@@ -26,6 +26,7 @@ import {
   CLASS_KINDS,
   ClassKind,
 } from '../../../core/services/academy-class.service';
+import { AcademyService } from '../../../core/services/academy.service';
 import { LanguageService } from '../../../core/services/language.service';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
@@ -98,6 +99,7 @@ interface KindOption {
 export class TimetableComponent {
   private readonly fb = inject(FormBuilder);
   private readonly classService = inject(AcademyClassService);
+  private readonly academyService = inject(AcademyService);
   private readonly languageService = inject(LanguageService);
   private readonly translate = inject(TranslateService);
   private readonly confirmationService = inject(ConfirmationService);
@@ -299,6 +301,7 @@ export class TimetableComponent {
         next: () => {
           this.dialogOpen.set(false);
           this.load();
+          this.refreshAcademy();
           this.toast('success', 'academy.timetable.toast.saved');
         },
         error: () =>
@@ -354,6 +357,7 @@ export class TimetableComponent {
         next: () => {
           this.dialogOpen.set(false);
           this.load();
+          this.refreshAcademy();
           this.toast('success', 'academy.timetable.toast.removed');
         },
         error: () =>
@@ -363,6 +367,20 @@ export class TimetableComponent {
             'academy.timetable.toast.errorDetail',
           ),
       });
+  }
+
+  /**
+   * A class changed, so the academy did too (#1575): its `classes_count`
+   * decides whether the form shows the weekday pills, and its
+   * `training_days` are what the check-in greys out. Both read the cached
+   * academy signal, so the cache is re-read here — otherwise, within one
+   * session, the form kept offering pills the server now refuses.
+   */
+  private refreshAcademy(): void {
+    this.academyService
+      .get({ forceRefresh: true })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({ error: () => undefined });
   }
 
   private load(): void {

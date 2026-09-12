@@ -22,12 +22,18 @@ use Illuminate\Support\Carbon;
 class RecordTrainingDaysAction
 {
     /**
+     * One save, not a dedicated `update()`: whatever the caller has already
+     * filled on the model — the rest of a PATCH — goes down with the days,
+     * so a Save that changes the name and the days leaves one audit entry,
+     * as it did before the days had an Action of their own.
+     *
      * @param  list<int>|null  $trainingDays  Carbon dayOfWeek ints, ascending; null = not configured
      */
     public function execute(Academy $academy, ?array $trainingDays): void
     {
         $this->upsertTodaySchedule($academy, $trainingDays);
-        $academy->update(['training_days' => $trainingDays]);
+        $academy->training_days = $trainingDays;
+        $academy->save();
     }
 
     /**

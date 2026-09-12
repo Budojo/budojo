@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions\Academy;
 
 use App\Models\Academy;
+use Illuminate\Support\Carbon;
 
 /**
  * The training days ARE the days with a class on the timetable (#1575).
@@ -21,6 +22,11 @@ use App\Models\Academy;
  * timetable existed — and deleting the last class leaves the days where they
  * were rather than blanking them: a timetable taken down is not a claim that
  * nobody trains.
+ *
+ * A change planned for a future date (#1094) does not survive the takeover.
+ * It was written when the pills were the source; left in place it would take
+ * over on its date while the column kept the derived days, and the app would
+ * disagree with itself. The timetable is where future changes are made now.
  */
 class DeriveTrainingDaysFromTimetableAction
 {
@@ -43,6 +49,10 @@ class DeriveTrainingDaysFromTimetableAction
         if ($fromTimetable === []) {
             return;
         }
+
+        $academy->schedules()
+            ->where('effective_from', '>', Carbon::today()->toDateString())
+            ->delete();
 
         $current = $academy->training_days ?? [];
         sort($current);

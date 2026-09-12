@@ -2786,6 +2786,11 @@ paths:
         `effective_from` MUST be strictly after today — same-day changes
         go through `PATCH /api/v1/academy`.
 
+        **Refused with a 422 while the academy's timetable has classes**
+        (#1575): the training days are derived from the classes then, and a
+        planned change would be deleted by the next class saved. Future
+        changes are made on the timetable.
+
         Invariant: at most ONE pending future schedule per academy at any
         time (the "single pending change" model from the PRD). A second
         POST while a pending row exists returns 422. The owner cancels

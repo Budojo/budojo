@@ -48,15 +48,19 @@ class UpdateAcademyAction
             $addressPayload = $validated['address'] ?? null;
             unset($validated['address']);
 
-            if (\array_key_exists('training_days', $validated)) {
-                /** @var list<int>|null $trainingDays */
-                $trainingDays = $validated['training_days'];
-                $this->recordTrainingDays->execute($academy, $trainingDays);
-                unset($validated['training_days']);
-            }
+            $trainingDaysKeyPresent = \array_key_exists('training_days', $validated);
+            /** @var list<int>|null $trainingDays */
+            $trainingDays = $validated['training_days'] ?? null;
+            unset($validated['training_days']);
 
-            if ($validated !== []) {
-                $academy->update($validated);
+            // Fill first, save once: the days Action saves the model, and
+            // it should carry the rest of the PATCH down with it rather
+            // than leave a second save — and a second audit entry — behind.
+            $academy->fill($validated);
+            if ($trainingDaysKeyPresent) {
+                $this->recordTrainingDays->execute($academy, $trainingDays);
+            } else {
+                $academy->save();
             }
 
             if ($addressKeyPresent) {

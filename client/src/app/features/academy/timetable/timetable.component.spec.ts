@@ -5,6 +5,7 @@ import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideRouter } from '@angular/router';
 import { ConfirmationService } from 'primeng/api';
 import { AcademyClass } from '../../../core/services/academy-class.service';
+import { AcademyService } from '../../../core/services/academy.service';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 import { TimetableComponent } from './timetable.component';
 
@@ -52,6 +53,24 @@ function setup() {
 
 function flushList(httpMock: HttpTestingController, classes: AcademyClass[]): void {
   httpMock.expectOne(CLASSES_URL).flush({ data: classes });
+}
+
+/**
+ * Every mutation re-reads the academy as well (#1575): `classes_count` and
+ * `training_days` on the cached signal are what the form and the check-in
+ * decide from, and they just changed.
+ */
+function flushAcademy(httpMock: HttpTestingController, classesCount: number): void {
+  httpMock.expectOne('/api/v1/academy').flush({
+    data: {
+      id: 1,
+      name: 'Test',
+      slug: 'test',
+      address: null,
+      logo_url: null,
+      classes_count: classesCount,
+    },
+  });
 }
 
 describe('TimetableComponent (#1562)', () => {
@@ -177,9 +196,27 @@ describe('TimetableComponent (#1562)', () => {
       }),
     });
 
-    // Saved → closed → the week is re-read.
+    // Saved → closed → the week is re-read, and so is the academy.
     expect(component['dialogOpen']()).toBe(false);
     flushList(httpMock, [KIDS]);
+    flushAcademy(httpMock, 2);
+  });
+
+  it('re-reads the cached academy after a change, so the form and the check-in follow (#1575)', () => {
+    const { fixture, component, httpMock } = setup();
+    flushList(httpMock, [KIDS]);
+    fixture.detectChanges();
+
+    component['startAdding'](3);
+    component['form'].patchValue({ name: 'Advanced' });
+    component['submit']();
+    httpMock.expectOne(CLASSES_URL).flush({ data: klass({ id: 9, name: 'Advanced', weekday: 3 }) });
+
+    flushList(httpMock, [KIDS, klass({ id: 9, name: 'Advanced', weekday: 3 })]);
+    // The academy is fetched again — `forceRefresh`, so the cache is
+    // replaced rather than served.
+    flushAcademy(httpMock, 2);
+    expect(TestBed.inject(AcademyService).academy()?.classes_count).toBe(2);
   });
 
   it('refuses to submit without a name or a day', () => {
@@ -227,6 +264,7 @@ describe('TimetableComponent (#1562)', () => {
     expect(req.request.body.starts_at).toBe('17:30');
     req.flush({ data: { ...KIDS, starts_at: '17:30' } });
     flushList(httpMock, [{ ...KIDS, starts_at: '17:30' }]);
+    flushAcademy(httpMock, 1);
   });
 
   it('removes a class once the confirm is accepted', () => {
@@ -254,6 +292,7 @@ describe('TimetableComponent (#1562)', () => {
 
     expect(component['dialogOpen']()).toBe(false);
     flushList(httpMock, []);
+    flushAcademy(httpMock, 0);
   });
 
   it('keeps the week on screen when a save fails', () => {

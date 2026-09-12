@@ -136,6 +136,44 @@ it('still accepts hand-set training days when there is no timetable', function (
         ->assertJsonPath('data.training_days', [1, 3, 5]);
 });
 
+it('refuses null for the days too — prohibited would have let it through', function (): void {
+    // `prohibited` only fails on a non-empty value; `null` would have slipped
+    // past it, landed in validated(), and blanked the days until the next
+    // class change happened to repair them.
+    AcademyClass::factory()->for($this->academy)->create(['weekday' => 1]);
+
+    $this->actingAs($this->user)
+        ->patchJson('/api/v1/academy', ['training_days' => null])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('training_days');
+
+    expect(daysOf($this))->toBe([1]);
+});
+
+it('takes over from a change planned for a future date', function (): void {
+    // Planned while the pills were the source: "from October we train
+    // Tue/Thu". Left in place it would take over on its date while the
+    // column kept the derived days, and the app would disagree with itself.
+    $this->academy->schedules()->create(['training_days' => [2, 4], 'effective_from' => '2026-10-01']);
+    expect($this->academy->nextSchedule())->not->toBeNull();
+
+    AcademyClass::factory()->for($this->academy)->create(['weekday' => 1]);
+
+    expect($this->academy->fresh()?->nextSchedule())->toBeNull()
+        ->and(daysOf($this))->toBe([1]);
+});
+
+it('refuses planning a future change while the timetable has classes', function (): void {
+    AcademyClass::factory()->for($this->academy)->create(['weekday' => 1]);
+
+    $this->actingAs($this->user)
+        ->postJson('/api/v1/academy/schedules', ['training_days' => [2, 4], 'effective_from' => '2026-10-01'])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('training_days');
+
+    expect($this->academy->fresh()?->nextSchedule())->toBeNull();
+});
+
 it('keeps the other academy fields editable while the days are derived', function (): void {
     AcademyClass::factory()->for($this->academy)->create(['weekday' => 1]);
 
