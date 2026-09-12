@@ -564,6 +564,14 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::patch('/academy/classes/{academyClass}', [\App\Http\Controllers\Academy\AcademyClassController::class, 'update']);
         Route::delete('/academy/classes/{academyClass}', [\App\Http\Controllers\Academy\AcademyClassController::class, 'destroy']);
 
+        // The programme (#1563): positions and the techniques under them,
+        // per academy, with the shipped BJJ starter one POST away.
+        Route::get('/academy/syllabus', [\App\Http\Controllers\Academy\SyllabusTopicController::class, 'index']);
+        Route::post('/academy/syllabus', [\App\Http\Controllers\Academy\SyllabusTopicController::class, 'store']);
+        Route::post('/academy/syllabus/seed', [\App\Http\Controllers\Academy\SyllabusTopicController::class, 'seed']);
+        Route::patch('/academy/syllabus/{syllabusTopic}', [\App\Http\Controllers\Academy\SyllabusTopicController::class, 'update']);
+        Route::delete('/academy/syllabus/{syllabusTopic}', [\App\Http\Controllers\Academy\SyllabusTopicController::class, 'destroy']);
+
         // Entry carnets — #1364. The pre-paid alternative to the monthly fee:
         // price + pack size are configured per academy via PATCH /academy and
         // snapshotted onto each carnet at sale. Consumption (one entry per
