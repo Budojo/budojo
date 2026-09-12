@@ -209,6 +209,7 @@ describe('AcademyFormComponent', () => {
       monthly_fee_cents: null,
       carnet_price_cents: null,
       carnet_entries: null,
+      carnet_entry_unit: 'lesson',
       season_start_month: null,
       training_days: null,
     });
@@ -257,6 +258,7 @@ describe('AcademyFormComponent', () => {
       monthly_fee_cents: null,
       carnet_price_cents: null,
       carnet_entries: null,
+      carnet_entry_unit: 'lesson',
       season_start_month: null,
       training_days: null,
     });
@@ -455,5 +457,64 @@ describe('AcademyFormComponent', () => {
     expect(component.monthlyFee.errors?.['min']).toBeTruthy();
     component.submit();
     httpMock.expectNone('/api/v1/academy');
+  });
+});
+
+describe('AcademyFormComponent — what one carnet entry covers (#1576)', () => {
+  const unitField = (fixture: Harness['fixture']) =>
+    fixture.nativeElement.querySelector('[data-cy="academy-form-carnet-entry-unit-field"]');
+
+  it('asks only once both halves of the carnet offering are set', () => {
+    const { fixture, component } = setup();
+    expect(unitField(fixture)).toBeNull();
+
+    component.form.patchValue({ carnet_price: 70 });
+    fixture.detectChanges();
+    expect(unitField(fixture)).toBeNull();
+
+    component.form.patchValue({ carnet_entries: 10 });
+    fixture.detectChanges();
+    expect(unitField(fixture)).not.toBeNull();
+
+    // Clearing either half takes the question away again.
+    component.form.patchValue({ carnet_price: null });
+    fixture.detectChanges();
+    expect(unitField(fixture)).toBeNull();
+  });
+
+  it('hydrates the unit from the academy', () => {
+    const { component } = setup(
+      makeAcademy({ carnet_price_cents: 7000, carnet_entries: 10, carnet_entry_unit: 'day' }),
+    );
+    expect(component.form.controls.carnet_entry_unit.value).toBe('day');
+  });
+
+  it('defaults to the lesson when the server says nothing', () => {
+    const { component } = setup(makeAcademy());
+    expect(component.form.controls.carnet_entry_unit.value).toBe('lesson');
+  });
+
+  it('sends the chosen unit with the rest of the offering', () => {
+    const { component, httpMock } = setup(
+      makeAcademy({ carnet_price_cents: 7000, carnet_entries: 10 }),
+    );
+    component.form.patchValue({ carnet_entry_unit: 'day' });
+    component.submit();
+
+    const req = httpMock.expectOne('/api/v1/academy');
+    expect(req.request.body.carnet_price_cents).toBe(7000);
+    expect(req.request.body.carnet_entries).toBe(10);
+    expect(req.request.body.carnet_entry_unit).toBe('day');
+    req.flush({ data: makeAcademy({ carnet_entry_unit: 'day' }) });
+  });
+
+  it("names the two answers in the reader's language", () => {
+    const { fixture } = setup(makeAcademy({ carnet_price_cents: 7000, carnet_entries: 10 }));
+    const labels = Array.from(
+      fixture.nativeElement.querySelectorAll(
+        '[data-cy="academy-form-carnet-entry-unit"] .p-togglebutton',
+      ) as NodeListOf<HTMLElement>,
+    ).map((el) => el.textContent?.trim());
+    expect(labels).toEqual(['One lesson', 'A whole day']);
   });
 });

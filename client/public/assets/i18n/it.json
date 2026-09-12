@@ -1496,6 +1496,12 @@
         "label": "Ingressi per carnet",
         "hint": "Quante sessioni copre un carnet. Lascia vuoto se non vendi carnet.",
         "errorRange": "Inserisci un numero tra 1 e 255."
+      },
+      "carnetEntryUnit": {
+        "label": "Un ingresso copre",
+        "lesson": "Una lezione",
+        "day": "Un giorno intero",
+        "hint": "Conta quando un atleta si allena due volte nello stesso giorno. Cambiarlo ricalcola tutti i carnet già venduti."
       }
     },
     "feeTiers": {
@@ -2032,6 +2038,7 @@
         "title": "Carnet ingressi",
         "sell": "Vendi carnet",
         "entriesWord": "ingressi",
+        "entryCoversDay": "Un ingresso copre l'intera giornata, qualunque sia il numero di lezioni.",
         "none": "Nessun carnet attivo.",
         "expiresOn": "Scade il {{date}}",
         "lowBalance": "In esaurimento",

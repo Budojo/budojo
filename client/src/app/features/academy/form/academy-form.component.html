@@ -441,6 +441,33 @@
     </app-budojo-form-field>
 
     <!--
+      What one entry pays for (#1576) — a lesson, or the whole day. Only asked
+      once both halves of the offering are filled in: an academy that does
+      not sell carnets has no reason to meet the question, and one that does
+      meets it right where it just said what a carnet is. Two answers, so a
+      segmented control rather than a dropdown that hides one of them.
+    -->
+    @if (carnetsOffered()) {
+      <div class="field" data-cy="academy-form-carnet-entry-unit-field">
+        <span class="field__label" id="academy-carnet-entry-unit-label">
+          {{ 'academy.form.carnetEntryUnit.label' | translate }}
+        </span>
+        <p-selectbutton
+          [options]="carnetEntryUnitOptions()"
+          formControlName="carnet_entry_unit"
+          optionLabel="label"
+          optionValue="value"
+          [allowEmpty]="false"
+          ariaLabelledBy="academy-carnet-entry-unit-label"
+          data-cy="academy-form-carnet-entry-unit"
+        />
+        <small class="field__hint">
+          {{ 'academy.form.carnetEntryUnit.hint' | translate }}
+        </small>
+      </div>
+    }
+
+    <!--
       When the training year restarts (#1484).
 
       It sits directly above the training days because the two answer the same

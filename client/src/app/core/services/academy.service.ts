@@ -20,6 +20,12 @@ import { environment } from '../../../environments/environment';
 export type CountryCode = 'IT';
 
 /**
+ * What one carnet entry pays for (#1576): one class, or the whole day
+ * however many classes were trained. Mirrors `App\Enums\CarnetEntryUnit`.
+ */
+export type CarnetEntryUnit = 'lesson' | 'day';
+
+/**
  * ISO 3166-2:IT province codes (#72) — the standard two-letter Italian
  * car-plate / postal codes. Required when `country === 'IT'`.
  */
@@ -213,6 +219,12 @@ export interface Academy {
   carnet_price_cents?: number | null;
   carnet_entries?: number | null;
   /**
+   * What one carnet entry pays for (#1576): a lesson, or the whole training
+   * day however many classes were trained. Never null on the wire — `lesson`
+   * until the owner says otherwise; optional here for fixture compat only.
+   */
+  carnet_entry_unit?: CarnetEntryUnit;
+  /**
    * Weekdays the academy trains on, as Carbon `dayOfWeek` ints (0=Sun..6=Sat).
    * `null` = "schedule not configured" — daily check-in falls back to
    * all-weekdays. Optional for the same fixture-compat reason as the fee.
@@ -344,6 +356,8 @@ export interface UpdateAcademyPayload {
   monthly_fee_cents?: number | null;
   carnet_price_cents?: number | null;
   carnet_entries?: number | null;
+  /** Never null: there is no "not configured" for what an entry pays for (#1576). */
+  carnet_entry_unit?: CarnetEntryUnit;
   training_days?: number[] | null;
   /** Month the training year restarts in, 1-12 (#1484). `null` = "not chosen". */
   season_start_month?: number | null;

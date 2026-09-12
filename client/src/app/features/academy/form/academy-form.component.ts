@@ -22,6 +22,7 @@ import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
 import { SelectModule } from 'primeng/select';
+import { SelectButtonModule } from 'primeng/selectbutton';
 import { ToastModule } from 'primeng/toast';
 import { Tooltip } from 'primeng/tooltip';
 import { MessageService } from 'primeng/api';
@@ -29,6 +30,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import {
   AcademyService,
   Address,
+  CarnetEntryUnit,
   CountryCode,
   ItalianProvinceCode,
   UpdateAcademyPayload,
@@ -133,6 +135,7 @@ const COUNTRY_CODE_OPTIONS: SelectOption<string>[] = [
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     RouterLink,
+    SelectButtonModule,
     ReactiveFormsModule,
     ButtonModule,
     InputNumberModule,
@@ -230,6 +233,10 @@ export class AcademyFormComponent implements OnInit {
     // server treats either being null as "this academy doesn't sell carnets".
     carnet_price: this.fb.control<number | null>(null, [Validators.min(0)]),
     carnet_entries: this.fb.control<number | null>(null, [Validators.min(1), Validators.max(255)]),
+    // What one entry pays for (#1576). Never null — `lesson` is the answer
+    // until the owner changes it, and the control only shows once both
+    // halves of the offering above are filled in.
+    carnet_entry_unit: this.fb.nonNullable.control<CarnetEntryUnit>('lesson'),
     training_days: this.fb.nonNullable.control<number[]>([]),
     // The month the training year restarts in (#1484), 1-12. `null` is not
     // "no season" — it is "nobody has said", which the server answers with
@@ -301,6 +308,7 @@ export class AcademyFormComponent implements OnInit {
       monthly_fee: academy.monthly_fee_cents == null ? null : academy.monthly_fee_cents / 100,
       carnet_price: academy.carnet_price_cents == null ? null : academy.carnet_price_cents / 100,
       carnet_entries: academy.carnet_entries ?? null,
+      carnet_entry_unit: academy.carnet_entry_unit ?? 'lesson',
       training_days: academy.training_days ?? [],
       season_start_month: academy.season_start_month ?? null,
     });
@@ -436,6 +444,30 @@ export class AcademyFormComponent implements OnInit {
     return null;
   });
 
+  /**
+   * Whether the academy sells carnets as far as this form can tell — both
+   * halves of the offering filled in (#1576). Read off the controls rather
+   * than the cached academy so the entry-unit question appears the moment
+   * the owner finishes typing the offering, not after the next save.
+   */
+  readonly carnetsOffered = computed<boolean>(() => {
+    void this.carnetPriceEvents();
+    void this.carnetEntriesEvents();
+    return (
+      this.form.controls.carnet_price.value != null &&
+      this.form.controls.carnet_entries.value != null
+    );
+  });
+
+  /** The two answers to "one entry covers", named in the current language. */
+  protected readonly carnetEntryUnitOptions = computed<SelectOption<CarnetEntryUnit>[]>(() => {
+    this.languageService.currentLang(); // signal dep — recompute on toggle
+    return [
+      { label: this.translate.instant('academy.form.carnetEntryUnit.lesson'), value: 'lesson' },
+      { label: this.translate.instant('academy.form.carnetEntryUnit.day'), value: 'day' },
+    ];
+  });
+
   get name() {
     return this.form.controls.name;
   }
@@ -566,6 +598,7 @@ export class AcademyFormComponent implements OnInit {
       // the carnet offering off server-side.
       carnet_price_cents: v.carnet_price == null ? null : Math.round(v.carnet_price * 100),
       carnet_entries: v.carnet_entries ?? null,
+      carnet_entry_unit: v.carnet_entry_unit,
       // Not sent while the timetable sets them (#1575): the server refuses
       // a hand-set value in that state, and the form has no control for it.
       ...(this.daysFromTimetable()

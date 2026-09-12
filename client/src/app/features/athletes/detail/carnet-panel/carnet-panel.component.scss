@@ -80,6 +80,15 @@
   color: var(--p-text-muted-color);
 }
 
+// The one line that explains a balance dropping by one after two check-ins
+// (#1576). Shown only when the academy sells days — see `entryCoversDay`.
+.carnets__entry-unit {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--p-text-muted-color);
+}
+
 .carnets__dates {
   display: flex;
   flex-direction: column;
