@@ -60,6 +60,64 @@ export function localised(value: Localised, lang: string): string {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.60.0',
+    date: '2026-09-12',
+    headline: {
+      en: 'What you actually taught.',
+      it: 'Cosa hai insegnato davvero.',
+    },
+    sections: [
+      {
+        heading: {
+          en: '📝 Tag what each lesson covered',
+          it: '📝 Segna cosa copre ogni lezione',
+        },
+        bullets: [
+          {
+            en: 'The check-in carries a new line under the day\'s class: the topics. One tap opens the programme and you tick what you did tonight. It is not three hundred names to scroll at the edge of the mat — it opens on three short groups: what you have already chosen, what you taught lately (teaching runs in blocks, so last Monday is very often tonight), and only then the programme, collapsed to its positions. Search runs across both levels at once: "guard" finds the position and everything under it.',
+            it: "Nel check-in, sotto la lezione del giorno, c'è una riga nuova: gli argomenti. Un tocco e si apre il programma, e spunti quello che avete fatto stasera. Non è un elenco di trecento nomi da scorrere sul bordo del tatami: si apre su tre gruppi corti — quello che hai già scelto, quello che hai fatto di recente (l'insegnamento va a blocchi, quindi quello di lunedì scorso è spessissimo quello di stasera) e solo dopo il programma, chiuso sulle posizioni. E la ricerca cerca su tutti e due i livelli insieme: «guardia» ti trova la posizione e tutto quello che ci sta sotto.",
+          },
+          {
+            en: 'You can tag a position on its own — "we worked half guard" is a real answer, and the app records it as one. There is room for free notes too ("Marco\'s first day back"); notes stay notes and never become topics.',
+            it: "Puoi segnare una posizione da sola: «abbiamo lavorato mezza guardia» è una risposta vera, e l'app la registra come tale. C'è anche uno spazio per le note libere — «il primo giorno di Marco dopo lo stop». Le note restano note: non diventano mai argomenti.",
+          },
+        ],
+      },
+      {
+        heading: {
+          en: '🗓️ Plan ahead, and confirm nothing',
+          it: '🗓️ Pianifica, e non devi confermare niente',
+        },
+        bullets: [
+          {
+            en: 'From the timetable, beside each class, a button opens the same sheet on the next time that class comes round. What you tick there is the plan. And there is nothing to confirm: the check-in IS the confirmation. A planned lesson nobody was marked present in stays a plan and never counts as taught, so the chart cannot report your intentions as facts. Did something else instead? Change the list afterwards — it is the same list.',
+            it: "Dall'orario, accanto a ogni lezione, un bottone apre lo stesso foglio sulla prossima volta che quella lezione torna. Quello che segni lì è il piano. E non c'è niente da confermare: il check-in è la conferma. Una lezione pianificata in cui non hai segnato presente nessuno resta un piano e non conta come fatta, così il grafico non ti racconta le tue intenzioni al posto dei fatti. Avete fatto altro? Cambi la lista dopo: è la stessa lista.",
+          },
+        ],
+      },
+      {
+        heading: {
+          en: '📊 How much of the programme you have covered',
+          it: '📊 Quanto del programma hai coperto',
+        },
+        bullets: [
+          {
+            en: 'Stats → Programme, and there is the question this all started from. Not one number but three states: covered (taught in at least two lessons), taught once (exactly one), and not taught (never, this year). Two lessons to call something covered, not one — doing a thing in September and considering it closed is exactly the self-deception this screen exists to prevent.',
+            it: "Statistiche → Programma, ed ecco la domanda da cui è partito tutto. Non un numero solo, ma tre stati: coperto (fatto in almeno due lezioni), fatto una volta (esattamente una) e non fatto (mai, quest'anno). Due lezioni per dire «coperto», non una: fare una cosa a settembre e considerarla chiusa è esattamente l'autoinganno che questa schermata serve a evitare.",
+          },
+          {
+            en: 'Below it: a bar per position — the primary view, because that axis shows the real gaps ("you have done nothing from half guard all year" is something you act on); coverage across the season, to see whether you are on pace or drifting; the blunt list of what is not taught yet, in programme order; and when each thing was last on the mat, with how long ago — the answer to "didn\'t I just do armbars?" that no notebook ever gave.',
+            it: "Sotto: una barra per posizione — è la vista principale, perché è l'asse che fa vedere i buchi veri («da mezza guardia non hai fatto niente tutt'anno» è un'informazione su cui agisci); la copertura nel corso della stagione, per vedere se sei in linea o alla deriva; l'elenco secco di quello che non hai ancora fatto, in ordine di programma; e l'ultima volta che ogni cosa è stata sul tatami, con quanto tempo fa — la risposta a «ma gli armbar non li ho appena fatti?».",
+          },
+          {
+            en: 'Gi and no-gi never mix: the filter narrows both what you did and what you were supposed to do. A count that mixes the two is quietly wrong, which is worse than no number. And with no programme yet you are not shown a 0% — you are told what to do.',
+            it: 'Gi e no-gi non si mescolano mai: il filtro restringe sia quello che hai fatto sia quello che avresti dovuto fare. Un conteggio che mischia i due dà un numero sbagliato in silenzio, che è peggio di nessun numero. E se non hai ancora un programma non ti mostra uno 0%: ti dice cosa fare.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.59.0',
     date: '2026-09-12',
     headline: {

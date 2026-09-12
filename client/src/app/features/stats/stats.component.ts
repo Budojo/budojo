@@ -27,6 +27,7 @@ export class StatsComponent {
     { value: 'attendance', labelKey: 'stats.tabs.attendance', dataCy: 'stats-tab-attendance' },
     { value: 'payments', labelKey: 'stats.tabs.payments', dataCy: 'stats-tab-payments' },
     { value: 'athletes', labelKey: 'stats.tabs.athletes', dataCy: 'stats-tab-athletes' },
+    { value: 'syllabus', labelKey: 'stats.tabs.syllabus', dataCy: 'stats-tab-syllabus' },
   ] as const;
 
   /**

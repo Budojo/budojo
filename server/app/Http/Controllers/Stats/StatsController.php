@@ -7,9 +7,11 @@ namespace App\Http\Controllers\Stats;
 use App\Actions\Stats\AthleteAgeBandsAction;
 use App\Actions\Stats\DailyAttendanceStatsAction;
 use App\Actions\Stats\MonthlyPaymentsStatsAction;
+use App\Actions\Stats\SyllabusCoverageAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Stats\DailyAttendanceRangeRequest;
 use App\Http\Requests\Stats\MonthsRangeRequest;
+use App\Http\Requests\Stats\SyllabusCoverageRequest;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,6 +22,7 @@ class StatsController extends Controller
         private readonly DailyAttendanceStatsAction $dailyAttendanceAction,
         private readonly MonthlyPaymentsStatsAction $monthlyPaymentsAction,
         private readonly AthleteAgeBandsAction $ageBandsAction,
+        private readonly SyllabusCoverageAction $syllabusCoverageAction,
     ) {
     }
 
@@ -53,6 +56,29 @@ class StatsController extends Controller
         $rows = $this->monthlyPaymentsAction->execute($academy, $request->months());
 
         return response()->json(['data' => $rows]);
+    }
+
+    /**
+     * What the programme says the academy would teach this season, against
+     * what it actually did (#1565).
+     */
+    public function syllabusCoverage(SyllabusCoverageRequest $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+        $academy = $user->activeAcademy();
+
+        if ($academy === null) {
+            return response()->json(['message' => 'Forbidden.'], 403);
+        }
+
+        return response()->json([
+            'data' => $this->syllabusCoverageAction->execute(
+                $academy,
+                $request->seasonsBack(),
+                $request->kind(),
+            ),
+        ]);
     }
 
     public function ageBands(Request $request): JsonResponse

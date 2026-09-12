@@ -12,10 +12,16 @@ use Carbon\CarbonImmutable;
  * The lesson for a class on a date — found if it exists, created if not
  * (#1562).
  *
- * This is the one place a lesson comes into being, and it happens the first
- * time somebody is checked into it. The class's name, time and kind are
- * copied onto the row here and never re-read: the timetable is mutable and
- * the past is not.
+ * This is the one place a lesson comes into being — the first time somebody
+ * is checked into it, or, since #1564, when its topics are planned ahead. The
+ * class's name, time and kind are copied onto the row here and never re-read:
+ * the timetable is mutable and the past is not.
+ *
+ * The copy is taken **when the row is created**, which planning moves earlier
+ * than the day: a lesson planned on Monday for Wednesday keeps Monday's name
+ * even if the class is renamed on Tuesday. Deliberate — re-reading the class
+ * would mean the snapshot is not a snapshot — and the window in which it can
+ * drift is a plan nobody has taught yet.
  *
  * `firstOrCreate` rather than a check-then-insert of our own, because the
  * check-in fires one POST per tap and two taps in quick succession arrive

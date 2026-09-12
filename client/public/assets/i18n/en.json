@@ -1556,6 +1556,7 @@
       "restDay": "No class",
       "today": "Today",
       "editAria": "Edit {{name}}",
+      "planAria": "Plan what {{name}} covers on {{date}}",
       "untimed": "No fixed time",
       "empty": {
         "title": "No classes yet",
@@ -1735,7 +1736,12 @@
       },
       "monthlySummary": "Monthly summary",
       "presentCountOne": "{{count}} present",
-      "presentCountOther": "{{count}} present"
+      "presentCountOther": "{{count}} present",
+      "topics": {
+        "empty": "Nothing tagged yet",
+        "add": "Add topics",
+        "edit": "Edit"
+      }
     },
     "summary": {
       "eyebrow": "Attendance summary",
@@ -1760,6 +1766,35 @@
         "daysInitial": "Click to sort by days attended (most first)",
         "daysDesc": "Sorted by days attended (most first). Click to flip.",
         "daysAsc": "Sorted by days attended (fewest first). Click to flip."
+      }
+    }
+  },
+  "lessons": {
+    "sheet": {
+      "title": "Lesson",
+      "planned": "Planned",
+      "held": "Held",
+      "searchPlaceholder": "Search the programme",
+      "searchAria": "Search the programme",
+      "clearSearch": "Clear the search",
+      "noResults": "Nothing in the programme matches \"{{query}}\".",
+      "chosen": "Covered",
+      "recent": "Taught lately",
+      "programme": "The programme",
+      "noProgramme": "No programme yet — set one up under Academy → Programme.",
+      "noTechniques": "Nothing under this position.",
+      "removeAria": "Remove {{name}}",
+      "tagAria": "Tag {{name}}",
+      "departedTooltip": "No longer in the programme. It stays on this lesson.",
+      "notes": "Notes",
+      "notesPlaceholder": "Marco's first day back",
+      "cancel": "Cancel",
+      "save": "Save",
+      "toast": {
+        "saved": "Lesson saved",
+        "errorSummary": "Something went wrong",
+        "errorDetail": "The change was not saved. Try again.",
+        "loadErrorDetail": "The lesson could not be loaded."
       }
     }
   },
@@ -2448,7 +2483,8 @@
       "overview": "Overview",
       "attendance": "Attendance",
       "payments": "Payments",
-      "athletes": "Athletes"
+      "athletes": "Athletes",
+      "syllabus": "Programme"
     },
     "attendance": {
       "heatmapTitle": "Attendance heatmap",
@@ -2502,6 +2538,51 @@
         "master_5": "Master 5",
         "master_6": "Master 6",
         "master_7": "Master 7"
+      }
+    },
+    "syllabus": {
+      "headline": "{{covered}} of {{total}} covered this season",
+      "byPosition": "By position",
+      "overTime": "Across the season",
+      "lastTaught": "Last taught",
+      "missingList": "Not taught yet ({{count}})",
+      "nothingMissing": "Nothing left — the whole programme has been taught.",
+      "thinTag": "Once",
+      "worked": "worked {{count}}×",
+      "barAria": "{{name}}: {{covered}} covered, {{thin}} taught once, {{missing}} not taught",
+      "state": {
+        "covered": "{{count}} covered",
+        "thin": "{{count}} taught once",
+        "missing": "{{count}} not taught"
+      },
+      "filter": {
+        "all": "All",
+        "gi": "Gi",
+        "nogi": "No-gi",
+        "aria": "Count gi, no-gi, or everything"
+      },
+      "season": {
+        "previous": "Previous season",
+        "next": "Next season"
+      },
+      "ago": {
+        "today": "today",
+        "yesterday": "yesterday",
+        "days": "{{count}} days ago",
+        "weekOne": "a week ago",
+        "weeks": "{{count}} weeks ago"
+      },
+      "empty": {
+        "noProgrammeTitle": "No programme to measure against",
+        "noProgrammeHint": "Coverage compares what you taught with what you said you would teach. Set up the programme first and this page fills itself in.",
+        "openProgramme": "Open the programme",
+        "nothingTaughtTitle": "Nothing taught yet this season",
+        "nothingTaughtHint": "Tag what each lesson covered from the check-in, and this page starts keeping score."
+      },
+      "error": {
+        "title": "Coverage couldn't be loaded",
+        "hint": "Something went wrong on our side. Try again.",
+        "retry": "Try again"
       }
     }
   },

@@ -86,6 +86,26 @@
                         <span class="slot__kind">{{ kindLabels()[c.kind] }}</span>
                         <span class="slot__name">{{ c.name }}</span>
                       </button>
+                      <!--
+                        Plan what the next one covers (#1564). The timetable is
+                        a recurring week and carries no dates, so the date the
+                        plan lands on is the one the owner would mean: the next
+                        time this class comes round. The check-in cannot reach
+                        it — that picker stops at today, because marking anyone
+                        present in the future is not a thing.
+                      -->
+                      <button
+                        type="button"
+                        class="slot__plan"
+                        (click)="startPlanning(c)"
+                        [attr.aria-label]="
+                          'academy.timetable.planAria'
+                            | translate: { name: c.name, date: nextOccurrenceLabel(c) }
+                        "
+                        [attr.data-cy]="'timetable-plan-' + c.id"
+                      >
+                        <i class="pi pi-book" aria-hidden="true"></i>
+                      </button>
                     </li>
                   }
                 </ul>
@@ -284,3 +304,18 @@
     </div>
   </ng-template>
 </p-dialog>
+
+<!--
+  Planning what the next occurrence of a class covers (#1564). Same sheet the
+  check-in opens, on a future date: topics on a lesson nobody has checked into
+  are a plan, and stay uncounted until somebody is.
+-->
+@if (planning(); as planned) {
+  <app-lesson-sheet
+    [(visible)]="planSheetOpen"
+    [academyClassId]="planned.id"
+    [heldOn]="nextOccurrenceIso(planned)"
+    [className]="planned.name"
+    [dateLabel]="nextOccurrenceLabel(planned)"
+  />
+}

@@ -42,6 +42,7 @@ Three cases and not [`ClassKind`](./academy-class.md)'s four: a topic is jiu-jit
 - `belongsTo(SyllabusTopic::class, 'parent_id')` — `parent()`, null on a position
 - `hasMany(SyllabusTopic::class, 'parent_id')` — `children()`, ordered by `sort_order` then `name`; empty on a technique
 - `scopePositions()` — the top level
+- Inverse of `Lesson::topics()` through `lesson_topic` (#1564) — every lesson that covered this topic
 
 ## Business rules
 
@@ -72,5 +73,5 @@ Three cases and not [`ClassKind`](./academy-class.md)'s four: a topic is jiu-jit
 ## Related
 
 - [`academy-class.md`](./academy-class.md) — the timetable; its `ClassKind` is the lesson-side twin of `TopicKind`
-- [`lesson.md`](./lesson.md) — what will reference topics once lessons are tagged (#1564)
+- [`lesson.md`](./lesson.md) — the lessons that covered these topics, through `lesson_topic` (#1564)
 - Epic #1561 — what was taught, and what is still missing

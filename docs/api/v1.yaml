@@ -59,6 +59,17 @@ tags:
       response component); the SPA catches this in its auth interceptor and
       redirects the user to `/dashboard/profile?reason=verify_required`.
       Reads (`GET`) stay open so the user can browse while unverified.
+  - name: attendance
+    description: |
+      Who was on the mat, and what was taught. Presences are recorded per day
+      and, once the academy keeps a timetable (#1562), into that day's lesson
+      for a class. Since #1564 the same lesson also carries the syllabus
+      topics it covered — ahead of time as a plan, after the fact as a
+      record, and the same list either way.
+
+      Reads are gated on `attendance_read`, writes on `attendance_record`:
+      writing down what was taught is the same act of witness as writing down
+      who was there.
   - name: documents
     description: |
       Files (ID, medical cert, insurance) attached to an athlete, with expiry tracking.
@@ -3303,6 +3314,253 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+
+  /lessons:
+    get:
+      tags: [attendance]
+      summary: What a lesson covers (#1564)
+      description: |
+        The lesson in one slot — a class, and a day — with its topics and its
+        note, or `null` when nobody has touched it. **Reading never creates
+        one**: an empty slot is not a claim that anything happened in it.
+
+        A lesson is addressed by its slot rather than by an id because when
+        the owner is planning it, the row does not exist yet.
+
+        Requires `attendance_read`.
+      operationId: lessonShow
+      parameters:
+        - in: query
+          name: academy_class_id
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - in: query
+          name: held_on
+          required: true
+          description: '`YYYY-MM-DD`. A date ahead of today is a plan.'
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: The lesson, or null
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    nullable: true
+                    allOf:
+                      - $ref: '#/components/schemas/Lesson'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /lessons/topics:
+    put:
+      tags: [attendance]
+      summary: Say what a lesson covers (#1564)
+      description: |
+        Sets the whole list, so sending it twice is a no-op. The lesson is
+        **materialised here** when it does not exist, which is how planning
+        works at all: a lesson with topics and no attendance is planned, not
+        held, and the coverage view never counts it.
+
+        An empty `topic_ids` is how the last topic comes off. A topic that has
+        left the programme cannot be newly attached (422), but one already
+        attached survives every sync — tidying the syllabus must not rewrite
+        what a past lesson was about.
+
+        Requires `attendance_record`, not `academy_settings_update`: writing
+        down what was taught is the same act of witness as writing down who
+        was there.
+      operationId: lessonSetTopics
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [academy_class_id, held_on, topic_ids]
+              properties:
+                academy_class_id:
+                  type: integer
+                  format: int64
+                held_on:
+                  type: string
+                  format: date
+                topic_ids:
+                  type: array
+                  maxItems: 50
+                  description: This academy's living syllabus topics; positions and techniques alike.
+                  items:
+                    type: integer
+                    format: int64
+      responses:
+        '200':
+          description: The lesson, with the list it now carries
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Lesson'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /lessons/notes:
+    put:
+      tags: [attendance]
+      summary: The lesson's free-text note (#1564)
+      description: |
+        "Marco's first day back", not data entry — the note is never parsed
+        into topics. Materialises the lesson like the topics write does; an
+        empty or whitespace-only note is stored as `null`.
+
+        Requires `attendance_record`.
+      operationId: lessonSetNotes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [academy_class_id, held_on, notes]
+              properties:
+                academy_class_id:
+                  type: integer
+                  format: int64
+                held_on:
+                  type: string
+                  format: date
+                notes:
+                  type: string
+                  maxLength: 2000
+                  nullable: true
+      responses:
+        '200':
+          description: The lesson, with its note
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Lesson'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /lessons/recent-topics:
+    get:
+      tags: [attendance]
+      summary: What the academy taught lately (#1564)
+      description: |
+        The topics this academy's lessons carried most recently, newest first,
+        capped at twelve and named once however many lessons used them — the
+        topic picker's second group, and the one that does most of the work:
+        teaching runs in blocks, so last Monday's topic is very often
+        tonight's. Living topics only.
+
+        Requires `attendance_read`.
+      operationId: lessonRecentTopics
+      responses:
+        '200':
+          description: Recently taught topics
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LessonTopic'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /stats/syllabus/coverage:
+    get:
+      tags: [Stats]
+      summary: Syllabus coverage across a season (#1565)
+      description: |
+        What the academy said it would teach this season, against what it
+        actually did — the payoff of the timetable (#1562), the programme
+        (#1563) and lesson tagging (#1564).
+
+        **Covered takes two held lessons.** Taught exactly once is `thin`, and
+        never taught is `missing`: teaching a thing in September and calling
+        it done is the self-deception a single percentage would hide.
+
+        Only **held** lessons count — a lesson planned and never checked into
+        contributes nothing. Only `in_season` topics count. **Positions are
+        not in the denominator**: the programme's top level is a chapter
+        heading, and "have I covered closed guard" is answered by its
+        techniques. A position tagged on its own is still reported, per row,
+        as `worked`.
+
+        `kind` narrows **both halves** of the fraction, never just the
+        numerator: a gi topic counted against a no-gi academy is a number
+        that is quietly wrong, which is worse than no number. `both` is not a
+        filter value — it is the kind a topic carries when it makes sense
+        either way, and every filter admits it.
+
+        Owner-only, and requires `stats_view`.
+      operationId: statsSyllabusCoverage
+      parameters:
+        - in: query
+          name: seasons_back
+          description: |
+            How many seasons before the current one, 0 being now. The boundary
+            is resolved server-side from `academies.season_start_month`
+            (#1484) so no client re-implements the same off-by-one.
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 10
+            default: 0
+        - in: query
+          name: kind
+          schema:
+            type: string
+            enum: [gi, nogi]
+      responses:
+        '200':
+          description: The coverage report
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/SyllabusCoverage'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
 
   /search:
     get:
@@ -7470,6 +7728,191 @@ components:
           example: 60
         kind:
           $ref: '#/components/schemas/ClassKind'
+
+    LessonTopic:
+      type: object
+      description: |
+        A syllabus topic as a lesson names it (#1564).
+      required: [id, name, kind, parent_id, parent_name, deleted]
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+          example: Armbar
+        kind:
+          $ref: '#/components/schemas/TopicKind'
+        parent_id:
+          type: integer
+          format: int64
+          nullable: true
+        parent_name:
+          type: string
+          nullable: true
+          description: |
+            The position this technique sits under. It rides along because
+            "Armbar" on its own is ambiguous by design — an armbar from mount
+            and one from closed guard are different lessons. Null on a
+            position, and null when the parent was not loaded.
+          example: Closed guard
+        deleted:
+          type: boolean
+          description: |
+            The topic has since left the programme. The lesson still names it
+            and the server keeps the link through every edit, but it is never
+            offered in the picker again.
+
+    Lesson:
+      type: object
+      description: |
+        One occurrence of a class on one date (#1562), with what it covered
+        (#1564).
+      required: [id, academy_class_id, held_on, name, starts_at, kind, notes, held, topics]
+      properties:
+        id:
+          type: integer
+          format: int64
+        academy_class_id:
+          type: integer
+          format: int64
+          nullable: true
+          description: Null once the class was removed from the timetable; the snapshot keeps the name.
+        held_on:
+          type: string
+          format: date
+        name:
+          type: string
+          description: |
+            The class's name as it was when this lesson row was created — on the
+            day for one born of a check-in, earlier for one planned ahead. A
+            snapshot, never re-read.
+          example: Fundamentals
+        starts_at:
+          type: string
+          nullable: true
+          example: '19:00'
+        kind:
+          $ref: '#/components/schemas/ClassKind'
+        notes:
+          type: string
+          nullable: true
+          description: Free text. Never parsed into topics.
+        held:
+          type: boolean
+          description: |
+            Derived, never stored: true when at least one attendance record
+            points at this lesson. A lesson with topics and no attendance is
+            **planned**, and the coverage view (#1565) does not count it. The
+            check-in is the confirmation, so there is no step to remember and
+            no flag to go stale.
+        topics:
+          type: array
+          items:
+            $ref: '#/components/schemas/LessonTopic'
+
+    SyllabusCoverage:
+      type: object
+      description: |
+        The coverage report for one season (#1565). Every count is of
+        **techniques** — positions are a grouping, not a unit of work.
+      required: [season, kind, totals, positions, missing, taught, timeline]
+      properties:
+        season:
+          type: object
+          required: [start, end, label]
+          properties:
+            start: { type: string, format: date }
+            end: { type: string, format: date }
+            label:
+              type: string
+              description: '`2026/27` for a season crossing new year, `2026` for one that does not.'
+              example: 2026/27
+        kind:
+          type: string
+          nullable: true
+          enum: [gi, nogi]
+          description: The filter in force, or null for the whole programme.
+        totals:
+          type: object
+          required: [in_scope, covered, thin, missing, percentage]
+          properties:
+            in_scope:
+              type: integer
+              description: In-season techniques the filter admits — the denominator.
+            covered:
+              type: integer
+              description: Taught in two or more held lessons.
+            thin:
+              type: integer
+              description: Taught in exactly one.
+            missing:
+              type: integer
+              description: Never taught this season.
+            percentage:
+              type: integer
+              description: '`covered / in_scope`, rounded. 0 rather than a division by zero when there is no programme.'
+        positions:
+          type: array
+          description: One row per position with anything in scope under it.
+          items:
+            type: object
+            required: [id, name, kind, in_scope, covered, thin, missing, worked]
+            properties:
+              id: { type: integer, format: int64 }
+              name: { type: string }
+              kind: { $ref: '#/components/schemas/TopicKind' }
+              in_scope: { type: integer }
+              covered: { type: integer }
+              thin: { type: integer }
+              missing: { type: integer }
+              worked:
+                type: integer
+                description: |
+                  Held lessons that tagged the position itself — "we worked
+                  half guard". Fills no technique, and is not nothing either.
+        missing:
+          type: array
+          items:
+            $ref: '#/components/schemas/CoverageTopic'
+        taught:
+          type: array
+          description: Everything taught at least once, most recently taught first.
+          items:
+            allOf:
+              - $ref: '#/components/schemas/CoverageTopic'
+              - type: object
+                required: [lessons, last_taught_on, state]
+                properties:
+                  lessons: { type: integer }
+                  last_taught_on: { type: string, format: date }
+                  state:
+                    type: string
+                    enum: [covered, thin, missing]
+        timeline:
+          type: array
+          description: |
+            Cumulative covered techniques, one point per week from the season
+            start up to today — a topic joins on the day of its **second**
+            lesson, the same rule the headline uses.
+          items:
+            type: object
+            required: [on, covered]
+            properties:
+              on: { type: string, format: date }
+              covered: { type: integer }
+
+    CoverageTopic:
+      type: object
+      required: [id, name, parent_name, kind]
+      properties:
+        id: { type: integer, format: int64 }
+        name: { type: string, example: Omoplata }
+        parent_name:
+          type: string
+          nullable: true
+          example: Closed guard
+        kind: { $ref: '#/components/schemas/TopicKind' }
 
     TopicKind:
       type: string

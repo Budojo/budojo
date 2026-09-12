@@ -28,6 +28,7 @@ import {
 } from '../../../core/services/academy-class.service';
 import { AcademyService } from '../../../core/services/academy.service';
 import { LanguageService } from '../../../core/services/language.service';
+import { LessonSheetComponent } from '../../lessons/lesson-sheet/lesson-sheet.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { TrainingDaysPickerComponent } from '../../../shared/components/training-days-picker/training-days-picker.component';
@@ -91,6 +92,7 @@ interface KindOption {
     EmptyStateComponent,
     PageHeaderComponent,
     TrainingDaysPickerComponent,
+    LessonSheetComponent,
   ],
   providers: [ConfirmationService, MessageService],
   templateUrl: './timetable.component.html',
@@ -231,6 +233,44 @@ export class TimetableComponent {
     this.form.controls.name.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.nameError.set(false));
+  }
+
+  // ── Planning what the next one covers (#1564) ─────────────────────────────
+
+  /** The class whose next occurrence is being planned, or null. */
+  protected readonly planning = signal<AcademyClass | null>(null);
+  protected readonly planSheetOpen = signal<boolean>(false);
+
+  /**
+   * The next date this class comes round, today included.
+   *
+   * The timetable is a recurring week and carries no dates, so planning has
+   * to pick one — and the one the owner means by "plan Monday's lesson" is
+   * the next Monday there is. Further out than that is a date picker nobody
+   * asked for; the check-in covers everything up to today.
+   */
+  protected nextOccurrenceIso(c: AcademyClass): string {
+    const today = new Date();
+    const ahead = (c.weekday - today.getDay() + 7) % 7;
+    const date = new Date(today.getFullYear(), today.getMonth(), today.getDate() + ahead);
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${date.getFullYear()}-${month}-${day}`;
+  }
+
+  /** The same date, named in the reader's language for the sheet's header. */
+  protected nextOccurrenceLabel(c: AcademyClass): string {
+    const [y, m, d] = this.nextOccurrenceIso(c).split('-').map(Number);
+    return new Intl.DateTimeFormat(localeFor(this.languageService.currentLang()), {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+    }).format(new Date(y, m - 1, d));
+  }
+
+  protected startPlanning(c: AcademyClass): void {
+    this.planning.set(c);
+    this.planSheetOpen.set(true);
   }
 
   /** Open the form empty — or with the day already chosen, from a day's "+". */
