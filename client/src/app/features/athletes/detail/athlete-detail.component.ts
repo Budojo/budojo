@@ -136,7 +136,22 @@ export class AthleteDetailComponent implements OnInit {
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe((e) => this.activeTab.set(this.tabFromUrl(e.urlAfterRedirects)));
-    this.activeTab.set(this.tabFromUrl(this.router.url));
+
+    // The child route, not `router.url`. On a cold load the component is built
+    // while the initial navigation is still resolving, so `router.url` is
+    // still the previous one — `/` — and the first render puts the tab strip
+    // on the Documents fallback. The NavigationEnd above then corrects the
+    // signal, but PrimeNG has already measured and placed its underline, and
+    // it does not come back for it (#1600). The activated-route tree is built
+    // before components activate, so this is right the first time.
+    this.activeTab.set(this.tabFromChildRoute());
+  }
+
+  /** The tab segment the router has already resolved for this page. */
+  private tabFromChildRoute(): string {
+    const path = this.route.firstChild?.snapshot.url[0]?.path;
+
+    return path !== undefined && path !== '' ? this.tabFromUrl(`/${path}`) : 'documents';
   }
 
   /**
