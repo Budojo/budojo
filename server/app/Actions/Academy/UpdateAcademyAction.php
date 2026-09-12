@@ -6,14 +6,13 @@ namespace App\Actions\Academy;
 
 use App\Actions\Address\SyncAddressAction;
 use App\Models\Academy;
-use Illuminate\Database\QueryException;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class UpdateAcademyAction
 {
     public function __construct(
         private readonly SyncAddressAction $syncAddress,
+        private readonly RecordTrainingDaysAction $recordTrainingDays,
     ) {
     }
 
@@ -27,6 +26,11 @@ class UpdateAcademyAction
      *   - `address` key absent from `$validated` → no change
      *   - `address` is `null` → delete the existing address row
      *   - `address` is an array → upsert (create or replace)
+     *
+     * Training days (#1094, #1575) are handled separately too: a change is
+     * "the schedule starting today", which leaves a history row as well as
+     * the column, and the timetable writes them through the same Action —
+     * see `RecordTrainingDaysAction`.
      *
      * `update()` hydrates the academy's scalar attributes in-memory before
      * persisting, so those are in sync with the DB on return. The address
@@ -44,20 +48,11 @@ class UpdateAcademyAction
             $addressPayload = $validated['address'] ?? null;
             unset($validated['address']);
 
-            // Schedule history (#1094). Touching `training_days` via the
-            // canonical PATCH is treated as "this is the schedule starting
-            // today" — insert a new row instead of (or in addition to)
-            // mutating the denormalised cache column on `academies`. The
-            // current-day row is upserted by (academy_id, effective_from)
-            // so a same-day double-PATCH replaces the row instead of
-            // hitting the UNIQUE constraint. PR 2 will add a dedicated
-            // schedule-change endpoint that allows a future
-            // `effective_from`; for now PATCH always lands on today.
-            $trainingDaysKeyPresent = \array_key_exists('training_days', $validated);
-            if ($trainingDaysKeyPresent) {
+            if (\array_key_exists('training_days', $validated)) {
                 /** @var list<int>|null $trainingDays */
                 $trainingDays = $validated['training_days'];
-                $this->upsertTodaySchedule($academy, $trainingDays);
+                $this->recordTrainingDays->execute($academy, $trainingDays);
+                unset($validated['training_days']);
             }
 
             if ($validated !== []) {
@@ -72,35 +67,5 @@ class UpdateAcademyAction
 
             return $academy;
         });
-    }
-
-    /**
-     * Race-safe upsert of the today-row in `academy_schedules`. The
-     * read-then-write shape of `updateOrCreate` against the
-     * `UNIQUE(academy_id, effective_from)` constraint isn't serialised
-     * by the enclosing transaction — two concurrent PATCHes from the
-     * same user (double-tap on Save, SPA retry after a 502) can both
-     * SELECT-miss, both INSERT, and one explodes with a
-     * UniqueConstraintViolation. Try the insert, fall through to an
-     * UPDATE on the duplicate-key path — second write wins,
-     * idempotently. Same shape as the gotchas-flagged `addresses`
-     * upsert.
-     *
-     * @param  list<int>|null  $trainingDays
-     */
-    private function upsertTodaySchedule(Academy $academy, ?array $trainingDays): void
-    {
-        $today = Carbon::today()->toDateString();
-
-        try {
-            $academy->schedules()->create([
-                'training_days' => $trainingDays,
-                'effective_from' => $today,
-            ]);
-        } catch (QueryException) {
-            $academy->schedules()
-                ->where('effective_from', $today)
-                ->update(['training_days' => $trainingDays]);
-        }
     }
 }

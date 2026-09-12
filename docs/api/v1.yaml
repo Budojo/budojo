@@ -2680,6 +2680,12 @@ paths:
         design — renames keep the original permalink stable. A user without
         an academy gets a 403 `{"message":"Forbidden."}` (same wire contract
         the rest of the API uses for ownership failures), not a 404.
+
+        `training_days` is **refused with a 422** while the academy's
+        timetable has at least one class (#1575): the days are then derived
+        from the classes — the weekdays with at least one — and recomputed on
+        every class change, so a hand-set value would not stick. With no
+        classes the field behaves as before.
       operationId: academyUpdate
       requestBody:
         required: true

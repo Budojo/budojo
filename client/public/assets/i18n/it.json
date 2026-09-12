@@ -1474,7 +1474,9 @@
       },
       "trainingDays": {
         "label": "Giorni di allenamento",
-        "hint": "Seleziona i giorni della settimana in cui si tiene lezione. Deseleziona tutti i giorni per cancellare la programmazione."
+        "hint": "Seleziona i giorni della settimana in cui si tiene lezione. Deseleziona tutti i giorni per cancellare la programmazione.",
+        "fromTimetable": "Impostati dall'orario: i giorni con almeno una lezione.",
+        "openTimetable": "Apri l'orario"
       },
       "actions": {
         "cancel": "Annulla",

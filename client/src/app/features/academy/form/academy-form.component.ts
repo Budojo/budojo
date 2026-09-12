@@ -15,7 +15,7 @@ import {
   ValidatorFn,
   Validators,
 } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { InputNumberModule } from 'primeng/inputnumber';
@@ -132,6 +132,7 @@ const COUNTRY_CODE_OPTIONS: SelectOption<string>[] = [
   selector: 'app-academy-form',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    RouterLink,
     ReactiveFormsModule,
     ButtonModule,
     InputNumberModule,
@@ -164,6 +165,16 @@ export class AcademyFormComponent implements OnInit {
   readonly error = signal<string | null>(null);
 
   readonly slug = signal<string>('');
+
+  /**
+   * Whether the timetable sets the training days (#1575). While it has at
+   * least one class the pills are not shown and `training_days` is not sent:
+   * the server would refuse it, and the next class change would overwrite it
+   * anyway. The count rides on the academy resource, so no extra request.
+   */
+  protected readonly daysFromTimetable = computed<boolean>(
+    () => (this.academyService.academy()?.classes_count ?? 0) > 0,
+  );
 
   /**
    * BCP-47 locale tag derived from the active SPA language. Bound to
@@ -555,7 +566,11 @@ export class AcademyFormComponent implements OnInit {
       // the carnet offering off server-side.
       carnet_price_cents: v.carnet_price == null ? null : Math.round(v.carnet_price * 100),
       carnet_entries: v.carnet_entries ?? null,
-      training_days: v.training_days.length === 0 ? null : v.training_days,
+      // Not sent while the timetable sets them (#1575): the server refuses
+      // a hand-set value in that state, and the form has no control for it.
+      ...(this.daysFromTimetable()
+        ? {}
+        : { training_days: v.training_days.length === 0 ? null : v.training_days }),
       season_start_month: v.season_start_month ?? null,
     };
   }

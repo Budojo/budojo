@@ -31,7 +31,7 @@ Existing `academies.training_days` stays alive as a **denormalised cache** of th
 
 ## Business rules
 
-- **Insert-not-update on the write side.** Every `PATCH /api/v1/academy` that touches `training_days` inserts a row with `effective_from = today` (or replaces the same-day row idempotently). Past rows are immutable.
+- **Insert-not-update on the write side.** Every `PATCH /api/v1/academy` that touches `training_days` inserts a row with `effective_from = today` (or replaces the same-day row idempotently). Past rows are immutable. Since #1575 the timetable writes here too — a class saved or deleted that changes the set of training days lands the same today-row, through the shared `RecordTrainingDaysAction`.
 - **Read via `Academy::scheduleForDate(Carbon $date)`.** Never query this table directly outside resource shaping — the helper is the canonical "schedule effective on date X" lookup.
 - **`Academy::currentSchedule()`** is sugar for `scheduleForDate(Carbon::today())`.
 - **`Academy::nextSchedule()`** returns the soonest row with `effective_from > today`, or `null` when none is pending. By PR 2 application invariant, at most one such row exists per academy at any time (single-pending-change model — see `docs/specs/training-schedule-history.md`).
