@@ -60,6 +60,32 @@ export function localised(value: Localised, lang: string): string {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.61.1',
+    date: '2026-09-12',
+    headline: {
+      en: 'The right tab, underlined.',
+      it: 'La linguetta giusta, sottolineata.',
+    },
+    sections: [
+      {
+        heading: {
+          en: '🐛 Fixes',
+          it: '🐛 Correzioni',
+        },
+        bullets: [
+          {
+            en: 'Opening an athlete tab straight from a link now underlines that tab, instead of leaving the mark under Documents.',
+            it: 'Aprendo una scheda dell’atleta direttamente da un link, adesso è quella scheda a essere sottolineata, invece di lasciare il segno su Documenti.',
+          },
+          {
+            en: 'Only a direct link or a refresh was affected; clicking a tab was always right.',
+            it: 'Riguardava solo i link diretti e i refresh: cliccando una scheda è sempre stato corretto.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.61.0',
     date: '2026-09-12',
     headline: {

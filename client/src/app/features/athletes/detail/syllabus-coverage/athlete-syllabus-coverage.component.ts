@@ -15,6 +15,7 @@ import { AthleteSyllabusCoverage, StatsService } from '../../../../core/services
 import { LanguageService } from '../../../../core/services/language.service';
 import { EmptyStateComponent } from '../../../../shared/components/empty-state/empty-state.component';
 import { ErrorStateComponent } from '../../../../shared/components/error-state/error-state.component';
+import { relativeDay } from '../../../../shared/utils/relative-day';
 import { localeFor } from '../../../../shared/utils/locale';
 
 /**
@@ -115,6 +116,11 @@ export class AthleteSyllabusCoverageComponent {
     return t !== undefined && t.taught_by_academy + t.not_taught_yet > 0;
   });
 
+  /** The empty state's way out: write a programme before measuring against it. */
+  protected goToProgramme(): void {
+    void this.router.navigate(['/dashboard/academy/syllabus']);
+  }
+
   /** Segment widths as a share of what the academy taught. */
   protected segment(value: number): string {
     const total = this.report()?.totals.taught_by_academy ?? 0;
@@ -123,6 +129,7 @@ export class AthleteSyllabusCoverageComponent {
 
   /** "12 Mar" — a day, in the reader's locale. */
   protected shortDate(iso: string): string {
+    if (iso === '') return '';
     const [y, m, d] = iso.split('-').map(Number);
     return new Intl.DateTimeFormat(localeFor(this.languageService.currentLang()), {
       day: 'numeric',
@@ -131,33 +138,14 @@ export class AthleteSyllabusCoverageComponent {
   }
 
   /**
-   * "3 weeks ago" — the answer to "when did they last see this?", which is a
-   * question about distance rather than about a date.
+   * "3 weeks ago" — the shared helper (#1602), so the wording and its
+   * pluralisation live in one place rather than drifting between the two
+   * coverage screens.
    */
   protected ago(iso: string): string {
     this.languageService.currentLang(); // signal dep — recompute on toggle
-    const [y, m, d] = iso.split('-').map(Number);
-    const then = new Date(y, m - 1, d).getTime();
-    const now = new Date();
-    const days = Math.max(
-      0,
-      Math.round(
-        (new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() - then) / 86_400_000,
-      ),
-    );
 
-    if (days === 0) return this.translate.instant('athletes.coverage.ago.today');
-    if (days === 1) return this.translate.instant('athletes.coverage.ago.yesterday');
-    if (days < 7) return this.translate.instant('athletes.coverage.ago.days', { count: days });
-    const weeks = Math.floor(days / 7);
-    return weeks === 1
-      ? this.translate.instant('athletes.coverage.ago.weekOne')
-      : this.translate.instant('athletes.coverage.ago.weeks', { count: weeks });
-  }
-
-  /** The empty state's way out: write a programme before measuring against it. */
-  protected goToProgramme(): void {
-    void this.router.navigate(['/dashboard/academy/syllabus']);
+    return relativeDay(iso, this.translate);
   }
 
   protected retry(): void {
