@@ -1,0 +1,299 @@
+<p-dialog
+  [visible]="visible()"
+  (visibleChange)="visible.set($event)"
+  [modal]="true"
+  [draggable]="false"
+  [breakpoints]="{ '768px': '96vw' }"
+  [style]="{ width: '36rem' }"
+  styleClass="lesson-sheet-dialog"
+  data-cy="lesson-sheet"
+>
+  <ng-template pTemplate="header">
+    <div class="sheet-head">
+      <span class="sheet-head__title">{{
+        className() || ('lessons.sheet.title' | translate)
+      }}</span>
+      <span class="sheet-head__meta">
+        <span>{{ dateLabel() }}</span>
+        @if (heldLabel(); as key) {
+          <!--
+            Planned or held, said plainly. A plan is never counted as taught
+            (#1565 reads the check-in, not this list), and the one place that
+            can explain it is the place the list is edited.
+          -->
+          <span class="sheet-head__state" [attr.data-cy]="'lesson-sheet-state'">
+            {{ key | translate }}
+          </span>
+        }
+      </span>
+    </div>
+  </ng-template>
+
+  @if (loading()) {
+    <div class="sheet__loading" aria-hidden="true" data-cy="lesson-sheet-loading">
+      @for (i of [1, 2, 3, 4]; track i) {
+        <p-skeleton height="2.5rem" borderRadius="0.5rem" />
+      }
+    </div>
+  } @else {
+    <div class="sheet">
+      <!--
+        Search first, because three hundred names is not a list anybody reads
+        (Hick's law). It filters across both levels at once: "guard" finds the
+        position and everything under it, "armbar" finds it wherever it lives.
+      -->
+      <div class="sheet__search">
+        <i class="pi pi-search" aria-hidden="true"></i>
+        <input
+          pInputText
+          type="search"
+          [ngModel]="query()"
+          (ngModelChange)="query.set($event)"
+          [placeholder]="'lessons.sheet.searchPlaceholder' | translate"
+          [attr.aria-label]="'lessons.sheet.searchAria' | translate"
+          data-cy="lesson-sheet-search"
+        />
+        @if (searching()) {
+          <button
+            type="button"
+            class="sheet__search-clear"
+            [attr.aria-label]="'lessons.sheet.clearSearch' | translate"
+            (click)="clearQuery()"
+            data-cy="lesson-sheet-search-clear"
+          >
+            <i class="pi pi-times" aria-hidden="true"></i>
+          </button>
+        }
+      </div>
+
+      @if (searching()) {
+        <ul class="topics" data-cy="lesson-sheet-results">
+          @for (topic of results(); track topic.id) {
+            <li>
+              <button
+                type="button"
+                class="topic"
+                [class.topic--on]="isChosen(topic.id)"
+                [attr.aria-pressed]="isChosen(topic.id)"
+                (click)="toggle(topic.id)"
+                [attr.data-cy]="'lesson-topic-' + topic.id"
+              >
+                <i
+                  class="topic__tick pi"
+                  [class.pi-check-circle]="isChosen(topic.id)"
+                  [class.pi-circle]="!isChosen(topic.id)"
+                  aria-hidden="true"
+                ></i>
+                <span class="topic__name">{{ topic.name }}</span>
+                @if (topic.parentName) {
+                  <span class="topic__parent">{{ topic.parentName }}</span>
+                }
+              </button>
+            </li>
+          } @empty {
+            <li class="topics__none" data-cy="lesson-sheet-no-results">
+              {{ 'lessons.sheet.noResults' | translate: { query: query() } }}
+            </li>
+          }
+        </ul>
+      } @else {
+        @if (chosen().length > 0 || departed().length > 0) {
+          <section class="group" data-cy="lesson-sheet-chosen">
+            <h3 class="group__title">{{ 'lessons.sheet.chosen' | translate }}</h3>
+            <div class="chips">
+              @for (topic of chosen(); track topic.id) {
+                <button
+                  type="button"
+                  class="chip chip--on"
+                  (click)="toggle(topic.id)"
+                  [attr.aria-label]="'lessons.sheet.removeAria' | translate: { name: topic.name }"
+                  [attr.data-cy]="'lesson-chip-' + topic.id"
+                >
+                  <span>{{ topic.name }}</span>
+                  @if (topic.parentName) {
+                    <span class="chip__parent">{{ topic.parentName }}</span>
+                  }
+                  <i class="pi pi-times" aria-hidden="true"></i>
+                </button>
+              }
+              <!--
+                Locked: it left the programme, so it is never offered again —
+                but the lesson keeps naming it, and the server carries the
+                link through every edit. Tidying the syllabus must not rewrite
+                what March was about.
+              -->
+              @for (topic of departed(); track topic.id) {
+                <span
+                  class="chip chip--gone"
+                  [attr.title]="'lessons.sheet.departedTooltip' | translate"
+                  [attr.data-cy]="'lesson-chip-gone-' + topic.id"
+                >
+                  <span>{{ topic.name }}</span>
+                  @if (topic.parent_name) {
+                    <span class="chip__parent">{{ topic.parent_name }}</span>
+                  }
+                </span>
+              }
+            </div>
+          </section>
+        }
+
+        @if (recentOffered().length > 0) {
+          <!--
+            Teaching runs in blocks, so what the academy taught last week is
+            very often what it is teaching tonight. This group is why the tree
+            below usually stays shut.
+          -->
+          <section class="group" data-cy="lesson-sheet-recent">
+            <h3 class="group__title">{{ 'lessons.sheet.recent' | translate }}</h3>
+            <ul class="topics">
+              @for (topic of recentOffered(); track topic.id) {
+                <li>
+                  <button
+                    type="button"
+                    class="topic"
+                    [attr.aria-pressed]="false"
+                    (click)="toggle(topic.id)"
+                    [attr.data-cy]="'lesson-recent-' + topic.id"
+                  >
+                    <i class="topic__tick pi pi-circle" aria-hidden="true"></i>
+                    <span class="topic__name">{{ topic.name }}</span>
+                    @if (topic.parent_name) {
+                      <span class="topic__parent">{{ topic.parent_name }}</span>
+                    }
+                  </button>
+                </li>
+              }
+            </ul>
+          </section>
+        }
+
+        <section class="group" data-cy="lesson-sheet-tree">
+          <h3 class="group__title">{{ 'lessons.sheet.programme' | translate }}</h3>
+          @if (positions().length === 0) {
+            <p class="group__empty" data-cy="lesson-sheet-no-programme">
+              {{ 'lessons.sheet.noProgramme' | translate }}
+            </p>
+          }
+          <ul class="tree">
+            @for (position of positions(); track position.id) {
+              <li class="tree__position">
+                <div class="tree__head">
+                  <button
+                    type="button"
+                    class="tree__toggle"
+                    (click)="toggleExpanded(position)"
+                    [attr.aria-expanded]="isExpanded(position)"
+                    [attr.aria-controls]="'lesson-children-' + position.id"
+                    [attr.data-cy]="'lesson-expand-' + position.id"
+                  >
+                    <i
+                      class="tree__chevron pi pi-chevron-right"
+                      [class.tree__chevron--open]="isExpanded(position)"
+                      aria-hidden="true"
+                    ></i>
+                    <span>{{ position.name }}</span>
+                    <span class="tree__count">{{ position.children?.length ?? 0 }}</span>
+                  </button>
+                  <!--
+                    Tagging the position is a real answer, not a shortcut to
+                    its children: "we worked half guard" is what an instructor
+                    actually says, and the coverage view would rather hear it
+                    than a guess at four techniques.
+                  -->
+                  <button
+                    type="button"
+                    class="topic topic--inline"
+                    [class.topic--on]="isChosen(position.id)"
+                    [attr.aria-pressed]="isChosen(position.id)"
+                    (click)="toggle(position.id)"
+                    [attr.aria-label]="'lessons.sheet.tagAria' | translate: { name: position.name }"
+                    [attr.data-cy]="'lesson-topic-' + position.id"
+                  >
+                    <i
+                      class="topic__tick pi"
+                      [class.pi-check-circle]="isChosen(position.id)"
+                      [class.pi-circle]="!isChosen(position.id)"
+                      aria-hidden="true"
+                    ></i>
+                  </button>
+                </div>
+
+                @if (isExpanded(position)) {
+                  <ul class="topics topics--nested" [id]="'lesson-children-' + position.id">
+                    @for (child of position.children; track child.id) {
+                      <li>
+                        <button
+                          type="button"
+                          class="topic"
+                          [class.topic--on]="isChosen(child.id)"
+                          [attr.aria-pressed]="isChosen(child.id)"
+                          (click)="toggle(child.id)"
+                          [attr.data-cy]="'lesson-topic-' + child.id"
+                        >
+                          <i
+                            class="topic__tick pi"
+                            [class.pi-check-circle]="isChosen(child.id)"
+                            [class.pi-circle]="!isChosen(child.id)"
+                            aria-hidden="true"
+                          ></i>
+                          <span class="topic__name">{{ child.name }}</span>
+                        </button>
+                      </li>
+                    } @empty {
+                      <li class="topics__none">{{ 'lessons.sheet.noTechniques' | translate }}</li>
+                    }
+                  </ul>
+                }
+              </li>
+            }
+          </ul>
+        </section>
+
+        <!--
+          Notes are for "Marco's first day back", never for data entry — they
+          are never parsed into topics, which is why they sit apart from the
+          picker rather than under it as a free-text fallback.
+        -->
+        <section class="group">
+          <label class="group__title" for="lesson-notes">
+            {{ 'lessons.sheet.notes' | translate }}
+          </label>
+          <textarea
+            pTextarea
+            id="lesson-notes"
+            rows="2"
+            maxlength="2000"
+            [ngModel]="notes()"
+            (ngModelChange)="notes.set($event)"
+            [placeholder]="'lessons.sheet.notesPlaceholder' | translate"
+            data-cy="lesson-sheet-notes"
+          ></textarea>
+        </section>
+      }
+    </div>
+  }
+
+  <ng-template pTemplate="footer">
+    <div class="sheet__footer">
+      <p-button
+        type="button"
+        [label]="'lessons.sheet.cancel' | translate"
+        severity="secondary"
+        [text]="true"
+        [fluid]="true"
+        (onClick)="close()"
+        data-cy="lesson-sheet-cancel"
+      />
+      <p-button
+        type="button"
+        [label]="'lessons.sheet.save' | translate"
+        [loading]="saving()"
+        [disabled]="loading()"
+        [fluid]="true"
+        (onClick)="save()"
+        data-cy="lesson-sheet-save"
+      />
+    </div>
+  </ng-template>
+</p-dialog>

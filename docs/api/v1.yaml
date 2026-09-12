@@ -59,6 +59,17 @@ tags:
       response component); the SPA catches this in its auth interceptor and
       redirects the user to `/dashboard/profile?reason=verify_required`.
       Reads (`GET`) stay open so the user can browse while unverified.
+  - name: attendance
+    description: |
+      Who was on the mat, and what was taught. Presences are recorded per day
+      and, once the academy keeps a timetable (#1562), into that day's lesson
+      for a class. Since #1564 the same lesson also carries the syllabus
+      topics it covered — ahead of time as a plan, after the fact as a
+      record, and the same list either way.
+
+      Reads are gated on `attendance_read`, writes on `attendance_record`:
+      writing down what was taught is the same act of witness as writing down
+      who was there.
   - name: documents
     description: |
       Files (ID, medical cert, insurance) attached to an athlete, with expiry tracking.
@@ -3303,6 +3314,190 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+
+  /lessons:
+    get:
+      tags: [attendance]
+      summary: What a lesson covers (#1564)
+      description: |
+        The lesson in one slot — a class, and a day — with its topics and its
+        note, or `null` when nobody has touched it. **Reading never creates
+        one**: an empty slot is not a claim that anything happened in it.
+
+        A lesson is addressed by its slot rather than by an id because when
+        the owner is planning it, the row does not exist yet.
+
+        Requires `attendance_read`.
+      operationId: lessonShow
+      parameters:
+        - in: query
+          name: academy_class_id
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - in: query
+          name: held_on
+          required: true
+          description: '`YYYY-MM-DD`. A date ahead of today is a plan.'
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: The lesson, or null
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    nullable: true
+                    allOf:
+                      - $ref: '#/components/schemas/Lesson'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /lessons/topics:
+    put:
+      tags: [attendance]
+      summary: Say what a lesson covers (#1564)
+      description: |
+        Sets the whole list, so sending it twice is a no-op. The lesson is
+        **materialised here** when it does not exist, which is how planning
+        works at all: a lesson with topics and no attendance is planned, not
+        held, and the coverage view never counts it.
+
+        An empty `topic_ids` is how the last topic comes off. A topic that has
+        left the programme cannot be newly attached (422), but one already
+        attached survives every sync — tidying the syllabus must not rewrite
+        what a past lesson was about.
+
+        Requires `attendance_record`, not `academy_settings_update`: writing
+        down what was taught is the same act of witness as writing down who
+        was there.
+      operationId: lessonSetTopics
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [academy_class_id, held_on, topic_ids]
+              properties:
+                academy_class_id:
+                  type: integer
+                  format: int64
+                held_on:
+                  type: string
+                  format: date
+                topic_ids:
+                  type: array
+                  maxItems: 50
+                  description: This academy's living syllabus topics; positions and techniques alike.
+                  items:
+                    type: integer
+                    format: int64
+      responses:
+        '200':
+          description: The lesson, with the list it now carries
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Lesson'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /lessons/notes:
+    put:
+      tags: [attendance]
+      summary: The lesson's free-text note (#1564)
+      description: |
+        "Marco's first day back", not data entry — the note is never parsed
+        into topics. Materialises the lesson like the topics write does; an
+        empty or whitespace-only note is stored as `null`.
+
+        Requires `attendance_record`.
+      operationId: lessonSetNotes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [academy_class_id, held_on, notes]
+              properties:
+                academy_class_id:
+                  type: integer
+                  format: int64
+                held_on:
+                  type: string
+                  format: date
+                notes:
+                  type: string
+                  maxLength: 2000
+                  nullable: true
+      responses:
+        '200':
+          description: The lesson, with its note
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Lesson'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /lessons/recent-topics:
+    get:
+      tags: [attendance]
+      summary: What the academy taught lately (#1564)
+      description: |
+        The topics this academy's lessons carried most recently, newest first,
+        capped at twelve and named once however many lessons used them — the
+        topic picker's second group, and the one that does most of the work:
+        teaching runs in blocks, so last Monday's topic is very often
+        tonight's. Living topics only.
+
+        Requires `attendance_read`.
+      operationId: lessonRecentTopics
+      responses:
+        '200':
+          description: Recently taught topics
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LessonTopic'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 
   /search:
     get:
@@ -7470,6 +7665,85 @@ components:
           example: 60
         kind:
           $ref: '#/components/schemas/ClassKind'
+
+    LessonTopic:
+      type: object
+      description: |
+        A syllabus topic as a lesson names it (#1564).
+      required: [id, name, kind, parent_id, parent_name, deleted]
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+          example: Armbar
+        kind:
+          $ref: '#/components/schemas/TopicKind'
+        parent_id:
+          type: integer
+          format: int64
+          nullable: true
+        parent_name:
+          type: string
+          nullable: true
+          description: |
+            The position this technique sits under. It rides along because
+            "Armbar" on its own is ambiguous by design — an armbar from mount
+            and one from closed guard are different lessons. Null on a
+            position, and null when the parent was not loaded.
+          example: Closed guard
+        deleted:
+          type: boolean
+          description: |
+            The topic has since left the programme. The lesson still names it
+            and the server keeps the link through every edit, but it is never
+            offered in the picker again.
+
+    Lesson:
+      type: object
+      description: |
+        One occurrence of a class on one date (#1562), with what it covered
+        (#1564).
+      required: [id, academy_class_id, held_on, name, starts_at, kind, notes, held, topics]
+      properties:
+        id:
+          type: integer
+          format: int64
+        academy_class_id:
+          type: integer
+          format: int64
+          nullable: true
+          description: Null once the class was removed from the timetable; the snapshot keeps the name.
+        held_on:
+          type: string
+          format: date
+        name:
+          type: string
+          description: The class's name as it was that day — a snapshot, never re-read.
+          example: Fundamentals
+        starts_at:
+          type: string
+          nullable: true
+          example: '19:00'
+        kind:
+          $ref: '#/components/schemas/ClassKind'
+        notes:
+          type: string
+          nullable: true
+          description: Free text. Never parsed into topics.
+        held:
+          type: boolean
+          description: |
+            Derived, never stored: true when at least one attendance record
+            points at this lesson. A lesson with topics and no attendance is
+            **planned**, and the coverage view (#1565) does not count it. The
+            check-in is the confirmation, so there is no step to remember and
+            no flag to go stale.
+        topics:
+          type: array
+          items:
+            $ref: '#/components/schemas/LessonTopic'
 
     TopicKind:
       type: string

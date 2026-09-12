@@ -1556,6 +1556,7 @@
       "restDay": "No class",
       "today": "Today",
       "editAria": "Edit {{name}}",
+      "planAria": "Plan what {{name}} covers on {{date}}",
       "untimed": "No fixed time",
       "empty": {
         "title": "No classes yet",
@@ -1735,7 +1736,12 @@
       },
       "monthlySummary": "Monthly summary",
       "presentCountOne": "{{count}} present",
-      "presentCountOther": "{{count}} present"
+      "presentCountOther": "{{count}} present",
+      "topics": {
+        "empty": "Nothing tagged yet",
+        "add": "Add topics",
+        "edit": "Edit"
+      }
     },
     "summary": {
       "eyebrow": "Attendance summary",
@@ -1760,6 +1766,35 @@
         "daysInitial": "Click to sort by days attended (most first)",
         "daysDesc": "Sorted by days attended (most first). Click to flip.",
         "daysAsc": "Sorted by days attended (fewest first). Click to flip."
+      }
+    }
+  },
+  "lessons": {
+    "sheet": {
+      "title": "Lesson",
+      "planned": "Planned",
+      "held": "Held",
+      "searchPlaceholder": "Search the programme",
+      "searchAria": "Search the programme",
+      "clearSearch": "Clear the search",
+      "noResults": "Nothing in the programme matches \"{{query}}\".",
+      "chosen": "Covered",
+      "recent": "Taught lately",
+      "programme": "The programme",
+      "noProgramme": "No programme yet — set one up under Academy → Programme.",
+      "noTechniques": "Nothing under this position.",
+      "removeAria": "Remove {{name}}",
+      "tagAria": "Tag {{name}}",
+      "departedTooltip": "No longer in the programme. It stays on this lesson.",
+      "notes": "Notes",
+      "notesPlaceholder": "Marco's first day back",
+      "cancel": "Cancel",
+      "save": "Save",
+      "toast": {
+        "saved": "Lesson saved",
+        "errorSummary": "Something went wrong",
+        "errorDetail": "The change was not saved. Try again.",
+        "loadErrorDetail": "The lesson could not be loaded."
       }
     }
   },

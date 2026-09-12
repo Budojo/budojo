@@ -111,6 +111,33 @@
   }
 
   <!--
+    What this lesson covered (#1564). One line under the class, collapsed to
+    a summary: this page exists to tick names, and the picker is one tap away
+    rather than in the way. Nothing to show without a class — there is no
+    lesson to hang topics off.
+  -->
+  @if (selectedClassId() !== null) {
+    <button
+      type="button"
+      class="attendance__topics"
+      [class.attendance__topics--empty]="!topicSummary()"
+      (click)="openLessonSheet()"
+      data-cy="attendance-topics"
+    >
+      <i class="pi pi-book" aria-hidden="true"></i>
+      <span class="attendance__topics-text">
+        {{ topicSummary() ?? ('attendance.daily.topics.empty' | translate) }}
+      </span>
+      <span class="attendance__topics-action">
+        {{
+          (topicSummary() ? 'attendance.daily.topics.edit' : 'attendance.daily.topics.add')
+            | translate
+        }}
+      </span>
+    </button>
+  }
+
+  <!--
     Search + belt filter strip — same shape as athletes-list (#184).
     Filters are forwarded to the same paginated athletes endpoint that
     feeds the page, so server-side filtering applies. Status is fixed
@@ -371,3 +398,18 @@
     </p>
   }
 </section>
+
+<!--
+  The lesson sheet (#1564). Rendered only with a class in hand: its inputs
+  are required, and there is no lesson without one.
+-->
+@if (selectedClassId(); as classId) {
+  <app-lesson-sheet
+    [(visible)]="lessonSheetOpen"
+    [academyClassId]="classId"
+    [heldOn]="selectedDateIso()"
+    [className]="selectedClassName()"
+    [dateLabel]="selectedDateLabel()"
+    (saved)="onLessonSaved($event)"
+  />
+}

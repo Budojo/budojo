@@ -48,10 +48,19 @@ class SyllabusTopic extends Model
         return $this->belongsTo(Academy::class);
     }
 
-    /** @return BelongsTo<SyllabusTopic, $this> */
+    /**
+     * The position a technique sits under.
+     *
+     * `withTrashed()` for the same reason {@see Lesson::topics()} carries it:
+     * a technique whose position has been taken out of the programme must
+     * still be able to say which position that was, or the lessons naming it
+     * lose half their meaning the moment the owner tidies up.
+     *
+     * @return BelongsTo<SyllabusTopic, $this>
+     */
     public function parent(): BelongsTo
     {
-        return $this->belongsTo(self::class, 'parent_id');
+        return $this->belongsTo(self::class, 'parent_id')->withTrashed();
     }
 
     /**

@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
@@ -57,6 +58,25 @@ class Lesson extends Model
     public function attendanceRecords(): HasMany
     {
         return $this->hasMany(AttendanceRecord::class);
+    }
+
+    /**
+     * What this lesson covered (#1564) — the plan before it is held, the
+     * record after, and the same list either way.
+     *
+     * `withTrashed()` on purpose: a topic taken out of the programme must
+     * still name itself on the lessons that taught it. The alternative —
+     * links that silently empty out — would rewrite the past every time the
+     * owner tidied the syllabus.
+     *
+     * @return BelongsToMany<SyllabusTopic, $this>
+     */
+    public function topics(): BelongsToMany
+    {
+        return $this->belongsToMany(SyllabusTopic::class, 'lesson_topic')
+            ->withTrashed()
+            ->orderBy('syllabus_topics.sort_order')
+            ->orderBy('syllabus_topics.name');
     }
 
     /**

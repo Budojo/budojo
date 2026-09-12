@@ -1556,6 +1556,7 @@
       "restDay": "Nessuna lezione",
       "today": "Oggi",
       "editAria": "Modifica {{name}}",
+      "planAria": "Pianifica cosa copre {{name}} il {{date}}",
       "untimed": "Senza orario fisso",
       "empty": {
         "title": "Ancora nessuna lezione",
@@ -1735,7 +1736,12 @@
       },
       "monthlySummary": "Riepilogo del mese",
       "presentCountOne": "{{count}} presente",
-      "presentCountOther": "{{count}} presenti"
+      "presentCountOther": "{{count}} presenti",
+      "topics": {
+        "empty": "Ancora niente",
+        "add": "Aggiungi argomenti",
+        "edit": "Modifica"
+      }
     },
     "summary": {
       "eyebrow": "Riepilogo presenze",
@@ -1760,6 +1766,35 @@
         "daysInitial": "Clicca per ordinare per giorni di presenza (prima i più alti)",
         "daysDesc": "Ordinato per giorni di presenza (prima i più alti). Clicca per invertire.",
         "daysAsc": "Ordinato per giorni di presenza (prima i più bassi). Clicca per invertire."
+      }
+    }
+  },
+  "lessons": {
+    "sheet": {
+      "title": "Lezione",
+      "planned": "In programma",
+      "held": "Svolta",
+      "searchPlaceholder": "Cerca nel programma",
+      "searchAria": "Cerca nel programma",
+      "clearSearch": "Cancella la ricerca",
+      "noResults": "Niente nel programma corrisponde a «{{query}}».",
+      "chosen": "Fatto",
+      "recent": "Fatto di recente",
+      "programme": "Il programma",
+      "noProgramme": "Nessun programma — impostalo da Accademia → Programma.",
+      "noTechniques": "Niente sotto questa posizione.",
+      "removeAria": "Togli {{name}}",
+      "tagAria": "Segna {{name}}",
+      "departedTooltip": "Non è più nel programma. Resta su questa lezione.",
+      "notes": "Note",
+      "notesPlaceholder": "Il primo giorno di Marco dopo lo stop",
+      "cancel": "Annulla",
+      "save": "Salva",
+      "toast": {
+        "saved": "Lezione salvata",
+        "errorSummary": "Qualcosa è andato storto",
+        "errorDetail": "La modifica non è stata salvata. Riprova.",
+        "loadErrorDetail": "Impossibile caricare la lezione."
       }
     }
   },

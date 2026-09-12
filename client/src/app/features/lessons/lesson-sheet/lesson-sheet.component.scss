@@ -1,0 +1,346 @@
+// The lesson sheet (#1564). A tall, scrolling picker: on a phone it is most
+// of the screen, on a desk it is a dialog that does not grow past the fold.
+
+.sheet-head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+
+  &__title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--p-text-color);
+    overflow-wrap: anywhere;
+  }
+
+  &__meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+    color: var(--p-text-muted-color);
+  }
+
+  // Planned or held, as an eyebrow chip — the same monochrome shape the
+  // timetable and the programme use for a dimension of the row.
+  &__state {
+    padding: 0 0.5rem;
+    line-height: 1.5rem;
+    border-radius: 8px;
+    border: 1px solid var(--p-content-border-color);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+}
+
+.sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+
+  &__loading {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  &__search {
+    position: relative;
+    display: flex;
+    align-items: center;
+
+    // The glyphs sit inside the field; the input reserves room for both so
+    // neither ever overlaps the text.
+    > .pi-search {
+      position: absolute;
+      left: 0.75rem;
+      font-size: 0.875rem;
+      color: var(--p-text-muted-color);
+      pointer-events: none;
+    }
+
+    input {
+      width: 100%;
+      padding-left: 2.5rem;
+      padding-right: 2.5rem;
+    }
+  }
+
+  &__search-clear {
+    position: absolute;
+    right: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    appearance: none;
+    background: none;
+    border: 0;
+    border-radius: var(--budojo-radius-small, 0.5rem);
+    color: var(--p-text-muted-color);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--p-content-hover-background);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--p-primary-color);
+      outline-offset: -2px;
+    }
+  }
+
+  &__footer {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 0.5rem;
+    width: 100%;
+
+    @media (min-width: 768px) {
+      flex-direction: row;
+      justify-content: flex-end;
+      gap: 0.5rem;
+    }
+  }
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+
+  &__title {
+    margin: 0;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--p-text-muted-color);
+  }
+
+  &__empty {
+    margin: 0;
+    font-size: 0.8125rem;
+    color: var(--p-text-muted-color);
+  }
+
+  textarea {
+    width: 100%;
+    resize: vertical;
+  }
+}
+
+// ── Chosen, as chips ──────────────────────────────────────────────────────────
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--p-content-border-color);
+  background: var(--p-surface-0);
+  font: inherit;
+  font-size: 0.8125rem;
+  color: var(--p-text-color);
+
+  &__parent {
+    font-size: 0.6875rem;
+    color: var(--p-text-muted-color);
+  }
+
+  &--on {
+    cursor: pointer;
+    border-color: color-mix(in srgb, var(--p-primary-color) 40%, var(--p-content-border-color));
+    background: color-mix(in srgb, var(--p-primary-color) 10%, transparent);
+
+    &:hover {
+      background: color-mix(in srgb, var(--p-primary-color) 18%, transparent);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--p-primary-color);
+      outline-offset: 2px;
+    }
+  }
+
+  // Gone from the programme: still named, never editable. Dashed, because a
+  // border that says "this one is not like the others" costs no colour.
+  &--gone {
+    border-style: dashed;
+    color: var(--p-text-muted-color);
+    cursor: default;
+  }
+}
+
+// ── A topic row ───────────────────────────────────────────────────────────────
+
+.topics {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+
+  &--nested {
+    padding-left: 2rem;
+  }
+
+  &__none {
+    padding: 0.5rem 0;
+    font-size: 0.8125rem;
+    font-style: italic;
+    color: var(--p-text-muted-color);
+  }
+}
+
+.topic {
+  appearance: none;
+  background: none;
+  border: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  // The canon's touch floor: this is the control the whole feature is used
+  // through, and it is used standing up.
+  min-height: 3rem;
+  padding: 0.5rem;
+  border-radius: var(--budojo-radius-small, 0.5rem);
+
+  &:hover {
+    background: var(--p-content-hover-background);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--p-primary-color);
+    outline-offset: -2px;
+  }
+
+  &__tick {
+    flex: 0 0 auto;
+    font-size: 1.125rem;
+    color: var(--p-text-muted-color);
+  }
+
+  &--on &__tick {
+    color: var(--p-primary-color);
+  }
+
+  &__name {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 0.875rem;
+    overflow-wrap: anywhere;
+  }
+
+  &--on &__name {
+    font-weight: 500;
+  }
+
+  &__parent {
+    flex: 0 0 auto;
+    font-size: 0.6875rem;
+    color: var(--p-text-muted-color);
+    white-space: nowrap;
+  }
+
+  // The tick beside a position's name, in the tree head.
+  &--inline {
+    width: auto;
+    flex: 0 0 auto;
+    padding: 0.5rem;
+  }
+}
+
+// ── The tree ──────────────────────────────────────────────────────────────────
+
+.tree {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+
+  &__position + &__position {
+    border-top: 1px solid color-mix(in srgb, var(--p-content-border-color) 60%, transparent);
+  }
+
+  &__head {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  &__toggle {
+    appearance: none;
+    background: none;
+    border: 0;
+    font: inherit;
+    color: var(--p-text-color);
+    text-align: left;
+    cursor: pointer;
+
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 3rem;
+    padding: 0.5rem;
+    border-radius: var(--budojo-radius-small, 0.5rem);
+    font-size: 0.875rem;
+    font-weight: 500;
+
+    &:hover {
+      background: var(--p-content-hover-background);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--p-primary-color);
+      outline-offset: -2px;
+    }
+  }
+
+  &__chevron {
+    flex: 0 0 auto;
+    font-size: 0.75rem;
+    color: var(--p-text-muted-color);
+    transition: transform var(--budojo-motion-fast) var(--budojo-motion-decelerate);
+
+    &--open {
+      transform: rotate(90deg);
+    }
+  }
+
+  &__count {
+    flex: 0 0 auto;
+    min-width: 1.5rem;
+    padding: 0 0.5rem;
+    line-height: 1.5rem;
+    border-radius: 8px;
+    background: var(--p-surface-100);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-align: center;
+    color: var(--p-text-muted-color);
+    font-variant-numeric: tabular-nums;
+  }
+}
