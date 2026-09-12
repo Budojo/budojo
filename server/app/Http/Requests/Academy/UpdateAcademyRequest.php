@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests\Academy;
 
 use App\Authorization\Capability;
+use App\Enums\CarnetEntryUnit;
 use App\Http\Requests\Concerns\AuthorizesAcademyCapability;
 use App\Http\Requests\Concerns\ValidatesAddress;
 use App\Http\Requests\Concerns\ValidatesPhonePair;
@@ -87,6 +88,10 @@ class UpdateAcademyRequest extends FormRequest
             // set. A pack of zero entries would be sellable but unusable.
             'carnet_price_cents' => ['sometimes', 'nullable', 'integer', 'min:0'],
             'carnet_entries' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:255'],
+            // What one entry pays for (#1576) — a lesson or the whole day.
+            // Never null: every academy has an answer, `lesson` until it
+            // says otherwise, so there is no "not configured" to express.
+            'carnet_entry_unit' => ['sometimes', Rule::enum(CarnetEntryUnit::class)],
             // Carbon dayOfWeek convention (0=Sun..6=Sat). See StoreAcademyRequest
             // for the same shape — kept in sync because both endpoints feed
             // the same column on the model. `min:1` keeps "not configured"

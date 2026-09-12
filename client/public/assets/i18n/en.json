@@ -398,6 +398,7 @@
     "carnet": {
       "title": "Your entry carnet",
       "entriesWord": "entries",
+      "entryCoversDay": "One entry covers the whole day, however many classes.",
       "expiresOn": "Expires on {{date}}",
       "lowBalance": "Running low"
     }
@@ -1496,6 +1497,12 @@
         "label": "Entries per carnet",
         "hint": "How many sessions one carnet covers. Leave empty if you don't sell carnets.",
         "errorRange": "Enter a number between 1 and 255."
+      },
+      "carnetEntryUnit": {
+        "label": "One entry covers",
+        "lesson": "One lesson",
+        "day": "A whole day",
+        "hint": "Matters when an athlete trains twice on the same day. Changing it recounts every carnet already sold."
       }
     },
     "feeTiers": {
@@ -2032,6 +2039,7 @@
         "title": "Entry carnets",
         "sell": "Sell carnet",
         "entriesWord": "entries",
+        "entryCoversDay": "One entry covers the whole day, however many classes.",
         "none": "No active carnet.",
         "expiresOn": "Expires on {{date}}",
         "lowBalance": "Running low",

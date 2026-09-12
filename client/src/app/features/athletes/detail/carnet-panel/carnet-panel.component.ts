@@ -157,6 +157,16 @@ export class CarnetPanelComponent {
     return priceCents !== null && entries !== null ? { priceCents, entries } : null;
   });
 
+  /**
+   * Whether an entry pays for the whole day rather than one class (#1576).
+   * Said on the card only in that case: two check-ins costing one entry is
+   * the reading that needs explaining, "ten entries are ten lessons" is the
+   * one everybody already has.
+   */
+  protected readonly entryCoversDay = computed(
+    () => this.academyService.academy()?.carnet_entry_unit === 'day',
+  );
+
   /** The carnet the next session will be charged against — see `activeCarnetOf`. */
   protected readonly activeCarnet = computed<Carnet | null>(() => activeCarnetOf(this.carnets()));
 

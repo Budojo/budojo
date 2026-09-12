@@ -57,6 +57,7 @@ class AcademyResource extends JsonResource
             'fee_tier_count' => $academy->feeTiers()->count(),
             'carnet_price_cents' => $academy->carnet_price_cents,
             'carnet_entries' => $academy->carnet_entries,
+            'carnet_entry_unit' => $academy->carnet_entry_unit->value,
             'training_days' => $academy->training_days,
             // The training year (#1484). Three fields for one setting,
             // because the SPA needs different halves of it in different

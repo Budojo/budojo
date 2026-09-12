@@ -4,7 +4,7 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { of, throwError } from 'rxjs';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { provideI18nTesting } from '../../../../../test-utils/i18n-test';
-import { AcademyService } from '../../../../core/services/academy.service';
+import { AcademyService, CarnetEntryUnit } from '../../../../core/services/academy.service';
 import { Carnet, CarnetEntry, CarnetService } from '../../../../core/services/carnet.service';
 import { CarnetPanelComponent } from './carnet-panel.component';
 
@@ -43,6 +43,7 @@ function setup(
   opts: {
     priceCents?: number | null;
     entriesPerCarnet?: number | null;
+    entryUnit?: CarnetEntryUnit;
     carnets?: Carnet[];
   } = {},
 ) {
@@ -62,6 +63,7 @@ function setup(
     ...ACADEMY_BASE,
     carnet_price_cents: opts.priceCents === undefined ? 7000 : opts.priceCents,
     carnet_entries: opts.entriesPerCarnet === undefined ? 10 : opts.entriesPerCarnet,
+    carnet_entry_unit: opts.entryUnit ?? 'lesson',
   });
 
   const service = TestBed.inject(CarnetService) as unknown as FakeCarnetService;
@@ -101,6 +103,20 @@ describe('CarnetPanelComponent', () => {
     expect(
       fixture.nativeElement.querySelector('[data-cy="carnet-remaining"]').textContent.trim(),
     ).toBe('7');
+  });
+
+  it('says an entry covers the whole day when the academy sells days (#1576)', () => {
+    const { fixture } = setup({ entryUnit: 'day' });
+
+    const note = fixture.nativeElement.querySelector('[data-cy="carnet-entry-unit"]');
+    expect(note).not.toBeNull();
+    expect(note.textContent.trim()).toBe('One entry covers the whole day, however many classes.');
+  });
+
+  it('says nothing about it when an entry is a lesson — the reading everybody already has', () => {
+    const { fixture } = setup();
+
+    expect(fixture.nativeElement.querySelector('[data-cy="carnet-entry-unit"]')).toBeNull();
   });
 
   it('shows the empty state when no carnet is active', () => {

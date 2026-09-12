@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Actions\Payment;
 
+use App\Enums\CarnetEntryUnit;
+use App\Models\Athlete;
 use App\Models\AthletePayment;
 use App\Models\AttendanceRecord;
 use App\Models\Carnet;
@@ -29,12 +31,16 @@ class ReconcileCarnetEntriesAction
      *    it and which still has room, earliest expiry first, so what is about
      *    to expire is spent before what is not;
      *  - a session no carnet can take is simply uncovered. Attendance is a
-     *    register, never a gate.
+     *    register, never a gate;
+     *  - when the academy sells days rather than lessons (#1576), a second
+     *    class on a day already charged costs nothing more. The entry stays
+     *    pinned to the day's first session, so the ledger keeps one row per
+     *    entry spent whichever unit is in force.
      *
      * `carnet_entries` is therefore a **projection**, not a log. Every input
      * that can move the result — a presence added or removed, a carnet sold,
-     * re-dated or deleted, a monthly payment recorded or undone — runs this
-     * afterwards. A wider blast radius than the old model, and the price of the
+     * re-dated or deleted, a monthly payment recorded or undone, the academy
+     * changing what an entry pays for — runs this afterwards. A wider blast radius than the old model, and the price of the
      * balance being correct rather than merely consistent with the order things
      * happened in.
      *
@@ -73,6 +79,7 @@ class ReconcileCarnetEntriesAction
                 ->groupBy('athlete_id');
 
             $coveredMonths = $this->monthsCoveredByFee($athleteIds);
+            $units = $this->entryUnits($athleteIds);
 
             $wanted = [];
             foreach ($athleteIds as $athleteId) {
@@ -80,6 +87,7 @@ class ReconcileCarnetEntriesAction
                     $carnets->get($athleteId, collect()),
                     $sessions->get($athleteId, collect()),
                     $coveredMonths[$athleteId] ?? [],
+                    $units[$athleteId] ?? CarnetEntryUnit::Lesson,
                 ) as $attendanceId => $carnetId) {
                     $wanted[$attendanceId] = $carnetId;
                 }
@@ -102,7 +110,7 @@ class ReconcileCarnetEntriesAction
      * @param  array<string, true>  $coveredMonths
      * @return array<int, int> attendance record id => carnet id
      */
-    private function assign($carnets, $sessions, array $coveredMonths): array
+    private function assign($carnets, $sessions, array $coveredMonths, CarnetEntryUnit $unit): array
     {
         if ($carnets->isEmpty()) {
             return [];
@@ -114,11 +122,15 @@ class ReconcileCarnetEntriesAction
         }
 
         $assignment = [];
+        $chargedDays = [];
 
         foreach ($sessions as $session) {
             $day = $session->attended_on;
 
             if (isset($coveredMonths[$day->format('Y-m')])) {
+                continue;
+            }
+            if ($unit === CarnetEntryUnit::Day && isset($chargedDays[$day->toDateString()])) {
                 continue;
             }
 
@@ -132,12 +144,39 @@ class ReconcileCarnetEntriesAction
 
                 $assignment[$session->id] = $carnet->id;
                 $remaining[$carnet->id]--;
+                $chargedDays[$day->toDateString()] = true;
 
                 break;
             }
         }
 
         return $assignment;
+    }
+
+    /**
+     * What an entry pays for, per athlete — the one academy setting the
+     * ledger depends on (#1576). Read through the athlete rather than taken
+     * as an argument: a batch is one academy's in practice, but nothing here
+     * needs to assume it, and the callers would each have to fetch it.
+     *
+     * @param  list<int>  $athleteIds
+     * @return array<int, CarnetEntryUnit>
+     */
+    private function entryUnits(array $athleteIds): array
+    {
+        $units = [];
+
+        $rows = Athlete::query()
+            ->withTrashed()
+            ->join('academies', 'academies.id', '=', 'athletes.academy_id')
+            ->whereIn('athletes.id', $athleteIds)
+            ->pluck('academies.carnet_entry_unit', 'athletes.id');
+
+        foreach ($rows as $athleteId => $unit) {
+            $units[(int) $athleteId] = CarnetEntryUnit::from(\is_string($unit) ? $unit : 'lesson');
+        }
+
+        return $units;
     }
 
     /**

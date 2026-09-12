@@ -13,6 +13,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TagModule } from 'primeng/tag';
 import { AthletePayment, PaymentService } from '../../core/services/payment.service';
+import { AcademyService, CarnetEntryUnit } from '../../core/services/academy.service';
 import { Carnet, CarnetService } from '../../core/services/carnet.service';
 import { LanguageService } from '../../core/services/language.service';
 import { activeCarnetOf } from '../../shared/utils/active-carnet';
@@ -39,6 +40,7 @@ import { PageHeaderComponent } from '../../shared/components/page-header/page-he
 export class MyPaymentsComponent implements OnInit {
   private readonly paymentService = inject(PaymentService);
   private readonly carnetService = inject(CarnetService);
+  private readonly academyService = inject(AcademyService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly languageService = inject(LanguageService);
 
@@ -62,6 +64,15 @@ export class MyPaymentsComponent implements OnInit {
 
   /** Same rule as the owner panel and the server — see `activeCarnetOf`. */
   protected readonly activeCarnet = computed<Carnet | null>(() => activeCarnetOf(this.carnets()));
+
+  /**
+   * What one entry pays for at this academy (#1576). Said on the card only
+   * under `day` — two check-ins costing one entry is the reading that needs
+   * explaining, and the athlete is the one whose balance it is. Unknown
+   * (request failed, older server) reads as the default, and says nothing.
+   */
+  private readonly entryUnit = signal<CarnetEntryUnit>('lesson');
+  protected readonly entryCoversDay = computed(() => this.entryUnit() === 'day');
 
   /**
    * One row per month, 1..12. `payment` is the payment **covering** that
@@ -124,6 +135,14 @@ export class MyPaymentsComponent implements OnInit {
       .subscribe({
         next: (carnets) => this.carnets.set(carnets ?? []),
         error: () => this.carnets.set([]),
+      });
+
+    this.academyService
+      .getMine()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (academy) => this.entryUnit.set(academy?.carnet_entry_unit ?? 'lesson'),
+        error: () => this.entryUnit.set('lesson'),
       });
 
     this.paymentService

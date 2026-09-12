@@ -82,5 +82,5 @@ Scope of uniqueness is the whole table, not per academy: a Budojo install is nor
 
 - `athletes` — see [`athlete.md`](./athlete.md)
 - `carnet_entries` — see [`carnet-entry.md`](./carnet-entry.md)
-- `academies` — see [`academy.md`](./academy.md) (the `carnet_price_cents` / `carnet_entries` offering)
+- `academies` — see [`academy.md`](./academy.md) (the `carnet_price_cents` / `carnet_entries` offering, and `carnet_entry_unit` — whether an entry pays for a lesson or a whole day, #1576)
 - `athlete_payments` — see [`athlete-payment.md`](./athlete-payment.md) (the monthly fee, which takes priority over carnet consumption)
