@@ -18,12 +18,13 @@ import { InputTextModule } from 'primeng/inputtext';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TextareaModule } from 'primeng/textarea';
 import { TooltipModule } from 'primeng/tooltip';
-import { forkJoin, of, switchMap } from 'rxjs';
+import { catchError, forkJoin, of, switchMap } from 'rxjs';
 import {
   Lesson,
   LessonService,
   LessonSuggestion,
   LessonTopic,
+  SuggestionReason,
 } from '../../../core/services/lesson.service';
 import { LanguageService } from '../../../core/services/language.service';
 import { SyllabusService, SyllabusTopic, TopicKind } from '../../../core/services/syllabus.service';
@@ -238,9 +239,20 @@ export class LessonSheetComponent {
   /**
    * "Not taught yet this season" / "last taught 12 Mar" — the reason in plain
    * words, beside the suggestion it explains.
+   *
+   * An explicit map, not a template string. The i18n canon forbids building a
+   * key by concatenation: the parity spec cannot see such a key, so a reason
+   * nobody translated would ship green and render its own key on the mat.
+   * Here an unmapped value is a compile error instead.
    */
-  protected reasonKey(reason: LessonSuggestion['reason']): string {
-    return `lessons.sheet.suggestions.reason.${reason}`;
+  private static readonly REASON_KEYS: Readonly<Record<SuggestionReason, string>> = {
+    never: 'lessons.sheet.suggestions.reason.never',
+    thin: 'lessons.sheet.suggestions.reason.thin',
+    stale: 'lessons.sheet.suggestions.reason.stale',
+  };
+
+  protected reasonKey(reason: SuggestionReason): string {
+    return LessonSheetComponent.REASON_KEYS[reason];
   }
 
   /** "12 Mar" — the day a topic was last on the mat, in the reader's locale. */
@@ -324,7 +336,13 @@ export class LessonSheetComponent {
       lesson: this.lessonService.get(this.academyClassId(), this.heldOn()),
       positions: this.syllabusService.list(),
       recent: this.lessonService.recentTopics(),
-      suggestions: this.lessonService.suggestions(this.academyClassId()),
+      // Caught here and not in the shared error branch: suggestions are the
+      // one piece of this dialog nobody needs. Letting them fail the forkJoin
+      // would stop an instructor editing tonight's topics because a panel they
+      // can dismiss anyway did not load.
+      suggestions: this.lessonService
+        .suggestions(this.academyClassId())
+        .pipe(catchError(() => of<LessonSuggestion[]>([]))),
     }).subscribe({
       next: ({ lesson, positions, recent, suggestions }) => {
         this.lesson.set(lesson);

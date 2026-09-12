@@ -100,8 +100,12 @@ class LessonController extends Controller
         $user = $request->user();
         $academy = $user->activeAcademy();
 
+        // 403, the same answer `recent()` gives for the same condition.
+        // Unreachable today — the FormRequest denies first — but two endpoints
+        // that disagree about what "no academy" means are one refactor away
+        // from disagreeing in public.
         if ($academy === null) {
-            return response()->json(['data' => []]);
+            return response()->json(['message' => 'Forbidden.'], 403);
         }
 
         return response()->json([
