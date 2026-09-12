@@ -6,11 +6,11 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SkeletonModule } from 'primeng/skeleton';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { map } from 'rxjs';
+import { map, of } from 'rxjs';
 import { AthleteSyllabusCoverage, StatsService } from '../../../../core/services/stats.service';
 import { LanguageService } from '../../../../core/services/language.service';
 import { EmptyStateComponent } from '../../../../shared/components/empty-state/empty-state.component';
@@ -57,8 +57,21 @@ export class AthleteSyllabusCoverageComponent {
   /** Bumped by retry; the effect below watches it. */
   private readonly reloadTick = signal<number>(0);
 
+  /**
+   * The athlete comes from the parent route, the same way every sibling tab
+   * reads it. `parent` is optional rather than asserted, and the id goes
+   * through `Number.isFinite` rather than a truthiness check: `Number('x')` is
+   * NaN and `0 || null` is null, and neither of those should be told apart
+   * from "no athlete" by accident.
+   */
   private readonly athleteId = toSignal(
-    this.route.parent!.paramMap.pipe(map((p) => Number(p.get('id')) || null)),
+    (this.route.parent?.paramMap ?? of(convertToParamMap({}))).pipe(
+      map((p) => {
+        const id = Number(p.get('id'));
+
+        return Number.isFinite(id) && p.get('id') !== null ? id : null;
+      }),
+    ),
     { initialValue: null },
   );
 
