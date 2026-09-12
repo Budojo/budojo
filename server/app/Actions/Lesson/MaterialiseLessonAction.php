@@ -42,6 +42,11 @@ class MaterialiseLessonAction
                 'academy_id' => $class->academy_id,
                 'name' => $class->name,
                 'starts_at' => $class->starts_at,
+                // Snapshotted with the rest (#1591), and for the same reason:
+                // mat hours are summed from this, so reading it live would
+                // rewrite last March's totals the day somebody shortens their
+                // Monday class.
+                'duration_minutes' => $class->duration_minutes,
                 'kind' => $class->kind,
             ],
         );

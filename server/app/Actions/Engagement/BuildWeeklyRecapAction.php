@@ -6,6 +6,8 @@ namespace App\Actions\Engagement;
 
 use App\Models\Athlete;
 use App\Models\AttendanceRecord;
+use App\Models\Lesson;
+use App\Support\MatHours;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 
@@ -20,14 +22,13 @@ use Carbon\CarbonInterface;
  * ≥1 attended_on day with the recap athlete in the window, ranked
  * by overlap count desc, capped at 3.
  *
- * The mat-hour estimate is a flat `sessions × 1.5h` per the M4 PRD
- * assumption (every academy session = ~90 minutes). Future per-
- * academy `session_duration_minutes` setting can replace the constant
- * when it lands.
+ * Mat hours are summed from the lessons the week's presences name
+ * (#1591), falling back to ninety minutes for one that names none.
+ * The old flat `sessions × 1.5h` came from the M4 PRD and could not
+ * be moved by any input the owner had.
  */
 class BuildWeeklyRecapAction
 {
-    private const float HOURS_PER_SESSION = 1.5;
     private const int MAX_PARTNERS = 3;
 
     public function execute(Athlete $athlete, CarbonImmutable $isoWeekStart): WeeklyRecapResult
@@ -35,10 +36,14 @@ class BuildWeeklyRecapAction
         $weekStart = $isoWeekStart->startOfDay();
         $weekEnd = $weekStart->addDays(6)->endOfDay();
 
-        $athleteRows = AttendanceRecord::query()
+        $presences = AttendanceRecord::query()
             ->where('athlete_id', $athlete->id)
             ->whereBetween('attended_on', [$weekStart->toDateString(), $weekEnd->toDateString()])
-            ->get(['attended_on'])
+            // Eager, or summing the durations below is one query per presence.
+            ->with('lesson:id,duration_minutes')
+            ->get(['attended_on', 'lesson_id']);
+
+        $athleteRows = $presences
             ->pluck('attended_on')
             ->map(function (mixed $d): string {
                 if ($d instanceof CarbonInterface) {
@@ -62,6 +67,19 @@ class BuildWeeklyRecapAction
                 partners: [],
             );
         }
+
+        // Summed per presence, not per day: two classes on one evening is one
+        // session on purpose, and two hours all the same (#1591).
+        $minutes = (int) $presences->sum(static function (AttendanceRecord $record): int {
+            // Hoisted rather than `?->duration_minutes ?? …`: the relation's
+            // declared type is non-null, so PHPStan calls the nullsafe
+            // unnecessary even though `lesson_id` is nullable.
+            $lesson = $record->lesson;
+
+            return $lesson instanceof Lesson
+                ? ($lesson->duration_minutes ?? MatHours::FALLBACK_MINUTES)
+                : MatHours::FALLBACK_MINUTES;
+        });
 
         // Top partners — athletes from the same academy who shared
         // any of the same attended_on dates this week. Excludes self.
@@ -112,7 +130,7 @@ class BuildWeeklyRecapAction
         return new WeeklyRecapResult(
             isoWeekStart: $weekStart->toDateString(),
             sessions: $sessions,
-            hours: $sessions * self::HOURS_PER_SESSION,
+            hours: MatHours::fromMinutes($minutes),
             partners: $partnerList,
         );
     }

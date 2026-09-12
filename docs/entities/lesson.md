@@ -18,6 +18,7 @@ A lesson is created **lazily**, by `App\Actions\Lesson\MaterialiseLessonAction`,
 | `held_on` | date | not null | Cast `date:Y-m-d`, like `attendance_records.attended_on`, so the SQLite TEXT path and the MySQL DATE path compare equal to the string a query hands them |
 | `name` | varchar(60) | not null | **Snapshot** of the class's name at creation |
 | `starts_at` | varchar(5) | nullable | **Snapshot**, `HH:MM` |
+| `duration_minutes` | smallint unsigned | nullable | **Snapshot** of the class's length (#1591). Null when the class never set one; mat hours then fall back to 90 minutes rather than storing a guess |
 | `kind` | varchar(8) | not null | **Snapshot**, `App\Enums\ClassKind` |
 | `notes` | text | nullable | Free text about the evening. Never parsed into topics — notes are for "Marco's first day back", not for data entry |
 | `created_at` / `updated_at` | timestamp | nullable | |
@@ -29,7 +30,7 @@ A lesson is created **lazily**, by `App\Actions\Lesson\MaterialiseLessonAction`,
 
 ### The snapshot is the point
 
-`name`, `starts_at` and `kind` are copied from the class once and never re-read. The timetable is mutable and the past is not: moving Tuesday fundamentals to Wednesday must not rewrite what happened on every previous Tuesday. [`academy_schedules`](./academy-schedule.md) (#1094) solved the same problem with a history table; a lesson is an *event*, so it carries its own truth and skips the table.
+`name`, `starts_at`, `duration_minutes` and `kind` are copied from the class once and never re-read. The timetable is mutable and the past is not: moving Tuesday fundamentals to Wednesday must not rewrite what happened on every previous Tuesday. [`academy_schedules`](./academy-schedule.md) (#1094) solved the same problem with a history table; a lesson is an *event*, so it carries its own truth and skips the table.
 
 The copy is taken **when the row is created**. Until #1564 that was always the day itself, because a lesson only existed once somebody had been checked into it; a planned lesson is created earlier, so one planned on Monday for Wednesday keeps Monday's name even if the class is renamed on Tuesday. Deliberate — re-reading the class would mean the snapshot is not a snapshot — and the window in which it can drift is a plan nobody has taught yet.
 

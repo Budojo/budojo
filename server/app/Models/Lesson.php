@@ -32,12 +32,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property Carbon      $held_on
  * @property string      $name
  * @property string|null $starts_at         `HH:MM` or null
+ * @property int|null    $duration_minutes  Snapshot of the class's length when the lesson was created (#1591); null when the class never set one
  * @property ClassKind   $kind
  * @property string|null $notes
  * @property Carbon      $created_at
  * @property Carbon      $updated_at
  */
-#[Fillable(['academy_id', 'academy_class_id', 'held_on', 'name', 'starts_at', 'kind', 'notes'])]
+#[Fillable(['academy_id', 'academy_class_id', 'held_on', 'name', 'starts_at', 'duration_minutes', 'kind', 'notes'])]
 class Lesson extends Model
 {
     /** @use HasFactory<LessonFactory> */
@@ -90,6 +91,7 @@ class Lesson extends Model
             // the same reason: the SQLite TEXT path and the MySQL DATE path
             // have to compare equal to the string the query hands them.
             'held_on' => 'date:Y-m-d',
+            'duration_minutes' => 'integer',
             'kind' => ClassKind::class,
         ];
     }
