@@ -4862,9 +4862,13 @@ paths:
       summary: Monthly mat-hours leaderboard for the caller's academy
       description: |
         Top 5 athletes by attendance session count for the given month
-        (#962). Sessions count distinct `attended_on` days, hours are
-        computed at 1.5 h per session. Defaults to the current month
-        when `month` is omitted.
+        (#962). Sessions count distinct `attended_on` days; hours sum the
+        length of the lesson each presence names (#1591), falling back to
+        90 minutes for a presence that names no lesson or one whose class
+        never set a duration. The two are therefore not proportional: an
+        athlete who trains twice in one evening is one session and two
+        lessons' worth of hours. Defaults to the current month when
+        `month` is omitted.
 
         Anonymisation: athletes who opted out via `users.leaderboard_visible
         = false` still count toward the rank, but their row carries
