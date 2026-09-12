@@ -2,10 +2,16 @@
 
 declare(strict_types=1);
 
+use App\Actions\Attendance\DeleteAttendanceAction;
 use App\Actions\Attendance\MarkAttendanceAction;
 use App\Actions\Payment\ReconcileCarnetEntriesAction;
+use App\Enums\AttendanceSource;
+use App\Enums\CarnetEntryUnit;
+use App\Models\Academy;
+use App\Models\AcademyClass;
 use App\Models\Athlete;
 use App\Models\AthletePayment;
+use App\Models\AttendanceRecord;
 use App\Models\Carnet;
 use App\Models\CarnetEntry;
 use Carbon\CarbonImmutable;
@@ -218,4 +224,98 @@ it('reconciles a batch with a constant number of lookups, not one per athlete', 
     // sessions, payments and the existing ledger are each one query for the
     // whole batch. A per-athlete lookup would make the delta grow much faster.
     expect($large - $small)->toBe(4);
+});
+
+// ─── What one entry pays for (#1576) ──────────────────────────────────────────
+
+function markInClassOn(Athlete $athlete, string $date, AcademyClass $class): void
+{
+    app(MarkAttendanceAction::class)->execute(
+        $athlete->academy,
+        CarbonImmutable::parse($date),
+        [$athlete->id],
+        AttendanceSource::Instructor,
+        $class,
+    );
+}
+
+/** @return array{AcademyClass, AcademyClass} Two classes on a Thursday, which 2026-03-05 is. */
+function twoThursdayClasses(Academy $academy): array
+{
+    return [
+        AcademyClass::factory()->for($academy)->create(['name' => 'Fundamentals', 'weekday' => 4, 'starts_at' => '19:00']),
+        AcademyClass::factory()->for($academy)->create(['name' => 'Open mat', 'weekday' => 4, 'starts_at' => '20:30']),
+    ];
+}
+
+it('charges one entry per class on the same day — a carnet of lessons, until the academy says otherwise', function (): void {
+    $carnet = Carnet::factory()->for($this->athlete)->validFrom('2026-01-10')->create();
+    [$fundamentals, $openMat] = twoThursdayClasses($this->academy);
+
+    markInClassOn($this->athlete, '2026-03-05', $fundamentals);
+    markInClassOn($this->athlete, '2026-03-05', $openMat);
+
+    expect(AttendanceRecord::where('athlete_id', $this->athlete->id)->count())->toBe(2);
+    expect(CarnetEntry::where('carnet_id', $carnet->id)->count())->toBe(2);
+});
+
+it('charges one entry for the whole day when the academy sells days', function (): void {
+    $this->academy->update(['carnet_entry_unit' => CarnetEntryUnit::Day]);
+    $carnet = Carnet::factory()->for($this->athlete)->validFrom('2026-01-10')->create();
+    [$fundamentals, $openMat] = twoThursdayClasses($this->academy);
+
+    markInClassOn($this->athlete, '2026-03-05', $fundamentals);
+    markInClassOn($this->athlete, '2026-03-05', $openMat);
+
+    expect(AttendanceRecord::where('athlete_id', $this->athlete->id)->count())->toBe(2);
+    expect(CarnetEntry::where('carnet_id', $carnet->id)->count())->toBe(1);
+    expect(CarnetEntry::first()->used_on->toDateString())->toBe('2026-03-05');
+});
+
+it('still charges a day per day when the academy sells days — two days are two entries', function (): void {
+    $this->academy->update(['carnet_entry_unit' => CarnetEntryUnit::Day]);
+    $carnet = Carnet::factory()->for($this->athlete)->validFrom('2026-01-10')->create();
+    [$fundamentals, $openMat] = twoThursdayClasses($this->academy);
+
+    markInClassOn($this->athlete, '2026-03-05', $fundamentals);
+    markInClassOn($this->athlete, '2026-03-05', $openMat);
+    markInClassOn($this->athlete, '2026-03-12', $fundamentals);
+
+    expect(CarnetEntry::where('carnet_id', $carnet->id)->pluck('used_on')->map(fn ($d) => $d->toDateString())->all())
+        ->toBe(['2026-03-05', '2026-03-12']);
+});
+
+it('moves the day\'s entry to the other session when the charged one is removed', function (): void {
+    $this->academy->update(['carnet_entry_unit' => CarnetEntryUnit::Day]);
+    $carnet = Carnet::factory()->for($this->athlete)->validFrom('2026-01-10')->create();
+    [$fundamentals, $openMat] = twoThursdayClasses($this->academy);
+
+    markInClassOn($this->athlete, '2026-03-05', $fundamentals);
+    markInClassOn($this->athlete, '2026-03-05', $openMat);
+
+    $first = AttendanceRecord::where('athlete_id', $this->athlete->id)->orderBy('id')->firstOrFail();
+    $second = AttendanceRecord::where('athlete_id', $this->athlete->id)->orderByDesc('id')->firstOrFail();
+    expect(CarnetEntry::first()->attendance_record_id)->toBe($first->id);
+
+    app(DeleteAttendanceAction::class)->execute($first);
+
+    // The day was still trained, so it is still one entry — now pinned to
+    // the session that remains rather than refunded.
+    expect(CarnetEntry::where('carnet_id', $carnet->id)->count())->toBe(1);
+    expect(CarnetEntry::first()->attendance_record_id)->toBe($second->id);
+});
+
+it('does not let a day charged on one carnet be charged again on the next', function (): void {
+    // One entry left on the first carnet, a second carnet with room: the day's
+    // second class must not fall through to the second carnet.
+    $this->academy->update(['carnet_entry_unit' => CarnetEntryUnit::Day]);
+    $first = Carnet::factory()->for($this->athlete)->validFrom('2026-01-10')->create(['total_entries' => 1]);
+    $second = Carnet::factory()->for($this->athlete)->validFrom('2026-02-20')->create();
+    [$fundamentals, $openMat] = twoThursdayClasses($this->academy);
+
+    markInClassOn($this->athlete, '2026-03-05', $fundamentals);
+    markInClassOn($this->athlete, '2026-03-05', $openMat);
+
+    expect(CarnetEntry::where('carnet_id', $first->id)->count())->toBe(1);
+    expect(CarnetEntry::where('carnet_id', $second->id)->count())->toBe(0);
 });

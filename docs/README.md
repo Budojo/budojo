@@ -14,6 +14,7 @@ docs/
 │   ├── academy-fee-tier.md            # the academy's monthly price list (#1381)
 │   ├── academy-class.md               # the weekly timetable — recurring classes (#1562)
 │   ├── lesson.md                      # one occurrence of a class on a date; what attendance points at (#1562)
+│   ├── syllabus-topic.md              # the programme — positions and techniques, per academy (#1563)
 │   ├── athlete.md
 │   ├── athlete-payment.md
 │   ├── athlete-promotion.md           # belt + stripe history audit log (v2.10.0, #654)

@@ -50,6 +50,7 @@ The kind is a dimension of the **class**, not a tag on a lesson: heel hooks live
 - **Deleting keeps the lessons.** The FK on `lessons.academy_class_id` is `nullOnDelete`: the occurrences stay, under the name they were held as. Removing next week's slot must never remove the evenings people trained.
 - **Weekday mismatch is allowed on purpose.** A lesson can be materialised for a class on a date that is not the class's weekday — the Monday class held on Tuesday because of a holiday is a real thing. The check-in only *offers* the date's weekday classes; the API does not refuse others.
 - **Capability.** Reads need `academy_settings_read` (every role); writes need `academy_settings_update` (owner, admin) — the same gate as the training days and the price list. An instructor who records attendance does not thereby get to move the class they teach.
+- **The training days follow the timetable (#1575).** While at least one class exists, `academies.training_days` is the set of weekdays with a class, recomputed after every class is saved or deleted (`AcademyClassObserver` → `DeriveTrainingDaysFromTimetableAction` → `RecordTrainingDaysAction`, the same path the owner's PATCH takes, so [`academy_schedules`](./academy-schedule.md) gets its row). Deleting the last class leaves the days as they were.
 
 ## API surface
 

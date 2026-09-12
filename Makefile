@@ -56,7 +56,7 @@ help: ## Show this list
 	@echo ""
 	@echo "  Budojo - make targets"
 	@echo ""
-	@grep -hE '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
+	@grep -hE '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
 	  | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
 	@echo ""
 	@echo "  Release is a slash command, not a target: /release"
@@ -183,8 +183,8 @@ gotchas: ## Print the gotchas routing table (read before every push)
 	@sed -n '1,25p' .claude/gotchas.md
 
 check-readme: ## Verify the README's command tables list exactly these targets
-	@diff <(grep -hE '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | cut -d: -f1 | sort) \
-	      <(grep -oE '^\| `make [a-zA-Z_-]+`' README.md | sed 's/.*make //; s/`//' | sort) \
+	@diff <(grep -hE '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | cut -d: -f1 | sort) \
+	      <(grep -oE '^\| `make [a-zA-Z0-9_-]+`' README.md | sed 's/.*make //; s/`//' | sort) \
 	  && echo "README is in sync with the Makefile" \
 	  || { echo ""; echo "README and Makefile disagree (left = Makefile, right = README) - fix README.md"; exit 1; }
 

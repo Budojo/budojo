@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
-/** Single entry in the sparkline series — one per realized lesson day. */
+/** Single entry in the sparkline series — one per lesson day held. */
 export interface AttendanceSummarySeriesPoint {
   readonly date: string;
   readonly attended: boolean;
@@ -17,7 +17,7 @@ export interface AttendanceSummary {
   readonly attended_count: number;
   readonly expected_count: number;
   /**
-   * Fraction in [0, 1] of realized lesson days the athlete attended.
+   * Fraction in [0, 1] of the lesson days held that the athlete attended.
    * `null` when `expected_count === 0` (no lessons in the window) — the
    * UI must NOT render `0%` for that branch (misleading).
    */

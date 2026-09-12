@@ -441,6 +441,33 @@
     </app-budojo-form-field>
 
     <!--
+      What one entry pays for (#1576) — a lesson, or the whole day. Only asked
+      once both halves of the offering are filled in: an academy that does
+      not sell carnets has no reason to meet the question, and one that does
+      meets it right where it just said what a carnet is. Two answers, so a
+      segmented control rather than a dropdown that hides one of them.
+    -->
+    @if (carnetsOffered()) {
+      <div class="field" data-cy="academy-form-carnet-entry-unit-field">
+        <span class="field__label" id="academy-carnet-entry-unit-label">
+          {{ 'academy.form.carnetEntryUnit.label' | translate }}
+        </span>
+        <p-selectbutton
+          [options]="carnetEntryUnitOptions()"
+          formControlName="carnet_entry_unit"
+          optionLabel="label"
+          optionValue="value"
+          [allowEmpty]="false"
+          ariaLabelledBy="academy-carnet-entry-unit-label"
+          data-cy="academy-form-carnet-entry-unit"
+        />
+        <small class="field__hint">
+          {{ 'academy.form.carnetEntryUnit.hint' | translate }}
+        </small>
+      </div>
+    }
+
+    <!--
       When the training year restarts (#1484).
 
       It sits directly above the training days because the two answer the same
@@ -474,28 +501,49 @@
       />
     </app-budojo-form-field>
 
-    <div class="field">
-      <span class="field__label">
-        {{ 'academy.form.trainingDays.label' | translate }}
-        <span class="field__optional">{{ 'academy.form.optional' | translate }}</span>
-      </span>
-      <app-training-days-picker
-        [value]="form.value.training_days ?? []"
-        (valueChange)="setTrainingDays($event)"
-        data-cy="academy-form-training-days"
-      />
-      <small class="field__hint">
-        {{ 'academy.form.trainingDays.hint' | translate }}
-      </small>
-    </div>
+    @if (daysFromTimetable()) {
+      <!--
+        The timetable sets the days (#1575): while it has classes, the
+        pills and the future-change planner would both be writing a value
+        the next class change overwrites. Say where the days come from and
+        point at the place they are edited.
+      -->
+      <div class="field" data-cy="academy-form-training-days-derived">
+        <span class="field__label">{{ 'academy.form.trainingDays.label' | translate }}</span>
+        <p class="field__derived">
+          <i class="pi pi-calendar" aria-hidden="true"></i>
+          <span>
+            {{ 'academy.form.trainingDays.fromTimetable' | translate }}
+            <a routerLink="/dashboard/academy/timetable" data-cy="academy-form-open-timetable">
+              {{ 'academy.form.trainingDays.openTimetable' | translate }}
+            </a>
+          </span>
+        </p>
+      </div>
+    } @else {
+      <div class="field">
+        <span class="field__label">
+          {{ 'academy.form.trainingDays.label' | translate }}
+          <span class="field__optional">{{ 'academy.form.optional' | translate }}</span>
+        </span>
+        <app-training-days-picker
+          [value]="form.value.training_days ?? []"
+          (valueChange)="setTrainingDays($event)"
+          data-cy="academy-form-training-days"
+        />
+        <small class="field__hint">
+          {{ 'academy.form.trainingDays.hint' | translate }}
+        </small>
+      </div>
 
-    <!--
-      Schedule a FUTURE change (#1094). Same-day changes are still made
-      via the training-days picker above and saved with the rest of the
-      form. This section is for "the new schedule starts on June 1" —
-      writing to a separate history row instead of overwriting today's.
-    -->
-    <app-schedule-planner data-cy="academy-form-schedule-planner" />
+      <!--
+        Schedule a FUTURE change (#1094). Same-day changes are still made
+        via the training-days picker above and saved with the rest of the
+        form. This section is for "the new schedule starts on June 1" —
+        writing to a separate history row instead of overwriting today's.
+      -->
+      <app-schedule-planner data-cy="academy-form-schedule-planner" />
+    }
 
     <div class="form__actions">
       <p-button

@@ -57,6 +57,7 @@ class AcademyResource extends JsonResource
             'fee_tier_count' => $academy->feeTiers()->count(),
             'carnet_price_cents' => $academy->carnet_price_cents,
             'carnet_entries' => $academy->carnet_entries,
+            'carnet_entry_unit' => $academy->carnet_entry_unit->value,
             'training_days' => $academy->training_days,
             // The training year (#1484). Three fields for one setting,
             // because the SPA needs different halves of it in different
@@ -71,6 +72,11 @@ class AcademyResource extends JsonResource
             // academy page needs to say "4 classes a week" or "not set up
             // yet" without a second round-trip. One indexed COUNT.
             'classes_count' => $academy->classes()->count(),
+            // Techniques in the programme (#1563) — enough for the academy
+            // page to say "84 techniques" or "not set up yet" without a
+            // second request. Techniques, not positions: a position with
+            // nothing under it is a heading, not something to teach.
+            'syllabus_topics_count' => $academy->syllabusTopics()->whereNotNull('parent_id')->count(),
             'season_start' => Season::startFor($academy, CarbonImmutable::now())->toDateString(),
             'season_label' => Season::labelFor($academy, CarbonImmutable::now()),
             // Schedule history (#1094). Pull the full history once,

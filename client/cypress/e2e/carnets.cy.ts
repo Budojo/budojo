@@ -112,6 +112,25 @@ describe('Entry carnets — owner', () => {
     cy.get('[data-cy="carnet-balance-card"]').should('be.visible');
     cy.get('[data-cy="carnet-code"]').should('have.text', 'A7K2');
     cy.get('[data-cy="carnet-remaining"]').should('have.text', '10');
+    // An entry is a lesson here, which needs no saying.
+    cy.get('[data-cy="carnet-entry-unit"]').should('not.exist');
+  });
+
+  it('says an entry covers the whole day when the academy sells days (#1576)', () => {
+    stubCommon({ ...ACADEMY, carnet_entry_unit: 'day' });
+    cy.intercept('GET', '/api/v1/athletes/1/carnets', {
+      statusCode: 200,
+      body: { data: [carnet({ remaining_entries: 7 })] },
+    }).as('carnets');
+
+    cy.visitAuthenticated('/dashboard/athletes/1/payments');
+    cy.wait('@carnets');
+    showPanel();
+
+    cy.get('[data-cy="carnet-balance-card"]').should('be.visible');
+    cy.get('[data-cy="carnet-entry-unit"]')
+      .should('be.visible')
+      .and('contain.text', 'One entry covers the whole day');
   });
 
   it('sends a back-dated purchase when the owner picks a date', () => {
@@ -299,6 +318,25 @@ describe('Entry carnets — athlete portal', () => {
     cy.get('[data-cy="my-carnet-code"]').should('have.text', 'A7K2');
     cy.get('[data-cy="my-carnet-remaining"]').should('have.text', '6');
     cy.get('[data-cy="my-carnet-low-balance"]').should('not.exist');
+    // An entry is a lesson here, which needs no saying.
+    cy.get('[data-cy="my-carnet-entry-unit"]').should('not.exist');
+  });
+
+  it('tells the athlete an entry covers the whole day when the academy sells days (#1576)', () => {
+    cy.intercept('GET', '/api/v1/me/academy', {
+      statusCode: 200,
+      body: { data: { ...ACADEMY, carnet_entry_unit: 'day' } },
+    });
+    cy.intercept('GET', '/api/v1/me/carnets', {
+      statusCode: 200,
+      body: { data: [carnet({ athlete_id: 2, remaining_entries: 6 })] },
+    });
+
+    cy.visitAuthenticated('/dashboard/me/payments');
+    cy.get('[data-cy="my-carnet-card"]', { timeout: 15000 }).should('be.visible');
+    cy.get('[data-cy="my-carnet-entry-unit"]')
+      .should('be.visible')
+      .and('contain.text', 'One entry covers the whole day');
   });
 
   it('warns the athlete when the carnet is nearly spent', () => {

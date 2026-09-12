@@ -120,9 +120,33 @@ describe('Weekly timetable', () => {
     // Thursday is pre-selected from the "+" that opened the form.
     cy.get('[data-cy="timetable-form-day-4"]').should('have.attr', 'aria-checked', 'true');
 
-    cy.get('[data-cy="timetable-form-name"]').type('Advanced');
-    cy.get('[data-cy="timetable-form-time"]').type('20:00');
-    cy.get('[data-cy="timetable-form-duration"] input').clear().type('90');
+    // The dialog moves focus to its first field when its opening animation
+    // ends. Typing before that races the jump: on CI it landed mid-keystroke
+    // and ate the time once and the duration once, with a green local run
+    // each time. Wait for the focus, then type.
+    cy.get('[data-cy="timetable-form-name"]')
+      .should('have.focus')
+      .type('Advanced')
+      .should('have.value', 'Advanced');
+    // Not `type()`: on a native time input it drives the browser's own
+    // hour / minute / AM-PM segments, and in Electron's en-US locale the
+    // value sometimes never reaches the control — green locally, red on
+    // #1574's CI with `starts_at: null`. Set the value the way the control
+    // reads it and fire the event Angular listens for.
+    cy.get('[data-cy="timetable-form-time"]')
+      .invoke('val', '20:00')
+      .trigger('input')
+      .should('have.value', '20:00');
+    // p-inputnumber commits on blur and clamps to [min, max]: a `9` caught
+    // mid-typing is below 15 and would leave the form invalid. Blur, then
+    // read the value back before moving on.
+    cy.get('[data-cy="timetable-form-duration"] input')
+      .clear()
+      .type('90')
+      .blur()
+      // Formatted on blur — `90 min` — so match the number, not the string.
+      .invoke('val')
+      .should('match', /^90\b/);
     cy.get('[data-cy="timetable-form-kind"]').contains('No-gi').click();
 
     cy.intercept(
@@ -141,6 +165,11 @@ describe('Weekly timetable', () => {
       ]),
     ).as('reload');
     cy.get('[data-cy="timetable-form-save"]').click();
+    // If Save found the form invalid it says so at the field and posts
+    // nothing — assert that first, so a failure names the field instead of
+    // timing out on the request that never came.
+    cy.get('[data-cy="timetable-form-name-error"]').should('not.exist');
+    cy.get('[data-cy="timetable-form-day-error"]').should('not.exist');
     cy.wait('@create');
     cy.wait('@reload');
 
@@ -162,8 +191,13 @@ describe('Weekly timetable', () => {
     cy.wait('@classes');
 
     cy.get('[data-cy="timetable-class-1"]').click();
-    cy.get('[data-cy="timetable-form-name"]').should('have.value', 'Kids');
-    cy.get('[data-cy="timetable-form-time"]').should('have.value', '17:00').clear().type('17:30');
+    // Same focus race as the add test: let the dialog settle before touching a field.
+    cy.get('[data-cy="timetable-form-name"]').should('have.focus').should('have.value', 'Kids');
+    cy.get('[data-cy="timetable-form-time"]')
+      .should('have.value', '17:00')
+      .invoke('val', '17:30')
+      .trigger('input')
+      .should('have.value', '17:30');
     cy.get('[data-cy="timetable-form-save"]').click();
     cy.wait('@update');
     cy.wait('@classes');

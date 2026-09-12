@@ -258,6 +258,14 @@ export const routes: Routes = [
           ),
       },
       {
+        // The programme (#1563) — its own page for the same reason as the
+        // timetable: it is a long list, read as often as it is edited, and
+        // the academy form is already long enough.
+        path: 'academy/syllabus',
+        loadComponent: () =>
+          import('./features/academy/syllabus/syllabus.component').then((m) => m.SyllabusComponent),
+      },
+      {
         path: 'athletes',
         loadComponent: () =>
           import('./features/athletes/list/athletes-list.component').then(

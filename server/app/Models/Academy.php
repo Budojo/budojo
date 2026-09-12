@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Contracts\HasAddress;
+use App\Enums\CarnetEntryUnit;
 use App\Observers\AcademyObserver;
 use App\Observers\Audit\AcademyAuditObserver;
 use Database\Factories\AcademyFactory;
@@ -33,14 +34,27 @@ use Illuminate\Support\Carbon;
  * @property int|null            $monthly_fee_cents
  * @property int|null            $carnet_price_cents
  * @property int|null            $carnet_entries
+ * @property CarnetEntryUnit     $carnet_entry_unit      What one carnet entry pays for (#1576): a lesson, or the whole training day.
  * @property list<int>|null      $training_days  Carbon dayOfWeek ints (0=Sun..6=Sat); null = "not configured"
  */
-#[Fillable(['user_id', 'name', 'phone_country_code', 'phone_national_number', 'website', 'facebook', 'instagram', 'slug', 'logo_path', 'monthly_fee_cents', 'carnet_price_cents', 'carnet_entries', 'training_days', 'season_start_month'])]
+#[Fillable(['user_id', 'name', 'phone_country_code', 'phone_national_number', 'website', 'facebook', 'instagram', 'slug', 'logo_path', 'monthly_fee_cents', 'carnet_price_cents', 'carnet_entries', 'carnet_entry_unit', 'training_days', 'season_start_month'])]
 #[ObservedBy([AcademyObserver::class, AcademyAuditObserver::class])]
 class Academy extends Model implements HasAddress
 {
     /** @use HasFactory<AcademyFactory> */
     use HasFactory;
+
+    /**
+     * The column default, known to the model too (#1576): a freshly created
+     * academy is serialised straight from the instance `create()` returns,
+     * which never reads the row back — without this the resource would
+     * meet a null where the schema promises `lesson`.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'carnet_entry_unit' => 'lesson',
+    ];
 
     /** @return BelongsTo<User, $this> */
     public function owner(): BelongsTo
@@ -80,6 +94,17 @@ class Academy extends Model implements HasAddress
     public function lessons(): HasMany
     {
         return $this->hasMany(Lesson::class);
+    }
+
+    /**
+     * The programme (#1563) — positions and techniques alike, living rows
+     * only. `SyllabusTopic::positions()` narrows to the top level.
+     *
+     * @return HasMany<SyllabusTopic, $this>
+     */
+    public function syllabusTopics(): HasMany
+    {
+        return $this->hasMany(SyllabusTopic::class);
     }
 
     /**
@@ -228,6 +253,7 @@ class Academy extends Model implements HasAddress
         return [
             'training_days' => 'array',
             'season_start_month' => 'integer',
+            'carnet_entry_unit' => CarnetEntryUnit::class,
         ];
     }
 }

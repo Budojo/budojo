@@ -168,7 +168,7 @@
         [value]="dayValue()"
         [ariaLabel]="'academy.timetable.form.dayAria' | translate"
         dataCyPrefix="timetable-form-day-"
-        (valueChange)="setDay($event[0] ?? null)"
+        (valueChange)="setDay($event.length > 0 ? $event[0] : null)"
       />
       @if (dayError()) {
         <small

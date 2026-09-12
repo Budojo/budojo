@@ -2680,6 +2680,12 @@ paths:
         design — renames keep the original permalink stable. A user without
         an academy gets a 403 `{"message":"Forbidden."}` (same wire contract
         the rest of the API uses for ownership failures), not a 404.
+
+        `training_days` is **refused with a 422** while the academy's
+        timetable has at least one class (#1575): the days are then derived
+        from the classes — the weekdays with at least one — and recomputed on
+        every class change, so a hand-set value would not stick. With no
+        classes the field behaves as before.
       operationId: academyUpdate
       requestBody:
         required: true
@@ -2779,6 +2785,11 @@ paths:
         given `training_days` effective from a future calendar date.
         `effective_from` MUST be strictly after today — same-day changes
         go through `PATCH /api/v1/academy`.
+
+        **Refused with a 422 while the academy's timetable has classes**
+        (#1575): the training days are derived from the classes then, and a
+        planned change would be deleted by the next class saved. Future
+        changes are made on the timetable.
 
         Invariant: at most ONE pending future schedule per academy at any
         time (the "single pending change" model from the PRD). A second
@@ -3113,6 +3124,179 @@ paths:
       responses:
         '204':
           description: Class removed; its lessons survive
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /academy/syllabus:
+    get:
+      tags: [academy]
+      summary: The academy's programme (#1563)
+      description: |
+        The tree: positions in `sort_order`, each carrying its techniques as
+        `children` in theirs. Empty on an academy that has not started one —
+        the editor then offers the shipped BJJ programme, or a blank first
+        position.
+
+        Requires `academy_settings_read`, which every membership role holds.
+      operationId: syllabusTopicIndex
+      responses:
+        '200':
+          description: The programme
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SyllabusTopic'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [academy]
+      summary: Add a position or a technique (#1563)
+      description: |
+        Without `parent_id` a position; with one, a technique under that
+        position. Appended after its siblings. Exactly two levels: a
+        technique as `parent_id` — like a position of another academy, or a
+        deleted one — is a 422 on `parent_id`. The same name twice among
+        living siblings is a 422 on `name`; the same name under another
+        position is fine and expected.
+
+        Requires `academy_settings_update`.
+      operationId: syllabusTopicStore
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SyllabusTopicPayload'
+      responses:
+        '201':
+          description: Topic added
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/SyllabusTopic'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /academy/syllabus/seed:
+    post:
+      tags: [academy]
+      summary: Start from the shipped BJJ programme (#1563)
+      description: |
+        Copies the shipped programme into rows this academy owns — only while
+        it has no topics at all. Even one topic is a programme the academy
+        owns, never overwritten: a 409. No body.
+
+        Requires `academy_settings_update`.
+      operationId: syllabusSeed
+      responses:
+        '201':
+          description: The programme was copied in
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [written]
+                    properties:
+                      written:
+                        type: integer
+                        description: How many topics were written, positions and techniques together.
+                        example: 348
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: The academy already has a programme
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+
+  /academy/syllabus/{syllabusTopic}:
+    patch:
+      tags: [academy]
+      summary: Change a topic (#1563)
+      description: |
+        Partial — only the fields sent change. `in_season` on a position
+        cascades to every technique under it; nothing else cascades.
+        `parent_id` cannot be changed: moving a technique is a delete and an
+        add. The capability is checked against the topic's own academy; a
+        foreign topic is a 403, a deleted one a 404.
+      operationId: syllabusTopicUpdate
+      parameters:
+        - in: path
+          name: syllabusTopic
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SyllabusTopicUpdatePayload'
+      responses:
+        '200':
+          description: Topic changed
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/SyllabusTopic'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [academy]
+      summary: Take a topic out of the programme (#1563)
+      description: |
+        Soft-deletes the topic — and, for a position, every technique under
+        it. The rows stay, out of the tree and out of the count, so a lesson
+        that taught the topic can still say so.
+      operationId: syllabusTopicDelete
+      parameters:
+        - in: path
+          name: syllabusTopic
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: Topic removed from the programme
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
@@ -5843,7 +6027,11 @@ paths:
       operationId: meAcademyShow
       responses:
         '200':
-          description: Academy snapshot for the linked user.
+          description: |
+            Academy snapshot for the linked user — name, contacts, address,
+            logo, `training_days`, `owner`, and `carnet_entry_unit` (#1576,
+            see `CarnetEntryUnit`) so the portal can say what one entry of the
+            athlete's carnet pays for.
           content:
             application/json:
               schema:
@@ -6905,6 +7093,14 @@ components:
             How many entries one carnet holds. Snapshotted onto each carnet
             at sale, so changing it never resizes carnets already sold.
           example: 10
+        carnet_entry_unit:
+          allOf:
+            - $ref: '#/components/schemas/CarnetEntryUnit'
+          description: |
+            What one entry pays for (#1576). Not nullable — there is no
+            "not configured", `lesson` is the answer until the owner changes
+            it, so `null` is a 422. Changing it recounts every carnet the
+            academy has ever sold, in the same transaction as this update.
         training_days:
           $ref: '#/components/schemas/TrainingDays'
         season_start_month:
@@ -6990,6 +7186,7 @@ components:
           monthly_fee_cents,
           carnet_price_cents,
           carnet_entries,
+          carnet_entry_unit,
           training_days,
           season_start_month,
           season_start,
@@ -7106,6 +7303,11 @@ components:
             How many entries one carnet holds. Snapshotted onto each carnet
             at sale.
           example: 10
+        carnet_entry_unit:
+          allOf:
+            - $ref: '#/components/schemas/CarnetEntryUnit'
+          description: |
+            Always present — `lesson` until the owner changes it (#1576).
         training_days:
           $ref: '#/components/schemas/TrainingDays'
         season_start_month:
@@ -7154,6 +7356,14 @@ components:
             the academy page to say "4 classes a week" or "not set up yet"
             without a second request.
           example: 4
+        syllabus_topics_count:
+          type: integer
+          minimum: 0
+          description: |
+            How many techniques the programme holds (#1563) — living ones,
+            positions excluded. Enough for the academy page to say "84
+            techniques" or "not set up yet" without a second request.
+          example: 84
         schedules:
           type: array
           description: |
@@ -7162,6 +7372,19 @@ components:
             transitions on the FE.
           items:
             $ref: '#/components/schemas/AcademySchedule'
+
+    CarnetEntryUnit:
+      type: string
+      enum: [lesson, day]
+      default: lesson
+      description: |
+        What one carnet entry pays for (#1576). With a timetable an athlete
+        can be checked into two classes on the same day: under `lesson` that
+        spends two entries, under `day` the second class on a day already
+        charged costs nothing. A rule of the ledger rather than of the sale,
+        so it is not snapshotted onto carnets — changing it recounts every
+        carnet the academy has sold.
+      example: lesson
 
     ClassKind:
       type: string
@@ -7247,6 +7470,93 @@ components:
           example: 60
         kind:
           $ref: '#/components/schemas/ClassKind'
+
+    TopicKind:
+      type: string
+      enum: [gi, nogi, both]
+      description: |
+        What a syllabus topic is trained in (#1563). Three cases and not
+        `ClassKind`'s four: a topic is jiu-jitsu by definition, so there is
+        no `other` for it to be. A technique's kind defaults to its
+        position's in the shipped seed; the owner can set either.
+
+    SyllabusTopicPayload:
+      type: object
+      description: |
+        A topic as the owner writes it (#1563). `name` and `kind` are
+        required; `parent_id` names the position a technique goes under and
+        is absent for a position.
+      required: [name, kind]
+      properties:
+        name:
+          type: string
+          maxLength: 80
+          example: Armbar
+        kind:
+          $ref: '#/components/schemas/TopicKind'
+        parent_id:
+          type: integer
+          format: int64
+          nullable: true
+          description: One of this academy's living positions, or null for a new position.
+          example: 12
+        in_season:
+          type: boolean
+          default: true
+
+    SyllabusTopicUpdatePayload:
+      type: object
+      description: |
+        Partial (#1563) — every field optional, only what is sent changes.
+        `in_season` on a position cascades to its techniques. There is no
+        `parent_id`: moving a technique is a delete and an add.
+      properties:
+        name:
+          type: string
+          maxLength: 80
+          example: Guardia chiusa
+        kind:
+          $ref: '#/components/schemas/TopicKind'
+        in_season:
+          type: boolean
+        sort_order:
+          type: integer
+          minimum: 0
+          maximum: 65535
+          description: Position among siblings; new topics append.
+          example: 3
+
+    SyllabusTopic:
+      type: object
+      description: |
+        One entry in the academy's programme (#1563) — a position when
+        `parent_id` is null, a technique under it otherwise. A position
+        carries its techniques as `children`; a technique has none.
+      required: [id, parent_id, name, kind, in_season, sort_order]
+      properties:
+        id:
+          type: integer
+          format: int64
+        parent_id:
+          type: integer
+          format: int64
+          nullable: true
+        name:
+          type: string
+          maxLength: 80
+          example: Closed guard
+        kind:
+          $ref: '#/components/schemas/TopicKind'
+        in_season:
+          type: boolean
+          description: In scope for the current season — the coverage denominator.
+        sort_order:
+          type: integer
+        children:
+          type: array
+          description: The techniques under a position, in order. Absent on a technique.
+          items:
+            $ref: '#/components/schemas/SyllabusTopic'
 
     AcademySchedule:
       type: object

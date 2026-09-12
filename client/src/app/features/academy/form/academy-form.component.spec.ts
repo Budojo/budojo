@@ -81,6 +81,45 @@ describe('AcademyFormComponent', () => {
     expect(component.slug()).toBe('gracie-barra-torino-a1b2c3d4');
   });
 
+  it('hides the training-day pills and sends no training_days while the timetable sets them (#1575)', () => {
+    const { fixture, component, httpMock } = setup(
+      makeAcademy({ classes_count: 3, training_days: [1, 3, 5] }),
+    );
+    fixture.detectChanges();
+
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('[data-cy="academy-form-training-days"]')).toBeNull();
+    expect(el.querySelector('[data-cy="academy-form-schedule-planner"]')).toBeNull();
+    expect(el.querySelector('[data-cy="academy-form-training-days-derived"]')).not.toBeNull();
+    expect(el.querySelector('[data-cy="academy-form-open-timetable"]')?.getAttribute('href')).toBe(
+      '/dashboard/academy/timetable',
+    );
+
+    component.submit();
+
+    const req = httpMock.expectOne('/api/v1/academy');
+    expect(req.request.method).toBe('PATCH');
+    // The server refuses it in this state; the form does not offer it.
+    expect('training_days' in req.request.body).toBe(false);
+    req.flush({ data: makeAcademy({ classes_count: 3 }) });
+  });
+
+  it('keeps the pills, and sends the days, when there is no timetable', () => {
+    const { fixture, component, httpMock } = setup(makeAcademy({ classes_count: 0 }));
+    fixture.detectChanges();
+
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('[data-cy="academy-form-training-days"]')).not.toBeNull();
+    expect(el.querySelector('[data-cy="academy-form-training-days-derived"]')).toBeNull();
+
+    component.setTrainingDays([1, 3]);
+    component.submit();
+
+    const req = httpMock.expectOne('/api/v1/academy');
+    expect(req.request.body.training_days).toEqual([1, 3]);
+    req.flush({ data: makeAcademy({ training_days: [1, 3] }) });
+  });
+
   it('renders empty address fields when the cached academy has a null address', () => {
     const { component } = setup(makeAcademy({ address: null }));
     expect(component.form.value.address?.line1).toBe('');
@@ -170,6 +209,7 @@ describe('AcademyFormComponent', () => {
       monthly_fee_cents: null,
       carnet_price_cents: null,
       carnet_entries: null,
+      carnet_entry_unit: 'lesson',
       season_start_month: null,
       training_days: null,
     });
@@ -218,6 +258,7 @@ describe('AcademyFormComponent', () => {
       monthly_fee_cents: null,
       carnet_price_cents: null,
       carnet_entries: null,
+      carnet_entry_unit: 'lesson',
       season_start_month: null,
       training_days: null,
     });
@@ -416,5 +457,80 @@ describe('AcademyFormComponent', () => {
     expect(component.monthlyFee.errors?.['min']).toBeTruthy();
     component.submit();
     httpMock.expectNone('/api/v1/academy');
+  });
+});
+
+describe('AcademyFormComponent — what one carnet entry covers (#1576)', () => {
+  const unitField = (fixture: Harness['fixture']) =>
+    fixture.nativeElement.querySelector('[data-cy="academy-form-carnet-entry-unit-field"]');
+
+  it('asks only once both halves of the carnet offering are set', () => {
+    const { fixture, component } = setup();
+    expect(unitField(fixture)).toBeNull();
+
+    component.form.patchValue({ carnet_price: 70 });
+    fixture.detectChanges();
+    expect(unitField(fixture)).toBeNull();
+
+    component.form.patchValue({ carnet_entries: 10 });
+    fixture.detectChanges();
+    expect(unitField(fixture)).not.toBeNull();
+
+    // Clearing either half takes the question away again.
+    component.form.patchValue({ carnet_price: null });
+    fixture.detectChanges();
+    expect(unitField(fixture)).toBeNull();
+  });
+
+  it('hydrates the unit from the academy', () => {
+    const { component } = setup(
+      makeAcademy({ carnet_price_cents: 7000, carnet_entries: 10, carnet_entry_unit: 'day' }),
+    );
+    expect(component.form.controls.carnet_entry_unit.value).toBe('day');
+  });
+
+  it('defaults to the lesson when the server says nothing', () => {
+    const { component } = setup(makeAcademy());
+    expect(component.form.controls.carnet_entry_unit.value).toBe('lesson');
+  });
+
+  it('keeps the persisted unit when the offering is cleared, so hiding the question does not answer it', () => {
+    // The control leaves the page when either half of the offering goes; the
+    // value it holds must still be the academy's, or clearing the price would
+    // silently flip a `day` academy back to lessons and recount every carnet.
+    const { component, httpMock } = setup(
+      makeAcademy({ carnet_price_cents: 7000, carnet_entries: 10, carnet_entry_unit: 'day' }),
+    );
+    component.form.patchValue({ carnet_price: null });
+    component.submit();
+
+    const req = httpMock.expectOne('/api/v1/academy');
+    expect(req.request.body.carnet_price_cents).toBeNull();
+    expect(req.request.body.carnet_entry_unit).toBe('day');
+    req.flush({ data: makeAcademy({ carnet_entry_unit: 'day' }) });
+  });
+
+  it('sends the chosen unit with the rest of the offering', () => {
+    const { component, httpMock } = setup(
+      makeAcademy({ carnet_price_cents: 7000, carnet_entries: 10 }),
+    );
+    component.form.patchValue({ carnet_entry_unit: 'day' });
+    component.submit();
+
+    const req = httpMock.expectOne('/api/v1/academy');
+    expect(req.request.body.carnet_price_cents).toBe(7000);
+    expect(req.request.body.carnet_entries).toBe(10);
+    expect(req.request.body.carnet_entry_unit).toBe('day');
+    req.flush({ data: makeAcademy({ carnet_entry_unit: 'day' }) });
+  });
+
+  it("names the two answers in the reader's language", () => {
+    const { fixture } = setup(makeAcademy({ carnet_price_cents: 7000, carnet_entries: 10 }));
+    const labels = Array.from(
+      fixture.nativeElement.querySelectorAll(
+        '[data-cy="academy-form-carnet-entry-unit"] .p-togglebutton',
+      ) as NodeListOf<HTMLElement>,
+    ).map((el) => el.textContent?.trim());
+    expect(labels).toEqual(['One lesson', 'A whole day']);
   });
 });
