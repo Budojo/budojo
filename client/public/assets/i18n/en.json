@@ -1376,9 +1376,15 @@
         "address": "Address",
         "trainingDays": "Training days",
         "timetable": "Timetable",
+        "syllabus": "Programme",
         "season": "Season"
       },
       "timetable": {
+        "none": "Not set up yet",
+        "manage": "Manage",
+        "setUp": "Set up"
+      },
+      "syllabus": {
         "none": "Not set up yet",
         "manage": "Manage",
         "setUp": "Set up"
@@ -1594,6 +1600,62 @@
         "errorSummary": "Something went wrong",
         "errorDetail": "The change was not saved. Try again.",
         "loadErrorDetail": "The timetable could not be loaded."
+      }
+    },
+    "syllabus": {
+      "title": "Programme",
+      "hint": "What you teach, by position. Tick what is in season — that is what the coverage view counts against.",
+      "countOne": "{{count}} technique",
+      "countOther": "{{count}} techniques",
+      "add": "Add position",
+      "addUnderAria": "Add a technique to {{name}}",
+      "editAria": "Edit {{name}}",
+      "season": "In season",
+      "seasonAria": "{{name}} is in season",
+      "noTechniques": "Nothing under this position yet.",
+      "empty": {
+        "title": "No programme yet",
+        "hint": "Start from the shipped BJJ programme — every position and technique, ready to rename, untick or delete — or write your own from scratch.",
+        "cta": "Start from the BJJ programme",
+        "scratch": "Write my own instead"
+      },
+      "dialog": {
+        "addPosition": "New position",
+        "addTechnique": "New technique in {{name}}",
+        "editPosition": "Edit position",
+        "editTechnique": "Edit technique"
+      },
+      "form": {
+        "name": "Name",
+        "namePlaceholderPosition": "Closed guard",
+        "namePlaceholderTechnique": "Armbar",
+        "kind": "Trained in",
+        "kindHint": "Heel hooks are no-gi, lapel guards are gi. Leave it on both when it makes sense either way.",
+        "nameRequired": "Give it a name, and one not already used here.",
+        "cancel": "Cancel",
+        "create": "Add",
+        "save": "Save",
+        "remove": "Remove"
+      },
+      "kind": {
+        "both": "Gi and no-gi",
+        "gi": "Gi",
+        "nogi": "No-gi"
+      },
+      "confirm": {
+        "remove": "Remove {{name}} from the programme?",
+        "removePositionOne": "Remove {{name}} and the one technique under it?",
+        "removePositionOther": "Remove {{name}} and the {{count}} techniques under it?",
+        "accept": "Remove",
+        "reject": "Keep"
+      },
+      "toast": {
+        "saved": "Programme saved",
+        "removed": "Removed from the programme",
+        "seeded": "The BJJ programme is yours to edit",
+        "errorSummary": "Something went wrong",
+        "errorDetail": "The change was not saved. Try again.",
+        "loadErrorDetail": "The programme could not be loaded."
       }
     },
     "schedule": {

@@ -225,6 +225,13 @@ export interface Academy {
    */
   carnet_entry_unit?: CarnetEntryUnit;
   /**
+   * How many techniques the programme holds (#1563) — living ones, positions
+   * excluded, so the academy page can say "84 techniques" or "not set up yet"
+   * without a second request. Optional for the same fixture-compat reason as
+   * the fee above.
+   */
+  syllabus_topics_count?: number;
+  /**
    * Weekdays the academy trains on, as Carbon `dayOfWeek` ints (0=Sun..6=Sat).
    * `null` = "schedule not configured" — daily check-in falls back to
    * all-weekdays. Optional for the same fixture-compat reason as the fee.

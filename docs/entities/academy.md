@@ -37,6 +37,7 @@ Today the model is 1-to-1 with `User` — one owner per academy, one academy per
 - `hasMany(AcademySchedule::class)` — schedule history (#1094); see [`academy-schedule.md`](./academy-schedule.md). Read-side helpers: `scheduleForDate(Carbon)`, `currentSchedule()`, `nextSchedule()`
 - `hasMany(AcademyClass::class)` — the weekly timetable (#1562); empty on an academy that never set one up, which changes nothing. See [`academy-class.md`](./academy-class.md)
 - `hasMany(Lesson::class)` — every lesson actually held, the occurrences the classes produced (#1562). See [`lesson.md`](./lesson.md)
+- `hasMany(SyllabusTopic::class)` — the programme (#1563), positions and techniques alike; empty until the academy starts one. See [`syllabus-topic.md`](./syllabus-topic.md)
 - `morphOne(Address::class, 'addressable')` — structured address (#72), see [`address.md`](./address.md)
 
 ## Indexes

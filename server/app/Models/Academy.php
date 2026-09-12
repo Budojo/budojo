@@ -97,6 +97,17 @@ class Academy extends Model implements HasAddress
     }
 
     /**
+     * The programme (#1563) — positions and techniques alike, living rows
+     * only. `SyllabusTopic::positions()` narrows to the top level.
+     *
+     * @return HasMany<SyllabusTopic, $this>
+     */
+    public function syllabusTopics(): HasMany
+    {
+        return $this->hasMany(SyllabusTopic::class);
+    }
+
+    /**
      * Academies that manage payments in Budojo at all (#1381).
      *
      * Before the price list existed this was simply `monthly_fee_cents IS NOT

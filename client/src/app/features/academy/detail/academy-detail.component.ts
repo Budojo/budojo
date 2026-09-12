@@ -93,6 +93,21 @@ export class AcademyDetailComponent {
     );
   });
 
+  /**
+   * "84 techniques" (#1563), or null before the programme exists. Techniques
+   * and not positions: a position with nothing under it is a heading, not
+   * something to teach.
+   */
+  protected readonly syllabusLabel = computed<string | null>(() => {
+    this.languageService.currentLang(); // signal dep — recompute on toggle
+    const n = this.academyService.academy()?.syllabus_topics_count ?? 0;
+    if (n === 0) return null;
+    return this.translate.instant(
+      n === 1 ? 'academy.syllabus.countOne' : 'academy.syllabus.countOther',
+      { count: n },
+    );
+  });
+
   /** `2025/26`, resolved server-side — see `App\Support\Season`. */
   protected readonly seasonLabel = computed(
     () => this.academyService.academy()?.season_label ?? null,

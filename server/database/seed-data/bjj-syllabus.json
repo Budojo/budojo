@@ -1,0 +1,478 @@
+[
+  {
+    "name": "Base movements",
+    "kind": "both",
+    "techniques": [
+      "Bridging",
+      "Shrimping / hip escape",
+      "Technical stand-up",
+      "Granby roll",
+      "Forward and backward rolls",
+      "Breakfalls (ukemi)",
+      "Sprawl",
+      "Inversions"
+    ]
+  },
+  {
+    "name": "Core concepts",
+    "kind": "both",
+    "techniques": [
+      "Posture",
+      "Base",
+      "Frames",
+      "Connection",
+      "Hip pressure",
+      { "name": "Grip fighting", "kind": "gi" },
+      { "name": "Hand fighting", "kind": "nogi" }
+    ]
+  },
+  {
+    "name": "Stance and grip fighting",
+    "kind": "both",
+    "techniques": [
+      "Collar tie",
+      "Wrist control",
+      "Inside tie",
+      "Pummelling",
+      "Underhook",
+      "Overhook / whizzer",
+      "Russian tie",
+      "Arm drag",
+      "Snap down",
+      "Level change",
+      "Penetration step"
+    ]
+  },
+  {
+    "name": "Takedowns — wrestling",
+    "kind": "both",
+    "techniques": [
+      "Double leg",
+      "Single leg",
+      "High crotch",
+      "Ankle pick",
+      "Knee tap",
+      "Body lock",
+      "Fireman's carry",
+      "Duck under",
+      "Inside and outside trip",
+      "Foot sweep"
+    ]
+  },
+  {
+    "name": "Takedowns — judo",
+    "kind": "gi",
+    "techniques": [
+      "O goshi",
+      "Ippon and drop seoi nage",
+      "Uchi mata",
+      "Osoto gari",
+      "Ouchi and kouchi gari",
+      "Tai otoshi",
+      "Tomoe nage",
+      "Harai goshi"
+    ]
+  },
+  {
+    "name": "Takedown defence",
+    "kind": "both",
+    "techniques": [
+      "Sprawl",
+      "Downblock",
+      "Crossface",
+      "Front headlock",
+      "Re-shot",
+      "Whizzer defence"
+    ]
+  },
+  {
+    "name": "Guard pulling",
+    "kind": "both",
+    "techniques": ["To closed guard", "To seated guard", "To a leg entanglement"]
+  },
+  {
+    "name": "Closed guard",
+    "kind": "both",
+    "techniques": [
+      "Armbar",
+      "Triangle",
+      "Kimura",
+      "Omoplata",
+      "Guillotine",
+      { "name": "Cross collar choke", "kind": "gi" },
+      "Hip bump sweep",
+      "Scissor sweep",
+      "Flower / pendulum sweep",
+      "Double and single ankle sweep",
+      "Back take",
+      "Posture breaking"
+    ]
+  },
+  {
+    "name": "Half guard",
+    "kind": "both",
+    "techniques": [
+      "Knee shield retention",
+      "Underhook recovery",
+      "Old school sweep",
+      "John Wayne sweep",
+      "Back take",
+      "Kimura",
+      "Lockdown",
+      "Deep half entry",
+      "Coming up on the single leg"
+    ]
+  },
+  {
+    "name": "Butterfly guard",
+    "kind": "both",
+    "techniques": [
+      "Hook / elevator sweep",
+      "Arm drag to the back",
+      "Sit-up sweep",
+      "Guillotine",
+      "Shin-to-shin entry"
+    ]
+  },
+  {
+    "name": "De la Riva",
+    "kind": "both",
+    "techniques": ["Berimbolo", "Back take", "Sweep to leg drag", "DLR to X guard"]
+  },
+  {
+    "name": "Reverse de la Riva",
+    "kind": "both",
+    "techniques": ["Kiss of the dragon", "Back take", "Kneebar entry", "Sweeps"]
+  },
+  {
+    "name": "X guard and single leg X",
+    "kind": "both",
+    "techniques": ["Technical stand-up sweep", "Leg lock entries", "X to back"]
+  },
+  {
+    "name": "Spider and lasso guard",
+    "kind": "gi",
+    "techniques": ["Triangle", "Omoplata", "Sweeps", "Lasso retention", "Spider to DLR"]
+  },
+  {
+    "name": "Collar–sleeve guard",
+    "kind": "gi",
+    "techniques": ["Sweeps", "Back take", "Triangle"]
+  },
+  {
+    "name": "Lapel guards",
+    "kind": "gi",
+    "techniques": ["Worm guard", "Squid guard", "Reverse de la worm", "Gubber guard"]
+  },
+  {
+    "name": "K guard",
+    "kind": "nogi",
+    "techniques": ["Entries to the saddle", "Back exposure"]
+  },
+  {
+    "name": "Deep half guard",
+    "kind": "both",
+    "techniques": ["Waiter sweep", "Back take", "Coming up"]
+  },
+  {
+    "name": "Seated / open guard",
+    "kind": "both",
+    "techniques": [
+      "Retention",
+      "Recovery",
+      "Granby and inversion recoveries",
+      "Tripod and sickle sweep",
+      "Shin-to-shin"
+    ]
+  },
+  {
+    "name": "Wrestling up",
+    "kind": "both",
+    "techniques": ["Getting to the legs from the bottom", "Standing in base", "Re-engaging"]
+  },
+  {
+    "name": "Opening the closed guard",
+    "kind": "both",
+    "techniques": ["Standing break", "Knee in the tailbone", "Log split", "Sao Paulo"]
+  },
+  {
+    "name": "Torreando and standing passes",
+    "kind": "both",
+    "techniques": ["Bullfighter", "Long step", "X-pass", "Leg drag"]
+  },
+  {
+    "name": "Pressure passes",
+    "kind": "both",
+    "techniques": [
+      "Knee cut / knee slice",
+      "Over-under",
+      "Body lock",
+      "Stack",
+      "Smash pass",
+      "Headquarters"
+    ]
+  },
+  {
+    "name": "Half guard top",
+    "kind": "both",
+    "techniques": ["Knee slice", "Underhook battle", "Back step", "Dogfight"]
+  },
+  {
+    "name": "Passing the knee shield",
+    "kind": "both",
+    "techniques": ["Flatten", "Staple", "Cross face"]
+  },
+  {
+    "name": "Passing the modern open guards",
+    "kind": "both",
+    "techniques": [
+      "De la Riva",
+      { "name": "Spider and lasso", "kind": "gi" },
+      "Butterfly",
+      "Seated"
+    ]
+  },
+  {
+    "name": "Passing leg entanglements",
+    "kind": "both",
+    "techniques": ["Leg lock defence while passing", "Hip escape", "Going backwards"]
+  },
+  {
+    "name": "Side control",
+    "kind": "both",
+    "techniques": [
+      "Maintenance and switching",
+      "Americana",
+      "Kimura",
+      "Straight armbar",
+      "Far side armbar",
+      { "name": "Paper cutter choke", "kind": "gi" },
+      "Transition to mount and knee on belly"
+    ]
+  },
+  {
+    "name": "Scarf hold (kesa gatame)",
+    "kind": "both",
+    "techniques": ["Maintenance", "Americana", "Arm trap", "Transitions"]
+  },
+  {
+    "name": "Knee on belly",
+    "kind": "both",
+    "techniques": [
+      "Maintenance",
+      "Far side armbar",
+      { "name": "Baseball bat choke", "kind": "gi" },
+      "Mount transition",
+      "Retaking"
+    ]
+  },
+  {
+    "name": "Mount",
+    "kind": "both",
+    "techniques": [
+      "Maintenance",
+      "High mount",
+      "S-mount",
+      "Armbar",
+      { "name": "Cross collar choke", "kind": "gi" },
+      "Americana",
+      "Ezekiel",
+      "Arm triangle",
+      "Back take"
+    ]
+  },
+  {
+    "name": "North–south",
+    "kind": "both",
+    "techniques": ["Control", "North–south choke", "Kimura", "Transition to side control"]
+  },
+  {
+    "name": "Back control",
+    "kind": "both",
+    "techniques": [
+      "Seat belt and hooks",
+      "Body triangle",
+      "Rear naked choke",
+      { "name": "Bow and arrow", "kind": "gi" },
+      "Armbar",
+      "Retention when they turn in"
+    ]
+  },
+  {
+    "name": "Turtle — top",
+    "kind": "both",
+    "techniques": [
+      "Breakdowns",
+      { "name": "Clock choke", "kind": "gi" },
+      "Crucifix",
+      "Back take",
+      "Front headlock"
+    ]
+  },
+  {
+    "name": "The truck",
+    "kind": "nogi",
+    "techniques": ["Twister", "Calf slicer", "Back exposure"]
+  },
+  {
+    "name": "Side control escapes",
+    "kind": "both",
+    "techniques": [
+      "Frame and shrimp to guard",
+      "Bridge to single leg",
+      "Underhook to turtle",
+      "Ghost escape"
+    ]
+  },
+  {
+    "name": "Mount escapes",
+    "kind": "both",
+    "techniques": [
+      "Upa / bridge and roll",
+      "Elbow escape",
+      "Knee to elbow",
+      "Trap and roll from high mount",
+      "Hip heist"
+    ]
+  },
+  {
+    "name": "Back escapes",
+    "kind": "both",
+    "techniques": ["Hand fighting", "Hook removal", "Shoulder slide to the mat", "Turning in"]
+  },
+  {
+    "name": "Knee on belly escapes",
+    "kind": "both",
+    "techniques": ["Frame and hip escape", "Belt grab to ankle pick"]
+  },
+  {
+    "name": "Turtle escapes",
+    "kind": "both",
+    "techniques": ["Standing up", "Granby to guard", "Sit out"]
+  },
+  {
+    "name": "Scarf hold escapes",
+    "kind": "both",
+    "techniques": ["Bridge and roll", "Back take"]
+  },
+  {
+    "name": "Submission defence",
+    "kind": "both",
+    "techniques": [
+      "Armbar escape",
+      "Triangle escape",
+      "Kimura escape",
+      "Guillotine escape",
+      "Collar choke escape",
+      "Arm triangle escape",
+      "Ankle lock escape",
+      "Heel hook escape"
+    ]
+  },
+  {
+    "name": "Ashi garami / single leg X",
+    "kind": "both",
+    "techniques": ["Straight ankle lock", "Entries", "Transitions out"]
+  },
+  {
+    "name": "Outside ashi",
+    "kind": "both",
+    "techniques": [{ "name": "Heel hook", "kind": "nogi" }, "Ankle lock", "Passing exposure"]
+  },
+  {
+    "name": "Saddle / inside sankaku (411)",
+    "kind": "both",
+    "techniques": [
+      { "name": "Inside heel hook", "kind": "nogi" },
+      "Kneebar",
+      "Toe hold",
+      "Transitions"
+    ]
+  },
+  {
+    "name": "50/50",
+    "kind": "both",
+    "techniques": ["Entries", { "name": "Heel hook", "kind": "nogi" }, "Sweeps", "Getting out"]
+  },
+  {
+    "name": "Backside 50/50",
+    "kind": "both",
+    "techniques": [{ "name": "Heel hook", "kind": "nogi" }, "Back exposure"]
+  },
+  {
+    "name": "Leg lock defence",
+    "kind": "both",
+    "techniques": ["Hiding the heel", "Hip escape", "Rotating out", "The boot"]
+  },
+  {
+    "name": "Standing leg attacks",
+    "kind": "both",
+    "techniques": ["Imanari roll", "Kneebar entries", "Ankle pick to entanglement"]
+  },
+  {
+    "name": "Guillotine family",
+    "kind": "both",
+    "techniques": ["High elbow", "Arm-in", "Standing", "From guard"]
+  },
+  {
+    "name": "Front headlock family",
+    "kind": "both",
+    "techniques": ["D'Arce", "Anaconda", "Peruvian necktie", "North–south choke"]
+  },
+  {
+    "name": "Head and arm",
+    "kind": "both",
+    "techniques": ["Arm triangle from mount and side control", "Von Flue"]
+  },
+  {
+    "name": "Triangle family",
+    "kind": "both",
+    "techniques": ["Front", "Side", "Reverse", "Inverted", "From the back"]
+  },
+  {
+    "name": "Kimura family",
+    "kind": "both",
+    "techniques": ["From guard", "From side control", "From north–south", "The kimura trap"]
+  },
+  {
+    "name": "Wrist locks",
+    "kind": "both",
+    "techniques": ["From guard", "From mount", "From the top"]
+  },
+  {
+    "name": "Spinal and compression",
+    "kind": "both",
+    "techniques": ["Twister", "Calf slicer", "Bicep slicer", "Can opener"]
+  },
+  {
+    "name": "Positional sparring",
+    "kind": "both",
+    "techniques": ["Rounds by position", "Starting pinned", "Starting in guard"]
+  },
+  {
+    "name": "Rolling",
+    "kind": "both",
+    "techniques": ["Flow rolling", "Resistance levels", "Tapping and safety"]
+  },
+  {
+    "name": "Competition preparation",
+    "kind": "both",
+    "techniques": [
+      "The points system",
+      "Advantages",
+      "Stalling",
+      "Weight cutting",
+      "Time management"
+    ]
+  },
+  {
+    "name": "Self-defence",
+    "kind": "both",
+    "techniques": [
+      "Standing headlock",
+      "Bear hug",
+      "Wrist grab",
+      "Punch defence from guard and mount"
+    ]
+  }
+]
