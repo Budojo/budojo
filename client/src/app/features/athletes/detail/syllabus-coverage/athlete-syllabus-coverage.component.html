@@ -1,0 +1,144 @@
+<section class="coverage" data-cy="athlete-coverage">
+  @if (loading()) {
+    <div class="coverage__loading" aria-hidden="true" data-cy="athlete-coverage-loading">
+      <p-skeleton height="3rem" />
+      <p-skeleton height="8rem" />
+    </div>
+  } @else if (failed()) {
+    <app-error-state
+      [title]="'athletes.coverage.error.title' | translate"
+      [hint]="'athletes.coverage.error.hint' | translate"
+      (retry)="retry()"
+      dataCy="athlete-coverage-error"
+    />
+  } @else if (!hasProgramme()) {
+    <!--
+      No programme at all. The athlete is not the subject of this sentence, so
+      the screen points at the syllabus rather than reporting a zero on them.
+    -->
+    <app-empty-state
+      icon="pi pi-book"
+      [headingLevel]="3"
+      [title]="'athletes.coverage.empty.noProgramme.title' | translate"
+      [hint]="'athletes.coverage.empty.noProgramme.hint' | translate"
+      [ctaLabel]="'athletes.coverage.empty.noProgramme.cta' | translate"
+      ctaIcon="pi pi-arrow-right"
+      (ctaClick)="goToProgramme()"
+      dataCy="athlete-coverage-no-programme"
+    />
+  } @else if (nothingTaught()) {
+    <!--
+      There is a programme, but nothing has been taught since this athlete
+      joined. "They have missed everything" would be false; nothing has
+      happened yet.
+    -->
+    <app-empty-state
+      icon="pi pi-calendar"
+      [headingLevel]="3"
+      [title]="'athletes.coverage.empty.nothingTaught.title' | translate"
+      [hint]="
+        'athletes.coverage.empty.nothingTaught.hint'
+          | translate: { date: shortDate(report()!.joined_on) }
+      "
+      dataCy="athlete-coverage-nothing-taught"
+    />
+  } @else {
+    @let r = report()!;
+
+    <header class="coverage__head">
+      <p class="coverage__headline" data-cy="athlete-coverage-headline">
+        <span class="coverage__percent">{{ r.totals.percentage }}</span
+        ><span class="coverage__percent-sign">%</span>
+      </p>
+      <p class="coverage__fraction">
+        {{
+          'athletes.coverage.fraction'
+            | translate: { seen: r.totals.seen, total: r.totals.taught_by_academy }
+        }}
+      </p>
+      <p class="coverage__since">
+        {{ 'athletes.coverage.since' | translate: { date: shortDate(r.joined_on) } }}
+      </p>
+    </header>
+
+    <ul class="legend">
+      <li>
+        <i class="legend__dot legend__dot--seen"></i
+        >{{ 'athletes.coverage.legend.seen' | translate: { count: r.totals.seen } }}
+      </li>
+      <li>
+        <i class="legend__dot legend__dot--thin"></i
+        >{{ 'athletes.coverage.legend.thin' | translate: { count: r.totals.thin } }}
+      </li>
+      <li>
+        <i class="legend__dot legend__dot--missed"></i
+        >{{ 'athletes.coverage.legend.missed' | translate: { count: r.totals.missed } }}
+      </li>
+    </ul>
+
+    <div
+      class="bar"
+      role="img"
+      [attr.aria-label]="'athletes.coverage.legend.seen' | translate: { count: r.totals.seen }"
+    >
+      <span class="bar__seg bar__seg--seen" [style.width]="segment(r.totals.seen)"></span>
+      <span class="bar__seg bar__seg--thin" [style.width]="segment(r.totals.thin)"></span>
+      <span class="bar__seg bar__seg--missed" [style.width]="segment(r.totals.missed)"></span>
+    </div>
+
+    @if (r.totals.not_taught_yet > 0) {
+      <!--
+        Outside the fraction, and said in the academy's voice, not the
+        athlete's: this is a gap in the programme, and putting it in the number
+        above would write it on a person.
+      -->
+      <p class="coverage__note" data-cy="athlete-coverage-not-taught">
+        {{ 'athletes.coverage.notTaughtYet' | translate: { count: r.totals.not_taught_yet } }}
+      </p>
+    }
+
+    @if (r.unattributed_presences > 0) {
+      <p class="coverage__note coverage__note--caveat" data-cy="athlete-coverage-caveat">
+        {{ 'athletes.coverage.unattributed' | translate: { count: r.unattributed_presences } }}
+      </p>
+    }
+
+    @if (r.missed.length > 0) {
+      <section class="panel" data-cy="athlete-coverage-missed">
+        <h3 class="panel__title">{{ 'athletes.coverage.missed.title' | translate }}</h3>
+        <ul class="rows">
+          @for (topic of r.missed; track topic.id) {
+            <li class="row">
+              <span class="row__name">{{ topic.name }}</span>
+              @if (topic.parent_name) {
+                <span class="row__parent">{{ topic.parent_name }}</span>
+              }
+              <span class="row__meta">
+                {{ 'athletes.coverage.missed.chances' | translate: { count: topic.taught_times } }}
+              </span>
+            </li>
+          }
+        </ul>
+      </section>
+    }
+
+    @if (r.seen_lately.length > 0) {
+      <section class="panel" data-cy="athlete-coverage-seen">
+        <h3 class="panel__title">{{ 'athletes.coverage.seen.title' | translate }}</h3>
+        <ul class="rows">
+          @for (topic of r.seen_lately; track topic.id) {
+            <li class="row">
+              <span class="row__name">{{ topic.name }}</span>
+              @if (topic.parent_name) {
+                <span class="row__parent">{{ topic.parent_name }}</span>
+              }
+              <span class="row__meta"
+                >{{ shortDate(topic.last_seen_on) }} · {{ ago(topic.last_seen_on) }}</span
+              >
+            </li>
+          }
+        </ul>
+      </section>
+    }
+  }
+</section>

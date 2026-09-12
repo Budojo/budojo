@@ -3499,6 +3499,128 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
 
+  /athletes/{athlete}/syllabus-coverage:
+    get:
+      tags: [attendance]
+      summary: What one athlete has seen of the programme (#1567)
+      description: |
+        Somebody away for six weeks did not miss "six lessons" — they missed
+        specific topics. This is the join between attendance and lesson topics,
+        read for one person.
+
+        **Four states, not the academy view's three, and the fourth is the
+        point.** "Never seen" would merge two unlike things: a topic the academy
+        taught while this athlete was away, which is their gap, and one the
+        academy has not taught at all, which is not. Merging them writes a low
+        number on a person for a decision somebody else made about the
+        programme.
+
+          - `seen` — attended two or more held lessons naming it
+          - `thin` — attended exactly one
+          - `missed` — taught while they were on the roster, and they were not there
+          - `not_taught_yet` — the academy has not covered it this season
+
+        `percentage` is `seen` over `taught_by_academy`, so it answers "how much
+        of what happened did you catch?" and never "how much of the syllabus are
+        you?". `not_taught_yet` is reported beside the fraction, never inside it.
+
+        **Everything is scoped to on or after the athlete's `joined_at`**, which
+        the response echoes as `joined_on`. Nobody misses what predates them.
+
+        `unattributed_presences` counts sessions in the window that name no
+        lesson and so can be attributed to no topic (#1562, #1590). They are
+        reported rather than counted as absence: a gap that is really a missing
+        record would be a lie about a person.
+
+        Requires `attendance_read`, not `stats_view` — this lives beside the
+        athlete's attendance, and the reader is the instructor planning their
+        next private lesson.
+      operationId: athleteSyllabusCoverage
+      parameters:
+        - name: athlete
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: seasons_back
+          in: query
+          required: false
+          schema: { type: integer, minimum: 0, maximum: 10, default: 0 }
+          description: 0 is the current season; 1 the one before it.
+      responses:
+        '200':
+          description: What this athlete has seen and missed
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [season, joined_on, totals, missed, seen_lately, unattributed_presences]
+                    properties:
+                      season:
+                        type: object
+                        required: [start, end, label]
+                        properties:
+                          start: { type: string, format: date }
+                          end: { type: string, format: date }
+                          label: { type: string, example: '2026/27' }
+                      joined_on:
+                        type: string
+                        format: date
+                        description: Nothing before this date is counted.
+                      totals:
+                        type: object
+                        required: [taught_by_academy, seen, thin, missed, percentage, not_taught_yet]
+                        properties:
+                          taught_by_academy:
+                            type: integer
+                            description: The denominator — what the academy taught while they were here.
+                          seen: { type: integer }
+                          thin: { type: integer }
+                          missed: { type: integer }
+                          percentage: { type: integer }
+                          not_taught_yet:
+                            type: integer
+                            description: Context about the programme, deliberately outside the fraction.
+                      missed:
+                        type: array
+                        items:
+                          type: object
+                          required: [id, name, parent_name, kind, taught_times]
+                          properties:
+                            id: { type: integer }
+                            name: { type: string }
+                            parent_name: { type: string, nullable: true }
+                            kind: { type: string, enum: [gi, nogi, both] }
+                            taught_times:
+                              type: integer
+                              description: How many evenings it was on the mat while they were on the roster.
+                      seen_lately:
+                        type: array
+                        description: Everything they have seen, most recent first.
+                        items:
+                          type: object
+                          required: [id, name, parent_name, lessons, last_seen_on]
+                          properties:
+                            id: { type: integer }
+                            name: { type: string }
+                            parent_name: { type: string, nullable: true }
+                            lessons: { type: integer }
+                            last_seen_on: { type: string, format: date }
+                      unattributed_presences:
+                        type: integer
+                        description: Sessions that name no lesson, and so count neither way.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
   /lessons/suggestions:
     get:
       tags: [attendance]

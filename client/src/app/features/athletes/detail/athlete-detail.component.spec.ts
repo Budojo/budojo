@@ -264,3 +264,24 @@ describe('AthleteDetailComponent', () => {
     httpMock.verify();
   });
 });
+
+describe('AthleteDetailComponent — the tab strip follows the URL', () => {
+  it.each([
+    ['documents'],
+    ['edit'],
+    ['attendance'],
+    ['payments'],
+    // Missing since it shipped: the strip underlined Documents while the
+    // promotion history was on screen.
+    ['promotions'],
+    ['coverage'],
+  ])('underlines the %s tab when the URL is on it', (tab) => {
+    const { http: httpMock } = setupTestBed('42', `/dashboard/athletes/42/${tab}`);
+    const fixture = TestBed.createComponent(AthleteDetailComponent);
+    fixture.detectChanges();
+    httpMock.expectOne('/api/v1/athletes/42').flush({ data: makeAthlete() });
+
+    expect(fixture.componentInstance.activeTab()).toBe(tab);
+    httpMock.verify();
+  });
+});

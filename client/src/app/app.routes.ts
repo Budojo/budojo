@@ -319,6 +319,15 @@ export const routes: Routes = [
               ),
           },
           {
+            // What this athlete has seen of the programme, and what they
+            // missed (#1567). Instructor-side, beside their attendance.
+            path: 'coverage',
+            loadComponent: () =>
+              import('./features/athletes/detail/syllabus-coverage/athlete-syllabus-coverage.component').then(
+                (m) => m.AthleteSyllabusCoverageComponent,
+              ),
+          },
+          {
             // Belt + stripe promotion history (post-v2.9.0). Owner-
             // facing timeline; date-descending list of every
             // belt/stripe change with the editor + date snapshot.
