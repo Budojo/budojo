@@ -645,6 +645,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::get('attendance/daily', [StatsController::class, 'attendanceDaily']);
             Route::get('payments/monthly', [StatsController::class, 'paymentsMonthly']);
             Route::get('athletes/age-bands', [StatsController::class, 'ageBands']);
+            // The programme against what was actually taught (#1565).
+            Route::get('syllabus/coverage', [StatsController::class, 'syllabusCoverage']);
         });
 
         // Audit log (#429). Owner-only paginated read; writes are observer-driven.

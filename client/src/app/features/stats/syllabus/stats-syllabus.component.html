@@ -1,0 +1,249 @@
+@if (loading()) {
+  <div class="coverage__loading" aria-hidden="true" data-cy="syllabus-coverage-loading">
+    <p-skeleton height="6rem" borderRadius="0.75rem" />
+    <p-skeleton height="12rem" borderRadius="0.75rem" />
+  </div>
+} @else if (failed()) {
+  <app-error-state
+    [title]="'stats.syllabus.error.title' | translate"
+    [hint]="'stats.syllabus.error.hint' | translate"
+    [retryLabel]="'stats.syllabus.error.retry' | translate"
+    (retry)="retry()"
+    dataCy="syllabus-coverage-error"
+  />
+} @else if (report(); as data) {
+  <section class="coverage" data-cy="syllabus-coverage">
+    <!--
+      The headline, the season it belongs to, and the filter that decides
+      which half of the programme is being counted. Gi and no-gi never mix:
+      a gi topic counted against a no-gi academy is a number that is quietly
+      wrong, which is worse than no number — so the filter is a control, not
+      a footnote.
+    -->
+    <header class="coverage__head">
+      <!--
+        No headline without a denominator. "0%" against nothing is not a
+        score, it is an accusation — an academy that has not written its
+        programme yet gets told what to do, below, and nothing else.
+      -->
+      @if (!nothingInScope()) {
+        <div class="coverage__headline">
+          <p class="coverage__percentage" data-cy="syllabus-coverage-percentage">
+            {{ data.totals.percentage }}<span class="coverage__percent-sign">%</span>
+          </p>
+          <p class="coverage__caption">
+            {{
+              'stats.syllabus.headline'
+                | translate: { covered: data.totals.covered, total: data.totals.in_scope }
+            }}
+          </p>
+        </div>
+      }
+
+      <div class="coverage__controls">
+        <div class="coverage__season" data-cy="syllabus-coverage-season">
+          <button
+            type="button"
+            class="coverage__season-step"
+            [disabled]="atOldestSeason()"
+            [attr.aria-label]="'stats.syllabus.season.previous' | translate"
+            (click)="shiftSeason(1)"
+            data-cy="syllabus-coverage-prev"
+          >
+            <i class="pi pi-chevron-left" aria-hidden="true"></i>
+          </button>
+          <span class="coverage__season-label">{{ seasonLabel() }}</span>
+          <button
+            type="button"
+            class="coverage__season-step"
+            [disabled]="atCurrentSeason()"
+            [attr.aria-label]="'stats.syllabus.season.next' | translate"
+            (click)="shiftSeason(-1)"
+            data-cy="syllabus-coverage-next"
+          >
+            <i class="pi pi-chevron-right" aria-hidden="true"></i>
+          </button>
+        </div>
+
+        <p-selectbutton
+          [options]="kindOptions()"
+          [ngModel]="kind()"
+          (ngModelChange)="setKind($event)"
+          optionLabel="label"
+          optionValue="value"
+          [allowEmpty]="false"
+          [ariaLabelledBy]="'syllabus-coverage-kind-label'"
+          data-cy="syllabus-coverage-kind"
+        />
+        <span id="syllabus-coverage-kind-label" class="visually-hidden">
+          {{ 'stats.syllabus.filter.aria' | translate }}
+        </span>
+      </div>
+    </header>
+
+    @if (nothingInScope()) {
+      <!--
+        No programme for this filter. Not a 0% — an academy with nothing to
+        measure against is told what to do, which is the only useful thing
+        this screen can say to it.
+      -->
+      <app-empty-state
+        icon="pi pi-book"
+        [title]="'stats.syllabus.empty.noProgrammeTitle' | translate"
+        [hint]="'stats.syllabus.empty.noProgrammeHint' | translate"
+        dataCy="syllabus-coverage-no-programme"
+      />
+      <p class="coverage__empty-link">
+        <a routerLink="/dashboard/academy/syllabus" data-cy="syllabus-coverage-programme-link">
+          {{ 'stats.syllabus.empty.openProgramme' | translate }}
+        </a>
+      </p>
+    } @else {
+      <p class="coverage__totals" data-cy="syllabus-coverage-totals">
+        <span class="tally tally--covered">
+          <span class="tally__dot" aria-hidden="true"></span>
+          {{ 'stats.syllabus.state.covered' | translate: { count: data.totals.covered } }}
+        </span>
+        <span class="tally tally--thin">
+          <span class="tally__dot" aria-hidden="true"></span>
+          {{ 'stats.syllabus.state.thin' | translate: { count: data.totals.thin } }}
+        </span>
+        <span class="tally tally--missing">
+          <span class="tally__dot" aria-hidden="true"></span>
+          {{ 'stats.syllabus.state.missing' | translate: { count: data.totals.missing } }}
+        </span>
+      </p>
+
+      @if (nothingTaught()) {
+        <app-empty-state
+          icon="pi pi-calendar"
+          [title]="'stats.syllabus.empty.nothingTaughtTitle' | translate"
+          [hint]="'stats.syllabus.empty.nothingTaughtHint' | translate"
+          dataCy="syllabus-coverage-nothing-taught"
+        />
+      } @else {
+        <!--
+          The position axis first, because it is what exposes real gaps:
+          "you have done nothing from half guard all year" is information an
+          instructor acts on, and a flat list of techniques is not.
+        -->
+        <section class="panel" data-cy="syllabus-coverage-positions">
+          <h3 class="panel__title">{{ 'stats.syllabus.byPosition' | translate }}</h3>
+          <ul class="bars">
+            @for (position of data.positions; track position.id) {
+              <li class="bars__row" [attr.data-cy]="'syllabus-position-' + position.id">
+                <span class="bars__name">
+                  {{ position.name }}
+                  @if (position.worked > 0) {
+                    <!-- "We worked half guard" — an answer that fills no
+                         technique, and is not nothing either. -->
+                    <span class="bars__worked">
+                      {{ 'stats.syllabus.worked' | translate: { count: position.worked } }}
+                    </span>
+                  }
+                </span>
+                <span
+                  class="bar"
+                  role="img"
+                  [attr.aria-label]="
+                    'stats.syllabus.barAria'
+                      | translate
+                        : {
+                            name: position.name,
+                            covered: position.covered,
+                            thin: position.thin,
+                            missing: position.missing,
+                          }
+                  "
+                >
+                  <span
+                    class="bar__seg bar__seg--covered"
+                    [style.width]="segment(position.covered, position.in_scope)"
+                  ></span>
+                  <span
+                    class="bar__seg bar__seg--thin"
+                    [style.width]="segment(position.thin, position.in_scope)"
+                  ></span>
+                  <span
+                    class="bar__seg bar__seg--missing"
+                    [style.width]="segment(position.missing, position.in_scope)"
+                  ></span>
+                </span>
+                <span class="bars__count">{{ position.covered }}/{{ position.in_scope }}</span>
+              </li>
+            }
+          </ul>
+        </section>
+
+        <!--
+          Coverage over the season, so the owner can see whether they are on
+          pace or drifting. A topic joins the line on the day of its second
+          lesson — the same rule the headline uses, because a chart arguing
+          with its own number is worse than no chart.
+        -->
+        <section class="panel" data-cy="syllabus-coverage-timeline">
+          <h3 class="panel__title">{{ 'stats.syllabus.overTime' | translate }}</h3>
+          <div class="panel__chart">
+            <p-chart
+              type="line"
+              [data]="timelineData()"
+              [options]="timelineOptions()"
+              height="200px"
+            />
+          </div>
+        </section>
+
+        <div class="panel-pair">
+          <!--
+            Blunt on purpose: this is the list an instructor acts on.
+          -->
+          <section class="panel" data-cy="syllabus-coverage-missing">
+            <h3 class="panel__title">
+              {{ 'stats.syllabus.missingList' | translate: { count: data.missing.length } }}
+            </h3>
+            @if (data.missing.length === 0) {
+              <p class="panel__none" data-cy="syllabus-coverage-nothing-missing">
+                {{ 'stats.syllabus.nothingMissing' | translate }}
+              </p>
+            } @else {
+              <ul class="topics">
+                @for (topic of data.missing; track topic.id) {
+                  <li class="topics__row" [attr.data-cy]="'syllabus-missing-' + topic.id">
+                    <span class="topics__name">{{ topic.name }}</span>
+                    @if (topic.parent_name) {
+                      <span class="topics__parent">{{ topic.parent_name }}</span>
+                    }
+                  </li>
+                }
+              </ul>
+            }
+          </section>
+
+          <!--
+            "Didn't I just do armbars?" — the question nobody's notebook ever
+            answers, so the date and the distance are both given.
+          -->
+          <section class="panel" data-cy="syllabus-coverage-taught">
+            <h3 class="panel__title">{{ 'stats.syllabus.lastTaught' | translate }}</h3>
+            <ul class="topics">
+              @for (topic of data.taught; track topic.id) {
+                <li class="topics__row" [attr.data-cy]="'syllabus-taught-' + topic.id">
+                  <span class="topics__name">
+                    {{ topic.name }}
+                    @if (topic.state === 'thin') {
+                      <span class="topics__thin">{{ 'stats.syllabus.thinTag' | translate }}</span>
+                    }
+                  </span>
+                  <span class="topics__when">
+                    <span>{{ shortDate(topic.last_taught_on) }}</span>
+                    <span class="topics__ago">{{ ago(topic.last_taught_on) }}</span>
+                  </span>
+                </li>
+              }
+            </ul>
+          </section>
+        </div>
+      }
+    }
+  </section>
+}

@@ -465,6 +465,15 @@ export const routes: Routes = [
                 (m) => m.StatsAthletesComponent,
               ),
           },
+          {
+            // Syllabus coverage (#1565) — the programme against what was
+            // actually taught this season.
+            path: 'syllabus',
+            loadComponent: () =>
+              import('./features/stats/syllabus/stats-syllabus.component').then(
+                (m) => m.StatsSyllabusComponent,
+              ),
+          },
         ],
       },
       {
