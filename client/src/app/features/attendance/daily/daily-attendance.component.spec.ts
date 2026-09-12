@@ -1063,3 +1063,96 @@ describe('DailyAttendanceComponent', () => {
     });
   });
 });
+
+describe('DailyAttendanceComponent — what the lesson covered (#1564)', () => {
+  const KIDS = {
+    id: 1,
+    name: 'Kids',
+    weekday: new Date().getDay(),
+    starts_at: null,
+    duration_minutes: null,
+    kind: 'gi' as const,
+  };
+
+  /** The day load now also reads the slot's lesson, once a class is picked. */
+  function flushLesson(httpMock: HttpTestingController, lesson: unknown): void {
+    httpMock
+      .expectOne((r) => r.url === '/api/v1/lessons' && r.method === 'GET')
+      .flush({ data: lesson });
+  }
+
+  it('shows no topic row without a class — there is no lesson to hang topics off', () => {
+    const { fixture, httpMock } = setup();
+    fixture.detectChanges();
+    flushInit(httpMock, {});
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('[data-cy="attendance-topics"]')).toBeNull();
+  });
+
+  it('invites a first tag when the lesson carries none', () => {
+    const { fixture, httpMock } = setup();
+    fixture.detectChanges();
+    flushInit(httpMock, { classes: [KIDS] });
+    flushLesson(httpMock, null);
+    fixture.detectChanges();
+
+    const row = fixture.nativeElement.querySelector('[data-cy="attendance-topics"]') as HTMLElement;
+    expect(row).not.toBeNull();
+    expect(row.textContent).toContain('Nothing tagged yet');
+    expect(row.textContent).toContain('Add topics');
+  });
+
+  it('summarises the topics on one line, and offers to edit them', () => {
+    const { fixture, httpMock } = setup();
+    fixture.detectChanges();
+    flushInit(httpMock, { classes: [KIDS] });
+    flushLesson(httpMock, {
+      id: 5,
+      academy_class_id: 1,
+      held_on: '2026-09-14',
+      name: 'Kids',
+      starts_at: null,
+      kind: 'gi',
+      notes: null,
+      held: true,
+      topics: [
+        {
+          id: 11,
+          name: 'Armbar',
+          kind: 'both',
+          parent_id: 1,
+          parent_name: 'Closed guard',
+          deleted: false,
+        },
+        {
+          id: 12,
+          name: 'Triangle',
+          kind: 'both',
+          parent_id: 1,
+          parent_name: 'Closed guard',
+          deleted: false,
+        },
+      ],
+    });
+    fixture.detectChanges();
+
+    const row = fixture.nativeElement.querySelector('[data-cy="attendance-topics"]') as HTMLElement;
+    expect(row.textContent).toContain('Armbar · Triangle');
+    expect(row.textContent).toContain('Edit');
+  });
+
+  it('opens the sheet from the row', () => {
+    const { fixture, component, httpMock } = setup();
+    fixture.detectChanges();
+    flushInit(httpMock, { classes: [KIDS] });
+    flushLesson(httpMock, null);
+    fixture.detectChanges();
+
+    expect(component['lessonSheetOpen']()).toBe(false);
+    (
+      fixture.nativeElement.querySelector('[data-cy="attendance-topics"]') as HTMLButtonElement
+    ).click();
+    expect(component['lessonSheetOpen']()).toBe(true);
+  });
+});

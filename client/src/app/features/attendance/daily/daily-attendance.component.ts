@@ -33,6 +33,8 @@ import {
 } from '../../../core/services/athlete.service';
 import { AcademyClass, AcademyClassService } from '../../../core/services/academy-class.service';
 import { AttendanceService } from '../../../core/services/attendance.service';
+import { Lesson, LessonService } from '../../../core/services/lesson.service';
+import { LessonSheetComponent } from '../../lessons/lesson-sheet/lesson-sheet.component';
 import { AthleteIdentityComponent } from '../../../shared/components/athlete-identity/athlete-identity.component';
 import { BeltBadgeComponent } from '../../../shared/components/belt-badge/belt-badge.component';
 import { FilterSheetComponent } from '../../../shared/components/filter-sheet/filter-sheet.component';
@@ -91,6 +93,7 @@ function toLocalDateString(d: Date): string {
     PageHeaderComponent,
     SortHeaderComponent,
     BeltSortButtonComponent,
+    LessonSheetComponent,
   ],
   providers: [MessageService],
   templateUrl: './daily-attendance.component.html',
@@ -98,6 +101,7 @@ function toLocalDateString(d: Date): string {
 })
 export class DailyAttendanceComponent implements OnInit {
   private readonly attendanceService = inject(AttendanceService);
+  private readonly lessonService = inject(LessonService);
   private readonly athleteService = inject(AthleteService);
   private readonly academyService = inject(AcademyService);
   private readonly messageService = inject(MessageService);
@@ -535,6 +539,8 @@ export class DailyAttendanceComponent implements OnInit {
         );
       }
       this.fetchAttendance(attendanceEpoch, settle);
+      // The topic row reads the same slot the records do.
+      this.loadLesson();
     });
   }
 
@@ -786,6 +792,70 @@ export class DailyAttendanceComponent implements OnInit {
     }
     this.selectedClassId.set(id);
     this.loadAttendanceOnly();
+    this.loadLesson();
+  }
+
+  // ── What the lesson covered (#1564) ────────────────────────────────────────
+
+  /** The selected class's lesson for the day, or null while nobody has tagged it. */
+  protected readonly lesson = signal<Lesson | null>(null);
+  protected readonly lessonSheetOpen = signal<boolean>(false);
+
+  /**
+   * The topics as one line — "Armbar · Triangle". Collapsed to a summary
+   * because the row sits above the roster, which is what the page is for:
+   * the picker is one tap away, and shut the rest of the time.
+   */
+  protected readonly topicSummary = computed<string | null>(() => {
+    const topics = this.lesson()?.topics ?? [];
+    if (topics.length === 0) return null;
+    return topics.map((t) => t.name).join(' · ');
+  });
+
+  /** `YYYY-MM-DD` for the selected day — what the lesson endpoints key on. */
+  protected readonly selectedDateIso = computed<string>(() =>
+    toLocalDateString(this.selectedDate()),
+  );
+
+  protected readonly selectedClassName = computed<string>(
+    () => this.dayClasses().find((c) => c.id === this.selectedClassId())?.name ?? '',
+  );
+
+  protected openLessonSheet(): void {
+    if (this.selectedClassId() === null) return;
+    this.lessonSheetOpen.set(true);
+  }
+
+  protected onLessonSaved(lesson: Lesson): void {
+    this.lesson.set(lesson);
+  }
+
+  /**
+   * Reads the lesson for the selected slot. Epoch-gated on the same counter
+   * the records use: a late answer for yesterday's class must not label
+   * today's.
+   */
+  private loadLesson(): void {
+    const classId = this.selectedClassId();
+    if (classId === null) {
+      this.lesson.set(null);
+      return;
+    }
+
+    const epoch = this.attendanceEpoch;
+    // Bare subscribe, like every other one-shot read on this page: HttpClient
+    // completes, so there is nothing to unsubscribe from.
+    this.lessonService.get(classId, this.selectedDateIso()).subscribe({
+      next: (lesson) => {
+        if (epoch === this.attendanceEpoch) this.lesson.set(lesson);
+      },
+      // A topic row that fails to load is not worth a toast over the roster:
+      // it renders as "nothing tagged yet", which is recoverable by opening
+      // it.
+      error: () => {
+        if (epoch === this.attendanceEpoch) this.lesson.set(null);
+      },
+    });
   }
 
   /**

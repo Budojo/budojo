@@ -559,3 +559,61 @@ $attendance-mobile-breakpoint: 768px;
     font-size: 1rem;
   }
 }
+
+// The lesson's topics (#1564) — one tappable line under the class picker.
+// A summary, not a control panel: the page is for ticking names, and the
+// picker opens on top of it.
+.attendance__topics {
+  appearance: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 3rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--p-surface-0);
+  border: 1px solid var(--p-content-border-color);
+  border-radius: var(--budojo-radius-small, 0.5rem);
+  color: var(--p-text-color);
+
+  &:hover {
+    background: var(--p-content-hover-background);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--p-primary-color);
+    outline-offset: 2px;
+  }
+
+  > .pi-book {
+    flex: 0 0 auto;
+    font-size: 0.875rem;
+    color: var(--p-text-muted-color);
+  }
+
+  // Nothing tagged yet reads as an invitation, not as data.
+  &--empty .attendance__topics-text {
+    color: var(--p-text-muted-color);
+    font-style: italic;
+  }
+}
+
+.attendance__topics-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 0.875rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attendance__topics-action {
+  flex: 0 0 auto;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--p-primary-color);
+}

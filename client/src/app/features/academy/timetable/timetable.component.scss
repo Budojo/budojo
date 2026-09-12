@@ -311,3 +311,17 @@
     width: 100%;
   }
 }
+
+// The plan action beside a class (#1564). The slot keeps the whole row as its
+// own tap target; this sits next to it, quiet, at the same 48px floor.
+.day__class {
+  display: flex;
+  align-items: stretch;
+  gap: 0.25rem;
+}
+
+.slot__plan {
+  @include tc.toolbar-control;
+  @include tc.toolbar-control-square;
+  flex: 0 0 auto;
+}
