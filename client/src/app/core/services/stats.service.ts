@@ -108,9 +108,72 @@ export interface SyllabusCoverage {
   readonly timeline: readonly { readonly on: string; readonly covered: number }[];
 }
 
+/** One thing this athlete has not seen yet (#1567). */
+export interface MissedTopic {
+  readonly id: number;
+  readonly name: string;
+  readonly parent_name: string | null;
+  readonly kind: TopicKind;
+  /** How many evenings it was on the mat while they were on the roster. */
+  readonly taught_times: number;
+}
+
+/** One thing they have seen, with the last time they saw it (#1567). */
+export interface SeenTopic {
+  readonly id: number;
+  readonly name: string;
+  readonly parent_name: string | null;
+  readonly lessons: number;
+  readonly last_seen_on: string;
+}
+
+/**
+ * What one athlete has seen of the programme (#1567).
+ *
+ * Four states, not the academy view's three. `not_taught_yet` sits outside the
+ * fraction on purpose: a topic the academy has not covered is not this
+ * person's gap, and counting it against them would turn a training log into a
+ * scoreboard.
+ */
+export interface AthleteSyllabusCoverage {
+  readonly season: { readonly start: string; readonly end: string; readonly label: string };
+  /** Nothing before this date is counted — nobody misses what predates them. */
+  readonly joined_on: string;
+  readonly totals: {
+    /** The denominator: what the academy taught while they were here. */
+    readonly taught_by_academy: number;
+    readonly seen: number;
+    readonly thin: number;
+    readonly missed: number;
+    readonly percentage: number;
+    /** Context about the programme, deliberately outside the fraction. */
+    readonly not_taught_yet: number;
+  };
+  readonly missed: readonly MissedTopic[];
+  readonly seen_lately: readonly SeenTopic[];
+  /** Presences that name no lesson, and so can be attributed to no topic. */
+  readonly unattributed_presences: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class StatsService {
   private readonly http = inject(HttpClient);
+
+  /**
+   * What this athlete has seen of the programme, and what they missed (#1567).
+   *
+   * Lives beside their attendance rather than under the owner-only stats
+   * group: the reader is the instructor planning their next private lesson.
+   */
+  athleteSyllabusCoverage(athleteId: number, seasonsBack = 0): Observable<AthleteSyllabusCoverage> {
+    const params = new HttpParams().set('seasons_back', seasonsBack);
+
+    return this.http
+      .get<{
+        data: AthleteSyllabusCoverage;
+      }>(`${environment.apiBase}/api/v1/athletes/${athleteId}/syllabus-coverage`, { params })
+      .pipe(map((r) => r.data));
+  }
 
   attendanceDaily(months: 3 | 6 | 12 = 3): Observable<readonly DailyAttendancePoint[]> {
     return this.http

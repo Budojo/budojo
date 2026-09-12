@@ -47,6 +47,16 @@ One `AttendanceRecord` is one athlete-was-present-on-one-date row. This is M4's 
 
 ## Wire shape
 
+## What an athlete has seen — per-athlete coverage (#1567)
+
+`GET /athletes/{athlete}/syllabus-coverage` reads the join between this table's `lesson_id` and `lesson_topic` for one person, and it is deliberately **not** the academy view with a filter on it.
+
+- **Four states, not three.** `seen` / `thin` / `missed` / `not_taught_yet`. Merging the last two into "never seen" would write a low number on a person for a decision somebody else made about the programme — which is exactly the scoreboard the screen must not become.
+- **The denominator is what the academy taught**, not the whole syllabus. The number answers *"how much of what happened did you catch?"* and never *"how much of the syllabus are you?"*. `not_taught_yet` is reported beside the fraction, never inside it.
+- **Scoped to on or after `athletes.joined_at`.** Nobody misses what predates them, and a denominator that says otherwise is not honest, just discouraging.
+- **Unattributed presences are stated, not counted as absence.** A row with `lesson_id` null says they trained and cannot say what they trained; treating that as a gap would report a missing record as a fact about a person. The count rides along so the screen can say so.
+- Gated on `attendance_read`, not `stats_view`: it lives beside the athlete's attendance, and the reader is the instructor planning their next private lesson.
+
 `AttendanceRecordResource` mirrors the model columns 1:1, including `source` (#960) and `lesson_id` (#1562). The full schema lives in [`../api/v1.yaml § AttendanceRecord`](../api/v1.yaml).
 
 ## Lifecycle

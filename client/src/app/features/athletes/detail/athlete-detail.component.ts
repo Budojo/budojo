@@ -139,11 +139,19 @@ export class AthleteDetailComponent implements OnInit {
     this.activeTab.set(this.tabFromUrl(this.router.url));
   }
 
+  /**
+   * Which tab the URL is on. Documents is the fallback because it is the
+   * default child route.
+   *
+   * A list rather than a chain of ifs, so adding a child route and forgetting
+   * this is harder: `promotions` had been missing since it shipped, and the
+   * tab strip quietly underlined Documents while showing the promotion
+   * history. `coverage` (#1567) would have landed the same way.
+   */
   private tabFromUrl(url: string): string {
-    if (url.includes('/payments')) return 'payments';
-    if (url.includes('/attendance')) return 'attendance';
-    if (url.includes('/edit')) return 'edit';
-    return 'documents';
+    const tabs = ['payments', 'attendance', 'promotions', 'coverage', 'edit'];
+
+    return tabs.find((tab) => url.includes(`/${tab}`)) ?? 'documents';
   }
 
   statusSeverity(status: AthleteStatus): 'success' | 'secondary' {

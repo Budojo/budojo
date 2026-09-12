@@ -604,6 +604,10 @@ Route::middleware('auth:sanctum')->group(function (): void {
         // general /athletes/{athlete}/attendance route or "summary" would
         // bind as a record id.
         Route::get('/athletes/{athlete}/attendance/summary', [\App\Http\Controllers\Attendance\AttendanceController::class, 'athleteSummary']);
+        // What this athlete has seen of the programme (#1567). Beside their
+        // attendance rather than under the owner-only stats group: the reader
+        // is the instructor planning their next private lesson.
+        Route::get('/athletes/{athlete}/syllabus-coverage', \App\Http\Controllers\Stats\AthleteSyllabusCoverageController::class);
         Route::get('/athletes/{athlete}/attendance', [\App\Http\Controllers\Attendance\AttendanceController::class, 'athleteHistory']);
     });
 

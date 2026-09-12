@@ -116,6 +116,15 @@
             <span>{{ 'athletes.detail.tabs.payments' | translate }}</span>
           </p-tab>
         }
+        <!--
+          What they have seen of the programme (#1567). Next to attendance,
+          because it answers the question attendance raises: they were here
+          forty times, but what did they actually see?
+        -->
+        <p-tab value="coverage" routerLink="coverage" data-cy="athlete-tab-coverage">
+          <i class="pi pi-book"></i>
+          <span>{{ 'athletes.detail.tabs.coverage' | translate }}</span>
+        </p-tab>
         <p-tab value="promotions" routerLink="promotions" data-cy="athlete-tab-promotions">
           <i class="pi pi-trophy"></i>
           <span>{{ 'athletes.detail.tabs.promotions' | translate }}</span>
