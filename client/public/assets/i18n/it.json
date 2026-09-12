@@ -1376,9 +1376,15 @@
         "address": "Indirizzo",
         "trainingDays": "Giorni di allenamento",
         "timetable": "Orario",
+        "syllabus": "Programma",
         "season": "Stagione"
       },
       "timetable": {
+        "none": "Non ancora impostato",
+        "manage": "Gestisci",
+        "setUp": "Imposta"
+      },
+      "syllabus": {
         "none": "Non ancora impostato",
         "manage": "Gestisci",
         "setUp": "Imposta"
@@ -1594,6 +1600,61 @@
         "errorSummary": "Qualcosa è andato storto",
         "errorDetail": "La modifica non è stata salvata. Riprova.",
         "loadErrorDetail": "Impossibile caricare l'orario."
+      }
+    },
+    "syllabus": {
+      "title": "Programma",
+      "hint": "Quello che insegni, per posizione. Spunta ciò che è in stagione: è quello su cui la copertura fa i conti.",
+      "countOne": "{{count}} tecnica",
+      "countOther": "{{count}} tecniche",
+      "add": "Aggiungi posizione",
+      "addUnderAria": "Aggiungi una tecnica a {{name}}",
+      "editAria": "Modifica {{name}}",
+      "season": "In stagione",
+      "seasonAria": "{{name}} è in stagione",
+      "noTechniques": "Ancora niente sotto questa posizione.",
+      "empty": {
+        "title": "Nessun programma",
+        "hint": "Parti dal programma BJJ già pronto — tutte le posizioni e le tecniche, da rinominare, togliere o cancellare — oppure scrivi il tuo da zero.",
+        "cta": "Parti dal programma BJJ",
+        "scratch": "Scrivo il mio"
+      },
+      "dialog": {
+        "addPosition": "Nuova posizione",
+        "addTechnique": "Nuova tecnica in {{name}}",
+        "editPosition": "Modifica posizione",
+        "editTechnique": "Modifica tecnica"
+      },
+      "form": {
+        "name": "Nome",
+        "namePlaceholderPosition": "Guardia chiusa",
+        "namePlaceholderTechnique": "Leva al braccio",
+        "kind": "Si allena",
+        "kindHint": "I heel hook sono no-gi, le guardie di bavero sono gi. Lascia gi e no-gi quando ha senso in entrambi.",
+        "nameRequired": "Dagli un nome, e che non sia già usato qui.",
+        "cancel": "Annulla",
+        "create": "Aggiungi",
+        "save": "Salva",
+        "remove": "Rimuovi"
+      },
+      "kind": {
+        "both": "Gi e no-gi",
+        "gi": "Gi",
+        "nogi": "No-gi"
+      },
+      "confirm": {
+        "remove": "Rimuovere {{name}} dal programma?",
+        "removePosition": "Rimuovere {{name}} e le {{count}} tecniche che contiene?",
+        "accept": "Rimuovi",
+        "reject": "Tieni"
+      },
+      "toast": {
+        "saved": "Programma salvato",
+        "removed": "Rimosso dal programma",
+        "seeded": "Il programma BJJ è tuo, modificalo pure",
+        "errorSummary": "Qualcosa è andato storto",
+        "errorDetail": "La modifica non è stata salvata. Riprova.",
+        "loadErrorDetail": "Impossibile caricare il programma."
       }
     },
     "schedule": {

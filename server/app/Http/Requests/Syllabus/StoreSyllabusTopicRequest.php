@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests\Syllabus;
 
 use App\Authorization\Capability;
+use App\Enums\TopicKind;
 use App\Http\Requests\Concerns\AuthorizesAcademyCapability;
 use App\Http\Requests\Concerns\ValidatesSyllabusTopic;
 use App\Models\SyllabusTopic;
@@ -66,6 +67,30 @@ class StoreSyllabusTopicRequest extends FormRequest
         ];
     }
 
+    /**
+     * The validated payload, typed. The rules above already guarantee these
+     * shapes; saying so here keeps the narrowing at the boundary rather than
+     * in the controller, which should be reading a topic, not a `mixed`.
+     */
+    public function topicName(): string
+    {
+        $name = $this->validated('name');
+
+        return \is_string($name) ? $name : '';
+    }
+
+    public function topicKind(): TopicKind
+    {
+        $kind = $this->validated('kind');
+
+        return $kind instanceof TopicKind ? $kind : TopicKind::from(\is_string($kind) ? $kind : 'both');
+    }
+
+    public function inSeason(): bool
+    {
+        return (bool) ($this->validated('in_season') ?? true);
+    }
+
     /** The position the new topic goes under, resolved after validation. */
     public function parent(): ?SyllabusTopic
     {
@@ -74,17 +99,17 @@ class StoreSyllabusTopicRequest extends FormRequest
         return $parentId === null ? null : SyllabusTopic::query()->find($parentId);
     }
 
-    private function parentId(): ?int
-    {
-        $raw = $this->input('parent_id');
-
-        return is_numeric($raw) ? (int) $raw : null;
-    }
-
     protected function failedAuthorization(): void
     {
         throw new HttpResponseException(
             response()->json(['message' => 'Forbidden.'], 403),
         );
+    }
+
+    private function parentId(): ?int
+    {
+        $raw = $this->input('parent_id');
+
+        return is_numeric($raw) ? (int) $raw : null;
     }
 }

@@ -9,7 +9,6 @@ use App\Actions\Syllabus\DeleteSyllabusTopicAction;
 use App\Actions\Syllabus\SeedSyllabusAction;
 use App\Actions\Syllabus\UpdateSyllabusTopicAction;
 use App\Authorization\Capability;
-use App\Enums\TopicKind;
 use App\Exceptions\SyllabusNotEmptyException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Syllabus\DestroySyllabusTopicRequest;
@@ -63,14 +62,13 @@ class SyllabusTopicController extends Controller
         $user = $request->user();
         /** @var Academy $academy */
         $academy = $user->activeAcademy();
-        $validated = $request->validated();
 
         $topic = $this->createTopic->execute(
             $academy,
-            (string) $validated['name'],
-            TopicKind::from((string) $validated['kind']),
+            $request->topicName(),
+            $request->topicKind(),
             $request->parent(),
-            (bool) ($validated['in_season'] ?? true),
+            $request->inSeason(),
         );
 
         return response()->json(['data' => new SyllabusTopicResource($topic)], 201);

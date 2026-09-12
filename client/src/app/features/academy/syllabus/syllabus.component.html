@@ -1,0 +1,281 @@
+<p-toast position="top-right" />
+<p-confirmpopup />
+
+<section class="syllabus" data-cy="syllabus-page">
+  <app-page-header [title]="'academy.syllabus.title' | translate" [countLabel]="countLabel()">
+    <!--
+      Hidden while the programme is empty — the empty state below carries the
+      two ways in, and two loudest buttons for one job is one too many.
+    -->
+    @if (!loading() && positions().length > 0) {
+      <p-button
+        pageHeaderCta
+        [label]="'academy.syllabus.add' | translate"
+        icon="pi pi-plus"
+        size="small"
+        (onClick)="startAddingPosition()"
+        data-cy="syllabus-add"
+      />
+    }
+  </app-page-header>
+
+  <div class="syllabus__body">
+    <p class="syllabus__hint">{{ 'academy.syllabus.hint' | translate }}</p>
+
+    @if (loading()) {
+      <div class="tree" aria-hidden="true" data-cy="syllabus-loading">
+        @for (i of [1, 2, 3, 4, 5, 6]; track i) {
+          <p-skeleton height="3.25rem" borderRadius="0.75rem" />
+        }
+      </div>
+    } @else if (positions().length === 0) {
+      <!--
+        The shipped programme is the loud way in: a blank tree of three
+        hundred techniques is a week of typing, and nobody starts. Writing
+        your own stays available, quietly, underneath.
+      -->
+      <app-empty-state
+        icon="pi pi-book"
+        [title]="'academy.syllabus.empty.title' | translate"
+        [hint]="'academy.syllabus.empty.hint' | translate"
+        [ctaLabel]="'academy.syllabus.empty.cta' | translate"
+        ctaIcon="pi pi-sparkles"
+        (ctaClick)="seedFromStarter()"
+        dataCy="syllabus-empty"
+      />
+      <div class="syllabus__scratch">
+        <p-button
+          type="button"
+          [label]="'academy.syllabus.empty.scratch' | translate"
+          severity="secondary"
+          [text]="true"
+          size="small"
+          [disabled]="seeding()"
+          (onClick)="startAddingPosition()"
+          data-cy="syllabus-empty-scratch"
+        />
+      </div>
+    } @else {
+      <ol class="tree" data-cy="syllabus-tree">
+        @for (position of positions(); track position.id) {
+          <li
+            class="position"
+            [class.position--off]="!position.in_season"
+            [attr.data-cy]="'syllabus-position-' + position.id"
+          >
+            <div class="position__head">
+              <!--
+                The whole left side opens the position (Fitts): sixty
+                headings are a programme you can read, three hundred
+                techniques are a wall, so the page starts collapsed.
+              -->
+              <button
+                type="button"
+                class="position__toggle"
+                (click)="toggleExpanded(position)"
+                [attr.aria-expanded]="isExpanded(position)"
+                [attr.aria-controls]="'syllabus-children-' + position.id"
+                [attr.data-cy]="'syllabus-toggle-' + position.id"
+              >
+                <i
+                  class="position__chevron pi pi-chevron-right"
+                  [class.position__chevron--open]="isExpanded(position)"
+                  aria-hidden="true"
+                ></i>
+                <span class="position__name">{{ position.name }}</span>
+                <span class="position__count">{{ position.children?.length ?? 0 }}</span>
+              </button>
+
+              <div class="position__controls">
+                @if (kindChip(position); as chip) {
+                  <span class="chip">{{ chip }}</span>
+                }
+                <!-- A column of bare checkboxes is a column of questions: the
+                     tooltip answers it for a pointer, the aria-label for a
+                     reader, and the hint above the list for everyone else. -->
+                <p-checkbox
+                  [binary]="true"
+                  [ngModel]="position.in_season"
+                  (onChange)="setSeason(position, $event.checked)"
+                  [ariaLabel]="'academy.syllabus.seasonAria' | translate: { name: position.name }"
+                  [pTooltip]="'academy.syllabus.season' | translate"
+                  tooltipPosition="top"
+                  [attr.data-cy]="'syllabus-season-' + position.id"
+                />
+                <button
+                  type="button"
+                  class="icon-button"
+                  [attr.aria-label]="
+                    'academy.syllabus.addUnderAria' | translate: { name: position.name }
+                  "
+                  (click)="startAddingTechnique(position)"
+                  [attr.data-cy]="'syllabus-add-under-' + position.id"
+                >
+                  <i class="pi pi-plus" aria-hidden="true"></i>
+                </button>
+                <button
+                  type="button"
+                  class="icon-button"
+                  [attr.aria-label]="
+                    'academy.syllabus.editAria' | translate: { name: position.name }
+                  "
+                  (click)="startEditing(position)"
+                  [attr.data-cy]="'syllabus-edit-' + position.id"
+                >
+                  <i class="pi pi-pencil" aria-hidden="true"></i>
+                </button>
+              </div>
+            </div>
+
+            @if (isExpanded(position)) {
+              <ul class="techniques" [id]="'syllabus-children-' + position.id">
+                @for (technique of position.children; track technique.id) {
+                  <li
+                    class="technique"
+                    [class.technique--off]="!technique.in_season"
+                    [attr.data-cy]="'syllabus-topic-' + technique.id"
+                  >
+                    <!-- The name is the edit: rename and kind are the same
+                         decision, and on a phone a dialog keeps both above
+                         the keyboard. -->
+                    <button
+                      type="button"
+                      class="technique__name"
+                      (click)="startEditing(technique)"
+                      [attr.aria-label]="
+                        'academy.syllabus.editAria' | translate: { name: technique.name }
+                      "
+                    >
+                      {{ technique.name }}
+                    </button>
+                    @if (kindChip(technique); as chip) {
+                      <span class="chip">{{ chip }}</span>
+                    }
+                    <p-checkbox
+                      [binary]="true"
+                      [ngModel]="technique.in_season"
+                      (onChange)="setSeason(technique, $event.checked)"
+                      [ariaLabel]="
+                        'academy.syllabus.seasonAria' | translate: { name: technique.name }
+                      "
+                      [pTooltip]="'academy.syllabus.season' | translate"
+                      tooltipPosition="top"
+                      [attr.data-cy]="'syllabus-season-' + technique.id"
+                    />
+                  </li>
+                } @empty {
+                  <li class="technique technique--none">
+                    {{ 'academy.syllabus.noTechniques' | translate }}
+                  </li>
+                }
+              </ul>
+            }
+          </li>
+        }
+      </ol>
+    }
+  </div>
+</section>
+
+<!--
+  One dialog for a position and a technique, adding and editing alike. The
+  two fields are the same either way, so a second form would be a second
+  thing to learn — and a second place to change the day a field moves.
+-->
+<p-dialog
+  [visible]="dialogOpen()"
+  (visibleChange)="dialogOpen.set($event)"
+  [modal]="true"
+  [draggable]="false"
+  [breakpoints]="{ '768px': '92vw' }"
+  [style]="{ width: '30rem' }"
+  [header]="dialogTitle() | translate: { name: addingUnder()?.name }"
+  data-cy="syllabus-dialog"
+>
+  <form class="topic-form" [formGroup]="form" (ngSubmit)="submit()" data-cy="syllabus-form">
+    <div class="field">
+      <label for="topic-name" class="field__label">
+        {{ 'academy.syllabus.form.name' | translate }}
+      </label>
+      <input
+        id="topic-name"
+        type="text"
+        pInputText
+        formControlName="name"
+        maxlength="80"
+        autocomplete="off"
+        [placeholder]="namePlaceholder() | translate"
+        [class.ng-invalid]="nameError()"
+        [class.ng-dirty]="nameError()"
+        [attr.aria-invalid]="nameError() ? 'true' : null"
+        [attr.aria-describedby]="nameError() ? 'topic-name-error' : null"
+        data-cy="syllabus-form-name"
+      />
+      @if (nameError()) {
+        <small
+          id="topic-name-error"
+          class="field__error"
+          role="alert"
+          data-cy="syllabus-form-name-error"
+        >
+          {{ 'academy.syllabus.form.nameRequired' | translate }}
+        </small>
+      }
+    </div>
+
+    <div class="field">
+      <span class="field__label" id="topic-kind-label">
+        {{ 'academy.syllabus.form.kind' | translate }}
+      </span>
+      <p-selectbutton
+        [options]="kindOptions()"
+        formControlName="kind"
+        optionLabel="label"
+        optionValue="value"
+        [allowEmpty]="false"
+        ariaLabelledBy="topic-kind-label"
+        data-cy="syllabus-form-kind"
+      />
+      <small class="field__hint">{{ 'academy.syllabus.form.kindHint' | translate }}</small>
+    </div>
+  </form>
+
+  <ng-template pTemplate="footer">
+    <div class="topic-form__footer">
+      @if (editing()) {
+        <!-- Removal lives at the far end from Save (Fitts), as quiet text —
+             the confirm popup does the asking. -->
+        <p-button
+          type="button"
+          [label]="'academy.syllabus.form.remove' | translate"
+          icon="pi pi-trash"
+          severity="danger"
+          [text]="true"
+          [fluid]="true"
+          (onClick)="confirmRemove($event)"
+          data-cy="syllabus-form-remove"
+        />
+      }
+      <span class="topic-form__spacer"></span>
+      <p-button
+        type="button"
+        [label]="'academy.syllabus.form.cancel' | translate"
+        severity="secondary"
+        [text]="true"
+        [fluid]="true"
+        (onClick)="dialogOpen.set(false)"
+        data-cy="syllabus-form-cancel"
+      />
+      <p-button
+        type="button"
+        [label]="
+          (editing() ? 'academy.syllabus.form.save' : 'academy.syllabus.form.create') | translate
+        "
+        [loading]="saving()"
+        [fluid]="true"
+        (onClick)="submit()"
+        data-cy="syllabus-form-submit"
+      />
+    </div>
+  </ng-template>
+</p-dialog>

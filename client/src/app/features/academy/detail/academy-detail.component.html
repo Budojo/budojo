@@ -207,6 +207,32 @@
         </dd>
       </div>
 
+      <!--
+        The programme (#1563), under the timetable because the two answer the
+        same question at two scales — when the academy trains, and what it
+        teaches while it does.
+      -->
+      <div class="row">
+        <dt class="row__label">{{ 'academy.detail.row.syllabus' | translate }}</dt>
+        <dd class="row__value row__value--with-action" data-cy="academy-row-syllabus">
+          @if (syllabusLabel(); as label) {
+            <span>{{ label }}</span>
+          } @else {
+            <span class="row__empty">{{ 'academy.detail.syllabus.none' | translate }}</span>
+          }
+          <a
+            class="row__link"
+            routerLink="/dashboard/academy/syllabus"
+            data-cy="academy-syllabus-link"
+          >
+            {{
+              (syllabusLabel() ? 'academy.detail.syllabus.manage' : 'academy.detail.syllabus.setUp')
+                | translate
+            }}
+          </a>
+        </dd>
+      </div>
+
       @let addr = a?.address;
       <div class="row">
         <dt class="row__label">{{ 'academy.detail.row.address' | translate }}</dt>

@@ -9,7 +9,6 @@ use App\Exceptions\SyllabusNotEmptyException;
 use App\Models\Academy;
 use App\Models\SyllabusTopic;
 use Illuminate\Support\Facades\DB;
-use RuntimeException;
 
 class SeedSyllabusAction
 {
@@ -73,18 +72,18 @@ class SeedSyllabusAction
     {
         $raw = file_get_contents(database_path(self::SEED_FILE));
         if ($raw === false) {
-            throw new RuntimeException('The syllabus seed file could not be read.');
+            throw new \RuntimeException('The syllabus seed file could not be read.');
         }
 
         $decoded = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
         if (! \is_array($decoded)) {
-            throw new RuntimeException('The syllabus seed file is not a list of positions.');
+            throw new \RuntimeException('The syllabus seed file is not a list of positions.');
         }
 
         $positions = [];
         foreach ($decoded as $position) {
             if (! \is_array($position) || ! \is_string($position['name'] ?? null)) {
-                throw new RuntimeException('Every seed position needs a name.');
+                throw new \RuntimeException('Every seed position needs a name.');
             }
             $kind = TopicKind::from(\is_string($position['kind'] ?? null) ? $position['kind'] : 'both');
 
@@ -94,7 +93,7 @@ class SeedSyllabusAction
                     $technique = ['name' => $technique];
                 }
                 if (! \is_array($technique) || ! \is_string($technique['name'] ?? null)) {
-                    throw new RuntimeException("Every technique under {$position['name']} needs a name.");
+                    throw new \RuntimeException("Every technique under {$position['name']} needs a name.");
                 }
                 $techniques[] = [
                     'name' => $technique['name'],
