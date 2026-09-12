@@ -9,6 +9,7 @@ use App\Models\AcademyClass;
 use App\Models\Athlete;
 use App\Models\AttendanceRecord;
 use App\Models\Lesson;
+use App\Support\MatHours;
 use Carbon\CarbonImmutable;
 
 /**
@@ -146,7 +147,7 @@ it('ranks the month on real durations', function (): void {
         ->and($rows[0]['hours'])->toBe(3.0);
 });
 
-it('keeps a lesson-less month on the fallback in the leaderboard too', function (): void {
+it('pins the leaderboard SQL fallback to the constant, in both directions', function (): void {
     foreach (['2026-05-18', '2026-05-20', '2026-05-22'] as $date) {
         AttendanceRecord::factory()->create([
             'athlete_id' => $this->athlete->id,
@@ -158,7 +159,12 @@ it('keeps a lesson-less month on the fallback in the leaderboard too', function 
     $rows = app(GetMonthlyLeaderboardAction::class)
         ->execute($this->academy, CarbonImmutable::parse('2026-05-01'));
 
-    expect($rows[0]['hours'])->toBe(4.5);
+    // Derived, not the literal 4.5. The fallback is written twice — as
+    // `FALLBACK_MINUTES` in PHP and as a bare 90 inside the leaderboard's
+    // `selectRaw`, which demands a literal-string — so this has to fail when
+    // *either* copy moves. Hardcoding the expectation would only have caught
+    // a change to the SQL.
+    expect($rows[0]['hours'])->toBe(MatHours::fromMinutes(3 * MatHours::FALLBACK_MINUTES));
 });
 
 it('does not drop a lesson-less presence from the month', function (): void {
