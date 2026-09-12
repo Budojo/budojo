@@ -239,6 +239,65 @@ function globalClasses() {
 }
 
 /**
+ * Class names the component applies from TypeScript.
+ *
+ * `[ngClass]="variantClass()"` with a computed `password-meter__bar-fill--
+ * score-${s}` is a real Angular pattern, and the rule it lands on is not dead
+ * — the template simply cannot show it. Reading the component's own `.ts` for
+ * string literals that look like class names covers both the computed case
+ * and the plain `'is-open'` one.
+ *
+ * Deliberately loose: it over-reports rather than under-reports, because a
+ * missed name here is a false accusation of dead code, while an extra name is
+ * only a check that stays quiet about one rule.
+ */
+function scriptClasses(htmlPath) {
+  const names = new Set();
+  const ts = htmlPath.replace(/\.html$/, ".ts");
+  let source;
+  try {
+    source = readFileSync(ts, "utf8");
+  } catch {
+    return names;
+  }
+  // Any quoted or templated run that looks like a BEM-ish class name, plus
+  // the literal prefix of a template string that interpolates its suffix.
+  for (const m of source.matchAll(/['"`]([A-Za-z][A-Za-z0-9_-]*(?:__|--)[A-Za-z0-9_-]*)/g)) {
+    names.add(m[1]);
+  }
+  return names;
+}
+
+/**
+ * Classes a component styles on its OWN host — `:host(.compact)`.
+ *
+ * These are worn by a PARENT template (`<app-belt-badge class="compact">`) and
+ * styled by the CHILD's stylesheet, so neither side sees the other and the
+ * pairwise check reports both halves as dead. It is a real Angular pattern,
+ * and the alternative — an allowlist of the three templates that use it — is
+ * a list of the bugs we decided to keep.
+ *
+ * Collected across every component so one declaration covers every parent.
+ */
+function hostClasses(root) {
+  const names = new Set();
+  for (const { scss } of componentPairs(root)) {
+    for (const source of [scss, ...importedPartials(scss)]) {
+      let text;
+      try {
+        text = readFileSync(source, "utf8");
+      } catch {
+        continue;
+      }
+      for (const m of text.matchAll(/:host\s*\(([^)]*)\)/g)) {
+        for (const c of m[1].matchAll(/\.([A-Za-z0-9_-]+)/g)) names.add(c[1]);
+      }
+    }
+  }
+  return names;
+}
+
+/**
  * Classes that legitimately appear on only one side.
  *
  * Every entry is a rule about the framework, not an excuse for a specific
@@ -257,6 +316,7 @@ const IGNORE = [
 const ignored = (c) => IGNORE.some((re) => re.test(c));
 
 const GLOBAL = globalClasses();
+const HOST = hostClasses(ROOT);
 
 let problems = 0;
 const report = [];
@@ -282,9 +342,18 @@ for (const { html, scss } of componentPairs(ROOT)) {
   }
 
   const unstyled = [...used].filter(
-    (c) => !ignored(c) && !defined.has(c) && !GLOBAL.has(c),
+    (c) => !ignored(c) && !defined.has(c) && !GLOBAL.has(c) && !HOST.has(c),
   );
-  const unused = [...declaring].filter((c) => !ignored(c) && !used.has(c));
+  // A rule can be worn by a class the TEMPLATE never spells out, because the
+  // component built the name in TypeScript.
+  const fromScript = scriptClasses(html);
+  const unused = [...declaring].filter(
+    (c) =>
+      !ignored(c) &&
+      !used.has(c) &&
+      !fromScript.has(c) &&
+      ![...fromScript].some((prefix) => c.startsWith(prefix)),
+  );
 
   if (unstyled.length || unused.length) {
     problems += unstyled.length + unused.length;
