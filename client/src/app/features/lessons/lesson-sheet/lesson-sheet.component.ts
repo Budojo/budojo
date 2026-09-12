@@ -17,7 +17,7 @@ import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TextareaModule } from 'primeng/textarea';
-import { forkJoin, of } from 'rxjs';
+import { forkJoin, of, switchMap } from 'rxjs';
 import { Lesson, LessonService, LessonTopic } from '../../../core/services/lesson.service';
 import { SyllabusService, SyllabusTopic, TopicKind } from '../../../core/services/syllabus.service';
 
@@ -83,6 +83,8 @@ export class LessonSheetComponent {
   readonly saved = output<Lesson>();
 
   protected readonly loading = signal<boolean>(true);
+  /** The open failed: there is nothing to edit, and nothing to save. */
+  protected readonly loadFailed = signal<boolean>(false);
   protected readonly saving = signal<boolean>(false);
   protected readonly lesson = signal<Lesson | null>(null);
   protected readonly positions = signal<readonly SyllabusTopic[]>([]);
@@ -221,32 +223,44 @@ export class LessonSheetComponent {
     }
 
     this.saving.set(true);
-    forkJoin({
-      topics: topicsChanged
-        ? this.lessonService.setTopics(classId, heldOn, topicIds)
-        : of(null as Lesson | null),
-      notes: notesChanged
-        ? this.lessonService.setNotes(classId, heldOn, notes === '' ? null : notes)
-        : of(null as Lesson | null),
-    }).subscribe({
-      next: ({ topics, notes: notesResult }) => {
-        this.saving.set(false);
-        // Whichever call went last carries both changes — the server
-        // returns the whole lesson from either.
-        const latest = notesResult ?? topics;
-        if (latest !== null) this.saved.emit(latest);
-        this.toast('success', 'lessons.sheet.toast.saved');
-        this.close();
-      },
-      error: () => {
-        this.saving.set(false);
-        this.toast('error', 'lessons.sheet.toast.errorSummary', 'lessons.sheet.toast.errorDetail');
-      },
-    });
+    // Chained, not concurrent. Both writes return the whole lesson, so the
+    // last response is the one worth emitting — and that is only true if the
+    // second actually ran after the first. Two PUTs racing on the same slot
+    // would let the notes reply carry a pre-sync topic list straight into the
+    // check-in's summary row.
+    const topics$ = topicsChanged
+      ? this.lessonService.setTopics(classId, heldOn, topicIds)
+      : of(null as Lesson | null);
+
+    topics$
+      .pipe(
+        switchMap((afterTopics) =>
+          notesChanged
+            ? this.lessonService.setNotes(classId, heldOn, notes === '' ? null : notes)
+            : of(afterTopics),
+        ),
+      )
+      .subscribe({
+        next: (latest) => {
+          this.saving.set(false);
+          if (latest !== null) this.saved.emit(latest);
+          this.toast('success', 'lessons.sheet.toast.saved');
+          this.close();
+        },
+        error: () => {
+          this.saving.set(false);
+          this.toast(
+            'error',
+            'lessons.sheet.toast.errorSummary',
+            'lessons.sheet.toast.errorDetail',
+          );
+        },
+      });
   }
 
   private load(): void {
     this.loading.set(true);
+    this.loadFailed.set(false);
     this.query.set('');
     this.expanded.set(new Set());
 
@@ -269,6 +283,18 @@ export class LessonSheetComponent {
         this.loading.set(false);
       },
       error: () => {
+        // Everything the previous opening left behind, cleared. The component
+        // instance outlives a slot change — switching class chips on the
+        // check-in reuses it — so keeping the last lesson's ticks here would
+        // render them under the new header and, worse, write them into the
+        // new slot on Save.
+        this.lesson.set(null);
+        this.positions.set([]);
+        this.recent.set([]);
+        this.selected.set(new Set());
+        this.notes.set('');
+        this.openedWith = { topicIds: [], notes: '' };
+        this.loadFailed.set(true);
         this.loading.set(false);
         this.toast(
           'error',

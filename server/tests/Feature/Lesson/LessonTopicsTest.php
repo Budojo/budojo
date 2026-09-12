@@ -291,9 +291,11 @@ it('leaves the topics alone when only the note changes', function (): void {
 it('offers what the academy taught most recently, most recent first', function (): void {
     $kimura = SyllabusTopic::factory()->under($this->closedGuard)->create(['name' => 'Kimura']);
 
-    setTopics($this, [$this->armbar->id], '2026-09-07')->assertOk();
-    setTopics($this, [$this->triangle->id], '2026-09-14')->assertOk();
-    setTopics($this, [$kimura->id], '2026-09-21')->assertOk();
+    // Past days, relatively: the group reads what was taught, and a fixed
+    // future date would drop out of it the moment the filter is right.
+    setTopics($this, [$this->armbar->id], CarbonImmutable::today()->subDays(14)->toDateString())->assertOk();
+    setTopics($this, [$this->triangle->id], CarbonImmutable::today()->subDays(7)->toDateString())->assertOk();
+    setTopics($this, [$kimura->id], CarbonImmutable::today()->toDateString())->assertOk();
 
     $names = collect($this->actingAs($this->user)
         ->getJson('/api/v1/lessons/recent-topics')
@@ -305,9 +307,50 @@ it('offers what the academy taught most recently, most recent first', function (
     expect($names)->toBe(['Kimura', 'Triangle', 'Armbar']);
 });
 
+it('does not call a future plan "taught lately" — nothing has been taught yet', function (): void {
+    $planned = SyllabusTopic::factory()->under($this->closedGuard)->create(['name' => 'Kimura']);
+
+    setTopics($this, [$this->armbar->id], CarbonImmutable::yesterday()->toDateString())->assertOk();
+    setTopics($this, [$planned->id], CarbonImmutable::today()->addWeek()->toDateString())->assertOk();
+
+    $names = collect($this->actingAs($this->user)
+        ->getJson('/api/v1/lessons/recent-topics')
+        ->assertOk()
+        ->json('data'))
+        ->pluck('name')
+        ->all();
+
+    expect($names)->toBe(['Armbar']);
+});
+
+it('counts today as taught — the evening being checked in is the common case', function (): void {
+    setTopics($this, [$this->armbar->id], CarbonImmutable::today()->toDateString())->assertOk();
+
+    $this->actingAs($this->user)
+        ->getJson('/api/v1/lessons/recent-topics')
+        ->assertOk()
+        ->assertJsonCount(1, 'data');
+});
+
+it('fills the group to its cap, counting only what can still be offered', function (): void {
+    // Thirteen topics taught on thirteen days, the most recent one then taken
+    // out of the programme: filtering after the cap would return eleven.
+    $topics = [];
+    foreach (range(1, 13) as $i) {
+        $topics[$i] = SyllabusTopic::factory()->under($this->closedGuard)->create(['name' => "Move {$i}"]);
+        setTopics($this, [$topics[$i]->id], CarbonImmutable::today()->subDays(14 - $i)->toDateString())->assertOk();
+    }
+    $topics[13]->delete();
+
+    $this->actingAs($this->user)
+        ->getJson('/api/v1/lessons/recent-topics')
+        ->assertOk()
+        ->assertJsonCount(12, 'data');
+});
+
 it('names a topic once however many lessons taught it', function (): void {
-    setTopics($this, [$this->armbar->id], '2026-09-07')->assertOk();
-    setTopics($this, [$this->armbar->id], '2026-09-14')->assertOk();
+    setTopics($this, [$this->armbar->id], CarbonImmutable::today()->subDays(7)->toDateString())->assertOk();
+    setTopics($this, [$this->armbar->id], CarbonImmutable::today()->toDateString())->assertOk();
 
     $this->actingAs($this->user)
         ->getJson('/api/v1/lessons/recent-topics')
@@ -316,14 +359,15 @@ it('names a topic once however many lessons taught it', function (): void {
 });
 
 it('does not offer a topic that has left the programme, nor another academy\'s', function (): void {
-    setTopics($this, [$this->armbar->id, $this->triangle->id])->assertOk();
+    $past = CarbonImmutable::today()->subDay()->toDateString();
+    setTopics($this, [$this->armbar->id, $this->triangle->id], $past)->assertOk();
     $this->armbar->delete();
 
     $other = userWithAcademy();
     $theirTopic = SyllabusTopic::factory()->for($other->academy)->create(['name' => 'Theirs']);
     $theirClass = AcademyClass::factory()->for($other->academy)->create();
     $this->actingAs($other)->putJson('/api/v1/lessons/topics', [
-        'academy_class_id' => $theirClass->id, 'held_on' => '2026-09-14', 'topic_ids' => [$theirTopic->id],
+        'academy_class_id' => $theirClass->id, 'held_on' => $past, 'topic_ids' => [$theirTopic->id],
     ])->assertOk();
 
     $names = collect($this->actingAs($this->user)

@@ -7720,7 +7720,10 @@ components:
           format: date
         name:
           type: string
-          description: The class's name as it was that day — a snapshot, never re-read.
+          description: |
+            The class's name as it was when this lesson row was created — on the
+            day for one born of a check-in, earlier for one planned ahead. A
+            snapshot, never re-read.
           example: Fundamentals
         starts_at:
           type: string

@@ -17,12 +17,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 /**
  * One real occurrence of a class on one date (#1562).
  *
- * The thing attendance points at, and the thing topics will hang off (#1564).
- * Created lazily by {@see \App\Actions\Lesson\MaterialiseLessonAction} the
- * first time somebody is checked in, never ahead of time.
+ * The thing attendance points at, and the thing topics hang off (#1564).
+ * Created by {@see \App\Actions\Lesson\MaterialiseLessonAction} — the first
+ * time somebody is checked in, or when its topics are planned ahead.
  *
- * `name`, `starts_at` and `kind` are a snapshot of the class as it was that
- * day. They are copied once and never re-read from the class, so the
+ * `name`, `starts_at` and `kind` are a snapshot of the class as it was when
+ * this row was created — on the day, for a lesson born of a check-in; earlier,
+ * for one planned ahead (#1564). Copied once and never re-read, so the
  * timetable can change without the past changing with it.
  *
  * @property int         $id

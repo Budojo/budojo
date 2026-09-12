@@ -1,5 +1,6 @@
-// The lesson sheet (#1564). A tall, scrolling picker: on a phone it is most
-// of the screen, on a desk it is a dialog that does not grow past the fold.
+// The lesson sheet (#1564). A tall picker; the dialog's own `[style]` width
+// and `[breakpoints]` size it and PrimeNG scrolls the content past the fold,
+// so nothing here needs to reach the dialog element itself.
 
 .sheet-head {
   display: flex;
@@ -343,4 +344,11 @@
     color: var(--p-text-muted-color);
     font-variant-numeric: tabular-nums;
   }
+}
+
+// The open failed. One line, in place of the picker it could not build.
+.sheet__error {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--budojo-danger);
 }

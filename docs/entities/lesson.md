@@ -31,6 +31,8 @@ A lesson is created **lazily**, by `App\Actions\Lesson\MaterialiseLessonAction`,
 
 `name`, `starts_at` and `kind` are copied from the class once and never re-read. The timetable is mutable and the past is not: moving Tuesday fundamentals to Wednesday must not rewrite what happened on every previous Tuesday. [`academy_schedules`](./academy-schedule.md) (#1094) solved the same problem with a history table; a lesson is an *event*, so it carries its own truth and skips the table.
 
+The copy is taken **when the row is created**. Until #1564 that was always the day itself, because a lesson only existed once somebody had been checked into it; a planned lesson is created earlier, so one planned on Monday for Wednesday keeps Monday's name even if the class is renamed on Tuesday. Deliberate — re-reading the class would mean the snapshot is not a snapshot — and the window in which it can drift is a plan nobody has taught yet.
+
 ## Relations
 
 - `belongsTo(Academy::class)` — inverse of `Academy::lessons()`

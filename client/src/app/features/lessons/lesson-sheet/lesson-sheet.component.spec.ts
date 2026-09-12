@@ -303,6 +303,73 @@ describe('LessonSheetComponent (#1564)', () => {
     ).not.toBeNull();
   });
 
+  it('keeps nothing from the last slot when the open fails', () => {
+    const { fixture, component, httpMock } = setup();
+    flushOpen(httpMock, {
+      lesson: lesson({ topics: [lessonTopic({ id: 11, name: 'Armbar' })], notes: 'Warm gym' }),
+    });
+    fixture.detectChanges();
+    expect(component['isChosen'](11)).toBe(true);
+
+    // Same instance, new slot — the check-in reuses it across class chips.
+    fixture.componentRef.setInput('visible', false);
+    fixture.detectChanges();
+    fixture.componentRef.setInput('heldOn', '2026-09-21');
+    fixture.componentRef.setInput('visible', true);
+    fixture.detectChanges();
+
+    // The siblings answer first: `forkJoin` cancels them the moment one
+    // errors, and a cancelled request cannot be flushed.
+    httpMock.expectOne(SYLLABUS_URL).flush({ data: [] });
+    httpMock.expectOne(RECENT_URL).flush({ data: [] });
+    httpMock
+      .expectOne((r) => r.url === LESSON_URL && r.method === 'GET')
+      .flush('boom', { status: 500, statusText: 'Server Error' });
+    fixture.detectChanges();
+
+    // Nothing of the previous lesson survives — it would otherwise render
+    // under the new header and be written into the new slot on Save.
+    expect(component['isChosen'](11)).toBe(false);
+    expect(component['notes']()).toBe('');
+    expect(fixture.nativeElement.querySelector('[data-cy="lesson-sheet-error"]')).not.toBeNull();
+    // And an empty picker must not read as "this academy has no programme".
+    expect(fixture.nativeElement.querySelector('[data-cy="lesson-sheet-no-programme"]')).toBeNull();
+
+    component['save']();
+    httpMock.expectNone(`${LESSON_URL}/topics`);
+    httpMock.expectNone(`${LESSON_URL}/notes`);
+  });
+
+  it('writes the topics before the notes, so the last answer is the whole truth', () => {
+    const { fixture, component, httpMock } = setup();
+    flushOpen(httpMock);
+    fixture.detectChanges();
+
+    component['toggle'](11);
+    component['notes'].set('Warm gym');
+    component['save']();
+
+    // The notes call has not been made yet: it waits for the topics reply,
+    // or it could answer with a pre-sync topic list.
+    httpMock.expectNone(`${LESSON_URL}/notes`);
+    httpMock
+      .expectOne(`${LESSON_URL}/topics`)
+      .flush({ data: lesson({ topics: [lessonTopic({ id: 11, name: 'Armbar' })] }) });
+
+    const notesReq = httpMock.expectOne(`${LESSON_URL}/notes`);
+    expect(notesReq.request.body.notes).toBe('Warm gym');
+
+    const emitted: unknown[] = [];
+    component.saved.subscribe((l) => emitted.push(l));
+    notesReq.flush({
+      data: lesson({ notes: 'Warm gym', topics: [lessonTopic({ id: 11, name: 'Armbar' })] }),
+    });
+
+    // What the host gets is the second answer, which carries both changes.
+    expect(emitted).toHaveLength(1);
+    expect((emitted[0] as { notes: string }).notes).toBe('Warm gym');
+  });
+
   it('re-reads when it is opened again — the slot may have moved', () => {
     const { fixture, httpMock } = setup();
     flushOpen(httpMock);
