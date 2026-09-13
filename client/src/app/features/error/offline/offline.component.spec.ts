@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { describe, expect, it, vi } from 'vitest';
 import { OfflineComponent } from './offline.component';
 import { OnlineStatusService } from '../../../core/services/online-status.service';
+import { DesktopBridgeService } from '../../../core/services/desktop-bridge.service';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 
 /**
@@ -24,7 +25,7 @@ function makeDocumentProxy(reload: () => void): Document {
 }
 
 describe('OfflineComponent', () => {
-  function setup(initialOnline = false) {
+  function setup(initialOnline = false, profile: 'web' | 'desktop' = 'web') {
     const reload = vi.fn();
     const isOnlineSignal = signal(initialOnline);
     const fakeService = {
@@ -37,6 +38,7 @@ describe('OfflineComponent', () => {
         ...provideI18nTesting(),
         { provide: DOCUMENT, useValue: makeDocumentProxy(reload) },
         { provide: OnlineStatusService, useValue: fakeService },
+        { provide: DesktopBridgeService, useValue: { isDesktop: profile === 'desktop' } },
       ],
     });
     const fixture = TestBed.createComponent(OfflineComponent);
@@ -53,6 +55,33 @@ describe('OfflineComponent', () => {
     expect(root.querySelector('.offline__message')?.textContent).toContain(
       "can't reach the network",
     );
+  });
+
+  // On the desktop `status === 0` means the bundled API on 127.0.0.1 stopped
+  // answering — the Wi-Fi has nothing to do with it (#1617). The page must not
+  // send the owner to check a connection that is not the problem. The shell is
+  // detected from the bridge, not from the fetched runtime profile: that fetch
+  // fails on the very reload this page asks for while PHP is coming back.
+  it('on the desktop, blames Budojo, not the network', () => {
+    const { fixture } = setup(false, 'desktop');
+    const root: HTMLElement = fixture.nativeElement;
+
+    expect(root.querySelector('.offline__title')?.textContent?.trim()).toBe(
+      "Budojo isn't responding",
+    );
+    const message = root.querySelector('.offline__message')?.textContent ?? '';
+    expect(message).toContain('close and reopen Budojo');
+    expect(message.toLowerCase()).not.toContain('check your connection');
+    expect(message.toLowerCase()).not.toContain('network');
+    expect(root.querySelector('[data-cy="offline-retry"]')).not.toBeNull();
+  });
+
+  it('on the web, keeps talking about the network', () => {
+    const { fixture } = setup(false, 'web');
+    const root: HTMLElement = fixture.nativeElement;
+
+    expect(root.querySelector('.offline__title')?.textContent?.trim()).toBe("You're offline");
+    expect(root.querySelector('.offline__message')?.textContent).toContain('Check your connection');
   });
 
   it('exposes a manual retry CTA', () => {

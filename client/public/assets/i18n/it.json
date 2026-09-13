@@ -427,7 +427,7 @@
       "dismiss": "Chiudi notifica"
     },
     "errorTitle": "Non siamo riusciti a caricare le notifiche",
-    "errorHint": "Qualcosa è andato storto. Controlla la connessione e riprova.",
+    "errorHint": "Qualcosa è andato storto. Riprova tra un momento.",
     "errorRetry": "Riprova"
   },
   "onboarding": {
@@ -656,7 +656,11 @@
   "offlinePage": {
     "title": "Sei offline",
     "message": "Budojo non riesce a raggiungere la rete in questo momento. Controlla la connessione — ti riportiamo dov'eri appena la rete torna disponibile.",
-    "tryAgain": "Riprova"
+    "tryAgain": "Riprova",
+    "desktop": {
+      "title": "Budojo non risponde",
+      "message": "Il servizio di Budojo su questo computer non ha risposto. Riprova; se continua, chiudi e riapri Budojo. La connessione a internet non c'entra."
+    }
   },
   "support": {
     "title": "Contatta il supporto",
@@ -1869,7 +1873,7 @@
       },
       "error": {
         "title": "Impossibile caricare gli atleti",
-        "hint": "Si è verificato un errore durante il caricamento degli atleti. Controlla la connessione e riprova.",
+        "hint": "Qualcosa è andato storto durante il caricamento degli atleti. Riprova tra un momento.",
         "retry": "Riprova"
       },
       "toast": {
