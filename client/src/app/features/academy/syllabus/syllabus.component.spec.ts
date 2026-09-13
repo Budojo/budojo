@@ -139,7 +139,9 @@ describe('SyllabusComponent (#1563)', () => {
 
     const el: HTMLElement = fixture.nativeElement;
     expect(el.querySelector('[data-cy="syllabus-empty"]')).not.toBeNull();
-    expect(el.querySelector('[data-cy="syllabus-empty-scratch"]')).not.toBeNull();
+    // Beside the primary since #1630, from the shared empty state's own
+    // secondary slot rather than a block 80 px below it.
+    expect(el.querySelector('[data-cy="syllabus-empty-secondary"]')).not.toBeNull();
     expect(el.querySelector('[data-cy="syllabus-tree"]')).toBeNull();
     // Not two loudest buttons for one job: the header CTA yields to the empty state.
     expect(el.querySelector('[data-cy="syllabus-add"]')).toBeNull();
@@ -416,5 +418,59 @@ describe('SyllabusComponent (#1563)', () => {
     } as unknown as Event);
 
     expect(spy.mock.calls[0][0].message).toBe('Remove Armbar from the programme?');
+  });
+
+  // ─── The technique row (#1630) ──────────────────────────────────────────
+
+  function expandedRow(): { fixture: ReturnType<typeof setup>['fixture']; row: HTMLElement } {
+    const { fixture, httpMock } = setup();
+    flushTree(httpMock, [CLOSED_GUARD, K_GUARD]);
+    fixture.detectChanges();
+    (
+      fixture.nativeElement.querySelector('[data-cy="syllabus-toggle-1"]') as HTMLButtonElement
+    ).click();
+    fixture.detectChanges();
+    return {
+      fixture,
+      row: fixture.nativeElement.querySelector('[data-cy="syllabus-topic-11"]') as HTMLElement,
+    };
+  }
+
+  it('puts the season tick beside the name it belongs to, and the name toggles it', () => {
+    const { fixture, row } = expandedRow();
+    const httpMock = TestBed.inject(HttpTestingController);
+
+    const tick = row.querySelector('[data-cy="syllabus-season-11"]');
+    const name = row.querySelector('.technique__name') as HTMLLabelElement;
+
+    // Tick first, then the name — it used to sit at the far right of the row.
+    expect(tick!.compareDocumentPosition(name) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    // The `for` has to land on a real input, or the label toggles nothing —
+    // asserting the attribute against the same literal the template builds
+    // would pass either way.
+    const input = row.querySelector(`#${name.getAttribute('for')}`);
+    expect(input?.tagName).toBe('INPUT');
+
+    // And pressing the name is what a reader will actually do.
+    name.click();
+    fixture.detectChanges();
+    const patch = httpMock.expectOne(
+      (r) => r.method === 'PATCH' && r.url.endsWith('/api/v1/academy/syllabus/11'),
+    );
+    // ARMBAR starts out of season in this fixture, so the press turns it on.
+    expect(patch.request.body).toEqual({ in_season: true });
+    patch.flush({ data: { ...ARMBAR, in_season: true } });
+  });
+
+  it('shows a pencil on the row, where renaming used to be a secret', () => {
+    const { fixture, row } = expandedRow();
+
+    const edit = row.querySelector('[data-cy="syllabus-topic-edit-11"]') as HTMLButtonElement;
+    expect(edit).not.toBeNull();
+    edit.click();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance['dialogOpen']()).toBe(true);
   });
 });

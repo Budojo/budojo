@@ -87,6 +87,7 @@ import { ButtonModule } from 'primeng/button';
               size="small"
               [label]="secondary"
               [icon]="secondaryIcon() ?? undefined"
+              [disabled]="secondaryDisabled()"
               (onClick)="secondaryClick.emit()"
               [attr.data-cy]="dataCy() ? dataCy() + '-secondary' : null"
             />
@@ -167,6 +168,12 @@ export class EmptyStateComponent {
   /** An optional second way out, beside the CTA — never filled, never alone. */
   readonly secondaryLabel = input<string | null>(null);
   readonly secondaryIcon = input<string | null>(null);
+  /**
+   * Locks the second action while the first one is working. The programme's
+   * empty state needs it: seeding 348 rows takes a moment, and "write my own"
+   * during it opens a dialog whose save the seed's reload would race (#1630).
+   */
+  readonly secondaryDisabled = input<boolean>(false);
   /** Cypress hook. By convention `{feature}-empty`. */
   readonly dataCy = input<string | null>(null);
 

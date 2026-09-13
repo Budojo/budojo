@@ -78,7 +78,7 @@ describe('Academy programme', () => {
     cy.wait('@syllabus');
 
     cy.get('[data-cy="syllabus-empty"]').should('be.visible');
-    cy.get('[data-cy="syllabus-empty-scratch"]').should('be.visible');
+    cy.get('[data-cy="syllabus-empty-secondary"]').should('be.visible');
     cy.get('[data-cy="syllabus-add"]').should('not.exist');
 
     cy.intercept('POST', '/api/v1/academy/syllabus/seed', {
@@ -90,7 +90,7 @@ describe('Academy programme', () => {
       body: { data: [CLOSED_GUARD, K_GUARD] },
     }).as('syllabusAfter');
 
-    cy.get('[data-cy="syllabus-empty"]').find('button').click();
+    cy.get('[data-cy="syllabus-empty-cta"]').click();
 
     cy.wait('@seed').its('request.body').should('deep.equal', {});
     cy.wait('@syllabusAfter');
