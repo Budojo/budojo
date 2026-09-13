@@ -179,5 +179,14 @@ describe('monthly attendance summary', () => {
       'monthly-summary-mobile-row-1',
       'monthly-summary-mobile-row-3',
     ]);
+
+    // The name is the way into that athlete's own attendance, and on the
+    // phone it is the card's only tap target (#1639).
+    cy.get('[data-cy="monthly-summary-mobile-athlete-link-1"]')
+      .should('have.attr', 'href', '/dashboard/athletes/1/attendance')
+      .then(($link) => {
+        // ≥ 48 px, per the canon's Fitts rule.
+        expect($link[0].getBoundingClientRect().height).to.be.at.least(48);
+      });
   });
 });

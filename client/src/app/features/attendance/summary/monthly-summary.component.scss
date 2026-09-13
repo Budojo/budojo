@@ -143,3 +143,34 @@ $summary-mobile-breakpoint: 768px;
     margin-left: 0.25rem;
   }
 }
+
+// The name is the way into that athlete's own attendance tab — it was plain
+// text on a page whose every row is about one person (#1639, SUM-3).
+//
+// Coloured, not hover-only: a signifier that appears on hover does not exist
+// on a phone, which is this app's primary form factor. Same treatment the
+// expiring-documents table gives the identical link.
+.summary-page__athlete-link {
+  color: var(--p-primary-color);
+  text-decoration: none;
+
+  &:hover,
+  &:focus-visible {
+    text-decoration: underline;
+  }
+}
+
+// On the card the name IS the tap target, so it carries the 48 px the canon
+// asks for (Fitts) rather than the 19 px a bare inline anchor would be.
+.summary-card__name.summary-page__athlete-link {
+  display: flex;
+  align-items: center;
+  min-height: 3rem;
+}
+
+// Why the columns have no fraction this month.
+.summary-page__note {
+  margin: 0 0 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--p-text-color-secondary);
+}
