@@ -2565,6 +2565,10 @@
       "nameFirstDesc": "Sorted by first name (Z → A). Click to cycle.",
       "nameLastAsc": "Sorted by last name (A → Z). Click to cycle.",
       "nameLastDesc": "Sorted by last name (Z → A). Click to cycle."
+    },
+    "ageBadge": {
+      "valueOne": "{{years}}y",
+      "valueOther": "{{years}}y"
     }
   },
   "stats": {

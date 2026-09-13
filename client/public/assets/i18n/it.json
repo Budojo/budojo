@@ -197,14 +197,14 @@
     "submit": "Accetta invito",
     "invalid": {
       "title": "Questo invito non è valido",
-      "body": "Il link potrebbe essere scaduto, revocato, o già usato. Chiedi al titolare della tua academy di inviartene uno nuovo — oppure accedi se hai già un account.",
+      "body": "Il link potrebbe essere scaduto, revocato, o già usato. Chiedi al titolare della tua accademia di inviartene uno nuovo — oppure accedi se hai già un account.",
       "signinCta": "Accedi"
     },
     "errors": {
       "invite_invalid": "Questo link di invito non è valido.",
       "invite_already_accepted": "Questo invito è già stato accettato. Prova ad accedere.",
-      "invite_revoked": "Questo invito è stato revocato. Chiedi al titolare della tua academy di inviartene uno nuovo.",
-      "invite_expired": "Questo invito è scaduto. Chiedi al titolare della tua academy di inviartene uno nuovo.",
+      "invite_revoked": "Questo invito è stato revocato. Chiedi al titolare della tua accademia di inviartene uno nuovo.",
+      "invite_expired": "Questo invito è scaduto. Chiedi al titolare della tua accademia di inviartene uno nuovo.",
       "email_already_registered": "Esiste già un account con questa email. Prova ad accedere.",
       "password_breached": "Questa password compare in liste di password compromesse — è troppo facile da indovinare. Scegline una più lunga o meno comune.",
       "unknown_error": "Qualcosa è andato storto. Riprova tra un momento."
@@ -255,7 +255,7 @@
       "cancel": "Annulla",
       "submit": "Pubblica evento",
       "successSummary": "Evento pubblicato",
-      "successDetail": "Tutti nella tua academy lo vedranno sul feed.",
+      "successDetail": "Tutti nella tua accademia lo vedranno sul feed.",
       "errorSummary": "Non è stato possibile pubblicare l'evento",
       "errorDetail": "Qualcosa è andato storto. Riprova tra un momento."
     },
@@ -273,14 +273,14 @@
   "athletePortal": {
     "welcome": {
       "title": "Benvenuto in Budojo",
-      "body": "Il tuo account atleta è pronto. Le pagine dove vedrai la tua presenza, i tuoi pagamenti e i tuoi documenti arrivano nella prossima release — per ora aspetta, la tua academy ti farà sapere quando ci sarà di più qui.",
+      "body": "Il tuo account atleta è pronto. Le pagine dove vedrai la tua presenza, i tuoi pagamenti e i tuoi documenti arrivano nella prossima release — per ora aspetta, la tua accademia ti farà sapere quando ci sarà di più qui.",
       "signOut": "Esci"
     },
     "nav": {
       "myProfile": "Il mio profilo",
       "settings": "Impostazioni",
       "feed": "Feed",
-      "academy": "Academy",
+      "academy": "Accademia",
       "attendance": "Presenze",
       "payments": "Pagamenti",
       "documents": "Documenti",
@@ -315,9 +315,9 @@
       "editErrorToast": "Non siamo riusciti a salvare il profilo. Riprova."
     },
     "feed": {
-      "title": "Il feed della tua academy",
+      "title": "Il feed della tua accademia",
       "emptyTitle": "Nessun post per ora",
-      "emptyHint": "Le promozioni di cintura e gli eventi della tua academy compariranno qui.",
+      "emptyHint": "Le promozioni di cintura e gli eventi della tua accademia compariranno qui.",
       "error": {
         "title": "Impossibile caricare il feed",
         "hint": "Si è verificato un errore. Aggiorna la pagina e riprova.",
@@ -365,32 +365,32 @@
       "commentDeleteError": "Non siamo riusciti a eliminare il tuo commento. Riprova."
     },
     "academy": {
-      "title": "La tua academy",
-      "emptyBody": "Al momento non sei collegato a nessuna academy. Contatta il tuo academy owner se pensi che sia un errore.",
-      "errorBody": "Non siamo riusciti a caricare la tua academy. Aggiorna la pagina e riprova.",
+      "title": "La tua accademia",
+      "emptyBody": "Al momento non sei collegato a nessuna accademia. Contatta il titolare della tua accademia se pensi che sia un errore.",
+      "errorBody": "Non siamo riusciti a caricare la tua accademia. Aggiorna la pagina e riprova.",
       "logoAlt": "Logo {{name}}",
       "addressLabel": "Indirizzo",
       "phoneLabel": "Telefono",
       "websiteLabel": "Sito web",
-      "ownerSection": "Owner"
+      "ownerSection": "Titolare"
     },
     "attendance": {
       "title": "Le tue presenze",
-      "emptyBody": "Nessuna sessione di allenamento registrata — la tua academy le segnerà man mano che ti alleni.",
-      "noProfileBody": "Non siamo riusciti a trovare il tuo profilo atleta. Contatta il tuo academy owner.",
+      "emptyBody": "Nessuna sessione di allenamento registrata — la tua accademia le segnerà man mano che ti alleni.",
+      "noProfileBody": "Non siamo riusciti a trovare il tuo profilo atleta. Contatta il titolare della tua accademia.",
       "errorBody": "Non siamo riusciti a caricare le tue presenze. Aggiorna la pagina e riprova.",
       "last30Days": "sessioni negli ultimi 30 giorni"
     },
     "payments": {
       "title": "I tuoi pagamenti",
-      "noProfileBody": "Non siamo riusciti a trovare il tuo profilo atleta. Contatta il tuo academy owner.",
+      "noProfileBody": "Non siamo riusciti a trovare il tuo profilo atleta. Contatta il titolare della tua accademia.",
       "errorBody": "Non siamo riusciti a caricare i tuoi pagamenti. Aggiorna la pagina e riprova.",
       "unpaid": "Non pagato"
     },
     "documents": {
       "title": "I tuoi documenti",
-      "emptyBody": "Nessun documento caricato per ora — la tua academy li caricherà man mano che li raccoglie.",
-      "noProfileBody": "Non siamo riusciti a trovare il tuo profilo atleta. Contatta il tuo academy owner.",
+      "emptyBody": "Nessun documento caricato per ora — la tua accademia li caricherà man mano che li raccoglie.",
+      "noProfileBody": "Non siamo riusciti a trovare il tuo profilo atleta. Contatta il titolare della tua accademia.",
       "errorBody": "Non siamo riusciti a caricare i tuoi documenti. Aggiorna la pagina e riprova.",
       "expiresAt": "Scade il",
       "expired": "Scaduto"
@@ -465,18 +465,18 @@
     }
   },
   "setup": {
-    "title": "Configura la tua academy",
+    "title": "Configura la tua accademia",
     "subtitle": "Ci siamo quasi — raccontaci della tua palestra",
-    "nameLabel": "Nome academy",
+    "nameLabel": "Nome dell'accademia",
     "namePlaceholder": "Gracie Barra Lisboa",
-    "nameRequired": "Il nome dell'academy è obbligatorio.",
+    "nameRequired": "Il nome dell'accademia è obbligatorio.",
     "nameMaxlength": "Massimo 255 caratteri.",
     "trainingDaysLabel": "Giorni di allenamento",
     "optional": "(opzionale)",
-    "submit": "Crea academy",
+    "submit": "Crea accademia",
     "trainHere": {
       "label": "Ti alleni anche tu in questa palestra?",
-      "body": "Se sì: comparirai nella lista atleti con un chip Owner, i tuoi post nella community mostreranno la cintura, potrai segnare la tua presenza, e non sarai fatturato (escluso dalle pagine pagamenti). Puoi cambiare scelta più tardi da Profilo → Allena qui.",
+      "body": "Se sì: comparirai nella lista atleti con un chip Titolare, i tuoi post nella community mostreranno la cintura, potrai segnare la tua presenza, e non sarai fatturato (escluso dalle pagine pagamenti). Puoi cambiare scelta più tardi da Profilo → Allena qui.",
       "yes": "Sì, iscrivimi",
       "no": "Non ora"
     }
@@ -875,7 +875,7 @@
     },
     "trainHere": {
       "title": "Mi alleno in questa palestra",
-      "subtitle": "Aggiungiti al roster come atleta della tua stessa palestra. I tuoi post community mostreranno la cintura, le tue presenze vengono tracciate e comparirai nella lista atleti con un'etichetta Owner.",
+      "subtitle": "Aggiungiti al roster come atleta della tua stessa palestra. I tuoi post community mostreranno la cintura, le tue presenze vengono tracciate e comparirai nella lista atleti con un'etichetta Titolare.",
       "errorMessage": "Non siamo riusciti a controllare se sei iscritto.",
       "retry": "Riprova",
       "toggle": {
@@ -955,8 +955,8 @@
         "description": "Notifica in inbox quando qualcuno risponde a un post community su cui hai già commentato."
       },
       "communityNewPost": {
-        "label": "Nuovo post nella tua academy",
-        "description": "Notifica in inbox + push quando un nuovo post arriva nel feed della tua academy — eventi, promozioni, annunci."
+        "label": "Nuovo post nella tua accademia",
+        "description": "Notifica in inbox + push quando un nuovo post arriva nel feed della tua accademia — eventi, promozioni, annunci."
       },
       "communityCommentOnYourPost": {
         "label": "Commento al tuo post",
@@ -968,11 +968,11 @@
       },
       "communityBeltCelebration": {
         "label": "Promozioni di cintura dei compagni",
-        "description": "Notifica in inbox quando un compagno della tua academy conquista una nuova cintura. Disattivata di default — attivala se vuoi ricevere ogni promozione."
+        "description": "Notifica in inbox quando un compagno della tua accademia conquista una nuova cintura. Disattivata di default — attivala se vuoi ricevere ogni promozione."
       },
       "communityEventNew": {
-        "label": "Nuovi eventi della tua academy",
-        "description": "Notifica in inbox quando l'owner della tua academy pubblica un nuovo evento — open mat, stage, gare interne."
+        "label": "Nuovi eventi della tua accademia",
+        "description": "Notifica in inbox quando il titolare della tua accademia pubblica un nuovo evento — open mat, stage, gare interne."
       },
       "alwaysSentTitle": "Sempre inviate",
       "alwaysSentSubtitle": "Email transazionali — necessarie al funzionamento del servizio, inviate indipendentemente dalle scelte sopra.",
@@ -1412,15 +1412,15 @@
   },
   "academy": {
     "detail": {
-      "eyebrow": "Academy",
+      "eyebrow": "Accademia",
       "edit": "Modifica",
-      "logoAlt": "Logo dell'academy",
+      "logoAlt": "Logo dell'accademia",
       "logoTitle": "Logo",
       "logoHint": "PNG, JPG, SVG o WebP, massimo 2 MB.",
       "logoUpload": "Carica",
       "logoReplace": "Sostituisci",
       "logoRemove": "Rimuovi",
-      "detailsAria": "Dettagli academy",
+      "detailsAria": "Dettagli accademia",
       "row": {
         "name": "Nome",
         "permalink": "Permalink",
@@ -1442,7 +1442,7 @@
         "manage": "Gestisci",
         "setUp": "Imposta"
       },
-      "linksAria": "Link di contatto dell'academy",
+      "linksAria": "Link di contatto dell'accademia",
       "links": {
         "website": "Sito web",
         "facebook": "Facebook",
@@ -1462,19 +1462,19 @@
         "removeErrorDetail": "Impossibile rimuovere il logo. Riprova."
       },
       "confirm": {
-        "removeMessage": "Rimuovere il logo dell'academy?",
+        "removeMessage": "Rimuovere il logo dell'accademia?",
         "removeAccept": "Rimuovi",
         "removeReject": "Annulla"
       },
       "seasonStarted": "iniziata il {{date}}"
     },
     "form": {
-      "eyebrow": "Academy",
-      "title": "Modifica academy",
+      "eyebrow": "Accademia",
+      "title": "Modifica accademia",
       "optional": "(opzionale)",
       "name": {
         "label": "Nome",
-        "errorRequired": "Il nome dell'academy è obbligatorio.",
+        "errorRequired": "Il nome dell'accademia è obbligatorio.",
         "errorMaxlength": "Massimo 255 caratteri."
       },
       "phone": {
@@ -1519,7 +1519,7 @@
         "cityLabel": "Città",
         "provinceLabel": "Provincia",
         "provinceAria": "Provincia",
-        "errorIncomplete": "Compila tutti i campi obbligatori dell'indirizzo, oppure svuotali tutti per lasciare l'academy senza indirizzo.",
+        "errorIncomplete": "Compila tutti i campi obbligatori dell'indirizzo, oppure svuotali tutti per lasciare l'accademia senza indirizzo.",
         "clearHint": "Lascia tutti i campi vuoti per rimuovere l'indirizzo salvato."
       },
       "monthlyFee": {
@@ -1543,7 +1543,7 @@
         "save": "Salva"
       },
       "toast": {
-        "successSummary": "Academy aggiornata"
+        "successSummary": "Accademia aggiornata"
       },
       "errorValidation": "Validazione non riuscita.",
       "errorGeneric": "Qualcosa è andato storto. Riprova.",
@@ -1566,7 +1566,7 @@
     },
     "feeTiers": {
       "title": "Listino quote mensili",
-      "hint": "Se l'academy ha più di una quota — per esempio 2 lezioni a settimana a 55 €, 3 lezioni a 65 € — elencale qui e assegna a ogni atleta la sua dal dettaglio atleta. Chi non sta su nessuna fascia paga la quota mensile qui sopra.",
+      "hint": "Se l'accademia ha più di una quota — per esempio 2 lezioni a settimana a 55 €, 3 lezioni a 65 € — elencale qui e assegna a ogni atleta la sua dal dettaglio atleta. Chi non sta su nessuna fascia paga la quota mensile qui sopra.",
       "empty": "Nessuna fascia. Tutti gli atleti pagano la quota mensile qui sopra.",
       "add": "Aggiungi fascia",
       "editAria": "Modifica la fascia {{label}}",
@@ -1583,8 +1583,8 @@
       },
       "confirm": {
         "remove": "Eliminare la fascia «{{label}}»?",
-        "removeWithAthletesOne": "Eliminare la fascia «{{label}}»? {{count}} atleta la sta usando e tornerà alla quota mensile dell’academy.",
-        "removeWithAthletesOther": "Eliminare la fascia «{{label}}»? {{count}} atleti la stanno usando e torneranno alla quota mensile dell’academy."
+        "removeWithAthletesOne": "Eliminare la fascia «{{label}}»? {{count}} atleta la sta usando e tornerà alla quota mensile dell’accademia.",
+        "removeWithAthletesOther": "Eliminare la fascia «{{label}}»? {{count}} atleti la stanno usando e torneranno alla quota mensile dell’accademia."
       },
       "toast": {
         "savedSummary": "Listino aggiornato",
@@ -1875,7 +1875,7 @@
       "searchPlaceholder": "Cerca per nome",
       "beltPlaceholder": "Cintura",
       "statusPlaceholder": "Stato",
-      "ownerChip": "Owner",
+      "ownerChip": "Titolare",
       "paidOptions": {
         "yes": "Pagato",
         "no": "Non pagato"
@@ -1935,7 +1935,7 @@
         "errorSummary": "Errore",
         "deletedSummary": "Eliminato",
         "deletedDetail": "{{name}} rimosso.",
-        "paidErrorMissingFee": "Imposta prima una quota mensile sull'academy per registrare i pagamenti.",
+        "paidErrorMissingFee": "Imposta prima una quota mensile sull'accademia per registrare i pagamenti.",
         "paidErrorGeneric": "Impossibile aggiornare il pagamento. Riprova.",
         "deleteErrorDetail": "Impossibile eliminare l'atleta. Riprova.",
         "markedPaidDetail": "{{name}} — {{month}}/{{year}}",
@@ -2225,7 +2225,7 @@
           "soldSummary": "Carnet venduto",
           "soldDetail": "L'atleta può iniziare a usarlo subito.",
           "errorSummary": "Qualcosa è andato storto",
-          "errorNotConfigured": "Imposta prima prezzo e taglia del carnet nelle impostazioni dell'academy.",
+          "errorNotConfigured": "Imposta prima prezzo e taglia del carnet nelle impostazioni dell'accademia.",
           "errorGeneric": "Non è stato possibile vendere il carnet. Riprova.",
           "errorEntries": "Non è stato possibile caricare il registro ingressi.",
           "loadError": "Non è stato possibile caricare i carnet.",
@@ -2340,7 +2340,7 @@
       },
       "hint": {
         "address": "Lascia tutti i campi vuoti per non assegnare un indirizzo all'atleta.",
-        "feeTier": "Quale quota mensile paga. Lascia vuoto per la quota standard dell'academy."
+        "feeTier": "Quale quota mensile paga. Lascia vuoto per la quota standard dell'accademia."
       },
       "button": {
         "cancel": "Annulla",
@@ -2367,7 +2367,7 @@
           "netherlands": "Paesi Bassi"
         }
       },
-      "feeTierPlaceholder": "Quota standard dell'academy",
+      "feeTierPlaceholder": "Quota standard dell'accademia",
       "billingPeriod": {
         "label": "Periodicità",
         "hint": "Ogni quanto paga. Un pagamento trimestrale è una riga sola che copre tre mesi.",
@@ -2565,6 +2565,10 @@
       "nameFirstDesc": "Ordinato per nome (Z → A). Clicca per cambiare.",
       "nameLastAsc": "Ordinato per cognome (A → Z). Clicca per cambiare.",
       "nameLastDesc": "Ordinato per cognome (Z → A). Clicca per cambiare."
+    },
+    "ageBadge": {
+      "valueOne": "{{years}} anno",
+      "valueOther": "{{years}} anni"
     }
   },
   "stats": {

@@ -8,12 +8,16 @@ import IT from '../../public/assets/i18n/it.json';
  * `nav.something` key in production because someone forgot the
  * `it.json` update.
  *
- * Two checks:
+ * Three checks:
  *   1. **Key parity** — walk both JSON object trees, collect leaf
  *      paths, assert the two sets are identical.
  *   2. **No empty stubs** — assert no leaf value is the empty string
  *      in either file. Catches the `"key": ""` placeholder pattern
  *      that bypasses parity but ships an invisible string to a user.
+ *   3. **Placeholder parity** — `{{academy}}` is a name the code passes,
+ *      not a word to translate. A terminology sweep over it.json once
+ *      turned it into `{{accademia}}` (#1623), which key parity cannot
+ *      see and which renders the placeholder verbatim to the reader.
  */
 function collectLeafPaths(obj: Record<string, unknown>, prefix = ''): string[] {
   const out: string[] = [];
@@ -57,5 +61,35 @@ describe('i18n key parity (en.json ↔ it.json)', () => {
     walk(EN, 'en');
     walk(IT, 'it');
     expect(empty).toEqual([]);
+  });
+
+  it('uses the same {{placeholders}} in both files — they are names, not words', () => {
+    // The SET, not the list: a language may legitimately repeat a
+    // placeholder its counterpart states once ("{{name}} … {{name}}"),
+    // and that is not a mismatch.
+    const placeholders = (value: string): string[] =>
+      [...new Set([...value.matchAll(/\{\{\s*([\w.]+)\s*\}\}/g)].map((m) => m[1]))].sort();
+
+    const read = (obj: Record<string, unknown>, path: string): string | undefined => {
+      let node: unknown = obj;
+      for (const segment of path.split('.')) {
+        if (node === null || typeof node !== 'object') return undefined;
+        node = (node as Record<string, unknown>)[segment];
+      }
+      return typeof node === 'string' ? node : undefined;
+    };
+
+    const mismatched: string[] = [];
+    for (const path of collectLeafPaths(EN)) {
+      const en = read(EN, path);
+      const it = read(IT, path);
+      if (en === undefined || it === undefined) continue;
+      const a = placeholders(en);
+      const b = placeholders(it);
+      if (a.join('|') !== b.join('|')) {
+        mismatched.push(`${path}: en {{${a.join(', ')}}} vs it {{${b.join(', ')}}}`);
+      }
+    }
+    expect(mismatched).toEqual([]);
   });
 });

@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { TranslateService } from '@ngx-translate/core';
 import { TagModule } from 'primeng/tag';
 import { Tooltip } from 'primeng/tooltip';
 import { LanguageService } from '../../../core/services/language.service';
@@ -25,7 +26,7 @@ import { localeFor } from '../../utils/locale';
   template: `
     @if (years(); as y) {
       <p-tag
-        [value]="y + 'y'"
+        [value]="label()"
         severity="secondary"
         [rounded]="true"
         [pTooltip]="dobLabel()"
@@ -38,6 +39,7 @@ import { localeFor } from '../../utils/locale';
 })
 export class AgeBadgeComponent {
   private readonly languageService = inject(LanguageService);
+  private readonly translate = inject(TranslateService);
 
   /** ISO `YYYY-MM-DD`. May be null/empty when the athlete has no DOB on file. */
   readonly dateOfBirth = input<string | null | undefined>(null);
@@ -56,6 +58,22 @@ export class AgeBadgeComponent {
       (today.getMonth() + 1 === parsed.month && today.getDate() < parsed.day);
     if (beforeBirthday) age -= 1;
     return age >= 0 ? age : null;
+  });
+
+  /**
+   * The chip's own text. It was `years + 'y'` — a unit built in code, which
+   * meant an Italian roster read "32y" beside every name and no translation
+   * could reach it (#1623). Through the plural pair instead: "32 anni",
+   * "1 anno", and the same "32y" in English where the letter is idiomatic.
+   */
+  protected readonly label = computed<string>(() => {
+    this.languageService.currentLang();
+    const years = this.years();
+    if (years === null) return '';
+    return this.translate.instant(
+      years === 1 ? 'shared.ageBadge.valueOne' : 'shared.ageBadge.valueOther',
+      { years },
+    ) as string;
   });
 
   /** Long-form date for the tooltip — e.g. "15 May 1990". */
