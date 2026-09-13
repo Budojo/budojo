@@ -8,6 +8,7 @@ import { Subject, of, throwError } from 'rxjs';
 import { ProfileComponent } from './profile.component';
 import { AuthService, User } from '../../core/services/auth.service';
 import { MessageService } from 'primeng/api';
+import { RuntimeService } from '../../core/services/runtime.service';
 import { provideI18nTesting } from '../../../test-utils/i18n-test';
 
 // PrimeNG's <p-tabs> binds a ResizeObserver in ngAfterViewInit; jsdom
@@ -32,7 +33,11 @@ const FAKE_USER: User = {
   avatar_url: null,
 };
 
-function setup(authOverrides: Partial<AuthService> = {}, userOverride?: User | null) {
+function setup(
+  authOverrides: Partial<AuthService> = {},
+  userOverride?: User | null,
+  profile: 'web' | 'desktop' = 'web',
+) {
   const userSignal = signal<User | null>(userOverride !== undefined ? userOverride : FAKE_USER);
   const authStub: Partial<AuthService> = {
     user: userSignal,
@@ -63,6 +68,14 @@ function setup(authOverrides: Partial<AuthService> = {}, userOverride?: User | n
     imports: [ProfileComponent],
     providers: [
       { provide: AuthService, useValue: authStub },
+      {
+        provide: RuntimeService,
+        useValue: {
+          loaded: signal(true),
+          profile: signal(profile),
+          has: signal(() => profile === 'web'),
+        },
+      },
       // ProfileComponent reads the app-level `MessageService` from the
       // root injector (no component-level provider) — provide it here.
       MessageService,
@@ -675,5 +688,51 @@ describe('ProfileComponent — inline email change (#476)', () => {
     cmp.cancelPendingEmailChange();
 
     expect(cancelSpy).toHaveBeenCalledTimes(1);
+  });
+
+  // ─── What a single owner at a single PC does not need (#1642) ───────────
+
+  it('keeps password and 2FA on the desktop, and drops the hosted furniture', () => {
+    const { fixture } = setup({}, undefined, 'desktop');
+    fixture.componentInstance['activeTab'].set('security');
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('app-profile-two-factor')).not.toBeNull();
+    // "The devices and browsers connected to your account" is one device, and
+    // the login history is a column of 127.0.0.1.
+    expect(el.querySelector('app-profile-sessions')).toBeNull();
+    expect(el.querySelector('app-profile-login-history')).toBeNull();
+  });
+
+  it('keeps all of it on the web', () => {
+    const { fixture } = setup({}, undefined, 'web');
+    fixture.componentInstance['activeTab'].set('security');
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('app-profile-sessions')).not.toBeNull();
+    expect(el.querySelector('app-profile-login-history')).not.toBeNull();
+  });
+
+  it('drops the API tokens where the API listens on 127.0.0.1 for this app alone', () => {
+    const { fixture } = setup({}, undefined, 'desktop');
+    fixture.componentInstance['activeTab'].set('account');
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('app-profile-api-tokens')).toBeNull();
+    // The two that still mean something here stay.
+    expect(el.querySelector('app-profile-train-here')).not.toBeNull();
+    expect(el.querySelector('[data-cy="profile-data-export"]')).not.toBeNull();
+  });
+
+  it('drops the handle where there is no feed to be that person in', () => {
+    const { fixture } = setup({}, undefined, 'desktop');
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('[data-cy="profile-handle"]')).toBeNull();
+    expect(el.querySelector('[data-cy="profile-handle-empty"]')).toBeNull();
   });
 });
