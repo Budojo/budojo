@@ -1,3 +1,4 @@
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
@@ -5,6 +6,7 @@ import { MessageService } from 'primeng/api';
 import { environment } from '../../../../environments/environment';
 import { ProfileTrainHereComponent } from './profile-train-here.component';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
+import { ALL_CAPABILITIES, RuntimeService } from '../../../core/services/runtime.service';
 
 /**
  * Coverage for the "Train at this academy" toggle (#750). Focuses on
@@ -16,7 +18,7 @@ describe('ProfileTrainHereComponent (#750)', () => {
   let httpMock: HttpTestingController;
   let messageAddSpy: ReturnType<typeof vi.fn>;
 
-  function setup() {
+  function setup(capabilities: readonly string[] = ALL_CAPABILITIES) {
     messageAddSpy = vi.fn();
     TestBed.configureTestingModule({
       imports: [ProfileTrainHereComponent],
@@ -25,6 +27,13 @@ describe('ProfileTrainHereComponent (#750)', () => {
         provideHttpClientTesting(),
         ...provideI18nTesting(),
         { provide: MessageService, useValue: { add: messageAddSpy } },
+        {
+          provide: RuntimeService,
+          useValue: {
+            profile: signal(capabilities.includes('email') ? 'web' : 'desktop'),
+            has: signal((capability: string) => capabilities.includes(capability)),
+          },
+        },
       ],
     });
     httpMock = TestBed.inject(HttpTestingController);
@@ -42,6 +51,50 @@ describe('ProfileTrainHereComponent (#750)', () => {
     expect(req.request.method).toBe('GET');
     req.flush({ data: state });
   }
+
+  it('does not bring the promise back in the enrol toast (#1626)', async () => {
+    // The paragraph stopped saying it; the toast still did, so flipping the
+    // toggle on a desktop build put it straight back on screen.
+    const { fixture } = setup([]);
+    flushState({ enrolled: false, athlete_id: null });
+    fixture.detectChanges();
+
+    const toggle = fixture.nativeElement.querySelector(
+      'p-toggleswitch input, [data-cy="train-here-toggle"] input',
+    ) as HTMLInputElement | null;
+    expect(toggle).not.toBeNull();
+    toggle!.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const enrol = httpMock.match((r) => r.method === 'POST');
+    if (enrol.length > 0) {
+      enrol[0].flush({ data: { id: 9 } });
+      fixture.detectChanges();
+      await fixture.whenStable();
+    }
+
+    const detail = messageAddSpy.mock.calls.map((c) => JSON.stringify(c[0])).join(' ');
+    expect(detail).not.toContain('community');
+  });
+
+  it('does not promise community posts on a build without a feed (#1626)', () => {
+    const { fixture } = setup([]);
+    flushState({ enrolled: false, athlete_id: null });
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('Add yourself to the roster');
+    expect(text).not.toContain('community posts');
+  });
+
+  it('keeps the community sentence where there is a community (#1626)', () => {
+    const { fixture } = setup();
+    flushState({ enrolled: false, athlete_id: null });
+    fixture.detectChanges();
+
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('community posts');
+  });
 
   it('starts in loading state, renders the spinner', () => {
     const { fixture } = setup();

@@ -13,6 +13,7 @@ import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { MessageService } from 'primeng/api';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { MyAthleteService } from '../../../core/services/my-athlete.service';
+import { RuntimeService } from '../../../core/services/runtime.service';
 
 /**
  * "Train at this academy" toggle on `/dashboard/profile` (#750,
@@ -46,6 +47,8 @@ import { MyAthleteService } from '../../../core/services/my-athlete.service';
 })
 export class ProfileTrainHereComponent implements OnInit {
   private readonly myAthleteService = inject(MyAthleteService);
+  /** The community sentence in this card is only true where there is a feed (#1626). */
+  protected readonly runtime = inject(RuntimeService);
   private readonly messageService = inject(MessageService);
   private readonly translate = inject(TranslateService);
 

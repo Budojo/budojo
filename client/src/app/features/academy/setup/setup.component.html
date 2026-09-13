@@ -49,7 +49,15 @@
       -->
       <div class="train-here" data-cy="setup-train-here-question">
         <span class="field-label">{{ 'setup.trainHere.label' | translate }}</span>
-        <p class="train-here__hint">{{ 'setup.trainHere.body' | translate }}</p>
+        <!-- The community half is a promise only a runtime with a feed can
+             keep (#1626). Everything else here is true on every build. -->
+        <p class="train-here__hint">
+          {{ 'setup.trainHere.body' | translate }}
+          @if (runtime.has()('community')) {
+            {{ 'setup.trainHere.bodyCommunity' | translate }}
+          }
+          {{ 'setup.trainHere.bodyFooter' | translate }}
+        </p>
         <div class="train-here__actions">
           <p-button
             type="button"
