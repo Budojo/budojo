@@ -852,6 +852,7 @@
     "notifications": {
       "title": "Notifiche",
       "subtitle": "Scegli quali notifiche vuoi ricevere. Ogni riga indica come viene consegnata (digest email, inbox, …).",
+      "subtitleNoEmail": "Scegli quali notifiche vuoi ricevere. Arrivano nella campanella in alto; questa build non invia email.",
       "groups": {
         "owner": "Avvisi maestro",
         "athlete": "Avvisi personali",

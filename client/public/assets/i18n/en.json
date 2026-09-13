@@ -852,6 +852,7 @@
     "notifications": {
       "title": "Notifications",
       "subtitle": "Choose which notifications you want to receive. Each row lists how it's delivered (email digest, inbox, …).",
+      "subtitleNoEmail": "Choose which notifications you want to receive. They arrive in the bell at the top; this build doesn't send email.",
       "groups": {
         "owner": "Owner alerts",
         "athlete": "Personal alerts",

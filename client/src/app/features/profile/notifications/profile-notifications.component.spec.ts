@@ -1,10 +1,12 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { MessageService } from 'primeng/api';
 import { describe, expect, it, vi } from 'vitest';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
+import { ALL_CAPABILITIES, RuntimeService } from '../../../core/services/runtime.service';
 import { ProfileNotificationsComponent } from './profile-notifications.component';
 
 interface Harness {
@@ -18,7 +20,7 @@ const ENDPOINT = '/api/v1/me/notification-preferences';
 const MEDICAL = 'medical_cert_expiry_reminders';
 const UNPAID = 'unpaid_athletes_digest';
 
-function setup(): Harness {
+function setup(capabilities: readonly string[] = ALL_CAPABILITIES): Harness {
   const addToastSpy = vi.fn();
   TestBed.configureTestingModule({
     imports: [ProfileNotificationsComponent],
@@ -28,6 +30,13 @@ function setup(): Harness {
       provideAnimationsAsync(),
       ...provideI18nTesting(),
       { provide: MessageService, useValue: { add: addToastSpy } },
+      {
+        provide: RuntimeService,
+        useValue: {
+          profile: signal(capabilities.includes('email') ? 'web' : 'desktop'),
+          has: signal((capability: string) => capabilities.includes(capability)),
+        },
+      },
     ],
   });
   const fixture = TestBed.createComponent(ProfileNotificationsComponent);
@@ -158,5 +167,66 @@ describe('ProfileNotificationsComponent (#416)', () => {
     // Reverted to the prior value.
     expect(component.isEnabled(MEDICAL)).toBe(true);
     expect(addToastSpy).toHaveBeenCalledWith(expect.objectContaining({ severity: 'error' }));
+  });
+
+  // #1619: on a runtime with no mail transport this page was promising five
+  // transactional emails and describing its own toggles as email digests.
+  // The toggles themselves stay — the owner digests fall back to the in-app
+  // inbox server-side, and the rest were never email to begin with.
+  describe('without the email capability (#1619)', () => {
+    function setupDesktop(): Harness {
+      const harness = setup([]);
+      harness.httpMock.expectOne(ENDPOINT).flush({ data: { [MEDICAL]: true, [UNPAID]: true } });
+      harness.fixture.detectChanges();
+      return harness;
+    }
+
+    it('drops the transactional-email block', () => {
+      const { el } = setupDesktop();
+      expect(el.querySelector('[data-cy="profile-notifications-transactional"]')).toBeNull();
+    });
+
+    it('stops describing the toggles as email, and points at the bell instead', () => {
+      const { el } = setupDesktop();
+      const subtitle = el.querySelector('.profile-notifications__subtitle')?.textContent ?? '';
+      expect(subtitle).not.toContain('email digest');
+      expect(subtitle).toContain('bell');
+    });
+
+    it('hides the community group and keeps the ones that still deliver', () => {
+      const { el } = setupDesktop();
+      expect(el.querySelector('[data-cy="profile-notifications-group-community"]')).toBeNull();
+      expect(el.querySelector('[data-cy="profile-notifications-group-owner"]')).not.toBeNull();
+      expect(el.querySelector(`[data-cy="profile-notifications-row-${UNPAID}"]`)).not.toBeNull();
+    });
+
+    it('hides the two owner alerts whose own routes are gated away', () => {
+      const { el } = setupDesktop();
+      // An RSVP needs the feed; "an athlete signed up" needs athlete accounts.
+      // Both sit in the OWNER group, so hiding the community accordion alone
+      // left two switches wired to nothing.
+      expect(el.querySelector('[data-cy="profile-notifications-row-owner_event_rsvp"]')).toBeNull();
+      expect(
+        el.querySelector('[data-cy="profile-notifications-row-athlete_signed_up"]'),
+      ).toBeNull();
+      expect(
+        el.querySelector('[data-cy="profile-notifications-row-owner_athlete_missed_streak"]'),
+      ).not.toBeNull();
+    });
+
+    it('keeps all three groups and the transactional block on the web', () => {
+      const { el, httpMock, fixture } = setup();
+      httpMock.expectOne(ENDPOINT).flush({ data: { [MEDICAL]: true, [UNPAID]: true } });
+      fixture.detectChanges();
+
+      expect(el.querySelector('[data-cy="profile-notifications-group-community"]')).not.toBeNull();
+      expect(el.querySelector('[data-cy="profile-notifications-transactional"]')).not.toBeNull();
+      expect(
+        el.querySelector('[data-cy="profile-notifications-row-owner_event_rsvp"]'),
+      ).not.toBeNull();
+      expect(el.querySelector('.profile-notifications__subtitle')?.textContent).toContain(
+        'email digest',
+      );
+    });
   });
 });
