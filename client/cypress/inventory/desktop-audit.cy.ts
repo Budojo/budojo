@@ -17,7 +17,8 @@
  * Deterministic on purpose: every endpoint is stubbed, the clock is frozen
  * at Monday 14 September 2026, 18:30 — in season, half an hour before an
  * evening class — and the Electron bridge is faked so the title bar, the
- * backup page and the update banner render as they do in the real shell.
+ * backup page and the title bar's update states render as they do in the
+ * real shell.
  * Re-running after a fix produces the same picture, minus the fix.
  */
 export {};
