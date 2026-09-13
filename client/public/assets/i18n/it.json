@@ -1838,7 +1838,10 @@
         "daysInitial": "Clicca per ordinare per giorni di presenza (prima i più alti)",
         "daysDesc": "Ordinato per giorni di presenza (prima i più alti). Clicca per invertire.",
         "daysAsc": "Ordinato per giorni di presenza (prima i più bassi). Clicca per invertire."
-      }
+      },
+      "presencesOne": "{{count}} presenza",
+      "presencesOther": "{{count}} presenze",
+      "noScheduleNote": "Nessun orario copre ancora questo mese, quindi non c'è un totale di giorni su cui calcolare le percentuali."
     }
   },
   "lessons": {

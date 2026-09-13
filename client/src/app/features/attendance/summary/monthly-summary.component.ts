@@ -18,6 +18,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { AcademyService } from '../../../core/services/academy.service';
 import { AttendanceService, AttendanceSummaryRow } from '../../../core/services/attendance.service';
+import { RouterLink } from '@angular/router';
 import { LanguageService } from '../../../core/services/language.service';
 import {
   attendanceRate,
@@ -102,6 +103,7 @@ function compareYearMonth(a: YearMonth, b: YearMonth): number {
   selector: 'app-monthly-summary',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    RouterLink,
     FormsModule,
     ButtonModule,
     InputTextModule,
@@ -196,16 +198,54 @@ export class MonthlySummaryComponent implements OnInit {
     });
   });
 
-  protected readonly totalDays = computed(() => this.rows().reduce((acc, r) => acc + r.count, 0));
+  /**
+   * Every athlete's count added together — which is a number of **presences**,
+   * not of days. The header called it "23 giorni di allenamento" (#1639), so
+   * a September with eight sessions on the mat read as twenty-three.
+   */
+  protected readonly totalPresences = computed(() =>
+    this.rows().reduce((acc, r) => acc + r.count, 0),
+  );
 
-  /** "21 giorni · 32 atleti" — single combined chip for the page-header. */
+  /**
+   * "23 presenze · 7 atleti · 8 giorni di allenamento" — the header chip.
+   * The third segment is the real thing the second one was pretending to be,
+   * and it is only there when the academy has a timetable to count against.
+   */
   protected readonly summaryCountLabel = computed<string>(() => {
-    const days = this.totalDays();
+    this.languageService.currentLang();
+    const presences = this.totalPresences();
     const athletes = this.rows().length;
-    const daysKey = days === 1 ? 'attendance.summary.daysOne' : 'attendance.summary.daysOther';
+    const scheduled = this.scheduledCount();
+
+    const presencesKey =
+      presences === 1 ? 'attendance.summary.presencesOne' : 'attendance.summary.presencesOther';
     const athletesKey =
       athletes === 1 ? 'attendance.summary.athletesOne' : 'attendance.summary.athletesOther';
-    return `${this.translate.instant(daysKey, { count: days })} · ${this.translate.instant(athletesKey, { count: athletes })}`;
+    const segments = [
+      this.translate.instant(presencesKey, { count: presences }) as string,
+      this.translate.instant(athletesKey, { count: athletes }) as string,
+    ];
+    // Zero is not a fact worth stating: it means the timetable does not
+    // reach back this far, and "0 giorni di allenamento" next to twelve
+    // presences is the same kind of wrong label this issue is about.
+    if (scheduled !== null && scheduled > 0) {
+      const daysKey =
+        scheduled === 1 ? 'attendance.summary.daysOne' : 'attendance.summary.daysOther';
+      segments.push(this.translate.instant(daysKey, { count: scheduled }) as string);
+    }
+    return segments.join(' · ');
+  });
+
+  /**
+   * True when this month has no day count to divide by — either no timetable
+   * was ever configured (`null`) or the one that exists starts after this
+   * month (`0`). Both make the rows drop their fraction, and until #1639
+   * neither said so.
+   */
+  protected readonly noDenominator = computed<boolean>(() => {
+    const scheduled = this.scheduledCount();
+    return scheduled === null || scheduled === 0;
   });
 
   /**

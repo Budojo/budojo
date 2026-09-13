@@ -1838,7 +1838,10 @@
         "daysInitial": "Click to sort by days attended (most first)",
         "daysDesc": "Sorted by days attended (most first). Click to flip.",
         "daysAsc": "Sorted by days attended (fewest first). Click to flip."
-      }
+      },
+      "presencesOne": "{{count}} attendance",
+      "presencesOther": "{{count}} attendances",
+      "noScheduleNote": "No timetable covers this month yet, so there is no day count to work the percentages against."
     }
   },
   "lessons": {
