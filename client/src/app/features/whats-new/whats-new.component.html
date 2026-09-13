@@ -17,7 +17,9 @@
     <section class="whats-new__release" [attr.data-cy]="'whats-new-release-' + release.version">
       <header class="whats-new__release-header">
         <h2 class="whats-new__version">{{ release.version }}</h2>
-        <time class="whats-new__date" [attr.datetime]="release.date">{{ release.date }}</time>
+        <time class="whats-new__date" [attr.datetime]="release.date">{{
+          release.date | localeDate: 'calendar-day'
+        }}</time>
       </header>
       <p class="whats-new__headline">{{ text(release.headline) }}</p>
       @for (section of release.sections; track $index) {

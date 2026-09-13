@@ -5,6 +5,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { LanguageService } from '../../core/services/language.service';
 import { BrandGlyphComponent } from '../../shared/components/brand-glyph/brand-glyph.component';
 import { localised, RELEASES, type Localised, type Release } from './whats-new.releases';
+import { LocaleDatePipe } from '../../shared/pipes/locale-date.pipe';
 
 /**
  * "What's new" page (#254). User-facing changelog for non-technical
@@ -42,7 +43,7 @@ import { localised, RELEASES, type Localised, type Release } from './whats-new.r
 @Component({
   selector: 'app-whats-new',
   standalone: true,
-  imports: [ButtonModule, BrandGlyphComponent, RouterLink, TranslatePipe],
+  imports: [LocaleDatePipe, ButtonModule, BrandGlyphComponent, RouterLink, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './whats-new.component.html',
   styleUrl: './whats-new.component.scss',

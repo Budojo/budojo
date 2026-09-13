@@ -1,19 +1,22 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { TranslateService } from '@ngx-translate/core';
 import { TagModule } from 'primeng/tag';
+import { LanguageService } from '../../../core/services/language.service';
 import { DocumentType } from '../../../core/services/document.service';
 
 export type ExpiryStatus = 'valid' | 'expiring' | 'expired' | 'missing' | 'none';
 
 interface BadgeSpec {
-  label: string;
+  /** Translation key — the labels were hard-coded English until #1625. */
+  labelKey: string;
   severity: 'success' | 'warn' | 'danger' | 'secondary';
 }
 
 const SPEC: Record<ExpiryStatus, BadgeSpec | null> = {
-  valid: { label: 'Valid', severity: 'success' },
-  expiring: { label: 'Expiring', severity: 'warn' },
-  expired: { label: 'Expired', severity: 'danger' },
-  missing: { label: 'Missing expiry', severity: 'danger' },
+  valid: { labelKey: 'shared.expiryBadge.valid', severity: 'success' },
+  expiring: { labelKey: 'shared.expiryBadge.expiring', severity: 'warn' },
+  expired: { labelKey: 'shared.expiryBadge.expired', severity: 'danger' },
+  missing: { labelKey: 'shared.expiryBadge.missing', severity: 'danger' },
   none: null,
 };
 
@@ -35,9 +38,7 @@ export function classifyExpiry(
     return type === 'medical_certificate' ? 'missing' : 'none';
   }
 
-  const expiry = parseDate(expiresAt);
-  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const diffDays = Math.ceil((expiry.getTime() - todayStart.getTime()) / (1000 * 60 * 60 * 24));
+  const diffDays = daysUntilExpiry(expiresAt, today) as number;
 
   if (diffDays < 0) return 'expired';
   if (diffDays <= EXPIRY_WARNING_DAYS) return 'expiring';
@@ -58,7 +59,7 @@ function parseDate(iso: string): Date {
   template: `
     @if (spec()) {
       <p-tag
-        [value]="spec()!.label"
+        [value]="label()"
         [severity]="spec()!.severity"
         [rounded]="true"
         data-cy="expiry-badge"
@@ -74,6 +75,9 @@ function parseDate(iso: string): Date {
   ],
 })
 export class ExpiryStatusBadgeComponent {
+  private readonly translate = inject(TranslateService);
+  private readonly language = inject(LanguageService);
+
   readonly expiresAt = input.required<string | null>();
   readonly type = input.required<DocumentType>();
   /** Dependency injection for deterministic tests — defaults to `new Date()` on render. */
@@ -84,4 +88,55 @@ export class ExpiryStatusBadgeComponent {
   );
 
   readonly spec = computed<BadgeSpec | null>(() => SPEC[this.status()]);
+
+  /** The tag's own word, in the reader's language. */
+  readonly label = computed<string>(() => {
+    this.language.currentLang();
+    const spec = this.spec();
+    return spec === null ? '' : (this.translate.instant(spec.labelKey) as string);
+  });
+}
+
+/**
+ * Whole days from today to an expiry — negative once it is past, null when
+ * there is no expiry to count to. `classifyExpiry` divides by it, so the
+ * badge's colour and the words beside it can never disagree.
+ *
+ * **Counted in calendar days, not in milliseconds.** A difference in ms
+ * divided by 86,400,000 is off by one whenever the clocks change between the
+ * two dates: in Europe/Rome, 24 October to 23 November is 30 days and that
+ * arithmetic called it 31 — a certificate one day inside the warning window
+ * rendered green. The March change produced `-0` for *yesterday*, so a
+ * document that had just expired read "scade oggi" in amber instead of red
+ * (#1625). Day numbers from `Date.UTC` have no hours in them to lose.
+ */
+export function daysUntilExpiry(expiresAt: string | null, today: Date = new Date()): number | null {
+  if (expiresAt === null) return null;
+  const expiry = parseDate(expiresAt);
+  return dayNumber(expiry) - dayNumber(today);
+}
+
+/**
+ * Which phrase says how long is left, and the number to put in it. The page
+ * that renders it does the translating — the badge shows a tag, not a
+ * sentence — but the choice of phrase lives here, next to the counting, so
+ * there is one place where "1" picks the singular (#1625).
+ */
+export function expiryCountdownKey(days: number): { key: string; count: number } {
+  if (days === 0) return { key: 'shared.expiryCountdown.today', count: 0 };
+  const count = Math.abs(days);
+  const key =
+    days > 0
+      ? count === 1
+        ? 'shared.expiryCountdown.futureOne'
+        : 'shared.expiryCountdown.futureOther'
+      : count === 1
+        ? 'shared.expiryCountdown.pastOne'
+        : 'shared.expiryCountdown.pastOther';
+  return { key, count };
+}
+
+/** Days since the epoch for a date's own calendar day, ignoring its clock. */
+function dayNumber(date: Date): number {
+  return Math.floor(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86_400_000);
 }

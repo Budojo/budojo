@@ -165,8 +165,8 @@
           <td class="documents-list__filename">
             <span>{{ doc.original_name }}</span>
           </td>
-          <td>{{ doc.issued_at ?? '—' }}</td>
-          <td>{{ doc.expires_at ?? '—' }}</td>
+          <td>{{ doc.issued_at ? (doc.issued_at | localeDate: 'calendar-day') : '—' }}</td>
+          <td>{{ doc.expires_at ? (doc.expires_at | localeDate: 'calendar-day') : '—' }}</td>
           <td>
             @if (doc.deleted_at) {
               <p-tag

@@ -2585,6 +2585,19 @@
     "ageBadge": {
       "valueOne": "{{years}} anno",
       "valueOther": "{{years}} anni"
+    },
+    "expiryBadge": {
+      "valid": "Valido",
+      "expiring": "In scadenza",
+      "expired": "Scaduto",
+      "missing": "Scadenza mancante"
+    },
+    "expiryCountdown": {
+      "today": "scade oggi",
+      "futureOne": "tra {{count}} giorno",
+      "futureOther": "tra {{count}} giorni",
+      "pastOne": "scaduto da {{count}} giorno",
+      "pastOther": "scaduto da {{count}} giorni"
     }
   },
   "stats": {

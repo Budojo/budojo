@@ -242,3 +242,11 @@ $expiring-mobile-breakpoint: 768px;
     align-items: center;
   }
 }
+
+// The words beside the date — "tra 16 giorni", "scaduto da 4 giorni" — read
+// as the note they are, not as a second value (#1625).
+.expiring-page__countdown {
+  display: block;
+  font-size: 0.8125rem;
+  color: var(--p-text-color-secondary);
+}
