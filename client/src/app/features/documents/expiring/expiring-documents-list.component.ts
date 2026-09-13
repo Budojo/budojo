@@ -22,11 +22,17 @@ import {
   DocumentType,
   ExpiringDocument,
 } from '../../../core/services/document.service';
-import { ExpiryStatusBadgeComponent } from '../../../shared/components/expiry-status-badge/expiry-status-badge.component';
+import {
+  daysUntilExpiry,
+  expiryCountdownKey,
+  ExpiryStatusBadgeComponent,
+} from '../../../shared/components/expiry-status-badge/expiry-status-badge.component';
+import { LanguageService } from '../../../core/services/language.service';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { ErrorStateComponent } from '../../../shared/components/error-state/error-state.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { triggerBrowserDownload } from '../../../shared/utils/download';
+import { LocaleDatePipe } from '../../../shared/pipes/locale-date.pipe';
 
 /**
  * Cross-athlete view of open document issues — both the expiring
@@ -42,6 +48,7 @@ import { triggerBrowserDownload } from '../../../shared/utils/download';
   selector: 'app-expiring-documents-list',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    LocaleDatePipe,
     RouterLink,
     ButtonModule,
     SkeletonModule,
@@ -63,11 +70,26 @@ export class ExpiringDocumentsListComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly messageService = inject(MessageService);
   private readonly translate = inject(TranslateService);
+  private readonly language = inject(LanguageService);
 
   readonly documents = signal<ExpiringDocument[]>([]);
   readonly missingCerts = signal<readonly AthleteMissingMedicalCertificate[]>([]);
   readonly loading = signal<boolean>(true);
   readonly errored = signal<boolean>(false);
+
+  /**
+   * How long until it runs out, in words. The column showed the date and
+   * left the subtraction to the reader — on the one page whose whole job is
+   * "who do I have to chase" (#1625, EXP-3). The counting and the choice of
+   * phrase live with the badge; this only translates.
+   */
+  protected countdownFor(expiresAt: string): string {
+    this.language.currentLang();
+    const days = daysUntilExpiry(expiresAt);
+    if (days === null) return '';
+    const { key, count } = expiryCountdownKey(days);
+    return this.translate.instant(key, { count }) as string;
+  }
 
   readonly count = computed<number>(() => this.documents().length);
   readonly missingCount = computed<number>(() => this.missingCerts().length);
