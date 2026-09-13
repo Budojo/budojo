@@ -90,10 +90,22 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
         min-width: 0;
       }
 
+      /* The count wraps under the title before the title starts breaking
+         inside its own words. At 960 — a window size the desktop app can
+         actually have — "Check-in di oggi" was rendering as three lines
+         beside a narrow "3 presenti" column (#1632, CHK-4). Nowrap returns
+         at 1024, where both fit on one line beside the CTA. */
       .page-header__title-row {
         display: flex;
         align-items: baseline;
         gap: 0.5rem;
+        flex-wrap: wrap;
+      }
+
+      @media (min-width: 1024px) {
+        .page-header__title-row {
+          flex-wrap: nowrap;
+        }
       }
 
       .page-header__title {

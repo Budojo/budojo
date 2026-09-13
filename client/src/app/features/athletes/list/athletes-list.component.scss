@@ -29,10 +29,11 @@
     margin-bottom: 1rem;
     flex-wrap: wrap;
 
-    // Desktop: one row. They are one control group doing one job — narrowing
-    // the list — and drawing them as two rows pushed the first athlete a row
-    // further down the page it exists to show.
-    @media (min-width: 768px) {
+    // One row where there is room for one. Below 1024 — and the desktop
+    // window can be 960 — nowrap had the search shrink to ~85 px and its
+    // placeholder read "Cer": the one control people actually type into was
+    // the first to give way (#1632, ATH-3). The selects wrap under it now.
+    @media (min-width: 1024px) {
       flex-wrap: nowrap;
     }
   }
@@ -45,7 +46,13 @@
     flex: 1 1 auto;
     min-width: 0;
 
+    // Its own row while the group is wrapped, so it keeps a typeable width.
     @media (min-width: 768px) {
+      flex: 1 0 100%;
+    }
+
+    @media (min-width: 1024px) {
+      flex: 1 1 auto;
       max-width: 22rem;
     }
 

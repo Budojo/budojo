@@ -63,6 +63,18 @@ export const VIEWPORT_DESKTOP: Viewport = {
   height: 900,
 };
 
+/**
+ * The smallest the desktop window can be (`desktop/src/main.ts` sets
+ * `minWidth: 960, minHeight: 600`). Not a phone and not a laptop: the size
+ * an owner gets by dragging the window into a corner, and the one the
+ * v2.61 audit shot every screen at. Two headers broke only here (#1632).
+ */
+export const VIEWPORT_MIN_WINDOW: Viewport = {
+  name: 'Minimum window',
+  width: 960,
+  height: 600,
+};
+
 /** Both mobile devices — the high-yield smoke set. */
 export const MOBILE_VIEWPORTS: readonly Viewport[] = [VIEWPORT_IPHONE_SE, VIEWPORT_PIXEL_8_PRO];
 
