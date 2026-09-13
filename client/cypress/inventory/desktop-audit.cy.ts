@@ -884,28 +884,28 @@ const AUDIT = {
   data: [
     {
       id: 5,
-      action: 'attendance.marked',
+      action: 'document.uploaded',
       actor_user_id: 1,
       actor_label: 'Matteo Bonanno',
-      subject_type: 'athlete',
+      subject_type: 'document',
       subject_id: 4,
-      subject_label: 'Sara Colombo',
+      subject_label: 'Sara Colombo — certificato medico',
       before: null,
-      after: { attended_on: TODAY, academy_class_id: 1 },
+      after: { type: 'medical_certificate', expires_at: '2027-09-14' },
       ip: '127.0.0.1',
       user_agent: 'Budojo Desktop',
       created_at: '2026-09-14T18:12:00+00:00',
     },
     {
       id: 4,
-      action: 'lesson.topics_updated',
+      action: 'academy.updated',
       actor_user_id: 1,
       actor_label: 'Matteo Bonanno',
-      subject_type: 'lesson',
-      subject_id: 7,
-      subject_label: 'Fondamentali · 14 set',
-      before: { topics: [] },
-      after: { topics: ['Armbar'] },
+      subject_type: 'academy',
+      subject_id: 1,
+      subject_label: 'Budojo BJJ Torino',
+      before: { monthly_fee: 60 },
+      after: { monthly_fee: 65 },
       ip: '127.0.0.1',
       user_agent: 'Budojo Desktop',
       created_at: '2026-09-14T18:02:00+00:00',
@@ -945,6 +945,10 @@ const AUDIT = {
       created_at: '2026-07-01T17:40:00+00:00',
     },
     {
+      // Deliberately an action the server does not write (#1631): this row is
+      // the frame's example of the unknown-action fallback — the raw key, in
+      // monospace, with the tooltip. A future server-side action looks like
+      // this until somebody gives it a sentence.
       id: 1,
       action: 'academy_class.created',
       actor_user_id: 1,

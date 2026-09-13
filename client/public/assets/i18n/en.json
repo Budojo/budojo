@@ -1391,14 +1391,30 @@
     "subtitle": "Every recorded action across the academy — who did what, when.",
     "filters": {
       "action": "Action",
-      "actionPlaceholder": "e.g. athlete.deleted",
       "from": "From",
       "to": "To",
       "apply": "Apply",
-      "reset": "Reset"
+      "reset": "Reset",
+      "actionAll": "All actions"
     },
     "emptyBody": "No activity recorded yet in this window.",
-    "errorBody": "We couldn't load the activity log. Refresh the page to try again."
+    "errorBody": "We couldn't load the activity log. Refresh the page to try again.",
+    "actions": {
+      "academyUpdated": "Academy updated",
+      "athleteCreated": "Athlete added",
+      "athleteUpdated": "Athlete edited",
+      "athleteDeleted": "Athlete deleted",
+      "carnetCreated": "Class pass sold",
+      "carnetUpdated": "Class pass updated",
+      "carnetDeleted": "Class pass deleted",
+      "documentUploaded": "Document uploaded",
+      "documentDeleted": "Document deleted",
+      "paymentCreated": "Payment recorded",
+      "paymentUpdated": "Payment edited",
+      "paymentDeleted": "Payment deleted"
+    },
+    "byActor": "by {{actor}}",
+    "unknownActionTitle": "Recorded by the system as “{{action}}”"
   },
   "weekdays": {
     "groupAria": "Training days of the week",

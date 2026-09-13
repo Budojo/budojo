@@ -1391,14 +1391,30 @@
     "subtitle": "Ogni azione registrata nell'accademia — chi ha fatto cosa, e quando.",
     "filters": {
       "action": "Azione",
-      "actionPlaceholder": "es. athlete.deleted",
       "from": "Dal",
       "to": "Al",
       "apply": "Applica",
-      "reset": "Reimposta"
+      "reset": "Reimposta",
+      "actionAll": "Tutte le azioni"
     },
     "emptyBody": "Nessuna attività registrata in questo periodo.",
-    "errorBody": "Impossibile caricare il registro attività. Aggiorna la pagina per riprovare."
+    "errorBody": "Impossibile caricare il registro attività. Aggiorna la pagina per riprovare.",
+    "actions": {
+      "academyUpdated": "Accademia aggiornata",
+      "athleteCreated": "Atleta aggiunto",
+      "athleteUpdated": "Atleta modificato",
+      "athleteDeleted": "Atleta eliminato",
+      "carnetCreated": "Carnet venduto",
+      "carnetUpdated": "Carnet aggiornato",
+      "carnetDeleted": "Carnet eliminato",
+      "documentUploaded": "Documento caricato",
+      "documentDeleted": "Documento eliminato",
+      "paymentCreated": "Pagamento registrato",
+      "paymentUpdated": "Pagamento modificato",
+      "paymentDeleted": "Pagamento eliminato"
+    },
+    "byActor": "da {{actor}}",
+    "unknownActionTitle": "Azione registrata dal sistema come «{{action}}»"
   },
   "weekdays": {
     "groupAria": "Giorni di allenamento della settimana",
