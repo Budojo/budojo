@@ -164,6 +164,32 @@ describe('BackupComponent', () => {
     expect(errorToast?.detail).toContain('newer version');
   });
 
+  // The confirm button asks ConfirmationService for a popup; only a
+  // `<p-confirmpopup>` in this template can show it. Without one the click
+  // did nothing — and every other test here bypasses it by calling
+  // `restore()` directly, which is how the desktop audit (#1614) found
+  // Restore inert on the shipped page (#1615). This one presses the button.
+  it('opens a confirm popup when restore is pressed, instead of doing nothing', async () => {
+    const { fixture } = setup();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const button = fixture.nativeElement.querySelector(
+      '[data-cy="backup-restore-budojo-backup-20260815-090000.zip"] button',
+    ) as HTMLButtonElement | null;
+    expect(button).not.toBeNull();
+    button?.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    // Not just any popup: this one's message, so the wiring of the confirm
+    // text is covered too.
+    expect(document.body.querySelector('.p-confirmpopup')?.textContent).toContain(
+      'Restore this backup?',
+    );
+  });
+
   it('hides the recovery-keys section when the bridge is absent (web)', async () => {
     const { fixture } = setup();
     await fixture.whenStable();

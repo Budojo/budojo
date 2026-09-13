@@ -2424,10 +2424,11 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
   screen('53-backup-restore-confirm', '/dashboard/backup', '[data-cy="backup-list"]', {
     act: () => {
       press('[data-cy="backup-restore-budojo-2026-09-14-0300.zip"]');
-      // The first run of this screen found that nothing opens: the page has
-      // no `<p-confirmpopup>` for the confirm button to render in (BKP-0 in
-      // the audit). Recorded in the console dump rather than failed, so the
-      // picture of "nothing happened" is still taken.
+      // The first run of this screen found that nothing opened: the page had
+      // no `<p-confirmpopup>` for the confirm button to render in until #1615
+      // (BKP-0 in the audit). The 1.5 s record stays as the regression
+      // tripwire — written to the console dump rather than failed, so the
+      // picture is still taken either way.
       cy.wait(1500);
       cy.get('body').then(($body) => {
         if ($body.find('.p-confirmpopup, .p-confirmdialog, .p-dialog').length === 0) {
