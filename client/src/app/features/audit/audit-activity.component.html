@@ -70,7 +70,7 @@
                 [attr.datetime]="entry.created_at"
                 [attr.title]="entry.created_at"
               >
-                {{ entry.created_at | date: 'medium' }}
+                {{ entry.created_at | localeDate }}
               </time>
             </div>
             <div class="audit-row__body">

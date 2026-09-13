@@ -5,6 +5,7 @@ import { provideAnimationsAsync } from '@angular/platform-browser/animations/asy
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { describe, expect, it, vi } from 'vitest';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
+import { LanguageService } from '../../../core/services/language.service';
 import { ProfileSessionsComponent } from './profile-sessions.component';
 
 interface Harness {
@@ -73,6 +74,17 @@ function setup(): Harness {
 }
 
 describe('ProfileSessionsComponent (#413)', () => {
+  it('writes "last used" in the active language, without seconds (#1624)', () => {
+    const { fixture, httpMock, el } = setup();
+    httpMock.expectOne(SESSIONS_URL).flush({ data: [ROW_CHROME] });
+    TestBed.inject(LanguageService).setLanguage('it');
+    fixture.detectChanges();
+
+    const lastUsed = el.querySelector('.profile-sessions__last-used')?.textContent ?? '';
+    expect(lastUsed).toContain('10 mag 2026');
+    expect(lastUsed).not.toMatch(/\d{2}:\d{2}:\d{2}/);
+  });
+
   it('renders the loading panel before the API responds', () => {
     const { el, httpMock } = setup();
     expect(el.querySelector('[data-cy="profile-sessions-loading"]')).not.toBeNull();

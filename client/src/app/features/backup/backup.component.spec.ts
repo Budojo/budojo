@@ -10,6 +10,7 @@ import { DesktopKeysService } from '../../core/services/desktop-keys.service';
 import { DriveSyncService } from '../../core/services/drive-sync.service';
 import { BackupFolderService } from '../../core/services/backup-folder.service';
 import { provideI18nTesting } from '../../../test-utils/i18n-test';
+import { LanguageService } from '../../core/services/language.service';
 
 /**
  * Data & backup page (#1228): shows the last backup, backs up, restores with a
@@ -125,6 +126,19 @@ describe('BackupComponent', () => {
 
     expect(fixture.nativeElement.querySelector('[data-cy="backup-last-at"]')).not.toBeNull();
     expect(fixture.nativeElement.querySelectorAll('[data-cy="backup-list"] li')).toHaveLength(2);
+  });
+
+  it('dates the archives in the active language, without seconds (#1624)', async () => {
+    // Four timestamps on this page read "Aug 15, 2026, 9:00:00 AM" under an
+    // Italian UI: `| date` formats against LOCALE_ID, which nothing sets.
+    const { fixture } = setup();
+    TestBed.inject(LanguageService).setLanguage('it');
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const row = fixture.nativeElement.querySelector('.backup-page__row-date')?.textContent ?? '';
+    expect(row).toContain('15 ago 2026');
+    expect(row).not.toMatch(/\d{2}:\d{2}:\d{2}/);
   });
 
   it('shows the empty state when there are no backups', async () => {

@@ -14,6 +14,7 @@ import {
 import { BeltBadgeComponent } from '../../shared/components/belt-badge/belt-badge.component';
 import { Belt } from '../../core/services/athlete.service';
 import { BELT_KEYS } from '../../shared/utils/i18n-enum-keys';
+import { LocaleDatePipe } from '../../shared/pipes/locale-date.pipe';
 
 type ViewState =
   { kind: 'loading' } | { kind: 'ready'; profile: PublicProfile } | { kind: 'not-found' };
@@ -34,6 +35,7 @@ type ViewState =
   selector: 'app-public-profile',
   standalone: true,
   imports: [
+    LocaleDatePipe,
     CommonModule,
     RouterLink,
     TranslatePipe,

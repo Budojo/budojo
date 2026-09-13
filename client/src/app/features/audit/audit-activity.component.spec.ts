@@ -4,6 +4,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { Observable, Subject, of, throwError } from 'rxjs';
 import { provideI18nTesting } from '../../../test-utils/i18n-test';
+import { LanguageService } from '../../core/services/language.service';
 import { AuditEntriesPage, AuditService } from '../../core/services/audit.service';
 import { AuditActivityComponent } from './audit-activity.component';
 
@@ -11,6 +12,29 @@ function emptyPage(overrides: Partial<AuditEntriesPage['meta']> = {}): AuditEntr
   return {
     data: [],
     meta: { current_page: 1, last_page: 1, total: 0, per_page: 20, ...overrides },
+  };
+}
+
+// #1624: one row, only to read its timestamp.
+function pageWithEntry(createdAt: string): AuditEntriesPage {
+  return {
+    data: [
+      {
+        id: 1,
+        action: 'attendance.marked',
+        actor_user_id: 1,
+        actor_label: 'Matteo Bonanno',
+        subject_type: 'athlete',
+        subject_id: 2,
+        subject_label: 'Sara Colombo',
+        before: null,
+        after: null,
+        ip: null,
+        user_agent: null,
+        created_at: createdAt,
+      },
+    ],
+    meta: { current_page: 1, last_page: 1, total: 1, per_page: 20 },
   };
 }
 
@@ -34,6 +58,20 @@ function setup(listReturn: Observable<AuditEntriesPage> = of(emptyPage())): {
 }
 
 describe('AuditActivityComponent (#429 part 3)', () => {
+  it('writes the row timestamp in the active language, without seconds (#1624)', async () => {
+    // `| date: 'medium'` formats against LOCALE_ID, which this app never
+    // sets: the log read "Sep 14, 2026, 6:12:00 PM" under an Italian UI.
+    const { fixture } = setup(of(pageWithEntry('2026-09-14T16:12:00Z')));
+    TestBed.inject(LanguageService).setLanguage('it');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const date = fixture.nativeElement.querySelector('.audit-row__date')?.textContent ?? '';
+    expect(date).toContain('14 set 2026');
+    expect(date).not.toMatch(/\d{2}:\d{2}:\d{2}/);
+  });
+
   afterEach(() => {
     // Drain any stray HTTP — the spy short-circuits the HttpClient,
     // but a future regression could leak a real request.

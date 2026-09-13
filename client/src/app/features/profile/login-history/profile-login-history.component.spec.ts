@@ -4,6 +4,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { describe, expect, it } from 'vitest';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
+import { LanguageService } from '../../../core/services/language.service';
 import { ProfileLoginHistoryComponent } from './profile-login-history.component';
 
 interface Harness {
@@ -58,6 +59,19 @@ function setup(): Harness {
 }
 
 describe('ProfileLoginHistoryComponent (#430)', () => {
+  it('writes each attempt in the active language, without seconds (#1624)', () => {
+    // "May 10, 2026, 1:00:00 PM" under an Italian UI — `| date` formats
+    // against LOCALE_ID, which nothing in this app sets.
+    const { fixture, httpMock, el } = setup();
+    httpMock.expectOne(ENDPOINT).flush({ data: [ROW_SUCCESS] });
+    TestBed.inject(LanguageService).setLanguage('it');
+    fixture.detectChanges();
+
+    const meta = el.querySelector('.profile-login-history__row-meta')?.textContent ?? '';
+    expect(meta).toContain('10 mag 2026');
+    expect(meta).not.toMatch(/\d{2}:\d{2}:\d{2}/);
+  });
+
   it('renders the loading panel before the API responds', () => {
     const { el, httpMock } = setup();
     expect(el.querySelector('[data-cy="profile-login-history-loading"]')).not.toBeNull();

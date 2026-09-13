@@ -62,7 +62,7 @@
               }
             </div>
             <p class="profile-login-history__row-meta">
-              {{ row.created_at | date: 'medium' }}
+              {{ row.created_at | localeDate }}
               @if (row.ip_address) {
                 <span class="profile-login-history__ip">· {{ row.ip_address }}</span>
               }
