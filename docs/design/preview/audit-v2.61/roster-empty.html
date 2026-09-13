@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8" />
+<title>Mockup — Roster vuoto</title>
+<style>
+  :root { --accent:#5b6cff; --text:#0a0a0b; --muted:#6b7280; --line:#e5e7eb; --bg:#fafafa }
+  * { box-sizing:border-box }
+  body { margin:0; font:14px/1.5 Inter,-apple-system,Segoe UI,sans-serif; color:var(--text); background:var(--bg); padding:32px }
+  h2 { font-size:13px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); margin:0 0 12px }
+  .pair { display:grid; grid-template-columns:1fr 1fr; gap:24px; max-width:1216px }
+  .table { background:#fff; border:1px solid var(--line); border-radius:12px; overflow:hidden }
+  .th { padding:12px 16px; border-bottom:1px solid var(--line); color:var(--muted); font-size:12px; font-weight:600 }
+  .empty { padding:64px 24px; text-align:center }
+  .empty .glyph { font-size:40px; color:#9ca3af }
+  .empty h3 { margin:12px 0 4px; font-size:16px }
+  .empty p { margin:0 0 20px; color:var(--muted) }
+  .btn { height:44px; padding:0 20px; border-radius:12px; border:1px solid var(--line); background:#fff; font:inherit; font-weight:500; margin:0 4px }
+  .btn.primary { background:var(--accent); color:#fff; border-color:var(--accent) }
+  .caption { color:var(--muted); font-size:13px; margin:12px 0 0 }
+</style>
+</head>
+<body>
+<div class="pair">
+  <div>
+    <h2>Nessun atleta ancora — la prima apertura</h2>
+    <div class="table">
+      <div class="th">Nome e cognome</div>
+      <div class="empty">
+        <div class="glyph">⚇</div>
+        <h3>Nessun atleta ancora</h3>
+        <p>Aggiungi il primo, o porta dentro tutta la lista da un foglio di calcolo.</p>
+        <button class="btn primary">+ Aggiungi atleta</button><button class="btn">Importa da CSV</button>
+      </div>
+    </div>
+    <p class="caption">Compare quando il roster è vuoto e nessun filtro è attivo. Oggi questo caso mostra il testo di destra, "Prova a rimuovere i filtri", con un pulsante che non ha nulla da rimuovere.</p>
+  </div>
+  <div>
+    <h2>Nessun risultato — un filtro o una ricerca attivi</h2>
+    <div class="table">
+      <div class="th">Nome e cognome</div>
+      <div class="empty">
+        <div class="glyph">⚇</div>
+        <h3>Nessun atleta trovato</h3>
+        <p>Nessuno corrisponde a "viola" e "non pagato". Prova a togliere un filtro.</p>
+        <button class="btn">Rimuovi filtri</button>
+      </div>
+    </div>
+    <p class="caption">Lo stato che esiste già, con una riga in più: dice quali filtri stanno nascondendo la lista. "Rimuovi filtri" resta, ma secondario — non è l'azione principale della pagina.</p>
+  </div>
+</div>
+</body>
+</html>

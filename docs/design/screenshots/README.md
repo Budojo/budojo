@@ -5,7 +5,7 @@ desktop 1280), captured by one command. It exists so "what does a list page
 look like in Budojo?" is answered by scrolling a folder rather than by
 guessing, and so a design review has something to review.
 
-**150 screenshots, 50 pages.** The spec is
+**162 screenshots, 54 pages.** The spec is
 [`client/cypress/inventory/design-inventory.cy.ts`](../../../client/cypress/inventory/design-inventory.cy.ts).
 
 ## Where the output goes — and why it is not in git
@@ -37,7 +37,7 @@ Prerequisites: Docker running, and the dev client up (`docker compose up -d clie
 
 ```bash
 cd client
-npm run design:inventory      # ~2 minutes, 150 screenshots
+npm run design:inventory      # ~3 minutes, 162 screenshots
 ```
 
 The run is deterministic: time is frozen, every endpoint is stubbed, and the
@@ -65,4 +65,39 @@ is worth keeping.
 
 **`/dashboard/backup`.** Its data comes from the Electron preload bridge, not
 over HTTP, so in a browser the page sits in a permanent loading state.
-Capturing it needs the packaged app — a different tool.
+Capturing it needs the packaged app — or the desktop audit below, which fakes
+the bridge.
+
+## The desktop audit — the same idea for the product Budojo is now
+
+[`client/cypress/inventory/desktop-audit.cy.ts`](../../../client/cypress/inventory/desktop-audit.cy.ts)
+(#1614) shoots every screen the shipped desktop app can show, at the two
+widths the Electron window can have (1280×860 and 960×600), in Italian, on
+the desktop runtime profile, with the Electron bridge faked — so the title
+bar, the update banner and the backup page render as they do in the real
+shell. Where the inventory shoots a page as it opens, the audit also shoots
+what is inside it: the dialogs, the confirm popups, a row after it was acted
+on, the empty and error states.
+
+```bash
+cd client
+npm run design:audit                       # ~9 minutes, ~360 frames
+npm run design:audit -- 22-athlete         # one area, by slug prefix
+npm run design:audit -- 22-athlete,40-stats   # several
+```
+
+Output goes to `client/cypress/screenshots/desktop-audit.cy.ts/`, two frames
+per screen and width: `{slug}__{width}.png` is the viewport as the owner sees
+it, `{slug}__{width}__full.png` the whole page unrolled when it scrolls.
+
+Two things the pictures cannot show are written beside them:
+
+- **`_console/{slug}__{width}.json`** — every `console.error`, uncaught error
+  and unhandled rejection raised while the screen was up, and any loading
+  state that never resolved — `[]` when clean. Every file reading `[]` is the
+  pass condition; the audit's first run found a computed that threw on an empty
+  date field this way.
+- **`_env.json`** — which prefixes were in force when the folder was last
+  written.
+
+The review it produced is [`docs/design/ux-audit-v2.61.md`](../ux-audit-v2.61.md).
