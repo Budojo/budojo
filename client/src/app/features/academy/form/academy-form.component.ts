@@ -48,6 +48,7 @@ import {
   addressAllOrNothing,
   italianPostalCode,
 } from '../../../shared/utils/address-form';
+import { RuntimeService } from '../../../core/services/runtime.service';
 
 /**
  * Rejects a value that is only whitespace. Without this validator the
@@ -157,6 +158,8 @@ const COUNTRY_CODE_OPTIONS: SelectOption<string>[] = [
 })
 export class AcademyFormComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
+  /** A permalink is a public URL, and this build has none (#1627). */
+  protected readonly runtime = inject(RuntimeService);
   private readonly academyService = inject(AcademyService);
   private readonly router = inject(Router);
   private readonly messageService = inject(MessageService);

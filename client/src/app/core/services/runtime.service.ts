@@ -42,10 +42,19 @@ export class RuntimeService {
 
   private readonly capabilitiesSignal = signal<readonly Capability[]>(ALL_CAPABILITIES);
   private readonly profileSignal = signal<'web' | 'desktop'>('web');
+  private readonly loadedSignal = signal<boolean>(false);
   private loading: Promise<void> | null = null;
 
   readonly capabilities = this.capabilitiesSignal.asReadonly();
   readonly profile = this.profileSignal.asReadonly();
+
+  /**
+   * Whether the answer is in. The defaults above are the WEB ones, which is
+   * the right bet for hiding nothing on a momentary failure — but a surface
+   * that appears and then vanishes is its own defect, so a gate that would
+   * paint web-only chrome on the desktop can wait for this instead (#1627).
+   */
+  readonly loaded = this.loadedSignal.asReadonly();
 
   /** True when the runtime offers the capability. Reactive — safe in templates and computeds. */
   readonly has = computed(() => {
@@ -73,7 +82,8 @@ export class RuntimeService {
         this.profileSignal.set(parsed.profile);
         this.capabilitiesSignal.set(parsed.capabilities);
       })
-      .catch(() => undefined);
+      .catch(() => undefined)
+      .finally(() => this.loadedSignal.set(true));
 
     return this.loading;
   }

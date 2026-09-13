@@ -91,4 +91,28 @@ describe('RuntimeService', () => {
     expect(first).toBe(second);
     http.expectNone('/api/v1/runtime');
   });
+
+  it('says when the answer is in, whichever way it went (#1627)', async () => {
+    // A gate that hides web-only chrome needs to tell "desktop" from "not
+    // asked yet" — the default is the web one.
+    expect(service.loaded()).toBe(false);
+
+    const pending = service.load();
+    http.expectOne('/api/v1/runtime').flush({ data: { profile: 'desktop', capabilities: [] } });
+    await pending;
+
+    expect(service.loaded()).toBe(true);
+  });
+
+  it('says so even when the request fails', async () => {
+    const pending = service.load();
+    http
+      .expectOne('/api/v1/runtime')
+      .error(new ProgressEvent('error'), { status: 500, statusText: 'Server Error' });
+    await pending;
+
+    expect(service.loaded()).toBe(true);
+    // …and the web default is kept, so a blip hides nothing.
+    expect(service.profile()).toBe('web');
+  });
 });

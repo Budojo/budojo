@@ -1,9 +1,11 @@
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { RouterLink, provideRouter } from '@angular/router';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
+import { RuntimeService } from '../../../core/services/runtime.service';
 import { AcademyDetailComponent } from './academy-detail.component';
 import { Academy, AcademyService } from '../../../core/services/academy.service';
 
@@ -25,7 +27,7 @@ function makeAcademy(overrides: Partial<Academy> = {}): Academy {
   };
 }
 
-function setupTestBed() {
+function setupTestBed(profile: 'web' | 'desktop' = 'web') {
   TestBed.configureTestingModule({
     imports: [AcademyDetailComponent],
     providers: [
@@ -33,6 +35,14 @@ function setupTestBed() {
       provideHttpClientTesting(),
       provideRouter([]),
       ...provideI18nTesting(),
+      {
+        provide: RuntimeService,
+        useValue: {
+          profile: signal(profile),
+          loaded: signal(true),
+          has: signal(() => profile === 'web'),
+        },
+      },
     ],
   });
 }
@@ -239,5 +249,47 @@ describe('AcademyDetailComponent', () => {
     ) as HTMLElement;
     expect(cell.querySelector('a')).toBeNull();
     expect(cell.textContent?.trim()).toBe('—');
+  });
+
+  // ─── The page stops leading with a setting (#1627) ───────────────────────
+
+  it("shows the logo as a row, not as the page's opening card", () => {
+    setupTestBed();
+    TestBed.inject(AcademyService).academy.set(makeAcademy());
+    const fixture = TestBed.createComponent(AcademyDetailComponent);
+    fixture.detectChanges();
+
+    const html = fixture.nativeElement as HTMLElement;
+    // A dashed placeholder and an upload button, first thing, every visit.
+    expect(html.querySelector('[data-cy="academy-logo-card"]')).toBeNull();
+    const row = html.querySelector('[data-cy="academy-logo-row"]');
+    expect(row).not.toBeNull();
+    expect(row?.textContent).toContain('None');
+    // The upload still works from there.
+    expect(row?.querySelector('[data-cy="academy-logo-upload"]')).not.toBeNull();
+  });
+
+  it('hides the permalink where there are no public URLs', () => {
+    setupTestBed('desktop');
+    TestBed.inject(AcademyService).academy.set(makeAcademy());
+    const fixture = TestBed.createComponent(AcademyDetailComponent);
+    fixture.detectChanges();
+
+    const html = fixture.nativeElement as HTMLElement;
+    expect(html.querySelector('[data-cy="academy-row-slug"]')).toBeNull();
+    // The hint that explains the slug goes with it. (Asserting on the Italian
+    // wording would have been vacuous: the harness renders EN.)
+    expect(html.querySelector('.detail__hint')).toBeNull();
+  });
+
+  it('keeps the permalink on the web, where it means something', () => {
+    setupTestBed('web');
+    TestBed.inject(AcademyService).academy.set(makeAcademy());
+    const fixture = TestBed.createComponent(AcademyDetailComponent);
+    fixture.detectChanges();
+
+    expect(
+      (fixture.nativeElement as HTMLElement).querySelector('[data-cy="academy-row-slug"]'),
+    ).not.toBeNull();
   });
 });
