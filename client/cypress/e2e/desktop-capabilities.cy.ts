@@ -76,6 +76,33 @@ describe('Desktop runtime capabilities (#1229)', () => {
     cy.get('[data-cy="auth-forgot-password-link"]').should('not.exist');
   });
 
+  it('turns away a bookmarked password-reset link when the runtime cannot send email (#1620)', () => {
+    // The login page stopped showing the link in #1229, but the routes
+    // themselves stayed open: a bookmark or the back button reached a form
+    // promising a link in an inbox nothing can post to. The guard sends the
+    // visitor to /dashboard, which — signed out — is the login page.
+    cy.intercept('GET', '/api/v1/runtime', DESKTOP_RUNTIME).as('runtime');
+    cy.visit('/auth/forgot-password');
+
+    cy.location('pathname').should('not.include', 'forgot-password');
+    cy.get('[data-cy="login-form"], [data-cy="auth-login-form"], form').should('exist');
+  });
+
+  it('turns away the reset-password form too (#1620)', () => {
+    cy.intercept('GET', '/api/v1/runtime', DESKTOP_RUNTIME).as('runtime');
+    cy.visit('/auth/reset-password?token=whatever&email=a@b.c');
+
+    cy.location('pathname').should('not.include', 'reset-password');
+  });
+
+  it('keeps both password-reset pages on the web runtime (#1620)', () => {
+    cy.intercept('GET', '/api/v1/runtime', WEB_RUNTIME).as('runtime');
+    cy.visit('/auth/forgot-password');
+    cy.wait('@runtime');
+
+    cy.location('pathname').should('include', 'forgot-password');
+  });
+
   it('hides the athlete-invitation notice on register when there are no athlete accounts', () => {
     cy.intercept('GET', '/api/v1/runtime', DESKTOP_RUNTIME).as('runtime');
     cy.visit('/auth/register');
