@@ -12,7 +12,14 @@
   align-items: center;
   justify-content: center;
   background: var(--p-surface-50);
-  padding: 2rem;
+  // The top gap has to clear the desktop's own title bar, not just the
+  // page's margin. `html.budojo-desktop::before` paints a fixed 40 px strip
+  // (`styles.scss`), and a flat 2 rem of padding is 32 — so on the register
+  // card, the tallest of the five, the title sat *under* the chrome with no
+  // air at all (#1622, AUTH-6). Same `max()` shape the dashboard and athlete
+  // shells already use for `--budojo-safe-top`; on the web the token is
+  // `env(safe-area-inset-top, 0px)` and this stays 2 rem.
+  padding: max(2rem, calc(var(--budojo-safe-top, 0px) + 1rem)) 2rem 2rem;
 }
 
 .auth-card {
@@ -73,6 +80,20 @@
   input.p-inputtext {
     width: 100%;
   }
+}
+
+// The same stretch, for the inputs that live inside the shared form
+// field (#1039). They are projected into `app-budojo-form-field`, so the
+// `.field` rule above never matched them and every plain input on these
+// cards rendered 43 px narrower than the password beside it — the card's
+// right edge zig-zagged down the form (#1622, AUTH-1). `::ng-deep`
+// because the control slot belongs to the wrapper's view.
+//
+// Scoped to the auth cards rather than baked into the wrapper: elsewhere
+// a short field is short on purpose (a fee, a CAP), and deciding that
+// globally is #1628's job, not this one's.
+:host ::ng-deep .budojo-form-field__control > .p-inputtext {
+  width: 100%;
 }
 
 // `<p-password>` lives outside the component's view-encapsulation, so

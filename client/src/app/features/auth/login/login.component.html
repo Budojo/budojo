@@ -14,7 +14,6 @@
       @if (!twoFactorRequired()) {
         <app-budojo-form-field
           [label]="'auth.login.email' | translate"
-          [required]="true"
           controlId="email"
           [error]="emailError() ? (emailError()! | translate) : null"
         >
@@ -33,7 +32,6 @@
 
         <app-budojo-form-field
           [label]="'auth.login.password' | translate"
-          [required]="true"
           controlId="password"
           [error]="passwordError() ? (passwordError()! | translate) : null"
         >
@@ -70,7 +68,6 @@
           <p class="auth-two-factor-hint">{{ 'auth.login.twoFactor.hint' | translate }}</p>
           <app-budojo-form-field
             [label]="'auth.login.twoFactor.codeLabel' | translate"
-            [required]="true"
             controlId="twoFactorCode"
             [error]="twoFactorError() ? (twoFactorError()! | translate) : null"
             dataCy="auth-login-two-factor"

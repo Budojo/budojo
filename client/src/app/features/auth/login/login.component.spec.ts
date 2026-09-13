@@ -60,6 +60,48 @@ describe('LoginComponent — inline validation errors (#1045 reviewer)', () => {
   });
 });
 
+describe('LoginComponent — required markers (#1622)', () => {
+  // The marker tells must-fill from may-fill. On a sign-in card there is
+  // nothing to tell apart — every field is required — and three red stars
+  // on one card is noise. Nothing is lost for assistive technology: the
+  // marker is `aria-hidden` and always was, and the form still reports on
+  // submit.
+  it('does not star the email and password fields', () => {
+    const { el } = setup();
+
+    expect(el.querySelectorAll('.budojo-form-field__label')).not.toHaveLength(0);
+    expect(el.querySelectorAll('.budojo-form-field__required')).toHaveLength(0);
+  });
+
+  it('does not star the 2FA code either — the step it lives on renders later', async () => {
+    const { fixture, httpMock, el } = setup();
+    const component = fixture.componentInstance as unknown as {
+      form: {
+        controls: {
+          email: { setValue: (v: string) => void };
+          password: { setValue: (v: string) => void };
+        };
+      };
+      submit: () => void;
+    };
+    component.form.controls.email.setValue('mario@example.com');
+    component.form.controls.password.setValue('Password1!');
+    component.submit();
+    httpMock
+      .expectOne('/api/v1/auth/login')
+      .flush(
+        { message: 'two_factor_required' },
+        { status: 422, statusText: 'Unprocessable Entity' },
+      );
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(el.querySelector('[data-cy="auth-login-two-factor-code"]')).not.toBeNull();
+    expect(el.querySelectorAll('.budojo-form-field__required')).toHaveLength(0);
+  });
+});
+
 describe('LoginComponent — 2FA challenge (#412)', () => {
   it('renders the email/password step by default', () => {
     const { el } = setup();
