@@ -35,10 +35,16 @@ export const routes: Routes = [
             (m) => m.VerifyErrorComponent,
           ),
       },
-      // Password reset (M5 PR-A). Both routes are public (no guard) —
-      // a logged-out user is the whole point of the flow.
+      // Password reset (M5 PR-A). Public — a logged-out user is the whole
+      // point of the flow — but gated on `email` since #1620: the whole
+      // flow is a link in an inbox, so on a build with no mail transport
+      // both pages can only promise something that will not arrive. The
+      // login page stopped showing the link in #1229; a bookmark, a typed
+      // URL or the back button still walked straight in. Same pairing as
+      // `/dashboard/support`.
       {
         path: 'forgot-password',
+        canActivate: [capabilityGuard('email')],
         loadComponent: () =>
           import('./features/auth/forgot-password/forgot-password.component').then(
             (m) => m.ForgotPasswordComponent,
@@ -46,6 +52,7 @@ export const routes: Routes = [
       },
       {
         path: 'reset-password',
+        canActivate: [capabilityGuard('email')],
         loadComponent: () =>
           import('./features/auth/reset-password/reset-password.component').then(
             (m) => m.ResetPasswordComponent,

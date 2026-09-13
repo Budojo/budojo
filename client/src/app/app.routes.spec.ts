@@ -24,6 +24,19 @@ describe('app routes', () => {
     expect(index?.pathMatch).toBe('full');
   });
 
+  it('gates both password-reset routes on a mail transport (#1620)', () => {
+    // The whole flow is a link in an inbox. On a runtime with no `email`
+    // capability the form can only promise something that will never
+    // arrive — and the login page hiding its link does nothing for a
+    // bookmark, a typed URL or the back button.
+    const auth = routes.find((r) => r.path === 'auth');
+    const guarded = (auth?.children as Routes)
+      .filter((r) => r.path === 'forgot-password' || r.path === 'reset-password')
+      .map((r) => (r.canActivate ?? []).length);
+
+    expect(guarded).toEqual([1, 1]);
+  });
+
   it('keeps the roster behind the owner + academy guards', () => {
     // The redirect above is only safe because the parent is guarded: without
     // `hasAcademyGuard` a brand-new account would land on a roster it has no

@@ -1463,8 +1463,12 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
   screen('00-landing', '/', '[data-cy="landing-lang-toggle"]', { public: true });
   screen('00-auth-login', '/auth/login', 'form', { public: true });
   screen('00-auth-register', '/auth/register', 'form', { public: true });
+  // Both password-reset pages are gated on the `email` capability since
+  // #1620, and this harness reports a desktop runtime with none — so what
+  // they shoot now is the login page they redirect to. Kept as screens on
+  // purpose: the frame is the evidence that the dead end is closed.
   screen('00-auth-forgot-password', '/auth/forgot-password', 'form', { public: true });
-  screen('00-auth-reset-password', '/auth/reset-password?token=x&email=a@b.c', 'main, form', {
+  screen('00-auth-reset-password', '/auth/reset-password?token=x&email=a@b.c', 'form', {
     public: true,
   });
   // First run: signed in, no academy yet.
