@@ -1848,7 +1848,7 @@
   "lessons": {
     "sheet": {
       "title": "Lezione",
-      "planned": "In programma",
+      "planned": "Pianificata",
       "held": "Svolta",
       "searchPlaceholder": "Cerca nel programma",
       "searchAria": "Cerca nel programma",
