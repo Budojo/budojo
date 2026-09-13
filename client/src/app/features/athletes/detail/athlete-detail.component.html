@@ -132,8 +132,6 @@
       </p-tablist>
     </p-tabs>
 
-    <router-outlet />
-
     <!--
       The account block, behind the Edit tab (#1500).
 
@@ -149,10 +147,25 @@
       when did she last train. The page was ordered by how permanent the
       information is rather than by how often it is needed.
 
-      Under Edit, below the form, because Edit is where every other editable
-      field already lives — and these are editing.
+      Under Edit, ABOVE the form since #1634: below it they sat after the
+      red "Elimina atleta" section, and anything that comes after delete-this-
+      athlete reads as an afterthought. The photo leads — with sixty white
+      belts a face is how you tell rows apart — then the account and the
+      email, then the form, and the danger zone last on the page.
     -->
     @if (activeTab() === 'edit') {
+      <!--
+        Athlete photo (#1357). Outside the account block above on purpose: that
+        block is hidden for the owner's own row and gated on athlete accounts,
+        and a photo has nothing to do with either. With sixty white belts, a face
+        is how you tell rows apart.
+
+        The card emits the refreshed row rather than asking the parent to refetch,
+        so the header and the list update from the object the server just
+        returned.
+      -->
+      <app-athlete-photo-card [athlete]="a" (changed)="onAthleteChanged($event)" />
+
       @if (!a.is_self) {
         <!--
           "Account & invito" card (#467, M7 PR-B-UI). Visible across all
@@ -176,18 +189,8 @@
         -->
         <app-athlete-email-change-card [athlete]="a" (athleteChanged)="reloadAthlete()" />
       }
-
-      <!--
-        Athlete photo (#1357). Outside the account block above on purpose: that
-        block is hidden for the owner's own row and gated on athlete accounts,
-        and a photo has nothing to do with either. With sixty white belts, a face
-        is how you tell rows apart.
-
-        The card emits the refreshed row rather than asking the parent to refetch,
-        so the header and the list update from the object the server just
-        returned.
-      -->
-      <app-athlete-photo-card [athlete]="a" (changed)="onAthleteChanged($event)" />
     }
+
+    <router-outlet />
   }
 </div>

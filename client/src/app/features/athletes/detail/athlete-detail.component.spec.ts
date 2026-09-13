@@ -291,4 +291,29 @@ describe('AthleteDetailComponent — the tab strip follows the URL', () => {
     expect(fixture.componentInstance.activeTab()).toBe(tab);
     httpMock.verify();
   });
+  // #1634 — the edit tab's reading order.
+  it('puts the photo and the email before the form, not after the delete button', () => {
+    const { http: httpMock } = setupTestBed('42', '/dashboard/athletes/42/edit');
+    const fixture = TestBed.createComponent(AthleteDetailComponent);
+    fixture.detectChanges();
+    httpMock.expectOne('/api/v1/athletes/42').flush({ data: makeAthlete() });
+    fixture.detectChanges();
+
+    const root = fixture.nativeElement as HTMLElement;
+    const photo = root.querySelector('app-athlete-photo-card');
+    const email = root.querySelector('app-athlete-email-change-card');
+    const outlet = root.querySelector('router-outlet');
+    expect(photo).not.toBeNull();
+    expect(outlet).not.toBeNull();
+
+    // The form — and the red "Elimina atleta" at the end of it — render into
+    // the outlet. Anything after that button reads as an afterthought, which
+    // is where the photo and the email used to be.
+    const before = (el: Element | null): boolean =>
+      el !== null &&
+      Boolean(el.compareDocumentPosition(outlet!) & Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(before(photo)).toBe(true);
+    expect(before(email)).toBe(true);
+    httpMock.verify();
+  });
 });
