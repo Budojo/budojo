@@ -468,7 +468,7 @@
     "title": "Configura la tua accademia",
     "subtitle": "Ci siamo quasi — raccontaci della tua palestra",
     "nameLabel": "Nome dell'accademia",
-    "namePlaceholder": "Gracie Barra Lisboa",
+    "namePlaceholder": "La tua palestra",
     "nameRequired": "Il nome dell'accademia è obbligatorio.",
     "nameMaxlength": "Massimo 255 caratteri.",
     "trainingDaysLabel": "Giorni di allenamento",
@@ -476,9 +476,11 @@
     "submit": "Crea accademia",
     "trainHere": {
       "label": "Ti alleni anche tu in questa palestra?",
-      "body": "Se sì: comparirai nella lista atleti con un chip Titolare, i tuoi post nella community mostreranno la cintura, potrai segnare la tua presenza, e non sarai fatturato (escluso dalle pagine pagamenti). Puoi cambiare scelta più tardi da Profilo → Allena qui.",
+      "body": "Se sì: comparirai nella lista atleti con un chip Titolare, potrai segnare la tua presenza, e non sarai fatturato (escluso dalle pagine pagamenti).",
       "yes": "Sì, iscrivimi",
-      "no": "Non ora"
+      "no": "Non ora",
+      "bodyCommunity": "I tuoi post nella community mostreranno anche la cintura.",
+      "bodyFooter": "Puoi cambiare scelta più tardi da Profilo → Mi alleno in questa palestra."
     }
   },
   "legal": {
@@ -875,7 +877,7 @@
     },
     "trainHere": {
       "title": "Mi alleno in questa palestra",
-      "subtitle": "Aggiungiti al roster come atleta della tua stessa palestra. I tuoi post community mostreranno la cintura, le tue presenze vengono tracciate e comparirai nella lista atleti con un'etichetta Titolare.",
+      "subtitle": "Aggiungiti al roster come atleta della tua stessa palestra. Le tue presenze vengono tracciate e comparirai nella lista atleti con un chip Titolare.",
       "errorMessage": "Non siamo riusciti a controllare se sei iscritto.",
       "retry": "Riprova",
       "toggle": {
@@ -885,7 +887,7 @@
       "toast": {
         "enrolled": {
           "summary": "Sei nel roster",
-          "detail": "Ora compari nella lista atleti. I tuoi post nel community mostreranno la cintura."
+          "detail": "Ora compari nella lista atleti."
         },
         "left": {
           "summary": "Rimosso dal roster",
@@ -895,7 +897,8 @@
           "summary": "Qualcosa è andato storto",
           "detail": "Non siamo riusciti ad aggiornare l'iscrizione. Riprova."
         }
-      }
+      },
+      "subtitleCommunity": "I tuoi post nella community mostreranno anche la cintura."
     },
     "notifications": {
       "title": "Notifiche",

@@ -1,5 +1,6 @@
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -8,6 +9,7 @@ import { SetupComponent } from './setup.component';
 import { AcademyService } from '../../../core/services/academy.service';
 import { MyAthleteService } from '../../../core/services/my-athlete.service';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
+import { ALL_CAPABILITIES, RuntimeService } from '../../../core/services/runtime.service';
 
 /**
  * Onboarding wizard "Train here too?" step (#751, M7 PR-C of #747 epic).
@@ -24,7 +26,7 @@ interface Harness {
   navigate: ReturnType<typeof vi.fn>;
 }
 
-function setup(): Harness {
+function setup(capabilities: readonly string[] = ALL_CAPABILITIES): Harness {
   const createAcademy = vi.fn(() => of({}));
   const enrollMe = vi.fn(() => of({ enrolled: true, athleteId: 1 }));
 
@@ -37,6 +39,13 @@ function setup(): Harness {
       ...provideI18nTesting(),
       { provide: AcademyService, useValue: { create: createAcademy } },
       { provide: MyAthleteService, useValue: { enroll: enrollMe } },
+      {
+        provide: RuntimeService,
+        useValue: {
+          profile: signal(capabilities.includes('email') ? 'web' : 'desktop'),
+          has: signal((capability: string) => capabilities.includes(capability)),
+        },
+      },
     ],
   });
 
@@ -51,6 +60,28 @@ function setup(): Harness {
 describe('SetupComponent — train-here step (#751)', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it('describes only what this build does, and does not name a franchise (#1626)', () => {
+    const { fixture } = setup([]);
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+
+    // The community half of the sentence is a promise a build with no feed
+    // cannot keep.
+    expect(text).toContain('you appear in the athlete list');
+    expect(text).not.toContain('community posts');
+
+    // And the name field suggested a real franchise's gym.
+    // `input#name` exactly: a selector list takes the first match of ANY
+    // branch in document order, so a loose fallback would have asserted on
+    // whatever input happened to render first.
+    const name = fixture.nativeElement.querySelector('input#name') as HTMLInputElement | null;
+    expect(name?.placeholder).toBe('Your gym');
+  });
+
+  it('keeps the community sentence where there is a community (#1626)', () => {
+    const { fixture } = setup();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('community posts');
   });
 
   it('renders the "Do you train here too?" question with both CTAs', () => {

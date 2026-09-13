@@ -26,7 +26,7 @@
         type="text"
         formControlName="name"
         autocomplete="organization"
-        placeholder="Gracie Barra Lisboa"
+        [placeholder]="'setup.namePlaceholder' | translate"
         maxlength="255"
         data-cy="academy-form-name"
         [class.ng-invalid]="name.invalid && name.touched"
