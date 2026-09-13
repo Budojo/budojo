@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
 import { ConfirmPopupModule } from 'primeng/confirmpopup';
@@ -7,6 +6,7 @@ import { ConfirmationService, MessageService } from 'primeng/api';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ActiveSession, SessionService } from '../../../core/services/session.service';
 import { ConfirmDestructiveButtonComponent } from '../../../shared/components/confirm-destructive-button/confirm-destructive-button.component';
+import { LocaleDatePipe } from '../../../shared/pipes/locale-date.pipe';
 
 /**
  * "Active sessions" panel on `/dashboard/profile` (#413).
@@ -24,10 +24,10 @@ import { ConfirmDestructiveButtonComponent } from '../../../shared/components/co
   selector: 'app-profile-sessions',
   standalone: true,
   imports: [
+    LocaleDatePipe,
     ButtonModule,
     ConfirmDestructiveButtonComponent,
     ConfirmPopupModule,
-    DatePipe,
     ProgressSpinnerModule,
     TranslatePipe,
   ],

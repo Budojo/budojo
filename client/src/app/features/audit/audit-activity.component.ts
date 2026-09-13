@@ -6,7 +6,6 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { DatePipe } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslatePipe } from '@ngx-translate/core';
@@ -19,6 +18,7 @@ import { EMPTY, Subject } from 'rxjs';
 import { catchError, switchMap, tap } from 'rxjs/operators';
 import { AuditEntriesFilters, AuditEntry, AuditService } from '../../core/services/audit.service';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
+import { LocaleDatePipe } from '../../shared/pipes/locale-date.pipe';
 
 // Owner-only academy activity log (#429 part 3).
 @Component({
@@ -26,7 +26,7 @@ import { PageHeaderComponent } from '../../shared/components/page-header/page-he
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    DatePipe,
+    LocaleDatePipe,
     ReactiveFormsModule,
     TranslatePipe,
     ButtonModule,

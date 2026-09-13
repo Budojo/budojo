@@ -59,7 +59,7 @@
                   {{ 'publicProfile.achievements.kind.' + badge.kind | translate }}
                 </span>
                 <time class="public-profile-badge-date" [attr.datetime]="badge.unlocked_at">
-                  {{ badge.unlocked_at | date: 'mediumDate' }}
+                  {{ badge.unlocked_at | localeDate: 'date' }}
                 </time>
               </div>
             </li>
@@ -82,7 +82,7 @@
               <div class="public-profile-timeline-content">
                 <p class="public-profile-timeline-title">{{ promotionLine(promotion) }}</p>
                 <time class="public-profile-timeline-date" [attr.datetime]="promotion.recorded_at">
-                  {{ promotion.recorded_at | date: 'mediumDate' }}
+                  {{ promotion.recorded_at | localeDate: 'calendar-day' }}
                 </time>
               </div>
             </li>

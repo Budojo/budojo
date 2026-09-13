@@ -66,7 +66,7 @@
               <p class="profile-sessions__last-used">
                 {{
                   'profile.sessions.lastUsedAt'
-                    | translate: { datetime: session.last_used_at | date: 'medium' }
+                    | translate: { datetime: session.last_used_at | localeDate }
                 }}
               </p>
             } @else {

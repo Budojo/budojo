@@ -178,7 +178,7 @@
                 [attr.data-cy]="'profile-browser-notifications-device-created-' + device.id"
               >
                 {{ 'profile.browserNotifications.deviceAdded' | translate }}
-                {{ device.created_at | date: 'mediumDate' }}
+                {{ device.created_at | localeDate: 'date' }}
               </span>
             </div>
             <app-confirm-destructive-button

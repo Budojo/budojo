@@ -9,7 +9,6 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
-import { DatePipe } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { finalize } from 'rxjs';
@@ -36,6 +35,7 @@ import { datePickerFormatFor } from '../../../../shared/utils/locale';
 import { BELT_KEYS, BELT_ORDER } from '../../../../shared/utils/i18n-enum-keys';
 import { BeltBadgeComponent } from '../../../../shared/components/belt-badge/belt-badge.component';
 import { ConfirmDestructiveButtonComponent } from '../../../../shared/components/confirm-destructive-button/confirm-destructive-button.component';
+import { LocaleDatePipe } from '../../../../shared/pipes/locale-date.pipe';
 
 interface SelectOption<T> {
   readonly label: string;
@@ -74,7 +74,7 @@ interface SelectOption<T> {
   selector: 'app-promotions-list',
   standalone: true,
   imports: [
-    DatePipe,
+    LocaleDatePipe,
     TranslatePipe,
     ReactiveFormsModule,
     ButtonModule,

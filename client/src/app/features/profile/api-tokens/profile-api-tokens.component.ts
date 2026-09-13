@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -22,6 +21,7 @@ import {
   CreatedApiToken,
 } from '../../../core/services/api-token.service';
 import { ConfirmDestructiveButtonComponent } from '../../../shared/components/confirm-destructive-button/confirm-destructive-button.component';
+import { LocaleDatePipe } from '../../../shared/pipes/locale-date.pipe';
 
 /**
  * "API tokens" panel on `/dashboard/profile` (#431). Lets the user
@@ -42,10 +42,10 @@ import { ConfirmDestructiveButtonComponent } from '../../../shared/components/co
   selector: 'app-profile-api-tokens',
   standalone: true,
   imports: [
+    LocaleDatePipe,
     ButtonModule,
     ConfirmDestructiveButtonComponent,
     ConfirmPopupModule,
-    DatePipe,
     DialogModule,
     InputNumberModule,
     InputTextModule,
