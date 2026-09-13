@@ -1,5 +1,10 @@
 <section class="backup-page">
   <p-toast />
+  <!-- The surface every app-confirm-destructive-button on this page opens
+       into. It was missing since the buttons arrived: #1324 provided the
+       service so they rendered, and nothing ever gave the service a popup to
+       draw, so every one of them did nothing at all (#1615). -->
+  <p-confirmpopup />
 
   <app-page-header
     [title]="'backup.title' | translate"

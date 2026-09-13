@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
+import { ConfirmPopup } from 'primeng/confirmpopup';
 import { ToastModule } from 'primeng/toast';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TooltipModule } from 'primeng/tooltip';
@@ -86,6 +87,7 @@ function timestampFromName(name: string): string {
     TooltipModule,
     SkeletonModule,
     ConfirmDestructiveButtonComponent,
+    ConfirmPopup,
     PageHeaderComponent,
   ],
   // ConfirmDestructiveButtonComponent injects ConfirmationService, and
