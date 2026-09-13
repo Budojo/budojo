@@ -2436,13 +2436,10 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       settle();
     },
   });
-  screen('50-profile-api-token-create', '/dashboard/profile', '[data-cy="profile-tabs"]', {
-    act: () => {
-      press('[data-cy="profile-tab-account"]');
-      press('[data-cy="profile-api-tokens-create"]');
-      dialogOpen('[data-cy="profile-api-tokens-create-dialog"]');
-    },
-  });
+  // The API-token dialog had a screen here until #1642 took the card off the
+  // desktop profile — an API that listens on 127.0.0.1 for this app alone has
+  // no tokens to issue. The dialog still exists on the web; this harness
+  // reports a desktop runtime, so there is nothing here to shoot.
 
   // ── 51–55. Notifications, backup, palette, inside ──────────────────────
   screen(
