@@ -659,35 +659,59 @@
                   <p-skeleton height="2rem" styleClass="mb-2" />
                   <p-skeleton height="2rem" />
                 </div>
-              } @else if (selectedBelt() || selectedStatus() || selectedPaid() || searchTerm()) {
-                <!--
-                  Filtered-empty: the user narrowed too far. CTA clears filters
-                  rather than dead-ending them on a blank list (Norman § match
-                  between system + real-world; #1033 wave 3).
-                -->
-                <app-empty-state
-                  icon="pi pi-users"
-                  [title]="'athletes.list.empty.title' | translate"
-                  [hint]="'athletes.list.empty.filteredHint' | translate"
-                  ctaIcon="pi pi-filter-slash"
-                  [ctaLabel]="'athletes.list.empty.clearFilters' | translate"
-                  (ctaClick)="clearAllFiltersAndSearch()"
-                  dataCy="athletes-empty"
-                />
               } @else {
-                <!--
-                  Roster genuinely empty (first-run for a new academy): turn
-                  the empty moment into the owner's primary onboarding action.
-                  The Add CTA shaves friction at the #1 time-to-value point
-                  (#1033 wave 3).
-                -->
-                <app-empty-state
-                  icon="pi pi-users"
-                  [title]="'athletes.list.empty.title' | translate"
-                  [ctaLabel]="'athletes.list.addButton' | translate"
-                  (ctaClick)="goToNew()"
-                  dataCy="athletes-empty"
-                />
+                @switch (emptyStateKind()) {
+                  @case ('filtered') {
+                    <!--
+                      Filtered-empty: the user narrowed too far. CTA clears
+                      filters rather than dead-ending them on a blank list
+                      (Norman § match between system + real-world; #1033 wave
+                      3), and the hint names what is doing the hiding (#1618).
+                    -->
+                    <app-empty-state
+                      icon="pi pi-users"
+                      [title]="'athletes.list.empty.title' | translate"
+                      [hint]="
+                        'athletes.list.empty.filteredHintNamed'
+                          | translate: { filters: activeFilterSummary() }
+                      "
+                      ctaIcon="pi pi-filter-slash"
+                      [ctaLabel]="'athletes.list.empty.clearFilters' | translate"
+                      ctaSeverity="secondary"
+                      (ctaClick)="clearAllFiltersAndSearch()"
+                      dataCy="athletes-empty"
+                    />
+                  }
+                  @case ('trash') {
+                    <!-- An empty bin is not a roster filtered down to nothing. -->
+                    <app-empty-state
+                      icon="pi pi-trash"
+                      [title]="'athletes.list.empty.trashTitle' | translate"
+                      [hint]="'athletes.list.empty.trashHint' | translate"
+                      dataCy="athletes-empty"
+                    />
+                  }
+                  @default {
+                    <!--
+                      Roster genuinely empty (first-run for a new academy): turn
+                      the empty moment into the owner's primary onboarding action.
+                      The Add CTA shaves friction at the #1 time-to-value point
+                      (#1033 wave 3); Import is the other way in for an academy
+                      that already keeps its people in a spreadsheet (#1618).
+                    -->
+                    <app-empty-state
+                      icon="pi pi-users"
+                      [title]="'athletes.list.empty.firstRunTitle' | translate"
+                      [hint]="'athletes.list.empty.firstRunHint' | translate"
+                      [ctaLabel]="'athletes.list.addButton' | translate"
+                      (ctaClick)="goToNew()"
+                      [secondaryLabel]="'athletes.list.importButton' | translate"
+                      secondaryIcon="pi pi-file-import"
+                      (secondaryClick)="goToImport()"
+                      dataCy="athletes-empty"
+                    />
+                  }
+                }
               }
             </td>
           </tr>
@@ -707,24 +731,43 @@
           }
         </div>
       } @else if (athletes().length === 0) {
-        @if (selectedBelt() || selectedStatus() || selectedPaid() || searchTerm()) {
-          <app-empty-state
-            icon="pi pi-users"
-            [title]="'athletes.list.empty.title' | translate"
-            [hint]="'athletes.list.empty.filteredHint' | translate"
-            ctaIcon="pi pi-filter-slash"
-            [ctaLabel]="'athletes.list.empty.clearFilters' | translate"
-            (ctaClick)="clearAllFiltersAndSearch()"
-            dataCy="athletes-mobile-empty"
-          />
-        } @else {
-          <app-empty-state
-            icon="pi pi-users"
-            [title]="'athletes.list.empty.title' | translate"
-            [ctaLabel]="'athletes.list.addButton' | translate"
-            (ctaClick)="goToNew()"
-            dataCy="athletes-mobile-empty"
-          />
+        @switch (emptyStateKind()) {
+          @case ('filtered') {
+            <app-empty-state
+              icon="pi pi-users"
+              [title]="'athletes.list.empty.title' | translate"
+              [hint]="
+                'athletes.list.empty.filteredHintNamed'
+                  | translate: { filters: activeFilterSummary() }
+              "
+              ctaIcon="pi pi-filter-slash"
+              [ctaLabel]="'athletes.list.empty.clearFilters' | translate"
+              ctaSeverity="secondary"
+              (ctaClick)="clearAllFiltersAndSearch()"
+              dataCy="athletes-mobile-empty"
+            />
+          }
+          @case ('trash') {
+            <app-empty-state
+              icon="pi pi-trash"
+              [title]="'athletes.list.empty.trashTitle' | translate"
+              [hint]="'athletes.list.empty.trashHint' | translate"
+              dataCy="athletes-mobile-empty"
+            />
+          }
+          @default {
+            <app-empty-state
+              icon="pi pi-users"
+              [title]="'athletes.list.empty.firstRunTitle' | translate"
+              [hint]="'athletes.list.empty.firstRunHint' | translate"
+              [ctaLabel]="'athletes.list.addButton' | translate"
+              (ctaClick)="goToNew()"
+              [secondaryLabel]="'athletes.list.importButton' | translate"
+              secondaryIcon="pi pi-file-import"
+              (secondaryClick)="goToImport()"
+              dataCy="athletes-mobile-empty"
+            />
+          }
         }
       } @else {
         <ul class="athletes-cards">

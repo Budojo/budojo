@@ -1863,9 +1863,13 @@
         "instagramLabel": "Open Instagram profile"
       },
       "empty": {
-        "title": "No athletes found.",
-        "filteredHint": "Try clearing your filters or search.",
-        "clearFilters": "Clear filters"
+        "title": "No athletes found",
+        "clearFilters": "Clear filters",
+        "firstRunTitle": "No athletes yet",
+        "firstRunHint": "Add the first one, or bring your whole list in from a spreadsheet.",
+        "filteredHintNamed": "Nobody matches {{filters}}. Try removing a filter.",
+        "trashTitle": "The bin is empty",
+        "trashHint": "Athletes you delete land here, and you can put them back from here."
       },
       "error": {
         "title": "Couldn't load the roster",

@@ -1586,6 +1586,38 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       });
     },
   });
+  // The other empty state: a roster that exists, narrowed to nobody. The
+  // search goes to the API as `?q=`, so an intercept keyed on it is enough
+  // (#1618 — the two states used to be told apart by the wrong condition).
+  screen('20-athletes-filtered-empty', '/dashboard/athletes', ROSTER_READY, {
+    stubs: () => {
+      cy.intercept(
+        { method: 'GET', pathname: '/api/v1/athletes', query: { q: 'zzz' } },
+        EMPTY_PAGE,
+      );
+    },
+    act: () => {
+      cy.get('[data-cy="athletes-search-input"]').type('zzz');
+      // The search is debounced, and RxJS measures the debounce on the
+      // frozen `Date`: the timer fires, sees no time has passed, and waits
+      // again forever. Move the clock past it.
+      cy.tick(300);
+      cy.get('[data-cy="athletes-empty"]').should('exist');
+    },
+  });
+  // And the third: the bin, with nothing in it.
+  screen('20-athletes-trash-empty', '/dashboard/athletes', ROSTER_READY, {
+    stubs: () => {
+      cy.intercept(
+        { method: 'GET', pathname: '/api/v1/athletes', query: { status: 'trashed' } },
+        EMPTY_PAGE,
+      );
+    },
+    act: () => {
+      press('[data-cy="athletes-reveal-trashed"]');
+      cy.get('[data-cy="athletes-empty"]').should('exist');
+    },
+  });
   screen('20-athletes-error', '/dashboard/athletes', '[data-cy="add-athlete-btn"]', {
     stubs: () => {
       cy.intercept('GET', '/api/v1/athletes*', {
