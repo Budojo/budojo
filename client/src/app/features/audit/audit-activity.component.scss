@@ -77,12 +77,19 @@
     flex-wrap: wrap;
   }
 
+  // A sentence, in the page's own type. The monospace was for a machine
+  // key and is kept for the one case that still is one (#1631).
   &__action {
+    font-size: 0.9375rem;
+    color: var(--p-text-color);
+    font-weight: 600;
+  }
+
+  &__action--raw {
     font-family:
       'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
     font-size: 0.875rem;
     color: var(--p-primary-color);
-    font-weight: 600;
   }
 
   &__date {
@@ -98,16 +105,15 @@
     font-size: 0.9375rem;
   }
 
+  // Behind the subject, and quieter than it: the row is about the athlete,
+  // not about who typed it.
   &__actor {
-    font-weight: 500;
-    color: var(--p-text-color);
-  }
-
-  &__sep {
+    font-size: 0.875rem;
     color: var(--p-text-color-secondary);
   }
 
   &__subject {
+    font-weight: 500;
     color: var(--p-text-color);
   }
 }
