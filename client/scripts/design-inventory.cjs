@@ -36,6 +36,16 @@ const REPO_ROOT = path.resolve(__dirname, '..', '..');
 const CYPRESS_IMAGE = 'cypress/included:15.21.1';
 const CLIENT_CONTAINER = 'budojo_client';
 
+// Which spec under `cypress/inventory/` to run. The three-viewport inventory
+// is the default; `desktop-audit` (#1614) is the same idea at the two widths
+// the Electron window can have, in Italian, with the dialogs opened.
+const SPEC = (process.argv[2] ?? 'design-inventory').replace(/\.cy\.ts$/, '');
+
+// Optional slug prefixes, comma-separated: `npm run design:audit -- desktop-audit
+// 22-athlete,40-stats` shoots only the screens whose slug starts with one. Read by the audit spec as
+// `Cypress.env('ONLY')`; the inventory ignores it.
+const ONLY = process.argv[3] ?? '';
+
 // Config values passed to Cypress at runtime:
 //   - baseUrl: local to the shared network namespace (dev server inside
 //     budojo_client).
@@ -56,6 +66,11 @@ const cypressConfig = [
   'baseUrl=http://localhost:4200',
   'trashAssetsBeforeRuns=false',
   'specPattern=cypress/inventory/**/*.cy.ts',
+  // The headless browser window is sized from these. Without them it opens
+  // at 1280×720 and a `cy.viewport(1280, 860)` is scaled to fit rather than
+  // given the room — and every 860-tall screenshot comes back 720 tall.
+  'viewportWidth=1280',
+  'viewportHeight=900',
 ].join(',');
 
 // Run as the invoking user. Without this the container writes as root, and on
@@ -71,6 +86,10 @@ const dockerArgs = [
   'run',
   '--rm',
   ...userArgs,
+  // A `CYPRESS_*` variable lands in `Cypress.env()` untouched — `--env` would
+  // split the list on its commas and read every prefix after the first as
+  // the name of another key.
+  ...(ONLY === '' ? [] : ['-e', `CYPRESS_ONLY=${ONLY}`]),
   `--network=container:${CLIENT_CONTAINER}`,
   '-v',
   `${REPO_ROOT}:/repo`,
@@ -79,7 +98,7 @@ const dockerArgs = [
   CYPRESS_IMAGE,
   'run',
   '--spec',
-  'cypress/inventory/design-inventory.cy.ts',
+  `cypress/inventory/${SPEC}.cy.ts`,
   '--reporter',
   'min',
   '--config',
@@ -90,9 +109,10 @@ console.log('→ regenerating design inventory screenshots');
 console.log('  cypress image:     ', CYPRESS_IMAGE);
 console.log('  shared network of: ', CLIENT_CONTAINER);
 console.log('  repo mount:        ', REPO_ROOT, '→ /repo');
+console.log('  spec:              ', `${SPEC}.cy.ts`);
 console.log(
   '  output:            ',
-  path.join(REPO_ROOT, 'client', 'cypress', 'screenshots', 'design-inventory.cy.ts'),
+  path.join(REPO_ROOT, 'client', 'cypress', 'screenshots', `${SPEC}.cy.ts`),
 );
 console.log('');
 

@@ -30,6 +30,12 @@ const ACADEMY = {
   id: 1,
   name: 'Gracie Barra Torino',
   slug: 'gracie-barra-torino-a1b2c3d4',
+  // The counts the programme epic's pages read to decide between their
+  // populated and their empty state.
+  classes_count: 3,
+  syllabus_topics_count: 3,
+  season_start_month: 9,
+  season_label: '2025/26',
   address: {
     line1: 'Via Roma 1',
     line2: null,
@@ -203,8 +209,27 @@ const PAYMENTS = [
   // `year` + `month`, not a date string: a payment covers a PERIOD since
   // #1382, and the component spreads it across the cells it pays for. A
   // wrong-shaped stub throws on `p.month` and takes the page down.
-  { id: 1, athlete_id: 1, year: 2026, month: 4, period_months: 1, amount_cents: 5000 },
-  { id: 2, athlete_id: 1, year: 2026, month: 1, period_months: 3, amount_cents: 15_000 },
+  // `paid_at` is not optional: the tab formats it, and without it the payment
+  // rows threw mid-render and the picture was the carnet panel's skeleton,
+  // which is how the desktop audit (#1614) found this fixture short.
+  {
+    id: 1,
+    athlete_id: 1,
+    year: 2026,
+    month: 4,
+    period_months: 1,
+    amount_cents: 5000,
+    paid_at: '2026-04-02',
+  },
+  {
+    id: 2,
+    athlete_id: 1,
+    year: 2026,
+    month: 1,
+    period_months: 3,
+    amount_cents: 15_000,
+    paid_at: '2026-01-05',
+  },
 ];
 
 const PROMOTIONS = [
@@ -336,6 +361,99 @@ const BACKUP = {
 const RUNTIME = {
   profile: 'web',
   capabilities: ['community', 'backup', 'athlete_accounts', 'email', 'web_push'],
+};
+
+// The programme epic (#1561): a timetable, a syllabus, and the two coverage
+// views. Small on purpose — enough for the pages to render their populated
+// state; the desktop audit (`desktop-audit.cy.ts`) carries the rich set.
+const CLASSES = [
+  { id: 1, name: 'Fondamentali', weekday: 1, starts_at: '19:00', duration_minutes: 60, kind: 'gi' },
+  { id: 2, name: 'No-gi', weekday: 3, starts_at: '19:00', duration_minutes: 60, kind: 'nogi' },
+  { id: 3, name: 'Open mat', weekday: 6, starts_at: '10:00', duration_minutes: null, kind: 'both' },
+];
+
+const SYLLABUS = [
+  {
+    id: 1,
+    parent_id: null,
+    name: 'Closed guard',
+    kind: 'both',
+    in_season: true,
+    sort_order: 0,
+    children: [
+      { id: 11, parent_id: 1, name: 'Armbar', kind: 'both', in_season: true, sort_order: 0 },
+      { id: 12, parent_id: 1, name: 'Triangle', kind: 'both', in_season: true, sort_order: 1 },
+    ],
+  },
+  {
+    id: 2,
+    parent_id: null,
+    name: 'Mount',
+    kind: 'both',
+    in_season: true,
+    sort_order: 1,
+    children: [
+      { id: 21, parent_id: 2, name: 'Americana', kind: 'both', in_season: true, sort_order: 0 },
+    ],
+  },
+];
+
+const SYLLABUS_COVERAGE = {
+  season: { start: '2025-09-01', end: '2026-08-31', label: '2025/26' },
+  kind: null,
+  totals: { in_scope: 3, covered: 1, thin: 1, missing: 1, percentage: 33 },
+  positions: [
+    {
+      id: 1,
+      name: 'Closed guard',
+      kind: 'both',
+      in_scope: 2,
+      covered: 1,
+      thin: 1,
+      missing: 0,
+      worked: 3,
+    },
+    { id: 2, name: 'Mount', kind: 'both', in_scope: 1, covered: 0, thin: 0, missing: 1, worked: 0 },
+  ],
+  missing: [{ id: 21, name: 'Americana', parent_name: 'Mount', kind: 'both' }],
+  taught: [
+    {
+      id: 11,
+      name: 'Armbar',
+      parent_name: 'Closed guard',
+      kind: 'both',
+      lessons: 2,
+      last_taught_on: '2026-04-20',
+      state: 'covered',
+    },
+    {
+      id: 12,
+      name: 'Triangle',
+      parent_name: 'Closed guard',
+      kind: 'both',
+      lessons: 1,
+      last_taught_on: '2026-04-13',
+      state: 'thin',
+    },
+  ],
+  timeline: [
+    { on: '2026-04-05', covered: 0 },
+    { on: '2026-04-12', covered: 0 },
+    { on: '2026-04-19', covered: 1 },
+  ],
+};
+
+const ATHLETE_COVERAGE = {
+  season: { start: '2025-09-01', end: '2026-08-31', label: '2025/26' },
+  joined_on: '2024-09-01',
+  totals: { taught_by_academy: 2, seen: 1, thin: 0, missed: 1, percentage: 50, not_taught_yet: 1 },
+  missed: [
+    { id: 12, name: 'Triangle', parent_name: 'Closed guard', kind: 'both', taught_times: 1 },
+  ],
+  seen_lately: [
+    { id: 11, name: 'Armbar', parent_name: 'Closed guard', lessons: 2, last_seen_on: '2026-04-20' },
+  ],
+  unattributed_presences: 0,
 };
 
 const FROZEN_NOW = new Date('2026-04-24T12:00:00Z').getTime();
@@ -473,6 +591,21 @@ function seedIntercepts(role: 'owner' | 'athlete' = 'owner'): void {
   });
   cy.intercept('GET', '/api/v1/backup/**', { statusCode: 200, body: { data: BACKUP } });
   cy.intercept('GET', '/api/v1/runtime', { statusCode: 200, body: { data: RUNTIME } });
+
+  // The programme epic's pages.
+  cy.intercept('GET', '/api/v1/academy/classes', { statusCode: 200, body: { data: CLASSES } });
+  cy.intercept('GET', '/api/v1/academy/syllabus', { statusCode: 200, body: { data: SYLLABUS } });
+  cy.intercept('GET', '/api/v1/lessons?*', { statusCode: 200, body: { data: null } });
+  cy.intercept('GET', '/api/v1/lessons/recent-topics', { statusCode: 200, body: { data: [] } });
+  cy.intercept('GET', '/api/v1/lessons/suggestions*', { statusCode: 200, body: { data: [] } });
+  cy.intercept('GET', '/api/v1/stats/syllabus/coverage*', {
+    statusCode: 200,
+    body: { data: SYLLABUS_COVERAGE },
+  });
+  cy.intercept('GET', '/api/v1/athletes/*/syllabus-coverage*', {
+    statusCode: 200,
+    body: { data: ATHLETE_COVERAGE },
+  });
 }
 
 // ── Capture helpers ─────────────────────────────────────────────────────
@@ -645,6 +778,22 @@ describe('Design inventory — visual reference', () => {
     'academy-activity',
     '[data-cy="audit-filters"]',
   );
+  // The programme epic (#1561), missed when it shipped.
+  captureAtAllViewports(
+    '/dashboard/academy/timetable',
+    'academy-timetable',
+    '[data-cy="timetable-week"]',
+  );
+  captureAtAllViewports(
+    '/dashboard/academy/syllabus',
+    'academy-syllabus',
+    '[data-cy="syllabus-tree"]',
+  );
+  captureAtAllViewports(
+    '/dashboard/athletes/1/coverage',
+    'athlete-coverage',
+    '[data-cy="athlete-coverage"]',
+  );
 
   // ── Attendance ─────────────────────────────────────────────────────────
   captureAtAllViewports('/dashboard/attendance', 'attendance-daily', 'h1');
@@ -663,6 +812,11 @@ describe('Design inventory — visual reference', () => {
   );
   captureAtAllViewports('/dashboard/stats/payments', 'stats-payments', '[data-cy="stats-tabs"]');
   captureAtAllViewports('/dashboard/stats/athletes', 'stats-athletes', '[data-cy="stats-tabs"]');
+  captureAtAllViewports(
+    '/dashboard/stats/syllabus',
+    'stats-syllabus',
+    '[data-cy="syllabus-coverage"]',
+  );
 
   // ── Account + shell ────────────────────────────────────────────────────
   captureAtAllViewports('/dashboard/profile', 'profile', 'h1');

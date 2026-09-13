@@ -28,5 +28,19 @@ export default defineConfig({
     // `design:inventory` npm script so the committed reference library
     // doesn't co-mingle with transient test failure artifacts.
     screenshotsFolder: 'cypress/screenshots',
+    setupNodeEvents(on) {
+      // The headless Electron window opens at 1280×720 and a `cy.viewport()`
+      // taller than that is scaled to fit, not given the room — so every
+      // screenshot of an 860-tall viewport came back 720 tall. Open the
+      // window large enough for the desktop audit's frames (#1614); the
+      // e2e specs keep their 1280×720 viewport and are unaffected.
+      on('before:browser:launch', (browser, launchOptions) => {
+        if (browser.name === 'electron') {
+          launchOptions.preferences['width'] = 1600;
+          launchOptions.preferences['height'] = 1000;
+        }
+        return launchOptions;
+      });
+    },
   },
 });
