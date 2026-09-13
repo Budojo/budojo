@@ -41,8 +41,9 @@ const CLIENT_CONTAINER = 'budojo_client';
 // the Electron window can have, in Italian, with the dialogs opened.
 const SPEC = (process.argv[2] ?? 'design-inventory').replace(/\.cy\.ts$/, '');
 
-// Optional slug prefixes, comma-separated: `npm run design:audit -- desktop-audit
-// 22-athlete,40-stats` shoots only the screens whose slug starts with one. Read by the audit spec as
+// Optional slug prefixes, comma-separated: `npm run design:audit -- 22-athlete,40-stats`
+// shoots only the screens whose slug starts with one (the npm script already
+// supplies the spec name; do not repeat it). Read by the audit spec as
 // `Cypress.env('ONLY')`; the inventory ignores it.
 const ONLY = process.argv[3] ?? '';
 
@@ -66,12 +67,17 @@ const cypressConfig = [
   'baseUrl=http://localhost:4200',
   'trashAssetsBeforeRuns=false',
   'specPattern=cypress/inventory/**/*.cy.ts',
-  // The headless browser window is sized from these. Without them it opens
-  // at 1280×720 and a `cy.viewport(1280, 860)` is scaled to fit rather than
-  // given the room — and every 860-tall screenshot comes back 720 tall.
-  'viewportWidth=1280',
-  'viewportHeight=900',
 ].join(',');
+
+// An unfiltered audit run starts from a clean console folder: every screen
+// rewrites its own dump, but a screen that was renamed or removed would leave
+// a stale file behind.
+if (SPEC === 'desktop-audit' && ONLY === '') {
+  require('node:fs').rmSync(
+    path.join(REPO_ROOT, 'client', 'cypress', 'screenshots', 'desktop-audit.cy.ts', '_console'),
+    { recursive: true, force: true },
+  );
+}
 
 // Run as the invoking user. Without this the container writes as root, and on
 // a Linux bind mount that is the host's real filesystem — so every screenshot

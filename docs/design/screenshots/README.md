@@ -5,7 +5,7 @@ desktop 1280), captured by one command. It exists so "what does a list page
 look like in Budojo?" is answered by scrolling a folder rather than by
 guessing, and so a design review has something to review.
 
-**150 screenshots, 50 pages.** The spec is
+**162 screenshots, 54 pages.** The spec is
 [`client/cypress/inventory/design-inventory.cy.ts`](../../../client/cypress/inventory/design-inventory.cy.ts).
 
 ## Where the output goes — and why it is not in git
@@ -37,7 +37,7 @@ Prerequisites: Docker running, and the dev client up (`docker compose up -d clie
 
 ```bash
 cd client
-npm run design:inventory      # ~2 minutes, 150 screenshots
+npm run design:inventory      # ~3 minutes, 162 screenshots
 ```
 
 The run is deterministic: time is frozen, every endpoint is stubbed, and the
@@ -94,8 +94,9 @@ Two things the pictures cannot show are written beside them:
 
 - **`_console/{slug}__{width}.json`** — every `console.error`, uncaught error
   and unhandled rejection raised while the screen was up, and any loading
-  state that never resolved. An empty folder is the pass condition; the audit's
-  first run found a computed that threw on an empty date field this way.
+  state that never resolved — `[]` when clean. Every file reading `[]` is the
+  pass condition; the audit's first run found a computed that threw on an empty
+  date field this way.
 - **`_env.json`** — which prefixes were in force when the folder was last
   written.
 

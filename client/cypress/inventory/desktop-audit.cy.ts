@@ -1312,8 +1312,8 @@ function shoot(name: string, clockInstalled: boolean): void {
  * A screenshot shows what rendered; it cannot show a computed that threw
  * half-way through change detection and left the last frame on screen. Every
  * `console.error`, uncaught error and unhandled rejection raised while a
- * screen was up is written beside its picture, under `_console/`. An empty
- * folder is the pass condition.
+ * screen was up is written beside its picture, under `_console/`. Every file
+ * reading `[]` is the pass condition.
  */
 interface AuditWindow extends Cypress.AUTWindow {
   __auditErrors?: string[];
@@ -1339,10 +1339,13 @@ function recordConsoleErrors(win: AuditWindow): void {
 
 function dumpConsoleErrors(name: string): void {
   cy.window().then((win: AuditWindow) => {
-    const errors = win.__auditErrors ?? [];
-    if (errors.length > 0) {
-      cy.writeFile(`cypress/screenshots/desktop-audit.cy.ts/_console/${name}.json`, errors);
-    }
+    // Written for every screen, `[]` when clean: the runner keeps prior
+    // assets, so a file that only existed for a failing screen would outlive
+    // its fix and keep reporting it.
+    cy.writeFile(
+      `cypress/screenshots/desktop-audit.cy.ts/_console/${name}.json`,
+      win.__auditErrors ?? [],
+    );
   });
 }
 
@@ -1387,9 +1390,9 @@ function settle(remaining = 16): void {
  * taken then is a picture of a loading state filed as a design fault.
  */
 function screen(slug: string, route: string, ready: string, opts: ScreenOptions = {}): void {
-  // `npm run design:audit -- desktop-audit 22-athlete` re-shoots one screen or one
-  // area, and `22-athlete+40-stats` several (`+`, because Cypress reads a comma
-  // in `--env` as the next key),
+  // `npm run design:audit -- 22-athlete` re-shoots one screen or one area,
+  // and `22-athlete,40-stats` several (the npm script already names the spec;
+  // a second spec token here would be read as the prefix list),
   // instead of all of them — a fix is checked in seconds, not minutes.
   const only = Cypress.env('ONLY');
   if (
