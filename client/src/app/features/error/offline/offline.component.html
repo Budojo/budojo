@@ -1,7 +1,19 @@
 <div class="offline">
   <app-brand-glyph class="offline__glyph" aria-hidden="true" />
-  <h1 class="offline__title">{{ 'offlinePage.title' | translate }}</h1>
-  <p class="offline__message">{{ 'offlinePage.message' | translate }}</p>
+  <!--
+    Two diagnoses for one status code. On the web a request that never got
+    an answer means the network is down; on the desktop the API is a local
+    process on 127.0.0.1, and the same status means it stopped answering.
+    Telling a desktop owner to check the Wi-Fi sends them to fix the wrong
+    thing (#1617).
+  -->
+  @if (desktop) {
+    <h1 class="offline__title">{{ 'offlinePage.desktop.title' | translate }}</h1>
+    <p class="offline__message">{{ 'offlinePage.desktop.message' | translate }}</p>
+  } @else {
+    <h1 class="offline__title">{{ 'offlinePage.title' | translate }}</h1>
+    <p class="offline__message">{{ 'offlinePage.message' | translate }}</p>
+  }
   <div class="offline__actions">
     <p-button
       type="button"

@@ -427,7 +427,7 @@
       "dismiss": "Dismiss notification"
     },
     "errorTitle": "Couldn't load your notifications",
-    "errorHint": "Something went wrong. Check your connection and try again.",
+    "errorHint": "Something went wrong. Try again in a moment.",
     "errorRetry": "Try again"
   },
   "onboarding": {
@@ -656,7 +656,11 @@
   "offlinePage": {
     "title": "You're offline",
     "message": "Budojo can't reach the network right now. Check your connection — we'll bring you back to where you were as soon as the network returns.",
-    "tryAgain": "Try again"
+    "tryAgain": "Try again",
+    "desktop": {
+      "title": "Budojo isn't responding",
+      "message": "Budojo's own service on this computer didn't answer. Try again; if it keeps happening, close and reopen Budojo. Your internet connection has nothing to do with it."
+    }
   },
   "support": {
     "title": "Contact support",
@@ -1869,7 +1873,7 @@
       },
       "error": {
         "title": "Couldn't load the roster",
-        "hint": "Something went wrong loading your athletes. Check your connection and try again.",
+        "hint": "Something went wrong loading your athletes. Try again in a moment.",
         "retry": "Try again"
       },
       "toast": {

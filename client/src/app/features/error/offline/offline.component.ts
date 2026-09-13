@@ -3,6 +3,7 @@ import { ButtonModule } from 'primeng/button';
 import { TranslatePipe } from '@ngx-translate/core';
 import { BrandGlyphComponent } from '../../../shared/components/brand-glyph/brand-glyph.component';
 import { OnlineStatusService } from '../../../core/services/online-status.service';
+import { DesktopBridgeService } from '../../../core/services/desktop-bridge.service';
 
 /**
  * Offline landing page (#425).
@@ -41,6 +42,18 @@ import { OnlineStatusService } from '../../../core/services/online-status.servic
 export class OfflineComponent {
   private readonly document = inject(DOCUMENT);
   private readonly onlineStatus = inject(OnlineStatusService);
+  /**
+   * The desktop's API is a local process: "no answer" is not "no network".
+   *
+   * Read from the shell, not from `RuntimeService.profile()`: that profile
+   * is fetched from the very API this page reports as dead, defaults to
+   * `web` until the fetch succeeds, and the fetch fails on exactly the
+   * reload this page's own button performs while PHP is still coming back —
+   * which would flip the copy to "check your connection" one click after
+   * telling the owner it is not the connection. The bridge is exposed
+   * synchronously by the preload, before any renderer script runs.
+   */
+  protected readonly desktop = inject(DesktopBridgeService).isDesktop;
   private wasOffline = this.onlineStatus.isOffline();
 
   constructor() {
