@@ -66,17 +66,32 @@ import { ButtonModule } from 'primeng/button';
         <p class="empty-state__hint">{{ hintText }}</p>
       }
       @if (ctaLabel(); as label) {
-        <p-button
-          type="button"
-          severity="primary"
-          size="small"
-          [label]="label"
-          [icon]="ctaIcon()"
-          [loading]="ctaLoading()"
-          [disabled]="ctaLoading()"
-          (onClick)="ctaClick.emit()"
-          [attr.data-cy]="dataCy() ? dataCy() + '-cta' : null"
-        />
+        <div class="empty-state__actions">
+          <p-button
+            type="button"
+            [severity]="ctaSeverity()"
+            [outlined]="ctaSeverity() === 'secondary'"
+            size="small"
+            [label]="label"
+            [icon]="ctaIcon()"
+            [loading]="ctaLoading()"
+            [disabled]="ctaLoading()"
+            (onClick)="ctaClick.emit()"
+            [attr.data-cy]="dataCy() ? dataCy() + '-cta' : null"
+          />
+          @if (secondaryLabel(); as secondary) {
+            <p-button
+              type="button"
+              severity="secondary"
+              [outlined]="true"
+              size="small"
+              [label]="secondary"
+              [icon]="secondaryIcon() ?? undefined"
+              (onClick)="secondaryClick.emit()"
+              [attr.data-cy]="dataCy() ? dataCy() + '-secondary' : null"
+            />
+          }
+        </div>
       }
     </div>
   `,
@@ -92,6 +107,12 @@ import { ButtonModule } from 'primeng/button';
         color: var(--p-text-muted-color);
       }
 
+      .empty-state__actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.5rem;
+      }
       .empty-state__icon {
         font-size: 3rem;
         color: var(--p-surface-400);
@@ -137,9 +158,19 @@ export class EmptyStateComponent {
    * missed at the one place the page has nothing else to show.
    */
   readonly ctaLoading = input<boolean>(false);
+  /**
+   * `secondary` renders the CTA outlined. For the empty state that is really
+   * an offer to undo something (clear the filters), a filled primary would
+   * claim to be the page's main action, and it is not (#1618).
+   */
+  readonly ctaSeverity = input<'primary' | 'secondary'>('primary');
+  /** An optional second way out, beside the CTA — never filled, never alone. */
+  readonly secondaryLabel = input<string | null>(null);
+  readonly secondaryIcon = input<string | null>(null);
   /** Cypress hook. By convention `{feature}-empty`. */
   readonly dataCy = input<string | null>(null);
 
   /** Fires when the user clicks the optional CTA. */
   readonly ctaClick = output<void>();
+  readonly secondaryClick = output<void>();
 }

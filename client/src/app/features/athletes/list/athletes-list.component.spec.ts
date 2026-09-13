@@ -1069,7 +1069,7 @@ describe('AthletesListComponent', () => {
   });
 
   describe('empty-state onboarding CTA (#1033 wave 3)', () => {
-    it('renders an Add athlete CTA when the roster is empty and no filters are set', () => {
+    it('renders the first-run state — add or import — when the roster is empty and no filters are set', () => {
       const fixture = TestBed.createComponent(AthletesListComponent);
       fixture.detectChanges();
 
@@ -1077,10 +1077,89 @@ describe('AthletesListComponent', () => {
         '[data-cy="athletes-empty"]',
       ) as HTMLElement | null;
       expect(empty).not.toBeNull();
+      // The status select defaults to `active`; that is not a filter the
+      // owner set, and until #1618 it was counted as one — so a brand-new
+      // academy read "try clearing your filters" under a checklist that said
+      // "add the first athlete". The title and the CTA label are what tell
+      // the two states apart; a bare "a CTA exists" passed for both.
+      expect(empty!.textContent).toContain('No athletes yet');
+      expect(empty!.textContent).not.toContain('Clear filters');
+      const cta = empty!.querySelector('[data-cy="athletes-empty-cta"]');
+      expect(cta?.textContent).toContain('Add athlete');
       // The empty state turns into the academy owner's onboarding moment —
       // a primary CTA wired to goToNew() reduces time-to-first-athlete
-      // (the #1 friction point at sign-up).
-      expect(empty!.querySelector('[data-cy="athletes-empty-cta"]')).not.toBeNull();
+      // (the #1 friction point at sign-up), and the import is the other way in.
+      expect(empty!.querySelector('[data-cy="athletes-empty-secondary"]')?.textContent).toContain(
+        'Import',
+      );
+    });
+
+    it('names what is hiding the list when a filter or search empties it (#1618)', () => {
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      fixture.detectChanges();
+      const component = fixture.componentInstance;
+      component.selectedBelt.set('purple');
+      component.selectedPaid.set('no');
+      component.searchTerm.set('rossi');
+      fixture.detectChanges();
+
+      const empty = fixture.nativeElement.querySelector(
+        '[data-cy="athletes-empty"]',
+      ) as HTMLElement | null;
+      expect(empty?.textContent).toContain('No athletes found');
+      expect(empty?.textContent).toContain('Purple');
+      expect(empty?.textContent).toContain('Unpaid');
+      expect(empty?.textContent).toContain('«rossi»');
+      expect(empty?.querySelector('[data-cy="athletes-empty-secondary"]')).toBeNull();
+    });
+
+    it('keeps the first-run state when the eye is open — showing everyone hides nobody (#1618)', () => {
+      // `toggleInactive()` sets the status to '' — a WIDER query than the
+      // default. Counting it as a filter put a new academy back on the
+      // filtered state, with nothing to name in the hint: "Nobody matches .".
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      fixture.detectChanges();
+      fixture.componentInstance.toggleInactive();
+      fixture.detectChanges();
+
+      const empty = fixture.nativeElement.querySelector(
+        '[data-cy="athletes-empty"]',
+      ) as HTMLElement | null;
+      expect(fixture.componentInstance.selectedStatus()).toBe('');
+      expect(empty?.textContent).toContain('No athletes yet');
+      expect(empty?.textContent).not.toContain('Nobody matches');
+    });
+
+    it('says the bin is empty in trash mode, instead of offering to clear filters (#1618)', () => {
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      fixture.detectChanges();
+      fixture.componentInstance.toggleTrashed();
+      fixture.detectChanges();
+
+      const empty = fixture.nativeElement.querySelector(
+        '[data-cy="athletes-empty"]',
+      ) as HTMLElement | null;
+      expect(empty?.textContent).toContain('The bin is empty');
+      // Nothing to clear and nothing to add — an empty bin is a statement,
+      // not a dead end to escape from.
+      expect(empty?.querySelector('[data-cy="athletes-empty-cta"]')).toBeNull();
+    });
+
+    it('names the trash scope when a search empties the bin (#1618)', () => {
+      // The one branch where a status label reaches the hint — it resolves
+      // `statuses.trashed` through the map, so a missing key shows up here
+      // rather than as a raw key on the page.
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      fixture.detectChanges();
+      fixture.componentInstance.toggleTrashed();
+      fixture.componentInstance.searchTerm.set('rossi');
+      fixture.detectChanges();
+
+      const empty = fixture.nativeElement.querySelector(
+        '[data-cy="athletes-empty"]',
+      ) as HTMLElement | null;
+      expect(empty?.textContent).toContain('Deleted');
+      expect(empty?.textContent).toContain('«rossi»');
     });
 
     it('the empty-state Clear filters action also clears searchTerm — not just the dropdowns (#1090 reviewer)', () => {

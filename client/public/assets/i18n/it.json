@@ -1867,9 +1867,13 @@
         "instagramLabel": "Apri profilo Instagram"
       },
       "empty": {
-        "title": "Nessun atleta trovato.",
-        "filteredHint": "Prova a rimuovere i filtri o la ricerca.",
-        "clearFilters": "Rimuovi filtri"
+        "title": "Nessun atleta trovato",
+        "clearFilters": "Rimuovi filtri",
+        "firstRunTitle": "Nessun atleta ancora",
+        "firstRunHint": "Aggiungi il primo, o porta dentro tutta la lista da un foglio di calcolo.",
+        "filteredHintNamed": "Nessuno corrisponde a {{filters}}. Prova a togliere un filtro.",
+        "trashTitle": "Il cestino è vuoto",
+        "trashHint": "Gli atleti che elimini finiscono qui, e da qui puoi rimetterli a posto."
       },
       "error": {
         "title": "Impossibile caricare gli atleti",
