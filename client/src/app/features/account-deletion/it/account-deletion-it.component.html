@@ -1,12 +1,10 @@
 <article class="legal-page">
   <header class="legal-page__header">
-    <a
-      class="legal-page__brand"
-      routerLink="/"
-      [attr.aria-label]="'legal.brandAriaLabel' | translate"
-    >
+    <!-- Labelled way back at the top, not only at the foot (#1616). -->
+    <a class="legal-page__brand" routerLink="/" data-cy="account-deletion-home-top">
+      <i class="pi pi-arrow-left" aria-hidden="true"></i>
       <app-brand-glyph class="legal-page__glyph" aria-hidden="true" />
-      <span class="legal-page__brand-name">Budojo</span>
+      <span class="legal-page__brand-name">Torna alla home</span>
     </a>
     <p class="legal-page__eyebrow">Legale</p>
     <h1 class="legal-page__title">Cancellazione dell'account</h1>

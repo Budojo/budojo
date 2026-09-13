@@ -561,7 +561,7 @@ Clean and honest: one card, one CTA, a hint that names the Excel menu path and s
 
 | ID | Grade | Finding | Rule |
 |---|---|---|---|
-| MORE-1 | P2 | **Backup has no place on the rail.** The one feature that stands between an owner and losing a season of data is two clicks deep under "Altro", with no indication anywhere on the shell of when the last backup ran. Give it a rail item (or a rail footer line: "Backup: stanotte · 1:00") and keep "Altro" for the rest. | Information architecture; Norman — visibility of system state |
+| MORE-1 | P2 | **Backup has no place on the rail.** The one feature that stands between an owner and losing a season of data is two clicks deep under "Altro", with no indication anywhere on the shell of when the last backup ran. Give it a rail item (or a rail footer line: "Ultimo backup: 2 ore fa") and keep "Altro" for the rest. | Information architecture; Norman — visibility of system state |
 
 **Backup — `/dashboard/backup`** — the copy is the best on the desktop ("I tuoi dati sono su questo computer. Fai il backup, così un guasto al disco non significa ricominciare da capo"). Two findings:
 
@@ -569,7 +569,7 @@ Clean and honest: one card, one CTA, a hint that names the Excel menu path and s
 |---|---|---|---|
 | BKP-0 | P1 | **"Ripristina" and "Smetti di copiare" open nothing.** Both are `app-confirm-destructive-button`s, which asks `ConfirmationService` to show a popup — and the backup page renders no `<p-confirmpopup />` for it to show in (`backup.component.html` has the folder button at line 79 and Restore at line 200, and no popup anywhere; the documents tab and the timetable each carry one). The harness clicked Restore and waited 1.5 s for any confirm surface; none came. #1324 fixed the provider so the buttons *render*; nothing yet makes them *work*. Verify on the packaged app before fixing — if it reproduces, restore has been unreachable since the button appeared. | Correctness — the most important button on the desktop |
 | BKP-1 | P2 | "Sep 14, 2026, 1:00:00 AM" — English dates with seconds, four times on the page (ACT-2). | i18n |
-| BKP-2 | P3 | The archives run at 01:00 every night and nothing says so: the page shows a schedule's output without naming the schedule. One line — "Budojo fa un backup ogni notte all'1:00" — turns three timestamps into a promise. | Norman — visibility of system state |
+| BKP-2 | P3 | The archives are automatic and nothing says so: the page shows a schedule's output without naming the schedule. One line — "Budojo fa un backup ogni sei ore mentre è aperto" — turns three timestamps into a promise. (Corrected while fixing #1616: the audit first read "ogni notte all'1:00" from the seeded timestamps; the real cadence is `intervalMs: 6 * 60 * 60_000` in `desktop/src/main.ts:524`, which is the point — a laptop closed at night gets no backup, and the page must not imply one.) | Norman — visibility of system state |
 
 **Search palette (Ctrl+K)** — right: one field, results as you type, a calm no-results line. Nothing to file.
 

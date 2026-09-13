@@ -487,8 +487,7 @@
       "eyebrow": "Legale",
       "languageToggleEn": "English",
       "languageToggleIt": "Italiano"
-    },
-    "brandAriaLabel": "Home Budojo"
+    }
   },
   "cookies": {
     "banner": {
@@ -554,7 +553,6 @@
     }
   },
   "help": {
-    "brandAriaLabel": "Home Budojo",
     "eyebrow": "Centro assistenza",
     "title": "Guida e domande frequenti",
     "subtitle": "Risposte rapide alle domande più comuni. Scrivi una parola chiave per filtrare, oppure scorri le categorie qui sotto.",
@@ -567,78 +565,128 @@
       "getting-started": "Per iniziare",
       "athletes": "Atleti",
       "attendance": "Presenze",
+      "academy": "L'accademia",
       "payments": "Pagamenti",
       "documents": "Documenti",
+      "data": "Dati e backup",
       "account": "Account"
     },
     "entries": {
       "what-is-budojo": {
         "question": "Cos'è Budojo?",
-        "answer": "Budojo è un'app gestionale leggera per accademie di jiu-jitsu e arti marziali. Permette di gestire l'elenco degli atleti, le presenze quotidiane, i pagamenti mensili e i documenti dei certificati in un unico posto, pensata per gli istruttori che vivono il tatami, non per il personale di back-office."
+        "answer": "È il gestionale della tua accademia di jiu-jitsu o arti marziali, e gira su questo computer: atleti, presenze, quote, documenti, orario e programma in un posto solo. Non è un servizio online — i dati restano sulla tua macchina e Budojo funziona anche senza connessione."
       },
       "create-academy": {
-        "question": "Come creo la mia accademia?",
-        "answer": "Dopo aver creato l'account e confermato l'email, l'app ti porta in una breve procedura di setup: scegli un nome, indica i giorni di allenamento e hai finito. La procedura compare in automatico al primo accesso finché non la completi."
+        "question": "Come comincio?",
+        "answer": "Al primo avvio crei il tuo accesso e Budojo apre una procedura breve: il nome dell'accademia, i giorni in cui si allena, e hai finito. Non c'è nessuna email da confermare — l'accesso vale su questo computer. Puoi tornare su tutto in qualsiasi momento da Accademia → Modifica."
       },
       "invite-coach": {
-        "question": "Posso invitare un istruttore aggiunto?",
-        "answer": "Le accademie multi-utente sono nella roadmap ma non sono ancora disponibili. Per ora ogni account Budojo gestisce una sola accademia. Se ti serve un flusso con co-istruttore, scrivi una nota da Invia feedback nella sidebar — la coda di richieste viene ordinata per domanda effettiva."
+        "question": "Posso dare l’accesso a un altro istruttore?",
+        "answer": "Non ancora. Budojo è pensato per una persona su un computer: non c'è un server a cui un secondo istruttore possa collegarsi. Se ti servirebbe, dillo da Altro → Contatta il supporto — le richieste vengono messe in coda per domanda reale."
       },
       "add-athlete": {
         "question": "Come aggiungo un atleta?",
-        "answer": "Dalla sidebar della dashboard apri Atleti e tocca il pulsante Aggiungi atleta (la CTA primaria color indaco in alto alla lista). Inserisci il nome, gli eventuali contatti, la cintura e la data di iscrizione — solo il nome è strettamente obbligatorio. Salva, e l'atleta compare in elenco."
+        "answer": "Apri Atleti e premi Aggiungi atleta, in alto a destra. Nome, cintura, stato e data di iscrizione: solo il nome è davvero obbligatorio, il resto lo completi quando lo sai. Salvi e l'atleta è in lista."
       },
       "import-athletes": {
-        "question": "Come importo gli atleti da un foglio di calcolo?",
-        "answer": "L'importazione massiva da CSV o foglio di calcolo non è ancora rilasciata. Per il momento gli atleti si creano uno alla volta da Atleti → Aggiungi atleta. Se hai un elenco lungo da migrare, scrivici da Invia feedback — preferiamo accelerare l'importazione piuttosto che farti copiare 80 nomi a mano."
+        "question": "Come porto dentro la lista che ho già su un foglio di calcolo?",
+        "answer": "Atleti → Importa. Scegli un file CSV con una riga di intestazione: Budojo legge le colonne — nome, cognome, cintura, gradi, stato, data di iscrizione, email, telefono, data di nascita — e ti mostra come le ha interpretate, così correggi prima di importare. Se parti da Excel: File → Salva con nome → CSV. Punti e virgola, accenti e date all'italiana sono già gestiti."
       },
       "belt-not-listed": {
         "question": "La mia cintura non è nel menu. Cosa faccio?",
-        "answer": "Budojo supporta l'intera scala IBJJF: bambini (grigia, gialla, arancione, verde), adulti (bianca, blu, viola, marrone, nera con fino a 6 graus), e senior (rossa-nera, rossa-bianca, rossa). Se pratichi un'arte marziale diversa con un sistema di colori proprio, scrivi una nota da Invia feedback così possiamo valutare una scala configurabile."
+        "answer": "Budojo copre l'intera scala IBJJF: bambini (grigia, gialla, arancione, verde), adulti (bianca, blu, viola, marrone, nera fino a 6 gradi) e senior (rossa-nera, rossa-bianca, rossa). Se pratichi un'arte con una scala diversa, scrivilo da Altro → Contatta il supporto: una scala configurabile è una cosa che possiamo valutare."
       },
       "suspend-athlete": {
-        "question": "Come sospendo temporaneamente un atleta?",
-        "answer": "Apri la pagina dell'atleta, cambia il campo Stato da Attivo a Sospeso e salva. Gli atleti sospesi restano nel tuo elenco (così la storia di presenze e pagamenti viene preservata) ma non compaiono più nel check-in giornaliero né nella lista di chi va sollecitato per i pagamenti. Riportalo ad Attivo quando torna."
+        "question": "Come metto in pausa un atleta che ha smesso per un po’?",
+        "answer": "Apri l'atleta, vai su Modifica e porta Stato su Inattivo. Resta in archivio con tutta la sua storia di presenze e pagamenti, ma sparisce dal check-in e da chi va sollecitato. L'occhio nella barra dei filtri della lista te lo fa rivedere quando ti serve; riportalo ad Attivo quando torna sul tatami."
       },
       "mark-attendance": {
         "question": "Come segno le presenze?",
-        "answer": "Apri Presenze dalla sidebar. La schermata si posiziona sull'ultimo giorno di allenamento del tuo calendario settimanale con l'elenco degli atleti attivi pre-caricato. Tocca ogni atleta presente sul tatami per impostarlo come Presente; tocca di nuovo per annullare. Le modifiche si salvano al tocco — nessun pulsante di invio."
+        "answer": "Apri Presenze: è il check-in di oggi. In cima trovi le lezioni del giorno con il loro orario, già posizionato su quella più vicina; seleziona chi è sul tatami e la riga si accende. Si salva da solo, e se sbagli c'è Annulla nel messaggio che compare."
       },
       "edit-attendance": {
-        "question": "Posso modificare le presenze di un giorno passato?",
-        "answer": "Sì. Da Presenze, cambia la data nel picker scegliendo il giorno da correggere e tocca Presente / non sull'atleta. Le presenze sono modificabili retroattivamente — non c'è una finestra di blocco — quindi un check-in dimenticato o un tocco sbagliato di domenica può essere sistemato la mattina dopo."
+        "question": "Posso correggere le presenze di un giorno passato?",
+        "answer": "Sì: cambia la data dal selettore in alto e correggi lì. Non c'è nessuna finestra che si chiude. Se oggi non si allena, Budojo apre l'ultima sessione utile e te lo dice in cima alla pagina."
+      },
+      "attendance-summary": {
+        "question": "Dove vedo quanto è venuto ognuno questo mese?",
+        "answer": "Presenze → Riepilogo del mese: una riga per atleta con i giorni fatti, quelli possibili e la percentuale, ordinata da chi viene di più. Le frecce accanto al mese ti portano avanti e indietro."
+      },
+      "timetable": {
+        "question": "Dove imposto gli orari delle lezioni?",
+        "answer": "Accademia → Orario. Ogni lezione ha giorno, ora, durata e tipo (gi, no-gi, open mat…), e la settimana si legge tutta in una schermata. È da qui che il check-in sa quali lezioni ci sono stasera, ed è da qui che si ricavano i giorni di allenamento dell'accademia."
+      },
+      "programme": {
+        "question": "A cosa serve il Programma?",
+        "answer": "Accademia → Programma è l'elenco di posizioni e tecniche che insegni. La spunta «in stagione» dice cosa stai coprendo quest'anno: è il denominatore su cui la copertura fa i conti. Se parti da zero, Budojo ti propone un programma BJJ completo da cui partire e poi modificare."
+      },
+      "lesson-topics": {
+        "question": "Come segno cosa abbiamo fatto in lezione?",
+        "answer": "Nel check-in, sotto le lezioni del giorno, c'è la riga degli argomenti: Aggiungi argomenti apre la scheda della lezione. Cerchi una tecnica, accetti i suggerimenti (con il motivo per cui te la propone) o scorri il programma, e salvi. Lo stesso foglio si apre dall'Orario sul pulsante della lezione, se vuoi pianificare la prossima invece di raccontare quella appena finita."
+      },
+      "coverage": {
+        "question": "Come faccio a sapere cosa non ho ancora insegnato?",
+        "answer": "Statistiche → Programma: quante tecniche in stagione hai davvero fatto, divise per posizione, quelle toccate una volta sola, quelle non ancora fatte e quando hai fatto l'ultima. Ogni atleta ha poi la sua scheda Copertura, che dice cosa si è perso lui."
       },
       "set-monthly-fee": {
         "question": "Come imposto la quota mensile?",
-        "answer": "Apri Accademia → Modifica e compila il campo Quota mensile. Una volta impostata, la tab Pagamenti su ogni profilo atleta si attiva e il toggle inline per segnare il pagamento sull'elenco atleti diventa cliccabile. Lascia il campo vuoto se non vuoi gestire i pagamenti tramite Budojo — il toggle e la tab semplicemente non compaiono."
+        "answer": "Accademia → Modifica, campo Quota mensile. Da quel momento la scheda Pagamenti di ogni atleta e il segna-pagato nella lista si attivano. Se i pagamenti non li gestisci qui, lascialo vuoto: i due controlli semplicemente non compaiono."
+      },
+      "fee-tiers": {
+        "question": "E se non pagano tutti la stessa quota?",
+        "answer": "Nella stessa pagina c'è il Listino quote mensili: crei le fasce che ti servono — due volte a settimana, illimitato, ridotta — con nome e importo, e assegni la fascia all'atleta dalla sua scheda. Chi non ha una fascia paga la quota mensile dell'accademia."
       },
       "mark-paid": {
-        "question": "Come segno qualcuno come pagato per il mese?",
-        "answer": "Due percorsi. Dall'elenco atleti, tocca il toggle Pagato · <mese> sulla riga dell'atleta per impostarlo come pagato per il mese in corso. Dal profilo atleta, apri la tab Pagamenti e tocca una riga di mese per cambiarne lo stato — è anche così che si registrano i mesi passati a posteriori."
+        "question": "Come segno un atleta come pagato?",
+        "answer": "Due strade. Dalla lista atleti, il chip del pagamento sulla riga registra il mese in corso. Dalla scheda dell'atleta, Pagamenti ti mostra l'anno mese per mese: segni lì i mesi arretrati e i periodi lunghi (trimestrale, annuale)."
       },
       "unpaid-badge": {
-        "question": "Cosa significa il badge Non pagato?",
-        "answer": "Il badge Non pagato compare sugli atleti che non hanno ancora versato la quota del mese in corso. Dal 16 in poi, anche la home della dashboard mostra un riquadro Da pagare questo mese con tutti gli atleti da sollecitare — fino al 15 la maggior parte dei clienti paga nella consueta finestra di inizio mese, quindi sollecitare prima sarebbe rumore. Gli atleti sospesi o inattivi non compaiono mai nella lista da sollecitare."
+        "question": "Cosa vuol dire il chip «Non pagato»?",
+        "answer": "Che quell'atleta non ha ancora versato la quota del mese in corso. Dal 16 in poi compare anche, sopra la lista, il riquadro Non pagati con tutti quelli da sollecitare: prima del 16 la maggior parte paga nella normale finestra di inizio mese, e insistere sarebbe solo rumore. Inattivi e cestinati non finiscono mai in quella lista."
+      },
+      "carnets": {
+        "question": "Come gestisco i carnet a ingressi?",
+        "answer": "Imposta prezzo e numero di ingressi in Accademia → Modifica, poi vendi il carnet dalla scheda Pagamenti dell'atleta: da lì in avanti ogni presenza scala un ingresso e la card ti dice quanti ne restano. Se conti un ingresso per giorno invece che per lezione, l'opzione è accanto al prezzo."
       },
       "upload-medical-cert": {
         "question": "Come carico un certificato medico?",
-        "answer": "Apri la pagina dell'atleta e passa alla tab Documenti. Tocca Aggiungi documento, scegli il tipo (in genere Certificato medico), imposta le date di emissione e scadenza e allega il PDF o la foto. Budojo usa la data di scadenza per ricordare a te e all'atleta — tramite il digest delle scadenze del certificato medico — che la deadline si avvicina."
+        "answer": "Apri l'atleta e vai su Documenti → Aggiungi documento: scegli il tipo (di solito Certificato medico), metti emissione e scadenza e allega il PDF o la foto. La data di scadenza è quella che fa scattare gli avvisi, quindi vale la pena metterla giusta."
       },
       "expiring-documents": {
-        "question": "Dove vedo tutti i documenti in scadenza in un colpo d'occhio?",
-        "answer": "La home della dashboard ha un riquadro Documenti in scadenza che elenca i prossimi certificati da rinnovare nei 30 giorni successivi. Tocca Vedi tutti per atterrare sull'elenco completo dei documenti in scadenza, ordinato per scadenza più vicina. Gli stessi dati alimentano il digest email quotidiano delle 9:00 inviato solo quando c'è davvero qualcosa da sollecitare."
+        "question": "Dove vedo tutti i certificati da rinnovare?",
+        "answer": "Il triangolo di avviso nella barra dei filtri della lista atleti porta la conta di chi non ha il certificato e di chi ce l'ha in scadenza; aprendolo arrivi all'elenco completo, prima chi manca del tutto e poi chi scade, con un collegamento diretto ai documenti di ognuno. Quando è grigio non c'è niente da fare."
+      },
+      "backup": {
+        "question": "Come faccio il backup?",
+        "answer": "Altro → Backup. Budojo crea un archivio da solo ogni sei ore mentre è aperto, e Esegui backup ne fa uno subito. Un backup che sta solo sul disco di questo computer però non sopravvive al disco: scegli anche una cartella — una che il tuo cloud già sincronizza, un disco di rete, una chiavetta — oppure collega Google Drive, e ogni archivio viene copiato lì da solo."
+      },
+      "restore-backup": {
+        "question": "Come rimetto a posto i dati da un backup?",
+        "answer": "Nella stessa pagina, la lista degli archivi ha un Ripristina su ognuno: sostituisce i dati di adesso con quelli dell'archivio e te lo chiede prima di farlo. Su un computer nuovo servono due cose, e l'ordine non conta: il ripristino dell'archivio e l'importazione delle chiavi di recupero — senza le chiavi i documenti dentro l'archivio non si aprono."
+      },
+      "recovery-code": {
+        "question": "Cos’è il codice di recupero?",
+        "answer": "È la chiave che apre i documenti conservati nei backup. Lo trovi in Backup → Chiavi di recupero → Mostra il codice di recupero: copialo in un gestore di password e non condividerlo, perché chiunque lo abbia può leggere quei documenti. Su un'installazione nuova si incolla in «Ripristina le chiavi da un codice di recupero», e Budojo si riavvia per applicarle."
+      },
+      "where-is-my-data": {
+        "question": "Dove sono i miei dati?",
+        "answer": "Su questo computer, nella cartella dati di Budojo — su Windows «%APPDATA%\\Budojo» — insieme ai documenti che carichi e agli archivi di backup. Niente esce dalla macchina se non sei tu a copiarlo (la cartella dei backup o Google Drive). Disinstallare Budojo non tocca quella cartella: i dati restano lì."
+      },
+      "update-budojo": {
+        "question": "Come aggiorno Budojo?",
+        "answer": "Da solo: quando esce una versione nuova, la barra del titolo in alto lo dice e il download parte da sé. Riavvia e aggiorna la installa subito; se non fai nulla, si installa alla prossima chiusura. Cosa è cambiato lo racconta Novità, nella barra laterale."
       },
       "change-language": {
         "question": "Come cambio la lingua?",
-        "answer": "La sidebar della dashboard ha un piccolo toggle EN ⇄ IT subito sopra il footer della versione. Scegli la lingua e tutta l'app — pagine, form, menu a tendina, messaggi di errore — passa subito. La scelta viene memorizzata sul dispositivo, quindi chiudendo il browser e riaprendolo domani trovi la stessa lingua."
+        "answer": "Altro → Lingua, e scegli italiano o inglese: tutta l'app — pagine, form, menu, messaggi — cambia subito. La scelta resta anche dopo aver chiuso e riaperto Budojo."
       },
       "export-data": {
         "question": "Come scarico una copia dei miei dati?",
-        "answer": "Apri Profilo → I tuoi dati e tocca Scarica i miei dati. Riceverai un archivio ZIP con i dettagli dell'accademia, gli atleti, i pagamenti, le presenze e i documenti caricati — l'export ai sensi dell'Art. 15 GDPR. Il file viene generato su richiesta, quindi un'accademia grande può richiedere qualche istante per essere preparata."
+        "answer": "Altro → Impostazioni → Account → Scarica i miei dati: ottieni uno ZIP con accademia, atleti, pagamenti, presenze e documenti caricati, leggibile con qualsiasi programma. Se invece quello che vuoi è una copia da rimettere dentro Budojo, quello è il backup."
       },
       "delete-account": {
-        "question": "Come elimino il mio account?",
-        "answer": "Apri Profilo e tocca Elimina account. Riceverai un'email di conferma ed entrerai in una finestra di tolleranza di 30 giorni durante la quale basta riaccedere per annullare la cancellazione. Dopo i 30 giorni i tuoi dati vengono eliminati definitivamente — accademia, atleti, presenze, pagamenti, documenti — senza alcuna possibilità di recupero."
+        "question": "Come cancello tutto?",
+        "answer": "Non c'è un account su un server da chiudere: i dati sono qui. Disinstalla Budojo e cancella la cartella dati (su Windows «%APPDATA%\\Budojo»), più gli archivi che hai copiato altrove — cartella di backup o Google Drive. Se pensi di poterci ripensare, fai prima un backup e mettilo al sicuro."
       }
     }
   },
