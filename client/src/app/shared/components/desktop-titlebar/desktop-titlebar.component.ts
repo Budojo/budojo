@@ -68,12 +68,32 @@ export class DesktopTitlebarComponent {
     const status = this.status();
 
     switch (status.phase) {
-      case 'ready':
-        return this.translate.instant('desktopTitlebar.updateReady', {
-          version: status.version,
-        });
+      case 'ready': {
+        // Both versions (#1641, UPD-2). "v2.62.0 Installa" on its own reads as
+        // "you are on 2.62.0" — the running version disappeared the moment a
+        // newer one existed, which is the one time you want to see it.
+        //
+        // Unless it has not arrived yet: `version()` and `status()` are two
+        // unordered promises in the constructor, and a window opened after a
+        // download finished can have the status first. "v → 2.62.0" is worse
+        // than naming one version.
+        const current = this.version();
+        return current === null
+          ? this.translate.instant('desktopTitlebar.updateReadyAlone', {
+              version: status.version,
+            })
+          : this.translate.instant('desktopTitlebar.updateReady', {
+              current,
+              version: status.version,
+            });
+      }
       case 'downloading':
-        return this.translate.instant('desktopTitlebar.downloading');
+        // With the percentage, because this bar is now the only place the
+        // download is reported (#1641, UPD-1) and 113 MB is long enough that
+        // "how much longer" is the actual question.
+        return this.translate.instant('desktopTitlebar.downloading', {
+          percent: status.percent,
+        });
       case 'checking':
         // Only when the owner asked. The six-hourly poll passes through the
         // same phase and has no business taking over the bar.
@@ -99,6 +119,14 @@ export class DesktopTitlebarComponent {
     () => this.status().phase === 'checking' || this.status().phase === 'downloading',
   );
 
+  /**
+   * Latched from the press, not from a response: a successful install never
+   * resolves in a way this component will see, because the app is quitting.
+   * Only a refusal comes back, and that is what turns the button on again —
+   * the behaviour the update banner owned before #1641 deleted it.
+   */
+  protected readonly installing = signal(false);
+
   constructor() {
     if (!this.isDesktop()) {
       return;
@@ -116,7 +144,21 @@ export class DesktopTitlebarComponent {
 
   protected press(): void {
     if (this.isReady()) {
-      void window.__BUDOJO__?.update.installNow();
+      if (this.installing()) {
+        return;
+      }
+      this.installing.set(true);
+      void window.__BUDOJO__?.update
+        .installNow()
+        .then((result) => {
+          // `{ ok: false }` on a stale `ready` — the installer is gone, or the
+          // quit was refused. Without this the button stayed live and said
+          // nothing at all.
+          if (!result.ok) {
+            this.installing.set(false);
+          }
+        })
+        .catch(() => this.installing.set(false));
 
       return;
     }

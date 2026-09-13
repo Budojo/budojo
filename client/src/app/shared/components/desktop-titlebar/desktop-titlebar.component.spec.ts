@@ -127,7 +127,9 @@ describe('DesktopTitlebarComponent', () => {
     fixture.detectChanges();
 
     const button = bar(fixture)!;
-    expect(button.textContent).toContain('v2.49.0');
+    // Both versions since #1641: "v2.49.0 Install" alone reads as "you are on
+    // 2.49.0", and the running one is exactly what you want to see here.
+    expect(button.textContent).toContain('v2.48.0 → 2.49.0');
     expect(button.textContent).toContain('Install');
 
     button.click();
@@ -194,5 +196,81 @@ describe('DesktopTitlebarComponent', () => {
     // Unlike `checking`, a download is worth showing unprompted: it is using
     // the owner's connection whether they asked for it or not.
     expect(bar(fixture)?.textContent).toContain('Downloading');
+  });
+
+  it('counts the download out loud — it is the only place that does now (#1641)', async () => {
+    // The banner that used to carry the percentage rendered under the fixed
+    // title-bar strip: invisible, and 44 px of layout all the same.
+    let listener: StatusListener = () => undefined;
+    bridgeWindow.__BUDOJO__ = stubBridge({
+      version: async () => '2.48.0',
+      update: {
+        onStatus: (cb) => {
+          listener = cb as StatusListener;
+          return () => undefined;
+        },
+      },
+    });
+
+    const fixture = await setup();
+    listener({ phase: 'downloading', version: '2.49.0', percent: 43 });
+    fixture.detectChanges();
+
+    expect(bar(fixture)!.textContent).toContain('43%');
+  });
+
+  it('names one version when the other has not arrived yet (#1641)', async () => {
+    // `version()` and `update.status()` are two unordered promises: a window
+    // opened after a download finished can have the status first, and
+    // "v → 2.49.0" is worse than naming one version.
+    let listener: StatusListener = () => undefined;
+    bridgeWindow.__BUDOJO__ = stubBridge({
+      version: () => new Promise<string>(() => undefined), // never resolves
+      update: {
+        onStatus: (cb) => {
+          listener = cb as StatusListener;
+          return () => undefined;
+        },
+      },
+    });
+
+    const fixture = await setup();
+    listener({ phase: 'ready', version: '2.49.0' });
+    fixture.detectChanges();
+
+    const text = bar(fixture)!.textContent ?? '';
+    expect(text).toContain('v2.49.0');
+    expect(text).not.toContain('→');
+  });
+
+  it('disables the install button on the press, and re-enables it on a refusal (#1641)', async () => {
+    // A successful install never resolves here — the app is quitting. Only a
+    // refusal comes back, and before this the button stayed live and silent.
+    let listener: StatusListener = () => undefined;
+    const installNow = vi.fn().mockResolvedValue({ ok: false });
+    bridgeWindow.__BUDOJO__ = stubBridge({
+      version: async () => '2.48.0',
+      update: {
+        installNow,
+        onStatus: (cb) => {
+          listener = cb as StatusListener;
+          return () => undefined;
+        },
+      },
+    });
+
+    const fixture = await setup();
+    listener({ phase: 'ready', version: '2.49.0' });
+    fixture.detectChanges();
+
+    const button = bar(fixture) as HTMLButtonElement;
+    button.click();
+    fixture.detectChanges();
+    expect(button.disabled).toBe(true);
+
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(button.disabled).toBe(false);
+    expect(installNow).toHaveBeenCalledTimes(1);
   });
 });

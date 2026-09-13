@@ -676,7 +676,7 @@
       },
       "update-budojo": {
         "question": "Come aggiorno Budojo?",
-        "answer": "Da solo: quando esce una versione nuova, la barra del titolo in alto lo dice e il download parte da sé. Riavvia e aggiorna la installa subito; se non fai nulla, si installa alla prossima chiusura. Cosa è cambiato lo racconta Novità, nella barra laterale."
+        "answer": "Da solo: quando esce una versione nuova, la barra del titolo in alto lo dice e il download parte da sé. Installa la mette subito; se non fai nulla, si installa alla prossima chiusura. Cosa è cambiato lo racconta Novità, nella barra laterale."
       },
       "change-language": {
         "question": "Come cambio la lingua?",
@@ -2911,21 +2911,16 @@
       }
     }
   },
-  "update": {
-    "downloading": "Scaricamento aggiornamento {{version}}…",
-    "percent": "{{percent}}%",
-    "ready": "Versione {{version}} pronta — si installa alla chiusura di Budojo",
-    "installNow": "Riavvia e aggiorna"
-  },
   "desktopTitlebar": {
     "checking": "Controllo…",
     "upToDate": "Sei aggiornato",
-    "downloading": "Scaricamento…",
-    "updateReady": "v{{version}}",
+    "downloading": "Scaricamento… {{percent}}%",
+    "updateReady": "v{{current}} → {{version}}",
     "install": "Installa",
     "tooltipCheck": "Controlla se ci sono aggiornamenti",
-    "tooltipInstall": "Installa l'aggiornamento e riavvia",
-    "tooltipUnavailable": "Questa versione non si aggiorna da sola"
+    "tooltipInstall": "Installa adesso e riavvia — altrimenti si installa quando chiudi Budojo.",
+    "tooltipUnavailable": "Questa versione non si aggiorna da sola",
+    "updateReadyAlone": "v{{version}}"
   },
   "relativeDay": {
     "today": "oggi",

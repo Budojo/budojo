@@ -9,7 +9,6 @@ import { VersionCheckService } from './core/services/version-check.service';
 import { CookieBannerComponent } from './features/cookie-banner/cookie-banner.component';
 import { NotificationOnboardingDialogComponent } from './shared/components/notification-onboarding-dialog/notification-onboarding-dialog.component';
 import { PushToastComponent } from './shared/components/push-toast/push-toast.component';
-import { UpdateBannerComponent } from './shared/components/update-banner/update-banner.component';
 import { DesktopTitlebarComponent } from './shared/components/desktop-titlebar/desktop-titlebar.component';
 
 @Component({
@@ -20,7 +19,6 @@ import { DesktopTitlebarComponent } from './shared/components/desktop-titlebar/d
     CookieBannerComponent,
     NotificationOnboardingDialogComponent,
     PushToastComponent,
-    UpdateBannerComponent,
     DesktopTitlebarComponent,
   ],
   templateUrl: './app.html',

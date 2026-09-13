@@ -7,11 +7,11 @@
      "push" so only WebPushHandlerService's messages render here —
      clickable (deep-links) + dismissable, unlike the generic toast above. -->
 <app-push-toast />
-<!-- Update progress (#1339). Mounted above the outlet so it sits at the very
-     top of whatever shell is rendered, and renders NOTHING at all unless an
-     update is downloading or waiting to install — so it costs no vertical
-     space in the normal case. Absent outside Electron. -->
-<app-update-banner />
+<!-- The update bar that used to live here (#1339) is gone (#1641). On the
+     desktop — the only place it could ever render — it sat UNDER the fixed
+     title-bar strip: invisible, while still taking its 44 px, so an update
+     silently pushed every screen down. Everything it said, the title bar
+     above already says, and now says with the percentage too. -->
 <router-outlet />
 <!--
   Cookie consent banner (#421), on the web profile only (#1508).
