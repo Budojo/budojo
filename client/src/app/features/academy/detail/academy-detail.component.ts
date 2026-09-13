@@ -17,6 +17,8 @@ import { AcademyService } from '../../../core/services/academy.service';
 import { LanguageService } from '../../../core/services/language.service';
 import { formatIsoDate } from '../../../shared/utils/locale';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
+import { Tooltip } from 'primeng/tooltip';
+import { RuntimeService } from '../../../core/services/runtime.service';
 
 const MAX_LOGO_BYTES = 2 * 1024 * 1024;
 const ALLOWED_LOGO_MIME = ['image/png', 'image/jpeg', 'image/svg+xml', 'image/webp'];
@@ -33,13 +35,23 @@ const ALLOWED_LOGO_MIME = ['image/png', 'image/jpeg', 'image/svg+xml', 'image/we
 @Component({
   selector: 'app-academy-detail',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, ButtonModule, ConfirmPopup, Toast, TranslatePipe, PageHeaderComponent],
+  imports: [
+    Tooltip,
+    RouterLink,
+    ButtonModule,
+    ConfirmPopup,
+    Toast,
+    TranslatePipe,
+    PageHeaderComponent,
+  ],
   providers: [ConfirmationService, MessageService],
   templateUrl: './academy-detail.component.html',
   styleUrl: './academy-detail.component.scss',
 })
 export class AcademyDetailComponent {
   private readonly academyService = inject(AcademyService);
+  /** A permalink is a public URL, and this build has none (#1627). */
+  protected readonly runtime = inject(RuntimeService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly messageService = inject(MessageService);
   private readonly translate = inject(TranslateService);

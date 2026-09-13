@@ -1434,7 +1434,6 @@
       "eyebrow": "Academy",
       "edit": "Edit",
       "logoAlt": "Academy logo",
-      "logoTitle": "Logo",
       "logoHint": "PNG, JPG, SVG or WebP, max 2 MB.",
       "logoUpload": "Upload",
       "logoReplace": "Replace",
@@ -1449,7 +1448,8 @@
         "trainingDays": "Training days",
         "timetable": "Timetable",
         "syllabus": "Programme",
-        "season": "Season"
+        "season": "Season",
+        "logo": "Logo"
       },
       "timetable": {
         "none": "Not set up yet",
@@ -1485,7 +1485,8 @@
         "removeAccept": "Remove",
         "removeReject": "Cancel"
       },
-      "seasonStarted": "started {{date}}"
+      "seasonStarted": "started {{date}}",
+      "logoNone": "None"
     },
     "form": {
       "eyebrow": "Academy",

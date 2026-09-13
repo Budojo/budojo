@@ -162,15 +162,17 @@
       now" — wrong signifier. A <p> inside a muted row communicates the
       immutability correctly (Norman § affordance + signifier).
     -->
-    <div class="field field--readonly">
-      <span class="field__label">{{ 'academy.form.permalink.label' | translate }}</span>
-      <p class="field__readonly-value" data-cy="academy-form-slug">
-        {{ slug() || '—' }}
-      </p>
-      <small class="field__hint">
-        {{ 'academy.form.permalink.hint' | translate }}
-      </small>
-    </div>
+    @if (runtime.loaded() && runtime.profile() === 'web') {
+      <div class="field field--readonly">
+        <span class="field__label">{{ 'academy.form.permalink.label' | translate }}</span>
+        <p class="field__readonly-value" data-cy="academy-form-slug">
+          {{ slug() || '—' }}
+        </p>
+        <small class="field__hint">
+          {{ 'academy.form.permalink.hint' | translate }}
+        </small>
+      </div>
+    }
 
     <fieldset class="field address-group" formGroupName="address">
       <legend class="field__label">

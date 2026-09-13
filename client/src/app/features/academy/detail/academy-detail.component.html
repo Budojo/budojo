@@ -22,62 +22,20 @@
        page has rendered flush against the next ever since.
   -->
   <div class="detail__body">
-    <div class="logo-card" data-cy="academy-logo-card">
-      <div class="logo-card__preview" data-cy="academy-logo-preview">
-        @if (logoUrl(); as url) {
-          <img
-            [src]="url"
-            [alt]="'academy.detail.logoAlt' | translate"
-            loading="lazy"
-            data-cy="academy-logo-image"
-          />
-        } @else {
-          <span class="logo-card__placeholder" aria-hidden="true">
-            <i class="pi pi-image"></i>
-          </span>
-        }
-      </div>
-      <div class="logo-card__body">
-        <p class="logo-card__title">{{ 'academy.detail.logoTitle' | translate }}</p>
-        <p class="logo-card__hint">{{ 'academy.detail.logoHint' | translate }}</p>
-        <div class="logo-card__actions">
-          <!--
-            Secondary, not primary (#1502). This and the page-header Edit were
-            both filled indigo, so the page had two equal loudest controls and
-            one of them changed a logo. The canon allows one primary CTA per
-            view, and it belongs to Edit.
-          -->
-          <p-button
-            [label]="
-              (logoUrl() ? 'academy.detail.logoReplace' : 'academy.detail.logoUpload') | translate
-            "
-            severity="secondary"
-            icon="pi pi-upload"
-            [loading]="logoUploading()"
-            (onClick)="onLogoBrowse()"
-            data-cy="academy-logo-upload"
-          />
-          @if (logoUrl()) {
-            <p-button
-              [label]="'academy.detail.logoRemove' | translate"
-              icon="pi pi-trash"
-              severity="secondary"
-              [text]="true"
-              (onClick)="confirmRemoveLogo($event)"
-              data-cy="academy-logo-remove"
-            />
-          }
-        </div>
-      </div>
-      <input
-        #logoInput
-        type="file"
-        class="logo-card__file"
-        accept="image/png,image/jpeg,image/svg+xml,image/webp"
-        (change)="onLogoSelected($event)"
-        data-cy="academy-logo-input"
-      />
-    </div>
+    <!--
+      The file input the Logo row opens. It used to sit inside a card that
+      was the first thing on this page — a dashed placeholder and an upload
+      button, on every visit, for an academy that never had a logo. It is a
+      setting, and it reads as one now (#1627).
+    -->
+    <input
+      #logoInput
+      type="file"
+      class="logo-row__file"
+      accept="image/png,image/jpeg,image/svg+xml,image/webp"
+      (change)="onLogoSelected($event)"
+      data-cy="academy-logo-input"
+    />
 
     <dl class="card" [attr.aria-label]="'academy.detail.detailsAria' | translate">
       <div class="row">
@@ -85,12 +43,67 @@
         <dd class="row__value" data-cy="academy-row-name">{{ a?.name ?? '—' }}</dd>
       </div>
 
-      <div class="row">
-        <dt class="row__label">{{ 'academy.detail.row.permalink' | translate }}</dt>
-        <dd class="row__value row__value--mono" data-cy="academy-row-slug">
-          {{ a?.slug ?? '—' }}
+      <div class="row" data-cy="academy-logo-row">
+        <dt class="row__label">{{ 'academy.detail.row.logo' | translate }}</dt>
+        <dd class="row__value row__value--logo">
+          @if (logoUrl(); as url) {
+            <img
+              class="row__logo"
+              [src]="url"
+              [alt]="'academy.detail.logoAlt' | translate"
+              loading="lazy"
+              data-cy="academy-logo-image"
+            />
+          } @else {
+            <span class="row__muted">{{ 'academy.detail.logoNone' | translate }}</span>
+          }
+          <!-- The formats and the 2 MB were on the card's hint line; without
+               them the owner meets the limit as an error toast after picking
+               a file, which is the wrong end of the interaction (#1627). -->
+          <p-button
+            [label]="
+              (logoUrl() ? 'academy.detail.logoReplace' : 'academy.detail.logoUpload') | translate
+            "
+            severity="secondary"
+            [text]="true"
+            size="small"
+            [loading]="logoUploading()"
+            [pTooltip]="'academy.detail.logoHint' | translate"
+            tooltipPosition="top"
+            [attr.aria-label]="
+              ((logoUrl() ? 'academy.detail.logoReplace' : 'academy.detail.logoUpload')
+                | translate) +
+              ' — ' +
+              ('academy.detail.logoHint' | translate)
+            "
+            (onClick)="onLogoBrowse()"
+            data-cy="academy-logo-upload"
+          />
+          @if (logoUrl()) {
+            <p-button
+              [label]="'academy.detail.logoRemove' | translate"
+              severity="secondary"
+              [text]="true"
+              size="small"
+              (onClick)="confirmRemoveLogo($event)"
+              data-cy="academy-logo-remove"
+            />
+          }
         </dd>
       </div>
+
+      <!--
+        A permalink is a public URL, and this build has no public URLs
+        (#1627). The value stays in the data; the row is for the web.
+      -->
+      @if (runtime.loaded() && runtime.profile() === 'web') {
+        <div class="row">
+          <dt class="row__label">{{ 'academy.detail.row.permalink' | translate }}</dt>
+          <dd class="row__value row__value--mono" data-cy="academy-row-slug">
+            {{ a?.slug ?? '—' }}
+          </dd>
+        </div>
+      }
 
       <div class="row">
         <dt class="row__label">{{ 'academy.detail.row.phone' | translate }}</dt>
@@ -277,9 +290,12 @@
       The slug is shown but never editable. Document it inline so the
       curious user doesn't have to ask why — follows Norman's "signifier"
       rule (explain constraints at the affordance, not in a help doc).
+      Goes where the row goes: both are about a public URL (#1627).
     -->
-    <p class="detail__hint">
-      {{ 'academy.detail.permalinkHint' | translate }}
-    </p>
+    @if (runtime.loaded() && runtime.profile() === 'web') {
+      <p class="detail__hint">
+        {{ 'academy.detail.permalinkHint' | translate }}
+      </p>
+    }
   </div>
 </section>
