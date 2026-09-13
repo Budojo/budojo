@@ -79,4 +79,14 @@ describe('AgeBadgeComponent', () => {
     const fixture = createWith(null);
     expect(fixture.nativeElement.querySelector('p-tag')).toBeNull();
   });
+  // #1623: the chip built its own unit in code — `years + 'y'` — so an
+  // Italian roster read "32y" beside every name.
+  it('writes the age through the translation, with the plural the language needs', () => {
+    const fixture = createWith('1990-05-15');
+    expect(fixture.nativeElement.querySelector('p-tag')?.textContent?.trim()).toMatch(/^\d+y$/);
+
+    TestBed.inject(LanguageService).setLanguage('it');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('p-tag')?.textContent).toContain(' anni');
+  });
 });
