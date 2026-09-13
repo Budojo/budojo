@@ -487,8 +487,7 @@
       "eyebrow": "Legal",
       "languageToggleEn": "English",
       "languageToggleIt": "Italiano"
-    },
-    "brandAriaLabel": "Budojo home"
+    }
   },
   "cookies": {
     "banner": {
@@ -554,7 +553,6 @@
     }
   },
   "help": {
-    "brandAriaLabel": "Budojo home",
     "eyebrow": "Help centre",
     "title": "Help & frequently asked questions",
     "subtitle": "Quick answers to the questions we hear most. Type a keyword to filter, or scroll the categories below.",
@@ -567,78 +565,128 @@
       "getting-started": "Getting started",
       "athletes": "Athletes",
       "attendance": "Attendance",
+      "academy": "The academy",
       "payments": "Payments",
       "documents": "Documents",
+      "data": "Data and backup",
       "account": "Account"
     },
     "entries": {
       "what-is-budojo": {
         "question": "What is Budojo?",
-        "answer": "Budojo is a lightweight management app for jiu-jitsu and martial-arts academies. You manage your athlete roster, daily attendance, monthly payments, and certificate documents in a single place — designed for instructors who run the mat, not for back-office staff."
+        "answer": "It runs your jiu-jitsu or martial-arts academy from this computer: athletes, attendance, fees, documents, timetable and programme in one place. It is not an online service — your data stays on your machine, and Budojo works with no connection at all."
       },
       "create-academy": {
-        "question": "How do I create my academy?",
-        "answer": "After signing up and confirming your email, the app sends you to a short setup wizard: pick a name, choose your training days, and you're done. The wizard appears automatically the first time you sign in until you complete it."
+        "question": "How do I start?",
+        "answer": "The first time you open it you create your sign-in, and Budojo walks you through a short setup: the academy's name, the days you train, done. There is no email to confirm — the sign-in belongs to this computer. Everything in there can be changed later from Academy → Edit."
       },
       "invite-coach": {
-        "question": "Can I invite an assistant coach?",
-        "answer": "Multi-user academies are on the roadmap but aren't shipped yet. For now each Budojo account manages a single academy on its own. If you'd like a co-instructor flow, send a note via Send feedback in the sidebar — we triage that backlog by user demand."
+        "question": "Can I give a second instructor access?",
+        "answer": "Not yet. Budojo is built for one person on one computer: there is no server for a second instructor to connect to. If you need it, say so from More → Contact support — requests are queued by real demand."
       },
       "add-athlete": {
         "question": "How do I add an athlete?",
-        "answer": "From the dashboard sidebar, open Athletes and tap the Add athlete button (the primary indigo CTA at the top of the list). Fill in the name, optional contacts, the belt, and the join date — only the name is strictly required. Save, and the athlete appears in the roster."
+        "answer": "Open Athletes and press Add athlete, top right. Name, belt, status and the date they joined: only the name is genuinely required, the rest you fill in when you know it. Save, and they are on the list."
       },
       "import-athletes": {
-        "question": "How do I import athletes from a spreadsheet?",
-        "answer": "Bulk import from a CSV or spreadsheet isn't shipped yet. For the moment athletes are created one at a time from Athletes → Add athlete. If you have a long roster to migrate, drop us a note via Send feedback — we'd rather fast-track the import flow than have you copy 80 names by hand."
+        "question": "How do I bring in the list I already keep in a spreadsheet?",
+        "answer": "Athletes → Import. Pick a CSV with a header row: Budojo reads the columns — first name, surname, belt, stripes, status, joined on, email, phone, date of birth — and shows you how it read them, so you can fix anything before importing. Coming from Excel: File → Save as → CSV. Semicolons, accents and day-first dates are already handled."
       },
       "belt-not-listed": {
-        "question": "My belt isn't in the dropdown. What now?",
-        "answer": "Budojo supports the full IBJJF belt ladder: kids (grey, yellow, orange, green), adults (white, blue, purple, brown, black with up to 6 graus), and senior (red-and-black, red-and-white, red). If you practise a different martial art with its own colour system, send a note via Send feedback so we can scope a configurable ladder."
+        "question": "My belt is not in the list. What now?",
+        "answer": "Budojo covers the whole IBJJF scale: youth (grey, yellow, orange, green), adult (white, blue, purple, brown, black up to 6 degrees) and senior (red-black, red-white, red). If your art uses a different scale, say so from More → Contact support: a configurable scale is something we can look at."
       },
       "suspend-athlete": {
-        "question": "How do I temporarily suspend an athlete?",
-        "answer": "Open the athlete's page, switch the Status field from Active to Suspended, and save. Suspended athletes stay in your roster (so attendance and payment history are preserved) but disappear from the daily check-in list and the chase-list for unpaid fees. Flip back to Active when they return."
+        "question": "How do I pause someone who has stopped for a while?",
+        "answer": "Open the athlete, go to Edit and set Status to Inactive. They stay in the archive with their whole attendance and payment history, but drop out of the check-in and out of who needs chasing. The eye in the list's filter row brings them back into view when you need them; set them back to Active when they return to the mat."
       },
       "mark-attendance": {
-        "question": "How do I mark attendance?",
-        "answer": "Open Attendance from the sidebar. The screen lands on the most recent training day in your weekly schedule with the active roster pre-loaded. Tap each athlete who's on the mat to flip them to Present; tap again to undo. Changes save as you tap — no submit button."
+        "question": "How do I take attendance?",
+        "answer": "Open Attendance: it is tonight's check-in. The classes for the day sit at the top with their times, already on the nearest one; pick whoever is on the mat and the row lights up. It saves itself, and if you get one wrong there is an Undo in the message that appears."
       },
       "edit-attendance": {
-        "question": "Can I edit a past day's attendance?",
-        "answer": "Yes. From Attendance, change the date in the picker to the day you want to fix and tap Present / not on the row. Daily attendance is editable retroactively — there's no lock window — so a missed check-in or a mistaken tap on a Sunday can be corrected the next morning."
+        "question": "Can I fix attendance for a past day?",
+        "answer": "Yes: change the date at the top and correct it there. No window closes on you. If nobody trains today, Budojo opens the last session that ran and says so at the top of the page."
+      },
+      "attendance-summary": {
+        "question": "Where do I see how often each of them came this month?",
+        "answer": "Attendance → Monthly summary: one row per athlete with days trained, days available and the rate, sorted by who comes most. The arrows beside the month move you back and forward."
+      },
+      "timetable": {
+        "question": "Where do I set the class times?",
+        "answer": "Academy → Timetable. Each class has a day, time, length and kind (gi, no-gi, open mat…), and the whole week reads in one screen. This is how the check-in knows which classes run tonight, and it is where the academy's training days come from."
+      },
+      "programme": {
+        "question": "What is the Programme for?",
+        "answer": "Academy → Programme is the list of positions and techniques you teach. The “in season” tick says what you are covering this year: it is the denominator coverage does its arithmetic against. Starting from nothing, Budojo offers a full BJJ programme to start from and edit."
+      },
+      "lesson-topics": {
+        "question": "How do I record what we worked on?",
+        "answer": "In the check-in, under the day's classes, there is the topics row: Add topics opens the lesson sheet. Search a technique, take a suggestion (it tells you why it is suggesting it) or walk the programme, then save. The same sheet opens from the Timetable on a class's own button, if you would rather plan the next one than write up the one just finished."
+      },
+      "coverage": {
+        "question": "How do I know what I have not taught yet?",
+        "answer": "Stats → Programme: how many in-season techniques you have actually done, broken down by position, which ones you touched only once, which you have not done at all, and when each was last taught. Every athlete then has their own Coverage tab, saying what they missed."
       },
       "set-monthly-fee": {
         "question": "How do I set the monthly fee?",
-        "answer": "Open Academy → Edit and fill in the Monthly fee field. Once set, the Payments tab on each athlete profile activates and the inline mark-paid toggle on the athletes list comes alive. Leave the field empty if you don't want to track payments through Budojo — the toggle and the tab simply hide."
+        "answer": "Academy → Edit, the Monthly fee field. From then on each athlete's Payments tab and the mark-as-paid control in the list switch on. If you do not run payments here, leave it empty: both controls simply stay away."
+      },
+      "fee-tiers": {
+        "question": "What if they do not all pay the same?",
+        "answer": "The same page carries the Monthly price list: create the tiers you need — twice a week, unlimited, reduced — with a name and an amount, then set an athlete's tier on their own page. Anyone without a tier pays the academy's monthly fee."
       },
       "mark-paid": {
-        "question": "How do I mark someone as paid for the month?",
-        "answer": "Two paths. From the athletes list, tap the Paid · <month> toggle on the athlete's row to flip them to paid for the current month. From the athlete's profile, open the Payments tab and tap any month row to toggle its state — this is also how you record past months retroactively."
+        "question": "How do I mark someone as paid?",
+        "answer": "Two ways. From the athlete list, the payment chip on their row records the current month. From the athlete's page, Payments shows the year month by month: that is where you record back months and longer periods (quarterly, yearly)."
       },
       "unpaid-badge": {
-        "question": "What does the Unpaid badge mean?",
-        "answer": "The Unpaid badge appears on athletes who haven't yet paid the current month's fee. From the 16th onwards, the dashboard home also surfaces an Unpaid this month tile listing every chase-able athlete — pre-15 most customers settle in the typical month-start window, so chasing earlier would be noise. Suspended and inactive athletes never appear in the chase-list."
+        "question": "What does the “Unpaid” chip mean?",
+        "answer": "That this athlete has not paid the current month yet. From the 16th onward an Unpaid panel also appears above the list with everyone to chase: before the 16th most people pay in the ordinary start-of-month window, and pushing earlier would be noise. Inactive and deleted athletes never appear in it."
+      },
+      "carnets": {
+        "question": "How do I handle class passes?",
+        "answer": "Set the price and how many entries a pass carries in Academy → Edit, then sell one from the athlete's Payments tab: from there on every attendance takes an entry off it and the card tells you how many are left. If you count one entry per day rather than per class, that option sits next to the price."
       },
       "upload-medical-cert": {
         "question": "How do I upload a medical certificate?",
-        "answer": "Open the athlete's page and switch to the Documents tab. Tap Add document, pick the kind (most often Medical certificate), set the issued and expiry dates, and attach the PDF or photo. Budojo uses the expiry date to chase you and the athlete via the medical-certificate expiry digest as the deadline approaches."
+        "answer": "Open the athlete and go to Documents → Add document: pick the type (usually Medical certificate), set the issue and expiry dates and attach the PDF or photo. The expiry date is what drives the warnings, so it is worth getting right."
       },
       "expiring-documents": {
-        "question": "Where can I see all expiring documents at once?",
-        "answer": "The dashboard home carries an Expiring documents tile listing the next certificates due in the coming 30 days. Tap View all to land on the cross-academy expiring-documents list, sorted by closest deadline first. The same data drives the daily 9 AM email digest sent when there's actually something to chase."
+        "question": "Where do I see every certificate that needs renewing?",
+        "answer": "The warning triangle in the athlete list's filter row carries the count of who has no certificate and whose is running out; opening it lands on the full list — first the ones missing entirely, then the ones expiring — each linking straight to that athlete's documents. When it is grey there is nothing to do."
+      },
+      "backup": {
+        "question": "How do I back up?",
+        "answer": "More → Backup (the page is called Data & backup). Budojo writes an archive by itself every six hours while it is open, and Back up now makes one immediately. A backup that only lives on this computer's disk does not survive that disk, though: also pick a folder — one your cloud already syncs, a network drive, a USB stick — or connect Google Drive, and every archive is copied there for you."
+      },
+      "restore-backup": {
+        "question": "How do I put the data back from a backup?",
+        "answer": "On the same page, every archive in the list has a Restore: it replaces what you have now with what is in the archive, and asks before it does. On a new computer it takes two things, in either order: restoring the archive, and importing your recovery keys — without the keys the documents inside the archive will not open."
+      },
+      "recovery-code": {
+        "question": "What is the recovery code?",
+        "answer": "It is the key that opens the documents kept inside your backups. Find it under Backup → Recovery keys → Reveal recovery code: put it in a password manager and never share it, because anyone holding it can read those documents. On a fresh installation you paste it into “Restore keys from a recovery code”, and Budojo restarts to apply them."
+      },
+      "where-is-my-data": {
+        "question": "Where is my data?",
+        "answer": "On this computer, in Budojo's data folder — “%APPDATA%\\Budojo” on Windows — together with the documents you upload and the backup archives. Nothing leaves the machine unless you copy it there yourself (the backup folder, or Google Drive). Uninstalling Budojo does not touch that folder: the data stays."
+      },
+      "update-budojo": {
+        "question": "How do I update Budojo?",
+        "answer": "It updates itself: when a new version is out the title bar at the top says so and the download starts on its own. Restart and update installs it immediately; do nothing and it installs the next time you close Budojo. What changed is in What's new, in the sidebar."
       },
       "change-language": {
         "question": "How do I change the language?",
-        "answer": "The dashboard sidebar carries a small EN ⇄ IT toggle just above the version footer. Pick your language and the whole app — pages, forms, dropdowns, error messages — flips immediately. Your choice is stored per device, so closing the browser and reopening tomorrow keeps you on the same language."
+        "answer": "More → Language, then pick Italian or English: the whole app — pages, forms, menus, messages — switches at once. The choice sticks after you close and reopen Budojo."
       },
       "export-data": {
         "question": "How do I download a copy of my data?",
-        "answer": "Open Profile → Your data and tap Download my data. You'll receive a ZIP containing your academy details, athletes, payments, attendance, and uploaded documents — the GDPR Art. 15 export. The file is generated on demand, so a large academy may take a moment to package."
+        "answer": "More → Settings → Account → Download my data: you get a ZIP with the academy, athletes, payments, attendance and uploaded documents, readable in any ordinary software. If what you want is a copy you can put back into Budojo, that is the backup instead."
       },
       "delete-account": {
-        "question": "How do I delete my account?",
-        "answer": "Open Profile and tap Delete account. You'll receive a confirmation email and enter a 30-day grace window during which signing back in cancels the deletion automatically. After 30 days, your data is wiped permanently — academy, athletes, attendance, payments, documents — with no way to recover it."
+        "question": "How do I delete everything?",
+        "answer": "There is no account on a server to close: the data is here. Uninstall Budojo and delete the data folder (“%APPDATA%\\Budojo” on Windows), plus any archives you copied elsewhere — backup folder or Google Drive. If there is any chance you will want it back, take a backup first and keep it somewhere safe."
       }
     }
   },
