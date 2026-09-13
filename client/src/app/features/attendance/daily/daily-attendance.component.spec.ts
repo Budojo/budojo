@@ -1010,6 +1010,55 @@ describe('DailyAttendanceComponent', () => {
       post.flush({ data: [{ id: 9, athlete_id: 1, lesson_id: null, attended_on: '2026-09-14' }] });
     });
 
+    it('keeps the day when the picker reports an unparsable field (#1638)', () => {
+      // `<p-datepicker>` reports null for anything its parser rejects: an
+      // emptied field, and every half-typed date on the way to a whole one.
+      // It used to go straight into a signal typed `Date`, and `dayClasses`
+      // then read `.getDay()` on null once per change-detection pass. The
+      // harness caught it at `30-attendance-date-cleared`.
+      const { fixture, component, httpMock } = setup();
+      fixture.detectChanges();
+      flushInit(httpMock, { classes: [KIDS, FUNDAMENTALS, ADVANCED] });
+      const before = component['selectedDate']();
+
+      component['onDateChanged'](null);
+      fixture.detectChanges();
+
+      expect(component['selectedDate']().getTime()).toBe(before.getTime());
+      expect(() => component['dayClasses']()).not.toThrow();
+      httpMock.expectNone((r) => r.url === '/api/v1/attendance');
+    });
+
+    it('puts the day back in the field on the way out, with a fresh reference (#1638)', async () => {
+      // The first fix wrote the date back on *every* null, which restored
+      // the old text under the cursor and made a date impossible to type by
+      // hand. Restoring belongs on blur — and it has to be a new `Date`:
+      // the same instance leaves `ngModel` with nothing to re-render, and
+      // the field would stay empty for good.
+      const { fixture, component, httpMock } = setup();
+      fixture.detectChanges();
+      flushInit(httpMock, { classes: [KIDS, FUNDAMENTALS, ADVANCED] });
+      const before = component['selectedDate']();
+
+      const input = fixture.nativeElement.querySelector(
+        '[data-cy="attendance-date"] input',
+      ) as HTMLInputElement;
+      expect(input).not.toBeNull();
+      input.value = '';
+      input.dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      component['restoreDateDisplay']();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      const after = component['selectedDate']();
+      expect(after.getTime()).toBe(before.getTime());
+      expect(after).not.toBe(before);
+      expect(input.value).not.toBe('');
+    });
+
     it('re-picks the class when the date moves — a past day opens on its first class', () => {
       // Wednesday evening, backfilling Monday.
       vi.setSystemTime(new Date(2026, 8, 16, 18, 30));
@@ -1018,8 +1067,7 @@ describe('DailyAttendanceComponent', () => {
       flushInit(httpMock, { classes: [KIDS, FUNDAMENTALS, ADVANCED] });
       expect(component['selectedClassId']()).toBe(ADVANCED.id);
 
-      component['selectedDate'].set(new Date(2026, 8, 14));
-      component['onDateChanged']();
+      component['onDateChanged'](new Date(2026, 8, 14));
 
       httpMock.expectOne((r) => r.url === '/api/v1/athletes').flush(emptyPage());
       // The timetable is not re-read: it was loaded once for the visit.
