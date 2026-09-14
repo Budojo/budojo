@@ -29,7 +29,10 @@
             <div class="recap__stat" data-cy="recap-sessions">
               <span class="recap__number">{{ r.sessions }}</span>
               <span class="recap__label">
-                {{ 'myRecap.sessions' | translate: { count: r.sessions } }}
+                {{
+                  (r.sessions === 1 ? 'myRecap.sessionsOne' : 'myRecap.sessionsOther')
+                    | translate: { count: r.sessions }
+                }}
               </span>
             </div>
             <div class="recap__stat" data-cy="recap-hours">

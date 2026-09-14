@@ -23,7 +23,10 @@
       />
     } @else {
       <div class="stats-page__total" data-cy="stats-total">
-        {{ 'stats.total' | translate: { count: totalAthletes() } }}
+        {{
+          (totalAthletes() === 1 ? 'stats.totalOne' : 'stats.totalOther')
+            | translate: { count: totalAthletes() }
+        }}
       </div>
       <section class="stats-card" data-cy="stats-belt-chart">
         <h2 class="stats-card__title">{{ 'stats.belt.title' | translate }}</h2>

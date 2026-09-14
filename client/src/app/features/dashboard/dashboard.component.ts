@@ -227,7 +227,10 @@ export class DashboardComponent implements OnInit {
       routerLink: '/dashboard/notifications',
       unread,
       label: this.translate.instant('notifications.title'),
-      unreadAriaLabel: this.translate.instant('notifications.bell.unreadCount', { count: unread }),
+      unreadAriaLabel: this.translate.instant(
+        unread === 1 ? 'notifications.bell.unreadCountOne' : 'notifications.bell.unreadCountOther',
+        { count: unread },
+      ),
     };
   });
 

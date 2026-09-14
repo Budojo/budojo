@@ -102,15 +102,30 @@
       <p class="coverage__totals" data-cy="syllabus-coverage-totals">
         <span class="tally tally--covered">
           <span class="tally__dot" aria-hidden="true"></span>
-          {{ 'stats.syllabus.state.covered' | translate: { count: data.totals.covered } }}
+          {{
+            (data.totals.covered === 1
+              ? 'stats.syllabus.state.coveredOne'
+              : 'stats.syllabus.state.coveredOther'
+            ) | translate: { count: data.totals.covered }
+          }}
         </span>
         <span class="tally tally--thin">
           <span class="tally__dot" aria-hidden="true"></span>
-          {{ 'stats.syllabus.state.thin' | translate: { count: data.totals.thin } }}
+          {{
+            (data.totals.thin === 1
+              ? 'stats.syllabus.state.thinOne'
+              : 'stats.syllabus.state.thinOther'
+            ) | translate: { count: data.totals.thin }
+          }}
         </span>
         <span class="tally tally--missing">
           <span class="tally__dot" aria-hidden="true"></span>
-          {{ 'stats.syllabus.state.missing' | translate: { count: data.totals.missing } }}
+          {{
+            (data.totals.missing === 1
+              ? 'stats.syllabus.state.missingOne'
+              : 'stats.syllabus.state.missingOther'
+            ) | translate: { count: data.totals.missing }
+          }}
         </span>
       </p>
 

@@ -407,7 +407,8 @@
     "bell": {
       "ariaLabel": "Notifiche",
       "tooltip": "Notifiche",
-      "unreadCount": "{{count}} non lette"
+      "unreadCountOne": "{{count}} non letta",
+      "unreadCountOther": "{{count}} non lette"
     },
     "toast": {
       "dismiss": "Chiudi notifica"
@@ -511,7 +512,8 @@
     "title": "Aggiornamenti recenti",
     "subtitle": "Le novità di Budojo in parole semplici. La più recente in cima.",
     "back": "Torna alla dashboard",
-    "showMore": "Mostra altri {{count}} rilasci"
+    "showMoreOne": "Mostra un altro rilascio",
+    "showMoreOther": "Mostra altri {{count}} rilasci"
   },
   "notificationOnboarding": {
     "title": "Resta aggiornato",
@@ -2075,8 +2077,6 @@
           "deleteErrorDetail": "Impossibile eliminare questo documento. Riprova."
         },
         "heading": "Documenti",
-        "activeCount": "{{count}} attivi",
-        "cancelledCount": "{{count}} cancellati",
         "toggle": {
           "aria": "Mostra documenti cancellati",
           "label": "Mostra cancellati"
@@ -2104,7 +2104,11 @@
           "withCancelled": "Nessun documento — attivo o cancellato.",
           "default": "Nessun documento.",
           "hint": "Usa <strong>Aggiungi documento</strong> sopra per caricare il primo."
-        }
+        },
+        "activeCountOne": "{{count}} attivo",
+        "activeCountOther": "{{count}} attivi",
+        "cancelledCountOne": "{{count}} cancellato",
+        "cancelledCountOther": "{{count}} cancellati"
       },
       "backToList": "Atleti",
       "loading": "Caricamento atleta…",
@@ -2484,12 +2488,13 @@
     "coverage": {
       "fraction": "{{seen}} su {{total}} cose che la palestra ha fatto",
       "since": "Conteggio dal {{date}}, giorno di iscrizione.",
-      "notTaughtYet": "Altri {{count}} sono nel programma ma non sono ancora stati fatti. È una lacuna della palestra, non sua.",
-      "unattributed": "{{count}} dei suoi allenamenti non dicono a quale lezione fossero, quindi qui non contano in nessun senso.",
       "legend": {
-        "seen": "{{count}} visti",
-        "thin": "{{count}} visti una volta",
-        "missed": "{{count}} persi"
+        "seenOne": "{{count}} visto",
+        "seenOther": "{{count}} visti",
+        "thinOne": "{{count}} visto una volta",
+        "thinOther": "{{count}} visti una volta",
+        "missedOne": "{{count}} perso",
+        "missedOther": "{{count}} persi"
       },
       "missed": {
         "title": "Cosa si è perso",
@@ -2512,7 +2517,11 @@
           "title": "Ancora nessuna lezione",
           "hint": "Nessuna lezione è stata segnata da quando si è iscritto, il {{date}}. Non c'è niente che possa essersi perso."
         }
-      }
+      },
+      "unattributedOne": "{{count}} dei suoi allenamenti non dice a quale lezione fosse, quindi qui non conta in nessun senso.",
+      "unattributedOther": "{{count}} dei suoi allenamenti non dicono a quale lezione fossero, quindi qui non contano in nessun senso.",
+      "notTaughtYetOne": "Un altro è nel programma ma non è ancora stato fatto. È una lacuna della palestra, non sua.",
+      "notTaughtYetOther": "Altri {{count}} sono nel programma ma non sono ancora stati fatti. È una lacuna della palestra, non sua."
     }
   },
   "month": {
@@ -2591,7 +2600,6 @@
     "loadError": "Impossibile caricare le statistiche. Riprova.",
     "emptyTitle": "Dati non sufficienti",
     "emptyHint": "Aggiungi il primo atleta e i grafici si popoleranno qui.",
-    "total": "Su {{count}} atleti attivi.",
     "belt": {
       "title": "Cinture",
       "hint": "Atleti per grado IBJJF, kids → senior. Passa sopra a una fetta per il conteggio + percentuale."
@@ -2613,13 +2621,14 @@
         "less": "Meno",
         "more": "Più",
         "scale": "Le tonalità seguono questo periodo: {{b1}} · {{b2}} · {{b3}} · {{b4}} presenze al giorno",
-        "tooltipCount": "{{count}} presenze il {{date}}",
         "tooltipEmpty": "Nessuna presenza il {{date}}",
         "dow": {
           "mon": "Lun",
           "wed": "Mer",
           "fri": "Ven"
-        }
+        },
+        "tooltipCountOne": "{{count}} presenza il {{date}}",
+        "tooltipCountOther": "{{count}} presenze il {{date}}"
       }
     },
     "payments": {
@@ -2635,7 +2644,6 @@
       "loading": "Caricamento distribuzione…",
       "errored": "Impossibile caricare la distribuzione.",
       "empty": "Nessun atleta con data di nascita.",
-      "missingDob": "{{count}} atleti senza data di nascita",
       "scope": {
         "kids": "Kids",
         "adults": "Adulti",
@@ -2655,7 +2663,9 @@
         "master_5": "Master 5",
         "master_6": "Master 6",
         "master_7": "Master 7"
-      }
+      },
+      "missingDobOne": "{{count}} atleta senza data di nascita",
+      "missingDobOther": "{{count}} atleti senza data di nascita"
     },
     "syllabus": {
       "headline": "{{covered}} di {{total}} coperti in questa stagione",
@@ -2668,9 +2678,12 @@
       "worked": "fatta {{count}}×",
       "barAria": "{{name}}: {{covered}} coperti, {{thin}} fatti una volta, {{missing}} non fatti",
       "state": {
-        "covered": "{{count}} coperti",
-        "thin": "{{count}} fatti una volta",
-        "missing": "{{count}} non fatti"
+        "coveredOne": "{{count}} coperto",
+        "coveredOther": "{{count}} coperti",
+        "missingOne": "{{count}} non fatto",
+        "missingOther": "{{count}} non fatti",
+        "thinOne": "{{count}} fatto una volta",
+        "thinOther": "{{count}} fatti una volta"
       },
       "filter": {
         "all": "Tutto",
@@ -2694,7 +2707,9 @@
         "hint": "Qualcosa è andato storto da parte nostra. Riprova.",
         "retry": "Riprova"
       }
-    }
+    },
+    "totalOne": "Su {{count}} atleta attivo.",
+    "totalOther": "Su {{count}} atleti attivi."
   },
   "publicProfile": {
     "joinedAt": "Da {{ date }}",
@@ -2731,7 +2746,6 @@
     "title": "La tua settimana sul tatami",
     "loading": "Caricamento della settimana…",
     "heading": "Ecco la tua settimana",
-    "sessions": "{{count}} allenament{{count, plural, one {o} other {i}}}",
     "hours": "Ore di tatami",
     "partners": {
       "heading": "Compagni di allenamento"
@@ -2745,7 +2759,9 @@
       "heading": "Impossibile caricare il recap",
       "copy": "Il parametro settimana sembra sbagliato, o il tuo profilo atleta non è pronto.",
       "cta": "Torna al mio profilo"
-    }
+    },
+    "sessionsOne": "{{count}} allenamento",
+    "sessionsOther": "{{count}} allenamenti"
   },
   "myAttendanceToday": {
     "title": "Presenza di oggi",
