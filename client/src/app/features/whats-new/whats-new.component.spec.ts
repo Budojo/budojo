@@ -3,7 +3,7 @@ import { provideRouter, Router } from '@angular/router';
 import { WhatsNewComponent } from './whats-new.component';
 import { provideI18nTesting } from '../../../test-utils/i18n-test';
 import { LanguageService } from '../../core/services/language.service';
-import { localised } from './whats-new.releases';
+import { localised, RELEASES } from './whats-new.releases';
 
 describe('WhatsNewComponent (#254)', () => {
   function setup() {
@@ -308,10 +308,10 @@ describe('WhatsNewComponent (#254)', () => {
       h.textContent?.trim(),
     );
     expect(headings).toEqual([
-      '🛡️ Privacy & data control',
-      '🥋 Athletes & belts',
-      '📱 Mobile fixes',
-      '🧹 Behind the scenes',
+      'Privacy & data control',
+      'Athletes & belts',
+      'Mobile fixes',
+      'Behind the scenes',
     ]);
   });
 
@@ -319,5 +319,33 @@ describe('WhatsNewComponent (#254)', () => {
     const { cmp } = setup();
     cmp.goHome();
     expect(TestBed.inject(Router).navigateByUrl).toHaveBeenCalledWith('/dashboard');
+  });
+});
+
+describe('no emoji in the release notes (#1659)', () => {
+  it('leaves every section heading without a glyph', () => {
+    // The content voice rule is "no emoji in product UI", and the release
+    // notes are product UI. They rendered as tofu wherever no emoji font is
+    // installed, and as colour pictographs where one is — neither is the
+    // typography the rest of the app uses.
+    // Base pictographs only. A variation selector, a zero-width joiner or a
+    // skin-tone modifier never appears without one, and putting them in a
+    // character class is what `no-misleading-character-class` forbids.
+    // No \u2190-\u21FF: that block is typographic arrows, and "Profilo" →
+    // "Impostazioni" is prose, not decoration.
+    const EMOJI = /[\u{1F000}-\u{1FAFF}\u{2300}-\u{27BF}\u{2B00}-\u{2BFF}]/u;
+
+    const offenders = RELEASES.flatMap((release) =>
+      release.sections
+        .flatMap((section) =>
+          typeof section.heading === 'string'
+            ? [section.heading]
+            : [section.heading.en, section.heading.it],
+        )
+        .filter((heading) => EMOJI.test(heading))
+        .map((heading) => `${release.version}: ${heading}`),
+    );
+
+    expect(offenders).toEqual([]);
   });
 });
