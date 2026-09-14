@@ -1,10 +1,12 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 import { AcademyFormComponent } from './academy-form.component';
 import { Academy, AcademyService, Address } from '../../../core/services/academy.service';
+import { RuntimeService } from '../../../core/services/runtime.service';
 
 function makeAddress(overrides: Partial<Address> = {}): Address {
   return {
@@ -44,6 +46,14 @@ function setup(cached: Academy | null = makeAcademy()): Harness {
       provideHttpClientTesting(),
       provideRouter([]),
       ...provideI18nTesting(),
+      {
+        provide: RuntimeService,
+        useValue: {
+          profile: signal(runtimeProfile),
+          loaded: signal(true),
+          has: signal(() => true),
+        },
+      },
     ],
   });
   TestBed.inject(AcademyService).academy.set(cached);
@@ -60,6 +70,8 @@ function setup(cached: Academy | null = makeAcademy()): Harness {
     router,
   };
 }
+
+let runtimeProfile: 'web' | 'desktop' = 'web';
 
 describe('AcademyFormComponent', () => {
   it('pre-populates the form from the cached academy signal', () => {
@@ -532,5 +544,25 @@ describe('AcademyFormComponent — what one carnet entry covers (#1576)', () => 
       ) as NodeListOf<HTMLElement>,
     ).map((el) => el.textContent?.trim());
     expect(labels).toEqual(['One lesson', 'A whole day']);
+  });
+
+  // #1627 — a permalink is a public URL, and this build has none.
+  it('hides the permalink box on a build with no public URLs', () => {
+    runtimeProfile = 'desktop';
+    try {
+      const { fixture } = setup();
+      expect(
+        (fixture.nativeElement as HTMLElement).querySelector('[data-cy="academy-form-slug"]'),
+      ).toBeNull();
+    } finally {
+      runtimeProfile = 'web';
+    }
+  });
+
+  it('keeps it on the web', () => {
+    const { fixture } = setup();
+    expect(
+      (fixture.nativeElement as HTMLElement).querySelector('[data-cy="academy-form-slug"]'),
+    ).not.toBeNull();
   });
 });

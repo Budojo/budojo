@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8" />
+<title>Mockup — Scheda atleta</title>
+<style>
+  :root { --accent:#5b6cff; --text:#0a0a0b; --muted:#6b7280; --line:#e5e7eb; --bg:#fafafa }
+  * { box-sizing:border-box }
+  body { margin:0; font:14px/1.5 Inter,-apple-system,Segoe UI,sans-serif; color:var(--text); background:var(--bg) }
+  .titlebar { height:40px; border-bottom:1px solid var(--line); padding:0 20px; display:flex; align-items:center; color:var(--muted); font-size:12px }
+  .layout { display:grid; grid-template-columns:240px 1fr }
+  .rail { border-right:1px solid var(--line); padding:24px 12px; background:#fff; min-height:calc(100vh - 40px) }
+  .rail .brand { font-weight:700; font-size:18px; padding:0 12px 24px }
+  .rail a { display:block; padding:12px; border-radius:12px; color:var(--text) }
+  .rail a.on { background:#eef0ff; font-weight:600 }
+  main { padding:32px; max-width:1040px }
+  .back { color:var(--muted); margin-bottom:16px }
+  .head { display:flex; align-items:flex-start; gap:20px }
+  .avatar { width:64px; height:64px; border-radius:50%; background:#e5e7eb; display:grid; place-items:center; font-weight:600; font-size:20px }
+  h1 { font-size:28px; margin:0; letter-spacing:-.018em; display:flex; align-items:center; gap:12px }
+  .chip { display:inline-block; padding:2px 10px; border-radius:999px; font-size:12px; font-weight:600; background:#f3f4f6; color:#374151 }
+  .chip.belt { background:#1d4ed8; color:#fff }
+  .chip.ok { background:#f0fdf4; color:#15803d }
+  .meta { color:var(--muted); margin-top:4px }
+  .contacts { display:flex; gap:16px; margin-top:12px }
+  .contacts a { color:var(--accent); text-decoration:none; font-weight:500 }
+  .actions { margin-left:auto; display:flex; gap:8px }
+  .btn { height:44px; padding:0 16px; border-radius:12px; border:1px solid var(--line); background:#fff; font:inherit; font-weight:500 }
+  .btn.primary { background:var(--accent); color:#fff; border-color:var(--accent) }
+  .tabs { display:flex; gap:32px; border-bottom:1px solid var(--line); margin-top:28px }
+  .tabs span { padding:14px 0; font-weight:600; color:var(--muted) }
+  .tabs span.on { color:var(--accent); border-bottom:2px solid var(--accent) }
+  .note { margin:32px 0 0; padding:16px; border:1px dashed var(--line); border-radius:12px; color:var(--muted); font-size:13px }
+</style>
+</head>
+<body>
+<div class="titlebar">v2.61.1</div>
+<div class="layout">
+  <nav class="rail"><div class="brand">Budojo BJJ Torino</div><a>Accademia</a><a class="on">Atleti</a><a>Presenze</a><a>Statistiche</a><a>Altro</a></nav>
+  <main>
+    <div class="back">← Atleti</div>
+    <div class="head">
+      <div class="avatar">GF</div>
+      <div>
+        <h1>Giulia Ferraro <span class="chip">32 anni</span> <span class="chip belt">Blu · 2 gradi</span> <span class="chip ok">Attiva</span></h1>
+        <div class="meta">Dal 2 settembre 2024 · Illimitato, trimestrale · carnet 3/10</div>
+        <div class="contacts"><a href="tel:+393331234567">+39 333 1234567</a><a href="mailto:giulia.ferraro@example.com">giulia.ferraro@example.com</a><a href="#">@giulia.bjj</a></div>
+      </div>
+      <div class="actions">
+        <button class="btn">Promuovi</button>
+        <button class="btn">Segna presente oggi</button>
+        <button class="btn primary">Modifica</button>
+      </div>
+    </div>
+    <div class="tabs"><span class="on">Documenti</span><span>Presenze</span><span>Pagamenti</span><span>Programma</span><span>Promozioni</span></div>
+
+    <p class="note">
+      Rispetto a oggi: "Modifica" esce dalle schede e diventa l'azione primaria dell'intestazione; telefono ed email sono nell'intestazione come link
+      (chiamare o scrivere a un atleta è il motivo più frequente per aprire la sua scheda); l'età è tradotta; "Attiva" concorda con la persona
+      e "Dal …" evita di concordare; quota e carnet compaiono in una riga sola. Le schede restano cinque sezioni di contenuto.
+      "Promuovi" e "Segna presente oggi" sono le due azioni che oggi vivono altrove (form e check-in) e che qui hanno il loro contesto.
+    </p>
+  </main>
+</div>
+</body>
+</html>

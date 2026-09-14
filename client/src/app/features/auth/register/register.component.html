@@ -38,7 +38,6 @@
     <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
       <app-budojo-form-field
         [label]="'auth.register.firstName' | translate"
-        [required]="true"
         controlId="first_name"
         [error]="firstNameError() ? (firstNameError()! | translate) : null"
       >
@@ -58,7 +57,6 @@
 
       <app-budojo-form-field
         [label]="'auth.register.lastName' | translate"
-        [required]="true"
         controlId="last_name"
         [error]="lastNameError() ? (lastNameError()! | translate) : null"
       >
@@ -78,7 +76,6 @@
 
       <app-budojo-form-field
         [label]="'auth.register.email' | translate"
-        [required]="true"
         controlId="email"
         [error]="emailError() ? (emailError()! | translate) : null"
       >
@@ -97,7 +94,6 @@
 
       <app-budojo-form-field
         [label]="'auth.register.password' | translate"
-        [required]="true"
         controlId="password"
         [error]="passwordError() ? (passwordError()! | translate) : null"
       >
@@ -132,7 +128,6 @@
 
       <app-budojo-form-field
         [label]="'auth.register.passwordConfirmation' | translate"
-        [required]="true"
         controlId="password_confirmation"
         [error]="passwordConfirmationError() ? (passwordConfirmationError()! | translate) : null"
       >

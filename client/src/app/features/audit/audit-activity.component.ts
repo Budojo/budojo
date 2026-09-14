@@ -6,32 +6,61 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { DatePipe } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
+import { TranslateService } from '@ngx-translate/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslatePipe } from '@ngx-translate/core';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
+import { SelectModule } from 'primeng/select';
 import { PaginatorModule } from 'primeng/paginator';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TooltipModule } from 'primeng/tooltip';
 import { EMPTY, Subject } from 'rxjs';
 import { catchError, switchMap, tap } from 'rxjs/operators';
+import { AuthService } from '../../core/services/auth.service';
+import { LanguageService } from '../../core/services/language.service';
 import { AuditEntriesFilters, AuditEntry, AuditService } from '../../core/services/audit.service';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
+import { LocaleDatePipe } from '../../shared/pipes/locale-date.pipe';
 
-// Owner-only academy activity log (#429 part 3).
+/**
+ * Owner-only academy activity log (#429 part 3).
+ *
+ * **The log speaks the product's language, not the code's** (#1631). Every
+ * row used to print the raw action key — `athlete.deleted`, in monospace —
+ * and the filter's placeholder taught that vocabulary as the way to search
+ * your own history. The map below is the whole vocabulary the server can
+ * write (the five `Observers/Audit/*` classes); anything outside it renders
+ * as the raw key with the same tooltip, which is what a new action added
+ * server-side should look like until someone gives it a sentence.
+ */
+const ACTION_LABEL_KEYS: Readonly<Record<string, string>> = {
+  'academy.updated': 'audit.actions.academyUpdated',
+  'athlete.created': 'audit.actions.athleteCreated',
+  'athlete.updated': 'audit.actions.athleteUpdated',
+  'athlete.deleted': 'audit.actions.athleteDeleted',
+  'carnet.created': 'audit.actions.carnetCreated',
+  'carnet.updated': 'audit.actions.carnetUpdated',
+  'carnet.deleted': 'audit.actions.carnetDeleted',
+  'document.uploaded': 'audit.actions.documentUploaded',
+  'document.deleted': 'audit.actions.documentDeleted',
+  'payment.created': 'audit.actions.paymentCreated',
+  'payment.updated': 'audit.actions.paymentUpdated',
+  'payment.deleted': 'audit.actions.paymentDeleted',
+};
 @Component({
   selector: 'app-audit-activity',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    DatePipe,
+    LocaleDatePipe,
     ReactiveFormsModule,
     TranslatePipe,
     ButtonModule,
     InputTextModule,
     PageHeaderComponent,
+    SelectModule,
     PaginatorModule,
     SkeletonModule,
     TooltipModule,
@@ -43,6 +72,9 @@ export class AuditActivityComponent {
   private readonly auditService = inject(AuditService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly fb = inject(FormBuilder);
+  private readonly translate = inject(TranslateService);
+  private readonly language = inject(LanguageService);
+  private readonly auth = inject(AuthService);
 
   protected readonly entries = signal<readonly AuditEntry[]>([]);
   protected readonly loading = signal<boolean>(true);
@@ -60,6 +92,40 @@ export class AuditActivityComponent {
   });
 
   protected readonly hasEntries = computed<boolean>(() => this.entries().length > 0);
+
+  /** The filter's options, in the order they read: everything, then the map. */
+  protected readonly actionOptions = computed<{ label: string; value: string }[]>(() => {
+    this.language.currentLang();
+    return [
+      { label: this.translate.instant('audit.filters.actionAll') as string, value: '' },
+      ...Object.entries(ACTION_LABEL_KEYS)
+        .map(([value, key]) => ({ label: this.translate.instant(key) as string, value }))
+        .sort((a, b) => a.label.localeCompare(b.label)),
+    ];
+  });
+
+  /** The sentence for an action, or the raw key when we have none. */
+  protected actionLabel(action: string): string {
+    this.language.currentLang();
+    const key = ACTION_LABEL_KEYS[action];
+    return key === undefined ? action : (this.translate.instant(key) as string);
+  }
+
+  /** True while the row is showing a key rather than a sentence. */
+  protected isRawAction(action: string): boolean {
+    return ACTION_LABEL_KEYS[action] === undefined;
+  }
+
+  /**
+   * The actor, only when it is not the person reading. On a single-owner
+   * build every row was "Matteo Bonanno → …", which is a column of the same
+   * name and an arrow that reads as a transfer (#1631).
+   */
+  protected otherActor(entry: AuditEntry): string | null {
+    const me = this.auth.user()?.id ?? null;
+    if (entry.actor_user_id === null || entry.actor_user_id === me) return null;
+    return entry.actor_label;
+  }
 
   // switchMap drops the previous in-flight request when a new filter
   // or page lands — a rapid double-tap on Apply can't leak the stale

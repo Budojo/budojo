@@ -38,8 +38,10 @@ const EXPECTED_CATEGORY_ORDER = [
   'getting-started',
   'athletes',
   'attendance',
+  'academy',
   'payments',
   'documents',
+  'data',
   'account',
 ] as const;
 
@@ -53,11 +55,23 @@ const EXPECTED_ENTRY_IDS = [
   'suspend-athlete',
   'mark-attendance',
   'edit-attendance',
+  'attendance-summary',
+  'timetable',
+  'programme',
+  'lesson-topics',
+  'coverage',
   'set-monthly-fee',
+  'fee-tiers',
   'mark-paid',
   'unpaid-badge',
+  'carnets',
   'upload-medical-cert',
   'expiring-documents',
+  'backup',
+  'restore-backup',
+  'recovery-code',
+  'where-is-my-data',
+  'update-budojo',
   'change-language',
   'export-data',
   'delete-account',
@@ -87,7 +101,7 @@ describe('HelpComponent (#422)', () => {
     return { fixture, cmp: fixture.componentInstance };
   }
 
-  it('renders the title and all six categories in the declared order', () => {
+  it('renders the title and all eight categories in the declared order', () => {
     const { fixture } = setup();
     const root: HTMLElement = fixture.nativeElement;
 
@@ -147,6 +161,48 @@ describe('HelpComponent (#422)', () => {
       }
     }
     expect(missing).toEqual([]);
+  });
+
+  it('answers about the desktop product, not a hosted one (#1616)', () => {
+    // The FAQ was written for the hosted web app: it confirmed emails,
+    // sent a 09:00 digest, talked about closing the browser and a
+    // language toggle in the sidebar. None of that exists on the build
+    // that ships. These are the shapes that came back, not the bare word
+    // "email" — saying there is NO email to confirm is the point, and
+    // the import answer names a spreadsheet's email COLUMN.
+    const forbidden: ReadonlyArray<readonly [RegExp, string]> = [
+      [/\bbrowsers?\b/i, 'the browser'],
+      [/(receive|send|get)s?[^.]{0,40}e-?mail/i, 'a promise to send email'],
+      [/(ricever|invi|arriv)[a-z]*[^.]{0,40}e-?mail/i, 'a promise to send email'],
+      [/e-?mail digest|digest e-?mail/i, 'an email digest'],
+    ];
+    const offenders: string[] = [];
+    for (const [lang, bundle] of [
+      ['en', EN],
+      ['it', IT],
+    ] as const) {
+      const entries = (bundle as unknown as Record<string, Record<string, unknown>>)['help'][
+        'entries'
+      ] as Record<string, { question: string; answer: string }>;
+      for (const id of EXPECTED_ENTRY_IDS) {
+        const text = `${entries[id].question} ${entries[id].answer}`;
+        for (const [pattern, what] of forbidden) {
+          if (pattern.test(text)) offenders.push(`${lang}/${id}: ${what}`);
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it('offers the way back at the top, not only at the foot (#1616)', () => {
+    const { fixture } = setup();
+    const top = fixture.nativeElement.querySelector(
+      '[data-cy="help-back-top"]',
+    ) as HTMLAnchorElement | null;
+
+    expect(top?.getAttribute('href')).toBe('/');
+    // It used to be the logo alone: a glyph and the word "Budojo".
+    expect(top?.textContent).toContain('Back to home');
   });
 
   it('renders ALL entries when the query is empty', () => {

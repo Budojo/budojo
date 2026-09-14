@@ -148,8 +148,10 @@ export class DailyAttendanceComponent implements OnInit {
   protected readonly maxDate = new Date();
 
   /**
-   * `selectedDate` is bound via FormsModule `[(ngModel)]` to the date
-   * picker. `<p-datepicker>` emits a Date, we convert to YYYY-MM-DD when
+   * `selectedDate` is bound one way (`[ngModel]`) to the date picker, with
+   * `onDateChanged` taking the other direction. `<p-datepicker>` emits a
+   * Date **or null** — null for anything its parser rejects, which is why
+   * the handler owns the assignment (#1638); we convert to YYYY-MM-DD when
    * crossing the wire boundary (see loadDay).
    *
    * Initialised to today; ngOnInit() reseats this to the most recent past
@@ -778,9 +780,40 @@ export class DailyAttendanceComponent implements OnInit {
     });
   }
 
-  protected onDateChanged(): void {
-    // ngModel pushes the new Date into selectedDate(). Reload accordingly.
+  /**
+   * The picker moved. `next` is null whenever the text in the field does not
+   * parse — an emptied field, and every half-typed date on the way to a
+   * whole one: `<p-datepicker>` catches its own parse error and reports null.
+   *
+   * `selectedDate` is this page's spine: the title, the weekday's classes,
+   * the wire date, the lesson. Letting null through put it into a signal
+   * typed `Date`, and from there `dayClasses` read `.getDay()` on it once
+   * per change-detection pass — a console filling with TypeErrors until
+   * somebody typed a valid date (#1638).
+   *
+   * So null simply does not reach the signal, and — this is the part the
+   * first attempt got wrong — it does not write anything back either. A
+   * write-back on every unparsable keystroke restores the old text under
+   * the cursor, which makes a date impossible to type by hand. The field is
+   * put right on the way out instead, in `restoreDateDisplay`.
+   */
+  protected onDateChanged(next: Date | null): void {
+    if (next === null) {
+      return;
+    }
+    this.selectedDate.set(next);
     this.loadDay();
+  }
+
+  /**
+   * Leaving the field with unparsable text in it (or none at all) puts the
+   * day back on screen. A check-in is always *for a day*, so a blank field
+   * has one meaning: the day we are on. Runs on blur and on the overlay
+   * closing; a new `Date` on purpose, so `ngModel` sees a changed reference
+   * and re-renders — the same instance would not.
+   */
+  protected restoreDateDisplay(): void {
+    this.selectedDate.set(new Date(this.selectedDate()));
   }
 
   // ── Class picker (#1562) ───────────────────────────────────────────────────

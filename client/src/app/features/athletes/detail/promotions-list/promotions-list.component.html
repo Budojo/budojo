@@ -37,7 +37,7 @@
         <li class="promotions__row" [attr.data-cy]="'promotion-' + p.id">
           <div class="promotions__date-row">
             <time class="promotions__date" [dateTime]="p.recorded_at">
-              {{ p.recorded_at | date: 'mediumDate' }}
+              {{ p.recorded_at | localeDate: 'calendar-day' }}
             </time>
             <p-button
               icon="pi pi-pencil"

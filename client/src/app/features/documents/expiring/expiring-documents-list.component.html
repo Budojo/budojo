@@ -109,6 +109,11 @@
                 <span class="expiring-card__type">{{ typeKeyFor(doc) | translate }}</span>
                 <div class="expiring-card__status">
                   <app-expiry-status-badge [expiresAt]="doc.expires_at" [type]="doc.type" />
+                  @if (doc.expires_at) {
+                    <span class="expiring-page__countdown" data-cy="expiring-card-countdown">{{
+                      countdownFor(doc.expires_at)
+                    }}</span>
+                  }
                 </div>
               </li>
             }
@@ -143,7 +148,18 @@
                     </a>
                   </td>
                   <td>{{ typeKeyFor(doc) | translate }}</td>
-                  <td>{{ doc.expires_at ?? '—' }}</td>
+                  <!-- The date, and the arithmetic the reader was doing on it:
+                       "tra 16 giorni", "scaduto da 4 giorni" (#1625, EXP-3). -->
+                  <td>
+                    @if (doc.expires_at) {
+                      <span>{{ doc.expires_at | localeDate: 'calendar-day' }}</span>
+                      <span class="expiring-page__countdown" data-cy="expiring-countdown">{{
+                        countdownFor(doc.expires_at)
+                      }}</span>
+                    } @else {
+                      —
+                    }
+                  </td>
                   <td>
                     <app-expiry-status-badge [expiresAt]="doc.expires_at" [type]="doc.type" />
                   </td>

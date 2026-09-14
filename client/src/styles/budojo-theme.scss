@@ -66,6 +66,18 @@
   --p-content-hover-background: var(--p-surface-100);
   // Hairline borders reuse surface-300 so palette tweaks stay in one place.
   --p-content-border-color: var(--p-surface-300);
+
+  // A checkbox's own boundary, at MD3's 3:1 against the card it sits on
+  // (#1622, AUTH-5). The preset paints an unchecked box near-white with no
+  // border a reader can see, which on the two consent gates — the one
+  // control the register form cannot be submitted without — left the
+  // weakest affordance on the page. `surface-500` is the first step on this
+  // scale that clears 3:1 on white (3.26:1; `surface-400` is 1.74:1, and
+  // the hairline `surface-300` used for content borders is 1.37:1).
+  // Tokens, not a component override, so all seven checkboxes read alike.
+  --p-checkbox-border-color: var(--p-surface-500);
+  --p-checkbox-hover-border-color: var(--p-surface-700);
+  --p-checkbox-background: var(--p-content-background);
   --p-content-color: var(--p-surface-900);
   --p-content-hover-color: var(--p-surface-900);
 

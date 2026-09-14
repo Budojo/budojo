@@ -1,6 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import { TranslatePipe } from '@ngx-translate/core';
 import { ButtonModule } from 'primeng/button';
 import { BrandGlyphComponent } from '../../../shared/components/brand-glyph/brand-glyph.component';
 
@@ -27,7 +26,7 @@ import { BrandGlyphComponent } from '../../../shared/components/brand-glyph/bran
 @Component({
   selector: 'app-account-deletion-it',
   standalone: true,
-  imports: [TranslatePipe, ButtonModule, BrandGlyphComponent, RouterLink],
+  imports: [ButtonModule, BrandGlyphComponent, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './account-deletion-it.component.html',
   styleUrl: './account-deletion-it.component.scss',

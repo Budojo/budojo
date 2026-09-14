@@ -61,7 +61,7 @@
               @if (token.last_used_at) {
                 <span>{{
                   'profile.apiTokens.lastUsedAt'
-                    | translate: { datetime: (token.last_used_at | date: 'short') }
+                    | translate: { datetime: (token.last_used_at | localeDate) }
                 }}</span>
               } @else {
                 <span>{{ 'profile.apiTokens.neverUsed' | translate }}</span>
@@ -70,7 +70,7 @@
                 <span class="profile-api-tokens__row-meta-sep" aria-hidden="true">·</span>
                 <span>{{
                   'profile.apiTokens.expiresAt'
-                    | translate: { datetime: (token.expires_at | date: 'short') }
+                    | translate: { datetime: (token.expires_at | localeDate) }
                 }}</span>
               }
             </div>

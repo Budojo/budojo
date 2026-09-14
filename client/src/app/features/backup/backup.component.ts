@@ -1,9 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { DatePipe } from '@angular/common';
 import { Router } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
+import { ConfirmPopup } from 'primeng/confirmpopup';
 import { ToastModule } from 'primeng/toast';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TooltipModule } from 'primeng/tooltip';
@@ -28,6 +28,7 @@ import {
   type DriveArchiveView,
   type DriveLinkStateView,
 } from '../../core/services/drive-sync.service';
+import { LocaleDatePipe } from '../../shared/pipes/locale-date.pipe';
 
 /**
  * The error codes with a translation of their own. Anything else falls back to
@@ -79,13 +80,14 @@ function timestampFromName(name: string): string {
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    DatePipe,
+    LocaleDatePipe,
     TranslatePipe,
     ButtonModule,
     ToastModule,
     TooltipModule,
     SkeletonModule,
     ConfirmDestructiveButtonComponent,
+    ConfirmPopup,
     PageHeaderComponent,
   ],
   // ConfirmDestructiveButtonComponent injects ConfirmationService, and

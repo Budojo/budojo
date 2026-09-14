@@ -17,6 +17,7 @@ import { AcademyService } from '../../../core/services/academy.service';
 import { MyAthleteService } from '../../../core/services/my-athlete.service';
 import { TrainingDaysPickerComponent } from '../../../shared/components/training-days-picker/training-days-picker.component';
 import { BudojoFormFieldComponent } from '../../../shared/components/budojo-form-field/budojo-form-field.component';
+import { RuntimeService } from '../../../core/services/runtime.service';
 
 const noWhitespace: ValidatorFn = (control: AbstractControl) =>
   control.value?.trim() ? null : { whitespace: true };
@@ -38,6 +39,8 @@ const noWhitespace: ValidatorFn = (control: AbstractControl) =>
 })
 export class SetupComponent {
   private readonly fb = inject(FormBuilder);
+  /** The community sentence in this card is only true where there is a feed (#1626). */
+  protected readonly runtime = inject(RuntimeService);
   private readonly academyService = inject(AcademyService);
   private readonly myAthleteService = inject(MyAthleteService);
   private readonly router = inject(Router);

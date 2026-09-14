@@ -17,9 +17,13 @@ import { BrandGlyphComponent } from '../../shared/components/brand-glyph/brand-g
 import { LanguageService } from '../../core/services/language.service';
 
 /**
- * Public `/help` page (#422). In-product FAQ for users who hit a
- * "how do I…?" question and would otherwise fall back to the in-app
- * feedback form. Self-service first, e-mail-the-owner second.
+ * Public `/help` page (#422). In-product FAQ for an owner who hits a
+ * "how do I…?" question and would otherwise write to support.
+ *
+ * **The answers describe the desktop product** (#1616): the app on this
+ * computer, with its own data folder, backups and updates — not the hosted
+ * service the first draft was written for, which stopped existing in #1230.
+ * An answer that names a screen names the one that is there today.
  *
  * **Structure mirrored from `/whats-new` (#254):**
  * - Typed array of categories + entries declared in the component.
@@ -38,7 +42,7 @@ import { LanguageService } from '../../core/services/language.service';
  * linked from the dashboard sidebar footer alongside `/privacy` so
  * existing customers reach it without leaving the app.
  *
- * **Search: client-side only.** The dataset (10–15 entries) easily
+ * **Search: client-side only.** The dataset (a few dozen entries) easily
  * fits in memory; no server round-trip, no debounce. We match
  * resolved (translated) question + answer text against the
  * lower-cased query so a user typing in their active language gets
@@ -69,11 +73,23 @@ const FAQ_ENTRY_IDS = [
   'suspend-athlete',
   'mark-attendance',
   'edit-attendance',
+  'attendance-summary',
+  'timetable',
+  'programme',
+  'lesson-topics',
+  'coverage',
   'set-monthly-fee',
+  'fee-tiers',
   'mark-paid',
   'unpaid-badge',
+  'carnets',
   'upload-medical-cert',
   'expiring-documents',
+  'backup',
+  'restore-backup',
+  'recovery-code',
+  'where-is-my-data',
+  'update-budojo',
   'change-language',
   'export-data',
   'delete-account',
@@ -88,7 +104,15 @@ interface FaqEntry {
 
 interface FaqCategory {
   /** Stable id for grouping + deep links (`/help#cat-<id>`). */
-  readonly id: 'getting-started' | 'athletes' | 'attendance' | 'payments' | 'documents' | 'account';
+  readonly id:
+    | 'getting-started'
+    | 'athletes'
+    | 'attendance'
+    | 'academy'
+    | 'payments'
+    | 'documents'
+    | 'data'
+    | 'account';
   readonly entries: readonly FaqEntry[];
 }
 
@@ -138,15 +162,40 @@ export class HelpComponent implements OnInit {
     },
     {
       id: 'attendance',
-      entries: [{ id: 'mark-attendance' }, { id: 'edit-attendance' }],
+      entries: [{ id: 'mark-attendance' }, { id: 'edit-attendance' }, { id: 'attendance-summary' }],
+    },
+    {
+      id: 'academy',
+      entries: [
+        { id: 'timetable' },
+        { id: 'programme' },
+        { id: 'lesson-topics' },
+        { id: 'coverage' },
+      ],
     },
     {
       id: 'payments',
-      entries: [{ id: 'set-monthly-fee' }, { id: 'mark-paid' }, { id: 'unpaid-badge' }],
+      entries: [
+        { id: 'set-monthly-fee' },
+        { id: 'fee-tiers' },
+        { id: 'mark-paid' },
+        { id: 'unpaid-badge' },
+        { id: 'carnets' },
+      ],
     },
     {
       id: 'documents',
       entries: [{ id: 'upload-medical-cert' }, { id: 'expiring-documents' }],
+    },
+    {
+      id: 'data',
+      entries: [
+        { id: 'backup' },
+        { id: 'restore-backup' },
+        { id: 'recovery-code' },
+        { id: 'where-is-my-data' },
+        { id: 'update-budojo' },
+      ],
     },
     {
       id: 'account',

@@ -1,16 +1,46 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { Observable, Subject, of, throwError } from 'rxjs';
 import { provideI18nTesting } from '../../../test-utils/i18n-test';
+import { LanguageService } from '../../core/services/language.service';
 import { AuditEntriesPage, AuditService } from '../../core/services/audit.service';
+import { AuthService } from '../../core/services/auth.service';
 import { AuditActivityComponent } from './audit-activity.component';
 
 function emptyPage(overrides: Partial<AuditEntriesPage['meta']> = {}): AuditEntriesPage {
   return {
     data: [],
     meta: { current_page: 1, last_page: 1, total: 0, per_page: 20, ...overrides },
+  };
+}
+
+// #1624: one row, only to read its timestamp.
+function pageWithEntry(
+  createdAt: string,
+  action = 'athlete.created',
+  opts: { actorId?: number } = {},
+): AuditEntriesPage {
+  return {
+    data: [
+      {
+        id: 1,
+        action,
+        actor_user_id: opts.actorId ?? 1,
+        actor_label: 'Matteo Bonanno',
+        subject_type: 'athlete',
+        subject_id: 2,
+        subject_label: 'Sara Colombo',
+        before: null,
+        after: null,
+        ip: null,
+        user_agent: null,
+        created_at: createdAt,
+      },
+    ],
+    meta: { current_page: 1, last_page: 1, total: 1, per_page: 20 },
   };
 }
 
@@ -25,6 +55,9 @@ function setup(listReturn: Observable<AuditEntriesPage> = of(emptyPage())): {
       provideHttpClient(),
       provideHttpClientTesting(),
       ...provideI18nTesting(),
+      // Signed in as user 1 — the actor on every fixture row, which is the
+      // case the log has to stop repeating (#1631).
+      { provide: AuthService, useValue: { user: signal({ id: 1 }) } },
     ],
   });
   const svc = TestBed.inject(AuditService);
@@ -34,6 +67,88 @@ function setup(listReturn: Observable<AuditEntriesPage> = of(emptyPage())): {
 }
 
 describe('AuditActivityComponent (#429 part 3)', () => {
+  it("names the action in words, not in the code's vocabulary (#1631)", async () => {
+    const { fixture } = setup(of(pageWithEntry('2026-09-14T16:12:00Z')));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const action = fixture.nativeElement.querySelector('[data-cy="audit-row-action"]');
+    expect(action?.textContent?.trim()).toBe('Athlete added');
+    expect(action?.className).not.toContain('audit-row__action--raw');
+    // The key stays reachable for support, as a tooltip.
+    expect(action?.getAttribute('title')).toContain('athlete.created');
+  });
+
+  it('falls back to the raw key for an action it has no sentence for (#1631)', async () => {
+    // What a new server-side action looks like before anyone names it.
+    const { fixture } = setup(of(pageWithEntry('2026-09-14T16:12:00Z', 'academy_class.created')));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const action = fixture.nativeElement.querySelector('[data-cy="audit-row-action"]');
+    expect(action?.textContent?.trim()).toBe('academy_class.created');
+    expect(action?.className).toContain('audit-row__action--raw');
+  });
+
+  it('leads with the subject and drops the actor when it is you (#1631)', async () => {
+    const { fixture } = setup(of(pageWithEntry('2026-09-14T16:12:00Z')));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const body = fixture.nativeElement.querySelector('.audit-row__body');
+    expect(body?.textContent).toContain('Sara Colombo');
+    // Every row said "Matteo Bonanno → …" on a build with one user.
+    expect(body?.textContent).not.toContain('Matteo Bonanno');
+    expect(fixture.nativeElement.querySelector('.audit-row__actor')).toBeNull();
+  });
+
+  it('keeps the actor when somebody else did it (#1631)', async () => {
+    const { fixture } = setup(
+      of(pageWithEntry('2026-09-14T16:12:00Z', 'athlete.created', { actorId: 7 })),
+    );
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.audit-row__actor')?.textContent).toContain(
+      'Matteo Bonanno',
+    );
+  });
+
+  it('offers the actions as a list to choose from, not a key to type (#1631)', async () => {
+    const { fixture } = setup();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const options = (
+      fixture.componentInstance as unknown as {
+        actionOptions: () => { label: string; value: string }[];
+      }
+    ).actionOptions();
+
+    expect(options[0]).toEqual({ label: 'All actions', value: '' });
+    expect(options.map((o) => o.value)).toContain('athlete.deleted');
+    expect(options.map((o) => o.label)).toContain('Athlete deleted');
+  });
+
+  it('writes the row timestamp in the active language, without seconds (#1624)', async () => {
+    // `| date: 'medium'` formats against LOCALE_ID, which this app never
+    // sets: the log read "Sep 14, 2026, 6:12:00 PM" under an Italian UI.
+    const { fixture } = setup(of(pageWithEntry('2026-09-14T16:12:00Z')));
+    TestBed.inject(LanguageService).setLanguage('it');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const date = fixture.nativeElement.querySelector('.audit-row__date')?.textContent ?? '';
+    expect(date).toContain('14 set 2026');
+    expect(date).not.toMatch(/\d{2}:\d{2}:\d{2}/);
+  });
+
   afterEach(() => {
     // Drain any stray HTTP — the spy short-circuits the HttpClient,
     // but a future regression could leak a real request.

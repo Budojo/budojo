@@ -5,6 +5,7 @@ import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { of, throwError } from 'rxjs';
 import { provideI18nTesting } from '../../../../../test-utils/i18n-test';
+import { LanguageService } from '../../../../core/services/language.service';
 import { type AthletePromotion, AthleteService } from '../../../../core/services/athlete.service';
 import { PromotionsListComponent } from './promotions-list.component';
 
@@ -120,6 +121,27 @@ describe('PromotionsListComponent (#799)', () => {
     // i18n test harness resolves keys to EN strings; assert against the
     // resolved text rather than the key (see EN en.json `promotions.emptyBody`).
     expect(el.textContent).toContain('No promotions yet');
+  });
+
+  it('writes the promotion date in the active language (#1624)', () => {
+    // "Jun 15, 2026" under an Italian UI: `| date: 'mediumDate'` formats
+    // against LOCALE_ID, which this app never sets.
+    const { fixture, el, svc } = setup();
+    svc.promotions.mockReturnValue(
+      of({
+        data: [makePromotion({ recorded_at: '2026-03-15T00:00:00Z' })],
+        meta: { current_page: 1, per_page: 20, total: 1, last_page: 1 },
+      }),
+    );
+    TestBed.inject(LanguageService).setLanguage('it');
+    fixture.detectChanges();
+
+    // The whole date, not just the month: `recorded_at` is a calendar day
+    // stored at UTC midnight, so reading it as an instant shows the 14th to
+    // every reader west of Greenwich — while the edit dialog beside it opens
+    // on the 15th (`utcCalendarDayAsLocalMidnight`). Run the suite under
+    // `TZ=America/New_York` and this is the assertion that fails.
+    expect(el.querySelector('.promotions__date')?.textContent).toContain('15 marzo 2026');
   });
 
   it('renders the error panel when AthleteService.promotions errors out', () => {

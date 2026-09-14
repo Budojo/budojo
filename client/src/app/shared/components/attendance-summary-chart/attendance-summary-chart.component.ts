@@ -119,6 +119,17 @@ export class AttendanceSummaryChartComponent {
    * `var(--*)` tokens. Indigo primary + muted surface, mirroring the
    * stats charts.
    */
+  /**
+   * Which window this rate covers (#1635, ATT-2).
+   *
+   * The card's 30/90/365-day rate and the monthly ring on the calendar below
+   * are different questions with similar answers, and neither said so — a
+   * reader seeing 57% here and 75% there assumes one of them is broken.
+   */
+  protected readonly rangeWindowKey = computed<string>(
+    () => `attendanceSummary.window.${this.range()}`,
+  );
+
   protected readonly donutData = computed(() => {
     this.languageService.currentLang(); // signal dep — the slice labels are translated
     const s = this.summary();

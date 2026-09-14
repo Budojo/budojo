@@ -1,9 +1,9 @@
-import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { TranslatePipe } from '@ngx-translate/core';
 import { LoginAttempt, LoginHistoryService } from '../../../core/services/login-history.service';
+import { LocaleDatePipe } from '../../../shared/pipes/locale-date.pipe';
 
 /**
  * "Login history" panel on `/dashboard/profile` (#430).
@@ -22,7 +22,7 @@ import { LoginAttempt, LoginHistoryService } from '../../../core/services/login-
 @Component({
   selector: 'app-profile-login-history',
   standalone: true,
-  imports: [ButtonModule, DatePipe, ProgressSpinnerModule, TranslatePipe],
+  imports: [LocaleDatePipe, ButtonModule, ProgressSpinnerModule, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './profile-login-history.component.html',
   styleUrl: './profile-login-history.component.scss',

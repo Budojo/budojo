@@ -24,6 +24,7 @@ import { STATUS_KEYS } from '../../../shared/utils/i18n-enum-keys';
 import { InvitationCardComponent } from './invitation-card/invitation-card.component';
 import { EmailChangeCardComponent } from './email-change-card/email-change-card.component';
 import { AthletePhotoCardComponent } from '../photo-card/athlete-photo-card.component';
+import { returnSection } from '../athlete-return-section';
 
 @Component({
   selector: 'app-athlete-detail',
@@ -73,6 +74,34 @@ export class AthleteDetailComponent implements OnInit {
   readonly athlete = signal<Athlete | null>(null);
   readonly activeTab = signal<string>('documents');
 
+  /**
+   * Editing is a mode, not a section (#1633).
+   *
+   * It used to be the first tab, ahead of Documenti, in a strip whose other
+   * five entries all answer "what do I want to see". Editing answers "what do
+   * I want to do", so it left the strip for a button in the header — and while
+   * it is open the strip is not rendered at all.
+   *
+   * That last part is not cosmetic. PrimeNG accepts a `[value]` matching no
+   * rendered tab without a word of complaint, and then every tab computes
+   * `active === false`, which drives `tabindex` to `-1` on all of them: the
+   * whole tablist drops out of the keyboard order, the ink bar is positioned
+   * from an undefined offset, and every tab reports `aria-selected="false"`.
+   * A strip nobody can reach by keyboard is worse than no strip, so the
+   * header carries the way out instead.
+   */
+  readonly isEditing = computed(() => this.activeTab() === 'edit');
+
+  /**
+   * The section to come back to when editing closes.
+   *
+   * Sending everyone to Documenti would strand the owner who opened the form
+   * from Pagamenti — they would have to find their way back to a tab they
+   * never left on purpose. Documenti is only the cold-start fallback, for a
+   * deep link that arrives straight on `/edit` with no section behind it.
+   */
+  private readonly lastSection = signal<string>('documents');
+
   readonly fullName = computed(() => {
     const a = this.athlete();
     return a ? `${a.first_name} ${a.last_name}` : '';
@@ -118,6 +147,91 @@ export class AthleteDetailComponent implements OnInit {
     return links;
   });
 
+  /**
+   * Phone and email, as links you can press (#1633, DET-2).
+   *
+   * The header listed an Instagram icon and nothing else, on the one screen a
+   * coach opens in order to reach somebody — both values were in the payload
+   * the whole time, and the only place an owner could read the email was
+   * behind the edit route.
+   *
+   * These are labelled rather than icon chips, deliberately. A number is as
+   * often copied or read aloud as dialled, and an icon hides the value it
+   * stands for. They also do not take `target="_blank"`: `tel:` and `mailto:`
+   * are handed to the operating system, and a blank tab for them opens an
+   * empty window on the desktop.
+   *
+   * The `tel:` href is built from the unspaced E.164 pair because the scheme
+   * does not tolerate inner whitespace, while the visible label keeps the
+   * prefix apart from the digits so it can be read. Same contract as the
+   * academy page (`academy-detail.component.ts`), including the defensive
+   * null check on a half-populated pair.
+   */
+  readonly reachLinks = computed<
+    { icon: string; href: string; label: string; ariaKey: string; cyKey: string }[]
+  >(() => {
+    const a = this.athlete();
+    if (!a) return [];
+    const reach: { icon: string; href: string; label: string; ariaKey: string; cyKey: string }[] =
+      [];
+    const cc = a.phone_country_code;
+    const nn = a.phone_national_number;
+    if (cc && nn)
+      reach.push({
+        icon: 'pi pi-phone',
+        href: `tel:${cc}${nn}`,
+        label: `${cc} ${nn}`,
+        ariaKey: 'athletes.detail.reach.phone',
+        cyKey: 'phone',
+      });
+    if (a.email)
+      reach.push({
+        icon: 'pi pi-envelope',
+        href: `mailto:${a.email}`,
+        label: a.email,
+        ariaKey: 'athletes.detail.reach.email',
+        cyKey: 'email',
+      });
+    return reach;
+  });
+
+  /** One button, one handler — see the template for why it is not two. */
+  protected toggleEdit(): void {
+    if (this.isEditing()) {
+      this.leaveEdit();
+    } else {
+      this.enterEdit();
+    }
+  }
+
+  /**
+   * Open the edit form, saying in the URL where it was opened from.
+   *
+   * A navigation rather than a link, so the button is one tab stop:
+   * `routerLink` on a `p-button` writes `tabindex` onto the host while the
+   * inner `<button>` stays focusable, which is two stops for one control.
+   *
+   * The section rides in a query param rather than only in `lastSection`,
+   * because this component is not the only way out of the form. `Annulla`
+   * and `Salva modifiche` at the bottom of the form navigate on their own,
+   * and they cannot read a signal in here — but they can read the URL they
+   * were opened with. A signal would also be gone after a reload; the param
+   * is not.
+   */
+  private enterEdit(): void {
+    void this.router.navigate(['edit'], {
+      relativeTo: this.route,
+      queryParams: { from: this.lastSection() },
+    });
+  }
+
+  /** Close the edit form, back to whichever section it was opened from. */
+  private leaveEdit(): void {
+    void this.router.navigate([returnSection(this.route.snapshot.queryParamMap.get('from'))], {
+      relativeTo: this.route,
+    });
+  }
+
   ngOnInit(): void {
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((paramMap) => {
       const idParam = paramMap.get('id');
@@ -135,7 +249,7 @@ export class AthleteDetailComponent implements OnInit {
         filter((e): e is NavigationEnd => e instanceof NavigationEnd),
         takeUntilDestroyed(this.destroyRef),
       )
-      .subscribe((e) => this.activeTab.set(this.tabFromUrl(e.urlAfterRedirects)));
+      .subscribe((e) => this.setTab(this.tabFromUrl(e.urlAfterRedirects)));
 
     // The child route, not `router.url`. On a cold load the component is built
     // while the initial navigation is still resolving, so `router.url` is
@@ -144,7 +258,21 @@ export class AthleteDetailComponent implements OnInit {
     // signal, but PrimeNG has already measured and placed its underline, and
     // it does not come back for it (#1600). The activated-route tree is built
     // before components activate, so this is right the first time.
-    this.activeTab.set(this.tabFromChildRoute());
+    this.setTab(this.tabFromChildRoute());
+  }
+
+  /**
+   * Move the strip, and remember the section while doing it.
+   *
+   * Both callers go through here so the two entry points — the cold-load seed
+   * and every later navigation — cannot drift apart on what "the section I
+   * came from" means.
+   */
+  private setTab(tab: string): void {
+    if (tab !== 'edit') {
+      this.lastSection.set(tab);
+    }
+    this.activeTab.set(tab);
   }
 
   /** The tab segment the router has already resolved for this page. */
@@ -164,6 +292,11 @@ export class AthleteDetailComponent implements OnInit {
    * history. `coverage` (#1567) would have landed the same way.
    */
   private tabFromUrl(url: string): string {
+    // `edit` stays in this list even though it is no longer a tab (#1633). It
+    // is the flag the photo, account and email cards are keyed on, and the
+    // thing that hides the strip while the form is open. Drop it and the URL
+    // resolves to `documents`: Documenti gets underlined over the edit form,
+    // and those three cards silently stop rendering.
     const tabs = ['payments', 'attendance', 'promotions', 'coverage', 'edit'];
 
     return tabs.find((tab) => url.includes(`/${tab}`)) ?? 'documents';

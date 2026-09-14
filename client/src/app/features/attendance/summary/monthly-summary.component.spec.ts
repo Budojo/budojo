@@ -1,7 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
+import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { Subject } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
@@ -374,6 +374,122 @@ describe('MonthlySummaryComponent', () => {
 
     expect(fixture.componentInstance['scheduledCount']()).toBeNull();
     expect(fixture.componentInstance.ratePercent(5)).toBeNull();
+    http.verify();
+  });
+
+  // ─── What the header actually counts (#1639) ────────────────────────────────
+
+  it('calls the presences presences, and the days the days', () => {
+    const { http, setMonthParam } = setupTestBed();
+    TestBed.inject(AcademyService).academy.set({
+      id: 1,
+      name: 'Test',
+      slug: 'test',
+      address: null,
+      logo_url: null,
+      training_days: [2, 4, 6],
+    });
+    const fixture = TestBed.createComponent(MonthlySummaryComponent);
+    fixture.detectChanges();
+    setMonthParam(null);
+    http
+      .expectOne('/api/v1/attendance/summary?month=2026-04')
+      .flush({ data: [makeRow(1, 4), makeRow(2, 6)] });
+    fixture.detectChanges();
+
+    // Ten presences across two athletes, over six sessions actually held.
+    // The header used to read "10 giorni di allenamento · 2 atleti".
+    const label = fixture.componentInstance['summaryCountLabel']();
+    expect(label).toContain('10 attendances');
+    expect(label).toContain('2 athletes');
+    expect(label).toContain('6 training days');
+    http.verify();
+  });
+
+  it('says nothing about zero days when the timetable does not reach this month', () => {
+    // A timetable configured from a later date answers 0, not null — the
+    // header would have read "5 presenze · 1 atleta · 0 giorni di
+    // allenamento" beside rows with no fraction.
+    const { http, setMonthParam } = setupTestBed();
+    TestBed.inject(AcademyService).academy.set({
+      id: 1,
+      name: 'Test',
+      slug: 'test',
+      address: null,
+      logo_url: null,
+      training_days: [2, 4, 6],
+      schedules: [{ effective_from: '2026-06-01', training_days: [2, 4, 6] }],
+    } as never);
+    const fixture = TestBed.createComponent(MonthlySummaryComponent);
+    fixture.detectChanges();
+    setMonthParam('2026-01');
+    http.expectOne('/api/v1/attendance/summary?month=2026-01').flush({ data: [makeRow(1, 5)] });
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance['scheduledCount']()).toBe(0);
+    expect(fixture.componentInstance['summaryCountLabel']()).not.toContain('0 training days');
+    expect(
+      fixture.nativeElement.querySelector('[data-cy="monthly-summary-no-schedule"]'),
+    ).not.toBeNull();
+    http.verify();
+  });
+
+  it('drops the day segment and says why when the month has no timetable', () => {
+    const { http, setMonthParam } = setupTestBed();
+    TestBed.inject(AcademyService).academy.set({
+      id: 1,
+      name: 'Test',
+      slug: 'test',
+      address: null,
+      logo_url: null,
+      training_days: null,
+    });
+    const fixture = TestBed.createComponent(MonthlySummaryComponent);
+    fixture.detectChanges();
+    setMonthParam(null);
+    http.expectOne('/api/v1/attendance/summary?month=2026-04').flush({ data: [makeRow(1, 5)] });
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance['summaryCountLabel']()).not.toContain('training day');
+    expect(
+      fixture.nativeElement.querySelector('[data-cy="monthly-summary-no-schedule"]'),
+    ).not.toBeNull();
+    http.verify();
+  });
+
+  it("lets a name reach that athlete's own attendance tab", () => {
+    // A real router here, not the `{ navigate }` stub the other tests use:
+    // `routerLink` needs one to render an href, and the href is the claim.
+    TestBed.resetTestingModule();
+    const queryParams = new Subject<ReturnType<typeof convertToParamMap>>();
+    TestBed.configureTestingModule({
+      imports: [MonthlySummaryComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        { provide: ActivatedRoute, useValue: { queryParamMap: queryParams.asObservable() } },
+        ...provideI18nTesting(),
+      ],
+    });
+    const http = TestBed.inject(HttpTestingController);
+    const fixture = TestBed.createComponent(MonthlySummaryComponent);
+    fixture.detectChanges();
+    queryParams.next(convertToParamMap({}));
+
+    http.expectOne('/api/v1/attendance/summary?month=2026-04').flush({ data: [makeRow(7, 3)] });
+    fixture.detectChanges();
+
+    const link = fixture.nativeElement.querySelector(
+      '[data-cy="monthly-summary-athlete-link-7"]',
+    ) as HTMLAnchorElement | null;
+    expect(link?.getAttribute('href')).toBe('/dashboard/athletes/7/attendance');
+
+    // The phone card renders its own anchor from a second template site.
+    const mobile = fixture.nativeElement.querySelector(
+      '[data-cy="monthly-summary-mobile-athlete-link-7"]',
+    ) as HTMLAnchorElement | null;
+    expect(mobile?.getAttribute('href')).toBe('/dashboard/athletes/7/attendance');
     http.verify();
   });
 });

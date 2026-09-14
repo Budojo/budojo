@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8" />
+<title>Mockup — Oggi</title>
+<style>
+  :root { --accent:#5b6cff; --text:#0a0a0b; --muted:#6b7280; --line:#e5e7eb; --bg:#fafafa; --card:#fff; --warn:#b45309; --warn-bg:#fff7ed; --ok:#15803d; --ok-bg:#f0fdf4; }
+  * { box-sizing:border-box }
+  body { margin:0; font:14px/1.5 Inter,-apple-system,Segoe UI,sans-serif; color:var(--text); background:var(--bg) }
+  .titlebar { height:40px; border-bottom:1px solid var(--line); padding:0 20px; display:flex; align-items:center; color:var(--muted); font-size:12px }
+  .layout { display:grid; grid-template-columns:240px 1fr; min-height:calc(100vh - 40px) }
+  .rail { border-right:1px solid var(--line); padding:24px 12px; background:#fff }
+  .rail .brand { font-weight:700; font-size:18px; padding:0 12px 24px }
+  .rail a { display:block; padding:12px; border-radius:12px; color:var(--text); text-decoration:none }
+  .rail a.on { background:#eef0ff; font-weight:600 }
+  .rail .foot { margin-top:auto; padding:12px; color:var(--muted); font-size:12px }
+  main { padding:32px; max-width:1040px }
+  h1 { font-size:28px; margin:0 0 4px; letter-spacing:-.018em }
+  .sub { color:var(--muted); margin:0 0 24px }
+  .grid { display:grid; grid-template-columns:1.4fr 1fr; gap:16px }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:20px }
+  .eyebrow { font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); font-weight:600; margin-bottom:12px }
+  .class { display:flex; align-items:center; gap:16px; padding:14px 0; border-top:1px solid var(--line) }
+  .class:first-of-type { border-top:0 }
+  .class .time { font-variant-numeric:tabular-nums; color:var(--muted); width:110px }
+  .class .name { font-weight:600; flex:1 }
+  .class .topics { color:var(--muted); font-size:13px }
+  .btn { display:inline-flex; align-items:center; gap:8px; padding:0 16px; height:44px; border-radius:12px; border:1px solid var(--line); background:#fff; font:inherit; font-weight:500; cursor:pointer }
+  .btn.primary { background:var(--accent); color:#fff; border-color:var(--accent) }
+  .btn.small { height:36px; padding:0 12px; font-size:13px }
+  .alert { display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-top:1px solid var(--line) }
+  .alert:first-of-type { border-top:0 }
+  .alert .n { font-weight:700; font-variant-numeric:tabular-nums; width:28px }
+  .alert a { color:var(--accent); text-decoration:none; font-weight:500 }
+  .chip { display:inline-block; padding:2px 10px; border-radius:999px; font-size:12px; font-weight:600 }
+  .chip.warn { background:var(--warn-bg); color:var(--warn) }
+  .chip.ok { background:var(--ok-bg); color:var(--ok) }
+  .suggest { padding:12px 0; border-top:1px solid var(--line) }
+  .suggest:first-of-type { border-top:0 }
+  .suggest .why { color:var(--muted); font-size:12px }
+  .state { display:flex; gap:24px; color:var(--muted); font-size:13px; margin-top:16px }
+  .state b { color:var(--text); font-weight:500 }
+  .note { margin:32px 0 0; padding:16px; border:1px dashed var(--line); border-radius:12px; color:var(--muted); font-size:13px; max-width:1040px }
+</style>
+</head>
+<body>
+<div class="titlebar">v2.61.1</div>
+<div class="layout">
+  <nav class="rail">
+    <div class="brand">Budojo BJJ Torino</div>
+    <a class="on">Oggi</a>
+    <a>Atleti</a>
+    <a>Presenze</a>
+    <a>Accademia</a>
+    <a>Statistiche</a>
+    <a>Backup</a>
+    <a>Altro</a>
+  </nav>
+  <main>
+    <h1>Lunedì 14 settembre</h1>
+    <p class="sub">Stagione 2026/27 · seconda settimana</p>
+
+    <div class="grid">
+      <section class="card">
+        <div class="eyebrow">Stasera</div>
+        <div class="class">
+          <span class="time">19:00 – 20:00</span>
+          <span class="name">Fondamentali <span class="chip" style="background:#f3f4f6;color:#374151">Gi</span></span>
+          <span class="topics">Armbar</span>
+          <button class="btn primary small">Apri il check-in</button>
+        </div>
+        <div class="class">
+          <span class="time">20:00 – 21:15</span>
+          <span class="name">Avanzati <span class="chip" style="background:#f3f4f6;color:#374151">Gi</span></span>
+          <span class="topics">Ancora niente</span>
+          <button class="btn small">Pianifica</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="eyebrow">Da guardare</div>
+        <div class="alert"><span><span class="n">3</span> certificati in scadenza entro 30 giorni</span><a href="#">Vedi</a></div>
+        <div class="alert"><span><span class="n">2</span> atleti senza certificato medico</span><a href="#">Vedi</a></div>
+        <div class="alert"><span><span class="n">1</span> quota di settembre non pagata</span><a href="#">Vedi</a></div>
+      </section>
+
+      <section class="card">
+        <div class="eyebrow">Cosa insegnare — Fondamentali</div>
+        <div class="suggest"><div>Triangle <span style="color:var(--muted)">· Closed guard</span></div><div class="why">Non ancora fatto questa stagione</div></div>
+        <div class="suggest"><div>Kimura <span style="color:var(--muted)">· Closed guard</span></div><div class="why">Non ancora fatto questa stagione</div></div>
+        <div class="suggest"><div>Knee shield <span style="color:var(--muted)">· Half guard</span></div><div class="why">Fatto una volta: 7 set</div></div>
+      </section>
+
+      <section class="card">
+        <div class="eyebrow">Questa settimana</div>
+        <div class="alert"><span>Presenze lunedì–sabato</span><b>23</b></div>
+        <div class="alert"><span>Copertura del programma</span><b>10% · 3 di 29</b></div>
+        <div class="alert"><span>Nuovi iscritti</span><b>1 · Francesca Marino</b></div>
+      </section>
+    </div>
+
+    <div class="state">
+      <span>Backup: <b>stanotte all'1:00</b> · copia in D:\OneDrive</span>
+      <span>Aggiornamenti: <b>nessuno</b></span>
+    </div>
+
+    <p class="note">
+      Ogni riquadro esiste già da qualche parte nell'app: le lezioni di stasera sul check-in, gli avvisi sul pulsante ⚠ del roster,
+      le tre proposte nel foglio lezione, lo stato del backup a due click sotto "Altro". Questa schermata non inventa nulla —
+      mette al primo posto le risposte che l'owner cerca aprendo il portatile alle 18:30. "Oggi" prende il posto di "Accademia" come prima voce del rail; Accademia scende con le impostazioni.
+    </p>
+  </main>
+</div>
+</body>
+</html>

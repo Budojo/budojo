@@ -45,6 +45,7 @@ const DOCUMENT_TYPE_KEYS: Readonly<Record<DocumentType, string>> = {
 import { ExpiryStatusBadgeComponent } from '../../../../shared/components/expiry-status-badge/expiry-status-badge.component';
 import { triggerBrowserDownload } from '../../../../shared/utils/download';
 import { UploadDocumentDialogComponent } from '../upload-document-dialog/upload-document-dialog.component';
+import { LocaleDatePipe } from '../../../../shared/pipes/locale-date.pipe';
 
 const TOGGLE_STORAGE_KEY = 'documents.showCancelled';
 
@@ -52,6 +53,7 @@ const TOGGLE_STORAGE_KEY = 'documents.showCancelled';
   selector: 'app-documents-list',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    LocaleDatePipe,
     FormsModule,
     TranslatePipe,
     ButtonModule,

@@ -112,7 +112,10 @@
   border-radius: 999px;
   background-color: var(--p-surface-200);
   color: var(--p-text-muted-color);
-  text-transform: capitalize;
+  // No `text-transform: capitalize` (#1633). It was invisible while the
+  // Italian statuses were single already-capitalised words; "In attività"
+  // came back as "In Attività", which is title case and against the
+  // sentence-case rule. The translations carry their own casing.
 
   &[data-status='suspended'] {
     background-color: var(--p-yellow-100, #fef3c7);

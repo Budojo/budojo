@@ -1,12 +1,15 @@
 <article class="help-page">
   <header class="help-page__header">
-    <a
-      class="help-page__brand"
-      routerLink="/"
-      [attr.aria-label]="'help.brandAriaLabel' | translate"
-    >
+    <!--
+      The way back, at the TOP (#1616). It used to be the brand alone —
+      a glyph and the word "Budojo", which is a logo, not a signifier —
+      with the only labelled "Torna alla home" at the foot of a page
+      3,500 px tall. Same link, now saying where it goes.
+    -->
+    <a class="help-page__brand" routerLink="/" data-cy="help-back-top">
+      <i class="pi pi-arrow-left" aria-hidden="true"></i>
       <app-brand-glyph class="help-page__glyph" aria-hidden="true" />
-      <span class="help-page__brand-name">Budojo</span>
+      <span class="help-page__brand-name">{{ 'help.back' | translate }}</span>
     </a>
     <p class="help-page__eyebrow">{{ 'help.eyebrow' | translate }}</p>
     <h1 class="help-page__title">{{ 'help.title' | translate }}</h1>

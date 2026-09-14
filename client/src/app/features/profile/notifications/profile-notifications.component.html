@@ -4,7 +4,13 @@
       {{ 'profile.notifications.title' | translate }}
     </h2>
     <p class="profile-notifications__subtitle">
-      {{ 'profile.notifications.subtitle' | translate }}
+      <!-- Two sentences for two runtimes: one of them names a channel this
+           build has no transport for (#1619). -->
+      @if (hasEmail()) {
+        {{ 'profile.notifications.subtitle' | translate }}
+      } @else {
+        {{ 'profile.notifications.subtitleNoEmail' | translate }}
+      }
     </p>
   </header>
 
@@ -38,7 +44,7 @@
       the user opens the audience they care about.
     -->
     <div class="profile-notifications__list" data-cy="profile-notifications-list">
-      @for (group of groups; track group) {
+      @for (group of groups(); track group) {
         <details
           class="profile-notifications__group"
           [attr.data-cy]="'profile-notifications-group-' + group"
@@ -80,24 +86,29 @@
       }
     </div>
 
-    <section
-      class="profile-notifications__transactional"
-      data-cy="profile-notifications-transactional"
-    >
-      <h3 class="profile-notifications__transactional-title">
-        {{ 'profile.notifications.alwaysSentTitle' | translate }}
-      </h3>
-      <p class="profile-notifications__transactional-subtitle">
-        {{ 'profile.notifications.alwaysSentSubtitle' | translate }}
-      </p>
-      <ul class="profile-notifications__transactional-list">
-        @for (key of transactionalKeys; track key) {
-          <li class="profile-notifications__transactional-row">
-            <i class="pi pi-lock" aria-hidden="true"></i>
-            <span>{{ 'profile.notifications.transactional.' + key | translate }}</span>
-          </li>
-        }
-      </ul>
-    </section>
+    <!-- The transactional list is entirely email. On a build with no mail
+         transport it is a promise of five messages that cannot be sent, so
+         it is not shown at all rather than shown greyed (#1619). -->
+    @if (hasEmail()) {
+      <section
+        class="profile-notifications__transactional"
+        data-cy="profile-notifications-transactional"
+      >
+        <h3 class="profile-notifications__transactional-title">
+          {{ 'profile.notifications.alwaysSentTitle' | translate }}
+        </h3>
+        <p class="profile-notifications__transactional-subtitle">
+          {{ 'profile.notifications.alwaysSentSubtitle' | translate }}
+        </p>
+        <ul class="profile-notifications__transactional-list">
+          @for (key of transactionalKeys; track key) {
+            <li class="profile-notifications__transactional-row">
+              <i class="pi pi-lock" aria-hidden="true"></i>
+              <span>{{ key | translate }}</span>
+            </li>
+          }
+        </ul>
+      </section>
+    }
   }
 </div>

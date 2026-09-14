@@ -1,5 +1,10 @@
 <section class="backup-page">
   <p-toast />
+  <!-- The surface every app-confirm-destructive-button on this page opens
+       into. It was missing since the buttons arrived: #1324 provided the
+       service so they rendered, and nothing ever gave the service a popup to
+       draw, so every one of them did nothing at all (#1615). -->
+  <p-confirmpopup />
 
   <app-page-header
     [title]="'backup.title' | translate"
@@ -11,7 +16,7 @@
       <p class="backup-page__summary-label">{{ 'backup.lastBackup' | translate }}</p>
       @if (lastBackupAt(); as at) {
         <p class="backup-page__summary-value" data-cy="backup-last-at">
-          {{ at | date: 'medium' }}
+          {{ at | localeDate }}
         </p>
       } @else {
         <p
@@ -42,7 +47,7 @@
         <p class="backup-page__muted" data-cy="folder-last-copy">
           @if (folderState().lastCopyAt) {
             {{ 'backup.folder.lastCopy' | translate }}
-            {{ folderState().lastCopyAt | date: 'medium' }}
+            {{ folderState().lastCopyAt | localeDate }}
           } @else {
             {{ 'backup.folder.neverCopied' | translate }}
           }
@@ -115,7 +120,7 @@
         </p>
         <p class="backup-page__muted" data-cy="drive-last-sync">
           @if (driveState().lastSyncAt) {
-            {{ 'backup.drive.lastSync' | translate }} {{ driveState().lastSyncAt | date: 'medium' }}
+            {{ 'backup.drive.lastSync' | translate }} {{ driveState().lastSyncAt | localeDate }}
           } @else {
             {{ 'backup.drive.neverSynced' | translate }}
           }
@@ -179,7 +184,7 @@
       @for (archive of rows(); track archive.name) {
         <li class="backup-page__row">
           <div class="backup-page__row-info">
-            <span class="backup-page__row-date">{{ archive.createdAt | date: 'medium' }}</span>
+            <span class="backup-page__row-date">{{ archive.createdAt | localeDate }}</span>
             <span class="backup-page__row-size">{{
               'backup.size' | translate: { mb: sizeMb(archive.sizeBytes) }
             }}</span>

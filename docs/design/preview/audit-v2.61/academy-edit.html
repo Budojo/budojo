@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8" />
+<title>Mockup — Modifica accademia</title>
+<style>
+  :root { --accent:#5b6cff; --text:#0a0a0b; --muted:#6b7280; --line:#e5e7eb; --bg:#fafafa; --field:#f3f4f6 }
+  * { box-sizing:border-box }
+  body { margin:0; font:14px/1.5 Inter,-apple-system,Segoe UI,sans-serif; color:var(--text); background:var(--bg) }
+  .titlebar { height:40px; border-bottom:1px solid var(--line); padding:0 20px; display:flex; align-items:center; color:var(--muted); font-size:12px }
+  .layout { display:grid; grid-template-columns:240px 1fr; height:calc(100vh - 40px) }
+  .rail { border-right:1px solid var(--line); padding:24px 12px; background:#fff }
+  .rail .brand { font-weight:700; font-size:18px; padding:0 12px 24px }
+  .rail a { display:block; padding:12px; border-radius:12px; color:var(--text) }
+  .rail a.on { background:#eef0ff; font-weight:600 }
+  .scroll { overflow:auto; position:relative }
+  main { padding:32px 32px 120px; max-width:1040px }
+  h1 { font-size:28px; margin:0 0 4px; letter-spacing:-.018em }
+  .sub { color:var(--muted); margin:0 0 24px }
+  .toc { display:flex; gap:8px; margin-bottom:24px }
+  .toc a { padding:6px 12px; border:1px solid var(--line); border-radius:999px; font-size:13px; color:var(--text); text-decoration:none; background:#fff }
+  .card { background:#fff; border:1px solid var(--line); border-radius:12px; padding:24px; margin-bottom:16px }
+  .eyebrow { font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); font-weight:600; margin-bottom:16px }
+  .row { display:grid; gap:16px 24px; margin-bottom:16px }
+  .row.two { grid-template-columns:1fr 1fr }
+  .row.three { grid-template-columns:1fr 1fr 1fr }
+  .row.addr { grid-template-columns:120px 1fr 120px }
+  label { display:block; font-weight:500; margin-bottom:6px }
+  label small { color:var(--muted); font-weight:400; margin-left:6px }
+  .in { height:44px; border-radius:12px; background:var(--field); padding:0 14px; display:flex; align-items:center; color:#374151 }
+  .in.short { width:160px }
+  .in.ph { color:#9ca3af }
+  .hint { color:var(--muted); font-size:12px; margin-top:6px }
+  .bar { position:sticky; bottom:0; margin:0 -32px -120px; padding:16px 32px; background:rgba(255,255,255,.92); border-top:1px solid var(--line); display:flex; justify-content:flex-end; gap:8px }
+  .btn { height:44px; padding:0 20px; border-radius:12px; border:1px solid var(--line); background:#fff; font:inherit; font-weight:500 }
+  .btn.primary { background:var(--accent); color:#fff; border-color:var(--accent) }
+  .note { margin:0 0 24px; padding:16px; border:1px dashed var(--line); border-radius:12px; color:var(--muted); font-size:13px }
+</style>
+</head>
+<body>
+<div class="titlebar">v2.61.1</div>
+<div class="layout">
+  <nav class="rail"><div class="brand">Budojo BJJ Torino</div><a class="on">Accademia</a><a>Atleti</a><a>Presenze</a><a>Statistiche</a><a>Altro</a></nav>
+  <div class="scroll">
+    <main>
+      <h1>Modifica accademia</h1>
+      <p class="sub">Cinque sezioni, la barra "Salva" resta in fondo alla finestra mentre scorri.</p>
+      <p class="note">Rispetto a oggi: stessi campi, stesso ordine. Cambiano tre cose — le sezioni con l'eyebrow come nel form atleta, i campi corti solo dove il valore è corto (quote, CAP, provincia) e larghi altrove, e la barra azioni fissa in basso. Il Permalink non compare sul profilo desktop.</p>
+
+      <div class="toc"><a href="#id">Identità</a><a href="#contatti">Contatti</a><a href="#indirizzo">Indirizzo</a><a href="#quote">Quote e carnet</a><a href="#stagione">Stagione</a></div>
+
+      <section class="card" id="id">
+        <div class="eyebrow">Identità</div>
+        <div class="row two">
+          <div><label>Nome</label><div class="in">Budojo BJJ Torino</div></div>
+          <div><label>Logo <small>(opzionale)</small></label><div class="in ph">Nessuno · Carica</div></div>
+        </div>
+      </section>
+
+      <section class="card" id="contatti">
+        <div class="eyebrow">Contatti</div>
+        <div class="row two">
+          <div><label>Telefono <small>(opzionale)</small></label><div class="in">+39 · 0111234567</div></div>
+          <div><label>Sito web <small>(opzionale)</small></label><div class="in">https://budojo-torino.example</div></div>
+          <div><label>Instagram <small>(opzionale)</small></label><div class="in">budojo_torino</div></div>
+          <div><label>Facebook <small>(opzionale)</small></label><div class="in ph">https://facebook.com/latuapagina</div></div>
+        </div>
+      </section>
+
+      <section class="card" id="indirizzo">
+        <div class="eyebrow">Indirizzo <small style="text-transform:none;letter-spacing:0;font-weight:400">(opzionale — tutto o niente)</small></div>
+        <div class="row"><div><label>Via e numero civico</label><div class="in">Via Garibaldi 12</div></div></div>
+        <div class="row addr">
+          <div><label>CAP</label><div class="in">10122</div></div>
+          <div><label>Città</label><div class="in">Torino</div></div>
+          <div><label>Provincia</label><div class="in">TO</div></div>
+        </div>
+        <div class="hint">Rimuovi indirizzo</div>
+      </section>
+
+      <section class="card" id="quote">
+        <div class="eyebrow">Quote e carnet</div>
+        <div class="row three">
+          <div><label>Quota mensile</label><div class="in short">70,00 €</div><div class="hint">Quanto paga ogni atleta al mese.</div></div>
+          <div><label>Prezzo carnet</label><div class="in short">120,00 €</div><div class="hint">Lascia vuoto se non vendi carnet.</div></div>
+          <div><label>Ingressi per carnet</label><div class="in short">10</div></div>
+        </div>
+        <div class="row"><div><label>Listino quote mensili</label><div class="in">2 lezioni a settimana · 60,00 € &nbsp;&nbsp; Illimitato · 70,00 € &nbsp;&nbsp; + Aggiungi fascia</div></div></div>
+      </section>
+
+      <section class="card" id="stagione">
+        <div class="eyebrow">Stagione</div>
+        <div class="row three">
+          <div><label>La stagione inizia a</label><div class="in short">settembre</div></div>
+          <div><label>Giorni di allenamento</label><div class="in ph">Dall'orario: Lun · Mer · Ven · Sab</div></div>
+        </div>
+      </section>
+
+      <div class="bar"><button class="btn">Annulla</button><button class="btn primary">Salva</button></div>
+    </main>
+  </div>
+</div>
+</body>
+</html>

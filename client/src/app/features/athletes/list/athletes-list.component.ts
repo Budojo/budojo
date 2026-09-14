@@ -371,6 +371,54 @@ export class AthletesListComponent implements OnInit {
     return count;
   });
 
+  /**
+   * The status, but only when it is one the owner deliberately picked.
+   * `active` is the default nobody chose, and `''` is the eye held open —
+   * that one WIDENS the query, so it can never be what is hiding a row.
+   */
+  private readonly narrowedStatus = computed<AthleteListStatus | null>(() => {
+    const status = this.selectedStatus();
+    return status === '' || status === 'active' ? null : status;
+  });
+
+  /**
+   * Which of the three empty states the list should draw when it comes back
+   * with no rows.
+   *
+   * The two that existed were told apart by a truthy check on the status
+   * signal — which defaults to `active` — so every fresh academy landed on
+   * "no athletes found, try clearing your filters" and was told to remove
+   * filters it had never set (#1618). `trash` is the third: an empty bin is
+   * not a roster that has been filtered down to nothing.
+   */
+  readonly emptyStateKind = computed<'first-run' | 'trash' | 'filtered'>(() => {
+    const narrowed =
+      this.selectedBelt() !== '' || this.selectedPaid() !== '' || this.searchTerm().trim() !== '';
+    if (this.isTrashedMode()) return narrowed ? 'filtered' : 'trash';
+    return narrowed || this.narrowedStatus() !== null ? 'filtered' : 'first-run';
+  });
+
+  /**
+   * What is hiding the list, in words: "Viola · Non pagato · «rossi»". The
+   * filtered-empty state names it so the owner knows what to remove instead
+   * of guessing. Every branch of `emptyStateKind` that reads this has at
+   * least one part to show — `trash` and `first-run` never reach it.
+   */
+  readonly activeFilterSummary = computed<string>(() => {
+    this.languageService.currentLang();
+    const parts: string[] = [];
+    const belt = this.selectedBelt();
+    if (belt !== '') parts.push(this.translate.instant(BELT_KEYS[belt]));
+    const status = this.narrowedStatus();
+    if (status !== null) parts.push(this.translate.instant(this.statusLabelKeys[status]));
+    const paid = this.selectedPaid();
+    if (paid === 'yes') parts.push(this.translate.instant('athletes.list.paidOptions.yes'));
+    if (paid === 'no') parts.push(this.translate.instant('athletes.list.paidOptions.no'));
+    const term = this.searchTerm().trim();
+    if (term !== '') parts.push(`«${term}»`);
+    return parts.join(' · ');
+  });
+
   ngOnInit(): void {
     // Hydrate `selectedPaid` from the `paid` query param so the
     // unpaid-widget CTA (#803) — and any future deep-link / refresh

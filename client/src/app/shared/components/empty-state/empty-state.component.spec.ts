@@ -13,6 +13,8 @@ describe('EmptyStateComponent (#1036)', () => {
     ctaLabel?: string | null;
     dataCy?: string | null;
     headingLevel?: 1 | 2 | 3 | 4;
+    ctaSeverity?: 'primary' | 'secondary';
+    secondaryLabel?: string | null;
   }) {
     const fixture = TestBed.createComponent(EmptyStateComponent);
     fixture.componentRef.setInput('title', inputs.title ?? 'No rows yet');
@@ -22,6 +24,10 @@ describe('EmptyStateComponent (#1036)', () => {
     if (inputs.dataCy !== undefined) fixture.componentRef.setInput('dataCy', inputs.dataCy);
     if (inputs.headingLevel !== undefined)
       fixture.componentRef.setInput('headingLevel', inputs.headingLevel);
+    if (inputs.ctaSeverity !== undefined)
+      fixture.componentRef.setInput('ctaSeverity', inputs.ctaSeverity);
+    if (inputs.secondaryLabel !== undefined)
+      fixture.componentRef.setInput('secondaryLabel', inputs.secondaryLabel);
     fixture.detectChanges();
     return fixture;
   }
@@ -98,5 +104,31 @@ describe('EmptyStateComponent (#1036)', () => {
     btn?.click();
 
     expect(clicks).toBe(1);
+  });
+
+  // #1618: an empty state whose CTA undoes something (clear the filters) must
+  // not look like the page's main action, and a first-run empty state can
+  // offer two ways in.
+  it('renders the CTA outlined when ctaSeverity is secondary', () => {
+    const fixture = mount({ ctaLabel: 'Clear filters', ctaSeverity: 'secondary', dataCy: 'x' });
+    const button = fixture.nativeElement.querySelector('[data-cy="x-cta"] button');
+    expect(button?.className).toContain('p-button-outlined');
+  });
+
+  it('omits the secondary action by default', () => {
+    const fixture = mount({ ctaLabel: 'Add', dataCy: 'x' });
+    expect(fixture.nativeElement.querySelector('[data-cy="x-secondary"]')).toBeNull();
+  });
+
+  it('renders the secondary action beside the CTA and emits when activated', () => {
+    const fixture = mount({ ctaLabel: 'Add', secondaryLabel: 'Import', dataCy: 'x' });
+    const emitted: string[] = [];
+    fixture.componentInstance.secondaryClick.subscribe(() => emitted.push('secondary'));
+    const button = fixture.nativeElement.querySelector(
+      '[data-cy="x-secondary"] button',
+    ) as HTMLButtonElement | null;
+    expect(button?.textContent).toContain('Import');
+    button?.click();
+    expect(emitted).toEqual(['secondary']);
   });
 });

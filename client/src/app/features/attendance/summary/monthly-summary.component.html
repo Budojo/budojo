@@ -90,7 +90,12 @@
         @for (row of displayRows(); track row.athlete_id) {
           @let mobilePercent = ratePercent(row.count);
           <li class="summary-card" [attr.data-cy]="'monthly-summary-mobile-row-' + row.athlete_id">
-            <span class="summary-card__name">{{ row.first_name }} {{ row.last_name }}</span>
+            <a
+              [routerLink]="['/dashboard/athletes', row.athlete_id, 'attendance']"
+              class="summary-card__name summary-page__athlete-link"
+              [attr.data-cy]="'monthly-summary-mobile-athlete-link-' + row.athlete_id"
+              >{{ row.first_name }} {{ row.last_name }}</a
+            >
             <span class="summary-card__count">
               @if (mobileScheduled !== null && mobilePercent !== null) {
                 {{ row.count }} / {{ mobileScheduled }}
@@ -102,6 +107,14 @@
           </li>
         }
       </ul>
+
+      @if (noDenominator()) {
+        <!-- Without a timetable for the month there is no denominator, so the
+             rows show bare counts. Until #1639 nothing said so. -->
+        <p class="summary-page__note" data-cy="monthly-summary-no-schedule">
+          {{ 'attendance.summary.noScheduleNote' | translate }}
+        </p>
+      }
 
       <div class="summary-page__table-wrapper">
         <p-table
@@ -146,7 +159,14 @@
             @let scheduled = scheduledCount();
             @let percent = ratePercent(row.count);
             <tr [attr.data-cy]="'monthly-summary-table-row-' + row.athlete_id">
-              <td>{{ row.first_name }} {{ row.last_name }}</td>
+              <td>
+                <a
+                  [routerLink]="['/dashboard/athletes', row.athlete_id, 'attendance']"
+                  class="summary-page__athlete-link"
+                  [attr.data-cy]="'monthly-summary-athlete-link-' + row.athlete_id"
+                  >{{ row.first_name }} {{ row.last_name }}</a
+                >
+              </td>
               <td class="summary-page__count-col">
                 @if (scheduled !== null && percent !== null) {
                   {{ row.count }} / {{ scheduled }}

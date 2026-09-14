@@ -43,8 +43,14 @@ function flushFeeTiers(httpMock: HttpTestingController, tiers: unknown[] = []): 
   }
 }
 
-function setupTestBed(routeId: string | null = null): void {
+function setupTestBed(
+  routeId: string | null = null,
+  // `?from=` names the section the edit form was opened from, so Annulla and
+  // Salva put the owner back where the header button would (#1633).
+  queryParams: Record<string, string> = {},
+): void {
   const paramMap = convertToParamMap(routeId ? { id: routeId } : {});
+  const queryParamMap = convertToParamMap(queryParams);
   TestBed.configureTestingModule({
     imports: [AthleteFormComponent],
     providers: [
@@ -55,7 +61,7 @@ function setupTestBed(routeId: string | null = null): void {
         provide: ActivatedRoute,
         useValue: {
           paramMap: of(paramMap),
-          snapshot: { paramMap },
+          snapshot: { paramMap, queryParamMap },
         },
       },
       ...provideI18nTesting(),
@@ -168,7 +174,7 @@ describe('AthleteFormComponent', () => {
 
       // After #281, on create we land directly on the new athlete's
       // detail (id taken from the response) instead of the list.
-      expect(router.navigate).toHaveBeenCalledWith(['/dashboard/athletes', 99]);
+      expect(router.navigate).toHaveBeenCalledWith(['/dashboard/athletes', 99, 'documents']);
       flushFeeTiers(httpMock);
       httpMock.verify();
     });
@@ -381,7 +387,7 @@ describe('AthleteFormComponent', () => {
       // After #281, edit success returns to the parent detail (default
       // child tab Documents) instead of bouncing to the list — the
       // user stays in the page they were editing.
-      expect(router.navigate).toHaveBeenCalledWith(['/dashboard/athletes', 42]);
+      expect(router.navigate).toHaveBeenCalledWith(['/dashboard/athletes', 42, 'documents']);
       flushFeeTiers(httpMock);
       httpMock.verify();
     });
@@ -508,8 +514,54 @@ describe('AthleteFormComponent', () => {
         // Edit lives INSIDE the athlete detail as a sub-tab — cancel
         // returns to the parent so the header + tab strip remain
         // visible, instead of dumping the user out to the list.
-        expect(router.navigate).toHaveBeenCalledWith(['/dashboard/athletes', 42]);
+        expect(router.navigate).toHaveBeenCalledWith(['/dashboard/athletes', 42, 'documents']);
         flushFeeTiers(httpMock);
+        httpMock.verify();
+      });
+    });
+
+    // The form has three exits and they have to agree (#1633). The header's
+    // own button reads the same `?from=`; before this, Annulla and Salva
+    // dropped the owner on Documenti while the header button put them back on
+    // Pagamenti, from the same screen.
+    describe('from a section other than the default', () => {
+      beforeEach(() => setupTestBed('42', { from: 'payments' }));
+
+      it('cancels back to the section the form was opened from', () => {
+        const fixture = TestBed.createComponent(AthleteFormComponent);
+        const httpMock = TestBed.inject(HttpTestingController);
+        fixture.detectChanges();
+        httpMock.expectOne('/api/v1/athletes/42').flush({ data: makeAthlete({ id: 42 }) });
+
+        fixture.componentInstance.cancel();
+
+        expect(TestBed.inject(Router).navigate).toHaveBeenCalledWith([
+          '/dashboard/athletes',
+          42,
+          'payments',
+        ]);
+        flushFeeTiers(httpMock);
+        httpMock.verify();
+      });
+
+      it('saves back to the section the form was opened from', () => {
+        const fixture = TestBed.createComponent(AthleteFormComponent);
+        const httpMock = TestBed.inject(HttpTestingController);
+        fixture.detectChanges();
+        httpMock.expectOne('/api/v1/athletes/42').flush({ data: makeAthlete({ id: 42 }) });
+        flushFeeTiers(httpMock);
+        fixture.detectChanges();
+
+        fixture.componentInstance.submit();
+        httpMock
+          .expectOne((r) => r.url === '/api/v1/athletes/42' && r.method === 'PUT')
+          .flush({ data: makeAthlete({ id: 42 }) });
+
+        expect(TestBed.inject(Router).navigate).toHaveBeenCalledWith([
+          '/dashboard/athletes',
+          42,
+          'payments',
+        ]);
         httpMock.verify();
       });
     });

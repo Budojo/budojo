@@ -5,6 +5,9 @@
     </h2>
     <p class="profile-train-here__subtitle">
       {{ 'profile.trainHere.subtitle' | translate }}
+      @if (runtime.has()('community')) {
+        {{ 'profile.trainHere.subtitleCommunity' | translate }}
+      }
     </p>
   </header>
 

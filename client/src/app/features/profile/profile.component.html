@@ -116,17 +116,10 @@
                 </small>
               }
 
+              <!-- Cancel then save, and save is the primary (#1642, PROF-4).
+                   This form had them the other way round and both in grey,
+                   which is the reverse of every other form in the app. -->
               <div class="profile-page__row-actions">
-                <p-button
-                  type="submit"
-                  [label]="'profile.editName.save' | translate"
-                  severity="secondary"
-                  [outlined]="true"
-                  size="small"
-                  [loading]="savingName()"
-                  [disabled]="savingName()"
-                  data-cy="profile-name-save"
-                />
                 <p-button
                   type="button"
                   [label]="'profile.editName.cancel' | translate"
@@ -136,6 +129,14 @@
                   [disabled]="savingName()"
                   (onClick)="cancelEditName()"
                   data-cy="profile-name-cancel"
+                />
+                <p-button
+                  type="submit"
+                  [label]="'profile.editName.save' | translate"
+                  size="small"
+                  [loading]="savingName()"
+                  [disabled]="savingName()"
+                  data-cy="profile-name-save"
                 />
               </div>
             </form>
@@ -185,98 +186,106 @@
             }}</span>
           }
 
-          @if (editingHandle()) {
-            <form
-              [formGroup]="handleForm"
-              (ngSubmit)="submitEditHandle()"
-              novalidate
-              class="profile-page__row profile-page__row--edit"
-              data-cy="profile-handle-edit-form"
-            >
-              <label for="profileHandle" class="profile-page__label">
-                {{ 'profile.handle' | translate }}
-              </label>
-              <p-inputgroup class="profile-page__handle-group">
-                <p-inputgroup-addon aria-hidden="true">&#64;</p-inputgroup-addon>
-                <input
-                  id="profileHandle"
-                  type="text"
-                  pInputText
-                  formControlName="handle"
-                  [attr.aria-invalid]="handleError !== null ? true : null"
-                  [attr.aria-describedby]="
-                    handleError !== null ? 'profileHandleError' : 'profileHandleHelp'
-                  "
-                  autocomplete="off"
-                  autocapitalize="off"
-                  autocorrect="off"
-                  spellcheck="false"
-                  maxlength="30"
-                  data-cy="profile-handle-input"
-                />
-              </p-inputgroup>
-              @if (handleError; as err) {
-                <small id="profileHandleError" class="field-error" [attr.data-cy]="err.dataCy">
-                  {{ err.key | translate }}
-                </small>
-              } @else {
-                <small id="profileHandleHelp" class="field-hint" data-cy="profile-handle-help">
-                  {{ 'profile.editHandle.help' | translate }}
-                </small>
-              }
-              <div class="profile-page__row-actions">
-                <p-button
-                  type="submit"
-                  [label]="'profile.editHandle.save' | translate"
-                  severity="secondary"
-                  [outlined]="true"
-                  size="small"
-                  [loading]="savingHandle()"
-                  [disabled]="savingHandle()"
-                  data-cy="profile-handle-save"
-                />
-                <p-button
-                  type="button"
-                  [label]="'profile.editHandle.cancel' | translate"
-                  severity="secondary"
-                  [text]="true"
-                  size="small"
-                  [disabled]="savingHandle()"
-                  (onClick)="cancelEditHandle()"
-                  data-cy="profile-handle-cancel"
-                />
-              </div>
-            </form>
-          } @else {
-            <div class="profile-page__row">
-              <span class="profile-page__label">{{ 'profile.handle' | translate }}</span>
-              <div class="profile-page__value-row">
-                @if (u.handle) {
-                  <span class="profile-page__value" data-cy="profile-handle"
-                    >&#64;{{ u.handle }}</span
-                  >
+          <!--
+            The handle is who you are in the feed (#862), and a build with no
+            feed has nowhere to be that person (#1642, PROF-2). Same gate the
+            feed's own surfaces use — not the profile, because the handle
+            belongs to the community rather than to the web.
+          -->
+          @if (runtime.has()('community')) {
+            @if (editingHandle()) {
+              <form
+                [formGroup]="handleForm"
+                (ngSubmit)="submitEditHandle()"
+                novalidate
+                class="profile-page__row profile-page__row--edit"
+                data-cy="profile-handle-edit-form"
+              >
+                <label for="profileHandle" class="profile-page__label">
+                  {{ 'profile.handle' | translate }}
+                </label>
+                <p-inputgroup class="profile-page__handle-group">
+                  <p-inputgroup-addon aria-hidden="true">&#64;</p-inputgroup-addon>
+                  <input
+                    id="profileHandle"
+                    type="text"
+                    pInputText
+                    formControlName="handle"
+                    [attr.aria-invalid]="handleError !== null ? true : null"
+                    [attr.aria-describedby]="
+                      handleError !== null ? 'profileHandleError' : 'profileHandleHelp'
+                    "
+                    autocomplete="off"
+                    autocapitalize="off"
+                    autocorrect="off"
+                    spellcheck="false"
+                    maxlength="30"
+                    data-cy="profile-handle-input"
+                  />
+                </p-inputgroup>
+                @if (handleError; as err) {
+                  <small id="profileHandleError" class="field-error" [attr.data-cy]="err.dataCy">
+                    {{ err.key | translate }}
+                  </small>
                 } @else {
-                  <span
-                    class="profile-page__value profile-page__value--placeholder"
-                    data-cy="profile-handle-empty"
-                  >
-                    {{ 'profile.editHandle.notSet' | translate }}
-                  </span>
+                  <small id="profileHandleHelp" class="field-hint" data-cy="profile-handle-help">
+                    {{ 'profile.editHandle.help' | translate }}
+                  </small>
                 }
-                <p-button
-                  type="button"
-                  icon="pi pi-pencil"
-                  severity="secondary"
-                  [text]="true"
-                  size="small"
-                  [pTooltip]="'profile.editHandle.edit' | translate"
-                  tooltipPosition="left"
-                  [ariaLabel]="'profile.editHandle.edit' | translate"
-                  (onClick)="startEditHandle()"
-                  data-cy="profile-handle-edit"
-                />
+                <div class="profile-page__row-actions">
+                  <p-button
+                    type="submit"
+                    [label]="'profile.editHandle.save' | translate"
+                    severity="secondary"
+                    [outlined]="true"
+                    size="small"
+                    [loading]="savingHandle()"
+                    [disabled]="savingHandle()"
+                    data-cy="profile-handle-save"
+                  />
+                  <p-button
+                    type="button"
+                    [label]="'profile.editHandle.cancel' | translate"
+                    severity="secondary"
+                    [text]="true"
+                    size="small"
+                    [disabled]="savingHandle()"
+                    (onClick)="cancelEditHandle()"
+                    data-cy="profile-handle-cancel"
+                  />
+                </div>
+              </form>
+            } @else {
+              <div class="profile-page__row">
+                <span class="profile-page__label">{{ 'profile.handle' | translate }}</span>
+                <div class="profile-page__value-row">
+                  @if (u.handle) {
+                    <span class="profile-page__value" data-cy="profile-handle"
+                      >&#64;{{ u.handle }}</span
+                    >
+                  } @else {
+                    <span
+                      class="profile-page__value profile-page__value--placeholder"
+                      data-cy="profile-handle-empty"
+                    >
+                      {{ 'profile.editHandle.notSet' | translate }}
+                    </span>
+                  }
+                  <p-button
+                    type="button"
+                    icon="pi pi-pencil"
+                    severity="secondary"
+                    [text]="true"
+                    size="small"
+                    [pTooltip]="'profile.editHandle.edit' | translate"
+                    tooltipPosition="left"
+                    [ariaLabel]="'profile.editHandle.edit' | translate"
+                    (onClick)="startEditHandle()"
+                    data-cy="profile-handle-edit"
+                  />
+                </div>
               </div>
-            </div>
+            }
           }
 
           @if (pendingEmailChange(); as pending) {
@@ -362,7 +371,7 @@
               <div class="profile-page__value-row">
                 <span class="profile-page__value" data-cy="profile-email">
                   {{ u.email }}
-                  @if (u.email_verified_at) {
+                  @if (u.email_verified_at && runtime.has()('email')) {
                     <i
                       class="pi pi-check-circle profile-page__email-verified-mark"
                       aria-hidden="true"
@@ -526,8 +535,6 @@
               <p-button
                 type="submit"
                 [label]="'profile.changePassword.submit' | translate"
-                severity="secondary"
-                [outlined]="true"
                 size="small"
                 [loading]="changingPassword()"
                 [disabled]="changingPassword()"
@@ -542,13 +549,22 @@
           <app-profile-two-factor />
         </section>
 
-        <section class="profile-page__card">
-          <app-profile-sessions />
-        </section>
+        <!--
+          Sessions and the login history are a hosted product's furniture
+          (#1642, PROF-2): "the devices and browsers connected to your
+          account" is one device, and the history is a column of 127.0.0.1.
+          The data is not wrong — it is a SaaS talking to one owner at one
+          PC. Password and 2FA stay; these two are for the web.
+        -->
+        @if (runtime.loaded() && runtime.profile() === 'web') {
+          <section class="profile-page__card">
+            <app-profile-sessions />
+          </section>
 
-        <section class="profile-page__card">
-          <app-profile-login-history />
-        </section>
+          <section class="profile-page__card">
+            <app-profile-login-history />
+          </section>
+        }
       }
 
       <!-- ═══════════════════════════════════════════════════════════════
@@ -577,9 +593,14 @@
           <app-profile-train-here />
         </section>
 
-        <section class="profile-page__card">
-          <app-profile-api-tokens />
-        </section>
+        <!-- "Token API — per script e integrazioni", against an API that
+             listens on 127.0.0.1 for this app alone, and whose token list
+             404s here anyway (#1642, PROF-2). -->
+        @if (runtime.loaded() && runtime.profile() === 'web') {
+          <section class="profile-page__card">
+            <app-profile-api-tokens />
+          </section>
+        }
 
         <section class="profile-page__card">
           <section class="profile-page__data-export" data-cy="profile-data-export">

@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -20,6 +19,7 @@ import {
   WebPushError,
   WebPushService,
 } from '../../../core/services/web-push.service';
+import { LocaleDatePipe } from '../../../shared/pipes/locale-date.pipe';
 
 /**
  * "Browser notifications" panel on `/dashboard/profile` (#694).
@@ -48,10 +48,10 @@ type PanelState = 'unsupported' | 'server-disabled' | 'permission-denied' | 'off
   selector: 'app-profile-browser-notifications',
   standalone: true,
   imports: [
+    LocaleDatePipe,
     ButtonModule,
     ConfirmPopup,
     ConfirmDestructiveButtonComponent,
-    DatePipe,
     ProgressSpinnerModule,
     TooltipModule,
     TranslatePipe,

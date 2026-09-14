@@ -34,6 +34,12 @@
         hundred techniques is a week of typing, and nobody starts. Writing
         your own stays available, quietly, underneath.
       -->
+      <!--
+        Both ways in, side by side (#1630, SYL-5). "Scrivo il mio" used to sit
+        80 px below in its own block, orphaned from the choice it belongs to —
+        the shared empty state grew a secondary slot in #1618 and this is what
+        it is for.
+      -->
       <app-empty-state
         icon="pi pi-book"
         [title]="'academy.syllabus.empty.title' | translate"
@@ -42,20 +48,11 @@
         ctaIcon="pi pi-sparkles"
         [ctaLoading]="seeding()"
         (ctaClick)="seedFromStarter()"
+        [secondaryLabel]="'academy.syllabus.empty.scratch' | translate"
+        [secondaryDisabled]="seeding()"
+        (secondaryClick)="startAddingPosition()"
         dataCy="syllabus-empty"
       />
-      <div class="syllabus__scratch">
-        <p-button
-          type="button"
-          [label]="'academy.syllabus.empty.scratch' | translate"
-          severity="secondary"
-          [text]="true"
-          size="small"
-          [disabled]="seeding()"
-          (onClick)="startAddingPosition()"
-          data-cy="syllabus-empty-scratch"
-        />
-      </div>
     } @else {
       <ol class="tree" data-cy="syllabus-tree">
         @for (position of positions(); track position.id) {
@@ -136,26 +133,19 @@
                     [class.technique--off]="!technique.in_season"
                     [attr.data-cy]="'syllabus-topic-' + technique.id"
                   >
-                    <!-- The name is the edit: rename and kind are the same
-                         decision, and on a phone a dialog keeps both above
-                         the keyboard. -->
-                    <button
-                      type="button"
-                      class="technique__name"
-                      (click)="startEditing(technique)"
-                      [attr.aria-label]="
-                        'academy.syllabus.editAria' | translate: { name: technique.name }
-                      "
-                    >
-                      {{ technique.name }}
-                    </button>
-                    @if (kindChip(technique); as chip) {
-                      <span class="chip">{{ chip }}</span>
-                    }
+                    <!--
+                      The tick leads, and the name is its label (#1630). It sat
+                      at the far right of the row with nothing in between: on a
+                      960 px window the eye had to travel the row to know which
+                      tick belonged to which name, and at 1280 the gap grew. A
+                      native `for` makes the whole name the toggle target with
+                      no handler and no nested control.
+                    -->
                     <p-checkbox
                       [binary]="true"
                       [ngModel]="technique.in_season"
                       (onChange)="setSeason(technique, $event.checked)"
+                      [inputId]="'syllabus-season-input-' + technique.id"
                       [ariaLabel]="
                         'academy.syllabus.seasonAria' | translate: { name: technique.name }
                       "
@@ -163,6 +153,31 @@
                       tooltipPosition="top"
                       [attr.data-cy]="'syllabus-season-' + technique.id"
                     />
+                    <label
+                      class="technique__name"
+                      [attr.for]="'syllabus-season-input-' + technique.id"
+                    >
+                      {{ technique.name }}
+                    </label>
+                    @if (kindChip(technique); as chip) {
+                      <span class="chip">{{ chip }}</span>
+                    }
+                    <!--
+                      Renaming was done by clicking the name, and nothing said
+                      so — the position row above shows a pencil, this one
+                      showed none (#1630, SYL-3). Now it has the same one.
+                    -->
+                    <button
+                      type="button"
+                      class="technique__edit"
+                      (click)="startEditing(technique)"
+                      [attr.aria-label]="
+                        'academy.syllabus.editAria' | translate: { name: technique.name }
+                      "
+                      [attr.data-cy]="'syllabus-topic-edit-' + technique.id"
+                    >
+                      <i class="pi pi-pencil" aria-hidden="true"></i>
+                    </button>
                   </li>
                 } @empty {
                   <li class="technique technique--none">

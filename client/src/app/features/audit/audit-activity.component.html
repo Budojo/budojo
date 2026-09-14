@@ -8,16 +8,22 @@
       (ngSubmit)="onFilterApply()"
       data-cy="audit-filters"
     >
-      <label class="audit-page__field">
-        <span>{{ 'audit.filters.action' | translate }}</span>
-        <input
-          pInputText
-          type="text"
+      <!-- A select of what the log can contain, not a text field that wanted
+           the code's vocabulary ("es. athlete.deleted") (#1631). A `<div>`
+           and an explicit `for`, because the label of a PrimeNG select has
+           no native control to wrap. -->
+      <div class="audit-page__field">
+        <label for="audit-filter-action">{{ 'audit.filters.action' | translate }}</label>
+        <p-select
+          inputId="audit-filter-action"
           formControlName="action"
-          [placeholder]="'audit.filters.actionPlaceholder' | translate"
+          [options]="actionOptions()"
+          optionLabel="label"
+          optionValue="value"
+          appendTo="body"
           data-cy="audit-filter-action"
         />
-      </label>
+      </div>
       <label class="audit-page__field">
         <span>{{ 'audit.filters.from' | translate }}</span>
         <input pInputText type="date" formControlName="from" data-cy="audit-filter-from" />
@@ -64,20 +70,35 @@
         @for (entry of entries(); track entry.id) {
           <li class="audit-row" [attr.data-cy]="'audit-row-' + entry.id">
             <div class="audit-row__head">
-              <span class="audit-row__action" data-cy="audit-row-action">{{ entry.action }}</span>
+              <span
+                class="audit-row__action"
+                [class.audit-row__action--raw]="isRawAction(entry.action)"
+                [attr.title]="
+                  isRawAction(entry.action)
+                    ? null
+                    : ('audit.unknownActionTitle' | translate: { action: entry.action })
+                "
+                data-cy="audit-row-action"
+                >{{ actionLabel(entry.action) }}</span
+              >
               <time
                 class="audit-row__date"
                 [attr.datetime]="entry.created_at"
                 [attr.title]="entry.created_at"
               >
-                {{ entry.created_at | date: 'medium' }}
+                {{ entry.created_at | localeDate }}
               </time>
             </div>
+            <!-- Subject first: it is what the row is about. The actor rides
+                 behind it, and only when it is somebody else (#1631). -->
             <div class="audit-row__body">
-              <span class="audit-row__actor">{{ entry.actor_label || '—' }}</span>
               @if (entry.subject_label) {
-                <span class="audit-row__sep" aria-hidden="true">→</span>
                 <span class="audit-row__subject">{{ entry.subject_label }}</span>
+              }
+              @if (otherActor(entry); as actor) {
+                <span class="audit-row__actor">{{
+                  'audit.byActor' | translate: { actor: actor }
+                }}</span>
               }
             </div>
           </li>

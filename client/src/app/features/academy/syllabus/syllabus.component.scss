@@ -17,12 +17,6 @@
     font-size: 0.875rem;
     color: var(--p-text-muted-color);
   }
-
-  // The quiet second way in, under the empty state's loud one.
-  &__scratch {
-    display: flex;
-    justify-content: center;
-  }
 }
 
 // ── The tree ──────────────────────────────────────────────────────────────────
@@ -160,30 +154,52 @@
     border-top: 1px solid color-mix(in srgb, var(--p-content-border-color) 60%, transparent);
   }
 
+  // The rename affordance the row never had. The SAME square control the
+  // position row's pencil uses (#1526) — a second visual language for the
+  // same job reads as a second kind of button, and the shared one carries the
+  // canon's 48 px target. Quiet until the row is under the pointer or the
+  // keyboard, so a list of thirty techniques is not a wall of pencils.
+  &__edit {
+    @include tc.toolbar-control;
+    @include tc.toolbar-control-square;
+    flex: 0 0 auto;
+    margin-left: auto;
+    opacity: 0;
+    transition: opacity var(--budojo-motion-fast) var(--budojo-motion-decelerate);
+  }
+
+  &:hover &__edit,
+  &:focus-within &__edit {
+    opacity: 1;
+  }
+
+  // Touch has no hover: there, the pencil is simply always visible.
+  @media (hover: none) {
+    &__edit {
+      opacity: 1;
+    }
+  }
+
+  // A label now, not a button: the tick owns the toggle and the `for` makes
+  // the whole name part of it (#1630). It keeps the row's slack so the target
+  // is the width of the row, not the width of the word.
   &__name {
-    appearance: none;
-    background: none;
-    border: 0;
     font: inherit;
     color: var(--p-text-color);
     text-align: left;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    align-self: stretch;
 
     flex: 1 1 auto;
     min-width: 0;
-    align-self: stretch;
     padding: 0.5rem 0.5rem 0.5rem 0;
     font-size: 0.875rem;
     overflow-wrap: anywhere;
 
     &:hover {
       color: var(--p-primary-color);
-    }
-
-    &:focus-visible {
-      outline: 2px solid var(--p-primary-color);
-      outline-offset: -2px;
-      border-radius: var(--budojo-radius-small, 0.5rem);
     }
   }
 

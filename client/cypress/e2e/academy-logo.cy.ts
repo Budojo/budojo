@@ -28,11 +28,13 @@ describe('academy logo management', () => {
     cy.intercept('GET', '/api/v1/documents/expiring*', { statusCode: 200, body: { data: [] } });
   });
 
-  it('shows the empty placeholder when the academy has no logo', () => {
+  it('shows the empty state when the academy has no logo', () => {
     cy.visitAuthenticated('/dashboard/academy');
     cy.wait('@academy');
 
-    cy.get('[data-cy="academy-logo-card"]').should('exist');
+    // A row in the summary since #1627, not the card that used to open the
+    // page with a dashed placeholder.
+    cy.get('[data-cy="academy-logo-row"]').should('exist').and('contain.text', 'None');
     cy.get('[data-cy="academy-logo-image"]').should('not.exist');
     cy.get('[data-cy="academy-logo-upload"]').should('contain.text', 'Upload');
     cy.get('[data-cy="academy-logo-remove"]').should('not.exist');

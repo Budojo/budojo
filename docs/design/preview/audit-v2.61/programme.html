@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8" />
+<title>Mockup — Programma</title>
+<style>
+  :root { --accent:#5b6cff; --text:#0a0a0b; --muted:#6b7280; --line:#e5e7eb; --bg:#fafafa; --field:#f3f4f6 }
+  * { box-sizing:border-box }
+  body { margin:0; font:14px/1.5 Inter,-apple-system,Segoe UI,sans-serif; color:var(--text); background:var(--bg); padding:32px }
+  .page { max-width:976px }
+  .head { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px }
+  h1 { font-size:28px; margin:0; letter-spacing:-.018em }
+  h1 small { font-size:14px; color:var(--muted); font-weight:400; margin-left:8px }
+  .btn { height:44px; padding:0 16px; border-radius:12px; border:1px solid var(--line); background:#fff; font:inherit; font-weight:500 }
+  .btn.primary { background:var(--accent); color:#fff; border-color:var(--accent) }
+  .sub { color:var(--muted); margin:0 0 16px }
+  .search { height:44px; border-radius:12px; background:var(--field); padding:0 14px; display:flex; align-items:center; color:#9ca3af; margin-bottom:16px; max-width:420px }
+  .pos { background:#fff; border:1px solid var(--line); border-radius:12px; margin-bottom:8px; overflow:hidden }
+  .pos > .row { display:flex; align-items:center; gap:12px; padding:12px 16px; font-weight:600 }
+  .count { background:var(--field); color:var(--muted); border-radius:8px; padding:0 8px; font-size:11px; font-weight:600 }
+  .tools { margin-left:auto; display:flex; gap:8px; color:var(--muted) }
+  .tech { display:flex; align-items:center; gap:12px; padding:0 16px 0 48px; height:48px; border-top:1px solid var(--line); cursor:pointer }
+  .tech:hover { background:#f9fafb }
+  .box { width:18px; height:18px; border-radius:4px; border:2px solid var(--accent); background:var(--accent); display:grid; place-items:center; color:#fff; font-size:12px }
+  .box.off { background:#fff; }
+  .tech .name { flex:1 }
+  .tech .name.off { color:var(--muted) }
+  .tech .kind { font-size:11px; border:1px solid var(--line); border-radius:8px; padding:0 6px; color:var(--muted) }
+  .tech .edit { color:var(--muted); opacity:0; }
+  .tech:hover .edit { opacity:1 }
+  .hint { color:var(--muted); font-size:12px; padding:8px 16px 12px 48px }
+  .note { margin:24px 0 0; padding:16px; border:1px dashed var(--line); border-radius:12px; color:var(--muted); font-size:13px }
+  mark { background:#fef3c7; padding:0 2px }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="head"><h1>Programma <small>29 tecniche in stagione · 31 totali</small></h1><button class="btn primary">+ Aggiungi posizione</button></div>
+  <p class="sub">Quello che insegni, per posizione. Spunta ciò che è in stagione: è quello su cui la copertura fa i conti.</p>
+  <div class="search">🔍 &nbsp; Cerca una tecnica o una posizione — "kim"</div>
+
+  <div class="pos">
+    <div class="row">⌄ Closed guard <span class="count">6</span><span class="tools">☑ &nbsp; + &nbsp; ✎</span></div>
+    <div class="tech"><span class="box">✓</span><span class="name"><mark>Kim</mark>ura</span><span class="edit">✎</span></div>
+  </div>
+  <div class="pos">
+    <div class="row">⌄ Half guard <span class="count">4</span><span class="tools">☑ &nbsp; + &nbsp; ✎</span></div>
+    <div class="tech"><span class="box off"></span><span class="name off"><mark>Kim</mark>ura trap</span><span class="kind">Fuori stagione</span><span class="edit">✎</span></div>
+  </div>
+  <div class="pos">
+    <div class="row">⌄ Side control <span class="count">4</span><span class="tools">☑ &nbsp; + &nbsp; ✎</span></div>
+    <div class="tech"><span class="box">✓</span><span class="name"><mark>Kim</mark>ura</span><span class="edit">✎</span></div>
+  </div>
+  <div class="hint">Tre tecniche in due posizioni. Svuota la ricerca per tornare all'albero.</div>
+
+  <p class="note">
+    Rispetto a oggi: un campo di ricerca sotto il titolo (lo stesso che il foglio lezione ha già); la spunta "in stagione" a sinistra del nome
+    e l'intera riga come bersaglio del toggle, così il controllo e il suo nome si toccano; una matita che appare al passaggio sulla riga della tecnica
+    (oggi il nome stesso è il pulsante di modifica, e nulla lo dice); una tecnica fuori stagione resta leggibile ma attenuata.
+    Il contatore del titolo distingue "in stagione" da "totali", che oggi divergono senza spiegazione.
+  </p>
+</div>
+</body>
+</html>

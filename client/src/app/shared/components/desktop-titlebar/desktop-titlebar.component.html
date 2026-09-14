@@ -5,14 +5,25 @@
     moves the window instead. The global rule in styles.scss already opts every
     `button` out; this is the one that would break silently if that rule moved.
   -->
+  <!--
+    No `aria-label`: it used to carry the tooltip, which OVERRODE the button's
+    own text for the accessible name — so during a download a screen reader
+    announced "Check for updates" on a control that is inert while busy, and
+    the percentage was unreachable (#1641). The `title` still carries the
+    tooltip for a pointer; the name is what the button says.
+
+    Not a live region, deliberately: progress changes several times a second,
+    and a strip that announced every percentage would be chatter. `aria-busy`
+    says a download is in flight; the number is there on focus.
+  -->
   <button
     type="button"
     class="titlebar"
     [class.titlebar--ready]="isReady()"
     [class.titlebar--busy]="busy()"
-    [disabled]="unavailable() && !isReady()"
+    [disabled]="(unavailable() && !isReady()) || installing()"
     [attr.title]="tooltip()"
-    [attr.aria-label]="tooltip()"
+    [attr.aria-busy]="busy() ? 'true' : null"
     (click)="press()"
     data-cy="desktop-titlebar"
   >
