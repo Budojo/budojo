@@ -1885,8 +1885,8 @@
   },
   "statuses": {
     "all": "Tutti gli stati",
-    "active": "Attivo",
-    "inactive": "Inattivo",
+    "active": "In attività",
+    "inactive": "Non in attività",
     "trashed": "Cancellati"
   },
   "athletes": {
@@ -2144,7 +2144,7 @@
       "backToList": "Atleti",
       "loading": "Caricamento atleta…",
       "loadError": "Impossibile caricare l'atleta.",
-      "joinedLabel": "Iscritto il {{date}}",
+      "joinedLabel": "Dal {{date}}",
       "tabs": {
         "documents": "Documenti",
         "attendance": "Presenze",
@@ -2270,6 +2270,12 @@
           "newExpiry": "Nuova scadenza: {{date}}"
         },
         "soldOnFor": "Venduto il {{date}} per {{amount}}"
+      },
+      "closeEdit": "Torna alla scheda",
+      "reachAria": "Come contattare l'atleta",
+      "reach": {
+        "phone": "Chiama {{value}}",
+        "email": "Scrivi a {{value}}"
       }
     },
     "form": {
@@ -2720,7 +2726,7 @@
     }
   },
   "publicProfile": {
-    "joinedAt": "Iscritto a {{ date }}",
+    "joinedAt": "Da {{ date }}",
     "promotions": {
       "title": "Promozioni",
       "empty": "Nessuna promozione registrata.",

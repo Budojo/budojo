@@ -2144,7 +2144,7 @@
       "backToList": "Athletes",
       "loading": "Loading athlete…",
       "loadError": "Could not load this athlete.",
-      "joinedLabel": "Joined {{date}}",
+      "joinedLabel": "Since {{date}}",
       "tabs": {
         "documents": "Documents",
         "attendance": "Attendance",
@@ -2270,6 +2270,12 @@
           "newExpiry": "New expiry: {{date}}"
         },
         "soldOnFor": "Sold on {{date}} for {{amount}}"
+      },
+      "closeEdit": "Back to the athlete",
+      "reachAria": "How to reach this athlete",
+      "reach": {
+        "phone": "Call {{value}}",
+        "email": "Email {{value}}"
       }
     },
     "form": {
@@ -2720,7 +2726,7 @@
     }
   },
   "publicProfile": {
-    "joinedAt": "Joined {{ date }}",
+    "joinedAt": "Since {{ date }}",
     "promotions": {
       "title": "Promotions",
       "empty": "No promotions recorded yet.",
