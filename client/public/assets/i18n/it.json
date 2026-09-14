@@ -1387,6 +1387,11 @@
     "error": {
       "title": "Impossibile caricare il grafico",
       "hint": "Aggiorna la pagina per riprovare."
+    },
+    "window": {
+      "30": "ultimi 30 giorni",
+      "90": "ultimi 90 giorni",
+      "365": "ultimi 12 mesi"
     }
   },
   "audit": {
@@ -2220,7 +2225,15 @@
           "dayLabel": "Allenamento del {{date}}",
           "monthLabel": "Presenze di {{month}}",
           "empty": "Nessuna sessione registrata questo mese."
-        }
+        },
+        "dayUpcoming": "{{day}} — non ancora",
+        "legend": {
+          "attended": "Presente",
+          "missed": "Assente",
+          "upcoming": "Da venire",
+          "off": "Non si allena"
+        },
+        "windowSoFar": "finora questo mese"
       },
       "carnets": {
         "title": "Carnet ingressi",

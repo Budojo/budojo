@@ -1647,7 +1647,25 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       dialogOpen('[data-cy="upload-document-dialog"]');
     },
   });
-  screen('22-athlete-attendance', '/dashboard/athletes/1/attendance', DETAIL_READY);
+  // Wait for both canvases before shooting (#1635).
+  //
+  // This screen's charts are constructed only after the summary fetch lands,
+  // which the ready-selector — page chrome — does not wait for. `settle()`
+  // then returns at ~250 ms and `shoot()` ticks the frozen clock past the
+  // entry animation; but if the chart is built AFTER that tick, it starts
+  // animating on a clock that never moves again and the canvas is captured
+  // empty. That is what the audit photographed and read as "the series is
+  // fetched and thrown away" — it is drawn, and this is why the picture
+  // disagreed.
+  //
+  // Waiting for the elements, not `clock: false`: the frozen clock is what
+  // makes these shots reproducible, and dropping it would trade a blank
+  // canvas for a half-drawn one, since nothing then waits out the animation.
+  screen('22-athlete-attendance', '/dashboard/athletes/1/attendance', DETAIL_READY, {
+    act: () => {
+      cy.get('[data-cy="attendance-summary-chart"] canvas').should('have.length', 2);
+    },
+  });
   screen('22-athlete-payments', '/dashboard/athletes/1/payments', DETAIL_READY);
   screen('22-athlete-payments-carnet-sell', '/dashboard/athletes/1/payments', DETAIL_READY, {
     act: () => {
@@ -2119,12 +2137,14 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
   });
   screen('22-athlete-attendance-year', '/dashboard/athletes/1/attendance', DETAIL_READY, {
     act: () => {
+      cy.get('[data-cy="attendance-summary-chart"] canvas').should('have.length', 2);
       cy.get('[data-cy="attendance-summary-range"] .p-togglebutton').last().click({ force: true });
       settle();
     },
   });
   screen('22-athlete-attendance-prev-month', '/dashboard/athletes/1/attendance', DETAIL_READY, {
     act: () => {
+      cy.get('[data-cy="attendance-summary-chart"] canvas').should('have.length', 2);
       press('[data-cy="attendance-prev"]');
       settle();
     },

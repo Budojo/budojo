@@ -58,6 +58,15 @@
     margin: 0;
     font-size: 0.875rem;
     color: var(--p-text-color-secondary);
+    text-align: center;
+  }
+
+  // The window sits under the counts rather than beside them: on a narrow
+  // card the two would wrap into one another and read as a single sentence.
+  &__window {
+    margin: 0.25rem 0 0;
+    font-size: 0.75rem;
+    color: var(--p-text-muted-color);
   }
 
   &__timeline {
