@@ -2,6 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { TranslateService } from '@ngx-translate/core';
 import { MessageService } from 'primeng/api';
 import { Lesson, LessonSuggestion, LessonTopic } from '../../../core/services/lesson.service';
 import { SyllabusTopic } from '../../../core/services/syllabus.service';
@@ -577,5 +578,64 @@ describe('LessonSheetComponent — a suggestions hiccup is not a broken sheet', 
     fixture.nativeElement.querySelector('[data-cy="lesson-topic-1"]').click();
     fixture.detectChanges();
     expect(component['selected']().has(1)).toBe(true);
+  });
+
+  // ─── The dialog's own vocabulary and glyphs (#1637) ─────────────────────
+
+  // The clash is Italian-only — EN says "Planned" over "The programme" and
+  // never collided — so this one has to be read in Italian to mean anything.
+  // The sync loader is built for it: see `test-utils/i18n-test.ts`.
+  it('names the lesson state with a word the programme heading does not use', () => {
+    const { fixture, httpMock } = setup();
+    TestBed.inject(TranslateService).use('it');
+    flushOpen(httpMock, { lesson: lesson({ held: false }) });
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const state = el.querySelector('[data-cy="lesson-sheet-state"]')?.textContent?.trim() ?? '';
+    const heading =
+      el.querySelector('[data-cy="lesson-sheet-tree"] .group__title')?.textContent?.trim() ?? '';
+
+    expect(state).toBe('Pianificata');
+    // The defect was the collision, not the word: the section below is still
+    // "Il programma", and the state must no longer borrow that noun.
+    expect(heading.toLowerCase()).toContain('programma');
+    expect(state.toLowerCase()).not.toContain('programma');
+  });
+
+  it('marks a multi-select with squares in both states, not with a radio circle', () => {
+    const { fixture, httpMock } = setup();
+    // Position 1 is on the lesson and position 2 is not, so one tick of each
+    // state renders — asserting only the empty one would leave the chosen
+    // branch untested.
+    flushOpen(httpMock, {
+      lesson: lesson({ topics: [lessonTopic({ id: 1, name: 'Closed guard' })] }),
+    });
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.topic__tick.pi-circle')).toBeNull();
+    expect(el.querySelector('.topic__tick.pi-check-circle')).toBeNull();
+
+    const chosen = el.querySelector('[data-cy="lesson-topic-1"] .topic__tick');
+    const empty = el.querySelector('[data-cy="lesson-topic-2"] .topic__tick');
+    expect(chosen?.classList.contains('pi-check-square')).toBe(true);
+    expect(empty?.classList.contains('pi-stop')).toBe(true);
+  });
+
+  it('leaves the clearing to its own button, without losing the search semantics', () => {
+    const { fixture, httpMock } = setup();
+    flushOpen(httpMock, {});
+    fixture.detectChanges();
+
+    const search = (fixture.nativeElement as HTMLElement).querySelector(
+      '[data-cy="lesson-sheet-search"]',
+    ) as HTMLInputElement;
+    // `type="search"` made Blink and WebKit draw a second ✕ that never goes
+    // through clearQuery(). These two attributes are what the type was worth
+    // and what hands it back.
+    expect(search.getAttribute('type')).toBe('text');
+    expect(search.getAttribute('role')).toBe('searchbox');
+    expect(search.getAttribute('enterkeyhint')).toBe('search');
   });
 });
