@@ -610,4 +610,116 @@ describe('SyllabusComponent (#1563)', () => {
     expect(el.querySelector('.position__count')?.textContent?.trim()).toBe('3');
     httpMock.verify();
   });
+
+  it('filters from the field itself, and the ✕ gives the tree back', () => {
+    // Through the DOM, not the signal. Every other search test pokes
+    // `query` directly, so deleting the whole field from the template left
+    // them all green — the binding, the clear button and the gate that
+    // decides whether the field exists were covered by nothing.
+    const kimura = topic({ id: 21, parent_id: 1, name: 'Kimura' });
+    const { fixture, component, httpMock } = setup();
+    flushTree(httpMock, [
+      topic({ id: 1, name: 'Closed guard', children: [ARMBAR, kimura] }),
+      K_GUARD,
+    ]);
+    fixture.detectChanges();
+
+    const el: HTMLElement = fixture.nativeElement;
+    const input = el.querySelector('[data-cy="syllabus-search"]') as HTMLInputElement;
+    expect(input).not.toBeNull();
+
+    input.value = 'kim';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    expect(component['query']()).toBe('kim');
+    expect(el.querySelectorAll('.position').length).toBe(1);
+
+    (el.querySelector('[data-cy="syllabus-search-clear"]') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    expect(component['query']()).toBe('');
+    expect(el.querySelectorAll('.position').length).toBe(2);
+    httpMock.verify();
+  });
+
+  it('counts what it found, in the singular when there is one of a thing', () => {
+    const kimura = topic({ id: 21, parent_id: 1, name: 'Kimura' });
+    const kimuraTrap = topic({ id: 22, parent_id: 2, name: 'Kimura trap' });
+    const { fixture, component, httpMock } = setup();
+    flushTree(httpMock, [
+      topic({ id: 1, name: 'Closed guard', children: [ARMBAR, kimura] }),
+      topic({ id: 2, name: 'Half guard', sort_order: 1, children: [kimuraTrap] }),
+    ]);
+    fixture.detectChanges();
+
+    const summary = (): string =>
+      (fixture.nativeElement as HTMLElement)
+        .querySelector('[data-cy="syllabus-search-summary"]')
+        ?.textContent?.trim() ?? '';
+
+    component['setQuery']('kim');
+    fixture.detectChanges();
+    // Distinguishable numbers, so swapping the two interpolations shows.
+    expect(summary()).toContain('2 techniques');
+    expect(summary()).toContain('2 positions');
+
+    // The commonest search there is returns one hit in one position, and a
+    // hardcoded plural renders "1 techniques across 1 positions".
+    component['setQuery']('kimura trap');
+    fixture.detectChanges();
+    expect(summary()).toContain('1 technique');
+    expect(summary()).not.toContain('1 techniques');
+    expect(summary()).toContain('1 position');
+    expect(summary()).not.toContain('1 positions');
+    httpMock.verify();
+  });
+
+  it('lets the reader fold a position away mid-search, and forgets it after', () => {
+    // "guard" matches the position by name, so it keeps every technique — the
+    // wall the collapsed tree exists to prevent. The toggle has to work.
+    const { fixture, component, httpMock } = setup();
+    flushTree(httpMock, [CLOSED_GUARD, K_GUARD]);
+    fixture.detectChanges();
+
+    component['setQuery']('guard');
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    // `.technique__name`, not `.technique`: an open position with no children
+    // renders an "ancora niente" row that carries the same block class, and
+    // K guard is empty.
+    expect(el.querySelectorAll('.technique__name').length).toBe(2);
+
+    (el.querySelector('[data-cy="syllabus-toggle-1"]') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(el.querySelectorAll('.technique__name').length).toBe(0);
+
+    // And the fold does not leak: clearing gives back the tree as it was,
+    // not one the reader never touched.
+    component['setQuery']('');
+    fixture.detectChanges();
+    expect(el.querySelectorAll('.position').length).toBe(2);
+    expect(el.querySelectorAll('.technique__name').length).toBe(0);
+    httpMock.verify();
+  });
+
+  it('leaves a technique added mid-search visible once the search is cleared', () => {
+    const { fixture, component, httpMock } = setup();
+    flushTree(httpMock, [CLOSED_GUARD, K_GUARD]);
+    fixture.detectChanges();
+
+    component['setQuery']('armbar');
+    fixture.detectChanges();
+    component['startAddingTechnique'](CLOSED_GUARD);
+    fixture.detectChanges();
+
+    // The guard used to read `isExpanded`, which is true for everything a
+    // search kept — so the id never reached `expanded` and the new row was
+    // gone the moment the field was cleared.
+    component['setQuery']('');
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelectorAll('.technique__name').length).toBe(2);
+    httpMock.verify();
+  });
 });

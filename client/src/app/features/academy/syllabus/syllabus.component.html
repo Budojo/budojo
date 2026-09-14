@@ -44,7 +44,7 @@
           role="searchbox"
           enterkeyhint="search"
           [ngModel]="query()"
-          (ngModelChange)="query.set($event)"
+          (ngModelChange)="setQuery($event)"
           [placeholder]="'academy.syllabus.searchPlaceholder' | translate"
           [attr.aria-label]="'academy.syllabus.searchPlaceholder' | translate"
           data-cy="syllabus-search"
@@ -54,7 +54,7 @@
             type="button"
             class="syllabus__search-clear"
             [attr.aria-label]="'academy.syllabus.searchClear' | translate"
-            (click)="query.set('')"
+            (click)="setQuery('')"
             data-cy="syllabus-search-clear"
           >
             <i class="pi pi-times" aria-hidden="true"></i>

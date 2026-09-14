@@ -318,7 +318,11 @@
   input {
     width: 100%;
     padding-left: 2.5rem;
-    padding-right: 3rem;
+    // 3.5rem, not 3: the clear button is 3rem wide sitting 0.5rem in, so a
+    // 3rem reserve left its left edge overhanging the text by 7 px — long
+    // values rendered under the ✕, and that strip cleared instead of placing
+    // the caret.
+    padding-right: 3.5rem;
   }
 }
 
@@ -339,13 +343,17 @@
 
   &:hover,
   &:focus-visible {
-    background: var(--p-content-hover-background);
+    // The field's own fill is already the hover surface, so `content-hover`
+    // was invisible against it.
+    background: var(--p-surface-200);
     color: var(--p-text-color);
   }
 
   &:focus-visible {
     outline: 2px solid var(--p-primary-color);
-    outline-offset: 2px;
+    // Inside, not outside: the button fills the field's height, so an outward
+    // offset drew the ring on top of the field's own border.
+    outline-offset: -2px;
   }
 }
 

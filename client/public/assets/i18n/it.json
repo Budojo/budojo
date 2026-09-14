@@ -1692,9 +1692,13 @@
       },
       "searchPlaceholder": "Cerca una tecnica o una posizione",
       "searchClear": "Cancella la ricerca",
-      "searchSummary": "{{techniques}} tecniche in {{positions}} posizioni. Svuota la ricerca per tornare all’albero.",
+      "searchSummary": "{{techniques}} in {{positions}}. Svuota la ricerca per tornare all’albero.",
       "searchNone": "Niente nel programma corrisponde a “{{query}}”.",
-      "countSplit": "{{inSeason}} in stagione · {{total}} totali"
+      "countSplit": "{{inSeason}} in stagione · {{total}} totali",
+      "searchCountTechniqueOne": "{{count}} tecnica",
+      "searchCountTechniqueOther": "{{count}} tecniche",
+      "searchCountPositionOne": "{{count}} posizione",
+      "searchCountPositionOther": "{{count}} posizioni"
     },
     "schedule": {
       "title": "Pianifica un cambio calendario futuro",

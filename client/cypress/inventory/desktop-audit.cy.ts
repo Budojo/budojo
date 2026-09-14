@@ -1544,6 +1544,14 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       cy.get('[data-cy="syllabus-search-summary"]').should('be.visible');
     },
   });
+  // One hit in one position — the commonest search, and the case a
+  // hardcoded plural rendered as "1 techniques across 1 positions" (#1629).
+  screen('12-syllabus-search-one', '/dashboard/academy/syllabus', '[data-cy="syllabus-tree"]', {
+    act: () => {
+      cy.get('[data-cy="syllabus-search"]').type('omoplata');
+      cy.get('[data-cy="syllabus-search-summary"]').should('be.visible');
+    },
+  });
   screen('12-syllabus-search-none', '/dashboard/academy/syllabus', '[data-cy="syllabus-tree"]', {
     act: () => {
       cy.get('[data-cy="syllabus-search"]').type('berimbolo');

@@ -134,6 +134,12 @@ export class SyllabusComponent {
    */
   protected readonly query = signal<string>('');
 
+  /** Set the query, and forget anything folded shut under the previous one. */
+  protected setQuery(next: string): void {
+    this.collapsedInSearch.set(new Set());
+    this.query.set(next);
+  }
+
   protected readonly searching = computed<boolean>(() => this.query().trim() !== '');
 
   /**
@@ -181,9 +187,25 @@ export class SyllabusComponent {
     this.languageService.currentLang(); // signal dep — recompute on toggle
     const positions = this.filteredPositions();
     const techniques = positions.reduce((n, p) => n + (p.children?.length ?? 0), 0);
+    // Two counts that vary independently, so each picks its own One/Other —
+    // ngx-translate has no plural rule, and a single hardcoded-plural string
+    // renders "1 techniques across 1 positions" on the commonest search
+    // there is. The same mistake is already documented in `confirmRemove`.
+    const t = this.translate.instant(
+      techniques === 1
+        ? 'academy.syllabus.searchCountTechniqueOne'
+        : 'academy.syllabus.searchCountTechniqueOther',
+      { count: techniques },
+    );
+    const p = this.translate.instant(
+      positions.length === 1
+        ? 'academy.syllabus.searchCountPositionOne'
+        : 'academy.syllabus.searchCountPositionOther',
+      { count: positions.length },
+    );
     return this.translate.instant('academy.syllabus.searchSummary', {
-      techniques,
-      positions: positions.length,
+      techniques: t,
+      positions: p,
     });
   });
 
@@ -281,16 +303,37 @@ export class SyllabusComponent {
       .subscribe(() => this.nameError.set(false));
   }
 
+  /**
+   * Positions the reader folded shut while a search was running (#1629).
+   *
+   * A search opens everything it kept, or the matches sit inside collapsed
+   * positions and the field looks like it found nothing. But "open" cannot be
+   * an override that outranks the toggle: a name like "guard" matches
+   * fourteen positions and keeps every technique under each, and the reader
+   * has to be able to fold one away. So the search has its own closed-set,
+   * and `expanded` — what the reader had open before, and gets back after —
+   * is left alone.
+   */
+  private readonly collapsedInSearch = signal<ReadonlySet<number>>(new Set());
+
   protected isExpanded(position: SyllabusTopic): boolean {
-    // A search opens everything it kept (#1629). Otherwise the matches sit
-    // inside collapsed positions and the field appears to have found nothing,
-    // which is the exact problem it was added to solve. Clearing the field
-    // restores whatever the reader had open — `expanded` is never written to
-    // here, only read past.
-    return this.searching() || this.expanded().has(position.id);
+    return this.searching()
+      ? !this.collapsedInSearch().has(position.id)
+      : this.expanded().has(position.id);
   }
 
   protected toggleExpanded(position: SyllabusTopic): void {
+    // While searching, the toggle acts on the search's own closed-set —
+    // otherwise the press writes to `expanded`, changes nothing on screen,
+    // and the reader finds positions opened or closed behind their back once
+    // the field is cleared.
+    if (this.searching()) {
+      const next = new Set(this.collapsedInSearch());
+      if (!next.delete(position.id)) next.add(position.id);
+      this.collapsedInSearch.set(next);
+      return;
+    }
+
     const next = new Set(this.expanded());
     if (next.has(position.id)) {
       next.delete(position.id);
@@ -322,7 +365,18 @@ export class SyllabusComponent {
     this.nameError.set(false);
     this.dialogOpen.set(true);
     // Adding into a closed position would hide the result.
-    if (!this.isExpanded(position)) this.toggleExpanded(position);
+    // Open it in the model that survives the search, not the one the search
+    // is painting: `isExpanded` is true for every kept position while a query
+    // is running, so testing it here meant the id never reached `expanded`
+    // and the new technique was gone the moment the field was cleared.
+    if (!this.expanded().has(position.id)) {
+      this.expanded.update((open) => new Set(open).add(position.id));
+    }
+    this.collapsedInSearch.update((shut) => {
+      const next = new Set(shut);
+      next.delete(position.id);
+      return next;
+    });
   }
 
   protected startEditing(topic: SyllabusTopic): void {
