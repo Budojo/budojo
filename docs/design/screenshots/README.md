@@ -74,7 +74,7 @@ the bridge.
 (#1614) shoots every screen the shipped desktop app can show, at the two
 widths the Electron window can have (1280×860 and 960×600), in Italian, on
 the desktop runtime profile, with the Electron bridge faked — so the title
-bar, the update banner and the backup page render as they do in the real
+bar with its update state, and the backup page, render as they do in the real
 shell. Where the inventory shoots a page as it opens, the audit also shoots
 what is inside it: the dialogs, the confirm popups, a row after it was acted
 on, the empty and error states.

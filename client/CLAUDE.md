@@ -34,7 +34,7 @@ Full per-source operational rules (e.g. Krug's three laws, Norman's affordance/f
 - **Color roles, never raw hex** in component SCSS. Use PrimeNG tokens (`var(--p-primary-color)`, `var(--p-surface-*)`) or the `--budojo-*` semantics. Exceptions are belt colors (domain palette) with a one-line comment.
 - **Sentence-case everything.** Buttons, headers, tags. No title-case, no uppercase — except eyebrow labels (`EXPIRING SOON`, `letter-spacing: 0.06em`).
 - **Don't restyle PrimeNG internals from component SCSS.** Override via CSS custom properties; `::ng-deep` only when a token truly doesn't exist AND the pattern is already documented in `DESIGN_SYSTEM.md`. The global override layer (`client/src/styles/budojo-theme.scss`) is the sanctioned exception — its selectors carry a one-line comment explaining why a token isn't enough.
-- **Motion uses `--budojo-motion-*` tokens**, not hand-picked `200ms ease-out`. Three durations, one curve (`cubic-bezier(0.2, 0, 0, 1)`). The global `@media (prefers-reduced-motion: reduce)` rule in `styles.scss` (#1074) collapses every CSS transition / animation in one shot — JS-driven motion (e.g. `scrollIntoView({ behavior: 'smooth' })`) gates separately via `prefersReducedMotion()` in `shared/utils`, because the JS option wins over CSS.
+- **Motion uses `--budojo-motion-*` tokens**, not hand-picked `200ms ease-out`. Three durations, one curve — `--budojo-motion-decelerate`, which is `cubic-bezier(0.22, 1, 0.36, 1)`. This line used to quote a curve that is defined nowhere, and eight component stylesheets copied it verbatim; if you find `cubic-bezier(0.2, 0, 0, 1)` hardcoded, that is where it came from. The global `@media (prefers-reduced-motion: reduce)` rule in `styles.scss` (#1074) collapses every CSS transition / animation in one shot — JS-driven motion (e.g. `scrollIntoView({ behavior: 'smooth' })`) gates separately via `prefersReducedMotion()` in `shared/utils`, because the JS option wins over CSS.
 - **Defer post-render DOM work with `afterNextRender`**, not `setTimeout(0)` (#1074). The Angular-21-idiomatic, SSR-safe replacement for the tick-defer hack. In a method body (not a constructor) wrap with `runInInjectionContext(this.injector, () => afterNextRender(() => …))` — see `my-feed.component.ts` for the canonical site. `setTimeout(…)` stays correct for actual delays (auto-redirect timers, debounces).
 - **Touch target ≥ 48 × 48 CSS px** for any primary CTA, nav link, icon button (Fitts).
 - **One primary CTA per view.** Secondaries hide in menus/overflow past 3.
@@ -168,18 +168,23 @@ import Material from '@primeuix/themes/material';
 providePrimeNG({
   theme: {
     preset: Material,
-    options: { darkModeSelector: '.dark' },
+    options: {
+      darkModeSelector: '.dark',
+      // Load-bearing: without the layer, PrimeNG's <style> lands after ours,
+      // both hit `:root` at equal specificity, and source order silently wins.
+      cssLayer: { name: 'primeng' },
+    },
   },
 });
 ```
 
 - Check [primeng.org](https://primeng.org/) before rolling custom — 9 times out of 10 there's a component.
-- Use PrimeFlex for layout utilities. No inline styles.
+- No inline styles. (PrimeFlex is **not** installed — this line used to recommend it.)
 - When PrimeNG doesn't fit, fall back to a plain HTML/SCSS component under `shared/components/` — still using theme tokens, never raw hex.
 
 ---
 
-## Testing — Vitest 4 (unit) + Cypress 13 (E2E)
+## Testing — Vitest 4 (unit) + Cypress 15 (E2E)
 
 Run locally via `./.claude/scripts/test-client.sh` (prettier --write + lint + vitest). Cypress runs in CI.
 

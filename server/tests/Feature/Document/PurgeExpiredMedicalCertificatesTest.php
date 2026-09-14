@@ -89,15 +89,7 @@ it('does not touch non-medical documents even when they are well-aged', function
     // A federation registration, expired 5 years ago — still
     // outside this cron's scope. Other DocumentType cases have
     // their own retention rules that haven't been decided yet.
-    $nonMedicalType = collect(DocumentType::cases())
-        ->first(fn (DocumentType $t): bool => $t !== DocumentType::MedicalCertificate);
-
-    if ($nonMedicalType === null) {
-        // Only one DocumentType case today — the assertion below
-        // becomes vacuous. Skip explicitly so a future contributor
-        // sees what to do when a second case lands.
-        $this->markTestSkipped('Only the medical_certificate case exists today; no second DocumentType to assert against.');
-    }
+    $nonMedicalType = DocumentType::Insurance;
 
     $oldFederationDoc = Document::factory()->create([
         'athlete_id' => $athlete->id,

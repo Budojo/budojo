@@ -60,13 +60,10 @@ it('non-medical documents stay plaintext (is_encrypted = false)', function (): v
     $owner = userWithAcademy();
     $athlete = Athlete::factory()->create(['academy_id' => $owner->academy->id]);
 
-    // Pick any non-medical case.
-    $nonMedical = collect(DocumentType::cases())
-        ->first(fn (DocumentType $t): bool => $t !== DocumentType::MedicalCertificate);
-
-    if ($nonMedical === null) {
-        $this->markTestSkipped('Only the medical_certificate case exists today; nothing else to assert plaintext for.');
-    }
+    // Any non-medical case. The guard that used to sit here skipped the test
+    // "if only the medical case exists" — there have been four since the enum
+    // was written, so it never ran and its message was never true.
+    $nonMedical = DocumentType::IdCard;
 
     $plaintext = 'federation registration paperwork — non-sensitive';
     $upload = UploadedFile::fake()->createWithContent('reg.pdf', $plaintext);

@@ -5,22 +5,13 @@
     "italian": "Italiano"
   },
   "search": {
-    "openHint": "Search",
-    "openShortcutMac": "⌘K",
-    "openShortcutWin": "Ctrl K",
-    "ariaOpen": "Open search",
-    "dialogTitle": "Search",
     "placeholder": "Search athletes by name…",
     "ariaInput": "Search athletes",
     "emptyHint": "Start typing to find athletes by name.",
-    "noResults": "No athletes match this search.",
-    "resultsAriaLabel": "Search results"
+    "noResults": "No athletes match this search."
   },
   "nav": {
-    "open": "Open navigation",
-    "close": "Close navigation",
     "homeAriaLabel": "Budojo — go to dashboard home",
-    "sidebarAriaLabel": "Primary navigation",
     "profileAriaLabel": "Open your profile",
     "academy": "Academy",
     "athletes": "Athletes",
@@ -271,11 +262,6 @@
     }
   },
   "athletePortal": {
-    "welcome": {
-      "title": "Welcome to Budojo",
-      "body": "Your athlete account is ready. The pages where you'll see your own attendance history, payments, and documents are coming in the next release — for now, sit tight, your academy will let you know when there's more here.",
-      "signOut": "Sign out"
-    },
     "nav": {
       "myProfile": "My profile",
       "settings": "Settings",
@@ -481,14 +467,6 @@
       "no": "Not now",
       "bodyCommunity": "Your community posts will show your belt too.",
       "bodyFooter": "You can change your mind later from Profile → Train at this academy."
-    }
-  },
-  "legal": {
-    "chrome": {
-      "brandHome": "Back to Budojo",
-      "eyebrow": "Legal",
-      "languageToggleEn": "English",
-      "languageToggleIt": "Italiano"
     }
   },
   "cookies": {
@@ -787,7 +765,6 @@
   "profile": {
     "title": "Settings",
     "subtitle": "Account, security, notifications.",
-    "eyebrow": "Settings",
     "tabs": {
       "identity": "Profile",
       "security": "Security",
@@ -795,7 +772,6 @@
       "account": "Account"
     },
     "verifyRequiredBanner": "You need to verify your email before adding athletes or documents. Check your inbox for the verification link, or use the Resend button below.",
-    "name": "Name",
     "firstName": "First name",
     "lastName": "Last name",
     "handle": "Handle",
@@ -1295,8 +1271,6 @@
     "expiringList": {
       "title": "Document status",
       "backToAthletes": "Athletes",
-      "countOne": "{{count}} document expired or expiring within 30 days",
-      "countOther": "{{count}} documents expired or expiring within 30 days",
       "countExpiring": "{{count}} expiring",
       "countMissing": "{{count}} no certificate",
       "expiring": {
@@ -1319,10 +1293,6 @@
         "title": "Couldn’t load expiring documents.",
         "hint": "Refresh the page to try again."
       },
-      "empty": {
-        "title": "All documents up to date.",
-        "hint": "No expirations in the next 30 days. Check back later."
-      },
       "allClear": {
         "title": "All documents up to date.",
         "hint": "No expirations in the next 30 days and every active athlete has a medical certificate on file."
@@ -1331,20 +1301,6 @@
         "errorSummary": "Download failed",
         "errorDetail": "Could not download {{filename}}. Please try again."
       }
-    },
-    "expiringWidget": {
-      "error": {
-        "title": "Couldn’t check expiring documents",
-        "hint": "Refresh the page to try again"
-      },
-      "empty": {
-        "title": "All documents up to date",
-        "hint": "No expirations in the next 30 days"
-      },
-      "countOne": "{{count}} athlete needs attention",
-      "countOther": "{{count}} athletes need attention",
-      "countHint": "Expired or expiring within 30 days",
-      "breakdown": "{{expiring}} expiring · {{missing}} no certificate"
     },
     "upload": {
       "header": "Upload document",
@@ -1436,7 +1392,6 @@
   },
   "academy": {
     "detail": {
-      "eyebrow": "Academy",
       "edit": "Edit",
       "logoAlt": "Academy logo",
       "logoHint": "PNG, JPG, SVG or WebP, max 2 MB.",
@@ -1494,7 +1449,6 @@
       "logoNone": "None"
     },
     "form": {
-      "eyebrow": "Academy",
       "title": "Edit academy",
       "optional": "(optional)",
       "name": {
@@ -1780,7 +1734,6 @@
   },
   "attendance": {
     "daily": {
-      "eyebrow": "Attendance",
       "title": "Today's check-in",
       "titleForDate": "Check-in · {{date}}",
       "noClassToday": "No class today — you're looking at the {{date}} session.",
@@ -1822,7 +1775,6 @@
       }
     },
     "summary": {
-      "eyebrow": "Attendance summary",
       "daysOne": "{{count}} training day",
       "daysOther": "{{count}} training days",
       "athletesOne": "{{count}} athlete",
@@ -1889,7 +1841,6 @@
     }
   },
   "statuses": {
-    "all": "All statuses",
     "active": "Active",
     "inactive": "Inactive",
     "trashed": "Deleted"
@@ -1902,7 +1853,6 @@
       "addButton": "Add athlete",
       "searchPlaceholder": "Search by name",
       "beltPlaceholder": "Belt",
-      "statusPlaceholder": "Status",
       "ownerChip": "Owner",
       "paidOptions": {
         "yes": "Paid",
@@ -1910,8 +1860,6 @@
       },
       "table": {
         "fullName": "Full name",
-        "status": "Status",
-        "paidPrefix": "Paid",
         "payment": "Payment",
         "attendance": "Sessions"
       },
@@ -1920,7 +1868,6 @@
         "editAria": "Edit {{name}}",
         "openMenuAria": "Open menu for {{name}}",
         "paid": "Paid",
-        "unpaid": "Unpaid",
         "restore": "Restore",
         "restoreAria": "Restore {{name}}",
         "publicProfile": "View public profile",
@@ -1929,7 +1876,6 @@
         "documents": "Documents",
         "payments": "Payments",
         "promotions": "Belt history",
-        "carnet": "Carnet {{code}} — {{count}} entries left",
         "paidCycleAll": "Showing everyone. Click to show only who has paid.",
         "paidCyclePaid": "Showing who has paid. Click to show only who has not.",
         "paidCycleUnpaid": "Showing who has not paid. Click to show everyone again.",
@@ -2241,7 +2187,6 @@
         "entriesWord": "entries",
         "entryCoversDay": "One entry covers the whole day, however many classes.",
         "none": "No active carnet.",
-        "expiresOn": "Expires on {{date}}",
         "lowBalance": "Running low",
         "expiringSoon": "Expiring soon",
         "register": "Entry register",
@@ -2627,7 +2572,6 @@
     }
   },
   "stats": {
-    "eyebrow": "Insights",
     "title": "Academy at a glance",
     "subtitle": "Quick read on your academy — belt distribution — pulled live from your athletes.",
     "loadError": "Couldn't load the stats. Please try again.",
@@ -2836,7 +2780,6 @@
     "never": "No backup yet",
     "backupNow": "Back up now",
     "archives": "Backups",
-    "loading": "Loading backups…",
     "empty": "No backups yet. Create one now to protect your data.",
     "size": "{{mb}} MB",
     "restore": "Restore",
@@ -2873,7 +2816,6 @@
     "drive": {
       "title": "Google Drive backup",
       "why": "Backups saved on this computer do not survive this computer. Connect a Google account and every backup is copied there automatically.",
-      "unavailable": "This build cannot connect to Google Drive.",
       "connect": "Connect Google Drive",
       "connectedTo": "Backing up to {{account}}",
       "connected": "Google Drive connected",
