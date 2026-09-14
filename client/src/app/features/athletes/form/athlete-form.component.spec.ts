@@ -7,10 +7,19 @@ import { ConfirmationService } from 'primeng/api';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 import { AthleteFormComponent } from './athlete-form.component';
 import { Athlete } from '../../../core/services/athlete.service';
+import { AcademyService } from '../../../core/services/academy.service';
 
 // `of` is needed below to provide the paramMap as an Observable on the mocked
 // ActivatedRoute — the component subscribes to it (not the snapshot) so it
 // reloads if the `:id` changes while the component instance is reused.
+
+const ACADEMY_BASE = {
+  id: 1,
+  name: 'Test',
+  slug: 'test',
+  address: null,
+  logo_url: null,
+} as const;
 
 function makeAthlete(overrides: Partial<Athlete> = {}): Athlete {
   return {
@@ -856,6 +865,49 @@ describe('AthleteFormComponent', () => {
       expect(
         (fixture.nativeElement as HTMLElement).querySelector('[data-cy="athlete-form-fee-tier"]'),
       ).toBeNull();
+    });
+  });
+
+  // ─── Form polish (#1650) ─────────────────────────────────────────────────
+
+  describe("a new athlete starts on the academy's dialling code", () => {
+    beforeEach(() => setupTestBed(null));
+
+    it('fills the prefix from the academy, so a +39 gym is not asked twice', () => {
+      TestBed.inject(AcademyService).academy.set({ ...ACADEMY_BASE, phone_country_code: '+39' });
+      const fixture = TestBed.createComponent(AthleteFormComponent);
+      fixture.detectChanges();
+      flushFeeTiers(TestBed.inject(HttpTestingController));
+
+      // The field opened empty and truncated to "Prefis…", so the one gym
+      // every athlete belongs to had to be retyped on every single one.
+      expect(fixture.componentInstance.form.controls.phone_country_code.value).toBe('+39');
+    });
+
+    it('leaves the prefix empty when the academy has no number of its own', () => {
+      TestBed.inject(AcademyService).academy.set({ ...ACADEMY_BASE, phone_country_code: null });
+      const fixture = TestBed.createComponent(AthleteFormComponent);
+      fixture.detectChanges();
+      flushFeeTiers(TestBed.inject(HttpTestingController));
+
+      expect(fixture.componentInstance.form.controls.phone_country_code.value).toBe('');
+    });
+  });
+
+  describe('the optional address group', () => {
+    beforeEach(() => setupTestBed(null));
+
+    it('marks no field with the asterisk that means required everywhere else', () => {
+      const fixture = TestBed.createComponent(AthleteFormComponent);
+      fixture.detectChanges();
+      flushFeeTiers(TestBed.inject(HttpTestingController));
+
+      // Four red asterisks sat under a legend reading "(optional)". The
+      // legend names the four fields now, so nothing has to be decoded.
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.querySelectorAll('.required-when-filled')).toHaveLength(0);
+      const legend = el.querySelector('.address-group legend');
+      expect(legend?.textContent).toContain('fill them all');
     });
   });
 });

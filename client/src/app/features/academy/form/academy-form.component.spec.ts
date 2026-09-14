@@ -565,4 +565,36 @@ describe('AcademyFormComponent — what one carnet entry covers (#1576)', () => 
       (fixture.nativeElement as HTMLElement).querySelector('[data-cy="academy-form-slug"]'),
     ).not.toBeNull();
   });
+
+  // ─── Form polish (#1650) ───────────────────────────────────────────────
+
+  describe('the optional address group', () => {
+    it('marks no field with the asterisk that means required everywhere else', () => {
+      const { fixture } = setup();
+      const el = fixture.nativeElement as HTMLElement;
+
+      // Four red asterisks sat under a legend reading "(optional)", and the
+      // legend then told you to fill "all marked fields" — the marker and
+      // the word contradicted each other on the same line.
+      expect(el.querySelectorAll('.required-when-filled')).toHaveLength(0);
+      const legend = el.querySelector('.address-group legend');
+      expect(legend?.textContent).toContain('fill them all');
+    });
+  });
+
+  describe('the contact links', () => {
+    it('shows an example URL rather than a bare handle', () => {
+      const { fixture } = setup();
+      const el = fixture.nativeElement as HTMLElement;
+
+      // Both forms declare `type="url"` and the server rule is
+      // `nullable|url`, so a placeholder reading `@yourgym` demonstrates a
+      // value the save would reject.
+      for (const id of ['academy-website', 'academy-facebook', 'academy-instagram']) {
+        const input = el.querySelector<HTMLInputElement>(`#${id}`);
+        expect(input, id).not.toBeNull();
+        expect(input?.placeholder, id).toMatch(/^https:\/\//);
+      }
+    });
+  });
 });

@@ -38,7 +38,12 @@ import {
   Belt,
   MAX_STRIPES_PER_BELT,
 } from '../../../core/services/athlete.service';
-import { Address, CountryCode, ItalianProvinceCode } from '../../../core/services/academy.service';
+import {
+  Address,
+  AcademyService,
+  CountryCode,
+  ItalianProvinceCode,
+} from '../../../core/services/academy.service';
 import { FeeTier, FeeTierService } from '../../../core/services/fee-tier.service';
 import { LanguageService } from '../../../core/services/language.service';
 import { localeFor, datePickerFormatFor } from '../../../shared/utils/locale';
@@ -189,6 +194,7 @@ export class AthleteFormComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly athleteService = inject(AthleteService);
   private readonly feeTierService = inject(FeeTierService);
+  private readonly academyService = inject(AcademyService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly messageService = inject(MessageService);
@@ -425,6 +431,20 @@ export class AthleteFormComponent implements OnInit {
         next: (tiers) => this.feeTiers.set(tiers),
         error: () => undefined,
       });
+
+    // ATHF-2 (#1650): a new athlete starts on the academy's own dialling
+    // code. The field opened empty and truncated to "Prefis…", so every
+    // athlete of a +39 gym was asked to state +39 again — and the pair
+    // validator then blocks the form until they do.
+    //
+    // Create only: on an edit the stored value is the athlete's own, and a
+    // default would quietly rewrite it.
+    if (this.mode() === 'create') {
+      const academyCode = this.academyService.academy()?.phone_country_code ?? '';
+      if (academyCode !== '' && this.form.controls.phone_country_code.value === '') {
+        this.form.controls.phone_country_code.setValue(academyCode);
+      }
+    }
 
     // The phone pair validators are mutually dependent — when one control's
     // value flips between empty/non-empty, the OTHER control's validity needs
