@@ -391,6 +391,21 @@ export class AthleteService {
   private readonly http = inject(HttpClient);
   private readonly base = `${environment.apiBase}/api/v1/athletes`;
 
+  /**
+   * How many athletes the academy has once the roster's default `active` is
+   * lifted — the answer to "is this gym new, or has everyone been marked
+   * inactive?", which the roster query alone cannot give (#1666).
+   *
+   * A named method rather than a bare `list({ page: 1 })` because it is asked
+   * for a different reason than the roster is, and a caller reading either
+   * the code or a mock's call history should be able to tell the two apart.
+   * Only `meta.total` is used; the rows come along because the index has no
+   * count-only mode.
+   */
+  countAll(): Observable<number> {
+    return this.list({ page: 1 }).pipe(map((res) => res.meta.total));
+  }
+
   list(filters: AthleteFilters = {}): Observable<AthleteListResponse> {
     let params = new HttpParams();
     if (filters.belt) params = params.set('belt', filters.belt);

@@ -682,6 +682,24 @@
                       dataCy="athletes-empty"
                     />
                   }
+                  @case ('all-inactive') {
+                    <!--
+                      Not a brand-new academy: every athlete is still there,
+                      one eye-toggle away, and the first-run copy claimed
+                      otherwise (#1666). The count says how many, so the
+                      offer is a fact rather than a guess.
+                    -->
+                    <app-empty-state
+                      icon="pi pi-eye-slash"
+                      [title]="'athletes.list.empty.allInactiveTitle' | translate"
+                      [hint]="inactiveHintKey() | translate: { count: inactiveTotal() }"
+                      ctaIcon="pi pi-eye"
+                      [ctaLabel]="'athletes.list.empty.showAll' | translate"
+                      ctaSeverity="secondary"
+                      (ctaClick)="toggleInactive()"
+                      dataCy="athletes-empty"
+                    />
+                  }
                   @case ('trash') {
                     <!-- An empty bin is not a roster filtered down to nothing. -->
                     <app-empty-state

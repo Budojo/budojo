@@ -1639,7 +1639,23 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       cy.get('[data-cy="athletes-empty"]').should('exist');
     },
   });
-  // And the third: the bin, with nothing in it.
+  // The fourth: everyone marked inactive. Zero rows on the default status,
+  // exactly like a brand-new academy — and the page used to say so (#1666).
+  screen('20-athletes-all-inactive', '/dashboard/athletes', '[data-cy="athletes-empty"]', {
+    stubs: () => {
+      // Order matters: a later intercept wins, so the broad one is registered
+      // FIRST and the roster's own query overrides it below.
+      //
+      // The count without the default status — nine athletes exist.
+      cy.intercept({ method: 'GET', pathname: '/api/v1/athletes' }, page(ATHLETES.slice(0, 9)));
+      // The roster asks for the actives and gets none of them.
+      cy.intercept(
+        { method: 'GET', pathname: '/api/v1/athletes', query: { status: 'active' } },
+        EMPTY_PAGE,
+      );
+    },
+  });
+  // And the fifth: the bin, with nothing in it.
   screen('20-athletes-trash-empty', '/dashboard/athletes', ROSTER_READY, {
     stubs: () => {
       cy.intercept(

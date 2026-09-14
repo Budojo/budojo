@@ -25,6 +25,9 @@ class FakeAthleteService {
     }),
   );
   readonly delete = vi.fn(() => of(void 0));
+  // Asked only when the roster comes back empty on a query nobody narrowed
+  // (#1666). Zero by default: a fake academy with no rows is a new one.
+  readonly countAll = vi.fn(() => of(0));
 }
 
 class FakePaymentService {
@@ -2111,5 +2114,75 @@ describe('AthletesListComponent — sessions out of sessions held (#1455)', () =
     expect(
       (fixture.nativeElement as HTMLElement).querySelector('app-monthly-summary-widget'),
     ).toBeNull();
+  });
+
+  // ─── An all-inactive roster is not a new academy (#1666) ─────────────────
+
+  describe('the empty roster tells apart a new gym from a paused one', () => {
+    function renderWithTotalAthletes(total: number) {
+      const svc = TestBed.inject(AthleteService) as unknown as { countAll: Mock };
+      svc.countAll = vi.fn(() => of(total));
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      fixture.detectChanges();
+      return fixture;
+    }
+
+    const emptyState = (fixture: ComponentFixture<AthletesListComponent>) =>
+      (fixture.nativeElement as HTMLElement).querySelector('[data-cy="athletes-empty"]');
+
+    it('says everyone is inactive, and how many, instead of "add your first"', () => {
+      const fixture = renderWithTotalAthletes(12);
+
+      // The roster queries status=active by default, so a gym that has marked
+      // everyone inactive got zero rows with no filter set and was told it had
+      // never added anybody. They are all still there, one eye-toggle away.
+      expect(fixture.componentInstance.emptyStateKind()).toBe('all-inactive');
+      expect(emptyState(fixture)?.textContent).toContain('12');
+      expect(emptyState(fixture)?.textContent).not.toContain('first');
+    });
+
+    it('still says first-run when the academy really has nobody', () => {
+      // The negative control the fix turns on: without it the new copy would
+      // simply replace the old one and be wrong in the other direction.
+      const fixture = renderWithTotalAthletes(0);
+      expect(fixture.componentInstance.emptyStateKind()).toBe('first-run');
+    });
+
+    it('counts one athlete in the singular', () => {
+      // ngx-translate runs here with no plural rule and no message compiler,
+      // so the two forms are separate keys picked at the call site (#1646).
+      const fixture = renderWithTotalAthletes(1);
+      expect(fixture.componentInstance.inactiveHintKey()).toBe(
+        'athletes.list.empty.allInactiveHintOne',
+      );
+      expect(emptyState(fixture)?.textContent).toContain('One athlete');
+    });
+
+    it('does not ask at all when a filter is what emptied the list', () => {
+      const svc = TestBed.inject(AthleteService) as unknown as { countAll: Mock };
+      svc.countAll = vi.fn(() => of(12));
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      fixture.detectChanges();
+      svc.countAll.mockClear();
+
+      fixture.componentInstance.applySearch('rossi');
+      fixture.detectChanges();
+
+      // A search that finds nobody is already explained by the search; the
+      // extra round-trip would buy nothing and the copy would be wrong.
+      expect(svc.countAll).not.toHaveBeenCalled();
+      expect(fixture.componentInstance.emptyStateKind()).toBe('filtered');
+    });
+
+    it('offers the eye, which is the control that actually shows them', () => {
+      const fixture = renderWithTotalAthletes(12);
+      const cmp = fixture.componentInstance;
+      expect(cmp.showingInactive()).toBe(false);
+
+      emptyState(fixture)?.querySelector('button')?.click();
+      fixture.detectChanges();
+
+      expect(cmp.showingInactive()).toBe(true);
+    });
   });
 });
