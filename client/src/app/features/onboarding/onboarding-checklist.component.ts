@@ -111,7 +111,7 @@ export class OnboardingChecklistComponent {
       target: event.currentTarget as EventTarget,
       message: this.translate.instant('onboarding.checklist.confirmDismiss'),
       acceptLabel: this.translate.instant('onboarding.checklist.confirmDismissAccept'),
-      rejectLabel: this.translate.instant('onboarding.checklist.confirmDismissReject'),
+      rejectLabel: this.translate.instant('common.cancel'),
       accept: () => this.dismiss(),
     });
   }

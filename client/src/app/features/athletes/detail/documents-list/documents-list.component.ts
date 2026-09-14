@@ -137,7 +137,7 @@ export class DocumentsListComponent implements OnInit {
         name: doc.original_name,
       }),
       acceptLabel: this.translate.instant('athletes.detail.documents.confirm.deleteAccept'),
-      rejectLabel: this.translate.instant('athletes.detail.documents.confirm.cancel'),
+      rejectLabel: this.translate.instant('common.cancel'),
       acceptButtonProps: { severity: 'danger' },
       accept: () => this.delete(doc),
     });

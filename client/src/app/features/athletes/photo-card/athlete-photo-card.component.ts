@@ -133,7 +133,7 @@ export class AthletePhotoCardComponent {
       target: event.currentTarget as HTMLElement,
       message: this.translate.instant('athletes.photo.confirm.removeMessage'),
       acceptLabel: this.translate.instant('athletes.photo.confirm.removeAccept'),
-      rejectLabel: this.translate.instant('athletes.photo.confirm.removeReject'),
+      rejectLabel: this.translate.instant('common.cancel'),
       acceptButtonProps: { severity: 'danger' },
       accept: () => this.remove(),
     });

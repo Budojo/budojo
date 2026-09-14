@@ -281,11 +281,14 @@ describe('TimetableComponent (#1562)', () => {
       c.accept?.();
       return confirmation;
     });
-    component['confirmRemove']({
-      currentTarget: document.createElement('button'),
-    } as unknown as Event);
+    component['confirmRemove']();
 
     expect(spy).toHaveBeenCalled();
+    // A dialog, not a popup (#1644, TT-5): the trigger lives inside the
+    // lesson dialog, and a popup anchored to it hung outside that dialog's
+    // bottom edge. A `target` here would put the anchoring back.
+    expect(spy.mock.calls[0][0].target).toBeUndefined();
+    expect(spy.mock.calls[0][0].rejectLabel).toBe('Cancel');
     const req = httpMock.expectOne(`${CLASSES_URL}/1`);
     expect(req.request.method).toBe('DELETE');
     req.flush(null, { status: 204, statusText: 'No Content' });

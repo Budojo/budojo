@@ -11,7 +11,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
-import { ConfirmPopupModule } from 'primeng/confirmpopup';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogModule } from 'primeng/dialog';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
@@ -83,7 +83,7 @@ interface KindOption {
     ReactiveFormsModule,
     TranslatePipe,
     ButtonModule,
-    ConfirmPopupModule,
+    ConfirmDialogModule,
     DialogModule,
     InputNumberModule,
     InputTextModule,
@@ -355,17 +355,19 @@ export class TimetableComponent {
       });
   }
 
-  protected confirmRemove(event: Event): void {
+  protected confirmRemove(): void {
     const current = this.editing();
     if (current === null) return;
 
     // Say what stays: the lessons already held keep their name and their
     // people. Removing a slot from next week is not deleting last week.
     this.confirmationService.confirm({
-      target: event.currentTarget as EventTarget,
+      // No `target`: a modal dialog is centred, so there is nothing to anchor
+      // to — and anchoring is exactly what put the old popup outside the
+      // dialog this button lives in (#1644, TT-5).
       message: this.translate.instant('academy.timetable.confirm.remove', { name: current.name }),
       acceptLabel: this.translate.instant('academy.timetable.confirm.accept'),
-      rejectLabel: this.translate.instant('academy.timetable.confirm.reject'),
+      rejectLabel: this.translate.instant('common.cancel'),
       acceptButtonProps: { severity: 'danger' },
       accept: () => this.remove(current.id),
     });

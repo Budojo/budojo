@@ -165,6 +165,9 @@ export class FeeTierListComponent {
     this.confirmationService.confirm({
       target: event.currentTarget as EventTarget,
       message,
+      acceptLabel: this.translate.instant('academy.feeTiers.confirm.removeAccept'),
+      rejectLabel: this.translate.instant('common.cancel'),
+      acceptButtonProps: { severity: 'danger' },
       accept: () => this.remove(tier.id),
     });
   }

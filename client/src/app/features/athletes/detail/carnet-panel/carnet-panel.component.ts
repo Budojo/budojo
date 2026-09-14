@@ -303,6 +303,9 @@ export class CarnetPanelComponent {
         code: carnet.code,
         count: carnet.total_entries - carnet.remaining_entries,
       }),
+      acceptLabel: this.translate.instant('athletes.detail.carnets.confirmDeleteAccept'),
+      rejectLabel: this.translate.instant('common.cancel'),
+      acceptButtonProps: { severity: 'danger' },
       accept: () => this.applyDelete(id, carnet.id),
     });
   }

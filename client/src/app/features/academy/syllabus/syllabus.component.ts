@@ -456,7 +456,7 @@ export class SyllabusComponent {
       target: event.currentTarget as EventTarget,
       message: this.translate.instant(messageKey, { name: current.name, count: under }),
       acceptLabel: this.translate.instant('academy.syllabus.confirm.accept'),
-      rejectLabel: this.translate.instant('academy.syllabus.confirm.reject'),
+      rejectLabel: this.translate.instant('common.cancel'),
       acceptButtonProps: { severity: 'danger' },
       accept: () => this.remove(current.id),
     });

@@ -106,7 +106,7 @@ export class AvatarCardComponent {
       target: event.currentTarget as HTMLElement,
       message: this.translate.instant('profile.avatarConfirm.removeMessage'),
       acceptLabel: this.translate.instant('profile.avatarConfirm.removeAccept'),
-      rejectLabel: this.translate.instant('profile.avatarConfirm.removeReject'),
+      rejectLabel: this.translate.instant('common.cancel'),
       acceptButtonProps: { severity: 'danger' },
       accept: () => this.removeAvatar(),
     });

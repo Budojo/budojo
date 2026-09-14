@@ -269,7 +269,7 @@ export class AcademyDetailComponent {
       target: event.currentTarget as HTMLElement,
       message: this.translate.instant('academy.detail.confirm.removeMessage'),
       acceptLabel: this.translate.instant('academy.detail.confirm.removeAccept'),
-      rejectLabel: this.translate.instant('academy.detail.confirm.removeReject'),
+      rejectLabel: this.translate.instant('common.cancel'),
       acceptButtonProps: { severity: 'danger' },
       accept: () => this.removeLogo(),
     });

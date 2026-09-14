@@ -205,7 +205,7 @@ export class SchedulePlannerComponent {
       target: event.currentTarget as EventTarget,
       message: this.translate.instant('academy.schedule.cancelConfirm'),
       acceptLabel: this.translate.instant('academy.schedule.cancelAccept'),
-      rejectLabel: this.translate.instant('academy.schedule.cancelReject'),
+      rejectLabel: this.translate.instant('common.cancel'),
       acceptButtonProps: { severity: 'danger' },
       accept: () => this.executeCancel(next.id),
     });

@@ -347,7 +347,7 @@ export class MyFeedComponent implements OnInit {
       header: this.translateService.instant('community.moderation.deletePostTitle'),
       message: this.translateService.instant('community.moderation.deletePostMessage'),
       acceptLabel: this.translateService.instant('community.moderation.deleteAccept'),
-      rejectLabel: this.translateService.instant('community.moderation.deleteReject'),
+      rejectLabel: this.translateService.instant('common.cancel'),
       acceptButtonProps: { severity: 'danger' },
       accept: () => this.deletePost(post.id),
     });

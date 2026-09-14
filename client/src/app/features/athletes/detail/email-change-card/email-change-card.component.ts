@@ -214,7 +214,7 @@ export class EmailChangeCardComponent {
       header: this.translate.instant(headerKey),
       message: this.translate.instant(messageKey, { newEmail, currentEmail }),
       acceptLabel: this.translate.instant('account.emailChange.athleteDetail.confirmAccept'),
-      rejectLabel: this.translate.instant('account.emailChange.athleteDetail.confirmReject'),
+      rejectLabel: this.translate.instant('common.cancel'),
       accept: () => this.dispatchChange(newEmail),
     });
   }

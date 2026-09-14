@@ -498,7 +498,7 @@ export class AthletesListComponent implements OnInit {
         name: `${athlete.first_name} ${athlete.last_name}`.trim(),
       }),
       acceptLabel: this.translate.instant('athletes.list.restoreConfirm.accept'),
-      rejectLabel: this.translate.instant('athletes.list.restoreConfirm.reject'),
+      rejectLabel: this.translate.instant('common.cancel'),
       acceptButtonProps: { severity: 'primary' },
       accept: () => this.restore(athlete),
     });
@@ -1267,7 +1267,7 @@ export class AthletesListComponent implements OnInit {
       target: event.currentTarget as EventTarget,
       message,
       acceptLabel: this.translate.instant('athletes.list.confirm.sellCarnetAccept'),
-      rejectLabel: this.translate.instant('athletes.list.confirm.cancel'),
+      rejectLabel: this.translate.instant('common.cancel'),
       accept: () => this.sellCarnet(athlete),
     });
   }
@@ -1479,7 +1479,7 @@ export class AthletesListComponent implements OnInit {
           ? 'athletes.list.confirm.markPaidAccept'
           : 'athletes.list.confirm.markUnpaidAccept',
       ),
-      rejectLabel: this.translate.instant('athletes.list.confirm.cancel'),
+      rejectLabel: this.translate.instant('common.cancel'),
       accept: () => this.applyPaidToggle(athlete, year, month, willMarkPaid),
     });
   }

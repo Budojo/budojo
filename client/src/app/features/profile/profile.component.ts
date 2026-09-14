@@ -361,7 +361,7 @@ export class ProfileComponent {
         currentEmail,
       }),
       acceptLabel: this.translate.instant('account.emailChange.profile.confirmAccept'),
-      rejectLabel: this.translate.instant('account.emailChange.profile.confirmReject'),
+      rejectLabel: this.translate.instant('common.cancel'),
       accept: () => this.dispatchEmailRequest(newEmail),
     });
   }

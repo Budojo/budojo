@@ -1968,7 +1968,9 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
         press('[data-cy="timetable-class-1"]');
         cy.get('[data-cy="timetable-form"]', { timeout: 4000 }).should('be.visible');
         press('[data-cy="timetable-form-remove"]');
-        cy.get('.p-confirmpopup', { timeout: 4000 }).should('be.visible');
+        // A dialog now, not a popup (#1644, TT-5) — the trigger is inside the
+        // lesson dialog and an anchored popup hung outside its bottom edge.
+        cy.get('.p-confirmdialog', { timeout: 4000 }).should('be.visible');
       },
     },
   );

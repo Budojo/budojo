@@ -81,7 +81,7 @@
             [ariaLabel]="'profile.apiTokens.revoke' | translate"
             [confirmMessage]="'profile.apiTokens.confirmRevoke' | translate: { name: token.name }"
             [acceptLabel]="'profile.apiTokens.confirmRevokeAccept' | translate"
-            [rejectLabel]="'profile.apiTokens.confirmRevokeReject' | translate"
+            [rejectLabel]="'common.cancel' | translate"
             [loading]="revokingId() === token.id"
             (confirmed)="revoke(token)"
             [dataCy]="'profile-api-token-revoke-' + token.id"
