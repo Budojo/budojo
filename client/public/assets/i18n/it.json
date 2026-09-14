@@ -1627,7 +1627,8 @@
       },
       "confirm": {
         "remove": "Rimuovere {{name}} dall'orario? Le lezioni già tenute restano come sono.",
-        "accept": "Rimuovi"
+        "accept": "Rimuovi",
+        "title": "Rimuovi dall'orario"
       },
       "toast": {
         "saved": "Lezione salvata",
@@ -1683,7 +1684,8 @@
         "remove": "Rimuovere {{name}} dal programma?",
         "removePositionOne": "Rimuovere {{name}} e la tecnica che contiene?",
         "removePositionOther": "Rimuovere {{name}} e le {{count}} tecniche che contiene?",
-        "accept": "Rimuovi"
+        "accept": "Rimuovi",
+        "title": "Rimuovi dal programma"
       },
       "toast": {
         "saved": "Programma salvato",

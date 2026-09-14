@@ -2004,6 +2004,17 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       cy.get('[data-cy="syllabus-form"]', { timeout: 4000 }).should('be.visible');
     },
   });
+  // The other half of TT-5 (#1644): this confirm is opened from the footer of
+  // the topic dialog, so an anchored popup hung below that dialog's edge. It
+  // is a modal confirm now, photographed like the timetable's.
+  screen('12-syllabus-remove-confirm', '/dashboard/academy/syllabus', '[data-cy="syllabus-tree"]', {
+    act: () => {
+      press('[data-cy="syllabus-edit-1"]');
+      cy.get('[data-cy="syllabus-form"]', { timeout: 4000 }).should('be.visible');
+      press('[data-cy="syllabus-form-remove"]');
+      cy.get('.p-confirmdialog', { timeout: 4000 }).should('be.visible');
+    },
+  });
 
   // ── 20–21. Roster, inside ──────────────────────────────────────────────
   // The payment control in the filter row is a sort toggle, not a select.

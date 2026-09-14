@@ -1627,7 +1627,8 @@
       },
       "confirm": {
         "remove": "Remove {{name}} from the timetable? The lessons already held stay as they were.",
-        "accept": "Remove"
+        "accept": "Remove",
+        "title": "Remove from the timetable"
       },
       "toast": {
         "saved": "Class saved",
@@ -1683,7 +1684,8 @@
         "remove": "Remove {{name}} from the programme?",
         "removePositionOne": "Remove {{name}} and the one technique under it?",
         "removePositionOther": "Remove {{name}} and the {{count}} techniques under it?",
-        "accept": "Remove"
+        "accept": "Remove",
+        "title": "Remove from the syllabus"
       },
       "toast": {
         "saved": "Programme saved",

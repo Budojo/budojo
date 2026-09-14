@@ -369,6 +369,12 @@ export class TimetableComponent {
       // No `target`: a modal dialog is centred, so there is nothing to anchor
       // to — and anchoring is exactly what put the old popup outside the
       // dialog this button lives in (#1644, TT-5).
+      //
+      // A header, because ConfirmDialog has no `showHeader`: the bar renders
+      // either way, so with none passed it was ~60px of empty chrome with a
+      // floating ✕ — and `aria-labelledby` pointed at the empty title span,
+      // leaving the dialog with no accessible name at all.
+      header: this.translate.instant('academy.timetable.confirm.title'),
       message: this.translate.instant('academy.timetable.confirm.remove', { name: current.name }),
       acceptLabel: this.translate.instant('academy.timetable.confirm.accept'),
       rejectLabel: this.translate.instant('common.cancel'),

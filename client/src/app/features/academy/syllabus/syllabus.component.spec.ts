@@ -371,9 +371,7 @@ describe('SyllabusComponent (#1563)', () => {
       c.accept?.();
       return confirmation;
     });
-    component['confirmRemove']({
-      currentTarget: document.createElement('button'),
-    } as unknown as Event);
+    component['confirmRemove']();
 
     // What goes with it is said before it goes, not after.
     expect(spy.mock.calls[0][0].message).toContain('2 techniques');
@@ -396,9 +394,7 @@ describe('SyllabusComponent (#1563)', () => {
     component['startEditing'](onlyArmbar);
     const confirmation = fixture.debugElement.injector.get(ConfirmationService);
     const spy = vi.spyOn(confirmation, 'confirm').mockImplementation(() => confirmation);
-    component['confirmRemove']({
-      currentTarget: document.createElement('button'),
-    } as unknown as Event);
+    component['confirmRemove']();
 
     expect(spy.mock.calls[0][0].message).toBe(
       'Remove Closed guard and the one technique under it?',
@@ -413,9 +409,7 @@ describe('SyllabusComponent (#1563)', () => {
     component['startEditing'](ARMBAR);
     const confirmation = fixture.debugElement.injector.get(ConfirmationService);
     const spy = vi.spyOn(confirmation, 'confirm').mockImplementation(() => confirmation);
-    component['confirmRemove']({
-      currentTarget: document.createElement('button'),
-    } as unknown as Event);
+    component['confirmRemove']();
 
     expect(spy.mock.calls[0][0].message).toBe('Remove Armbar from the programme?');
   });
@@ -721,5 +715,26 @@ describe('SyllabusComponent (#1563)', () => {
     const el: HTMLElement = fixture.nativeElement;
     expect(el.querySelectorAll('.technique__name').length).toBe(2);
     httpMock.verify();
+  });
+
+  it('confirms in a dialog rather than a popup anchored inside one', () => {
+    const { fixture, component, httpMock } = setup();
+    flushTree(httpMock, [CLOSED_GUARD]);
+    fixture.detectChanges();
+    component['startEditing'](CLOSED_GUARD);
+
+    const confirmation = fixture.debugElement.injector.get(ConfirmationService);
+    const spy = vi.spyOn(confirmation, 'confirm').mockImplementation(() => confirmation);
+
+    component['confirmRemove']();
+
+    // The trigger sits in the topic dialog's footer; a popup anchored to it
+    // hung below that dialog's bottom edge (#1644, the same shape as TT-5).
+    // A `target` here would put the anchoring back.
+    expect(spy.mock.calls[0][0].target).toBeUndefined();
+    // ConfirmDialog has no `showHeader` — with no header passed the bar still
+    // renders, empty, and `aria-labelledby` points at an empty span.
+    expect(spy.mock.calls[0][0].header).toBe('Remove from the syllabus');
+    expect(spy.mock.calls[0][0].rejectLabel).toBe('Cancel');
   });
 });

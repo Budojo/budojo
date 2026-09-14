@@ -12,7 +12,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { CheckboxModule } from 'primeng/checkbox';
-import { ConfirmPopupModule } from 'primeng/confirmpopup';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectButtonModule } from 'primeng/selectbutton';
@@ -69,7 +69,7 @@ interface KindOption {
     TranslatePipe,
     ButtonModule,
     CheckboxModule,
-    ConfirmPopupModule,
+    ConfirmDialogModule,
     DialogModule,
     InputTextModule,
     SelectButtonModule,
@@ -437,7 +437,7 @@ export class SyllabusComponent {
       });
   }
 
-  protected confirmRemove(event: Event): void {
+  protected confirmRemove(): void {
     const current = this.editing();
     if (current === null) return;
 
@@ -457,7 +457,10 @@ export class SyllabusComponent {
           : 'academy.syllabus.confirm.removePositionOther';
 
     this.confirmationService.confirm({
-      target: event.currentTarget as EventTarget,
+      // No `target`: a modal confirm is centred, so there is nothing to anchor
+      // to — and anchoring is what put the old popup outside the dialog this
+      // button lives in (#1644, same shape as the timetable's TT-5).
+      header: this.translate.instant('academy.syllabus.confirm.title'),
       message: this.translate.instant(messageKey, { name: current.name, count: under }),
       acceptLabel: this.translate.instant('academy.syllabus.confirm.accept'),
       rejectLabel: this.translate.instant('common.cancel'),

@@ -205,8 +205,8 @@ describe('Weekly timetable', () => {
     cy.get('[data-cy="timetable-class-1"]').click();
     cy.get('[data-cy="timetable-form-remove"]').click();
     // The confirm names what stays: the lessons already held.
-    cy.get('.p-confirmpopup').should('contain', 'Kids').and('contain', 'already held');
-    cy.get('.p-confirmpopup').contains('button', 'Remove').click();
+    cy.get('.p-confirmdialog').should('contain', 'Kids').and('contain', 'already held');
+    cy.get('.p-confirmdialog').contains('button', 'Remove').click();
     cy.wait('@remove');
 
     // The host element stays in the DOM; the mask is the honest signal for
