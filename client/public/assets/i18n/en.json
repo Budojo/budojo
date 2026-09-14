@@ -2487,7 +2487,7 @@
       "another": "Choose another file"
     },
     "coverage": {
-      "fraction": "{{seen}} of {{total}} things the academy taught",
+      "fraction": "{{seen}} of {{total}} techniques the academy taught",
       "since": "Counted from {{date}}, the day they joined.",
       "legend": {
         "seenOne": "{{count}} seen",
