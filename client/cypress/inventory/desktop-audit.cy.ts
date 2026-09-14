@@ -1536,6 +1536,28 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       cy.get('[data-cy="syllabus-topic-11"]').should('be.visible');
     },
   });
+  // Searching the programme (#1629). The audit's own finding was that this
+  // page had no search, so the state that answers it needs its own frame.
+  screen('12-syllabus-search', '/dashboard/academy/syllabus', '[data-cy="syllabus-tree"]', {
+    act: () => {
+      cy.get('[data-cy="syllabus-search"]').type('kim');
+      cy.get('[data-cy="syllabus-search-summary"]').should('be.visible');
+    },
+  });
+  // One hit in one position — the commonest search, and the case a
+  // hardcoded plural rendered as "1 techniques across 1 positions" (#1629).
+  screen('12-syllabus-search-one', '/dashboard/academy/syllabus', '[data-cy="syllabus-tree"]', {
+    act: () => {
+      cy.get('[data-cy="syllabus-search"]').type('omoplata');
+      cy.get('[data-cy="syllabus-search-summary"]').should('be.visible');
+    },
+  });
+  screen('12-syllabus-search-none', '/dashboard/academy/syllabus', '[data-cy="syllabus-tree"]', {
+    act: () => {
+      cy.get('[data-cy="syllabus-search"]').type('berimbolo');
+      cy.get('[data-cy="syllabus-no-results"]').should('be.visible');
+    },
+  });
   screen('12-syllabus-empty', '/dashboard/academy/syllabus', '[data-cy="syllabus-page"]', {
     stubs: () => {
       cy.intercept('GET', '/api/v1/academy', {

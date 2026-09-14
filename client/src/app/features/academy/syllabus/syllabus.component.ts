@@ -124,14 +124,119 @@ export class SyllabusComponent {
     this.positions().reduce((total, position) => total + (position.children?.length ?? 0), 0),
   );
 
+  /**
+   * The search field (#1629, SYL-1).
+   *
+   * The shipped programme is 278 techniques and this is the page that
+   * maintains it; without a field, finding "kimura" meant opening seven
+   * positions one at a time. The lesson sheet has searched this same tree
+   * since #1564 — the page that edits it could not.
+   */
+  protected readonly query = signal<string>('');
+
+  /** Set the query, and forget anything folded shut under the previous one. */
+  protected setQuery(next: string): void {
+    this.collapsedInSearch.set(new Set());
+    this.query.set(next);
+  }
+
+  protected readonly searching = computed<boolean>(() => this.query().trim() !== '');
+
+  /**
+   * Matching positions, each carrying only its matching techniques.
+   *
+   * Grouped rather than flattened, which is the whole difference from the
+   * lesson sheet's flat result list: the programme holds a Kimura under
+   * Closed guard, Half guard and Side control, and a flat list of three
+   * identical names answers nothing. A position whose own name matches keeps
+   * all of its techniques — you searched for the position.
+   */
+  protected readonly filteredPositions = computed<readonly SyllabusTopic[]>(() => {
+    const needle = this.query().trim().toLocaleLowerCase();
+    if (needle === '') return this.positions();
+
+    const hit = (name: string): boolean => name.toLocaleLowerCase().includes(needle);
+
+    return this.positions()
+      .map((position) => {
+        if (hit(position.name)) return position;
+        const children = (position.children ?? []).filter((child) => hit(child.name));
+        return children.length > 0 ? { ...position, children } : null;
+      })
+      .filter((position): position is SyllabusTopic => position !== null);
+  });
+
+  /**
+   * How many techniques each position really holds, by id.
+   *
+   * The badge on a position row means "this position holds N techniques", and
+   * a search must not quietly change what it means: `filteredPositions` hands
+   * the template a position carrying only its matches, so reading the badge
+   * off that would make Closed guard say 1 when it holds 6.
+   */
+  private readonly totalByPosition = computed<ReadonlyMap<number, number>>(
+    () => new Map(this.positions().map((p) => [p.id, p.children?.length ?? 0])),
+  );
+
+  protected techniqueTotal(position: SyllabusTopic): number {
+    return this.totalByPosition().get(position.id) ?? position.children?.length ?? 0;
+  }
+
+  /** How many techniques the search turned up, and across how many positions. */
+  protected readonly resultSummary = computed<string>(() => {
+    this.languageService.currentLang(); // signal dep — recompute on toggle
+    const positions = this.filteredPositions();
+    const techniques = positions.reduce((n, p) => n + (p.children?.length ?? 0), 0);
+    // Two counts that vary independently, so each picks its own One/Other —
+    // ngx-translate has no plural rule, and a single hardcoded-plural string
+    // renders "1 techniques across 1 positions" on the commonest search
+    // there is. The same mistake is already documented in `confirmRemove`.
+    const t = this.translate.instant(
+      techniques === 1
+        ? 'academy.syllabus.searchCountTechniqueOne'
+        : 'academy.syllabus.searchCountTechniqueOther',
+      { count: techniques },
+    );
+    const p = this.translate.instant(
+      positions.length === 1
+        ? 'academy.syllabus.searchCountPositionOne'
+        : 'academy.syllabus.searchCountPositionOther',
+      { count: positions.length },
+    );
+    return this.translate.instant('academy.syllabus.searchSummary', {
+      techniques: t,
+      positions: p,
+    });
+  });
+
+  /**
+   * In-season and total, said separately (#1629).
+   *
+   * One number used to stand for both, and they diverge the moment a position
+   * goes out of season — silently, on the page whose ticks are what the
+   * coverage report counts.
+   */
+  protected readonly inSeasonCount = computed<number>(() =>
+    this.positions().reduce(
+      (total, position) =>
+        total + (position.children ?? []).filter((child) => child.in_season).length,
+      0,
+    ),
+  );
+
   protected readonly countLabel = computed<string | null>(() => {
     this.languageService.currentLang(); // signal dep — recompute on toggle
     const n = this.techniqueCount();
     if (n === 0) return null;
-    return this.translate.instant(
-      n === 1 ? 'academy.syllabus.countOne' : 'academy.syllabus.countOther',
-      { count: n },
-    );
+    const inSeason = this.inSeasonCount();
+    // Only split the count when the two actually differ — "31 in stagione ·
+    // 31 totali" is noise, and the whole point is that a divergence shows.
+    return inSeason === n
+      ? this.translate.instant(
+          n === 1 ? 'academy.syllabus.countOne' : 'academy.syllabus.countOther',
+          { count: n },
+        )
+      : this.translate.instant('academy.syllabus.countSplit', { inSeason, total: n });
   });
 
   /**
@@ -198,11 +303,37 @@ export class SyllabusComponent {
       .subscribe(() => this.nameError.set(false));
   }
 
+  /**
+   * Positions the reader folded shut while a search was running (#1629).
+   *
+   * A search opens everything it kept, or the matches sit inside collapsed
+   * positions and the field looks like it found nothing. But "open" cannot be
+   * an override that outranks the toggle: a name like "guard" matches
+   * fourteen positions and keeps every technique under each, and the reader
+   * has to be able to fold one away. So the search has its own closed-set,
+   * and `expanded` — what the reader had open before, and gets back after —
+   * is left alone.
+   */
+  private readonly collapsedInSearch = signal<ReadonlySet<number>>(new Set());
+
   protected isExpanded(position: SyllabusTopic): boolean {
-    return this.expanded().has(position.id);
+    return this.searching()
+      ? !this.collapsedInSearch().has(position.id)
+      : this.expanded().has(position.id);
   }
 
   protected toggleExpanded(position: SyllabusTopic): void {
+    // While searching, the toggle acts on the search's own closed-set —
+    // otherwise the press writes to `expanded`, changes nothing on screen,
+    // and the reader finds positions opened or closed behind their back once
+    // the field is cleared.
+    if (this.searching()) {
+      const next = new Set(this.collapsedInSearch());
+      if (!next.delete(position.id)) next.add(position.id);
+      this.collapsedInSearch.set(next);
+      return;
+    }
+
     const next = new Set(this.expanded());
     if (next.has(position.id)) {
       next.delete(position.id);
@@ -234,7 +365,18 @@ export class SyllabusComponent {
     this.nameError.set(false);
     this.dialogOpen.set(true);
     // Adding into a closed position would hide the result.
-    if (!this.isExpanded(position)) this.toggleExpanded(position);
+    // Open it in the model that survives the search, not the one the search
+    // is painting: `isExpanded` is true for every kept position while a query
+    // is running, so testing it here meant the id never reached `expanded`
+    // and the new technique was gone the moment the field was cleared.
+    if (!this.expanded().has(position.id)) {
+      this.expanded.update((open) => new Set(open).add(position.id));
+    }
+    this.collapsedInSearch.update((shut) => {
+      const next = new Set(shut);
+      next.delete(position.id);
+      return next;
+    });
   }
 
   protected startEditing(topic: SyllabusTopic): void {

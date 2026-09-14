@@ -1689,7 +1689,16 @@
         "errorSummary": "Qualcosa è andato storto",
         "errorDetail": "La modifica non è stata salvata. Riprova.",
         "loadErrorDetail": "Impossibile caricare il programma."
-      }
+      },
+      "searchPlaceholder": "Cerca una tecnica o una posizione",
+      "searchClear": "Cancella la ricerca",
+      "searchSummary": "{{techniques}} in {{positions}}. Svuota la ricerca per tornare all’albero.",
+      "searchNone": "Niente nel programma corrisponde a “{{query}}”.",
+      "countSplit": "{{inSeason}} in stagione · {{total}} totali",
+      "searchCountTechniqueOne": "{{count}} tecnica",
+      "searchCountTechniqueOther": "{{count}} tecniche",
+      "searchCountPositionOne": "{{count}} posizione",
+      "searchCountPositionOther": "{{count}} posizioni"
     },
     "schedule": {
       "title": "Pianifica un cambio calendario futuro",

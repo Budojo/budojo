@@ -1689,7 +1689,16 @@
         "errorSummary": "Something went wrong",
         "errorDetail": "The change was not saved. Try again.",
         "loadErrorDetail": "The programme could not be loaded."
-      }
+      },
+      "searchPlaceholder": "Search a technique or a position",
+      "searchClear": "Clear the search",
+      "searchSummary": "{{techniques}} across {{positions}}. Clear the search to get the tree back.",
+      "searchNone": "Nothing in the programme matches \"{{query}}\".",
+      "countSplit": "{{inSeason}} in season · {{total}} in total",
+      "searchCountTechniqueOne": "{{count}} technique",
+      "searchCountTechniqueOther": "{{count}} techniques",
+      "searchCountPositionOne": "{{count}} position",
+      "searchCountPositionOther": "{{count}} positions"
     },
     "schedule": {
       "title": "Plan a future schedule change",
