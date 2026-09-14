@@ -303,14 +303,48 @@ describe('AttendanceHistoryComponent', () => {
     expect(futureNonTraining.classList.contains('attendance-history__cell--training')).toBe(false);
     expect(futureNonTraining.classList.contains('attendance-history__cell--upcoming')).toBe(false);
 
-    // Today is a Saturday here and not a training day, but the boundary is
-    // the part most likely to be got wrong: a class tonight is not a miss at
-    // nine this morning.
-    expect(cell(25).classList.contains('attendance-history__cell--upcoming')).toBe(false);
-
     // A reader hears the difference too, not only sees it.
     expect(upcoming.getAttribute('aria-label')).toContain('not yet');
     expect(missed.getAttribute('aria-label')).not.toContain('not yet');
+
+    flushSummary(httpMock);
+    httpMock.verify();
+  });
+
+  it('does not call today missed before today has happened', () => {
+    // The boundary, with a fixture that actually trains on it. System time is
+    // Saturday 25 April 2026, so training_days must include 6 or the
+    // `training &&` conjunct short-circuits and the test proves nothing —
+    // which is exactly how the first version of it passed either way.
+    const httpMock = setupTestBed();
+    TestBed.inject(AcademyService).academy.set({
+      id: 1,
+      name: 'Test',
+      slug: 'test',
+      address: null,
+      logo_url: null,
+      training_days: [1, 3, 5, 6],
+    });
+
+    const fixture = TestBed.createComponent(AttendanceHistoryComponent);
+    fixture.detectChanges();
+    httpMock.expectOne(`/api/v1/athletes/${ATHLETE_ID}`).flush({ data: makeAthlete() });
+    httpMock
+      .expectOne(`/api/v1/athletes/${ATHLETE_ID}/attendance?from=2026-04-01&to=2026-04-30`)
+      .flush({ data: [] });
+    fixture.detectChanges();
+
+    const today = fixture.nativeElement.querySelector('[data-day="25"]') as HTMLElement;
+    expect(today.classList.contains('attendance-history__cell--training')).toBe(true);
+    // Not the missed tone: the class has not happened yet, and the legend
+    // under this grid puts the word "missed" to that tone.
+    expect(today.classList.contains('attendance-history__cell--upcoming')).toBe(true);
+    expect(today.getAttribute('aria-label')).toContain('not yet');
+
+    // Yesterday was a Friday and a training day, and it really was missed.
+    const yesterday = fixture.nativeElement.querySelector('[data-day="24"]') as HTMLElement;
+    expect(yesterday.classList.contains('attendance-history__cell--training')).toBe(true);
+    expect(yesterday.classList.contains('attendance-history__cell--upcoming')).toBe(false);
 
     flushSummary(httpMock);
     httpMock.verify();
