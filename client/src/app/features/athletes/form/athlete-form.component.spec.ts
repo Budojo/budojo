@@ -870,27 +870,71 @@ describe('AthleteFormComponent', () => {
 
   // ─── Form polish (#1650) ─────────────────────────────────────────────────
 
-  describe("a new athlete starts on the academy's dialling code", () => {
+  describe("the phone prefix follows the academy's own dialling code", () => {
     beforeEach(() => setupTestBed(null));
 
-    it('fills the prefix from the academy, so a +39 gym is not asked twice', () => {
-      TestBed.inject(AcademyService).academy.set({ ...ACADEMY_BASE, phone_country_code: '+39' });
+    function renderWith(code: string | null) {
+      TestBed.inject(AcademyService).academy.set({ ...ACADEMY_BASE, phone_country_code: code });
       const fixture = TestBed.createComponent(AthleteFormComponent);
       fixture.detectChanges();
       flushFeeTiers(TestBed.inject(HttpTestingController));
+      return fixture;
+    }
 
-      // The field opened empty and truncated to "Prefis…", so the one gym
-      // every athlete belongs to had to be retyped on every single one.
-      expect(fixture.componentInstance.form.controls.phone_country_code.value).toBe('+39');
+    it('fills the prefix on the first keystroke of the number', () => {
+      const fixture = renderWith('+39');
+      const form = fixture.componentInstance.form;
+
+      // The field opened empty and clipped to "Prefis…", and the one gym
+      // every athlete belongs to had to be restated on each of them.
+      form.controls.phone_national_number.setValue('3331234567');
+
+      expect(form.controls.phone_country_code.value).toBe('+39');
+    });
+
+    it('leaves the form untouched and submittable while the number is empty', () => {
+      const fixture = renderWith('+39');
+      const form = fixture.componentInstance.form;
+
+      // The regression an eager default caused: the prefix arrived on init,
+      // phonePairRequired fired on a number nobody had typed, and an athlete
+      // with no phone could not be saved at all.
+      expect(form.controls.phone_country_code.value).toBe('');
+      expect(form.controls.phone_national_number.errors).toBeNull();
+    });
+
+    it('saves an athlete with no phone at all', () => {
+      const fixture = renderWith('+39');
+      const cmp = fixture.componentInstance;
+      cmp.form.controls.first_name.setValue('Mario');
+      cmp.form.controls.last_name.setValue('Rossi');
+
+      cmp.submit();
+
+      // Before the fix this issued zero POSTs: submit() returned early on
+      // form.invalid and rendered "National number is required when a
+      // country code is selected" under a prefix the app had chosen.
+      const req = TestBed.inject(HttpTestingController).expectOne('/api/v1/athletes');
+      expect(req.request.body.phone_country_code).toBeNull();
+      expect(req.request.body.phone_national_number).toBeNull();
+      req.flush({ data: makeAthlete() });
     });
 
     it('leaves the prefix empty when the academy has no number of its own', () => {
-      TestBed.inject(AcademyService).academy.set({ ...ACADEMY_BASE, phone_country_code: null });
-      const fixture = TestBed.createComponent(AthleteFormComponent);
-      fixture.detectChanges();
-      flushFeeTiers(TestBed.inject(HttpTestingController));
+      const fixture = renderWith(null);
+      fixture.componentInstance.form.controls.phone_national_number.setValue('3331234567');
 
       expect(fixture.componentInstance.form.controls.phone_country_code.value).toBe('');
+    });
+
+    it('never overwrites a prefix the owner picked themselves', () => {
+      const fixture = renderWith('+39');
+      const form = fixture.componentInstance.form;
+      form.controls.phone_country_code.setValue('+44');
+
+      form.controls.phone_national_number.setValue('7700900123');
+
+      expect(form.controls.phone_country_code.value).toBe('+44');
     });
   });
 

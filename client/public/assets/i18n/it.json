@@ -2313,7 +2313,6 @@
         "phoneNationalNumber": "Numero nazionale",
         "province": "Provincia"
       },
-      "tooltip": {},
       "validation": {
         "maxLength100": "Massimo 100 caratteri.",
         "maxLength255": "Massimo 255 caratteri.",

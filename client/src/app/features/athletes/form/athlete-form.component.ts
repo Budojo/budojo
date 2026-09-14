@@ -26,7 +26,6 @@ import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
 import { SelectModule } from 'primeng/select';
 import { ToastModule } from 'primeng/toast';
-import { Tooltip } from 'primeng/tooltip';
 import { ConfirmPopupModule } from 'primeng/confirmpopup';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import {
@@ -180,7 +179,6 @@ const urlIfPresent: ValidatorFn = (control: AbstractControl) => {
     MessageModule,
     SelectModule,
     ToastModule,
-    Tooltip,
     ConfirmPopupModule,
     PageHeaderComponent,
     BudojoFormFieldComponent,
@@ -432,20 +430,6 @@ export class AthleteFormComponent implements OnInit {
         error: () => undefined,
       });
 
-    // ATHF-2 (#1650): a new athlete starts on the academy's own dialling
-    // code. The field opened empty and truncated to "Prefis…", so every
-    // athlete of a +39 gym was asked to state +39 again — and the pair
-    // validator then blocks the form until they do.
-    //
-    // Create only: on an edit the stored value is the athlete's own, and a
-    // default would quietly rewrite it.
-    if (this.mode() === 'create') {
-      const academyCode = this.academyService.academy()?.phone_country_code ?? '';
-      if (academyCode !== '' && this.form.controls.phone_country_code.value === '') {
-        this.form.controls.phone_country_code.setValue(academyCode);
-      }
-    }
-
     // The phone pair validators are mutually dependent — when one control's
     // value flips between empty/non-empty, the OTHER control's validity needs
     // a re-check. Without this wiring, typing a country code wouldn't surface
@@ -461,7 +445,29 @@ export class AthleteFormComponent implements OnInit {
     cc.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
       nn.updateValueAndValidity({ emitEvent: false });
     });
-    nn.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+    nn.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((number) => {
+      // ATHF-2 (#1650): Budojo installs in one gym, so every athlete in it
+      // shares that gym's dialling code — but the field asking for it opened
+      // empty and clipped to "Prefis…", and had to be answered on every
+      // single athlete.
+      //
+      // Filled on the first keystroke of the number, NOT on init. An eager
+      // default looks like the same thing and is not: it opens the form in
+      // the dead end the comment beside the ✕ in the template already names
+      // — prefix set, number empty, `phonePairRequired` firing on a field
+      // nobody touched — so an athlete with no phone could not be saved at
+      // all until the owner found the ✕ and cleared a value the app had
+      // chosen for them. A dialling code on its own is not a phone number;
+      // it becomes one when there is a number to put in front of.
+      //
+      // No mode guard is needed: this only ever writes into an empty
+      // control, so an athlete's own +44 is never touched, create or edit.
+      if (number !== '' && cc.value === '') {
+        const academyCode = this.academyService.academy()?.phone_country_code ?? '';
+        if (academyCode !== '') {
+          cc.setValue(academyCode, { emitEvent: false });
+        }
+      }
       cc.updateValueAndValidity({ emitEvent: false });
     });
 

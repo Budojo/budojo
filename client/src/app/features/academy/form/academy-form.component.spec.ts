@@ -3,6 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
+import { TranslateService } from '@ngx-translate/core';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 import { AcademyFormComponent } from './academy-form.component';
 import { Academy, AcademyService, Address } from '../../../core/services/academy.service';
@@ -582,19 +583,21 @@ describe('AcademyFormComponent — what one carnet entry covers (#1576)', () => 
     });
   });
 
-  describe('the contact links', () => {
-    it('shows an example URL rather than a bare handle', () => {
+  describe('the address placeholders', () => {
+    it('follow the language, instead of being hardcoded Italian', () => {
       const { fixture } = setup();
       const el = fixture.nativeElement as HTMLElement;
+      const line2 = () => el.querySelector<HTMLInputElement>('#academy-address-line2');
 
-      // Both forms declare `type="url"` and the server rule is
-      // `nullable|url`, so a placeholder reading `@yourgym` demonstrates a
-      // value the save would reject.
-      for (const id of ['academy-website', 'academy-facebook', 'academy-instagram']) {
-        const input = el.querySelector<HTMLInputElement>(`#${id}`);
-        expect(input, id).not.toBeNull();
-        expect(input?.placeholder, id).toMatch(/^https:\/\//);
-      }
+      // They were written straight into the template — `Scala B, interno 4`
+      // — so they stayed Italian whatever the sidebar said, and the i18n
+      // parity spec could not see them at all.
+      expect(line2()?.placeholder).toBe('Block B, flat 4');
+
+      TestBed.inject(TranslateService).use('it');
+      fixture.detectChanges();
+
+      expect(line2()?.placeholder).toBe('Scala B, interno 4');
     });
   });
 });
