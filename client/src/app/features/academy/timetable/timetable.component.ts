@@ -11,7 +11,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
-import { ConfirmPopupModule } from 'primeng/confirmpopup';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogModule } from 'primeng/dialog';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
@@ -34,6 +34,10 @@ import { EmptyStateComponent } from '../../../shared/components/empty-state/empt
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { TrainingDaysPickerComponent } from '../../../shared/components/training-days-picker/training-days-picker.component';
 import { localeFor } from '../../../shared/utils/locale';
+import {
+  CONFIRM_ACCEPT_DESTRUCTIVE,
+  CONFIRM_REJECT_BUTTON,
+} from '../../../shared/utils/confirm-buttons';
 
 /** Mon-first display order, Carbon values (0 = Sunday). */
 const WEEK_ORDER = [1, 2, 3, 4, 5, 6, 0] as const;
@@ -83,7 +87,7 @@ interface KindOption {
     ReactiveFormsModule,
     TranslatePipe,
     ButtonModule,
-    ConfirmPopupModule,
+    ConfirmDialogModule,
     DialogModule,
     InputNumberModule,
     InputTextModule,
@@ -355,18 +359,27 @@ export class TimetableComponent {
       });
   }
 
-  protected confirmRemove(event: Event): void {
+  protected confirmRemove(): void {
     const current = this.editing();
     if (current === null) return;
 
     // Say what stays: the lessons already held keep their name and their
     // people. Removing a slot from next week is not deleting last week.
     this.confirmationService.confirm({
-      target: event.currentTarget as EventTarget,
+      // No `target`: a modal dialog is centred, so there is nothing to anchor
+      // to — and anchoring is exactly what put the old popup outside the
+      // dialog this button lives in (#1644, TT-5).
+      //
+      // A header, because ConfirmDialog has no `showHeader`: the bar renders
+      // either way, so with none passed it was ~60px of empty chrome with a
+      // floating ✕ — and `aria-labelledby` pointed at the empty title span,
+      // leaving the dialog with no accessible name at all.
+      header: this.translate.instant('academy.timetable.confirm.title'),
       message: this.translate.instant('academy.timetable.confirm.remove', { name: current.name }),
       acceptLabel: this.translate.instant('academy.timetable.confirm.accept'),
-      rejectLabel: this.translate.instant('academy.timetable.confirm.reject'),
-      acceptButtonProps: { severity: 'danger' },
+      rejectLabel: this.translate.instant('common.cancel'),
+      acceptButtonProps: CONFIRM_ACCEPT_DESTRUCTIVE,
+      rejectButtonProps: CONFIRM_REJECT_BUTTON,
       accept: () => this.remove(current.id),
     });
   }

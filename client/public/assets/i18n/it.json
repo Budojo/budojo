@@ -1,4 +1,7 @@
 {
+  "common": {
+    "cancel": "Annulla"
+  },
   "language": {
     "label": "Lingua",
     "english": "English",
@@ -256,7 +259,6 @@
       "deletePostTitle": "Eliminare questo post?",
       "deletePostMessage": "Il post e tutti i suoi commenti spariranno dal feed. L'azione non è ripristinabile dalla dashboard.",
       "deleteAccept": "Elimina",
-      "deleteReject": "Annulla",
       "postDeletedSummary": "Post eliminato",
       "postDeleteError": "Non è stato possibile eliminare il post. Riprova tra un momento."
     }
@@ -425,7 +427,6 @@
       "dismiss": "Chiudi",
       "confirmDismiss": "Nascondere questa checklist per sempre? Non la vedrai più.",
       "confirmDismissAccept": "Nascondi",
-      "confirmDismissReject": "Tienila",
       "dismissedSummary": "Checklist nascosta"
     },
     "steps": {
@@ -832,8 +833,7 @@
     },
     "avatarConfirm": {
       "removeMessage": "Rimuovere la tua foto profilo?",
-      "removeAccept": "Rimuovi",
-      "removeReject": "Annulla"
+      "removeAccept": "Rimuovi"
     },
     "changePassword": {
       "title": "Password",
@@ -985,7 +985,6 @@
       "addDevice": "Aggiungi un altro dispositivo",
       "revoke": "Revoca",
       "revokeConfirm": "Smettere di inviare notifiche a questo dispositivo?",
-      "cancel": "Annulla",
       "deviceAdded": "Aggiunto",
       "enabledToast": {
         "summary": "Notifiche attivate su questo dispositivo"
@@ -1062,7 +1061,6 @@
       "confirmRevokeCurrent": "Disconnettere la sessione {{device}}? È il dispositivo che stai usando ora — verrai disconnesso e dovrai accedere di nuovo.",
       "confirmRevokeOthers": "Disconnettere tutte le altre sessioni e tenere solo questa? Dovrai accedere di nuovo dagli altri dispositivi.",
       "confirmAccept": "Disconnetti",
-      "confirmReject": "Annulla",
       "errorMessage": "Non è stato possibile caricare le sessioni. Riprova tra un momento.",
       "retry": "Riprova",
       "revokeToast": {
@@ -1136,7 +1134,6 @@
       "expiresAt": "Scade {{datetime}}",
       "confirmRevoke": "Revocare {{name}}? Qualsiasi script che usa questo token smetterà di funzionare immediatamente.",
       "confirmRevokeAccept": "Revoca",
-      "confirmRevokeReject": "Annulla",
       "createDialog": {
         "title": "Genera un nuovo token API",
         "nameLabel": "Nome del token",
@@ -1168,7 +1165,6 @@
         "confirmTitle": "Conferma il cambio email",
         "confirmMessage": "Invieremo un link di conferma a {{newEmail}}. Fino al click su quel link, la tua email di accesso resta {{currentEmail}}.",
         "confirmAccept": "Invia link",
-        "confirmReject": "Annulla",
         "required": "Inserisci il nuovo indirizzo email.",
         "invalid": "Non sembra un indirizzo email valido.",
         "maxLength": "L'email non può superare 255 caratteri.",
@@ -1198,7 +1194,6 @@
         "confirmStateCTitle": "Link di conferma",
         "confirmStateCMessage": "L'atleta dovrà confermare la nuova email cliccando un link. Fino ad allora la sua email di accesso resta {{currentEmail}}.",
         "confirmAccept": "Continua",
-        "confirmReject": "Annulla",
         "toast": {
           "directSummary": "Email aggiornata",
           "inviteSwapSummary": "Invito reinviato",
@@ -1444,8 +1439,7 @@
       },
       "confirm": {
         "removeMessage": "Rimuovere il logo dell'accademia?",
-        "removeAccept": "Rimuovi",
-        "removeReject": "Annulla"
+        "removeAccept": "Rimuovi"
       },
       "seasonStarted": "iniziata il {{date}}",
       "logoNone": "Nessuno"
@@ -1570,7 +1564,8 @@
       "confirm": {
         "remove": "Eliminare la fascia «{{label}}»?",
         "removeWithAthletesOne": "Eliminare la fascia «{{label}}»? {{count}} atleta la sta usando e tornerà alla quota mensile dell’accademia.",
-        "removeWithAthletesOther": "Eliminare la fascia «{{label}}»? {{count}} atleti la stanno usando e torneranno alla quota mensile dell’accademia."
+        "removeWithAthletesOther": "Eliminare la fascia «{{label}}»? {{count}} atleti la stanno usando e torneranno alla quota mensile dell’accademia.",
+        "removeAccept": "Elimina"
       },
       "toast": {
         "savedSummary": "Listino aggiornato",
@@ -1633,7 +1628,7 @@
       "confirm": {
         "remove": "Rimuovere {{name}} dall'orario? Le lezioni già tenute restano come sono.",
         "accept": "Rimuovi",
-        "reject": "Tieni"
+        "title": "Rimuovi dall'orario"
       },
       "toast": {
         "saved": "Lezione salvata",
@@ -1690,7 +1685,7 @@
         "removePositionOne": "Rimuovere {{name}} e la tecnica che contiene?",
         "removePositionOther": "Rimuovere {{name}} e le {{count}} tecniche che contiene?",
         "accept": "Rimuovi",
-        "reject": "Tieni"
+        "title": "Rimuovi dal programma"
       },
       "toast": {
         "saved": "Programma salvato",
@@ -1718,9 +1713,8 @@
       "editCancel": "Annulla",
       "save": "Pianifica cambio",
       "cancel": "Annulla cambio pianificato",
-      "cancelConfirm": "Annullare il cambio pianificato?",
-      "cancelAccept": "Sì, annulla",
-      "cancelReject": "Mantienilo",
+      "cancelConfirm": "Scartare il cambio pianificato?",
+      "cancelAccept": "Scarta",
       "effectiveFromLabel": "Effettivo dal",
       "effectiveFromHint": "Il nuovo calendario parte da questo giorno. Deve essere una data futura — per cambiare con effetto immediato usa il selettore dei giorni di allenamento qui sopra.",
       "daysLabel": "Giorni di allenamento da quella data",
@@ -1944,16 +1938,14 @@
         "markPaidAccept": "Segna pagato",
         "markUnpaidMessage": "Segnare {{name}} come non pagato per {{month}}?",
         "markUnpaidAccept": "Segna non pagato",
-        "cancel": "Annulla",
-        "markPaidPeriodMessage": "Registrare il pagamento di {{name}} per {{period}}?",
-        "markUnpaidPeriodMessage": "Annullare il pagamento di {{name}} che copre {{period}}?",
+        "markPaidPeriodMessage": "Segnare {{name}} come pagato? Il pagamento copre: {{period}}",
+        "markUnpaidPeriodMessage": "Segnare {{name}} come non pagato? Il pagamento copriva: {{period}}",
         "sellCarnetMessage": "Vendere un carnet da {{price}} per {{entries}} ingressi a {{name}}?",
         "sellCarnetAccept": "Vendi"
       },
       "restoreConfirm": {
         "message": "Ripristinare {{name}}?",
-        "accept": "Ripristina",
-        "reject": "Annulla"
+        "accept": "Ripristina"
       },
       "restoreToast": {
         "successSummary": "Atleta ripristinato",
@@ -2010,8 +2002,7 @@
       "acceptedChip": "Atleta registrato il {{acceptedAt}}",
       "confirm": {
         "revokeMessage": "Revocare l'invito? L'atleta non potrà più usare il link.",
-        "revokeAccept": "Revoca",
-        "revokeReject": "Annulla"
+        "revokeAccept": "Revoca"
       },
       "toast": {
         "invitedSummary": "Invito inviato",
@@ -2032,8 +2023,10 @@
         "confirm": {
           "markPaidMessage": "Segnare {{name}} come pagato per {{month}} {{year}}?",
           "markUnpaidMessage": "Segnare {{name}} come non pagato per {{month}} {{year}}?",
-          "markPaidPeriodMessage": "Registrare il pagamento di {{name}} per {{period}}?",
-          "markUnpaidPeriodMessage": "Annullare il pagamento di {{name}} che copre {{period}}?"
+          "markPaidPeriodMessage": "Segnare {{name}} come pagato? Il pagamento copre: {{period}}",
+          "markUnpaidPeriodMessage": "Segnare {{name}} come non pagato? Il pagamento copriva: {{period}}",
+          "markPaidAccept": "Segna pagato",
+          "markUnpaidAccept": "Segna non pagato"
         },
         "toast": {
           "markedPaidSummary": "Pagato",
@@ -2070,8 +2063,7 @@
       "documents": {
         "confirm": {
           "deleteMessage": "Eliminare {{name}}? Il file verrà rimosso dal disco.",
-          "deleteAccept": "Elimina",
-          "cancel": "Annulla"
+          "deleteAccept": "Elimina"
         },
         "toast": {
           "uploadedSummary": "Documento caricato",
@@ -2253,7 +2245,8 @@
           "confirm": "Salva",
           "newExpiry": "Nuova scadenza: {{date}}"
         },
-        "soldOnFor": "Venduto il {{date}} per {{amount}}"
+        "soldOnFor": "Venduto il {{date}} per {{amount}}",
+        "confirmDeleteAccept": "Elimina"
       },
       "closeEdit": "Torna alla scheda",
       "reachAria": "Come contattare l'atleta",
@@ -2412,8 +2405,7 @@
       "alt": "Foto di {{name}}",
       "confirm": {
         "removeMessage": "Rimuovere la foto di questo atleta?",
-        "removeAccept": "Rimuovi",
-        "removeReject": "Annulla"
+        "removeAccept": "Rimuovi"
       },
       "toast": {
         "uploadSuccess": "Foto aggiornata",
@@ -2821,7 +2813,6 @@
     "restore": "Ripristina",
     "confirmRestore": "Ripristinare questo backup? I dati attuali verranno sostituiti con il contenuto di questo archivio.",
     "confirmRestoreAccept": "Ripristina",
-    "confirmRestoreReject": "Annulla",
     "toast": {
       "created": "Backup creato",
       "failed": "Backup non riuscito — controlla il log",
@@ -2844,7 +2835,6 @@
       "import": "Importa le chiavi",
       "importConfirm": "Importare queste chiavi? Sostituisce le chiavi attuali di questo computer e riavvia Budojo. Fallo solo quando recuperi i dati da un altro PC.",
       "importConfirmAccept": "Importa e riavvia",
-      "importConfirmReject": "Annulla",
       "importOk": "Chiavi di recupero importate",
       "importRelaunch": "Budojo si riavvierà per applicarle.",
       "importFailed": "Impossibile importare il codice di recupero"

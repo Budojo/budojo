@@ -1971,7 +1971,9 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
         press('[data-cy="timetable-class-1"]');
         cy.get('[data-cy="timetable-form"]', { timeout: 4000 }).should('be.visible');
         press('[data-cy="timetable-form-remove"]');
-        cy.get('.p-confirmpopup', { timeout: 4000 }).should('be.visible');
+        // A dialog now, not a popup (#1644, TT-5) — the trigger is inside the
+        // lesson dialog and an anchored popup hung outside its bottom edge.
+        cy.get('.p-confirmdialog', { timeout: 4000 }).should('be.visible');
       },
     },
   );
@@ -2000,6 +2002,17 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       press('[data-cy="syllabus-toggle-1"]');
       press('[data-cy="syllabus-topic-11"] button');
       cy.get('[data-cy="syllabus-form"]', { timeout: 4000 }).should('be.visible');
+    },
+  });
+  // The other half of TT-5 (#1644): this confirm is opened from the footer of
+  // the topic dialog, so an anchored popup hung below that dialog's edge. It
+  // is a modal confirm now, photographed like the timetable's.
+  screen('12-syllabus-remove-confirm', '/dashboard/academy/syllabus', '[data-cy="syllabus-tree"]', {
+    act: () => {
+      press('[data-cy="syllabus-edit-1"]');
+      cy.get('[data-cy="syllabus-form"]', { timeout: 4000 }).should('be.visible');
+      press('[data-cy="syllabus-form-remove"]');
+      cy.get('.p-confirmdialog', { timeout: 4000 }).should('be.visible');
     },
   });
 

@@ -2,6 +2,10 @@ import { ChangeDetectionStrategy, Component, computed, inject, input, output } f
 import { ButtonModule } from 'primeng/button';
 import { ConfirmationService } from 'primeng/api';
 import { Tooltip } from 'primeng/tooltip';
+import {
+  CONFIRM_ACCEPT_DESTRUCTIVE,
+  CONFIRM_REJECT_BUTTON,
+} from '../../../shared/utils/confirm-buttons';
 
 /**
  * Wrap a destructive `p-button` with a one-step confirm popup.
@@ -148,7 +152,8 @@ export class ConfirmDestructiveButtonComponent {
       icon: this.confirmIcon() ?? undefined,
       acceptLabel: this.acceptLabel(),
       rejectLabel: this.rejectLabel(),
-      acceptButtonProps: { severity: 'danger' },
+      acceptButtonProps: CONFIRM_ACCEPT_DESTRUCTIVE,
+      rejectButtonProps: CONFIRM_REJECT_BUTTON,
       accept: () => this.confirmed.emit(),
     });
   }

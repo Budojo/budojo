@@ -1,5 +1,10 @@
 <p-toast position="top-right" />
-<p-confirmpopup />
+<!-- A dialog, not a popup (#1644). The remove confirm is opened from the
+     footer of the topic dialog, and a popup anchors to its trigger with no
+     knowledge of that dialog's bounds — so it hung below its bottom edge,
+     the same geometry as the timetable's (TT-5). A modal confirm is
+     centred, so there is nothing to anchor and nothing to escape. -->
+<p-confirmdialog />
 
 <section class="syllabus" data-cy="syllabus-page">
   <app-page-header [title]="'academy.syllabus.title' | translate" [countLabel]="countLabel()">
@@ -325,7 +330,7 @@
           severity="danger"
           [text]="true"
           [fluid]="true"
-          (onClick)="confirmRemove($event)"
+          (onClick)="confirmRemove()"
           data-cy="syllabus-form-remove"
         />
       }

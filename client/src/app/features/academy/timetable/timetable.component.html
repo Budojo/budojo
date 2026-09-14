@@ -1,5 +1,10 @@
 <p-toast position="top-right" />
-<p-confirmpopup />
+<!-- A dialog, not a popup (#1644, TT-5). The only confirm on this screen is
+     opened from a button INSIDE the lesson dialog, and a popup anchors to
+     its trigger while ignoring the dialog's bounds — so it hung out below
+     the dialog's bottom edge. A modal confirm is centred, so where it sits
+     in the DOM does not matter. -->
+<p-confirmdialog />
 
 <section class="timetable" data-cy="timetable-page">
   <app-page-header [title]="'academy.timetable.title' | translate" [countLabel]="countLabel()">
@@ -277,7 +282,7 @@
           severity="danger"
           [text]="true"
           [fluid]="true"
-          (onClick)="confirmRemove($event)"
+          (onClick)="confirmRemove()"
           data-cy="timetable-form-remove"
         />
       }

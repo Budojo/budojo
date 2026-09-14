@@ -25,6 +25,7 @@ import { FeeTier } from '../../../../core/services/fee-tier.service';
 import { AthletePayment, PaymentService } from '../../../../core/services/payment.service';
 import { formatIsoDate, localeFor } from '../../../../shared/utils/locale';
 import { CarnetPanelComponent } from '../carnet-panel/carnet-panel.component';
+import { CONFIRM_REJECT_BUTTON } from '../../../../shared/utils/confirm-buttons';
 
 /**
  * Per-athlete payments tab on the detail page (#182 Surface 2).
@@ -310,6 +311,18 @@ export class PaymentsListComponent implements OnInit {
     this.confirmationService.confirm({
       target: event.currentTarget as EventTarget,
       message,
+      // Without labels PrimeNG renders its own "Yes"/"No" in one colour, so
+      // the answer that wipes a recorded payment looked exactly like the one
+      // that walks away (#1644). The accept repeats the verb from the
+      // question; only un-marking is destructive.
+      acceptLabel: this.translate.instant(
+        willMarkPaid
+          ? 'athletes.detail.payments.confirm.markPaidAccept'
+          : 'athletes.detail.payments.confirm.markUnpaidAccept',
+      ),
+      rejectLabel: this.translate.instant('common.cancel'),
+      rejectButtonProps: CONFIRM_REJECT_BUTTON,
+      acceptButtonProps: willMarkPaid ? undefined : { severity: 'danger' },
       accept: () => this.applyToggle(row.month, willMarkPaid),
     });
   }

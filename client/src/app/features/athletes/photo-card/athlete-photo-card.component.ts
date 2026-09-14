@@ -16,6 +16,10 @@ import { ConfirmPopup } from 'primeng/confirmpopup';
 
 import { AthleteService, type Athlete } from '../../../core/services/athlete.service';
 import { UserAvatarComponent } from '../../../shared/components/user-avatar/user-avatar.component';
+import {
+  CONFIRM_ACCEPT_DESTRUCTIVE,
+  CONFIRM_REJECT_BUTTON,
+} from '../../../shared/utils/confirm-buttons';
 
 const MAX_PHOTO_BYTES = 2 * 1024 * 1024;
 const ALLOWED_PHOTO_MIME = ['image/png', 'image/jpeg', 'image/webp'];
@@ -133,8 +137,9 @@ export class AthletePhotoCardComponent {
       target: event.currentTarget as HTMLElement,
       message: this.translate.instant('athletes.photo.confirm.removeMessage'),
       acceptLabel: this.translate.instant('athletes.photo.confirm.removeAccept'),
-      rejectLabel: this.translate.instant('athletes.photo.confirm.removeReject'),
-      acceptButtonProps: { severity: 'danger' },
+      rejectLabel: this.translate.instant('common.cancel'),
+      acceptButtonProps: CONFIRM_ACCEPT_DESTRUCTIVE,
+      rejectButtonProps: CONFIRM_REJECT_BUTTON,
       accept: () => this.remove(),
     });
   }

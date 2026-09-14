@@ -16,7 +16,7 @@
         [ariaLabel]="'profile.sessions.revokeOthersCta' | translate"
         [confirmMessage]="'profile.sessions.confirmRevokeOthers' | translate"
         [acceptLabel]="'profile.sessions.confirmAccept' | translate"
-        [rejectLabel]="'profile.sessions.confirmReject' | translate"
+        [rejectLabel]="'common.cancel' | translate"
         confirmIcon="pi pi-exclamation-triangle"
         [text]="false"
         [outlined]="true"
@@ -86,7 +86,7 @@
               ) | translate: { device: session.name }
             "
             [acceptLabel]="'profile.sessions.confirmAccept' | translate"
-            [rejectLabel]="'profile.sessions.confirmReject' | translate"
+            [rejectLabel]="'common.cancel' | translate"
             confirmIcon="pi pi-exclamation-triangle"
             [loading]="revokingId() === session.id"
             [disabled]="revokingId() !== null || revokingOthers()"

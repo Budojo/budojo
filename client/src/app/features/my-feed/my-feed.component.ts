@@ -56,6 +56,10 @@ import {
   VideoFacadeComponent,
   VideoProvider,
 } from '../../shared/components/video-facade/video-facade.component';
+import {
+  CONFIRM_ACCEPT_DESTRUCTIVE,
+  CONFIRM_REJECT_BUTTON,
+} from '../../shared/utils/confirm-buttons';
 
 /**
  * Athlete-portal community timeline (#614, M9 PR-B2). Consumes the
@@ -347,8 +351,9 @@ export class MyFeedComponent implements OnInit {
       header: this.translateService.instant('community.moderation.deletePostTitle'),
       message: this.translateService.instant('community.moderation.deletePostMessage'),
       acceptLabel: this.translateService.instant('community.moderation.deleteAccept'),
-      rejectLabel: this.translateService.instant('community.moderation.deleteReject'),
-      acceptButtonProps: { severity: 'danger' },
+      rejectLabel: this.translateService.instant('common.cancel'),
+      acceptButtonProps: CONFIRM_ACCEPT_DESTRUCTIVE,
+      rejectButtonProps: CONFIRM_REJECT_BUTTON,
       accept: () => this.deletePost(post.id),
     });
   }
