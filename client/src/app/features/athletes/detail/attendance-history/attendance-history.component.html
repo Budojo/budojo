@@ -10,7 +10,14 @@
       <p class="attendance-history__eyebrow">
         {{ 'athletes.detail.attendance.eyebrow' | translate }}
       </p>
-      <h2 class="attendance-history__title" data-cy="attendance-month-label">
+      <!-- Announced for the same reason as the payments year stepper: the
+           chevron rewrites this heading and the grid below it. -->
+      <h2
+        class="attendance-history__title"
+        aria-live="polite"
+        aria-atomic="true"
+        data-cy="attendance-month-label"
+      >
         {{ monthLabelKey() | translate }} {{ visibleYear() }}
       </h2>
       @if (ratePercent() !== null) {
