@@ -52,6 +52,15 @@
               'athletes.detail.attendance.daysFormat'
                 | translate: { attended: attendedCount(), scheduled: scheduledCount() }
             }}
+            <!--
+              Which window this number covers (#1635, ATT-2). The card above
+              shows a rate over 30, 90 or 365 days and this ring shows one
+              month; unlabelled, they read as two answers to one question and
+              the reader assumes one of them is wrong.
+            -->
+            <small class="attendance-history__rate-window" data-cy="attendance-rate-window">
+              {{ 'athletes.detail.attendance.thisMonthWindow' | translate }}
+            </small>
           </span>
         </div>
       } @else {
@@ -136,19 +145,34 @@
             @let attended = attendedDates().has(key);
             @let hasNotes = notedDates().has(key);
             @let training = isTrainingDay(day);
+            @let upcoming = training && !attended && isFuture(day);
+            <!--
+              A training day that has not happened yet is not a missed one
+              (#1635, ATT-3). Both used to render as the same grey square, so
+              the rest of the month read as sessions the athlete had skipped.
+            -->
             <button
               type="button"
               class="attendance-history__cell"
               [class.attendance-history__cell--attended]="attended"
               [class.attendance-history__cell--training]="training"
+              [class.attendance-history__cell--upcoming]="upcoming"
               [class.attendance-history__cell--has-notes]="hasNotes"
               [disabled]="!hasNotes"
-              [attr.data-cy]="attended ? 'attendance-day-attended' : 'attendance-day'"
+              [attr.data-cy]="
+                attended
+                  ? 'attendance-day-attended'
+                  : upcoming
+                    ? 'attendance-day-upcoming'
+                    : 'attendance-day'
+              "
               [attr.data-day]="day"
               [attr.aria-label]="
                 (attended
                   ? 'athletes.detail.attendance.dayPresent'
-                  : 'athletes.detail.attendance.dayNotRecorded'
+                  : upcoming
+                    ? 'athletes.detail.attendance.dayUpcoming'
+                    : 'athletes.detail.attendance.dayNotRecorded'
                 ) | translate: { day: day }
               "
               (click)="hasNotes && openNotesFor($event, key)"
@@ -163,6 +187,31 @@
       }
     </div>
   }
+
+  <!--
+    Four tones and no key was the whole of ATT-3: attended, missed, still to
+    come and not-a-training-day all had to be inferred from shade alone.
+    `aria-hidden` because each cell already says what it is in its own label;
+    the legend is for the eye.
+  -->
+  <ul class="attendance-history__legend" aria-hidden="true" data-cy="attendance-legend">
+    <li>
+      <span class="attendance-history__swatch attendance-history__swatch--attended"></span>
+      {{ 'athletes.detail.attendance.legend.attended' | translate }}
+    </li>
+    <li>
+      <span class="attendance-history__swatch attendance-history__swatch--missed"></span>
+      {{ 'athletes.detail.attendance.legend.missed' | translate }}
+    </li>
+    <li>
+      <span class="attendance-history__swatch attendance-history__swatch--upcoming"></span>
+      {{ 'athletes.detail.attendance.legend.upcoming' | translate }}
+    </li>
+    <li>
+      <span class="attendance-history__swatch attendance-history__swatch--off"></span>
+      {{ 'athletes.detail.attendance.legend.off' | translate }}
+    </li>
+  </ul>
 
   <p-popover #notesPopover>
     @if (activeNotes(); as notes) {

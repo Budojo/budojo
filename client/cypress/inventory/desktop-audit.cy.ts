@@ -1647,7 +1647,16 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       dialogOpen('[data-cy="upload-document-dialog"]');
     },
   });
-  screen('22-athlete-attendance', '/dashboard/athletes/1/attendance', DETAIL_READY);
+  // `clock: false` because this screen's charts are drawn AFTER a fetch that
+  // the ready-selector does not wait for (#1635). The frozen clock's single
+  // `tick(3000)` fires while the summary request is still in flight, so
+  // Chart.js begins animating on a clock that never moves again and both
+  // canvases stay on their empty first frame. The audit read that as "the
+  // series is fetched and thrown away"; it is drawn, and this is why the
+  // picture disagreed. Same reason the `40-stats-*` screens opt out.
+  screen('22-athlete-attendance', '/dashboard/athletes/1/attendance', DETAIL_READY, {
+    clock: false,
+  });
   screen('22-athlete-payments', '/dashboard/athletes/1/payments', DETAIL_READY);
   screen('22-athlete-payments-carnet-sell', '/dashboard/athletes/1/payments', DETAIL_READY, {
     act: () => {
@@ -2118,12 +2127,14 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
     },
   });
   screen('22-athlete-attendance-year', '/dashboard/athletes/1/attendance', DETAIL_READY, {
+    clock: false,
     act: () => {
       cy.get('[data-cy="attendance-summary-range"] .p-togglebutton').last().click({ force: true });
       settle();
     },
   });
   screen('22-athlete-attendance-prev-month', '/dashboard/athletes/1/attendance', DETAIL_READY, {
+    clock: false,
     act: () => {
       press('[data-cy="attendance-prev"]');
       settle();

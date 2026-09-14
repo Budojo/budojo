@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 import { AttendanceSummary } from '../../../core/services/attendance-summary.service';
@@ -159,5 +160,31 @@ describe('AttendanceSummaryChartComponent (#894)', () => {
 
     const rate = fixture.nativeElement.querySelector('[data-cy="attendance-summary-rate"]');
     expect(rate?.textContent?.trim()).toBe('67%');
+  });
+
+  it('names the window its rate covers, and follows the range switcher (#1635)', () => {
+    // The card's rate and the monthly ring below it are different questions
+    // with similar-looking answers. Neither said which was which.
+    const { fixture, http } = setup();
+    fixture.detectChanges();
+    flush(http, makePayload());
+    fixture.detectChanges();
+
+    const windowText = (): string =>
+      (fixture.nativeElement as HTMLElement)
+        .querySelector('[data-cy="attendance-summary-window"]')
+        ?.textContent?.trim() ?? '';
+    expect(windowText()).toBe('last 90 days');
+
+    const chart = fixture.debugElement.query(
+      By.directive(AttendanceSummaryChartComponent),
+    ).componentInstance;
+    chart['onRangeChange'](30);
+    fixture.detectChanges();
+    flush(http, makePayload({ range_days: 30 }), 30);
+    fixture.detectChanges();
+
+    expect(windowText()).toBe('last 30 days');
+    http.verify();
   });
 });

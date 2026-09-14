@@ -52,6 +52,15 @@
       <p class="attendance-chart__counts" data-cy="attendance-summary-counts">
         {{ attendedExpectedLabel() }}
       </p>
+      <!--
+        The range this rate covers, so it cannot be mistaken for the monthly
+        ring below it (#1635, ATT-2). A sibling of the counts line, not a child
+        of it: `attendance-summary-counts` means the counts, and two specs read
+        its text expecting exactly that.
+      -->
+      <p class="attendance-chart__window" data-cy="attendance-summary-window">
+        {{ rangeWindowKey() | translate }}
+      </p>
 
       <!-- Bar timeline — one bar per lesson day held, colour-encoded
            by attendance. Keeps a fast "are they trending up or down?"

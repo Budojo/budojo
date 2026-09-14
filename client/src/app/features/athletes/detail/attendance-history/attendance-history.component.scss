@@ -84,6 +84,14 @@
     font-weight: 500;
   }
 
+  &__rate-window {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: var(--p-text-muted-color);
+  }
+
   &__nav {
     display: flex;
     gap: 0.25rem;
@@ -138,7 +146,19 @@
     // calendar background. The `--attended` styling below still wins when both
     // classes apply (source order beats equal specificity).
     &--training {
-      background: var(--p-surface-100);
+      // surface-200, not 100: against the white of a day the academy does not
+      // train, 100 was too close to tell apart, which is half of what ATT-3
+      // was reporting (#1635).
+      background: var(--p-surface-200);
+    }
+
+    // A training day that has not arrived: outlined, not filled. It reads as
+    // "pencilled in" against the solid grey of a day that was missed, and
+    // needs no new colour to do it (#1635, ATT-3).
+    &--upcoming {
+      background: var(--p-content-background);
+      border-style: dashed;
+      color: var(--p-text-muted-color);
     }
 
     &--attended {
@@ -173,5 +193,52 @@
     font-size: 0.875rem;
     line-height: 1.5;
     white-space: pre-wrap;
+  }
+}
+
+// The key to the four cell tones (#1635, ATT-3).
+.attendance-history__legend {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  font-size: 0.75rem;
+  color: var(--p-text-muted-color);
+
+  li {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+}
+
+.attendance-history__swatch {
+  width: 1rem;
+  height: 1rem;
+  // Not `--p-border-radius-sm`: that is 8 px, which on a 16 px box is a
+  // circle. The cells it stands for are ~48 px, where the same 8 px reads as
+  // a rounded square — so the swatch matches the proportion, not the value.
+  border-radius: 0.25rem;
+  border: 1px solid var(--p-content-border-color);
+  flex-shrink: 0;
+
+  &--attended {
+    background: var(--p-primary-50);
+    border-color: var(--p-primary-300);
+  }
+
+  &--missed {
+    background: var(--p-surface-200);
+  }
+
+  &--upcoming {
+    background: var(--p-content-background);
+    border-style: dashed;
+  }
+
+  &--off {
+    background: var(--p-content-background);
   }
 }

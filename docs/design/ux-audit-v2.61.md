@@ -396,7 +396,7 @@ Clean and honest: one card, one CTA, a hint that names the Excel menu path and s
 
 | ID | Grade | Finding | Rule |
 |---|---|---|---|
-| ATT-1 | P2 | **The "Percentuale di presenze" card is 380 px of white with a number in the middle.** The endpoint returns a 90-point `series` (one flag per training day); the template draws only the rate and one line of text (`attendance-summary-chart.component.html`). The data for a strip — attended / missed per day — is fetched and thrown away, and the card's height is what a chart would need. | MD3 — every region earns its space; Tufte — data-ink |
+| ~~ATT-1~~ | — | ~~**The "Percentuale di presenze" card is 380 px of white with a number in the middle.**~~ **Withdrawn (#1635): this was an artefact of the harness, not the app.** The card draws a doughnut and a 90-bar timeline from `series`, and both appear once the screen is re-shot with `{ clock: false }`. The harness freezes `Date` and ticks 3 s past the entry animation as soon as the ready-selector resolves — which here is the athlete header, not the chart — so Chart.js began animating on a clock that never moved again and both canvases stayed on their empty first frame. The three `22-athlete-attendance*` screens now opt out of the frozen clock, as the `40-stats-*` ones already did. | — |
 | ATT-2 | P3 | Two rate visuals for one athlete: the big 57% (90 days) in the card and a knob ring (this month) above the calendar. Different windows, no label saying so. | Krug |
 | ATT-3 | P3 | The calendar uses white, tinted and grey cells with no legend: attended, not attended, not a training day, and future all have to be inferred. | Norman — signifiers |
 

@@ -257,6 +257,88 @@ describe('AttendanceHistoryComponent', () => {
     httpMock.verify();
   });
 
+  // ─── The calendar says which of four things a square is (#1635, ATT-3) ───
+
+  it('tells a training day still to come apart from one that was missed', () => {
+    // System time is 25 April 2026 and training is Mon/Wed/Fri, so Monday the
+    // 20th is behind us and Monday the 27th is not. Both were the same grey
+    // square before this, which showed the athlete missing sessions the
+    // academy had not held yet.
+    const httpMock = setupTestBed();
+    TestBed.inject(AcademyService).academy.set({
+      id: 1,
+      name: 'Test',
+      slug: 'test',
+      address: null,
+      logo_url: null,
+      training_days: [1, 3, 5],
+    });
+
+    const fixture = TestBed.createComponent(AttendanceHistoryComponent);
+    fixture.detectChanges();
+    httpMock.expectOne(`/api/v1/athletes/${ATHLETE_ID}`).flush({ data: makeAthlete() });
+    httpMock
+      .expectOne(`/api/v1/athletes/${ATHLETE_ID}/attendance?from=2026-04-01&to=2026-04-30`)
+      .flush({ data: [] });
+    fixture.detectChanges();
+
+    const cell = (day: number): HTMLElement =>
+      fixture.nativeElement.querySelector(`[data-day="${day}"]`) as HTMLElement;
+    const missed = cell(20);
+    const upcoming = cell(27);
+    const notTraining = cell(4);
+
+    expect(missed.classList.contains('attendance-history__cell--training')).toBe(true);
+    expect(missed.classList.contains('attendance-history__cell--upcoming')).toBe(false);
+
+    expect(upcoming.classList.contains('attendance-history__cell--training')).toBe(true);
+    expect(upcoming.classList.contains('attendance-history__cell--upcoming')).toBe(true);
+
+    expect(notTraining.classList.contains('attendance-history__cell--upcoming')).toBe(false);
+
+    // A reader hears the difference too, not only sees it.
+    expect(upcoming.getAttribute('aria-label')).toContain('not yet');
+    expect(missed.getAttribute('aria-label')).not.toContain('not yet');
+
+    flushSummary(httpMock);
+    httpMock.verify();
+  });
+
+  it('keys the four tones, and says which window the rate covers', () => {
+    const httpMock = setupTestBed();
+    TestBed.inject(AcademyService).academy.set({
+      id: 1,
+      name: 'Test',
+      slug: 'test',
+      address: null,
+      logo_url: null,
+      training_days: [1, 3, 5],
+    });
+
+    const fixture = TestBed.createComponent(AttendanceHistoryComponent);
+    fixture.detectChanges();
+    httpMock.expectOne(`/api/v1/athletes/${ATHLETE_ID}`).flush({ data: makeAthlete() });
+    httpMock
+      .expectOne(`/api/v1/athletes/${ATHLETE_ID}/attendance?from=2026-04-01&to=2026-04-30`)
+      .flush({ data: [] });
+    fixture.detectChanges();
+
+    const root = fixture.nativeElement as HTMLElement;
+    const legend = root.querySelector('[data-cy="attendance-legend"]');
+    expect(legend).not.toBeNull();
+    // One entry per state the grid can render — fewer and a tone is unexplained.
+    expect(legend!.querySelectorAll('li').length).toBe(4);
+
+    // The ring covers one month; the card above covers 30, 90 or 365 days.
+    // Unlabelled they read as two answers to one question (ATT-2).
+    expect(root.querySelector('[data-cy="attendance-rate-window"]')?.textContent?.trim()).toBe(
+      'this month',
+    );
+
+    flushSummary(httpMock);
+    httpMock.verify();
+  });
+
   it('renders no --training modifier on any cell when academy.training_days is unconfigured', () => {
     const httpMock = setupTestBed();
     TestBed.inject(AcademyService).academy.set({

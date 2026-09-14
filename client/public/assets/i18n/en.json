@@ -1387,6 +1387,11 @@
     "error": {
       "title": "Couldn't load the chart",
       "hint": "Refresh the page to try again."
+    },
+    "window": {
+      "30": "last 30 days",
+      "90": "last 90 days",
+      "365": "last 12 months"
     }
   },
   "audit": {
@@ -2220,6 +2225,14 @@
           "dayLabel": "Trained on {{date}}",
           "monthLabel": "{{month}} attendance",
           "empty": "No sessions recorded this month."
+        },
+        "dayUpcoming": "{{day}} — not yet",
+        "thisMonthWindow": "this month",
+        "legend": {
+          "attended": "Attended",
+          "missed": "Missed",
+          "upcoming": "Still to come",
+          "off": "Not a training day"
         }
       },
       "carnets": {

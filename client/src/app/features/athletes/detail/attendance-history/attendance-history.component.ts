@@ -195,6 +195,23 @@ export class AttendanceHistoryComponent implements OnInit {
   });
 
   /**
+   * Whether a day in the visible month has not arrived yet (#1635, ATT-3).
+   *
+   * Without this a training day next Tuesday and one skipped last Tuesday
+   * render identically — same grey fill, same missing tick — so the calendar
+   * shows the athlete as having missed sessions the academy has not held.
+   * The four states the legend names are: attended, missed, still to come,
+   * and not a training day.
+   */
+  protected isFuture(day: number): boolean {
+    const ym = this.visible();
+    const cell = new Date(ym.year, ym.month - 1, day);
+    const today = new Date();
+    const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    return cell.getTime() > startOfToday.getTime();
+  }
+
+  /**
    * True iff the given day-of-month falls on a configured training day in
    * the visible month. Used by the template `[class.--training]` binding.
    */
