@@ -37,7 +37,10 @@ function templates(): string[] {
 describe('select-button allowEmpty (#1675)', () => {
   const buttons = templates().flatMap((file) => {
     const html = readFileSync(file, 'utf8');
-    return [...html.matchAll(/<p-selectbutton\b(.*?)\/>/gs)].map((m) => ({
+    // Both spellings, and both casings PrimeNG's selector accepts: a
+    // select-button written with a closing tag rather than self-closed would
+    // otherwise pass this rule without ever being read by it.
+    return [...html.matchAll(/<p-select[Bb]utton\b([^>]*?)\/?>/gs)].map((m) => ({
       file: file.slice(APP.length + 1),
       line: html.slice(0, m.index).split('\n').length,
       attrs: m[1],
