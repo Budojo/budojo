@@ -118,10 +118,42 @@ export class PaymentsListComponent implements OnInit {
   /** The year this athlete joined — there is nothing to look at before it. */
   private readonly joinedYear = signal<number | null>(null);
 
-  protected readonly canGoPrev = computed<boolean>(() => {
-    const floor = this.joinedYear();
-    return floor === null ? true : this.year() > floor;
-  });
+  /**
+   * The server refuses to record a payment before this (`min:2020` on the
+   * store request). Walking past it renders twelve inviting "Mark paid"
+   * buttons that all 422, and the client reports that 422 as "set a monthly
+   * fee first" — a message about a different problem entirely.
+   */
+  private static readonly EARLIEST_YEAR = 2020;
+
+  /**
+   * Which fetch the rows on screen came from, and which fetch is current.
+   *
+   * Stepping the year sets the heading immediately and the rows arrive later.
+   * Without a guard, a failed or slow load leaves one year's ledger under
+   * another year's heading — and every button in that table writes to the
+   * heading's year, so unmarking a row fetched for 2026 would delete a 2025
+   * payment the owner never saw. The attendance tab beside this one has
+   * carried the same guard since it shipped; this copied its control and not
+   * its guard.
+   */
+  private loadEpoch = 0;
+  private readonly loadedYear = signal<number | null>(null);
+
+  protected readonly canGoPrev = computed<boolean>(() => this.year() > this.floorYear());
+
+  /**
+   * The earliest year worth opening: the year they joined, but never before
+   * the year the server will accept. When the athlete request fails the
+   * joining year is unknown, and the hard floor is what stops the stepper
+   * walking back to 1999.
+   */
+  private readonly floorYear = computed<number>(() =>
+    Math.max(
+      this.joinedYear() ?? PaymentsListComponent.EARLIEST_YEAR,
+      PaymentsListComponent.EARLIEST_YEAR,
+    ),
+  );
 
   /** No forward travel: a year that has not started has nothing to record. */
   protected readonly canGoNext = computed<boolean>(() => this.year() < this.currentYear);
@@ -322,7 +354,11 @@ export class PaymentsListComponent implements OnInit {
             ? 'athletes.detail.payments.toast.errorGeneric'
             : 'period_months' in fields
               ? 'athletes.detail.payments.toast.errorOverlap'
-              : 'athletes.detail.payments.toast.errorMissingFee',
+              : // A year outside the server's window used to fall through to
+                // "set a monthly fee first", on an academy that has one.
+                'year' in fields
+                ? 'athletes.detail.payments.toast.errorYear'
+                : 'athletes.detail.payments.toast.errorMissingFee',
         );
         this.messageService.add({
           severity: 'error',
@@ -335,12 +371,26 @@ export class PaymentsListComponent implements OnInit {
   }
 
   private load(athleteId: number): void {
+    // Which fetch this is, and which year it is for. A year step fires a new
+    // one while the old may still be in flight, and the old answer must not
+    // land on top of the new — nor un-skeleton the table showing the year the
+    // reader just left.
+    const epoch = ++this.loadEpoch;
+    const forYear = this.year();
     this.loading.set(true);
     this.paymentService
-      .list(athleteId, this.year())
-      .pipe(finalize(() => this.loading.set(false)))
+      .list(athleteId, forYear)
+      .pipe(
+        finalize(() => {
+          if (epoch === this.loadEpoch) this.loading.set(false);
+        }),
+      )
       .subscribe({
-        next: (payments) => this.payments.set(payments),
+        next: (payments) => {
+          if (epoch !== this.loadEpoch) return;
+          this.payments.set(payments);
+          this.loadedYear.set(forYear);
+        },
         // On error we deliberately KEEP the previous `payments` value
         // — Copilot caught (#260 review) that resetting to [] would
         // make every paid month silently flip to "Unpaid" in the UI,
@@ -348,13 +398,23 @@ export class PaymentsListComponent implements OnInit {
         // when the user can't act on it. Surfacing the toast is
         // enough; the table stays at its last-known good state until
         // a successful reload replaces it.
-        error: () =>
+        error: () => {
+          if (epoch !== this.loadEpoch) return;
+          // Keeping the rows is right — resetting to [] would flip every paid
+          // month to "Unpaid" on a network blip (#260). But keeping them
+          // under a heading naming a year they are NOT from is worse than
+          // either: the table is live, and unmarking a row would delete a
+          // payment from the year the heading names. So the heading goes back
+          // to the year the rows actually are, and the toast says why.
+          const loaded = this.loadedYear();
+          if (loaded !== null && loaded !== forYear) this.year.set(loaded);
           this.messageService.add({
             severity: 'error',
             summary: this.translate.instant('athletes.detail.payments.toast.errorSummary'),
             detail: this.translate.instant('athletes.detail.payments.toast.loadErrorDetail'),
             life: 4000,
-          }),
+          });
+        },
       });
   }
 
@@ -368,16 +428,17 @@ export class PaymentsListComponent implements OnInit {
   private loadAthleteName(athleteId: number): void {
     this.athleteService.get(athleteId).subscribe({
       next: (athlete) => {
+        // First, not last. As the final statement a throw here left every
+        // signal at its constructor value — including `joinedYear`, whose
+        // default is the same `null` the guarded read produces — so the test
+        // named for this regression could not see it.
+        const joinedYear = Number(athlete.joined_at?.slice(0, 4));
+        this.joinedYear.set(Number.isFinite(joinedYear) ? joinedYear : null);
+
         this.athleteName.set(`${athlete.first_name} ${athlete.last_name}`);
         this.athleteFeeCents.set(athlete.monthly_fee_cents ?? null);
         this.feeTier.set(athlete.fee_tier ?? null);
         this.athleteBillingPeriod.set(athlete.billing_period_months ?? 1);
-        // Optional-chained on purpose: a partial payload with no joining date
-        // must leave the floor unknown, not throw inside the subscriber. It
-        // threw 16 unhandled rxjs errors in the suite without failing one
-        // test, which is exactly how this would have reached a user.
-        const joinedYear = Number(athlete.joined_at?.slice(0, 4));
-        this.joinedYear.set(Number.isFinite(joinedYear) ? joinedYear : null);
       },
       // Silent failure here — the confirm popup falls back to "this
       // athlete" rather than blocking the table, and `athleteFeeCents`

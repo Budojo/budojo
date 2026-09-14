@@ -454,6 +454,14 @@ describe('PaymentsListComponent — the 422 that is not about the fee (#1382)', 
 
   // ─── A way to another year (#1636, PAY-1) ────────────────────────────────
 
+  // Frozen mid-year on purpose. These read the wall clock, and in December
+  // `month <= currentMonth` is true for all twelve — so the test pinning
+  // "a finished year is editable end to end" would pass on the reverted code
+  // for the whole of December. A test whose power swings with the calendar
+  // is not a test.
+  beforeEach(() => vi.setSystemTime(new Date(Date.UTC(2026, 5, 15))));
+  afterEach(() => vi.useRealTimers());
+
   it('walks back a year and refetches that year', () => {
     const { component } = setup({ joinedAt: '2023-04-01' });
     const svc = TestBed.inject(PaymentService) as unknown as { list: Mock };
@@ -515,9 +523,12 @@ describe('PaymentsListComponent — the 422 that is not about the fee (#1382)', 
     // The fixture had none, and the unguarded read threw inside the
     // subscriber without failing anything.
     const { component } = setup();
+    // The read is the first statement of the subscriber, so a throw stops
+    // everything after it — this is what makes the regression observable.
+    expect(component['athleteName']()).toBe('Mario Rossi');
     expect(component['canGoPrev']()).toBe(true);
     component['prevYear']();
-    expect(component['year']()).toBeLessThan(new Date().getUTCFullYear() + 1);
+    expect(component['year']()).toBe(2025);
   });
 
   // ─── What one period costs (#1636, PAY-4) ────────────────────────────────
@@ -536,5 +547,50 @@ describe('PaymentsListComponent — the 422 that is not about the fee (#1382)', 
     const { component } = setup({ fee: 7000, billingPeriodMonths: 1 });
     // The monthly figure above already says everything.
     expect(component['billingPeriodHint']()).toBeNull();
+  });
+
+  it('records against the year on screen, not against today', () => {
+    // The one that matters. Reverting `markPaid(id, this.year(), month)` to
+    // the current year left the whole suite green, and the bug it hides is a
+    // coach marking January 2025 paid and creating a January 2026 row.
+    const { component } = setup({ joinedAt: '2023-04-01' });
+    const svc = TestBed.inject(PaymentService) as unknown as { markPaid: Mock };
+
+    component['prevYear']();
+    expect(component['year']()).toBe(2025);
+
+    component['applyToggle'](3, true);
+
+    expect(svc.markPaid).toHaveBeenCalledWith(42, 2025, 3);
+  });
+
+  it('does not leave a year on the heading that the rows are not from', () => {
+    // The rows are kept on a failed load (#260) — but keeping them under a
+    // heading naming another year is worse than either, because the table is
+    // live: unmarking a row would delete a payment from the year named.
+    const { component } = setup({ joinedAt: '2023-04-01' });
+    const svc = TestBed.inject(PaymentService) as unknown as { list: Mock };
+    svc.list = vi.fn(() => throwError(() => ({ status: 500 })));
+
+    component['prevYear']();
+
+    expect(component['year']()).toBe(2026);
+  });
+
+  it('will not step before the earliest year the server accepts', () => {
+    // joined_at is only `date`-validated, so a long-standing member can hold
+    // 2015 — and the store request refuses anything under 2020, reporting it
+    // as "set a monthly fee first".
+    const { component } = setup({ joinedAt: '2015-09-01' });
+    for (let i = 0; i < 20 && component['canGoPrev'](); i++) component['prevYear']();
+    expect(component['year']()).toBe(2020);
+    expect(component['canGoPrev']()).toBe(false);
+  });
+
+  it('will not walk into the past when the athlete failed to load', () => {
+    const { component } = setup();
+    for (let i = 0; i < 20 && component['canGoPrev'](); i++) component['prevYear']();
+    // Without a hard floor an unknown joining year walked to 1999.
+    expect(component['year']()).toBe(2020);
   });
 });

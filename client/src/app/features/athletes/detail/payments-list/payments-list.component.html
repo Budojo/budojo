@@ -1,7 +1,12 @@
 <div class="payments-list">
   <header class="payments-list__header">
     <div class="payments-list__year">
-      <h2 class="payments-list__title">
+      <!--
+        `aria-live` because the chevron changes the heading and the whole
+        table and announces nothing otherwise: the button's label says what
+        it will do, never what happened (WCAG 4.1.3).
+      -->
+      <h2 class="payments-list__title" aria-live="polite" aria-atomic="true">
         {{ 'athletes.detail.payments.title' | translate: { year: year() } }}
       </h2>
       <!--
