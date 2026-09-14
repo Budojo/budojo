@@ -1,8 +1,9 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
+import { ActivatedRoute, NavigationEnd, Router, convertToParamMap } from '@angular/router';
 import { Subject, of } from 'rxjs';
+import { TranslateService } from '@ngx-translate/core';
 import { MessageService } from 'primeng/api';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 import { AthleteDetailComponent } from './athlete-detail.component';
@@ -41,8 +42,12 @@ function makeAthlete(overrides: Partial<Athlete> = {}): Athlete {
 function setupTestBed(
   idParam: string | null = '42',
   initialUrl = '/dashboard/athletes/42/documents',
+  // `?from=` is how the section the edit form was opened from reaches both the
+  // header button and the form's own Annulla / Salva (#1633).
+  queryParams: Record<string, string> = {},
 ): { http: HttpTestingController; routerEvents: Subject<unknown> } {
   const paramMap = convertToParamMap(idParam ? { id: idParam } : {});
+  const queryParamMap = convertToParamMap(queryParams);
   const routerEvents = new Subject<unknown>();
   TestBed.configureTestingModule({
     imports: [AthleteDetailComponent],
@@ -61,7 +66,7 @@ function setupTestBed(
         provide: ActivatedRoute,
         useValue: {
           paramMap: of(paramMap),
-          snapshot: { paramMap },
+          snapshot: { paramMap, queryParamMap },
           // The router builds the activated-route tree before it activates
           // components, so production always has a resolved child here. The
           // mock needs one too, or the component reads no tab segment and
@@ -195,8 +200,23 @@ describe('AthleteDetailComponent', () => {
   // attendance tab so the page never renders a payments view that can
   // never have content.
 
-  it('hides the invitation card, email-change card, and payments tab on the owner self-row', () => {
+  it('hides the payments tab on the owner self-row', () => {
     const { http: httpMock } = setupTestBed('42');
+    const fixture = TestBed.createComponent(AthleteDetailComponent);
+    fixture.detectChanges();
+    httpMock.expectOne('/api/v1/athletes/42').flush({ data: makeAthlete({ is_self: true }) });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('[data-cy="athlete-tab-payments"]')).toBeNull();
+    httpMock.verify();
+  });
+
+  it('hides the invitation and email-change cards on the owner self-row', () => {
+    // From `/edit`, where the cards are rendered at all. Asserted from
+    // `/documents` these two passed for the wrong reason: since #1500 the edit
+    // gate hides both for EVERY row there, self or not, so `is_self` — the
+    // thing the test is named after — was doing none of the work.
+    const { http: httpMock } = setupTestBed('42', '/dashboard/athletes/42/edit');
     const fixture = TestBed.createComponent(AthleteDetailComponent);
     fixture.detectChanges();
     httpMock.expectOne('/api/v1/athletes/42').flush({ data: makeAthlete({ is_self: true }) });
@@ -204,7 +224,9 @@ describe('AthleteDetailComponent', () => {
 
     expect(fixture.nativeElement.querySelector('app-athlete-invitation-card')).toBeNull();
     expect(fixture.nativeElement.querySelector('app-athlete-email-change-card')).toBeNull();
-    expect(fixture.nativeElement.querySelector('[data-cy="athlete-tab-payments"]')).toBeNull();
+    // The photo card is not self-gated, so this proves the edit gate is open
+    // and the two nulls above are about `is_self`.
+    expect(fixture.nativeElement.querySelector('app-athlete-photo-card')).not.toBeNull();
     httpMock.verify();
   });
 
@@ -222,6 +244,19 @@ describe('AthleteDetailComponent', () => {
     expect(fixture.nativeElement.querySelector('app-athlete-invitation-card')).not.toBeNull();
     expect(fixture.nativeElement.querySelector('app-athlete-email-change-card')).not.toBeNull();
     expect(fixture.nativeElement.querySelector('app-athlete-photo-card')).not.toBeNull();
+    httpMock.verify();
+  });
+
+  it('shows the payments tab on a regular row, on a section route', () => {
+    // Was asserted from `/edit` until #1633 took the strip off that route.
+    // The claim it was making is about `is_self`, not about editing, so it
+    // moved to a route where a strip exists at all.
+    const { http: httpMock } = setupTestBed('42', '/dashboard/athletes/42/documents');
+    const fixture = TestBed.createComponent(AthleteDetailComponent);
+    fixture.detectChanges();
+    httpMock.expectOne('/api/v1/athletes/42').flush({ data: makeAthlete() });
+    fixture.detectChanges();
+
     expect(fixture.nativeElement.querySelector('[data-cy="athlete-tab-payments"]')).not.toBeNull();
     httpMock.verify();
   });
@@ -275,7 +310,6 @@ describe('AthleteDetailComponent', () => {
 describe('AthleteDetailComponent — the tab strip follows the URL', () => {
   it.each([
     ['documents'],
-    ['edit'],
     ['attendance'],
     ['payments'],
     // Missing since it shipped: the strip underlined Documents while the
@@ -289,6 +323,20 @@ describe('AthleteDetailComponent — the tab strip follows the URL', () => {
     httpMock.expectOne('/api/v1/athletes/42').flush({ data: makeAthlete() });
 
     expect(fixture.componentInstance.activeTab()).toBe(tab);
+    httpMock.verify();
+  });
+
+  // `edit` is no longer one of them (#1633), but it must still RESOLVE — it is
+  // what gates the photo, account and email cards. Dropping it from the
+  // component's list would underline Documenti over the edit form and make
+  // those three cards disappear, with every other test still green.
+  it('still resolves the edit route, though it is no longer a tab', () => {
+    const { http: httpMock } = setupTestBed('42', '/dashboard/athletes/42/edit');
+    const fixture = TestBed.createComponent(AthleteDetailComponent);
+    fixture.detectChanges();
+    httpMock.expectOne('/api/v1/athletes/42').flush({ data: makeAthlete() });
+
+    expect(fixture.componentInstance.activeTab()).toBe('edit');
     httpMock.verify();
   });
   // #1634 — the edit tab's reading order.
@@ -314,6 +362,210 @@ describe('AthleteDetailComponent — the tab strip follows the URL', () => {
       Boolean(el.compareDocumentPosition(outlet!) & Node.DOCUMENT_POSITION_FOLLOWING);
     expect(before(photo)).toBe(true);
     expect(before(email)).toBe(true);
+    httpMock.verify();
+  });
+});
+
+// ─── The header carries the action, and a way to reach the athlete (#1633) ──
+
+describe('AthleteDetailComponent — editing is a mode, not a section', () => {
+  it('leaves five content sections in the strip, Documenti first, and no Modifica', () => {
+    const { http: httpMock } = setupTestBed('42', '/dashboard/athletes/42/documents');
+    const fixture = TestBed.createComponent(AthleteDetailComponent);
+    fixture.detectChanges();
+    httpMock.expectOne('/api/v1/athletes/42').flush({ data: makeAthlete() });
+    fixture.detectChanges();
+
+    const root = fixture.nativeElement as HTMLElement;
+    expect(root.querySelector('[data-cy="athlete-tab-edit"]')).toBeNull();
+
+    const tabs = [...root.querySelectorAll('p-tab')].map((t) => t.getAttribute('data-cy'));
+    expect(tabs).toEqual([
+      'athlete-tab-documents',
+      'athlete-tab-attendance',
+      'athlete-tab-payments',
+      'athlete-tab-coverage',
+      'athlete-tab-promotions',
+    ]);
+    httpMock.verify();
+  });
+
+  it('takes the whole strip off screen while the form is open, and offers the way out', () => {
+    const { http: httpMock } = setupTestBed('42', '/dashboard/athletes/42/edit');
+    const fixture = TestBed.createComponent(AthleteDetailComponent);
+    fixture.detectChanges();
+    httpMock.expectOne('/api/v1/athletes/42').flush({ data: makeAthlete() });
+    fixture.detectChanges();
+
+    const root = fixture.nativeElement as HTMLElement;
+    // Not "no tab underlined" — no strip. A PrimeNG tablist whose value
+    // matches no tab puts tabindex="-1" on every one of them, which takes the
+    // whole strip out of the keyboard order.
+    expect(root.querySelector('[data-cy="athlete-tabs"]')).toBeNull();
+    expect(root.querySelector('[data-cy="athlete-edit-cta"]')).toBeNull();
+    expect(root.querySelector('[data-cy="athlete-edit-close"]')).not.toBeNull();
+    httpMock.verify();
+  });
+
+  it('shows the strip and the Modifica action on a section route', () => {
+    const { http: httpMock } = setupTestBed('42', '/dashboard/athletes/42/documents');
+    const fixture = TestBed.createComponent(AthleteDetailComponent);
+    fixture.detectChanges();
+    httpMock.expectOne('/api/v1/athletes/42').flush({ data: makeAthlete() });
+    fixture.detectChanges();
+
+    const root = fixture.nativeElement as HTMLElement;
+    expect(root.querySelector('[data-cy="athlete-tabs"]')).not.toBeNull();
+    expect(root.querySelector('[data-cy="athlete-edit-cta"]')).not.toBeNull();
+    expect(root.querySelector('[data-cy="athlete-edit-close"]')).toBeNull();
+    httpMock.verify();
+  });
+
+  it('tells the form which section it was opened from, tracking in-session moves', () => {
+    // Starts on Documenti and reaches Pagamenti the way a user does, through a
+    // navigation, so this covers the router-event path and not just the
+    // cold-load seed. Putting `activeTab.set` back in place of `setTab` in the
+    // subscription turns this red; starting the test on Pagamenti would not,
+    // because the seed writes the section either way.
+    const { http: httpMock, routerEvents } = setupTestBed('42');
+    const fixture = TestBed.createComponent(AthleteDetailComponent);
+    fixture.detectChanges();
+    httpMock.expectOne('/api/v1/athletes/42').flush({ data: makeAthlete() });
+    fixture.detectChanges();
+
+    const component = fixture.componentInstance;
+    expect(component.activeTab()).toBe('documents');
+
+    // The router is a stub, so stand in for the navigation it would report.
+    routerEvents.next(
+      new NavigationEnd(1, '/dashboard/athletes/42/payments', '/dashboard/athletes/42/payments'),
+    );
+    fixture.detectChanges();
+    expect(component.activeTab()).toBe('payments');
+
+    component['toggleEdit']();
+    expect(TestBed.inject(Router).navigate).toHaveBeenCalledWith(
+      ['edit'],
+      expect.objectContaining({ queryParams: { from: 'payments' } }),
+    );
+    httpMock.verify();
+  });
+
+  it('closes back to the section named in the URL, not to Documenti', () => {
+    const { http: httpMock } = setupTestBed('42', '/dashboard/athletes/42/edit', {
+      from: 'payments',
+    });
+    const fixture = TestBed.createComponent(AthleteDetailComponent);
+    fixture.detectChanges();
+    httpMock.expectOne('/api/v1/athletes/42').flush({ data: makeAthlete() });
+    fixture.detectChanges();
+
+    fixture.componentInstance['toggleEdit']();
+    expect(TestBed.inject(Router).navigate).toHaveBeenCalledWith(['payments'], expect.anything());
+    httpMock.verify();
+  });
+
+  it('keeps one button across the mode switch, so the press does not lose focus', () => {
+    // Two buttons in an @if/@else are two embedded views: pressing one destroys
+    // the focused element and focus falls back to <body>. One button whose
+    // label and icon change keeps the node, and the focus on it.
+    const { http: httpMock, routerEvents } = setupTestBed('42');
+    const fixture = TestBed.createComponent(AthleteDetailComponent);
+    fixture.detectChanges();
+    httpMock.expectOne('/api/v1/athletes/42').flush({ data: makeAthlete() });
+    fixture.detectChanges();
+
+    const root = fixture.nativeElement as HTMLElement;
+    const before = root.querySelector('.athlete-detail-page__actions button');
+    expect(before).not.toBeNull();
+
+    routerEvents.next(
+      new NavigationEnd(1, '/dashboard/athletes/42/edit', '/dashboard/athletes/42/edit'),
+    );
+    fixture.detectChanges();
+
+    expect(root.querySelector('.athlete-detail-page__actions button')).toBe(before);
+    expect(root.querySelector('[data-cy="athlete-edit-close"]')).not.toBeNull();
+    httpMock.verify();
+  });
+
+  it('falls back to Documenti for a deep link that lands straight on the form', () => {
+    const { http: httpMock } = setupTestBed('42', '/dashboard/athletes/42/edit');
+    const fixture = TestBed.createComponent(AthleteDetailComponent);
+    fixture.detectChanges();
+    httpMock.expectOne('/api/v1/athletes/42').flush({ data: makeAthlete() });
+    fixture.detectChanges();
+
+    fixture.componentInstance['toggleEdit']();
+    expect(TestBed.inject(Router).navigate).toHaveBeenCalledWith(['documents'], expect.anything());
+    httpMock.verify();
+  });
+});
+
+describe('AthleteDetailComponent — the header says how to reach the athlete', () => {
+  it('writes the phone and the email out, as tel: and mailto:', () => {
+    const { http: httpMock } = setupTestBed('42');
+    const fixture = TestBed.createComponent(AthleteDetailComponent);
+    fixture.detectChanges();
+    httpMock.expectOne('/api/v1/athletes/42').flush({
+      data: makeAthlete({
+        phone_country_code: '+39',
+        phone_national_number: '3331234567',
+        email: 'giulia@example.com',
+      }),
+    });
+    fixture.detectChanges();
+
+    const root = fixture.nativeElement as HTMLElement;
+    const phone = root.querySelector('[data-cy="athlete-reach-phone"]');
+    const email = root.querySelector('[data-cy="athlete-reach-email"]');
+
+    // The href cannot carry the space; the label is what a person reads.
+    expect(phone?.getAttribute('href')).toBe('tel:+393331234567');
+    expect(phone?.textContent?.trim()).toBe('+39 3331234567');
+    expect(email?.getAttribute('href')).toBe('mailto:giulia@example.com');
+    expect(email?.textContent?.trim()).toBe('giulia@example.com');
+
+    // A new tab for a tel: or mailto: leaves an empty window behind.
+    expect(phone?.getAttribute('target')).toBeNull();
+    expect(email?.getAttribute('target')).toBeNull();
+    httpMock.verify();
+  });
+
+  it('says nothing about a phone when only half the pair is stored', () => {
+    const { http: httpMock } = setupTestBed('42');
+    const fixture = TestBed.createComponent(AthleteDetailComponent);
+    fixture.detectChanges();
+    httpMock.expectOne('/api/v1/athletes/42').flush({
+      data: makeAthlete({ phone_country_code: '+39', phone_national_number: null, email: null }),
+    });
+    fixture.detectChanges();
+
+    const root = fixture.nativeElement as HTMLElement;
+    expect(root.querySelector('[data-cy="athlete-reach-phone"]')).toBeNull();
+    expect(root.querySelector('.reach-links')).toBeNull();
+    httpMock.verify();
+  });
+
+  it('names the athlete without agreeing with their gender, in Italian', () => {
+    const { http: httpMock } = setupTestBed('42');
+    TestBed.inject(TranslateService).use('it');
+    const fixture = TestBed.createComponent(AthleteDetailComponent);
+    fixture.detectChanges();
+    httpMock.expectOne('/api/v1/athletes/42').flush({ data: makeAthlete() });
+    fixture.detectChanges();
+
+    const root = fixture.nativeElement as HTMLElement;
+    const meta = root.querySelector('.athlete-detail-page__meta')?.textContent?.trim() ?? '';
+    // Not `p-tag` — the age badge is one too, and it comes first.
+    const status = root.querySelector('[data-cy="athlete-status"]')?.textContent?.trim() ?? '';
+
+    // "Iscritto il" and "Attivo" both agree with a masculine subject, under
+    // the name of an athlete who may not be one. Neither replacement agrees
+    // with anything.
+    expect(meta).toContain('Dal ');
+    expect(meta).not.toContain('Iscritto');
+    expect(status).toBe('In attività');
     httpMock.verify();
   });
 });

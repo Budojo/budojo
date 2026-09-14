@@ -34,106 +34,166 @@
           [value]="statusLabelKey(a.status) | translate"
           [severity]="statusSeverity(a.status)"
           [rounded]="true"
+          data-cy="athlete-status"
         />
+
+        <!--
+          The page's one persistent action (#1633, DET-1). It used to be the
+          first tab, which put an action at the head of a strip of content
+          sections and landed the page on the second one.
+
+          Outlined, not filled: each tab below owns its own primary — "Aggiungi
+          documento", "Vendi carnet" — and a filled button up here would be a
+          second accent on the same screen, against one-primary-CTA. The header
+          action is chrome that persists across five tabs; the tab's own action
+          is the one that changes with it.
+
+          ONE button whose inputs change, not two in an `@if`/`@else`. Two
+          branches are two embedded views, so pressing the button would destroy
+          the element the press came from and build a different one: focus
+          falls back to `<body>` and the next Tab restarts at the top of the
+          page. On a screen whose whole argument is about keyboard order, that
+          would have been the one regression this change shipped.
+        -->
+        <div class="athlete-detail-page__actions">
+          <p-button
+            [label]="
+              (isEditing() ? 'athletes.detail.closeEdit' : 'athletes.detail.tabs.edit') | translate
+            "
+            [icon]="isEditing() ? 'pi pi-arrow-left' : 'pi pi-pencil'"
+            severity="secondary"
+            [outlined]="true"
+            (onClick)="toggleEdit()"
+            [attr.data-cy]="isEditing() ? 'athlete-edit-close' : 'athlete-edit-cta'"
+          />
+        </div>
       </div>
       <p class="athlete-detail-page__meta">
         {{ 'athletes.detail.joinedLabel' | translate: { date: joinedOn(a.joined_at) } }}
       </p>
 
       @let links = contactLinks();
-      @if (links.length > 0) {
+      @let reach = reachLinks();
+      @if (reach.length > 0 || links.length > 0) {
         <!--
-          Contact links (#162) — icon-only chip list. Same shape as
-          the academy detail page; only populated channels render, and
-          each opens in a new tab so the SPA session isn't disrupted.
-          `noopener noreferrer` is canon-mandatory for external `_blank`
-          targets.
+          One row, two kinds of link (#1633, DET-2). Phone and email are
+          written out because a coach reads and copies them as often as
+          presses them, and because an icon hides the value it stands for.
+          The social profiles stay icons: what we hold for them is a URL, and
+          a URL spelled out is noise.
         -->
-        <ul
-          class="contact-links"
-          [attr.aria-label]="'athletes.detail.contactLinksAriaLabel' | translate"
-        >
-          @for (link of links; track link.labelKey) {
-            <li>
-              <a
-                class="contact-links__chip"
-                [href]="link.url"
-                target="_blank"
-                rel="noopener noreferrer"
-                [attr.aria-label]="link.labelKey | translate"
-                [attr.title]="link.labelKey | translate"
-                [attr.data-cy]="'athlete-link-' + link.cyKey"
-              >
-                <i [class]="link.icon" aria-hidden="true"></i>
-                <span class="contact-links__sr">{{ link.labelKey | translate }}</span>
-              </a>
-            </li>
+        <div class="athlete-detail-page__contact">
+          @if (reach.length > 0) {
+            <ul class="reach-links" [attr.aria-label]="'athletes.detail.reachAria' | translate">
+              @for (r of reach; track r.cyKey) {
+                <li>
+                  <!--
+                    No `target="_blank"`: `tel:` and `mailto:` are handed to
+                    the OS handler, and a new tab for them leaves an empty
+                    window behind on the desktop.
+                  -->
+                  <a
+                    class="reach-links__link"
+                    [href]="r.href"
+                    [attr.aria-label]="r.ariaKey | translate: { value: r.label }"
+                    [attr.data-cy]="'athlete-reach-' + r.cyKey"
+                  >
+                    <i [class]="r.icon" aria-hidden="true"></i>
+                    <span>{{ r.label }}</span>
+                  </a>
+                </li>
+              }
+            </ul>
           }
-        </ul>
+          @if (links.length > 0) {
+            <!--
+              Contact links (#162) — icon-only chip list. Same shape as the
+              academy detail page; only populated channels render, and each
+              opens in a new tab so the SPA session isn't disrupted.
+              `noopener noreferrer` is canon-mandatory for external `_blank`
+              targets.
+            -->
+            <ul
+              class="contact-links"
+              [attr.aria-label]="'athletes.detail.contactLinksAriaLabel' | translate"
+            >
+              @for (link of links; track link.labelKey) {
+                <li>
+                  <a
+                    class="contact-links__chip"
+                    [href]="link.url"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    [attr.aria-label]="link.labelKey | translate"
+                    [attr.title]="link.labelKey | translate"
+                    [attr.data-cy]="'athlete-link-' + link.cyKey"
+                  >
+                    <i [class]="link.icon" aria-hidden="true"></i>
+                    <span class="contact-links__sr">{{ link.labelKey | translate }}</span>
+                  </a>
+                </li>
+              }
+            </ul>
+          }
+        </div>
       }
     </header>
 
     <!--
-      "Account & invito" + Email-change cards hidden on the owner's
-      self-row (#775). The owner already has an account — inviting
-      themselves to the system is nonsense — and they have their own
-      email-change flow at `/dashboard/me/email-change` (#476) that's
-      separate from this athlete-detail surface. Both cards are
-      athlete-level not tab-scoped, so a single `@if` covers every
-      child route.
+      Five sections, Documenti first, and none of them on screen while the
+      edit form is (#1633). Editing left this strip: it is the one entry that
+      answered "what do I want to do" in a row of answers to "what do I want
+      to see", and it pushed the landing tab into second place.
+
+      The strip is absent rather than merely unselected on `/edit` — see the
+      `isEditing` comment in the component for what PrimeNG does with a value
+      that matches no tab, and why a header button is the way back instead.
     -->
-    <p-tabs [value]="activeTab()" class="athlete-detail-page__tabs" data-cy="athlete-tabs">
-      <p-tablist>
-        <!-- Edit comes first in the tab strip (post-v2.1.0 reorder).
-             Editing is the most-frequent action when an owner opens
-             an athlete fresh; the read-mostly tabs (Documents,
-             Attendance, Payments) sit to the right. Norman § Fitts —
-             primary action gets the leftmost (most predictable) tab. -->
-        <p-tab value="edit" routerLink="edit" data-cy="athlete-tab-edit">
-          <i class="pi pi-pencil"></i>
-          <span>{{ 'athletes.detail.tabs.edit' | translate }}</span>
-        </p-tab>
-        <p-tab value="documents" routerLink="documents" data-cy="athlete-tab-documents">
-          <i class="pi pi-file"></i>
-          <span>{{ 'athletes.detail.tabs.documents' | translate }}</span>
-        </p-tab>
-        <p-tab value="attendance" routerLink="attendance" data-cy="athlete-tab-attendance">
-          <i class="pi pi-calendar"></i>
-          <span>{{ 'athletes.detail.tabs.attendance' | translate }}</span>
-        </p-tab>
-        @if (!a.is_self) {
-          <!--
-            Payments tab hidden on the owner's self-row (#775). Self-rows
-            are excluded from the payments pipeline by design — no unpaid
-            digest, no overdue push, no ledger — so a Payments tab on a
-            self-row would render an empty view that can never have
-            content. The deep-link `/dashboard/athletes/{self-id}/payments`
-            is redirected to the next-most-likely tab by the component's
-            init effect (see athlete-detail.component.ts).
-          -->
-          <p-tab value="payments" routerLink="payments" data-cy="athlete-tab-payments">
-            <i class="pi pi-euro"></i>
-            <span>{{ 'athletes.detail.tabs.payments' | translate }}</span>
+    @if (!isEditing()) {
+      <p-tabs [value]="activeTab()" class="athlete-detail-page__tabs" data-cy="athlete-tabs">
+        <p-tablist>
+          <p-tab value="documents" routerLink="documents" data-cy="athlete-tab-documents">
+            <i class="pi pi-file"></i>
+            <span>{{ 'athletes.detail.tabs.documents' | translate }}</span>
           </p-tab>
-        }
-        <!--
-          What they have seen of the programme (#1567). Next to attendance,
-          because it answers the question attendance raises: they were here
-          forty times, but what did they actually see?
-        -->
-        <p-tab value="coverage" routerLink="coverage" data-cy="athlete-tab-coverage">
-          <i class="pi pi-book"></i>
-          <span>{{ 'athletes.detail.tabs.coverage' | translate }}</span>
-        </p-tab>
-        <p-tab value="promotions" routerLink="promotions" data-cy="athlete-tab-promotions">
-          <i class="pi pi-trophy"></i>
-          <span>{{ 'athletes.detail.tabs.promotions' | translate }}</span>
-        </p-tab>
-      </p-tablist>
-    </p-tabs>
+          <p-tab value="attendance" routerLink="attendance" data-cy="athlete-tab-attendance">
+            <i class="pi pi-calendar"></i>
+            <span>{{ 'athletes.detail.tabs.attendance' | translate }}</span>
+          </p-tab>
+          @if (!a.is_self) {
+            <!--
+              Payments tab hidden on the owner's self-row (#775). Self-rows
+              are excluded from the payments pipeline by design — no unpaid
+              digest, no overdue push, no ledger — so a Payments tab on a
+              self-row would render an empty view that can never have
+              content. The deep-link `/dashboard/athletes/{self-id}/payments`
+              is redirected to the next-most-likely tab by the component's
+              init effect (see athlete-detail.component.ts).
+            -->
+            <p-tab value="payments" routerLink="payments" data-cy="athlete-tab-payments">
+              <i class="pi pi-euro"></i>
+              <span>{{ 'athletes.detail.tabs.payments' | translate }}</span>
+            </p-tab>
+          }
+          <!--
+            What they have seen of the programme (#1567). Next to attendance,
+            because it answers the question attendance raises: they were here
+            forty times, but what did they actually see?
+          -->
+          <p-tab value="coverage" routerLink="coverage" data-cy="athlete-tab-coverage">
+            <i class="pi pi-book"></i>
+            <span>{{ 'athletes.detail.tabs.coverage' | translate }}</span>
+          </p-tab>
+          <p-tab value="promotions" routerLink="promotions" data-cy="athlete-tab-promotions">
+            <i class="pi pi-trophy"></i>
+            <span>{{ 'athletes.detail.tabs.promotions' | translate }}</span>
+          </p-tab>
+        </p-tablist>
+      </p-tabs>
+    }
 
     <!--
-      The account block, behind the Edit tab (#1500).
+      The account block, behind the Edit mode (#1500, #1633).
 
       These three sat ABOVE the tab strip, which put it at y≈678 on a
       1280×800 window: clicking Documents landed you on a page where the
@@ -153,7 +213,7 @@
       belts a face is how you tell rows apart — then the account and the
       email, then the form, and the danger zone last on the page.
     -->
-    @if (activeTab() === 'edit') {
+    @if (isEditing()) {
       <!--
         Athlete photo (#1357). Outside the account block above on purpose: that
         block is hidden for the owner's own row and gated on athlete accounts,
