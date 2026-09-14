@@ -149,8 +149,15 @@
     padding: 0 0.5rem;
     margin-inline-start: -0.5rem;
     border-radius: var(--p-border-radius-md);
-    color: var(--p-primary-color);
-    text-decoration: none;
+    // --p-primary-600, not --p-primary-color (500). At 14px/500 this is body
+    // text, so AA wants 4.5:1 and the 500 gives 4.00:1 on the shell's surface.
+    // The 600 clears it at 5.37:1 and is still the accent.
+    color: var(--p-primary-600);
+    // Underlined at rest: colour alone is not a signifier, and these are the
+    // two controls on the page most likely to be looked for rather than
+    // stumbled upon.
+    text-decoration: underline;
+    text-underline-offset: 2px;
     font-weight: 500;
     font-size: 0.875rem;
     min-width: 0;
@@ -170,7 +177,7 @@
     &:hover,
     &:focus-visible {
       background: var(--p-content-hover-background);
-      text-decoration: underline;
+      text-decoration-thickness: 2px;
     }
 
     &:focus-visible {

@@ -47,27 +47,25 @@
           second accent on the same screen, against one-primary-CTA. The header
           action is chrome that persists across five tabs; the tab's own action
           is the one that changes with it.
+
+          ONE button whose inputs change, not two in an `@if`/`@else`. Two
+          branches are two embedded views, so pressing the button would destroy
+          the element the press came from and build a different one: focus
+          falls back to `<body>` and the next Tab restarts at the top of the
+          page. On a screen whose whole argument is about keyboard order, that
+          would have been the one regression this change shipped.
         -->
         <div class="athlete-detail-page__actions">
-          @if (isEditing()) {
-            <p-button
-              [label]="'athletes.detail.closeEdit' | translate"
-              icon="pi pi-arrow-left"
-              severity="secondary"
-              [outlined]="true"
-              (onClick)="leaveEdit()"
-              data-cy="athlete-edit-close"
-            />
-          } @else {
-            <p-button
-              [label]="'athletes.detail.tabs.edit' | translate"
-              icon="pi pi-pencil"
-              severity="secondary"
-              [outlined]="true"
-              (onClick)="enterEdit()"
-              data-cy="athlete-edit-cta"
-            />
-          }
+          <p-button
+            [label]="
+              (isEditing() ? 'athletes.detail.closeEdit' : 'athletes.detail.tabs.edit') | translate
+            "
+            [icon]="isEditing() ? 'pi pi-arrow-left' : 'pi pi-pencil'"
+            severity="secondary"
+            [outlined]="true"
+            (onClick)="toggleEdit()"
+            [attr.data-cy]="isEditing() ? 'athlete-edit-close' : 'athlete-edit-cta'"
+          />
         </div>
       </div>
       <p class="athlete-detail-page__meta">

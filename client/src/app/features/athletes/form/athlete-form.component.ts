@@ -16,6 +16,7 @@ import {
   Validators,
 } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { returnSection } from '../athlete-return-section';
 import { finalize } from 'rxjs';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ButtonModule } from 'primeng/button';
@@ -512,7 +513,14 @@ export class AthleteFormComponent implements OnInit {
         // came from the response so we land directly on the new
         // athlete's home.
         const targetId = id ?? athlete.id;
-        void this.router.navigate(['/dashboard/athletes', targetId]);
+        // Back to the section the form was opened from (#1633). Landing on
+        // Documenti after editing from Pagamenti was the header button and
+        // this one disagreeing about the same journey.
+        void this.router.navigate([
+          '/dashboard/athletes',
+          targetId,
+          returnSection(this.route.snapshot.queryParamMap.get('from')),
+        ]);
       },
       error: (err) => this.handleServerError(err),
     });
@@ -526,7 +534,11 @@ export class AthleteFormComponent implements OnInit {
     if (id === null) {
       void this.router.navigate(['/dashboard/athletes']);
     } else {
-      void this.router.navigate(['/dashboard/athletes', id]);
+      void this.router.navigate([
+        '/dashboard/athletes',
+        id,
+        returnSection(this.route.snapshot.queryParamMap.get('from')),
+      ]);
     }
   }
 

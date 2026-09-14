@@ -96,6 +96,27 @@ describe('Cmd/Ctrl-K command palette (#426)', () => {
     cy.get('[data-cy="search-palette-row-43"]').should('contain', 'Marco Rossini');
   });
 
+  it('leaves the status pill in the casing the translation gives it (#1633)', () => {
+    // The pill carried `text-transform: capitalize`, which was invisible while
+    // the Italian statuses were single already-capitalised words. "In attività"
+    // came back as "In Attività" — title case, in a repo that spells everything
+    // in sentence case. Only a computed style can see this: `text-transform`
+    // never touches `textContent`, so a unit test cannot.
+    cy.visitAuthenticated('/dashboard/athletes');
+    cy.wait('@athletes');
+
+    cy.intercept('GET', '/api/v1/search*', SEARCH_RESULTS).as('searchMario');
+    cy.get('body').trigger('keydown', { key: 'k', metaKey: true });
+    cy.get('[data-cy="search-palette-input"]').type('mario');
+    cy.wait('@searchMario');
+
+    cy.get('[data-cy="search-palette-row-42"] .search-palette__row-status').should(
+      'have.css',
+      'text-transform',
+      'none',
+    );
+  });
+
   it('clicking a result navigates to the athlete detail and closes the palette', () => {
     cy.visitAuthenticated('/dashboard/athletes');
     cy.wait('@athletes');

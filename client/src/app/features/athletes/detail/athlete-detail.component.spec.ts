@@ -42,8 +42,12 @@ function makeAthlete(overrides: Partial<Athlete> = {}): Athlete {
 function setupTestBed(
   idParam: string | null = '42',
   initialUrl = '/dashboard/athletes/42/documents',
+  // `?from=` is how the section the edit form was opened from reaches both the
+  // header button and the form's own Annulla / Salva (#1633).
+  queryParams: Record<string, string> = {},
 ): { http: HttpTestingController; routerEvents: Subject<unknown> } {
   const paramMap = convertToParamMap(idParam ? { id: idParam } : {});
+  const queryParamMap = convertToParamMap(queryParams);
   const routerEvents = new Subject<unknown>();
   TestBed.configureTestingModule({
     imports: [AthleteDetailComponent],
@@ -62,7 +66,7 @@ function setupTestBed(
         provide: ActivatedRoute,
         useValue: {
           paramMap: of(paramMap),
-          snapshot: { paramMap },
+          snapshot: { paramMap, queryParamMap },
           // The router builds the activated-route tree before it activates
           // components, so production always has a resolved child here. The
           // mock needs one too, or the component reads no tab segment and
@@ -196,8 +200,23 @@ describe('AthleteDetailComponent', () => {
   // attendance tab so the page never renders a payments view that can
   // never have content.
 
-  it('hides the invitation card, email-change card, and payments tab on the owner self-row', () => {
+  it('hides the payments tab on the owner self-row', () => {
     const { http: httpMock } = setupTestBed('42');
+    const fixture = TestBed.createComponent(AthleteDetailComponent);
+    fixture.detectChanges();
+    httpMock.expectOne('/api/v1/athletes/42').flush({ data: makeAthlete({ is_self: true }) });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('[data-cy="athlete-tab-payments"]')).toBeNull();
+    httpMock.verify();
+  });
+
+  it('hides the invitation and email-change cards on the owner self-row', () => {
+    // From `/edit`, where the cards are rendered at all. Asserted from
+    // `/documents` these two passed for the wrong reason: since #1500 the edit
+    // gate hides both for EVERY row there, self or not, so `is_self` — the
+    // thing the test is named after — was doing none of the work.
+    const { http: httpMock } = setupTestBed('42', '/dashboard/athletes/42/edit');
     const fixture = TestBed.createComponent(AthleteDetailComponent);
     fixture.detectChanges();
     httpMock.expectOne('/api/v1/athletes/42').flush({ data: makeAthlete({ is_self: true }) });
@@ -205,7 +224,9 @@ describe('AthleteDetailComponent', () => {
 
     expect(fixture.nativeElement.querySelector('app-athlete-invitation-card')).toBeNull();
     expect(fixture.nativeElement.querySelector('app-athlete-email-change-card')).toBeNull();
-    expect(fixture.nativeElement.querySelector('[data-cy="athlete-tab-payments"]')).toBeNull();
+    // The photo card is not self-gated, so this proves the edit gate is open
+    // and the two nulls above are about `is_self`.
+    expect(fixture.nativeElement.querySelector('app-athlete-photo-card')).not.toBeNull();
     httpMock.verify();
   });
 
@@ -400,32 +421,71 @@ describe('AthleteDetailComponent — editing is a mode, not a section', () => {
     httpMock.verify();
   });
 
-  it('closes back to the section the form was opened from, not to Documenti', () => {
-    // The one that matters. A hardcoded 'documents' return, a missing write to
-    // the remembered section, or an inverted guard all pass if the round trip
-    // starts on the default tab — so this one starts on Pagamenti.
-    const { http: httpMock, routerEvents } = setupTestBed('42', '/dashboard/athletes/42/payments');
+  it('tells the form which section it was opened from, tracking in-session moves', () => {
+    // Starts on Documenti and reaches Pagamenti the way a user does, through a
+    // navigation, so this covers the router-event path and not just the
+    // cold-load seed. Putting `activeTab.set` back in place of `setTab` in the
+    // subscription turns this red; starting the test on Pagamenti would not,
+    // because the seed writes the section either way.
+    const { http: httpMock, routerEvents } = setupTestBed('42');
     const fixture = TestBed.createComponent(AthleteDetailComponent);
     fixture.detectChanges();
     httpMock.expectOne('/api/v1/athletes/42').flush({ data: makeAthlete() });
     fixture.detectChanges();
 
     const component = fixture.componentInstance;
-    const router = TestBed.inject(Router);
-    expect(component.activeTab()).toBe('payments');
-
-    component['enterEdit']();
-    expect(router.navigate).toHaveBeenCalledWith(['edit'], expect.anything());
+    expect(component.activeTab()).toBe('documents');
 
     // The router is a stub, so stand in for the navigation it would report.
+    routerEvents.next(
+      new NavigationEnd(1, '/dashboard/athletes/42/payments', '/dashboard/athletes/42/payments'),
+    );
+    fixture.detectChanges();
+    expect(component.activeTab()).toBe('payments');
+
+    component['toggleEdit']();
+    expect(TestBed.inject(Router).navigate).toHaveBeenCalledWith(
+      ['edit'],
+      expect.objectContaining({ queryParams: { from: 'payments' } }),
+    );
+    httpMock.verify();
+  });
+
+  it('closes back to the section named in the URL, not to Documenti', () => {
+    const { http: httpMock } = setupTestBed('42', '/dashboard/athletes/42/edit', {
+      from: 'payments',
+    });
+    const fixture = TestBed.createComponent(AthleteDetailComponent);
+    fixture.detectChanges();
+    httpMock.expectOne('/api/v1/athletes/42').flush({ data: makeAthlete() });
+    fixture.detectChanges();
+
+    fixture.componentInstance['toggleEdit']();
+    expect(TestBed.inject(Router).navigate).toHaveBeenCalledWith(['payments'], expect.anything());
+    httpMock.verify();
+  });
+
+  it('keeps one button across the mode switch, so the press does not lose focus', () => {
+    // Two buttons in an @if/@else are two embedded views: pressing one destroys
+    // the focused element and focus falls back to <body>. One button whose
+    // label and icon change keeps the node, and the focus on it.
+    const { http: httpMock, routerEvents } = setupTestBed('42');
+    const fixture = TestBed.createComponent(AthleteDetailComponent);
+    fixture.detectChanges();
+    httpMock.expectOne('/api/v1/athletes/42').flush({ data: makeAthlete() });
+    fixture.detectChanges();
+
+    const root = fixture.nativeElement as HTMLElement;
+    const before = root.querySelector('.athlete-detail-page__actions button');
+    expect(before).not.toBeNull();
+
     routerEvents.next(
       new NavigationEnd(1, '/dashboard/athletes/42/edit', '/dashboard/athletes/42/edit'),
     );
     fixture.detectChanges();
-    expect(component.isEditing()).toBe(true);
 
-    component['leaveEdit']();
-    expect(router.navigate).toHaveBeenCalledWith(['payments'], expect.anything());
+    expect(root.querySelector('.athlete-detail-page__actions button')).toBe(before);
+    expect(root.querySelector('[data-cy="athlete-edit-close"]')).not.toBeNull();
     httpMock.verify();
   });
 
@@ -436,7 +496,7 @@ describe('AthleteDetailComponent — editing is a mode, not a section', () => {
     httpMock.expectOne('/api/v1/athletes/42').flush({ data: makeAthlete() });
     fixture.detectChanges();
 
-    fixture.componentInstance['leaveEdit']();
+    fixture.componentInstance['toggleEdit']();
     expect(TestBed.inject(Router).navigate).toHaveBeenCalledWith(['documents'], expect.anything());
     httpMock.verify();
   });

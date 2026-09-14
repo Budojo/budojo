@@ -24,6 +24,7 @@ import { STATUS_KEYS } from '../../../shared/utils/i18n-enum-keys';
 import { InvitationCardComponent } from './invitation-card/invitation-card.component';
 import { EmailChangeCardComponent } from './email-change-card/email-change-card.component';
 import { AthletePhotoCardComponent } from '../photo-card/athlete-photo-card.component';
+import { returnSection } from '../athlete-return-section';
 
 @Component({
   selector: 'app-athlete-detail',
@@ -194,17 +195,41 @@ export class AthleteDetailComponent implements OnInit {
     return reach;
   });
 
-  /** Open the edit form. A navigation, not a link, so the button is one tab
-   *  stop: `routerLink` on a `p-button` writes `tabindex` onto the host and
-   *  leaves the inner `<button>` focusable too, which is two stops for one
-   *  control. */
-  protected enterEdit(): void {
-    void this.router.navigate(['edit'], { relativeTo: this.route });
+  /** One button, one handler — see the template for why it is not two. */
+  protected toggleEdit(): void {
+    if (this.isEditing()) {
+      this.leaveEdit();
+    } else {
+      this.enterEdit();
+    }
+  }
+
+  /**
+   * Open the edit form, saying in the URL where it was opened from.
+   *
+   * A navigation rather than a link, so the button is one tab stop:
+   * `routerLink` on a `p-button` writes `tabindex` onto the host while the
+   * inner `<button>` stays focusable, which is two stops for one control.
+   *
+   * The section rides in a query param rather than only in `lastSection`,
+   * because this component is not the only way out of the form. `Annulla`
+   * and `Salva modifiche` at the bottom of the form navigate on their own,
+   * and they cannot read a signal in here — but they can read the URL they
+   * were opened with. A signal would also be gone after a reload; the param
+   * is not.
+   */
+  private enterEdit(): void {
+    void this.router.navigate(['edit'], {
+      relativeTo: this.route,
+      queryParams: { from: this.lastSection() },
+    });
   }
 
   /** Close the edit form, back to whichever section it was opened from. */
-  protected leaveEdit(): void {
-    void this.router.navigate([this.lastSection()], { relativeTo: this.route });
+  private leaveEdit(): void {
+    void this.router.navigate([returnSection(this.route.snapshot.queryParamMap.get('from'))], {
+      relativeTo: this.route,
+    });
   }
 
   ngOnInit(): void {

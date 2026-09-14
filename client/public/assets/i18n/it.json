@@ -600,7 +600,7 @@
       },
       "suspend-athlete": {
         "question": "Come metto in pausa un atleta che ha smesso per un po’?",
-        "answer": "Apri l'atleta, vai su Modifica e porta Stato su Inattivo. Resta in archivio con tutta la sua storia di presenze e pagamenti, ma sparisce dal check-in e da chi va sollecitato. L'occhio nella barra dei filtri della lista te lo fa rivedere quando ti serve; riportalo ad Attivo quando torna sul tatami."
+        "answer": "Apri l'atleta, vai su Modifica e porta Stato su Non in attività. Resta in archivio con tutta la sua storia di presenze e pagamenti, ma sparisce dal check-in e da chi va sollecitato. L'occhio nella barra dei filtri della lista te lo fa rivedere quando ti serve; riportalo a In attività quando torna sul tatami."
       },
       "mark-attendance": {
         "question": "Come segno le presenze?",
