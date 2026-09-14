@@ -1616,7 +1616,8 @@
         "save": "Salva",
         "remove": "Rimuovi lezione",
         "nameRequired": "Dai un nome alla lezione.",
-        "dayRequired": "Scegli un giorno."
+        "dayRequired": "Scegli un giorno.",
+        "durationPlaceholder": "minuti"
       },
       "kind": {
         "gi": "Gi",
@@ -1635,7 +1636,9 @@
         "errorSummary": "Qualcosa è andato storto",
         "errorDetail": "La modifica non è stata salvata. Riprova.",
         "loadErrorDetail": "Impossibile caricare l'orario."
-      }
+      },
+      "plan": "Pianifica",
+      "editHint": "Apri la lezione per modificarla"
     },
     "syllabus": {
       "title": "Programma",

@@ -17,6 +17,7 @@ import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectButtonModule } from 'primeng/selectbutton';
 import { SkeletonModule } from 'primeng/skeleton';
+import { Tooltip } from 'primeng/tooltip';
 import { Toast } from 'primeng/toast';
 import { finalize } from 'rxjs';
 import {
@@ -89,6 +90,7 @@ interface KindOption {
     SelectButtonModule,
     SkeletonModule,
     Toast,
+    Tooltip,
     EmptyStateComponent,
     PageHeaderComponent,
     TrainingDaysPickerComponent,

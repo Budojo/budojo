@@ -78,6 +78,8 @@
                         [attr.aria-label]="
                           'academy.timetable.editAria' | translate: { name: c.name }
                         "
+                        [pTooltip]="'academy.timetable.editHint' | translate"
+                        tooltipPosition="top"
                         [attr.data-cy]="'timetable-class-' + c.id"
                       >
                         <span class="slot__time" [class.slot__time--none]="!timeRange(c)">
@@ -105,6 +107,9 @@
                         [attr.data-cy]="'timetable-plan-' + c.id"
                       >
                         <i class="pi pi-book" aria-hidden="true"></i>
+                        <span class="slot__plan-label">
+                          {{ 'academy.timetable.plan' | translate }}
+                        </span>
                       </button>
                     </li>
                   }
@@ -236,6 +241,7 @@
           [showButtons]="true"
           [fluid]="true"
           [suffix]="'academy.timetable.form.durationSuffix' | translate"
+          [placeholder]="'academy.timetable.form.durationPlaceholder' | translate"
           data-cy="timetable-form-duration"
         />
       </div>

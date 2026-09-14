@@ -289,9 +289,13 @@
   min-width: 0;
 
   &__label {
-    font-size: 0.875rem;
+    // Matches the syllabus dialog and the academy form (#1648, TT-4). Two
+    // dialogs from the same epic wrote their field labels differently — dark
+    // and a size larger here, small and muted there — and the difference read
+    // as meaning when it was only drift.
+    font-size: 0.8125rem;
     font-weight: 500;
-    color: var(--p-text-color);
+    color: var(--p-text-muted-color);
   }
 
   &__hint {
@@ -322,6 +326,19 @@
 
 .slot__plan {
   @include tc.toolbar-control;
-  @include tc.toolbar-control-square;
-  flex: 0 0 auto;
+  // `toolbar-control-labelled`, not `-square` (#1648, TT-1). The square
+  // variant is for a control with no word to size around; this one now says
+  // "Pianifica", and the labelled variant already knows to fall back to a
+  // square below 768px so a wrapped row does not spill onto a third line.
+  @include tc.toolbar-control-labelled;
+}
+
+// The labelled variant is a bare square below 768px, so the word has to go
+// with it — otherwise it overflows a 44px box (#1648).
+.slot__plan-label {
+  display: none;
+
+  @media (min-width: 768px) {
+    display: inline;
+  }
 }
