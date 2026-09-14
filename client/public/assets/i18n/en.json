@@ -1468,15 +1468,18 @@
       },
       "website": {
         "label": "Website",
-        "errorUrl": "Enter a full URL — e.g. https://example.com."
+        "errorUrl": "Enter a full URL — e.g. https://example.com.",
+        "placeholder": "https://gracie-barra.com"
       },
       "facebook": {
         "label": "Facebook",
-        "errorUrl": "Enter a full URL — e.g. https://facebook.com/yourpage."
+        "errorUrl": "Enter a full URL — e.g. https://facebook.com/yourpage.",
+        "placeholder": "https://facebook.com/yourpage"
       },
       "instagram": {
         "label": "Instagram",
-        "errorUrl": "Enter a full URL — e.g. https://instagram.com/yourprofile."
+        "errorUrl": "Enter a full URL — e.g. https://instagram.com/yourprofile.",
+        "placeholder": "https://instagram.com/yourprofile"
       },
       "permalink": {
         "label": "Permalink",
@@ -1484,9 +1487,7 @@
       },
       "address": {
         "legend": "Address",
-        "legendOptional": "(optional — fill all marked fields below or none)",
-        "requiredWhenFilledTooltip": "Required when any address field is filled",
-        "requiredWhenFilledAria": "required when any address field is filled",
+        "legendOptional": "(optional — street, city, ZIP and province go together: fill them all, or leave them all empty)",
         "line1Label": "Street + civic number",
         "line2Label": "Apt / floor / unit",
         "zipLabel": "ZIP",
@@ -1495,7 +1496,11 @@
         "provinceLabel": "Province",
         "provinceAria": "Province",
         "errorIncomplete": "Fill every required address field, or clear them all to leave the academy without an address.",
-        "clearHint": "Leave every field empty to clear the address on file."
+        "clearHint": "Leave every field empty to clear the address on file.",
+        "line1Placeholder": "Via Roma 1",
+        "line2Placeholder": "Block B, flat 4",
+        "zipPlaceholder": "00100",
+        "cityPlaceholder": "Roma"
       },
       "monthlyFee": {
         "label": "Monthly fee",
@@ -2262,7 +2267,7 @@
       "validationFailed": "Validation failed.",
       "serverError": "Something went wrong. Please try again.",
       "optional": "(optional)",
-      "optionalAddress": "(optional — fill all marked fields below or none)",
+      "optionalAddress": "(optional — street, city, ZIP and province go together: fill them all, or leave them all empty)",
       "label": {
         "firstName": "First name",
         "lastName": "Last name",
@@ -2300,11 +2305,7 @@
       "aria": {
         "phoneCountryCode": "Phone country code",
         "phoneNationalNumber": "Phone national number",
-        "province": "Province",
-        "requiredWhenFilled": "required when any address field is filled"
-      },
-      "tooltip": {
-        "requiredWhenFilled": "Required when any address field is filled"
+        "province": "Province"
       },
       "validation": {
         "maxLength100": "Maximum 100 characters.",

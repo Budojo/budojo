@@ -50,7 +50,10 @@ const ACADEMY = {
   phone_national_number: '0111234567',
   website: 'https://budojo-torino.example',
   facebook: null,
-  instagram: 'budojo_torino',
+  // A URL, not a handle: both forms declare `type="url"` and the server
+  // rule is `nullable|url`, so a bare handle is data the API would refuse —
+  // and an audit shot from it describes a screen that cannot exist (#1650).
+  instagram: 'https://instagram.com/budojo_torino',
   address: ADDRESS,
   logo_url: null,
   monthly_fee_cents: 7000,
@@ -268,7 +271,7 @@ const ATHLETES = [
     email: 'giulia.ferraro@example.com',
     phone_country_code: '+39',
     phone_national_number: '3331234567',
-    instagram: 'giulia.bjj',
+    instagram: 'https://instagram.com/giulia.bjj',
     date_of_birth: '1994-03-12',
     belt: 'blue',
     stripes: 2,

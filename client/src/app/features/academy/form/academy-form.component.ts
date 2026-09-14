@@ -24,7 +24,6 @@ import { MessageModule } from 'primeng/message';
 import { SelectModule } from 'primeng/select';
 import { SelectButtonModule } from 'primeng/selectbutton';
 import { ToastModule } from 'primeng/toast';
-import { Tooltip } from 'primeng/tooltip';
 import { MessageService } from 'primeng/api';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import {
@@ -144,7 +143,6 @@ const COUNTRY_CODE_OPTIONS: SelectOption<string>[] = [
     MessageModule,
     SelectModule,
     ToastModule,
-    Tooltip,
     TranslatePipe,
     TrainingDaysPickerComponent,
     SchedulePlannerComponent,
