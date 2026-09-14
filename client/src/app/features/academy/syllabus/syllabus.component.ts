@@ -30,6 +30,10 @@ import {
 } from '../../../core/services/syllabus.service';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
+import {
+  CONFIRM_ACCEPT_DESTRUCTIVE,
+  CONFIRM_REJECT_BUTTON,
+} from '../../../shared/utils/confirm-buttons';
 
 interface KindOption {
   readonly label: string;
@@ -457,7 +461,8 @@ export class SyllabusComponent {
       message: this.translate.instant(messageKey, { name: current.name, count: under }),
       acceptLabel: this.translate.instant('academy.syllabus.confirm.accept'),
       rejectLabel: this.translate.instant('common.cancel'),
-      acceptButtonProps: { severity: 'danger' },
+      acceptButtonProps: CONFIRM_ACCEPT_DESTRUCTIVE,
+      rejectButtonProps: CONFIRM_REJECT_BUTTON,
       accept: () => this.remove(current.id),
     });
   }

@@ -78,6 +78,7 @@ import {
 } from '../../../shared/utils/athlete-sort';
 import { localeFor } from '../../../shared/utils/locale';
 import { CarnetService } from '../../../core/services/carnet.service';
+import { CONFIRM_REJECT_BUTTON } from '../../../shared/utils/confirm-buttons';
 
 interface SelectOption<T extends string> {
   label: string;
@@ -499,6 +500,7 @@ export class AthletesListComponent implements OnInit {
       }),
       acceptLabel: this.translate.instant('athletes.list.restoreConfirm.accept'),
       rejectLabel: this.translate.instant('common.cancel'),
+      rejectButtonProps: CONFIRM_REJECT_BUTTON,
       acceptButtonProps: { severity: 'primary' },
       accept: () => this.restore(athlete),
     });
@@ -1268,6 +1270,7 @@ export class AthletesListComponent implements OnInit {
       message,
       acceptLabel: this.translate.instant('athletes.list.confirm.sellCarnetAccept'),
       rejectLabel: this.translate.instant('common.cancel'),
+      rejectButtonProps: CONFIRM_REJECT_BUTTON,
       accept: () => this.sellCarnet(athlete),
     });
   }
@@ -1480,6 +1483,7 @@ export class AthletesListComponent implements OnInit {
           : 'athletes.list.confirm.markUnpaidAccept',
       ),
       rejectLabel: this.translate.instant('common.cancel'),
+      rejectButtonProps: CONFIRM_REJECT_BUTTON,
       accept: () => this.applyPaidToggle(athlete, year, month, willMarkPaid),
     });
   }

@@ -356,3 +356,11 @@ Format: `→` separates the symptom from the action.
 2. **When Copilot flags a non-typo mistake in review**, add the `→` entry to the correct category in the SAME PR that fixes it. The file grows naturally.
 3. **Never delete entries.** Even if the framework fixes an issue upstream, the pattern-recognition is still useful. Just annotate with `~~strikethrough~~` + reason.
 4. **Keep it scannable.** One line per entry. If the explanation needs more, link to a doc or a PR discussion.
+
+→ **A default parameter object is created once per function, not once per call.**
+  `function flatten(node, path = '', out: Record<string,string> = {})` looks like a
+  fresh accumulator each time. It is not — the literal is evaluated at definition,
+  so a second `flatten(EN)` came back holding `IT`'s keys as well, and a spec that
+  listed "stray keys" printed every entry twice. The duplication is the tell. Take
+  the accumulator as optional and default it inside: `out?: T` then `const acc = out ?? {}`.
+  (#1644)

@@ -23,6 +23,10 @@ import { Carnet, CarnetEntry, CarnetService } from '../../../../core/services/ca
 import { LanguageService } from '../../../../core/services/language.service';
 import { activeCarnetOf } from '../../../../shared/utils/active-carnet';
 import { localeFor, datePickerFormatFor } from '../../../../shared/utils/locale';
+import {
+  CONFIRM_ACCEPT_DESTRUCTIVE,
+  CONFIRM_REJECT_BUTTON,
+} from '../../../../shared/utils/confirm-buttons';
 
 /**
  * Entry-carnet panel on the athlete's payments tab (#1364).
@@ -305,7 +309,8 @@ export class CarnetPanelComponent {
       }),
       acceptLabel: this.translate.instant('athletes.detail.carnets.confirmDeleteAccept'),
       rejectLabel: this.translate.instant('common.cancel'),
-      acceptButtonProps: { severity: 'danger' },
+      acceptButtonProps: CONFIRM_ACCEPT_DESTRUCTIVE,
+      rejectButtonProps: CONFIRM_REJECT_BUTTON,
       accept: () => this.applyDelete(id, carnet.id),
     });
   }

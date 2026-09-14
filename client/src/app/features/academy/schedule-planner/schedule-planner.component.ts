@@ -19,6 +19,10 @@ import { AcademyService, AcademySchedule } from '../../../core/services/academy.
 import { LanguageService } from '../../../core/services/language.service';
 import { localeFor, datePickerFormatFor } from '../../../shared/utils/locale';
 import { TrainingDaysPickerComponent } from '../../../shared/components/training-days-picker/training-days-picker.component';
+import {
+  CONFIRM_ACCEPT_DESTRUCTIVE,
+  CONFIRM_REJECT_BUTTON,
+} from '../../../shared/utils/confirm-buttons';
 
 /** Carbon dayOfWeek convention (0=Sun..6=Sat). Display order: Mon-first. */
 const DAY_KEY_MAP: Record<number, string> = {
@@ -206,7 +210,8 @@ export class SchedulePlannerComponent {
       message: this.translate.instant('academy.schedule.cancelConfirm'),
       acceptLabel: this.translate.instant('academy.schedule.cancelAccept'),
       rejectLabel: this.translate.instant('common.cancel'),
-      acceptButtonProps: { severity: 'danger' },
+      acceptButtonProps: CONFIRM_ACCEPT_DESTRUCTIVE,
+      rejectButtonProps: CONFIRM_REJECT_BUTTON,
       accept: () => this.executeCancel(next.id),
     });
   }

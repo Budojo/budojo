@@ -1936,8 +1936,8 @@
         "markPaidAccept": "Segna pagato",
         "markUnpaidMessage": "Segnare {{name}} come non pagato per {{month}}?",
         "markUnpaidAccept": "Segna non pagato",
-        "markPaidPeriodMessage": "Registrare il pagamento di {{name}} per {{period}}?",
-        "markUnpaidPeriodMessage": "Annullare il pagamento di {{name}} che copre {{period}}?",
+        "markPaidPeriodMessage": "Segnare {{name}} come pagato? Il pagamento copre: {{period}}",
+        "markUnpaidPeriodMessage": "Segnare {{name}} come non pagato? Il pagamento copriva: {{period}}",
         "sellCarnetMessage": "Vendere un carnet da {{price}} per {{entries}} ingressi a {{name}}?",
         "sellCarnetAccept": "Vendi"
       },
@@ -2021,8 +2021,8 @@
         "confirm": {
           "markPaidMessage": "Segnare {{name}} come pagato per {{month}} {{year}}?",
           "markUnpaidMessage": "Segnare {{name}} come non pagato per {{month}} {{year}}?",
-          "markPaidPeriodMessage": "Registrare il pagamento di {{name}} per {{period}}?",
-          "markUnpaidPeriodMessage": "Annullare il pagamento di {{name}} che copre {{period}}?",
+          "markPaidPeriodMessage": "Segnare {{name}} come pagato? Il pagamento copre: {{period}}",
+          "markUnpaidPeriodMessage": "Segnare {{name}} come non pagato? Il pagamento copriva: {{period}}",
           "markPaidAccept": "Segna pagato",
           "markUnpaidAccept": "Segna non pagato"
         },

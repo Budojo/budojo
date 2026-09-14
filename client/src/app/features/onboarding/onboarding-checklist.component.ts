@@ -10,6 +10,7 @@ import {
   OnboardingService,
   OnboardingStep,
 } from '../../core/services/onboarding.service';
+import { CONFIRM_REJECT_BUTTON } from '../../shared/utils/confirm-buttons';
 
 /**
  * Static map of step → i18n key. Replaces a dynamic
@@ -112,6 +113,7 @@ export class OnboardingChecklistComponent {
       message: this.translate.instant('onboarding.checklist.confirmDismiss'),
       acceptLabel: this.translate.instant('onboarding.checklist.confirmDismissAccept'),
       rejectLabel: this.translate.instant('common.cancel'),
+      rejectButtonProps: CONFIRM_REJECT_BUTTON,
       accept: () => this.dismiss(),
     });
   }

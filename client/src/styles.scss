@@ -148,3 +148,28 @@ html.budojo-desktop {
     -webkit-app-region: no-drag;
   }
 }
+
+// ── Confirm popups: sized to their message, kept inside the content area ──
+//
+// `p-confirmpopup` measures its message on one line and then anchors to the
+// trigger, with no ceiling on how wide that gets. The athlete-delete confirm
+// carries a two-clause sentence — "Eliminare X? I suoi documenti saranno
+// cancellati definitivamente e non potranno essere ripristinati — solo la
+// riga atleta può essere annullata." — which rendered ~1200px wide and slid
+// left until it covered the side rail (#1644, X-CONFIRM). A destructive
+// confirm that hides the navigation it is asking you to stay on is the one
+// place that should not.
+//
+// 32rem is the measure this codebase already uses for readable prose, and it
+// is narrow enough that the popup fits beside any trigger at the 960px
+// viewport the audit shoots. The message wraps instead of the popup growing.
+.p-confirmpopup {
+  max-width: min(32rem, calc(100vw - 2rem));
+
+  .p-confirmpopup-message {
+    // Without this the message keeps its one-line measure and overflows the
+    // box we just capped, rather than wrapping inside it.
+    overflow-wrap: anywhere;
+    text-wrap: pretty;
+  }
+}

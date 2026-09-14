@@ -1936,8 +1936,8 @@
         "markPaidAccept": "Mark paid",
         "markUnpaidMessage": "Mark {{name}} unpaid for {{month}}?",
         "markUnpaidAccept": "Mark unpaid",
-        "markPaidPeriodMessage": "Record {{name}}’s payment for {{period}}?",
-        "markUnpaidPeriodMessage": "Undo {{name}}’s payment covering {{period}}?",
+        "markPaidPeriodMessage": "Mark {{name}} paid? The payment covers: {{period}}",
+        "markUnpaidPeriodMessage": "Mark {{name}} unpaid? The payment covered: {{period}}",
         "sellCarnetMessage": "Sell {{name}} a carnet — {{price}} for {{entries}} entries?",
         "sellCarnetAccept": "Sell"
       },
@@ -2021,8 +2021,8 @@
         "confirm": {
           "markPaidMessage": "Mark {{name}} paid for {{month}} {{year}}?",
           "markUnpaidMessage": "Mark {{name}} unpaid for {{month}} {{year}}?",
-          "markPaidPeriodMessage": "Record {{name}}’s payment for {{period}}?",
-          "markUnpaidPeriodMessage": "Undo {{name}}’s payment covering {{period}}?",
+          "markPaidPeriodMessage": "Mark {{name}} paid? The payment covers: {{period}}",
+          "markUnpaidPeriodMessage": "Mark {{name}} unpaid? The payment covered: {{period}}",
           "markPaidAccept": "Mark paid",
           "markUnpaidAccept": "Mark unpaid"
         },

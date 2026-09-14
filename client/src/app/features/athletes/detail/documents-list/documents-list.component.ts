@@ -46,6 +46,10 @@ import { ExpiryStatusBadgeComponent } from '../../../../shared/components/expiry
 import { triggerBrowserDownload } from '../../../../shared/utils/download';
 import { UploadDocumentDialogComponent } from '../upload-document-dialog/upload-document-dialog.component';
 import { LocaleDatePipe } from '../../../../shared/pipes/locale-date.pipe';
+import {
+  CONFIRM_ACCEPT_DESTRUCTIVE,
+  CONFIRM_REJECT_BUTTON,
+} from '../../../../shared/utils/confirm-buttons';
 
 const TOGGLE_STORAGE_KEY = 'documents.showCancelled';
 
@@ -138,7 +142,8 @@ export class DocumentsListComponent implements OnInit {
       }),
       acceptLabel: this.translate.instant('athletes.detail.documents.confirm.deleteAccept'),
       rejectLabel: this.translate.instant('common.cancel'),
-      acceptButtonProps: { severity: 'danger' },
+      acceptButtonProps: CONFIRM_ACCEPT_DESTRUCTIVE,
+      rejectButtonProps: CONFIRM_REJECT_BUTTON,
       accept: () => this.delete(doc),
     });
   }

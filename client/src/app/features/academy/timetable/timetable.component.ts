@@ -34,6 +34,10 @@ import { EmptyStateComponent } from '../../../shared/components/empty-state/empt
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { TrainingDaysPickerComponent } from '../../../shared/components/training-days-picker/training-days-picker.component';
 import { localeFor } from '../../../shared/utils/locale';
+import {
+  CONFIRM_ACCEPT_DESTRUCTIVE,
+  CONFIRM_REJECT_BUTTON,
+} from '../../../shared/utils/confirm-buttons';
 
 /** Mon-first display order, Carbon values (0 = Sunday). */
 const WEEK_ORDER = [1, 2, 3, 4, 5, 6, 0] as const;
@@ -368,7 +372,8 @@ export class TimetableComponent {
       message: this.translate.instant('academy.timetable.confirm.remove', { name: current.name }),
       acceptLabel: this.translate.instant('academy.timetable.confirm.accept'),
       rejectLabel: this.translate.instant('common.cancel'),
-      acceptButtonProps: { severity: 'danger' },
+      acceptButtonProps: CONFIRM_ACCEPT_DESTRUCTIVE,
+      rejectButtonProps: CONFIRM_REJECT_BUTTON,
       accept: () => this.remove(current.id),
     });
   }

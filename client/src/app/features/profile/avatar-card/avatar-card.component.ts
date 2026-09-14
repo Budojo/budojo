@@ -13,6 +13,10 @@ import { ConfirmationService, MessageService } from 'primeng/api';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../../core/services/auth.service';
 import { UserAvatarComponent } from '../../../shared/components/user-avatar/user-avatar.component';
+import {
+  CONFIRM_ACCEPT_DESTRUCTIVE,
+  CONFIRM_REJECT_BUTTON,
+} from '../../../shared/utils/confirm-buttons';
 
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
 const ALLOWED_AVATAR_MIME = ['image/png', 'image/jpeg', 'image/webp'];
@@ -107,7 +111,8 @@ export class AvatarCardComponent {
       message: this.translate.instant('profile.avatarConfirm.removeMessage'),
       acceptLabel: this.translate.instant('profile.avatarConfirm.removeAccept'),
       rejectLabel: this.translate.instant('common.cancel'),
-      acceptButtonProps: { severity: 'danger' },
+      acceptButtonProps: CONFIRM_ACCEPT_DESTRUCTIVE,
+      rejectButtonProps: CONFIRM_REJECT_BUTTON,
       accept: () => this.removeAvatar(),
     });
   }

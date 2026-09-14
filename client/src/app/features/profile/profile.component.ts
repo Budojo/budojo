@@ -33,6 +33,7 @@ import { ProfileTrainHereComponent } from './train-here/profile-train-here.compo
 import { ProfileTwoFactorComponent } from './two-factor/profile-two-factor.component';
 import { ProfileApiTokensComponent } from './api-tokens/profile-api-tokens.component';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
+import { CONFIRM_REJECT_BUTTON } from '../../shared/utils/confirm-buttons';
 
 type ProfileTab = 'identity' | 'security' | 'notifications' | 'account';
 
@@ -362,6 +363,7 @@ export class ProfileComponent {
       }),
       acceptLabel: this.translate.instant('account.emailChange.profile.confirmAccept'),
       rejectLabel: this.translate.instant('common.cancel'),
+      rejectButtonProps: CONFIRM_REJECT_BUTTON,
       accept: () => this.dispatchEmailRequest(newEmail),
     });
   }

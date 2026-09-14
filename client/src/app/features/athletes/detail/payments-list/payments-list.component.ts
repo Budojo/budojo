@@ -25,6 +25,7 @@ import { FeeTier } from '../../../../core/services/fee-tier.service';
 import { AthletePayment, PaymentService } from '../../../../core/services/payment.service';
 import { formatIsoDate, localeFor } from '../../../../shared/utils/locale';
 import { CarnetPanelComponent } from '../carnet-panel/carnet-panel.component';
+import { CONFIRM_REJECT_BUTTON } from '../../../../shared/utils/confirm-buttons';
 
 /**
  * Per-athlete payments tab on the detail page (#182 Surface 2).
@@ -320,6 +321,7 @@ export class PaymentsListComponent implements OnInit {
           : 'athletes.detail.payments.confirm.markUnpaidAccept',
       ),
       rejectLabel: this.translate.instant('common.cancel'),
+      rejectButtonProps: CONFIRM_REJECT_BUTTON,
       acceptButtonProps: willMarkPaid ? undefined : { severity: 'danger' },
       accept: () => this.applyToggle(row.month, willMarkPaid),
     });
