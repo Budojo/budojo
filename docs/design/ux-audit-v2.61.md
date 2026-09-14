@@ -44,7 +44,7 @@ One row per screen, worst grade first in the column, every finding named, and th
 | 10.4 | Edit academy | `/dashboard/academy/edit` | P2 | ACADE-1, ACADE-2, ACADE-3, ACADE-4, ACADE-5, ACADE-6 | #1623, #1627, #1628 |
 | 10.6 | Activity | `/dashboard/academy/activity` | P2 | ACT-1, ACT-2, ACT-3 | #1624, #1631 |
 | 20.1 | Roster | `/dashboard/athletes` | P1 | ATH-1, ATH-2, ATH-3, ATH-4, ATH-5, ATH-6 | #1618, #1623, #1632, #1649 |
-| 20.2 | Add athlete | `/dashboard/athletes/new` | P3 | ATHF-1, ATHF-2, ATHF-3, ATHF-4 | #1628, #1650, #1651 |
+| 20.2 | Add athlete | `/dashboard/athletes/new` | P3 | ATHF-1, ATHF-2, ~~ATHF-3~~, ATHF-4 | #1628, #1650, #1651 |
 | 20.3 | Import | `/dashboard/athletes/import` | P3 | IMP-1 | #1658 |
 | 20.4 | Athlete header and tabs | `/dashboard/athletes/:id` | P2 | DET-1, DET-2, DET-3, DET-4 | #1623, #1633 |
 | 20.5 | Documents tab | `…/documents` | P2 | DOC-1, DOC-2, DOC-3, DOC-4, DOC-5 | #1625, #1652 |
@@ -107,7 +107,7 @@ One row per screen, worst grade first in the column, every finding named, and th
 | #1647 | P3 | COV-1, COV-3, PROMO-3 — fix(copy): gendered and inconsistent wording on the athlete tabs |
 | #1648 | P3 | TT-1, TT-2, TT-3, TT-4 — fix(timetable): plan button without a label, duration without a unit, two label styles |
 | #1649 | P3 | ATH-4, ATH-5, ATH-6 — fix(athletes): roster polish — attendance header, toggle states, onboarding steps |
-| #1650 | P3 | ATHF-2, ATHF-3 — fix(athletes): form polish — prefix default, instagram format, address asterisks |
+| #1650 | P3 | ATHF-1, ATHF-2, ~~ATHF-3~~ — fix(forms): prefix default, address asterisks on both forms, untranslated academy placeholders (ATHF-3 withdrawn) |
 | #1651 | P3 | ATHF-4 — feat(academy): a 'trains kids' flag that hides the youth belts |
 | #1652 | P3 | DOC-3, DOC-4, DOC-5 — fix(documents): 'No file chosen', no expiry prefill, an overlay that flashes over the rows |
 | #1653 | P3 | PROMO-2, PROMO-4 — fix(promotions): destructive control before the content; promote from the tab |
@@ -354,7 +354,7 @@ No layout findings: the prose container, the IT/EN toggle and the type scale are
 |---|---|---|---|
 | ATHF-1 | P3 | The address section is headed "(opzionale — compila tutti i campi o lasciali tutti vuoti)" and then marks four of its fields with the red `*` that everywhere else means "required". Two signals, opposite meanings. The academy form has the same pair. | Krug — consistency of signifiers |
 | ATHF-2 | P3 | The phone prefix opens empty ("Prefis…✕⌄", truncated) on an academy whose own number is +39. Default it to the academy's prefix. | Norman — defaults |
-| ATHF-3 | P3 | Instagram takes a URL here (`https://instagram.com/iltuoprof…`, truncated at 275 px) and a handle on the academy form (`budojo_torino`). One product, two formats for the same field. | Consistency |
+| ~~ATHF-3~~ | ~~P3~~ | ~~Instagram takes a URL here (`https://instagram.com/iltuoprof…`, truncated at 275 px) and a handle on the academy form (`budojo_torino`). One product, two formats for the same field.~~ **Withdrawn — an artefact of the audit fixture, not a defect.** Both forms have required a URL since #162: `urlIfPresent` on the client (`athlete-form.component.ts:357`, `academy-form.component.ts:217`) and `nullable\|url` on the server (`UpdateAthleteRequest.php:94`, `UpdateAcademyRequest.php:81`), with `type="url"` on both inputs. `budojo_torino` and `giulia.bjj` were seeded by `desktop-audit.cy.ts` itself, so the screenshot showed a state the API would reject. Fixture corrected in #1650. What *was* wrong on this screen: four placeholders hardcoded in Italian in the academy template (`Via Roma 1`, `Scala B, interno 4`, `00100`, `Roma`) never followed the language switch — fixed under this ID instead. | Consistency |
 | ATHF-4 | P3 | The belt select lists the IBJJF youth belts for an academy with no kids programme. A per-academy "trains kids" flag would halve the list where it is not needed. | Hick |
 
 ### 20.3 Import — `/dashboard/athletes/import`
