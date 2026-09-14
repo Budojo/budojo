@@ -313,7 +313,7 @@
         "text": "{{name}} ha appena conquistato una nuova cintura!"
       },
       "stripePromotion": {
-        "text": "{{name}} ha preso una striscetta — {{from}} → {{to}}"
+        "text": "{{name}} ha preso un grado — {{from}} → {{to}}"
       },
       "share": {
         "button": "Condividi",
@@ -2129,9 +2129,9 @@
       },
       "promotions": {
         "errorBody": "Impossibile caricare lo storico promozioni. Riprova tra un momento.",
-        "emptyBody": "Nessuna promozione registrata. Cambia cintura o striscette e qui apparirà la riga.",
+        "emptyBody": "Nessuna promozione registrata. Cambia cintura o gradi e qui apparirà la riga.",
         "firstBelt": "Prima cintura",
-        "stripes": "striscette",
+        "stripes": "gradi",
         "recordedBy": "Registrato da {{name}}",
         "prevPage": "Pagina precedente",
         "nextPage": "Pagina successiva",
@@ -2153,14 +2153,14 @@
           "body": "Per una promozione avvenuta prima che Budojo esistesse. Deve essere coerente con le promozioni già registrate intorno ad essa.",
           "kindLabel": "Tipo",
           "kindBelt": "Cintura",
-          "kindStripe": "Striscetta",
+          "kindStripe": "Grado",
           "dateLabel": "Registrata il",
           "fromBelt": "Da cintura",
           "toBelt": "A cintura",
           "firstBelt": "Prima cintura (nessuna precedente)",
           "beltAtEvent": "Cintura al momento",
-          "fromStripes": "Da striscette",
-          "toStripes": "A striscette",
+          "fromStripes": "Da gradi",
+          "toStripes": "A gradi",
           "confirm": "Aggiungi promozione",
           "error": "Impossibile aggiungere questa promozione. Riprova."
         },
@@ -2488,7 +2488,7 @@
       "another": "Scegli un altro file"
     },
     "coverage": {
-      "fraction": "{{seen}} su {{total}} cose che la palestra ha fatto",
+      "fraction": "{{seen}} su {{total}} tecniche che la palestra ha fatto",
       "since": "Conteggio dal {{date}}, giorno di iscrizione.",
       "legend": {
         "seenOne": "{{count}} visto",
@@ -2499,7 +2499,7 @@
         "missedOther": "{{count}} persi"
       },
       "missed": {
-        "title": "Cosa si è perso",
+        "title": "Cosa ha perso",
         "chances": "fatto {{count}}×"
       },
       "seen": {
@@ -2548,8 +2548,8 @@
       "ariaUnmark": "Segna non pagato"
     },
     "beltBadge": {
-      "stripeOne": "{{count}} striscia",
-      "stripeMany": "{{count}} strisce"
+      "stripeOne": "{{count}} grado",
+      "stripeMany": "{{count}} gradi"
     },
     "unpaidWidget": {
       "eyebrow": "Non pagati",

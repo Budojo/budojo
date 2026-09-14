@@ -79,7 +79,7 @@ describe('AthleteSyllabusCoverageComponent (#1567)', () => {
     const headline = fixture.nativeElement.querySelector('[data-cy="athlete-coverage-headline"]');
     expect(headline.textContent).toContain('50');
     // The denominator is what the academy taught, never the whole syllabus.
-    expect(fixture.nativeElement.textContent).toContain('2 of 4 things the academy taught');
+    expect(fixture.nativeElement.textContent).toContain('2 of 4 techniques the academy taught');
   });
 
   it('keeps what nobody taught out of the number and says whose gap it is', () => {
