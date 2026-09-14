@@ -6,7 +6,7 @@ This folder is the living reference for Budojo's domain model, API contract, and
 
 ```
 docs/
-├── README.md                          # this file — the index
+├── README.md                          # this file — the index (every directory under docs/ appears here)
 ├── entities/                          # one file per persisted domain entity
 │   ├── user.md
 │   ├── personal-access-token.md
@@ -42,14 +42,24 @@ docs/
 ├── adr/                               # architectural decision records
 │   └── 0001-svg-sanitizer.md
 ├── development/                       # procedural runbooks (the how-to behind CLAUDE.md rules)
+│   ├── linux-dev.md                   # the Linux development base — setup, bind-mount ownership, SELinux
 │   ├── git-flow.md                    # branch model, naming, commit format, daily/hotfix flow
 │   ├── release-flow.md                # semantic-release cadence, Auto-closes block, auto-sweep
-│   └── pr-labels.md                   # type/status labels, PR checklist, PR body conventions
-└── design/                            # design system (MD3, palette, tokens, component matrix)
-    ├── README.md
-    ├── DESIGN_SYSTEM.md
-    ├── brand-kit/                     # 13 standalone SVG logo variants for handoff / pitch decks
-    └── preview/                       # static HTML previews of the variant matrix
+│   ├── pr-labels.md                   # type/status labels, PR checklist, PR body conventions
+│   └── visual-verification.md         # the mandatory in-browser smoke before pushing visible changes
+├── changelog/                         # 107 files — user-facing release notes, one per version
+│   └── user-facing/vX.Y.Z.md          # written on the release branch; the release flow mandates it
+├── design/                            # design system (MD3, palette, tokens, component matrix)
+│   ├── README.md                      # content voice, iconography, palette + casing rules
+│   ├── DESIGN_SYSTEM.md               # token inventory, per-component override specs
+│   ├── ux-audit-v2.61.md              # the 50-screen desktop audit (#1614) and its 47 findings
+│   ├── screenshots/                   # how the inventory + audit harnesses shoot every screen
+│   ├── brand-kit/                     # 13 standalone SVG logo variants for handoff / pitch decks
+│   └── preview/                       # static HTML previews of the variant matrix and audit mockups
+├── legal/                             # 8 files — privacy, terms, DPA template, sub-processors
+├── marketing/                         # positioning and launch copy
+├── mobile/                            # the phone-form-factor notes
+└── operations/                        # runbooks that are neither infra nor development
 ```
 
 ## Who reads what

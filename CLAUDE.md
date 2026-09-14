@@ -54,10 +54,10 @@ Five test layers are mandatory — every layer your diff touches is green before
 
 | Layer            | Stack                      | Scope                                                                         |
 | ---------------- | -------------------------- | ----------------------------------------------------------------------------- |
-| **PHP unit**     | PEST 4                     | Isolated classes — Actions, validators, value objects                         |
-| **PHP feature**  | PEST 4 + `RefreshDatabase` | Full HTTP round-trips against an in-memory SQLite DB                          |
+| **PHP unit**     | PEST 5                     | Isolated classes — Actions, validators, value objects                         |
+| **PHP feature**  | PEST 5 + `RefreshDatabase` | Full HTTP round-trips against an in-memory SQLite DB                          |
 | **Angular unit** | Vitest 4                   | Components and services in isolation                                          |
-| **Angular E2E**  | Cypress 13                 | User flows in a real browser; all API calls intercepted with `cy.intercept()` |
+| **Angular E2E**  | Cypress 15                 | User flows in a real browser; all API calls intercepted with `cy.intercept()` |
 | **Desktop unit** | Vitest 4 (`desktop/`)      | Electron engines in isolation — no Electron import, no filesystem              |
 
 No untested business logic is merged to `develop`.
@@ -149,14 +149,18 @@ The repo ships its own domain documentation in `docs/` — it is **source of tru
 
 ```
 docs/
-├── README.md              # index
+├── README.md              # index — every directory below is listed there too
 ├── entities/*.md          # one file per persisted entity (user, academy, athlete, …)
 ├── api/v1.yaml            # OpenAPI 3.0 contract for /api/v1
 ├── desktop/*.md           # the desktop build (M11) — architecture, install, backup-restore
 ├── specs/*.md             # milestone PRDs
-├── development/*.md       # procedural runbooks (git, release, labels)
-├── design/*.md            # design system, mobile audit, brand kit
-└── infra/*.md             # production deployment, branch rulesets
+├── development/*.md       # procedural runbooks (linux, git, release, labels, visual verification)
+├── design/*.md            # design system, UX audits, screenshot harnesses, brand kit
+├── changelog/user-facing/ # one file per release, written on the release branch
+├── adr/*.md               # architectural decision records
+├── legal/*.md             # privacy, terms, DPA template, sub-processors
+├── marketing/, mobile/, operations/
+└── infra/*.md             # branch rulesets; the hosted stack lives under infra/archive/
 ```
 
 ### When a doc update is REQUIRED in the same PR
@@ -186,7 +190,7 @@ See [`server/CLAUDE.md`](./server/CLAUDE.md) for:
 
 - **Uncle Bob canon** (Clean Code / Architecture / Agile / Coder) — the shared vocabulary for judging backend code, with SOLID expanded and the Active Record caveat
 - Server structure conventions (Actions, Controllers, FormRequests, Resources, Observers)
-- PHPStan level 9, PHP CS Fixer, PEST 4 conventions
+- PHPStan level 9, PHP CS Fixer, PEST 5 conventions
 - API conventions (Sanctum, JSON envelope, academy scoping)
 
 ## Client (Angular 21 + PrimeNG 21) — frontend rules
@@ -196,7 +200,7 @@ See [`client/CLAUDE.md`](./client/CLAUDE.md) for:
 - **Design canon** (Material Design 3 / Don't Make Me Think / Norman / Laws of UX) — the shared vocabulary for judging UI decisions
 - Client structure conventions (standalone components, OnPush, functional guards/interceptors, signals)
 - PrimeNG 21 with the Material preset — theme, components, layout
-- Vitest 4 (unit) and Cypress 13 (E2E) conventions
+- Vitest 4 (unit) and Cypress 15 (E2E) conventions
 
 ---
 

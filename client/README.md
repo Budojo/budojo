@@ -47,7 +47,7 @@ npm test -- --watch=false # single run (CI mode)
 
 ## Running end-to-end tests
 
-E2E tests run on [Cypress 13](https://www.cypress.io/) — `cypress.config.ts` at the root of `client/`. The dev server must be up (`npm run start`) before opening Cypress.
+E2E tests run on [Cypress 15](https://www.cypress.io/) — `cypress.config.ts` at the root of `client/`. The dev server must be up (`npm run start`) before opening Cypress.
 
 ```bash
 npm run cy:open           # interactive runner

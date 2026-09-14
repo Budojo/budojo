@@ -12,11 +12,6 @@
 
   // <app-page-header> owns the title→body gap (#1126); the body keeps the
   // check-in list rhythm.
-  &__body {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-  }
 }
 
 // ── No-class-today banner (#854) ──────────────────────────────────────────────
