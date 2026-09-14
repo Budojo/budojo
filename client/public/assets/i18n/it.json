@@ -2227,13 +2227,13 @@
           "empty": "Nessuna sessione registrata questo mese."
         },
         "dayUpcoming": "{{day}} — non ancora",
-        "thisMonthWindow": "questo mese",
         "legend": {
           "attended": "Presente",
           "missed": "Assente",
           "upcoming": "Da venire",
           "off": "Non si allena"
-        }
+        },
+        "windowSoFar": "finora questo mese"
       },
       "carnets": {
         "title": "Carnet ingressi",

@@ -2227,13 +2227,13 @@
           "empty": "No sessions recorded this month."
         },
         "dayUpcoming": "{{day}} — not yet",
-        "thisMonthWindow": "this month",
         "legend": {
           "attended": "Attended",
           "missed": "Missed",
           "upcoming": "Still to come",
           "off": "Not a training day"
-        }
+        },
+        "windowSoFar": "so far this month"
       },
       "carnets": {
         "title": "Entry carnets",

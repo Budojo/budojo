@@ -59,7 +59,11 @@
               the reader assumes one of them is wrong.
             -->
             <small class="attendance-history__rate-window" data-cy="attendance-rate-window">
-              {{ 'athletes.detail.attendance.thisMonthWindow' | translate }}
+              @if (rateWindowIsCurrentMonth()) {
+                {{ 'athletes.detail.attendance.windowSoFar' | translate }}
+              } @else {
+                {{ monthLabelKey() | translate }} {{ visibleYear() }}
+              }
             </small>
           </span>
         </div>
@@ -145,7 +149,7 @@
             @let attended = attendedDates().has(key);
             @let hasNotes = notedDates().has(key);
             @let training = isTrainingDay(day);
-            @let upcoming = training && !attended && isFuture(day);
+            @let upcoming = training && !attended && hasNotHappenedYet(day);
             <!--
               A training day that has not happened yet is not a missed one
               (#1635, ATT-3). Both used to render as the same grey square, so

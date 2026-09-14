@@ -294,7 +294,19 @@ describe('AttendanceHistoryComponent', () => {
     expect(upcoming.classList.contains('attendance-history__cell--training')).toBe(true);
     expect(upcoming.classList.contains('attendance-history__cell--upcoming')).toBe(true);
 
+    // Apr 4 is past AND non-training, so on its own it proves nothing: it is
+    // false either way. Apr 26 is a Sunday still to come — the only control
+    // that fails if the `training &&` conjunct is dropped, which would paint
+    // every remaining weekend dashed and call it a session.
+    const futureNonTraining = cell(26);
     expect(notTraining.classList.contains('attendance-history__cell--upcoming')).toBe(false);
+    expect(futureNonTraining.classList.contains('attendance-history__cell--training')).toBe(false);
+    expect(futureNonTraining.classList.contains('attendance-history__cell--upcoming')).toBe(false);
+
+    // Today is a Saturday here and not a training day, but the boundary is
+    // the part most likely to be got wrong: a class tonight is not a miss at
+    // nine this morning.
+    expect(cell(25).classList.contains('attendance-history__cell--upcoming')).toBe(false);
 
     // A reader hears the difference too, not only sees it.
     expect(upcoming.getAttribute('aria-label')).toContain('not yet');
@@ -326,13 +338,31 @@ describe('AttendanceHistoryComponent', () => {
     const root = fixture.nativeElement as HTMLElement;
     const legend = root.querySelector('[data-cy="attendance-legend"]');
     expect(legend).not.toBeNull();
-    // One entry per state the grid can render — fewer and a tone is unexplained.
-    expect(legend!.querySelectorAll('li').length).toBe(4);
+    // The words, not the count. Four `<li>` is static markup asserting itself:
+    // it stays 4 with every label typo'd into a raw translation key.
+    expect([...legend!.querySelectorAll('li')].map((li) => li.textContent?.trim())).toEqual([
+      'Attended',
+      'Missed',
+      'Still to come',
+      'Not a training day',
+    ]);
 
     // The ring covers one month; the card above covers 30, 90 or 365 days.
     // Unlabelled they read as two answers to one question (ATT-2).
     expect(root.querySelector('[data-cy="attendance-rate-window"]')?.textContent?.trim()).toBe(
-      'this month',
+      'so far this month',
+    );
+
+    // …and names the month once you leave the current one. A constant label
+    // was worse than none: it asserted the wrong window on every other view.
+    fixture.componentInstance['prevMonth']();
+    fixture.detectChanges();
+    httpMock
+      .expectOne(`/api/v1/athletes/${ATHLETE_ID}/attendance?from=2026-03-01&to=2026-03-31`)
+      .flush({ data: [] });
+    fixture.detectChanges();
+    expect(root.querySelector('[data-cy="attendance-rate-window"]')?.textContent?.trim()).toBe(
+      'March 2026',
     );
 
     flushSummary(httpMock);

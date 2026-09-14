@@ -25,6 +25,7 @@ import {
   attendanceRate,
   countScheduledTrainingDays,
   schedulesForAcademy,
+  scheduleForDate,
 } from '../../../../shared/utils/attendance-rate';
 import { YearMonth, buildCalendarGrid, shiftMonth } from './calendar-grid';
 import { AttendanceMonthHeatmapComponent } from './attendance-month-heatmap.component';
@@ -182,17 +183,32 @@ export class AttendanceHistoryComponent implements OnInit {
   });
 
   /**
-   * Quick-lookup set of training-day weekdays — drives the `--training`
-   * cell modifier in the calendar so non-training days read as "not
-   * relevant" instead of "not present" (#88c). `null` when the academy
-   * hasn't configured a schedule, in which case ALL cells stay neutral
-   * (legacy rendering preserved).
+   * The schedule history, resolved once per academy change.
+   *
+   * `academy().training_days` is a denormalised cache of the CURRENT schedule
+   * (see `academy.service.ts`), and reading it per cell disagreed with the
+   * denominator three lines below, which has resolved each day against the
+   * schedule in force on that day since #1094. While `--training` was only a
+   * background tint that was cosmetic. It is not any more: the legend added
+   * in #1635 puts the word "missed" to that tone, so a grid painted from
+   * today's weekdays now accuses an athlete of skipping sessions the academy
+   * never held — and the ring beside it counts a different number.
    */
-  protected readonly trainingDaysSet = computed<Set<number> | null>(() => {
-    const days = this.academyService.academy()?.training_days ?? null;
+  private readonly scheduleHistory = computed(() =>
+    schedulesForAcademy(this.academyService.academy()),
+  );
+
+  /**
+   * Quick-lookup set of training-day weekdays for a given day, from the
+   * schedule in force on that day. `null` when the academy hasn't configured
+   * one, in which case ALL cells stay neutral (legacy rendering preserved).
+   */
+  private trainingDaysOn(date: Date): Set<number> | null {
+    const schedule = scheduleForDate(this.scheduleHistory(), date);
+    const days = schedule?.training_days ?? null;
     if (days === null || days.length === 0) return null;
     return new Set(days);
-  });
+  }
 
   /**
    * Whether a day in the visible month has not arrived yet (#1635, ATT-3).
@@ -203,12 +219,18 @@ export class AttendanceHistoryComponent implements OnInit {
    * The four states the legend names are: attended, missed, still to come,
    * and not a training day.
    */
-  protected isFuture(day: number): boolean {
+  protected hasNotHappenedYet(day: number): boolean {
     const ym = this.visible();
     const cell = new Date(ym.year, ym.month - 1, day);
     const today = new Date();
     const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    return cell.getTime() > startOfToday.getTime();
+    // `>=`, not `>`: today's class has not happened yet either. With `>` the
+    // grid called an athlete absent from nine in the morning until somebody
+    // took the register — and the legend under it puts the word "missed" to
+    // that tone. The cost is the other end of the day: a session at 19:00
+    // still reads "still to come" at 23:00 if nobody checked anyone in. That
+    // is the milder wrong, and taking the register clears it.
+    return cell.getTime() >= startOfToday.getTime();
   }
 
   /**
@@ -216,11 +238,26 @@ export class AttendanceHistoryComponent implements OnInit {
    * the visible month. Used by the template `[class.--training]` binding.
    */
   protected isTrainingDay(day: number): boolean {
-    const set = this.trainingDaysSet();
-    if (set === null) return false;
     const ym = this.visible();
-    return set.has(new Date(ym.year, ym.month - 1, day).getDay());
+    const date = new Date(ym.year, ym.month - 1, day);
+    const set = this.trainingDaysOn(date);
+    if (set === null) return false;
+    return set.has(date.getDay());
   }
+
+  /**
+   * Which window the ring covers (#1635, ATT-2).
+   *
+   * A constant "this month" was worse than no label: one press of the back
+   * chevron left it asserting the current month over August's numbers. For
+   * the month in progress it says "so far", because the denominator stops at
+   * today rather than running to the 30th.
+   */
+  protected readonly rateWindowIsCurrentMonth = computed<boolean>(() => {
+    const ym = this.visible();
+    const now = new Date();
+    return ym.year === now.getFullYear() && ym.month === now.getMonth() + 1;
+  });
 
   /** Ratio of attended-to-scheduled, 0..1 (or > 1 for off-schedule sessions). */
   protected readonly rate = computed(() =>
