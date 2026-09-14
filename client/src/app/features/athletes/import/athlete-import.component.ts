@@ -267,6 +267,41 @@ export class AthleteImportComponent {
     return Object.values(row.errors).flat().join(' · ');
   }
 
+  /**
+   * The word for a row's outcome, in the tense the page is actually in
+   * (#1658, IMP-1).
+   *
+   * "Verrà importato" is right while the table is a preview and wrong the
+   * moment it is a receipt: after the run the summary says "2 atleti
+   * importati" and a toast confirms it, and every row underneath still
+   * promised a future that had already happened.
+   *
+   * An explicit map rather than `'athletes.import.status.' + row.status`,
+   * which is what the template did: the parity spec cannot see a key built
+   * from a string, so a missing one ships green and renders the raw path.
+   */
+  private static readonly STATUS_KEYS: Readonly<
+    Record<'preview' | 'done', Readonly<Record<AthleteImportRow['status'], string>>>
+  > = {
+    preview: {
+      ok: 'athletes.import.status.ok',
+      invalid: 'athletes.import.status.invalid',
+      duplicate: 'athletes.import.status.duplicate',
+    },
+    done: {
+      // Only `ok` changes tense. A row that was discarded or already on the
+      // list is in the same state it was before the run.
+      ok: 'athletes.import.status.okDone',
+      invalid: 'athletes.import.status.invalid',
+      duplicate: 'athletes.import.status.duplicate',
+    },
+  };
+
+  protected statusKey(row: AthleteImportRow): string {
+    const phase = this.imported() === null ? 'preview' : 'done';
+    return AthleteImportComponent.STATUS_KEYS[phase][row.status];
+  }
+
   protected severityFor(row: AthleteImportRow): 'success' | 'warn' | 'danger' {
     if (row.status === 'ok') {
       return 'success';

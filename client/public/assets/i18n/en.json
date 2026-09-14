@@ -2458,7 +2458,8 @@
       "status": {
         "ok": "Will be imported",
         "invalid": "Skipped",
-        "duplicate": "Already on the roster"
+        "duplicate": "Already on the roster",
+        "okDone": "Imported"
       },
       "reason": {
         "duplicate": "Someone with this name is already here."

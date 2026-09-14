@@ -216,4 +216,28 @@ describe('AthleteImportComponent', () => {
     expect(query('[data-cy="import-missing"]')).toBeNull();
     expect(query('[data-cy="import-filename"]')?.textContent).toContain('secondo.csv');
   });
+
+  // ─── The table speaks in the tense the page is in (#1658, IMP-1) ─────────
+
+  it('promises the future while previewing and reports the past after the run', () => {
+    choose();
+    http.expectOne(URL).flush({ data: report() });
+    fixture.detectChanges();
+
+    // While it is a preview, the promise is correct.
+    expect(text()).toContain('Will be imported');
+
+    (query('[data-cy="import-confirm"] button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    http.expectOne(URL).flush({ data: report({ dry_run: false }) });
+    fixture.detectChanges();
+
+    // The summary above now says two were imported and a toast has confirmed
+    // it. A row still promising a future contradicts both.
+    expect(text()).not.toContain('Will be imported');
+    expect(text()).toContain('Imported');
+
+    // A discarded row is in the same state the run found it in.
+    expect(text()).toContain('Skipped');
+  });
 });

@@ -2458,7 +2458,8 @@
       "status": {
         "ok": "Verrà importato",
         "invalid": "Scartato",
-        "duplicate": "Già in lista"
+        "duplicate": "Già in lista",
+        "okDone": "Importato"
       },
       "reason": {
         "duplicate": "C'è già qualcuno con questo nome."
