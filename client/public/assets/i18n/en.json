@@ -1510,7 +1510,7 @@
       },
       "seasonStart": {
         "label": "Season starts in",
-        "placeholder": "September",
+        "placeholder": "September (default)",
         "hint": "The month your training year restarts. The roster counts sessions from here, not from the day each athlete joined. September if you leave it empty."
       },
       "trainingDays": {
@@ -2396,7 +2396,8 @@
         "identity": "Who they are",
         "gym": "At the gym",
         "contact": "Contact"
-      }
+      },
+      "feeTierStandard": "The academy's standard fee"
     },
     "photo": {
       "title": "Photo",
