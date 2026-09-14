@@ -25,4 +25,30 @@ describe('Stats — attendance heatmap tab', () => {
     cy.wait('@attendanceDaily');
     cy.get('[data-cy="stats-attendance-heatmap"]').should('be.visible');
   });
+
+  it('keeps the range when the chosen chip is tapped again (#1675)', () => {
+    // `p-selectbutton`'s allowEmpty defaults to TRUE, so a second tap on the
+    // chip already chosen deselected it and emitted null into a signal typed
+    // `3 | 6 | 12`. The refetch went out as `?months=null`, the server's
+    // `in:3,6,12` rule 422'd it, and the heatmap sat in its error state until
+    // another range was picked.
+    cy.intercept('GET', '/api/v1/stats/attendance/daily?months=null', (req) => {
+      req.reply({ statusCode: 422, body: { message: 'The selected months is invalid.' } });
+    }).as('nullRange');
+
+    cy.visitAuthenticated('/dashboard/stats/attendance');
+    cy.wait('@attendanceDaily');
+
+    cy.get('[data-cy="stats-attendance-range"] p-togglebutton[data-p-checked="true"]')
+      .should('have.length', 1)
+      .click();
+
+    // Still selected, still drawn, and the null request was never made.
+    cy.get('[data-cy="stats-attendance-range"] p-togglebutton[data-p-checked="true"]').should(
+      'have.length',
+      1,
+    );
+    cy.get('[data-cy="stats-attendance-heatmap"]').should('be.visible');
+    cy.get('@nullRange.all').should('have.length', 0);
+  });
 });
