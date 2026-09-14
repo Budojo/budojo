@@ -60,6 +60,104 @@ export function localised(value: Localised, lang: string): string {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.61.2',
+    date: '2026-09-14',
+    headline: {
+      en: 'Fifty screens, read again from scratch.',
+      it: 'Cinquanta schermate, rilette da capo.',
+    },
+    sections: [
+      {
+        heading: {
+          en: '🇮🇹 Italian all the way down',
+          it: '🇮🇹 In italiano fino in fondo',
+        },
+        bullets: [
+          {
+            en: 'Dates were still English in four places — the activity log, promotions, sessions and backup — and carried seconds nobody needs. They now follow the language you picked.',
+            it: 'Le date erano rimaste in inglese in quattro punti — registro attività, promozioni, sessioni e backup — e mostravano anche i secondi, che non servono a nessuno. Adesso seguono la lingua che hai scelto.',
+          },
+          {
+            en: 'In the documents tab, expiry dates read "30 settembre 2026" instead of 2026-09-30, and the status tags are Italian. The day count you were doing in your head is written down.',
+            it: 'Nella scheda documenti le scadenze si leggono "30 settembre 2026" invece di 2026-09-30, e le etichette di stato sono in italiano. Il conteggio dei giorni che facevi a mente c\'è scritto.',
+          },
+          {
+            en: 'The activity log listed database codes with your name repeated on every row. It now says what happened, in words, and names you once.',
+            it: 'Il registro attività elencava sigle da database con il tuo nome ripetuto su ogni riga. Adesso dice cosa è successo, in parole, e ti nomina una volta sola.',
+          },
+        ],
+      },
+      {
+        heading: {
+          en: '🖥️ No promises this build cannot keep',
+          it: '🖥️ Niente promesse che questa versione non può mantenere',
+        },
+        bullets: [
+          {
+            en: 'Budojo runs on your computer and has no mail server. The notifications tab offered email reminders that would never arrive, and the sign-in page had a "forgot password" that could not send anything. Recovery now works a way that does not need mail.',
+            it: 'Budojo gira sul tuo computer e non ha un server della posta. La scheda notifiche offriva promemoria via email che non sarebbero mai arrivati, e l\'accesso aveva un "password dimenticata" che non poteva mandare niente. Il recupero adesso funziona in un modo che non ha bisogno della posta.',
+          },
+          {
+            en: 'All twenty-nine help answers were rewritten about the app you installed, not the hosted product that no longer exists. The community described in three places is gone with it.',
+            it: "Tutte e ventinove le risposte dell'aiuto sono riscritte sull'app che hai installato, non sul prodotto ospitato che non esiste più. Con loro se n'è andata la community descritta in tre punti.",
+          },
+          {
+            en: 'Profile settings showed active sessions, login history, API tokens and a verified tick — furniture from a web app. When something failed, the app blamed your connection, though the server is a process on your own machine.',
+            it: "Le impostazioni del profilo mostravano sessioni attive, cronologia accessi, token API e la spunta di verifica: arredamento di un'app web. E quando qualcosa falliva, l'app dava la colpa alla connessione, mentre il server è un processo sul tuo stesso computer.",
+          },
+        ],
+      },
+      {
+        heading: {
+          en: '✨ Screens put back in order',
+          it: '✨ Schermate rimesse in ordine',
+        },
+        bullets: [
+          {
+            en: 'The athlete page opened on "Modifica" as its first tab and landed on the second. Modifica is a button top right now, Documenti leads, and the header carries the phone and the email as links — the most common reason to open that page at all.',
+            it: 'La scheda dell\'atleta apriva con "Modifica" come prima linguetta e atterrava sulla seconda. Modifica adesso è un pulsante in alto a destra, Documenti apre la fila, e nell\'intestazione ci sono telefono ed email da premere: il motivo più frequente per aprire quella scheda.',
+          },
+          {
+            en: 'On the attendance calendar a session next week looked exactly like one that was missed, so on the fourteenth half the month read as skipped. Days still to come are outlined now, and a key underneath says what each tone means.',
+            it: 'Sul calendario delle presenze un allenamento della settimana prossima era identico a uno saltato, così il giorno quattordici mezzo mese risultava mancato. I giorni che devono arrivare sono tratteggiati, e sotto una legenda dice cosa vuol dire ogni tinta.',
+          },
+          {
+            en: 'In the lesson sheet one word meant two things: the state said "in programma" while "il programma" two lines below was the syllabus. The search had two clear buttons, one of which did not clear, and the circles beside techniques suggested you could only pick one.',
+            it: 'Nella scheda della lezione una parola voleva dire due cose: lo stato diceva "in programma" mentre "il programma" due righe sotto era il syllabus. La ricerca aveva due pulsanti per cancellare, uno dei quali non cancellava, e i cerchietti accanto alle tecniche facevano pensare di poterne scegliere una sola.',
+          },
+          {
+            en: 'The academy page opened on a logo uploader instead of the academy. The programme kept its in-season tick seven hundred pixels from the name it belonged to. A brand-new gym was told its filters were hiding athletes it had never added.',
+            it: 'La pagina dell\'accademia apriva con un riquadro per il logo invece che con l\'accademia. Nel programma la spunta "in stagione" stava a settecento pixel dal nome a cui apparteneva. E a una palestra appena creata veniva detto che i filtri nascondevano atleti che non aveva mai aggiunto.',
+          },
+        ],
+      },
+      {
+        heading: {
+          en: '🐛 Fixes',
+          it: '🐛 Correzioni',
+        },
+        bullets: [
+          {
+            en: 'Clearing the date on the check-in threw on every keystroke and left the field impossible to type into.',
+            it: "Cancellando la data sul check-in, l'app andava in errore a ogni tasto e il campo non si lasciava più scrivere.",
+          },
+          {
+            en: 'The month summary said "23 giorni di allenamento" while counting attendances, so a day with two lessons counted twice. It counts days now, and says presences when it means presences.',
+            it: 'Il riepilogo del mese diceva "23 giorni di allenamento" contando le presenze: un giorno con due lezioni valeva due. Adesso conta i giorni, e dice presenze quando sono presenze.',
+          },
+          {
+            en: 'Restoring a backup and stopping a copy asked for confirmation in a popup that had nowhere to appear, so they asked nothing and went ahead.',
+            it: "Il ripristino di un backup e l'interruzione della copia chiedevano conferma in un riquadro che non aveva dove comparire, quindi non chiedevano niente e partivano.",
+          },
+          {
+            en: 'Two places announced a ready update and contradicted each other, and the empty strip pushed the page down by forty-four pixels. The title-bar button is the one that stayed.',
+            it: 'Due posti annunciavano un aggiornamento pronto e si contraddicevano, e la striscia vuota spingeva giù la pagina di quarantaquattro pixel. È rimasto il pulsante nella barra del titolo.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.61.1',
     date: '2026-09-12',
     headline: {
