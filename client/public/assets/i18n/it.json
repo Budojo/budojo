@@ -1474,15 +1474,18 @@
       },
       "website": {
         "label": "Sito web",
-        "errorUrl": "Inserisci un URL completo — es. https://example.com."
+        "errorUrl": "Inserisci un URL completo — es. https://example.com.",
+        "placeholder": "https://gracie-barra.com"
       },
       "facebook": {
         "label": "Facebook",
-        "errorUrl": "Inserisci un URL completo — es. https://facebook.com/lapagina."
+        "errorUrl": "Inserisci un URL completo — es. https://facebook.com/lapagina.",
+        "placeholder": "https://facebook.com/latuapagina"
       },
       "instagram": {
         "label": "Instagram",
-        "errorUrl": "Inserisci un URL completo — es. https://instagram.com/ilprofilo."
+        "errorUrl": "Inserisci un URL completo — es. https://instagram.com/ilprofilo.",
+        "placeholder": "https://instagram.com/iltuoprofilo"
       },
       "permalink": {
         "label": "Permalink",
@@ -1490,9 +1493,7 @@
       },
       "address": {
         "legend": "Indirizzo",
-        "legendOptional": "(opzionale — compila tutti i campi contrassegnati o nessuno)",
-        "requiredWhenFilledTooltip": "Obbligatorio quando un campo dell'indirizzo è compilato",
-        "requiredWhenFilledAria": "obbligatorio quando un campo dell'indirizzo è compilato",
+        "legendOptional": "(opzionale — via, città, CAP e provincia vanno insieme: compilali tutti, o lasciali tutti vuoti)",
         "line1Label": "Via e numero civico",
         "line2Label": "Scala / piano / interno",
         "zipLabel": "CAP",
@@ -1501,7 +1502,11 @@
         "provinceLabel": "Provincia",
         "provinceAria": "Provincia",
         "errorIncomplete": "Compila tutti i campi obbligatori dell'indirizzo, oppure svuotali tutti per lasciare l'accademia senza indirizzo.",
-        "clearHint": "Lascia tutti i campi vuoti per rimuovere l'indirizzo salvato."
+        "clearHint": "Lascia tutti i campi vuoti per rimuovere l'indirizzo salvato.",
+        "line1Placeholder": "Via Roma 1",
+        "line2Placeholder": "Scala B, interno 4",
+        "zipPlaceholder": "00100",
+        "cityPlaceholder": "Roma"
       },
       "monthlyFee": {
         "label": "Quota mensile",
@@ -2271,7 +2276,7 @@
       "validationFailed": "Validazione fallita.",
       "serverError": "Qualcosa è andato storto. Riprova.",
       "optional": "(opzionale)",
-      "optionalAddress": "(opzionale — compila tutti i campi sotto o lasciali tutti vuoti)",
+      "optionalAddress": "(opzionale — via, città, CAP e provincia vanno insieme: compilali tutti, o lasciali tutti vuoti)",
       "label": {
         "firstName": "Nome",
         "lastName": "Cognome",
@@ -2309,11 +2314,7 @@
       "aria": {
         "phoneCountryCode": "Prefisso telefonico",
         "phoneNationalNumber": "Numero nazionale",
-        "province": "Provincia",
-        "requiredWhenFilled": "obbligatorio quando un campo dell'indirizzo è compilato"
-      },
-      "tooltip": {
-        "requiredWhenFilled": "Obbligatorio quando un campo dell'indirizzo è compilato"
+        "province": "Provincia"
       },
       "validation": {
         "maxLength100": "Massimo 100 caratteri.",

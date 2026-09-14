@@ -7,10 +7,19 @@ import { ConfirmationService } from 'primeng/api';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 import { AthleteFormComponent } from './athlete-form.component';
 import { Athlete } from '../../../core/services/athlete.service';
+import { AcademyService } from '../../../core/services/academy.service';
 
 // `of` is needed below to provide the paramMap as an Observable on the mocked
 // ActivatedRoute — the component subscribes to it (not the snapshot) so it
 // reloads if the `:id` changes while the component instance is reused.
+
+const ACADEMY_BASE = {
+  id: 1,
+  name: 'Test',
+  slug: 'test',
+  address: null,
+  logo_url: null,
+} as const;
 
 function makeAthlete(overrides: Partial<Athlete> = {}): Athlete {
   return {
@@ -856,6 +865,93 @@ describe('AthleteFormComponent', () => {
       expect(
         (fixture.nativeElement as HTMLElement).querySelector('[data-cy="athlete-form-fee-tier"]'),
       ).toBeNull();
+    });
+  });
+
+  // ─── Form polish (#1650) ─────────────────────────────────────────────────
+
+  describe("the phone prefix follows the academy's own dialling code", () => {
+    beforeEach(() => setupTestBed(null));
+
+    function renderWith(code: string | null) {
+      TestBed.inject(AcademyService).academy.set({ ...ACADEMY_BASE, phone_country_code: code });
+      const fixture = TestBed.createComponent(AthleteFormComponent);
+      fixture.detectChanges();
+      flushFeeTiers(TestBed.inject(HttpTestingController));
+      return fixture;
+    }
+
+    it('fills the prefix on the first keystroke of the number', () => {
+      const fixture = renderWith('+39');
+      const form = fixture.componentInstance.form;
+
+      // The field opened empty and clipped to "Prefis…", and the one gym
+      // every athlete belongs to had to be restated on each of them.
+      form.controls.phone_national_number.setValue('3331234567');
+
+      expect(form.controls.phone_country_code.value).toBe('+39');
+    });
+
+    it('leaves the form untouched and submittable while the number is empty', () => {
+      const fixture = renderWith('+39');
+      const form = fixture.componentInstance.form;
+
+      // The regression an eager default caused: the prefix arrived on init,
+      // phonePairRequired fired on a number nobody had typed, and an athlete
+      // with no phone could not be saved at all.
+      expect(form.controls.phone_country_code.value).toBe('');
+      expect(form.controls.phone_national_number.errors).toBeNull();
+    });
+
+    it('saves an athlete with no phone at all', () => {
+      const fixture = renderWith('+39');
+      const cmp = fixture.componentInstance;
+      cmp.form.controls.first_name.setValue('Mario');
+      cmp.form.controls.last_name.setValue('Rossi');
+
+      cmp.submit();
+
+      // Before the fix this issued zero POSTs: submit() returned early on
+      // form.invalid and rendered "National number is required when a
+      // country code is selected" under a prefix the app had chosen.
+      const req = TestBed.inject(HttpTestingController).expectOne('/api/v1/athletes');
+      expect(req.request.body.phone_country_code).toBeNull();
+      expect(req.request.body.phone_national_number).toBeNull();
+      req.flush({ data: makeAthlete() });
+    });
+
+    it('leaves the prefix empty when the academy has no number of its own', () => {
+      const fixture = renderWith(null);
+      fixture.componentInstance.form.controls.phone_national_number.setValue('3331234567');
+
+      expect(fixture.componentInstance.form.controls.phone_country_code.value).toBe('');
+    });
+
+    it('never overwrites a prefix the owner picked themselves', () => {
+      const fixture = renderWith('+39');
+      const form = fixture.componentInstance.form;
+      form.controls.phone_country_code.setValue('+44');
+
+      form.controls.phone_national_number.setValue('7700900123');
+
+      expect(form.controls.phone_country_code.value).toBe('+44');
+    });
+  });
+
+  describe('the optional address group', () => {
+    beforeEach(() => setupTestBed(null));
+
+    it('marks no field with the asterisk that means required everywhere else', () => {
+      const fixture = TestBed.createComponent(AthleteFormComponent);
+      fixture.detectChanges();
+      flushFeeTiers(TestBed.inject(HttpTestingController));
+
+      // Four red asterisks sat under a legend reading "(optional)". The
+      // legend names the four fields now, so nothing has to be decoded.
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.querySelectorAll('.required-when-filled')).toHaveLength(0);
+      const legend = el.querySelector('.address-group legend');
+      expect(legend?.textContent).toContain('fill them all');
     });
   });
 });
