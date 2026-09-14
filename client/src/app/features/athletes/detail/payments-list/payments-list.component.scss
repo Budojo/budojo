@@ -189,3 +189,18 @@ $payments-mobile-breakpoint: 768px;
   font-weight: 400;
   color: var(--p-text-muted-color);
 }
+
+// Title and its year stepper on one line (#1636).
+.payments-list__year {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.payments-list__nav {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}

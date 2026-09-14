@@ -103,8 +103,42 @@ export class PaymentsListComponent implements OnInit {
   // pulls fresh values; the cost of staleness for a tab visit is
   // bounded by the user's session.
   private readonly nowUtc = new Date();
-  protected readonly year = this.nowUtc.getUTCFullYear();
+  private readonly currentYear = this.nowUtc.getUTCFullYear();
   private readonly currentMonth = this.nowUtc.getUTCMonth() + 1;
+
+  /**
+   * The year on screen (#1636, PAY-1).
+   *
+   * It used to be a constant, and the heading said "Pagamenti — 2026" with
+   * nothing on the page able to move it: an athlete who joined in 2024 had
+   * two years of history the app could not open. A constraint with no escape.
+   */
+  protected readonly year = signal<number>(this.currentYear);
+
+  /** The year this athlete joined — there is nothing to look at before it. */
+  private readonly joinedYear = signal<number | null>(null);
+
+  protected readonly canGoPrev = computed<boolean>(() => {
+    const floor = this.joinedYear();
+    return floor === null ? true : this.year() > floor;
+  });
+
+  /** No forward travel: a year that has not started has nothing to record. */
+  protected readonly canGoNext = computed<boolean>(() => this.year() < this.currentYear);
+
+  protected prevYear(): void {
+    if (this.canGoPrev()) this.goToYear(this.year() - 1);
+  }
+
+  protected nextYear(): void {
+    if (this.canGoNext()) this.goToYear(this.year() + 1);
+  }
+
+  private goToYear(next: number): void {
+    this.year.set(next);
+    const id = this.athleteId();
+    if (id !== null) this.load(id);
+  }
 
   /**
    * What this athlete pays each month, resolved server-side (#1381): their
@@ -156,7 +190,7 @@ export class PaymentsListComponent implements OnInit {
     for (const p of this.payments()) {
       for (let i = 0; i < (p.period_months ?? 1); i++) {
         const absolute = p.year * 12 + (p.month - 1) + i;
-        if (Math.floor(absolute / 12) !== this.year) continue;
+        if (Math.floor(absolute / 12) !== this.year()) continue;
         byMonth.set((absolute % 12) + 1, p);
       }
     }
@@ -172,14 +206,17 @@ export class PaymentsListComponent implements OnInit {
       // fee behind it gets the server's 422 and its toast, which is a
       // better trade than flickering the whole table read-only on
       // every visit.
-      const canEdit = fee && month <= this.currentMonth;
+      // Only the CURRENT year is capped at today; a year that has ended is
+      // editable end to end, which is the whole point of being able to reach
+      // one (#1636).
+      const canEdit = fee && (this.year() < this.currentYear || month <= this.currentMonth);
       return {
         month,
         labelKey,
         payment,
         canEdit,
         coveredByEarlierPeriod:
-          payment !== null && !(payment.year === this.year && payment.month === month),
+          payment !== null && !(payment.year === this.year() && payment.month === month),
         periodMonths: payment?.period_months ?? 1,
       };
     });
@@ -220,7 +257,7 @@ export class PaymentsListComponent implements OnInit {
     // suggests, and Norman's rule is to show the consequence before the act,
     // not after.
     const period = willMarkPaid
-      ? this.periodCaptionFor(this.year, row.month, this.athleteBillingPeriod())
+      ? this.periodCaptionFor(this.year(), row.month, this.athleteBillingPeriod())
       : this.periodCaption(row);
 
     const message =
@@ -235,7 +272,7 @@ export class PaymentsListComponent implements OnInit {
             willMarkPaid
               ? 'athletes.detail.payments.confirm.markPaidMessage'
               : 'athletes.detail.payments.confirm.markUnpaidMessage',
-            { name: fullName, month: this.translate.instant(row.labelKey), year: this.year },
+            { name: fullName, month: this.translate.instant(row.labelKey), year: this.year() },
           );
 
     this.confirmationService.confirm({
@@ -250,8 +287,8 @@ export class PaymentsListComponent implements OnInit {
     if (id === null) return;
 
     const op$ = markPaid
-      ? this.paymentService.markPaid(id, this.year, month).pipe(map(() => undefined))
-      : this.paymentService.unmarkPaid(id, this.year, month);
+      ? this.paymentService.markPaid(id, this.year(), month).pipe(map(() => undefined))
+      : this.paymentService.unmarkPaid(id, this.year(), month);
 
     op$.subscribe({
       next: () => {
@@ -269,7 +306,7 @@ export class PaymentsListComponent implements OnInit {
           ),
           detail: this.translate.instant('athletes.detail.payments.toast.markedDetail', {
             month: monthLabel,
-            year: this.year,
+            year: this.year(),
           }),
           life: 3000,
         });
@@ -300,7 +337,7 @@ export class PaymentsListComponent implements OnInit {
   private load(athleteId: number): void {
     this.loading.set(true);
     this.paymentService
-      .list(athleteId, this.year)
+      .list(athleteId, this.year())
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
         next: (payments) => this.payments.set(payments),
@@ -335,6 +372,12 @@ export class PaymentsListComponent implements OnInit {
         this.athleteFeeCents.set(athlete.monthly_fee_cents ?? null);
         this.feeTier.set(athlete.fee_tier ?? null);
         this.athleteBillingPeriod.set(athlete.billing_period_months ?? 1);
+        // Optional-chained on purpose: a partial payload with no joining date
+        // must leave the floor unknown, not throw inside the subscriber. It
+        // threw 16 unhandled rxjs errors in the suite without failing one
+        // test, which is exactly how this would have reached a user.
+        const joinedYear = Number(athlete.joined_at?.slice(0, 4));
+        this.joinedYear.set(Number.isFinite(joinedYear) ? joinedYear : null);
       },
       // Silent failure here — the confirm popup falls back to "this
       // athlete" rather than blocking the table, and `athleteFeeCents`
@@ -350,6 +393,40 @@ export class PaymentsListComponent implements OnInit {
    * pluralises, and ngx-translate has no plural rule — the repo picks between
    * an explicit `…One` / `…Other` key pair in code.
    */
+  /**
+   * The period this athlete pays on, and what one period costs (#1636, PAY-4).
+   *
+   * A quarterly payer's subtitle read "70,00 € al mese per 7 lezioni a
+   * settimana" and the period was discoverable only by reading the rows —
+   * three of which say "Pagato · — · 2 gennaio" for one payment. `null` on a
+   * plain monthly payer, where the monthly figure already says everything.
+   *
+   * The words come from the athlete form's own picker, so the page names the
+   * period the same way the control that set it does.
+   */
+  protected readonly billingPeriodHint = computed<string | null>(() => {
+    this.languageService.currentLang(); // signal dep — recompute on toggle
+    const months = this.athleteBillingPeriod();
+    const monthly = this.athleteFeeCents();
+    if (months <= 1 || monthly === null || monthly === undefined) return null;
+
+    const KEYS: Readonly<Record<number, string>> = {
+      3: 'athletes.form.billingPeriod.quarterly',
+      6: 'athletes.form.billingPeriod.halfYearly',
+      12: 'athletes.form.billingPeriod.annual',
+    };
+    const key = KEYS[months];
+    const period =
+      key !== undefined
+        ? this.translate.instant(key)
+        : this.translate.instant('athletes.detail.payments.periodMonths', { count: months });
+
+    return this.translate.instant('athletes.detail.payments.periodHint', {
+      period,
+      amount: this.formatAmount(monthly * months),
+    });
+  });
+
   protected feeTierHint(tier: FeeTier): string {
     return this.translate.instant(
       tier.lessons_per_week === 1

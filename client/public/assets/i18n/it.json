@@ -2050,7 +2050,11 @@
         },
         "feeTierHintOne": "Fascia {{label}} · {{amount}} al mese per {{count}} lezione a settimana.",
         "feeTierHintOther": "Fascia {{label}} · {{amount}} al mese per {{count}} lezioni a settimana.",
-        "periodRange": "Da {{from}} a {{to}} {{year}}"
+        "periodRange": "Da {{from}} a {{to}} {{year}}",
+        "prevYear": "Anno precedente",
+        "nextYear": "Anno successivo",
+        "periodHint": "{{period}} · {{amount}} a periodo",
+        "periodMonths": "Ogni {{count}} mesi"
       },
       "documents": {
         "confirm": {

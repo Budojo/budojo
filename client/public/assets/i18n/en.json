@@ -2050,7 +2050,11 @@
         },
         "feeTierHintOne": "{{label}} tier · {{amount}} a month for {{count}} lesson a week.",
         "feeTierHintOther": "{{label}} tier · {{amount}} a month for {{count}} lessons a week.",
-        "periodRange": "{{from}} to {{to}} {{year}}"
+        "periodRange": "{{from}} to {{to}} {{year}}",
+        "prevYear": "Previous year",
+        "nextYear": "Next year",
+        "periodHint": "{{period}} · {{amount}} per period",
+        "periodMonths": "Every {{count}} months"
       },
       "documents": {
         "confirm": {
