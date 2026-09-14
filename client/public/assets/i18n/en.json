@@ -1616,7 +1616,8 @@
         "save": "Save",
         "remove": "Remove class",
         "nameRequired": "Give the class a name.",
-        "dayRequired": "Pick a day."
+        "dayRequired": "Pick a day.",
+        "durationPlaceholder": "minutes"
       },
       "kind": {
         "gi": "Gi",
@@ -1635,7 +1636,9 @@
         "errorSummary": "Something went wrong",
         "errorDetail": "The change was not saved. Try again.",
         "loadErrorDetail": "The timetable could not be loaded."
-      }
+      },
+      "plan": "Plan",
+      "editHint": "Open this class to edit it"
     },
     "syllabus": {
       "title": "Programme",
