@@ -814,4 +814,26 @@ describe('AthleteFormComponent', () => {
       httpMock.verify();
     });
   });
+
+  // ─── The fee tier names its empty state (#1645) ──────────────────────────
+
+  describe('fee tier', () => {
+    beforeEach(() => setupTestBed(null));
+
+    it('offers the academy standard fee as an option, not as a clear button', () => {
+      const fixture = TestBed.createComponent(AthleteFormComponent);
+      fixture.detectChanges();
+
+      const options = fixture.componentInstance.feeTierOptions();
+      // First, so it reads as the default rather than as an afterthought.
+      expect(options[0].value).toBeNull();
+      expect(options[0].label).toBe("The academy's standard fee");
+
+      // The ✕ meant "they pay the academy's fee" and said none of it.
+      const select = (fixture.nativeElement as HTMLElement).querySelector(
+        '[data-cy="athlete-form-fee-tier"]',
+      );
+      expect(select?.querySelector('.p-select-clear-icon')).toBeNull();
+    });
+  });
 });

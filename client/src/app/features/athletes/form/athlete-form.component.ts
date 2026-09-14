@@ -78,7 +78,7 @@ const COUNTRY_CODE_ENTRIES: readonly CountryCodeEntry[] = [
 
 // Widened past `string` for the fee-tier select (#1381), whose value is the
 // tier's id. Every other option list here is still string-valued.
-interface SelectOption<T extends string | number> {
+interface SelectOption<T extends string | number | null> {
   label: string;
   value: T;
 }
@@ -258,15 +258,26 @@ export class AthleteFormComponent implements OnInit {
    * athlete pays. Reading the amount from a second screen would be exactly
    * the kind of lookup Krug's first law says to remove.
    */
-  readonly feeTierOptions = computed<SelectOption<number>[]>(() => {
+  /**
+   * The price list, with the academy's own fee named at the head (#1645).
+   *
+   * Leaving this empty has always meant "they pay the academy's standard
+   * fee", and the only way to say so was to press a bare ✕ — a glyph that
+   * reads as "clear this filter" and states nothing about what happens next.
+   * An option can carry the meaning; a clear button cannot.
+   */
+  readonly feeTierOptions = computed<SelectOption<number | null>[]>(() => {
     const locale = localeFor(this.languageService.currentLang());
-    return this.feeTiers().map((tier) => ({
-      label: `${tier.label} — ${(tier.amount_cents / 100).toLocaleString(locale, {
-        style: 'currency',
-        currency: 'EUR',
-      })}`,
-      value: tier.id,
-    }));
+    return [
+      { label: this.translate.instant('athletes.form.feeTierStandard'), value: null },
+      ...this.feeTiers().map((tier) => ({
+        label: `${tier.label} — ${(tier.amount_cents / 100).toLocaleString(locale, {
+          style: 'currency',
+          currency: 'EUR',
+        })}`,
+        value: tier.id,
+      })),
+    ];
   });
 
   /**

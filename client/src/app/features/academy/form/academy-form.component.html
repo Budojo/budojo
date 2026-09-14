@@ -50,6 +50,11 @@
       [error]="phoneError() ? (phoneError()! | translate) : null"
     >
       <div class="phone-pair">
+        <!--
+          The ✕ stays (#1645). The phone is a pair: clearing the number and
+          leaving the prefix fails validation with no way forward except
+          clearing the prefix, and this is that way.
+          -->
         <p-select
           inputId="academy-phone-country-code"
           [options]="countryCodeOptions"
@@ -296,6 +301,13 @@
               *
             </span>
           </label>
+          <!--
+            The ✕ stays (#1645). The address is all-or-nothing — line 1, city,
+            postcode and province together or none of them — and the other
+            three are text inputs you can empty. Take this one away and a
+            province, once chosen, can never be unchosen, so an address once
+            entered can never be removed.
+            -->
           <p-select
             inputId="academy-address-province"
             [options]="provinceOptions"

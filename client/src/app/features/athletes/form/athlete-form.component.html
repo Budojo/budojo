@@ -195,13 +195,19 @@
                 controlId="fee_tier_id"
                 [hint]="'athletes.form.hint.feeTier' | translate"
               >
+                <!--
+                  No ✕ (#1645). Leaving this empty means "the academy's
+                  standard fee", and a bare clear button states none of that
+                  — it reads as "clear this filter". The empty state is the
+                  first option now, and it says what it is.
+                -->
                 <p-select
                   inputId="fee_tier_id"
                   [options]="feeTierOptions()"
                   formControlName="fee_tier_id"
                   optionLabel="label"
                   optionValue="value"
-                  [showClear]="true"
+                  [showClear]="false"
                   [placeholder]="'athletes.form.feeTierPlaceholder' | translate"
                   appendTo="body"
                   data-cy="athlete-form-fee-tier"
@@ -275,6 +281,11 @@
               [error]="phoneError() ? (phoneError()! | translate) : null"
             >
               <div class="phone-pair">
+                <!--
+                  The ✕ stays (#1645). The phone is a pair: clearing the number and
+                  leaving the prefix fails validation with no way forward except
+                  clearing the prefix, and this is that way.
+                  -->
                 <p-select
                   inputId="phone_country_code"
                   [options]="countryCodeOptions()"
@@ -506,6 +517,13 @@
                     *
                   </span>
                 </label>
+                <!--
+                  The ✕ stays (#1645). The address is all-or-nothing — line 1, city,
+                  postcode and province together or none of them — and the other
+                  three are text inputs you can empty. Take this one away and a
+                  province, once chosen, can never be unchosen, so an address once
+                  entered can never be removed.
+                  -->
                 <p-select
                   inputId="athlete-address-province"
                   [options]="provinceOptions"
