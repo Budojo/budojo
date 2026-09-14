@@ -473,4 +473,141 @@ describe('SyllabusComponent (#1563)', () => {
 
     expect(fixture.componentInstance['dialogOpen']()).toBe(true);
   });
+
+  // ─── Search on the page that maintains the programme (#1629, SYL-1) ──────
+
+  it('keeps a match grouped under its own position, not in a flat list', () => {
+    // The shipped programme holds a Kimura under three different positions.
+    // Flattened, three identical names answer nothing — which position is
+    // the one you were looking for.
+    const kimuraClosed = topic({ id: 21, parent_id: 1, name: 'Kimura' });
+    const kimuraSide = topic({ id: 22, parent_id: 3, name: 'Kimura trap' });
+    const sideControl = topic({
+      id: 3,
+      name: 'Side control',
+      sort_order: 2,
+      children: [kimuraSide],
+    });
+    const { fixture, component, httpMock } = setup();
+    flushTree(httpMock, [
+      topic({ id: 1, name: 'Closed guard', children: [ARMBAR, kimuraClosed] }),
+      K_GUARD,
+      sideControl,
+    ]);
+    fixture.detectChanges();
+
+    component['query'].set('kim');
+    fixture.detectChanges();
+
+    const el: HTMLElement = fixture.nativeElement;
+    const positions = [...el.querySelectorAll('.position__name')].map((n) => n.textContent?.trim());
+    // K guard holds no match and is gone; the other two stay, each carrying
+    // the technique that matched.
+    expect(positions).toEqual(['Closed guard', 'Side control']);
+    const techniques = [...el.querySelectorAll('.technique__name')].map((n) =>
+      n.textContent?.trim(),
+    );
+    expect(techniques).toEqual(['Kimura', 'Kimura trap']);
+    httpMock.verify();
+  });
+
+  it('opens what the search kept, without a press', () => {
+    // The page starts collapsed by design. If a search left it that way the
+    // field would appear to find nothing, which is what it exists to fix.
+    const { fixture, component, httpMock } = setup();
+    flushTree(httpMock, [CLOSED_GUARD, K_GUARD]);
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).querySelectorAll('.technique').length).toBe(0);
+
+    component['query'].set('armbar');
+    fixture.detectChanges();
+
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelectorAll('.technique').length).toBe(1);
+    expect(el.querySelector('.technique__name')?.textContent?.trim()).toBe('Armbar');
+    httpMock.verify();
+  });
+
+  it('gives the tree back, still collapsed, when the field is cleared', () => {
+    const { fixture, component, httpMock } = setup();
+    flushTree(httpMock, [CLOSED_GUARD, K_GUARD]);
+    fixture.detectChanges();
+
+    component['query'].set('armbar');
+    fixture.detectChanges();
+    component['query'].set('');
+    fixture.detectChanges();
+
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelectorAll('.position').length).toBe(2);
+    // Searching must not have written to `expanded` behind the reader's back.
+    expect(el.querySelectorAll('.technique').length).toBe(0);
+    httpMock.verify();
+  });
+
+  it('says so when nothing matches, instead of showing an empty programme', () => {
+    const { fixture, component, httpMock } = setup();
+    flushTree(httpMock, [CLOSED_GUARD, K_GUARD]);
+    fixture.detectChanges();
+
+    component['query'].set('berimbolo');
+    fixture.detectChanges();
+
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('[data-cy="syllabus-no-results"]')?.textContent).toContain('berimbolo');
+    expect(el.querySelectorAll('.position').length).toBe(0);
+    httpMock.verify();
+  });
+
+  it('splits the header count only once in-season and total disagree', () => {
+    const { fixture, httpMock } = setup();
+    // Both techniques in season: one number is the honest answer.
+    flushTree(httpMock, [CLOSED_GUARD]);
+    fixture.detectChanges();
+    expect(
+      (fixture.nativeElement as HTMLElement).querySelector('[data-cy="page-header-count"]')
+        ?.textContent,
+    ).toContain('2 techniques');
+    httpMock.verify();
+  });
+
+  it('names both numbers when a technique goes out of season', () => {
+    const { fixture, httpMock } = setup();
+    flushTree(httpMock, [
+      topic({
+        id: 1,
+        name: 'Closed guard',
+        children: [ARMBAR, topic({ id: 12, parent_id: 1, name: 'Cross collar', in_season: false })],
+      }),
+    ]);
+    fixture.detectChanges();
+
+    // They diverge the moment something is unticked, and the coverage report
+    // counts the in-season half — so the page has to say which is which.
+    const count = (fixture.nativeElement as HTMLElement).querySelector(
+      '[data-cy="page-header-count"]',
+    )?.textContent;
+    expect(count).toContain('1 in season');
+    expect(count).toContain('2 in total');
+    httpMock.verify();
+  });
+
+  it('keeps the position badge on its real size while the list is filtered', () => {
+    const kimura = topic({ id: 21, parent_id: 1, name: 'Kimura' });
+    const { fixture, component, httpMock } = setup();
+    flushTree(httpMock, [
+      topic({ id: 1, name: 'Closed guard', children: [ARMBAR, CROSS_COLLAR, kimura] }),
+    ]);
+    fixture.detectChanges();
+
+    component['query'].set('kim');
+    fixture.detectChanges();
+
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelectorAll('.technique').length).toBe(1);
+    // One match listed, but the position still holds three — the badge means
+    // the position's size, and a search must not change what it means.
+    expect(el.querySelector('.position__count')?.textContent?.trim()).toBe('3');
+    httpMock.verify();
+  });
 });

@@ -299,3 +299,59 @@
     line-height: 1.5;
   }
 }
+
+// The programme's search (#1629). Same shape as the lesson sheet's field, so
+// the two searches over the same tree look like the same control.
+.syllabus__search {
+  position: relative;
+  display: flex;
+  align-items: center;
+
+  > i {
+    position: absolute;
+    left: 1rem;
+    color: var(--p-text-muted-color);
+    font-size: 0.875rem;
+    pointer-events: none;
+  }
+
+  input {
+    width: 100%;
+    padding-left: 2.5rem;
+    padding-right: 3rem;
+  }
+}
+
+.syllabus__search-clear {
+  position: absolute;
+  right: 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  // 48 px: the floor for anything you are meant to press (canon § Fitts).
+  width: 3rem;
+  height: 3rem;
+  border: 0;
+  background: transparent;
+  border-radius: var(--p-border-radius-md);
+  color: var(--p-text-muted-color);
+  cursor: pointer;
+
+  &:hover,
+  &:focus-visible {
+    background: var(--p-content-hover-background);
+    color: var(--p-text-color);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--p-primary-color);
+    outline-offset: 2px;
+  }
+}
+
+.syllabus__results,
+.syllabus__no-results {
+  margin: 0;
+  color: var(--p-text-muted-color);
+  font-size: 0.875rem;
+}

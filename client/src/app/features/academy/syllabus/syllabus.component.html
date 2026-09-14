@@ -22,6 +22,47 @@
   <div class="syllabus__body">
     <p class="syllabus__hint">{{ 'academy.syllabus.hint' | translate }}</p>
 
+    <!--
+      Search on the page that maintains the programme (#1629, SYL-1). The
+      lesson sheet has searched this same tree since #1564; here, with 278
+      shipped techniques, finding one meant opening positions one at a time.
+
+      Hidden while the programme is empty — there is nothing to search, and
+      the empty state below is the one thing that should be on screen.
+    -->
+    @if (!loading() && positions().length > 0) {
+      <div class="syllabus__search">
+        <i class="pi pi-search" aria-hidden="true"></i>
+        <!--
+          `type="text"`, not `search`: Blink and WebKit draw their own ✕ and
+          this field has its own (#1637). `role`/`enterkeyhint` put back what
+          the type was worth.
+        -->
+        <input
+          pInputText
+          type="text"
+          role="searchbox"
+          enterkeyhint="search"
+          [ngModel]="query()"
+          (ngModelChange)="query.set($event)"
+          [placeholder]="'academy.syllabus.searchPlaceholder' | translate"
+          [attr.aria-label]="'academy.syllabus.searchPlaceholder' | translate"
+          data-cy="syllabus-search"
+        />
+        @if (searching()) {
+          <button
+            type="button"
+            class="syllabus__search-clear"
+            [attr.aria-label]="'academy.syllabus.searchClear' | translate"
+            (click)="query.set('')"
+            data-cy="syllabus-search-clear"
+          >
+            <i class="pi pi-times" aria-hidden="true"></i>
+          </button>
+        }
+      </div>
+    }
+
     @if (loading()) {
       <div class="tree" aria-hidden="true" data-cy="syllabus-loading">
         @for (i of [1, 2, 3, 4, 5, 6]; track i) {
@@ -54,8 +95,22 @@
         dataCy="syllabus-empty"
       />
     } @else {
+      @if (searching()) {
+        @if (filteredPositions().length === 0) {
+          <p class="syllabus__no-results" role="status" data-cy="syllabus-no-results">
+            {{ 'academy.syllabus.searchNone' | translate: { query: query() } }}
+          </p>
+        } @else {
+          <!-- What matched, and the way back. A filtered tree looks like a
+               shrunken programme unless something says otherwise. -->
+          <p class="syllabus__results" role="status" data-cy="syllabus-search-summary">
+            {{ resultSummary() }}
+          </p>
+        }
+      }
+
       <ol class="tree" data-cy="syllabus-tree">
-        @for (position of positions(); track position.id) {
+        @for (position of filteredPositions(); track position.id) {
           <li
             class="position"
             [class.position--off]="!position.in_season"
@@ -81,7 +136,9 @@
                   aria-hidden="true"
                 ></i>
                 <span class="position__name">{{ position.name }}</span>
-                <span class="position__count">{{ position.children?.length ?? 0 }}</span>
+                <!-- The position's real size, not the filtered one: a search
+                     narrows what is listed, not what the position holds. -->
+                <span class="position__count">{{ techniqueTotal(position) }}</span>
               </button>
 
               <div class="position__controls">

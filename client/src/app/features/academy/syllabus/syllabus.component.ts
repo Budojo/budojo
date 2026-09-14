@@ -124,14 +124,97 @@ export class SyllabusComponent {
     this.positions().reduce((total, position) => total + (position.children?.length ?? 0), 0),
   );
 
+  /**
+   * The search field (#1629, SYL-1).
+   *
+   * The shipped programme is 278 techniques and this is the page that
+   * maintains it; without a field, finding "kimura" meant opening seven
+   * positions one at a time. The lesson sheet has searched this same tree
+   * since #1564 — the page that edits it could not.
+   */
+  protected readonly query = signal<string>('');
+
+  protected readonly searching = computed<boolean>(() => this.query().trim() !== '');
+
+  /**
+   * Matching positions, each carrying only its matching techniques.
+   *
+   * Grouped rather than flattened, which is the whole difference from the
+   * lesson sheet's flat result list: the programme holds a Kimura under
+   * Closed guard, Half guard and Side control, and a flat list of three
+   * identical names answers nothing. A position whose own name matches keeps
+   * all of its techniques — you searched for the position.
+   */
+  protected readonly filteredPositions = computed<readonly SyllabusTopic[]>(() => {
+    const needle = this.query().trim().toLocaleLowerCase();
+    if (needle === '') return this.positions();
+
+    const hit = (name: string): boolean => name.toLocaleLowerCase().includes(needle);
+
+    return this.positions()
+      .map((position) => {
+        if (hit(position.name)) return position;
+        const children = (position.children ?? []).filter((child) => hit(child.name));
+        return children.length > 0 ? { ...position, children } : null;
+      })
+      .filter((position): position is SyllabusTopic => position !== null);
+  });
+
+  /**
+   * How many techniques each position really holds, by id.
+   *
+   * The badge on a position row means "this position holds N techniques", and
+   * a search must not quietly change what it means: `filteredPositions` hands
+   * the template a position carrying only its matches, so reading the badge
+   * off that would make Closed guard say 1 when it holds 6.
+   */
+  private readonly totalByPosition = computed<ReadonlyMap<number, number>>(
+    () => new Map(this.positions().map((p) => [p.id, p.children?.length ?? 0])),
+  );
+
+  protected techniqueTotal(position: SyllabusTopic): number {
+    return this.totalByPosition().get(position.id) ?? position.children?.length ?? 0;
+  }
+
+  /** How many techniques the search turned up, and across how many positions. */
+  protected readonly resultSummary = computed<string>(() => {
+    this.languageService.currentLang(); // signal dep — recompute on toggle
+    const positions = this.filteredPositions();
+    const techniques = positions.reduce((n, p) => n + (p.children?.length ?? 0), 0);
+    return this.translate.instant('academy.syllabus.searchSummary', {
+      techniques,
+      positions: positions.length,
+    });
+  });
+
+  /**
+   * In-season and total, said separately (#1629).
+   *
+   * One number used to stand for both, and they diverge the moment a position
+   * goes out of season — silently, on the page whose ticks are what the
+   * coverage report counts.
+   */
+  protected readonly inSeasonCount = computed<number>(() =>
+    this.positions().reduce(
+      (total, position) =>
+        total + (position.children ?? []).filter((child) => child.in_season).length,
+      0,
+    ),
+  );
+
   protected readonly countLabel = computed<string | null>(() => {
     this.languageService.currentLang(); // signal dep — recompute on toggle
     const n = this.techniqueCount();
     if (n === 0) return null;
-    return this.translate.instant(
-      n === 1 ? 'academy.syllabus.countOne' : 'academy.syllabus.countOther',
-      { count: n },
-    );
+    const inSeason = this.inSeasonCount();
+    // Only split the count when the two actually differ — "31 in stagione ·
+    // 31 totali" is noise, and the whole point is that a divergence shows.
+    return inSeason === n
+      ? this.translate.instant(
+          n === 1 ? 'academy.syllabus.countOne' : 'academy.syllabus.countOther',
+          { count: n },
+        )
+      : this.translate.instant('academy.syllabus.countSplit', { inSeason, total: n });
   });
 
   /**
@@ -199,7 +282,12 @@ export class SyllabusComponent {
   }
 
   protected isExpanded(position: SyllabusTopic): boolean {
-    return this.expanded().has(position.id);
+    // A search opens everything it kept (#1629). Otherwise the matches sit
+    // inside collapsed positions and the field appears to have found nothing,
+    // which is the exact problem it was added to solve. Clearing the field
+    // restores whatever the reader had open — `expanded` is never written to
+    // here, only read past.
+    return this.searching() || this.expanded().has(position.id);
   }
 
   protected toggleExpanded(position: SyllabusTopic): void {
