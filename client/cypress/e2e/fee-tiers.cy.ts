@@ -169,10 +169,14 @@ describe('Putting an athlete on a tier', () => {
     cy.wait('@tiers');
 
     cy.get('[data-cy="athlete-form-fee-tier"]').scrollIntoView().click();
-    // The price rides along in the option label — the owner is choosing an
-    // amount, not a name.
-    cy.get('.p-select-option').first().should('contain', '2 lezioni').and('contain', '55');
-    cy.get('.p-select-option').first().click();
+    // The academy's own fee leads the list (#1645): leaving the tier unset
+    // has always meant "they pay the standard fee", and it used to be sayable
+    // only by pressing a bare ✕.
+    cy.get('.p-select-option').first().should('contain', "The academy's standard fee");
+    // By name, not by position — the price rides along in the option label,
+    // because the owner is choosing an amount and not a name.
+    cy.get('.p-select-option').contains('2 lezioni').should('contain', '55');
+    cy.get('.p-select-option').contains('2 lezioni').click();
 
     cy.contains('button', 'Save changes').scrollIntoView().click();
 
