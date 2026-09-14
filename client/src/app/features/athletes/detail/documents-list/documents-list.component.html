@@ -10,11 +10,19 @@
       <h2>{{ 'athletes.detail.documents.heading' | translate }}</h2>
       @if (!loading()) {
         <span class="documents-list__count">
-          {{ 'athletes.detail.documents.activeCount' | translate: { count: activeCount() } }}
+          {{
+            (activeCount() === 1
+              ? 'athletes.detail.documents.activeCountOne'
+              : 'athletes.detail.documents.activeCountOther'
+            ) | translate: { count: activeCount() }
+          }}
           @if (showCancelled() && cancelledCount() > 0) {
             ,
             {{
-              'athletes.detail.documents.cancelledCount' | translate: { count: cancelledCount() }
+              (cancelledCount() === 1
+                ? 'athletes.detail.documents.cancelledCountOne'
+                : 'athletes.detail.documents.cancelledCountOther'
+              ) | translate: { count: cancelledCount() }
             }}
           }
         </span>

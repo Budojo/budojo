@@ -42,7 +42,10 @@
   -->
   @if (remaining() > 0) {
     <button type="button" class="whats-new__more" (click)="showMore()" data-cy="whats-new-more">
-      {{ 'whatsNew.showMore' | translate: { count: remaining() } }}
+      {{
+        (remaining() === 1 ? 'whatsNew.showMoreOne' : 'whatsNew.showMoreOther')
+          | translate: { count: remaining() }
+      }}
     </button>
   }
 

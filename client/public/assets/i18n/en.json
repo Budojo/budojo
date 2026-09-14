@@ -407,7 +407,8 @@
     "bell": {
       "ariaLabel": "Notifications",
       "tooltip": "Notifications",
-      "unreadCount": "{{count}} unread"
+      "unreadCountOne": "{{count}} unread",
+      "unreadCountOther": "{{count}} unread"
     },
     "toast": {
       "dismiss": "Dismiss notification"
@@ -511,7 +512,8 @@
     "title": "Recent updates",
     "subtitle": "What's changed in Budojo lately, in plain language. Newest at the top.",
     "back": "Back to dashboard",
-    "showMore": "Show {{count}} more releases"
+    "showMoreOne": "Show one more release",
+    "showMoreOther": "Show {{count}} more releases"
   },
   "notificationOnboarding": {
     "title": "Stay in the loop",
@@ -2075,8 +2077,6 @@
           "deleteErrorDetail": "Could not delete this document. Please try again."
         },
         "heading": "Documents",
-        "activeCount": "{{count}} active",
-        "cancelledCount": "{{count}} cancelled",
         "toggle": {
           "aria": "Show cancelled documents",
           "label": "Show cancelled"
@@ -2104,7 +2104,11 @@
           "withCancelled": "No documents yet — active or cancelled.",
           "default": "No documents yet.",
           "hint": "Use <strong>Add document</strong> above to upload the first one."
-        }
+        },
+        "activeCountOne": "{{count}} active",
+        "activeCountOther": "{{count}} active",
+        "cancelledCountOne": "{{count}} cancelled",
+        "cancelledCountOther": "{{count}} cancelled"
       },
       "backToList": "Athletes",
       "loading": "Loading athlete…",
@@ -2484,12 +2488,13 @@
     "coverage": {
       "fraction": "{{seen}} of {{total}} things the academy taught",
       "since": "Counted from {{date}}, the day they joined.",
-      "notTaughtYet": "{{count}} more are in the programme but have not been taught yet. That is the academy's gap, not theirs.",
-      "unattributed": "{{count}} of their sessions do not say which class they were, so nothing here counts them either way.",
       "legend": {
-        "seen": "{{count}} seen",
-        "thin": "{{count}} seen once",
-        "missed": "{{count}} missed"
+        "seenOne": "{{count}} seen",
+        "seenOther": "{{count}} seen",
+        "thinOne": "{{count}} seen once",
+        "thinOther": "{{count}} seen once",
+        "missedOne": "{{count}} missed",
+        "missedOther": "{{count}} missed"
       },
       "missed": {
         "title": "What they missed",
@@ -2512,7 +2517,11 @@
           "title": "Nothing taught yet",
           "hint": "No lesson has been tagged since they joined on {{date}}. There is nothing here to have missed."
         }
-      }
+      },
+      "unattributedOne": "{{count}} of their sessions does not say which class it was, so nothing here counts it either way.",
+      "unattributedOther": "{{count}} of their sessions do not say which class they were, so nothing here counts them either way.",
+      "notTaughtYetOne": "One more is in the programme but has not been taught yet. That is the academy's gap, not theirs.",
+      "notTaughtYetOther": "{{count}} more are in the programme but have not been taught yet. That is the academy's gap, not theirs."
     }
   },
   "month": {
@@ -2591,7 +2600,6 @@
     "loadError": "Couldn't load the stats. Please try again.",
     "emptyTitle": "Not enough data yet",
     "emptyHint": "Add your first athlete and the charts will populate here.",
-    "total": "Across {{count}} active athletes.",
     "belt": {
       "title": "Belts",
       "hint": "Athletes by IBJJF rank, kids → seniors. Hover a slice for the count + share."
@@ -2613,13 +2621,14 @@
         "less": "Less",
         "more": "More",
         "scale": "Shades follow this window: {{b1}} · {{b2}} · {{b3}} · {{b4}} attendances a day",
-        "tooltipCount": "{{count}} attendances on {{date}}",
         "tooltipEmpty": "No attendance on {{date}}",
         "dow": {
           "mon": "Mon",
           "wed": "Wed",
           "fri": "Fri"
-        }
+        },
+        "tooltipCountOne": "{{count}} attendance on {{date}}",
+        "tooltipCountOther": "{{count}} attendances on {{date}}"
       }
     },
     "payments": {
@@ -2635,7 +2644,6 @@
       "loading": "Loading distribution…",
       "errored": "Couldn't load distribution.",
       "empty": "No athletes with a date of birth yet.",
-      "missingDob": "{{count}} athletes without date of birth",
       "scope": {
         "kids": "Kids",
         "adults": "Adults",
@@ -2655,7 +2663,9 @@
         "master_5": "Master 5",
         "master_6": "Master 6",
         "master_7": "Master 7"
-      }
+      },
+      "missingDobOne": "{{count}} athlete without a date of birth",
+      "missingDobOther": "{{count}} athletes without a date of birth"
     },
     "syllabus": {
       "headline": "{{covered}} of {{total}} covered this season",
@@ -2668,9 +2678,12 @@
       "worked": "worked {{count}}×",
       "barAria": "{{name}}: {{covered}} covered, {{thin}} taught once, {{missing}} not taught",
       "state": {
-        "covered": "{{count}} covered",
-        "thin": "{{count}} taught once",
-        "missing": "{{count}} not taught"
+        "coveredOne": "{{count}} covered",
+        "coveredOther": "{{count}} covered",
+        "missingOne": "{{count}} not taught",
+        "missingOther": "{{count}} not taught",
+        "thinOne": "{{count}} taught once",
+        "thinOther": "{{count}} taught once"
       },
       "filter": {
         "all": "All",
@@ -2694,7 +2707,9 @@
         "hint": "Something went wrong on our side. Try again.",
         "retry": "Try again"
       }
-    }
+    },
+    "totalOne": "Across {{count}} active athlete.",
+    "totalOther": "Across {{count}} active athletes."
   },
   "publicProfile": {
     "joinedAt": "Since {{ date }}",
@@ -2731,7 +2746,6 @@
     "title": "Your week on the mats",
     "loading": "Loading your week…",
     "heading": "Here's your week",
-    "sessions": "{{count}} session{{count, plural, one {} other {s}}}",
     "hours": "Hours on the mat",
     "partners": {
       "heading": "Top training partners"
@@ -2745,7 +2759,9 @@
       "heading": "We couldn't load this recap",
       "copy": "The week parameter looks off, or your athlete profile isn't ready yet.",
       "cta": "Back to my profile"
-    }
+    },
+    "sessionsOne": "{{count}} session",
+    "sessionsOther": "{{count}} sessions"
   },
   "myAttendanceToday": {
     "title": "Today's attendance",

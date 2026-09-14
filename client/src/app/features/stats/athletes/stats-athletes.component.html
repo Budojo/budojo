@@ -41,7 +41,12 @@
 
     @if (payload().missing_dob > 0) {
       <p class="stats-athletes__missing" data-cy="stats-athletes-missing">
-        {{ 'stats.athletes.missingDob' | translate: { count: payload().missing_dob } }}
+        {{
+          (payload().missing_dob === 1
+            ? 'stats.athletes.missingDobOne'
+            : 'stats.athletes.missingDobOther'
+          ) | translate: { count: payload().missing_dob }
+        }}
       </p>
     }
   }
