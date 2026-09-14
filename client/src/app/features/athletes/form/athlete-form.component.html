@@ -187,7 +187,14 @@
             cost more attention than it directed.
           -->
           <div class="athlete-form__row">
-            @if (feeTierOptions().length > 0) {
+            <!--
+              Gated on the academy's price list, not on the options (#1645).
+              The options always hold at least "the academy's standard fee"
+              now, so asking them made the field render for an academy with
+              no tiers at all — a dropdown offering exactly one thing, which
+              is a choice nobody should be asked to make.
+            -->
+            @if (hasFeeTiers()) {
               <app-budojo-form-field
                 class="athlete-form__field--medium"
                 [label]="'athletes.form.label.feeTier' | translate"

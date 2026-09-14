@@ -253,6 +253,15 @@ export class AthleteFormComponent implements OnInit {
   private readonly feeTiers = signal<readonly FeeTier[]>([]);
 
   /**
+   * Whether the academy has a price list at all (#1645).
+   *
+   * The field used to be gated on `feeTierOptions().length`, which now always
+   * holds at least "the academy's standard fee" — so the gate opened for an
+   * academy with no tiers and offered a dropdown containing one thing.
+   */
+  protected readonly hasFeeTiers = computed<boolean>(() => this.feeTiers().length > 0);
+
+  /**
    * Each option carries its price, because "2 lezioni" alone doesn't answer
    * the question the owner is actually asking — which is how much this
    * athlete pays. Reading the amount from a second screen would be exactly

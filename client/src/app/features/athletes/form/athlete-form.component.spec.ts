@@ -822,18 +822,40 @@ describe('AthleteFormComponent', () => {
 
     it('offers the academy standard fee as an option, not as a clear button', () => {
       const fixture = TestBed.createComponent(AthleteFormComponent);
+      const httpMock = TestBed.inject(HttpTestingController);
+      fixture.detectChanges();
+      flushFeeTiers(httpMock, [
+        { id: 1, label: '2 lessons', amount_cents: 5500, lessons_per_week: 2 },
+      ]);
       fixture.detectChanges();
 
       const options = fixture.componentInstance.feeTierOptions();
       // First, so it reads as the default rather than as an afterthought.
       expect(options[0].value).toBeNull();
       expect(options[0].label).toBe("The academy's standard fee");
+      expect(options).toHaveLength(2);
 
       // The ✕ meant "they pay the academy's fee" and said none of it.
       const select = (fixture.nativeElement as HTMLElement).querySelector(
         '[data-cy="athlete-form-fee-tier"]',
       );
-      expect(select?.querySelector('.p-select-clear-icon')).toBeNull();
+      expect(select).not.toBeNull();
+      expect(select!.querySelector('.p-select-clear-icon')).toBeNull();
+    });
+
+    it('hides the field entirely for an academy with no price list', () => {
+      // The gate reads the price list, not the options — those now always
+      // hold the standard fee, so asking them would offer a dropdown
+      // containing exactly one thing.
+      const fixture = TestBed.createComponent(AthleteFormComponent);
+      const httpMock = TestBed.inject(HttpTestingController);
+      fixture.detectChanges();
+      flushFeeTiers(httpMock, []);
+      fixture.detectChanges();
+
+      expect(
+        (fixture.nativeElement as HTMLElement).querySelector('[data-cy="athlete-form-fee-tier"]'),
+      ).toBeNull();
     });
   });
 });
