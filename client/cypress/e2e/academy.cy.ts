@@ -286,4 +286,36 @@ describe('Academy edit form', () => {
     // Unchanged on detail — the cancel didn't PATCH anything.
     cy.get('[data-cy="academy-row-name"]').should('contain', 'Gracie Barra Torino');
   });
+
+  it('clears the phone through the ✕ instead of killing Salva (#1705)', () => {
+    const WITH_PHONE = {
+      ...ACADEMY_TORINO,
+      phone_country_code: '+39',
+      phone_national_number: '0111234567',
+    };
+    cy.intercept('GET', '/api/v1/academy', { statusCode: 200, body: { data: WITH_PHONE } }).as(
+      'academyWithPhone',
+    );
+    cy.intercept('PATCH', '/api/v1/academy', {
+      statusCode: 200,
+      body: { data: { ...WITH_PHONE, phone_country_code: null, phone_national_number: null } },
+    }).as('save');
+
+    cy.visitAuthenticated('/dashboard/academy/edit');
+    cy.wait('@academyWithPhone');
+
+    // The sequence the ✕ exists for (#1645): empty the number, then clear the
+    // prefix. `showClear` writes null through the CVA, and the payload builder
+    // used to call `.trim()` on it — inside buildPayload, before any request,
+    // so Salva did nothing at all: no spinner, no toast, no error (#1705).
+    cy.get('[data-cy="academy-form-phone-national-number"]').clear();
+    cy.get('[data-cy="academy-form-phone-country-code"] [data-pc-section="clearicon"]').click();
+
+    cy.get('[data-cy="academy-form-save"]').click();
+
+    cy.wait('@save').its('request.body').should('deep.include', {
+      phone_country_code: null,
+      phone_national_number: null,
+    });
+  });
 });

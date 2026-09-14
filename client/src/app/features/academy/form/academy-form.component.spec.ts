@@ -600,4 +600,32 @@ describe('AcademyFormComponent — what one carnet entry covers (#1576)', () => 
       expect(line2()?.placeholder).toBe('Scala B, interno 4');
     });
   });
+
+  // ─── Clearing the phone prefix (#1705) ───────────────────────────────────
+
+  it('clears the phone through the ✕ instead of killing the Save button', () => {
+    const { component, httpMock } = setup(
+      makeAcademy({ phone_country_code: '+39', phone_national_number: '0111234567' }),
+    );
+
+    // The exact sequence the ✕ exists for (#1645): empty the number, then
+    // clear the prefix. `showClear` writes null through the CVA, past the
+    // `nonNullable` group's `string` type — which only describes `reset()`.
+    component.form.controls.phone_national_number.setValue('');
+    component.form.controls.phone_country_code.setValue(null as unknown as string);
+
+    // Valid, because `phonePairRequired` normalises with `?? ''` — so this
+    // reaches buildPayload rather than being stopped by submit()'s guard.
+    expect(component.form.valid).toBe(true);
+
+    component.submit();
+
+    // It used to throw here, inside buildPayload and before submitting.set(true),
+    // so the owner got no spinner, no toast, no error and no request — Salva
+    // was simply dead until they reloaded.
+    const req = httpMock.expectOne('/api/v1/academy');
+    expect(req.request.body.phone_country_code).toBeNull();
+    expect(req.request.body.phone_national_number).toBeNull();
+    req.flush({ data: makeAcademy({ phone_country_code: null, phone_national_number: null }) });
+  });
 });
