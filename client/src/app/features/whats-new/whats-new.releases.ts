@@ -60,6 +60,104 @@ export function localised(value: Localised, lang: string): string {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.62.0',
+    date: '2026-09-15',
+    headline: {
+      en: 'Your gym’s year, not the calendar’s.',
+      it: 'L’anno della tua palestra, non quello del calendario.',
+    },
+    sections: [
+      {
+        heading: {
+          en: 'Payments follow the season',
+          it: 'I pagamenti seguono la stagione',
+        },
+        bullets: [
+          {
+            en: 'The payments tab ran January to December while your season starts in September — so the current month sat in the middle of a list that began eight months before the season did. It is the season now: Payments — 2026/27, September through August.',
+            it: 'La scheda pagamenti andava da gennaio a dicembre mentre la tua stagione comincia a settembre, così il mese in corso stava in mezzo a una lista partita otto mesi prima della stagione. Adesso è la stagione: Pagamenti — 2026/27, da settembre ad agosto.',
+          },
+          {
+            en: 'A month can be marked paid before it arrives. October, November and December had a dash where the tick goes, so somebody paying October in September had no box to write it in — the very row that money belonged to.',
+            it: 'Un mese si può segnare pagato anche prima che arrivi. Ottobre, novembre e dicembre avevano un trattino al posto della spunta, così chi ti pagava ottobre a settembre non aveva la casella in cui scriverlo: proprio la riga a cui quei soldi appartenevano.',
+          },
+          {
+            en: 'Each month of a quarter says something different now. September used to read “from September to November”, explaining itself to itself; it says “also covers October and November”, and the other two say “part of the September payment”.',
+            it: 'Ogni mese di un trimestre dice una cosa diversa. Settembre leggeva «da settembre a novembre», spiegando sé stesso a sé stesso; ora dice «copre anche ottobre e novembre», e gli altri due dicono «incluso nel pagamento di settembre».',
+          },
+          {
+            en: 'The arrows reach back to the season an athlete actually joined in. They used to stop one season short, leaving the months they had paid for at the start behind a disabled arrow.',
+            it: 'Le frecce arrivano fino alla stagione in cui un atleta si è davvero iscritto. Prima si fermavano una stagione dopo, lasciando dietro una freccia spenta i mesi che aveva pagato all’inizio.',
+          },
+        ],
+      },
+      {
+        heading: {
+          en: 'When the gym is paused',
+          it: 'Quando la palestra è ferma',
+        },
+        bullets: [
+          {
+            en: 'An academy that has marked everyone inactive — season over, gym closed — opened the roster and read “No athletes yet. Add the first one.” They were all still there, one eye-toggle away. It says how many there are and offers to show them, on the phone as well as the desktop.',
+            it: 'Una palestra che ha messo tutti in pausa — stagione finita, chiusura — apriva la lista e leggeva «Nessun atleta ancora. Aggiungi il primo». C’erano tutti, a un clic dell’occhietto. Ora dice quanti sono e si offre di mostrarteli, sul telefono come sul computer.',
+          },
+        ],
+      },
+      {
+        heading: {
+          en: 'Controls that say what they do',
+          it: 'Controlli che dicono quello che fanno',
+        },
+        bullets: [
+          {
+            en: 'The confirmation popups spoke three vocabularies, and in a couple of places offered “No / Yes” in one identical blue — where the button that deletes a payment looked exactly like the one that closes the window. The way out is “Annulla” everywhere now, the action carries its verb, and only the destructive one is coloured.',
+            it: 'Le conferme parlavano tre lingue diverse, e in un paio di punti offrivano «No / Sì» dello stesso identico azzurro, dove il pulsante che cancella un pagamento era indistinguibile da quello che chiude la finestra. L’uscita si chiama «Annulla» dappertutto, l’azione porta il suo verbo, e solo quella che distrugge è colorata.',
+          },
+          {
+            en: 'On the roster the eye, the bin and the payment filter were grey on grey — the same look as a disabled button. Now you can see they can be pressed. And the attendance column finally labels its two numbers: month / season.',
+            it: 'Sulla lista l’occhietto, il cestino e il filtro pagamento erano grigio su grigio, lo stesso aspetto di un pulsante disattivato. Ora si vede che si possono premere. E la colonna presenze finalmente dà un nome ai suoi due numeri: mese / stagione.',
+          },
+        ],
+      },
+      {
+        heading: {
+          en: 'Italian where you were not looking',
+          it: 'In italiano anche dove non guardavi',
+        },
+        bullets: [
+          {
+            en: 'The athlete’s own app still wrote dates in English — “Monday, September 14, 2026”. The language switch could not move them, by the way they were written. They follow the language now, like everything else.',
+            it: 'L’app dell’atleta scriveva ancora le date in inglese — «Monday, September 14, 2026». Il selettore della lingua non poteva spostarle, per come erano scritte. Adesso seguono la lingua come tutto il resto.',
+          },
+        ],
+      },
+      {
+        heading: {
+          en: 'Fixes',
+          it: 'Correzioni',
+        },
+        bullets: [
+          {
+            en: 'On the academy page, clearing the phone prefix stopped Save from working: no error, no spinner, nothing happened. It was the very ✕ that exists to escape a half-cleared phone.',
+            it: 'Sulla scheda accademia, cancellando il prefisso telefonico il tasto Salva smetteva di funzionare: nessun errore, nessuna rotellina, non succedeva niente. Ed era proprio la ✕ che esiste per uscire da un telefono a metà.',
+          },
+          {
+            en: 'On the statistics, tapping the already-selected chip deselected it and sent the chart into its error state. That applies to every chip in the app.',
+            it: 'Sulle statistiche, ritoccare la linguetta già selezionata la deselezionava e il grafico andava in errore. Vale per tutte le linguette dell’app.',
+          },
+          {
+            en: 'Changing the roster’s sort while it was still loading could leave the previous list under the new controls.',
+            it: 'Cambiando l’ordinamento della lista mentre stava ancora caricando, poteva restare la lista di prima sotto i controlli nuovi.',
+          },
+          {
+            en: 'The programme search now finds techniques and keeps its groups.',
+            it: 'Nel programma la ricerca ora trova le tecniche e tiene i gruppi.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.61.2',
     date: '2026-09-14',
     headline: {
