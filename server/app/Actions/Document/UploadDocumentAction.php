@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions\Document;
 
 use App\Enums\DocumentType;
+use App\Models\Academy;
 use App\Models\Athlete;
 use App\Models\Document;
 use App\Models\User;
@@ -29,6 +30,13 @@ class UploadDocumentAction
      * not the client-advertised `Content-Type`, to prevent spoofing the value
      * we later echo in the download `Content-Type` header.
      *
+     * **The owner is an athlete or the academy itself (#1743).** One Action,
+     * because this is one operation — store the bytes, record the row — and
+     * the half that must never be duplicated is the encryption contract: a
+     * second upload path is a second chance to write special-category data
+     * in plaintext. The union is the whole branch; everything below it is
+     * identical for both.
+     *
      * **Encryption at rest (#224)** — when `$type === MedicalCertificate`
      * the bytes are AES-256-GCM encrypted via `DocumentEncryption` before
      * landing on disk; no plaintext is persisted. Other document types
@@ -37,7 +45,7 @@ class UploadDocumentAction
      * tells the download path how to read it back.
      */
     public function execute(
-        Athlete $athlete,
+        Athlete|Academy $owner,
         DocumentType $type,
         UploadedFile $file,
         ?string $issuedAt = null,
@@ -81,7 +89,10 @@ class UploadDocumentAction
         }
 
         try {
-            $document = $athlete->documents()->create([
+            // `documents()` exists on both, so the row lands with exactly one
+            // of `athlete_id` / `academy_id` set without this Action naming
+            // either column — the relation is the invariant.
+            $document = $owner->documents()->create([
                 'type' => $type,
                 'file_path' => $path,
                 'original_name' => $file->getClientOriginalName(),
@@ -93,7 +104,13 @@ class UploadDocumentAction
                 'notes' => $notes,
             ]);
 
-            $this->maybeNotifyOwner($document, $athlete, $uploader);
+            // Athlete-side only: the push tells the owner that somebody
+            // uploaded a document for one of their athletes. The owner
+            // uploading the academy's own liability policy does not need
+            // telling that they did it.
+            if ($owner instanceof Athlete) {
+                $this->maybeNotifyOwner($document, $owner, $uploader);
+            }
 
             return $document;
         } catch (\Throwable $e) {

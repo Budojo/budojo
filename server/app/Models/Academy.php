@@ -154,6 +154,22 @@ class Academy extends Model implements HasAddress
     }
 
     /**
+     * The academy's own papers (#1743) — the DAE certificate, the liability
+     * policy, the affiliation, the lease.
+     *
+     * Not the academy's athletes' documents: those hang off `Athlete`, and a
+     * `Document` carries exactly one of the two owners. The same table, the
+     * same expiry badge and the same reminder pipeline serve both, which is
+     * the whole reason there is no second `academy_documents` table.
+     *
+     * @return HasMany<Document, $this>
+     */
+    public function documents(): HasMany
+    {
+        return $this->hasMany(Document::class);
+    }
+
+    /**
      * Team memberships (#427 / #714). Includes soft-revoked rows;
      * use `->whereNull('revoked_at')` to scope to currently-active
      * team members.

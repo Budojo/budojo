@@ -54,6 +54,14 @@ final class WebSchedule implements ScheduleDefinition
             ->timezone('Europe/Rome')
             ->withoutOverlapping(60);
 
+        // The academy's own papers (#1743), beside the medical digest and on
+        // the same clock — the DAE certificate and the liability policy are
+        // chased with the same phone call.
+        $schedule->command('budojo:send-academy-document-expiry-reminders')
+            ->dailyAt('09:00')
+            ->timezone('Europe/Rome')
+            ->withoutOverlapping(60);
+
         // Monthly digest of athletes still unpaid for the current month
         // (M5 PR-E). Runs once on the 16th at 09:00 Europe/Rome — the date
         // the dashboard's `unpaid-this-month-widget` starts surfacing the

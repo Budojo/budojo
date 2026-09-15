@@ -1305,7 +1305,8 @@
       "toast": {
         "errorSummary": "Download failed",
         "errorDetail": "Could not download {{filename}}. Please try again."
-      }
+      },
+      "academyOwned": "The academy"
     },
     "upload": {
       "header": "Upload document",

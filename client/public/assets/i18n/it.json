@@ -1305,7 +1305,8 @@
       "toast": {
         "errorSummary": "Scaricamento non riuscito",
         "errorDetail": "Impossibile scaricare {{filename}}. Riprova."
-      }
+      },
+      "academyOwned": "L'accademia"
     },
     "upload": {
       "header": "Carica documento",

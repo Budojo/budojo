@@ -67,7 +67,9 @@ it('keeps the wall-clock schedule on the web profile', function (): void {
         ->and($events)->toHaveKey('budojo:send-athlete-training-today-pushes')
         ->and($events)->toHaveKey('budojo:send-weekly-recap-pushes')
         ->and($events)->toHaveKey('budojo:send-athlete-payment-overdue-pushes')
-        ->and($events)->toHaveCount(11);
+        // The academy's own papers (#1743) — its own command, so its own entry.
+        ->and($events)->toHaveKey('budojo:send-academy-document-expiry-reminders')
+        ->and($events)->toHaveCount(12);
 });
 
 it('runs the owner reminders on a tight cadence inside their window on the desktop', function (): void {
@@ -131,5 +133,7 @@ it('does not schedule the athlete-facing pushes on the desktop', function (): vo
     expect($events)->not->toHaveKey('budojo:send-athlete-training-today-pushes')
         ->and($events)->not->toHaveKey('budojo:send-weekly-recap-pushes')
         ->and($events)->not->toHaveKey('budojo:send-athlete-payment-overdue-pushes')
-        ->and($events)->toHaveCount(8);
+        // Owner-facing, so it IS on the desktop (#1743) — unlike the three above.
+        ->and($events)->toHaveKey('budojo:send-academy-document-expiry-reminders')
+        ->and($events)->toHaveCount(9);
 });

@@ -250,3 +250,13 @@ $expiring-mobile-breakpoint: 768px;
   font-size: 0.8125rem;
   color: var(--p-text-color-secondary);
 }
+
+// The academy's own papers (#1743) occupy the athlete-name slot but are not a
+// link — there is nowhere to go. Muted and italic so the row reads as a
+// different kind at a glance, without changing its shape.
+.expiring-card__academy,
+.expiring-page__academy {
+  color: var(--p-text-muted-color);
+  font-style: italic;
+  text-decoration: none;
+}

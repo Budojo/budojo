@@ -16,6 +16,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AcademyService } from '../../../core/services/academy.service';
 import { LanguageService } from '../../../core/services/language.service';
 import { formatIsoDate } from '../../../shared/utils/locale';
+import { DocumentsListComponent } from '../../athletes/detail/documents-list/documents-list.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { Tooltip } from 'primeng/tooltip';
 import { RuntimeService } from '../../../core/services/runtime.service';
@@ -40,6 +41,7 @@ const ALLOWED_LOGO_MIME = ['image/png', 'image/jpeg', 'image/svg+xml', 'image/we
   selector: 'app-academy-detail',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    DocumentsListComponent,
     Tooltip,
     RouterLink,
     ButtonModule,

@@ -14,7 +14,8 @@ Documents are the first entity in the system that owns **physical files on disk*
 | Column | Type | Constraints | Purpose |
 |---|---|---|---|
 | `id` | bigint unsigned | PK, auto-increment | |
-| `athlete_id` | bigint unsigned | FK `athletes.id`, **cascade on delete**, indexed | Tenant scoping via athlete → academy |
+| `athlete_id` | bigint unsigned | **nullable**, FK `athletes.id`, cascade on delete, indexed | The person this document belongs to. Null when it belongs to the academy itself (#1743) |
+| `academy_id` | bigint unsigned | nullable, FK `academies.id`, **cascade on delete**, indexed | The academy this document belongs to directly (#1743) — the DAE certificate, the liability policy, the affiliation, the lease. Null when it belongs to a person |
 | `type` | string | not null | Cast to `App\Enums\DocumentType` backed enum (`id_card` / `medical_certificate` / `insurance` / `other`) |
 | `file_path` | string | not null | Path on the `local` disk, relative to `storage/app/private/`. Server-generated, never client-supplied. |
 | `original_name` | string | not null | The filename the client uploaded (e.g. `certificate_2026.pdf`). Surfaced in `Content-Disposition` on download. |
@@ -30,13 +31,15 @@ Documents are the first entity in the system that owns **physical files on disk*
 
 ## Relations
 
-- `belongsTo(Athlete::class)` — inverse of `Athlete::documents()`
+- `belongsTo(Athlete::class)` — inverse of `Athlete::documents()`. Null on an academy document.
+- `belongsTo(Academy::class)` — inverse of `Academy::documents()` (#1743). Null on an athlete document.
 
 ## Indexes
 
 - `PRIMARY KEY(id)`
 - `INDEX(athlete_id)` — auto-created FK index, drives the per-athlete list query
 - `INDEX(athlete_id, deleted_at)` — composite, covers both the FK scope and the soft-delete filter used everywhere
+- `INDEX(academy_id, deleted_at)` — composite, the academy-document mirror of the athlete one (#1743)
 - `INDEX(expires_at)` — single column, required for the `/documents/expiring` date-range query to be performant
 
 ## Enums
@@ -63,6 +66,12 @@ Documents are the first entity in the system that owns **physical files on disk*
 - **Athlete soft-delete cascades.** When an `Athlete` is soft-deleted, `AthleteObserver::deleting` loops over `$athlete->documents` and calls `DeleteDocumentAction` on each. Every row is soft-deleted, every file is wiped. Consistent with the per-document GDPR policy.
 - **File cannot be replaced via `PUT`.** `UpdateDocumentRequest` strips `file`, `file_path`, and `athlete_id` from the validated payload — only metadata (`type`, `issued_at`, `expires_at`, `notes`) is updateable. To replace a file, upload a brand new document row and soft-delete the old one.
 - **Expiring query excludes `expires_at = null`.** A document without expiry isn't "expiring" — it's a no-expiry document. Those are handled by the UI badge logic, not the `/documents/expiring` endpoint.
+- **A document belongs to an athlete OR to the academy, never both and never neither** (#1743). Exactly one of `athlete_id` / `academy_id` is set. The invariant is enforced in `UploadDocumentAction` — the owner is the relation the row is created through, so neither path names a column — and **not** by a SQLite `CHECK`: the app must refuse the row before the database has to, and the same code has to hold on any driver.
+  - **`Document::owningAcademyId()` is the tenant-scoping answer, in one place.** Five call sites used to reach through `$document->athlete->academy_id`; three of them null-pointer on an academy document, and five copies of a scoping rule is how a document from another install becomes downloadable. It returns null for an unattached row, which never equals an academy id, so an impossible row is refused rather than leaked.
+  - **An academy document is never a medical certificate.** `UploadAcademyDocumentRequest` refuses the type: it is the one type that is special-category data under GDPR Art. 9 and the one type `UploadDocumentAction` encrypts, and an academy does not have a medical fitness certificate — a person does. Academy documents are therefore never encrypted, so their bytes are not behind the key in `secrets.bin`, which backups deliberately do not carry.
+  - **`academy_id` cascades** like `athlete_id`: deleting an academy takes its papers with it.
+  - **The expiring list merges both**, from two queries, re-sorted on `expires_at` then `id`. The 200-row cap applies to the **merged** list, not to each half — two capped queries return 400 rows, and capping each at 100 would hide urgent athlete certificates behind an academy's paperwork. The active-athlete scope (#1740) lives on the athlete join and does not apply to academy papers: a liability policy has no training status.
+  - **Reminders are a separate command.** `budojo:send-academy-document-expiry-reminders` fires at the same T-30 / T-7 / T-0 thresholds with the same `notification_log` de-dup, and writes `kind: academy_document_expiry_reminders`. `SendMedicalCertExpiryReminders` was deliberately **not** widened: it is medical-only by name, by filter, by mail template and by the notification preference that gates it, and a liability policy behind a checkbox labelled "medical certificate reminders" is an opt-out nobody can find.
 - **A renewed medical certificate supersedes the one it replaces** (#1739). A live medical-certificate row is **superseded** when the same athlete has another live medical-certificate row with a strictly greater `expires_at` — or an equal `expires_at` and a greater `id`, so a duplicate upload of the same date retires exactly one way round and the athlete never disappears from both sides of the tie. Superseded rows are excluded from `GET /documents/expiring` (and therefore from the roster alert count) and from the T-30 / T-7 / T-0 reminder pass — which is both the owner digest **and** the `AthleteMedicalCertExpiringNotification` push the same pass sends to the athlete, since both read the one filtered collection. The rule lives in one place, `Document::scopeNotSuperseded`.
   - **Medical certificates only.** `id_card`, `insurance` and `other` are never superseded: only a medical certificate has a renewal cycle the product models. Two ID cards are two documents, not a replacement.
   - **Undated rows sit outside the rule.** A medical row with `expires_at = null` neither supersedes nor is superseded — it carries no statement about when coverage ends, so it is no evidence coverage was renewed.
@@ -73,6 +82,8 @@ Documents are the first entity in the system that owns **physical files on disk*
 ## Related endpoints
 
 - `GET /api/v1/athletes/{athlete}/documents` — paginated list for a specific athlete (50/page, newest first, soft-deleted excluded)
+- `GET /api/v1/academy/documents` — the academy's own papers (#1743), same shape, no route parameter: the subject is the caller's active academy
+- `POST /api/v1/academy/documents` — multipart upload of one of the academy's own papers; `medical_certificate` is refused
 - `POST /api/v1/athletes/{athlete}/documents` — multipart upload, nested under the athlete
 - `GET /api/v1/documents/{id}/download` — authenticated file stream
 - `PUT /api/v1/documents/{id}` — partial metadata update (no file replacement)

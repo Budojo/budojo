@@ -152,15 +152,18 @@ class DocumentController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        $athlete = $document->athlete;
-        if ($athlete === null) {
+        // Which academy owns it — through an athlete, or directly (#1743).
+        // Null is an unattached row, which the invariant forbids; refuse it
+        // rather than reason about it.
+        $academyId = $document->owningAcademyId();
+        if ($academyId === null) {
             return response()->json(['message' => 'Forbidden.'], 403);
         }
 
         // Capability gate: DocumentsDelete is owner/admin only per
         // the matrix. Instructor can upload but not delete;
         // assistant is read-only on documents.
-        if (! $user->canInAcademy($athlete->academy_id, \App\Authorization\Capability::DocumentsDelete)) {
+        if (! $user->canInAcademy($academyId, \App\Authorization\Capability::DocumentsDelete)) {
             return response()->json(['message' => 'Forbidden.'], 403);
         }
 
@@ -171,13 +174,18 @@ class DocumentController extends Controller
 
     /**
      * A document belongs to the authenticated user iff the authenticated user
-     * owns an academy and the document's athlete belongs to that academy.
+     * has an active academy and the document belongs to that academy —
+     * through its athlete, or directly (#1743).
      */
     private function userOwns(User $user, Document $document): bool
     {
+        // `owningAcademyId()` answers for both kinds of document (#1743) —
+        // a person's, and the academy's own. It returns null for a row
+        // attached to neither, which the invariant forbids and which never
+        // equals an academy id, so an impossible row is refused rather than
+        // leaked.
         return $user->activeAcademyId() !== null
-            && $document->athlete !== null
-            && $document->athlete->academy_id === $user->activeAcademyId();
+            && $document->owningAcademyId() === $user->activeAcademyId();
     }
 
     /**

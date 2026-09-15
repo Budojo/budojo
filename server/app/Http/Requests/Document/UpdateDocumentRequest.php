@@ -31,12 +31,15 @@ class UpdateDocumentRequest extends FormRequest
             return false;
         }
 
-        $athlete = $document->athlete;
-        if ($athlete === null) {
+        // Through the athlete, or directly on the academy (#1743) — one
+        // accessor, so a new kind of document cannot acquire a fifth copy of
+        // the scoping rule that quietly disagrees with the other four.
+        $academyId = $document->owningAcademyId();
+        if ($academyId === null) {
             return false;
         }
 
-        return $this->authorizeInAcademy($athlete->academy_id, Capability::DocumentsUpload);
+        return $this->authorizeInAcademy($academyId, Capability::DocumentsUpload);
     }
 
     /**
