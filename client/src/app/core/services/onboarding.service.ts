@@ -14,6 +14,12 @@ import { environment } from '../../../environments/environment';
  */
 export const ONBOARDING_STEPS = [
   'add_athlete',
+  // The two the check-in depends on (#1649): it proposes the classes on
+  // today's timetable, and a lesson's topics come from the programme. Kept in
+  // the server's order — `App\Support\OnboardingStep::all()` is the source of
+  // truth and a PEST test pins it to a literal list.
+  'set_timetable',
+  'write_syllabus',
   'log_attendance',
   'mark_payment',
   'upload_document',

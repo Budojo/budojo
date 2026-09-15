@@ -27,6 +27,15 @@ namespace App\Support;
 final class OnboardingStep
 {
     public const string ADD_ATHLETE = 'add_athlete';
+    /**
+     * The two the check-in depends on (#1649). Both were missing while the
+     * daily check-in had come to rest on them: it proposes the classes on
+     * today's timetable, and a lesson's topics come from the programme. An
+     * owner who followed the checklist to the end still had neither, and the
+     * screen that needed them said nothing about it.
+     */
+    public const string SET_TIMETABLE = 'set_timetable';
+    public const string WRITE_SYLLABUS = 'write_syllabus';
     public const string LOG_ATTENDANCE = 'log_attendance';
     public const string MARK_PAYMENT = 'mark_payment';
     public const string UPLOAD_DOCUMENT = 'upload_document';
@@ -37,6 +46,10 @@ final class OnboardingStep
     {
         return [
             self::ADD_ATHLETE,
+            // Before logging attendance, because that is the order they are
+            // needed in: the check-in proposes today's classes.
+            self::SET_TIMETABLE,
+            self::WRITE_SYLLABUS,
             self::LOG_ATTENDANCE,
             self::MARK_PAYMENT,
             self::UPLOAD_DOCUMENT,

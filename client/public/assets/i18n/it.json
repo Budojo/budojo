@@ -449,6 +449,14 @@
       "view_stats": {
         "label": "Controlla le statistiche",
         "hint": "Trend di presenze, ricavi mensili, chi sta mollando."
+      },
+      "set_timetable": {
+        "label": "Imposta l'orario settimanale",
+        "hint": "Il check-in propone le lezioni dell'orario di oggi, quindi gliene serve uno."
+      },
+      "write_syllabus": {
+        "label": "Scrivi il programma",
+        "hint": "Gli argomenti di una lezione vengono dal programma: è quello che dà un senso alla copertura."
       }
     }
   },
@@ -1874,7 +1882,8 @@
       "table": {
         "fullName": "Nome e cognome",
         "payment": "Pagamento",
-        "attendance": "Presenze"
+        "attendance": "Presenze",
+        "attendanceLines": "mese / stagione"
       },
       "tooltip": {
         "edit": "Modifica",

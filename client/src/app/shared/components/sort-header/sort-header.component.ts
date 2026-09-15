@@ -53,7 +53,12 @@ import { Tooltip } from 'primeng/tooltip';
       [attr.data-cy]="dataCy()"
       (click)="cycle.emit()"
     >
-      {{ label() }}
+      <span class="sort-header__label">
+        {{ label() }}
+        @if (sublabel(); as sub) {
+          <span class="sort-header__sublabel">{{ sub }}</span>
+        }
+      </span>
       <span
         class="sort-header__signifier"
         [class.sort-header__signifier--active]="signifier() !== null"
@@ -67,6 +72,16 @@ import { Tooltip } from 'primeng/tooltip';
 export class SortHeaderComponent {
   /** Already-translated column name. */
   readonly label = input.required<string>();
+
+  /**
+   * An optional second line under the column name.
+   *
+   * The attendance column stacks two fractions — this month over this season
+   * — under one word, "Presenze", and which was which lived only in a
+   * tooltip (#1649). A tooltip is not an answer for a column header: it is
+   * not there when the eye arrives and it is not there at all on a phone.
+   */
+  readonly sublabel = input<string | null>(null);
 
   /**
    * The compact state glyph — `F↑`, `L↓`, `M↓`. Null means this column is not

@@ -71,7 +71,8 @@ describe('OnboardingChecklistComponent (#588)', () => {
     const stepRows = fixture.nativeElement.querySelectorAll(
       '[data-cy^="onboarding-step-"]:not([data-cy$="-cta"])',
     );
-    expect(stepRows.length).toBe(5);
+    // Seven since #1649 added the timetable and the programme.
+    expect(stepRows.length).toBe(7);
     expect(rows.length).toBeGreaterThan(0);
   });
 
