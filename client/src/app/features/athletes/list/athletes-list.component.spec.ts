@@ -2212,6 +2212,55 @@ describe('AthletesListComponent — sessions out of sessions held (#1455)', () =
       expect(el.querySelector('[data-cy="athletes-empty"]')?.textContent).toContain('12');
     });
 
+    it('never latches the skeleton on when a stale roster answer lands late', () => {
+      // `load()` does not cancel the request it replaces, so an older roster
+      // response still reaches its handler. It used to set the in-flight flag
+      // with a stale epoch, and the clear — which checks that epoch — refused
+      // to fire for exactly that subscription. The phone tests the flag
+      // BEFORE it tests `athletes().length`, so skeletons sat over a roster
+      // that had already arrived, with loading() already false.
+      const row = {
+        id: 1,
+        first_name: 'Mario',
+        last_name: 'Rossi',
+        belt: 'white',
+        stripes: 0,
+        status: 'inactive',
+      } as unknown as Athlete;
+      const page = (data: Athlete[]) => ({
+        data,
+        meta: { current_page: 1, last_page: 1, per_page: 20, total: data.length },
+      });
+      const first = new Subject<ReturnType<typeof page>>();
+      const second = new Subject<ReturnType<typeof page>>();
+      const svc = TestBed.inject(AthleteService) as unknown as { list: Mock; countInactive: Mock };
+      let call = 0;
+      svc.list = vi.fn(() => (call++ === 0 ? first : second));
+      svc.countInactive = vi.fn(() => of(4));
+
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      fixture.detectChanges();
+      const cmp = fixture.componentInstance;
+
+      // A second query goes out while the first is still in flight.
+      cmp.toggleInactive();
+
+      // The stale one answers first, and answers empty.
+      first.next(page([]));
+      first.complete();
+      // The live one answers with a real roster.
+      second.next(page([row]));
+      second.complete();
+      fixture.detectChanges();
+
+      expect(cmp.settlingEmptyState()).toBe(false);
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.querySelector('[data-cy="athletes-mobile-loading"]')).toBeNull();
+      // The exact card, not the `^=` prefix — that also matches the card's
+      // avatar, name and menu hooks, which is five nodes for one athlete.
+      expect(el.querySelector('[data-cy="athlete-card-1"]')).not.toBeNull();
+    });
+
     it('offers the eye, which is the control that actually shows them', () => {
       const fixture = renderWithInactive(12);
       const cmp = fixture.componentInstance;

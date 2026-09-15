@@ -1648,6 +1648,17 @@ export class AthletesListComponent implements OnInit {
    * cannot decide what it is.
    */
   private askWhetherAllInactive(epoch: number): void {
+    // Guard the ENTRY, not just the exit. `load()` does not cancel the
+    // request it replaces, so an older roster response still reaches its
+    // `next` handler and calls this with a stale epoch. Setting
+    // `resolvingEmptyState` from there latched it on: the clear lives in a
+    // `finalize` that checks `epoch === loadEpoch` and so refuses to fire for
+    // exactly that subscription, and nothing else touches the flag until the
+    // next `load()`. On the phone — whose branch tests the flag before it
+    // tests `athletes().length` — that left skeletons sitting over a roster
+    // that had already arrived, with `loading()` false. Reachable by opening
+    // the eye, or clearing a search, while the first load is still out.
+    if (epoch !== this.loadEpoch) return;
     if (this.isTrashedMode()) return;
     if (this.emptyStateKind() === 'filtered') return;
 
