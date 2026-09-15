@@ -57,7 +57,13 @@ describe('sentence case, in every table (#1501)', () => {
     seed();
     cy.visitAuthenticated('/dashboard/attendance');
 
+    // The first header cell is the check-in indicator (#1657): an icon
+    // column whose name lives in `aria-label`, so it renders no text and
+    // `''.toUpperCase()` equals `''` — the assertion below would pass
+    // vacuously or, with `to.not.equal`, fail on a blank. Take the first
+    // header that actually spells something.
     cy.get('.p-datatable-thead th')
+      .filter((_index, th) => (th.textContent ?? '').trim().length > 0)
       .first()
       .should(($th) => {
         const text = $th.text().trim();
