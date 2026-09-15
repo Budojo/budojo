@@ -26,9 +26,13 @@
   gap: 0.5rem;
   padding: 0.5rem 1rem;
   margin-bottom: 1rem;
-  border: 1px solid var(--p-amber-200, #fde68a);
-  background: var(--p-amber-50, #fffbeb);
-  color: var(--p-amber-900, #78350f);
+  // Information, not a warning (#1657, CHK-3). "You are looking at
+  // Saturday's session" is a statement of where you are; amber is what this
+  // app uses when something needs doing — an unverified email, a lapsed
+  // certificate — and spending it here makes the real warnings cheaper.
+  border: 1px solid var(--p-primary-200, #bfdbfe);
+  background: var(--p-primary-50, #eff6ff);
+  color: var(--p-primary-800, #1e40af);
   border-radius: var(--p-border-radius-md);
   font-size: 0.875rem;
   line-height: 1.4;
@@ -203,8 +207,10 @@
 // lengths land in the same row.
 
 .attendance-cell-indicator {
-  width: 3rem;
-  text-align: right;
+  // Leads the row now (#1657), so it aligns with the names beside it rather
+  // than against the far edge it used to sit on.
+  width: 2.5rem;
+  text-align: left;
 }
 
 .attendance-indicator {
@@ -590,6 +596,10 @@ $attendance-mobile-breakpoint: 768px;
     color: var(--p-text-muted-color);
   }
 
+  // Clear of the search strip below. The two boxes had no margin between
+  // them at all and read as one control with a seam.
+  margin-bottom: 0.75rem;
+
   // Nothing tagged yet reads as an invitation, not as data.
   &--empty .attendance__topics-text {
     color: var(--p-text-muted-color);
@@ -611,4 +621,34 @@ $attendance-mobile-breakpoint: 768px;
   font-size: 0.75rem;
   font-weight: 600;
   color: var(--p-primary-color);
+}
+
+// The topics on today's lesson, one chip each — the same chip the lesson
+// sheet draws, because this summary is the door to that sheet. They were a
+// single line joined with ` · `, and a middle dot is not a boundary the eye
+// trusts: four topics read as one run-on phrase, and a technique sat beside
+// its own parent position looking like a fifth technique.
+.attendance__topics-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  min-width: 0;
+
+  .chip {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.375rem;
+    padding: 0.125rem 0.625rem;
+    border-radius: 999px;
+    border: 1px solid var(--p-content-border-color);
+    background: var(--p-surface-0);
+    font-size: 0.8125rem;
+    color: var(--p-text-color);
+    white-space: nowrap;
+  }
+
+  .chip__parent {
+    font-size: 0.6875rem;
+    color: var(--p-text-muted-color);
+  }
 }

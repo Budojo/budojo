@@ -1151,7 +1151,7 @@ describe('DailyAttendanceComponent — what the lesson covered (#1564)', () => {
     expect(row.textContent).toContain('Add topics');
   });
 
-  it('summarises the topics on one line, and offers to edit them', () => {
+  it('shows each topic as its own chip, with the position it belongs to', () => {
     const { fixture, httpMock } = setup();
     fixture.detectChanges();
     flushInit(httpMock, { classes: [KIDS] });
@@ -1186,7 +1186,18 @@ describe('DailyAttendanceComponent — what the lesson covered (#1564)', () => {
     fixture.detectChanges();
 
     const row = fixture.nativeElement.querySelector('[data-cy="attendance-topics"]') as HTMLElement;
-    expect(row.textContent).toContain('Armbar · Triangle');
+
+    // One chip each, not one line joined with ` · ` (#1657). A middle dot is
+    // not a boundary the eye trusts, and the payload's `parent_name` was
+    // being thrown away by the join — so a technique sat beside its own
+    // position looking like a separate technique.
+    const chips = row.querySelectorAll('.chip');
+    expect(chips).toHaveLength(2);
+    expect(chips[0].textContent).toContain('Armbar');
+    expect(chips[0].textContent).toContain('Closed guard');
+    expect(chips[1].textContent).toContain('Triangle');
+    expect(row.textContent).not.toContain('·');
+
     expect(row.textContent).toContain('Edit');
   });
 

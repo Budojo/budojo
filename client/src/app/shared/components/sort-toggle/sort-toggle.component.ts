@@ -33,7 +33,7 @@ import type { AthleteSortOrder } from '../../../core/services/athlete.service';
       (click)="cycle.emit()"
     >
       <i
-        class="pi"
+        class="pi sort-toggle__icon"
         [class.pi-sort-alt]="!active()"
         [class.pi-sort-amount-up-alt]="active() && order() === 'asc'"
         [class.pi-sort-amount-down]="active() && order() === 'desc'"
