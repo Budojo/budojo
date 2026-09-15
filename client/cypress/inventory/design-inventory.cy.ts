@@ -446,7 +446,15 @@ const SYLLABUS_COVERAGE = {
 const ATHLETE_COVERAGE = {
   season: { start: '2025-09-01', end: '2026-08-31', label: '2025/26' },
   joined_on: '2024-09-01',
-  totals: { taught_by_academy: 2, seen: 1, thin: 0, missed: 1, percentage: 50, not_taught_yet: 1 },
+  totals: {
+    taught_by_academy: 2,
+    attended: 1,
+    seen: 1,
+    thin: 0,
+    missed: 1,
+    percentage: 50,
+    not_taught_yet: 1,
+  },
   missed: [
     { id: 12, name: 'Triangle', parent_name: 'Closed guard', kind: 'both', taught_times: 1 },
   ],
