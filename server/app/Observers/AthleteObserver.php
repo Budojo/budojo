@@ -48,6 +48,7 @@ class AthleteObserver
     {
         $athlete->first_name_sort = NameFold::fold($athlete->first_name);
         $athlete->last_name_sort = NameFold::fold($athlete->last_name);
+        $this->stampStatusChange($athlete);
     }
 
     /**
@@ -130,6 +131,37 @@ class AthleteObserver
     public function forceDeleted(Athlete $athlete): void
     {
         $athlete->address()->delete();
+    }
+
+    /**
+     * Date the row the day its status moves (#1741).
+     *
+     * Here rather than in `UpdateAthleteAction` — which is the only path the
+     * API has today — because it is not the only path the row has: the CSV
+     * import, the seeder, a console command, and whatever endpoint is written
+     * next all reach `save()` too. A fact that must hold for every write
+     * belongs where every write passes, not in each caller's memory.
+     *
+     * On `saving`, so the date lands in the same UPDATE as the status it
+     * describes; a `saved` hook would need a second write and could leave the
+     * row briefly claiming the old date for the new status.
+     *
+     * Guarded on `isDirty`, unlike the name folding above: this is a
+     * measurement, and re-stamping it on every unrelated edit would make it
+     * say "changed today" about a status that has not moved in a year.
+     *
+     * `exists` excludes creation. A brand-new athlete has not *changed* status
+     * — they were given one — and null already says "never changed since the
+     * row was created", which is the honest answer for everyone imported
+     * active and still active.
+     */
+    private function stampStatusChange(Athlete $athlete): void
+    {
+        if (! $athlete->exists || ! $athlete->isDirty('status')) {
+            return;
+        }
+
+        $athlete->status_changed_at = now()->startOfDay();
     }
 
     private function handleBeltChange(Athlete $athlete, int $userId): void

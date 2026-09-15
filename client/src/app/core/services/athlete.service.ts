@@ -89,6 +89,16 @@ export interface Athlete {
   status: AthleteStatus;
   joined_at: string;
   /**
+   * The date `status` last changed (#1741). Nothing renders it yet — it is
+   * here because the wire carries it and the next reader should not have to
+   * re-derive the shape.
+   *
+   * **Null is an answer, not a gap**: the status has not moved since the row
+   * was created. Do not fall back to `joined_at` — that would date a
+   * departure to an enrolment. Optional for fixture-compat.
+   */
+  status_changed_at?: string | null;
+  /**
    * Public handle of the user this athlete row is linked to. Null when:
    *   - the athlete hasn't been linked to a user yet (V1 athletes
    *     created without an invite flow);
