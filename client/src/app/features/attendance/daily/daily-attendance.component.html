@@ -127,9 +127,22 @@
       data-cy="attendance-topics"
     >
       <i class="pi pi-book" aria-hidden="true"></i>
-      <span class="attendance__topics-text">
-        {{ topicSummary() ?? ('attendance.daily.topics.empty' | translate) }}
-      </span>
+      @if (topicChips().length > 0) {
+        <span class="attendance__topics-chips">
+          @for (topic of topicChips(); track topic.id) {
+            <span class="chip">
+              {{ topic.name }}
+              @if (topic.parent_name; as parent) {
+                <span class="chip__parent">{{ parent }}</span>
+              }
+            </span>
+          }
+        </span>
+      } @else {
+        <span class="attendance__topics-text">
+          {{ 'attendance.daily.topics.empty' | translate }}
+        </span>
+      }
       <span class="attendance__topics-action">
         {{
           (topicSummary() ? 'attendance.daily.topics.edit' : 'attendance.daily.topics.add')
@@ -224,6 +237,10 @@
     >
       <ng-template pTemplate="header">
         <tr>
+          <th
+            class="attendance-cell-indicator"
+            [attr.aria-label]="'attendance.daily.table.presentAria' | translate"
+          ></th>
           <!--
             One column for the athlete, one for the answer (#1458). The Belt
             column went the way the roster's did in #1443 — the spine in the
@@ -246,10 +263,6 @@
               (cycle)="cycleFullNameSort()"
             />
           </th>
-          <th
-            class="attendance-cell-indicator"
-            [attr.aria-label]="'attendance.daily.table.presentAria' | translate"
-          ></th>
         </tr>
       </ng-template>
 
@@ -273,6 +286,25 @@
           (keydown.space)="togglePresent(athlete); $event.preventDefault()"
           [attr.data-cy]="'attendance-row-' + athlete.id"
         >
+          <!--
+            The state LEADS the row (#1657, CHK-1). It was the last cell, so
+            on a 960px row "is Marco ticked?" was a saccade across empty
+            space — and for an absent row the tint says nothing, leaving a
+            far-right grey ring as the only answer. #1630 moved the season
+            tick next to the name for the same reason.
+
+            Squares, not circles: a radio circle reads as "pick exactly one"
+            on a list whose whole job is ticking many. #1686 converted the
+            lesson sheet — the dialog this page opens — for precisely that,
+            and the check-in was missed.
+          -->
+          <td class="attendance-cell-indicator" aria-hidden="true">
+            @if (isPresent(athlete.id)) {
+              <i class="pi pi-check-square attendance-indicator attendance-indicator--present"></i>
+            } @else {
+              <i class="pi pi-stop attendance-indicator"></i>
+            }
+          </td>
           <td class="attendance-cell-name">
             <!--
               The same identity block the roster draws (#1458). `linkToDetail`
@@ -293,13 +325,6 @@
               }
             </app-athlete-identity>
           </td>
-          <td class="attendance-cell-indicator" aria-hidden="true">
-            @if (isPresent(athlete.id)) {
-              <i class="pi pi-check-circle attendance-indicator attendance-indicator--present"></i>
-            } @else {
-              <i class="pi pi-circle attendance-indicator"></i>
-            }
-          </td>
         </tr>
       </ng-template>
 
@@ -318,7 +343,16 @@
                 @if (searchTerm() || selectedBelt()) {
                   <p>{{ 'attendance.daily.empty.filtered' | translate }}</p>
                 } @else {
-                  <p>{{ 'attendance.daily.empty.noAthletes' | translate }}</p>
+                  <!--
+                    The instruction was plain text: "add one from the Athletes page"
+                    named a destination and offered no way to reach it (#1657, CHK-5).
+                  -->
+                  <p>
+                    {{ 'attendance.daily.empty.noAthletes' | translate }}
+                    <a routerLink="/dashboard/athletes" data-cy="attendance-empty-athletes-link">{{
+                      'attendance.daily.empty.noAthletesCta' | translate
+                    }}</a>
+                  </p>
                 }
               </div>
             }
@@ -346,7 +380,16 @@
         @if (searchTerm() || selectedBelt()) {
           <p>{{ 'attendance.daily.empty.filtered' | translate }}</p>
         } @else {
-          <p>{{ 'attendance.daily.empty.noAthletes' | translate }}</p>
+          <!--
+            The instruction was plain text: "add one from the Athletes page"
+            named a destination and offered no way to reach it (#1657, CHK-5).
+          -->
+          <p>
+            {{ 'attendance.daily.empty.noAthletes' | translate }}
+            <a routerLink="/dashboard/athletes" data-cy="attendance-empty-athletes-link">{{
+              'attendance.daily.empty.noAthletesCta' | translate
+            }}</a>
+          </p>
         }
       </div>
     } @else {
@@ -378,10 +421,10 @@
               <span class="attendance-card__indicator" aria-hidden="true">
                 @if (isPresent(athlete.id)) {
                   <i
-                    class="pi pi-check-circle attendance-indicator attendance-indicator--present"
+                    class="pi pi-check-square attendance-indicator attendance-indicator--present"
                   ></i>
                 } @else {
-                  <i class="pi pi-circle attendance-indicator"></i>
+                  <i class="pi pi-stop attendance-indicator"></i>
                 }
               </span>
             </button>

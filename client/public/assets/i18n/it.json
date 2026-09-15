@@ -1773,7 +1773,8 @@
       },
       "empty": {
         "filtered": "Nessun atleta attivo corrisponde ai filtri.",
-        "noAthletes": "Nessun atleta attivo ancora — aggiungine uno dalla pagina Atleti."
+        "noAthletes": "Nessun atleta attivo ancora.",
+        "noAthletesCta": "Vai ad Atleti"
       },
       "paginationHint": "Mostrati {{shown}} di {{total}} atleti attivi. La paginazione arriva nel follow-up M4.2.5.",
       "undo": "Annulla",

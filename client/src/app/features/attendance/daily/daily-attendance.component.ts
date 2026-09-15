@@ -33,7 +33,7 @@ import {
 } from '../../../core/services/athlete.service';
 import { AcademyClass, AcademyClassService } from '../../../core/services/academy-class.service';
 import { AttendanceService } from '../../../core/services/attendance.service';
-import { Lesson, LessonService } from '../../../core/services/lesson.service';
+import { Lesson, LessonService, LessonTopic } from '../../../core/services/lesson.service';
 import { LessonSheetComponent } from '../../lessons/lesson-sheet/lesson-sheet.component';
 import { AthleteIdentityComponent } from '../../../shared/components/athlete-identity/athlete-identity.component';
 import { BeltBadgeComponent } from '../../../shared/components/belt-badge/belt-badge.component';
@@ -839,8 +839,25 @@ export class DailyAttendanceComponent implements OnInit {
    * because the row sits above the roster, which is what the page is for:
    * the picker is one tap away, and shut the rest of the time.
    */
+  /**
+   * The topics on today's lesson, as they are shown: one chip each.
+   *
+   * They used to be one string joined with ` · `, and a middle dot is not a
+   * boundary the eye trusts — a four-topic line read as one run-on phrase.
+   * Worse, the payload carries `parent_name` and the join threw it away, so
+   * "Staple" and its own position "Passing the knee shield" sat side by side
+   * looking like two separate techniques.
+   *
+   * The chips are the ones the lesson sheet draws — the dialog this button
+   * opens — so the summary looks like the thing it leads to.
+   */
+  protected readonly topicChips = computed<readonly LessonTopic[]>(
+    () => this.lesson()?.topics ?? [],
+  );
+
+  /** Still a string, for the accessible name and the empty check. */
   protected readonly topicSummary = computed<string | null>(() => {
-    const topics = this.lesson()?.topics ?? [];
+    const topics = this.topicChips();
     if (topics.length === 0) return null;
     return topics.map((t) => t.name).join(' · ');
   });

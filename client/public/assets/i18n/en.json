@@ -1773,7 +1773,8 @@
       },
       "empty": {
         "filtered": "No active athletes match the current filters.",
-        "noAthletes": "No active athletes yet — add one from the Athletes page."
+        "noAthletes": "No active athletes yet.",
+        "noAthletesCta": "Go to Athletes"
       },
       "paginationHint": "Showing {{shown}} of {{total}} active athletes. Pagination is on the M4.2.5 follow-up.",
       "undo": "Undo",
