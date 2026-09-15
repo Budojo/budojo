@@ -41,7 +41,17 @@ class StoreAcademyRequest extends FormRequest
             // as given and pinned to the 1st by the Action — the form offers a
             // month, and a floor that moved with the day it was set would be a
             // different rule on the 15th than on the 1st.
-            'billing_from' => ['sometimes', 'nullable', 'date'],
+            //
+            // Never in the future. "Fees are recorded here from next October"
+            // is not a statement anyone can act on, and it desynchronises the
+            // ledger from everything else that decides unpaid: the roster's
+            // `?paid=no`, the owner digest and the athlete overdue push all
+            // answer for the CURRENT month without a floor, so a future one
+            // would blank a month in the ledger while those three still chased
+            // it. The rule lives here, once, rather than in four consumers —
+            // and deliberately NOT in the picker, where a `maxDate` silently
+            // blanked an already-stored future value instead of showing it.
+            'billing_from' => ['sometimes', 'nullable', 'date', 'before_or_equal:today'],
             ...$this->addressRules(),
         ];
     }

@@ -107,9 +107,17 @@
                 so the row says nothing — an em-dash, the same neutral mark a
                 no-fee athlete already gets, rather than an amber accusation
                 about money handled in cash years ago.
+
+                `role="img"` + `aria-label`, and focusable: a bare span carries
+                the generic role and most screen readers drop its label, and a
+                tooltip alone is mouse-only — which on the phone, the primary
+                form factor, is nobody. The reason has to be reachable without
+                a pointer.
               -->
               <span
                 class="payment-card__dash"
+                role="img"
+                tabindex="0"
                 [pTooltip]="'athletes.detail.payments.beforeBillingFloor' | translate"
                 tooltipPosition="left"
                 [attr.aria-label]="'athletes.detail.payments.beforeBillingFloor' | translate"
@@ -231,6 +239,8 @@
                 <!-- See the card above: a month with no answer gets none (#1742). -->
                 <span
                   class="payments-list__dash"
+                  role="img"
+                  tabindex="0"
                   [pTooltip]="'athletes.detail.payments.beforeBillingFloor' | translate"
                   tooltipPosition="top"
                   [attr.aria-label]="'athletes.detail.payments.beforeBillingFloor' | translate"

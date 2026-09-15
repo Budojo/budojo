@@ -884,15 +884,26 @@ describe('PaymentsListComponent — the ledger stops asserting a debt it cannot 
     expect(component['canGoPrev']()).toBe(false);
   });
 
-  it('still walks back to the joining season when there is no academy floor', () => {
+  it('stops at an earlier floor rather than at the current season', () => {
     const { component } = setup({
       academy: SEPTEMBER_ACADEMY,
-      joinedAt: '2024-03-15',
-      billingFloor: '2023-09-01',
+      joinedAt: '2021-03-15',
+      billingFloor: '2024-03-01',
     });
 
-    // `billing_floor` already IS max(academy, joined) — here the athlete's
-    // own season is the later one and the server resolved it to 2023/24.
+    // The floor is season 2023/24, so the stepper walks back — but only that
+    // far. The previous fixture here put the floor BEFORE the joining month,
+    // a state the server cannot emit (`billing_floor` is `max()` of the two),
+    // and both the old and new rules answered `true` for it: the assertion
+    // could not fail. This one depends on `billingFloorSeason`.
     expect(component['canGoPrev']()).toBe(true);
+
+    component['prevYear']();
+    component['prevYear']();
+    component['prevYear']();
+    component['prevYear']();
+
+    expect(component['seasonLabel']()).toBe('2023/24');
+    expect(component['canGoPrev']()).toBe(false);
   });
 });

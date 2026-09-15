@@ -79,14 +79,17 @@ it('emits the academy setting raw so the form can put it back', function (): voi
 });
 
 it('pins a mid-month setting to the first when the owner saves it', function (): void {
+    Carbon::setTestNow('2026-09-15 10:00:00');
     $user = userWithAcademy();
 
     $this->actingAs($user)
-        ->patchJson('/api/v1/academy', ['billing_from' => '2026-09-17'])
+        ->patchJson('/api/v1/academy', ['billing_from' => '2026-08-17'])
         ->assertOk()
         // A floor set on the 17th must not behave differently from one set on
         // the 1st. Pinned once, on the way in, so no reader has to check.
-        ->assertJsonPath('data.billing_from', '2026-09-01');
+        ->assertJsonPath('data.billing_from', '2026-08-01');
+
+    Carbon::setTestNow();
 });
 
 it('lets the owner clear the floor', function (): void {
@@ -161,3 +164,48 @@ function migrationBillingFrom(): object
         'migrations/2026_09_15_130000_add_billing_from_to_academies_table.php',
     );
 }
+
+it('refuses a floor in the future', function (): void {
+    Carbon::setTestNow('2026-09-15 10:00:00');
+    $user = userWithAcademy();
+
+    // A future floor blanks a month in the ledger while `?paid=no`, the owner
+    // digest and the athlete overdue push all still chase it — four consumers
+    // disagreeing about one month. The rule lives on the server, once.
+    $this->actingAs($user)
+        ->patchJson('/api/v1/academy', ['billing_from' => '2026-10-01'])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('billing_from');
+
+    Carbon::setTestNow();
+});
+
+it('accepts the current month', function (): void {
+    Carbon::setTestNow('2026-09-15 10:00:00');
+    $user = userWithAcademy();
+
+    // The boundary is inclusive: "fees are recorded here from this month" is
+    // the commonest answer there is, and the 1st of this month is in the past.
+    $this->actingAs($user)
+        ->patchJson('/api/v1/academy', ['billing_from' => '2026-09-01'])
+        ->assertOk()
+        ->assertJsonPath('data.billing_from', '2026-09-01');
+
+    Carbon::setTestNow();
+});
+
+it('gives a brand-new academy this month as its floor', function (): void {
+    Carbon::setTestNow('2026-09-15 10:00:00');
+    $user = \App\Models\User::factory()->create();
+
+    $this->actingAs($user)
+        ->postJson('/api/v1/academy', ['name' => 'Nuova Accademia'])
+        ->assertCreated()
+        // The migration's backfill has nothing to backfill on a fresh
+        // install, so without this every new academy starts with no floor and
+        // the ledger falls back to each athlete's joining month — the phantom
+        // arrears this issue exists to remove, on the shipping path.
+        ->assertJsonPath('data.billing_from', '2026-09-01');
+
+    Carbon::setTestNow();
+});

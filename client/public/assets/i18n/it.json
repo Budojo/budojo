@@ -1522,7 +1522,7 @@
       },
       "billingFrom": {
         "label": "Le quote sono registrate su Budojo da",
-        "hint": "I mesi precedenti restano vuoti invece che non pagati: quei soldi sono passati da un’altra parte. Svuota il campo per non mettere limiti.",
+        "hint": "I mesi precedenti restano vuoti invece che non pagati: quei soldi sono passati da un’altra parte. Lascialo vuoto per non mettere limiti.",
         "placeholder": "Scegli un mese"
       },
       "trainingDays": {

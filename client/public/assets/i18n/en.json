@@ -1522,7 +1522,7 @@
       },
       "billingFrom": {
         "label": "Fees are recorded in Budojo from",
-        "hint": "Months before this are left blank instead of unpaid — the money was handled somewhere else. Clear the field for no limit.",
+        "hint": "Months before this are left blank instead of unpaid — the money was handled somewhere else. Leave it empty for no limit.",
         "placeholder": "Choose a month"
       },
       "trainingDays": {
