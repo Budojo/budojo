@@ -1214,4 +1214,36 @@ describe('DailyAttendanceComponent — what the lesson covered (#1564)', () => {
     ).click();
     expect(component['lessonSheetOpen']()).toBe(true);
   });
+
+  // ─── Check-in polish (#1657) ─────────────────────────────────────────────
+
+  it('draws the state as a square that leads the row, never as a radio circle', () => {
+    const { fixture, httpMock } = setup();
+    fixture.detectChanges();
+    flushInit(httpMock, { classes: [KIDS], athletes: [makeAthlete({ id: 1 })] });
+    fixture.detectChanges();
+
+    const row = fixture.nativeElement.querySelector('[data-cy^="attendance-row-"]') as HTMLElement;
+    expect(row, 'a roster row').not.toBeNull();
+    // First cell, not last: "is this person ticked?" should not be a saccade
+    // across the row (CHK-1).
+    const first = row.querySelector('td');
+    expect(first?.classList.contains('attendance-cell-indicator')).toBe(true);
+    // A radio circle reads as "pick exactly one" on a list whose whole job is
+    // ticking many. #1686 fixed the lesson sheet; the check-in was missed.
+    expect(row.querySelector('.pi-circle, .pi-check-circle')).toBeNull();
+    expect(row.querySelector('.pi-stop, .pi-check-square')).not.toBeNull();
+  });
+
+  it('links the empty roster to the page that fixes it', () => {
+    const { fixture, httpMock } = setup();
+    fixture.detectChanges();
+    flushInit(httpMock, { classes: [KIDS], athletes: [] });
+    fixture.detectChanges();
+
+    // "Add one from the Athletes page" named a destination with no way to
+    // reach it (CHK-5).
+    const link = fixture.nativeElement.querySelector('[data-cy="attendance-empty-athletes-link"]');
+    expect(link?.getAttribute('href')).toBe('/dashboard/athletes');
+  });
 });
