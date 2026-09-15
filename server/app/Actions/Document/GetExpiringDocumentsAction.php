@@ -55,7 +55,14 @@ class GetExpiringDocumentsAction
 
         return $through
             ->whereNotNull('documents.expires_at')
-            ->where('documents.expires_at', '<=', $cutoff)
+            // `whereDate`, not `where` — the `date` cast on the model writes
+            // `2026-10-15 00:00:00` while `$cutoff` is the bare `2026-10-15`,
+            // and SQLite compares those as text, so a document expiring on
+            // exactly `today + days` sorted AFTER the cutoff and vanished:
+            // `days=30` hid it, `days=31` showed it. The T-30 digest uses
+            // `whereDate` and never had the bug, so the owner got an email
+            // that morning about a certificate this widget did not list.
+            ->whereDate('documents.expires_at', '<=', $cutoff)
             ->notSuperseded()
             ->with('athlete')
             ->orderBy('documents.expires_at', 'asc')

@@ -162,3 +162,22 @@ it('still counts an athlete whose every certificate is trashed as missing one', 
         ->and(collect($response->json('missing_medical_certificate'))->pluck('id'))
         ->toContain($athlete->id);
 });
+
+it('leaves the superseded certificate on the athlete\'s own documents tab', function (): void {
+    // The tab lists history. Supersession narrows *what needs chasing*, not
+    // *what we keep* — and since the rule is a Model scope, one stray
+    // `->notSuperseded()` in `AthleteDocumentController` would quietly delete
+    // the athlete's paper trail from their own screen with nothing red.
+    $user = userWithAcademy();
+    $athlete = Athlete::factory()->for($user->academy)->create();
+    $lastYear = medicalCert($athlete, now()->subMonths(2)->toDateString());
+    $renewal = medicalCert($athlete, now()->addYear()->toDateString());
+
+    $ids = collect($this->actingAs($user)
+        ->getJson("/api/v1/athletes/{$athlete->id}/documents")
+        ->assertOk()
+        ->json('data'))->pluck('id')->all();
+
+    expect($ids)->toContain($lastYear->id)
+        ->and($ids)->toContain($renewal->id);
+});

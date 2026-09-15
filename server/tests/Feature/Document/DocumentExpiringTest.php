@@ -85,6 +85,33 @@ it('respects the days query parameter', function (): void {
         ->assertJsonCount(1, 'data');
 });
 
+it('includes a document expiring on exactly the last day of the window', function (): void {
+    // The `date` cast writes `2026-10-15 00:00:00`; the cutoff is the bare
+    // `2026-10-15`. Compared as text the stored value sorts after it, so the
+    // boundary day fell off the list while the T-30 digest — which uses
+    // `whereDate` — emailed about it the same morning.
+    $user = userWithAcademy();
+    $athlete = Athlete::factory()->for($user->academy)->create();
+    $onTheDay = idCard($athlete)->expiringIn(30)->create();
+
+    $this->actingAs($user)
+        ->getJson('/api/v1/documents/expiring?days=30')
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.id', $onTheDay->id);
+});
+
+it('still excludes the day after the window closes', function (): void {
+    $user = userWithAcademy();
+    $athlete = Athlete::factory()->for($user->academy)->create();
+    idCard($athlete)->expiringIn(31)->create();
+
+    $this->actingAs($user)
+        ->getJson('/api/v1/documents/expiring?days=30')
+        ->assertOk()
+        ->assertJsonCount(0, 'data');
+});
+
 it('does not include documents with null expires_at', function (): void {
     $user = userWithAcademy();
     $athlete = Athlete::factory()->for($user->academy)->create();
