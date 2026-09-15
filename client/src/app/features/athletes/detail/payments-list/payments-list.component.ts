@@ -416,9 +416,17 @@ export class PaymentsListComponent implements OnInit {
     // from April removes the whole quarter — neither is what "April" alone
     // suggests, and Norman's rule is to show the consequence before the act,
     // not after.
+    // Both branches name the WHOLE span, deliberately. The row captions
+    // stopped doing that in #1714 — each row there says the thing its reader
+    // does not already know — but a confirm is the opposite situation: the
+    // reader is about to create or undo the entire period, so "from February
+    // to April" is exactly what they need and "part of the February payment"
+    // would hide the two months the click also touches.
     const period = willMarkPaid
       ? this.periodCaptionFor(row.year, row.month, this.athleteBillingPeriod())
-      : this.periodCaption(row);
+      : row.payment !== null
+        ? this.periodCaptionFor(row.payment.year, row.payment.month, row.periodMonths)
+        : null;
 
     const message =
       period !== null

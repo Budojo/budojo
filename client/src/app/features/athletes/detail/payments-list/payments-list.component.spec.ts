@@ -396,6 +396,29 @@ describe('PaymentsListComponent — billing periods (#1382)', () => {
     ).not.toContain('165');
   });
 
+  it('still names the WHOLE period in the confirm, where the row captions do not', () => {
+    // #1714 made each row say only what its reader does not already know.
+    // A confirm is the opposite case: the click touches all three months, so
+    // hiding two of them behind "part of the February payment" would be the
+    // consequence not shown before the act. Sharing one helper between the
+    // two collapsed them, and CI caught it.
+    const { fixture, component } = setup({ payments: [quarterlyFrom(2)] });
+    // Component-scoped, like the mark-paid test beside this one — a
+    // `TestBed.inject` finds no provider for it.
+    const confirmation = fixture.componentRef.injector.get(ConfirmationService);
+    const spy = vi.spyOn(confirmation, 'confirm').mockImplementation(() => confirmation);
+
+    const february = component['monthRows']().find((r: { month: number }) => r.month === 2)!;
+    const event = new MouseEvent('click');
+    Object.defineProperty(event, 'currentTarget', { value: document.createElement('button') });
+    component.confirmToggleRow(event, february);
+
+    const message = spy.mock.calls[0][0].message as string;
+    expect(message).toContain('February');
+    expect(message).toContain('April');
+    expect(message).not.toContain('Part of');
+  });
+
   it('tells each row the thing it does not already know', () => {
     const { fixture } = setup({ payments: [quarterlyFrom(2)] });
     const caption = (month: number) =>
