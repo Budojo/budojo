@@ -50,3 +50,20 @@
     color: var(--p-primary-color);
   }
 }
+
+// The column name and its second line, stacked. A header that labels two
+// stacked numbers has to be two lines itself, or the reader matches them by
+// position and guesses (#1649).
+.sort-header__label {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.2;
+}
+
+.sort-header__sublabel {
+  font-size: 0.6875rem;
+  font-weight: 400;
+  color: var(--p-text-muted-color);
+  text-transform: lowercase;
+}

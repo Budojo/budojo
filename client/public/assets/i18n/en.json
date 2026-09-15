@@ -449,6 +449,14 @@
       "view_stats": {
         "label": "Check your stats",
         "hint": "Attendance trends, monthly revenue, who's slipping."
+      },
+      "set_timetable": {
+        "label": "Set your weekly timetable",
+        "hint": "The check-in proposes the classes on today’s timetable, so it needs one."
+      },
+      "write_syllabus": {
+        "label": "Write your programme",
+        "hint": "A lesson’s topics come from the programme — it is what makes coverage mean anything."
       }
     }
   },
@@ -1874,7 +1882,8 @@
       "table": {
         "fullName": "Full name",
         "payment": "Payment",
-        "attendance": "Sessions"
+        "attendance": "Sessions",
+        "attendanceLines": "month / season"
       },
       "tooltip": {
         "edit": "Edit",

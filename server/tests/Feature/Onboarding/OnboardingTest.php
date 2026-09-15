@@ -2,9 +2,11 @@
 
 declare(strict_types=1);
 
+use App\Models\AcademyClass;
 use App\Models\Athlete;
 use App\Models\AthletePayment;
 use App\Models\AttendanceRecord;
+use App\Models\SyllabusTopic;
 use App\Support\OnboardingStep;
 
 it('GET /me/onboarding returns the initial empty state', function (): void {
@@ -15,7 +17,20 @@ it('GET /me/onboarding returns the initial empty state', function (): void {
     $response->assertOk()
         ->assertJsonPath('data.dismissed_at', null)
         ->assertJsonPath('data.completed_steps', [])
-        ->assertJsonPath('data.available_steps', OnboardingStep::all());
+        // Pinned to a LITERAL list, not to `OnboardingStep::all()`. Comparing
+        // the endpoint's output against the constant the endpoint itself uses
+        // cannot fail — the catalogue grew by two steps in #1649 without this
+        // assertion noticing, and the client keeps its own copy of this list
+        // that has to stay in step with it.
+        ->assertJsonPath('data.available_steps', [
+            'add_athlete',
+            'set_timetable',
+            'write_syllabus',
+            'log_attendance',
+            'mark_payment',
+            'upload_document',
+            'view_stats',
+        ]);
 });
 
 it('POST /me/onboarding/steps appends a step and is idempotent on re-post', function (): void {
@@ -142,4 +157,44 @@ it('/me/onboarding endpoints all 401 without authentication', function (): void 
     $this->postJson('/api/v1/me/onboarding/steps', ['step' => OnboardingStep::ADD_ATHLETE])
         ->assertUnauthorized();
     $this->postJson('/api/v1/me/onboarding/dismiss')->assertUnauthorized();
+});
+
+it('ticks the timetable step once the academy has a class', function (): void {
+    $user = userWithAcademy();
+    $academy = $user->activeAcademy();
+
+    expect($this->actingAs($user)->getJson('/api/v1/me/onboarding')
+        ->json('data.completed_steps'))->not->toContain(OnboardingStep::SET_TIMETABLE);
+
+    AcademyClass::factory()->for($academy)->create();
+
+    // Answered from the database like the four beside it, rather than waiting
+    // for a tick the owner has no reason to give (#1649).
+    expect($this->actingAs($user)->getJson('/api/v1/me/onboarding')
+        ->json('data.completed_steps'))->toContain(OnboardingStep::SET_TIMETABLE);
+});
+
+it('ticks the programme step once the academy has a syllabus topic', function (): void {
+    $user = userWithAcademy();
+    $academy = $user->activeAcademy();
+
+    expect($this->actingAs($user)->getJson('/api/v1/me/onboarding')
+        ->json('data.completed_steps'))->not->toContain(OnboardingStep::WRITE_SYLLABUS);
+
+    SyllabusTopic::factory()->for($academy)->create();
+
+    expect($this->actingAs($user)->getJson('/api/v1/me/onboarding')
+        ->json('data.completed_steps'))->toContain(OnboardingStep::WRITE_SYLLABUS);
+});
+
+it('does not tick either from another academy\'s data', function (): void {
+    $user = userWithAcademy();
+    $other = userWithAcademy();
+
+    AcademyClass::factory()->for($other->activeAcademy())->create();
+    SyllabusTopic::factory()->for($other->activeAcademy())->create();
+
+    $steps = $this->actingAs($user)->getJson('/api/v1/me/onboarding')->json('data.completed_steps');
+    expect($steps)->not->toContain(OnboardingStep::SET_TIMETABLE)
+        ->and($steps)->not->toContain(OnboardingStep::WRITE_SYLLABUS);
 });
