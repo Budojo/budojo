@@ -899,6 +899,10 @@
         "label": "Promemoria scadenza certificato medico",
         "description": "Digest giornaliero alle 09:00 con gli atleti il cui certificato medico scade tra 30, 7 o 0 giorni."
       },
+      "academyDocumentReminders": {
+        "label": "I documenti dell'accademia",
+        "description": "Un promemoria a 30 giorni, a 7 giorni e il giorno stesso in cui scade un documento dell'accademia — il certificato DAE, la polizza RC, l'affiliazione, il contratto d'affitto."
+      },
       "unpaidAthletesDigest": {
         "label": "Digest mensile atleti non paganti",
         "description": "Una volta al mese, il giorno 16, l'elenco degli atleti che non hanno pagato la quota del mese corrente."
@@ -1249,7 +1253,8 @@
     "continueCta": "Continua",
     "categories": {
       "medical_cert_expiry_reminders": "i promemoria di scadenza del certificato medico",
-      "unpaid_athletes_digest": "il digest mensile degli atleti non paganti"
+      "unpaid_athletes_digest": "il digest mensile degli atleti non paganti",
+      "academy_document_expiry_reminders": "i promemoria sui documenti dell'accademia in scadenza"
     }
   },
   "emailVerification": {

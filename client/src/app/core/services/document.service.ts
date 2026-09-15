@@ -61,11 +61,21 @@ export interface DocumentListOptions {
  * `/api/v1/athletes/:id`.
  */
 export interface ExpiringDocument extends Document {
-  athlete: {
+  /**
+   * Absent for one of the academy's own papers (#1743) — they have no person
+   * attached, and the server omits the object rather than sending an empty
+   * one.
+   *
+   * Optional **on purpose**: typing it as always-present is what let
+   * `doc.athlete.first_name` compile and then throw on the first academy
+   * document, blanking the whole expiring page. With this, the compiler
+   * enforces the guard instead of the guard being a defensive habit.
+   */
+  athlete?: {
     id: number;
     first_name: string;
     last_name: string;
-  };
+  } | null;
 }
 
 /**

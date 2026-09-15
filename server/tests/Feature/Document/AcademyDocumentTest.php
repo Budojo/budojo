@@ -40,23 +40,31 @@ it('stores a document against the academy, with no athlete', function (): void {
         ->and($response->json('data.athlete_id'))->toBeNull();
 });
 
-it('keeps exactly one owner on an athlete document too', function (): void {
+it('will not let the update endpoint move a document between owners', function (): void {
     $user = userWithAcademy();
     $athlete = Athlete::factory()->for($user->academy)->create();
+    $doc = Document::factory()->for($athlete)->create(['type' => DocumentType::IdCard]);
 
-    $response = $this->actingAs($user)
-        ->postJson("/api/v1/athletes/{$athlete->id}/documents", [
-            'type' => 'id_card',
-            'file' => UploadedFile::fake()->create('carta.pdf', 12, 'application/pdf'),
+    // Neither FK is in `UpdateDocumentRequest::rules()`, so `validated()`
+    // drops them. That is what keeps the exactly-one-owner invariant from
+    // needing a database constraint — a row cannot acquire a second owner,
+    // because no request can name one.
+    //
+    // The previous version of this test asserted the invariant on a freshly
+    // uploaded row, where no code path writes the other column anyway: it
+    // could not have failed.
+    $this->actingAs($user)
+        ->putJson("/api/v1/documents/{$doc->id}", [
+            'academy_id' => $user->academy->id,
+            'athlete_id' => null,
+            'notes' => 'still mine',
         ])
-        ->assertCreated();
+        ->assertOk();
 
-    $document = Document::query()->findOrFail($response->json('data.id'));
-
-    // The relation writes the column, so neither Action names one — and a row
-    // cannot acquire both owners by anybody forgetting to clear the other.
-    expect($document->academy_id)->toBeNull()
-        ->and($document->athlete_id)->toBe($athlete->id);
+    $fresh = $doc->fresh();
+    expect($fresh?->athlete_id)->toBe($athlete->id)
+        ->and($fresh?->academy_id)->toBeNull()
+        ->and($fresh?->notes)->toBe('still mine');
 });
 
 it('refuses a medical certificate on the academy', function (): void {
@@ -148,13 +156,22 @@ it('merges the academy papers into the expiring list, in date order', function (
 
 it('does not let an inactive athlete filter hide the academy own papers', function (): void {
     $user = userWithAcademy();
+    // An INACTIVE athlete with an expiring document, so the #1740 scope this
+    // test is named for is actually exercised. Without one it created no
+    // athlete at all and the filter was never reached.
+    $left = Athlete::factory()->for($user->academy)->create(['status' => 'inactive']);
+    Document::factory()->for($left)->create([
+        'type' => DocumentType::IdCard,
+        'expires_at' => now()->addDays(4)->toDateString(),
+    ]);
     $policy = Document::factory()->forAcademy($user->academy)->create([
         'type' => DocumentType::Insurance,
         'expires_at' => now()->addDays(5)->toDateString(),
     ]);
 
-    // The active-athlete scope (#1740) lives on the athlete join. A liability
-    // policy has no training status, so it must not be filtered by one.
+    // The active-athlete scope lives on the athlete join: it takes the
+    // inactive athlete's card and leaves the academy's policy, which has no
+    // training status to be filtered by.
     $ids = collect($this->actingAs($user)
         ->getJson('/api/v1/documents/expiring')
         ->assertOk()
@@ -338,4 +355,127 @@ it('leaves an athlete medical certificate to the other command', function (): vo
     expect(DB::table('notifications')->count())->toBe(0);
 
     Illuminate\Support\Carbon::setTestNow();
+});
+
+it('refuses to retype an academy paper into a medical certificate', function (): void {
+    $user = userWithAcademy();
+    $policy = Document::factory()->forAcademy($user->academy)->create([
+        'type' => DocumentType::Insurance,
+    ]);
+
+    // Refusing it only at upload leaves a back door with teeth: the row would
+    // then match `PurgeExpiredMedicalCertificates`, which after 24 months
+    // soft-deletes it and wipes the file — a mistyped liability policy would
+    // quietly destroy itself.
+    $this->actingAs($user)
+        ->putJson("/api/v1/documents/{$policy->id}", ['type' => 'medical_certificate'])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('type');
+
+    expect($policy->fresh()?->type)->toBe(DocumentType::Insurance);
+});
+
+it('still lets an athlete document be retyped to a medical certificate', function (): void {
+    $user = userWithAcademy();
+    $athlete = Athlete::factory()->for($user->academy)->create();
+    $doc = Document::factory()->for($athlete)->create(['type' => DocumentType::Other]);
+
+    // The other half: the restriction is about the OWNER, not about the type.
+    // Blocking it everywhere would pass the test above and break a correction
+    // the owner has always been able to make.
+    $this->actingAs($user)
+        ->putJson("/api/v1/documents/{$doc->id}", ['type' => 'medical_certificate'])
+        ->assertOk();
+
+    expect($doc->fresh()?->type)->toBe(DocumentType::MedicalCertificate);
+});
+
+it('lets the owner switch a notification off and the digest goes quiet', function (): void {
+    Illuminate\Support\Carbon::setTestNow('2026-09-15 09:00:00');
+    $user = userWithAcademy();
+    Document::factory()->forAcademy($user->academy)->create([
+        'type' => DocumentType::Insurance,
+        'expires_at' => now()->addDays(7)->toDateString(),
+    ]);
+
+    $user->forceFill([
+        'notification_preferences' => ['academy_document_expiry_reminders' => false],
+    ])->save();
+
+    Artisan::call('budojo:send-academy-document-expiry-reminders');
+
+    // It was the only owner-facing reminder in the app that could not be
+    // switched off.
+    expect(DB::table('notifications')->count())->toBe(0);
+
+    Illuminate\Support\Carbon::setTestNow();
+});
+
+// ── GDPR: erasure and portability ─────────────────────────────────────────
+
+it('wipes the academy paper files when the account is purged', function (): void {
+    $user = userWithAcademy();
+    $athlete = Athlete::factory()->for($user->academy)->create();
+    $athleteDoc = Document::factory()->for($athlete)->create(['file_path' => 'documents/athlete.pdf']);
+    $policy = Document::factory()->forAcademy($user->academy)->create(['file_path' => 'documents/policy.pdf']);
+    Storage::disk('local')->put($athleteDoc->file_path, 'bytes');
+    Storage::disk('local')->put($policy->file_path, 'bytes');
+
+    app(\App\Actions\User\PurgeAccountAction::class)->execute($user);
+
+    // The FK cascade takes the ROW; nothing but this walk takes the file. An
+    // erasure that leaves the bytes on disk has not erased anything, and the
+    // walk went athlete-first, so academy papers were missed entirely.
+    expect(Storage::disk('local')->exists($policy->file_path))->toBeFalse()
+        ->and(Storage::disk('local')->exists($athleteDoc->file_path))->toBeFalse();
+});
+
+it('includes the academy papers in the data export', function (): void {
+    $user = userWithAcademy();
+    $policy = Document::factory()->forAcademy($user->academy)->create([
+        'type' => DocumentType::Insurance,
+        'original_name' => 'polizza-rc.pdf',
+    ]);
+
+    $export = app(\App\Actions\User\ExportUserDataAction::class)->execute($user);
+
+    // Portability that silently omits a whole class of the user's documents
+    // is not portability.
+    $names = collect($export['data']['academy']['documents'])->pluck('original_name')->all();
+    expect($names)->toContain('polizza-rc.pdf')
+        ->and($export['data']['academy']['documents'][0]['id'])->toBe($policy->id);
+});
+
+// ── The activity log ──────────────────────────────────────────────────────
+
+it('records an academy paper upload in the activity log', function (): void {
+    $user = userWithAcademy();
+
+    $this->actingAs($user)
+        ->postJson('/api/v1/academy/documents', [
+            'type' => 'insurance',
+            'file' => UploadedFile::fake()->create('polizza.pdf', 12, 'application/pdf'),
+        ])
+        ->assertCreated();
+
+    $entry = DB::table('audit_entries')->where('action', 'document.uploaded')->latest('id')->first();
+
+    // `athlete?->academy` was null for every academy paper, and the activity
+    // page filters on `academy_id` — so uploading the liability policy left
+    // no trace at all, which is the opposite of what an audit trail is for.
+    expect($entry?->academy_id)->toBe($user->academy->id)
+        ->and($entry?->subject_label)->toContain('polizza.pdf')
+        ->and($entry?->subject_label)->not->toContain('Athlete #');
+});
+
+it('reaches the activity page rather than being filtered out', function (): void {
+    $user = userWithAcademy();
+    Document::factory()->forAcademy($user->academy)->create(['original_name' => 'DAE.pdf'])->delete();
+
+    $labels = collect($this->actingAs($user)
+        ->getJson('/api/v1/audit-entries')
+        ->assertOk()
+        ->json('data'))->pluck('subject_label')->all();
+
+    expect($labels)->toContain('DAE.pdf (' . $user->academy->name . ')');
 });

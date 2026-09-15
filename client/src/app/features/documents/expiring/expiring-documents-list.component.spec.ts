@@ -230,7 +230,7 @@ describe('ExpiringDocumentsListComponent', () => {
         academy_id: 1,
         type: 'insurance',
         original_name: 'polizza-rc.pdf',
-        athlete: undefined as unknown as ExpiringDocument['athlete'],
+        athlete: null,
       });
 
     it('renders the row instead of throwing on the missing athlete', () => {
@@ -266,11 +266,15 @@ describe('ExpiringDocumentsListComponent', () => {
       expect(el.querySelector('[data-cy="academy-owned"]')).not.toBeNull();
     });
 
-    it('counts them in the header total like any other row', () => {
+    it('names them in the header chip like any other row', () => {
       const fixture = mount();
       flushHealth([policy(), makeExpiring({ id: 8 })]);
       fixture.detectChanges();
 
+      // The RENDERED count, not `count() === documents().length` — that
+      // asserted a line this change never touched and could not have failed.
+      const header = (fixture.nativeElement as HTMLElement).textContent ?? '';
+      expect(header).toContain('2');
       expect(fixture.componentInstance.count()).toBe(2);
     });
   });

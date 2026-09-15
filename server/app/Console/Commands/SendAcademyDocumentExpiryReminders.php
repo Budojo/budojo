@@ -8,6 +8,8 @@ use App\Models\Academy;
 use App\Models\Document;
 use App\Models\NotificationLog;
 use App\Notifications\OwnerAcademyDocumentExpiringNotification;
+use App\Support\NotificationCategory;
+use App\Support\NotificationPreferences;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -63,8 +65,16 @@ class SendAcademyDocumentExpiryReminders extends Command
                             continue;
                         }
 
+                        // Per-user opt-out, the same gate every other
+                        // owner-facing reminder carries. Skipped WITHOUT
+                        // claiming a `notification_log` row, so re-ticking the
+                        // box takes effect on the next trigger rather than
+                        // after a day of silence.
                         $owner = $academy->owner;
-                        if ($owner === null) {
+                        if ($owner === null || ! NotificationPreferences::isEnabled(
+                            $owner,
+                            NotificationCategory::ACADEMY_DOCUMENT_EXPIRY_REMINDERS,
+                        )) {
                             $skipped++;
 
                             continue;

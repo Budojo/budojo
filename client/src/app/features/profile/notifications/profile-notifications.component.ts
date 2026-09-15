@@ -57,6 +57,12 @@ const CATEGORIES: readonly ToggleableCategory[] = [
     i18nDescription: 'profile.notifications.medicalCertReminders.description',
   },
   {
+    key: 'academy_document_expiry_reminders',
+    group: 'owner',
+    i18nLabel: 'profile.notifications.academyDocumentReminders.label',
+    i18nDescription: 'profile.notifications.academyDocumentReminders.description',
+  },
+  {
     key: 'unpaid_athletes_digest',
     group: 'owner',
     i18nLabel: 'profile.notifications.unpaidAthletesDigest.label',

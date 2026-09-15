@@ -119,6 +119,17 @@ class PurgeAccountAction
             }
         }
 
+        // The academy's OWN papers (#1743) — the liability policy, the DAE
+        // certificate, the lease. The FK cascade deletes their rows when the
+        // academy goes, which is exactly what makes this walk necessary: a
+        // deleted row is a file nothing points at any more, and a GDPR erasure
+        // that leaves the bytes on disk has not erased anything. Missed on the
+        // first pass because the walk went athlete-first and academy documents
+        // hang off the academy directly.
+        foreach ($academy->documents()->withTrashed()->get() as $doc) {
+            $paths['local'][] = $doc->file_path;
+        }
+
         if (\is_string($academy->logo_path) && $academy->logo_path !== '') {
             $paths['public'][] = $academy->logo_path;
         }
