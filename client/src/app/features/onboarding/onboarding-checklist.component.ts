@@ -10,6 +10,7 @@ import {
   OnboardingService,
   OnboardingStep,
 } from '../../core/services/onboarding.service';
+import { CONFIRM_REJECT_BUTTON } from '../../shared/utils/confirm-buttons';
 
 /**
  * Static map of step → i18n key. Replaces a dynamic
@@ -20,6 +21,8 @@ import {
  */
 const STEP_LABEL_KEY: Record<OnboardingStep, string> = {
   add_athlete: 'onboarding.steps.add_athlete.label',
+  set_timetable: 'onboarding.steps.set_timetable.label',
+  write_syllabus: 'onboarding.steps.write_syllabus.label',
   log_attendance: 'onboarding.steps.log_attendance.label',
   mark_payment: 'onboarding.steps.mark_payment.label',
   upload_document: 'onboarding.steps.upload_document.label',
@@ -27,6 +30,8 @@ const STEP_LABEL_KEY: Record<OnboardingStep, string> = {
 };
 const STEP_HINT_KEY: Record<OnboardingStep, string> = {
   add_athlete: 'onboarding.steps.add_athlete.hint',
+  set_timetable: 'onboarding.steps.set_timetable.hint',
+  write_syllabus: 'onboarding.steps.write_syllabus.hint',
   log_attendance: 'onboarding.steps.log_attendance.hint',
   mark_payment: 'onboarding.steps.mark_payment.hint',
   upload_document: 'onboarding.steps.upload_document.hint',
@@ -111,7 +116,8 @@ export class OnboardingChecklistComponent {
       target: event.currentTarget as EventTarget,
       message: this.translate.instant('onboarding.checklist.confirmDismiss'),
       acceptLabel: this.translate.instant('onboarding.checklist.confirmDismissAccept'),
-      rejectLabel: this.translate.instant('onboarding.checklist.confirmDismissReject'),
+      rejectLabel: this.translate.instant('common.cancel'),
+      rejectButtonProps: CONFIRM_REJECT_BUTTON,
       accept: () => this.dismiss(),
     });
   }
@@ -131,6 +137,10 @@ export class OnboardingChecklistComponent {
     switch (step) {
       case 'add_athlete':
         return '/dashboard/athletes/new';
+      case 'set_timetable':
+        return '/dashboard/academy/timetable';
+      case 'write_syllabus':
+        return '/dashboard/academy/syllabus';
       case 'log_attendance':
         return '/dashboard/attendance';
       case 'mark_payment':

@@ -7,6 +7,7 @@ import { MyDocumentsComponent } from './my-documents.component';
 import type { Document } from '../../core/services/document.service';
 import { environment } from '../../../environments/environment';
 import { provideI18nTesting } from '../../../test-utils/i18n-test';
+import { LanguageService } from '../../core/services/language.service';
 
 function doc(over: Partial<Document> = {}): Document {
   return {
@@ -131,5 +132,28 @@ describe('MyDocumentsComponent (M7 PR-D slice 5)', () => {
       .error(new ProgressEvent('error'), { status: 500, statusText: 'Server Error' });
     fixture.detectChanges();
     expect(el.querySelector('[data-cy="my-documents-error"]')).not.toBeNull();
+  });
+
+  it("names the expiry month in the reader's language, not in English (#1670)", () => {
+    const { fixture, el, http } = setup();
+    // The real switch, not just the signal: `setLanguage` also calls
+    // `translate.use`, and the month names come through `| translate`.
+    TestBed.inject(LanguageService).setLanguage('it');
+    fixture.detectChanges();
+    http.expectOne(`${environment.apiBase}/api/v1/me/documents`).flush({
+      data: [
+        {
+          id: 1,
+          type: 'medical_certificate',
+          expires_at: '2026-09-30',
+          original_name: 'certificato.pdf',
+        },
+      ],
+    });
+    fixture.detectChanges();
+
+    const text = el.textContent ?? '';
+    expect(text).toContain('settembre');
+    expect(text).not.toContain('Sep');
   });
 });

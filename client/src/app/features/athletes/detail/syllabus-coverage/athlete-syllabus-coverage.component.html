@@ -64,22 +64,42 @@
     <ul class="legend">
       <li>
         <i class="legend__dot legend__dot--seen"></i
-        >{{ 'athletes.coverage.legend.seen' | translate: { count: r.totals.seen } }}
+        >{{
+          (r.totals.seen === 1
+            ? 'athletes.coverage.legend.seenOne'
+            : 'athletes.coverage.legend.seenOther'
+          ) | translate: { count: r.totals.seen }
+        }}
       </li>
       <li>
         <i class="legend__dot legend__dot--thin"></i
-        >{{ 'athletes.coverage.legend.thin' | translate: { count: r.totals.thin } }}
+        >{{
+          (r.totals.thin === 1
+            ? 'athletes.coverage.legend.thinOne'
+            : 'athletes.coverage.legend.thinOther'
+          ) | translate: { count: r.totals.thin }
+        }}
       </li>
       <li>
         <i class="legend__dot legend__dot--missed"></i
-        >{{ 'athletes.coverage.legend.missed' | translate: { count: r.totals.missed } }}
+        >{{
+          (r.totals.missed === 1
+            ? 'athletes.coverage.legend.missedOne'
+            : 'athletes.coverage.legend.missedOther'
+          ) | translate: { count: r.totals.missed }
+        }}
       </li>
     </ul>
 
     <div
       class="bar"
       role="img"
-      [attr.aria-label]="'athletes.coverage.legend.seen' | translate: { count: r.totals.seen }"
+      [attr.aria-label]="
+        (r.totals.seen === 1
+          ? 'athletes.coverage.legend.seenOne'
+          : 'athletes.coverage.legend.seenOther'
+        ) | translate: { count: r.totals.seen }
+      "
     >
       <span class="bar__seg bar__seg--seen" [style.width]="segment(r.totals.seen)"></span>
       <span class="bar__seg bar__seg--thin" [style.width]="segment(r.totals.thin)"></span>
@@ -93,13 +113,23 @@
         above would write it on a person.
       -->
       <p class="coverage__note" data-cy="athlete-coverage-not-taught">
-        {{ 'athletes.coverage.notTaughtYet' | translate: { count: r.totals.not_taught_yet } }}
+        {{
+          (r.totals.not_taught_yet === 1
+            ? 'athletes.coverage.notTaughtYetOne'
+            : 'athletes.coverage.notTaughtYetOther'
+          ) | translate: { count: r.totals.not_taught_yet }
+        }}
       </p>
     }
 
     @if (r.unattributed_presences > 0) {
       <p class="coverage__note coverage__note--caveat" data-cy="athlete-coverage-caveat">
-        {{ 'athletes.coverage.unattributed' | translate: { count: r.unattributed_presences } }}
+        {{
+          (r.unattributed_presences === 1
+            ? 'athletes.coverage.unattributedOne'
+            : 'athletes.coverage.unattributedOther'
+          ) | translate: { count: r.unattributed_presences }
+        }}
       </p>
     }
 

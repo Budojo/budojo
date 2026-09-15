@@ -21,6 +21,7 @@ import {
   AthleteService,
 } from '../../../../core/services/athlete.service';
 import { CardComponent } from '../../../../shared/components/card/card.component';
+import { CONFIRM_REJECT_BUTTON } from '../../../../shared/utils/confirm-buttons';
 
 /**
  * Owner-side email-change card on athlete detail (#476). The card
@@ -214,7 +215,8 @@ export class EmailChangeCardComponent {
       header: this.translate.instant(headerKey),
       message: this.translate.instant(messageKey, { newEmail, currentEmail }),
       acceptLabel: this.translate.instant('account.emailChange.athleteDetail.confirmAccept'),
-      rejectLabel: this.translate.instant('account.emailChange.athleteDetail.confirmReject'),
+      rejectLabel: this.translate.instant('common.cancel'),
+      rejectButtonProps: CONFIRM_REJECT_BUTTON,
       accept: () => this.dispatchChange(newEmail),
     });
   }

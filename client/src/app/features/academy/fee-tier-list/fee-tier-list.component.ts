@@ -19,6 +19,10 @@ import { finalize } from 'rxjs';
 import { FeeTier, FeeTierService } from '../../../core/services/fee-tier.service';
 import { LanguageService } from '../../../core/services/language.service';
 import { localeFor } from '../../../shared/utils/locale';
+import {
+  CONFIRM_ACCEPT_DESTRUCTIVE,
+  CONFIRM_REJECT_BUTTON,
+} from '../../../shared/utils/confirm-buttons';
 
 /**
  * The academy's monthly price list (#1381).
@@ -165,6 +169,10 @@ export class FeeTierListComponent {
     this.confirmationService.confirm({
       target: event.currentTarget as EventTarget,
       message,
+      acceptLabel: this.translate.instant('academy.feeTiers.confirm.removeAccept'),
+      rejectLabel: this.translate.instant('common.cancel'),
+      acceptButtonProps: CONFIRM_ACCEPT_DESTRUCTIVE,
+      rejectButtonProps: CONFIRM_REJECT_BUTTON,
       accept: () => this.remove(tier.id),
     });
   }

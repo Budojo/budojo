@@ -1,8 +1,45 @@
 <div class="payments-list">
   <header class="payments-list__header">
-    <h2 class="payments-list__title">
-      {{ 'athletes.detail.payments.title' | translate: { year } }}
-    </h2>
+    <div class="payments-list__year">
+      <!--
+        `aria-live` because the chevron changes the heading and the whole
+        table and announces nothing otherwise: the button's label says what
+        it will do, never what happened (WCAG 4.1.3).
+      -->
+      <h2 class="payments-list__title" aria-live="polite" aria-atomic="true">
+        {{ 'athletes.detail.payments.title' | translate: { year: seasonLabel() } }}
+      </h2>
+      <!--
+        A way to another year (#1636, PAY-1). The heading named one and
+        nothing could move it, so an athlete who joined two years ago had
+        history the app could not open. Same control as the attendance
+        month stepper, so the two read as the same gesture.
+      -->
+      <div class="payments-list__nav">
+        <p-button
+          icon="pi pi-chevron-left"
+          [text]="true"
+          [rounded]="true"
+          [disabled]="!canGoPrev()"
+          (onClick)="prevYear()"
+          [ariaLabel]="'athletes.detail.payments.prevYear' | translate"
+          [pTooltip]="'athletes.detail.payments.prevYear' | translate"
+          tooltipPosition="top"
+          data-cy="payments-prev-year"
+        />
+        <p-button
+          icon="pi pi-chevron-right"
+          [text]="true"
+          [rounded]="true"
+          [disabled]="!canGoNext()"
+          (onClick)="nextYear()"
+          [ariaLabel]="'athletes.detail.payments.nextYear' | translate"
+          [pTooltip]="'athletes.detail.payments.nextYear' | translate"
+          tooltipPosition="top"
+          data-cy="payments-next-year"
+        />
+      </div>
+    </div>
     @if (feeKnown() && !hasMonthlyFee()) {
       <p class="payments-list__hint" data-cy="payments-no-fee-hint">
         {{ 'athletes.detail.payments.noFeeHint' | translate }}
@@ -14,6 +51,14 @@
         and naming it here would be noise on every athlete of every academy.
       -->
       <p class="payments-list__hint" data-cy="payments-fee-tier">{{ feeTierHint(tier) }}</p>
+    }
+    <!--
+      What one period costs, for anyone who does not pay monthly (#1636,
+      PAY-4). Without it the period was discoverable only by reading the
+      rows, three of which say "Pagato · — · 2 gennaio" for one payment.
+    -->
+    @if (billingPeriodHint(); as periodHint) {
+      <p class="payments-list__hint" data-cy="payments-period-hint">{{ periodHint }}</p>
     }
   </header>
 

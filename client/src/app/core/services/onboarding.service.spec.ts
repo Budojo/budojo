@@ -25,6 +25,10 @@ describe('OnboardingService (#424)', () => {
     // doesn't update the server enum fails BOTH suites.
     expect([...ONBOARDING_STEPS]).toEqual([
       'add_athlete',
+      // The two the check-in depends on, added in #1649 and placed where
+      // they are needed: before logging attendance.
+      'set_timetable',
+      'write_syllabus',
       'log_attendance',
       'mark_payment',
       'upload_document',
@@ -79,7 +83,7 @@ describe('OnboardingService (#424)', () => {
     });
 
     expect(service.tourActive()).toBe(false);
-    expect(service.progress()).toBe(5);
+    expect(service.progress()).toBe(7);
   });
 
   it('tourActive is false before load() resolves — no flash-of-checklist', () => {

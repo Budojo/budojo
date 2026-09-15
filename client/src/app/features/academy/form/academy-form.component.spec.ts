@@ -3,6 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
+import { TranslateService } from '@ngx-translate/core';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 import { AcademyFormComponent } from './academy-form.component';
 import { Academy, AcademyService, Address } from '../../../core/services/academy.service';
@@ -564,5 +565,67 @@ describe('AcademyFormComponent — what one carnet entry covers (#1576)', () => 
     expect(
       (fixture.nativeElement as HTMLElement).querySelector('[data-cy="academy-form-slug"]'),
     ).not.toBeNull();
+  });
+
+  // ─── Form polish (#1650) ───────────────────────────────────────────────
+
+  describe('the optional address group', () => {
+    it('marks no field with the asterisk that means required everywhere else', () => {
+      const { fixture } = setup();
+      const el = fixture.nativeElement as HTMLElement;
+
+      // Four red asterisks sat under a legend reading "(optional)", and the
+      // legend then told you to fill "all marked fields" — the marker and
+      // the word contradicted each other on the same line.
+      expect(el.querySelectorAll('.required-when-filled')).toHaveLength(0);
+      const legend = el.querySelector('.address-group legend');
+      expect(legend?.textContent).toContain('fill them all');
+    });
+  });
+
+  describe('the address placeholders', () => {
+    it('follow the language, instead of being hardcoded Italian', () => {
+      const { fixture } = setup();
+      const el = fixture.nativeElement as HTMLElement;
+      const line2 = () => el.querySelector<HTMLInputElement>('#academy-address-line2');
+
+      // They were written straight into the template — `Scala B, interno 4`
+      // — so they stayed Italian whatever the sidebar said, and the i18n
+      // parity spec could not see them at all.
+      expect(line2()?.placeholder).toBe('Block B, flat 4');
+
+      TestBed.inject(TranslateService).use('it');
+      fixture.detectChanges();
+
+      expect(line2()?.placeholder).toBe('Scala B, interno 4');
+    });
+  });
+
+  // ─── Clearing the phone prefix (#1705) ───────────────────────────────────
+
+  it('clears the phone through the ✕ instead of killing the Save button', () => {
+    const { component, httpMock } = setup(
+      makeAcademy({ phone_country_code: '+39', phone_national_number: '0111234567' }),
+    );
+
+    // The exact sequence the ✕ exists for (#1645): empty the number, then
+    // clear the prefix. `showClear` writes null through the CVA, past the
+    // `nonNullable` group's `string` type — which only describes `reset()`.
+    component.form.controls.phone_national_number.setValue('');
+    component.form.controls.phone_country_code.setValue(null as unknown as string);
+
+    // Valid, because `phonePairRequired` normalises with `?? ''` — so this
+    // reaches buildPayload rather than being stopped by submit()'s guard.
+    expect(component.form.valid).toBe(true);
+
+    component.submit();
+
+    // It used to throw here, inside buildPayload and before submitting.set(true),
+    // so the owner got no spinner, no toast, no error and no request — Salva
+    // was simply dead until they reloaded.
+    const req = httpMock.expectOne('/api/v1/academy');
+    expect(req.request.body.phone_country_code).toBeNull();
+    expect(req.request.body.phone_national_number).toBeNull();
+    req.flush({ data: makeAcademy({ phone_country_code: null, phone_national_number: null }) });
   });
 });

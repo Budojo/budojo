@@ -117,10 +117,12 @@ export class AttendanceHeatmapComponent {
         const tooltip =
           count === 0
             ? this.translate.instant('stats.attendance.heatmap.tooltipEmpty', { date: dateLabel })
-            : this.translate.instant('stats.attendance.heatmap.tooltipCount', {
-                date: dateLabel,
-                count,
-              });
+            : this.translate.instant(
+                count === 1
+                  ? 'stats.attendance.heatmap.tooltipCountOne'
+                  : 'stats.attendance.heatmap.tooltipCountOther',
+                { date: dateLabel, count },
+              );
         week.push({
           date: cellDate,
           iso,

@@ -1,26 +1,20 @@
 {
+  "common": {
+    "cancel": "Annulla"
+  },
   "language": {
     "label": "Lingua",
     "english": "English",
     "italian": "Italiano"
   },
   "search": {
-    "openHint": "Cerca",
-    "openShortcutMac": "⌘K",
-    "openShortcutWin": "Ctrl K",
-    "ariaOpen": "Apri ricerca",
-    "dialogTitle": "Cerca",
     "placeholder": "Cerca atleti per nome…",
     "ariaInput": "Cerca atleti",
     "emptyHint": "Inizia a digitare per trovare atleti per nome.",
-    "noResults": "Nessun atleta corrisponde alla ricerca.",
-    "resultsAriaLabel": "Risultati della ricerca"
+    "noResults": "Nessun atleta corrisponde alla ricerca."
   },
   "nav": {
-    "open": "Apri navigazione",
-    "close": "Chiudi navigazione",
     "homeAriaLabel": "Budojo — torna alla dashboard",
-    "sidebarAriaLabel": "Navigazione principale",
     "profileAriaLabel": "Apri il tuo profilo",
     "academy": "Accademia",
     "athletes": "Atleti",
@@ -265,17 +259,11 @@
       "deletePostTitle": "Eliminare questo post?",
       "deletePostMessage": "Il post e tutti i suoi commenti spariranno dal feed. L'azione non è ripristinabile dalla dashboard.",
       "deleteAccept": "Elimina",
-      "deleteReject": "Annulla",
       "postDeletedSummary": "Post eliminato",
       "postDeleteError": "Non è stato possibile eliminare il post. Riprova tra un momento."
     }
   },
   "athletePortal": {
-    "welcome": {
-      "title": "Benvenuto in Budojo",
-      "body": "Il tuo account atleta è pronto. Le pagine dove vedrai la tua presenza, i tuoi pagamenti e i tuoi documenti arrivano nella prossima release — per ora aspetta, la tua accademia ti farà sapere quando ci sarà di più qui.",
-      "signOut": "Esci"
-    },
     "nav": {
       "myProfile": "Il mio profilo",
       "settings": "Impostazioni",
@@ -327,7 +315,7 @@
         "text": "{{name}} ha appena conquistato una nuova cintura!"
       },
       "stripePromotion": {
-        "text": "{{name}} ha preso una striscetta — {{from}} → {{to}}"
+        "text": "{{name}} ha preso un grado — {{from}} → {{to}}"
       },
       "share": {
         "button": "Condividi",
@@ -421,7 +409,8 @@
     "bell": {
       "ariaLabel": "Notifiche",
       "tooltip": "Notifiche",
-      "unreadCount": "{{count}} non lette"
+      "unreadCountOne": "{{count}} non letta",
+      "unreadCountOther": "{{count}} non lette"
     },
     "toast": {
       "dismiss": "Chiudi notifica"
@@ -438,7 +427,6 @@
       "dismiss": "Chiudi",
       "confirmDismiss": "Nascondere questa checklist per sempre? Non la vedrai più.",
       "confirmDismissAccept": "Nascondi",
-      "confirmDismissReject": "Tienila",
       "dismissedSummary": "Checklist nascosta"
     },
     "steps": {
@@ -461,6 +449,14 @@
       "view_stats": {
         "label": "Controlla le statistiche",
         "hint": "Trend di presenze, ricavi mensili, chi sta mollando."
+      },
+      "set_timetable": {
+        "label": "Imposta l'orario settimanale",
+        "hint": "Il check-in propone le lezioni dell'orario di oggi, quindi gliene serve uno."
+      },
+      "write_syllabus": {
+        "label": "Scrivi il programma",
+        "hint": "Gli argomenti di una lezione vengono dal programma: è quello che dà un senso alla copertura."
       }
     }
   },
@@ -481,14 +477,6 @@
       "no": "Non ora",
       "bodyCommunity": "I tuoi post nella community mostreranno anche la cintura.",
       "bodyFooter": "Puoi cambiare scelta più tardi da Profilo → Mi alleno in questa palestra."
-    }
-  },
-  "legal": {
-    "chrome": {
-      "brandHome": "Torna a Budojo",
-      "eyebrow": "Legale",
-      "languageToggleEn": "English",
-      "languageToggleIt": "Italiano"
     }
   },
   "cookies": {
@@ -533,7 +521,8 @@
     "title": "Aggiornamenti recenti",
     "subtitle": "Le novità di Budojo in parole semplici. La più recente in cima.",
     "back": "Torna alla dashboard",
-    "showMore": "Mostra altri {{count}} rilasci"
+    "showMoreOne": "Mostra un altro rilascio",
+    "showMoreOther": "Mostra altri {{count}} rilasci"
   },
   "notificationOnboarding": {
     "title": "Resta aggiornato",
@@ -787,7 +776,6 @@
   "profile": {
     "title": "Impostazioni",
     "subtitle": "Account, sicurezza, notifiche.",
-    "eyebrow": "Impostazioni",
     "tabs": {
       "identity": "Profilo",
       "security": "Sicurezza",
@@ -795,7 +783,6 @@
       "account": "Account"
     },
     "verifyRequiredBanner": "Devi verificare la tua email prima di aggiungere atleti o documenti. Controlla la casella di posta per il link di verifica, oppure usa il pulsante Reinvia qui sotto.",
-    "name": "Nome",
     "firstName": "Nome",
     "lastName": "Cognome",
     "handle": "Handle",
@@ -854,8 +841,7 @@
     },
     "avatarConfirm": {
       "removeMessage": "Rimuovere la tua foto profilo?",
-      "removeAccept": "Rimuovi",
-      "removeReject": "Annulla"
+      "removeAccept": "Rimuovi"
     },
     "changePassword": {
       "title": "Password",
@@ -1007,7 +993,6 @@
       "addDevice": "Aggiungi un altro dispositivo",
       "revoke": "Revoca",
       "revokeConfirm": "Smettere di inviare notifiche a questo dispositivo?",
-      "cancel": "Annulla",
       "deviceAdded": "Aggiunto",
       "enabledToast": {
         "summary": "Notifiche attivate su questo dispositivo"
@@ -1084,7 +1069,6 @@
       "confirmRevokeCurrent": "Disconnettere la sessione {{device}}? È il dispositivo che stai usando ora — verrai disconnesso e dovrai accedere di nuovo.",
       "confirmRevokeOthers": "Disconnettere tutte le altre sessioni e tenere solo questa? Dovrai accedere di nuovo dagli altri dispositivi.",
       "confirmAccept": "Disconnetti",
-      "confirmReject": "Annulla",
       "errorMessage": "Non è stato possibile caricare le sessioni. Riprova tra un momento.",
       "retry": "Riprova",
       "revokeToast": {
@@ -1158,7 +1142,6 @@
       "expiresAt": "Scade {{datetime}}",
       "confirmRevoke": "Revocare {{name}}? Qualsiasi script che usa questo token smetterà di funzionare immediatamente.",
       "confirmRevokeAccept": "Revoca",
-      "confirmRevokeReject": "Annulla",
       "createDialog": {
         "title": "Genera un nuovo token API",
         "nameLabel": "Nome del token",
@@ -1190,7 +1173,6 @@
         "confirmTitle": "Conferma il cambio email",
         "confirmMessage": "Invieremo un link di conferma a {{newEmail}}. Fino al click su quel link, la tua email di accesso resta {{currentEmail}}.",
         "confirmAccept": "Invia link",
-        "confirmReject": "Annulla",
         "required": "Inserisci il nuovo indirizzo email.",
         "invalid": "Non sembra un indirizzo email valido.",
         "maxLength": "L'email non può superare 255 caratteri.",
@@ -1220,7 +1202,6 @@
         "confirmStateCTitle": "Link di conferma",
         "confirmStateCMessage": "L'atleta dovrà confermare la nuova email cliccando un link. Fino ad allora la sua email di accesso resta {{currentEmail}}.",
         "confirmAccept": "Continua",
-        "confirmReject": "Annulla",
         "toast": {
           "directSummary": "Email aggiornata",
           "inviteSwapSummary": "Invito reinviato",
@@ -1295,8 +1276,6 @@
     "expiringList": {
       "title": "Stato documenti",
       "backToAthletes": "Atleti",
-      "countOne": "{{count}} documento scaduto o in scadenza entro 30 giorni",
-      "countOther": "{{count}} documenti scaduti o in scadenza entro 30 giorni",
       "countExpiring": "{{count}} in scadenza",
       "countMissing": "{{count}} senza certificato",
       "expiring": {
@@ -1319,10 +1298,6 @@
         "title": "Impossibile caricare i documenti in scadenza.",
         "hint": "Aggiorna la pagina per riprovare."
       },
-      "empty": {
-        "title": "Tutti i documenti sono aggiornati.",
-        "hint": "Nessuna scadenza nei prossimi 30 giorni. Ricontrolla più avanti."
-      },
       "allClear": {
         "title": "Tutti i documenti sono aggiornati.",
         "hint": "Nessuna scadenza nei prossimi 30 giorni e tutti gli atleti attivi hanno un certificato medico caricato."
@@ -1331,20 +1306,6 @@
         "errorSummary": "Scaricamento non riuscito",
         "errorDetail": "Impossibile scaricare {{filename}}. Riprova."
       }
-    },
-    "expiringWidget": {
-      "error": {
-        "title": "Impossibile verificare i documenti in scadenza",
-        "hint": "Aggiorna la pagina per riprovare"
-      },
-      "empty": {
-        "title": "Tutti i documenti sono aggiornati",
-        "hint": "Nessuna scadenza nei prossimi 30 giorni"
-      },
-      "countOne": "{{count}} atleta da controllare",
-      "countOther": "{{count}} atleti da controllare",
-      "countHint": "Scaduti, in scadenza o senza certificato",
-      "breakdown": "{{expiring}} in scadenza · {{missing}} senza certificato"
     },
     "upload": {
       "header": "Carica documento",
@@ -1436,7 +1397,6 @@
   },
   "academy": {
     "detail": {
-      "eyebrow": "Accademia",
       "edit": "Modifica",
       "logoAlt": "Logo dell'accademia",
       "logoHint": "PNG, JPG, SVG o WebP, massimo 2 MB.",
@@ -1487,14 +1447,12 @@
       },
       "confirm": {
         "removeMessage": "Rimuovere il logo dell'accademia?",
-        "removeAccept": "Rimuovi",
-        "removeReject": "Annulla"
+        "removeAccept": "Rimuovi"
       },
       "seasonStarted": "iniziata il {{date}}",
       "logoNone": "Nessuno"
     },
     "form": {
-      "eyebrow": "Accademia",
       "title": "Modifica accademia",
       "optional": "(opzionale)",
       "name": {
@@ -1518,15 +1476,18 @@
       },
       "website": {
         "label": "Sito web",
-        "errorUrl": "Inserisci un URL completo — es. https://example.com."
+        "errorUrl": "Inserisci un URL completo — es. https://example.com.",
+        "placeholder": "https://gracie-barra.com"
       },
       "facebook": {
         "label": "Facebook",
-        "errorUrl": "Inserisci un URL completo — es. https://facebook.com/lapagina."
+        "errorUrl": "Inserisci un URL completo — es. https://facebook.com/lapagina.",
+        "placeholder": "https://facebook.com/latuapagina"
       },
       "instagram": {
         "label": "Instagram",
-        "errorUrl": "Inserisci un URL completo — es. https://instagram.com/ilprofilo."
+        "errorUrl": "Inserisci un URL completo — es. https://instagram.com/ilprofilo.",
+        "placeholder": "https://instagram.com/iltuoprofilo"
       },
       "permalink": {
         "label": "Permalink",
@@ -1534,9 +1495,7 @@
       },
       "address": {
         "legend": "Indirizzo",
-        "legendOptional": "(opzionale — compila tutti i campi contrassegnati o nessuno)",
-        "requiredWhenFilledTooltip": "Obbligatorio quando un campo dell'indirizzo è compilato",
-        "requiredWhenFilledAria": "obbligatorio quando un campo dell'indirizzo è compilato",
+        "legendOptional": "(opzionale — via, città, CAP e provincia vanno insieme: compilali tutti, o lasciali tutti vuoti)",
         "line1Label": "Via e numero civico",
         "line2Label": "Scala / piano / interno",
         "zipLabel": "CAP",
@@ -1545,7 +1504,11 @@
         "provinceLabel": "Provincia",
         "provinceAria": "Provincia",
         "errorIncomplete": "Compila tutti i campi obbligatori dell'indirizzo, oppure svuotali tutti per lasciare l'accademia senza indirizzo.",
-        "clearHint": "Lascia tutti i campi vuoti per rimuovere l'indirizzo salvato."
+        "clearHint": "Lascia tutti i campi vuoti per rimuovere l'indirizzo salvato.",
+        "line1Placeholder": "Via Roma 1",
+        "line2Placeholder": "Scala B, interno 4",
+        "zipPlaceholder": "00100",
+        "cityPlaceholder": "Roma"
       },
       "monthlyFee": {
         "label": "Quota mensile",
@@ -1554,7 +1517,7 @@
       },
       "seasonStart": {
         "label": "La stagione inizia a",
-        "placeholder": "Settembre",
+        "placeholder": "Settembre (predefinito)",
         "hint": "Il mese in cui ricomincia l'anno di allenamenti. La lista atleti conta le presenze da qui, non dal giorno di iscrizione del singolo atleta. Se lo lasci vuoto vale settembre."
       },
       "trainingDays": {
@@ -1609,7 +1572,8 @@
       "confirm": {
         "remove": "Eliminare la fascia «{{label}}»?",
         "removeWithAthletesOne": "Eliminare la fascia «{{label}}»? {{count}} atleta la sta usando e tornerà alla quota mensile dell’accademia.",
-        "removeWithAthletesOther": "Eliminare la fascia «{{label}}»? {{count}} atleti la stanno usando e torneranno alla quota mensile dell’accademia."
+        "removeWithAthletesOther": "Eliminare la fascia «{{label}}»? {{count}} atleti la stanno usando e torneranno alla quota mensile dell’accademia.",
+        "removeAccept": "Elimina"
       },
       "toast": {
         "savedSummary": "Listino aggiornato",
@@ -1660,7 +1624,8 @@
         "save": "Salva",
         "remove": "Rimuovi lezione",
         "nameRequired": "Dai un nome alla lezione.",
-        "dayRequired": "Scegli un giorno."
+        "dayRequired": "Scegli un giorno.",
+        "durationPlaceholder": "minuti"
       },
       "kind": {
         "gi": "Gi",
@@ -1671,7 +1636,7 @@
       "confirm": {
         "remove": "Rimuovere {{name}} dall'orario? Le lezioni già tenute restano come sono.",
         "accept": "Rimuovi",
-        "reject": "Tieni"
+        "title": "Rimuovi dall'orario"
       },
       "toast": {
         "saved": "Lezione salvata",
@@ -1679,7 +1644,9 @@
         "errorSummary": "Qualcosa è andato storto",
         "errorDetail": "La modifica non è stata salvata. Riprova.",
         "loadErrorDetail": "Impossibile caricare l'orario."
-      }
+      },
+      "plan": "Pianifica",
+      "editHint": "Apri la lezione per modificarla"
     },
     "syllabus": {
       "title": "Programma",
@@ -1726,7 +1693,7 @@
         "removePositionOne": "Rimuovere {{name}} e la tecnica che contiene?",
         "removePositionOther": "Rimuovere {{name}} e le {{count}} tecniche che contiene?",
         "accept": "Rimuovi",
-        "reject": "Tieni"
+        "title": "Rimuovi dal programma"
       },
       "toast": {
         "saved": "Programma salvato",
@@ -1735,7 +1702,16 @@
         "errorSummary": "Qualcosa è andato storto",
         "errorDetail": "La modifica non è stata salvata. Riprova.",
         "loadErrorDetail": "Impossibile caricare il programma."
-      }
+      },
+      "searchPlaceholder": "Cerca una tecnica o una posizione",
+      "searchClear": "Cancella la ricerca",
+      "searchSummary": "{{techniques}} in {{positions}}. Svuota la ricerca per tornare all’albero.",
+      "searchNone": "Niente nel programma corrisponde a “{{query}}”.",
+      "countSplit": "{{inSeason}} in stagione · {{total}} totali",
+      "searchCountTechniqueOne": "{{count}} tecnica",
+      "searchCountTechniqueOther": "{{count}} tecniche",
+      "searchCountPositionOne": "{{count}} posizione",
+      "searchCountPositionOther": "{{count}} posizioni"
     },
     "schedule": {
       "title": "Pianifica un cambio calendario futuro",
@@ -1745,9 +1721,8 @@
       "editCancel": "Annulla",
       "save": "Pianifica cambio",
       "cancel": "Annulla cambio pianificato",
-      "cancelConfirm": "Annullare il cambio pianificato?",
-      "cancelAccept": "Sì, annulla",
-      "cancelReject": "Mantienilo",
+      "cancelConfirm": "Scartare il cambio pianificato?",
+      "cancelAccept": "Scarta",
       "effectiveFromLabel": "Effettivo dal",
       "effectiveFromHint": "Il nuovo calendario parte da questo giorno. Deve essere una data futura — per cambiare con effetto immediato usa il selettore dei giorni di allenamento qui sopra.",
       "daysLabel": "Giorni di allenamento da quella data",
@@ -1780,7 +1755,6 @@
   },
   "attendance": {
     "daily": {
-      "eyebrow": "Presenze",
       "title": "Check-in di oggi",
       "titleForDate": "Check-in · {{date}}",
       "noClassToday": "Oggi nessun allenamento — stai vedendo la sessione di {{date}}.",
@@ -1822,7 +1796,6 @@
       }
     },
     "summary": {
-      "eyebrow": "Riepilogo presenze",
       "daysOne": "{{count}} giorno di allenamento",
       "daysOther": "{{count}} giorni di allenamento",
       "athletesOne": "{{count}} atleta",
@@ -1889,7 +1862,6 @@
     }
   },
   "statuses": {
-    "all": "Tutti gli stati",
     "active": "In attività",
     "inactive": "Non in attività",
     "trashed": "Cancellati"
@@ -1902,7 +1874,6 @@
       "addButton": "Aggiungi atleta",
       "searchPlaceholder": "Cerca per nome",
       "beltPlaceholder": "Cintura",
-      "statusPlaceholder": "Stato",
       "ownerChip": "Titolare",
       "paidOptions": {
         "yes": "Pagato",
@@ -1910,17 +1881,15 @@
       },
       "table": {
         "fullName": "Nome e cognome",
-        "status": "Stato",
-        "paidPrefix": "Pagato",
         "payment": "Pagamento",
-        "attendance": "Presenze"
+        "attendance": "Presenze",
+        "attendanceLines": "mese / stagione"
       },
       "tooltip": {
         "edit": "Modifica",
         "editAria": "Modifica {{name}}",
         "openMenuAria": "Apri il menu per {{name}}",
         "paid": "Pagato",
-        "unpaid": "Non pagato",
         "restore": "Ripristina",
         "restoreAria": "Ripristina {{name}}",
         "publicProfile": "Vedi profilo pubblico",
@@ -1929,7 +1898,6 @@
         "documents": "Documenti",
         "payments": "Pagamenti",
         "promotions": "Storico cinture",
-        "carnet": "Carnet {{code}} — {{count}} ingressi rimasti",
         "paidCycleAll": "Stai vedendo tutti. Clicca per vedere solo chi ha pagato.",
         "paidCyclePaid": "Stai vedendo chi ha pagato. Clicca per vedere solo chi non ha pagato.",
         "paidCycleUnpaid": "Stai vedendo chi non ha pagato. Clicca per tornare a vedere tutti.",
@@ -1950,7 +1918,11 @@
         "firstRunHint": "Aggiungi il primo, o porta dentro tutta la lista da un foglio di calcolo.",
         "filteredHintNamed": "Nessuno corrisponde a {{filters}}. Prova a togliere un filtro.",
         "trashTitle": "Il cestino è vuoto",
-        "trashHint": "Gli atleti che elimini finiscono qui, e da qui puoi rimetterli a posto."
+        "trashHint": "Gli atleti che elimini finiscono qui, e da qui puoi rimetterli a posto.",
+        "allInactiveTitle": "Al momento non si allena nessuno",
+        "allInactiveHintOne": "Hai un atleta in lista, segnato come non attivo.",
+        "allInactiveHintOther": "Hai {{count}} atleti in lista, tutti segnati come non attivi.",
+        "showAll": "Mostra tutti"
       },
       "error": {
         "title": "Impossibile caricare gli atleti",
@@ -1979,16 +1951,14 @@
         "markPaidAccept": "Segna pagato",
         "markUnpaidMessage": "Segnare {{name}} come non pagato per {{month}}?",
         "markUnpaidAccept": "Segna non pagato",
-        "cancel": "Annulla",
-        "markPaidPeriodMessage": "Registrare il pagamento di {{name}} per {{period}}?",
-        "markUnpaidPeriodMessage": "Annullare il pagamento di {{name}} che copre {{period}}?",
+        "markPaidPeriodMessage": "Segnare {{name}} come pagato? Il pagamento copre: {{period}}",
+        "markUnpaidPeriodMessage": "Segnare {{name}} come non pagato? Il pagamento copriva: {{period}}",
         "sellCarnetMessage": "Vendere un carnet da {{price}} per {{entries}} ingressi a {{name}}?",
         "sellCarnetAccept": "Vendi"
       },
       "restoreConfirm": {
         "message": "Ripristinare {{name}}?",
-        "accept": "Ripristina",
-        "reject": "Annulla"
+        "accept": "Ripristina"
       },
       "restoreToast": {
         "successSummary": "Atleta ripristinato",
@@ -2045,8 +2015,7 @@
       "acceptedChip": "Atleta registrato il {{acceptedAt}}",
       "confirm": {
         "revokeMessage": "Revocare l'invito? L'atleta non potrà più usare il link.",
-        "revokeAccept": "Revoca",
-        "revokeReject": "Annulla"
+        "revokeAccept": "Revoca"
       },
       "toast": {
         "invitedSummary": "Invito inviato",
@@ -2067,8 +2036,10 @@
         "confirm": {
           "markPaidMessage": "Segnare {{name}} come pagato per {{month}} {{year}}?",
           "markUnpaidMessage": "Segnare {{name}} come non pagato per {{month}} {{year}}?",
-          "markPaidPeriodMessage": "Registrare il pagamento di {{name}} per {{period}}?",
-          "markUnpaidPeriodMessage": "Annullare il pagamento di {{name}} che copre {{period}}?"
+          "markPaidPeriodMessage": "Segnare {{name}} come pagato? Il pagamento copre: {{period}}",
+          "markUnpaidPeriodMessage": "Segnare {{name}} come non pagato? Il pagamento copriva: {{period}}",
+          "markPaidAccept": "Segna pagato",
+          "markUnpaidAccept": "Segna non pagato"
         },
         "toast": {
           "markedPaidSummary": "Pagato",
@@ -2078,7 +2049,8 @@
           "errorMissingFee": "Imposta una quota mensile sull'accademia prima di registrare i pagamenti.",
           "errorGeneric": "Impossibile aggiornare il pagamento. Riprova.",
           "loadErrorDetail": "Impossibile caricare i pagamenti.",
-          "errorOverlap": "Quel mese è già coperto da un altro pagamento."
+          "errorOverlap": "Quel mese è già coperto da un altro pagamento.",
+          "errorYear": "Quell’anno è fuori dall’intervallo in cui si possono registrare pagamenti."
         },
         "title": "Pagamenti — {{year}}",
         "noFeeHint": "Imposta una quota mensile sull'accademia per iniziare a registrare i pagamenti. Fino ad allora questa pagina rimane di sola lettura.",
@@ -2095,13 +2067,19 @@
         },
         "feeTierHintOne": "Fascia {{label}} · {{amount}} al mese per {{count}} lezione a settimana.",
         "feeTierHintOther": "Fascia {{label}} · {{amount}} al mese per {{count}} lezioni a settimana.",
-        "periodRange": "Da {{from}} a {{to}} {{year}}"
+        "periodRange": "Da {{from}} a {{to}} {{year}}",
+        "prevYear": "Anno precedente",
+        "nextYear": "Anno successivo",
+        "periodHint": "{{period}} · {{amount}} a periodo",
+        "periodMonths": "Ogni {{count}} mesi",
+        "periodStartsHereOne": "Copre anche {{next}}",
+        "periodStartsHereOther": "Copre anche {{next}}",
+        "periodCoveredBy": "Incluso nel pagamento di {{month}}"
       },
       "documents": {
         "confirm": {
           "deleteMessage": "Eliminare {{name}}? Il file verrà rimosso dal disco.",
-          "deleteAccept": "Elimina",
-          "cancel": "Annulla"
+          "deleteAccept": "Elimina"
         },
         "toast": {
           "uploadedSummary": "Documento caricato",
@@ -2115,8 +2093,6 @@
           "deleteErrorDetail": "Impossibile eliminare questo documento. Riprova."
         },
         "heading": "Documenti",
-        "activeCount": "{{count}} attivi",
-        "cancelledCount": "{{count}} cancellati",
         "toggle": {
           "aria": "Mostra documenti cancellati",
           "label": "Mostra cancellati"
@@ -2144,7 +2120,11 @@
           "withCancelled": "Nessun documento — attivo o cancellato.",
           "default": "Nessun documento.",
           "hint": "Usa <strong>Aggiungi documento</strong> sopra per caricare il primo."
-        }
+        },
+        "activeCountOne": "{{count}} attivo",
+        "activeCountOther": "{{count}} attivi",
+        "cancelledCountOne": "{{count}} cancellato",
+        "cancelledCountOther": "{{count}} cancellati"
       },
       "backToList": "Atleti",
       "loading": "Caricamento atleta…",
@@ -2165,9 +2145,9 @@
       },
       "promotions": {
         "errorBody": "Impossibile caricare lo storico promozioni. Riprova tra un momento.",
-        "emptyBody": "Nessuna promozione registrata. Cambia cintura o striscette e qui apparirà la riga.",
+        "emptyBody": "Nessuna promozione registrata. Cambia cintura o gradi e qui apparirà la riga.",
         "firstBelt": "Prima cintura",
-        "stripes": "striscette",
+        "stripes": "gradi",
         "recordedBy": "Registrato da {{name}}",
         "prevPage": "Pagina precedente",
         "nextPage": "Pagina successiva",
@@ -2189,14 +2169,14 @@
           "body": "Per una promozione avvenuta prima che Budojo esistesse. Deve essere coerente con le promozioni già registrate intorno ad essa.",
           "kindLabel": "Tipo",
           "kindBelt": "Cintura",
-          "kindStripe": "Striscetta",
+          "kindStripe": "Grado",
           "dateLabel": "Registrata il",
           "fromBelt": "Da cintura",
           "toBelt": "A cintura",
           "firstBelt": "Prima cintura (nessuna precedente)",
           "beltAtEvent": "Cintura al momento",
-          "fromStripes": "Da striscette",
-          "toStripes": "A striscette",
+          "fromStripes": "Da gradi",
+          "toStripes": "A gradi",
           "confirm": "Aggiungi promozione",
           "error": "Impossibile aggiungere questa promozione. Riprova."
         },
@@ -2241,7 +2221,6 @@
         "entriesWord": "ingressi",
         "entryCoversDay": "Un ingresso copre l'intera giornata, qualunque sia il numero di lezioni.",
         "none": "Nessun carnet attivo.",
-        "expiresOn": "Scade il {{date}}",
         "lowBalance": "In esaurimento",
         "expiringSoon": "In scadenza",
         "register": "Registro ingressi",
@@ -2282,7 +2261,8 @@
           "confirm": "Salva",
           "newExpiry": "Nuova scadenza: {{date}}"
         },
-        "soldOnFor": "Venduto il {{date}} per {{amount}}"
+        "soldOnFor": "Venduto il {{date}} per {{amount}}",
+        "confirmDeleteAccept": "Elimina"
       },
       "closeEdit": "Torna alla scheda",
       "reachAria": "Come contattare l'atleta",
@@ -2305,7 +2285,7 @@
       "validationFailed": "Validazione fallita.",
       "serverError": "Qualcosa è andato storto. Riprova.",
       "optional": "(opzionale)",
-      "optionalAddress": "(opzionale — compila tutti i campi sotto o lasciali tutti vuoti)",
+      "optionalAddress": "(opzionale — via, città, CAP e provincia vanno insieme: compilali tutti, o lasciali tutti vuoti)",
       "label": {
         "firstName": "Nome",
         "lastName": "Cognome",
@@ -2343,11 +2323,7 @@
       "aria": {
         "phoneCountryCode": "Prefisso telefonico",
         "phoneNationalNumber": "Numero nazionale",
-        "province": "Provincia",
-        "requiredWhenFilled": "obbligatorio quando un campo dell'indirizzo è compilato"
-      },
-      "tooltip": {
-        "requiredWhenFilled": "Obbligatorio quando un campo dell'indirizzo è compilato"
+        "province": "Provincia"
       },
       "validation": {
         "maxLength100": "Massimo 100 caratteri.",
@@ -2433,7 +2409,8 @@
         "identity": "Anagrafica",
         "gym": "In palestra",
         "contact": "Contatti"
-      }
+      },
+      "feeTierStandard": "Quota standard dell'accademia"
     },
     "photo": {
       "title": "Foto",
@@ -2444,8 +2421,7 @@
       "alt": "Foto di {{name}}",
       "confirm": {
         "removeMessage": "Rimuovere la foto di questo atleta?",
-        "removeAccept": "Rimuovi",
-        "removeReject": "Annulla"
+        "removeAccept": "Rimuovi"
       },
       "toast": {
         "uploadSuccess": "Foto aggiornata",
@@ -2495,7 +2471,8 @@
       "status": {
         "ok": "Verrà importato",
         "invalid": "Scartato",
-        "duplicate": "Già in lista"
+        "duplicate": "Già in lista",
+        "okDone": "Importato"
       },
       "reason": {
         "duplicate": "C'è già qualcuno con questo nome."
@@ -2523,17 +2500,18 @@
       "another": "Scegli un altro file"
     },
     "coverage": {
-      "fraction": "{{seen}} su {{total}} cose che la palestra ha fatto",
+      "fraction": "{{seen}} su {{total}} tecniche che la palestra ha fatto",
       "since": "Conteggio dal {{date}}, giorno di iscrizione.",
-      "notTaughtYet": "Altri {{count}} sono nel programma ma non sono ancora stati fatti. È una lacuna della palestra, non sua.",
-      "unattributed": "{{count}} dei suoi allenamenti non dicono a quale lezione fossero, quindi qui non contano in nessun senso.",
       "legend": {
-        "seen": "{{count}} visti",
-        "thin": "{{count}} visti una volta",
-        "missed": "{{count}} persi"
+        "seenOne": "{{count}} visto",
+        "seenOther": "{{count}} visti",
+        "thinOne": "{{count}} visto una volta",
+        "thinOther": "{{count}} visti una volta",
+        "missedOne": "{{count}} perso",
+        "missedOther": "{{count}} persi"
       },
       "missed": {
-        "title": "Cosa si è perso",
+        "title": "Cosa ha perso",
         "chances": "fatto {{count}}×"
       },
       "seen": {
@@ -2553,7 +2531,11 @@
           "title": "Ancora nessuna lezione",
           "hint": "Nessuna lezione è stata segnata da quando si è iscritto, il {{date}}. Non c'è niente che possa essersi perso."
         }
-      }
+      },
+      "unattributedOne": "{{count}} dei suoi allenamenti non dice a quale lezione fosse, quindi qui non conta in nessun senso.",
+      "unattributedOther": "{{count}} dei suoi allenamenti non dicono a quale lezione fossero, quindi qui non contano in nessun senso.",
+      "notTaughtYetOne": "Un altro è nel programma ma non è ancora stato fatto. È una lacuna della palestra, non sua.",
+      "notTaughtYetOther": "Altri {{count}} sono nel programma ma non sono ancora stati fatti. È una lacuna della palestra, non sua."
     }
   },
   "month": {
@@ -2578,8 +2560,8 @@
       "ariaUnmark": "Segna non pagato"
     },
     "beltBadge": {
-      "stripeOne": "{{count}} striscia",
-      "stripeMany": "{{count}} strisce"
+      "stripeOne": "{{count}} grado",
+      "stripeMany": "{{count}} gradi"
     },
     "unpaidWidget": {
       "eyebrow": "Non pagati",
@@ -2627,13 +2609,11 @@
     }
   },
   "stats": {
-    "eyebrow": "Panoramica",
     "title": "L'accademia a colpo d'occhio",
     "subtitle": "Lettura rapida dell’accademia — distribuzione cinture — calcolata in tempo reale dai tuoi atleti.",
     "loadError": "Impossibile caricare le statistiche. Riprova.",
     "emptyTitle": "Dati non sufficienti",
     "emptyHint": "Aggiungi il primo atleta e i grafici si popoleranno qui.",
-    "total": "Su {{count}} atleti attivi.",
     "belt": {
       "title": "Cinture",
       "hint": "Atleti per grado IBJJF, kids → senior. Passa sopra a una fetta per il conteggio + percentuale."
@@ -2655,13 +2635,14 @@
         "less": "Meno",
         "more": "Più",
         "scale": "Le tonalità seguono questo periodo: {{b1}} · {{b2}} · {{b3}} · {{b4}} presenze al giorno",
-        "tooltipCount": "{{count}} presenze il {{date}}",
         "tooltipEmpty": "Nessuna presenza il {{date}}",
         "dow": {
           "mon": "Lun",
           "wed": "Mer",
           "fri": "Ven"
-        }
+        },
+        "tooltipCountOne": "{{count}} presenza il {{date}}",
+        "tooltipCountOther": "{{count}} presenze il {{date}}"
       }
     },
     "payments": {
@@ -2677,7 +2658,6 @@
       "loading": "Caricamento distribuzione…",
       "errored": "Impossibile caricare la distribuzione.",
       "empty": "Nessun atleta con data di nascita.",
-      "missingDob": "{{count}} atleti senza data di nascita",
       "scope": {
         "kids": "Kids",
         "adults": "Adulti",
@@ -2697,7 +2677,9 @@
         "master_5": "Master 5",
         "master_6": "Master 6",
         "master_7": "Master 7"
-      }
+      },
+      "missingDobOne": "{{count}} atleta senza data di nascita",
+      "missingDobOther": "{{count}} atleti senza data di nascita"
     },
     "syllabus": {
       "headline": "{{covered}} di {{total}} coperti in questa stagione",
@@ -2710,9 +2692,12 @@
       "worked": "fatta {{count}}×",
       "barAria": "{{name}}: {{covered}} coperti, {{thin}} fatti una volta, {{missing}} non fatti",
       "state": {
-        "covered": "{{count}} coperti",
-        "thin": "{{count}} fatti una volta",
-        "missing": "{{count}} non fatti"
+        "coveredOne": "{{count}} coperto",
+        "coveredOther": "{{count}} coperti",
+        "missingOne": "{{count}} non fatto",
+        "missingOther": "{{count}} non fatti",
+        "thinOne": "{{count}} fatto una volta",
+        "thinOther": "{{count}} fatti una volta"
       },
       "filter": {
         "all": "Tutto",
@@ -2736,7 +2721,9 @@
         "hint": "Qualcosa è andato storto da parte nostra. Riprova.",
         "retry": "Riprova"
       }
-    }
+    },
+    "totalOne": "Su {{count}} atleta attivo.",
+    "totalOther": "Su {{count}} atleti attivi."
   },
   "publicProfile": {
     "joinedAt": "Da {{ date }}",
@@ -2773,7 +2760,6 @@
     "title": "La tua settimana sul tatami",
     "loading": "Caricamento della settimana…",
     "heading": "Ecco la tua settimana",
-    "sessions": "{{count}} allenament{{count, plural, one {o} other {i}}}",
     "hours": "Ore di tatami",
     "partners": {
       "heading": "Compagni di allenamento"
@@ -2787,7 +2773,9 @@
       "heading": "Impossibile caricare il recap",
       "copy": "Il parametro settimana sembra sbagliato, o il tuo profilo atleta non è pronto.",
       "cta": "Torna al mio profilo"
-    }
+    },
+    "sessionsOne": "{{count}} allenamento",
+    "sessionsOther": "{{count}} allenamenti"
   },
   "myAttendanceToday": {
     "title": "Presenza di oggi",
@@ -2836,13 +2824,11 @@
     "never": "Ancora nessun backup",
     "backupNow": "Esegui backup",
     "archives": "Backup",
-    "loading": "Caricamento dei backup…",
     "empty": "Ancora nessun backup. Creane uno ora per proteggere i tuoi dati.",
     "size": "{{mb}} MB",
     "restore": "Ripristina",
     "confirmRestore": "Ripristinare questo backup? I dati attuali verranno sostituiti con il contenuto di questo archivio.",
     "confirmRestoreAccept": "Ripristina",
-    "confirmRestoreReject": "Annulla",
     "toast": {
       "created": "Backup creato",
       "failed": "Backup non riuscito — controlla il log",
@@ -2865,7 +2851,6 @@
       "import": "Importa le chiavi",
       "importConfirm": "Importare queste chiavi? Sostituisce le chiavi attuali di questo computer e riavvia Budojo. Fallo solo quando recuperi i dati da un altro PC.",
       "importConfirmAccept": "Importa e riavvia",
-      "importConfirmReject": "Annulla",
       "importOk": "Chiavi di recupero importate",
       "importRelaunch": "Budojo si riavvierà per applicarle.",
       "importFailed": "Impossibile importare il codice di recupero"
@@ -2873,7 +2858,6 @@
     "drive": {
       "title": "Backup su Google Drive",
       "why": "I backup salvati su questo computer non sopravvivono a questo computer. Collega un account Google e ogni backup viene copiato lì automaticamente.",
-      "unavailable": "Questa versione non può collegarsi a Google Drive.",
       "connect": "Collega Google Drive",
       "connectedTo": "Backup su {{account}}",
       "connected": "Google Drive collegato",

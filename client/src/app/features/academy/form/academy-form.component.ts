@@ -24,7 +24,6 @@ import { MessageModule } from 'primeng/message';
 import { SelectModule } from 'primeng/select';
 import { SelectButtonModule } from 'primeng/selectbutton';
 import { ToastModule } from 'primeng/toast';
-import { Tooltip } from 'primeng/tooltip';
 import { MessageService } from 'primeng/api';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import {
@@ -144,7 +143,6 @@ const COUNTRY_CODE_OPTIONS: SelectOption<string>[] = [
     MessageModule,
     SelectModule,
     ToastModule,
-    Tooltip,
     TranslatePipe,
     TrainingDaysPickerComponent,
     SchedulePlannerComponent,
@@ -568,8 +566,17 @@ export class AcademyFormComponent implements OnInit {
     // Phone (#161). Send `null` for both when either is empty (the validator
     // already rejects half-filled, so reaching here means both empty or both
     // valid). Sending null on both clears any existing saved phone.
-    const phoneCc = v.phone_country_code.trim();
-    const phoneNn = v.phone_national_number.trim();
+    //
+    // Optional-chained because the prefix select carries `[showClear]`, which
+    // writes **null** through the CVA — past the `nonNullable` group's `string`
+    // type, which only describes `reset()`. With the number already empty a
+    // null prefix is valid (`phonePairRequired` normalises with `?? ''`), so it
+    // clears `submit()`'s guard and lands here; a bare `.trim()` then threw
+    // before `submitting.set(true)` and before any request, which is why Salva
+    // did nothing at all rather than failing visibly (#1705). The athlete
+    // form's builder has been written this way since #228.
+    const phoneCc = v.phone_country_code?.trim() ?? '';
+    const phoneNn = v.phone_national_number?.trim() ?? '';
     const phoneEmpty = phoneCc === '' || phoneNn === '';
 
     // Contact links (#162). Each is independently nullable — empty

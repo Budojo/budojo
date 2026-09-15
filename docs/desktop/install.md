@@ -75,7 +75,7 @@ Uninstall from **Windows Settings → Apps**. By design the uninstaller **does n
 
 From v2.43.0 the installed build **updates itself**. It checks the public releases shortly after launch and every six hours, downloads a new version in the background (only the changed blocks, thanks to the published blockmap), and installs it **when you next close Budojo** — never while you are working. A desktop notification tells you when one is waiting.
 
-Nothing to configure, and nothing to click. If the machine is offline the check simply fails and is logged; the app starts normally.
+Nothing to configure. Since v2.61.2 the title bar is where the update speaks: it shows the percentage while a new version downloads, then the version that is waiting. Pressing it installs immediately, closing the app to do so — so the default is still "installs when you next close Budojo", and the button is there for when you would rather not wait. If the machine is offline the check simply fails and is logged; the app starts normally.
 
 Two caveats worth knowing:
 

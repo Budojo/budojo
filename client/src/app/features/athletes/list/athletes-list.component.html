@@ -1,3 +1,85 @@
+<!--
+  The four empty states, written once (#1666).
+
+  There are two places that draw them — the table's `emptymessage` and the
+  mobile card list — and they differed only by `dataCy`. Keeping two copies
+  of a `@switch` in step had already been required three times, and the
+  fourth attempt is what let the all-inactive case ship desktop-only: Angular
+  checks no `@switch` for exhaustiveness, so the new value fell into
+  `@default` on the phone and that screen went on saying the academy had
+  never added anybody.
+-->
+<ng-template #rosterEmptyState let-dataCy="dataCy">
+  @switch (emptyStateKind()) {
+    @case ('filtered') {
+      <!--
+        Filtered-empty: the user narrowed too far. CTA clears filters rather
+        than dead-ending them on a blank list (Norman § match between system
+        + real-world; #1033 wave 3), and the hint names what is doing the
+        hiding (#1618).
+      -->
+      <app-empty-state
+        icon="pi pi-users"
+        [title]="'athletes.list.empty.title' | translate"
+        [hint]="
+          'athletes.list.empty.filteredHintNamed' | translate: { filters: activeFilterSummary() }
+        "
+        ctaIcon="pi pi-filter-slash"
+        [ctaLabel]="'athletes.list.empty.clearFilters' | translate"
+        ctaSeverity="secondary"
+        (ctaClick)="clearAllFiltersAndSearch()"
+        [dataCy]="dataCy"
+      />
+    }
+    @case ('all-inactive') {
+      <!--
+        Not a brand-new academy: every athlete is still there, one eye-toggle
+        away, and the first-run copy claimed otherwise (#1666). The count says
+        how many, so the offer is a fact rather than a guess.
+      -->
+      <app-empty-state
+        icon="pi pi-eye-slash"
+        [title]="'athletes.list.empty.allInactiveTitle' | translate"
+        [hint]="inactiveHintKey() | translate: { count: inactiveTotal() }"
+        ctaIcon="pi pi-eye"
+        [ctaLabel]="'athletes.list.empty.showAll' | translate"
+        ctaSeverity="secondary"
+        (ctaClick)="toggleInactive()"
+        [dataCy]="dataCy"
+      />
+    }
+    @case ('trash') {
+      <!-- An empty bin is not a roster filtered down to nothing. -->
+      <app-empty-state
+        icon="pi pi-trash"
+        [title]="'athletes.list.empty.trashTitle' | translate"
+        [hint]="'athletes.list.empty.trashHint' | translate"
+        [dataCy]="dataCy"
+      />
+    }
+    @default {
+      <!--
+        Roster genuinely empty (first-run for a new academy): turn the empty
+        moment into the owner's primary onboarding action. The Add CTA shaves
+        friction at the #1 time-to-value point (#1033 wave 3); Import is the
+        other way in for an academy that already keeps its people in a
+        spreadsheet (#1618).
+      -->
+      <app-empty-state
+        icon="pi pi-users"
+        [title]="'athletes.list.empty.firstRunTitle' | translate"
+        [hint]="'athletes.list.empty.firstRunHint' | translate"
+        [ctaLabel]="'athletes.list.addButton' | translate"
+        (ctaClick)="goToNew()"
+        [secondaryLabel]="'athletes.list.importButton' | translate"
+        secondaryIcon="pi pi-file-import"
+        (secondaryClick)="goToImport()"
+        [dataCy]="dataCy"
+      />
+    }
+  }
+</ng-template>
+
 <p-toast position="top-right" />
 <p-confirmpopup />
 <!-- Mobile card 3-dot menu (#670). One shared <p-menu> instance whose model
@@ -361,6 +443,7 @@
               <th class="sort-th" [attr.aria-sort]="attendanceAriaSort()">
                 <app-sort-header
                   [label]="'athletes.list.table.attendance' | translate"
+                  [sublabel]="'athletes.list.table.attendanceLines' | translate"
                   [signifier]="attendanceSortLabel()"
                   [tooltip]="attendanceSortTooltip()"
                   align="end"
@@ -646,7 +729,7 @@
               [attr.colspan]="2 + (hasAttendanceCounts() ? 1 : 0) + (hasMonthlyFee() ? 1 : 0)"
               class="empty-message"
             >
-              @if (loading()) {
+              @if (loading() || settlingEmptyState()) {
                 <!-- Skeleton rows replace the PrimeNG header-spinner that
                    [showLoader]="false" suppressed. Canon § motion: skeletons
                    communicate shape before content, a spinner just says
@@ -660,58 +743,9 @@
                   <p-skeleton height="2rem" />
                 </div>
               } @else {
-                @switch (emptyStateKind()) {
-                  @case ('filtered') {
-                    <!--
-                      Filtered-empty: the user narrowed too far. CTA clears
-                      filters rather than dead-ending them on a blank list
-                      (Norman § match between system + real-world; #1033 wave
-                      3), and the hint names what is doing the hiding (#1618).
-                    -->
-                    <app-empty-state
-                      icon="pi pi-users"
-                      [title]="'athletes.list.empty.title' | translate"
-                      [hint]="
-                        'athletes.list.empty.filteredHintNamed'
-                          | translate: { filters: activeFilterSummary() }
-                      "
-                      ctaIcon="pi pi-filter-slash"
-                      [ctaLabel]="'athletes.list.empty.clearFilters' | translate"
-                      ctaSeverity="secondary"
-                      (ctaClick)="clearAllFiltersAndSearch()"
-                      dataCy="athletes-empty"
-                    />
-                  }
-                  @case ('trash') {
-                    <!-- An empty bin is not a roster filtered down to nothing. -->
-                    <app-empty-state
-                      icon="pi pi-trash"
-                      [title]="'athletes.list.empty.trashTitle' | translate"
-                      [hint]="'athletes.list.empty.trashHint' | translate"
-                      dataCy="athletes-empty"
-                    />
-                  }
-                  @default {
-                    <!--
-                      Roster genuinely empty (first-run for a new academy): turn
-                      the empty moment into the owner's primary onboarding action.
-                      The Add CTA shaves friction at the #1 time-to-value point
-                      (#1033 wave 3); Import is the other way in for an academy
-                      that already keeps its people in a spreadsheet (#1618).
-                    -->
-                    <app-empty-state
-                      icon="pi pi-users"
-                      [title]="'athletes.list.empty.firstRunTitle' | translate"
-                      [hint]="'athletes.list.empty.firstRunHint' | translate"
-                      [ctaLabel]="'athletes.list.addButton' | translate"
-                      (ctaClick)="goToNew()"
-                      [secondaryLabel]="'athletes.list.importButton' | translate"
-                      secondaryIcon="pi pi-file-import"
-                      (secondaryClick)="goToImport()"
-                      dataCy="athletes-empty"
-                    />
-                  }
-                }
+                <ng-container
+                  *ngTemplateOutlet="rosterEmptyState; context: { dataCy: 'athletes-empty' }"
+                />
               }
             </td>
           </tr>
@@ -724,51 +758,16 @@
        (name+age → detail nav), with a 3-dot menu carrying Edit + Delete.
        Apple-minimalist look per the design system. -->
     <div class="athletes-page__mobile-list" data-cy="athletes-mobile-list">
-      @if (loading()) {
+      @if (loading() || settlingEmptyState()) {
         <div class="athletes-page__mobile-skeletons" data-cy="athletes-mobile-loading">
           @for (i of [1, 2, 3, 4, 5]; track i) {
             <p-skeleton height="5rem" styleClass="mb-2" />
           }
         </div>
       } @else if (athletes().length === 0) {
-        @switch (emptyStateKind()) {
-          @case ('filtered') {
-            <app-empty-state
-              icon="pi pi-users"
-              [title]="'athletes.list.empty.title' | translate"
-              [hint]="
-                'athletes.list.empty.filteredHintNamed'
-                  | translate: { filters: activeFilterSummary() }
-              "
-              ctaIcon="pi pi-filter-slash"
-              [ctaLabel]="'athletes.list.empty.clearFilters' | translate"
-              ctaSeverity="secondary"
-              (ctaClick)="clearAllFiltersAndSearch()"
-              dataCy="athletes-mobile-empty"
-            />
-          }
-          @case ('trash') {
-            <app-empty-state
-              icon="pi pi-trash"
-              [title]="'athletes.list.empty.trashTitle' | translate"
-              [hint]="'athletes.list.empty.trashHint' | translate"
-              dataCy="athletes-mobile-empty"
-            />
-          }
-          @default {
-            <app-empty-state
-              icon="pi pi-users"
-              [title]="'athletes.list.empty.firstRunTitle' | translate"
-              [hint]="'athletes.list.empty.firstRunHint' | translate"
-              [ctaLabel]="'athletes.list.addButton' | translate"
-              (ctaClick)="goToNew()"
-              [secondaryLabel]="'athletes.list.importButton' | translate"
-              secondaryIcon="pi pi-file-import"
-              (secondaryClick)="goToImport()"
-              dataCy="athletes-mobile-empty"
-            />
-          }
-        }
+        <ng-container
+          *ngTemplateOutlet="rosterEmptyState; context: { dataCy: 'athletes-mobile-empty' }"
+        />
       } @else {
         <ul class="athletes-cards">
           @for (athlete of athletes(); track athlete.id) {

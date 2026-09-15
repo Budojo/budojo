@@ -50,7 +50,10 @@ const ACADEMY = {
   phone_national_number: '0111234567',
   website: 'https://budojo-torino.example',
   facebook: null,
-  instagram: 'budojo_torino',
+  // A URL, not a handle: both forms declare `type="url"` and the server
+  // rule is `nullable|url`, so a bare handle is data the API would refuse —
+  // and an audit shot from it describes a screen that cannot exist (#1650).
+  instagram: 'https://instagram.com/budojo_torino',
   address: ADDRESS,
   logo_url: null,
   monthly_fee_cents: 7000,
@@ -268,7 +271,7 @@ const ATHLETES = [
     email: 'giulia.ferraro@example.com',
     phone_country_code: '+39',
     phone_national_number: '3331234567',
-    instagram: 'giulia.bjj',
+    instagram: 'https://instagram.com/giulia.bjj',
     date_of_birth: '1994-03-12',
     belt: 'blue',
     stripes: 2,
@@ -585,33 +588,47 @@ const LEADERBOARD = {
 };
 
 // A payment covers a PERIOD (#1382): Giulia pays quarterly.
+//
+// The quarters start with the SEASON, not with the calendar (#1709). This
+// academy's year opens in September, so a quarterly payer pays in September,
+// December, March and June — and the last two fall in the next calendar
+// year, which is the case the table exists to get right. Newest first.
 const PAYMENTS_ONE = [
   {
     id: 1,
     athlete_id: 1,
-    year: 2026,
-    month: 7,
+    year: 2027,
+    month: 6,
     period_months: 3,
     amount_cents: 21_000,
-    paid_at: '2026-07-02',
+    paid_at: '2027-06-02',
   },
   {
     id: 2,
     athlete_id: 1,
-    year: 2026,
-    month: 4,
+    year: 2027,
+    month: 3,
     period_months: 3,
     amount_cents: 21_000,
-    paid_at: '2026-04-02',
+    paid_at: '2027-03-02',
   },
   {
     id: 3,
     athlete_id: 1,
     year: 2026,
-    month: 1,
+    month: 12,
     period_months: 3,
     amount_cents: 21_000,
-    paid_at: '2026-01-02',
+    paid_at: '2026-12-02',
+  },
+  {
+    id: 4,
+    athlete_id: 1,
+    year: 2026,
+    month: 9,
+    period_months: 3,
+    amount_cents: 21_000,
+    paid_at: '2026-09-02',
   },
 ];
 
@@ -1536,6 +1553,28 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       cy.get('[data-cy="syllabus-topic-11"]').should('be.visible');
     },
   });
+  // Searching the programme (#1629). The audit's own finding was that this
+  // page had no search, so the state that answers it needs its own frame.
+  screen('12-syllabus-search', '/dashboard/academy/syllabus', '[data-cy="syllabus-tree"]', {
+    act: () => {
+      cy.get('[data-cy="syllabus-search"]').type('kim');
+      cy.get('[data-cy="syllabus-search-summary"]').should('be.visible');
+    },
+  });
+  // One hit in one position — the commonest search, and the case a
+  // hardcoded plural rendered as "1 techniques across 1 positions" (#1629).
+  screen('12-syllabus-search-one', '/dashboard/academy/syllabus', '[data-cy="syllabus-tree"]', {
+    act: () => {
+      cy.get('[data-cy="syllabus-search"]').type('omoplata');
+      cy.get('[data-cy="syllabus-search-summary"]').should('be.visible');
+    },
+  });
+  screen('12-syllabus-search-none', '/dashboard/academy/syllabus', '[data-cy="syllabus-tree"]', {
+    act: () => {
+      cy.get('[data-cy="syllabus-search"]').type('berimbolo');
+      cy.get('[data-cy="syllabus-no-results"]').should('be.visible');
+    },
+  });
   screen('12-syllabus-empty', '/dashboard/academy/syllabus', '[data-cy="syllabus-page"]', {
     stubs: () => {
       cy.intercept('GET', '/api/v1/academy', {
@@ -1614,7 +1653,29 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       cy.get('[data-cy="athletes-empty"]').should('exist');
     },
   });
-  // And the third: the bin, with nothing in it.
+  // The fourth: everyone marked inactive. Zero rows on the default status,
+  // exactly like a brand-new academy — and the page used to say so (#1666).
+  screen('20-athletes-all-inactive', '/dashboard/athletes', '[data-cy="athletes-empty"]', {
+    stubs: () => {
+      // Order matters: a later intercept wins, so the broad one is registered
+      // FIRST and the roster's own query overrides it below.
+      //
+      // The count without the default status — nine athletes exist.
+      cy.intercept({ method: 'GET', pathname: '/api/v1/athletes' }, page(ATHLETES.slice(0, 9)));
+      // The roster asks for the actives and gets none of them.
+      cy.intercept(
+        { method: 'GET', pathname: '/api/v1/athletes', query: { status: 'active' } },
+        EMPTY_PAGE,
+      );
+    },
+    act: () => {
+      // `[data-cy="athletes-empty"]` is the id of ALL FOUR empty states, so
+      // waiting for it proves only that one of them rendered — and the bug
+      // this screen exists for is the wrong one rendering. Name the copy.
+      cy.get('[data-cy="athletes-empty"]').should('contain.text', 'non si allena nessuno');
+    },
+  });
+  // And the fifth: the bin, with nothing in it.
   screen('20-athletes-trash-empty', '/dashboard/athletes', ROSTER_READY, {
     stubs: () => {
       cy.intercept(
@@ -1946,7 +2007,9 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
         press('[data-cy="timetable-class-1"]');
         cy.get('[data-cy="timetable-form"]', { timeout: 4000 }).should('be.visible');
         press('[data-cy="timetable-form-remove"]');
-        cy.get('.p-confirmpopup', { timeout: 4000 }).should('be.visible');
+        // A dialog now, not a popup (#1644, TT-5) — the trigger is inside the
+        // lesson dialog and an anchored popup hung outside its bottom edge.
+        cy.get('.p-confirmdialog', { timeout: 4000 }).should('be.visible');
       },
     },
   );
@@ -1975,6 +2038,17 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       press('[data-cy="syllabus-toggle-1"]');
       press('[data-cy="syllabus-topic-11"] button');
       cy.get('[data-cy="syllabus-form"]', { timeout: 4000 }).should('be.visible');
+    },
+  });
+  // The other half of TT-5 (#1644): this confirm is opened from the footer of
+  // the topic dialog, so an anchored popup hung below that dialog's edge. It
+  // is a modal confirm now, photographed like the timetable's.
+  screen('12-syllabus-remove-confirm', '/dashboard/academy/syllabus', '[data-cy="syllabus-tree"]', {
+    act: () => {
+      press('[data-cy="syllabus-edit-1"]');
+      cy.get('[data-cy="syllabus-form"]', { timeout: 4000 }).should('be.visible');
+      press('[data-cy="syllabus-form-remove"]');
+      cy.get('.p-confirmdialog', { timeout: 4000 }).should('be.visible');
     },
   });
 
@@ -2150,13 +2224,16 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
     },
   });
   // Giulia's July quarter unpaid, so September has a "mark paid" control.
+  // Everything but the last quarter, so the season's final three months are
+  // unpaid and there is a "mark" button to photograph. On a September season
+  // that is June, July and August (#1709).
   const PAYMENTS_TO_JUNE = { statusCode: 200, body: { data: PAYMENTS_ONE.slice(1) } };
   screen('22-athlete-payments-mark-confirm', '/dashboard/athletes/1/payments', DETAIL_READY, {
     stubs: () => {
       cy.intercept('GET', '/api/v1/athletes/*/payments*', PAYMENTS_TO_JUNE);
     },
     act: () => {
-      press('[data-cy="payment-mark-9"]');
+      press('[data-cy="payment-mark-6"]');
       cy.get('.p-confirmpopup', { timeout: 4000 }).should('be.visible');
     },
   });
@@ -2180,14 +2257,14 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       });
     },
     act: () => {
-      press('[data-cy="payment-mark-9"]');
+      press('[data-cy="payment-mark-6"]');
       cy.get('.p-confirmpopup-accept-button', { timeout: 4000 }).click({ force: true });
       cy.wait(800);
     },
   });
   screen('22-athlete-payments-unmark-confirm', '/dashboard/athletes/1/payments', DETAIL_READY, {
     act: () => {
-      press('[data-cy="payment-unmark-7"]');
+      press('[data-cy="payment-unmark-6"]');
       cy.get('.p-confirmpopup', { timeout: 4000 }).should('be.visible');
     },
   });

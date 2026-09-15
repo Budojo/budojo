@@ -50,6 +50,11 @@
       [error]="phoneError() ? (phoneError()! | translate) : null"
     >
       <div class="phone-pair">
+        <!--
+          The ✕ stays (#1645). The phone is a pair: clearing the number and
+          leaving the prefix fails validation with no way forward except
+          clearing the prefix, and this is that way.
+          -->
         <p-select
           inputId="academy-phone-country-code"
           [options]="countryCodeOptions"
@@ -105,7 +110,7 @@
         type="url"
         formControlName="website"
         autocomplete="url"
-        placeholder="https://gracie-barra.com"
+        [placeholder]="'academy.form.website.placeholder' | translate"
         maxlength="255"
         data-cy="academy-form-website"
         [class.ng-invalid]="website.invalid && website.touched"
@@ -126,7 +131,7 @@
         type="url"
         formControlName="facebook"
         autocomplete="url"
-        placeholder="https://facebook.com/yourpage"
+        [placeholder]="'academy.form.facebook.placeholder' | translate"
         maxlength="255"
         data-cy="academy-form-facebook"
         [class.ng-invalid]="facebook.invalid && facebook.touched"
@@ -147,7 +152,7 @@
         type="url"
         formControlName="instagram"
         autocomplete="url"
-        placeholder="https://instagram.com/yourprofile"
+        [placeholder]="'academy.form.instagram.placeholder' | translate"
         maxlength="255"
         data-cy="academy-form-instagram"
         [class.ng-invalid]="instagram.invalid && instagram.touched"
@@ -185,14 +190,6 @@
       <div class="field">
         <label for="academy-address-line1">
           {{ 'academy.form.address.line1Label' | translate }}
-          <span
-            class="required-when-filled"
-            [pTooltip]="'academy.form.address.requiredWhenFilledTooltip' | translate"
-            tooltipPosition="top"
-            [attr.aria-label]="'academy.form.address.requiredWhenFilledAria' | translate"
-          >
-            *
-          </span>
         </label>
         <input
           pInputText
@@ -200,7 +197,7 @@
           type="text"
           formControlName="line1"
           autocomplete="address-line1"
-          placeholder="Via Roma 1"
+          [placeholder]="'academy.form.address.line1Placeholder' | translate"
           maxlength="255"
           data-cy="academy-form-address-line1"
           [class.ng-invalid]="addressLine1.invalid && addressLine1.touched"
@@ -219,7 +216,7 @@
           type="text"
           formControlName="line2"
           autocomplete="address-line2"
-          placeholder="Scala B, interno 4"
+          [placeholder]="'academy.form.address.line2Placeholder' | translate"
           maxlength="255"
           data-cy="academy-form-address-line2"
         />
@@ -229,14 +226,6 @@
         <div class="field">
           <label for="academy-address-postal-code">
             {{ 'academy.form.address.zipLabel' | translate }}
-            <span
-              class="required-when-filled"
-              [pTooltip]="'academy.form.address.requiredWhenFilledTooltip' | translate"
-              tooltipPosition="top"
-              [attr.aria-label]="'academy.form.address.requiredWhenFilledAria' | translate"
-            >
-              *
-            </span>
           </label>
           <input
             pInputText
@@ -244,7 +233,7 @@
             type="text"
             formControlName="postal_code"
             autocomplete="postal-code"
-            placeholder="00100"
+            [placeholder]="'academy.form.address.zipPlaceholder' | translate"
             inputmode="numeric"
             maxlength="5"
             data-cy="academy-form-address-postal-code"
@@ -263,14 +252,6 @@
         <div class="field">
           <label for="academy-address-city">
             {{ 'academy.form.address.cityLabel' | translate }}
-            <span
-              class="required-when-filled"
-              [pTooltip]="'academy.form.address.requiredWhenFilledTooltip' | translate"
-              tooltipPosition="top"
-              [attr.aria-label]="'academy.form.address.requiredWhenFilledAria' | translate"
-            >
-              *
-            </span>
           </label>
           <input
             pInputText
@@ -278,7 +259,7 @@
             type="text"
             formControlName="city"
             autocomplete="address-level2"
-            placeholder="Roma"
+            [placeholder]="'academy.form.address.cityPlaceholder' | translate"
             maxlength="100"
             data-cy="academy-form-address-city"
           />
@@ -287,15 +268,14 @@
         <div class="field">
           <label for="academy-address-province">
             {{ 'academy.form.address.provinceLabel' | translate }}
-            <span
-              class="required-when-filled"
-              [pTooltip]="'academy.form.address.requiredWhenFilledTooltip' | translate"
-              tooltipPosition="top"
-              [attr.aria-label]="'academy.form.address.requiredWhenFilledAria' | translate"
-            >
-              *
-            </span>
           </label>
+          <!--
+            The ✕ stays (#1645). The address is all-or-nothing — line 1, city,
+            postcode and province together or none of them — and the other
+            three are text inputs you can empty. Take this one away and a
+            province, once chosen, can never be unchosen, so an address once
+            entered can never be removed.
+            -->
           <p-select
             inputId="academy-address-province"
             [options]="provinceOptions"

@@ -1,26 +1,20 @@
 {
+  "common": {
+    "cancel": "Cancel"
+  },
   "language": {
     "label": "Language",
     "english": "English",
     "italian": "Italiano"
   },
   "search": {
-    "openHint": "Search",
-    "openShortcutMac": "⌘K",
-    "openShortcutWin": "Ctrl K",
-    "ariaOpen": "Open search",
-    "dialogTitle": "Search",
     "placeholder": "Search athletes by name…",
     "ariaInput": "Search athletes",
     "emptyHint": "Start typing to find athletes by name.",
-    "noResults": "No athletes match this search.",
-    "resultsAriaLabel": "Search results"
+    "noResults": "No athletes match this search."
   },
   "nav": {
-    "open": "Open navigation",
-    "close": "Close navigation",
     "homeAriaLabel": "Budojo — go to dashboard home",
-    "sidebarAriaLabel": "Primary navigation",
     "profileAriaLabel": "Open your profile",
     "academy": "Academy",
     "athletes": "Athletes",
@@ -265,17 +259,11 @@
       "deletePostTitle": "Delete this post?",
       "deletePostMessage": "The post and all its comments will be removed from the feed. This action can't be undone from the dashboard.",
       "deleteAccept": "Delete",
-      "deleteReject": "Cancel",
       "postDeletedSummary": "Post deleted",
       "postDeleteError": "Couldn't delete the post. Try again in a moment."
     }
   },
   "athletePortal": {
-    "welcome": {
-      "title": "Welcome to Budojo",
-      "body": "Your athlete account is ready. The pages where you'll see your own attendance history, payments, and documents are coming in the next release — for now, sit tight, your academy will let you know when there's more here.",
-      "signOut": "Sign out"
-    },
     "nav": {
       "myProfile": "My profile",
       "settings": "Settings",
@@ -421,7 +409,8 @@
     "bell": {
       "ariaLabel": "Notifications",
       "tooltip": "Notifications",
-      "unreadCount": "{{count}} unread"
+      "unreadCountOne": "{{count}} unread",
+      "unreadCountOther": "{{count}} unread"
     },
     "toast": {
       "dismiss": "Dismiss notification"
@@ -438,7 +427,6 @@
       "dismiss": "Dismiss",
       "confirmDismiss": "Hide this checklist for good? You won't see it again.",
       "confirmDismissAccept": "Hide",
-      "confirmDismissReject": "Keep it",
       "dismissedSummary": "Checklist hidden"
     },
     "steps": {
@@ -461,6 +449,14 @@
       "view_stats": {
         "label": "Check your stats",
         "hint": "Attendance trends, monthly revenue, who's slipping."
+      },
+      "set_timetable": {
+        "label": "Set your weekly timetable",
+        "hint": "The check-in proposes the classes on today’s timetable, so it needs one."
+      },
+      "write_syllabus": {
+        "label": "Write your programme",
+        "hint": "A lesson’s topics come from the programme — it is what makes coverage mean anything."
       }
     }
   },
@@ -481,14 +477,6 @@
       "no": "Not now",
       "bodyCommunity": "Your community posts will show your belt too.",
       "bodyFooter": "You can change your mind later from Profile → Train at this academy."
-    }
-  },
-  "legal": {
-    "chrome": {
-      "brandHome": "Back to Budojo",
-      "eyebrow": "Legal",
-      "languageToggleEn": "English",
-      "languageToggleIt": "Italiano"
     }
   },
   "cookies": {
@@ -533,7 +521,8 @@
     "title": "Recent updates",
     "subtitle": "What's changed in Budojo lately, in plain language. Newest at the top.",
     "back": "Back to dashboard",
-    "showMore": "Show {{count}} more releases"
+    "showMoreOne": "Show one more release",
+    "showMoreOther": "Show {{count}} more releases"
   },
   "notificationOnboarding": {
     "title": "Stay in the loop",
@@ -787,7 +776,6 @@
   "profile": {
     "title": "Settings",
     "subtitle": "Account, security, notifications.",
-    "eyebrow": "Settings",
     "tabs": {
       "identity": "Profile",
       "security": "Security",
@@ -795,7 +783,6 @@
       "account": "Account"
     },
     "verifyRequiredBanner": "You need to verify your email before adding athletes or documents. Check your inbox for the verification link, or use the Resend button below.",
-    "name": "Name",
     "firstName": "First name",
     "lastName": "Last name",
     "handle": "Handle",
@@ -854,8 +841,7 @@
     },
     "avatarConfirm": {
       "removeMessage": "Remove your profile photo?",
-      "removeAccept": "Remove",
-      "removeReject": "Cancel"
+      "removeAccept": "Remove"
     },
     "changePassword": {
       "title": "Password",
@@ -1007,7 +993,6 @@
       "addDevice": "Add another device",
       "revoke": "Revoke",
       "revokeConfirm": "Stop sending notifications to this device?",
-      "cancel": "Cancel",
       "deviceAdded": "Added",
       "enabledToast": {
         "summary": "Notifications enabled on this device"
@@ -1084,7 +1069,6 @@
       "confirmRevokeCurrent": "Sign out the {{device}} session? This is the device you're using right now — you'll be signed out and asked to log in again.",
       "confirmRevokeOthers": "Sign out every other session and keep only this one? You'll need to sign in again on those devices.",
       "confirmAccept": "Sign out",
-      "confirmReject": "Cancel",
       "errorMessage": "We couldn't load your sessions. Try again in a moment.",
       "retry": "Retry",
       "revokeToast": {
@@ -1158,7 +1142,6 @@
       "expiresAt": "Expires {{datetime}}",
       "confirmRevoke": "Revoke {{name}}? Any script using this token will stop working immediately.",
       "confirmRevokeAccept": "Revoke",
-      "confirmRevokeReject": "Cancel",
       "createDialog": {
         "title": "Generate a new API token",
         "nameLabel": "Token name",
@@ -1190,7 +1173,6 @@
         "confirmTitle": "Confirm email change",
         "confirmMessage": "We'll send a confirmation link to {{newEmail}}. Until you click that link, your login email stays {{currentEmail}}.",
         "confirmAccept": "Send link",
-        "confirmReject": "Cancel",
         "required": "Enter the new email address.",
         "invalid": "That doesn't look like a valid email address.",
         "maxLength": "Email must be at most 255 characters.",
@@ -1220,7 +1202,6 @@
         "confirmStateCTitle": "Confirmation link",
         "confirmStateCMessage": "The athlete will need to confirm the new email by clicking a link. Until they do, their login email stays {{currentEmail}}.",
         "confirmAccept": "Continue",
-        "confirmReject": "Cancel",
         "toast": {
           "directSummary": "Email updated",
           "inviteSwapSummary": "Invitation re-sent",
@@ -1295,8 +1276,6 @@
     "expiringList": {
       "title": "Document status",
       "backToAthletes": "Athletes",
-      "countOne": "{{count}} document expired or expiring within 30 days",
-      "countOther": "{{count}} documents expired or expiring within 30 days",
       "countExpiring": "{{count}} expiring",
       "countMissing": "{{count}} no certificate",
       "expiring": {
@@ -1319,10 +1298,6 @@
         "title": "Couldn’t load expiring documents.",
         "hint": "Refresh the page to try again."
       },
-      "empty": {
-        "title": "All documents up to date.",
-        "hint": "No expirations in the next 30 days. Check back later."
-      },
       "allClear": {
         "title": "All documents up to date.",
         "hint": "No expirations in the next 30 days and every active athlete has a medical certificate on file."
@@ -1331,20 +1306,6 @@
         "errorSummary": "Download failed",
         "errorDetail": "Could not download {{filename}}. Please try again."
       }
-    },
-    "expiringWidget": {
-      "error": {
-        "title": "Couldn’t check expiring documents",
-        "hint": "Refresh the page to try again"
-      },
-      "empty": {
-        "title": "All documents up to date",
-        "hint": "No expirations in the next 30 days"
-      },
-      "countOne": "{{count}} athlete needs attention",
-      "countOther": "{{count}} athletes need attention",
-      "countHint": "Expired or expiring within 30 days",
-      "breakdown": "{{expiring}} expiring · {{missing}} no certificate"
     },
     "upload": {
       "header": "Upload document",
@@ -1436,7 +1397,6 @@
   },
   "academy": {
     "detail": {
-      "eyebrow": "Academy",
       "edit": "Edit",
       "logoAlt": "Academy logo",
       "logoHint": "PNG, JPG, SVG or WebP, max 2 MB.",
@@ -1487,14 +1447,12 @@
       },
       "confirm": {
         "removeMessage": "Remove the academy logo?",
-        "removeAccept": "Remove",
-        "removeReject": "Cancel"
+        "removeAccept": "Remove"
       },
       "seasonStarted": "started {{date}}",
       "logoNone": "None"
     },
     "form": {
-      "eyebrow": "Academy",
       "title": "Edit academy",
       "optional": "(optional)",
       "name": {
@@ -1518,15 +1476,18 @@
       },
       "website": {
         "label": "Website",
-        "errorUrl": "Enter a full URL — e.g. https://example.com."
+        "errorUrl": "Enter a full URL — e.g. https://example.com.",
+        "placeholder": "https://gracie-barra.com"
       },
       "facebook": {
         "label": "Facebook",
-        "errorUrl": "Enter a full URL — e.g. https://facebook.com/yourpage."
+        "errorUrl": "Enter a full URL — e.g. https://facebook.com/yourpage.",
+        "placeholder": "https://facebook.com/yourpage"
       },
       "instagram": {
         "label": "Instagram",
-        "errorUrl": "Enter a full URL — e.g. https://instagram.com/yourprofile."
+        "errorUrl": "Enter a full URL — e.g. https://instagram.com/yourprofile.",
+        "placeholder": "https://instagram.com/yourprofile"
       },
       "permalink": {
         "label": "Permalink",
@@ -1534,9 +1495,7 @@
       },
       "address": {
         "legend": "Address",
-        "legendOptional": "(optional — fill all marked fields below or none)",
-        "requiredWhenFilledTooltip": "Required when any address field is filled",
-        "requiredWhenFilledAria": "required when any address field is filled",
+        "legendOptional": "(optional — street, city, ZIP and province go together: fill them all, or leave them all empty)",
         "line1Label": "Street + civic number",
         "line2Label": "Apt / floor / unit",
         "zipLabel": "ZIP",
@@ -1545,7 +1504,11 @@
         "provinceLabel": "Province",
         "provinceAria": "Province",
         "errorIncomplete": "Fill every required address field, or clear them all to leave the academy without an address.",
-        "clearHint": "Leave every field empty to clear the address on file."
+        "clearHint": "Leave every field empty to clear the address on file.",
+        "line1Placeholder": "Via Roma 1",
+        "line2Placeholder": "Block B, flat 4",
+        "zipPlaceholder": "00100",
+        "cityPlaceholder": "Roma"
       },
       "monthlyFee": {
         "label": "Monthly fee",
@@ -1554,7 +1517,7 @@
       },
       "seasonStart": {
         "label": "Season starts in",
-        "placeholder": "September",
+        "placeholder": "September (default)",
         "hint": "The month your training year restarts. The roster counts sessions from here, not from the day each athlete joined. September if you leave it empty."
       },
       "trainingDays": {
@@ -1609,7 +1572,8 @@
       "confirm": {
         "remove": "Delete the “{{label}}” tier?",
         "removeWithAthletesOne": "Delete the “{{label}}” tier? {{count}} athlete is on it and will fall back to the academy’s monthly fee.",
-        "removeWithAthletesOther": "Delete the “{{label}}” tier? {{count}} athletes are on it and will fall back to the academy’s monthly fee."
+        "removeWithAthletesOther": "Delete the “{{label}}” tier? {{count}} athletes are on it and will fall back to the academy’s monthly fee.",
+        "removeAccept": "Delete"
       },
       "toast": {
         "savedSummary": "Price list updated",
@@ -1660,7 +1624,8 @@
         "save": "Save",
         "remove": "Remove class",
         "nameRequired": "Give the class a name.",
-        "dayRequired": "Pick a day."
+        "dayRequired": "Pick a day.",
+        "durationPlaceholder": "minutes"
       },
       "kind": {
         "gi": "Gi",
@@ -1671,7 +1636,7 @@
       "confirm": {
         "remove": "Remove {{name}} from the timetable? The lessons already held stay as they were.",
         "accept": "Remove",
-        "reject": "Keep"
+        "title": "Remove from the timetable"
       },
       "toast": {
         "saved": "Class saved",
@@ -1679,7 +1644,9 @@
         "errorSummary": "Something went wrong",
         "errorDetail": "The change was not saved. Try again.",
         "loadErrorDetail": "The timetable could not be loaded."
-      }
+      },
+      "plan": "Plan",
+      "editHint": "Open this class to edit it"
     },
     "syllabus": {
       "title": "Programme",
@@ -1726,7 +1693,7 @@
         "removePositionOne": "Remove {{name}} and the one technique under it?",
         "removePositionOther": "Remove {{name}} and the {{count}} techniques under it?",
         "accept": "Remove",
-        "reject": "Keep"
+        "title": "Remove from the syllabus"
       },
       "toast": {
         "saved": "Programme saved",
@@ -1735,7 +1702,16 @@
         "errorSummary": "Something went wrong",
         "errorDetail": "The change was not saved. Try again.",
         "loadErrorDetail": "The programme could not be loaded."
-      }
+      },
+      "searchPlaceholder": "Search a technique or a position",
+      "searchClear": "Clear the search",
+      "searchSummary": "{{techniques}} across {{positions}}. Clear the search to get the tree back.",
+      "searchNone": "Nothing in the programme matches \"{{query}}\".",
+      "countSplit": "{{inSeason}} in season · {{total}} in total",
+      "searchCountTechniqueOne": "{{count}} technique",
+      "searchCountTechniqueOther": "{{count}} techniques",
+      "searchCountPositionOne": "{{count}} position",
+      "searchCountPositionOther": "{{count}} positions"
     },
     "schedule": {
       "title": "Plan a future schedule change",
@@ -1745,9 +1721,8 @@
       "editCancel": "Cancel",
       "save": "Schedule change",
       "cancel": "Cancel pending change",
-      "cancelConfirm": "Cancel this pending schedule change?",
-      "cancelAccept": "Yes, cancel it",
-      "cancelReject": "Keep it",
+      "cancelConfirm": "Discard the pending schedule change?",
+      "cancelAccept": "Discard",
       "effectiveFromLabel": "Effective from",
       "effectiveFromHint": "The new schedule starts on this day. Must be in the future — same-day changes go through the Training days picker above.",
       "daysLabel": "Training days from that date",
@@ -1780,7 +1755,6 @@
   },
   "attendance": {
     "daily": {
-      "eyebrow": "Attendance",
       "title": "Today's check-in",
       "titleForDate": "Check-in · {{date}}",
       "noClassToday": "No class today — you're looking at the {{date}} session.",
@@ -1822,7 +1796,6 @@
       }
     },
     "summary": {
-      "eyebrow": "Attendance summary",
       "daysOne": "{{count}} training day",
       "daysOther": "{{count}} training days",
       "athletesOne": "{{count}} athlete",
@@ -1889,7 +1862,6 @@
     }
   },
   "statuses": {
-    "all": "All statuses",
     "active": "Active",
     "inactive": "Inactive",
     "trashed": "Deleted"
@@ -1902,7 +1874,6 @@
       "addButton": "Add athlete",
       "searchPlaceholder": "Search by name",
       "beltPlaceholder": "Belt",
-      "statusPlaceholder": "Status",
       "ownerChip": "Owner",
       "paidOptions": {
         "yes": "Paid",
@@ -1910,17 +1881,15 @@
       },
       "table": {
         "fullName": "Full name",
-        "status": "Status",
-        "paidPrefix": "Paid",
         "payment": "Payment",
-        "attendance": "Sessions"
+        "attendance": "Sessions",
+        "attendanceLines": "month / season"
       },
       "tooltip": {
         "edit": "Edit",
         "editAria": "Edit {{name}}",
         "openMenuAria": "Open menu for {{name}}",
         "paid": "Paid",
-        "unpaid": "Unpaid",
         "restore": "Restore",
         "restoreAria": "Restore {{name}}",
         "publicProfile": "View public profile",
@@ -1929,7 +1898,6 @@
         "documents": "Documents",
         "payments": "Payments",
         "promotions": "Belt history",
-        "carnet": "Carnet {{code}} — {{count}} entries left",
         "paidCycleAll": "Showing everyone. Click to show only who has paid.",
         "paidCyclePaid": "Showing who has paid. Click to show only who has not.",
         "paidCycleUnpaid": "Showing who has not paid. Click to show everyone again.",
@@ -1950,7 +1918,11 @@
         "firstRunHint": "Add the first one, or bring your whole list in from a spreadsheet.",
         "filteredHintNamed": "Nobody matches {{filters}}. Try removing a filter.",
         "trashTitle": "The bin is empty",
-        "trashHint": "Athletes you delete land here, and you can put them back from here."
+        "trashHint": "Athletes you delete land here, and you can put them back from here.",
+        "allInactiveTitle": "Nobody is training right now",
+        "allInactiveHintOne": "One athlete is on your roster, marked inactive.",
+        "allInactiveHintOther": "{{count}} athletes are on your roster, all marked inactive.",
+        "showAll": "Show everyone"
       },
       "error": {
         "title": "Couldn't load the roster",
@@ -1979,16 +1951,14 @@
         "markPaidAccept": "Mark paid",
         "markUnpaidMessage": "Mark {{name}} unpaid for {{month}}?",
         "markUnpaidAccept": "Mark unpaid",
-        "cancel": "Cancel",
-        "markPaidPeriodMessage": "Record {{name}}’s payment for {{period}}?",
-        "markUnpaidPeriodMessage": "Undo {{name}}’s payment covering {{period}}?",
+        "markPaidPeriodMessage": "Mark {{name}} paid? The payment covers: {{period}}",
+        "markUnpaidPeriodMessage": "Mark {{name}} unpaid? The payment covered: {{period}}",
         "sellCarnetMessage": "Sell {{name}} a carnet — {{price}} for {{entries}} entries?",
         "sellCarnetAccept": "Sell"
       },
       "restoreConfirm": {
         "message": "Restore {{name}}?",
-        "accept": "Restore",
-        "reject": "Cancel"
+        "accept": "Restore"
       },
       "restoreToast": {
         "successSummary": "Athlete restored",
@@ -2045,8 +2015,7 @@
       "acceptedChip": "Athlete registered on {{acceptedAt}}",
       "confirm": {
         "revokeMessage": "Revoke this invitation? The athlete won't be able to use the link anymore.",
-        "revokeAccept": "Revoke",
-        "revokeReject": "Cancel"
+        "revokeAccept": "Revoke"
       },
       "toast": {
         "invitedSummary": "Invitation sent",
@@ -2067,8 +2036,10 @@
         "confirm": {
           "markPaidMessage": "Mark {{name}} paid for {{month}} {{year}}?",
           "markUnpaidMessage": "Mark {{name}} unpaid for {{month}} {{year}}?",
-          "markPaidPeriodMessage": "Record {{name}}’s payment for {{period}}?",
-          "markUnpaidPeriodMessage": "Undo {{name}}’s payment covering {{period}}?"
+          "markPaidPeriodMessage": "Mark {{name}} paid? The payment covers: {{period}}",
+          "markUnpaidPeriodMessage": "Mark {{name}} unpaid? The payment covered: {{period}}",
+          "markPaidAccept": "Mark paid",
+          "markUnpaidAccept": "Mark unpaid"
         },
         "toast": {
           "markedPaidSummary": "Marked paid",
@@ -2078,7 +2049,8 @@
           "errorMissingFee": "Set a monthly fee on the academy first to record payments.",
           "errorGeneric": "Couldn't update the payment. Please try again.",
           "loadErrorDetail": "Couldn't load payments.",
-          "errorOverlap": "That month is already covered by another payment."
+          "errorOverlap": "That month is already covered by another payment.",
+          "errorYear": "That year is outside the range payments can be recorded for."
         },
         "title": "Payments — {{year}}",
         "noFeeHint": "Set a monthly fee on the academy to start recording payments. Until then this page stays read-only.",
@@ -2095,13 +2067,19 @@
         },
         "feeTierHintOne": "{{label}} tier · {{amount}} a month for {{count}} lesson a week.",
         "feeTierHintOther": "{{label}} tier · {{amount}} a month for {{count}} lessons a week.",
-        "periodRange": "{{from}} to {{to}} {{year}}"
+        "periodRange": "{{from}} to {{to}} {{year}}",
+        "prevYear": "Previous year",
+        "nextYear": "Next year",
+        "periodHint": "{{period}} · {{amount}} per period",
+        "periodMonths": "Every {{count}} months",
+        "periodStartsHereOne": "Also covers {{next}}",
+        "periodStartsHereOther": "Also covers {{next}}",
+        "periodCoveredBy": "Part of the {{month}} payment"
       },
       "documents": {
         "confirm": {
           "deleteMessage": "Delete {{name}}? The file will be removed from disk.",
-          "deleteAccept": "Delete",
-          "cancel": "Cancel"
+          "deleteAccept": "Delete"
         },
         "toast": {
           "uploadedSummary": "Document uploaded",
@@ -2115,8 +2093,6 @@
           "deleteErrorDetail": "Could not delete this document. Please try again."
         },
         "heading": "Documents",
-        "activeCount": "{{count}} active",
-        "cancelledCount": "{{count}} cancelled",
         "toggle": {
           "aria": "Show cancelled documents",
           "label": "Show cancelled"
@@ -2144,7 +2120,11 @@
           "withCancelled": "No documents yet — active or cancelled.",
           "default": "No documents yet.",
           "hint": "Use <strong>Add document</strong> above to upload the first one."
-        }
+        },
+        "activeCountOne": "{{count}} active",
+        "activeCountOther": "{{count}} active",
+        "cancelledCountOne": "{{count}} cancelled",
+        "cancelledCountOther": "{{count}} cancelled"
       },
       "backToList": "Athletes",
       "loading": "Loading athlete…",
@@ -2241,7 +2221,6 @@
         "entriesWord": "entries",
         "entryCoversDay": "One entry covers the whole day, however many classes.",
         "none": "No active carnet.",
-        "expiresOn": "Expires on {{date}}",
         "lowBalance": "Running low",
         "expiringSoon": "Expiring soon",
         "register": "Entry register",
@@ -2282,7 +2261,8 @@
           "confirm": "Save",
           "newExpiry": "New expiry: {{date}}"
         },
-        "soldOnFor": "Sold on {{date}} for {{amount}}"
+        "soldOnFor": "Sold on {{date}} for {{amount}}",
+        "confirmDeleteAccept": "Delete"
       },
       "closeEdit": "Back to the athlete",
       "reachAria": "How to reach this athlete",
@@ -2305,7 +2285,7 @@
       "validationFailed": "Validation failed.",
       "serverError": "Something went wrong. Please try again.",
       "optional": "(optional)",
-      "optionalAddress": "(optional — fill all marked fields below or none)",
+      "optionalAddress": "(optional — street, city, ZIP and province go together: fill them all, or leave them all empty)",
       "label": {
         "firstName": "First name",
         "lastName": "Last name",
@@ -2343,11 +2323,7 @@
       "aria": {
         "phoneCountryCode": "Phone country code",
         "phoneNationalNumber": "Phone national number",
-        "province": "Province",
-        "requiredWhenFilled": "required when any address field is filled"
-      },
-      "tooltip": {
-        "requiredWhenFilled": "Required when any address field is filled"
+        "province": "Province"
       },
       "validation": {
         "maxLength100": "Maximum 100 characters.",
@@ -2433,7 +2409,8 @@
         "identity": "Who they are",
         "gym": "At the gym",
         "contact": "Contact"
-      }
+      },
+      "feeTierStandard": "The academy's standard fee"
     },
     "photo": {
       "title": "Photo",
@@ -2444,8 +2421,7 @@
       "alt": "Photo of {{name}}",
       "confirm": {
         "removeMessage": "Remove this athlete's photo?",
-        "removeAccept": "Remove",
-        "removeReject": "Cancel"
+        "removeAccept": "Remove"
       },
       "toast": {
         "uploadSuccess": "Photo updated",
@@ -2495,7 +2471,8 @@
       "status": {
         "ok": "Will be imported",
         "invalid": "Skipped",
-        "duplicate": "Already on the roster"
+        "duplicate": "Already on the roster",
+        "okDone": "Imported"
       },
       "reason": {
         "duplicate": "Someone with this name is already here."
@@ -2523,14 +2500,15 @@
       "another": "Choose another file"
     },
     "coverage": {
-      "fraction": "{{seen}} of {{total}} things the academy taught",
+      "fraction": "{{seen}} of {{total}} techniques the academy taught",
       "since": "Counted from {{date}}, the day they joined.",
-      "notTaughtYet": "{{count}} more are in the programme but have not been taught yet. That is the academy's gap, not theirs.",
-      "unattributed": "{{count}} of their sessions do not say which class they were, so nothing here counts them either way.",
       "legend": {
-        "seen": "{{count}} seen",
-        "thin": "{{count}} seen once",
-        "missed": "{{count}} missed"
+        "seenOne": "{{count}} seen",
+        "seenOther": "{{count}} seen",
+        "thinOne": "{{count}} seen once",
+        "thinOther": "{{count}} seen once",
+        "missedOne": "{{count}} missed",
+        "missedOther": "{{count}} missed"
       },
       "missed": {
         "title": "What they missed",
@@ -2553,7 +2531,11 @@
           "title": "Nothing taught yet",
           "hint": "No lesson has been tagged since they joined on {{date}}. There is nothing here to have missed."
         }
-      }
+      },
+      "unattributedOne": "{{count}} of their sessions does not say which class it was, so nothing here counts it either way.",
+      "unattributedOther": "{{count}} of their sessions do not say which class they were, so nothing here counts them either way.",
+      "notTaughtYetOne": "One more is in the programme but has not been taught yet. That is the academy's gap, not theirs.",
+      "notTaughtYetOther": "{{count}} more are in the programme but have not been taught yet. That is the academy's gap, not theirs."
     }
   },
   "month": {
@@ -2627,13 +2609,11 @@
     }
   },
   "stats": {
-    "eyebrow": "Insights",
     "title": "Academy at a glance",
     "subtitle": "Quick read on your academy — belt distribution — pulled live from your athletes.",
     "loadError": "Couldn't load the stats. Please try again.",
     "emptyTitle": "Not enough data yet",
     "emptyHint": "Add your first athlete and the charts will populate here.",
-    "total": "Across {{count}} active athletes.",
     "belt": {
       "title": "Belts",
       "hint": "Athletes by IBJJF rank, kids → seniors. Hover a slice for the count + share."
@@ -2655,13 +2635,14 @@
         "less": "Less",
         "more": "More",
         "scale": "Shades follow this window: {{b1}} · {{b2}} · {{b3}} · {{b4}} attendances a day",
-        "tooltipCount": "{{count}} attendances on {{date}}",
         "tooltipEmpty": "No attendance on {{date}}",
         "dow": {
           "mon": "Mon",
           "wed": "Wed",
           "fri": "Fri"
-        }
+        },
+        "tooltipCountOne": "{{count}} attendance on {{date}}",
+        "tooltipCountOther": "{{count}} attendances on {{date}}"
       }
     },
     "payments": {
@@ -2677,7 +2658,6 @@
       "loading": "Loading distribution…",
       "errored": "Couldn't load distribution.",
       "empty": "No athletes with a date of birth yet.",
-      "missingDob": "{{count}} athletes without date of birth",
       "scope": {
         "kids": "Kids",
         "adults": "Adults",
@@ -2697,7 +2677,9 @@
         "master_5": "Master 5",
         "master_6": "Master 6",
         "master_7": "Master 7"
-      }
+      },
+      "missingDobOne": "{{count}} athlete without a date of birth",
+      "missingDobOther": "{{count}} athletes without a date of birth"
     },
     "syllabus": {
       "headline": "{{covered}} of {{total}} covered this season",
@@ -2710,9 +2692,12 @@
       "worked": "worked {{count}}×",
       "barAria": "{{name}}: {{covered}} covered, {{thin}} taught once, {{missing}} not taught",
       "state": {
-        "covered": "{{count}} covered",
-        "thin": "{{count}} taught once",
-        "missing": "{{count}} not taught"
+        "coveredOne": "{{count}} covered",
+        "coveredOther": "{{count}} covered",
+        "missingOne": "{{count}} not taught",
+        "missingOther": "{{count}} not taught",
+        "thinOne": "{{count}} taught once",
+        "thinOther": "{{count}} taught once"
       },
       "filter": {
         "all": "All",
@@ -2736,7 +2721,9 @@
         "hint": "Something went wrong on our side. Try again.",
         "retry": "Try again"
       }
-    }
+    },
+    "totalOne": "Across {{count}} active athlete.",
+    "totalOther": "Across {{count}} active athletes."
   },
   "publicProfile": {
     "joinedAt": "Since {{ date }}",
@@ -2773,7 +2760,6 @@
     "title": "Your week on the mats",
     "loading": "Loading your week…",
     "heading": "Here's your week",
-    "sessions": "{{count}} session{{count, plural, one {} other {s}}}",
     "hours": "Hours on the mat",
     "partners": {
       "heading": "Top training partners"
@@ -2787,7 +2773,9 @@
       "heading": "We couldn't load this recap",
       "copy": "The week parameter looks off, or your athlete profile isn't ready yet.",
       "cta": "Back to my profile"
-    }
+    },
+    "sessionsOne": "{{count}} session",
+    "sessionsOther": "{{count}} sessions"
   },
   "myAttendanceToday": {
     "title": "Today's attendance",
@@ -2836,13 +2824,11 @@
     "never": "No backup yet",
     "backupNow": "Back up now",
     "archives": "Backups",
-    "loading": "Loading backups…",
     "empty": "No backups yet. Create one now to protect your data.",
     "size": "{{mb}} MB",
     "restore": "Restore",
     "confirmRestore": "Restore this backup? Your current data will be replaced with the contents of this archive.",
     "confirmRestoreAccept": "Restore",
-    "confirmRestoreReject": "Cancel",
     "toast": {
       "created": "Backup created",
       "failed": "Backup failed — see the log",
@@ -2865,7 +2851,6 @@
       "import": "Import keys",
       "importConfirm": "Import these keys? This replaces this computer's current keys and restarts Budojo. Only do this when recovering data from another machine.",
       "importConfirmAccept": "Import and restart",
-      "importConfirmReject": "Cancel",
       "importOk": "Recovery keys imported",
       "importRelaunch": "Budojo will restart to apply them.",
       "importFailed": "The recovery code could not be imported"
@@ -2873,7 +2858,6 @@
     "drive": {
       "title": "Google Drive backup",
       "why": "Backups saved on this computer do not survive this computer. Connect a Google account and every backup is copied there automatically.",
-      "unavailable": "This build cannot connect to Google Drive.",
       "connect": "Connect Google Drive",
       "connectedTo": "Backing up to {{account}}",
       "connected": "Google Drive connected",

@@ -19,6 +19,10 @@ import { formatIsoDate } from '../../../shared/utils/locale';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { Tooltip } from 'primeng/tooltip';
 import { RuntimeService } from '../../../core/services/runtime.service';
+import {
+  CONFIRM_ACCEPT_DESTRUCTIVE,
+  CONFIRM_REJECT_BUTTON,
+} from '../../../shared/utils/confirm-buttons';
 
 const MAX_LOGO_BYTES = 2 * 1024 * 1024;
 const ALLOWED_LOGO_MIME = ['image/png', 'image/jpeg', 'image/svg+xml', 'image/webp'];
@@ -269,8 +273,9 @@ export class AcademyDetailComponent {
       target: event.currentTarget as HTMLElement,
       message: this.translate.instant('academy.detail.confirm.removeMessage'),
       acceptLabel: this.translate.instant('academy.detail.confirm.removeAccept'),
-      rejectLabel: this.translate.instant('academy.detail.confirm.removeReject'),
-      acceptButtonProps: { severity: 'danger' },
+      rejectLabel: this.translate.instant('common.cancel'),
+      acceptButtonProps: CONFIRM_ACCEPT_DESTRUCTIVE,
+      rejectButtonProps: CONFIRM_REJECT_BUTTON,
       accept: () => this.removeLogo(),
     });
   }

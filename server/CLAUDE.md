@@ -139,7 +139,7 @@ server/app/
 
 - **PHPStan level 9** (max). Config: `server/phpstan.neon`. Run with `--memory-limit=1G` if you hit the default 128M ceiling.
 - **PHP CS Fixer**. Config: `server/.php-cs-fixer.php`. Rulesets: `@PHP84Migration`, `@PSR12`, `@PSR12:risky`. Key rules: `declare_strict_types`, `use_arrow_functions`, `ordered_imports`.
-- **PEST 4** with `--parallel`. Feature tests use SQLite `:memory:` via `RefreshDatabase`; unit tests mock external dependencies. Shared helpers (`userWithAcademy()`, …) live in `tests/Pest.php`. No enforced coverage minimum — coverage grows with TDD.
+- **PEST 5** with `--parallel`. Feature tests use SQLite `:memory:` via `RefreshDatabase`; unit tests mock external dependencies. Shared helpers (`userWithAcademy()`, …) live in `tests/Pest.php`. No enforced coverage minimum — coverage grows with TDD.
 
 CI blocks merge on any of the above failing. Run them locally via `./.claude/scripts/test-server.sh` before pushing.
 

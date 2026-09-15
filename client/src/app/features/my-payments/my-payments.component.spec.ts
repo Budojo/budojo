@@ -7,6 +7,7 @@ import type { AthletePayment } from '../../core/services/payment.service';
 import type { Carnet } from '../../core/services/carnet.service';
 import { environment } from '../../../environments/environment';
 import { provideI18nTesting } from '../../../test-utils/i18n-test';
+import { LanguageService } from '../../core/services/language.service';
 
 function payment(over: Partial<AthletePayment> = {}): AthletePayment {
   const year = new Date().getFullYear();
@@ -268,5 +269,22 @@ describe('MyPaymentsComponent — billing periods (#1382)', () => {
     expect(cell(el, 3).textContent).toContain('50');
     expect(el.querySelector('[data-cy="month-period-3"]')).toBeNull();
     expect(cell(el, 4).className).not.toContain('my-payments__row--paid');
+  });
+
+  it("names the month in the reader's language, not in English (#1670)", () => {
+    const { fixture, el, http, year } = setup();
+    // The real switch, not just the signal: `setLanguage` also calls
+    // `translate.use`, and the month names come through `| translate`.
+    TestBed.inject(LanguageService).setLanguage('it');
+    fixture.detectChanges();
+    http.expectOne(`${environment.apiBase}/api/v1/me/payments?year=${year}`).flush({ data: [] });
+    fixture.detectChanges();
+
+    // These are the twelve translated month keys the owner's payments tab
+    // uses, not `new Date(...) | date: 'LLLL'` against an unset LOCALE_ID.
+    const text = el.textContent ?? '';
+    expect(text).toContain('gennaio');
+    expect(text).toContain('dicembre');
+    expect(text).not.toContain('January');
   });
 });

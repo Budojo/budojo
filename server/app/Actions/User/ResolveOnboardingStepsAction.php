@@ -59,6 +59,17 @@ final class ResolveOnboardingStepsAction
                 $done[OnboardingStep::ADD_ATHLETE] = true;
             }
 
+            // Both answerable from the academy itself, so they answer
+            // themselves like the four below rather than waiting for a tick
+            // (#1649).
+            if ($academy->classes()->exists()) {
+                $done[OnboardingStep::SET_TIMETABLE] = true;
+            }
+
+            if ($academy->syllabusTopics()->exists()) {
+                $done[OnboardingStep::WRITE_SYLLABUS] = true;
+            }
+
             // Scoped through the academy's athletes, so a step cannot be
             // satisfied by another academy's records on a shared user.
             $athleteIds = $academy->athletes()->select('id');

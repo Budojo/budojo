@@ -1,6 +1,10 @@
 <section class="attendance-chart" data-cy="attendance-summary-chart">
   <header class="attendance-chart__header">
     <h3 class="attendance-chart__title">{{ 'attendanceSummary.title' | translate }}</h3>
+    <!-- allowEmpty defaults to TRUE: without this, tapping the chip that is
+         already chosen deselects it and emits null into a signal typed as
+         non-nullable, and the refetch goes out as `?range=null` (#1675).
+         There is no "no range" state to represent. -->
     <p-selectbutton
       [options]="rangeOptions()"
       [ngModel]="range()"
@@ -8,6 +12,7 @@
       optionLabel="label"
       optionValue="value"
       data-cy="attendance-summary-range"
+      [allowEmpty]="false"
     />
   </header>
 

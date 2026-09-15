@@ -3,7 +3,7 @@ import { provideRouter, Router } from '@angular/router';
 import { WhatsNewComponent } from './whats-new.component';
 import { provideI18nTesting } from '../../../test-utils/i18n-test';
 import { LanguageService } from '../../core/services/language.service';
-import { localised } from './whats-new.releases';
+import { localised, RELEASES } from './whats-new.releases';
 
 describe('WhatsNewComponent (#254)', () => {
   function setup() {
@@ -125,7 +125,7 @@ describe('WhatsNewComponent (#254)', () => {
     // version we've shipped; when we ship a new version and forget
     // to prepend instead of append, this fails.
     const firstRelease = root.querySelector('.whats-new__release');
-    expect(firstRelease?.querySelector('.whats-new__version')?.textContent?.trim()).toBe('v2.61.2');
+    expect(firstRelease?.querySelector('.whats-new__version')?.textContent?.trim()).toBe('v2.62.0');
   });
 
   it('opens on ten releases, with the rest a press away (#1464)', () => {
@@ -138,7 +138,7 @@ describe('WhatsNewComponent (#254)', () => {
 
     const more = root.querySelector('[data-cy="whats-new-more"]') as HTMLButtonElement;
     expect(more).not.toBeNull();
-    expect(more.textContent).toContain('99');
+    expect(more.textContent).toContain('100');
 
     more.click();
     fixture.detectChanges();
@@ -161,7 +161,7 @@ describe('WhatsNewComponent (#254)', () => {
     expect(root.querySelector('[data-cy="whats-new-more"]')).toBeNull();
 
     const cards = fixture.nativeElement.querySelectorAll('.whats-new__release');
-    expect(cards.length).toBe(109);
+    expect(cards.length).toBe(110);
 
     // Pin every version in the order we ship them so a refactor that
     // accidentally reverses the array (e.g. a sort that reads ids
@@ -170,6 +170,7 @@ describe('WhatsNewComponent (#254)', () => {
       (el as HTMLElement).querySelector('.whats-new__version')?.textContent?.trim(),
     );
     expect(versions).toEqual([
+      'v2.62.0',
       'v2.61.2',
       'v2.61.1',
       'v2.61.0',
@@ -308,10 +309,10 @@ describe('WhatsNewComponent (#254)', () => {
       h.textContent?.trim(),
     );
     expect(headings).toEqual([
-      '🛡️ Privacy & data control',
-      '🥋 Athletes & belts',
-      '📱 Mobile fixes',
-      '🧹 Behind the scenes',
+      'Privacy & data control',
+      'Athletes & belts',
+      'Mobile fixes',
+      'Behind the scenes',
     ]);
   });
 
@@ -319,5 +320,33 @@ describe('WhatsNewComponent (#254)', () => {
     const { cmp } = setup();
     cmp.goHome();
     expect(TestBed.inject(Router).navigateByUrl).toHaveBeenCalledWith('/dashboard');
+  });
+});
+
+describe('no emoji in the release notes (#1659)', () => {
+  it('leaves every section heading without a glyph', () => {
+    // The content voice rule is "no emoji in product UI", and the release
+    // notes are product UI. They rendered as tofu wherever no emoji font is
+    // installed, and as colour pictographs where one is — neither is the
+    // typography the rest of the app uses.
+    // Base pictographs only. A variation selector, a zero-width joiner or a
+    // skin-tone modifier never appears without one, and putting them in a
+    // character class is what `no-misleading-character-class` forbids.
+    // No \u2190-\u21FF: that block is typographic arrows, and "Profilo" →
+    // "Impostazioni" is prose, not decoration.
+    const EMOJI = /[\u{1F000}-\u{1FAFF}\u{2300}-\u{27BF}\u{2B00}-\u{2BFF}]/u;
+
+    const offenders = RELEASES.flatMap((release) =>
+      release.sections
+        .flatMap((section) =>
+          typeof section.heading === 'string'
+            ? [section.heading]
+            : [section.heading.en, section.heading.it],
+        )
+        .filter((heading) => EMOJI.test(heading))
+        .map((heading) => `${release.version}: ${heading}`),
+    );
+
+    expect(offenders).toEqual([]);
   });
 });

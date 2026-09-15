@@ -1,5 +1,10 @@
 <p-toast position="top-right" />
-<p-confirmpopup />
+<!-- A dialog, not a popup (#1644, TT-5). The only confirm on this screen is
+     opened from a button INSIDE the lesson dialog, and a popup anchors to
+     its trigger while ignoring the dialog's bounds — so it hung out below
+     the dialog's bottom edge. A modal confirm is centred, so where it sits
+     in the DOM does not matter. -->
+<p-confirmdialog />
 
 <section class="timetable" data-cy="timetable-page">
   <app-page-header [title]="'academy.timetable.title' | translate" [countLabel]="countLabel()">
@@ -78,6 +83,8 @@
                         [attr.aria-label]="
                           'academy.timetable.editAria' | translate: { name: c.name }
                         "
+                        [pTooltip]="'academy.timetable.editHint' | translate"
+                        tooltipPosition="top"
                         [attr.data-cy]="'timetable-class-' + c.id"
                       >
                         <span class="slot__time" [class.slot__time--none]="!timeRange(c)">
@@ -105,6 +112,9 @@
                         [attr.data-cy]="'timetable-plan-' + c.id"
                       >
                         <i class="pi pi-book" aria-hidden="true"></i>
+                        <span class="slot__plan-label">
+                          {{ 'academy.timetable.plan' | translate }}
+                        </span>
                       </button>
                     </li>
                   }
@@ -236,6 +246,7 @@
           [showButtons]="true"
           [fluid]="true"
           [suffix]="'academy.timetable.form.durationSuffix' | translate"
+          [placeholder]="'academy.timetable.form.durationPlaceholder' | translate"
           data-cy="timetable-form-duration"
         />
       </div>
@@ -271,7 +282,7 @@
           severity="danger"
           [text]="true"
           [fluid]="true"
-          (onClick)="confirmRemove($event)"
+          (onClick)="confirmRemove()"
           data-cy="timetable-form-remove"
         />
       }

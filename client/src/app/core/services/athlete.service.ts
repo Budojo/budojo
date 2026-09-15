@@ -391,6 +391,27 @@ export class AthleteService {
   private readonly http = inject(HttpClient);
   private readonly base = `${environment.apiBase}/api/v1/athletes`;
 
+  /**
+   * How many athletes are marked inactive — the answer to "is this gym new,
+   * or has everyone been stood down?", which the roster query alone cannot
+   * give because its default `status=active` returns nothing either way
+   * (#1666).
+   *
+   * Asks for `status=inactive` rather than for everyone, on three counts: it
+   * is the claim the empty state actually makes, so the copy cannot overstate
+   * it; it excludes the bin, so deleted people are never counted as stood
+   * down; and it is recognisable on the wire, where an unfiltered `?page=1`
+   * is indistinguishable from the roster's own first query — which is how it
+   * first went wrong, by landing after a sorted request and being mistaken
+   * for it.
+   *
+   * Only `meta.total` is used; the rows come along because the index has no
+   * count-only mode.
+   */
+  countInactive(): Observable<number> {
+    return this.list({ page: 1, status: 'inactive' }).pipe(map((res) => res.meta.total));
+  }
+
   list(filters: AthleteFilters = {}): Observable<AthleteListResponse> {
     let params = new HttpParams();
     if (filters.belt) params = params.set('belt', filters.belt);

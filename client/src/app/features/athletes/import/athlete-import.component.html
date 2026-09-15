@@ -165,10 +165,7 @@
                 <td>{{ dateLabel(row, 'date_of_birth') }}</td>
                 <td>{{ dateLabel(row, 'joined_at') }}</td>
                 <td>
-                  <p-tag
-                    [severity]="severityFor(row)"
-                    [value]="'athletes.import.status.' + row.status | translate"
-                  />
+                  <p-tag [severity]="severityFor(row)" [value]="statusKey(row) | translate" />
                   @if (reasonFor(row); as reason) {
                     <span class="import-table__reason">{{ reason }}</span>
                   }

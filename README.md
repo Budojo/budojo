@@ -268,14 +268,14 @@ budojo/
 | SPA framework | Angular 21 |
 | UI components | PrimeNG 21 (Material preset, MD3) |
 | API contract | OpenAPI 3.0.3 + Spectral lint |
-| Desktop shell | Electron 33 + bundled PHP 8.4 |
+| Desktop shell | Electron 44 + bundled PHP 8.4 |
 | Desktop packaging | electron-builder (NSIS) |
 | Dev environment | Docker + Compose |
-| PHP tests | PEST 4 |
+| PHP tests | PEST 5 |
 | PHP static analysis | PHPStan (level 9) |
 | PHP style | PHP CS Fixer (PSR-12) |
 | Angular unit tests | Vitest 4 |
-| Angular E2E tests | Cypress 13 |
+| Angular E2E tests | Cypress 15 |
 | Releases | semantic-release (beta on develop, stable on main) |
 
 ---
