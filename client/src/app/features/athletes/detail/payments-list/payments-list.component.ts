@@ -666,9 +666,42 @@ export class PaymentsListComponent implements OnInit {
    * rather than to three different stories.
    */
   protected periodCaption(row: MonthRow): string | null {
-    return row.payment === null
-      ? null
-      : this.periodCaptionFor(row.payment.year, row.payment.month, row.periodMonths);
+    const payment = row.payment;
+    if (payment === null || row.periodMonths <= 1) return null;
+
+    // Each row says the thing its reader does not already know (#1714).
+    //
+    // One string on all three rows of a quarter meant the row that STARTS
+    // the period explained itself to itself — "settembre · Da settembre a
+    // novembre" — and that is exactly where a reader stops and asks what
+    // they are being told. On the covered rows the same string earns its
+    // place: it is the only thing explaining a "Paid" with a dash for an
+    // amount.
+    if (row.coveredByEarlierPeriod) {
+      return this.translate.instant('athletes.detail.payments.periodCoveredBy', {
+        month: this.translate.instant(MONTH_KEYS[payment.month - 1]),
+      });
+    }
+
+    const rest = Array.from({ length: row.periodMonths - 1 }, (_, i) =>
+      this.translate.instant(MONTH_KEYS[(payment.month + i) % 12]),
+    );
+    return this.translate.instant(
+      rest.length === 1
+        ? 'athletes.detail.payments.periodStartsHereOne'
+        : 'athletes.detail.payments.periodStartsHereOther',
+      { next: this.listWords(rest) },
+    );
+  }
+
+  /**
+   * "ottobre e novembre", "ottobre, novembre e dicembre" — the language's own
+   * list, not a comma-joined array. `Intl.ListFormat` knows the conjunction
+   * for both languages the app speaks.
+   */
+  private listWords(words: readonly string[]): string {
+    const locale = localeFor(this.languageService.currentLang());
+    return new Intl.ListFormat(locale, { style: 'long', type: 'conjunction' }).format(words);
   }
 
   /** The same caption for a period that has not been recorded yet. */

@@ -2062,7 +2062,10 @@
         "prevYear": "Previous year",
         "nextYear": "Next year",
         "periodHint": "{{period}} · {{amount}} per period",
-        "periodMonths": "Every {{count}} months"
+        "periodMonths": "Every {{count}} months",
+        "periodStartsHereOne": "Also covers {{next}}",
+        "periodStartsHereOther": "Also covers {{next}}",
+        "periodCoveredBy": "Part of the {{month}} payment"
       },
       "documents": {
         "confirm": {
