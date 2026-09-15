@@ -1654,6 +1654,12 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
         EMPTY_PAGE,
       );
     },
+    act: () => {
+      // `[data-cy="athletes-empty"]` is the id of ALL FOUR empty states, so
+      // waiting for it proves only that one of them rendered — and the bug
+      // this screen exists for is the wrong one rendering. Name the copy.
+      cy.get('[data-cy="athletes-empty"]').should('contain.text', 'non si allena nessuno');
+    },
   });
   // And the fifth: the bin, with nothing in it.
   screen('20-athletes-trash-empty', '/dashboard/athletes', ROSTER_READY, {

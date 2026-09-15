@@ -3,7 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { Router, provideRouter } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import type { Mock } from 'vitest';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
@@ -27,7 +27,7 @@ class FakeAthleteService {
   readonly delete = vi.fn(() => of(void 0));
   // Asked only when the roster comes back empty on a query nobody narrowed
   // (#1666). Zero by default: a fake academy with no rows is a new one.
-  readonly countAll = vi.fn(() => of(0));
+  readonly countInactive = vi.fn(() => of(0));
 }
 
 class FakePaymentService {
@@ -2119,9 +2119,9 @@ describe('AthletesListComponent — sessions out of sessions held (#1455)', () =
   // ─── An all-inactive roster is not a new academy (#1666) ─────────────────
 
   describe('the empty roster tells apart a new gym from a paused one', () => {
-    function renderWithTotalAthletes(total: number) {
-      const svc = TestBed.inject(AthleteService) as unknown as { countAll: Mock };
-      svc.countAll = vi.fn(() => of(total));
+    function renderWithInactive(total: number) {
+      const svc = TestBed.inject(AthleteService) as unknown as { countInactive: Mock };
+      svc.countInactive = vi.fn(() => of(total));
       const fixture = TestBed.createComponent(AthletesListComponent);
       fixture.detectChanges();
       return fixture;
@@ -2131,7 +2131,7 @@ describe('AthletesListComponent — sessions out of sessions held (#1455)', () =
       (fixture.nativeElement as HTMLElement).querySelector('[data-cy="athletes-empty"]');
 
     it('says everyone is inactive, and how many, instead of "add your first"', () => {
-      const fixture = renderWithTotalAthletes(12);
+      const fixture = renderWithInactive(12);
 
       // The roster queries status=active by default, so a gym that has marked
       // everyone inactive got zero rows with no filter set and was told it had
@@ -2144,14 +2144,14 @@ describe('AthletesListComponent — sessions out of sessions held (#1455)', () =
     it('still says first-run when the academy really has nobody', () => {
       // The negative control the fix turns on: without it the new copy would
       // simply replace the old one and be wrong in the other direction.
-      const fixture = renderWithTotalAthletes(0);
+      const fixture = renderWithInactive(0);
       expect(fixture.componentInstance.emptyStateKind()).toBe('first-run');
     });
 
     it('counts one athlete in the singular', () => {
       // ngx-translate runs here with no plural rule and no message compiler,
       // so the two forms are separate keys picked at the call site (#1646).
-      const fixture = renderWithTotalAthletes(1);
+      const fixture = renderWithInactive(1);
       expect(fixture.componentInstance.inactiveHintKey()).toBe(
         'athletes.list.empty.allInactiveHintOne',
       );
@@ -2159,23 +2159,61 @@ describe('AthletesListComponent — sessions out of sessions held (#1455)', () =
     });
 
     it('does not ask at all when a filter is what emptied the list', () => {
-      const svc = TestBed.inject(AthleteService) as unknown as { countAll: Mock };
-      svc.countAll = vi.fn(() => of(12));
+      const svc = TestBed.inject(AthleteService) as unknown as { countInactive: Mock };
+      svc.countInactive = vi.fn(() => of(12));
       const fixture = TestBed.createComponent(AthletesListComponent);
       fixture.detectChanges();
-      svc.countAll.mockClear();
+      svc.countInactive.mockClear();
 
       fixture.componentInstance.applySearch('rossi');
       fixture.detectChanges();
 
       // A search that finds nobody is already explained by the search; the
       // extra round-trip would buy nothing and the copy would be wrong.
-      expect(svc.countAll).not.toHaveBeenCalled();
+      expect(svc.countInactive).not.toHaveBeenCalled();
       expect(fixture.componentInstance.emptyStateKind()).toBe('filtered');
     });
 
+    it('says the same thing on the phone as on the desktop', () => {
+      // The two layouts each had their own @switch, and Angular checks
+      // neither for exhaustiveness — so the new case shipped desktop-only and
+      // the phone, which client/CLAUDE.md calls the primary form factor, went
+      // on claiming the academy had never added anybody (#1666).
+      const fixture = renderWithInactive(12);
+      const el = fixture.nativeElement as HTMLElement;
+
+      const desktop = el.querySelector('[data-cy="athletes-empty"]');
+      const mobile = el.querySelector('[data-cy="athletes-mobile-empty"]');
+      expect(desktop, 'desktop empty state').not.toBeNull();
+      expect(mobile, 'mobile empty state').not.toBeNull();
+      expect(mobile?.textContent).toContain('12');
+      expect(mobile?.textContent).not.toContain('first');
+    });
+
+    it('shows nothing rather than the wrong thing while it is still deciding', () => {
+      const pending = new Subject<number>();
+      const svc = TestBed.inject(AthleteService) as unknown as { countInactive: Mock };
+      svc.countInactive = vi.fn(() => pending.asObservable());
+
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      fixture.detectChanges();
+      const el = fixture.nativeElement as HTMLElement;
+
+      // Mid-flight the answer is unknown, and `first-run` is what the state
+      // machine falls back to — so without the guard the owner of a
+      // stood-down gym reads "you have not added anybody yet" for a whole
+      // round-trip before it corrects itself.
+      expect(el.querySelector('[data-cy="athletes-empty"]')).toBeNull();
+
+      pending.next(12);
+      pending.complete();
+      fixture.detectChanges();
+
+      expect(el.querySelector('[data-cy="athletes-empty"]')?.textContent).toContain('12');
+    });
+
     it('offers the eye, which is the control that actually shows them', () => {
-      const fixture = renderWithTotalAthletes(12);
+      const fixture = renderWithInactive(12);
       const cmp = fixture.componentInstance;
       expect(cmp.showingInactive()).toBe(false);
 

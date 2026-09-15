@@ -53,6 +53,15 @@ describe('athletes table — column sorting', () => {
     cy.intercept('GET', '/api/v1/documents/expiring*', { statusCode: 200, body: { data: [] } });
     cy.intercept('GET', '/api/v1/attendance/summary*', { statusCode: 200, body: { data: [] } });
     cy.intercept('GET', '/api/v1/athletes*', { statusCode: 200, body: EMPTY_PAGE }).as('athletes');
+    // These tests are about the ROSTER's query. An empty roster also triggers
+    // the "is everyone just inactive?" count (#1666), which hits the same
+    // endpoint and would otherwise land in `@athletes` — so `cy.wait` could
+    // resolve to it and assert a sort on a request that carries none.
+    // Registered after the line above, because a later intercept wins.
+    cy.intercept(
+      { method: 'GET', pathname: '/api/v1/athletes', query: { status: 'inactive' } },
+      { statusCode: 200, body: EMPTY_PAGE },
+    ).as('inactiveCount');
   });
 
   it('asks for belt descending before anyone touches a control (#1457)', () => {

@@ -79,6 +79,7 @@ import {
 import { localeFor } from '../../../shared/utils/locale';
 import { CarnetService } from '../../../core/services/carnet.service';
 import { CONFIRM_REJECT_BUTTON } from '../../../shared/utils/confirm-buttons';
+import { NgTemplateOutlet } from '@angular/common';
 
 interface SelectOption<T extends string> {
   label: string;
@@ -89,6 +90,7 @@ interface SelectOption<T extends string> {
   selector: 'app-athletes-list',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    NgTemplateOutlet,
     FormsModule,
     ToggleSwitchModule,
     RouterLink,
@@ -410,6 +412,20 @@ export class AthletesListComponent implements OnInit {
    * and only then. `null` is "not asked", never zero.
    */
   private readonly inactiveCount = signal<number | null>(null);
+
+  /**
+   * True while the "is everyone just inactive?" count is in flight.
+   *
+   * Without it the empty state renders `first-run` for the length of that
+   * round-trip and then swaps — so the owner of a stood-down gym is told
+   * "you have not added anybody yet", briefly, before being told the truth.
+   * A flash of a wrong answer is worse than a moment of none, especially
+   * when the wrong answer is a claim about their own academy (#1666).
+   */
+  private readonly resolvingEmptyState = signal<boolean>(false);
+
+  /** The roster is still deciding what its emptiness means. */
+  readonly settlingEmptyState = computed<boolean>(() => this.resolvingEmptyState());
 
   /** The count in the all-inactive copy, safe to read from the template. */
   readonly inactiveTotal = computed<number>(() => this.inactiveCount() ?? 0);
@@ -1635,9 +1651,15 @@ export class AthletesListComponent implements OnInit {
     if (this.isTrashedMode()) return;
     if (this.emptyStateKind() === 'filtered') return;
 
+    this.resolvingEmptyState.set(true);
     this.athleteService
-      .countAll()
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .countInactive()
+      .pipe(
+        finalize(() => {
+          if (epoch === this.loadEpoch) this.resolvingEmptyState.set(false);
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
       .subscribe({
         next: (total) => {
           if (epoch !== this.loadEpoch) return;
@@ -1654,6 +1676,7 @@ export class AthletesListComponent implements OnInit {
     // asked about, so it is dropped the moment a new one goes out.
     const epoch = ++this.loadEpoch;
     this.inactiveCount.set(null);
+    this.resolvingEmptyState.set(false);
     const filters: AthleteFilters = { page: this.page };
     const belt = this.selectedBelt();
     const status = this.selectedStatus();
