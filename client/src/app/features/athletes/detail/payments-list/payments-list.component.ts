@@ -46,8 +46,15 @@ import { MONTH_KEYS } from '../../../../shared/utils/months';
  * `getUTCMonth()` arithmetic so the badge state and the persisted
  * row stay in sync across the day/month boundary.
  *
- * Future months are listed but their action buttons are disabled —
- * there's nothing to "mark paid" for July 2026 in May.
+ * **Every month is markable, including ones that have not arrived.**
+ * #1636 disabled them on the reasoning that there is nothing to mark paid
+ * for July in May. That is wrong about how a gym actually takes money:
+ * paying a month or a term in advance is ordinary, and the owner had no way
+ * to record it — the row the money belonged to was the one row they could
+ * not touch. The roster's inline toggle stays pinned to the current month,
+ * because it is a one-click bulk surface where a stray tap on the wrong
+ * month would be silent; this tab is the deliberate one, opened on a single
+ * athlete, and it is where an advance payment gets recorded.
  */
 
 interface MonthRow {
@@ -240,10 +247,12 @@ export class PaymentsListComponent implements OnInit {
       // fee behind it gets the server's 422 and its toast, which is a
       // better trade than flickering the whole table read-only on
       // every visit.
-      // Only the CURRENT year is capped at today; a year that has ended is
-      // editable end to end, which is the whole point of being able to reach
-      // one (#1636).
-      const canEdit = fee && (this.year() < this.currentYear || month <= this.currentMonth);
+      // No cap at today: an athlete who pays October in September has to be
+      // recordable in October's row, which is the only row that means it.
+      // The server has always allowed it — `month` is `between:1,12` and
+      // `year` is `min:2020|max:2100` — so this was a client-side refusal of
+      // something the domain permits.
+      const canEdit = fee;
       return {
         month,
         labelKey,
