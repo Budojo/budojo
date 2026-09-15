@@ -298,4 +298,21 @@
       </p>
     }
   </div>
+
+  <!--
+    The academy's own papers (#1743) — the DAE certificate, the liability
+    policy, the affiliation, the lease.
+
+    The same component the athlete's Documents tab uses, mounted in academy
+    mode: the same expiry badge, the same upload dialog, the same
+    confirm-before-delete, the same reminder behind them. A second documents
+    feature would have doubled every rule in this epic.
+
+    Below the identity rows, because it is the academy's paperwork rather than
+    part of what the academy IS — and it is the one block on this page with
+    its own actions, so it does not belong inside a read-only `<dl>`.
+  -->
+  <div class="detail__documents" data-cy="academy-documents-section">
+    <app-documents-list [ownerAcademy]="true" />
+  </div>
 </section>

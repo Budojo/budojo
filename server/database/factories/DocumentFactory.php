@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Database\Factories;
 
 use App\Enums\DocumentType;
+use App\Models\Academy;
 use App\Models\Athlete;
 use App\Models\Document;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -48,6 +49,21 @@ class DocumentFactory extends Factory
     {
         return $this->state(fn () => [
             'expires_at' => now()->addDays($days)->toDateString(),
+        ]);
+    }
+
+    /**
+     * Factory state: one of the academy's own papers (#1743) — no athlete.
+     *
+     * `athlete_id` is cleared explicitly. `definition()` seeds an
+     * `Athlete::factory()`, and leaving it would create an athlete nobody
+     * asked for AND violate the exactly-one-owner invariant in the same row.
+     */
+    public function forAcademy(Academy $academy): static
+    {
+        return $this->state([
+            'athlete_id' => null,
+            'academy_id' => $academy->id,
         ]);
     }
 

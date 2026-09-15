@@ -41,6 +41,7 @@ class ExportUserDataAction
         // fan into N+1 even on academies with hundreds of athletes.
         $user->load([
             'academy.address',
+            'academy.documents',
             'academy.athletes.address',
             'academy.athletes.documents',
             'academy.athletes.payments',
@@ -110,6 +111,14 @@ class ExportUserDataAction
             'training_days' => $academy->training_days,
             'logo_path' => $academy->logo_path,
             'address' => $this->serializeAddress($academy->address),
+            // The academy's own papers (#1743) — the liability policy, the DAE
+            // certificate, the lease. They hang off the academy directly, so
+            // the athlete-first walk below does not reach them, and portability
+            // that silently omits a whole class of the user's documents is not
+            // portability.
+            'documents' => $academy->documents
+                ->map(fn (Document $d): array => $this->serializeDocument($d))
+                ->all(),
             'created_at' => $academy->created_at?->toIso8601String(),
         ];
     }

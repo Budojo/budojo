@@ -42,8 +42,15 @@ class GetExpiringDocumentsAction
      * a certificate, so their lapsed paperwork is not an alarm — it stays on
      * their own documents tab, where it is history rather than a task.
      *
+     * **The academy's own papers are included** (#1743), merged in from a
+     * second query and re-sorted, because they hang off the academy directly
+     * and the athlete join cannot reach them. They carry no athlete, and the
+     * active-athlete scope above does not apply to them — an academy's
+     * liability policy does not have a training status.
+     *
      * The `athlete` relation is eager-loaded so the API resource can include
-     * the athlete identity without N+1. Result size is capped at MAX_RESULTS.
+     * the athlete identity without N+1. Result size is capped at MAX_RESULTS,
+     * applied to the MERGED list.
      *
      * @return Collection<int, \App\Models\Document>
      */
@@ -59,7 +66,7 @@ class GetExpiringDocumentsAction
             'athlete_id',
         );
 
-        return $through
+        $athleteDocuments = $through
             ->where('athletes.status', AthleteStatus::Active->value)
             ->whereNotNull('documents.expires_at')
             // `whereDate`, not `where` — the `date` cast on the model writes
@@ -75,6 +82,36 @@ class GetExpiringDocumentsAction
             ->orderBy('documents.expires_at', 'asc')
             ->limit(self::MAX_RESULTS)
             ->get();
+
+        // The academy's own papers are not reachable through the athlete join
+        // (#1743) — `athlete_id` is null on them — so they are a second query,
+        // merged and re-sorted here.
+        //
+        // **The cap applies to the merge, not to each half.** Two queries each
+        // taking 200 can return 400 rows, and capping each at 100 would hide
+        // urgent athlete certificates behind an academy's paperwork or the
+        // other way round. Each half still carries the cap so neither can pull
+        // an unbounded set out of the database; the merge then re-applies it
+        // to what the caller actually receives.
+        $academyDocuments = $academy->documents()
+            ->whereNotNull('expires_at')
+            ->whereDate('expires_at', '<=', $cutoff)
+            ->orderBy('expires_at', 'asc')
+            ->limit(self::MAX_RESULTS)
+            ->get();
+
+        /** @var Collection<int, \App\Models\Document> $merged */
+        $merged = $athleteDocuments
+            ->concat($academyDocuments)
+            // `id` after the date, so two documents expiring on the same day
+            // come back in the same order on every call. Without it a tied
+            // block reorders between requests, and the dashboard widget's
+            // "most urgent first" becomes "whichever the database felt like".
+            ->sortBy([['expires_at', 'asc'], ['id', 'asc']])
+            ->take(self::MAX_RESULTS)
+            ->values();
+
+        return $merged;
     }
 
     /**

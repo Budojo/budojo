@@ -24,6 +24,10 @@ class DocumentResource extends JsonResource
         return [
             'id' => $d->id,
             'athlete_id' => $d->athlete_id,
+            // Set when the document is the academy's own paper rather than a
+            // person's (#1743). Exactly one of the two is non-null, so a
+            // reader can tell the kinds apart without loading a relation.
+            'academy_id' => $d->academy_id,
             'type' => $d->type->value,
             'original_name' => $d->original_name,
             'mime_type' => $d->mime_type,

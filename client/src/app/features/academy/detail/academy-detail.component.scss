@@ -228,3 +228,10 @@
 .row__muted {
   color: var(--p-text-muted-color);
 }
+
+// The academy's own papers (#1743). The list brings its own card chrome, so
+// this only has to place it: outside the identity `<dl>`, on the page's
+// vertical rhythm.
+.detail__documents {
+  margin-top: 1.5rem;
+}

@@ -5,6 +5,7 @@ import {
   OnInit,
   computed,
   inject,
+  input,
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -84,6 +85,17 @@ export class DocumentsListComponent implements OnInit {
   private readonly languageService = inject(LanguageService);
   private readonly destroyRef = inject(DestroyRef);
 
+  /**
+   * Render the **academy's** own papers instead of an athlete's (#1743).
+   *
+   * One list, two mounts. Everything this component does — the tombstone
+   * toggle, the expiry badge, the confirm-before-delete, the download through
+   * the auth interceptor, the shared upload dialog — is identical for both
+   * owners; only where the rows come from differs. A second component would
+   * have duplicated all of it to express one branch.
+   */
+  readonly ownerAcademy = input<boolean>(false);
+
   readonly documents = signal<Document[]>([]);
   readonly loading = signal(true);
   readonly athleteId = signal<number | null>(null);
@@ -99,6 +111,14 @@ export class DocumentsListComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    // The academy's own papers have no id in the URL — the subject is the
+    // caller's active academy, so there is no route to read (#1743).
+    if (this.ownerAcademy()) {
+      this.load();
+
+      return;
+    }
+
     // Parent route is /athletes/:id — we read the id from the parent route params
     // so this component stays dumb about URL structure above it.
     const parentParams = this.route.parent?.paramMap;
@@ -184,24 +204,27 @@ export class DocumentsListComponent implements OnInit {
 
   private load(): void {
     const athleteId = this.athleteId();
-    if (athleteId === null) return;
+    if (!this.ownerAcademy() && athleteId === null) return;
 
     this.loading.set(true);
-    this.documentService
-      .list(athleteId, { includeCancelled: this.showCancelled() })
-      .pipe(finalize(() => this.loading.set(false)))
-      .subscribe({
-        next: (res) => this.documents.set(res.data),
-        error: () => {
-          this.documents.set([]);
-          this.messageService.add({
-            severity: 'error',
-            summary: this.translate.instant('athletes.detail.documents.toast.loadErrorSummary'),
-            detail: this.translate.instant('athletes.detail.documents.toast.loadErrorDetail'),
-            life: 4000,
-          });
-        },
-      });
+    const request$ = this.ownerAcademy()
+      ? this.documentService.listForAcademy({ includeCancelled: this.showCancelled() })
+      : this.documentService.list(athleteId as number, {
+          includeCancelled: this.showCancelled(),
+        });
+
+    request$.pipe(finalize(() => this.loading.set(false))).subscribe({
+      next: (res) => this.documents.set(res.data),
+      error: () => {
+        this.documents.set([]);
+        this.messageService.add({
+          severity: 'error',
+          summary: this.translate.instant('athletes.detail.documents.toast.loadErrorSummary'),
+          detail: this.translate.instant('athletes.detail.documents.toast.loadErrorDetail'),
+          life: 4000,
+        });
+      },
+    });
   }
 
   private delete(doc: Document): void {

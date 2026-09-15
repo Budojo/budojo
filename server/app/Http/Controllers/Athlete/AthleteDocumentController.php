@@ -52,7 +52,7 @@ class AthleteDocumentController extends Controller
         }
 
         $document = $this->uploadAction->execute(
-            athlete: $athlete,
+            owner: $athlete,
             type: DocumentType::from($request->string('type')->toString()),
             file: $file,
             issuedAt: $request->filled('issued_at') ? $request->string('issued_at')->toString() : null,

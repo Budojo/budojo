@@ -31,12 +31,15 @@ class UpdateDocumentRequest extends FormRequest
             return false;
         }
 
-        $athlete = $document->athlete;
-        if ($athlete === null) {
+        // Through the athlete, or directly on the academy (#1743) — one
+        // accessor, so a new kind of document cannot acquire a fifth copy of
+        // the scoping rule that quietly disagrees with the other four.
+        $academyId = $document->owningAcademyId();
+        if ($academyId === null) {
             return false;
         }
 
-        return $this->authorizeInAcademy($athlete->academy_id, Capability::DocumentsUpload);
+        return $this->authorizeInAcademy($academyId, Capability::DocumentsUpload);
     }
 
     /**
@@ -49,8 +52,27 @@ class UpdateDocumentRequest extends FormRequest
      */
     public function rules(): array
     {
+        /** @var \App\Models\Document|null $document */
+        $document = $this->route('document');
+
         return [
-            'type' => ['sometimes', Rule::enum(DocumentType::class)],
+            'type' => [
+                'sometimes',
+                Rule::enum(DocumentType::class),
+                // An academy paper cannot be RETYPED into a medical
+                // certificate (#1743). Upload already refuses it, but refusing
+                // it only at upload leaves a back door with teeth: the row
+                // would then match `PurgeExpiredMedicalCertificates`, which
+                // after 24 months soft-deletes it and **wipes the file** — so
+                // a mistyped liability policy would quietly destroy itself.
+                // It is also the one type that is special-category data, and
+                // its bytes would still be plaintext, since encryption happens
+                // at upload and `PUT` cannot re-write a file.
+                Rule::when(
+                    $document?->academy_id !== null,
+                    [Rule::notIn([DocumentType::MedicalCertificate->value])],
+                ),
+            ],
             'issued_at' => ['sometimes', 'nullable', 'date'],
             'expires_at' => ['sometimes', 'nullable', 'date', 'after_or_equal:issued_at'],
             'notes' => ['sometimes', 'nullable', 'string', 'max:500'],

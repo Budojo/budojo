@@ -18,7 +18,8 @@ use Illuminate\Database\Query\Builder as QueryBuilder;
 
 /**
  * @property int                 $id
- * @property int                 $athlete_id
+ * @property int|null            $athlete_id Null when the document belongs to the academy itself (#1743). Exactly one of this and `academy_id` is set — resolve the owner through `owningAcademyId()`, never by dereferencing one of them.
+ * @property int|null            $academy_id Set when the document is the academy's own paper rather than a person's (#1743).
  * @property DocumentType        $type
  * @property string              $file_path
  * @property string              $original_name
@@ -34,6 +35,7 @@ use Illuminate\Database\Query\Builder as QueryBuilder;
  */
 #[Fillable([
     'athlete_id',
+    'academy_id',
     'type',
     'file_path',
     'original_name',
@@ -56,6 +58,41 @@ class Document extends Model
     public function athlete(): BelongsTo
     {
         return $this->belongsTo(Athlete::class);
+    }
+
+    /**
+     * The academy this document belongs to, when it belongs to one directly
+     * (#1743) — the DAE certificate, the liability policy, the affiliation.
+     *
+     * Exactly one of `athlete()` and `academy()` is set. Null here means the
+     * document belongs to a person, not that it belongs to nobody.
+     *
+     * @return BelongsTo<Academy, $this>
+     */
+    public function academy(): BelongsTo
+    {
+        return $this->belongsTo(Academy::class);
+    }
+
+    /**
+     * Which academy owns this document, whichever way it is attached (#1743).
+     *
+     * **The tenant-scoping answer, in one place.** Five call sites used to
+     * reach through `$document->athlete->academy_id` — the delete capability
+     * check, the download owner check, two FormRequests and the per-athlete
+     * list. All five null-pointer on a document that belongs to the academy
+     * rather than to a person, and five copies of a scoping rule is how a
+     * document from another install becomes downloadable. Adding five null
+     * checks would have left five copies; this leaves one.
+     *
+     * Null means *unattached*, which the invariant forbids. Returning null
+     * rather than guessing is deliberate: every caller compares it against
+     * the user's active academy, and null never equals an academy id, so an
+     * impossible row is refused rather than leaked.
+     */
+    public function owningAcademyId(): ?int
+    {
+        return $this->academy_id ?? $this->athlete?->academy_id;
     }
 
     /**
