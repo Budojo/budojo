@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\Actions\Notification\DeliverOwnerDigestAction;
+use App\Enums\AthleteStatus;
 use App\Enums\DocumentType;
 use App\Mail\MedicalCertificateExpiringMail;
 use App\Models\Academy;
@@ -279,8 +280,15 @@ class SendMedicalCertExpiryReminders extends Command
         // one lapses — and without this the owner still got a T-30, a T-7 and
         // a T-0 telling them to chase a certificate sitting in the athlete's
         // own documents tab.
+        // Active athletes only, for the same reason the expiring list uses
+        // (#1740) — and because the digest links to that list. Chasing an
+        // athlete who stopped training was already noise; once the list
+        // stopped showing them, the reminder pointed the owner at a page
+        // reading "All documents up to date" about the very row it named.
         return Document::query()
-            ->whereHas('athlete', fn ($q) => $q->where('academy_id', $academy->id))
+            ->whereHas('athlete', fn ($q) => $q
+                ->where('academy_id', $academy->id)
+                ->where('status', AthleteStatus::Active->value))
             ->where('type', DocumentType::MedicalCertificate)
             ->notSuperseded()
             ->where(function ($q) use ($triggerDates): void {

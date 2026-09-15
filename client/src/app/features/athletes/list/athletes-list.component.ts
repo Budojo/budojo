@@ -1012,9 +1012,20 @@ export class AthletesListComponent implements OnInit {
    * needs doing rather than only how much of it there is.
    */
   protected readonly alertsMissing = signal<number>(0);
-  protected readonly alertsExpiring = signal<number>(0);
+  /**
+   * Medical certificates only, and the other three types on their own line
+   * (#1740). One line used to count the whole `data` array under a label
+   * that read "certificate expiring within 30 days", so an expired ID card
+   * from 2024 and an insurance policy were both being called certificates.
+   *
+   * The split is client-side because `DocumentResource` already carries
+   * `type` — the server answers "what expires", and which of those the owner
+   * is being asked about is this panel's question, not the endpoint's.
+   */
+  protected readonly alertsCertificates = signal<number>(0);
+  protected readonly alertsOtherDocuments = signal<number>(0);
   protected readonly alertCount = computed<number>(
-    () => this.alertsMissing() + this.alertsExpiring(),
+    () => this.alertsMissing() + this.alertsCertificates() + this.alertsOtherDocuments(),
   );
 
   private loadAlerts(): void {
@@ -1028,7 +1039,10 @@ export class AthletesListComponent implements OnInit {
           // `data` — would otherwise throw inside a subscribe callback and
           // take the whole roster down with it. The alerts are the least
           // important thing on this page; they must not be able to break it.
-          this.alertsExpiring.set(resp.data?.length ?? 0);
+          const documents = resp.data ?? [];
+          const certificates = documents.filter((d) => d.type === 'medical_certificate').length;
+          this.alertsCertificates.set(certificates);
+          this.alertsOtherDocuments.set(documents.length - certificates);
           this.alertsMissing.set(resp.missing_medical_certificate?.length ?? 0);
         },
         // Non-blocking: a failed health check must not cost the reader the

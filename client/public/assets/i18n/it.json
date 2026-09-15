@@ -2001,7 +2001,10 @@
       "alerts": {
         "button": "Avvisi",
         "missingCertificate": "senza certificato medico",
-        "expiringCertificate": "certificato in scadenza entro 30 giorni",
+        "expiringCertificateOne": "certificato medico da rinnovare",
+        "expiringCertificateOther": "certificati medici da rinnovare",
+        "expiringDocumentOne": "altro documento da rinnovare",
+        "expiringDocumentOther": "altri documenti da rinnovare",
         "none": "Non c'è niente da controllare"
       }
     },

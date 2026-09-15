@@ -36,6 +36,12 @@ class GetExpiringDocumentsAction
      * asked about the 2026 one it replaced — which otherwise sat here in red
      * for the full 24 months until the purge took it.
      *
+     * **Active athletes only** (#1740), which is what `missingMedicalCertificate()`
+     * below has always said and what this method did not: one envelope cannot
+     * hold two definitions of who counts. An inactive athlete is not asked for
+     * a certificate, so their lapsed paperwork is not an alarm — it stays on
+     * their own documents tab, where it is history rather than a task.
+     *
      * The `athlete` relation is eager-loaded so the API resource can include
      * the athlete identity without N+1. Result size is capped at MAX_RESULTS.
      *
@@ -54,6 +60,7 @@ class GetExpiringDocumentsAction
         );
 
         return $through
+            ->where('athletes.status', AthleteStatus::Active->value)
             ->whereNotNull('documents.expires_at')
             // `whereDate`, not `where` — the `date` cast on the model writes
             // `2026-10-15 00:00:00` while `$cutoff` is the bare `2026-10-15`,

@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Router, provideRouter } from '@angular/router';
 import { Subject, of, throwError } from 'rxjs';
 import { ConfirmationService, MessageService } from 'primeng/api';
@@ -2340,6 +2340,79 @@ describe('AthletesListComponent — sessions out of sessions held (#1455)', () =
       fixture.detectChanges();
 
       expect(cmp.showingInactive()).toBe(true);
+    });
+  });
+  describe('the alerts popover counts what its label says (#1740)', () => {
+    // One line used to count the whole `data` array under a label reading
+    // "certificate expiring within 30 days", so an ID card and an insurance
+    // policy were both being called certificates. `type` is on the wire; the
+    // panel splits on it.
+    function renderWithHealth(data: unknown[], missing: unknown[] = []) {
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      fixture.detectChanges();
+      const http = TestBed.inject(HttpTestingController);
+      http
+        .expectOne((r) => r.url.endsWith('/documents/expiring'))
+        .flush({ data, missing_medical_certificate: missing });
+      fixture.detectChanges();
+      return fixture;
+    }
+
+    const doc = (id: number, type: string) => ({
+      id,
+      athlete_id: id,
+      type,
+      original_name: 'f.pdf',
+      mime_type: 'application/pdf',
+      size_bytes: 1,
+      issued_at: null,
+      expires_at: '2026-10-01',
+      notes: null,
+      created_at: null,
+      deleted_at: null,
+      athlete: { id, first_name: 'A', last_name: 'B' },
+    });
+
+    it('counts an id card and an insurance policy as documents, not as certificates', () => {
+      const cmp = renderWithHealth([
+        doc(1, 'medical_certificate'),
+        doc(2, 'id_card'),
+        doc(3, 'insurance'),
+        doc(4, 'other'),
+      ]).componentInstance as unknown as {
+        alertsCertificates: () => number;
+        alertsOtherDocuments: () => number;
+        alertCount: () => number;
+      };
+
+      expect(cmp.alertsCertificates()).toBe(1);
+      expect(cmp.alertsOtherDocuments()).toBe(3);
+      expect(cmp.alertCount()).toBe(4);
+    });
+
+    it('leaves the other-documents line at zero when every row is a certificate', () => {
+      const cmp = renderWithHealth([doc(1, 'medical_certificate'), doc(2, 'medical_certificate')])
+        .componentInstance as unknown as {
+        alertsCertificates: () => number;
+        alertsOtherDocuments: () => number;
+      };
+
+      expect(cmp.alertsCertificates()).toBe(2);
+      expect(cmp.alertsOtherDocuments()).toBe(0);
+    });
+
+    it('still adds the missing-certificate athletes into the badge total', () => {
+      const fixture = renderWithHealth(
+        [doc(1, 'id_card')],
+        [{ id: 9, first_name: 'C', last_name: 'D' }],
+      );
+      const cmp = fixture.componentInstance as unknown as { alertCount: () => number };
+
+      expect(cmp.alertCount()).toBe(2);
+      const badge = (fixture.nativeElement as HTMLElement).querySelector(
+        '.athletes-page__toggle-count',
+      );
+      expect(badge?.textContent?.trim()).toBe('2');
     });
   });
 });

@@ -312,15 +312,37 @@
             <i class="pi pi-angle-right" aria-hidden="true"></i>
           </button>
         }
-        @if (alertsExpiring() > 0) {
+        @if (alertsCertificates() > 0) {
           <button
             type="button"
             class="athletes-alerts__row"
             (click)="goToExpiringDocuments(); alertPanel.hide()"
             data-cy="athletes-alerts-expiring"
           >
-            <span class="athletes-alerts__count">{{ alertsExpiring() }}</span>
-            <span>{{ 'athletes.list.alerts.expiringCertificate' | translate }}</span>
+            <span class="athletes-alerts__count">{{ alertsCertificates() }}</span>
+            <span>{{
+              (alertsCertificates() === 1
+                ? 'athletes.list.alerts.expiringCertificateOne'
+                : 'athletes.list.alerts.expiringCertificateOther'
+              ) | translate
+            }}</span>
+            <i class="pi pi-angle-right" aria-hidden="true"></i>
+          </button>
+        }
+        @if (alertsOtherDocuments() > 0) {
+          <button
+            type="button"
+            class="athletes-alerts__row"
+            (click)="goToExpiringDocuments(); alertPanel.hide()"
+            data-cy="athletes-alerts-other-documents"
+          >
+            <span class="athletes-alerts__count">{{ alertsOtherDocuments() }}</span>
+            <span>{{
+              (alertsOtherDocuments() === 1
+                ? 'athletes.list.alerts.expiringDocumentOne'
+                : 'athletes.list.alerts.expiringDocumentOther'
+              ) | translate
+            }}</span>
             <i class="pi pi-angle-right" aria-hidden="true"></i>
           </button>
         }
