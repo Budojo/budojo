@@ -182,6 +182,24 @@ export class PaymentsListComponent implements OnInit {
     return this.seasonStartMonth() === 1 ? `${start}` : `${start}/${`${start + 1}`.slice(-2)}`;
   });
 
+  /**
+   * Which season a calendar month falls in — the boundary rule, mirroring
+   * `App\\Support\\Season::startFor`.
+   *
+   * Written once, here, and used by everything that needs it. The component
+   * takes `season_start` from the server precisely so this rule does not
+   * have to exist on the client — but an athlete's `joined_at` also has to
+   * be placed in a season, and the payload does not say which. One named
+   * copy with a pointer to the PHP is honest; three inlined `>=` comparisons
+   * scattered through the file is how the off-by-one gets in, and it did:
+   * `floorYear` compared a CALENDAR year against a SEASON year and made the
+   * season an athlete joined in unreachable for eight of twelve joining
+   * months.
+   */
+  private seasonOf(year: number, month: number): number {
+    return month >= this.seasonStartMonth() ? year : year - 1;
+  }
+
   /** The calendar year the current season began in, as the server resolved it. */
   private readonly currentSeasonYear = computed<number>(() => {
     const iso = this.academyService.academy()?.season_start;
@@ -189,11 +207,16 @@ export class PaymentsListComponent implements OnInit {
     // The academy has not answered yet. Derive it the same way the server
     // would rather than guess the current calendar year: in March, that
     // guess is a whole season out.
-    return this.currentMonth >= this.seasonStartMonth() ? this.currentYear : this.currentYear - 1;
+    return this.seasonOf(this.currentYear, this.currentMonth);
   });
 
   /** The year this athlete joined — there is nothing to look at before it. */
-  private readonly joinedYear = signal<number | null>(null);
+  /**
+   * The day they joined, as year and month — not just the year. A season is
+   * placed by both (#1709); the year alone cannot say which side of the
+   * boundary a January joiner falls on.
+   */
+  private readonly joinedOn = signal<{ year: number; month: number } | null>(null);
 
   /**
    * The server refuses to record a payment before this (`min:2020` on the
@@ -221,17 +244,29 @@ export class PaymentsListComponent implements OnInit {
   protected readonly canGoPrev = computed<boolean>(() => this.seasonYear() > this.floorYear());
 
   /**
-   * The earliest year worth opening: the year they joined, but never before
-   * the year the server will accept. When the athlete request fails the
-   * joining year is unknown, and the hard floor is what stops the stepper
-   * walking back to 1999.
+   * The earliest SEASON worth opening: the one the athlete joined in, but
+   * never before the one holding the first month the server will accept.
+   *
+   * Both bounds are seasons. Flooring a season with a calendar year is an
+   * off-by-one for every athlete who joined before the season-start month —
+   * on a September academy that is January through August, eight of twelve,
+   * and it put the months they actually paid for behind a disabled chevron.
+   *
+   * When the athlete request fails the joining season is unknown, and the
+   * hard floor is what stops the stepper walking back to 1999.
    */
-  private readonly floorYear = computed<number>(() =>
-    Math.max(
-      this.joinedYear() ?? PaymentsListComponent.EARLIEST_YEAR,
-      PaymentsListComponent.EARLIEST_YEAR,
-    ),
-  );
+  private readonly floorYear = computed<number>(() => {
+    const joined = this.joinedSeason();
+    const serverFloor = this.seasonOf(PaymentsListComponent.EARLIEST_YEAR, 1);
+    return Math.max(joined ?? serverFloor, serverFloor);
+  });
+
+  /** The season the athlete's joining date falls in — see `seasonOf`. */
+  private readonly joinedSeason = computed<number | null>(() => {
+    const joined = this.joinedOn();
+    if (joined === null) return null;
+    return this.seasonOf(joined.year, joined.month);
+  });
 
   /**
    * No forward travel past the season in progress. A season that has started
@@ -334,7 +369,12 @@ export class PaymentsListComponent implements OnInit {
         year,
         labelKey: MONTH_KEYS[month - 1],
         payment,
-        canEdit: fee,
+        // Per ROW, not per table: the earliest season straddles the server's
+        // `min:2020`, so its first months are outside what the server will
+        // accept while the rest of the same table is inside it. Flooring the
+        // whole season either hides months that are recordable or offers
+        // buttons that 422 (#1709).
+        canEdit: fee && year >= PaymentsListComponent.EARLIEST_YEAR,
         coveredByEarlierPeriod:
           payment !== null && !(payment.year === year && payment.month === month),
         periodMonths: payment?.period_months ?? 1,
@@ -540,11 +580,16 @@ export class PaymentsListComponent implements OnInit {
     this.athleteService.get(athleteId).subscribe({
       next: (athlete) => {
         // First, not last. As the final statement a throw here left every
-        // signal at its constructor value — including `joinedYear`, whose
+        // signal at its constructor value — including `joinedOn`, whose
         // default is the same `null` the guarded read produces — so the test
         // named for this regression could not see it.
         const joinedYear = Number(athlete.joined_at?.slice(0, 4));
-        this.joinedYear.set(Number.isFinite(joinedYear) ? joinedYear : null);
+        const joinedMonth = Number(athlete.joined_at?.slice(5, 7));
+        this.joinedOn.set(
+          Number.isFinite(joinedYear) && Number.isFinite(joinedMonth) && joinedMonth >= 1
+            ? { year: joinedYear, month: joinedMonth }
+            : null,
+        );
 
         this.athleteName.set(`${athlete.first_name} ${athlete.last_name}`);
         this.athleteFeeCents.set(athlete.monthly_fee_cents ?? null);

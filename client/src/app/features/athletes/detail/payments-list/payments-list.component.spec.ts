@@ -11,8 +11,16 @@ import { AthleteService } from '../../../../core/services/athlete.service';
 import { AthletePayment, PaymentService } from '../../../../core/services/payment.service';
 import { PaymentsListComponent } from './payments-list.component';
 
+/** Per-year payment fixtures, keyed the way the endpoint is. */
+const PAYMENTS_BY_YEAR = new Map<number, AthletePayment[]>();
+
 class FakePaymentService {
-  readonly list = vi.fn(() => of([] as AthletePayment[]));
+  // Honours the year it is asked for. A fake that ignores it returns the SAME
+  // array for both calls of a season, so `pages.flat()` merges a payload with
+  // its own duplicate and dropping half the fetch passes the suite (#1709).
+  readonly list = vi.fn((_athleteId: number, year: number) =>
+    of(PAYMENTS_BY_YEAR.get(year) ?? ([] as AthletePayment[])),
+  );
   readonly markPaid = vi.fn(() =>
     of({
       id: 99,
@@ -110,9 +118,14 @@ function setup(
     }),
   );
 
-  if (opts.payments) {
-    const svc = TestBed.inject(PaymentService) as unknown as { list: Mock };
-    svc.list = vi.fn(() => of(opts.payments!));
+  // Each payment is filed under its OWN calendar year, so a season that
+  // crosses new year genuinely needs both requests to see all of them —
+  // which is what makes the merge testable at all (#1709).
+  PAYMENTS_BY_YEAR.clear();
+  for (const p of opts.payments ?? []) {
+    const bucket = PAYMENTS_BY_YEAR.get(p.year) ?? [];
+    bucket.push(p);
+    PAYMENTS_BY_YEAR.set(p.year, bucket);
   }
 
   const fixture = TestBed.createComponent(PaymentsListComponent);
@@ -501,9 +514,18 @@ describe('PaymentsListComponent — the 422 that is not about the fee (#1382)', 
 
   // ─── A way to another year (#1636, PAY-1) ────────────────────────────────
 
-  // Frozen mid-year on purpose: these read the wall clock, and a test whose
-  // power swings with the calendar is not a test.
-  beforeEach(() => vi.setSystemTime(new Date(Date.UTC(2026, 5, 15))));
+  // Frozen in FEBRUARY 2027 on purpose, and consistent with the fixture's
+  // `season_start` of 2026-09-01 — a pairing the server can actually produce
+  // (`Season::startFor` on this date returns exactly that).
+  //
+  // February is the month that separates the two rules. The season on screen
+  // starts in 2026; the calendar year is 2027. The old rule
+  // (`seasonYear() < currentYear`) reads 2026 < 2027 and offers a step into
+  // 2027/28, a season that has not begun. The new one compares seasons and
+  // refuses. With the clock in June — and a `season_start` the server could
+  // never have returned for June — both rules agreed and the fix was pinned
+  // by nothing.
+  beforeEach(() => vi.setSystemTime(new Date(Date.UTC(2027, 1, 15))));
   afterEach(() => vi.useRealTimers());
 
   it('walks back a year and refetches that year', () => {
@@ -522,20 +544,67 @@ describe('PaymentsListComponent — the 422 that is not about the fee (#1382)', 
     expect(svc.list.mock.calls[3][1]).toBe(thisYear);
   });
 
-  it('stops at the year the athlete joined', () => {
-    const { component } = setup({ joinedAt: '2023-04-01' });
-    const thisYear = component['seasonYear']();
+  it('keeps the payments from BOTH calendar years the season spans', () => {
+    // The merge is the reason the load asks twice. Nothing else tested it:
+    // a fake that ignores the year returns the same array to both calls, so
+    // `pages.flat()` merged a payload with its own duplicate and dropping
+    // half the fetch passed the suite (#1709).
+    const { component } = setup({
+      joinedAt: '2020-01-01',
+      payments: [
+        {
+          id: 1,
+          athlete_id: 42,
+          year: 2026,
+          month: 10,
+          amount_cents: 9500,
+          paid_at: '2026-10-02T10:00:00Z',
+        },
+        {
+          id: 2,
+          athlete_id: 42,
+          year: 2027,
+          month: 2,
+          amount_cents: 9500,
+          paid_at: '2027-02-02T10:00:00Z',
+        },
+      ],
+    });
 
-    // Step until it refuses, rather than assume how many years back today is.
+    const rows = component['monthRows']();
+    const october = rows.find((r: { month: number }) => r.month === 10)!;
+    const february = rows.find((r: { month: number }) => r.month === 2)!;
+
+    // One from each request, both on the same table.
+    expect(october.payment?.id).toBe(1);
+    expect(february.payment?.id).toBe(2);
+  });
+
+  it('stops at the SEASON the athlete joined, which is not their joining year', () => {
+    // April 2023 belongs to the season that began in September 2022, so the
+    // floor is 2022. Flooring on the joining YEAR stopped at 2023 and put
+    // April through August 2023 — months this athlete actually paid for —
+    // behind a disabled chevron. On a September academy that hits every
+    // joining month from January to August: eight of twelve (#1709).
+    const { component } = setup({ joinedAt: '2023-04-01' });
+    const thisSeason = component['seasonYear']();
+
+    // Step until it refuses, rather than assume how many seasons back today is.
     for (let i = 0; i < 20 && component['canGoPrev'](); i++) component['prevYear']();
-    expect(component['seasonYear']()).toBe(2023);
+    expect(component['seasonYear']()).toBe(2022);
     expect(component['canGoPrev']()).toBe(false);
+
+    // And the month they joined in is actually on the table it stops at.
+    const months = component['monthRows']().map(
+      (r: { year: number; month: number }) => `${r.year}-${r.month}`,
+    );
+    expect(months).toContain('2023-4');
 
     // The guard, not just the disabled attribute: nothing stops a keyboard
     // or a test calling it again.
     component['prevYear']();
-    expect(component['seasonYear']()).toBe(2023);
-    expect(thisYear).toBeGreaterThan(2023);
+    expect(component['seasonYear']()).toBe(2022);
+    expect(thisSeason).toBeGreaterThan(2022);
   });
 
   it('does not travel into a year that has not happened', () => {
@@ -657,14 +726,26 @@ describe('PaymentsListComponent — the 422 that is not about the fee (#1382)', 
     // as "set a monthly fee first".
     const { component } = setup({ joinedAt: '2015-09-01' });
     for (let i = 0; i < 20 && component['canGoPrev'](); i++) component['prevYear']();
-    expect(component['seasonYear']()).toBe(2020);
+    // Season 2019, not calendar 2020: it is the season that CONTAINS January
+    // 2020, and stopping at season 2020 would have hidden January through
+    // August 2020 — inside the server's window, and unreachable.
+    expect(component['seasonYear']()).toBe(2019);
     expect(component['canGoPrev']()).toBe(false);
+
+    // The months of that season that the server would refuse are read-only
+    // rather than hidden, so the table stays honest at both ends.
+    const rows = component['monthRows']();
+    const sept2019 = rows.find((r: { year: number; month: number }) => r.year === 2019)!;
+    const jan2020 = rows.find((r: { year: number; month: number }) => r.year === 2020)!;
+    expect(sept2019.canEdit).toBe(false);
+    expect(jan2020.canEdit).toBe(true);
   });
 
   it('will not walk into the past when the athlete failed to load', () => {
     const { component } = setup();
     for (let i = 0; i < 20 && component['canGoPrev'](); i++) component['prevYear']();
-    // Without a hard floor an unknown joining year walked to 1999.
-    expect(component['seasonYear']()).toBe(2020);
+    // Without a hard floor an unknown joining year walked to 1999. The floor
+    // is the season holding the server's earliest acceptable month.
+    expect(component['seasonYear']()).toBe(2019);
   });
 });
