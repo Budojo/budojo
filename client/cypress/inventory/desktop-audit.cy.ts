@@ -588,33 +588,47 @@ const LEADERBOARD = {
 };
 
 // A payment covers a PERIOD (#1382): Giulia pays quarterly.
+//
+// The quarters start with the SEASON, not with the calendar (#1709). This
+// academy's year opens in September, so a quarterly payer pays in September,
+// December, March and June — and the last two fall in the next calendar
+// year, which is the case the table exists to get right. Newest first.
 const PAYMENTS_ONE = [
   {
     id: 1,
     athlete_id: 1,
-    year: 2026,
-    month: 7,
+    year: 2027,
+    month: 6,
     period_months: 3,
     amount_cents: 21_000,
-    paid_at: '2026-07-02',
+    paid_at: '2027-06-02',
   },
   {
     id: 2,
     athlete_id: 1,
-    year: 2026,
-    month: 4,
+    year: 2027,
+    month: 3,
     period_months: 3,
     amount_cents: 21_000,
-    paid_at: '2026-04-02',
+    paid_at: '2027-03-02',
   },
   {
     id: 3,
     athlete_id: 1,
     year: 2026,
-    month: 1,
+    month: 12,
     period_months: 3,
     amount_cents: 21_000,
-    paid_at: '2026-01-02',
+    paid_at: '2026-12-02',
+  },
+  {
+    id: 4,
+    athlete_id: 1,
+    year: 2026,
+    month: 9,
+    period_months: 3,
+    amount_cents: 21_000,
+    paid_at: '2026-09-02',
   },
 ];
 
@@ -2188,13 +2202,16 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
     },
   });
   // Giulia's July quarter unpaid, so September has a "mark paid" control.
+  // Everything but the last quarter, so the season's final three months are
+  // unpaid and there is a "mark" button to photograph. On a September season
+  // that is June, July and August (#1709).
   const PAYMENTS_TO_JUNE = { statusCode: 200, body: { data: PAYMENTS_ONE.slice(1) } };
   screen('22-athlete-payments-mark-confirm', '/dashboard/athletes/1/payments', DETAIL_READY, {
     stubs: () => {
       cy.intercept('GET', '/api/v1/athletes/*/payments*', PAYMENTS_TO_JUNE);
     },
     act: () => {
-      press('[data-cy="payment-mark-9"]');
+      press('[data-cy="payment-mark-6"]');
       cy.get('.p-confirmpopup', { timeout: 4000 }).should('be.visible');
     },
   });
@@ -2218,14 +2235,14 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       });
     },
     act: () => {
-      press('[data-cy="payment-mark-9"]');
+      press('[data-cy="payment-mark-6"]');
       cy.get('.p-confirmpopup-accept-button', { timeout: 4000 }).click({ force: true });
       cy.wait(800);
     },
   });
   screen('22-athlete-payments-unmark-confirm', '/dashboard/athletes/1/payments', DETAIL_READY, {
     act: () => {
-      press('[data-cy="payment-unmark-7"]');
+      press('[data-cy="payment-unmark-6"]');
       cy.get('.p-confirmpopup', { timeout: 4000 }).should('be.visible');
     },
   });

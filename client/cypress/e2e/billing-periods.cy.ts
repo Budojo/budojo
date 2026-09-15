@@ -9,7 +9,13 @@ export {};
  * people read as a ledger.
  */
 
-const YEAR = new Date().getUTCFullYear();
+// The season the fixture academy is in, stated rather than read off the wall
+// clock: the payments table is built on the season now (#1709), so asking
+// `new Date()` what year it is describes a different table every September.
+const SEASON = 2026;
+
+/** A month's own calendar year inside a September season. */
+const yearOf = (month: number): number => (month >= 9 ? SEASON : SEASON + 1);
 
 const ACADEMY_OK = {
   statusCode: 200,
@@ -22,6 +28,8 @@ const ACADEMY_OK = {
       logo_url: null,
       monthly_fee_cents: 5500,
       fee_tier_count: 0,
+      season_start_month: 9,
+      season_start: `${SEASON}-09-01`,
     },
   },
 };
@@ -48,11 +56,11 @@ const ATHLETE_QUARTERLY = {
 const QUARTERLY_FEB = {
   id: 7,
   athlete_id: 42,
-  year: YEAR,
+  year: yearOf(2),
   month: 2,
   period_months: 3,
   amount_cents: 16500,
-  paid_at: `${YEAR}-02-05T10:00:00Z`,
+  paid_at: `${yearOf(2)}-02-05T10:00:00Z`,
 };
 
 describe('A payment that covers a quarter', () => {
@@ -115,16 +123,19 @@ describe('A payment that covers a quarter', () => {
     cy.get('.p-confirmpopup').should('contain', 'February').and('contain', 'April');
   });
 
-  it('spreads a period bought last December into January and February', () => {
+  it('spreads a December period into the January and February of the SAME season', () => {
     cy.intercept('GET', '/api/v1/athletes/42/payments*', {
       statusCode: 200,
       body: {
         data: [
           {
             ...QUARTERLY_FEB,
-            year: YEAR - 1,
+            // December belongs to the season's first calendar year and the
+            // January and February it pays for to the second — one table,
+            // two years, which is the case #1709 exists to get right.
+            year: SEASON,
             month: 12,
-            paid_at: `${YEAR - 1}-12-05T10:00:00Z`,
+            paid_at: `${SEASON}-12-05T10:00:00Z`,
           },
         ],
       },

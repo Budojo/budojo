@@ -17,10 +17,11 @@ class FakePaymentService {
     of({
       id: 99,
       athlete_id: 42,
-      year: 2026,
+      // March of the 2026/27 season is March 2027 (#1709).
+      year: 2027,
       month: 3,
       amount_cents: 9500,
-      paid_at: '2026-03-05T10:00:00Z',
+      paid_at: '2027-03-05T10:00:00Z',
     } as AthletePayment),
   );
   readonly unmarkPaid = vi.fn(() => of(void 0));
@@ -49,6 +50,11 @@ const ACADEMY_BASE = {
   slug: 'test',
   address: null,
   logo_url: null,
+  // A September academy, stated rather than defaulted: the payments table is
+  // built on the season now (#1709), and a fixture that leans on the fallback
+  // would stop testing the thing the moment the fallback changed.
+  season_start_month: 9,
+  season_start: '2026-09-01',
 } as const;
 
 function setup(
@@ -58,6 +64,8 @@ function setup(
     payments?: AthletePayment[];
     joinedAt?: string;
     billingPeriodMonths?: number;
+    /** Override the academy's season — the table is built on it (#1709). */
+    academy?: { season_start_month: number; season_start: string };
   } = {},
 ) {
   TestBed.configureTestingModule({
@@ -80,7 +88,11 @@ function setup(
   });
 
   const fee = opts.fee === undefined ? 9500 : opts.fee;
-  TestBed.inject(AcademyService).academy.set({ ...ACADEMY_BASE, monthly_fee_cents: fee });
+  TestBed.inject(AcademyService).academy.set({
+    ...ACADEMY_BASE,
+    ...(opts.academy ?? {}),
+    monthly_fee_cents: fee,
+  });
 
   const athleteSvc = TestBed.inject(AthleteService) as unknown as { get: Mock };
   athleteSvc.get = vi.fn(() =>
@@ -109,38 +121,58 @@ function setup(
 }
 
 describe('PaymentsListComponent (#182 Surface 2)', () => {
-  it('loads payments for the current UTC year on init', () => {
+  it('loads both calendar years the season spans', () => {
     const { component } = setup();
     const svc = TestBed.inject(PaymentService) as unknown as { list: Mock };
 
-    expect(svc.list).toHaveBeenCalledTimes(1);
-    expect(svc.list.mock.calls[0][0]).toBe(42);
-    // Year is whatever UTC says today — assert it's in a sane window.
-    const year = svc.list.mock.calls[0][1];
-    expect(year).toBeGreaterThanOrEqual(2025);
-    expect(year).toBeLessThanOrEqual(2100);
+    // A September season runs into the next calendar year, and the endpoint
+    // takes one year at a time — so the table asks twice and merges (#1709).
+    expect(svc.list).toHaveBeenCalledTimes(2);
+    expect(svc.list.mock.calls[0]).toEqual([42, 2026]);
+    expect(svc.list.mock.calls[1]).toEqual([42, 2027]);
     expect(component['athleteName']()).toBe('Mario Rossi');
   });
 
-  it('renders 12 month rows in the calendar order', () => {
-    const { fixture } = setup();
+  it('asks only once for an academy whose year starts in January', () => {
+    // The negative control for the line above: a January season does not
+    // cross new year, so the second request would be a wasted round-trip.
+    const { component } = setup({
+      academy: { season_start_month: 1, season_start: '2026-01-01' },
+    });
+    const svc = TestBed.inject(PaymentService) as unknown as { list: Mock };
+
+    expect(svc.list).toHaveBeenCalledTimes(1);
+    expect(svc.list.mock.calls[0]).toEqual([42, 2026]);
+    expect(component['seasonLabel']()).toBe('2026');
+  });
+
+  it("renders the twelve months in the season's order, not the calendar's", () => {
+    const { fixture, component } = setup();
 
     const rows = fixture.nativeElement.querySelectorAll('[data-cy^="payment-row-"]');
     expect(rows.length).toBe(12);
 
-    // First row is January (month=1), last is December (month=12).
-    expect(rows[0].getAttribute('data-cy')).toBe('payment-row-1');
-    expect(rows[11].getAttribute('data-cy')).toBe('payment-row-12');
+    // September first, August last — the academy's year, not January's.
+    expect(rows[0].getAttribute('data-cy')).toBe('payment-row-9');
+    expect(rows[11].getAttribute('data-cy')).toBe('payment-row-8');
+
+    // And it wraps the calendar year in the middle, which is the whole
+    // reason every row carries its own.
+    const months = component['monthRows']().map((r: { month: number }) => r.month);
+    expect(months).toEqual([9, 10, 11, 12, 1, 2, 3, 4, 5, 6, 7, 8]);
+    const years = component['monthRows']().map((r: { year: number }) => r.year);
+    expect(years).toEqual([2026, 2026, 2026, 2026, 2027, 2027, 2027, 2027, 2027, 2027, 2027, 2027]);
   });
 
   it('renders Paid badge + amount + date on rows that have a payment', () => {
     const payment: AthletePayment = {
       id: 1,
       athlete_id: 42,
-      year: 2026,
+      // March of the 2026/27 season is March 2027 (#1709).
+      year: 2027,
       month: 3,
       amount_cents: 9500,
-      paid_at: '2026-03-05T10:00:00Z',
+      paid_at: '2027-03-05T10:00:00Z',
     };
     const { fixture } = setup({ payments: [payment] });
 
@@ -155,7 +187,7 @@ describe('PaymentsListComponent (#182 Surface 2)', () => {
     // Written for a reader since #1537 — and still the calendar day the
     // server recorded, because the timestamp is truncated rather than
     // converted (23:00 UTC on the 31st must not become the 1st in Rome).
-    expect(marchRow.textContent).toContain('5 March 2026');
+    expect(marchRow.textContent).toContain('5 March 2027');
   });
 
   it('hides edit buttons on every row when the academy has no monthly fee', () => {
@@ -227,10 +259,11 @@ describe('PaymentsListComponent (#182 Surface 2)', () => {
     const payment: AthletePayment = {
       id: 1,
       athlete_id: 42,
-      year: 2026,
+      // January of the 2026/27 season is January 2027 (#1709).
+      year: 2027,
       month: 1,
       amount_cents: 9500,
-      paid_at: '2026-01-15T10:00:00Z',
+      paid_at: '2027-01-15T10:00:00Z',
     };
     const { fixture, component } = setup({ payments: [payment] });
 
@@ -245,8 +278,10 @@ describe('PaymentsListComponent (#182 Surface 2)', () => {
     const markSpy = TestBed.inject(PaymentService).markPaid as unknown as Mock;
     const listSpy = TestBed.inject(PaymentService).list as unknown as Mock;
 
-    // Pick an editable unpaid month — January is paid, so use February (paid: null).
-    const februaryRow = component['monthRows']()[1];
+    // Pick an editable unpaid month — January is paid, so use February
+    // (paid: null). By month, not by index: the rows are in SEASON order
+    // now, so position 1 is October (#1709).
+    const februaryRow = component['monthRows']().find((r: { month: number }) => r.month === 2)!;
     expect(februaryRow.month).toBe(2);
     expect(februaryRow.payment).toBeNull();
 
@@ -256,10 +291,12 @@ describe('PaymentsListComponent (#182 Surface 2)', () => {
     component.confirmToggleRow(event, februaryRow);
 
     expect(markSpy).toHaveBeenCalledTimes(1);
-    expect(markSpy.mock.calls[0]).toEqual([42, expect.any(Number), 2]);
-    // After success the table reloads — list called once on init + once
-    // on the post-success reload.
-    expect(listSpy).toHaveBeenCalledTimes(2);
+    // February of a 2026/27 season is February 2027, and the write has to
+    // carry that rather than the season's own year (#1709).
+    expect(markSpy.mock.calls[0]).toEqual([42, 2027, 2]);
+    // After success the table reloads. Two requests per load, one per
+    // calendar year the season spans — so init + reload is four.
+    expect(listSpy).toHaveBeenCalledTimes(4);
     expect(messageSpy).toHaveBeenCalledWith(
       expect.objectContaining({ severity: 'success', summary: 'Marked paid' }),
     );
@@ -296,17 +333,25 @@ describe('PaymentsListComponent (#182 Surface 2)', () => {
 });
 
 describe('PaymentsListComponent — billing periods (#1382)', () => {
-  const YEAR = new Date().getUTCFullYear();
+  // The season the fixture academy is in, stated rather than read off the
+  // wall clock: the table is built on the season now (#1709), so a fixture
+  // that asks `new Date()` what year it is describes a different table every
+  // September.
+  const SEASON = 2026;
+
+  /** A month's own calendar year inside a September season. */
+  const yearOf = (month: number): number => (month >= 9 ? SEASON : SEASON + 1);
 
   function quarterlyFrom(month: number): AthletePayment {
+    const year = yearOf(month);
     return {
       id: 7,
       athlete_id: 42,
-      year: YEAR,
+      year,
       month,
       period_months: 3,
       amount_cents: 16500,
-      paid_at: `${YEAR}-0${month}-05T10:00:00Z`,
+      paid_at: `${year}-${`${month}`.padStart(2, '0')}-05T10:00:00Z`,
     };
   }
 
@@ -353,33 +398,35 @@ describe('PaymentsListComponent — billing periods (#1382)', () => {
     const payment: AthletePayment = {
       id: 1,
       athlete_id: 42,
-      year: YEAR,
+      year: yearOf(3),
       month: 3,
       period_months: 1,
       amount_cents: 9500,
-      paid_at: `${YEAR}-03-05T10:00:00Z`,
+      paid_at: `${yearOf(3)}-03-05T10:00:00Z`,
     };
     const { fixture } = setup({ payments: [payment] });
 
     const row = fixture.nativeElement.querySelector('[data-cy="payment-row-3"]');
     expect(row.textContent).toContain('95');
-    expect(row.textContent).toContain(`5 March ${YEAR}`);
+    expect(row.textContent).toContain(`5 March ${yearOf(3)}`);
     expect(fixture.nativeElement.querySelector('[data-cy="payment-period-3"]')).toBeNull();
   });
 
   it('spreads a period that started last year into this one', () => {
+    // December belongs to the SEASON's first calendar year; the January and
+    // February it pays for belong to the second. Inside one table.
     const payment: AthletePayment = {
       id: 9,
       athlete_id: 42,
-      year: YEAR - 1,
+      year: SEASON,
       month: 12,
       period_months: 3,
       amount_cents: 16500,
-      paid_at: `${YEAR - 1}-12-05T10:00:00Z`,
+      paid_at: `${SEASON}-12-05T10:00:00Z`,
     };
     const { fixture } = setup({ payments: [payment] });
 
-    // December's own row belongs to last year's table; January and February
+    // December's own row is in THIS table now; January and February
     // are what this year sees of it.
     for (const month of [1, 2]) {
       expect(
@@ -401,10 +448,10 @@ describe('PaymentsListComponent — billing periods (#1382)', () => {
     const payment = {
       id: 1,
       athlete_id: 42,
-      year: YEAR,
+      year: yearOf(3),
       month: 3,
       amount_cents: 9500,
-      paid_at: `${YEAR}-03-05T10:00:00Z`,
+      paid_at: `${yearOf(3)}-03-05T10:00:00Z`,
     } as AthletePayment;
     const { fixture } = setup({ payments: [payment] });
 
@@ -462,46 +509,48 @@ describe('PaymentsListComponent — the 422 that is not about the fee (#1382)', 
   it('walks back a year and refetches that year', () => {
     const { component } = setup({ joinedAt: '2023-04-01' });
     const svc = TestBed.inject(PaymentService) as unknown as { list: Mock };
-    const thisYear = component['year']();
+    const thisYear = component['seasonYear']();
 
     component['prevYear']();
 
-    expect(component['year']()).toBe(thisYear - 1);
-    // The table has to follow the heading, or the page says one year and
-    // shows another.
-    expect(svc.list).toHaveBeenCalledTimes(2);
-    expect(svc.list.mock.calls[1][1]).toBe(thisYear - 1);
+    expect(component['seasonYear']()).toBe(thisYear - 1);
+    // The table has to follow the heading, or the page says one season and
+    // shows another. Two requests per load, one per calendar year the season
+    // spans (#1709), so the previous season's pair starts at index 2.
+    expect(svc.list).toHaveBeenCalledTimes(4);
+    expect(svc.list.mock.calls[2][1]).toBe(thisYear - 1);
+    expect(svc.list.mock.calls[3][1]).toBe(thisYear);
   });
 
   it('stops at the year the athlete joined', () => {
     const { component } = setup({ joinedAt: '2023-04-01' });
-    const thisYear = component['year']();
+    const thisYear = component['seasonYear']();
 
     // Step until it refuses, rather than assume how many years back today is.
     for (let i = 0; i < 20 && component['canGoPrev'](); i++) component['prevYear']();
-    expect(component['year']()).toBe(2023);
+    expect(component['seasonYear']()).toBe(2023);
     expect(component['canGoPrev']()).toBe(false);
 
     // The guard, not just the disabled attribute: nothing stops a keyboard
     // or a test calling it again.
     component['prevYear']();
-    expect(component['year']()).toBe(2023);
+    expect(component['seasonYear']()).toBe(2023);
     expect(thisYear).toBeGreaterThan(2023);
   });
 
   it('does not travel into a year that has not happened', () => {
     const { component } = setup({ joinedAt: '2023-04-01' });
-    const thisYear = component['year']();
+    const thisYear = component['seasonYear']();
 
     expect(component['canGoNext']()).toBe(false);
     component['nextYear']();
-    expect(component['year']()).toBe(thisYear);
+    expect(component['seasonYear']()).toBe(thisYear);
 
     // ...but going back and forward again is fine.
     component['prevYear']();
     expect(component['canGoNext']()).toBe(true);
     component['nextYear']();
-    expect(component['year']()).toBe(thisYear);
+    expect(component['seasonYear']()).toBe(thisYear);
   });
 
   it('leaves every month of a finished year editable', () => {
@@ -544,7 +593,7 @@ describe('PaymentsListComponent — the 422 that is not about the fee (#1382)', 
     expect(component['athleteName']()).toBe('Mario Rossi');
     expect(component['canGoPrev']()).toBe(true);
     component['prevYear']();
-    expect(component['year']()).toBe(2025);
+    expect(component['seasonYear']()).toBe(2025);
   });
 
   // ─── What one period costs (#1636, PAY-4) ────────────────────────────────
@@ -565,19 +614,28 @@ describe('PaymentsListComponent — the 422 that is not about the fee (#1382)', 
     expect(component['billingPeriodHint']()).toBeNull();
   });
 
-  it('records against the year on screen, not against today', () => {
-    // The one that matters. Reverting `markPaid(id, this.year(), month)` to
-    // the current year left the whole suite green, and the bug it hides is a
-    // coach marking January 2025 paid and creating a January 2026 row.
+  it("records against the ROW's own year, not the season's", () => {
+    // The one that matters, and #1709 made it matter more. It used to prove
+    // the year came from the table rather than from today; a season crosses
+    // new year, so now it has to come from the ROW — February on a 2026/27
+    // table is February 2027, and sending 2026 would silently write the
+    // payment onto a month twelve cells above the one that was clicked.
     const { component } = setup({ joinedAt: '2023-04-01' });
     const svc = TestBed.inject(PaymentService) as unknown as { markPaid: Mock };
 
-    component['prevYear']();
-    expect(component['year']()).toBe(2025);
+    const rows = component['monthRows']();
+    const october = rows.find((r: { month: number }) => r.month === 10)!;
+    const february = rows.find((r: { month: number }) => r.month === 2)!;
 
-    component['applyToggle'](3, true);
+    // Same table, two different calendar years.
+    expect(october.year).toBe(2026);
+    expect(february.year).toBe(2027);
 
-    expect(svc.markPaid).toHaveBeenCalledWith(42, 2025, 3);
+    component['applyToggle'](february.year, february.month, true);
+    expect(svc.markPaid).toHaveBeenCalledWith(42, 2027, 2);
+
+    component['applyToggle'](october.year, october.month, true);
+    expect(svc.markPaid).toHaveBeenLastCalledWith(42, 2026, 10);
   });
 
   it('does not leave a year on the heading that the rows are not from', () => {
@@ -590,7 +648,7 @@ describe('PaymentsListComponent — the 422 that is not about the fee (#1382)', 
 
     component['prevYear']();
 
-    expect(component['year']()).toBe(2026);
+    expect(component['seasonYear']()).toBe(2026);
   });
 
   it('will not step before the earliest year the server accepts', () => {
@@ -599,7 +657,7 @@ describe('PaymentsListComponent — the 422 that is not about the fee (#1382)', 
     // as "set a monthly fee first".
     const { component } = setup({ joinedAt: '2015-09-01' });
     for (let i = 0; i < 20 && component['canGoPrev'](); i++) component['prevYear']();
-    expect(component['year']()).toBe(2020);
+    expect(component['seasonYear']()).toBe(2020);
     expect(component['canGoPrev']()).toBe(false);
   });
 
@@ -607,6 +665,6 @@ describe('PaymentsListComponent — the 422 that is not about the fee (#1382)', 
     const { component } = setup();
     for (let i = 0; i < 20 && component['canGoPrev'](); i++) component['prevYear']();
     // Without a hard floor an unknown joining year walked to 1999.
-    expect(component['year']()).toBe(2020);
+    expect(component['seasonYear']()).toBe(2020);
   });
 });
