@@ -1720,9 +1720,24 @@ export class AthletesListComponent implements OnInit {
 
     this.athleteService
       .list(filters)
-      .pipe(finalize(() => this.loading.set(false)))
+      .pipe(
+        finalize(() => {
+          // Only the request the reader is actually waiting for may
+          // un-skeleton the table. A stale one finishing second cleared
+          // `loading` while the current query was still out (#1707).
+          if (epoch === this.loadEpoch) this.loading.set(false);
+        }),
+      )
       .subscribe({
         next: (res) => {
+          // `load()` does not cancel the request it replaces, so an older
+          // response still arrives here. Whichever answered LAST used to
+          // win, which meant changing a sort or opening the eye could put
+          // the previous query's athletes under the new query's controls —
+          // and every control on those rows writes to the filters on
+          // screen, not to the ones that fetched them (#1707).
+          if (epoch !== this.loadEpoch) return;
+
           this.athletes.set(res.data);
           this.totalRecords.set(res.meta.total);
           if (res.meta.total === 0) this.askWhetherAllInactive(epoch);
@@ -1734,6 +1749,8 @@ export class AthletesListComponent implements OnInit {
           }
         },
         error: () => {
+          if (epoch !== this.loadEpoch) return;
+
           this.athletes.set([]);
           this.totalRecords.set(0);
           // Inline banner instead of a toast: a load failure must persist
