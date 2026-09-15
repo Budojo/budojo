@@ -2212,6 +2212,76 @@ describe('AthletesListComponent — sessions out of sessions held (#1455)', () =
       expect(el.querySelector('[data-cy="athletes-empty"]')?.textContent).toContain('12');
     });
 
+    it('lets no stale roster answer replace a newer one', () => {
+      // `load()` does not cancel the request it replaces, so two can be in
+      // flight. Whichever answered LAST used to win — so changing a sort or
+      // opening the eye could put the previous query's athletes under the new
+      // query's controls, and every control on those rows writes to the
+      // filters on screen rather than the ones that fetched them (#1707).
+      const row = (id: number, name: string) =>
+        ({
+          id,
+          first_name: name,
+          last_name: 'Rossi',
+          belt: 'white',
+          stripes: 0,
+          status: 'active',
+        }) as unknown as Athlete;
+      const page = (data: Athlete[]) => ({
+        data,
+        meta: { current_page: 1, last_page: 1, per_page: 20, total: data.length },
+      });
+
+      const first = new Subject<ReturnType<typeof page>>();
+      const second = new Subject<ReturnType<typeof page>>();
+      const svc = TestBed.inject(AthleteService) as unknown as { list: Mock; countInactive: Mock };
+      let call = 0;
+      svc.list = vi.fn(() => (call++ === 0 ? first : second));
+      svc.countInactive = vi.fn(() => of(0));
+
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      fixture.detectChanges();
+      const cmp = fixture.componentInstance;
+
+      // A second query goes out while the first is still in flight.
+      cmp.toggleInactive();
+
+      // The live one answers first...
+      second.next(page([row(2, 'Giulia')]));
+      second.complete();
+      fixture.detectChanges();
+      expect(cmp.athletes().map((a) => a.id)).toEqual([2]);
+
+      // ...and the stale one lands afterwards, carrying the OLD query's rows.
+      first.next(page([row(1, 'Mario')]));
+      first.complete();
+      fixture.detectChanges();
+
+      expect(cmp.athletes().map((a) => a.id)).toEqual([2]);
+    });
+
+    it('keeps the skeleton up while the live request is still out', () => {
+      // A stale response finishing second used to clear `loading` — so the
+      // table un-skeletoned while the query the reader is waiting for was
+      // still in flight (#1707).
+      const first = new Subject<unknown>();
+      const second = new Subject<unknown>();
+      const svc = TestBed.inject(AthleteService) as unknown as { list: Mock; countInactive: Mock };
+      let call = 0;
+      svc.list = vi.fn(() => (call++ === 0 ? first : second));
+      svc.countInactive = vi.fn(() => of(0));
+
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      fixture.detectChanges();
+      const cmp = fixture.componentInstance;
+      cmp.toggleInactive();
+
+      first.complete();
+      fixture.detectChanges();
+
+      expect(cmp.loading()).toBe(true);
+    });
+
     it('never latches the skeleton on when a stale roster answer lands late', () => {
       // `load()` does not cancel the request it replaces, so an older roster
       // response still reaches its handler. It used to set the in-flight flag
