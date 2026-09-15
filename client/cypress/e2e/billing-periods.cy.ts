@@ -101,11 +101,12 @@ describe('A payment that covers a quarter', () => {
     cy.get('[data-cy="payment-row-3"]').should('not.contain', '165');
     cy.get('[data-cy="payment-row-4"]').should('not.contain', '165');
 
-    // The caption is what ties the dash on March to the €165 on February.
-    cy.get('[data-cy="payment-period-3"]')
-      .scrollIntoView()
-      .should('contain', 'February')
-      .and('contain', 'April');
+    // The caption is what ties the dash on March to the €165 on February —
+    // and since #1714 it says exactly that, rather than repeating the range
+    // the reader can see three rows of.
+    cy.get('[data-cy="payment-period-3"]').scrollIntoView().should('contain', 'February');
+    // The row that STARTS the period says what it buys beyond itself.
+    cy.get('[data-cy="payment-period-2"]').should('contain', 'March').and('contain', 'April');
   });
 
   it('says what the whole period is before undoing it', () => {

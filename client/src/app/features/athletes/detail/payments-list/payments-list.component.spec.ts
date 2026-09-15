@@ -396,15 +396,59 @@ describe('PaymentsListComponent — billing periods (#1382)', () => {
     ).not.toContain('165');
   });
 
-  it('captions every covered month with the range the payment buys', () => {
-    const { fixture } = setup({ payments: [quarterlyFrom(2)] });
+  it('still names the WHOLE period in the confirm, where the row captions do not', () => {
+    // #1714 made each row say only what its reader does not already know.
+    // A confirm is the opposite case: the click touches all three months, so
+    // hiding two of them behind "part of the February payment" would be the
+    // consequence not shown before the act. Sharing one helper between the
+    // two collapsed them, and CI caught it.
+    const { fixture, component } = setup({ payments: [quarterlyFrom(2)] });
+    // Component-scoped, like the mark-paid test beside this one — a
+    // `TestBed.inject` finds no provider for it.
+    const confirmation = fixture.componentRef.injector.get(ConfirmationService);
+    const spy = vi.spyOn(confirmation, 'confirm').mockImplementation(() => confirmation);
 
-    for (const month of [2, 3, 4]) {
-      const caption = fixture.nativeElement.querySelector(`[data-cy="payment-period-${month}"]`);
-      expect(caption, `month ${month}`).not.toBeNull();
-      expect(caption.textContent).toContain('February');
-      expect(caption.textContent).toContain('April');
-    }
+    const february = component['monthRows']().find((r: { month: number }) => r.month === 2)!;
+    const event = new MouseEvent('click');
+    Object.defineProperty(event, 'currentTarget', { value: document.createElement('button') });
+    component.confirmToggleRow(event, february);
+
+    const message = spy.mock.calls[0][0].message as string;
+    expect(message).toContain('February');
+    expect(message).toContain('April');
+    expect(message).not.toContain('Part of');
+  });
+
+  it('tells each row the thing it does not already know', () => {
+    const { fixture } = setup({ payments: [quarterlyFrom(2)] });
+    const caption = (month: number) =>
+      fixture.nativeElement
+        .querySelector(`[data-cy="payment-period-${month}"]`)
+        ?.textContent?.trim();
+
+    // The row that STARTS the period used to say "February · from February
+    // to April", explaining itself to itself — which is where the reader
+    // stopped and asked what they were being told (#1714). It says what the
+    // payment buys BEYOND this row.
+    expect(caption(2)).toBe('Also covers March and April');
+
+    // The covered rows keep the thing that earns its place: the only
+    // explanation for a "Paid" with a dash where the amount goes.
+    expect(caption(3)).toBe('Part of the February payment');
+    expect(caption(4)).toBe('Part of the February payment');
+
+    // And the starting row never claims to be covered by itself.
+    expect(caption(2)).not.toContain('Part of');
+  });
+
+  it("joins the covered months with the language's own conjunction", () => {
+    // "March and April", not "March, April" — and the Italian gets "e"
+    // rather than a comma, which a hand-rolled join would have to know.
+    const { fixture } = setup({ payments: [{ ...quarterlyFrom(2), period_months: 4 }] });
+    const caption = fixture.nativeElement
+      .querySelector('[data-cy="payment-period-2"]')
+      ?.textContent?.trim();
+    expect(caption).toBe('Also covers March, April and May');
   });
 
   it('leaves a plain monthly payment reading exactly as it always did', () => {
