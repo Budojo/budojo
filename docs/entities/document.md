@@ -68,6 +68,7 @@ Documents are the first entity in the system that owns **physical files on disk*
   - **Undated rows sit outside the rule.** A medical row with `expires_at = null` neither supersedes nor is superseded — it carries no statement about when coverage ends, so it is no evidence coverage was renewed.
   - **Live means `deleted_at is null`.** A trashed certificate supersedes nothing, including one taken by `PurgeExpiredMedicalCertificates` after 24 months.
   - The athlete's own documents tab is **unaffected** — it lists history, and the superseded certificate stays visible there with its expiry badge.
+- **The expiring query covers active athletes only** (#1740). `GET /documents/expiring` returns documents belonging to athletes with `status = active`, the same scope `missing_medical_certificate` has always used — one envelope cannot hold two definitions of who counts. An inactive athlete is not asked for a certificate, so their lapsed paperwork is not an alarm; it stays on their own documents tab. The T-30 / T-7 / T-0 reminder pass carries the same scope, because its notification links to that list — reminding about an athlete the list no longer shows would send the owner to a page reading "All documents up to date" about the very row the email named.
 
 ## Related endpoints
 

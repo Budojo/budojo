@@ -104,6 +104,56 @@ describe('Expiring documents widget + deep-link', () => {
     cy.get('[data-cy="athlete-link"]').first().should('contain.text', 'Mario Rossi');
   });
 
+  it('splits the panel by what the label claims, and agrees with the page (#1740)', () => {
+    // One line used to count the whole array under "certificate expiring
+    // within 30 days", so the owner read "3 certificates", clicked through,
+    // and found an ID card and an insurance policy. Two lines now, and the
+    // two of them still add up to what the page says it is showing.
+    cy.intercept('GET', '/api/v1/documents/expiring*', {
+      statusCode: 200,
+      body: {
+        data: [
+          expiringDoc({ id: 1 }),
+          expiringDoc({
+            id: 2,
+            athlete_id: 7,
+            type: 'id_card',
+            athlete: { id: 7, first_name: 'Anna', last_name: 'Bianchi' },
+          }),
+          expiringDoc({
+            id: 3,
+            athlete_id: 99,
+            type: 'insurance',
+            athlete: { id: 99, first_name: 'Luca', last_name: 'Verdi' },
+          }),
+        ],
+        missing_medical_certificate: [],
+      },
+    }).as('getExpiring');
+
+    cy.visitAuthenticated('/dashboard/athletes');
+    cy.wait(['@academy', '@athletes', '@getExpiring']);
+
+    cy.get('[data-cy="athletes-alerts"]').click();
+    cy.get('[data-cy="athletes-alerts-expiring"]')
+      .should('be.visible')
+      .and('contain.text', '1')
+      .and('contain.text', 'medical certificate to renew');
+    cy.get('[data-cy="athletes-alerts-other-documents"]')
+      .should('be.visible')
+      .and('contain.text', '2')
+      .and('contain.text', 'other documents to renew');
+
+    // The badge is the sum, and the page it leads to shows the same total.
+    cy.get('[data-cy="athletes-alerts"] .athletes-page__toggle-count').should('have.text', '3');
+    cy.get('[data-cy="athletes-alerts-other-documents"]').click();
+
+    cy.url().should('include', '/dashboard/documents/expiring');
+    cy.wait('@getExpiring');
+    cy.get('[data-cy="expiring-table"] tbody tr').should('have.length', 3);
+    cy.contains('3 expiring').should('be.visible');
+  });
+
   it('goes quiet rather than vanishing when nothing needs attention (#1482)', () => {
     // It used to disappear entirely, which made the toolbar's controls shift
     // sideways the moment the last certificate was filed — and left nowhere

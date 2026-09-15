@@ -165,6 +165,33 @@ it('excludes soft-deleted documents', function (): void {
         ->assertJsonCount(0, 'data');
 });
 
+// Active athletes only (#1740) — the same definition `missingMedicalCertificate`
+// below has always used. An inactive athlete is not asked for a certificate,
+// so their lapsed paperwork is not an alarm.
+
+it('excludes documents belonging to an inactive athlete', function (): void {
+    $user = userWithAcademy();
+    $left = Athlete::factory()->for($user->academy)->create(['status' => 'inactive']);
+    $training = Athlete::factory()->for($user->academy)->create(['status' => 'active']);
+    idCard($left)->expired()->create();
+    $chase = idCard($training)->expired()->create();
+
+    $response = $this->actingAs($user)->getJson('/api/v1/documents/expiring')->assertOk();
+
+    expect(collect($response->json('data'))->pluck('id')->all())->toBe([$chase->id]);
+});
+
+it('excludes an inactive athlete\'s medical certificate from the expiring list too', function (): void {
+    $user = userWithAcademy();
+    $left = Athlete::factory()->for($user->academy)->create(['status' => 'inactive']);
+    Document::factory()->for($left)->state(['type' => DocumentType::MedicalCertificate])->expiringIn(5)->create();
+
+    $this->actingAs($user)
+        ->getJson('/api/v1/documents/expiring')
+        ->assertOk()
+        ->assertJsonCount(0, 'data');
+});
+
 it('returns 401 on expiring endpoint without auth', function (): void {
     $this->getJson('/api/v1/documents/expiring')->assertUnauthorized();
 });

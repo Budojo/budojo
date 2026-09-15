@@ -2001,7 +2001,10 @@
       "alerts": {
         "button": "Alerts",
         "missingCertificate": "no medical certificate",
-        "expiringCertificate": "certificate expiring within 30 days",
+        "expiringCertificateOne": "medical certificate to renew",
+        "expiringCertificateOther": "medical certificates to renew",
+        "expiringDocumentOne": "other document to renew",
+        "expiringDocumentOther": "other documents to renew",
         "none": "Nothing needs attention"
       }
     },

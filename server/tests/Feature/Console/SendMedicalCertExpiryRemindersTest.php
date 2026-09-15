@@ -276,3 +276,24 @@ it('still reminds about the renewal itself when its own threshold comes round', 
     ): bool => $mail->documents->pluck('id')->all() === [$current->id]
             && ! $mail->documents->pluck('id')->contains($superseded->id));
 });
+
+it('does not chase a certificate for an athlete who stopped training', function (): void {
+    // The digest links to /dashboard/documents/expiring, which since #1740
+    // shows active athletes only. Reminding about an inactive athlete sent
+    // the owner to a page reading "All documents up to date" about the very
+    // row the email had just named.
+    $academy = makeAcademy();
+    $left = Athlete::factory()->create([
+        'academy_id' => $academy->id,
+        'status' => 'inactive',
+    ]);
+    Document::factory()->create([
+        'athlete_id' => $left->id,
+        'type' => DocumentType::MedicalCertificate,
+        'expires_at' => Carbon::today()->addDays(7)->toDateString(),
+    ]);
+
+    \Artisan::call('budojo:send-medical-cert-expiry-reminders');
+
+    Mail::assertNothingQueued();
+});

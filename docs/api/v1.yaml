@@ -4430,6 +4430,11 @@ paths:
         the one with the greatest `expires_at` can appear here. The others are
         history, not something to chase. Other document types are never
         superseded — two ID cards are two documents.
+
+        Only documents belonging to **active** athletes are returned — the
+        same scope `missing_medical_certificate` has always used. An inactive
+        athlete is not asked for a certificate, so their lapsed paperwork is
+        not something to chase; it stays on their own documents tab.
       operationId: documentExpiring
       parameters:
         - name: days
