@@ -44,11 +44,12 @@ return new class extends Migration
 
         // Recover what the audit log still holds. `AthleteAuditObserver::updated`
         // writes only the CHANGED attributes into `after`, so a `status` key
-        // there means the status moved in that save — unlike `athlete.created`
-        // and `athlete.deleted`, which dump the whole row and would date every
-        // athlete's "status change" to their enrolment. Both edit verbs are
-        // matched: a save that moves belt AND status is filed under
-        // `athlete.belt.promoted`.
+        // there means the status moved in that save — unlike `athlete.created`,
+        // which dumps the whole row and would date every athlete's "status
+        // change" to their enrolment. Both edit verbs are matched: a save that
+        // moves belt AND status is filed under `athlete.belt.promoted`.
+        // (`athlete.deleted` needs no exclusion — `deleting` passes only
+        // `before:`, so it can never match an `after` filter.)
         //
         // This runs once. From here the observer keeps the column in step, so
         // the audit log is never read back out again.
@@ -64,7 +65,17 @@ return new class extends Migration
             DB::table('athletes')
                 ->where('id', $row->subject_id)
                 ->whereNull('status_changed_at')
-                ->update(['status_changed_at' => substr((string) $row->changed_at, 0, 10)]);
+                // `Y-m-d H:i:s` at midnight, not a bare `Y-m-d`. Laravel's
+                // plain `date` cast serialises through the grammar format, so
+                // the observer — and `joined_at`, and `date_of_birth` — all
+                // store `2026-09-15 00:00:00`. Writing the short form through
+                // `DB::table()` (which applies no casts) would leave two string
+                // shapes in one column, and SQLite compares them as text: a
+                // later `where('status_changed_at', '>=', Carbon::parse($d))`
+                // binds `Y-m-d H:i:s` and silently drops every backfilled row
+                // on its own boundary day. Same trap as #1484's `joined_at` vs
+                // `attended_on` comparison, and as #1739's expiry cutoff.
+                ->update(['status_changed_at' => substr((string) $row->changed_at, 0, 10) . ' 00:00:00']);
         }
     }
 

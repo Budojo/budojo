@@ -89,9 +89,13 @@ it('emits the date on the resource, null included', function (): void {
     $athlete = Athlete::factory()->for($user->academy)->create(['status' => AthleteStatus::Active]);
 
     // Always present, so a client can tell "not changed" from "field missing".
+    // `assertJsonPath(..., null)` alone would NOT say that — a missing key
+    // resolves to null too, so it passes with the field deleted from the
+    // resource. The structure assertion is the half with teeth.
     $this->actingAs($user)
         ->getJson("/api/v1/athletes/{$athlete->id}")
         ->assertOk()
+        ->assertJsonStructure(['data' => ['status_changed_at']])
         ->assertJsonPath('data.status_changed_at', null);
 });
 
@@ -106,8 +110,49 @@ it('stores a date, not the hour of day', function (): void {
 
     // 14:30 on the clock, midnight in the column. The hour somebody was
     // marked inactive is noise, and storing it invites a screen that shows it.
-    expect($raw)->toStartWith('2026-09-15')
-        ->and($raw)->not->toContain('14:30');
+    //
+    // The exact string, not a prefix: Laravel's plain `date` cast serialises
+    // through the grammar format, so this is what `joined_at` and
+    // `date_of_birth` hold too. A prefix assertion passes for a bare
+    // `2026-09-15` as well, which is how the backfill came to write a second
+    // shape into the same column.
+    expect($raw)->toBe('2026-09-15 00:00:00');
+});
+
+it('backfills in the same string shape the observer writes', function (): void {
+    $user = userWithAcademy();
+    $stamped = Athlete::factory()->for($user->academy)->create(['status' => AthleteStatus::Active]);
+    $stamped->update(['status' => AthleteStatus::Inactive]);
+
+    $backfilled = Athlete::factory()->for($user->academy)->create(['status' => AthleteStatus::Active]);
+    \Illuminate\Support\Facades\DB::table('audit_entries')->insert([
+        'academy_id' => $user->academy->id,
+        'action' => 'athlete.updated',
+        'subject_type' => Athlete::class,
+        'subject_id' => $backfilled->id,
+        'subject_label' => 'A B',
+        'after' => json_encode(['status' => 'inactive']),
+        'created_at' => '2026-09-15 11:00:00',
+    ]);
+
+    statusChangedAtMigration()->up();
+
+    $raw = fn (Athlete $a): string => (string) \Illuminate\Support\Facades\DB::table('athletes')
+        ->where('id', $a->id)->value('status_changed_at');
+
+    // Two write paths, one column, one shape. `DB::table()` in a migration
+    // applies no casts, so the short form went in unconverted — and SQLite
+    // compares dates as text, so the query below dropped the backfilled row
+    // on the very day it was dated.
+    expect($raw($backfilled))->toBe($raw($stamped));
+
+    $matched = Athlete::query()
+        ->where('status_changed_at', '>=', Carbon::parse('2026-09-15'))
+        ->pluck('id')
+        ->all();
+
+    expect($matched)->toContain($backfilled->id)
+        ->and($matched)->toContain($stamped->id);
 });
 
 // The backfill. It runs once, reads the audit log, and is never read again —
