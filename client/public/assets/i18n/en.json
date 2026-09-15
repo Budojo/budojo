@@ -2500,7 +2500,7 @@
       "another": "Choose another file"
     },
     "coverage": {
-      "fraction": "{{seen}} of {{total}} techniques the academy taught",
+      "fraction": "{{attended}} of {{total}} techniques the academy taught",
       "since": "Counted from {{date}}, the day they joined.",
       "legend": {
         "seenOne": "{{count}} seen",
@@ -2535,7 +2535,12 @@
       "unattributedOne": "{{count}} of their sessions does not say which class it was, so nothing here counts it either way.",
       "unattributedOther": "{{count}} of their sessions do not say which class they were, so nothing here counts them either way.",
       "notTaughtYetOne": "One more is in the programme but has not been taught yet. That is the academy's gap, not theirs.",
-      "notTaughtYetOther": "{{count}} more are in the programme but have not been taught yet. That is the academy's gap, not theirs."
+      "notTaughtYetOther": "{{count}} more are in the programme but have not been taught yet. That is the academy's gap, not theirs.",
+      "nothingMissedOne": "They were at the one lesson that taught it.",
+      "nothingMissedOther": "They were at every one of them.",
+      "consolidatedOne": "One seen more than once.",
+      "consolidatedOther": "{{count}} seen more than once.",
+      "consolidatedNone": "None seen more than once yet."
     }
   },
   "month": {

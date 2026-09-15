@@ -107,6 +107,28 @@ export class AthleteSyllabusCoverageComponent {
    * from "they missed everything", and the difference matters: one is a
    * sentence about the programme, the other about a person.
    */
+  /**
+   * "They were at every one of them" — or, when the academy taught exactly
+   * one topic, the singular that does not claim a plural (#1710, #1646).
+   */
+  protected readonly nothingMissedKey = computed<string>(() =>
+    (this.report()?.totals.taught_by_academy ?? 0) === 1
+      ? 'athletes.coverage.nothingMissedOne'
+      : 'athletes.coverage.nothingMissedOther',
+  );
+
+  /**
+   * The two-exposure count, kept as a secondary line rather than as the
+   * headline it used to be. `SEEN_AT = 2` is a real distinction — having
+   * seen a technique is not having consolidated it — and the screen still
+   * says it. It just no longer says it as a percentage of the athlete.
+   */
+  protected readonly consolidatedKey = computed<string>(() => {
+    const seen = this.report()?.totals.seen ?? 0;
+    if (seen === 0) return 'athletes.coverage.consolidatedNone';
+    return seen === 1 ? 'athletes.coverage.consolidatedOne' : 'athletes.coverage.consolidatedOther';
+  });
+
   protected readonly nothingTaught = computed<boolean>(
     () => (this.report()?.totals.taught_by_academy ?? 0) === 0,
   );

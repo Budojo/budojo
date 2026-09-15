@@ -53,8 +53,21 @@
       <p class="coverage__fraction">
         {{
           'athletes.coverage.fraction'
-            | translate: { seen: r.totals.seen, total: r.totals.taught_by_academy }
+            | translate: { attended: r.totals.attended, total: r.totals.taught_by_academy }
         }}
+      </p>
+      <!--
+        Said in words, not left as a legend dot (#1710). An athlete who
+        missed nothing was reading a headline that looked like a failure,
+        and "0 persi" three lines below in 11px does not undo that.
+      -->
+      @if (r.totals.missed === 0 && r.totals.taught_by_academy > 0) {
+        <p class="coverage__nothing-missed" data-cy="athlete-coverage-nothing-missed">
+          {{ nothingMissedKey() | translate }}
+        </p>
+      }
+      <p class="coverage__consolidated" data-cy="athlete-coverage-consolidated">
+        {{ consolidatedKey() | translate: { count: r.totals.seen } }}
       </p>
       <p class="coverage__since">
         {{ 'athletes.coverage.since' | translate: { date: shortDate(r.joined_on) } }}

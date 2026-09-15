@@ -142,6 +142,8 @@ export interface AthleteSyllabusCoverage {
   readonly totals: {
     /** The denominator: what the academy taught while they were here. */
     readonly taught_by_academy: number;
+    /** Attended at least once — the headline's numerator since #1710. */
+    readonly attended: number;
     readonly seen: number;
     readonly thin: number;
     readonly missed: number;

@@ -2500,7 +2500,7 @@
       "another": "Scegli un altro file"
     },
     "coverage": {
-      "fraction": "{{seen}} su {{total}} tecniche che la palestra ha fatto",
+      "fraction": "{{attended}} su {{total}} tecniche che la palestra ha fatto",
       "since": "Conteggio dal {{date}}, giorno di iscrizione.",
       "legend": {
         "seenOne": "{{count}} visto",
@@ -2535,7 +2535,12 @@
       "unattributedOne": "{{count}} dei suoi allenamenti non dice a quale lezione fosse, quindi qui non conta in nessun senso.",
       "unattributedOther": "{{count}} dei suoi allenamenti non dicono a quale lezione fossero, quindi qui non contano in nessun senso.",
       "notTaughtYetOne": "Un altro è nel programma ma non è ancora stato fatto. È una lacuna della palestra, non sua.",
-      "notTaughtYetOther": "Altri {{count}} sono nel programma ma non sono ancora stati fatti. È una lacuna della palestra, non sua."
+      "notTaughtYetOther": "Altri {{count}} sono nel programma ma non sono ancora stati fatti. È una lacuna della palestra, non sua.",
+      "nothingMissedOne": "C'era alla lezione in cui è stata fatta.",
+      "nothingMissedOther": "C'era a tutte.",
+      "consolidatedOne": "Una vista più di una volta.",
+      "consolidatedOther": "{{count}} viste più di una volta.",
+      "consolidatedNone": "Nessuna ancora vista più di una volta."
     }
   },
   "month": {

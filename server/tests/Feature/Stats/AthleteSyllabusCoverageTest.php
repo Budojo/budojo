@@ -101,6 +101,9 @@ it('separates what they missed from what nobody taught', function (): void {
         'seen' => 1,
         'thin' => 0,
         'missed' => 1,
+        'attended' => 1,
+        // One of the two taught: the headline is what they CAUGHT, not what
+        // they consolidated (#1710).
         'percentage' => 50,
         'not_taught_yet' => 1,
     ]);
@@ -117,9 +120,12 @@ it('calls one attendance thin, the way the academy view does', function (): void
 
     $report = athleteCoverage($this);
 
-    // They saw it once out of two evenings: not missed, not covered.
+    // They saw it once out of two evenings: not missed, not consolidated.
     expect($report['totals'])->toMatchArray([
         'taught_by_academy' => 1, 'seen' => 0, 'thin' => 1, 'missed' => 0,
+        // And it counts towards the headline, which is the whole point of
+        // #1710: being there once is being there.
+        'attended' => 1, 'percentage' => 100,
     ]);
 });
 
@@ -318,4 +324,33 @@ it('refuses somebody with no standing in the academy', function (): void {
     $this->actingAs($outsider)
         ->getJson("/api/v1/athletes/{$this->athlete->id}/syllabus-coverage")
         ->assertForbidden();
+});
+
+it('reads 100% for an athlete who missed nothing, however thinly', function (): void {
+    // The report that started #1710: eleven topics taught since joining, all
+    // eleven attended, nine of them once. It read 18% — two consolidated out
+    // of eleven — and told the owner their most diligent athlete had an 82%
+    // gap.
+    $topics = [];
+    for ($i = 1; $i <= 11; $i++) {
+        $topics[] = coveredTechnique($this, "Technique {$i}", $i);
+    }
+    foreach ($topics as $n => $topic) {
+        lessonWith($this, sprintf('2026-09-%02d', $n + 1), [$topic], [$this->athlete]);
+    }
+    // Two of them a second time, so `seen` and `thin` are both non-zero and
+    // the two numerators cannot be confused for each other.
+    lessonWith($this, '2026-09-20', [$topics[0]], [$this->athlete]);
+    lessonWith($this, '2026-09-21', [$topics[1]], [$this->athlete]);
+
+    $totals = athleteCoverage($this)['totals'];
+
+    expect($totals)->toMatchArray([
+        'taught_by_academy' => 11,
+        'attended' => 11,
+        'missed' => 0,
+        'percentage' => 100,
+    ]);
+    // The distinction survives, demoted rather than deleted.
+    expect($totals['seen'])->toBe(2)->and($totals['thin'])->toBe(9);
 });
