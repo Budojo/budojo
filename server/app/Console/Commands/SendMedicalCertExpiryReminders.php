@@ -274,9 +274,15 @@ class SendMedicalCertExpiryReminders extends Command
         // does the comparison against the date portion explicitly,
         // matching regardless of any datetime-vs-date subtlety in
         // the storage round-trip.
+        // A certificate the athlete has already renewed is not a reminder
+        // (#1739). Early renewal is the normal case — a month before the old
+        // one lapses — and without this the owner still got a T-30, a T-7 and
+        // a T-0 telling them to chase a certificate sitting in the athlete's
+        // own documents tab.
         return Document::query()
             ->whereHas('athlete', fn ($q) => $q->where('academy_id', $academy->id))
             ->where('type', DocumentType::MedicalCertificate)
+            ->notSuperseded()
             ->where(function ($q) use ($triggerDates): void {
                 foreach ($triggerDates as $date) {
                     $q->orWhereDate('expires_at', $date);

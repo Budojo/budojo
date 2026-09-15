@@ -30,6 +30,12 @@ class GetExpiringDocumentsAction
      * ascending (most urgent first). Documents with `expires_at = null` are
      * excluded — "no expiry" is handled separately by the UI badge logic.
      *
+     * A medical certificate a later one has replaced is excluded too
+     * (`Document::scopeNotSuperseded`, #1739). This list answers "who needs
+     * chasing", and the owner holding a valid 2027 certificate is not being
+     * asked about the 2026 one it replaced — which otherwise sat here in red
+     * for the full 24 months until the purge took it.
+     *
      * The `athlete` relation is eager-loaded so the API resource can include
      * the athlete identity without N+1. Result size is capped at MAX_RESULTS.
      *
@@ -49,7 +55,15 @@ class GetExpiringDocumentsAction
 
         return $through
             ->whereNotNull('documents.expires_at')
-            ->where('documents.expires_at', '<=', $cutoff)
+            // `whereDate`, not `where` — the `date` cast on the model writes
+            // `2026-10-15 00:00:00` while `$cutoff` is the bare `2026-10-15`,
+            // and SQLite compares those as text, so a document expiring on
+            // exactly `today + days` sorted AFTER the cutoff and vanished:
+            // `days=30` hid it, `days=31` showed it. The T-30 digest uses
+            // `whereDate` and never had the bug, so the owner got an email
+            // that morning about a certificate this widget did not list.
+            ->whereDate('documents.expires_at', '<=', $cutoff)
+            ->notSuperseded()
             ->with('athlete')
             ->orderBy('documents.expires_at', 'asc')
             ->limit(self::MAX_RESULTS)
