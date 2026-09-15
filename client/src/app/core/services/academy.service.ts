@@ -276,6 +276,16 @@ export interface Academy {
    * All optional for the same fixture-compat reason as the fee above.
    */
   season_start_month?: number | null;
+  /**
+   * The month this academy started recording fees in Budojo (#1742), as
+   * `YYYY-MM-01`, or `null` for no floor.
+   *
+   * The settings form is the only consumer. The ledger does **not** read this
+   * — the effective floor for an athlete is this OR their joining month,
+   * whichever is later, and that resolution reaches the client already done
+   * as `billing_floor` on the athlete.
+   */
+  billing_from?: string | null;
   /** ISO `YYYY-MM-DD`. */
   season_start?: string;
   season_label?: string;
@@ -374,6 +384,12 @@ export interface UpdateAcademyPayload {
   training_days?: number[] | null;
   /** Month the training year restarts in, 1-12 (#1484). `null` = "not chosen". */
   season_start_month?: number | null;
+  /**
+   * The month fees start being recorded here (#1742), `YYYY-MM-DD`. Any day
+   * is accepted; the server pins it to the 1st, so a floor set on the 17th
+   * cannot behave differently from one set on the 1st. `null` clears it.
+   */
+  billing_from?: string | null;
 }
 
 interface AcademyResponse {

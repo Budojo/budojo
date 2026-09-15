@@ -83,6 +83,37 @@ export function datePickerFormatFor(lang: SupportedLanguage): string {
 }
 
 /**
+ * The same, for a picker showing **months** rather than days (#1742).
+ *
+ * Separate from `datePickerFormatFor` because a month picker that still
+ * renders a day is a control offering a precision it will not honour — and
+ * the server pins the day anyway.
+ */
+export function monthPickerFormatFor(lang: SupportedLanguage): string {
+  switch (lang) {
+    case 'en':
+    case 'it':
+      return 'mm/yy';
+    default: {
+      const _exhaustive: never = lang;
+      return _exhaustive;
+    }
+  }
+}
+
+/**
+ * The first of a `Date`'s month, as the `YYYY-MM-DD` the API takes.
+ *
+ * Built from the LOCAL parts, never `toISOString()`: that converts to UTC,
+ * and east of Greenwich midnight on the 1st becomes the last day of the month
+ * before — so an owner in Rome setting September would send August.
+ */
+export function localMonthStart(date: Date): string {
+  const month = `${date.getMonth() + 1}`.padStart(2, '0');
+  return `${date.getFullYear()}-${month}-01`;
+}
+
+/**
  * A date a person reads, from an ISO date **or timestamp** (#1498, #1537).
  *
  * `Joined 2024-09-01` was rendered straight from the API on the athlete's

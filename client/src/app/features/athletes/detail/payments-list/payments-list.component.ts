@@ -75,6 +75,21 @@ interface MonthRow {
   readonly payment: AthletePayment | null;
   readonly canEdit: boolean;
   /**
+   * True when this month falls before the academy started recording fees in
+   * Budojo, or before the athlete joined (#1742) — whichever is later.
+   *
+   * Such a month has no answer here, so it gets none: no "Non pagato".
+   * **Absence of a payment record is not arrears**, and for every month
+   * before adoption the ledger was asserting a debt it has no knowledge of —
+   * up to six seasons of amber per athlete on an academy that trained for
+   * years before the app existed.
+   *
+   * It does NOT gate `canEdit`. The owner transcribing a paper register is
+   * exactly the case that produces a payment below the floor, and the server
+   * has always accepted one.
+   */
+  readonly beforeBillingFloor: boolean;
+  /**
    * True when this month is covered by a period that started somewhere else
    * (#1382). The row still reads "paid", but the amount belongs to the month
    * the period started in — repeating €165 on all three months of a quarterly
@@ -219,6 +234,16 @@ export class PaymentsListComponent implements OnInit {
   private readonly joinedOn = signal<{ year: number; month: number } | null>(null);
 
   /**
+   * The earliest month worth showing anything for, as an absolute month index
+   * (`year * 12 + month - 1`), or null when nothing floors this athlete.
+   *
+   * `null` is the pre-#1742 behaviour, exactly: an academy restored from an
+   * older backup carries no `billing_from`, and the ledger must read as it
+   * always did rather than blank somebody's history.
+   */
+  private readonly billingFloorMonth = signal<number | null>(null);
+
+  /**
    * The server refuses to record a payment before this (`min:2020` on the
    * store request). Walking past it renders twelve inviting "Mark paid"
    * buttons that all 422, and the client reports that 422 as "set a monthly
@@ -256,9 +281,20 @@ export class PaymentsListComponent implements OnInit {
    * hard floor is what stops the stepper walking back to 1999.
    */
   private readonly floorYear = computed<number>(() => {
+    const billing = this.billingFloorSeason();
     const joined = this.joinedSeason();
     const serverFloor = this.seasonOf(PaymentsListComponent.EARLIEST_YEAR, 1);
-    return Math.max(joined ?? serverFloor, serverFloor);
+    // `billing` already IS `max(academy floor, joining month)` — the server
+    // resolved it (#1742) — so `joined` is only the fallback for a response
+    // that did not carry one.
+    return Math.max(billing ?? joined ?? serverFloor, serverFloor);
+  });
+
+  /** The season the billing floor falls in — see `seasonOf`. */
+  private readonly billingFloorSeason = computed<number | null>(() => {
+    const absolute = this.billingFloorMonth();
+    if (absolute === null) return null;
+    return this.seasonOf(Math.floor(absolute / 12), (absolute % 12) + 1);
   });
 
   /** The season the athlete's joining date falls in — see `seasonOf`. */
@@ -348,6 +384,7 @@ export class PaymentsListComponent implements OnInit {
     }
 
     const fee = this.hasMonthlyFee();
+    const floorMonth = this.billingFloorMonth();
     const first = this.seasonYear() * 12 + (this.seasonStartMonth() - 1);
 
     return Array.from({ length: 12 }, (_, slot) => {
@@ -375,6 +412,13 @@ export class PaymentsListComponent implements OnInit {
         // whole season either hides months that are recordable or offers
         // buttons that 422 (#1709).
         canEdit: fee && year >= PaymentsListComponent.EARLIEST_YEAR,
+        // Below the floor this month has no answer, so the table gives none
+        // (#1742). Deliberately NOT folded into `canEdit`: the two floors
+        // mean different things. `EARLIEST_YEAR` mirrors the server's
+        // `min:2020` — a write the API will refuse. This one is a statement
+        // about knowledge, and the owner transcribing a paper register must
+        // still be able to record against it.
+        beforeBillingFloor: floorMonth !== null && absolute < floorMonth,
         coveredByEarlierPeriod:
           payment !== null && !(payment.year === year && payment.month === month),
         periodMonths: payment?.period_months ?? 1,
@@ -596,6 +640,19 @@ export class PaymentsListComponent implements OnInit {
         this.joinedOn.set(
           Number.isFinite(joinedYear) && Number.isFinite(joinedMonth) && joinedMonth >= 1
             ? { year: joinedYear, month: joinedMonth }
+            : null,
+        );
+
+        // The resolved floor, not the two inputs (#1742). The server combines
+        // `academies.billing_from` with this athlete's joining month; doing it
+        // here would be a second implementation of a `max()` over two dates,
+        // which is the shape the #1709 off-by-one already took once.
+        const floor = athlete.billing_floor;
+        const floorYearPart = Number(floor?.slice(0, 4));
+        const floorMonthPart = Number(floor?.slice(5, 7));
+        this.billingFloorMonth.set(
+          floor && Number.isFinite(floorYearPart) && Number.isFinite(floorMonthPart)
+            ? floorYearPart * 12 + (floorMonthPart - 1)
             : null,
         );
 

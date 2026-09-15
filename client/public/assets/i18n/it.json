@@ -1520,6 +1520,11 @@
         "placeholder": "Settembre (predefinito)",
         "hint": "Il mese in cui ricomincia l'anno di allenamenti. La lista atleti conta le presenze da qui, non dal giorno di iscrizione del singolo atleta. Se lo lasci vuoto vale settembre."
       },
+      "billingFrom": {
+        "label": "Le quote sono registrate su Budojo da",
+        "hint": "I mesi precedenti restano vuoti invece che non pagati: quei soldi sono passati da un’altra parte. Lascialo vuoto per non mettere limiti.",
+        "placeholder": "Scegli un mese"
+      },
       "trainingDays": {
         "label": "Giorni di allenamento",
         "hint": "Seleziona i giorni della settimana in cui si tiene lezione. Deseleziona tutti i giorni per cancellare la programmazione.",
@@ -2078,7 +2083,8 @@
         "periodMonths": "Ogni {{count}} mesi",
         "periodStartsHereOne": "Copre anche {{next}}",
         "periodStartsHereOther": "Copre anche {{next}}",
-        "periodCoveredBy": "Incluso nel pagamento di {{month}}"
+        "periodCoveredBy": "Incluso nel pagamento di {{month}}",
+        "beforeBillingFloor": "Prima che questa accademia iniziasse a registrare le quote su Budojo"
       },
       "documents": {
         "confirm": {

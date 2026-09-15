@@ -483,6 +483,50 @@
       />
     </app-budojo-form-field>
 
+    <!--
+      When this academy started keeping its fees here (#1742).
+
+      Beside the season, because both are statements about time that the
+      ledger reads — but they answer different questions: the season says
+      which twelve months a table shows, this says which of them Budojo can
+      say anything about. Below it, a missing payment means the money was
+      handled somewhere else, and the ledger stops calling those months unpaid.
+
+      A month picker, not a date: the rule is about months and the server pins
+      whatever arrives to the 1st. Emptying the field restores the pre-#1742
+      behaviour exactly rather than meaning "since forever", which is what the
+      hint says — there is no `showClear`, because PrimeNG gates its ✕ on
+      `inputfieldViewChild.nativeElement.value`, a field the component writes
+      imperatively after change detection has already asked, so the icon never
+      entered the DOM. Verified, not assumed: a dead attribute beside a
+      working one reads as a bug to whoever finds it next.
+
+      No `maxDate`. It was here to refuse a future month — "fees are recorded
+      from next March" is not a statement anyone can act on — but PrimeNG's
+      `formatDateTime` returns null for a value outside the range, so a floor
+      already stored in the future rendered as an EMPTY field, and saving the
+      form would then have cleared it. Losing a stored value to enforce a rule
+      the server does not have is the two-definitions problem this whole issue
+      is about.
+    -->
+    <app-budojo-form-field
+      [label]="'academy.form.billingFrom.label' | translate"
+      controlId="academy-billing-from"
+      [hint]="'academy.form.billingFrom.hint' | translate"
+    >
+      <p-datepicker
+        inputId="academy-billing-from"
+        formControlName="billing_from"
+        view="month"
+        [dateFormat]="billingFromFormat()"
+        appendTo="body"
+        [showIcon]="true"
+        [placeholder]="'academy.form.billingFrom.placeholder' | translate"
+        data-cy="academy-form-billing-from"
+        aria-describedby="academy-billing-from-hint"
+      />
+    </app-budojo-form-field>
+
     @if (daysFromTimetable()) {
       <!--
         The timetable sets the days (#1575): while it has classes, the

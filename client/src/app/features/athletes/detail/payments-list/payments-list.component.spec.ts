@@ -72,6 +72,8 @@ function setup(
     payments?: AthletePayment[];
     joinedAt?: string;
     billingPeriodMonths?: number;
+    /** The resolved floor as the server sends it, `YYYY-MM-01` (#1742). */
+    billingFloor?: string | null;
     /** Override the academy's season — the table is built on it (#1709). */
     academy?: { season_start_month: number; season_start: string };
   } = {},
@@ -115,6 +117,7 @@ function setup(
       // failing a single test (#1636).
       joined_at: opts.joinedAt,
       billing_period_months: opts.billingPeriodMonths,
+      billing_floor: opts.billingFloor,
     }),
   );
 
@@ -791,5 +794,116 @@ describe('PaymentsListComponent — the 422 that is not about the fee (#1382)', 
     // Without a hard floor an unknown joining year walked to 1999. The floor
     // is the season holding the server's earliest acceptable month.
     expect(component['seasonYear']()).toBe(2019);
+  });
+});
+
+describe('PaymentsListComponent — the ledger stops asserting a debt it cannot know about (#1742)', () => {
+  // The academy trained for years before Budojo. Every month before it
+  // adopted the app rendered an amber "Non pagato" for fees collected in
+  // cash — up to six seasons of them per athlete. Absence of a payment
+  // record is not arrears.
+  const SEPTEMBER_ACADEMY = { season_start_month: 9, season_start: '2026-09-01' };
+
+  function rowFor(component: PaymentsListComponent, year: number, month: number) {
+    return component['monthRows']().find(
+      (r: { year: number; month: number }) => r.year === year && r.month === month,
+    );
+  }
+
+  it('leaves months before the floor blank rather than unpaid', () => {
+    // An academy that adopted Budojo in the MIDDLE of a season — the case
+    // that actually puts both kinds of month in one table. September to
+    // December 2026 are below a January 2027 floor; the rest of the season
+    // is above it.
+    const { component } = setup({
+      academy: SEPTEMBER_ACADEMY,
+      joinedAt: '2021-03-15',
+      billingFloor: '2027-01-01',
+    });
+
+    expect(rowFor(component, 2026, 9)?.beforeBillingFloor).toBe(true);
+    expect(rowFor(component, 2026, 12)?.beforeBillingFloor).toBe(true);
+    // The floor month itself is IN scope — the first month Budojo can speak
+    // for, not the last it cannot.
+    expect(rowFor(component, 2027, 1)?.beforeBillingFloor).toBe(false);
+    expect(rowFor(component, 2027, 8)?.beforeBillingFloor).toBe(false);
+  });
+
+  it('still calls a genuinely unpaid month after the floor unpaid', () => {
+    const { component } = setup({
+      academy: SEPTEMBER_ACADEMY,
+      joinedAt: '2021-03-15',
+      billingFloor: '2026-09-01',
+    });
+
+    // The floor month itself is IN scope — it is the first month Budojo can
+    // speak for, not the last it cannot.
+    expect(rowFor(component, 2026, 9)?.beforeBillingFloor).toBe(false);
+    expect(rowFor(component, 2027, 2)?.beforeBillingFloor).toBe(false);
+  });
+
+  it('behaves exactly as before when nothing floors the athlete', () => {
+    const { component } = setup({
+      academy: SEPTEMBER_ACADEMY,
+      joinedAt: '2021-03-15',
+      billingFloor: null,
+    });
+
+    // An academy restored from a backup predating #1742 carries no floor.
+    // Blanking somebody's whole history would be a worse bug than the one
+    // this fixes — and the stepper must still reach the seasons it always did.
+    expect(rowFor(component, 2026, 9)?.beforeBillingFloor).toBe(false);
+    expect(component['canGoPrev']()).toBe(true);
+  });
+
+  it('keeps the month recordable below the floor', () => {
+    const { component } = setup({
+      academy: SEPTEMBER_ACADEMY,
+      joinedAt: '2021-03-15',
+      billingFloor: '2027-01-01',
+    });
+
+    // A display and aggregation rule, not a write rule: the owner
+    // transcribing a paper register is exactly the case that produces a
+    // payment below the floor, and the server has always accepted one. The
+    // two floors are deliberately not folded together — `canEdit` mirrors
+    // the server's `min:2020`, which is a write the API will refuse.
+    expect(rowFor(component, 2026, 9)?.beforeBillingFloor).toBe(true);
+    expect(rowFor(component, 2026, 9)?.canEdit).toBe(true);
+  });
+
+  it('stops the season stepper at the floor, not at the joining season', () => {
+    const { component } = setup({
+      academy: SEPTEMBER_ACADEMY,
+      joinedAt: '2021-03-15',
+      billingFloor: '2026-09-01',
+    });
+
+    // Without the floor the stepper walked back to season 2020 and offered
+    // five seasons of rows the app can say nothing about.
+    expect(component['canGoPrev']()).toBe(false);
+  });
+
+  it('stops at an earlier floor rather than at the current season', () => {
+    const { component } = setup({
+      academy: SEPTEMBER_ACADEMY,
+      joinedAt: '2021-03-15',
+      billingFloor: '2024-03-01',
+    });
+
+    // The floor is season 2023/24, so the stepper walks back — but only that
+    // far. The previous fixture here put the floor BEFORE the joining month,
+    // a state the server cannot emit (`billing_floor` is `max()` of the two),
+    // and both the old and new rules answered `true` for it: the assertion
+    // could not fail. This one depends on `billingFloorSeason`.
+    expect(component['canGoPrev']()).toBe(true);
+
+    component['prevYear']();
+    component['prevYear']();
+    component['prevYear']();
+    component['prevYear']();
+
+    expect(component['seasonLabel']()).toBe('2023/24');
+    expect(component['canGoPrev']()).toBe(false);
   });
 });

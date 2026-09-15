@@ -21,6 +21,7 @@ import { ButtonModule } from 'primeng/button';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
+import { DatePickerModule } from 'primeng/datepicker';
 import { SelectModule } from 'primeng/select';
 import { SelectButtonModule } from 'primeng/selectbutton';
 import { ToastModule } from 'primeng/toast';
@@ -35,7 +36,7 @@ import {
   UpdateAcademyPayload,
 } from '../../../core/services/academy.service';
 import { LanguageService } from '../../../core/services/language.service';
-import { localeFor } from '../../../shared/utils/locale';
+import { localMonthStart, localeFor, monthPickerFormatFor } from '../../../shared/utils/locale';
 import { TrainingDaysPickerComponent } from '../../../shared/components/training-days-picker/training-days-picker.component';
 import { SchedulePlannerComponent } from '../schedule-planner/schedule-planner.component';
 import { FeeTierListComponent } from '../fee-tier-list/fee-tier-list.component';
@@ -141,6 +142,7 @@ const COUNTRY_CODE_OPTIONS: SelectOption<string>[] = [
     InputNumberModule,
     InputTextModule,
     MessageModule,
+    DatePickerModule,
     SelectModule,
     ToastModule,
     TranslatePipe,
@@ -188,6 +190,11 @@ export class AcademyFormComponent implements OnInit {
    * recomputes reactively without a manual subscription.
    */
   readonly currentLocale = computed(() => localeFor(this.languageService.currentLang()));
+
+  /** `mm/yy` — the billing floor is a month, so the picker shows months. */
+  protected readonly billingFromFormat = computed(() =>
+    monthPickerFormatFor(this.languageService.currentLang()),
+  );
 
   readonly provinceOptions = PROVINCE_OPTIONS;
   readonly countryOptions = COUNTRY_OPTIONS;
@@ -243,6 +250,11 @@ export class AcademyFormComponent implements OnInit {
     // "no season" — it is "nobody has said", which the server answers with
     // September.
     season_start_month: this.fb.control<number | null>(null),
+    // The month fees start being recorded here (#1742). A `Date` because
+    // `p-datepicker` speaks `Date`; `toPayload` reduces it to `YYYY-MM-01`.
+    // `null` is not "since forever" — it is "no floor", which is exactly how
+    // the ledger behaved before the column existed.
+    billing_from: this.fb.control<Date | null>(null),
   });
 
   /**
@@ -312,6 +324,7 @@ export class AcademyFormComponent implements OnInit {
       carnet_entry_unit: academy.carnet_entry_unit ?? 'lesson',
       training_days: academy.training_days ?? [],
       season_start_month: academy.season_start_month ?? null,
+      billing_from: academy.billing_from ? new Date(`${academy.billing_from}T00:00:00`) : null,
     });
   }
 
@@ -615,6 +628,12 @@ export class AcademyFormComponent implements OnInit {
         ? {}
         : { training_days: v.training_days.length === 0 ? null : v.training_days }),
       season_start_month: v.season_start_month ?? null,
+      // Local parts, not `toISOString()`: that converts to UTC, and east of
+      // Greenwich midnight on the 1st becomes the last day of the month
+      // before — which would move the floor a whole month for anyone in Rome.
+      // The server pins the day anyway, but sending the wrong month is not
+      // something to leave for it to correct.
+      billing_from: v.billing_from ? localMonthStart(v.billing_from) : null,
     };
   }
 
