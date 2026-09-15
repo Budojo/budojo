@@ -33,7 +33,7 @@
             @if (doc.expires_at; as exp) {
               <span class="my-documents__expiry">
                 {{ 'athletePortal.documents.expiresAt' | translate }}
-                {{ toLocalDate(exp.slice(0, 10)) | date: 'mediumDate' }}
+                {{ exp | localeDate: 'calendar-day' }}
                 @if (isExpired(exp)) {
                   <span class="my-documents__badge" data-cy="document-expired-badge">{{
                     'athletePortal.documents.expired' | translate

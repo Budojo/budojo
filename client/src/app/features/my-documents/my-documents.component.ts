@@ -6,7 +6,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { LocaleDatePipe } from '../../shared/pipes/locale-date.pipe';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslatePipe } from '@ngx-translate/core';
 import { SkeletonModule } from 'primeng/skeleton';
@@ -23,7 +23,7 @@ import { PageHeaderComponent } from '../../shared/components/page-header/page-he
 @Component({
   selector: 'app-my-documents',
   standalone: true,
-  imports: [TranslatePipe, DatePipe, SkeletonModule, PageHeaderComponent],
+  imports: [TranslatePipe, LocaleDatePipe, SkeletonModule, PageHeaderComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './my-documents.component.html',
   styleUrl: './my-documents.component.scss',
@@ -74,14 +74,5 @@ export class MyDocumentsComponent implements OnInit {
       `${String(today.getMonth() + 1).padStart(2, '0')}-` +
       `${String(today.getDate()).padStart(2, '0')}`;
     return expiresAt.slice(0, 10) <= todayStr;
-  }
-
-  /**
-   * Convert the wire `YYYY-MM-DD` to a local Date so DatePipe doesn't
-   * shift the day on non-UTC clients.
-   */
-  protected toLocalDate(value: string): Date {
-    const [y, m, d] = value.split('-').map(Number);
-    return new Date(y, m - 1, d);
   }
 }

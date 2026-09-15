@@ -77,7 +77,7 @@
                 [dateTime]="year() + '-' + (row.month < 10 ? '0' + row.month : row.month)"
                 class="my-payments__month"
               >
-                {{ localMonthDate(row.month) | date: 'LLLL' }}
+                {{ monthKey(row.month) | translate }}
               </time>
               @if (row.periodCaption; as caption) {
                 <!-- The range that ties this month to the payment behind it

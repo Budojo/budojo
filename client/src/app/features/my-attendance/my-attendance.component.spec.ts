@@ -6,6 +6,7 @@ import { MyAttendanceComponent } from './my-attendance.component';
 import { environment } from '../../../environments/environment';
 import { provideI18nTesting } from '../../../test-utils/i18n-test';
 import type { AttendanceRecord } from '../../core/services/attendance.service';
+import { LanguageService } from '../../core/services/language.service';
 
 function record(over: Partial<AttendanceRecord> = {}): AttendanceRecord {
   return {
@@ -105,5 +106,24 @@ describe('MyAttendanceComponent (M7 PR-D slice 3)', () => {
       .error(new ProgressEvent('error'), { status: 500, statusText: 'Server Error' });
     fixture.detectChanges();
     expect(el.querySelector('[data-cy="my-attendance-error"]')).not.toBeNull();
+  });
+
+  it("names the day in the reader's language, not in English (#1670)", () => {
+    const { fixture, el, http } = setup();
+    // The real switch, not just the signal: `setLanguage` also calls
+    // `translate.use`, and the month names come through `| translate`.
+    TestBed.inject(LanguageService).setLanguage('it');
+    fixture.detectChanges();
+    http.expectOne(`${environment.apiBase}/api/v1/me/attendance`).flush({
+      data: [{ id: 1, attended_on: '2026-09-14', notes: null }],
+    });
+    fixture.detectChanges();
+
+    // `| date: 'fullDate'` formats against LOCALE_ID, which this SPA never
+    // sets — so the portal printed "Monday, September 14, 2026" under an
+    // Italian UI and the language toggle could not move it.
+    const text = el.querySelector('[data-cy="attendance-1"]')?.textContent ?? '';
+    expect(text).toContain('settembre');
+    expect(text).not.toContain('September');
   });
 });

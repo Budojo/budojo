@@ -7,7 +7,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { LocaleDatePipe } from '../../shared/pipes/locale-date.pipe';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslatePipe } from '@ngx-translate/core';
 import { SkeletonModule } from 'primeng/skeleton';
@@ -31,7 +31,7 @@ import { PageHeaderComponent } from '../../shared/components/page-header/page-he
   imports: [
     PageHeaderComponent,
     TranslatePipe,
-    DatePipe,
+    LocaleDatePipe,
     SkeletonModule,
     AttendanceSummaryChartComponent,
   ],
@@ -76,18 +76,6 @@ export class MyAttendanceComponent implements OnInit {
     const cutoffStr = this.toLocalIsoDate(cutoff);
     return this.records().filter((r) => r.attended_on >= cutoffStr).length;
   });
-
-  /**
-   * Parse the wire's `YYYY-MM-DD` string as a LOCAL date — bypasses
-   * the JS engine's default UTC interpretation of date-only strings,
-   * which would shift the rendered calendar day in non-UTC TZs
-   * (Copilot review on PR #622). Splitting on `-` and feeding the
-   * year/month/day to the Date constructor keeps the day stable.
-   */
-  protected toLocalDate(value: string): Date {
-    const [y, m, d] = value.split('-').map(Number);
-    return new Date(y, m - 1, d);
-  }
 
   private toLocalIsoDate(d: Date): string {
     const y = d.getFullYear();

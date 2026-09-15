@@ -7,7 +7,6 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { DatePipe } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslatePipe } from '@ngx-translate/core';
 import { SkeletonModule } from 'primeng/skeleton';
@@ -19,6 +18,7 @@ import { LanguageService } from '../../core/services/language.service';
 import { activeCarnetOf } from '../../shared/utils/active-carnet';
 import { formatIsoDate, localeFor } from '../../shared/utils/locale';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
+import { monthKey as monthKeyFor } from '../../shared/utils/months';
 
 /**
  * Athlete-portal monthly payments page (M7 PR-D slice 4). Read-only
@@ -32,7 +32,7 @@ import { PageHeaderComponent } from '../../shared/components/page-header/page-he
 @Component({
   selector: 'app-my-payments',
   standalone: true,
-  imports: [PageHeaderComponent, TranslatePipe, DatePipe, SkeletonModule, TagModule],
+  imports: [PageHeaderComponent, TranslatePipe, SkeletonModule, TagModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './my-payments.component.html',
   styleUrl: './my-payments.component.scss',
@@ -165,13 +165,15 @@ export class MyPaymentsComponent implements OnInit {
   }
 
   /**
-   * Local Date for the 1st of the month — used by DatePipe to render
-   * the month label ("January", "February"…). Constructing from
-   * year/month parts keeps the label stable across timezones
-   * (mirrors the same gotcha addressed in MyAttendance).
+   * The month's name as a translation key (#1670).
+   *
+   * Was `new Date(year, month - 1, 1) | date: 'LLLL'`, which formats against
+   * `LOCALE_ID` — a value this SPA never sets — so the portal printed
+   * "September" under an Italian UI and the language toggle could not move
+   * it. The same twelve keys the owner's payments tab uses.
    */
-  protected localMonthDate(month: number): Date {
-    return new Date(this.year(), month - 1, 1);
+  protected monthKey(month: number): string {
+    return monthKeyFor(month);
   }
 
   /**
