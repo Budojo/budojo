@@ -7482,6 +7482,16 @@ components:
           $ref: '#/components/schemas/TrainingDays'
         season_start_month:
           $ref: '#/components/schemas/SeasonStartMonth'
+        billing_from:
+          type: string
+          format: date
+          nullable: true
+          description: |
+            The month this academy started recording fees in Budojo (#1742).
+            Any day is accepted and **pinned server-side to the 1st**, so a
+            floor set on the 17th cannot behave differently from one set on
+            the 1st. `null` clears it, which restores the pre-#1742 ledger
+            exactly — it does not mean "since forever".
 
     AcademyUpdateRequest:
       type: object
@@ -7583,6 +7593,16 @@ components:
           $ref: '#/components/schemas/TrainingDays'
         season_start_month:
           $ref: '#/components/schemas/SeasonStartMonth'
+        billing_from:
+          type: string
+          format: date
+          nullable: true
+          description: |
+            The month this academy started recording fees in Budojo (#1742).
+            Any day is accepted and **pinned server-side to the 1st**, so a
+            floor set on the 17th cannot behave differently from one set on
+            the 1st. `null` clears it, which restores the pre-#1742 ledger
+            exactly — it does not mean "since forever".
 
     Address:
       type: object
@@ -7790,6 +7810,17 @@ components:
           $ref: '#/components/schemas/TrainingDays'
         season_start_month:
           $ref: '#/components/schemas/SeasonStartMonth'
+        billing_from:
+          type: string
+          format: date
+          nullable: true
+          description: |
+            The month this academy started recording fees in Budojo (#1742),
+            always the 1st, or `null` for no floor. This is the raw setting,
+            for the settings form. The ledger does **not** floor on it
+            directly: the effective floor for an athlete is this OR their
+            joining month, whichever is later, and that arrives already
+            resolved as `billing_floor` on the athlete resource.
         season_start:
           type: string
           format: date
@@ -8767,6 +8798,22 @@ components:
             expectation to answer "is anyone late", and a payment only says
             what already happened. `1` — monthly — until someone changes it.
           example: 1
+        billing_floor:
+          type: string
+          format: date
+          nullable: true
+          description: |
+            The earliest month this athlete can owe anything for (#1742),
+            always the 1st, or `null` when nothing floors them.
+
+            Resolved server-side as the later of the academy's `billing_from`
+            and this athlete's `joined_at`. **Read this rather than combining
+            the two**: the ledger renders months below it as out of scope
+            instead of unpaid, and a `max()` over two dates re-implemented
+            client-side is the shape the #1709 off-by-one already took.
+
+            It is a display and aggregation rule only — recording a payment
+            for a month below the floor still succeeds.
         monthly_fee_cents:
           type: integer
           nullable: true

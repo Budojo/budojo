@@ -37,6 +37,11 @@ class StoreAcademyRequest extends FormRequest
             // optional the way a carnet is: every academy has one whether or
             // not it has an opinion about it.
             'season_start_month' => ['sometimes', 'nullable', 'integer', 'between:1,12'],
+            // The month fees start being recorded here (#1742). A date, taken
+            // as given and pinned to the 1st by the Action — the form offers a
+            // month, and a floor that moved with the day it was set would be a
+            // different rule on the 15th than on the 1st.
+            'billing_from' => ['sometimes', 'nullable', 'date'],
             ...$this->addressRules(),
         ];
     }

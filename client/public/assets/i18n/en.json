@@ -1520,6 +1520,11 @@
         "placeholder": "September (default)",
         "hint": "The month your training year restarts. The roster counts sessions from here, not from the day each athlete joined. September if you leave it empty."
       },
+      "billingFrom": {
+        "label": "Fees are recorded in Budojo from",
+        "hint": "Months before this are left blank instead of unpaid — the money was handled somewhere else. Clear the field for no limit.",
+        "placeholder": "Choose a month"
+      },
       "trainingDays": {
         "label": "Training days",
         "hint": "Pick the weekdays your academy holds class. Deselect every day to clear the schedule.",
@@ -2075,7 +2080,8 @@
         "periodMonths": "Every {{count}} months",
         "periodStartsHereOne": "Also covers {{next}}",
         "periodStartsHereOther": "Also covers {{next}}",
-        "periodCoveredBy": "Part of the {{month}} payment"
+        "periodCoveredBy": "Part of the {{month}} payment",
+        "beforeBillingFloor": "Before this academy started recording fees in Budojo"
       },
       "documents": {
         "confirm": {

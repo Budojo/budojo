@@ -224,6 +224,7 @@ describe('AcademyFormComponent', () => {
       carnet_entries: null,
       carnet_entry_unit: 'lesson',
       season_start_month: null,
+      billing_from: null,
       training_days: null,
     });
     req.flush({
@@ -273,6 +274,7 @@ describe('AcademyFormComponent', () => {
       carnet_entries: null,
       carnet_entry_unit: 'lesson',
       season_start_month: null,
+      billing_from: null,
       training_days: null,
     });
     req.flush({ data: makeAcademy({ address: null }) });
@@ -627,5 +629,34 @@ describe('AcademyFormComponent — what one carnet entry covers (#1576)', () => 
     expect(req.request.body.phone_country_code).toBeNull();
     expect(req.request.body.phone_national_number).toBeNull();
     req.flush({ data: makeAcademy({ phone_country_code: null, phone_national_number: null }) });
+  });
+});
+
+describe('AcademyFormComponent — when fees started being recorded here (#1742)', () => {
+  it('hydrates the month picker from the cached academy', () => {
+    const { component } = setup(makeAcademy({ billing_from: '2027-01-01' }));
+    const control = component.form.controls.billing_from;
+
+    expect(control.value).toBeInstanceOf(Date);
+    // Local parts, not UTC: east of Greenwich `new Date('2027-01-01')` is
+    // 31 December 2026 at 01:00, which would show the wrong month.
+    expect((control.value as Date).getFullYear()).toBe(2027);
+    expect((control.value as Date).getMonth()).toBe(0);
+  });
+
+  it('sends the first of the chosen month, built from local parts', () => {
+    const { component } = setup(makeAcademy({ billing_from: null }));
+    component.form.controls.billing_from.setValue(new Date(2027, 0, 17));
+
+    expect(component['buildPayload']().billing_from).toBe('2027-01-01');
+  });
+
+  it('sends null when the owner clears it', () => {
+    const { component } = setup(makeAcademy({ billing_from: '2027-01-01' }));
+    component.form.controls.billing_from.setValue(null);
+
+    // Null is "no floor", which restores the pre-#1742 ledger exactly — not
+    // "since forever", and not "leave it as it was".
+    expect(component['buildPayload']().billing_from).toBeNull();
   });
 });

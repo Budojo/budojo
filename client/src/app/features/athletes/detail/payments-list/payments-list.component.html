@@ -100,6 +100,21 @@
                 severity="success"
                 [rounded]="true"
               />
+            } @else if (row.beforeBillingFloor) {
+              <!--
+                Before this academy kept its fees here, or before the athlete
+                joined (#1742). A missing record says nothing about this month,
+                so the row says nothing — an em-dash, the same neutral mark a
+                no-fee athlete already gets, rather than an amber accusation
+                about money handled in cash years ago.
+              -->
+              <span
+                class="payment-card__dash"
+                [pTooltip]="'athletes.detail.payments.beforeBillingFloor' | translate"
+                tooltipPosition="left"
+                [attr.aria-label]="'athletes.detail.payments.beforeBillingFloor' | translate"
+                >&mdash;</span
+              >
             } @else {
               <p-tag
                 [value]="'shared.paidBadge.unpaid' | translate"
@@ -212,6 +227,15 @@
                   severity="success"
                   [rounded]="true"
                 />
+              } @else if (row.beforeBillingFloor) {
+                <!-- See the card above: a month with no answer gets none (#1742). -->
+                <span
+                  class="payments-list__dash"
+                  [pTooltip]="'athletes.detail.payments.beforeBillingFloor' | translate"
+                  tooltipPosition="top"
+                  [attr.aria-label]="'athletes.detail.payments.beforeBillingFloor' | translate"
+                  >&mdash;</span
+                >
               } @else {
                 <p-tag
                   [value]="'shared.paidBadge.unpaid' | translate"
