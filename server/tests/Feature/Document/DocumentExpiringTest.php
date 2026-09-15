@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enums\DocumentType;
 use App\Models\Academy;
 use App\Models\Athlete;
 use App\Models\Document;
@@ -9,12 +10,26 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
+/**
+ * These cover the expiry WINDOW — which dates land in the list, in what
+ * order. They pin `type` to an ID card on purpose: `DocumentFactory` rolls a
+ * random `DocumentType`, and since #1739 a medical certificate can be
+ * superseded by a later one on the same athlete. Left to the roll, a test
+ * that puts three documents on one athlete would pass or fail depending on
+ * how many came back `medical_certificate`. Renewal has its own file —
+ * `MedicalCertificateSupersessionTest`.
+ */
+function idCard(Athlete $athlete): \Database\Factories\DocumentFactory
+{
+    return Document::factory()->for($athlete)->state(['type' => DocumentType::IdCard]);
+}
+
 it('returns documents expiring in the next N days (default 30)', function (): void {
     $user = userWithAcademy();
     $athlete = Athlete::factory()->for($user->academy)->create();
-    $expiringSoon = Document::factory()->for($athlete)->expiringIn(10)->create();
-    $expiringLater = Document::factory()->for($athlete)->expiringIn(45)->create();
-    $valid = Document::factory()->for($athlete)->valid()->create();
+    $expiringSoon = idCard($athlete)->expiringIn(10)->create();
+    $expiringLater = idCard($athlete)->expiringIn(45)->create();
+    $valid = idCard($athlete)->valid()->create();
 
     $response = $this->actingAs($user)
         ->getJson('/api/v1/documents/expiring')
@@ -29,8 +44,8 @@ it('returns documents expiring in the next N days (default 30)', function (): vo
 it('includes already-expired documents in the response', function (): void {
     $user = userWithAcademy();
     $athlete = Athlete::factory()->for($user->academy)->create();
-    $expired = Document::factory()->for($athlete)->expired()->create();
-    $expiringSoon = Document::factory()->for($athlete)->expiringIn(5)->create();
+    $expired = idCard($athlete)->expired()->create();
+    $expiringSoon = idCard($athlete)->expiringIn(5)->create();
 
     $response = $this->actingAs($user)
         ->getJson('/api/v1/documents/expiring')
@@ -44,9 +59,9 @@ it('includes already-expired documents in the response', function (): void {
 it('orders results by expires_at ascending (most urgent first)', function (): void {
     $user = userWithAcademy();
     $athlete = Athlete::factory()->for($user->academy)->create();
-    $expiringIn20 = Document::factory()->for($athlete)->expiringIn(20)->create();
-    $expired = Document::factory()->for($athlete)->expired()->create();
-    $expiringIn5 = Document::factory()->for($athlete)->expiringIn(5)->create();
+    $expiringIn20 = idCard($athlete)->expiringIn(20)->create();
+    $expired = idCard($athlete)->expired()->create();
+    $expiringIn5 = idCard($athlete)->expiringIn(5)->create();
 
     $response = $this->actingAs($user)
         ->getJson('/api/v1/documents/expiring')
@@ -60,9 +75,9 @@ it('orders results by expires_at ascending (most urgent first)', function (): vo
 it('respects the days query parameter', function (): void {
     $user = userWithAcademy();
     $athlete = Athlete::factory()->for($user->academy)->create();
-    Document::factory()->for($athlete)->expiringIn(10)->create();
-    Document::factory()->for($athlete)->expiringIn(20)->create();
-    Document::factory()->for($athlete)->expiringIn(60)->create();
+    idCard($athlete)->expiringIn(10)->create();
+    idCard($athlete)->expiringIn(20)->create();
+    idCard($athlete)->expiringIn(60)->create();
 
     $this->actingAs($user)
         ->getJson('/api/v1/documents/expiring?days=15')
@@ -102,7 +117,7 @@ it('each entry carries athlete id and name for deep-link', function (): void {
         'first_name' => 'Mario',
         'last_name' => 'Rossi',
     ]);
-    Document::factory()->for($athlete)->expiringIn(5)->create();
+    idCard($athlete)->expiringIn(5)->create();
 
     $this->actingAs($user)
         ->getJson('/api/v1/documents/expiring')
@@ -115,7 +130,7 @@ it('each entry carries athlete id and name for deep-link', function (): void {
 it('excludes soft-deleted documents', function (): void {
     $user = userWithAcademy();
     $athlete = Athlete::factory()->for($user->academy)->create();
-    Document::factory()->for($athlete)->expiringIn(5)->create(['deleted_at' => now()]);
+    idCard($athlete)->expiringIn(5)->create(['deleted_at' => now()]);
 
     $this->actingAs($user)
         ->getJson('/api/v1/documents/expiring')

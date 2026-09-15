@@ -4424,6 +4424,12 @@ paths:
         expired documents are included. Documents with `expires_at = null`
         are excluded. Each item inlines an `athlete` summary (id, first_name,
         last_name) for deep-linking from the dashboard widget.
+
+        A medical certificate that a later one has replaced is also excluded:
+        when an athlete has more than one live `medical_certificate` row, only
+        the one with the greatest `expires_at` can appear here. The others are
+        history, not something to chase. Other document types are never
+        superseded — two ID cards are two documents.
       operationId: documentExpiring
       parameters:
         - name: days

@@ -63,6 +63,11 @@ Documents are the first entity in the system that owns **physical files on disk*
 - **Athlete soft-delete cascades.** When an `Athlete` is soft-deleted, `AthleteObserver::deleting` loops over `$athlete->documents` and calls `DeleteDocumentAction` on each. Every row is soft-deleted, every file is wiped. Consistent with the per-document GDPR policy.
 - **File cannot be replaced via `PUT`.** `UpdateDocumentRequest` strips `file`, `file_path`, and `athlete_id` from the validated payload — only metadata (`type`, `issued_at`, `expires_at`, `notes`) is updateable. To replace a file, upload a brand new document row and soft-delete the old one.
 - **Expiring query excludes `expires_at = null`.** A document without expiry isn't "expiring" — it's a no-expiry document. Those are handled by the UI badge logic, not the `/documents/expiring` endpoint.
+- **A renewed medical certificate supersedes the one it replaces** (#1739). A live medical-certificate row is **superseded** when the same athlete has another live medical-certificate row with a strictly greater `expires_at` — or an equal `expires_at` and a greater `id`, so a duplicate upload of the same date retires exactly one way round and the athlete never disappears from both sides of the tie. Superseded rows are excluded from `GET /documents/expiring` (and therefore from the roster alert count) and from the T-30 / T-7 / T-0 owner digest. The rule lives in one place, `Document::scopeNotSuperseded`.
+  - **Medical certificates only.** `id_card`, `insurance` and `other` are never superseded: only a medical certificate has a renewal cycle the product models. Two ID cards are two documents, not a replacement.
+  - **Undated rows sit outside the rule.** A medical row with `expires_at = null` neither supersedes nor is superseded — it carries no statement about when coverage ends, so it is no evidence coverage was renewed.
+  - **Live means `deleted_at is null`.** A trashed certificate supersedes nothing, including one taken by `PurgeExpiredMedicalCertificates` after 24 months.
+  - The athlete's own documents tab is **unaffected** — it lists history, and the superseded certificate stays visible there with its expiry badge.
 
 ## Related endpoints
 
