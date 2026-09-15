@@ -25,7 +25,7 @@ use Illuminate\Support\Facades\Log;
  *
  *   for each academy with training_days configured:
  *       streak_dates = the last 3 academy training_days (today + back)
- *       for each active athlete with a linked user_id:
+ *       for each active athlete:
  *           if attendance is present for ALL streak_dates → skip
  *           if attendance is absent for ALL streak_dates →
  *             owner gets notified (once per 14 days per athlete to
@@ -89,9 +89,19 @@ class SendAthleteMissedStreakPushes extends Command
             return;
         }
 
+        // NOT filtered on `user_id`. This alert is delivered to the OWNER —
+        // `OwnerAthleteMissedStreakNotification::via()` is `['database',
+        // WebPushChannel]` with the owner as the notifiable — and the signal
+        // it reads is `attendance_records`, which the owner writes at
+        // check-in. An athlete's linked account has nothing to do with
+        // either end of it.
+        //
+        // The filter was here from #735 and made this command fire for
+        // NOBODY on the shipping desktop build, where `athlete_accounts` is
+        // off and therefore no athlete has a `user_id` at all. An owner who
+        // had the preference switched on believed they were being warned.
         $athletes = $academy->athletes()
             ->where('status', AthleteStatus::Active)
-            ->whereNotNull('user_id')
             ->get();
 
         foreach ($athletes as $athlete) {
