@@ -26,6 +26,7 @@ import { AthletePayment, PaymentService } from '../../../../core/services/paymen
 import { formatIsoDate, localeFor } from '../../../../shared/utils/locale';
 import { CarnetPanelComponent } from '../carnet-panel/carnet-panel.component';
 import { CONFIRM_REJECT_BUTTON } from '../../../../shared/utils/confirm-buttons';
+import { MONTH_KEYS } from '../../../../shared/utils/months';
 
 /**
  * Per-athlete payments tab on the detail page (#182 Surface 2).
@@ -562,18 +563,3 @@ export class PaymentsListComponent implements OnInit {
     return formatIsoDate(iso, this.languageService.currentLang());
   }
 }
-
-const MONTH_KEYS = [
-  'month.january',
-  'month.february',
-  'month.march',
-  'month.april',
-  'month.may',
-  'month.june',
-  'month.july',
-  'month.august',
-  'month.september',
-  'month.october',
-  'month.november',
-  'month.december',
-] as const;
