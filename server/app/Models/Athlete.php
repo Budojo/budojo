@@ -41,6 +41,7 @@ use Illuminate\Support\Facades\Storage;
  * @property int                     $stripes
  * @property AthleteStatus           $status
  * @property \Carbon\Carbon          $joined_at
+ * @property \Carbon\Carbon|null     $status_changed_at When `status` last moved (#1741). Null means it never has since the row was created — the right answer for an athlete active since import, not a missing value.
  * @property \Carbon\Carbon|null     $created_at
  * @property \Carbon\Carbon|null     $updated_at
  * @property \Carbon\Carbon|null     $deleted_at
@@ -224,6 +225,7 @@ class Athlete extends Model implements HasAddress
             'status' => AthleteStatus::class,
             'date_of_birth' => 'date',
             'joined_at' => 'date',
+            'status_changed_at' => 'date',
             'stripes' => 'integer',
             'is_self' => 'boolean',
         ];

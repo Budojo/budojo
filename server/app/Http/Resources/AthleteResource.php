@@ -86,6 +86,12 @@ class AthleteResource extends JsonResource
             'belt' => $athlete->belt->value,
             'stripes' => $athlete->stripes,
             'status' => $athlete->status->value,
+            // When `status` last moved (#1741). Null is an answer, not a gap:
+            // it means the status has not changed since the row was created,
+            // which is true of every athlete who has been active since import.
+            // A reader must not fall back to `joined_at` — that would date a
+            // departure to an enrolment.
+            'status_changed_at' => $athlete->status_changed_at?->toDateString(),
             // Owner-as-athlete flag (#748). The SPA uses this to:
             //   - render an `Owner` chip next to the name on the roster,
             //   - hide the payment column on this row,

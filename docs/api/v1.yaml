@@ -8642,6 +8642,16 @@ components:
         joined_at:
           type: string
           format: date
+        status_changed_at:
+          type: string
+          format: date
+          nullable: true
+          description: |
+            The date `status` last changed (#1741). **Null is an answer,
+            not a gap**: it means the status has not moved since the row
+            was created, which is true of every athlete active since
+            import. Do not fall back to `joined_at` — that would date a
+            departure to an enrolment.
         address:
           allOf:
             - $ref: '#/components/schemas/Address'
