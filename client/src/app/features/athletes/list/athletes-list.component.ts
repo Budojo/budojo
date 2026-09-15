@@ -79,6 +79,7 @@ import {
 import { localeFor } from '../../../shared/utils/locale';
 import { CarnetService } from '../../../core/services/carnet.service';
 import { CONFIRM_REJECT_BUTTON } from '../../../shared/utils/confirm-buttons';
+import { NgTemplateOutlet } from '@angular/common';
 
 interface SelectOption<T extends string> {
   label: string;
@@ -89,6 +90,7 @@ interface SelectOption<T extends string> {
   selector: 'app-athletes-list',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    NgTemplateOutlet,
     FormsModule,
     ToggleSwitchModule,
     RouterLink,
@@ -392,12 +394,52 @@ export class AthletesListComponent implements OnInit {
    * filters it had never set (#1618). `trash` is the third: an empty bin is
    * not a roster that has been filtered down to nothing.
    */
-  readonly emptyStateKind = computed<'first-run' | 'trash' | 'filtered'>(() => {
+  readonly emptyStateKind = computed<'first-run' | 'trash' | 'filtered' | 'all-inactive'>(() => {
     const narrowed =
       this.selectedBelt() !== '' || this.selectedPaid() !== '' || this.searchTerm().trim() !== '';
     if (this.isTrashedMode()) return narrowed ? 'filtered' : 'trash';
-    return narrowed || this.narrowedStatus() !== null ? 'filtered' : 'first-run';
+    if (narrowed || this.narrowedStatus() !== null) return 'filtered';
+    // `first-run` is a claim about the academy, not about the query, and the
+    // default status makes it one the query cannot support: an academy that
+    // has marked everyone inactive (season over, gym paused) gets zero rows
+    // with no filter set and is told it has never added anybody (#1666).
+    return (this.inactiveCount() ?? 0) > 0 ? 'all-inactive' : 'first-run';
   });
+
+  /**
+   * How many athletes exist once the default `active` is lifted — asked only
+   * when the roster comes back empty on a query the owner did not narrow,
+   * and only then. `null` is "not asked", never zero.
+   */
+  private readonly inactiveCount = signal<number | null>(null);
+
+  /**
+   * True while the "is everyone just inactive?" count is in flight.
+   *
+   * Without it the empty state renders `first-run` for the length of that
+   * round-trip and then swaps — so the owner of a stood-down gym is told
+   * "you have not added anybody yet", briefly, before being told the truth.
+   * A flash of a wrong answer is worse than a moment of none, especially
+   * when the wrong answer is a claim about their own academy (#1666).
+   */
+  private readonly resolvingEmptyState = signal<boolean>(false);
+
+  /** The roster is still deciding what its emptiness means. */
+  readonly settlingEmptyState = computed<boolean>(() => this.resolvingEmptyState());
+
+  /** The count in the all-inactive copy, safe to read from the template. */
+  readonly inactiveTotal = computed<number>(() => this.inactiveCount() ?? 0);
+
+  /**
+   * Singular and plural as separate keys: ngx-translate here runs with no
+   * plural rule and no message compiler, so ICU would reach the owner
+   * verbatim (#1646).
+   */
+  readonly inactiveHintKey = computed<string>(() =>
+    this.inactiveTotal() === 1
+      ? 'athletes.list.empty.allInactiveHintOne'
+      : 'athletes.list.empty.allInactiveHintOther',
+  );
 
   /**
    * What is hiding the list, in words: "Viola · Non pagato · «rossi»". The
@@ -1590,9 +1632,62 @@ export class AthletesListComponent implements OnInit {
     this.load();
   }
 
+  private loadEpoch = 0;
+
+  /**
+   * The roster came back empty on a query the owner did not narrow. That is
+   * two different situations — a brand-new academy, and one that has marked
+   * everybody inactive — and the default `status=active` cannot tell them
+   * apart, so the page claimed the first and was wrong for the second
+   * (#1666). One more request, only on the empty path, settles it.
+   *
+   * Deliberately not folded into the main load: this costs a round-trip and
+   * it is asked only when there is nothing to show anyway, where a second
+   * request is invisible. An error leaves `inactiveCount` null, which is
+   * exactly the old behaviour — the first-run copy — rather than a page that
+   * cannot decide what it is.
+   */
+  private askWhetherAllInactive(epoch: number): void {
+    // Guard the ENTRY, not just the exit. `load()` does not cancel the
+    // request it replaces, so an older roster response still reaches its
+    // `next` handler and calls this with a stale epoch. Setting
+    // `resolvingEmptyState` from there latched it on: the clear lives in a
+    // `finalize` that checks `epoch === loadEpoch` and so refuses to fire for
+    // exactly that subscription, and nothing else touches the flag until the
+    // next `load()`. On the phone — whose branch tests the flag before it
+    // tests `athletes().length` — that left skeletons sitting over a roster
+    // that had already arrived, with `loading()` false. Reachable by opening
+    // the eye, or clearing a search, while the first load is still out.
+    if (epoch !== this.loadEpoch) return;
+    if (this.isTrashedMode()) return;
+    if (this.emptyStateKind() === 'filtered') return;
+
+    this.resolvingEmptyState.set(true);
+    this.athleteService
+      .countInactive()
+      .pipe(
+        finalize(() => {
+          if (epoch === this.loadEpoch) this.resolvingEmptyState.set(false);
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (total) => {
+          if (epoch !== this.loadEpoch) return;
+          this.inactiveCount.set(total);
+        },
+        error: () => undefined,
+      });
+  }
+
   private load(): void {
     this.loading.set(true);
     this.loadError.set(false);
+    // A stale answer to "are they all inactive?" outlives the query it was
+    // asked about, so it is dropped the moment a new one goes out.
+    const epoch = ++this.loadEpoch;
+    this.inactiveCount.set(null);
+    this.resolvingEmptyState.set(false);
     const filters: AthleteFilters = { page: this.page };
     const belt = this.selectedBelt();
     const status = this.selectedStatus();
@@ -1630,6 +1725,7 @@ export class AthletesListComponent implements OnInit {
         next: (res) => {
           this.athletes.set(res.data);
           this.totalRecords.set(res.meta.total);
+          if (res.meta.total === 0) this.askWhetherAllInactive(epoch);
           // One-way latch — see `attendanceCountsSeen`. An empty page proves
           // nothing about the server, so it must not un-prove what an earlier
           // page already showed.
