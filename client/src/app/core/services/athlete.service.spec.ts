@@ -275,4 +275,29 @@ describe('AthleteService', () => {
       req.flush(null);
     });
   });
+
+  describe('countInactive', () => {
+    it('asks for the inactive only, and answers with the total alone', () => {
+      let answer: number | undefined;
+      service.countInactive().subscribe((n) => (answer = n));
+
+      const req = httpMock.expectOne(
+        (r) => r.url === '/api/v1/athletes' && r.params.get('status') === 'inactive',
+      );
+      expect(req.request.method).toBe('GET');
+      // Page 1 is enough: only `meta.total` is read, and the rows come along
+      // because the index has no count-only mode.
+      expect(req.request.params.get('page')).toBe('1');
+      // Not an unfiltered count. Asking for everyone would include the bin,
+      // and the empty state's "tutti segnati come non attivi" would be false
+      // whenever a deleted athlete existed (#1666).
+      expect(req.request.params.get('status')).not.toBeNull();
+
+      req.flush({
+        data: [],
+        meta: { current_page: 1, last_page: 1, per_page: 20, total: 7 },
+      });
+      expect(answer).toBe(7);
+    });
+  });
 });

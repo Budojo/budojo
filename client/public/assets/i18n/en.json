@@ -1909,7 +1909,11 @@
         "firstRunHint": "Add the first one, or bring your whole list in from a spreadsheet.",
         "filteredHintNamed": "Nobody matches {{filters}}. Try removing a filter.",
         "trashTitle": "The bin is empty",
-        "trashHint": "Athletes you delete land here, and you can put them back from here."
+        "trashHint": "Athletes you delete land here, and you can put them back from here.",
+        "allInactiveTitle": "Nobody is training right now",
+        "allInactiveHintOne": "One athlete is on your roster, marked inactive.",
+        "allInactiveHintOther": "{{count}} athletes are on your roster, all marked inactive.",
+        "showAll": "Show everyone"
       },
       "error": {
         "title": "Couldn't load the roster",
