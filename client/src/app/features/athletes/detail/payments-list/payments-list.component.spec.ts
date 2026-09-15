@@ -454,11 +454,8 @@ describe('PaymentsListComponent — the 422 that is not about the fee (#1382)', 
 
   // ─── A way to another year (#1636, PAY-1) ────────────────────────────────
 
-  // Frozen mid-year on purpose. These read the wall clock, and in December
-  // `month <= currentMonth` is true for all twelve — so the test pinning
-  // "a finished year is editable end to end" would pass on the reverted code
-  // for the whole of December. A test whose power swings with the calendar
-  // is not a test.
+  // Frozen mid-year on purpose: these read the wall clock, and a test whose
+  // power swings with the calendar is not a test.
   beforeEach(() => vi.setSystemTime(new Date(Date.UTC(2026, 5, 15))));
   afterEach(() => vi.useRealTimers());
 
@@ -512,11 +509,30 @@ describe('PaymentsListComponent — the 422 that is not about the fee (#1382)', 
 
     component['prevYear']();
     const rows = component['monthRows']();
-    // In the current year the table stops at today. A year that has ended is
-    // entirely in the past, so all twelve are markable — which is the point
-    // of being able to reach one.
     expect(rows.length).toBe(12);
     expect(rows.every((r: { canEdit: boolean }) => r.canEdit)).toBe(true);
+  });
+
+  it('lets the owner record a month paid in advance', () => {
+    // The clock is frozen to 15 June, so July onward has not arrived.
+    const { component } = setup({ joinedAt: '2023-04-01' });
+    const rows = component['monthRows']();
+
+    // #1636 disabled these on the reasoning that there is nothing to mark
+    // paid for July in May. Paying a month or a term ahead is ordinary, and
+    // the row the money belongs to was the one row the owner could not
+    // touch — the server has always accepted it.
+    const october = rows.find((r: { month: number }) => r.month === 10);
+    expect(october?.canEdit).toBe(true);
+    expect(rows.every((r: { canEdit: boolean }) => r.canEdit)).toBe(true);
+  });
+
+  it('still refuses every month when the academy has no fee to charge', () => {
+    // The negative control the rule now rests on entirely: with the cap gone,
+    // `fee` is the only thing left saying no, so a mistake there would make
+    // the whole table editable against an academy that charges nothing.
+    const { component } = setup({ fee: null });
+    expect(component['monthRows']().some((r: { canEdit: boolean }) => r.canEdit)).toBe(false);
   });
 
   it('survives an athlete payload with no joining date', () => {
