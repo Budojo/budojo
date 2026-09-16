@@ -60,6 +60,117 @@ export function localised(value: Localised, lang: string): string {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.63.0',
+    date: '2026-09-16',
+    headline: {
+      en: 'What the app does not know, it no longer claims.',
+      it: 'Quello che l’app non sa, adesso non lo dice.',
+    },
+    sections: [
+      {
+        heading: {
+          en: 'The months before Budojo are not unpaid',
+          it: 'I mesi prima di Budojo non sono «Non pagato»',
+        },
+        bullets: [
+          {
+            en: 'If your academy existed before Budojo — and it did — every athlete’s payments tab was full of amber “Unpaid” for months collected in cash years ago. On an academy open since 2019 that is up to six seasons per person: seventy cells asserting a debt the app knows nothing about.',
+            it: 'Se la tua accademia esisteva prima di Budojo — e esisteva — la scheda pagamenti di ogni atleta era piena di «Non pagato» ambrati per mesi incassati in contanti anni fa. Su un’accademia aperta nel 2019 sono fino a sei stagioni a persona: settanta caselle che dichiarano un debito di cui l’app non sa niente.',
+          },
+          {
+            en: 'The academy settings have a new field — “Fees are recorded in Budojo from” — set to the month you opened the academy here. Months before it show a neutral dash instead of the accusation, and the season arrows stop there.',
+            it: 'Nelle impostazioni dell’accademia c’è un campo nuovo — «Le quote sono registrate su Budojo da» — impostato al mese in cui hai aperto l’accademia qui. I mesi precedenti mostrano un trattino neutro invece dell’accusa, e le frecce delle stagioni si fermano lì.',
+          },
+          {
+            en: 'They stay recordable. If you are transcribing a paper register you can still mark a month below that line as paid: it is a rule about what the app may state, not about what you may write.',
+            it: 'Restano registrabili. Se stai trascrivendo un registro di carta puoi ancora segnare pagato un mese sotto quella soglia: è una regola su cosa l’app può affermare, non su cosa tu puoi scrivere.',
+          },
+        ],
+      },
+      {
+        heading: {
+          en: 'A renewed certificate retires the old one',
+          it: 'Un certificato rinnovato manda in pensione quello vecchio',
+        },
+        bullets: [
+          {
+            en: 'You uploaded the new certificate and the old one carried on as if it were still theirs: red on Expiring documents for twenty-four months, counted in the roster alerts, and — if you renewed early, which is the normal case — still firing the reminders at 30, 7 and 0 days for a certificate already on your desk.',
+            it: 'Caricavi il certificato nuovo e il vecchio continuava come se fosse ancora il suo: in rosso su Documenti in scadenza per ventiquattro mesi, contato negli avvisi della lista, e — se rinnovavi in anticipo, il caso normale — faceva partire lo stesso i promemoria a 30, 7 e 0 giorni per un certificato che avevi già.',
+          },
+          {
+            en: 'An athlete’s latest valid certificate now retires the earlier ones. The full history stays on the athlete’s own page: it is the “what do I have to chase” list that gets shorter, not the archive.',
+            it: 'L’ultimo certificato valido di un atleta manda in pensione i precedenti. La storia resta tutta sulla scheda dell’atleta: è la lista «cosa devo rincorrere» che si accorcia, non l’archivio.',
+          },
+        ],
+      },
+      {
+        heading: {
+          en: 'The alerts count what they say they count',
+          it: 'Gli avvisi dicono quello che contano',
+        },
+        bullets: [
+          {
+            en: 'The alerts panel read “3 certificate expiring within 30 days”. That 3 was the length of the whole documents list: every type of document, documents belonging to athletes who stopped training, and things already long expired. You clicked through and found an ID card from 2024 and a policy for somebody who no longer comes.',
+            it: 'Il pannello avvisi diceva «3 certificato in scadenza entro 30 giorni». Quel 3 era la lunghezza di tutta la lista documenti: ogni tipo di documento, quelli di atleti che hanno smesso, e anche cose scadute da un pezzo. Cliccavi e trovavi una carta d’identità del 2024 e una polizza di chi non viene più.',
+          },
+          {
+            en: 'Two separate lines now — medical certificates to renew, other documents to renew — counting only people who actually train. The number on the button is the same; what is behind it finally adds up.',
+            it: 'Ora sono due righe separate — certificati medici da rinnovare, altri documenti da rinnovare — e contano solo chi si allena davvero. Il numero sul pulsante è lo stesso; è quello che c’è dentro che torna.',
+          },
+          {
+            en: 'A document expiring on exactly the last day of the window did not appear at all: at 30 days it vanished, at 31 it came back. The reminder that morning told you about it anyway.',
+            it: 'Un documento che scadeva esattamente l’ultimo giorno della finestra non compariva: a 30 giorni spariva, a 31 riappariva. Il promemoria di quella mattina te ne parlava lo stesso.',
+          },
+        ],
+      },
+      {
+        heading: {
+          en: 'The academy’s own documents',
+          it: 'I documenti dell’accademia',
+        },
+        bullets: [
+          {
+            en: 'Until now every document in Budojo belonged to a person. But a club has papers of its own that expire: the defibrillator certificate, the liability policy, the affiliation, the lease. There was nowhere to put them, and the screen that exists to say “what runs out soon” structurally could not include them.',
+            it: 'Finora ogni documento di Budojo apparteneva a una persona. Ma un’ASD ha carte sue che scadono: il certificato DAE, la polizza RC, l’affiliazione, il contratto d’affitto. Non c’era dove metterle, e la schermata che esiste per dire «cosa sta per scadere» non poteva strutturalmente includerle.',
+          },
+          {
+            en: 'It is also the document that costs most if it lapses. A forgotten medical certificate is one person who should not be on the mat; a lapsed liability policy is the academy.',
+            it: 'È anche il documento che costa di più se scade. Un certificato medico dimenticato è una persona che non dovrebbe salire sul tatami; una polizza RC scaduta è l’accademia.',
+          },
+          {
+            en: 'The Academy page now has a Documents section with the same upload, the same expiry badge and the same reminder as an athlete’s. They appear in the same expiring list, ordered by date among the rest, and they have their own switch in the notification preferences.',
+            it: 'La pagina Accademia ha una sezione Documenti, con lo stesso caricamento, lo stesso badge di scadenza e lo stesso promemoria di quelli degli atleti. Compaiono nella stessa lista delle scadenze, ordinati per data in mezzo agli altri, e hanno il loro interruttore nelle preferenze notifiche.',
+          },
+        ],
+      },
+      {
+        heading: {
+          en: 'The check-in reads better',
+          it: 'Il check-in, più leggibile',
+        },
+        bullets: [
+          {
+            en: 'In the daily attendance list the state leads the row instead of trailing it, the box is a square rather than a circle — a circle, in an interface, is usually not something you press — and the lesson’s techniques are chips instead of a run of dot-separated words where you could not tell one from the next.',
+            it: 'Nella lista presenze del giorno lo stato guida la riga invece di stare in fondo, la casella è un quadrato invece di un cerchio — un cerchio, in un’interfaccia, di solito non si preme — e le tecniche della lezione sono chip invece di una fila separata da punti in cui non si capiva dove finisse una e cominciasse l’altra.',
+          },
+        ],
+      },
+      {
+        heading: { en: 'Fixes', it: 'Correzioni' },
+        bullets: [
+          {
+            en: 'On an athlete’s programme the percentage read 18% for somebody who had not missed a single class. The headline now says how many they saw out of how many were taught, with the percentage underneath — if you were always there, you read that you were always there.',
+            it: 'Sul programma di un atleta la percentuale diceva 18% a chi non aveva saltato una lezione. Adesso il titolo dice quante ne ha viste su quante ne sono state fatte, con la percentuale sotto: se c’eri sempre, leggi che c’eri sempre.',
+          },
+          {
+            en: 'The “not seen in a while” alert never fired for anybody on the installed app: it looked for a link to the athlete’s account, which does not exist on the desktop. The alert is for you, and it reads the attendance you record yourself.',
+            it: 'L’avviso «non si vede da un po’» non è mai partito per nessuno sull’app installata: cercava un collegamento all’account dell’atleta che sul computer non esiste. L’avviso è per te, e legge le presenze che segni tu.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.62.0',
     date: '2026-09-15',
     headline: {
