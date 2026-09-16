@@ -89,6 +89,16 @@ export interface Athlete {
   status: AthleteStatus;
   joined_at: string;
   /**
+   * The date `status` last changed (#1741). Nothing renders it yet — it is
+   * here because the wire carries it and the next reader should not have to
+   * re-derive the shape.
+   *
+   * **Null is an answer, not a gap**: the status has not moved since the row
+   * was created. Do not fall back to `joined_at` — that would date a
+   * departure to an enrolment. Optional for fixture-compat.
+   */
+  status_changed_at?: string | null;
+  /**
    * Public handle of the user this athlete row is linked to. Null when:
    *   - the athlete hasn't been linked to a user yet (V1 athletes
    *     created without an invite flow);
@@ -180,6 +190,20 @@ export interface Athlete {
    * treat a missing value as monthly, which is what every athlete is.
    */
   billing_period_months?: number;
+  /**
+   * The earliest month this athlete can owe anything for (#1742), as
+   * `YYYY-MM-01`, or `null` when nothing floors them.
+   *
+   * Resolved server-side by `App\Support\BillingFloor` — the later of the
+   * academy's `billing_from` and this athlete's joining month. **Read this
+   * rather than combining the two**: a `max()` over two dates is exactly the
+   * shape the #1709 off-by-one took, and the client cannot see the academy
+   * setting per row without holding it beside every athlete.
+   *
+   * Null means the ledger behaves as it did before the column existed, which
+   * is what an academy restored from an older backup gets.
+   */
+  billing_floor?: string | null;
   /**
    * What is paying for this athlete's current month (#1402), resolved
    * server-side by `App\Support\MonthCoverage` — the fee's period if one

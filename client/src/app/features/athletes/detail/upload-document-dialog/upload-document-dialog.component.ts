@@ -122,7 +122,16 @@ export class UploadDocumentDialogComponent {
 
   /** Two-way bound. Parent owns the open/closed state — we just toggle it. */
   readonly visible = model.required<boolean>();
-  readonly athleteId = input.required<number>();
+  /**
+   * Who the document is for. `null` uploads it to the **academy** itself
+   * (#1743) — the DAE certificate, the liability policy, the affiliation.
+   *
+   * One dialog, not two. The file contract, the validators, the size and MIME
+   * rules and the error handling are identical for both owners; the only
+   * differences are the endpoint and one absent type, and duplicating the
+   * dialog to express those would duplicate everything else with them.
+   */
+  readonly athleteId = input<number | null>(null);
   /** Emitted exactly once per successful upload with the server-created Document. */
   readonly uploaded = output<Document>();
 
@@ -154,7 +163,7 @@ export class UploadDocumentDialogComponent {
    */
   readonly typeOptions = computed<TypeOption[]>(() => {
     this.languageService.currentLang();
-    return [
+    const options: TypeOption[] = [
       { label: this.translate.instant('documents.types.id_card'), value: 'id_card' },
       {
         label: this.translate.instant('documents.types.medical_certificate'),
@@ -163,6 +172,14 @@ export class UploadDocumentDialogComponent {
       { label: this.translate.instant('documents.types.insurance'), value: 'insurance' },
       { label: this.translate.instant('documents.types.other'), value: 'other' },
     ];
+
+    // An academy does not have a medical fitness certificate — a person does,
+    // and it is the one type that is special-category data under GDPR Art. 9.
+    // The server refuses it with a 422; offering it here and then explaining
+    // the refusal afterwards is a control that exists to be punished.
+    return this.athleteId() === null
+      ? options.filter((option) => option.value !== 'medical_certificate')
+      : options;
   });
 
   readonly form = this.fb.group(
@@ -225,8 +242,14 @@ export class UploadDocumentDialogComponent {
     this.submitting.set(true);
     this.error.set(null);
 
-    this.documentService
-      .upload(this.athleteId(), body)
+    // The endpoint is the whole branch; everything after it is identical.
+    const athleteId = this.athleteId();
+    const request$ =
+      athleteId === null
+        ? this.documentService.uploadForAcademy(body)
+        : this.documentService.upload(athleteId, body);
+
+    request$
       .pipe(
         takeUntil(this.cancelled$),
         finalize(() => this.submitting.set(false)),

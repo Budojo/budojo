@@ -7,7 +7,17 @@ export type DocumentType = 'id_card' | 'medical_certificate' | 'insurance' | 'ot
 
 export interface Document {
   id: number;
-  athlete_id: number;
+  /**
+   * The person this document belongs to, or `null` when it belongs to the
+   * academy itself (#1743). Exactly one of this and `academy_id` is set.
+   */
+  athlete_id: number | null;
+  /**
+   * The academy this document belongs to directly (#1743). `null` on a
+   * person's document. Optional for fixture-compat; the wire carries it on
+   * every document from #1743 on.
+   */
+  academy_id?: number | null;
   type: DocumentType;
   original_name: string;
   mime_type: string;
@@ -51,11 +61,21 @@ export interface DocumentListOptions {
  * `/api/v1/athletes/:id`.
  */
 export interface ExpiringDocument extends Document {
-  athlete: {
+  /**
+   * Absent for one of the academy's own papers (#1743) — they have no person
+   * attached, and the server omits the object rather than sending an empty
+   * one.
+   *
+   * Optional **on purpose**: typing it as always-present is what let
+   * `doc.athlete.first_name` compile and then throw on the first academy
+   * document, blanking the whole expiring page. With this, the compiler
+   * enforces the guard instead of the guard being a defensive habit.
+   */
+  athlete?: {
     id: number;
     first_name: string;
     last_name: string;
-  };
+  } | null;
 }
 
 /**
@@ -98,6 +118,29 @@ export class DocumentService {
     return this.http
       .post<{ data: Document }>(`${this.base}/athletes/${athleteId}/documents`, body)
       .pipe(map((res) => res.data));
+  }
+
+  /**
+   * The academy's own papers (#1743) — the DAE certificate, the liability
+   * policy, the affiliation, the lease.
+   *
+   * No id: the subject is the caller's active academy, the way `GET /academy`
+   * already works. `medical_certificate` is refused server-side with a 422 on
+   * `type` — it is special-category data and belongs to a person.
+   */
+  uploadForAcademy(body: FormData): Observable<Document> {
+    return this.http
+      .post<{ data: Document }>(`${this.base}/academy/documents`, body)
+      .pipe(map((res) => res.data));
+  }
+
+  /** The academy's own papers, newest first. Same envelope as the per-athlete list. */
+  listForAcademy(options: DocumentListOptions = {}): Observable<DocumentListResponse> {
+    let params = new HttpParams();
+    if (options.includeCancelled) {
+      params = params.set('trashed', '1');
+    }
+    return this.http.get<DocumentListResponse>(`${this.base}/academy/documents`, { params });
   }
 
   /**

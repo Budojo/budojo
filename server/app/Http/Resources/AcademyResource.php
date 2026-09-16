@@ -68,6 +68,13 @@ class AcademyResource extends JsonResource
             // season starts — the client re-deriving it from the month would
             // be a second implementation of the same off-by-one.
             'season_start_month' => $academy->season_start_month,
+            // The month Budojo became where this academy's fees are recorded
+            // (#1742). Emitted raw — it goes back into the settings form. The
+            // ledger does NOT floor on it directly: the effective floor is
+            // this OR the athlete's joining month, whichever is later, and
+            // that resolution lives in `App\Support\BillingFloor` and reaches
+            // the client as `billing_floor` on the athlete.
+            'billing_from' => $academy->billing_from?->toDateString(),
             // How many classes are on the weekly timetable (#1562) — what the
             // academy page needs to say "4 classes a week" or "not set up
             // yet" without a second round-trip. One indexed COUNT.

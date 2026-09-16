@@ -306,7 +306,27 @@ class AthleteSyllabusCoverageAction
                 'seen' => $seen,
                 'thin' => $thin,
                 'missed' => \count($missed),
-                'percentage' => $taughtCount === 0 ? 0 : (int) round(($seen / $taughtCount) * 100),
+                /*
+                 * ATTENDED over TAUGHT — what this athlete actually caught.
+                 *
+                 * It used to be `seen / taught`, where `seen` means attended
+                 * two or more held lessons. An athlete who was at every
+                 * single lesson since joining, missing nothing, read 18%:
+                 * two topics seen twice out of eleven taught. The arithmetic
+                 * was doing what it was built to do and the screen was
+                 * telling the owner their most diligent athlete had an 82%
+                 * gap (#1710).
+                 *
+                 * `SEEN_AT = 2` stays — the difference between having seen a
+                 * technique and having consolidated it is real. It stops
+                 * being the headline: `seen` is reported beside this as the
+                 * secondary count it always was.
+                 */
+                'percentage' => $taughtCount === 0
+                    ? 0
+                    : (int) round((($seen + $thin) / $taughtCount) * 100),
+                /** Attended at least once — the headline's numerator. */
+                'attended' => $seen + $thin,
                 // Context, deliberately outside the fraction.
                 'not_taught_yet' => $notTaught,
             ],

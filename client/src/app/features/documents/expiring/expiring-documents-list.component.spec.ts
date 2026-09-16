@@ -217,4 +217,65 @@ describe('ExpiringDocumentsListComponent', () => {
     // All-clear empty block must NOT render when either axis has rows.
     expect(el.querySelector('[data-cy="all-clear-empty"]')).toBeNull();
   });
+  describe("the academy's own papers (#1743)", () => {
+    // They arrive in the same list with `athlete_id: null` and no `athlete`
+    // object. The page used to read `doc.athlete.first_name` unguarded, so a
+    // single academy document would have thrown during change detection and
+    // blanked the whole screen.
+
+    const policy = () =>
+      makeExpiring({
+        id: 7,
+        athlete_id: null,
+        academy_id: 1,
+        type: 'insurance',
+        original_name: 'polizza-rc.pdf',
+        athlete: null,
+      });
+
+    it('renders the row instead of throwing on the missing athlete', () => {
+      const fixture = mount();
+      flushHealth([policy()]);
+      fixture.detectChanges();
+
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.querySelector('[data-cy="academy-owned"]')).not.toBeNull();
+      expect(el.querySelector('[data-cy="expiring-table"] tbody tr')).not.toBeNull();
+    });
+
+    it('offers no athlete deep-link, because there is nowhere to go', () => {
+      const fixture = mount();
+      flushHealth([policy()]);
+      fixture.detectChanges();
+
+      const el = fixture.nativeElement as HTMLElement;
+      // A link to `/dashboard/athletes/null/documents` is a 404 dressed as a
+      // control.
+      expect(el.querySelector('[data-cy="athlete-link"]')).toBeNull();
+    });
+
+    it('still deep-links an athlete document beside it', () => {
+      const fixture = mount();
+      flushHealth([policy(), makeExpiring({ id: 8 })]);
+      fixture.detectChanges();
+
+      const el = fixture.nativeElement as HTMLElement;
+      // The other half: refusing every link would pass the test above and
+      // break the feature the page already had.
+      expect(el.querySelector('[data-cy="athlete-link"]')).not.toBeNull();
+      expect(el.querySelector('[data-cy="academy-owned"]')).not.toBeNull();
+    });
+
+    it('names them in the header chip like any other row', () => {
+      const fixture = mount();
+      flushHealth([policy(), makeExpiring({ id: 8 })]);
+      fixture.detectChanges();
+
+      // The RENDERED count, not `count() === documents().length` — that
+      // asserted a line this change never touched and could not have failed.
+      const header = (fixture.nativeElement as HTMLElement).textContent ?? '';
+      expect(header).toContain('2');
+      expect(fixture.componentInstance.count()).toBe(2);
+    });
+  });
 });

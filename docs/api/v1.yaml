@@ -4413,6 +4413,78 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationError'
 
+  /academy/documents:
+    get:
+      tags: [documents]
+      summary: The academy's own documents
+      description: |
+        The academy's own papers (#1743) — the DAE / BLSD-D certificate, the
+        civil-liability policy, the federation affiliation, the lease. Up to 50
+        per page, newest `created_at` first.
+
+        No path parameter: the subject is the caller's **active academy**.
+        Rows here have `athlete_id: null` and `academy_id` set; an athlete's
+        documents are never included.
+
+        Same tombstone contract as the per-athlete list — pass `?trashed=1` to
+        include soft-deleted rows.
+      operationId: academyDocumentList
+      parameters:
+        - name: trashed
+          in: query
+          description: |
+            Opt-in flag. The only supported value is `1`, which includes
+            soft-deleted documents (tombstones) in the response.
+          required: false
+          schema:
+            type: string
+            enum: ['1']
+      responses:
+        '200':
+          description: Paginated list of the academy's documents
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentList'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          description: No active academy, or the caller lacks the documents capability
+
+    post:
+      tags: [documents]
+      summary: Upload one of the academy's own documents
+      description: |
+        Multipart upload, identical in storage and validation to the
+        per-athlete upload: private `local` disk, max 10 MB, `application/pdf`
+        / `image/jpeg` / `image/png`.
+
+        **`medical_certificate` is refused with 422.** It is the one type that
+        is special-category data under GDPR Art. 9 and the one type the upload
+        path encrypts, and an academy does not have a medical fitness
+        certificate — a person does. Academy documents are therefore never
+        encrypted.
+      operationId: academyDocumentUpload
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DocumentUploadRequest'
+      responses:
+        '201':
+          description: Document created and file stored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          description: No active academy, or the caller lacks the documents capability
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
   /documents/expiring:
     get:
       tags: [documents]
@@ -4424,6 +4496,24 @@ paths:
         expired documents are included. Documents with `expires_at = null`
         are excluded. Each item inlines an `athlete` summary (id, first_name,
         last_name) for deep-linking from the dashboard widget.
+
+        A medical certificate that a later one has replaced is also excluded:
+        when an athlete has more than one live `medical_certificate` row, only
+        the one with the greatest `expires_at` can appear here. The others are
+        history, not something to chase. Other document types are never
+        superseded — two ID cards are two documents.
+
+        Only documents belonging to **active** athletes are returned — the
+        same scope `missing_medical_certificate` has always used. An inactive
+        athlete is not asked for a certificate, so their lapsed paperwork is
+        not something to chase; it stays on their own documents tab.
+
+        The academy's **own** documents (#1743) are merged in from a second
+        query and re-sorted with the rest, so the list is one ordering rather
+        than two sections. They carry `athlete_id: null` and no `athlete`
+        object, and the active-athlete scope does not apply to them — a
+        liability policy has no training status. The 200-row cap applies to
+        the **merged** list.
       operationId: documentExpiring
       parameters:
         - name: days
@@ -7476,6 +7566,16 @@ components:
           $ref: '#/components/schemas/TrainingDays'
         season_start_month:
           $ref: '#/components/schemas/SeasonStartMonth'
+        billing_from:
+          type: string
+          format: date
+          nullable: true
+          description: |
+            The month this academy started recording fees in Budojo (#1742).
+            Any day is accepted and **pinned server-side to the 1st**, so a
+            floor set on the 17th cannot behave differently from one set on
+            the 1st. `null` clears it, which restores the pre-#1742 ledger
+            exactly — it does not mean "since forever".
 
     AcademyUpdateRequest:
       type: object
@@ -7577,6 +7677,16 @@ components:
           $ref: '#/components/schemas/TrainingDays'
         season_start_month:
           $ref: '#/components/schemas/SeasonStartMonth'
+        billing_from:
+          type: string
+          format: date
+          nullable: true
+          description: |
+            The month this academy started recording fees in Budojo (#1742).
+            Any day is accepted and **pinned server-side to the 1st**, so a
+            floor set on the 17th cannot behave differently from one set on
+            the 1st. `null` clears it, which restores the pre-#1742 ledger
+            exactly — it does not mean "since forever".
 
     Address:
       type: object
@@ -7784,6 +7894,17 @@ components:
           $ref: '#/components/schemas/TrainingDays'
         season_start_month:
           $ref: '#/components/schemas/SeasonStartMonth'
+        billing_from:
+          type: string
+          format: date
+          nullable: true
+          description: |
+            The month this academy started recording fees in Budojo (#1742),
+            always the 1st, or `null` for no floor. This is the raw setting,
+            for the settings form. The ledger does **not** floor on it
+            directly: the effective floor for an athlete is this OR their
+            joining month, whichever is later, and that arrives already
+            resolved as `billing_floor` on the athlete resource.
         season_start:
           type: string
           format: date
@@ -8631,6 +8752,16 @@ components:
         joined_at:
           type: string
           format: date
+        status_changed_at:
+          type: string
+          format: date
+          nullable: true
+          description: |
+            The date `status` last changed (#1741). **Null is an answer,
+            not a gap**: it means the status has not moved since the row
+            was created, which is true of every athlete active since
+            import. Do not fall back to `joined_at` — that would date a
+            departure to an enrolment.
         address:
           allOf:
             - $ref: '#/components/schemas/Address'
@@ -8761,6 +8892,22 @@ components:
             expectation to answer "is anyone late", and a payment only says
             what already happened. `1` — monthly — until someone changes it.
           example: 1
+        billing_floor:
+          type: string
+          format: date
+          nullable: true
+          description: |
+            The earliest month this athlete can owe anything for (#1742),
+            always the 1st, or `null` when nothing floors them.
+
+            Resolved server-side as the later of the academy's `billing_from`
+            and this athlete's `joined_at`. **Read this rather than combining
+            the two**: the ledger renders months below it as out of scope
+            instead of unpaid, and a `max()` over two dates re-implemented
+            client-side is the shape the #1709 off-by-one already took.
+
+            It is a display and aggregation rule only — recording a payment
+            for a month below the floor still succeeds.
         monthly_fee_cents:
           type: integer
           nullable: true
@@ -9181,6 +9328,19 @@ components:
         athlete_id:
           type: integer
           format: int64
+          nullable: true
+          description: |
+            The person this document belongs to, or `null` when it belongs
+            to the academy itself (#1743). Exactly one of `athlete_id` and
+            `academy_id` is set — never both, never neither.
+        academy_id:
+          type: integer
+          format: int64
+          nullable: true
+          description: |
+            The academy this document belongs to directly (#1743) — the
+            DAE certificate, the liability policy, the affiliation, the
+            lease. `null` when the document belongs to a person.
         type:
           $ref: '#/components/schemas/DocumentType'
         original_name:

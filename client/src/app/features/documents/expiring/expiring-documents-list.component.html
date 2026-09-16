@@ -86,13 +86,27 @@
             @for (doc of documents(); track doc.id) {
               <li class="expiring-card" [attr.data-cy]="'expiring-card-' + doc.id">
                 <header class="expiring-card__header">
-                  <a
-                    [routerLink]="['/dashboard/athletes', doc.athlete_id, 'documents']"
-                    class="expiring-card__athlete-link"
-                    [attr.data-cy]="'expiring-card-athlete-' + doc.id"
-                  >
-                    {{ athleteNameFor(doc) }}
-                  </a>
+                  @if (isAcademyDocument(doc)) {
+                    <!--
+                      One of the academy's own papers (#1743): no athlete, so
+                      no name and nowhere to deep-link. It says whose it is
+                      instead, in the same slot, so the row keeps its shape.
+                    -->
+                    <span
+                      class="expiring-card__athlete-link expiring-card__academy"
+                      [attr.data-cy]="'expiring-card-academy-' + doc.id"
+                    >
+                      {{ 'documents.expiringList.academyOwned' | translate }}
+                    </span>
+                  } @else {
+                    <a
+                      [routerLink]="['/dashboard/athletes', doc.athlete_id, 'documents']"
+                      class="expiring-card__athlete-link"
+                      [attr.data-cy]="'expiring-card-athlete-' + doc.id"
+                    >
+                      {{ athleteNameFor(doc) }}
+                    </a>
+                  }
                   <p-button
                     icon="pi pi-download"
                     severity="secondary"
@@ -139,13 +153,20 @@
               <ng-template pTemplate="body" let-doc>
                 <tr>
                   <td>
-                    <a
-                      [routerLink]="['/dashboard/athletes', doc.athlete_id, 'documents']"
-                      class="expiring-page__athlete-link"
-                      data-cy="athlete-link"
-                    >
-                      {{ athleteNameFor(doc) }}
-                    </a>
+                    @if (isAcademyDocument(doc)) {
+                      <!-- See the card above: the academy's own paper (#1743). -->
+                      <span class="expiring-page__academy" data-cy="academy-owned">
+                        {{ 'documents.expiringList.academyOwned' | translate }}
+                      </span>
+                    } @else {
+                      <a
+                        [routerLink]="['/dashboard/athletes', doc.athlete_id, 'documents']"
+                        class="expiring-page__athlete-link"
+                        data-cy="athlete-link"
+                      >
+                        {{ athleteNameFor(doc) }}
+                      </a>
+                    }
                   </td>
                   <td>{{ typeKeyFor(doc) | translate }}</td>
                   <!-- The date, and the arithmetic the reader was doing on it:

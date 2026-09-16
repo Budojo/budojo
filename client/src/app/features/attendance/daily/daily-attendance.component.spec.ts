@@ -1151,7 +1151,7 @@ describe('DailyAttendanceComponent — what the lesson covered (#1564)', () => {
     expect(row.textContent).toContain('Add topics');
   });
 
-  it('summarises the topics on one line, and offers to edit them', () => {
+  it('shows each topic as its own chip, with the position it belongs to', () => {
     const { fixture, httpMock } = setup();
     fixture.detectChanges();
     flushInit(httpMock, { classes: [KIDS] });
@@ -1186,7 +1186,18 @@ describe('DailyAttendanceComponent — what the lesson covered (#1564)', () => {
     fixture.detectChanges();
 
     const row = fixture.nativeElement.querySelector('[data-cy="attendance-topics"]') as HTMLElement;
-    expect(row.textContent).toContain('Armbar · Triangle');
+
+    // One chip each, not one line joined with ` · ` (#1657). A middle dot is
+    // not a boundary the eye trusts, and the payload's `parent_name` was
+    // being thrown away by the join — so a technique sat beside its own
+    // position looking like a separate technique.
+    const chips = row.querySelectorAll('.chip');
+    expect(chips).toHaveLength(2);
+    expect(chips[0].textContent).toContain('Armbar');
+    expect(chips[0].textContent).toContain('Closed guard');
+    expect(chips[1].textContent).toContain('Triangle');
+    expect(row.textContent).not.toContain('·');
+
     expect(row.textContent).toContain('Edit');
   });
 
@@ -1202,5 +1213,37 @@ describe('DailyAttendanceComponent — what the lesson covered (#1564)', () => {
       fixture.nativeElement.querySelector('[data-cy="attendance-topics"]') as HTMLButtonElement
     ).click();
     expect(component['lessonSheetOpen']()).toBe(true);
+  });
+
+  // ─── Check-in polish (#1657) ─────────────────────────────────────────────
+
+  it('draws the state as a square that leads the row, never as a radio circle', () => {
+    const { fixture, httpMock } = setup();
+    fixture.detectChanges();
+    flushInit(httpMock, { classes: [KIDS], athletes: [makeAthlete({ id: 1 })] });
+    fixture.detectChanges();
+
+    const row = fixture.nativeElement.querySelector('[data-cy^="attendance-row-"]') as HTMLElement;
+    expect(row, 'a roster row').not.toBeNull();
+    // First cell, not last: "is this person ticked?" should not be a saccade
+    // across the row (CHK-1).
+    const first = row.querySelector('td');
+    expect(first?.classList.contains('attendance-cell-indicator')).toBe(true);
+    // A radio circle reads as "pick exactly one" on a list whose whole job is
+    // ticking many. #1686 fixed the lesson sheet; the check-in was missed.
+    expect(row.querySelector('.pi-circle, .pi-check-circle')).toBeNull();
+    expect(row.querySelector('.pi-stop, .pi-check-square')).not.toBeNull();
+  });
+
+  it('links the empty roster to the page that fixes it', () => {
+    const { fixture, httpMock } = setup();
+    fixture.detectChanges();
+    flushInit(httpMock, { classes: [KIDS], athletes: [] });
+    fixture.detectChanges();
+
+    // "Add one from the Athletes page" named a destination with no way to
+    // reach it (CHK-5).
+    const link = fixture.nativeElement.querySelector('[data-cy="attendance-empty-athletes-link"]');
+    expect(link?.getAttribute('href')).toBe('/dashboard/athletes');
   });
 });

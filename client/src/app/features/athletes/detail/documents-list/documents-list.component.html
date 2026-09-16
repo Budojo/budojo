@@ -42,21 +42,32 @@
         </span>
       </label>
 
+      <!--
+        Disabled only while there is no owner at all — i.e. before the athlete
+        id arrives from the route. In academy mode `athleteId()` is null by
+        design (#1743), and gating on it alone left the one control the whole
+        section exists for permanently inert.
+      -->
       <p-button
         [label]="'athletes.detail.documents.button.add' | translate"
         icon="pi pi-plus"
         size="small"
-        [disabled]="athleteId() === null"
+        [disabled]="!ownerAcademy() && athleteId() === null"
         (onClick)="openUploadDialog()"
         data-cy="add-document-btn"
       />
     </div>
   </header>
 
-  @if (athleteId(); as id) {
+  <!--
+    `athleteId` is null in academy mode (#1743), which is what tells the dialog
+    to upload to the academy and to drop `medical_certificate` from its types.
+    The guard is on having an owner at all, not on having an athlete.
+  -->
+  @if (ownerAcademy() || athleteId() !== null) {
     <app-upload-document-dialog
       [(visible)]="uploadDialogOpen"
-      [athleteId]="id"
+      [athleteId]="ownerAcademy() ? null : athleteId()"
       (uploaded)="onUploaded($event)"
     />
   }

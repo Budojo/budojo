@@ -11,8 +11,25 @@
   @include toolbar.toolbar-control;
   @include toolbar.toolbar-control-labelled;
 
+  // A sort that is ON does NOT wear the filter's tint (#1657, CHK-2).
+  //
+  // `toolbar-control-on` is the app's "a filter is engaged" surface — the eye,
+  // the bin and the payment filter all wear it when they are narrowing the
+  // list. A sort narrows nothing. On the check-in the belt sort is active by
+  // DEFAULT, so a tinted pill reading "Cintura" sat half a centimetre from a
+  // select reading "Tutte le cinture", and at a glance the toolbar said a
+  // second belt filter was on.
+  //
+  // Active is carried by the direction arrow, which the neutral state does
+  // not have, plus the text weight. Both are specific to sorting; neither
+  // collides with "filtered".
   &--on {
-    @include toolbar.toolbar-control-on;
+    color: var(--p-text-color);
+    font-weight: 600;
+
+    .sort-toggle__icon {
+      color: var(--p-primary-color);
+    }
   }
 }
 

@@ -688,7 +688,15 @@ const PROMOTIONS_ONE = [
 const ATHLETE_COVERAGE = {
   season: { start: '2026-09-01', end: '2027-08-31', label: '2026/27' },
   joined_on: '2024-09-02',
-  totals: { taught_by_academy: 6, seen: 3, thin: 2, missed: 1, percentage: 50, not_taught_yet: 23 },
+  totals: {
+    taught_by_academy: 6,
+    attended: 5,
+    seen: 3,
+    thin: 2,
+    missed: 1,
+    percentage: 50,
+    not_taught_yet: 23,
+  },
   missed: [
     { id: 21, name: 'Knee shield', parent_name: 'Half guard', kind: 'both', taught_times: 1 },
   ],
@@ -1756,6 +1764,7 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
               joined_on: '2026-09-12',
               totals: {
                 taught_by_academy: 0,
+                attended: 0,
                 seen: 0,
                 thin: 0,
                 missed: 0,
@@ -1784,6 +1793,7 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
               ...ATHLETE_COVERAGE,
               totals: {
                 taught_by_academy: 0,
+                attended: 0,
                 seen: 0,
                 thin: 0,
                 missed: 0,

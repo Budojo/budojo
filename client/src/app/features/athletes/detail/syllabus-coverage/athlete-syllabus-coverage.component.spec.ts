@@ -16,10 +16,11 @@ function report(over: Partial<AthleteSyllabusCoverage> = {}): AthleteSyllabusCov
     joined_on: '2026-09-01',
     totals: {
       taught_by_academy: 4,
+      attended: 3,
       seen: 2,
       thin: 1,
       missed: 1,
-      percentage: 50,
+      percentage: 75,
       not_taught_yet: 0,
     },
     missed: [],
@@ -77,9 +78,12 @@ describe('AthleteSyllabusCoverageComponent (#1567)', () => {
     fixture.detectChanges();
 
     const headline = fixture.nativeElement.querySelector('[data-cy="athlete-coverage-headline"]');
-    expect(headline.textContent).toContain('50');
+    // Attended over taught. It was `seen / taught` — two-exposure — and an
+    // athlete who missed nothing read 18% (#1710).
+    expect(headline.textContent).toContain('75');
     // The denominator is what the academy taught, never the whole syllabus.
-    expect(fixture.nativeElement.textContent).toContain('2 of 4 techniques the academy taught');
+    // Three attended of four taught, not two consolidated of four (#1710).
+    expect(fixture.nativeElement.textContent).toContain('3 of 4 techniques the academy taught');
   });
 
   it('keeps what nobody taught out of the number and says whose gap it is', () => {
@@ -89,10 +93,11 @@ describe('AthleteSyllabusCoverageComponent (#1567)', () => {
       report({
         totals: {
           taught_by_academy: 4,
+          attended: 3,
           seen: 2,
           thin: 1,
           missed: 1,
-          percentage: 50,
+          percentage: 75,
           not_taught_yet: 30,
         },
       }),
@@ -103,7 +108,7 @@ describe('AthleteSyllabusCoverageComponent (#1567)', () => {
     // decision about the programme, and saying so is the whole design.
     expect(
       fixture.nativeElement.querySelector('[data-cy="athlete-coverage-headline"]').textContent,
-    ).toContain('50');
+    ).toContain('75');
     const note = fixture.nativeElement.querySelector('[data-cy="athlete-coverage-not-taught"]');
     expect(note.textContent).toContain("academy's gap, not theirs");
   });
@@ -180,6 +185,7 @@ describe('AthleteSyllabusCoverageComponent (#1567)', () => {
       report({
         totals: {
           taught_by_academy: 0,
+          attended: 0,
           seen: 0,
           thin: 0,
           missed: 0,
@@ -205,6 +211,7 @@ describe('AthleteSyllabusCoverageComponent (#1567)', () => {
         joined_on: '2026-11-01',
         totals: {
           taught_by_academy: 0,
+          attended: 0,
           seen: 0,
           thin: 0,
           missed: 0,

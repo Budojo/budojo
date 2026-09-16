@@ -420,6 +420,14 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::post('/academy/logo', [\App\Http\Controllers\Academy\AcademyController::class, 'uploadLogo']);
         Route::delete('/academy/logo', [\App\Http\Controllers\Academy\AcademyController::class, 'deleteLogo']);
 
+        // The academy's own papers (#1743) — same table, same badge, same
+        // reminder as an athlete's. No route parameter: the subject is the
+        // caller's active academy. PUT / DELETE / download stay on the flat
+        // `/documents/{id}` routes, which scope through
+        // `Document::owningAcademyId()` for both kinds of owner.
+        Route::get('/academy/documents', [\App\Http\Controllers\Academy\AcademyDocumentController::class, 'index']);
+        Route::post('/academy/documents', [\App\Http\Controllers\Academy\AcademyDocumentController::class, 'store']);
+
         // Schedule history (#1094). POST schedules a future
         // training_days change effective on a calendar date (`> today`,
         // single pending invariant enforced server-side). DELETE

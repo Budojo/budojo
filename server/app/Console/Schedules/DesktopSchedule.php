@@ -80,6 +80,15 @@ final class DesktopSchedule implements ScheduleDefinition
             ->between('09:30', '23:59')
             ->withoutOverlapping(60);
 
+        // The academy's own papers (#1743). Its own command rather than a
+        // widening of the medical one, so it gets its own schedule entry —
+        // same window, same cadence.
+        $schedule->command('budojo:send-academy-document-expiry-reminders')
+            ->everyFiveMinutes()
+            ->timezone('Europe/Rome')
+            ->between('09:00', '23:59')
+            ->withoutOverlapping(60);
+
         // Monthly on the 16th, as on the web; the day gate replaces monthlyOn()
         // so the digest still goes out if the app is opened at 15:00 that day.
         $schedule->command('budojo:send-unpaid-athletes-digest')

@@ -146,7 +146,7 @@ describe('DocumentService', () => {
       httpMock.expectOne((r) => r.url === '/api/v1/documents/expiring').flush({ data: [expanded] });
 
       expect(result).toHaveLength(1);
-      expect(result[0].athlete.first_name).toBe('Mario');
+      expect(result[0].athlete?.first_name).toBe('Mario');
       expect(result[0].expires_at).toBe('2026-05-10');
     });
   });

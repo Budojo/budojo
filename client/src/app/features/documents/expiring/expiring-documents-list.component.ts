@@ -135,7 +135,23 @@ export class ExpiringDocumentsListComponent implements OnInit {
   }
 
   athleteNameFor(doc: ExpiringDocument): string {
-    return `${doc.athlete.first_name} ${doc.athlete.last_name}`;
+    const athlete = doc.athlete;
+    if (!athlete) return '';
+
+    return `${athlete.first_name} ${athlete.last_name}`;
+  }
+
+  /**
+   * True for one of the academy's own papers (#1743) — no athlete, so no name
+   * to show and nowhere to deep-link to.
+   *
+   * Read from `athlete_id` rather than from the presence of the `athlete`
+   * object: the id is on the wire unconditionally, while the nested object is
+   * a `whenLoaded`, and keying a visible branch on an eager-load is how a row
+   * ends up rendering as the wrong kind on the day somebody changes the query.
+   */
+  protected isAcademyDocument(doc: ExpiringDocument): boolean {
+    return doc.athlete_id === null;
   }
 
   missingAthleteNameFor(a: AthleteMissingMedicalCertificate): string {

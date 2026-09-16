@@ -22,7 +22,7 @@ it('encrypts medical certificate bytes at-rest — no plaintext on disk', functi
 
     $action = new UploadDocumentAction();
     $document = $action->execute(
-        athlete: $athlete,
+        owner: $athlete,
         type: DocumentType::MedicalCertificate,
         file: $upload,
     );
@@ -45,7 +45,7 @@ it('downloads a medical certificate as the original plaintext', function (): voi
     $upload = UploadedFile::fake()->createWithContent('cert.pdf', $plaintext);
     $action = new UploadDocumentAction();
     $document = $action->execute(
-        athlete: $athlete,
+        owner: $athlete,
         type: DocumentType::MedicalCertificate,
         file: $upload,
     );
@@ -68,7 +68,7 @@ it('non-medical documents stay plaintext (is_encrypted = false)', function (): v
     $plaintext = 'federation registration paperwork — non-sensitive';
     $upload = UploadedFile::fake()->createWithContent('reg.pdf', $plaintext);
     $action = new UploadDocumentAction();
-    $document = $action->execute(athlete: $athlete, type: $nonMedical, file: $upload);
+    $document = $action->execute(owner: $athlete, type: $nonMedical, file: $upload);
 
     expect($document->is_encrypted)->toBeFalse();
     expect(Storage::disk('local')->get($document->file_path))->toBe($plaintext);

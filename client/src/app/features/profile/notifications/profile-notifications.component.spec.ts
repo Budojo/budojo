@@ -19,6 +19,7 @@ interface Harness {
 const ENDPOINT = '/api/v1/me/notification-preferences';
 const MEDICAL = 'medical_cert_expiry_reminders';
 const UNPAID = 'unpaid_athletes_digest';
+const ACADEMY_DOCS = 'academy_document_expiry_reminders';
 
 function setup(capabilities: readonly string[] = ALL_CAPABILITIES): Harness {
   const addToastSpy = vi.fn();
@@ -227,6 +228,35 @@ describe('ProfileNotificationsComponent (#416)', () => {
       expect(el.querySelector('.profile-notifications__subtitle')?.textContent).toContain(
         'email digest',
       );
+    });
+  });
+  describe("the academy's own documents (#1743)", () => {
+    it('offers a row, so the reminder can be switched off like every other', () => {
+      const { fixture, httpMock, el } = setup();
+      httpMock.expectOne('/api/v1/me/notification-preferences').flush({
+        data: { [MEDICAL]: true, [ACADEMY_DOCS]: true, [UNPAID]: true },
+      });
+      fixture.detectChanges();
+
+      // Without it, this was the only owner-facing notification in the app the
+      // owner could not turn off — and the digest it controls exists partly to
+      // argue that an unfindable opt-out is not an opt-out.
+      expect(
+        el.querySelector(`[data-cy="profile-notifications-row-${ACADEMY_DOCS}"]`),
+      ).not.toBeNull();
+    });
+
+    it('labels it as the academy, not as a certificate', () => {
+      const { fixture, httpMock, el } = setup();
+      httpMock.expectOne('/api/v1/me/notification-preferences').flush({
+        data: { [MEDICAL]: true, [ACADEMY_DOCS]: true, [UNPAID]: true },
+      });
+      fixture.detectChanges();
+
+      const row = el.querySelector(`[data-cy="profile-notifications-row-${ACADEMY_DOCS}"]`);
+      const text = row?.textContent ?? '';
+      expect(text).toContain('academy');
+      expect(text).not.toContain('medical certificate');
     });
   });
 });

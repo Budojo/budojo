@@ -9,14 +9,17 @@ use App\Observers\Audit\DocumentAuditObserver;
 use Database\Factories\DocumentFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 
 /**
  * @property int                 $id
- * @property int                 $athlete_id
+ * @property int|null            $athlete_id Null when the document belongs to the academy itself (#1743). Exactly one of this and `academy_id` is set — resolve the owner through `owningAcademyId()`, never by dereferencing one of them.
+ * @property int|null            $academy_id Set when the document is the academy's own paper rather than a person's (#1743).
  * @property DocumentType        $type
  * @property string              $file_path
  * @property string              $original_name
@@ -32,6 +35,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 #[Fillable([
     'athlete_id',
+    'academy_id',
     'type',
     'file_path',
     'original_name',
@@ -54,6 +58,92 @@ class Document extends Model
     public function athlete(): BelongsTo
     {
         return $this->belongsTo(Athlete::class);
+    }
+
+    /**
+     * The academy this document belongs to, when it belongs to one directly
+     * (#1743) — the DAE certificate, the liability policy, the affiliation.
+     *
+     * Exactly one of `athlete()` and `academy()` is set. Null here means the
+     * document belongs to a person, not that it belongs to nobody.
+     *
+     * @return BelongsTo<Academy, $this>
+     */
+    public function academy(): BelongsTo
+    {
+        return $this->belongsTo(Academy::class);
+    }
+
+    /**
+     * Which academy owns this document, whichever way it is attached (#1743).
+     *
+     * **The tenant-scoping answer, in one place.** Five call sites used to
+     * reach through `$document->athlete->academy_id` — the delete capability
+     * check, the download owner check, two FormRequests and the per-athlete
+     * list. All five null-pointer on a document that belongs to the academy
+     * rather than to a person, and five copies of a scoping rule is how a
+     * document from another install becomes downloadable. Adding five null
+     * checks would have left five copies; this leaves one.
+     *
+     * Null means *unattached*, which the invariant forbids. Returning null
+     * rather than guessing is deliberate: every caller compares it against
+     * the user's active academy, and null never equals an academy id, so an
+     * impossible row is refused rather than leaked.
+     */
+    public function owningAcademyId(): ?int
+    {
+        return $this->academy_id ?? $this->athlete?->academy_id;
+    }
+
+    /**
+     * Drop the medical certificates a later one has replaced.
+     *
+     * A row is **superseded** when the same athlete has another live
+     * medical-certificate row with a strictly greater `expires_at` — or the
+     * same `expires_at` and a greater `id`, so a re-upload of an identical
+     * date supersedes exactly one way round and never both at once. Live
+     * means `deleted_at is null`: a trashed certificate replaces nothing,
+     * including one the 24-month purge has taken.
+     *
+     * Only medical certificates have a renewal cycle the product models, so
+     * only they can be superseded. An ID card, an insurance paper and an
+     * `other` row pass through untouched — there is no "the new one" for
+     * those, only more documents.
+     *
+     * Rows with `expires_at = null` sit outside the rule entirely: they
+     * neither supersede nor are superseded. An undated row says nothing
+     * about when coverage ends, so it cannot be evidence that coverage was
+     * renewed — and it is already invisible to every caller of this scope,
+     * which all filter on a date.
+     *
+     * @param  Builder<$this>  $query
+     * @return Builder<$this>
+     */
+    public function scopeNotSuperseded(Builder $query): Builder
+    {
+        return $query->where(function (Builder $kept): void {
+            $kept
+                ->where('documents.type', '!=', DocumentType::MedicalCertificate->value)
+                ->orWhereNotExists(function (QueryBuilder $newer): void {
+                    $newer
+                        ->selectRaw('1')
+                        ->from('documents as newer_cert')
+                        ->whereColumn('newer_cert.athlete_id', 'documents.athlete_id')
+                        ->where('newer_cert.type', DocumentType::MedicalCertificate->value)
+                        ->whereNull('newer_cert.deleted_at')
+                        ->whereNotNull('newer_cert.expires_at')
+                        ->whereNotNull('documents.expires_at')
+                        ->where(function (QueryBuilder $later): void {
+                            $later
+                                ->whereColumn('newer_cert.expires_at', '>', 'documents.expires_at')
+                                ->orWhere(function (QueryBuilder $tie): void {
+                                    $tie
+                                        ->whereColumn('newer_cert.expires_at', '=', 'documents.expires_at')
+                                        ->whereColumn('newer_cert.id', '>', 'documents.id');
+                                });
+                        });
+                });
+        });
     }
 
     /**

@@ -7,6 +7,7 @@ namespace App\Actions\Academy;
 use App\Actions\Address\SyncAddressAction;
 use App\Actions\Payment\ReconcileAcademyCarnetsAction;
 use App\Models\Academy;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class UpdateAcademyAction
@@ -60,6 +61,16 @@ class UpdateAcademyAction
             /** @var list<int>|null $trainingDays */
             $trainingDays = $validated['training_days'] ?? null;
             unset($validated['training_days']);
+
+            // The billing floor is a MONTH (#1742). The form offers one, but
+            // the field validates as a date, and a floor set on the 15th that
+            // behaved differently from one set on the 1st would be a second
+            // rule nobody wrote down. Pin it here, once, on the way in — so
+            // every reader downstream can assume the 1st without checking.
+            $billingFrom = $validated['billing_from'] ?? null;
+            if (\is_string($billingFrom) && $billingFrom !== '') {
+                $validated['billing_from'] = Carbon::parse($billingFrom)->startOfMonth();
+            }
 
             // Fill first, save once: the days Action saves the model, and
             // it should carry the rest of the PATCH down with it rather

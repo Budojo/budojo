@@ -42,6 +42,18 @@ final class NotificationCategory
     public const string MEDICAL_CERT_EXPIRY_REMINDERS = 'medical_cert_expiry_reminders';
 
     /**
+     * Daily digest of the academy's OWN documents expiring at T-30 / T-7 /
+     * T-0 — the DAE certificate, the liability policy, the affiliation, the
+     * lease. Dispatched by `SendAcademyDocumentExpiryReminders` (#1743).
+     *
+     * Its own category, not a second use of the medical one: putting a
+     * liability policy behind a checkbox labelled "medical certificate
+     * reminders" is an opt-out nobody can find, and the two are chased by
+     * different people at different times of year.
+     */
+    public const string ACADEMY_DOCUMENT_EXPIRY_REMINDERS = 'academy_document_expiry_reminders';
+
+    /**
      * Monthly digest of athletes still unpaid for the current month,
      * sent to the academy owner on the 16th. Dispatched by
      * `SendUnpaidAthletesDigest`.
@@ -209,6 +221,7 @@ final class NotificationCategory
     {
         return [
             self::MEDICAL_CERT_EXPIRY_REMINDERS,
+            self::ACADEMY_DOCUMENT_EXPIRY_REMINDERS,
             self::UNPAID_ATHLETES_DIGEST,
             self::ATHLETE_SIGNED_UP,
             self::ATHLETE_TRAINING_TODAY,

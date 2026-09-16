@@ -899,6 +899,10 @@
         "label": "Medical certificate expiring reminders",
         "description": "Daily digest at 09:00 listing athletes whose medical certificate expires in 30, 7, or 0 days."
       },
+      "academyDocumentReminders": {
+        "label": "The academy's documents",
+        "description": "A reminder 30 days, 7 days and on the day one of the academy's own documents expires — the DAE certificate, the liability policy, the affiliation, the lease."
+      },
       "unpaidAthletesDigest": {
         "label": "Unpaid athletes monthly digest",
         "description": "Once a month on the 16th, a list of athletes who haven't paid the monthly fee for the current month."
@@ -1249,7 +1253,8 @@
     "continueCta": "Continue",
     "categories": {
       "medical_cert_expiry_reminders": "medical certificate expiring reminders",
-      "unpaid_athletes_digest": "the unpaid athletes monthly digest"
+      "unpaid_athletes_digest": "the unpaid athletes monthly digest",
+      "academy_document_expiry_reminders": "the academy's expiring documents reminders"
     }
   },
   "emailVerification": {
@@ -1305,7 +1310,8 @@
       "toast": {
         "errorSummary": "Download failed",
         "errorDetail": "Could not download {{filename}}. Please try again."
-      }
+      },
+      "academyOwned": "The academy"
     },
     "upload": {
       "header": "Upload document",
@@ -1519,6 +1525,11 @@
         "label": "Season starts in",
         "placeholder": "September (default)",
         "hint": "The month your training year restarts. The roster counts sessions from here, not from the day each athlete joined. September if you leave it empty."
+      },
+      "billingFrom": {
+        "label": "Fees are recorded in Budojo from",
+        "hint": "Months before this are left blank instead of unpaid — the money was handled somewhere else. Leave it empty for no limit.",
+        "placeholder": "Choose a month"
       },
       "trainingDays": {
         "label": "Training days",
@@ -1773,7 +1784,8 @@
       },
       "empty": {
         "filtered": "No active athletes match the current filters.",
-        "noAthletes": "No active athletes yet — add one from the Athletes page."
+        "noAthletes": "No active athletes yet.",
+        "noAthletesCta": "Go to Athletes"
       },
       "paginationHint": "Showing {{shown}} of {{total}} active athletes. Pagination is on the M4.2.5 follow-up.",
       "undo": "Undo",
@@ -2000,7 +2012,10 @@
       "alerts": {
         "button": "Alerts",
         "missingCertificate": "no medical certificate",
-        "expiringCertificate": "certificate expiring within 30 days",
+        "expiringCertificateOne": "medical certificate to renew",
+        "expiringCertificateOther": "medical certificates to renew",
+        "expiringDocumentOne": "other document to renew",
+        "expiringDocumentOther": "other documents to renew",
         "none": "Nothing needs attention"
       }
     },
@@ -2074,7 +2089,8 @@
         "periodMonths": "Every {{count}} months",
         "periodStartsHereOne": "Also covers {{next}}",
         "periodStartsHereOther": "Also covers {{next}}",
-        "periodCoveredBy": "Part of the {{month}} payment"
+        "periodCoveredBy": "Part of the {{month}} payment",
+        "beforeBillingFloor": "Before this academy started recording fees in Budojo"
       },
       "documents": {
         "confirm": {
@@ -2500,7 +2516,7 @@
       "another": "Choose another file"
     },
     "coverage": {
-      "fraction": "{{seen}} of {{total}} techniques the academy taught",
+      "fraction": "{{attended}} of {{total}} techniques the academy taught",
       "since": "Counted from {{date}}, the day they joined.",
       "legend": {
         "seenOne": "{{count}} seen",
@@ -2535,7 +2551,12 @@
       "unattributedOne": "{{count}} of their sessions does not say which class it was, so nothing here counts it either way.",
       "unattributedOther": "{{count}} of their sessions do not say which class they were, so nothing here counts them either way.",
       "notTaughtYetOne": "One more is in the programme but has not been taught yet. That is the academy's gap, not theirs.",
-      "notTaughtYetOther": "{{count}} more are in the programme but have not been taught yet. That is the academy's gap, not theirs."
+      "notTaughtYetOther": "{{count}} more are in the programme but have not been taught yet. That is the academy's gap, not theirs.",
+      "nothingMissedOne": "They were at the one lesson that taught it.",
+      "nothingMissedOther": "They were at every one of them.",
+      "consolidatedOne": "One seen more than once.",
+      "consolidatedOther": "{{count}} seen more than once.",
+      "consolidatedNone": "None seen more than once yet."
     }
   },
   "month": {

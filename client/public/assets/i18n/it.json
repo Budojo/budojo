@@ -899,6 +899,10 @@
         "label": "Promemoria scadenza certificato medico",
         "description": "Digest giornaliero alle 09:00 con gli atleti il cui certificato medico scade tra 30, 7 o 0 giorni."
       },
+      "academyDocumentReminders": {
+        "label": "I documenti dell'accademia",
+        "description": "Un promemoria a 30 giorni, a 7 giorni e il giorno stesso in cui scade un documento dell'accademia — il certificato DAE, la polizza RC, l'affiliazione, il contratto d'affitto."
+      },
       "unpaidAthletesDigest": {
         "label": "Digest mensile atleti non paganti",
         "description": "Una volta al mese, il giorno 16, l'elenco degli atleti che non hanno pagato la quota del mese corrente."
@@ -1249,7 +1253,8 @@
     "continueCta": "Continua",
     "categories": {
       "medical_cert_expiry_reminders": "i promemoria di scadenza del certificato medico",
-      "unpaid_athletes_digest": "il digest mensile degli atleti non paganti"
+      "unpaid_athletes_digest": "il digest mensile degli atleti non paganti",
+      "academy_document_expiry_reminders": "i promemoria sui documenti dell'accademia in scadenza"
     }
   },
   "emailVerification": {
@@ -1305,7 +1310,8 @@
       "toast": {
         "errorSummary": "Scaricamento non riuscito",
         "errorDetail": "Impossibile scaricare {{filename}}. Riprova."
-      }
+      },
+      "academyOwned": "L'accademia"
     },
     "upload": {
       "header": "Carica documento",
@@ -1519,6 +1525,11 @@
         "label": "La stagione inizia a",
         "placeholder": "Settembre (predefinito)",
         "hint": "Il mese in cui ricomincia l'anno di allenamenti. La lista atleti conta le presenze da qui, non dal giorno di iscrizione del singolo atleta. Se lo lasci vuoto vale settembre."
+      },
+      "billingFrom": {
+        "label": "Le quote sono registrate su Budojo da",
+        "hint": "I mesi precedenti restano vuoti invece che non pagati: quei soldi sono passati da un’altra parte. Lascialo vuoto per non mettere limiti.",
+        "placeholder": "Scegli un mese"
       },
       "trainingDays": {
         "label": "Giorni di allenamento",
@@ -1773,7 +1784,8 @@
       },
       "empty": {
         "filtered": "Nessun atleta attivo corrisponde ai filtri.",
-        "noAthletes": "Nessun atleta attivo ancora — aggiungine uno dalla pagina Atleti."
+        "noAthletes": "Nessun atleta attivo ancora.",
+        "noAthletesCta": "Vai ad Atleti"
       },
       "paginationHint": "Mostrati {{shown}} di {{total}} atleti attivi. La paginazione arriva nel follow-up M4.2.5.",
       "undo": "Annulla",
@@ -2000,7 +2012,10 @@
       "alerts": {
         "button": "Avvisi",
         "missingCertificate": "senza certificato medico",
-        "expiringCertificate": "certificato in scadenza entro 30 giorni",
+        "expiringCertificateOne": "certificato medico da rinnovare",
+        "expiringCertificateOther": "certificati medici da rinnovare",
+        "expiringDocumentOne": "altro documento da rinnovare",
+        "expiringDocumentOther": "altri documenti da rinnovare",
         "none": "Non c'è niente da controllare"
       }
     },
@@ -2074,7 +2089,8 @@
         "periodMonths": "Ogni {{count}} mesi",
         "periodStartsHereOne": "Copre anche {{next}}",
         "periodStartsHereOther": "Copre anche {{next}}",
-        "periodCoveredBy": "Incluso nel pagamento di {{month}}"
+        "periodCoveredBy": "Incluso nel pagamento di {{month}}",
+        "beforeBillingFloor": "Prima che questa accademia iniziasse a registrare le quote su Budojo"
       },
       "documents": {
         "confirm": {
@@ -2500,7 +2516,7 @@
       "another": "Scegli un altro file"
     },
     "coverage": {
-      "fraction": "{{seen}} su {{total}} tecniche che la palestra ha fatto",
+      "fraction": "{{attended}} su {{total}} tecniche che la palestra ha fatto",
       "since": "Conteggio dal {{date}}, giorno di iscrizione.",
       "legend": {
         "seenOne": "{{count}} visto",
@@ -2535,7 +2551,12 @@
       "unattributedOne": "{{count}} dei suoi allenamenti non dice a quale lezione fosse, quindi qui non conta in nessun senso.",
       "unattributedOther": "{{count}} dei suoi allenamenti non dicono a quale lezione fossero, quindi qui non contano in nessun senso.",
       "notTaughtYetOne": "Un altro è nel programma ma non è ancora stato fatto. È una lacuna della palestra, non sua.",
-      "notTaughtYetOther": "Altri {{count}} sono nel programma ma non sono ancora stati fatti. È una lacuna della palestra, non sua."
+      "notTaughtYetOther": "Altri {{count}} sono nel programma ma non sono ancora stati fatti. È una lacuna della palestra, non sua.",
+      "nothingMissedOne": "C'era alla lezione in cui è stata fatta.",
+      "nothingMissedOther": "C'era a tutte.",
+      "consolidatedOne": "Una vista più di una volta.",
+      "consolidatedOther": "{{count}} viste più di una volta.",
+      "consolidatedNone": "Nessuna ancora vista più di una volta."
     }
   },
   "month": {

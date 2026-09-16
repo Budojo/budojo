@@ -8,6 +8,7 @@ use App\Models\Athlete;
 use App\Models\AthleteInvitation;
 use App\Models\AthletePayment;
 use App\Models\Carnet;
+use App\Support\BillingFloor;
 use App\Support\CarnetAvailability;
 use App\Support\MonthCoverage;
 use App\Support\MonthlyFee;
@@ -86,6 +87,12 @@ class AthleteResource extends JsonResource
             'belt' => $athlete->belt->value,
             'stripes' => $athlete->stripes,
             'status' => $athlete->status->value,
+            // When `status` last moved (#1741). Null is an answer, not a gap:
+            // it means the status has not changed since the row was created,
+            // which is true of every athlete who has been active since import.
+            // A reader must not fall back to `joined_at` — that would date a
+            // departure to an enrolment.
+            'status_changed_at' => $athlete->status_changed_at?->toDateString(),
             // Owner-as-athlete flag (#748). The SPA uses this to:
             //   - render an `Owner` chip next to the name on the roster,
             //   - hide the payment column on this row,
@@ -130,6 +137,17 @@ class AthleteResource extends JsonResource
                 'lessons_per_week' => $athlete->feeTier->lessons_per_week,
             ],
             'monthly_fee_cents' => MonthlyFee::forAthlete($athlete),
+            // The earliest month this athlete can owe anything for (#1742),
+            // as `Y-m-01`, or null when nothing floors them.
+            //
+            // Resolved here — `max(academy billing floor, joining month)` —
+            // so the ledger never re-derives it. Two floors combined on the
+            // client is two chances at the off-by-one that #1709 already paid
+            // for once, and the client cannot see `billing_from` per athlete
+            // without holding the academy beside every row.
+            'billing_floor' => $athlete->academy === null
+                ? null
+                : BillingFloor::isoFor($athlete->academy, $athlete),
             // How often this athlete is expected to pay (#1382), in months.
             // Not the same question as what they last paid: the app needs the
             // expectation to answer "is anyone late", and a payment only says

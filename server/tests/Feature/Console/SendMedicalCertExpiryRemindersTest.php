@@ -225,3 +225,75 @@ it('returns FAILURE exit code when academies throw but keeps iterating the loop 
     expect($callCount)->toBeGreaterThanOrEqual(2);
     expect($exitCode)->toBe(1);
 });
+
+// Renewal (#1739). Owners renew early — a month before the old certificate
+// lapses is the normal case — and the old row kept firing all three
+// thresholds, chasing a certificate already on file.
+
+it('does not remind about a certificate the athlete has already renewed', function (): void {
+    $academy = makeAcademy();
+    $athlete = Athlete::factory()->create(['academy_id' => $academy->id]);
+
+    // Lapses in 30 days — a T-30 trigger — but the replacement is uploaded.
+    Document::factory()->create([
+        'athlete_id' => $athlete->id,
+        'type' => DocumentType::MedicalCertificate,
+        'expires_at' => Carbon::today()->addDays(30)->toDateString(),
+    ]);
+    Document::factory()->create([
+        'athlete_id' => $athlete->id,
+        'type' => DocumentType::MedicalCertificate,
+        'expires_at' => Carbon::today()->addYear()->toDateString(),
+    ]);
+
+    \Artisan::call('budojo:send-medical-cert-expiry-reminders');
+
+    Mail::assertNothingQueued();
+});
+
+it('still reminds about the renewal itself when its own threshold comes round', function (): void {
+    $academy = makeAcademy();
+    $athlete = Athlete::factory()->create(['academy_id' => $academy->id]);
+
+    // BOTH sit on a trigger date — the old one lapses today (T-0), the
+    // renewal in a week (T-7). A superseded row parked outside the three
+    // thresholds would make this test pass with or without the fix.
+    $superseded = Document::factory()->create([
+        'athlete_id' => $athlete->id,
+        'type' => DocumentType::MedicalCertificate,
+        'expires_at' => Carbon::today()->toDateString(),
+    ]);
+    $current = Document::factory()->create([
+        'athlete_id' => $athlete->id,
+        'type' => DocumentType::MedicalCertificate,
+        'expires_at' => Carbon::today()->addDays(7)->toDateString(),
+    ]);
+
+    \Artisan::call('budojo:send-medical-cert-expiry-reminders');
+
+    Mail::assertQueued(MedicalCertificateExpiringMail::class, fn (
+        MedicalCertificateExpiringMail $mail,
+    ): bool => $mail->documents->pluck('id')->all() === [$current->id]
+            && ! $mail->documents->pluck('id')->contains($superseded->id));
+});
+
+it('does not chase a certificate for an athlete who stopped training', function (): void {
+    // The digest links to /dashboard/documents/expiring, which since #1740
+    // shows active athletes only. Reminding about an inactive athlete sent
+    // the owner to a page reading "All documents up to date" about the very
+    // row the email had just named.
+    $academy = makeAcademy();
+    $left = Athlete::factory()->create([
+        'academy_id' => $academy->id,
+        'status' => 'inactive',
+    ]);
+    Document::factory()->create([
+        'athlete_id' => $left->id,
+        'type' => DocumentType::MedicalCertificate,
+        'expires_at' => Carbon::today()->addDays(7)->toDateString(),
+    ]);
+
+    \Artisan::call('budojo:send-medical-cert-expiry-reminders');
+
+    Mail::assertNothingQueued();
+});

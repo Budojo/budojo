@@ -38,6 +38,16 @@ class CreateAcademyAction
                 'name' => $name,
                 'slug' => $this->uniqueSlug($name),
                 'training_days' => $trainingDays,
+                // This month, for the same reason the #1742 migration
+                // backfilled existing academies to the month they were
+                // created in: an academy starts recording its fees here when
+                // it starts existing here. Leaving it null would let the
+                // ledger fall back to each athlete's `joined_at`, and an
+                // owner adding long-standing members on a fresh install would
+                // see exactly the years of phantom "Non pagato" #1742 exists
+                // to remove — on the shipping path, where the migration's
+                // backfill has nothing to backfill.
+                'billing_from' => Carbon::today()->startOfMonth(),
             ]);
 
             // Schedule history (#1094). Seed the brand-new academy's
