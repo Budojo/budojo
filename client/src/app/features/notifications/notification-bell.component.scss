@@ -5,8 +5,17 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.5rem;
-  height: 2.5rem;
+  // 48px, the canon floor (#1786). It shipped at 2.5rem / 40px, flush
+  // against a 48px avatar in the mobile topbar — two adjacent targets where
+  // one is under the floor is a mis-tap generator (Fitts), and this is a
+  // button an owner presses one-handed at the side of the mat.
+  //
+  // The painted circle grows with it rather than being padded, because the
+  // sibling `.topbar__user-link` is padding-built and lands at 48 too: after
+  // this the two round controls beside each other are the same size, which
+  // they were not before.
+  width: 3rem;
+  height: 3rem;
   border: none;
   background: transparent;
   border-radius: 50%;

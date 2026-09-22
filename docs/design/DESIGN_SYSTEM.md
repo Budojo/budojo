@@ -27,7 +27,7 @@ A drop-in override layer for the `@primeuix/themes/material` preset that deliver
 | `--p-surface-900` | `#0a0a0b` | `#f2f2f7` | Ink |
 | `--p-content-background` | `#ffffff` | `#1c1c1e` | Card/content bg |
 | `--p-text-color` | `#0a0a0b` | `#f2f2f7` | Primary text |
-| `--p-text-muted-color` | `#8e8e93` | `#aeaeb2` | Secondary text |
+| `--p-text-muted-color` | `#636366` | `#aeaeb2` | Secondary text. Both are `--p-surface-600`: at `surface-500` the light value measured 3.26:1 on white, below the 4.5 AA floor, across 212 call sites (#1786) |
 | `--p-mask-background` | `rgba(10,10,11,.32)` | `rgba(0,0,0,.52)` | Modal scrim |
 | `--budojo-success` | `#34c759` | same | iOS system green |
 | `--budojo-warning` | `#ff9f0a` | same | iOS system orange |
@@ -234,7 +234,7 @@ copy, **open the real file**.
   --p-content-color:             var(--p-surface-900);
   --p-text-color:                var(--p-surface-900);
   --p-text-hover-color:          var(--p-surface-900);
-  --p-text-muted-color:          var(--p-surface-500);
+  --p-text-muted-color:          var(--p-surface-600);
   --p-text-hover-muted-color:    var(--p-surface-700);
 
   // ---- Overlay / mask ----
@@ -252,7 +252,7 @@ copy, **open the real file**.
   --p-form-field-focus-border-color:      var(--p-primary-color);
   --p-form-field-invalid-border-color:    #ff3b30;
   --p-form-field-color:                   var(--p-surface-900);
-  --p-form-field-placeholder-color:       var(--p-surface-500);
+  --p-form-field-placeholder-color:       var(--p-surface-600); // light; dark keeps surface-500 (#1786)
   --p-form-field-padding-x:               14px;
   --p-form-field-padding-y:               12px;
   --p-form-field-border-radius:           12px;

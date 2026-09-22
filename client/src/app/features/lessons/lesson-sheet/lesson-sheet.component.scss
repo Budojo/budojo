@@ -385,7 +385,10 @@
     background: transparent;
     color: var(--p-text-muted-color);
     cursor: pointer;
-    transition: background var(--budojo-motion-fast) var(--budojo-motion-ease);
+    // `--budojo-motion-ease` does not exist — only fast / base / slow /
+    // decelerate do — and an undefined `var()` with no fallback invalidates
+    // the whole declaration, so this transition never ran (#1786).
+    transition: background var(--budojo-motion-fast) var(--budojo-motion-decelerate);
 
     &:hover {
       background: var(--p-surface-100);
