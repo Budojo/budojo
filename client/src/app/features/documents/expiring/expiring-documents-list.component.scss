@@ -189,7 +189,12 @@ $expiring-mobile-breakpoint: 768px;
 
 :host-context(.dark) .missing-cert-row__link:hover,
 :host-context(.dark) .missing-cert-row__link:focus-visible {
-  background: var(--p-surface-800);
+  // `surface-200`, not `surface-800` (#1793). This rule exists to give the
+  // row a dark hover, and it picked the index that means "one step off the
+  // page" in the LIGHT ramp — which in ours is #e5e5ea, so hovering a row on
+  // a dark page flashed a near-white block. A dark-only rule getting the dark
+  // ramp backwards was invisible for as long as nothing could reach `.dark`.
+  background: var(--p-surface-200);
 }
 
 .expiring-card {

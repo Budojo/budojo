@@ -58,6 +58,9 @@ Everything the renderer needs beyond HTTP is on `window.__BUDOJO__` (typed in `c
 | `update.{status,onStatus}` | renderer ↔ main | The update state ([#1339](https://github.com/Budojo/budojo/issues/1339)): `idle`, `checking`, `up-to-date`, `downloading`, `ready`. `status()` for the first paint, `onStatus` for every change after. |
 | `update.check()` | renderer → main (async) | Check now instead of waiting for the six-hourly poll ([#1401](https://github.com/Budojo/budojo/issues/1401)). Resolves only with whether a check could be **started**; what it found arrives through `onStatus`, exactly as the automatic check's result does. |
 | `update.installNow()` | renderer → main (async) | Quit, run the installer visibly, relaunch ([#1362](https://github.com/Budojo/budojo/issues/1362)). Guarded on the state, so a stale click cannot quit the app to install nothing. |
+| `theme.apply(resolved)` | renderer → main (async) | Repaint the native title-bar overlay for the SPA's current theme, and remember it for the next launch ([#1793](https://github.com/Budojo/budojo/issues/1793)). Always `'light' \| 'dark'`, never the `system` preference: that is a question the SPA has already answered, and the shell answering it a second time is how the two disagree. |
+
+**The title bar is the one surface CSS cannot reach.** `titleBarStyle: 'hidden'` keeps the real Windows buttons and lets us paint the bar behind them — but that paint is a native value handed to Electron, so it does not inherit, does not cascade, and cannot see the `.dark` class the renderer toggles. The drag strip below it *is* CSS. They are the same bar from two sides, and they are kept equal by `desktop/src/titlebar-theme.ts`, whose spec reads `client/src/styles/budojo-theme.scss` and fails if the two colours drift. Moving one without the other leaves a light rectangle welded around the window buttons — which is exactly what shipped for the length of one review round.
 
 **The update states are not symmetric with the events.** `checking` and `up-to-date` exist for one reason: before them, a check that found nothing was completely silent, and "nothing to get" was indistinguishable from "never looked". The renderer decides who deserves to hear about them — a press does, the six-hourly poll does not — because the state stream cannot tell the two apart and should not try.
 
@@ -103,6 +106,7 @@ Everything that persists lives under Electron's **`userData`** directory (`%APPD
 | `drive-sync.json` | Drive link bookkeeping — account, folder id, last sync, last error. Holds no secret. |
 | `backup-folder.json` | Which folder backups are copied into and how that last went (#1320). Holds no secret. |
 | `bootstrap.json` | First-run state marker. |
+| `theme.json` | Which theme was painted last run ([#1793](https://github.com/Budojo/budojo/issues/1793)). The window's `backgroundColor` and native title-bar overlay are chosen **before** any renderer exists, and the main process cannot read the renderer's localStorage — without a remembered answer, every launch on a dark theme opens with a white flash. Holds no secret and describes this screen, not the owner's data, so it is deliberately not restored from a backup. |
 | `php.ini`, `php-server.pid` | Generated PHP config + supervisor pid. |
 | `notifications-ledger.json` | Once-only ledger so a native reminder fires at most once. |
 | `tmp/` | Scratch (backup staging, etc.). |

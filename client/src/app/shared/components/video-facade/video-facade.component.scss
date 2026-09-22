@@ -10,7 +10,12 @@
   width: 100%;
   border-radius: var(--p-border-radius-md, 12px);
   overflow: hidden;
-  background: var(--p-surface-900);
+  // Literal near-black in both themes, like the toggle knob's white (#1793):
+  // this is the letterbox behind a video thumbnail, and a player surround is
+  // dark everywhere regardless of the app around it. It used to be
+  // `--p-surface-900`, which in our inverted dark ramp is #f2f2f7 — a white
+  // frame around a video, on a dark page.
+  background: #0a0a0b;
 }
 
 // YouTube — landscape 16:9.
@@ -35,7 +40,8 @@
   padding: 0;
   border: none;
   cursor: pointer;
-  background: var(--p-surface-800);
+  // One step off the letterbox above, and fixed for the same reason.
+  background: #1c1c1e;
   display: block;
 }
 

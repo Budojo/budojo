@@ -162,9 +162,17 @@ describe('WebPushService (#694)', () => {
       });
       // `navigator.standalone` is false / undefined → non-standalone
       (navigator as unknown as { standalone?: boolean }).standalone = false;
+      // `writable: true` matters, and so does the cleanup below. Without
+      // either, this test left a READ-ONLY `matchMedia` on the shared window
+      // for every spec file that followed it in the same worker — and
+      // `theme.service.spec.ts` (#1793), which installs its own, then died
+      // with `Cannot assign to read only property` on exactly the orderings
+      // where this file ran first. Intermittent, green on a re-run, and
+      // nothing to do with the spec that reported it.
       Object.defineProperty(window, 'matchMedia', {
         value: () => ({ matches: false }),
         configurable: true,
+        writable: true,
       });
 
       try {
@@ -175,6 +183,7 @@ describe('WebPushService (#694)', () => {
       } finally {
         Object.defineProperty(navigator, 'userAgent', { value: origUA, configurable: true });
         delete (navigator as unknown as { standalone?: boolean }).standalone;
+        delete (window as unknown as { matchMedia?: unknown }).matchMedia;
       }
       http.verify();
     });

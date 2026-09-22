@@ -45,6 +45,16 @@ export interface DataLayout {
   driveStateFile: string;
   /** Which folder backups are copied into, and how that last went (#1320). */
   backupFolderStateFile: string;
+  /**
+   * Which theme was on screen when the app last closed (#1793).
+   *
+   * The main process cannot read the renderer's localStorage, and the window's
+   * `backgroundColor` and native title-bar overlay are chosen *before* any
+   * renderer exists — so without a remembered answer every launch on a dark
+   * theme starts with a white flash. Holds no secret and is never restored
+   * from a backup: it describes this machine's screen, not the owner's data.
+   */
+  themeFile: string;
 }
 
 /**
@@ -71,6 +81,7 @@ export function dataLayout(userDataDir: string): DataLayout {
     driveTokenFile: path.join(root, 'drive-token.bin'),
     driveStateFile: path.join(root, 'drive-sync.json'),
     backupFolderStateFile: path.join(root, 'backup-folder.json'),
+    themeFile: path.join(root, 'theme.json'),
   };
 }
 

@@ -143,6 +143,22 @@ interface BudojoBridge {
     }>;
   };
   /**
+   * Native window chrome (#1793).
+   *
+   * The desktop shell hides the frame and paints the title-bar overlay itself
+   * — and that paint is a native value handed to Electron, not CSS. It cannot
+   * read a custom property, cannot see the `.dark` class on `<html>`, and does
+   * not change when the theme does. So the SPA pushes the **resolved** theme
+   * here every time it applies one, and the shell repaints the bar to match
+   * and remembers it for the next launch.
+   *
+   * Always `'light' | 'dark'`, never the preference: `system` is a question
+   * the SPA has already answered by the time it calls.
+   */
+  readonly theme: {
+    apply(theme: 'light' | 'dark'): Promise<{ ok: boolean }>;
+  };
+  /**
    * Recovery-key export/import (#1254). `export` decrypts the OS-keychain key
    * store into a single copy-pasteable code; `import` writes a provided code's
    * keys back and relaunches the app under them. Present only inside Budojo

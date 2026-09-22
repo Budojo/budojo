@@ -32,9 +32,9 @@ $bottom-nav-height: 3.5rem;
   gap: 0.5rem;
   padding: max(0.5rem, var(--budojo-safe-top)) 1rem 0.5rem;
   min-height: $topbar-height;
-  background: var(--p-surface-900);
-  color: var(--p-surface-0);
-  border-bottom: 1px solid var(--p-surface-700);
+  background: var(--budojo-chrome-background);
+  color: var(--budojo-chrome-color);
+  border-bottom: 1px solid var(--budojo-chrome-border);
   position: sticky;
   top: 0;
   z-index: 60;
@@ -99,7 +99,10 @@ $bottom-nav-height: 3.5rem;
 
     &:hover,
     &:focus-visible {
-      background: var(--p-surface-800);
+      // Inside the inverted bar, so it takes the chrome's own hover rather
+      // than a scale index — `surface-800` is one step off near-black in
+      // light and one step off near-white in dark (#1793).
+      background: var(--budojo-chrome-hover);
     }
 
     &:focus-visible {

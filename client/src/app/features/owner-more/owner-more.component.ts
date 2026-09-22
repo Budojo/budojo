@@ -6,6 +6,8 @@ import { AuthService } from '../../core/services/auth.service';
 import { LanguageService } from '../../core/services/language.service';
 import { RuntimeService } from '../../core/services/runtime.service';
 import { SUPPORT_EMAIL, supportMailtoHref } from '../../shared/utils/support-contact';
+import { ThemeService } from '../../core/services/theme.service';
+import { ThemeSheetComponent } from '../../shared/components/theme-sheet/theme-sheet.component';
 import { LanguageSheetComponent } from '../../shared/components/language-sheet/language-sheet.component';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { VERSION } from '../../../environments/version';
@@ -24,7 +26,13 @@ import { VERSION } from '../../../environments/version';
   selector: 'app-owner-more',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [PageHeaderComponent, RouterLink, TranslatePipe, LanguageSheetComponent],
+  imports: [
+    PageHeaderComponent,
+    RouterLink,
+    TranslatePipe,
+    LanguageSheetComponent,
+    ThemeSheetComponent,
+  ],
   templateUrl: './owner-more.component.html',
   styleUrl: './owner-more.component.scss',
 })
@@ -50,9 +58,15 @@ export class OwnerMoreComponent {
   protected readonly currentLang = this.languageService.currentLang;
   protected readonly versionTag = VERSION.tag;
   protected readonly languageSheet = viewChild.required(LanguageSheetComponent);
+  protected readonly themeSheet = viewChild.required(ThemeSheetComponent);
+  protected readonly themePreference = inject(ThemeService).preference;
 
   protected openLanguage(): void {
     this.languageSheet().open();
+  }
+
+  protected openTheme(): void {
+    this.themeSheet().open();
   }
 
   protected signOut(): void {

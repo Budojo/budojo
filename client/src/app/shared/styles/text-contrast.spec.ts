@@ -88,6 +88,18 @@ const CASES: ReadonlyArray<{ token: string; on: readonly string[]; floor: number
   { token: 'p-text-muted-color', on: ['p-surface-0', 'p-surface-50', 'p-surface-100'], floor: 4.5 },
   { token: 'p-form-field-color', on: ['p-surface-0', 'p-surface-100'], floor: 4.5 },
   { token: 'p-form-field-placeholder-color', on: ['p-surface-0', 'p-surface-100'], floor: 4.5 },
+  // Status chips (#1793). A `p-tag` is 12px/600 — body text by AA's reckoning,
+  // not large — and it is the whole content of the paid/unpaid column, so it
+  // is read more often than most prose in the app. Each ink is checked on its
+  // own fill rather than on a page surface: the fill is what it is painted on.
+  //
+  // These are tokens at all because they used to be eight literals tuned for
+  // white, which made every chip on a dark roster a near-white block. Putting
+  // them here is what stops the dark pair being chosen by eye.
+  { token: 'budojo-success-ink', on: ['budojo-success-soft'], floor: 4.5 },
+  { token: 'budojo-warning-ink', on: ['budojo-warning-soft'], floor: 4.5 },
+  { token: 'budojo-danger-ink', on: ['budojo-danger-soft'], floor: 4.5 },
+  { token: 'budojo-info-ink', on: ['budojo-info-soft'], floor: 4.5 },
 ];
 
 describe('semantic text tokens clear WCAG AA in both themes (#1786)', () => {
@@ -120,5 +132,10 @@ describe('semantic text tokens clear WCAG AA in both themes (#1786)', () => {
     expect(resolve('p-surface-0', 'light')).toBe('#ffffff');
     expect(resolve('p-text-color', 'light')).toBe('#0a0a0b');
     expect(resolve('p-surface-0', 'dark')).not.toBe(resolve('p-surface-0', 'light'));
+    // And that the status pairs really are re-declared in the dark half —
+    // a token that falls through resolves to the light value and passes the
+    // dark cases above while shipping a pastel block on a near-black page.
+    expect(resolve('budojo-danger-soft', 'dark')).not.toBe(resolve('budojo-danger-soft', 'light'));
+    expect(resolve('budojo-info-ink', 'dark')).not.toBe(resolve('budojo-info-ink', 'light'));
   });
 });

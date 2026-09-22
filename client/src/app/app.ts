@@ -5,6 +5,7 @@ import { AppUpdateService } from './core/services/app-update.service';
 import { DesktopBridgeService } from './core/services/desktop-bridge.service';
 import { LanguageService } from './core/services/language.service';
 import { RuntimeService } from './core/services/runtime.service';
+import { ThemeService } from './core/services/theme.service';
 import { VersionCheckService } from './core/services/version-check.service';
 import { CookieBannerComponent } from './features/cookie-banner/cookie-banner.component';
 import { NotificationOnboardingDialogComponent } from './shared/components/notification-onboarding-dialog/notification-onboarding-dialog.component';
@@ -29,6 +30,7 @@ export class App implements OnInit {
   private readonly appUpdateService = inject(AppUpdateService);
   private readonly versionCheckService = inject(VersionCheckService);
   private readonly runtimeService = inject(RuntimeService);
+  private readonly themeService = inject(ThemeService);
 
   /**
    * Exposed to the template for the consent banner's gate (#1508). Defaults
@@ -45,6 +47,12 @@ export class App implements OnInit {
     // language. Reads localStorage / navigator.language with
     // an `en` fallback.
     this.languageService.bootstrap();
+
+    // Theme (#1793), for the same reason and in the same place: the inline
+    // script in index.html has already set the class so there is no flash,
+    // and this hands ownership to the service — which is what keeps
+    // following the OS when it flips at sunset.
+    this.themeService.bootstrap();
 
     // Wire the PWA service worker update listener so a deploy on
     // main lands in the user's browser without a manual cache
