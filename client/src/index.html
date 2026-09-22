@@ -57,6 +57,14 @@
       source of truth. Keep it that way: logic duplicated here is logic that
       will disagree with the service on some future branch.
 
+      That is not hypothetical — it already did, in the first draft of this
+      block. It enumerated the values it trusted (`'system'` or empty) and so
+      sent everything ELSE to light, while `detectInitialPreference()` treats
+      an unrecognised key as `system` and asks the OS. One corrupted
+      localStorage entry and the pre-paint class and the service disagreed for
+      the whole session. Phrased as "not light" instead, the two agree for
+      every input, including the ones nobody thought of.
+
       Wrapped in try/catch because localStorage throws outright in Safari
       private mode, and a theme is not worth a blank page.
     -->
@@ -66,7 +74,7 @@
           var stored = localStorage.getItem('budojoTheme');
           var dark =
             stored === 'dark' ||
-            ((stored === 'system' || !stored) &&
+            (stored !== 'light' &&
               window.matchMedia &&
               window.matchMedia('(prefers-color-scheme: dark)').matches);
           if (dark) {

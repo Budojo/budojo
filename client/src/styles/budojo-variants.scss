@@ -105,12 +105,15 @@
 // when the filled-danger would compete with a primary CTA nearby.
 // Filled, no border: soft danger bg, dark danger ink.
 .p-button-outlined.p-button-danger {
-  background: var(--budojo-danger-soft, #ffe5e3);
-  color: #b42318;
+  background: var(--budojo-danger-soft);
+  color: var(--budojo-danger-ink);
   border: 1px solid transparent;
 
   &:hover:not(:disabled) {
-    background: color-mix(in oklab, var(--budojo-danger) 16%, #ffe5e3);
+    // Mixed against the fill itself rather than the light literal it used to
+    // name (#1793) — hovering a soft-danger button in dark mode otherwise
+    // walked it back towards #ffe5e3, i.e. lighter on hover in a dark theme.
+    background: color-mix(in oklab, var(--budojo-danger) 16%, var(--budojo-danger-soft));
   }
 }
 
@@ -180,23 +183,27 @@
   border: 1px solid transparent;
 }
 
-// Filled status — default PrimeNG severities (already mapped in v1 p-tag block)
+// Filled status — default PrimeNG severities (already mapped in v1 p-tag block).
+// On tokens since #1793: these were eight literals picked for a white page, so
+// on a dark roster every paid/unpaid chip rendered as a near-white block. The
+// light values are unchanged to the digit — see `--budojo-*-soft` / `-ink` in
+// `budojo-theme.scss` for the pairs and the arithmetic behind the dark ones.
 .p-tag.p-tag-success {
-  background: #e7f7ea;
-  color: #188038;
+  background: var(--budojo-success-soft);
+  color: var(--budojo-success-ink);
 }
 .p-tag.p-tag-warn,
 .p-tag.p-tag-warning {
-  background: #fff3e0;
-  color: #b45309;
+  background: var(--budojo-warning-soft);
+  color: var(--budojo-warning-ink);
 }
 .p-tag.p-tag-danger {
-  background: #ffe5e3;
-  color: #b42318;
+  background: var(--budojo-danger-soft);
+  color: var(--budojo-danger-ink);
 }
 .p-tag.p-tag-info {
-  background: #e1efff;
-  color: #0a67d9;
+  background: var(--budojo-info-soft);
+  color: var(--budojo-info-ink);
 }
 
 // Neutral filled (counts, metadata)

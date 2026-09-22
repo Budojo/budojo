@@ -127,12 +127,30 @@ export class ThemeService {
    * `app.config.ts` selects. `color-scheme` goes with it so the browser's own
    * chrome — form controls, scrollbars, the canvas behind a rubber-band
    * scroll — follows too; without it a dark app keeps white scrollbars.
+   *
+   * The window chrome is the one surface the class cannot reach. In Budojo
+   * Desktop the title bar is painted by Windows from a value handed to
+   * Electron at window creation — native paint, no cascade, no custom
+   * properties — so it has to be pushed. Skipping it left a #fafafa bar welded
+   * across the top of a near-black app, which is what `styles.scss` had warned
+   * about in writing since #1379.
+   *
+   * Fire-and-forget: the bar is decoration, the theme is already applied, and
+   * there is nothing useful to tell someone whose title bar stayed light.
    */
   private apply(): void {
     const root = this.document.documentElement;
-    const dark = this.resolved() === 'dark';
+    const resolved = this.resolved();
+    const dark = resolved === 'dark';
     root.classList.toggle('dark', dark);
     root.style.colorScheme = dark ? 'dark' : 'light';
+
+    // Optional all the way down, not just on `__BUDOJO__`. The bridge is
+    // injected by a preload script — a separate build artefact, outside this
+    // TypeScript program — so its type is a claim about what the shell
+    // exposes, not a guarantee. `?.theme.apply` would throw on any shell that
+    // predates this channel, during a paint, for a bar nobody is looking at.
+    void this.document.defaultView?.__BUDOJO__?.theme?.apply?.(resolved)?.catch(() => undefined);
   }
 
   private isSupported(value: string): value is ThemePreference {

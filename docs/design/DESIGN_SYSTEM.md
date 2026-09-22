@@ -33,6 +33,29 @@ A drop-in override layer for the `@primeuix/themes/material` preset that deliver
 | `--budojo-warning` | `#ff9f0a` | same | iOS system orange |
 | `--budojo-danger` | `#ff3b30` | same | iOS system red |
 | `--budojo-info` | `#0a84ff` | same | iOS system blue |
+| `--budojo-success-soft` / `-ink` | `#e7f7ea` / `#188038` | `#12301d` / `#5be07f` | Status chip fill + its ink (#1793) |
+| `--budojo-warning-soft` / `-ink` | `#fff3e0` / `#b45309` | `#3a2508` / `#ffc46b` | idem |
+| `--budojo-danger-soft` / `-ink` | `#ffe5e3` / `#b42318` | `#431d1a` / `#ff8a80` | idem, plus the soft-destructive button |
+| `--budojo-info-soft` / `-ink` | `#e1efff` / `#0a67d9` | `#0e2a45` / `#7ab8ff` | idem |
+| `--budojo-chrome-background` | `--p-surface-900` | `--p-surface-0` | The mobile topbar, which is **inverted** chrome (#1793) |
+| `--budojo-chrome-color` | `--p-surface-0` | `--p-surface-900` | Its ink |
+| `--budojo-chrome-border` | `--p-surface-700` | `--p-content-border-color` | Its bottom hairline |
+| `--budojo-chrome-hover` | `--p-surface-800` | `--p-surface-200` | Hover for controls inside it |
+| `--budojo-titlebar-background` | `#fafafa` | `#151517` | The Electron drag strip. Pinned to `titleBarOverlay.color` in `desktop/src/titlebar-theme.ts` by a spec — native paint cannot read CSS (#1793) |
+| `--budojo-skeleton-background` | `--p-surface-100` | `--p-surface-200` | A placeholder needs a step against the card it covers, and in dark `surface-100` **is** the card (#1793) |
+| `--budojo-belt-edge` | `rgb(0 0 0 / 12%)` | `rgb(255 255 255 / 22%)` | Ground contact under a belt spine; the belt itself never moves (#1793) |
+
+> **The surface scale inverts between themes, so its indices are not portable.**
+> `--p-surface-0` is white in light and `#1c1c1e` in dark; `--p-surface-900` is
+> the reverse. That is deliberate — it is what lets the semantics above resolve
+> in both themes without being restated. The cost is that a component reaching
+> past a semantic into the scale writes a value that flips: `background:
+> var(--p-surface-900)` is a near-black bar in light and a near-WHITE one in
+> dark. It happened in four places (#1793), including a `:host-context(.dark)`
+> rule that got the dark ramp backwards. `no-inverted-ramp.spec.ts` now fails
+> the build on a `background` naming the top of the scale or a `color` naming
+> the bottom. Reach for a semantic, or for a literal with a comment when the
+> value genuinely must not move (a video letterbox, the white toggle knob).
 
 Belt colors remain domain constants in `client/src/app/shared/components/belt-badge/belt-badge.component.scss` — don't move them into theme vars.
 

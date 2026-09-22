@@ -134,6 +134,58 @@ describe('ThemeService (#1793)', () => {
     });
   });
 
+  describe('the desktop title bar follows too', () => {
+    /**
+     * The native window chrome is the one surface the `.dark` class cannot
+     * reach: Windows paints it from a value handed to Electron, so it has to
+     * be pushed. Without this, picking Dark left a #fafafa bar welded across
+     * the top of a near-black app — permanently, on the only platform that
+     * ships.
+     */
+    function withBridge() {
+      const apply = vi.fn(async () => ({ ok: true }));
+      (window as unknown as { __BUDOJO__: unknown }).__BUDOJO__ = { theme: { apply } };
+
+      return apply;
+    }
+
+    afterEach(() => {
+      delete (window as unknown as { __BUDOJO__?: unknown }).__BUDOJO__;
+    });
+
+    it('pushes the resolved theme on boot', () => {
+      const apply = withBridge();
+
+      setup({ osDark: true });
+
+      expect(apply).toHaveBeenCalledWith('dark');
+    });
+
+    it('pushes the resolved theme, never the preference', () => {
+      const apply = withBridge();
+      const { service } = setup({ stored: 'dark', osDark: false });
+      apply.mockClear();
+
+      service.setPreference('system');
+
+      // `system` is a question the SPA has already answered; the shell has no
+      // business answering it a second time and differently.
+      expect(apply).toHaveBeenCalledWith('light');
+      expect(apply).not.toHaveBeenCalledWith('system');
+    });
+
+    it('pushes again when the OS flips under `system`', () => {
+      const apply = withBridge();
+      const { os } = setup({ osDark: false });
+      apply.mockClear();
+
+      os.flip(true);
+
+      // At sunset the app goes dark and the title bar has to go with it.
+      expect(apply).toHaveBeenCalledWith('dark');
+    });
+  });
+
   describe('bad input and hostile environments', () => {
     it('ignores a stored value that is not a preference', () => {
       const { service } = setup({ stored: 'solarized', osDark: true });
@@ -163,6 +215,19 @@ describe('ThemeService (#1793)', () => {
       // No signal from the OS is not dark; it is light, which is what the
       // app has always shipped.
       expect(service.resolved()).toBe('light');
+    });
+
+    it('survives a desktop shell that predates the theme channel', () => {
+      // `window.__BUDOJO__` is injected by a preload script — a separate build
+      // artefact — so its TypeScript type is a claim, not a guarantee. An
+      // older shell has no `theme` key, and `?.theme.apply` would throw right
+      // through `bootstrap()` and take the whole app's boot with it.
+      (window as unknown as { __BUDOJO__: unknown }).__BUDOJO__ = { apiBase: '' };
+
+      const { service } = setup({ osDark: true });
+
+      expect(service.resolved()).toBe('dark');
+      delete (window as unknown as { __BUDOJO__?: unknown }).__BUDOJO__;
     });
 
     it('applies the theme even when localStorage throws on write', () => {

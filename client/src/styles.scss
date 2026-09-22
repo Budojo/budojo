@@ -103,14 +103,17 @@ html.budojo-desktop {
   // than merely intended.
   //
   // The colour is the one Windows paints behind its own buttons
-  // (`titleBarOverlay.color` in desktop/src/main.ts) so the strip and the
-  // native controls read as one bar. The two must change together.
+  // (`titleBarOverlay.color`, from `desktop/src/titlebar-theme.ts`) so the
+  // strip and the native controls read as one bar. The two must change
+  // together — they are the same surface seen from either side.
   //
-  // NOTE for whoever adds a dark theme: PrimeNG is configured with
-  // `darkModeSelector: '.dark'` but nothing in the app ever sets that class,
-  // so the app is light-only today and this can be a constant. The day it
-  // isn't, this needs a token AND `setTitleBarOverlay` on the shell side —
-  // moving one without the other leaves a light rectangle around the buttons.
+  // That used to be a NOTE addressed to whoever added a dark theme, because
+  // `darkModeSelector: '.dark'` was configured and nothing ever set the class.
+  // #1793 set it, so both halves landed: this is a token now, and
+  // `ThemeService.apply()` pushes the resolved theme over the bridge so the
+  // shell repaints the overlay. Moving one without the other is still what
+  // leaves a light rectangle around the buttons — on Windows, permanently,
+  // because native paint does not cascade.
   &::before {
     content: '';
     position: fixed;
@@ -120,7 +123,7 @@ html.budojo-desktop {
     // without this the border below makes the strip 41px against Electron's
     // 40, and the native buttons sit a pixel proud of it.
     box-sizing: border-box;
-    background: #fafafa;
+    background: var(--budojo-titlebar-background);
     // The hairline that makes it read as a surface rather than as empty space
     // (#1400). Same token as the side rail's own border, deliberately: two
     // pieces of chrome meeting at a corner in two almost-identical greys looks
