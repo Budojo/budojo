@@ -196,7 +196,7 @@ final class DisciplineProfile
     public function trainingModes(): array;
     /** @return list<array{code: string, category: 'kids'|'adults', min: int, max: int|null}> */
     public function ageDivisions(): array;
-    public function syllabusSeed(): string;                       // path under seed-data/syllabus/
+    public function syllabusSeed(): ?string;                      // path under seed-data/syllabus/; null until it ships
 }
 
 final class RankLadder
@@ -238,6 +238,14 @@ File shape:
 `kids: true` is informational — the picker groups them under a divider, nothing
 validates on it. A school that never awards half-belts ignores the group.
 
+`syllabus_seed` is **absent until the discipline's programme file has shipped**
+(slices 5–7 each add one line here). Absent means `syllabusSeed()` is null, the
+seed endpoint answers 404, and `AcademyResource.syllabus_seed_available` is
+false so the programme page never shows the CTA. A judo academy created between
+slice 3 and slice 5 gets "write your own" — not a server error from a file that
+does not exist. The registry guard asserts the file exists whenever the key is
+set.
+
 ### `App\Enums\Belt` — the vocabulary
 
 Existing twelve cases stay, values untouched. New cases:
@@ -253,8 +261,13 @@ Existing twelve cases stay, values untouched. New cases:
 | `BlueAndRed` | `blue-and-red` | taekwondo (3rd kup) |
 | `BlackAndRed` | `black-and-red` | taekwondo — the *poom*, the under-15 black belt |
 
-`rank()` and `maxStripes()` are **deleted** from the enum. Their two callers —
-`applyBeltSort()` and `ValidatesStripesAgainstBelt` — read the ladder.
+`rank()` and `maxStripes()` are **deleted** from the enum. `rank()` has no
+runtime reader — `applyBeltSort()` hard-codes the integers, and only the sync
+test this epic retires called it. `maxStripes()` has **two**:
+`ValidatesStripesAgainstBelt` and `StoreAthletePromotionRequest::validateStripeCap()`
+(the bespoke copy for `belt_at_event`, line 120). Both read the ladder. The
+first draft of this list named one of the two; grep `->maxStripes()` before the
+delete, not after.
 
 ### Training modes
 
@@ -265,6 +278,18 @@ today). `academy_classes.kind`, `lessons.kind` and `syllabus_topics.kind` widen
 from `varchar(8)` to `varchar(16)` (`tachi-waza` is ten characters); stored
 values do not change. The column keeps its name — renaming it buys nothing and
 touches three tables.
+
+**All of it lands in one slice (4), never partially.** Today
+`Rule::enum(ClassKind::class)` admits every case globally, and
+`SuggestLessonTopicsAction::techniquesInScope()` is an exhaustive `match` over
+the four cases. Widening the enum in slice 1 without the profile-aware rule
+would let a BJJ academy store `kata`, and the first suggestion request for a
+class in a new mode would throw `UnhandledMatchError`. So **slice 1 does not
+touch the kinds at all**; slice 4 swaps the enum, widens the columns, makes the
+three requests (`ValidatesAcademyClass`, `ValidatesSyllabusTopic`,
+`SyllabusCoverageRequest`) check the profile, and rewrites `techniquesInScope()`
+as the general rule — a mode admits itself and `both`; `both` and `other`
+admit everything.
 
 ---
 
@@ -398,13 +423,25 @@ instructor acts on. Sizes below are targets, not counts.
   four values, 422 otherwise. The setup form always sends it; a fixture that
   does not is a fixture that fails.
 - **Discipline is locked once the academy is not empty.** `PATCH /api/v1/academy`
-  accepts `discipline` only while the academy has **no athletes (soft-deleted
-  included), no classes and no syllabus topics**; otherwise 422 on the field.
-  Soft-deleted athletes count because their belt is still a claim; classes
-  count because their `kind` is a mode of the old discipline; topics because a
-  BJJ programme inside a judo academy is a lie with a coverage chart. The
+  accepts `discipline` only while the academy has **no athletes, no classes, no
+  lessons and no syllabus topics — soft-deleted rows included**; otherwise 422
+  on the field. Athletes count even soft-deleted because their belt is still a
+  claim. Classes count because their `kind` is a mode of the old discipline.
+  **Lessons count because they outlive their class**: `lessons.academy_class_id`
+  is null-on-delete and `lessons.kind` is a snapshot taken at creation, so a
+  timetable taken down leaves a season of `gi` evenings standing. **Topics count
+  even soft-deleted because `Lesson::topics()` reads them `withTrashed()`** — a
+  topic removed from the programme still names itself on the lessons that
+  taught it, so a tidied-away programme is not a gone one. The rule is *no
+  discipline-shaped history at all*, and those four tables are where such
+  history lives; `Academy::hasDisciplineHistory()` (or a `Support` predicate)
+  answers it in one place for the request and for `discipline_locked`. The
   precedent is the syllabus seed's 409: *a programme is a claim about what the
   academy teaches, and so is a discipline.*
+- **A class or topic kind is valid when the discipline's profile lists it**
+  (plus `both`; plus `other` for classes). `Rule::enum(TrainingMode::class)`
+  alone would admit `kata` in a BJJ academy. Lands in slice 4 with the enum
+  itself — see § Training modes for why the two cannot be split.
 - **A belt is valid for an athlete when the academy's ladder has it.**
   `AthleteFieldRules` becomes `AthleteFieldRules::for(Academy)`: `belt` is
   `Rule::enum(Belt::class)` **and** in `ladder->belts()`. The rule already has
@@ -433,8 +470,11 @@ instructor acts on. Sizes below are targets, not counts.
   build — `community` and `athlete_accounts` are absent from its capability list
   (`server/config/budojo.php:77`) — and still correct on the web build.
 - **The seed copies the academy's discipline's programme.** `POST /academy/syllabus/seed`
-  reads `DisciplineProfile::for($academy->discipline)->syllabusSeed()`. The 409
-  rule is unchanged.
+  reads `DisciplineProfile::for($academy->discipline)->syllabusSeed()`. When
+  that is **null** — the discipline's programme has not shipped yet — the
+  endpoint answers **404** with a message, never a 500 from a missing file, and
+  the resource's `syllabus_seed_available` is false so the client does not
+  offer the button in the first place. The 409 rule is unchanged.
 - **Import synonyms resolve to the vocabulary, then the ladder validates.**
   `BeltText` gains the two-tone spellings (`bianco-gialla`, `bianco gialla`,
   `bianca/gialla`, `giallo-verde`, …). Resolution is discipline-independent —
@@ -447,9 +487,9 @@ instructor acts on. Sizes below are targets, not counts.
 |---|---|---|
 | `POST` | `/api/v1/academy` | `discipline` **required**, `Discipline` enum |
 | `PATCH` | `/api/v1/academy` | `discipline` accepted while empty; 422 `discipline` otherwise |
-| `GET` | `/api/v1/academy` | `AcademyResource` gains `discipline`, `grades: [{ belt, max_stripes, kids }]` in rank order, `training_modes: [a, b]`, and `discipline_locked: bool` so the form can render the locked state without a failed PATCH |
+| `GET` | `/api/v1/academy` | `AcademyResource` gains `discipline`, `grades: [{ belt, max_stripes, kids }]` in rank order, `discipline_locked: bool` (so the form renders the locked state without a failed PATCH) and `syllabus_seed_available: bool`; `training_modes: [a, b]` arrives with slice 4 |
 | `GET` | `/api/v1/athletes`, `/{id}` | unchanged shape; `belt` may now be any vocabulary value |
-| `POST` | `/api/v1/academy/syllabus/seed` | copies the discipline's programme |
+| `POST` | `/api/v1/academy/syllabus/seed` | copies the discipline's programme; **404** while none has shipped for it |
 | `GET` | `/api/v1/community/…`, `/public/…` | `discipline` beside every belt they emit |
 
 OpenAPI: `Discipline` and `Grade` schemas; `Belt` enum extended and its
@@ -530,6 +570,12 @@ four ladders, and it was the ranks, not the colours, that the sort meant.
 three. Shown only where a cap is above zero, which outside BJJ is black and the
 poom.
 
+### The programme page before the programme ships
+
+`syllabus_seed_available` false → the empty state offers "write your own" and
+nothing else; the seed CTA and its hint do not render. Lands with slice 3 — the
+first slice that can create a non-BJJ academy — not with the programmes.
+
 ### Check-in, timetable, programme, lesson sheet, coverage filter
 
 The mode picker and the coverage toggle iterate `trainingModes()`; labels
@@ -560,6 +606,15 @@ chain rule; audit entries (`athlete.belt.promoted` stays the verb); search.
 - **`PATCH discipline` on an academy with one soft-deleted athlete.** 422. The
   form never shows the control in that state, so this is the API guarding
   against a client that skipped the check.
+- **`PATCH discipline` on an academy whose only class was deleted, with a
+  season of lessons behind it.** 422 — the lessons kept the class's `kind`.
+  Same for an academy whose programme was deleted topic by topic: the topics
+  are soft-deleted and still linked to lessons. "Empty" means the four tables,
+  trashed rows included.
+- **A judo owner opens the programme page before the judo programme has
+  shipped.** No seed button — `syllabus_seed_available` is false — and the
+  empty state says to write their own. A client that calls the endpoint anyway
+  gets 404 with a message, not a 500.
 - **A belt value in the DB that is not in the ladder** (a hand-edited file, a
   restore from another academy's backup). Renders through `common` labels and
   the colour palette — the vocabulary knows the colour even when the ladder
@@ -587,20 +642,27 @@ picks BJJ belts.
 
 ### 1 — BE: the discipline and its ladder (#1800)
 
-`Discipline` enum; `DisciplineProfile` + `RankLadder` + `TrainingMode`; the four
-registry files (BJJ verbatim from today's enum; the other three as drafted
-above, **signed off before merge**); migration `academies.discipline`;
-`AcademyResource` fields; `POST` required / `PATCH` locked; `AthleteFieldRules::for()`;
-`ValidatesStripesAgainstBelt` via ladder; `applyBeltSort()` generated;
-`EnrollSelfAsAthleteAction` first belt; `StoreAthletePromotionRequest` ladder
-check; `BeltText` two-tone synonyms; `Belt` gains eight cases and loses two
-methods; factories pick from the academy's ladder; `SeedSyllabusAction` reads
-the profile (BJJ file moved, content identical, guard test moved with it).
-PEST: registry guard (every case has a file; parses; belts are cases; caps sane;
-BJJ ladder equals the historical ranks), `CASE` generation and `ELSE`, 422
-outside the ladder on form + import + promotion backfill, cap per grade, lock
-rule for each of the three emptiness conditions, `POST` requires discipline.
-Docs + OpenAPI in this PR.
+`Discipline` enum; `DisciplineProfile` + `RankLadder`; the four registry files
+(BJJ verbatim from today's enum; the other three as drafted above, **signed off
+before merge**; `syllabus_seed` set on BJJ only); migration `academies.discipline`;
+`AcademyResource` — `discipline`, `grades`, `discipline_locked`,
+`syllabus_seed_available`; `POST` required / `PATCH` locked on the **four**
+tables, trashed rows included; `AthleteFieldRules::for()`;
+`ValidatesStripesAgainstBelt` **and** `StoreAthletePromotionRequest::validateStripeCap()`
+via ladder; `applyBeltSort()` generated; `EnrollSelfAsAthleteAction` first belt;
+`StoreAthletePromotionRequest` ladder check on the three belt fields; `BeltText`
+two-tone synonyms; `Belt` gains eight cases and loses two methods; factories
+pick from the academy's ladder; `SeedSyllabusAction` reads the profile (BJJ
+file moved, content identical, guard test moved with it) and answers 404 on a
+null seed. **Nothing about kinds** — `ClassKind`, `TopicKind` and the three
+`kind` columns are untouched until slice 4, for the reason in § Training modes.
+PEST: registry guard (every case has a file; parses; belts are cases; caps
+sane; seed file exists when the key is set; BJJ ladder equals the historical
+ranks), `CASE` generation and `ELSE`, 422 outside the ladder on form + import +
+promotion backfill, cap per grade on both stripe validators, lock rule for each
+of the four tables plus a trashed athlete, a trashed topic and an orphaned
+lesson, `POST` requires discipline, seed 404 for a discipline without a
+programme. Docs + OpenAPI in this PR.
 
 ### 2 — FE: belts drawn from the ladder (#1801)
 
@@ -620,16 +682,29 @@ The select-button on `/setup`, the locked/unlocked control on the academy page,
 
 ### 4 — Training modes (#1803)
 
-`TrainingMode` on the client; the mode picker on timetable, programme, lesson
-sheet; the coverage toggle; the check-in class pick; `academy.trainingMode.*`
-keys; column widening migration; `academy-class.md`, `syllabus-topic.md`,
-`lesson.md`. BJJ pinned unchanged by the existing timetable/syllabus E2E.
+**Server and client in one PR** — § Training modes says why the two halves
+cannot be split. Server: `TrainingMode` replaces `ClassKind` / `TopicKind`
+(wire values unchanged); the three `kind` columns widen to 16 — a table rebuild
+on SQLite, so run it against a `budojo.sqlite` with a season of lessons before
+calling it done; `ValidatesAcademyClass`, `ValidatesSyllabusTopic` and
+`SyllabusCoverageRequest` check `DisciplineProfile::trainingModes()`;
+`techniquesInScope()` becomes the general rule; `SyllabusCoverageAction`
+confirmed literal-free; `AcademyResource.training_modes`. PEST: 422 for a mode
+outside the discipline on all three requests; the suggestion for a `kata`
+class admits `kata` + `both` and throws for no mode; BJJ pinned by the
+existing timetable, syllabus and suggestion tests. Client: `TrainingMode`; the
+mode picker on timetable, programme, lesson sheet; the coverage toggle; the
+check-in class pick; `academy.trainingMode.*` keys; `academy-class.md`,
+`syllabus-topic.md`, `lesson.md`. BJJ pinned unchanged by the existing
+timetable/syllabus E2E.
 
 ### 5, 6, 7 — The judo, karate, taekwondo programmes (#1804, #1805, #1806)
 
-One PR each: the seed file, its guard test, the seed CTA copy
-(`academy.syllabus.seed.cta.<discipline>` — "Start from the Shotokan karate
-programme"). **Content review by the owner is the merge gate**, not CI.
+One PR each: the seed file; **`syllabus_seed` set in the discipline's registry
+file** — the one line that turns the CTA on and the 404 off; its guard test;
+the seed CTA copy (`academy.syllabus.seed.cta.<discipline>` — "Start from the
+Shotokan karate programme"). **Content review by the owner is the merge gate**,
+not CI.
 
 ### 8 — Age divisions per discipline (#1807)
 
