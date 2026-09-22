@@ -33,10 +33,23 @@ function setup(opts: { stored?: string | null; osDark?: boolean } = {}) {
   if (opts.stored != null) localStorage.setItem('budojoTheme', opts.stored);
 
   // `matchMedia` lives on the document's default view, which is what the
-  // service reads through Angular's DOCUMENT token. Assigned rather than
+  // service reads through Angular's DOCUMENT token. Defined rather than
   // spied: the test environment does not implement it at all, so there is no
   // function for `vi.spyOn` to wrap.
-  (window as unknown as { matchMedia: unknown }).matchMedia = os.matchMedia;
+  //
+  // And DEFINED rather than assigned. A plain `window.matchMedia = …` threw
+  // `Cannot assign to read only property` depending on which spec file shared
+  // the worker: `web-push.service.spec.ts` installs its own with
+  // `Object.defineProperty(…, { configurable: true })`, and a descriptor
+  // without `writable` defaults to read-only. It only ever failed on the
+  // orderings where that file ran first, which reads exactly like a flake and
+  // is not one. `defineProperty` overwrites whatever is there, whatever its
+  // descriptor says.
+  Object.defineProperty(window, 'matchMedia', {
+    value: os.matchMedia,
+    configurable: true,
+    writable: true,
+  });
 
   TestBed.configureTestingModule({});
   const service = TestBed.inject(ThemeService);
@@ -215,6 +228,20 @@ describe('ThemeService (#1793)', () => {
       // No signal from the OS is not dark; it is light, which is what the
       // app has always shipped.
       expect(service.resolved()).toBe('light');
+    });
+
+    it('sets up even when a previous spec file left a read-only matchMedia', () => {
+      // This is the ordering that failed in CI and passed on every re-run.
+      // `web-push.service.spec.ts` installs its own `matchMedia` with a
+      // descriptor that omits `writable`, which defaults to read-only, and
+      // did not remove it afterwards — so on the orderings where it shared a
+      // worker and ran first, `setup()` threw before asserting anything.
+      Object.defineProperty(window, 'matchMedia', {
+        value: () => ({ matches: false }),
+        configurable: true,
+      });
+
+      expect(() => setup({ osDark: true })).not.toThrow();
     });
 
     it('survives a desktop shell that predates the theme channel', () => {
