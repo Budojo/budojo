@@ -60,6 +60,77 @@ export function localised(value: Localised, lang: string): string {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.63.1',
+    date: '2026-09-22',
+    headline: {
+      en: 'It reads.',
+      it: 'Si legge.',
+    },
+    sections: [
+      {
+        heading: {
+          en: 'The secondary text was too light',
+          it: 'Il testo secondario era troppo chiaro',
+        },
+        bullets: [
+          {
+            en: 'Timestamps, helper lines, column headers, empty states, the dashes on the ledger — everything sitting under the main information — was grey at a level that measures 3.26 against a 4.5 readability floor, on white and on the app background alike. The hints inside fields ("https://facebook.com/yourpage", "00100", "Via Roma 1") were lower still, effectively absent, and those are the ones you read while you type.',
+            it: 'Orari, righe di aiuto, intestazioni di colonna, stati vuoti, i trattini sul registro — tutto quello che sta sotto l’informazione principale — era grigio a un livello che misura 3.26 contro una soglia di leggibilità di 4.5, su bianco come sullo sfondo dell’app. I suggerimenti dentro i campi («https://facebook.com/latuapagina», «00100», «Via Roma 1») stavano più in basso ancora, praticamente assenti, e sono quelli che si leggono mentre si scrive.',
+          },
+          {
+            en: 'The dark theme was already fine. It was the light one that had drifted paler than its own design.',
+            it: 'Il tema scuro era già a posto. Era il chiaro ad aver preso una strada più pallida del proprio progetto.',
+          },
+        ],
+      },
+      {
+        heading: {
+          en: 'And in 131 places it was too dark',
+          it: 'E in 131 punti era troppo scuro',
+        },
+        bullets: [
+          {
+            en: 'The opposite problem, for a silly reason: a colour name written across 53 files had never existed. When a browser cannot find a colour it does not leave the text uncoloured — it gives it the container\u2019s. So 131 labels, captions and notes written to sit *below* a heading came out in the same full black as the heading.',
+            it: 'Il problema opposto, per una ragione sciocca: un nome di colore scritto in 53 file non era mai esistito. Quando un browser non trova un colore non lascia il testo senza colore, gli dà quello del contenitore. Così 131 etichette, didascalie e note scritte per stare *sotto* un titolo uscivano in nero pieno come il titolo.',
+          },
+          {
+            en: 'Visible on the academy page, the legal pages and the invitation cards: the eye now gets the order right at a glance.',
+            it: 'Si vede sulla scheda accademia, nelle pagine legali e nelle card di invito: adesso l’occhio capisce al primo colpo cosa viene prima.',
+          },
+        ],
+      },
+      {
+        heading: {
+          en: 'Bigger targets where you tap',
+          it: 'Bersagli più grandi dove si tocca',
+        },
+        bullets: [
+          {
+            en: 'The notification bell was tappable across 40 pixels, flush against a 48-pixel avatar: two adjacent targets, one under size, which is the classic way to hit the wrong one. Same for the filter panel\u2019s ✕ and the row of buttons above the athlete list.',
+            it: 'La campanella delle notifiche era premibile su 40 pixel, appiccicata a un avatar da 48: due bersagli attaccati, uno sotto misura, che è il modo classico di sbagliare tocco. Lo stesso per la ✕ del pannello filtri e per la fila di pulsanti sopra la lista atleti.',
+          },
+          {
+            en: 'All of them are tappable across 48 now, without having got any bigger: the sensitive area grows, the drawing does not. Nothing moved.',
+            it: 'Adesso sono tutti premibili su 48, senza essere diventati più grandi: cresce la zona sensibile, non il disegno. Niente si è spostato.',
+          },
+        ],
+      },
+      {
+        heading: { en: 'Fixes', it: 'Correzioni' },
+        bullets: [
+          {
+            en: 'Three transitions had never run since the day they were written: they asked for an animation by the wrong name, and the browser threw the whole instruction away without saying so. Things that used to snap now move.',
+            it: 'Tre transizioni non sono mai partite da quando esistono: chiedevano un’animazione con un nome sbagliato, e il browser buttava via l’intera istruzione senza dire niente. Le cose che scattavano adesso si muovono.',
+          },
+          {
+            en: 'The statistics card had square corners in an app made of rounded ones, for the same reason.',
+            it: 'La card delle statistiche aveva gli angoli quadrati in un’app fatta di angoli arrotondati, per lo stesso motivo.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.63.0',
     date: '2026-09-16',
     headline: {
