@@ -33,6 +33,7 @@ describe('dataLayout', () => {
     expect(layout.stateFile).toBe(path.resolve('/data/Budojo/bootstrap.json'));
     expect(layout.storageDir).toBe(path.resolve('/data/Budojo/storage'));
     expect(layout.backupsDir).toBe(path.resolve('/data/Budojo/backups'));
+    expect(layout.themeFile).toBe(path.resolve('/data/Budojo/theme.json'));
   });
 
   // The Google refresh token must not travel inside a backup archive (#1301).

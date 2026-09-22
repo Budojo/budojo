@@ -159,6 +159,47 @@
   --budojo-elevation-floating: 0 1px 2px rgba(10, 10, 11, 0.06), 0 8px 24px rgba(10, 10, 11, 0.12);
   --budojo-elevation-sheet: 0 -24px 48px rgba(10, 10, 11, 0.18);
 
+  // The hairline that gives a belt spine an edge against the row it sits on
+  // (#1793). The belt colours are domain constants and must not move — a
+  // black belt is black — so what adapts is the ground contact, not the
+  // belt. Dark needs a LIGHT hairline: a black edge around a black belt on a
+  // #1c1c1e row measures 1.04:1, which is not an edge, it is nothing.
+  --budojo-belt-edge: rgb(0 0 0 / 12%);
+
+  // The Electron drag strip under the native window buttons (#1793).
+  //
+  // This is the one surface in the app whose colour is ALSO a native value:
+  // `titleBarOverlay.color` in `desktop/src/titlebar-theme.ts` paints the area
+  // behind the minimise/maximise/close buttons, and native paint cannot read a
+  // custom property or see the `.dark` class. The two halves of the same bar
+  // must therefore carry the same value in two places — so if this moves,
+  // `CHROME` in that file moves with it, and a spec there pins the pairing.
+  --budojo-titlebar-background: #fafafa;
+
+  // The mobile topbar, which is INVERTED chrome: a near-black bar with white
+  // text on a light page (#1111). Both shells built that out of the scale
+  // directly — `background: --p-surface-900; color: --p-surface-0` — and our
+  // dark ramp runs the other way, so in dark those two resolved to a
+  // near-WHITE bar with near-black text, pinned to the top of a dark app on
+  // the primary form factor. Same mistake PrimeNG makes with its overlay
+  // backgrounds, in our own stylesheet: reaching past the semantics into the
+  // scale, where the index means the opposite thing.
+  //
+  // So the semantic is "chrome", and each theme says what that is. Dark has
+  // nothing to invert to — everything is already dark — so it picks the
+  // elevated cell, a step up from the page rather than a step down.
+  --budojo-chrome-background: var(--p-surface-900);
+  --budojo-chrome-color: var(--p-surface-0);
+  --budojo-chrome-border: var(--p-surface-700);
+  --budojo-chrome-hover: var(--p-surface-800);
+
+  // Skeletons need a step AGAINST the surface they load on, which is not the
+  // same as a fixed grey (#1793). In dark, `--p-surface-100` and the card it
+  // covers are both #1c1c1e — the placeholder was exactly the card, so ~20
+  // loading views had a skeleton that was literally invisible and the app
+  // looked frozen rather than busy. A token, so each theme picks its own step.
+  --budojo-skeleton-background: var(--p-surface-100);
+
   --budojo-motion-fast: 160ms;
   --budojo-motion-base: 240ms;
   --budojo-motion-slow: 360ms;
@@ -267,10 +308,30 @@
   --budojo-danger: #ff3b30;
   --budojo-info: #0a84ff;
 
-  // Soft-danger surface — used by the row-level "delete" button variant
+  // ───── Status chips: a soft fill and the ink that sits on it ─────
+  //
+  // The four `p-tag` severities and the soft-destructive button shipped as
+  // eight raw hexes in `budojo-variants.scss`, chosen for a white page (#1793).
+  // A pastel fill does not survive a theme flip: on a near-black roster every
+  // paid/unpaid chip came out as a near-white block with dark text, which is
+  // the loudest thing on the screen and means nothing.
+  //
+  // The light values below are the literals they replace, to the digit — this
+  // is a move, not a retune. Dark gets a tint of the same hue and a light ink,
+  // each pair verified against `text-contrast.spec.ts`'s arithmetic rather
+  // than picked by eye. Declared as plain hexes on purpose: `color-mix` would
+  // read nicely here and would be invisible to that guard.
+  --budojo-success-soft: #e7f7ea;
+  --budojo-success-ink: #188038;
+  --budojo-warning-soft: #fff3e0;
+  --budojo-warning-ink: #b45309;
+  // Soft-danger surface — also used by the row-level "delete" button variant
   // (canon § Button matrix → destructive (soft)). Defined alongside the
   // hard danger so both render through tokens, not string literals.
   --budojo-danger-soft: #ffe5e3;
+  --budojo-danger-ink: #b42318;
+  --budojo-info-soft: #e1efff;
+  --budojo-info-ink: #0a67d9;
 }
 
 // Page padding scales up at the sidebar breakpoint — see `--budojo-page-
@@ -325,6 +386,70 @@
   // the doc was right and the code had drifted. 5.59:1 was already passing,
   // so this buys 8.25:1 and, more usefully, removes the disagreement.
   --p-text-muted-color: var(--p-surface-600);
+
+  // A LIGHT hairline in dark, for the reason spelled out beside the light
+  // value: a black edge around a black belt on a #1c1c1e row is 1.04:1, which
+  // is not an edge, it is nothing. The belt colours themselves never move.
+  --budojo-belt-edge: rgb(255 255 255 / 22%);
+
+  // The other half of the window chrome (#1793). `titleBarOverlay.color` is
+  // repainted to match from `ThemeService.apply()` via the shell bridge —
+  // moving this without that leaves a light rectangle around the buttons,
+  // which is precisely what `styles.scss` had warned about in writing.
+  --budojo-titlebar-background: #151517;
+
+  // The topbar, from the other end of the ramp — see the light block. Taking
+  // `surface-900` literally here is what put a white bar across the top of
+  // the phone; the elevated cell is what "chrome" means when the page is
+  // already dark.
+  --budojo-chrome-background: var(--p-surface-0);
+  --budojo-chrome-color: var(--p-surface-900);
+  --budojo-chrome-border: var(--p-content-border-color);
+  --budojo-chrome-hover: var(--p-surface-200);
+
+  // `surface-200`, not `surface-100`: in this ramp `--p-surface-100` IS
+  // `--p-content-background`, so the light theme's choice put the skeleton at
+  // exactly the colour of the card it was loading on. Zero delta, no shimmer,
+  // an app that reads as frozen.
+  --budojo-skeleton-background: var(--p-surface-200);
+
+  // The sheet's top edge. A black drop shadow does nothing against a near-
+  // black page — it measured 1.16:1, so on mobile the bottom sheet had no top
+  // edge at all and appeared to be the page. The hairline is what separates
+  // it; the shadow stays for the depth it still buys below.
+  --budojo-elevation-sheet: 0 -1px 0 rgb(255 255 255 / 14%), 0 -24px 48px rgb(0 0 0 / 60%);
+
+  // Status chips — see the light block for why these are tokens at all. Each
+  // ink clears 4.5:1 on its own fill (6.4–9.2), and each fill is a comparable
+  // step off the card to the one the light pastels make off white.
+  --budojo-success-soft: #12301d;
+  --budojo-success-ink: #5be07f;
+  --budojo-warning-soft: #3a2508;
+  --budojo-warning-ink: #ffc46b;
+  --budojo-danger-soft: #431d1a;
+  --budojo-danger-ink: #ff8a80;
+  --budojo-info-soft: #0e2a45;
+  --budojo-info-ink: #7ab8ff;
+
+  // Overlay surfaces (#1793). Our dark ramp runs dark→light (surface-0 is the
+  // grouped-list cell, surface-900 is near-white text), which is what lets
+  // the semantic tokens above resolve without being restated. PrimeNG's own
+  // dark theme picks its overlay backgrounds by surface INDEX, expecting the
+  // opposite direction — so the dialog came out at #f2f2f7, a white sheet on
+  // a dark page with near-white text on it, two options invisible.
+  //
+  // Declared rather than the ramp reversed: nineteen semantics depend on the
+  // current direction and every one of them resolves correctly. The mismatch
+  // is only where PrimeNG reaches past our semantics into the scale itself.
+  --p-overlay-modal-background: var(--p-surface-0);
+  --p-overlay-modal-color: var(--p-surface-900);
+  --p-overlay-modal-border-color: var(--p-surface-200);
+  --p-overlay-popover-background: var(--p-surface-0);
+  --p-overlay-popover-color: var(--p-surface-900);
+  --p-overlay-popover-border-color: var(--p-surface-200);
+  --p-overlay-select-background: var(--p-surface-0);
+  --p-overlay-select-color: var(--p-surface-900);
+  --p-overlay-select-border-color: var(--p-surface-200);
 
   --p-mask-background: rgba(0, 0, 0, 0.52);
 
@@ -534,7 +659,7 @@
 // Skeleton — subtle iOS shimmer
 .p-skeleton {
   border-radius: var(--p-border-radius-sm);
-  background: var(--p-surface-100);
+  background: var(--budojo-skeleton-background);
 }
 
 @keyframes budojo-sheet-in {

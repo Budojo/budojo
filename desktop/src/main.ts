@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, Notification, protocol, safeStorage, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, Notification, protocol, safeStorage, shell } from 'electron';
 import { createWriteStream, existsSync, readFileSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -20,6 +20,13 @@ import { TokenVault } from './token-vault.js';
 import { PeriodicTask } from './periodic-task.js';
 import { contentTypeFor, resolveAppRequest } from './protocol.js';
 import { decodeRecoveryCode, encodeRecoveryCode } from './recovery-keys.js';
+import {
+  isResolvedTheme,
+  resolveBootTheme,
+  serialiseTheme,
+  titleBarOverlayFor,
+  windowBackgroundFor,
+} from './titlebar-theme.js';
 import {
   idleUpdateStatus,
   onCheckStarted,
@@ -199,20 +206,87 @@ function attachRendererLogging(window: BrowserWindow): void {
   });
 }
 
+/**
+ * The theme that was on screen when the app last closed, if any (#1793).
+ *
+ * Synchronous because `createWindow` is: the value is needed to construct the
+ * `BrowserWindow`, not after it. A missing or unreadable file is not an error
+ * — it is a first launch, and `resolveBootTheme` falls through to the OS.
+ */
+function readThemeFile(): string | null {
+  const file = dataLayout(app.getPath('userData')).themeFile;
+
+  try {
+    return existsSync(file) ? readFileSync(file, 'utf8') : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Keeps the native window chrome in step with the SPA's theme (#1793).
+ *
+ * `titleBarOverlay` is native paint sitting on top of the web content. It does
+ * not inherit, does not cascade, and cannot see the `.dark` class the renderer
+ * toggles on `<html>` — so without this handler, choosing Dark left a #fafafa
+ * bar welded across the top of a near-black app, with the version button
+ * inside it at 2.12:1. That is on Windows, which is the only platform that
+ * ships.
+ *
+ * The renderer sends the **resolved** theme, never the preference: `system` is
+ * a question the SPA has already answered by the time it calls, and the shell
+ * has no business answering it a second time and differently.
+ */
+function registerThemeBridge(): void {
+  const themeFile = dataLayout(app.getPath('userData')).themeFile;
+
+  ipcMain.handle('budojo:theme:apply', async (event, theme: unknown) => {
+    if (!isResolvedTheme(theme)) return { ok: false };
+
+    const window = BrowserWindow.fromWebContents(event.sender);
+    try {
+      // Windows only. On a Linux dev run this throws rather than no-opping,
+      // and a dev machine that cannot paint a title bar is not a reason to
+      // fail the call — the persisted value below still matters.
+      window?.setTitleBarOverlay(titleBarOverlayFor(theme));
+    } catch {
+      // see above
+    }
+
+    // Persisted so the NEXT launch opens at the right colour. Best-effort: a
+    // failed write costs one white flash, which is not worth surfacing to
+    // someone who just picked a theme.
+    try {
+      await writeFile(themeFile, serialiseTheme(theme), 'utf8');
+    } catch {
+      // see above
+    }
+
+    return { ok: true };
+  });
+}
+
 function createWindow(apiBase: string): BrowserWindow {
+  // What was on screen last run, or what the OS asks for on a first launch
+  // (#1793). Read here rather than after boot because both values below are
+  // consumed before any renderer exists — asking the SPA would be a frame too
+  // late, and a frame is exactly how long a white flash lasts.
+  const boot = resolveBootTheme(readThemeFile(), nativeTheme.shouldUseDarkColors);
+
   const window = new BrowserWindow({
     width: 1280,
     height: 860,
     minWidth: 960,
     minHeight: 600,
     show: false,
-    // The page surface token (`--p-surface-50`), not a colour of our own. The
-    // window paints this before the renderer draws, so any mismatch is a flash
-    // of the wrong colour at every launch. It used to be a dark navy while the
-    // app's theme is light — and because the page painted no background of its
-    // own, that navy stayed visible *underneath* the light theme, which is why
-    // the app looked like dark-text-on-dark. Fixed on both sides.
-    backgroundColor: '#fafafa',
+    // The page surface token (`--p-surface-50`) for the booting theme, not a
+    // colour of our own. The window paints this before the renderer draws, so
+    // any mismatch is a flash of the wrong colour at every launch. It used to
+    // be a dark navy while the app's theme is light — and because the page
+    // painted no background of its own, that navy stayed visible *underneath*
+    // the light theme, which is why the app looked like dark-text-on-dark.
+    // Fixed on both sides; since #1793 it also follows the theme.
+    backgroundColor: windowBackgroundFor(boot),
     title: 'Budojo',
     // Native window controls, our colours. `frame: false` would mean
     // reimplementing minimise / maximise / close, and with them snap layouts,
@@ -220,26 +294,13 @@ function createWindow(apiBase: string): BrowserWindow {
     // for free — a custom title bar gets those subtly wrong. Hiding the frame
     // and painting the overlay keeps the real buttons and drops the chrome.
     titleBarStyle: 'hidden',
-    titleBarOverlay: {
-      color: '#fafafa',
-      symbolColor: '#1c1c1e',
-      // Deliberately ONE PIXEL SHORTER than `--budojo-titlebar-height` (40px,
-      // client/src/styles.scss). Not a mismatch to tidy up — see #1424.
-      //
-      // The strip's hairline is a `border-bottom` on a `box-sizing: border-box`
-      // element, so it is the LAST pixel row inside the 40, not a 41st. This
-      // overlay is native paint sitting on top of the web content, so at
-      // height 40 it covered rows 0-39 and took the border with it: the line
-      // ran across the window and stopped dead where the buttons begin, which
-      // is exactly what the alpha tester reported twice. At 39 the overlay
-      // stops one row short and the border runs edge to edge.
-      //
-      // The buttons sitting a pixel higher is the right relationship anyway —
-      // the border is the bar's bottom edge, and the buttons belong above it
-      // rather than across it. Content clearance is untouched: that comes from
-      // `--budojo-safe-top`, which still tracks the full 40.
-      height: 39,
-    },
+    // The colours and the 39px come from `titlebar-theme.ts`, which is the one
+    // place the shell and the stylesheet agree on this surface (#1793). The
+    // height is one pixel short of `--budojo-titlebar-height` on purpose —
+    // #1424, explained there — and the overlay is repainted on every theme
+    // change by `registerThemeBridge`, because this value is native paint and
+    // cannot read the `.dark` class the renderer toggles.
+    titleBarOverlay: titleBarOverlayFor(boot),
     webPreferences: {
       preload: path.join(here, 'preload.cjs'),
       // The renderer runs untrusted-by-default: no Node, isolated context,
@@ -1066,6 +1127,9 @@ if (!gotTheLock) {
     registerTokenVault();
     registerRecoveryKeysBridge();
     registerUpdateBridge();
+    // Before the window exists, so the SPA's first `apply()` — which runs
+    // during Angular's bootstrap — has a handler to reach (#1793).
+    registerThemeBridge();
 
     // Registered before the runtime starts, and independent of it: an install
     // that cannot boot its API should still be able to update itself out of

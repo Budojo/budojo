@@ -7,6 +7,14 @@
     "english": "English",
     "italian": "Italiano"
   },
+  "theme": {
+    "label": "Appearance",
+    "system": "Follow the system",
+    "light": "Light",
+    "dark": "Dark",
+    "nowDark": "currently dark",
+    "nowLight": "currently light"
+  },
   "search": {
     "placeholder": "Search athletes by name…",
     "ariaInput": "Search athletes",

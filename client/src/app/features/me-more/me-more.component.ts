@@ -3,6 +3,8 @@ import { Router, RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { AuthService } from '../../core/services/auth.service';
 import { LanguageService } from '../../core/services/language.service';
+import { ThemeService } from '../../core/services/theme.service';
+import { ThemeSheetComponent } from '../../shared/components/theme-sheet/theme-sheet.component';
 import { LanguageSheetComponent } from '../../shared/components/language-sheet/language-sheet.component';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { VERSION } from '../../../environments/version';
@@ -18,7 +20,13 @@ import { VERSION } from '../../../environments/version';
   selector: 'app-me-more',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [PageHeaderComponent, RouterLink, TranslatePipe, LanguageSheetComponent],
+  imports: [
+    PageHeaderComponent,
+    RouterLink,
+    TranslatePipe,
+    LanguageSheetComponent,
+    ThemeSheetComponent,
+  ],
   templateUrl: './me-more.component.html',
   styleUrl: './me-more.component.scss',
 })
@@ -31,9 +39,15 @@ export class MeMoreComponent {
   protected readonly currentLang = this.languageService.currentLang;
   protected readonly versionTag = VERSION.tag;
   protected readonly languageSheet = viewChild.required(LanguageSheetComponent);
+  protected readonly themeSheet = viewChild.required(ThemeSheetComponent);
+  protected readonly themePreference = inject(ThemeService).preference;
 
   protected openLanguage(): void {
     this.languageSheet().open();
+  }
+
+  protected openTheme(): void {
+    this.themeSheet().open();
   }
 
   protected signOut(): void {

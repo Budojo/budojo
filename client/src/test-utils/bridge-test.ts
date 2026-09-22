@@ -36,6 +36,7 @@ interface BridgeOverrides {
   folder?: Partial<Bridge['folder']>;
   keys?: Partial<Bridge['keys']>;
   update?: Partial<Bridge['update']>;
+  theme?: Partial<Bridge['theme']>;
 }
 
 export function stubBridge(overrides: BridgeOverrides = {}): Bridge {
@@ -74,6 +75,9 @@ export function stubBridge(overrides: BridgeOverrides = {}): Bridge {
       check: async () => ({ ok: true }),
       installNow: async () => ({ ok: false }),
     },
+    theme: {
+      apply: async () => ({ ok: true }),
+    },
   };
 
   return {
@@ -85,5 +89,6 @@ export function stubBridge(overrides: BridgeOverrides = {}): Bridge {
     folder: { ...base.folder, ...overrides.folder },
     keys: { ...base.keys, ...overrides.keys },
     update: { ...base.update, ...overrides.update },
+    theme: { ...base.theme, ...overrides.theme },
   };
 }

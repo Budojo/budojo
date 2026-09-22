@@ -115,6 +115,12 @@ contextBridge.exposeInMainWorld('__BUDOJO__', {
       return () => ipcRenderer.removeListener(UPDATE_STATUS_CHANNEL, listener);
     },
   },
+  // Native window chrome (#1793). The title-bar overlay is painted by Windows,
+  // not by CSS, so the class the renderer toggles on <html> cannot reach it.
+  // The SPA pushes the RESOLVED theme here every time it applies one.
+  theme: {
+    apply: (theme: string) => ipcRenderer.invoke('budojo:theme:apply', theme),
+  },
   // Recovery keys (#1254). Export decrypts the keychain store into a copy-
   // pasteable code; import writes it back and the app relaunches under the new
   // keys. Async; not hot paths.
