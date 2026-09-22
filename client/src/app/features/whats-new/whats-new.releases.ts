@@ -60,6 +60,76 @@ export function localised(value: Localised, lang: string): string {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.64.0',
+    date: '2026-09-22',
+    headline: {
+      en: 'The dark theme.',
+      it: 'Il tema scuro.',
+    },
+    sections: [
+      {
+        heading: {
+          en: 'Where it is',
+          it: 'Dove si trova',
+        },
+        bullets: [
+          {
+            en: '**More → Appearance.** Three choices, not a switch: **Follow the system** (the default — the app goes dark when your phone or computer does, and comes back light in the morning), **Light**, and **Dark**. "Follow the system" also says which way it currently lands, because it is the only one of the three whose name does not already tell you what you will see.',
+            it: '**Altro → Aspetto.** Tre scelte, non un interruttore: **Segui il sistema** (il predefinito — l’app si scurisce quando si scurisce il telefono o il computer, e torna chiara al mattino), **Chiaro** e **Scuro**. «Segui il sistema» dice anche com’è adesso, perché è l’unica delle tre il cui nome non dice già cosa vedrai.',
+          },
+          {
+            en: 'The choice survives a restart. On the desktop the app now **opens** at the right colour — no white flash at launch.',
+            it: 'La scelta resta dopo il riavvio. Sul desktop l’app **si apre già** del colore giusto: niente lampo bianco al lancio.',
+          },
+        ],
+      },
+      {
+        heading: {
+          en: 'Why it was needed',
+          it: 'Perché serviva',
+        },
+        bullets: [
+          {
+            en: 'A gym in the evening, lights down, a white app in your hand at the side of the mat. That is when attendance gets marked, and until now it was also when the app hurt to look at.',
+            it: 'Una palestra la sera, con le luci basse, e un’app bianca in mano a bordo tappeto. È il momento in cui si segna la presenza, e finora era anche il momento in cui l’app faceva male agli occhi.',
+          },
+        ],
+      },
+      {
+        heading: {
+          en: 'What turning it on found',
+          it: 'Cosa abbiamo trovato accendendolo',
+        },
+        bullets: [
+          {
+            en: 'A theme nobody could reach is a theme nobody had ever looked at. The top bar on the phone stayed white — a light strip pinned above a dark app, on the screen used most. On the desktop the window bar stayed white too, around the close and minimise buttons, permanently on Windows.',
+            it: 'Un tema che nessuno poteva raggiungere è un tema che nessuno ha mai guardato. La barra in alto del telefono restava bianca — una striscia chiara inchiodata sopra un’app scura, sulla schermata che si usa di più. Sul desktop restava bianca anche la barra della finestra, attorno ai pulsanti di chiudi e riduci a icona. Su Windows, in modo permanente.',
+          },
+          {
+            en: 'The status chips — paid, unpaid, expired, valid — were designed for a white page, so on a near-black roster they came out as pale blocks: the brightest thing on screen, saying something small. And the loading placeholders were exactly the colour of the card they appeared on, so the app read as frozen rather than busy.',
+            it: 'Le targhette di stato — pagato, non pagato, scaduto, valido — erano pensate per una pagina bianca, e su un elenco quasi nero uscivano come blocchi pallidi: la cosa più luminosa dello schermo, a dire una cosa piccola. E i riquadri di caricamento erano esattamente del colore della scheda su cui apparivano, quindi l’app sembrava bloccata invece che occupata.',
+          },
+          {
+            en: 'Also: the filters panel had no top edge, so sliding up it looked like the page rather than a panel; the belt spine lost its footing; a video was framed in white; rows flashed white under the cursor. All fixed, with an automatic check that stops this family of mistakes coming back.',
+            it: 'Inoltre: il pannello dei filtri non aveva un bordo superiore, quindi scivolando su sembrava la pagina invece che un pannello; la cintura perdeva il suo fermo; un video aveva la cornice bianca; le righe lampeggiavano di bianco al passaggio del mouse. Sistemate tutte, con un controllo automatico che impedisce a questa famiglia di errori di rientrare.',
+          },
+        ],
+      },
+      {
+        heading: {
+          en: 'The light theme did not change',
+          it: 'Il chiaro non è cambiato',
+        },
+        bullets: [
+          {
+            en: 'Not by a pixel. Every colour in the light theme is the one it was, digit for digit.',
+            it: 'Nemmeno di un pixel. Ogni colore del tema chiaro è rimasto quello di prima, cifra per cifra.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.63.1',
     date: '2026-09-22',
     headline: {
