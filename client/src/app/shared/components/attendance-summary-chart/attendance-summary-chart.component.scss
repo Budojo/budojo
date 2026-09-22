@@ -57,7 +57,7 @@
   &__counts {
     margin: 0;
     font-size: 0.875rem;
-    color: var(--p-text-color-secondary);
+    color: var(--p-text-muted-color);
     text-align: center;
   }
 
@@ -87,7 +87,7 @@
     align-items: center;
     gap: 0.5rem;
     padding: 2rem 1rem;
-    color: var(--p-text-color-secondary);
+    color: var(--p-text-muted-color);
     text-align: center;
 
     i {

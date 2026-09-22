@@ -83,7 +83,16 @@
 
   --p-text-color: var(--p-surface-900);
   --p-text-hover-color: var(--p-surface-900);
-  --p-text-muted-color: var(--p-surface-500);
+  // `surface-600`, not `surface-500` (#1786). This token paints 212 call
+  // sites of 12-14px text — timestamps, helper lines, column headers,
+  // empty-state copy, the out-of-scope dashes on the ledger — and at
+  // `surface-500` (#8e8e93) it measured 3.26:1 on white, 3.12 on the app
+  // background and 2.99 on a grouped cell. AA for body text is 4.5.
+  //
+  // The dark theme below was already right: the same role there is 5.59:1.
+  // One mode had taken the step and the other had not, which is why nothing
+  // looked obviously wrong in review.
+  --p-text-muted-color: var(--p-surface-600);
   --p-text-hover-muted-color: var(--p-surface-700);
 
   // ───── Overlay / mask (dialog, drawer backdrop) ─────────────────
@@ -124,7 +133,12 @@
   --p-form-field-hover-border-color: transparent;
   --p-form-field-focus-border-color: var(--p-primary-500);
   --p-form-field-color: var(--p-surface-900);
-  --p-form-field-placeholder-color: var(--p-surface-400);
+  // `surface-600` (#1786). At `surface-400` (#c4c4c9) on the resting field
+  // fill (#f5f5f7) this measured 1.60:1 — not "quiet", absent. A placeholder
+  // here is a functional format hint ("https://facebook.com/yourpage",
+  // "00100", "Via Roma 1"), so it has to be readable while somebody is
+  // typing real data next to it. Dark already used `surface-500` (5.22:1).
+  --p-form-field-placeholder-color: var(--p-surface-600);
   --p-form-field-border-radius: var(--p-border-radius-md);
   --p-form-field-padding-x: 12px;
   --p-form-field-padding-y: 12px;
@@ -306,7 +320,11 @@
   --p-content-color: var(--p-surface-900);
 
   --p-text-color: var(--p-surface-900);
-  --p-text-muted-color: var(--p-surface-500);
+  // `surface-600` here too (#1786). DESIGN_SYSTEM.md already documented the
+  // dark value as #aeaeb2 (surface-600) while the file shipped surface-500 —
+  // the doc was right and the code had drifted. 5.59:1 was already passing,
+  // so this buys 8.25:1 and, more usefully, removes the disagreement.
+  --p-text-muted-color: var(--p-surface-600);
 
   --p-mask-background: rgba(0, 0, 0, 0.52);
 

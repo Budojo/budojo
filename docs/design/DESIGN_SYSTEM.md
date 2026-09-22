@@ -20,14 +20,14 @@ A drop-in override layer for the `@primeuix/themes/material` preset that deliver
 | `--p-surface-200` | `#ebebef` | `#2c2c2e` | Resting rows, rails |
 | `--p-surface-300` | `#dcdce0` | `#3a3a3c` | Hairline dividers |
 | `--p-surface-400` | `#c4c4c9` | `#48484a` | Disabled glyphs |
-| `--p-surface-500` | `#8e8e93` | `#8e8e93` | Secondary text |
-| `--p-surface-600` | `#636366` | `#aeaeb2` | Tertiary text |
+| `--p-surface-500` | `#8e8e93` | `#8e8e93` | Hairlines, non-text marks. **Not text**: 3.26:1 on white, below the 4.5 AA floor (#1786) |
+| `--p-surface-600` | `#636366` | `#aeaeb2` | Secondary text |
 | `--p-surface-700` | `#3a3a3c` | `#c7c7cc` | High-emphasis |
 | `--p-surface-800` | `#1c1c1e` | `#e5e5ea` | Display |
 | `--p-surface-900` | `#0a0a0b` | `#f2f2f7` | Ink |
 | `--p-content-background` | `#ffffff` | `#1c1c1e` | Card/content bg |
 | `--p-text-color` | `#0a0a0b` | `#f2f2f7` | Primary text |
-| `--p-text-muted-color` | `#8e8e93` | `#aeaeb2` | Secondary text |
+| `--p-text-muted-color` | `#636366` | `#aeaeb2` | Secondary text. Both are `--p-surface-600`: at `surface-500` the light value measured 3.26:1 on white, below the 4.5 AA floor, across 212 call sites (#1786) |
 | `--p-mask-background` | `rgba(10,10,11,.32)` | `rgba(0,0,0,.52)` | Modal scrim |
 | `--budojo-success` | `#34c759` | same | iOS system green |
 | `--budojo-warning` | `#ff9f0a` | same | iOS system orange |
@@ -234,7 +234,7 @@ copy, **open the real file**.
   --p-content-color:             var(--p-surface-900);
   --p-text-color:                var(--p-surface-900);
   --p-text-hover-color:          var(--p-surface-900);
-  --p-text-muted-color:          var(--p-surface-500);
+  --p-text-muted-color:          var(--p-surface-600);
   --p-text-hover-muted-color:    var(--p-surface-700);
 
   // ---- Overlay / mask ----
@@ -252,7 +252,7 @@ copy, **open the real file**.
   --p-form-field-focus-border-color:      var(--p-primary-color);
   --p-form-field-invalid-border-color:    #ff3b30;
   --p-form-field-color:                   var(--p-surface-900);
-  --p-form-field-placeholder-color:       var(--p-surface-500);
+  --p-form-field-placeholder-color:       var(--p-surface-600); // light; dark keeps surface-500 (#1786)
   --p-form-field-padding-x:               14px;
   --p-form-field-padding-y:               12px;
   --p-form-field-border-radius:           12px;
@@ -906,4 +906,6 @@ Check-in mechanic: tap anywhere on the row toggles the circle → filled accent 
 - **Status-bar style.** In `manifest.webmanifest` use `"theme_color": "#ffffff"` light / `"#000000"` dark; in `index.html` set `<meta name="apple-mobile-web-app-status-bar-style" content="default">` so iOS blends the status bar into the header — matches the Apple-minimal look.
 - **Viewport meta:** include `viewport-fit=cover` so safe-area insets report correctly:
   `<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">`.
-- **Touch target floor:** canon is ≥48 CSS px. For supplementary controls (toolbar chevrons, close x) 44 is allowed but wrap them in a 48-dp hit region with `padding`, don't shrink the target.
+- **Touch target floor:** canon is ≥48 CSS px. For supplementary controls (toolbar chevrons, close x) 44 is allowed but wrap them in a 48-dp hit region, don't shrink the target.
+  - **Two ways to build the region, and the choice is not free.** `padding` grows the painted box with it, which is right where the control's surface *should* be 48 — `.topbar__user-link` is built that way. A transparent `::after` with a negative `inset` leaves the paint alone, which is right where growing it would be wrong: the notification bell is shared with the athlete shell, whose topbar is `min-height: 3.5rem` and whose avatar is 32px, and its unread pill is positioned against the painted box; the filter sheet's close ✕ would otherwise wear a 48px hover circle as the quietest control on the panel. Reference implementations: `filter-sheet__close`, `notification-bell`, and the shared `toolbar-control` mixin (#1786).
+  - Put it in the **mixin**, not the consumers, when a family shares one. `toolbar-control` has six.

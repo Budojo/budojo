@@ -20,7 +20,7 @@
   &__subtitle {
     margin: 0;
     font-size: 0.875rem;
-    color: var(--p-text-color-secondary);
+    color: var(--p-text-muted-color);
   }
 
   &__state {
@@ -29,7 +29,7 @@
     align-items: center;
     gap: 0.5rem;
     padding: 1.5rem 0;
-    color: var(--p-text-color-secondary);
+    color: var(--p-text-muted-color);
 
     &--error {
       color: var(--p-red-500, #ef4444);
@@ -102,7 +102,7 @@
   }
 
   &__group-chevron {
-    color: var(--p-text-color-secondary);
+    color: var(--p-text-muted-color);
     font-size: 1rem;
     transition: transform var(--budojo-motion-duration-quick, 0.16s)
       var(--budojo-motion-easing-standard, cubic-bezier(0.2, 0, 0, 1));
@@ -165,7 +165,7 @@
   &__description {
     margin: 0;
     font-size: 0.8125rem;
-    color: var(--p-text-color-secondary);
+    color: var(--p-text-muted-color);
   }
 
   &__transactional {
@@ -189,7 +189,7 @@
   &__transactional-subtitle {
     margin: 0;
     font-size: 0.8125rem;
-    color: var(--p-text-color-secondary);
+    color: var(--p-text-muted-color);
   }
 
   &__transactional-list {
@@ -209,7 +209,7 @@
     color: var(--p-text-color);
 
     i {
-      color: var(--p-text-color-secondary);
+      color: var(--p-text-muted-color);
       font-size: 0.875rem;
     }
   }

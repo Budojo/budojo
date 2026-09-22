@@ -93,7 +93,10 @@
     background: var(--p-primary-color);
     color: var(--p-primary-contrast-color);
     font-weight: 500;
-    transition: filter var(--budojo-motion-fast) var(--budojo-motion-ease);
+    // `--budojo-motion-ease` does not exist — only fast / base / slow /
+    // decelerate do — and an undefined `var()` with no fallback invalidates
+    // the whole declaration, so this transition never ran (#1786).
+    transition: filter var(--budojo-motion-fast) var(--budojo-motion-decelerate);
   }
 
   &:hover &__button {

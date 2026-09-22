@@ -130,7 +130,7 @@ app-brand-glyph.rail__logo {
     font-size: 1.25rem;
     width: 1.5rem;
     text-align: center;
-    color: var(--p-text-color-secondary);
+    color: var(--p-text-muted-color);
   }
 
   &:hover {
@@ -197,7 +197,7 @@ app-brand-glyph.rail__logo {
 
 .rail__profile-handle {
   font-size: 0.8125rem;
-  color: var(--p-text-color-secondary);
+  color: var(--p-text-muted-color);
 }
 
 // Keyboard focus ring: the branded ring comes from the GLOBAL :focus-visible

@@ -81,7 +81,7 @@
 
   &__subtitle {
     margin: 0;
-    color: var(--p-text-color-secondary);
+    color: var(--p-text-muted-color);
     font-size: 1rem;
     line-height: 1.5;
     max-width: 44rem;
@@ -141,7 +141,7 @@
     p,
     li {
       line-height: 1.55;
-      color: var(--p-text-color-secondary);
+      color: var(--p-text-muted-color);
     }
 
     ol,

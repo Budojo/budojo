@@ -150,12 +150,12 @@
   }
 
   &__author-handle {
-    color: var(--p-text-color-secondary);
+    color: var(--p-text-muted-color);
     font-size: 0.875rem;
   }
 
   &__time {
-    color: var(--p-text-color-secondary);
+    color: var(--p-text-muted-color);
     font-size: 0.8125rem;
     margin-left: auto;
   }
@@ -191,7 +191,7 @@
   &__event-time,
   &__event-location {
     margin: 0;
-    color: var(--p-text-color-secondary);
+    color: var(--p-text-muted-color);
     font-size: 0.9375rem;
     display: inline-flex;
     align-items: center;
@@ -339,7 +339,7 @@
   // surface; styled subtly to read as a secondary touch zone (no font
   // weight, secondary text color) so the toggle stays the primary CTA.
   &__react-count {
-    color: var(--p-text-color-secondary);
+    color: var(--p-text-muted-color);
     font-size: 0.8125rem;
     font-variant-numeric: tabular-nums;
     // Hairline separator on the left edge — visually distinguishes the
@@ -447,7 +447,7 @@
   }
 
   &__page-label {
-    color: var(--p-text-color-secondary);
+    color: var(--p-text-muted-color);
     font-size: 0.875rem;
   }
 }
