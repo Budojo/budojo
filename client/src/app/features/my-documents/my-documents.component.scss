@@ -53,7 +53,7 @@
   }
 
   &__type {
-    color: var(--p-text-color-secondary);
+    color: var(--p-text-muted-color);
     font-size: 0.875rem;
     text-transform: capitalize;
   }
@@ -64,7 +64,7 @@
   }
 
   &__expiry {
-    color: var(--p-text-color-secondary);
+    color: var(--p-text-muted-color);
     font-size: 0.8125rem;
     display: inline-flex;
     align-items: center;
@@ -84,7 +84,7 @@
   }
 
   &__empty {
-    color: var(--p-text-color-secondary);
+    color: var(--p-text-muted-color);
     text-align: center;
     padding: 2rem 1rem;
   }

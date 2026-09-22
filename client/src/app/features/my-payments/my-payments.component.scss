@@ -65,18 +65,18 @@
   }
 
   &__paid-on {
-    color: var(--p-text-color-secondary);
+    color: var(--p-text-muted-color);
     font-size: 0.8125rem;
   }
 
   &__unpaid {
-    color: var(--p-text-color-secondary);
+    color: var(--p-text-muted-color);
     font-style: italic;
     grid-column: 2 / -1;
   }
 
   &__empty {
-    color: var(--p-text-color-secondary);
+    color: var(--p-text-muted-color);
     text-align: center;
     padding: 2rem 1rem;
   }

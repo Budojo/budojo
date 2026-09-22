@@ -11,7 +11,11 @@
   font-size: 0.875rem;
   line-height: 1.25;
   border: 1px solid var(--p-content-border-color);
-  transition: background-color var(--budojo-motion-quick) var(--budojo-motion-easing);
+  // Neither `--budojo-motion-quick` nor `--budojo-motion-easing` exists —
+  // only fast / base / slow / decelerate do — and an undefined `var()` with
+  // no fallback invalidates the whole declaration, so this transition never
+  // ran (#1786). Two ghost names in one line is why nobody noticed.
+  transition: background-color var(--budojo-motion-fast) var(--budojo-motion-decelerate);
 
   i {
     font-size: 1rem;

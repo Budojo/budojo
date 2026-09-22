@@ -93,7 +93,7 @@
     font-size: 0.8125rem;
     font-weight: 600;
     letter-spacing: 0.04em;
-    color: var(--p-text-color-secondary);
+    color: var(--p-text-muted-color);
     cursor: pointer;
     transition:
       border-color 160ms var(--budojo-motion-decelerate),
@@ -131,7 +131,7 @@
     margin: 0;
     font-size: 1.0625rem;
     line-height: 1.6;
-    color: var(--p-text-color-secondary);
+    color: var(--p-text-muted-color);
     // A readable measure. The old page ran this to the full 80rem container,
     // which at desktop width is roughly 140 characters a line.
     max-width: 54ch;
@@ -197,7 +197,7 @@
     height: 2rem;
     border-radius: var(--p-border-radius-full);
     background: var(--p-surface-100);
-    color: var(--p-text-color-secondary);
+    color: var(--p-text-muted-color);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -219,7 +219,7 @@
   &__step-body {
     font-size: 0.9375rem;
     line-height: 1.5;
-    color: var(--p-text-color-secondary);
+    color: var(--p-text-muted-color);
   }
 
   // ============================================================
@@ -246,7 +246,7 @@
     gap: 1rem 1.25rem;
 
     a {
-      color: var(--p-text-color-secondary);
+      color: var(--p-text-muted-color);
       text-decoration: none;
       font-size: 0.875rem;
       font-weight: 500;
@@ -260,6 +260,6 @@
   &__footer-meta {
     margin: 0;
     font-size: 0.8125rem;
-    color: var(--p-text-color-secondary);
+    color: var(--p-text-muted-color);
   }
 }

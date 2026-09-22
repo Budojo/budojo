@@ -7,6 +7,9 @@
   // matches the toolbar's other icon buttons so the strip reads as one row of
   // controls rather than a chip with buttons after it.
   &__chip {
+    // 44px painted, 48px pressable (#1786) — the same treatment the toolbar
+    // family and the sheet's own close button now carry.
+    position: relative;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -21,7 +24,13 @@
     font-size: 0.875rem;
     font-weight: 500;
     cursor: pointer;
-    transition: background var(--budojo-motion-duration-fast, 160ms) ease;
+    transition: background var(--budojo-motion-fast) var(--budojo-motion-decelerate);
+
+    &::after {
+      content: '';
+      position: absolute;
+      inset: -0.125rem;
+    }
 
     &:hover {
       background: var(--p-surface-100, #f3f4f6);
@@ -29,7 +38,7 @@
 
     i {
       font-size: 1rem;
-      color: var(--p-text-color-secondary);
+      color: var(--p-text-muted-color);
     }
   }
 
@@ -90,16 +99,32 @@
   }
 
   &__close {
+    // 44px painted, 48px pressable (#1786). `DESIGN_SYSTEM.md:909` allows 44
+    // for a supplementary control like a close ✕ **only** when it is wrapped
+    // in a 48-dp hit region; it shipped at 2rem / 32px with neither.
+    //
+    // The region is a transparent `::after` rather than padding, which is how
+    // `.topbar__user-link` does it. There the paint growing with the padding
+    // is welcome; here it would put a 48px hover circle on a ✕ in a sheet
+    // header, which is a heavy mark for the quietest control on the panel.
+    position: relative;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 2rem;
-    height: 2rem;
+    width: 2.75rem;
+    height: 2.75rem;
     border: 0;
     border-radius: 999px;
     background: transparent;
-    color: var(--p-text-color-secondary);
+    color: var(--p-text-muted-color);
     cursor: pointer;
+
+    &::after {
+      content: '';
+      position: absolute;
+      // (48 - 44) / 2 = 2px on each side.
+      inset: -0.125rem;
+    }
 
     &:hover {
       background: var(--p-surface-100, #f3f4f6);

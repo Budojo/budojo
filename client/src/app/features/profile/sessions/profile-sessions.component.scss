@@ -33,7 +33,7 @@
   &__subtitle {
     margin: 0;
     font-size: 0.875rem;
-    color: var(--p-text-color-secondary);
+    color: var(--p-text-muted-color);
   }
 
   &__state {
@@ -42,7 +42,7 @@
     align-items: center;
     gap: 0.5rem;
     padding: 1.5rem 0;
-    color: var(--p-text-color-secondary);
+    color: var(--p-text-muted-color);
 
     &--error {
       color: var(--p-red-500, #ef4444);
@@ -125,6 +125,6 @@
   &__last-used {
     margin: 0;
     font-size: 0.8125rem;
-    color: var(--p-text-color-secondary);
+    color: var(--p-text-muted-color);
   }
 }

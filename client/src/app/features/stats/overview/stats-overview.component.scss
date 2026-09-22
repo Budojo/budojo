@@ -25,7 +25,11 @@
 .stats-card {
   background: var(--p-content-background);
   border: 1px solid var(--p-content-border-color);
-  border-radius: var(--p-border-radius);
+  // `-md`, not the bare name (#1786): `--p-border-radius` does not exist —
+  // the scale is sm / md / lg — so with no fallback this declaration was
+  // invalid and the card rendered with square corners in a design system
+  // whose whole point is 12/16/24px radii.
+  border-radius: var(--p-border-radius-md);
   padding: 1.5rem;
   display: flex;
   flex-direction: column;

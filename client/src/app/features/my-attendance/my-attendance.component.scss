@@ -40,7 +40,7 @@
   }
 
   &__summary-label {
-    color: var(--p-text-color-secondary);
+    color: var(--p-text-muted-color);
     font-size: 0.875rem;
   }
 
@@ -70,12 +70,12 @@
 
   &__notes {
     margin: 0;
-    color: var(--p-text-color-secondary);
+    color: var(--p-text-muted-color);
     font-size: 0.875rem;
   }
 
   &__empty {
-    color: var(--p-text-color-secondary);
+    color: var(--p-text-muted-color);
     text-align: center;
     padding: 2rem 1rem;
   }

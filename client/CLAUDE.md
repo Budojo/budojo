@@ -112,6 +112,31 @@ The SPA runs `@ngx-translate/core` with a synchronous bundled-JSON loader. EN is
 
 Roadmap (#271) adds Spanish + German next; framework is multi-locale-ready.
 
+### The anti-slop check (#1786)
+
+A borrowed catalogue, scoped on purpose. The [`design-taste-frontend`](https://github.com/Leonxlnx/taste-skill) skill is a list of the shapes an interface takes when nobody decided anything — the patterns that read as *generated* rather than designed. Its own § 13 says it is **not** for dashboards, data tables or multi-step product UI, which is what Budojo is. So it does not govern here, and it is not installed as a rule.
+
+What we took from it is the part that survives outside a landing page: **craft that is true of any interface**. Run it as a check, not as a style.
+
+- **Contrast is arithmetic, not taste.** Every semantic text token clears WCAG AA (4.5:1 body, 3:1 large) against every surface it is painted on, **in both themes**. `shared/styles/text-contrast.spec.ts` computes it from `budojo-theme.scss` and fails the build. This is how `--p-text-muted-color` shipped at 3.26:1 across 212 call sites: it lints, type-checks, renders and screenshots perfectly, and a washy grey looks like a decision in every frame.
+- **The touch-target floor is a floor.** ≥48 CSS px. 44 is allowed for a supplementary control (a close ✕, a toolbar chevron) **only** wrapped in a 48-dp hit region. Two adjacent round controls where one is under the floor is a mis-tap generator, not a spec-sheet complaint.
+- **One icon family, one stroke weight**, no hand-drawn SVG paths, no emoji standing in for a glyph.
+- **One accent, used identically.** In product UI the accent carries meaning — primary action, selected row, active nav — so a second one is not merely inconsistent, it is ambiguous.
+- **A card only where elevation says something.** Otherwise group with a hairline, a divider or space. Card-on-card is how a screen stops having a focal point.
+- **One radius system**, or a written rule that is then followed everywhere.
+- **Ship the whole interaction cycle**, not the happy static state: skeletons shaped like the result, empty states that say how to fill them, inline form errors, a tactile `:active`.
+- **Placeholder content is honest content.** No fake-perfect numbers, no "Acme", no filler verbs. Our fixtures are read by us far more often than by anyone else, and a `99.99%` in a screenshot teaches the wrong thing about the product.
+
+**What we rejected, and why** — recorded so nobody re-litigates it from the skill's text:
+
+| Its rule | Our call |
+|---|---|
+| **Zero em-dashes, "non-negotiable"** | **No.** The `—` is load-bearing in our Italian changelog and UI voice. Its ban exists because the em-dash is an LLM *tell* in marketing copy; ours is a deliberate register, applied by a person, in prose nobody mistakes for a landing page. |
+| **Avoid Inter as a default** | **No, for now.** The criticism is that Inter is what a model reaches for without deciding. We decided: it is a dense operational UI read at 12-15px on a phone in bad light, which is the case Inter is actually good at. Revisit as a typography decision on its own merits, not as an anti-slop one. |
+| Snap every font size to the scale, tighten eyebrow tracking, unify two legend shapes on routes that never co-occur | **No.** Each was verified real and judged invisible to an owner: sub-pixel differences, in files carrying screenshot coverage. Churn with a review cost and no user on the other end. |
+
+If a rule from the skill and a rule here ever disagree, **this file wins** — that is already the rule at the top of the root `CLAUDE.md`, and it is the whole reason the skill is a check rather than a canon.
+
 ### Red flags in code review
 
 A reviewer should push back when they see:

@@ -43,7 +43,7 @@
 
 .owner-more__row > i:first-child {
   font-size: 1.125rem;
-  color: var(--p-text-color-secondary);
+  color: var(--p-text-muted-color);
 }
 
 // Sign-out is the only destructive action on the hub, so it must LOOK
@@ -66,13 +66,13 @@
 }
 
 .owner-more__chevron {
-  color: var(--p-text-color-secondary);
+  color: var(--p-text-muted-color);
   font-size: 0.875rem;
 }
 
 // Trailing value (e.g. the current language) sits right-aligned before the chevron.
 .owner-more__value {
-  color: var(--p-text-color-secondary);
+  color: var(--p-text-muted-color);
   font-size: 0.875rem;
 }
 
@@ -103,13 +103,13 @@
   align-items: baseline;
   gap: 0.5rem;
   margin: 0;
-  color: var(--p-text-color-secondary);
+  color: var(--p-text-muted-color);
   font-size: 0.8125rem;
   line-height: 1.4;
 }
 
 .owner-more__footer-link {
-  color: var(--p-text-color-secondary);
+  color: var(--p-text-muted-color);
   text-decoration: none;
 
   &:hover,
