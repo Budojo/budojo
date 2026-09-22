@@ -1,0 +1,56 @@
+// The bottom-sheet chrome comes from the global `.p-dialog.bottom-sheet`
+// rule (#1109), the same way the language sheet gets it. Only the option
+// list lives here.
+.theme-sheet__options {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.theme-sheet__option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 0.5rem;
+  background: transparent;
+  border: 0;
+  text-align: left;
+  color: var(--p-text-color);
+  font-size: 1rem;
+  cursor: pointer;
+  border-radius: var(--p-border-radius-md);
+  transition: background var(--budojo-motion-fast) var(--budojo-motion-decelerate);
+}
+
+.theme-sheet__option:hover {
+  background: var(--p-content-hover-background);
+}
+
+.theme-sheet__option--active {
+  color: var(--p-primary-color);
+  font-weight: 600;
+}
+
+.theme-sheet__label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.theme-sheet__option > i {
+  color: var(--p-primary-color);
+}
+
+// The "currently light / currently dark" note under System. Muted, and one
+// step down in size: it is an answer to a question the label raises, not a
+// second label.
+.theme-sheet__resolved {
+  color: var(--p-text-muted-color);
+  font-size: 0.8125rem;
+  // Explicit, because the active option is 600 and this would inherit it:
+  // the answer to "which way does System land" should be the quietest thing
+  // on the row, and it was coming out bolder than the labels beside it.
+  font-weight: 400;
+}

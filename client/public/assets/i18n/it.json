@@ -7,6 +7,14 @@
     "english": "English",
     "italian": "Italiano"
   },
+  "theme": {
+    "label": "Aspetto",
+    "system": "Segui il sistema",
+    "light": "Chiaro",
+    "dark": "Scuro",
+    "nowDark": "ora scuro",
+    "nowLight": "ora chiaro"
+  },
   "search": {
     "placeholder": "Cerca atleti per nome…",
     "ariaInput": "Cerca atleti",

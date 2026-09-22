@@ -1,0 +1,47 @@
+<p-dialog
+  [visible]="isOpen()"
+  (visibleChange)="isOpen.set($event)"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [dismissableMask]="true"
+  [header]="'theme.label' | translate"
+  styleClass="bottom-sheet"
+  [style]="{ width: '24rem' }"
+  [breakpoints]="{ '768px': '100vw' }"
+>
+  <ul class="theme-sheet__options">
+    @for (opt of options; track opt.value) {
+      <li>
+        <button
+          type="button"
+          class="theme-sheet__option"
+          [class.theme-sheet__option--active]="preference() === opt.value"
+          [attr.aria-current]="preference() === opt.value ? 'true' : null"
+          (click)="select(opt.value)"
+          [attr.data-cy]="'theme-option-' + opt.value"
+        >
+          <span class="theme-sheet__label">
+            <i [class]="opt.icon" aria-hidden="true"></i>
+            <span>{{ opt.labelKey | translate }}</span>
+            <!--
+              Only `system` gets a sub-label, and only because it is the one
+              option whose name does not tell you what you will see. "Light"
+              and "Dark" are self-evident; "System" is a promise about
+              somewhere else, so it says which way that promise currently
+              lands (#1793).
+            -->
+            @if (opt.value === 'system') {
+              <span class="theme-sheet__resolved">{{
+                (resolved() === 'dark' ? 'theme.nowDark' : 'theme.nowLight') | translate
+              }}</span>
+            }
+          </span>
+          @if (preference() === opt.value) {
+            <i class="pi pi-check" aria-hidden="true"></i>
+          }
+        </button>
+      </li>
+    }
+  </ul>
+</p-dialog>

@@ -189,7 +189,12 @@
   // White and grey are the case that breaks a coloured bar: #f3f4f6 on a white
   // row is an invisible rectangle. A hairline gives it an edge without
   // inventing a colour the belt does not have.
-  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 12%);
+  //
+  // The hairline is a token because the case inverts with the theme (#1793):
+  // on dark, black and brown are the invisible ones — measured at 1.04:1 and
+  // 1.35:1 against the row — and a black edge does nothing for them. The
+  // belt colours stay exactly where they are; only the ground contact moves.
+  box-shadow: inset 0 0 0 1px var(--budojo-belt-edge, rgb(0 0 0 / 12%));
 
   // A real belt's stripes are tape wrapped horizontally around it near the
   // tip — bands the full width of the belt, not dots (#1429 review). Full

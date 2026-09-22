@@ -159,6 +159,13 @@
   --budojo-elevation-floating: 0 1px 2px rgba(10, 10, 11, 0.06), 0 8px 24px rgba(10, 10, 11, 0.12);
   --budojo-elevation-sheet: 0 -24px 48px rgba(10, 10, 11, 0.18);
 
+  // The hairline that gives a belt spine an edge against the row it sits on
+  // (#1793). The belt colours are domain constants and must not move — a
+  // black belt is black — so what adapts is the ground contact, not the
+  // belt. Dark needs a LIGHT hairline: a black edge around a black belt on a
+  // #1c1c1e row measures 1.04:1, which is not an edge, it is nothing.
+  --budojo-belt-edge: rgb(0 0 0 / 12%);
+
   --budojo-motion-fast: 160ms;
   --budojo-motion-base: 240ms;
   --budojo-motion-slow: 360ms;
@@ -324,6 +331,27 @@
   // dark value as #aeaeb2 (surface-600) while the file shipped surface-500 —
   // the doc was right and the code had drifted. 5.59:1 was already passing,
   // so this buys 8.25:1 and, more usefully, removes the disagreement.
+  --budojo-belt-edge: rgb(255 255 255 / 22%);
+
+  // Overlay surfaces (#1793). Our dark ramp runs dark→light (surface-0 is the
+  // grouped-list cell, surface-900 is near-white text), which is what lets
+  // the semantic tokens above resolve without being restated. PrimeNG's own
+  // dark theme picks its overlay backgrounds by surface INDEX, expecting the
+  // opposite direction — so the dialog came out at #f2f2f7, a white sheet on
+  // a dark page with near-white text on it, two options invisible.
+  //
+  // Declared rather than the ramp reversed: nineteen semantics depend on the
+  // current direction and every one of them resolves correctly. The mismatch
+  // is only where PrimeNG reaches past our semantics into the scale itself.
+  --p-overlay-modal-background: var(--p-surface-0);
+  --p-overlay-modal-color: var(--p-surface-900);
+  --p-overlay-modal-border-color: var(--p-surface-200);
+  --p-overlay-popover-background: var(--p-surface-0);
+  --p-overlay-popover-color: var(--p-surface-900);
+  --p-overlay-popover-border-color: var(--p-surface-200);
+  --p-overlay-select-background: var(--p-surface-0);
+  --p-overlay-select-color: var(--p-surface-900);
+  --p-overlay-select-border-color: var(--p-surface-200);
   --p-text-muted-color: var(--p-surface-600);
 
   --p-mask-background: rgba(0, 0, 0, 0.52);
