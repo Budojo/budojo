@@ -116,7 +116,7 @@ export interface BottomNavCenterAction {
         min-width: 48px;
         min-height: 48px;
         text-decoration: none;
-        color: var(--p-text-color-secondary);
+        color: var(--p-text-muted-color);
         font-size: 0.6875rem;
         transition: color var(--budojo-motion-fast) var(--budojo-motion-decelerate);
       }

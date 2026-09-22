@@ -7,6 +7,9 @@
   // matches the toolbar's other icon buttons so the strip reads as one row of
   // controls rather than a chip with buttons after it.
   &__chip {
+    // 44px painted, 48px pressable (#1786) — the same treatment the toolbar
+    // family and the sheet's own close button now carry.
+    position: relative;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -21,7 +24,13 @@
     font-size: 0.875rem;
     font-weight: 500;
     cursor: pointer;
-    transition: background var(--budojo-motion-duration-fast, 160ms) ease;
+    transition: background var(--budojo-motion-fast) var(--budojo-motion-decelerate);
+
+    &::after {
+      content: '';
+      position: absolute;
+      inset: -0.125rem;
+    }
 
     &:hover {
       background: var(--p-surface-100, #f3f4f6);
@@ -29,7 +38,7 @@
 
     i {
       font-size: 1rem;
-      color: var(--p-text-color-secondary);
+      color: var(--p-text-muted-color);
     }
   }
 
@@ -107,7 +116,7 @@
     border: 0;
     border-radius: 999px;
     background: transparent;
-    color: var(--p-text-color-secondary);
+    color: var(--p-text-muted-color);
     cursor: pointer;
 
     &::after {

@@ -32,7 +32,7 @@
   &__subtitle {
     margin: 0;
     font-size: 0.875rem;
-    color: var(--p-text-color-secondary);
+    color: var(--p-text-muted-color);
   }
 
   &__state {
@@ -42,7 +42,7 @@
     justify-content: center;
     gap: 0.5rem;
     padding: 2rem 0;
-    color: var(--p-text-color-secondary);
+    color: var(--p-text-muted-color);
 
     i {
       font-size: 1.75rem;
@@ -97,14 +97,14 @@
   &__chip {
     padding: 0.125rem 0.5rem;
     background: var(--p-surface-100);
-    color: var(--p-text-color-secondary);
+    color: var(--p-text-muted-color);
     border-radius: 999px;
     font-family: monospace;
     font-size: 0.75rem;
   }
 
   &__row-meta {
-    color: var(--p-text-color-secondary);
+    color: var(--p-text-muted-color);
     font-size: 0.8rem;
     display: flex;
     flex-wrap: wrap;
@@ -152,7 +152,7 @@
 
   &__plaintext-hint {
     margin: 0 0 1rem;
-    color: var(--p-text-color-secondary);
+    color: var(--p-text-muted-color);
     font-size: 0.875rem;
   }
 

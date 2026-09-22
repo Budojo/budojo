@@ -43,7 +43,7 @@
     }
 
     dt {
-      color: var(--p-text-color-secondary);
+      color: var(--p-text-muted-color);
       font-size: 0.875rem;
       margin: 0;
     }
@@ -59,7 +59,7 @@
   }
 
   &__placeholder {
-    color: var(--p-text-color-secondary);
+    color: var(--p-text-muted-color);
     font-style: italic;
   }
 
@@ -91,12 +91,12 @@
 
   &__hint {
     margin: 0;
-    color: var(--p-text-color-secondary);
+    color: var(--p-text-muted-color);
     font-size: 0.875rem;
   }
 
   &__loading {
-    color: var(--p-text-color-secondary);
+    color: var(--p-text-muted-color);
   }
 
   &__edit-btn {
@@ -119,12 +119,12 @@
   }
 
   &__label {
-    color: var(--p-text-color-secondary);
+    color: var(--p-text-muted-color);
     font-size: 0.875rem;
   }
 
   &__sublabel {
-    color: var(--p-text-color-secondary);
+    color: var(--p-text-muted-color);
     font-size: 0.875rem;
     opacity: 0.85;
   }

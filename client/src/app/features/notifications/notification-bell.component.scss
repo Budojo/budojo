@@ -5,23 +5,34 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  // 48px, the canon floor (#1786). It shipped at 2.5rem / 40px, flush
-  // against a 48px avatar in the mobile topbar — two adjacent targets where
-  // one is under the floor is a mis-tap generator (Fitts), and this is a
-  // button an owner presses one-handed at the side of the mat.
+  // 40px painted, 48px pressable (#1786). It shipped at 40 with no hit
+  // region, flush against the avatar in the mobile topbar — two adjacent
+  // targets where one is under the floor is a mis-tap generator (Fitts), and
+  // this is a button an owner presses one-handed at the side of the mat.
   //
-  // The painted circle grows with it rather than being padded, because the
-  // sibling `.topbar__user-link` is padding-built and lands at 48 too: after
-  // this the two round controls beside each other are the same size, which
-  // they were not before.
-  width: 3rem;
-  height: 3rem;
+  // The paint does NOT grow, unlike `.topbar__user-link` which is
+  // padding-built. This component is shared: the athlete shell mounts it in
+  // a `min-height: 3.5rem` topbar beside a bare 32px avatar, so a 48px box
+  // would push that bar taller on the primary form factor. It would also
+  // move the unread pill, whose `top/right` offsets are tuned per surface
+  // against this exact box (see `_count-badge.scss`).
+  width: 2.5rem;
+  height: 2.5rem;
   border: none;
   background: transparent;
   border-radius: 50%;
   color: currentColor;
   cursor: pointer;
   transition: background var(--budojo-motion-fast, 160ms) ease;
+
+  // The 48px region, transparent, centred on the painted circle:
+  // (48 - 40) / 2 = 4px of overhang each side. Same technique as
+  // `filter-sheet__close`.
+  &::after {
+    content: '';
+    position: absolute;
+    inset: -0.25rem;
+  }
 
   &:hover,
   &:focus-visible {

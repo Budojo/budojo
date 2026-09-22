@@ -9,6 +9,8 @@
 
 // The base: background, hairline, focus ring, hover. Square by default.
 @mixin toolbar-control {
+  // `relative` for the hit region below, not for any offset child.
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -24,9 +26,12 @@
   color: var(--p-text-color);
 
   cursor: pointer;
+  // Real token names, no fallback (#1786). `--budojo-motion-easing` does not
+  // exist; it only ever worked through `ease-out`, and the `120ms` fallback
+  // was a third duration the canon does not have.
   transition:
-    background-color var(--budojo-motion-fast, 120ms) var(--budojo-motion-easing, ease-out),
-    color var(--budojo-motion-fast, 120ms) var(--budojo-motion-easing, ease-out);
+    background-color var(--budojo-motion-fast) var(--budojo-motion-decelerate),
+    color var(--budojo-motion-fast) var(--budojo-motion-decelerate);
 
   &:hover {
     color: var(--p-text-color);
@@ -35,6 +40,21 @@
   &:focus-visible {
     outline: 2px solid var(--p-primary-color);
     outline-offset: 2px;
+  }
+
+  // 44px painted, 48px pressable (#1786). `DESIGN_SYSTEM.md` allows 44 for a
+  // supplementary control **only** wrapped in a 48-dp hit region, and this
+  // family is five of them side by side on the roster's filter row — the
+  // densest cluster of adjacent targets in the app, which is exactly where
+  // the floor stops being a spec sheet and starts being mis-taps.
+  //
+  // In the mixin rather than in the six consumers, because a rule that has
+  // to be remembered six times is a rule that will be true five times.
+  &::after {
+    content: '';
+    position: absolute;
+    // (48 - 44) / 2 = 2px each side.
+    inset: -0.125rem;
   }
 }
 

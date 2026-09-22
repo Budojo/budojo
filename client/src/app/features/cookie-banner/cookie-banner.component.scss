@@ -64,7 +64,7 @@
     margin: 0;
     font-size: 0.875rem;
     line-height: 1.5;
-    color: var(--p-text-color-secondary);
+    color: var(--p-text-muted-color);
 
     a {
       color: var(--p-primary-color);
@@ -96,7 +96,7 @@
     margin: 0 0 1rem;
     font-size: 0.9375rem;
     line-height: 1.5;
-    color: var(--p-text-color-secondary);
+    color: var(--p-text-muted-color);
   }
 
   &__categories {
@@ -147,7 +147,7 @@
   }
 
   &__category-description {
-    color: var(--p-text-color-secondary);
+    color: var(--p-text-muted-color);
     font-size: 0.875rem;
     line-height: 1.5;
   }

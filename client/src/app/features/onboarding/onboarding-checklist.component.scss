@@ -31,7 +31,7 @@
   &__subtitle {
     margin: 0;
     font-size: 0.875rem;
-    color: var(--p-text-color-secondary);
+    color: var(--p-text-muted-color);
   }
 
   &__list {
@@ -84,6 +84,6 @@
   &__step-hint {
     margin: 0;
     font-size: 0.875rem;
-    color: var(--p-text-color-secondary);
+    color: var(--p-text-muted-color);
   }
 }

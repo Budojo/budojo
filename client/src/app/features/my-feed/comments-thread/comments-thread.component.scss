@@ -10,7 +10,7 @@
 
   &__hint {
     margin: 0;
-    color: var(--p-text-color-secondary);
+    color: var(--p-text-muted-color);
     font-size: 0.875rem;
 
     &--empty {
@@ -44,7 +44,7 @@
 
   &__time {
     grid-column: 3 / 4;
-    color: var(--p-text-color-secondary);
+    color: var(--p-text-muted-color);
     font-size: 0.75rem;
     align-self: start;
   }
@@ -53,7 +53,7 @@
     grid-column: 4 / 5;
     background: transparent;
     border: none;
-    color: var(--p-text-color-secondary);
+    color: var(--p-text-muted-color);
     cursor: pointer;
     padding: 0.25rem;
     border-radius: 4px;
