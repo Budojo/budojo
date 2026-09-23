@@ -117,3 +117,26 @@ it('lists programmes whose files exist and parse, with keys unique across every 
 it('offers no file for a key the art does not list', function (): void {
     expect(MartialArtProfile::for(MartialArt::Bjj)->programmeFile('karate-goju-ryu'))->toBeNull();
 });
+
+it('gives every art age divisions that cover every age from the youngest up, once (#1807)', function (MartialArt $art): void {
+    $divisions = MartialArtProfile::for($art)->ageDivisions();
+
+    expect($divisions)->not->toBe([])
+        ->and(end($divisions)->max)->toBeNull();
+
+    // Contiguous and disjoint: every age from the youngest to 100 falls in
+    // exactly one division.
+    foreach (range($divisions[0]->min, 100) as $age) {
+        $matching = array_filter($divisions, fn ($d) => $d->contains($age));
+        expect($matching)->toHaveCount(1, "{$art->value} at {$age}");
+    }
+})->with(MartialArt::cases());
+
+it('keeps the IBJJF table BJJ always had', function (): void {
+    $codes = array_map(fn ($d) => $d->code, MartialArtProfile::for(MartialArt::Bjj)->ageDivisions());
+
+    expect($codes)->toBe([
+        'mighty_mite', 'pee_wee', 'junior', 'teen', 'juvenile', 'adult',
+        'master_1', 'master_2', 'master_3', 'master_4', 'master_5', 'master_6', 'master_7',
+    ]);
+});

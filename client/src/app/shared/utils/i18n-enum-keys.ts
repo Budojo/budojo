@@ -101,6 +101,80 @@ export const TRAINING_MODE_HINT_KEYS: Readonly<Record<MartialArt, string>> = {
   taekwondo: 'academy.syllabus.kindHint.taekwondo',
 };
 
+/**
+ * The label of every age division (#1807), per martial art — the server's
+ * `age_divisions` codes, each mapped to a key the parity check can see.
+ * A code the client does not know yet (a federation's new class) reads as
+ * itself rather than as a raw key.
+ */
+const AGE_BAND_KEYS: Readonly<Record<MartialArt, Readonly<Record<string, string>>>> = {
+  bjj: {
+    mighty_mite: 'stats.athletes.bands.bjj.mighty_mite',
+    pee_wee: 'stats.athletes.bands.bjj.pee_wee',
+    junior: 'stats.athletes.bands.bjj.junior',
+    teen: 'stats.athletes.bands.bjj.teen',
+    juvenile: 'stats.athletes.bands.bjj.juvenile',
+    adult: 'stats.athletes.bands.bjj.adult',
+    master_1: 'stats.athletes.bands.bjj.master_1',
+    master_2: 'stats.athletes.bands.bjj.master_2',
+    master_3: 'stats.athletes.bands.bjj.master_3',
+    master_4: 'stats.athletes.bands.bjj.master_4',
+    master_5: 'stats.athletes.bands.bjj.master_5',
+    master_6: 'stats.athletes.bands.bjj.master_6',
+    master_7: 'stats.athletes.bands.bjj.master_7',
+  },
+  judo: {
+    bambini_a: 'stats.athletes.bands.judo.bambini_a',
+    bambini_b: 'stats.athletes.bands.judo.bambini_b',
+    fanciulli: 'stats.athletes.bands.judo.fanciulli',
+    ragazzi: 'stats.athletes.bands.judo.ragazzi',
+    esordienti_a: 'stats.athletes.bands.judo.esordienti_a',
+    esordienti_b: 'stats.athletes.bands.judo.esordienti_b',
+    cadetti: 'stats.athletes.bands.judo.cadetti',
+    juniores: 'stats.athletes.bands.judo.juniores',
+    seniores: 'stats.athletes.bands.judo.seniores',
+    master: 'stats.athletes.bands.judo.master',
+  },
+  karate: {
+    bambini_a: 'stats.athletes.bands.karate.bambini_a',
+    bambini_b: 'stats.athletes.bands.karate.bambini_b',
+    fanciulli: 'stats.athletes.bands.karate.fanciulli',
+    ragazzi: 'stats.athletes.bands.karate.ragazzi',
+    esordienti: 'stats.athletes.bands.karate.esordienti',
+    cadetti: 'stats.athletes.bands.karate.cadetti',
+    juniores: 'stats.athletes.bands.karate.juniores',
+    seniores: 'stats.athletes.bands.karate.seniores',
+    master_a: 'stats.athletes.bands.karate.master_a',
+    master_b: 'stats.athletes.bands.karate.master_b',
+    master_c: 'stats.athletes.bands.karate.master_c',
+    master_d: 'stats.athletes.bands.karate.master_d',
+    master_e: 'stats.athletes.bands.karate.master_e',
+  },
+  taekwondo: {
+    under_12: 'stats.athletes.bands.taekwondo.under_12',
+    cadet: 'stats.athletes.bands.taekwondo.cadet',
+    junior: 'stats.athletes.bands.taekwondo.junior',
+    under_30: 'stats.athletes.bands.taekwondo.under_30',
+    under_40: 'stats.athletes.bands.taekwondo.under_40',
+    under_50: 'stats.athletes.bands.taekwondo.under_50',
+    under_60: 'stats.athletes.bands.taekwondo.under_60',
+    under_65: 'stats.athletes.bands.taekwondo.under_65',
+    over_65: 'stats.athletes.bands.taekwondo.over_65',
+  },
+};
+
+export function ageBandKey(art: MartialArt, code: string): string | null {
+  return AGE_BAND_KEYS[art][code] ?? null;
+}
+
+/** The chart's title, naming the federation whose divisions it counts in (#1807). */
+export const AGE_BANDS_TITLE_KEYS: Readonly<Record<MartialArt, string>> = {
+  bjj: 'stats.athletes.ageBandsTitle.bjj',
+  judo: 'stats.athletes.ageBandsTitle.judo',
+  karate: 'stats.athletes.ageBandsTitle.karate',
+  taekwondo: 'stats.athletes.ageBandsTitle.taekwondo',
+};
+
 /** The translation key for a belt, as the given martial art names it. */
 export function beltKey(belt: Belt, art: MartialArt): string {
   return BELT_KEY_OVERRIDES[art][belt] ?? BELT_KEYS[belt];

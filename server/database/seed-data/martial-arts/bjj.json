@@ -55,6 +55,89 @@
       "max_stripes": 4
     }
   ],
+  "age_divisions": {
+    "source": "IBJJF age divisions, as AthleteAgeBandsAction carried them before #1807.",
+    "divisions": [
+      {
+        "code": "mighty_mite",
+        "category": "kids",
+        "min": 4,
+        "max": 6
+      },
+      {
+        "code": "pee_wee",
+        "category": "kids",
+        "min": 7,
+        "max": 9
+      },
+      {
+        "code": "junior",
+        "category": "kids",
+        "min": 10,
+        "max": 12
+      },
+      {
+        "code": "teen",
+        "category": "kids",
+        "min": 13,
+        "max": 15
+      },
+      {
+        "code": "juvenile",
+        "category": "adults",
+        "min": 16,
+        "max": 17
+      },
+      {
+        "code": "adult",
+        "category": "adults",
+        "min": 18,
+        "max": 29
+      },
+      {
+        "code": "master_1",
+        "category": "adults",
+        "min": 30,
+        "max": 35
+      },
+      {
+        "code": "master_2",
+        "category": "adults",
+        "min": 36,
+        "max": 40
+      },
+      {
+        "code": "master_3",
+        "category": "adults",
+        "min": 41,
+        "max": 45
+      },
+      {
+        "code": "master_4",
+        "category": "adults",
+        "min": 46,
+        "max": 50
+      },
+      {
+        "code": "master_5",
+        "category": "adults",
+        "min": 51,
+        "max": 55
+      },
+      {
+        "code": "master_6",
+        "category": "adults",
+        "min": 56,
+        "max": 60
+      },
+      {
+        "code": "master_7",
+        "category": "adults",
+        "min": 61,
+        "max": null
+      }
+    ]
+  },
   "training_modes": [
     "gi",
     "nogi"

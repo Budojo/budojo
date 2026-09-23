@@ -70,6 +70,89 @@
       "first": 9
     }
   ],
+  "age_divisions": {
+    "source": "FIJLKAM, Norme per l’affiliazione e il tesseramento 2026-2028, classi d’età Karate: preagonisti are kids, agonisti adults; ages are the year the athlete turns.",
+    "divisions": [
+      {
+        "code": "bambini_a",
+        "category": "kids",
+        "min": 3,
+        "max": 5
+      },
+      {
+        "code": "bambini_b",
+        "category": "kids",
+        "min": 6,
+        "max": 7
+      },
+      {
+        "code": "fanciulli",
+        "category": "kids",
+        "min": 8,
+        "max": 9
+      },
+      {
+        "code": "ragazzi",
+        "category": "kids",
+        "min": 10,
+        "max": 11
+      },
+      {
+        "code": "esordienti",
+        "category": "adults",
+        "min": 12,
+        "max": 13
+      },
+      {
+        "code": "cadetti",
+        "category": "adults",
+        "min": 14,
+        "max": 15
+      },
+      {
+        "code": "juniores",
+        "category": "adults",
+        "min": 16,
+        "max": 17
+      },
+      {
+        "code": "seniores",
+        "category": "adults",
+        "min": 18,
+        "max": 35
+      },
+      {
+        "code": "master_a",
+        "category": "adults",
+        "min": 36,
+        "max": 43
+      },
+      {
+        "code": "master_b",
+        "category": "adults",
+        "min": 44,
+        "max": 50
+      },
+      {
+        "code": "master_c",
+        "category": "adults",
+        "min": 51,
+        "max": 58
+      },
+      {
+        "code": "master_d",
+        "category": "adults",
+        "min": 59,
+        "max": 65
+      },
+      {
+        "code": "master_e",
+        "category": "adults",
+        "min": 66,
+        "max": null
+      }
+    ]
+  },
   "training_modes": [
     "kata",
     "kumite"

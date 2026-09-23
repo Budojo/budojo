@@ -24,23 +24,13 @@ export interface MonthlyPaymentsBucket {
   readonly future: boolean;
 }
 
-export type AgeBandCode =
-  | 'mighty_mite'
-  | 'pee_wee'
-  | 'junior'
-  | 'teen'
-  | 'juvenile'
-  | 'adult'
-  | 'master_1'
-  | 'master_2'
-  | 'master_3'
-  | 'master_4'
-  | 'master_5'
-  | 'master_6'
-  | 'master_7';
-
 export interface AgeBand {
-  readonly code: AgeBandCode;
+  /**
+   * The division, from the academy's martial art (#1807): `mighty_mite` for
+   * BJJ, `esordienti_b` for judo, `under_30` for taekwondo. An open string —
+   * the federations change their classes — labelled through `ageBandKey()`.
+   */
+  readonly code: string;
   readonly category: 'kids' | 'adults';
   readonly min: number;
   readonly max: number | null;

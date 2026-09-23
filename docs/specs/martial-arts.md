@@ -476,6 +476,29 @@ Codes are lower-case ASCII (`esordienti_a`); labels are client i18n keys under
 `stats.ageBands.<art>.<code>` through an explicit map, never a built
 string.
 
+**As built (#1807)** — every table checked against a federation document of
+2026, which moved three of them:
+
+- **Judo** — the FIJLKAM *Norme per l'affiliazione e il tesseramento
+  2026–2028*, confirmed by the judo *Programma Attività* 2026 (by year of
+  birth). The draft's single "Bambini 5–7" is two classes, **Bambini A 3–5
+  and Bambini B 6–7**; the rest stands: Fanciulli 8–9, Ragazzi 10–11,
+  Esordienti A 12, Esordienti B 13–14, Cadetti 15–17, Juniores 18–20,
+  Seniores 21–35, Master 36+.
+- **Karate** — the same *Norme* give the classes without U21: Esordienti
+  12–13, Cadetti 14–15, Juniores 16–17, **Seniores 18–35**, Master A–E. U21
+  is a competition category of the *Programma Attività*, overlapping the
+  Seniores, not a class; the chart counts classes.
+- **Taekwondo** — World Taekwondo's divisions (the WT *Division of
+  Participants*): Cadet 12–14, Junior 15–17, then the poomsae age groups
+  Under 30 (18–30), Under 40, Under 50, Under 60, Under 65 (61–65), Over 65.
+  WT names nothing under 12 and FITA publishes no readable class table, so
+  one **Under 12** band (5–11) is the club's own, and the file says so.
+- **Every art counts by year of birth**, BJJ included: the IBJJF classes that
+  way too, and the chart counting today's age was an old defect, not a BJJ
+  rule. The labels live under `stats.athletes.bands.<art>.<code>` rather
+  than `stats.ageBands`, next to the chart's other keys.
+
 ## ⚠️ The programmes — need sign-off, one PR each
 
 Same file shape as `bjj-syllabus.json`, moved to `seed-data/syllabus/<key>.json`
@@ -887,6 +910,8 @@ stats page title stops saying IBJJF except for BJJ. Karate's table is verified
 (FIJLKAM 2026); judo's and taekwondo's are verified before this slice merges.
 FIJLKAM counts by **year of birth**, which may not be how the action computes
 age today — check, and pin it with a test on 31 December and 1 January.
+*Built (#1807):* it computed today's age; every art now counts the age reached
+this calendar year, pinned on 31 December 2010 and 1 January 2011.
 
 ### 9 — Copy (#1808)
 

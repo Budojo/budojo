@@ -6,57 +6,38 @@ namespace App\Actions\Stats;
 
 use App\Enums\AthleteStatus;
 use App\Models\Academy;
+use App\Support\MartialArt\AgeDivision;
+use App\Support\MartialArt\MartialArtProfile;
 use Carbon\CarbonImmutable;
 
 /**
- * Aggregates the academy's athletes into the canonical IBJJF age
- * divisions (Mighty Mite → Master 7), bucketing by the athlete's age
- * AS OF TODAY. Always returns all 13 bands — empty bands keep their
- * shape so the frontend can render the full distribution.
+ * Aggregates the academy's active athletes into its federation's age
+ * divisions (#1807): IBJJF for BJJ, FIJLKAM's classes for judo and karate,
+ * World Taekwondo's for taekwondo — the registry's `age_divisions`, read
+ * through `MartialArtProfile`. Always returns every division, empty ones
+ * included, so the chart draws the whole distribution.
  *
- * The IBJJF band table lives here as a private constant. Single
- * consumer today; if a second one ever needs it, extract to a
- * shared value object then. KISS until duplication forces extraction.
+ * An athlete's age is the one they **reach this calendar year**, which is
+ * how all four federations class athletes (FIJLKAM's "dal 12° anno", WT's
+ * "the year, not the date"). The chart used to read today's age, which put
+ * everyone born after today's date in the division below until their
+ * birthday.
  *
  * @return array{bands: list<array{code: string, category: 'kids'|'adults', min: int, max: int|null, count: int}>, total: int, missing_dob: int}
  */
 class AthleteAgeBandsAction
 {
     /**
-     * IBJJF age divisions, canonical order (kids → adults), inclusive
-     * lower and upper bounds. `max: null` means open-ended (master_7).
+     * Pure helper, static so it can be tested without booting the action.
+     * The division an age falls in, or null below the youngest.
      *
-     * @var list<array{code: string, category: 'kids'|'adults', min: int, max: int|null}>
+     * @param list<AgeDivision> $divisions
      */
-    private const array BANDS = [
-        ['code' => 'mighty_mite', 'category' => 'kids',   'min' => 4,  'max' => 6],
-        ['code' => 'pee_wee',     'category' => 'kids',   'min' => 7,  'max' => 9],
-        ['code' => 'junior',      'category' => 'kids',   'min' => 10, 'max' => 12],
-        ['code' => 'teen',        'category' => 'kids',   'min' => 13, 'max' => 15],
-        ['code' => 'juvenile',    'category' => 'adults', 'min' => 16, 'max' => 17],
-        ['code' => 'adult',       'category' => 'adults', 'min' => 18, 'max' => 29],
-        ['code' => 'master_1',    'category' => 'adults', 'min' => 30, 'max' => 35],
-        ['code' => 'master_2',    'category' => 'adults', 'min' => 36, 'max' => 40],
-        ['code' => 'master_3',    'category' => 'adults', 'min' => 41, 'max' => 45],
-        ['code' => 'master_4',    'category' => 'adults', 'min' => 46, 'max' => 50],
-        ['code' => 'master_5',    'category' => 'adults', 'min' => 51, 'max' => 55],
-        ['code' => 'master_6',    'category' => 'adults', 'min' => 56, 'max' => 60],
-        ['code' => 'master_7',    'category' => 'adults', 'min' => 61, 'max' => null],
-    ];
-
-    /**
-     * Pure helper — exposed as static for unit testing without booting
-     * the full action. Returns the IBJJF band code for an integer age,
-     * or null if below the youngest division (under 4).
-     */
-    public static function bandCodeFor(int $age): ?string
+    public static function bandCodeFor(int $age, array $divisions): ?string
     {
-        foreach (self::BANDS as $band) {
-            if ($age < $band['min']) {
-                continue;
-            }
-            if ($band['max'] === null || $age <= $band['max']) {
-                return $band['code'];
+        foreach ($divisions as $division) {
+            if ($division->contains($age)) {
+                return $division->code;
             }
         }
 
@@ -68,13 +49,14 @@ class AthleteAgeBandsAction
      */
     public function execute(Academy $academy): array
     {
-        $today = CarbonImmutable::now();
+        $thisYear = CarbonImmutable::now()->year;
+        $divisions = MartialArtProfile::for($academy->martial_art)->ageDivisions();
 
         // Initialise every band at count 0 so empty bands stay in the
         // response with the canonical shape.
         $counts = [];
-        foreach (self::BANDS as $band) {
-            $counts[$band['code']] = 0;
+        foreach ($divisions as $division) {
+            $counts[$division->code] = 0;
         }
 
         $missingDob = 0;
@@ -98,27 +80,24 @@ class AthleteAgeBandsAction
                 continue;
             }
 
-            // $dob is already a Carbon instance (cast via 'date' in the Athlete model).
-            // CarbonImmutable::instance() wraps it without a string round-trip.
-            $age = CarbonImmutable::instance($dob)->diffInYears($today);
-            $code = self::bandCodeFor((int) $age);
+            // The age reached this calendar year, not today's (see above).
+            $code = self::bandCodeFor($thisYear - $dob->year, $divisions);
             if ($code !== null) {
                 $counts[$code]++;
             }
-            // ages below 4 are silently dropped from band counts — they
-            // aren't a defined IBJJF division. They still count in $total
-            // (the academy has them on the roster), but the histogram
-            // can't place them.
+            // Younger than the youngest division: no federation class to
+            // put them in. They still count in $total (the academy has them
+            // on the roster), but the histogram cannot place them.
         }
 
         $bands = [];
-        foreach (self::BANDS as $band) {
+        foreach ($divisions as $division) {
             $bands[] = [
-                'code' => $band['code'],
-                'category' => $band['category'],
-                'min' => $band['min'],
-                'max' => $band['max'],
-                'count' => $counts[$band['code']],
+                'code' => $division->code,
+                'category' => $division->category,
+                'min' => $division->min,
+                'max' => $division->max,
+                'count' => $counts[$division->code],
             ];
         }
 

@@ -5,8 +5,10 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ChartModule } from 'primeng/chart';
 import { SelectButtonModule } from 'primeng/selectbutton';
 import { SkeletonModule } from 'primeng/skeleton';
+import { AcademyService } from '../../../core/services/academy.service';
 import { LanguageService } from '../../../core/services/language.service';
 import { AgeBandsPayload, StatsService } from '../../../core/services/stats.service';
+import { AGE_BANDS_TITLE_KEYS, ageBandKey } from '../../../shared/utils/i18n-enum-keys';
 import { ErrorStateComponent } from '../../../shared/components/error-state/error-state.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 
@@ -32,6 +34,12 @@ export class StatsAthletesComponent {
   private readonly stats = inject(StatsService);
   private readonly translate = inject(TranslateService);
   private readonly language = inject(LanguageService);
+  private readonly academyService = inject(AcademyService);
+
+  /** Whose divisions these are — IBJJF, FIJLKAM or WT (#1807). */
+  private readonly martialArt = computed(() => this.academyService.academy()?.martial_art ?? 'bjj');
+
+  protected readonly titleKey = computed(() => AGE_BANDS_TITLE_KEYS[this.martialArt()]);
 
   protected readonly loading = signal(true);
   protected readonly errored = signal(false);
@@ -67,16 +75,19 @@ export class StatsAthletesComponent {
   });
 
   /**
-   * Chart.js data derived from the visible bands.
-   *
-   * The label key is built dynamically from `b.code` — safe here because
-   * `AgeBandCode` is a closed literal union (13 members) and the i18n parity
-   * spec verifies all 13 `stats.athletes.bands.*` keys exist in both locales.
+   * Chart.js data derived from the visible bands, each labelled in the
+   * academy's federation's words through an explicit key map (#1807). A code
+   * the map does not know yet reads as itself, never as a raw key.
    */
   protected readonly chartData = computed(() => {
+    this.language.currentLang(); // signal dep — relabel on toggle
     const bands = this.visibleBands();
+    const art = this.martialArt();
     return {
-      labels: bands.map((b) => this.translate.instant(`stats.athletes.bands.${b.code}`)),
+      labels: bands.map((b) => {
+        const key = ageBandKey(art, b.code);
+        return key ? this.translate.instant(key) : b.code;
+      }),
       datasets: [
         {
           data: bands.map((b) => b.count),

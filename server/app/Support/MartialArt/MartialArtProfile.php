@@ -11,8 +11,8 @@ use App\Enums\TrainingMode;
 
 /**
  * Everything the app knows about a martial art that is not the academy's own
- * data (#1800): its ladder, its two training modes (#1803) and its starter
- * programmes.
+ * data (#1800): its ladder, its two training modes (#1803), its starter
+ * programmes and its federation's age divisions (#1807).
  *
  * Read from `database/seed-data/martial-arts/<art>.json`, one file per
  * `MartialArt` case, and cached per process — the files ship with the app and
@@ -35,12 +35,14 @@ final class MartialArtProfile
     /**
      * @param array{TrainingMode, TrainingMode} $trainingModes
      * @param array<string, string>             $programmes    key → file name under PROGRAMME_DIR, in offer order
+     * @param list<AgeDivision>                 $ageDivisions  youngest first
      */
     private function __construct(
         public readonly MartialArt $art,
         private readonly RankLadder $ladder,
         private readonly array $trainingModes,
         private readonly array $programmes,
+        private readonly array $ageDivisions,
     ) {
     }
 
@@ -87,6 +89,17 @@ final class MartialArtProfile
     }
 
     /**
+     * The federation's age divisions, youngest first, contiguous, the last
+     * one open-ended — what the stats page buckets athletes into.
+     *
+     * @return list<AgeDivision>
+     */
+    public function ageDivisions(): array
+    {
+        return $this->ageDivisions;
+    }
+
+    /**
      * The starter programmes this art offers, by key, in the order the
      * programme page lists them. Empty until the first one ships — the seed
      * endpoint then answers 404 and the page offers no button.
@@ -124,6 +137,7 @@ final class MartialArtProfile
             self::ladderFrom($art, $data['grades'] ?? null),
             self::trainingModesFrom($art, $data['training_modes'] ?? null),
             self::programmesFrom($art, $data['programmes'] ?? null),
+            self::ageDivisionsFrom($art, \is_array($data['age_divisions'] ?? null) ? ($data['age_divisions']['divisions'] ?? null) : null),
         );
     }
 
@@ -174,6 +188,47 @@ final class MartialArtProfile
         }
 
         return [$a, $b];
+    }
+
+    /**
+     * Youngest first, each starting the year after the last one ends, and
+     * only the last open-ended: a gap would drop athletes from the chart
+     * without a word, and an overlap would count one athlete twice.
+     *
+     * @return list<AgeDivision>
+     */
+    private static function ageDivisionsFrom(MartialArt $art, mixed $divisions): array
+    {
+        if (! \is_array($divisions) || $divisions === []) {
+            throw new \RuntimeException("The {$art->value} registry has no age divisions.");
+        }
+
+        $parsed = [];
+        $next = null;
+        foreach (array_values($divisions) as $index => $division) {
+            $code = \is_array($division) ? ($division['code'] ?? null) : null;
+            $category = \is_array($division) ? ($division['category'] ?? null) : null;
+            $min = \is_array($division) ? ($division['min'] ?? null) : null;
+            $max = \is_array($division) ? ($division['max'] ?? null) : null;
+            $isLast = $index === \count($divisions) - 1;
+
+            $valid = \is_string($code) && preg_match('/^[a-z][a-z0-9_]*$/', $code) === 1
+                && ($category === 'kids' || $category === 'adults')
+                && \is_int($min) && ($next === null || $min === $next)
+                && ($isLast ? $max === null : \is_int($max) && $max >= $min);
+            if (! $valid) {
+                throw new \RuntimeException("The {$art->value} registry has an age division that is not contiguous, ascending and open only at the top.");
+            }
+
+            /** @var string $code */
+            /** @var 'kids'|'adults' $category */
+            /** @var int $min */
+            /** @var int|null $max */
+            $parsed[] = new AgeDivision($code, $category, $min, $max);
+            $next = $max === null ? null : $max + 1;
+        }
+
+        return $parsed;
     }
 
     /**
