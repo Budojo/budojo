@@ -3775,9 +3775,14 @@ paths:
             default: 0
         - in: query
           name: kind
+          description: |
+            One of the academy's two `training_modes` (#1803) — `gi` or `nogi`
+            in BJJ, `kata` or `kumite` in karate. Never `both` or `other`:
+            every filter already admits `both`. A mode from another art is a
+            422.
           schema:
             type: string
-            enum: [gi, nogi]
+            enum: [gi, nogi, tachi-waza, ne-waza, kata, kumite, poomsae, kyorugi]
       responses:
         '200':
           description: The coverage report
@@ -8049,6 +8054,17 @@ components:
             and caps belts from this and keeps no copy of its own.
           items:
             $ref: '#/components/schemas/Grade'
+        training_modes:
+          type: array
+          description: |
+            The martial art's two training modes, in picker order (#1803). A
+            class, a topic or a coverage filter uses these, plus `both` (and
+            `other` for a class).
+          minItems: 2
+          maxItems: 2
+          items:
+            $ref: '#/components/schemas/TrainingMode'
+          example: [gi, nogi]
         martial_art_locked:
           type: boolean
           description: |
@@ -8086,15 +8102,18 @@ components:
         carnet the academy has sold.
       example: lesson
 
-    ClassKind:
+    TrainingMode:
       type: string
-      enum: [gi, nogi, both, other]
+      enum: [gi, nogi, tachi-waza, ne-waza, kata, kumite, poomsae, kyorugi, both, other]
       description: |
-        What a class is trained in (#1562). A dimension of the class, not a
-        tag on a lesson — heel hooks live in no-gi, lapel guards in gi, and a
-        coverage chart that mixes the two says a number that is quietly
-        wrong. `other` is what is on the timetable without being jiu-jitsu
-        in a kimono or out of one: conditioning, wrestling, a yoga slot.
+        What a class, a lesson or a programme topic is trained in (#1562,
+        #1563, #1803). Every martial art splits the same way, two modes and
+        a middle: BJJ `gi` / `nogi`, judo `tachi-waza` / `ne-waza`, karate
+        `kata` / `kumite`, taekwondo `poomsae` / `kyorugi`. An academy may use
+        only its own pair (`Academy.training_modes`) plus `both`; a class may
+        also be `other` (conditioning, a yoga slot), a topic may not — a
+        topic is the martial art by definition. Anything else is a 422.
+        Replaces `ClassKind` and `TopicKind` with the same stored values.
 
     AcademyClassPayload:
       type: object
@@ -8135,7 +8154,7 @@ components:
             model a rule about how long people train.
           example: 60
         kind:
-          $ref: '#/components/schemas/ClassKind'
+          $ref: '#/components/schemas/TrainingMode'
 
     AcademyClass:
       type: object
@@ -8169,7 +8188,7 @@ components:
           nullable: true
           example: 60
         kind:
-          $ref: '#/components/schemas/ClassKind'
+          $ref: '#/components/schemas/TrainingMode'
 
     LessonTopic:
       type: object
@@ -8184,7 +8203,7 @@ components:
           type: string
           example: Armbar
         kind:
-          $ref: '#/components/schemas/TopicKind'
+          $ref: '#/components/schemas/TrainingMode'
         parent_id:
           type: integer
           format: int64
@@ -8235,7 +8254,7 @@ components:
           nullable: true
           example: '19:00'
         kind:
-          $ref: '#/components/schemas/ClassKind'
+          $ref: '#/components/schemas/TrainingMode'
         notes:
           type: string
           nullable: true
@@ -8303,7 +8322,7 @@ components:
             properties:
               id: { type: integer, format: int64 }
               name: { type: string }
-              kind: { $ref: '#/components/schemas/TopicKind' }
+              kind: { $ref: '#/components/schemas/TrainingMode' }
               in_scope: { type: integer }
               covered: { type: integer }
               thin: { type: integer }
@@ -8354,16 +8373,7 @@ components:
           type: string
           nullable: true
           example: Closed guard
-        kind: { $ref: '#/components/schemas/TopicKind' }
-
-    TopicKind:
-      type: string
-      enum: [gi, nogi, both]
-      description: |
-        What a syllabus topic is trained in (#1563). Three cases and not
-        `ClassKind`'s four: a topic is jiu-jitsu by definition, so there is
-        no `other` for it to be. A technique's kind defaults to its
-        position's in the shipped seed; the owner can set either.
+        kind: { $ref: '#/components/schemas/TrainingMode' }
 
     SyllabusTopicPayload:
       type: object
@@ -8378,7 +8388,7 @@ components:
           maxLength: 80
           example: Armbar
         kind:
-          $ref: '#/components/schemas/TopicKind'
+          $ref: '#/components/schemas/TrainingMode'
         parent_id:
           type: integer
           format: int64
@@ -8401,7 +8411,7 @@ components:
           maxLength: 80
           example: Guardia chiusa
         kind:
-          $ref: '#/components/schemas/TopicKind'
+          $ref: '#/components/schemas/TrainingMode'
         in_season:
           type: boolean
         sort_order:
@@ -8431,7 +8441,7 @@ components:
           maxLength: 80
           example: Closed guard
         kind:
-          $ref: '#/components/schemas/TopicKind'
+          $ref: '#/components/schemas/TrainingMode'
         in_season:
           type: boolean
           description: In scope for the current season — the coverage denominator.

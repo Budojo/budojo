@@ -1656,12 +1656,6 @@
         "dayRequired": "Scegli un giorno.",
         "durationPlaceholder": "minuti"
       },
-      "kind": {
-        "gi": "Gi",
-        "nogi": "No-gi",
-        "both": "Gi e no-gi",
-        "other": "Altro"
-      },
       "confirm": {
         "remove": "Rimuovere {{name}} dall'orario? Le lezioni già tenute restano come sono.",
         "accept": "Rimuovi",
@@ -1707,17 +1701,11 @@
         "namePlaceholderPosition": "Guardia chiusa",
         "namePlaceholderTechnique": "Leva al braccio",
         "kind": "Si allena",
-        "kindHint": "I heel hook sono no-gi, le guardie di bavero sono gi. Lascia gi e no-gi quando ha senso in entrambi.",
         "nameRequired": "Dagli un nome, e che non sia già usato qui.",
         "cancel": "Annulla",
         "create": "Aggiungi",
         "save": "Salva",
         "remove": "Rimuovi"
-      },
-      "kind": {
-        "both": "Gi e no-gi",
-        "gi": "Gi",
-        "nogi": "No-gi"
       },
       "confirm": {
         "remove": "Rimuovere {{name}} dal programma?",
@@ -1742,7 +1730,13 @@
       "searchCountTechniqueOne": "{{count}} tecnica",
       "searchCountTechniqueOther": "{{count}} tecniche",
       "searchCountPositionOne": "{{count}} posizione",
-      "searchCountPositionOther": "{{count}} posizioni"
+      "searchCountPositionOther": "{{count}} posizioni",
+      "kindHint": {
+        "bjj": "I heel hook sono no-gi, le guardie di bavero sono gi. Lascia gi e no-gi quando ha senso in entrambi.",
+        "judo": "L'o-soto-gari è tachi-waza, il kesa-gatame è ne-waza. Lascia tachi-waza e ne-waza quando ha senso in entrambi.",
+        "karate": "Saifa è kata, il sanbon kumite è kumite. Lascia kata e kumite quando ha senso in entrambi.",
+        "taekwondo": "Il Taegeuk il jang è poomsae, una combinazione da combattimento è kyorugi. Lascia poomsae e kyorugi quando ha senso in entrambi."
+      }
     },
     "schedule": {
       "title": "Pianifica un cambio calendario futuro",
@@ -1766,6 +1760,23 @@
         "errorSummary": "Non sono riuscito a salvare",
         "errorDetail": "Riprova, o scegli un'altra data se ce n'è già una pianificata.",
         "cancelErrorDetail": "Non sono riuscito ad annullare il cambio. Aggiorna la pagina e riprova."
+      }
+    },
+    "trainingMode": {
+      "gi": "Gi",
+      "nogi": "No-gi",
+      "tachiWaza": "Tachi-waza",
+      "neWaza": "Ne-waza",
+      "kata": "Kata",
+      "kumite": "Kumite",
+      "poomsae": "Poomsae",
+      "kyorugi": "Kyorugi",
+      "other": "Altro",
+      "both": {
+        "bjj": "Gi e no-gi",
+        "judo": "Tachi-waza e ne-waza",
+        "karate": "Kata e kumite",
+        "taekwondo": "Poomsae e kyorugi"
       }
     }
   },
@@ -2766,9 +2777,7 @@
       },
       "filter": {
         "all": "Tutto",
-        "gi": "Gi",
-        "nogi": "No-gi",
-        "aria": "Conta gi, no-gi o tutto"
+        "aria": "Conta {{a}}, {{b}} o tutto"
       },
       "season": {
         "previous": "Stagione precedente",

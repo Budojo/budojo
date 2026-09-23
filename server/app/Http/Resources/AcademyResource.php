@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
+use App\Enums\TrainingMode;
 use App\Models\Academy;
 use App\Support\MartialArt\Grade;
 use App\Support\MartialArt\MartialArtLock;
@@ -106,10 +107,11 @@ class AcademyResource extends JsonResource
     /**
      * What the academy teaches and what follows from it (#1800): the ladder
      * the SPA must pick, sort and paint belts from — so it never keeps a
-     * second copy that could disagree — whether the art can still change, and
-     * which starter programmes the empty programme page may offer.
+     * second copy that could disagree — its two training modes (#1803), whether
+     * the art can still change, and which starter programmes the empty
+     * programme page may offer.
      *
-     * @return array{martial_art: string, grades: list<array{belt: string, max_stripes: int, count: string, first: int, kids: bool}>, martial_art_locked: bool, syllabus_programmes: list<string>}
+     * @return array{martial_art: string, grades: list<array{belt: string, max_stripes: int, count: string, first: int, kids: bool}>, training_modes: list<string>, martial_art_locked: bool, syllabus_programmes: list<string>}
      */
     private function martialArtPayload(Academy $academy): array
     {
@@ -118,6 +120,7 @@ class AcademyResource extends JsonResource
         return [
             'martial_art' => $academy->martial_art->value,
             'grades' => array_map(static fn (Grade $grade): array => $grade->toArray(), $profile->ladder()->grades()),
+            'training_modes' => array_map(static fn (TrainingMode $mode): string => $mode->value, $profile->trainingModes()),
             'martial_art_locked' => MartialArtLock::isLocked($academy),
             'syllabus_programmes' => $profile->programmes(),
         ];

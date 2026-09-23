@@ -1,12 +1,14 @@
-// Four large choices, 2×2 (#1802). The same pills as the training-days picker
-// on the same screen, so the two read as one family.
+// A single choice among a few large buttons, two to a row (#1802, #1803): the
+// martial art at setup, a class's or a topic's training mode. The pill
+// language of the training-days picker, so a form that has both reads as one
+// family.
 
-.martial-art-picker {
+.choice-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.5rem;
-  // Four words do not need a 960 px row on the desktop edit form; past this
-  // the pair of columns stops reading as one choice.
+  // Four words do not need a 960 px row on a desktop form; past this the
+  // pair of columns stops reading as one choice.
   max-width: 30rem;
 
   &__option {
@@ -20,13 +22,20 @@
     font: inherit;
     font-weight: 500;
     text-align: center;
-    // "Brazilian / jiu-jitsu", not "Brazilian jiu- / jitsu" in a narrow cell.
+    // "Brazilian / jiu-jitsu", not "Brazilian jiu- / jitsu" in a narrow cell;
+    // "Tachi-waza and / ne-waza", not a hyphen stranded at a line end.
     text-wrap: balance;
     cursor: pointer;
     transition:
       background var(--budojo-motion-fast) var(--budojo-motion-decelerate),
       border-color var(--budojo-motion-fast) var(--budojo-motion-decelerate),
       color var(--budojo-motion-fast) var(--budojo-motion-decelerate);
+
+    // An odd one out takes the whole last row — "Kata and kumite" under
+    // "Kata" and "Kumite" — rather than half of it with a hole beside it.
+    &:last-child:nth-child(odd) {
+      grid-column: 1 / -1;
+    }
 
     &:hover {
       background: var(--p-content-hover-background);

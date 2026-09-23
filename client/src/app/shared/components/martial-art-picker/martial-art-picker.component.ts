@@ -1,63 +1,49 @@
-import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
-import { TranslatePipe } from '@ngx-translate/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
+import { TranslateService } from '@ngx-translate/core';
 import { MartialArt } from '../../../core/services/academy.service';
+import { LanguageService } from '../../../core/services/language.service';
 import { MARTIAL_ART_KEYS, MARTIAL_ARTS } from '../../utils/i18n-enum-keys';
+import { ChoiceGridComponent, ChoiceOption } from '../choice-grid/choice-grid.component';
 
 /**
  * Which martial art the academy teaches (#1802) — four large choices, one of
- * them pressed.
- *
- * Not a `p-selectbutton`: four options, one of them "Brazilian jiu-jitsu", do
- * not fit a segmented row on a phone, and a segmented control that wraps
- * reads as broken. A 2×2 grid of 48px buttons does (Fitts), and it is the
- * same visual language as the training-days picker on the same screen.
- *
- * Buttons with `aria-pressed`, not radios: a radiogroup promises arrow-key
- * navigation, and roles without the roving tabindex behind them are worse
- * than honest buttons (#1795).
+ * them pressed. The layout and the accessibility are `ChoiceGridComponent`'s;
+ * this knows only the four arts and what they are called.
  */
 @Component({
   selector: 'app-martial-art-picker',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [TranslatePipe],
+  imports: [ChoiceGridComponent],
   template: `
-    <div
-      class="martial-art-picker"
-      role="group"
-      [attr.aria-label]="ariaLabel()"
-      [attr.aria-describedby]="describedBy()"
-    >
-      @for (art of arts; track art) {
-        <button
-          type="button"
-          class="martial-art-picker__option"
-          [class.martial-art-picker__option--selected]="value() === art"
-          [attr.aria-pressed]="value() === art"
-          (click)="valueChange.emit(art)"
-          [attr.data-cy]="'martial-art-' + art"
-        >
-          {{ keys[art] | translate }}
-        </button>
-      }
-    </div>
+    <app-choice-grid
+      [options]="options()"
+      [value]="value()"
+      [ariaLabel]="ariaLabel()"
+      [describedBy]="describedBy()"
+      optionCy="martial-art-"
+      (valueChange)="valueChange.emit($event)"
+    />
   `,
-  styleUrl: './martial-art-picker.component.scss',
 })
 export class MartialArtPickerComponent {
+  private readonly translate = inject(TranslateService);
+  private readonly languageService = inject(LanguageService);
+
   /** The chosen art, or null before the owner has chosen — there is no default. */
   readonly value = input<MartialArt | null>(null);
 
   /** The group's accessible name — the same words as the visible label beside it. */
   readonly ariaLabel = input<string | null>(null);
-  /**
-   * The id of the hint or error the group should announce, as
-   * `BudojoFormField` renders them (`{controlId}-hint` / `-error`). A group
-   * has no `<label for>` to borrow them from.
-   */
+  /** The id of the field's hint or error, for the group to announce. */
   readonly describedBy = input<string | null>(null);
 
   readonly valueChange = output<MartialArt>();
 
-  protected readonly arts = MARTIAL_ARTS;
-  protected readonly keys = MARTIAL_ART_KEYS;
+  protected readonly options = computed<ChoiceOption<MartialArt>[]>(() => {
+    this.languageService.currentLang(); // signal dep — recompute on toggle
+    return MARTIAL_ARTS.map((art) => ({
+      value: art,
+      label: this.translate.instant(MARTIAL_ART_KEYS[art]),
+    }));
+  });
 }

@@ -70,5 +70,9 @@
       "first": 9
     }
   ],
+  "training_modes": [
+    "tachi-waza",
+    "ne-waza"
+  ],
   "programmes": []
 }

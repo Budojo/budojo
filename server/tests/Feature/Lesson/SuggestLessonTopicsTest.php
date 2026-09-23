@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Enums\TopicKind;
+use App\Enums\TrainingMode;
 use App\Models\AcademyClass;
 use App\Models\Athlete;
 use App\Models\AttendanceRecord;
@@ -146,9 +146,9 @@ it('still answers when everything in season has been covered twice', function ()
 // ─── Scope ───────────────────────────────────────────────────────────────────
 
 it('never tells a gi class to teach a no-gi technique', function (): void {
-    suggestibleTechnique($this, $this->guard, 'Lapel guard', 1, TopicKind::Gi->value);
-    suggestibleTechnique($this, $this->guard, 'Heel hook', 2, TopicKind::NoGi->value);
-    suggestibleTechnique($this, $this->guard, 'Armbar', 3, TopicKind::Both->value);
+    suggestibleTechnique($this, $this->guard, 'Lapel guard', 1, TrainingMode::Gi->value);
+    suggestibleTechnique($this, $this->guard, 'Heel hook', 2, TrainingMode::NoGi->value);
+    suggestibleTechnique($this, $this->guard, 'Armbar', 3, TrainingMode::Both->value);
 
     expect(collect(suggest($this))->pluck('name')->all())
         ->toBe(['Lapel guard', 'Armbar']);
@@ -156,17 +156,17 @@ it('never tells a gi class to teach a no-gi technique', function (): void {
 
 it('never tells a no-gi class to teach a gi technique', function (): void {
     $this->class->update(['kind' => 'nogi']);
-    suggestibleTechnique($this, $this->guard, 'Lapel guard', 1, TopicKind::Gi->value);
-    suggestibleTechnique($this, $this->guard, 'Heel hook', 2, TopicKind::NoGi->value);
-    suggestibleTechnique($this, $this->guard, 'Armbar', 3, TopicKind::Both->value);
+    suggestibleTechnique($this, $this->guard, 'Lapel guard', 1, TrainingMode::Gi->value);
+    suggestibleTechnique($this, $this->guard, 'Heel hook', 2, TrainingMode::NoGi->value);
+    suggestibleTechnique($this, $this->guard, 'Armbar', 3, TrainingMode::Both->value);
 
     expect(collect(suggest($this))->pluck('name')->all())
         ->toBe(['Heel hook', 'Armbar']);
 });
 
 it('admits everything for a both or other class', function (): void {
-    suggestibleTechnique($this, $this->guard, 'Lapel guard', 1, TopicKind::Gi->value);
-    suggestibleTechnique($this, $this->guard, 'Heel hook', 2, TopicKind::NoGi->value);
+    suggestibleTechnique($this, $this->guard, 'Lapel guard', 1, TrainingMode::Gi->value);
+    suggestibleTechnique($this, $this->guard, 'Heel hook', 2, TrainingMode::NoGi->value);
 
     foreach (['both', 'other'] as $kind) {
         $this->class->update(['kind' => $kind]);

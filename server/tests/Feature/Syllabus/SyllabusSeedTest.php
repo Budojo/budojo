@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use App\Actions\Syllabus\SeedSyllabusAction;
 use App\Enums\MartialArt;
-use App\Enums\TopicKind;
+use App\Enums\TrainingMode;
 use App\Models\Academy;
 use App\Models\AcademyMembership;
 use App\Models\SyllabusTopic;
@@ -45,12 +45,12 @@ it('marks what only makes sense in one of gi or no-gi, and inherits the rest fro
     $this->actingAs($this->user)->postJson('/api/v1/academy/syllabus/seed')->assertCreated();
 
     $kGuard = SyllabusTopic::query()->where('academy_id', $this->academy->id)->where('name', 'K guard')->firstOrFail();
-    expect($kGuard->kind)->toBe(TopicKind::NoGi);
-    expect($kGuard->children()->pluck('kind')->unique()->all())->toBe([TopicKind::NoGi]);
+    expect($kGuard->kind)->toBe(TrainingMode::NoGi);
+    expect($kGuard->children()->pluck('kind')->unique()->all())->toBe([TrainingMode::NoGi]);
 
     $closed = SyllabusTopic::query()->where('academy_id', $this->academy->id)->where('name', 'Closed guard')->firstOrFail();
-    expect($closed->children()->where('name', 'Cross collar choke')->firstOrFail()->kind)->toBe(TopicKind::Gi);
-    expect($closed->children()->where('name', 'Armbar')->firstOrFail()->kind)->toBe(TopicKind::Both);
+    expect($closed->children()->where('name', 'Cross collar choke')->firstOrFail()->kind)->toBe(TrainingMode::Gi);
+    expect($closed->children()->where('name', 'Armbar')->firstOrFail()->kind)->toBe(TrainingMode::Both);
 });
 
 it('refuses to seed an academy that already has a programme, and writes nothing', function (): void {
@@ -124,7 +124,7 @@ it('ships programme files that parse, name every position once, and repeat no te
     foreach (MartialArt::cases() as $art) {
         $profile = MartialArtProfile::for($art);
         foreach ($profile->programmes() as $key) {
-            $positions = SeedSyllabusAction::positions((string) $profile->programmeFile($key));
+            $positions = SeedSyllabusAction::positions((string) $profile->programmeFile($key), $art);
 
             $positionNames = array_column($positions, 'name');
             expect($positionNames)->toBe(array_values(array_unique($positionNames)), $key);
@@ -132,14 +132,14 @@ it('ships programme files that parse, name every position once, and repeat no te
             foreach ($positions as $position) {
                 expect($position['name'])->not->toBe('');
                 expect(mb_strlen($position['name']))->toBeLessThanOrEqual(80);
-                expect($position['kind'])->toBeInstanceOf(TopicKind::class);
+                expect($position['kind'])->toBeInstanceOf(TrainingMode::class);
                 expect($position['techniques'])->not->toBe([]);
 
                 $names = array_column($position['techniques'], 'name');
                 expect($names)->toBe(array_values(array_unique($names)), "{$key}: {$position['name']} repeats a technique");
                 foreach ($position['techniques'] as $technique) {
                     expect(mb_strlen($technique['name']))->toBeLessThanOrEqual(80);
-                    expect($technique['kind'])->toBeInstanceOf(TopicKind::class);
+                    expect($technique['kind'])->toBeInstanceOf(TrainingMode::class);
                 }
             }
         }

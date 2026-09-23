@@ -179,6 +179,43 @@ describe('Weekly timetable', () => {
     cy.get('[data-cy="timetable-class-9"]').should('contain', 'Advanced');
   });
 
+  it('offers a judo academy its own modes, starts on the middle, and sends the one picked (#1803)', () => {
+    cy.intercept('GET', '/api/v1/academy', {
+      statusCode: 200,
+      body: {
+        data: {
+          ...ACADEMY_OK.body.data,
+          martial_art: 'judo',
+          training_modes: ['tachi-waza', 'ne-waza'],
+        },
+      },
+    }).as('academy');
+    cy.intercept('GET', '/api/v1/academy/classes', classes([KIDS])).as('classes');
+    cy.intercept('POST', '/api/v1/academy/classes', (req) => {
+      req.reply({ statusCode: 201, body: { data: { id: 9, ...req.body } } });
+    }).as('create');
+
+    cy.visitAuthenticated('/dashboard/academy/timetable');
+    cy.wait('@classes');
+
+    cy.get('[data-cy="timetable-add-2"]').click();
+    cy.get('[data-cy="timetable-form-kind"]')
+      .should('contain.text', 'Tachi-waza')
+      .and('contain.text', 'Ne-waza')
+      .and('not.contain.text', 'Gi');
+    cy.get('[data-cy="timetable-form-kind"] [aria-pressed="true"]').should(
+      'contain.text',
+      'Tachi-waza and ne-waza',
+    );
+
+    cy.get('[data-cy="timetable-form-name"]').should('have.focus').type('Randori');
+    cy.get('[data-cy="timetable-form-kind"]').contains('Ne-waza').click();
+    cy.intercept('GET', '/api/v1/academy/classes', classes([KIDS])).as('reload');
+    cy.get('[data-cy="timetable-form-save"]').click();
+
+    cy.wait('@create').its('request.body.kind').should('eq', 'ne-waza');
+  });
+
   it('edits a class in place and removes it after a confirm', () => {
     cy.intercept('GET', '/api/v1/academy/classes', classes([KIDS])).as('classes');
     cy.intercept('PATCH', '/api/v1/academy/classes/1', (req) => {

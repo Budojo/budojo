@@ -80,10 +80,13 @@ function report(over: Record<string, unknown> = {}) {
   };
 }
 
-function stub(data: Record<string, unknown> = report()): void {
+function stub(
+  data: Record<string, unknown> = report(),
+  academy: Record<string, unknown> = ACADEMY,
+): void {
   cy.clearLocalStorage();
   cy.intercept('GET', '/api/v1/**', { statusCode: 200, body: { data: [] } });
-  cy.intercept('GET', '/api/v1/academy', { statusCode: 200, body: { data: ACADEMY } });
+  cy.intercept('GET', '/api/v1/academy', { statusCode: 200, body: { data: academy } });
   cy.intercept('GET', '/api/v1/athletes*', ATHLETES_EMPTY);
   cy.intercept('GET', '/api/v1/stats/syllabus/coverage*', { statusCode: 200, body: { data } }).as(
     'coverage',
@@ -133,6 +136,20 @@ describe('Syllabus coverage', () => {
 
     cy.wait('@filtered').its('request.url').should('contain', 'kind=nogi');
     cy.get('[data-cy="syllabus-coverage"]').should('contain.text', '1 of 3 covered this season');
+  });
+
+  it('filters a judo academy by its own modes (#1803)', () => {
+    stub(report(), { ...ACADEMY, martial_art: 'judo', training_modes: ['tachi-waza', 'ne-waza'] });
+
+    cy.visitAuthenticated('/dashboard/stats/syllabus');
+    cy.wait('@coverage');
+
+    cy.get('[data-cy="syllabus-coverage-kind"]')
+      .should('contain.text', 'Tachi-waza')
+      .and('not.contain.text', 'Gi');
+    cy.get('[data-cy="syllabus-coverage-kind"]').contains('Ne-waza').click();
+
+    cy.wait('@coverage').its('request.url').should('contain', 'kind=ne-waza');
   });
 
   it('walks back a season, and offers nothing past the current one', () => {

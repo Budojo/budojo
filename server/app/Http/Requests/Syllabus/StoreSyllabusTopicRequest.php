@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Requests\Syllabus;
 
 use App\Authorization\Capability;
-use App\Enums\TopicKind;
+use App\Enums\MartialArt;
+use App\Enums\TrainingMode;
 use App\Http\Requests\Concerns\AuthorizesAcademyCapability;
 use App\Http\Requests\Concerns\ValidatesSyllabusTopic;
 use App\Models\SyllabusTopic;
@@ -52,7 +53,12 @@ class StoreSyllabusTopicRequest extends FormRequest
                     ->whereNull('parent_id')
                     ->whereNull('deleted_at'),
             ],
-            ...$this->syllabusTopicRules(required: true, academyId: $academyId, parentId: $parentId),
+            ...$this->syllabusTopicRules(
+                required: true,
+                academyId: $academyId,
+                parentId: $parentId,
+                art: $user->activeAcademy()->martial_art ?? MartialArt::Bjj,
+            ),
         ];
     }
 
@@ -79,11 +85,11 @@ class StoreSyllabusTopicRequest extends FormRequest
         return \is_string($name) ? $name : '';
     }
 
-    public function topicKind(): TopicKind
+    public function topicKind(): TrainingMode
     {
         $kind = $this->validated('kind');
 
-        return $kind instanceof TopicKind ? $kind : TopicKind::from(\is_string($kind) ? $kind : 'both');
+        return $kind instanceof TrainingMode ? $kind : TrainingMode::from(\is_string($kind) ? $kind : 'both');
     }
 
     public function inSeason(): bool

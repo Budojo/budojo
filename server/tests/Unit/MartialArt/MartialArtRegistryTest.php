@@ -103,7 +103,7 @@ it('lists programmes whose files exist and parse, with keys unique across every 
             $file = $profile->programmeFile($key);
             expect($file)->not->toBeNull()
                 ->and(is_file((string) $file))->toBeTrue("{$art->value}: {$key}")
-                ->and(SeedSyllabusAction::positions((string) $file))->not->toBe([]);
+                ->and(SeedSyllabusAction::positions((string) $file, $art))->not->toBe([]);
         }
     }
 

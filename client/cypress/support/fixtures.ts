@@ -3,6 +3,7 @@
 // change instead of one across many specs.
 
 import LADDERS from '../../src/test-utils/ladders.json';
+import TRAINING_MODES from '../../src/test-utils/training-modes.json';
 
 export const MOCK_ACADEMY = {
   id: 1,
@@ -16,6 +17,7 @@ export const MOCK_ACADEMY = {
   // desktop spec keeps equal to the server's registry.
   martial_art: 'bjj',
   grades: LADDERS.bjj,
+  training_modes: TRAINING_MODES.bjj,
   martial_art_locked: false,
   syllabus_programmes: ['bjj'],
 } as const;

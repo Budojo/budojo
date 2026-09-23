@@ -127,6 +127,40 @@ describe('Academy programme', () => {
     });
   });
 
+  it('offers a karate academy its own modes and its own example (#1803)', () => {
+    stub([], {
+      ...ACADEMY,
+      martial_art: 'karate',
+      training_modes: ['kata', 'kumite'],
+      // No karate programme has shipped, so the empty page offers only a blank start.
+      syllabus_programmes: [],
+    });
+
+    cy.visitAuthenticated('/dashboard/academy/syllabus');
+    cy.wait('@syllabus');
+
+    cy.get('[data-cy="syllabus-empty-cta"] button').click();
+    cy.get('[data-cy="syllabus-form-kind"]')
+      .should('contain.text', 'Kata and kumite')
+      .and('not.contain.text', 'Gi');
+    cy.get('[data-cy="syllabus-dialog"]').should(
+      'contain.text',
+      'Saifa is kata, sanbon kumite is kumite.',
+    );
+
+    cy.get('[data-cy="syllabus-form-name"]').should('be.visible').type('Kata');
+    cy.get('[data-cy="syllabus-form-kind"]')
+      .contains(/^\s*Kata\s*$/)
+      .click();
+    cy.intercept('POST', '/api/v1/academy/syllabus', {
+      statusCode: 201,
+      body: { data: topic({ id: 21, name: 'Kata', kind: 'kata', children: [] }) },
+    }).as('create');
+    cy.get('[data-cy="syllabus-form-submit"]').click();
+
+    cy.wait('@create').its('request.body.kind').should('eq', 'kata');
+  });
+
   it('takes a position out of season', () => {
     stub([CLOSED_GUARD, K_GUARD]);
 

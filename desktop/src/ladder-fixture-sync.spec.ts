@@ -3,8 +3,8 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 /**
- * The client's test fixture of the four belt ladders must be what the server
- * sends (#1801). The client suite runs in a container that mounts `./client`
+ * The client's test fixtures of the four belt ladders (#1801) and their
+ * training modes (#1803) must be what the server sends. The client suite runs in a container that mounts `./client`
  * alone and cannot see the server's registry; this suite runs on the host
  * with the whole repo, so it is the side that can compare the two — the same
  * reason the title-bar colour pin lives here.
@@ -37,5 +37,17 @@ describe('client ladder fixtures match the server registry', () => {
     }));
 
     expect(fixture[art]).toEqual(wire);
+  });
+
+  it.each(arts)('sends the %s training modes the registry names (#1803)', (art) => {
+    const modes = JSON.parse(
+      readFileSync(path.join(repo, 'client', 'src', 'test-utils', 'training-modes.json'), 'utf8'),
+    ) as Record<string, string[]>;
+    const registry = JSON.parse(
+      readFileSync(path.join(repo, 'server', 'database', 'seed-data', 'martial-arts', `${art}.json`), 'utf8'),
+    ) as { training_modes: string[] };
+
+    expect(Object.keys(modes).sort()).toEqual([...arts].sort());
+    expect(modes[art]).toEqual(registry.training_modes);
   });
 });

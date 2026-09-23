@@ -2,15 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
-
-/**
- * What a class is trained in (#1562). A dimension of the class, not a tag on a
- * lesson — heel hooks live in no-gi, lapel guards in gi, and a chart that
- * mixes the two says a number that is quietly wrong.
- */
-export type ClassKind = 'gi' | 'nogi' | 'both' | 'other';
-
-export const CLASS_KINDS: readonly ClassKind[] = ['gi', 'nogi', 'both', 'other'];
+import type { TrainingMode } from './academy.service';
 
 /**
  * One recurring slot on the academy's weekly timetable (#1562).
@@ -25,7 +17,11 @@ export interface AcademyClass {
   readonly weekday: number;
   readonly starts_at: string | null;
   readonly duration_minutes: number | null;
-  readonly kind: ClassKind;
+  /**
+   * What the class is trained in (#1562, #1803): one of the academy's two
+   * modes, `both` or `other`. A dimension of the class, not a tag on a lesson.
+   */
+  readonly kind: TrainingMode;
 }
 
 export interface AcademyClassPayload {
@@ -33,7 +29,7 @@ export interface AcademyClassPayload {
   readonly weekday: number;
   readonly starts_at: string | null;
   readonly duration_minutes: number | null;
-  readonly kind: ClassKind;
+  readonly kind: TrainingMode;
 }
 
 @Injectable({ providedIn: 'root' })

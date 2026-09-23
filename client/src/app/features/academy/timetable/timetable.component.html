@@ -256,12 +256,11 @@
       <span class="field__label" id="class-kind-label">
         {{ 'academy.timetable.form.kind' | translate }}
       </span>
-      <p-selectbutton
+      <!-- A grid, not a segmented row: "Tachi-waza and ne-waza" does not fit one (#1803). -->
+      <app-choice-grid
         [options]="kindOptions()"
-        formControlName="kind"
-        optionLabel="label"
-        optionValue="value"
-        [allowEmpty]="false"
+        [value]="form.controls.kind.value"
+        (valueChange)="setKind($event)"
         ariaLabelledBy="class-kind-label"
         data-cy="timetable-form-kind"
       />

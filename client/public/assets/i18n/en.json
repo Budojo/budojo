@@ -1656,12 +1656,6 @@
         "dayRequired": "Pick a day.",
         "durationPlaceholder": "minutes"
       },
-      "kind": {
-        "gi": "Gi",
-        "nogi": "No-gi",
-        "both": "Gi and no-gi",
-        "other": "Other"
-      },
       "confirm": {
         "remove": "Remove {{name}} from the timetable? The lessons already held stay as they were.",
         "accept": "Remove",
@@ -1707,17 +1701,11 @@
         "namePlaceholderPosition": "Closed guard",
         "namePlaceholderTechnique": "Armbar",
         "kind": "Trained in",
-        "kindHint": "Heel hooks are no-gi, lapel guards are gi. Leave it on both when it makes sense either way.",
         "nameRequired": "Give it a name, and one not already used here.",
         "cancel": "Cancel",
         "create": "Add",
         "save": "Save",
         "remove": "Remove"
-      },
-      "kind": {
-        "both": "Gi and no-gi",
-        "gi": "Gi",
-        "nogi": "No-gi"
       },
       "confirm": {
         "remove": "Remove {{name}} from the programme?",
@@ -1742,7 +1730,13 @@
       "searchCountTechniqueOne": "{{count}} technique",
       "searchCountTechniqueOther": "{{count}} techniques",
       "searchCountPositionOne": "{{count}} position",
-      "searchCountPositionOther": "{{count}} positions"
+      "searchCountPositionOther": "{{count}} positions",
+      "kindHint": {
+        "bjj": "Heel hooks are no-gi, lapel guards are gi. Leave it on both when it makes sense either way.",
+        "judo": "O-soto-gari is tachi-waza, kesa-gatame is ne-waza. Leave it on tachi-waza and ne-waza when it makes sense either way.",
+        "karate": "Saifa is kata, sanbon kumite is kumite. Leave it on kata and kumite when it makes sense either way.",
+        "taekwondo": "Taegeuk il jang is poomsae, a sparring combination is kyorugi. Leave it on poomsae and kyorugi when it makes sense either way."
+      }
     },
     "schedule": {
       "title": "Plan a future schedule change",
@@ -1766,6 +1760,23 @@
         "errorSummary": "Couldn't save",
         "errorDetail": "Try again, or pick a different date if one is already scheduled.",
         "cancelErrorDetail": "The pending change could not be cancelled. Refresh and try again."
+      }
+    },
+    "trainingMode": {
+      "gi": "Gi",
+      "nogi": "No-gi",
+      "tachiWaza": "Tachi-waza",
+      "neWaza": "Ne-waza",
+      "kata": "Kata",
+      "kumite": "Kumite",
+      "poomsae": "Poomsae",
+      "kyorugi": "Kyorugi",
+      "other": "Other",
+      "both": {
+        "bjj": "Gi and no-gi",
+        "judo": "Tachi-waza and ne-waza",
+        "karate": "Kata and kumite",
+        "taekwondo": "Poomsae and kyorugi"
       }
     }
   },
@@ -2766,9 +2777,7 @@
       },
       "filter": {
         "all": "All",
-        "gi": "Gi",
-        "nogi": "No-gi",
-        "aria": "Count gi, no-gi, or everything"
+        "aria": "Count {{a}}, {{b}}, or everything"
       },
       "season": {
         "previous": "Previous season",

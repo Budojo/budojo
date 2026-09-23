@@ -56,5 +56,9 @@
       "first": 1
     }
   ],
+  "training_modes": [
+    "poomsae",
+    "kyorugi"
+  ],
   "programmes": []
 }

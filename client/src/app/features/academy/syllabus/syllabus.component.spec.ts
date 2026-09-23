@@ -4,9 +4,10 @@ import { TestBed } from '@angular/core/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideRouter } from '@angular/router';
 import { ConfirmationService } from 'primeng/api';
-import { AcademyService } from '../../../core/services/academy.service';
+import { AcademyService, MartialArt } from '../../../core/services/academy.service';
 import { SyllabusTopic } from '../../../core/services/syllabus.service';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
+import { TRAINING_MODE_FIXTURES } from '../../../../test-utils/ladder-test';
 import { SyllabusComponent } from './syllabus.component';
 
 const SYLLABUS_URL = '/api/v1/academy/syllabus';
@@ -28,7 +29,7 @@ const CLOSED_GUARD = topic({ id: 1, name: 'Closed guard', children: [ARMBAR, CRO
 const K_GUARD = topic({ id: 2, name: 'K guard', kind: 'nogi', sort_order: 1, children: [] });
 
 /** The martial art's starter programmes, as `Academy.syllabus_programmes` sends them (#1802). */
-function setup(starterProgrammes: string[] = ['bjj']) {
+function setup(starterProgrammes: string[] = ['bjj'], art: MartialArt = 'bjj') {
   TestBed.configureTestingModule({
     imports: [SyllabusComponent],
     providers: [
@@ -46,6 +47,8 @@ function setup(starterProgrammes: string[] = ['bjj']) {
     slug: 'test',
     address: null,
     logo_url: null,
+    martial_art: art,
+    training_modes: TRAINING_MODE_FIXTURES[art],
     syllabus_programmes: starterProgrammes,
   });
 
@@ -769,5 +772,51 @@ describe('SyllabusComponent (#1563)', () => {
     // renders, empty, and `aria-labelledby` points at an empty span.
     expect(spy.mock.calls[0][0].header).toBe('Remove from the syllabus');
     expect(spy.mock.calls[0][0].rejectLabel).toBe('Cancel');
+  });
+});
+
+describe('SyllabusComponent — training modes (#1803)', () => {
+  afterEach(() => TestBed.inject(HttpTestingController).verify());
+
+  const SANCHIN = topic({ id: 5, name: 'Sanchin', kind: 'kata', children: [] });
+  const KAKIE = topic({ id: 6, name: 'Kakie', kind: 'both', sort_order: 1, children: [] });
+
+  it("offers a karate topic the art's modes, with the art's own example under them", () => {
+    const { fixture, component, httpMock } = setup([], 'karate');
+    flushTree(httpMock, [SANCHIN]);
+    fixture.detectChanges();
+
+    component['startAddingPosition']();
+    fixture.detectChanges();
+
+    const options = Array.from(
+      document.querySelectorAll<HTMLElement>('[data-cy="syllabus-form-kind"] button'),
+    ).map((b) => b.textContent?.trim());
+    expect(options).toEqual(['Kata', 'Kumite', 'Kata and kumite']);
+    expect(document.body.textContent).toContain('Saifa is kata, sanbon kumite is kumite.');
+    expect(document.body.textContent).not.toContain('Heel hooks');
+  });
+
+  it('says a mode on the row only when it narrows something, in the art own words', () => {
+    const { fixture, httpMock } = setup([], 'karate');
+    flushTree(httpMock, [SANCHIN, KAKIE]);
+    fixture.detectChanges();
+
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.textContent).toContain('Kata');
+    expect(el.textContent).not.toContain('Kata and kumite');
+  });
+
+  it('keeps the BJJ example word for word', () => {
+    const { fixture, component, httpMock } = setup();
+    flushTree(httpMock, [CLOSED_GUARD]);
+    fixture.detectChanges();
+
+    component['startAddingPosition']();
+    fixture.detectChanges();
+
+    expect(document.body.textContent).toContain(
+      'Heel hooks are no-gi, lapel guards are gi. Leave it on both when it makes sense either way.',
+    );
   });
 });

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Enums\TopicKind;
+use App\Enums\TrainingMode;
 use Carbon\Carbon;
 use Database\Factories\SyllabusTopicFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -28,7 +28,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property int         $academy_id
  * @property int|null    $parent_id
  * @property string      $name
- * @property TopicKind   $kind
+ * @property TrainingMode   $kind
  * @property bool        $in_season   In scope for the current season — the coverage denominator
  * @property int         $sort_order
  * @property Carbon      $created_at
@@ -92,7 +92,7 @@ class SyllabusTopic extends Model
         return [
             'in_season' => 'boolean',
             'sort_order' => 'integer',
-            'kind' => TopicKind::class,
+            'kind' => TrainingMode::class,
         ];
     }
 }

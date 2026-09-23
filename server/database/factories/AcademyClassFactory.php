@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
-use App\Enums\ClassKind;
+use App\Enums\TrainingMode;
 use App\Models\Academy;
 use App\Models\AcademyClass;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -29,7 +29,7 @@ class AcademyClassFactory extends Factory
             'weekday' => $this->faker->numberBetween(1, 5),
             'starts_at' => '19:00',
             'duration_minutes' => 60,
-            'kind' => ClassKind::Gi,
+            'kind' => TrainingMode::Gi,
         ];
     }
 

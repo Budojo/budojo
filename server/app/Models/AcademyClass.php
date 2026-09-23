@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Enums\ClassKind;
+use App\Enums\TrainingMode;
 use App\Observers\AcademyClassObserver;
 use Carbon\Carbon;
 use Database\Factories\AcademyClassFactory;
@@ -28,7 +28,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int         $weekday          Carbon dayOfWeek, 0=Sun..6=Sat
  * @property string|null $starts_at        `HH:MM`, or null for a class with no clock time
  * @property int|null    $duration_minutes
- * @property ClassKind   $kind
+ * @property TrainingMode   $kind
  * @property Carbon      $created_at
  * @property Carbon      $updated_at
  */
@@ -59,7 +59,7 @@ class AcademyClass extends Model
         return [
             'weekday' => 'integer',
             'duration_minutes' => 'integer',
-            'kind' => ClassKind::class,
+            'kind' => TrainingMode::class,
         ];
     }
 }

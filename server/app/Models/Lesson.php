@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Enums\ClassKind;
+use App\Enums\TrainingMode;
 use Carbon\Carbon;
 use Database\Factories\LessonFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -33,7 +33,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string      $name
  * @property string|null $starts_at         `HH:MM` or null
  * @property int|null    $duration_minutes  Snapshot of the class's length when the lesson was created (#1591); null when the class never set one
- * @property ClassKind   $kind
+ * @property TrainingMode   $kind
  * @property string|null $notes
  * @property Carbon      $created_at
  * @property Carbon      $updated_at
@@ -92,7 +92,7 @@ class Lesson extends Model
             // have to compare equal to the string the query hands them.
             'held_on' => 'date:Y-m-d',
             'duration_minutes' => 'integer',
-            'kind' => ClassKind::class,
+            'kind' => TrainingMode::class,
         ];
     }
 }

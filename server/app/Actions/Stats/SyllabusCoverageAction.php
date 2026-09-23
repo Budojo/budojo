@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Stats;
 
-use App\Enums\TopicKind;
+use App\Enums\TrainingMode;
 use App\Models\Academy;
 use App\Models\Lesson;
 use App\Models\SyllabusTopic;
@@ -47,7 +47,7 @@ class SyllabusCoverageAction
      *
      * @return array<string, mixed>
      */
-    public function execute(Academy $academy, int $seasonsBack = 0, ?TopicKind $kind = null): array
+    public function execute(Academy $academy, int $seasonsBack = 0, ?TrainingMode $kind = null): array
     {
         $reference = CarbonImmutable::now()->subYears($seasonsBack);
         $start = Season::startFor($academy, $reference);
@@ -80,16 +80,19 @@ class SyllabusCoverageAction
     /**
      * The programme as this report counts it: living, in season, and of a
      * kind the filter admits. `both` is admitted by every filter — it is the
-     * default a topic carries when it makes sense either way.
+     * default a topic carries when it makes sense either way. The same rule as
+     * a lesson's suggestions, {@see TrainingMode::admittedTopicModes()}.
      *
      * @return Collection<int, SyllabusTopic>
      */
-    private function topicsInScope(Academy $academy, ?TopicKind $kind): Collection
+    private function topicsInScope(Academy $academy, ?TrainingMode $kind): Collection
     {
+        $admitted = $kind?->admittedTopicModes();
+
         return SyllabusTopic::query()
             ->where('academy_id', $academy->id)
             ->where('in_season', true)
-            ->when($kind !== null, static fn ($q) => $q->whereIn('kind', [$kind?->value, TopicKind::Both->value]))
+            ->when($admitted !== null, static fn ($q) => $q->whereIn('kind', $admitted))
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get();

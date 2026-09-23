@@ -168,7 +168,7 @@ describe('SetupComponent — martial-art picker (#1802)', () => {
     const { fixture } = setup();
     const options = Array.from(
       (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>(
-        '.martial-art-picker__option',
+        'app-martial-art-picker button',
       ),
     );
 
@@ -218,7 +218,7 @@ describe('SetupComponent — martial-art picker (#1802)', () => {
   it('describes the picker by its hint, then by its error once there is one', () => {
     const { fixture, cmp } = setup();
     const el = fixture.nativeElement as HTMLElement;
-    const group = () => el.querySelector('.martial-art-picker');
+    const group = () => el.querySelector('app-martial-art-picker [role="group"]');
 
     expect(group()?.getAttribute('aria-describedby')).toBe('martial-art-hint');
     expect(el.querySelector('#martial-art-hint')).not.toBeNull();
