@@ -1684,11 +1684,23 @@
       "noTechniques": "Nothing under this position yet.",
       "empty": {
         "title": "No programme yet",
-        "hint": "Start from the shipped BJJ programme — every position and technique, ready to rename, untick or delete — or write your own from scratch.",
-        "cta": "Start from the BJJ programme",
         "scratch": "Write my own instead",
         "hintNoStarter": "The starter programme for this martial art is not ready yet. Write your own: the positions or groups you teach first, then what goes in each.",
-        "ctaNoStarter": "Write my programme"
+        "ctaNoStarter": "Write my programme",
+        "starter": {
+          "bjj": {
+            "cta": "Start from the BJJ programme",
+            "hint": "Start from the shipped BJJ programme — every position and technique, ready to rename, untick or delete — or write your own from scratch."
+          },
+          "judo": {
+            "cta": "Start from the judo programme",
+            "hint": "Start from the shipped judo programme — the Kodokan throws, holds, chokes and locks by group, with ukemi, randori and kata — ready to rename, untick or delete, or write your own from scratch."
+          },
+          "other": {
+            "cta": "Start from the shipped programme",
+            "hint": "Start from the programme that ships for this martial art — ready to rename, untick or delete — or write your own from scratch."
+          }
+        }
       },
       "dialog": {
         "addPosition": "New position",

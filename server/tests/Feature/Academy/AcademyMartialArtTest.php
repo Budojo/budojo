@@ -35,7 +35,7 @@ it('creates a judo academy and answers with the judo ladder', function (): void 
         ->assertCreated()
         ->assertJsonPath('data.martial_art', 'judo')
         ->assertJsonPath('data.martial_art_locked', false)
-        ->assertJsonPath('data.syllabus_programmes', []);
+        ->assertJsonPath('data.syllabus_programmes', ['judo']);
 
     $grades = collect($response->json('data.grades'));
     expect($grades->pluck('belt')->all())->not->toContain('purple')

@@ -90,8 +90,8 @@
         <app-empty-state
           icon="pi pi-book"
           [title]="'academy.syllabus.empty.title' | translate"
-          [hint]="'academy.syllabus.empty.hint' | translate"
-          [ctaLabel]="'academy.syllabus.empty.cta' | translate"
+          [hint]="starterKeys().hint | translate"
+          [ctaLabel]="starterKeys().cta | translate"
           ctaIcon="pi pi-sparkles"
           [ctaLoading]="seeding()"
           (ctaClick)="seedFromStarter()"
@@ -238,7 +238,7 @@
                     >
                       {{ technique.name }}
                     </label>
-                    @if (kindChip(technique); as chip) {
+                    @if (kindChip(technique, position); as chip) {
                       <span class="chip">{{ chip }}</span>
                     }
                     <!--

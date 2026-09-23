@@ -1684,11 +1684,23 @@
       "noTechniques": "Ancora niente sotto questa posizione.",
       "empty": {
         "title": "Nessun programma",
-        "hint": "Parti dal programma BJJ già pronto — tutte le posizioni e le tecniche, da rinominare, togliere o cancellare — oppure scrivi il tuo da zero.",
-        "cta": "Parti dal programma BJJ",
         "scratch": "Scrivo il mio",
         "hintNoStarter": "Il programma già pronto per questa arte marziale non c'è ancora. Scrivi il tuo: prima le posizioni o i gruppi che insegni, poi cosa c'è in ognuno.",
-        "ctaNoStarter": "Scrivo il mio programma"
+        "ctaNoStarter": "Scrivo il mio programma",
+        "starter": {
+          "bjj": {
+            "cta": "Parti dal programma BJJ",
+            "hint": "Parti dal programma BJJ già pronto — tutte le posizioni e le tecniche, da rinominare, togliere o cancellare — oppure scrivi il tuo da zero."
+          },
+          "judo": {
+            "cta": "Parti dal programma di judo",
+            "hint": "Parti dal programma di judo già pronto — le proiezioni, le immobilizzazioni, gli strangolamenti e le leve del Kodokan per gruppi, con ukemi, randori e kata — da rinominare, togliere o cancellare, oppure scrivi il tuo da zero."
+          },
+          "other": {
+            "cta": "Parti dal programma già pronto",
+            "hint": "Parti dal programma già pronto per questa arte marziale — da rinominare, togliere o cancellare — oppure scrivi il tuo da zero."
+          }
+        }
       },
       "dialog": {
         "addPosition": "Nuova posizione",

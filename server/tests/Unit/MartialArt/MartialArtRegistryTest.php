@@ -109,9 +109,11 @@ it('lists programmes whose files exist and parse, with keys unique across every 
 
     expect($keys)->toBe(array_values(array_unique($keys)))
         ->and(MartialArtProfile::for(MartialArt::Bjj)->programmes())->toBe(['bjj'])
-        // Empty until each art's programme ships (#1804-#1806, #1810): the
+        ->and(MartialArtProfile::for(MartialArt::Judo)->programmes())->toBe(['judo'])
+        // Empty until each art's programme ships (#1805, #1806, #1810): the
         // page offers no button and the endpoint answers 404 until then.
-        ->and(MartialArtProfile::for(MartialArt::Judo)->programmes())->toBe([]);
+        ->and(MartialArtProfile::for(MartialArt::Karate)->programmes())->toBe([])
+        ->and(MartialArtProfile::for(MartialArt::Taekwondo)->programmes())->toBe([]);
 });
 
 it('offers no file for a key the art does not list', function (): void {

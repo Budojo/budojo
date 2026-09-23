@@ -491,6 +491,12 @@ instructor acts on. Sizes below are targets, not counts.
   transitions and turnovers; renraku and kaeshi-waza; randori and shiai
   preparation; Nage-no-kata and Katame-no-kata. Throws are `tachi-waza`,
   holds/chokes/locks are `ne-waza`, the rest `both`.
+
+  *As built (#1804), against the IJF/Kodokan classification of 1 April 2017:*
+  14 groups, 137 items. Te-waza is **16** — the draft missed obi-tori-gaeshi.
+  Yoko-sutemi-waza gains uchi-makikomi and loses daki-age, which is not in the
+  classification. All seven Kodokan kata are listed, not only the two the
+  first dan grades ask for; the owner unticks.
 - **Karate — more than one starter programme, one per style.** Kihon and kumite
   are broadly shared between styles; kata are not, and a karate school is known
   by its kata. So karate's `programmes` lists one entry per style and the empty

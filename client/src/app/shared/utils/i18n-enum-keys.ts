@@ -101,6 +101,37 @@ export const TRAINING_MODE_HINT_KEYS: Readonly<Record<MartialArt, string>> = {
   taekwondo: 'academy.syllabus.kindHint.taekwondo',
 };
 
+/** The seed button and its hint, as each shipped starter programme is named (#1804). */
+export interface StarterProgrammeKeys {
+  readonly cta: string;
+  readonly hint: string;
+}
+
+const STARTER_PROGRAMME_KEYS: Readonly<Record<string, StarterProgrammeKeys>> = {
+  bjj: {
+    cta: 'academy.syllabus.empty.starter.bjj.cta',
+    hint: 'academy.syllabus.empty.starter.bjj.hint',
+  },
+  judo: {
+    cta: 'academy.syllabus.empty.starter.judo.cta',
+    hint: 'academy.syllabus.empty.starter.judo.hint',
+  },
+};
+
+/**
+ * The keys for a programme the server offers (`Academy.syllabus_programmes`).
+ * A programme that ships before its copy does still gets a truthful button —
+ * "Start from the shipped programme" — never a raw key on screen.
+ */
+export function starterProgrammeKeys(programme: string): StarterProgrammeKeys {
+  return (
+    STARTER_PROGRAMME_KEYS[programme] ?? {
+      cta: 'academy.syllabus.empty.starter.other.cta',
+      hint: 'academy.syllabus.empty.starter.other.hint',
+    }
+  );
+}
+
 /** The translation key for a belt, as the given martial art names it. */
 export function beltKey(belt: Belt, art: MartialArt): string {
   return BELT_KEY_OVERRIDES[art][belt] ?? BELT_KEYS[belt];
