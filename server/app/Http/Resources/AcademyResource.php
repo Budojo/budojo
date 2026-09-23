@@ -105,6 +105,24 @@ class AcademyResource extends JsonResource
     }
 
     /**
+     * The part of the martial art every reader of the academy needs to draw
+     * a belt or a mode: the owner here, an athlete through `MeAcademyResource`
+     * (#1813). One builder, so the two cannot send different ladders.
+     *
+     * @return array{martial_art: string, grades: list<array{belt: string, max_stripes: int, count: string, first: int, kids: bool}>, training_modes: list<string>}
+     */
+    public static function ladderPayload(Academy $academy): array
+    {
+        $profile = MartialArtProfile::for($academy->martial_art);
+
+        return [
+            'martial_art' => $academy->martial_art->value,
+            'grades' => array_map(static fn (Grade $grade): array => $grade->toArray(), $profile->ladder()->grades()),
+            'training_modes' => array_map(static fn (TrainingMode $mode): string => $mode->value, $profile->trainingModes()),
+        ];
+    }
+
+    /**
      * What the academy teaches and what follows from it (#1800): the ladder
      * the SPA must pick, sort and paint belts from — so it never keeps a
      * second copy that could disagree — its two training modes (#1803), whether
@@ -115,14 +133,10 @@ class AcademyResource extends JsonResource
      */
     private function martialArtPayload(Academy $academy): array
     {
-        $profile = MartialArtProfile::for($academy->martial_art);
-
         return [
-            'martial_art' => $academy->martial_art->value,
-            'grades' => array_map(static fn (Grade $grade): array => $grade->toArray(), $profile->ladder()->grades()),
-            'training_modes' => array_map(static fn (TrainingMode $mode): string => $mode->value, $profile->trainingModes()),
+            ...self::ladderPayload($academy),
             'martial_art_locked' => MartialArtLock::isLocked($academy),
-            'syllabus_programmes' => $profile->programmes(),
+            'syllabus_programmes' => MartialArtProfile::for($academy->martial_art)->programmes(),
         ];
     }
 

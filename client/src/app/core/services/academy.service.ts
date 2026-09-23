@@ -1,4 +1,4 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import {
   Observable,
@@ -364,6 +364,14 @@ export interface MeAcademy {
   readonly training_days: number[] | null;
   readonly owner: MeAcademyOwner | null;
   /**
+   * The academy's martial art, ladder and modes (#1813) — the same builder
+   * as `Academy`'s, so the portal draws an athlete's belt in their academy's
+   * words. Optional for fixture compat only.
+   */
+  readonly martial_art?: MartialArt;
+  readonly grades?: Grade[];
+  readonly training_modes?: readonly TrainingMode[];
+  /**
    * What one carnet entry pays for (#1576) — the athlete's balance drops by
    * one after two check-ins under `day`, and the portal says so. Optional
    * for fixture compat only; never null on the wire.
@@ -465,6 +473,25 @@ export class AcademyService {
   private readonly base = `${environment.apiBase}/api/v1/academy`;
 
   readonly academy = signal<Academy | null>(null);
+
+  /**
+   * The athlete's own academy (#1813), set by `getMine()`. The athlete portal
+   * never loads the owner-side `academy` — its routes have no academy guard
+   * — so without this the belts there read as BJJ whatever the academy
+   * teaches.
+   */
+  readonly mine = signal<MeAcademy | null>(null);
+
+  /**
+   * Whichever academy this session has a ladder from: the owner's, else the
+   * athlete's own (#1813). What `BeltLadderService` and `TrainingModesService`
+   * read, so every belt in the app is drawn from the one the session belongs
+   * to.
+   */
+  readonly ladderAcademy = computed<Pick<
+    Academy,
+    'martial_art' | 'grades' | 'training_modes'
+  > | null>(() => this.academy() ?? this.mine());
 
   /**
    * Tracks the HTTP request that is currently in flight, if any. We reuse it
@@ -649,6 +676,7 @@ export class AcademyService {
   getMine(): Observable<MeAcademy | null> {
     return this.http.get<{ data: MeAcademy }>(`${environment.apiBase}/api/v1/me/academy`).pipe(
       map((res) => res.data),
+      tap((academy) => this.mine.set(academy)),
       catchError((err: HttpErrorResponse) =>
         err.status === 404 ? of<MeAcademy | null>(null) : throwError(() => err),
       ),
@@ -663,6 +691,7 @@ export class AcademyService {
    */
   clear(): void {
     this.academy.set(null);
+    this.mine.set(null);
     this.inflight$ = null;
     this.epoch++;
   }

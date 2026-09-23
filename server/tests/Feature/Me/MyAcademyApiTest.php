@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enums\MartialArt;
 use App\Models\Academy;
 use App\Models\Athlete;
 use App\Models\User;
@@ -46,6 +47,30 @@ it("returns the athlete's own academy with the owner contact block for an athlet
 
     expect($response->json('data.id'))->toBe($this->academy->id)
         ->and($response->json('data.owner.email'))->toBe($this->owner->email);
+});
+
+it("sends an athlete their academy's martial art and ladder (#1813)", function (): void {
+    $this->academy->update(['martial_art' => MartialArt::Judo]);
+    /** @var Athlete $athlete */
+    $athlete = Athlete::factory()->for($this->academy)->create(['user_id' => null]);
+    /** @var User $athleteUser */
+    $athleteUser = User::factory()->create(['role' => 'athlete']);
+    $athlete->update(['user_id' => $athleteUser->id]);
+
+    $response = $this->actingAs($athleteUser)
+        ->getJson('/api/v1/me/academy')
+        ->assertOk();
+
+    // The same ladder the owner's `/academy` sends — one builder for both.
+    $ownerView = $this->actingAs($this->owner)->getJson('/api/v1/academy')->json('data');
+
+    expect($response->json('data.martial_art'))->toBe('judo')
+        ->and($response->json('data.grades'))->toBe($ownerView['grades'])
+        ->and($response->json('data.grades.1.belt'))->toBe('white-and-yellow')
+        ->and($response->json('data.training_modes'))->toBe(['tachi-waza', 'ne-waza'])
+        // Owner-side fields stay owner-side.
+        ->and($response->json('data'))->not->toHaveKey('martial_art_locked')
+        ->and($response->json('data'))->not->toHaveKey('syllabus_programmes');
 });
 
 it('returns 404 for a user with no linked academy', function (): void {
