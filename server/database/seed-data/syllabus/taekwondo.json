@@ -128,7 +128,10 @@
     "name": "Competition preparation",
     "kind": "both",
     "techniques": [
-      "Electronic scoring (PSS)",
+      {
+        "name": "Electronic scoring (PSS)",
+        "kind": "kyorugi"
+      },
       {
         "name": "Kyorugi rules",
         "kind": "kyorugi"
@@ -137,7 +140,10 @@
         "name": "Poomsae rules",
         "kind": "poomsae"
       },
-      "Weight and gear"
+      {
+        "name": "Weight and gear",
+        "kind": "kyorugi"
+      }
     ]
   }
 ]

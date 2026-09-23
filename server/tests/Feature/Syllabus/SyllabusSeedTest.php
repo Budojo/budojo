@@ -311,6 +311,10 @@ it('files poomsae as poomsae, sparring as kyorugi, and kicks either way', functi
         // A dollyeo-chagi is in Taegeuk and in every sparring round.
         ->and($mode('Dollyeo-chagi'))->toBe(TrainingMode::Both)
         ->and($mode('Kyorugi rules'))->toBe(TrainingMode::Kyorugi)
+        // Body-protector scoring and weight classes exist only in sparring:
+        // a poomsae coverage count must not ask for them.
+        ->and($mode('Electronic scoring (PSS)'))->toBe(TrainingMode::Kyorugi)
+        ->and($mode('Weight and gear'))->toBe(TrainingMode::Kyorugi)
         ->and($mode('Poomsae rules'))->toBe(TrainingMode::Poomsae);
 });
 
