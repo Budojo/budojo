@@ -656,19 +656,28 @@ halves, so `fg` must clear 4.5:1 against **both** `a` and `b`, in both themes.
 
 ### Setup
 
-`/setup` asks for the martial art **first** — before the name — as a
-`p-selectbutton` of four options (Hick: four, not a dropdown; the choice frames
-every field after it). Text labels only: `pi pi-*` has no martial-arts glyph
-and the canon forbids a second icon family. The setup E2E (`setup.cy.ts`) picks
-one; a second case picks judo and asserts the athlete form then offers
-`white-and-yellow` and not `purple`.
+`/setup` asks for the martial art **first** — before the name — as four large
+buttons in a 2×2 grid (Hick: four, not a dropdown; the choice frames every
+field after it). Nothing is pre-selected: a default BJJ is the bug this work
+exists to fix, and existing academies are BJJ by the migration, not by the
+form. Text labels only: `pi pi-*` has no martial-arts glyph and the canon
+forbids a second icon family. The setup E2E (`setup.cy.ts`) picks one; a second
+case picks judo and asserts the athlete form then offers `white-and-yellow` and
+not `purple`.
+
+*Built as `MartialArtPicker`, not the `p-selectbutton` first planned:* a select
+button is one joined row, and "Brazilian jiu-jitsu" beside three other labels
+does not fit the 320 px setup card. The grid uses the pill language of the
+training-days picker on the same screen, so the two read as one family.
 
 ### Academy page
 
-The martial art shows as a read-only line while `martial_art_locked` is true,
-with a tooltip saying why ("Set while the academy has no athletes, lessons or
-programme"); as the same select-button while it is false. No dialog: the lock
-is a fact about the data, not a warning to dismiss.
+The martial art shows as a read-only value while `martial_art_locked` is true,
+with the reason written under it ("Fixed now: the academy already has athletes,
+lessons or a programme") — not a tooltip, which a phone cannot hover; as the
+same picker while it is false. A locked form leaves `martial_art` off the
+`PATCH`. No dialog: the lock is a fact about the data, not a warning to
+dismiss. The detail page names the martial art in its own row.
 
 ### Everywhere a belt is picked or sorted
 
@@ -808,9 +817,10 @@ all four ladders, light and dark, mobile and desktop.
 
 ### 3 — FE: choose the martial art at setup; see it on the academy page (#1802)
 
-The select-button on `/setup`, the locked/unlocked control on the academy page,
-`martial_art_locked` consumed, i18n `martialArts.<value>`, `setup.cy.ts` +
-`academy.cy.ts` cases.
+The picker on `/setup`, the locked/unlocked control on the academy page,
+`martial_art_locked` consumed, i18n `martialArts.<value>`, the programme page's
+empty state read from `syllabus_programmes`, `setup.cy.ts` + `academy.cy.ts`
+cases.
 
 ### 4 — Training modes (#1803)
 

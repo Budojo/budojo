@@ -11,6 +11,25 @@
     }
 
     <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <!--
+        First, before the name (#1802): the martial art frames every field
+        after it — the belts, the programme — so a karate owner never meets a
+        purple belt and wonders why.
+      -->
+      <app-budojo-form-field
+        [label]="'setup.martialArt.label' | translate"
+        [required]="true"
+        [hint]="'setup.martialArt.hint' | translate"
+        [error]="martialArtError() ? (martialArtError()! | translate) : null"
+        dataCy="setup-martial-art"
+      >
+        <app-martial-art-picker
+          [value]="form.value.martial_art ?? null"
+          [ariaLabel]="'setup.martialArt.label' | translate"
+          (valueChange)="setMartialArt($event)"
+        />
+      </app-budojo-form-field>
+
       <app-budojo-form-field
         [label]="'setup.nameLabel' | translate"
         [required]="true"

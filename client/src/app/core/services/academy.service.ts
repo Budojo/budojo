@@ -404,6 +404,8 @@ export interface CreateAcademyPayload {
  */
 export interface UpdateAcademyPayload {
   name?: string;
+  /** Accepted while `martial_art_locked` is false; a different value is a 422 after. */
+  martial_art?: MartialArt;
   /** Phone pair (#161). `null` on both clears the saved phone. */
   phone_country_code?: string | null;
   phone_national_number?: string | null;

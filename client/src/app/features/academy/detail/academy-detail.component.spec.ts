@@ -293,3 +293,18 @@ describe('AcademyDetailComponent', () => {
     ).not.toBeNull();
   });
 });
+
+describe('AcademyDetailComponent — the martial art (#1802)', () => {
+  it('names the martial art the academy teaches', () => {
+    setupTestBed();
+    TestBed.inject(AcademyService).academy.set(makeAcademy({ martial_art: 'karate' }));
+
+    const fixture = TestBed.createComponent(AcademyDetailComponent);
+    fixture.detectChanges();
+
+    const row = (fixture.nativeElement as HTMLElement).querySelector(
+      '[data-cy="academy-row-martial-art"]',
+    );
+    expect(row?.textContent?.trim()).toBe('Karate');
+  });
+});

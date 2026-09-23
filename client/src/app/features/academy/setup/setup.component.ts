@@ -13,9 +13,10 @@ import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
 import { TranslatePipe } from '@ngx-translate/core';
-import { AcademyService } from '../../../core/services/academy.service';
+import { AcademyService, MartialArt } from '../../../core/services/academy.service';
 import { MyAthleteService } from '../../../core/services/my-athlete.service';
 import { TrainingDaysPickerComponent } from '../../../shared/components/training-days-picker/training-days-picker.component';
+import { MartialArtPickerComponent } from '../../../shared/components/martial-art-picker/martial-art-picker.component';
 import { BudojoFormFieldComponent } from '../../../shared/components/budojo-form-field/budojo-form-field.component';
 import { RuntimeService } from '../../../core/services/runtime.service';
 
@@ -31,6 +32,7 @@ const noWhitespace: ValidatorFn = (control: AbstractControl) =>
     InputTextModule,
     MessageModule,
     TrainingDaysPickerComponent,
+    MartialArtPickerComponent,
     BudojoFormFieldComponent,
     TranslatePipe,
   ],
@@ -64,6 +66,11 @@ export class SetupComponent {
    * the empty Address row in the detail card, and add it on their own time.
    */
   readonly form = this.fb.group({
+    // Asked first and never defaulted (#1802): it decides the belts, the
+    // programme and what everything after it means, and a pre-selected BJJ is
+    // the bug the multi-martial-art work exists to fix. Existing academies are
+    // BJJ by the migration, not by this form.
+    martial_art: this.fb.control<MartialArt | null>(null, Validators.required),
     name: ['', [Validators.required, Validators.maxLength(255), noWhitespace]],
     // Optional. Empty array on submit → sent as null ("not configured").
     training_days: this.fb.nonNullable.control<number[]>([]),
@@ -83,10 +90,8 @@ export class SetupComponent {
 
     const createAcademy$ = this.academyService.create({
       name,
-      // Every academy was BJJ until #1800. The server now requires the field
-      // and never guesses it; the picker that asks the owner lands with
-      // #1802, and until then the setup says out loud what it always meant.
-      martial_art: 'bjj',
+      // `form.invalid` returned above, so the required control holds a value.
+      martial_art: this.form.value.martial_art!,
       training_days: days.length === 0 ? null : days,
     });
 
@@ -111,6 +116,11 @@ export class SetupComponent {
     });
   }
 
+  setMartialArt(art: MartialArt): void {
+    this.form.controls.martial_art.setValue(art);
+    this.form.controls.martial_art.markAsTouched();
+  }
+
   setTrainingDays(days: number[]): void {
     this.form.controls.training_days.setValue(days);
   }
@@ -126,6 +136,15 @@ export class SetupComponent {
     if (c.errors?.['required'] || c.errors?.['whitespace']) return 'setup.nameRequired';
     if (c.errors?.['maxlength']) return 'setup.nameMaxlength';
     return null;
+  });
+
+  private readonly martialArtEvents = toSignal(this.form.controls.martial_art.events, {
+    initialValue: null,
+  });
+  readonly martialArtError = computed<string | null>(() => {
+    void this.martialArtEvents();
+    const c = this.form.controls.martial_art;
+    return c.touched && c.invalid ? 'setup.martialArt.required' : null;
   });
 
   get name() {

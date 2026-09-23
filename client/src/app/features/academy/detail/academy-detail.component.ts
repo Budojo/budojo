@@ -16,6 +16,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AcademyService } from '../../../core/services/academy.service';
 import { LanguageService } from '../../../core/services/language.service';
 import { formatIsoDate } from '../../../shared/utils/locale';
+import { MARTIAL_ART_KEYS } from '../../../shared/utils/i18n-enum-keys';
 import { DocumentsListComponent } from '../../athletes/detail/documents-list/documents-list.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { Tooltip } from 'primeng/tooltip';
@@ -124,6 +125,14 @@ export class AcademyDetailComponent {
       n === 1 ? 'academy.syllabus.countOne' : 'academy.syllabus.countOther',
       { count: n },
     );
+  });
+
+  /** What the academy teaches (#1802), in words. */
+  protected readonly martialArtName = computed(() => {
+    this.languageService.currentLang();
+    const art = this.academyService.academy()?.martial_art;
+    // The em-dash every other row shows during the first-tick flash.
+    return art ? this.translate.instant(MARTIAL_ART_KEYS[art]) : '—';
   });
 
   /** `2025/26`, resolved server-side — see `App\Support\Season`. */

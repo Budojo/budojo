@@ -57,6 +57,17 @@ export const BELT_KEY_OVERRIDES: Readonly<Record<MartialArt, Partial<Record<Belt
   },
 };
 
+/** Every martial art Budojo ships a ladder for, in the order the pickers offer them (#1802). */
+export const MARTIAL_ARTS: readonly MartialArt[] = ['bjj', 'judo', 'karate', 'taekwondo'];
+
+/** The name of each martial art — explicit keys the parity check can see. */
+export const MARTIAL_ART_KEYS: Readonly<Record<MartialArt, string>> = {
+  bjj: 'martialArts.bjj',
+  judo: 'martialArts.judo',
+  karate: 'martialArts.karate',
+  taekwondo: 'martialArts.taekwondo',
+};
+
 /** The translation key for a belt, as the given martial art names it. */
 export function beltKey(belt: Belt, art: MartialArt): string {
   return BELT_KEY_OVERRIDES[art][belt] ?? BELT_KEYS[belt];

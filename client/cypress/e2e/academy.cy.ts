@@ -13,6 +13,8 @@ const ACADEMY_TORINO = {
     country: 'IT',
   },
   logo_url: null,
+  martial_art: 'bjj',
+  martial_art_locked: false,
 };
 
 const ATHLETES_EMPTY = {
@@ -75,6 +77,12 @@ describe('Academy home page', () => {
         expect(normalized).to.contain('Via Roma 1');
         expect(normalized).to.contain('10100 Torino (TO)');
       });
+  });
+
+  it('names the martial art the academy teaches (#1802)', () => {
+    cy.visitAuthenticated('/dashboard/academy');
+    cy.wait('@academy');
+    cy.get('[data-cy="academy-row-martial-art"]').should('contain.text', 'Brazilian jiu-jitsu');
   });
 
   it('shows an em-dash when the academy has no address', () => {
@@ -175,6 +183,51 @@ describe('Academy edit form', () => {
       expect(request.body.carnet_price_cents).to.eq(7000);
       expect(request.body.carnet_entries).to.eq(10);
       expect(request.body.carnet_entry_unit).to.eq('day');
+    });
+  });
+
+  it('lets the martial art change while nothing depends on it, and sends it (#1802)', () => {
+    cy.intercept('PATCH', '/api/v1/academy', {
+      statusCode: 200,
+      body: { data: { ...ACADEMY_TORINO, martial_art: 'karate' } },
+    }).as('updateAcademy');
+
+    cy.visitAuthenticated('/dashboard/academy/edit');
+    cy.wait('@academy');
+
+    cy.get('[data-cy="martial-art-bjj"]').should('have.attr', 'aria-pressed', 'true');
+    cy.get('[data-cy="martial-art-karate"]').click();
+    cy.get('[data-cy="academy-form-save"]').click();
+
+    cy.wait('@updateAcademy').its('request.body.martial_art').should('eq', 'karate');
+  });
+
+  it('shows a locked martial art as text and leaves it off the save (#1802)', () => {
+    cy.intercept('GET', '/api/v1/academy', {
+      statusCode: 200,
+      body: { data: { ...ACADEMY_TORINO, martial_art_locked: true } },
+    }).as('academy');
+    cy.intercept('PATCH', '/api/v1/academy', {
+      statusCode: 200,
+      body: { data: { ...ACADEMY_TORINO, martial_art_locked: true } },
+    }).as('updateAcademy');
+
+    cy.visitAuthenticated('/dashboard/academy/edit');
+    cy.wait('@academy');
+
+    cy.get('.martial-art-picker').should('not.exist');
+    cy.get('[data-cy="academy-form-martial-art-locked"]').should(
+      'contain.text',
+      'Brazilian jiu-jitsu',
+    );
+    cy.get('[data-cy="academy-form-martial-art"]').should(
+      'contain.text',
+      'Fixed now: the academy already has athletes, lessons or a programme.',
+    );
+    cy.get('[data-cy="academy-form-save"]').click();
+
+    cy.wait('@updateAcademy').then(({ request }) => {
+      expect(request.body).not.to.have.property('martial_art');
     });
   });
 
