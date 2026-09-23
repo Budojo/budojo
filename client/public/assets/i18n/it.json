@@ -251,7 +251,7 @@
       "locationLabel": "Dove (facoltativo)",
       "locationPlaceholder": "Via Roma 10, Milano",
       "descriptionLabel": "Dettagli (facoltativo)",
-      "descriptionPlaceholder": "Aperto a tutte le cinture — porta il tuo gi.",
+      "descriptionPlaceholder": "Aperto a tutte le cinture.",
       "maxAttendeesLabel": "Posti massimi (facoltativo)",
       "maxAttendeesPlaceholder": "Lascia vuoto per nessun limite",
       "cancel": "Annulla",
@@ -578,7 +578,7 @@
     "entries": {
       "what-is-budojo": {
         "question": "Cos'è Budojo?",
-        "answer": "È il gestionale della tua accademia di jiu-jitsu o arti marziali, e gira su questo computer: atleti, presenze, quote, documenti, orario e programma in un posto solo. Non è un servizio online — i dati restano sulla tua macchina e Budojo funziona anche senza connessione."
+        "answer": "È il gestionale della tua accademia di arti marziali — BJJ, judo, karate o taekwondo — e gira su questo computer: atleti, presenze, quote, documenti, orario e programma in un posto solo. Non è un servizio online — i dati restano sulla tua macchina e Budojo funziona anche senza connessione."
       },
       "create-academy": {
         "question": "Come comincio?",
@@ -598,7 +598,7 @@
       },
       "belt-not-listed": {
         "question": "La mia cintura non è nel menu. Cosa faccio?",
-        "answer": "Budojo copre l'intera scala IBJJF: bambini (grigia, gialla, arancione, verde), adulti (bianca, blu, viola, marrone, nera fino a 6 gradi) e senior (rossa-nera, rossa-bianca, rossa). Se pratichi un'arte con una scala diversa, scrivilo da Altro → Contatta il supporto: una scala configurabile è una cosa che possiamo valutare."
+        "answer": "Le cinture sono quelle dell'arte marziale dell'accademia: la scala IBJJF per il BJJ (dalla grigia alla verde per i bambini, dalla bianca alla nera fino a 6 gradi, poi coral e rossa), i kyu, le mezze cinture e i dan FIJLKAM per judo e karate, i kup, le mezze cinture, il poom e i dan WT per il taekwondo. Una cintura che manca di solito vuol dire che l'accademia è stata creata con un'altra arte marziale: la puoi cambiare da Accademia → Modifica finché l'accademia non ha atleti, un orario o un programma. Se la tua scuola usa una scala diversa da tutte queste, scrivilo da Altro → Contatta il supporto."
       },
       "suspend-athlete": {
         "question": "Come metto in pausa un atleta che ha smesso per un po’?",
@@ -618,7 +618,7 @@
       },
       "timetable": {
         "question": "Dove imposto gli orari delle lezioni?",
-        "answer": "Accademia → Orario. Ogni lezione ha giorno, ora, durata e tipo (gi, no-gi, open mat…), e la settimana si legge tutta in una schermata. È da qui che il check-in sa quali lezioni ci sono stasera, ed è da qui che si ricavano i giorni di allenamento dell'accademia."
+        "answer": "Accademia → Orario. Ogni lezione ha giorno, ora, durata e tipo — gi o no-gi, kata o kumite, secondo come si divide la tua arte marziale — e la settimana si legge tutta in una schermata. È da qui che il check-in sa quali lezioni ci sono stasera, ed è da qui che si ricavano i giorni di allenamento dell'accademia."
       },
       "programme": {
         "question": "A cosa serve il Programma?",
@@ -1723,14 +1723,30 @@
       },
       "form": {
         "name": "Nome",
-        "namePlaceholderPosition": "Guardia chiusa",
-        "namePlaceholderTechnique": "Leva al braccio",
         "kind": "Si allena",
         "nameRequired": "Dagli un nome, e che non sia già usato qui.",
         "cancel": "Annulla",
         "create": "Aggiungi",
         "save": "Salva",
-        "remove": "Rimuovi"
+        "remove": "Rimuovi",
+        "namePlaceholder": {
+          "bjj": {
+            "position": "Guardia chiusa",
+            "technique": "Leva al braccio"
+          },
+          "judo": {
+            "position": "Ashi-waza",
+            "technique": "O-soto-gari"
+          },
+          "karate": {
+            "position": "Kaishu kata — kyu",
+            "technique": "Saifa"
+          },
+          "taekwondo": {
+            "position": "Chagi (calci)",
+            "technique": "Dollyeo-chagi"
+          }
+        }
       },
       "confirm": {
         "remove": "Rimuovere {{name}} dal programma?",
@@ -2716,7 +2732,7 @@
     "emptyHint": "Aggiungi il primo atleta e i grafici si popoleranno qui.",
     "belt": {
       "title": "Cinture",
-      "hint": "Atleti per grado IBJJF, kids → senior. Passa sopra a una fetta per il conteggio + percentuale."
+      "hint": "Atleti per grado, dal più basso al più alto. Passa sopra a una fetta per il conteggio + percentuale."
     },
     "tabs": {
       "overview": "Panoramica",

@@ -861,6 +861,21 @@ describe('SyllabusComponent — the starter it offers (#1804)', () => {
       ?.textContent?.trim();
   }
 
+  it("suggests the academy's own art in the name field (#1808)", () => {
+    const { fixture, component, httpMock } = setup(['judo'], 'judo');
+    flushTree(httpMock, []);
+    fixture.detectChanges();
+
+    component['startAddingPosition']();
+    fixture.detectChanges();
+
+    expect(
+      (
+        fixture.nativeElement.querySelector('[data-cy="syllabus-form-name"]') as HTMLInputElement
+      ).getAttribute('placeholder'),
+    ).toBe('Ashi-waza');
+  });
+
   it('names the programme a judo academy will get', () => {
     const { fixture, httpMock } = setup(['judo'], 'judo');
     flushTree(httpMock, []);

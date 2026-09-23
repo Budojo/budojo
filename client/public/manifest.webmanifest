@@ -1,7 +1,7 @@
 {
   "name": "Budojo",
   "short_name": "Budojo",
-  "description": "BJJ gym management — athletes, documents, attendance.",
+  "description": "Martial-arts academy management — athletes, attendance, fees, documents.",
   "lang": "en",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui", "browser"],

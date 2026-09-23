@@ -61,7 +61,7 @@ final class NameFold
      * written. A map change needs a migration that re-folds the table.
      *
      * The set is the Latin-script diacritics that turn up on a mat: Italian,
-     * Portuguese and Spanish first (this is a BJJ app), then French, German and
+     * Portuguese and Spanish first (BJJ and judo rosters are full of them), then French, German and
      * the Nordic and Slavic letters that arrive with a visiting athlete.
      *
      * @var array<string, string>

@@ -23,7 +23,11 @@ import { AcademyService, TrainingMode } from '../../../core/services/academy.ser
 import { LanguageService } from '../../../core/services/language.service';
 import { SyllabusService, SyllabusTopic } from '../../../core/services/syllabus.service';
 import { TrainingModesService } from '../../../core/services/training-modes.service';
-import { StarterProgrammeKeys, starterProgrammeKeys } from '../../../shared/utils/i18n-enum-keys';
+import {
+  StarterProgrammeKeys,
+  SYLLABUS_NAME_PLACEHOLDER_KEYS,
+  starterProgrammeKeys,
+} from '../../../shared/utils/i18n-enum-keys';
 import { ChoiceGridComponent } from '../../../shared/components/choice-grid/choice-grid.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
@@ -286,9 +290,10 @@ export class SyllabusComponent {
   protected readonly namePlaceholder = computed<string>(() => {
     const editing = this.editing();
     const isPosition = editing !== null ? editing.parent_id === null : this.addingUnder() === null;
-    return isPosition
-      ? 'academy.syllabus.form.namePlaceholderPosition'
-      : 'academy.syllabus.form.namePlaceholderTechnique';
+    // In the academy's own art (#1808): "Ashi-waza" and "O-soto-gari" for judo.
+    const keys =
+      SYLLABUS_NAME_PLACEHOLDER_KEYS[this.academyService.academy()?.martial_art ?? 'bjj'];
+    return isPosition ? keys.position : keys.technique;
   });
 
   constructor() {

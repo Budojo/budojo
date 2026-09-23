@@ -118,7 +118,7 @@ interface SelectOption<T extends string> {
 
 /**
  * Curated country-code list. Italy-first because it's the primary market;
- * the rest covers the typical European + transatlantic mix we see at BJJ
+ * the rest covers the typical European + transatlantic mix we see at martial-arts
  * academies. Mirrors the athlete form's list verbatim — drift would be a bug.
  */
 const COUNTRY_CODE_OPTIONS: SelectOption<string>[] = [

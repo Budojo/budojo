@@ -2,6 +2,7 @@ import EN from '../../../../public/assets/i18n/en.json';
 import IT from '../../../../public/assets/i18n/it.json';
 import {
   AGE_BAND_KEYS,
+  SYLLABUS_NAME_PLACEHOLDER_KEYS,
   AGE_BANDS_TITLE_KEYS,
   BELT_KEYS,
   BELT_KEY_OVERRIDES,
@@ -38,6 +39,10 @@ describe('i18n enum-key bindings (#357)', () => {
           expect(typeof lookup(IT, key), `${art} ${code} in it`).toBe('string');
         }
         expect(typeof lookup(EN, AGE_BANDS_TITLE_KEYS[art]), `${art} title in en`).toBe('string');
+        for (const key of Object.values(SYLLABUS_NAME_PLACEHOLDER_KEYS[art])) {
+          expect(typeof lookup(EN, key), `${art} ${key} in en`).toBe('string');
+          expect(typeof lookup(IT, key), `${art} ${key} in it`).toBe('string');
+        }
         expect(typeof lookup(IT, AGE_BANDS_TITLE_KEYS[art]), `${art} title in it`).toBe('string');
       }
     });

@@ -31,18 +31,18 @@ The character counts at the bottom of each section are the live count after the 
 ### English
 
 ```
-BJJ + martial-arts academy management: athletes, certs, attendance, payments.
+Martial-arts academy management: athletes, certs, attendance, payments.
 ```
 
-(77 / 80)
+(71 / 80)
 
 ### Italian
 
 ```
-Gestione palestra BJJ e arti marziali — atleti, certificati, presenze, quote.
+Gestione palestra di arti marziali — atleti, certificati, presenze, quote.
 ```
 
-(77 / 80)
+(74 / 80)
 
 > "Quote" is the Italian word an academy owner uses for monthly dues — mirrors what they say to the parents at the door. "Pagamenti" is technically correct but reads colder.
 
@@ -53,7 +53,7 @@ Gestione palestra BJJ e arti marziali — atleti, certificati, presenze, quote.
 ### English
 
 ```
-Budojo is the all-in-one tool for the small Brazilian Jiu-Jitsu and martial-arts academy.
+Budojo is the all-in-one tool for the small martial-arts academy — BJJ, judo, karate or taekwondo.
 Track every athlete, every medical certificate, every check-in, and every payment from
 your phone — no spreadsheets, no shared Google Sheet that someone always overwrites.
 
@@ -111,8 +111,8 @@ Questions? support@budojo.it
 ### Italian
 
 ```
-Budojo è lo strumento all-in-one per la piccola palestra di Brazilian Jiu-Jitsu e
-arti marziali. Tieni traccia di ogni atleta, ogni certificato medico, ogni
+Budojo è lo strumento all-in-one per la piccola palestra di arti marziali — BJJ,
+judo, karate o taekwondo. Tieni traccia di ogni atleta, ogni certificato medico, ogni
 presenza e ogni quota dal tuo telefono — niente fogli Excel, niente Google Sheet
 condivisi che qualcuno sovrascrive sempre.
 

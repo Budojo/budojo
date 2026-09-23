@@ -6,7 +6,7 @@ namespace App\Enums;
 
 /**
  * Allowed emoji on `post_reactions` (#600, M9). V1 hard-codes a short
- * positive-only set — clap + pray are the BJJ-cultural fit for "ben
+ * positive-only set — clap + pray are the dojo's fit for "ben
  * fatto" e "rispetto / namaste". Configurability per academy is
  * deferred (open question in the PRD); V2 considers extending the
  * set if 2+ academies request different defaults.
