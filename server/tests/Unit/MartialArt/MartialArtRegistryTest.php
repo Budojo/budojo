@@ -112,9 +112,7 @@ it('lists programmes whose files exist and parse, with keys unique across every 
         ->and(MartialArtProfile::for(MartialArt::Judo)->programmes())->toBe(['judo'])
         // One per style, Goju-ryu first; the second style is #1810.
         ->and(MartialArtProfile::for(MartialArt::Karate)->programmes())->toBe(['karate-goju-ryu'])
-        // Empty until its programme ships (#1806): the page offers no button
-        // and the endpoint answers 404 until then.
-        ->and(MartialArtProfile::for(MartialArt::Taekwondo)->programmes())->toBe([]);
+        ->and(MartialArtProfile::for(MartialArt::Taekwondo)->programmes())->toBe(['taekwondo']);
 });
 
 it('offers no file for a key the art does not list', function (): void {

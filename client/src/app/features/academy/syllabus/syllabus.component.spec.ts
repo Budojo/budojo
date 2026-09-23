@@ -902,6 +902,14 @@ describe('SyllabusComponent — the starter it offers (#1804)', () => {
     expect(cta(fixture)).toBe('Start from the Goju-ryu programme');
   });
 
+  it('says WT on the taekwondo button, as karate names its style', () => {
+    const { fixture, httpMock } = setup(['taekwondo'], 'taekwondo');
+    flushTree(httpMock, []);
+    fixture.detectChanges();
+
+    expect(cta(fixture)).toBe('Start from the taekwondo programme (WT)');
+  });
+
   it('says something true for a programme that ships before its own words do', () => {
     const { fixture, httpMock } = setup(['karate-shorin-ryu'], 'karate');
     flushTree(httpMock, []);
