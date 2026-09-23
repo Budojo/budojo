@@ -251,7 +251,7 @@
       "locationLabel": "Where (optional)",
       "locationPlaceholder": "Via Roma 10, Milano",
       "descriptionLabel": "Details (optional)",
-      "descriptionPlaceholder": "All belts welcome — bring your gi.",
+      "descriptionPlaceholder": "All belts welcome.",
       "maxAttendeesLabel": "Max attendees (optional)",
       "maxAttendeesPlaceholder": "Leave empty for no cap",
       "cancel": "Cancel",
@@ -578,11 +578,11 @@
     "entries": {
       "what-is-budojo": {
         "question": "What is Budojo?",
-        "answer": "It runs your jiu-jitsu or martial-arts academy from this computer: athletes, attendance, fees, documents, timetable and programme in one place. It is not an online service — your data stays on your machine, and Budojo works with no connection at all."
+        "answer": "It runs your martial-arts academy — BJJ, judo, karate or taekwondo — from this computer: athletes, attendance, fees, documents, timetable and programme in one place. It is not an online service — your data stays on your machine, and Budojo works with no connection at all."
       },
       "create-academy": {
         "question": "How do I start?",
-        "answer": "The first time you open it you create your sign-in, and Budojo walks you through a short setup: the academy's name, the days you train, done. There is no email to confirm — the sign-in belongs to this computer. Everything in there can be changed later from Academy → Edit."
+        "answer": "The first time you open it you create your sign-in, and Budojo walks you through a short setup: the martial art you teach, the academy's name, the days you train, done. There is no email to confirm — the sign-in belongs to this computer. Everything in there can be changed later from Academy → Edit — the martial art until the academy has athletes, a timetable or a programme."
       },
       "invite-coach": {
         "question": "Can I give a second instructor access?",
@@ -598,7 +598,7 @@
       },
       "belt-not-listed": {
         "question": "My belt is not in the list. What now?",
-        "answer": "Budojo covers the whole IBJJF scale: youth (grey, yellow, orange, green), adult (white, blue, purple, brown, black up to 6 degrees) and senior (red-black, red-white, red). If your art uses a different scale, say so from More → Contact support: a configurable scale is something we can look at."
+        "answer": "The belts come from the martial art the academy teaches: the IBJJF scale for BJJ (grey to green for the kids, white to black with up to 6 degrees, then coral and red), the FIJLKAM kyu, half-belts and dan for judo and karate, the WT kup, half-belts, poom and dan for taekwondo. A missing belt usually means the academy was set up with another martial art: you can change it from Academy → Edit until the academy has athletes, a timetable or a programme. If your school uses a scale none of these match, say so from More → Contact support."
       },
       "suspend-athlete": {
         "question": "How do I pause someone who has stopped for a while?",
@@ -618,7 +618,7 @@
       },
       "timetable": {
         "question": "Where do I set the class times?",
-        "answer": "Academy → Timetable. Each class has a day, time, length and kind (gi, no-gi, open mat…), and the whole week reads in one screen. This is how the check-in knows which classes run tonight, and it is where the academy's training days come from."
+        "answer": "Academy → Timetable. Each class has a day, time, length and kind — gi or no-gi, kata or kumite, as your martial art splits it — and the whole week reads in one screen. This is how the check-in knows which classes run tonight, and it is where the academy's training days come from."
       },
       "programme": {
         "question": "What is the Programme for?",
@@ -771,7 +771,7 @@
       },
       "step2": {
         "title": "Set up the academy",
-        "body": "Name, address, the days you train, and a fee if you charge one. About a minute, and you can change any of it later."
+        "body": "The martial art you teach, the name, the days you train, and a fee if you charge one. About a minute, and you can change it later — the martial art until you add athletes, a timetable or a programme."
       },
       "step3": {
         "title": "Add your first athlete",
@@ -1497,7 +1497,7 @@
       "website": {
         "label": "Website",
         "errorUrl": "Enter a full URL — e.g. https://example.com.",
-        "placeholder": "https://gracie-barra.com"
+        "placeholder": "https://example.com"
       },
       "facebook": {
         "label": "Facebook",
@@ -1723,14 +1723,30 @@
       },
       "form": {
         "name": "Name",
-        "namePlaceholderPosition": "Closed guard",
-        "namePlaceholderTechnique": "Armbar",
         "kind": "Trained in",
         "nameRequired": "Give it a name, and one not already used here.",
         "cancel": "Cancel",
         "create": "Add",
         "save": "Save",
-        "remove": "Remove"
+        "remove": "Remove",
+        "namePlaceholder": {
+          "bjj": {
+            "position": "Closed guard",
+            "technique": "Armbar"
+          },
+          "judo": {
+            "position": "Ashi-waza",
+            "technique": "O-soto-gari"
+          },
+          "karate": {
+            "position": "Kaishu kata — kyu",
+            "technique": "Saifa"
+          },
+          "taekwondo": {
+            "position": "Chagi (kicks)",
+            "technique": "Dollyeo-chagi"
+          }
+        }
       },
       "confirm": {
         "remove": "Remove {{name}} from the programme?",
@@ -2716,7 +2732,7 @@
     "emptyHint": "Add your first athlete and the charts will populate here.",
     "belt": {
       "title": "Belts",
-      "hint": "Athletes by IBJJF rank, kids → seniors. Hover a slice for the count + share."
+      "hint": "Athletes by rank, lowest → highest. Hover a slice for the count + share."
     },
     "tabs": {
       "overview": "Overview",

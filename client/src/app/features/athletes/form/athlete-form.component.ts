@@ -313,7 +313,7 @@ export class AthleteFormComponent implements OnInit {
   /**
    * Curated country code list (#75). Italy-first because that's the
    * primary market; the rest covers the typical European + transatlantic
-   * mix we see in BJJ academies. The `value` is the E.164 prefix that
+   * mix we see in martial-arts academies. The `value` is the E.164 prefix that
    * goes on the wire; the `label` is the localised dropdown text
    * (e.g. `+39 Italia` in IT, `+39 Italy` in EN).
    *

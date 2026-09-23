@@ -942,6 +942,18 @@ this calendar year, pinned on 31 December 2010 and 1 January 2011.
 `README.md`, `docs/README.md`, the academy description placeholder ("bring your
 gi"), the whats-new entry.
 
+*As built (#1808):* the meta description, the web manifest, `README.md`, the
+design README, both store listings (short and full descriptions, the belt
+paragraph, category and rating notes), three help answers (what Budojo is, a
+missing belt, the timetable's kinds), the community post placeholder ("bring
+your gi"), the belt chart's "IBJJF rank" hint, the programme form's name
+placeholders — per art now, "Ashi-waza" / "O-soto-gari" for judo — the
+onboarding copy that now names the martial-art choice, the website and handle
+placeholders that named a BJJ franchise, and five code comments that called it
+a BJJ app. `docs/README.md` never named BJJ. The
+changelog and whats-new entry belong to the release that ships the epic, and
+are written there.
+
 ---
 
 ## Decisions taken, and what is still open

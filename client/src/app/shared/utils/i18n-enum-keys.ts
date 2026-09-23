@@ -93,6 +93,32 @@ export const TRAINING_MODE_BOTH_KEYS: Readonly<Record<MartialArt, string>> = {
   taekwondo: 'academy.trainingMode.both.taekwondo',
 };
 
+/**
+ * The name field's example, a group and a technique of the academy's own art
+ * (#1808) — "Closed guard" and "Armbar" told a judo owner the form was not
+ * theirs.
+ */
+export const SYLLABUS_NAME_PLACEHOLDER_KEYS: Readonly<
+  Record<MartialArt, { readonly position: string; readonly technique: string }>
+> = {
+  bjj: {
+    position: 'academy.syllabus.form.namePlaceholder.bjj.position',
+    technique: 'academy.syllabus.form.namePlaceholder.bjj.technique',
+  },
+  judo: {
+    position: 'academy.syllabus.form.namePlaceholder.judo.position',
+    technique: 'academy.syllabus.form.namePlaceholder.judo.technique',
+  },
+  karate: {
+    position: 'academy.syllabus.form.namePlaceholder.karate.position',
+    technique: 'academy.syllabus.form.namePlaceholder.karate.technique',
+  },
+  taekwondo: {
+    position: 'academy.syllabus.form.namePlaceholder.taekwondo.position',
+    technique: 'academy.syllabus.form.namePlaceholder.taekwondo.technique',
+  },
+};
+
 /** The programme form's example of the split, one per art (#1803). */
 export const TRAINING_MODE_HINT_KEYS: Readonly<Record<MartialArt, string>> = {
   bjj: 'academy.syllabus.kindHint.bjj',

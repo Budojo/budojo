@@ -23,12 +23,12 @@ Both strings fit under the 80-char Play Console limit. Verify with `wc -m <(prin
 
 **IT**:
 ```
-Gestisci la tua academy di BJJ: atleti, cinture, presenze, pagamenti.
+Gestisci la tua accademia di arti marziali: atleti, cinture, presenze, quote.
 ```
 
 **EN**:
 ```
-Run your BJJ academy: athletes, belts, attendance, payments, community.
+Run your martial-arts academy: athletes, belts, attendance, payments.
 ```
 
 ## Full description (4000 char max)
@@ -36,10 +36,10 @@ Run your BJJ academy: athletes, belts, attendance, payments, community.
 ### IT (~1800 char)
 
 ```
-Budojo è lo strumento operativo per chi insegna Brazilian Jiu-Jitsu — istruttori, head coach, proprietari di academy. Una sola app sul telefono per gestire tutto quello che oggi vive su carta, Excel o WhatsApp.
+Budojo è lo strumento operativo per chi insegna arti marziali — BJJ, judo, karate, taekwondo: istruttori, head coach, proprietari di academy. Una sola app sul telefono per gestire tutto quello che oggi vive su carta, Excel o WhatsApp.
 
 🥋 ATLETI E CINTURE
-Anagrafica completa con foto, telefono, email, indirizzo. Cinture youth (grigio, giallo, arancio, verde), adulto (bianco, blu, viola, marrone, nero) e senior coral / red — comprensive di striscette e graus IBJJF. Promuovi un atleta con un tocco; lo storico di tutti i passaggi di grado resta visibile sul profilo.
+Anagrafica completa con foto, telefono, email, indirizzo. Le cinture sono quelle della tua arte marziale: la scala IBJJF con striscette e graus per il BJJ, kyu, mezze cinture e dan FIJLKAM per judo e karate, kup, poom e dan WT per il taekwondo. Promuovi un atleta con un tocco; lo storico di tutti i passaggi di grado resta visibile sul profilo.
 
 📋 PRESENZE GIORNO PER GIORNO
 Check-in degli allenamenti in pochi secondi. Vedi chi sta venendo a tappeto, chi è sparito da settimane, chi è pronto per la prossima cintura.
@@ -65,10 +65,10 @@ Budojo è in evoluzione continua, guidata dal feedback diretto degli istruttori 
 ### EN (~1900 char)
 
 ```
-Budojo is the operational tool for Brazilian Jiu-Jitsu instructors, head coaches, and academy owners. One app on your phone to run everything that currently lives on paper, Excel, or WhatsApp threads.
+Budojo is the operational tool for martial-arts instructors, head coaches, and academy owners — BJJ, judo, karate and taekwondo. One app on your phone to run everything that currently lives on paper, Excel, or WhatsApp threads.
 
 🥋 ATHLETES AND BELTS
-Full roster: name, photo, phone, email, address. Belts across the IBJJF scale — youth (grey, yellow, orange, green), adult (white, blue, purple, brown, black), and senior coral / red — including stripes and black-belt graus. Promote an athlete in one tap; the complete promotion history stays visible on their profile.
+Full roster: name, photo, phone, email, address. Belts follow your martial art: the IBJJF scale with stripes and black-belt graus for BJJ, FIJLKAM kyu, half-belts and dan for judo and karate, WT kup, poom and dan for taekwondo. Promote an athlete in one tap; the complete promotion history stays visible on their profile.
 
 📋 DAILY ATTENDANCE
 Check athletes in as they walk onto the mat. See who's training consistently, who's drifted away, who's due for the next belt.
@@ -93,7 +93,7 @@ Budojo evolves continuously, guided by direct feedback from the instructors who 
 
 ## Category
 
-**Suggested**: `Sports` (primary) — matches the BJJ-instructor target audience and where they'd browse for tools.
+**Suggested**: `Sports` (primary) — matches the martial-arts-instructor target audience and where they'd browse for tools.
 
 Alternative if Play Console rejects Sports as too narrow: `Business → Productivity`.
 
@@ -101,7 +101,7 @@ Alternative if Play Console rejects Sports as too narrow: `Business → Producti
 
 - Target audience: 18+ (academy owners / instructors) — the athlete-portal users are separate from the publishing-account use case
 - Content rating questionnaire answers:
-  - Violence: No (BJJ is depicted but not enacted in-app)
+  - Violence: No (martial arts are depicted but not enacted in-app)
   - User-generated content: Yes (community feed posts + comments) — academy-scoped, not public
   - Personal info: Yes (collected with consent under GDPR)
   - Crypto/gambling: No

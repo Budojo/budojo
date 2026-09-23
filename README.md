@@ -1,8 +1,8 @@
 # Budojo
 
-> BJJ gym management — replace the Excel sheets with something built for the mat.
+> Martial-arts academy management — replace the Excel sheets with something built for the mat.
 
-Budojo helps Brazilian Jiu-Jitsu instructors track students, documents, attendance, payments and belt progressions without the usual spreadsheet mess.
+Budojo helps martial-arts instructors — BJJ, judo, karate and taekwondo — track students, documents, attendance, payments and belt progressions without the usual spreadsheet mess. Each academy teaches one martial art, and the belts, training modes, starter programme and age divisions follow it.
 
 It ships as a **Windows desktop application**: the same Angular SPA and Laravel API that ran as a hosted web app, packaged with Electron and a bundled PHP runtime so the whole thing runs on the instructor's own machine — no server, no account, no monthly bill. The hosted stack (DigitalOcean / Forge / Cloudflare) was decommissioned in [#1230](https://github.com/Budojo/budojo/issues/1230); its runbook is kept, archived, at [`docs/infra/archive/production-deployment.md`](docs/infra/archive/production-deployment.md).
 
