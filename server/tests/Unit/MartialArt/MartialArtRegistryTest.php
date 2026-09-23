@@ -121,8 +121,11 @@ it('offers no file for a key the art does not list', function (): void {
 it('gives every art age divisions that cover every age from the youngest up, once (#1807)', function (MartialArt $art): void {
     $divisions = MartialArtProfile::for($art)->ageDivisions();
 
+    $codes = array_map(fn ($d) => $d->code, $divisions);
     expect($divisions)->not->toBe([])
-        ->and(end($divisions)->max)->toBeNull();
+        ->and(end($divisions)->max)->toBeNull()
+        ->and($codes)->toBe(array_values(array_unique($codes)))
+        ->and($divisions[0]->min)->toBeGreaterThanOrEqual(0);
 
     // Contiguous and disjoint: every age from the youngest to 100 falls in
     // exactly one division.

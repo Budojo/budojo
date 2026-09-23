@@ -204,6 +204,7 @@ final class MartialArtProfile
         }
 
         $parsed = [];
+        $seen = [];
         $next = null;
         foreach (array_values($divisions) as $index => $division) {
             $code = \is_array($division) ? ($division['code'] ?? null) : null;
@@ -212,12 +213,14 @@ final class MartialArtProfile
             $max = \is_array($division) ? ($division['max'] ?? null) : null;
             $isLast = $index === \count($divisions) - 1;
 
-            $valid = \is_string($code) && preg_match('/^[a-z][a-z0-9_]*$/', $code) === 1
+            // A repeated code would share one counter between two age ranges
+            // and draw both in each bar.
+            $valid = \is_string($code) && preg_match('/^[a-z][a-z0-9_]*$/', $code) === 1 && ! isset($seen[$code])
                 && ($category === 'kids' || $category === 'adults')
-                && \is_int($min) && ($next === null || $min === $next)
+                && \is_int($min) && $min >= 0 && ($next === null || $min === $next)
                 && ($isLast ? $max === null : \is_int($max) && $max >= $min);
             if (! $valid) {
-                throw new \RuntimeException("The {$art->value} registry has an age division that is not contiguous, ascending and open only at the top.");
+                throw new \RuntimeException("The {$art->value} registry has an age division that is not uniquely named, contiguous, ascending and open only at the top.");
             }
 
             /** @var string $code */
@@ -225,6 +228,7 @@ final class MartialArtProfile
             /** @var int $min */
             /** @var int|null $max */
             $parsed[] = new AgeDivision($code, $category, $min, $max);
+            $seen[$code] = true;
             $next = $max === null ? null : $max + 1;
         }
 

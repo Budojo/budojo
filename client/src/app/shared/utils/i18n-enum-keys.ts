@@ -107,7 +107,7 @@ export const TRAINING_MODE_HINT_KEYS: Readonly<Record<MartialArt, string>> = {
  * A code the client does not know yet (a federation's new class) reads as
  * itself rather than as a raw key.
  */
-const AGE_BAND_KEYS: Readonly<Record<MartialArt, Readonly<Record<string, string>>>> = {
+export const AGE_BAND_KEYS: Readonly<Record<MartialArt, Readonly<Record<string, string>>>> = {
   bjj: {
     mighty_mite: 'stats.athletes.bands.bjj.mighty_mite',
     pee_wee: 'stats.athletes.bands.bjj.pee_wee',
