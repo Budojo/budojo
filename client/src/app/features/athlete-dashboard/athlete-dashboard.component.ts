@@ -9,6 +9,7 @@ import {
 import { RouterLink, RouterOutlet } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/services/auth.service';
+import { AcademyService } from '../../core/services/academy.service';
 import { LanguageService } from '../../core/services/language.service';
 import { NotificationInboxService } from '../../core/services/notification-inbox.service';
 import { BrandGlyphComponent } from '../../shared/components/brand-glyph/brand-glyph.component';
@@ -61,6 +62,7 @@ import { NotificationBellComponent } from '../notifications/notification-bell.co
 })
 export class AthleteDashboardComponent implements OnInit {
   private readonly authService = inject(AuthService);
+  private readonly academyService = inject(AcademyService);
   private readonly translate = inject(TranslateService);
   private readonly languageService = inject(LanguageService);
   private readonly inbox = inject(NotificationInboxService);
@@ -179,6 +181,13 @@ export class AthleteDashboardComponent implements OnInit {
     // it back.
     if (this.user() === null) {
       this.authService.loadCurrentUser().subscribe({ error: () => undefined });
+    }
+
+    // The athlete's own academy, for its belt ladder (#1813): every portal
+    // route is a child of this shell, and none of them loads the owner-side
+    // academy, so without it a judo athlete's belts read as BJJ's.
+    if (this.academyService.mine() === null) {
+      this.academyService.getMine().subscribe({ error: () => undefined });
     }
   }
 }

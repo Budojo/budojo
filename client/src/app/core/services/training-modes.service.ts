@@ -31,12 +31,12 @@ export class TrainingModesService {
   private readonly languageService = inject(LanguageService);
 
   private readonly martialArt = computed<MartialArt>(
-    () => this.academyService.academy()?.martial_art ?? 'bjj',
+    () => this.academyService.ladderAcademy()?.martial_art ?? 'bjj',
   );
 
   /** The art's two modes, in picker order: `['gi', 'nogi']`, `['kata', 'kumite']`. */
   readonly modes = computed<readonly TrainingMode[]>(
-    () => this.academyService.academy()?.training_modes ?? ['gi', 'nogi'],
+    () => this.academyService.ladderAcademy()?.training_modes ?? ['gi', 'nogi'],
   );
 
   /** A class: the two modes, then the middle, then what is not the art at all. */

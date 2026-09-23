@@ -24,10 +24,10 @@ export interface BeltOption<T> {
  * martial art's registry. There is deliberately no copy on the client — the
  * BJJ constants this replaced were a second answer that could disagree.
  *
- * Until an academy is loaded the ladder is empty and the art reads as BJJ,
- * the column default, and a belt with no grade is clamped only by the global
- * ceiling. The web-only athlete portal never loads one — right for every
- * install today, which is BJJ, and wrong for a judo athlete there (#1813).
+ * The ladder is the session's academy's — the owner's, or on the athlete
+ * portal the athlete's own (`AcademyService.ladderAcademy`, #1813). Until one
+ * is loaded the ladder is empty and the art reads as BJJ, the column default,
+ * and a belt with no grade is clamped only by the global ceiling.
  */
 @Injectable({ providedIn: 'root' })
 export class BeltLadderService {
@@ -35,11 +35,13 @@ export class BeltLadderService {
   private readonly translate = inject(TranslateService);
 
   readonly martialArt = computed<MartialArt>(
-    () => this.academyService.academy()?.martial_art ?? 'bjj',
+    () => this.academyService.ladderAcademy()?.martial_art ?? 'bjj',
   );
 
   /** The ladder, lowest first. */
-  readonly grades = computed<readonly Grade[]>(() => this.academyService.academy()?.grades ?? []);
+  readonly grades = computed<readonly Grade[]>(
+    () => this.academyService.ladderAcademy()?.grades ?? [],
+  );
 
   /** The belts this academy awards, in rank order. */
   readonly belts = computed<readonly Belt[]>(() => this.grades().map((grade) => grade.belt));

@@ -6625,14 +6625,32 @@ paths:
             Academy snapshot for the linked user — name, contacts, address,
             logo, `training_days`, `owner`, and `carnet_entry_unit` (#1576,
             see `CarnetEntryUnit`) so the portal can say what one entry of the
-            athlete's carnet pays for.
+            athlete's carnet pays for. Also the academy's `martial_art`, its
+            ladder (`grades`) and `training_modes` (#1813), built by the same
+            code as the owner's `/academy`, so the portal draws belts in the
+            academy's words. The owner-only `martial_art_locked` and
+            `syllabus_programmes` are not sent.
           content:
             application/json:
               schema:
                 type: object
                 required: [data]
                 properties:
-                  data: { type: object }
+                  data:
+                    type: object
+                    properties:
+                      martial_art:
+                        $ref: '#/components/schemas/MartialArt'
+                      grades:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Grade'
+                      training_modes:
+                        type: array
+                        minItems: 2
+                        maxItems: 2
+                        items:
+                          $ref: '#/components/schemas/TrainingMode'
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '404':
