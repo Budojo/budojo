@@ -21,11 +21,13 @@
         [required]="true"
         [hint]="'setup.martialArt.hint' | translate"
         [error]="martialArtError() ? (martialArtError()! | translate) : null"
+        controlId="martial-art"
         dataCy="setup-martial-art"
       >
         <app-martial-art-picker
           [value]="form.value.martial_art ?? null"
           [ariaLabel]="'setup.martialArt.label' | translate"
+          [describedBy]="martialArtError() ? 'martial-art-error' : 'martial-art-hint'"
           (valueChange)="setMartialArt($event)"
         />
       </app-budojo-form-field>

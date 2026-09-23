@@ -215,6 +215,23 @@ describe('SetupComponent — martial-art picker (#1802)', () => {
     ).toBe('true');
   });
 
+  it('describes the picker by its hint, then by its error once there is one', () => {
+    const { fixture, cmp } = setup();
+    const el = fixture.nativeElement as HTMLElement;
+    const group = () => el.querySelector('.martial-art-picker');
+
+    expect(group()?.getAttribute('aria-describedby')).toBe('martial-art-hint');
+    expect(el.querySelector('#martial-art-hint')).not.toBeNull();
+
+    cmp.submit();
+    fixture.detectChanges();
+
+    expect(group()?.getAttribute('aria-describedby')).toBe('martial-art-error');
+    expect(el.querySelector('#martial-art-error')?.textContent?.trim()).toBe(
+      'Choose the martial art you teach.',
+    );
+  });
+
   it('clears the error once a martial art is picked', () => {
     const { fixture, cmp } = setup();
     cmp.submit();

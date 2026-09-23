@@ -350,6 +350,17 @@ export class AcademyFormComponent implements OnInit {
       season_start_month: academy.season_start_month ?? null,
       billing_from: academy.billing_from ? new Date(`${academy.billing_from}T00:00:00`) : null,
     });
+
+    // The cached academy predates whatever the owner did since it loaded: an
+    // athlete added, a class on the timetable, "train here" at setup. Nothing
+    // refreshes the cache on those, and `martial_art_locked` is the one field
+    // here they change, so ask again (#1802). Only the lock follows the reply;
+    // the fields stay as patched, and may already be under the owner's hands.
+    // A failed read changes nothing: the server still refuses a locked change.
+    this.academyService
+      .get({ forceRefresh: true })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({ error: () => undefined });
   }
 
   setMartialArt(art: MartialArt): void {

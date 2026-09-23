@@ -21,7 +21,7 @@
  * real shell.
  * Re-running after a fix produces the same picture, minus the fix.
  */
-export {};
+import LADDERS from '../../src/test-utils/ladders.json';
 
 // ── The clock ────────────────────────────────────────────────────────────
 //
@@ -70,6 +70,14 @@ const ACADEMY = {
   season_start: '2026-09-01',
   season_label: '2026/27',
   classes_count: 6,
+  // What it teaches (#1800-#1802). A BJJ academy with classes and topics, so
+  // locked, as the server would say. Without `grades` every belt picker in
+  // the audit renders empty, and without the rest the academy row reads "—"
+  // and the empty programme loses its starter: screens that cannot exist.
+  martial_art: 'bjj',
+  grades: LADDERS.bjj,
+  martial_art_locked: true,
+  syllabus_programmes: ['bjj'],
 };
 
 const ME = {

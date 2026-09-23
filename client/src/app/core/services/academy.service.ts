@@ -368,7 +368,7 @@ export interface MeAcademy {
 
 /**
  * What an academy teaches (#1800). Set at creation and locked once the academy
- * has athletes, lessons or a programme — every stored belt is a claim in its
+ * has athletes, classes, lessons or a programme — every stored belt is a claim in its
  * ladder.
  */
 export type MartialArt = 'bjj' | 'judo' | 'karate' | 'taekwondo';

@@ -674,7 +674,7 @@ training-days picker on the same screen, so the two read as one family.
 
 The martial art shows as a read-only value while `martial_art_locked` is true,
 with the reason written under it ("Fixed now: the academy already has athletes,
-lessons or a programme") — not a tooltip, which a phone cannot hover; as the
+a timetable, lessons or a programme") — not a tooltip, which a phone cannot hover; as the
 same picker while it is false. A locked form leaves `martial_art` off the
 `PATCH`. No dialog: the lock is a fact about the data, not a warning to
 dismiss. The detail page names the martial art in its own row.

@@ -222,7 +222,7 @@ describe('Academy edit form', () => {
     );
     cy.get('[data-cy="academy-form-martial-art"]').should(
       'contain.text',
-      'Fixed now: the academy already has athletes, lessons or a programme.',
+      'Fixed now: the academy already has athletes, a timetable, lessons or a programme.',
     );
     cy.get('[data-cy="academy-form-save"]').click();
 

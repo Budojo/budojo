@@ -21,7 +21,12 @@ import { MARTIAL_ART_KEYS, MARTIAL_ARTS } from '../../utils/i18n-enum-keys';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [TranslatePipe],
   template: `
-    <div class="martial-art-picker" role="group" [attr.aria-label]="ariaLabel()">
+    <div
+      class="martial-art-picker"
+      role="group"
+      [attr.aria-label]="ariaLabel()"
+      [attr.aria-describedby]="describedBy()"
+    >
       @for (art of arts; track art) {
         <button
           type="button"
@@ -44,6 +49,12 @@ export class MartialArtPickerComponent {
 
   /** The group's accessible name — the same words as the visible label beside it. */
   readonly ariaLabel = input<string | null>(null);
+  /**
+   * The id of the hint or error the group should announce, as
+   * `BudojoFormField` renders them (`{controlId}-hint` / `-error`). A group
+   * has no `<label for>` to borrow them from.
+   */
+  readonly describedBy = input<string | null>(null);
 
   readonly valueChange = output<MartialArt>();
 

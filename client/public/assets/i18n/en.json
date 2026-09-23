@@ -488,7 +488,7 @@
     },
     "martialArt": {
       "label": "Martial art",
-      "hint": "It decides the belts and the programme. You can change it until you add athletes, lessons or a programme.",
+      "hint": "It decides the belts and the programme. You can change it until you add athletes, a timetable or a programme.",
       "required": "Choose the martial art you teach."
     }
   },
@@ -1578,7 +1578,7 @@
       },
       "martialArt": {
         "label": "Martial art",
-        "locked": "Fixed now: the academy already has athletes, lessons or a programme."
+        "locked": "Fixed now: the academy already has athletes, a timetable, lessons or a programme."
       }
     },
     "feeTiers": {
