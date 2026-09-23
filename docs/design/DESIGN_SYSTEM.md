@@ -43,7 +43,7 @@ A drop-in override layer for the `@primeuix/themes/material` preset that deliver
 | `--budojo-chrome-hover` | `--p-surface-800` | `--p-surface-200` | Hover for controls inside it |
 | `--budojo-titlebar-background` | `#fafafa` | `#151517` | The Electron drag strip. Pinned to `titleBarOverlay.color` in `desktop/src/titlebar-theme.ts` by a spec — native paint cannot read CSS (#1793) |
 | `--budojo-skeleton-background` | `--p-surface-100` | `--p-surface-200` | A placeholder needs a step against the card it covers, and in dark `surface-100` **is** the card (#1793) |
-| `--budojo-belt-edge` | `rgb(0 0 0 / 12%)` | `rgb(255 255 255 / 22%)` | Ground contact under a belt spine; the belt itself never moves (#1793) |
+| `--budojo-belt-edge` | `rgb(0 0 0 / 12%)` | `rgb(255 255 255 / 22%)` | Ground contact around a belt spine and a belt pill; the belt itself never moves (#1793, #1801) |
 
 > **The surface scale inverts between themes, so its indices are not portable.**
 > `--p-surface-0` is white in light and `#1c1c1e` in dark; `--p-surface-900` is
@@ -57,7 +57,10 @@ A drop-in override layer for the `@primeuix/themes/material` preset that deliver
 > the bottom. Reach for a semantic, or for a literal with a comment when the
 > value genuinely must not move (a video letterbox, the white toggle knob).
 
-Belt colors remain domain constants in `client/src/app/shared/components/belt-badge/belt-badge.component.scss` — don't move them into theme vars.
+Belt colors are domain constants, not theme roles, and they live **once** in `budojo-theme.scss` (#1801): `--budojo-belt-<colour>` and `--budojo-belt-<colour>-ink` for ten colours (white, grey, yellow, orange, green, blue, purple, brown, black, red), defined on `:root` only and never overridden by the dark theme. Every belt is one or two of them — a two-colour value is `<main>-and-<tip>` — and every surface that paints a belt reads the same tokens: the badge and spine through `var()`, the stats doughnut and the share card through `resolveBeltColour()` (`shared/utils/belt-palette.ts`), because a canvas cannot read a custom property. Three palettes used to disagree on what blue was.
+
+- **A pill's text sits on one colour only.** A two-colour belt is its main colour with the second as a band at the end (`--budojo-belt-band`, 0.5rem); the spine, which carries no text, shows both halves in full. No single ink reads on both halves of every pair — yellow-and-orange has none at 4.5:1 — so this is arithmetic, not taste.
+- **Each colour clears AA against its own ink.** `shared/styles/belt-contrast.spec.ts` computes it from the file and fails the build. Green and orange were darkened in #1801 (white text measured 3.30:1 and 3.56:1), and the coral red-and-white stopped putting dark text on red (2.27:1).
 
 ### 1.2 Typography (iOS HIG scale)
 

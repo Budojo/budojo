@@ -5,6 +5,8 @@ import { describe, expect, it } from 'vitest';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 import { StatsOverviewComponent } from './stats-overview.component';
 import { Athlete } from '../../../core/services/athlete.service';
+import type { MartialArt } from '../../../core/services/academy.service';
+import { useLadder } from '../../../../test-utils/ladder-test';
 
 function makeAthlete(overrides: Partial<Athlete> = {}): Athlete {
   return {
@@ -37,11 +39,13 @@ function makeListResponse(data: Athlete[], lastPage = 1) {
   };
 }
 
-function setupTestBed(): HttpTestingController {
+function setupTestBed(art: MartialArt = 'bjj'): HttpTestingController {
   TestBed.configureTestingModule({
     imports: [StatsOverviewComponent],
     providers: [provideHttpClient(), provideHttpClientTesting(), ...provideI18nTesting()],
   });
+  // The doughnut orders slices by the academy's ladder (#1801).
+  useLadder(art);
   return TestBed.inject(HttpTestingController);
 }
 
@@ -79,14 +83,48 @@ describe('StatsOverviewComponent', () => {
     fixture.detectChanges();
 
     const beltChart = fixture.componentInstance['beltChartData']();
-    // Order follows BELT_ORDER (kids → adults → senior); white precedes
-    // blue, blue precedes black.
+    // Order follows the academy's ladder; in BJJ white precedes blue,
+    // blue precedes black.
     expect(beltChart.labels).toEqual(['White', 'Blue', 'Black']);
     expect(beltChart.datasets[0].data).toEqual([1, 2, 1]);
 
     expect(fixture.componentInstance['totalAthletes']()).toBe(4);
     // The embedded LeaderboardCardComponent (#962) fires a GET on
     // mount — drain it so httpMock.verify() doesn't trip.
+    httpMock
+      .expectOne((r) => r.url.endsWith('/attendance/leaderboard'))
+      .flush({ data: [], meta: { month: '2026-05' } });
+    httpMock.verify();
+  });
+
+  it("orders the slices by the academy's own ladder, not by BJJ", () => {
+    // Taekwondo: red is the 2nd kup, below the poom and the black belt. On
+    // a BJJ ladder red is the grand master and would come last.
+    const httpMock = setupTestBed('taekwondo');
+    const fixture = TestBed.createComponent(StatsOverviewComponent);
+    fixture.detectChanges();
+
+    httpMock
+      .expectOne((r) => r.url.endsWith('/athletes') && r.params.get('page') === '1')
+      .flush(
+        makeListResponse(
+          [
+            makeAthlete({ id: 1, belt: 'black' }),
+            makeAthlete({ id: 2, belt: 'red' }),
+            makeAthlete({ id: 3, belt: 'black-and-red' }),
+            makeAthlete({ id: 4, belt: 'white-and-yellow' }),
+          ],
+          1,
+        ),
+      );
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance['beltChartData']().labels).toEqual([
+      'White and yellow',
+      'Red',
+      'Poom',
+      'Black',
+    ]);
     httpMock
       .expectOne((r) => r.url.endsWith('/attendance/leaderboard'))
       .flush({ data: [], meta: { month: '2026-05' } });

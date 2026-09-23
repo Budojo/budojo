@@ -66,20 +66,20 @@ describe('BeltSortButtonComponent', () => {
     const { fixture, host } = setup();
 
     expect(button(fixture).getAttribute('aria-label')).toBe(
-      'Click to sort by belt rank (black → white)',
+      'Click to sort by belt rank (highest → lowest)',
     );
 
     host.field.set('belt');
     host.order.set('asc');
     fixture.detectChanges();
     expect(button(fixture).getAttribute('aria-label')).toBe(
-      'Sorted by belt (white → black). Click to flip.',
+      'Sorted by belt (lowest → highest). Click to flip.',
     );
 
     TestBed.inject(LanguageService).setLanguage('it');
     fixture.detectChanges();
     expect(button(fixture).getAttribute('aria-label')).toBe(
-      'Ordinato per cintura (bianca → nera). Clicca per invertire.',
+      'Ordinato per cintura (dalla più bassa alla più alta). Clicca per invertire.',
     );
     expect(button(fixture).textContent?.trim()).toBe('Cintura');
   });

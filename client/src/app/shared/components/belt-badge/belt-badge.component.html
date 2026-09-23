@@ -19,6 +19,9 @@
   <p-tag [style]="style()" [rounded]="true">
     <span class="belt-badge__inner">
       <span class="belt-badge__label">{{ labelKey() | translate }}</span>
+      @if (countLabel(); as count) {
+        <span class="belt-badge__count" data-cy="belt-count">{{ count }}</span>
+      }
       @if (stripeTiles().length > 0) {
         <span
           class="belt-badge__stripes"

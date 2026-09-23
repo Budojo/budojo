@@ -1,101 +1,16 @@
 :host {
   display: inline-flex;
+  // The palette lives once in `budojo-theme.scss` (#1801): `--budojo-belt-<colour>`
+  // and its `-ink`. This component composes belts from it and defines none.
+}
 
-  /*
-   * IBJJF belt colors are *domain* constants, not Material Design 3 theme
-   * tokens. client/CLAUDE.md § Design canon permits hardcoded values "unless
-   * the token truly doesn't exist", and that's exactly the case here: these
-   * values are the product — a blue belt is #1D4ED8, not `var(--p-primary)`.
-   *
-   * Centralising them as CSS custom properties on :host means:
-   *   1. No hex literal lives in the TS file (shared component discipline).
-   *   2. A future per-academy branding (e.g. Gracie palette) can override
-   *      these variables from a parent scope without touching the component.
-   *   3. The mapping stays trivially auditable — twelve bg/fg pairs
-   *      covering the full IBJJF scale (kids: grey/yellow/orange/green;
-   *      adults: white/blue/purple/brown/black; senior coral and red:
-   *      red-and-black, red-and-white, red). New belts get appended here.
-   */
-  // Adult IBJJF belts.
-  --budojo-belt-white-bg: #f3f4f6;
-  --budojo-belt-white-fg: #374151;
-  --budojo-belt-blue-bg: #1d4ed8;
-  --budojo-belt-blue-fg: #ffffff;
-  --budojo-belt-purple-bg: #7c3aed;
-  --budojo-belt-purple-fg: #ffffff;
-  --budojo-belt-brown-bg: #92400e;
-  --budojo-belt-brown-fg: #ffffff;
-  --budojo-belt-black-bg: #111827;
-  --budojo-belt-black-fg: #ffffff;
-
-  // IBJJF Youth belts (#230). Foreground stays high-contrast on each
-  // pill — the kid badges read at the same glance distance as adult
-  // belts on the roster.
-  --budojo-belt-grey-bg: #6b7280;
-  --budojo-belt-grey-fg: #ffffff;
-  --budojo-belt-yellow-bg: #f59e0b;
-  --budojo-belt-yellow-fg: #1f2937;
-  --budojo-belt-orange-bg: #ea580c;
-  --budojo-belt-orange-fg: #ffffff;
-  --budojo-belt-green-bg: #16a34a;
-  --budojo-belt-green-fg: #ffffff;
-
-  // Senior IBJJF ranks beyond black (#229) — 7° / 8° / 9°+ grau. The
-  // coral pair uses a 50/50 linear-gradient that matches the IBJJF
-  // physical belt design. Solid red for the master (9°/10°).
-  // Foreground colour follows the brighter half of each belt:
-  //   - red-and-black: white text (readable on both red AND black)
-  //   - red-and-white: dark text (readable on the white half; the red
-  //     half stays passable since #1f2937 on #b91c1c clears WCAG AA)
-  //   - red: white text (high contrast on solid red)
-  --budojo-belt-red-and-black-bg: linear-gradient(
-    90deg,
-    #b91c1c 0%,
-    #b91c1c 50%,
-    #111827 50%,
-    #111827 100%
-  );
-  --budojo-belt-red-and-black-fg: #ffffff;
-  --budojo-belt-red-and-white-bg: linear-gradient(
-    90deg,
-    #b91c1c 0%,
-    #b91c1c 50%,
-    #f3f4f6 50%,
-    #f3f4f6 100%
-  );
-  --budojo-belt-red-and-white-fg: #1f2937;
-  --budojo-belt-red-bg: #b91c1c;
-  --budojo-belt-red-fg: #ffffff;
-
-  // The palette as HALVES (#1429). Every belt has two, equal for the solid
-  // ones and genuinely different for the coral pair — which is the only
-  // reason this shape exists. `-bg` above stays the badge's horizontal
-  // split; the spine composes a vertical one from the same values, so a
-  // colour lives in exactly one place and the two shapes cannot drift.
-  --budojo-belt-white-a: #f3f4f6;
-  --budojo-belt-white-b: #f3f4f6;
-  --budojo-belt-blue-a: #1d4ed8;
-  --budojo-belt-blue-b: #1d4ed8;
-  --budojo-belt-purple-a: #7c3aed;
-  --budojo-belt-purple-b: #7c3aed;
-  --budojo-belt-brown-a: #92400e;
-  --budojo-belt-brown-b: #92400e;
-  --budojo-belt-black-a: #111827;
-  --budojo-belt-black-b: #111827;
-  --budojo-belt-grey-a: #6b7280;
-  --budojo-belt-grey-b: #6b7280;
-  --budojo-belt-yellow-a: #f59e0b;
-  --budojo-belt-yellow-b: #f59e0b;
-  --budojo-belt-orange-a: #ea580c;
-  --budojo-belt-orange-b: #ea580c;
-  --budojo-belt-green-a: #16a34a;
-  --budojo-belt-green-b: #16a34a;
-  --budojo-belt-red-a: #b91c1c;
-  --budojo-belt-red-b: #b91c1c;
-  --budojo-belt-red-and-black-a: #b91c1c;
-  --budojo-belt-red-and-black-b: #111827;
-  --budojo-belt-red-and-white-a: #b91c1c;
-  --budojo-belt-red-and-white-b: #f3f4f6;
+// A two-colour belt carries its second colour as a band at the pill's end
+// (#1801). The band is painted by the gradient in `style()`; this keeps the
+// text and the stripe tiles off it, so they only ever sit on the main colour.
+// `::ng-deep` because the padding belongs to PrimeNG's inner `.p-tag` — the
+// same documented exception as the compact variant below.
+:host(.belt-badge--two-tone) ::ng-deep .p-tag {
+  padding-inline-end: calc(10px + var(--budojo-belt-band));
 }
 
 .belt-badge {
@@ -117,6 +32,14 @@
   // Inline stripe markers (#165). Each tile is a small filled square in the
   // belt's foreground color — high-contrast against the pill background by
   // construction (white belt → dark tiles, coloured belts → white tiles).
+  // "3° dan" — a dan or a poom is written, not drawn (#1801).
+  &__count {
+    line-height: 1;
+    white-space: nowrap;
+    font-weight: 500;
+    opacity: 0.9;
+  }
+
   &__stripes {
     display: inline-flex;
     align-items: center;
@@ -160,6 +83,10 @@
   .belt-badge__inner {
     gap: 0.25rem;
   }
+}
+
+:host(.belt-badge--compact.belt-badge--two-tone) ::ng-deep .p-tag {
+  padding-inline-end: calc(0.375rem + var(--budojo-belt-band));
 }
 
 // ── Spine (#1429) ──────────────────────────────────────────────────────────────

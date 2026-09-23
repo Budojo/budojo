@@ -571,15 +571,12 @@ rests on structural evidence, not a census.
 - **The promotion backfill validates against the ladder too**
   (`StoreAthletePromotionRequest`: `from_belt`, `to_belt`, `belt_at_event`).
   Chain consistency (#1431) is untouched; it compares strings.
-- **A public profile renders a belt with the martial art it was earned in.**
-  The feed, comments, reactions and the check-in list are academy-scoped, so
-  the viewer's academy *is* the belt's academy and they need nothing. The
-  public profile is the one surface a visitor from elsewhere — or no academy
-  at all — can see; it needs `martial_art` beside the belt for the art-specific
-  label, and falls back to the colour vocabulary without it. Deferred to #1801,
-  where it is rendered: both surfaces are web-only (`community` and
-  `athlete_accounts` are absent from the desktop capability list,
-  `server/config/budojo.php:77`), and the web build is not deployed.
+- **Every surface that shows a belt is in the belt's own academy**, so the
+  viewer's ladder is the belt's ladder and no payload needs a `martial_art`.
+  The feed, comments, reactions and the check-in list are academy-scoped, and
+  the public profile — the one this PRD first thought an outsider could see —
+  404s any viewer not in the profile's academy (`PublicProfileController`'s
+  same-academy gate). Found while building #1801; nothing to add.
 - **The seed copies one of the academy's martial art's starter programmes.**
   `POST /academy/syllabus/seed` takes an optional `programme` key and reads
   `MartialArtProfile::for($academy->martial_art)->programmeFile($key)`. The key

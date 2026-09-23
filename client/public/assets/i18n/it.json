@@ -1759,18 +1759,42 @@
   },
   "belts": {
     "all": "Tutte le cinture",
-    "grey": "Grigia (bambini)",
-    "yellow": "Gialla (bambini)",
-    "orange": "Arancione (bambini)",
-    "green": "Verde (bambini)",
+    "grey": "Grigia",
+    "yellow": "Gialla",
+    "orange": "Arancione",
+    "green": "Verde",
     "white": "Bianca",
     "blue": "Blu",
     "purple": "Viola",
     "brown": "Marrone",
     "black": "Nera",
-    "redAndBlack": "Rossa e nera (7°)",
-    "redAndWhite": "Rossa e bianca (8°)",
-    "red": "Rossa (9°/10°)"
+    "redAndBlack": "Rosso-nera",
+    "redAndWhite": "Bianco-rossa",
+    "red": "Rossa",
+    "whiteAndYellow": "Bianco-gialla",
+    "yellowAndOrange": "Giallo-arancio",
+    "orangeAndGreen": "Arancio-verde",
+    "greenAndBlue": "Verde-blu",
+    "blueAndBrown": "Blu-marrone",
+    "yellowAndGreen": "Giallo-verde",
+    "blueAndRed": "Blu-rossa",
+    "blackAndRed": "Nero-rossa",
+    "bjj": {
+      "grey": "Grigia (bambini)",
+      "yellow": "Gialla (bambini)",
+      "orange": "Arancione (bambini)",
+      "green": "Verde (bambini)",
+      "redAndBlack": "Rossa e nera (7°)",
+      "redAndWhite": "Rossa e bianca (8°)",
+      "red": "Rossa (9°/10°)"
+    },
+    "taekwondo": {
+      "blackAndRed": "Poom"
+    },
+    "count": {
+      "dan": "{{n}}° dan",
+      "poom": "{{n}}°"
+    }
   },
   "attendance": {
     "daily": {
@@ -2610,9 +2634,9 @@
     },
     "sort": {
       "beltLabel": "Cintura",
-      "beltInitial": "Clicca per ordinare per cintura (nera → bianca)",
-      "beltAsc": "Ordinato per cintura (bianca → nera). Clicca per invertire.",
-      "beltDesc": "Ordinato per cintura (nera → bianca). Clicca per invertire.",
+      "beltInitial": "Clicca per ordinare per cintura (dalla più alta)",
+      "beltAsc": "Ordinato per cintura (dalla più bassa alla più alta). Clicca per invertire.",
+      "beltDesc": "Ordinato per cintura (dalla più alta alla più bassa). Clicca per invertire.",
       "nameInitial": "Clicca per ordinare per nome (A → Z)",
       "nameFirstAsc": "Ordinato per nome (A → Z). Clicca per cambiare.",
       "nameFirstDesc": "Ordinato per nome (Z → A). Clicca per cambiare.",

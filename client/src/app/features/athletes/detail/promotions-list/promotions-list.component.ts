@@ -28,11 +28,10 @@ import {
   type AthletePromotionCreatePayload,
   AthleteService,
   Belt,
-  MAX_STRIPES_PER_BELT,
 } from '../../../../core/services/athlete.service';
+import { BeltLadderService } from '../../../../core/services/belt-ladder.service';
 import { LanguageService } from '../../../../core/services/language.service';
 import { datePickerFormatFor } from '../../../../shared/utils/locale';
-import { BELT_KEYS, BELT_ORDER } from '../../../../shared/utils/i18n-enum-keys';
 import { BeltBadgeComponent } from '../../../../shared/components/belt-badge/belt-badge.component';
 import { ConfirmDestructiveButtonComponent } from '../../../../shared/components/confirm-destructive-button/confirm-destructive-button.component';
 import { LocaleDatePipe } from '../../../../shared/pipes/locale-date.pipe';
@@ -102,6 +101,7 @@ export class PromotionsListComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly messageService = inject(MessageService);
   private readonly translate = inject(TranslateService);
+  private readonly beltLadder = inject(BeltLadderService);
   private readonly languageService = inject(LanguageService);
 
   /**
@@ -174,10 +174,29 @@ export class PromotionsListComponent implements OnInit {
     ];
   });
 
-  /** Every belt, in IBJJF rank order — for `to_belt` / `belt_at_event`. */
+  /**
+   * A stripe count on a timeline row, read the way its grade counts (#1801):
+   * a plain number for stripes and *tacche*, "2° dan" for a dan.
+   */
+  protected stripeCount(promotion: AthletePromotion, stripes: number | null): string {
+    this.languageService.currentLang();
+    if (stripes === null) return '';
+    return promotion.belt_at_event === null
+      ? String(stripes)
+      : this.beltLadder.stripesLabel(promotion.belt_at_event, stripes);
+  }
+
+  /** Whether the row's count is stripes (and so needs the "stripes" noun). */
+  protected countsStripes(promotion: AthletePromotion): boolean {
+    return (
+      promotion.belt_at_event === null || this.beltLadder.countsStripes(promotion.belt_at_event)
+    );
+  }
+
+  /** The academy's ladder, in rank order — for `to_belt` / `belt_at_event` (#1801). */
   protected readonly beltOptions = computed<SelectOption<Belt>[]>(() => {
     this.languageService.currentLang();
-    return BELT_ORDER.map((value) => ({ label: this.translate.instant(BELT_KEYS[value]), value }));
+    return this.beltLadder.beltOptions();
   });
 
   /** Same list plus a leading "first belt" option — `from_belt` alone can be empty. */
@@ -203,13 +222,10 @@ export class PromotionsListComponent implements OnInit {
    * rather than merely rejected after the fact.
    */
   protected readonly createStripesOptions = computed<SelectOption<string>[]>(() => {
+    this.languageService.currentLang();
     const belt = this.beltAtEventValue();
     if (belt === null) return [];
-    const max = MAX_STRIPES_PER_BELT[belt];
-    return Array.from({ length: max + 1 }, (_, i) => String(i)).map((v) => ({
-      label: v,
-      value: v,
-    }));
+    return this.beltLadder.stripeOptions(belt);
   });
 
   private athleteId = 0;

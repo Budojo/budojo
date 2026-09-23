@@ -166,6 +166,38 @@
   // #1c1c1e row measures 1.04:1, which is not an edge, it is nothing.
   --budojo-belt-edge: rgb(0 0 0 / 12%);
 
+  // The belt colours (#1801) — domain constants, not theme roles: a blue belt
+  // is #1d4ed8, never the primary colour, in either theme. One palette for
+  // every surface that paints a belt (badge, spine, stats doughnut, share
+  // card), which used to be three that disagreed on what blue was. Every
+  // belt is one or two of these ten; `-ink` is the text that sits on the
+  // colour, and `belt-contrast.spec.ts` keeps each pair at WCAG AA (4.5:1).
+  // Green and orange were darkened in #1801 to get there — they measured
+  // 3.30:1 and 3.56:1 under white text.
+  --budojo-belt-white: #f3f4f6;
+  --budojo-belt-white-ink: #374151;
+  --budojo-belt-grey: #6b7280;
+  --budojo-belt-grey-ink: #ffffff;
+  --budojo-belt-yellow: #f59e0b;
+  --budojo-belt-yellow-ink: #1f2937;
+  --budojo-belt-orange: #c2410c;
+  --budojo-belt-orange-ink: #ffffff;
+  --budojo-belt-green: #15803d;
+  --budojo-belt-green-ink: #ffffff;
+  --budojo-belt-blue: #1d4ed8;
+  --budojo-belt-blue-ink: #ffffff;
+  --budojo-belt-purple: #7c3aed;
+  --budojo-belt-purple-ink: #ffffff;
+  --budojo-belt-brown: #92400e;
+  --budojo-belt-brown-ink: #ffffff;
+  --budojo-belt-black: #111827;
+  --budojo-belt-black-ink: #ffffff;
+  --budojo-belt-red: #b91c1c;
+  --budojo-belt-red-ink: #ffffff;
+  // The second colour of a two-colour belt, as a band at the pill's end —
+  // the text never sits on it, which is what makes AA possible at all.
+  --budojo-belt-band: 0.5rem;
+
   // The Electron drag strip under the native window buttons (#1793).
   //
   // This is the one surface in the app whose colour is ALSO a native value:

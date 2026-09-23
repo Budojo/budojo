@@ -18,6 +18,7 @@ import {
 } from '../../../core/services/athlete.service';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { BELT_KEYS } from '../../../shared/utils/i18n-enum-keys';
+import { BeltLadderService } from '../../../core/services/belt-ladder.service';
 import { LanguageService } from '../../../core/services/language.service';
 import { localeFor } from '../../../shared/utils/locale';
 import type { Belt } from '../../../core/services/athlete.service';
@@ -65,6 +66,7 @@ export class AthleteImportComponent {
   private readonly router = inject(Router);
   private readonly messages = inject(MessageService);
   private readonly translate = inject(TranslateService);
+  private readonly beltLadder = inject(BeltLadderService);
   private readonly language = inject(LanguageService);
 
   protected readonly file = signal<File | null>(null);
@@ -227,14 +229,13 @@ export class AthleteImportComponent {
    * The preview exists to be CHECKED, and `blue` is a word this app never
    * otherwise shows an Italian instructor — asking them to verify a parse
    * against vocabulary they do not use defeats the point of showing it.
-   * Reuses `BELT_KEYS`, whose exhaustive `Record<Belt, string>` is what makes
-   * a new belt a compile error rather than a blank cell.
+   * Named the way the academy's martial art names it (#1801); a value that is
+   * not a belt at all is shown as typed, which is what the owner must fix.
    */
   protected beltLabel(row: AthleteImportRow): string {
     const value = this.valueOf(row, 'belt');
-    const key = BELT_KEYS[value as Belt] as string | undefined;
 
-    return key === undefined ? value : this.translate.instant(key);
+    return value in BELT_KEYS ? this.beltLadder.label(value as Belt) : value;
   }
 
   /**

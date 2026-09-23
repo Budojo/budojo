@@ -1,0 +1,374 @@
+{
+  "bjj": [
+    {
+      "belt": "grey",
+      "max_stripes": 4,
+      "count": "stripe",
+      "first": 0,
+      "kids": true
+    },
+    {
+      "belt": "yellow",
+      "max_stripes": 4,
+      "count": "stripe",
+      "first": 0,
+      "kids": true
+    },
+    {
+      "belt": "orange",
+      "max_stripes": 4,
+      "count": "stripe",
+      "first": 0,
+      "kids": true
+    },
+    {
+      "belt": "green",
+      "max_stripes": 4,
+      "count": "stripe",
+      "first": 0,
+      "kids": true
+    },
+    {
+      "belt": "white",
+      "max_stripes": 4,
+      "count": "stripe",
+      "first": 0,
+      "kids": false
+    },
+    {
+      "belt": "blue",
+      "max_stripes": 4,
+      "count": "stripe",
+      "first": 0,
+      "kids": false
+    },
+    {
+      "belt": "purple",
+      "max_stripes": 4,
+      "count": "stripe",
+      "first": 0,
+      "kids": false
+    },
+    {
+      "belt": "brown",
+      "max_stripes": 4,
+      "count": "stripe",
+      "first": 0,
+      "kids": false
+    },
+    {
+      "belt": "black",
+      "max_stripes": 6,
+      "count": "stripe",
+      "first": 0,
+      "kids": false
+    },
+    {
+      "belt": "red-and-black",
+      "max_stripes": 4,
+      "count": "stripe",
+      "first": 0,
+      "kids": false
+    },
+    {
+      "belt": "red-and-white",
+      "max_stripes": 4,
+      "count": "stripe",
+      "first": 0,
+      "kids": false
+    },
+    {
+      "belt": "red",
+      "max_stripes": 4,
+      "count": "stripe",
+      "first": 0,
+      "kids": false
+    }
+  ],
+  "judo": [
+    {
+      "belt": "white",
+      "max_stripes": 0,
+      "count": "stripe",
+      "first": 0,
+      "kids": false
+    },
+    {
+      "belt": "white-and-yellow",
+      "max_stripes": 0,
+      "count": "stripe",
+      "first": 0,
+      "kids": true
+    },
+    {
+      "belt": "yellow",
+      "max_stripes": 0,
+      "count": "stripe",
+      "first": 0,
+      "kids": false
+    },
+    {
+      "belt": "yellow-and-orange",
+      "max_stripes": 0,
+      "count": "stripe",
+      "first": 0,
+      "kids": true
+    },
+    {
+      "belt": "orange",
+      "max_stripes": 0,
+      "count": "stripe",
+      "first": 0,
+      "kids": false
+    },
+    {
+      "belt": "orange-and-green",
+      "max_stripes": 0,
+      "count": "stripe",
+      "first": 0,
+      "kids": true
+    },
+    {
+      "belt": "green",
+      "max_stripes": 0,
+      "count": "stripe",
+      "first": 0,
+      "kids": false
+    },
+    {
+      "belt": "green-and-blue",
+      "max_stripes": 0,
+      "count": "stripe",
+      "first": 0,
+      "kids": true
+    },
+    {
+      "belt": "blue",
+      "max_stripes": 0,
+      "count": "stripe",
+      "first": 0,
+      "kids": false
+    },
+    {
+      "belt": "blue-and-brown",
+      "max_stripes": 0,
+      "count": "stripe",
+      "first": 0,
+      "kids": true
+    },
+    {
+      "belt": "brown",
+      "max_stripes": 0,
+      "count": "stripe",
+      "first": 0,
+      "kids": false
+    },
+    {
+      "belt": "black",
+      "max_stripes": 4,
+      "count": "dan",
+      "first": 1,
+      "kids": false
+    },
+    {
+      "belt": "red-and-white",
+      "max_stripes": 2,
+      "count": "dan",
+      "first": 6,
+      "kids": false
+    },
+    {
+      "belt": "red",
+      "max_stripes": 1,
+      "count": "dan",
+      "first": 9,
+      "kids": false
+    }
+  ],
+  "karate": [
+    {
+      "belt": "white",
+      "max_stripes": 3,
+      "count": "stripe",
+      "first": 0,
+      "kids": false
+    },
+    {
+      "belt": "white-and-yellow",
+      "max_stripes": 3,
+      "count": "stripe",
+      "first": 0,
+      "kids": true
+    },
+    {
+      "belt": "yellow",
+      "max_stripes": 3,
+      "count": "stripe",
+      "first": 0,
+      "kids": false
+    },
+    {
+      "belt": "yellow-and-orange",
+      "max_stripes": 3,
+      "count": "stripe",
+      "first": 0,
+      "kids": true
+    },
+    {
+      "belt": "orange",
+      "max_stripes": 3,
+      "count": "stripe",
+      "first": 0,
+      "kids": false
+    },
+    {
+      "belt": "orange-and-green",
+      "max_stripes": 3,
+      "count": "stripe",
+      "first": 0,
+      "kids": true
+    },
+    {
+      "belt": "green",
+      "max_stripes": 3,
+      "count": "stripe",
+      "first": 0,
+      "kids": false
+    },
+    {
+      "belt": "green-and-blue",
+      "max_stripes": 3,
+      "count": "stripe",
+      "first": 0,
+      "kids": true
+    },
+    {
+      "belt": "blue",
+      "max_stripes": 3,
+      "count": "stripe",
+      "first": 0,
+      "kids": false
+    },
+    {
+      "belt": "blue-and-brown",
+      "max_stripes": 3,
+      "count": "stripe",
+      "first": 0,
+      "kids": true
+    },
+    {
+      "belt": "brown",
+      "max_stripes": 3,
+      "count": "stripe",
+      "first": 0,
+      "kids": false
+    },
+    {
+      "belt": "black",
+      "max_stripes": 4,
+      "count": "dan",
+      "first": 1,
+      "kids": false
+    },
+    {
+      "belt": "red-and-white",
+      "max_stripes": 2,
+      "count": "dan",
+      "first": 6,
+      "kids": false
+    },
+    {
+      "belt": "red",
+      "max_stripes": 1,
+      "count": "dan",
+      "first": 9,
+      "kids": false
+    }
+  ],
+  "taekwondo": [
+    {
+      "belt": "white",
+      "max_stripes": 0,
+      "count": "stripe",
+      "first": 0,
+      "kids": false
+    },
+    {
+      "belt": "white-and-yellow",
+      "max_stripes": 0,
+      "count": "stripe",
+      "first": 0,
+      "kids": false
+    },
+    {
+      "belt": "yellow",
+      "max_stripes": 0,
+      "count": "stripe",
+      "first": 0,
+      "kids": false
+    },
+    {
+      "belt": "yellow-and-green",
+      "max_stripes": 0,
+      "count": "stripe",
+      "first": 0,
+      "kids": false
+    },
+    {
+      "belt": "green",
+      "max_stripes": 0,
+      "count": "stripe",
+      "first": 0,
+      "kids": false
+    },
+    {
+      "belt": "green-and-blue",
+      "max_stripes": 0,
+      "count": "stripe",
+      "first": 0,
+      "kids": false
+    },
+    {
+      "belt": "blue",
+      "max_stripes": 0,
+      "count": "stripe",
+      "first": 0,
+      "kids": false
+    },
+    {
+      "belt": "blue-and-red",
+      "max_stripes": 0,
+      "count": "stripe",
+      "first": 0,
+      "kids": false
+    },
+    {
+      "belt": "red",
+      "max_stripes": 0,
+      "count": "stripe",
+      "first": 0,
+      "kids": false
+    },
+    {
+      "belt": "red-and-black",
+      "max_stripes": 0,
+      "count": "stripe",
+      "first": 0,
+      "kids": false
+    },
+    {
+      "belt": "black-and-red",
+      "max_stripes": 3,
+      "count": "poom",
+      "first": 1,
+      "kids": true
+    },
+    {
+      "belt": "black",
+      "max_stripes": 8,
+      "count": "dan",
+      "first": 1,
+      "kids": false
+    }
+  ]
+}
