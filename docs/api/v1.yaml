@@ -3617,7 +3617,7 @@ paths:
                             id: { type: integer }
                             name: { type: string }
                             parent_name: { type: string, nullable: true }
-                            kind: { type: string, enum: [gi, nogi, both] }
+                            kind: { $ref: '#/components/schemas/TrainingMode' }
                             taught_times:
                               type: integer
                               description: How many evenings it was on the mat while they were on the roster.
@@ -3715,8 +3715,7 @@ paths:
                           nullable: true
                           description: The position it sits under.
                         kind:
-                          type: string
-                          enum: [gi, nogi, both]
+                          $ref: '#/components/schemas/TrainingMode'
                         reason:
                           type: string
                           enum: [never, thin, stale]
@@ -8292,8 +8291,10 @@ components:
         kind:
           type: string
           nullable: true
-          enum: [gi, nogi]
-          description: The filter in force, or null for the whole programme.
+          enum: [gi, nogi, tachi-waza, ne-waza, kata, kumite, poomsae, kyorugi]
+          description: |
+            The filter in force — one of the academy's `training_modes`
+            (#1803) — or null for the whole programme.
         totals:
           type: object
           required: [in_scope, covered, thin, missing, percentage]

@@ -22,7 +22,7 @@ namespace App\Enums;
  * is nothing else for it to be.
  *
  * Wire values are the ones stored in the three `kind` columns; the BJJ cases
- * are the values `TrainingMode` and `TrainingMode` stored before this enum replaced
+ * are the values `ClassKind` and `TopicKind` stored before this enum replaced
  * them.
  */
 enum TrainingMode: string
