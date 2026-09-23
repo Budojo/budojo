@@ -132,14 +132,18 @@ describe('Academy programme', () => {
       ...ACADEMY,
       martial_art: 'karate',
       training_modes: ['kata', 'kumite'],
-      // No karate programme has shipped, so the empty page offers only a blank start.
-      syllabus_programmes: [],
+      syllabus_programmes: ['karate-goju-ryu'],
     });
 
     cy.visitAuthenticated('/dashboard/academy/syllabus');
     cy.wait('@syllabus');
 
-    cy.get('[data-cy="syllabus-empty-cta"] button').click();
+    // Writing one's own, beside the Goju-ryu seed (#1805).
+    cy.get('[data-cy="syllabus-empty-cta"]').should(
+      'contain.text',
+      'Start from the Goju-ryu programme',
+    );
+    cy.get('[data-cy="syllabus-empty-secondary"] button').click();
     cy.get('[data-cy="syllabus-form-kind"]')
       .should('contain.text', 'Kata and kumite')
       .and('not.contain.text', 'Gi');

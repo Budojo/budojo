@@ -1698,6 +1698,11 @@
             "hint": "Parti dal programma di judo già pronto — le proiezioni, le immobilizzazioni, gli strangolamenti e le leve del Kodokan per gruppi, con ukemi, randori e kata — da rinominare, togliere o cancellare, oppure scrivi il tuo da zero.",
             "seeded": "Il programma di judo è tuo, modificalo pure"
           },
+          "karateGojuRyu": {
+            "cta": "Parti dal programma Goju-ryu",
+            "hint": "Parti dal programma Goju-ryu già pronto — kihon, i kata del Goju da Sanchin a Suparinpei, kakie e kumite — da rinominare, togliere o cancellare, oppure scrivi il tuo da zero.",
+            "seeded": "Il programma Goju-ryu è tuo, modificalo pure"
+          },
           "other": {
             "cta": "Parti dal programma già pronto",
             "hint": "Parti dal programma già pronto per questa arte marziale — da rinominare, togliere o cancellare — oppure scrivi il tuo da zero.",

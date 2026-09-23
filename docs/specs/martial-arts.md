@@ -530,6 +530,12 @@ instructor acts on. Sizes below are targets, not counts.
   the order of the FIJLKAM Goju dan programme — 1st dan Sanchin, Saifa,
   Seiyunchin; 2nd Tensho, Shisochin, Sanseiru; 3rd Sanchin, Tensho, Seipai,
   Kururunfa. Goju-Kai teaches Sanseiru before Shisochin; the owner reorders.
+
+  *As built (#1805):* 15 groups, 62 items, spelled as the IOGKF spells them
+  (Sanseru, Sepai — the FIJLKAM, Jundokan and Goju-Kai variants live in the
+  entity doc, since JSON carries no comments). The fukyu kata are two groups,
+  Taikyoku and Gekisai, so an Okinawan-lineage school unticks the five
+  Taikyoku in one tap.
 - **Taekwondo (~11 groups, ~70 techniques)** — seogi (6), hand techniques (6),
   makki (6), chagi (12); **poomsae**: Taegeuk 1–8 Jang and the yudanja set
   (Koryo, Keumgang, Taebaek, Pyongwon, Sipjin, Jitae, Cheonkwon, Hansu, Ilyeo),
@@ -790,6 +796,8 @@ chain rule; audit entries (`athlete.belt.promoted` stays the verb); search.
 - **A karate owner seeds without naming a style.** 422 on `programme`: karate
   offers more than one, and guessing would put a Goju-ryu school's name on a
   Shorin-ryu programme. The client never sends that request; the page asks.
+  *As built (#1805):* true once the second style ships (#1810). Until then
+  karate offers Goju-ryu alone, and a seed without a key copies it.
 - **A karate school whose ladder has ten kyu.** Nothing to configure: yellow
   covering 9th and 8th kyu is recorded as yellow, with *tacche* if the school
   shows the step. The kyu number was never stored.

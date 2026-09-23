@@ -119,6 +119,12 @@ const STARTER_PROGRAMME_KEYS: Readonly<Record<string, StarterProgrammeKeys>> = {
     hint: 'academy.syllabus.empty.starter.judo.hint',
     seeded: 'academy.syllabus.empty.starter.judo.seeded',
   },
+  // Karate ships one programme per style (#1805), and the button names it.
+  'karate-goju-ryu': {
+    cta: 'academy.syllabus.empty.starter.karateGojuRyu.cta',
+    hint: 'academy.syllabus.empty.starter.karateGojuRyu.hint',
+    seeded: 'academy.syllabus.empty.starter.karateGojuRyu.seeded',
+  },
 };
 
 /**

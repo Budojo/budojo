@@ -1698,6 +1698,11 @@
             "hint": "Start from the shipped judo programme — the Kodokan throws, holds, chokes and locks by group, with ukemi, randori and kata — ready to rename, untick or delete, or write your own from scratch.",
             "seeded": "The judo programme is yours to edit"
           },
+          "karateGojuRyu": {
+            "cta": "Start from the Goju-ryu programme",
+            "hint": "Start from the shipped Goju-ryu programme — kihon, the Goju kata from Sanchin to Suparinpei, kakie and kumite — ready to rename, untick or delete, or write your own from scratch.",
+            "seeded": "The Goju-ryu programme is yours to edit"
+          },
           "other": {
             "cta": "Start from the shipped programme",
             "hint": "Start from the programme that ships for this martial art — ready to rename, untick or delete — or write your own from scratch.",

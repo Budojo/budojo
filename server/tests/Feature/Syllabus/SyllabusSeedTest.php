@@ -187,6 +187,64 @@ it('keeps the techniques shiai forbids, and says so in their name', function ():
     ]);
 });
 
+it('copies the Goju-ryu programme into a karate academy: kihon, then kata, then kumite (#1805)', function (): void {
+    $this->academy->update(['martial_art' => MartialArt::Karate]);
+
+    // The only karate programme so far, so no key is needed.
+    $this->actingAs($this->user)->postJson('/api/v1/academy/syllabus/seed')->assertCreated();
+
+    $groups = SyllabusTopic::query()->where('academy_id', $this->academy->id)->positions()
+        ->orderBy('sort_order')->with('children')->get()->keyBy('name');
+
+    expect($groups->keys()->first())->toBe('Junbi undo and hojo undo')
+        ->and($groups->keys()->last())->toBe('Jiyu kumite');
+
+    // Every Goju kata, in the Okinawan order — Seiyunchin, Shisochin, then
+    // Sanseru, the order of the FIJLKAM Goju dan programme too.
+    $kata = collect(['Heishu kata', 'Fukyu kata — Taikyoku', 'Fukyu kata — Gekisai', 'Kaishu kata — kyu', 'Kaishu kata — dan'])
+        ->flatMap(fn (string $group) => $groups[$group]->children->sortBy('sort_order')->pluck('name'))
+        ->all();
+    expect($kata)->toBe([
+        'Sanchin', 'Tensho',
+        'Taikyoku jodan', 'Taikyoku chudan', 'Taikyoku gedan', 'Taikyoku kake uke', 'Taikyoku mawashi uke',
+        'Gekisai dai ichi', 'Gekisai dai ni',
+        'Saifa', 'Seiyunchin', 'Shisochin',
+        'Sanseru', 'Sepai', 'Kururunfa', 'Seisan', 'Suparinpei',
+    ]);
+});
+
+it('files kata as kata, kakie and every kumite as kumite, and kihon either way', function (): void {
+    $this->academy->update(['martial_art' => MartialArt::Karate]);
+    $this->actingAs($this->user)->postJson('/api/v1/academy/syllabus/seed')->assertCreated();
+
+    $mode = fn (string $name): TrainingMode => SyllabusTopic::query()
+        ->where('academy_id', $this->academy->id)->where('name', $name)->firstOrFail()->kind;
+
+    expect($mode('Suparinpei'))->toBe(TrainingMode::Kata)
+        ->and($mode('Basic kakie'))->toBe(TrainingMode::Kumite)
+        ->and($mode('Sandan gi'))->toBe(TrainingMode::Kumite)
+        ->and($mode('Sanchin dachi'))->toBe(TrainingMode::Both)
+        ->and($mode('Renzoku bunkai'))->toBe(TrainingMode::Both);
+});
+
+it('lets a school that opens with Gekisai take the five Taikyoku out in one tap', function (): void {
+    // Goju-Kai opens with the Taikyoku, Okinawan Goju with Gekisai. One file
+    // serves both because the Taikyoku are their own group.
+    $this->academy->update(['martial_art' => MartialArt::Karate]);
+    $this->actingAs($this->user)->postJson('/api/v1/academy/syllabus/seed')->assertCreated();
+    $taikyoku = SyllabusTopic::query()->where('academy_id', $this->academy->id)->where('name', 'Fukyu kata — Taikyoku')->firstOrFail();
+
+    $this->actingAs($this->user)
+        ->patchJson("/api/v1/academy/syllabus/{$taikyoku->id}", ['in_season' => false])
+        ->assertOk();
+
+    // The one tap takes all five out, and leaves Gekisai where it was.
+    expect($taikyoku->children()->where('in_season', true)->count())->toBe(0)
+        ->and($taikyoku->children()->count())->toBe(5)
+        ->and(SyllabusTopic::query()->where('academy_id', $this->academy->id)
+            ->where('name', 'like', 'Gekisai%')->where('in_season', true)->count())->toBe(2);
+});
+
 it('ships programme files that parse, name every position once, and repeat no technique within a position', function (): void {
     foreach (MartialArt::cases() as $art) {
         $profile = MartialArtProfile::for($art);

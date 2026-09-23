@@ -110,9 +110,10 @@ it('lists programmes whose files exist and parse, with keys unique across every 
     expect($keys)->toBe(array_values(array_unique($keys)))
         ->and(MartialArtProfile::for(MartialArt::Bjj)->programmes())->toBe(['bjj'])
         ->and(MartialArtProfile::for(MartialArt::Judo)->programmes())->toBe(['judo'])
-        // Empty until each art's programme ships (#1805, #1806, #1810): the
-        // page offers no button and the endpoint answers 404 until then.
-        ->and(MartialArtProfile::for(MartialArt::Karate)->programmes())->toBe([])
+        // One per style, Goju-ryu first; the second style is #1810.
+        ->and(MartialArtProfile::for(MartialArt::Karate)->programmes())->toBe(['karate-goju-ryu'])
+        // Empty until its programme ships (#1806): the page offers no button
+        // and the endpoint answers 404 until then.
         ->and(MartialArtProfile::for(MartialArt::Taekwondo)->programmes())->toBe([]);
 });
 
