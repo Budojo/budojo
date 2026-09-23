@@ -15,7 +15,6 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogModule } from 'primeng/dialog';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
-import { SelectButtonModule } from 'primeng/selectbutton';
 import { SkeletonModule } from 'primeng/skeleton';
 import { Tooltip } from 'primeng/tooltip';
 import { Toast } from 'primeng/toast';
@@ -24,12 +23,12 @@ import {
   AcademyClass,
   AcademyClassPayload,
   AcademyClassService,
-  CLASS_KINDS,
-  ClassKind,
 } from '../../../core/services/academy-class.service';
-import { AcademyService } from '../../../core/services/academy.service';
+import { AcademyService, TrainingMode } from '../../../core/services/academy.service';
+import { TrainingModesService } from '../../../core/services/training-modes.service';
 import { LanguageService } from '../../../core/services/language.service';
 import { LessonSheetComponent } from '../../lessons/lesson-sheet/lesson-sheet.component';
+import { ChoiceGridComponent } from '../../../shared/components/choice-grid/choice-grid.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { TrainingDaysPickerComponent } from '../../../shared/components/training-days-picker/training-days-picker.component';
@@ -55,11 +54,6 @@ interface Day {
   readonly name: string;
   readonly classes: readonly AcademyClass[];
   readonly isToday: boolean;
-}
-
-interface KindOption {
-  readonly label: string;
-  readonly value: ClassKind;
 }
 
 /**
@@ -91,7 +85,7 @@ interface KindOption {
     DialogModule,
     InputNumberModule,
     InputTextModule,
-    SelectButtonModule,
+    ChoiceGridComponent,
     SkeletonModule,
     Toast,
     Tooltip,
@@ -108,6 +102,8 @@ export class TimetableComponent {
   private readonly fb = inject(FormBuilder);
   private readonly classService = inject(AcademyClassService);
   private readonly academyService = inject(AcademyService);
+  /** The academy's modes (#1803): gi and no-gi here, kata and kumite in a karate one. */
+  private readonly trainingModes = inject(TrainingModesService);
   private readonly languageService = inject(LanguageService);
   private readonly translate = inject(TranslateService);
   private readonly confirmationService = inject(ConfirmationService);
@@ -148,7 +144,7 @@ export class TimetableComponent {
       Validators.min(15),
       Validators.max(480),
     ]),
-    kind: this.fb.control<ClassKind>('gi', {
+    kind: this.fb.control<TrainingMode>(this.trainingModes.newClassMode(), {
       nonNullable: true,
       validators: [Validators.required],
     }),
@@ -199,31 +195,14 @@ export class TimetableComponent {
     );
   });
 
-  /**
-   * An explicit map, not `'academy.timetable.kind.' + kind`: the i18n parity
-   * check cannot see a key built at runtime, and the day a kind is added this
-   * fails to compile until its label exists in both languages.
-   */
-  private readonly kindKeys: Record<ClassKind, string> = {
-    gi: 'academy.timetable.kind.gi',
-    nogi: 'academy.timetable.kind.nogi',
-    both: 'academy.timetable.kind.both',
-    other: 'academy.timetable.kind.other',
-  };
+  protected readonly kindLabels = this.trainingModes.labels;
 
-  protected readonly kindLabels = computed<Record<ClassKind, string>>(() => {
-    this.languageService.currentLang(); // signal dep — recompute on toggle
-    return {
-      gi: this.translate.instant(this.kindKeys.gi),
-      nogi: this.translate.instant(this.kindKeys.nogi),
-      both: this.translate.instant(this.kindKeys.both),
-      other: this.translate.instant(this.kindKeys.other),
-    };
-  });
+  protected readonly kindOptions = this.trainingModes.classOptions;
 
-  protected readonly kindOptions = computed<KindOption[]>(() =>
-    CLASS_KINDS.map((value) => ({ value, label: this.kindLabels()[value] })),
-  );
+  protected setKind(kind: TrainingMode): void {
+    this.form.controls.kind.setValue(kind);
+    this.form.controls.kind.markAsDirty();
+  }
 
   /** The picker takes a list; in single mode it holds at most one day. */
   protected readonly dayValue = computed<number[]>(() => {
@@ -282,7 +261,13 @@ export class TimetableComponent {
   /** Open the form empty — or with the day already chosen, from a day's "+". */
   protected startAdding(weekday: number | null = null): void {
     this.editing.set(null);
-    this.form.reset({ name: '', weekday, starts_at: '', duration_minutes: null, kind: 'gi' });
+    this.form.reset({
+      name: '',
+      weekday,
+      starts_at: '',
+      duration_minutes: null,
+      kind: this.trainingModes.newClassMode(),
+    });
     this.selectedDay.set(weekday);
     this.clearErrors();
     this.dialogOpen.set(true);

@@ -710,7 +710,7 @@ describe('AcademyFormComponent — the martial art (#1802)', () => {
     );
     const el = fixture.nativeElement as HTMLElement;
 
-    expect(el.querySelector('.martial-art-picker')).toBeNull();
+    expect(el.querySelector('app-martial-art-picker')).toBeNull();
     expect(
       el.querySelector('[data-cy="academy-form-martial-art-locked"]')?.textContent?.trim(),
     ).toBe('Judo');
@@ -720,7 +720,7 @@ describe('AcademyFormComponent — the martial art (#1802)', () => {
     const { fixture } = setup(makeAcademy({ martial_art_locked: false }));
     const el = fixture.nativeElement as HTMLElement;
 
-    const group = el.querySelector('.martial-art-picker');
+    const group = el.querySelector('app-martial-art-picker [role="group"]');
     const hint = el.querySelector('#martial-art-hint');
     expect(group?.getAttribute('aria-describedby')).toBe('martial-art-hint');
     expect(hint?.textContent).toContain('It decides the belts and the programme.');
@@ -732,7 +732,7 @@ describe('AcademyFormComponent — the martial art (#1802)', () => {
     );
     const el = fixture.nativeElement as HTMLElement;
 
-    expect(el.querySelector('.martial-art-picker')).toBeNull();
+    expect(el.querySelector('app-martial-art-picker')).toBeNull();
     expect(
       el.querySelector('[data-cy="academy-form-martial-art-locked"]')?.textContent?.trim(),
     ).toBe('Taekwondo');

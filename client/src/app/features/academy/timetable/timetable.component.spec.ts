@@ -5,8 +5,9 @@ import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideRouter } from '@angular/router';
 import { ConfirmationService } from 'primeng/api';
 import { AcademyClass } from '../../../core/services/academy-class.service';
-import { AcademyService } from '../../../core/services/academy.service';
+import { AcademyService, MartialArt } from '../../../core/services/academy.service';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
+import { useLadder } from '../../../../test-utils/ladder-test';
 import { TimetableComponent } from './timetable.component';
 
 const CLASSES_URL = '/api/v1/academy/classes';
@@ -33,7 +34,8 @@ const OPEN_MAT = klass({
   kind: 'both',
 });
 
-function setup() {
+/** `art` loads an academy teaching it before the page opens (#1803); none reads as BJJ. */
+function setup(art?: MartialArt) {
   TestBed.configureTestingModule({
     imports: [TimetableComponent],
     providers: [
@@ -44,6 +46,8 @@ function setup() {
       ...provideI18nTesting(),
     ],
   });
+
+  if (art) useLadder(art);
 
   const fixture = TestBed.createComponent(TimetableComponent);
   const httpMock = TestBed.inject(HttpTestingController);
@@ -314,5 +318,48 @@ describe('TimetableComponent (#1562)', () => {
     expect(component['dialogOpen']()).toBe(true);
     expect(component['classes']()).toEqual([KIDS]);
     expect(component['saving']()).toBe(false);
+  });
+});
+
+describe('TimetableComponent — training modes (#1803)', () => {
+  afterEach(() => TestBed.inject(HttpTestingController).verify());
+
+  it("offers a judo class the art's own modes, and starts it on the middle", () => {
+    const { fixture, component, httpMock } = setup('judo');
+    flushList(httpMock, []);
+    fixture.detectChanges();
+
+    component['startAdding'](2);
+    fixture.detectChanges();
+
+    const options = Array.from(
+      document.querySelectorAll<HTMLElement>('[data-cy="timetable-form-kind"] button'),
+    ).map((b) => b.textContent?.trim());
+    expect(options).toEqual(['Tachi-waza', 'Ne-waza', 'Tachi-waza and ne-waza', 'Other']);
+    expect(component['form'].controls.kind.value).toBe('both');
+  });
+
+  it('keeps gi as the first choice of a BJJ class, as it always was', () => {
+    const { fixture, component, httpMock } = setup('bjj');
+    flushList(httpMock, []);
+    fixture.detectChanges();
+
+    component['startAdding'](2);
+
+    expect(component['form'].controls.kind.value).toBe('gi');
+  });
+
+  it('names each class by its mode on the week', () => {
+    const { fixture, httpMock } = setup('karate');
+    flushList(httpMock, [
+      klass({ id: 1, name: 'Forms', kind: 'kata' }),
+      klass({ id: 2, name: 'Kihon', starts_at: '20:30', kind: 'both' }),
+    ]);
+    fixture.detectChanges();
+
+    const kinds = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>('.slot__kind'),
+    ).map((k) => k.textContent?.trim());
+    expect(kinds).toEqual(['Kata', 'Kata and kumite']);
   });
 });

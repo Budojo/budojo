@@ -215,7 +215,7 @@ describe('Academy edit form', () => {
     cy.visitAuthenticated('/dashboard/academy/edit');
     cy.wait('@academy');
 
-    cy.get('.martial-art-picker').should('not.exist');
+    cy.get('app-martial-art-picker').should('not.exist');
     cy.get('[data-cy="academy-form-martial-art-locked"]').should(
       'contain.text',
       'Brazilian jiu-jitsu',

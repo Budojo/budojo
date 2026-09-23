@@ -22,6 +22,7 @@
  * Re-running after a fix produces the same picture, minus the fix.
  */
 import LADDERS from '../../src/test-utils/ladders.json';
+import TRAINING_MODES from '../../src/test-utils/training-modes.json';
 
 // ── The clock ────────────────────────────────────────────────────────────
 //
@@ -76,6 +77,7 @@ const ACADEMY = {
   // and the empty programme loses its starter: screens that cannot exist.
   martial_art: 'bjj',
   grades: LADDERS.bjj,
+  training_modes: TRAINING_MODES.bjj,
   martial_art_locked: true,
   syllabus_programmes: ['bjj'],
 };

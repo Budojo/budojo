@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
-use App\Enums\ClassKind;
+use App\Enums\TrainingMode;
 use App\Models\Academy;
 use App\Models\AcademyClass;
 use App\Models\Lesson;
@@ -33,7 +33,7 @@ class LessonFactory extends Factory
             'held_on' => now()->toDateString(),
             'name' => 'Fundamentals',
             'starts_at' => '19:00',
-            'kind' => ClassKind::Gi,
+            'kind' => TrainingMode::Gi,
             'notes' => null,
         ];
     }

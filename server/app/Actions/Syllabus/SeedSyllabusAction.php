@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Actions\Syllabus;
 
-use App\Enums\TopicKind;
+use App\Enums\MartialArt;
+use App\Enums\TrainingMode;
 use App\Exceptions\SyllabusNotEmptyException;
 use App\Exceptions\SyllabusProgrammeUnavailableException;
 use App\Models\Academy;
@@ -32,14 +33,17 @@ class SeedSyllabusAction
     public function execute(Academy $academy, ?string $programme = null): int
     {
         $file = self::resolveFile($academy, $programme);
+        // Parsed before the transaction: a malformed file is a build defect,
+        // not something to discover half-way through writing rows.
+        $positions = self::positions($file, $academy->martial_art);
 
-        return DB::transaction(function () use ($academy, $file): int {
+        return DB::transaction(function () use ($academy, $positions): int {
             if (SyllabusTopic::query()->where('academy_id', $academy->id)->exists()) {
                 throw new SyllabusNotEmptyException();
             }
 
             $written = 0;
-            foreach (self::positions($file) as $order => $position) {
+            foreach ($positions as $order => $position) {
                 $parent = SyllabusTopic::create([
                     'academy_id' => $academy->id,
                     'parent_id' => null,
@@ -69,16 +73,28 @@ class SeedSyllabusAction
 
     /**
      * A shipped programme, parsed and validated: a technique with no kind of
-     * its own inherits its position's. Public so the test that guards every
-     * programme file — no duplicate names within a position, every kind valid —
-     * reads them through the same code the seed does.
+     * its own inherits its position's, and every kind is one the art's topics
+     * may carry — a `kata` in the BJJ programme would be a topic no BJJ
+     * picker can show (#1803). Public so the test that guards every programme
+     * file — no duplicate names within a position, every kind valid — reads
+     * them through the same code the seed does.
      *
      * @param string $file absolute path, from `MartialArtProfile::programmeFile()`
      *
-     * @return list<array{name: string, kind: TopicKind, techniques: list<array{name: string, kind: TopicKind}>}>
+     * @return list<array{name: string, kind: TrainingMode, techniques: list<array{name: string, kind: TrainingMode}>}>
      */
-    public static function positions(string $file): array
+    public static function positions(string $file, MartialArt $art): array
     {
+        $admitted = MartialArtProfile::for($art)->topicModes();
+        $mode = static function (mixed $raw, TrainingMode $inherited) use ($admitted, $art): TrainingMode {
+            $mode = \is_string($raw) ? TrainingMode::tryFrom($raw) : $inherited;
+            if ($mode === null || ! \in_array($mode, $admitted, true)) {
+                throw new \RuntimeException("The {$art->value} programme uses a training mode its martial art does not have.");
+            }
+
+            return $mode;
+        };
+
         $raw = file_get_contents($file);
         if ($raw === false) {
             throw new \RuntimeException('The syllabus seed file could not be read.');
@@ -94,7 +110,7 @@ class SeedSyllabusAction
             if (! \is_array($position) || ! \is_string($position['name'] ?? null)) {
                 throw new \RuntimeException('Every seed position needs a name.');
             }
-            $kind = TopicKind::from(\is_string($position['kind'] ?? null) ? $position['kind'] : 'both');
+            $kind = $mode($position['kind'] ?? null, TrainingMode::Both);
 
             $techniques = [];
             foreach (\is_array($position['techniques'] ?? null) ? $position['techniques'] : [] as $technique) {
@@ -106,7 +122,7 @@ class SeedSyllabusAction
                 }
                 $techniques[] = [
                     'name' => $technique['name'],
-                    'kind' => \is_string($technique['kind'] ?? null) ? TopicKind::from($technique['kind']) : $kind,
+                    'kind' => $mode($technique['kind'] ?? null, $kind),
                 ];
             }
 

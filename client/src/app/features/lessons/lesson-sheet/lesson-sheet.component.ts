@@ -27,7 +27,8 @@ import {
   SuggestionReason,
 } from '../../../core/services/lesson.service';
 import { LanguageService } from '../../../core/services/language.service';
-import { SyllabusService, SyllabusTopic, TopicKind } from '../../../core/services/syllabus.service';
+import { SyllabusService, SyllabusTopic } from '../../../core/services/syllabus.service';
+import type { TrainingMode } from '../../../core/services/academy.service';
 import { localeFor } from '../../../shared/utils/locale';
 
 /** A topic as the picker shows it, whichever list it came from. */
@@ -35,7 +36,7 @@ interface Pickable {
   readonly id: number;
   readonly name: string;
   readonly parentName: string | null;
-  readonly kind: TopicKind;
+  readonly kind: TrainingMode;
 }
 
 /**

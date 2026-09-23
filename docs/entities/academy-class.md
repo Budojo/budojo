@@ -20,23 +20,31 @@ Nothing here is mandatory. An academy that never opens the timetable keeps check
 | `weekday` | tinyint unsigned | not null, 0–6 | Carbon `dayOfWeek`: 0 = Sunday … 6 = Saturday. Same convention as `training_days`, so the two never need translating |
 | `starts_at` | varchar(5) | nullable | `HH:MM`, 24-hour. Text rather than `TIME`: MySQL would return `19:00:00` and SQLite whatever was written, and every reader would then trim one and not the other. Zero-padded text sorts correctly as a string. Null = the class has no fixed time |
 | `duration_minutes` | smallint unsigned | nullable, 15–480 | |
-| `kind` | varchar(8) | not null | `App\Enums\ClassKind` — see below |
+| `kind` | varchar(8) | not null | `App\Enums\TrainingMode` — see below. Declared 8 and holding values up to 10 (`tachi-waza`): SQLite does not enforce a declared length, so no table rebuild widens it (#1803) |
 | `created_at` / `updated_at` | timestamp | nullable | |
 
 ### Indexes
 
 - `INDEX(academy_id, weekday)` — the hot read is "this academy's week", and the check-in narrows it to one weekday.
 
-### Enum — `ClassKind`
+### Enum — `TrainingMode` (#1803)
 
-| Case | Value | Meaning |
-|---|---|---|
-| `Gi` | `gi` | Trained in the kimono |
-| `NoGi` | `nogi` | Trained without |
-| `Both` | `both` | A mixed class |
-| `Other` | `other` | On the timetable without being jiu-jitsu in a kimono or out of one — conditioning, wrestling, a yoga slot |
+One vocabulary for every martial art, shared with [`Lesson`](./lesson.md) and [`SyllabusTopic`](./syllabus-topic.md). It replaced `ClassKind` and `TopicKind`, keeping their stored values.
 
-The kind is a dimension of the **class**, not a tag on a lesson: heel hooks live in no-gi, lapel guards in gi, and a coverage chart that mixes the two says a number that is quietly wrong. It is copied onto every lesson the class produces.
+| Case | Value | Martial art | Meaning |
+|---|---|---|---|
+| `Gi` | `gi` | BJJ | Trained in the kimono — lapel guards, collar chokes |
+| `NoGi` | `nogi` | BJJ | Trained without — heel hooks, K guard |
+| `TachiWaza` | `tachi-waza` | Judo | Standing — nage-waza, the throws |
+| `NeWaza` | `ne-waza` | Judo | On the ground — katame-waza, pins, chokes, locks |
+| `Kata` | `kata` | Karate | Forms |
+| `Kumite` | `kumite` | Karate | Sparring |
+| `Poomsae` | `poomsae` | Taekwondo | Forms |
+| `Kyorugi` | `kyorugi` | Taekwondo | Sparring |
+| `Both` | `both` | every art | Either way — a mixed class, karate's kihon, a technique that belongs to both halves |
+| `Other` | `other` | every art, **classes only** | On the timetable without being the martial art — conditioning, wrestling, a yoga slot |
+
+The kind is a dimension of the **class**, not a tag on a lesson: heel hooks live in no-gi, lapel guards in gi, and a coverage chart that mixes the two says a number that is quietly wrong. Every art splits the same way, two modes and a middle. It is copied onto every lesson the class produces.
 
 ## Relations
 
@@ -46,6 +54,7 @@ The kind is a dimension of the **class**, not a tag on a lesson: heel hooks live
 ## Business rules
 
 - **Ordering.** `GET /api/v1/academy/classes` returns the week by `weekday`, then `starts_at`, with untimed classes last within their day, then `name`.
+- **A class is in one of its academy's modes (#1803).** `kind` must be one of `MartialArtProfile::classModes()` for the academy's martial art: its two training modes, `both` or `other`. A `gi` class in a karate academy is a 422, on create and on update. The art cannot change under an existing class — classes lock it (see [`academy.md`](./academy.md)).
 - **Editing never rewrites the past.** Changing a class's name, day, time or kind touches only future materialisations. Every existing [`Lesson`](./lesson.md) keeps the snapshot it was created with.
 - **Deleting keeps the lessons.** The FK on `lessons.academy_class_id` is `nullOnDelete`: the occurrences stay, under the name they were held as. Removing next week's slot must never remove the evenings people trained.
 - **Weekday mismatch is allowed on purpose.** A lesson can be materialised for a class on a date that is not the class's weekday — the Monday class held on Tuesday because of a holiday is a real thing. The check-in only *offers* the date's weekday classes; the API does not refuse others.

@@ -16,7 +16,7 @@ The parent is the **position**, not the submission, on purpose: *"you have done 
 | `academy_id` | bigint unsigned | FK `academies.id`, cascade on delete | Owner academy. Rows are per-academy, never global, so editing is unconstrained |
 | `parent_id` | bigint unsigned | nullable, FK `syllabus_topics.id`, cascade on delete | Null = position, set = technique. **Exactly two levels** — the request refuses a parent that has a parent |
 | `name` | varchar(80) | not null | The owner's own word for it |
-| `kind` | varchar(8) | not null | `App\Enums\TopicKind` — see below |
+| `kind` | varchar(8) | not null | `App\Enums\TrainingMode` — see below. Holds values up to 10 characters; SQLite does not enforce the declared length (#1803) |
 | `in_season` | boolean | not null, default `true` | In scope for the current season. This is the coverage denominator; the owner unticks what they don't teach this year |
 | `sort_order` | smallint unsigned | not null, default `0` | Order among siblings. New topics append; `PATCH` moves |
 | `created_at` / `updated_at` | timestamp | nullable | |
@@ -26,15 +26,9 @@ The parent is the **position**, not the submission, on purpose: *"you have done 
 
 - `INDEX(academy_id, parent_id, sort_order)` — the hot read is one academy's tree, siblings in order.
 
-### Enum — `TopicKind`
+### Enum — `TrainingMode` (#1803)
 
-| Case | Value | Meaning |
-|---|---|---|
-| `Gi` | `gi` | Only makes sense in the kimono — lapel guards, collar chokes |
-| `NoGi` | `nogi` | Only without — heel hooks, K guard |
-| `Both` | `both` | Everything else |
-
-Three cases and not [`ClassKind`](./academy-class.md)'s four: a topic is jiu-jitsu by definition, so there is no `other` for it to be. A technique's kind defaults to its position's in the seed; the owner can set either.
+The same enum as [`AcademyClass`](./academy-class.md#enum--trainingmode-1803)'s, which lists every case. A topic uses the academy's two modes and `both`, never `other`: a topic is the martial art by definition, so there is nothing else for it to be. A technique's kind defaults to its position's in the seed; the owner can set either.
 
 ## Relations
 
@@ -49,6 +43,7 @@ Three cases and not [`ClassKind`](./academy-class.md)'s four: a topic is jiu-jit
 - **Two levels, enforced at the boundary.** `POST` accepts `parent_id` only when it names one of the caller's academy's *positions* (living, `parent_id IS NULL`); a technique as parent, a foreign one and a deleted one all fail the same `exists` rule. `PATCH` does not accept `parent_id` at all — moving a technique is a delete and an add, and a position cannot become a technique without taking its children somewhere.
 - **Unique among living siblings.** The same name twice under one position is the free-text drift the tree exists to prevent; the same name under another position is the design. Deleted rows do not hold a name.
 - **Appended, then reordered.** `CreateSyllabusTopicAction` places a new topic after its siblings; `sort_order` on `PATCH` moves it. Drag-to-reorder is not a v1 requirement — a sort field is enough.
+- **A topic is in one of its academy's modes (#1803).** `kind` must be one of `MartialArtProfile::topicModes()` — the art's two training modes or `both`. Anything else is a 422, on create and on update. A shipped programme is held to the same rule when it is parsed: a mode its art does not have fails the seed and the guard test, before a single row is written.
 - **`in_season` on a position cascades.** `UpdateSyllabusTopicAction` copies the flag to every technique under the position — unticking "Lapel guards" in one tap is the difference between an owner who narrows the seed and one who abandons it. Nothing else cascades: a position's kind is a default for what is added under it, not a rule over what is already there. Unticking one technique leaves its position and siblings alone.
 - **Soft delete, whole subtree.** `DeleteSyllabusTopicAction` soft-deletes a position together with its techniques. Soft, because a lesson that taught the topic (#1564) must still be able to say so; the subtree, because a technique whose position is gone has nowhere in the tree to be. Route binding is on living rows, so a deleted topic is a 404 to `PATCH` and `DELETE`, and the tree and the count never show it.
 - **The seed is on demand and never overwrites.** `POST /academy/syllabus/seed` copies the shipped programme into the academy — only when the academy has **no** topics at all. Even one topic is a programme the academy owns, and the request is a 409. Not run at academy creation: a programme is a claim about what the academy teaches, and the button says so.
@@ -74,6 +69,6 @@ Three cases and not [`ClassKind`](./academy-class.md)'s four: a topic is jiu-jit
 
 ## Related
 
-- [`academy-class.md`](./academy-class.md) — the timetable; its `ClassKind` is the lesson-side twin of `TopicKind`
+- [`academy-class.md`](./academy-class.md) — the timetable; its classes share the `TrainingMode` vocabulary, and the table of cases lives there
 - [`lesson.md`](./lesson.md) — the lessons that covered these topics, through `lesson_topic` (#1564)
 - Epic #1561 — what was taught, and what is still missing

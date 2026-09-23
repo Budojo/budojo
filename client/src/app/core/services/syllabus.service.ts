@@ -2,15 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
-
-/**
- * What a syllabus topic is trained in (#1563). Three cases and not
- * `ClassKind`'s four: a topic is jiu-jitsu by definition, so there is no
- * "other" for it to be.
- */
-export type TopicKind = 'gi' | 'nogi' | 'both';
-
-export const TOPIC_KINDS: readonly TopicKind[] = ['both', 'gi', 'nogi'];
+import type { TrainingMode } from './academy.service';
 
 /**
  * One entry in the academy's programme (#1563) — a position when `parent_id`
@@ -23,7 +15,7 @@ export interface SyllabusTopic {
   readonly id: number;
   readonly parent_id: number | null;
   readonly name: string;
-  readonly kind: TopicKind;
+  readonly kind: TrainingMode;
   readonly in_season: boolean;
   readonly sort_order: number;
   readonly children?: readonly SyllabusTopic[];
@@ -31,14 +23,14 @@ export interface SyllabusTopic {
 
 export interface SyllabusTopicPayload {
   readonly name: string;
-  readonly kind: TopicKind;
+  readonly kind: TrainingMode;
   readonly parent_id?: number | null;
   readonly in_season?: boolean;
 }
 
 export interface SyllabusTopicPatch {
   readonly name?: string;
-  readonly kind?: TopicKind;
+  readonly kind?: TrainingMode;
   readonly in_season?: boolean;
   readonly sort_order?: number;
 }

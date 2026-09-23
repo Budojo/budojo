@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
-use App\Enums\TopicKind;
+use App\Enums\TrainingMode;
 use App\Models\Academy;
 use App\Models\SyllabusTopic;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -31,7 +31,7 @@ class SyllabusTopicFactory extends Factory
             // may create — and `definition()` runs even when the caller
             // passes a name of its own, which almost every test does.
             'name' => ucfirst($this->faker->unique()->words(2, true)),
-            'kind' => TopicKind::Both,
+            'kind' => TrainingMode::Both,
             'in_season' => true,
             'sort_order' => 0,
         ];

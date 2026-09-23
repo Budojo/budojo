@@ -1,4 +1,4 @@
-import type { MartialArt } from '../../core/services/academy.service';
+import type { MartialArt, TrainingMode } from '../../core/services/academy.service';
 import { AthleteStatus, Belt } from '../../core/services/athlete.service';
 
 /**
@@ -66,6 +66,39 @@ export const MARTIAL_ART_KEYS: Readonly<Record<MartialArt, string>> = {
   judo: 'martialArts.judo',
   karate: 'martialArts.karate',
   taekwondo: 'martialArts.taekwondo',
+};
+
+/**
+ * The name of each training mode (#1803), `both` aside. Japanese and Korean
+ * terms are not translated; `other` is. `both` is per art — "Gi and no-gi",
+ * "Kata and kumite" — so it has its own map below.
+ */
+export const TRAINING_MODE_KEYS: Readonly<Record<Exclude<TrainingMode, 'both'>, string>> = {
+  gi: 'academy.trainingMode.gi',
+  nogi: 'academy.trainingMode.nogi',
+  'tachi-waza': 'academy.trainingMode.tachiWaza',
+  'ne-waza': 'academy.trainingMode.neWaza',
+  kata: 'academy.trainingMode.kata',
+  kumite: 'academy.trainingMode.kumite',
+  poomsae: 'academy.trainingMode.poomsae',
+  kyorugi: 'academy.trainingMode.kyorugi',
+  other: 'academy.trainingMode.other',
+};
+
+/** `both`, as each martial art says it: its two modes, joined. */
+export const TRAINING_MODE_BOTH_KEYS: Readonly<Record<MartialArt, string>> = {
+  bjj: 'academy.trainingMode.both.bjj',
+  judo: 'academy.trainingMode.both.judo',
+  karate: 'academy.trainingMode.both.karate',
+  taekwondo: 'academy.trainingMode.both.taekwondo',
+};
+
+/** The programme form's example of the split, one per art (#1803). */
+export const TRAINING_MODE_HINT_KEYS: Readonly<Record<MartialArt, string>> = {
+  bjj: 'academy.syllabus.kindHint.bjj',
+  judo: 'academy.syllabus.kindHint.judo',
+  karate: 'academy.syllabus.kindHint.karate',
+  taekwondo: 'academy.syllabus.kindHint.taekwondo',
 };
 
 /** The translation key for a belt, as the given martial art names it. */

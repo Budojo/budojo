@@ -7,10 +7,12 @@ namespace App\Support\MartialArt;
 use App\Enums\Belt;
 use App\Enums\GradeCount;
 use App\Enums\MartialArt;
+use App\Enums\TrainingMode;
 
 /**
  * Everything the app knows about a martial art that is not the academy's own
- * data (#1800): its ladder and its starter programmes.
+ * data (#1800): its ladder, its two training modes (#1803) and its starter
+ * programmes.
  *
  * Read from `database/seed-data/martial-arts/<art>.json`, one file per
  * `MartialArt` case, and cached per process — the files ship with the app and
@@ -31,11 +33,13 @@ final class MartialArtProfile
     private static array $loaded = [];
 
     /**
-     * @param array<string, string> $programmes key → file name under PROGRAMME_DIR, in offer order
+     * @param array{TrainingMode, TrainingMode} $trainingModes
+     * @param array<string, string>             $programmes    key → file name under PROGRAMME_DIR, in offer order
      */
     private function __construct(
         public readonly MartialArt $art,
         private readonly RankLadder $ladder,
+        private readonly array $trainingModes,
         private readonly array $programmes,
     ) {
     }
@@ -48,6 +52,38 @@ final class MartialArtProfile
     public function ladder(): RankLadder
     {
         return $this->ladder;
+    }
+
+    /**
+     * The art's two training modes, in the order its pickers list them — gi
+     * then no-gi, kata then kumite.
+     *
+     * @return array{TrainingMode, TrainingMode}
+     */
+    public function trainingModes(): array
+    {
+        return $this->trainingModes;
+    }
+
+    /**
+     * What a topic of this art may be trained in: its two modes and `both`.
+     *
+     * @return list<TrainingMode>
+     */
+    public function topicModes(): array
+    {
+        return [...$this->trainingModes, TrainingMode::Both];
+    }
+
+    /**
+     * What a class of this art may be: a topic's modes, and `other` for what
+     * is on the timetable without being the art.
+     *
+     * @return list<TrainingMode>
+     */
+    public function classModes(): array
+    {
+        return [...$this->topicModes(), TrainingMode::Other];
     }
 
     /**
@@ -83,7 +119,12 @@ final class MartialArtProfile
             throw new \RuntimeException("The {$art->value} registry does not describe {$art->value}.");
         }
 
-        return new self($art, self::ladderFrom($art, $data['grades'] ?? null), self::programmesFrom($art, $data['programmes'] ?? null));
+        return new self(
+            $art,
+            self::ladderFrom($art, $data['grades'] ?? null),
+            self::trainingModesFrom($art, $data['training_modes'] ?? null),
+            self::programmesFrom($art, $data['programmes'] ?? null),
+        );
     }
 
     private static function ladderFrom(MartialArt $art, mixed $grades): RankLadder
@@ -110,6 +151,29 @@ final class MartialArtProfile
         }
 
         return new RankLadder($parsed);
+    }
+
+    /**
+     * Exactly two, distinct, and neither of them the middle: `both` and
+     * `other` belong to every art and are added by {@see topicModes()} and
+     * {@see classModes()}, so a registry that lists one is misdescribing the
+     * split.
+     *
+     * @return array{TrainingMode, TrainingMode}
+     */
+    private static function trainingModesFrom(MartialArt $art, mixed $modes): array
+    {
+        $parsed = \is_array($modes) && array_is_list($modes)
+            ? array_map(static fn (mixed $mode): ?TrainingMode => \is_string($mode) ? TrainingMode::tryFrom($mode) : null, $modes)
+            : [];
+
+        [$a, $b] = [$parsed[0] ?? null, $parsed[1] ?? null];
+        if (\count($parsed) !== 2 || $a === null || $b === null || $a === $b
+            || \in_array(TrainingMode::Both, $parsed, true) || \in_array(TrainingMode::Other, $parsed, true)) {
+            throw new \RuntimeException("The {$art->value} registry must name exactly two training modes, neither of them both or other.");
+        }
+
+        return [$a, $b];
     }
 
     /**

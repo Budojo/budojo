@@ -1,6 +1,13 @@
 import { TestBed } from '@angular/core/testing';
-import { Academy, AcademyService, Grade, MartialArt } from '../app/core/services/academy.service';
+import {
+  Academy,
+  AcademyService,
+  Grade,
+  MartialArt,
+  TrainingMode,
+} from '../app/core/services/academy.service';
 import LADDERS from './ladders.json';
+import MODES from './training-modes.json';
 
 /**
  * The four ladders exactly as `AcademyResource.grades` sends them (#1801).
@@ -13,10 +20,13 @@ import LADDERS from './ladders.json';
  */
 export const LADDER_FIXTURES = LADDERS as Record<MartialArt, Grade[]>;
 
+/** Each art's two training modes as `AcademyResource.training_modes` sends them (#1803). */
+export const TRAINING_MODE_FIXTURES = MODES as Record<MartialArt, TrainingMode[]>;
+
 /**
  * Loads an academy teaching `art` into `AcademyService`, so every component
- * that reads `BeltLadderService` sees that ladder. Call after
- * `TestBed.configureTestingModule(...)`.
+ * that reads `BeltLadderService` or `TrainingModesService` sees that art's
+ * ladder and modes. Call after `TestBed.configureTestingModule(...)`.
  */
 export function useLadder(art: MartialArt, academy: Partial<Academy> = {}): void {
   TestBed.inject(AcademyService).academy.set({
@@ -28,5 +38,6 @@ export function useLadder(art: MartialArt, academy: Partial<Academy> = {}): void
     ...academy,
     martial_art: art,
     grades: LADDER_FIXTURES[art],
+    training_modes: TRAINING_MODE_FIXTURES[art],
   } as Academy);
 }

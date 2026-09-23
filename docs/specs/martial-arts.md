@@ -295,10 +295,18 @@ delete, not after.
 `ClassKind` and `TopicKind` become `App\Enums\TrainingMode` — one enum, the
 union of every martial art's modes plus `both` and `other`, with the profile
 saying which subset an academy may use (`other` is a class-only value, as
-today). `academy_classes.kind`, `lessons.kind` and `syllabus_topics.kind` widen
-from `varchar(8)` to `varchar(16)` (`tachi-waza` is ten characters); stored
-values do not change. The column keeps its name — renaming it buys nothing and
-touches three tables.
+today). `academy_classes.kind`, `lessons.kind` and `syllabus_topics.kind` keep
+their name — renaming buys nothing and touches three tables — and stored values
+do not change.
+
+*Built without widening them (#1803).* The columns are declared `varchar(8)`
+and `tachi-waza` is ten characters, but SQLite does not enforce a declared
+length, and SQLite is the only engine the app runs on since #1230. The widening
+planned here would have been a table rebuild on every install at boot, which
+drops `lessons` while its children point at it — the one migration shape that
+can take rows with it. A PEST test stores `tachi-waza` on a class and on the
+lesson it produces, and a harness on a copy of a real database did the same
+through the running app (9/9).
 
 **All of it lands in one slice (4), never partially.** Today
 `Rule::enum(ClassKind::class)` admits every case globally, and
@@ -412,6 +420,19 @@ above them.
 The table in the fourth trade-off. Default for a **new class**: `gi` in BJJ (as
 today), `both` elsewhere — a judo or karate class is mixed unless the owner says
 otherwise. Default for a **new topic**: its position's mode, as today.
+
+The programme form's example of the split, one per art (drafted in #1803, BJJ
+unchanged):
+
+| Art | English | Italiano |
+|---|---|---|
+| BJJ | Heel hooks are no-gi, lapel guards are gi. | I heel hook sono no-gi, le guardie di bavero sono gi. |
+| Judo | O-soto-gari is tachi-waza, kesa-gatame is ne-waza. | L'o-soto-gari è tachi-waza, il kesa-gatame è ne-waza. |
+| Karate | Saifa is kata, sanbon kumite is kumite. | Saifa è kata, il sanbon kumite è kumite. |
+| Taekwondo | Taegeuk il jang is poomsae, a sparring combination is kyorugi. | Il Taegeuk il jang è poomsae, una combinazione da combattimento è kyorugi. |
+
+Each continues "Leave it on *both* when it makes sense either way", naming the
+art's own middle.
 
 ## Age divisions
 
@@ -713,7 +734,16 @@ through `academy.syllabus.programme.<key>`, an explicit map.
 
 The mode picker and the coverage toggle iterate `trainingModes()`; labels
 through `academy.trainingMode.<mode>`, an explicit map over the `TrainingMode`
-union. BJJ shows exactly what it shows today.
+union, with `both` per art ("Gi and no-gi", "Kata and kumite"). BJJ keeps every
+string it had.
+
+*As built (#1803):* the timetable's and the programme's pickers are a 2×2 grid
+of buttons (`ChoiceGrid`, the martial-art picker's layout, extracted) rather
+than a `p-selectbutton` — "Tachi-waza and ne-waza" does not fit a segmented row,
+which broke words at their hyphens and clipped "Other" on a phone. The topic
+picker now lists the two modes first and the middle under them, the class
+picker's order. The check-in and the lesson sheet never showed a mode, so they
+had nothing to change.
 
 ---
 
@@ -826,9 +856,8 @@ cases.
 
 **Server and client in one PR** — § Training modes says why the two halves
 cannot be split. Server: `TrainingMode` replaces `ClassKind` / `TopicKind`
-(wire values unchanged); the three `kind` columns widen to 16 — a table rebuild
-on SQLite, so run it against a `budojo.sqlite` with a season of lessons before
-calling it done; `ValidatesAcademyClass`, `ValidatesSyllabusTopic` and
+(wire values unchanged); the three `kind` columns stay `varchar(8)`, which
+SQLite does not enforce (§ Training modes); `ValidatesAcademyClass`, `ValidatesSyllabusTopic` and
 `SyllabusCoverageRequest` check `MartialArtProfile::trainingModes()`;
 `techniquesInScope()` becomes the general rule; `SyllabusCoverageAction`
 confirmed literal-free; `AcademyResource.training_modes`. PEST: 422 for a mode

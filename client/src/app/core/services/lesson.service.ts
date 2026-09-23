@@ -2,8 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { ClassKind } from './academy-class.service';
-import { TopicKind } from './syllabus.service';
+import type { TrainingMode } from './academy.service';
 
 /**
  * A syllabus topic as a lesson names it (#1564).
@@ -17,7 +16,7 @@ import { TopicKind } from './syllabus.service';
 export interface LessonTopic {
   readonly id: number;
   readonly name: string;
-  readonly kind: TopicKind;
+  readonly kind: TrainingMode;
   readonly parent_id: number | null;
   readonly parent_name: string | null;
   readonly deleted: boolean;
@@ -36,7 +35,7 @@ export interface Lesson {
   readonly held_on: string;
   readonly name: string;
   readonly starts_at: string | null;
-  readonly kind: ClassKind;
+  readonly kind: TrainingMode;
   readonly notes: string | null;
   readonly held: boolean;
   readonly topics: readonly LessonTopic[];
@@ -54,7 +53,7 @@ export interface LessonSuggestion {
   readonly id: number;
   readonly name: string;
   readonly parent_name: string | null;
-  readonly kind: TopicKind;
+  readonly kind: TrainingMode;
   readonly reason: SuggestionReason;
   /** `null` exactly when the reason is `never`. */
   readonly last_taught_on: string | null;

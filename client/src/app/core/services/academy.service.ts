@@ -178,6 +178,11 @@ export interface Academy {
    */
   martial_art?: MartialArt;
   grades?: Grade[];
+  /**
+   * The art's two training modes, in picker order (#1803): `gi`/`nogi`,
+   * `kata`/`kumite`… Read through `TrainingModesService`, never directly.
+   */
+  training_modes?: readonly TrainingMode[];
   /** True once the academy has athletes, classes, lessons or topics. */
   martial_art_locked?: boolean;
   /** Starter-programme keys the art offers; empty until one ships. */
@@ -372,6 +377,26 @@ export interface MeAcademy {
  * ladder.
  */
 export type MartialArt = 'bjj' | 'judo' | 'karate' | 'taekwondo';
+
+/**
+ * What a class, a lesson or a programme topic is trained in (#1803) — the
+ * server's `TrainingMode`. Every martial art splits the same way, two modes
+ * and a middle: BJJ gi / no-gi, judo tachi-waza / ne-waza, karate kata /
+ * kumite, taekwondo poomsae / kyorugi. `both` is the middle every art has;
+ * `other` is a class's alone (conditioning, a yoga slot). An academy uses
+ * only its own pair, `Academy.training_modes`.
+ */
+export type TrainingMode =
+  | 'gi'
+  | 'nogi'
+  | 'tachi-waza'
+  | 'ne-waza'
+  | 'kata'
+  | 'kumite'
+  | 'poomsae'
+  | 'kyorugi'
+  | 'both'
+  | 'other';
 
 /**
  * One rung of the academy's ladder, lowest first in `Academy.grades` (#1800).

@@ -322,16 +322,15 @@
       <span class="field__label" id="topic-kind-label">
         {{ 'academy.syllabus.form.kind' | translate }}
       </span>
-      <p-selectbutton
+      <app-choice-grid
         [options]="kindOptions()"
-        formControlName="kind"
-        optionLabel="label"
-        optionValue="value"
-        [allowEmpty]="false"
+        [value]="form.controls.kind.value"
+        (valueChange)="setKind($event)"
         ariaLabelledBy="topic-kind-label"
+        describedBy="topic-kind-hint"
         data-cy="syllabus-form-kind"
       />
-      <small class="field__hint">{{ 'academy.syllabus.form.kindHint' | translate }}</small>
+      <small class="field__hint" id="topic-kind-hint">{{ kindHintKey() | translate }}</small>
     </div>
   </form>
 

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Syllabus;
 
-use App\Enums\TopicKind;
+use App\Enums\TrainingMode;
 use App\Models\Academy;
 use App\Models\SyllabusTopic;
 
@@ -19,7 +19,7 @@ class CreateSyllabusTopicAction
      * Ownership and depth are the request's job — by the time this runs the
      * parent, if any, is one of the academy's positions.
      */
-    public function execute(Academy $academy, string $name, TopicKind $kind, ?SyllabusTopic $parent = null, bool $inSeason = true): SyllabusTopic
+    public function execute(Academy $academy, string $name, TrainingMode $kind, ?SyllabusTopic $parent = null, bool $inSeason = true): SyllabusTopic
     {
         $last = SyllabusTopic::query()
             ->where('academy_id', $academy->id)

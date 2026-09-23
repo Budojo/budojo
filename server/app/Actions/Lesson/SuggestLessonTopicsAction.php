@@ -4,8 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Lesson;
 
-use App\Enums\ClassKind;
-use App\Enums\TopicKind;
+use App\Enums\TrainingMode;
 use App\Models\Academy;
 use App\Models\AcademyClass;
 use App\Models\Lesson;
@@ -138,19 +137,17 @@ class SuggestLessonTopicsAction
      * The techniques this class could be told to teach: living, in season, and
      * of a kind the class admits.
      *
-     * A `gi` class is never told to teach a no-gi leg entanglement, and vice
-     * versa. `both` and `other` admit everything — `other` is a seminar or an
-     * open mat, not a statement about the uniform.
+     * A `gi` class is never told to teach a no-gi leg entanglement, nor a
+     * `kata` class a kumite drill. `both` and `other` admit everything —
+     * `other` is a seminar or an open mat, not a statement about the uniform.
+     * The rule is {@see TrainingMode::admittedTopicModes()}'s, the same for
+     * every art.
      *
      * @return Collection<int, SyllabusTopic>
      */
-    private function techniquesInScope(Academy $academy, ClassKind $kind): Collection
+    private function techniquesInScope(Academy $academy, TrainingMode $kind): Collection
     {
-        $admitted = match ($kind) {
-            ClassKind::Gi => [TopicKind::Gi->value, TopicKind::Both->value],
-            ClassKind::NoGi => [TopicKind::NoGi->value, TopicKind::Both->value],
-            ClassKind::Both, ClassKind::Other => null,
-        };
+        $admitted = $kind->admittedTopicModes();
 
         return SyllabusTopic::query()
             ->where('academy_id', $academy->id)

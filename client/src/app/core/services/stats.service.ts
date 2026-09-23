@@ -2,7 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { map, Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { TopicKind } from './syllabus.service';
+import type { TrainingMode } from './academy.service';
 
 export interface DailyAttendancePoint {
   readonly date: string; // 'YYYY-MM-DD'
@@ -67,7 +67,7 @@ export type CoverageState = 'covered' | 'thin' | 'missing';
 export interface CoveragePosition {
   readonly id: number;
   readonly name: string;
-  readonly kind: TopicKind;
+  readonly kind: TrainingMode;
   readonly in_scope: number;
   readonly covered: number;
   readonly thin: number;
@@ -80,7 +80,7 @@ export interface CoverageTopic {
   readonly id: number;
   readonly name: string;
   readonly parent_name: string | null;
-  readonly kind: TopicKind;
+  readonly kind: TrainingMode;
 }
 
 export interface CoverageTaughtTopic extends CoverageTopic {
@@ -92,7 +92,7 @@ export interface CoverageTaughtTopic extends CoverageTopic {
 export interface SyllabusCoverage {
   readonly season: { readonly start: string; readonly end: string; readonly label: string };
   /** The kind filter in force, or null for everything. */
-  readonly kind: TopicKind | null;
+  readonly kind: TrainingMode | null;
   readonly totals: {
     readonly in_scope: number;
     readonly covered: number;
@@ -113,7 +113,7 @@ export interface MissedTopic {
   readonly id: number;
   readonly name: string;
   readonly parent_name: string | null;
-  readonly kind: TopicKind;
+  readonly kind: TrainingMode;
   /** How many evenings it was on the mat while they were on the roster. */
   readonly taught_times: number;
 }
@@ -207,7 +207,7 @@ export class StatsService {
    */
   syllabusCoverage(
     seasonsBack = 0,
-    kind: 'gi' | 'nogi' | null = null,
+    kind: TrainingMode | null = null,
   ): Observable<SyllabusCoverage> {
     let params = new HttpParams().set('seasons_back', seasonsBack);
     if (kind !== null) params = params.set('kind', kind);
