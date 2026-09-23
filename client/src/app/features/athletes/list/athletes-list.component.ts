@@ -67,7 +67,7 @@ import {
   schedulesForAcademy,
 } from '../../../shared/utils/attendance-rate';
 import { DocumentService } from '../../../core/services/document.service';
-import { BELT_KEYS, BELT_ORDER } from '../../../shared/utils/i18n-enum-keys';
+import { BeltLadderService } from '../../../core/services/belt-ladder.service';
 import {
   nameSortAria,
   nameSortSignifier,
@@ -146,6 +146,7 @@ export class AthletesListComponent implements OnInit {
    */
   protected readonly runtime = inject(RuntimeService);
   private readonly translate = inject(TranslateService);
+  private readonly beltLadder = inject(BeltLadderService);
   private readonly languageService = inject(LanguageService);
   private readonly onboardingService = inject(OnboardingService);
   private readonly documentService = inject(DocumentService);
@@ -295,22 +296,17 @@ export class AthletesListComponent implements OnInit {
       .subscribe((q) => this.applySearch(q));
   }
 
-  // The key map and the rank order both come from `i18n-enum-keys` (#1443).
-  // This file used to carry private copies of each; the shared ones are the
-  // same two literals, and two of them is how a new belt gets added to one
-  // and not the other. Only the leading `''` is local — it is the "all
-  // belts" option, which belongs to this dropdown and not to the enum.
-  private readonly beltOrder: readonly (Belt | '')[] = ['', ...BELT_ORDER];
-
+  // The belts and their names come from the academy's ladder (#1801) — this
+  // file used to carry a private copy of the order, then a shared BJJ one,
+  // and either way a judo academy would have been offered a purple belt.
+  // Only the leading "all belts" option is local: it belongs to this
+  // dropdown, not to any ladder.
   readonly beltOptions = computed<SelectOption<Belt>[]>(() => {
     this.languageService.currentLang(); // signal dep — recompute on toggle
-    return this.beltOrder.map((value) => ({
-      label:
-        value === ''
-          ? this.translate.instant('belts.all')
-          : this.translate.instant(BELT_KEYS[value]),
-      value,
-    }));
+    return [
+      { label: this.translate.instant('belts.all'), value: '' },
+      ...this.beltLadder.beltOptions(),
+    ];
   });
 
   // Same exhaustiveness pattern as belts. AthleteListStatus is the
@@ -451,7 +447,7 @@ export class AthletesListComponent implements OnInit {
     this.languageService.currentLang();
     const parts: string[] = [];
     const belt = this.selectedBelt();
-    if (belt !== '') parts.push(this.translate.instant(BELT_KEYS[belt]));
+    if (belt !== '') parts.push(this.beltLadder.label(belt));
     const status = this.narrowedStatus();
     if (status !== null) parts.push(this.translate.instant(this.statusLabelKeys[status]));
     const paid = this.selectedPaid();
@@ -1133,7 +1129,7 @@ export class AthletesListComponent implements OnInit {
    */
   beltName(athlete: Athlete): string {
     this.languageService.currentLang();
-    return this.translate.instant(BELT_KEYS[athlete.belt]);
+    return this.beltLadder.label(athlete.belt);
   }
 
   /**

@@ -8,7 +8,7 @@ import {
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { TranslatePipe } from '@ngx-translate/core';
 import { mergeMap, range, toArray } from 'rxjs';
 import { ChartModule } from 'primeng/chart';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
@@ -16,42 +16,17 @@ import { LeaderboardCardComponent } from '../../../shared/components/leaderboard
 import { SkeletonModule } from 'primeng/skeleton';
 import { Athlete, AthleteService, Belt } from '../../../core/services/athlete.service';
 import { LanguageService } from '../../../core/services/language.service';
-import { BELT_KEYS, BELT_ORDER } from '../../../shared/utils/i18n-enum-keys';
+import { BeltLadderService } from '../../../core/services/belt-ladder.service';
+import { beltCanvasFill } from '../../../shared/utils/belt-palette';
 import { ErrorStateComponent } from '../../../shared/components/error-state/error-state.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
-
-/**
- * Belt colour palette — one entry per IBJJF rank. Hex values rather
- * than CSS custom properties because Chart.js renders to a `<canvas>`
- * and reads colours at draw time, not via the cascade. Lives here
- * (not in the global theme tokens) because it's domain-specific to
- * the stats surface — every other belt rendering uses the
- * `--budojo-belt-*` tokens via SCSS.
- *
- * The exception is documented in `client/CLAUDE.md` § Design canon
- * (gotchas): "Exceptions are belt colors (domain palette) with a
- * rationale comment".
- */
-const BELT_COLORS: Readonly<Record<Belt, string>> = {
-  grey: '#9ca3af',
-  yellow: '#facc15',
-  orange: '#f97316',
-  green: '#22c55e',
-  white: '#f3f4f6',
-  blue: '#3b82f6',
-  purple: '#a855f7',
-  brown: '#92400e',
-  black: '#1f2937',
-  'red-and-black': '#dc2626',
-  'red-and-white': '#ef4444',
-  red: '#b91c1c',
-};
 
 interface DoughnutData {
   readonly labels: readonly string[];
   readonly datasets: readonly {
     data: readonly number[];
-    backgroundColor: readonly string[];
+    // A colour, or a tile for a two-colour belt (#1801): Chart.js takes either.
+    backgroundColor: readonly (string | CanvasPattern)[];
     borderWidth: number;
   }[];
 }
@@ -76,13 +51,13 @@ interface DoughnutData {
  *    (`attendance_records`, `athlete_payments`) and aren't surfaced
  *    by `/api/v1/athletes` at all, so there's no fetch-all alternative.
  *  - **Athletes age-bands** — `date_of_birth` IS reachable via
- *    `/api/v1/athletes`, but the IBJJF age-division table (Mighty Mite
- *    → Master 7, with their inclusive bounds) is a domain rule we
+ *    `/api/v1/athletes`, but the federation's age divisions (IBJJF,
+ *    FIJLKAM or WT, per martial art, #1807) are a domain rule we
  *    centralise on the server (`AthleteAgeBandsAction`), and the cut-
  *    over uses server time so a client clock skew can't shift a band
  *    boundary. The dedicated endpoint costs one round trip vs. the
- *    page-walk; we accept it for the IBJJF-table-fidelity + clock-
- *    correctness wins.
+ *    page-walk; we accept it for the table-fidelity + clock-correctness
+ *    wins.
  *
  * Locale-aware: the chart labels (belt names) flow through the
  * `belts.*` translation keys, so toggling EN ↔ IT re-renders the
@@ -106,7 +81,7 @@ interface DoughnutData {
 })
 export class StatsOverviewComponent implements OnInit {
   private readonly athleteService = inject(AthleteService);
-  private readonly translate = inject(TranslateService);
+  private readonly beltLadder = inject(BeltLadderService);
   private readonly languageService = inject(LanguageService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -119,9 +94,8 @@ export class StatsOverviewComponent implements OnInit {
   /**
    * Belt distribution computed reactively against
    * `languageService.currentLang()` so the labels reflect the active
-   * UI language without a manual subscription. Belt colours are
-   * domain-stable (a blue belt is blue regardless of locale), so they
-   * stay in the static palette above.
+   * UI language without a manual subscription. Belt colours come from the
+   * one palette in `budojo-theme.scss`, resolved for the canvas.
    */
   protected readonly beltChartData = computed<DoughnutData>(() => {
     this.languageService.currentLang(); // signal dep — recompute on toggle
@@ -129,16 +103,20 @@ export class StatsOverviewComponent implements OnInit {
     for (const a of this.athletes()) {
       counts.set(a.belt, (counts.get(a.belt) ?? 0) + 1);
     }
-    // Walk the canonical IBJJF order so the slices appear in rank
-    // order (kids → adults → senior coral / red), making the chart
-    // legend a glance-readable progression chart.
-    const presentBelts = BELT_ORDER.filter((b) => counts.has(b));
+    // Walk the academy's ladder (#1801) so the slices appear in rank order,
+    // making the legend a glance-readable progression chart. A belt outside
+    // the ladder (a hand-edited row) still gets its slice, last.
+    const ladder = this.beltLadder.belts();
+    const presentBelts = [
+      ...ladder.filter((b) => counts.has(b)),
+      ...[...counts.keys()].filter((b) => !ladder.includes(b)),
+    ];
     return {
-      labels: presentBelts.map((b) => this.translate.instant(BELT_KEYS[b])),
+      labels: presentBelts.map((b) => this.beltLadder.label(b)),
       datasets: [
         {
           data: presentBelts.map((b) => counts.get(b) ?? 0),
-          backgroundColor: presentBelts.map((b) => BELT_COLORS[b]),
+          backgroundColor: presentBelts.map((b) => beltCanvasFill(b)),
           borderWidth: 1,
         },
       ],

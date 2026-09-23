@@ -21,6 +21,7 @@ import { MessageService } from 'primeng/api';
 import { SkeletonModule } from 'primeng/skeleton';
 import { Toast } from 'primeng/toast';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { BeltLadderService } from '../../../core/services/belt-ladder.service';
 import { AcademyService } from '../../../core/services/academy.service';
 import { LanguageService } from '../../../core/services/language.service';
 import { datePickerFormatFor } from '../../../shared/utils/locale';
@@ -106,6 +107,7 @@ export class DailyAttendanceComponent implements OnInit {
   private readonly academyService = inject(AcademyService);
   private readonly messageService = inject(MessageService);
   private readonly translate = inject(TranslateService);
+  private readonly beltLadder = inject(BeltLadderService);
   private readonly languageService = inject(LanguageService);
   private readonly academyClassService = inject(AcademyClassService);
 
@@ -389,53 +391,14 @@ export class DailyAttendanceComponent implements OnInit {
    */
   private readonly searchInputSubject = new Subject<string>();
 
-  // Exhaustive Belt → translation-key map. `Record<Belt, string>` is the
-  // load-bearing piece: if Belt ever gains a new member (e.g. a kids' red
-  // band), TS fails compilation here until the matching key is added,
-  // closing the parity-gap loop on the i18n side too.
-  private readonly beltLabelKeys: Record<Belt, string> = {
-    grey: 'belts.grey',
-    yellow: 'belts.yellow',
-    orange: 'belts.orange',
-    green: 'belts.green',
-    white: 'belts.white',
-    blue: 'belts.blue',
-    purple: 'belts.purple',
-    brown: 'belts.brown',
-    black: 'belts.black',
-    'red-and-black': 'belts.redAndBlack',
-    'red-and-white': 'belts.redAndWhite',
-    red: 'belts.red',
-  };
-
-  // Render order = IBJJF rank (kids → adults → senior coral/red). Kept
-  // separate from the Record above because Record key order isn't a
-  // language guarantee, and the empty 'all' option isn't a Belt value.
-  private readonly beltOrder: readonly (Belt | '')[] = [
-    '',
-    'grey',
-    'yellow',
-    'orange',
-    'green',
-    'white',
-    'blue',
-    'purple',
-    'brown',
-    'black',
-    'red-and-black',
-    'red-and-white',
-    'red',
-  ];
-
+  // The belt filter offers the academy's own ladder, in rank order (#1801).
+  // This file used to carry a BJJ key map and order of its own.
   protected readonly beltOptions = computed<SelectOption<Belt>[]>(() => {
     this.languageService.currentLang(); // signal dep — recompute on toggle
-    return this.beltOrder.map((value) => ({
-      label:
-        value === ''
-          ? this.translate.instant('belts.all')
-          : this.translate.instant(this.beltLabelKeys[value]),
-      value,
-    }));
+    return [
+      { label: this.translate.instant('belts.all'), value: '' },
+      ...this.beltLadder.beltOptions(),
+    ];
   });
 
   constructor() {

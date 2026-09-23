@@ -4,18 +4,22 @@ declare(strict_types=1);
 
 namespace App\Actions\Syllabus;
 
-use App\Enums\TopicKind;
+use App\Enums\MartialArt;
+use App\Enums\TrainingMode;
 use App\Exceptions\SyllabusNotEmptyException;
+use App\Exceptions\SyllabusProgrammeUnavailableException;
 use App\Models\Academy;
 use App\Models\SyllabusTopic;
+use App\Support\MartialArt\MartialArtProfile;
 use Illuminate\Support\Facades\DB;
 
 class SeedSyllabusAction
 {
-    public const SEED_FILE = 'seed-data/bjj-syllabus.json';
-
     /**
-     * Copies the shipped BJJ programme into the academy's own rows (#1563).
+     * Copies one of the shipped starter programmes into the academy's own rows
+     * (#1563) — the one named by `$programme`, or the art's only one when it
+     * offers a single programme (#1800). Which programmes an art offers is its
+     * registry's answer (`MartialArtProfile::programmes()`).
      *
      * On demand, from a button, never at academy creation: a programme is a
      * claim about what the academy teaches, and an academy that already has
@@ -23,16 +27,23 @@ class SeedSyllabusAction
      * academy's from this moment; the file is never read again for them.
      *
      * @return int how many topics were written
+     *
+     * @throws SyllabusProgrammeUnavailableException when the art offers no programme yet
      */
-    public function execute(Academy $academy): int
+    public function execute(Academy $academy, ?string $programme = null): int
     {
-        return DB::transaction(function () use ($academy): int {
+        $file = self::resolveFile($academy, $programme);
+        // Parsed before the transaction: a malformed file is a build defect,
+        // not something to discover half-way through writing rows.
+        $positions = self::positions($file, $academy->martial_art);
+
+        return DB::transaction(function () use ($academy, $positions): int {
             if (SyllabusTopic::query()->where('academy_id', $academy->id)->exists()) {
                 throw new SyllabusNotEmptyException();
             }
 
             $written = 0;
-            foreach (self::positions() as $order => $position) {
+            foreach ($positions as $order => $position) {
                 $parent = SyllabusTopic::create([
                     'academy_id' => $academy->id,
                     'parent_id' => null,
@@ -61,16 +72,30 @@ class SeedSyllabusAction
     }
 
     /**
-     * The shipped programme, parsed and validated: a technique with no kind
-     * of its own inherits its position's. Public so the test that guards the
+     * A shipped programme, parsed and validated: a technique with no kind of
+     * its own inherits its position's, and every kind is one the art's topics
+     * may carry — a `kata` in the BJJ programme would be a topic no BJJ
+     * picker can show (#1803). Public so the test that guards every programme
      * file — no duplicate names within a position, every kind valid — reads
-     * it through the same code the seed does.
+     * them through the same code the seed does.
      *
-     * @return list<array{name: string, kind: TopicKind, techniques: list<array{name: string, kind: TopicKind}>}>
+     * @param string $file absolute path, from `MartialArtProfile::programmeFile()`
+     *
+     * @return list<array{name: string, kind: TrainingMode, techniques: list<array{name: string, kind: TrainingMode}>}>
      */
-    public static function positions(): array
+    public static function positions(string $file, MartialArt $art): array
     {
-        $raw = file_get_contents(database_path(self::SEED_FILE));
+        $admitted = MartialArtProfile::for($art)->topicModes();
+        $mode = static function (mixed $raw, TrainingMode $inherited) use ($admitted, $art): TrainingMode {
+            $mode = \is_string($raw) ? TrainingMode::tryFrom($raw) : $inherited;
+            if ($mode === null || ! \in_array($mode, $admitted, true)) {
+                throw new \RuntimeException("The {$art->value} programme uses a training mode its martial art does not have.");
+            }
+
+            return $mode;
+        };
+
+        $raw = file_get_contents($file);
         if ($raw === false) {
             throw new \RuntimeException('The syllabus seed file could not be read.');
         }
@@ -85,7 +110,7 @@ class SeedSyllabusAction
             if (! \is_array($position) || ! \is_string($position['name'] ?? null)) {
                 throw new \RuntimeException('Every seed position needs a name.');
             }
-            $kind = TopicKind::from(\is_string($position['kind'] ?? null) ? $position['kind'] : 'both');
+            $kind = $mode($position['kind'] ?? null, TrainingMode::Both);
 
             $techniques = [];
             foreach (\is_array($position['techniques'] ?? null) ? $position['techniques'] : [] as $technique) {
@@ -97,7 +122,7 @@ class SeedSyllabusAction
                 }
                 $techniques[] = [
                     'name' => $technique['name'],
-                    'kind' => \is_string($technique['kind'] ?? null) ? TopicKind::from($technique['kind']) : $kind,
+                    'kind' => $mode($technique['kind'] ?? null, $kind),
                 ];
             }
 
@@ -105,5 +130,28 @@ class SeedSyllabusAction
         }
 
         return $positions;
+    }
+
+    /**
+     * The programme file to copy. Null `$programme` means "the only one": the
+     * request requires a key whenever the art offers more than one, so an
+     * omitted key reaching here with several on offer is a programming error.
+     */
+    private static function resolveFile(Academy $academy, ?string $programme): string
+    {
+        $profile = MartialArtProfile::for($academy->martial_art);
+        $offered = $profile->programmes();
+        if ($offered === []) {
+            throw new SyllabusProgrammeUnavailableException();
+        }
+
+        if ($programme === null) {
+            if (\count($offered) > 1) {
+                throw new \LogicException('A programme must be named when the martial art offers several.');
+            }
+            $programme = $offered[0];
+        }
+
+        return $profile->programmeFile($programme) ?? throw new SyllabusProgrammeUnavailableException();
     }
 }

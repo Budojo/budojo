@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests\AcademyClass;
 
 use App\Authorization\Capability;
+use App\Enums\MartialArt;
 use App\Http\Requests\Concerns\AuthorizesAcademyCapability;
 use App\Http\Requests\Concerns\ValidatesAcademyClass;
 use App\Models\AcademyClass;
@@ -34,7 +35,12 @@ class UpdateAcademyClassRequest extends FormRequest
      */
     public function rules(): array
     {
-        return $this->academyClassRules(required: false);
+        /** @var AcademyClass $class */
+        $class = $this->route('academyClass');
+
+        // The class's own academy, as `authorize()` checked — not the
+        // caller's active one.
+        return $this->academyClassRules(required: false, art: $class->academy->martial_art ?? MartialArt::Bjj);
     }
 
     protected function failedAuthorization(): void

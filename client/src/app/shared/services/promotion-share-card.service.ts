@@ -1,27 +1,7 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import type { Belt } from '../../core/services/athlete.service';
-
-/**
- * Belt color palette for the card render. Mirrors the BJJ canon —
- * the visual identity of the promotion. Source of truth for the
- * pure-canvas card is here (not the PrimeNG token layer) because we
- * need exact hex for image data even when the SPA is rendering in
- * dark mode.
- */
-const BELT_COLORS: Readonly<Record<Belt, { fill: string; ink: string; label: string }>> = {
-  grey: { fill: '#9ca3af', ink: '#1f2937', label: 'GREY' },
-  yellow: { fill: '#fbbf24', ink: '#1f2937', label: 'YELLOW' },
-  orange: { fill: '#fb923c', ink: '#1f2937', label: 'ORANGE' },
-  green: { fill: '#22c55e', ink: '#0b1f12', label: 'GREEN' },
-  white: { fill: '#ffffff', ink: '#1f2937', label: 'WHITE' },
-  blue: { fill: '#3b82f6', ink: '#ffffff', label: 'BLUE' },
-  purple: { fill: '#8b5cf6', ink: '#ffffff', label: 'PURPLE' },
-  brown: { fill: '#92400e', ink: '#ffffff', label: 'BROWN' },
-  black: { fill: '#111827', ink: '#ffffff', label: 'BLACK' },
-  'red-and-black': { fill: '#7f1d1d', ink: '#ffffff', label: 'RED & BLACK' },
-  'red-and-white': { fill: '#b91c1c', ink: '#ffffff', label: 'CORAL' },
-  red: { fill: '#dc2626', ink: '#ffffff', label: 'RED' },
-};
+import { BeltLadderService } from '../../core/services/belt-ladder.service';
+import { beltPaint, resolveBeltColour } from '../utils/belt-palette';
 
 export type ShareCardVariant = 'story' | 'square';
 
@@ -54,6 +34,8 @@ export interface PromotionShareCardInput {
  */
 @Injectable({ providedIn: 'root' })
 export class PromotionShareCardService {
+  private readonly beltLadder = inject(BeltLadderService);
+
   async toBlob(input: PromotionShareCardInput, variant: ShareCardVariant = 'story'): Promise<Blob> {
     const dims = variant === 'story' ? { w: 1080, h: 1920 } : { w: 1080, h: 1080 };
     const canvas = document.createElement('canvas');
@@ -65,9 +47,13 @@ export class PromotionShareCardService {
     // Background — soft gradient from the new-belt color into a deep
     // neutral. Belt-color anchor keeps the card visually tied to the
     // milestone.
-    const toBeltStyle = BELT_COLORS[input.toBelt];
+    // The same palette every other surface paints belts with (#1801) — the
+    // tokens are theme-independent, so the hex is the same in dark mode.
+    const toPaint = beltPaint(input.toBelt);
+    const toFill = resolveBeltColour(toPaint.main);
+    const toLabel = this.beltLadder.label(input.toBelt);
     const gradient = ctx.createLinearGradient(0, 0, 0, dims.h);
-    gradient.addColorStop(0, toBeltStyle.fill);
+    gradient.addColorStop(0, toFill);
     gradient.addColorStop(1, '#0b1020');
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, dims.w, dims.h);
@@ -93,15 +79,20 @@ export class PromotionShareCardService {
     // New belt label — the headline.
     ctx.fillStyle = '#0b1020';
     ctx.font = `800 ${Math.round(dims.w * 0.13)}px system-ui, sans-serif`;
-    ctx.fillText(toBeltStyle.label, dims.w / 2, panelY + 220);
+    ctx.fillText(toLabel.toLocaleUpperCase(), dims.w / 2, panelY + 220);
 
     // Belt visual — bar with the new belt color (with optional
     // stripe-band hint by leaving the right ~12% darker for the black
     // belt bar convention).
     const beltBarY = panelY + 280;
     const beltBarH = 80;
-    ctx.fillStyle = toBeltStyle.fill;
+    ctx.fillStyle = toFill;
     ctx.fillRect(panelX + 60, beltBarY, panelW - 120, beltBarH);
+    if (toPaint.tip !== null) {
+      // A two-colour belt shows its second colour as a band, as on the badge.
+      ctx.fillStyle = resolveBeltColour(toPaint.tip);
+      ctx.fillRect(panelX + panelW - 280, beltBarY, 60, beltBarH);
+    }
     ctx.fillStyle = '#0b1020';
     ctx.fillRect(panelX + panelW - 200, beltBarY, 60, beltBarH);
 
@@ -112,11 +103,10 @@ export class PromotionShareCardService {
 
     // From-belt transition line ("from white belt to blue belt").
     if (input.fromBelt !== null) {
-      const fromLabel = BELT_COLORS[input.fromBelt].label.toLowerCase();
-      const toLabel = toBeltStyle.label.toLowerCase();
+      const fromLabel = this.beltLadder.label(input.fromBelt).toLocaleLowerCase();
       ctx.fillStyle = '#374151';
       ctx.font = `500 ${Math.round(dims.w * 0.035)}px system-ui, sans-serif`;
-      ctx.fillText(`${fromLabel} → ${toLabel}`, dims.w / 2, panelY + 640);
+      ctx.fillText(`${fromLabel} → ${toLabel.toLocaleLowerCase()}`, dims.w / 2, panelY + 640);
     }
 
     // Academy + date — footer line, smaller.

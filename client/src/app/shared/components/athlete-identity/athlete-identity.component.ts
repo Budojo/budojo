@@ -1,10 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { TranslateService } from '@ngx-translate/core';
 import { Tooltip } from 'primeng/tooltip';
 import { Athlete } from '../../../core/services/athlete.service';
 import { LanguageService } from '../../../core/services/language.service';
-import { BELT_KEYS } from '../../utils/i18n-enum-keys';
+import { BeltLadderService } from '../../../core/services/belt-ladder.service';
 import { AgeBadgeComponent } from '../age-badge/age-badge.component';
 import { BeltBadgeComponent } from '../belt-badge/belt-badge.component';
 import { UserAvatarComponent } from '../user-avatar/user-avatar.component';
@@ -34,8 +33,8 @@ import { UserAvatarComponent } from '../user-avatar/user-avatar.component';
   styleUrl: './athlete-identity.component.scss',
 })
 export class AthleteIdentityComponent {
-  private readonly translate = inject(TranslateService);
   private readonly languageService = inject(LanguageService);
+  private readonly beltLadder = inject(BeltLadderService);
 
   readonly athlete = input.required<Athlete>();
 
@@ -67,7 +66,7 @@ export class AthleteIdentityComponent {
    */
   protected readonly beltName = computed(() => {
     this.languageService.currentLang();
-    return this.translate.instant(BELT_KEYS[this.athlete().belt]);
+    return this.beltLadder.label(this.athlete().belt);
   });
 
   protected avatarUrl(): string | null {

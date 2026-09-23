@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use App\Actions\Lesson\MaterialiseLessonAction;
-use App\Enums\ClassKind;
+use App\Enums\TrainingMode;
 use App\Models\Academy;
 use App\Models\AcademyClass;
 use App\Models\AcademyMembership;
@@ -118,7 +118,7 @@ it('leaves an evening that already happened exactly as it was held', function ()
     // The timetable is mutable; the past is not. The lesson copied the
     // class at creation and does not look back at it.
     $class = AcademyClass::factory()->for($this->user->academy)
-        ->create(['name' => 'Fundamentals', 'weekday' => 1, 'starts_at' => '19:00', 'kind' => ClassKind::Gi]);
+        ->create(['name' => 'Fundamentals', 'weekday' => 1, 'starts_at' => '19:00', 'kind' => TrainingMode::Gi]);
     $lesson = app(MaterialiseLessonAction::class)->execute($class, CarbonImmutable::parse('2026-09-07'));
 
     $this->actingAs($this->user)
@@ -132,7 +132,7 @@ it('leaves an evening that already happened exactly as it was held', function ()
     $lesson->refresh();
     expect($lesson->name)->toBe('Fundamentals')
         ->and($lesson->starts_at)->toBe('19:00')
-        ->and($lesson->kind)->toBe(ClassKind::Gi);
+        ->and($lesson->kind)->toBe(TrainingMode::Gi);
 });
 
 // ─── DELETE /academy/classes/{class} ─────────────────────────────────────────

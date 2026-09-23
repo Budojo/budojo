@@ -17,7 +17,8 @@ use Illuminate\Support\Facades\Storage;
  * (`monthly_fee_cents` doesn't surface here — athletes don't see
  * the academy's fee column), plus an `owner` block carrying public
  * contact info (first_name, last_name, email) so athletes know
- * whom to reach out to about training, payments, schedule changes.
+ * whom to reach out to about training, payments, schedule changes, and
+ * the martial art's ladder (#1813) so the portal draws belts in its words.
  * V1 owner persona is single per academy; multi-owner academies
  * (V2) would surface a list.
  */
@@ -53,6 +54,10 @@ class MeAcademyResource extends JsonResource
             // whose balance it is gets the same one-line explanation the
             // owner's card has.
             'carnet_entry_unit' => $academy->carnet_entry_unit->value,
+            // The martial art and its ladder (#1813), so the portal draws an
+            // athlete's belt in their academy's words — "Green", not BJJ's
+            // "Green (kids)" — and a dan as a dan.
+            ...AcademyResource::ladderPayload($academy),
             'owner' => $owner !== null ? [
                 'first_name' => $owner->first_name,
                 'last_name' => $owner->last_name,

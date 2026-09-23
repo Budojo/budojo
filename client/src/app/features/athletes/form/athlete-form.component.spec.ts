@@ -8,6 +8,8 @@ import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 import { AthleteFormComponent } from './athlete-form.component';
 import { Athlete } from '../../../core/services/athlete.service';
 import { AcademyService } from '../../../core/services/academy.service';
+import type { MartialArt } from '../../../core/services/academy.service';
+import { useLadder } from '../../../../test-utils/ladder-test';
 
 // `of` is needed below to provide the paramMap as an Observable on the mocked
 // ActivatedRoute — the component subscribes to it (not the snapshot) so it
@@ -77,6 +79,51 @@ function setupTestBed(
     ],
   });
 }
+
+describe("AthleteFormComponent — the academy's ladder (#1801)", () => {
+  function build(art: MartialArt): AthleteFormComponent {
+    setupTestBed(null);
+    useLadder(art);
+    const fixture = TestBed.createComponent(AthleteFormComponent);
+    fixture.detectChanges();
+    return fixture.componentInstance;
+  }
+
+  it('offers the belts the academy awards, in rank order — no purple in judo', () => {
+    const form = build('judo');
+    const values = form.beltOptions().map((o) => o.value);
+
+    expect(values.slice(0, 2)).toEqual(['white', 'white-and-yellow']);
+    expect(values).not.toContain('purple');
+  });
+
+  it("starts a new athlete on the art's adult starting belt, not the kids' grey", () => {
+    expect(build('bjj').form.controls.belt.value).toBe('white');
+  });
+
+  it('hides the stripe picker on a grade that carries no stripes', () => {
+    const form = build('judo');
+    form.form.controls.belt.setValue('green');
+
+    expect(form.showStripes()).toBe(false);
+  });
+
+  it('offers dan on a FIJLKAM black belt, and clamps a count above the new cap', () => {
+    const form = build('karate');
+    form.form.controls.belt.setValue('black');
+    expect(form.stripesOptions().map((o) => o.label)).toEqual([
+      '1° dan',
+      '2° dan',
+      '3° dan',
+      '4° dan',
+      '5° dan',
+    ]);
+
+    form.form.controls.stripes.setValue('4');
+    form.form.controls.belt.setValue('green'); // cap 3
+    expect(form.form.controls.stripes.value).toBe('3');
+  });
+});
 
 describe('AthleteFormComponent', () => {
   describe('create mode (no :id route param)', () => {

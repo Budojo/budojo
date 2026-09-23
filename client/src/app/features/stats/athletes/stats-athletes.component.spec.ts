@@ -3,6 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { StatsAthletesComponent } from './stats-athletes.component';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
+import { useLadder } from '../../../../test-utils/ladder-test';
 
 const MOCK_BANDS_PAYLOAD = {
   bands: [
@@ -81,5 +82,55 @@ describe('StatsAthletesComponent', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.querySelector('[data-cy="stats-athletes-error"]')).toBeTruthy();
+  });
+});
+
+describe('StatsAthletesComponent — the federation the divisions come from (#1807)', () => {
+  let fixture: ComponentFixture<StatsAthletesComponent>;
+  let http: HttpTestingController;
+
+  function open(art: 'bjj' | 'judo', bands: object[]): HTMLElement {
+    TestBed.configureTestingModule({
+      imports: [StatsAthletesComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting(), ...provideI18nTesting()],
+    });
+    useLadder(art);
+    fixture = TestBed.createComponent(StatsAthletesComponent);
+    http = TestBed.inject(HttpTestingController);
+    fixture.detectChanges();
+    http
+      .expectOne('/api/v1/stats/athletes/age-bands')
+      .flush({ data: { bands, total: 3, missing_dob: 0 } });
+    fixture.detectChanges();
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  afterEach(() => http.verify());
+
+  it("titles and labels a judo academy's chart in FIJLKAM classes", () => {
+    const el = open('judo', [
+      { code: 'esordienti_a', category: 'adults', min: 12, max: 12, count: 1 },
+      { code: 'seniores', category: 'adults', min: 21, max: 35, count: 2 },
+    ]);
+
+    expect(el.querySelector('.stats-athletes__title')?.textContent?.trim()).toBe(
+      'Athletes by FIJLKAM age class',
+    );
+    expect(fixture.componentInstance['chartData']().labels).toEqual(['Esordienti A', 'Seniores']);
+  });
+
+  it('keeps the IBJJF title and labels for BJJ', () => {
+    const el = open('bjj', [{ code: 'mighty_mite', category: 'kids', min: 4, max: 6, count: 3 }]);
+
+    expect(el.querySelector('.stats-athletes__title')?.textContent?.trim()).toBe(
+      'Athletes by IBJJF age division',
+    );
+    expect(fixture.componentInstance['chartData']().labels).toEqual(['Mighty Mite']);
+  });
+
+  it('reads a division it has no words for as its code, never as a raw key', () => {
+    open('judo', [{ code: 'master_b', category: 'adults', min: 41, max: 45, count: 3 }]);
+
+    expect(fixture.componentInstance['chartData']().labels).toEqual(['master_b']);
   });
 });

@@ -35,8 +35,8 @@ import {
   AthleteStatus,
   AthleteUpdatePayload,
   Belt,
-  MAX_STRIPES_PER_BELT,
 } from '../../../core/services/athlete.service';
+import { BeltLadderService } from '../../../core/services/belt-ladder.service';
 import {
   Address,
   AcademyService,
@@ -55,12 +55,7 @@ import {
   addressAllOrNothing,
   italianPostalCode,
 } from '../../../shared/utils/address-form';
-import {
-  BELT_KEYS,
-  BELT_ORDER,
-  STATUS_KEYS,
-  STATUS_ORDER,
-} from '../../../shared/utils/i18n-enum-keys';
+import { STATUS_KEYS, STATUS_ORDER } from '../../../shared/utils/i18n-enum-keys';
 
 interface CountryCodeEntry {
   code: string;
@@ -197,6 +192,7 @@ export class AthleteFormComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly messageService = inject(MessageService);
   private readonly translate = inject(TranslateService);
+  private readonly beltLadder = inject(BeltLadderService);
   private readonly languageService = inject(LanguageService);
 
   /**
@@ -235,18 +231,15 @@ export class AthleteFormComponent implements OnInit {
   protected readonly deleting = signal(false);
 
   /**
-   * Belt picker options. Order = IBJJF rank (kids → adults → senior
-   * coral/red) so the picker reads bottom-up like a progression chart.
-   * Computed against `languageService.currentLang()` so the labels
-   * recompute on a runtime locale toggle (signal dependency triggers
-   * re-evaluation; `translate.instant()` reads the now-active bundle).
+   * Belt picker options: the academy's own ladder, in rank order (#1801), so
+   * the picker reads bottom-up like a progression chart and a judo academy
+   * is never offered a purple belt. Computed against
+   * `languageService.currentLang()` so the labels recompute on a runtime
+   * locale toggle.
    */
   readonly beltOptions = computed<SelectOption<Belt>[]>(() => {
     this.languageService.currentLang();
-    return BELT_ORDER.map((value) => ({
-      label: this.translate.instant(BELT_KEYS[value]),
-      value,
-    }));
+    return this.beltLadder.beltOptions();
   });
 
   /**
@@ -320,7 +313,7 @@ export class AthleteFormComponent implements OnInit {
   /**
    * Curated country code list (#75). Italy-first because that's the
    * primary market; the rest covers the typical European + transatlantic
-   * mix we see in BJJ academies. The `value` is the E.164 prefix that
+   * mix we see in martial-arts academies. The `value` is the E.164 prefix that
    * goes on the wire; the `label` is the localised dropdown text
    * (e.g. `+39 Italia` in IT, `+39 Italy` in EN).
    *
@@ -361,7 +354,7 @@ export class AthleteFormComponent implements OnInit {
     instagram: ['', [Validators.maxLength(255), urlIfPresent]],
     // date_of_birth is the only field that can genuinely be null
     date_of_birth: this.fb.control<Date | null>(null),
-    belt: this.fb.nonNullable.control<Belt>('white', Validators.required),
+    belt: this.fb.nonNullable.control<Belt>(this.beltLadder.startingBelt(), Validators.required),
     stripes: this.fb.nonNullable.control<string>('0', Validators.required),
     status: this.fb.nonNullable.control<AthleteStatus>('active', Validators.required),
     // Which price tier they're on (#1381). Null — the default, and the only
@@ -400,21 +393,22 @@ export class AthleteFormComponent implements OnInit {
   });
 
   /**
-   * Stripes options scoped to the SELECTED belt (#229). Black gets 0-6
-   * because graus 1°-6° are stored as stripes; every other belt caps at
-   * 0-4 (canonical IBJJF). Re-computes when `belt` changes — the
-   * stripes-clamp wiring in ngOnInit also resets stripes back to a
-   * valid value if the user downgrades from black with 5-6 stripes to
-   * a belt that only allows 0-4.
+   * Stripes options scoped to the SELECTED belt's grade (#229, #1801): 0-6 on
+   * a BJJ black, 0-3 *tacche* on a karate green, "1° dan…5° dan" on a
+   * FIJLKAM black. Re-computes when `belt` changes — the stripes-clamp
+   * wiring in ngOnInit also resets stripes to a valid value when the belt
+   * moves to a grade with a lower cap.
    */
   readonly stripesOptions = computed<SelectOption<string>[]>(() => {
-    const belt = this.beltSignal();
-    const max = MAX_STRIPES_PER_BELT[belt];
-    return Array.from({ length: max + 1 }, (_, i) => String(i)).map((v) => ({
-      label: v,
-      value: v,
-    }));
+    this.languageService.currentLang();
+    return this.beltLadder.stripeOptions(this.beltSignal());
   });
+
+  /**
+   * A grade that carries no stripes at all (a judo green) has nothing to
+   * pick: the field hides instead of offering a single "0".
+   */
+  readonly showStripes = computed(() => this.stripesOptions().length > 1);
 
   ngOnInit(): void {
     // The price list (#1381). Loaded once for the lifetime of the form: it is
@@ -478,7 +472,7 @@ export class AthleteFormComponent implements OnInit {
     this.form.controls.belt.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((belt) => {
-        const max = MAX_STRIPES_PER_BELT[belt];
+        const max = this.beltLadder.stripeCap(belt);
         const current = Number(this.form.controls.stripes.value);
         if (current > max) {
           this.form.controls.stripes.setValue(String(max));

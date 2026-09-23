@@ -86,19 +86,36 @@
         the shared empty state grew a secondary slot in #1618 and this is what
         it is for.
       -->
-      <app-empty-state
-        icon="pi pi-book"
-        [title]="'academy.syllabus.empty.title' | translate"
-        [hint]="'academy.syllabus.empty.hint' | translate"
-        [ctaLabel]="'academy.syllabus.empty.cta' | translate"
-        ctaIcon="pi pi-sparkles"
-        [ctaLoading]="seeding()"
-        (ctaClick)="seedFromStarter()"
-        [secondaryLabel]="'academy.syllabus.empty.scratch' | translate"
-        [secondaryDisabled]="seeding()"
-        (secondaryClick)="startAddingPosition()"
-        dataCy="syllabus-empty"
-      />
+      @if (hasStarter()) {
+        <app-empty-state
+          icon="pi pi-book"
+          [title]="'academy.syllabus.empty.title' | translate"
+          [hint]="starterKeys().hint | translate"
+          [ctaLabel]="starterKeys().cta | translate"
+          ctaIcon="pi pi-sparkles"
+          [ctaLoading]="seeding()"
+          (ctaClick)="seedFromStarter()"
+          [secondaryLabel]="'academy.syllabus.empty.scratch' | translate"
+          [secondaryDisabled]="seeding()"
+          (secondaryClick)="startAddingPosition()"
+          dataCy="syllabus-empty"
+        />
+      } @else {
+        <!--
+          The martial art's starter programme has not shipped yet (#1802):
+          the server would answer the seed with a 404, so the page offers
+          only what works — writing one's own.
+        -->
+        <app-empty-state
+          icon="pi pi-book"
+          [title]="'academy.syllabus.empty.title' | translate"
+          [hint]="'academy.syllabus.empty.hintNoStarter' | translate"
+          [ctaLabel]="'academy.syllabus.empty.ctaNoStarter' | translate"
+          ctaIcon="pi pi-plus"
+          (ctaClick)="startAddingPosition()"
+          dataCy="syllabus-empty"
+        />
+      }
     } @else {
       @if (searching()) {
         @if (filteredPositions().length === 0) {
@@ -140,16 +157,24 @@
                   [class.position__chevron--open]="isExpanded(position)"
                   aria-hidden="true"
                 ></i>
-                <span class="position__name">{{ position.name }}</span>
-                <!-- The position's real size, not the filtered one: a search
-                     narrows what is listed, not what the position holds. -->
-                <span class="position__count">{{ techniqueTotal(position) }}</span>
+                <!--
+                  Name, size and mode as one block that wraps: on a phone the
+                  mode drops under the name rather than squeezing it to
+                  "Poom / sae" (#1806) — every group of a judo, karate or
+                  taekwondo programme carries one.
+                -->
+                <span class="position__label">
+                  <span class="position__name">{{ position.name }}</span>
+                  <!-- The position's real size, not the filtered one: a search
+                       narrows what is listed, not what the position holds. -->
+                  <span class="position__count">{{ techniqueTotal(position) }}</span>
+                  @if (kindChip(position); as chip) {
+                    <span class="chip">{{ chip }}</span>
+                  }
+                </span>
               </button>
 
               <div class="position__controls">
-                @if (kindChip(position); as chip) {
-                  <span class="chip">{{ chip }}</span>
-                }
                 <!-- A column of bare checkboxes is a column of questions: the
                      tooltip answers it for a pointer, the aria-label for a
                      reader, and the hint above the list for everyone else. -->
@@ -221,7 +246,7 @@
                     >
                       {{ technique.name }}
                     </label>
-                    @if (kindChip(technique); as chip) {
+                    @if (kindChip(technique, position); as chip) {
                       <span class="chip">{{ chip }}</span>
                     }
                     <!--
@@ -305,16 +330,15 @@
       <span class="field__label" id="topic-kind-label">
         {{ 'academy.syllabus.form.kind' | translate }}
       </span>
-      <p-selectbutton
+      <app-choice-grid
         [options]="kindOptions()"
-        formControlName="kind"
-        optionLabel="label"
-        optionValue="value"
-        [allowEmpty]="false"
+        [value]="form.controls.kind.value"
+        (valueChange)="setKind($event)"
         ariaLabelledBy="topic-kind-label"
+        describedBy="topic-kind-hint"
         data-cy="syllabus-form-kind"
       />
-      <small class="field__hint">{{ 'academy.syllabus.form.kindHint' | translate }}</small>
+      <small class="field__hint" id="topic-kind-hint">{{ kindHintKey() | translate }}</small>
     </div>
   </form>
 

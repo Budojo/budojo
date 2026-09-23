@@ -125,7 +125,7 @@ describe('WhatsNewComponent (#254)', () => {
     // version we've shipped; when we ship a new version and forget
     // to prepend instead of append, this fails.
     const firstRelease = root.querySelector('.whats-new__release');
-    expect(firstRelease?.querySelector('.whats-new__version')?.textContent?.trim()).toBe('v2.64.0');
+    expect(firstRelease?.querySelector('.whats-new__version')?.textContent?.trim()).toBe('v2.65.0');
   });
 
   it('opens on ten releases, with the rest a press away (#1464)', () => {
@@ -138,7 +138,7 @@ describe('WhatsNewComponent (#254)', () => {
 
     const more = root.querySelector('[data-cy="whats-new-more"]') as HTMLButtonElement;
     expect(more).not.toBeNull();
-    expect(more.textContent).toContain('103');
+    expect(more.textContent).toContain('104');
 
     more.click();
     fixture.detectChanges();
@@ -161,7 +161,7 @@ describe('WhatsNewComponent (#254)', () => {
     expect(root.querySelector('[data-cy="whats-new-more"]')).toBeNull();
 
     const cards = fixture.nativeElement.querySelectorAll('.whats-new__release');
-    expect(cards.length).toBe(113);
+    expect(cards.length).toBe(114);
 
     // Pin every version in the order we ship them so a refactor that
     // accidentally reverses the array (e.g. a sort that reads ids
@@ -170,6 +170,7 @@ describe('WhatsNewComponent (#254)', () => {
       (el as HTMLElement).querySelector('.whats-new__version')?.textContent?.trim(),
     );
     expect(versions).toEqual([
+      'v2.65.0',
       'v2.64.0',
       'v2.63.1',
       'v2.63.0',
@@ -351,5 +352,18 @@ describe('no emoji in the release notes (#1659)', () => {
     );
 
     expect(offenders).toEqual([]);
+  });
+
+  it('writes plain text — the page renders no markdown, so ** would show as asterisks', () => {
+    // v2.64.0 shipped its bullets with **bold** markers the card printed
+    // verbatim; the markdown changelog file is where bold belongs.
+    const texts = RELEASES.flatMap((release) =>
+      [release.headline, ...release.sections.flatMap((s) => [s.heading, ...s.bullets])]
+        .flatMap((value) => (typeof value === 'string' ? [value] : [value.en, value.it]))
+        .map((text) => ({ version: release.version, text })),
+    );
+
+    const offenders = texts.filter(({ text }) => text.includes('**')).map(({ version }) => version);
+    expect([...new Set(offenders)]).toEqual([]);
   });
 });

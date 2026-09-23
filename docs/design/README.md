@@ -1,6 +1,6 @@
 # Budojo Design System
 
-An Apple HIG / iOS 17+ minimal override layer for the PrimeNG Material preset used by Budojo — a mobile-first PWA replacing Excel spreadsheets for BJJ academy owners and instructors. The primary user is an instructor on the mat, phone in hand; the design system exists to make that context feel native, restrained, and fast.
+An Apple HIG / iOS 17+ minimal override layer for the PrimeNG Material preset used by Budojo — a mobile-first PWA replacing Excel spreadsheets for martial-arts academy owners and instructors. The primary user is an instructor on the mat, phone in hand; the design system exists to make that context feel native, restrained, and fast.
 
 ## Sources
 

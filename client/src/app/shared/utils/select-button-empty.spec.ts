@@ -49,8 +49,10 @@ describe('select-button allowEmpty (#1675)', () => {
 
   it('finds the select-buttons at all', () => {
     // Negative control: the rule below iterates this list, so a regex that
-    // stopped matching would make it pass over nothing.
-    expect(buttons.length).toBeGreaterThanOrEqual(8);
+    // stopped matching would make it pass over nothing. Six since #1803 moved
+    // the timetable's and the programme's mode pickers to `ChoiceGrid`, which
+    // has no empty state to guard: a press on the chosen option re-emits it.
+    expect(buttons.length).toBeGreaterThanOrEqual(6);
   });
 
   it('never lets a repeat tap clear a closed choice', () => {

@@ -188,3 +188,11 @@
   flex: 1 1 auto;
   min-width: 0;
 }
+
+// A locked value (#1802): read as a value, not as a disabled control.
+.form__static {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--p-text-color);
+}

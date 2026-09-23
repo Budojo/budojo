@@ -1,4 +1,4 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import {
   Observable,
@@ -12,6 +12,7 @@ import {
   switchMap,
 } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import type { Belt } from './athlete.service';
 
 /**
  * ISO 3166-1 alpha-2 country code (#72). MVP supports only Italy; adding a
@@ -169,6 +170,23 @@ export interface Academy {
   id: number;
   name: string;
   slug: string;
+  /**
+   * What the academy teaches, and its ladder (#1800). The SPA picks, sorts and
+   * caps belts from `grades` — never from a copy of its own — through
+   * `BeltLadderService`. Optional for fixture-compat, like the fields below;
+   * the wire shape always carries them.
+   */
+  martial_art?: MartialArt;
+  grades?: Grade[];
+  /**
+   * The art's two training modes, in picker order (#1803): `gi`/`nogi`,
+   * `kata`/`kumite`… Read through `TrainingModesService`, never directly.
+   */
+  training_modes?: readonly TrainingMode[];
+  /** True once the academy has athletes, classes, lessons or topics. */
+  martial_art_locked?: boolean;
+  /** Starter-programme keys the art offers; empty until one ships. */
+  syllabus_programmes?: string[];
   /**
    * Phone (#161) — same shape as Athlete. `phone_country_code` carries the
    * E.164 prefix (e.g. `+39`); `phone_national_number` carries the digits
@@ -346,6 +364,14 @@ export interface MeAcademy {
   readonly training_days: number[] | null;
   readonly owner: MeAcademyOwner | null;
   /**
+   * The academy's martial art, ladder and modes (#1813) — the same builder
+   * as `Academy`'s, so the portal draws an athlete's belt in their academy's
+   * words. Optional for fixture compat only.
+   */
+  readonly martial_art?: MartialArt;
+  readonly grades?: Grade[];
+  readonly training_modes?: readonly TrainingMode[];
+  /**
    * What one carnet entry pays for (#1576) — the athlete's balance drops by
    * one after two check-ins under `day`, and the portal says so. Optional
    * for fixture compat only; never null on the wire.
@@ -353,8 +379,51 @@ export interface MeAcademy {
   readonly carnet_entry_unit?: CarnetEntryUnit;
 }
 
+/**
+ * What an academy teaches (#1800). Set at creation and locked once the academy
+ * has athletes, classes, lessons or a programme — every stored belt is a claim in its
+ * ladder.
+ */
+export type MartialArt = 'bjj' | 'judo' | 'karate' | 'taekwondo';
+
+/**
+ * What a class, a lesson or a programme topic is trained in (#1803) — the
+ * server's `TrainingMode`. Every martial art splits the same way, two modes
+ * and a middle: BJJ gi / no-gi, judo tachi-waza / ne-waza, karate kata /
+ * kumite, taekwondo poomsae / kyorugi. `both` is the middle every art has;
+ * `other` is a class's alone (conditioning, a yoga slot). An academy uses
+ * only its own pair, `Academy.training_modes`.
+ */
+export type TrainingMode =
+  | 'gi'
+  | 'nogi'
+  | 'tachi-waza'
+  | 'ne-waza'
+  | 'kata'
+  | 'kumite'
+  | 'poomsae'
+  | 'kyorugi'
+  | 'both'
+  | 'other';
+
+/**
+ * One rung of the academy's ladder, lowest first in `Academy.grades` (#1800).
+ * `athletes.stripes` stores a plain 0…`max_stripes`; `count` says what it
+ * counts and `first` is the number its first step shows as — a FIJLKAM black
+ * belt is `max_stripes: 4, count: 'dan', first: 1`, stored 0–4, shown 1°–5°.
+ */
+export interface Grade {
+  belt: Belt;
+  max_stripes: number;
+  count: 'stripe' | 'dan' | 'poom';
+  first: number;
+  kids: boolean;
+}
+
 export interface CreateAcademyPayload {
   name: string;
+  /** Required by the API since #1800 — it never defaults a new academy. */
+  martial_art: MartialArt;
   address?: Address | null;
   training_days?: number[] | null;
 }
@@ -368,6 +437,8 @@ export interface CreateAcademyPayload {
  */
 export interface UpdateAcademyPayload {
   name?: string;
+  /** Accepted while `martial_art_locked` is false; a different value is a 422 after. */
+  martial_art?: MartialArt;
   /** Phone pair (#161). `null` on both clears the saved phone. */
   phone_country_code?: string | null;
   phone_national_number?: string | null;
@@ -402,6 +473,34 @@ export class AcademyService {
   private readonly base = `${environment.apiBase}/api/v1/academy`;
 
   readonly academy = signal<Academy | null>(null);
+
+  /**
+   * The athlete's own academy (#1813), set by `getMine()`. The athlete portal
+   * never loads the owner-side `academy` — its routes have no academy guard
+   * — so without this the belts there read as BJJ whatever the academy
+   * teaches.
+   */
+  readonly mine = signal<MeAcademy | null>(null);
+
+  /**
+   * Bumped by `clear()` only, so a `/me/academy` reply that lands after a
+   * sign-out cannot put the previous athlete's academy back — the next
+   * athlete in the same tab would otherwise keep it, since the portal shell
+   * fetches only while `mine` is empty. Separate from `epoch`, which every
+   * owner-side `get()` bumps too.
+   */
+  private mineEpoch = 0;
+
+  /**
+   * Whichever academy this session has a ladder from: the owner's, else the
+   * athlete's own (#1813). What `BeltLadderService` and `TrainingModesService`
+   * read, so every belt in the app is drawn from the one the session belongs
+   * to.
+   */
+  readonly ladderAcademy = computed<Pick<
+    Academy,
+    'martial_art' | 'grades' | 'training_modes'
+  > | null>(() => this.academy() ?? this.mine());
 
   /**
    * Tracks the HTTP request that is currently in flight, if any. We reuse it
@@ -578,14 +677,19 @@ export class AcademyService {
    * the caller can render the empty state without subscribing to an
    * error path.
    *
-   * Not cached — this surface is rarely revisited within a session
-   * and the cache invalidation rules would complicate the
-   * (single-purpose, athlete-side) view. The owner-side `get()`
-   * cache stays in charge of the higher-traffic `/api/v1/academy`.
+   * Always asks the server, and keeps the answer in `mine` (#1813): the
+   * athlete portal's belt ladder reads it through `ladderAcademy`, and the
+   * portal shell fetches only while it is empty. A reply that lands after
+   * `clear()` is dropped. The owner-side `get()` cache stays in charge of
+   * `/api/v1/academy`.
    */
   getMine(): Observable<MeAcademy | null> {
+    const requestEpoch = this.mineEpoch;
     return this.http.get<{ data: MeAcademy }>(`${environment.apiBase}/api/v1/me/academy`).pipe(
       map((res) => res.data),
+      tap((academy) => {
+        if (requestEpoch === this.mineEpoch) this.mine.set(academy);
+      }),
       catchError((err: HttpErrorResponse) =>
         err.status === 404 ? of<MeAcademy | null>(null) : throwError(() => err),
       ),
@@ -600,6 +704,8 @@ export class AcademyService {
    */
   clear(): void {
     this.academy.set(null);
+    this.mine.set(null);
+    this.mineEpoch++;
     this.inflight$ = null;
     this.epoch++;
   }

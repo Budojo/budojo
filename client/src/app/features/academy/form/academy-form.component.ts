@@ -33,8 +33,11 @@ import {
   CarnetEntryUnit,
   CountryCode,
   ItalianProvinceCode,
+  MartialArt,
   UpdateAcademyPayload,
 } from '../../../core/services/academy.service';
+import { MartialArtPickerComponent } from '../../../shared/components/martial-art-picker/martial-art-picker.component';
+import { MARTIAL_ART_KEYS } from '../../../shared/utils/i18n-enum-keys';
 import { LanguageService } from '../../../core/services/language.service';
 import { localMonthStart, localeFor, monthPickerFormatFor } from '../../../shared/utils/locale';
 import { TrainingDaysPickerComponent } from '../../../shared/components/training-days-picker/training-days-picker.component';
@@ -115,7 +118,7 @@ interface SelectOption<T extends string> {
 
 /**
  * Curated country-code list. Italy-first because it's the primary market;
- * the rest covers the typical European + transatlantic mix we see at BJJ
+ * the rest covers the typical European + transatlantic mix we see at martial-arts
  * academies. Mirrors the athlete form's list verbatim — drift would be a bug.
  */
 const COUNTRY_CODE_OPTIONS: SelectOption<string>[] = [
@@ -147,6 +150,7 @@ const COUNTRY_CODE_OPTIONS: SelectOption<string>[] = [
     ToastModule,
     TranslatePipe,
     TrainingDaysPickerComponent,
+    MartialArtPickerComponent,
     SchedulePlannerComponent,
     FeeTierListComponent,
     BudojoFormFieldComponent,
@@ -183,6 +187,24 @@ export class AcademyFormComponent implements OnInit {
   );
 
   /**
+   * Whether the martial art can still change (#1802). The server locks it
+   * once the academy has athletes, classes, lessons or a programme — every
+   * stored belt is a claim in the old ladder — and says so on the resource,
+   * so the form shows the value instead of a control that would be refused.
+   */
+  protected readonly martialArtLocked = computed<boolean>(
+    () => this.academyService.academy()?.martial_art_locked ?? false,
+  );
+
+  /** The locked art, in words. */
+  protected readonly martialArtName = computed<string>(() => {
+    this.languageService.currentLang();
+    return this.translate.instant(
+      MARTIAL_ART_KEYS[this.academyService.academy()?.martial_art ?? 'bjj'],
+    );
+  });
+
+  /**
    * BCP-47 locale tag derived from the active SPA language. Bound to
    * `<p-inputnumber [locale]>` so the EUR currency formatting flips
    * separators when the user toggles language ("€ 50.00" in EN,
@@ -201,6 +223,7 @@ export class AcademyFormComponent implements OnInit {
   readonly countryCodeOptions = COUNTRY_CODE_OPTIONS;
 
   readonly form = this.fb.nonNullable.group({
+    martial_art: this.fb.nonNullable.control<MartialArt>('bjj'),
     name: ['', [Validators.required, Validators.maxLength(255), noWhitespace]],
     phone_country_code: ['', [phonePairRequired('phone_national_number')]],
     phone_national_number: [
@@ -302,6 +325,7 @@ export class AcademyFormComponent implements OnInit {
     }
     this.slug.set(academy.slug);
     this.form.patchValue({
+      martial_art: academy.martial_art ?? 'bjj',
       name: academy.name,
       phone_country_code: academy.phone_country_code ?? '',
       phone_national_number: academy.phone_national_number ?? '',
@@ -326,6 +350,22 @@ export class AcademyFormComponent implements OnInit {
       season_start_month: academy.season_start_month ?? null,
       billing_from: academy.billing_from ? new Date(`${academy.billing_from}T00:00:00`) : null,
     });
+
+    // The cached academy predates whatever the owner did since it loaded: an
+    // athlete added, a class on the timetable, "train here" at setup. Nothing
+    // refreshes the cache on those, and `martial_art_locked` is the one field
+    // here they change, so ask again (#1802). Only the lock follows the reply;
+    // the fields stay as patched, and may already be under the owner's hands.
+    // A failed read changes nothing: the server still refuses a locked change.
+    this.academyService
+      .get({ forceRefresh: true })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({ error: () => undefined });
+  }
+
+  setMartialArt(art: MartialArt): void {
+    this.form.controls.martial_art.setValue(art);
+    this.form.controls.martial_art.markAsDirty();
   }
 
   submit(): void {
@@ -610,6 +650,9 @@ export class AcademyFormComponent implements OnInit {
 
     return {
       name: v.name.trim(),
+      // Not sent while locked, same as the timetable's training days: the
+      // server would accept the unchanged value, but there is nothing to say.
+      ...(this.martialArtLocked() ? {} : { martial_art: v.martial_art }),
       phone_country_code: phoneEmpty ? null : phoneCc,
       phone_national_number: phoneEmpty ? null : phoneNn,
       website: website === '' ? null : website,

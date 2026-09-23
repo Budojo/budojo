@@ -5,6 +5,8 @@ import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideRouter } from '@angular/router';
 import { SyllabusCoverage } from '../../../core/services/stats.service';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
+import { useLadder } from '../../../../test-utils/ladder-test';
+import type { MartialArt } from '../../../core/services/academy.service';
 import { StatsSyllabusComponent } from './stats-syllabus.component';
 
 const URL = '/api/v1/stats/syllabus/coverage';
@@ -68,7 +70,8 @@ function report(over: Partial<SyllabusCoverage> = {}): SyllabusCoverage {
   };
 }
 
-function setup() {
+/** `art` loads an academy teaching it first (#1803); none reads as BJJ. */
+function setup(art?: MartialArt) {
   TestBed.configureTestingModule({
     imports: [StatsSyllabusComponent],
     providers: [
@@ -79,6 +82,8 @@ function setup() {
       ...provideI18nTesting(),
     ],
   });
+
+  if (art) useLadder(art);
 
   const fixture = TestBed.createComponent(StatsSyllabusComponent);
   const httpMock = TestBed.inject(HttpTestingController);
@@ -335,5 +340,48 @@ describe('StatsSyllabusComponent (#1565)', () => {
     const options = component['timelineOptions']() as { scales: { y: { suggestedMax: number } } };
     expect(options.scales.y.suggestedMax).toBe(10);
     expect(component['timelineData']().datasets[0].data).toEqual([0, 2]);
+  });
+});
+
+describe('StatsSyllabusComponent — training modes (#1803)', () => {
+  afterEach(() => TestBed.inject(HttpTestingController).verify());
+
+  it("filters by the academy's own two modes, and says so to a screen reader", () => {
+    const { fixture, httpMock } = setup('judo');
+    flush(httpMock);
+    fixture.detectChanges();
+
+    const el: HTMLElement = fixture.nativeElement;
+    const options = Array.from(
+      el.querySelectorAll<HTMLElement>('[data-cy="syllabus-coverage-kind"] .p-togglebutton'),
+    ).map((b) => b.textContent?.trim());
+    expect(options).toEqual(['All', 'Tachi-waza', 'Ne-waza']);
+    expect(el.querySelector('#syllabus-coverage-kind-label')?.textContent?.trim()).toBe(
+      'Count tachi-waza, ne-waza, or everything',
+    );
+  });
+
+  it('asks the server for the mode picked', () => {
+    const { fixture, component, httpMock } = setup('karate');
+    flush(httpMock);
+    fixture.detectChanges();
+
+    component['setKind']('kumite');
+    fixture.detectChanges();
+
+    const req = httpMock.expectOne((r) => r.url === URL);
+    expect(req.request.params.get('kind')).toBe('kumite');
+    req.flush({ data: report({ kind: 'kumite' }) });
+  });
+
+  it('keeps the BJJ filter as it was', () => {
+    const { fixture, httpMock } = setup();
+    flush(httpMock);
+    fixture.detectChanges();
+
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('#syllabus-coverage-kind-label')?.textContent?.trim()).toBe(
+      'Count gi, no-gi, or everything',
+    );
   });
 });

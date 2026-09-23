@@ -1,0 +1,148 @@
+{
+  "martial_art": "judo",
+  "source": "FIJLKAM Regolamento Organico Federale, Title XII, Art. 92: 6th-1st kyu white, yellow, orange, green, blue, brown; 1st-5th dan black, 6th-8th red-and-white, 9th-10th red. The half-belts are club practice for children, not federal grades.",
+  "grades": [
+    {
+      "belt": "white",
+      "max_stripes": 0
+    },
+    {
+      "belt": "white-and-yellow",
+      "max_stripes": 0,
+      "kids": true
+    },
+    {
+      "belt": "yellow",
+      "max_stripes": 0
+    },
+    {
+      "belt": "yellow-and-orange",
+      "max_stripes": 0,
+      "kids": true
+    },
+    {
+      "belt": "orange",
+      "max_stripes": 0
+    },
+    {
+      "belt": "orange-and-green",
+      "max_stripes": 0,
+      "kids": true
+    },
+    {
+      "belt": "green",
+      "max_stripes": 0
+    },
+    {
+      "belt": "green-and-blue",
+      "max_stripes": 0,
+      "kids": true
+    },
+    {
+      "belt": "blue",
+      "max_stripes": 0
+    },
+    {
+      "belt": "blue-and-brown",
+      "max_stripes": 0,
+      "kids": true
+    },
+    {
+      "belt": "brown",
+      "max_stripes": 0
+    },
+    {
+      "belt": "black",
+      "max_stripes": 4,
+      "count": "dan",
+      "first": 1
+    },
+    {
+      "belt": "red-and-white",
+      "max_stripes": 2,
+      "count": "dan",
+      "first": 6
+    },
+    {
+      "belt": "red",
+      "max_stripes": 1,
+      "count": "dan",
+      "first": 9
+    }
+  ],
+  "age_divisions": {
+    "source": "FIJLKAM, Norme per l’affiliazione e il tesseramento 2026-2028, classi d’età Judo: preagonisti are kids, agonisti adults; ages are the year the athlete turns.",
+    "divisions": [
+      {
+        "code": "bambini_a",
+        "category": "kids",
+        "min": 3,
+        "max": 5
+      },
+      {
+        "code": "bambini_b",
+        "category": "kids",
+        "min": 6,
+        "max": 7
+      },
+      {
+        "code": "fanciulli",
+        "category": "kids",
+        "min": 8,
+        "max": 9
+      },
+      {
+        "code": "ragazzi",
+        "category": "kids",
+        "min": 10,
+        "max": 11
+      },
+      {
+        "code": "esordienti_a",
+        "category": "adults",
+        "min": 12,
+        "max": 12
+      },
+      {
+        "code": "esordienti_b",
+        "category": "adults",
+        "min": 13,
+        "max": 14
+      },
+      {
+        "code": "cadetti",
+        "category": "adults",
+        "min": 15,
+        "max": 17
+      },
+      {
+        "code": "juniores",
+        "category": "adults",
+        "min": 18,
+        "max": 20
+      },
+      {
+        "code": "seniores",
+        "category": "adults",
+        "min": 21,
+        "max": 35
+      },
+      {
+        "code": "master",
+        "category": "adults",
+        "min": 36,
+        "max": null
+      }
+    ]
+  },
+  "training_modes": [
+    "tachi-waza",
+    "ne-waza"
+  ],
+  "programmes": [
+    {
+      "key": "judo",
+      "file": "judo.json"
+    }
+  ]
+}

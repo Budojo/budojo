@@ -118,6 +118,7 @@ it('seeds one schedule row on POST /academy (with training_days)', function (): 
 
     $this->postJson('/api/v1/academy', [
         'name' => 'Schedule History Roma',
+        'martial_art' => 'bjj',
         'training_days' => [1, 3, 5],
     ])->assertCreated();
 
@@ -132,7 +133,7 @@ it('seeds one schedule row on POST /academy even when training_days is omitted (
     Carbon::setTestNow('2026-05-28');
     Sanctum::actingAs(User::factory()->create());
 
-    $this->postJson('/api/v1/academy', ['name' => 'No-schedule Academy'])
+    $this->postJson('/api/v1/academy', ['name' => 'No-schedule Academy', 'martial_art' => 'bjj'])
         ->assertCreated();
 
     $academy = Academy::firstOrFail();

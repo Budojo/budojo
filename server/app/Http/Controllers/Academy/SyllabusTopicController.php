@@ -10,6 +10,7 @@ use App\Actions\Syllabus\SeedSyllabusAction;
 use App\Actions\Syllabus\UpdateSyllabusTopicAction;
 use App\Authorization\Capability;
 use App\Exceptions\SyllabusNotEmptyException;
+use App\Exceptions\SyllabusProgrammeUnavailableException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Syllabus\DestroySyllabusTopicRequest;
 use App\Http\Requests\Syllabus\SeedSyllabusRequest;
@@ -89,7 +90,7 @@ class SyllabusTopicController extends Controller
     }
 
     /**
-     * "Start from the BJJ programme." 409 when the academy already has one —
+     * "Start from the judo programme." 409 when the academy already has one —
      * even one topic is a programme the academy owns, never overwritten.
      */
     public function seed(SeedSyllabusRequest $request): JsonResponse
@@ -99,10 +100,14 @@ class SyllabusTopicController extends Controller
         /** @var Academy $academy */
         $academy = $user->activeAcademy();
 
+        $programme = $request->validated('programme');
+
         try {
-            $written = $this->seedSyllabus->execute($academy);
+            $written = $this->seedSyllabus->execute($academy, \is_string($programme) ? $programme : null);
         } catch (SyllabusNotEmptyException $e) {
             return response()->json(['message' => $e->getMessage()], 409);
+        } catch (SyllabusProgrammeUnavailableException $e) {
+            return response()->json(['message' => $e->getMessage()], 404);
         }
 
         return response()->json(['data' => ['written' => $written]], 201);

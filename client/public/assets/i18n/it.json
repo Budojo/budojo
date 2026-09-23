@@ -251,7 +251,7 @@
       "locationLabel": "Dove (facoltativo)",
       "locationPlaceholder": "Via Roma 10, Milano",
       "descriptionLabel": "Dettagli (facoltativo)",
-      "descriptionPlaceholder": "Aperto a tutte le cinture — porta il tuo gi.",
+      "descriptionPlaceholder": "Aperto a tutte le cinture.",
       "maxAttendeesLabel": "Posti massimi (facoltativo)",
       "maxAttendeesPlaceholder": "Lascia vuoto per nessun limite",
       "cancel": "Annulla",
@@ -485,6 +485,11 @@
       "no": "Non ora",
       "bodyCommunity": "I tuoi post nella community mostreranno anche la cintura.",
       "bodyFooter": "Puoi cambiare scelta più tardi da Profilo → Mi alleno in questa palestra."
+    },
+    "martialArt": {
+      "label": "Arte marziale",
+      "hint": "Decide le cinture e il programma. Puoi cambiarla finché non aggiungi atleti, un orario o un programma.",
+      "required": "Scegli l'arte marziale che insegni."
     }
   },
   "cookies": {
@@ -573,11 +578,11 @@
     "entries": {
       "what-is-budojo": {
         "question": "Cos'è Budojo?",
-        "answer": "È il gestionale della tua accademia di jiu-jitsu o arti marziali, e gira su questo computer: atleti, presenze, quote, documenti, orario e programma in un posto solo. Non è un servizio online — i dati restano sulla tua macchina e Budojo funziona anche senza connessione."
+        "answer": "È il gestionale della tua accademia di arti marziali — BJJ, judo, karate o taekwondo — e gira su questo computer: atleti, presenze, quote, documenti, orario e programma in un posto solo. Non è un servizio online — i dati restano sulla tua macchina e Budojo funziona anche senza connessione."
       },
       "create-academy": {
         "question": "Come comincio?",
-        "answer": "Al primo avvio crei il tuo accesso e Budojo apre una procedura breve: il nome dell'accademia, i giorni in cui si allena, e hai finito. Non c'è nessuna email da confermare — l'accesso vale su questo computer. Puoi tornare su tutto in qualsiasi momento da Accademia → Modifica."
+        "answer": "Al primo avvio crei il tuo accesso e Budojo apre una procedura breve: l'arte marziale che insegni, il nome dell'accademia, i giorni in cui si allena, e hai finito. Non c'è nessuna email da confermare — l'accesso vale su questo computer. Puoi tornare su tutto da Accademia → Modifica — sull'arte marziale finché l'accademia non ha atleti, un orario o un programma."
       },
       "invite-coach": {
         "question": "Posso dare l’accesso a un altro istruttore?",
@@ -593,7 +598,7 @@
       },
       "belt-not-listed": {
         "question": "La mia cintura non è nel menu. Cosa faccio?",
-        "answer": "Budojo copre l'intera scala IBJJF: bambini (grigia, gialla, arancione, verde), adulti (bianca, blu, viola, marrone, nera fino a 6 gradi) e senior (rossa-nera, rossa-bianca, rossa). Se pratichi un'arte con una scala diversa, scrivilo da Altro → Contatta il supporto: una scala configurabile è una cosa che possiamo valutare."
+        "answer": "Le cinture sono quelle dell'arte marziale dell'accademia: la scala IBJJF per il BJJ (dalla grigia alla verde per i bambini, dalla bianca alla nera fino a 6 gradi, poi coral e rossa), i kyu, le mezze cinture e i dan FIJLKAM per judo e karate, i kup, le mezze cinture, il poom e i dan WT per il taekwondo. Una cintura che manca di solito vuol dire che l'accademia è stata creata con un'altra arte marziale: la puoi cambiare da Accademia → Modifica finché l'accademia non ha atleti, un orario o un programma. Se la tua scuola usa una scala diversa da tutte queste, scrivilo da Altro → Contatta il supporto."
       },
       "suspend-athlete": {
         "question": "Come metto in pausa un atleta che ha smesso per un po’?",
@@ -613,11 +618,11 @@
       },
       "timetable": {
         "question": "Dove imposto gli orari delle lezioni?",
-        "answer": "Accademia → Orario. Ogni lezione ha giorno, ora, durata e tipo (gi, no-gi, open mat…), e la settimana si legge tutta in una schermata. È da qui che il check-in sa quali lezioni ci sono stasera, ed è da qui che si ricavano i giorni di allenamento dell'accademia."
+        "answer": "Accademia → Orario. Ogni lezione ha giorno, ora, durata e tipo — gi o no-gi, kata o kumite, secondo come si divide la tua arte marziale — e la settimana si legge tutta in una schermata. È da qui che il check-in sa quali lezioni ci sono stasera, ed è da qui che si ricavano i giorni di allenamento dell'accademia."
       },
       "programme": {
         "question": "A cosa serve il Programma?",
-        "answer": "Accademia → Programma è l'elenco di posizioni e tecniche che insegni. La spunta «in stagione» dice cosa stai coprendo quest'anno: è il denominatore su cui la copertura fa i conti. Se parti da zero, Budojo ti propone un programma BJJ completo da cui partire e poi modificare."
+        "answer": "Accademia → Programma è l'elenco di posizioni e tecniche che insegni. La spunta «in stagione» dice cosa stai coprendo quest'anno: è il denominatore su cui la copertura fa i conti. Se parti da zero, Budojo ti propone il programma completo della tua arte marziale, dove ce n'è già uno, da cui partire e poi modificare."
       },
       "lesson-topics": {
         "question": "Come segno cosa abbiamo fatto in lezione?",
@@ -766,7 +771,7 @@
       },
       "step2": {
         "title": "Imposta l'accademia",
-        "body": "Nome, indirizzo, i giorni in cui vi allenate e la quota se la fai pagare. Un minuto circa, e puoi cambiare tutto dopo."
+        "body": "L'arte marziale che insegni, il nome, i giorni in cui vi allenate e la quota se la fai pagare. Un minuto circa, e puoi cambiare tutto dopo — l'arte marziale finché non aggiungi atleti, un orario o un programma."
       },
       "step3": {
         "title": "Aggiungi il primo atleta",
@@ -1428,7 +1433,8 @@
         "timetable": "Orario",
         "syllabus": "Programma",
         "season": "Stagione",
-        "logo": "Logo"
+        "logo": "Logo",
+        "martialArt": "Arte marziale"
       },
       "timetable": {
         "none": "Non ancora impostato",
@@ -1491,7 +1497,7 @@
       "website": {
         "label": "Sito web",
         "errorUrl": "Inserisci un URL completo — es. https://example.com.",
-        "placeholder": "https://gracie-barra.com"
+        "placeholder": "https://example.com"
       },
       "facebook": {
         "label": "Facebook",
@@ -1569,6 +1575,10 @@
         "lesson": "Una lezione",
         "day": "Un giorno intero",
         "hint": "Conta quando un atleta si allena due volte nello stesso giorno. Cambiarlo ricalcola tutti i carnet già venduti."
+      },
+      "martialArt": {
+        "label": "Arte marziale",
+        "locked": "Non si cambia più: l'accademia ha già atleti, un orario, lezioni o un programma."
       }
     },
     "feeTiers": {
@@ -1646,12 +1656,6 @@
         "dayRequired": "Scegli un giorno.",
         "durationPlaceholder": "minuti"
       },
-      "kind": {
-        "gi": "Gi",
-        "nogi": "No-gi",
-        "both": "Gi e no-gi",
-        "other": "Altro"
-      },
       "confirm": {
         "remove": "Rimuovere {{name}} dall'orario? Le lezioni già tenute restano come sono.",
         "accept": "Rimuovi",
@@ -1680,9 +1684,36 @@
       "noTechniques": "Ancora niente sotto questa posizione.",
       "empty": {
         "title": "Nessun programma",
-        "hint": "Parti dal programma BJJ già pronto — tutte le posizioni e le tecniche, da rinominare, togliere o cancellare — oppure scrivi il tuo da zero.",
-        "cta": "Parti dal programma BJJ",
-        "scratch": "Scrivo il mio"
+        "scratch": "Scrivo il mio",
+        "hintNoStarter": "Il programma già pronto per questa arte marziale non c'è ancora. Scrivi il tuo: prima le posizioni o i gruppi che insegni, poi cosa c'è in ognuno.",
+        "ctaNoStarter": "Scrivo il mio programma",
+        "starter": {
+          "bjj": {
+            "cta": "Parti dal programma BJJ",
+            "hint": "Parti dal programma BJJ già pronto — tutte le posizioni e le tecniche, da rinominare, togliere o cancellare — oppure scrivi il tuo da zero.",
+            "seeded": "Il programma BJJ è tuo, modificalo pure"
+          },
+          "judo": {
+            "cta": "Parti dal programma di judo",
+            "hint": "Parti dal programma di judo già pronto — le proiezioni, le immobilizzazioni, gli strangolamenti e le leve del Kodokan per gruppi, con ukemi, randori e kata — da rinominare, togliere o cancellare, oppure scrivi il tuo da zero.",
+            "seeded": "Il programma di judo è tuo, modificalo pure"
+          },
+          "karateGojuRyu": {
+            "cta": "Parti dal programma Goju-ryu",
+            "hint": "Parti dal programma Goju-ryu già pronto — kihon, i kata del Goju da Sanchin a Suparinpei, kakie e kumite — da rinominare, togliere o cancellare, oppure scrivi il tuo da zero.",
+            "seeded": "Il programma Goju-ryu è tuo, modificalo pure"
+          },
+          "taekwondo": {
+            "cta": "Parti dal programma di taekwondo (WT)",
+            "hint": "Parti dal programma di taekwondo WT già pronto — fondamentali e calci, i poomsae Taegeuk e yudanja, kyorugi, hosinsul e gyeokpa — da rinominare, togliere o cancellare, oppure scrivi il tuo da zero.",
+            "seeded": "Il programma di taekwondo è tuo, modificalo pure"
+          },
+          "other": {
+            "cta": "Parti dal programma già pronto",
+            "hint": "Parti dal programma già pronto per questa arte marziale — da rinominare, togliere o cancellare — oppure scrivi il tuo da zero.",
+            "seeded": "Il programma è tuo, modificalo pure"
+          }
+        }
       },
       "dialog": {
         "addPosition": "Nuova posizione",
@@ -1692,20 +1723,30 @@
       },
       "form": {
         "name": "Nome",
-        "namePlaceholderPosition": "Guardia chiusa",
-        "namePlaceholderTechnique": "Leva al braccio",
         "kind": "Si allena",
-        "kindHint": "I heel hook sono no-gi, le guardie di bavero sono gi. Lascia gi e no-gi quando ha senso in entrambi.",
         "nameRequired": "Dagli un nome, e che non sia già usato qui.",
         "cancel": "Annulla",
         "create": "Aggiungi",
         "save": "Salva",
-        "remove": "Rimuovi"
-      },
-      "kind": {
-        "both": "Gi e no-gi",
-        "gi": "Gi",
-        "nogi": "No-gi"
+        "remove": "Rimuovi",
+        "namePlaceholder": {
+          "bjj": {
+            "position": "Guardia chiusa",
+            "technique": "Leva al braccio"
+          },
+          "judo": {
+            "position": "Ashi-waza",
+            "technique": "O-soto-gari"
+          },
+          "karate": {
+            "position": "Kaishu kata — kyu",
+            "technique": "Saifa"
+          },
+          "taekwondo": {
+            "position": "Chagi (calci)",
+            "technique": "Dollyeo-chagi"
+          }
+        }
       },
       "confirm": {
         "remove": "Rimuovere {{name}} dal programma?",
@@ -1717,7 +1758,6 @@
       "toast": {
         "saved": "Programma salvato",
         "removed": "Rimosso dal programma",
-        "seeded": "Il programma BJJ è tuo, modificalo pure",
         "errorSummary": "Qualcosa è andato storto",
         "errorDetail": "La modifica non è stata salvata. Riprova.",
         "loadErrorDetail": "Impossibile caricare il programma."
@@ -1730,7 +1770,13 @@
       "searchCountTechniqueOne": "{{count}} tecnica",
       "searchCountTechniqueOther": "{{count}} tecniche",
       "searchCountPositionOne": "{{count}} posizione",
-      "searchCountPositionOther": "{{count}} posizioni"
+      "searchCountPositionOther": "{{count}} posizioni",
+      "kindHint": {
+        "bjj": "I heel hook sono no-gi, le guardie di bavero sono gi. Lascia gi e no-gi quando ha senso in entrambi.",
+        "judo": "L'o-soto-gari è tachi-waza, il kesa-gatame è ne-waza. Lascia tachi-waza e ne-waza quando ha senso in entrambi.",
+        "karate": "Saifa è kata, il sanbon kumite è kumite. Lascia kata e kumite quando ha senso in entrambi.",
+        "taekwondo": "Il Taegeuk il jang è poomsae, una combinazione da combattimento è kyorugi. Lascia poomsae e kyorugi quando ha senso in entrambi."
+      }
     },
     "schedule": {
       "title": "Pianifica un cambio calendario futuro",
@@ -1755,22 +1801,63 @@
         "errorDetail": "Riprova, o scegli un'altra data se ce n'è già una pianificata.",
         "cancelErrorDetail": "Non sono riuscito ad annullare il cambio. Aggiorna la pagina e riprova."
       }
+    },
+    "trainingMode": {
+      "gi": "Gi",
+      "nogi": "No-gi",
+      "tachiWaza": "Tachi-waza",
+      "neWaza": "Ne-waza",
+      "kata": "Kata",
+      "kumite": "Kumite",
+      "poomsae": "Poomsae",
+      "kyorugi": "Kyorugi",
+      "other": "Altro",
+      "both": {
+        "bjj": "Gi e no-gi",
+        "judo": "Tachi-waza e ne-waza",
+        "karate": "Kata e kumite",
+        "taekwondo": "Poomsae e kyorugi"
+      }
     }
   },
   "belts": {
     "all": "Tutte le cinture",
-    "grey": "Grigia (bambini)",
-    "yellow": "Gialla (bambini)",
-    "orange": "Arancione (bambini)",
-    "green": "Verde (bambini)",
+    "grey": "Grigia",
+    "yellow": "Gialla",
+    "orange": "Arancione",
+    "green": "Verde",
     "white": "Bianca",
     "blue": "Blu",
     "purple": "Viola",
     "brown": "Marrone",
     "black": "Nera",
-    "redAndBlack": "Rossa e nera (7°)",
-    "redAndWhite": "Rossa e bianca (8°)",
-    "red": "Rossa (9°/10°)"
+    "redAndBlack": "Rosso-nera",
+    "redAndWhite": "Bianco-rossa",
+    "red": "Rossa",
+    "whiteAndYellow": "Bianco-gialla",
+    "yellowAndOrange": "Giallo-arancio",
+    "orangeAndGreen": "Arancio-verde",
+    "greenAndBlue": "Verde-blu",
+    "blueAndBrown": "Blu-marrone",
+    "yellowAndGreen": "Giallo-verde",
+    "blueAndRed": "Blu-rossa",
+    "blackAndRed": "Nero-rossa",
+    "bjj": {
+      "grey": "Grigia (bambini)",
+      "yellow": "Gialla (bambini)",
+      "orange": "Arancione (bambini)",
+      "green": "Verde (bambini)",
+      "redAndBlack": "Rossa e nera (7°)",
+      "redAndWhite": "Rossa e bianca (8°)",
+      "red": "Rossa (9°/10°)"
+    },
+    "taekwondo": {
+      "blackAndRed": "Poom"
+    },
+    "count": {
+      "dan": "{{n}}° dan",
+      "poom": "{{n}}°"
+    }
   },
   "attendance": {
     "daily": {
@@ -2610,9 +2697,9 @@
     },
     "sort": {
       "beltLabel": "Cintura",
-      "beltInitial": "Clicca per ordinare per cintura (nera → bianca)",
-      "beltAsc": "Ordinato per cintura (bianca → nera). Clicca per invertire.",
-      "beltDesc": "Ordinato per cintura (nera → bianca). Clicca per invertire.",
+      "beltInitial": "Clicca per ordinare per cintura (dalla più alta)",
+      "beltAsc": "Ordinato per cintura (dalla più bassa alla più alta). Clicca per invertire.",
+      "beltDesc": "Ordinato per cintura (dalla più alta alla più bassa). Clicca per invertire.",
       "nameInitial": "Clicca per ordinare per nome (A → Z)",
       "nameFirstAsc": "Ordinato per nome (A → Z). Clicca per cambiare.",
       "nameFirstDesc": "Ordinato per nome (Z → A). Clicca per cambiare.",
@@ -2645,7 +2732,7 @@
     "emptyHint": "Aggiungi il primo atleta e i grafici si popoleranno qui.",
     "belt": {
       "title": "Cinture",
-      "hint": "Atleti per grado IBJJF, kids → senior. Passa sopra a una fetta per il conteggio + percentuale."
+      "hint": "Atleti per grado, dal più basso al più alto. Passa sopra a una fetta per il conteggio + percentuale."
     },
     "tabs": {
       "overview": "Panoramica",
@@ -2682,8 +2769,13 @@
       "empty": "Nessun incasso negli ultimi 12 mesi."
     },
     "athletes": {
-      "ageBandsTitle": "Atleti per divisione IBJJF",
-      "ageBandsHint": "Tutti gli atleti con data di nascita, raggruppati per età odierna",
+      "ageBandsTitle": {
+        "bjj": "Atleti per divisione d'età IBJJF",
+        "judo": "Atleti per classe d'età FIJLKAM",
+        "karate": "Atleti per classe d'età FIJLKAM",
+        "taekwondo": "Atleti per divisione d'età WT"
+      },
+      "ageBandsHint": "Tutti gli atleti attivi con una data di nascita, per l'età che compiono quest'anno — come contano le federazioni",
       "loading": "Caricamento distribuzione…",
       "errored": "Impossibile caricare la distribuzione.",
       "empty": "Nessun atleta con data di nascita.",
@@ -2692,23 +2784,63 @@
         "adults": "Adulti",
         "all": "Tutti"
       },
-      "bands": {
-        "mighty_mite": "Mighty Mite",
-        "pee_wee": "Pee Wee",
-        "junior": "Junior",
-        "teen": "Teen",
-        "juvenile": "Juvenile",
-        "adult": "Adult",
-        "master_1": "Master 1",
-        "master_2": "Master 2",
-        "master_3": "Master 3",
-        "master_4": "Master 4",
-        "master_5": "Master 5",
-        "master_6": "Master 6",
-        "master_7": "Master 7"
-      },
       "missingDobOne": "{{count}} atleta senza data di nascita",
-      "missingDobOther": "{{count}} atleti senza data di nascita"
+      "missingDobOther": "{{count}} atleti senza data di nascita",
+      "bands": {
+        "bjj": {
+          "mighty_mite": "Mighty Mite",
+          "pee_wee": "Pee Wee",
+          "junior": "Junior",
+          "teen": "Teen",
+          "juvenile": "Juvenile",
+          "adult": "Adult",
+          "master_1": "Master 1",
+          "master_2": "Master 2",
+          "master_3": "Master 3",
+          "master_4": "Master 4",
+          "master_5": "Master 5",
+          "master_6": "Master 6",
+          "master_7": "Master 7"
+        },
+        "judo": {
+          "bambini_a": "Bambini A",
+          "bambini_b": "Bambini B",
+          "fanciulli": "Fanciulli",
+          "ragazzi": "Ragazzi",
+          "esordienti_a": "Esordienti A",
+          "esordienti_b": "Esordienti B",
+          "cadetti": "Cadetti",
+          "juniores": "Juniores",
+          "seniores": "Seniores",
+          "master": "Master"
+        },
+        "karate": {
+          "bambini_a": "Bambini A",
+          "bambini_b": "Bambini B",
+          "fanciulli": "Fanciulli",
+          "ragazzi": "Ragazzi",
+          "esordienti": "Esordienti",
+          "cadetti": "Cadetti",
+          "juniores": "Juniores",
+          "seniores": "Seniores",
+          "master_a": "Master A",
+          "master_b": "Master B",
+          "master_c": "Master C",
+          "master_d": "Master D",
+          "master_e": "Master E"
+        },
+        "taekwondo": {
+          "under_12": "Under 12",
+          "cadet": "Cadetti",
+          "junior": "Juniores",
+          "under_30": "Under 30",
+          "under_40": "Under 40",
+          "under_50": "Under 50",
+          "under_60": "Under 60",
+          "under_65": "Under 65",
+          "over_65": "Over 65"
+        }
+      }
     },
     "syllabus": {
       "headline": "{{covered}} di {{total}} coperti in questa stagione",
@@ -2730,9 +2862,7 @@
       },
       "filter": {
         "all": "Tutto",
-        "gi": "Gi",
-        "nogi": "No-gi",
-        "aria": "Conta gi, no-gi o tutto"
+        "aria": "Conta {{a}}, {{b}} o tutto"
       },
       "season": {
         "previous": "Stagione precedente",
@@ -2960,5 +3090,11 @@
     "days": "{{count}} giorni fa",
     "weekOne": "una settimana fa",
     "weeks": "{{count}} settimane fa"
+  },
+  "martialArts": {
+    "bjj": "Brazilian jiu-jitsu",
+    "judo": "Judo",
+    "karate": "Karate",
+    "taekwondo": "Taekwondo"
   }
 }

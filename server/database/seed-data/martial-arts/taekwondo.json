@@ -1,0 +1,128 @@
+{
+  "martial_art": "taekwondo",
+  "source": "WT / FITA ten-kup ladder with half-belts, confirmed by the owner (no stripes); poom for black belts under fifteen.",
+  "grades": [
+    {
+      "belt": "white",
+      "max_stripes": 0
+    },
+    {
+      "belt": "white-and-yellow",
+      "max_stripes": 0
+    },
+    {
+      "belt": "yellow",
+      "max_stripes": 0
+    },
+    {
+      "belt": "yellow-and-green",
+      "max_stripes": 0
+    },
+    {
+      "belt": "green",
+      "max_stripes": 0
+    },
+    {
+      "belt": "green-and-blue",
+      "max_stripes": 0
+    },
+    {
+      "belt": "blue",
+      "max_stripes": 0
+    },
+    {
+      "belt": "blue-and-red",
+      "max_stripes": 0
+    },
+    {
+      "belt": "red",
+      "max_stripes": 0
+    },
+    {
+      "belt": "red-and-black",
+      "max_stripes": 0
+    },
+    {
+      "belt": "black-and-red",
+      "max_stripes": 3,
+      "count": "poom",
+      "first": 1,
+      "kids": true
+    },
+    {
+      "belt": "black",
+      "max_stripes": 8,
+      "count": "dan",
+      "first": 1
+    }
+  ],
+  "age_divisions": {
+    "source": "World Taekwondo divisions (cadet 12-14, junior 15-17, poomsae Under 30 to Over 65), by the year the athlete turns. WT names no division under 12: under_12 is the club’s own, not the federation’s.",
+    "divisions": [
+      {
+        "code": "under_12",
+        "category": "kids",
+        "min": 5,
+        "max": 11
+      },
+      {
+        "code": "cadet",
+        "category": "kids",
+        "min": 12,
+        "max": 14
+      },
+      {
+        "code": "junior",
+        "category": "adults",
+        "min": 15,
+        "max": 17
+      },
+      {
+        "code": "under_30",
+        "category": "adults",
+        "min": 18,
+        "max": 30
+      },
+      {
+        "code": "under_40",
+        "category": "adults",
+        "min": 31,
+        "max": 40
+      },
+      {
+        "code": "under_50",
+        "category": "adults",
+        "min": 41,
+        "max": 50
+      },
+      {
+        "code": "under_60",
+        "category": "adults",
+        "min": 51,
+        "max": 60
+      },
+      {
+        "code": "under_65",
+        "category": "adults",
+        "min": 61,
+        "max": 65
+      },
+      {
+        "code": "over_65",
+        "category": "adults",
+        "min": 66,
+        "max": null
+      }
+    ]
+  },
+  "training_modes": [
+    "poomsae",
+    "kyorugi"
+  ],
+  "programmes": [
+    {
+      "key": "taekwondo",
+      "file": "taekwondo.json"
+    }
+  ]
+}

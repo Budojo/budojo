@@ -24,8 +24,8 @@ An `Athlete` represents a student enrolled at an `Academy`. This is the core ros
 | `facebook` | string(255) | nullable | Facebook profile URL (#162). Same shape as `website`. |
 | `instagram` | string(255) | nullable | Instagram profile URL (#162). Same shape as `website`. |
 | `date_of_birth` | date | nullable | Cast to `Carbon\Carbon` in the model |
-| `belt` | string | not null | Cast to `App\Enums\Belt` backed enum — kids (`grey` / `yellow` / `orange` / `green`) + adults (`white` / `blue` / `purple` / `brown` / `black`) + senior coral and red (`red-and-black` / `red-and-white` / `red`) |
-| `stripes` | tinyint unsigned | not null, default `0` | Range 0–6 on `black` (graus 1°–6°); 0–4 on every other belt. Enforced cross-field at the request layer via `Belt::maxStripes()` |
+| `belt` | string | not null | Cast to `App\Enums\Belt` — a **colour** from the belt vocabulary. Valid for an athlete only if the academy's martial art's ladder awards it (#1800); see Enums |
+| `stripes` | tinyint unsigned | not null, default `0` | A plain 0…cap integer. The cap is the athlete's grade's, in the academy's ladder (6 on a BJJ black, 4 on a FIJLKAM black shown as 1st–5th dan, 0 on a judo green); the global ceiling on every request is 10 |
 | `status` | string | not null | Cast to `App\Enums\AthleteStatus` backed enum (`active` / `inactive`) |
 | `joined_at` | date | not null | When the athlete first enrolled |
 | `status_changed_at` | date | nullable | When `status` last changed (#1741). Null means it never has since the row was created — the right answer for an athlete active since import, not a missing value |
@@ -55,28 +55,21 @@ An `Athlete` represents a student enrolled at an `Academy`. This is the core ros
 
 ### `App\Enums\Belt`
 
-| Case | Value | Rank | Max stripes |
-|---|---|---|---|
-| `Grey` | `grey` | 1 | 4 |
-| `Yellow` | `yellow` | 2 | 4 |
-| `Orange` | `orange` | 3 | 4 |
-| `Green` | `green` | 4 | 4 |
-| `White` | `white` | 5 | 4 |
-| `Blue` | `blue` | 6 | 4 |
-| `Purple` | `purple` | 7 | 4 |
-| `Brown` | `brown` | 8 | 4 |
-| `Black` | `black` | 9 | **6** |
-| `RedAndBlack` | `red-and-black` | 10 | 4 |
-| `RedAndWhite` | `red-and-white` | 11 | 4 |
-| `Red` | `red` | 12 | 4 |
+A **vocabulary of colours**, not a ranking (#1800). Which colours an academy awards, in what order and with what stripe cap is its martial art's ladder — `Academy.grades`, read from `server/database/seed-data/martial-arts/<art>.json` through `App\Support\MartialArt\RankLadder`. Blue is 6th of 12 in BJJ and 7th of 12 in taekwondo, which is why `Belt::rank()` and `Belt::maxStripes()` were removed.
 
-Covers the full **IBJJF rank scale** on a single linear axis:
+| Values | Used by |
+|---|---|
+| `grey`, `yellow`, `orange`, `green` | BJJ kids; `yellow`, `orange`, `green` are also kyu/kup colours elsewhere |
+| `white`, `blue`, `brown`, `black` | every martial art |
+| `purple` | BJJ only |
+| `red-and-black`, `red-and-white`, `red` | BJJ coral and red (#229); `red-and-white` / `red` are FIJLKAM 6th–8th / 9th–10th dan; `red` and `red-and-black` are taekwondo's 2nd and 1st kup |
+| `white-and-yellow`, `yellow-and-orange`, `orange-and-green`, `green-and-blue`, `blue-and-brown` | judo and karate kids' half-belts; `white-and-yellow`, `green-and-blue` also taekwondo kup |
+| `yellow-and-green`, `blue-and-red` | taekwondo kup |
+| `black-and-red` | taekwondo poom (black belt under 15) |
 
-- **Youth** (kids/teens up to ~16) — grey, yellow, orange, green (added in #230).
-- **Adult** — white, blue, purple, brown, black (the canonical progression).
-- **Senior beyond black** — red-and-black (7° grau, coral), red-and-white (8° grau, coral), red (9° / 10° grau, grand master). Added in #229 — request from beta tester Luigi for "vendita all'esterno" credibility.
+Two-colour values are `<upper>-and-<lower>`. Values never change; new colours are appended.
 
-**Stripes per belt** (`Belt::maxStripes()`): 4 for every belt EXCEPT `Black`, which carries the IBJJF graus 1°–6° as `stripes 1..6`. The cap is enforced both at the request level (cross-field validation in `StoreAthleteRequest::validateStripesAgainstBelt` / `UpdateAthleteRequest::validateStripesAgainstBelt`) and at the SPA picker level (`MAX_STRIPES_PER_BELT` in `client/src/app/core/services/athlete.service.ts`). Sub-progressions inside each kids belt (e.g. grey-white, grey, grey-black) are not modelled — only the four base colours.
+**Stripes per grade**: the ladder's `max_stripes`. For BJJ it is exactly what it was — 6 on black (graus 1°–6°), 4 elsewhere. A grade also says what a stripe counts (`count`: `stripe`, `dan`, `poom`) and the number its first step is shown as (`first`): the stored value never carries that offset.
 
 ### `App\Enums\AthleteStatus`
 
@@ -109,7 +102,8 @@ Covers the full **IBJJF rank scale** on a single linear axis:
 - **Soft-delete semantics.** `DELETE /api/v1/athletes/{id}` sets `deleted_at` but never removes the row. Future reports (attendance history, belt promotions) can still reference historic athletes. The list endpoint never returns soft-deleted rows.
 - **Soft-delete cascades to documents.** An `AthleteObserver` (wired via `#[ObservedBy]` on the model) catches the `deleting` event and, for every `Document` belonging to the athlete, soft-deletes the row AND wipes the file from the `local` disk via `Storage::delete`. This is the GDPR-friendly policy locked in the M3 PRD — there is no "restore athlete → restore documents" flow.
 - **Email uniqueness ignores soft-deleted rows.** You can re-add a previously-deleted Mario Rossi with the same email, and the Form Request's `whereNull('deleted_at')` clause allows it.
-- **Stripes range is per-belt.** `Black` allows `0..6` to track the IBJJF graus 1°–6°; every other belt allows `0..4`. The static rule on the FormRequest is `min:0|max:6` (the global ceiling), and the per-belt cap is then enforced cross-field in `withValidator` against `Belt::maxStripes()`. The DB column is an unsigned tinyint with no CHECK constraint.
+- **The belt must be one the academy's martial art awards, and the stripes are capped by its grade (#1800).** `App\Rules\BeltInLadder` guards every door a belt comes in by — the create and edit requests, the CSV import (through `AthleteFieldRules`) and the promotion backfill — so a `viola` in a judo file is refused in the import preview with the same reason the form gives. The static rule is `min:0|max:10` (the ceiling across every ladder); `App\Rules\StripesWithinGrade` then enforces the grade's cap — for the belt in the payload or, when an edit sends only `stripes`, the belt the athlete already has — on create, edit and the CSV import alike. Until #1800 the cap was a request-only trait that added its error outside a `$validator->after()` hook, which `passes()` discards, and the import never ran it: the only thing enforcing it was the SPA's picker. The ladder used is the athlete's own academy's on edit, the caller's active academy's on create. The DB column is an unsigned tinyint with no CHECK constraint.
+- **The roster's belt sort follows the academy's ladder.** `sort_by=belt` orders by rank in `Academy.grades`, then stripes desc, last name, id; a value outside the ladder sorts last ascending and first descending.
 - **Address (#72b).** Athletes own at most one polymorphic `Address` row via `morphOne(Address::class, 'addressable')`. Update semantics on `PUT /api/v1/athletes/{id}` (Laravel's resource route also accepts `PATCH`): send `address: { line1, line2, city, postal_code, province, country }` to upsert in place, `address: null` to clear (delete the morph row), or omit the key to leave untouched. Same two-layer enforcement as `Academy`: DB UNIQUE index on `(addressable_type, addressable_id)` plus `SyncAddressAction`'s atomic `updateOrCreate`. On hard delete (`forceDelete`) the `AthleteObserver::forceDeleted` hook wipes the address; soft delete leaves it in place. See [`address.md`](./address.md).
 - **Phone is a structured pair (#75).** The two phone columns are jointly nullable: either both are `null` (no phone on file) or both carry a value. The FormRequest enforces this via `required_with` between the two fields, validates the country code with `regex:/^\+[1-9][0-9]{0,3}$/`, validates the national number with `regex:/^[0-9]+$/`, and runs a cross-field `withValidator` check that concatenates the pair and feeds it to `libphonenumber-for-php`'s `isValidNumber()` — combinations that are well-formed individually but unreachable in any numbering plan (e.g. `+39` + `1`) are rejected. The DB stores the raw national digits; formatting for display is the client's job.
 - **`status_changed_at` is written by the observer, on the save that moves the status** (#1741). `AthleteObserver::saving` stamps today's date when `status` is dirty on an existing row — not in `UpdateAthleteAction`, which is only the path the API happens to use today: the CSV import, the seeder and every endpoint written next all reach `save()` too, and a fact that must hold for every write belongs where every write passes.
@@ -119,7 +113,7 @@ Covers the full **IBJJF rank scale** on a single linear axis:
   - **A date, not a timestamp.** The hour somebody was marked inactive is noise, and storing it invites a screen that shows it.
   - Existing rows were backfilled once from `audit_entries`, taking the most recent `athlete.updated` / `athlete.belt.promoted` entry whose `after` blob carries a `status` key. `athlete.created` is excluded on purpose — it dumps the whole row, status included, so matching it would date every athlete's "status change" to their enrolment. (`athlete.deleted` needs no exclusion: `AthleteAuditObserver::deleting` passes only `before:`, so it can never match an `after` filter.) The backfill writes `Y-m-d 00:00:00`, the same string Eloquent's `date` cast produces — a bare `Y-m-d` through `DB::table()` would leave two shapes in one column, and SQLite compares them as text.
 
-- **Paginated list is 20 per page.** Configured in `AthleteController@index`. Filters: `belt` (enum), `status` (enum), `paid` (`yes`|`no` — has a payment record for the current calendar month or not), and `q` (free-text token-AND search across `first_name` + `last_name`, case-insensitive). Sort: `sort_by` ∈ {`first_name`, `last_name`, `belt`, `joined_at`, `created_at`, `attendance_month`, `attendance_total`} with `sort_order` (`asc`|`desc`, default `desc`). `belt` is rank-aware (kids `grey < yellow < orange < green` < adults `white < blue < purple < brown < black` < senior `red-and-black < red-and-white < red`) with `stripes` desc + `last_name` asc as stable tiebreakers. Page via `?page=N`. The OpenAPI contract at `docs/api/v1.yaml` is the canonical reference for parameter shape and defaults.
+- **Paginated list is 20 per page.** Configured in `AthleteController@index`. Filters: `belt` (enum), `status` (enum), `paid` (`yes`|`no` — has a payment record for the current calendar month or not), and `q` (free-text token-AND search across `first_name` + `last_name`, case-insensitive). Sort: `sort_by` ∈ {`first_name`, `last_name`, `belt`, `joined_at`, `created_at`, `attendance_month`, `attendance_total`} with `sort_order` (`asc`|`desc`, default `desc`). `belt` follows the academy's ladder (for BJJ: kids `grey < yellow < orange < green` < adults `white < blue < purple < brown < black` < senior `red-and-black < red-and-white < red`) with `stripes` desc + `last_name` asc as stable tiebreakers. Page via `?page=N`. The OpenAPI contract at `docs/api/v1.yaml` is the canonical reference for parameter shape and defaults.
 
 ## Related endpoints
 

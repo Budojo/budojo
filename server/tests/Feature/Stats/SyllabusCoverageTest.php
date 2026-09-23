@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Enums\TopicKind;
+use App\Enums\TrainingMode;
 use App\Models\AcademyClass;
 use App\Models\Athlete;
 use App\Models\AttendanceRecord;
@@ -187,9 +187,9 @@ it('follows the academy own season boundary', function (): void {
 // ─── Gi and no-gi never mix ──────────────────────────────────────────────────
 
 it('narrows the denominator with the filter, not only the numerator', function (): void {
-    $this->armbar->update(['kind' => TopicKind::NoGi]);
-    $this->triangle->update(['kind' => TopicKind::Gi]);
-    $lapel = SyllabusTopic::factory()->under($this->closedGuard)->create(['name' => 'Worm guard', 'kind' => TopicKind::Gi]);
+    $this->armbar->update(['kind' => TrainingMode::NoGi]);
+    $this->triangle->update(['kind' => TrainingMode::Gi]);
+    $lapel = SyllabusTopic::factory()->under($this->closedGuard)->create(['name' => 'Worm guard', 'kind' => TrainingMode::Gi]);
 
     // Unfiltered: three techniques.
     expect(coverage($this)['totals']['in_scope'])->toBe(3);
@@ -202,12 +202,12 @@ it('narrows the denominator with the filter, not only the numerator', function (
 
     // Gi: the two gi ones.
     expect(coverage($this, ['kind' => 'gi'])['totals']['in_scope'])->toBe(2);
-    expect($lapel->fresh()?->kind)->toBe(TopicKind::Gi);
+    expect($lapel->fresh()?->kind)->toBe(TrainingMode::Gi);
 });
 
 it('admits a both-kinds topic under either filter — that is what both means', function (): void {
     // Armbar stays `both` from the factory; make the other one gi.
-    $this->triangle->update(['kind' => TopicKind::Gi]);
+    $this->triangle->update(['kind' => TrainingMode::Gi]);
 
     expect(coverage($this, ['kind' => 'nogi'])['totals']['in_scope'])->toBe(1);
     expect(coverage($this, ['kind' => 'gi'])['totals']['in_scope'])->toBe(2);
@@ -300,7 +300,7 @@ it('keeps a technique whose position is out of season, and still gives it a bar'
 });
 
 it('names the position of a missing technique even when the filter excludes the position', function (): void {
-    $this->closedGuard->update(['kind' => TopicKind::Gi]);
+    $this->closedGuard->update(['kind' => TrainingMode::Gi]);
 
     // `both` techniques survive a no-gi filter; their `gi` position does not.
     $data = coverage($this, ['kind' => 'nogi']);

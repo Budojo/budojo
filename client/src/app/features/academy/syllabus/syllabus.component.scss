@@ -99,12 +99,21 @@
     }
   }
 
+  &__label {
+    min-width: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem 0.5rem;
+  }
+
   &__name {
     min-width: 0;
     font-size: 0.9375rem;
     font-weight: 600;
     color: var(--p-text-color);
-    overflow-wrap: anywhere;
+    // Between words, and inside one only when it cannot fit a line at all.
+    overflow-wrap: break-word;
   }
 
   // How many techniques the position holds, as a quiet pill — the number is

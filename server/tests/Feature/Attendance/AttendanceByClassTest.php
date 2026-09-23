@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Enums\ClassKind;
+use App\Enums\TrainingMode;
 use App\Models\AcademyClass;
 use App\Models\Athlete;
 use App\Models\AttendanceRecord;
@@ -27,10 +27,10 @@ beforeEach(function (): void {
     $this->user = userWithAcademy();
     $this->academy = $this->user->academy;
     $this->fundamentals = AcademyClass::factory()->for($this->academy)->create([
-        'name' => 'Fundamentals', 'weekday' => 1, 'starts_at' => '19:00', 'kind' => ClassKind::Gi,
+        'name' => 'Fundamentals', 'weekday' => 1, 'starts_at' => '19:00', 'kind' => TrainingMode::Gi,
     ]);
     $this->openMat = AcademyClass::factory()->for($this->academy)->create([
-        'name' => 'Open mat', 'weekday' => 1, 'starts_at' => '20:30', 'kind' => ClassKind::Both,
+        'name' => 'Open mat', 'weekday' => 1, 'starts_at' => '20:30', 'kind' => TrainingMode::Both,
     ]);
     $this->mario = Athlete::factory()->for($this->academy)->create();
     $this->luigi = Athlete::factory()->for($this->academy)->create();
@@ -78,7 +78,7 @@ it('records the presence into the class lesson for the day, creating it on the f
         // The snapshot: what the class was that evening.
         ->and($lesson->name)->toBe('Fundamentals')
         ->and($lesson->starts_at)->toBe('19:00')
-        ->and($lesson->kind)->toBe(ClassKind::Gi);
+        ->and($lesson->kind)->toBe(TrainingMode::Gi);
 
     expect(AttendanceRecord::where('lesson_id', $lesson->id)->count())->toBe(2);
 });

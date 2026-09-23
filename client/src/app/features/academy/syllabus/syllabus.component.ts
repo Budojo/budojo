@@ -15,30 +15,26 @@ import { CheckboxModule } from 'primeng/checkbox';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
-import { SelectButtonModule } from 'primeng/selectbutton';
 import { SkeletonModule } from 'primeng/skeleton';
 import { Toast } from 'primeng/toast';
 import { Tooltip } from 'primeng/tooltip';
 import { finalize } from 'rxjs';
-import { AcademyService } from '../../../core/services/academy.service';
+import { AcademyService, TrainingMode } from '../../../core/services/academy.service';
 import { LanguageService } from '../../../core/services/language.service';
+import { SyllabusService, SyllabusTopic } from '../../../core/services/syllabus.service';
+import { TrainingModesService } from '../../../core/services/training-modes.service';
 import {
-  SyllabusService,
-  SyllabusTopic,
-  TOPIC_KINDS,
-  TopicKind,
-} from '../../../core/services/syllabus.service';
+  StarterProgrammeKeys,
+  SYLLABUS_NAME_PLACEHOLDER_KEYS,
+  starterProgrammeKeys,
+} from '../../../shared/utils/i18n-enum-keys';
+import { ChoiceGridComponent } from '../../../shared/components/choice-grid/choice-grid.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import {
   CONFIRM_ACCEPT_DESTRUCTIVE,
   CONFIRM_REJECT_BUTTON,
 } from '../../../shared/utils/confirm-buttons';
-
-interface KindOption {
-  readonly label: string;
-  readonly value: TopicKind;
-}
 
 /**
  * The academy's programme (#1563).
@@ -72,7 +68,7 @@ interface KindOption {
     ConfirmDialogModule,
     DialogModule,
     InputTextModule,
-    SelectButtonModule,
+    ChoiceGridComponent,
     SkeletonModule,
     Toast,
     Tooltip,
@@ -87,6 +83,8 @@ export class SyllabusComponent {
   private readonly fb = inject(FormBuilder);
   private readonly syllabus = inject(SyllabusService);
   private readonly academyService = inject(AcademyService);
+  /** The academy's modes (#1803): gi and no-gi here, kata and kumite in a karate one. */
+  private readonly trainingModes = inject(TrainingModesService);
   private readonly languageService = inject(LanguageService);
   private readonly translate = inject(TranslateService);
   private readonly confirmationService = inject(ConfirmationService);
@@ -97,6 +95,20 @@ export class SyllabusComponent {
   protected readonly positions = signal<readonly SyllabusTopic[]>([]);
   protected readonly saving = signal<boolean>(false);
   protected readonly seeding = signal<boolean>(false);
+
+  /**
+   * Whether the academy's martial art has a starter programme to copy
+   * (#1802). Empty until the art's first programme ships; the seed CTA would
+   * otherwise meet a 404.
+   */
+  protected readonly hasStarter = computed<boolean>(
+    () => (this.academyService.academy()?.syllabus_programmes?.length ?? 0) > 0,
+  );
+
+  /** "Start from the judo programme" — the programme the seed will copy (#1804). */
+  protected readonly starterKeys = computed<StarterProgrammeKeys>(() =>
+    starterProgrammeKeys(this.academyService.academy()?.syllabus_programmes?.[0] ?? ''),
+  );
   protected readonly dialogOpen = signal<boolean>(false);
 
   /** The topic being edited, or null while adding a new one. */
@@ -113,7 +125,7 @@ export class SyllabusComponent {
       nonNullable: true,
       validators: [Validators.required, Validators.maxLength(80)],
     }),
-    kind: this.fb.control<TopicKind>('both', {
+    kind: this.fb.control<TrainingMode>('both', {
       nonNullable: true,
       validators: [Validators.required],
     }),
@@ -243,29 +255,15 @@ export class SyllabusComponent {
       : this.translate.instant('academy.syllabus.countSplit', { inSeason, total: n });
   });
 
-  /**
-   * An explicit map, not `'academy.syllabus.kind.' + kind`: the i18n parity
-   * check cannot see a key built at runtime, and the day a kind is added this
-   * fails to compile until its label exists in both languages.
-   */
-  private readonly kindKeys: Record<TopicKind, string> = {
-    both: 'academy.syllabus.kind.both',
-    gi: 'academy.syllabus.kind.gi',
-    nogi: 'academy.syllabus.kind.nogi',
-  };
+  protected readonly kindOptions = this.trainingModes.topicOptions;
 
-  protected readonly kindLabels = computed<Record<TopicKind, string>>(() => {
-    this.languageService.currentLang(); // signal dep — recompute on toggle
-    return {
-      both: this.translate.instant(this.kindKeys.both),
-      gi: this.translate.instant(this.kindKeys.gi),
-      nogi: this.translate.instant(this.kindKeys.nogi),
-    };
-  });
+  protected setKind(kind: TrainingMode): void {
+    this.form.controls.kind.setValue(kind);
+    this.form.controls.kind.markAsDirty();
+  }
 
-  protected readonly kindOptions = computed<KindOption[]>(() =>
-    TOPIC_KINDS.map((value) => ({ value, label: this.kindLabels()[value] })),
-  );
+  /** "Heel hooks are no-gi…", "O-soto-gari is tachi-waza…" — the art's own example. */
+  protected readonly kindHintKey = this.trainingModes.hintKey;
 
   /**
    * Four headers for one dialog, because "New technique in Closed guard" is
@@ -292,9 +290,10 @@ export class SyllabusComponent {
   protected readonly namePlaceholder = computed<string>(() => {
     const editing = this.editing();
     const isPosition = editing !== null ? editing.parent_id === null : this.addingUnder() === null;
-    return isPosition
-      ? 'academy.syllabus.form.namePlaceholderPosition'
-      : 'academy.syllabus.form.namePlaceholderTechnique';
+    // In the academy's own art (#1808): "Ashi-waza" and "O-soto-gari" for judo.
+    const keys =
+      SYLLABUS_NAME_PLACEHOLDER_KEYS[this.academyService.academy()?.martial_art ?? 'bjj'];
+    return isPosition ? keys.position : keys.technique;
   });
 
   constructor() {
@@ -347,9 +346,16 @@ export class SyllabusComponent {
     this.expanded.set(next);
   }
 
-  /** The kind, said only when it narrows something — "both" is the default. */
-  protected kindChip(topic: SyllabusTopic): string | null {
-    return topic.kind === 'both' ? null : this.kindLabels()[topic.kind];
+  /**
+   * The kind, said only where it tells the reader something: on a position
+   * when it is not the default "both", on a technique when it differs from
+   * what its position already says. A judo programme would otherwise print
+   * TACHI-WAZA on a hundred rows (#1804) — while a "both" technique under a
+   * no-gi position still says so, because it widens what its siblings are.
+   */
+  protected kindChip(topic: SyllabusTopic, position?: SyllabusTopic): string | null {
+    const inherited = position?.kind ?? 'both';
+    return topic.kind === inherited ? null : this.trainingModes.labels()[topic.kind];
   }
 
   protected startAddingPosition(): void {
@@ -508,7 +514,7 @@ export class SyllabusComponent {
         next: () => {
           this.load();
           this.refreshAcademy();
-          this.toast('success', 'academy.syllabus.toast.seeded');
+          this.toast('success', this.starterKeys().seeded);
         },
         error: () =>
           this.toast(

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests\AcademyClass;
 
 use App\Authorization\Capability;
+use App\Enums\MartialArt;
 use App\Http\Requests\Concerns\AuthorizesAcademyCapability;
 use App\Http\Requests\Concerns\ValidatesAcademyClass;
 use Illuminate\Foundation\Http\FormRequest;
@@ -31,7 +32,12 @@ class StoreAcademyClassRequest extends FormRequest
      */
     public function rules(): array
     {
-        return $this->academyClassRules(required: true);
+        // `authorize()` has already required an active academy; the BJJ
+        // fallback answers the type system and is the column default.
+        return $this->academyClassRules(
+            required: true,
+            art: $this->user()?->activeAcademy()->martial_art ?? MartialArt::Bjj,
+        );
     }
 
     protected function failedAuthorization(): void

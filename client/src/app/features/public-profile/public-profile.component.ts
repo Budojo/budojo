@@ -13,7 +13,7 @@ import {
 } from '../../core/services/public-profile.service';
 import { BeltBadgeComponent } from '../../shared/components/belt-badge/belt-badge.component';
 import { Belt } from '../../core/services/athlete.service';
-import { BELT_KEYS } from '../../shared/utils/i18n-enum-keys';
+import { BeltLadderService } from '../../core/services/belt-ladder.service';
 import { LocaleDatePipe } from '../../shared/pipes/locale-date.pipe';
 
 type ViewState =
@@ -51,6 +51,7 @@ export class PublicProfileComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly publicProfileService = inject(PublicProfileService);
   private readonly translateService = inject(TranslateService);
+  private readonly beltLadder = inject(BeltLadderService);
 
   private readonly state$ = this.route.paramMap.pipe(
     switchMap((params): ReturnType<typeof this.handleLookup> => {
@@ -92,11 +93,10 @@ export class PublicProfileComponent {
    * i18n key concatenation (client/CLAUDE.md § i18n hard rules:
    * "Don't dynamically build translation keys with template strings").
    *
-   * Belt labels resolve through `BELT_KEYS` — the single static
-   * `Belt → key` mapping — so a typo in a belt slug fails at compile
-   * time (TypeScript narrows on the `Belt` union) instead of shipping
-   * green to prod and rendering the raw key in the timeline (cf.
-   * [[feedback_i18n_parity_doesnt_verify_templates]]).
+   * Belt labels resolve through `BeltLadderService` — explicit keys per
+   * martial art — so a typo in a belt slug fails at compile time
+   * (TypeScript narrows on the `Belt` union) instead of shipping green to
+   * prod and rendering the raw key in the timeline.
    */
   protected promotionLine(promotion: PublicProfilePromotion): string {
     if (promotion.kind === 'belt') {
@@ -112,7 +112,10 @@ export class PublicProfileComponent {
   }
 
   private beltLabel(belt: Belt): string {
-    return this.translateService.instant(BELT_KEYS[belt]);
+    // The viewer is always in the profile's academy (the endpoint 404s any
+    // other), so the viewer's ladder is the right one — the owner's academy,
+    // or on the athlete portal the athlete's own (#1813).
+    return this.beltLadder.label(belt);
   }
 
   /**

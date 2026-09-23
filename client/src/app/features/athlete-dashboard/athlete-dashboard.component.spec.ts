@@ -1,14 +1,17 @@
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { EMPTY } from 'rxjs';
 import { AthleteDashboardComponent } from './athlete-dashboard.component';
 import { AuthService } from '../../core/services/auth.service';
+import { AcademyService } from '../../core/services/academy.service';
 import type { User } from '../../core/services/auth.service';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideI18nTesting } from '../../../test-utils/i18n-test';
 
-function setup(opts: { cachedUser?: Partial<User> | null } = {}) {
+function setup(opts: { cachedUser?: Partial<User> | null; academyLoaded?: boolean } = {}) {
   const user = signal<User | null>((opts.cachedUser as User | null | undefined) ?? null);
   const loadCurrentUser = vi.fn(() => EMPTY);
   const logout = vi.fn();
@@ -18,6 +21,8 @@ function setup(opts: { cachedUser?: Partial<User> | null } = {}) {
     providers: [
       provideRouter([]),
       provideAnimationsAsync(),
+      provideHttpClient(),
+      provideHttpClientTesting(),
       {
         provide: AuthService,
         useValue: { user, loadCurrentUser, logout } as unknown as AuthService,
@@ -26,9 +31,12 @@ function setup(opts: { cachedUser?: Partial<User> | null } = {}) {
     ],
   });
 
+  if (opts.academyLoaded) {
+    TestBed.inject(AcademyService).mine.set({ id: 1, name: 'Dojo' } as never);
+  }
   const fixture = TestBed.createComponent(AthleteDashboardComponent);
   fixture.detectChanges();
-  return { fixture, loadCurrentUser };
+  return { fixture, loadCurrentUser, httpMock: TestBed.inject(HttpTestingController) };
 }
 
 const ATHLETE = {
@@ -136,5 +144,23 @@ describe('AthleteDashboardComponent (#610, M7 PR-D slice 1)', () => {
       expect(rail.querySelector('a[href="/dashboard/me/documents"]')).toBeNull();
       expect(rail.querySelector('a[href="/dashboard/me/profile"]')).toBeNull();
     });
+  });
+});
+
+describe('AthleteDashboardComponent — the academy the belts come from (#1813)', () => {
+  it("loads the athlete's own academy once, for its belt ladder", () => {
+    const { httpMock } = setup({ cachedUser: ATHLETE });
+
+    httpMock
+      .expectOne('/api/v1/me/academy')
+      .flush({ data: { id: 1, name: 'Dojo', martial_art: 'judo', grades: [] } });
+
+    expect(TestBed.inject(AcademyService).ladderAcademy()?.martial_art).toBe('judo');
+  });
+
+  it('does not ask again when the academy is already loaded', () => {
+    const { httpMock } = setup({ cachedUser: ATHLETE, academyLoaded: true });
+
+    httpMock.expectNone('/api/v1/me/academy');
   });
 });

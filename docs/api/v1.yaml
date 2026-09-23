@@ -3149,7 +3149,8 @@ paths:
       description: |
         The tree: positions in `sort_order`, each carrying its techniques as
         `children` in theirs. Empty on an academy that has not started one —
-        the editor then offers the shipped BJJ programme, or a blank first
+        the editor then offers the starter programme of the academy's
+        martial art (`Academy.syllabus_programmes`), or a blank first
         position.
 
         Requires `academy_settings_read`, which every membership role holds.
@@ -3211,14 +3212,30 @@ paths:
   /academy/syllabus/seed:
     post:
       tags: [academy]
-      summary: Start from the shipped BJJ programme (#1563)
+      summary: Start from a shipped starter programme (#1563, #1800)
       description: |
-        Copies the shipped programme into rows this academy owns — only while
-        it has no topics at all. Even one topic is a programme the academy
-        owns, never overwritten: a 409. No body.
+        Copies one of the starter programmes the academy's martial art offers
+        (`Academy.syllabus_programmes`) into rows this academy owns — only
+        while it has no topics at all. Even one topic is a programme the
+        academy owns, never overwritten: a 409.
+
+        `programme` may be omitted when the art offers exactly one; it is
+        required when it offers several (karate ships one per style). An art
+        whose first programme has not shipped yet answers 404.
 
         Requires `academy_settings_update`.
       operationId: syllabusSeed
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                programme:
+                  type: string
+                  description: A key from `Academy.syllabus_programmes`.
+                  example: bjj
       responses:
         '201':
           description: The programme was copied in
@@ -3240,12 +3257,20 @@ paths:
           $ref: '#/components/responses/Unauthenticated'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '404':
+          description: The academy's martial art has no starter programme yet
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
         '409':
           description: The academy already has a programme
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/MessageResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
 
   /academy/syllabus/{syllabusTopic}:
     patch:
@@ -3593,7 +3618,7 @@ paths:
                             id: { type: integer }
                             name: { type: string }
                             parent_name: { type: string, nullable: true }
-                            kind: { type: string, enum: [gi, nogi, both] }
+                            kind: { $ref: '#/components/schemas/TrainingMode' }
                             taught_times:
                               type: integer
                               description: How many evenings it was on the mat while they were on the roster.
@@ -3691,8 +3716,7 @@ paths:
                           nullable: true
                           description: The position it sits under.
                         kind:
-                          type: string
-                          enum: [gi, nogi, both]
+                          $ref: '#/components/schemas/TrainingMode'
                         reason:
                           type: string
                           enum: [never, thin, stale]
@@ -3751,9 +3775,14 @@ paths:
             default: 0
         - in: query
           name: kind
+          description: |
+            One of the academy's two `training_modes` (#1803) — `gi` or `nogi`
+            in BJJ, `kata` or `kumite` in karate. Never `both` or `other`:
+            every filter already admits `both`. A mode from another art is a
+            422.
           schema:
             type: string
-            enum: [gi, nogi]
+            enum: [gi, nogi, tachi-waza, ne-waza, kata, kumite, poomsae, kyorugi]
       responses:
         '200':
           description: The coverage report
@@ -3901,11 +3930,13 @@ paths:
         - name: sort_by
           in: query
           description: |
-            Column to sort by. `belt` is rank-aware on the full IBJJF scale
-            (kids: grey < yellow < orange < green; adults: white < blue <
-            purple < brown < black; senior: red-and-black < red-and-white <
-            red) via a SQL CASE expression — NOT a lexicographic
-            sort on the column value — and chains `stripes desc` + `last_name
+            Column to sort by. `belt` orders by rank in `Academy.grades` —
+            the academy's martial art's ladder (#1800): for BJJ, kids grey <
+            yellow < orange < green, adults white < blue < purple < brown <
+            black, senior red-and-black < red-and-white < red; in taekwondo
+            red is the 2nd kup and sorts below the poom and black — via a SQL
+            CASE expression, NOT a lexicographic sort on the column value. A
+            value outside the ladder sorts last ascending. It chains `stripes desc` + `last_name
             asc` as stable tiebreakers so two athletes at the same belt
             level always render in the same row order. `stripes` is not
             accepted as a primary sort (it's meaningful only as a within-belt
@@ -5934,18 +5965,27 @@ paths:
   /stats/athletes/age-bands:
     get:
       operationId: statsAthleteAgeBands
-      summary: IBJJF age-division histogram of the academy's athletes
+      summary: Age-division histogram of the academy's athletes, in its federation's divisions
       description: |
-        Returns all 13 canonical IBJJF age divisions in order (Mighty Mite
-        through Master 7), each with the count of athletes whose age today
-        falls in that division. Empty divisions are included with count 0 so
-        the frontend can render the full histogram without gap-filling.
-        Athletes with a NULL date_of_birth are excluded from band counts and
-        reported in the top-level `missing_dob` field.
+        Returns every age division of the academy's martial art, youngest
+        first (#1807), each with the count of active athletes in it. The
+        divisions are the federation's: IBJJF for BJJ (Mighty Mite through
+        Master 7), FIJLKAM's classes for judo and for karate (Bambini A
+        through Master / Master E), World Taekwondo's for taekwondo (Under 12,
+        Cadet, Junior, Under 30 through Over 65). An athlete's age is the one
+        they reach **this calendar year** — how all four federations class
+        athletes — not their age today. Empty divisions are included with
+        count 0 so the frontend can render the full histogram without
+        gap-filling. Athletes with a NULL date_of_birth are excluded from band
+        counts and reported in the top-level `missing_dob` field; athletes
+        younger than the youngest division count in `total` only.
+
+        The tables follow the federations' documents for 2026 and move when
+        a federation republishes its classes.
       tags: [Stats]
       responses:
         '200':
-          description: All 13 IBJJF age divisions in canonical order
+          description: Every age division of the academy's martial art, youngest first
           content:
             application/json:
               schema:
@@ -5963,20 +6003,12 @@ paths:
                           properties:
                             code:
                               type: string
-                              enum:
-                                - mighty_mite
-                                - pee_wee
-                                - junior
-                                - teen
-                                - juvenile
-                                - adult
-                                - master_1
-                                - master_2
-                                - master_3
-                                - master_4
-                                - master_5
-                                - master_6
-                                - master_7
+                              description: |
+                                The division, lower-case ASCII, from the
+                                martial art's registry — `mighty_mite`,
+                                `esordienti_b`, `under_30`. The set depends
+                                on the academy's `martial_art`.
+                              example: esordienti_b
                             category: { type: string, enum: [kids, adults] }
                             min: { type: integer, minimum: 0 }
                             max: { type: integer, nullable: true }
@@ -6593,14 +6625,32 @@ paths:
             Academy snapshot for the linked user — name, contacts, address,
             logo, `training_days`, `owner`, and `carnet_entry_unit` (#1576,
             see `CarnetEntryUnit`) so the portal can say what one entry of the
-            athlete's carnet pays for.
+            athlete's carnet pays for. Also the academy's `martial_art`, its
+            ladder (`grades`) and `training_modes` (#1813), built by the same
+            code as the owner's `/academy`, so the portal draws belts in the
+            academy's words. The owner-only `martial_art_locked` and
+            `syllabus_programmes` are not sent.
           content:
             application/json:
               schema:
                 type: object
                 required: [data]
                 properties:
-                  data: { type: object }
+                  data:
+                    type: object
+                    properties:
+                      martial_art:
+                        $ref: '#/components/schemas/MartialArt'
+                      grades:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Grade'
+                      training_modes:
+                        type: array
+                        minItems: 2
+                        maxItems: 2
+                        items:
+                          $ref: '#/components/schemas/TrainingMode'
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '404':
@@ -7103,15 +7153,15 @@ components:
     Belt:
       type: string
       description: |-
-        IBJJF belt ranks on a single linear scale.
-          - Youth: `grey`, `yellow`, `orange`, `green` (added in #230).
-          - Adult: `white`, `blue`, `purple`, `brown`, `black`.
-          - Senior beyond black: `red-and-black` (7° grau, coral),
-            `red-and-white` (8° grau, coral), `red` (9°/10° grau, grand
-            master). Added in #229.
+        The vocabulary of belt colours (#1800) — only the colours. Which of
+        them an academy awards, in what order, and with what stripe cap is
+        its martial art's ladder: `Academy.grades`. A value may be a colour
+        and still be refused for an academy whose art does not award it.
 
-        Per-belt stripes cap: `black` allows 0–6 (graus 1°–6° within the
-        black-belt phase); every other belt caps at 0–4.
+        Two-colour belts are `<upper>-and-<lower>`: the coral pair
+        (`red-and-black`, `red-and-white`, #229) and the half-belts (#1800) —
+        kids' steps in judo and karate, intermediate kup in taekwondo, and
+        `black-and-red`, taekwondo's poom.
       enum:
         [
           grey,
@@ -7125,8 +7175,50 @@ components:
           black,
           red-and-black,
           red-and-white,
-          red
+          red,
+          white-and-yellow,
+          yellow-and-orange,
+          orange-and-green,
+          green-and-blue,
+          blue-and-brown,
+          yellow-and-green,
+          blue-and-red,
+          black-and-red
         ]
+
+    MartialArt:
+      type: string
+      description: |
+        What an academy teaches (#1800). Set at creation, changeable only while
+        the academy has no athletes, classes, lessons or programme topics
+        (soft-deleted ones included).
+      enum: [bjj, judo, karate, taekwondo]
+
+    Grade:
+      type: object
+      description: |
+        One rung of the academy's ladder (#1800), in rank order in
+        `Academy.grades`. `athletes.stripes` stores a plain 0…`max_stripes`;
+        `count` says what it counts and `first` is the number its first step
+        is shown as — a FIJLKAM black belt is `max_stripes: 4, count: dan,
+        first: 1`, stored 0–4 and shown 1°–5° dan.
+      required: [belt, max_stripes, count, first, kids]
+      properties:
+        belt:
+          $ref: '#/components/schemas/Belt'
+        max_stripes:
+          type: integer
+          minimum: 0
+          maximum: 10
+        count:
+          type: string
+          enum: [stripe, dan, poom]
+        first:
+          type: integer
+          minimum: 0
+        kids:
+          type: boolean
+          description: A children's step. Informational — nothing validates on it.
 
     AthleteStatus:
       type: string
@@ -7183,8 +7275,8 @@ components:
           allOf:
             - $ref: '#/components/schemas/Belt'
           nullable: true
-        from_stripes: { type: integer, minimum: 0, maximum: 6, nullable: true }
-        to_stripes: { type: integer, minimum: 0, maximum: 6, nullable: true }
+        from_stripes: { type: integer, minimum: 0, maximum: 10, nullable: true }
+        to_stripes: { type: integer, minimum: 0, maximum: 10, nullable: true }
         belt_at_event:
           $ref: '#/components/schemas/Belt'
         recorded_at: { type: string, format: date-time }
@@ -7548,12 +7640,16 @@ components:
 
     AcademyCreateRequest:
       type: object
-      required: [name]
+      required: [name, martial_art]
       properties:
         name:
           type: string
           maxLength: 255
           example: Gracie Barra Lisboa
+        martial_art:
+          allOf:
+            - $ref: '#/components/schemas/MartialArt'
+          description: Required, never defaulted (#1800).
         address:
           allOf:
             - $ref: '#/components/schemas/Address'
@@ -7588,6 +7684,13 @@ components:
           minLength: 1
           maxLength: 255
           example: Gracie Barra Lisboa Centro
+        martial_art:
+          allOf:
+            - $ref: '#/components/schemas/MartialArt'
+          description: |
+            Changeable only while `Academy.martial_art_locked` is false (#1800);
+            otherwise a different value is a 422 on this field. The value the
+            academy already has is always accepted. `null` is refused.
         phone_country_code:
           type: string
           nullable: true
@@ -7773,6 +7876,10 @@ components:
           season_start_month,
           season_start,
           season_label,
+          martial_art,
+          grades,
+          martial_art_locked,
+          syllabus_programmes,
           phone_country_code,
           phone_national_number,
           website,
@@ -7957,6 +8064,41 @@ components:
             positions excluded. Enough for the academy page to say "84
             techniques" or "not set up yet" without a second request.
           example: 84
+        martial_art:
+          $ref: '#/components/schemas/MartialArt'
+        grades:
+          type: array
+          description: |
+            The martial art's ladder, lowest first (#1800). The SPA picks, sorts
+            and caps belts from this and keeps no copy of its own.
+          items:
+            $ref: '#/components/schemas/Grade'
+        training_modes:
+          type: array
+          description: |
+            The martial art's two training modes, in picker order (#1803). A
+            class, a topic or a coverage filter uses these, plus `both` (and
+            `other` for a class).
+          minItems: 2
+          maxItems: 2
+          items:
+            $ref: '#/components/schemas/TrainingMode'
+          example: [gi, nogi]
+        martial_art_locked:
+          type: boolean
+          description: |
+            True once the academy has athletes, classes, lessons or programme
+            topics — soft-deleted ones included. While true, `PATCH` refuses a
+            different `martial_art`.
+        syllabus_programmes:
+          type: array
+          description: |
+            Starter programme keys the art offers, in offer order (#1800).
+            Empty until its first one ships, and then the programme page
+            offers no seed button.
+          items:
+            type: string
+          example: [bjj]
         schedules:
           type: array
           description: |
@@ -7979,15 +8121,18 @@ components:
         carnet the academy has sold.
       example: lesson
 
-    ClassKind:
+    TrainingMode:
       type: string
-      enum: [gi, nogi, both, other]
+      enum: [gi, nogi, tachi-waza, ne-waza, kata, kumite, poomsae, kyorugi, both, other]
       description: |
-        What a class is trained in (#1562). A dimension of the class, not a
-        tag on a lesson — heel hooks live in no-gi, lapel guards in gi, and a
-        coverage chart that mixes the two says a number that is quietly
-        wrong. `other` is what is on the timetable without being jiu-jitsu
-        in a kimono or out of one: conditioning, wrestling, a yoga slot.
+        What a class, a lesson or a programme topic is trained in (#1562,
+        #1563, #1803). Every martial art splits the same way, two modes and
+        a middle: BJJ `gi` / `nogi`, judo `tachi-waza` / `ne-waza`, karate
+        `kata` / `kumite`, taekwondo `poomsae` / `kyorugi`. An academy may use
+        only its own pair (`Academy.training_modes`) plus `both`; a class may
+        also be `other` (conditioning, a yoga slot), a topic may not — a
+        topic is the martial art by definition. Anything else is a 422.
+        Replaces `ClassKind` and `TopicKind` with the same stored values.
 
     AcademyClassPayload:
       type: object
@@ -8028,7 +8173,7 @@ components:
             model a rule about how long people train.
           example: 60
         kind:
-          $ref: '#/components/schemas/ClassKind'
+          $ref: '#/components/schemas/TrainingMode'
 
     AcademyClass:
       type: object
@@ -8062,7 +8207,7 @@ components:
           nullable: true
           example: 60
         kind:
-          $ref: '#/components/schemas/ClassKind'
+          $ref: '#/components/schemas/TrainingMode'
 
     LessonTopic:
       type: object
@@ -8077,7 +8222,7 @@ components:
           type: string
           example: Armbar
         kind:
-          $ref: '#/components/schemas/TopicKind'
+          $ref: '#/components/schemas/TrainingMode'
         parent_id:
           type: integer
           format: int64
@@ -8128,7 +8273,7 @@ components:
           nullable: true
           example: '19:00'
         kind:
-          $ref: '#/components/schemas/ClassKind'
+          $ref: '#/components/schemas/TrainingMode'
         notes:
           type: string
           nullable: true
@@ -8166,8 +8311,10 @@ components:
         kind:
           type: string
           nullable: true
-          enum: [gi, nogi]
-          description: The filter in force, or null for the whole programme.
+          enum: [gi, nogi, tachi-waza, ne-waza, kata, kumite, poomsae, kyorugi]
+          description: |
+            The filter in force — one of the academy's `training_modes`
+            (#1803) — or null for the whole programme.
         totals:
           type: object
           required: [in_scope, covered, thin, missing, percentage]
@@ -8196,7 +8343,7 @@ components:
             properties:
               id: { type: integer, format: int64 }
               name: { type: string }
-              kind: { $ref: '#/components/schemas/TopicKind' }
+              kind: { $ref: '#/components/schemas/TrainingMode' }
               in_scope: { type: integer }
               covered: { type: integer }
               thin: { type: integer }
@@ -8247,16 +8394,7 @@ components:
           type: string
           nullable: true
           example: Closed guard
-        kind: { $ref: '#/components/schemas/TopicKind' }
-
-    TopicKind:
-      type: string
-      enum: [gi, nogi, both]
-      description: |
-        What a syllabus topic is trained in (#1563). Three cases and not
-        `ClassKind`'s four: a topic is jiu-jitsu by definition, so there is
-        no `other` for it to be. A technique's kind defaults to its
-        position's in the shipped seed; the owner can set either.
+        kind: { $ref: '#/components/schemas/TrainingMode' }
 
     SyllabusTopicPayload:
       type: object
@@ -8271,7 +8409,7 @@ components:
           maxLength: 80
           example: Armbar
         kind:
-          $ref: '#/components/schemas/TopicKind'
+          $ref: '#/components/schemas/TrainingMode'
         parent_id:
           type: integer
           format: int64
@@ -8294,7 +8432,7 @@ components:
           maxLength: 80
           example: Guardia chiusa
         kind:
-          $ref: '#/components/schemas/TopicKind'
+          $ref: '#/components/schemas/TrainingMode'
         in_season:
           type: boolean
         sort_order:
@@ -8324,7 +8462,7 @@ components:
           maxLength: 80
           example: Closed guard
         kind:
-          $ref: '#/components/schemas/TopicKind'
+          $ref: '#/components/schemas/TrainingMode'
         in_season:
           type: boolean
           description: In scope for the current season — the coverage denominator.
@@ -8462,7 +8600,8 @@ components:
         stripes:
           type: integer
           minimum: 0
-          maximum: 4
+          maximum: 10
+          description: Global ceiling; the cap for the athlete's grade is in `Academy.grades` (#1800).
           default: 0
         status:
           $ref: '#/components/schemas/AthleteStatus'
@@ -8557,7 +8696,8 @@ components:
         stripes:
           type: integer
           minimum: 0
-          maximum: 4
+          maximum: 10
+          description: Global ceiling; the cap for the athlete's grade is in `Academy.grades` (#1800).
         status:
           $ref: '#/components/schemas/AthleteStatus'
         joined_at:
@@ -8746,7 +8886,8 @@ components:
         stripes:
           type: integer
           minimum: 0
-          maximum: 4
+          maximum: 10
+          description: Global ceiling; the cap for the athlete's grade is in `Academy.grades` (#1800).
         status:
           $ref: '#/components/schemas/AthleteStatus'
         joined_at:
@@ -9207,8 +9348,8 @@ components:
           description: Null on the athlete's first belt assignment. `kind=belt` only.
         to_belt:
           $ref: '#/components/schemas/Belt'
-        from_stripes: { type: integer, minimum: 0, maximum: 6 }
-        to_stripes: { type: integer, minimum: 0, maximum: 6 }
+        from_stripes: { type: integer, minimum: 0, maximum: 10 }
+        to_stripes: { type: integer, minimum: 0, maximum: 10 }
         belt_at_event:
           allOf:
             - $ref: '#/components/schemas/Belt'
@@ -9714,11 +9855,11 @@ components:
       properties:
         id: { type: integer, format: int64 }
         kind: { $ref: '#/components/schemas/PublicProfilePromotionKind' }
-        from_belt: { type: string, nullable: true, description: 'IBJJF belt slug; null on stripe-only rows.' }
-        to_belt: { type: string, nullable: true, description: 'IBJJF belt slug; null on stripe-only rows.' }
-        from_stripes: { type: integer, nullable: true, minimum: 0, maximum: 6 }
-        to_stripes: { type: integer, nullable: true, minimum: 0, maximum: 6 }
-        belt_at_event: { type: string, description: 'IBJJF belt slug at the moment the event was recorded. Always present — the column is NOT NULL on every promotion row.' }
+        from_belt: { type: string, nullable: true, description: 'Belt slug; null on stripe-only rows.' }
+        to_belt: { type: string, nullable: true, description: 'Belt slug; null on stripe-only rows.' }
+        from_stripes: { type: integer, nullable: true, minimum: 0, maximum: 10 }
+        to_stripes: { type: integer, nullable: true, minimum: 0, maximum: 10 }
+        belt_at_event: { type: string, description: 'Belt slug at the moment the event was recorded. Always present — the column is NOT NULL on every promotion row.' }
         recorded_at: { type: string, format: date-time }
 
     PublicProfileAchievementKind:

@@ -6,9 +6,11 @@ namespace App\Http\Requests\Academy;
 
 use App\Authorization\Capability;
 use App\Enums\CarnetEntryUnit;
+use App\Enums\MartialArt;
 use App\Http\Requests\Concerns\AuthorizesAcademyCapability;
 use App\Http\Requests\Concerns\ValidatesAddress;
 use App\Http\Requests\Concerns\ValidatesPhonePair;
+use App\Support\MartialArt\MartialArtLock;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -47,6 +49,9 @@ class UpdateAcademyRequest extends FormRequest
     {
         return [
             'name' => ['sometimes', 'required', 'string', 'max:255'],
+            // Changeable only while nothing in the academy is shaped by it —
+            // see `validateMartialArtLock()` below and `MartialArtLock`.
+            'martial_art' => ['sometimes', 'required', Rule::enum(MartialArt::class)],
             // Phone is a *pair* (#161, mirrors the athlete shape from #75):
             // either both null or both filled, with a libphonenumber-validated
             // combination. We do NOT add `sometimes` on these two on purpose
@@ -147,6 +152,7 @@ class UpdateAcademyRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $this->validatePhonePairWithLibphonenumber($validator);
+        $validator->after(fn (Validator $validator) => $this->validateMartialArtLock($validator));
     }
 
     /**
@@ -161,5 +167,26 @@ class UpdateAcademyRequest extends FormRequest
         throw new HttpResponseException(
             response()->json(['message' => 'Forbidden.'], 403),
         );
+    }
+
+    /**
+     * Refuses a *change* of martial art once the academy has anything shaped by
+     * the old one (#1800). Sending the value it already has is accepted: a
+     * form that posts every field should not fail on the one it did not touch.
+     */
+    private function validateMartialArtLock(Validator $validator): void
+    {
+        $requested = MartialArt::tryFrom(\is_string($this->input('martial_art')) ? $this->input('martial_art') : '');
+        $academy = $this->user()?->activeAcademy();
+        if ($requested === null || $academy === null || $requested === $academy->martial_art) {
+            return;
+        }
+
+        if (MartialArtLock::isLocked($academy)) {
+            $validator->errors()->add(
+                'martial_art',
+                'The martial art is set once the academy has athletes, classes, lessons or a programme.',
+            );
+        }
     }
 }

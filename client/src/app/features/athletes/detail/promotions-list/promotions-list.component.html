@@ -81,15 +81,19 @@
             @case ('stripe') {
               <div class="promotions__transition" data-cy="promotion-stripe">
                 @if (p.belt_at_event) {
+                  <!-- Context only: the count is the row's own subject, below. -->
                   <app-belt-badge [belt]="p.belt_at_event" />
                 }
                 <span class="promotions__stripe-count">
-                  {{ p.from_stripes }} <i class="pi pi-arrow-right" aria-hidden="true"></i>
-                  {{ p.to_stripes }}
+                  {{ stripeCount(p, p.from_stripes) }}
+                  <i class="pi pi-arrow-right" aria-hidden="true"></i>
+                  {{ stripeCount(p, p.to_stripes) }}
                 </span>
-                <span class="promotions__stripe-label">
-                  {{ 'athletes.detail.promotions.stripes' | translate }}
-                </span>
+                @if (countsStripes(p)) {
+                  <span class="promotions__stripe-label">
+                    {{ 'athletes.detail.promotions.stripes' | translate }}
+                  </span>
+                }
               </div>
             }
           }

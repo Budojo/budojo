@@ -1,0 +1,244 @@
+[
+  {
+    "name": "Ukemi",
+    "kind": "both",
+    "techniques": [
+      "Mae-ukemi",
+      "Ushiro-ukemi",
+      "Yoko-ukemi",
+      "Mae-mawari-ukemi"
+    ]
+  },
+  {
+    "name": "Kumi-kata and tai-sabaki",
+    "kind": "tachi-waza",
+    "techniques": [
+      "Shizentai and jigotai",
+      "Kumi-kata",
+      "Ayumi-ashi",
+      "Tsugi-ashi",
+      "Tai-sabaki",
+      "Happo-no-kuzushi",
+      "Tsukuri and kake"
+    ]
+  },
+  {
+    "name": "Te-waza",
+    "kind": "tachi-waza",
+    "techniques": [
+      "Seoi-nage",
+      "Ippon-seoi-nage",
+      "Seoi-otoshi",
+      "Tai-otoshi",
+      "Kata-guruma",
+      "Sukui-nage",
+      "Obi-otoshi",
+      "Uki-otoshi",
+      "Sumi-otoshi",
+      "Yama-arashi",
+      "Obi-tori-gaeshi",
+      "Morote-gari",
+      "Kuchiki-taoshi",
+      "Kibisu-gaeshi",
+      "Uchi-mata-sukashi",
+      "Ko-uchi-gaeshi"
+    ]
+  },
+  {
+    "name": "Koshi-waza",
+    "kind": "tachi-waza",
+    "techniques": [
+      "Uki-goshi",
+      "O-goshi",
+      "Koshi-guruma",
+      "Tsurikomi-goshi",
+      "Sode-tsurikomi-goshi",
+      "Harai-goshi",
+      "Tsuri-goshi",
+      "Hane-goshi",
+      "Utsuri-goshi",
+      "Ushiro-goshi"
+    ]
+  },
+  {
+    "name": "Ashi-waza",
+    "kind": "tachi-waza",
+    "techniques": [
+      "De-ashi-harai",
+      "Hiza-guruma",
+      "Sasae-tsurikomi-ashi",
+      "O-soto-gari",
+      "O-uchi-gari",
+      "Ko-soto-gari",
+      "Ko-uchi-gari",
+      "Okuri-ashi-harai",
+      "Uchi-mata",
+      "Ko-soto-gake",
+      "Ashi-guruma",
+      "Harai-tsurikomi-ashi",
+      "O-guruma",
+      "O-soto-guruma",
+      "O-soto-otoshi",
+      "Tsubame-gaeshi",
+      "O-soto-gaeshi",
+      "O-uchi-gaeshi",
+      "Hane-goshi-gaeshi",
+      "Harai-goshi-gaeshi",
+      "Uchi-mata-gaeshi"
+    ]
+  },
+  {
+    "name": "Ma-sutemi-waza",
+    "kind": "tachi-waza",
+    "techniques": [
+      "Tomoe-nage",
+      "Sumi-gaeshi",
+      "Hikikomi-gaeshi",
+      "Tawara-gaeshi",
+      "Ura-nage"
+    ]
+  },
+  {
+    "name": "Yoko-sutemi-waza",
+    "kind": "tachi-waza",
+    "techniques": [
+      "Yoko-otoshi",
+      "Tani-otoshi",
+      "Hane-makikomi",
+      "Soto-makikomi",
+      "Uchi-makikomi",
+      "Uki-waza",
+      "Yoko-wakare",
+      "Yoko-guruma",
+      "Yoko-gake",
+      "Daki-wakare",
+      "O-soto-makikomi",
+      "Uchi-mata-makikomi",
+      "Harai-makikomi",
+      "Ko-uchi-makikomi",
+      "Kani-basami (prohibited in shiai)",
+      "Kawazu-gake (prohibited in shiai)"
+    ]
+  },
+  {
+    "name": "Renraku-waza and kaeshi-waza",
+    "kind": "tachi-waza",
+    "techniques": [
+      "Renraku-waza — forward into forward",
+      "Renraku-waza — backward into forward",
+      "Renraku-waza — forward into backward",
+      "Kaeshi-waza — against forward throws",
+      "Kaeshi-waza — against backward throws"
+    ]
+  },
+  {
+    "name": "Osaekomi-waza",
+    "kind": "ne-waza",
+    "techniques": [
+      "Kesa-gatame",
+      "Kuzure-kesa-gatame",
+      "Ushiro-kesa-gatame",
+      "Kata-gatame",
+      "Kami-shiho-gatame",
+      "Kuzure-kami-shiho-gatame",
+      "Yoko-shiho-gatame",
+      "Tate-shiho-gatame",
+      "Uki-gatame",
+      "Ura-gatame"
+    ]
+  },
+  {
+    "name": "Shime-waza",
+    "kind": "ne-waza",
+    "techniques": [
+      "Nami-juji-jime",
+      "Gyaku-juji-jime",
+      "Kata-juji-jime",
+      "Hadaka-jime",
+      "Okuri-eri-jime",
+      "Kataha-jime",
+      "Katate-jime",
+      "Ryote-jime",
+      "Sode-guruma-jime",
+      "Tsukkomi-jime",
+      "Sankaku-jime",
+      "Do-jime (prohibited in shiai)"
+    ]
+  },
+  {
+    "name": "Kansetsu-waza",
+    "kind": "ne-waza",
+    "techniques": [
+      "Ude-garami",
+      "Juji-gatame",
+      "Ude-gatame",
+      "Hiza-gatame",
+      "Waki-gatame",
+      "Hara-gatame",
+      "Ashi-gatame",
+      "Te-gatame",
+      "Sankaku-gatame",
+      "Ashi-garami (prohibited in shiai)"
+    ]
+  },
+  {
+    "name": "Ne-waza — transitions and turnovers",
+    "kind": "ne-waza",
+    "techniques": [
+      "From tachi-waza into ne-waza",
+      "Turning the turtle",
+      "Passing the legs",
+      "Working from the guard",
+      "Escaping osaekomi-waza",
+      "Defending shime-waza and kansetsu-waza"
+    ]
+  },
+  {
+    "name": "Randori and shiai",
+    "kind": "both",
+    "techniques": [
+      {
+        "name": "Uchi-komi",
+        "kind": "tachi-waza"
+      },
+      {
+        "name": "Nage-komi",
+        "kind": "tachi-waza"
+      },
+      "Yakusoku-geiko",
+      "Kakari-geiko",
+      {
+        "name": "Tachi-waza randori",
+        "kind": "tachi-waza"
+      },
+      {
+        "name": "Ne-waza randori",
+        "kind": "ne-waza"
+      },
+      {
+        "name": "Grip fighting",
+        "kind": "tachi-waza"
+      },
+      "Shiai rules and scoring"
+    ]
+  },
+  {
+    "name": "Kata",
+    "kind": "both",
+    "techniques": [
+      {
+        "name": "Nage-no-kata",
+        "kind": "tachi-waza"
+      },
+      {
+        "name": "Katame-no-kata",
+        "kind": "ne-waza"
+      },
+      "Ju-no-kata",
+      "Kime-no-kata",
+      "Kodokan-goshin-jutsu",
+      "Itsutsu-no-kata",
+      "Koshiki-no-kata"
+    ]
+  }
+]

@@ -33,6 +33,7 @@ it('creates an academy for an authenticated user', function (): void {
 
     $this->postJson('/api/v1/academy', [
         'name' => 'Gracie Barra Roma',
+        'martial_art' => 'bjj',
         'address' => validAddressPayload(),
     ])
         ->assertCreated()
@@ -58,7 +59,7 @@ it('creates an academy without an address (address is optional)', function (): v
     $user = User::factory()->create();
     Sanctum::actingAs($user);
 
-    $this->postJson('/api/v1/academy', ['name' => 'Address-less Academy'])
+    $this->postJson('/api/v1/academy', ['name' => 'Address-less Academy', 'martial_art' => 'bjj'])
         ->assertCreated()
         ->assertJsonPath('data.address', null);
 });
@@ -68,7 +69,7 @@ it('returns 409 when user already has an academy', function (): void {
     Academy::factory()->create(['user_id' => $user->id]);
     Sanctum::actingAs($user);
 
-    $this->postJson('/api/v1/academy', ['name' => 'Another Academy'])
+    $this->postJson('/api/v1/academy', ['name' => 'Another Academy', 'martial_art' => 'bjj'])
         ->assertConflict();
 });
 
@@ -81,7 +82,7 @@ it('returns 422 when name is missing', function (): void {
 });
 
 it('returns 401 when creating academy without auth', function (): void {
-    $this->postJson('/api/v1/academy', ['name' => 'Test Academy'])
+    $this->postJson('/api/v1/academy', ['name' => 'Test Academy', 'martial_art' => 'bjj'])
         ->assertUnauthorized();
 });
 
@@ -303,6 +304,7 @@ it('persists training_days on POST /academy as an ordered list of weekday ints (
 
     $this->postJson('/api/v1/academy', [
         'name' => 'Eagles BJJ',
+        'martial_art' => 'bjj',
         // Carbon convention: 0=Sun … 6=Sat. Tue/Thu/Sat = [2,4,6].
         'training_days' => [2, 4, 6],
     ])

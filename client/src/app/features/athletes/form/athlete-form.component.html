@@ -129,21 +129,23 @@
               />
             </app-budojo-form-field>
 
-            <app-budojo-form-field
-              class="athlete-form__field--short"
-              [label]="'athletes.form.label.stripes' | translate"
-              [required]="true"
-              controlId="stripes"
-            >
-              <p-select
-                inputId="stripes"
-                [options]="stripesOptions()"
-                formControlName="stripes"
-                optionLabel="label"
-                optionValue="value"
-                appendTo="body"
-              />
-            </app-budojo-form-field>
+            @if (showStripes()) {
+              <app-budojo-form-field
+                class="athlete-form__field--short"
+                [label]="'athletes.form.label.stripes' | translate"
+                [required]="true"
+                controlId="stripes"
+              >
+                <p-select
+                  inputId="stripes"
+                  [options]="stripesOptions()"
+                  formControlName="stripes"
+                  optionLabel="label"
+                  optionValue="value"
+                  appendTo="body"
+                />
+              </app-budojo-form-field>
+            }
 
             <app-budojo-form-field
               class="athlete-form__field--medium"

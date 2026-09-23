@@ -12,15 +12,17 @@ import { SelectButtonModule } from 'primeng/selectbutton';
 import { SkeletonModule } from 'primeng/skeleton';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { AcademyService } from '../../../core/services/academy.service';
+import { AcademyService, TrainingMode } from '../../../core/services/academy.service';
 import { LanguageService } from '../../../core/services/language.service';
 import { StatsService, SyllabusCoverage } from '../../../core/services/stats.service';
+import { TrainingModesService } from '../../../core/services/training-modes.service';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { ErrorStateComponent } from '../../../shared/components/error-state/error-state.component';
 import { relativeDay } from '../../../shared/utils/relative-day';
 import { localeFor } from '../../../shared/utils/locale';
 
-type KindFilter = 'all' | 'gi' | 'nogi';
+/** Everything, or one of the academy's two modes — never `both`, which every filter admits. */
+type KindFilter = 'all' | TrainingMode;
 
 /**
  * The furthest back the report will go, mirroring `SyllabusCoverageRequest`'s
@@ -69,6 +71,7 @@ interface FilterOption {
 export class StatsSyllabusComponent {
   private readonly stats = inject(StatsService);
   private readonly academyService = inject(AcademyService);
+  private readonly trainingModes = inject(TrainingModesService);
   private readonly languageService = inject(LanguageService);
   private readonly translate = inject(TranslateService);
 
@@ -113,11 +116,21 @@ export class StatsSyllabusComponent {
 
   protected readonly kindOptions = computed<FilterOption[]>(() => {
     this.languageService.currentLang(); // signal dep — recompute on toggle
+    const labels = this.trainingModes.labels();
     return [
       { label: this.translate.instant('stats.syllabus.filter.all'), value: 'all' },
-      { label: this.translate.instant('stats.syllabus.filter.gi'), value: 'gi' },
-      { label: this.translate.instant('stats.syllabus.filter.nogi'), value: 'nogi' },
+      ...this.trainingModes.modes().map((mode) => ({ label: labels[mode], value: mode })),
     ];
+  });
+
+  /** "Count gi, no-gi, or everything" — or kata and kumite, in the academy's own words. */
+  protected readonly filterAria = computed<string>(() => {
+    const labels = this.trainingModes.labels();
+    const [a, b] = this.trainingModes.modes();
+    return this.translate.instant('stats.syllabus.filter.aria', {
+      a: labels[a].toLocaleLowerCase(),
+      b: labels[b].toLocaleLowerCase(),
+    });
   });
 
   /**

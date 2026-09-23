@@ -3,10 +3,11 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideRouter } from '@angular/router';
-import { ConfirmationService } from 'primeng/api';
-import { AcademyService } from '../../../core/services/academy.service';
+import { ConfirmationService, MessageService } from 'primeng/api';
+import { AcademyService, MartialArt } from '../../../core/services/academy.service';
 import { SyllabusTopic } from '../../../core/services/syllabus.service';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
+import { TRAINING_MODE_FIXTURES } from '../../../../test-utils/ladder-test';
 import { SyllabusComponent } from './syllabus.component';
 
 const SYLLABUS_URL = '/api/v1/academy/syllabus';
@@ -27,7 +28,8 @@ const CROSS_COLLAR = topic({ id: 12, parent_id: 1, name: 'Cross collar choke', k
 const CLOSED_GUARD = topic({ id: 1, name: 'Closed guard', children: [ARMBAR, CROSS_COLLAR] });
 const K_GUARD = topic({ id: 2, name: 'K guard', kind: 'nogi', sort_order: 1, children: [] });
 
-function setup() {
+/** The martial art's starter programmes, as `Academy.syllabus_programmes` sends them (#1802). */
+function setup(starterProgrammes: string[] = ['bjj'], art: MartialArt = 'bjj') {
   TestBed.configureTestingModule({
     imports: [SyllabusComponent],
     providers: [
@@ -37,6 +39,17 @@ function setup() {
       provideNoopAnimations(),
       ...provideI18nTesting(),
     ],
+  });
+
+  TestBed.inject(AcademyService).academy.set({
+    id: 1,
+    name: 'Test',
+    slug: 'test',
+    address: null,
+    logo_url: null,
+    martial_art: art,
+    training_modes: TRAINING_MODE_FIXTURES[art],
+    syllabus_programmes: starterProgrammes,
   });
 
   const fixture = TestBed.createComponent(SyllabusComponent);
@@ -122,6 +135,37 @@ describe('SyllabusComponent (#1563)', () => {
     expect(el.querySelector('[data-cy="syllabus-topic-12"] .chip')?.textContent?.trim()).toBe('Gi');
   });
 
+  it("does not repeat a position's kind on each of its techniques (#1804)", () => {
+    const LEG_LOCKS = topic({
+      id: 3,
+      name: 'Leg locks',
+      kind: 'nogi',
+      sort_order: 2,
+      children: [
+        topic({ id: 31, parent_id: 3, name: 'Heel hook', kind: 'nogi' }),
+        topic({ id: 32, parent_id: 3, name: 'Kneebar', kind: 'both' }),
+        topic({ id: 33, parent_id: 3, name: 'Ezekiel from the leg', kind: 'gi' }),
+      ],
+    });
+    const { fixture, httpMock } = setup();
+    flushTree(httpMock, [LEG_LOCKS]);
+    fixture.detectChanges();
+    (fixture.nativeElement.querySelector('[data-cy="syllabus-toggle-3"]') as HTMLElement).click();
+    fixture.detectChanges();
+
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('[data-cy="syllabus-position-3"] .chip')?.textContent?.trim()).toBe(
+      'No-gi',
+    );
+    expect(el.querySelector('[data-cy="syllabus-topic-31"] .chip')).toBeNull();
+    // Different from its position: that is worth saying, "both" included —
+    // otherwise it would read as no-gi like its siblings.
+    expect(el.querySelector('[data-cy="syllabus-topic-32"] .chip')?.textContent?.trim()).toBe(
+      'Gi and no-gi',
+    );
+    expect(el.querySelector('[data-cy="syllabus-topic-33"] .chip')?.textContent?.trim()).toBe('Gi');
+  });
+
   it('counts the techniques in the header, positions excluded', () => {
     const { fixture, httpMock } = setup();
     flushTree(httpMock, [CLOSED_GUARD, K_GUARD]);
@@ -145,6 +189,29 @@ describe('SyllabusComponent (#1563)', () => {
     expect(el.querySelector('[data-cy="syllabus-tree"]')).toBeNull();
     // Not two loudest buttons for one job: the header CTA yields to the empty state.
     expect(el.querySelector('[data-cy="syllabus-add"]')).toBeNull();
+  });
+
+  it('offers only a blank start while the martial art has no starter programme (#1802)', () => {
+    const { fixture, component, httpMock } = setup([]);
+    flushTree(httpMock, []);
+    fixture.detectChanges();
+
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('[data-cy="syllabus-empty"]')?.textContent).toContain(
+      'The starter programme for this martial art is not ready yet.',
+    );
+    // The seed would meet a 404, so nothing offers it, not even as a secondary.
+    expect(el.querySelector('[data-cy="syllabus-empty-secondary"]')).toBeNull();
+
+    const cta = el.querySelector<HTMLButtonElement>('[data-cy="syllabus-empty-cta"] button');
+    expect(cta?.textContent?.trim()).toBe('Write my programme');
+    cta!.click();
+    fixture.detectChanges();
+
+    // The new-position dialog, not a seed.
+    expect(component['dialogOpen']()).toBe(true);
+    expect(component['addingUnder']()).toBeNull();
+    httpMock.expectNone(`${SYLLABUS_URL}/seed`);
   });
 
   it('seeds the shipped programme, then re-reads the tree and the academy', () => {
@@ -736,5 +803,133 @@ describe('SyllabusComponent (#1563)', () => {
     // renders, empty, and `aria-labelledby` points at an empty span.
     expect(spy.mock.calls[0][0].header).toBe('Remove from the syllabus');
     expect(spy.mock.calls[0][0].rejectLabel).toBe('Cancel');
+  });
+});
+
+describe('SyllabusComponent — training modes (#1803)', () => {
+  afterEach(() => TestBed.inject(HttpTestingController).verify());
+
+  const SANCHIN = topic({ id: 5, name: 'Sanchin', kind: 'kata', children: [] });
+  const KAKIE = topic({ id: 6, name: 'Kakie', kind: 'both', sort_order: 1, children: [] });
+
+  it("offers a karate topic the art's modes, with the art's own example under them", () => {
+    const { fixture, component, httpMock } = setup([], 'karate');
+    flushTree(httpMock, [SANCHIN]);
+    fixture.detectChanges();
+
+    component['startAddingPosition']();
+    fixture.detectChanges();
+
+    const options = Array.from(
+      document.querySelectorAll<HTMLElement>('[data-cy="syllabus-form-kind"] button'),
+    ).map((b) => b.textContent?.trim());
+    expect(options).toEqual(['Kata', 'Kumite', 'Kata and kumite']);
+    expect(document.body.textContent).toContain('Saifa is kata, sanbon kumite is kumite.');
+    expect(document.body.textContent).not.toContain('Heel hooks');
+  });
+
+  it('says a mode on the row only when it narrows something, in the art own words', () => {
+    const { fixture, httpMock } = setup([], 'karate');
+    flushTree(httpMock, [SANCHIN, KAKIE]);
+    fixture.detectChanges();
+
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.textContent).toContain('Kata');
+    expect(el.textContent).not.toContain('Kata and kumite');
+  });
+
+  it('keeps the BJJ example word for word', () => {
+    const { fixture, component, httpMock } = setup();
+    flushTree(httpMock, [CLOSED_GUARD]);
+    fixture.detectChanges();
+
+    component['startAddingPosition']();
+    fixture.detectChanges();
+
+    expect(document.body.textContent).toContain(
+      'Heel hooks are no-gi, lapel guards are gi. Leave it on both when it makes sense either way.',
+    );
+  });
+});
+
+describe('SyllabusComponent — the starter it offers (#1804)', () => {
+  afterEach(() => TestBed.inject(HttpTestingController).verify());
+
+  function cta(fixture: { nativeElement: HTMLElement }): string | undefined {
+    return fixture.nativeElement
+      .querySelector('[data-cy="syllabus-empty-cta"] button')
+      ?.textContent?.trim();
+  }
+
+  it("suggests the academy's own art in the name field (#1808)", () => {
+    const { fixture, component, httpMock } = setup(['judo'], 'judo');
+    flushTree(httpMock, []);
+    fixture.detectChanges();
+
+    component['startAddingPosition']();
+    fixture.detectChanges();
+
+    expect(
+      (
+        fixture.nativeElement.querySelector('[data-cy="syllabus-form-name"]') as HTMLInputElement
+      ).getAttribute('placeholder'),
+    ).toBe('Ashi-waza');
+  });
+
+  it('names the programme a judo academy will get', () => {
+    const { fixture, httpMock } = setup(['judo'], 'judo');
+    flushTree(httpMock, []);
+    fixture.detectChanges();
+
+    expect(cta(fixture)).toBe('Start from the judo programme');
+    expect(fixture.nativeElement.textContent).toContain('the Kodokan throws');
+  });
+
+  it('keeps the BJJ button word for word', () => {
+    const { fixture, httpMock } = setup(['bjj'], 'bjj');
+    flushTree(httpMock, []);
+    fixture.detectChanges();
+
+    expect(cta(fixture)).toBe('Start from the BJJ programme');
+  });
+
+  it('says which programme became the academy own, once it has', () => {
+    const { fixture, component, httpMock } = setup(['judo'], 'judo');
+    flushTree(httpMock, []);
+    fixture.detectChanges();
+    const toast = vi.spyOn(fixture.debugElement.injector.get(MessageService), 'add');
+
+    component['seedFromStarter']();
+    httpMock.expectOne(`${SYLLABUS_URL}/seed`).flush({ data: { written: 151 } });
+    flushTree(httpMock, []);
+    flushAcademy(httpMock, 137);
+
+    expect(toast).toHaveBeenCalledWith(
+      expect.objectContaining({ summary: 'The judo programme is yours to edit' }),
+    );
+  });
+
+  it('names the karate style the programme is, so another style is never surprised', () => {
+    const { fixture, httpMock } = setup(['karate-goju-ryu'], 'karate');
+    flushTree(httpMock, []);
+    fixture.detectChanges();
+
+    expect(cta(fixture)).toBe('Start from the Goju-ryu programme');
+  });
+
+  it('says WT on the taekwondo button, as karate names its style', () => {
+    const { fixture, httpMock } = setup(['taekwondo'], 'taekwondo');
+    flushTree(httpMock, []);
+    fixture.detectChanges();
+
+    expect(cta(fixture)).toBe('Start from the taekwondo programme (WT)');
+  });
+
+  it('says something true for a programme that ships before its own words do', () => {
+    const { fixture, httpMock } = setup(['karate-shorin-ryu'], 'karate');
+    flushTree(httpMock, []);
+    fixture.detectChanges();
+
+    expect(cta(fixture)).toBe('Start from the shipped programme');
   });
 });

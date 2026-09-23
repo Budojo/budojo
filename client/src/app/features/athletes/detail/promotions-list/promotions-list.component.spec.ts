@@ -8,6 +8,7 @@ import { provideI18nTesting } from '../../../../../test-utils/i18n-test';
 import { LanguageService } from '../../../../core/services/language.service';
 import { type AthletePromotion, AthleteService } from '../../../../core/services/athlete.service';
 import { PromotionsListComponent } from './promotions-list.component';
+import { useLadder } from '../../../../../test-utils/ladder-test';
 
 class FakeAthleteService {
   readonly promotions = vi.fn(() =>
@@ -94,6 +95,36 @@ function makePromotion(over: Partial<AthletePromotion> = {}): AthletePromotion {
 
 describe('PromotionsListComponent (#799)', () => {
   afterEach(() => TestBed.resetTestingModule());
+
+  it('reads a stripe row the way its grade counts — dan, not stripes (#1801)', () => {
+    const { fixture, el, svc } = setup();
+    useLadder('judo');
+    svc.promotions.mockReturnValue(
+      of({
+        data: [
+          makePromotion({
+            kind: 'stripe',
+            from_belt: null,
+            to_belt: null,
+            from_stripes: 1,
+            to_stripes: 2,
+            belt_at_event: 'black',
+          }),
+        ],
+        meta: { current_page: 1, per_page: 20, total: 1, last_page: 1 },
+      }),
+    );
+    fixture.detectChanges();
+
+    const count = el
+      .querySelector('.promotions__stripe-count')
+      ?.textContent?.replace(/\s+/g, ' ')
+      .trim();
+    expect(count).toBe('2° dan 3° dan');
+    // No "stripes" noun after a dan count, and the context badge says no count of its own.
+    expect(el.querySelector('.promotions__stripe-label')).toBeNull();
+    expect(el.querySelector('[data-cy="belt-count"]')).toBeNull();
+  });
 
   it('fires the load on init with athleteId from the route + page 1', () => {
     const { fixture, svc } = setup({ athleteId: '7' });

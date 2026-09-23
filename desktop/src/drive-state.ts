@@ -125,7 +125,7 @@ export function recordFailure(state: DriveState, input: { at: number; error: str
 
 /**
  * What the Backup page shows. Says what to do about it, not what the API
- * returned — the reader is a jiu-jitsu instructor, not the person who wrote
+ * returned — the reader is a martial-arts instructor, not the person who wrote
  * the OAuth client.
  */
 export function describeSyncError(code: string): string {

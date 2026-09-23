@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests\Syllabus;
 
 use App\Authorization\Capability;
+use App\Enums\MartialArt;
 use App\Http\Requests\Concerns\AuthorizesAcademyCapability;
 use App\Http\Requests\Concerns\ValidatesSyllabusTopic;
 use App\Models\SyllabusTopic;
@@ -43,6 +44,7 @@ class UpdateSyllabusTopicRequest extends FormRequest
                 required: false,
                 academyId: $topic->academy_id,
                 parentId: $topic->parent_id,
+                art: $topic->academy->martial_art ?? MartialArt::Bjj,
                 ignoreId: $topic->id,
             ),
             'sort_order' => ['sometimes', 'integer', 'min:0', 'max:65535'],
