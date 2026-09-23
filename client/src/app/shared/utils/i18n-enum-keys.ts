@@ -1,15 +1,15 @@
+import type { MartialArt } from '../../core/services/academy.service';
 import { AthleteStatus, Belt } from '../../core/services/athlete.service';
 
 /**
- * Single source of truth for the `belts.*` translation key bindings
- * (#357 Copilot review). The compiler enforces every `Belt` enum case
- * is mapped, and the keys are statically greppable for the
- * `i18n-keys.spec.ts` parity check.
+ * The neutral name of every belt colour (#357, #1800): "White", "Green and
+ * blue". The compiler enforces every `Belt` case is mapped, and the keys are
+ * statically greppable for the `i18n-keys.spec.ts` parity check.
  *
- * Consumers: `belt-badge.component`, `athlete-form.component`.
- * Anywhere that needs to render or pick a belt by its localised label
- * resolves the key here, then runs it through the `translate` pipe or
- * `TranslateService.instant()`.
+ * Neutral on purpose — a green belt is "Green" in judo and karate. What one
+ * martial art calls a colour differently lives in `BELT_KEY_OVERRIDES`, and
+ * `beltKey()` is the one resolver; prefer `BeltLadderService.label()`, which
+ * already knows the academy's art.
  */
 export const BELT_KEYS: Readonly<Record<Belt, string>> = {
   grey: 'belts.grey',
@@ -24,28 +24,43 @@ export const BELT_KEYS: Readonly<Record<Belt, string>> = {
   'red-and-black': 'belts.redAndBlack',
   'red-and-white': 'belts.redAndWhite',
   red: 'belts.red',
+  'white-and-yellow': 'belts.whiteAndYellow',
+  'yellow-and-orange': 'belts.yellowAndOrange',
+  'orange-and-green': 'belts.orangeAndGreen',
+  'green-and-blue': 'belts.greenAndBlue',
+  'blue-and-brown': 'belts.blueAndBrown',
+  'yellow-and-green': 'belts.yellowAndGreen',
+  'blue-and-red': 'belts.blueAndRed',
+  'black-and-red': 'belts.blackAndRed',
 };
 
 /**
- * IBJJF belt order — kids ranks → adults → senior coral/red. Used by
- * the form picker so the dropdown reads bottom-up like a progression
- * chart. Exported alongside `BELT_KEYS` so callers don't re-declare
- * the order separately.
+ * What a martial art calls a colour when the neutral name is not enough
+ * (#1800). BJJ keeps the labels it always had — "Green (kids)", "Red & black
+ * (7°)" — character for character; taekwondo calls its under-15 black belt
+ * the poom. Explicit keys, never built ones, so the parity check sees them.
  */
-export const BELT_ORDER: readonly Belt[] = [
-  'grey',
-  'yellow',
-  'orange',
-  'green',
-  'white',
-  'blue',
-  'purple',
-  'brown',
-  'black',
-  'red-and-black',
-  'red-and-white',
-  'red',
-] as const;
+export const BELT_KEY_OVERRIDES: Readonly<Record<MartialArt, Partial<Record<Belt, string>>>> = {
+  bjj: {
+    grey: 'belts.bjj.grey',
+    yellow: 'belts.bjj.yellow',
+    orange: 'belts.bjj.orange',
+    green: 'belts.bjj.green',
+    'red-and-black': 'belts.bjj.redAndBlack',
+    'red-and-white': 'belts.bjj.redAndWhite',
+    red: 'belts.bjj.red',
+  },
+  judo: {},
+  karate: {},
+  taekwondo: {
+    'black-and-red': 'belts.taekwondo.blackAndRed',
+  },
+};
+
+/** The translation key for a belt, as the given martial art names it. */
+export function beltKey(belt: Belt, art: MartialArt): string {
+  return BELT_KEY_OVERRIDES[art][belt] ?? BELT_KEYS[belt];
+}
 
 /**
  * Single source of truth for the `statuses.*` translation key bindings

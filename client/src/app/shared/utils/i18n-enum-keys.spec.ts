@@ -1,40 +1,69 @@
-import { BELT_KEYS, BELT_ORDER, STATUS_KEYS, STATUS_ORDER } from './i18n-enum-keys';
+import EN from '../../../../public/assets/i18n/en.json';
+import IT from '../../../../public/assets/i18n/it.json';
+import {
+  BELT_KEYS,
+  BELT_KEY_OVERRIDES,
+  beltKey,
+  STATUS_KEYS,
+  STATUS_ORDER,
+} from './i18n-enum-keys';
 import type { AthleteStatus, Belt } from '../../core/services/athlete.service';
+import type { MartialArt } from '../../core/services/academy.service';
+
+/** Resolves a dotted key in a bundle, or undefined — the parity spec checks sets, not paths. */
+function lookup(bundle: unknown, key: string): unknown {
+  return key
+    .split('.')
+    .reduce<unknown>(
+      (node, part) =>
+        node !== null && typeof node === 'object'
+          ? (node as Record<string, unknown>)[part]
+          : undefined,
+      bundle,
+    );
+}
+
+const ARTS: readonly MartialArt[] = ['bjj', 'judo', 'karate', 'taekwondo'];
 
 describe('i18n enum-key bindings (#357)', () => {
-  describe('BELT_KEYS', () => {
-    it('maps every Belt case to a `belts.*` key', () => {
-      // BELT_ORDER lists every Belt case in IBJJF progression order;
-      // pin it as the authoritative key set so an unmapped new belt
-      // here trips at compile time (compiler enforces Record<Belt, …>)
-      // AND at test time (this assertion).
-      const mapKeys = Object.keys(BELT_KEYS) as Belt[];
-      expect(new Set(mapKeys)).toEqual(new Set(BELT_ORDER));
-    });
-
-    it('the belts.* keys are statically greppable strings (no template interpolation)', () => {
-      for (const value of Object.values(BELT_KEYS)) {
-        expect(value).toMatch(/^belts\.[a-zA-Z]+$/);
+  describe('belt keys (#1801)', () => {
+    it('names every belt colour with a key that exists in both bundles', () => {
+      for (const [belt, key] of Object.entries(BELT_KEYS)) {
+        expect(typeof lookup(EN, key), `${belt} → ${key} in en`).toBe('string');
+        expect(typeof lookup(IT, key), `${belt} → ${key} in it`).toBe('string');
       }
     });
 
-    it('uses camelCase for the multi-word colours (matches i18n bundle convention)', () => {
-      expect(BELT_KEYS['red-and-black']).toBe('belts.redAndBlack');
-      expect(BELT_KEYS['red-and-white']).toBe('belts.redAndWhite');
-    });
-  });
-
-  describe('BELT_ORDER', () => {
-    it('lists every Belt case exactly once', () => {
-      expect(new Set(BELT_ORDER).size).toBe(BELT_ORDER.length);
+    it('points every per-art override at a key that exists in both bundles', () => {
+      for (const art of ARTS) {
+        for (const [belt, key] of Object.entries(BELT_KEY_OVERRIDES[art])) {
+          expect(typeof lookup(EN, key as string), `${art} ${belt}`).toBe('string');
+          expect(typeof lookup(IT, key as string), `${art} ${belt}`).toBe('string');
+        }
+      }
     });
 
-    it('starts with the kids ranks (grey → yellow → orange → green) before white', () => {
-      expect(BELT_ORDER.slice(0, 5)).toEqual(['grey', 'yellow', 'orange', 'green', 'white']);
+    it('keeps the BJJ labels exactly what they were', () => {
+      // Every existing install is BJJ: a rename of keys, never of copy.
+      const bjj = (belt: Belt): unknown => lookup(EN, beltKey(belt, 'bjj'));
+      expect(bjj('green')).toBe('Green (kids)');
+      expect(bjj('red-and-black')).toBe('Red & black (7°)');
+      expect(bjj('red')).toBe('Red (9°/10°)');
+      expect(bjj('black')).toBe('Black');
+      expect(lookup(IT, beltKey('grey', 'bjj'))).toBe('Grigia (bambini)');
     });
 
-    it('ends with the senior coral / red ranks', () => {
-      expect(BELT_ORDER.slice(-3)).toEqual(['red-and-black', 'red-and-white', 'red']);
+    it('uses the neutral name where an art has no word of its own', () => {
+      expect(beltKey('green', 'judo')).toBe('belts.green');
+      expect(lookup(IT, beltKey('green', 'karate'))).toBe('Verde');
+      expect(lookup(EN, beltKey('black-and-red', 'taekwondo'))).toBe('Poom');
+      expect(lookup(IT, beltKey('white-and-yellow', 'judo'))).toBe('Bianco-gialla');
+    });
+
+    it('keeps every key statically greppable (no interpolation)', () => {
+      for (const value of Object.values(BELT_KEYS)) {
+        expect(value).toMatch(/^belts\.[a-zA-Z]+$/);
+      }
     });
   });
 

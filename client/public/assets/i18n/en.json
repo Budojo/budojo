@@ -1759,18 +1759,42 @@
   },
   "belts": {
     "all": "All belts",
-    "grey": "Grey (kids)",
-    "yellow": "Yellow (kids)",
-    "orange": "Orange (kids)",
-    "green": "Green (kids)",
+    "grey": "Grey",
+    "yellow": "Yellow",
+    "orange": "Orange",
+    "green": "Green",
     "white": "White",
     "blue": "Blue",
     "purple": "Purple",
     "brown": "Brown",
     "black": "Black",
-    "redAndBlack": "Red & black (7°)",
-    "redAndWhite": "Red & white (8°)",
-    "red": "Red (9°/10°)"
+    "redAndBlack": "Red and black",
+    "redAndWhite": "Red and white",
+    "red": "Red",
+    "whiteAndYellow": "White and yellow",
+    "yellowAndOrange": "Yellow and orange",
+    "orangeAndGreen": "Orange and green",
+    "greenAndBlue": "Green and blue",
+    "blueAndBrown": "Blue and brown",
+    "yellowAndGreen": "Yellow and green",
+    "blueAndRed": "Blue and red",
+    "blackAndRed": "Black and red",
+    "bjj": {
+      "grey": "Grey (kids)",
+      "yellow": "Yellow (kids)",
+      "orange": "Orange (kids)",
+      "green": "Green (kids)",
+      "redAndBlack": "Red & black (7°)",
+      "redAndWhite": "Red & white (8°)",
+      "red": "Red (9°/10°)"
+    },
+    "taekwondo": {
+      "blackAndRed": "Poom"
+    },
+    "count": {
+      "dan": "{{n}}° dan",
+      "poom": "{{n}}°"
+    }
   },
   "attendance": {
     "daily": {
@@ -2610,9 +2634,9 @@
     },
     "sort": {
       "beltLabel": "Belt",
-      "beltInitial": "Click to sort by belt rank (black → white)",
-      "beltAsc": "Sorted by belt (white → black). Click to flip.",
-      "beltDesc": "Sorted by belt (black → white). Click to flip.",
+      "beltInitial": "Click to sort by belt rank (highest → lowest)",
+      "beltAsc": "Sorted by belt (lowest → highest). Click to flip.",
+      "beltDesc": "Sorted by belt (highest → lowest). Click to flip.",
       "nameInitial": "Click to sort by first name (A → Z)",
       "nameFirstAsc": "Sorted by first name (A → Z). Click to cycle.",
       "nameFirstDesc": "Sorted by first name (Z → A). Click to cycle.",

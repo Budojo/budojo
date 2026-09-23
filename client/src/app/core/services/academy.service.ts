@@ -12,6 +12,7 @@ import {
   switchMap,
 } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import type { Belt } from './athlete.service';
 
 /**
  * ISO 3166-1 alpha-2 country code (#72). MVP supports only Italy; adding a
@@ -169,6 +170,18 @@ export interface Academy {
   id: number;
   name: string;
   slug: string;
+  /**
+   * What the academy teaches, and its ladder (#1800). The SPA picks, sorts and
+   * caps belts from `grades` — never from a copy of its own — through
+   * `BeltLadderService`. Optional for fixture-compat, like the fields below;
+   * the wire shape always carries them.
+   */
+  martial_art?: MartialArt;
+  grades?: Grade[];
+  /** True once the academy has athletes, classes, lessons or topics. */
+  martial_art_locked?: boolean;
+  /** Starter-programme keys the art offers; empty until one ships. */
+  syllabus_programmes?: string[];
   /**
    * Phone (#161) — same shape as Athlete. `phone_country_code` carries the
    * E.164 prefix (e.g. `+39`); `phone_national_number` carries the digits
@@ -359,6 +372,20 @@ export interface MeAcademy {
  * ladder.
  */
 export type MartialArt = 'bjj' | 'judo' | 'karate' | 'taekwondo';
+
+/**
+ * One rung of the academy's ladder, lowest first in `Academy.grades` (#1800).
+ * `athletes.stripes` stores a plain 0…`max_stripes`; `count` says what it
+ * counts and `first` is the number its first step shows as — a FIJLKAM black
+ * belt is `max_stripes: 4, count: 'dan', first: 1`, stored 0–4, shown 1°–5°.
+ */
+export interface Grade {
+  belt: Belt;
+  max_stripes: number;
+  count: 'stripe' | 'dan' | 'poom';
+  first: number;
+  kids: boolean;
+}
 
 export interface CreateAcademyPayload {
   name: string;

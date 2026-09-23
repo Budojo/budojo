@@ -1,4 +1,8 @@
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { provideI18nTesting } from '../../../test-utils/i18n-test';
+import { useLadder } from '../../../test-utils/ladder-test';
 import { PromotionShareCardService } from './promotion-share-card.service';
 
 /**
@@ -53,11 +57,39 @@ describe('PromotionShareCardService (#959)', () => {
   let service: PromotionShareCardService;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({});
+    // The card names belts the way the academy's martial art does (#1801).
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting(), ...provideI18nTesting()],
+    });
+    useLadder('bjj');
     service = TestBed.inject(PromotionShareCardService);
   });
 
   afterEach(() => vi.restoreAllMocks());
+
+  it('writes the belt the way the academy names it, upper-cased', async () => {
+    stubCanvas2D();
+    const written: string[] = [];
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
+      ...(HTMLCanvasElement.prototype.getContext.call(
+        document.createElement('canvas'),
+        '2d',
+      ) as object),
+      fillText: (text: string) => written.push(text),
+    } as never);
+
+    await service.toBlob({
+      athleteName: 'Mario Rossi',
+      fromBelt: 'yellow',
+      toBelt: 'green',
+      academyName: 'BJJ Roma',
+      date: '23 May 2026',
+    });
+
+    // BJJ's own word for it — no more hard-coded English colour table.
+    expect(written).toContain('GREEN (KIDS)');
+    expect(written).toContain('yellow (kids) → green (kids)');
+  });
 
   it('resolves to a non-empty PNG blob for a typical belt promotion', async () => {
     stubCanvas2D();

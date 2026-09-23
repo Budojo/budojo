@@ -9,46 +9,37 @@ import { Address } from './academy.service';
 import { FeeTier } from './fee-tier.service';
 import { environment } from '../../../environments/environment';
 
+/**
+ * The vocabulary of belt colours (#1800) — only the colours. Which of them an
+ * academy awards, in what order, with what stripe cap, is its martial art's
+ * ladder: `Academy.grades`, read through `BeltLadderService`. Mirrors
+ * `App\Enums\Belt`; values never change and new ones are appended.
+ */
 export type Belt =
-  // IBJJF Youth belts (#230).
   | 'grey'
   | 'yellow'
   | 'orange'
   | 'green'
-  // IBJJF Adult belts.
   | 'white'
   | 'blue'
   | 'purple'
   | 'brown'
   | 'black'
-  // IBJJF senior ranks beyond black (#229) — 7°+ graus get their own
-  // colour. 1°-6° on black are tracked via `stripes`, not enum cases.
+  // Two-colour belts are `<upper>-and-<lower>`: the BJJ coral pair (#229)…
   | 'red-and-black'
   | 'red-and-white'
-  | 'red';
+  | 'red'
+  // …and the half-belts (#1800): kids' steps in judo and karate, the
+  // intermediate kup in taekwondo, and taekwondo's poom.
+  | 'white-and-yellow'
+  | 'yellow-and-orange'
+  | 'orange-and-green'
+  | 'green-and-blue'
+  | 'blue-and-brown'
+  | 'yellow-and-green'
+  | 'blue-and-red'
+  | 'black-and-red';
 
-/**
- * Stripes ceiling per belt, BJJ only. Mirrors the BJJ ladder in
- * `server/database/seed-data/martial-arts/bjj.json` — the server's source of
- * truth since #1800, emitted per academy as `Academy.grades`. Black has 6
- * graus (1°-6°); every other belt caps at 4. Used by the form picker to
- * render only valid options for the selected belt. Deleted by #1801, when the
- * SPA reads the cap from `Academy.grades` for every martial art.
- */
-export const MAX_STRIPES_PER_BELT: Record<Belt, number> = {
-  grey: 4,
-  yellow: 4,
-  orange: 4,
-  green: 4,
-  white: 4,
-  blue: 4,
-  purple: 4,
-  brown: 4,
-  black: 6,
-  'red-and-black': 4,
-  'red-and-white': 4,
-  red: 4,
-};
 export type AthleteStatus = 'active' | 'inactive';
 
 /**
