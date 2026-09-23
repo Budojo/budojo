@@ -2753,8 +2753,13 @@
       "empty": "Nothing collected in the last 12 months."
     },
     "athletes": {
-      "ageBandsTitle": "Athletes by IBJJF age division",
-      "ageBandsHint": "All athletes with a date of birth, bucketed by today's age",
+      "ageBandsTitle": {
+        "bjj": "Athletes by IBJJF age division",
+        "judo": "Athletes by FIJLKAM age class",
+        "karate": "Athletes by FIJLKAM age class",
+        "taekwondo": "Athletes by WT age division"
+      },
+      "ageBandsHint": "All active athletes with a date of birth, by the age they reach this year — how the federations count it",
       "loading": "Loading distribution…",
       "errored": "Couldn't load distribution.",
       "empty": "No athletes with a date of birth yet.",
@@ -2763,23 +2768,63 @@
         "adults": "Adults",
         "all": "All"
       },
-      "bands": {
-        "mighty_mite": "Mighty Mite",
-        "pee_wee": "Pee Wee",
-        "junior": "Junior",
-        "teen": "Teen",
-        "juvenile": "Juvenile",
-        "adult": "Adult",
-        "master_1": "Master 1",
-        "master_2": "Master 2",
-        "master_3": "Master 3",
-        "master_4": "Master 4",
-        "master_5": "Master 5",
-        "master_6": "Master 6",
-        "master_7": "Master 7"
-      },
       "missingDobOne": "{{count}} athlete without a date of birth",
-      "missingDobOther": "{{count}} athletes without a date of birth"
+      "missingDobOther": "{{count}} athletes without a date of birth",
+      "bands": {
+        "bjj": {
+          "mighty_mite": "Mighty Mite",
+          "pee_wee": "Pee Wee",
+          "junior": "Junior",
+          "teen": "Teen",
+          "juvenile": "Juvenile",
+          "adult": "Adult",
+          "master_1": "Master 1",
+          "master_2": "Master 2",
+          "master_3": "Master 3",
+          "master_4": "Master 4",
+          "master_5": "Master 5",
+          "master_6": "Master 6",
+          "master_7": "Master 7"
+        },
+        "judo": {
+          "bambini_a": "Bambini A",
+          "bambini_b": "Bambini B",
+          "fanciulli": "Fanciulli",
+          "ragazzi": "Ragazzi",
+          "esordienti_a": "Esordienti A",
+          "esordienti_b": "Esordienti B",
+          "cadetti": "Cadetti",
+          "juniores": "Juniores",
+          "seniores": "Seniores",
+          "master": "Master"
+        },
+        "karate": {
+          "bambini_a": "Bambini A",
+          "bambini_b": "Bambini B",
+          "fanciulli": "Fanciulli",
+          "ragazzi": "Ragazzi",
+          "esordienti": "Esordienti",
+          "cadetti": "Cadetti",
+          "juniores": "Juniores",
+          "seniores": "Seniores",
+          "master_a": "Master A",
+          "master_b": "Master B",
+          "master_c": "Master C",
+          "master_d": "Master D",
+          "master_e": "Master E"
+        },
+        "taekwondo": {
+          "under_12": "Under 12",
+          "cadet": "Cadet",
+          "junior": "Junior",
+          "under_30": "Under 30",
+          "under_40": "Under 40",
+          "under_50": "Under 50",
+          "under_60": "Under 60",
+          "under_65": "Under 65",
+          "over_65": "Over 65"
+        }
+      }
     },
     "syllabus": {
       "headline": "{{covered}} of {{total}} covered this season",

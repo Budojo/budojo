@@ -51,13 +51,13 @@ interface DoughnutData {
  *    (`attendance_records`, `athlete_payments`) and aren't surfaced
  *    by `/api/v1/athletes` at all, so there's no fetch-all alternative.
  *  - **Athletes age-bands** — `date_of_birth` IS reachable via
- *    `/api/v1/athletes`, but the IBJJF age-division table (Mighty Mite
- *    → Master 7, with their inclusive bounds) is a domain rule we
+ *    `/api/v1/athletes`, but the federation's age divisions (IBJJF,
+ *    FIJLKAM or WT, per martial art, #1807) are a domain rule we
  *    centralise on the server (`AthleteAgeBandsAction`), and the cut-
  *    over uses server time so a client clock skew can't shift a band
  *    boundary. The dedicated endpoint costs one round trip vs. the
- *    page-walk; we accept it for the IBJJF-table-fidelity + clock-
- *    correctness wins.
+ *    page-walk; we accept it for the table-fidelity + clock-correctness
+ *    wins.
  *
  * Locale-aware: the chart labels (belt names) flow through the
  * `belts.*` translation keys, so toggling EN ↔ IT re-renders the

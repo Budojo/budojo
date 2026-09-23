@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Enums\AthleteStatus;
+use App\Enums\MartialArt;
 use App\Models\Athlete;
 use Carbon\CarbonImmutable;
 use Laravel\Sanctum\Sanctum;
@@ -32,34 +33,53 @@ it('returns 13 IBJJF age divisions, all present, in canonical order', function (
     expect($master7['max'])->toBeNull();
 });
 
-it('counts athletes into the correct band based on age today', function (): void {
+it('counts athletes by the age they reach this calendar year, as the federations do (#1807)', function (): void {
     $user = userWithAcademy();
 
     CarbonImmutable::setTestNow(CarbonImmutable::create(2026, 5, 15));
 
-    // 28-year-old → adult
-    Athlete::factory()->for($user->academy)->create([
-        'date_of_birth' => '1998-05-14', // turned 28 yesterday
-    ]);
-    // 33-year-old → master_1
-    Athlete::factory()->for($user->academy)->create([
-        'date_of_birth' => '1993-01-01',
-    ]);
-    // 11-year-old → junior
-    Athlete::factory()->for($user->academy)->create([
-        'date_of_birth' => '2014-06-01', // birthday hasn't happened yet this year → still 11
-    ]);
+    // Born on New Year's Eve 2010: 15 today, 16 this year → juvenile, not
+    // teen. The federations class by year of birth; today's age would put
+    // them in the division below until December.
+    Athlete::factory()->for($user->academy)->create(['date_of_birth' => '2010-12-31']);
+    // Born the next morning: 15 this year → teen.
+    Athlete::factory()->for($user->academy)->create(['date_of_birth' => '2011-01-01']);
+    // 28 this year → adult; 33 → master_1.
+    Athlete::factory()->for($user->academy)->create(['date_of_birth' => '1998-05-14']);
+    Athlete::factory()->for($user->academy)->create(['date_of_birth' => '1993-01-01']);
 
     Sanctum::actingAs($user);
     $payload = $this->getJson('/api/v1/stats/athletes/age-bands')->assertOk()->json('data');
 
     $byCode = collect($payload['bands'])->keyBy('code');
-    expect($byCode['junior']['count'])->toBe(1);
-    expect($byCode['adult']['count'])->toBe(1);
-    expect($byCode['master_1']['count'])->toBe(1);
+    expect($byCode['juvenile']['count'])->toBe(1)
+        ->and($byCode['teen']['count'])->toBe(1)
+        ->and($byCode['adult']['count'])->toBe(1)
+        ->and($byCode['master_1']['count'])->toBe(1)
+        ->and($payload['total'])->toBe(4)
+        ->and($payload['missing_dob'])->toBe(0);
+});
 
-    expect($payload['total'])->toBe(3);
-    expect($payload['missing_dob'])->toBe(0);
+it('answers a judo academy in FIJLKAM classes, never an IBJJF one (#1807)', function (): void {
+    $user = userWithAcademy();
+    $user->academy->update(['martial_art' => MartialArt::Judo]);
+    CarbonImmutable::setTestNow(CarbonImmutable::create(2026, 9, 23));
+
+    // 12 in 2026 → Esordienti A; 30 → Seniores.
+    Athlete::factory()->for($user->academy)->create(['date_of_birth' => '2014-11-02']);
+    Athlete::factory()->for($user->academy)->create(['date_of_birth' => '1996-03-10']);
+
+    Sanctum::actingAs($user);
+    $payload = $this->getJson('/api/v1/stats/athletes/age-bands')->assertOk()->json('data');
+
+    $codes = collect($payload['bands'])->pluck('code');
+    expect($codes->all())->toBe([
+        'bambini_a', 'bambini_b', 'fanciulli', 'ragazzi',
+        'esordienti_a', 'esordienti_b', 'cadetti', 'juniores', 'seniores', 'master',
+    ])
+        ->and($codes->intersect(['mighty_mite', 'adult', 'master_1'])->all())->toBe([])
+        ->and(collect($payload['bands'])->keyBy('code')['esordienti_a']['count'])->toBe(1)
+        ->and(collect($payload['bands'])->keyBy('code')['seniores']['count'])->toBe(1);
 });
 
 it('counts NULL date_of_birth as missing_dob, NOT in any band', function (): void {

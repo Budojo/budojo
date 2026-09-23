@@ -70,6 +70,71 @@
       "first": 9
     }
   ],
+  "age_divisions": {
+    "source": "FIJLKAM, Norme per l’affiliazione e il tesseramento 2026-2028, classi d’età Judo: preagonisti are kids, agonisti adults; ages are the year the athlete turns.",
+    "divisions": [
+      {
+        "code": "bambini_a",
+        "category": "kids",
+        "min": 3,
+        "max": 5
+      },
+      {
+        "code": "bambini_b",
+        "category": "kids",
+        "min": 6,
+        "max": 7
+      },
+      {
+        "code": "fanciulli",
+        "category": "kids",
+        "min": 8,
+        "max": 9
+      },
+      {
+        "code": "ragazzi",
+        "category": "kids",
+        "min": 10,
+        "max": 11
+      },
+      {
+        "code": "esordienti_a",
+        "category": "adults",
+        "min": 12,
+        "max": 12
+      },
+      {
+        "code": "esordienti_b",
+        "category": "adults",
+        "min": 13,
+        "max": 14
+      },
+      {
+        "code": "cadetti",
+        "category": "adults",
+        "min": 15,
+        "max": 17
+      },
+      {
+        "code": "juniores",
+        "category": "adults",
+        "min": 18,
+        "max": 20
+      },
+      {
+        "code": "seniores",
+        "category": "adults",
+        "min": 21,
+        "max": 35
+      },
+      {
+        "code": "master",
+        "category": "adults",
+        "min": 36,
+        "max": null
+      }
+    ]
+  },
   "training_modes": [
     "tachi-waza",
     "ne-waza"

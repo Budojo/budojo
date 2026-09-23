@@ -5965,18 +5965,27 @@ paths:
   /stats/athletes/age-bands:
     get:
       operationId: statsAthleteAgeBands
-      summary: IBJJF age-division histogram of the academy's athletes
+      summary: Age-division histogram of the academy's athletes, in its federation's divisions
       description: |
-        Returns all 13 canonical IBJJF age divisions in order (Mighty Mite
-        through Master 7), each with the count of athletes whose age today
-        falls in that division. Empty divisions are included with count 0 so
-        the frontend can render the full histogram without gap-filling.
-        Athletes with a NULL date_of_birth are excluded from band counts and
-        reported in the top-level `missing_dob` field.
+        Returns every age division of the academy's martial art, youngest
+        first (#1807), each with the count of active athletes in it. The
+        divisions are the federation's: IBJJF for BJJ (Mighty Mite through
+        Master 7), FIJLKAM's classes for judo and for karate (Bambini A
+        through Master / Master E), World Taekwondo's for taekwondo (Under 12,
+        Cadet, Junior, Under 30 through Over 65). An athlete's age is the one
+        they reach **this calendar year** — how all four federations class
+        athletes — not their age today. Empty divisions are included with
+        count 0 so the frontend can render the full histogram without
+        gap-filling. Athletes with a NULL date_of_birth are excluded from band
+        counts and reported in the top-level `missing_dob` field; athletes
+        younger than the youngest division count in `total` only.
+
+        The tables follow the federations' documents for 2026 and move when
+        a federation republishes its classes.
       tags: [Stats]
       responses:
         '200':
-          description: All 13 IBJJF age divisions in canonical order
+          description: Every age division of the academy's martial art, youngest first
           content:
             application/json:
               schema:
@@ -5994,20 +6003,12 @@ paths:
                           properties:
                             code:
                               type: string
-                              enum:
-                                - mighty_mite
-                                - pee_wee
-                                - junior
-                                - teen
-                                - juvenile
-                                - adult
-                                - master_1
-                                - master_2
-                                - master_3
-                                - master_4
-                                - master_5
-                                - master_6
-                                - master_7
+                              description: |
+                                The division, lower-case ASCII, from the
+                                martial art's registry — `mighty_mite`,
+                                `esordienti_b`, `under_30`. The set depends
+                                on the academy's `martial_art`.
+                              example: esordienti_b
                             category: { type: string, enum: [kids, adults] }
                             min: { type: integer, minimum: 0 }
                             max: { type: integer, nullable: true }

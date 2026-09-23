@@ -39,6 +39,22 @@ describe('client ladder fixtures match the server registry', () => {
     expect(fixture[art]).toEqual(wire);
   });
 
+  it.each(arts)('labels every %s age division the registry sends (#1807)', (art) => {
+    // The client falls back to the bare code for a division it has no words
+    // for, so a registry change would show `u21` on the chart without failing
+    // anything. Both sides are only visible from here.
+    const en = JSON.parse(
+      readFileSync(path.join(repo, 'client', 'public', 'assets', 'i18n', 'en.json'), 'utf8'),
+    ) as { stats: { athletes: { bands: Record<string, Record<string, string>> } } };
+    const registry = JSON.parse(
+      readFileSync(path.join(repo, 'server', 'database', 'seed-data', 'martial-arts', `${art}.json`), 'utf8'),
+    ) as { age_divisions: { divisions: { code: string }[] } };
+
+    expect(Object.keys(en.stats.athletes.bands[art] ?? {}).sort()).toEqual(
+      registry.age_divisions.divisions.map((d) => d.code).sort(),
+    );
+  });
+
   it.each(arts)('sends the %s training modes the registry names (#1803)', (art) => {
     const modes = JSON.parse(
       readFileSync(path.join(repo, 'client', 'src', 'test-utils', 'training-modes.json'), 'utf8'),

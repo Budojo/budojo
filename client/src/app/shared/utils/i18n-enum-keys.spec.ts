@@ -1,6 +1,8 @@
 import EN from '../../../../public/assets/i18n/en.json';
 import IT from '../../../../public/assets/i18n/it.json';
 import {
+  AGE_BAND_KEYS,
+  AGE_BANDS_TITLE_KEYS,
   BELT_KEYS,
   BELT_KEY_OVERRIDES,
   beltKey,
@@ -26,6 +28,21 @@ function lookup(bundle: unknown, key: string): unknown {
 const ARTS: readonly MartialArt[] = ['bjj', 'judo', 'karate', 'taekwondo'];
 
 describe('i18n enum-key bindings (#357)', () => {
+  describe('age division keys (#1807)', () => {
+    // A code with no key reads as itself on the chart rather than failing,
+    // so this is the check that says a label is missing.
+    it('names every division of every art with a key that exists in both bundles', () => {
+      for (const art of ARTS) {
+        for (const [code, key] of Object.entries(AGE_BAND_KEYS[art])) {
+          expect(typeof lookup(EN, key), `${art} ${code} in en`).toBe('string');
+          expect(typeof lookup(IT, key), `${art} ${code} in it`).toBe('string');
+        }
+        expect(typeof lookup(EN, AGE_BANDS_TITLE_KEYS[art]), `${art} title in en`).toBe('string');
+        expect(typeof lookup(IT, AGE_BANDS_TITLE_KEYS[art]), `${art} title in it`).toBe('string');
+      }
+    });
+  });
+
   describe('belt keys (#1801)', () => {
     it('names every belt colour with a key that exists in both bundles', () => {
       for (const [belt, key] of Object.entries(BELT_KEYS)) {
