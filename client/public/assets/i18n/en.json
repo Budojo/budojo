@@ -1703,6 +1703,11 @@
             "hint": "Start from the shipped Goju-ryu programme — kihon, the Goju kata from Sanchin to Suparinpei, kakie and kumite — ready to rename, untick or delete, or write your own from scratch.",
             "seeded": "The Goju-ryu programme is yours to edit"
           },
+          "taekwondo": {
+            "cta": "Start from the taekwondo programme (WT)",
+            "hint": "Start from the shipped WT taekwondo programme — basics and kicks, the Taegeuk and yudanja poomsae, kyorugi, hosinsul and gyeokpa — ready to rename, untick or delete, or write your own from scratch.",
+            "seeded": "The taekwondo programme is yours to edit"
+          },
           "other": {
             "cta": "Start from the shipped programme",
             "hint": "Start from the programme that ships for this martial art — ready to rename, untick or delete — or write your own from scratch.",

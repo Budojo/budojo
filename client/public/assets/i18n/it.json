@@ -1703,6 +1703,11 @@
             "hint": "Parti dal programma Goju-ryu già pronto — kihon, i kata del Goju da Sanchin a Suparinpei, kakie e kumite — da rinominare, togliere o cancellare, oppure scrivi il tuo da zero.",
             "seeded": "Il programma Goju-ryu è tuo, modificalo pure"
           },
+          "taekwondo": {
+            "cta": "Parti dal programma di taekwondo (WT)",
+            "hint": "Parti dal programma di taekwondo WT già pronto — fondamentali e calci, i poomsae Taegeuk e yudanja, kyorugi, hosinsul e gyeokpa — da rinominare, togliere o cancellare, oppure scrivi il tuo da zero.",
+            "seeded": "Il programma di taekwondo è tuo, modificalo pure"
+          },
           "other": {
             "cta": "Parti dal programma già pronto",
             "hint": "Parti dal programma già pronto per questa arte marziale — da rinominare, togliere o cancellare — oppure scrivi il tuo da zero.",

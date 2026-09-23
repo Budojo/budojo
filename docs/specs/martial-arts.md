@@ -542,6 +542,12 @@ instructor acts on. Sizes below are targets, not counts.
   all `poomsae`; kyorugi footwork and attack/counter drills, all `kyorugi`;
   hosinsul; kyokpa; competition preparation (electronic scoring, rules).
 
+  *As built (#1806):* 11 groups, 69 items. Technique names in the Kukkiwon
+  textbook's romanisation (*makgi*, *eolgul*, *apgubi*, *dollyeo-chagi*,
+  *palgup*, *ttwieo-chagi*) rather than the draft's older spellings; the
+  discipline words stay World Taekwondo's (*poomsae*, *kyorugi*), matching
+  the training modes. *Gyeokpa* for breaking, as the Kukkiwon writes it.
+
 ### Sources for the karate content
 
 FIJLKAM *Regolamento Organico Federale* Title XII (Art. 92–96); FIJLKAM

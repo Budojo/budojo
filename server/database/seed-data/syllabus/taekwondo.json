@@ -1,0 +1,143 @@
+[
+  {
+    "name": "Seogi (stances)",
+    "kind": "both",
+    "techniques": [
+      "Moa-seogi",
+      "Narani-seogi",
+      "Juchum-seogi",
+      "Ap-seogi",
+      "Apgubi",
+      "Dwitgubi",
+      "Beom-seogi"
+    ]
+  },
+  {
+    "name": "Jireugi and chigi (hand techniques)",
+    "kind": "both",
+    "techniques": [
+      "Momtong-jireugi",
+      "Eolgul-jireugi",
+      "Arae-jireugi",
+      "Sonnal-mok-chigi",
+      "Deungjumeok-ap-chigi",
+      "Palgup-dollyeo-chigi"
+    ]
+  },
+  {
+    "name": "Makgi (blocks)",
+    "kind": "both",
+    "techniques": [
+      "Arae-makgi",
+      "Momtong-an-makgi",
+      "Momtong-bakkat-makgi",
+      "Eolgul-makgi",
+      "Sonnal-makgi",
+      "Batangson-makgi",
+      "Geodeureo-makgi",
+      "Hecheo-makgi"
+    ]
+  },
+  {
+    "name": "Chagi (kicks)",
+    "kind": "both",
+    "techniques": [
+      "Ap-chagi",
+      "Dollyeo-chagi",
+      "Yeop-chagi",
+      "Dwi-chagi",
+      "Naeryeo-chagi",
+      "Bandal-chagi",
+      "Huryeo-chagi",
+      "Dwi-huryeo-chagi",
+      "Mireo-chagi",
+      "Biteureo-chagi",
+      "Ttwieo-chagi",
+      "Narae-chagi"
+    ]
+  },
+  {
+    "name": "Poomsae — Taegeuk",
+    "kind": "poomsae",
+    "techniques": [
+      "Taegeuk Il Jang",
+      "Taegeuk I Jang",
+      "Taegeuk Sam Jang",
+      "Taegeuk Sa Jang",
+      "Taegeuk O Jang",
+      "Taegeuk Yuk Jang",
+      "Taegeuk Chil Jang",
+      "Taegeuk Pal Jang"
+    ]
+  },
+  {
+    "name": "Poomsae — yudanja",
+    "kind": "poomsae",
+    "techniques": [
+      "Koryo",
+      "Keumgang",
+      "Taebaek",
+      "Pyongwon",
+      "Sipjin",
+      "Jitae",
+      "Cheonkwon",
+      "Hansu",
+      "Ilyeo"
+    ]
+  },
+  {
+    "name": "Kyorugi — footwork",
+    "kind": "kyorugi",
+    "techniques": [
+      "Ditgi (stepping)",
+      "Switch step",
+      "Slide step",
+      "Cutting the angle"
+    ]
+  },
+  {
+    "name": "Kyorugi — attack and counter",
+    "kind": "kyorugi",
+    "techniques": [
+      "First attack",
+      "Bada-chagi (counter-kick)",
+      "Dwi-chagi counter",
+      "Head-kick entries",
+      "Clinch work"
+    ]
+  },
+  {
+    "name": "Hosinsul (self-defence)",
+    "kind": "both",
+    "techniques": [
+      "Releases from grabs",
+      "Sweeps",
+      "Joint controls"
+    ]
+  },
+  {
+    "name": "Gyeokpa (breaking)",
+    "kind": "both",
+    "techniques": [
+      "Hand breaking",
+      "Kick breaking",
+      "Jumping breaking"
+    ]
+  },
+  {
+    "name": "Competition preparation",
+    "kind": "both",
+    "techniques": [
+      "Electronic scoring (PSS)",
+      {
+        "name": "Kyorugi rules",
+        "kind": "kyorugi"
+      },
+      {
+        "name": "Poomsae rules",
+        "kind": "poomsae"
+      },
+      "Weight and gear"
+    ]
+  }
+]

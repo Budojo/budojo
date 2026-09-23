@@ -125,6 +125,13 @@ const STARTER_PROGRAMME_KEYS: Readonly<Record<string, StarterProgrammeKeys>> = {
     hint: 'academy.syllabus.empty.starter.karateGojuRyu.hint',
     seeded: 'academy.syllabus.empty.starter.karateGojuRyu.seeded',
   },
+  // "(WT)" on the button for the reason karate names its style (#1806):
+  // ITF tul are a different list.
+  taekwondo: {
+    cta: 'academy.syllabus.empty.starter.taekwondo.cta',
+    hint: 'academy.syllabus.empty.starter.taekwondo.hint',
+    seeded: 'academy.syllabus.empty.starter.taekwondo.seeded',
+  },
 };
 
 /**

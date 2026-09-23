@@ -108,14 +108,48 @@ it('refuses a programme the martial art does not offer', function (): void {
     expect(SyllabusTopic::query()->where('academy_id', $this->academy->id)->exists())->toBeFalse();
 });
 
+/**
+ * Runs `$run` as if `$art` offered no starter programme. Every art has one
+ * since #1806, but the next art added to the registry will not on its first
+ * day, and the endpoint must answer that with a 404 rather than a 500. The
+ * registry is read-only data, so the test swaps the art's cached profile for
+ * a copy with no programmes, and puts the real one back.
+ */
+function withoutProgrammes(MartialArt $art, callable $run): void
+{
+    $cache = new ReflectionProperty(MartialArtProfile::class, 'loaded');
+    $loaded = $cache->getValue();
+    $real = MartialArtProfile::for($art);
+
+    $bare = new ReflectionClass(MartialArtProfile::class)->newInstanceWithoutConstructor();
+    foreach (['art', 'ladder', 'trainingModes'] as $name) {
+        $property = new ReflectionProperty(MartialArtProfile::class, $name);
+        $property->setValue($bare, $property->getValue($real));
+    }
+    new ReflectionProperty(MartialArtProfile::class, 'programmes')->setValue($bare, []);
+
+    $cache->setValue(null, [...(array) $loaded, $art->value => $bare]);
+
+    try {
+        $run();
+    } finally {
+        $cache->setValue(null, $loaded);
+    }
+}
+
 it('answers 404, not 500, for a martial art whose programme has not shipped', function (): void {
-    // #1800: a taekwondo academy exists before its programme does (#1806).
     $this->academy->update(['martial_art' => MartialArt::Taekwondo]);
 
-    $this->actingAs($this->user)
-        ->postJson('/api/v1/academy/syllabus/seed')
-        ->assertNotFound()
-        ->assertJsonPath('message', 'No starter programme has shipped for this martial art yet.');
+    withoutProgrammes(MartialArt::Taekwondo, function (): void {
+        $this->actingAs($this->user)
+            ->postJson('/api/v1/academy/syllabus/seed')
+            ->assertNotFound()
+            ->assertJsonPath('message', 'No starter programme has shipped for this martial art yet.');
+
+        $this->actingAs($this->user)
+            ->getJson('/api/v1/academy')
+            ->assertJsonPath('data.syllabus_programmes', []);
+    });
 
     expect(SyllabusTopic::query()->where('academy_id', $this->academy->id)->exists())->toBeFalse();
 });
@@ -243,6 +277,41 @@ it('lets a school that opens with Gekisai take the five Taikyoku out in one tap'
         ->and($taikyoku->children()->count())->toBe(5)
         ->and(SyllabusTopic::query()->where('academy_id', $this->academy->id)
             ->where('name', 'like', 'Gekisai%')->where('in_season', true)->count())->toBe(2);
+});
+
+it('copies the WT taekwondo programme into a taekwondo academy: basics, poomsae, kyorugi (#1806)', function (): void {
+    $this->academy->update(['martial_art' => MartialArt::Taekwondo]);
+
+    $this->actingAs($this->user)->postJson('/api/v1/academy/syllabus/seed')->assertCreated();
+
+    $groups = SyllabusTopic::query()->where('academy_id', $this->academy->id)->positions()
+        ->orderBy('sort_order')->with('children')->get()->keyBy('name');
+
+    expect($groups->keys()->first())->toBe('Seogi (stances)')
+        ->and($groups->keys()->last())->toBe('Competition preparation')
+        // The Kukkiwon set: eight Taegeuk for the kup grades, nine for dan.
+        ->and($groups['Poomsae — Taegeuk']->children->sortBy('sort_order')->pluck('name')->all())->toBe([
+            'Taegeuk Il Jang', 'Taegeuk I Jang', 'Taegeuk Sam Jang', 'Taegeuk Sa Jang',
+            'Taegeuk O Jang', 'Taegeuk Yuk Jang', 'Taegeuk Chil Jang', 'Taegeuk Pal Jang',
+        ])
+        ->and($groups['Poomsae — yudanja']->children->sortBy('sort_order')->pluck('name')->all())->toBe([
+            'Koryo', 'Keumgang', 'Taebaek', 'Pyongwon', 'Sipjin', 'Jitae', 'Cheonkwon', 'Hansu', 'Ilyeo',
+        ]);
+});
+
+it('files poomsae as poomsae, sparring as kyorugi, and kicks either way', function (): void {
+    $this->academy->update(['martial_art' => MartialArt::Taekwondo]);
+    $this->actingAs($this->user)->postJson('/api/v1/academy/syllabus/seed')->assertCreated();
+
+    $mode = fn (string $name): TrainingMode => SyllabusTopic::query()
+        ->where('academy_id', $this->academy->id)->where('name', $name)->firstOrFail()->kind;
+
+    expect($mode('Koryo'))->toBe(TrainingMode::Poomsae)
+        ->and($mode('Bada-chagi (counter-kick)'))->toBe(TrainingMode::Kyorugi)
+        // A dollyeo-chagi is in Taegeuk and in every sparring round.
+        ->and($mode('Dollyeo-chagi'))->toBe(TrainingMode::Both)
+        ->and($mode('Kyorugi rules'))->toBe(TrainingMode::Kyorugi)
+        ->and($mode('Poomsae rules'))->toBe(TrainingMode::Poomsae);
 });
 
 it('ships programme files that parse, name every position once, and repeat no technique within a position', function (): void {
