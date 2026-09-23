@@ -157,5 +157,10 @@
     "kata",
     "kumite"
   ],
-  "programmes": []
+  "programmes": [
+    {
+      "key": "karate-goju-ryu",
+      "file": "karate-goju-ryu.json"
+    }
+  ]
 }

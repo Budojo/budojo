@@ -119,5 +119,10 @@
     "poomsae",
     "kyorugi"
   ],
-  "programmes": []
+  "programmes": [
+    {
+      "key": "taekwondo",
+      "file": "taekwondo.json"
+    }
+  ]
 }

@@ -90,8 +90,8 @@
         <app-empty-state
           icon="pi pi-book"
           [title]="'academy.syllabus.empty.title' | translate"
-          [hint]="'academy.syllabus.empty.hint' | translate"
-          [ctaLabel]="'academy.syllabus.empty.cta' | translate"
+          [hint]="starterKeys().hint | translate"
+          [ctaLabel]="starterKeys().cta | translate"
           ctaIcon="pi pi-sparkles"
           [ctaLoading]="seeding()"
           (ctaClick)="seedFromStarter()"
@@ -157,16 +157,24 @@
                   [class.position__chevron--open]="isExpanded(position)"
                   aria-hidden="true"
                 ></i>
-                <span class="position__name">{{ position.name }}</span>
-                <!-- The position's real size, not the filtered one: a search
-                     narrows what is listed, not what the position holds. -->
-                <span class="position__count">{{ techniqueTotal(position) }}</span>
+                <!--
+                  Name, size and mode as one block that wraps: on a phone the
+                  mode drops under the name rather than squeezing it to
+                  "Poom / sae" (#1806) — every group of a judo, karate or
+                  taekwondo programme carries one.
+                -->
+                <span class="position__label">
+                  <span class="position__name">{{ position.name }}</span>
+                  <!-- The position's real size, not the filtered one: a search
+                       narrows what is listed, not what the position holds. -->
+                  <span class="position__count">{{ techniqueTotal(position) }}</span>
+                  @if (kindChip(position); as chip) {
+                    <span class="chip">{{ chip }}</span>
+                  }
+                </span>
               </button>
 
               <div class="position__controls">
-                @if (kindChip(position); as chip) {
-                  <span class="chip">{{ chip }}</span>
-                }
                 <!-- A column of bare checkboxes is a column of questions: the
                      tooltip answers it for a pointer, the aria-label for a
                      reader, and the hint above the list for everyone else. -->
@@ -238,7 +246,7 @@
                     >
                       {{ technique.name }}
                     </label>
-                    @if (kindChip(technique); as chip) {
+                    @if (kindChip(technique, position); as chip) {
                       <span class="chip">{{ chip }}</span>
                     }
                     <!--

@@ -175,6 +175,54 @@ export const AGE_BANDS_TITLE_KEYS: Readonly<Record<MartialArt, string>> = {
   taekwondo: 'stats.athletes.ageBandsTitle.taekwondo',
 };
 
+/** The seed button, its hint and its toast, as each shipped starter programme is named (#1804). */
+export interface StarterProgrammeKeys {
+  readonly cta: string;
+  readonly hint: string;
+  readonly seeded: string;
+}
+
+const STARTER_PROGRAMME_KEYS: Readonly<Record<string, StarterProgrammeKeys>> = {
+  bjj: {
+    cta: 'academy.syllabus.empty.starter.bjj.cta',
+    hint: 'academy.syllabus.empty.starter.bjj.hint',
+    seeded: 'academy.syllabus.empty.starter.bjj.seeded',
+  },
+  judo: {
+    cta: 'academy.syllabus.empty.starter.judo.cta',
+    hint: 'academy.syllabus.empty.starter.judo.hint',
+    seeded: 'academy.syllabus.empty.starter.judo.seeded',
+  },
+  // Karate ships one programme per style (#1805), and the button names it.
+  'karate-goju-ryu': {
+    cta: 'academy.syllabus.empty.starter.karateGojuRyu.cta',
+    hint: 'academy.syllabus.empty.starter.karateGojuRyu.hint',
+    seeded: 'academy.syllabus.empty.starter.karateGojuRyu.seeded',
+  },
+  // "(WT)" on the button for the reason karate names its style (#1806):
+  // ITF tul are a different list.
+  taekwondo: {
+    cta: 'academy.syllabus.empty.starter.taekwondo.cta',
+    hint: 'academy.syllabus.empty.starter.taekwondo.hint',
+    seeded: 'academy.syllabus.empty.starter.taekwondo.seeded',
+  },
+};
+
+/**
+ * The keys for a programme the server offers (`Academy.syllabus_programmes`).
+ * A programme that ships before its copy does still gets a truthful button —
+ * "Start from the shipped programme" — never a raw key on screen.
+ */
+export function starterProgrammeKeys(programme: string): StarterProgrammeKeys {
+  return (
+    STARTER_PROGRAMME_KEYS[programme] ?? {
+      cta: 'academy.syllabus.empty.starter.other.cta',
+      hint: 'academy.syllabus.empty.starter.other.hint',
+      seeded: 'academy.syllabus.empty.starter.other.seeded',
+    }
+  );
+}
+
 /** The translation key for a belt, as the given martial art names it. */
 export function beltKey(belt: Belt, art: MartialArt): string {
   return BELT_KEY_OVERRIDES[art][belt] ?? BELT_KEYS[belt];

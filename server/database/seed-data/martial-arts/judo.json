@@ -139,5 +139,10 @@
     "tachi-waza",
     "ne-waza"
   ],
-  "programmes": []
+  "programmes": [
+    {
+      "key": "judo",
+      "file": "judo.json"
+    }
+  ]
 }

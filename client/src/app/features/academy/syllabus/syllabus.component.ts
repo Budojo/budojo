@@ -23,6 +23,7 @@ import { AcademyService, TrainingMode } from '../../../core/services/academy.ser
 import { LanguageService } from '../../../core/services/language.service';
 import { SyllabusService, SyllabusTopic } from '../../../core/services/syllabus.service';
 import { TrainingModesService } from '../../../core/services/training-modes.service';
+import { StarterProgrammeKeys, starterProgrammeKeys } from '../../../shared/utils/i18n-enum-keys';
 import { ChoiceGridComponent } from '../../../shared/components/choice-grid/choice-grid.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
@@ -98,6 +99,11 @@ export class SyllabusComponent {
    */
   protected readonly hasStarter = computed<boolean>(
     () => (this.academyService.academy()?.syllabus_programmes?.length ?? 0) > 0,
+  );
+
+  /** "Start from the judo programme" — the programme the seed will copy (#1804). */
+  protected readonly starterKeys = computed<StarterProgrammeKeys>(() =>
+    starterProgrammeKeys(this.academyService.academy()?.syllabus_programmes?.[0] ?? ''),
   );
   protected readonly dialogOpen = signal<boolean>(false);
 
@@ -335,9 +341,16 @@ export class SyllabusComponent {
     this.expanded.set(next);
   }
 
-  /** The kind, said only when it narrows something — "both" is the default. */
-  protected kindChip(topic: SyllabusTopic): string | null {
-    return topic.kind === 'both' ? null : this.trainingModes.labels()[topic.kind];
+  /**
+   * The kind, said only where it tells the reader something: on a position
+   * when it is not the default "both", on a technique when it differs from
+   * what its position already says. A judo programme would otherwise print
+   * TACHI-WAZA on a hundred rows (#1804) — while a "both" technique under a
+   * no-gi position still says so, because it widens what its siblings are.
+   */
+  protected kindChip(topic: SyllabusTopic, position?: SyllabusTopic): string | null {
+    const inherited = position?.kind ?? 'both';
+    return topic.kind === inherited ? null : this.trainingModes.labels()[topic.kind];
   }
 
   protected startAddingPosition(): void {
@@ -496,7 +509,7 @@ export class SyllabusComponent {
         next: () => {
           this.load();
           this.refreshAcademy();
-          this.toast('success', 'academy.syllabus.toast.seeded');
+          this.toast('success', this.starterKeys().seeded);
         },
         error: () =>
           this.toast(
