@@ -3149,7 +3149,8 @@ paths:
       description: |
         The tree: positions in `sort_order`, each carrying its techniques as
         `children` in theirs. Empty on an academy that has not started one —
-        the editor then offers the shipped BJJ programme, or a blank first
+        the editor then offers the starter programme of the academy's
+        martial art (`Academy.syllabus_programmes`), or a blank first
         position.
 
         Requires `academy_settings_read`, which every membership role holds.

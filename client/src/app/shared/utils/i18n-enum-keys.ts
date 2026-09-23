@@ -101,20 +101,23 @@ export const TRAINING_MODE_HINT_KEYS: Readonly<Record<MartialArt, string>> = {
   taekwondo: 'academy.syllabus.kindHint.taekwondo',
 };
 
-/** The seed button and its hint, as each shipped starter programme is named (#1804). */
+/** The seed button, its hint and its toast, as each shipped starter programme is named (#1804). */
 export interface StarterProgrammeKeys {
   readonly cta: string;
   readonly hint: string;
+  readonly seeded: string;
 }
 
 const STARTER_PROGRAMME_KEYS: Readonly<Record<string, StarterProgrammeKeys>> = {
   bjj: {
     cta: 'academy.syllabus.empty.starter.bjj.cta',
     hint: 'academy.syllabus.empty.starter.bjj.hint',
+    seeded: 'academy.syllabus.empty.starter.bjj.seeded',
   },
   judo: {
     cta: 'academy.syllabus.empty.starter.judo.cta',
     hint: 'academy.syllabus.empty.starter.judo.hint',
+    seeded: 'academy.syllabus.empty.starter.judo.seeded',
   },
 };
 
@@ -128,6 +131,7 @@ export function starterProgrammeKeys(programme: string): StarterProgrammeKeys {
     STARTER_PROGRAMME_KEYS[programme] ?? {
       cta: 'academy.syllabus.empty.starter.other.cta',
       hint: 'academy.syllabus.empty.starter.other.hint',
+      seeded: 'academy.syllabus.empty.starter.other.seeded',
     }
   );
 }

@@ -3,7 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideRouter } from '@angular/router';
-import { ConfirmationService } from 'primeng/api';
+import { ConfirmationService, MessageService } from 'primeng/api';
 import { AcademyService, MartialArt } from '../../../core/services/academy.service';
 import { SyllabusTopic } from '../../../core/services/syllabus.service';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
@@ -158,8 +158,11 @@ describe('SyllabusComponent (#1563)', () => {
       'No-gi',
     );
     expect(el.querySelector('[data-cy="syllabus-topic-31"] .chip')).toBeNull();
-    expect(el.querySelector('[data-cy="syllabus-topic-32"] .chip')).toBeNull();
-    // Different from its position: that is worth saying.
+    // Different from its position: that is worth saying, "both" included —
+    // otherwise it would read as no-gi like its siblings.
+    expect(el.querySelector('[data-cy="syllabus-topic-32"] .chip')?.textContent?.trim()).toBe(
+      'Gi and no-gi',
+    );
     expect(el.querySelector('[data-cy="syllabus-topic-33"] .chip')?.textContent?.trim()).toBe('Gi');
   });
 
@@ -873,6 +876,22 @@ describe('SyllabusComponent — the starter it offers (#1804)', () => {
     fixture.detectChanges();
 
     expect(cta(fixture)).toBe('Start from the BJJ programme');
+  });
+
+  it('says which programme became the academy own, once it has', () => {
+    const { fixture, component, httpMock } = setup(['judo'], 'judo');
+    flushTree(httpMock, []);
+    fixture.detectChanges();
+    const toast = vi.spyOn(fixture.debugElement.injector.get(MessageService), 'add');
+
+    component['seedFromStarter']();
+    httpMock.expectOne(`${SYLLABUS_URL}/seed`).flush({ data: { written: 151 } });
+    flushTree(httpMock, []);
+    flushAcademy(httpMock, 137);
+
+    expect(toast).toHaveBeenCalledWith(
+      expect.objectContaining({ summary: 'The judo programme is yours to edit' }),
+    );
   });
 
   it('says something true for a programme that ships before its own words do', () => {

@@ -496,7 +496,9 @@ instructor acts on. Sizes below are targets, not counts.
   14 groups, 137 items. Te-waza is **16** — the draft missed obi-tori-gaeshi.
   Yoko-sutemi-waza gains uchi-makikomi and loses daki-age, which is not in the
   classification. All seven Kodokan kata are listed, not only the two the
-  first dan grades ask for; the owner unticks.
+  first dan grades ask for; the owner unticks. The seed button, its hint and
+  its toast are per programme under `academy.syllabus.empty.starter.<key>`
+  (`starterProgrammeKeys()`, with a generic `other` fallback).
 - **Karate — more than one starter programme, one per style.** Kihon and kumite
   are broadly shared between styles; kata are not, and a karate school is known
   by its kata. So karate's `programmes` lists one entry per style and the empty
@@ -734,7 +736,8 @@ One programme → the single CTA it has today ("Start from the BJJ programme").
 **More than one → one choice per programme**, named by style ("Start from
 Goju-ryu", "Start from Shorin-ryu"), plus "write your own" — a `p-selectbutton`
 or a short list, never a dropdown for two or three options (Hick). Labels
-through `academy.syllabus.programme.<key>`, an explicit map.
+through `academy.syllabus.empty.starter.<key>`, an explicit map
+(`starterProgrammeKeys()`, #1804).
 
 ### Check-in, timetable, programme, lesson sheet, coverage filter
 
@@ -879,8 +882,8 @@ timetable/syllabus E2E.
 
 One PR per programme file: the seed file; **its entry in the martial art's
 `programmes`** — the line that turns the CTA on and the 404 off; its guard
-test; the CTA label (`academy.syllabus.programme.<key>` — "Start from
-Goju-ryu"). Karate is **two PRs at kick-off** — Goju-ryu now, the second style
+test; the CTA, hint and toast (`academy.syllabus.empty.starter.<key>` —
+"Start from Goju-ryu"). Karate is **two PRs at kick-off** — Goju-ryu now, the second style
 once the owner's friend has named it — and Shotokan later is a third. The
 choice on the programme page ships with the **second** karate programme; until
 then karate offers one and shows one CTA like any other art. **Content review by

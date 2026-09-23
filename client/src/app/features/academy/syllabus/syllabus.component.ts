@@ -342,14 +342,15 @@ export class SyllabusComponent {
   }
 
   /**
-   * The kind, said only when it narrows something: never "both", the default,
-   * and never on a technique that only repeats its position's — the chip on
-   * the position already says it. A judo programme would otherwise print
-   * TACHI-WAZA on a hundred rows (#1804).
+   * The kind, said only where it tells the reader something: on a position
+   * when it is not the default "both", on a technique when it differs from
+   * what its position already says. A judo programme would otherwise print
+   * TACHI-WAZA on a hundred rows (#1804) — while a "both" technique under a
+   * no-gi position still says so, because it widens what its siblings are.
    */
   protected kindChip(topic: SyllabusTopic, position?: SyllabusTopic): string | null {
-    if (topic.kind === 'both' || topic.kind === position?.kind) return null;
-    return this.trainingModes.labels()[topic.kind];
+    const inherited = position?.kind ?? 'both';
+    return topic.kind === inherited ? null : this.trainingModes.labels()[topic.kind];
   }
 
   protected startAddingPosition(): void {
@@ -508,7 +509,7 @@ export class SyllabusComponent {
         next: () => {
           this.load();
           this.refreshAcademy();
-          this.toast('success', 'academy.syllabus.toast.seeded');
+          this.toast('success', this.starterKeys().seeded);
         },
         error: () =>
           this.toast(
