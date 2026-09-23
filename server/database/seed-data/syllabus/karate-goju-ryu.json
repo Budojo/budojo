@@ -1,0 +1,154 @@
+[
+  {
+    "name": "Junbi undo and hojo undo",
+    "kind": "both",
+    "techniques": [
+      "Junbi undo",
+      "Makiwara",
+      "Chiishi",
+      "Nigiri game",
+      "Kongoken",
+      "Ishi sashi",
+      "Kote kitae"
+    ]
+  },
+  {
+    "name": "Kihon — dachi",
+    "kind": "both",
+    "techniques": [
+      "Sanchin dachi",
+      "Shiko dachi",
+      "Neko ashi dachi",
+      "Zenkutsu dachi",
+      "Heiko dachi",
+      "Musubi dachi"
+    ]
+  },
+  {
+    "name": "Kihon — uke",
+    "kind": "both",
+    "techniques": [
+      "Jodan uke",
+      "Chudan uke",
+      "Gedan barai",
+      "Mawashi uke",
+      "Kake uke",
+      "Hiki uke"
+    ]
+  },
+  {
+    "name": "Kihon — tsuki and uchi",
+    "kind": "both",
+    "techniques": [
+      "Seiken tsuki",
+      "Ura tsuki",
+      "Age tsuki",
+      "Uraken uchi",
+      "Hiji ate",
+      "Shuto uchi"
+    ]
+  },
+  {
+    "name": "Kihon — geri",
+    "kind": "both",
+    "techniques": [
+      "Mae geri",
+      "Kansetsu geri",
+      "Mawashi geri",
+      "Yoko geri",
+      "Hiza geri"
+    ]
+  },
+  {
+    "name": "Kihon ido",
+    "kind": "both",
+    "techniques": [
+      "Unsoku ho",
+      "Kihon ido",
+      "Shiho ido",
+      "Happo ido"
+    ]
+  },
+  {
+    "name": "Heishu kata",
+    "kind": "kata",
+    "techniques": [
+      "Sanchin",
+      "Tensho"
+    ]
+  },
+  {
+    "name": "Fukyu kata — Taikyoku",
+    "kind": "kata",
+    "techniques": [
+      "Taikyoku jodan",
+      "Taikyoku chudan",
+      "Taikyoku gedan",
+      "Taikyoku kake uke",
+      "Taikyoku mawashi uke"
+    ]
+  },
+  {
+    "name": "Fukyu kata — Gekisai",
+    "kind": "kata",
+    "techniques": [
+      "Gekisai dai ichi",
+      "Gekisai dai ni"
+    ]
+  },
+  {
+    "name": "Kaishu kata — kyu",
+    "kind": "kata",
+    "techniques": [
+      "Saifa",
+      "Seiyunchin",
+      "Shisochin"
+    ]
+  },
+  {
+    "name": "Kaishu kata — dan",
+    "kind": "kata",
+    "techniques": [
+      "Sanseiru",
+      "Sepai",
+      "Kururunfa",
+      "Seisan",
+      "Suparinpei"
+    ]
+  },
+  {
+    "name": "Bunkai",
+    "kind": "both",
+    "techniques": [
+      "Kata bunkai",
+      "Renzoku bunkai"
+    ]
+  },
+  {
+    "name": "Kakie",
+    "kind": "kumite",
+    "techniques": [
+      "Basic kakie",
+      "Kakie with suri ashi",
+      "Kakie with nage"
+    ]
+  },
+  {
+    "name": "Yakusoku kumite",
+    "kind": "kumite",
+    "techniques": [
+      "Sandan gi",
+      "Kihon ippon kumite",
+      "Jiyu ippon kumite"
+    ]
+  },
+  {
+    "name": "Jiyu kumite",
+    "kind": "kumite",
+    "techniques": [
+      "Iri kumi",
+      "Jiyu kumite",
+      "Competition kumite (WKF)"
+    ]
+  }
+]

@@ -894,8 +894,16 @@ describe('SyllabusComponent — the starter it offers (#1804)', () => {
     );
   });
 
-  it('says something true for a programme that ships before its own words do', () => {
+  it('names the karate style the programme is, so another style is never surprised', () => {
     const { fixture, httpMock } = setup(['karate-goju-ryu'], 'karate');
+    flushTree(httpMock, []);
+    fixture.detectChanges();
+
+    expect(cta(fixture)).toBe('Start from the Goju-ryu programme');
+  });
+
+  it('says something true for a programme that ships before its own words do', () => {
+    const { fixture, httpMock } = setup(['karate-shorin-ryu'], 'karate');
     flushTree(httpMock, []);
     fixture.detectChanges();
 

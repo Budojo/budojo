@@ -530,6 +530,11 @@ instructor acts on. Sizes below are targets, not counts.
   the order of the FIJLKAM Goju dan programme — 1st dan Sanchin, Saifa,
   Seiyunchin; 2nd Tensho, Shisochin, Sanseiru; 3rd Sanchin, Tensho, Seipai,
   Kururunfa. Goju-Kai teaches Sanseiru before Shisochin; the owner reorders.
+
+  *As built (#1805):* 15 groups, 62 items, spelled as the IOGKF spells them
+  (Sanseiru, Sepai — the variants live in the entity doc, since JSON carries
+  no comments). The fukyu kata are two groups, Taikyoku and Gekisai, so either
+  lineage's opening comes out in one tap.
 - **Taekwondo (~11 groups, ~70 techniques)** — seogi (6), hand techniques (6),
   makki (6), chagi (12); **poomsae**: Taegeuk 1–8 Jang and the yudanja set
   (Koryo, Keumgang, Taebaek, Pyongwon, Sipjin, Jitae, Cheonkwon, Hansu, Ilyeo),
