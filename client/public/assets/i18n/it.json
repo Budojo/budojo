@@ -582,7 +582,7 @@
       },
       "create-academy": {
         "question": "Come comincio?",
-        "answer": "Al primo avvio crei il tuo accesso e Budojo apre una procedura breve: il nome dell'accademia, i giorni in cui si allena, e hai finito. Non c'è nessuna email da confermare — l'accesso vale su questo computer. Puoi tornare su tutto in qualsiasi momento da Accademia → Modifica."
+        "answer": "Al primo avvio crei il tuo accesso e Budojo apre una procedura breve: l'arte marziale che insegni, il nome dell'accademia, i giorni in cui si allena, e hai finito. Non c'è nessuna email da confermare — l'accesso vale su questo computer. Puoi tornare su tutto da Accademia → Modifica — sull'arte marziale finché l'accademia non ha atleti, un orario o un programma."
       },
       "invite-coach": {
         "question": "Posso dare l’accesso a un altro istruttore?",
@@ -771,7 +771,7 @@
       },
       "step2": {
         "title": "Imposta l'accademia",
-        "body": "Nome, indirizzo, i giorni in cui vi allenate e la quota se la fai pagare. Un minuto circa, e puoi cambiare tutto dopo."
+        "body": "L'arte marziale che insegni, il nome, i giorni in cui vi allenate e la quota se la fai pagare. Un minuto circa, e puoi cambiare tutto dopo — l'arte marziale finché non aggiungi atleti, un orario o un programma."
       },
       "step3": {
         "title": "Aggiungi il primo atleta",
@@ -1497,7 +1497,7 @@
       "website": {
         "label": "Sito web",
         "errorUrl": "Inserisci un URL completo — es. https://example.com.",
-        "placeholder": "https://gracie-barra.com"
+        "placeholder": "https://example.com"
       },
       "facebook": {
         "label": "Facebook",

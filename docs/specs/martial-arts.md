@@ -947,8 +947,10 @@ design README, both store listings (short and full descriptions, the belt
 paragraph, category and rating notes), three help answers (what Budojo is, a
 missing belt, the timetable's kinds), the community post placeholder ("bring
 your gi"), the belt chart's "IBJJF rank" hint, the programme form's name
-placeholders — per art now, "Ashi-waza" / "O-soto-gari" for judo — and four
-code comments that called it a BJJ app. `docs/README.md` never named BJJ. The
+placeholders — per art now, "Ashi-waza" / "O-soto-gari" for judo — the
+onboarding copy that now names the martial-art choice, the website and handle
+placeholders that named a BJJ franchise, and five code comments that called it
+a BJJ app. `docs/README.md` never named BJJ. The
 changelog and whats-new entry belong to the release that ships the epic, and
 are written there.
 

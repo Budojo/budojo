@@ -582,7 +582,7 @@
       },
       "create-academy": {
         "question": "How do I start?",
-        "answer": "The first time you open it you create your sign-in, and Budojo walks you through a short setup: the academy's name, the days you train, done. There is no email to confirm — the sign-in belongs to this computer. Everything in there can be changed later from Academy → Edit."
+        "answer": "The first time you open it you create your sign-in, and Budojo walks you through a short setup: the martial art you teach, the academy's name, the days you train, done. There is no email to confirm — the sign-in belongs to this computer. Everything in there can be changed later from Academy → Edit — the martial art until the academy has athletes, a timetable or a programme."
       },
       "invite-coach": {
         "question": "Can I give a second instructor access?",
@@ -771,7 +771,7 @@
       },
       "step2": {
         "title": "Set up the academy",
-        "body": "Name, address, the days you train, and a fee if you charge one. About a minute, and you can change any of it later."
+        "body": "The martial art you teach, the name, the days you train, and a fee if you charge one. About a minute, and you can change it later — the martial art until you add athletes, a timetable or a programme."
       },
       "step3": {
         "title": "Add your first athlete",
@@ -1497,7 +1497,7 @@
       "website": {
         "label": "Website",
         "errorUrl": "Enter a full URL — e.g. https://example.com.",
-        "placeholder": "https://gracie-barra.com"
+        "placeholder": "https://example.com"
       },
       "facebook": {
         "label": "Facebook",
