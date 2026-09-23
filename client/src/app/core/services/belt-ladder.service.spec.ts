@@ -87,7 +87,7 @@ describe('BeltLadderService (#1801)', () => {
   });
 
   it('reads as BJJ with no ladder until an academy is loaded', () => {
-    // The web-only athlete portal never loads the academy.
+    // Before the session's academy — owner's or athlete's (#1813) — arrives.
     const ladder = setup();
 
     expect(ladder.martialArt()).toBe('bjj');

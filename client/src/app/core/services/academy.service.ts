@@ -483,6 +483,15 @@ export class AcademyService {
   readonly mine = signal<MeAcademy | null>(null);
 
   /**
+   * Bumped by `clear()` only, so a `/me/academy` reply that lands after a
+   * sign-out cannot put the previous athlete's academy back — the next
+   * athlete in the same tab would otherwise keep it, since the portal shell
+   * fetches only while `mine` is empty. Separate from `epoch`, which every
+   * owner-side `get()` bumps too.
+   */
+  private mineEpoch = 0;
+
+  /**
    * Whichever academy this session has a ladder from: the owner's, else the
    * athlete's own (#1813). What `BeltLadderService` and `TrainingModesService`
    * read, so every belt in the app is drawn from the one the session belongs
@@ -668,15 +677,19 @@ export class AcademyService {
    * the caller can render the empty state without subscribing to an
    * error path.
    *
-   * Not cached — this surface is rarely revisited within a session
-   * and the cache invalidation rules would complicate the
-   * (single-purpose, athlete-side) view. The owner-side `get()`
-   * cache stays in charge of the higher-traffic `/api/v1/academy`.
+   * Always asks the server, and keeps the answer in `mine` (#1813): the
+   * athlete portal's belt ladder reads it through `ladderAcademy`, and the
+   * portal shell fetches only while it is empty. A reply that lands after
+   * `clear()` is dropped. The owner-side `get()` cache stays in charge of
+   * `/api/v1/academy`.
    */
   getMine(): Observable<MeAcademy | null> {
+    const requestEpoch = this.mineEpoch;
     return this.http.get<{ data: MeAcademy }>(`${environment.apiBase}/api/v1/me/academy`).pipe(
       map((res) => res.data),
-      tap((academy) => this.mine.set(academy)),
+      tap((academy) => {
+        if (requestEpoch === this.mineEpoch) this.mine.set(academy);
+      }),
       catchError((err: HttpErrorResponse) =>
         err.status === 404 ? of<MeAcademy | null>(null) : throwError(() => err),
       ),
@@ -692,6 +705,7 @@ export class AcademyService {
   clear(): void {
     this.academy.set(null);
     this.mine.set(null);
+    this.mineEpoch++;
     this.inflight$ = null;
     this.epoch++;
   }

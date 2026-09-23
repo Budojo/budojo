@@ -30,6 +30,35 @@ describe('AcademyService', () => {
     httpMock.verify();
   });
 
+  describe('getMine — the athlete academy (#1813)', () => {
+    it('keeps the answer for the belt ladder to read', () => {
+      service.getMine().subscribe();
+      httpMock
+        .expectOne('/api/v1/me/academy')
+        .flush({ data: { id: 3, name: 'Dojo', martial_art: 'judo' } });
+
+      expect(service.mine()?.martial_art).toBe('judo');
+      expect(service.ladderAcademy()?.martial_art).toBe('judo');
+    });
+
+    it('drops a reply that lands after sign-out, so the next athlete does not inherit it', () => {
+      service.getMine().subscribe();
+      const req = httpMock.expectOne('/api/v1/me/academy');
+
+      service.clear();
+      req.flush({ data: { id: 3, name: 'Dojo', martial_art: 'judo' } });
+
+      expect(service.mine()).toBeNull();
+    });
+
+    it("prefers the owner's academy for the ladder when both are loaded", () => {
+      service.academy.set(makeAcademy({ martial_art: 'karate' }));
+      service.mine.set({ id: 3, name: 'Dojo', martial_art: 'judo' } as never);
+
+      expect(service.ladderAcademy()?.martial_art).toBe('karate');
+    });
+  });
+
   describe('get — caching', () => {
     it('GETs /api/v1/academy on first call and populates the signal', () => {
       const academy = makeAcademy();
