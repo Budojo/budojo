@@ -485,6 +485,11 @@
       "no": "Non ora",
       "bodyCommunity": "I tuoi post nella community mostreranno anche la cintura.",
       "bodyFooter": "Puoi cambiare scelta più tardi da Profilo → Mi alleno in questa palestra."
+    },
+    "martialArt": {
+      "label": "Arte marziale",
+      "hint": "Decide le cinture e il programma. Puoi cambiarla finché non aggiungi atleti, un orario o un programma.",
+      "required": "Scegli l'arte marziale che insegni."
     }
   },
   "cookies": {
@@ -1428,7 +1433,8 @@
         "timetable": "Orario",
         "syllabus": "Programma",
         "season": "Stagione",
-        "logo": "Logo"
+        "logo": "Logo",
+        "martialArt": "Arte marziale"
       },
       "timetable": {
         "none": "Non ancora impostato",
@@ -1569,6 +1575,10 @@
         "lesson": "Una lezione",
         "day": "Un giorno intero",
         "hint": "Conta quando un atleta si allena due volte nello stesso giorno. Cambiarlo ricalcola tutti i carnet già venduti."
+      },
+      "martialArt": {
+        "label": "Arte marziale",
+        "locked": "Non si cambia più: l'accademia ha già atleti, un orario, lezioni o un programma."
       }
     },
     "feeTiers": {
@@ -1682,7 +1692,9 @@
         "title": "Nessun programma",
         "hint": "Parti dal programma BJJ già pronto — tutte le posizioni e le tecniche, da rinominare, togliere o cancellare — oppure scrivi il tuo da zero.",
         "cta": "Parti dal programma BJJ",
-        "scratch": "Scrivo il mio"
+        "scratch": "Scrivo il mio",
+        "hintNoStarter": "Il programma già pronto per questa arte marziale non c'è ancora. Scrivi il tuo: prima le posizioni o i gruppi che insegni, poi cosa c'è in ognuno.",
+        "ctaNoStarter": "Scrivo il mio programma"
       },
       "dialog": {
         "addPosition": "Nuova posizione",
@@ -2984,5 +2996,11 @@
     "days": "{{count}} giorni fa",
     "weekOne": "una settimana fa",
     "weeks": "{{count}} settimane fa"
+  },
+  "martialArts": {
+    "bjj": "Brazilian jiu-jitsu",
+    "judo": "Judo",
+    "karate": "Karate",
+    "taekwondo": "Taekwondo"
   }
 }

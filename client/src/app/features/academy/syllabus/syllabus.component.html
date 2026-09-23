@@ -86,19 +86,36 @@
         the shared empty state grew a secondary slot in #1618 and this is what
         it is for.
       -->
-      <app-empty-state
-        icon="pi pi-book"
-        [title]="'academy.syllabus.empty.title' | translate"
-        [hint]="'academy.syllabus.empty.hint' | translate"
-        [ctaLabel]="'academy.syllabus.empty.cta' | translate"
-        ctaIcon="pi pi-sparkles"
-        [ctaLoading]="seeding()"
-        (ctaClick)="seedFromStarter()"
-        [secondaryLabel]="'academy.syllabus.empty.scratch' | translate"
-        [secondaryDisabled]="seeding()"
-        (secondaryClick)="startAddingPosition()"
-        dataCy="syllabus-empty"
-      />
+      @if (hasStarter()) {
+        <app-empty-state
+          icon="pi pi-book"
+          [title]="'academy.syllabus.empty.title' | translate"
+          [hint]="'academy.syllabus.empty.hint' | translate"
+          [ctaLabel]="'academy.syllabus.empty.cta' | translate"
+          ctaIcon="pi pi-sparkles"
+          [ctaLoading]="seeding()"
+          (ctaClick)="seedFromStarter()"
+          [secondaryLabel]="'academy.syllabus.empty.scratch' | translate"
+          [secondaryDisabled]="seeding()"
+          (secondaryClick)="startAddingPosition()"
+          dataCy="syllabus-empty"
+        />
+      } @else {
+        <!--
+          The martial art's starter programme has not shipped yet (#1802):
+          the server would answer the seed with a 404, so the page offers
+          only what works — writing one's own.
+        -->
+        <app-empty-state
+          icon="pi pi-book"
+          [title]="'academy.syllabus.empty.title' | translate"
+          [hint]="'academy.syllabus.empty.hintNoStarter' | translate"
+          [ctaLabel]="'academy.syllabus.empty.ctaNoStarter' | translate"
+          ctaIcon="pi pi-plus"
+          (ctaClick)="startAddingPosition()"
+          dataCy="syllabus-empty"
+        />
+      }
     } @else {
       @if (searching()) {
         @if (filteredPositions().length === 0) {

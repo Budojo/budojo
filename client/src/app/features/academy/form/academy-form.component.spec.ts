@@ -39,7 +39,7 @@ interface Harness {
   router: Router;
 }
 
-function setup(cached: Academy | null = makeAcademy()): Harness {
+function setup(cached: Academy | null = makeAcademy(), fresh?: Academy): Harness {
   TestBed.configureTestingModule({
     imports: [AcademyFormComponent],
     providers: [
@@ -64,10 +64,17 @@ function setup(cached: Academy | null = makeAcademy()): Harness {
 
   const fixture = TestBed.createComponent(AcademyFormComponent);
   fixture.detectChanges();
+  const httpMock = TestBed.inject(HttpTestingController);
+  // The form re-reads the academy on open for a fresh lock (#1802); the
+  // server agrees with the cache unless a test says otherwise.
+  if (cached) {
+    httpMock.expectOne({ method: 'GET', url: '/api/v1/academy' }).flush({ data: fresh ?? cached });
+    fixture.detectChanges();
+  }
   return {
     fixture,
     component: fixture.componentInstance,
-    httpMock: TestBed.inject(HttpTestingController),
+    httpMock,
     router,
   };
 }
@@ -226,6 +233,9 @@ describe('AcademyFormComponent', () => {
       season_start_month: null,
       billing_from: null,
       training_days: null,
+      // Unlocked (no athletes, timetable, lessons or programme yet), so the picker's
+      // value rides along; the server accepts its own value unchanged.
+      martial_art: 'bjj',
     });
     req.flush({
       data: makeAcademy({
@@ -276,6 +286,9 @@ describe('AcademyFormComponent', () => {
       season_start_month: null,
       billing_from: null,
       training_days: null,
+      // Unlocked (no athletes, timetable, lessons or programme yet), so the picker's
+      // value rides along; the server accepts its own value unchanged.
+      martial_art: 'bjj',
     });
     req.flush({ data: makeAcademy({ address: null }) });
   });
@@ -658,5 +671,79 @@ describe('AcademyFormComponent — when fees started being recorded here (#1742)
     // Null is "no floor", which restores the pre-#1742 ledger exactly — not
     // "since forever", and not "leave it as it was".
     expect(component['buildPayload']().billing_from).toBeNull();
+  });
+});
+
+describe('AcademyFormComponent — the martial art (#1802)', () => {
+  it('offers the picker while the martial art can still change', () => {
+    const { fixture } = setup(makeAcademy({ martial_art: 'judo', martial_art_locked: false }));
+    const el = fixture.nativeElement as HTMLElement;
+
+    expect(el.querySelector('[data-cy="martial-art-judo"]')?.getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+    expect(el.querySelector('[data-cy="academy-form-martial-art-locked"]')).toBeNull();
+  });
+
+  it('sends the martial art the owner switched to', () => {
+    const { fixture, component, httpMock } = setup(
+      makeAcademy({ martial_art: 'bjj', martial_art_locked: false }),
+    );
+
+    (fixture.nativeElement as HTMLElement)
+      .querySelector<HTMLButtonElement>('[data-cy="martial-art-karate"]')!
+      .click();
+    component.submit();
+
+    const req = httpMock.expectOne('/api/v1/academy');
+    expect(req.request.body.martial_art).toBe('karate');
+    expect(component.form.dirty).toBe(true);
+  });
+
+  it('takes the lock from the server, not from a cache older than the first athlete', () => {
+    // Loaded unlocked, then the owner added an athlete: nothing refreshed
+    // the cache, and the picker would have offered a change the server
+    // refuses with a 422.
+    const { fixture } = setup(
+      makeAcademy({ martial_art: 'judo', martial_art_locked: false }),
+      makeAcademy({ martial_art: 'judo', martial_art_locked: true }),
+    );
+    const el = fixture.nativeElement as HTMLElement;
+
+    expect(el.querySelector('.martial-art-picker')).toBeNull();
+    expect(
+      el.querySelector('[data-cy="academy-form-martial-art-locked"]')?.textContent?.trim(),
+    ).toBe('Judo');
+  });
+
+  it('points the picker at its hint, which a group has no label to borrow', () => {
+    const { fixture } = setup(makeAcademy({ martial_art_locked: false }));
+    const el = fixture.nativeElement as HTMLElement;
+
+    const group = el.querySelector('.martial-art-picker');
+    const hint = el.querySelector('#martial-art-hint');
+    expect(group?.getAttribute('aria-describedby')).toBe('martial-art-hint');
+    expect(hint?.textContent).toContain('It decides the belts and the programme.');
+  });
+
+  it('shows the martial art as text once it is locked, and never sends it', () => {
+    const { fixture, component, httpMock } = setup(
+      makeAcademy({ martial_art: 'taekwondo', martial_art_locked: true }),
+    );
+    const el = fixture.nativeElement as HTMLElement;
+
+    expect(el.querySelector('.martial-art-picker')).toBeNull();
+    expect(
+      el.querySelector('[data-cy="academy-form-martial-art-locked"]')?.textContent?.trim(),
+    ).toBe('Taekwondo');
+    expect(el.textContent).toContain(
+      'Fixed now: the academy already has athletes, a timetable, lessons or a programme.',
+    );
+
+    component.submit();
+    const req = httpMock.expectOne('/api/v1/academy');
+    // A locked academy answers any value but its own with a 422, and the
+    // form has nothing to add: the key stays off the wire.
+    expect('martial_art' in req.request.body).toBe(false);
   });
 });

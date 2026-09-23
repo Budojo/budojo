@@ -485,6 +485,11 @@
       "no": "Not now",
       "bodyCommunity": "Your community posts will show your belt too.",
       "bodyFooter": "You can change your mind later from Profile → Train at this academy."
+    },
+    "martialArt": {
+      "label": "Martial art",
+      "hint": "It decides the belts and the programme. You can change it until you add athletes, a timetable or a programme.",
+      "required": "Choose the martial art you teach."
     }
   },
   "cookies": {
@@ -1428,7 +1433,8 @@
         "timetable": "Timetable",
         "syllabus": "Programme",
         "season": "Season",
-        "logo": "Logo"
+        "logo": "Logo",
+        "martialArt": "Martial art"
       },
       "timetable": {
         "none": "Not set up yet",
@@ -1569,6 +1575,10 @@
         "lesson": "One lesson",
         "day": "A whole day",
         "hint": "Matters when an athlete trains twice on the same day. Changing it recounts every carnet already sold."
+      },
+      "martialArt": {
+        "label": "Martial art",
+        "locked": "Fixed now: the academy already has athletes, a timetable, lessons or a programme."
       }
     },
     "feeTiers": {
@@ -1682,7 +1692,9 @@
         "title": "No programme yet",
         "hint": "Start from the shipped BJJ programme — every position and technique, ready to rename, untick or delete — or write your own from scratch.",
         "cta": "Start from the BJJ programme",
-        "scratch": "Write my own instead"
+        "scratch": "Write my own instead",
+        "hintNoStarter": "The starter programme for this martial art is not ready yet. Write your own: the positions or groups you teach first, then what goes in each.",
+        "ctaNoStarter": "Write my programme"
       },
       "dialog": {
         "addPosition": "New position",
@@ -2984,5 +2996,11 @@
     "days": "{{count}} days ago",
     "weekOne": "a week ago",
     "weeks": "{{count}} weeks ago"
+  },
+  "martialArts": {
+    "bjj": "Brazilian jiu-jitsu",
+    "judo": "Judo",
+    "karate": "Karate",
+    "taekwondo": "Taekwondo"
   }
 }

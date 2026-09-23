@@ -6,6 +6,15 @@
 // required `*` is now owned by the BudojoFormField wrapper, #1054) and the
 // textarea (which `_auth-page.scss` doesn't touch — only inputs).
 
+// One rhythm between the fields. The form had none, so a field's hint sat
+// flush against the next field's label; the three-line martial-art hint
+// (#1802) is where that stopped being survivable.
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
 .optional {
   font-size: 0.75rem;
   font-weight: 400;
@@ -40,7 +49,6 @@ textarea.p-textarea {
   padding: 1rem;
   border: 1px solid var(--p-content-border-color);
   border-radius: var(--p-border-radius-md);
-  margin-bottom: 1rem;
 
   &__hint {
     margin: 0;

@@ -105,7 +105,7 @@ describe('SetupComponent — train-here step (#751)', () => {
 
   it('defaults to "Not now" — no athlete enroll call on submit', () => {
     const { cmp, createAcademy, enrollMe, navigate } = setup();
-    cmp['form'].patchValue({ name: 'Test Academy' });
+    cmp['form'].patchValue({ martial_art: 'bjj', name: 'Test Academy' });
     cmp.submit();
     expect(createAcademy).toHaveBeenCalledTimes(1);
     expect(enrollMe).not.toHaveBeenCalled();
@@ -114,7 +114,7 @@ describe('SetupComponent — train-here step (#751)', () => {
 
   it('selecting "Yes" → submit chains create-academy + enroll-self before navigate', () => {
     const { cmp, createAcademy, enrollMe, navigate } = setup();
-    cmp['form'].patchValue({ name: 'Test Academy' });
+    cmp['form'].patchValue({ martial_art: 'bjj', name: 'Test Academy' });
     cmp.setTrainHere(true);
 
     cmp.submit();
@@ -129,7 +129,7 @@ describe('SetupComponent — train-here step (#751)', () => {
     // submit chain leaked enroll errors to the form's error banner. Verify
     // the wizard navigates to /dashboard even when /me/athlete throws.
     const { fixture, cmp, createAcademy, navigate } = setup();
-    cmp['form'].patchValue({ name: 'Test Academy' });
+    cmp['form'].patchValue({ martial_art: 'bjj', name: 'Test Academy' });
     cmp.setTrainHere(true);
 
     // Override the enroll spy to throw — must be done BEFORE submit().
@@ -150,11 +150,99 @@ describe('SetupComponent — train-here step (#751)', () => {
 
   it('selecting "Not now" after Yes flips back to no-enroll on submit', () => {
     const { cmp, createAcademy, enrollMe } = setup();
-    cmp['form'].patchValue({ name: 'Test Academy' });
+    cmp['form'].patchValue({ martial_art: 'bjj', name: 'Test Academy' });
     cmp.setTrainHere(true);
     cmp.setTrainHere(false);
     cmp.submit();
     expect(createAcademy).toHaveBeenCalled();
     expect(enrollMe).not.toHaveBeenCalled();
+  });
+});
+
+describe('SetupComponent — martial-art picker (#1802)', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('offers the four martial arts, none of them pre-selected', () => {
+    const { fixture } = setup();
+    const options = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>(
+        '.martial-art-picker__option',
+      ),
+    );
+
+    expect(options.map((o) => o.textContent?.trim())).toEqual([
+      'Brazilian jiu-jitsu',
+      'Judo',
+      'Karate',
+      'Taekwondo',
+    ]);
+    expect(options.every((o) => o.getAttribute('aria-pressed') === 'false')).toBe(true);
+  });
+
+  it('refuses to submit without a martial art, and says so on the field', () => {
+    const { fixture, cmp, createAcademy } = setup();
+    cmp['form'].patchValue({ name: 'Test Academy' });
+
+    cmp.submit();
+    fixture.detectChanges();
+
+    expect(createAcademy).not.toHaveBeenCalled();
+    const field = (fixture.nativeElement as HTMLElement).querySelector(
+      '[data-cy="setup-martial-art"]',
+    );
+    expect(field?.querySelector('small.budojo-form-field__error')?.textContent?.trim()).toBe(
+      'Choose the martial art you teach.',
+    );
+  });
+
+  it('sends the martial art the owner picked', () => {
+    const { fixture, cmp, createAcademy } = setup();
+    cmp['form'].patchValue({ name: 'Test Academy' });
+
+    (fixture.nativeElement as HTMLElement)
+      .querySelector<HTMLButtonElement>('[data-cy="martial-art-judo"]')!
+      .click();
+    fixture.detectChanges();
+    cmp.submit();
+
+    expect(createAcademy).toHaveBeenCalledWith(expect.objectContaining({ martial_art: 'judo' }));
+    expect(
+      (fixture.nativeElement as HTMLElement)
+        .querySelector('[data-cy="martial-art-judo"]')
+        ?.getAttribute('aria-pressed'),
+    ).toBe('true');
+  });
+
+  it('describes the picker by its hint, then by its error once there is one', () => {
+    const { fixture, cmp } = setup();
+    const el = fixture.nativeElement as HTMLElement;
+    const group = () => el.querySelector('.martial-art-picker');
+
+    expect(group()?.getAttribute('aria-describedby')).toBe('martial-art-hint');
+    expect(el.querySelector('#martial-art-hint')).not.toBeNull();
+
+    cmp.submit();
+    fixture.detectChanges();
+
+    expect(group()?.getAttribute('aria-describedby')).toBe('martial-art-error');
+    expect(el.querySelector('#martial-art-error')?.textContent?.trim()).toBe(
+      'Choose the martial art you teach.',
+    );
+  });
+
+  it('clears the error once a martial art is picked', () => {
+    const { fixture, cmp } = setup();
+    cmp.submit();
+    fixture.detectChanges();
+
+    cmp.setMartialArt('karate');
+    fixture.detectChanges();
+
+    const field = (fixture.nativeElement as HTMLElement).querySelector(
+      '[data-cy="setup-martial-art"]',
+    );
+    expect(field?.querySelector('small.budojo-form-field__error')).toBeNull();
   });
 });

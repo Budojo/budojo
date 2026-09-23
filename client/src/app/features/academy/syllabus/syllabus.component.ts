@@ -97,6 +97,15 @@ export class SyllabusComponent {
   protected readonly positions = signal<readonly SyllabusTopic[]>([]);
   protected readonly saving = signal<boolean>(false);
   protected readonly seeding = signal<boolean>(false);
+
+  /**
+   * Whether the academy's martial art has a starter programme to copy
+   * (#1802). Empty until the art's first programme ships; the seed CTA would
+   * otherwise meet a 404.
+   */
+  protected readonly hasStarter = computed<boolean>(
+    () => (this.academyService.academy()?.syllabus_programmes?.length ?? 0) > 0,
+  );
   protected readonly dialogOpen = signal<boolean>(false);
 
   /** The topic being edited, or null while adding a new one. */

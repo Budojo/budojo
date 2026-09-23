@@ -1,4 +1,4 @@
-export {};
+import LADDERS from '../../src/test-utils/ladders.json';
 
 const ATHLETES_EMPTY = {
   statusCode: 200,
@@ -39,6 +39,54 @@ describe('Academy setup page', () => {
     cy.get('button[type="submit"]').should('contain.text', 'Create academy');
   });
 
+  it('asks for the martial art first, with nothing pre-selected (#1802)', () => {
+    cy.get('[data-cy="setup-martial-art"]').should('contain.text', 'Martial art');
+    cy.get('[data-cy^="martial-art-"][aria-pressed="true"]').should('not.exist');
+  });
+
+  it('refuses to create an academy without a martial art (#1802)', () => {
+    cy.intercept('POST', '/api/v1/academy', () => {
+      throw new Error('should not be called without a martial art');
+    });
+
+    cy.get('input[id="name"]').type('My Academy');
+    cy.get('button[type="submit"]').click();
+
+    cy.contains('Choose the martial art you teach.').should('be.visible');
+  });
+
+  it('a judo academy is offered judo belts, not the BJJ ones (#1802)', () => {
+    const judoAcademy = {
+      id: 1,
+      name: 'My Dojo',
+      slug: 'my-dojo',
+      address: null,
+      logo_url: null,
+      martial_art: 'judo',
+      grades: LADDERS.judo,
+      martial_art_locked: false,
+      syllabus_programmes: [],
+    };
+    cy.intercept('POST', '/api/v1/academy', {
+      statusCode: 201,
+      body: { data: judoAcademy },
+    }).as('createAcademy');
+
+    cy.get('[data-cy="martial-art-judo"]').click();
+    cy.get('input[id="name"]').type('My Dojo');
+    cy.get('button[type="submit"]').click();
+
+    cy.wait('@createAcademy').its('request.body.martial_art').should('eq', 'judo');
+    cy.url().should('include', '/dashboard/athletes');
+
+    // In-app, so the ladder comes from the academy the POST returned.
+    cy.get('[data-cy="add-athlete-btn"]').click();
+    cy.get('#belt').click();
+    cy.get('.p-select-option').should('have.length', LADDERS.judo.length);
+    cy.get('.p-select-option').contains('White and yellow').should('exist');
+    cy.get('.p-select-option').contains('Purple').should('not.exist');
+  });
+
   it('shows validation error when submitting empty name', () => {
     cy.get('button[type="submit"]').click();
     cy.contains('Academy name is required').should('be.visible');
@@ -63,6 +111,7 @@ describe('Academy setup page', () => {
     }).as('createAcademy');
     cy.intercept('GET', '/api/v1/athletes*', ATHLETES_EMPTY).as('athletesList');
 
+    cy.get('[data-cy="martial-art-bjj"]').click();
     cy.get('input[id="name"]').type('My Academy');
     cy.get('button[type="submit"]').click();
 
@@ -87,6 +136,7 @@ describe('Academy setup page', () => {
     }).as('enrollMe');
     cy.intercept('GET', '/api/v1/athletes*', ATHLETES_EMPTY).as('athletesList');
 
+    cy.get('[data-cy="martial-art-bjj"]').click();
     cy.get('input[id="name"]').type('My Academy');
     cy.get('[data-cy="setup-train-here-yes"]').click();
     cy.get('button[type="submit"]').click();
@@ -111,6 +161,7 @@ describe('Academy setup page', () => {
     });
     cy.intercept('GET', '/api/v1/athletes*', ATHLETES_EMPTY);
 
+    cy.get('[data-cy="martial-art-bjj"]').click();
     cy.get('input[id="name"]').type('My Academy');
     cy.get('button[type="submit"]').click();
     cy.wait('@createAcademy');
@@ -123,6 +174,7 @@ describe('Academy setup page', () => {
       body: { message: 'Server error.' },
     }).as('createFail');
 
+    cy.get('[data-cy="martial-art-bjj"]').click();
     cy.get('input[id="name"]').type('My Academy');
     cy.get('button[type="submit"]').click();
 

@@ -27,7 +27,8 @@ const CROSS_COLLAR = topic({ id: 12, parent_id: 1, name: 'Cross collar choke', k
 const CLOSED_GUARD = topic({ id: 1, name: 'Closed guard', children: [ARMBAR, CROSS_COLLAR] });
 const K_GUARD = topic({ id: 2, name: 'K guard', kind: 'nogi', sort_order: 1, children: [] });
 
-function setup() {
+/** The martial art's starter programmes, as `Academy.syllabus_programmes` sends them (#1802). */
+function setup(starterProgrammes: string[] = ['bjj']) {
   TestBed.configureTestingModule({
     imports: [SyllabusComponent],
     providers: [
@@ -37,6 +38,15 @@ function setup() {
       provideNoopAnimations(),
       ...provideI18nTesting(),
     ],
+  });
+
+  TestBed.inject(AcademyService).academy.set({
+    id: 1,
+    name: 'Test',
+    slug: 'test',
+    address: null,
+    logo_url: null,
+    syllabus_programmes: starterProgrammes,
   });
 
   const fixture = TestBed.createComponent(SyllabusComponent);
@@ -145,6 +155,29 @@ describe('SyllabusComponent (#1563)', () => {
     expect(el.querySelector('[data-cy="syllabus-tree"]')).toBeNull();
     // Not two loudest buttons for one job: the header CTA yields to the empty state.
     expect(el.querySelector('[data-cy="syllabus-add"]')).toBeNull();
+  });
+
+  it('offers only a blank start while the martial art has no starter programme (#1802)', () => {
+    const { fixture, component, httpMock } = setup([]);
+    flushTree(httpMock, []);
+    fixture.detectChanges();
+
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('[data-cy="syllabus-empty"]')?.textContent).toContain(
+      'The starter programme for this martial art is not ready yet.',
+    );
+    // The seed would meet a 404, so nothing offers it, not even as a secondary.
+    expect(el.querySelector('[data-cy="syllabus-empty-secondary"]')).toBeNull();
+
+    const cta = el.querySelector<HTMLButtonElement>('[data-cy="syllabus-empty-cta"] button');
+    expect(cta?.textContent?.trim()).toBe('Write my programme');
+    cta!.click();
+    fixture.detectChanges();
+
+    // The new-position dialog, not a seed.
+    expect(component['dialogOpen']()).toBe(true);
+    expect(component['addingUnder']()).toBeNull();
+    httpMock.expectNone(`${SYLLABUS_URL}/seed`);
   });
 
   it('seeds the shipped programme, then re-reads the tree and the academy', () => {

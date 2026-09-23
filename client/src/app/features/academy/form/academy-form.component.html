@@ -13,6 +13,38 @@
   }
 
   <form [formGroup]="form" (ngSubmit)="submit()" novalidate class="form__fields">
+    <!--
+      The martial art (#1802). Editable only while nothing in the academy is
+      shaped by it; after that it is a fact about the data, shown as a value
+      with the reason written beside it — not a disabled control that looks
+      broken, and not a tooltip a phone cannot hover.
+    -->
+    @if (martialArtLocked()) {
+      <app-budojo-form-field
+        [label]="'academy.form.martialArt.label' | translate"
+        [hint]="'academy.form.martialArt.locked' | translate"
+        dataCy="academy-form-martial-art"
+      >
+        <p class="form__static" data-cy="academy-form-martial-art-locked">
+          {{ martialArtName() }}
+        </p>
+      </app-budojo-form-field>
+    } @else {
+      <app-budojo-form-field
+        [label]="'academy.form.martialArt.label' | translate"
+        [hint]="'setup.martialArt.hint' | translate"
+        controlId="martial-art"
+        dataCy="academy-form-martial-art"
+      >
+        <app-martial-art-picker
+          [value]="form.controls.martial_art.value"
+          [ariaLabel]="'academy.form.martialArt.label' | translate"
+          describedBy="martial-art-hint"
+          (valueChange)="setMartialArt($event)"
+        />
+      </app-budojo-form-field>
+    }
+
     <app-budojo-form-field
       [label]="'academy.form.name.label' | translate"
       [required]="true"

@@ -43,6 +43,11 @@
         <dd class="row__value" data-cy="academy-row-name">{{ a?.name ?? '—' }}</dd>
       </div>
 
+      <div class="row">
+        <dt class="row__label">{{ 'academy.detail.row.martialArt' | translate }}</dt>
+        <dd class="row__value" data-cy="academy-row-martial-art">{{ martialArtName() }}</dd>
+      </div>
+
       <div class="row" data-cy="academy-logo-row">
         <dt class="row__label">{{ 'academy.detail.row.logo' | translate }}</dt>
         <dd class="row__value row__value--logo">

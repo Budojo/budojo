@@ -368,7 +368,7 @@ export interface MeAcademy {
 
 /**
  * What an academy teaches (#1800). Set at creation and locked once the academy
- * has athletes, lessons or a programme — every stored belt is a claim in its
+ * has athletes, classes, lessons or a programme — every stored belt is a claim in its
  * ladder.
  */
 export type MartialArt = 'bjj' | 'judo' | 'karate' | 'taekwondo';
@@ -404,6 +404,8 @@ export interface CreateAcademyPayload {
  */
 export interface UpdateAcademyPayload {
   name?: string;
+  /** Accepted while `martial_art_locked` is false; a different value is a 422 after. */
+  martial_art?: MartialArt;
   /** Phone pair (#161). `null` on both clears the saved phone. */
   phone_country_code?: string | null;
   phone_national_number?: string | null;
