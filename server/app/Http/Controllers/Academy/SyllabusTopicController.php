@@ -90,7 +90,7 @@ class SyllabusTopicController extends Controller
     }
 
     /**
-     * "Start from the BJJ programme." 409 when the academy already has one —
+     * "Start from the judo programme." 409 when the academy already has one —
      * even one topic is a programme the academy owns, never overwritten.
      */
     public function seed(SeedSyllabusRequest $request): JsonResponse

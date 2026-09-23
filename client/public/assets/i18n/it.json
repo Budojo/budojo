@@ -622,7 +622,7 @@
       },
       "programme": {
         "question": "A cosa serve il Programma?",
-        "answer": "Accademia → Programma è l'elenco di posizioni e tecniche che insegni. La spunta «in stagione» dice cosa stai coprendo quest'anno: è il denominatore su cui la copertura fa i conti. Se parti da zero, Budojo ti propone un programma BJJ completo da cui partire e poi modificare."
+        "answer": "Accademia → Programma è l'elenco di posizioni e tecniche che insegni. La spunta «in stagione» dice cosa stai coprendo quest'anno: è il denominatore su cui la copertura fa i conti. Se parti da zero, Budojo ti propone il programma completo della tua arte marziale, dove ce n'è già uno, da cui partire e poi modificare."
       },
       "lesson-topics": {
         "question": "Come segno cosa abbiamo fatto in lezione?",
@@ -1684,11 +1684,26 @@
       "noTechniques": "Ancora niente sotto questa posizione.",
       "empty": {
         "title": "Nessun programma",
-        "hint": "Parti dal programma BJJ già pronto — tutte le posizioni e le tecniche, da rinominare, togliere o cancellare — oppure scrivi il tuo da zero.",
-        "cta": "Parti dal programma BJJ",
         "scratch": "Scrivo il mio",
         "hintNoStarter": "Il programma già pronto per questa arte marziale non c'è ancora. Scrivi il tuo: prima le posizioni o i gruppi che insegni, poi cosa c'è in ognuno.",
-        "ctaNoStarter": "Scrivo il mio programma"
+        "ctaNoStarter": "Scrivo il mio programma",
+        "starter": {
+          "bjj": {
+            "cta": "Parti dal programma BJJ",
+            "hint": "Parti dal programma BJJ già pronto — tutte le posizioni e le tecniche, da rinominare, togliere o cancellare — oppure scrivi il tuo da zero.",
+            "seeded": "Il programma BJJ è tuo, modificalo pure"
+          },
+          "judo": {
+            "cta": "Parti dal programma di judo",
+            "hint": "Parti dal programma di judo già pronto — le proiezioni, le immobilizzazioni, gli strangolamenti e le leve del Kodokan per gruppi, con ukemi, randori e kata — da rinominare, togliere o cancellare, oppure scrivi il tuo da zero.",
+            "seeded": "Il programma di judo è tuo, modificalo pure"
+          },
+          "other": {
+            "cta": "Parti dal programma già pronto",
+            "hint": "Parti dal programma già pronto per questa arte marziale — da rinominare, togliere o cancellare — oppure scrivi il tuo da zero.",
+            "seeded": "Il programma è tuo, modificalo pure"
+          }
+        }
       },
       "dialog": {
         "addPosition": "Nuova posizione",
@@ -1717,7 +1732,6 @@
       "toast": {
         "saved": "Programma salvato",
         "removed": "Rimosso dal programma",
-        "seeded": "Il programma BJJ è tuo, modificalo pure",
         "errorSummary": "Qualcosa è andato storto",
         "errorDetail": "La modifica non è stata salvata. Riprova.",
         "loadErrorDetail": "Impossibile caricare il programma."

@@ -109,8 +109,8 @@ it('refuses a programme the martial art does not offer', function (): void {
 });
 
 it('answers 404, not 500, for a martial art whose programme has not shipped', function (): void {
-    // #1800: a judo academy exists before the judo programme does (#1804).
-    $this->academy->update(['martial_art' => MartialArt::Judo]);
+    // #1800: a taekwondo academy exists before its programme does (#1806).
+    $this->academy->update(['martial_art' => MartialArt::Taekwondo]);
 
     $this->actingAs($this->user)
         ->postJson('/api/v1/academy/syllabus/seed')
@@ -118,6 +118,73 @@ it('answers 404, not 500, for a martial art whose programme has not shipped', fu
         ->assertJsonPath('message', 'No starter programme has shipped for this martial art yet.');
 
     expect(SyllabusTopic::query()->where('academy_id', $this->academy->id)->exists())->toBeFalse();
+});
+
+it('copies the judo programme into a judo academy: the Kodokan gokyo, then katame-waza, then practice (#1804)', function (): void {
+    $this->academy->update(['martial_art' => MartialArt::Judo]);
+
+    $this->actingAs($this->user)->postJson('/api/v1/academy/syllabus/seed')->assertCreated();
+
+    $groups = SyllabusTopic::query()->where('academy_id', $this->academy->id)->positions()
+        ->orderBy('sort_order')->withCount('children')->get()->keyBy('name');
+
+    expect($groups->keys()->first())->toBe('Ukemi')
+        ->and($groups->keys()->last())->toBe('Kata');
+
+    // The Kodokan classification since 1 April 2017: 68 nage-waza and 32
+    // katame-waza, and every one of them where the Kodokan files it. A throw
+    // in the wrong group, or one left out, fails here rather than on a mat.
+    expect([
+        'Te-waza' => $groups['Te-waza']->children_count,
+        'Koshi-waza' => $groups['Koshi-waza']->children_count,
+        'Ashi-waza' => $groups['Ashi-waza']->children_count,
+        'Ma-sutemi-waza' => $groups['Ma-sutemi-waza']->children_count,
+        'Yoko-sutemi-waza' => $groups['Yoko-sutemi-waza']->children_count,
+        'Osaekomi-waza' => $groups['Osaekomi-waza']->children_count,
+        'Shime-waza' => $groups['Shime-waza']->children_count,
+        'Kansetsu-waza' => $groups['Kansetsu-waza']->children_count,
+    ])->toBe([
+        'Te-waza' => 16,
+        'Koshi-waza' => 10,
+        'Ashi-waza' => 21,
+        'Ma-sutemi-waza' => 5,
+        'Yoko-sutemi-waza' => 16,
+        'Osaekomi-waza' => 10,
+        'Shime-waza' => 12,
+        'Kansetsu-waza' => 10,
+    ]);
+});
+
+it('files the throws under tachi-waza and the holds, chokes and locks under ne-waza', function (): void {
+    $this->academy->update(['martial_art' => MartialArt::Judo]);
+    $this->actingAs($this->user)->postJson('/api/v1/academy/syllabus/seed')->assertCreated();
+
+    $mode = fn (string $name): TrainingMode => SyllabusTopic::query()
+        ->where('academy_id', $this->academy->id)->where('name', $name)->firstOrFail()->kind;
+
+    expect($mode('O-soto-gari'))->toBe(TrainingMode::TachiWaza)
+        ->and($mode('Tomoe-nage'))->toBe(TrainingMode::TachiWaza)
+        ->and($mode('Kesa-gatame'))->toBe(TrainingMode::NeWaza)
+        ->and($mode('Juji-gatame'))->toBe(TrainingMode::NeWaza)
+        ->and($mode('Mae-ukemi'))->toBe(TrainingMode::Both)
+        // A practice group is either-way; its kata say which half they drill.
+        ->and($mode('Nage-no-kata'))->toBe(TrainingMode::TachiWaza)
+        ->and($mode('Katame-no-kata'))->toBe(TrainingMode::NeWaza);
+});
+
+it('keeps the techniques shiai forbids, and says so in their name', function (): void {
+    $this->academy->update(['martial_art' => MartialArt::Judo]);
+    $this->actingAs($this->user)->postJson('/api/v1/academy/syllabus/seed')->assertCreated();
+
+    $forbidden = SyllabusTopic::query()->where('academy_id', $this->academy->id)
+        ->where('name', 'like', '%(prohibited in shiai)')->orderBy('name')->pluck('name')->all();
+
+    expect($forbidden)->toBe([
+        'Ashi-garami (prohibited in shiai)',
+        'Do-jime (prohibited in shiai)',
+        'Kani-basami (prohibited in shiai)',
+        'Kawazu-gake (prohibited in shiai)',
+    ]);
 });
 
 it('ships programme files that parse, name every position once, and repeat no technique within a position', function (): void {

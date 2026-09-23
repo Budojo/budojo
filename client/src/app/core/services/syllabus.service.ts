@@ -60,7 +60,7 @@ export class SyllabusService {
   }
 
   /**
-   * "Start from the BJJ programme" — copies the shipped starter in. A 409
+   * "Start from the judo programme" — copies the art's shipped starter in. A 409
    * means the academy already has topics, which the caller never asks for:
    * the button is gone by then.
    */

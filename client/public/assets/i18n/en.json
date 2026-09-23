@@ -622,7 +622,7 @@
       },
       "programme": {
         "question": "What is the Programme for?",
-        "answer": "Academy → Programme is the list of positions and techniques you teach. The “in season” tick says what you are covering this year: it is the denominator coverage does its arithmetic against. Starting from nothing, Budojo offers a full BJJ programme to start from and edit."
+        "answer": "Academy → Programme is the list of positions and techniques you teach. The “in season” tick says what you are covering this year: it is the denominator coverage does its arithmetic against. Starting from nothing, Budojo offers the full programme of your martial art, where one has shipped, to start from and edit."
       },
       "lesson-topics": {
         "question": "How do I record what we worked on?",
@@ -1684,11 +1684,26 @@
       "noTechniques": "Nothing under this position yet.",
       "empty": {
         "title": "No programme yet",
-        "hint": "Start from the shipped BJJ programme — every position and technique, ready to rename, untick or delete — or write your own from scratch.",
-        "cta": "Start from the BJJ programme",
         "scratch": "Write my own instead",
         "hintNoStarter": "The starter programme for this martial art is not ready yet. Write your own: the positions or groups you teach first, then what goes in each.",
-        "ctaNoStarter": "Write my programme"
+        "ctaNoStarter": "Write my programme",
+        "starter": {
+          "bjj": {
+            "cta": "Start from the BJJ programme",
+            "hint": "Start from the shipped BJJ programme — every position and technique, ready to rename, untick or delete — or write your own from scratch.",
+            "seeded": "The BJJ programme is yours to edit"
+          },
+          "judo": {
+            "cta": "Start from the judo programme",
+            "hint": "Start from the shipped judo programme — the Kodokan throws, holds, chokes and locks by group, with ukemi, randori and kata — ready to rename, untick or delete, or write your own from scratch.",
+            "seeded": "The judo programme is yours to edit"
+          },
+          "other": {
+            "cta": "Start from the shipped programme",
+            "hint": "Start from the programme that ships for this martial art — ready to rename, untick or delete — or write your own from scratch.",
+            "seeded": "The programme is yours to edit"
+          }
+        }
       },
       "dialog": {
         "addPosition": "New position",
@@ -1717,7 +1732,6 @@
       "toast": {
         "saved": "Programme saved",
         "removed": "Removed from the programme",
-        "seeded": "The BJJ programme is yours to edit",
         "errorSummary": "Something went wrong",
         "errorDetail": "The change was not saved. Try again.",
         "loadErrorDetail": "The programme could not be loaded."
