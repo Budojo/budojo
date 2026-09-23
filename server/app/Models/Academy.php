@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Contracts\HasAddress;
 use App\Enums\CarnetEntryUnit;
+use App\Enums\MartialArt;
 use App\Observers\AcademyObserver;
 use App\Observers\Audit\AcademyAuditObserver;
 use Database\Factories\AcademyFactory;
@@ -23,6 +24,7 @@ use Illuminate\Support\Carbon;
  * @property int                 $id
  * @property int                 $user_id
  * @property string              $name
+ * @property MartialArt          $martial_art            What the academy teaches (#1800). Its ladder and programmes come from App\Support\MartialArt\MartialArtProfile.
  * @property string|null         $phone_country_code     E.164 prefix incl. `+`, e.g. `+39`. Pair with `phone_national_number` (#161). Both columns null OR both filled.
  * @property string|null         $phone_national_number  Unformatted national digits, e.g. `3331234567`.
  * @property string|null         $website               Full URL incl. scheme, e.g. `https://gracie-barra.com` (#162).
@@ -38,7 +40,7 @@ use Illuminate\Support\Carbon;
  * @property CarnetEntryUnit     $carnet_entry_unit      What one carnet entry pays for (#1576): a lesson, or the whole training day.
  * @property list<int>|null      $training_days  Carbon dayOfWeek ints (0=Sun..6=Sat); null = "not configured"
  */
-#[Fillable(['user_id', 'name', 'phone_country_code', 'phone_national_number', 'website', 'facebook', 'instagram', 'slug', 'logo_path', 'monthly_fee_cents', 'carnet_price_cents', 'carnet_entries', 'carnet_entry_unit', 'training_days', 'season_start_month', 'billing_from'])]
+#[Fillable(['user_id', 'name', 'phone_country_code', 'phone_national_number', 'website', 'facebook', 'instagram', 'slug', 'logo_path', 'monthly_fee_cents', 'carnet_price_cents', 'carnet_entries', 'carnet_entry_unit', 'training_days', 'season_start_month', 'billing_from', 'martial_art'])]
 #[ObservedBy([AcademyObserver::class, AcademyAuditObserver::class])]
 class Academy extends Model implements HasAddress
 {
@@ -46,15 +48,18 @@ class Academy extends Model implements HasAddress
     use HasFactory;
 
     /**
-     * The column default, known to the model too (#1576): a freshly created
-     * academy is serialised straight from the instance `create()` returns,
-     * which never reads the row back — without this the resource would
-     * meet a null where the schema promises `lesson`.
+     * The column defaults, known to the model too (#1576, #1800): a freshly
+     * created academy is serialised straight from the instance `create()`
+     * returns, which never reads the row back — without this the resource
+     * would meet a null where the schema promises `lesson`, and every path
+     * that builds an academy without a request (factories, seeders) would hold
+     * a null martial art.
      *
      * @var array<string, mixed>
      */
     protected $attributes = [
         'carnet_entry_unit' => 'lesson',
+        'martial_art' => 'bjj',
     ];
 
     /** @return BelongsTo<User, $this> */
@@ -272,6 +277,7 @@ class Academy extends Model implements HasAddress
             'season_start_month' => 'integer',
             'billing_from' => 'date',
             'carnet_entry_unit' => CarnetEntryUnit::class,
+            'martial_art' => MartialArt::class,
         ];
     }
 }

@@ -199,7 +199,7 @@ it('gives a brand-new academy this month as its floor', function (): void {
     $user = \App\Models\User::factory()->create();
 
     $this->actingAs($user)
-        ->postJson('/api/v1/academy', ['name' => 'Nuova Accademia'])
+        ->postJson('/api/v1/academy', ['name' => 'Nuova Accademia', 'martial_art' => 'bjj'])
         ->assertCreated()
         // The migration's backfill has nothing to backfill on a fresh
         // install, so without this every new academy starts with no floor and

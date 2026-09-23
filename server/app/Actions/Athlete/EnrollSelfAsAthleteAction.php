@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace App\Actions\Athlete;
 
 use App\Enums\AthleteStatus;
-use App\Enums\Belt;
 use App\Exceptions\UserAlreadyAthleteException;
 use App\Models\Academy;
 use App\Models\Athlete;
 use App\Models\User;
+use App\Support\MartialArt\MartialArtProfile;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -99,7 +99,9 @@ class EnrollSelfAsAthleteAction
                 'first_name' => $user->first_name,
                 'last_name' => $user->last_name,
                 'email' => $user->email,
-                'belt' => Belt::White,
+                // The adult starting belt of the academy's art (#1800) — white in
+                // all four today, but that is the ladder's answer, not a constant.
+                'belt' => MartialArtProfile::for($academy->martial_art)->ladder()->startingBelt(),
                 'stripes' => 0,
                 'status' => AthleteStatus::Active,
                 'joined_at' => now()->toDateString(),

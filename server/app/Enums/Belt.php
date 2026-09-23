@@ -4,11 +4,23 @@ declare(strict_types=1);
 
 namespace App\Enums;
 
+/**
+ * The vocabulary of belt colours (#1800).
+ *
+ * Only the colours. Which of them an academy awards, in what order, and how
+ * many stripes each carries is its martial art's **ladder**
+ * (`App\Support\MartialArt\RankLadder`, read from
+ * `database/seed-data/martial-arts/<art>.json`). Blue is 6th of 12 in BJJ
+ * and 7th of 12 in taekwondo; red is BJJ's grand master and taekwondo's 2nd
+ * kup. A rank on the colour could only ever have been one art's rank, which
+ * is why `rank()` and `maxStripes()` left this enum.
+ *
+ * Values never change: they are what `athletes.belt` and the promotion
+ * history store. New colours are appended.
+ */
 enum Belt: string
 {
-    // IBJJF Youth belts (#230 — request from beta tester Luigi). Kept on a
-    // single linear rank scale below white so "sort by belt asc" surfaces
-    // beginners (kids first, then adult start) and "desc" surfaces seniors.
+    // IBJJF youth belts (#230).
     case Grey = 'grey';
     case Yellow = 'yellow';
     case Orange = 'orange';
@@ -20,52 +32,21 @@ enum Belt: string
     case Brown = 'brown';
     case Black = 'black';
 
-    // Senior IBJJF ranks beyond black (#229 — request from beta tester
-    // Luigi). 1°-6° grau on black are stored as `stripes` 1-6, not as
-    // separate enum cases — that re-uses the existing stripes mechanism.
-    // 7°+ ARE separate cases because their colour changes:
-    case RedAndBlack = 'red-and-black'; // 7° grau — coral
-    case RedAndWhite = 'red-and-white'; // 8° grau — coral
-    case Red = 'red';                   // 9° / 10° grau — grand master
+    // Two-colour belts: the coral pair (#229), whose naming — `-and-`, upper
+    // half first — every half-belt below follows.
+    case RedAndBlack = 'red-and-black';
+    case RedAndWhite = 'red-and-white';
+    case Red = 'red';
 
-    /**
-     * IBJJF rank: kids (grey < yellow < orange < green) < adults (white <
-     * blue < purple < brown < black) < senior coral and red. Single
-     * source of truth for any "by belt rank" ordering — sort controllers,
-     * attendance summaries, future promotion logic. Update this once when
-     * the rank scale changes; everything that consumes it stays consistent.
-     */
-    public function rank(): int
-    {
-        return match ($this) {
-            self::Grey => 1,
-            self::Yellow => 2,
-            self::Orange => 3,
-            self::Green => 4,
-            self::White => 5,
-            self::Blue => 6,
-            self::Purple => 7,
-            self::Brown => 8,
-            self::Black => 9,
-            self::RedAndBlack => 10,
-            self::RedAndWhite => 11,
-            self::Red => 12,
-        };
-    }
-
-    /**
-     * Maximum stripes for THIS belt.
-     *   - Black: 0-6 (the graus 1°-6° within the black-belt phase, IBJJF
-     *     standard).
-     *   - Every other belt: 0-4 (kids, adult, and coral/red belts share
-     *     the canonical four-stripe progression).
-     *
-     * Centralised here so the validation layer and the SPA picker stay
-     * in sync via a single match — no magic numbers in StoreAthleteRequest
-     * / UpdateAthleteRequest / athlete-form.component.
-     */
-    public function maxStripes(): int
-    {
-        return $this === self::Black ? 6 : 4;
-    }
+    // Half-belts (#1800) — kids' steps between two kyu in judo and karate,
+    // and the intermediate kup in taekwondo.
+    case WhiteAndYellow = 'white-and-yellow';
+    case YellowAndOrange = 'yellow-and-orange';
+    case OrangeAndGreen = 'orange-and-green';
+    case GreenAndBlue = 'green-and-blue';
+    case BlueAndBrown = 'blue-and-brown';
+    case YellowAndGreen = 'yellow-and-green';
+    case BlueAndRed = 'blue-and-red';
+    // Taekwondo's poom — the black belt of someone under fifteen.
+    case BlackAndRed = 'black-and-red';
 }

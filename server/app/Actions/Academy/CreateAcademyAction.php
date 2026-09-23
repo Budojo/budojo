@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions\Academy;
 
 use App\Actions\Address\SyncAddressAction;
+use App\Enums\MartialArt;
 use App\Models\Academy;
 use App\Models\User;
 use Illuminate\Support\Carbon;
@@ -25,6 +26,7 @@ class CreateAcademyAction
     public function execute(
         User $user,
         string $name,
+        MartialArt $martialArt,
         ?array $address = null,
         ?array $trainingDays = null,
     ): Academy {
@@ -32,10 +34,11 @@ class CreateAcademyAction
         // creation step — wrap them so a failed address insert rolls back
         // the academy row, instead of leaving a half-created academy with
         // no address that the user can't recover.
-        return DB::transaction(function () use ($user, $name, $address, $trainingDays): Academy {
+        return DB::transaction(function () use ($user, $name, $martialArt, $address, $trainingDays): Academy {
             $academy = Academy::create([
                 'user_id' => $user->id,
                 'name' => $name,
+                'martial_art' => $martialArt,
                 'slug' => $this->uniqueSlug($name),
                 'training_days' => $trainingDays,
                 // This month, for the same reason the #1742 migration

@@ -6,9 +6,9 @@ namespace App\Http\Requests\Athlete;
 
 use App\Authorization\Capability;
 use App\Http\Requests\Concerns\AuthorizesAcademyCapability;
+use App\Http\Requests\Concerns\ResolvesRankLadder;
 use App\Http\Requests\Concerns\ValidatesAddress;
 use App\Http\Requests\Concerns\ValidatesPhonePair;
-use App\Http\Requests\Concerns\ValidatesStripesAgainstBelt;
 use App\Support\AthleteFieldRules;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
@@ -19,7 +19,7 @@ class StoreAthleteRequest extends FormRequest
     use AuthorizesAcademyCapability;
     use ValidatesAddress;
     use ValidatesPhonePair;
-    use ValidatesStripesAgainstBelt;
+    use ResolvesRankLadder;
 
     public function authorize(): bool
     {
@@ -42,7 +42,7 @@ class StoreAthleteRequest extends FormRequest
             // One definition of "a valid athlete", shared with the CSV import
             // (#1346) so a rule added here cannot silently skip the path that
             // creates sixty records at once.
-            ...AthleteFieldRules::for($academyId),
+            ...AthleteFieldRules::for($academyId, $this->rankLadder()),
             ...$this->addressRules(),
         ];
     }
@@ -50,7 +50,6 @@ class StoreAthleteRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $this->validatePhonePairWithLibphonenumber($validator);
-        $this->validateStripesAgainstBelt($validator);
     }
 
     /**

@@ -1,0 +1,74 @@
+{
+  "martial_art": "karate",
+  "source": "FIJLKAM Regolamento Organico Federale, Title XII, Art. 92 (it covers judo and karate alike). Up to three tacche on every coloured belt: no federation prescribes or forbids them, and Italian dojos use both tacche and half-belts for children.",
+  "grades": [
+    {
+      "belt": "white",
+      "max_stripes": 3
+    },
+    {
+      "belt": "white-and-yellow",
+      "max_stripes": 3,
+      "kids": true
+    },
+    {
+      "belt": "yellow",
+      "max_stripes": 3
+    },
+    {
+      "belt": "yellow-and-orange",
+      "max_stripes": 3,
+      "kids": true
+    },
+    {
+      "belt": "orange",
+      "max_stripes": 3
+    },
+    {
+      "belt": "orange-and-green",
+      "max_stripes": 3,
+      "kids": true
+    },
+    {
+      "belt": "green",
+      "max_stripes": 3
+    },
+    {
+      "belt": "green-and-blue",
+      "max_stripes": 3,
+      "kids": true
+    },
+    {
+      "belt": "blue",
+      "max_stripes": 3
+    },
+    {
+      "belt": "blue-and-brown",
+      "max_stripes": 3,
+      "kids": true
+    },
+    {
+      "belt": "brown",
+      "max_stripes": 3
+    },
+    {
+      "belt": "black",
+      "max_stripes": 4,
+      "count": "dan",
+      "first": 1
+    },
+    {
+      "belt": "red-and-white",
+      "max_stripes": 2,
+      "count": "dan",
+      "first": 6
+    },
+    {
+      "belt": "red",
+      "max_stripes": 1,
+      "count": "dan",
+      "first": 9
+    }
+  ],
+  "programmes": []
+}

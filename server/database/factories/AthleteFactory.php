@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
-use App\Enums\Belt;
+use App\Enums\MartialArt;
 use App\Enums\AthleteStatus;
 use App\Models\Academy;
 use App\Models\Athlete;
+use App\Support\MartialArt\MartialArtProfile;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -58,7 +59,9 @@ class AthleteFactory extends Factory
             'facebook'              => $hasFacebook ? "https://example.com/fb/{$slug}" : null,
             'instagram'             => $hasInstagram ? "https://example.com/ig/{$slug}" : null,
             'date_of_birth'         => $this->faker->optional(0.6)->dateTimeBetween('-50 years', '-16 years')?->format('Y-m-d'),
-            'belt'                  => $this->faker->randomElement(Belt::cases())->value,
+            // From the BJJ ladder, which is what a factory academy teaches:
+            // `Belt::cases()` is every colour of every art since #1800.
+            'belt'                  => $this->faker->randomElement(MartialArtProfile::for(MartialArt::Bjj)->ladder()->belts())->value,
             'stripes'               => $this->faker->numberBetween(0, 4),
             'status'                => AthleteStatus::Active->value,
             'is_self'               => false,

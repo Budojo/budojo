@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Actions\Academy\CreateAcademyAction;
 use App\Actions\Address\SyncAddressAction;
+use App\Enums\MartialArt;
 use App\Models\Academy;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -16,7 +17,7 @@ it('creates an academy with a slug + ties it to the calling user (#1021)', funct
     $user = User::factory()->create();
 
     $action = new CreateAcademyAction(new SyncAddressAction());
-    $academy = $action->execute(user: $user, name: 'Akademia Roma BJJ');
+    $academy = $action->execute(user: $user, name: 'Akademia Roma BJJ', martialArt: MartialArt::Bjj);
 
     expect($academy)->toBeInstanceOf(Academy::class);
     expect($academy->user_id)->toBe($user->id);
@@ -39,7 +40,7 @@ it('upserts the polymorphic address row when one is supplied', function (): void
     ];
 
     $action = new CreateAcademyAction(new SyncAddressAction());
-    $academy = $action->execute(user: $user, name: 'Test BJJ', address: $address);
+    $academy = $action->execute(user: $user, name: 'Test BJJ', martialArt: MartialArt::Bjj, address: $address);
 
     expect($academy->address)->not->toBeNull();
     expect($academy->address->city)->toBe('Torino');
@@ -63,6 +64,7 @@ it('rolls back the academy row when the address sync throws — transactional in
     expect(fn () => $action->execute(
         user: $user,
         name: 'Test',
+        martialArt: MartialArt::Bjj,
         address: ['line1' => '1', 'city' => 'X', 'province' => 'P', 'postal_code' => '0', 'country' => 'IT'],
     ))->toThrow(\RuntimeException::class, 'simulated address-sync failure');
 
@@ -77,8 +79,19 @@ it('persists training_days as JSON when supplied', function (): void {
     $academy = $action->execute(
         user: $user,
         name: 'BJJ Days',
+        martialArt: MartialArt::Bjj,
         trainingDays: [1, 3, 5], // Monday / Wednesday / Friday
     );
 
     expect($academy->training_days)->toBe([1, 3, 5]);
+});
+
+it('stores the martial art it is given', function (): void {
+    /** @var User $user */
+    $user = User::factory()->create();
+
+    $academy = new CreateAcademyAction(new SyncAddressAction())
+        ->execute(user: $user, name: 'Dojo', martialArt: MartialArt::Taekwondo);
+
+    expect($academy->fresh()?->martial_art)->toBe(MartialArt::Taekwondo);
 });

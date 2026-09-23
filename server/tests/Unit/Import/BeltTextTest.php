@@ -75,3 +75,28 @@ it('refuses what it does not recognise instead of guessing', function (?string $
     // white belt's record and nobody finds out.
     expect(BeltText::parse($text))->toBeNull();
 })->with([null, '', '   ', 'cintura', 'chartreuse', '42', 'bl']);
+
+it('reads the half-belts however they are written (#1800)', function (string $text, Belt $belt): void {
+    expect(BeltText::parse($text))->toBe($belt);
+})->with([
+    ['bianco-gialla', Belt::WhiteAndYellow],
+    ['Bianca/Gialla', Belt::WhiteAndYellow],
+    ['cintura bianca e gialla', Belt::WhiteAndYellow],
+    ['giallo arancio', Belt::YellowAndOrange],
+    ['gialla-arancione', Belt::YellowAndOrange],
+    ['arancio-verde', Belt::OrangeAndGreen],
+    ['verde blu', Belt::GreenAndBlue],
+    ['blu-marrone', Belt::BlueAndBrown],
+    ['giallo-verde', Belt::YellowAndGreen],
+    ['blu rossa', Belt::BlueAndRed],
+    ['nera e rossa', Belt::BlackAndRed],
+    ['Poom', Belt::BlackAndRed],
+    ['bianca superiore', Belt::WhiteAndYellow],
+]);
+
+it('keeps reading the single colours and the coral belts the way it did', function (): void {
+    expect(BeltText::parse('gialla'))->toBe(Belt::Yellow)
+        ->and(BeltText::parse('rosso nera'))->toBe(Belt::RedAndBlack)
+        ->and(BeltText::parse('rossa e bianca'))->toBe(Belt::RedAndWhite)
+        ->and(BeltText::parse('arancio viola'))->toBeNull();
+});

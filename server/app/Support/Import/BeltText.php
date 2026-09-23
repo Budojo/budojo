@@ -82,7 +82,34 @@ final class BeltText
         'rossa e bianca' => Belt::RedAndWhite,
         'rosso e bianco' => Belt::RedAndWhite,
         'red and white' => Belt::RedAndWhite,
+
+        // Taekwondo's poom (#1800) — the black belt of someone under fifteen.
+        'poom' => Belt::BlackAndRed,
+        // The 9th kup, which some clubs call "white superior".
+        'bianca superiore' => Belt::WhiteAndYellow,
     ];
+
+    /**
+     * The Italian words for each colour, both genders, as `normalise()` leaves
+     * them. The half-belts (#1800) are built from these rather than listed:
+     * eight belts × two genders × "X Y" / "X e Y" is a list nobody would keep
+     * complete by hand.
+     *
+     * @var array<string, list<string>>
+     */
+    private const COLOUR_WORDS = [
+        'white' => ['bianca', 'bianco'],
+        'yellow' => ['gialla', 'giallo'],
+        'orange' => ['arancione', 'arancio'],
+        'green' => ['verde'],
+        'blue' => ['blu'],
+        'brown' => ['marrone'],
+        'black' => ['nera', 'nero'],
+        'red' => ['rossa', 'rosso'],
+    ];
+
+    /** @var array<string, Belt>|null */
+    private static ?array $halfBelts = null;
 
     public static function parse(?string $text): ?Belt
     {
@@ -100,7 +127,38 @@ final class BeltText
             }
         }
 
-        return self::SYNONYMS[$normalised] ?? null;
+        return self::SYNONYMS[$normalised] ?? self::halfBelts()[$normalised] ?? null;
+    }
+
+    /**
+     * `bianco gialla`, `bianca e gialla`, `giallo arancio`… → the half-belt.
+     * Every two-colour case whose value is `<a>-and-<b>` with both halves in
+     * `COLOUR_WORDS`, in the order the value states them — the upper half
+     * first, which is also how people name them.
+     *
+     * @return array<string, Belt>
+     */
+    private static function halfBelts(): array
+    {
+        if (self::$halfBelts !== null) {
+            return self::$halfBelts;
+        }
+
+        $map = [];
+        foreach (Belt::cases() as $belt) {
+            $halves = explode('-and-', $belt->value);
+            if (\count($halves) !== 2 || ! isset(self::COLOUR_WORDS[$halves[0]], self::COLOUR_WORDS[$halves[1]])) {
+                continue;
+            }
+            foreach (self::COLOUR_WORDS[$halves[0]] as $upper) {
+                foreach (self::COLOUR_WORDS[$halves[1]] as $lower) {
+                    $map["{$upper} {$lower}"] ??= $belt;
+                    $map["{$upper} e {$lower}"] ??= $belt;
+                }
+            }
+        }
+
+        return self::$halfBelts = $map;
     }
 
     /**

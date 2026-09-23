@@ -212,9 +212,11 @@ final class RankLadder
     public function has(Belt $belt): bool;
     public function rankOf(Belt $belt): int;                      // 1-based position
     public function maxStripes(Belt $belt): int;
-    public function countOf(Belt $belt): GradeCount;              // what a stripe on this belt means
-    public function first(): Belt;                                // what a new athlete gets
-    public function sortCase(string $column, string $direction): string;
+    /** @return list<Grade> — belt, max_stripes, count, first, kids */
+    public function grades(): array;
+    public function startingBelt(): Belt;                         // the lowest non-kids grade
+    /** @return list<string|null> — padded to MAX_GRADES for the literal sort SQL */
+    public function sortBindings(): array;
 }
 ```
 
@@ -281,9 +283,10 @@ Existing twelve cases stay, values untouched. New cases:
 
 `rank()` and `maxStripes()` are **deleted** from the enum. `rank()` has no
 runtime reader — `applyBeltSort()` hard-codes the integers, and only the sync
-test this epic retires called it. `maxStripes()` has **two**:
+test this epic retires called it. `maxStripes()` had **two**:
 `ValidatesStripesAgainstBelt` and `StoreAthletePromotionRequest::validateStripeCap()`
-(the bespoke copy for `belt_at_event`, line 120). Both read the ladder. The
+(the bespoke copy for `belt_at_event`). Both became one `ValidationRule`,
+`StripesWithinGrade`, which also covers the CSV import that had no cap at all. The
 first draft of this list named one of the two; grep `->maxStripes()` before the
 delete, not after.
 
@@ -547,28 +550,36 @@ rests on structural evidence, not a census.
   `Rule::enum(Belt::class)` **and** in `ladder->belts()`. The rule already has
   two callers (the form request and the CSV import), so a purple belt in a
   judo file is refused in the preview with the same reason the form would give.
-- **Stripes are capped by the grade, in the ladder.** `ValidatesStripesAgainstBelt`
-  reads `ladder->maxStripes($belt)`. The global ceiling on the request moves
+- **Stripes are capped by the grade, in the ladder.** `StripesWithinGrade`
+  reads `ladder->maxStripes($belt)` — on create, edit, import and backfill. The global ceiling on the request moves
   from `max:6` to `max:10` — the dan — and the DB column (unsigned tinyint)
   needs nothing.
-- **The belt sort is generated, not hand-synced.** `applyBeltSort()` builds its
-  two `CASE` expressions from `RankLadder::sortCase()`, values bound, `ELSE`
-  strictly greater than the highest rank so a value outside the ladder surfaces
-  at the end rather than hiding. `BeltRankSqlSyncTest` — which exists only to
-  keep a string literal in step with an enum — is **retired** and replaced by a
-  test that the BJJ ladder generates the twelve ranks it has today.
-- **The owner who enrols themself gets the ladder's first belt**
-  (`EnrollSelfAsAthleteAction`), not `Belt::White` — which is first in all four
-  ladders today and is still not the rule.
+- **The belt sort reads the ladder, not a hand-synced list.** `orderByRaw()`
+  takes a `literal-string`, so the SQL cannot be generated from a ladder.
+  Instead it is a literal `CASE belt WHEN ? THEN 1 … WHEN ? THEN 16 ELSE 99`,
+  and the ladder is **bound** into it (`RankLadder::sortBindings()`, padded
+  with nulls that never match). `MAX_GRADES = 16` bounds every ladder; `ELSE`
+  is above every rank, so a value outside the ladder surfaces at the end.
+  `BeltRankSqlSyncTest` — which existed only to keep a string literal in step
+  with an enum — is **retired**; `BeltRankSqlShapeTest` pins the SQL's shape
+  and the registry guard pins BJJ to the twelve ranks it had.
+- **The owner who enrols themself gets the ladder's starting belt**
+  (`EnrollSelfAsAthleteAction` → `RankLadder::startingBelt()`): the lowest
+  grade that is **not** a kids' step. Not simply the first rung — BJJ's opens
+  with the kids' grey. White in all four ladders today, as the ladder's answer
+  rather than a constant.
 - **The promotion backfill validates against the ladder too**
   (`StoreAthletePromotionRequest`: `from_belt`, `to_belt`, `belt_at_event`).
   Chain consistency (#1431) is untouched; it compares strings.
-- **A promotion post, a share card and a public profile render with the
-  martial art of the academy the belt was earned in.** `PublicProfileResource`
-  and `CommunityPostResource` gain `martial_art`; the client resolves label and
-  colour through it, never through the *viewer's* academy. Moot on the desktop
-  build — `community` and `athlete_accounts` are absent from its capability list
-  (`server/config/budojo.php:77`) — and still correct on the web build.
+- **A public profile renders a belt with the martial art it was earned in.**
+  The feed, comments, reactions and the check-in list are academy-scoped, so
+  the viewer's academy *is* the belt's academy and they need nothing. The
+  public profile is the one surface a visitor from elsewhere — or no academy
+  at all — can see; it needs `martial_art` beside the belt for the art-specific
+  label, and falls back to the colour vocabulary without it. Deferred to #1801,
+  where it is rendered: both surfaces are web-only (`community` and
+  `athlete_accounts` are absent from the desktop capability list,
+  `server/config/budojo.php:77`), and the web build is not deployed.
 - **The seed copies one of the academy's martial art's starter programmes.**
   `POST /academy/syllabus/seed` takes an optional `programme` key and reads
   `MartialArtProfile::for($academy->martial_art)->programmeFile($key)`. The key
@@ -594,7 +605,7 @@ rests on structural evidence, not a census.
 | `GET` | `/api/v1/academy` | `AcademyResource` gains `martial_art`, `grades: [{ belt, max_stripes, kids }]` in rank order, `martial_art_locked: bool` (so the form renders the locked state without a failed PATCH) and `syllabus_programmes: string[]` (starter-programme keys, empty until one ships); each grade also carries `count` (`stripe` \| `dan` \| `poom`) and `first`; `training_modes: [a, b]` arrives with slice 4 |
 | `GET` | `/api/v1/athletes`, `/{id}` | unchanged shape; `belt` may now be any vocabulary value |
 | `POST` | `/api/v1/academy/syllabus/seed` | optional `programme` key (required when the art offers more than one; 422 if not offered); **404** while none has shipped |
-| `GET` | `/api/v1/community/…`, `/public/…` | `martial_art` beside every belt they emit |
+| `GET` | `/api/v1/public/…` (profile) | `martial_art` beside the belt — with #1801, where the profile renders it |
 
 OpenAPI: `MartialArt` and `Grade` schemas; `Belt` enum extended and its
 description rewritten — *a colour vocabulary; which colours an academy awards,
@@ -769,8 +780,8 @@ taekwondo as confirmed by the owner; `programmes` listing BJJ's only), with
 `AcademyResource` — `martial_art`, `grades`, `martial_art_locked`,
 `syllabus_programmes`; `POST` required / `PATCH` locked on the **four**
 tables, trashed rows included; `AthleteFieldRules::for()`;
-`ValidatesStripesAgainstBelt` **and** `StoreAthletePromotionRequest::validateStripeCap()`
-via ladder; `applyBeltSort()` generated; `EnrollSelfAsAthleteAction` first belt;
+`StripesWithinGrade` (replacing the trait and the backfill's copy)
+via ladder; `applyBeltSort()` bound to the ladder; `EnrollSelfAsAthleteAction` starting belt;
 `StoreAthletePromotionRequest` ladder check on the three belt fields; `BeltText`
 two-tone synonyms; `Belt` gains eight cases and loses two methods; factories
 pick from the academy's ladder; `SeedSyllabusAction` reads the profile (BJJ
