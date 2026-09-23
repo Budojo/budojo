@@ -8,6 +8,7 @@ use App\Enums\AthleteStatus;
 use App\Enums\Belt;
 use App\Enums\BillingPeriod;
 use App\Rules\BeltInLadder;
+use App\Rules\StripesWithinGrade;
 use App\Support\MartialArt\RankLadder;
 use Illuminate\Validation\Rule;
 
@@ -28,9 +29,10 @@ use Illuminate\Validation\Rule;
  *
  * Address rules are deliberately *not* here — they come from
  * `ValidatesAddress::addressRules()` and belong to the form, which is the only
- * surface that collects one. Nor are the cross-field checks: those already
- * live in the `ValidatesPhonePair` and `ValidatesStripesAgainstBelt` traits,
- * and both callers use them directly.
+ * surface that collects one. Nor is the phone-pair reachability check, which
+ * lives in the `ValidatesPhonePair` trait. The stripe cap per grade **is**
+ * here (`StripesWithinGrade`, #1800): it was a request-only trait until then,
+ * and the import — which never ran it — accepted any count up to the ceiling.
  */
 final class AthleteFieldRules
 {
@@ -83,9 +85,9 @@ final class AthleteFieldRules
             'date_of_birth' => ['nullable', 'date', 'before:today'],
             'belt' => ['required', Rule::enum(Belt::class), new BeltInLadder($ladder)],
             // Global ceiling across every ladder (#1800) — taekwondo's black
-            // counts 1st-9th dan as 0-8 — with the per-grade cap enforced
-            // cross-field against the ladder by `ValidatesStripesAgainstBelt`.
-            'stripes' => ['integer', 'min:0', 'max:10'],
+            // counts 1st-9th dan as 0-8 — and the cap of the row's own grade,
+            // which the CSV import needs as much as the form does.
+            'stripes' => ['integer', 'min:0', 'max:10', new StripesWithinGrade($ladder)],
             'status' => ['required', Rule::enum(AthleteStatus::class)],
             'joined_at' => ['required', 'date'],
             // Which price tier the athlete starts on (#1381). Optional: an

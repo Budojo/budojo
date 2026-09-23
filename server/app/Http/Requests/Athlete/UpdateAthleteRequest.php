@@ -9,11 +9,12 @@ use App\Enums\AthleteStatus;
 use App\Enums\Belt;
 use App\Enums\BillingPeriod;
 use App\Http\Requests\Concerns\AuthorizesAcademyCapability;
+use App\Http\Requests\Concerns\ResolvesRankLadder;
 use App\Http\Requests\Concerns\ValidatesAddress;
 use App\Http\Requests\Concerns\ValidatesPhonePair;
-use App\Http\Requests\Concerns\ValidatesStripesAgainstBelt;
 use App\Models\Athlete;
 use App\Rules\BeltInLadder;
+use App\Rules\StripesWithinGrade;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -24,7 +25,7 @@ class UpdateAthleteRequest extends FormRequest
     use AuthorizesAcademyCapability;
     use ValidatesAddress;
     use ValidatesPhonePair;
-    use ValidatesStripesAgainstBelt;
+    use ResolvesRankLadder;
 
     public function authorize(): bool
     {
@@ -95,10 +96,10 @@ class UpdateAthleteRequest extends FormRequest
             'instagram' => ['sometimes', 'nullable', 'url', 'max:255'],
             'date_of_birth' => ['sometimes', 'nullable', 'date', 'before:today'],
             'belt' => ['sometimes', Rule::enum(Belt::class), new BeltInLadder($this->rankLadder())],
-            // Global ceiling across every ladder (#1800). The per-grade cap is
-            // enforced cross-field in `withValidator` below — it considers the
-            // belt from the request OR, if absent, the existing athlete's belt.
-            'stripes' => ['sometimes', 'integer', 'min:0', 'max:10'],
+            // Global ceiling across every ladder (#1800), then the grade's own
+            // cap — for the belt in the request or, when an edit sends only
+            // `stripes`, the belt the athlete already has.
+            'stripes' => ['sometimes', 'integer', 'min:0', 'max:10', new StripesWithinGrade($this->rankLadder(), storedBelt: $athlete?->belt)],
             'status' => ['sometimes', Rule::enum(AthleteStatus::class)],
             'joined_at' => ['sometimes', 'date'],
             // Which price tier the athlete is on (#1381). Scoped to their own
@@ -118,7 +119,6 @@ class UpdateAthleteRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $this->validatePhonePairWithLibphonenumber($validator);
-        $this->validateStripesAgainstBelt($validator);
     }
 
     /**

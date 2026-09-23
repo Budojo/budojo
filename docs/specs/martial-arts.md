@@ -283,9 +283,10 @@ Existing twelve cases stay, values untouched. New cases:
 
 `rank()` and `maxStripes()` are **deleted** from the enum. `rank()` has no
 runtime reader — `applyBeltSort()` hard-codes the integers, and only the sync
-test this epic retires called it. `maxStripes()` has **two**:
+test this epic retires called it. `maxStripes()` had **two**:
 `ValidatesStripesAgainstBelt` and `StoreAthletePromotionRequest::validateStripeCap()`
-(the bespoke copy for `belt_at_event`, line 120). Both read the ladder. The
+(the bespoke copy for `belt_at_event`). Both became one `ValidationRule`,
+`StripesWithinGrade`, which also covers the CSV import that had no cap at all. The
 first draft of this list named one of the two; grep `->maxStripes()` before the
 delete, not after.
 
@@ -549,8 +550,8 @@ rests on structural evidence, not a census.
   `Rule::enum(Belt::class)` **and** in `ladder->belts()`. The rule already has
   two callers (the form request and the CSV import), so a purple belt in a
   judo file is refused in the preview with the same reason the form would give.
-- **Stripes are capped by the grade, in the ladder.** `ValidatesStripesAgainstBelt`
-  reads `ladder->maxStripes($belt)`. The global ceiling on the request moves
+- **Stripes are capped by the grade, in the ladder.** `StripesWithinGrade`
+  reads `ladder->maxStripes($belt)` — on create, edit, import and backfill. The global ceiling on the request moves
   from `max:6` to `max:10` — the dan — and the DB column (unsigned tinyint)
   needs nothing.
 - **The belt sort reads the ladder, not a hand-synced list.** `orderByRaw()`
@@ -779,7 +780,7 @@ taekwondo as confirmed by the owner; `programmes` listing BJJ's only), with
 `AcademyResource` — `martial_art`, `grades`, `martial_art_locked`,
 `syllabus_programmes`; `POST` required / `PATCH` locked on the **four**
 tables, trashed rows included; `AthleteFieldRules::for()`;
-`ValidatesStripesAgainstBelt` **and** `StoreAthletePromotionRequest::validateStripeCap()`
+`StripesWithinGrade` (replacing the trait and the backfill's copy)
 via ladder; `applyBeltSort()` bound to the ladder; `EnrollSelfAsAthleteAction` starting belt;
 `StoreAthletePromotionRequest` ladder check on the three belt fields; `BeltText`
 two-tone synonyms; `Belt` gains eight cases and loses two methods; factories

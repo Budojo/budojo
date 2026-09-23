@@ -87,6 +87,35 @@ it('caps stripes by the grade in the ladder', function (MartialArt $art, string 
     'bjj black: six graus' => [MartialArt::Bjj, 'black', 6],
 ]);
 
+it('caps stripes by the stored belt when an edit sends only stripes', function (MartialArt $art, Belt $belt, int $over): void {
+    // The branch the form never exercises: no `belt` in the payload, so the
+    // cap comes from the belt the athlete already has, in their academy's ladder.
+    $owner = ownerOf($art);
+    $athlete = Athlete::factory()->for($owner->academy)->create(['belt' => $belt, 'stripes' => 0]);
+
+    $this->actingAs($owner)->putJson("/api/v1/athletes/{$athlete->id}", ['stripes' => $over])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['stripes' => "The {$belt->value} belt allows at most " . ($over - 1) . ' stripes.']);
+    $this->actingAs($owner)->putJson("/api/v1/athletes/{$athlete->id}", ['stripes' => $over - 1])
+        ->assertOk();
+})->with([
+    'bjj purple' => [MartialArt::Bjj, Belt::Purple, 5],
+    'judo green' => [MartialArt::Judo, Belt::Green, 1],
+]);
+
+it('caps stripes by the grade in the CSV import too', function (): void {
+    // Before #1800 the import had only the global ceiling and no grade cap at
+    // all: a white belt with six stripes went straight onto the roster.
+    $owner = userWithAcademy();
+    $csv = UploadedFile::fake()->createWithContent('atleti.csv', "Nome;Cognome;Cintura;Gradi\nAnna;Verdi;bianca;8\nBea;Neri;nera;6\n");
+
+    $rows = collect($this->actingAs($owner)->post('/api/v1/athletes/import', ['file' => $csv])->assertOk()->json('data.rows'));
+
+    expect($rows->firstWhere('row', 2)['status'])->toBe('invalid')
+        ->and($rows->firstWhere('row', 2)['errors']['stripes'][0])->toBe('The white belt allows at most 4 stripes.')
+        ->and($rows->firstWhere('row', 3)['status'])->not->toBe('invalid');
+});
+
 it('refuses a belt outside the ladder in the import preview, naming the reason', function (): void {
     $owner = ownerOf(MartialArt::Judo);
     $csv = UploadedFile::fake()->createWithContent('atleti.csv', "Nome;Cognome;Cintura\nAnna;Verdi;viola\nBea;Neri;bianco-gialla\n");

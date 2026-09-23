@@ -11,6 +11,7 @@ use App\Http\Requests\Concerns\ResolvesRankLadder;
 use App\Http\Requests\Concerns\ValidatesPromotionChainConsistency;
 use App\Models\Athlete;
 use App\Rules\BeltInLadder;
+use App\Rules\StripesWithinGrade;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -50,6 +51,9 @@ class StoreAthletePromotionRequest extends FormRequest
         // History is judged against the athlete's academy's ladder (#1800): a
         // transcribed paper register from a judo dojo cannot contain a purple.
         $inLadder = new BeltInLadder($this->rankLadder());
+        // The cap of the grade the stripes were counted on — `belt_at_event`,
+        // not the athlete's belt today.
+        $withinGrade = new StripesWithinGrade($this->rankLadder(), beltField: 'belt_at_event');
 
         return [
             'kind' => ['required', Rule::in(['belt', 'stripe'])],
@@ -59,8 +63,8 @@ class StoreAthletePromotionRequest extends FormRequest
             'recorded_at' => ['required', 'date_format:Y-m-d', 'before_or_equal:today'],
             'from_belt' => ['nullable', 'prohibited_unless:kind,belt', Rule::enum(Belt::class), $inLadder],
             'to_belt' => ['required_if:kind,belt', 'prohibited_unless:kind,belt', Rule::enum(Belt::class), $inLadder],
-            'from_stripes' => ['required_if:kind,stripe', 'prohibited_unless:kind,stripe', 'integer', 'min:0', 'max:10'],
-            'to_stripes' => ['required_if:kind,stripe', 'prohibited_unless:kind,stripe', 'integer', 'min:0', 'max:10'],
+            'from_stripes' => ['required_if:kind,stripe', 'prohibited_unless:kind,stripe', 'integer', 'min:0', 'max:10', $withinGrade],
+            'to_stripes' => ['required_if:kind,stripe', 'prohibited_unless:kind,stripe', 'integer', 'min:0', 'max:10', $withinGrade],
             'belt_at_event' => ['required_if:kind,stripe', 'prohibited_unless:kind,stripe', Rule::enum(Belt::class), $inLadder],
         ];
     }
@@ -69,7 +73,6 @@ class StoreAthletePromotionRequest extends FormRequest
     {
         $validator->after(function (Validator $validator): void {
             $this->validateNoOpTransition($validator);
-            $this->validateStripeCap($validator);
             // Skip the (expensive, DB-querying) chain check once the shape
             // rules above have already failed — there is nothing coherent
             // to compare against yet.
@@ -102,38 +105,6 @@ class StoreAthletePromotionRequest extends FormRequest
             && $this->has(['from_stripes', 'to_stripes'])
             && $this->input('from_stripes') === $this->input('to_stripes')) {
             $validator->errors()->add('to_stripes', 'The new stripe count must differ from the previous one.');
-        }
-    }
-
-    /**
-     * Mirrors `ValidatesStripesAgainstBelt`'s per-grade cap — read from the
-     * academy's ladder (#1800) — against `belt_at_event` rather than an
-     * athlete's live `belt`. A bespoke check, not a reuse of that trait,
-     * because the field it validates against is different here and the two
-     * have exactly one caller each.
-     */
-    private function validateStripeCap(Validator $validator): void
-    {
-        if ($this->input('kind') !== 'stripe') {
-            return;
-        }
-
-        $beltValue = $this->input('belt_at_event');
-        $belt = \is_string($beltValue) ? Belt::tryFrom($beltValue) : null;
-        if ($belt === null) {
-            return; // the shape rule on belt_at_event already failed separately
-        }
-
-        $max = $this->rankLadder()->maxStripes($belt);
-        if ($max === null) {
-            return; // not in the ladder — BeltInLadder already said so
-        }
-
-        foreach (['from_stripes', 'to_stripes'] as $field) {
-            $value = $this->input($field);
-            if (is_numeric($value) && (int) $value > $max) {
-                $validator->errors()->add($field, "The {$belt->value} belt allows at most {$max} stripes.");
-            }
         }
     }
 }

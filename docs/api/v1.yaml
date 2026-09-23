@@ -3925,11 +3925,13 @@ paths:
         - name: sort_by
           in: query
           description: |
-            Column to sort by. `belt` is rank-aware on the full IBJJF scale
-            (kids: grey < yellow < orange < green; adults: white < blue <
-            purple < brown < black; senior: red-and-black < red-and-white <
-            red) via a SQL CASE expression — NOT a lexicographic
-            sort on the column value — and chains `stripes desc` + `last_name
+            Column to sort by. `belt` orders by rank in `Academy.grades` —
+            the academy's martial art's ladder (#1800): for BJJ, kids grey <
+            yellow < orange < green, adults white < blue < purple < brown <
+            black, senior red-and-black < red-and-white < red; in taekwondo
+            red is the 2nd kup and sorts below the poom and black — via a SQL
+            CASE expression, NOT a lexicographic sort on the column value. A
+            value outside the ladder sorts last ascending. It chains `stripes desc` + `last_name
             asc` as stable tiebreakers so two athletes at the same belt
             level always render in the same row order. `stripes` is not
             accepted as a primary sort (it's meaningful only as a within-belt
@@ -9822,8 +9824,8 @@ components:
       properties:
         id: { type: integer, format: int64 }
         kind: { $ref: '#/components/schemas/PublicProfilePromotionKind' }
-        from_belt: { type: string, nullable: true, description: 'IBJJF belt slug; null on stripe-only rows.' }
-        to_belt: { type: string, nullable: true, description: 'IBJJF belt slug; null on stripe-only rows.' }
+        from_belt: { type: string, nullable: true, description: 'Belt slug; null on stripe-only rows.' }
+        to_belt: { type: string, nullable: true, description: 'Belt slug; null on stripe-only rows.' }
         from_stripes: { type: integer, nullable: true, minimum: 0, maximum: 10 }
         to_stripes: { type: integer, nullable: true, minimum: 0, maximum: 10 }
         belt_at_event: { type: string, description: 'Belt slug at the moment the event was recorded. Always present — the column is NOT NULL on every promotion row.' }

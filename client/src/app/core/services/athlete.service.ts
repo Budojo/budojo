@@ -28,10 +28,12 @@ export type Belt =
   | 'red';
 
 /**
- * Stripes ceiling per belt — single source of truth on the FE side
- * (mirrors `App\Enums\Belt::maxStripes()` on the server). Black has
- * 6 graus (1°-6°); every other belt caps at 4. Used by the form
- * picker to render only valid options for the selected belt.
+ * Stripes ceiling per belt, BJJ only. Mirrors the BJJ ladder in
+ * `server/database/seed-data/martial-arts/bjj.json` — the server's source of
+ * truth since #1800, emitted per academy as `Academy.grades`. Black has 6
+ * graus (1°-6°); every other belt caps at 4. Used by the form picker to
+ * render only valid options for the selected belt. Deleted by #1801, when the
+ * SPA reads the cap from `Academy.grades` for every martial art.
  */
 export const MAX_STRIPES_PER_BELT: Record<Belt, number> = {
   grey: 4,
