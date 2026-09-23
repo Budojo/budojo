@@ -1,0 +1,64 @@
+{
+  "martial_art": "bjj",
+  "source": "IBJJF graduation system. Byte-for-byte the ranks and caps Belt::rank() and Belt::maxStripes() carried before #1800.",
+  "grades": [
+    {
+      "belt": "grey",
+      "max_stripes": 4,
+      "kids": true
+    },
+    {
+      "belt": "yellow",
+      "max_stripes": 4,
+      "kids": true
+    },
+    {
+      "belt": "orange",
+      "max_stripes": 4,
+      "kids": true
+    },
+    {
+      "belt": "green",
+      "max_stripes": 4,
+      "kids": true
+    },
+    {
+      "belt": "white",
+      "max_stripes": 4
+    },
+    {
+      "belt": "blue",
+      "max_stripes": 4
+    },
+    {
+      "belt": "purple",
+      "max_stripes": 4
+    },
+    {
+      "belt": "brown",
+      "max_stripes": 4
+    },
+    {
+      "belt": "black",
+      "max_stripes": 6
+    },
+    {
+      "belt": "red-and-black",
+      "max_stripes": 4
+    },
+    {
+      "belt": "red-and-white",
+      "max_stripes": 4
+    },
+    {
+      "belt": "red",
+      "max_stripes": 4
+    }
+  ],
+  "programmes": [
+    {
+      "key": "bjj",
+      "file": "bjj.json"
+    }
+  ]
+}

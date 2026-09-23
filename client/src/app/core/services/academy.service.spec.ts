@@ -231,10 +231,10 @@ describe('AcademyService', () => {
       const created = makeAcademy({ id: 7, name: 'New GB' });
       let received: Academy | undefined;
 
-      service.create({ name: 'New GB' }).subscribe((a) => (received = a));
+      service.create({ name: 'New GB', martial_art: 'bjj' }).subscribe((a) => (received = a));
       const req = httpMock.expectOne('/api/v1/academy');
       expect(req.request.method).toBe('POST');
-      expect(req.request.body).toEqual({ name: 'New GB' });
+      expect(req.request.body).toEqual({ name: 'New GB', martial_art: 'bjj' });
       req.flush({ data: created });
 
       expect(received).toEqual(created);

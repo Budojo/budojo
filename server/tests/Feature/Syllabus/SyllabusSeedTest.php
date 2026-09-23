@@ -3,14 +3,16 @@
 declare(strict_types=1);
 
 use App\Actions\Syllabus\SeedSyllabusAction;
+use App\Enums\MartialArt;
 use App\Enums\TopicKind;
 use App\Models\Academy;
 use App\Models\AcademyMembership;
 use App\Models\SyllabusTopic;
 use App\Models\User;
+use App\Support\MartialArt\MartialArtProfile;
 
 /**
- * The shipped BJJ programme (#1563) — a starting point the academy owns from
+ * The shipped starter programmes (#1563, #1800) — a starting point the academy owns from
  * the first minute, never a taxonomy imposed on it.
  */
 
@@ -91,23 +93,55 @@ it('needs the settings capability', function (): void {
     expect(SyllabusTopic::query()->where('academy_id', $academy->id)->exists())->toBeFalse();
 });
 
-it('ships a file that parses, names every position once, and repeats no technique within a position', function (): void {
-    $positions = SeedSyllabusAction::positions();
+it('names the BJJ programme by its key, or not at all, since BJJ offers one', function (): void {
+    $this->actingAs($this->user)
+        ->postJson('/api/v1/academy/syllabus/seed', ['programme' => 'bjj'])
+        ->assertCreated();
+});
 
-    $positionNames = array_column($positions, 'name');
-    expect($positionNames)->toBe(array_values(array_unique($positionNames)));
+it('refuses a programme the martial art does not offer', function (): void {
+    $this->actingAs($this->user)
+        ->postJson('/api/v1/academy/syllabus/seed', ['programme' => 'karate-goju-ryu'])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('programme');
 
-    foreach ($positions as $position) {
-        expect($position['name'])->not->toBe('');
-        expect(mb_strlen($position['name']))->toBeLessThanOrEqual(80);
-        expect($position['kind'])->toBeInstanceOf(TopicKind::class);
-        expect($position['techniques'])->not->toBe([]);
+    expect(SyllabusTopic::query()->where('academy_id', $this->academy->id)->exists())->toBeFalse();
+});
 
-        $names = array_column($position['techniques'], 'name');
-        expect($names)->toBe(array_values(array_unique($names)), "{$position['name']} repeats a technique");
-        foreach ($position['techniques'] as $technique) {
-            expect(mb_strlen($technique['name']))->toBeLessThanOrEqual(80);
-            expect($technique['kind'])->toBeInstanceOf(TopicKind::class);
+it('answers 404, not 500, for a martial art whose programme has not shipped', function (): void {
+    // #1800: a judo academy exists before the judo programme does (#1804).
+    $this->academy->update(['martial_art' => MartialArt::Judo]);
+
+    $this->actingAs($this->user)
+        ->postJson('/api/v1/academy/syllabus/seed')
+        ->assertNotFound()
+        ->assertJsonPath('message', 'No starter programme has shipped for this martial art yet.');
+
+    expect(SyllabusTopic::query()->where('academy_id', $this->academy->id)->exists())->toBeFalse();
+});
+
+it('ships programme files that parse, name every position once, and repeat no technique within a position', function (): void {
+    foreach (MartialArt::cases() as $art) {
+        $profile = MartialArtProfile::for($art);
+        foreach ($profile->programmes() as $key) {
+            $positions = SeedSyllabusAction::positions((string) $profile->programmeFile($key));
+
+            $positionNames = array_column($positions, 'name');
+            expect($positionNames)->toBe(array_values(array_unique($positionNames)), $key);
+
+            foreach ($positions as $position) {
+                expect($position['name'])->not->toBe('');
+                expect(mb_strlen($position['name']))->toBeLessThanOrEqual(80);
+                expect($position['kind'])->toBeInstanceOf(TopicKind::class);
+                expect($position['techniques'])->not->toBe([]);
+
+                $names = array_column($position['techniques'], 'name');
+                expect($names)->toBe(array_values(array_unique($names)), "{$key}: {$position['name']} repeats a technique");
+                foreach ($position['techniques'] as $technique) {
+                    expect(mb_strlen($technique['name']))->toBeLessThanOrEqual(80);
+                    expect($technique['kind'])->toBeInstanceOf(TopicKind::class);
+                }
+            }
         }
     }
 });

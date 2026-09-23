@@ -42,7 +42,7 @@ class StoreAthleteRequest extends FormRequest
             // One definition of "a valid athlete", shared with the CSV import
             // (#1346) so a rule added here cannot silently skip the path that
             // creates sixty records at once.
-            ...AthleteFieldRules::for($academyId),
+            ...AthleteFieldRules::for($academyId, $this->rankLadder()),
             ...$this->addressRules(),
         ];
     }

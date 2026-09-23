@@ -16,6 +16,8 @@ use App\Http\Resources\AthleteResource;
 use App\Models\Academy;
 use App\Models\Athlete;
 use App\Models\User;
+use App\Support\MartialArt\MartialArtProfile;
+use App\Support\MartialArt\RankLadder;
 use App\Support\NameFold;
 use App\Support\Season;
 use Carbon\CarbonImmutable;
@@ -27,6 +29,24 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class AthleteController extends Controller
 {
+    /**
+     * The roster's belt sort (#1800). A literal on purpose: `orderByRaw()`
+     * takes a `literal-string`, so the SQL cannot be generated from a ladder.
+     * Instead it has `RankLadder::MAX_GRADES` placeholders and the academy's
+     * ladder is **bound** into them (`RankLadder::sortBindings()`), padded
+     * with nulls that never match. `BeltRankSqlShapeTest` keeps the count of
+     * `WHEN ?` equal to MAX_GRADES.
+     *
+     * `ELSE 99` traps a belt value outside the ladder (the column is plain
+     * varchar: a hand edit, a restore from another academy's backup). Without
+     * it the CASE returns NULL, which sorts first on ASC and buries the drift;
+     * 99 is above any rank, so such rows land last on ASC and first on DESC —
+     * visible either way.
+     */
+    private const string BELT_RANK_ASC = 'CASE belt WHEN ? THEN 1 WHEN ? THEN 2 WHEN ? THEN 3 WHEN ? THEN 4 WHEN ? THEN 5 WHEN ? THEN 6 WHEN ? THEN 7 WHEN ? THEN 8 WHEN ? THEN 9 WHEN ? THEN 10 WHEN ? THEN 11 WHEN ? THEN 12 WHEN ? THEN 13 WHEN ? THEN 14 WHEN ? THEN 15 WHEN ? THEN 16 ELSE 99 END ASC';
+
+    private const string BELT_RANK_DESC = 'CASE belt WHEN ? THEN 1 WHEN ? THEN 2 WHEN ? THEN 3 WHEN ? THEN 4 WHEN ? THEN 5 WHEN ? THEN 6 WHEN ? THEN 7 WHEN ? THEN 8 WHEN ? THEN 9 WHEN ? THEN 10 WHEN ? THEN 11 WHEN ? THEN 12 WHEN ? THEN 13 WHEN ? THEN 14 WHEN ? THEN 15 WHEN ? THEN 16 ELSE 99 END DESC';
+
     /**
      * Single-column sort whitelist. The `belt` case is special and lives in
      * applyBeltSort() because it needs a rank-aware CASE expression rather
@@ -232,7 +252,7 @@ class AthleteController extends Controller
             });
 
         if ($sortBy === 'belt') {
-            $this->applyBeltSort($query, $sortOrder);
+            $this->applyBeltSort($query, $sortOrder, MartialArtProfile::for($academy->martial_art)->ladder());
         } elseif ($sortBy === 'first_name' || $sortBy === 'last_name') {
             // Name sort always tiebreaks on the OTHER name field in the same
             // direction (#196). The "Full name" column on the SPA is a
@@ -396,32 +416,16 @@ class AthleteController extends Controller
     }
 
     /**
-     * Belt sort = rank-aware CASE expression for the primary key, then
-     * stripes desc + last_name asc as stable tiebreakers so two athletes
-     * at the same belt level always render in the same row order.
-     *
-     * The `WHEN ... THEN N` branches MUST stay in sync with `Belt::rank()`
-     * — see `BeltRankSqlSyncTest`, which fails if the two ever drift. SQL
-     * is hard-coded literal because PHPStan's `orderByRaw` signature
-     * requires `literal-string` and constant-built strings don't qualify.
+     * Belt sort = the academy's ladder order for the primary key (#1800), then
+     * stripes desc + last_name asc as stable tiebreakers so two athletes at
+     * the same belt level always render in the same row order.
      *
      * @param  Builder<Athlete>|HasMany<Athlete, Academy>  $query
      * @param  'asc'|'desc'  $direction
      */
-    private function applyBeltSort(Builder|HasMany $query, string $direction): void
+    private function applyBeltSort(Builder|HasMany $query, string $direction, RankLadder $ladder): void
     {
-        // `ELSE 99` traps any belt value that fell outside the enum (the
-        // column is plain varchar with no CHECK constraint, so a direct
-        // DB write or a future enum-removal migration could leave a
-        // stray row). Without an explicit ELSE the CASE returns NULL —
-        // and NULL sorts first on ASC, hiding the data drift exactly
-        // when we'd want it surfaced. 99 is far above the real ranks
-        // (1-9), so unknown values land at the end on ASC and at the
-        // top on DESC; either way they're visible, not buried.
-        $caseAsc = "CASE belt WHEN 'grey' THEN 1 WHEN 'yellow' THEN 2 WHEN 'orange' THEN 3 WHEN 'green' THEN 4 WHEN 'white' THEN 5 WHEN 'blue' THEN 6 WHEN 'purple' THEN 7 WHEN 'brown' THEN 8 WHEN 'black' THEN 9 WHEN 'red-and-black' THEN 10 WHEN 'red-and-white' THEN 11 WHEN 'red' THEN 12 ELSE 99 END ASC";
-        $caseDesc = "CASE belt WHEN 'grey' THEN 1 WHEN 'yellow' THEN 2 WHEN 'orange' THEN 3 WHEN 'green' THEN 4 WHEN 'white' THEN 5 WHEN 'blue' THEN 6 WHEN 'purple' THEN 7 WHEN 'brown' THEN 8 WHEN 'black' THEN 9 WHEN 'red-and-black' THEN 10 WHEN 'red-and-white' THEN 11 WHEN 'red' THEN 12 ELSE 99 END DESC";
-
-        $query->orderByRaw($direction === 'asc' ? $caseAsc : $caseDesc);
+        $query->orderByRaw($direction === 'asc' ? self::BELT_RANK_ASC : self::BELT_RANK_DESC, $ladder->sortBindings());
         $query->orderBy('stripes', 'desc');
         $query->orderBy('last_name_sort', 'asc');
         $query->orderBy('id');

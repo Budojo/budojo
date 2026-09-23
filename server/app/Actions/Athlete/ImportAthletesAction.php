@@ -13,6 +13,7 @@ use App\Support\Import\AthleteCsv;
 use App\Support\Import\BeltText;
 use App\Support\Import\DateText;
 use App\Support\Import\PhoneText;
+use App\Support\MartialArt\MartialArtProfile;
 use App\Support\NameFold;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -203,7 +204,7 @@ final class ImportAthletesAction
      */
     private function errorsFor(array $values, Academy $academy): array
     {
-        $validator = Validator::make($values, AthleteFieldRules::for($academy->id));
+        $validator = Validator::make($values, AthleteFieldRules::for($academy->id, MartialArtProfile::for($academy->martial_art)->ladder()));
 
         /** @var array<string, list<string>> $errors */
         $errors = $validator->errors()->toArray();

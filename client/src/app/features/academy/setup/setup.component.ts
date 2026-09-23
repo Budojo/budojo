@@ -83,6 +83,10 @@ export class SetupComponent {
 
     const createAcademy$ = this.academyService.create({
       name,
+      // Every academy was BJJ until #1800. The server now requires the field
+      // and never guesses it; the picker that asks the owner lands with
+      // #1802, and until then the setup says out loud what it always meant.
+      martial_art: 'bjj',
       training_days: days.length === 0 ? null : days,
     });
 

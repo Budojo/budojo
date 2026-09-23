@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace App\Http\Resources;
 
 use App\Models\Academy;
+use App\Support\MartialArt\Grade;
+use App\Support\MartialArt\MartialArtLock;
+use App\Support\MartialArt\MartialArtProfile;
 use App\Support\Season;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
@@ -84,6 +87,7 @@ class AcademyResource extends JsonResource
             // second request. Techniques, not positions: a position with
             // nothing under it is a heading, not something to teach.
             'syllabus_topics_count' => $academy->syllabusTopics()->whereNotNull('parent_id')->count(),
+            ...$this->martialArtPayload($academy),
             'season_start' => Season::startFor($academy, CarbonImmutable::now())->toDateString(),
             'season_label' => Season::labelFor($academy, CarbonImmutable::now()),
             // Schedule history (#1094). Pull the full history once,
@@ -96,6 +100,26 @@ class AcademyResource extends JsonResource
             // are also now byte-for-byte identical to entries in
             // `schedules`, no two-source-of-truth risk.
             ...$this->schedulePayload($academy, $request),
+        ];
+    }
+
+    /**
+     * What the academy teaches and what follows from it (#1800): the ladder
+     * the SPA must pick, sort and paint belts from — so it never keeps a
+     * second copy that could disagree — whether the art can still change, and
+     * which starter programmes the empty programme page may offer.
+     *
+     * @return array{martial_art: string, grades: list<array{belt: string, max_stripes: int, count: string, first: int, kids: bool}>, martial_art_locked: bool, syllabus_programmes: list<string>}
+     */
+    private function martialArtPayload(Academy $academy): array
+    {
+        $profile = MartialArtProfile::for($academy->martial_art);
+
+        return [
+            'martial_art' => $academy->martial_art->value,
+            'grades' => array_map(static fn (Grade $grade): array => $grade->toArray(), $profile->ladder()->grades()),
+            'martial_art_locked' => MartialArtLock::isLocked($academy),
+            'syllabus_programmes' => $profile->programmes(),
         ];
     }
 

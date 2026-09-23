@@ -6,16 +6,19 @@ namespace App\Actions\Syllabus;
 
 use App\Enums\TopicKind;
 use App\Exceptions\SyllabusNotEmptyException;
+use App\Exceptions\SyllabusProgrammeUnavailableException;
 use App\Models\Academy;
 use App\Models\SyllabusTopic;
+use App\Support\MartialArt\MartialArtProfile;
 use Illuminate\Support\Facades\DB;
 
 class SeedSyllabusAction
 {
-    public const SEED_FILE = 'seed-data/bjj-syllabus.json';
-
     /**
-     * Copies the shipped BJJ programme into the academy's own rows (#1563).
+     * Copies one of the shipped starter programmes into the academy's own rows
+     * (#1563) — the one named by `$programme`, or the art's only one when it
+     * offers a single programme (#1800). Which programmes an art offers is its
+     * registry's answer (`MartialArtProfile::programmes()`).
      *
      * On demand, from a button, never at academy creation: a programme is a
      * claim about what the academy teaches, and an academy that already has
@@ -23,16 +26,20 @@ class SeedSyllabusAction
      * academy's from this moment; the file is never read again for them.
      *
      * @return int how many topics were written
+     *
+     * @throws SyllabusProgrammeUnavailableException when the art offers no programme yet
      */
-    public function execute(Academy $academy): int
+    public function execute(Academy $academy, ?string $programme = null): int
     {
-        return DB::transaction(function () use ($academy): int {
+        $file = self::resolveFile($academy, $programme);
+
+        return DB::transaction(function () use ($academy, $file): int {
             if (SyllabusTopic::query()->where('academy_id', $academy->id)->exists()) {
                 throw new SyllabusNotEmptyException();
             }
 
             $written = 0;
-            foreach (self::positions() as $order => $position) {
+            foreach (self::positions($file) as $order => $position) {
                 $parent = SyllabusTopic::create([
                     'academy_id' => $academy->id,
                     'parent_id' => null,
@@ -61,16 +68,18 @@ class SeedSyllabusAction
     }
 
     /**
-     * The shipped programme, parsed and validated: a technique with no kind
-     * of its own inherits its position's. Public so the test that guards the
-     * file — no duplicate names within a position, every kind valid — reads
-     * it through the same code the seed does.
+     * A shipped programme, parsed and validated: a technique with no kind of
+     * its own inherits its position's. Public so the test that guards every
+     * programme file — no duplicate names within a position, every kind valid —
+     * reads them through the same code the seed does.
+     *
+     * @param string $file absolute path, from `MartialArtProfile::programmeFile()`
      *
      * @return list<array{name: string, kind: TopicKind, techniques: list<array{name: string, kind: TopicKind}>}>
      */
-    public static function positions(): array
+    public static function positions(string $file): array
     {
-        $raw = file_get_contents(database_path(self::SEED_FILE));
+        $raw = file_get_contents($file);
         if ($raw === false) {
             throw new \RuntimeException('The syllabus seed file could not be read.');
         }
@@ -105,5 +114,28 @@ class SeedSyllabusAction
         }
 
         return $positions;
+    }
+
+    /**
+     * The programme file to copy. Null `$programme` means "the only one": the
+     * request requires a key whenever the art offers more than one, so an
+     * omitted key reaching here with several on offer is a programming error.
+     */
+    private static function resolveFile(Academy $academy, ?string $programme): string
+    {
+        $profile = MartialArtProfile::for($academy->martial_art);
+        $offered = $profile->programmes();
+        if ($offered === []) {
+            throw new SyllabusProgrammeUnavailableException();
+        }
+
+        if ($programme === null) {
+            if (\count($offered) > 1) {
+                throw new \LogicException('A programme must be named when the martial art offers several.');
+            }
+            $programme = $offered[0];
+        }
+
+        return $profile->programmeFile($programme) ?? throw new SyllabusProgrammeUnavailableException();
     }
 }

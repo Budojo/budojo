@@ -7,8 +7,10 @@ namespace App\Http\Requests\Promotion;
 use App\Authorization\Capability;
 use App\Enums\Belt;
 use App\Http\Requests\Concerns\AuthorizesAcademyCapability;
+use App\Http\Requests\Concerns\ResolvesRankLadder;
 use App\Http\Requests\Concerns\ValidatesPromotionChainConsistency;
 use App\Models\Athlete;
+use App\Rules\BeltInLadder;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -27,6 +29,7 @@ use Illuminate\Validation\Rule;
 class StoreAthletePromotionRequest extends FormRequest
 {
     use AuthorizesAcademyCapability;
+    use ResolvesRankLadder;
     use ValidatesPromotionChainConsistency;
 
     public function authorize(): bool
@@ -44,17 +47,21 @@ class StoreAthletePromotionRequest extends FormRequest
      */
     public function rules(): array
     {
+        // History is judged against the athlete's academy's ladder (#1800): a
+        // transcribed paper register from a judo dojo cannot contain a purple.
+        $inLadder = new BeltInLadder($this->rankLadder());
+
         return [
             'kind' => ['required', Rule::in(['belt', 'stripe'])],
             // Date-only, matching PR 1's edit endpoint and the timeline's
             // own display precision. A promotion can't be recorded ahead
             // of today even when it is being entered late.
             'recorded_at' => ['required', 'date_format:Y-m-d', 'before_or_equal:today'],
-            'from_belt' => ['nullable', 'prohibited_unless:kind,belt', Rule::enum(Belt::class)],
-            'to_belt' => ['required_if:kind,belt', 'prohibited_unless:kind,belt', Rule::enum(Belt::class)],
-            'from_stripes' => ['required_if:kind,stripe', 'prohibited_unless:kind,stripe', 'integer', 'min:0', 'max:6'],
-            'to_stripes' => ['required_if:kind,stripe', 'prohibited_unless:kind,stripe', 'integer', 'min:0', 'max:6'],
-            'belt_at_event' => ['required_if:kind,stripe', 'prohibited_unless:kind,stripe', Rule::enum(Belt::class)],
+            'from_belt' => ['nullable', 'prohibited_unless:kind,belt', Rule::enum(Belt::class), $inLadder],
+            'to_belt' => ['required_if:kind,belt', 'prohibited_unless:kind,belt', Rule::enum(Belt::class), $inLadder],
+            'from_stripes' => ['required_if:kind,stripe', 'prohibited_unless:kind,stripe', 'integer', 'min:0', 'max:10'],
+            'to_stripes' => ['required_if:kind,stripe', 'prohibited_unless:kind,stripe', 'integer', 'min:0', 'max:10'],
+            'belt_at_event' => ['required_if:kind,stripe', 'prohibited_unless:kind,stripe', Rule::enum(Belt::class), $inLadder],
         ];
     }
 
@@ -99,11 +106,11 @@ class StoreAthletePromotionRequest extends FormRequest
     }
 
     /**
-     * Mirrors `ValidatesStripesAgainstBelt`'s per-belt cap (black allows
-     * graus 1°-6°, every other belt caps at 4) against `belt_at_event`
-     * rather than an athlete's live `belt` — a bespoke check, not a reuse
-     * of that trait, because the field it validates against is different
-     * here and the two have exactly one caller each.
+     * Mirrors `ValidatesStripesAgainstBelt`'s per-grade cap — read from the
+     * academy's ladder (#1800) — against `belt_at_event` rather than an
+     * athlete's live `belt`. A bespoke check, not a reuse of that trait,
+     * because the field it validates against is different here and the two
+     * have exactly one caller each.
      */
     private function validateStripeCap(Validator $validator): void
     {
@@ -117,7 +124,11 @@ class StoreAthletePromotionRequest extends FormRequest
             return; // the shape rule on belt_at_event already failed separately
         }
 
-        $max = $belt->maxStripes();
+        $max = $this->rankLadder()->maxStripes($belt);
+        if ($max === null) {
+            return; // not in the ladder — BeltInLadder already said so
+        }
+
         foreach (['from_stripes', 'to_stripes'] as $field) {
             $value = $this->input($field);
             if (is_numeric($value) && (int) $value > $max) {

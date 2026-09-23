@@ -4,7 +4,7 @@
 
 One entry in an academy's programme (#1563): a **position** when `parent_id` is null (*"Closed guard"*), a **technique** under it otherwise (*"Armbar"*). The tree is the denominator the coverage view (#1565) measures against — "twelve armbars" is neither a lot nor a little; "twelve of the forty things I said I'd teach this year" is a number an instructor can act on.
 
-Two failure modes bracket the design. Free text, and within three months the data is `armbar`, `arm bar`, `juji gatame`, `leva al braccio` — four tags, one technique, a worthless chart. A fixed shipped list, and something is always missing, because every academy teaches its own way. So: a **shipped seed, fully editable**. The BJJ starter (`server/database/seed-data/bjj-syllabus.json`) is copied into rows the academy owns from the first minute; the file is never read again for them.
+Two failure modes bracket the design. Free text, and within three months the data is `armbar`, `arm bar`, `juji gatame`, `leva al braccio` — four tags, one technique, a worthless chart. A fixed shipped list, and something is always missing, because every academy teaches its own way. So: a **shipped seed, fully editable**. The BJJ starter (`server/database/seed-data/syllabus/bjj.json`) is copied into rows the academy owns from the first minute; the file is never read again for them.
 
 The parent is the **position**, not the submission, on purpose: *"you have done nothing from half guard all year"* is information an instructor acts on, *"few kimuras"* is not. A few submissions therefore appear under several positions — an armbar from mount and one from closed guard are different lessons, and a chart must tell them apart. That repetition is the design.
 
@@ -60,7 +60,7 @@ Three cases and not [`ClassKind`](./academy-class.md)'s four: a topic is jiu-jit
 |---|---|---|
 | `GET` | `/api/v1/academy/syllabus` | The tree: positions in order, each with `children` |
 | `POST` | `/api/v1/academy/syllabus` | `name`, `kind` required; `parent_id` (a position) and `in_season` optional |
-| `POST` | `/api/v1/academy/syllabus/seed` | Copy the shipped BJJ programme; 201 `{ written }`, 409 when the academy already has topics |
+| `POST` | `/api/v1/academy/syllabus/seed` | Copy one of the martial art's starter programmes (#1800). Optional `programme` key — required when the art offers several; 201 `{ written }`, 404 when the art offers none yet, 409 when the academy already has topics, 422 for a key it does not offer |
 | `PATCH` | `/api/v1/academy/syllabus/{syllabusTopic}` | Partial — `name`, `kind`, `in_season`, `sort_order` |
 | `DELETE` | `/api/v1/academy/syllabus/{syllabusTopic}` | 204; soft, subtree |
 
@@ -68,7 +68,9 @@ Three cases and not [`ClassKind`](./academy-class.md)'s four: a topic is jiu-jit
 
 ## The shipped seed
 
-`server/database/seed-data/bjj-syllabus.json` — a list of positions, each with a `kind` and its `techniques` (a string, or `{ name, kind }` when the technique's kind differs from the position's). Ordered the way a lesson is: from standing, down through the guard, into the pins, out through the escapes, then the leg entanglements, the submission families across positions, and practice — self-defence last. Gi and no-gi both present; no kids programme. `SyllabusSeedTest` guards the file: it parses, every position is named once, no position repeats a technique, every kind is valid.
+**Starter programmes are per martial art (#1800).** Each art's registry (`server/database/seed-data/martial-arts/<art>.json`) lists the programmes it offers as `{ key, file }`, and the files live in `server/database/seed-data/syllabus/`. The seed endpoint takes the key; the academy resource lists the keys as `syllabus_programmes`. An art lists **none** until its first programme ships — the endpoint answers 404 and the programme page offers no button — and **more than one** when the art is taught in styles with different kata (karate: one programme per style, so the key is required and the button names the style). The chosen key is not stored: the rows are the academy's from that moment.
+
+`syllabus/bjj.json` — the BJJ starter (key `bjj`): a list of positions, each with a `kind` and its `techniques` (a string, or `{ name, kind }` when the technique's kind differs from the position's). Ordered the way a lesson is: from standing, down through the guard, into the pins, out through the escapes, then the leg entanglements, the submission families across positions, and practice — self-defence last. Gi and no-gi both present; no kids programme. `SyllabusSeedTest` guards every programme file: it parses, every position is named once, no position repeats a technique, every kind is valid.
 
 ## Related
 

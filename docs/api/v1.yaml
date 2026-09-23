@@ -3211,14 +3211,30 @@ paths:
   /academy/syllabus/seed:
     post:
       tags: [academy]
-      summary: Start from the shipped BJJ programme (#1563)
+      summary: Start from a shipped starter programme (#1563, #1800)
       description: |
-        Copies the shipped programme into rows this academy owns — only while
-        it has no topics at all. Even one topic is a programme the academy
-        owns, never overwritten: a 409. No body.
+        Copies one of the starter programmes the academy's martial art offers
+        (`Academy.syllabus_programmes`) into rows this academy owns — only
+        while it has no topics at all. Even one topic is a programme the
+        academy owns, never overwritten: a 409.
+
+        `programme` may be omitted when the art offers exactly one; it is
+        required when it offers several (karate ships one per style). An art
+        whose first programme has not shipped yet answers 404.
 
         Requires `academy_settings_update`.
       operationId: syllabusSeed
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                programme:
+                  type: string
+                  description: A key from `Academy.syllabus_programmes`.
+                  example: bjj
       responses:
         '201':
           description: The programme was copied in
@@ -3240,12 +3256,20 @@ paths:
           $ref: '#/components/responses/Unauthenticated'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '404':
+          description: The academy's martial art has no starter programme yet
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
         '409':
           description: The academy already has a programme
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/MessageResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
 
   /academy/syllabus/{syllabusTopic}:
     patch:
@@ -7103,15 +7127,15 @@ components:
     Belt:
       type: string
       description: |-
-        IBJJF belt ranks on a single linear scale.
-          - Youth: `grey`, `yellow`, `orange`, `green` (added in #230).
-          - Adult: `white`, `blue`, `purple`, `brown`, `black`.
-          - Senior beyond black: `red-and-black` (7° grau, coral),
-            `red-and-white` (8° grau, coral), `red` (9°/10° grau, grand
-            master). Added in #229.
+        The vocabulary of belt colours (#1800) — only the colours. Which of
+        them an academy awards, in what order, and with what stripe cap is
+        its martial art's ladder: `Academy.grades`. A value may be a colour
+        and still be refused for an academy whose art does not award it.
 
-        Per-belt stripes cap: `black` allows 0–6 (graus 1°–6° within the
-        black-belt phase); every other belt caps at 0–4.
+        Two-colour belts are `<upper>-and-<lower>`: the coral pair
+        (`red-and-black`, `red-and-white`, #229) and the half-belts (#1800) —
+        kids' steps in judo and karate, intermediate kup in taekwondo, and
+        `black-and-red`, taekwondo's poom.
       enum:
         [
           grey,
@@ -7125,8 +7149,50 @@ components:
           black,
           red-and-black,
           red-and-white,
-          red
+          red,
+          white-and-yellow,
+          yellow-and-orange,
+          orange-and-green,
+          green-and-blue,
+          blue-and-brown,
+          yellow-and-green,
+          blue-and-red,
+          black-and-red
         ]
+
+    MartialArt:
+      type: string
+      description: |
+        What an academy teaches (#1800). Set at creation, changeable only while
+        the academy has no athletes, classes, lessons or programme topics
+        (soft-deleted ones included).
+      enum: [bjj, judo, karate, taekwondo]
+
+    Grade:
+      type: object
+      description: |
+        One rung of the academy's ladder (#1800), in rank order in
+        `Academy.grades`. `athletes.stripes` stores a plain 0…`max_stripes`;
+        `count` says what it counts and `first` is the number its first step
+        is shown as — a FIJLKAM black belt is `max_stripes: 4, count: dan,
+        first: 1`, stored 0–4 and shown 1°–5° dan.
+      required: [belt, max_stripes, count, first, kids]
+      properties:
+        belt:
+          $ref: '#/components/schemas/Belt'
+        max_stripes:
+          type: integer
+          minimum: 0
+          maximum: 10
+        count:
+          type: string
+          enum: [stripe, dan, poom]
+        first:
+          type: integer
+          minimum: 0
+        kids:
+          type: boolean
+          description: A children's step. Informational — nothing validates on it.
 
     AthleteStatus:
       type: string
@@ -7183,8 +7249,8 @@ components:
           allOf:
             - $ref: '#/components/schemas/Belt'
           nullable: true
-        from_stripes: { type: integer, minimum: 0, maximum: 6, nullable: true }
-        to_stripes: { type: integer, minimum: 0, maximum: 6, nullable: true }
+        from_stripes: { type: integer, minimum: 0, maximum: 10, nullable: true }
+        to_stripes: { type: integer, minimum: 0, maximum: 10, nullable: true }
         belt_at_event:
           $ref: '#/components/schemas/Belt'
         recorded_at: { type: string, format: date-time }
@@ -7548,12 +7614,16 @@ components:
 
     AcademyCreateRequest:
       type: object
-      required: [name]
+      required: [name, martial_art]
       properties:
         name:
           type: string
           maxLength: 255
           example: Gracie Barra Lisboa
+        martial_art:
+          allOf:
+            - $ref: '#/components/schemas/MartialArt'
+          description: Required, never defaulted (#1800).
         address:
           allOf:
             - $ref: '#/components/schemas/Address'
@@ -7588,6 +7658,13 @@ components:
           minLength: 1
           maxLength: 255
           example: Gracie Barra Lisboa Centro
+        martial_art:
+          allOf:
+            - $ref: '#/components/schemas/MartialArt'
+          description: |
+            Changeable only while `Academy.martial_art_locked` is false (#1800);
+            otherwise a different value is a 422 on this field. The value the
+            academy already has is always accepted. `null` is refused.
         phone_country_code:
           type: string
           nullable: true
@@ -7773,6 +7850,10 @@ components:
           season_start_month,
           season_start,
           season_label,
+          martial_art,
+          grades,
+          martial_art_locked,
+          syllabus_programmes,
           phone_country_code,
           phone_national_number,
           website,
@@ -7957,6 +8038,30 @@ components:
             positions excluded. Enough for the academy page to say "84
             techniques" or "not set up yet" without a second request.
           example: 84
+        martial_art:
+          $ref: '#/components/schemas/MartialArt'
+        grades:
+          type: array
+          description: |
+            The martial art's ladder, lowest first (#1800). The SPA picks, sorts
+            and caps belts from this and keeps no copy of its own.
+          items:
+            $ref: '#/components/schemas/Grade'
+        martial_art_locked:
+          type: boolean
+          description: |
+            True once the academy has athletes, classes, lessons or programme
+            topics — soft-deleted ones included. While true, `PATCH` refuses a
+            different `martial_art`.
+        syllabus_programmes:
+          type: array
+          description: |
+            Starter programme keys the art offers, in offer order (#1800).
+            Empty until its first one ships, and then the programme page
+            offers no seed button.
+          items:
+            type: string
+          example: [bjj]
         schedules:
           type: array
           description: |
@@ -8462,7 +8567,8 @@ components:
         stripes:
           type: integer
           minimum: 0
-          maximum: 4
+          maximum: 10
+          description: Global ceiling; the cap for the athlete's grade is in `Academy.grades` (#1800).
           default: 0
         status:
           $ref: '#/components/schemas/AthleteStatus'
@@ -8557,7 +8663,8 @@ components:
         stripes:
           type: integer
           minimum: 0
-          maximum: 4
+          maximum: 10
+          description: Global ceiling; the cap for the athlete's grade is in `Academy.grades` (#1800).
         status:
           $ref: '#/components/schemas/AthleteStatus'
         joined_at:
@@ -8746,7 +8853,8 @@ components:
         stripes:
           type: integer
           minimum: 0
-          maximum: 4
+          maximum: 10
+          description: Global ceiling; the cap for the athlete's grade is in `Academy.grades` (#1800).
         status:
           $ref: '#/components/schemas/AthleteStatus'
         joined_at:
@@ -9207,8 +9315,8 @@ components:
           description: Null on the athlete's first belt assignment. `kind=belt` only.
         to_belt:
           $ref: '#/components/schemas/Belt'
-        from_stripes: { type: integer, minimum: 0, maximum: 6 }
-        to_stripes: { type: integer, minimum: 0, maximum: 6 }
+        from_stripes: { type: integer, minimum: 0, maximum: 10 }
+        to_stripes: { type: integer, minimum: 0, maximum: 10 }
         belt_at_event:
           allOf:
             - $ref: '#/components/schemas/Belt'
@@ -9716,9 +9824,9 @@ components:
         kind: { $ref: '#/components/schemas/PublicProfilePromotionKind' }
         from_belt: { type: string, nullable: true, description: 'IBJJF belt slug; null on stripe-only rows.' }
         to_belt: { type: string, nullable: true, description: 'IBJJF belt slug; null on stripe-only rows.' }
-        from_stripes: { type: integer, nullable: true, minimum: 0, maximum: 6 }
-        to_stripes: { type: integer, nullable: true, minimum: 0, maximum: 6 }
-        belt_at_event: { type: string, description: 'IBJJF belt slug at the moment the event was recorded. Always present — the column is NOT NULL on every promotion row.' }
+        from_stripes: { type: integer, nullable: true, minimum: 0, maximum: 10 }
+        to_stripes: { type: integer, nullable: true, minimum: 0, maximum: 10 }
+        belt_at_event: { type: string, description: 'Belt slug at the moment the event was recorded. Always present — the column is NOT NULL on every promotion row.' }
         recorded_at: { type: string, format: date-time }
 
     PublicProfileAchievementKind:

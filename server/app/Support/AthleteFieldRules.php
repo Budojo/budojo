@@ -7,6 +7,8 @@ namespace App\Support;
 use App\Enums\AthleteStatus;
 use App\Enums\Belt;
 use App\Enums\BillingPeriod;
+use App\Rules\BeltInLadder;
+use App\Support\MartialArt\RankLadder;
 use Illuminate\Validation\Rule;
 
 /**
@@ -37,10 +39,12 @@ final class AthleteFieldRules
      *                            existence check; null in the (unreachable in
      *                            practice) case of a user with no academy, which
      *                            `authorize()` has already refused
+     * @param RankLadder $ladder the academy's martial art's ladder (#1800) — a
+     *                           belt must be a colour that art awards
      *
      * @return array<string, mixed>
      */
-    public static function for(?int $academyId): array
+    public static function for(?int $academyId, RankLadder $ladder): array
     {
         return [
             'first_name' => ['required', 'string', 'max:100'],
@@ -77,11 +81,11 @@ final class AthleteFieldRules
             'facebook' => ['nullable', 'url', 'max:255'],
             'instagram' => ['nullable', 'url', 'max:255'],
             'date_of_birth' => ['nullable', 'date', 'before:today'],
-            'belt' => ['required', Rule::enum(Belt::class)],
-            // Global cap is 6 (the maximum among all belts — Black has 6
-            // graus, every other belt has 4). The per-belt cap is enforced
-            // cross-field via `Belt::maxStripes()`.
-            'stripes' => ['integer', 'min:0', 'max:6'],
+            'belt' => ['required', Rule::enum(Belt::class), new BeltInLadder($ladder)],
+            // Global ceiling across every ladder (#1800) — taekwondo's black
+            // counts 1st-9th dan as 0-8 — with the per-grade cap enforced
+            // cross-field against the ladder by `ValidatesStripesAgainstBelt`.
+            'stripes' => ['integer', 'min:0', 'max:10'],
             'status' => ['required', Rule::enum(AthleteStatus::class)],
             'joined_at' => ['required', 'date'],
             // Which price tier the athlete starts on (#1381). Optional: an

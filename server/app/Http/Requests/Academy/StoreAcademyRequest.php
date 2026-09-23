@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Academy;
 
+use App\Enums\MartialArt;
 use App\Http\Requests\Concerns\ValidatesAddress;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreAcademyRequest extends FormRequest
 {
@@ -23,6 +25,10 @@ class StoreAcademyRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
+            // What the academy teaches (#1800). Required, never defaulted: the
+            // column's `bjj` default is for rows that predate it, and a request
+            // that could omit this would let a setup screen ship without asking.
+            'martial_art' => ['required', Rule::enum(MartialArt::class)],
             // Carbon dayOfWeek convention (0=Sun..6=Sat). `null` / omitted =
             // "schedule not configured", which the daily check-in UI uses
             // as the signal to fall back to all-weekdays. `min:1` rejects

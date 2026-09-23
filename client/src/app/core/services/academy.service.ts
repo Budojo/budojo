@@ -353,8 +353,17 @@ export interface MeAcademy {
   readonly carnet_entry_unit?: CarnetEntryUnit;
 }
 
+/**
+ * What an academy teaches (#1800). Set at creation and locked once the academy
+ * has athletes, lessons or a programme — every stored belt is a claim in its
+ * ladder.
+ */
+export type MartialArt = 'bjj' | 'judo' | 'karate' | 'taekwondo';
+
 export interface CreateAcademyPayload {
   name: string;
+  /** Required by the API since #1800 — it never defaults a new academy. */
+  martial_art: MartialArt;
   address?: Address | null;
   training_days?: number[] | null;
 }

@@ -8,6 +8,7 @@ use App\Actions\Academy\CreateAcademyAction;
 use App\Actions\Academy\DeleteAcademyLogoAction;
 use App\Actions\Academy\UpdateAcademyAction;
 use App\Actions\Academy\UploadAcademyLogoAction;
+use App\Enums\MartialArt;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Academy\StoreAcademyRequest;
 use App\Http\Requests\Academy\UpdateAcademyRequest;
@@ -43,6 +44,7 @@ class AcademyController extends Controller
             $academy = $this->createAction->execute(
                 user: $user,
                 name: $request->string('name')->toString(),
+                martialArt: MartialArt::from($request->string('martial_art')->toString()),
                 address: $addressPayload,
                 trainingDays: $this->trainingDaysFromValidated($validated),
             );
