@@ -200,7 +200,7 @@ it('copies the Goju-ryu programme into a karate academy: kihon, then kata, then 
         ->and($groups->keys()->last())->toBe('Jiyu kumite');
 
     // Every Goju kata, in the Okinawan order — Seiyunchin, Shisochin, then
-    // Sanseiru, the order of the FIJLKAM Goju dan programme.
+    // Sanseru, the order of the FIJLKAM Goju dan programme too.
     $kata = collect(['Heishu kata', 'Fukyu kata — Taikyoku', 'Fukyu kata — Gekisai', 'Kaishu kata — kyu', 'Kaishu kata — dan'])
         ->flatMap(fn (string $group) => $groups[$group]->children->sortBy('sort_order')->pluck('name'))
         ->all();
@@ -209,7 +209,7 @@ it('copies the Goju-ryu programme into a karate academy: kihon, then kata, then 
         'Taikyoku jodan', 'Taikyoku chudan', 'Taikyoku gedan', 'Taikyoku kake uke', 'Taikyoku mawashi uke',
         'Gekisai dai ichi', 'Gekisai dai ni',
         'Saifa', 'Seiyunchin', 'Shisochin',
-        'Sanseiru', 'Sepai', 'Kururunfa', 'Seisan', 'Suparinpei',
+        'Sanseru', 'Sepai', 'Kururunfa', 'Seisan', 'Suparinpei',
     ]);
 });
 
