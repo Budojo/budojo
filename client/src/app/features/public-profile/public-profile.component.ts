@@ -113,7 +113,8 @@ export class PublicProfileComponent {
 
   private beltLabel(belt: Belt): string {
     // The viewer is always in the profile's academy (the endpoint 404s any
-    // other), so the academy's ladder names the belt the way this art does.
+    // other), so once the viewer's academy is loaded its ladder is the right
+    // one. The athlete portal does not load it yet and reads as BJJ (#1813).
     return this.beltLadder.label(belt);
   }
 

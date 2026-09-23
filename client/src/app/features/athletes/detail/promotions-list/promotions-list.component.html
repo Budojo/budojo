@@ -82,7 +82,7 @@
               <div class="promotions__transition" data-cy="promotion-stripe">
                 @if (p.belt_at_event) {
                   <!-- Context only: the count is the row's own subject, below. -->
-                  <app-belt-badge [belt]="p.belt_at_event" [showStripes]="false" />
+                  <app-belt-badge [belt]="p.belt_at_event" />
                 }
                 <span class="promotions__stripe-count">
                   {{ stripeCount(p, p.from_stripes) }}

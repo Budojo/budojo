@@ -8,7 +8,8 @@ export type BeltColour =
  * A belt as paint: its main colour, and the second colour of a two-colour
  * belt (`<main>-and-<tip>`), or null. Every `Belt` value is built this way, so
  * the split is the rule rather than a table to keep in step — and
- * `belt-palette.spec.ts` checks every value resolves to known colours.
+ * `shared/styles/belt-contrast.spec.ts` checks every value resolves to known
+ * colours.
  */
 export interface BeltPaint {
   readonly main: BeltColour;

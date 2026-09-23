@@ -47,11 +47,15 @@ export class BeltBadgeComponent {
 
   readonly belt = input.required<Belt>();
   /**
-   * The stored stripe count, 0…cap. What it means is the grade's call: tiles
-   * for stripes and *tacche*, a written "n° dan" for a dan or a poom. Clamped
-   * to the grade's cap so a stale value outside it cannot blow the layout.
+   * The stored stripe count, 0…cap — or null where the caller has no count to
+   * show (a feed flair, a promotion's from/to belt). What it means is the
+   * grade's call: tiles for stripes and *tacche*, a written "n° dan" for a dan
+   * or a poom. Null draws neither, which matters because 0 is not "nothing"
+   * on a dan grade: it is the 1st dan, and a badge defaulting to it would
+   * call every judo black belt "1° dan" (#1801). Clamped to the grade's cap
+   * so a stale value outside it cannot blow the layout.
    */
-  readonly stripes = input<number>(0);
+  readonly stripes = input<number | null>(null);
 
   /**
    * `badge` writes the belt's name; `spine` says it in colour alone.
@@ -63,34 +67,33 @@ export class BeltBadgeComponent {
    */
   readonly appearance = input<'badge' | 'spine'>('badge');
 
-  /**
-   * False where the belt is context and the count is said elsewhere — a
-   * promotion row's belt at the time of a stripe event. Without it a dan
-   * grade would print "1° dan" for a count of 0 that nobody passed.
-   */
-  readonly showStripes = input<boolean>(true);
-
   protected readonly paint = computed(() => beltPaint(this.belt()));
 
   readonly labelKey = computed(() => this.ladder.labelKey(this.belt()));
 
-  private readonly clampedStripes = computed(() =>
-    Math.max(0, Math.min(this.ladder.stripeCap(this.belt()), Math.trunc(this.stripes()))),
-  );
+  /** Null when no count was given; otherwise within the grade's cap. */
+  private readonly clampedStripes = computed(() => {
+    const stripes = this.stripes();
+    return stripes === null
+      ? null
+      : Math.max(0, Math.min(this.ladder.stripeCap(this.belt()), Math.trunc(stripes)));
+  });
 
   /** One tile per stripe — only where a stripe is something on the belt. */
-  readonly stripeTiles = computed(() =>
-    this.showStripes() && this.ladder.countsStripes(this.belt())
-      ? Array.from({ length: this.clampedStripes() })
-      : [],
-  );
+  readonly stripeTiles = computed(() => {
+    const stripes = this.clampedStripes();
+    return stripes !== null && this.ladder.countsStripes(this.belt())
+      ? Array.from({ length: stripes })
+      : [];
+  });
 
   /** "3° dan" for a grade that counts dan or poom; null where tiles say it. */
   readonly countLabel = computed(() => {
     this.languageService.currentLang(); // re-translate on a locale toggle
-    return !this.showStripes() || this.ladder.countsStripes(this.belt())
+    const stripes = this.clampedStripes();
+    return stripes === null || this.ladder.countsStripes(this.belt())
       ? null
-      : this.ladder.stripesLabel(this.belt(), this.clampedStripes());
+      : this.ladder.stripesLabel(this.belt(), stripes);
   });
 
   /**
@@ -115,13 +118,14 @@ export class BeltBadgeComponent {
   /**
    * The spine's paint. A vertical bar splits along its length the way a
    * physical two-colour belt does, and with no text on it both halves can be
-   * shown in full.
+   * shown in full. The stripe bands sit at the bottom — on the second half —
+   * so they take that half's ink: white bands on a white half are invisible.
    */
   readonly spineStyle = computed<Record<string, string>>(() => {
     const { main, tip } = this.paint();
     return {
       background: `linear-gradient(180deg, ${beltColourVar(main)} 0 50%, ${beltColourVar(tip ?? main)} 50% 100%)`,
-      color: beltInkVar(main),
+      color: beltInkVar(tip ?? main),
     };
   });
 }

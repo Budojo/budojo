@@ -38,6 +38,15 @@ function labelOf(badge: DebugElement): string | undefined {
     ?.textContent?.trim();
 }
 
+/** A caller with no count to show — a feed flair, a promotion's from/to belt. */
+@Component({
+  imports: [BeltBadgeComponent],
+  template: `<app-belt-badge [belt]="belt" />`,
+})
+class CountlessHostComponent {
+  belt: Belt = 'black';
+}
+
 describe('BeltBadgeComponent', () => {
   it('renders the belt name via the shared i18n key', () => {
     TestBed.configureTestingModule({
@@ -102,6 +111,22 @@ describe('BeltBadgeComponent', () => {
     const badge = setup('judo', { belt: 'black', stripes: 2 });
     const el = badge.nativeElement as HTMLElement;
     expect(el.querySelector('[data-cy="belt-count"]')?.textContent?.trim()).toBe('3° dan');
+    expect(el.querySelectorAll('[data-cy="belt-stripe-tile"]').length).toBe(0);
+  });
+
+  it('draws no count at all where the caller passes none — never a default 1° dan', () => {
+    // 0 is the 1st dan on a FIJLKAM black: a badge defaulting to it would
+    // call every judo black belt in the feed "1° dan" (#1801 pre-review).
+    TestBed.configureTestingModule({
+      imports: [CountlessHostComponent],
+      providers: [...provideI18nTesting()],
+    });
+    useLadder('judo');
+    const fixture = TestBed.createComponent(CountlessHostComponent);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+
+    expect(el.querySelector('[data-cy="belt-count"]')).toBeNull();
     expect(el.querySelectorAll('[data-cy="belt-stripe-tile"]').length).toBe(0);
   });
 
@@ -255,6 +280,10 @@ describe('BeltBadgeComponent', () => {
         const badge = setup('judo', { belt, appearance: 'spine' });
         expect(badge.componentInstance.spineStyle()['background']).toBe(
           `linear-gradient(180deg, var(--budojo-belt-${top}) 0 50%, var(--budojo-belt-${bottom}) 50% 100%)`,
+        );
+        // The stripe bands sit on the bottom half, so they take its ink.
+        expect(badge.componentInstance.spineStyle()['color']).toBe(
+          `var(--budojo-belt-${bottom}-ink)`,
         );
       },
     );

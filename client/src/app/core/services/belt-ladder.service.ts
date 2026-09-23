@@ -24,9 +24,10 @@ export interface BeltOption<T> {
  * martial art's registry. There is deliberately no copy on the client — the
  * BJJ constants this replaced were a second answer that could disagree.
  *
- * Until an academy is loaded (the web-only athlete portal never loads one) the
- * ladder is empty and the art reads as BJJ, the column default: labels stay
- * right, and a belt with no grade is clamped only by the global ceiling.
+ * Until an academy is loaded the ladder is empty and the art reads as BJJ,
+ * the column default, and a belt with no grade is clamped only by the global
+ * ceiling. The web-only athlete portal never loads one — right for every
+ * install today, which is BJJ, and wrong for a judo athlete there (#1813).
  */
 @Injectable({ providedIn: 'root' })
 export class BeltLadderService {

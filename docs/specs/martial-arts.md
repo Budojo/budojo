@@ -576,7 +576,9 @@ rests on structural evidence, not a census.
   The feed, comments, reactions and the check-in list are academy-scoped, and
   the public profile — the one this PRD first thought an outsider could see —
   404s any viewer not in the profile's academy (`PublicProfileController`'s
-  same-academy gate). Found while building #1801; nothing to add.
+  same-academy gate). **The gap is the athlete portal**: its routes never load
+  the academy, so the client has no ladder there and reads as BJJ. Web-only
+  and frozen, so it is #1813 rather than part of #1801.
 - **The seed copies one of the academy's martial art's starter programmes.**
   `POST /academy/syllabus/seed` takes an optional `programme` key and reads
   `MartialArtProfile::for($academy->martial_art)->programmeFile($key)`. The key
