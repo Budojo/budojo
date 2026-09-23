@@ -60,6 +60,90 @@ export function localised(value: Localised, lang: string): string {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.65.0',
+    date: '2026-09-23',
+    headline: {
+      en: 'Four martial arts: judo, karate and taekwondo beside BJJ.',
+      it: 'Quattro arti marziali: judo, karate e taekwondo accanto al BJJ.',
+    },
+    sections: [
+      {
+        heading: { en: 'If you teach BJJ', it: 'Se insegni BJJ' },
+        bullets: [
+          {
+            en: 'Almost nothing changes. Your academy stays BJJ, with the belts, degrees and words it always had. The few differences are under "What changes for everyone".',
+            it: 'Per te non cambia quasi niente. La tua accademia resta BJJ, con le cinture, i gradi e le parole di sempre. Le poche differenze sono sotto «Cosa cambia per tutti».',
+          },
+        ],
+      },
+      {
+        heading: { en: "The academy's martial art", it: "L'arte marziale dell'accademia" },
+        bullets: [
+          {
+            en: 'Chosen when you create the academy, first, before the name — four buttons, none preselected.',
+            it: 'Si sceglie quando crei l’accademia, come prima cosa, prima del nome: quattro pulsanti, nessuno preselezionato.',
+          },
+          {
+            en: 'It can be changed from Academy → Edit until the academy has athletes, a timetable or a programme. After that it stays: the belts already awarded are belts of that art.',
+            it: 'Si può cambiare da Accademia → Modifica finché l’accademia non ha atleti, un orario o un programma. Dopo resta quella: le cinture già assegnate sono cinture di quell’arte.',
+          },
+        ],
+      },
+      {
+        heading: { en: 'The belts', it: 'Le cinture' },
+        bullets: [
+          {
+            en: 'Judo and karate follow the FIJLKAM scale: kyu from white to brown with the half-belts clubs give the kids, then black 1st to 5th dan, red-and-white 6th–8th, red 9th–10th. A coloured karate belt can carry up to three tacche.',
+            it: 'Judo e karate seguono la scala FIJLKAM: i kyu dalla bianca alla marrone con le mezze cinture dei bambini, poi la nera dal 1° al 5° dan, la bianco-rossa dal 6° all’8°, la rossa per 9° e 10°. Nel karate una cintura colorata può portare fino a tre tacche.',
+          },
+          {
+            en: 'Taekwondo follows the WT scale: ten kup with half-belts, the poom for the young, and the dan.',
+            it: 'Taekwondo segue la scala WT: dieci kup con le mezze cinture, il poom per i ragazzi, e i dan.',
+          },
+          {
+            en: 'Wherever a belt is picked or sorted — the athlete form, the roster filters, the check-in, promotions, stats — only your art’s belts appear. A dan or a poom is written out: "Black 3° dan".',
+            it: 'Ovunque si scelga o si ordini una cintura — la scheda atleta, i filtri, il check-in, le promozioni, le statistiche — compaiono solo le cinture della tua arte. Dan e poom si leggono scritti: «Nera 3° dan».',
+          },
+        ],
+      },
+      {
+        heading: { en: 'Classes and the programme', it: 'Le lezioni e il programma' },
+        bullets: [
+          {
+            en: 'Gi and no-gi become the way your art trains: tachi-waza and ne-waza for judo, kata and kumite for karate, poomsae and kyorugi for taekwondo — on the timetable, the programme, the lesson suggestions and the coverage chart.',
+            it: 'Gi e no-gi diventano il modo in cui si allena la tua arte: tachi-waza e ne-waza nel judo, kata e kumite nel karate, poomsae e kyorugi nel taekwondo — nell’orario, nel programma, nei suggerimenti e nella copertura.',
+          },
+          {
+            en: 'A ready programme for each art: judo (every Kodokan technique, group by group, with ukemi, randori and the kata), karate Goju-ryu (kihon, the Goju kata from Sanchin to Suparinpei, bunkai, kakie and kumite), taekwondo WT (stances, blocks, kicks, the Taegeuk and black-belt poomsae, sparring, self-defence and breaking).',
+            it: 'Un programma già pronto per ogni arte: judo (tutte le tecniche del Kodokan, gruppo per gruppo, con ukemi, randori e kata), karate Goju-ryu (kihon, i kata del Goju da Sanchin a Suparinpei, bunkai, kakie e kumite), taekwondo WT (posizioni, parate, calci, i poomsae Taegeuk e da cintura nera, combattimento, hosinsul e rotture).',
+          },
+        ],
+      },
+      {
+        heading: { en: 'Age classes', it: 'Le classi d’età' },
+        bullets: [
+          {
+            en: 'The athletes-by-age chart uses your federation’s classes: FIJLKAM’s Bambini to Master for judo and karate, WT’s divisions for taekwondo, IBJJF’s for BJJ as before.',
+            it: 'Il grafico degli atleti per età usa le classi della tua federazione: da Bambini a Master della FIJLKAM per judo e karate, le divisioni WT per il taekwondo, quelle IBJJF per il BJJ come prima.',
+          },
+        ],
+      },
+      {
+        heading: { en: 'What changes for everyone', it: 'Cosa cambia per tutti' },
+        bullets: [
+          {
+            en: 'Age is counted the way the federations count it: by year of birth. An athlete born in December is in their class from January, not from their birthday — in the BJJ chart a few athletes move up a division, the right one.',
+            it: 'L’età si conta come la contano le federazioni: per anno di nascita. Un atleta nato a dicembre è nella sua classe da gennaio, non dal compleanno — nel grafico del BJJ qualcuno sale di una divisione, quella giusta.',
+          },
+          {
+            en: 'The type of a class or a technique is picked from a grid of buttons rather than a row, and in the programme a technique shows its type only when it differs from its group’s.',
+            it: 'Il tipo di una lezione o di una tecnica si sceglie da una griglia di pulsanti invece che da una fila, e nel programma una tecnica mostra il suo tipo solo se è diverso da quello del suo gruppo.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.64.0',
     date: '2026-09-22',
     headline: {
@@ -74,12 +158,12 @@ export const RELEASES: readonly Release[] = [
         },
         bullets: [
           {
-            en: '**More → Appearance.** Three choices, not a switch: **Follow the system** (the default — the app goes dark when your phone or computer does, and comes back light in the morning), **Light**, and **Dark**. "Follow the system" also says which way it currently lands, because it is the only one of the three whose name does not already tell you what you will see.',
-            it: '**Altro → Aspetto.** Tre scelte, non un interruttore: **Segui il sistema** (il predefinito — l’app si scurisce quando si scurisce il telefono o il computer, e torna chiara al mattino), **Chiaro** e **Scuro**. «Segui il sistema» dice anche com’è adesso, perché è l’unica delle tre il cui nome non dice già cosa vedrai.',
+            en: 'More → Appearance. Three choices, not a switch: Follow the system (the default — the app goes dark when your phone or computer does, and comes back light in the morning), Light, and Dark. "Follow the system" also says which way it currently lands, because it is the only one of the three whose name does not already tell you what you will see.',
+            it: 'Altro → Aspetto. Tre scelte, non un interruttore: Segui il sistema (il predefinito — l’app si scurisce quando si scurisce il telefono o il computer, e torna chiara al mattino), Chiaro e Scuro. «Segui il sistema» dice anche com’è adesso, perché è l’unica delle tre il cui nome non dice già cosa vedrai.',
           },
           {
-            en: 'The choice survives a restart. On the desktop the app now **opens** at the right colour — no white flash at launch.',
-            it: 'La scelta resta dopo il riavvio. Sul desktop l’app **si apre già** del colore giusto: niente lampo bianco al lancio.',
+            en: 'The choice survives a restart. On the desktop the app now opens at the right colour — no white flash at launch.',
+            it: 'La scelta resta dopo il riavvio. Sul desktop l’app si apre già del colore giusto: niente lampo bianco al lancio.',
           },
         ],
       },
