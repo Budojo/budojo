@@ -1,4 +1,5 @@
 import { MOCK_ACADEMY } from '../support/fixtures';
+import { VIEWPORT_IPHONE_SE } from '../support/viewports';
 
 /**
  * Syllabus coverage (#1565).
@@ -195,13 +196,79 @@ describe('Syllabus coverage', () => {
     cy.get('[data-cy="season-map-cell-1-2026-10-05"]').should('have.class', 'swatch--more');
     cy.get('[data-cy="season-map-cell-1-2026-10-19"]').should('have.class', 'swatch--planned');
     // A week with nothing on it is not a control.
-    cy.get('[data-cy="syllabus-position-2"] button').should('not.exist');
+    cy.get('[data-cy="syllabus-position-2"] td button').should('not.exist');
 
     cy.get('[data-cy="season-map-cell-1-2026-10-19"]').click();
     cy.get('[data-cy="season-map-popover"]')
       .should('contain.text', 'Fundamentals')
       .and('contain.text', 'Planned')
       .and('contain.text', 'Closed guard');
+  });
+
+  it('moves the popover to the second week opened, not only its content', () => {
+    stub();
+
+    cy.visitAuthenticated('/dashboard/stats/syllabus');
+    cy.wait('@calendar');
+
+    cy.get('[data-cy="season-map-cell-1-2026-10-05"]').click();
+    cy.get('[data-cy="season-map-popover"]').should('contain.text', 'Advanced');
+
+    cy.get('[data-cy="season-map-cell-1-2026-10-19"]').click();
+    cy.get('[data-cy="season-map-popover"]').should('contain.text', 'Planned');
+
+    // PrimeNG's show() leaves an open popover where it was; it must follow.
+    cy.get('[data-cy="season-map-cell-1-2026-10-19"]').then(($cell) => {
+      const cell = $cell[0].getBoundingClientRect();
+      cy.get('.p-popover').should(($pop) => {
+        const pop = $pop[0].getBoundingClientRect();
+        expect(Math.abs(pop.left - cell.left)).to.be.lessThan(32);
+      });
+    });
+  });
+
+  it("opens a position's whole season from its name, and takes focus there", () => {
+    stub();
+
+    cy.visitAuthenticated('/dashboard/stats/syllabus');
+    cy.wait('@calendar');
+
+    cy.get('[data-cy="season-map-position-1"]').focus().type('{enter}');
+    cy.get('[data-cy="season-map-popover"]')
+      .should('contain.text', 'Closed guard, this season')
+      .and('contain.text', 'Week of')
+      .and('contain.text', 'Armbar')
+      .and('contain.text', 'Planned');
+    cy.focused().should('have.id', 'season-map-pop-title');
+
+    // Escape hands focus back to the name that opened it.
+    cy.focused().type('{esc}');
+    cy.focused().should('have.attr', 'data-cy', 'season-map-position-1');
+  });
+
+  it("opens a position's season as a bottom sheet on a phone, with a fingertip-sized name", () => {
+    cy.viewport(VIEWPORT_IPHONE_SE.width, VIEWPORT_IPHONE_SE.height);
+    stub();
+
+    cy.visitAuthenticated('/dashboard/stats/syllabus');
+    cy.wait('@calendar');
+
+    cy.get('[data-cy="season-map-position-1"]').click();
+    cy.get('.p-drawer [data-cy="season-map-popover"]')
+      .should('be.visible')
+      .and('contain.text', 'Closed guard, this season');
+    cy.focused().should('have.id', 'season-map-drawer-title');
+    cy.screenshot('season-map-sheet-375', { capture: 'viewport', overwrite: true });
+  });
+
+  it('draws the map for a season with only plans on it, above the nothing-taught state', () => {
+    stub(report({ taught: [] }));
+
+    cy.visitAuthenticated('/dashboard/stats/syllabus');
+    cy.wait('@calendar');
+
+    cy.get('[data-cy="syllabus-coverage-nothing-taught"]').should('be.visible');
+    cy.get('[data-cy="season-map-cell-1-2026-10-19"]').should('have.class', 'swatch--planned');
   });
 
   it('asks the map for the same filter as the report', () => {
@@ -226,6 +293,9 @@ describe('Syllabus coverage', () => {
 
     cy.get('[data-cy="season-map-error"]').should('be.visible');
     cy.get('[data-cy="syllabus-position-1"]').should('contain.text', '3/6');
+
+    // The retry is a full-size button, the one action in this state.
+    cy.get('[data-cy="season-map-retry"] button').invoke('outerHeight').should('be.gte', 48);
   });
 
   it('re-asks the server when the gi filter moves — the denominator moves with it', () => {
@@ -317,5 +387,110 @@ describe('Syllabus coverage', () => {
 
     cy.location('pathname').should('eq', '/dashboard/stats/syllabus');
     cy.get('[data-cy="syllabus-coverage"]').should('exist');
+  });
+});
+
+describe('Who has seen a technique (#1745)', () => {
+  function person(id: number, first: string, last: string, over: Record<string, unknown> = {}) {
+    return {
+      id,
+      first_name: first,
+      last_name: last,
+      belt: 'blue',
+      stripes: 1,
+      status: 'active',
+      joined_at: '2026-09-01',
+      date_of_birth: null,
+      photo_url: null,
+      user_avatar_url: null,
+      exposures: 0,
+      last_seen_on: null,
+      state: 'never',
+      ...over,
+    };
+  }
+
+  const EXPOSURE = {
+    topic: { id: 11, name: 'Armbar', parent_name: 'Closed guard', kind: 'both', in_season: true },
+    season: { start: '2026-09-01', end: '2027-08-31', label: '2026/27' },
+    lessons: [
+      {
+        id: 1,
+        held_on: '2026-09-16',
+        name: 'Fundamentals',
+        kind: 'gi',
+        starts_at: '19:00',
+        headcount: 2,
+      },
+      {
+        id: 2,
+        held_on: '2026-10-05',
+        name: 'Fundamentals',
+        kind: 'gi',
+        starts_at: '19:00',
+        headcount: 1,
+      },
+    ],
+    athletes: [
+      person(1, 'Anna', 'Bianchi', { exposures: 2, last_seen_on: '2026-10-05', state: 'seen' }),
+      person(2, 'Marco', 'Rossi', { exposures: 1, last_seen_on: '2026-09-16', state: 'thin' }),
+      person(3, 'Giulia', 'Verdi'),
+    ],
+    totals: { lessons: 2, seen: 1, thin: 1, never: 1, unplaced: 0 },
+  };
+
+  it('opens a taught row on its lessons and on who was, and was not, there', () => {
+    stub();
+    cy.intercept('GET', '/api/v1/stats/syllabus/topics/11*', {
+      statusCode: 200,
+      body: { data: EXPOSURE },
+    }).as('exposure');
+
+    cy.visitAuthenticated('/dashboard/stats/syllabus');
+    cy.wait('@coverage');
+
+    cy.get('[data-cy="syllabus-taught-11"] button').click();
+    cy.wait('@exposure').its('request.url').should('contain', 'seasons_back=0');
+
+    cy.get('[data-cy="exposure-head"]').should('contain.text', 'Armbar');
+    cy.get('[data-cy="exposure-lessons"]')
+      .should('contain.text', 'Taught in 2 lessons this season')
+      .and('contain.text', '2 people');
+    cy.get('[data-cy="exposure-group-seen"]').should('contain.text', 'Anna Bianchi');
+    cy.get('[data-cy="exposure-group-thin"]').should('contain.text', 'Marco Rossi');
+    cy.get('[data-cy="exposure-group-never"]').should('contain.text', 'Giulia Verdi');
+  });
+
+  it('lists apart the people the record cannot place, never under never', () => {
+    stub();
+    cy.intercept('GET', '/api/v1/stats/syllabus/topics/11*', {
+      statusCode: 200,
+      body: {
+        data: {
+          ...EXPOSURE,
+          athletes: [...EXPOSURE.athletes, person(4, 'Paolo', 'Neri', { state: 'unplaced' })],
+          totals: { ...EXPOSURE.totals, unplaced: 1 },
+        },
+      },
+    }).as('exposure');
+
+    cy.visitAuthenticated('/dashboard/stats/syllabus');
+    cy.wait('@coverage');
+
+    cy.get('[data-cy="syllabus-taught-11"] button').click();
+    cy.wait('@exposure');
+
+    cy.get('[data-cy="exposure-group-unplaced"]').should('contain.text', 'Paolo Neri');
+    cy.get('[data-cy="exposure-group-never"]').should('not.contain.text', 'Paolo Neri');
+  });
+
+  it('leaves a never-taught row a plain row', () => {
+    stub();
+
+    cy.visitAuthenticated('/dashboard/stats/syllabus');
+    cy.wait('@coverage');
+
+    cy.get('[data-cy="syllabus-missing-31"]').should('contain.text', 'Omoplata');
+    cy.get('[data-cy="syllabus-missing-31"] button').should('not.exist');
   });
 });

@@ -107,9 +107,13 @@
         </a>
       </p>
     } @else {
+      <!--
+        Plain words, no coloured dots: the accent's strengths key the season
+        map below (a lesson, two or more), and the same colours here would
+        mean something else on the same screen.
+      -->
       <p class="coverage__totals" data-cy="syllabus-coverage-totals">
-        <span class="tally tally--covered">
-          <span class="tally__dot" aria-hidden="true"></span>
+        <span class="tally">
           {{
             (data.totals.covered === 1
               ? 'stats.syllabus.state.coveredOne'
@@ -117,8 +121,7 @@
             ) | translate: { count: data.totals.covered }
           }}
         </span>
-        <span class="tally tally--thin">
-          <span class="tally__dot" aria-hidden="true"></span>
+        <span class="tally">
           {{
             (data.totals.thin === 1
               ? 'stats.syllabus.state.thinOne'
@@ -126,8 +129,7 @@
             ) | translate: { count: data.totals.thin }
           }}
         </span>
-        <span class="tally tally--missing">
-          <span class="tally__dot" aria-hidden="true"></span>
+        <span class="tally">
           {{
             (data.totals.missing === 1
               ? 'stats.syllabus.state.missingOne'
@@ -137,6 +139,22 @@
         </span>
       </p>
 
+      <!--
+        The position axis first, because it is what exposes real gaps:
+        "you have done nothing from half guard all year" is information an
+        instructor acts on, and a flat list of techniques is not. Week by week
+        (#1858), because *when* is the other half of that sentence; each row
+        still ends on the fraction the bars used to draw.
+
+        Drawn whenever there is a programme, taught or not: a new season with
+        only plans on it is exactly when the map is worth opening.
+      -->
+      <app-season-map
+        [positions]="data.positions"
+        [seasonsBack]="seasonsBack()"
+        [kind]="kindParam()"
+      />
+
       @if (nothingTaught()) {
         <app-empty-state
           icon="pi pi-calendar"
@@ -145,19 +163,6 @@
           dataCy="syllabus-coverage-nothing-taught"
         />
       } @else {
-        <!--
-          The position axis first, because it is what exposes real gaps:
-          "you have done nothing from half guard all year" is information an
-          instructor acts on, and a flat list of techniques is not. Week by
-          week (#1858), because *when* is the other half of that sentence;
-          each row still ends on the fraction the bars used to draw.
-        -->
-        <app-season-map
-          [positions]="data.positions"
-          [seasonsBack]="seasonsBack()"
-          [kind]="kindParam()"
-        />
-
         <!--
           Coverage over the season, so the owner can see whether they are on
           pace or drifting. A topic joins the line on the day of its second
@@ -210,17 +215,35 @@
             <h3 class="panel__title">{{ 'stats.syllabus.lastTaught' | translate }}</h3>
             <ul class="topics">
               @for (topic of data.taught; track topic.id) {
-                <li class="topics__row" [attr.data-cy]="'syllabus-taught-' + topic.id">
-                  <span class="topics__name">
-                    {{ topic.name }}
-                    @if (topic.state === 'thin') {
-                      <span class="topics__thin">{{ 'stats.syllabus.thinTag' | translate }}</span>
-                    }
-                  </span>
-                  <span class="topics__when">
-                    <span>{{ shortDate(topic.last_taught_on) }}</span>
-                    <span class="topics__ago">{{ ago(topic.last_taught_on) }}</span>
-                  </span>
+                <!--
+                  A taught row opens who has seen it (#1745). Its accessible
+                  name is what it shows, with a hidden lead-in and the
+                  position: the seed repeats technique names across
+                  positions, and a label that replaced the visible text would
+                  read nine identical "Back take" buttons.
+                -->
+                <li
+                  class="topics__row topics__row--open"
+                  [attr.data-cy]="'syllabus-taught-' + topic.id"
+                >
+                  <button type="button" class="topics__open" (click)="openExposure(topic.id)">
+                    <span class="visually-hidden">{{
+                      'stats.syllabus.exposure.openPrefix' | translate
+                    }}</span>
+                    <span class="topics__name">
+                      {{ topic.name }}
+                      @if (topic.parent_name) {
+                        <span class="visually-hidden">({{ topic.parent_name }})</span>
+                      }
+                      @if (topic.state === 'thin') {
+                        <span class="topics__thin">{{ 'stats.syllabus.thinTag' | translate }}</span>
+                      }
+                    </span>
+                    <span class="topics__when">
+                      <span>{{ shortDate(topic.last_taught_on) }}</span>
+                      <span class="topics__ago">{{ ago(topic.last_taught_on) }}</span>
+                    </span>
+                  </button>
                 </li>
               }
             </ul>
@@ -230,3 +253,9 @@
     }
   </section>
 }
+
+<app-topic-exposure
+  [(visible)]="exposureOpen"
+  [topicId]="exposureTopicId()"
+  [seasonsBack]="seasonsBack()"
+/>

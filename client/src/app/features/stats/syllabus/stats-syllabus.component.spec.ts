@@ -165,6 +165,8 @@ describe('StatsSyllabusComponent (#1565)', () => {
     expect(totals.textContent).toContain('4 covered');
     expect(totals.textContent).toContain('2 taught once');
     expect(totals.textContent).toContain('4 not taught');
+    // In words only: the accent's strengths key the map (#1858), not this line.
+    expect(totals.querySelector('.tally__dot')).toBeNull();
   });
 
   it('hands the season map the report positions, its season and its filter (#1858)', () => {
@@ -303,6 +305,8 @@ describe('StatsSyllabusComponent (#1565)', () => {
     expect(el.querySelector('[data-cy="syllabus-coverage-nothing-taught"]')).not.toBeNull();
     // The tally still shows: "0 covered, 10 not taught" is the honest state.
     expect(el.querySelector('[data-cy="syllabus-coverage-totals"]')).not.toBeNull();
+    // And the map: a season with only plans on it is when the map matters (#1858).
+    expect(el.querySelector('app-season-map')).not.toBeNull();
   });
 
   it('says nothing is missing rather than drawing an empty list', () => {
@@ -367,6 +371,70 @@ describe('StatsSyllabusComponent (#1565)', () => {
     const options = component['timelineOptions']() as { scales: { y: { suggestedMax: number } } };
     expect(options.scales.y.suggestedMax).toBe(10);
     expect(component['timelineData']().datasets[0].data).toEqual([0, 2]);
+  });
+});
+
+describe('StatsSyllabusComponent — who has seen it (#1745)', () => {
+  afterEach(() => TestBed.inject(HttpTestingController).verify());
+
+  it('opens a taught row on who has seen that technique, in the season on screen', () => {
+    const { fixture, httpMock } = setup();
+    flush(httpMock);
+    fixture.detectChanges();
+
+    const open: HTMLButtonElement = fixture.nativeElement.querySelector(
+      '[data-cy="syllabus-taught-11"] button',
+    );
+    open.click();
+    fixture.detectChanges();
+
+    const req = httpMock.expectOne((r) => r.url === '/api/v1/stats/syllabus/topics/11');
+    expect(req.request.params.get('seasons_back')).toBe('0');
+    req.flush({ message: 'not the point' }, { status: 500, statusText: 'Server Error' });
+  });
+
+  it('names the button by what it shows, with a lead-in and the position', () => {
+    const { fixture, httpMock } = setup();
+    flush(httpMock);
+    fixture.detectChanges();
+
+    const open: HTMLButtonElement = fixture.nativeElement.querySelector(
+      '[data-cy="syllabus-taught-11"] button',
+    );
+    // No aria-label replacing the visible text (WCAG 2.5.3): the name is the
+    // content, and it carries the position, because the seed repeats names.
+    expect(open.hasAttribute('aria-label')).toBe(false);
+    const name = open.textContent?.replace(/\s+/g, ' ') ?? '';
+    expect(name).toContain('Who has seen it:');
+    expect(name).toContain('Armbar');
+    expect(name).toContain('(Closed guard)');
+  });
+
+  it('leaves a never-taught row a plain row — planning it is #1656', () => {
+    const { fixture, httpMock } = setup();
+    flush(httpMock);
+    fixture.detectChanges();
+
+    expect(
+      fixture.nativeElement.querySelector('[data-cy="syllabus-missing-31"] button'),
+    ).toBeNull();
+  });
+
+  it('keeps both lists in the order the server sent them', () => {
+    const { fixture, httpMock } = setup();
+    flush(httpMock);
+    fixture.detectChanges();
+
+    const ids = (panel: string) =>
+      Array.from(fixture.nativeElement.querySelectorAll(`[data-cy="${panel}"] li[data-cy]`)).map(
+        (li) => (li as HTMLElement).getAttribute('data-cy'),
+      );
+
+    expect(ids('syllabus-coverage-missing')).toEqual([
+      'syllabus-missing-31',
+      'syllabus-missing-32',
+    ]);
+    expect(ids('syllabus-coverage-taught')).toEqual(['syllabus-taught-11', 'syllabus-taught-12']);
   });
 });
 

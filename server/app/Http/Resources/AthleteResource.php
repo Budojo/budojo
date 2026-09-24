@@ -171,6 +171,16 @@ class AthleteResource extends JsonResource
             // someone who has genuinely never trained.
             'attendance_month_count' => $athlete->attendance_month_count,
             'attendance_total_count' => $athlete->attendance_total_count,
+            // When they last trained (#1726), `Y-m-d`, or null when they
+            // never have. Selected on the index and on show; every other
+            // endpoint leaves the KEY out rather than sending null, because
+            // null is an answer — "never trained" — and the update or the
+            // photo endpoints saying it about someone who trained yesterday
+            // would be a lie the SPA could not tell from the truth.
+            'last_attended_on' => $this->when(
+                \array_key_exists('last_attended_on', $athlete->getAttributes()),
+                fn (): ?string => $this->lastAttendedOn($athlete),
+            ),
             // M7 PR-B-UI (#467) — the single invitation block the SPA's
             // athlete-detail card renders. Read-side projection only;
             // the raw token + sha-256 hash never leave the database.
@@ -216,5 +226,19 @@ class AthleteResource extends JsonResource
             'expires_at' => $invitation->expires_at->toIso8601String(),
             'accepted_at' => $invitation->accepted_at?->toIso8601String(),
         ];
+    }
+
+    /**
+     * The `withMax` alias comes back raw — whatever the engine stored, which
+     * for a DATE column on MySQL is `Y-m-d` and on SQLite whatever string was
+     * written. Normalised to the date alone so the wire never carries a time.
+     */
+    private function lastAttendedOn(Athlete $athlete): ?string
+    {
+        $raw = $athlete->getAttribute('last_attended_on');
+
+        return \is_string($raw) && $raw !== ''
+            ? CarbonImmutable::parse($raw)->toDateString()
+            : null;
     }
 }

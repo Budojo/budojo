@@ -131,28 +131,16 @@
   }
 }
 
-// The legend, carrying the same three strengths the bars use.
+// The three counts, in words. No coloured dots: the accent's strengths key
+// the season map (#1858), and here they would mean something else.
 .tally {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
 
-  &__dot {
-    width: 0.75rem;
-    height: 0.75rem;
-    border-radius: 4px;
-  }
-
-  &--covered &__dot {
-    background: var(--p-primary-color);
-  }
-
-  &--thin &__dot {
-    background: color-mix(in srgb, var(--p-primary-color) 35%, transparent);
-  }
-
-  &--missing &__dot {
-    background: var(--p-surface-200);
+  & + &::before {
+    content: '·';
+    margin-right: 1rem;
+    color: var(--p-text-muted-color);
   }
 }
 
@@ -219,6 +207,43 @@
 
     & + & {
       border-top: 1px solid color-mix(in srgb, var(--p-content-border-color) 60%, transparent);
+    }
+
+    // A taught row is a button the width of the list (#1745), so the row
+    // itself gives up its padding to it.
+    &--open {
+      padding: 0;
+    }
+  }
+
+  // Who has seen it (#1745): the whole taught row, 48 px tall so it clears
+  // the touch floor, and plain at rest — a list of names, not a wall of
+  // links. Hover and focus say it can be pressed.
+  &__open {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    width: 100%;
+    min-height: 3rem;
+    padding: 0.5rem;
+    margin: 0;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color var(--budojo-motion-fast) var(--budojo-motion-decelerate);
+
+    &:hover {
+      background: var(--p-content-hover-background);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--p-primary-color);
+      outline-offset: -2px;
     }
   }
 

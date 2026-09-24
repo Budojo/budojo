@@ -3,7 +3,14 @@ import {
   CoveragePosition,
   SyllabusCalendar,
 } from '../../../../core/services/stats.service';
-import { buildRows, cellLessons, mondayOf, monthOfWeek, monthStarts } from './season-map.model';
+import {
+  buildRows,
+  cellLessons,
+  mondayOf,
+  monthOfWeek,
+  monthStarts,
+  positionSeason,
+} from './season-map.model';
 
 function position(id: number, name: string, covered = 1, inScope = 4): CoveragePosition {
   return { id, name, kind: 'both', in_scope: inScope, covered, thin: 0, missing: 0, worked: 0 };
@@ -135,6 +142,23 @@ describe('season map model (#1858)', () => {
     });
 
     expect(cellLessons(data, 1, '2026-10-12').map((l) => l.id)).toEqual([1, 2]);
+  });
+
+  it("gathers a position's whole season, week by week, leaving out the empty weeks", () => {
+    const data = calendar({
+      lessons: [
+        lesson({ id: 1, held_on: '2026-10-05', position_ids: [1] }),
+        lesson({ id: 2, held_on: '2026-10-19', position_ids: [1], state: 'planned' }),
+        lesson({ id: 3, held_on: '2026-10-21', position_ids: [1], state: 'planned' }),
+        lesson({ id: 4, held_on: '2026-10-12', position_ids: [2] }),
+      ],
+    });
+
+    const season = positionSeason(data, 1);
+
+    expect(season.map((g) => g.week)).toEqual(['2026-10-05', '2026-10-19']);
+    expect(season[1].lessons.map((l) => l.id)).toEqual([2, 3]);
+    expect(positionSeason(data, 9)).toEqual([]);
   });
 
   it('names what each lesson did on the position, the position itself included', () => {
