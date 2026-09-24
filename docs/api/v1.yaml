@@ -6076,8 +6076,9 @@ paths:
         the academy's realised sessions, so a client can tell "nobody is
         drifting" from "not enough sessions recorded yet". Not cached.
 
-        Owner and staff with `stats_view`; an athlete account gets the
-        `role_required` 403 every `/stats` route gives it.
+        Owner-only, and requires `stats_view`: the route sits in the
+        `role:owner` group with every other `/stats` read, so any other role
+        gets the `role_required` 403 before the capability is checked.
       tags: [Stats]
       responses:
         '200':
@@ -6087,7 +6088,7 @@ paths:
               schema: { $ref: '#/components/schemas/AtRiskAthletes' }
         '401': { description: Unauthenticated }
         '403':
-          description: Forbidden — no academy, or a role without `stats_view`.
+          description: Forbidden — not the owner (`role_required`), or no academy.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorMessage' }
