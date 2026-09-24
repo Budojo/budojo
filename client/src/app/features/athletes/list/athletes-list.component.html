@@ -641,6 +641,9 @@
                   -->
                   <span
                     class="athlete-attendance__last-seen"
+                    [pTooltip]="athlete.last_attended_on | localeDate: 'calendar-day'"
+                    [tooltipDisabled]="!athlete.last_attended_on"
+                    tooltipPosition="top"
                     [attr.data-cy]="'athlete-last-seen-inline-' + athlete.id"
                     ><span class="athlete-attendance__last-seen-part">{{
                       'athletes.list.lastSeen.inlineLabel' | translate
