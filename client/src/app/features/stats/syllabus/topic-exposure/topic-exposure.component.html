@@ -111,18 +111,6 @@
             }
           </section>
         }
-
-        @if (data.unattributed_presences > 0) {
-          <!-- What it cannot see, said rather than counted as absence (#1590). -->
-          <p class="exposure__unattributed" data-cy="exposure-unattributed">
-            {{
-              (data.unattributed_presences === 1
-                ? 'stats.syllabus.exposure.unattributedOne'
-                : 'stats.syllabus.exposure.unattributedOther'
-              ) | translate: { count: data.unattributed_presences }
-            }}
-          </p>
-        }
       </div>
     }
   }

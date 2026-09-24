@@ -93,7 +93,7 @@ it('splits the roster into seen, seen once and never there', function (): void {
 
     expect(exposureNames($report, 'seen'))->toBe(['Anna', 'Marco'])
         ->and(exposureNames($report, 'never'))->toBe(['Giulia'])
-        ->and($report['totals'])->toBe(['lessons' => 3, 'seen' => 2, 'thin' => 0, 'never' => 1]);
+        ->and($report['totals'])->toBe(['lessons' => 3, 'seen' => 2, 'thin' => 0, 'never' => 1, 'unplaced' => 0]);
 
     $anna = collect($report['athletes'])->firstWhere('id', $this->anna->id);
     expect($anna['exposures'])->toBe(2)
@@ -147,6 +147,34 @@ it('keeps somebody who joined between two lessons as never there', function (): 
 
     expect(exposureNames(exposureOf($this, $this->armbar), 'never'))->toContain('Sara');
     expect($midway->id)->toBeInt();
+});
+
+it('keeps somebody who joined on the day of the last lesson — they could have been there', function (): void {
+    Athlete::factory()->for($this->academy)->create([
+        'first_name' => 'Pietro', 'joined_at' => '2026-09-23',
+    ]);
+
+    exposureLesson($this, '2026-09-16', [$this->armbar], [$this->anna]);
+    exposureLesson($this, '2026-09-23', [$this->armbar], [$this->anna]);
+
+    // The edge is inclusive: `joined_at > last` leaves out, `=` stays in.
+    expect(exposureNames(exposureOf($this, $this->armbar), 'never'))->toContain('Pietro');
+});
+
+it('keeps somebody who went inactive on the day of the first lesson — they were still there', function (): void {
+    Athlete::factory()->for($this->academy)->create([
+        'first_name' => 'Chiara',
+        'joined_at' => '2025-01-01',
+        'status' => AthleteStatus::Inactive,
+        'status_changed_at' => '2026-09-16',
+    ]);
+
+    exposureLesson($this, '2026-09-16', [$this->armbar], [$this->anna]);
+    exposureLesson($this, '2026-09-23', [$this->armbar], [$this->anna]);
+
+    // Inclusive on this edge too: left before the first lesson is out, left
+    // that day is in.
+    expect(exposureNames(exposureOf($this, $this->armbar), 'never'))->toContain('Chiara');
 });
 
 it('leaves out an athlete who had left before the first lesson', function (): void {
@@ -263,7 +291,7 @@ it('answers an honest empty for a technique nobody has taught', function (): voi
     // a roster filed under "never" would put it on the people.
     expect($report['lessons'])->toBe([])
         ->and($report['athletes'])->toBe([])
-        ->and($report['totals'])->toBe(['lessons' => 0, 'seen' => 0, 'thin' => 0, 'never' => 0]);
+        ->and($report['totals'])->toBe(['lessons' => 0, 'seen' => 0, 'thin' => 0, 'never' => 0, 'unplaced' => 0]);
 });
 
 // ─── A position is a different fact ──────────────────────────────────────────
@@ -280,21 +308,31 @@ it('drills a position down to the lessons that named the position itself', funct
 
 // ─── What it cannot see ──────────────────────────────────────────────────────
 
-it('counts presences on those days that name no lesson, rather than calling them absence', function (): void {
+it('never files a presence that names no lesson under never — it gets its own group', function (): void {
+    $giulia = Athlete::factory()->for($this->academy)->create([
+        'first_name' => 'Giulia', 'last_name' => 'Verdi', 'joined_at' => '2026-09-01',
+    ]);
+
     exposureLesson($this, '2026-09-16', [$this->armbar], [$this->anna]);
+    // Marco trained that day; the record cannot say at which lesson (#1590).
     AttendanceRecord::factory()->create([
         'athlete_id' => $this->marco->id,
         'lesson_id' => null,
         'attended_on' => '2026-09-16',
     ]);
-    // A day the technique was not taught says nothing about it.
+    // Giulia trained on a day the technique was not taught: that says nothing
+    // about it, so she was never there for it.
     AttendanceRecord::factory()->create([
-        'athlete_id' => $this->marco->id,
+        'athlete_id' => $giulia->id,
         'lesson_id' => null,
         'attended_on' => '2026-10-01',
     ]);
 
-    expect(exposureOf($this, $this->armbar)['unattributed_presences'])->toBe(1);
+    $report = exposureOf($this, $this->armbar);
+
+    expect(exposureNames($report, 'unplaced'))->toBe(['Marco'])
+        ->and(exposureNames($report, 'never'))->toBe(['Giulia'])
+        ->and($report['totals'])->toMatchArray(['never' => 1, 'unplaced' => 1]);
 });
 
 // ─── The season ──────────────────────────────────────────────────────────────

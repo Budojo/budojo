@@ -67,8 +67,7 @@ function exposure(over: Partial<TopicExposure> = {}): TopicExposure {
       athlete({ id: 3, first_name: 'Giulia' }),
       athlete({ id: 4, first_name: 'Aldo', status: 'inactive' }),
     ],
-    totals: { lessons: 2, seen: 1, thin: 1, never: 2 },
-    unattributed_presences: 0,
+    totals: { lessons: 2, seen: 1, thin: 1, never: 2, unplaced: 0 },
     ...over,
   };
 }
@@ -189,7 +188,7 @@ describe('TopicExposureComponent (#1745)', () => {
       exposure({
         lessons: [],
         athletes: [],
-        totals: { lessons: 0, seen: 0, thin: 0, never: 0 },
+        totals: { lessons: 0, seen: 0, thin: 0, never: 0, unplaced: 0 },
       }),
     );
     fixture.detectChanges();
@@ -202,14 +201,30 @@ describe('TopicExposureComponent (#1745)', () => {
     expect(el.textContent).not.toContain('%');
   });
 
-  it('says how many presences on those days it cannot attribute', () => {
+  it('lists the people the record cannot place apart, last, and never under never', () => {
     const { fixture, httpMock } = setup();
-    flush(httpMock, exposure({ unattributed_presences: 3 }));
+    flush(
+      httpMock,
+      exposure({
+        athletes: [
+          ...exposure().athletes,
+          athlete({ id: 5, first_name: 'Paolo', state: 'unplaced' }),
+        ],
+        totals: { lessons: 2, seen: 1, thin: 1, never: 2, unplaced: 1 },
+      }),
+    );
     fixture.detectChanges();
 
-    expect(
-      fixture.nativeElement.querySelector('[data-cy="exposure-unattributed"]')?.textContent,
-    ).toContain('3 presences');
+    const el: HTMLElement = fixture.nativeElement;
+    expect(group(fixture, 'unplaced')).toEqual(['exposure-athlete-5']);
+    expect(group(fixture, 'never')).not.toContain('exposure-athlete-5');
+    expect(el.querySelector('[data-cy="exposure-group-unplaced"]')?.textContent).toContain(
+      "trained that day, at a lesson the record doesn't name",
+    );
+    const sections = Array.from(el.querySelectorAll('[data-cy^="exposure-group-"]')).map((s) =>
+      s.getAttribute('data-cy'),
+    );
+    expect(sections.at(-1)).toBe('exposure-group-unplaced');
   });
 
   it('offers a retry when the read fails', () => {

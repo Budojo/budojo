@@ -291,14 +291,29 @@
   display: flex;
   flex-direction: column;
 
-  &__item + &__item {
-    border-top: 1px solid color-mix(in srgb, var(--p-content-border-color) 60%, transparent);
+  &__row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+    min-height: 2rem;
+    padding: 0.25rem 0;
+
+    & + & {
+      border-top: 1px solid color-mix(in srgb, var(--p-content-border-color) 60%, transparent);
+    }
+
+    // A taught row is a button the width of the list (#1745), so the row
+    // itself gives up its padding to it.
+    &--open {
+      padding: 0;
+    }
   }
 
-  // The whole row opens who has seen it (#1745): a button the width of the
-  // list, 48 px tall so it clears the touch floor, and plain at rest — a list
-  // of names, not a wall of links. Hover and focus say it can be pressed.
-  &__row {
+  // Who has seen it (#1745): the whole taught row, 48 px tall so it clears
+  // the touch floor, and plain at rest — a list of names, not a wall of
+  // links. Hover and focus say it can be pressed.
+  &__open {
     display: flex;
     align-items: center;
     justify-content: space-between;

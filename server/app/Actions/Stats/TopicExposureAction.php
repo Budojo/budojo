@@ -22,11 +22,15 @@ use Illuminate\Support\Facades\DB;
  * promotion, before deciding tonight's class. A 278-column grid does not fit a
  * desktop window; one column, opened on demand, does.
  *
- * The three states are the athlete tab's, read from the other side (#1567):
+ * The three states are the athlete tab's, read from the other side (#1567),
+ * and a fourth for what the record cannot say:
  *
- *   - `seen`   at two or more of those lessons
- *   - `thin`   at exactly one
- *   - `never`  on the roster while it was taught, and at none of them
+ *   - `seen`      at two or more of those lessons
+ *   - `thin`      at exactly one
+ *   - `never`     on the roster while it was taught, and at none of them
+ *   - `unplaced`  at none of them by the record, but trained on one of those
+ *                 days with no lesson named (#1590). Could have been there;
+ *                 never read as an absence, and never filed under `never`.
  *
  * **"On the roster" has two edges.** Somebody who joined after the last lesson
  * that taught it did not miss it; somebody who had already left before the
@@ -79,9 +83,9 @@ class TopicExposureAction
             $end->toDateString(),
         )[$topic->id] ?? [];
 
-        $athletes = $this->athletes($academy->id, $lessons);
+        $athletes = $this->athletes($academy->id, $lessons, $this->unplacedOnThoseDays($academy->id, $lessons));
 
-        $totals = ['lessons' => \count($lessons), 'seen' => 0, 'thin' => 0, 'never' => 0];
+        $totals = ['lessons' => \count($lessons), 'seen' => 0, 'thin' => 0, 'never' => 0, 'unplaced' => 0];
         foreach ($athletes as $row) {
             $totals[$row['state']]++;
         }
@@ -111,7 +115,6 @@ class TopicExposureAction
             ], $lessons),
             'athletes' => $athletes,
             'totals' => $totals,
-            'unattributed_presences' => $this->unattributedOnThoseDays($academy->id, $lessons),
         ];
     }
 
@@ -132,10 +135,12 @@ class TopicExposureAction
      *     user_avatar_url: string|null,
      *     exposures: int,
      *     last_seen_on: string|null,
-     *     state: 'seen'|'thin'|'never',
+     *     state: 'seen'|'thin'|'never'|'unplaced',
      * }>
+     *
+     * @param  array<int, true>  $unplaced  athletes who trained on one of those days with no lesson named
      */
-    private function athletes(int $academyId, array $lessons): array
+    private function athletes(int $academyId, array $lessons, array $unplaced): array
     {
         if ($lessons === []) {
             // Nobody has seen it because nobody has taught it.
@@ -171,8 +176,11 @@ class TopicExposureAction
         $rows = [];
         foreach ($roster as $athlete) {
             $mine = $exposure[$athlete->id] ?? null;
+            // Trained on one of those days, at a lesson the record cannot
+            // name: they were on the roster that day, so no edge applies.
+            $isUnplaced = $mine === null && isset($unplaced[$athlete->id]);
 
-            if ($mine === null && ! $this->onTheRosterFor($athlete, $first, $last)) {
+            if ($mine === null && ! $isUnplaced && ! $this->onTheRosterFor($athlete, $first, $last)) {
                 continue;
             }
 
@@ -190,7 +198,12 @@ class TopicExposureAction
                 'user_avatar_url' => $athlete->user?->avatar_url,
                 'exposures' => $count,
                 'last_seen_on' => $mine['last'] ?? null,
-                'state' => $count >= self::SEEN_AT ? 'seen' : ($count === 1 ? 'thin' : 'never'),
+                'state' => match (true) {
+                    $count >= self::SEEN_AT => 'seen',
+                    $count === 1 => 'thin',
+                    $isUnplaced => 'unplaced',
+                    default => 'never',
+                },
             ];
         }
 
@@ -215,27 +228,38 @@ class TopicExposureAction
     }
 
     /**
-     * Presences on the days it was taught that name no lesson. Each could have
-     * been at one of these lessons, so the screen says how many there are
-     * rather than letting them read as absence (#1590). A presence on a day
-     * the technique was not taught says nothing about it and is not counted.
+     * The athletes with a presence on one of the days it was taught that names
+     * no lesson. Each could have been at one of these lessons, so they are
+     * never read as absent (#1590). A presence on a day the technique was not
+     * taught says nothing about it and does not count.
      *
      * @param  list<array{id: int, held_on: string, name: string, kind: string, starts_at: string|null, athlete_ids: list<int>}>  $lessons
+     * @return array<int, true>
      */
-    private function unattributedOnThoseDays(int $academyId, array $lessons): int
+    private function unplacedOnThoseDays(int $academyId, array $lessons): array
     {
         if ($lessons === []) {
-            return 0;
+            return [];
         }
 
         $days = array_values(array_unique(array_column($lessons, 'held_on')));
 
-        return DB::table('attendance_records')
+        $ids = DB::table('attendance_records')
             ->join('athletes', 'athletes.id', '=', 'attendance_records.athlete_id')
             ->where('athletes.academy_id', $academyId)
             ->whereNull('attendance_records.lesson_id')
             ->whereNull('attendance_records.deleted_at')
             ->whereIn('attendance_records.attended_on', $days)
-            ->count();
+            ->distinct()
+            ->pluck('attendance_records.athlete_id');
+
+        $out = [];
+        foreach ($ids as $id) {
+            if (is_numeric($id)) {
+                $out[(int) $id] = true;
+            }
+        }
+
+        return $out;
     }
 }

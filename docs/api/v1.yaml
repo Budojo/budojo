@@ -3966,8 +3966,13 @@ paths:
         The athlete × technique matrix read one column at a time: the held
         lessons that named this topic in the season, and the roster split
         against them — at two or more (`seen`), at exactly one (`thin`), at
-        none while on the roster (`never`). The drill-down behind a row of
-        `/stats/syllabus/coverage`.
+        none while on the roster (`never`). The drill-down behind a taught
+        row of `/stats/syllabus/coverage`.
+
+        **A presence that names no lesson is never an absence** (#1590).
+        Somebody at none of the lessons by the record, who trained on one of
+        those days with no lesson named, is `unplaced`: they could have been
+        there, so they are listed apart and never under `never`.
 
         **Held** means somebody was checked in, exactly as in the coverage
         report: a planned lesson contributes neither a row nor a headcount.
@@ -8610,7 +8615,7 @@ components:
       description: |
         Who has seen one technique this season (#1745). `totals` counts the
         rows of `athletes` by `state`, and `lessons` counts `lessons`.
-      required: [topic, season, lessons, athletes, totals, unattributed_presences]
+      required: [topic, season, lessons, athletes, totals]
       properties:
         topic:
           type: object
@@ -8684,22 +8689,21 @@ components:
                 description: The latest of those lessons they were at; null for `never`.
               state:
                 type: string
-                enum: [seen, thin, never]
-                description: At two or more, at exactly one, at none while on the roster.
+                enum: [seen, thin, never, unplaced]
+                description: |
+                  At two or more; at exactly one; at none while on the roster;
+                  or at none by the record but trained on one of those days
+                  with no lesson named (#1590) — could have been there, so
+                  never read as an absence.
         totals:
           type: object
-          required: [lessons, seen, thin, never]
+          required: [lessons, seen, thin, never, unplaced]
           properties:
             lessons: { type: integer }
             seen: { type: integer }
             thin: { type: integer }
             never: { type: integer }
-        unattributed_presences:
-          type: integer
-          description: |
-            Presences on the days it was taught that name no lesson (#1590).
-            Each could have been at one of those lessons, so the client says
-            how many there are instead of letting them read as absence.
+            unplaced: { type: integer }
     SyllabusCoverage:
       type: object
       description: |

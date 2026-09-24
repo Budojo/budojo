@@ -372,7 +372,6 @@ describe('StatsSyllabusComponent — who has seen it (#1745)', () => {
     const open: HTMLButtonElement = fixture.nativeElement.querySelector(
       '[data-cy="syllabus-taught-11"] button',
     );
-    expect(open.getAttribute('aria-label')).toBe('Who has seen Armbar');
     open.click();
     fixture.detectChanges();
 
@@ -381,17 +380,31 @@ describe('StatsSyllabusComponent — who has seen it (#1745)', () => {
     req.flush({ message: 'not the point' }, { status: 500, statusText: 'Server Error' });
   });
 
-  it('opens a row that was never taught too, for its honest empty', () => {
+  it('names the button by what it shows, with a lead-in and the position', () => {
     const { fixture, httpMock } = setup();
     flush(httpMock);
     fixture.detectChanges();
 
-    fixture.nativeElement.querySelector('[data-cy="syllabus-missing-31"] button').click();
+    const open: HTMLButtonElement = fixture.nativeElement.querySelector(
+      '[data-cy="syllabus-taught-11"] button',
+    );
+    // No aria-label replacing the visible text (WCAG 2.5.3): the name is the
+    // content, and it carries the position, because the seed repeats names.
+    expect(open.hasAttribute('aria-label')).toBe(false);
+    const name = open.textContent?.replace(/\s+/g, ' ') ?? '';
+    expect(name).toContain('Who has seen it:');
+    expect(name).toContain('Armbar');
+    expect(name).toContain('(Closed guard)');
+  });
+
+  it('leaves a never-taught row a plain row — planning it is #1656', () => {
+    const { fixture, httpMock } = setup();
+    flush(httpMock);
     fixture.detectChanges();
 
-    httpMock
-      .expectOne((r) => r.url === '/api/v1/stats/syllabus/topics/31')
-      .flush({ message: 'not the point' }, { status: 500, statusText: 'Server Error' });
+    expect(
+      fixture.nativeElement.querySelector('[data-cy="syllabus-missing-31"] button'),
+    ).toBeNull();
   });
 
   it('keeps both lists in the order the server sent them', () => {

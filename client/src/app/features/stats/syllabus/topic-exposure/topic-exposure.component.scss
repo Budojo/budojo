@@ -91,6 +91,12 @@
     background: color-mix(in srgb, var(--p-primary-color) 35%, transparent);
   }
 
+  // The record cannot say: an outline, no fill — neither there nor absent.
+  &__section[data-state='unplaced'] &__dot {
+    background: transparent;
+    border: 1px dashed var(--p-text-muted-color);
+  }
+
   &__lessons,
   &__people {
     list-style: none;
@@ -158,13 +164,6 @@
   &__inactive {
     margin: 0.5rem 0 0;
     font-size: 0.75rem;
-    color: var(--p-text-muted-color);
-  }
-
-  &__unattributed {
-    margin: 0;
-    font-size: 0.8125rem;
-    font-style: italic;
     color: var(--p-text-muted-color);
   }
 }
