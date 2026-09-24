@@ -208,7 +208,9 @@ export class LessonSheetComponent {
     // Offered once: a technique the room group already names comes with the
     // reason about tonight's people, which is the sharper of the two.
     const room = new Set(this.roomGapsOffered().map((g) => g.id));
-    return this.suggestions().filter((s) => !picked.has(s.id) && !waved.has(s.id) && !room.has(s.id));
+    return this.suggestions().filter(
+      (s) => !picked.has(s.id) && !waved.has(s.id) && !room.has(s.id),
+    );
   });
 
   /** The room rows not already chosen — a tick moves one into "Fatto", like a suggestion. */

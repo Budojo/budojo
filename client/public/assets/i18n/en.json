@@ -1968,6 +1968,14 @@
         "errorDetail": "The change was not saved. Try again.",
         "loadErrorDetail": "The lesson could not be loaded."
       },
+      "room": {
+        "title": "For the people on the mat tonight",
+        "reasonOne": "{{missed}} of the {{present}} here tonight wasn't there · last taught {{date}}",
+        "reasonOther": "{{missed}} of the {{present}} here tonight weren't there · last taught {{date}}",
+        "who": "Who missed {{name}}",
+        "unsureOne": "1 more trained that day, at a lesson the record doesn't name.",
+        "unsureOther": "{{count}} more trained that day, at a lesson the record doesn't name."
+      },
       "suggestions": {
         "title": "Suggested tonight",
         "dismiss": "Not tonight",

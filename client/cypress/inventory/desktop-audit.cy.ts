@@ -389,6 +389,53 @@ const ATHLETES = [
   }),
 ];
 
+/** How the room drill-downs draw a person: the identity fields and nothing else. */
+function identityOf(id: number) {
+  const a = ATHLETES.find((row) => row.id === id) as Record<string, unknown>;
+  return {
+    id,
+    first_name: a['first_name'],
+    last_name: a['last_name'],
+    belt: a['belt'],
+    stripes: a['stripes'],
+    date_of_birth: a['date_of_birth'] ?? null,
+    photo_url: null,
+    user_avatar_url: null,
+  };
+}
+
+/**
+ * What tonight's room missed (#1860): seven on the mat, two techniques most of
+ * them were not there for, names in register order.
+ */
+const ROOM_GAPS = {
+  present: 7,
+  rows: [
+    {
+      id: 21,
+      name: 'Knee shield',
+      parent_name: 'Half guard',
+      kind: 'both',
+      lessons: 1,
+      last_taught_on: '2026-09-07',
+      missed: 5,
+      unattributed: 0,
+      athletes: [4, 7, 8, 2, 6].map(identityOf),
+    },
+    {
+      id: 34,
+      name: 'Upa escape',
+      parent_name: 'Mount',
+      kind: 'both',
+      lessons: 1,
+      last_taught_on: '2026-09-04',
+      missed: 4,
+      unattributed: 1,
+      athletes: [7, 8, 2, 6].map(identityOf),
+    },
+  ],
+};
+
 function page(rows: unknown[], perPage = 20) {
   return {
     data: rows,
@@ -1308,6 +1355,11 @@ function seed(): void {
     statusCode: 200,
     body: { data: SUGGESTIONS },
   });
+  // Asked for only when a lesson is held; an empty room unless a screen says otherwise.
+  cy.intercept('GET', '/api/v1/lessons/room-gaps*', {
+    statusCode: 200,
+    body: { data: { present: 0, rows: [] } },
+  });
   cy.intercept('GET', '/api/v1/payments/summary*', {
     statusCode: 200,
     body: { data: { paid: 4, unpaid: 3 } },
@@ -1917,6 +1969,32 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
         press('[data-cy="attendance-topics"]');
         dialogOpen('[data-cy="lesson-sheet"]');
         cy.get('[data-cy="lesson-sheet-suggestions"]').should('be.visible');
+      },
+    },
+  );
+  // Tonight, for the people on the mat (#1860): a held lesson, two techniques
+  // most of the room missed, and the names of the first one opened.
+  screen(
+    '30-attendance-lesson-sheet-room',
+    '/dashboard/attendance',
+    '[data-cy="attendance-class-picker"]',
+    {
+      stubs: () => {
+        cy.intercept('GET', '/api/v1/lessons?*', {
+          statusCode: 200,
+          body: { data: { ...LESSON_TONIGHT, held: true } },
+        });
+        cy.intercept('GET', '/api/v1/lessons/room-gaps*', {
+          statusCode: 200,
+          body: { data: ROOM_GAPS },
+        });
+      },
+      act: () => {
+        press('[data-cy="attendance-topics"]');
+        dialogOpen('[data-cy="lesson-sheet"]');
+        cy.get('[data-cy="lesson-sheet-room"]').should('be.visible');
+        press('[data-cy="lesson-room-who-21"]');
+        cy.get('[data-cy="lesson-room-people-21"]').should('be.visible');
       },
     },
   );

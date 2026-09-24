@@ -1968,6 +1968,14 @@
         "errorDetail": "La modifica non è stata salvata. Riprova.",
         "loadErrorDetail": "Impossibile caricare la lezione."
       },
+      "room": {
+        "title": "Per chi c'è stasera",
+        "reasonOne": "{{missed}} dei {{present}} presenti non c'era · l'ultima volta il {{date}}",
+        "reasonOther": "{{missed}} dei {{present}} presenti non c'erano · l'ultima volta il {{date}}",
+        "who": "Chi non c'era per {{name}}",
+        "unsureOne": "Un altro si è allenato quel giorno, ma non si sa a quale lezione.",
+        "unsureOther": "Altri {{count}} si sono allenati quel giorno, ma non si sa a quale lezione."
+      },
       "suggestions": {
         "title": "Suggeriti per stasera",
         "dismiss": "Non stasera",
