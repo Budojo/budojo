@@ -5,6 +5,8 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { Router, provideRouter } from '@angular/router';
 import { Subject, of, throwError } from 'rxjs';
 import { ConfirmationService, MessageService } from 'primeng/api';
+import { By } from '@angular/platform-browser';
+import { Tooltip } from 'primeng/tooltip';
 import type { Mock } from 'vitest';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 import { AthletesListComponent } from './athletes-list.component';
@@ -12,6 +14,7 @@ import { AcademyService, type Academy } from '../../../core/services/academy.ser
 import { RuntimeService } from '../../../core/services/runtime.service';
 import { AthleteService, type Athlete } from '../../../core/services/athlete.service';
 import { PaymentService } from '../../../core/services/payment.service';
+import { formatIsoDate } from '../../../shared/utils/locale';
 
 class FakeAthleteService {
   // Declare the default `data` slot as `Athlete[]` (not `never[]`) so
@@ -1895,6 +1898,171 @@ describe('AthletesListComponent — how often they actually turn up (#1447)', ()
     // un-prove what an earlier page already showed.
     expect(fixture.componentInstance.hasAttendanceCounts()).toBe(true);
     expect(el(fixture, '[data-cy="athletes-th-attendance"]')).not.toBeNull();
+  });
+});
+
+describe('AthletesListComponent — when they last trained (#1726)', () => {
+  function makeAthlete(over: Partial<Athlete> = {}): Athlete {
+    return {
+      id: 42,
+      first_name: 'Mario',
+      last_name: 'Rossi',
+      email: null,
+      phone_country_code: null,
+      phone_national_number: null,
+      address: null,
+      date_of_birth: null,
+      belt: 'white',
+      stripes: 0,
+      status: 'active',
+      joined_at: '2026-01-01',
+      created_at: '2026-01-01T00:00:00Z',
+      attendance_month_count: 0,
+      attendance_total_count: 0,
+      last_attended_on: null,
+      ...over,
+    } as Athlete;
+  }
+
+  /** A `Y-m-d` day `n` days before today, in local time — what the server sends. */
+  function daysAgo(n: number): string {
+    const d = new Date();
+    d.setDate(d.getDate() - n);
+    const month = `${d.getMonth() + 1}`.padStart(2, '0');
+    const day = `${d.getDate()}`.padStart(2, '0');
+    return `${d.getFullYear()}-${month}-${day}`;
+  }
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [AthletesListComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        { provide: AthleteService, useClass: FakeAthleteService },
+        { provide: PaymentService, useClass: FakePaymentService },
+        ...provideI18nTesting(),
+      ],
+    });
+  });
+
+  function render(rows: Athlete[]) {
+    const athleteService = TestBed.inject(AthleteService) as unknown as FakeAthleteService;
+    athleteService.list.mockReturnValue(
+      of({
+        data: rows,
+        meta: { total: rows.length, current_page: 1, per_page: 20, last_page: 1 },
+      }),
+    );
+    const fixture = TestBed.createComponent(AthletesListComponent);
+    fixture.detectChanges();
+
+    return fixture;
+  }
+
+  function el(
+    fixture: ComponentFixture<AthletesListComponent>,
+    selector: string,
+  ): HTMLElement | null {
+    return (fixture.nativeElement as HTMLElement).querySelector(selector);
+  }
+
+  it('says how long ago in words, with the exact day in the tooltip', () => {
+    const day = daysAgo(3);
+    const fixture = render([makeAthlete({ id: 1, last_attended_on: day })]);
+
+    const cell = el(fixture, '[data-cy="athlete-last-seen-1"]');
+    expect(cell?.textContent?.trim()).toBe('3 days ago');
+
+    // Through LocaleDatePipe in calendar-day mode: truncated, never converted.
+    const tooltip = fixture.debugElement
+      .query(By.css('[data-cy="athlete-last-seen-1"]'))
+      .injector.get(Tooltip);
+    expect(tooltip.content).toBe(formatIsoDate(day, 'en'));
+  });
+
+  it('repeats it under the counts for the narrow window, labelled in its own words', () => {
+    // CSS decides which of the two shows (the column from 1024px up). Under
+    // the "Presenze" header a bare "3 days ago" would not say what it
+    // measures, so the line carries its own label — visibly, not in an
+    // aria-label a plain span does not reliably announce.
+    const fixture = render([makeAthlete({ id: 1, last_attended_on: daysAgo(3) })]);
+
+    const inline = el(fixture, '[data-cy="athlete-last-seen-inline-1"]');
+    expect(inline?.textContent?.trim()).toBe('Last seen: 3 days ago');
+    expect(inline?.closest('td')?.querySelector('.athlete-attendance')).not.toBeNull();
+  });
+
+  it('says "never" for an athlete who has never trained, not a dash that reads as missing data', () => {
+    const fixture = render([makeAthlete({ id: 1, last_attended_on: null })]);
+
+    // Lower case, like every distance in the same column.
+    expect(el(fixture, '[data-cy="athlete-last-seen-1"]')?.textContent?.trim()).toBe('never');
+    expect(el(fixture, '[data-cy="athlete-last-seen-inline-1"]')?.textContent?.trim()).toBe(
+      'Last seen: never',
+    );
+  });
+
+  it('reads a long absence in months, where the longest-absent sort puts it first', () => {
+    const fixture = render([makeAthlete({ id: 1, last_attended_on: daysAgo(150) })]);
+
+    expect(el(fixture, '[data-cy="athlete-last-seen-1"]')?.textContent?.trim()).toBe(
+      '5 months ago',
+    );
+  });
+
+  it('adds the column when the payload carries the field, even as null', () => {
+    const fixture = render([makeAthlete({ id: 1, last_attended_on: null })]);
+
+    expect(el(fixture, '[data-cy="athletes-th-last-seen"]')).not.toBeNull();
+  });
+
+  it('hides the column when the payload never carried the field', () => {
+    const fixture = render([makeAthlete({ id: 1, last_attended_on: undefined })]);
+
+    expect(el(fixture, '[data-cy="athletes-th-last-seen"]')).toBeNull();
+    expect(el(fixture, '[data-cy="athlete-last-seen-1"]')).toBeNull();
+  });
+
+  it('sorts the longest-absent first on the first click, then the most recent first', () => {
+    const fixture = render([makeAthlete({ id: 1 })]);
+    const cmp = fixture.componentInstance;
+    const list = TestBed.inject(AthleteService).list as unknown as Mock;
+
+    // The retention question comes first: who have I not seen?
+    cmp.cycleLastSeenSort();
+    expect([cmp.sortField(), cmp.sortOrder()]).toEqual(['last_seen', 'asc']);
+    expect(cmp.lastSeenAriaSort()).toBe('ascending');
+    expect(list).toHaveBeenLastCalledWith(
+      expect.objectContaining({ sortBy: 'last_seen', sortOrder: 'asc' }),
+    );
+
+    cmp.cycleLastSeenSort();
+    expect([cmp.sortField(), cmp.sortOrder()]).toEqual(['last_seen', 'desc']);
+    expect(cmp.lastSeenAriaSort()).toBe('descending');
+
+    cmp.cycleLastSeenSort();
+    expect([cmp.sortField(), cmp.sortOrder()]).toEqual(['last_seen', 'asc']);
+  });
+
+  it('leaves the attendance sort alone — the two headers do not share a state', () => {
+    const fixture = render([makeAthlete({ id: 1 })]);
+    const cmp = fixture.componentInstance;
+
+    cmp.cycleLastSeenSort();
+    expect(cmp.attendanceAriaSort()).toBe('none');
+
+    cmp.cycleAttendanceSort();
+    expect(cmp.lastSeenAriaSort()).toBe('none');
+  });
+
+  it('puts the last presence on the mobile card too, labelled, since the card has no header', () => {
+    const fixture = render([makeAthlete({ id: 1, last_attended_on: daysAgo(1) })]);
+
+    expect(el(fixture, '[data-cy="athlete-card-last-seen-1"]')?.textContent?.trim()).toBe(
+      'Last trained yesterday',
+    );
   });
 });
 

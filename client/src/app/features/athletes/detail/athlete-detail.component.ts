@@ -18,6 +18,8 @@ import { Athlete, AthleteService, AthleteStatus } from '../../../core/services/a
 import { RuntimeService } from '../../../core/services/runtime.service';
 import { LanguageService } from '../../../core/services/language.service';
 import { formatIsoDate } from '../../../shared/utils/locale';
+import { relativeDay } from '../../../shared/utils/relative-day';
+import { Tooltip } from 'primeng/tooltip';
 import { AgeBadgeComponent } from '../../../shared/components/age-badge/age-badge.component';
 import { BeltBadgeComponent } from '../../../shared/components/belt-badge/belt-badge.component';
 import { STATUS_KEYS } from '../../../shared/utils/i18n-enum-keys';
@@ -36,6 +38,7 @@ import { returnSection } from '../athlete-return-section';
     ButtonModule,
     TabsModule,
     TagModule,
+    Tooltip,
     AgeBadgeComponent,
     BeltBadgeComponent,
     InvitationCardComponent,
@@ -67,6 +70,20 @@ export class AthleteDetailComponent implements OnInit {
    */
   protected joinedOn(iso: string): string {
     return formatIsoDate(iso, this.languageService.currentLang());
+  }
+
+  /**
+   * "Last trained 3 days ago", or "No sessions yet" (#1726). A distance,
+   * because that is what an owner acts on; the day itself is the tooltip.
+   */
+  protected lastSeen(athlete: Athlete): string {
+    this.languageService.currentLang(); // signal dep — re-translate on toggle
+    const iso = athlete.last_attended_on;
+    return iso
+      ? this.translate.instant('athletes.detail.lastSeen', {
+          when: relativeDay(iso, this.translate),
+        })
+      : this.translate.instant('athletes.detail.lastSeenNever');
   }
 
   readonly loading = signal(false);
@@ -330,7 +347,12 @@ export class AthleteDetailComponent implements OnInit {
    * were just told.
    */
   onAthleteChanged(updated: Athlete): void {
-    this.athlete.set(updated);
+    // The photo endpoints do not select the last presence (#1726) and leave
+    // the key out; keep the one we already hold rather than dropping the line.
+    const held = this.athlete()?.last_attended_on;
+    this.athlete.set(
+      updated.last_attended_on === undefined ? { ...updated, last_attended_on: held } : updated,
+    );
   }
 
   reloadAthlete(): void {
