@@ -658,6 +658,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::get('attendance/daily', [StatsController::class, 'attendanceDaily']);
             Route::get('payments/monthly', [StatsController::class, 'paymentsMonthly']);
             Route::get('athletes/age-bands', [StatsController::class, 'ageBands']);
+            // Athletes a medical certificate covers, not rows (#1732).
+            Route::get('documents/compliance', [StatsController::class, 'documentsCompliance']);
             // The programme against what was actually taught (#1565).
             Route::get('syllabus/coverage', [StatsController::class, 'syllabusCoverage']);
         });
