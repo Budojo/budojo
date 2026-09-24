@@ -10,7 +10,7 @@ A drop-in override layer for the `@primeuix/themes/material` preset that deliver
 
 | Token | Light | Dark | Purpose |
 |---|---|---|---|
-| `--p-primary-color` | `#5b6cff` | `#7b8bff` | Action, selection, state, and nothing else. See **The accent means action** below (#1852) |
+| `--p-primary-color` | `#5b6cff` | `#7b8bff` | Action, selection and state; brand and decoration on their own surfaces; never data. See **The accent means action** below (#1852) |
 | `--p-primary-contrast-color` | `#ffffff` | `#0a0a0b` | Text on primary |
 | `--p-primary-hover-color` | `#4554ed` | `#9aa3ff` | Primary hover |
 | `--p-primary-active-color` | `#3644c7` | `#b4bbff` | Primary pressed |
@@ -45,15 +45,16 @@ A drop-in override layer for the `@primeuix/themes/material` preset that deliver
 | `--budojo-skeleton-background` | `--p-surface-100` | `--p-surface-200` | A placeholder needs a step against the card it covers, and in dark `surface-100` **is** the card (#1793) |
 | `--budojo-belt-edge` | `rgb(0 0 0 / 12%)` | `rgb(255 255 255 / 22%)` | Ground contact around a belt spine and a belt pill; the belt itself never moves (#1793, #1801) |
 
-**The accent means action (#1852).** Indigo is the one colour that tells the owner "you can press this" or "this one is on". It keeps that meaning only while nothing else wears it. Sanctioned uses:
+**The accent means action (#1852).** Indigo is the one colour that tells the owner "you can press this" or "this one is on". It keeps that meaning only while nothing on a working screen competes with it. Sanctioned uses:
 
 - **Action:** a primary button, a link (inside prose too), a text action such as "Annulla" on the undo toast.
 - **Selection:** the selected chip, day or option; the present row at check-in; the active nav item; the active sort signifier.
 - **State:** today on the timetable, an unread dot, an update ready to install, a deep-linked card, the caller's own row.
 - **Focus:** the focus ring.
 - **A chart's single hue:** an ordinal scale is one hue at several strengths (#1550), and the heatmaps and coverage bars use the accent as that hue. A bar is not mistaken for a button; a number would be.
+- **Brand and decoration:** the logo mark on the auth pages, brand tiles (`docs/design/README.md` § brand icons), the academy-logo placeholder, a public profile's initials, the decorative icons in notices and sheets. They are the product's colour, not a claim about what can be pressed.
 
-**Data is ink.** A percentage, a count, a remaining balance or a rank is `--p-text-color` (or `--p-text-muted-color` when it is context for something beside it), and its hierarchy comes from size and weight. `shared/styles/accent-means-action.spec.ts` fails the build when a class named like a number (`__number`, `__count`, `__remaining`, `__percentage`, `__headline`, `__rank`, `__total`) takes its text colour from the accent.
+**Data is ink.** A percentage, a count, a remaining balance or a rank is `--p-text-color` (or `--p-text-muted-color` when it is context for something beside it), and its hierarchy comes from size and weight. `shared/styles/accent-means-action.spec.ts` fails the build when a class named like a number takes its text colour from the accent, directly or through a nested modifier or a selector list: `__number`, `__count`, `__remaining`, `__percentage`, `__percent`, `__headline`, `__rank`, `__total` (or the same word after a single `-`). Nor is a category: a notification's category tone never wears the accent, or an indigo close enough to read as it, because on an unread row the accent is already the dot and the wash.
 
 > **The surface scale inverts between themes, so its indices are not portable.**
 > `--p-surface-0` is white in light and `#1c1c1e` in dark; `--p-surface-900` is

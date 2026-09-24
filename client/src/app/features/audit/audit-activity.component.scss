@@ -89,8 +89,8 @@
     font-family:
       'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
     font-size: 0.875rem;
-    // Ink, not the accent (#1852): the accent means action, selection or
-    // state. A number earns its weight from its size.
+    // Ink, not the accent (#1852): a raw action code shown when the entry has
+    // no label is data, and the accent means action, selection or state.
     color: var(--p-text-color);
   }
 
