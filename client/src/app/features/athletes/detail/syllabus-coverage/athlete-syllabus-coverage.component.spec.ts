@@ -86,6 +86,23 @@ describe('AthleteSyllabusCoverageComponent (#1567)', () => {
     expect(fixture.nativeElement.textContent).toContain('3 of 4 techniques the academy taught');
   });
 
+  it('says this percentage counts one lesson, and that the academy report counts two (#1748)', () => {
+    const { fixture, httpMock } = setup();
+    flush(httpMock, report());
+    fixture.detectChanges();
+
+    // 75% here and 34% on Stats → Programme are both right, by different
+    // rules. The screen says so, rather than leaving the owner to work out
+    // that the athlete has not seen a third of the programme.
+    const rule = fixture.nativeElement.querySelector('[data-cy="athlete-coverage-rule"]');
+    expect(rule.textContent).toContain('Stats → Programme');
+    expect(rule.textContent).toContain('two');
+    // The two-lesson count below the fraction names the same bar.
+    expect(
+      fixture.nativeElement.querySelector('[data-cy="athlete-coverage-consolidated"]').textContent,
+    ).toContain('twice or more');
+  });
+
   it('keeps what nobody taught out of the number and says whose gap it is', () => {
     const { fixture, httpMock } = setup();
     flush(

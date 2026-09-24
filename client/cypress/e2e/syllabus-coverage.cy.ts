@@ -101,7 +101,10 @@ describe('Syllabus coverage', () => {
     cy.wait('@coverage').its('request.url').should('contain', 'seasons_back=0');
 
     cy.get('[data-cy="syllabus-coverage-percentage"]').should('contain.text', '40');
-    cy.get('[data-cy="syllabus-coverage"]').should('contain.text', '4 of 10 covered this season');
+    cy.get('[data-cy="syllabus-coverage"]').should(
+      'contain.text',
+      '4 of 10 in the programme, taught at least twice this season',
+    );
 
     cy.get('[data-cy="syllabus-coverage-totals"]')
       .should('contain.text', '4 covered')
@@ -135,7 +138,10 @@ describe('Syllabus coverage', () => {
     cy.get('[data-cy="syllabus-coverage-kind"]').contains('No-gi').click();
 
     cy.wait('@filtered').its('request.url').should('contain', 'kind=nogi');
-    cy.get('[data-cy="syllabus-coverage"]').should('contain.text', '1 of 3 covered this season');
+    cy.get('[data-cy="syllabus-coverage"]').should(
+      'contain.text',
+      '1 of 3 in the programme, taught at least twice this season',
+    );
   });
 
   it('filters a judo academy by its own modes (#1803)', () => {

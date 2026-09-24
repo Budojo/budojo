@@ -2612,6 +2612,7 @@
     },
     "coverage": {
       "fraction": "{{attended}} su {{total}} tecniche che la palestra ha fatto",
+      "headlineRule": "La percentuale conta una lezione, perché chiede se c'era. Statistiche → Programma conta una tecnica solo dopo due, quindi il dato della palestra è più basso.",
       "since": "Conteggio dal {{date}}, giorno di iscrizione.",
       "legend": {
         "seenOne": "{{count}} visto",
@@ -2649,9 +2650,9 @@
       "notTaughtYetOther": "Altri {{count}} sono nel programma ma non sono ancora stati fatti. È una lacuna della palestra, non sua.",
       "nothingMissedOne": "C'era alla lezione in cui è stata fatta.",
       "nothingMissedOther": "C'era a tutte.",
-      "consolidatedOne": "Una vista più di una volta.",
-      "consolidatedOther": "{{count}} viste più di una volta.",
-      "consolidatedNone": "Nessuna ancora vista più di una volta."
+      "consolidatedOne": "Una vista due volte o più, la soglia di Statistiche → Programma.",
+      "consolidatedOther": "{{count}} viste due volte o più, la soglia di Statistiche → Programma.",
+      "consolidatedNone": "Nessuna ancora vista due volte o più."
     }
   },
   "month": {
@@ -2833,7 +2834,8 @@
       }
     },
     "syllabus": {
-      "headline": "{{covered}} di {{total}} coperti in questa stagione",
+      "headline": "{{covered}} di {{total}} del programma, fatti almeno due volte in questa stagione",
+      "headlineRule": "La scheda Programma di un atleta conta una tecnica già dopo una lezione: chiede se c'era, non se la palestra l'ha fatta abbastanza.",
       "byPosition": "Per posizione",
       "overTime": "Nel corso della stagione",
       "lastTaught": "L'ultima volta",
