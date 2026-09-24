@@ -1,0 +1,115 @@
+<!--
+  Nothing until the answer arrives, and nothing if it fails: the roster is
+  what the owner came for, and a side panel must not be able to break it.
+-->
+@if (list(); as l) {
+  <section class="not-seen" data-cy="not-seen-lately">
+    @if (rows().length > 0) {
+      <button
+        type="button"
+        class="not-seen__header"
+        [attr.aria-expanded]="expanded()"
+        aria-controls="not-seen-list"
+        (click)="toggle()"
+        data-cy="not-seen-toggle"
+      >
+        <i class="pi pi-user-minus not-seen__icon" aria-hidden="true"></i>
+        <span class="not-seen__title">{{ 'athletes.list.atRisk.title' | translate }}</span>
+        <span class="not-seen__count">{{ countLabel() }}</span>
+        <i
+          class="pi not-seen__chevron"
+          [class.pi-chevron-up]="expanded()"
+          [class.pi-chevron-down]="!expanded()"
+          aria-hidden="true"
+        ></i>
+      </button>
+
+      @if (expanded()) {
+        <p class="not-seen__description">{{ 'athletes.list.atRisk.description' | translate }}</p>
+        <ul id="not-seen-list" class="not-seen__list">
+          @for (row of rows(); track row.athlete.id) {
+            <li class="not-seen__row" [attr.data-cy]="'not-seen-row-' + row.athlete.id">
+              <app-athlete-identity
+                class="not-seen__who"
+                [athlete]="row.athlete"
+                [linkToDetail]="true"
+              />
+              <div class="not-seen__why">
+                <p-tag
+                  class="not-seen__tier"
+                  [value]="tierLabel(row.tier)"
+                  [severity]="tierSeverity(row.tier)"
+                  [rounded]="true"
+                />
+                <span class="not-seen__reason">{{ reason(row) }}</span>
+              </div>
+              <div class="not-seen__actions">
+                <app-contact-actions
+                  [countryCode]="row.athlete.phone_country_code"
+                  [nationalNumber]="row.athlete.phone_national_number"
+                  [name]="fullName(row)"
+                  [dataCy]="'not-seen-contact-' + row.athlete.id"
+                />
+                <!-- A plain button drawn like the two contact actions beside it. -->
+                <button
+                  type="button"
+                  class="not-seen__more"
+                  aria-haspopup="menu"
+                  [attr.aria-label]="
+                    'athletes.list.atRisk.moreAria' | translate: { name: fullName(row) }
+                  "
+                  [pTooltip]="'athletes.list.atRisk.more' | translate"
+                  tooltipPosition="top"
+                  (click)="openMenu($event, row, rowMenu)"
+                  [attr.data-cy]="'not-seen-more-' + row.athlete.id"
+                >
+                  <i class="pi pi-ellipsis-v" aria-hidden="true"></i>
+                </button>
+              </div>
+            </li>
+          }
+        </ul>
+      }
+    } @else {
+      <!--
+        Three different answers, never one dressed as another (#1729). "Nobody
+        is drifting" is only true with enough history to know; with too
+        little it is "we cannot tell yet", and with none at all the way to
+        start is the check-in.
+      -->
+      @switch (emptyKind()) {
+        @case ('healthy') {
+          <p class="not-seen__empty" data-cy="not-seen-empty-healthy">
+            <i class="pi pi-check-circle" aria-hidden="true"></i>
+            <span class="not-seen__title">{{ 'athletes.list.atRisk.title' | translate }}</span>
+            <span>{{ 'athletes.list.atRisk.emptyHealthy' | translate }}</span>
+          </p>
+        }
+        @case ('no-history') {
+          <p class="not-seen__empty" data-cy="not-seen-empty-no-history">
+            <i class="pi pi-hourglass" aria-hidden="true"></i>
+            <span class="not-seen__title">{{ 'athletes.list.atRisk.title' | translate }}</span>
+            <span>{{
+              'athletes.list.atRisk.emptyNoHistory'
+                | translate
+                  : { available: l.meta.sessions_available, needed: l.meta.sessions_needed }
+            }}</span>
+          </p>
+        }
+        @case ('no-attendance') {
+          <p class="not-seen__empty" data-cy="not-seen-empty-no-attendance">
+            <i class="pi pi-calendar" aria-hidden="true"></i>
+            <span class="not-seen__title">{{ 'athletes.list.atRisk.title' | translate }}</span>
+            <span>{{ 'athletes.list.atRisk.emptyNoAttendance' | translate }}</span>
+            <a class="not-seen__link" routerLink="/dashboard/attendance">{{
+              'athletes.list.atRisk.openCheckIn' | translate
+            }}</a>
+          </p>
+        }
+      }
+    }
+  </section>
+}
+
+<p-menu #rowMenu [popup]="true" [model]="menuModel()" appendTo="body" />
+<p-confirmpopup />

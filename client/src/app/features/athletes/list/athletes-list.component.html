@@ -401,6 +401,17 @@
     </button>
   </div>
 
+  <!--
+    Not seen lately (#1729): who is drifting, against their own attendance,
+    actionable in place. Asked once, on the roster's first load — never on a
+    filter or a page change — and not in the restore picker, which is a
+    different question about different people. Marking someone inactive from
+    here reloads the table, or with the inactive hidden their row would stay.
+  -->
+  @if (!isTrashedMode()) {
+    <app-not-seen-lately class="athletes-page__not-seen" (markedInactive)="reload()" />
+  }
+
   @if (loadError()) {
     <app-error-state
       [title]="'athletes.list.error.title' | translate"

@@ -362,6 +362,8 @@ const ATHLETES = [
     belt: 'blue',
     stripes: 4,
     joined_at: '2023-09-11',
+    phone_country_code: '+39',
+    phone_national_number: '3471234567',
     payment_coverage: 'carnet',
     paid_current_month: false,
     active_carnet: { id: 9, code: 'Q3M8', remaining_entries: 6, expires_at: '2027-03-01' },
@@ -379,9 +381,11 @@ const ATHLETES = [
     joined_at: '2019-05-20',
     payment_coverage: 'none',
     paid_current_month: false,
-    attendance_month_count: 1,
+    // Drifting (#1729): nothing this month, last seen in August — the `gone`
+    // row of the at-risk fixture below, so the two screens agree.
+    attendance_month_count: 0,
     attendance_total_count: 530,
-    last_attended_on: '2026-09-01',
+    last_attended_on: '2026-08-12',
   }),
   athlete({
     id: 8,
@@ -397,6 +401,47 @@ const ATHLETES = [
     last_attended_on: '2026-09-10',
   }),
 ];
+
+// Not seen lately (#1729): three roster athletes, one per tier, with the
+// numbers the endpoint would send for them. Taken FROM the roster fixture so
+// the section and the table never disagree about a person.
+function atRiskRow(
+  id: number,
+  tier: 'gone' | 'quiet' | 'dropping',
+  counts: { recent: number; baseline: number },
+) {
+  const a = ATHLETES.find((x) => x.id === id)!;
+  return {
+    athlete: {
+      id: a.id,
+      first_name: a.first_name,
+      last_name: a.last_name,
+      belt: a.belt,
+      stripes: a.stripes,
+      date_of_birth: a.date_of_birth,
+      status: a.status,
+      photo_url: a.photo_url,
+      user_avatar_url: a.user_avatar_url,
+      phone_country_code: a.phone_country_code,
+      phone_national_number: a.phone_national_number,
+    },
+    tier,
+    last_attended_on: a.last_attended_on,
+    recent_attended: counts.recent,
+    recent_sessions: 8,
+    baseline_attended: counts.baseline,
+    baseline_sessions: 24,
+  };
+}
+
+const AT_RISK = {
+  data: [
+    atRiskRow(7, 'gone', { recent: 0, baseline: 11 }),
+    atRiskRow(4, 'quiet', { recent: 3, baseline: 16 }),
+    atRiskRow(6, 'dropping', { recent: 2, baseline: 15 }),
+  ],
+  meta: { sessions_available: 41, sessions_needed: 20 },
+};
 
 function page(rows: unknown[], perPage = 20) {
   return {
@@ -1323,6 +1368,7 @@ function seed(): void {
   });
 
   // Stats.
+  cy.intercept('GET', '/api/v1/stats/attendance/at-risk', { statusCode: 200, body: AT_RISK });
   cy.intercept('GET', '/api/v1/stats/attendance/daily*', {
     statusCode: 200,
     body: { data: DAILY },
@@ -2184,6 +2230,30 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
     act: () => {
       press('[data-cy="athletes-th-last-seen"]');
       cy.wait(400);
+    },
+  });
+  // Not seen lately (#1729): the ⋯ menu open, and the two empty answers that
+  // must never be confused — "nobody is drifting" and "we cannot tell yet".
+  screen('20-athletes-not-seen-menu', '/dashboard/athletes', ROSTER_READY, {
+    act: () => {
+      press('[data-cy="not-seen-more-7"]');
+      cy.get('.p-menu').should('be.visible');
+    },
+  });
+  screen('20-athletes-not-seen-healthy', '/dashboard/athletes', ROSTER_READY, {
+    stubs: () => {
+      cy.intercept('GET', '/api/v1/stats/attendance/at-risk', {
+        statusCode: 200,
+        body: { data: [], meta: { sessions_available: 41, sessions_needed: 20 } },
+      });
+    },
+  });
+  screen('20-athletes-not-seen-no-history', '/dashboard/athletes', ROSTER_READY, {
+    stubs: () => {
+      cy.intercept('GET', '/api/v1/stats/attendance/at-risk', {
+        statusCode: 200,
+        body: { data: [], meta: { sessions_available: 12, sessions_needed: 20 } },
+      });
     },
   });
   screen('20-athletes-inactive-revealed', '/dashboard/athletes', ROSTER_READY, {

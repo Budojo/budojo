@@ -58,6 +58,7 @@ import { IconButtonComponent } from '../../../shared/components/icon-button/icon
 import { SortHeaderComponent } from '../../../shared/components/sort-header/sort-header.component';
 import { BeltSortButtonComponent } from '../../../shared/components/belt-sort-button/belt-sort-button.component';
 import { OnboardingChecklistComponent } from '../../onboarding/onboarding-checklist.component';
+import { NotSeenLatelyComponent } from './not-seen-lately/not-seen-lately.component';
 import { OnboardingService } from '../../../core/services/onboarding.service';
 import { academyChargesAFee } from '../../../shared/utils/academy-fee';
 import {
@@ -118,6 +119,7 @@ interface SelectOption<T extends string> {
     UserAvatarComponent,
     PaidBadgeComponent,
     OnboardingChecklistComponent,
+    NotSeenLatelyComponent,
     PageHeaderComponent,
     ErrorStateComponent,
     EmptyStateComponent,

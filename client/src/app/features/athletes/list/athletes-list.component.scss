@@ -8,6 +8,13 @@
   max-width: var(--budojo-page-content-max);
   margin: 0 auto;
 
+  // Not seen lately (#1729): between the toolbar and the table, with the
+  // same space under it that the toolbar leaves.
+  &__not-seen {
+    display: block;
+    margin-bottom: 1rem;
+  }
+
   // Mobile first: the search takes the full width and the rest wraps under it
   // — four controls do not share 375px, and the canon is explicit that the
   // base styles are the phone (#1428).
