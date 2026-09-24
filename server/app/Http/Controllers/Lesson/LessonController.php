@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Lesson;
 
+use App\Actions\Lesson\LastLessonNotesAction;
 use App\Actions\Lesson\RecentLessonTopicsAction;
 use App\Actions\Lesson\SetLessonNotesAction;
 use App\Actions\Lesson\SetLessonTopicsAction;
 use App\Actions\Lesson\SuggestLessonTopicsAction;
 use App\Authorization\Capability;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Lesson\LastLessonNotesRequest;
 use App\Http\Requests\Lesson\SetLessonNotesRequest;
 use App\Http\Requests\Lesson\SetLessonTopicsRequest;
 use App\Http\Requests\Lesson\ShowLessonRequest;
@@ -36,6 +38,7 @@ class LessonController extends Controller
         private readonly SetLessonNotesAction $setNotes,
         private readonly RecentLessonTopicsAction $recentTopics,
         private readonly SuggestLessonTopicsAction $suggestTopics,
+        private readonly LastLessonNotesAction $lastNotes,
     ) {
     }
 
@@ -110,6 +113,19 @@ class LessonController extends Controller
 
         return response()->json([
             'data' => $this->suggestTopics->execute($academy, $request->academyClass(), $request->limit()),
+        ]);
+    }
+
+    /**
+     * The notes of the last evening that taught a topic (#1862), for the
+     * lesson sheet to show beside it as that evening's — or `null`.
+     */
+    public function lastNotes(LastLessonNotesRequest $request): JsonResponse
+    {
+        $lesson = $this->lastNotes->execute($request->topic());
+
+        return response()->json([
+            'data' => $lesson === null ? null : new LessonResource($lesson),
         ]);
     }
 

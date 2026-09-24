@@ -3582,6 +3582,51 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
 
+  /lessons/last-notes:
+    get:
+      tags: [attendance]
+      summary: The notes of the last evening that taught a topic (#1862)
+      description: |
+        The latest **held** lesson that named this topic and carried notes —
+        blank ones skipped — or `null`. Held means somebody was checked in: a
+        plan that already carries a note did not happen, and never answers.
+
+        Lesson notes are about the evening and are never parsed into topics
+        (#1564); this finds a lesson, not a sentence, and the whole lesson
+        comes back so the reader can label its notes as that evening's, with
+        its date and class. The lesson sheet asks for it when the owner opens
+        a technique's details, not for every row.
+
+        Requires `attendance_read`. The topic must be a living topic of the
+        caller's academy, else 422.
+      operationId: lessonLastNotes
+      parameters:
+        - in: query
+          name: syllabus_topic_id
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: The lesson, or null
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    nullable: true
+                    allOf:
+                      - $ref: '#/components/schemas/Lesson'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
   /athletes/{athlete}/syllabus-coverage:
     get:
       tags: [attendance]
@@ -8604,6 +8649,28 @@ components:
             academy's own ladder, anything else is a 422. Null is for
             everyone. **Absent**, a technique takes its position's belt: a
             default for what is added under a position, never a cascade.
+        notes:
+          $ref: '#/components/schemas/SyllabusTopicNotes'
+        video_url:
+          $ref: '#/components/schemas/SyllabusTopicVideoUrl'
+
+    SyllabusTopicNotes:
+      type: string
+      nullable: true
+      maxLength: 2000
+      description: How it is taught here (#1862). An empty string is stored as null.
+      example: Start from the S-mount; grip on the far elbow.
+
+    SyllabusTopicVideoUrl:
+      type: string
+      nullable: true
+      maxLength: 500
+      pattern: '^https://'
+      description: |
+        The instructional it was taken from (#1862). `https://` only — it
+        ends up in an `href`, so `javascript:`, `file:` and plain `http` are
+        422s. Opens in the system browser.
+      example: https://www.youtube.com/watch?v=abc123
 
     SyllabusTopicUpdatePayload:
       type: object
@@ -8628,6 +8695,10 @@ components:
             The grade it belongs to the programme from (#1861), on the
             academy's own ladder; null for everyone. On a position it does
             not cascade to the techniques already under it.
+        notes:
+          $ref: '#/components/schemas/SyllabusTopicNotes'
+        video_url:
+          $ref: '#/components/schemas/SyllabusTopicVideoUrl'
         sort_order:
           type: integer
           minimum: 0
@@ -8641,7 +8712,7 @@ components:
         One entry in the academy's programme (#1563) — a position when
         `parent_id` is null, a technique under it otherwise. A position
         carries its techniques as `children`; a technique has none.
-      required: [id, parent_id, name, kind, in_season, from_belt, sort_order]
+      required: [id, parent_id, name, kind, in_season, from_belt, notes, video_url, sort_order]
       properties:
         id:
           type: integer
@@ -8667,6 +8738,10 @@ components:
             The grade it belongs to the programme from (#1861): expected of
             that belt and of every grade above it on the academy's ladder.
             Null is for everyone.
+        notes:
+          $ref: '#/components/schemas/SyllabusTopicNotes'
+        video_url:
+          $ref: '#/components/schemas/SyllabusTopicVideoUrl'
         sort_order:
           type: integer
         children:
