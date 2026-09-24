@@ -2096,10 +2096,10 @@
         "any": "Payment"
       },
       "attendance": {
-        "aria": "{{month}} sessions this month, {{total}} this season",
-        "ariaMonth": "{{month}} sessions this month",
-        "cellAria": "{{monthAttended}} of {{monthScheduled}} sessions this month, {{totalAttended}} of {{totalScheduled}} this season",
-        "cellAriaCounts": "{{monthAttended}} sessions this month, {{totalAttended}} this season",
+        "aria": "{{month}} days this month, {{total}} this season",
+        "ariaMonth": "{{month}} days this month",
+        "cellAria": "{{monthAttended}} of {{monthScheduled}} days this month, {{totalAttended}} of {{totalScheduled}} this season",
+        "cellAriaCounts": "{{monthAttended}} days this month, {{totalAttended}} this season",
         "tooltipMonth": "This month",
         "tooltipTotal": "This season ({{season}})",
         "tooltipTotalJoined": "This season ({{season}}), counted from {{joined}} when they joined"

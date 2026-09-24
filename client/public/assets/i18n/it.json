@@ -2096,10 +2096,10 @@
         "any": "Pagamento"
       },
       "attendance": {
-        "aria": "{{month}} presenze questo mese, {{total}} in questa stagione",
-        "ariaMonth": "{{month}} presenze questo mese",
-        "cellAria": "{{monthAttended}} presenze su {{monthScheduled}} questo mese, {{totalAttended}} su {{totalScheduled}} in questa stagione",
-        "cellAriaCounts": "{{monthAttended}} presenze questo mese, {{totalAttended}} in questa stagione",
+        "aria": "{{month}} giorni questo mese, {{total}} in questa stagione",
+        "ariaMonth": "{{month}} giorni questo mese",
+        "cellAria": "{{monthAttended}} giorni su {{monthScheduled}} questo mese, {{totalAttended}} su {{totalScheduled}} in questa stagione",
+        "cellAriaCounts": "{{monthAttended}} giorni questo mese, {{totalAttended}} in questa stagione",
         "tooltipMonth": "Questo mese",
         "tooltipTotal": "Questa stagione ({{season}})",
         "tooltipTotalJoined": "Questa stagione ({{season}}), contata dal {{joined}}, quando si è iscritto"
