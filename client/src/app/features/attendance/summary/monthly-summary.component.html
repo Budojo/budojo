@@ -26,6 +26,15 @@
        the skeleton, the empty state and the table all rendered flush
        against each other (#1355). -->
   <div class="summary-page__body">
+    <!--
+      How the header's days and each row's percentage are counted (#1853):
+      folded under the header, and only when there is a number to explain.
+    -->
+    @if (!loading() && !errored() && rows().length > 0) {
+      <app-how-counted dataCy="monthly-summary-method">
+        <p class="summary-page__method">{{ 'attendance.summary.method' | translate }}</p>
+      </app-how-counted>
+    }
     <div class="summary-page__filter">
       <input
         pInputText

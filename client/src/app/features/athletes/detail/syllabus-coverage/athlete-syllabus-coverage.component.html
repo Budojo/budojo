@@ -66,16 +66,26 @@
           {{ nothingMissedKey() | translate }}
         </p>
       }
-      <p class="coverage__consolidated" data-cy="athlete-coverage-consolidated">
-        {{ consolidatedKey() | translate: { count: r.totals.seen } }}
-      </p>
-      <p class="coverage__since">
-        {{ 'athletes.coverage.since' | translate: { date: shortDate(r.joined_on) } }}
-      </p>
-      <!-- The reverse of the line on Stats → Programme (#1748). -->
-      <p class="coverage__rule" data-cy="athlete-coverage-rule">
-        {{ 'athletes.coverage.headlineRule' | translate }}
-      </p>
+      <!--
+        One sentence under the number says what it counts; the method folds
+        behind it (#1853). What folds is still here, one tap away: the two-
+        lesson threshold, the joining date the count starts from, and the
+        line that names Stats → Programme and why the two numbers differ
+        (#1748). The screens still name each other; they just do not open on
+        it.
+      -->
+      <app-how-counted dataCy="athlete-coverage-method">
+        <p class="coverage__consolidated" data-cy="athlete-coverage-consolidated">
+          {{ consolidatedKey() | translate: { count: r.totals.seen } }}
+        </p>
+        <p class="coverage__since" data-cy="athlete-coverage-since">
+          {{ 'athletes.coverage.since' | translate: { date: shortDate(r.joined_on) } }}
+        </p>
+        <!-- The reverse of the line on Stats → Programme (#1748). -->
+        <p class="coverage__rule" data-cy="athlete-coverage-rule">
+          {{ 'athletes.coverage.headlineRule' | translate }}
+        </p>
+      </app-how-counted>
     </header>
 
     <ul class="legend">

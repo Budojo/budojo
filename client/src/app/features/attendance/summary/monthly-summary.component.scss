@@ -168,6 +168,12 @@ $summary-mobile-breakpoint: 768px;
   min-height: 3rem;
 }
 
+// The method, folded under the header (#1853). The fold sets the size and the
+// colour; the paragraph only drops the browser's margin.
+.summary-page__method {
+  margin: 0;
+}
+
 // Why the columns have no fraction this month.
 .summary-page__note {
   margin: 0 0 0.5rem;

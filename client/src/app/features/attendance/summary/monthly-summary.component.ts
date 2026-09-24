@@ -37,6 +37,7 @@ import {
   type SortState,
 } from '../../../shared/utils/athlete-sort';
 import type { AthleteSortOrder } from '../../../core/services/athlete.service';
+import { HowCountedComponent } from '../../../shared/components/how-counted/how-counted.component';
 
 interface YearMonth {
   year: number;
@@ -114,6 +115,7 @@ function compareYearMonth(a: YearMonth, b: YearMonth): number {
     ErrorStateComponent,
     SortHeaderComponent,
     SortToggleComponent,
+    HowCountedComponent,
   ],
   templateUrl: './monthly-summary.component.html',
   styleUrl: './monthly-summary.component.scss',

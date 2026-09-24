@@ -718,6 +718,7 @@ Reach for these before hand-rolling the same shape again. Shipped in the v2.32.0
 | `<app-error-state>` | "Load failed" surfaces | `role="alert"`, warn-tone icon, optional retry CTA (`severity="warn"` outlined). |
 | `<app-card>` | Card shells | surface-0 + hairline + `--p-border-radius-md` + named `[header]`/`[body]`/`[footer]` slots. |
 | `<app-confirm-destructive-button>` | Destructive actions | `p-button[severity=danger]` + `ConfirmationService.confirm()` with required `ariaLabel` — bakes in the "destructive actions confirm" rule. |
+| `<app-how-counted>` | The method behind a number (#1853) | A native `<details>` whose `<summary>` is the question "Come si conta?", closed at rest. Under a number goes one visible sentence saying what it counts; how it is counted, and why it differs from a same-looking number elsewhere, is projected in here. Used on the athlete's Programme tab, Stats → Programme and the monthly summary. |
 
 **Form-error reactivity pattern:** for inline validation that must appear on an empty submit, source the error signal from `toSignal(control.events)` (emits `TouchedChangeEvent`) — NOT `statusChanges`, which `markAllAsTouched()` doesn't fire. See `login.component.ts` for the canonical example.
 

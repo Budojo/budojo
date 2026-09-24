@@ -109,13 +109,19 @@ describe('AthleteSyllabusCoverageComponent (#1567)', () => {
     fixture.detectChanges();
 
     const root = fixture.nativeElement as HTMLElement;
-    const method = root.querySelector('details[data-cy="athlete-coverage-method"]') as HTMLDetailsElement;
+    const method = root.querySelector(
+      'details[data-cy="athlete-coverage-method"]',
+    ) as HTMLDetailsElement;
     // The meaning stays in view, outside the fold...
     expect(method.contains(root.querySelector('.coverage__fraction'))).toBe(false);
     // ...and the method folds, closed at rest, #1748's cross-reference with
     // it: the two screens still name each other, one tap away.
     expect(method.open).toBe(false);
-    for (const cy of ['athlete-coverage-consolidated', 'athlete-coverage-since', 'athlete-coverage-rule']) {
+    for (const cy of [
+      'athlete-coverage-consolidated',
+      'athlete-coverage-since',
+      'athlete-coverage-rule',
+    ]) {
       expect(method.querySelector(`[data-cy="${cy}"]`)).not.toBeNull();
     }
   });

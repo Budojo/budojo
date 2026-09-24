@@ -144,7 +144,9 @@ describe('StatsSyllabusComponent (#1565)', () => {
     fixture.detectChanges();
 
     const root = fixture.nativeElement as HTMLElement;
-    const method = root.querySelector('details[data-cy="syllabus-coverage-method"]') as HTMLDetailsElement;
+    const method = root.querySelector(
+      'details[data-cy="syllabus-coverage-method"]',
+    ) as HTMLDetailsElement;
     expect(method.open).toBe(false);
     expect(method.querySelector('[data-cy="syllabus-coverage-rule"]')).not.toBeNull();
     expect(method.contains(root.querySelector('.coverage__caption'))).toBe(false);

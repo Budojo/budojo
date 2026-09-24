@@ -17,6 +17,7 @@ import { EmptyStateComponent } from '../../../../shared/components/empty-state/e
 import { ErrorStateComponent } from '../../../../shared/components/error-state/error-state.component';
 import { relativeDay } from '../../../../shared/utils/relative-day';
 import { localeFor } from '../../../../shared/utils/locale';
+import { HowCountedComponent } from '../../../../shared/components/how-counted/how-counted.component';
 
 /**
  * What this athlete has seen of the programme, and what they missed (#1567).
@@ -40,7 +41,13 @@ import { localeFor } from '../../../../shared/utils/locale';
 @Component({
   selector: 'app-athlete-syllabus-coverage',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [TranslatePipe, SkeletonModule, EmptyStateComponent, ErrorStateComponent],
+  imports: [
+    TranslatePipe,
+    SkeletonModule,
+    EmptyStateComponent,
+    ErrorStateComponent,
+    HowCountedComponent,
+  ],
   templateUrl: './athlete-syllabus-coverage.component.html',
   styleUrl: './athlete-syllabus-coverage.component.scss',
 })

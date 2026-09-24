@@ -21,6 +21,7 @@ import { ErrorStateComponent } from '../../../shared/components/error-state/erro
 import { relativeDay } from '../../../shared/utils/relative-day';
 import { localeFor } from '../../../shared/utils/locale';
 import { TopicExposureComponent } from './topic-exposure/topic-exposure.component';
+import { HowCountedComponent } from '../../../shared/components/how-counted/how-counted.component';
 
 /** Everything, or one of the academy's two modes — never `both`, which every filter admits. */
 type KindFilter = 'all' | TrainingMode;
@@ -66,6 +67,7 @@ interface FilterOption {
     EmptyStateComponent,
     ErrorStateComponent,
     TopicExposureComponent,
+    HowCountedComponent,
   ],
   templateUrl: './stats-syllabus.component.html',
   styleUrl: './stats-syllabus.component.scss',
