@@ -45,6 +45,31 @@
       </app-budojo-form-field>
     }
 
+    <!--
+      Kids (#1651), right under the martial art: it decides which of that
+      art's belts every picker offers. A switch, because the question is yes
+      or no, with the answer written beside it rather than left to the
+      switch's colour.
+    -->
+    <app-budojo-form-field
+      [label]="'academy.form.trainsKids.label' | translate"
+      controlId="academy-trains-kids"
+      [hint]="'academy.form.trainsKids.hint' | translate"
+      dataCy="academy-form-trains-kids"
+    >
+      <label for="academy-trains-kids" class="form__switch">
+        <p-toggleswitch
+          formControlName="trains_kids"
+          inputId="academy-trains-kids"
+          ariaLabelledBy="academy-trains-kids-text"
+          data-cy="academy-form-trains-kids-switch"
+        />
+        <span id="academy-trains-kids-text">{{
+          'academy.form.trainsKids.switch' | translate
+        }}</span>
+      </label>
+    </app-budojo-form-field>
+
     <app-budojo-form-field
       [label]="'academy.form.name.label' | translate"
       [required]="true"

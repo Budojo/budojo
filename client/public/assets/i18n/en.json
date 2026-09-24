@@ -1579,6 +1579,11 @@
       "martialArt": {
         "label": "Martial art",
         "locked": "Fixed now: the academy already has athletes, a timetable, lessons or a programme."
+      },
+      "trainsKids": {
+        "label": "Kids",
+        "switch": "We also train kids",
+        "hint": "When off, the belt lists leave out the kids' belts and the stats drop the Kids / Adults split. Athletes already on a kids' belt keep it."
       }
     },
     "feeTiers": {

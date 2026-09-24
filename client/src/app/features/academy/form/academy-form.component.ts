@@ -25,6 +25,7 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { SelectModule } from 'primeng/select';
 import { SelectButtonModule } from 'primeng/selectbutton';
 import { ToastModule } from 'primeng/toast';
+import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { MessageService } from 'primeng/api';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import {
@@ -148,6 +149,7 @@ const COUNTRY_CODE_OPTIONS: SelectOption<string>[] = [
     DatePickerModule,
     SelectModule,
     ToastModule,
+    ToggleSwitchModule,
     TranslatePipe,
     TrainingDaysPickerComponent,
     MartialArtPickerComponent,
@@ -273,6 +275,9 @@ export class AcademyFormComponent implements OnInit {
     // "no season" — it is "nobody has said", which the server answers with
     // September.
     season_start_month: this.fb.control<number | null>(null),
+    // Whether the academy has a kids' programme (#1651): the belt pickers and
+    // filters offer the youth grades only when it does.
+    trains_kids: this.fb.nonNullable.control<boolean>(false),
     // The month fees start being recorded here (#1742). A `Date` because
     // `p-datepicker` speaks `Date`; `toPayload` reduces it to `YYYY-MM-01`.
     // `null` is not "since forever" — it is "no floor", which is exactly how
@@ -348,6 +353,9 @@ export class AcademyFormComponent implements OnInit {
       carnet_entry_unit: academy.carnet_entry_unit ?? 'lesson',
       training_days: academy.training_days ?? [],
       season_start_month: academy.season_start_month ?? null,
+      // Absent reads as `true`, as the ladder reads it: a payload from before
+      // the setting existed meant every belt was offered.
+      trains_kids: academy.trains_kids ?? true,
       billing_from: academy.billing_from ? new Date(`${academy.billing_from}T00:00:00`) : null,
     });
 
@@ -671,6 +679,7 @@ export class AcademyFormComponent implements OnInit {
         ? {}
         : { training_days: v.training_days.length === 0 ? null : v.training_days }),
       season_start_month: v.season_start_month ?? null,
+      trains_kids: v.trains_kids,
       // Local parts, not `toISOString()`: that converts to UTC, and east of
       // Greenwich midnight on the 1st becomes the last day of the month
       // before — which would move the floor a whole month for anyone in Rome.

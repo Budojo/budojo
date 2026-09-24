@@ -1579,6 +1579,11 @@
       "martialArt": {
         "label": "Arte marziale",
         "locked": "Non si cambia più: l'accademia ha già atleti, un orario, lezioni o un programma."
+      },
+      "trainsKids": {
+        "label": "Bambini",
+        "switch": "Alleniamo anche bambini",
+        "hint": "Se è spento, gli elenchi delle cinture non mostrano quelle dei bambini e le statistiche non dividono più tra Kids e Adulti. Chi ha già una cintura da bambino la tiene."
       }
     },
     "feeTiers": {

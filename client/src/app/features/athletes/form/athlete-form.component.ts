@@ -236,10 +236,14 @@ export class AthleteFormComponent implements OnInit {
    * is never offered a purple belt. Computed against
    * `languageService.currentLang()` so the labels recompute on a runtime
    * locale toggle.
+   *
+   * Without the youth grades when the academy does not train kids (#1651) —
+   * except the belt the athlete being edited already holds, which must stay
+   * selectable or saving the form would look like it moved them.
    */
   readonly beltOptions = computed<SelectOption<Belt>[]>(() => {
     this.languageService.currentLang();
-    return this.beltLadder.beltOptions();
+    return this.beltLadder.beltOptions(this.loadedAthlete()?.belt ?? null);
   });
 
   /**

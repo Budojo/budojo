@@ -24,17 +24,19 @@
       dataCy="stats-athletes-empty"
     />
   } @else {
-    <div class="stats-athletes__toolbar">
-      <p-selectbutton
-        [options]="scopeOptions()"
-        optionLabel="label"
-        optionValue="value"
-        [ngModel]="scope()"
-        (ngModelChange)="scope.set($event)"
-        data-cy="stats-athletes-scope"
-        [allowEmpty]="false"
-      />
-    </div>
+    @if (trainsKids()) {
+      <div class="stats-athletes__toolbar">
+        <p-selectbutton
+          [options]="scopeOptions()"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="scope()"
+          (ngModelChange)="scope.set($event)"
+          data-cy="stats-athletes-scope"
+          [allowEmpty]="false"
+        />
+      </div>
+    }
 
     <div class="stats-athletes__chart" data-cy="stats-athletes-chart">
       <p-chart type="bar" [data]="chartData()" [options]="chartOptions" />
