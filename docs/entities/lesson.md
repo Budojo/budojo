@@ -66,7 +66,8 @@ The join between the timetable and the programme (#1564), and the row the covera
 | `syllabus_topic_id` | bigint unsigned | FK `syllabus_topics.id`, cascade on delete, part of PK | |
 
 - `PRIMARY KEY(lesson_id, syllabus_topic_id)` — no surrogate key and no timestamps: a link is the fact, it has no identity of its own and nothing about it changes. The composite key is also what makes attaching the same topic twice a no-op at the schema level rather than a rule the code has to remember.
-- `INDEX(syllabus_topic_id)` — the reverse read, "which lessons covered this topic", is what #1565 and #1567 both ask; the composite key only indexes the other direction.
+- `INDEX(syllabus_topic_id)` — the reverse read, "which lessons covered this topic", is what #1565, #1567 and #1745 ask; the composite key only indexes the other direction.
+- **Who was in the room when a topic was taught** is one join, written once: `App\Support\TopicAttendance` returns the held lessons that named a set of topics, each with the distinct athletes present. One evening is one exposure, however many topics it named. The technique drill-down (#1745) reads it.
 - **A topic that leaves the programme keeps its links.** Topics are soft-deleted, so the FK cascade (a *hard*-delete rule) never fires for them. `SetLessonTopicsAction` also carries already-attached departed topics through every `sync()`: the picker cannot offer them, so a sync of what it offers would quietly drop them and editing tonight's list would rewrite what March said.
 - **A position is a legitimate tag.** Tagging "Half guard" tags the position, not its children — "we worked half guard" is what an instructor actually says.
 

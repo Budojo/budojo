@@ -2001,7 +2001,8 @@
         "fullName": "Nome e cognome",
         "payment": "Pagamento",
         "attendance": "Presenze",
-        "attendanceLines": "mese / stagione"
+        "attendanceLines": "mese / stagione",
+        "lastSeen": "Ultima volta"
       },
       "tooltip": {
         "edit": "Modifica",
@@ -2023,7 +2024,10 @@
         "attendanceSortMonthDesc": "Ordinato per presenze del mese (prima le più alte). Clicca per continuare.",
         "attendanceSortMonthAsc": "Ordinato per presenze del mese (prima le più basse). Clicca per continuare.",
         "attendanceSortTotalDesc": "Ordinato per presenze della stagione (prima le più alte). Clicca per continuare.",
-        "attendanceSortTotalAsc": "Ordinato per presenze della stagione (prima le più basse). Clicca per continuare."
+        "attendanceSortTotalAsc": "Ordinato per presenze della stagione (prima le più basse). Clicca per continuare.",
+        "lastSeenSortInitial": "Ordina per ultima presenza. Clicca per continuare.",
+        "lastSeenSortAsc": "Ordinato per ultima presenza (prima chi manca da più tempo). Clicca per continuare.",
+        "lastSeenSortDesc": "Ordinato per ultima presenza (prima la più recente). Clicca per continuare."
       },
       "social": {
         "facebookLabel": "Apri profilo Facebook",
@@ -2114,6 +2118,12 @@
         "tooltipMonth": "Questo mese",
         "tooltipTotal": "Questa stagione ({{season}})",
         "tooltipTotalJoined": "Questa stagione ({{season}}), contata dal {{joined}}, quando si è iscritto"
+      },
+      "lastSeen": {
+        "never": "mai",
+        "inlineLabel": "Ultima volta:",
+        "aria": "Ultimo allenamento {{when}}",
+        "neverAria": "Nessun allenamento"
       },
       "alerts": {
         "button": "Avvisi",
@@ -2252,6 +2262,8 @@
       "loading": "Caricamento atleta…",
       "loadError": "Impossibile caricare l'atleta.",
       "joinedLabel": "Dal {{date}}",
+      "lastSeen": "Ultimo allenamento {{when}}",
+      "lastSeenNever": "Nessun allenamento finora",
       "tabs": {
         "documents": "Documenti",
         "attendance": "Presenze",
@@ -2911,6 +2923,27 @@
         "title": "Impossibile caricare la copertura",
         "hint": "Qualcosa è andato storto da parte nostra. Riprova.",
         "retry": "Riprova"
+      },
+      "exposure": {
+        "title": "Chi l'ha vista",
+        "openPrefix": "Chi l'ha vista:",
+        "lessonsOne": "Fatta in {{count}} lezione questa stagione",
+        "lessonsOther": "Fatta in {{count}} lezioni questa stagione",
+        "headcountOne": "{{count}} persona",
+        "headcountOther": "{{count}} persone",
+        "seenOne": "{{count}} presente due volte o più",
+        "seenOther": "{{count}} presenti due volte o più",
+        "thinOne": "{{count}} presente una volta",
+        "thinOther": "{{count}} presenti una volta",
+        "neverOne": "{{count}} mai presente",
+        "neverOther": "{{count}} mai presenti",
+        "unplacedOne": "{{count}} si è allenato quel giorno, ma non si sa a quale lezione",
+        "unplacedOther": "{{count}} si sono allenati quel giorno, ma non si sa a quale lezione",
+        "timesOne": "{{count}} lezione",
+        "timesOther": "{{count}} lezioni",
+        "inactive": "Non più attivi",
+        "nobodyYet": "Nessuno l'ha vista perché non l'avete ancora fatta in questa stagione.",
+        "error": "Impossibile caricare chi l'ha vista."
       }
     },
     "totalOne": "Su {{count}} atleta attivo.",
@@ -3121,7 +3154,11 @@
     "yesterday": "ieri",
     "days": "{{count}} giorni fa",
     "weekOne": "una settimana fa",
-    "weeks": "{{count}} settimane fa"
+    "weeks": "{{count}} settimane fa",
+    "monthOne": "un mese fa",
+    "monthOther": "{{count}} mesi fa",
+    "yearOne": "un anno fa",
+    "yearOther": "{{count}} anni fa"
   },
   "martialArts": {
     "bjj": "Brazilian jiu-jitsu",
