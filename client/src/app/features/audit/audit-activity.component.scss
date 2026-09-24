@@ -89,7 +89,9 @@
     font-family:
       'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
     font-size: 0.875rem;
-    color: var(--p-primary-color);
+    // Ink, not the accent (#1852): the accent means action, selection or
+    // state. A number earns its weight from its size.
+    color: var(--p-text-color);
   }
 
   &__date {

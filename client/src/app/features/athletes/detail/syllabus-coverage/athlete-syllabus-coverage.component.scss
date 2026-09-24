@@ -26,7 +26,9 @@
     margin: 0;
     display: flex;
     align-items: baseline;
-    color: var(--p-primary-color);
+    // Ink, not the accent (#1852): the accent means action, selection or
+    // state. A number earns its weight from its size.
+    color: var(--p-text-color);
   }
 
   &__percent {

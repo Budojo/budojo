@@ -69,7 +69,9 @@
   &__number {
     font-size: 3rem;
     font-weight: 700;
-    color: var(--p-primary-color);
+    // Ink, not the accent (#1852): the accent means action, selection or
+    // state. A number earns its weight from its size.
+    color: var(--p-text-color);
     line-height: 1;
   }
 
