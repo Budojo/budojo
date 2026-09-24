@@ -1,0 +1,139 @@
+<section class="season-map" data-cy="syllabus-coverage-positions">
+  <header class="season-map__head">
+    <h3 class="season-map__title">{{ 'stats.syllabus.map.title' | translate }}</h3>
+    <!--
+      The legend carries the same strengths the cells do. Hidden from
+      assistive tech because every cell already says what it holds.
+    -->
+    <ul class="season-map__legend" aria-hidden="true" data-cy="season-map-legend">
+      <li>
+        <span class="swatch swatch--more"></span>{{ 'stats.syllabus.map.legend.more' | translate }}
+      </li>
+      <li>
+        <span class="swatch swatch--once"></span>{{ 'stats.syllabus.map.legend.once' | translate }}
+      </li>
+      <li>
+        <span class="swatch swatch--planned"></span
+        >{{ 'stats.syllabus.map.legend.planned' | translate }}
+      </li>
+      <li>
+        <span class="swatch swatch--unconfirmed"></span
+        >{{ 'stats.syllabus.map.legend.unconfirmed' | translate }}
+      </li>
+      <li>
+        <span class="season-map__legend-now"></span
+        >{{ 'stats.syllabus.map.legend.current' | translate }}
+      </li>
+    </ul>
+  </header>
+
+  @if (failed()) {
+    <p class="season-map__error" data-cy="season-map-error">
+      {{ 'stats.syllabus.map.error' | translate }}
+      <button type="button" class="season-map__retry" (click)="retry()">
+        {{ 'stats.syllabus.error.retry' | translate }}
+      </button>
+    </p>
+  }
+
+  <!--
+    Its own horizontal scroll, the name column sticky: at 960 px a season of
+    weeks is wider than the window, and the page itself must never scroll
+    sideways.
+  -->
+  <div class="season-map__scroll" #scroller>
+    <table
+      class="season-map__table"
+      [class.season-map__table--weeks]="weeks().length > 0"
+      [style.min-width]="weeks().length > 0 ? tableMinWidth() : null"
+    >
+      <thead>
+        <tr>
+          <th scope="col" class="season-map__corner">
+            <span class="visually-hidden">{{
+              'stats.syllabus.map.positionHeader' | translate
+            }}</span>
+          </th>
+          @for (week of weeks(); track week; let i = $index) {
+            <th
+              scope="col"
+              class="season-map__week"
+              [class.is-current]="week === currentWeek()"
+              [attr.aria-label]="weekAria(week)"
+            >
+              <span aria-hidden="true">{{ monthLabels()[i] }}</span>
+            </th>
+          }
+          <th scope="col" class="season-map__fraction-head">
+            <span class="visually-hidden">{{
+              'stats.syllabus.map.fractionHeader' | translate
+            }}</span>
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of rows(); track row.id) {
+          <tr [attr.data-cy]="'syllabus-position-' + row.id">
+            <th scope="row" class="season-map__name">{{ row.name }}</th>
+            @if (calendar()) {
+              @for (cell of row.cells; track cell.week) {
+                <td class="season-map__cell" [class.is-current]="cell.current">
+                  @if (cell.tone !== 'none') {
+                    <button
+                      type="button"
+                      [class]="'swatch swatch--' + cell.tone"
+                      [class.swatch--also-planned]="cell.alsoPlanned"
+                      [attr.aria-label]="cellAria(row, cell)"
+                      (click)="open($event, row, cell)"
+                      [attr.data-cy]="'season-map-cell-' + row.id + '-' + cell.week"
+                    ></button>
+                  } @else {
+                    <span class="swatch swatch--none"></span>
+                  }
+                </td>
+              }
+            } @else if (!failed()) {
+              <td class="season-map__pending">
+                <p-skeleton height="0.75rem" borderRadius="4px" />
+              </td>
+            } @else {
+              <td class="season-map__pending"></td>
+            }
+            <td class="season-map__fraction" [attr.aria-label]="fractionAria(row)">
+              {{ row.covered }}/{{ row.inScope }}
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <p-popover #cellPopover>
+    @if (selected(); as cell) {
+      <div class="season-map__pop" data-cy="season-map-popover">
+        <p class="season-map__pop-title">
+          {{
+            'stats.syllabus.map.popTitle'
+              | translate: { position: cell.name, date: shortDate(cell.week) }
+          }}
+        </p>
+        <ul class="season-map__lessons">
+          @for (lesson of cell.lessons; track lesson.id) {
+            <li class="season-map__lesson">
+              <span class="season-map__lesson-when">
+                {{ dayDate(lesson.held_on) }} · {{ lesson.name }}
+                @if (lesson.starts_at) {
+                  <span class="season-map__lesson-time">{{ lesson.starts_at }}</span>
+                }
+                @if (stateKey(lesson.state); as key) {
+                  <span class="season-map__state">{{ key | translate }}</span>
+                }
+              </span>
+              <span class="season-map__lesson-topics">{{ lesson.topicNames.join(', ') }}</span>
+            </li>
+          }
+        </ul>
+      </div>
+    }
+  </p-popover>
+</section>

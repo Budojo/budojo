@@ -1,0 +1,214 @@
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { TestBed } from '@angular/core/testing';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { CoveragePosition, SyllabusCalendar } from '../../../../core/services/stats.service';
+import { provideI18nTesting } from '../../../../../test-utils/i18n-test';
+import { SeasonMapComponent } from './season-map.component';
+
+const URL = '/api/v1/stats/syllabus/calendar';
+
+const POSITIONS: CoveragePosition[] = [
+  {
+    id: 1,
+    name: 'Closed guard',
+    kind: 'both',
+    in_scope: 6,
+    covered: 3,
+    thin: 1,
+    missing: 2,
+    worked: 0,
+  },
+  {
+    id: 2,
+    name: 'Half guard',
+    kind: 'both',
+    in_scope: 4,
+    covered: 1,
+    thin: 1,
+    missing: 2,
+    worked: 2,
+  },
+];
+
+function calendar(over: Partial<SyllabusCalendar> = {}): SyllabusCalendar {
+  return {
+    season: { start: '2026-09-01', end: '2027-08-31', label: '2026/27' },
+    kind: null,
+    today: '2026-10-14',
+    weeks: ['2026-10-05', '2026-10-12', '2026-10-19'],
+    positions: [
+      {
+        id: 1,
+        name: 'Closed guard',
+        kind: 'both',
+        cells: [
+          { week: '2026-10-05', held: 2, planned: 0, unconfirmed: 0 },
+          { week: '2026-10-19', held: 0, planned: 1, unconfirmed: 0 },
+        ],
+      },
+      { id: 2, name: 'Half guard', kind: 'both', cells: [] },
+    ],
+    lessons: [
+      {
+        id: 40,
+        academy_class_id: 7,
+        held_on: '2026-10-05',
+        name: 'Fundamentals',
+        starts_at: '19:00',
+        kind: 'gi',
+        state: 'held',
+        position_ids: [1],
+        topics: [{ id: 11, name: 'Armbar', parent_id: 1 }],
+      },
+      {
+        id: 41,
+        academy_class_id: 7,
+        held_on: '2026-10-07',
+        name: 'Advanced',
+        starts_at: '20:30',
+        kind: 'gi',
+        state: 'held',
+        position_ids: [1],
+        topics: [{ id: 12, name: 'Triangle', parent_id: 1 }],
+      },
+      {
+        id: 42,
+        academy_class_id: 7,
+        held_on: '2026-10-19',
+        name: 'Fundamentals',
+        starts_at: '19:00',
+        kind: 'gi',
+        state: 'planned',
+        position_ids: [1],
+        topics: [{ id: 1, name: 'Closed guard', parent_id: null }],
+      },
+    ],
+    ...over,
+  };
+}
+
+function setup() {
+  TestBed.configureTestingModule({
+    imports: [SeasonMapComponent],
+    providers: [
+      provideHttpClient(),
+      provideHttpClientTesting(),
+      provideNoopAnimations(),
+      ...provideI18nTesting(),
+    ],
+  });
+
+  const fixture = TestBed.createComponent(SeasonMapComponent);
+  fixture.componentRef.setInput('positions', POSITIONS);
+  const httpMock = TestBed.inject(HttpTestingController);
+  fixture.detectChanges();
+  return { fixture, component: fixture.componentInstance, httpMock };
+}
+
+function flush(httpMock: HttpTestingController, data: SyllabusCalendar = calendar()) {
+  const req = httpMock.expectOne((r) => r.url === URL);
+  req.flush({ data });
+  return req;
+}
+
+describe('SeasonMapComponent (#1858)', () => {
+  afterEach(() => TestBed.inject(HttpTestingController).verify());
+
+  it('asks for the same season and filter the report is showing', () => {
+    const { fixture, httpMock } = setup();
+    flush(httpMock);
+
+    fixture.componentRef.setInput('seasonsBack', 1);
+    fixture.componentRef.setInput('kind', 'nogi');
+    fixture.detectChanges();
+
+    const req = httpMock.expectOne((r) => r.url === URL);
+    expect(req.request.params.get('seasons_back')).toBe('1');
+    expect(req.request.params.get('kind')).toBe('nogi');
+    req.flush({ data: calendar() });
+  });
+
+  it('names each position and keeps its fraction, even before the weeks arrive', () => {
+    const { fixture, httpMock } = setup();
+
+    const row = fixture.nativeElement.querySelector('[data-cy="syllabus-position-1"]');
+    expect(row.textContent).toContain('Closed guard');
+    expect(row.textContent).toContain('3/6');
+
+    flush(httpMock);
+  });
+
+  it('draws a column per week, shaded by how much was taught and outlined when planned', () => {
+    const { fixture, httpMock } = setup();
+    flush(httpMock);
+    fixture.detectChanges();
+
+    const row: HTMLElement = fixture.nativeElement.querySelector('[data-cy="syllabus-position-1"]');
+    const swatches = Array.from(row.querySelectorAll('.swatch')) as HTMLElement[];
+    expect(swatches).toHaveLength(3);
+    expect(swatches[0].classList).toContain('swatch--more');
+    expect(swatches[1].classList).toContain('swatch--none');
+    expect(swatches[2].classList).toContain('swatch--planned');
+  });
+
+  it('makes a week with something in it a button that says what it holds, and an empty one not', () => {
+    const { fixture, httpMock } = setup();
+    flush(httpMock);
+    fixture.detectChanges();
+
+    const row: HTMLElement = fixture.nativeElement.querySelector('[data-cy="syllabus-position-1"]');
+    const buttons = Array.from(row.querySelectorAll('button')) as HTMLButtonElement[];
+    expect(buttons).toHaveLength(2);
+    expect(buttons[0].getAttribute('aria-label')).toContain('Closed guard');
+    expect(buttons[0].getAttribute('aria-label')).toContain('2 lessons');
+    expect(buttons[1].getAttribute('aria-label')).toContain('1 planned');
+  });
+
+  it('marks the week holding today', () => {
+    const { fixture, httpMock } = setup();
+    flush(httpMock);
+    fixture.detectChanges();
+
+    const current = fixture.nativeElement.querySelectorAll('th.is-current');
+    expect(current).toHaveLength(1);
+    expect(current[0].getAttribute('aria-label')).toContain('this week');
+  });
+
+  it('lists the lessons of a week when its cell is opened', () => {
+    const { fixture, component, httpMock } = setup();
+    flush(httpMock);
+    fixture.detectChanges();
+
+    const cell = fixture.nativeElement.querySelector(
+      '[data-cy="season-map-cell-1-2026-10-05"]',
+    ) as HTMLButtonElement;
+    cell.click();
+    fixture.detectChanges();
+
+    const selected = component['selected']();
+    expect(selected?.name).toBe('Closed guard');
+    expect(selected?.lessons.map((l) => l.id)).toEqual([40, 41]);
+    expect(selected?.lessons[0].topicNames).toEqual(['Armbar']);
+  });
+
+  it('says so when the weeks cannot be loaded, and tries again on request', () => {
+    const { fixture, httpMock } = setup();
+    httpMock
+      .expectOne((r) => r.url === URL)
+      .flush('boom', { status: 500, statusText: 'Server Error' });
+    fixture.detectChanges();
+
+    const error = fixture.nativeElement.querySelector('[data-cy="season-map-error"]');
+    expect(error).not.toBeNull();
+    // The rows and their fractions stay: only the weeks are missing.
+    expect(fixture.nativeElement.textContent).toContain('3/6');
+
+    (error.querySelector('button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    flush(httpMock);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('[data-cy="season-map-error"]')).toBeNull();
+  });
+});

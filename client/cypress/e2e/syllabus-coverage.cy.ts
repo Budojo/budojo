@@ -80,6 +80,64 @@ function report(over: Record<string, unknown> = {}) {
   };
 }
 
+/** The season map (#1858): two positions over three weeks around "today". */
+function calendar(over: Record<string, unknown> = {}) {
+  return {
+    season: { start: '2026-09-01', end: '2027-08-31', label: '2026/27' },
+    kind: null,
+    today: '2026-10-14',
+    weeks: ['2026-10-05', '2026-10-12', '2026-10-19'],
+    positions: [
+      {
+        id: 1,
+        name: 'Closed guard',
+        kind: 'both',
+        cells: [
+          { week: '2026-10-05', held: 2, planned: 0, unconfirmed: 0 },
+          { week: '2026-10-19', held: 0, planned: 1, unconfirmed: 0 },
+        ],
+      },
+      { id: 2, name: 'Half guard', kind: 'both', cells: [] },
+    ],
+    lessons: [
+      {
+        id: 40,
+        academy_class_id: 7,
+        held_on: '2026-10-05',
+        name: 'Fundamentals',
+        starts_at: '19:00',
+        kind: 'gi',
+        state: 'held',
+        position_ids: [1],
+        topics: [{ id: 11, name: 'Armbar', parent_id: 1 }],
+      },
+      {
+        id: 41,
+        academy_class_id: 7,
+        held_on: '2026-10-07',
+        name: 'Advanced',
+        starts_at: '20:30',
+        kind: 'gi',
+        state: 'held',
+        position_ids: [1],
+        topics: [{ id: 12, name: 'Triangle', parent_id: 1 }],
+      },
+      {
+        id: 42,
+        academy_class_id: 7,
+        held_on: '2026-10-19',
+        name: 'Fundamentals',
+        starts_at: '19:00',
+        kind: 'gi',
+        state: 'planned',
+        position_ids: [1],
+        topics: [{ id: 1, name: 'Closed guard', parent_id: null }],
+      },
+    ],
+    ...over,
+  };
+}
+
 function stub(
   data: Record<string, unknown> = report(),
   academy: Record<string, unknown> = ACADEMY,
@@ -91,6 +149,10 @@ function stub(
   cy.intercept('GET', '/api/v1/stats/syllabus/coverage*', { statusCode: 200, body: { data } }).as(
     'coverage',
   );
+  cy.intercept('GET', '/api/v1/stats/syllabus/calendar*', {
+    statusCode: 200,
+    body: { data: calendar() },
+  }).as('calendar');
 }
 
 describe('Syllabus coverage', () => {
@@ -112,11 +174,58 @@ describe('Syllabus coverage', () => {
       .and('contain.text', '4 not taught');
 
     // The position axis is the primary view: it is what exposes real gaps.
-    cy.get('[data-cy="syllabus-position-1"]').should('contain.text', 'Closed guard');
-    cy.get('[data-cy="syllabus-position-2"]').should('contain.text', 'worked 2×');
+    // Each row keeps its fraction at the end of its weeks (#1858).
+    cy.get('[data-cy="syllabus-position-1"]')
+      .should('contain.text', 'Closed guard')
+      .and('contain.text', '3/6');
+    cy.get('[data-cy="syllabus-position-2"]').should('contain.text', '1/4');
 
     cy.get('[data-cy="syllabus-coverage-missing"]').should('contain.text', 'Omoplata');
     cy.get('[data-cy="syllabus-coverage-taught"]').should('contain.text', 'Armbar');
+  });
+
+  it('lays each position out week by week, and opens a week on the lessons it counts (#1858)', () => {
+    stub();
+
+    cy.visitAuthenticated('/dashboard/stats/syllabus');
+    cy.wait('@calendar').its('request.url').should('contain', 'seasons_back=0');
+
+    // Taught twice in the first week, nothing in the second, planned in the third.
+    cy.get('[data-cy="syllabus-position-1"] .swatch').should('have.length', 3);
+    cy.get('[data-cy="season-map-cell-1-2026-10-05"]').should('have.class', 'swatch--more');
+    cy.get('[data-cy="season-map-cell-1-2026-10-19"]').should('have.class', 'swatch--planned');
+    // A week with nothing on it is not a control.
+    cy.get('[data-cy="syllabus-position-2"] button').should('not.exist');
+
+    cy.get('[data-cy="season-map-cell-1-2026-10-19"]').click();
+    cy.get('[data-cy="season-map-popover"]')
+      .should('contain.text', 'Fundamentals')
+      .and('contain.text', 'Planned')
+      .and('contain.text', 'Closed guard');
+  });
+
+  it('asks the map for the same filter as the report', () => {
+    stub();
+
+    cy.visitAuthenticated('/dashboard/stats/syllabus');
+    cy.wait('@calendar');
+
+    cy.get('[data-cy="syllabus-coverage-kind"]').contains('No-gi').click();
+
+    cy.wait('@calendar').its('request.url').should('contain', 'kind=nogi');
+  });
+
+  it('keeps the names and fractions when the weeks cannot be loaded', () => {
+    stub();
+    cy.intercept('GET', '/api/v1/stats/syllabus/calendar*', { statusCode: 500, body: {} }).as(
+      'broken',
+    );
+
+    cy.visitAuthenticated('/dashboard/stats/syllabus');
+    cy.wait('@broken');
+
+    cy.get('[data-cy="season-map-error"]').should('be.visible');
+    cy.get('[data-cy="syllabus-position-1"]').should('contain.text', '3/6');
   });
 
   it('re-asks the server when the gi filter moves — the denominator moves with it', () => {

@@ -2848,14 +2848,39 @@
     "syllabus": {
       "headline": "{{covered}} of {{total}} in the season's programme, each taught at least twice",
       "headlineRule": "An athlete's own Programme tab counts differently: a technique after one lesson they attended, out of what the academy taught while they were on the roster. It asks whether they were there, not how much of the programme has been taught.",
-      "byPosition": "By position",
+      "map": {
+        "title": "By position, week by week",
+        "legend": {
+          "more": "2 or more lessons",
+          "once": "1 lesson",
+          "planned": "Planned",
+          "unconfirmed": "Planned, nobody checked in",
+          "current": "This week"
+        },
+        "positionHeader": "Position",
+        "fractionHeader": "Covered",
+        "week": "Week of {{date}}",
+        "weekCurrent": "Week of {{date}}, this week",
+        "cell": "{{position}}, week of {{date}}: {{detail}}",
+        "heldOne": "{{count}} lesson",
+        "heldOther": "{{count}} lessons",
+        "plannedOne": "{{count}} planned",
+        "plannedOther": "{{count}} planned",
+        "unconfirmedOne": "{{count}} planned with nobody checked in",
+        "unconfirmedOther": "{{count}} planned with nobody checked in",
+        "fraction": "{{covered}} of {{total}} covered",
+        "popTitle": "{{position}}, week of {{date}}",
+        "state": {
+          "planned": "Planned",
+          "unconfirmed": "No check-in"
+        },
+        "error": "The weeks could not be loaded."
+      },
       "overTime": "Across the season",
       "lastTaught": "Last taught",
       "missingList": "Not taught yet ({{count}})",
       "nothingMissing": "Nothing left — the whole programme has been taught.",
       "thinTag": "Once",
-      "worked": "worked {{count}}×",
-      "barAria": "{{name}}: {{covered}} covered, {{thin}} taught once, {{missing}} not taught",
       "state": {
         "coveredOne": "{{count}} covered",
         "coveredOther": "{{count}} covered",

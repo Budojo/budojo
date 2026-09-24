@@ -67,4 +67,20 @@ describe('StatsService', () => {
       missing_dob: 2,
     });
   });
+
+  it('GETs the season map with the same season and filter as the coverage report (#1858)', () => {
+    let received: unknown;
+    service.syllabusCalendar(1, 'gi').subscribe((r) => (received = r));
+
+    const req = http.expectOne('/api/v1/stats/syllabus/calendar?seasons_back=1&kind=gi');
+    expect(req.request.method).toBe('GET');
+    req.flush({ data: { weeks: ['2025-09-01'] } });
+
+    expect(received).toEqual({ weeks: ['2025-09-01'] });
+  });
+
+  it('asks for the whole programme when no filter is given', () => {
+    service.syllabusCalendar().subscribe();
+    http.expectOne('/api/v1/stats/syllabus/calendar?seasons_back=0').flush({ data: {} });
+  });
 });

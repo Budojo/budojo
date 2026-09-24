@@ -8,6 +8,7 @@ use App\Actions\Stats\AthleteAgeBandsAction;
 use App\Actions\Stats\CertificateComplianceAction;
 use App\Actions\Stats\DailyAttendanceStatsAction;
 use App\Actions\Stats\MonthlyPaymentsStatsAction;
+use App\Actions\Stats\SyllabusCalendarAction;
 use App\Actions\Stats\SyllabusCoverageAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Stats\DailyAttendanceRangeRequest;
@@ -24,6 +25,7 @@ class StatsController extends Controller
         private readonly MonthlyPaymentsStatsAction $monthlyPaymentsAction,
         private readonly AthleteAgeBandsAction $ageBandsAction,
         private readonly SyllabusCoverageAction $syllabusCoverageAction,
+        private readonly SyllabusCalendarAction $syllabusCalendarAction,
         private readonly CertificateComplianceAction $certificateComplianceAction,
     ) {
     }
@@ -76,6 +78,30 @@ class StatsController extends Controller
 
         return response()->json([
             'data' => $this->syllabusCoverageAction->execute(
+                $academy,
+                $request->seasonsBack(),
+                $request->kind(),
+            ),
+        ]);
+    }
+
+    /**
+     * Each position, week by week (#1858): held, planned, and planned but
+     * never checked into. Same season and filter as the coverage report,
+     * because the map is drawn beside that report's fractions.
+     */
+    public function syllabusCalendar(SyllabusCoverageRequest $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+        $academy = $user->activeAcademy();
+
+        if ($academy === null) {
+            return response()->json(['message' => 'Forbidden.'], 403);
+        }
+
+        return response()->json([
+            'data' => $this->syllabusCalendarAction->execute(
                 $academy,
                 $request->seasonsBack(),
                 $request->kind(),

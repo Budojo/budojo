@@ -148,55 +148,15 @@
         <!--
           The position axis first, because it is what exposes real gaps:
           "you have done nothing from half guard all year" is information an
-          instructor acts on, and a flat list of techniques is not.
+          instructor acts on, and a flat list of techniques is not. Week by
+          week (#1858), because *when* is the other half of that sentence;
+          each row still ends on the fraction the bars used to draw.
         -->
-        <section class="panel" data-cy="syllabus-coverage-positions">
-          <h3 class="panel__title">{{ 'stats.syllabus.byPosition' | translate }}</h3>
-          <ul class="bars">
-            @for (position of data.positions; track position.id) {
-              <li class="bars__row" [attr.data-cy]="'syllabus-position-' + position.id">
-                <span class="bars__name">
-                  {{ position.name }}
-                  @if (position.worked > 0) {
-                    <!-- "We worked half guard" — an answer that fills no
-                         technique, and is not nothing either. -->
-                    <span class="bars__worked">
-                      {{ 'stats.syllabus.worked' | translate: { count: position.worked } }}
-                    </span>
-                  }
-                </span>
-                <span
-                  class="bar"
-                  role="img"
-                  [attr.aria-label]="
-                    'stats.syllabus.barAria'
-                      | translate
-                        : {
-                            name: position.name,
-                            covered: position.covered,
-                            thin: position.thin,
-                            missing: position.missing,
-                          }
-                  "
-                >
-                  <span
-                    class="bar__seg bar__seg--covered"
-                    [style.width]="segment(position.covered, position.in_scope)"
-                  ></span>
-                  <span
-                    class="bar__seg bar__seg--thin"
-                    [style.width]="segment(position.thin, position.in_scope)"
-                  ></span>
-                  <span
-                    class="bar__seg bar__seg--missing"
-                    [style.width]="segment(position.missing, position.in_scope)"
-                  ></span>
-                </span>
-                <span class="bars__count">{{ position.covered }}/{{ position.in_scope }}</span>
-              </li>
-            }
-          </ul>
-        </section>
+        <app-season-map
+          [positions]="data.positions"
+          [seasonsBack]="seasonsBack()"
+          [kind]="kindParam()"
+        />
 
         <!--
           Coverage over the season, so the owner can see whether they are on

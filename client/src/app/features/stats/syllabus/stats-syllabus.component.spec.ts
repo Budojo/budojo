@@ -1,13 +1,27 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { Component, input } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideRouter } from '@angular/router';
-import { SyllabusCoverage } from '../../../core/services/stats.service';
+import { CoveragePosition, SyllabusCoverage } from '../../../core/services/stats.service';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 import { useLadder } from '../../../../test-utils/ladder-test';
-import type { MartialArt } from '../../../core/services/academy.service';
+import type { MartialArt, TrainingMode } from '../../../core/services/academy.service';
+import { SeasonMapComponent } from './season-map/season-map.component';
 import { StatsSyllabusComponent } from './stats-syllabus.component';
+
+/**
+ * The season map fetches its own weeks and has its own spec; here it only has
+ * to receive the report's rows and controls.
+ */
+@Component({ selector: 'app-season-map', template: '' })
+class SeasonMapStub {
+  readonly positions = input<readonly CoveragePosition[]>([]);
+  readonly seasonsBack = input<number>(0);
+  readonly kind = input<TrainingMode | null>(null);
+}
 
 const URL = '/api/v1/stats/syllabus/coverage';
 
@@ -82,6 +96,10 @@ function setup(art?: MartialArt) {
       ...provideI18nTesting(),
     ],
   });
+  TestBed.overrideComponent(StatsSyllabusComponent, {
+    remove: { imports: [SeasonMapComponent] },
+    add: { imports: [SeasonMapStub] },
+  });
 
   if (art) useLadder(art);
 
@@ -149,35 +167,26 @@ describe('StatsSyllabusComponent (#1565)', () => {
     expect(totals.textContent).toContain('4 not taught');
   });
 
-  it('draws a bar per position, sized by that position own scope', () => {
-    const { fixture, httpMock } = setup();
+  it('hands the season map the report positions, its season and its filter (#1858)', () => {
+    const { fixture, component, httpMock } = setup();
     flush(httpMock);
     fixture.detectChanges();
 
-    const row = fixture.nativeElement.querySelector(
-      '[data-cy="syllabus-position-1"]',
-    ) as HTMLElement;
-    expect(row.textContent).toContain('Closed guard');
-    expect(row.textContent).toContain('3/6');
+    const map = fixture.debugElement.query(By.directive(SeasonMapStub))
+      .componentInstance as SeasonMapStub;
+    expect(map.positions().map((p) => p.name)).toEqual(['Closed guard', 'Half guard']);
+    expect(map.seasonsBack()).toBe(0);
+    // "all" is the absence of a filter, not a value the server knows.
+    expect(map.kind()).toBeNull();
 
-    const covered = row.querySelector('.bar__seg--covered') as HTMLElement;
-    const thin = row.querySelector('.bar__seg--thin') as HTMLElement;
-    expect(covered.style.width).toBe('50%');
-    expect(thin.style.width).toBe(`${(1 / 6) * 100}%`);
-  });
-
-  it('says when a position was worked as a whole, and stays quiet when it was not', () => {
-    const { fixture, httpMock } = setup();
-    flush(httpMock);
+    component['setKind']('nogi');
+    fixture.detectChanges();
+    flush(httpMock, report({ kind: 'nogi' }));
     fixture.detectChanges();
 
-    const el: HTMLElement = fixture.nativeElement;
-    expect(
-      el.querySelector('[data-cy="syllabus-position-2"]')?.textContent?.replace(/\s+/g, ' '),
-    ).toContain('worked 2×');
-    expect(el.querySelector('[data-cy="syllabus-position-1"]')?.textContent).not.toContain(
-      'worked',
-    );
+    const filtered = fixture.debugElement.query(By.directive(SeasonMapStub))
+      .componentInstance as SeasonMapStub;
+    expect(filtered.kind()).toBe('nogi');
   });
 
   it('lists what has not been taught, with the position it belongs to', () => {
@@ -281,8 +290,8 @@ describe('StatsSyllabusComponent (#1565)', () => {
     expect(
       el.querySelector('[data-cy="syllabus-coverage-programme-link"]')?.getAttribute('href'),
     ).toBe('/dashboard/academy/syllabus');
-    // No bars, no lists — there is nothing to measure against.
-    expect(el.querySelector('[data-cy="syllabus-coverage-positions"]')).toBeNull();
+    // No map, no lists — there is nothing to measure against.
+    expect(el.querySelector('app-season-map')).toBeNull();
   });
 
   it('tells an academy with a programme and no lessons to go and teach', () => {
