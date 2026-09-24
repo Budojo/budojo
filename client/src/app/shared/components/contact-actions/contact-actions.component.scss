@@ -1,0 +1,48 @@
+:host {
+  display: inline-flex;
+  align-items: center;
+}
+
+// 48 × 48 each: the floor for anything you are meant to press (canon § Fitts).
+.contact-actions__action,
+.contact-actions__none i {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+}
+
+.contact-actions__action {
+  border-radius: var(--p-border-radius-md);
+  color: var(--p-text-color);
+  text-decoration: none;
+  transition: background-color var(--budojo-motion-fast) var(--budojo-motion-decelerate);
+
+  &:hover {
+    background: var(--p-content-hover-background);
+  }
+
+  &:active {
+    background: var(--p-highlight-background);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--p-focus-ring-color);
+    outline-offset: -2px;
+  }
+}
+
+// Disabled = visually obvious (canon): dimmed, and the cursor says no.
+.contact-actions__none {
+  display: inline-flex;
+  opacity: 0.5;
+  cursor: not-allowed;
+  color: var(--p-text-muted-color);
+  border-radius: var(--p-border-radius-md);
+
+  &:focus-visible {
+    outline: 2px solid var(--p-focus-ring-color);
+    outline-offset: -2px;
+  }
+}
