@@ -25,6 +25,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\DB;
 
 class AthleteController extends Controller
 {
@@ -202,11 +203,14 @@ class AthleteController extends Controller
             // second N+1 on the busiest screen in the app. Two subqueries for
             // the page.
             //
-            // `count(*)` is the right count because there is at most one live
-            // record per (athlete, day): `MarkAttendanceAction` enforces it on
-            // insert, and the SoftDeletes global scope keeps a corrected-by-
-            // delete-and-reinsert day from being counted twice. See the
-            // uniqueness note in the create_attendance_records migration.
+            // Days, not rows (#1765). One presence is one day: since the
+            // timetable (#1562) an athlete in the gi class at 19:00 and the
+            // no-gi one at 20:30 has two rows for that evening — coverage and
+            // mat hours need to know both lessons — and the roster's fraction
+            // divides by a count of days, so `count(*)` printed `2/1`.
+            // `withCount` cannot say DISTINCT; a `select` in the constraint
+            // replaces the counted column, so it does. The SoftDeletes global
+            // scope still keeps a deleted row out of either count.
             // The season's count, not a lifetime one (#1484), and floored at
             // the athlete's own joining date because the lower bound differs
             // per ROW: someone who joined in November cannot have attended
@@ -214,8 +218,10 @@ class AthleteController extends Controller
             // season reports the academy's calendar as if it were their
             // record.
             ->withCount([
-                'attendanceRecords as attendance_total_count' => $seasonAttendanceScope,
-                'attendanceRecords as attendance_month_count' => $currentMonthAttendanceScope,
+                'attendanceRecords as attendance_total_count' => fn ($q) => $seasonAttendanceScope($q)
+                    ->select(DB::raw('count(distinct attended_on)')),
+                'attendanceRecords as attendance_month_count' => fn ($q) => $currentMonthAttendanceScope($q)
+                    ->select(DB::raw('count(distinct attended_on)')),
             ])
             ->when($request->filled('belt'), fn ($q) => $q->where('belt', $request->input('belt')))
             ->when(

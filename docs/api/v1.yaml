@@ -5164,9 +5164,10 @@ paths:
       tags: [attendance]
       summary: Monthly attendance count per athlete
       description: |
-        Aggregated count of active (non-deleted) attendance rows per
-        athlete for a single calendar month. Only athletes with at least
-        one record in the month appear. Sorted DESC by count, then by
+        How many days each athlete attended in a single calendar month —
+        distinct days, not rows (#1765): an evening with two lessons is two
+        rows and one day. Soft-deleted rows are not counted. Only athletes
+        with at least one record in the month appear. Sorted DESC by count, then by
         last_name ASC for stable ordering at ties.
       operationId: attendanceMonthlySummary
       parameters:
@@ -8999,7 +9000,7 @@ components:
           nullable: true
           minimum: 0
           description: |
-            How many sessions this athlete attended in the **current calendar
+            How many days this athlete attended in the **current calendar
             month** (#1447), by the server's clock.
 
             Selected only by the roster index, as a `withCount` alias. On
@@ -9007,9 +9008,9 @@ components:
             for"**, never as zero, which is a real answer meaning someone has
             not trained this month.
 
-            Counts days, not rows: at most one live attendance record exists
-            per (athlete, day), enforced on insert, and a day corrected by
-            soft-delete-and-reinsert is counted once.
+            Counts days, not rows (#1765): an evening in the gi class and the
+            no-gi class is two attendance rows — one per lesson — and one day.
+            A soft-deleted row is never counted.
           example: 6
         attendance_total_count:
           type: integer

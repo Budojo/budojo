@@ -360,6 +360,24 @@ it('returns monthly summary with a count per athlete who trained that month', fu
     expect($luigiRow['count'])->toBe(1);
 });
 
+it('counts a day with two lessons as one day in the monthly summary (#1765)', function (): void {
+    $user = userWithAcademy();
+    $mario = Athlete::factory()->for($user->academy)->create();
+
+    // Gi at 19:00 and no-gi at 20:30 on the same Tuesday, then one more day.
+    AttendanceRecord::factory()->for($mario)->on('2026-04-07')->create();
+    AttendanceRecord::factory()->for($mario)->on('2026-04-07')->create();
+    AttendanceRecord::factory()->for($mario)->on('2026-04-09')->create();
+
+    Sanctum::actingAs($user);
+
+    $row = collect($this->getJson('/api/v1/attendance/summary?month=2026-04')->assertOk()->json('data'))
+        ->firstWhere('athlete_id', $mario->id);
+
+    // The column is headed "Days"; three rows are two days.
+    expect($row['count'])->toBe(2);
+});
+
 it('excludes soft-deleted records from the monthly summary count', function (): void {
     $user = userWithAcademy();
     $mario = Athlete::factory()->for($user->academy)->create();
