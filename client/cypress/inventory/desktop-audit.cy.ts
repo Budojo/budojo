@@ -269,6 +269,7 @@ function athlete(over: Record<string, unknown>) {
     active_carnet: null,
     attendance_month_count: 0,
     attendance_total_count: 0,
+    last_attended_on: null,
     ...over,
   };
 }
@@ -291,6 +292,7 @@ const ATHLETES = [
     payment_coverage: 'quarterly',
     attendance_month_count: 5,
     attendance_total_count: 143,
+    last_attended_on: '2026-09-11',
     active_carnet: { id: 7, code: 'A7K2', remaining_entries: 3, expires_at: '2027-01-10' },
   }),
   athlete({
@@ -304,6 +306,7 @@ const ATHLETES = [
     fee_tier: FEE_TIERS[0],
     attendance_month_count: 4,
     attendance_total_count: 61,
+    last_attended_on: '2026-09-10',
   }),
   athlete({
     id: 3,
@@ -320,6 +323,7 @@ const ATHLETES = [
     monthly_fee_cents: null,
     attendance_month_count: 6,
     attendance_total_count: 812,
+    last_attended_on: '2026-09-14',
   }),
   athlete({
     id: 4,
@@ -333,6 +337,7 @@ const ATHLETES = [
     billing_period_months: 12,
     attendance_month_count: 3,
     attendance_total_count: 402,
+    last_attended_on: '2026-09-03',
   }),
   athlete({
     id: 5,
@@ -347,6 +352,7 @@ const ATHLETES = [
     paid_current_month: false,
     attendance_month_count: 0,
     attendance_total_count: 9,
+    last_attended_on: '2026-03-20',
   }),
   athlete({
     id: 6,
@@ -361,6 +367,7 @@ const ATHLETES = [
     active_carnet: { id: 9, code: 'Q3M8', remaining_entries: 6, expires_at: '2027-03-01' },
     attendance_month_count: 2,
     attendance_total_count: 188,
+    last_attended_on: '2026-09-09',
   }),
   athlete({
     id: 7,
@@ -374,6 +381,7 @@ const ATHLETES = [
     paid_current_month: false,
     attendance_month_count: 1,
     attendance_total_count: 530,
+    last_attended_on: '2026-09-01',
   }),
   athlete({
     id: 8,
@@ -386,6 +394,7 @@ const ATHLETES = [
     created_at: '2026-09-07T18:00:00+00:00',
     attendance_month_count: 2,
     attendance_total_count: 2,
+    last_attended_on: '2026-09-10',
   }),
 ];
 
@@ -842,6 +851,75 @@ const SYLLABUS_COVERAGE = {
     { on: '2026-09-06', covered: 1 },
     { on: '2026-09-13', covered: 3 },
   ],
+};
+
+/**
+ * Who has seen the armbar (#1745) — the report's first taught row, opened.
+ * Three lessons, as the row says, the last on 11 September; the headcounts
+ * are the people listed as there, so the numbers agree with each other.
+ */
+function exposureRow(id: number, exposures: number, lastSeenOn: string | null, state: string) {
+  const a = ATHLETES.find((row) => row.id === id) as Record<string, unknown>;
+  return {
+    id,
+    first_name: a['first_name'],
+    last_name: a['last_name'],
+    belt: a['belt'],
+    stripes: a['stripes'],
+    status: a['status'],
+    joined_at: a['joined_at'],
+    date_of_birth: a['date_of_birth'] ?? null,
+    photo_url: null,
+    user_avatar_url: null,
+    exposures,
+    last_seen_on: lastSeenOn,
+    state,
+  };
+}
+
+const TOPIC_EXPOSURE = {
+  topic: { id: 11, name: 'Armbar', parent_name: 'Closed guard', kind: 'both', in_season: true },
+  season: SYLLABUS_COVERAGE.season,
+  lessons: [
+    {
+      id: 901,
+      held_on: '2026-09-04',
+      name: 'Fondamentali',
+      kind: 'gi',
+      starts_at: '19:00',
+      headcount: 4,
+    },
+    {
+      id: 902,
+      held_on: '2026-09-07',
+      name: 'Fondamentali',
+      kind: 'gi',
+      starts_at: '19:00',
+      headcount: 3,
+    },
+    {
+      id: 903,
+      held_on: '2026-09-11',
+      name: 'Gi, tutti i livelli',
+      kind: 'gi',
+      starts_at: '19:00',
+      headcount: 2,
+    },
+  ],
+  // Register order, active first: Bonanno, Colombo, Ferraro, Gallo, Marino,
+  // Moretti, Russo, then Ricci, who is inactive with no date of departure.
+  // Gallo trained on the 7th at a lesson the record does not name.
+  athletes: [
+    exposureRow(3, 2, '2026-09-11', 'seen'),
+    exposureRow(4, 2, '2026-09-07', 'seen'),
+    exposureRow(1, 3, '2026-09-11', 'seen'),
+    exposureRow(7, 0, null, 'unplaced'),
+    exposureRow(8, 0, null, 'never'),
+    exposureRow(2, 1, '2026-09-04', 'thin'),
+    exposureRow(6, 1, '2026-09-07', 'thin'),
+    exposureRow(5, 0, null, 'never'),
+  ],
+  totals: { lessons: 3, seen: 3, thin: 2, never: 2, unplaced: 1 },
 };
 
 // ── Stats ────────────────────────────────────────────────────────────────
@@ -1983,6 +2061,27 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       });
     },
   });
+  // A taught row, opened on who has seen it (#1745).
+  screen(
+    '40-stats-syllabus-exposure',
+    '/dashboard/stats/syllabus',
+    '[data-cy="syllabus-coverage"]',
+    {
+      clock: false,
+      stubs: () => {
+        cy.intercept('GET', '/api/v1/stats/syllabus/topics/11*', {
+          statusCode: 200,
+          body: { data: TOPIC_EXPOSURE },
+        });
+      },
+      act: () => {
+        cy.wait(1500);
+        press('[data-cy="syllabus-taught-11"] button');
+        cy.get('[data-cy="exposure-group-seen"]', { timeout: 10_000 }).should('exist');
+        cy.wait(400);
+      },
+    },
+  );
 
   // ── 50. Account ────────────────────────────────────────────────────────
   screen('50-profile-identity', '/dashboard/profile', '[data-cy="profile-tabs"]');
@@ -2110,6 +2209,13 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
   screen('20-athletes-paid-sort', '/dashboard/athletes', ROSTER_READY, {
     act: () => {
       press('[data-cy="athletes-paid-filter"]');
+      cy.wait(400);
+    },
+  });
+  // The Last seen header pressed once (#1726): longest absent first.
+  screen('20-athletes-last-seen-sort', '/dashboard/athletes', ROSTER_READY, {
+    act: () => {
+      press('[data-cy="athletes-th-last-seen"]');
       cy.wait(400);
     },
   });
