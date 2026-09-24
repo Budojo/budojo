@@ -86,47 +86,54 @@
         {{ 'today.watch.title' | translate }}
       </h2>
 
-      @switch (health().state) {
-        @case ('loading') {
-          <p-skeleton height="3.5rem" />
-        }
-        @case ('error') {
-          <p class="today-card__note">{{ 'today.watch.error' | translate }}</p>
-        }
-        @default {
-          @if (watchRows().length > 0) {
-            <ul class="today-rows">
-              @for (row of watchRows(); track row.dataCy) {
-                <li>
-                  <a
-                    class="today-row today-row--link"
-                    [routerLink]="row.link"
-                    [queryParams]="row.queryParams"
-                    [attr.data-cy]="row.dataCy"
-                  >
-                    @if (row.count !== null) {
-                      <span class="today-row__count">{{ row.count }}</span>
-                    } @else {
-                      <!-- A state, not a tally (#1751): a mark where the count would be. -->
-                      <span class="today-row__count today-row__count--alert">
-                        <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
-                      </span>
-                    }
-                    <span class="today-row__label">
-                      {{ row.label }}
-                      @if (row.detail) {
-                        <span class="today-row__detail">{{ row.detail }}</span>
-                      }
-                    </span>
-                    <i class="pi pi-angle-right today-row__chevron" aria-hidden="true"></i>
-                  </a>
-                </li>
-              }
-            </ul>
-          } @else {
-            <p class="today-card__note">{{ 'today.watch.none' | translate }}</p>
+      <!--
+        Two requests feed this card, and each fails on its own. The all-clear
+        is said only when both have answered and found nothing: a count still
+        loading, or one that failed, is not a zero.
+      -->
+      @if (watchRows().length > 0) {
+        <ul class="today-rows">
+          @for (row of watchRows(); track row.dataCy) {
+            <li>
+              <a
+                class="today-row today-row--link"
+                [routerLink]="row.link"
+                [queryParams]="row.queryParams"
+                [attr.data-cy]="row.dataCy"
+              >
+                @if (row.count !== null) {
+                  <span class="today-row__count">{{ row.count }}</span>
+                } @else {
+                  <!-- A state, not a tally (#1751): a mark where the count would be. -->
+                  <span class="today-row__count today-row__count--alert">
+                    <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+                  </span>
+                }
+                <span class="today-row__label">
+                  {{ row.label }}
+                  @if (row.detail) {
+                    <span class="today-row__detail">{{ row.detail }}</span>
+                  }
+                </span>
+                <i class="pi pi-angle-right today-row__chevron" aria-hidden="true"></i>
+              </a>
+            </li>
           }
-        }
+        </ul>
+      } @else if (watchState() === 'loading') {
+        <p-skeleton height="3.5rem" />
+      } @else if (watchAllClear()) {
+        <p class="today-card__note">{{ 'today.watch.none' | translate }}</p>
+      }
+      @if (health().state === 'error') {
+        <p class="today-card__note" data-cy="today-watch-documents-error">
+          {{ 'today.watch.documentsError' | translate }}
+        </p>
+      }
+      @if (unpaid()?.state === 'error') {
+        <p class="today-card__note" data-cy="today-watch-unpaid-error">
+          {{ 'today.watch.unpaidError' | translate }}
+        </p>
       }
     </section>
 
@@ -268,7 +275,7 @@
   <app-lesson-sheet
     [(visible)]="sheetOpen"
     [academyClassId]="c.id"
-    [heldOn]="heldOn"
+    [heldOn]="heldOn()"
     [className]="c.name"
     [dateLabel]="sheetDateLabel()"
     (saved)="onSaved(c.id, $event)"

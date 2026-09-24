@@ -2,6 +2,7 @@ import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http'
 import { Injectable, inject } from '@angular/core';
 import { Observable, catchError, map, of, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import type { AthleteIdentity } from './athlete.service';
 
 /**
  * Source of an attendance row (#960). `'instructor'` is the default
@@ -40,6 +41,12 @@ export interface AttendanceSummaryRow {
   first_name: string;
   last_name: string;
   count: number;
+  /**
+   * The person behind the count (#1851), so the row is drawn with the belt
+   * spine like every other list of people. Null only when the athlete could
+   * not be loaded; the row then falls back to the name.
+   */
+  athlete: AthleteIdentity | null;
 }
 
 export interface MarkAttendancePayload {

@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Observable, catchError, map, of, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import type { AthleteIdentity } from './athlete.service';
 
 export type DocumentType = 'id_card' | 'medical_certificate' | 'insurance' | 'other';
 
@@ -71,11 +72,7 @@ export interface ExpiringDocument extends Document {
    * document, blanking the whole expiring page. With this, the compiler
    * enforces the guard instead of the guard being a defensive habit.
    */
-  athlete?: {
-    id: number;
-    first_name: string;
-    last_name: string;
-  } | null;
+  athlete?: AthleteIdentity | null;
 }
 
 /**
@@ -84,11 +81,7 @@ export interface ExpiringDocument extends Document {
  * live (non-trashed) medical certificate row — same risk surface as
  * an expired one.
  */
-export interface AthleteMissingMedicalCertificate {
-  id: number;
-  first_name: string;
-  last_name: string;
-}
+export type AthleteMissingMedicalCertificate = AthleteIdentity;
 
 /**
  * Composite envelope returned by `GET /api/v1/documents/expiring`.

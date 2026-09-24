@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Attendance;
 
+use App\Actions\Athlete\LoadAthleteIdentitiesAction;
 use App\Actions\Attendance\DeleteAttendanceAction;
 use App\Actions\Attendance\GetAthleteAttendanceAction;
 use App\Actions\Attendance\GetAthleteAttendanceSummaryAction;
@@ -14,6 +15,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Attendance\AthleteAttendanceSummaryRequest;
 use App\Http\Requests\Attendance\MarkAttendanceRequest;
 use App\Http\Requests\Attendance\MonthlySummaryRequest;
+use App\Http\Resources\AthleteIdentityResource;
 use App\Http\Resources\AttendanceRecordResource;
 use App\Models\Academy;
 use App\Models\AcademyClass;
@@ -43,6 +45,7 @@ class AttendanceController extends Controller
         private readonly GetAthleteAttendanceAction $athleteAction,
         private readonly GetMonthlyAttendanceSummaryAction $summaryAction,
         private readonly GetAthleteAttendanceSummaryAction $athleteSummaryAction,
+        private readonly LoadAthleteIdentitiesAction $identities,
     ) {
     }
 
@@ -231,7 +234,20 @@ class AttendanceController extends Controller
 
         $rows = $this->summaryAction->execute($academy, $month);
 
-        return response()->json(['data' => $rows]);
+        // Each row also carries the person's identity (#1851), so the page
+        // draws it with the belt like every other list of people. Additive:
+        // the flat name fields stay.
+        $athletes = $this->identities->execute($academy, $rows->map(fn (array $row): int => $row['athlete_id']));
+        $data = $rows->map(function (array $row) use ($athletes, $request): array {
+            $athlete = $athletes->get($row['athlete_id']);
+
+            return [
+                ...$row,
+                'athlete' => $athlete === null ? null : new AthleteIdentityResource($athlete)->toArray($request),
+            ];
+        });
+
+        return response()->json(['data' => $data]);
     }
 
     /**

@@ -2403,6 +2403,7 @@
       "reachAria": "How to reach this athlete",
       "reach": {
         "phone": "Call {{value}}",
+        "whatsapp": "Message {{value}} on WhatsApp",
         "email": "Email {{value}}"
       }
     },
@@ -2738,6 +2739,13 @@
       "futureOther": "in {{count}} days",
       "pastOne": "{{count}} day overdue",
       "pastOther": "{{count}} days overdue"
+    },
+    "contact": {
+      "call": "Call",
+      "whatsapp": "WhatsApp",
+      "callAria": "Call {{name}}",
+      "whatsappAria": "Message {{name}} on WhatsApp",
+      "noPhone": "No phone number on file"
     }
   },
   "stats": {
@@ -3040,7 +3048,8 @@
       "unpaidOne": "{{month}} fee not paid",
       "unpaidOther": "{{month}} fees not paid",
       "none": "Nothing to check today.",
-      "error": "Couldn't load what needs checking."
+      "documentsError": "Couldn't load the documents to check.",
+      "unpaidError": "Couldn't load who has paid this month."
     },
     "teach": {
       "title": "What to teach",

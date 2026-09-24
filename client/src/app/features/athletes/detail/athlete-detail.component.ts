@@ -18,6 +18,7 @@ import { Athlete, AthleteService, AthleteStatus } from '../../../core/services/a
 import { RuntimeService } from '../../../core/services/runtime.service';
 import { LanguageService } from '../../../core/services/language.service';
 import { formatIsoDate } from '../../../shared/utils/locale';
+import { contactLinks, phoneLabel } from '../../../shared/utils/contact-links';
 import { relativeDay } from '../../../shared/utils/relative-day';
 import { Tooltip } from 'primeng/tooltip';
 import { AgeBadgeComponent } from '../../../shared/components/age-badge/age-badge.component';
@@ -27,6 +28,20 @@ import { InvitationCardComponent } from './invitation-card/invitation-card.compo
 import { EmailChangeCardComponent } from './email-change-card/email-change-card.component';
 import { AthletePhotoCardComponent } from '../photo-card/athlete-photo-card.component';
 import { returnSection } from '../athlete-return-section';
+
+/** One labelled way to reach the athlete, in the header (#1633, #1727). */
+interface ReachLink {
+  icon: string;
+  href: string;
+  /** What the chip shows: the number, the address, or "WhatsApp". */
+  label: string;
+  ariaKey: string;
+  /** What the aria-label names — the number for both phone links. */
+  ariaValue: string;
+  cyKey: string;
+  /** A web page (WhatsApp) opens in a new tab; `tel:` and `mailto:` never do. */
+  external: boolean;
+}
 
 @Component({
   selector: 'app-athlete-detail',
@@ -178,36 +193,48 @@ export class AthleteDetailComponent implements OnInit {
    * are handed to the operating system, and a blank tab for them opens an
    * empty window on the desktop.
    *
-   * The `tel:` href is built from the unspaced E.164 pair because the scheme
-   * does not tolerate inner whitespace, while the visible label keeps the
-   * prefix apart from the digits so it can be read. Same contract as the
-   * academy page (`academy-detail.component.ts`), including the defensive
-   * null check on a half-populated pair.
+   * The hrefs come from `contactLinks()` (#1727), shared with every list
+   * that names an athlete; the visible label keeps the prefix apart from the
+   * digits so it can be read. WhatsApp (#1727) sits beside the number, since
+   * that is how this owner actually reaches people. It is the one link here
+   * that is a web page, so it alone opens in a new tab.
    */
-  readonly reachLinks = computed<
-    { icon: string; href: string; label: string; ariaKey: string; cyKey: string }[]
-  >(() => {
+  readonly reachLinks = computed<ReachLink[]>(() => {
+    this.languageService.currentLang(); // signal dep — the WhatsApp label is translated
     const a = this.athlete();
     if (!a) return [];
-    const reach: { icon: string; href: string; label: string; ariaKey: string; cyKey: string }[] =
-      [];
-    const cc = a.phone_country_code;
-    const nn = a.phone_national_number;
-    if (cc && nn)
+    const reach: ReachLink[] = [];
+    const { tel, whatsapp } = contactLinks(a.phone_country_code, a.phone_national_number);
+    const number = phoneLabel(a.phone_country_code, a.phone_national_number);
+    if (tel && whatsapp && number) {
       reach.push({
         icon: 'pi pi-phone',
-        href: `tel:${cc}${nn}`,
-        label: `${cc} ${nn}`,
+        href: tel,
+        label: number,
         ariaKey: 'athletes.detail.reach.phone',
+        ariaValue: number,
         cyKey: 'phone',
+        external: false,
       });
+      reach.push({
+        icon: 'pi pi-whatsapp',
+        href: whatsapp,
+        label: this.translate.instant('shared.contact.whatsapp'),
+        ariaKey: 'athletes.detail.reach.whatsapp',
+        ariaValue: number,
+        cyKey: 'whatsapp',
+        external: true,
+      });
+    }
     if (a.email)
       reach.push({
         icon: 'pi pi-envelope',
         href: `mailto:${a.email}`,
         label: a.email,
         ariaKey: 'athletes.detail.reach.email',
+        ariaValue: a.email,
         cyKey: 'email',
+        external: false,
       });
     return reach;
   });

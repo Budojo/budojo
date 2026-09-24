@@ -81,14 +81,24 @@ describe('today helpers', () => {
     expect(presencesSince([], '2026-09-21')).toBe(0);
   });
 
-  it('joinedSince keeps the athletes whose joining date is on or after the day', () => {
+  it('joinedSince keeps the athletes who joined from the first day to the last', () => {
     const athletes = [
       { id: 1, joined_at: '2026-09-21' },
       { id: 2, joined_at: '2026-09-20' },
       { id: 3, joined_at: '2026-09-24' },
     ];
 
-    expect(joinedSince(athletes, '2026-09-21').map((a) => a.id)).toEqual([1, 3]);
+    expect(joinedSince(athletes, '2026-09-21', '2026-09-24').map((a) => a.id)).toEqual([1, 3]);
+  });
+
+  it('joinedSince leaves out someone pre-registered for a later date', () => {
+    const athletes = [
+      { id: 1, joined_at: '2026-09-22' },
+      // Signed up today, starts on the 1st: not new this week yet.
+      { id: 2, joined_at: '2026-10-01' },
+    ];
+
+    expect(joinedSince(athletes, '2026-09-21', '2026-09-24').map((a) => a.id)).toEqual([1]);
   });
 
   it('timeRange reads start and end, the start alone, or nothing', () => {

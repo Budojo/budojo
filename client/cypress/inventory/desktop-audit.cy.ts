@@ -398,6 +398,27 @@ const ATHLETES = [
   }),
 ];
 
+/**
+ * A roster athlete as the aggregate lists carry them since #1851: the monthly
+ * summary, the owner's leaderboard and the expiring documents send the
+ * identity the row draws with the belt spine. Read from `ATHLETES`, so a
+ * person has the same belt on every screen of the audit.
+ */
+function identityOf(id: number) {
+  const a = ATHLETES.find((x) => x.id === id);
+  if (!a) throw new Error(`no roster athlete ${id}`);
+  return {
+    id: a.id,
+    first_name: a.first_name,
+    last_name: a.last_name,
+    belt: a.belt,
+    stripes: a.stripes,
+    date_of_birth: a.date_of_birth,
+    photo_url: a.photo_url,
+    user_avatar_url: a.user_avatar_url,
+  };
+}
+
 function page(rows: unknown[], perPage = 20) {
   return {
     data: rows,
@@ -463,7 +484,7 @@ const EXPIRING = {
   data: [
     {
       ...DOCUMENTS_ONE[0],
-      athlete: { id: 1, first_name: 'Giulia', last_name: 'Ferraro' },
+      athlete: identityOf(1),
     },
     {
       ...document({
@@ -474,7 +495,7 @@ const EXPIRING = {
         issued_at: '2025-09-01',
         expires_at: '2026-09-10',
       }),
-      athlete: { id: 4, first_name: 'Sara', last_name: 'Colombo' },
+      athlete: identityOf(4),
     },
     {
       ...document({
@@ -485,13 +506,22 @@ const EXPIRING = {
         issued_at: '2025-10-01',
         expires_at: '2026-10-01',
       }),
-      athlete: { id: 7, first_name: 'Andrea', last_name: 'Gallo' },
+      athlete: identityOf(7),
     },
+    // One of the academy's own papers (#1743): no athlete, so no identity and
+    // no spine. Here so the card's inset is shot beside the athletes' (#1851).
+    document({
+      id: 47,
+      athlete_id: null,
+      academy_id: 1,
+      type: 'insurance',
+      original_name: 'polizza-rc-2026.pdf',
+      issued_at: '2025-10-12',
+      // Inside the 30-day window the endpoint uses, or it would not be listed.
+      expires_at: '2026-10-12',
+    }),
   ],
-  missing_medical_certificate: [
-    { id: 2, first_name: 'Luca', last_name: 'Moretti' },
-    { id: 8, first_name: 'Francesca', last_name: 'Marino' },
-  ],
+  missing_medical_certificate: [identityOf(2), identityOf(8)],
 };
 
 // ── Attendance, payments, promotions, carnets ────────────────────────────
@@ -541,13 +571,13 @@ const ATHLETE_SUMMARY = (() => {
 })();
 
 const ATTENDANCE_SUMMARY = [
-  { athlete_id: 3, first_name: 'Matteo', last_name: 'Bonanno', count: 6 },
-  { athlete_id: 1, first_name: 'Giulia', last_name: 'Ferraro', count: 5 },
-  { athlete_id: 2, first_name: 'Luca', last_name: 'Moretti', count: 4 },
-  { athlete_id: 4, first_name: 'Sara', last_name: 'Colombo', count: 3 },
-  { athlete_id: 6, first_name: 'Elena', last_name: 'Russo', count: 2 },
-  { athlete_id: 8, first_name: 'Francesca', last_name: 'Marino', count: 2 },
-  { athlete_id: 7, first_name: 'Andrea', last_name: 'Gallo', count: 1 },
+  { athlete_id: 3, first_name: 'Matteo', last_name: 'Bonanno', count: 6, athlete: identityOf(3) },
+  { athlete_id: 1, first_name: 'Giulia', last_name: 'Ferraro', count: 5, athlete: identityOf(1) },
+  { athlete_id: 2, first_name: 'Luca', last_name: 'Moretti', count: 4, athlete: identityOf(2) },
+  { athlete_id: 4, first_name: 'Sara', last_name: 'Colombo', count: 3, athlete: identityOf(4) },
+  { athlete_id: 6, first_name: 'Elena', last_name: 'Russo', count: 2, athlete: identityOf(6) },
+  { athlete_id: 8, first_name: 'Francesca', last_name: 'Marino', count: 2, athlete: identityOf(8) },
+  { athlete_id: 7, first_name: 'Andrea', last_name: 'Gallo', count: 1, athlete: identityOf(7) },
 ];
 
 const LEADERBOARD = {
@@ -561,6 +591,7 @@ const LEADERBOARD = {
       hours: 6.5,
       anonymous: false,
       is_self: true,
+      athlete: identityOf(3),
     },
     {
       rank: 2,
@@ -571,6 +602,7 @@ const LEADERBOARD = {
       hours: 5.25,
       anonymous: false,
       is_self: false,
+      athlete: identityOf(1),
     },
     {
       rank: 3,
@@ -581,6 +613,7 @@ const LEADERBOARD = {
       hours: 4,
       anonymous: false,
       is_self: false,
+      athlete: identityOf(2),
     },
     {
       rank: 4,
@@ -591,6 +624,7 @@ const LEADERBOARD = {
       hours: 3.5,
       anonymous: false,
       is_self: false,
+      athlete: identityOf(4),
     },
     {
       rank: 5,
@@ -601,6 +635,7 @@ const LEADERBOARD = {
       hours: 2,
       anonymous: false,
       is_self: false,
+      athlete: identityOf(6),
     },
   ],
   meta: { month: '2026-09' },

@@ -2403,6 +2403,7 @@
       "reachAria": "Come contattare l'atleta",
       "reach": {
         "phone": "Chiama {{value}}",
+        "whatsapp": "Scrivi a {{value}} su WhatsApp",
         "email": "Scrivi a {{value}}"
       }
     },
@@ -2738,6 +2739,13 @@
       "futureOther": "tra {{count}} giorni",
       "pastOne": "scaduto da {{count}} giorno",
       "pastOther": "scaduto da {{count}} giorni"
+    },
+    "contact": {
+      "call": "Chiama",
+      "whatsapp": "WhatsApp",
+      "callAria": "Chiama {{name}}",
+      "whatsappAria": "Scrivi a {{name}} su WhatsApp",
+      "noPhone": "Nessun numero in archivio"
     }
   },
   "stats": {
@@ -3040,7 +3048,8 @@
       "unpaidOne": "quota di {{month}} non pagata",
       "unpaidOther": "quote di {{month}} non pagate",
       "none": "Niente da controllare oggi.",
-      "error": "Non riesco a caricare cosa c'è da controllare."
+      "documentsError": "Non riesco a caricare i documenti da controllare.",
+      "unpaidError": "Non riesco a caricare chi ha pagato questo mese."
     },
     "teach": {
       "title": "Cosa insegnare",

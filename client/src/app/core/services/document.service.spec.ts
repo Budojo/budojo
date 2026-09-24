@@ -141,7 +141,16 @@ describe('DocumentService', () => {
 
       const expanded: ExpiringDocument = {
         ...makeDoc({ id: 1, type: 'medical_certificate', expires_at: '2026-05-10' }),
-        athlete: { id: 42, first_name: 'Mario', last_name: 'Rossi' },
+        athlete: {
+          id: 42,
+          first_name: 'Mario',
+          last_name: 'Rossi',
+          belt: 'blue',
+          stripes: 0,
+          date_of_birth: null,
+          photo_url: null,
+          user_avatar_url: null,
+        },
       };
       httpMock.expectOne((r) => r.url === '/api/v1/documents/expiring').flush({ data: [expanded] });
 
