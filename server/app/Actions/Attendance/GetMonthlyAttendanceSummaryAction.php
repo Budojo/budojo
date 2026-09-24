@@ -20,6 +20,10 @@ class GetMonthlyAttendanceSummaryAction
      *
      * Shape of each row: { athlete_id, first_name, last_name, count }.
      *
+     * `count` is **days**, not rows (#1765): a day with a gi and a no-gi
+     * lesson is two rows and one day, and the page's column is headed Days.
+     * The leaderboard counts the same way.
+     *
      * Sorted by count DESC, then last_name ASC — the instructor's first
      * question is "who's showing up the most?", and alphabetical is the
      * neutral tiebreak.
@@ -47,7 +51,7 @@ class GetMonthlyAttendanceSummaryAction
                 'athletes.id as athlete_id',
                 'athletes.first_name',
                 'athletes.last_name',
-                DB::raw('COUNT(*) as count'),
+                DB::raw('COUNT(DISTINCT attendance_records.attended_on) as count'),
             ])
             ->orderByDesc('count')
             ->orderBy('athletes.last_name_sort')

@@ -1989,7 +1989,7 @@
       "table": {
         "fullName": "Full name",
         "payment": "Payment",
-        "attendance": "Sessions",
+        "attendance": "Days",
         "attendanceLines": "month / season"
       },
       "tooltip": {
@@ -2008,11 +2008,11 @@
         "paidCycleAll": "Showing everyone. Click to show only who has paid.",
         "paidCyclePaid": "Showing who has paid. Click to show only who has not.",
         "paidCycleUnpaid": "Showing who has not paid. Click to show everyone again.",
-        "attendanceSortInitial": "Click to sort by sessions this month (most first)",
-        "attendanceSortMonthDesc": "Sorted by sessions this month (most first). Click to cycle.",
-        "attendanceSortMonthAsc": "Sorted by sessions this month (fewest first). Click to cycle.",
-        "attendanceSortTotalDesc": "Sorted by sessions this season (most first). Click to cycle.",
-        "attendanceSortTotalAsc": "Sorted by sessions this season (fewest first). Click to cycle."
+        "attendanceSortInitial": "Click to sort by days attended this month (most first)",
+        "attendanceSortMonthDesc": "Sorted by days attended this month (most first). Click to cycle.",
+        "attendanceSortMonthAsc": "Sorted by days attended this month (fewest first). Click to cycle.",
+        "attendanceSortTotalDesc": "Sorted by days attended this season (most first). Click to cycle.",
+        "attendanceSortTotalAsc": "Sorted by days attended this season (fewest first). Click to cycle."
       },
       "social": {
         "facebookLabel": "Open Facebook profile",
@@ -2096,10 +2096,10 @@
         "any": "Payment"
       },
       "attendance": {
-        "aria": "{{month}} sessions this month, {{total}} this season",
-        "ariaMonth": "{{month}} sessions this month",
-        "cellAria": "{{monthAttended}} of {{monthScheduled}} sessions this month, {{totalAttended}} of {{totalScheduled}} this season",
-        "cellAriaCounts": "{{monthAttended}} sessions this month, {{totalAttended}} this season",
+        "aria": "{{month}} days this month, {{total}} this season",
+        "ariaMonth": "{{month}} days this month",
+        "cellAria": "{{monthAttended}} of {{monthScheduled}} days this month, {{totalAttended}} of {{totalScheduled}} this season",
+        "cellAriaCounts": "{{monthAttended}} days this month, {{totalAttended}} this season",
         "tooltipMonth": "This month",
         "tooltipTotal": "This season ({{season}})",
         "tooltipTotalJoined": "This season ({{season}}), counted from {{joined}} when they joined"

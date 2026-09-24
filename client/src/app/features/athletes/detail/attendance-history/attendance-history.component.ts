@@ -139,7 +139,9 @@ export class AttendanceHistoryComponent implements OnInit {
   protected readonly attendedDates = computed(
     () => new Set(this.records().map((r) => r.attended_on)),
   );
-  protected readonly attendedCount = computed(() => this.records().length);
+  // Days, not rows (#1765): a gi and a no-gi lesson on one evening are two
+  // records and one day, and this count sits over "{{scheduled}} days".
+  protected readonly attendedCount = computed(() => this.attendedDates().size);
 
   /**
    * Attended sessions as an array of `Date` objects for the month heatmap.
