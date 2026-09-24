@@ -20,6 +20,7 @@ import { EmptyStateComponent } from '../../../shared/components/empty-state/empt
 import { ErrorStateComponent } from '../../../shared/components/error-state/error-state.component';
 import { relativeDay } from '../../../shared/utils/relative-day';
 import { localeFor } from '../../../shared/utils/locale';
+import { TopicExposureComponent } from './topic-exposure/topic-exposure.component';
 
 /** Everything, or one of the academy's two modes — never `both`, which every filter admits. */
 type KindFilter = 'all' | TrainingMode;
@@ -64,6 +65,7 @@ interface FilterOption {
     SkeletonModule,
     EmptyStateComponent,
     ErrorStateComponent,
+    TopicExposureComponent,
   ],
   templateUrl: './stats-syllabus.component.html',
   styleUrl: './stats-syllabus.component.scss',
@@ -84,6 +86,10 @@ export class StatsSyllabusComponent {
 
   /** Bumped by the retry button; the effect below watches it. */
   private readonly reloadTick = signal<number>(0);
+
+  /** The row opened on who has seen it (#1745), and whether it is open. */
+  protected readonly exposureTopicId = signal<number | null>(null);
+  protected readonly exposureOpen = signal<boolean>(false);
 
   constructor() {
     // The same refetch shape the attendance tab uses: an effect keyed on the
@@ -236,5 +242,11 @@ export class StatsSyllabusComponent {
 
   protected retry(): void {
     this.reloadTick.update((n) => n + 1);
+  }
+
+  /** Who has seen this technique — the row, opened in the season on screen. */
+  protected openExposure(topicId: number): void {
+    this.exposureTopicId.set(topicId);
+    this.exposureOpen.set(true);
   }
 }

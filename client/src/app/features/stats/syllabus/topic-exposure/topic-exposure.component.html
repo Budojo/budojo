@@ -1,0 +1,134 @@
+<p-dialog
+  [visible]="visible()"
+  (visibleChange)="visible.set($event)"
+  [modal]="true"
+  [draggable]="false"
+  [dismissableMask]="true"
+  [breakpoints]="{ '768px': '96vw' }"
+  [style]="{ width: '36rem' }"
+  data-cy="topic-exposure"
+>
+  <ng-template pTemplate="header">
+    <div class="exposure-head" data-cy="exposure-head">
+      <span class="exposure-head__title">
+        {{ report()?.topic?.name ?? ('stats.syllabus.exposure.title' | translate) }}
+      </span>
+      @if (report(); as data) {
+        <span class="exposure-head__meta">
+          @if (data.topic.parent_name) {
+            <span>{{ data.topic.parent_name }}</span>
+            <span aria-hidden="true">·</span>
+          }
+          <span>{{ data.season.label }}</span>
+        </span>
+      }
+    </div>
+  </ng-template>
+
+  @if (loading()) {
+    <div class="exposure__loading" aria-hidden="true" data-cy="exposure-loading">
+      @for (i of [1, 2, 3]; track i) {
+        <p-skeleton height="2.5rem" borderRadius="0.5rem" />
+      }
+    </div>
+  } @else if (failed()) {
+    <div class="exposure__error" role="alert" data-cy="exposure-error">
+      <p>{{ 'stats.syllabus.exposure.error' | translate }}</p>
+      <p-button
+        [label]="'stats.syllabus.error.retry' | translate"
+        severity="secondary"
+        (onClick)="retry()"
+        data-cy="exposure-retry"
+      />
+    </div>
+  } @else if (report(); as data) {
+    @if (nobodyYet()) {
+      <!--
+        Nobody has seen it because nobody has taught it. The academy's gap,
+        said as a sentence — not a roster filed under "never", and not a 0%.
+      -->
+      <p class="exposure__nobody" data-cy="exposure-nobody-yet">
+        {{ 'stats.syllabus.exposure.nobodyYet' | translate }}
+      </p>
+    } @else {
+      <div class="exposure">
+        <section class="exposure__section" data-cy="exposure-lessons">
+          <h3 class="exposure__eyebrow">
+            {{
+              (data.lessons.length === 1
+                ? 'stats.syllabus.exposure.lessonsOne'
+                : 'stats.syllabus.exposure.lessonsOther'
+              ) | translate: { count: data.lessons.length }
+            }}
+          </h3>
+          <ul class="exposure__lessons">
+            @for (lesson of data.lessons; track lesson.id) {
+              <li class="exposure__lesson" [attr.data-cy]="'exposure-lesson-' + lesson.id">
+                <span class="exposure__lesson-day">{{ lessonDay(lesson.held_on) }}</span>
+                <span class="exposure__lesson-name">{{ lesson.name }}</span>
+                <span class="exposure__lesson-count">
+                  {{
+                    (lesson.headcount === 1
+                      ? 'stats.syllabus.exposure.headcountOne'
+                      : 'stats.syllabus.exposure.headcountOther'
+                    ) | translate: { count: lesson.headcount }
+                  }}
+                </span>
+              </li>
+            }
+          </ul>
+        </section>
+
+        @for (group of groups(); track group.state) {
+          <section
+            class="exposure__section"
+            [attr.data-state]="group.state"
+            [attr.data-cy]="'exposure-group-' + group.state"
+          >
+            <h3 class="exposure__eyebrow">
+              <span class="exposure__dot" aria-hidden="true"></span>
+              {{ groupKey(group) | translate: { count: groupCount(group) } }}
+            </h3>
+            <ul class="exposure__people">
+              @for (athlete of group.active; track athlete.id) {
+                <ng-container *ngTemplateOutlet="personRow; context: { $implicit: athlete }" />
+              }
+            </ul>
+            @if (group.inactive.length > 0) {
+              <!--
+                Still in the read, never dropped silently: half a roster
+                missing is the thing an owner does not notice. Below the
+                active ones, and labelled.
+              -->
+              <p class="exposure__inactive" data-cy="exposure-inactive-label">
+                {{ 'stats.syllabus.exposure.inactive' | translate }}
+              </p>
+              <ul class="exposure__people">
+                @for (athlete of group.inactive; track athlete.id) {
+                  <ng-container *ngTemplateOutlet="personRow; context: { $implicit: athlete }" />
+                }
+              </ul>
+            }
+          </section>
+        }
+      </div>
+    }
+  }
+</p-dialog>
+
+<ng-template #personRow let-athlete>
+  <li class="exposure__person" [attr.data-cy]="'exposure-athlete-' + athlete.id">
+    <app-athlete-identity [athlete]="athlete" [linkToDetail]="true" />
+    @if (athlete.last_seen_on) {
+      <span class="exposure__person-when">
+        {{
+          (athlete.exposures === 1
+            ? 'stats.syllabus.exposure.timesOne'
+            : 'stats.syllabus.exposure.timesOther'
+          ) | translate: { count: athlete.exposures }
+        }}
+        · {{ shortDay(athlete.last_seen_on) }}
+      </span>
+    }
+  </li>
+</ng-template>
