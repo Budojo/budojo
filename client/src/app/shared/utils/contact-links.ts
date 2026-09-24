@@ -18,8 +18,12 @@ function digitsOf(part: string | null | undefined): string {
 }
 
 /**
- * Built from the stored E.164 pair (`phone_country_code` with its `+`,
- * `phone_national_number`).
+ * Built from the stored pair: `phone_country_code` with its `+`, and
+ * `phone_national_number` **as the owner typed it**. That is not guaranteed to
+ * be E.164: a national trunk prefix survives validation (`+44` +
+ * `07911123456`), and this function strips only non-digits, so wa.me then gets
+ * `4407911123456`, which WhatsApp rejects. The fix belongs in how the number
+ * is stored, not here (#1867).
  *
  * - `tel:+393331234567` — unspaced, because the scheme does not tolerate
  *   inner whitespace, and with the `+`, because without it the number would
@@ -27,8 +31,10 @@ function digitsOf(part: string | null | undefined): string {
  * - `https://wa.me/393331234567` — WITHOUT the `+`: `wa.me/+39…` is not a
  *   valid path.
  *
- * Neither is meant for `target="_blank"` on its own terms — see the callers:
- * `tel:` goes to the operating system, `wa.me` to the browser.
+ * `tel:` never takes a `target`: it goes to the operating system, and a blank
+ * tab for it leaves an empty window. `wa.me` always takes `target="_blank"`:
+ * it is a web page and must not replace the app, and the desktop shell hands
+ * a new `https` window to the system browser.
  */
 export function contactLinks(
   countryCode: string | null | undefined,
