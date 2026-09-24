@@ -1751,7 +1751,8 @@
         "moveUp": "Sposta su",
         "moveDown": "Sposta giù",
         "place": "{{n}} di {{total}}",
-        "orderHint": "Lo spostamento vale subito; Salva serve per il nome e il tipo."
+        "orderHint": "Lo spostamento vale subito; Salva serve per il nome e per «Si allena».",
+        "close": "Chiudi"
       },
       "confirm": {
         "remove": "Rimuovere {{name}} dal programma?",

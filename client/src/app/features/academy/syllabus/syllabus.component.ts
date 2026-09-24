@@ -2,8 +2,11 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  Injector,
+  afterNextRender,
   computed,
   inject,
+  runInInjectionContext,
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -90,6 +93,7 @@ export class SyllabusComponent {
   private readonly confirmationService = inject(ConfirmationService);
   private readonly messageService = inject(MessageService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly injector = inject(Injector);
 
   protected readonly loading = signal<boolean>(true);
   protected readonly positions = signal<readonly SyllabusTopic[]>([]);
@@ -359,6 +363,7 @@ export class SyllabusComponent {
   }
 
   protected startAddingPosition(): void {
+    this.moved.set(false);
     this.editing.set(null);
     this.addingUnder.set(null);
     this.form.reset({ name: '', kind: 'both' });
@@ -367,6 +372,7 @@ export class SyllabusComponent {
   }
 
   protected startAddingTechnique(position: SyllabusTopic): void {
+    this.moved.set(false);
     this.editing.set(null);
     this.addingUnder.set(position);
     // A technique starts as its position is trained — a submission under
@@ -389,8 +395,15 @@ export class SyllabusComponent {
     });
   }
 
-  /** A move is on its way — the two buttons wait for it (#1661). */
+  /** A move is on its way; a second press waits for it (#1661). */
   protected readonly moving = signal<boolean>(false);
+
+  /**
+   * Something was moved while this dialog was open (#1661). Moves are saved
+   * as they happen, so "Cancel" would promise an undo that does not exist —
+   * the footer says "Close" instead.
+   */
+  protected readonly moved = signal<boolean>(false);
 
   /**
    * Where the topic being edited stands among its siblings (#1661): the
@@ -422,7 +435,11 @@ export class SyllabusComponent {
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
-        next: (siblings) => this.applyOrder(topic, siblings),
+        next: (siblings) => {
+          this.applyOrder(topic, siblings);
+          this.moved.set(true);
+          this.keepFocusAfterMove(direction);
+        },
         error: () =>
           this.toast(
             'error',
@@ -430,6 +447,25 @@ export class SyllabusComponent {
             'academy.syllabus.toast.errorDetail',
           ),
       });
+  }
+
+  /**
+   * At either end the pressed button disables itself, and a focused button
+   * that becomes disabled drops focus to the page. Hand it to the other one,
+   * so a keyboard can keep going the way it can.
+   */
+  private keepFocusAfterMove(direction: 'up' | 'down'): void {
+    const place = this.place();
+    if (place === null) return;
+    const atEnd = direction === 'up' ? place.index === 0 : place.index === place.total - 1;
+    if (!atEnd) return;
+
+    const other = direction === 'up' ? 'syllabus-form-move-down' : 'syllabus-form-move-up';
+    runInInjectionContext(this.injector, () =>
+      afterNextRender(() =>
+        document.querySelector<HTMLButtonElement>(`[data-cy="${other}"] button`)?.focus(),
+      ),
+    );
   }
 
   private siblingsOf(topic: SyllabusTopic): readonly SyllabusTopic[] {
@@ -461,6 +497,7 @@ export class SyllabusComponent {
   }
 
   protected startEditing(topic: SyllabusTopic): void {
+    this.moved.set(false);
     this.editing.set(topic);
     this.addingUnder.set(null);
     this.form.reset({ name: topic.name, kind: topic.kind });

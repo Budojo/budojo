@@ -953,7 +953,10 @@ describe('SyllabusComponent — reordering (#1661)', () => {
     fixture.detectChanges();
     expect(component['place']()).toEqual({ index: 2, total: 3 });
 
-    component['move']('up');
+    // Through the button, so a template wired the wrong way round fails here.
+    (
+      document.querySelector('[data-cy="syllabus-form-move-up"] button') as HTMLButtonElement
+    ).click();
     const req = httpMock.expectOne(`${SYLLABUS_URL}/13/move`);
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual({ direction: 'up' });
@@ -965,6 +968,33 @@ describe('SyllabusComponent — reordering (#1661)', () => {
     expect(childNames(component)).toEqual(['Armbar', 'Triangle', 'Cross collar choke']);
     expect(component['place']()).toEqual({ index: 1, total: 3 });
     expect(component['dialogOpen']()).toBe(true);
+    // The move is saved already, so the footer no longer offers to cancel it.
+    expect(
+      (document.querySelector('[data-cy="syllabus-form-cancel"]') as HTMLElement).textContent,
+    ).toContain('Close');
+  });
+
+  it('hands focus to the other step when the pressed one runs out of room', async () => {
+    const { fixture, component, httpMock } = setup();
+    flushTree(httpMock, [GUARD]);
+    fixture.detectChanges();
+
+    component['startEditing'](CROSS_COLLAR);
+    fixture.detectChanges();
+    const up = document.querySelector(
+      '[data-cy="syllabus-form-move-up"] button',
+    ) as HTMLButtonElement;
+    up.focus();
+    up.click();
+    httpMock.expectOne(`${SYLLABUS_URL}/12/move`).flush({ data: [CROSS_COLLAR, ARMBAR, TRIANGLE] });
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    // First place now: Move up disables itself, and a disabled button drops
+    // focus to the page. The keyboard lands on Move down instead.
+    expect(document.activeElement).toBe(
+      document.querySelector('[data-cy="syllabus-form-move-down"] button'),
+    );
   });
 
   it('greys out the step there is no room for', () => {
@@ -991,8 +1021,13 @@ describe('SyllabusComponent — reordering (#1661)', () => {
     fixture.detectChanges();
 
     component['startEditing'](GUARD);
-    component['move']('down');
-    httpMock.expectOne(`${SYLLABUS_URL}/1/move`).flush({
+    fixture.detectChanges();
+    (
+      document.querySelector('[data-cy="syllabus-form-move-down"] button') as HTMLButtonElement
+    ).click();
+    const req = httpMock.expectOne(`${SYLLABUS_URL}/1/move`);
+    expect(req.request.body).toEqual({ direction: 'down' });
+    req.flush({
       data: [
         { ...K_GUARD, children: undefined },
         { ...GUARD, children: undefined },

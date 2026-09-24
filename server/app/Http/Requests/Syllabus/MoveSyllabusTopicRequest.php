@@ -9,6 +9,7 @@ use App\Enums\MoveDirection;
 use App\Http\Requests\Concerns\AuthorizesAcademyCapability;
 use App\Models\SyllabusTopic;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Validation\Rule;
 
 /** One step up or down the programme (#1661) — the same right as editing it. */
@@ -39,5 +40,13 @@ class MoveSyllabusTopicRequest extends FormRequest
     public function direction(): MoveDirection
     {
         return MoveDirection::from($this->string('direction')->toString());
+    }
+
+    /** The same 403 body as every other syllabus write. */
+    protected function failedAuthorization(): void
+    {
+        throw new HttpResponseException(
+            response()->json(['message' => 'Forbidden.'], 403),
+        );
     }
 }

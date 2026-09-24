@@ -115,9 +115,26 @@ it('moves among its own siblings only', function (): void {
         ->and($other->fresh()->sort_order)->toBe(0);
 });
 
+it("moves a position among this academy's positions, not another's", function (): void {
+    // Positions have no parent, so `parent_id` alone would gather every
+    // academy's positions into one list and renumber theirs too.
+    $other = userWithAcademy()->academy;
+    $theirFirst = reorderPosition($other, 'Aaa theirs', 0);
+    $theirSecond = reorderPosition($other, 'Zzz theirs', 5);
+    $guard = reorderPosition($this->academy, 'Closed guard', 0);
+    reorderPosition($this->academy, 'Mount', 1);
+
+    $ids = reorderMove($this, $guard, 'down')->assertOk()->json('data.*.id');
+
+    expect($ids)->not->toContain($theirFirst->id)
+        ->and($ids)->not->toContain($theirSecond->id)
+        ->and($theirFirst->fresh()->sort_order)->toBe(0)
+        ->and($theirSecond->fresh()->sort_order)->toBe(5);
+});
+
 it("refuses another academy's topic, and a direction that is not up or down", function (): void {
     $theirs = reorderPosition(userWithAcademy()->academy, 'Theirs');
-    reorderMove($this, $theirs, 'up')->assertForbidden();
+    reorderMove($this, $theirs, 'up')->assertForbidden()->assertExactJson(['message' => 'Forbidden.']);
 
     $mine = reorderPosition($this->academy, 'Mine');
     reorderMove($this, $mine, 'sideways')

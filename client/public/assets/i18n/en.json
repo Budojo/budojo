@@ -1751,7 +1751,8 @@
         "moveUp": "Move up",
         "moveDown": "Move down",
         "place": "{{n}} of {{total}}",
-        "orderHint": "Moves apply straight away; Save is for the name and the type."
+        "orderHint": "Moves apply straight away; Save is for the name and \"Trained in\".",
+        "close": "Close"
       },
       "confirm": {
         "remove": "Remove {{name}} from the programme?",

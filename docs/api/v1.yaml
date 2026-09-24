@@ -3373,7 +3373,10 @@ paths:
                   enum: [up, down]
       responses:
         '200':
-          description: The siblings, in their new order
+          description: |
+            The siblings, in their new order. Positions come **without**
+            `children` here: the answer is about the order, and a client
+            re-sorting its tree should keep the techniques it already has.
           content:
             application/json:
               schema:

@@ -359,7 +359,7 @@
             [label]="'academy.syllabus.form.moveUp' | translate"
             severity="secondary"
             [outlined]="true"
-            [disabled]="p.index === 0 || moving()"
+            [disabled]="p.index === 0"
             (onClick)="move('up')"
             data-cy="syllabus-form-move-up"
           />
@@ -369,7 +369,7 @@
             [label]="'academy.syllabus.form.moveDown' | translate"
             severity="secondary"
             [outlined]="true"
-            [disabled]="p.index === p.total - 1 || moving()"
+            [disabled]="p.index === p.total - 1"
             (onClick)="move('down')"
             data-cy="syllabus-form-move-down"
           />
@@ -401,7 +401,9 @@
       <span class="topic-form__spacer"></span>
       <p-button
         type="button"
-        [label]="'academy.syllabus.form.cancel' | translate"
+        [label]="
+          (moved() ? 'academy.syllabus.form.close' : 'academy.syllabus.form.cancel') | translate
+        "
         severity="secondary"
         [text]="true"
         [fluid]="true"
