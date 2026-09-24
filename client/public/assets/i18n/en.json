@@ -646,7 +646,7 @@
       },
       "unpaid-badge": {
         "question": "What does the “Unpaid” chip mean?",
-        "answer": "That this athlete has not paid the current month yet. From the 16th onward an Unpaid panel also appears above the list with everyone to chase: before the 16th most people pay in the ordinary start-of-month window, and pushing earlier would be noise. Inactive and deleted athletes never appear in it."
+        "answer": "That nothing pays for this athlete's current month: no fee payment covers it, and they hold no carnet with entries left. To see everyone to chase, press the Payment button above the list until it reads Unpaid. Carnet holders, inactive athletes and your own row never appear there."
       },
       "carnets": {
         "question": "How do I handle class passes?",
@@ -2678,16 +2678,6 @@
     "beltBadge": {
       "stripeOne": "{{count}} stripe",
       "stripeMany": "{{count}} stripes"
-    },
-    "unpaidWidget": {
-      "eyebrow": "Unpaid",
-      "error": "Couldn't check",
-      "allPaid": "Everyone paid",
-      "allPaidSubtitle": "— nice month",
-      "countOne": "athlete still owes",
-      "countMany": "athletes still owe",
-      "viewAll": "View all {{count}} →",
-      "viewList": "View on the athletes list →"
     },
     "filterSheet": {
       "filters": "Filters",

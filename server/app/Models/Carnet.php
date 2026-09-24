@@ -79,6 +79,27 @@ class Carnet extends Model
     }
 
     /**
+     * Carnets spendable on `$date`, decided in SQL (#1722).
+     *
+     * `CarnetAvailability::isActiveOn` is the rule; this is the same rule for
+     * a caller that has to filter a query — "who owes this month" — instead of
+     * inspecting rows it already holds. One rule, two dialects, the precedent
+     * being `AthletePayment::scopeCovering`: `OwingThisMonthTest` holds them
+     * to the same answer over both window edges and the balance, so a change
+     * to one that forgets the other fails there rather than on the roster.
+     *
+     * @param  Builder<$this>  $query
+     * @return Builder<$this>
+     */
+    public function scopeSpendableOn(Builder $query, CarbonInterface $date): Builder
+    {
+        return $query
+            ->whereDate('valid_from', '<=', $date->toDateString())
+            ->whereDate('expires_at', '>=', $date->toDateString())
+            ->whereRaw('total_entries > (select count(*) from carnet_entries where carnet_entries.carnet_id = carnets.id)');
+    }
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array

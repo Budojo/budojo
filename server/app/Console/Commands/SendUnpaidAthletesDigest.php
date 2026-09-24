@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\Actions\Notification\DeliverOwnerDigestAction;
-use App\Enums\AthleteStatus;
 use App\Mail\UnpaidAthletesDigestMail;
 use App\Models\Academy;
 use App\Models\Athlete;
@@ -21,11 +20,9 @@ use Illuminate\Support\Facades\DB;
  * month. Scheduled at 09:00 Europe/Rome on day 16 from
  * `routes/console.php`. M5 PR-E.
  *
- * The 16th is when the dashboard's `unpaid-this-month-widget` starts
- * surfacing — pre-15 a "not paid yet" state is normal because most
- * customers settle in the first half of the month. Pushing the
- * widget signal out via email on day 16 + matches when the
- * instructor actually wants the chase-list.
+ * The 16th because pre-15 a "not paid yet" state is normal: most
+ * customers settle in the first half of the month, and day 16 is when
+ * the instructor actually wants the chase-list.
  *
  * **De-dup** via the `notification_log` table introduced in PR-D —
  * unique key (academy_id, notification_type, sent_for_date) is the
@@ -128,9 +125,7 @@ class SendUnpaidAthletesDigest extends Command
             // (#404 follow-up). The "unpaid this month" concept only
             // makes sense once a fee is configured — a fee-less
             // academy treats payments as off-platform / cash, and a
-            // monthly chase email there is noise. Mirror of the
-            // dashboard's `unpaid-this-month-widget` which hides
-            // entirely when no fee applies.
+            // monthly chase email there is noise.
             //
             // "Has a fee" means a flat fee OR a price list since #1381:
             // an academy that prices only by tier leaves
@@ -232,34 +227,20 @@ class SendUnpaidAthletesDigest extends Command
     }
 
     /**
-     * Active athletes in the given academy who have no AthletePayment
-     * row for ($year, $month). Suspended / Inactive athletes are
-     * excluded — they aren't expected to pay so they shouldn't
-     * surface in the chase-list.
+     * The athletes who owe the month, by the roster's own rule
+     * (`Athlete::scopeOwing`, #1722): a carnet holder is not chased, and
+     * neither is the owner's own row or an athlete charged no fee.
+     *
+     * A carnet is judged spendable today, as the roster's chip judges it —
+     * a backfill for a past month still reads today's carnets.
      *
      * @return \Illuminate\Database\Eloquent\Collection<int, Athlete>
      */
     private function unpaidActiveAthletesFor(Academy $academy, int $year, int $month): \Illuminate\Database\Eloquent\Collection
     {
-        // Bound to a variable rather than written inline: `whereDoesntHave`
-        // declares its callback over the base `Builder`, so an inline closure
-        // hides `AthletePayment`'s scopes from static analysis. Same shape
-        // `AthleteController::index` uses for the `?paid` filter.
-        $covering = fn ($q) => $q->covering($year, $month);
-
         return Athlete::query()
             ->where('academy_id', $academy->id)
-            ->where('status', AthleteStatus::Active)
-            // Owner-as-athlete rows (#748) are excluded from the digest
-            // — the owner isn't billed, so listing them as "unpaid"
-            // every month would be noise. The `(academy_id, is_self)`
-            // composite index keeps the scan tight.
-            ->where('is_self', false)
-            // Covered by any payment whose period contains the month, not
-            // just one that starts in it (#1382) — otherwise the owner gets
-            // chased about every athlete on a quarterly for two months in
-            // three.
-            ->whereDoesntHave('payments', $covering)
+            ->owing($year, $month, Carbon::today())
             ->orderBy('last_name_sort', 'asc')
             ->orderBy('first_name_sort', 'asc')
             ->orderBy('id')

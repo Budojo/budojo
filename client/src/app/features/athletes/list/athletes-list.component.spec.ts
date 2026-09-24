@@ -421,11 +421,10 @@ describe('AthletesListComponent', () => {
     });
 
     it('hydrates selectedPaid from the `paid` query param on first render (#803)', async () => {
-      // Bug #803: tapping "Vedi tutti i N" on the unpaid widget navigates
-      // to /dashboard/athletes?paid=no, but since the user was already on
-      // that route, ngOnInit didn't re-fire and there was no queryParams
-      // subscription, so the filter never applied. This test pins the
-      // queryParamMap → selectedPaid → load() hydration.
+      // Bug #803: a link to /dashboard/athletes?paid=no landed on the
+      // route the user was already on, ngOnInit didn't re-fire and there
+      // was no queryParams subscription, so the filter never applied. This
+      // test pins the queryParamMap → selectedPaid → load() hydration.
       TestBed.inject(AcademyService).academy.set({ ...ACADEMY_BASE, monthly_fee_cents: 9500 });
       await TestBed.inject(Router).navigate([], { queryParams: { paid: 'no' } });
 

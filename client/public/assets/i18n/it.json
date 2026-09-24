@@ -646,7 +646,7 @@
       },
       "unpaid-badge": {
         "question": "Cosa vuol dire il chip «Non pagato»?",
-        "answer": "Che quell'atleta non ha ancora versato la quota del mese in corso. Dal 16 in poi compare anche, sopra la lista, il riquadro Non pagati con tutti quelli da sollecitare: prima del 16 la maggior parte paga nella normale finestra di inizio mese, e insistere sarebbe solo rumore. Inattivi e cestinati non finiscono mai in quella lista."
+        "answer": "Che nulla copre il mese in corso di quell'atleta: nessuna quota lo paga e non ha un carnet con ingressi residui. Per vedere tutti quelli da sollecitare, premi il pulsante Pagamento sopra la lista finché non dice Non pagato. Chi ha un carnet, gli inattivi e la tua riga non ci finiscono mai."
       },
       "carnets": {
         "question": "Come gestisco i carnet a ingressi?",
@@ -2678,16 +2678,6 @@
     "beltBadge": {
       "stripeOne": "{{count}} grado",
       "stripeMany": "{{count}} gradi"
-    },
-    "unpaidWidget": {
-      "eyebrow": "Non pagati",
-      "error": "Impossibile verificare",
-      "allPaid": "Hanno pagato tutti",
-      "allPaidSubtitle": "— bel mese",
-      "countOne": "atleta deve ancora pagare",
-      "countMany": "atleti devono ancora pagare",
-      "viewAll": "Vedi tutti i {{count}} →",
-      "viewList": "Vedi nella lista atleti →"
     },
     "filterSheet": {
       "filters": "Filtri",

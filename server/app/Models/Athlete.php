@@ -9,9 +9,11 @@ use App\Enums\AthleteStatus;
 use App\Enums\Belt;
 use App\Observers\AthleteObserver;
 use App\Observers\Audit\AthleteAuditObserver;
+use Carbon\CarbonInterface;
 use Database\Factories\AthleteFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -153,6 +155,60 @@ class Athlete extends Model implements HasAddress
     public function carnets(): HasMany
     {
         return $this->hasMany(Carnet::class);
+    }
+
+    /**
+     * Athletes who owe the month (#1722): the roster's "Unpaid" chip, as a
+     * query.
+     *
+     * Three readers ask it — `?paid=no`, the owner digest, the athlete overdue
+     * push — and each used to ask only whether a payment row covered the
+     * month. The chip has known better since #1402: a spendable carnet pays
+     * for the month too (`MonthCoverage`), and a row on which no payment is
+     * expected at all is not a debt. So an athlete owes when they are:
+     *
+     * - **active** (#805) — a suspended or inactive athlete is not asked to pay;
+     * - **not the owner** training in their own academy (#748);
+     * - **charged a fee** — on a tier, or at an academy with a flat fee; the
+     *   SQL side of `MonthlyFee::forAthlete()` being non-null (#1381);
+     * - **not covered** by a payment or a carnet spendable on `$today`.
+     *
+     * @param  Builder<$this>  $query
+     * @return Builder<$this>
+     */
+    public function scopeOwing(Builder $query, int $year, int $month, CarbonInterface $today): Builder
+    {
+        $payingAFee = fn (Builder $q) => $q
+            ->whereNotNull('fee_tier_id')
+            ->orWhereHas('academy', fn (Builder $academy) => $academy->whereNotNull('monthly_fee_cents'));
+
+        return $query
+            ->where('status', AthleteStatus::Active)
+            ->where('is_self', false)
+            ->where($payingAFee)
+            ->whereNot(fn (Builder $q) => $q->coveredFor($year, $month, $today));
+    }
+
+    /**
+     * Athletes whose month something pays for: a payment whose period covers
+     * it, or a carnet spendable on `$today` — every chip on the roster but
+     * "Unpaid" (#1722). Status is deliberately not asked (#805): an athlete
+     * who paid and then went inactive has still paid.
+     *
+     * @param  Builder<$this>  $query
+     * @return Builder<$this>
+     */
+    public function scopeCoveredFor(Builder $query, int $year, int $month, CarbonInterface $today): Builder
+    {
+        // Bound to variables rather than written inline: `whereHas` declares
+        // its callback over the base `Builder`, which hides the related
+        // model's scopes from static analysis.
+        $covering = fn ($q) => $q->covering($year, $month);
+        $spendable = fn ($q) => $q->spendableOn($today);
+
+        return $query->where(fn (Builder $q) => $q
+            ->whereHas('payments', $covering)
+            ->orWhereHas('carnets', $spendable));
     }
 
     /**

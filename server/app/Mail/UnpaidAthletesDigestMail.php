@@ -24,10 +24,8 @@ use Illuminate\Support\Carbon;
  * every active athlete who hasn't yet been marked paid for the
  * current month. M5 PR-E.
  *
- * The 16th is the moment the dashboard's `unpaid-this-month-widget`
- * starts surfacing — pre-15th, "not paid yet" is normal because most
- * customers pay around the 1st-15th window. Pushing the widget
- * signal out via email on day 16 + matches when the instructor
+ * The 16th because pre-15th "not paid yet" is normal: most customers
+ * pay around the 1st-15th window, and day 16 is when the instructor
  * actually wants the chase-list.
  *
  * **Scope**: only athletes whose `status === 'active'`. Suspended

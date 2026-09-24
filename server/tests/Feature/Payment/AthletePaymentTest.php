@@ -226,9 +226,9 @@ it('filters athletes by ?paid=no — returns only those NOT paid for the current
 it('?paid=no excludes inactive athletes — payment not expected from non-active rows (#805)', function (): void {
     $active = Athlete::factory()->for($this->user->academy)->create(['status' => 'active']);
     $inactive = Athlete::factory()->for($this->user->academy)->create(['status' => 'inactive']);
-    // None have current-month payments — under the pre-#805 filter all three
-    // would surface as "unpaid" and inflate the unpaid-this-month widget's
-    // count + name list with rows the academy isn't expecting payment from.
+    // Neither has a current-month payment — under the pre-#805 filter both
+    // would surface as "unpaid", with a row the academy isn't expecting
+    // payment from.
 
     $ids = collect($this->actingAs($this->user)
         ->getJson('/api/v1/athletes?paid=no')
