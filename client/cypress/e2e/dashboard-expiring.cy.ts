@@ -356,8 +356,21 @@ MOBILE_VIEWPORTS.forEach(({ name, width, height }) => {
       cy.get('[data-cy="expiring-card-download-1"]').should('exist');
       cy.get('[data-cy="expiring-card-download-2"]').should('exist');
 
-      // Tapping the athlete name in a card routes to that athlete's
-      // documents tab (same target as the desktop link).
+      // The name stretches over the whole card (#1851), and the download
+      // button sits above that overlay. Cypress refuses a click on an element
+      // another one covers, so this click passing is the proof: it downloads
+      // and the page stays where it was.
+      cy.intercept('GET', '/api/v1/documents/1/download', {
+        statusCode: 200,
+        body: 'pdf',
+        headers: { 'content-type': 'application/pdf' },
+      }).as('download');
+      cy.get('[data-cy="expiring-card-download-1"] button').click();
+      cy.wait('@download');
+      cy.location('pathname').should('eq', '/dashboard/documents/expiring');
+
+      // A tap anywhere else on the card opens the athlete's documents tab
+      // (the same target as the desktop link).
       cy.intercept('GET', '/api/v1/athletes/42', {
         statusCode: 200,
         body: {
@@ -383,8 +396,8 @@ MOBILE_VIEWPORTS.forEach(({ name, width, height }) => {
         body: { data: [] },
       }).as('getDocs');
 
-      cy.get('[data-cy="expiring-card-athlete-1"] [data-cy="athlete-name-link"]').click();
-      cy.url().should('include', '/dashboard/athletes/42/documents');
+      cy.get('[data-cy="expiring-card-1"]').click('bottom');
+      cy.location('pathname').should('eq', '/dashboard/athletes/42/documents');
     });
   });
 });

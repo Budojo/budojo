@@ -194,6 +194,11 @@ describe('LeaderboardCardComponent (#962)', () => {
     fixture.detectChanges();
 
     const root = fixture.nativeElement as HTMLElement;
+    // Any row with an identity gives the whole list the spine gutter, so the
+    // ranks stay in one column.
+    expect(root.querySelector('[data-cy="leaderboard-list"]')?.classList).toContain(
+      'leaderboard-card__list--identities',
+    );
     const owner = root.querySelector('[data-cy="leaderboard-row-4"]');
     expect(owner?.querySelector('[data-cy="belt-spine"]')?.getAttribute('aria-label')).toContain(
       'Blue',
@@ -206,5 +211,17 @@ describe('LeaderboardCardComponent (#962)', () => {
     const portal = root.querySelector('[data-cy="leaderboard-row-5"]');
     expect(portal?.querySelector('[data-cy="belt-spine"]')).toBeNull();
     expect(portal?.textContent).toContain('Luca B.');
+  });
+
+  it('keeps the spine gutter off a card that draws no identity, as on the portal (#1851)', async () => {
+    // The gutter exists to clear the spine. The portal's rows carry no
+    // identity, so they must look exactly as they did before.
+    const { fixture } = setup();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const list = (fixture.nativeElement as HTMLElement).querySelector(
+      '[data-cy="leaderboard-list"]',
+    );
+    expect(list?.classList).not.toContain('leaderboard-card__list--identities');
   });
 });

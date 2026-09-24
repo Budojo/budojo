@@ -499,6 +499,18 @@ const EXPIRING = {
       }),
       athlete: identityOf(7),
     },
+    // One of the academy's own papers (#1743): no athlete, so no identity and
+    // no spine. Here so the card's inset is shot beside the athletes' (#1851).
+    document({
+      id: 47,
+      athlete_id: null,
+      academy_id: 1,
+      type: 'insurance',
+      original_name: 'polizza-rc-2026.pdf',
+      issued_at: '2025-10-12',
+      // Inside the 30-day window the endpoint uses, or it would not be listed.
+      expires_at: '2026-10-12',
+    }),
   ],
   missing_medical_certificate: [identityOf(2), identityOf(8)],
 };

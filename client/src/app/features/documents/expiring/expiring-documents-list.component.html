@@ -104,16 +104,23 @@
                       {{ 'documents.expiringList.academyOwned' | translate }}
                     </span>
                   } @else if (doc.athlete; as person) {
-                    <!-- The person as every list draws them (#1851). -->
+                    <!--
+                      The person as every list draws them (#1851). The name
+                      stretches over the card, so the whole card opens the
+                      athlete's documents; the download button sits above that
+                      overlay and stays its own target.
+                    -->
                     <app-athlete-identity
                       class="expiring-card__identity"
                       [athlete]="person"
                       [linkToDetail]="true"
                       detailTab="documents"
+                      [stretchLink]="true"
                       [attr.data-cy]="'expiring-card-athlete-' + doc.id"
                     />
                   }
                   <p-button
+                    class="expiring-card__download"
                     icon="pi pi-download"
                     severity="secondary"
                     [text]="true"

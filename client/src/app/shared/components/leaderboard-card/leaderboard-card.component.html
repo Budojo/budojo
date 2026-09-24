@@ -25,7 +25,11 @@
       </p>
     }
     @case ('ok') {
-      <ol class="leaderboard-card__list" data-cy="leaderboard-list">
+      <ol
+        class="leaderboard-card__list"
+        [class.leaderboard-card__list--identities]="drawsIdentities()"
+        data-cy="leaderboard-list"
+      >
         @for (row of rows(); track row.athlete_id) {
           <li
             class="leaderboard-card__row"

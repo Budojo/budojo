@@ -41,6 +41,13 @@ export class LeaderboardCardComponent {
 
   protected readonly status = signal<'loading' | 'ok' | 'error' | 'empty'>('loading');
   protected readonly rows = signal<readonly LeaderboardRow[]>([]);
+  /**
+   * Whether any row draws the athlete's identity (#1851): the owner's card
+   * does, the portal's never does. Only then does the list make room for the
+   * belt spine, so the portal's card is exactly what it was.
+   */
+  protected readonly drawsIdentities = computed(() => this.rows().some((row) => row.athlete));
+
   /** The API's `meta.month`, an ISO `YYYY-MM`. */
   private readonly monthIso = signal<string>('');
 
