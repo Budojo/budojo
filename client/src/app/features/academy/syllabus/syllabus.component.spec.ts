@@ -1206,6 +1206,82 @@ describe('SyllabusComponent — the programme by grade (#1861)', () => {
     expect(el.querySelector('[data-cy="syllabus-belt-summary"]')).toBeNull();
   });
 
+  it('lets go of the belt filter once the last graded topic goes back to everyone', () => {
+    const { fixture, component, httpMock } = graded();
+    const el: HTMLElement = fixture.nativeElement;
+
+    component['setBeltFilter']('white');
+    fixture.detectChanges();
+    expect(el.querySelector('[data-cy="syllabus-position-3"]')).toBeNull();
+
+    // Every belt cleared, one save at a time — here the reload after the last.
+    const everyone = (t: SyllabusTopic): SyllabusTopic => ({ ...t, from_belt: null });
+    component['startEditing'](TRIANGLE);
+    component['form'].patchValue({ fromBelt: null });
+    component['submit']();
+    httpMock.expectOne(`${SYLLABUS_URL}/23`).flush({ data: everyone(TRIANGLE) });
+    flushTree(httpMock, [
+      { ...everyone(GUARD), children: GUARD.children?.map(everyone) },
+      { ...everyone(LEG_LOCKS), children: LEG_LOCKS.children?.map(everyone) },
+    ]);
+    flushAcademy(httpMock, 4);
+    fixture.detectChanges();
+
+    // The select is gone, and so is what it was narrowing: the whole tree,
+    // no summary line promising a filter nobody can see.
+    expect(el.querySelector('[data-cy="syllabus-belt-filter"]')).toBeNull();
+    expect(el.querySelector('[data-cy="syllabus-position-3"]')).not.toBeNull();
+    expect(el.querySelector('[data-cy="syllabus-belt-summary"]')).toBeNull();
+    expect(component['beltFilter']()).toBeNull();
+  });
+
+  it("keeps a position's hidden kids' belt in the new technique's options", () => {
+    const KIDS = topic({ id: 4, name: 'Kids games', from_belt: 'grey', children: [] });
+    const { component, httpMock } = setup();
+    useLadder('bjj', { trains_kids: false });
+    flushTree(httpMock, [KIDS]);
+
+    // Graded while the academy trained kids: the new technique starts on
+    // grey, so grey must be there to show — not "for everyone" over a grey
+    // that Save would send anyway.
+    component['startAddingTechnique'](KIDS);
+    expect(component['form'].getRawValue().fromBelt).toBe('grey');
+    expect(component['beltOptions']().map((o) => o.value)).toContain('grey');
+  });
+
+  it('says which filter emptied the tree, and how to get it back', () => {
+    const { fixture, component } = graded();
+    const el: HTMLElement = fixture.nativeElement;
+    const line = () => el.querySelector('[role="status"]')?.textContent?.trim();
+
+    // Both on, both keeping something: the way back names both.
+    component['setQuery']('triangle');
+    component['setBeltFilter']('blue');
+    fixture.detectChanges();
+    expect(el.querySelector('[data-cy="syllabus-search-summary"]')).not.toBeNull();
+    expect(line()).toBe(
+      '1 technique across 1 position, up to the Blue belt. Clear the search and the belt to get the whole tree back.',
+    );
+
+    // The search matched, the belt emptied it: not "nothing matches".
+    component['setQuery']('heel');
+    fixture.detectChanges();
+    expect(el.querySelector('[data-cy="syllabus-no-results"]')).not.toBeNull();
+    expect(line()).toBe('"heel" matches, but none of it is expected up to the Blue belt.');
+
+    // The search matched nothing at all: the belt is beside the point.
+    component['setQuery']('berimbolo');
+    fixture.detectChanges();
+    expect(line()).toBe('Nothing in the programme matches "berimbolo".');
+
+    // The belt on its own, with nothing at or below it.
+    component['setQuery']('');
+    component['positions'].set([LEG_LOCKS]);
+    component['setBeltFilter']('white');
+    fixture.detectChanges();
+    expect(line()).toBe('Nothing in the programme is expected up to the White belt yet.');
+  });
+
   it('offers no belt filter while nothing in the programme names a belt', () => {
     const { fixture, httpMock } = setup();
     useLadder('bjj');
