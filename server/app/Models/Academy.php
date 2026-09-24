@@ -25,6 +25,7 @@ use Illuminate\Support\Carbon;
  * @property int                 $user_id
  * @property string              $name
  * @property MartialArt          $martial_art            What the academy teaches (#1800). Its ladder and programmes come from App\Support\MartialArt\MartialArtProfile.
+ * @property bool                $trains_kids            Whether it has a kids' programme (#1651). Trims the SPA's belt pickers and filters to adult grades when false; not enforced on the server.
  * @property string|null         $phone_country_code     E.164 prefix incl. `+`, e.g. `+39`. Pair with `phone_national_number` (#161). Both columns null OR both filled.
  * @property string|null         $phone_national_number  Unformatted national digits, e.g. `3331234567`.
  * @property string|null         $website               Full URL incl. scheme, e.g. `https://gracie-barra.com` (#162).
@@ -40,7 +41,7 @@ use Illuminate\Support\Carbon;
  * @property CarnetEntryUnit     $carnet_entry_unit      What one carnet entry pays for (#1576): a lesson, or the whole training day.
  * @property list<int>|null      $training_days  Carbon dayOfWeek ints (0=Sun..6=Sat); null = "not configured"
  */
-#[Fillable(['user_id', 'name', 'phone_country_code', 'phone_national_number', 'website', 'facebook', 'instagram', 'slug', 'logo_path', 'monthly_fee_cents', 'carnet_price_cents', 'carnet_entries', 'carnet_entry_unit', 'training_days', 'season_start_month', 'billing_from', 'martial_art'])]
+#[Fillable(['user_id', 'name', 'phone_country_code', 'phone_national_number', 'website', 'facebook', 'instagram', 'slug', 'logo_path', 'monthly_fee_cents', 'carnet_price_cents', 'carnet_entries', 'carnet_entry_unit', 'training_days', 'season_start_month', 'billing_from', 'martial_art', 'trains_kids'])]
 #[ObservedBy([AcademyObserver::class, AcademyAuditObserver::class])]
 class Academy extends Model implements HasAddress
 {
@@ -60,6 +61,7 @@ class Academy extends Model implements HasAddress
     protected $attributes = [
         'carnet_entry_unit' => 'lesson',
         'martial_art' => 'bjj',
+        'trains_kids' => false,
     ];
 
     /** @return BelongsTo<User, $this> */
@@ -278,6 +280,7 @@ class Academy extends Model implements HasAddress
             'billing_from' => 'date',
             'carnet_entry_unit' => CarnetEntryUnit::class,
             'martial_art' => MartialArt::class,
+            'trains_kids' => 'boolean',
         ];
     }
 }

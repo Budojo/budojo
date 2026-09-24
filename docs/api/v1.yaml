@@ -7856,6 +7856,12 @@ components:
           $ref: '#/components/schemas/TrainingDays'
         season_start_month:
           $ref: '#/components/schemas/SeasonStartMonth'
+        trains_kids:
+          type: boolean
+          description: |
+            Whether the academy has a kids' programme (#1651). The SPA offers
+            the youth grades of the ladder (`grades[].kids`) only when it is
+            `true`; the server takes a youth belt either way.
         billing_from:
           type: string
           format: date
@@ -7950,6 +7956,7 @@ components:
           carnet_entry_unit,
           training_days,
           season_start_month,
+          trains_kids,
           season_start,
           season_label,
           martial_art,
@@ -8077,6 +8084,13 @@ components:
           $ref: '#/components/schemas/TrainingDays'
         season_start_month:
           $ref: '#/components/schemas/SeasonStartMonth'
+        trains_kids:
+          type: boolean
+          description: |
+            Whether the academy has a kids' programme (#1651). `false` on a
+            new academy. When `false` the SPA trims its belt pickers and
+            filters to the grades with `kids: false`, but keeps an athlete's
+            own belt; `grades` still lists every grade so any belt renders.
         billing_from:
           type: string
           format: date

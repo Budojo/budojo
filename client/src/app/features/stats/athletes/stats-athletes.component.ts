@@ -60,10 +60,26 @@ export class StatsAthletesComponent {
     ];
   });
 
-  /** Bands filtered to the selected scope ('all' passes everything through). */
+  /**
+   * Whether the Kids / Adults toggle means anything here (#1651). An academy
+   * with no kids' programme has one scope, and a toggle between an empty half
+   * and everything is noise.
+   */
+  protected readonly trainsKids = computed(
+    () => this.academyService.academy()?.trains_kids ?? true,
+  );
+
+  /**
+   * Bands filtered to the selected scope ('all' passes everything through).
+   * With no kids' programme the kids' divisions go, unless someone is in one:
+   * a teenager on the roster is still counted where they belong.
+   */
   protected readonly visibleBands = computed(() => {
-    const s = this.scope();
     const bands = this.payload().bands;
+    if (!this.trainsKids()) {
+      return bands.filter((b) => b.category === 'adults' || b.count > 0);
+    }
+    const s = this.scope();
     return s === 'all' ? bands : bands.filter((b) => b.category === s);
   });
 

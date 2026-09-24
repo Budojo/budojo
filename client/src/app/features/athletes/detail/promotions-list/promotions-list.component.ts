@@ -193,10 +193,15 @@ export class PromotionsListComponent implements OnInit {
     );
   }
 
-  /** The academy's ladder, in rank order — for `to_belt` / `belt_at_event` (#1801). */
+  /**
+   * The academy's whole ladder, in rank order — for `to_belt` /
+   * `belt_at_event` (#1801). The whole of it even where the academy does not
+   * train kids (#1651): this dialog transcribes history, and an adult's can
+   * start on a youth belt.
+   */
   protected readonly beltOptions = computed<SelectOption<Belt>[]>(() => {
     this.languageService.currentLang();
-    return this.beltLadder.beltOptions();
+    return this.beltLadder.allBeltOptions();
   });
 
   /** Same list plus a leading "first belt" option — `from_belt` alone can be empty. */

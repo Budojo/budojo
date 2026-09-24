@@ -196,3 +196,14 @@
   font-weight: 500;
   color: var(--p-text-color);
 }
+
+// The kids switch (#1651): the whole row is the hit area, text included, and
+// at least 48px tall on a phone.
+.form__switch {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-height: 3rem;
+  cursor: pointer;
+  color: var(--p-text-color);
+}

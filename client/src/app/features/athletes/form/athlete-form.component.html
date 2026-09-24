@@ -118,6 +118,7 @@
               [label]="'athletes.form.label.belt' | translate"
               [required]="true"
               controlId="belt"
+              [hint]="kidsBeltsHidden() ? ('athletes.form.hint.kidsBeltsHidden' | translate) : null"
             >
               <p-select
                 inputId="belt"

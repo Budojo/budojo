@@ -1579,6 +1579,11 @@
       "martialArt": {
         "label": "Martial art",
         "locked": "Fixed now: the academy already has athletes, a timetable, lessons or a programme."
+      },
+      "trainsKids": {
+        "label": "Kids",
+        "switch": "We also train kids",
+        "hint": "When off, the belt lists leave out the kids' belts and the stats drop the Kids / Adults split. Athletes already on a kids' belt keep it."
       }
     },
     "feeTiers": {
@@ -2469,7 +2474,8 @@
       },
       "hint": {
         "address": "Leave every field empty to keep the athlete without an address on file.",
-        "feeTier": "Which monthly fee they pay. Leave empty for the academy's standard fee."
+        "feeTier": "Which monthly fee they pay. Leave empty for the academy's standard fee.",
+        "kidsBeltsHidden": "Kids' belts are hidden: turn them on in Academy → Edit."
       },
       "button": {
         "cancel": "Cancel",
