@@ -2001,7 +2001,8 @@
         "fullName": "Full name",
         "payment": "Payment",
         "attendance": "Days",
-        "attendanceLines": "month / season"
+        "attendanceLines": "month / season",
+        "lastSeen": "Last seen"
       },
       "tooltip": {
         "edit": "Edit",
@@ -2023,7 +2024,10 @@
         "attendanceSortMonthDesc": "Sorted by days attended this month (most first). Click to cycle.",
         "attendanceSortMonthAsc": "Sorted by days attended this month (fewest first). Click to cycle.",
         "attendanceSortTotalDesc": "Sorted by days attended this season (most first). Click to cycle.",
-        "attendanceSortTotalAsc": "Sorted by days attended this season (fewest first). Click to cycle."
+        "attendanceSortTotalAsc": "Sorted by days attended this season (fewest first). Click to cycle.",
+        "lastSeenSortInitial": "Sort by last presence. Click to cycle.",
+        "lastSeenSortAsc": "Sorted by last presence (longest absent first). Click to cycle.",
+        "lastSeenSortDesc": "Sorted by last presence (most recent first). Click to cycle."
       },
       "social": {
         "facebookLabel": "Open Facebook profile",
@@ -2114,6 +2118,12 @@
         "tooltipMonth": "This month",
         "tooltipTotal": "This season ({{season}})",
         "tooltipTotalJoined": "This season ({{season}}), counted from {{joined}} when they joined"
+      },
+      "lastSeen": {
+        "never": "never",
+        "inlineLabel": "Last seen:",
+        "aria": "Last trained {{when}}",
+        "neverAria": "Never trained"
       },
       "alerts": {
         "button": "Alerts",
@@ -2252,6 +2262,8 @@
       "loading": "Loading athlete…",
       "loadError": "Could not load this athlete.",
       "joinedLabel": "Since {{date}}",
+      "lastSeen": "Last trained {{when}}",
+      "lastSeenNever": "No sessions yet",
       "tabs": {
         "documents": "Documents",
         "attendance": "Attendance",
@@ -2891,6 +2903,27 @@
         "title": "Coverage couldn't be loaded",
         "hint": "Something went wrong on our side. Try again.",
         "retry": "Try again"
+      },
+      "exposure": {
+        "title": "Who has seen it",
+        "openPrefix": "Who has seen it:",
+        "lessonsOne": "Taught in {{count}} lesson this season",
+        "lessonsOther": "Taught in {{count}} lessons this season",
+        "headcountOne": "{{count}} person",
+        "headcountOther": "{{count}} people",
+        "seenOne": "{{count}} at two or more",
+        "seenOther": "{{count}} at two or more",
+        "thinOne": "{{count}} at one",
+        "thinOther": "{{count}} at one",
+        "neverOne": "{{count}} never there",
+        "neverOther": "{{count}} never there",
+        "unplacedOne": "{{count}} trained that day, at a lesson the record doesn't name",
+        "unplacedOther": "{{count}} trained that day, at a lesson the record doesn't name",
+        "timesOne": "{{count}} lesson",
+        "timesOther": "{{count}} lessons",
+        "inactive": "No longer active",
+        "nobodyYet": "Nobody has seen it, because nobody has taught it yet this season.",
+        "error": "Couldn't load who has seen it."
       }
     },
     "totalOne": "Across {{count}} active athlete.",
@@ -3101,7 +3134,11 @@
     "yesterday": "yesterday",
     "days": "{{count}} days ago",
     "weekOne": "a week ago",
-    "weeks": "{{count}} weeks ago"
+    "weeks": "{{count}} weeks ago",
+    "monthOne": "a month ago",
+    "monthOther": "{{count}} months ago",
+    "yearOne": "a year ago",
+    "yearOther": "{{count}} years ago"
   },
   "martialArts": {
     "bjj": "Brazilian jiu-jitsu",
