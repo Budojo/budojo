@@ -28,6 +28,8 @@ use Illuminate\Support\Facades\Log;
  *     (`Athlete::scopeOwing`, #1722): active, not the owner, charged a
  *     fee, and neither a payment covering the month nor a carnet
  *     spendable today.
+ *   - Athlete's own fee is above zero — a free tier is not chased even
+ *     where another tier pays (`Athlete::scopeChargedMoreThanNothing`).
  *   - Athlete has a linked user_id (invite-pending rows skipped).
  *   - User has `athlete_payment_overdue` enabled.
  *
@@ -75,9 +77,12 @@ class SendAthletePaymentOverduePushes extends Command
     {
         // Who owes the month, by the roster's own rule (#1722): the payment
         // covering it (#1382), a spendable carnet, the owner's own row (#748)
-        // and an athlete charged no fee are all left alone.
+        // and an athlete charged no fee are all left alone. Narrower than the
+        // owner's list by one clause: a free tier is not chased, for the same
+        // reason the academy gate above skips an academy charging zero.
         $athletes = $academy->athletes()
             ->owing($year, $month, $today)
+            ->chargedMoreThanNothing()
             ->whereNotNull('user_id')
             ->with('user')
             ->get();

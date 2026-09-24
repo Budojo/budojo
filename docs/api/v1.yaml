@@ -3914,7 +3914,8 @@ paths:
               spendable carnet. Until #1722 it meant a payment row only and
               left carnet holders out. It deliberately carries no status
               gate: an athlete who paid and then went inactive has still
-              paid.
+              paid. Rows on which no payment is expected (`is_self`, or
+              `monthly_fee_cents` null) are under neither value.
 
             The owner's digest and the athlete's overdue push ask the same
             question the same way. Unrecognised values are silently ignored

@@ -131,6 +131,23 @@ it('counts a spendable carnet as paid', function (): void {
         ->and($ids)->not->toContain($exhausted->id);
 });
 
+it('leaves the rows that show a dash out of paid, whatever covers them', function (): void {
+    // The chip renders a dash where no payment is expected, so those rows are
+    // under neither Paid nor Unpaid — even with a payment or a carnet on them.
+    $self = Athlete::factory()->for($this->academy)->selfFor($this->user)->create();
+    AthletePayment::factory()->for($self)->forCurrentMonth()->create();
+
+    $this->academy->update(['monthly_fee_cents' => null]);
+    AcademyFeeTier::factory()->for($this->academy)->create();
+    $onNoTier = Athlete::factory()->for($this->academy)->create();
+    Carnet::factory()->for($onNoTier)->create();
+
+    $ids = idsFor($this, 'paid=yes');
+
+    expect($ids)->not->toContain($self->id)
+        ->and($ids)->not->toContain($onNoTier->id);
+});
+
 // ─── The filter and the badge give one answer ────────────────────────────────
 
 it('agrees with the payment badge on every row of the roster', function (): void {
@@ -145,7 +162,10 @@ it('agrees with the payment badge on every row of the roster', function (): void
     Athlete::factory()->for($this->academy)->create();
     Athlete::factory()->for($this->academy)->create(['fee_tier_id' => $tier->id]);
     Athlete::factory()->for($this->academy)->create(['status' => AthleteStatus::Inactive]);
-    Athlete::factory()->for($this->academy)->selfFor($this->user)->create();
+    $inactivePaid = Athlete::factory()->for($this->academy)->create(['status' => AthleteStatus::Inactive]);
+    AthletePayment::factory()->for($inactivePaid)->forCurrentMonth()->create();
+    $self = Athlete::factory()->for($this->academy)->selfFor($this->user)->create();
+    AthletePayment::factory()->for($self)->forCurrentMonth()->create();
 
     $rows = collect($this->actingAs($this->user)
         ->getJson('/api/v1/athletes')
@@ -160,13 +180,18 @@ it('agrees with the payment badge on every row of the roster', function (): void
             && $r['is_self'] === false
             && $r['monthly_fee_cents'] !== null)
         ->pluck('id')->sort()->values()->all();
+    // Paid is every other chip, and deliberately not gated on status (#805):
+    // an athlete who paid and then went inactive has still paid.
     $badgeCovered = $rows
-        ->filter(fn (array $r): bool => $r['payment_coverage'] !== 'none')
+        ->filter(fn (array $r): bool => $r['payment_coverage'] !== 'none'
+            && $r['is_self'] === false
+            && $r['monthly_fee_cents'] !== null)
         ->pluck('id')->sort()->values()->all();
 
     expect(collect(idsFor($this, 'paid=no'))->sort()->values()->all())->toBe($badgeUnpaid)
         ->and(collect(idsFor($this, 'paid=yes'))->sort()->values()->all())->toBe($badgeCovered)
-        ->and($badgeUnpaid)->toHaveCount(3);
+        ->and($badgeUnpaid)->toHaveCount(3)
+        ->and($badgeCovered)->toHaveCount(3);
 });
 
 // ─── The other two readers ───────────────────────────────────────────────────
@@ -199,6 +224,38 @@ it('does not push an overdue reminder to an athlete paying by carnet', function 
     // doing and not a preference or a gate keeping everyone quiet.
     Notification::assertSentTo($owing, AthletePaymentOverdueNotification::class);
     Notification::assertNotSentTo($byCarnet, AthletePaymentOverdueNotification::class);
+});
+
+it('does not push an overdue reminder to an athlete on a free tier', function (): void {
+    // The owner's list counts a zero fee — `chargingAFee` keeps a deliberate
+    // zero on purpose — but chasing the athlete for nothing is the noise
+    // `chargingMoreThanNothing` exists to stop. It only gated the academy, so
+    // a free tier beside a paying one was still pushed.
+    $this->academy->update(['monthly_fee_cents' => null]);
+    $paying = AcademyFeeTier::factory()->for($this->academy)->create(['label' => 'Adulti', 'amount_cents' => 6000]);
+    $free = AcademyFeeTier::factory()->for($this->academy)->create(['label' => 'Esente', 'amount_cents' => 0]);
+    $onFree = User::factory()->create();
+    Athlete::factory()->for($this->academy)->create(['user_id' => $onFree->id, 'fee_tier_id' => $free->id]);
+    $onPaying = User::factory()->create();
+    Athlete::factory()->for($this->academy)->create(['user_id' => $onPaying->id, 'fee_tier_id' => $paying->id]);
+
+    Notification::fake();
+    $this->artisan('budojo:send-athlete-payment-overdue-pushes')->assertSuccessful();
+
+    Notification::assertSentTo($onPaying, AthletePaymentOverdueNotification::class);
+    Notification::assertNotSentTo($onFree, AthletePaymentOverdueNotification::class);
+});
+
+it('still pushes an athlete on no tier at a flat-fee academy', function (): void {
+    // The tier wins over the academy fee only when there is a tier: an athlete
+    // on none pays the flat fee, as `MonthlyFee::forAthlete` resolves it.
+    $user = User::factory()->create();
+    Athlete::factory()->for($this->academy)->create(['user_id' => $user->id]);
+
+    Notification::fake();
+    $this->artisan('budojo:send-athlete-payment-overdue-pushes')->assertSuccessful();
+
+    Notification::assertSentTo($user, AthletePaymentOverdueNotification::class);
 });
 
 // ─── The SQL dialect of the carnet rule ──────────────────────────────────────

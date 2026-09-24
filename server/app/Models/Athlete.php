@@ -165,40 +165,62 @@ class Athlete extends Model implements HasAddress
      * push — and each used to ask only whether a payment row covered the
      * month. The chip has known better since #1402: a spendable carnet pays
      * for the month too (`MonthCoverage`), and a row on which no payment is
-     * expected at all is not a debt. So an athlete owes when they are:
-     *
-     * - **active** (#805) — a suspended or inactive athlete is not asked to pay;
-     * - **not the owner** training in their own academy (#748);
-     * - **charged a fee** — on a tier, or at an academy with a flat fee; the
-     *   SQL side of `MonthlyFee::forAthlete()` being non-null (#1381);
-     * - **not covered** by a payment or a carnet spendable on `$today`.
+     * expected at all is not a debt. So an athlete owes when they are
+     * **active** (#805), **expected to pay** at all, and **not paid for**.
      *
      * @param  Builder<$this>  $query
      * @return Builder<$this>
      */
     public function scopeOwing(Builder $query, int $year, int $month, CarbonInterface $today): Builder
     {
-        $payingAFee = fn (Builder $q) => $q
-            ->whereNotNull('fee_tier_id')
-            ->orWhereHas('academy', fn (Builder $academy) => $academy->whereNotNull('monthly_fee_cents'));
-
         return $query
             ->where('status', AthleteStatus::Active)
-            ->where('is_self', false)
-            ->where($payingAFee)
-            ->whereNot(fn (Builder $q) => $q->coveredFor($year, $month, $today));
+            ->expectedToPay()
+            ->whereNot(fn (Builder $q) => $q->paidFor($year, $month, $today));
     }
 
     /**
-     * Athletes whose month something pays for: a payment whose period covers
-     * it, or a carnet spendable on `$today` — every chip on the roster but
-     * "Unpaid" (#1722). Status is deliberately not asked (#805): an athlete
+     * Every chip on the roster but "Unpaid" and the dash (#1722): expected to
+     * pay, and paid for. Status is deliberately not asked (#805): an athlete
      * who paid and then went inactive has still paid.
      *
      * @param  Builder<$this>  $query
      * @return Builder<$this>
      */
     public function scopeCoveredFor(Builder $query, int $year, int $month, CarbonInterface $today): Builder
+    {
+        return $query->expectedToPay()->paidFor($year, $month, $today);
+    }
+
+    /**
+     * Rows on which a payment is expected at all — the ones where the chip is
+     * not a dash, status aside (#1722):
+     *
+     * - **not the owner** training in their own academy (#748);
+     * - **charged a fee** — on a tier, or at an academy with a flat fee; the
+     *   SQL side of `MonthlyFee::forAthlete()` being non-null (#1381). A
+     *   deliberate zero counts, as it does for `Academy::scopeChargingAFee`.
+     *
+     * @param  Builder<$this>  $query
+     * @return Builder<$this>
+     */
+    public function scopeExpectedToPay(Builder $query): Builder
+    {
+        return $query
+            ->where('is_self', false)
+            ->where(fn (Builder $q) => $q
+                ->whereNotNull('fee_tier_id')
+                ->orWhereHas('academy', fn (Builder $academy) => $academy->whereNotNull('monthly_fee_cents')));
+    }
+
+    /**
+     * Something pays for the month: a payment whose period covers it, or a
+     * carnet spendable on `$today` — `MonthCoverage` in SQL.
+     *
+     * @param  Builder<$this>  $query
+     * @return Builder<$this>
+     */
+    public function scopePaidFor(Builder $query, int $year, int $month, CarbonInterface $today): Builder
     {
         // Bound to variables rather than written inline: `whereHas` declares
         // its callback over the base `Builder`, which hides the related
@@ -209,6 +231,28 @@ class Athlete extends Model implements HasAddress
         return $query->where(fn (Builder $q) => $q
             ->whereHas('payments', $covering)
             ->orWhereHas('carnets', $spendable));
+    }
+
+    /**
+     * Athletes whose resolved fee is more than zero — the athlete-level twin
+     * of `Academy::scopeChargingMoreThanNothing`, for the one reader that
+     * chases the athlete rather than informing the owner: the overdue push.
+     *
+     * The tier wins when there is one, as in `MonthlyFee::forAthlete()`: a
+     * free tier is free even at an academy with a flat fee.
+     *
+     * @param  Builder<$this>  $query
+     * @return Builder<$this>
+     */
+    public function scopeChargedMoreThanNothing(Builder $query): Builder
+    {
+        $payingTier = fn ($q) => $q->where('amount_cents', '>', 0);
+
+        return $query->where(fn (Builder $q) => $q
+            ->whereHas('feeTier', $payingTier)
+            ->orWhere(fn (Builder $noTier) => $noTier
+                ->whereNull('fee_tier_id')
+                ->whereHas('academy', fn (Builder $academy) => $academy->where('monthly_fee_cents', '>', 0))));
     }
 
     /**
