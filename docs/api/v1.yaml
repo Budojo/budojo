@@ -4006,6 +4006,11 @@ paths:
         academy — the client does not send `academy_id`. Email uniqueness is
         scoped per academy; a previously soft-deleted row with the same email
         does not block creation.
+
+        Also opens the athlete's promotion timeline (#1771): one `belt`
+        promotion with `from_belt: null` and the belt they are created at,
+        dated now and recorded by the caller. The CSV import and
+        `POST /me/athlete` write the same row for every athlete they create.
       operationId: athleteCreate
       requestBody:
         required: true
@@ -4044,6 +4049,11 @@ paths:
 
         `validate_only` **defaults to `true`**, deliberately: a missing flag
         must never be the one that creates sixty athletes.
+
+        Each athlete written gets the opening promotion row `POST /athletes`
+        writes (#1771), dated the import and recorded by the importer — not at
+        the sheet's joining date, which would claim they arrived at today's
+        belt years ago.
 
         The two-step shape is the feature, not caution. A real file's dates are
         ambiguous (`03/04/2019` is 3 April in Europe and 4 March in the US),
@@ -9910,7 +9920,7 @@ components:
         joined_at: { type: string, nullable: true, format: date, description: 'Date the athlete row was registered in this academy.' }
         promotions:
           type: array
-          description: 'Top-50 belt + stripe promotions, newest first.'
+          description: 'Top-50 belt + stripe promotions, newest first. A belt row with no `from_belt` is a starting point, not a promotion (#1771), and is left out.'
           items: { $ref: '#/components/schemas/PublicProfilePromotion' }
         achievements:
           type: array

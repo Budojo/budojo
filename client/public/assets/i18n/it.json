@@ -2257,7 +2257,7 @@
       "promotions": {
         "errorBody": "Impossibile caricare lo storico promozioni. Riprova tra un momento.",
         "emptyBody": "Nessuna promozione registrata. Cambia cintura o gradi e qui apparirà la riga.",
-        "firstBelt": "Prima cintura",
+        "firstBelt": "Cintura di partenza",
         "stripes": "gradi",
         "recordedBy": "Registrato da {{name}}",
         "prevPage": "Pagina precedente",
@@ -2284,7 +2284,7 @@
           "dateLabel": "Registrata il",
           "fromBelt": "Da cintura",
           "toBelt": "A cintura",
-          "firstBelt": "Prima cintura (nessuna precedente)",
+          "firstBelt": "Cintura di partenza (niente prima)",
           "beltAtEvent": "Cintura al momento",
           "fromStripes": "Da gradi",
           "toStripes": "A gradi",

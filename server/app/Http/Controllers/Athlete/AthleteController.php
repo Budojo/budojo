@@ -303,7 +303,7 @@ class AthleteController extends Controller
         $addressIntent = AddressIntent::fromValidated($validated);
         unset($validated['address']);
 
-        $athlete = $this->createAthlete->execute($academy, $validated, $addressIntent);
+        $athlete = $this->createAthlete->execute($user, $academy, $validated, $addressIntent);
 
         return response()->json(['data' => new AthleteResource($athlete)], 201);
     }

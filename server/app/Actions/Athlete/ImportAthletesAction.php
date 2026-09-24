@@ -8,6 +8,7 @@ use App\Actions\Address\AddressIntent;
 use App\Enums\AthleteStatus;
 use App\Models\Academy;
 use App\Models\Athlete;
+use App\Models\User;
 use App\Support\AthleteFieldRules;
 use App\Support\Import\AthleteCsv;
 use App\Support\Import\BeltText;
@@ -56,12 +57,13 @@ final class ImportAthletesAction
     }
 
     /**
-     * @param array<string, string> $map     field => the header name carrying it
-     * @param bool                  $dryRun  true = validate everything, write nothing
+     * @param User                  $importer who is importing — each athlete's opening promotion row is recorded as theirs (#1771)
+     * @param array<string, string> $map      field => the header name carrying it
+     * @param bool                  $dryRun   true = validate everything, write nothing
      *
      * @return array{imported: int, skipped: int, rows: list<array{row: int, status: string, values: array<string, mixed>, errors: array<string, list<string>>}>}
      */
-    public function execute(Academy $academy, AthleteCsv $csv, array $map, bool $dryRun): array
+    public function execute(User $importer, Academy $academy, AthleteCsv $csv, array $map, bool $dryRun): array
     {
         /** @var list<array{row: int, status: string, values: array<string, mixed>, errors: array<string, list<string>>}> $rows */
         $rows = [];
@@ -94,7 +96,7 @@ final class ImportAthletesAction
         }
 
         if (! $dryRun) {
-            $this->write($academy, $rows);
+            $this->write($importer, $academy, $rows);
         }
 
         return [
@@ -114,15 +116,15 @@ final class ImportAthletesAction
      *
      * @param list<array{row: int, status: string, values: array<string, mixed>, errors: array<string, list<string>>}> $rows
      */
-    private function write(Academy $academy, array $rows): void
+    private function write(User $importer, Academy $academy, array $rows): void
     {
-        DB::transaction(function () use ($academy, $rows): void {
+        DB::transaction(function () use ($importer, $academy, $rows): void {
             foreach ($rows as $row) {
                 if ($row['status'] !== 'ok') {
                     continue;
                 }
 
-                $this->create->execute($academy, $row['values'], AddressIntent::skip());
+                $this->create->execute($importer, $academy, $row['values'], AddressIntent::skip());
             }
         });
     }

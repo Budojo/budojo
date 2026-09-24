@@ -4,7 +4,7 @@
 
 An `Achievement` row is one lifetime milestone unlocked by an athlete on the mat (#961). Five kinds ship in v2.30.0 — first class, 30-day streak, 100 sessions, 1 year at the academy, belt promotion — and the table is shaped to absorb new kinds without a migration (one column per metadata field would not scale).
 
-Unlocks are computed by `EvaluateAchievementsAction`, fired from `AttendanceObserver` on every new attendance row (event-bound, real-time for activity-based kinds) and from `EvaluateTimeBasedAchievements` (nightly 02:00 cron, for time-based kinds where no event would otherwise fire — anniversary, streak).
+Unlocks are computed by `EvaluateAchievementsAction`, fired from `AttendanceObserver` on every new attendance row (event-bound, real-time for activity-based kinds) and from `EvaluateTimeBasedAchievements` (daily at 02:00 on the web, every thirty minutes on the desktop — for time-based kinds where no event would otherwise fire: anniversary, streak).
 
 Surfaced on the public-profile read (`GET /api/v1/users/{handle}/profile`) as a `achievements[]` array, each entry carrying `kind`, `unlocked_at`, and the kind's `metadata` (e.g. the awarded belt for a `belt_promotion`). The SPA renders one badge per row on the public profile card.
 
@@ -31,18 +31,18 @@ The backing PHP enum `App\Enums\AchievementKind` is the source of truth. Adding 
 | Case | Stored value | Trigger | Cron / event |
 |---|---|---|---|
 | `FirstClass` | `first_class` | Athlete's first-ever `attendance_records` row | `AttendanceObserver` on create |
-| `ThirtyDayStreak` | `30_day_streak` | 30 consecutive calendar days with at least one attendance row | Nightly 02:00 cron |
+| `ThirtyDayStreak` | `30_day_streak` | 30 consecutive calendar days with at least one attendance row | Time-based evaluator (see below) |
 | `HundredSessions` | `100_sessions` | 100 total `attendance_records` rows for the athlete | `AttendanceObserver` on create |
-| `OneYearAtAcademy` | `1_year_at_academy` | 365 days since `athletes.joined_at` | Nightly 02:00 cron |
-| `BeltPromotion` | `belt_promotion` | Belt changed on the athlete (delegates to `AthleteObserver` belt-change branch) | `AthleteObserver` on update |
+| `OneYearAtAcademy` | `1_year_at_academy` | 365 days since `athletes.joined_at` | Time-based evaluator (see below) |
+| `BeltPromotion` | `belt_promotion` | The athlete's first `athlete_promotions` belt row **with a `from_belt`** — a real promotion. The starting row every timeline opens with (#1771) has none and does not count | `AthleteObserver` on update (and any evaluator run) |
 
 ## Relations
 
-- `Achievement` → `Athlete` — `belongsTo`. `Achievement::athlete()`. Inverse `Athlete::achievements()` (`hasMany`, ordered by `unlocked_at` desc).
+- `Achievement` → `Athlete` — `belongsTo`. `Achievement::athlete()`. There is no inverse relation on `Athlete`; readers query `Achievement` by `athlete_id`.
 
 ## Business rules
 
-- **Idempotent**: re-running the evaluator never produces duplicates (`UNIQUE (athlete_id, kind)` for the four non-belt kinds; application-level check for `belt_promotion`).
+- **Idempotent**: re-running the evaluator never produces duplicates — `UNIQUE (athlete_id, kind)` holds for every kind, `belt_promotion` included. That is also why the evaluator must never mistake a starting row for a promotion (#1771): the badge would unlock on creation, and the athlete's real first promotion could then never earn it.
 - **Wrapped in try/catch in the observer**: a thrown exception in the evaluator MUST NOT swallow the attendance record create. The observer catches and reports.
 - **Anonymisation does not apply**: there is no opt-out for achievements. They are tied to public-profile visibility (`users.profile_is_public`) — if the profile is hidden, the achievements are hidden along with it.
-- **Time-based kinds use a daily cron** because no incoming event would naturally evaluate them — a 30-day streak resets at midnight UTC with no user action.
+- **Time-based kinds run on a schedule** because no incoming event would naturally evaluate them — a 30-day streak resets at midnight UTC with no user action. `budojo:evaluate-time-based-achievements` runs daily at 02:00 on the web schedule and **every thirty minutes on the desktop** (`DesktopSchedule`), where the machine is not guaranteed to be on at 02:00.
