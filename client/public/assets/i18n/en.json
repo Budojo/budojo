@@ -2896,6 +2896,10 @@
         "seasonTitle": "{{position}}, this season",
         "seasonAria": "{{position}}: every week of the season",
         "seasonEmpty": "Nothing on this position this season yet.",
+        "planTitle": "Plan a lesson",
+        "planAria": "Plan {{position}}, week of {{date}}",
+        "planNoneWeek": "No class on the timetable that week can teach this position.",
+        "planNoneSeason": "No class on the timetable in the next two weeks can teach this position.",
         "state": {
           "planned": "Planned",
           "unconfirmed": "No check-in"
