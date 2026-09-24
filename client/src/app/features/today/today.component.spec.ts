@@ -1,3 +1,4 @@
+import { Provider } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
@@ -6,6 +7,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { provideI18nTesting } from '../../../test-utils/i18n-test';
 import { useLadder } from '../../../test-utils/ladder-test';
 import { AcademyClass } from '../../core/services/academy-class.service';
+import {
+  BackupFolderService,
+  BackupFolderStateView,
+} from '../../core/services/backup-folder.service';
+import { DriveLinkStateView, DriveSyncService } from '../../core/services/drive-sync.service';
 import { Athlete } from '../../core/services/athlete.service';
 import { Lesson } from '../../core/services/lesson.service';
 import { TodayComponent } from './today.component';
@@ -70,7 +76,10 @@ interface Responses {
   recent?: Athlete[];
 }
 
-function setup(academy: Record<string, unknown> = {}): HttpTestingController {
+function setup(
+  academy: Record<string, unknown> = {},
+  providers: Provider[] = [],
+): HttpTestingController {
   TestBed.configureTestingModule({
     imports: [TodayComponent],
     providers: [
@@ -78,6 +87,7 @@ function setup(academy: Record<string, unknown> = {}): HttpTestingController {
       provideHttpClientTesting(),
       provideRouter([]),
       ...provideI18nTesting(),
+      ...providers,
     ],
   });
   useLadder('bjj', academy);
@@ -412,5 +422,94 @@ describe('TodayComponent', () => {
 
     expect(text(fixture.nativeElement, 'today-class-1')).toContain('Kimura');
     http.verify();
+  });
+
+  describe('is there a copy anywhere but this computer (#1751)', () => {
+    const FOLDER: BackupFolderStateView = {
+      folder: 'D:\\OneDrive\\Budojo',
+      lastCopyAt: '2026-09-24T03:00:00Z',
+      lastError: null,
+      lastErrorAt: null,
+    };
+    const NO_DRIVE: DriveLinkStateView = { configured: true, linked: false };
+
+    function bridges(
+      folder: BackupFolderStateView | null,
+      drive: DriveLinkStateView | null = NO_DRIVE,
+    ): Provider[] {
+      return [
+        {
+          provide: BackupFolderService,
+          useValue: { available: folder !== null, state: () => Promise.resolve(folder) },
+        },
+        {
+          provide: DriveSyncService,
+          useValue: { available: drive !== null, state: () => Promise.resolve(drive) },
+        },
+      ];
+    }
+
+    async function render(providers: Provider[]): Promise<HTMLElement> {
+      const http = setup({}, providers);
+      const fixture = TestBed.createComponent(TodayComponent);
+      fixture.detectChanges();
+      flushAll(http, { health: { data: [], missing_medical_certificate: [] } });
+      await fixture.whenStable();
+      fixture.detectChanges();
+      http.verify();
+      return fixture.nativeElement as HTMLElement;
+    }
+
+    it('a failing folder copy is an alert naming the folder and the reason', async () => {
+      const root = await render(
+        bridges({ ...FOLDER, lastError: 'ENOENT', lastErrorAt: '2026-09-23T03:00:00Z' }),
+      );
+
+      const row = text(root, 'today-watch-backup');
+      expect(row).toContain('D:\\OneDrive\\Budojo');
+      // The Backup page's own sentence for the errno, not a second copy of it.
+      expect(row).toContain('The backup folder no longer exists');
+      expect(root.querySelector('[data-cy="today-watch-backup"]')?.getAttribute('href')).toBe(
+        '/dashboard/backup',
+      );
+      expect(root.querySelector('[data-cy="today-system"]')).toBeNull();
+    });
+
+    it('a failing Drive sync is an alert naming the account', async () => {
+      const root = await render(
+        bridges(
+          { ...FOLDER, folder: null, lastCopyAt: null },
+          {
+            configured: true,
+            linked: true,
+            account: 'dojo@example.com',
+            lastError: 'invalid_grant',
+          },
+        ),
+      );
+
+      expect(text(root, 'today-watch-backup')).toContain('dojo@example.com');
+    });
+
+    it('no folder and no Drive link is the "only on this computer" alert', async () => {
+      const root = await render(bridges({ ...FOLDER, folder: null, lastCopyAt: null }));
+
+      expect(text(root, 'today-watch-backup')).toContain('only on this computer');
+    });
+
+    it('copies landing are one quiet line, and nothing to check', async () => {
+      const root = await render(bridges(FOLDER));
+
+      expect(root.querySelector('[data-cy="today-watch-backup"]')).toBeNull();
+      expect(text(root, 'today-watch')).toContain('Nothing to check');
+      expect(text(root, 'today-system')).toContain('Last copy off this computer');
+    });
+
+    it('says nothing at all on the web build, where there is no bridge', async () => {
+      const root = await render(bridges(null, null));
+
+      expect(root.querySelector('[data-cy="today-watch-backup"]')).toBeNull();
+      expect(root.querySelector('[data-cy="today-system"]')).toBeNull();
+    });
   });
 });

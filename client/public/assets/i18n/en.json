@@ -3062,9 +3062,16 @@
       "joinedError": "Couldn't load the new members."
     },
     "system": {
-      "backup": "Last backup {{when}}",
-      "noBackup": "No backup on this computer yet",
+      "lastCopy": "Last copy off this computer: {{when}}",
+      "firstCopyPending": "The first copy off this computer comes with the next backup",
       "open": "Open backup"
+    },
+    "backup": {
+      "folderFailing": "Copying backups to {{where}} is failing",
+      "driveFailing": "Copying backups to Google Drive ({{where}}) is failing",
+      "driveFailingUnnamed": "Copying backups to Google Drive is failing",
+      "localOnly": "Backups are only on this computer",
+      "localOnlyDetail": "If this disk breaks, the academy goes with it. Choose a folder or link Google Drive."
     }
   },
   "backup": {

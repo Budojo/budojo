@@ -15,8 +15,9 @@ import { SkeletonModule } from 'primeng/skeleton';
 import { AcademyClass, AcademyClassService } from '../../core/services/academy-class.service';
 import { AcademyService } from '../../core/services/academy.service';
 import { Athlete, AthleteService } from '../../core/services/athlete.service';
-import { DesktopBackupService } from '../../core/services/desktop-backup.service';
+import { BackupFolderService } from '../../core/services/backup-folder.service';
 import { DocumentService } from '../../core/services/document.service';
+import { DriveSyncService } from '../../core/services/drive-sync.service';
 import { LanguageService } from '../../core/services/language.service';
 import {
   Lesson,
@@ -28,8 +29,9 @@ import { StatsService, SyllabusCoverage } from '../../core/services/stats.servic
 import { TrainingModesService } from '../../core/services/training-modes.service';
 import { AthleteIdentityComponent } from '../../shared/components/athlete-identity/athlete-identity.component';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
-import { RelativeTimePipe } from '../../shared/pipes/relative-time.pipe';
+import { LocaleDatePipe } from '../../shared/pipes/locale-date.pipe';
 import { academyChargesAFee } from '../../shared/utils/academy-fee';
+import { driveErrorKey, folderErrorKey } from '../../shared/utils/backup-errors';
 import { localeFor } from '../../shared/utils/locale';
 import { monthKey } from '../../shared/utils/months';
 import { pickDefaultClass } from '../attendance/daily/class-pick';
@@ -43,6 +45,7 @@ import {
   tonightClasses,
   weekStart,
 } from './today.helpers';
+import { BackupHealth, backupHealth } from './today-backup';
 
 /** A block's own request: in flight, answered, or failed on its own. */
 type Load<T> =
@@ -53,11 +56,16 @@ type Load<T> =
 const LOADING = { state: 'loading' } as const;
 const FAILED = { state: 'error' } as const;
 
-/** One line of "Da guardare": a count, what it counts, and where to act on it. */
+/**
+ * One line of "Da guardare": a count, what it counts, and where to act on it.
+ * A row with no count is an alert about a state, not a tally (#1751): it
+ * carries a warning mark in the count's place and a line saying why.
+ */
 interface WatchRow {
   readonly dataCy: string;
-  readonly count: number;
+  readonly count: number | null;
   readonly label: string;
+  readonly detail: string | null;
   readonly link: string;
   readonly queryParams: Record<string, string> | null;
 }
@@ -89,8 +97,8 @@ interface DocumentsHealth {
     AthleteIdentityComponent,
     ButtonModule,
     LessonSheetComponent,
+    LocaleDatePipe,
     PageHeaderComponent,
-    RelativeTimePipe,
     RouterLink,
     SkeletonModule,
     TranslatePipe,
@@ -102,8 +110,9 @@ export class TodayComponent implements OnInit {
   private readonly academyClassService = inject(AcademyClassService);
   private readonly academyService = inject(AcademyService);
   private readonly athleteService = inject(AthleteService);
-  private readonly backupService = inject(DesktopBackupService);
+  private readonly backupFolder = inject(BackupFolderService);
   private readonly documentService = inject(DocumentService);
+  private readonly driveSync = inject(DriveSyncService);
   private readonly languageService = inject(LanguageService);
   private readonly lessonService = inject(LessonService);
   private readonly statsService = inject(StatsService);
@@ -167,7 +176,9 @@ export class TodayComponent implements OnInit {
     if (h.state !== 'ready') return [];
     const t = (one: string, other: string, count: number, params = {}): string =>
       this.translate.instant(count === 1 ? one : other, params);
-    const rows: WatchRow[] = [];
+    // The one failure that loses the whole academy goes first (#1751).
+    const backup = this.backupAlert();
+    const rows: WatchRow[] = backup === null ? [] : [backup];
     const expiring = '/dashboard/documents/expiring';
     if (h.value.certificates > 0) {
       rows.push({
@@ -178,6 +189,7 @@ export class TodayComponent implements OnInit {
           'today.watch.certificateOther',
           h.value.certificates,
         ),
+        detail: null,
         link: expiring,
         queryParams: null,
       });
@@ -187,6 +199,7 @@ export class TodayComponent implements OnInit {
         dataCy: 'today-watch-missing',
         count: h.value.missing,
         label: t('today.watch.missingOne', 'today.watch.missingOther', h.value.missing),
+        detail: null,
         link: expiring,
         queryParams: null,
       });
@@ -196,6 +209,7 @@ export class TodayComponent implements OnInit {
         dataCy: 'today-watch-documents',
         count: h.value.documents,
         label: t('today.watch.documentOne', 'today.watch.documentOther', h.value.documents),
+        detail: null,
         link: expiring,
         queryParams: null,
       });
@@ -207,6 +221,7 @@ export class TodayComponent implements OnInit {
         dataCy: 'today-watch-unpaid',
         count: unpaid,
         label: t('today.watch.unpaidOne', 'today.watch.unpaidOther', unpaid, { month }),
+        detail: null,
         link: '/dashboard/athletes',
         queryParams: { paid: 'no' },
       });
@@ -251,9 +266,39 @@ export class TodayComponent implements OnInit {
     return c === null ? null : this.translate.instant('today.season', { label: c.season.label });
   });
 
-  protected readonly isDesktop = this.backupService.available;
-  /** The newest local archive's timestamp; null when there is none; undefined until read. */
-  protected readonly lastBackupAt = signal<string | null | undefined>(undefined);
+  /**
+   * Whether a copy of the academy exists off this computer (#1751), or null
+   * until read — and forever on the web build, which has no bridge to ask.
+   */
+  protected readonly backup = signal<BackupHealth | null>(null);
+
+  /** The backup as a "Da guardare" row, when it is failing or was never set up. */
+  private readonly backupAlert = computed<WatchRow | null>(() => {
+    this.languageService.currentLang();
+    const b = this.backup();
+    if (b === null || b.kind === 'ok') return null;
+    const row = {
+      dataCy: 'today-watch-backup',
+      count: null,
+      link: '/dashboard/backup',
+      queryParams: null,
+    };
+    if (b.kind === 'local-only') {
+      return {
+        ...row,
+        label: this.translate.instant('today.backup.localOnly'),
+        detail: this.translate.instant('today.backup.localOnlyDetail'),
+      };
+    }
+    const label =
+      b.target === 'folder'
+        ? this.translate.instant('today.backup.folderFailing', { where: b.where })
+        : b.where === ''
+          ? this.translate.instant('today.backup.driveFailingUnnamed')
+          : this.translate.instant('today.backup.driveFailing', { where: b.where });
+    const reasonKey = b.target === 'folder' ? folderErrorKey(b.code) : driveErrorKey(b.code);
+    return { ...row, label, detail: this.translate.instant(reasonKey, { code: b.code }) };
+  });
 
   ngOnInit(): void {
     this.loadClasses();
@@ -420,13 +465,17 @@ export class TodayComponent implements OnInit {
   }
 
   private loadBackup(): void {
-    if (!this.isDesktop) return;
-    void this.backupService.list().then(
-      (archives) => {
-        const newest = [...archives].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
-        this.lastBackupAt.set(newest?.createdAt ?? null);
-      },
-      () => this.lastBackupAt.set(null),
+    // `state()` answers all-nulls where there is no bridge, and on the web an
+    // absent folder means "no such feature", not "none chosen". Only the
+    // desktop is asked, or the web build would raise a backup alarm about a
+    // feature it does not have.
+    if (!this.backupFolder.available) return;
+    const drive = this.driveSync.available
+      ? this.driveSync.state()
+      : Promise.resolve({ configured: false, linked: false });
+    void Promise.all([this.backupFolder.state(), drive]).then(
+      ([folder, link]) => this.backup.set(backupHealth(folder, link)),
+      () => this.backup.set(null),
     );
   }
 }

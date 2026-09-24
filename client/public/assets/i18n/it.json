@@ -3062,9 +3062,16 @@
       "joinedError": "Non riesco a caricare i nuovi iscritti."
     },
     "system": {
-      "backup": "Ultimo backup {{when}}",
-      "noBackup": "Ancora nessun backup su questo computer",
+      "lastCopy": "Ultima copia fuori da questo computer: {{when}}",
+      "firstCopyPending": "La prima copia fuori da questo computer arriva con il prossimo backup",
       "open": "Apri il backup"
+    },
+    "backup": {
+      "folderFailing": "La copia dei backup in {{where}} non riesce",
+      "driveFailing": "La copia dei backup su Google Drive ({{where}}) non riesce",
+      "driveFailingUnnamed": "La copia dei backup su Google Drive non riesce",
+      "localOnly": "I backup sono solo su questo computer",
+      "localOnlyDetail": "Se si rompe questo disco, si perde tutta l'accademia. Scegli una cartella o collega Google Drive."
     }
   },
   "backup": {
