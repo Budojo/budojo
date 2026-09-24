@@ -658,6 +658,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
         // this block without touching other route sections.
         Route::prefix('stats')->group(function (): void {
             Route::get('attendance/daily', [StatsController::class, 'attendanceDaily']);
+            // Who is drifting, against their own attendance (#1728).
+            Route::get('attendance/at-risk', [StatsController::class, 'atRisk']);
             Route::get('payments/monthly', [StatsController::class, 'paymentsMonthly']);
             Route::get('athletes/age-bands', [StatsController::class, 'ageBands']);
             // Athletes a medical certificate covers, not rows (#1732).
