@@ -20,6 +20,9 @@ const SPEC: Record<ExpiryStatus, BadgeSpec | null> = {
   none: null,
 };
 
+// The server's `ResolveCertificateStatusAction::EXPIRY_WARNING_DAYS` is this
+// number in the other dialect (#1732): move one and the athlete's badge and
+// the academy's compliance figure disagree about the same certificate.
 const EXPIRY_WARNING_DAYS = 30;
 
 /**

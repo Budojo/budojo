@@ -7,6 +7,7 @@ namespace App\Models;
 use App\Contracts\HasAddress;
 use App\Enums\AthleteStatus;
 use App\Enums\Belt;
+use App\Enums\DocumentType;
 use App\Observers\AthleteObserver;
 use App\Observers\Audit\AthleteAuditObserver;
 use Carbon\CarbonInterface;
@@ -155,6 +156,30 @@ class Athlete extends Model implements HasAddress
     public function carnets(): HasMany
     {
         return $this->hasMany(Carnet::class);
+    }
+
+    /**
+     * Adds `current_certificate_expires_at`: the latest `expires_at` among
+     * this athlete's live medical certificates, or null when none is dated
+     * (#1732). One correlated subquery, not a query per athlete; the rule that
+     * turns it into a status is `ResolveCertificateStatusAction`.
+     *
+     * `max()` skips nulls, which is the "nulls last" of the rule for free: an
+     * undated row never beats a dated one, and an athlete with only undated
+     * rows gets null — missing.
+     *
+     * @param  Builder<$this>  $query
+     * @return Builder<$this>
+     */
+    public function scopeWithCurrentCertificateExpiry(Builder $query): Builder
+    {
+        // `addSelect` keeps `athletes.*` when nothing else is selected.
+        return $query->addSelect([
+            'current_certificate_expires_at' => Document::query()
+                ->selectRaw('max(documents.expires_at)')
+                ->whereColumn('documents.athlete_id', 'athletes.id')
+                ->where('documents.type', DocumentType::MedicalCertificate->value),
+        ]);
     }
 
     /**

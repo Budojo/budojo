@@ -6045,6 +6045,56 @@ paths:
               schema: { $ref: '#/components/schemas/ErrorMessage' }
               example: { message: Forbidden. }
 
+  /stats/documents/compliance:
+    get:
+      operationId: statsDocumentsCompliance
+      summary: How many active athletes a medical certificate covers
+      description: |
+        Counts **athletes, not documents** (#1732). Each active athlete is
+        classed once, by their **current certificate**: their live medical
+        certificate with the latest `expires_at`. An athlete with an expired
+        2024 certificate and a valid one is one covered athlete.
+
+        - `missing` — no live medical certificate with an expiry date. An
+          undated or deleted certificate is not cover.
+        - `expired` — the current certificate expired before today.
+        - `expiring` — it expires between today and today + 30 days,
+          inclusive: the same window as the document badge.
+        - `valid` — later than that.
+
+        The four counters sum to `total_active`; inactive and deleted
+        athletes are left out. `compliance_pct` is `(valid + expiring) /
+        total_active`, rounded, and `null` when there are no active
+        athletes: an empty roster is neither compliant nor not.
+      tags: [Stats]
+      responses:
+        '200':
+          description: The academy's certificate coverage, in athletes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    required: [total_active, valid, expiring, expired, missing, compliance_pct]
+                    properties:
+                      total_active: { type: integer, minimum: 0 }
+                      valid: { type: integer, minimum: 0 }
+                      expiring: { type: integer, minimum: 0 }
+                      expired: { type: integer, minimum: 0 }
+                      missing: { type: integer, minimum: 0 }
+                      compliance_pct: { type: integer, minimum: 0, maximum: 100, nullable: true }
+              example:
+                data: { total_active: 42, valid: 31, expiring: 4, expired: 3, missing: 4, compliance_pct: 83 }
+        '401': { description: Unauthenticated }
+        '403':
+          description: Forbidden — authed user has no academy.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorMessage' }
+              example: { message: Forbidden. }
+
   /users/{handle}/profile:
     get:
       tags: [profile]
