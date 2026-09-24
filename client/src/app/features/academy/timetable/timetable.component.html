@@ -321,11 +321,15 @@
   are a plan, and stay uncounted until somebody is.
 -->
 @if (planning(); as planned) {
+  <!--
+    Opens on the next occurrence; the header's arrows reach any week after
+    it (#1859), because a programme is planned in weeks, not one lesson.
+  -->
   <app-lesson-sheet
     [(visible)]="planSheetOpen"
     [academyClassId]="planned.id"
     [heldOn]="nextOccurrenceIso(planned)"
     [className]="planned.name"
-    [dateLabel]="nextOccurrenceLabel(planned)"
+    [steppable]="true"
   />
 }
