@@ -744,7 +744,18 @@ function coveragePosition(
   worked: number,
   kind = 'both',
 ) {
-  return { id, name, kind, in_scope, covered, thin, missing: in_scope - covered - thin, worked };
+  return {
+    id,
+    name,
+    kind,
+    in_scope,
+    covered,
+    thin,
+    missing: in_scope - covered - thin,
+    worked,
+    // Four or five people a worked evening, as the check-in fixtures have it.
+    worked_reach: worked === 0 ? 0 : 5,
+  };
 }
 
 const SYLLABUS_COVERAGE = {
@@ -789,6 +800,8 @@ const SYLLABUS_COVERAGE = {
       parent_name: 'Closed guard',
       kind: 'both',
       lessons: 3,
+      reach: 5,
+      attendances: 9,
       last_taught_on: '2026-09-11',
       state: 'covered',
     },
@@ -798,6 +811,8 @@ const SYLLABUS_COVERAGE = {
       parent_name: 'Closed guard',
       kind: 'both',
       lessons: 2,
+      reach: 6,
+      attendances: 9,
       last_taught_on: '2026-09-09',
       state: 'covered',
     },
@@ -807,6 +822,8 @@ const SYLLABUS_COVERAGE = {
       parent_name: 'Mount',
       kind: 'both',
       lessons: 2,
+      reach: 4,
+      attendances: 7,
       last_taught_on: '2026-09-07',
       state: 'covered',
     },
@@ -816,6 +833,8 @@ const SYLLABUS_COVERAGE = {
       parent_name: 'Closed guard',
       kind: 'both',
       lessons: 1,
+      reach: 7,
+      attendances: 7,
       last_taught_on: '2026-09-09',
       state: 'thin',
     },
@@ -825,6 +844,8 @@ const SYLLABUS_COVERAGE = {
       parent_name: 'Half guard',
       kind: 'both',
       lessons: 1,
+      reach: 6,
+      attendances: 6,
       last_taught_on: '2026-09-07',
       state: 'thin',
     },
@@ -834,6 +855,8 @@ const SYLLABUS_COVERAGE = {
       parent_name: 'Mount',
       kind: 'both',
       lessons: 1,
+      reach: 4,
+      attendances: 4,
       last_taught_on: '2026-09-04',
       state: 'thin',
     },
@@ -843,6 +866,8 @@ const SYLLABUS_COVERAGE = {
       parent_name: 'Standing',
       kind: 'both',
       lessons: 1,
+      reach: 5,
+      attendances: 5,
       last_taught_on: '2026-09-02',
       state: 'thin',
     },

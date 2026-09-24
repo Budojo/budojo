@@ -8656,7 +8656,7 @@ components:
           description: One row per position with anything in scope under it.
           items:
             type: object
-            required: [id, name, kind, in_scope, covered, thin, missing, worked]
+            required: [id, name, kind, in_scope, covered, thin, missing, worked, worked_reach]
             properties:
               id: { type: integer, format: int64 }
               name: { type: string }
@@ -8670,6 +8670,9 @@ components:
                 description: |
                   Held lessons that tagged the position itself — "we worked
                   half guard". Fills no technique, and is not nothing either.
+              worked_reach:
+                type: integer
+                description: Distinct athletes at one or more of the `worked` lessons (#1746).
         missing:
           type: array
           items:
@@ -8681,9 +8684,19 @@ components:
             allOf:
               - $ref: '#/components/schemas/CoverageTopic'
               - type: object
-                required: [lessons, last_taught_on, state]
+                required: [lessons, reach, attendances, last_taught_on, state]
                 properties:
                   lessons: { type: integer }
+                  reach:
+                    type: integer
+                    description: |
+                      Distinct athletes at one or more of those lessons (#1746).
+                      Three lessons to the same four people reach four. A
+                      column beside `lessons`, never part of the headline and
+                      never a threshold: covered still takes two lessons.
+                  attendances:
+                    type: integer
+                    description: Distinct (athlete, lesson) presences across those lessons — what makes `reach` checkable.
                   last_taught_on: { type: string, format: date }
                   state:
                     type: string

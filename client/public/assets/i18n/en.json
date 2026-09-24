@@ -2866,6 +2866,10 @@
       "missingList": "Not taught yet ({{count}})",
       "nothingMissing": "Nothing left — the whole programme has been taught.",
       "thinTag": "Once",
+      "lessonsOne": "{{count}} lesson",
+      "lessonsOther": "{{count}} lessons",
+      "reachOne": "{{count}} person",
+      "reachOther": "{{count}} people",
       "worked": "worked {{count}}×",
       "barAria": "{{name}}: {{covered}} covered, {{thin}} taught once, {{missing}} not taught",
       "state": {

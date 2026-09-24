@@ -2866,6 +2866,10 @@
       "missingList": "Non ancora fatto ({{count}})",
       "nothingMissing": "Non manca niente: hai fatto tutto il programma.",
       "thinTag": "Una volta",
+      "lessonsOne": "{{count}} lezione",
+      "lessonsOther": "{{count}} lezioni",
+      "reachOne": "{{count}} persona",
+      "reachOther": "{{count}} persone",
       "worked": "fatta {{count}}×",
       "barAria": "{{name}}: {{covered}} coperti, {{thin}} fatti una volta, {{missing}} non fatti",
       "state": {

@@ -265,14 +265,38 @@
                     <span class="visually-hidden">{{
                       'stats.syllabus.exposure.openPrefix' | translate
                     }}</span>
-                    <span class="topics__name">
-                      {{ topic.name }}
-                      @if (topic.parent_name) {
-                        <span class="visually-hidden">({{ topic.parent_name }})</span>
-                      }
-                      @if (topic.state === 'thin') {
-                        <span class="topics__thin">{{ 'stats.syllabus.thinTag' | translate }}</span>
-                      }
+                    <span class="topics__what">
+                      <span class="topics__name">
+                        {{ topic.name }}
+                        @if (topic.parent_name) {
+                          <span class="visually-hidden">({{ topic.parent_name }})</span>
+                        }
+                        @if (topic.state === 'thin') {
+                          <span class="topics__thin">{{
+                            'stats.syllabus.thinTag' | translate
+                          }}</span>
+                        }
+                      </span>
+                      <!--
+                        Three lessons to fifteen people and three to four read
+                        the same without this line (#1746). Beside the count,
+                        never in the headline: covered still takes two lessons.
+                      -->
+                      <span class="topics__reach" data-cy="syllabus-taught-reach">
+                        {{
+                          (topic.lessons === 1
+                            ? 'stats.syllabus.lessonsOne'
+                            : 'stats.syllabus.lessonsOther'
+                          ) | translate: { count: topic.lessons }
+                        }}
+                        ·
+                        {{
+                          (topic.reach === 1
+                            ? 'stats.syllabus.reachOne'
+                            : 'stats.syllabus.reachOther'
+                          ) | translate: { count: topic.reach }
+                        }}
+                      </span>
                     </span>
                     <span class="topics__when">
                       <span>{{ shortDate(topic.last_taught_on) }}</span>
