@@ -36,34 +36,56 @@
       the empty state below is the one thing that should be on screen.
     -->
     @if (!loading() && positions().length > 0) {
-      <div class="syllabus__search">
-        <i class="pi pi-search" aria-hidden="true"></i>
+      <div class="syllabus__tools">
+        <div class="syllabus__search">
+          <i class="pi pi-search" aria-hidden="true"></i>
+          <!--
+            `type="text"`, not `search`: Blink and WebKit draw their own ✕ and
+            this field has its own (#1637). `role`/`enterkeyhint` put back what
+            the type was worth.
+          -->
+          <input
+            pInputText
+            type="text"
+            role="searchbox"
+            enterkeyhint="search"
+            [ngModel]="query()"
+            (ngModelChange)="setQuery($event)"
+            [placeholder]="'academy.syllabus.searchPlaceholder' | translate"
+            [attr.aria-label]="'academy.syllabus.searchPlaceholder' | translate"
+            data-cy="syllabus-search"
+          />
+          @if (searching()) {
+            <button
+              type="button"
+              class="syllabus__search-clear"
+              [attr.aria-label]="'academy.syllabus.searchClear' | translate"
+              (click)="setQuery('')"
+              data-cy="syllabus-search-clear"
+            >
+              <i class="pi pi-times" aria-hidden="true"></i>
+            </button>
+          }
+        </div>
+
         <!--
-          `type="text"`, not `search`: Blink and WebKit draw their own ✕ and
-          this field has its own (#1637). `role`/`enterkeyhint` put back what
-          the type was worth.
+          "What is a green belt expected to know" (#1861). Offered only once
+          something names a belt: before that every topic is for everyone and
+          the filter would narrow nothing.
         -->
-        <input
-          pInputText
-          type="text"
-          role="searchbox"
-          enterkeyhint="search"
-          [ngModel]="query()"
-          (ngModelChange)="setQuery($event)"
-          [placeholder]="'academy.syllabus.searchPlaceholder' | translate"
-          [attr.aria-label]="'academy.syllabus.searchPlaceholder' | translate"
-          data-cy="syllabus-search"
-        />
-        @if (searching()) {
-          <button
-            type="button"
-            class="syllabus__search-clear"
-            [attr.aria-label]="'academy.syllabus.searchClear' | translate"
-            (click)="setQuery('')"
-            data-cy="syllabus-search-clear"
-          >
-            <i class="pi pi-times" aria-hidden="true"></i>
-          </button>
+        @if (graded()) {
+          <p-select
+            [options]="filterBeltOptions()"
+            [ngModel]="beltFilter()"
+            (ngModelChange)="setBeltFilter($event)"
+            optionLabel="label"
+            optionValue="value"
+            [placeholder]="'academy.syllabus.beltFilterPlaceholder' | translate"
+            [showClear]="true"
+            [ariaLabel]="'academy.syllabus.beltFilterAria' | translate"
+            class="syllabus__belt-filter"
+            data-cy="syllabus-belt-filter"
+          />
         }
       </div>
     }
@@ -131,6 +153,12 @@
         }
       }
 
+      @if (beltSummary(); as summary) {
+        <p class="syllabus__results" role="status" data-cy="syllabus-belt-summary">
+          {{ summary }}
+        </p>
+      }
+
       <ol class="tree" data-cy="syllabus-tree">
         @for (position of filteredPositions(); track position.id) {
           <li
@@ -170,6 +198,13 @@
                   <span class="position__count">{{ techniqueTotal(position) }}</span>
                   @if (kindChip(position); as chip) {
                     <span class="chip">{{ chip }}</span>
+                  }
+                  @let positionBelt = beltChip(position);
+                  @if (positionBelt) {
+                    <span class="belt-from" data-cy="syllabus-belt">
+                      {{ 'academy.syllabus.fromBelt' | translate }}
+                      <app-belt-badge [belt]="positionBelt" />
+                    </span>
                   }
                 </span>
               </button>
@@ -248,6 +283,23 @@
                     </label>
                     @if (kindChip(technique, position); as chip) {
                       <span class="chip">{{ chip }}</span>
+                    }
+                    <!--
+                      Its belt only where it differs from its position's
+                      (#1861) — "for everyone" included, which is how a
+                      technique added before its position was graded shows
+                      that it did not follow.
+                    -->
+                    @let techniqueBelt = beltChip(technique, position);
+                    @if (techniqueBelt === null) {
+                      <span class="chip" data-cy="syllabus-belt">
+                        {{ 'academy.syllabus.forEveryone' | translate }}
+                      </span>
+                    } @else if (techniqueBelt) {
+                      <span class="belt-from" data-cy="syllabus-belt">
+                        {{ 'academy.syllabus.fromBelt' | translate }}
+                        <app-belt-badge [belt]="techniqueBelt" />
+                      </span>
                     }
                     <!--
                       Renaming was done by clicking the name, and nothing said
@@ -339,6 +391,31 @@
         data-cy="syllabus-form-kind"
       />
       <small class="field__hint" id="topic-kind-hint">{{ kindHintKey() | translate }}</small>
+    </div>
+
+    <!--
+      From which grade it belongs to the programme (#1861). Optional, and
+      "for everyone" until chosen; a technique starts on its position's.
+    -->
+    <div class="field">
+      <label for="topic-from-belt" class="field__label">
+        {{ 'academy.syllabus.form.fromBelt' | translate }}
+      </label>
+      <p-select
+        inputId="topic-from-belt"
+        formControlName="fromBelt"
+        [options]="beltOptions()"
+        optionLabel="label"
+        optionValue="value"
+        [placeholder]="'academy.syllabus.forEveryone' | translate"
+        [showClear]="true"
+        appendTo="body"
+        styleClass="topic-form__belt"
+        data-cy="syllabus-form-from-belt"
+      />
+      <small class="field__hint" id="topic-from-belt-hint">
+        {{ 'academy.syllabus.form.fromBeltHint' | translate }}
+      </small>
     </div>
 
     <!--

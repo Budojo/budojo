@@ -354,3 +354,97 @@ it('reads 100% for an athlete who missed nothing, however thinly', function (): 
     // The distinction survives, demoted rather than deleted.
     expect($totals['seen'])->toBe(2)->and($totals['thin'])->toBe(9);
 });
+
+// ─── The programme of their own belt (#1861) ─────────────────────────────────
+
+function gradedTechnique(mixed $test, string $name, ?string $fromBelt, int $order = 0, bool $inSeason = true): SyllabusTopic
+{
+    return SyllabusTopic::factory()->under($test->guard)->create([
+        'name' => $name, 'sort_order' => $order, 'from_belt' => $fromBelt, 'in_season' => $inSeason,
+    ]);
+}
+
+it('has no belt line while nothing in the programme names a belt', function (): void {
+    $armbar = coveredTechnique($this, 'Armbar', 1);
+    lessonWith($this, '2026-09-16', [$armbar], [$this->athlete]);
+
+    $report = athleteCoverage($this);
+
+    expect($report)->toHaveKey('grade')
+        ->and($report['grade'])->toBeNull();
+});
+
+it('counts what is expected up to their belt, what was taught of it, and what they were at', function (): void {
+    $this->athlete->update(['belt' => 'blue']);
+
+    $forEveryone = gradedTechnique($this, 'Armbar', null, 1);
+    $blue = gradedTechnique($this, 'Triangle', 'blue', 2);
+    $white = gradedTechnique($this, 'Scissor sweep', 'white', 3);
+    $purple = gradedTechnique($this, 'Omoplata', 'purple', 4);
+    gradedTechnique($this, 'Collar choke', 'blue', 5);
+
+    lessonWith($this, '2026-09-16', [$forEveryone], [$this->athlete]);
+    lessonWith($this, '2026-09-23', [$blue, $white], []);
+    // Above their belt: taught, and not theirs to have seen.
+    lessonWith($this, '2026-09-30', [$purple], [$this->athlete]);
+
+    // Up to blue: Armbar (everyone), Triangle and Collar choke (blue), Scissor
+    // sweep (white, below blue). Omoplata is purple and stays out.
+    expect(athleteCoverage($this)['grade'])->toBe([
+        'belt' => 'blue',
+        'items' => 4,
+        'taught_by_academy' => 3,
+        'attended' => 1,
+    ]);
+});
+
+it('orders belts by the ladder, not by the colour names', function (): void {
+    // Kids' grey sits below white on the BJJ ladder, so it is expected of a
+    // white belt; black sits above and is not.
+    $this->athlete->update(['belt' => 'white']);
+    gradedTechnique($this, 'Shrimp', 'grey', 1);
+    gradedTechnique($this, 'Berimbolo', 'black', 2);
+
+    expect(athleteCoverage($this)['grade']['items'])->toBe(1);
+});
+
+it('leaves out-of-season items out of the belt line too', function (): void {
+    $this->athlete->update(['belt' => 'blue']);
+    gradedTechnique($this, 'Triangle', 'blue', 1);
+    gradedTechnique($this, 'Gogoplata', 'blue', 2, inSeason: false);
+
+    expect(athleteCoverage($this)['grade']['items'])->toBe(1);
+});
+
+it('does not count on the belt line what was taught before they joined', function (): void {
+    $this->athlete->update(['belt' => 'blue', 'joined_at' => '2026-10-01']);
+    $blue = gradedTechnique($this, 'Triangle', 'blue', 1);
+    lessonWith($this, '2026-09-23', [$blue], []);
+
+    expect(athleteCoverage($this)['grade'])->toMatchArray([
+        'items' => 1,
+        'taught_by_academy' => 0,
+        'attended' => 0,
+    ]);
+});
+
+it('reads the new belt programme after a promotion, rewriting nothing', function (): void {
+    $this->athlete->update(['belt' => 'blue']);
+    gradedTechnique($this, 'Triangle', 'blue', 1);
+    gradedTechnique($this, 'Omoplata', 'purple', 2);
+
+    expect(athleteCoverage($this)['grade']['items'])->toBe(1);
+
+    $this->athlete->update(['belt' => 'purple']);
+
+    expect(athleteCoverage($this)['grade'])->toMatchArray(['belt' => 'purple', 'items' => 2]);
+});
+
+it('has no belt line for a belt the academy ladder does not hold', function (): void {
+    // Only reachable by an art change after the athlete was written; the
+    // line would have no rank to compare against.
+    $this->athlete->update(['belt' => 'white-and-yellow']);
+    gradedTechnique($this, 'Triangle', 'blue', 1);
+
+    expect(athleteCoverage($this)['grade'])->toBeNull();
+});

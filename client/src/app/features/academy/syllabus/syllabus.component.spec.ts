@@ -7,7 +7,7 @@ import { ConfirmationService, MessageService } from 'primeng/api';
 import { AcademyService, MartialArt } from '../../../core/services/academy.service';
 import { SyllabusTopic } from '../../../core/services/syllabus.service';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
-import { TRAINING_MODE_FIXTURES } from '../../../../test-utils/ladder-test';
+import { TRAINING_MODE_FIXTURES, useLadder } from '../../../../test-utils/ladder-test';
 import { SyllabusComponent } from './syllabus.component';
 
 const SYLLABUS_URL = '/api/v1/academy/syllabus';
@@ -18,6 +18,7 @@ function topic(overrides: Partial<SyllabusTopic> & { id: number }): SyllabusTopi
     name: `Topic ${overrides.id}`,
     kind: 'both',
     in_season: true,
+    from_belt: null,
     sort_order: 0,
     ...overrides,
   };
@@ -262,7 +263,12 @@ describe('SyllabusComponent (#1563)', () => {
 
     const req = httpMock.expectOne(SYLLABUS_URL);
     expect(req.request.method).toBe('POST');
-    expect(req.request.body).toEqual({ name: 'Mount', kind: 'both', parent_id: null });
+    expect(req.request.body).toEqual({
+      name: 'Mount',
+      kind: 'both',
+      parent_id: null,
+      from_belt: null,
+    });
     req.flush({ data: topic({ id: 3, name: 'Mount' }) });
 
     expect(component['dialogOpen']()).toBe(false);
@@ -288,7 +294,12 @@ describe('SyllabusComponent (#1563)', () => {
     component['submit']();
 
     const req = httpMock.expectOne(SYLLABUS_URL);
-    expect(req.request.body).toEqual({ name: 'Saddle entry', kind: 'nogi', parent_id: 2 });
+    expect(req.request.body).toEqual({
+      name: 'Saddle entry',
+      kind: 'nogi',
+      parent_id: 2,
+      from_belt: null,
+    });
     req.flush({ data: topic({ id: 21, parent_id: 2, name: 'Saddle entry', kind: 'nogi' }) });
 
     flushTree(httpMock, [CLOSED_GUARD, K_GUARD]);
@@ -327,14 +338,18 @@ describe('SyllabusComponent (#1563)', () => {
 
     (fixture.nativeElement.querySelector('[data-cy="syllabus-edit-1"]') as HTMLElement).click();
     expect(component['editing']()).toEqual(CLOSED_GUARD);
-    expect(component['form'].getRawValue()).toEqual({ name: 'Closed guard', kind: 'both' });
+    expect(component['form'].getRawValue()).toEqual({
+      name: 'Closed guard',
+      kind: 'both',
+      fromBelt: null,
+    });
 
     component['form'].patchValue({ name: 'Guardia chiusa' });
     component['submit']();
 
     const req = httpMock.expectOne(`${SYLLABUS_URL}/1`);
     expect(req.request.method).toBe('PATCH');
-    expect(req.request.body).toEqual({ name: 'Guardia chiusa', kind: 'both' });
+    expect(req.request.body).toEqual({ name: 'Guardia chiusa', kind: 'both', from_belt: null });
     req.flush({ data: { ...CLOSED_GUARD, name: 'Guardia chiusa' } });
 
     flushTree(httpMock, [{ ...CLOSED_GUARD, name: 'Guardia chiusa' }]);
@@ -1050,5 +1065,159 @@ describe('SyllabusComponent — reordering (#1661)', () => {
 
     expect(component['place']()).toBeNull();
     expect(document.querySelector('[data-cy="syllabus-form-order"]')).toBeNull();
+  });
+});
+
+describe('SyllabusComponent — the programme by grade (#1861)', () => {
+  afterEach(() => TestBed.inject(HttpTestingController).verify());
+
+  // Everyone, white and blue under one position; purple on its own.
+  const SHRIMP = topic({ id: 21, parent_id: 2, name: 'Shrimp' });
+  const SCISSOR = topic({ id: 22, parent_id: 2, name: 'Scissor sweep', from_belt: 'white' });
+  const TRIANGLE = topic({ id: 23, parent_id: 2, name: 'Triangle', from_belt: 'blue' });
+  const GUARD = topic({
+    id: 2,
+    name: 'Guard',
+    from_belt: 'blue',
+    children: [SHRIMP, SCISSOR, TRIANGLE],
+  });
+  const HEEL_HOOK = topic({ id: 31, parent_id: 3, name: 'Heel hook', from_belt: 'purple' });
+  const LEG_LOCKS = topic({
+    id: 3,
+    name: 'Leg locks',
+    from_belt: 'purple',
+    sort_order: 1,
+    children: [HEEL_HOOK],
+  });
+
+  function graded() {
+    const ctx = setup();
+    useLadder('bjj', { syllabus_programmes: ['bjj'] });
+    flushTree(ctx.httpMock, [GUARD, LEG_LOCKS]);
+    ctx.fixture.detectChanges();
+    return ctx;
+  }
+
+  function techniqueNames(fixture: { nativeElement: HTMLElement }): (string | undefined)[] {
+    return Array.from(
+      fixture.nativeElement.querySelectorAll('.technique__name') as NodeListOf<HTMLElement>,
+    ).map((n) => n.textContent?.trim());
+  }
+
+  it("starts a new technique on its position's belt, and sends it", () => {
+    const { fixture, component, httpMock } = graded();
+
+    (
+      fixture.nativeElement.querySelector('[data-cy="syllabus-add-under-3"]') as HTMLElement
+    ).click();
+    expect(component['form'].getRawValue().fromBelt).toBe('purple');
+
+    component['form'].patchValue({ name: 'Kneebar' });
+    component['submit']();
+
+    const req = httpMock.expectOne(SYLLABUS_URL);
+    expect(req.request.body).toEqual({
+      name: 'Kneebar',
+      kind: 'both',
+      parent_id: 3,
+      from_belt: 'purple',
+    });
+    req.flush({ data: topic({ id: 32, parent_id: 3, name: 'Kneebar', from_belt: 'purple' }) });
+    flushTree(httpMock, [GUARD, LEG_LOCKS]);
+    flushAcademy(httpMock, 5);
+  });
+
+  it('edits the belt with the rest of the topic — clearing it is "for everyone"', () => {
+    const { component, httpMock } = graded();
+
+    component['startEditing'](TRIANGLE);
+    expect(component['form'].getRawValue().fromBelt).toBe('blue');
+
+    component['form'].patchValue({ fromBelt: null });
+    component['submit']();
+
+    const req = httpMock.expectOne(`${SYLLABUS_URL}/23`);
+    expect(req.request.body).toEqual({ name: 'Triangle', kind: 'both', from_belt: null });
+    req.flush({ data: { ...TRIANGLE, from_belt: null } });
+    flushTree(httpMock, [GUARD, LEG_LOCKS]);
+    flushAcademy(httpMock, 4);
+  });
+
+  it('offers the grades of the academy ladder in the dialog, without the kids ones it does not train', () => {
+    const { component, httpMock } = setup();
+    useLadder('bjj', { trains_kids: false });
+    flushTree(httpMock, [GUARD]);
+
+    const values = component['beltOptions']().map((o) => o.value);
+    expect(values[0]).toBe('white');
+    expect(values).not.toContain('grey');
+  });
+
+  it('says the belt on a row only where it tells the reader something', () => {
+    const { fixture } = graded();
+    const el: HTMLElement = fixture.nativeElement;
+
+    // On a position whenever it has one.
+    expect(
+      el.querySelector('[data-cy="syllabus-position-2"] [data-cy="syllabus-belt"]'),
+    ).not.toBeNull();
+
+    (el.querySelector('[data-cy="syllabus-toggle-2"]') as HTMLElement).click();
+    fixture.detectChanges();
+
+    // Same as its position: said once, above. Different: said on the row —
+    // "for everyone" included, since a position's belt is a default for what
+    // is added under it and not a rule over what was already there.
+    expect(el.querySelector('[data-cy="syllabus-topic-23"] [data-cy="syllabus-belt"]')).toBeNull();
+    expect(
+      el.querySelector('[data-cy="syllabus-topic-22"] [data-cy="syllabus-belt"]'),
+    ).not.toBeNull();
+    expect(
+      el.querySelector('[data-cy="syllabus-topic-21"] [data-cy="syllabus-belt"]')?.textContent,
+    ).toContain('For everyone');
+  });
+
+  it('narrows the programme to what a belt is expected to know, the grades below included', () => {
+    const { fixture, component } = graded();
+
+    component['setBeltFilter']('blue');
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+
+    // Leg locks start at purple: nothing in them is a blue belt's yet.
+    expect(el.querySelector('[data-cy="syllabus-position-3"]')).toBeNull();
+    (el.querySelector('[data-cy="syllabus-toggle-2"]') as HTMLElement).click();
+    fixture.detectChanges();
+    expect(techniqueNames(fixture)).toEqual(['Shrimp', 'Scissor sweep', 'Triangle']);
+    expect(el.querySelector('[data-cy="syllabus-belt-summary"]')?.textContent?.trim()).toBe(
+      '3 techniques expected up to the Blue belt',
+    );
+
+    component['setBeltFilter']('white');
+    fixture.detectChanges();
+    expect(techniqueNames(fixture)).toEqual(['Shrimp', 'Scissor sweep']);
+    expect(el.querySelector('[data-cy="syllabus-belt-summary"]')?.textContent?.trim()).toBe(
+      '2 techniques expected up to the White belt',
+    );
+
+    component['setBeltFilter'](null);
+    fixture.detectChanges();
+    expect(el.querySelector('[data-cy="syllabus-position-3"]')).not.toBeNull();
+    expect(el.querySelector('[data-cy="syllabus-belt-summary"]')).toBeNull();
+  });
+
+  it('offers no belt filter while nothing in the programme names a belt', () => {
+    const { fixture, httpMock } = setup();
+    useLadder('bjj');
+    flushTree(httpMock, [CLOSED_GUARD, K_GUARD]);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('[data-cy="syllabus-belt-filter"]')).toBeNull();
+  });
+
+  it('shows the belt filter once a belt is named', () => {
+    const { fixture } = graded();
+
+    expect(fixture.nativeElement.querySelector('[data-cy="syllabus-belt-filter"]')).not.toBeNull();
   });
 });

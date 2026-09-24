@@ -18,11 +18,14 @@ import { CheckboxModule } from 'primeng/checkbox';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
+import { SelectModule } from 'primeng/select';
 import { SkeletonModule } from 'primeng/skeleton';
 import { Toast } from 'primeng/toast';
 import { Tooltip } from 'primeng/tooltip';
 import { finalize } from 'rxjs';
 import { AcademyService, TrainingMode } from '../../../core/services/academy.service';
+import { Belt } from '../../../core/services/athlete.service';
+import { BeltLadderService, BeltOption } from '../../../core/services/belt-ladder.service';
 import { LanguageService } from '../../../core/services/language.service';
 import { SyllabusService, SyllabusTopic } from '../../../core/services/syllabus.service';
 import { TrainingModesService } from '../../../core/services/training-modes.service';
@@ -31,6 +34,7 @@ import {
   SYLLABUS_NAME_PLACEHOLDER_KEYS,
   starterProgrammeKeys,
 } from '../../../shared/utils/i18n-enum-keys';
+import { BeltBadgeComponent } from '../../../shared/components/belt-badge/belt-badge.component';
 import { ChoiceGridComponent } from '../../../shared/components/choice-grid/choice-grid.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
@@ -71,6 +75,8 @@ import {
     ConfirmDialogModule,
     DialogModule,
     InputTextModule,
+    SelectModule,
+    BeltBadgeComponent,
     ChoiceGridComponent,
     SkeletonModule,
     Toast,
@@ -88,6 +94,8 @@ export class SyllabusComponent {
   private readonly academyService = inject(AcademyService);
   /** The academy's modes (#1803): gi and no-gi here, kata and kumite in a karate one. */
   private readonly trainingModes = inject(TrainingModesService);
+  /** The academy's grades, in ladder order (#1861) — the only way to compare two belts. */
+  private readonly ladder = inject(BeltLadderService);
   private readonly languageService = inject(LanguageService);
   private readonly translate = inject(TranslateService);
   private readonly confirmationService = inject(ConfirmationService);
@@ -133,6 +141,8 @@ export class SyllabusComponent {
       nonNullable: true,
       validators: [Validators.required],
     }),
+    /** The grade it belongs to the programme from (#1861); null is for everyone. */
+    fromBelt: this.fb.control<Belt | null>(null),
   });
 
   /**
@@ -171,7 +181,7 @@ export class SyllabusComponent {
    * identical names answers nothing. A position whose own name matches keeps
    * all of its techniques — you searched for the position.
    */
-  protected readonly filteredPositions = computed<readonly SyllabusTopic[]>(() => {
+  private readonly searchedPositions = computed<readonly SyllabusTopic[]>(() => {
     const needle = this.query().trim().toLocaleLowerCase();
     if (needle === '') return this.positions();
 
@@ -185,6 +195,98 @@ export class SyllabusComponent {
       })
       .filter((position): position is SyllabusTopic => position !== null);
   });
+
+  // ── The programme by grade (#1861) ──────────────────────────────────────
+
+  /**
+   * "What is a green belt expected to know": the belt the tree is narrowed to,
+   * or null for the whole programme. Cumulative — a grade's programme is its
+   * own items, those of every grade below it, and those for everyone.
+   */
+  protected readonly beltFilter = signal<Belt | null>(null);
+
+  protected setBeltFilter(belt: Belt | null): void {
+    this.beltFilter.set(belt);
+  }
+
+  /**
+   * Whether anything in the programme names a belt. Until something does,
+   * every topic is for everyone and a belt filter would filter nothing, so it
+   * is not offered — the dialog's field is where grading starts.
+   */
+  protected readonly graded = computed<boolean>(() =>
+    this.positions().some(
+      (position) =>
+        position.from_belt !== null ||
+        (position.children ?? []).some((child) => child.from_belt !== null),
+    ),
+  );
+
+  /**
+   * The academy's grades, in ladder order, without the kids' ones when it
+   * trains none (#1651) — `keep` holds on to one a topic already names.
+   */
+  protected readonly beltOptions = computed<BeltOption<Belt>[]>(() =>
+    this.ladder.beltOptions(this.editing()?.from_belt ?? null),
+  );
+
+  /** The same grades for the filter, which has no topic of its own to keep. */
+  protected readonly filterBeltOptions = computed<BeltOption<Belt>[]>(() =>
+    this.ladder.beltOptions(),
+  );
+
+  /**
+   * Search first, then the belt: a position stays when at least one of its
+   * techniques is expected by the chosen belt. A technique is judged by its
+   * own `from_belt`, never its position's — a position's belt is a default
+   * for what is added under it, not a rule over what is already there.
+   */
+  protected readonly filteredPositions = computed<readonly SyllabusTopic[]>(() => {
+    const searched = this.searchedPositions();
+    const belt = this.beltFilter();
+    const rank = belt === null ? null : this.ladder.rankOf(belt);
+    if (rank === null) return searched;
+
+    const expected = (topic: SyllabusTopic): boolean => {
+      if (topic.from_belt === null) return true;
+      const from = this.ladder.rankOf(topic.from_belt);
+      return from !== null && from <= rank;
+    };
+
+    return searched
+      .map((position) => ({ ...position, children: (position.children ?? []).filter(expected) }))
+      .filter((position) => position.children.length > 0);
+  });
+
+  /** "12 techniques expected up to the green belt" — what the filter kept, in words. */
+  protected readonly beltSummary = computed<string | null>(() => {
+    this.languageService.currentLang(); // signal dep — recompute on toggle
+    const belt = this.beltFilter();
+    if (belt === null) return null;
+    const count = this.filteredPositions().reduce((n, p) => n + (p.children?.length ?? 0), 0);
+    return this.translate.instant(
+      count === 1 ? 'academy.syllabus.beltSummaryOne' : 'academy.syllabus.beltSummaryOther',
+      { count, belt: this.ladder.label(belt) },
+    );
+  });
+
+  /**
+   * The belt said on a row only where it tells the reader something — the
+   * rule `kindChip` follows: on a position when it has one, on a technique
+   * when it differs from its position's. "For everyone" under a graded
+   * position is worth saying: it is how a technique added before the
+   * position was graded shows that it did not follow.
+   *
+   * `undefined` for nothing to say; null for "for everyone".
+   */
+  protected beltChip(topic: SyllabusTopic, position?: SyllabusTopic): Belt | null | undefined {
+    const inherited = position === undefined ? null : position.from_belt;
+    return topic.from_belt === inherited ? undefined : topic.from_belt;
+  }
+
+  protected beltKey(belt: Belt): string {
+    return this.ladder.labelKey(belt);
+  }
 
   /**
    * How many techniques each position really holds, by id.
@@ -366,7 +468,7 @@ export class SyllabusComponent {
     this.moved.set(false);
     this.editing.set(null);
     this.addingUnder.set(null);
-    this.form.reset({ name: '', kind: 'both' });
+    this.form.reset({ name: '', kind: 'both', fromBelt: null });
     this.nameError.set(false);
     this.dialogOpen.set(true);
   }
@@ -376,8 +478,9 @@ export class SyllabusComponent {
     this.editing.set(null);
     this.addingUnder.set(position);
     // A technique starts as its position is trained — a submission under
-    // "Lapel guards" is a gi technique until someone says otherwise.
-    this.form.reset({ name: '', kind: position.kind });
+    // "Lapel guards" is a gi technique until someone says otherwise — and
+    // from its position's belt, the same default (#1861).
+    this.form.reset({ name: '', kind: position.kind, fromBelt: position.from_belt });
     this.nameError.set(false);
     this.dialogOpen.set(true);
     // Adding into a closed position would hide the result.
@@ -500,7 +603,7 @@ export class SyllabusComponent {
     this.moved.set(false);
     this.editing.set(topic);
     this.addingUnder.set(null);
-    this.form.reset({ name: topic.name, kind: topic.kind });
+    this.form.reset({ name: topic.name, kind: topic.kind, fromBelt: topic.from_belt });
     this.nameError.set(false);
     this.dialogOpen.set(true);
   }
@@ -522,8 +625,9 @@ export class SyllabusComponent {
             name,
             kind: raw.kind,
             parent_id: this.addingUnder()?.id ?? null,
+            from_belt: raw.fromBelt,
           })
-        : this.syllabus.update(current.id, { name, kind: raw.kind });
+        : this.syllabus.update(current.id, { name, kind: raw.kind, from_belt: raw.fromBelt });
 
     this.saving.set(true);
     op$

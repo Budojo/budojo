@@ -3181,7 +3181,9 @@ paths:
         technique as `parent_id` — like a position of another academy, or a
         deleted one — is a 422 on `parent_id`. The same name twice among
         living siblings is a 422 on `name`; the same name under another
-        position is fine and expected.
+        position is fine and expected. `from_belt` absent on a technique
+        takes its position's belt (#1861); a belt off the academy's ladder is
+        a 422.
 
         Requires `academy_settings_update`.
       operationId: syllabusTopicStore
@@ -3601,9 +3603,10 @@ paths:
           - `missed` — taught while they were on the roster, and they were not there
           - `not_taught_yet` — the academy has not covered it this season
 
-        `percentage` is `seen` over `taught_by_academy`, so it answers "how much
-        of what happened did you catch?" and never "how much of the syllabus are
-        you?". `not_taught_yet` is reported beside the fraction, never inside it.
+        `percentage` is `attended` (seen or thin) over `taught_by_academy`
+        (#1710), so it answers "how much of what happened did you catch?" and
+        never "how much of the syllabus are you?". `not_taught_yet` is reported
+        beside the fraction, never inside it.
 
         **Everything is scoped to on or after the athlete's `joined_at`**, which
         the response echoes as `joined_on`. Nobody misses what predates them.
@@ -3612,6 +3615,13 @@ paths:
         lesson and so can be attributed to no topic (#1562, #1590). They are
         reported rather than counted as absence: a gap that is really a missing
         record would be a lie about a person.
+
+        `grade` is the programme of their own belt (#1861): the in-season
+        techniques marked from their belt or a grade below it on the academy's
+        ladder, plus those for everyone, with how many the academy taught in
+        the same window and how many they were at. Null while no in-season
+        technique names a belt, and for a belt the ladder does not hold.
+        Exposure only — never an assessment.
 
         Requires `attendance_read`, not `stats_view` — this lives beside the
         athlete's attendance, and the reader is the instructor planning their
@@ -3638,7 +3648,7 @@ paths:
                 properties:
                   data:
                     type: object
-                    required: [season, joined_on, totals, missed, seen_lately, unattributed_presences]
+                    required: [season, joined_on, totals, missed, seen_lately, unattributed_presences, grade]
                     properties:
                       season:
                         type: object
@@ -3653,11 +3663,14 @@ paths:
                         description: Nothing before this date is counted.
                       totals:
                         type: object
-                        required: [taught_by_academy, seen, thin, missed, percentage, not_taught_yet]
+                        required: [taught_by_academy, attended, seen, thin, missed, percentage, not_taught_yet]
                         properties:
                           taught_by_academy:
                             type: integer
                             description: The denominator — what the academy taught while they were here.
+                          attended:
+                            type: integer
+                            description: Attended at least once — the headline's numerator (#1710).
                           seen: { type: integer }
                           thin: { type: integer }
                           missed: { type: integer }
@@ -3693,6 +3706,23 @@ paths:
                       unattributed_presences:
                         type: integer
                         description: Sessions that name no lesson, and so count neither way.
+                      grade:
+                        type: object
+                        nullable: true
+                        description: The programme of their own belt (#1861), or null.
+                        required: [belt, items, taught_by_academy, attended]
+                        properties:
+                          belt:
+                            $ref: '#/components/schemas/Belt'
+                          items:
+                            type: integer
+                            description: In-season techniques expected up to their belt, taught or not.
+                          taught_by_academy:
+                            type: integer
+                            description: Of those, taught in a held lesson since they joined, this season.
+                          attended:
+                            type: integer
+                            description: Of those, taught in a lesson they were checked into.
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
@@ -8565,6 +8595,15 @@ components:
         in_season:
           type: boolean
           default: true
+        from_belt:
+          allOf:
+            - $ref: '#/components/schemas/Belt'
+          nullable: true
+          description: |
+            The grade it belongs to the programme from (#1861) — a belt on the
+            academy's own ladder, anything else is a 422. Null is for
+            everyone. **Absent**, a technique takes its position's belt: a
+            default for what is added under a position, never a cascade.
 
     SyllabusTopicUpdatePayload:
       type: object
@@ -8581,6 +8620,14 @@ components:
           $ref: '#/components/schemas/TrainingMode'
         in_season:
           type: boolean
+        from_belt:
+          allOf:
+            - $ref: '#/components/schemas/Belt'
+          nullable: true
+          description: |
+            The grade it belongs to the programme from (#1861), on the
+            academy's own ladder; null for everyone. On a position it does
+            not cascade to the techniques already under it.
         sort_order:
           type: integer
           minimum: 0
@@ -8594,7 +8641,7 @@ components:
         One entry in the academy's programme (#1563) — a position when
         `parent_id` is null, a technique under it otherwise. A position
         carries its techniques as `children`; a technique has none.
-      required: [id, parent_id, name, kind, in_season, sort_order]
+      required: [id, parent_id, name, kind, in_season, from_belt, sort_order]
       properties:
         id:
           type: integer
@@ -8612,6 +8659,14 @@ components:
         in_season:
           type: boolean
           description: In scope for the current season — the coverage denominator.
+        from_belt:
+          allOf:
+            - $ref: '#/components/schemas/Belt'
+          nullable: true
+          description: |
+            The grade it belongs to the programme from (#1861): expected of
+            that belt and of every grade above it on the academy's ladder.
+            Null is for everyone.
         sort_order:
           type: integer
         children:

@@ -122,7 +122,16 @@ const CLASSES = [
 // ── The programme ────────────────────────────────────────────────────────
 
 function topic(id: number, parent_id: number | null, name: string, over: object = {}) {
-  return { id, parent_id, name, kind: 'both', in_season: true, sort_order: id, ...over };
+  return {
+    id,
+    parent_id,
+    name,
+    kind: 'both',
+    in_season: true,
+    from_belt: null,
+    sort_order: id,
+    ...over,
+  };
 }
 
 const SYLLABUS = [
@@ -191,6 +200,31 @@ const SYLLABUS = [
     ],
   },
 ];
+
+/**
+ * The same programme with grades (#1861): Mount from white, the leg locks
+ * from purple (one of them added before the position was graded, so it still
+ * says "for everyone"), an arm triangle from blue. The rest is for everyone.
+ */
+const GRADED_SYLLABUS = SYLLABUS.map((position) => {
+  if (position.id === 3) {
+    return {
+      ...position,
+      from_belt: 'white',
+      children: position.children.map((t) =>
+        t.id === 33 ? { ...t, from_belt: 'blue' } : { ...t, from_belt: 'white' },
+      ),
+    };
+  }
+  if (position.id === 7) {
+    return {
+      ...position,
+      from_belt: 'purple',
+      children: position.children.map((t) => (t.id === 71 ? t : { ...t, from_belt: 'purple' })),
+    };
+  }
+  return position;
+});
 
 function lessonTopic(id: number, name: string, parent: string, kind = 'both') {
   return { id, name, kind, parent_id: Math.floor(id / 10), parent_name: parent, deleted: false };
@@ -724,6 +758,7 @@ const ATHLETE_COVERAGE = {
     { id: 61, name: 'Double leg', parent_name: 'Standing', lessons: 1, last_seen_on: '2026-09-02' },
   ],
   unattributed_presences: 1,
+  grade: null,
 };
 
 function coveragePosition(
@@ -1608,6 +1643,37 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       cy.get('[data-cy="syllabus-form"]').should('be.visible');
     },
   });
+  // The programme by grade (#1861): a few topics graded, the tree narrowed to
+  // what a blue belt is expected to know, one position open to show the
+  // belt said on the row only where it differs from its position's.
+  screen('12-syllabus-belt', '/dashboard/academy/syllabus', '[data-cy="syllabus-tree"]', {
+    stubs: () => {
+      cy.intercept('GET', '/api/v1/academy/syllabus', {
+        statusCode: 200,
+        body: { data: GRADED_SYLLABUS },
+      });
+    },
+    act: () => {
+      cy.get('[data-cy="syllabus-belt-filter"]').should('be.visible').click();
+      cy.get('.p-select-option').contains('Blu').click();
+      cy.get('[data-cy="syllabus-belt-summary"]').should('be.visible');
+      cy.get('.p-select-overlay').should('not.exist');
+      press('[data-cy="syllabus-toggle-3"]');
+      cy.get('[data-cy="syllabus-topic-31"]').should('be.visible');
+    },
+  });
+  screen('12-syllabus-belt-dialog', '/dashboard/academy/syllabus', '[data-cy="syllabus-tree"]', {
+    stubs: () => {
+      cy.intercept('GET', '/api/v1/academy/syllabus', {
+        statusCode: 200,
+        body: { data: GRADED_SYLLABUS },
+      });
+    },
+    act: () => {
+      press('[data-cy="syllabus-add-under-7"]');
+      cy.get('[data-cy="syllabus-form-from-belt"]').should('be.visible');
+    },
+  });
 
   // ── 13. Activity ───────────────────────────────────────────────────────
   screen('13-activity', '/dashboard/academy/activity', '[data-cy="audit-filters"]');
@@ -1760,6 +1826,26 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
     },
   });
   screen('22-athlete-coverage', '/dashboard/athletes/1/coverage', '[data-cy="athlete-coverage"]');
+  // The programme of their own belt (#1861) — only there once the academy
+  // has graded something.
+  screen(
+    '22-athlete-coverage-belt',
+    '/dashboard/athletes/1/coverage',
+    '[data-cy="athlete-coverage-grade"]',
+    {
+      stubs: () => {
+        cy.intercept('GET', '/api/v1/athletes/*/syllabus-coverage*', {
+          statusCode: 200,
+          body: {
+            data: {
+              ...ATHLETE_COVERAGE,
+              grade: { belt: 'blue', items: 18, taught_by_academy: 6, attended: 5 },
+            },
+          },
+        });
+      },
+    },
+  );
   screen(
     '22-athlete-coverage-nothing-yet',
     '/dashboard/athletes/1/coverage',

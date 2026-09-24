@@ -3,6 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { map, Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import type { TrainingMode } from './academy.service';
+import type { Belt } from './athlete.service';
 
 export interface DailyAttendancePoint {
   readonly date: string; // 'YYYY-MM-DD'
@@ -145,6 +146,17 @@ export interface AthleteSyllabusCoverage {
   readonly seen_lately: readonly SeenTopic[];
   /** Presences that name no lesson, and so can be attributed to no topic. */
   readonly unattributed_presences: number;
+  /**
+   * The programme of their own belt (#1861): what is expected up to it, how
+   * much of that the academy taught while they were here, how much they were
+   * at. Null while nothing in the programme names a belt.
+   */
+  readonly grade: {
+    readonly belt: Belt;
+    readonly items: number;
+    readonly taught_by_academy: number;
+    readonly attended: number;
+  } | null;
 }
 
 @Injectable({ providedIn: 'root' })

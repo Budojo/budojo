@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Actions\Stats;
 
+use App\Enums\MartialArt;
 use App\Models\Academy;
 use App\Models\Athlete;
 use App\Models\Lesson;
 use App\Models\SyllabusTopic;
+use App\Support\MartialArt\MartialArtProfile;
 use App\Support\Season;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
@@ -81,24 +83,81 @@ class AthleteSyllabusCoverageAction
 
         if ($from->greaterThan($to)) {
             // They joined after this season ended, or it has not started.
-            return $this->report($techniques, $positions, [], [], $start, $end, $label, $joined, 0);
+            return [
+                ...$this->report($techniques, $positions, [], [], $start, $end, $label, $joined, 0),
+                'grade' => $this->ownBeltProgramme($athlete, $academy, $techniques, [], []),
+            ];
         }
 
         $taughtByAcademy = $this->taughtByAcademy($academy->id, $from, $to);
         $attendedByAthlete = $this->attendedByAthlete($athlete, $from, $to);
         $unattributed = $this->unattributedPresences($athlete, $from, $to);
 
-        return $this->report(
-            $techniques,
-            $positions,
-            $taughtByAcademy,
-            $attendedByAthlete,
-            $start,
-            $end,
-            $label,
-            $joined,
-            $unattributed,
-        );
+        return [
+            ...$this->report(
+                $techniques,
+                $positions,
+                $taughtByAcademy,
+                $attendedByAthlete,
+                $start,
+                $end,
+                $label,
+                $joined,
+                $unattributed,
+            ),
+            'grade' => $this->ownBeltProgramme($athlete, $academy, $techniques, $taughtByAcademy, $attendedByAthlete),
+        ];
+    }
+
+    /**
+     * The programme of their own belt (#1861): the items expected of their
+     * grade — those marked from it or from any grade below it on the ladder,
+     * and those for everyone — with how many the academy taught while they
+     * were here and how many they were at. Exposure, never competence: every
+     * number is a derivation from attendance.
+     *
+     * Null while nothing in season names a belt, because the headline already
+     * is the whole programme then; and null for a belt the ladder does not
+     * hold, which has no rank to compare against.
+     *
+     * @param  Collection<int, SyllabusTopic>  $techniques
+     * @param  array<int, int>  $taught
+     * @param  array<int, array{lessons: int, last: string}>  $attended
+     * @return array{belt: string, items: int, taught_by_academy: int, attended: int}|null
+     */
+    private function ownBeltProgramme(Athlete $athlete, Academy $academy, Collection $techniques, array $taught, array $attended): ?array
+    {
+        if (! $techniques->contains(static fn (SyllabusTopic $technique): bool => $technique->from_belt !== null)) {
+            return null;
+        }
+
+        // Rank from the ladder, never from the enum's case order: blue is 6th
+        // of 12 in BJJ and 7th of 12 in taekwondo.
+        $ladder = MartialArtProfile::for($academy->martial_art ?? MartialArt::Bjj)->ladder();
+        $rank = $ladder->rankOf($athlete->belt);
+        if ($rank === null) {
+            return null;
+        }
+
+        $items = $techniques->filter(static function (SyllabusTopic $technique) use ($ladder, $rank): bool {
+            if ($technique->from_belt === null) {
+                return true;
+            }
+            $from = $ladder->rankOf($technique->from_belt);
+
+            return $from !== null && $from <= $rank;
+        });
+
+        return [
+            'belt' => $athlete->belt->value,
+            'items' => $items->count(),
+            'taught_by_academy' => $items->filter(
+                static fn (SyllabusTopic $technique): bool => ($taught[$technique->id] ?? 0) > 0,
+            )->count(),
+            'attended' => $items->filter(
+                static fn (SyllabusTopic $technique): bool => ($attended[$technique->id]['lessons'] ?? 0) > 0,
+            )->count(),
+        ];
     }
 
     /**

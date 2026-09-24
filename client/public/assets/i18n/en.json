@@ -1756,9 +1756,17 @@
         "moveUp": "Move up",
         "moveDown": "Move down",
         "place": "{{n}} of {{total}}",
-        "orderHint": "Moves apply straight away; Save is for the name and \"Trained in\".",
-        "close": "Close"
+        "orderHint": "Moves apply straight away; Save is for the name, \"Trained in\" and the belt.",
+        "close": "Close",
+        "fromBelt": "In the programme from",
+        "fromBeltHint": "Expected of this belt and of every belt above it. Leave it for everyone when the grade does not matter."
       },
+      "fromBelt": "From",
+      "forEveryone": "For everyone",
+      "beltFilterPlaceholder": "Up to a belt",
+      "beltFilterAria": "Show what a belt is expected to know",
+      "beltSummaryOne": "{{count}} technique expected up to the {{belt}} belt",
+      "beltSummaryOther": "{{count}} techniques expected up to the {{belt}} belt",
       "confirm": {
         "remove": "Remove {{name}} from the programme?",
         "removePositionOne": "Remove {{name}} and the one technique under it?",
@@ -2664,7 +2672,15 @@
       "nothingMissedOther": "They were at every one of them.",
       "consolidatedOne": "One seen twice or more, the bar Stats → Programme counts by.",
       "consolidatedOther": "{{count}} seen twice or more, the bar Stats → Programme counts by.",
-      "consolidatedNone": "None seen twice or more yet."
+      "consolidatedNone": "None seen twice or more yet.",
+      "grade": {
+        "title": "Programme up to the {{belt}} belt",
+        "fractionOne": "{{attended}} of {{taught}} technique the academy has taught so far",
+        "fractionOther": "{{attended}} of {{taught}} techniques the academy has taught so far",
+        "nothingTaught": "The academy has not taught any of it since they joined.",
+        "itemsOne": "{{count}} technique in the programme up to this belt",
+        "itemsOther": "{{count}} techniques in the programme up to this belt"
+      }
     }
   },
   "month": {

@@ -26,6 +26,7 @@ function report(over: Partial<AthleteSyllabusCoverage> = {}): AthleteSyllabusCov
     missed: [],
     seen_lately: [],
     unattributed_presences: 0,
+    grade: null,
     ...over,
   };
 }
@@ -145,6 +146,47 @@ describe('AthleteSyllabusCoverageComponent (#1567)', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.querySelector('[data-cy="athlete-coverage-caveat"]')).toBeNull();
+  });
+
+  it('says how much of their own belt programme was taught, and how much they were at (#1861)', () => {
+    const { fixture, httpMock } = setup();
+    flush(
+      httpMock,
+      report({ grade: { belt: 'blue', items: 18, taught_by_academy: 15, attended: 12 } }),
+    );
+    fixture.detectChanges();
+
+    const grade: HTMLElement = fixture.nativeElement.querySelector(
+      '[data-cy="athlete-coverage-grade"]',
+    );
+    expect(grade.querySelector('h3')?.textContent?.trim()).toBe('Programme up to the Blue belt');
+    expect(grade.textContent).toContain('12 of 15 techniques the academy has taught so far');
+    // What is still to come is the academy's to teach, said beside the
+    // fraction and never inside it.
+    expect(grade.textContent).toContain('18 techniques in the programme up to this belt');
+  });
+
+  it('counts one technique in the singular on the belt line', () => {
+    const { fixture, httpMock } = setup();
+    flush(
+      httpMock,
+      report({ grade: { belt: 'white', items: 1, taught_by_academy: 1, attended: 0 } }),
+    );
+    fixture.detectChanges();
+
+    const grade: HTMLElement = fixture.nativeElement.querySelector(
+      '[data-cy="athlete-coverage-grade"]',
+    );
+    expect(grade.textContent).toContain('0 of 1 technique the academy has taught so far');
+    expect(grade.textContent).toContain('1 technique in the programme up to this belt');
+  });
+
+  it('has no belt line while the programme names no belt', () => {
+    const { fixture, httpMock } = setup();
+    flush(httpMock, report());
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('[data-cy="athlete-coverage-grade"]')).toBeNull();
   });
 
   it('lists what they missed with how many chances they had', () => {
