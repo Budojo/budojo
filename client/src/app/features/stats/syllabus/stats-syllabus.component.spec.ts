@@ -121,7 +121,9 @@ describe('StatsSyllabusComponent (#1565)', () => {
     // The fraction is what makes the percentage mean something — and it
     // says which rule it counts by, because the athlete tab counts by another
     // (#1748).
-    expect(el.textContent).toContain('4 of 10 in the programme, taught at least twice this season');
+    expect(el.textContent).toContain(
+      "4 of 10 in the season's programme, each taught at least twice",
+    );
   });
 
   it('names the rule the athlete tab counts by, next to the number (#1748)', () => {
@@ -230,7 +232,7 @@ describe('StatsSyllabusComponent (#1565)', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain(
-      '1 of 3 in the programme, taught at least twice this season',
+      "1 of 3 in the season's programme, each taught at least twice",
     );
   });
 

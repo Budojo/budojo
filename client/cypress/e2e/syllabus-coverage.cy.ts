@@ -103,7 +103,7 @@ describe('Syllabus coverage', () => {
     cy.get('[data-cy="syllabus-coverage-percentage"]').should('contain.text', '40');
     cy.get('[data-cy="syllabus-coverage"]').should(
       'contain.text',
-      '4 of 10 in the programme, taught at least twice this season',
+      "4 of 10 in the season's programme, each taught at least twice",
     );
 
     cy.get('[data-cy="syllabus-coverage-totals"]')
@@ -140,7 +140,7 @@ describe('Syllabus coverage', () => {
     cy.wait('@filtered').its('request.url').should('contain', 'kind=nogi');
     cy.get('[data-cy="syllabus-coverage"]').should(
       'contain.text',
-      '1 of 3 in the programme, taught at least twice this season',
+      "1 of 3 in the season's programme, each taught at least twice",
     );
   });
 
