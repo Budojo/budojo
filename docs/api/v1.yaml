@@ -3857,6 +3857,63 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationError'
 
+  /stats/syllabus/calendar:
+    get:
+      tags: [Stats]
+      summary: Each position, week by week, across a season (#1858)
+      description: |
+        The season map. The coverage report says **how much** of a position
+        was taught; this says **when**, one column per week of the season,
+        so "half guard in October and never again" is visible.
+
+        A cell counts the distinct lessons that week naming the position **or
+        any of its techniques**. Techniques count by the coverage report's
+        own rules — living, `in_season`, admitted by `kind` — so a row and the
+        fraction printed beside it never disagree; a position named on its own
+        counts under every filter, as `worked` does.
+
+        Three states, derived on every read and never stored:
+        - `held` — at least one live presence points at the lesson;
+        - `planned` — nobody checked in, dated today or later;
+        - `unconfirmed` — nobody checked in, and the day has passed.
+
+        Same parameters and same gate as `/stats/syllabus/coverage`: the map
+        is drawn beside that report's fractions. Owner-only, and requires
+        `stats_view`.
+      operationId: statsSyllabusCalendar
+      parameters:
+        - in: query
+          name: seasons_back
+          description: How many seasons before the current one, 0 being now.
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 10
+            default: 0
+        - in: query
+          name: kind
+          description: One of the academy's two `training_modes`; never `both` or `other`.
+          schema:
+            type: string
+            enum: [gi, nogi, tachi-waza, ne-waza, kata, kumite, poomsae, kyorugi]
+      responses:
+        '200':
+          description: The season map
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/SyllabusCalendar'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
   /stats/syllabus/topics/{syllabusTopic}:
     get:
       tags: [Stats]
@@ -6054,6 +6111,55 @@ paths:
               example: { message: Forbidden. }
         '422': { description: 'Validation error — months must be 3, 6, or 12.' }
 
+  /stats/attendance/at-risk:
+    get:
+      operationId: statsAttendanceAtRisk
+      summary: Athletes whose attendance has fallen against their own habit
+      description: |
+        Who is drifting (#1728), measured against each athlete's own record
+        rather than a fixed number, and counted in **realised sessions** —
+        the distinct days anyone in the academy was checked in — rather than
+        in weeks, so a closure contributes nothing. Per athlete the sessions
+        are clipped at `joined_at`, and today counts for an athlete only once
+        they are ticked: not being checked in yet to a session still in
+        progress is not an absence.
+
+        `recent` is the athlete's last 8 sessions; `baseline` the 24 before
+        those. One tier per athlete, the most severe that applies:
+
+        - `gone` — none of the last 8, and last seen more than 21 days ago
+          (or never, since joining);
+        - `quiet` — none of the last 3, for someone whose own baseline rate
+          says they would normally have come at least once in 3;
+        - `dropping` — at least 6 presences in the baseline and a recent
+          rate under half the baseline rate.
+
+        Left out: athletes not `active`, anyone who joined in the last 28
+        days, and anyone whose baseline holds fewer than 12 sessions.
+
+        Sorted `gone`, `quiet`, `dropping`; within a tier, longest absent
+        first (never-seen first of all). `meta.sessions_available` counts
+        the academy's realised sessions, so a client can tell "nobody is
+        drifting" from "not enough sessions recorded yet". Not cached.
+
+        Owner-only, and requires `stats_view`: the route sits in the
+        `role:owner` group with every other `/stats` read, so any other role
+        gets the `role_required` 403 before the capability is checked.
+      tags: [Stats]
+      responses:
+        '200':
+          description: The athletes at risk, most severe first, and how many sessions exist.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AtRiskAthletes' }
+        '401': { description: Unauthenticated }
+        '403':
+          description: Forbidden — not the owner (`role_required`), or no academy.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorMessage' }
+              example: { message: Forbidden. }
+
   /stats/payments/monthly:
     get:
       operationId: statsPaymentsMonthly
@@ -7439,6 +7545,84 @@ components:
       description: Enrollment status for an athlete
       enum: [active, inactive]
 
+    AtRiskAthletes:
+      type: object
+      description: Who is drifting, against their own attendance (#1728).
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          description: Most severe tier first; within a tier, longest absent first.
+          items:
+            type: object
+            required:
+              [
+                athlete,
+                tier,
+                last_attended_on,
+                recent_attended,
+                recent_sessions,
+                baseline_attended,
+                baseline_sessions,
+              ]
+            properties:
+              athlete:
+                type: object
+                description: |
+                  What a list row needs to draw the person (the belt spine
+                  of `app-athlete-identity`) and to reach them (the phone
+                  pair) without a second request.
+                required: [id, first_name, last_name, belt, stripes, status]
+                properties:
+                  id: { type: integer }
+                  first_name: { type: string }
+                  last_name: { type: string }
+                  belt: { type: string, example: blue }
+                  stripes: { type: integer, minimum: 0 }
+                  date_of_birth: { type: string, format: date, nullable: true }
+                  status: { type: string, example: active }
+                  photo_url: { type: string, nullable: true }
+                  user_avatar_url: { type: string, nullable: true }
+                  phone_country_code: { type: string, nullable: true, example: '+39' }
+                  phone_national_number: { type: string, nullable: true }
+              tier:
+                type: string
+                enum: [gone, quiet, dropping]
+                description: The most severe that applies — one value, never several.
+              last_attended_on:
+                type: string
+                format: date
+                nullable: true
+                description: Latest live presence, all time. `null` — never trained since joining.
+              recent_attended:
+                type: integer
+                minimum: 0
+                description: Presences in the last 8 sessions since joining.
+              recent_sessions:
+                type: integer
+                minimum: 0
+                description: Sessions in that window — 8 for anyone listed.
+              baseline_attended:
+                type: integer
+                minimum: 0
+                description: Presences in the 24 sessions before those.
+              baseline_sessions:
+                type: integer
+                minimum: 12
+                maximum: 24
+                description: Sessions in the baseline — fewer than 24 for someone who joined within it.
+        meta:
+          type: object
+          required: [sessions_available]
+          properties:
+            sessions_available:
+              type: integer
+              minimum: 0
+              description: |
+                Every realised session the academy has recorded. Below 20
+                (8 recent + 12 baseline) nobody can be judged yet, and an
+                empty list means "not enough history", not "nobody drifting".
+
     # ── Generic envelopes ─────────────────────────────────────────────────
 
     ErrorMessage:
@@ -8719,6 +8903,91 @@ components:
             properties:
               on: { type: string, format: date }
               covered: { type: integer }
+
+    SyllabusCalendar:
+      type: object
+      description: |
+        The season map (#1858): each living position, one column per week.
+        Cells are sparse — a week with nothing on that position is absent.
+      required: [season, kind, today, weeks, positions, lessons]
+      properties:
+        season:
+          type: object
+          required: [start, end, label]
+          properties:
+            start: { type: string, format: date }
+            end: { type: string, format: date }
+            label: { type: string, example: 2026/27 }
+        kind:
+          type: string
+          nullable: true
+          enum: [gi, nogi, tachi-waza, ne-waza, kata, kumite, poomsae, kyorugi]
+          description: The filter in force, or null for the whole programme.
+        today:
+          type: string
+          format: date
+          description: The server's today — the day `planned` and `unconfirmed` were split on.
+        weeks:
+          type: array
+          description: The Monday of every ISO week the season touches, oldest first. The first can fall before the season opens.
+          items: { type: string, format: date }
+        positions:
+          type: array
+          description: Every living position, in programme order.
+          items:
+            type: object
+            required: [id, name, kind, cells]
+            properties:
+              id: { type: integer, format: int64 }
+              name: { type: string }
+              kind: { $ref: '#/components/schemas/TrainingMode' }
+              cells:
+                type: array
+                description: Weeks with at least one lesson on this position, oldest first.
+                items:
+                  type: object
+                  required: [week, held, planned, unconfirmed]
+                  properties:
+                    week: { type: string, format: date, description: The Monday of the week. }
+                    held: { type: integer, description: Distinct held lessons that week. }
+                    planned: { type: integer, description: Distinct lessons dated today or later with nobody checked in. }
+                    unconfirmed: { type: integer, description: Distinct lessons dated before today with nobody checked in. }
+        lessons:
+          type: array
+          description: |
+            The season's lessons that carry at least one topic, oldest first,
+            so a cell can list what it counts without a second request.
+          items:
+            type: object
+            required: [id, academy_class_id, held_on, name, starts_at, kind, state, position_ids, topics]
+            properties:
+              id: { type: integer, format: int64 }
+              academy_class_id:
+                type: integer
+                format: int64
+                nullable: true
+                description: Null once the class was deleted.
+              held_on: { type: string, format: date }
+              name: { type: string, description: 'The class name, as snapshotted on the lesson.' }
+              starts_at: { type: string, nullable: true, example: '19:00' }
+              kind: { $ref: '#/components/schemas/TrainingMode' }
+              state:
+                type: string
+                enum: [held, planned, unconfirmed]
+              position_ids:
+                type: array
+                description: The positions this lesson counts for under the filter in force — possibly none.
+                items: { type: integer, format: int64 }
+              topics:
+                type: array
+                description: Every topic on the lesson, departed ones included.
+                items:
+                  type: object
+                  required: [id, name, parent_id]
+                  properties:
+                    id: { type: integer, format: int64 }
+                    name: { type: string }
+                    parent_id: { type: integer, format: int64, nullable: true }
 
     CoverageTopic:
       type: object
