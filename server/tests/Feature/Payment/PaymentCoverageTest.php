@@ -134,9 +134,9 @@ it('keeps paid_current_month meaning what it always meant', function (): void {
         ])
         ->assertCreated();
 
-    // A carnet is not a paid month, and the unpaid widget, the `?paid` filter
-    // and both reminders still read this. Widening it here would have changed
-    // who gets chased, by accident, in the same commit as a column rename.
+    // A carnet is not a paid month, and the row's paid / unpaid toggle reads
+    // this. Who gets chased is decided elsewhere, by `Athlete::scopeOwing`
+    // (#1722) — widening this flag would not have been the way to fix that.
     $row = collect($this->actingAs($this->user)->getJson('/api/v1/athletes')->json('data'))
         ->firstWhere('id', $this->athlete->id);
 

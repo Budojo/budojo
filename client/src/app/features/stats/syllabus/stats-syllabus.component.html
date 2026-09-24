@@ -37,6 +37,14 @@
                 | translate: { covered: data.totals.covered, total: data.totals.in_scope }
             }}
           </p>
+          <!--
+            The athlete tab counts one lesson and this counts two, both on
+            purpose (#1748). Said under the number, not in a tooltip: nobody
+            hovers a number they do not know is ambiguous.
+          -->
+          <p class="coverage__rule" data-cy="syllabus-coverage-rule">
+            {{ 'stats.syllabus.headlineRule' | translate }}
+          </p>
         </div>
       }
 

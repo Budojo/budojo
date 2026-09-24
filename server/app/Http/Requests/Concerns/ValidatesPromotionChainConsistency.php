@@ -73,10 +73,16 @@ trait ValidatesPromotionChainConsistency
         }
 
         $next = $this->neighbour($athlete, 'belt', $recordedAt, earlier: false);
-        if ($next !== null && $toBelt !== $next->from_belt?->value) {
+        // A later row with no `from_belt` is a starting point — every timeline
+        // opens with one (#1771). It says which belt was held that day and
+        // nothing about how, so it constrains nothing before it: a paper
+        // register entered oldest-first ends below it until the last row is
+        // in, and an incomplete one (blue in 2019, the promotion to purple
+        // never written down) may never reach it at all.
+        if ($next !== null && $next->from_belt !== null && $toBelt !== $next->from_belt->value) {
             $validator->errors()->add(
                 'to_belt',
-                "Doesn't match the belt before the next promotion on {$next->recorded_at->toDateString()} ({$next->from_belt?->value}).",
+                "Doesn't match the belt before the next promotion on {$next->recorded_at->toDateString()} ({$next->from_belt->value}).",
             );
         }
     }

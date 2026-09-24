@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Athlete;
 
+use App\Actions\Promotion\OpenPromotionTimelineAction;
 use App\Enums\AthleteStatus;
 use App\Exceptions\UserAlreadyAthleteException;
 use App\Models\Academy;
@@ -39,6 +40,11 @@ use Illuminate\Support\Facades\DB;
  */
 class EnrollSelfAsAthleteAction
 {
+    public function __construct(
+        private readonly OpenPromotionTimelineAction $openTimeline,
+    ) {
+    }
+
     public function execute(User $user, Academy $academy): Athlete
     {
         return DB::transaction(function () use ($user, $academy): Athlete {
@@ -93,7 +99,8 @@ class EnrollSelfAsAthleteAction
                 );
             }
 
-            return $academy->athletes()->create([
+            /** @var Athlete $athlete */
+            $athlete = $academy->athletes()->create([
                 'user_id' => $user->id,
                 'is_self' => true,
                 'first_name' => $user->first_name,
@@ -106,6 +113,11 @@ class EnrollSelfAsAthleteAction
                 'status' => AthleteStatus::Active,
                 'joined_at' => now()->toDateString(),
             ]);
+            // The owner's own timeline opens like anyone else's (#1771),
+            // recorded by the owner themselves.
+            $this->openTimeline->execute($athlete, $user);
+
+            return $athlete;
         });
     }
 }

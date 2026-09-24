@@ -50,7 +50,6 @@ import { BeltBadgeComponent } from '../../../shared/components/belt-badge/belt-b
 import { UserAvatarComponent } from '../../../shared/components/user-avatar/user-avatar.component';
 import { AgeBadgeComponent } from '../../../shared/components/age-badge/age-badge.component';
 import { FilterSheetComponent } from '../../../shared/components/filter-sheet/filter-sheet.component';
-import { UnpaidThisMonthWidgetComponent } from '../../../shared/components/unpaid-this-month-widget/unpaid-this-month-widget.component';
 import { PaidBadgeComponent } from '../../../shared/components/paid-badge/paid-badge.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { ErrorStateComponent } from '../../../shared/components/error-state/error-state.component';
@@ -114,7 +113,6 @@ interface SelectOption<T extends string> {
     BeltBadgeComponent,
     AthleteIdentityComponent,
     UserAvatarComponent,
-    UnpaidThisMonthWidgetComponent,
     PaidBadgeComponent,
     OnboardingChecklistComponent,
     PageHeaderComponent,
@@ -459,9 +457,8 @@ export class AthletesListComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    // Hydrate `selectedPaid` from the `paid` query param so the
-    // unpaid-widget CTA (#803) — and any future deep-link / refresh
-    // — lands with the filter applied. The subscription emits once
+    // Hydrate `selectedPaid` from the `paid` query param so a deep link
+    // or a refresh lands with the filter applied (#803). The subscription emits once
     // immediately with the current params, which replaces the
     // previous unconditional `this.load()` call.
     this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {

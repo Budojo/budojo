@@ -5,8 +5,10 @@ declare(strict_types=1);
 use App\Enums\AthleteStatus;
 use App\Enums\Belt;
 use App\Models\Academy;
+use App\Models\AcademyClass;
 use App\Models\Athlete;
 use App\Models\AttendanceRecord;
+use App\Models\Lesson;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Laravel\Sanctum\Sanctum;
@@ -247,4 +249,66 @@ it('leaves the counts null on show, where they are not selected', function (): v
     // who has genuinely never trained.
     expect($row['attendance_month_count'])->toBeNull()
         ->and($row['attendance_total_count'])->toBeNull();
+});
+
+// ─── One presence is one day (#1765) ─────────────────────────────────────────
+
+/** Marks the athlete in a gi and a no-gi class held on the same evening. */
+function trainedTwiceOn(Academy $academy, Athlete $athlete, string $day): void
+{
+    $weekday = CarbonImmutable::parse($day)->dayOfWeek;
+    foreach (['gi', 'nogi'] as $index => $kind) {
+        $class = AcademyClass::factory()->for($academy)->create([
+            'name' => "Evening {$kind}",
+            'weekday' => $weekday,
+            'starts_at' => $index === 0 ? '19:00' : '20:30',
+            'kind' => $kind,
+        ]);
+        AttendanceRecord::factory()->create([
+            'athlete_id' => $athlete->id,
+            'attended_on' => $day,
+            'lesson_id' => Lesson::factory()->forClass($class, $day)->create()->id,
+        ]);
+    }
+}
+
+it('counts the evening of a gi and a no-gi class as one presence, not two (#1765)', function (): void {
+    $athlete = athleteNamed($this->academy, 'Rossi');
+    trainedTwiceOn($this->academy, $athlete, '2026-03-10');
+
+    $row = collect($this->getJson('/api/v1/athletes')->assertOk()->json('data'))->firstWhere('id', $athlete->id);
+
+    // Two rows — coverage and mat hours need to know both lessons — but one
+    // day, which is what the roster's fraction divides by.
+    expect(AttendanceRecord::query()->where('athlete_id', $athlete->id)->count())->toBe(2)
+        ->and($row['attendance_month_count'])->toBe(1)
+        ->and($row['attendance_total_count'])->toBe(1);
+});
+
+it('still counts two days as two, so nobody fixes it by counting athletes', function (): void {
+    $athlete = athleteNamed($this->academy, 'Bianchi');
+    trainedTwiceOn($this->academy, $athlete, '2026-03-10');
+    attendedOn($athlete, ['2026-03-12']);
+
+    $row = collect($this->getJson('/api/v1/athletes')->assertOk()->json('data'))->firstWhere('id', $athlete->id);
+
+    expect($row['attendance_month_count'])->toBe(2)
+        ->and($row['attendance_total_count'])->toBe(2);
+});
+
+it('sorts by days attended, not by rows (#1765)', function (): void {
+    // Rows and days disagree on purpose: Abate trained gi and no-gi on two
+    // evenings (4 rows, 2 days), Zanetti once on three days (3 rows, 3 days).
+    // By rows Abate leads; by days Zanetti does — and Zanetti also sorts
+    // last by name, so a tie-break cannot pass this by accident.
+    $abate = athleteNamed($this->academy, 'Abate');
+    trainedTwiceOn($this->academy, $abate, '2026-03-10');
+    trainedTwiceOn($this->academy, $abate, '2026-03-17');
+    $zanetti = athleteNamed($this->academy, 'Zanetti');
+    attendedOn($zanetti, ['2026-03-11', '2026-03-12', '2026-03-13']);
+
+    $ids = collect($this->getJson('/api/v1/athletes?sort_by=attendance_month&sort_order=desc')
+        ->assertOk()->json('data'))->pluck('id')->all();
+
+    expect(array_search($zanetti->id, $ids, true))->toBeLessThan(array_search($abate->id, $ids, true));
 });

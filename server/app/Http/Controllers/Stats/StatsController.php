@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Stats;
 
 use App\Actions\Stats\AthleteAgeBandsAction;
+use App\Actions\Stats\CertificateComplianceAction;
 use App\Actions\Stats\DailyAttendanceStatsAction;
 use App\Actions\Stats\MonthlyPaymentsStatsAction;
 use App\Actions\Stats\SyllabusCoverageAction;
@@ -23,6 +24,7 @@ class StatsController extends Controller
         private readonly MonthlyPaymentsStatsAction $monthlyPaymentsAction,
         private readonly AthleteAgeBandsAction $ageBandsAction,
         private readonly SyllabusCoverageAction $syllabusCoverageAction,
+        private readonly CertificateComplianceAction $certificateComplianceAction,
     ) {
     }
 
@@ -94,5 +96,19 @@ class StatsController extends Controller
         $payload = $this->ageBandsAction->execute($academy);
 
         return response()->json(['data' => $payload]);
+    }
+
+    /** How many active athletes a medical certificate covers (#1732). */
+    public function documentsCompliance(Request $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+        $academy = $user->activeAcademy();
+
+        if ($academy === null) {
+            return response()->json(['message' => 'Forbidden.'], 403);
+        }
+
+        return response()->json(['data' => $this->certificateComplianceAction->execute($academy)]);
     }
 }

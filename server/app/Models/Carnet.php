@@ -63,7 +63,8 @@ class Carnet extends Model
      * and which throws without `entries_count` — so loading it here makes the
      * half-configured query (window but no count, or count but no ordering)
      * impossible to write by accident. The balance test itself stays in the
-     * helper rather than being duplicated into SQL.
+     * helper here; a caller that must filter by it in SQL uses
+     * `scopeSpendableOn` below, which is held to the helper by a test.
      *
      * @param  Builder<$this>  $query
      * @return Builder<$this>
@@ -76,6 +77,27 @@ class Carnet extends Model
             ->withCount('entries')
             ->orderBy('expires_at')
             ->orderBy('id');
+    }
+
+    /**
+     * Carnets spendable on `$date`, decided in SQL (#1722).
+     *
+     * `CarnetAvailability::isActiveOn` is the rule; this is the same rule for
+     * a caller that has to filter a query — "who owes this month" — instead of
+     * inspecting rows it already holds. One rule, two dialects, the precedent
+     * being `AthletePayment::scopeCovering`: `OwingThisMonthTest` holds them
+     * to the same answer over both window edges and the balance, so a change
+     * to one that forgets the other fails there rather than on the roster.
+     *
+     * @param  Builder<$this>  $query
+     * @return Builder<$this>
+     */
+    public function scopeSpendableOn(Builder $query, CarbonInterface $date): Builder
+    {
+        return $query
+            ->whereDate('valid_from', '<=', $date->toDateString())
+            ->whereDate('expires_at', '>=', $date->toDateString())
+            ->whereRaw('total_entries > (select count(*) from carnet_entries where carnet_entries.carnet_id = carnets.id)');
     }
 
     /**

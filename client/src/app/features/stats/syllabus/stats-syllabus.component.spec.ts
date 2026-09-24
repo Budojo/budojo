@@ -118,8 +118,24 @@ describe('StatsSyllabusComponent (#1565)', () => {
     expect(
       el.querySelector('[data-cy="syllabus-coverage-percentage"]')?.textContent?.trim(),
     ).toContain('40');
-    // The fraction is what makes the percentage mean something.
-    expect(el.textContent).toContain('4 of 10 covered this season');
+    // The fraction is what makes the percentage mean something — and it
+    // says which rule it counts by, because the athlete tab counts by another
+    // (#1748).
+    expect(el.textContent).toContain(
+      "4 of 10 in the season's programme, each taught at least twice",
+    );
+  });
+
+  it('names the rule the athlete tab counts by, next to the number (#1748)', () => {
+    const { fixture, httpMock } = setup();
+    flush(httpMock);
+    fixture.detectChanges();
+
+    // An owner reading 100% on an athlete and 34% here would conclude the
+    // athlete has seen a third of the programme. The line under the headline
+    // is what stops that reading.
+    const rule = fixture.nativeElement.querySelector('[data-cy="syllabus-coverage-rule"]');
+    expect(rule.textContent).toContain('after one lesson');
   });
 
   it('splits the tally three ways, because one number would hide the thin half', () => {
@@ -215,7 +231,9 @@ describe('StatsSyllabusComponent (#1565)', () => {
     });
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('1 of 3 covered this season');
+    expect(fixture.nativeElement.textContent).toContain(
+      "1 of 3 in the season's programme, each taught at least twice",
+    );
   });
 
   it('walks back a season and forward again, and will not go past the current one', () => {

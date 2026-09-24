@@ -57,7 +57,6 @@ describe('plural pairs (#1646)', () => {
       'profile.sessions.revokeOthersToast.detail',
       'relativeDay.days',
       'relativeDay.weeks',
-      'shared.unpaidWidget.viewAll',
       'stats.syllabus.missingList',
       'stats.syllabus.worked',
     ]);

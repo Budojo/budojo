@@ -60,6 +60,64 @@ export function localised(value: Localised, lang: string): string {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.66.0',
+    date: '2026-09-24',
+    headline: {
+      en: 'Numbers that add up: who owes, how often, how much of the programme, and where a belt history starts.',
+      it: 'I conti che tornano: chi deve pagare, quante presenze, quanto del programma, e da dove parte la storia di una cintura.',
+    },
+    sections: [
+      {
+        heading: { en: 'Who has not paid', it: 'Chi non ha pagato' },
+        bullets: [
+          {
+            en: 'The "Unpaid" box above the athlete list is gone. It counted carnet holders and your own row as owing, so it could say "7 athletes still owe" above a table showing 3. The payment is on every row, and the filter does the rest.',
+            it: "Il riquadro «Non pagati» sopra l'elenco atleti non c'è più. Contava come debitori anche chi ha un carnet e la tua stessa riga, e poteva dire «7 atleti devono ancora pagare» sopra una tabella che ne mostrava 3. Il pagamento è già su ogni riga, e il filtro fa il resto.",
+          },
+          {
+            en: 'To see who to chase, press the Payment button above the list until it reads Unpaid (on a phone, until its icon is a circle with an X). It now shows exactly the athletes whose chip says Unpaid.',
+            it: "Per vedere chi sollecitare, premi il pulsante Pagamento sopra l'elenco finché non dice Non pagato (dal telefono, finché l'icona non è un cerchio con la X). Ora mostra esattamente chi ha il chip «Non pagato».",
+          },
+          {
+            en: 'Carnet holders with entries left are no longer on the chase list, in the filter or in the notice on the 16th. Nor are inactive athletes, athletes with no fee to pay, or your own row. "Paid" now includes a valid carnet.',
+            it: "Chi ha un carnet con ingressi residui non è più tra quelli da sollecitare, né nel filtro né nell'avviso del 16 del mese. Nemmeno gli inattivi, chi non ha una quota da pagare e la tua riga. «Pagato» ora comprende anche un carnet valido.",
+          },
+        ],
+      },
+      {
+        heading: { en: 'Attendance', it: 'Le presenze' },
+        bullets: [
+          {
+            en: "An evening in the gi and the no-gi class counts as one presence, not two, on the athlete list, the monthly summary and the athlete's Attendance tab. A fraction could read 2/1.",
+            it: "Una sera in gi e no-gi conta come una presenza, non due, nell'elenco atleti, nel riepilogo del mese e nella scheda Presenze dell'atleta. Una frazione poteva leggere 2/1.",
+          },
+        ],
+      },
+      {
+        heading: { en: 'The programme', it: 'Il programma' },
+        bullets: [
+          {
+            en: "The two programme percentages now say how they count. Stats → Programme counts a technique after two lessons, out of the whole programme; an athlete's Programme tab counts one lesson they attended, out of what the academy taught. An athlete at 100% and an academy at 40% do not contradict each other.",
+            it: "Le due percentuali del programma ora dicono come contano. Statistiche → Programma conta una tecnica dopo due lezioni, sull'intero programma; la scheda Programma di un atleta conta una lezione a cui era presente, su quelle che la palestra ha fatto. Un atleta al 100% e una palestra al 40% non si contraddicono.",
+          },
+        ],
+      },
+      {
+        heading: { en: 'Promotions', it: 'Le promozioni' },
+        bullets: [
+          {
+            en: 'Every athlete now has a starting belt. A timeline used to start empty: a blue belt of nine years, imported from a sheet, read "No promotions yet". Now it opens with "Starting belt → Blue", dated the day the athlete was added to Budojo. Existing athletes get it with this update.',
+            it: "Ogni atleta ha una cintura di partenza. La storia delle promozioni cominciava vuota: una cintura blu di nove anni, importata da un foglio, diceva «Nessuna promozione registrata». Adesso parte con «Cintura di partenza → Blu», datata il giorno in cui l'atleta è entrato in Budojo. Gli atleti che hai già la ricevono con l'aggiornamento.",
+          },
+          {
+            en: 'Earlier promotions are yours to add from the paper register, with "Add a past promotion", in any order and even if the register is incomplete. The starting belt is not a promotion: it unlocks no badge and does not appear on the public profile.',
+            it: "Le promozioni di prima le aggiungi tu, dal registro di carta, con «Aggiungi una promozione passata», nell'ordine che preferisci e anche se il registro è incompleto. La cintura di partenza non è una promozione: non sblocca traguardi e non compare nel profilo pubblico.",
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.65.0',
     date: '2026-09-23',
     headline: {

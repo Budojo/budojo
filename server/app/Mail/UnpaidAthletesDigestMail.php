@@ -21,18 +21,15 @@ use Illuminate\Support\Carbon;
 
 /**
  * Monthly digest emailed to an academy owner on the 16th, listing
- * every active athlete who hasn't yet been marked paid for the
- * current month. M5 PR-E.
+ * every athlete who owes the current month. M5 PR-E.
  *
- * The 16th is the moment the dashboard's `unpaid-this-month-widget`
- * starts surfacing — pre-15th, "not paid yet" is normal because most
- * customers pay around the 1st-15th window. Pushing the widget
- * signal out via email on day 16 + matches when the instructor
+ * The 16th because pre-15th "not paid yet" is normal: most customers
+ * pay around the 1st-15th window, and day 16 is when the instructor
  * actually wants the chase-list.
  *
- * **Scope**: only athletes whose `status === 'active'`. Suspended
- * and inactive athletes don't owe a fee for the month so they
- * shouldn't surface in the chase-list.
+ * **Scope**: `Athlete::scopeOwing` (#1722), the roster's "Unpaid"
+ * chip — active, not the owner's own row, charged a fee, and covered
+ * neither by a payment for the month nor by a spendable carnet.
  *
  * **Queueing**: same ShouldQueue + atomicity discipline as the
  * cert-expiry digest in PR-D.
@@ -46,8 +43,8 @@ class UnpaidAthletesDigestMail extends Mailable implements ShouldQueue
     use SerializesModels;
 
     /**
-     * @param  Collection<int, Athlete>  $athletes  active athletes with no payment
-     *                                              for ($year, $month).
+     * @param  Collection<int, Athlete>  $athletes  athletes who owe ($year, $month),
+     *                                              per `Athlete::scopeOwing`.
      */
     public function __construct(
         public readonly Academy $academy,

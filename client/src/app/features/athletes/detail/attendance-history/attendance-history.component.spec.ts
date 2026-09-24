@@ -98,6 +98,28 @@ describe('AttendanceHistoryComponent', () => {
     vi.useRealTimers();
   });
 
+  it('counts an evening in two lessons as one day, not two (#1765)', () => {
+    const httpMock = setupTestBed();
+    const fixture = TestBed.createComponent(AttendanceHistoryComponent);
+    fixture.detectChanges();
+
+    httpMock.expectOne(`/api/v1/athletes/${ATHLETE_ID}`).flush({ data: makeAthlete() });
+    httpMock
+      .expectOne(`/api/v1/athletes/${ATHLETE_ID}/attendance?from=2026-04-01&to=2026-04-30`)
+      .flush({
+        data: [
+          // Gi at 19:00 and no-gi at 20:30 on the 10th, then the 14th.
+          makeRecord({ id: 1, attended_on: '2026-04-10' }),
+          makeRecord({ id: 2, attended_on: '2026-04-10' }),
+          makeRecord({ id: 3, attended_on: '2026-04-14' }),
+        ],
+      });
+
+    expect(fixture.componentInstance['attendedCount']()).toBe(2);
+    flushSummary(httpMock);
+    httpMock.verify();
+  });
+
   it('fetches the athlete and the current month of attendance records on init', () => {
     const httpMock = setupTestBed();
     const fixture = TestBed.createComponent(AttendanceHistoryComponent);

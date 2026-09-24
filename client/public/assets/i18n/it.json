@@ -646,7 +646,7 @@
       },
       "unpaid-badge": {
         "question": "Cosa vuol dire il chip «Non pagato»?",
-        "answer": "Che quell'atleta non ha ancora versato la quota del mese in corso. Dal 16 in poi compare anche, sopra la lista, il riquadro Non pagati con tutti quelli da sollecitare: prima del 16 la maggior parte paga nella normale finestra di inizio mese, e insistere sarebbe solo rumore. Inattivi e cestinati non finiscono mai in quella lista."
+        "answer": "Che nulla copre il mese in corso di quell'atleta: nessuna quota lo paga e non ha un carnet con ingressi residui. Per vedere tutti quelli da sollecitare, premi il pulsante Pagamento sopra la lista finché non dice Non pagato — dal telefono, finché l'icona non è un cerchio con la X. Chi ha un carnet ancora in uso, gli inattivi, chi non paga una quota e la tua riga non ci finiscono mai."
       },
       "carnets": {
         "question": "Come gestisco i carnet a ingressi?",
@@ -2257,7 +2257,7 @@
       "promotions": {
         "errorBody": "Impossibile caricare lo storico promozioni. Riprova tra un momento.",
         "emptyBody": "Nessuna promozione registrata. Cambia cintura o gradi e qui apparirà la riga.",
-        "firstBelt": "Prima cintura",
+        "firstBelt": "Cintura di partenza",
         "stripes": "gradi",
         "recordedBy": "Registrato da {{name}}",
         "prevPage": "Pagina precedente",
@@ -2284,7 +2284,7 @@
           "dateLabel": "Registrata il",
           "fromBelt": "Da cintura",
           "toBelt": "A cintura",
-          "firstBelt": "Prima cintura (nessuna precedente)",
+          "firstBelt": "Cintura di partenza (niente prima)",
           "beltAtEvent": "Cintura al momento",
           "fromStripes": "Da gradi",
           "toStripes": "A gradi",
@@ -2612,6 +2612,7 @@
     },
     "coverage": {
       "fraction": "{{attended}} su {{total}} tecniche che la palestra ha fatto",
+      "headlineRule": "Qui una tecnica conta dopo una lezione a cui era presente, su quelle che la palestra ha fatto mentre era iscritto: la domanda è se c'era. Statistiche → Programma conta due lezioni, sull'intero programma, quindi i due numeri misurano cose diverse.",
       "since": "Conteggio dal {{date}}, giorno di iscrizione.",
       "legend": {
         "seenOne": "{{count}} visto",
@@ -2649,9 +2650,9 @@
       "notTaughtYetOther": "Altri {{count}} sono nel programma ma non sono ancora stati fatti. È una lacuna della palestra, non sua.",
       "nothingMissedOne": "C'era alla lezione in cui è stata fatta.",
       "nothingMissedOther": "C'era a tutte.",
-      "consolidatedOne": "Una vista più di una volta.",
-      "consolidatedOther": "{{count}} viste più di una volta.",
-      "consolidatedNone": "Nessuna ancora vista più di una volta."
+      "consolidatedOne": "Una vista due volte o più, la soglia di Statistiche → Programma.",
+      "consolidatedOther": "{{count}} viste due volte o più, la soglia di Statistiche → Programma.",
+      "consolidatedNone": "Nessuna ancora vista due volte o più."
     }
   },
   "month": {
@@ -2678,16 +2679,6 @@
     "beltBadge": {
       "stripeOne": "{{count}} grado",
       "stripeMany": "{{count}} gradi"
-    },
-    "unpaidWidget": {
-      "eyebrow": "Non pagati",
-      "error": "Impossibile verificare",
-      "allPaid": "Hanno pagato tutti",
-      "allPaidSubtitle": "— bel mese",
-      "countOne": "atleta deve ancora pagare",
-      "countMany": "atleti devono ancora pagare",
-      "viewAll": "Vedi tutti i {{count}} →",
-      "viewList": "Vedi nella lista atleti →"
     },
     "filterSheet": {
       "filters": "Filtri",
@@ -2843,7 +2834,8 @@
       }
     },
     "syllabus": {
-      "headline": "{{covered}} di {{total}} coperti in questa stagione",
+      "headline": "{{covered}} di {{total}} nel programma della stagione, fatti almeno due volte ciascuno",
+      "headlineRule": "La scheda Programma di un atleta conta in un altro modo: una tecnica dopo una sola lezione a cui era presente, su quelle che la palestra ha fatto mentre era iscritto. Chiede se c'era, non quanto del programma è stato fatto.",
       "byPosition": "Per posizione",
       "overTime": "Nel corso della stagione",
       "lastTaught": "L'ultima volta",

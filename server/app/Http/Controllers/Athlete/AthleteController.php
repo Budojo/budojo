@@ -8,7 +8,6 @@ use App\Actions\Address\AddressIntent;
 use App\Actions\Athlete\CreateAthleteAction;
 use App\Actions\Athlete\RestoreAthleteAction;
 use App\Actions\Athlete\UpdateAthleteAction;
-use App\Enums\AthleteStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Athlete\StoreAthleteRequest;
 use App\Http\Requests\Athlete\UpdateAthleteRequest;
@@ -26,6 +25,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\DB;
 
 class AthleteController extends Controller
 {
@@ -108,10 +108,9 @@ class AthleteController extends Controller
         $currentYear = (int) now()->year;
         $currentMonth = (int) now()->month;
 
-        // Re-used three times: as the eager-load scope (so the resource sees
-        // only the payments that could cover this month), and as the filter
-        // scope below for ?paid=yes|no. Pulling it into a closure means the
-        // rule is applied identically in all three.
+        // The eager-load scope, so the resource sees only the payments that
+        // could cover this month. The `?paid` filter below asks the same
+        // `covering` rule through the `Athlete` scopes.
         //
         // "Covering", not "starting in" (#1382): a quarterly bought in
         // February pays for April, and asking for a row whose `month` is 4
@@ -204,11 +203,14 @@ class AthleteController extends Controller
             // second N+1 on the busiest screen in the app. Two subqueries for
             // the page.
             //
-            // `count(*)` is the right count because there is at most one live
-            // record per (athlete, day): `MarkAttendanceAction` enforces it on
-            // insert, and the SoftDeletes global scope keeps a corrected-by-
-            // delete-and-reinsert day from being counted twice. See the
-            // uniqueness note in the create_attendance_records migration.
+            // Days, not rows (#1765). One presence is one day: since the
+            // timetable (#1562) an athlete in the gi class at 19:00 and the
+            // no-gi one at 20:30 has two rows for that evening — coverage and
+            // mat hours need to know both lessons — and the roster's fraction
+            // divides by a count of days, so `count(*)` printed `2/1`.
+            // `withCount` cannot say DISTINCT; a `select` in the constraint
+            // replaces the counted column, so it does. The SoftDeletes global
+            // scope still keeps a deleted row out of either count.
             // The season's count, not a lifetime one (#1484), and floored at
             // the athlete's own joining date because the lower bound differs
             // per ROW: someone who joined in November cannot have attended
@@ -216,35 +218,31 @@ class AthleteController extends Controller
             // season reports the academy's calendar as if it were their
             // record.
             ->withCount([
-                'attendanceRecords as attendance_total_count' => $seasonAttendanceScope,
-                'attendanceRecords as attendance_month_count' => $currentMonthAttendanceScope,
+                'attendanceRecords as attendance_total_count' => fn ($q) => $seasonAttendanceScope($q)
+                    ->select(DB::raw('count(distinct attended_on)')),
+                'attendanceRecords as attendance_month_count' => fn ($q) => $currentMonthAttendanceScope($q)
+                    ->select(DB::raw('count(distinct attended_on)')),
             ])
             ->when($request->filled('belt'), fn ($q) => $q->where('belt', $request->input('belt')))
             ->when(
                 ! $trashedMode && $request->filled('status'),
                 fn ($q) => $q->where('status', $request->input('status')),
             )
-            // ?paid=yes|no — filter on whether the athlete has a payment
-            // record for the current calendar month (#105). Unrecognised
-            // values are silently ignored (no filter applied) — same shape
-            // as `sort_by`: defensive defaults beat 422-noise on a list
-            // endpoint that's read by humans more than tools.
+            // ?paid=yes|no — the payment chip's own question, not whether a
+            // payment row exists (#1722). `no` is the "Unpaid" chip: active,
+            // charged a fee, not the owner, nothing covering the month. `yes`
+            // is every other chip — a payment covering the month OR a carnet
+            // spendable today; it used to leave carnet holders out, and an
+            // owner asking who has paid means it the ordinary way. `yes` does
+            // not gate on status (#805): an athlete who paid and then went
+            // inactive has still paid. The scopes on `Athlete` hold the rule
+            // for this filter, the owner digest and the overdue push alike.
             //
-            // The `paid=no` branch ALSO gates on `status = 'active'` (#805):
-            // suspended / inactive athletes aren't expected to contribute
-            // for the current month, so listing them as "owes" — both in
-            // the unpaid-this-month widget (which consumes this filter)
-            // AND in any other consumer of the API — is false noise.
-            // `paid=yes` deliberately doesn't carry the same gate: an
-            // athlete who paid earlier in the month and then went inactive
-            // is still factually "paid" and worth surfacing if a caller
-            // asks for that view.
-            ->when($paid === 'yes', fn ($q) => $q->whereHas('payments', $currentMonthScope))
-            ->when(
-                $paid === 'no',
-                fn ($q) => $q->whereDoesntHave('payments', $currentMonthScope)
-                    ->where('status', AthleteStatus::Active),
-            )
+            // Unrecognised values are silently ignored (no filter applied) —
+            // same shape as `sort_by`: defensive defaults beat 422-noise on a
+            // list endpoint that's read by humans more than tools.
+            ->when($paid === 'yes', fn ($q) => $q->coveredFor($currentYear, $currentMonth, $now))
+            ->when($paid === 'no', fn ($q) => $q->owing($currentYear, $currentMonth, $now))
             ->when($request->filled('q'), function (Builder|HasMany $q) use ($request) {
                 // `$request->string('q')` returns a `Stringable` — keeps PHPStan
                 // happy without the `mixed` → `string` cast that `input()` needs.
@@ -305,7 +303,7 @@ class AthleteController extends Controller
         $addressIntent = AddressIntent::fromValidated($validated);
         unset($validated['address']);
 
-        $athlete = $this->createAthlete->execute($academy, $validated, $addressIntent);
+        $athlete = $this->createAthlete->execute($user, $academy, $validated, $addressIntent);
 
         return response()->json(['data' => new AthleteResource($athlete)], 201);
     }

@@ -181,8 +181,8 @@ class EvaluateAchievementsAction
     /**
      * Links the existing belt_promotion event to the badge surface.
      * Unlocks the first time the athlete is promoted past their
-     * initial belt (i.e. the first `belt_promotion` row in
-     * `athlete_promotions` of kind `belt`).
+     * initial belt (i.e. the first `athlete_promotions` row of kind
+     * `belt` that has a `from_belt`).
      *
      * @return array<string, mixed>|null
      */
@@ -191,6 +191,11 @@ class EvaluateAchievementsAction
         $firstPromotion = \App\Models\AthletePromotion::query()
             ->where('athlete_id', $athlete->id)
             ->where('kind', 'belt')
+            // A row with no prior belt is an arrival, not a promotion
+            // (#1771): every timeline opens with one, and counting it would
+            // unlock this on creation — and `UNIQUE (athlete_id, kind)` would
+            // then keep the athlete's real first promotion from ever counting.
+            ->whereNotNull('from_belt')
             ->orderBy('recorded_at')
             ->first();
         if ($firstPromotion === null) {

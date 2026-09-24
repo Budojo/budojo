@@ -37,7 +37,7 @@ The expiry follows the validity start rather than the sale, so the window is alw
 - `UNIQUE(code)` — the authority on code uniqueness. `SellCarnetAction` draws a random code and redraws when the index rejects it, so no application-side "is this taken?" query is needed
 - `INDEX(athlete_id, expires_at)` — the "active carnets for this athlete on this date" lookup, which every read path performs
 - `INDEX(athlete_id, valid_from)` — the other end of the same window check, which moved off `purchased_at` in #1380
-- Implicit index on `athlete_id` from the foreign key
+- No separate index on `athlete_id`. The foreign key does not create one on SQLite (this line used to say it did, as `carnet-entry.md` did for `carnet_id` until #1722), and none is needed: both composite indexes above lead with it.
 
 ## The code
 

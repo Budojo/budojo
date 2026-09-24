@@ -72,6 +72,10 @@
       <p class="coverage__since">
         {{ 'athletes.coverage.since' | translate: { date: shortDate(r.joined_on) } }}
       </p>
+      <!-- The reverse of the line on Stats → Programme (#1748). -->
+      <p class="coverage__rule" data-cy="athlete-coverage-rule">
+        {{ 'athletes.coverage.headlineRule' | translate }}
+      </p>
     </header>
 
     <ul class="legend">

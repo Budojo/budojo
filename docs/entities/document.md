@@ -53,10 +53,11 @@ Documents are the first entity in the system that owns **physical files on disk*
 | `Insurance` | `insurance` | Sport insurance policy |
 | `Other` | `other` | Anything else worth tracking (waiver, minor consent, …) |
 
-**No unique constraint** is enforced on `(athlete_id, type)`. An athlete has a **history** of certificates (one per year); the "current" medical certificate is the most recent non-soft-deleted row with `expires_at` in the future. The UI decides what to show — the schema preserves everything.
+**No unique constraint** is enforced on `(athlete_id, type)`. An athlete has a **history** of certificates (one per year); which one is "current" is a rule, below (§ Business rules, "An athlete's certificate status"). The schema preserves everything.
 
 ## Business rules
 
+- **An athlete's certificate status is one rule (#1732).** Their **current certificate** is their live (`deleted_at is null`) `medical_certificate` row with the greatest `expires_at`, nulls last — the same "latest expiry wins" rule as `Document::scopeNotSuperseded` (#1739). `ResolveCertificateStatusAction` turns it into `valid` / `expiring` / `expired` / `missing` (`App\Enums\CertificateStatus`): no dated certificate at all is `missing`; before today is `expired`; today through today + 30 is `expiring`; later is `valid`. Whole calendar days, the same boundaries as the client's `classifyExpiry`, and `EXPIRY_WARNING_DAYS` is the same 30 on both sides. The SQL half is `Athlete::scopeWithCurrentCertificateExpiry` (a correlated `max(expires_at)`), so a reader counting a roster makes one query. `GET /stats/documents/compliance` counts active athletes by it (`CertificateComplianceAction`). The old wording here — "the most recent row with `expires_at` in the future" — had no answer when every row had expired, which is the case that matters.
 - **Academy scoping via the athlete.** A document belongs to an athlete, which belongs to an academy. Every controller action re-checks that `document->athlete->academy_id === auth()->user()->academy->id` before serving or mutating. This is a controller-level check, same pattern as `Athlete`.
 - **File storage: `local` disk only.** Files live at `storage/app/private/documents/*`. No public symlink, no signed URL. The only way to retrieve a file is the authenticated `GET /api/v1/documents/{id}/download` endpoint.
 - **File validation: `pdf` / `jpeg` / `png`, max 10 MB.** Validated server-side via Laravel's `mimetypes` rule — client-side validation is pre-flight UX only and is not trusted.

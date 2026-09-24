@@ -126,6 +126,23 @@ describe('PromotionsListComponent (#799)', () => {
     expect(el.querySelector('[data-cy="belt-count"]')).toBeNull();
   });
 
+  it('labels a row with no previous belt as the starting belt (#1771)', () => {
+    const { fixture, el, svc } = setup();
+    svc.promotions.mockReturnValue(
+      of({
+        data: [makePromotion({ kind: 'belt', from_belt: null, to_belt: 'blue' })],
+        meta: { current_page: 1, per_page: 20, total: 1, last_page: 1 },
+      }),
+    );
+    fixture.detectChanges();
+
+    // Every timeline now opens with this row, dated the day the record began.
+    // "First belt" said something false about a blue belt of nine years.
+    const transition = el.querySelector('[data-cy="promotion-belt"]')?.textContent ?? '';
+    expect(transition).toContain('Starting belt');
+    expect(transition).not.toContain('First belt');
+  });
+
   it('fires the load on init with athleteId from the route + page 1', () => {
     const { fixture, svc } = setup({ athleteId: '7' });
     svc.promotions.mockReturnValue(

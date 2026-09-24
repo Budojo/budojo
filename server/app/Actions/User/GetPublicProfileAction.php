@@ -80,6 +80,11 @@ class GetPublicProfileAction
         $promotions = array_values(
             AthletePromotion::query()
                 ->where('athlete_id', $targetAthlete->id)
+                // The public line reads "Promoted from X to Y". A belt row
+                // with no X is an arrival (#1771), not a promotion, and the
+                // SPA used to default X to white — telling peers a blue belt
+                // had just been promoted from white.
+                ->where(fn ($q) => $q->where('kind', 'stripe')->orWhereNotNull('from_belt'))
                 ->orderByDesc('recorded_at')
                 ->limit(50)
                 ->get()
