@@ -7543,15 +7543,22 @@ components:
                 description: Sessions in the baseline — fewer than 24 for someone who joined within it.
         meta:
           type: object
-          required: [sessions_available]
+          required: [sessions_available, sessions_needed]
           properties:
             sessions_available:
               type: integer
               minimum: 0
               description: |
-                Every realised session the academy has recorded. Below 20
-                (8 recent + 12 baseline) nobody can be judged yet, and an
-                empty list means "not enough history", not "nobody drifting".
+                Every realised session the academy has recorded. Below
+                `sessions_needed` nobody can be judged yet, and an empty list
+                means "not enough history", not "nobody drifting".
+            sessions_needed:
+              type: integer
+              example: 20
+              description: |
+                The fewest sessions the rules can judge anyone on — the 8
+                recent plus the shortest accepted baseline of 12 (#1729). Sent
+                so a client never hard-codes the threshold the tiers use.
 
     # ── Generic envelopes ─────────────────────────────────────────────────
 

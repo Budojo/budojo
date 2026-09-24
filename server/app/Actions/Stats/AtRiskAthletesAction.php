@@ -85,7 +85,7 @@ class AtRiskAthletesAction
      *         baseline_attended: int,
      *         baseline_sessions: int,
      *     }>,
-     *     meta: array{sessions_available: int},
+     *     meta: array{sessions_available: int, sessions_needed: int},
      * }
      */
     public function execute(Academy $academy, CarbonImmutable $today): array
@@ -94,7 +94,7 @@ class AtRiskAthletesAction
         $sessions = $this->latestSessions($academy, $today);
 
         if ($sessions === []) {
-            return ['data' => [], 'meta' => ['sessions_available' => $sessionsAvailable]];
+            return ['data' => [], 'meta' => $this->meta($sessionsAvailable)];
         }
 
         $athletes = $this->candidates($academy, $today);
@@ -121,7 +121,23 @@ class AtRiskAthletesAction
             $b['athlete']['id'],
         ]);
 
-        return ['data' => $rows, 'meta' => ['sessions_available' => $sessionsAvailable]];
+        return ['data' => $rows, 'meta' => $this->meta($sessionsAvailable)];
+    }
+
+    /**
+     * How many sessions exist, and how many the rules need before anyone can
+     * be judged at all (#1729): the recent window plus the shortest baseline.
+     * Sent rather than known by the client, so "not enough history yet" is
+     * decided by the same numbers that decide the tiers.
+     *
+     * @return array{sessions_available: int, sessions_needed: int}
+     */
+    private function meta(int $sessionsAvailable): array
+    {
+        return [
+            'sessions_available' => $sessionsAvailable,
+            'sessions_needed' => self::RECENT_SESSIONS + self::BASELINE_FLOOR_SESSIONS,
+        ];
     }
 
     /**

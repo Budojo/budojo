@@ -100,7 +100,7 @@ it('leaves out an athlete who came to every one of the last 8 sessions', functio
     $response = atRiskResponse($this);
 
     expect($response['data'])->toBe([])
-        ->and($response['meta'])->toBe(['sessions_available' => 32]);
+        ->and($response['meta'])->toBe(['sessions_available' => 32, 'sessions_needed' => 20]);
 });
 
 it('flags a drop against the athlete\'s own baseline, with the numbers that say why', function (): void {
@@ -239,7 +239,7 @@ it('says how many sessions exist, so a young academy is not reported as healthy'
     $response = atRiskResponse($this);
 
     expect($response['data'])->toBe([])
-        ->and($response['meta'])->toBe(['sessions_available' => 15]);
+        ->and($response['meta'])->toBe(['sessions_available' => 15, 'sessions_needed' => 20]);
 });
 
 it('refuses an athlete account the way the other stats routes do', function (): void {

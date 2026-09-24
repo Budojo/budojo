@@ -202,6 +202,40 @@ export interface AthleteSyllabusCoverage {
   readonly unattributed_presences: number;
 }
 
+/** The three at-risk tiers (#1728), most severe first. */
+export type AtRiskTier = 'gone' | 'quiet' | 'dropping';
+
+/** One athlete who is drifting, with the numbers that say why (#1728). */
+export interface AtRiskRow {
+  /** Enough to draw the row with the belt spine and to reach the person. */
+  readonly athlete: AthleteIdentity & {
+    readonly status: AthleteStatus;
+    readonly phone_country_code: string | null;
+    readonly phone_national_number: string | null;
+  };
+  readonly tier: AtRiskTier;
+  /** `null` — never trained since joining. */
+  readonly last_attended_on: string | null;
+  readonly recent_attended: number;
+  readonly recent_sessions: number;
+  readonly baseline_attended: number;
+  readonly baseline_sessions: number;
+}
+
+/**
+ * Who is drifting, against their own attendance (#1728). The tiers are the
+ * server's: a client that recomputed one would be a second copy of the rule.
+ */
+export interface AtRiskList {
+  readonly data: readonly AtRiskRow[];
+  readonly meta: {
+    /** Realised sessions the academy has recorded. */
+    readonly sessions_available: number;
+    /** The fewest the rules can judge anyone on — below it, "we cannot tell yet". */
+    readonly sessions_needed: number;
+  };
+}
+
 @Injectable({ providedIn: 'root' })
 export class StatsService {
   private readonly http = inject(HttpClient);
@@ -262,6 +296,11 @@ export class StatsService {
         params,
       })
       .pipe(map((r) => r.data));
+  }
+
+  /** Who is drifting, against their own attendance (#1728). The whole envelope: `meta` is read. */
+  atRisk(): Observable<AtRiskList> {
+    return this.http.get<AtRiskList>(`${environment.apiBase}/api/v1/stats/attendance/at-risk`);
   }
 
   /** Who has seen one technique — a row of the coverage report, opened (#1745). */

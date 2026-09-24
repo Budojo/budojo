@@ -2133,6 +2133,31 @@
         "expiringDocumentOne": "altro documento da rinnovare",
         "expiringDocumentOther": "altri documenti da rinnovare",
         "none": "Non c'è niente da controllare"
+      },
+      "atRisk": {
+        "title": "Non si vedono da un po'",
+        "description": "Chi viene meno del solito, rispetto alle sue stesse presenze.",
+        "countOne": "{{count}} atleta",
+        "countOther": "{{count}} atleti",
+        "tier": {
+          "gone": "Assente da tempo",
+          "quiet": "Assente di recente",
+          "dropping": "In calo"
+        },
+        "reasonDropping": "{{recent}} delle ultime {{recentTotal}} · prima {{baseline}} su {{baselineTotal}}",
+        "reasonAbsent": "Ultima volta {{when}}",
+        "reasonNever": "Nessuna presenza dall'iscrizione",
+        "emptyHealthy": "Nessuno sta calando: tutti vengono più o meno come al solito.",
+        "emptyNoHistory": "Non ci sono ancora abbastanza lezioni registrate per dirlo: {{available}} su {{needed}}.",
+        "emptyNoAttendance": "Nessuna presenza registrata. Fai l'appello dal check-in e questa lista si riempie da sola.",
+        "openCheckIn": "Apri il check-in",
+        "more": "Altro",
+        "moreAria": "Altre azioni per {{name}}",
+        "markInactive": "Segna come non in attività",
+        "markInactiveConfirm": "Segnare {{name}} come non in attività? Esce dalla vista predefinita degli atleti; non si cancella nulla.",
+        "markInactiveAccept": "Segna non in attività",
+        "markInactiveToast": "{{name}}: ora non in attività",
+        "markInactiveError": "Non è stato possibile aggiornare {{name}}. Riprova."
       }
     },
     "invitation": {
