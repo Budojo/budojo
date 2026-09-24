@@ -2474,7 +2474,8 @@
       },
       "hint": {
         "address": "Lascia tutti i campi vuoti per non assegnare un indirizzo all'atleta.",
-        "feeTier": "Quale quota mensile paga. Lascia vuoto per la quota standard dell'accademia."
+        "feeTier": "Quale quota mensile paga. Lascia vuoto per la quota standard dell'accademia.",
+        "kidsBeltsHidden": "Le cinture dei bambini sono nascoste: attivale in Accademia → Modifica."
       },
       "button": {
         "cancel": "Annulla",

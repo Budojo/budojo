@@ -105,6 +105,8 @@ describe("AthleteFormComponent — the academy's ladder (#1801)", () => {
     const values = form.beltOptions().map((o) => o.value);
     expect(values[0]).toBe('white');
     expect(values).not.toContain('grey');
+    // And says where they went: setup never asks, so nothing else would.
+    expect(form.kidsBeltsHidden()).toBe(true);
   });
 
   it("keeps the youth belt of the athlete being edited, so saving doesn't move them (#1651)", () => {

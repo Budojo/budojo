@@ -2474,7 +2474,8 @@
       },
       "hint": {
         "address": "Leave every field empty to keep the athlete without an address on file.",
-        "feeTier": "Which monthly fee they pay. Leave empty for the academy's standard fee."
+        "feeTier": "Which monthly fee they pay. Leave empty for the academy's standard fee.",
+        "kidsBeltsHidden": "Kids' belts are hidden: turn them on in Academy → Edit."
       },
       "button": {
         "cancel": "Cancel",

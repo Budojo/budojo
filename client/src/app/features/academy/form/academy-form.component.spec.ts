@@ -107,6 +107,10 @@ describe('AcademyFormComponent', () => {
     expect(component.form.controls.trains_kids.value).toBe(false);
     const row = fixture.nativeElement.querySelector('[data-cy="academy-form-trains-kids"]');
     expect(row.textContent).toContain('We also train kids');
+    // The hint says what switching off does; a screen reader reads it too.
+    expect(row.querySelector('input#academy-trains-kids')?.getAttribute('aria-describedby')).toBe(
+      'academy-trains-kids-hint',
+    );
 
     component.form.controls.trains_kids.setValue(true);
     component.submit();

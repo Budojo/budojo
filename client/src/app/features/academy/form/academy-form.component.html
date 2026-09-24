@@ -58,10 +58,14 @@
       dataCy="academy-form-trains-kids"
     >
       <label for="academy-trains-kids" class="form__switch">
+        <!-- ToggleSwitch has no ariaDescribedBy input; the pass-through
+             reaches its <input>, so the hint is read like every other
+             field's in this form. -->
         <p-toggleswitch
           formControlName="trains_kids"
           inputId="academy-trains-kids"
           ariaLabelledBy="academy-trains-kids-text"
+          [pt]="{ input: { 'aria-describedby': 'academy-trains-kids-hint' } }"
           data-cy="academy-form-trains-kids-switch"
         />
         <span id="academy-trains-kids-text">{{

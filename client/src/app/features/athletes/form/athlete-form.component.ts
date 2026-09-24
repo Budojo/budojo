@@ -247,6 +247,13 @@ export class AthleteFormComponent implements OnInit {
   });
 
   /**
+   * Say where the kids' belts went (#1651). A new academy starts with them
+   * hidden and setup never asks, so an owner who does train kids would
+   * otherwise find no grey belt and no reason why.
+   */
+  readonly kidsBeltsHidden = computed(() => !this.beltLadder.trainsKids());
+
+  /**
    * The academy's price list (#1381), for the tier dropdown. Empty for an
    * academy that charges one flat fee — the field hides entirely in that
    * case rather than offering an empty select.

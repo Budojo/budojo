@@ -103,6 +103,22 @@ it('answers from what each academy already holds', function (): void {
         ->and($empty->fresh()->trains_kids)->toBeFalse();
 });
 
+it("draws the age line where the art's kids' divisions end", function (): void {
+    // BJJ's youngest adult division (juvenile) starts at 16: turning 15 this
+    // year is a kid, turning 16 is not. Pinned on both sides, because an
+    // off-by-one here moves every teenager across it.
+    $fifteen = Academy::factory()->create();
+    Athlete::factory()->for($fifteen)->create(['belt' => Belt::White, 'date_of_birth' => '2011-12-31']);
+    $sixteen = Academy::factory()->create();
+    Athlete::factory()->for($sixteen)->create(['belt' => Belt::White, 'date_of_birth' => '2010-01-01']);
+    Academy::query()->update(['trains_kids' => false]);
+
+    trainsKidsMigration()->up();
+
+    expect($fifteen->fresh()->trains_kids)->toBeTrue()
+        ->and($sixteen->fresh()->trains_kids)->toBeFalse();
+});
+
 it('counts a soft-deleted kid, and ignores another academy', function (): void {
     // Restoring the kid would bring back a youth belt the pickers no longer
     // offer; and a kid next door says nothing about this academy.
