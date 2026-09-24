@@ -114,6 +114,8 @@ Belt colors are domain constants, not theme roles, and they live **once** in `bu
 
 Third shadow ramp is forbidden. If you reach for it, use a hairline border.
 
+**Depth strategy: borders first.** Group with a hairline, a divider or space. Lift with `--budojo-elevation-floating` only what floats over the page: dialogs, menus, toasts. A card on a card is how a screen loses its focal point (#1855).
+
 ### 1.6 Motion
 
 | Token | Value | Use |
@@ -173,6 +175,28 @@ Page-chrome **padding** is set once at the dashboard shell `.main` element and c
 - Pages inside the dashboard shell declare only their container choice — `max-width: var(--budojo-page-content-max); margin: 0 auto;`. Padding is **never** redeclared on a page wrapper.
 - Public pages outside the dashboard shell (`/privacy`, `/sub-processors`) keep their own padding in `_legal-page.scss` and consume `--budojo-container-prose` directly — the shell's `.main` doesn't reach them, and the global `box-sizing: border-box` rule already includes their own padding inside `max-width`.
 - Narrow-card layouts (`/profile`, `/dashboard/academy`, `/dashboard/academy/edit`, athlete form) currently use raw `max-width` (40rem / 640px / 900px) because they're slated for a hierarchy rework — wide page header + narrow card aligned left, instead of a viewport-restricting page.
+
+### 1.8 Signature — the belt spine (#1855)
+
+Budojo is near-monochrome with one indigo accent. The colour in the product comes from the belts, as it does on the mat. **Wherever a person is listed, their belt is on the row**: a spine in the belt's colour, full height, down the left edge. It is the one element that could belong to no other product, which is what `interface-design` means by a *signature*. The product review of 24 September 2026 named it.
+
+**How.** Always through `<app-athlete-identity>` (`shared/components/athlete-identity/`, #1458): spine, avatar, full name, age chip. A page adds only what is its own (a payment chip, a present/absent control, a date) through `<ng-content>`. Never redraw a spine by hand: the spine carries the belt's name for a screen reader and a tooltip for a sighted reader who cannot tell brown from black in a 9 px stripe, and a hand-drawn copy loses both.
+
+**Where it appears.**
+
+| Screen | Since |
+|---|---|
+| Roster | #1458 |
+| Check-in (daily attendance) | #1458 |
+| Monthly summary, leaderboard, expiring documents | #1851 |
+| Every new list of people: Today (#1643), the promotion candidates (#1841), "not seen lately" (#1729) | as they ship |
+
+**What it is never used for.**
+
+- **A row that is not a person.** A class, a technique or a payment has no belt, and a coloured bar beside one reads as a rank that does not exist.
+- **State.** The spine is the belt and nothing else. No red spine for unpaid, no faded spine for inactive: state is a chip or words, beside the identity.
+- **Decoration.** No belt-coloured headers, gradients or backgrounds. The colour is information about one person, so it only appears next to that person.
+- **Recolouring.** The belt tokens (§ 1.1, `--budojo-belt-*`) are constants on `:root`, the same in both themes. Only the ground contact around the spine (`--budojo-belt-edge`) changes with the theme.
 
 ---
 

@@ -532,6 +532,27 @@ describe('AthleteDetailComponent — the header says how to reach the athlete', 
     httpMock.verify();
   });
 
+  it('offers WhatsApp beside the number, in a new tab — the one web page among them (#1727)', () => {
+    const { http: httpMock } = setupTestBed('42');
+    const fixture = TestBed.createComponent(AthleteDetailComponent);
+    fixture.detectChanges();
+    httpMock.expectOne('/api/v1/athletes/42').flush({
+      data: makeAthlete({ phone_country_code: '+39', phone_national_number: '3331234567' }),
+    });
+    fixture.detectChanges();
+
+    const root = fixture.nativeElement as HTMLElement;
+    const whatsapp = root.querySelector('[data-cy="athlete-reach-whatsapp"]');
+
+    // No `+` in a wa.me path; a new tab, because it is a web page.
+    expect(whatsapp?.getAttribute('href')).toBe('https://wa.me/393331234567');
+    expect(whatsapp?.getAttribute('target')).toBe('_blank');
+    expect(whatsapp?.getAttribute('rel')).toContain('noopener');
+    expect(whatsapp?.textContent?.trim()).toBe('WhatsApp');
+    expect(whatsapp?.getAttribute('aria-label')).toBe('Message +39 3331234567 on WhatsApp');
+    httpMock.verify();
+  });
+
   it('says nothing about a phone when only half the pair is stored', () => {
     const { http: httpMock } = setupTestBed('42');
     const fixture = TestBed.createComponent(AthleteDetailComponent);
@@ -566,6 +587,67 @@ describe('AthleteDetailComponent — the header says how to reach the athlete', 
     expect(meta).toContain('Dal ');
     expect(meta).not.toContain('Iscritto');
     expect(status).toBe('In attività');
+    httpMock.verify();
+  });
+});
+
+describe('AthleteDetailComponent — the header says when they last trained (#1726)', () => {
+  function daysAgo(n: number): string {
+    const d = new Date();
+    d.setDate(d.getDate() - n);
+    const month = `${d.getMonth() + 1}`.padStart(2, '0');
+    const day = `${d.getDate()}`.padStart(2, '0');
+    return `${d.getFullYear()}-${month}-${day}`;
+  }
+
+  function metaFor(athlete: Athlete): HTMLElement | null {
+    const { http: httpMock } = setupTestBed('42');
+    const fixture = TestBed.createComponent(AthleteDetailComponent);
+    fixture.detectChanges();
+    httpMock.expectOne('/api/v1/athletes/42').flush({ data: athlete });
+    fixture.detectChanges();
+    httpMock.verify();
+
+    return (fixture.nativeElement as HTMLElement).querySelector('.athlete-detail-page__meta');
+  }
+
+  it('puts the last presence beside the joined date, as a distance', () => {
+    const meta = metaFor(makeAthlete({ last_attended_on: daysAgo(3) }));
+
+    expect(meta?.querySelector('[data-cy="athlete-last-seen"]')?.textContent?.trim()).toBe(
+      'Last trained 3 days ago',
+    );
+  });
+
+  it('says so in words when they have never trained', () => {
+    const meta = metaFor(makeAthlete({ last_attended_on: null }));
+
+    expect(meta?.querySelector('[data-cy="athlete-last-seen"]')?.textContent?.trim()).toBe(
+      'No sessions yet',
+    );
+  });
+
+  it('says nothing when the payload did not carry the field', () => {
+    const meta = metaFor(makeAthlete());
+
+    expect(meta?.querySelector('[data-cy="athlete-last-seen"]')).toBeNull();
+  });
+
+  it('keeps the last presence when a child hands back a row without it (the photo card)', () => {
+    const { http: httpMock } = setupTestBed('42');
+    const fixture = TestBed.createComponent(AthleteDetailComponent);
+    fixture.detectChanges();
+    httpMock.expectOne('/api/v1/athletes/42').flush({
+      data: makeAthlete({ last_attended_on: daysAgo(3) }),
+    });
+    fixture.detectChanges();
+
+    // The photo endpoints do not select it, so the key is absent.
+    fixture.componentInstance.onAthleteChanged(makeAthlete({ stripes: 3 }));
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.athlete()?.last_attended_on).toBe(daysAgo(3));
+    expect(fixture.componentInstance.athlete()?.stripes).toBe(3);
     httpMock.verify();
   });
 });

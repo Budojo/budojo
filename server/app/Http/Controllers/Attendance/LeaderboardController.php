@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Attendance;
 
+use App\Actions\Athlete\LoadAthleteIdentitiesAction;
 use App\Actions\Engagement\GetMonthlyLeaderboardAction;
 use App\Http\Controllers\Controller;
+use App\Http\Resources\AthleteIdentityResource;
 use App\Models\Academy;
 use App\Models\User;
 use Carbon\CarbonImmutable;
@@ -26,6 +28,7 @@ class LeaderboardController extends Controller
 {
     public function __construct(
         private readonly GetMonthlyLeaderboardAction $action,
+        private readonly LoadAthleteIdentitiesAction $identities,
     ) {
     }
 
@@ -51,11 +54,41 @@ class LeaderboardController extends Controller
         $rows = $this->action->execute($academy, $month, $selfAthleteId);
 
         return response()->json([
-            'data' => $rows,
+            'data' => $this->withIdentities($rows, $academy, $user, $request),
             'meta' => [
                 'month' => $month->format('Y-m'),
             ],
         ]);
+    }
+
+    /**
+     * The owner sees each visible athlete's full identity, belt included
+     * (#1851), so the card draws them like every other list of people. An
+     * athlete on the portal keeps "first name and initial": the card is shown
+     * to their training partners, and nothing here should say more about a
+     * peer than it did. An anonymous row stays anonymous for everyone,
+     * because the opt-out is the athlete's choice.
+     *
+     * @param  list<array{rank: int, athlete_id: int, first_name: string, last_name_initial: string, sessions: int, hours: float, anonymous: bool, is_self: bool}>  $rows
+     * @return list<array<string, mixed>>
+     */
+    private function withIdentities(array $rows, Academy $academy, User $user, Request $request): array
+    {
+        if (! $user->isOwner()) {
+            return array_map(static fn (array $row): array => [...$row, 'athlete' => null], $rows);
+        }
+
+        $visibleIds = array_column(array_filter($rows, static fn (array $row): bool => $row['anonymous'] === false), 'athlete_id');
+        $athletes = $this->identities->execute($academy, $visibleIds);
+
+        return array_map(static function (array $row) use ($athletes, $request): array {
+            $athlete = $row['anonymous'] === false ? $athletes->get($row['athlete_id']) : null;
+
+            return [
+                ...$row,
+                'athlete' => $athlete === null ? null : new AthleteIdentityResource($athlete)->toArray($request),
+            ];
+        }, $rows);
     }
 
     private function resolveAcademyId(User $user): ?int
