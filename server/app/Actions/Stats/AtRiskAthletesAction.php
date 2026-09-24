@@ -24,13 +24,16 @@ use Illuminate\Database\Eloquent\Collection;
  * in — the same primitive `GetAthleteAttendanceSummaryAction` divides by. A
  * closure contributes nothing to it, so a closed August does not halve every
  * baseline and flag the whole roster in September. Per athlete the list is
- * clipped at `joined_at`: nobody misses what predates them.
+ * clipped at `joined_at`: nobody misses what predates them. Tonight counts
+ * for an athlete only once they are ticked: not being checked in yet to a
+ * session still in progress is not an absence.
  *
  * The three tiers, most severe first (one value per athlete, never several):
  *
  *   - `gone` — none of the last 8 sessions, and last seen more than 21 days
  *     ago (or never, since joining).
- *   - `quiet` — none of the last 3 sessions.
+ *   - `quiet` — none of the last 3 sessions, for someone whose own baseline
+ *     rate says they would normally have come at least once in 3.
  *   - `dropping` — at least 6 presences in the baseline (the 24 sessions
  *     before the last 8), and a recent rate under half the baseline rate.
  *
@@ -168,7 +171,9 @@ class AtRiskAthletesAction
             ->select('attended_on')
             ->distinct()
             ->orderByDesc('attended_on')
-            ->limit(self::RECENT_SESSIONS + self::BASELINE_SESSIONS)
+            // One spare: tonight drops out of the lists of everyone not yet
+            // ticked, and their windows must still be full.
+            ->limit(self::RECENT_SESSIONS + self::BASELINE_SESSIONS + 1)
             ->pluck('attended_on')
             ->map(static fn (mixed $day): string => substr(\is_string($day) ? $day : '', 0, 10))
             ->filter(static fn (string $day): bool => $day !== '')
@@ -257,7 +262,15 @@ class AtRiskAthletesAction
     private function assess(Athlete $athlete, array $sessions, array $attended, CarbonImmutable $today): ?array
     {
         $joined = $athlete->joined_at->toDateString();
-        $own = array_values(array_filter($sessions, static fn (string $day): bool => $day >= $joined));
+        $tonight = $today->toDateString();
+        // Clipped at their joining day. And tonight is theirs only once they
+        // are ticked: today becomes a session the moment the first person is
+        // checked in, and someone not ticked YET is not absent from a session
+        // still in progress (#1728 prereview). A tick tonight still counts.
+        $own = array_values(array_filter(
+            $sessions,
+            static fn (string $day): bool => $day >= $joined && ($day !== $tonight || isset($attended[$tonight])),
+        ));
 
         $recent = \array_slice($own, 0, self::RECENT_SESSIONS);
         $baseline = \array_slice($own, self::RECENT_SESSIONS, self::BASELINE_SESSIONS);
@@ -279,7 +292,8 @@ class AtRiskAthletesAction
         // quiet and usually dropping, and saying all three says nothing more.
         $tier = match (true) {
             $recentAttended === 0 && $this->absentLong($lastAttendedOn, $today) => 'gone',
-            $count(\array_slice($own, 0, self::QUIET_SESSIONS)) === 0 => 'quiet',
+            $count(\array_slice($own, 0, self::QUIET_SESSIONS)) === 0
+                && $this->usuallyComesWithin(self::QUIET_SESSIONS, $baselineAttended, \count($baseline)) => 'quiet',
             $this->isDropping($recentAttended, \count($recent), $baselineAttended, \count($baseline)) => 'dropping',
             default => null,
         };
@@ -316,6 +330,17 @@ class AtRiskAthletesAction
     {
         return $lastAttendedOn === null
             || CarbonImmutable::parse($lastAttendedOn)->diffInDays($today) > self::GONE_AFTER_DAYS;
+    }
+
+    /**
+     * Whether, at their own baseline rate, this athlete would normally have
+     * come at least once in that many sessions. Missing three is news about
+     * someone who comes every other night, and an ordinary week for someone
+     * who comes once in four (#1728 prereview) — so `quiet` asks this first.
+     */
+    private function usuallyComesWithin(int $sessions, int $baselineAttended, int $baselineSessions): bool
+    {
+        return $baselineAttended / $baselineSessions * $sessions >= 1;
     }
 
     /**

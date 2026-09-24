@@ -6054,14 +6054,17 @@ paths:
         rather than a fixed number, and counted in **realised sessions** —
         the distinct days anyone in the academy was checked in — rather than
         in weeks, so a closure contributes nothing. Per athlete the sessions
-        are clipped at `joined_at`.
+        are clipped at `joined_at`, and today counts for an athlete only once
+        they are ticked: not being checked in yet to a session still in
+        progress is not an absence.
 
         `recent` is the athlete's last 8 sessions; `baseline` the 24 before
         those. One tier per athlete, the most severe that applies:
 
         - `gone` — none of the last 8, and last seen more than 21 days ago
           (or never, since joining);
-        - `quiet` — none of the last 3;
+        - `quiet` — none of the last 3, for someone whose own baseline rate
+          says they would normally have come at least once in 3;
         - `dropping` — at least 6 presences in the baseline and a recent
           rate under half the baseline rate.
 

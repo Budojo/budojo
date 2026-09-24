@@ -132,8 +132,35 @@ it('compares an athlete with their own history, not with a fixed number', functi
     atRiskPresent($sliding, atRiskAt($this->sessions, [0, 4, ...range(8, 21)]));
     $steady = atRiskAthlete($this->academy, 'Steady');
     atRiskPresent($steady, atRiskAt($this->sessions, [0, 4, 8, 12, 16, 20, 24, 28]));
+    // The same habit, three sessions out of phase: last seen a week ago, none
+    // of the last 3. Someone who comes once in four is not "quiet" for having
+    // missed three — that is their normal week (#1728 prereview).
+    $offset = atRiskAthlete($this->academy, 'SteadyOffset');
+    atRiskPresent($offset, atRiskAt($this->sessions, [3, 7, 11, 15, 19, 23, 27, 31]));
 
     expect(atRiskTiers($this))->toBe(['Sliding' => 'dropping']);
+});
+
+it('does not count tonight against anyone who has not been ticked yet', function (): void {
+    // Today becomes a session the moment the first person is checked in. An
+    // athlete not ticked YET is not absent from a session still in progress.
+    atRiskPresent($this->regular, ['2026-09-24']);
+    $notYet = atRiskAthlete($this->academy, 'NotYet');
+    atRiskPresent($notYet, atRiskAt($this->sessions, [2, 3, 4, 5, ...range(8, 21)]));
+
+    expect(atRiskTiers($this))->toBe([]);
+});
+
+it('takes someone off the list the evening they are ticked', function (): void {
+    // None of the last 3 before tonight — quiet. Checked in tonight: back.
+    $back = atRiskAthlete($this->academy, 'Back');
+    atRiskPresent($back, atRiskAt($this->sessions, [3, 4, 5, 6, ...range(8, 21)]));
+    expect(atRiskTiers($this))->toBe(['Back' => 'quiet']);
+
+    atRiskPresent($back, ['2026-09-24']);
+    atRiskPresent($this->regular, ['2026-09-24']);
+
+    expect(atRiskTiers($this))->toBe([]);
 });
 
 it('needs six presences in the baseline before it calls anything a drop', function (): void {
@@ -156,11 +183,25 @@ it('says nothing about an athlete with fewer than twelve sessions of baseline', 
     expect(atRiskTiers($this))->toBe([]);
 });
 
-it('never lists an inactive athlete, or one who joined in the last 28 days', function (): void {
+it('never lists an inactive athlete', function (): void {
     atRiskAthlete($this->academy, 'Inactive', status: AthleteStatus::Inactive);
-    atRiskAthlete($this->academy, 'Newcomer', '2026-09-14');
 
     expect(atRiskTiers($this))->toBe([]);
+});
+
+it('leaves out anyone who joined in the last 28 days, and only them', function (): void {
+    // A session every day for a month, so both newcomers have far more than
+    // the twenty sessions the other floors ask for: only the 28-day rule can
+    // keep the first one off the list.
+    $daily = [];
+    for ($i = 1; $i <= 30; $i++) {
+        $daily[] = CarbonImmutable::parse('2026-09-24')->subDays($i)->toDateString();
+    }
+    atRiskPresent($this->regular, $daily);
+    atRiskAthlete($this->academy, 'JoinedTwentyFiveDaysAgo', '2026-08-30');
+    atRiskAthlete($this->academy, 'JoinedTwentyNineDaysAgo', '2026-08-26');
+
+    expect(atRiskTiers($this))->toBe(['JoinedTwentyNineDaysAgo' => 'gone']);
 });
 
 it('gives the most severe tier, as one value', function (): void {
