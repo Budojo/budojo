@@ -2612,6 +2612,7 @@
     },
     "coverage": {
       "fraction": "{{attended}} of {{total}} techniques the academy taught",
+      "headlineRule": "This counts a technique after one lesson they attended, out of what the academy taught while they were on the roster: it asks whether they were there. Stats → Programme counts two lessons, out of the whole programme, so the two numbers measure different things.",
       "since": "Counted from {{date}}, the day they joined.",
       "legend": {
         "seenOne": "{{count}} seen",
@@ -2649,9 +2650,9 @@
       "notTaughtYetOther": "{{count}} more are in the programme but have not been taught yet. That is the academy's gap, not theirs.",
       "nothingMissedOne": "They were at the one lesson that taught it.",
       "nothingMissedOther": "They were at every one of them.",
-      "consolidatedOne": "One seen more than once.",
-      "consolidatedOther": "{{count}} seen more than once.",
-      "consolidatedNone": "None seen more than once yet."
+      "consolidatedOne": "One seen twice or more, the bar Stats → Programme counts by.",
+      "consolidatedOther": "{{count}} seen twice or more, the bar Stats → Programme counts by.",
+      "consolidatedNone": "None seen twice or more yet."
     }
   },
   "month": {
@@ -2833,7 +2834,8 @@
       }
     },
     "syllabus": {
-      "headline": "{{covered}} of {{total}} covered this season",
+      "headline": "{{covered}} of {{total}} in the season's programme, each taught at least twice",
+      "headlineRule": "An athlete's own Programme tab counts differently: a technique after one lesson they attended, out of what the academy taught while they were on the roster. It asks whether they were there, not how much of the programme has been taught.",
       "byPosition": "By position",
       "overTime": "Across the season",
       "lastTaught": "Last taught",
