@@ -394,6 +394,63 @@
       background: var(--p-surface-100);
       color: var(--p-text-color);
     }
+
+    &:focus-visible {
+      outline: 2px solid var(--p-primary-color);
+      outline-offset: -2px;
+    }
+  }
+}
+
+// ── Tonight, for the people on the mat (#1860) ───────────────────────────────
+//
+// The same row as a suggestion — it is one, with a reason about the room — and
+// under it, on request, the people who missed it.
+
+.room {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+
+  // Where the suggestions put "not tonight", the room puts "who": the same
+  // 48 px square in the same place, so the row reads the same way.
+  &__who {
+    @extend .suggestion__dismiss;
+
+    &[aria-expanded='true'] {
+      background: var(--p-content-hover-background);
+      color: var(--p-text-color);
+    }
+  }
+
+  &__people {
+    list-style: none;
+    margin: 0;
+    padding: 0 0 0 1rem;
+    display: flex;
+    flex-direction: column;
+  }
+
+  // The identity's spine is absolutely positioned, so the row is its
+  // containing block — the roster's arrangement (#1458).
+  &__person {
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-height: 2.5rem;
+    padding: 0.25rem 0 0.25rem 1rem;
+
+    & + & {
+      border-top: 1px solid color-mix(in srgb, var(--p-content-border-color) 60%, transparent);
+    }
+  }
+
+  &__unsure {
+    margin: 0;
+    padding-left: 1rem;
+    font-size: 0.75rem;
+    color: var(--p-text-muted-color);
   }
 }
 
