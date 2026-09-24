@@ -2257,7 +2257,7 @@
       "promotions": {
         "errorBody": "Couldn't load promotion history. Try again in a moment.",
         "emptyBody": "No promotions yet. Bump a belt or stripes and it lands here.",
-        "firstBelt": "First belt",
+        "firstBelt": "Starting belt",
         "stripes": "stripes",
         "recordedBy": "Recorded by {{name}}",
         "prevPage": "Previous page",
@@ -2284,7 +2284,7 @@
           "dateLabel": "Recorded on",
           "fromBelt": "From belt",
           "toBelt": "To belt",
-          "firstBelt": "First belt (no prior)",
+          "firstBelt": "Starting belt (nothing before)",
           "beltAtEvent": "Belt at the time",
           "fromStripes": "From stripes",
           "toStripes": "To stripes",

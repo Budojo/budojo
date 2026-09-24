@@ -32,8 +32,9 @@ class AthleteImportController extends Controller
 
     public function __invoke(ImportAthletesRequest $request, ImportAthletesAction $import): JsonResponse
     {
-        $academy = $request->user()?->activeAcademy();
-        if (! $academy instanceof Academy) {
+        $user = $request->user();
+        $academy = $user?->activeAcademy();
+        if ($user === null || ! $academy instanceof Academy) {
             return response()->json(['message' => 'Forbidden.'], 403);
         }
 
@@ -68,7 +69,7 @@ class AthleteImportController extends Controller
             ], 422);
         }
 
-        $report = $import->execute($academy, $csv, $mapping, $request->isDryRun());
+        $report = $import->execute($user, $academy, $csv, $mapping, $request->isDryRun());
 
         return response()->json([
             'data' => [
