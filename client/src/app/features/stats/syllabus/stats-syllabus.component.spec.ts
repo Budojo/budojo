@@ -138,6 +138,18 @@ describe('StatsSyllabusComponent (#1565)', () => {
     expect(rule.textContent).toContain('after one lesson');
   });
 
+  it('keeps the caption in view and folds the other rule behind the number (#1853)', () => {
+    const { fixture, httpMock } = setup();
+    flush(httpMock);
+    fixture.detectChanges();
+
+    const root = fixture.nativeElement as HTMLElement;
+    const method = root.querySelector('details[data-cy="syllabus-coverage-method"]') as HTMLDetailsElement;
+    expect(method.open).toBe(false);
+    expect(method.querySelector('[data-cy="syllabus-coverage-rule"]')).not.toBeNull();
+    expect(method.contains(root.querySelector('.coverage__caption'))).toBe(false);
+  });
+
   it('splits the tally three ways, because one number would hide the thin half', () => {
     const { fixture, httpMock } = setup();
     flush(httpMock);

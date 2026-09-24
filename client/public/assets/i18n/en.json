@@ -1,6 +1,7 @@
 {
   "common": {
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "howCounted": "How is this counted?"
   },
   "language": {
     "label": "Language",
@@ -1938,7 +1939,8 @@
       },
       "presencesOne": "{{count}} attendance",
       "presencesOther": "{{count}} attendances",
-      "noScheduleNote": "No timetable covers this month yet, so there is no day count to work the percentages against."
+      "noScheduleNote": "No timetable covers this month yet, so there is no day count to work the percentages against.",
+      "method": "Days counts the days the athlete came, not the presences: an evening with two lessons is one day. The percentage divides them by the month's training days in the timetable, up to today while the month is running."
     }
   },
   "lessons": {

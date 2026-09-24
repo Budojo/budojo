@@ -457,6 +457,34 @@ describe('MonthlySummaryComponent', () => {
     http.verify();
   });
 
+  it('folds how the days and the percentage are counted under the header (#1853)', () => {
+    const { http, setMonthParam } = setupTestBed();
+    const fixture = TestBed.createComponent(MonthlySummaryComponent);
+    fixture.detectChanges();
+    setMonthParam(null);
+    http.expectOne('/api/v1/attendance/summary?month=2026-04').flush({ data: [makeRow(1, 5)] });
+    fixture.detectChanges();
+
+    const method = fixture.nativeElement.querySelector(
+      'details[data-cy="monthly-summary-method"]',
+    ) as HTMLDetailsElement;
+    expect(method.open).toBe(false);
+    expect(method.textContent).toContain('an evening with two lessons is one day');
+    http.verify();
+  });
+
+  it('shows no method for an empty month, where there is no number to explain (#1853)', () => {
+    const { http, setMonthParam } = setupTestBed();
+    const fixture = TestBed.createComponent(MonthlySummaryComponent);
+    fixture.detectChanges();
+    setMonthParam(null);
+    http.expectOne('/api/v1/attendance/summary?month=2026-04').flush({ data: [] });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('[data-cy="monthly-summary-method"]')).toBeNull();
+    http.verify();
+  });
+
   it("lets a name reach that athlete's own attendance tab", () => {
     // A real router here, not the `{ navigate }` stub the other tests use:
     // `routerLink` needs one to render an href, and the href is the claim.

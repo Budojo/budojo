@@ -1,6 +1,7 @@
 {
   "common": {
-    "cancel": "Annulla"
+    "cancel": "Annulla",
+    "howCounted": "Come si conta?"
   },
   "language": {
     "label": "Lingua",
@@ -1938,7 +1939,8 @@
       },
       "presencesOne": "{{count}} presenza",
       "presencesOther": "{{count}} presenze",
-      "noScheduleNote": "Nessun orario copre ancora questo mese, quindi non c'è un totale di giorni su cui calcolare le percentuali."
+      "noScheduleNote": "Nessun orario copre ancora questo mese, quindi non c'è un totale di giorni su cui calcolare le percentuali.",
+      "method": "Giorni conta i giorni in cui l'atleta è venuto, non le presenze: una sera con due lezioni vale un giorno. La percentuale li divide per i giorni di allenamento del mese secondo l'orario, fino a oggi se il mese è in corso."
     }
   },
   "lessons": {
