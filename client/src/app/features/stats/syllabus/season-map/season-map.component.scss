@@ -71,28 +71,13 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.5rem 1rem;
+  }
+
+  &__error-text {
     margin: 0;
     font-size: 0.875rem;
     color: var(--p-text-muted-color);
-  }
-
-  &__retry {
-    appearance: none;
-    padding: 0;
-    background: none;
-    border: 0;
-    font: inherit;
-    color: var(--p-primary-color);
-    text-decoration: underline;
-    text-underline-offset: 2px;
-    cursor: pointer;
-
-    &:focus-visible {
-      outline: 2px solid var(--p-primary-color);
-      outline-offset: 2px;
-      border-radius: 4px;
-    }
   }
 
   // `width: 0` with `min-width: 100%`: the box fills its panel but offers no
@@ -135,6 +120,41 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  // The row's control: the position's whole season. It fills the name cell,
+  // and on a touch screen grows to a fingertip's 48 px — the cells beside it
+  // are a pointer shortcut and never will.
+  &__name-button {
+    appearance: none;
+    display: block;
+    width: 100%;
+    margin: -0.25rem 0;
+    padding: 0.25rem 0;
+    background: none;
+    border: 0;
+    border-radius: 4px;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+
+    &:hover {
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--p-primary-color);
+      outline-offset: -2px;
+    }
+
+    @media (pointer: coarse) {
+      min-height: 3rem;
+    }
   }
 
   // Month names sit over the first week that belongs to them and run over
@@ -200,8 +220,19 @@
   &__pop {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
-    max-width: 20rem;
+    gap: 1rem;
+    max-width: 22rem;
+    // A whole season can be long; the panel scrolls, the page does not.
+    max-height: 60dvh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+
+    // In the bottom sheet the sheet itself bounds and scrolls it.
+    &--sheet {
+      max-width: none;
+      max-height: none;
+      overflow-y: visible;
+    }
   }
 
   &__pop-title {
@@ -209,6 +240,39 @@
     font-size: 0.875rem;
     font-weight: 600;
     color: var(--p-text-color);
+
+    // Focus lands here when the panel opens; the ring shows only for the
+    // keyboard, as everywhere else.
+    &:focus {
+      outline: none;
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--p-primary-color);
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+  }
+
+  &__none {
+    margin: 0;
+    font-size: 0.8125rem;
+    color: var(--p-text-muted-color);
+  }
+
+  &__group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  &__group-title {
+    margin: 0;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--p-text-muted-color);
   }
 
   &__lessons {

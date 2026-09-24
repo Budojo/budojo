@@ -2870,6 +2870,9 @@
         "unconfirmedOther": "{{count}} pianificate senza appello",
         "fraction": "{{covered}} su {{total}} coperte",
         "popTitle": "{{position}}, settimana del {{date}}",
+        "seasonTitle": "{{position}}, in questa stagione",
+        "seasonAria": "{{position}}: tutte le settimane della stagione",
+        "seasonEmpty": "Ancora niente su questa posizione in questa stagione.",
         "state": {
           "planned": "Pianificata",
           "unconfirmed": "Senza appello"

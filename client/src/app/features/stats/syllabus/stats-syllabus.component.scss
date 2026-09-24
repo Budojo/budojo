@@ -131,28 +131,16 @@
   }
 }
 
-// The legend, carrying the same three strengths the bars use.
+// The three counts, in words. No coloured dots: the accent's strengths key
+// the season map (#1858), and here they would mean something else.
 .tally {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
 
-  &__dot {
-    width: 0.75rem;
-    height: 0.75rem;
-    border-radius: 4px;
-  }
-
-  &--covered &__dot {
-    background: var(--p-primary-color);
-  }
-
-  &--thin &__dot {
-    background: color-mix(in srgb, var(--p-primary-color) 35%, transparent);
-  }
-
-  &--missing &__dot {
-    background: var(--p-surface-200);
+  & + &::before {
+    content: '·';
+    margin-right: 1rem;
+    color: var(--p-text-muted-color);
   }
 }
 

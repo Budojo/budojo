@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   ElementRef,
   Injector,
   afterNextRender,
@@ -12,7 +13,10 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { ButtonModule } from 'primeng/button';
+import { DrawerModule } from 'primeng/drawer';
 import { Popover, PopoverModule } from 'primeng/popover';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TrainingMode } from '../../../../core/services/academy.service';
@@ -25,20 +29,29 @@ import {
 } from '../../../../core/services/stats.service';
 import { localeFor } from '../../../../shared/utils/locale';
 import {
-  CellLesson,
   MapCell,
   MapRow,
+  WeekLessons,
   buildRows,
   cellLessons,
   mondayOf,
   monthStarts,
+  positionSeason,
 } from './season-map.model';
 
-interface SelectedCell {
+/**
+ * What the panel shows: one week of one position (a cell, the pointer
+ * shortcut), or the position's whole season (its name — the control every
+ * keyboard, screen reader and fingertip reaches).
+ */
+interface OpenPanel {
+  readonly mode: 'week' | 'season';
   readonly name: string;
-  readonly week: string;
-  readonly lessons: readonly CellLesson[];
+  readonly groups: readonly WeekLessons[];
 }
+
+/** Below this the panel is a bottom sheet; the popover is for a wide window. */
+const WIDE_QUERY = '(min-width: 768px)';
 
 /** The two states that carry a tag; a held lesson needs none. */
 const STATE_KEYS: Record<Exclude<CalendarLessonState, 'held'>, string> = {
@@ -62,7 +75,14 @@ const STATE_KEYS: Record<Exclude<CalendarLessonState, 'held'>, string> = {
 @Component({
   selector: 'app-season-map',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [TranslatePipe, PopoverModule, SkeletonModule],
+  imports: [
+    NgTemplateOutlet,
+    TranslatePipe,
+    ButtonModule,
+    DrawerModule,
+    PopoverModule,
+    SkeletonModule,
+  ],
   templateUrl: './season-map.component.html',
   styleUrl: './season-map.component.scss',
 })
@@ -71,6 +91,7 @@ export class SeasonMapComponent {
   private readonly translate = inject(TranslateService);
   private readonly languageService = inject(LanguageService);
   private readonly injector = inject(Injector);
+  private readonly destroyRef = inject(DestroyRef);
 
   /** The coverage report's rows: they decide which positions are drawn, and in which order. */
   readonly positions = input.required<readonly CoveragePosition[]>();
@@ -80,13 +101,22 @@ export class SeasonMapComponent {
 
   protected readonly calendar = signal<SyllabusCalendar | null>(null);
   protected readonly failed = signal<boolean>(false);
-  protected readonly selected = signal<SelectedCell | null>(null);
+  /** What the panel is showing, or null before anything was opened. */
+  protected readonly panel = signal<OpenPanel | null>(null);
+  /** The bottom sheet, the panel's form in a narrow window. */
+  protected readonly drawerOpen = signal<boolean>(false);
+  /** Wide enough for a popover beside the map; below that, a bottom sheet. */
+  protected readonly wide = signal<boolean>(true);
 
   private readonly reloadTick = signal<number>(0);
   private readonly popover = viewChild<Popover>('cellPopover');
   private readonly scroller = viewChild<ElementRef<HTMLElement>>('scroller');
+  /** Where focus goes back to when the panel closes. */
+  private lastTrigger: HTMLElement | null = null;
 
   constructor() {
+    this.watchWidth();
+
     // Keyed on the report's own controls, cancelling the previous read: two
     // quick presses on "previous season" must not paint a stale season.
     effect((onCleanup) => {
@@ -186,20 +216,77 @@ export class SeasonMapComponent {
     return state === 'held' ? null : STATE_KEYS[state];
   }
 
-  protected open(event: Event, row: MapRow, cell: MapCell): void {
+  /** A week's cell: the pointer shortcut to that week's lessons. */
+  protected openWeek(event: Event, row: MapRow, cell: MapCell): void {
     const calendar = this.calendar();
     if (calendar === null) return;
 
-    this.selected.set({
+    this.present(event, {
+      mode: 'week',
       name: row.name,
-      week: cell.week,
-      lessons: cellLessons(calendar, row.id, cell.week),
+      groups: [{ week: cell.week, lessons: cellLessons(calendar, row.id, cell.week) }],
     });
-    this.popover()?.show(event);
+  }
+
+  /**
+   * A position's name: its whole season, every week with something on it.
+   * The equivalent of the cells for anyone they are too small for — one tab
+   * stop per row, and a target the size of the name.
+   */
+  protected openSeason(event: Event, row: MapRow): void {
+    const calendar = this.calendar();
+    if (calendar === null) return;
+
+    this.present(event, {
+      mode: 'season',
+      name: row.name,
+      groups: positionSeason(calendar, row.id),
+    });
+  }
+
+  protected seasonAria(row: MapRow): string {
+    return this.translate.instant('stats.syllabus.map.seasonAria', { position: row.name });
+  }
+
+  /** "Closed guard, week of 12 Oct" — or "Closed guard, this season". */
+  protected panelTitle(panel: OpenPanel): string {
+    return panel.mode === 'season'
+      ? this.translate.instant('stats.syllabus.map.seasonTitle', { position: panel.name })
+      : this.translate.instant('stats.syllabus.map.popTitle', {
+          position: panel.name,
+          date: this.shortDate(panel.groups[0]?.week ?? ''),
+        });
+  }
+
+  /** "Week of 12 Oct" — the heading of one week in a position's season. */
+  protected weekTitle(week: string): string {
+    return this.translate.instant('stats.syllabus.map.week', { date: this.shortDate(week) });
+  }
+
+  /**
+   * The panel is up: move focus onto its title, as a dialog must. By id, not
+   * by a view query: the same body is stamped into the popover and the sheet.
+   */
+  protected focusTitle(): void {
+    const id = this.wide() ? 'season-map-pop-title' : 'season-map-drawer-title';
+    document.getElementById(id)?.focus();
+  }
+
+  /**
+   * The panel closed. When it took focus with it (Escape, the drawer's own
+   * close), hand it back to the control that opened it; when the reader
+   * clicked somewhere else, leave it there.
+   */
+  protected restoreFocus(): void {
+    const active = document.activeElement;
+    const insidePanel =
+      active instanceof HTMLElement && active.closest('[data-cy="season-map-popover"]') !== null;
+    if (active === null || active === document.body || insidePanel) this.lastTrigger?.focus();
   }
 
   /** "12 Oct" — the Monday a week starts on, in the reader's locale. */
   protected shortDate(iso: string): string {
+    if (iso === '') return '';
     const [y, m, d] = iso.split('-').map(Number);
     return new Intl.DateTimeFormat(localeFor(this.languageService.currentLang()), {
       day: 'numeric',
@@ -219,6 +306,47 @@ export class SeasonMapComponent {
 
   protected retry(): void {
     this.reloadTick.update((n) => n + 1);
+  }
+
+  /**
+   * Show the panel for this trigger. A popover already open for another cell
+   * gets the new content and is moved to the new cell: PrimeNG's `show()`
+   * does not re-align a panel that is already visible, so it stayed pinned
+   * to the first cell.
+   */
+  private present(event: Event, panel: OpenPanel): void {
+    this.lastTrigger = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
+    this.panel.set(panel);
+
+    if (!this.wide()) {
+      this.drawerOpen.set(true);
+      return;
+    }
+
+    const popover = this.popover();
+    if (popover === undefined) return;
+
+    const wasOpen = popover.overlayVisible;
+    popover.show(event);
+    if (wasOpen) {
+      runInInjectionContext(this.injector, () =>
+        afterNextRender(() => {
+          popover.align();
+          this.focusTitle();
+        }),
+      );
+    }
+  }
+
+  /** Track the window's width, so the panel is a popover or a bottom sheet as it should be. */
+  private watchWidth(): void {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+
+    const query = window.matchMedia(WIDE_QUERY);
+    this.wide.set(query.matches);
+    const onChange = (e: MediaQueryListEvent): void => this.wide.set(e.matches);
+    query.addEventListener('change', onChange);
+    this.destroyRef.onDestroy(() => query.removeEventListener('change', onChange));
   }
 
   private count(what: 'held' | 'planned' | 'unconfirmed', n: number): string {

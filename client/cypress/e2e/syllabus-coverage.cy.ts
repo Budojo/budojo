@@ -1,4 +1,5 @@
 import { MOCK_ACADEMY } from '../support/fixtures';
+import { VIEWPORT_IPHONE_SE } from '../support/viewports';
 
 /**
  * Syllabus coverage (#1565).
@@ -195,13 +196,79 @@ describe('Syllabus coverage', () => {
     cy.get('[data-cy="season-map-cell-1-2026-10-05"]').should('have.class', 'swatch--more');
     cy.get('[data-cy="season-map-cell-1-2026-10-19"]').should('have.class', 'swatch--planned');
     // A week with nothing on it is not a control.
-    cy.get('[data-cy="syllabus-position-2"] button').should('not.exist');
+    cy.get('[data-cy="syllabus-position-2"] td button').should('not.exist');
 
     cy.get('[data-cy="season-map-cell-1-2026-10-19"]').click();
     cy.get('[data-cy="season-map-popover"]')
       .should('contain.text', 'Fundamentals')
       .and('contain.text', 'Planned')
       .and('contain.text', 'Closed guard');
+  });
+
+  it('moves the popover to the second week opened, not only its content', () => {
+    stub();
+
+    cy.visitAuthenticated('/dashboard/stats/syllabus');
+    cy.wait('@calendar');
+
+    cy.get('[data-cy="season-map-cell-1-2026-10-05"]').click();
+    cy.get('[data-cy="season-map-popover"]').should('contain.text', 'Advanced');
+
+    cy.get('[data-cy="season-map-cell-1-2026-10-19"]').click();
+    cy.get('[data-cy="season-map-popover"]').should('contain.text', 'Planned');
+
+    // PrimeNG's show() leaves an open popover where it was; it must follow.
+    cy.get('[data-cy="season-map-cell-1-2026-10-19"]').then(($cell) => {
+      const cell = $cell[0].getBoundingClientRect();
+      cy.get('.p-popover').should(($pop) => {
+        const pop = $pop[0].getBoundingClientRect();
+        expect(Math.abs(pop.left - cell.left)).to.be.lessThan(32);
+      });
+    });
+  });
+
+  it("opens a position's whole season from its name, and takes focus there", () => {
+    stub();
+
+    cy.visitAuthenticated('/dashboard/stats/syllabus');
+    cy.wait('@calendar');
+
+    cy.get('[data-cy="season-map-position-1"]').focus().type('{enter}');
+    cy.get('[data-cy="season-map-popover"]')
+      .should('contain.text', 'Closed guard, this season')
+      .and('contain.text', 'Week of')
+      .and('contain.text', 'Armbar')
+      .and('contain.text', 'Planned');
+    cy.focused().should('have.id', 'season-map-pop-title');
+
+    // Escape hands focus back to the name that opened it.
+    cy.focused().type('{esc}');
+    cy.focused().should('have.attr', 'data-cy', 'season-map-position-1');
+  });
+
+  it("opens a position's season as a bottom sheet on a phone, with a fingertip-sized name", () => {
+    cy.viewport(VIEWPORT_IPHONE_SE.width, VIEWPORT_IPHONE_SE.height);
+    stub();
+
+    cy.visitAuthenticated('/dashboard/stats/syllabus');
+    cy.wait('@calendar');
+
+    cy.get('[data-cy="season-map-position-1"]').click();
+    cy.get('.p-drawer [data-cy="season-map-popover"]')
+      .should('be.visible')
+      .and('contain.text', 'Closed guard, this season');
+    cy.focused().should('have.id', 'season-map-drawer-title');
+    cy.screenshot('season-map-sheet-375', { capture: 'viewport', overwrite: true });
+  });
+
+  it('draws the map for a season with only plans on it, above the nothing-taught state', () => {
+    stub(report({ taught: [] }));
+
+    cy.visitAuthenticated('/dashboard/stats/syllabus');
+    cy.wait('@calendar');
+
+    cy.get('[data-cy="syllabus-coverage-nothing-taught"]').should('be.visible');
+    cy.get('[data-cy="season-map-cell-1-2026-10-19"]').should('have.class', 'swatch--planned');
   });
 
   it('asks the map for the same filter as the report', () => {
@@ -226,6 +293,9 @@ describe('Syllabus coverage', () => {
 
     cy.get('[data-cy="season-map-error"]').should('be.visible');
     cy.get('[data-cy="syllabus-position-1"]').should('contain.text', '3/6');
+
+    // The retry is a full-size button, the one action in this state.
+    cy.get('[data-cy="season-map-retry"] button').invoke('outerHeight').should('be.gte', 48);
   });
 
   it('re-asks the server when the gi filter moves — the denominator moves with it', () => {

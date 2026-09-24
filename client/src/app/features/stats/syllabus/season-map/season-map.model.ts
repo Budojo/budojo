@@ -130,6 +130,22 @@ export function buildRows(
   });
 }
 
+export interface WeekLessons {
+  readonly week: string;
+  readonly lessons: readonly CellLesson[];
+}
+
+/**
+ * A position's whole season: every week with something on it, oldest first,
+ * each with the lessons its cell counts. What the row's name opens — the
+ * same content as the cells, reachable with one tab stop per row.
+ */
+export function positionSeason(calendar: SyllabusCalendar, positionId: number): WeekLessons[] {
+  return calendar.weeks
+    .map((week) => ({ week, lessons: cellLessons(calendar, positionId, week) }))
+    .filter((group) => group.lessons.length > 0);
+}
+
 /** The lessons one cell counts: that week, and counted for that position. */
 export function cellLessons(
   calendar: SyllabusCalendar,

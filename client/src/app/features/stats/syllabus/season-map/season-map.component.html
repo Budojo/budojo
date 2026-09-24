@@ -28,12 +28,19 @@
   </header>
 
   @if (failed()) {
-    <p class="season-map__error" data-cy="season-map-error">
-      {{ 'stats.syllabus.map.error' | translate }}
-      <button type="button" class="season-map__retry" (click)="retry()">
-        {{ 'stats.syllabus.error.retry' | translate }}
-      </button>
-    </p>
+    <div class="season-map__error" role="alert" data-cy="season-map-error">
+      <p class="season-map__error-text">{{ 'stats.syllabus.map.error' | translate }}</p>
+      <!-- The one action here, so a full-size button: the canonical retry treatment. -->
+      <p-button
+        type="button"
+        severity="warn"
+        [outlined]="true"
+        icon="pi pi-refresh"
+        [label]="'stats.syllabus.error.retry' | translate"
+        (onClick)="retry()"
+        data-cy="season-map-retry"
+      />
+    </div>
   }
 
   <!--
@@ -74,17 +81,44 @@
       <tbody>
         @for (row of rows(); track row.id) {
           <tr [attr.data-cy]="'syllabus-position-' + row.id">
-            <th scope="row" class="season-map__name">{{ row.name }}</th>
+            <th scope="row" class="season-map__name">
+              @if (calendar()) {
+                <!--
+                  The row's control: the position's whole season. The cells
+                  are a pointer shortcut too small for a fingertip; this is
+                  the equivalent everyone reaches, one tab stop per row.
+                -->
+                <button
+                  type="button"
+                  class="season-map__name-button"
+                  aria-haspopup="dialog"
+                  [attr.aria-label]="seasonAria(row)"
+                  (click)="openSeason($event, row)"
+                  [attr.data-cy]="'season-map-position-' + row.id"
+                >
+                  {{ row.name }}
+                </button>
+              } @else {
+                {{ row.name }}
+              }
+            </th>
             @if (calendar()) {
               @for (cell of row.cells; track cell.week) {
                 <td class="season-map__cell" [class.is-current]="cell.current">
                   @if (cell.tone !== 'none') {
+                    <!--
+                      Out of the tab order: the row's name reaches the same
+                      lessons. A pointer shortcut, still labelled for anyone
+                      reading the table cell by cell.
+                    -->
                     <button
                       type="button"
+                      tabindex="-1"
+                      aria-haspopup="dialog"
                       [class]="'swatch swatch--' + cell.tone"
                       [class.swatch--also-planned]="cell.alsoPlanned"
                       [attr.aria-label]="cellAria(row, cell)"
-                      (click)="open($event, row, cell)"
+                      (click)="openWeek($event, row, cell)"
                       [attr.data-cy]="'season-map-cell-' + row.id + '-' + cell.week"
                     ></button>
                   } @else {
@@ -108,32 +142,73 @@
     </table>
   </div>
 
-  <p-popover #cellPopover>
-    @if (selected(); as cell) {
-      <div class="season-map__pop" data-cy="season-map-popover">
-        <p class="season-map__pop-title">
-          {{
-            'stats.syllabus.map.popTitle'
-              | translate: { position: cell.name, date: shortDate(cell.week) }
-          }}
+  <!--
+    One panel, two forms: a popover beside the map in a wide window, a bottom
+    sheet in a narrow one. Either way it is a dialog, so it takes focus on its
+    title and hands it back when it closes.
+  -->
+  <p-popover
+    #cellPopover
+    ariaLabelledBy="season-map-pop-title"
+    (onShow)="focusTitle()"
+    (onHide)="restoreFocus()"
+  >
+    <ng-container *ngTemplateOutlet="panelBody; context: { $implicit: 'season-map-pop-title' }" />
+  </p-popover>
+
+  <p-drawer
+    [visible]="drawerOpen()"
+    (visibleChange)="drawerOpen.set($event)"
+    position="bottom"
+    [modal]="true"
+    [style]="{ height: 'auto', maxHeight: '80dvh' }"
+    (onShow)="focusTitle()"
+    (onHide)="restoreFocus()"
+  >
+    <ng-container
+      *ngTemplateOutlet="panelBody; context: { $implicit: 'season-map-drawer-title' }"
+    />
+  </p-drawer>
+
+  <ng-template #panelBody let-titleId>
+    @if (panel(); as open) {
+      <div
+        class="season-map__pop"
+        [class.season-map__pop--sheet]="titleId === 'season-map-drawer-title'"
+        data-cy="season-map-popover"
+      >
+        <p class="season-map__pop-title" tabindex="-1" [id]="titleId">
+          {{ panelTitle(open) }}
         </p>
-        <ul class="season-map__lessons">
-          @for (lesson of cell.lessons; track lesson.id) {
-            <li class="season-map__lesson">
-              <span class="season-map__lesson-when">
-                {{ dayDate(lesson.held_on) }} · {{ lesson.name }}
-                @if (lesson.starts_at) {
-                  <span class="season-map__lesson-time">{{ lesson.starts_at }}</span>
-                }
-                @if (stateKey(lesson.state); as key) {
-                  <span class="season-map__state">{{ key | translate }}</span>
-                }
-              </span>
-              <span class="season-map__lesson-topics">{{ lesson.topicNames.join(', ') }}</span>
-            </li>
-          }
-        </ul>
+        @if (open.groups.length === 0) {
+          <p class="season-map__none" data-cy="season-map-season-empty">
+            {{ 'stats.syllabus.map.seasonEmpty' | translate }}
+          </p>
+        }
+        @for (group of open.groups; track group.week) {
+          <section class="season-map__group">
+            @if (open.mode === 'season') {
+              <h4 class="season-map__group-title">{{ weekTitle(group.week) }}</h4>
+            }
+            <ul class="season-map__lessons">
+              @for (lesson of group.lessons; track lesson.id) {
+                <li class="season-map__lesson">
+                  <span class="season-map__lesson-when">
+                    {{ dayDate(lesson.held_on) }} · {{ lesson.name }}
+                    @if (lesson.starts_at) {
+                      <span class="season-map__lesson-time">{{ lesson.starts_at }}</span>
+                    }
+                    @if (stateKey(lesson.state); as key) {
+                      <span class="season-map__state">{{ key | translate }}</span>
+                    }
+                  </span>
+                  <span class="season-map__lesson-topics">{{ lesson.topicNames.join(', ') }}</span>
+                </li>
+              }
+            </ul>
+          </section>
+        }
       </div>
     }
-  </p-popover>
+  </ng-template>
 </section>

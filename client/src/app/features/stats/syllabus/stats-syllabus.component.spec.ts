@@ -165,6 +165,8 @@ describe('StatsSyllabusComponent (#1565)', () => {
     expect(totals.textContent).toContain('4 covered');
     expect(totals.textContent).toContain('2 taught once');
     expect(totals.textContent).toContain('4 not taught');
+    // In words only: the accent's strengths key the map (#1858), not this line.
+    expect(totals.querySelector('.tally__dot')).toBeNull();
   });
 
   it('hands the season map the report positions, its season and its filter (#1858)', () => {
@@ -303,6 +305,8 @@ describe('StatsSyllabusComponent (#1565)', () => {
     expect(el.querySelector('[data-cy="syllabus-coverage-nothing-taught"]')).not.toBeNull();
     // The tally still shows: "0 covered, 10 not taught" is the honest state.
     expect(el.querySelector('[data-cy="syllabus-coverage-totals"]')).not.toBeNull();
+    // And the map: a season with only plans on it is when the map matters (#1858).
+    expect(el.querySelector('app-season-map')).not.toBeNull();
   });
 
   it('says nothing is missing rather than drawing an empty list', () => {

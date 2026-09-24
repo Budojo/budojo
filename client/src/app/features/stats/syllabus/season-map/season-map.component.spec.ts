@@ -152,17 +152,73 @@ describe('SeasonMapComponent (#1858)', () => {
     expect(swatches[2].classList).toContain('swatch--planned');
   });
 
-  it('makes a week with something in it a button that says what it holds, and an empty one not', () => {
+  it('makes a week with something in it a labelled pointer shortcut, and an empty one nothing', () => {
     const { fixture, httpMock } = setup();
     flush(httpMock);
     fixture.detectChanges();
 
     const row: HTMLElement = fixture.nativeElement.querySelector('[data-cy="syllabus-position-1"]');
-    const buttons = Array.from(row.querySelectorAll('button')) as HTMLButtonElement[];
-    expect(buttons).toHaveLength(2);
-    expect(buttons[0].getAttribute('aria-label')).toContain('Closed guard');
-    expect(buttons[0].getAttribute('aria-label')).toContain('2 lessons');
-    expect(buttons[1].getAttribute('aria-label')).toContain('1 planned');
+    const cells = Array.from(row.querySelectorAll('td button')) as HTMLButtonElement[];
+    expect(cells).toHaveLength(2);
+    expect(cells[0].getAttribute('aria-label')).toContain('Closed guard');
+    expect(cells[0].getAttribute('aria-label')).toContain('2 lessons');
+    expect(cells[1].getAttribute('aria-label')).toContain('1 planned');
+    // Out of the tab order: the row's name is the control everyone reaches.
+    expect(cells.every((c) => c.tabIndex === -1)).toBe(true);
+  });
+
+  it("gives each row one tab stop, its name, which opens the position's whole season", () => {
+    const { fixture, component, httpMock } = setup();
+    flush(httpMock);
+    fixture.detectChanges();
+
+    const row: HTMLElement = fixture.nativeElement.querySelector('[data-cy="syllabus-position-1"]');
+    const tabbable = Array.from(row.querySelectorAll('button')).filter((b) => b.tabIndex >= 0);
+    expect(tabbable).toHaveLength(1);
+
+    const name = row.querySelector('[data-cy="season-map-position-1"]') as HTMLButtonElement;
+    expect(name.getAttribute('aria-label')).toContain('Closed guard');
+    name.click();
+    fixture.detectChanges();
+
+    const panel = component['panel']();
+    expect(panel?.mode).toBe('season');
+    // Every week with something on it, oldest first; the empty week is left out.
+    expect(panel?.groups.map((g) => g.week)).toEqual(['2026-10-05', '2026-10-19']);
+    expect(panel?.groups[0].lessons.map((l) => l.id)).toEqual([40, 41]);
+  });
+
+  it('opens a bottom sheet instead of the popover in a narrow window', () => {
+    // Defined, writable and deleted afterwards — never assigned. The test
+    // environment has no matchMedia at all, and a leftover property (even an
+    // `undefined` one) leaks into every spec file that shares the worker
+    // (see web-push.service.spec.ts and theme.service.spec.ts).
+    Object.defineProperty(window, 'matchMedia', {
+      value: (query: string) => ({
+        matches: false,
+        media: query,
+        addEventListener: () => undefined,
+        removeEventListener: () => undefined,
+      }),
+      configurable: true,
+      writable: true,
+    });
+    try {
+      const { fixture, component, httpMock } = setup();
+      flush(httpMock);
+      fixture.detectChanges();
+
+      (
+        fixture.nativeElement.querySelector(
+          '[data-cy="season-map-position-1"]',
+        ) as HTMLButtonElement
+      ).click();
+      fixture.detectChanges();
+
+      expect(component['drawerOpen']()).toBe(true);
+    } finally {
+      delete (window as unknown as { matchMedia?: unknown }).matchMedia;
+    }
   });
 
   it('marks the week holding today', () => {
@@ -186,10 +242,11 @@ describe('SeasonMapComponent (#1858)', () => {
     cell.click();
     fixture.detectChanges();
 
-    const selected = component['selected']();
-    expect(selected?.name).toBe('Closed guard');
-    expect(selected?.lessons.map((l) => l.id)).toEqual([40, 41]);
-    expect(selected?.lessons[0].topicNames).toEqual(['Armbar']);
+    const panel = component['panel']();
+    expect(panel?.mode).toBe('week');
+    expect(panel?.name).toBe('Closed guard');
+    expect(panel?.groups[0].lessons.map((l) => l.id)).toEqual([40, 41]);
+    expect(panel?.groups[0].lessons[0].topicNames).toEqual(['Armbar']);
   });
 
   it('says so when the weeks cannot be loaded, and tries again on request', () => {
@@ -204,7 +261,12 @@ describe('SeasonMapComponent (#1858)', () => {
     // The rows and their fractions stay: only the weeks are missing.
     expect(fixture.nativeElement.textContent).toContain('3/6');
 
-    (error.querySelector('button') as HTMLButtonElement).click();
+    // A full-size button, the one action in this state.
+    (
+      fixture.nativeElement.querySelector(
+        '[data-cy="season-map-retry"] button',
+      ) as HTMLButtonElement
+    ).click();
     fixture.detectChanges();
     flush(httpMock);
     fixture.detectChanges();

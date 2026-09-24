@@ -2870,6 +2870,9 @@
         "unconfirmedOther": "{{count}} planned with nobody checked in",
         "fraction": "{{covered}} of {{total}} covered",
         "popTitle": "{{position}}, week of {{date}}",
+        "seasonTitle": "{{position}}, this season",
+        "seasonAria": "{{position}}: every week of the season",
+        "seasonEmpty": "Nothing on this position this season yet.",
         "state": {
           "planned": "Planned",
           "unconfirmed": "No check-in"
