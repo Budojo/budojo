@@ -7,14 +7,19 @@ namespace App\Support;
 use App\Models\Athlete;
 
 /**
- * An athlete as a row that lists people draws them: the belt spine, the
- * avatar, the name and the age chip — what the SPA's `app-athlete-identity`
- * reads, and nothing else (#1458).
+ * How a person is drawn on a row that is not the roster (#1851): the belt
+ * spine, the avatar, the full name and the age chip — what the SPA's
+ * `app-athlete-identity` reads, and nothing else.
  *
- * The reads that list people without the whole athlete — who has seen a
- * technique (#1745), what tonight's room missed (#1860) — send exactly this
- * much, written once so the two cannot drift apart. Load `user` first when
- * mapping many, or each row asks for its avatar on its own.
+ * The one place this shape is written. `AthleteIdentityResource` hands it to
+ * the controllers that list people (the monthly summary, the leaderboard, the
+ * expiring documents); the Actions that list people themselves — who has
+ * seen a technique (#1745), what tonight's room missed (#1860) — call it
+ * directly, because an Action does not reach into the HTTP layer.
+ *
+ * `user_avatar_url` needs the `user` relation. Eager-load `user` wherever a
+ * list of these is built; without it the field reads null rather than
+ * costing one query per row.
  */
 final class AthleteIdentity
 {
@@ -31,7 +36,7 @@ final class AthleteIdentity
             'stripes' => $athlete->stripes,
             'date_of_birth' => $athlete->date_of_birth?->toDateString(),
             'photo_url' => $athlete->photo_url,
-            'user_avatar_url' => $athlete->user?->avatar_url,
+            'user_avatar_url' => $athlete->relationLoaded('user') ? $athlete->user?->avatar_url : null,
         ];
     }
 }

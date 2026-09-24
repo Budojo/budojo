@@ -78,7 +78,8 @@ class GetExpiringDocumentsAction
             // that morning about a certificate this widget did not list.
             ->whereDate('documents.expires_at', '<=', $cutoff)
             ->notSuperseded()
-            ->with('athlete')
+            // `.user` for the avatar the row draws beside the name (#1851).
+            ->with('athlete.user')
             ->orderBy('documents.expires_at', 'asc')
             ->limit(self::MAX_RESULTS)
             ->get();
@@ -129,6 +130,7 @@ class GetExpiringDocumentsAction
         return $academy->athletes()
             ->where('status', AthleteStatus::Active->value)
             ->whereDoesntHave('documents', fn ($q) => $q->where('type', DocumentType::MedicalCertificate->value))
+            ->with('user')
             ->orderBy('first_name_sort')
             ->orderBy('last_name_sort')
             ->orderBy('id')

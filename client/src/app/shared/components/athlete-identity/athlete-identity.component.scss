@@ -81,6 +81,15 @@
     border-radius: var(--p-border-radius-sm);
   }
 
+  // The whole card as the target (#1851): an overlay on the nearest
+  // positioned ancestor. Only on a phone card, where there is no hover and so
+  // no spine tooltip for the overlay to cover.
+  &--stretched::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+  }
+
   // On a row that is itself the control, the name is a label and must not
   // pretend otherwise.
   &--plain {

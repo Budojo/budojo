@@ -105,7 +105,7 @@ describe('AttendanceService', () => {
   describe('getMonthlySummary', () => {
     it('GETs /attendance/summary with the month param and unwraps rows', () => {
       const rows: AttendanceSummaryRow[] = [
-        { athlete_id: 1, first_name: 'Mario', last_name: 'Rossi', count: 12 },
+        { athlete_id: 1, first_name: 'Mario', last_name: 'Rossi', count: 12, athlete: null },
       ];
       let received: AttendanceSummaryRow[] | undefined;
 

@@ -11,6 +11,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { SkeletonModule } from 'primeng/skeleton';
 import { AcademyService, MeAcademy } from '../../core/services/academy.service';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
+import { contactLinks, phoneLabel } from '../../shared/utils/contact-links';
 
 /**
  * Athlete-portal "My academy" page (#618, M7 PR-D slice 2). Read-only
@@ -77,26 +78,19 @@ export class MyAcademyComponent implements OnInit {
   }
 
   /**
-   * Formats the phone pair into a single E.164-ish display string
-   * (with a separating space for readability). Null when neither side
-   * is filled — the row collapses.
+   * The phone pair as a person reads it (`+39 3331234567`). Null unless both
+   * halves are filled — the row collapses. The rule lives in the shared
+   * `contact-links` util (#1727).
    */
   protected phoneLine(academy: MeAcademy): string | null {
-    if (academy.phone_country_code === null || academy.phone_national_number === null) {
-      return null;
-    }
-    return `${academy.phone_country_code} ${academy.phone_national_number}`;
+    return phoneLabel(academy.phone_country_code, academy.phone_national_number);
   }
 
   /**
-   * Builds the `tel:` URI from the raw phone parts — no space between
-   * country code and national number, since spaces are invalid inside
-   * tel URIs (RFC 3966). Same null-guard as `phoneLine`.
+   * The unspaced `tel:` URI — spaces are invalid inside tel URIs (RFC 3966).
+   * Same all-or-nothing rule as `phoneLine`, from the same util.
    */
   protected phoneHref(academy: MeAcademy): string | null {
-    if (academy.phone_country_code === null || academy.phone_national_number === null) {
-      return null;
-    }
-    return `tel:${academy.phone_country_code}${academy.phone_national_number}`;
+    return contactLinks(academy.phone_country_code, academy.phone_national_number).tel;
   }
 }

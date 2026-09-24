@@ -39,17 +39,15 @@ class DocumentResource extends JsonResource
             // Null on active documents, set on tombstones (see PRD P0.7b).
             // Consumers use this field to distinguish active from cancelled.
             'deleted_at' => $d->deleted_at?->toIso8601String(),
-            'athlete' => $this->whenLoaded('athlete', function () use ($d): ?array {
+            // The whole identity, not just the name (#1851): the expiring list
+            // draws the person with their belt, like every other list of people.
+            'athlete' => $this->whenLoaded('athlete', function () use ($d, $request): ?array {
                 $athlete = $d->athlete;
                 if ($athlete === null) {
                     return null;
                 }
 
-                return [
-                    'id' => $athlete->id,
-                    'first_name' => $athlete->first_name,
-                    'last_name' => $athlete->last_name,
-                ];
+                return new AthleteIdentityResource($athlete)->toArray($request);
             }),
         ];
     }

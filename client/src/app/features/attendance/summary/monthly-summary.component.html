@@ -90,12 +90,27 @@
         @for (row of displayRows(); track row.athlete_id) {
           @let mobilePercent = ratePercent(row.count);
           <li class="summary-card" [attr.data-cy]="'monthly-summary-mobile-row-' + row.athlete_id">
-            <a
-              [routerLink]="['/dashboard/athletes', row.athlete_id, 'attendance']"
-              class="summary-card__name summary-page__athlete-link"
-              [attr.data-cy]="'monthly-summary-mobile-athlete-link-' + row.athlete_id"
-              >{{ row.first_name }} {{ row.last_name }}</a
-            >
+            <!--
+              The person as every list draws them (#1851): belt spine, avatar,
+              name, age. The name opens their attendance, and on the card it
+              stretches over the whole card, which is the tap target.
+            -->
+            @if (row.athlete; as person) {
+              <app-athlete-identity
+                class="summary-card__identity"
+                [athlete]="person"
+                [linkToDetail]="true"
+                detailTab="attendance"
+                [stretchLink]="true"
+              />
+            } @else {
+              <a
+                [routerLink]="['/dashboard/athletes', row.athlete_id, 'attendance']"
+                class="summary-card__name summary-page__athlete-link"
+                [attr.data-cy]="'monthly-summary-mobile-athlete-link-' + row.athlete_id"
+                >{{ row.first_name }} {{ row.last_name }}</a
+              >
+            }
             <span class="summary-card__count">
               @if (mobileScheduled !== null && mobilePercent !== null) {
                 {{ row.count }} / {{ mobileScheduled }}
@@ -159,13 +174,22 @@
             @let scheduled = scheduledCount();
             @let percent = ratePercent(row.count);
             <tr [attr.data-cy]="'monthly-summary-table-row-' + row.athlete_id">
-              <td>
-                <a
-                  [routerLink]="['/dashboard/athletes', row.athlete_id, 'attendance']"
-                  class="summary-page__athlete-link"
-                  [attr.data-cy]="'monthly-summary-athlete-link-' + row.athlete_id"
-                  >{{ row.first_name }} {{ row.last_name }}</a
-                >
+              <!-- The cell anchors the belt spine, as on the roster (#1851). -->
+              <td class="summary-page__athlete-cell">
+                @if (row.athlete; as person) {
+                  <app-athlete-identity
+                    [athlete]="person"
+                    [linkToDetail]="true"
+                    detailTab="attendance"
+                  />
+                } @else {
+                  <a
+                    [routerLink]="['/dashboard/athletes', row.athlete_id, 'attendance']"
+                    class="summary-page__athlete-link"
+                    [attr.data-cy]="'monthly-summary-athlete-link-' + row.athlete_id"
+                    >{{ row.first_name }} {{ row.last_name }}</a
+                  >
+                }
               </td>
               <td class="summary-page__count-col">
                 @if (scheduled !== null && percent !== null) {
