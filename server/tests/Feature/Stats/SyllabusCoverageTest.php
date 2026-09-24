@@ -353,3 +353,85 @@ it('never counts another academy lessons or topics', function (): void {
     expect($data['totals']['in_scope'])->toBe(2);
     expect($data['taught'])->toBe([]);
 });
+
+// ─── Reach: taught three times is not taught to three people (#1746) ─────────
+
+/** A held lesson on `$date` naming `$topics`, with exactly `$present` in the room. */
+function reachLesson(mixed $test, string $date, array $topics, array $present): Lesson
+{
+    $lesson = Lesson::factory()->forClass($test->class, $date)->create();
+    $lesson->topics()->sync(array_map(static fn (SyllabusTopic $t): int => $t->id, $topics));
+    foreach ($present as $who) {
+        AttendanceRecord::create([
+            'athlete_id' => $who->id, 'lesson_id' => $lesson->id, 'attended_on' => $date,
+        ]);
+    }
+
+    return $lesson;
+}
+
+function taughtRow(array $data, string $name): array
+{
+    return collect($data['taught'])->firstWhere('name', $name);
+}
+
+it('says how many people a taught technique reached, beside how many lessons', function (): void {
+    $four = Athlete::factory()->count(4)->for($this->academy)->create()->all();
+
+    reachLesson($this, '2026-09-07', [$this->armbar], $four);
+    reachLesson($this, '2026-09-14', [$this->armbar], $four);
+
+    // The pair is the whole test: the same four at both lessons. A reach
+    // counted as rows reads 8.
+    expect(taughtRow(coverage($this), 'Armbar'))->toMatchArray([
+        'lessons' => 2,
+        'attendances' => 8,
+        'reach' => 4,
+    ]);
+});
+
+it('counts a person at both lessons once in reach', function (): void {
+    $both = Athlete::factory()->for($this->academy)->create();
+    $once = Athlete::factory()->for($this->academy)->create();
+
+    reachLesson($this, '2026-09-07', [$this->armbar], [$both, $once]);
+    reachLesson($this, '2026-09-14', [$this->armbar], [$both]);
+
+    expect(taughtRow(coverage($this), 'Armbar'))->toMatchArray(['attendances' => 3, 'reach' => 2]);
+});
+
+it('still counts nothing for a lesson nobody was checked into', function (): void {
+    reachLesson($this, '2026-09-07', [$this->armbar], []);
+
+    // Joining the attendance table must not make a plan count as taught.
+    expect(coverage($this)['taught'])->toBe([]);
+});
+
+it('drops a presence that was corrected away from both numbers', function (): void {
+    $a = Athlete::factory()->for($this->academy)->create();
+    $b = Athlete::factory()->for($this->academy)->create();
+    $lesson = reachLesson($this, '2026-09-07', [$this->armbar], [$a, $b]);
+
+    AttendanceRecord::query()->where('athlete_id', $b->id)->where('lesson_id', $lesson->id)->delete();
+
+    expect(taughtRow(coverage($this), 'Armbar'))->toMatchArray(['attendances' => 1, 'reach' => 1]);
+});
+
+it('gives a position the reach of the lessons that named it', function (): void {
+    $three = Athlete::factory()->count(3)->for($this->academy)->create()->all();
+    reachLesson($this, '2026-09-07', [$this->closedGuard], $three);
+
+    $position = collect(coverage($this)['positions'])->firstWhere('name', 'Closed guard');
+
+    expect($position)->toMatchArray(['worked' => 1, 'worked_reach' => 3]);
+});
+
+it('leaves reach out of the headline', function (): void {
+    $four = Athlete::factory()->count(4)->for($this->academy)->create()->all();
+    reachLesson($this, '2026-09-07', [$this->armbar], $four);
+    reachLesson($this, '2026-09-14', [$this->armbar], [$four[0]]);
+
+    // Covered is still two lessons, whoever was in them: reach is a column,
+    // not a second rule.
+    expect(coverage($this)['totals'])->toMatchArray(['covered' => 1, 'percentage' => 50]);
+});

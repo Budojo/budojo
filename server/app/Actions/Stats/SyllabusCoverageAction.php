@@ -6,17 +6,21 @@ namespace App\Actions\Stats;
 
 use App\Enums\TrainingMode;
 use App\Models\Academy;
-use App\Models\Lesson;
 use App\Models\SyllabusTopic;
 use App\Support\Season;
+use App\Support\TopicAttendance;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 
 class SyllabusCoverageAction
 {
     /** Taught in at least this many held lessons to count as covered. */
     private const COVERED_AT = 2;
+
+    public function __construct(
+        private readonly TopicAttendance $attendance,
+    ) {
+    }
 
     /**
      * What the academy has covered this season, what it has barely touched,
@@ -64,7 +68,12 @@ class SyllabusCoverageAction
             ->filter(static fn (SyllabusTopic $t): bool => $t->parent_id !== null);
         $positions = $this->positions($academy);
 
-        $taught = $this->taughtInSeason($academy, $start, $end);
+        // The techniques in scope, and every position for its `worked` count.
+        $topicIds = array_values(array_unique(array_merge(
+            $techniques->map(static fn (SyllabusTopic $t): int => $t->id)->all(),
+            array_keys($positions->all()),
+        )));
+        $taught = $this->taughtInSeason($academy, $topicIds, $start, $end);
 
         return [
             'season' => [
@@ -116,48 +125,44 @@ class SyllabusCoverageAction
     }
 
     /**
-     * Every (topic, lesson day) this season, from held lessons only.
+     * What each topic's held lessons this season add up to.
      *
-     * Fetched whole rather than aggregated in SQL because the timeline needs
-     * the day a topic reached its *second* lesson, which no aggregate can
-     * answer — and a season of one academy is a few hundred rows.
+     * Read through {@see TopicAttendance}, the one place the join from a topic
+     * to the people in the room is written, so "held" here is the same held
+     * the drill-down (#1745) and tonight's room (#1860) use. Taken whole, not
+     * aggregated in SQL, because the timeline needs the day a topic reached
+     * its *second* lesson, which no aggregate can answer — and a season of
+     * one academy is a few hundred rows.
      *
-     * @return array<int, array{lessons: int, last: string, second: string|null}>
+     * **Reach is people, attendances are presences (#1746).** Three evenings
+     * of fifteen and three of four both read `lessons: 3`; `reach` — distinct
+     * athletes at one or more of them — is what tells them apart, and
+     * `attendances` — distinct (athlete, lesson) pairs — is what makes a
+     * `reach` counted as rows fail a test instead of passing for a number.
+     *
+     * @param  list<int>  $topicIds
+     * @return array<int, array{lessons: int, last: string, second: string|null, reach: int, attendances: int}>
      */
-    private function taughtInSeason(Academy $academy, CarbonImmutable $start, CarbonImmutable $end): array
+    private function taughtInSeason(Academy $academy, array $topicIds, CarbonImmutable $start, CarbonImmutable $end): array
     {
-        $heldLessonIds = Lesson::query()
-            ->where('academy_id', $academy->id)
-            ->whereBetween('held_on', [$start->toDateString(), $end->toDateString()])
-            ->whereHas('attendanceRecords')
-            ->pluck('id');
-
-        if ($heldLessonIds->isEmpty()) {
-            return [];
-        }
-
-        $rows = DB::table('lesson_topic')
-            ->join('lessons', 'lessons.id', '=', 'lesson_topic.lesson_id')
-            ->whereIn('lesson_topic.lesson_id', $heldLessonIds)
-            ->orderBy('lessons.held_on')
-            ->get(['lesson_topic.syllabus_topic_id as topic_id', 'lessons.held_on as held_on']);
-
-        /** @var array<int, list<string>> $days */
-        $days = [];
-        foreach ($rows as $row) {
-            $topicId = is_numeric($row->topic_id) ? (int) $row->topic_id : 0;
-            // `held_on` arrives as `Y-m-d` from SQLite and may carry a time
-            // from MySQL's DATE handling; both compare correctly once cut.
-            $days[$topicId][] = substr((string) $row->held_on, 0, 10);
-        }
+        $byTopic = $this->attendance->lessonsFor(
+            $academy->id,
+            $topicIds,
+            $start->toDateString(),
+            $end->toDateString(),
+        );
 
         $taught = [];
-        foreach ($days as $topicId => $dates) {
-            sort($dates);
+        foreach ($byTopic as $topicId => $lessons) {
+            // Oldest first, as `TopicAttendance` returns them.
+            $dates = array_column($lessons, 'held_on');
+            $people = array_column($lessons, 'athlete_ids');
             $taught[$topicId] = [
-                'lessons' => \count($dates),
+                'lessons' => \count($lessons),
                 'last' => $dates[\count($dates) - 1],
                 'second' => $dates[self::COVERED_AT - 1] ?? null,
+                'reach' => \count(array_unique(array_merge(...$people))),
+                'attendances' => array_sum(array_map('count', $people)),
             ];
         }
 
@@ -167,7 +172,7 @@ class SyllabusCoverageAction
     /**
      * @param  Collection<int, SyllabusTopic>  $techniques
      * @param  Collection<int, SyllabusTopic>  $positions
-     * @param  array<int, array{lessons: int, last: string, second: string|null}>  $taught
+     * @param  array<int, array{lessons: int, last: string, second: string|null, reach: int, attendances: int}>  $taught
      * @return array<string, mixed>
      */
     private function report(
@@ -216,6 +221,11 @@ class SyllabusCoverageAction
                     'parent_name' => $parent?->name,
                     'kind' => $technique->kind->value,
                     'lessons' => $lessons,
+                    // A column beside `lessons`, never a second fraction and
+                    // never a threshold: covered still takes two lessons,
+                    // whoever was in them (#1746).
+                    'reach' => $taught[$technique->id]['reach'],
+                    'attendances' => $taught[$technique->id]['attendances'],
                     'last_taught_on' => $taught[$technique->id]['last'],
                     'state' => $state,
                 ];
@@ -266,7 +276,7 @@ class SyllabusCoverageAction
      *
      * @param  Collection<int, SyllabusTopic>  $positions
      * @param  array<int, array{covered: int, thin: int, missing: int}>  $byPosition
-     * @param  array<int, array{lessons: int, last: string, second: string|null}>  $taught
+     * @param  array<int, array{lessons: int, last: string, second: string|null, reach: int, attendances: int}>  $taught
      * @return list<array<string, mixed>>
      */
     private function positionRows(Collection $positions, array $byPosition, array $taught): array
@@ -291,6 +301,8 @@ class SyllabusCoverageAction
                 // worked half guard", an answer that fills no technique but
                 // is not nothing either.
                 'worked' => $taught[$position->id]['lessons'] ?? 0,
+                // How many people those position-level lessons reached (#1746).
+                'worked_reach' => $taught[$position->id]['reach'] ?? 0,
             ];
         }
 
@@ -307,7 +319,7 @@ class SyllabusCoverageAction
      * arguing with its own number.
      *
      * @param  Collection<int, SyllabusTopic>  $techniques
-     * @param  array<int, array{lessons: int, last: string, second: string|null}>  $taught
+     * @param  array<int, array{lessons: int, last: string, second: string|null, reach: int, attendances: int}>  $taught
      * @return list<array{on: string, covered: int}>
      */
     private function timeline(Collection $techniques, array $taught, CarbonImmutable $start, CarbonImmutable $end): array
