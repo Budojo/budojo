@@ -844,6 +844,75 @@ const SYLLABUS_COVERAGE = {
   ],
 };
 
+/**
+ * Who has seen the armbar (#1745) — the report's first taught row, opened.
+ * Three lessons, as the row says, the last on 11 September; the headcounts
+ * are the people listed as there, so the numbers agree with each other.
+ */
+function exposureRow(id: number, exposures: number, lastSeenOn: string | null, state: string) {
+  const a = ATHLETES.find((row) => row.id === id) as Record<string, unknown>;
+  return {
+    id,
+    first_name: a['first_name'],
+    last_name: a['last_name'],
+    belt: a['belt'],
+    stripes: a['stripes'],
+    status: a['status'],
+    joined_at: a['joined_at'],
+    date_of_birth: a['date_of_birth'] ?? null,
+    photo_url: null,
+    user_avatar_url: null,
+    exposures,
+    last_seen_on: lastSeenOn,
+    state,
+  };
+}
+
+const TOPIC_EXPOSURE = {
+  topic: { id: 11, name: 'Armbar', parent_name: 'Closed guard', kind: 'both', in_season: true },
+  season: SYLLABUS_COVERAGE.season,
+  lessons: [
+    {
+      id: 901,
+      held_on: '2026-09-04',
+      name: 'Fondamentali',
+      kind: 'gi',
+      starts_at: '19:00',
+      headcount: 4,
+    },
+    {
+      id: 902,
+      held_on: '2026-09-07',
+      name: 'Fondamentali',
+      kind: 'gi',
+      starts_at: '19:00',
+      headcount: 3,
+    },
+    {
+      id: 903,
+      held_on: '2026-09-11',
+      name: 'Gi, tutti i livelli',
+      kind: 'gi',
+      starts_at: '19:00',
+      headcount: 2,
+    },
+  ],
+  // Register order, active first: Bonanno, Colombo, Ferraro, Gallo, Marino,
+  // Moretti, Russo, then Ricci, who is inactive with no date of departure.
+  athletes: [
+    exposureRow(3, 2, '2026-09-11', 'seen'),
+    exposureRow(4, 2, '2026-09-07', 'seen'),
+    exposureRow(1, 3, '2026-09-11', 'seen'),
+    exposureRow(7, 0, null, 'never'),
+    exposureRow(8, 0, null, 'never'),
+    exposureRow(2, 1, '2026-09-04', 'thin'),
+    exposureRow(6, 1, '2026-09-07', 'thin'),
+    exposureRow(5, 0, null, 'never'),
+  ],
+  totals: { lessons: 3, seen: 3, thin: 2, never: 3 },
+  unattributed_presences: 1,
+};
+
 // ── Stats ────────────────────────────────────────────────────────────────
 
 const DAILY = Array.from({ length: 90 }, (_, i) => {
@@ -1950,6 +2019,57 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       });
     },
   });
+  // A taught row, opened on who has seen it (#1745).
+  screen(
+    '40-stats-syllabus-exposure',
+    '/dashboard/stats/syllabus',
+    '[data-cy="syllabus-coverage"]',
+    {
+      clock: false,
+      stubs: () => {
+        cy.intercept('GET', '/api/v1/stats/syllabus/topics/11*', {
+          statusCode: 200,
+          body: { data: TOPIC_EXPOSURE },
+        });
+      },
+      act: () => {
+        cy.wait(1500);
+        press('[data-cy="syllabus-taught-11"] button');
+        cy.get('[data-cy="exposure-group-seen"]', { timeout: 10_000 }).should('exist');
+        cy.wait(400);
+      },
+    },
+  );
+  // A row nobody has taught: one sentence, no people, no number.
+  screen(
+    '40-stats-syllabus-exposure-empty',
+    '/dashboard/stats/syllabus',
+    '[data-cy="syllabus-coverage"]',
+    {
+      clock: false,
+      stubs: () => {
+        cy.intercept('GET', '/api/v1/stats/syllabus/topics/12*', {
+          statusCode: 200,
+          body: {
+            data: {
+              ...TOPIC_EXPOSURE,
+              topic: { ...TOPIC_EXPOSURE.topic, id: 12, name: 'Triangle' },
+              lessons: [],
+              athletes: [],
+              totals: { lessons: 0, seen: 0, thin: 0, never: 0 },
+              unattributed_presences: 0,
+            },
+          },
+        });
+      },
+      act: () => {
+        cy.wait(1500);
+        press('[data-cy="syllabus-missing-12"] button');
+        cy.get('[data-cy="exposure-nobody-yet"]', { timeout: 10_000 }).should('exist');
+        cy.wait(400);
+      },
+    },
+  );
 
   // ── 50. Account ────────────────────────────────────────────────────────
   screen('50-profile-identity', '/dashboard/profile', '[data-cy="profile-tabs"]');

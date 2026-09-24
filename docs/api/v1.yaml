@@ -3857,6 +3857,73 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationError'
 
+  /stats/syllabus/topics/{syllabusTopic}:
+    get:
+      tags: [Stats]
+      summary: Who has seen one technique this season (#1745)
+      description: |
+        The athlete × technique matrix read one column at a time: the held
+        lessons that named this topic in the season, and the roster split
+        against them — at two or more (`seen`), at exactly one (`thin`), at
+        none while on the roster (`never`). The drill-down behind a row of
+        `/stats/syllabus/coverage`.
+
+        **Held** means somebody was checked in, exactly as in the coverage
+        report: a planned lesson contributes neither a row nor a headcount.
+        One evening is one exposure, however many topics it named.
+
+        **On the roster has two edges.** An athlete who joined after the last
+        lesson that taught it is left out, and so is one whose status moved
+        to `inactive` before the first (#1741). An inactive athlete whose
+        departure has no date stays, and `status` says so.
+
+        **A topic nobody taught returns nobody**: no lessons and no athletes.
+        A roster filed under `never` would hang the academy's gap on the
+        people (#1567).
+
+        A **position** returns the lessons that named the position itself —
+        the `worked` count beside its bar — not its techniques'.
+
+        Athletes come in register order, active first. Nothing is ranked.
+
+        Owner-only, and requires `stats_view`. A topic from another academy
+        is a 403, like every other foreign programme row; one taken out of
+        the programme is a 404.
+      operationId: statsTopicExposure
+      parameters:
+        - in: path
+          name: syllabusTopic
+          required: true
+          schema: { type: integer }
+          description: A position or a technique of the caller's programme.
+        - in: query
+          name: seasons_back
+          description: How many seasons before the current one, 0 being now.
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 10
+            default: 0
+      responses:
+        '200':
+          description: Who has seen it
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/TopicExposure'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
   /search:
     get:
       tags: [auth]
@@ -8437,6 +8504,101 @@ components:
           items:
             $ref: '#/components/schemas/LessonTopic'
 
+    TopicExposure:
+      type: object
+      description: |
+        Who has seen one technique this season (#1745). `totals` counts the
+        rows of `athletes` by `state`, and `lessons` counts `lessons`.
+      required: [topic, season, lessons, athletes, totals, unattributed_presences]
+      properties:
+        topic:
+          type: object
+          required: [id, name, parent_name, kind, in_season]
+          properties:
+            id: { type: integer }
+            name: { type: string }
+            parent_name:
+              type: string
+              nullable: true
+              description: The position it sits under; null for a position.
+            kind:
+              $ref: '#/components/schemas/TrainingMode'
+            in_season: { type: boolean }
+        season:
+          type: object
+          required: [start, end, label]
+          properties:
+            start: { type: string, format: date }
+            end: { type: string, format: date }
+            label: { type: string, example: '2026/27' }
+        lessons:
+          type: array
+          description: The held lessons that named it, oldest first.
+          items:
+            type: object
+            required: [id, held_on, name, kind, starts_at, headcount]
+            properties:
+              id: { type: integer }
+              held_on: { type: string, format: date }
+              name:
+                type: string
+                description: The class name, as the lesson snapshotted it.
+              kind:
+                $ref: '#/components/schemas/TrainingMode'
+              starts_at:
+                type: string
+                nullable: true
+                example: '19:00'
+              headcount:
+                type: integer
+                description: Distinct athletes with a live presence on it.
+        athletes:
+          type: array
+          description: |
+            The roster against those lessons — register order, active first.
+            Empty when nobody has taught it.
+          items:
+            type: object
+            required: [id, first_name, last_name, belt, stripes, status, joined_at, date_of_birth, photo_url, user_avatar_url, exposures, last_seen_on, state]
+            properties:
+              id: { type: integer }
+              first_name: { type: string }
+              last_name: { type: string }
+              belt:
+                $ref: '#/components/schemas/Belt'
+              stripes: { type: integer }
+              status:
+                $ref: '#/components/schemas/AthleteStatus'
+              joined_at: { type: string, format: date }
+              date_of_birth: { type: string, format: date, nullable: true }
+              photo_url: { type: string, nullable: true }
+              user_avatar_url: { type: string, nullable: true }
+              exposures:
+                type: integer
+                description: How many of `lessons` they were at — distinct lessons.
+              last_seen_on:
+                type: string
+                format: date
+                nullable: true
+                description: The latest of those lessons they were at; null for `never`.
+              state:
+                type: string
+                enum: [seen, thin, never]
+                description: At two or more, at exactly one, at none while on the roster.
+        totals:
+          type: object
+          required: [lessons, seen, thin, never]
+          properties:
+            lessons: { type: integer }
+            seen: { type: integer }
+            thin: { type: integer }
+            never: { type: integer }
+        unattributed_presences:
+          type: integer
+          description: |
+            Presences on the days it was taught that name no lesson (#1590).
+            Each could have been at one of those lessons, so the client says
+            how many there are instead of letting them read as absence.
     SyllabusCoverage:
       type: object
       description: |

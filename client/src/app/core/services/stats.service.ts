@@ -3,6 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { map, Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import type { TrainingMode } from './academy.service';
+import type { AthleteIdentity, AthleteStatus } from './athlete.service';
 
 export interface DailyAttendancePoint {
   readonly date: string; // 'YYYY-MM-DD'
@@ -96,6 +97,57 @@ export interface SyllabusCoverage {
   readonly taught: readonly CoverageTaughtTopic[];
   /** Cumulative covered topics, one point per week up to today. */
   readonly timeline: readonly { readonly on: string; readonly covered: number }[];
+}
+
+/** Where one athlete stands against a technique's lessons (#1745). */
+export type ExposureState = 'seen' | 'thin' | 'never';
+
+/** A held lesson that named the technique, with how many were in the room. */
+export interface ExposureLesson {
+  readonly id: number;
+  readonly held_on: string;
+  /** The class name, as the lesson snapshotted it. */
+  readonly name: string;
+  readonly kind: TrainingMode;
+  readonly starts_at: string | null;
+  readonly headcount: number;
+}
+
+export interface ExposureAthlete extends AthleteIdentity {
+  readonly status: AthleteStatus;
+  readonly joined_at: string;
+  /** How many of the lessons they were at. */
+  readonly exposures: number;
+  readonly last_seen_on: string | null;
+  readonly state: ExposureState;
+}
+
+/**
+ * Who has seen one technique this season (#1745) — the coverage report's
+ * row, opened. A technique nobody taught comes back with no lessons and no
+ * athletes: the academy's gap is never filed under people.
+ */
+export interface TopicExposure {
+  readonly topic: {
+    readonly id: number;
+    readonly name: string;
+    readonly parent_name: string | null;
+    readonly kind: TrainingMode;
+    readonly in_season: boolean;
+  };
+  readonly season: { readonly start: string; readonly end: string; readonly label: string };
+  /** Held lessons that named it, oldest first. */
+  readonly lessons: readonly ExposureLesson[];
+  /** Register order, active first — never ranked. */
+  readonly athletes: readonly ExposureAthlete[];
+  readonly totals: {
+    readonly lessons: number;
+    readonly seen: number;
+    readonly thin: number;
+    readonly never: number;
+  };
+  /** Presences on those days that name no lesson — said, not counted as absence. */
+  readonly unattributed_presences: number;
 }
 
 /** One thing this athlete has not seen yet (#1567). */
@@ -206,6 +258,17 @@ export class StatsService {
       .get<{ data: SyllabusCoverage }>(`${environment.apiBase}/api/v1/stats/syllabus/coverage`, {
         params,
       })
+      .pipe(map((r) => r.data));
+  }
+
+  /** Who has seen one technique — a row of the coverage report, opened (#1745). */
+  topicExposure(topicId: number, seasonsBack = 0): Observable<TopicExposure> {
+    const params = new HttpParams().set('seasons_back', seasonsBack);
+
+    return this.http
+      .get<{
+        data: TopicExposure;
+      }>(`${environment.apiBase}/api/v1/stats/syllabus/topics/${topicId}`, { params })
       .pipe(map((r) => r.data));
   }
 }

@@ -291,16 +291,38 @@
   display: flex;
   flex-direction: column;
 
+  &__item + &__item {
+    border-top: 1px solid color-mix(in srgb, var(--p-content-border-color) 60%, transparent);
+  }
+
+  // The whole row opens who has seen it (#1745): a button the width of the
+  // list, 48 px tall so it clears the touch floor, and plain at rest — a list
+  // of names, not a wall of links. Hover and focus say it can be pressed.
   &__row {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     justify-content: space-between;
     gap: 0.5rem;
-    min-height: 2rem;
-    padding: 0.25rem 0;
+    width: 100%;
+    min-height: 3rem;
+    padding: 0.5rem;
+    margin: 0;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color var(--budojo-motion-fast) var(--budojo-motion-decelerate);
 
-    & + & {
-      border-top: 1px solid color-mix(in srgb, var(--p-content-border-color) 60%, transparent);
+    &:hover {
+      background: var(--p-content-hover-background);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--p-primary-color);
+      outline-offset: -2px;
     }
   }
 

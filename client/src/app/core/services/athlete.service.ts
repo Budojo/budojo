@@ -221,6 +221,23 @@ export interface Athlete {
   attendance_total_count?: number | null;
 }
 
+/**
+ * What `app-athlete-identity` draws — the belt spine, the avatar, the name and
+ * the age chip — and nothing else. A read that lists people without the whole
+ * athlete (the technique drill-down, #1745) sends exactly this much.
+ */
+export type AthleteIdentity = Pick<
+  Athlete,
+  | 'id'
+  | 'first_name'
+  | 'last_name'
+  | 'belt'
+  | 'stripes'
+  | 'date_of_birth'
+  | 'photo_url'
+  | 'user_avatar_url'
+>;
+
 /** The shapes `payment_coverage` takes. Mirrors `App\Enums\PaymentCoverage`. */
 export type PaymentCoverage =
   'monthly' | 'quarterly' | 'half_yearly' | 'annual' | 'carnet' | 'none';

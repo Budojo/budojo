@@ -231,11 +231,25 @@
             } @else {
               <ul class="topics">
                 @for (topic of data.missing; track topic.id) {
-                  <li class="topics__row" [attr.data-cy]="'syllabus-missing-' + topic.id">
-                    <span class="topics__name">{{ topic.name }}</span>
-                    @if (topic.parent_name) {
-                      <span class="topics__parent">{{ topic.parent_name }}</span>
-                    }
+                  <!--
+                    A row opens who has seen it (#1745). For a topic nobody
+                    taught that is an honest empty — the academy's gap, said
+                    as a sentence, not a list of people.
+                  -->
+                  <li class="topics__item" [attr.data-cy]="'syllabus-missing-' + topic.id">
+                    <button
+                      type="button"
+                      class="topics__row"
+                      [attr.aria-label]="
+                        'stats.syllabus.exposure.openAria' | translate: { name: topic.name }
+                      "
+                      (click)="openExposure(topic.id)"
+                    >
+                      <span class="topics__name">{{ topic.name }}</span>
+                      @if (topic.parent_name) {
+                        <span class="topics__parent">{{ topic.parent_name }}</span>
+                      }
+                    </button>
                   </li>
                 }
               </ul>
@@ -250,17 +264,26 @@
             <h3 class="panel__title">{{ 'stats.syllabus.lastTaught' | translate }}</h3>
             <ul class="topics">
               @for (topic of data.taught; track topic.id) {
-                <li class="topics__row" [attr.data-cy]="'syllabus-taught-' + topic.id">
-                  <span class="topics__name">
-                    {{ topic.name }}
-                    @if (topic.state === 'thin') {
-                      <span class="topics__thin">{{ 'stats.syllabus.thinTag' | translate }}</span>
-                    }
-                  </span>
-                  <span class="topics__when">
-                    <span>{{ shortDate(topic.last_taught_on) }}</span>
-                    <span class="topics__ago">{{ ago(topic.last_taught_on) }}</span>
-                  </span>
+                <li class="topics__item" [attr.data-cy]="'syllabus-taught-' + topic.id">
+                  <button
+                    type="button"
+                    class="topics__row"
+                    [attr.aria-label]="
+                      'stats.syllabus.exposure.openAria' | translate: { name: topic.name }
+                    "
+                    (click)="openExposure(topic.id)"
+                  >
+                    <span class="topics__name">
+                      {{ topic.name }}
+                      @if (topic.state === 'thin') {
+                        <span class="topics__thin">{{ 'stats.syllabus.thinTag' | translate }}</span>
+                      }
+                    </span>
+                    <span class="topics__when">
+                      <span>{{ shortDate(topic.last_taught_on) }}</span>
+                      <span class="topics__ago">{{ ago(topic.last_taught_on) }}</span>
+                    </span>
+                  </button>
                 </li>
               }
             </ul>
@@ -270,3 +293,9 @@
     }
   </section>
 }
+
+<app-topic-exposure
+  [(visible)]="exposureOpen"
+  [topicId]="exposureTopicId()"
+  [seasonsBack]="seasonsBack()"
+/>

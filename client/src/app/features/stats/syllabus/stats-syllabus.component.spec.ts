@@ -361,6 +361,57 @@ describe('StatsSyllabusComponent (#1565)', () => {
   });
 });
 
+describe('StatsSyllabusComponent — who has seen it (#1745)', () => {
+  afterEach(() => TestBed.inject(HttpTestingController).verify());
+
+  it('opens a taught row on who has seen that technique, in the season on screen', () => {
+    const { fixture, httpMock } = setup();
+    flush(httpMock);
+    fixture.detectChanges();
+
+    const open: HTMLButtonElement = fixture.nativeElement.querySelector(
+      '[data-cy="syllabus-taught-11"] button',
+    );
+    expect(open.getAttribute('aria-label')).toBe('Who has seen Armbar');
+    open.click();
+    fixture.detectChanges();
+
+    const req = httpMock.expectOne((r) => r.url === '/api/v1/stats/syllabus/topics/11');
+    expect(req.request.params.get('seasons_back')).toBe('0');
+    req.flush({ message: 'not the point' }, { status: 500, statusText: 'Server Error' });
+  });
+
+  it('opens a row that was never taught too, for its honest empty', () => {
+    const { fixture, httpMock } = setup();
+    flush(httpMock);
+    fixture.detectChanges();
+
+    fixture.nativeElement.querySelector('[data-cy="syllabus-missing-31"] button').click();
+    fixture.detectChanges();
+
+    httpMock
+      .expectOne((r) => r.url === '/api/v1/stats/syllabus/topics/31')
+      .flush({ message: 'not the point' }, { status: 500, statusText: 'Server Error' });
+  });
+
+  it('keeps both lists in the order the server sent them', () => {
+    const { fixture, httpMock } = setup();
+    flush(httpMock);
+    fixture.detectChanges();
+
+    const ids = (panel: string) =>
+      Array.from(fixture.nativeElement.querySelectorAll(`[data-cy="${panel}"] li[data-cy]`)).map(
+        (li) => (li as HTMLElement).getAttribute('data-cy'),
+      );
+
+    expect(ids('syllabus-coverage-missing')).toEqual([
+      'syllabus-missing-31',
+      'syllabus-missing-32',
+    ]);
+    expect(ids('syllabus-coverage-taught')).toEqual(['syllabus-taught-11', 'syllabus-taught-12']);
+  });
+});
+
 describe('StatsSyllabusComponent — training modes (#1803)', () => {
   afterEach(() => TestBed.inject(HttpTestingController).verify());
 
