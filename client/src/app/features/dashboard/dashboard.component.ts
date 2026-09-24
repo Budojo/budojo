@@ -134,11 +134,14 @@ export class DashboardComponent implements OnInit {
     // and the mobile bottom nav, so it is filtered once, here.
     const has = this.runtime.has();
     return [
+      // Today is the home (#1643), so it takes the home glyph and the first
+      // place. The academy page it replaced there is a settings summary; it
+      // moves down the rail and, on the phone, into More.
       {
         icon: 'pi pi-home',
-        label: t('nav.academy'),
-        routerLink: '/dashboard/academy',
-        dataCy: 'bottomnav-academy',
+        label: t('nav.today'),
+        routerLink: '/dashboard/today',
+        dataCy: 'bottomnav-today',
       },
       {
         icon: 'pi pi-users',
@@ -193,6 +196,13 @@ export class DashboardComponent implements OnInit {
         routerLink: '/dashboard/stats',
         dataCy: 'rail-stats',
       },
+      // The academy sits beside the settings it mostly is (#1643), above More.
+      {
+        icon: 'pi pi-building',
+        label: this.translate.instant('nav.academy'),
+        routerLink: '/dashboard/academy',
+        dataCy: 'rail-academy',
+      },
       ...this.tabs().filter((t) => t.routerLink === '/dashboard/more'),
     ];
   });
@@ -245,11 +255,11 @@ export class DashboardComponent implements OnInit {
     return this.translate.instant('nav.barAriaLabel');
   });
 
-  /** Desktop rail brand — academy name + logo → the academy home. */
+  /** Desktop rail brand — academy name + logo → home, which is Today (#1643). */
   protected readonly railBrand = computed<RailBrand>(() => ({
     label: this.brandLabel(),
     logoUrl: this.academyLogoUrl(),
-    routerLink: '/dashboard/academy',
+    routerLink: '/dashboard/today',
   }));
 
   /** Desktop rail profile chip → the More hub; null until the user hydrates. */

@@ -24,6 +24,7 @@
   "nav": {
     "homeAriaLabel": "Budojo — torna alla dashboard",
     "profileAriaLabel": "Apri il tuo profilo",
+    "today": "Oggi",
     "academy": "Accademia",
     "athletes": "Atleti",
     "attendance": "Presenze",
@@ -2978,6 +2979,59 @@
     },
     "unmarkErrorToast": {
       "summary": "Impossibile annullare la presenza"
+    }
+  },
+  "today": {
+    "season": "Stagione {{label}}",
+    "checkIn": "Apri il check-in",
+    "tonight": {
+      "title": "Stasera",
+      "nothingYet": "Ancora niente",
+      "addTopics": "Aggiungi argomenti",
+      "editTopics": "Modifica argomenti",
+      "noClass": "Stasera non c'è lezione.",
+      "next": "La prossima: {{day}} alle {{time}}, {{name}}.",
+      "nextUntimed": "La prossima: {{day}}, {{name}}.",
+      "noTimetable": "Non c'è ancora un orario, quindi stasera non ha niente da mostrare.",
+      "setUpTimetable": "Imposta l'orario",
+      "error": "Non riesco a caricare l'orario."
+    },
+    "watch": {
+      "title": "Da guardare",
+      "certificateOne": "certificato medico da rinnovare",
+      "certificateOther": "certificati medici da rinnovare",
+      "missingOne": "atleta senza certificato medico",
+      "missingOther": "atleti senza certificato medico",
+      "documentOne": "altro documento da rinnovare",
+      "documentOther": "altri documenti da rinnovare",
+      "unpaidOne": "quota di {{month}} non pagata",
+      "unpaidOther": "quote di {{month}} non pagate",
+      "none": "Niente da controllare oggi.",
+      "error": "Non riesco a caricare cosa c'è da controllare."
+    },
+    "teach": {
+      "title": "Cosa insegnare",
+      "for": "Per {{name}} alle {{time}}",
+      "forUntimed": "Per {{name}}",
+      "openSheet": "Prepara la lezione",
+      "none": "Nessun suggerimento: il programma è vuoto, o è tutto fuori stagione.",
+      "programmeLink": "Apri il programma",
+      "noClass": "Stasera non c'è lezione, quindi non c'è niente da preparare.",
+      "error": "Non riesco a caricare i suggerimenti."
+    },
+    "week": {
+      "title": "Questa settimana",
+      "presences": "Presenze da lunedì",
+      "programme": "Programma della stagione",
+      "programmeValue": "{{percentage}}% · {{covered}} di {{total}}",
+      "joined": "Nuovi questa settimana",
+      "joinedNone": "Nessun nuovo iscritto questa settimana.",
+      "joinedError": "Non riesco a caricare i nuovi iscritti."
+    },
+    "system": {
+      "backup": "Ultimo backup {{when}}",
+      "noBackup": "Ancora nessun backup su questo computer",
+      "open": "Apri il backup"
     }
   },
   "backup": {

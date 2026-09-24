@@ -1531,6 +1531,39 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
   screen('01-error-server', '/error', '[data-cy="server-error-retry"]', { public: true });
   screen('01-error-not-found', '/no-such-page', '[data-cy="not-found-cta"]', { public: true });
 
+  // ── 05. Today — the first screen (#1643) ────────────────────────────────
+  // Monday 18:30: two classes on, the first in half an hour.
+  screen('05-today', '/dashboard/today', '[data-cy="today-class-1"]', {
+    stubs: () => {
+      // Two people joined this week, so "Nuovi questa settimana" shows the
+      // belt spine the way every list of people does.
+      cy.intercept(
+        { method: 'GET', pathname: '/api/v1/athletes', query: { sort_by: 'joined_at' } },
+        page([
+          { ...ATHLETES[3], joined_at: TODAY },
+          { ...ATHLETES[5], joined_at: TODAY },
+        ]),
+      );
+    },
+  });
+  screen('05-today-rest-day', '/dashboard/today', '[data-cy="today-next-class"]', {
+    stubs: () => {
+      // Only Wednesday's classes: tonight is a rest night, and the card says
+      // when the next lesson is instead.
+      cy.intercept('GET', '/api/v1/academy/classes', {
+        statusCode: 200,
+        body: { data: CLASSES.filter((c) => c.weekday === 3) },
+      });
+    },
+  });
+  screen('05-today-lesson-sheet', '/dashboard/today', '[data-cy="today-class-1"]', {
+    act: () => {
+      press('[data-cy="today-class-plan-1"] button');
+      cy.get('[data-cy="lesson-sheet"]', { timeout: 10_000 }).should('exist');
+      settle();
+    },
+  });
+
   // ── 10. Academy ────────────────────────────────────────────────────────
   screen('10-academy-home', '/dashboard/academy', '[data-cy="academy-detail"]');
   screen('10-academy-edit', '/dashboard/academy/edit', '[data-cy="academy-form"]');

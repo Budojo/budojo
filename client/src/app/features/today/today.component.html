@@ -1,0 +1,258 @@
+<div class="today" data-cy="today">
+  <app-page-header [title]="dateTitle()" [subtitle]="seasonSubtitle()">
+    <!-- The one primary action of the screen: the evening starts at the check-in. -->
+    <a
+      pageHeaderCta
+      pButton
+      class="today__checkin"
+      routerLink="/dashboard/attendance"
+      data-cy="today-checkin"
+    >
+      <i class="pi pi-check-square" pButtonIcon aria-hidden="true"></i>
+      <span pButtonLabel>{{ 'today.checkIn' | translate }}</span>
+    </a>
+  </app-page-header>
+
+  <div class="today__grid">
+    <!-- ── Stasera ───────────────────────────────────────────────────── -->
+    <section
+      class="today-card today-card--tonight"
+      aria-labelledby="today-tonight-title"
+      data-cy="today-tonight"
+    >
+      <h2 id="today-tonight-title" class="today-card__title">
+        {{ 'today.tonight.title' | translate }}
+      </h2>
+
+      @switch (classes().state) {
+        @case ('loading') {
+          <p-skeleton height="3.5rem" />
+        }
+        @case ('error') {
+          <p class="today-card__note">{{ 'today.tonight.error' | translate }}</p>
+        }
+        @default {
+          @if (tonight().length > 0) {
+            <ul class="today-classes">
+              @for (c of tonight(); track c.id) {
+                <li class="today-class" [attr.data-cy]="'today-class-' + c.id">
+                  <span class="today-class__time">{{ timeRange(c) ?? '' }}</span>
+                  <div class="today-class__body">
+                    <span class="today-class__name">
+                      {{ c.name }}
+                      <span class="today-class__kind">{{ kindLabels()[c.kind] }}</span>
+                    </span>
+                    @if (topicsOf(c.id); as topics) {
+                      <span class="today-class__topics">{{ topics }}</span>
+                    } @else {
+                      <span class="today-class__topics today-class__topics--empty">{{
+                        'today.tonight.nothingYet' | translate
+                      }}</span>
+                    }
+                  </div>
+                  <p-button
+                    [text]="true"
+                    size="small"
+                    [label]="
+                      (topicsOf(c.id) ? 'today.tonight.editTopics' : 'today.tonight.addTopics')
+                        | translate
+                    "
+                    (onClick)="plan(c)"
+                    [attr.data-cy]="'today-class-plan-' + c.id"
+                  />
+                </li>
+              }
+            </ul>
+          } @else if (!hasTimetable()) {
+            <!-- No timetable at all: tonight cannot be answered until there is one. -->
+            <p class="today-card__note">{{ 'today.tonight.noTimetable' | translate }}</p>
+            <a
+              class="today-card__link"
+              routerLink="/dashboard/academy/timetable"
+              data-cy="today-timetable-link"
+              >{{ 'today.tonight.setUpTimetable' | translate }}</a
+            >
+          } @else {
+            <p class="today-card__lead">{{ 'today.tonight.noClass' | translate }}</p>
+            <p class="today-card__note" data-cy="today-next-class">{{ nextClassLine() }}</p>
+          }
+        }
+      }
+    </section>
+
+    <!-- ── Da guardare ───────────────────────────────────────────────── -->
+    <section class="today-card" aria-labelledby="today-watch-title" data-cy="today-watch">
+      <h2 id="today-watch-title" class="today-card__title">
+        {{ 'today.watch.title' | translate }}
+      </h2>
+
+      @switch (health().state) {
+        @case ('loading') {
+          <p-skeleton height="3.5rem" />
+        }
+        @case ('error') {
+          <p class="today-card__note">{{ 'today.watch.error' | translate }}</p>
+        }
+        @default {
+          @if (watchRows().length > 0) {
+            <ul class="today-rows">
+              @for (row of watchRows(); track row.dataCy) {
+                <li>
+                  <a
+                    class="today-row today-row--link"
+                    [routerLink]="row.link"
+                    [queryParams]="row.queryParams"
+                    [attr.data-cy]="row.dataCy"
+                  >
+                    <span class="today-row__count">{{ row.count }}</span>
+                    <span class="today-row__label">{{ row.label }}</span>
+                    <i class="pi pi-angle-right today-row__chevron" aria-hidden="true"></i>
+                  </a>
+                </li>
+              }
+            </ul>
+          } @else {
+            <p class="today-card__note">{{ 'today.watch.none' | translate }}</p>
+          }
+        }
+      }
+    </section>
+
+    <!-- ── Cosa insegnare ─────────────────────────────────────────────── -->
+    <section class="today-card" aria-labelledby="today-teach-title" data-cy="today-teach">
+      <h2 id="today-teach-title" class="today-card__title">
+        {{ 'today.teach.title' | translate }}
+      </h2>
+
+      @if (classes().state === 'loading' || suggestions().state === 'loading') {
+        <p-skeleton height="3.5rem" />
+      } @else if (suggestions().state === 'error') {
+        <p class="today-card__note">{{ 'today.teach.error' | translate }}</p>
+      } @else if (teachClass(); as c) {
+        <p class="today-card__lead">{{ teachHeading(c) }}</p>
+        @if (suggestions(); as s) {
+          @if (s.state === 'ready' && s.value.length > 0) {
+            <ul class="today-rows">
+              @for (item of s.value; track item.id) {
+                <li
+                  class="today-row today-row--stacked"
+                  [attr.data-cy]="'today-suggestion-' + item.id"
+                >
+                  <span class="today-row__label">
+                    {{ item.name }}
+                    @if (item.parent_name) {
+                      <span class="today-row__muted">· {{ item.parent_name }}</span>
+                    }
+                  </span>
+                  <span class="today-row__reason">{{ reasonLabel(item) }}</span>
+                </li>
+              }
+            </ul>
+            <p-button
+              [text]="true"
+              size="small"
+              [label]="'today.teach.openSheet' | translate"
+              (onClick)="plan(c)"
+              data-cy="today-teach-plan"
+            />
+          } @else {
+            <p class="today-card__note">{{ 'today.teach.none' | translate }}</p>
+            <a class="today-card__link" routerLink="/dashboard/academy/syllabus">{{
+              'today.teach.programmeLink' | translate
+            }}</a>
+          }
+        }
+      } @else {
+        <p class="today-card__note">{{ 'today.teach.noClass' | translate }}</p>
+      }
+    </section>
+
+    <!-- ── Questa settimana ──────────────────────────────────────────── -->
+    <section class="today-card" aria-labelledby="today-week-title" data-cy="today-week">
+      <h2 id="today-week-title" class="today-card__title">{{ 'today.week.title' | translate }}</h2>
+
+      <ul class="today-rows">
+        @if (presences() !== null) {
+          <li class="today-row" data-cy="today-week-presences">
+            <span class="today-row__label">{{ 'today.week.presences' | translate }}</span>
+            <span class="today-row__value">{{ presences() }}</span>
+          </li>
+        }
+        @if (coverage(); as cov) {
+          @if (cov.totals.in_scope > 0) {
+            <li>
+              <a
+                class="today-row today-row--link"
+                routerLink="/dashboard/stats/syllabus"
+                data-cy="today-week-programme"
+              >
+                <span class="today-row__label">{{ 'today.week.programme' | translate }}</span>
+                <span class="today-row__value">{{
+                  'today.week.programmeValue'
+                    | translate
+                      : {
+                          percentage: cov.totals.percentage,
+                          covered: cov.totals.covered,
+                          total: cov.totals.in_scope,
+                        }
+                }}</span>
+                <i class="pi pi-angle-right today-row__chevron" aria-hidden="true"></i>
+              </a>
+            </li>
+          }
+        }
+      </ul>
+
+      <div class="today-joined" data-cy="today-week-joined">
+        <h3 class="today-joined__title">{{ 'today.week.joined' | translate }}</h3>
+        @switch (joined().state) {
+          @case ('loading') {
+            <p-skeleton height="2.5rem" />
+          }
+          @case ('error') {
+            <p class="today-card__note">{{ 'today.week.joinedError' | translate }}</p>
+          }
+          @default {
+            @if (joined(); as j) {
+              @if (j.state === 'ready' && j.value.length > 0) {
+                <ul class="today-joined__list">
+                  @for (a of j.value; track a.id) {
+                    <li class="today-joined__row">
+                      <app-athlete-identity [athlete]="a" [linkToDetail]="true" />
+                    </li>
+                  }
+                </ul>
+              } @else {
+                <p class="today-card__note">{{ 'today.week.joinedNone' | translate }}</p>
+              }
+            }
+          }
+        }
+      </div>
+    </section>
+  </div>
+
+  @if (isDesktop && lastBackupAt() !== undefined) {
+    <p class="today__system" data-cy="today-system">
+      @if (lastBackupAt(); as at) {
+        <span>{{ 'today.system.backup' | translate: { when: (at | relativeTime) } }}</span>
+      } @else {
+        <span>{{ 'today.system.noBackup' | translate }}</span>
+      }
+      <a routerLink="/dashboard/backup" data-cy="today-system-backup">{{
+        'today.system.open' | translate
+      }}</a>
+    </p>
+  }
+</div>
+
+@if (planning(); as c) {
+  <app-lesson-sheet
+    [(visible)]="sheetOpen"
+    [academyClassId]="c.id"
+    [heldOn]="heldOn"
+    [className]="c.name"
+    [dateLabel]="sheetDateLabel()"
+    (saved)="onSaved(c.id, $event)"
+  />
+}
