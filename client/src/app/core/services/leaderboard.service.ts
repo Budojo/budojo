@@ -2,6 +2,7 @@ import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http'
 import { Injectable, inject } from '@angular/core';
 import { Observable, catchError, map, of, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import type { AthleteIdentity } from './athlete.service';
 
 /**
  * Top-5 mat-hours leaderboard row (#962). Anonymised rows zero out
@@ -18,6 +19,13 @@ export interface LeaderboardRow {
   readonly hours: number;
   readonly anonymous: boolean;
   readonly is_self: boolean;
+  /**
+   * The athlete's full identity, belt included (#1851), sent to an owner for
+   * a visible row only. Null on the portal, where training partners keep
+   * seeing "first name and initial", and null on an anonymous row for
+   * everyone.
+   */
+  readonly athlete: AthleteIdentity | null;
 }
 
 export interface LeaderboardPage {

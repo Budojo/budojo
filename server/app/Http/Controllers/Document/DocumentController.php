@@ -8,6 +8,7 @@ use App\Actions\Document\DeleteDocumentAction;
 use App\Actions\Document\GetExpiringDocumentsAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Document\UpdateDocumentRequest;
+use App\Http\Resources\AthleteIdentityResource;
 use App\Http\Resources\DocumentResource;
 use App\Models\Document;
 use App\Models\User;
@@ -57,11 +58,8 @@ class DocumentController extends Controller
 
         return response()->json([
             'data' => DocumentResource::collection($documents)->resolve(),
-            'missing_medical_certificate' => $missing->map(fn (\App\Models\Athlete $a) => [
-                'id' => $a->id,
-                'first_name' => $a->first_name,
-                'last_name' => $a->last_name,
-            ])->values()->all(),
+            // The whole identity, so the row carries the belt (#1851).
+            'missing_medical_certificate' => AthleteIdentityResource::collection($missing)->resolve($request),
         ]);
     }
 

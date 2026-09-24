@@ -7,9 +7,31 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 import { MonthlySummaryComponent } from './monthly-summary.component';
 import { AcademyService } from '../../../core/services/academy.service';
+import { AttendanceSummaryRow } from '../../../core/services/attendance.service';
 
-function makeRow(id: number, count: number, first = `First${id}`, last = `Last${id}`) {
-  return { athlete_id: id, first_name: first, last_name: last, count };
+function makeRow(
+  id: number,
+  count: number,
+  first = `First${id}`,
+  last = `Last${id}`,
+): AttendanceSummaryRow {
+  return { athlete_id: id, first_name: first, last_name: last, count, athlete: null };
+}
+
+function withIdentity(row: AttendanceSummaryRow): AttendanceSummaryRow {
+  return {
+    ...row,
+    athlete: {
+      id: row.athlete_id,
+      first_name: row.first_name,
+      last_name: row.last_name,
+      belt: 'purple',
+      stripes: 2,
+      date_of_birth: null,
+      photo_url: null,
+      user_avatar_url: null,
+    },
+  };
 }
 
 interface Harness {
@@ -518,6 +540,44 @@ describe('MonthlySummaryComponent', () => {
       '[data-cy="monthly-summary-mobile-athlete-link-7"]',
     ) as HTMLAnchorElement | null;
     expect(mobile?.getAttribute('href')).toBe('/dashboard/athletes/7/attendance');
+    http.verify();
+  });
+
+  it('draws each person with the belt spine, the name leading to their attendance (#1851)', () => {
+    const queryParams = new Subject<ReturnType<typeof convertToParamMap>>();
+    TestBed.configureTestingModule({
+      imports: [MonthlySummaryComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        { provide: ActivatedRoute, useValue: { queryParamMap: queryParams.asObservable() } },
+        ...provideI18nTesting(),
+      ],
+    });
+    const http = TestBed.inject(HttpTestingController);
+    const fixture = TestBed.createComponent(MonthlySummaryComponent);
+    fixture.detectChanges();
+    queryParams.next(convertToParamMap({}));
+
+    http
+      .expectOne('/api/v1/attendance/summary?month=2026-04')
+      .flush({ data: [withIdentity(makeRow(7, 3, 'Anna', 'Bianchi'))] });
+    fixture.detectChanges();
+
+    const root = fixture.nativeElement as HTMLElement;
+    for (const row of [
+      '[data-cy="monthly-summary-table-row-7"]',
+      '[data-cy="monthly-summary-mobile-row-7"]',
+    ]) {
+      // The belt is on the row, with its name for a screen reader.
+      expect(
+        root.querySelector(`${row} [data-cy="belt-spine"]`)?.getAttribute('aria-label'),
+      ).toContain('Purple');
+      const name = root.querySelector(`${row} [data-cy="athlete-name-link"]`);
+      expect(name?.textContent?.trim()).toBe('Anna Bianchi');
+      expect(name?.getAttribute('href')).toBe('/dashboard/athletes/7/attendance');
+    }
     http.verify();
   });
 });

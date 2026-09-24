@@ -228,9 +228,12 @@ export interface Athlete {
 }
 
 /**
- * What `app-athlete-identity` draws — the belt spine, the avatar, the name and
- * the age chip — and nothing else. A read that lists people without the whole
- * athlete (the technique drill-down, #1745) sends exactly this much.
+ * What `app-athlete-identity` draws (the belt spine, the avatar, the name and
+ * the age chip) and nothing else. The roster passes a whole `Athlete`, which
+ * fits. A read that lists people without the whole athlete sends exactly this
+ * much: the technique drill-down (#1745), and the monthly summary, the owner's
+ * leaderboard and the expiring-documents list (#1851, `AthleteIdentityResource`,
+ * `AthleteSummary` in the contract).
  */
 export type AthleteIdentity = Pick<
   Athlete,

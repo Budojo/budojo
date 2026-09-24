@@ -29,6 +29,7 @@ import { localeFor } from '../../../shared/utils/locale';
 import { ErrorStateComponent } from '../../../shared/components/error-state/error-state.component';
 import { SortHeaderComponent } from '../../../shared/components/sort-header/sort-header.component';
 import { SortToggleComponent } from '../../../shared/components/sort-toggle/sort-toggle.component';
+import { AthleteIdentityComponent } from '../../../shared/components/athlete-identity/athlete-identity.component';
 import {
   nameSortAria,
   nameSortSignifier,
@@ -115,6 +116,7 @@ function compareYearMonth(a: YearMonth, b: YearMonth): number {
     ErrorStateComponent,
     SortHeaderComponent,
     SortToggleComponent,
+    AthleteIdentityComponent,
     HowCountedComponent,
   ],
   templateUrl: './monthly-summary.component.html',

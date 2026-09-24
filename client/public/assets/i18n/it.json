@@ -2404,6 +2404,7 @@
       "reachAria": "Come contattare l'atleta",
       "reach": {
         "phone": "Chiama {{value}}",
+        "whatsapp": "Scrivi a {{value}} su WhatsApp",
         "email": "Scrivi a {{value}}"
       }
     },
@@ -2739,6 +2740,13 @@
       "futureOther": "tra {{count}} giorni",
       "pastOne": "scaduto da {{count}} giorno",
       "pastOther": "scaduto da {{count}} giorni"
+    },
+    "contact": {
+      "call": "Chiama",
+      "whatsapp": "WhatsApp",
+      "callAria": "Chiama {{name}}",
+      "whatsappAria": "Scrivi a {{name}} su WhatsApp",
+      "noPhone": "Nessun numero in archivio"
     }
   },
   "stats": {

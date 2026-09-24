@@ -177,3 +177,52 @@ it('returns 404 for callers with no academy context', function (): void {
 it('rejects unauthenticated callers with 401', function (): void {
     $this->getJson('/api/v1/attendance/leaderboard')->assertStatus(401);
 });
+
+it('gives the owner each visible athlete\'s identity, full name and belt (#1851)', function (): void {
+    [, $athlete] = makeLeaderboardAthlete($this->academy, 6);
+    $athlete->update([
+        'first_name' => 'Mario',
+        'last_name' => 'Rossi',
+        'belt' => \App\Enums\Belt::Blue->value,
+        'stripes' => 3,
+    ]);
+
+    $row = $this->actingAs($this->owner)
+        ->getJson('/api/v1/attendance/leaderboard')
+        ->assertOk()
+        ->json('data.0');
+
+    expect($row['athlete'])->toMatchArray([
+        'id' => $athlete->id,
+        'first_name' => 'Mario',
+        'last_name' => 'Rossi',
+        'belt' => 'blue',
+        'stripes' => 3,
+    ]);
+});
+
+it('gives an anonymous row no identity, even to the owner (#1851)', function (): void {
+    makeLeaderboardAthlete($this->academy, 9, /* leaderboard_visible */ false);
+
+    $row = $this->actingAs($this->owner)
+        ->getJson('/api/v1/attendance/leaderboard')
+        ->assertOk()
+        ->json('data.0');
+
+    expect($row['anonymous'])->toBeTrue();
+    expect($row['athlete'])->toBeNull();
+});
+
+it('gives an athlete caller no identity: the portal keeps first name and initial (#1851)', function (): void {
+    [$user] = makeLeaderboardAthlete($this->academy, 5);
+    makeLeaderboardAthlete($this->academy, 8);
+
+    $rows = $this->actingAs($user)
+        ->getJson('/api/v1/attendance/leaderboard')
+        ->assertOk()
+        ->json('data');
+
+    foreach ($rows as $row) {
+        expect($row['athlete'])->toBeNull();
+    }
+});

@@ -27,6 +27,9 @@ client/.angular/
 # docs/design/screenshots/ and stays outside this exclusion.
 client/cypress/screenshots/
 client/cypress/videos/
+# Cypress's default downloadsFolder: a spec that clicks a real download
+# button (dashboard-expiring, #1851) writes the file here.
+client/cypress/downloads/
 
 # Docker volumes
 db_data/
