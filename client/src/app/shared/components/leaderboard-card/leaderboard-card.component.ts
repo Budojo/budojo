@@ -10,6 +10,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { LanguageService } from '../../../core/services/language.service';
 import { formatIsoMonth } from '../../utils/locale';
 import { TranslatePipe } from '@ngx-translate/core';
+import { AthleteIdentityComponent } from '../athlete-identity/athlete-identity.component';
 import {
   LeaderboardResult,
   LeaderboardRow,
@@ -28,7 +29,7 @@ import {
 @Component({
   selector: 'app-leaderboard-card',
   standalone: true,
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, AthleteIdentityComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './leaderboard-card.component.html',
   styleUrl: './leaderboard-card.component.scss',

@@ -15,6 +15,21 @@ const ATHLETES_EMPTY = {
   },
 };
 
+// A person as the server sends them on this page since #1851: the identity
+// the row draws with the belt spine.
+function person(id: number, first: string, last: string) {
+  return {
+    id,
+    first_name: first,
+    last_name: last,
+    belt: 'blue',
+    stripes: 1,
+    date_of_birth: null,
+    photo_url: null,
+    user_avatar_url: null,
+  };
+}
+
 function expiringDoc(overrides: Record<string, unknown> = {}) {
   return {
     id: 1,
@@ -28,7 +43,7 @@ function expiringDoc(overrides: Record<string, unknown> = {}) {
     notes: null,
     created_at: '2026-04-20T10:00:00+00:00',
     deleted_at: null,
-    athlete: { id: 42, first_name: 'Mario', last_name: 'Rossi' },
+    athlete: person(42, 'Mario', 'Rossi'),
     ...overrides,
   };
 }
@@ -64,19 +79,19 @@ describe('Expiring documents widget + deep-link', () => {
         data: [
           expiringDoc({
             id: 1,
-            athlete: { id: 42, first_name: 'Mario', last_name: 'Rossi' },
+            athlete: person(42, 'Mario', 'Rossi'),
           }),
           expiringDoc({
             id: 2,
             athlete_id: 7,
             type: 'id_card',
-            athlete: { id: 7, first_name: 'Anna', last_name: 'Bianchi' },
+            athlete: person(7, 'Anna', 'Bianchi'),
           }),
           expiringDoc({
             id: 3,
             athlete_id: 99,
             type: 'insurance',
-            athlete: { id: 99, first_name: 'Luca', last_name: 'Verdi' },
+            athlete: person(99, 'Luca', 'Verdi'),
           }),
         ],
         missing_medical_certificate: [],
@@ -101,7 +116,9 @@ describe('Expiring documents widget + deep-link', () => {
     cy.wait('@getExpiring');
 
     cy.get('[data-cy="expiring-table"] tbody tr').should('have.length', 3);
-    cy.get('[data-cy="athlete-link"]').first().should('contain.text', 'Mario Rossi');
+    cy.get('[data-cy="expiring-table"] [data-cy="athlete-name-link"]')
+      .first()
+      .should('contain.text', 'Mario Rossi');
   });
 
   it('splits the panel by what the label claims, and agrees with the page (#1740)', () => {
@@ -118,13 +135,13 @@ describe('Expiring documents widget + deep-link', () => {
             id: 2,
             athlete_id: 7,
             type: 'id_card',
-            athlete: { id: 7, first_name: 'Anna', last_name: 'Bianchi' },
+            athlete: person(7, 'Anna', 'Bianchi'),
           }),
           expiringDoc({
             id: 3,
             athlete_id: 99,
             type: 'insurance',
-            athlete: { id: 99, first_name: 'Luca', last_name: 'Verdi' },
+            athlete: person(99, 'Luca', 'Verdi'),
           }),
         ],
         missing_medical_certificate: [],
@@ -198,10 +215,7 @@ describe('Expiring documents widget + deep-link', () => {
       statusCode: 200,
       body: {
         data: [],
-        missing_medical_certificate: [
-          { id: 11, first_name: 'Giulia', last_name: 'Rossi' },
-          { id: 12, first_name: 'Luca', last_name: 'Verdi' },
-        ],
+        missing_medical_certificate: [person(11, 'Giulia', 'Rossi'), person(12, 'Luca', 'Verdi')],
       },
     }).as('getExpiring');
     cy.intercept('GET', '/api/v1/athletes/11', {
@@ -247,7 +261,7 @@ describe('Expiring documents widget + deep-link', () => {
         data: [
           expiringDoc({
             id: 1,
-            athlete: { id: 42, first_name: 'Mario', last_name: 'Rossi' },
+            athlete: person(42, 'Mario', 'Rossi'),
           }),
         ],
       },
@@ -280,7 +294,7 @@ describe('Expiring documents widget + deep-link', () => {
     cy.visitAuthenticated('/dashboard/documents/expiring');
     cy.wait(['@academy', '@getExpiring']);
 
-    cy.get('[data-cy="athlete-link"]').first().click();
+    cy.get('[data-cy="expiring-table"] [data-cy="athlete-name-link"]').first().click();
     cy.url().should('include', '/dashboard/athletes/42/documents');
   });
 });
@@ -322,7 +336,7 @@ MOBILE_VIEWPORTS.forEach(({ name, width, height }) => {
             expiringDoc({
               id: 2,
               athlete_id: 43,
-              athlete: { id: 43, first_name: 'Luigi', last_name: 'Verdi' },
+              athlete: person(43, 'Luigi', 'Verdi'),
               original_name: 'id-card.pdf',
               type: 'id_card',
               expires_at: '2026-07-15',
@@ -369,7 +383,7 @@ MOBILE_VIEWPORTS.forEach(({ name, width, height }) => {
         body: { data: [] },
       }).as('getDocs');
 
-      cy.get('[data-cy="expiring-card-athlete-1"]').click();
+      cy.get('[data-cy="expiring-card-athlete-1"] [data-cy="athlete-name-link"]').click();
       cy.url().should('include', '/dashboard/athletes/42/documents');
     });
   });

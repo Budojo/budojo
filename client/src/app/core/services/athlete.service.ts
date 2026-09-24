@@ -221,6 +221,27 @@ export interface Athlete {
   attendance_total_count?: number | null;
 }
 
+/**
+ * What a row needs to draw a person (#1851): the input of
+ * `app-athlete-identity` (belt spine, avatar, full name, age chip).
+ *
+ * The roster passes a whole `Athlete`, which fits. The monthly summary, the
+ * owner's leaderboard and the expiring-documents list get exactly this shape
+ * from the server (`AthleteIdentityResource`, `AthleteSummary` in the
+ * contract), because those payloads are aggregates and carry no full athlete.
+ */
+export type AthleteIdentity = Pick<
+  Athlete,
+  | 'id'
+  | 'first_name'
+  | 'last_name'
+  | 'belt'
+  | 'stripes'
+  | 'date_of_birth'
+  | 'photo_url'
+  | 'user_avatar_url'
+>;
+
 /** The shapes `payment_coverage` takes. Mirrors `App\Enums\PaymentCoverage`. */
 export type PaymentCoverage =
   'monthly' | 'quarterly' | 'half_yearly' | 'annual' | 'carnet' | 'none';

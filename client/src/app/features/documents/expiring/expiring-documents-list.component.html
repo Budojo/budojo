@@ -52,12 +52,17 @@
           <ul class="missing-cert-list">
             @for (a of missingCerts(); track a.id) {
               <li class="missing-cert-row">
+                <!--
+                  The whole row is the link, so the identity inside it draws the
+                  person (belt spine, avatar, name, age, #1851) without a
+                  second anchor of its own.
+                -->
                 <a
                   [routerLink]="['/dashboard/athletes', a.id, 'documents']"
                   class="missing-cert-row__link"
                   [attr.data-cy]="'missing-cert-row-' + a.id"
                 >
-                  <span class="missing-cert-row__name">{{ missingAthleteNameFor(a) }}</span>
+                  <app-athlete-identity class="missing-cert-row__identity" [athlete]="a" />
                   <span class="missing-cert-row__cta">
                     {{ 'documents.expiringList.missingCerts.action' | translate }}
                     <i class="pi pi-arrow-right" aria-hidden="true"></i>
@@ -98,14 +103,15 @@
                     >
                       {{ 'documents.expiringList.academyOwned' | translate }}
                     </span>
-                  } @else {
-                    <a
-                      [routerLink]="['/dashboard/athletes', doc.athlete_id, 'documents']"
-                      class="expiring-card__athlete-link"
+                  } @else if (doc.athlete; as person) {
+                    <!-- The person as every list draws them (#1851). -->
+                    <app-athlete-identity
+                      class="expiring-card__identity"
+                      [athlete]="person"
+                      [linkToDetail]="true"
+                      detailTab="documents"
                       [attr.data-cy]="'expiring-card-athlete-' + doc.id"
-                    >
-                      {{ athleteNameFor(doc) }}
-                    </a>
+                    />
                   }
                   <p-button
                     icon="pi pi-download"
@@ -152,20 +158,19 @@
 
               <ng-template pTemplate="body" let-doc>
                 <tr>
-                  <td>
+                  <!-- The cell anchors the belt spine, as on the roster (#1851). -->
+                  <td class="expiring-page__athlete-cell">
                     @if (isAcademyDocument(doc)) {
                       <!-- See the card above: the academy's own paper (#1743). -->
                       <span class="expiring-page__academy" data-cy="academy-owned">
                         {{ 'documents.expiringList.academyOwned' | translate }}
                       </span>
-                    } @else {
-                      <a
-                        [routerLink]="['/dashboard/athletes', doc.athlete_id, 'documents']"
-                        class="expiring-page__athlete-link"
-                        data-cy="athlete-link"
-                      >
-                        {{ athleteNameFor(doc) }}
-                      </a>
+                    } @else if (doc.athlete; as person) {
+                      <app-athlete-identity
+                        [athlete]="person"
+                        [linkToDetail]="true"
+                        detailTab="documents"
+                      />
                     }
                   </td>
                   <td>{{ typeKeyFor(doc) | translate }}</td>

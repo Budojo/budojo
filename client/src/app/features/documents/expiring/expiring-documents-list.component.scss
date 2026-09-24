@@ -26,7 +26,7 @@
     color: var(--p-text-muted-color);
     text-decoration: none;
     font-size: 0.875rem;
-    transition: color 200ms cubic-bezier(0.2, 0, 0, 1);
+    transition: color var(--budojo-motion-fast) var(--budojo-motion-decelerate);
 
     &:hover,
     &:focus-visible {
@@ -143,6 +143,8 @@ $expiring-mobile-breakpoint: 768px;
   border-radius: 12px;
 
   &__link {
+    // The containing block for the belt spine (#1851).
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -151,7 +153,7 @@ $expiring-mobile-breakpoint: 768px;
     min-height: 3rem; // ≥ 48px touch target — Fitts
     text-decoration: none;
     color: var(--p-text-color);
-    transition: background 200ms cubic-bezier(0.2, 0, 0, 1);
+    transition: background var(--budojo-motion-fast) var(--budojo-motion-decelerate);
 
     &:hover,
     &:focus-visible {
@@ -165,12 +167,9 @@ $expiring-mobile-breakpoint: 768px;
     }
   }
 
-  &__name {
-    font-weight: 600;
+  &__identity {
+    flex: 1;
     min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
   &__cta {
@@ -198,10 +197,14 @@ $expiring-mobile-breakpoint: 768px;
 }
 
 .expiring-card {
+  // The containing block for the belt spine (#1851), which runs the card's
+  // full height. The wider left padding clears it; the type and status below
+  // take the identity's own 0.5rem inset so all three lines start together.
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  padding: 0.875rem 1rem;
+  padding: 0.875rem 1rem 0.875rem 1.5rem;
   background: var(--p-content-background);
   border: 1px solid var(--p-content-border-color);
   border-radius: 12px;
@@ -237,7 +240,13 @@ $expiring-mobile-breakpoint: 768px;
     }
   }
 
+  &__identity {
+    flex: 1;
+    min-width: 0;
+  }
+
   &__type {
+    margin-left: 0.5rem;
     font-size: 0.875rem;
     color: var(--p-text-muted-color);
   }
@@ -245,7 +254,19 @@ $expiring-mobile-breakpoint: 768px;
   &__status {
     display: flex;
     align-items: center;
+    margin-left: 0.5rem;
   }
+}
+
+// The belt spine's anchor (#1851): the cell, not the row, as on the roster.
+// Wide enough for avatar and name on one line at the 960 px window; without it
+// the auto-sized column squeezed the identity onto three lines (avatar, name,
+// age). The age chip may still wrap under the name, as it does on the roster.
+// At 960 px the date beside it wraps too: keeping it on one line pushed the
+// table past the page width, which is worse than a taller row.
+.expiring-page__athlete-cell {
+  position: relative;
+  min-width: 12rem;
 }
 
 // The words beside the date — "tra 16 giorni", "scaduto da 4 giorni" — read

@@ -11,13 +11,33 @@ function currentMonthStr(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
+// Each row carries the person's identity since #1851, as the server sends it.
+function summaryRow(id: number, first: string, last: string, count: number, belt: string) {
+  return {
+    athlete_id: id,
+    first_name: first,
+    last_name: last,
+    count,
+    athlete: {
+      id,
+      first_name: first,
+      last_name: last,
+      belt,
+      stripes: 1,
+      date_of_birth: null,
+      photo_url: null,
+      user_avatar_url: null,
+    },
+  };
+}
+
 const SUMMARY_THREE = {
   statusCode: 200,
   body: {
     data: [
-      { athlete_id: 1, first_name: 'Mario', last_name: 'Rossi', count: 8 },
-      { athlete_id: 2, first_name: 'Luigi', last_name: 'Verdi', count: 3 },
-      { athlete_id: 3, first_name: 'Marco', last_name: 'Bianchi', count: 12 },
+      summaryRow(1, 'Mario', 'Rossi', 8, 'blue'),
+      summaryRow(2, 'Luigi', 'Verdi', 3, 'white'),
+      summaryRow(3, 'Marco', 'Bianchi', 12, 'purple'),
     ],
   },
 };
@@ -180,13 +200,20 @@ describe('monthly attendance summary', () => {
       'monthly-summary-mobile-row-3',
     ]);
 
-    // The name is the way into that athlete's own attendance, and on the
-    // phone it is the card's only tap target (#1639).
-    cy.get('[data-cy="monthly-summary-mobile-athlete-link-1"]')
-      .should('have.attr', 'href', '/dashboard/athletes/1/attendance')
-      .then(($link) => {
-        // ≥ 48 px, per the canon's Fitts rule.
-        expect($link[0].getBoundingClientRect().height).to.be.at.least(48);
-      });
+    // The name is the way into that athlete's own attendance (#1639), and on
+    // the phone it stretches over the whole card (#1851), so the card is the
+    // tap target: ≥ 48 px per the canon's Fitts rule, and a tap anywhere on
+    // it, the count included, lands on the link.
+    cy.get('[data-cy="monthly-summary-mobile-row-1"] [data-cy="athlete-name-link"]').should(
+      'have.attr',
+      'href',
+      '/dashboard/athletes/1/attendance',
+    );
+    cy.get('[data-cy="monthly-summary-mobile-row-1"]').then(($card) => {
+      const box = $card[0].getBoundingClientRect();
+      expect(box.height).to.be.at.least(48);
+      const hit = $card[0].ownerDocument.elementFromPoint(box.right - 8, box.top + box.height / 2);
+      expect(hit?.getAttribute('data-cy')).to.equal('athlete-name-link');
+    });
   });
 });

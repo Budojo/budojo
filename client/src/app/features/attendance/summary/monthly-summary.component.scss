@@ -111,6 +111,9 @@ $summary-mobile-breakpoint: 768px;
 }
 
 .summary-card {
+  // The containing block for the belt spine and for the stretched name link
+  // (#1851): both measure the card, not the identity inside it.
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -128,6 +131,11 @@ $summary-mobile-breakpoint: 768px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  &__identity {
+    flex: 1;
+    min-width: 0;
   }
 
   &__count {
@@ -166,6 +174,13 @@ $summary-mobile-breakpoint: 768px;
   display: flex;
   align-items: center;
   min-height: 3rem;
+}
+
+// The belt spine's anchor (#1851): `position` on the cell, not the row, as on
+// the roster (#1429), because a `<td>` is a reliable containing block and a
+// `<tr>` is not.
+.summary-page__athlete-cell {
+  position: relative;
 }
 
 // Why the columns have no fraction this month.
