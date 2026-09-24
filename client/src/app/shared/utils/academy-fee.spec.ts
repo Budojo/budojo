@@ -29,7 +29,7 @@ describe('academyChargesAFee', () => {
 
   it('is true for an academy priced only by tier (#1381)', () => {
     // The case the old `monthly_fee_cents !== null` check got wrong: the paid
-    // badge and the unpaid widget would vanish on an academy that plainly
+    // badge and the paid filter would vanish on an academy that plainly
     // charges its athletes.
     expect(academyChargesAFee(academy({ monthly_fee_cents: null, fee_tier_count: 2 }))).toBe(true);
   });

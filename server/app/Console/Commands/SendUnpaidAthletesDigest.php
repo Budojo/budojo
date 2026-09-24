@@ -16,8 +16,8 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Monthly digest emailed to every academy on the 16th, listing every
- * active athlete who hasn't yet been marked paid for the current
- * month. Scheduled at 09:00 Europe/Rome on day 16 from
+ * athlete who owes the current month by the roster's own rule
+ * (`Athlete::scopeOwing`, #1722). Scheduled at 09:00 Europe/Rome on day 16 from
  * `routes/console.php`. M5 PR-E.
  *
  * The 16th because pre-15 a "not paid yet" state is normal: most

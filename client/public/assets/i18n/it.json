@@ -646,7 +646,7 @@
       },
       "unpaid-badge": {
         "question": "Cosa vuol dire il chip «Non pagato»?",
-        "answer": "Che nulla copre il mese in corso di quell'atleta: nessuna quota lo paga e non ha un carnet con ingressi residui. Per vedere tutti quelli da sollecitare, premi il pulsante Pagamento sopra la lista finché non dice Non pagato. Chi ha un carnet, gli inattivi e la tua riga non ci finiscono mai."
+        "answer": "Che nulla copre il mese in corso di quell'atleta: nessuna quota lo paga e non ha un carnet con ingressi residui. Per vedere tutti quelli da sollecitare, premi il pulsante Pagamento sopra la lista finché non dice Non pagato — dal telefono, finché l'icona non è un cerchio con la X. Chi ha un carnet ancora in uso, gli inattivi, chi non paga una quota e la tua riga non ci finiscono mai."
       },
       "carnets": {
         "question": "Come gestisco i carnet a ingressi?",

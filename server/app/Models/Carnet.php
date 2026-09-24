@@ -63,7 +63,8 @@ class Carnet extends Model
      * and which throws without `entries_count` — so loading it here makes the
      * half-configured query (window but no count, or count but no ordering)
      * impossible to write by accident. The balance test itself stays in the
-     * helper rather than being duplicated into SQL.
+     * helper here; a caller that must filter by it in SQL uses
+     * `scopeSpendableOn` below, which is held to the helper by a test.
      *
      * @param  Builder<$this>  $query
      * @return Builder<$this>
