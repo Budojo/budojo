@@ -258,6 +258,11 @@ describe('Syllabus coverage', () => {
       .should('be.visible')
       .and('contain.text', 'Closed guard, this season');
     cy.focused().should('have.id', 'season-map-drawer-title');
+    // A modal dialog with a name, not PrimeNG's nameless `complementary`.
+    cy.get('.p-drawer')
+      .should('have.attr', 'role', 'dialog')
+      .and('have.attr', 'aria-modal', 'true')
+      .and('have.attr', 'aria-labelledby', 'season-map-drawer-title');
     cy.screenshot('season-map-sheet-375', { capture: 'viewport', overwrite: true });
   });
 

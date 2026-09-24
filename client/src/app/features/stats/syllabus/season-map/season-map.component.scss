@@ -372,6 +372,29 @@
     outline: 1.5px solid var(--p-primary-color);
     outline-offset: 1px;
   }
+
+  // A missed plan in a week a lesson already claims: a hatched corner, the
+  // unconfirmed pattern in miniature, drawn on the surface colour so it reads
+  // over the full accent as well as over the outline.
+  &--also-unconfirmed {
+    position: relative;
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 0.5rem;
+      height: 0.5rem;
+      border-top-right-radius: 3px;
+      clip-path: polygon(0 0, 100% 0, 100% 100%);
+      background: repeating-linear-gradient(
+        135deg,
+        var(--p-text-muted-color) 0 1px,
+        var(--p-surface-0) 1px 3px
+      );
+    }
+  }
 }
 
 button.swatch {

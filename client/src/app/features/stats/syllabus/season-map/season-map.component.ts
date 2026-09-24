@@ -108,6 +108,19 @@ export class SeasonMapComponent {
   /** Wide enough for a popover beside the map; below that, a bottom sheet. */
   protected readonly wide = signal<boolean>(true);
 
+  /**
+   * The bottom sheet is a modal dialog named by its title, as the popover is.
+   * `p-drawer` has no input for either — its panel says `complementary` — so
+   * they go onto the panel through PrimeNG's pass-through.
+   */
+  protected readonly drawerPt = {
+    root: {
+      role: 'dialog',
+      'aria-modal': 'true',
+      'aria-labelledby': 'season-map-drawer-title',
+    },
+  };
+
   private readonly reloadTick = signal<number>(0);
   private readonly popover = viewChild<Popover>('cellPopover');
   private readonly scroller = viewChild<ElementRef<HTMLElement>>('scroller');

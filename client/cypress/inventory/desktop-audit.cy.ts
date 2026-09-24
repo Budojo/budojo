@@ -916,7 +916,9 @@ const SYLLABUS_CALENDAR = {
       kind: 'both',
       cells: [
         { week: '2026-08-31', held: 2, planned: 0, unconfirmed: 0 },
-        { week: '2026-09-07', held: 1, planned: 0, unconfirmed: 0 },
+        // Taught on Monday, and a plan for Monday's second class nobody
+        // checked into: both have to show.
+        { week: '2026-09-07', held: 1, planned: 0, unconfirmed: 1 },
       ],
     },
     {
@@ -961,6 +963,9 @@ const SYLLABUS_CALENDAR = {
       { id: 11, name: 'Armbar', parent_id: 1 },
       { id: 31, name: 'Americana', parent_id: 3 },
       { id: 21, name: 'Knee shield', parent_id: 2 },
+    ]),
+    calendarLesson(513, '2026-09-07', 2, 'unconfirmed', [
+      { id: 35, name: 'Elbow-knee escape', parent_id: 3 },
     ]),
     calendarLesson(504, '2026-09-09', 4, 'held', [
       { id: 14, name: 'Hip bump sweep', parent_id: 1 },
@@ -2162,6 +2167,15 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
     clock: false,
     act: () => {
       press('[data-cy="season-map-position-1"]');
+      cy.get('[data-cy="season-map-popover"]', { timeout: 4000 }).should('be.visible');
+    },
+  });
+  // A week with a lesson held and a plan nobody checked into: the fill, a
+  // hatched corner, and both lessons in the popover.
+  screen('40-stats-syllabus-missed', '/dashboard/stats/syllabus', '[data-cy="syllabus-coverage"]', {
+    clock: false,
+    act: () => {
+      press('[data-cy="season-map-cell-3-2026-09-07"]');
       cy.get('[data-cy="season-map-popover"]', { timeout: 4000 }).should('be.visible');
     },
   });
