@@ -264,17 +264,25 @@
   }
 }
 
+// "Ultima volta:" over "3 giorni fa", labelled because the header above says
+// "Presenze". Always two lines, each unbroken: on one line the sentence
+// widened the column until the age chips and "Non pagato" wrapped, and
+// letting it wrap only when long gave rows of three different heights.
 .athlete-attendance__last-seen {
   display: block;
   text-align: end;
   font-size: 0.875rem;
   line-height: 1.3;
-  white-space: nowrap;
   color: var(--p-text-muted-color);
 
   @media (min-width: 1024px) {
     display: none;
   }
+}
+
+.athlete-attendance__last-seen-part {
+  display: block;
+  white-space: nowrap;
 }
 
 // Text, not a number, so it stays left-aligned like any other words; one

@@ -635,11 +635,20 @@
                 </span>
                 <!-- Below 1024px only, where the Last seen column is hidden (#1726). -->
                 @if (hasLastSeen()) {
+                  <!--
+                    Labelled in its own words: under the "Presenze" header a
+                    bare "3 giorni fa" says nothing about what it measures.
+                  -->
                   <span
                     class="athlete-attendance__last-seen"
-                    [attr.aria-label]="lastSeenSentence(athlete)"
                     [attr.data-cy]="'athlete-last-seen-inline-' + athlete.id"
-                    >{{ lastSeenLabel(athlete) }}</span
+                    ><span class="athlete-attendance__last-seen-part">{{
+                      'athletes.list.lastSeen.inlineLabel' | translate
+                    }}</span
+                    >{{ ' '
+                    }}<span class="athlete-attendance__last-seen-part">{{
+                      lastSeenLabel(athlete)
+                    }}</span></span
                   >
                 }
               </td>
@@ -655,7 +664,6 @@
                 <span
                   class="athlete-last-seen"
                   [class.athlete-last-seen--never]="!athlete.last_attended_on"
-                  [attr.aria-label]="lastSeenSentence(athlete)"
                   [pTooltip]="athlete.last_attended_on | localeDate: 'calendar-day'"
                   [tooltipDisabled]="!athlete.last_attended_on"
                   tooltipPosition="left"

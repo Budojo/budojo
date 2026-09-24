@@ -1974,7 +1974,6 @@ describe('AthletesListComponent — when they last trained (#1726)', () => {
 
     const cell = el(fixture, '[data-cy="athlete-last-seen-1"]');
     expect(cell?.textContent?.trim()).toBe('3 days ago');
-    expect(cell?.getAttribute('aria-label')).toBe('Last trained 3 days ago');
 
     // Through LocaleDatePipe in calendar-day mode: truncated, never converted.
     const tooltip = fixture.debugElement
@@ -1983,23 +1982,34 @@ describe('AthletesListComponent — when they last trained (#1726)', () => {
     expect(tooltip.content).toBe(formatIsoDate(day, 'en'));
   });
 
-  it('repeats it under the counts, for the narrow window where the column is hidden', () => {
-    // CSS decides which of the two shows (the column from 1024px up); both
-    // must say the same thing to whoever reads them.
+  it('repeats it under the counts for the narrow window, labelled in its own words', () => {
+    // CSS decides which of the two shows (the column from 1024px up). Under
+    // the "Presenze" header a bare "3 days ago" would not say what it
+    // measures, so the line carries its own label — visibly, not in an
+    // aria-label a plain span does not reliably announce.
     const fixture = render([makeAthlete({ id: 1, last_attended_on: daysAgo(3) })]);
 
     const inline = el(fixture, '[data-cy="athlete-last-seen-inline-1"]');
-    expect(inline?.textContent?.trim()).toBe('3 days ago');
-    expect(inline?.getAttribute('aria-label')).toBe('Last trained 3 days ago');
+    expect(inline?.textContent?.trim()).toBe('Last seen: 3 days ago');
     expect(inline?.closest('td')?.querySelector('.athlete-attendance')).not.toBeNull();
   });
 
-  it('says "Never" for an athlete who has never trained, not a dash that reads as missing data', () => {
+  it('says "never" for an athlete who has never trained, not a dash that reads as missing data', () => {
     const fixture = render([makeAthlete({ id: 1, last_attended_on: null })]);
 
-    const cell = el(fixture, '[data-cy="athlete-last-seen-1"]');
-    expect(cell?.textContent?.trim()).toBe('Never');
-    expect(cell?.getAttribute('aria-label')).toBe('Never trained');
+    // Lower case, like every distance in the same column.
+    expect(el(fixture, '[data-cy="athlete-last-seen-1"]')?.textContent?.trim()).toBe('never');
+    expect(el(fixture, '[data-cy="athlete-last-seen-inline-1"]')?.textContent?.trim()).toBe(
+      'Last seen: never',
+    );
+  });
+
+  it('reads a long absence in months, where the longest-absent sort puts it first', () => {
+    const fixture = render([makeAthlete({ id: 1, last_attended_on: daysAgo(150) })]);
+
+    expect(el(fixture, '[data-cy="athlete-last-seen-1"]')?.textContent?.trim()).toBe(
+      '5 months ago',
+    );
   });
 
   it('adds the column when the payload carries the field, even as null', () => {

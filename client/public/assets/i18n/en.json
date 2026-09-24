@@ -2120,7 +2120,8 @@
         "tooltipTotalJoined": "This season ({{season}}), counted from {{joined}} when they joined"
       },
       "lastSeen": {
-        "never": "Never",
+        "never": "never",
+        "inlineLabel": "Last seen:",
         "aria": "Last trained {{when}}",
         "neverAria": "Never trained"
       },
@@ -3104,7 +3105,11 @@
     "yesterday": "yesterday",
     "days": "{{count}} days ago",
     "weekOne": "a week ago",
-    "weeks": "{{count}} weeks ago"
+    "weeks": "{{count}} weeks ago",
+    "monthOne": "a month ago",
+    "monthOther": "{{count}} months ago",
+    "yearOne": "a year ago",
+    "yearOther": "{{count}} years ago"
   },
   "martialArts": {
     "bjj": "Brazilian jiu-jitsu",

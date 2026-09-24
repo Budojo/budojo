@@ -835,7 +835,11 @@ export class AthletesListComponent implements OnInit {
   private readonly lastSeenFieldSeen = signal(false);
   readonly hasLastSeen = this.lastSeenFieldSeen.asReadonly();
 
-  /** "3 days ago", or "Never". The exact day goes in the tooltip. */
+  /**
+   * "3 days ago", "5 months ago", or "never" — lower case throughout, so a
+   * column of them reads as one set (the coverage screens' distances are
+   * lower case too). The exact day goes in the tooltip.
+   */
   protected lastSeenLabel(athlete: Athlete): string {
     const iso = athlete.last_attended_on;
     return iso
@@ -844,9 +848,9 @@ export class AthletesListComponent implements OnInit {
   }
 
   /**
-   * "Last trained 3 days ago", or "Never trained". The cell's aria-label,
-   * and the card's visible text — the card has no header to say what the
-   * bare "3 days ago" is about.
+   * "Last trained 3 days ago", or "Never trained". The mobile card's
+   * visible text — the card has no header to say what the bare "3 days ago"
+   * is about.
    */
   protected lastSeenSentence(athlete: Athlete): string {
     const iso = athlete.last_attended_on;
