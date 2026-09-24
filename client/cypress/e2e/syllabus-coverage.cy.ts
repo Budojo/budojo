@@ -210,3 +210,108 @@ describe('Syllabus coverage', () => {
     cy.get('[data-cy="syllabus-coverage"]').should('exist');
   });
 });
+
+describe('Who has seen a technique (#1745)', () => {
+  function person(id: number, first: string, last: string, over: Record<string, unknown> = {}) {
+    return {
+      id,
+      first_name: first,
+      last_name: last,
+      belt: 'blue',
+      stripes: 1,
+      status: 'active',
+      joined_at: '2026-09-01',
+      date_of_birth: null,
+      photo_url: null,
+      user_avatar_url: null,
+      exposures: 0,
+      last_seen_on: null,
+      state: 'never',
+      ...over,
+    };
+  }
+
+  const EXPOSURE = {
+    topic: { id: 11, name: 'Armbar', parent_name: 'Closed guard', kind: 'both', in_season: true },
+    season: { start: '2026-09-01', end: '2027-08-31', label: '2026/27' },
+    lessons: [
+      {
+        id: 1,
+        held_on: '2026-09-16',
+        name: 'Fundamentals',
+        kind: 'gi',
+        starts_at: '19:00',
+        headcount: 2,
+      },
+      {
+        id: 2,
+        held_on: '2026-10-05',
+        name: 'Fundamentals',
+        kind: 'gi',
+        starts_at: '19:00',
+        headcount: 1,
+      },
+    ],
+    athletes: [
+      person(1, 'Anna', 'Bianchi', { exposures: 2, last_seen_on: '2026-10-05', state: 'seen' }),
+      person(2, 'Marco', 'Rossi', { exposures: 1, last_seen_on: '2026-09-16', state: 'thin' }),
+      person(3, 'Giulia', 'Verdi'),
+    ],
+    totals: { lessons: 2, seen: 1, thin: 1, never: 1, unplaced: 0 },
+  };
+
+  it('opens a taught row on its lessons and on who was, and was not, there', () => {
+    stub();
+    cy.intercept('GET', '/api/v1/stats/syllabus/topics/11*', {
+      statusCode: 200,
+      body: { data: EXPOSURE },
+    }).as('exposure');
+
+    cy.visitAuthenticated('/dashboard/stats/syllabus');
+    cy.wait('@coverage');
+
+    cy.get('[data-cy="syllabus-taught-11"] button').click();
+    cy.wait('@exposure').its('request.url').should('contain', 'seasons_back=0');
+
+    cy.get('[data-cy="exposure-head"]').should('contain.text', 'Armbar');
+    cy.get('[data-cy="exposure-lessons"]')
+      .should('contain.text', 'Taught in 2 lessons this season')
+      .and('contain.text', '2 people');
+    cy.get('[data-cy="exposure-group-seen"]').should('contain.text', 'Anna Bianchi');
+    cy.get('[data-cy="exposure-group-thin"]').should('contain.text', 'Marco Rossi');
+    cy.get('[data-cy="exposure-group-never"]').should('contain.text', 'Giulia Verdi');
+  });
+
+  it('lists apart the people the record cannot place, never under never', () => {
+    stub();
+    cy.intercept('GET', '/api/v1/stats/syllabus/topics/11*', {
+      statusCode: 200,
+      body: {
+        data: {
+          ...EXPOSURE,
+          athletes: [...EXPOSURE.athletes, person(4, 'Paolo', 'Neri', { state: 'unplaced' })],
+          totals: { ...EXPOSURE.totals, unplaced: 1 },
+        },
+      },
+    }).as('exposure');
+
+    cy.visitAuthenticated('/dashboard/stats/syllabus');
+    cy.wait('@coverage');
+
+    cy.get('[data-cy="syllabus-taught-11"] button').click();
+    cy.wait('@exposure');
+
+    cy.get('[data-cy="exposure-group-unplaced"]').should('contain.text', 'Paolo Neri');
+    cy.get('[data-cy="exposure-group-never"]').should('not.contain.text', 'Paolo Neri');
+  });
+
+  it('leaves a never-taught row a plain row', () => {
+    stub();
+
+    cy.visitAuthenticated('/dashboard/stats/syllabus');
+    cy.wait('@coverage');
+
+    cy.get('[data-cy="syllabus-missing-31"]').should('contain.text', 'Omoplata');
+    cy.get('[data-cy="syllabus-missing-31"] button').should('not.exist');
+  });
+});

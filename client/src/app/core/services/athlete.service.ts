@@ -219,16 +219,21 @@ export interface Athlete {
    */
   attendance_month_count?: number | null;
   attendance_total_count?: number | null;
+  /**
+   * The day of their latest presence (#1726), `YYYY-MM-DD`. Selected on the
+   * roster index AND on show. `null` means they have never trained; absent
+   * means the payload did not carry it, and the roster then shows no column.
+   */
+  last_attended_on?: string | null;
 }
 
 /**
- * What a row needs to draw a person (#1851): the input of
- * `app-athlete-identity` (belt spine, avatar, full name, age chip).
- *
- * The roster passes a whole `Athlete`, which fits. The monthly summary, the
- * owner's leaderboard and the expiring-documents list get exactly this shape
- * from the server (`AthleteIdentityResource`, `AthleteSummary` in the
- * contract), because those payloads are aggregates and carry no full athlete.
+ * What `app-athlete-identity` draws (the belt spine, the avatar, the name and
+ * the age chip) and nothing else. The roster passes a whole `Athlete`, which
+ * fits. A read that lists people without the whole athlete sends exactly this
+ * much: the technique drill-down (#1745), and the monthly summary, the owner's
+ * leaderboard and the expiring-documents list (#1851, `AthleteIdentityResource`,
+ * `AthleteSummary` in the contract).
  */
 export type AthleteIdentity = Pick<
   Athlete,
@@ -267,7 +272,9 @@ export type AthleteSortField =
   // Query aliases, not columns (#1447) — the two attendance counts the roster
   // index selects. The server whitelists them separately for that reason.
   | 'attendance_month'
-  | 'attendance_total';
+  | 'attendance_total'
+  // The last presence (#1726), another alias. Never-trained sorts last both ways.
+  | 'last_seen';
 
 export type AthleteSortOrder = 'asc' | 'desc';
 
