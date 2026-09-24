@@ -301,8 +301,6 @@ class SyllabusCoverageAction
                 // worked half guard", an answer that fills no technique but
                 // is not nothing either.
                 'worked' => $taught[$position->id]['lessons'] ?? 0,
-                // How many people those position-level lessons reached (#1746).
-                'worked_reach' => $taught[$position->id]['reach'] ?? 0,
             ];
         }
 

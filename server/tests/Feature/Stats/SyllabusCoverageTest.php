@@ -417,14 +417,6 @@ it('drops a presence that was corrected away from both numbers', function (): vo
     expect(taughtRow(coverage($this), 'Armbar'))->toMatchArray(['attendances' => 1, 'reach' => 1]);
 });
 
-it('gives a position the reach of the lessons that named it', function (): void {
-    $three = Athlete::factory()->count(3)->for($this->academy)->create()->all();
-    reachLesson($this, '2026-09-07', [$this->closedGuard], $three);
-
-    $position = collect(coverage($this)['positions'])->firstWhere('name', 'Closed guard');
-
-    expect($position)->toMatchArray(['worked' => 1, 'worked_reach' => 3]);
-});
 
 it('leaves reach out of the headline', function (): void {
     $four = Athlete::factory()->count(4)->for($this->academy)->create()->all();

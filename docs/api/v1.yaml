@@ -8665,7 +8665,7 @@ components:
           description: One row per position with anything in scope under it.
           items:
             type: object
-            required: [id, name, kind, in_scope, covered, thin, missing, worked, worked_reach]
+            required: [id, name, kind, in_scope, covered, thin, missing, worked]
             properties:
               id: { type: integer, format: int64 }
               name: { type: string }
@@ -8679,9 +8679,6 @@ components:
                 description: |
                   Held lessons that tagged the position itself — "we worked
                   half guard". Fills no technique, and is not nothing either.
-              worked_reach:
-                type: integer
-                description: Distinct athletes at one or more of the `worked` lessons (#1746).
         missing:
           type: array
           items:

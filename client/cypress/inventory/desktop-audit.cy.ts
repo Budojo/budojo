@@ -779,18 +779,7 @@ function coveragePosition(
   worked: number,
   kind = 'both',
 ) {
-  return {
-    id,
-    name,
-    kind,
-    in_scope,
-    covered,
-    thin,
-    missing: in_scope - covered - thin,
-    worked,
-    // Four or five people a worked evening, as the check-in fixtures have it.
-    worked_reach: worked === 0 ? 0 : 5,
-  };
+  return { id, name, kind, in_scope, covered, thin, missing: in_scope - covered - thin, worked };
 }
 
 const SYLLABUS_COVERAGE = {

@@ -26,7 +26,6 @@ function report(over: Partial<SyllabusCoverage> = {}): SyllabusCoverage {
         thin: 1,
         missing: 2,
         worked: 0,
-        worked_reach: 0,
       },
       {
         id: 2,
@@ -37,7 +36,6 @@ function report(over: Partial<SyllabusCoverage> = {}): SyllabusCoverage {
         thin: 1,
         missing: 2,
         worked: 2,
-        worked_reach: 5,
       },
     ],
     missing: [

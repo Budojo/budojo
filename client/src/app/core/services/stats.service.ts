@@ -65,8 +65,6 @@ export interface CoveragePosition {
   readonly missing: number;
   /** Held lessons that tagged the position itself — "we worked half guard". */
   readonly worked: number;
-  /** Distinct athletes at one or more of the `worked` lessons (#1746). */
-  readonly worked_reach: number;
 }
 
 export interface CoverageTopic {

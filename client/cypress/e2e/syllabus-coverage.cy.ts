@@ -35,7 +35,6 @@ function position(over: Record<string, unknown> = {}) {
     thin: 1,
     missing: 2,
     worked: 0,
-    worked_reach: 0,
     ...over,
   };
 }
@@ -55,7 +54,6 @@ function report(over: Record<string, unknown> = {}) {
         thin: 1,
         missing: 2,
         worked: 2,
-        worked_reach: 5,
       }),
     ],
     missing: [
