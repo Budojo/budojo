@@ -23,6 +23,50 @@
     color: var(--p-text-muted-color);
   }
 
+  // The week stepper (#1859): a toolbar chevron, 40 px drawn inside a 48 px
+  // hit region, as the touch-target rule allows for a supplementary control.
+  &__step {
+    position: relative;
+    appearance: none;
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    padding: 0;
+    background: none;
+    border: 1px solid var(--p-content-border-color);
+    border-radius: var(--budojo-radius-small, 0.5rem);
+    color: var(--p-text-muted-color);
+    cursor: pointer;
+
+    &::after {
+      content: '';
+      position: absolute;
+      inset: -0.25rem;
+    }
+
+    &:hover:not(:disabled) {
+      background: var(--p-content-hover-background);
+    }
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--p-primary-color);
+      outline-offset: 2px;
+    }
+  }
+
+  &__hint {
+    font-size: 0.75rem;
+    color: var(--p-text-muted-color);
+  }
+
   // Planned or held, as an eyebrow chip — the same monochrome shape the
   // timetable and the programme use for a dimension of the row.
   &__state {

@@ -3459,6 +3459,11 @@ paths:
         attached survives every sync — tidying the syllabus must not rewrite
         what a past lesson was about.
 
+        **A plan lands on a day the class runs (#1859).** A `held_on` of
+        today or later that is not the class's weekday is a 422 on `held_on`
+        — unless the lesson already exists, so a plan made before the class
+        moved day can still be edited or cleared. The past keeps no rule.
+
         Requires `attendance_record`, not `academy_settings_update`: writing
         down what was taught is the same act of witness as writing down who
         was there.
@@ -3510,6 +3515,9 @@ paths:
         "Marco's first day back", not data entry — the note is never parsed
         into topics. Materialises the lesson like the topics write does; an
         empty or whitespace-only note is stored as `null`.
+
+        Held to the topics write's weekday rule (#1859): a new lesson dated
+        today or later must fall on the class's weekday.
 
         Requires `attendance_record`.
       operationId: lessonSetNotes
