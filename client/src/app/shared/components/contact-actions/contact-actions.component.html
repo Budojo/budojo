@@ -1,0 +1,51 @@
+@let l = links();
+@if (l.whatsapp && l.tel) {
+  <!--
+    `stopPropagation`: the rows these sit in may one day take a click of
+    their own, and a tap meant for WhatsApp must not also open the athlete.
+  -->
+  <a
+    class="contact-actions__action"
+    [href]="l.whatsapp"
+    target="_blank"
+    rel="noopener noreferrer"
+    [attr.aria-label]="'shared.contact.whatsappAria' | translate: { name: name() }"
+    [pTooltip]="'shared.contact.whatsapp' | translate"
+    tooltipPosition="top"
+    [attr.data-cy]="cy('whatsapp')"
+    (click)="$event.stopPropagation()"
+  >
+    <i class="pi pi-whatsapp" aria-hidden="true"></i>
+  </a>
+  <a
+    class="contact-actions__action"
+    [href]="l.tel"
+    [attr.aria-label]="'shared.contact.callAria' | translate: { name: name() }"
+    [pTooltip]="'shared.contact.call' | translate"
+    tooltipPosition="top"
+    [attr.data-cy]="cy('call')"
+    (click)="$event.stopPropagation()"
+  >
+    <i class="pi pi-phone" aria-hidden="true"></i>
+  </a>
+} @else {
+  <!--
+    Disabled, and focusable so the reason is reachable from the keyboard: the
+    tooltip opens on focus as well as on hover. The same two glyphs, dimmed,
+    so a column of rows keeps one shape whether or not a number is on file.
+  -->
+  <span
+    class="contact-actions__none"
+    role="button"
+    aria-disabled="true"
+    tabindex="0"
+    [attr.aria-label]="'shared.contact.noPhone' | translate"
+    [pTooltip]="'shared.contact.noPhone' | translate"
+    tooltipEvent="both"
+    tooltipPosition="top"
+    [attr.data-cy]="cy('none')"
+  >
+    <i class="pi pi-whatsapp" aria-hidden="true"></i>
+    <i class="pi pi-phone" aria-hidden="true"></i>
+  </span>
+}

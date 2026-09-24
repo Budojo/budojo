@@ -111,6 +111,9 @@ $summary-mobile-breakpoint: 768px;
 }
 
 .summary-card {
+  // The containing block for the belt spine and for the stretched name link
+  // (#1851): both measure the card, not the identity inside it.
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -119,6 +122,13 @@ $summary-mobile-breakpoint: 768px;
   background: var(--p-content-background);
   border: 1px solid var(--p-content-border-color);
   border-radius: 12px;
+  transition: background var(--budojo-motion-fast) var(--budojo-motion-decelerate);
+
+  // The whole card is one link (#1851, the stretched name), so it answers a
+  // tap the way the roster's card does: a press you can see.
+  &:active {
+    background: var(--p-content-hover-background);
+  }
 
   &__name {
     font-weight: 600;
@@ -128,6 +138,11 @@ $summary-mobile-breakpoint: 768px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  &__identity {
+    flex: 1;
+    min-width: 0;
   }
 
   &__count {
@@ -144,12 +159,12 @@ $summary-mobile-breakpoint: 768px;
   }
 }
 
-// The name is the way into that athlete's own attendance tab — it was plain
-// text on a page whose every row is about one person (#1639, SUM-3).
-//
-// Coloured, not hover-only: a signifier that appears on hover does not exist
-// on a phone, which is this app's primary form factor. Same treatment the
-// expiring-documents table gives the identical link.
+// The fallback for a row that arrives without the athlete's identity (#1851):
+// every row the server sends today carries one and is drawn by
+// `app-athlete-identity`, whose name is ink. Only this fallback keeps the
+// indigo link. The name is the way into that athlete's own attendance tab
+// (#1639, SUM-3), and colour, not hover, signals it, because a signifier that
+// appears on hover does not exist on a phone.
 .summary-page__athlete-link {
   color: var(--p-primary-color);
   text-decoration: none;
@@ -166,6 +181,13 @@ $summary-mobile-breakpoint: 768px;
   display: flex;
   align-items: center;
   min-height: 3rem;
+}
+
+// The belt spine's anchor (#1851): `position` on the cell, not the row, as on
+// the roster (#1429), because a `<td>` is a reliable containing block and a
+// `<tr>` is not.
+.summary-page__athlete-cell {
+  position: relative;
 }
 
 // Why the columns have no fraction this month.

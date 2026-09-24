@@ -36,6 +36,10 @@ export class AthleteIdentityComponent {
   private readonly languageService = inject(LanguageService);
   private readonly beltLadder = inject(BeltLadderService);
 
+  /**
+   * The person, as little of them as a row needs (#1851). The roster passes a
+   * whole `Athlete`; the lists built on aggregates pass the identity alone.
+   */
   readonly athlete = input.required<AthleteIdentity>();
 
   /**
@@ -47,6 +51,27 @@ export class AthleteIdentityComponent {
    * and you navigate away instead of marking someone present.
    */
   readonly linkToDetail = input<boolean>(false);
+
+  /**
+   * The detail tab the name opens, when the page is about one (#1851): the
+   * monthly summary leads to the athlete's attendance, the expiring list to
+   * their documents. Null opens the detail page's default tab, as the roster
+   * does.
+   */
+  readonly detailTab = input<string | null>(null);
+
+  /**
+   * Stretch the name link over the nearest positioned ancestor (#1851), so a
+   * phone card is one tap target rather than a 19 px line of text. The card
+   * supplies `position: relative`, as it already must for the spine.
+   */
+  readonly stretchLink = input<boolean>(false);
+
+  protected readonly detailLink = computed(() => {
+    const tab = this.detailTab();
+    const base: (string | number)[] = ['/dashboard/athletes', this.athlete().id];
+    return tab ? [...base, tab] : base;
+  });
 
   /** The public-profile route the avatar links to, when the athlete has a handle. */
   readonly avatarHandle = input<string | null>(null);

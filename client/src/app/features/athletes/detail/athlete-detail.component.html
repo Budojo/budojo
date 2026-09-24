@@ -102,14 +102,18 @@
               @for (r of reach; track r.cyKey) {
                 <li>
                   <!--
-                    No `target="_blank"`: `tel:` and `mailto:` are handed to
-                    the OS handler, and a new tab for them leaves an empty
-                    window behind on the desktop.
+                    No `target="_blank"` for `tel:` and `mailto:`: they are
+                    handed to the OS handler, and a new tab for them leaves an
+                    empty window behind on the desktop. WhatsApp is a web page
+                    and is the exception (#1727): the desktop shell hands a new
+                    `https` window to the system browser.
                   -->
                   <a
                     class="reach-links__link"
                     [href]="r.href"
-                    [attr.aria-label]="r.ariaKey | translate: { value: r.label }"
+                    [attr.target]="r.external ? '_blank' : null"
+                    [attr.rel]="r.external ? 'noopener noreferrer' : null"
+                    [attr.aria-label]="r.ariaKey | translate: { value: r.ariaValue }"
                     [attr.data-cy]="'athlete-reach-' + r.cyKey"
                   >
                     <i [class]="r.icon" aria-hidden="true"></i>
