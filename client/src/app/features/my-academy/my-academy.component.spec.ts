@@ -71,10 +71,38 @@ describe('MyAcademyComponent (#618, M7 PR-D slice 2)', () => {
       'Via Roma 10',
     );
     expect(el.querySelector('[data-cy="my-academy-phone"]')?.textContent).toContain('+39');
+    // Built by the shared contact-links util (#1727): unspaced, with the `+`.
+    expect(el.querySelector('[data-cy="my-academy-phone"]')?.getAttribute('href')).toBe(
+      'tel:+390612345678',
+    );
     expect(el.querySelector('[data-cy="my-academy-owner"]')).not.toBeNull();
     expect(el.querySelector('[data-cy="my-academy-owner-email"]')?.textContent).toContain(
       'mario@example.com',
     );
+  });
+
+  it('hides the phone row for a half pair', () => {
+    // A half-populated pair produces no link, never a broken one (#1727).
+    const { fixture, el, http } = setup();
+    http
+      .expectOne(`${environment.apiBase}/api/v1/me/academy`)
+      .flush({ data: fixtureAcademy({ phone_national_number: null }) });
+    fixture.detectChanges();
+
+    expect(el.querySelector('[data-cy="my-academy-card"]')).not.toBeNull();
+    expect(el.querySelector('[data-cy="my-academy-phone"]')).toBeNull();
+  });
+
+  it('hides the phone row when the number is only whitespace', () => {
+    // Since #1727 an empty number is a half pair too; before, it rendered
+    // a "+39 " link that dialled nothing.
+    const { fixture, el, http } = setup();
+    http
+      .expectOne(`${environment.apiBase}/api/v1/me/academy`)
+      .flush({ data: fixtureAcademy({ phone_national_number: '  ' }) });
+    fixture.detectChanges();
+
+    expect(el.querySelector('[data-cy="my-academy-phone"]')).toBeNull();
   });
 
   it('renders the empty state when the API returns null (no linked academy)', () => {
