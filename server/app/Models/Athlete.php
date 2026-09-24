@@ -173,10 +173,7 @@ class Athlete extends Model implements HasAddress
      */
     public function scopeWithCurrentCertificateExpiry(Builder $query): Builder
     {
-        if ($query->getQuery()->columns === null) {
-            $query->select('athletes.*');
-        }
-
+        // `addSelect` keeps `athletes.*` when nothing else is selected.
         return $query->addSelect([
             'current_certificate_expires_at' => Document::query()
                 ->selectRaw('max(documents.expires_at)')
