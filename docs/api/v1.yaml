@@ -3801,7 +3801,12 @@ paths:
 
         A candidate is in scope for the class exactly as for
         `/lessons/suggestions`: living, in season, a technique, of a kind the
-        class admits. `missed` counts the people checked in tonight who were
+        class admits — minus what tonight's lesson already names, so a tagged
+        technique never takes a slot. **Before tonight is by the clock**: an
+        earlier day counts, and so does an earlier lesson the same day; a
+        later one the same evening does not, and a same-day lesson with no
+        start time (or a tonight with none) is left out, because there is no
+        saying which came first. `missed` counts the people checked in tonight who were
         at none of its held lessons and had joined by the last of them. A row
         comes back only when `missed` is at least 2 **and** at least half of
         `present`; at most three, the most missed first, then the one taught

@@ -193,13 +193,70 @@ it('never offers a no-gi technique to a gi class', function (): void {
     expect(roomGaps($this)['rows'])->toBe([]);
 });
 
-it('does not count last season, nor tonight itself', function (): void {
+it('does not count last season', function (): void {
     $people = roomRoster($this, 4, '2025-01-01');
     roomLesson($this, '2026-06-10', [$this->armbar], [$people[0]]);
-    // Tagged tonight: tonight is the lesson being planned, not one they missed.
-    roomLesson($this, '2026-11-18', [$this->armbar], $people);
+    roomLesson($this, '2026-11-18', [], $people);
 
     expect(roomGaps($this)['rows'])->toBe([]);
+});
+
+/** A second class on tonight's weekday, at `$time`, for same-day lessons. */
+function roomSameDayClass(mixed $test, string $time): AcademyClass
+{
+    return AcademyClass::factory()->for($test->academy)->create([
+        'name' => "Class at {$time}",
+        'weekday' => CarbonImmutable::parse('2026-11-18')->dayOfWeek,
+        'starts_at' => $time,
+        'kind' => 'gi',
+    ]);
+}
+
+it('counts a lesson earlier the same day, and not one later that evening', function (): void {
+    $people = roomRoster($this, 4, '2025-01-01');
+    roomLesson($this, '2026-10-07', [$this->armbar], [$people[0]]);
+
+    // Anna saw the armbar at the 12:30 class today: before tonight, so she
+    // did not miss it. The 21:00 class comes after tonight's 19:00 and
+    // cannot have been missed yet.
+    $noon = Lesson::factory()->forClass(roomSameDayClass($this, '12:30'), '2026-11-18')->create();
+    $noon->topics()->sync([$this->armbar->id]);
+    AttendanceRecord::factory()->create([
+        'athlete_id' => $people[1]->id, 'lesson_id' => $noon->id, 'attended_on' => '2026-11-18',
+    ]);
+    $late = Lesson::factory()->forClass(roomSameDayClass($this, '21:00'), '2026-11-18')->create();
+    $late->topics()->sync([$this->armbar->id]);
+    AttendanceRecord::factory()->create([
+        'athlete_id' => $people[2]->id, 'lesson_id' => $late->id, 'attended_on' => '2026-11-18',
+    ]);
+
+    roomLesson($this, '2026-11-18', [], $people);
+
+    // Taught twice before tonight, to people 0 and 1: people 2 and 3 missed
+    // it. Counting 21:00 would make it 3 lessons and 1 missed; dropping the
+    // whole day would make it 1 lesson and 3 missed.
+    expect(roomGaps($this)['rows'][0])->toMatchArray([
+        'lessons' => 2,
+        'last_taught_on' => '2026-11-18',
+        'missed' => 2,
+    ]);
+});
+
+it('leaves out what tonight already covers, so the next gaps take its place', function (): void {
+    $people = roomRoster($this, 10);
+    $kimura = SyllabusTopic::factory()->under($this->guard)->create(['name' => 'Kimura', 'sort_order' => 2]);
+    $omoplata = SyllabusTopic::factory()->under($this->guard)->create(['name' => 'Omoplata', 'sort_order' => 3]);
+    $sweep = SyllabusTopic::factory()->under($this->guard)->create(['name' => 'Hip bump', 'sort_order' => 4]);
+
+    roomLesson($this, '2026-10-07', [$this->armbar], [$people[0]]);
+    roomLesson($this, '2026-10-14', [$kimura], array_slice($people, 0, 2));
+    roomLesson($this, '2026-10-21', [$omoplata], array_slice($people, 0, 3));
+    roomLesson($this, '2026-10-28', [$sweep], array_slice($people, 0, 4));
+    // The armbar — the biggest gap — is already on tonight's lesson.
+    roomLesson($this, '2026-11-18', [$this->armbar], $people);
+
+    // Without the armbar taking a slot, all three others come back.
+    expect(array_column(roomGaps($this)['rows'], 'name'))->toBe(['Kimura', 'Omoplata', 'Hip bump']);
 });
 
 it('stays quiet unless most of the room missed it', function (): void {

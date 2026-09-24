@@ -9,6 +9,7 @@ use App\Models\AcademyClass;
 use App\Models\Athlete;
 use App\Models\Lesson;
 use App\Models\SyllabusTopic;
+use App\Support\AthleteIdentity;
 use App\Support\Season;
 use App\Support\TopicAttendance;
 use Carbon\CarbonImmutable;
@@ -24,13 +25,24 @@ use Illuminate\Support\Facades\DB;
  * asks when choosing a recap — *who is here, and what did they miss?* — which
  * no paper register can.
  *
- * A candidate is a technique in scope for the class (in season, of a kind the
- * class admits) that the academy taught in at least one held lesson this
+ * A candidate is a technique the class could be told to teach
+ * ({@see SyllabusTopic::scopeTeachableIn()}) that tonight's lesson does not
+ * already name, and that the academy taught in at least one held lesson this
  * season **before tonight**. For each, "missed" counts the people checked in
  * tonight who were at none of those lessons and had joined by the last of
  * them. It is offered only when most of the room missed it — at least two
  * people and at least half — and at most three come back, the most missed
  * first, then the one that has waited longest.
+ *
+ * **Before tonight is by the clock, not by the date.** A lesson earlier the
+ * same day counts — somebody who saw the armbar at the 12:30 class did not
+ * miss it at 19:00 — and one later the same evening does not, because it has
+ * not happened yet. When either lesson has no start time, the same-day one is
+ * left out: there is no saying which came first.
+ *
+ * **What tonight already covers is left out**, so it cannot take a slot the
+ * picker would then hide: once the instructor ticks the top gap, the next one
+ * comes up in its place.
  *
  * **It sharpens the suggestions rather than repeating them.** A technique
  * taught twice counts as covered there; if seven of tonight's nine never saw
@@ -62,19 +74,23 @@ class RoomGapsAction
      */
     public function execute(Academy $academy, AcademyClass $class, CarbonImmutable $heldOn): array
     {
-        $present = $this->presentTonight($class, $heldOn);
-        if (\count($present) < self::MIN_PRESENT) {
+        $tonight = Lesson::query()
+            ->where('academy_class_id', $class->id)
+            ->whereDate('held_on', $heldOn->toDateString())
+            ->first();
+
+        $present = $tonight instanceof Lesson ? $this->presentAt($tonight) : [];
+        if (! $tonight instanceof Lesson || \count($present) < self::MIN_PRESENT) {
             return ['present' => \count($present), 'rows' => []];
         }
 
-        $techniques = $this->techniquesInScope($academy, $class);
-        $taught = $this->attendance->lessonsFor(
+        $techniques = $this->candidates($academy, $class, $tonight);
+        $taught = $this->before($tonight, $this->attendance->lessonsFor(
             $academy->id,
             array_values($techniques->keys()->all()),
             Season::startFor($academy, $heldOn)->toDateString(),
-            // Tonight is the lesson being planned, not one anybody missed.
-            $heldOn->subDay()->toDateString(),
-        );
+            $heldOn->toDateString(),
+        ));
         $unattributed = $this->unattributedDays(array_keys($present), $taught);
 
         $rows = [];
@@ -101,6 +117,55 @@ class RoomGapsAction
                 return $row;
             }, \array_slice($rows, 0, self::LIMIT)),
         ];
+    }
+
+    /**
+     * The techniques the class could be told to teach, minus what tonight's
+     * lesson already names — keyed by id.
+     *
+     * @return Collection<int, SyllabusTopic>
+     */
+    private function candidates(Academy $academy, AcademyClass $class, Lesson $tonight): Collection
+    {
+        $covered = DB::table('lesson_topic')
+            ->where('lesson_id', $tonight->id)
+            ->pluck('syllabus_topic_id');
+
+        return SyllabusTopic::query()
+            ->where('academy_id', $academy->id)
+            ->teachableIn($class->kind)
+            ->whereNotIn('id', $covered)
+            ->with('parent')
+            ->get()
+            ->keyBy('id');
+    }
+
+    /**
+     * Only the lessons that happened before tonight's: any earlier day, and
+     * earlier the same day by the clock. Tonight's own lesson never counts.
+     *
+     * @param  array<int, list<array{id: int, held_on: string, name: string, kind: string, starts_at: string|null, athlete_ids: list<int>}>>  $taught
+     * @return array<int, list<array{id: int, held_on: string, name: string, kind: string, starts_at: string|null, athlete_ids: list<int>}>>
+     */
+    private function before(Lesson $tonight, array $taught): array
+    {
+        $day = $tonight->held_on->toDateString();
+        $at = $tonight->starts_at;
+
+        $out = [];
+        foreach ($taught as $topicId => $lessons) {
+            $earlier = array_values(array_filter($lessons, static fn (array $lesson): bool => $lesson['id'] !== $tonight->id
+                && ($lesson['held_on'] < $day
+                    || ($lesson['held_on'] === $day
+                        && $at !== null
+                        && $lesson['starts_at'] !== null
+                        && $lesson['starts_at'] < $at))));
+            if ($earlier !== []) {
+                $out[$topicId] = $earlier;
+            }
+        }
+
+        return $out;
     }
 
     /**
@@ -144,16 +209,7 @@ class RoomGapsAction
             'last_taught_on' => $last,
             'missed' => \count($missed),
             'unattributed' => $unsure,
-            'athletes' => array_map(static fn (Athlete $a): array => [
-                'id' => $a->id,
-                'first_name' => $a->first_name,
-                'last_name' => $a->last_name,
-                'belt' => $a->belt->value,
-                'stripes' => $a->stripes,
-                'date_of_birth' => $a->date_of_birth?->toDateString(),
-                'photo_url' => $a->photo_url,
-                'user_avatar_url' => $a->user?->avatar_url,
-            ], $missed),
+            'athletes' => array_map(AthleteIdentity::of(...), $missed),
             // Sort key only; stripped before the rows are returned.
             '_order' => [$parent instanceof SyllabusTopic ? $parent->sort_order : 0, $technique->sort_order],
         ];
@@ -161,25 +217,15 @@ class RoomGapsAction
 
     /**
      * The athletes with a live presence on tonight's lesson, keyed by id, in
-     * register order. No lesson in the slot, or nobody checked into it, is an
-     * empty room.
+     * register order.
      *
      * @return array<int, Athlete>
      */
-    private function presentTonight(AcademyClass $class, CarbonImmutable $heldOn): array
+    private function presentAt(Lesson $tonight): array
     {
-        $lesson = Lesson::query()
-            ->where('academy_class_id', $class->id)
-            ->whereDate('held_on', $heldOn->toDateString())
-            ->first();
-
-        if (! $lesson instanceof Lesson) {
-            return [];
-        }
-
         return Athlete::query()
             ->whereIn('id', DB::table('attendance_records')
-                ->where('lesson_id', $lesson->id)
+                ->where('lesson_id', $tonight->id)
                 ->whereNull('deleted_at')
                 ->select('athlete_id'))
             ->with('user')
@@ -189,27 +235,6 @@ class RoomGapsAction
             ->get()
             ->keyBy('id')
             ->all();
-    }
-
-    /**
-     * What the class could be told to teach: living, in season, a technique
-     * and not a position, of a kind the class admits — the suggestions' own
-     * scope ({@see SuggestLessonTopicsAction}).
-     *
-     * @return Collection<int, SyllabusTopic>
-     */
-    private function techniquesInScope(Academy $academy, AcademyClass $class): Collection
-    {
-        $admitted = $class->kind->admittedTopicModes();
-
-        return SyllabusTopic::query()
-            ->where('academy_id', $academy->id)
-            ->where('in_season', true)
-            ->whereNotNull('parent_id')
-            ->when($admitted !== null, static fn ($q) => $q->whereIn('kind', $admitted))
-            ->with('parent')
-            ->get()
-            ->keyBy('id');
     }
 
     /**
