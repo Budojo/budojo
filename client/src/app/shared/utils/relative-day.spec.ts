@@ -28,7 +28,16 @@ describe('relativeDay', () => {
     ['2026-11-11', 'a week ago'],
     ['2026-11-05', 'a week ago'],
     ['2026-11-04', '2 weeks ago'],
-    ['2026-09-02', '11 weeks ago'],
+    // Weeks stop at seven; eight weeks is read in months (#1726), rounded —
+    // eight weeks is nearer two months than one.
+    ['2026-09-24', '7 weeks ago'],
+    ['2026-09-23', '2 months ago'],
+    ['2026-09-02', '3 months ago'],
+    ['2025-12-03', '11 months ago'],
+    // Twelve months is a year; two years once past a year and a half.
+    ['2025-11-23', 'a year ago'],
+    ['2025-06-18', 'a year ago'],
+    ['2024-09-01', '2 years ago'],
   ])('reads %s as "%s"', (iso, expected) => {
     expect(relativeDay(iso, translate, now)).toBe(expected);
   });

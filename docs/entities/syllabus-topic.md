@@ -81,4 +81,5 @@ The same enum as [`AcademyClass`](./academy-class.md#enum--trainingmode-1803)'s,
 
 - [`academy-class.md`](./academy-class.md) — the timetable; its classes share the `TrainingMode` vocabulary, and the table of cases lives there
 - [`lesson.md`](./lesson.md) — the lessons that covered these topics, through `lesson_topic` (#1564)
+- `GET /api/v1/stats/syllabus/topics/{syllabusTopic}` — who has seen one topic this season (#1745): its held lessons, and the roster split into seen, seen once and never there while on the roster. Somebody who trained on one of those days with no lesson named is listed apart, never as absent (#1590). Rules in [`../api/v1.yaml`](../api/v1.yaml) § `statsTopicExposure`
 - Epic #1561 — what was taught, and what is still missing

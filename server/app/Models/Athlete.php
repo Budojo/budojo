@@ -52,6 +52,7 @@ use Illuminate\Support\Facades\Storage;
  * @property string                  $last_name_sort         Same, for `last_name`.
  * @property-read int|null           $attendance_month_count Present only on the roster index (#1447), which selects it as a `withCount` alias. Null everywhere else — read it as "not asked for", never as "zero".
  * @property-read int|null           $attendance_total_count Same, for the current SEASON (#1484) — the academy's training year, floored per row at this athlete's `joined_at`. It was an all-time count until then.
+ * @property-read string|null        $last_attended_on       The latest live presence (#1726), selected as a `withMax` alias on the roster index and on show. Null when they never trained; the resource omits the key where the query did not ask.
  */
 #[Fillable(['academy_id', 'fee_tier_id', 'billing_period_months', 'user_id', 'is_self', 'first_name', 'last_name', 'email', 'phone_country_code', 'phone_national_number', 'website', 'facebook', 'instagram', 'date_of_birth', 'belt', 'stripes', 'status', 'joined_at'])]
 #[ObservedBy([AthleteObserver::class, AthleteAuditObserver::class])]

@@ -25,7 +25,11 @@
       </p>
     }
     @case ('ok') {
-      <ol class="leaderboard-card__list" data-cy="leaderboard-list">
+      <ol
+        class="leaderboard-card__list"
+        [class.leaderboard-card__list--identities]="drawsIdentities()"
+        data-cy="leaderboard-list"
+      >
         @for (row of rows(); track row.athlete_id) {
           <li
             class="leaderboard-card__row"
@@ -33,13 +37,27 @@
             [attr.data-cy]="'leaderboard-row-' + row.athlete_id"
           >
             <span class="leaderboard-card__rank">{{ row.rank }}</span>
-            <span class="leaderboard-card__name">
-              @if (row.anonymous) {
-                {{ 'leaderboard.anonymous' | translate }}
-              } @else {
-                {{ row.first_name }} {{ row.last_name_initial }}.
-              }
-            </span>
+            <!--
+              The owner gets each visible athlete's identity and sees them as
+              every list draws people, belt spine first (#1851). The portal
+              gets none, so a training partner still reads "first name and
+              initial", and an anonymous row stays anonymous for everyone.
+            -->
+            @if (row.athlete; as person) {
+              <app-athlete-identity
+                class="leaderboard-card__identity"
+                [athlete]="person"
+                [linkToDetail]="true"
+              />
+            } @else {
+              <span class="leaderboard-card__name">
+                @if (row.anonymous) {
+                  {{ 'leaderboard.anonymous' | translate }}
+                } @else {
+                  {{ row.first_name }} {{ row.last_name_initial }}.
+                }
+              </span>
+            }
             <span class="leaderboard-card__stats">
               {{ row.sessions }}× · {{ row.hours.toFixed(1) }}h
             </span>

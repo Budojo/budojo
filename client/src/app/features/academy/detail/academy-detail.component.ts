@@ -16,6 +16,9 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AcademyService } from '../../../core/services/academy.service';
 import { LanguageService } from '../../../core/services/language.service';
 import { formatIsoDate } from '../../../shared/utils/locale';
+// Aliased: this component already has a `contactLinks` computed for the
+// academy's social profiles.
+import { contactLinks as phoneLinks, phoneLabel } from '../../../shared/utils/contact-links';
 import { MARTIAL_ART_KEYS } from '../../../shared/utils/i18n-enum-keys';
 import { DocumentsListComponent } from '../../athletes/detail/documents-list/documents-list.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
@@ -153,14 +156,10 @@ export class AcademyDetailComponent {
   protected readonly logoUrl = computed(() => this.academy()?.logo_url ?? null);
 
   /**
-   * Phone (#161) — emits a fully-formed `tel:` href + a human-spaced
-   * label for the visible text. The `tel:` URI scheme can't tolerate
-   * inner whitespace, so the href is built from the unspaced E.164
-   * form; the visible label keeps the prefix-vs-digits separation for
-   * legibility. Returns null when either half of the pair is missing —
-   * the all-or-nothing validator on the wire keeps "only country code,
-   * no number" from ever happening, but the defensive null-check
-   * covers legacy / partial data.
+   * Phone (#161) — a fully-formed `tel:` href + a human-spaced label for
+   * the visible text, both from the shared `contact-links` util (#1727),
+   * which owns the unspaced-href rule and the all-or-nothing check on a
+   * half-populated pair. Null when there is no whole number.
    *
    * Building the href in the computed (rather than concatenating in
    * the template) keeps the template a pure projection of state.
@@ -168,11 +167,10 @@ export class AcademyDetailComponent {
   protected readonly phoneE164 = computed<{ telHref: string; label: string } | null>(() => {
     const cc = this.academy()?.phone_country_code;
     const nn = this.academy()?.phone_national_number;
-    if (!cc || !nn) return null;
-    return {
-      telHref: `tel:${cc}${nn}`,
-      label: `${cc} ${nn}`,
-    };
+    const { tel } = phoneLinks(cc, nn);
+    const label = phoneLabel(cc, nn);
+    if (!tel || !label) return null;
+    return { telHref: tel, label };
   });
 
   /**
