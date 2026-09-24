@@ -269,6 +269,7 @@ function athlete(over: Record<string, unknown>) {
     active_carnet: null,
     attendance_month_count: 0,
     attendance_total_count: 0,
+    last_attended_on: null,
     ...over,
   };
 }
@@ -291,6 +292,7 @@ const ATHLETES = [
     payment_coverage: 'quarterly',
     attendance_month_count: 5,
     attendance_total_count: 143,
+    last_attended_on: '2026-09-11',
     active_carnet: { id: 7, code: 'A7K2', remaining_entries: 3, expires_at: '2027-01-10' },
   }),
   athlete({
@@ -304,6 +306,7 @@ const ATHLETES = [
     fee_tier: FEE_TIERS[0],
     attendance_month_count: 4,
     attendance_total_count: 61,
+    last_attended_on: '2026-09-10',
   }),
   athlete({
     id: 3,
@@ -320,6 +323,7 @@ const ATHLETES = [
     monthly_fee_cents: null,
     attendance_month_count: 6,
     attendance_total_count: 812,
+    last_attended_on: '2026-09-14',
   }),
   athlete({
     id: 4,
@@ -333,6 +337,7 @@ const ATHLETES = [
     billing_period_months: 12,
     attendance_month_count: 3,
     attendance_total_count: 402,
+    last_attended_on: '2026-09-03',
   }),
   athlete({
     id: 5,
@@ -347,6 +352,7 @@ const ATHLETES = [
     paid_current_month: false,
     attendance_month_count: 0,
     attendance_total_count: 9,
+    last_attended_on: '2026-03-20',
   }),
   athlete({
     id: 6,
@@ -361,6 +367,7 @@ const ATHLETES = [
     active_carnet: { id: 9, code: 'Q3M8', remaining_entries: 6, expires_at: '2027-03-01' },
     attendance_month_count: 2,
     attendance_total_count: 188,
+    last_attended_on: '2026-09-09',
   }),
   athlete({
     id: 7,
@@ -374,6 +381,7 @@ const ATHLETES = [
     paid_current_month: false,
     attendance_month_count: 1,
     attendance_total_count: 530,
+    last_attended_on: '2026-09-01',
   }),
   athlete({
     id: 8,
@@ -386,6 +394,7 @@ const ATHLETES = [
     created_at: '2026-09-07T18:00:00+00:00',
     attendance_month_count: 2,
     attendance_total_count: 2,
+    last_attended_on: '2026-09-10',
   }),
 ];
 
@@ -2167,6 +2176,13 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
   screen('20-athletes-paid-sort', '/dashboard/athletes', ROSTER_READY, {
     act: () => {
       press('[data-cy="athletes-paid-filter"]');
+      cy.wait(400);
+    },
+  });
+  // The Last seen header pressed once (#1726): longest absent first.
+  screen('20-athletes-last-seen-sort', '/dashboard/athletes', ROSTER_READY, {
+    act: () => {
+      press('[data-cy="athletes-th-last-seen"]');
       cy.wait(400);
     },
   });
