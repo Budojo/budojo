@@ -4739,8 +4739,9 @@ paths:
         document with `expires_at` ≤ today + `days` (default 30), ordered
         `expires_at` ascending so the most urgent item is first. Already
         expired documents are included. Documents with `expires_at = null`
-        are excluded. Each item inlines an `athlete` summary (id, first_name,
-        last_name) for deep-linking from the dashboard widget.
+        are excluded. Each item inlines the `athlete`'s identity
+        (`AthleteSummary`: name, belt, stripes, date of birth, photo, #1851),
+        for deep-linking and for drawing the row with the belt.
 
         A medical certificate that a later one has replaced is also excluded:
         when an athlete has more than one live `medical_certificate` row, only
@@ -4793,14 +4794,8 @@ paths:
                     description: Documents whose `expires_at` is in the past OR within `days`. Ordered by `expires_at` ascending.
                   missing_medical_certificate:
                     type: array
-                    description: Active athletes with no live medical-certificate row.
-                    items:
-                      type: object
-                      required: [id, first_name, last_name]
-                      properties:
-                        id: { type: integer, format: int64 }
-                        first_name: { type: string }
-                        last_name: { type: string }
+                    description: Active athletes with no live medical-certificate row, each with their identity (#1851).
+                    items: { $ref: '#/components/schemas/AthleteSummary' }
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
@@ -5424,6 +5419,11 @@ paths:
         The caller's own row (when the caller is an athlete) carries
         `is_self: true`. Owners never get `is_self` set because they
         have no athlete row of their own.
+
+        Identity (#1851): for an owner, each visible row also carries
+        `athlete`, the full `AthleteSummary`, so the card draws the person
+        with the belt. An athlete caller never gets it, and an anonymous row
+        never has it.
       operationId: attendanceLeaderboard
       parameters:
         - name: month
@@ -5445,7 +5445,7 @@ paths:
                     maxItems: 5
                     items:
                       type: object
-                      required: [athlete_id, first_name, last_name_initial, anonymous, sessions, hours, is_self]
+                      required: [athlete_id, first_name, last_name_initial, anonymous, sessions, hours, is_self, athlete]
                       properties:
                         athlete_id: { type: integer, format: int64 }
                         first_name: { type: string, description: Empty string when anonymous. }
@@ -5454,6 +5454,15 @@ paths:
                         sessions: { type: integer, minimum: 1 }
                         hours: { type: number, format: float }
                         is_self: { type: boolean }
+                        athlete:
+                          allOf:
+                            - $ref: '#/components/schemas/AthleteSummary'
+                          nullable: true
+                          description: |
+                            The athlete's full identity, belt included (#1851), for an **owner**
+                            caller and a visible row only. Null for an anonymous row, and null
+                            on every row for an athlete caller: the portal keeps "first name and
+                            initial" for training partners.
                   meta:
                     type: object
                     required: [month]
@@ -6109,6 +6118,55 @@ paths:
               schema: { $ref: '#/components/schemas/ErrorMessage' }
               example: { message: Forbidden. }
         '422': { description: 'Validation error — months must be 3, 6, or 12.' }
+
+  /stats/attendance/at-risk:
+    get:
+      operationId: statsAttendanceAtRisk
+      summary: Athletes whose attendance has fallen against their own habit
+      description: |
+        Who is drifting (#1728), measured against each athlete's own record
+        rather than a fixed number, and counted in **realised sessions** —
+        the distinct days anyone in the academy was checked in — rather than
+        in weeks, so a closure contributes nothing. Per athlete the sessions
+        are clipped at `joined_at`, and today counts for an athlete only once
+        they are ticked: not being checked in yet to a session still in
+        progress is not an absence.
+
+        `recent` is the athlete's last 8 sessions; `baseline` the 24 before
+        those. One tier per athlete, the most severe that applies:
+
+        - `gone` — none of the last 8, and last seen more than 21 days ago
+          (or never, since joining);
+        - `quiet` — none of the last 3, for someone whose own baseline rate
+          says they would normally have come at least once in 3;
+        - `dropping` — at least 6 presences in the baseline and a recent
+          rate under half the baseline rate.
+
+        Left out: athletes not `active`, anyone who joined in the last 28
+        days, and anyone whose baseline holds fewer than 12 sessions.
+
+        Sorted `gone`, `quiet`, `dropping`; within a tier, longest absent
+        first (never-seen first of all). `meta.sessions_available` counts
+        the academy's realised sessions, so a client can tell "nobody is
+        drifting" from "not enough sessions recorded yet". Not cached.
+
+        Owner-only, and requires `stats_view`: the route sits in the
+        `role:owner` group with every other `/stats` read, so any other role
+        gets the `role_required` 403 before the capability is checked.
+      tags: [Stats]
+      responses:
+        '200':
+          description: The athletes at risk, most severe first, and how many sessions exist.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AtRiskAthletes' }
+        '401': { description: Unauthenticated }
+        '403':
+          description: Forbidden — not the owner (`role_required`), or no academy.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorMessage' }
+              example: { message: Forbidden. }
 
   /stats/payments/monthly:
     get:
@@ -7494,6 +7552,84 @@ components:
       type: string
       description: Enrollment status for an athlete
       enum: [active, inactive]
+
+    AtRiskAthletes:
+      type: object
+      description: Who is drifting, against their own attendance (#1728).
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          description: Most severe tier first; within a tier, longest absent first.
+          items:
+            type: object
+            required:
+              [
+                athlete,
+                tier,
+                last_attended_on,
+                recent_attended,
+                recent_sessions,
+                baseline_attended,
+                baseline_sessions,
+              ]
+            properties:
+              athlete:
+                type: object
+                description: |
+                  What a list row needs to draw the person (the belt spine
+                  of `app-athlete-identity`) and to reach them (the phone
+                  pair) without a second request.
+                required: [id, first_name, last_name, belt, stripes, status]
+                properties:
+                  id: { type: integer }
+                  first_name: { type: string }
+                  last_name: { type: string }
+                  belt: { type: string, example: blue }
+                  stripes: { type: integer, minimum: 0 }
+                  date_of_birth: { type: string, format: date, nullable: true }
+                  status: { type: string, example: active }
+                  photo_url: { type: string, nullable: true }
+                  user_avatar_url: { type: string, nullable: true }
+                  phone_country_code: { type: string, nullable: true, example: '+39' }
+                  phone_national_number: { type: string, nullable: true }
+              tier:
+                type: string
+                enum: [gone, quiet, dropping]
+                description: The most severe that applies — one value, never several.
+              last_attended_on:
+                type: string
+                format: date
+                nullable: true
+                description: Latest live presence, all time. `null` — never trained since joining.
+              recent_attended:
+                type: integer
+                minimum: 0
+                description: Presences in the last 8 sessions since joining.
+              recent_sessions:
+                type: integer
+                minimum: 0
+                description: Sessions in that window — 8 for anyone listed.
+              baseline_attended:
+                type: integer
+                minimum: 0
+                description: Presences in the 24 sessions before those.
+              baseline_sessions:
+                type: integer
+                minimum: 12
+                maximum: 24
+                description: Sessions in the baseline — fewer than 24 for someone who joined within it.
+        meta:
+          type: object
+          required: [sessions_available]
+          properties:
+            sessions_available:
+              type: integer
+              minimum: 0
+              description: |
+                Every realised session the academy has recorded. Below 20
+                (8 recent + 12 baseline) nobody can be judged yet, and an
+                empty list means "not enough history", not "nobody drifting".
 
     # ── Generic envelopes ─────────────────────────────────────────────────
 
@@ -9928,10 +10064,15 @@ components:
     AthleteSummary:
       type: object
       description: |
-        Minimal athlete identity inlined into a document response when the
-        endpoint returns documents across athletes (e.g. `/documents/expiring`).
-        For single-athlete endpoints this is omitted.
-      required: [id, first_name, last_name]
+        An athlete's identity, inlined wherever a list names people without
+        being the roster (#1851): the expiring documents and the athletes
+        missing a certificate (`/documents/expiring`), the monthly summary
+        (`/attendance/summary`) and, for the owner, the leaderboard
+        (`/attendance/leaderboard`). It is exactly what the SPA needs to draw
+        the row with the belt spine, the avatar, the full name and the age:
+        `AthleteIdentityResource` on the server. For single-athlete endpoints
+        it is omitted.
+      required: [id, first_name, last_name, belt, stripes, date_of_birth, photo_url, user_avatar_url]
       properties:
         id:
           type: integer
@@ -9940,6 +10081,24 @@ components:
           type: string
         last_name:
           type: string
+        belt:
+          $ref: '#/components/schemas/Belt'
+        stripes:
+          type: integer
+          minimum: 0
+          maximum: 10
+        date_of_birth:
+          type: string
+          format: date
+          nullable: true
+        photo_url:
+          type: string
+          nullable: true
+          description: The athlete's own photo (#1357), with a `?v=` cache-buster. Wins over `user_avatar_url`.
+        user_avatar_url:
+          type: string
+          nullable: true
+          description: The linked user's avatar; null when there is no linked user or no avatar.
 
     Document:
       type: object
@@ -10146,7 +10305,7 @@ components:
 
     AttendanceSummaryRow:
       type: object
-      required: [athlete_id, first_name, last_name, count]
+      required: [athlete_id, first_name, last_name, count, athlete]
       properties:
         athlete_id:
           type: integer
@@ -10159,6 +10318,13 @@ components:
           type: integer
           minimum: 1
           description: Number of active attendance records in the month.
+        athlete:
+          allOf:
+            - $ref: '#/components/schemas/AthleteSummary'
+          nullable: true
+          description: |
+            The athlete's identity (#1851), so the page draws the row with the
+            belt. Additive: the flat name fields above stay.
 
     AttendanceSummaryEnvelope:
       type: object
