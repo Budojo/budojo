@@ -2886,7 +2886,7 @@
       },
       "exposure": {
         "title": "Who has seen it",
-        "openAria": "Who has seen {{name}}",
+        "openPrefix": "Who has seen it:",
         "lessonsOne": "Taught in {{count}} lesson this season",
         "lessonsOther": "Taught in {{count}} lessons this season",
         "headcountOne": "{{count}} person",
@@ -2897,12 +2897,12 @@
         "thinOther": "{{count}} at one",
         "neverOne": "{{count}} never there",
         "neverOther": "{{count}} never there",
+        "unplacedOne": "{{count}} trained that day, at a lesson the record doesn't name",
+        "unplacedOther": "{{count}} trained that day, at a lesson the record doesn't name",
         "timesOne": "{{count}} lesson",
         "timesOther": "{{count}} lessons",
         "inactive": "No longer active",
         "nobodyYet": "Nobody has seen it, because nobody has taught it yet this season.",
-        "unattributedOne": "{{count}} presence on those days names no lesson, so it is not counted here.",
-        "unattributedOther": "{{count}} presences on those days name no lesson, so they are not counted here.",
         "error": "Couldn't load who has seen it."
       }
     },

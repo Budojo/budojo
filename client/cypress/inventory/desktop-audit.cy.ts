@@ -899,18 +899,18 @@ const TOPIC_EXPOSURE = {
   ],
   // Register order, active first: Bonanno, Colombo, Ferraro, Gallo, Marino,
   // Moretti, Russo, then Ricci, who is inactive with no date of departure.
+  // Gallo trained on the 7th at a lesson the record does not name.
   athletes: [
     exposureRow(3, 2, '2026-09-11', 'seen'),
     exposureRow(4, 2, '2026-09-07', 'seen'),
     exposureRow(1, 3, '2026-09-11', 'seen'),
-    exposureRow(7, 0, null, 'never'),
+    exposureRow(7, 0, null, 'unplaced'),
     exposureRow(8, 0, null, 'never'),
     exposureRow(2, 1, '2026-09-04', 'thin'),
     exposureRow(6, 1, '2026-09-07', 'thin'),
     exposureRow(5, 0, null, 'never'),
   ],
-  totals: { lessons: 3, seen: 3, thin: 2, never: 3 },
-  unattributed_presences: 1,
+  totals: { lessons: 3, seen: 3, thin: 2, never: 2, unplaced: 1 },
 };
 
 // ── Stats ────────────────────────────────────────────────────────────────
@@ -2036,36 +2036,6 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
         cy.wait(1500);
         press('[data-cy="syllabus-taught-11"] button');
         cy.get('[data-cy="exposure-group-seen"]', { timeout: 10_000 }).should('exist');
-        cy.wait(400);
-      },
-    },
-  );
-  // A row nobody has taught: one sentence, no people, no number.
-  screen(
-    '40-stats-syllabus-exposure-empty',
-    '/dashboard/stats/syllabus',
-    '[data-cy="syllabus-coverage"]',
-    {
-      clock: false,
-      stubs: () => {
-        cy.intercept('GET', '/api/v1/stats/syllabus/topics/12*', {
-          statusCode: 200,
-          body: {
-            data: {
-              ...TOPIC_EXPOSURE,
-              topic: { ...TOPIC_EXPOSURE.topic, id: 12, name: 'Triangle' },
-              lessons: [],
-              athletes: [],
-              totals: { lessons: 0, seen: 0, thin: 0, never: 0 },
-              unattributed_presences: 0,
-            },
-          },
-        });
-      },
-      act: () => {
-        cy.wait(1500);
-        press('[data-cy="syllabus-missing-12"] button');
-        cy.get('[data-cy="exposure-nobody-yet"]', { timeout: 10_000 }).should('exist');
         cy.wait(400);
       },
     },

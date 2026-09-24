@@ -257,8 +257,7 @@ describe('Who has seen a technique (#1745)', () => {
       person(2, 'Marco', 'Rossi', { exposures: 1, last_seen_on: '2026-09-16', state: 'thin' }),
       person(3, 'Giulia', 'Verdi'),
     ],
-    totals: { lessons: 2, seen: 1, thin: 1, never: 1 },
-    unattributed_presences: 0,
+    totals: { lessons: 2, seen: 1, thin: 1, never: 1, unplaced: 0 },
   };
 
   it('opens a taught row on its lessons and on who was, and was not, there', () => {
@@ -283,17 +282,15 @@ describe('Who has seen a technique (#1745)', () => {
     cy.get('[data-cy="exposure-group-never"]').should('contain.text', 'Giulia Verdi');
   });
 
-  it('opens a row nobody has taught on one sentence, with nobody listed under it', () => {
+  it('lists apart the people the record cannot place, never under never', () => {
     stub();
-    cy.intercept('GET', '/api/v1/stats/syllabus/topics/31*', {
+    cy.intercept('GET', '/api/v1/stats/syllabus/topics/11*', {
       statusCode: 200,
       body: {
         data: {
           ...EXPOSURE,
-          topic: { ...EXPOSURE.topic, id: 31, name: 'Omoplata' },
-          lessons: [],
-          athletes: [],
-          totals: { lessons: 0, seen: 0, thin: 0, never: 0 },
+          athletes: [...EXPOSURE.athletes, person(4, 'Paolo', 'Neri', { state: 'unplaced' })],
+          totals: { ...EXPOSURE.totals, unplaced: 1 },
         },
       },
     }).as('exposure');
@@ -301,10 +298,20 @@ describe('Who has seen a technique (#1745)', () => {
     cy.visitAuthenticated('/dashboard/stats/syllabus');
     cy.wait('@coverage');
 
-    cy.get('[data-cy="syllabus-missing-31"] button').click();
+    cy.get('[data-cy="syllabus-taught-11"] button').click();
     cy.wait('@exposure');
 
-    cy.get('[data-cy="exposure-nobody-yet"]').should('contain.text', 'nobody has taught it');
-    cy.get('[data-cy^="exposure-group-"]').should('not.exist');
+    cy.get('[data-cy="exposure-group-unplaced"]').should('contain.text', 'Paolo Neri');
+    cy.get('[data-cy="exposure-group-never"]').should('not.contain.text', 'Paolo Neri');
+  });
+
+  it('leaves a never-taught row a plain row', () => {
+    stub();
+
+    cy.visitAuthenticated('/dashboard/stats/syllabus');
+    cy.wait('@coverage');
+
+    cy.get('[data-cy="syllabus-missing-31"]').should('contain.text', 'Omoplata');
+    cy.get('[data-cy="syllabus-missing-31"] button').should('not.exist');
   });
 });

@@ -99,8 +99,12 @@ export interface SyllabusCoverage {
   readonly timeline: readonly { readonly on: string; readonly covered: number }[];
 }
 
-/** Where one athlete stands against a technique's lessons (#1745). */
-export type ExposureState = 'seen' | 'thin' | 'never';
+/**
+ * Where one athlete stands against a technique's lessons (#1745). `unplaced`
+ * is at none of them by the record, but trained on one of those days with no
+ * lesson named (#1590): could have been there, so never read as an absence.
+ */
+export type ExposureState = 'seen' | 'thin' | 'never' | 'unplaced';
 
 /** A held lesson that named the technique, with how many were in the room. */
 export interface ExposureLesson {
@@ -145,9 +149,8 @@ export interface TopicExposure {
     readonly seen: number;
     readonly thin: number;
     readonly never: number;
+    readonly unplaced: number;
   };
-  /** Presences on those days that name no lesson — said, not counted as absence. */
-  readonly unattributed_presences: number;
 }
 
 /** One thing this athlete has not seen yet (#1567). */

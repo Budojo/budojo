@@ -2886,7 +2886,7 @@
       },
       "exposure": {
         "title": "Chi l'ha vista",
-        "openAria": "Chi ha visto {{name}}",
+        "openPrefix": "Chi l'ha vista:",
         "lessonsOne": "Fatta in {{count}} lezione questa stagione",
         "lessonsOther": "Fatta in {{count}} lezioni questa stagione",
         "headcountOne": "{{count}} persona",
@@ -2897,12 +2897,12 @@
         "thinOther": "{{count}} presenti una volta",
         "neverOne": "{{count}} mai presente",
         "neverOther": "{{count}} mai presenti",
+        "unplacedOne": "{{count}} si è allenato quel giorno, ma non si sa a quale lezione",
+        "unplacedOther": "{{count}} si sono allenati quel giorno, ma non si sa a quale lezione",
         "timesOne": "{{count}} lezione",
         "timesOther": "{{count}} lezioni",
         "inactive": "Non più attivi",
         "nobodyYet": "Nessuno l'ha vista perché non l'avete ancora fatta in questa stagione.",
-        "unattributedOne": "{{count}} presenza di quei giorni non dice a quale lezione fosse: qui non conta.",
-        "unattributedOther": "{{count}} presenze di quei giorni non dicono a quale lezione fossero: qui non contano.",
         "error": "Impossibile caricare chi l'ha vista."
       }
     },

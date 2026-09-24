@@ -29,8 +29,11 @@ interface ExposureGroup {
   readonly inactive: readonly ExposureAthlete[];
 }
 
-/** Seen, then seen once, then never — the order the question is asked in. */
-const STATES: readonly ExposureState[] = ['seen', 'thin', 'never'];
+/**
+ * Seen, then seen once, then never — the order the question is asked in — and
+ * last, apart, the people the record cannot place.
+ */
+const STATES: readonly ExposureState[] = ['seen', 'thin', 'never', 'unplaced'];
 
 /**
  * Who has seen one technique this season (#1745) — a row of the coverage
