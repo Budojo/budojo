@@ -219,6 +219,12 @@ export interface Athlete {
    */
   attendance_month_count?: number | null;
   attendance_total_count?: number | null;
+  /**
+   * The day of their latest presence (#1726), `YYYY-MM-DD`. Selected on the
+   * roster index AND on show. `null` means they have never trained; absent
+   * means the payload did not carry it, and the roster then shows no column.
+   */
+  last_attended_on?: string | null;
 }
 
 /**
@@ -263,7 +269,9 @@ export type AthleteSortField =
   // Query aliases, not columns (#1447) — the two attendance counts the roster
   // index selects. The server whitelists them separately for that reason.
   | 'attendance_month'
-  | 'attendance_total';
+  | 'attendance_total'
+  // The last presence (#1726), another alias. Never-trained sorts last both ways.
+  | 'last_seen';
 
 export type AthleteSortOrder = 'asc' | 'desc';
 
