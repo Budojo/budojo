@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Tooltip } from 'primeng/tooltip';
-import { Athlete } from '../../../core/services/athlete.service';
+import { AthleteIdentity } from '../../../core/services/athlete.service';
 import { LanguageService } from '../../../core/services/language.service';
 import { BeltLadderService } from '../../../core/services/belt-ladder.service';
 import { AgeBadgeComponent } from '../age-badge/age-badge.component';
@@ -36,7 +36,7 @@ export class AthleteIdentityComponent {
   private readonly languageService = inject(LanguageService);
   private readonly beltLadder = inject(BeltLadderService);
 
-  readonly athlete = input.required<Athlete>();
+  readonly athlete = input.required<AthleteIdentity>();
 
   /**
    * Whether the name opens the athlete's detail page.

@@ -151,6 +151,29 @@ describe('athletes table — column sorting', () => {
       .and('include', 'sort_order=desc');
   });
 
+  it('sorts by the last presence, longest absent first (#1726)', () => {
+    // Ascending first, the opposite of the count beside it: this column is
+    // opened with "who have I not seen". The column exists only when the
+    // payload carries the field, so the fixture supplies it.
+    const withLastSeen = structuredClone(ONE_BROWN_BELT);
+    Object.assign(withLastSeen.body.data[0], { last_attended_on: '2026-09-01' });
+    cy.intercept('GET', '/api/v1/athletes*', withLastSeen).as('athletes');
+    cy.visitAuthenticated('/dashboard/athletes');
+    cy.wait('@athletes');
+
+    cy.get('[data-cy="athletes-th-last-seen"]').click();
+    cy.wait('@athletes')
+      .its('request.url')
+      .should('include', 'sort_by=last_seen')
+      .and('include', 'sort_order=asc');
+
+    cy.get('[data-cy="athletes-th-last-seen"]').click();
+    cy.wait('@athletes')
+      .its('request.url')
+      .should('include', 'sort_by=last_seen')
+      .and('include', 'sort_order=desc');
+  });
+
   it('drops the Attendance column when the payload has no counts (#1447)', () => {
     // A pre-#1447 server. Showing zeroes would say nobody has ever trained.
     //
