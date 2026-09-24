@@ -360,6 +360,39 @@
 // instructor actually walked in with; the group below is the answer to a
 // different one ("what were we doing?").
 
+// The square beside a suggestion row: "not tonight" on a suggestion, "who" on
+// tonight's room (#1860). One shape in one place, because both sit in the
+// same spot on the same row. 48px, because it sits under a thumb at the edge
+// of a mat (Fitts).
+%row-square-button {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  min-height: 3rem;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--p-text-muted-color);
+  cursor: pointer;
+  // `--budojo-motion-ease` does not exist — only fast / base / slow /
+  // decelerate do — and an undefined `var()` with no fallback invalidates
+  // the whole declaration, so this transition never ran (#1786).
+  transition: background var(--budojo-motion-fast) var(--budojo-motion-decelerate);
+
+  &:hover {
+    background: var(--p-surface-100);
+    color: var(--p-text-color);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--p-primary-color);
+    outline-offset: -2px;
+  }
+}
+
 .suggestion {
   display: flex;
   align-items: stretch;
@@ -371,34 +404,8 @@
     min-width: 0;
   }
 
-  // 48px, because it sits under a thumb at the edge of a mat (Fitts).
   &__dismiss {
-    flex: 0 0 auto;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 3rem;
-    min-height: 3rem;
-    padding: 0;
-    border: 0;
-    border-radius: 12px;
-    background: transparent;
-    color: var(--p-text-muted-color);
-    cursor: pointer;
-    // `--budojo-motion-ease` does not exist — only fast / base / slow /
-    // decelerate do — and an undefined `var()` with no fallback invalidates
-    // the whole declaration, so this transition never ran (#1786).
-    transition: background var(--budojo-motion-fast) var(--budojo-motion-decelerate);
-
-    &:hover {
-      background: var(--p-surface-100);
-      color: var(--p-text-color);
-    }
-
-    &:focus-visible {
-      outline: 2px solid var(--p-primary-color);
-      outline-offset: -2px;
-    }
+    @extend %row-square-button;
   }
 }
 
@@ -416,7 +423,7 @@
   // Where the suggestions put "not tonight", the room puts "who": the same
   // 48 px square in the same place, so the row reads the same way.
   &__who {
-    @extend .suggestion__dismiss;
+    @extend %row-square-button;
 
     &[aria-expanded='true'] {
       background: var(--p-content-hover-background);
