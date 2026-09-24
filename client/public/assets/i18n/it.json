@@ -2895,6 +2895,27 @@
         "title": "Impossibile caricare la copertura",
         "hint": "Qualcosa è andato storto da parte nostra. Riprova.",
         "retry": "Riprova"
+      },
+      "exposure": {
+        "title": "Chi l'ha vista",
+        "openPrefix": "Chi l'ha vista:",
+        "lessonsOne": "Fatta in {{count}} lezione questa stagione",
+        "lessonsOther": "Fatta in {{count}} lezioni questa stagione",
+        "headcountOne": "{{count}} persona",
+        "headcountOther": "{{count}} persone",
+        "seenOne": "{{count}} presente due volte o più",
+        "seenOther": "{{count}} presenti due volte o più",
+        "thinOne": "{{count}} presente una volta",
+        "thinOther": "{{count}} presenti una volta",
+        "neverOne": "{{count}} mai presente",
+        "neverOther": "{{count}} mai presenti",
+        "unplacedOne": "{{count}} si è allenato quel giorno, ma non si sa a quale lezione",
+        "unplacedOther": "{{count}} si sono allenati quel giorno, ma non si sa a quale lezione",
+        "timesOne": "{{count}} lezione",
+        "timesOther": "{{count}} lezioni",
+        "inactive": "Non più attivi",
+        "nobodyYet": "Nessuno l'ha vista perché non l'avete ancora fatta in questa stagione.",
+        "error": "Impossibile caricare chi l'ha vista."
       }
     },
     "totalOne": "Su {{count}} atleta attivo.",

@@ -2895,6 +2895,27 @@
         "title": "Coverage couldn't be loaded",
         "hint": "Something went wrong on our side. Try again.",
         "retry": "Try again"
+      },
+      "exposure": {
+        "title": "Who has seen it",
+        "openPrefix": "Who has seen it:",
+        "lessonsOne": "Taught in {{count}} lesson this season",
+        "lessonsOther": "Taught in {{count}} lessons this season",
+        "headcountOne": "{{count}} person",
+        "headcountOther": "{{count}} people",
+        "seenOne": "{{count}} at two or more",
+        "seenOther": "{{count}} at two or more",
+        "thinOne": "{{count}} at one",
+        "thinOther": "{{count}} at one",
+        "neverOne": "{{count}} never there",
+        "neverOther": "{{count}} never there",
+        "unplacedOne": "{{count}} trained that day, at a lesson the record doesn't name",
+        "unplacedOther": "{{count}} trained that day, at a lesson the record doesn't name",
+        "timesOne": "{{count}} lesson",
+        "timesOther": "{{count}} lessons",
+        "inactive": "No longer active",
+        "nobodyYet": "Nobody has seen it, because nobody has taught it yet this season.",
+        "error": "Couldn't load who has seen it."
       }
     },
     "totalOne": "Across {{count}} active athlete.",
