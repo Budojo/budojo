@@ -4012,6 +4012,10 @@ paths:
             block reorders between requests and an athlete can land on two
             pages or none. The tiebreak stays ascending because the names are
             a stable key, not a second dimension the caller asked to reverse.
+            `last_seen` (#1726) sorts on `last_attended_on` the same way, with
+            one addition: an athlete who has never trained (`null`) sorts
+            **last in both directions** — neither the most recent nor the
+            most overdue, but unknown. `asc` puts the longest-absent first.
 
             **Names order on a folded key, not the raw column (#1527).** Both
             name sorts read a folded `*_sort` column — lower-cased,
@@ -4033,6 +4037,7 @@ paths:
                 created_at,
                 attendance_month,
                 attendance_total,
+                last_seen,
               ]
         - name: sort_order
           in: query
@@ -9172,6 +9177,25 @@ components:
             the athlete the roster is most worth spotting: the one with a full
             season of sessions who has not appeared this month.
           example: 214
+        last_attended_on:
+          type: string
+          format: date
+          nullable: true
+          description: |
+            The day of this athlete's latest presence (#1726), `Y-m-d`. A
+            read-side aggregate (`withMax` over `attendance_records`), not a
+            column. Selected on the roster index **and** on
+            `GET /athletes/{id}`, where `null` means the athlete has never
+            trained. **Every other endpoint that returns an athlete** (the
+            writes, the photo endpoints, search) **omits the key** rather than
+            sending `null`, because `null` is an answer, and "never trained"
+            said of someone who trained yesterday is a lie a client could not
+            tell from the truth. Unlike the two counts above, which are `null`
+            when not selected.
+
+            Not floored at the season or at `joined_at`: a date either exists
+            or it does not. A soft-deleted presence is never read.
+          example: '2026-03-13'
         billing_period_months:
           type: integer
           enum: [1, 3, 6, 12]

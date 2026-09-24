@@ -76,6 +76,8 @@ import {
   type SortState,
 } from '../../../shared/utils/athlete-sort';
 import { localeFor } from '../../../shared/utils/locale';
+import { relativeDay } from '../../../shared/utils/relative-day';
+import { LocaleDatePipe } from '../../../shared/pipes/locale-date.pipe';
 import { CarnetService } from '../../../core/services/carnet.service';
 import { CONFIRM_REJECT_BUTTON } from '../../../shared/utils/confirm-buttons';
 import { NgTemplateOutlet } from '@angular/common';
@@ -108,6 +110,7 @@ interface SelectOption<T extends string> {
     Tooltip,
     Popover,
     TranslatePipe,
+    LocaleDatePipe,
     AgeBadgeComponent,
     FilterSheetComponent,
     BeltBadgeComponent,
@@ -778,6 +781,81 @@ export class AthletesListComponent implements OnInit {
     if (!this.isAttendanceSort(this.sortField())) return 'none';
     return this.sortOrder() === 'asc' ? 'ascending' : 'descending';
   });
+
+  /**
+   * Two states on the Last seen column (#1726): longest absent first, then
+   * most recent first, then back.
+   *
+   * **Ascending first**, the opposite of the count column beside it. The
+   * question this column is opened with is "who have I not seen", and the
+   * answer is the oldest date. Two states rather than three for the reason
+   * the belt sort has two (#1457): "off" is a state nobody reaches for, and
+   * the other headers are how the order leaves this column. The server puts
+   * the never-trained last in both directions.
+   */
+  cycleLastSeenSort(): void {
+    const next: AthleteSortOrder =
+      this.sortField() === 'last_seen' && this.sortOrder() === 'asc' ? 'desc' : 'asc';
+    this.sortField.set('last_seen');
+    this.sortOrder.set(next);
+    this.resetPage();
+    this.load();
+  }
+
+  /** `↑` / `↓` while the roster is sorted by the last presence, else the neutral glyph. */
+  readonly lastSeenSortLabel = computed<string | null>(() => {
+    if (this.sortField() !== 'last_seen') return null;
+    return this.sortOrder() === 'asc' ? '↑' : '↓';
+  });
+
+  readonly lastSeenSortTooltip = computed<string>(() => {
+    this.languageService.currentLang();
+    if (this.sortField() !== 'last_seen') {
+      return this.translate.instant('athletes.list.tooltip.lastSeenSortInitial');
+    }
+    return this.translate.instant(
+      this.sortOrder() === 'asc'
+        ? 'athletes.list.tooltip.lastSeenSortAsc'
+        : 'athletes.list.tooltip.lastSeenSortDesc',
+    );
+  });
+
+  readonly lastSeenAriaSort = computed<'ascending' | 'descending' | 'none'>(() => {
+    if (this.sortField() !== 'last_seen') return 'none';
+    return this.sortOrder() === 'asc' ? 'ascending' : 'descending';
+  });
+
+  /**
+   * Whether this server sends the last presence at all (#1726). Latched the
+   * same way as `attendanceCountsSeen`, for the same reasons: an empty page
+   * proves nothing, and a column that comes and goes with the rows on screen
+   * shifts the table on every reload. `null` counts as sent — it is the
+   * answer "never trained", not a missing field.
+   */
+  private readonly lastSeenFieldSeen = signal(false);
+  readonly hasLastSeen = this.lastSeenFieldSeen.asReadonly();
+
+  /** "3 days ago", or "Never". The exact day goes in the tooltip. */
+  protected lastSeenLabel(athlete: Athlete): string {
+    const iso = athlete.last_attended_on;
+    return iso
+      ? relativeDay(iso, this.translate)
+      : this.translate.instant('athletes.list.lastSeen.never');
+  }
+
+  /**
+   * "Last trained 3 days ago", or "Never trained". The cell's aria-label,
+   * and the card's visible text — the card has no header to say what the
+   * bare "3 days ago" is about.
+   */
+  protected lastSeenSentence(athlete: Athlete): string {
+    const iso = athlete.last_attended_on;
+    return iso
+      ? this.translate.instant('athletes.list.lastSeen.aria', {
+          when: relativeDay(iso, this.translate),
+        })
+      : this.translate.instant('athletes.list.lastSeen.neverAria');
+  }
 
   /**
    * Whether this server sends attendance numbers at all.
@@ -1753,6 +1831,9 @@ export class AthletesListComponent implements OnInit {
           // page already showed.
           if (res.data.some((a) => this.hasAttendance(a))) {
             this.attendanceCountsSeen.set(true);
+          }
+          if (res.data.some((a) => a.last_attended_on !== undefined)) {
+            this.lastSeenFieldSeen.set(true);
           }
         },
         error: () => {

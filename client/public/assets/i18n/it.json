@@ -2001,7 +2001,8 @@
         "fullName": "Nome e cognome",
         "payment": "Pagamento",
         "attendance": "Presenze",
-        "attendanceLines": "mese / stagione"
+        "attendanceLines": "mese / stagione",
+        "lastSeen": "Ultima volta"
       },
       "tooltip": {
         "edit": "Modifica",
@@ -2023,7 +2024,10 @@
         "attendanceSortMonthDesc": "Ordinato per presenze del mese (prima le più alte). Clicca per continuare.",
         "attendanceSortMonthAsc": "Ordinato per presenze del mese (prima le più basse). Clicca per continuare.",
         "attendanceSortTotalDesc": "Ordinato per presenze della stagione (prima le più alte). Clicca per continuare.",
-        "attendanceSortTotalAsc": "Ordinato per presenze della stagione (prima le più basse). Clicca per continuare."
+        "attendanceSortTotalAsc": "Ordinato per presenze della stagione (prima le più basse). Clicca per continuare.",
+        "lastSeenSortInitial": "Ordina per ultima presenza. Clicca per continuare.",
+        "lastSeenSortAsc": "Ordinato per ultima presenza (prima chi manca da più tempo). Clicca per continuare.",
+        "lastSeenSortDesc": "Ordinato per ultima presenza (prima la più recente). Clicca per continuare."
       },
       "social": {
         "facebookLabel": "Apri profilo Facebook",
@@ -2114,6 +2118,11 @@
         "tooltipMonth": "Questo mese",
         "tooltipTotal": "Questa stagione ({{season}})",
         "tooltipTotalJoined": "Questa stagione ({{season}}), contata dal {{joined}}, quando si è iscritto"
+      },
+      "lastSeen": {
+        "never": "Mai",
+        "aria": "Ultimo allenamento {{when}}",
+        "neverAria": "Nessun allenamento"
       },
       "alerts": {
         "button": "Avvisi",
@@ -2252,6 +2261,8 @@
       "loading": "Caricamento atleta…",
       "loadError": "Impossibile caricare l'atleta.",
       "joinedLabel": "Dal {{date}}",
+      "lastSeen": "Ultimo allenamento {{when}}",
+      "lastSeenNever": "Nessun allenamento finora",
       "tabs": {
         "documents": "Documenti",
         "attendance": "Presenze",

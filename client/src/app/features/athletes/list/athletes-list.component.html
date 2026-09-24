@@ -462,6 +462,30 @@
                 />
               </th>
             }
+            <!--
+              When they last trained (#1726). The counts cannot say it: "7 this
+              season" reads the same for someone who came yesterday and
+              someone who stopped in March.
+
+              A column from 1024px up only. In the narrow desktop window a
+              fifth column squeezed the name cell until the avatar wrapped
+              above the name; there the same words ride under the counts
+              instead (see the attendance cell).
+            -->
+            @if (hasLastSeen()) {
+              <th
+                class="sort-th athletes-table__last-seen-col"
+                [attr.aria-sort]="lastSeenAriaSort()"
+              >
+                <app-sort-header
+                  [label]="'athletes.list.table.lastSeen' | translate"
+                  [signifier]="lastSeenSortLabel()"
+                  [tooltip]="lastSeenSortTooltip()"
+                  dataCy="athletes-th-last-seen"
+                  (cycle)="cycleLastSeenSort()"
+                />
+              </th>
+            }
             @if (hasMonthlyFee()) {
               <!-- Header carries the current month abbreviation (#282) so an
                  instructor reading "Unpaid" on a row knows which month the
@@ -609,6 +633,35 @@
                     >{{ sessionsLine(s.totalAttended, s.totalScheduled) }}</span
                   >
                 </span>
+                <!-- Below 1024px only, where the Last seen column is hidden (#1726). -->
+                @if (hasLastSeen()) {
+                  <span
+                    class="athlete-attendance__last-seen"
+                    [attr.aria-label]="lastSeenSentence(athlete)"
+                    [attr.data-cy]="'athlete-last-seen-inline-' + athlete.id"
+                    >{{ lastSeenLabel(athlete) }}</span
+                  >
+                }
+              </td>
+            }
+            @if (hasLastSeen()) {
+              <td class="athletes-table__last-seen-col">
+                <!--
+                  Distance, not a date — "5 weeks ago" is the thing an owner
+                  acts on. The day itself is in the tooltip, truncated rather
+                  than converted (a presence is a calendar day). "Never" in
+                  words, because an em-dash reads as missing data.
+                -->
+                <span
+                  class="athlete-last-seen"
+                  [class.athlete-last-seen--never]="!athlete.last_attended_on"
+                  [attr.aria-label]="lastSeenSentence(athlete)"
+                  [pTooltip]="athlete.last_attended_on | localeDate: 'calendar-day'"
+                  [tooltipDisabled]="!athlete.last_attended_on"
+                  tooltipPosition="left"
+                  [attr.data-cy]="'athlete-last-seen-' + athlete.id"
+                  >{{ lastSeenLabel(athlete) }}</span
+                >
               </td>
             }
             @if (hasMonthlyFee()) {
@@ -731,12 +784,17 @@
 
         <ng-template pTemplate="emptymessage">
           <tr>
-            <!-- Name + (attendance) + (payment) + actions. Was 4/3 while Belt
-                 was a column of its own (#1443); attendance (#1447) is the
-                 second optional one — it renders only when the payload
-                 actually carried the counts. -->
+            <!-- Name + (attendance) + (last seen) + (payment) + actions. Was
+                 4/3 while Belt was a column of its own (#1443); attendance
+                 (#1447) and last seen (#1726) render only when the payload
+                 actually carried them. -->
             <td
-              [attr.colspan]="2 + (hasAttendanceCounts() ? 1 : 0) + (hasMonthlyFee() ? 1 : 0)"
+              [attr.colspan]="
+                2 +
+                (hasAttendanceCounts() ? 1 : 0) +
+                (hasLastSeen() ? 1 : 0) +
+                (hasMonthlyFee() ? 1 : 0)
+              "
               class="empty-message"
             >
               @if (loading() || settlingEmptyState()) {
@@ -916,6 +974,17 @@
                       sessionsLine(cs.monthAttended, cs.monthScheduled)
                     }}</span>
                   </span>
+                }
+                <!--
+                  The last presence (#1726), as a sentence: the card has no
+                  header to say what a bare "3 days ago" is about.
+                -->
+                @if (athlete.last_attended_on !== undefined) {
+                  <span
+                    class="athlete-card__last-seen"
+                    [attr.data-cy]="'athlete-card-last-seen-' + athlete.id"
+                    >{{ lastSeenSentence(athlete) }}</span
+                  >
                 }
                 <!-- Inside the badge row since #1445, not on a line of its own
                      under it. The row already wraps, so two icons cost nothing

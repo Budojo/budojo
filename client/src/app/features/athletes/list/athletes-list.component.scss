@@ -252,6 +252,44 @@
   }
 }
 
+// When they last trained (#1726). A column only from 1024px up: in the narrow
+// desktop window (960) a fifth column took the width the name cell needs and
+// the identity block wrapped its avatar above the name, doubling every row.
+// Below 1024 the same words are the third line of the attendance cell.
+.athletes-table__last-seen-col {
+  display: none;
+
+  @media (min-width: 1024px) {
+    display: table-cell;
+  }
+}
+
+.athlete-attendance__last-seen {
+  display: block;
+  text-align: end;
+  font-size: 0.875rem;
+  line-height: 1.3;
+  white-space: nowrap;
+  color: var(--p-text-muted-color);
+
+  @media (min-width: 1024px) {
+    display: none;
+  }
+}
+
+// Text, not a number, so it stays left-aligned like any other words; one
+// line, because "5 settimane fa" wrapping onto two doubles the row for no
+// information.
+.athlete-last-seen {
+  white-space: nowrap;
+  cursor: default;
+
+  // "Never" is an answer, not an alarm — muted rather than coloured.
+  &--never {
+    color: var(--p-text-muted-color);
+  }
+}
+
 // The alert button (#1456) wears the toolbar's shared control surface, with
 // the count in place of a label — the same shape as the payment toggle, so
 // the row stays one family of buttons.
@@ -512,6 +550,13 @@ $athletes-mobile-breakpoint: 768px;
       font-size: var(--budojo-icon-sm);
       line-height: 1;
     }
+  }
+
+  // The last presence (#1726). The same muted register as the count beside
+  // it: a fact, not a state with a severity.
+  &__last-seen {
+    font-size: 0.875rem;
+    color: var(--p-text-muted-color);
   }
 
   // A group inside the badge row since #1445, not a row of its own beneath
