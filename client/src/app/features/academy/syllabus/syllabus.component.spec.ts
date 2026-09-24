@@ -933,3 +933,122 @@ describe('SyllabusComponent — the starter it offers (#1804)', () => {
     expect(cta(fixture)).toBe('Start from the shipped programme');
   });
 });
+
+describe('SyllabusComponent — reordering (#1661)', () => {
+  afterEach(() => TestBed.inject(HttpTestingController).verify());
+
+  const TRIANGLE = topic({ id: 13, parent_id: 1, name: 'Triangle', sort_order: 2 });
+  const GUARD = topic({ id: 1, name: 'Closed guard', children: [ARMBAR, CROSS_COLLAR, TRIANGLE] });
+
+  function childNames(component: SyllabusComponent): string[] {
+    return (component['positions']()[0].children ?? []).map((c: SyllabusTopic) => c.name);
+  }
+
+  it('says where the technique stands, and moves it one place without leaving the dialog', () => {
+    const { fixture, component, httpMock } = setup();
+    flushTree(httpMock, [GUARD]);
+    fixture.detectChanges();
+
+    component['startEditing'](TRIANGLE);
+    fixture.detectChanges();
+    expect(component['place']()).toEqual({ index: 2, total: 3 });
+
+    // Through the button, so a template wired the wrong way round fails here.
+    (
+      document.querySelector('[data-cy="syllabus-form-move-up"] button') as HTMLButtonElement
+    ).click();
+    const req = httpMock.expectOne(`${SYLLABUS_URL}/13/move`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ direction: 'up' });
+    req.flush({ data: [ARMBAR, TRIANGLE, CROSS_COLLAR] });
+    fixture.detectChanges();
+
+    // Applied from the answer, not by re-reading the whole tree, and the
+    // dialog stays open for the next step.
+    expect(childNames(component)).toEqual(['Armbar', 'Triangle', 'Cross collar choke']);
+    expect(component['place']()).toEqual({ index: 1, total: 3 });
+    expect(component['dialogOpen']()).toBe(true);
+    // The move is saved already, so the footer no longer offers to cancel it.
+    expect(
+      (document.querySelector('[data-cy="syllabus-form-cancel"]') as HTMLElement).textContent,
+    ).toContain('Close');
+  });
+
+  it('hands focus to the other step when the pressed one runs out of room', async () => {
+    const { fixture, component, httpMock } = setup();
+    flushTree(httpMock, [GUARD]);
+    fixture.detectChanges();
+
+    component['startEditing'](CROSS_COLLAR);
+    fixture.detectChanges();
+    const up = document.querySelector(
+      '[data-cy="syllabus-form-move-up"] button',
+    ) as HTMLButtonElement;
+    up.focus();
+    up.click();
+    httpMock.expectOne(`${SYLLABUS_URL}/12/move`).flush({ data: [CROSS_COLLAR, ARMBAR, TRIANGLE] });
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    // First place now: Move up disables itself, and a disabled button drops
+    // focus to the page. The keyboard lands on Move down instead.
+    expect(document.activeElement).toBe(
+      document.querySelector('[data-cy="syllabus-form-move-down"] button'),
+    );
+  });
+
+  it('greys out the step there is no room for', () => {
+    const { fixture, component, httpMock } = setup();
+    flushTree(httpMock, [GUARD]);
+    fixture.detectChanges();
+
+    component['startEditing'](ARMBAR);
+    fixture.detectChanges();
+
+    const up = document.querySelector(
+      '[data-cy="syllabus-form-move-up"] button',
+    ) as HTMLButtonElement;
+    const down = document.querySelector(
+      '[data-cy="syllabus-form-move-down"] button',
+    ) as HTMLButtonElement;
+    expect(up.disabled).toBe(true);
+    expect(down.disabled).toBe(false);
+  });
+
+  it('moves a position among the positions, keeping its techniques', () => {
+    const { fixture, component, httpMock } = setup();
+    flushTree(httpMock, [GUARD, K_GUARD]);
+    fixture.detectChanges();
+
+    component['startEditing'](GUARD);
+    fixture.detectChanges();
+    (
+      document.querySelector('[data-cy="syllabus-form-move-down"] button') as HTMLButtonElement
+    ).click();
+    const req = httpMock.expectOne(`${SYLLABUS_URL}/1/move`);
+    expect(req.request.body).toEqual({ direction: 'down' });
+    req.flush({
+      data: [
+        { ...K_GUARD, children: undefined },
+        { ...GUARD, children: undefined },
+      ],
+    });
+
+    const positions = component['positions']();
+    expect(positions.map((p: SyllabusTopic) => p.name)).toEqual(['K guard', 'Closed guard']);
+    // The answer carries no children; the tree keeps its own.
+    expect(positions[1].children).toHaveLength(3);
+  });
+
+  it('offers no order while adding — a new topic goes at the end', () => {
+    const { fixture, component, httpMock } = setup();
+    flushTree(httpMock, [GUARD]);
+    fixture.detectChanges();
+
+    component['startAddingTechnique'](GUARD);
+    fixture.detectChanges();
+
+    expect(component['place']()).toBeNull();
+    expect(document.querySelector('[data-cy="syllabus-form-order"]')).toBeNull();
+  });
+});

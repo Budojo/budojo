@@ -284,6 +284,20 @@
   }
 }
 
+// The two steps and where the topic now stands (#1661). Wraps on a phone,
+// the place dropping under the buttons rather than squeezing them.
+.topic-order {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+
+  &__place {
+    color: var(--p-text-muted-color);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
 .field {
   display: flex;
   flex-direction: column;

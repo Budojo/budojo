@@ -55,6 +55,17 @@ export class SyllabusService {
       .pipe(map((r) => r.data));
   }
 
+  /**
+   * One place up or down among its siblings (#1661). Answers with the
+   * siblings in their new order — the techniques of its position, or the
+   * positions — without their children.
+   */
+  move(id: number, direction: 'up' | 'down'): Observable<SyllabusTopic[]> {
+    return this.http
+      .post<{ data: SyllabusTopic[] }>(`${this.base}/${id}/move`, { direction })
+      .pipe(map((r) => r.data));
+  }
+
   remove(id: number): Observable<void> {
     return this.http.delete<void>(`${this.base}/${id}`);
   }

@@ -578,6 +578,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::post('/academy/syllabus', [\App\Http\Controllers\Academy\SyllabusTopicController::class, 'store']);
         Route::post('/academy/syllabus/seed', [\App\Http\Controllers\Academy\SyllabusTopicController::class, 'seed']);
         Route::patch('/academy/syllabus/{syllabusTopic}', [\App\Http\Controllers\Academy\SyllabusTopicController::class, 'update']);
+        // One place up or down among its siblings (#1661).
+        Route::post('/academy/syllabus/{syllabusTopic}/move', [\App\Http\Controllers\Academy\SyllabusTopicController::class, 'move']);
         Route::delete('/academy/syllabus/{syllabusTopic}', [\App\Http\Controllers\Academy\SyllabusTopicController::class, 'destroy']);
 
         // Entry carnets — #1364. The pre-paid alternative to the monthly fee:
