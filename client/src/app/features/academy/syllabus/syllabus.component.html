@@ -340,6 +340,46 @@
       />
       <small class="field__hint" id="topic-kind-hint">{{ kindHintKey() | translate }}</small>
     </div>
+
+    <!--
+      Order (#1661), editing only: a new topic goes at the end. Two steps and
+      the place it lands, rather than drag handles on a tree whose rows
+      already carry a tick and one or two buttons — on a phone a handle is a
+      third target in a row that has no room for one.
+    -->
+    @if (place(); as p) {
+      <div class="field" data-cy="syllabus-form-order">
+        <span class="field__label" id="topic-order-label">
+          {{ 'academy.syllabus.form.order' | translate }}
+        </span>
+        <div class="topic-order" role="group" aria-labelledby="topic-order-label">
+          <p-button
+            type="button"
+            icon="pi pi-arrow-up"
+            [label]="'academy.syllabus.form.moveUp' | translate"
+            severity="secondary"
+            [outlined]="true"
+            [disabled]="p.index === 0 || moving()"
+            (onClick)="move('up')"
+            data-cy="syllabus-form-move-up"
+          />
+          <p-button
+            type="button"
+            icon="pi pi-arrow-down"
+            [label]="'academy.syllabus.form.moveDown' | translate"
+            severity="secondary"
+            [outlined]="true"
+            [disabled]="p.index === p.total - 1 || moving()"
+            (onClick)="move('down')"
+            data-cy="syllabus-form-move-down"
+          />
+          <span class="topic-order__place" aria-live="polite" data-cy="syllabus-form-place">
+            {{ 'academy.syllabus.form.place' | translate: { n: p.index + 1, total: p.total } }}
+          </span>
+        </div>
+        <small class="field__hint">{{ 'academy.syllabus.form.orderHint' | translate }}</small>
+      </div>
+    }
   </form>
 
   <ng-template pTemplate="footer">

@@ -3340,6 +3340,59 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /academy/syllabus/{syllabusTopic}/move:
+    post:
+      tags: [academy]
+      summary: Move a topic one place up or down among its siblings (#1661)
+      description: |
+        Siblings are the techniques of the topic's position, or the academy's
+        positions. They are read in the order the list shows them —
+        `sort_order`, then `name`, then `id` — the topic moves one place, and
+        every sibling is renumbered `0…n-1`, so ties left by the seed or by
+        hand cannot stall a move. Past either end it is a no-op (200), not an
+        error. Answers with the siblings in their new order. Same capability
+        as editing the programme; a foreign topic is a 403.
+      operationId: syllabusTopicMove
+      parameters:
+        - in: path
+          name: syllabusTopic
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [direction]
+              properties:
+                direction:
+                  type: string
+                  enum: [up, down]
+      responses:
+        '200':
+          description: The siblings, in their new order
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SyllabusTopic'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
   /lessons:
     get:
       tags: [attendance]

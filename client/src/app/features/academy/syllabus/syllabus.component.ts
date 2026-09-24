@@ -389,6 +389,77 @@ export class SyllabusComponent {
     });
   }
 
+  /** A move is on its way — the two buttons wait for it (#1661). */
+  protected readonly moving = signal<boolean>(false);
+
+  /**
+   * Where the topic being edited stands among its siblings (#1661): the
+   * techniques of its position, or the positions. `null` while adding — a
+   * new topic goes at the end, and there is nothing to move yet.
+   */
+  protected readonly place = computed<{ index: number; total: number } | null>(() => {
+    const topic = this.editing();
+    if (topic === null) return null;
+    const siblings = this.siblingsOf(topic);
+    const index = siblings.findIndex((s) => s.id === topic.id);
+    return index === -1 ? null : { index, total: siblings.length };
+  });
+
+  /**
+   * One place up or down, straight away (#1661). Moves are not held for
+   * Save: each press is the change, the way a list is reordered anywhere
+   * else, and the dialog stays open for the next one.
+   */
+  protected move(direction: 'up' | 'down'): void {
+    const topic = this.editing();
+    if (topic === null || this.moving()) return;
+
+    this.moving.set(true);
+    this.syllabus
+      .move(topic.id, direction)
+      .pipe(
+        finalize(() => this.moving.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (siblings) => this.applyOrder(topic, siblings),
+        error: () =>
+          this.toast(
+            'error',
+            'academy.syllabus.toast.errorSummary',
+            'academy.syllabus.toast.errorDetail',
+          ),
+      });
+  }
+
+  private siblingsOf(topic: SyllabusTopic): readonly SyllabusTopic[] {
+    if (topic.parent_id === null) return this.positions();
+    return this.positions().find((p) => p.id === topic.parent_id)?.children ?? [];
+  }
+
+  /**
+   * Re-sort the siblings in the tree by the order the server answered with.
+   * The tree's own objects are kept, not the answer's: a position in the
+   * answer carries no children.
+   */
+  private applyOrder(topic: SyllabusTopic, ordered: readonly SyllabusTopic[]): void {
+    const rank = new Map(ordered.map((s, index) => [s.id, index]));
+    const byRank = (list: readonly SyllabusTopic[]): SyllabusTopic[] =>
+      [...list].sort((a, b) => (rank.get(a.id) ?? 0) - (rank.get(b.id) ?? 0));
+
+    if (topic.parent_id === null) {
+      this.positions.set(byRank(this.positions()));
+      return;
+    }
+    this.positions.set(
+      this.positions().map((position) =>
+        position.id === topic.parent_id
+          ? { ...position, children: byRank(position.children ?? []) }
+          : position,
+      ),
+    );
+  }
+
   protected startEditing(topic: SyllabusTopic): void {
     this.editing.set(topic);
     this.addingUnder.set(null);

@@ -1746,7 +1746,12 @@
             "position": "Chagi (calci)",
             "technique": "Dollyeo-chagi"
           }
-        }
+        },
+        "order": "Ordine",
+        "moveUp": "Sposta su",
+        "moveDown": "Sposta giù",
+        "place": "{{n}} di {{total}}",
+        "orderHint": "Lo spostamento vale subito; Salva serve per il nome e il tipo."
       },
       "confirm": {
         "remove": "Rimuovere {{name}} dal programma?",

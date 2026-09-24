@@ -1746,7 +1746,12 @@
             "position": "Chagi (kicks)",
             "technique": "Dollyeo-chagi"
           }
-        }
+        },
+        "order": "Order",
+        "moveUp": "Move up",
+        "moveDown": "Move down",
+        "place": "{{n}} of {{total}}",
+        "orderHint": "Moves apply straight away; Save is for the name and the type."
       },
       "confirm": {
         "remove": "Remove {{name}} from the programme?",
