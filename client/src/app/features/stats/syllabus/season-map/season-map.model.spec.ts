@@ -110,6 +110,31 @@ describe('season map model (#1858)', () => {
     expect(guard.cells[0].alsoPlanned).toBe(false);
   });
 
+  it('keeps a missed plan visible in a week that also has a lesson held or planned', () => {
+    // A plan nobody checked into on Monday, the position taught on Wednesday.
+    const data = calendar({
+      positions: [
+        {
+          id: 1,
+          name: 'Closed guard',
+          kind: 'both',
+          cells: [
+            { week: '2026-10-05', held: 1, planned: 0, unconfirmed: 1 },
+            { week: '2026-10-12', held: 0, planned: 1, unconfirmed: 1 },
+            { week: '2026-10-19', held: 0, planned: 0, unconfirmed: 2 },
+          ],
+        },
+      ],
+    });
+
+    const [guard] = buildRows([position(1, 'Closed guard')], data);
+
+    expect(guard.cells.map((c) => c.tone)).toEqual(['once', 'planned', 'unconfirmed']);
+    // The fill or the outline wins the cell; the missed plan keeps a mark of
+    // its own. A cell that is only missed plans is already hatched.
+    expect(guard.cells.map((c) => c.alsoUnconfirmed)).toEqual([true, true, false]);
+  });
+
   it('marks the column of the server today', () => {
     const [guard] = buildRows([position(1, 'Closed guard')], calendar());
 

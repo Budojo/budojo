@@ -221,6 +221,33 @@ describe('SeasonMapComponent (#1858)', () => {
     }
   });
 
+  it('keeps a missed plan on the map, and in the words, beside a lesson held that week', () => {
+    const { fixture, httpMock } = setup();
+    flush(
+      httpMock,
+      calendar({
+        positions: [
+          {
+            id: 1,
+            name: 'Closed guard',
+            kind: 'both',
+            cells: [{ week: '2026-10-05', held: 2, planned: 0, unconfirmed: 1 }],
+          },
+          { id: 2, name: 'Half guard', kind: 'both', cells: [] },
+        ],
+      }),
+    );
+    fixture.detectChanges();
+
+    const cell = fixture.nativeElement.querySelector(
+      '[data-cy="season-map-cell-1-2026-10-05"]',
+    ) as HTMLButtonElement;
+    expect(cell.classList).toContain('swatch--more');
+    expect(cell.classList).toContain('swatch--also-unconfirmed');
+    expect(cell.getAttribute('aria-label')).toContain('2 lessons');
+    expect(cell.getAttribute('aria-label')).toContain('1 planned with nobody checked in');
+  });
+
   it('marks the week holding today', () => {
     const { fixture, httpMock } = setup();
     flush(httpMock);

@@ -22,6 +22,12 @@ export interface MapCell {
   readonly tone: CellTone;
   /** Taught this week, and more of it planned — the plan stays visible. */
   readonly alsoPlanned: boolean;
+  /**
+   * A plan nobody checked into, in a week the fill or the outline already
+   * claims — Monday's missed plan beside Wednesday's lesson. Its own mark,
+   * so no state the API reports disappears from the map.
+   */
+  readonly alsoUnconfirmed: boolean;
   /** The week holding the server's today. */
   readonly current: boolean;
 }
@@ -123,6 +129,7 @@ export function buildRows(
           unconfirmed,
           tone: toneOf(held, planned, unconfirmed),
           alsoPlanned: held > 0 && planned > 0,
+          alsoUnconfirmed: unconfirmed > 0 && (held > 0 || planned > 0),
           current: week === currentWeek,
         };
       }),
