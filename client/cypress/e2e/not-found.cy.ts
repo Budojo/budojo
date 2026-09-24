@@ -21,7 +21,7 @@ describe('404 — wildcard route', () => {
     cy.contains('Page not found').should('be.visible');
   });
 
-  it('CTA navigates to /dashboard/athletes — authGuard then redirects an unauthenticated visitor to /auth/login', () => {
+  it('CTA navigates to /dashboard — authGuard then redirects an unauthenticated visitor to /auth/login', () => {
     // No interceptors needed: with localStorage cleared in beforeEach,
     // authGuard redirects synchronously based on the missing auth token,
     // before any guard ever fires an HTTP request. (loadCurrentUser hits

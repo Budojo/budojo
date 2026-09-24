@@ -24,8 +24,11 @@ export const publicGuard: CanActivateFn = () => {
   const auth = inject(AuthService);
   const router = inject(Router);
 
+  // `/dashboard`, not a named page: the route's own redirect decides where
+  // home is (Today since #1643). The desktop shell loads `/` on every launch,
+  // so this line is where a relaunch lands.
   if (auth.isLoggedIn()) {
-    return router.createUrlTree(['/dashboard/athletes']);
+    return router.createUrlTree(['/dashboard']);
   }
 
   return true;

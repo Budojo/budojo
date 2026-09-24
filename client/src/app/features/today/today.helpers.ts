@@ -61,12 +61,18 @@ export function presencesSince(
   return points.filter((p) => p.date >= fromIso).reduce((sum, p) => sum + p.count, 0);
 }
 
-/** The athletes whose joining date is `fromIso` or later. */
+/**
+ * The athletes who joined between `fromIso` and `toIso`, both included.
+ * `joined_at` accepts a future date — someone pre-registered for next month —
+ * and that person has not joined this week: the upper bound keeps them out
+ * until the day comes.
+ */
 export function joinedSince<T extends { readonly joined_at: string }>(
   athletes: readonly T[],
   fromIso: string,
+  toIso: string,
 ): T[] {
-  return athletes.filter((a) => a.joined_at >= fromIso);
+  return athletes.filter((a) => a.joined_at >= fromIso && a.joined_at <= toIso);
 }
 
 /** "19:00–20:30", "19:00" without a length, `null` without a start. */

@@ -65,6 +65,9 @@ interface Responses {
   suggestions?: unknown[];
   health?: unknown | 'error';
   unpaidTotal?: number;
+  unpaidError?: boolean;
+  /** Leave the `?paid=no` request unanswered, as if still in flight. */
+  unpaidPending?: boolean;
   daily?: { date: string; count: number }[];
   coverage?: unknown | 'error';
   recent?: Athlete[];
@@ -128,13 +131,19 @@ function flushAll(http: HttpTestingController, r: Responses = {}): void {
   for (const req of http.match((q) => q.url.endsWith('/lessons/suggestions'))) {
     req.flush({ data: r.suggestions ?? [] });
   }
-  for (const req of http.match(
-    (q) => q.url.endsWith('/athletes') && q.params.get('paid') === 'no',
-  )) {
-    req.flush({
-      data: [],
-      meta: { total: r.unpaidTotal ?? 0, current_page: 1, per_page: 20, last_page: 1 },
-    });
+  if (!r.unpaidPending) {
+    for (const req of http.match(
+      (q) => q.url.endsWith('/athletes') && q.params.get('paid') === 'no',
+    )) {
+      if (r.unpaidError) {
+        req.flush({ message: 'boom' }, { status: 500, statusText: 'Server Error' });
+      } else {
+        req.flush({
+          data: [],
+          meta: { total: r.unpaidTotal ?? 0, current_page: 1, per_page: 20, last_page: 1 },
+        });
+      }
+    }
   }
   http
     .expectOne((req) => req.url.includes('/stats/attendance/daily'))
@@ -291,6 +300,97 @@ describe('TodayComponent', () => {
     fixture.detectChanges();
 
     expect(text(fixture.nativeElement, 'today-watch')).toContain('Nothing to check');
+    http.verify();
+  });
+
+  it('never says all clear while the unpaid count failed to load', () => {
+    const http = setup({ monthly_fee_cents: 5000 });
+    const fixture = TestBed.createComponent(TodayComponent);
+    fixture.detectChanges();
+    flushAll(http, {
+      health: { data: [], missing_medical_certificate: [] },
+      unpaidError: true,
+    });
+    fixture.detectChanges();
+
+    const watch = text(fixture.nativeElement, 'today-watch');
+    expect(watch).not.toContain('Nothing to check');
+    expect(text(fixture.nativeElement, 'today-watch-unpaid-error')).toContain(
+      "Couldn't load who has paid",
+    );
+    http.verify();
+  });
+
+  it('never says all clear while the unpaid count is still loading', () => {
+    const http = setup({ monthly_fee_cents: 5000 });
+    const fixture = TestBed.createComponent(TodayComponent);
+    fixture.detectChanges();
+    flushAll(http, {
+      health: { data: [], missing_medical_certificate: [] },
+      unpaidPending: true,
+    });
+    fixture.detectChanges();
+
+    expect(text(fixture.nativeElement, 'today-watch')).not.toContain('Nothing to check');
+  });
+
+  it('keeps a loaded unpaid count when the documents check fails', () => {
+    const http = setup({ monthly_fee_cents: 5000 });
+    const fixture = TestBed.createComponent(TodayComponent);
+    fixture.detectChanges();
+    flushAll(http, { health: 'error', unpaidTotal: 3 });
+    fixture.detectChanges();
+
+    const root = fixture.nativeElement as HTMLElement;
+    expect(text(root, 'today-watch-unpaid')).toContain('3');
+    expect(text(root, 'today-watch-documents-error')).toContain("Couldn't load the documents");
+    http.verify();
+  });
+
+  it('comes back from a night asleep on the new day, and asks for its lessons', () => {
+    // Thursday 23:50: the window is left on Today.
+    vi.setSystemTime(new Date(2026, 8, 24, 23, 50));
+    const http = setup();
+    const fixture = TestBed.createComponent(TodayComponent);
+    fixture.detectChanges();
+    flushAll(http, { classes: [cls({ id: 1, weekday: 5, name: 'Venerdi' })] });
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).querySelector('h1')?.textContent).toContain(
+      'Thursday 24 September',
+    );
+
+    // Friday 08:00: the laptop wakes and the window becomes visible again.
+    vi.setSystemTime(new Date(2026, 8, 25, 8, 0));
+    document.dispatchEvent(new Event('visibilitychange'));
+    fixture.detectChanges();
+
+    http
+      .expectOne((req) => req.url.endsWith('/academy/classes'))
+      .flush({ data: [cls({ id: 1, weekday: 5, name: 'Venerdi' })] });
+    const lessonReq = http.expectOne((req) => req.url.endsWith('/lessons') && req.method === 'GET');
+    // Tonight's topics belong to Friday's lesson now, not Thursday's.
+    expect(lessonReq.request.params.get('held_on')).toBe('2026-09-25');
+    lessonReq.flush({ data: null });
+    for (const req of http.match((q) => q.method === 'GET')) {
+      req.flush({ data: [], meta: { total: 0, current_page: 1, per_page: 20, last_page: 1 } });
+    }
+    fixture.detectChanges();
+
+    const root = fixture.nativeElement as HTMLElement;
+    expect(root.querySelector('h1')?.textContent).toContain('Friday 25 September');
+    expect(root.querySelector('[data-cy="today-class-1"]')).not.toBeNull();
+  });
+
+  it('does not reload on a return the same day', () => {
+    const http = setup();
+    const fixture = TestBed.createComponent(TodayComponent);
+    fixture.detectChanges();
+    flushAll(http);
+
+    vi.setSystemTime(new Date(2026, 8, 24, 21, 0));
+    document.dispatchEvent(new Event('visibilitychange'));
+
+    http.expectNone((req) => req.url.endsWith('/academy/classes'));
     http.verify();
   });
 

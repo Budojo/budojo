@@ -3048,7 +3048,8 @@
       "unpaidOne": "quota di {{month}} non pagata",
       "unpaidOther": "quote di {{month}} non pagate",
       "none": "Niente da controllare oggi.",
-      "error": "Non riesco a caricare cosa c'è da controllare."
+      "documentsError": "Non riesco a caricare i documenti da controllare.",
+      "unpaidError": "Non riesco a caricare chi ha pagato questo mese."
     },
     "teach": {
       "title": "Cosa insegnare",

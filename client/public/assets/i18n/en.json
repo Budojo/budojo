@@ -3048,7 +3048,8 @@
       "unpaidOne": "{{month}} fee not paid",
       "unpaidOther": "{{month}} fees not paid",
       "none": "Nothing to check today.",
-      "error": "Couldn't load what needs checking."
+      "documentsError": "Couldn't load the documents to check.",
+      "unpaidError": "Couldn't load who has paid this month."
     },
     "teach": {
       "title": "What to teach",

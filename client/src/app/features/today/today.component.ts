@@ -2,21 +2,23 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  DOCUMENT,
   OnInit,
   computed,
   inject,
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { fromEvent } from 'rxjs';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ButtonModule } from 'primeng/button';
 import { SkeletonModule } from 'primeng/skeleton';
 import { AcademyClass, AcademyClassService } from '../../core/services/academy-class.service';
 import { AcademyService } from '../../core/services/academy.service';
-import { Athlete, AthleteService } from '../../core/services/athlete.service';
+import { Athlete, AthleteListResponse, AthleteService } from '../../core/services/athlete.service';
 import { DesktopBackupService } from '../../core/services/desktop-backup.service';
-import { DocumentService } from '../../core/services/document.service';
+import { DocumentService, ExpiringDocumentsResponse } from '../../core/services/document.service';
 import { LanguageService } from '../../core/services/language.service';
 import {
   Lesson,
@@ -24,7 +26,11 @@ import {
   LessonSuggestion,
   SuggestionReason,
 } from '../../core/services/lesson.service';
-import { StatsService, SyllabusCoverage } from '../../core/services/stats.service';
+import {
+  DailyAttendancePoint,
+  StatsService,
+  SyllabusCoverage,
+} from '../../core/services/stats.service';
 import { TrainingModesService } from '../../core/services/training-modes.service';
 import { AthleteIdentityComponent } from '../../shared/components/athlete-identity/athlete-identity.component';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
@@ -110,11 +116,22 @@ export class TodayComponent implements OnInit {
   private readonly trainingModes = inject(TrainingModesService);
   private readonly translate = inject(TranslateService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly document = inject(DOCUMENT);
 
-  /** The clock is read once: the page describes the moment it was opened. */
-  private readonly now = new Date();
-  private readonly todayIso = isoDay(this.now);
-  private readonly mondayIso = isoDay(weekStart(this.now));
+  /**
+   * The moment the cards describe. A signal, not a constant: Today is the
+   * screen a desktop window sits on overnight, and after a sleep it must not
+   * go on showing yesterday — nor save tonight's topics onto yesterday's
+   * lesson. Re-read when the window comes back (see `ngOnInit`).
+   */
+  private readonly now = signal<Date>(new Date());
+  private readonly todayIso = computed<string>(() => isoDay(this.now()));
+  private readonly mondayIso = computed<string>(() => isoDay(weekStart(this.now())));
+  /**
+   * Bumped on every reload, so an answer to a request made for yesterday is
+   * dropped instead of landing on today's cards.
+   */
+  private epoch = 0;
 
   protected readonly kindLabels = this.trainingModes.labels;
   protected readonly timeRange = timeRange;
@@ -124,7 +141,7 @@ export class TodayComponent implements OnInit {
   protected readonly classes = signal<Load<readonly AcademyClass[]>>(LOADING);
   protected readonly tonight = computed<readonly AcademyClass[]>(() => {
     const c = this.classes();
-    return c.state === 'ready' ? tonightClasses(c.value, this.now) : [];
+    return c.state === 'ready' ? tonightClasses(c.value, this.now()) : [];
   });
   /** A timetable exists at all — without one, "tonight" has no answer yet. */
   protected readonly hasTimetable = computed<boolean>(() => {
@@ -138,7 +155,7 @@ export class TodayComponent implements OnInit {
     this.languageService.currentLang();
     const c = this.classes();
     if (c.state !== 'ready') return null;
-    const next = nextClassAfter(c.value, this.now);
+    const next = nextClassAfter(c.value, this.now());
     if (next === null) return null;
     const day = new Intl.DateTimeFormat(localeFor(this.languageService.currentLang()), {
       weekday: 'long',
@@ -158,18 +175,37 @@ export class TodayComponent implements OnInit {
   // ── Da guardare ────────────────────────────────────────────────────────
 
   protected readonly health = signal<Load<DocumentsHealth>>(LOADING);
-  /** Owing this month, or null when the academy charges nothing to owe. */
-  protected readonly unpaid = signal<number | null>(null);
+  /**
+   * Owing this month; `null` when the academy charges nothing, so there is
+   * no request and no line. Its own load state, because "nothing to check"
+   * is a claim about BOTH halves of the card: a count still loading, or one
+   * that failed, is not a zero.
+   */
+  protected readonly unpaid = signal<Load<number> | null>(null);
+
+  /**
+   * The card says "nothing to check" only when every half has answered and
+   * found nothing — never while one is loading, and never after one failed.
+   */
+  protected readonly watchState = computed<'loading' | 'settled'>(() =>
+    this.health().state === 'loading' || this.unpaid()?.state === 'loading' ? 'loading' : 'settled',
+  );
+  protected readonly watchAllClear = computed<boolean>(
+    () =>
+      this.watchState() === 'settled' &&
+      this.health().state === 'ready' &&
+      this.unpaid()?.state !== 'error' &&
+      this.watchRows().length === 0,
+  );
 
   protected readonly watchRows = computed<readonly WatchRow[]>(() => {
     this.languageService.currentLang();
     const h = this.health();
-    if (h.state !== 'ready') return [];
     const t = (one: string, other: string, count: number, params = {}): string =>
       this.translate.instant(count === 1 ? one : other, params);
     const rows: WatchRow[] = [];
     const expiring = '/dashboard/documents/expiring';
-    if (h.value.certificates > 0) {
+    if (h.state === 'ready' && h.value.certificates > 0) {
       rows.push({
         dataCy: 'today-watch-certificates',
         count: h.value.certificates,
@@ -182,7 +218,7 @@ export class TodayComponent implements OnInit {
         queryParams: null,
       });
     }
-    if (h.value.missing > 0) {
+    if (h.state === 'ready' && h.value.missing > 0) {
       rows.push({
         dataCy: 'today-watch-missing',
         count: h.value.missing,
@@ -191,7 +227,7 @@ export class TodayComponent implements OnInit {
         queryParams: null,
       });
     }
-    if (h.value.documents > 0) {
+    if (h.state === 'ready' && h.value.documents > 0) {
       rows.push({
         dataCy: 'today-watch-documents',
         count: h.value.documents,
@@ -200,9 +236,10 @@ export class TodayComponent implements OnInit {
         queryParams: null,
       });
     }
-    const unpaid = this.unpaid();
-    if (unpaid !== null && unpaid > 0) {
-      const month = this.translate.instant(monthKey(this.now.getMonth() + 1));
+    const u = this.unpaid();
+    const unpaid = u?.state === 'ready' ? u.value : 0;
+    if (unpaid > 0) {
+      const month = this.translate.instant(monthKey(this.now().getMonth() + 1));
       rows.push({
         dataCy: 'today-watch-unpaid',
         count: unpaid,
@@ -222,7 +259,7 @@ export class TodayComponent implements OnInit {
    * same lesson by "tonight".
    */
   protected readonly teachClass = computed<AcademyClass | null>(() =>
-    pickDefaultClass(this.tonight(), this.now, this.now),
+    pickDefaultClass(this.tonight(), this.now(), this.now()),
   );
   protected readonly suggestions = signal<Load<readonly LessonSuggestion[]>>(LOADING);
 
@@ -239,7 +276,7 @@ export class TodayComponent implements OnInit {
       weekday: 'long',
       day: 'numeric',
       month: 'long',
-    }).format(this.now);
+    }).format(this.now());
     // "giovedì 24 settembre" is a sentence fragment in Italian; as a title it
     // starts with a capital, as any heading does.
     return label.charAt(0).toUpperCase() + label.slice(1);
@@ -256,11 +293,52 @@ export class TodayComponent implements OnInit {
   protected readonly lastBackupAt = signal<string | null | undefined>(undefined);
 
   ngOnInit(): void {
+    this.loadAll();
+
+    // Back from a sleep, or from another window, on a different day: re-read
+    // the clock and ask every card again. Clicking "Oggi" cannot do it — the
+    // router reuses the page on a same-URL navigation.
+    fromEvent(this.document, 'visibilitychange')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        if (this.document.visibilityState !== 'visible') return;
+        const now = new Date();
+        if (isoDay(now) === this.todayIso()) return;
+        this.now.set(now);
+        this.reset();
+        this.loadAll();
+      });
+  }
+
+  private loadAll(): void {
     this.loadClasses();
     this.loadHealth();
     this.loadUnpaid();
     this.loadWeek();
     this.loadBackup();
+  }
+
+  /** Every card back to "loading", and every older answer to the bin. */
+  private reset(): void {
+    this.epoch++;
+    this.classes.set(LOADING);
+    this.lessons.set(new Map());
+    this.suggestions.set(LOADING);
+    this.health.set(LOADING);
+    this.unpaid.set(null);
+    this.presences.set(null);
+    this.coverage.set(null);
+    this.joined.set(LOADING);
+    this.sheetOpen.set(false);
+    this.planning.set(null);
+  }
+
+  /** Runs `apply` only if no reload happened since the request was made. */
+  private current<T>(apply: (value: T) => void): (value: T) => void {
+    const epoch = this.epoch;
+    return (value) => {
+      if (epoch === this.epoch) apply(value);
+    };
   }
 
   protected topicsOf(classId: number): string | null {
@@ -304,7 +382,7 @@ export class TodayComponent implements OnInit {
       weekday: 'long',
       day: 'numeric',
       month: 'long',
-    }).format(this.now);
+    }).format(this.now());
   });
 
   protected readonly heldOn = this.todayIso;
@@ -314,24 +392,26 @@ export class TodayComponent implements OnInit {
       .list()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (classes) => {
+        next: this.current((classes: AcademyClass[]) => {
           this.classes.set({ state: 'ready', value: classes });
           for (const c of this.tonight()) this.loadLesson(c.id);
           this.loadSuggestions();
-        },
-        error: () => {
+        }),
+        error: this.current(() => {
           this.classes.set(FAILED);
           this.suggestions.set(FAILED);
-        },
+        }),
       });
   }
 
   private loadLesson(classId: number): void {
     this.lessonService
-      .get(classId, this.todayIso)
+      .get(classId, this.todayIso())
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (lesson) => this.lessons.update((m) => new Map(m).set(classId, lesson)),
+        next: this.current((lesson: Lesson | null) =>
+          this.lessons.update((m) => new Map(m).set(classId, lesson)),
+        ),
         // A missing topic line is not worth an error on the card: the class
         // itself still shows, and the sheet reads the lesson again on open.
         error: () => undefined,
@@ -348,8 +428,10 @@ export class TodayComponent implements OnInit {
       .suggestions(c.id, 3)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (value) => this.suggestions.set({ state: 'ready', value }),
-        error: () => this.suggestions.set(FAILED),
+        next: this.current((value: LessonSuggestion[]) =>
+          this.suggestions.set({ state: 'ready', value }),
+        ),
+        error: this.current(() => this.suggestions.set(FAILED)),
       });
   }
 
@@ -358,7 +440,7 @@ export class TodayComponent implements OnInit {
       .fetchDocumentsHealth()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (resp) => {
+        next: this.current((resp: ExpiringDocumentsResponse) => {
           // Defaulted as on the roster (#1456): a response without one of the
           // arrays must cost a zero, not the card.
           const documents = resp.data ?? [];
@@ -371,20 +453,23 @@ export class TodayComponent implements OnInit {
               missing: resp.missing_medical_certificate?.length ?? 0,
             },
           });
-        },
-        error: () => this.health.set(FAILED),
+        }),
+        error: this.current(() => this.health.set(FAILED)),
       });
   }
 
   private loadUnpaid(): void {
     // Nothing is owed where nothing is charged (#1381): no request, no line.
     if (!academyChargesAFee(this.academyService.academy())) return;
+    this.unpaid.set(LOADING);
     this.athleteService
       .list({ paid: 'no' })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (res) => this.unpaid.set(res.meta.total),
-        error: () => undefined,
+        next: this.current((res: AthleteListResponse) =>
+          this.unpaid.set({ state: 'ready', value: res.meta.total }),
+        ),
+        error: this.current(() => this.unpaid.set(FAILED)),
       });
   }
 
@@ -393,7 +478,9 @@ export class TodayComponent implements OnInit {
       .attendanceDaily(3)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (points) => this.presences.set(presencesSince(points, this.mondayIso)),
+        next: this.current((points: readonly DailyAttendancePoint[]) =>
+          this.presences.set(presencesSince(points, this.mondayIso())),
+        ),
         error: () => undefined,
       });
     this.statsService
@@ -402,8 +489,9 @@ export class TodayComponent implements OnInit {
       .subscribe({
         // A report without its season or totals is no report: an empty 200
         // (a stub, a proxy) must cost the row, not the page's change detection.
-        next: (coverage) =>
+        next: this.current((coverage: SyllabusCoverage) =>
           this.coverage.set(coverage?.season && coverage.totals ? coverage : null),
+        ),
         // Stats are an owner capability; a reader without it sees the rest.
         error: () => undefined,
       });
@@ -413,9 +501,13 @@ export class TodayComponent implements OnInit {
       .list({ sortBy: 'joined_at', sortOrder: 'desc' })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (res) =>
-          this.joined.set({ state: 'ready', value: joinedSince(res.data, this.mondayIso) }),
-        error: () => this.joined.set(FAILED),
+        next: this.current((res: AthleteListResponse) =>
+          this.joined.set({
+            state: 'ready',
+            value: joinedSince(res.data, this.mondayIso(), this.todayIso()),
+          }),
+        ),
+        error: this.current(() => this.joined.set(FAILED)),
       });
   }
 
