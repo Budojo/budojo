@@ -165,35 +165,50 @@ it('keeps the arrival out of the public promotions timeline', function (): void 
 
 // ─── Transcribing the history before the record began ────────────────────────
 
-it('accepts a backfilled promotion before the arrival that ends at the arrival belt', function (): void {
-    $athlete = Athlete::factory()->for($this->academy)->create(['belt' => Belt::Blue]);
+function startedAt(object $test, Belt $belt): Athlete
+{
+    $athlete = Athlete::factory()->for($test->academy)->create(['belt' => $belt]);
     AthletePromotion::create([
-        'athlete_id' => $athlete->id, 'kind' => 'belt', 'from_belt' => null, 'to_belt' => 'blue',
-        'belt_at_event' => 'blue', 'recorded_at' => '2026-09-24 09:00:00', 'recorded_by_user_id' => $this->owner->id,
+        'athlete_id' => $athlete->id, 'kind' => 'belt', 'from_belt' => null, 'to_belt' => $belt->value,
+        'belt_at_event' => $belt->value, 'recorded_at' => '2026-09-24 09:00:00', 'recorded_by_user_id' => $test->owner->id,
     ]);
 
-    // The paper register: white to blue in 2021, years before the record began.
-    // An arrival says only "held blue that day" — nothing about how.
-    $this->actingAs($this->owner)
-        ->postJson("/api/v1/athletes/{$athlete->id}/promotions", [
-            'kind' => 'belt', 'from_belt' => 'white', 'to_belt' => 'blue', 'recorded_at' => '2021-05-10',
-        ])
-        ->assertCreated();
+    return $athlete;
+}
+
+function backfill(object $test, Athlete $athlete, string $from, string $to, string $on): \Illuminate\Testing\TestResponse
+{
+    return $test->actingAs($test->owner)->postJson("/api/v1/athletes/{$athlete->id}/promotions", [
+        'kind' => 'belt', 'from_belt' => $from, 'to_belt' => $to, 'recorded_at' => $on,
+    ]);
+}
+
+it('takes a paper register oldest-first, before the starting row', function (): void {
+    // Imported at purple. The register says white → blue in 2019 and blue →
+    // purple in 2021, and the owner types it in the order it is written. A
+    // starting row says only "held purple that day", so the first line —
+    // which ends at blue — is not a contradiction of it.
+    $athlete = startedAt($this, Belt::Purple);
+
+    backfill($this, $athlete, 'white', 'blue', '2019-05-10')->assertCreated();
+    backfill($this, $athlete, 'blue', 'purple', '2021-06-12')->assertCreated();
 });
 
-it('refuses a backfilled promotion before the arrival that ends at another belt', function (): void {
-    $athlete = Athlete::factory()->for($this->academy)->create(['belt' => Belt::Blue]);
-    AthletePromotion::create([
-        'athlete_id' => $athlete->id, 'kind' => 'belt', 'from_belt' => null, 'to_belt' => 'blue',
-        'belt_at_event' => 'blue', 'recorded_at' => '2026-09-24 09:00:00', 'recorded_by_user_id' => $this->owner->id,
-    ]);
+it('takes an incomplete register that never reaches the starting belt', function (): void {
+    // Blue in 2019 is written down; the promotion to purple never was.
+    $athlete = startedAt($this, Belt::Purple);
 
-    $this->actingAs($this->owner)
-        ->postJson("/api/v1/athletes/{$athlete->id}/promotions", [
-            'kind' => 'belt', 'from_belt' => 'blue', 'to_belt' => 'purple', 'recorded_at' => '2021-05-10',
-        ])
+    backfill($this, $athlete, 'white', 'blue', '2019-05-10')->assertCreated();
+});
+
+it('still refuses a backfill that contradicts the promotion before it', function (): void {
+    $athlete = startedAt($this, Belt::Purple);
+    backfill($this, $athlete, 'white', 'blue', '2019-05-10')->assertCreated();
+
+    // The row before 2020 ends at blue, so 2020 cannot start at purple.
+    backfill($this, $athlete, 'purple', 'brown', '2020-01-10')
         ->assertUnprocessable()
-        ->assertJsonValidationErrors('to_belt');
+        ->assertJsonValidationErrors('from_belt');
 });
 
 // ─── Existing rosters ────────────────────────────────────────────────────────
@@ -242,6 +257,9 @@ it('leaves an athlete alone whose history already covers the day the record bega
         'belt_at_event' => 'blue', 'recorded_at' => '2021-05-10 00:00:00', 'recorded_by_user_id' => $this->owner->id,
     ]);
     $opened = Athlete::factory()->for($this->academy)->create(['belt' => Belt::White]);
+    // Record began in March, starting row written in September: only the
+    // "already opens" check can skip this one, not the date check.
+    $opened->forceFill(['created_at' => '2026-03-02 18:30:00'])->saveQuietly();
     AthletePromotion::create([
         'athlete_id' => $opened->id, 'kind' => 'belt', 'from_belt' => null, 'to_belt' => 'white',
         'belt_at_event' => 'white', 'recorded_at' => '2026-09-01 00:00:00', 'recorded_by_user_id' => $this->owner->id,

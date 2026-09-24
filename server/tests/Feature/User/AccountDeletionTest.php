@@ -150,6 +150,32 @@ it('PurgeAccountAction hard-deletes user + academy + athletes (including soft-de
     expect(Storage::disk('local')->exists($stored))->toBeFalse();
 });
 
+it('PurgeAccountAction purges an owner whose athletes carry promotion rows they recorded (#1771)', function (): void {
+    // `athlete_promotions.recorded_by_user_id` is RESTRICT, and SQLite checks
+    // RESTRICT the moment the user row goes — before the cascade from academy
+    // to athletes reaches the promotion rows. Every athlete now opens with a
+    // row its creator recorded, so without clearing them first no owner could
+    // ever be purged.
+    $user = userWithAcademy();
+    $id = $this->actingAs($user)
+        ->postJson('/api/v1/athletes', [
+            'first_name' => 'Marco', 'last_name' => 'Rossi', 'belt' => 'blue', 'stripes' => 0,
+            'status' => 'active', 'joined_at' => '2024-09-01',
+        ])
+        ->assertCreated()
+        ->json('data.id');
+    $gone = Athlete::factory()->for($user->academy)->create(['deleted_at' => now()]);
+    \App\Models\AthletePromotion::create([
+        'athlete_id' => $gone->id, 'kind' => 'belt', 'from_belt' => 'white', 'to_belt' => 'blue',
+        'belt_at_event' => 'blue', 'recorded_at' => now(), 'recorded_by_user_id' => $user->id,
+    ]);
+
+    app(PurgeAccountAction::class)->execute($user);
+
+    expect(\App\Models\User::query()->where('id', $user->id)->exists())->toBeFalse()
+        ->and(\App\Models\AthletePromotion::query()->whereIn('athlete_id', [$id, $gone->id])->exists())->toBeFalse();
+});
+
 it('PurgeAccountAction does not touch other users data', function (): void {
     $userA = userWithAcademy();
     $userB = userWithAcademy();

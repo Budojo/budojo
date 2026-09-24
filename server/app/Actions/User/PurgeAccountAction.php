@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Actions\User;
 
+use App\Models\Athlete;
+use App\Models\AthletePromotion;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -50,6 +52,19 @@ class PurgeAccountAction
         $pathsToWipe = $this->collectDiskPaths($user);
 
         DB::transaction(function () use ($user): void {
+            // The owned academy's promotion rows go first (#1771).
+            // `athlete_promotions.recorded_by_user_id` is RESTRICT, and
+            // SQLite checks RESTRICT the moment the user row is deleted —
+            // before the cascade from academy to athletes reaches these
+            // rows. Every athlete's timeline now opens with a row its
+            // creator recorded, so without this no owner could be purged.
+            $academyId = $user->academy?->id;
+            if ($academyId !== null) {
+                AthletePromotion::query()
+                    ->whereIn('athlete_id', Athlete::withTrashed()->where('academy_id', $academyId)->select('id'))
+                    ->delete();
+            }
+
             // Deleting the user triggers the FK cascade chain (user →
             // academy → athletes → payments, attendance, documents).
             // All wired with `cascadeOnDelete()` at the migration

@@ -5534,6 +5534,11 @@ paths:
         kind. Belt and stripe chains are checked independently; a stripe
         row is never cross-checked against belt rows.
 
+        A later belt row with no `from_belt` is a starting point — every
+        timeline opens with one (#1771) — and constrains nothing before it:
+        it says which belt was held that day, not how. So a register can be
+        entered oldest-first, or left incomplete, beneath it.
+
         `belt_at_event` is not accepted for `kind=belt` — it always equals
         `to_belt` and is derived server-side.
       operationId: athletePromotionCreate

@@ -57,9 +57,11 @@ return new class extends Migration
 
     private function open(object $athlete): void
     {
+        // `joined_at` is a DATE column but its cast writes `Y-m-d 00:00:00`,
+        // so take the day and not the raw value.
         $began = \is_string($athlete->created_at ?? null)
             ? $athlete->created_at
-            : "{$athlete->joined_at} 00:00:00";
+            : substr((string) $athlete->joined_at, 0, 10) . ' 00:00:00';
 
         $beltRows = DB::table('athlete_promotions')
             ->where('athlete_id', $athlete->id)
