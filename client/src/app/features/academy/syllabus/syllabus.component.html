@@ -139,23 +139,20 @@
         />
       }
     } @else {
-      @if (searching()) {
-        @if (filteredPositions().length === 0) {
-          <p class="syllabus__no-results" role="status" data-cy="syllabus-no-results">
-            {{ 'academy.syllabus.searchNone' | translate: { query: query() } }}
-          </p>
-        } @else {
-          <!-- What matched, and the way back. A filtered tree looks like a
-               shrunken programme unless something says otherwise. -->
-          <p class="syllabus__results" role="status" data-cy="syllabus-search-summary">
-            {{ resultSummary() }}
-          </p>
-        }
-      }
-
-      @if (beltSummary(); as summary) {
-        <p class="syllabus__results" role="status" data-cy="syllabus-belt-summary">
-          {{ summary }}
+      <!--
+        What the search and the belt kept, and the way back — or why nothing
+        is left. A filtered tree looks like a shrunken programme unless
+        something says otherwise, and one line says it for both filters
+        (#1861).
+      -->
+      @if (filterMessage(); as m) {
+        <p
+          [class.syllabus__results]="m.tone === 'summary'"
+          [class.syllabus__no-results]="m.tone === 'empty'"
+          role="status"
+          [attr.data-cy]="m.dataCy"
+        >
+          {{ m.text }}
         </p>
       }
 

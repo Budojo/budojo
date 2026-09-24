@@ -35,10 +35,10 @@ use Illuminate\Support\Facades\DB;
  *   - `missed`     taught while they were on the roster, and they were not there
  *   - `not_taught` the academy has not covered it yet this season
  *
- * The headline is `seen` over what the academy **taught**, so it answers "how
- * much of what happened did you catch?" and never "how much of the syllabus
- * are you?". `not_taught` is reported beside it as the academy's context, not
- * as the athlete's gap.
+ * The headline is `attended` — seen or thin, at least one lesson (#1710) —
+ * over what the academy **taught**, so it answers "how much of what happened
+ * did you catch?" and never "how much of the syllabus are you?". `not_taught`
+ * is reported beside it as the academy's context, not as the athlete's gap.
  *
  * **Everything is scoped to on or after `joined_at`.** A white belt who walked
  * in last month did not miss October, and a denominator that says otherwise is

@@ -43,6 +43,13 @@ import {
   CONFIRM_REJECT_BUTTON,
 } from '../../../shared/utils/confirm-buttons';
 
+/** The one line under the search and belt filter: what they kept, or why nothing. */
+interface FilterMessage {
+  readonly tone: 'summary' | 'empty';
+  readonly dataCy: string;
+  readonly text: string;
+}
+
 /**
  * The academy's programme (#1563).
  *
@@ -223,11 +230,24 @@ export class SyllabusComponent {
   );
 
   /**
+   * The belt actually narrowing the tree. The filter is only offered while
+   * something is graded, so once the last graded topic goes back to "for
+   * everyone" the select is gone — and a choice left in `beltFilter` would
+   * keep filtering a tree with no control on screen to undo it.
+   */
+  private readonly activeBelt = computed<Belt | null>(() =>
+    this.graded() ? this.beltFilter() : null,
+  );
+
+  /**
    * The academy's grades, in ladder order, without the kids' ones when it
-   * trains none (#1651) — `keep` holds on to one a topic already names.
+   * trains none (#1651). `keep` holds on to the one the dialog opens on —
+   * the topic's own, or, for a new technique, its position's — or the
+   * select would show its "for everyone" placeholder while Save sent the
+   * hidden belt.
    */
   protected readonly beltOptions = computed<BeltOption<Belt>[]>(() =>
-    this.ladder.beltOptions(this.editing()?.from_belt ?? null),
+    this.ladder.beltOptions(this.editing()?.from_belt ?? this.addingUnder()?.from_belt ?? null),
   );
 
   /** The same grades for the filter, which has no topic of its own to keep. */
@@ -243,7 +263,7 @@ export class SyllabusComponent {
    */
   protected readonly filteredPositions = computed<readonly SyllabusTopic[]>(() => {
     const searched = this.searchedPositions();
-    const belt = this.beltFilter();
+    const belt = this.activeBelt();
     const rank = belt === null ? null : this.ladder.rankOf(belt);
     if (rank === null) return searched;
 
@@ -258,17 +278,87 @@ export class SyllabusComponent {
       .filter((position) => position.children.length > 0);
   });
 
-  /** "12 techniques expected up to the green belt" — what the filter kept, in words. */
-  protected readonly beltSummary = computed<string | null>(() => {
+  /**
+   * One line saying what the tree is showing, chosen by which filters are on
+   * — search, belt, or both — and whether anything survived them.
+   *
+   * One line and not two: a search summary saying "clear the search to get
+   * the tree back" beside a belt still narrowing it is a promise the page
+   * does not keep, and "nothing matches 'leg'" is false when the search
+   * matched and the belt emptied the result. `dataCy` keeps the hooks the
+   * harness and the specs already read.
+   */
+  protected readonly filterMessage = computed<FilterMessage | null>(() => {
     this.languageService.currentLang(); // signal dep — recompute on toggle
-    const belt = this.beltFilter();
-    if (belt === null) return null;
-    const count = this.filteredPositions().reduce((n, p) => n + (p.children?.length ?? 0), 0);
-    return this.translate.instant(
-      count === 1 ? 'academy.syllabus.beltSummaryOne' : 'academy.syllabus.beltSummaryOther',
-      { count, belt: this.ladder.label(belt) },
-    );
+    const searching = this.searching();
+    const belt = this.activeBelt();
+    if (!searching && belt === null) return null;
+
+    const query = this.query().trim();
+    const beltLabel = belt === null ? '' : this.ladder.label(belt);
+    const shown = this.filteredPositions();
+
+    if (shown.length === 0) {
+      // The search found nothing on its own: the belt is beside the point.
+      if (searching && this.searchedPositions().length === 0) {
+        return this.message('empty', 'syllabus-no-results', 'academy.syllabus.searchNone', {
+          query,
+        });
+      }
+      return searching
+        ? this.message('empty', 'syllabus-no-results', 'academy.syllabus.searchNoneForBelt', {
+            query,
+            belt: beltLabel,
+          })
+        : this.message('empty', 'syllabus-no-results', 'academy.syllabus.beltNone', {
+            belt: beltLabel,
+          });
+    }
+
+    const techniques = shown.reduce((n, p) => n + (p.children?.length ?? 0), 0);
+    if (!searching) {
+      return this.message(
+        'summary',
+        'syllabus-belt-summary',
+        techniques === 1 ? 'academy.syllabus.beltSummaryOne' : 'academy.syllabus.beltSummaryOther',
+        { count: techniques, belt: beltLabel },
+      );
+    }
+
+    // Two counts that vary independently, so each picks its own One/Other —
+    // ngx-translate has no plural rule, and a single hardcoded-plural string
+    // renders "1 techniques across 1 positions" on the commonest search
+    // there is. The same mistake is already documented in `confirmRemove`.
+    const counts = {
+      techniques: this.translate.instant(
+        techniques === 1
+          ? 'academy.syllabus.searchCountTechniqueOne'
+          : 'academy.syllabus.searchCountTechniqueOther',
+        { count: techniques },
+      ),
+      positions: this.translate.instant(
+        shown.length === 1
+          ? 'academy.syllabus.searchCountPositionOne'
+          : 'academy.syllabus.searchCountPositionOther',
+        { count: shown.length },
+      ),
+    };
+    return belt === null
+      ? this.message('summary', 'syllabus-search-summary', 'academy.syllabus.searchSummary', counts)
+      : this.message('summary', 'syllabus-search-summary', 'academy.syllabus.searchSummaryBelt', {
+          ...counts,
+          belt: beltLabel,
+        });
   });
+
+  private message(
+    tone: FilterMessage['tone'],
+    dataCy: string,
+    key: string,
+    params: Record<string, unknown>,
+  ): FilterMessage {
+    return { tone, dataCy, text: this.translate.instant(key, params) };
+  }
 
   /**
    * The belt said on a row only where it tells the reader something — the
@@ -282,10 +372,6 @@ export class SyllabusComponent {
   protected beltChip(topic: SyllabusTopic, position?: SyllabusTopic): Belt | null | undefined {
     const inherited = position === undefined ? null : position.from_belt;
     return topic.from_belt === inherited ? undefined : topic.from_belt;
-  }
-
-  protected beltKey(belt: Belt): string {
-    return this.ladder.labelKey(belt);
   }
 
   /**
@@ -303,33 +389,6 @@ export class SyllabusComponent {
   protected techniqueTotal(position: SyllabusTopic): number {
     return this.totalByPosition().get(position.id) ?? position.children?.length ?? 0;
   }
-
-  /** How many techniques the search turned up, and across how many positions. */
-  protected readonly resultSummary = computed<string>(() => {
-    this.languageService.currentLang(); // signal dep — recompute on toggle
-    const positions = this.filteredPositions();
-    const techniques = positions.reduce((n, p) => n + (p.children?.length ?? 0), 0);
-    // Two counts that vary independently, so each picks its own One/Other —
-    // ngx-translate has no plural rule, and a single hardcoded-plural string
-    // renders "1 techniques across 1 positions" on the commonest search
-    // there is. The same mistake is already documented in `confirmRemove`.
-    const t = this.translate.instant(
-      techniques === 1
-        ? 'academy.syllabus.searchCountTechniqueOne'
-        : 'academy.syllabus.searchCountTechniqueOther',
-      { count: techniques },
-    );
-    const p = this.translate.instant(
-      positions.length === 1
-        ? 'academy.syllabus.searchCountPositionOne'
-        : 'academy.syllabus.searchCountPositionOther',
-      { count: positions.length },
-    );
-    return this.translate.instant('academy.syllabus.searchSummary', {
-      techniques: t,
-      positions: p,
-    });
-  });
 
   /**
    * In-season and total, said separately (#1629).
@@ -802,7 +861,13 @@ export class SyllabusComponent {
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
-        next: (positions) => this.positions.set(positions),
+        next: (positions) => {
+          this.positions.set(positions);
+          // The last graded topic went back to "for everyone": the filter is
+          // gone from the page, so its choice goes too — otherwise grading
+          // one topic later would bring back a filter nobody just picked.
+          if (!this.graded()) this.beltFilter.set(null);
+        },
         // Keep whatever was on screen: an empty tree reads as "you have no
         // programme", which is a different and wrong claim.
         error: () =>
