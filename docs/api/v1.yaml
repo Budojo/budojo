@@ -3857,6 +3857,63 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationError'
 
+  /stats/syllabus/calendar:
+    get:
+      tags: [Stats]
+      summary: Each position, week by week, across a season (#1858)
+      description: |
+        The season map. The coverage report says **how much** of a position
+        was taught; this says **when**, one column per week of the season,
+        so "half guard in October and never again" is visible.
+
+        A cell counts the distinct lessons that week naming the position **or
+        any of its techniques**. Techniques count by the coverage report's
+        own rules — living, `in_season`, admitted by `kind` — so a row and the
+        fraction printed beside it never disagree; a position named on its own
+        counts under every filter, as `worked` does.
+
+        Three states, derived on every read and never stored:
+        - `held` — at least one live presence points at the lesson;
+        - `planned` — nobody checked in, dated today or later;
+        - `unconfirmed` — nobody checked in, and the day has passed.
+
+        Same parameters and same gate as `/stats/syllabus/coverage`: the map
+        is drawn beside that report's fractions. Owner-only, and requires
+        `stats_view`.
+      operationId: statsSyllabusCalendar
+      parameters:
+        - in: query
+          name: seasons_back
+          description: How many seasons before the current one, 0 being now.
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 10
+            default: 0
+        - in: query
+          name: kind
+          description: One of the academy's two `training_modes`; never `both` or `other`.
+          schema:
+            type: string
+            enum: [gi, nogi, tachi-waza, ne-waza, kata, kumite, poomsae, kyorugi]
+      responses:
+        '200':
+          description: The season map
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/SyllabusCalendar'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
   /stats/syllabus/topics/{syllabusTopic}:
     get:
       tags: [Stats]
@@ -8836,6 +8893,91 @@ components:
             properties:
               on: { type: string, format: date }
               covered: { type: integer }
+
+    SyllabusCalendar:
+      type: object
+      description: |
+        The season map (#1858): each living position, one column per week.
+        Cells are sparse — a week with nothing on that position is absent.
+      required: [season, kind, today, weeks, positions, lessons]
+      properties:
+        season:
+          type: object
+          required: [start, end, label]
+          properties:
+            start: { type: string, format: date }
+            end: { type: string, format: date }
+            label: { type: string, example: 2026/27 }
+        kind:
+          type: string
+          nullable: true
+          enum: [gi, nogi, tachi-waza, ne-waza, kata, kumite, poomsae, kyorugi]
+          description: The filter in force, or null for the whole programme.
+        today:
+          type: string
+          format: date
+          description: The server's today — the day `planned` and `unconfirmed` were split on.
+        weeks:
+          type: array
+          description: The Monday of every ISO week the season touches, oldest first. The first can fall before the season opens.
+          items: { type: string, format: date }
+        positions:
+          type: array
+          description: Every living position, in programme order.
+          items:
+            type: object
+            required: [id, name, kind, cells]
+            properties:
+              id: { type: integer, format: int64 }
+              name: { type: string }
+              kind: { $ref: '#/components/schemas/TrainingMode' }
+              cells:
+                type: array
+                description: Weeks with at least one lesson on this position, oldest first.
+                items:
+                  type: object
+                  required: [week, held, planned, unconfirmed]
+                  properties:
+                    week: { type: string, format: date, description: The Monday of the week. }
+                    held: { type: integer, description: Distinct held lessons that week. }
+                    planned: { type: integer, description: Distinct lessons dated today or later with nobody checked in. }
+                    unconfirmed: { type: integer, description: Distinct lessons dated before today with nobody checked in. }
+        lessons:
+          type: array
+          description: |
+            The season's lessons that carry at least one topic, oldest first,
+            so a cell can list what it counts without a second request.
+          items:
+            type: object
+            required: [id, academy_class_id, held_on, name, starts_at, kind, state, position_ids, topics]
+            properties:
+              id: { type: integer, format: int64 }
+              academy_class_id:
+                type: integer
+                format: int64
+                nullable: true
+                description: Null once the class was deleted.
+              held_on: { type: string, format: date }
+              name: { type: string, description: 'The class name, as snapshotted on the lesson.' }
+              starts_at: { type: string, nullable: true, example: '19:00' }
+              kind: { $ref: '#/components/schemas/TrainingMode' }
+              state:
+                type: string
+                enum: [held, planned, unconfirmed]
+              position_ids:
+                type: array
+                description: The positions this lesson counts for under the filter in force — possibly none.
+                items: { type: integer, format: int64 }
+              topics:
+                type: array
+                description: Every topic on the lesson, departed ones included.
+                items:
+                  type: object
+                  required: [id, name, parent_id]
+                  properties:
+                    id: { type: integer, format: int64 }
+                    name: { type: string }
+                    parent_id: { type: integer, format: int64, nullable: true }
 
     CoverageTopic:
       type: object

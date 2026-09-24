@@ -666,6 +666,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::get('documents/compliance', [StatsController::class, 'documentsCompliance']);
             // The programme against what was actually taught (#1565).
             Route::get('syllabus/coverage', [StatsController::class, 'syllabusCoverage']);
+            // Each position, week by week — held, planned, unconfirmed (#1858).
+            Route::get('syllabus/calendar', [StatsController::class, 'syllabusCalendar']);
             // Who has seen one technique — a row of that report, opened (#1745).
             Route::get('syllabus/topics/{syllabusTopic}', \App\Http\Controllers\Stats\TopicExposureController::class);
         });
