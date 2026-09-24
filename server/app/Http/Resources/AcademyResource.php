@@ -52,7 +52,7 @@ class AcademyResource extends JsonResource
                 : null,
             'monthly_fee_cents' => $academy->monthly_fee_cents,
             // How many price tiers the academy has (#1381). The SPA gates the
-            // paid badge and the unpaid widget on "does this academy manage
+            // paid badge and the payment filter on "does this academy manage
             // payments at all", which used to be the same question as
             // `monthly_fee_cents !== null` and is not any more: an academy
             // priced only by tier leaves the flat fee empty. Counted rather

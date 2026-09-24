@@ -20,6 +20,12 @@ use App\Models\Athlete;
  * Kept deliberately narrow. The per-athlete override the owner asked for — a
  * black belt who trains free — is the next slice, and it lands here as one
  * more branch rather than as a second rule somewhere else.
+ *
+ * **Its SQL twins are `Athlete::scopeExpectedToPay`** (tier or flat fee,
+ * non-null) **and `Athlete::scopeChargedMoreThanNothing`** (the same, above
+ * zero), #1722. Whatever branch lands here lands there too, or the roster
+ * shows a dash on a row that `?paid=no`, the digest and the overdue push still
+ * chase.
  */
 final class MonthlyFee
 {

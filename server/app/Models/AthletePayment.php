@@ -69,8 +69,8 @@ class AthletePayment extends Model
      *
      * The one place the containment rule is written. Every surface that used
      * to ask `where year = ? and month = ?` asks this instead: the twelve-month
-     * table, `paid_current_month`, the `?paid` filter, the unpaid widget, the
-     * owner's digest, the overdue push, and the months the monthly fee covers
+     * table, `paid_current_month`, `Athlete::scopeOwing` (the `?paid` filter,
+     * the owner's digest, the overdue push), and the months the monthly fee covers
      * during carnet reconciliation.
      *
      * Deliberately not indexable. The expression spans two columns plus a

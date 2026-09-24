@@ -8,17 +8,6 @@
   max-width: var(--budojo-page-content-max);
   margin: 0 auto;
 
-  &__widgets {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 1rem;
-    margin-bottom: 1rem;
-
-    @media (min-width: 768px) {
-      grid-template-columns: repeat(2, 1fr);
-    }
-  }
-
   // Mobile first: the search takes the full width and the rest wraps under it
   // — four controls do not share 375px, and the canon is explicit that the
   // base styles are the phone (#1428).

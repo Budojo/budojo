@@ -122,10 +122,11 @@ class AthleteResource extends JsonResource
             'paid_current_month' => $paidCurrentMonth,
             // What is actually paying for this month (#1402): the fee's period
             // if one covers it, otherwise a spendable carnet, otherwise
-            // nothing. `paid_current_month` stays beside it — it still answers
-            // the narrower question the unpaid widget and the `?paid` filter
-            // ask, and the two must not drift, which is why both are derived
-            // from the same lookup right above.
+            // nothing. `paid_current_month` stays beside it — it answers the
+            // narrower question the row's paid / unpaid toggle asks, and the
+            // two must not drift, which is why both are derived from the same
+            // lookup right above. Who OWES is this field's question, asked in
+            // SQL by `Athlete::scopeOwing` (#1722).
             'payment_coverage' => MonthCoverage::resolve($coveringPayment, $activeCarnet)->value,
             // Which line of the price list this athlete is on (#1381), and the
             // amount that actually applies to them — resolved server-side so

@@ -4,13 +4,11 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
-use App\Enums\AthleteStatus;
 use App\Models\Academy;
-use App\Models\Athlete;
-use App\Models\AthletePayment;
 use App\Notifications\AthletePaymentOverdueNotification;
 use App\Support\NotificationCategory;
 use App\Support\NotificationPreferences;
+use Carbon\CarbonInterface;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
@@ -26,11 +24,13 @@ use Illuminate\Support\Facades\Log;
  *   - Academy charges something — a flat `monthly_fee_cents` > 0 or a
  *     price tier above zero (#1381). Zero everywhere skips the academy
  *     wholesale: no fee = nothing owed = no reminder.
- *   - Athlete is `active` (other statuses are out of scope —
- *     suspended athletes aren't expected to pay).
+ *   - Athlete owes the month, by the roster's own rule
+ *     (`Athlete::scopeOwing`, #1722): active, not the owner, charged a
+ *     fee, and neither a payment covering the month nor a carnet
+ *     spendable today.
+ *   - Athlete's own fee is above zero — a free tier is not chased even
+ *     where another tier pays (`Athlete::scopeChargedMoreThanNothing`).
  *   - Athlete has a linked user_id (invite-pending rows skipped).
- *   - No `AthletePayment` row for (athlete, current year, current
- *     month).
  *   - User has `athlete_payment_overdue` enabled.
  *
  * Best-effort per-athlete: a single notify() failure logs + continues
@@ -57,9 +57,9 @@ class SendAthletePaymentOverduePushes extends Command
 
         Academy::query()
             ->chargingMoreThanNothing()
-            ->each(function (Academy $academy) use ($year, $month, &$hasFailures): void {
+            ->each(function (Academy $academy) use ($year, $month, $today, &$hasFailures): void {
                 try {
-                    $this->processAcademy($academy, $year, $month);
+                    $this->processAcademy($academy, $year, $month, $today);
                 } catch (\Throwable $e) {
                     $hasFailures = true;
                     Log::warning('athlete_payment_overdue fanout failed for academy', [
@@ -73,40 +73,21 @@ class SendAthletePaymentOverduePushes extends Command
         return $hasFailures ? Command::FAILURE : Command::SUCCESS;
     }
 
-    private function processAcademy(Academy $academy, int $year, int $month): void
+    private function processAcademy(Academy $academy, int $year, int $month, CarbonInterface $today): void
     {
+        // Who owes the month, by the roster's own rule (#1722): the payment
+        // covering it (#1382), a spendable carnet, the owner's own row (#748)
+        // and an athlete charged no fee are all left alone. Narrower than the
+        // owner's list by one clause: a free tier is not chased, for the same
+        // reason the academy gate above skips an academy charging zero.
         $athletes = $academy->athletes()
-            ->where('status', AthleteStatus::Active)
-            // Owner-as-athlete rows (#748) are not billed — exclude
-            // them from the overdue push pipeline. The owner's `is_self`
-            // row carries `user_id` but is never expected to pay.
-            ->where('is_self', false)
+            ->owing($year, $month, $today)
+            ->chargedMoreThanNothing()
             ->whereNotNull('user_id')
             ->with('user')
             ->get();
-        if ($athletes->isEmpty()) {
-            return;
-        }
-
-        // Covered, not "paid in this month" (#1382): an athlete on a quarterly
-        // bought in February is square for April, and chasing them for it
-        // would be exactly the false alarm this command exists to avoid.
-        $paidAthleteIds = AthletePayment::query()
-            ->whereIn('athlete_id', $athletes->pluck('id'))
-            ->covering($year, $month)
-            ->pluck('athlete_id');
-        /** @var array<int, true> $paidSet */
-        $paidSet = [];
-        foreach ($paidAthleteIds as $id) {
-            if (is_numeric($id)) {
-                $paidSet[(int) $id] = true;
-            }
-        }
 
         foreach ($athletes as $athlete) {
-            if (isset($paidSet[$athlete->id])) {
-                continue;
-            }
             $user = $athlete->user;
             if ($user === null) {
                 continue;

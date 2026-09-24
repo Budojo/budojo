@@ -169,6 +169,10 @@ it('excludes self-rows from the unpaid-this-month digest source list', function 
     $owner = userWithAcademy();
     /** @var Academy $academy */
     $academy = $owner->activeAcademy();
+    // The digest only runs for an academy charging a fee, and an athlete
+    // charged none owes nothing (#1722) — without it the list is empty for a
+    // reason that has nothing to do with the self-row.
+    $academy->update(['monthly_fee_cents' => 5000]);
 
     // One regular unpaid active athlete.
     Athlete::factory()->for($academy)->create([
