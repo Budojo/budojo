@@ -432,15 +432,17 @@ describe('StatsSyllabusComponent — who has seen it (#1745)', () => {
     expect(reach(12)).toBe('1 lesson · 1 person');
   });
 
-  it('keeps reach out of the headline', () => {
+  it('keeps reach out of the headline, number and caption alike', () => {
     const { fixture, httpMock } = setup();
     flush(httpMock);
     fixture.detectChanges();
 
-    const headline = fixture.nativeElement.querySelector(
-      '[data-cy="syllabus-coverage-percentage"]',
-    );
+    // The whole headline block: the percentage, the caption and the rule.
+    // Reach is a column on the rows; it must never climb into the fraction.
+    const headline: HTMLElement = fixture.nativeElement.querySelector('.coverage__headline');
+    expect(headline).not.toBeNull();
     expect(headline.textContent).not.toContain('11');
+    expect(headline.textContent).not.toMatch(/people|person/);
   });
 
   it('leaves a never-taught row a plain row — planning it is #1656', () => {

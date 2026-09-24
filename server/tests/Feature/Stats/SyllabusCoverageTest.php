@@ -427,3 +427,32 @@ it('leaves reach out of the headline', function (): void {
     // not a second rule.
     expect(coverage($this)['totals'])->toMatchArray(['covered' => 1, 'percentage' => 50]);
 });
+
+it('does not count a lesson whose only presence was corrected away as held', function (): void {
+    $only = Athlete::factory()->for($this->academy)->create();
+    $lesson = reachLesson($this, '2026-09-07', [$this->armbar], [$only]);
+
+    AttendanceRecord::query()->where('lesson_id', $lesson->id)->delete();
+
+    // Held rests on a live presence (`TopicAttendance`): with its only one
+    // gone, the lesson is a plan again and taught nothing.
+    $data = coverage($this);
+    expect($data['taught'])->toBe([])
+        ->and($data['totals']['thin'])->toBe(0);
+});
+
+it('does not count an athlete who was deleted in reach, as the drill-down does not list them', function (): void {
+    $kept = Athlete::factory()->for($this->academy)->create();
+    $gone = Athlete::factory()->for($this->academy)->create();
+    reachLesson($this, '2026-09-07', [$this->armbar], [$kept, $gone]);
+
+    // Their presence rows stay live; the person does not. The row would say
+    // two people while "who has seen it" lists one.
+    $gone->delete();
+
+    expect(taughtRow(coverage($this), 'Armbar'))->toMatchArray([
+        'lessons' => 1,
+        'reach' => 1,
+        'attendances' => 1,
+    ]);
+});
