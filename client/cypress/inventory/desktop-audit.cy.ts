@@ -129,6 +129,8 @@ function topic(id: number, parent_id: number | null, name: string, over: object 
     kind: 'both',
     in_season: true,
     from_belt: null,
+    notes: null,
+    video_url: null,
     sort_order: id,
     ...over,
   };
@@ -225,6 +227,25 @@ const GRADED_SYLLABUS = SYLLABUS.map((position) => {
   }
   return position;
 });
+
+/** The armbar with how it is taught here written down (#1862). */
+const NOTED_SYLLABUS = SYLLABUS.map((position) =>
+  position.id === 1
+    ? {
+        ...position,
+        children: position.children.map((t) =>
+          t.id === 11
+            ? {
+                ...t,
+                notes:
+                  'Parti dalla S-mount; presa sul gomito lontano.\nPrima il ginocchio sulla testa, poi la gamba.',
+                video_url: 'https://www.youtube.com/watch?v=abc123',
+              }
+            : t,
+        ),
+      }
+    : position,
+);
 
 function lessonTopic(id: number, name: string, parent: string, kind = 'both') {
   return { id, name, kind, parent_id: Math.floor(id / 10), parent_name: parent, deleted: false };
@@ -1937,6 +1958,48 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       },
     },
   );
+  // How a technique is taught here (#1862): the programme's notes and video,
+  // and the notes of the last evening that taught it, captioned as that
+  // evening's.
+  screen(
+    '30-attendance-lesson-sheet-detail',
+    '/dashboard/attendance',
+    '[data-cy="attendance-class-picker"]',
+    {
+      stubs: () => {
+        cy.intercept('GET', '/api/v1/academy/syllabus', {
+          statusCode: 200,
+          body: { data: NOTED_SYLLABUS },
+        });
+        cy.intercept('GET', '/api/v1/lessons/last-notes*', {
+          statusCode: 200,
+          body: {
+            data: {
+              ...LESSON_TONIGHT,
+              id: 5,
+              held_on: '2026-09-09',
+              notes: 'Primo giorno di Marco dopo lo stop: drill lenti, niente sparring.',
+              held: true,
+            },
+          },
+        });
+      },
+      act: () => {
+        press('[data-cy="attendance-topics"]');
+        dialogOpen('[data-cy="lesson-sheet"]');
+        // Let the dialog's own autofocus land on the search field now, on the
+        // frozen clock, rather than during `shoot()`'s tick — where it
+        // scrolled the sheet back to the top over the details below.
+        cy.tick(1000);
+        press('[data-cy="lesson-expand-1"]');
+        press('[data-cy="lesson-detail-toggle-tree-11"]');
+        // The details sit below the fold of the sheet's own scroll area;
+        // focus brings them into the frame the way a keyboard would.
+        cy.get('[data-cy="lesson-detail-video"]').focus();
+        cy.get('[data-cy="lesson-detail-last-evening"]').should('be.visible');
+      },
+    },
+  );
   screen(
     '30-attendance-lesson-sheet-search',
     '/dashboard/attendance',
@@ -2136,23 +2199,54 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
   screen('12-syllabus-edit-position', '/dashboard/academy/syllabus', '[data-cy="syllabus-tree"]', {
     act: () => {
       press('[data-cy="syllabus-edit-1"]');
-      cy.get('[data-cy="syllabus-form"]', { timeout: 4000 }).should('be.visible');
+      // The name field, not the form: since #1862 the form outgrows the
+      // dialog's scroll area at 960×600, and Cypress reads a form taller
+      // than its scroll container as not visible.
+      cy.get('[data-cy="syllabus-form-name"]', { timeout: 4000 }).should('be.visible');
     },
   });
   screen('12-syllabus-edit-technique', '/dashboard/academy/syllabus', '[data-cy="syllabus-tree"]', {
     act: () => {
       press('[data-cy="syllabus-toggle-1"]');
       press('[data-cy="syllabus-topic-11"] button');
-      cy.get('[data-cy="syllabus-form"]', { timeout: 4000 }).should('be.visible');
+      // The name field, not the form: since #1862 the form outgrows the
+      // dialog's scroll area at 960×600, and Cypress reads a form taller
+      // than its scroll container as not visible.
+      cy.get('[data-cy="syllabus-form-name"]', { timeout: 4000 }).should('be.visible');
     },
   });
+  // The teaching notebook in the dialog (#1862): notes and a reference video.
+  screen(
+    '12-syllabus-edit-technique-notes',
+    '/dashboard/academy/syllabus',
+    '[data-cy="syllabus-tree"]',
+    {
+      stubs: () => {
+        cy.intercept('GET', '/api/v1/academy/syllabus', {
+          statusCode: 200,
+          body: { data: NOTED_SYLLABUS },
+        });
+      },
+      act: () => {
+        press('[data-cy="syllabus-toggle-1"]');
+        press('[data-cy="syllabus-topic-edit-11"]');
+        // Below the fold at 960×600: focus scrolls the dialog to the two
+        // new fields the way a keyboard would reach them.
+        cy.get('[data-cy="syllabus-form-video"]').focus();
+        cy.get('[data-cy="syllabus-form-notes"]').should('be.visible');
+      },
+    },
+  );
   // The other half of TT-5 (#1644): this confirm is opened from the footer of
   // the topic dialog, so an anchored popup hung below that dialog's edge. It
   // is a modal confirm now, photographed like the timetable's.
   screen('12-syllabus-remove-confirm', '/dashboard/academy/syllabus', '[data-cy="syllabus-tree"]', {
     act: () => {
       press('[data-cy="syllabus-edit-1"]');
-      cy.get('[data-cy="syllabus-form"]', { timeout: 4000 }).should('be.visible');
+      // The name field, not the form: since #1862 the form outgrows the
+      // dialog's scroll area at 960×600, and Cypress reads a form taller
+      // than its scroll container as not visible.
+      cy.get('[data-cy="syllabus-form-name"]', { timeout: 4000 }).should('be.visible');
       press('[data-cy="syllabus-form-remove"]');
       cy.get('.p-confirmdialog', { timeout: 4000 }).should('be.visible');
     },

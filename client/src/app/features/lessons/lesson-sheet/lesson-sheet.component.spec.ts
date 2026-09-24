@@ -21,6 +21,8 @@ function topic(over: Partial<SyllabusTopic> & { id: number }): SyllabusTopic {
     kind: 'both',
     in_season: true,
     from_belt: null,
+    notes: null,
+    video_url: null,
     sort_order: 0,
     ...over,
   };
@@ -638,5 +640,135 @@ describe('LessonSheetComponent — a suggestions hiccup is not a broken sheet', 
     expect(search.getAttribute('type')).toBe('text');
     expect(search.getAttribute('role')).toBe('searchbox');
     expect(search.getAttribute('enterkeyhint')).toBe('search');
+  });
+});
+
+describe('LessonSheetComponent — how it is taught here (#1862)', () => {
+  afterEach(() => TestBed.inject(HttpTestingController).verify());
+
+  const LAST_NOTES_URL = '/api/v1/lessons/last-notes';
+  const NOTED_ARMBAR = topic({
+    id: 11,
+    parent_id: 1,
+    name: 'Armbar',
+    notes: 'Start from the S-mount.\nGrip on the far elbow.',
+    video_url: 'https://www.youtube.com/watch?v=abc123',
+  });
+  const GUARD = topic({ id: 1, name: 'Closed guard', children: [NOTED_ARMBAR, TRIANGLE] });
+
+  type Fixture = { nativeElement: HTMLElement; detectChanges(): void };
+
+  function openTree(fixture: Fixture): void {
+    (fixture.nativeElement.querySelector('[data-cy="lesson-expand-1"]') as HTMLElement).click();
+    fixture.detectChanges();
+  }
+
+  function toggle(fixture: Fixture, key: string): void {
+    (
+      fixture.nativeElement.querySelector(`[data-cy="lesson-detail-toggle-${key}"]`) as HTMLElement
+    ).click();
+    fixture.detectChanges();
+  }
+
+  it("shows the programme's notes and video, and the last evening's notes as that evening's", () => {
+    const { fixture, httpMock } = setup();
+    flushOpen(httpMock, { positions: [GUARD] });
+    fixture.detectChanges();
+    openTree(fixture);
+
+    toggle(fixture, 'tree-11');
+    const el: HTMLElement = fixture.nativeElement;
+    const req = httpMock.expectOne((r) => r.url === LAST_NOTES_URL);
+    expect(req.request.params.get('syllabus_topic_id')).toBe('11');
+    // Loading is said, not left blank.
+    expect(el.querySelector('[data-cy="lesson-detail-tree-11"]')?.textContent).toContain(
+      'Looking for the last evening',
+    );
+    req.flush({
+      data: lesson({ held_on: '2026-10-07', notes: "Marco's first day back", held: true }),
+    });
+    fixture.detectChanges();
+
+    const detail = el.querySelector('[data-cy="lesson-detail-tree-11"]') as HTMLElement;
+    expect(detail.querySelector('[data-cy="lesson-detail-notes"]')?.textContent).toContain(
+      'Start from the S-mount.',
+    );
+    const video = detail.querySelector('[data-cy="lesson-detail-video"]') as HTMLAnchorElement;
+    expect(video.getAttribute('href')).toBe('https://www.youtube.com/watch?v=abc123');
+    // The desktop shell opens target=_blank in the system browser.
+    expect(video.getAttribute('target')).toBe('_blank');
+    expect(video.getAttribute('rel')).toContain('noopener');
+    // Captioned as the evening's notes — with its class — never the technique's.
+    const evening = detail.querySelector('[data-cy="lesson-detail-last-evening"]') as HTMLElement;
+    expect(evening.querySelector('figcaption')?.textContent).toContain('Fundamentals');
+    expect(evening.querySelector('blockquote')?.textContent).toContain("Marco's first day back");
+
+    const button = el.querySelector('[data-cy="lesson-detail-toggle-tree-11"]') as HTMLElement;
+    expect(button.getAttribute('aria-expanded')).toBe('true');
+  });
+
+  it('asks for the last evening once per opening of the sheet, not every time', () => {
+    const { fixture, httpMock } = setup();
+    flushOpen(httpMock, { positions: [GUARD] });
+    fixture.detectChanges();
+    openTree(fixture);
+
+    toggle(fixture, 'tree-11');
+    httpMock.expectOne((r) => r.url === LAST_NOTES_URL).flush({ data: null });
+    toggle(fixture, 'tree-11');
+    toggle(fixture, 'tree-11');
+
+    httpMock.expectNone((r) => r.url === LAST_NOTES_URL);
+    expect(fixture.nativeElement.querySelector('[data-cy="lesson-detail-tree-11"]')).not.toBeNull();
+  });
+
+  it('says there is nothing yet when nothing is written and no evening left notes', () => {
+    const { fixture, httpMock } = setup();
+    flushOpen(httpMock, { positions: [GUARD] });
+    fixture.detectChanges();
+    openTree(fixture);
+
+    toggle(fixture, 'tree-12');
+    httpMock.expectOne((r) => r.url === LAST_NOTES_URL).flush({ data: null });
+    fixture.detectChanges();
+
+    expect(
+      fixture.nativeElement.querySelector('[data-cy="lesson-detail-nothing"]')?.textContent,
+    ).toContain('No notes on this technique yet');
+  });
+
+  it("keeps the programme's notes when the last-evening read fails, and says nothing about it", () => {
+    const { fixture, httpMock } = setup();
+    flushOpen(httpMock, { positions: [GUARD] });
+    fixture.detectChanges();
+    openTree(fixture);
+
+    toggle(fixture, 'tree-11');
+    httpMock
+      .expectOne((r) => r.url === LAST_NOTES_URL)
+      .flush({ message: 'boom' }, { status: 500, statusText: 'Server Error' });
+    fixture.detectChanges();
+
+    const detail = fixture.nativeElement.querySelector('[data-cy="lesson-detail-tree-11"]');
+    expect(detail.querySelector('[data-cy="lesson-detail-notes"]')).not.toBeNull();
+    expect(detail.querySelector('[data-cy="lesson-detail-last-evening"]')).toBeNull();
+  });
+
+  it('opens a technique in the group it was pressed in, not in every group that lists it', () => {
+    const { fixture, httpMock } = setup();
+    flushOpen(httpMock, {
+      positions: [GUARD],
+      suggestions: [suggestion({ id: 11, name: 'Armbar' })],
+    });
+    fixture.detectChanges();
+    openTree(fixture);
+
+    toggle(fixture, 'suggestions-11');
+    httpMock.expectOne((r) => r.url === LAST_NOTES_URL).flush({ data: null });
+    fixture.detectChanges();
+
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('[data-cy="lesson-detail-suggestions-11"]')).not.toBeNull();
+    expect(el.querySelector('[data-cy="lesson-detail-tree-11"]')).toBeNull();
   });
 });

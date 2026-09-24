@@ -1759,7 +1759,13 @@
         "orderHint": "Moves apply straight away; Save is for the name, \"Trained in\" and the belt.",
         "close": "Close",
         "fromBelt": "In the programme from",
-        "fromBeltHint": "Expected of this belt and of every belt above it. Leave it for everyone when the grade does not matter."
+        "fromBeltHint": "Expected of this belt and of every belt above it. Leave it for everyone when the grade does not matter.",
+        "notes": "How it is taught here",
+        "notesPlaceholder": "Start from the S-mount; grip on the far elbow…",
+        "notesHint": "Optional. Whoever teaches it finds this in the lesson sheet.",
+        "video": "Reference video",
+        "videoHint": "Optional. A link starting with https:// — it opens in your browser.",
+        "videoInvalid": "Paste a link that starts with https://."
       },
       "fromBelt": "From",
       "forEveryone": "For everyone",
@@ -1987,6 +1993,13 @@
           "thin": "Taught once, on {{date}}",
           "stale": "Last taught {{date}}"
         }
+      },
+      "detail": {
+        "open": "How {{name}} is taught here",
+        "video": "Watch the reference video",
+        "lastEvening": "Notes from the evening of {{date}} ({{class}}), when it was last taught",
+        "lastEveningLoading": "Looking for the last evening it was taught…",
+        "nothing": "No notes on this technique yet. Write them under Academy → Programme."
       }
     }
   },

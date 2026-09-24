@@ -50,7 +50,9 @@ class LastLessonNotesRequest extends FormRequest
     /** The topic, resolved after validation. */
     public function topic(): SyllabusTopic
     {
-        return SyllabusTopic::query()->findOrFail((int) $this->validated('syllabus_topic_id'));
+        $id = $this->validated('syllabus_topic_id');
+
+        return SyllabusTopic::query()->findOrFail(is_numeric($id) ? (int) $id : 0);
     }
 
     protected function failedAuthorization(): void

@@ -273,6 +273,112 @@
   }
 }
 
+// ── How it is taught here (#1862) ─────────────────────────────────────────────
+//
+// A row that can open its details: the topic, the info button beside it, and
+// the details under both when open. The button is the dismiss button's shape
+// — the same quiet 48 px square — so a row carries one kind of side control.
+
+.pickable {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0.5rem;
+  min-width: 0;
+
+  .topic {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+}
+
+.topic-info {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  min-height: 3rem;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  // Muted until the programme has something written for it; then it reads
+  // like the text it opens.
+  color: var(--p-text-muted-color);
+  cursor: pointer;
+  transition: background var(--budojo-motion-fast) var(--budojo-motion-decelerate);
+
+  &--written {
+    color: var(--p-text-color);
+  }
+
+  &:hover,
+  &[aria-expanded='true'] {
+    background: var(--p-surface-100);
+    color: var(--p-text-color);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--p-primary-color);
+    outline-offset: -2px;
+  }
+}
+
+.topic-detail {
+  flex: 1 1 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0 0 0.5rem 2rem;
+  padding: 0.5rem 1rem;
+  border-left: 2px solid var(--p-content-border-color);
+  font-size: 0.8125rem;
+  color: var(--p-text-color);
+
+  &__notes {
+    margin: 0;
+    // The owner's own line breaks are part of what they wrote.
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+  }
+
+  &__video {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    align-self: flex-start;
+    min-height: 3rem;
+    color: var(--p-primary-color);
+  }
+
+  &__muted {
+    margin: 0;
+    color: var(--p-text-muted-color);
+  }
+
+  // The last evening's notes, quoted and captioned as that evening's: they
+  // are about the evening, never about the technique.
+  &__evening {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+
+    figcaption {
+      font-size: 0.75rem;
+      color: var(--p-text-muted-color);
+    }
+
+    blockquote {
+      margin: 0;
+      white-space: pre-line;
+      overflow-wrap: anywhere;
+      font-style: italic;
+    }
+  }
+}
+
 // ── The tree ──────────────────────────────────────────────────────────────────
 
 .tree {
@@ -362,12 +468,15 @@
 
 .suggestion {
   display: flex;
+  flex-wrap: wrap;
   align-items: stretch;
   gap: 0.5rem;
   min-width: 0;
 
   .topic {
-    flex: 1 1 auto;
+    // `0`, not `auto`: with the row wrapping for the details panel, an
+    // `auto` basis would push the two buttons onto a line of their own.
+    flex: 1 1 0;
     min-width: 0;
   }
 
