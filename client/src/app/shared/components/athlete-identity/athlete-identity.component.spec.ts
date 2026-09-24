@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
-import { Athlete } from '../../../core/services/athlete.service';
+import { Athlete, AthleteIdentity } from '../../../core/services/athlete.service';
 import { AthleteIdentityComponent } from './athlete-identity.component';
 
 function makeAthlete(over: Partial<Athlete> = {}): Athlete {
@@ -34,12 +34,24 @@ describe('AthleteIdentityComponent (#1458)', () => {
   });
 
   function render(
-    inputs: Partial<{ athlete: Athlete; linkToDetail: boolean; avatarHandle: string | null }>,
+    inputs: Partial<{
+      athlete: AthleteIdentity;
+      linkToDetail: boolean;
+      detailTab: string | null;
+      stretchLink: boolean;
+      avatarHandle: string | null;
+    }>,
   ) {
     fixture = TestBed.createComponent(AthleteIdentityComponent);
     fixture.componentRef.setInput('athlete', inputs.athlete ?? makeAthlete());
     if (inputs.linkToDetail !== undefined) {
       fixture.componentRef.setInput('linkToDetail', inputs.linkToDetail);
+    }
+    if (inputs.detailTab !== undefined) {
+      fixture.componentRef.setInput('detailTab', inputs.detailTab);
+    }
+    if (inputs.stretchLink !== undefined) {
+      fixture.componentRef.setInput('stretchLink', inputs.stretchLink);
     }
     if (inputs.avatarHandle !== undefined) {
       fixture.componentRef.setInput('avatarHandle', inputs.avatarHandle);
@@ -100,5 +112,48 @@ describe('AthleteIdentityComponent (#1458)', () => {
 
     expect((fixture.nativeElement as HTMLElement).innerHTML).toContain('photo.jpg');
     expect((fixture.nativeElement as HTMLElement).innerHTML).not.toContain('avatar.jpg');
+  });
+
+  it('draws a person from the identity alone, not a whole athlete (#1851)', () => {
+    // The monthly summary, the leaderboard and the expiring list get this
+    // smaller shape from the server; the roster's full Athlete still fits.
+    render({
+      athlete: {
+        id: 9,
+        first_name: 'Anna',
+        last_name: 'Bianchi',
+        belt: 'purple',
+        stripes: 1,
+        date_of_birth: null,
+        photo_url: null,
+        user_avatar_url: null,
+      },
+    });
+
+    expect(el('[data-cy="belt-spine"]')?.getAttribute('aria-label')).toContain('Purple');
+    expect(el('[data-cy="athlete-name-text"]')?.textContent?.trim()).toBe('Anna Bianchi');
+  });
+
+  it('opens the tab the page is about when it names one (#1851)', () => {
+    // From the monthly summary the name leads to the athlete's attendance,
+    // from the expiring list to their documents: the tab the reader came for.
+    render({ linkToDetail: true, detailTab: 'documents' });
+    expect(el('[data-cy="athlete-name-link"]')?.getAttribute('href')).toBe(
+      '/dashboard/athletes/7/documents',
+    );
+  });
+
+  it('stretches the name over its card only when the card asks (#1851)', () => {
+    // On a phone card the whole card is the tap target (Fitts); on a desktop
+    // row only the name is, as on the roster.
+    render({ linkToDetail: true, stretchLink: true });
+    expect(el('[data-cy="athlete-name-link"]')?.classList).toContain(
+      'athlete-identity__name--stretched',
+    );
+
+    render({ linkToDetail: true });
+    expect(el('[data-cy="athlete-name-link"]')?.classList).not.toContain(
+      'athlete-identity__name--stretched',
+    );
   });
 });

@@ -6,8 +6,23 @@ import {
   AthleteMissingMedicalCertificate,
   ExpiringDocument,
 } from '../../../core/services/document.service';
+import { AthleteIdentity } from '../../../core/services/athlete.service';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 import { ExpiringDocumentsListComponent } from './expiring-documents-list.component';
+
+/** A person as the server sends them on this page (#1851). */
+function person(id: number, first: string, last: string): AthleteIdentity {
+  return {
+    id,
+    first_name: first,
+    last_name: last,
+    belt: 'blue',
+    stripes: 1,
+    date_of_birth: null,
+    photo_url: null,
+    user_avatar_url: null,
+  };
+}
 
 function makeExpiring(overrides: Partial<ExpiringDocument> = {}): ExpiringDocument {
   return {
@@ -22,7 +37,7 @@ function makeExpiring(overrides: Partial<ExpiringDocument> = {}): ExpiringDocume
     notes: null,
     created_at: '2026-04-20T10:00:00+00:00',
     deleted_at: null,
-    athlete: { id: 42, first_name: 'Mario', last_name: 'Rossi' },
+    athlete: person(42, 'Mario', 'Rossi'),
     ...overrides,
   };
 }
@@ -68,26 +83,33 @@ describe('ExpiringDocumentsListComponent', () => {
     req.flush({ data: [], missing_medical_certificate: [] });
   });
 
-  it('renders rows with athlete name + deep-link to the athlete documents page', () => {
+  it('renders rows with the athlete identity + deep-link to the athlete documents page', () => {
     const fixture = mount();
     flushHealth([
       makeExpiring({
         id: 1,
         athlete_id: 42,
-        athlete: { id: 42, first_name: 'Mario', last_name: 'Rossi' },
+        athlete: person(42, 'Mario', 'Rossi'),
       }),
       makeExpiring({
         id: 2,
         athlete_id: 7,
-        athlete: { id: 7, first_name: 'Anna', last_name: 'Bianchi' },
+        athlete: person(7, 'Anna', 'Bianchi'),
         type: 'insurance',
       }),
     ]);
     fixture.detectChanges();
 
     const el: HTMLElement = fixture.nativeElement;
-    const links = el.querySelectorAll('[data-cy="athlete-link"]') as NodeListOf<HTMLAnchorElement>;
+    // Drawn as every list draws people (#1851): the belt spine, then the name,
+    // which opens the athlete's documents.
+    const links = el.querySelectorAll(
+      '[data-cy="expiring-table"] [data-cy="athlete-name-link"]',
+    ) as NodeListOf<HTMLAnchorElement>;
     expect(links).toHaveLength(2);
+    expect(el.querySelectorAll('[data-cy="expiring-table"] [data-cy="belt-spine"]')).toHaveLength(
+      2,
+    );
     expect(links[0].textContent?.trim()).toBe('Mario Rossi');
     expect(links[0].getAttribute('href')).toBe('/dashboard/athletes/42/documents');
     expect(links[1].textContent?.trim()).toBe('Anna Bianchi');
@@ -101,7 +123,7 @@ describe('ExpiringDocumentsListComponent', () => {
 
     const el: HTMLElement = fixture.nativeElement;
     expect(el.querySelector('[data-cy="all-clear-empty"]')).not.toBeNull();
-    expect(el.querySelector('[data-cy="athlete-link"]')).toBeNull();
+    expect(el.querySelector('[data-cy="athlete-name-link"]')).toBeNull();
     expect(el.querySelector('[data-cy="missing-cert-section"]')).toBeNull();
   });
 
@@ -119,13 +141,7 @@ describe('ExpiringDocumentsListComponent', () => {
 
   it('renders the missing-cert section when athletes without medical certs are returned', () => {
     const fixture = mount();
-    flushHealth(
-      [],
-      [
-        { id: 11, first_name: 'Giulia', last_name: 'Rossi' },
-        { id: 12, first_name: 'Luca', last_name: 'Verdi' },
-      ],
-    );
+    flushHealth([], [person(11, 'Giulia', 'Rossi'), person(12, 'Luca', 'Verdi')]);
     fixture.detectChanges();
 
     const el: HTMLElement = fixture.nativeElement;
@@ -139,6 +155,10 @@ describe('ExpiringDocumentsListComponent', () => {
     expect(rows[0].getAttribute('href')).toBe('/dashboard/athletes/11/documents');
     expect(rows[1].textContent).toContain('Luca Verdi');
     expect(rows[1].getAttribute('href')).toBe('/dashboard/athletes/12/documents');
+    // The belt is on the row (#1851), and the row stays ONE link: the name
+    // inside it is text, not a second anchor nested in the first.
+    expect(rows[0].querySelector('[data-cy="belt-spine"]')).not.toBeNull();
+    expect(rows[0].querySelector('a')).toBeNull();
   });
 
   it('hides the missing-cert section when no missing certs are returned', () => {
@@ -153,7 +173,7 @@ describe('ExpiringDocumentsListComponent', () => {
 
   it('hides the expiring section when only missing certs exist (no expired documents)', () => {
     const fixture = mount();
-    flushHealth([], [{ id: 11, first_name: 'Giulia', last_name: 'Rossi' }]);
+    flushHealth([], [person(11, 'Giulia', 'Rossi')]);
     fixture.detectChanges();
 
     const el: HTMLElement = fixture.nativeElement;
@@ -176,10 +196,7 @@ describe('ExpiringDocumentsListComponent', () => {
     const fixture = mount();
     flushHealth(
       [makeExpiring({ id: 1 }), makeExpiring({ id: 2 }), makeExpiring({ id: 3 })],
-      [
-        { id: 11, first_name: 'Giulia', last_name: 'Rossi' },
-        { id: 12, first_name: 'Luca', last_name: 'Verdi' },
-      ],
+      [person(11, 'Giulia', 'Rossi'), person(12, 'Luca', 'Verdi')],
     );
     fixture.detectChanges();
 
@@ -200,11 +217,7 @@ describe('ExpiringDocumentsListComponent', () => {
         makeExpiring({ id: 1, athlete_id: 42 }),
         makeExpiring({ id: 2, athlete_id: 43, type: 'insurance' }),
       ],
-      [
-        { id: 11, first_name: 'Giulia', last_name: 'Rossi' },
-        { id: 12, first_name: 'Luca', last_name: 'Verdi' },
-        { id: 13, first_name: 'Sara', last_name: 'Bianchi' },
-      ],
+      [person(11, 'Giulia', 'Rossi'), person(12, 'Luca', 'Verdi'), person(13, 'Sara', 'Bianchi')],
     );
     fixture.detectChanges();
 
@@ -251,7 +264,7 @@ describe('ExpiringDocumentsListComponent', () => {
       const el = fixture.nativeElement as HTMLElement;
       // A link to `/dashboard/athletes/null/documents` is a 404 dressed as a
       // control.
-      expect(el.querySelector('[data-cy="athlete-link"]')).toBeNull();
+      expect(el.querySelector('[data-cy="athlete-name-link"]')).toBeNull();
     });
 
     it('still deep-links an athlete document beside it', () => {
@@ -262,7 +275,7 @@ describe('ExpiringDocumentsListComponent', () => {
       const el = fixture.nativeElement as HTMLElement;
       // The other half: refusing every link would pass the test above and
       // break the feature the page already had.
-      expect(el.querySelector('[data-cy="athlete-link"]')).not.toBeNull();
+      expect(el.querySelector('[data-cy="athlete-name-link"]')).not.toBeNull();
       expect(el.querySelector('[data-cy="academy-owned"]')).not.toBeNull();
     });
 

@@ -30,6 +30,7 @@ import {
 import { LanguageService } from '../../../core/services/language.service';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { ErrorStateComponent } from '../../../shared/components/error-state/error-state.component';
+import { AthleteIdentityComponent } from '../../../shared/components/athlete-identity/athlete-identity.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { triggerBrowserDownload } from '../../../shared/utils/download';
 import { LocaleDatePipe } from '../../../shared/pipes/locale-date.pipe';
@@ -60,6 +61,7 @@ import { LocaleDatePipe } from '../../../shared/pipes/locale-date.pipe';
     PageHeaderComponent,
     ErrorStateComponent,
     EmptyStateComponent,
+    AthleteIdentityComponent,
   ],
   providers: [MessageService],
   templateUrl: './expiring-documents-list.component.html',
@@ -134,13 +136,6 @@ export class ExpiringDocumentsListComponent implements OnInit {
     return this.typeKeys[doc.type];
   }
 
-  athleteNameFor(doc: ExpiringDocument): string {
-    const athlete = doc.athlete;
-    if (!athlete) return '';
-
-    return `${athlete.first_name} ${athlete.last_name}`;
-  }
-
   /**
    * True for one of the academy's own papers (#1743) — no athlete, so no name
    * to show and nowhere to deep-link to.
@@ -152,10 +147,6 @@ export class ExpiringDocumentsListComponent implements OnInit {
    */
   protected isAcademyDocument(doc: ExpiringDocument): boolean {
     return doc.athlete_id === null;
-  }
-
-  missingAthleteNameFor(a: AthleteMissingMedicalCertificate): string {
-    return `${a.first_name} ${a.last_name}`;
   }
 
   ngOnInit(): void {

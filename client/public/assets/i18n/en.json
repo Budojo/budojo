@@ -2402,6 +2402,7 @@
       "reachAria": "How to reach this athlete",
       "reach": {
         "phone": "Call {{value}}",
+        "whatsapp": "Message {{value}} on WhatsApp",
         "email": "Email {{value}}"
       }
     },
@@ -2737,6 +2738,13 @@
       "futureOther": "in {{count}} days",
       "pastOne": "{{count}} day overdue",
       "pastOther": "{{count}} days overdue"
+    },
+    "contact": {
+      "call": "Call",
+      "whatsapp": "WhatsApp",
+      "callAria": "Call {{name}}",
+      "whatsappAria": "Message {{name}} on WhatsApp",
+      "noPhone": "No phone number on file"
     }
   },
   "stats": {

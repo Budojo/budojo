@@ -4674,8 +4674,9 @@ paths:
         document with `expires_at` ≤ today + `days` (default 30), ordered
         `expires_at` ascending so the most urgent item is first. Already
         expired documents are included. Documents with `expires_at = null`
-        are excluded. Each item inlines an `athlete` summary (id, first_name,
-        last_name) for deep-linking from the dashboard widget.
+        are excluded. Each item inlines the `athlete`'s identity
+        (`AthleteSummary`: name, belt, stripes, date of birth, photo, #1851),
+        for deep-linking and for drawing the row with the belt.
 
         A medical certificate that a later one has replaced is also excluded:
         when an athlete has more than one live `medical_certificate` row, only
@@ -4728,14 +4729,8 @@ paths:
                     description: Documents whose `expires_at` is in the past OR within `days`. Ordered by `expires_at` ascending.
                   missing_medical_certificate:
                     type: array
-                    description: Active athletes with no live medical-certificate row.
-                    items:
-                      type: object
-                      required: [id, first_name, last_name]
-                      properties:
-                        id: { type: integer, format: int64 }
-                        first_name: { type: string }
-                        last_name: { type: string }
+                    description: Active athletes with no live medical-certificate row, each with their identity (#1851).
+                    items: { $ref: '#/components/schemas/AthleteSummary' }
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
@@ -5359,6 +5354,11 @@ paths:
         The caller's own row (when the caller is an athlete) carries
         `is_self: true`. Owners never get `is_self` set because they
         have no athlete row of their own.
+
+        Identity (#1851): for an owner, each visible row also carries
+        `athlete`, the full `AthleteSummary`, so the card draws the person
+        with the belt. An athlete caller never gets it, and an anonymous row
+        never has it.
       operationId: attendanceLeaderboard
       parameters:
         - name: month
@@ -5380,7 +5380,7 @@ paths:
                     maxItems: 5
                     items:
                       type: object
-                      required: [athlete_id, first_name, last_name_initial, anonymous, sessions, hours, is_self]
+                      required: [athlete_id, first_name, last_name_initial, anonymous, sessions, hours, is_self, athlete]
                       properties:
                         athlete_id: { type: integer, format: int64 }
                         first_name: { type: string, description: Empty string when anonymous. }
@@ -5389,6 +5389,15 @@ paths:
                         sessions: { type: integer, minimum: 1 }
                         hours: { type: number, format: float }
                         is_self: { type: boolean }
+                        athlete:
+                          allOf:
+                            - $ref: '#/components/schemas/AthleteSummary'
+                          nullable: true
+                          description: |
+                            The athlete's full identity, belt included (#1851), for an **owner**
+                            caller and a visible row only. Null for an anonymous row, and null
+                            on every row for an athlete caller: the portal keeps "first name and
+                            initial" for training partners.
                   meta:
                     type: object
                     required: [month]
@@ -9791,10 +9800,15 @@ components:
     AthleteSummary:
       type: object
       description: |
-        Minimal athlete identity inlined into a document response when the
-        endpoint returns documents across athletes (e.g. `/documents/expiring`).
-        For single-athlete endpoints this is omitted.
-      required: [id, first_name, last_name]
+        An athlete's identity, inlined wherever a list names people without
+        being the roster (#1851): the expiring documents and the athletes
+        missing a certificate (`/documents/expiring`), the monthly summary
+        (`/attendance/summary`) and, for the owner, the leaderboard
+        (`/attendance/leaderboard`). It is exactly what the SPA needs to draw
+        the row with the belt spine, the avatar, the full name and the age:
+        `AthleteIdentityResource` on the server. For single-athlete endpoints
+        it is omitted.
+      required: [id, first_name, last_name, belt, stripes, date_of_birth, photo_url, user_avatar_url]
       properties:
         id:
           type: integer
@@ -9803,6 +9817,24 @@ components:
           type: string
         last_name:
           type: string
+        belt:
+          $ref: '#/components/schemas/Belt'
+        stripes:
+          type: integer
+          minimum: 0
+          maximum: 10
+        date_of_birth:
+          type: string
+          format: date
+          nullable: true
+        photo_url:
+          type: string
+          nullable: true
+          description: The athlete's own photo (#1357), with a `?v=` cache-buster. Wins over `user_avatar_url`.
+        user_avatar_url:
+          type: string
+          nullable: true
+          description: The linked user's avatar; null when there is no linked user or no avatar.
 
     Document:
       type: object
@@ -10009,7 +10041,7 @@ components:
 
     AttendanceSummaryRow:
       type: object
-      required: [athlete_id, first_name, last_name, count]
+      required: [athlete_id, first_name, last_name, count, athlete]
       properties:
         athlete_id:
           type: integer
@@ -10022,6 +10054,13 @@ components:
           type: integer
           minimum: 1
           description: Number of active attendance records in the month.
+        athlete:
+          allOf:
+            - $ref: '#/components/schemas/AthleteSummary'
+          nullable: true
+          description: |
+            The athlete's identity (#1851), so the page draws the row with the
+            belt. Additive: the flat name fields above stay.
 
     AttendanceSummaryEnvelope:
       type: object
