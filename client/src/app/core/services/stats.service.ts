@@ -138,6 +138,9 @@ export interface TopicExposure {
     readonly parent_name: string | null;
     readonly kind: TrainingMode;
     readonly in_season: boolean;
+    /** How it is taught here, and the video it came from (#1862). */
+    readonly notes: string | null;
+    readonly video_url: string | null;
   };
   readonly season: { readonly start: string; readonly end: string; readonly label: string };
   /** Held lessons that named it, oldest first. */

@@ -196,6 +196,9 @@ describe('Academy programme', () => {
 
     cy.get('[data-cy="syllabus-toggle-1"]').click();
     cy.get('[data-cy="syllabus-topic-edit-11"]').click();
+    // The dialog puts focus on its first field once it has opened; typing
+    // before that lands half a link in the name.
+    cy.get('[data-cy="syllabus-form-name"]').should('have.focus');
 
     cy.get('[data-cy="syllabus-form-notes"]').type('Start from the S-mount.');
     // Plain http is refused at the field before anything is sent.

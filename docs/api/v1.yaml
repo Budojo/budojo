@@ -8607,7 +8607,7 @@ components:
       properties:
         topic:
           type: object
-          required: [id, name, parent_name, kind, in_season]
+          required: [id, name, parent_name, kind, in_season, notes, video_url]
           properties:
             id: { type: integer }
             name: { type: string }
@@ -8618,6 +8618,10 @@ components:
             kind:
               $ref: '#/components/schemas/TrainingMode'
             in_season: { type: boolean }
+            notes:
+              $ref: '#/components/schemas/SyllabusTopicNotes'
+            video_url:
+              $ref: '#/components/schemas/SyllabusTopicVideoUrl'
         season:
           type: object
           required: [start, end, label]

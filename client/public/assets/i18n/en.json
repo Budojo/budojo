@@ -2939,6 +2939,7 @@
       "exposure": {
         "title": "Who has seen it",
         "openPrefix": "Who has seen it:",
+        "notebook": "How it is taught here",
         "lessonsOne": "Taught in {{count}} lesson this season",
         "lessonsOther": "Taught in {{count}} lessons this season",
         "headcountOne": "{{count}} person",

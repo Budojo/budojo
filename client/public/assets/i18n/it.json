@@ -2939,6 +2939,7 @@
       "exposure": {
         "title": "Chi l'ha vista",
         "openPrefix": "Chi l'ha vista:",
+        "notebook": "Come si insegna qui",
         "lessonsOne": "Fatta in {{count}} lezione questa stagione",
         "lessonsOther": "Fatta in {{count}} lezioni questa stagione",
         "headcountOne": "{{count}} persona",

@@ -969,7 +969,16 @@ function exposureRow(id: number, exposures: number, lastSeenOn: string | null, s
 }
 
 const TOPIC_EXPOSURE = {
-  topic: { id: 11, name: 'Armbar', parent_name: 'Closed guard', kind: 'both', in_season: true },
+  topic: {
+    id: 11,
+    name: 'Armbar',
+    parent_name: 'Closed guard',
+    kind: 'both',
+    in_season: true,
+    // How it is taught here (#1862), so the drill-down shows its notebook.
+    notes: 'Parti dalla S-mount; presa sul gomito lontano.',
+    video_url: 'https://www.youtube.com/watch?v=abc123',
+  },
   season: SYLLABUS_COVERAGE.season,
   lessons: [
     {
