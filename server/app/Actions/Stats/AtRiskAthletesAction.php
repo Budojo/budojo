@@ -10,7 +10,7 @@ use App\Models\Athlete;
 use App\Models\AttendanceRecord;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Collection;
+use Illuminate\Database\Eloquent\Collection;
 
 /**
  * Who is drifting (#1728) — measured against each athlete's own habit.
@@ -154,7 +154,8 @@ class AtRiskAthletesAction
             ->orderByDesc('attended_on')
             ->limit(self::RECENT_SESSIONS + self::BASELINE_SESSIONS)
             ->pluck('attended_on')
-            ->map(static fn (mixed $day): string => substr((string) $day, 0, 10))
+            ->map(static fn (mixed $day): string => substr(\is_string($day) ? $day : '', 0, 10))
+            ->filter(static fn (string $day): bool => $day !== '')
             ->unique()
             ->values()
             ->all();
@@ -202,7 +203,7 @@ class AtRiskAthletesAction
 
         $byAthlete = [];
         foreach ($rows as $row) {
-            \assert(\is_object($row) && isset($row->athlete_id, $row->attended_on));
+            \assert(isset($row->athlete_id, $row->attended_on));
             $byAthlete[(int) $row->athlete_id][substr((string) $row->attended_on, 0, 10)] = true;
         }
 

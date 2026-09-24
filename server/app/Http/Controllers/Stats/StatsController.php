@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Stats;
 
-use App\Actions\Stats\AtRiskAthletesAction;
 use App\Actions\Stats\AthleteAgeBandsAction;
+use App\Actions\Stats\AtRiskAthletesAction;
 use App\Actions\Stats\CertificateComplianceAction;
 use App\Actions\Stats\DailyAttendanceStatsAction;
 use App\Actions\Stats\MonthlyPaymentsStatsAction;

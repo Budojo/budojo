@@ -218,7 +218,7 @@ it('counts only this academy\'s sessions and athletes', function (): void {
     // Another academy trained every day this month. Those are not nights this
     // academy was open, and its athletes are not ours to list.
     $other = userWithAcademy()->academy;
-    \assert($other instanceof Academy);
+    assert($other instanceof Academy);
     $theirs = atRiskAthlete($other, 'Theirs');
     atRiskPresent($theirs, atRiskSessionDates(40));
     atRiskAthlete($other, 'TheirsIdle');

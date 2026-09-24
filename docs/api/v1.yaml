@@ -6045,6 +6045,51 @@ paths:
               example: { message: Forbidden. }
         '422': { description: 'Validation error — months must be 3, 6, or 12.' }
 
+  /stats/attendance/at-risk:
+    get:
+      operationId: statsAttendanceAtRisk
+      summary: Athletes whose attendance has fallen against their own habit
+      description: |
+        Who is drifting (#1728), measured against each athlete's own record
+        rather than a fixed number, and counted in **realised sessions** —
+        the distinct days anyone in the academy was checked in — rather than
+        in weeks, so a closure contributes nothing. Per athlete the sessions
+        are clipped at `joined_at`.
+
+        `recent` is the athlete's last 8 sessions; `baseline` the 24 before
+        those. One tier per athlete, the most severe that applies:
+
+        - `gone` — none of the last 8, and last seen more than 21 days ago
+          (or never, since joining);
+        - `quiet` — none of the last 3;
+        - `dropping` — at least 6 presences in the baseline and a recent
+          rate under half the baseline rate.
+
+        Left out: athletes not `active`, anyone who joined in the last 28
+        days, and anyone whose baseline holds fewer than 12 sessions.
+
+        Sorted `gone`, `quiet`, `dropping`; within a tier, longest absent
+        first (never-seen first of all). `meta.sessions_available` counts
+        the academy's realised sessions, so a client can tell "nobody is
+        drifting" from "not enough sessions recorded yet". Not cached.
+
+        Owner and staff with `stats_view`; an athlete account gets the
+        `role_required` 403 every `/stats` route gives it.
+      tags: [Stats]
+      responses:
+        '200':
+          description: The athletes at risk, most severe first, and how many sessions exist.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AtRiskAthletes' }
+        '401': { description: Unauthenticated }
+        '403':
+          description: Forbidden — no academy, or a role without `stats_view`.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorMessage' }
+              example: { message: Forbidden. }
+
   /stats/payments/monthly:
     get:
       operationId: statsPaymentsMonthly
@@ -7429,6 +7474,84 @@ components:
       type: string
       description: Enrollment status for an athlete
       enum: [active, inactive]
+
+    AtRiskAthletes:
+      type: object
+      description: Who is drifting, against their own attendance (#1728).
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          description: Most severe tier first; within a tier, longest absent first.
+          items:
+            type: object
+            required:
+              [
+                athlete,
+                tier,
+                last_attended_on,
+                recent_attended,
+                recent_sessions,
+                baseline_attended,
+                baseline_sessions,
+              ]
+            properties:
+              athlete:
+                type: object
+                description: |
+                  What a list row needs to draw the person (the belt spine
+                  of `app-athlete-identity`) and to reach them (the phone
+                  pair) without a second request.
+                required: [id, first_name, last_name, belt, stripes, status]
+                properties:
+                  id: { type: integer }
+                  first_name: { type: string }
+                  last_name: { type: string }
+                  belt: { type: string, example: blue }
+                  stripes: { type: integer, minimum: 0 }
+                  date_of_birth: { type: string, format: date, nullable: true }
+                  status: { type: string, example: active }
+                  photo_url: { type: string, nullable: true }
+                  user_avatar_url: { type: string, nullable: true }
+                  phone_country_code: { type: string, nullable: true, example: '+39' }
+                  phone_national_number: { type: string, nullable: true }
+              tier:
+                type: string
+                enum: [gone, quiet, dropping]
+                description: The most severe that applies — one value, never several.
+              last_attended_on:
+                type: string
+                format: date
+                nullable: true
+                description: Latest live presence, all time. `null` — never trained since joining.
+              recent_attended:
+                type: integer
+                minimum: 0
+                description: Presences in the last 8 sessions since joining.
+              recent_sessions:
+                type: integer
+                minimum: 0
+                description: Sessions in that window — 8 for anyone listed.
+              baseline_attended:
+                type: integer
+                minimum: 0
+                description: Presences in the 24 sessions before those.
+              baseline_sessions:
+                type: integer
+                minimum: 12
+                maximum: 24
+                description: Sessions in the baseline — fewer than 24 for someone who joined within it.
+        meta:
+          type: object
+          required: [sessions_available]
+          properties:
+            sessions_available:
+              type: integer
+              minimum: 0
+              description: |
+                Every realised session the academy has recorded. Below 20
+                (8 recent + 12 baseline) nobody can be judged yet, and an
+                empty list means "not enough history", not "nobody drifting".
 
     # ── Generic envelopes ─────────────────────────────────────────────────
 
