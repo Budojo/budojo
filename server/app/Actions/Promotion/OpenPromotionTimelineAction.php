@@ -21,8 +21,10 @@ use Carbon\CarbonImmutable;
  * joining date of years ago, and "arrived at blue in 2019" is false for
  * everyone who arrived white and was promoted since. The belt held the day the
  * record starts is the one fact the app actually has; the owner transcribes
- * what came before through the promotions tab, and the chain rule accepts it
- * as long as it ends at this belt (`ValidatesPromotionChainConsistency`).
+ * what came before through the promotions tab. This row says which belt was
+ * held that day and nothing about how, so `ValidatesPromotionChainConsistency`
+ * does not check a backfill against it: a register goes in oldest-first, or
+ * stays incomplete, beneath it.
  *
  * **A belt row only.** A stripe row would assert a change — 0 → 2 — that never
  * happened on this date. This row's date plus the athlete's current stripes

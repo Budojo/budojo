@@ -25,9 +25,10 @@ class CreateAthletePromotionAction
      * recorded the real-world event (#1431).
      *
      * Chain consistency (does this row contradict its neighbours) is
-     * already enforced by `StoreAthletePromotionRequest` before this runs
-     * — by the time `execute()` is called, the row is known-consistent
-     * and this is a straight insert.
+     * enforced by `StoreAthletePromotionRequest` before a backfill reaches
+     * here, so this is a straight insert. The other caller is
+     * `OpenPromotionTimelineAction` (#1771), whose starting row on a fresh
+     * athlete has no neighbours to contradict.
      */
     public function execute(
         Athlete $athlete,

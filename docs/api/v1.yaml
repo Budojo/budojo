@@ -7278,7 +7278,11 @@ components:
       description: |
         One row of an athlete's belt or stripe promotion history.
         `kind` discriminates the populated columns: `belt` →
-        `from_belt`/`to_belt` set, stripes null. `stripe` →
+        `to_belt` set, and `from_belt` too except on a **starting row**
+        (`from_belt: null`) — the row every timeline opens with, written
+        when the athlete is created or imported (#1771), or a starting
+        belt the owner transcribes. A starting row is an arrival, not a
+        promotion. Stripes null on belt rows. `stripe` →
         `from_stripes`/`to_stripes` set, belts null. `belt_at_event`
         is the snapshot of the athlete's belt at the moment of the
         promotion — populated on both kinds, lets the SPA render the
@@ -9369,7 +9373,11 @@ components:
           allOf:
             - $ref: '#/components/schemas/Belt'
           nullable: true
-          description: Null on the athlete's first belt assignment. `kind=belt` only.
+          description: |
+            Null writes a **starting row**: the belt held on `recorded_at`,
+            with nothing said about how (#1771). Every athlete created or
+            imported already has one, dated when their record began.
+            `kind=belt` only.
         to_belt:
           $ref: '#/components/schemas/Belt'
         from_stripes: { type: integer, minimum: 0, maximum: 10 }
