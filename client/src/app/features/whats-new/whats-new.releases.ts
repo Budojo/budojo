@@ -64,7 +64,7 @@ export const RELEASES: readonly Release[] = [
     date: '2026-09-24',
     headline: {
       en: 'Numbers that add up: who owes, how often, how much of the programme, and where a belt history starts.',
-      it: 'I conti che tornano: chi deve pagare, quante presenze, quanto programma, e da dove parte la storia di una cintura.',
+      it: 'I conti che tornano: chi deve pagare, quante presenze, quanto del programma, e da dove parte la storia di una cintura.',
     },
     sections: [
       {
