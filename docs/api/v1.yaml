@@ -3789,6 +3789,112 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationError'
 
+  /lessons/room-gaps:
+    get:
+      tags: [attendance]
+      summary: What tonight's people missed, of what was already taught (#1860)
+      description: |
+        The suggestions answer from the academy's side; this answers from the
+        room. For the athletes checked into this lesson, the techniques the
+        academy taught this season **before tonight** that most of them were
+        not there for.
+
+        A candidate is in scope for the class exactly as for
+        `/lessons/suggestions`: living, in season, a technique, of a kind the
+        class admits — minus what tonight's lesson already names, so a tagged
+        technique never takes a slot. **Before tonight is by the clock**: an
+        earlier day counts, and so does an earlier lesson the same day; a
+        later one the same evening does not, and a same-day lesson with no
+        start time (or a tonight with none) is left out, because there is no
+        saying which came first. `missed` counts the people checked in tonight who were
+        at none of its held lessons and had joined by the last of them. A row
+        comes back only when `missed` is at least 2 **and** at least half of
+        `present`; at most three, the most missed first, then the one taught
+        longest ago. Fewer than three people on the mat is a private lesson
+        and answers no rows. A technique not taught yet this season never
+        appears here — that is the suggestions' first rule.
+
+        A presence that names no lesson (#1590) on one of those days is not
+        read as an absence: the person is left out of `missed` and counted
+        in `unattributed`.
+
+        Never creates the lesson. A slot nobody touched, or one nobody is
+        checked into, answers `present: 0` and no rows.
+
+        Requires `attendance_read`.
+      operationId: lessonRoomGaps
+      parameters:
+        - name: academy_class_id
+          in: query
+          required: true
+          schema: { type: integer }
+          description: A class on the caller's own timetable.
+        - name: held_on
+          in: query
+          required: true
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: What most of tonight's room missed
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [present, rows]
+                    properties:
+                      present:
+                        type: integer
+                        description: Distinct athletes with a live presence on this lesson.
+                      rows:
+                        type: array
+                        items:
+                          type: object
+                          required: [id, name, parent_name, kind, lessons, last_taught_on, missed, unattributed, athletes]
+                          properties:
+                            id: { type: integer }
+                            name: { type: string }
+                            parent_name:
+                              type: string
+                              nullable: true
+                            kind:
+                              $ref: '#/components/schemas/TrainingMode'
+                            lessons:
+                              type: integer
+                              description: Held lessons that taught it this season, before tonight.
+                            last_taught_on: { type: string, format: date }
+                            missed:
+                              type: integer
+                              description: People here tonight who were at none of those lessons.
+                            unattributed:
+                              type: integer
+                              description: People here tonight who trained on one of those days with no lesson named — neither there nor missed.
+                            athletes:
+                              type: array
+                              description: Who missed it, in register order — the rows of `missed`.
+                              items:
+                                type: object
+                                required: [id, first_name, last_name, belt, stripes, date_of_birth, photo_url, user_avatar_url]
+                                properties:
+                                  id: { type: integer }
+                                  first_name: { type: string }
+                                  last_name: { type: string }
+                                  belt:
+                                    $ref: '#/components/schemas/Belt'
+                                  stripes: { type: integer }
+                                  date_of_birth: { type: string, format: date, nullable: true }
+                                  photo_url: { type: string, nullable: true }
+                                  user_avatar_url: { type: string, nullable: true }
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
   /stats/syllabus/coverage:
     get:
       tags: [Stats]
