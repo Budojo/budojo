@@ -24,6 +24,7 @@
   "nav": {
     "homeAriaLabel": "Budojo — go to dashboard home",
     "profileAriaLabel": "Open your profile",
+    "today": "Today",
     "academy": "Academy",
     "athletes": "Athletes",
     "attendance": "Attendance",
@@ -3074,6 +3075,60 @@
     },
     "unmarkErrorToast": {
       "summary": "Couldn't cancel attendance"
+    }
+  },
+  "today": {
+    "season": "Season {{label}}",
+    "checkIn": "Open the check-in",
+    "tonight": {
+      "title": "Tonight",
+      "nothingYet": "Nothing yet",
+      "addTopics": "Add topics",
+      "editTopics": "Edit topics",
+      "noClass": "No class tonight.",
+      "next": "Next: {{day}} at {{time}}, {{name}}.",
+      "nextUntimed": "Next: {{day}}, {{name}}.",
+      "noTimetable": "There is no timetable yet, so tonight has nothing to show.",
+      "setUpTimetable": "Set up the timetable",
+      "error": "Couldn't load the timetable."
+    },
+    "watch": {
+      "title": "To check",
+      "certificateOne": "medical certificate to renew",
+      "certificateOther": "medical certificates to renew",
+      "missingOne": "athlete without a medical certificate",
+      "missingOther": "athletes without a medical certificate",
+      "documentOne": "other document to renew",
+      "documentOther": "other documents to renew",
+      "unpaidOne": "{{month}} fee not paid",
+      "unpaidOther": "{{month}} fees not paid",
+      "none": "Nothing to check today.",
+      "documentsError": "Couldn't load the documents to check.",
+      "unpaidError": "Couldn't load who has paid this month."
+    },
+    "teach": {
+      "title": "What to teach",
+      "for": "For {{name}} at {{time}}",
+      "forUntimed": "For {{name}}",
+      "openSheet": "Plan the lesson",
+      "none": "No suggestions: the programme is empty, or everything in it is out of season.",
+      "programmeLink": "Open the programme",
+      "noClass": "No class tonight, so there is nothing to prepare.",
+      "error": "Couldn't load the suggestions."
+    },
+    "week": {
+      "title": "This week",
+      "presences": "Presences since Monday",
+      "programme": "Programme this season",
+      "programmeValue": "{{percentage}}% · {{covered}} of {{total}}",
+      "joined": "New this week",
+      "joinedNone": "Nobody new this week.",
+      "joinedError": "Couldn't load the new members."
+    },
+    "system": {
+      "backup": "Last backup {{when}}",
+      "noBackup": "No backup on this computer yet",
+      "open": "Open backup"
     }
   },
   "backup": {
