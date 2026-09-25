@@ -1,3 +1,4 @@
+import { Provider } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
@@ -6,6 +7,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { provideI18nTesting } from '../../../test-utils/i18n-test';
 import { useLadder } from '../../../test-utils/ladder-test';
 import { AcademyClass } from '../../core/services/academy-class.service';
+import {
+  BackupFolderService,
+  BackupFolderStateView,
+} from '../../core/services/backup-folder.service';
+import { DriveLinkStateView, DriveSyncService } from '../../core/services/drive-sync.service';
 import { Athlete } from '../../core/services/athlete.service';
 import { Lesson } from '../../core/services/lesson.service';
 import { TodayComponent } from './today.component';
@@ -73,7 +79,10 @@ interface Responses {
   recent?: Athlete[];
 }
 
-function setup(academy: Record<string, unknown> = {}): HttpTestingController {
+function setup(
+  academy: Record<string, unknown> = {},
+  providers: Provider[] = [],
+): HttpTestingController {
   TestBed.configureTestingModule({
     imports: [TodayComponent],
     providers: [
@@ -81,6 +90,7 @@ function setup(academy: Record<string, unknown> = {}): HttpTestingController {
       provideHttpClientTesting(),
       provideRouter([]),
       ...provideI18nTesting(),
+      ...providers,
     ],
   });
   useLadder('bjj', academy);
@@ -512,5 +522,173 @@ describe('TodayComponent', () => {
 
     expect(text(fixture.nativeElement, 'today-class-1')).toContain('Kimura');
     http.verify();
+  });
+
+  describe('is there a copy anywhere but this computer (#1751)', () => {
+    const FOLDER: BackupFolderStateView = {
+      folder: 'D:\\OneDrive\\Budojo',
+      lastCopyAt: '2026-09-24T03:00:00Z',
+      lastError: null,
+      lastErrorAt: null,
+    };
+    const NO_DRIVE: DriveLinkStateView = { configured: true, linked: false };
+
+    /**
+     * What the services really answer off the desktop: `available` false,
+     * and `state()` all-nulls / unconfigured rather than nothing at all. So
+     * a component that forgot the `available` gate would read those as "no
+     * folder, no Drive" and raise the alert — which the web-build test below
+     * must catch.
+     */
+    const OFF_DESKTOP_FOLDER: BackupFolderStateView = {
+      folder: null,
+      lastCopyAt: null,
+      lastError: null,
+      lastErrorAt: null,
+    };
+    const OFF_DESKTOP_DRIVE: DriveLinkStateView = { configured: false, linked: false };
+
+    function bridges(
+      folder: BackupFolderStateView | null,
+      drive: DriveLinkStateView | null = NO_DRIVE,
+    ): Provider[] {
+      return [
+        {
+          provide: BackupFolderService,
+          useValue: {
+            available: folder !== null,
+            state: () => Promise.resolve(folder ?? OFF_DESKTOP_FOLDER),
+          },
+        },
+        {
+          provide: DriveSyncService,
+          useValue: {
+            available: drive !== null,
+            state: () => Promise.resolve(drive ?? OFF_DESKTOP_DRIVE),
+          },
+        },
+      ];
+    }
+
+    async function render(providers: Provider[]): Promise<HTMLElement> {
+      const http = setup({}, providers);
+      const fixture = TestBed.createComponent(TodayComponent);
+      fixture.detectChanges();
+      flushAll(http, { health: { data: [], missing_medical_certificate: [] } });
+      await fixture.whenStable();
+      fixture.detectChanges();
+      http.verify();
+      return fixture.nativeElement as HTMLElement;
+    }
+
+    it('a failing folder copy is an alert naming the folder and the reason', async () => {
+      const root = await render(
+        bridges({ ...FOLDER, lastError: 'ENOENT', lastErrorAt: '2026-09-23T03:00:00Z' }),
+      );
+
+      const row = text(root, 'today-watch-backup');
+      expect(row).toContain('D:\\OneDrive\\Budojo');
+      // The Backup page's own sentence for the errno, not a second copy of it.
+      expect(row).toContain('The backup folder no longer exists');
+      expect(root.querySelector('[data-cy="today-watch-backup"]')?.getAttribute('href')).toBe(
+        '/dashboard/backup',
+      );
+      expect(root.querySelector('[data-cy="today-system"]')).toBeNull();
+    });
+
+    it('a failing Drive sync is an alert naming the account', async () => {
+      const root = await render(
+        bridges(
+          { ...FOLDER, folder: null, lastCopyAt: null },
+          {
+            configured: true,
+            linked: true,
+            account: 'dojo@example.com',
+            lastError: 'invalid_grant',
+          },
+        ),
+      );
+
+      expect(text(root, 'today-watch-backup')).toContain('dojo@example.com');
+    });
+
+    it('no folder and no Drive link is the "only on this computer" alert', async () => {
+      const root = await render(bridges({ ...FOLDER, folder: null, lastCopyAt: null }));
+
+      expect(text(root, 'today-watch-backup')).toContain('only on this computer');
+      expect(text(root, 'today-watch-backup')).toContain('link Google Drive');
+    });
+
+    it('does not suggest Google Drive in a build that cannot link it', async () => {
+      const root = await render(
+        bridges(
+          { ...FOLDER, folder: null, lastCopyAt: null },
+          { configured: false, linked: false },
+        ),
+      );
+
+      const row = text(root, 'today-watch-backup');
+      expect(row).toContain('only on this computer');
+      expect(row).toContain('Choose a folder');
+      expect(row).not.toContain('Google Drive');
+    });
+
+    it('a copy that stopped arriving more than a week ago is a warning with its date', async () => {
+      // No lastError: the local backup threw, and the copy after it never ran.
+      const root = await render(bridges({ ...FOLDER, lastCopyAt: '2026-09-10T03:00:00Z' }));
+
+      const row = text(root, 'today-watch-backup');
+      expect(row).toContain('The last copy outside this computer is from 10 September');
+      expect(root.querySelector('[data-cy="today-system"]')).toBeNull();
+    });
+
+    it('copies landing are one quiet line, and nothing to check', async () => {
+      const root = await render(bridges(FOLDER));
+
+      expect(root.querySelector('[data-cy="today-watch-backup"]')).toBeNull();
+      expect(text(root, 'today-watch')).toContain('Nothing to check');
+      expect(text(root, 'today-system')).toContain('Last copy off this computer');
+    });
+
+    it('never says all clear before the backup state has been read', async () => {
+      // The bridge answers last: documents and payments are already in.
+      let answer: (state: BackupFolderStateView) => void = () => undefined;
+      const slowFolder = new Promise<BackupFolderStateView>((resolve) => (answer = resolve));
+      const http = setup({}, [
+        {
+          provide: BackupFolderService,
+          useValue: { available: true, state: () => slowFolder },
+        },
+        {
+          provide: DriveSyncService,
+          useValue: { available: true, state: () => Promise.resolve(NO_DRIVE) },
+        },
+      ]);
+      const fixture = TestBed.createComponent(TodayComponent);
+      fixture.detectChanges();
+      flushAll(http, { health: { data: [], missing_medical_certificate: [] } });
+      await Promise.resolve();
+      fixture.detectChanges();
+
+      const root = fixture.nativeElement as HTMLElement;
+      expect(text(root, 'today-watch')).not.toContain('Nothing to check');
+
+      // Then the backup turns out to exist nowhere but here.
+      answer({ ...FOLDER, folder: null, lastCopyAt: null });
+      // The bridge's promise chain is not a tracked task: let it drain.
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      fixture.detectChanges();
+
+      expect(text(root, 'today-watch')).not.toContain('Nothing to check');
+      expect(text(root, 'today-watch-backup')).toContain('only on this computer');
+      http.verify();
+    });
+
+    it('says nothing at all on the web build, where there is no bridge', async () => {
+      const root = await render(bridges(null, null));
+
+      expect(root.querySelector('[data-cy="today-watch-backup"]')).toBeNull();
+      expect(root.querySelector('[data-cy="today-system"]')).toBeNull();
+    });
   });
 });

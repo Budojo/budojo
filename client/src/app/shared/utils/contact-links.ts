@@ -19,11 +19,15 @@ function digitsOf(part: string | null | undefined): string {
 
 /**
  * Built from the stored pair: `phone_country_code` with its `+`, and
- * `phone_national_number` **as the owner typed it**. That is not guaranteed to
- * be E.164: a national trunk prefix survives validation (`+44` +
- * `07911123456`), and this function strips only non-digits, so wa.me then gets
- * `4407911123456`, which WhatsApp rejects. The fix belongs in how the number
- * is stored, not here (#1867).
+ * `phone_national_number` as its **national significant number**, which the
+ * server stores on every write since #1867 — a trunk zero typed on the form
+ * (`+44` + `07911123456`) is dropped, and an Italian landline's leading zero
+ * is kept. A one-off migration dropped the trunk zeros already stored. So the
+ * pair is E.164, and this function only has to strip the `+` and anything
+ * that is not a digit. It does not re-derive the number itself: that rule is
+ * libphonenumber's, on the server. (An Italian landline imported before #1867
+ * may lack its zero and give a link that does not ring; the server logged
+ * those rows for a person to fix rather than guess the zero back.)
  *
  * - `tel:+393331234567` — unspaced, because the scheme does not tolerate
  *   inner whitespace, and with the `+`, because without it the number would
