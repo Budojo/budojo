@@ -19,6 +19,7 @@ import { ButtonModule } from 'primeng/button';
 import { DrawerModule } from 'primeng/drawer';
 import { Popover, PopoverModule } from 'primeng/popover';
 import { SkeletonModule } from 'primeng/skeleton';
+import { AcademyClass, AcademyClassService } from '../../../../core/services/academy-class.service';
 import { TrainingMode } from '../../../../core/services/academy.service';
 import { LanguageService } from '../../../../core/services/language.service';
 import {
@@ -27,15 +28,19 @@ import {
   StatsService,
   SyllabusCalendar,
 } from '../../../../core/services/stats.service';
+import { addDays, admitsTopic, localIso } from '../../../../shared/utils/class-occurrences';
 import { localeFor } from '../../../../shared/utils/locale';
+import { LessonSheetComponent } from '../../../lessons/lesson-sheet/lesson-sheet.component';
 import {
   MapCell,
   MapRow,
+  PlanOption,
   WeekLessons,
   buildRows,
   cellLessons,
   mondayOf,
   monthStarts,
+  planOptions,
   positionSeason,
 } from './season-map.model';
 
@@ -46,8 +51,45 @@ import {
  */
 interface OpenPanel {
   readonly mode: 'week' | 'season';
+  readonly positionId: number;
   readonly name: string;
   readonly groups: readonly WeekLessons[];
+  /**
+   * Where a plan can land (#1859): the classes of that week, or of the next
+   * two, that may teach this position. Null when planning is not offered —
+   * a week already past, a season gone by, an academy with no timetable.
+   */
+  readonly plan: readonly PlanOption[] | null;
+}
+
+/** The lesson being planned from the map, opened in the lesson sheet. */
+interface PlanningSlot {
+  readonly classId: number;
+  readonly heldOn: string;
+  readonly className: string;
+  readonly positionId: number;
+}
+
+/** How far ahead a position's season offers a lesson to plan: the next two weeks. */
+const SEASON_PLAN_DAYS = 13;
+
+/**
+ * The first day a plan can land on. The calendar's `today` is the server's
+ * date, in UTC: for an hour or two after midnight in Rome it is still
+ * yesterday, and last night's class would be offered as a plan.
+ */
+function planningToday(calendar: SyllabusCalendar): string {
+  const local = localIso(new Date());
+  return local > calendar.today ? local : calendar.today;
+}
+
+/**
+ * The last day a plan can land on: `to`, or the season's end if that comes
+ * first. The map draws the season's last week whole, so a season closing on
+ * a Tuesday still shows that week's Wednesday — which belongs to the next one.
+ */
+function planningUntil(calendar: SyllabusCalendar, to: string): string {
+  return to < calendar.season.end ? to : calendar.season.end;
 }
 
 /** Below this the panel is a bottom sheet; the popover is for a wide window. */
@@ -82,12 +124,14 @@ const STATE_KEYS: Record<Exclude<CalendarLessonState, 'held'>, string> = {
     DrawerModule,
     PopoverModule,
     SkeletonModule,
+    LessonSheetComponent,
   ],
   templateUrl: './season-map.component.html',
   styleUrl: './season-map.component.scss',
 })
 export class SeasonMapComponent {
   private readonly stats = inject(StatsService);
+  private readonly classService = inject(AcademyClassService);
   private readonly translate = inject(TranslateService);
   private readonly languageService = inject(LanguageService);
   private readonly injector = inject(Injector);
@@ -107,6 +151,11 @@ export class SeasonMapComponent {
   protected readonly drawerOpen = signal<boolean>(false);
   /** Wide enough for a popover beside the map; below that, a bottom sheet. */
   protected readonly wide = signal<boolean>(true);
+  /** The timetable, for what a future week can be planned into (#1859). */
+  protected readonly classes = signal<readonly AcademyClass[]>([]);
+  /** The lesson being planned from the map, and whether its sheet is open. */
+  protected readonly planning = signal<PlanningSlot | null>(null);
+  protected readonly planSheetOpen = signal<boolean>(false);
 
   /**
    * The bottom sheet is a modal dialog named by its title, as the popover is.
@@ -129,6 +178,14 @@ export class SeasonMapComponent {
 
   constructor() {
     this.watchWidth();
+
+    // Once: the timetable does not move with the season or the filter. A
+    // failure offers no planning rather than a broken panel.
+    const classes = this.classService.list().subscribe({
+      next: (list) => this.classes.set(list),
+      error: () => this.classes.set([]),
+    });
+    this.destroyRef.onDestroy(() => classes.unsubscribe());
 
     // Keyed on the report's own controls, cancelling the previous read: two
     // quick presses on "previous season" must not paint a stale season.
@@ -154,6 +211,15 @@ export class SeasonMapComponent {
 
   protected readonly weeks = computed<readonly string[]>(() => this.calendar()?.weeks ?? []);
 
+  /**
+   * Planning is offered in the current season, on a row some class of the
+   * timetable may teach. A season gone by has no week left to plan, and a
+   * no-gi position in a gi-only timetable has nowhere to go.
+   */
+  protected canPlan(row: MapRow): boolean {
+    return this.seasonsBack() === 0 && this.classes().some((c) => admitsTopic(c.kind, row.kind));
+  }
+
   protected readonly currentWeek = computed<string | null>(() => {
     const today = this.calendar()?.today;
     return today ? mondayOf(today) : null;
@@ -167,6 +233,7 @@ export class SeasonMapComponent {
     return this.positions().map((p) => ({
       id: p.id,
       name: p.name,
+      kind: p.kind,
       covered: p.covered,
       inScope: p.in_scope,
       cells: [],
@@ -234,10 +301,24 @@ export class SeasonMapComponent {
     const calendar = this.calendar();
     if (calendar === null) return;
 
+    // From today, not from Monday: the days of this week already gone are
+    // the check-in's, not a plan's.
+    const today = planningToday(calendar);
+    const from = cell.week > today ? cell.week : today;
     this.present(event, {
       mode: 'week',
+      positionId: row.id,
       name: row.name,
       groups: [{ week: cell.week, lessons: cellLessons(calendar, row.id, cell.week) }],
+      plan:
+        cell.ahead && this.canPlan(row)
+          ? planOptions(
+              this.classes(),
+              row.kind,
+              from,
+              planningUntil(calendar, addDays(cell.week, 6)),
+            )
+          : null,
     });
   }
 
@@ -250,10 +331,53 @@ export class SeasonMapComponent {
     const calendar = this.calendar();
     if (calendar === null) return;
 
+    const today = planningToday(calendar);
     this.present(event, {
       mode: 'season',
+      positionId: row.id,
       name: row.name,
       groups: positionSeason(calendar, row.id),
+      plan: this.canPlan(row)
+        ? planOptions(
+            this.classes(),
+            row.kind,
+            today,
+            planningUntil(calendar, addDays(today, SEASON_PLAN_DAYS)),
+          )
+        : null,
+    });
+  }
+
+  /** "Plan closed guard, week of 12 Oct" — an empty week ahead, as a pointer shortcut. */
+  protected planAria(row: MapRow, cell: MapCell): string {
+    return this.translate.instant('stats.syllabus.map.planAria', {
+      position: row.name,
+      date: this.shortDate(cell.week),
+    });
+  }
+
+  /**
+   * Open the lesson sheet on the chosen class and day, with the position
+   * already expanded (#1859). The panel closes first: two dialogs on top of
+   * each other is one too many.
+   */
+  protected plan(option: PlanOption, panel: OpenPanel): void {
+    this.popover()?.hide();
+    this.drawerOpen.set(false);
+    this.planning.set({
+      classId: option.classId,
+      heldOn: option.date,
+      className: option.name,
+      positionId: panel.positionId,
+    });
+    this.planSheetOpen.set(true);
+  }
+
+  /** The plan was saved: redraw the weeks without blanking the map first. */
+  protected refreshWeeks(): void {
+    this.stats.syllabusCalendar(this.seasonsBack(), this.kind()).subscribe({
+      next: (calendar) => this.calendar.set(calendar),
+      error: () => undefined,
     });
   }
 

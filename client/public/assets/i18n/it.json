@@ -1761,7 +1761,13 @@
         "orderHint": "Lo spostamento vale subito; Salva serve per il nome, per «Si allena» e per la cintura.",
         "close": "Chiudi",
         "fromBelt": "Nel programma dalla cintura",
-        "fromBeltHint": "Previsto per questa cintura e per tutte quelle sopra. Lascialo per tutti quando la cintura non conta."
+        "fromBeltHint": "Previsto per questa cintura e per tutte quelle sopra. Lascialo per tutti quando la cintura non conta.",
+        "notes": "Come si insegna qui",
+        "notesPlaceholder": "Parti dalla S-mount; presa sul gomito lontano…",
+        "notesHint": "Facoltativo. Chi la insegna lo ritrova nella scheda della lezione.",
+        "video": "Video di riferimento",
+        "videoHint": "Facoltativo. Un link che inizia con https://: si apre nel browser.",
+        "videoInvalid": "Incolla un link che inizia con https://."
       },
       "fromBelt": "Dalla",
       "forEveryone": "Per tutti",
@@ -1960,6 +1966,9 @@
       "title": "Lezione",
       "planned": "Pianificata",
       "held": "Svolta",
+      "stepPrevious": "La settimana prima",
+      "stepNext": "La settimana dopo",
+      "stepSaveFirst": "Salva o annulla prima di cambiare settimana.",
       "searchPlaceholder": "Cerca nel programma",
       "searchAria": "Cerca nel programma",
       "clearSearch": "Cancella la ricerca",
@@ -1993,11 +2002,20 @@
       "suggestions": {
         "title": "Suggeriti per stasera",
         "dismiss": "Non stasera",
+        "titleLesson": "Suggeriti per questa lezione",
+        "dismissLesson": "Non per questa lezione",
         "reason": {
           "never": "Non ancora fatto questa stagione",
           "thin": "Fatto una volta: {{date}}",
           "stale": "Ultima volta: {{date}}"
         }
+      },
+      "detail": {
+        "open": "Come si insegna qui {{name}}",
+        "video": "Guarda il video di riferimento",
+        "lastEvening": "Note della sera del {{date}} ({{class}}), l'ultima in cui l'avete fatta",
+        "lastEveningLoading": "Cerco l'ultima sera in cui l'avete fatta…",
+        "nothing": "Ancora nessuna nota su questa tecnica. Scrivile in Accademia → Programma."
       }
     }
   },
@@ -2155,6 +2173,31 @@
         "expiringDocumentOne": "altro documento da rinnovare",
         "expiringDocumentOther": "altri documenti da rinnovare",
         "none": "Non c'è niente da controllare"
+      },
+      "atRisk": {
+        "title": "Non si vedono da un po'",
+        "description": "Chi viene meno del solito, rispetto alle sue stesse presenze.",
+        "countOne": "{{count}} atleta",
+        "countOther": "{{count}} atleti",
+        "tier": {
+          "gone": "Assente da tempo",
+          "quiet": "Assente di recente",
+          "dropping": "In calo"
+        },
+        "reasonDropping": "{{recent}} delle ultime {{recentTotal}} · prima {{baseline}} su {{baselineTotal}}",
+        "reasonAbsent": "Ultima volta {{when}}",
+        "reasonNever": "Nessuna presenza dall'iscrizione",
+        "emptyHealthy": "Nessuno sta calando: tutti vengono più o meno come al solito.",
+        "emptyNoHistory": "Non ci sono ancora abbastanza lezioni registrate per dirlo: {{available}} su {{needed}}.",
+        "emptyNoAttendance": "Nessuna presenza registrata. Fai l'appello dal check-in e questa lista si riempie da sola.",
+        "openCheckIn": "Apri il check-in",
+        "more": "Altro",
+        "moreAria": "Altre azioni per {{name}}",
+        "markInactive": "Segna come non in attività",
+        "markInactiveConfirm": "Segnare {{name}} come non in attività? Esce dalla vista predefinita degli atleti; non si cancella nulla.",
+        "markInactiveAccept": "Segna non in attività",
+        "markInactiveToast": "{{name}}: ora non in attività",
+        "markInactiveError": "Non è stato possibile aggiornare {{name}}. Riprova."
       }
     },
     "invitation": {
@@ -2923,6 +2966,10 @@
         "seasonTitle": "{{position}}, in questa stagione",
         "seasonAria": "{{position}}: tutte le settimane della stagione",
         "seasonEmpty": "Ancora niente su questa posizione in questa stagione.",
+        "planTitle": "Pianifica una lezione",
+        "planAria": "Pianifica {{position}}, settimana del {{date}}",
+        "planNoneWeek": "Quella settimana nessuna classe dell'orario può fare questa posizione.",
+        "planNoneSeason": "Nelle prossime due settimane nessuna classe dell'orario può fare questa posizione.",
         "state": {
           "planned": "Pianificata",
           "unconfirmed": "Senza appello"
@@ -2969,6 +3016,7 @@
       "exposure": {
         "title": "Chi l'ha vista",
         "openPrefix": "Chi l'ha vista:",
+        "notebook": "Come si insegna qui",
         "lessonsOne": "Fatta in {{count}} lezione questa stagione",
         "lessonsOther": "Fatta in {{count}} lezioni questa stagione",
         "headcountOne": "{{count}} persona",
@@ -3133,9 +3181,19 @@
       "joinedError": "Non riesco a caricare i nuovi iscritti."
     },
     "system": {
-      "backup": "Ultimo backup {{when}}",
-      "noBackup": "Ancora nessun backup su questo computer",
+      "lastCopy": "Ultima copia fuori da questo computer: {{when}}",
+      "firstCopyPending": "La prima copia fuori da questo computer arriva con il prossimo backup",
       "open": "Apri il backup"
+    },
+    "backup": {
+      "folderFailing": "La copia dei backup in {{where}} non riesce",
+      "driveFailing": "La copia dei backup su Google Drive ({{where}}) non riesce",
+      "driveFailingUnnamed": "La copia dei backup su Google Drive non riesce",
+      "localOnly": "I backup sono solo su questo computer",
+      "localOnlyDetail": "Se si rompe questo disco, si perde tutta l'accademia. Scegli una cartella o collega Google Drive.",
+      "localOnlyDetailFolder": "Se si rompe questo disco, si perde tutta l'accademia. Scegli una cartella per i backup.",
+      "stale": "L'ultima copia fuori da questo computer è del {{date}}",
+      "staleDetail": "Da più di una settimana non ne arriva una nuova. Apri il backup per capire perché."
     }
   },
   "backup": {

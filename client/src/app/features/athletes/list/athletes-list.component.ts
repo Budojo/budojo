@@ -58,6 +58,7 @@ import { IconButtonComponent } from '../../../shared/components/icon-button/icon
 import { SortHeaderComponent } from '../../../shared/components/sort-header/sort-header.component';
 import { BeltSortButtonComponent } from '../../../shared/components/belt-sort-button/belt-sort-button.component';
 import { OnboardingChecklistComponent } from '../../onboarding/onboarding-checklist.component';
+import { NotSeenLatelyComponent } from './not-seen-lately/not-seen-lately.component';
 import { OnboardingService } from '../../../core/services/onboarding.service';
 import { academyChargesAFee } from '../../../shared/utils/academy-fee';
 import {
@@ -118,6 +119,7 @@ interface SelectOption<T extends string> {
     UserAvatarComponent,
     PaidBadgeComponent,
     OnboardingChecklistComponent,
+    NotSeenLatelyComponent,
     PageHeaderComponent,
     ErrorStateComponent,
     EmptyStateComponent,
@@ -402,6 +404,16 @@ export class AthletesListComponent implements OnInit {
     // with no filter set and is told it has never added anybody (#1666).
     return (this.inactiveCount() ?? 0) > 0 ? 'all-inactive' : 'first-run';
   });
+
+  /**
+   * Whether the academy has anybody on its books. False only while the roster
+   * shows its first-run state — including before the first answer, so the
+   * not-seen-lately section (#1729) cannot flash a nudge to take the register
+   * above a first-run state that is about to say there is nobody to check in.
+   */
+  readonly hasAthletes = computed<boolean>(
+    () => this.totalRecords() > 0 || this.emptyStateKind() !== 'first-run',
+  );
 
   /**
    * How many athletes exist once the default `active` is lifted — asked only

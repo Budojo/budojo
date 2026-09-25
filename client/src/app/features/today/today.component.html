@@ -101,8 +101,20 @@
                 [queryParams]="row.queryParams"
                 [attr.data-cy]="row.dataCy"
               >
-                <span class="today-row__count">{{ row.count }}</span>
-                <span class="today-row__label">{{ row.label }}</span>
+                @if (row.count !== null) {
+                  <span class="today-row__count">{{ row.count }}</span>
+                } @else {
+                  <!-- A state, not a tally (#1751): a mark where the count would be. -->
+                  <span class="today-row__count today-row__count--alert">
+                    <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+                  </span>
+                }
+                <span class="today-row__label">
+                  {{ row.label }}
+                  @if (row.detail) {
+                    <span class="today-row__detail">{{ row.detail }}</span>
+                  }
+                </span>
                 <i class="pi pi-angle-right today-row__chevron" aria-hidden="true"></i>
               </a>
             </li>
@@ -243,17 +255,23 @@
     </section>
   </div>
 
-  @if (isDesktop && lastBackupAt() !== undefined) {
-    <p class="today__system" data-cy="today-system">
-      @if (lastBackupAt(); as at) {
-        <span>{{ 'today.system.backup' | translate: { when: (at | relativeTime) } }}</span>
-      } @else {
-        <span>{{ 'today.system.noBackup' | translate }}</span>
-      }
-      <a routerLink="/dashboard/backup" data-cy="today-system-backup">{{
-        'today.system.open' | translate
-      }}</a>
-    </p>
+  <!--
+    Copies are landing (#1751): the only backup state that is a quiet line.
+    A failing copy, or none set up, is an alert in "Da guardare" instead.
+  -->
+  @if (backup(); as b) {
+    @if (b.kind === 'ok') {
+      <p class="today__system" data-cy="today-system">
+        @if (b.lastCopyAt; as at) {
+          <span>{{ 'today.system.lastCopy' | translate: { when: (at | localeDate) } }}</span>
+        } @else {
+          <span>{{ 'today.system.firstCopyPending' | translate }}</span>
+        }
+        <a routerLink="/dashboard/backup" data-cy="today-system-backup">{{
+          'today.system.open' | translate
+        }}</a>
+      </p>
+    }
   }
 </div>
 

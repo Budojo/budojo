@@ -100,7 +100,7 @@ it('leaves out an athlete who came to every one of the last 8 sessions', functio
     $response = atRiskResponse($this);
 
     expect($response['data'])->toBe([])
-        ->and($response['meta'])->toBe(['sessions_available' => 32]);
+        ->and($response['meta'])->toBe(['sessions_available' => 32, 'sessions_needed' => 20, 'has_attendance' => true]);
 });
 
 it('flags a drop against the athlete\'s own baseline, with the numbers that say why', function (): void {
@@ -280,7 +280,38 @@ it('says how many sessions exist, so a young academy is not reported as healthy'
     $response = atRiskResponse($this);
 
     expect($response['data'])->toBe([])
-        ->and($response['meta'])->toBe(['sessions_available' => 15]);
+        ->and($response['meta'])->toBe(['sessions_available' => 15, 'sessions_needed' => 20, 'has_attendance' => true]);
+});
+
+it('does not count tonight as history before it is over', function (): void {
+    // Nineteen sessions before today, and a twentieth in progress with one
+    // person ticked. Everyone not ticked is judged on nineteen, which is too
+    // few: the client must hear "not enough history", not "nobody drifting".
+    AttendanceRecord::query()->forceDelete();
+    $before = atRiskSessionDates(19);
+    atRiskPresent($this->regular, [...$before, '2026-09-24']);
+    atRiskPresent(atRiskAthlete($this->academy, 'Drifting'), atRiskAt($before, range(8, 18)));
+
+    $response = atRiskResponse($this);
+
+    expect($response['data'])->toBe([])
+        ->and($response['meta'])->toBe(['sessions_available' => 19, 'sessions_needed' => 20, 'has_attendance' => true]);
+});
+
+it('tells the first evening of an academy apart from one that never took the register', function (): void {
+    // Nothing before today, and today's register under way: no history yet,
+    // but attendance has been recorded — the client must not say "no
+    // attendance recorded" to someone who has just recorded some.
+    AttendanceRecord::query()->forceDelete();
+    atRiskPresent($this->regular, ['2026-09-24']);
+
+    expect(atRiskResponse($this)['meta'])
+        ->toBe(['sessions_available' => 0, 'sessions_needed' => 20, 'has_attendance' => true]);
+
+    AttendanceRecord::query()->forceDelete();
+
+    expect(atRiskResponse($this)['meta'])
+        ->toBe(['sessions_available' => 0, 'sessions_needed' => 20, 'has_attendance' => false]);
 });
 
 it('refuses an athlete account the way the other stats routes do', function (): void {

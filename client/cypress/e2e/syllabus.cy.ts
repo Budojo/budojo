@@ -28,6 +28,8 @@ function topic(over: Record<string, unknown> = {}) {
     kind: 'both',
     in_season: true,
     from_belt: null,
+    notes: null,
+    video_url: null,
     sort_order: 0,
     ...over,
   };
@@ -126,6 +128,8 @@ describe('Academy programme', () => {
       kind: 'nogi',
       parent_id: 2,
       from_belt: null,
+      notes: null,
+      video_url: null,
     });
   });
 
@@ -160,6 +164,8 @@ describe('Academy programme', () => {
       name: 'Cross collar choke',
       kind: 'gi',
       from_belt: 'purple',
+      notes: null,
+      video_url: null,
     });
     cy.wait('@reload');
 
@@ -180,6 +186,38 @@ describe('Academy programme', () => {
     );
     cy.get('[data-cy="syllabus-topic-11"]').should('be.visible');
     cy.get('[data-cy="syllabus-topic-12"]').should('not.exist');
+  });
+
+  it('writes how a technique is taught here and where it came from (#1862)', () => {
+    stub([CLOSED_GUARD, K_GUARD]);
+
+    cy.visitAuthenticated('/dashboard/academy/syllabus');
+    cy.wait('@syllabus');
+
+    cy.get('[data-cy="syllabus-toggle-1"]').click();
+    cy.get('[data-cy="syllabus-topic-edit-11"]').click();
+    // The dialog puts focus on its first field once it has opened; typing
+    // before that lands half a link in the name.
+    cy.get('[data-cy="syllabus-form-name"]').should('have.focus');
+
+    cy.get('[data-cy="syllabus-form-notes"]').type('Start from the S-mount.');
+    // Plain http is refused at the field before anything is sent.
+    cy.get('[data-cy="syllabus-form-video"]').type('http://youtube.com/watch?v=abc123');
+    cy.get('[data-cy="syllabus-form-submit"]').click();
+    cy.get('[data-cy="syllabus-form-video-error"]').should('contain.text', 'https://');
+
+    cy.intercept('PATCH', '/api/v1/academy/syllabus/11', {
+      statusCode: 200,
+      body: { data: { ...ARMBAR, notes: 'Start from the S-mount.' } },
+    }).as('notes');
+    cy.get('[data-cy="syllabus-form-video"]').clear().type('https://youtube.com/watch?v=abc123');
+    cy.get('[data-cy="syllabus-form-video-error"]').should('not.exist');
+    cy.get('[data-cy="syllabus-form-submit"]').click();
+
+    cy.wait('@notes').its('request.body').should('deep.include', {
+      notes: 'Start from the S-mount.',
+      video_url: 'https://youtube.com/watch?v=abc123',
+    });
   });
 
   it('offers a karate academy its own modes and its own example (#1803)', () => {

@@ -100,6 +100,10 @@ class TopicExposureAction
                 'parent_name' => $parent instanceof SyllabusTopic ? $parent->name : null,
                 'kind' => $topic->kind->value,
                 'in_season' => $topic->in_season,
+                // How it is taught here (#1862): the drill-down is where an
+                // instructor decides whether to teach it again.
+                'notes' => $topic->notes,
+                'video_url' => $topic->video_url,
             ],
             'season' => [
                 'start' => $start->toDateString(),

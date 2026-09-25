@@ -67,6 +67,16 @@ class SetLessonTopicsRequest extends FormRequest
         ];
     }
 
+    /**
+     * A plan lands on a day the class runs (#1859).
+     *
+     * @return list<\Closure>
+     */
+    public function after(): array
+    {
+        return [$this->futureSlotOnClassWeekday()];
+    }
+
     /** @return list<int> */
     public function topicIds(): array
     {

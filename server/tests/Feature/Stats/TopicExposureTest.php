@@ -370,6 +370,17 @@ it('describes the topic and the season it read', function (): void {
     ])->and($report['season'])->toHaveKeys(['start', 'end', 'label']);
 });
 
+it('carries how the topic is taught here, when the programme says (#1862)', function (): void {
+    expect(exposureOf($this, $this->armbar)['topic'])->toMatchArray(['notes' => null, 'video_url' => null]);
+
+    $this->armbar->update(['notes' => 'Start from the S-mount.', 'video_url' => 'https://vimeo.com/1']);
+
+    expect(exposureOf($this, $this->armbar)['topic'])->toMatchArray([
+        'notes' => 'Start from the S-mount.',
+        'video_url' => 'https://vimeo.com/1',
+    ]);
+});
+
 // ─── Scoping ─────────────────────────────────────────────────────────────────
 
 it("refuses another academy's topic", function (): void {
