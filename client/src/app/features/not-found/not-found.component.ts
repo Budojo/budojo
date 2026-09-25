@@ -7,7 +7,7 @@ import { BrandGlyphComponent } from '../../shared/components/brand-glyph/brand-g
 /**
  * Wildcard 404 page (#226). Hit by any URL that no other route matches.
  *
- * The CTA navigates to `/dashboard/athletes` — the dashboard guards
+ * The CTA navigates to `/dashboard` — the dashboard guards
  * (auth + has-academy) then take care of bouncing unauthenticated or
  * setup-pending users back where they belong, so this single CTA works
  * for every visitor state without coupling this page to AuthService.
@@ -23,7 +23,9 @@ import { BrandGlyphComponent } from '../../shared/components/brand-glyph/brand-g
 export class NotFoundComponent {
   private readonly router = inject(Router);
 
+  // `/dashboard`: its redirect decides where home is (Today, #1643), and
+  // its guards send anyone else where they belong.
   goHome(): void {
-    this.router.navigateByUrl('/dashboard/athletes');
+    this.router.navigateByUrl('/dashboard');
   }
 }

@@ -69,6 +69,16 @@ export class BeltLadderService {
     return this.grades().find((grade) => grade.belt === belt);
   }
 
+  /**
+   * 1-based place on the ladder, or null for a colour this art does not award
+   * — `RankLadder::rankOf()` on the server. The one way to compare two belts:
+   * blue is 6th in BJJ and 7th in taekwondo, so a colour alone orders nothing.
+   */
+  rankOf(belt: Belt): number | null {
+    const index = this.belts().indexOf(belt);
+    return index === -1 ? null : index + 1;
+  }
+
   /** How many stripes this belt may carry here. */
   stripeCap(belt: Belt): number {
     return this.gradeOf(belt)?.max_stripes ?? STRIPES_CEILING;

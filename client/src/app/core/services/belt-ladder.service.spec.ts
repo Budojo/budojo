@@ -31,6 +31,20 @@ describe('BeltLadderService (#1801)', () => {
     });
   });
 
+  it('ranks a belt by its place on the ladder, not by the colour (#1861)', () => {
+    const ladder = setup();
+    useLadder('bjj');
+
+    // Blue is 6th in BJJ, below the kids' greys that open the ladder…
+    expect(ladder.rankOf('blue')).toBe(6);
+    expect(ladder.rankOf('grey')).toBe(1);
+    // …and a colour the art does not award has no rank at all.
+    expect(ladder.rankOf('white-and-yellow')).toBeNull();
+
+    useLadder('taekwondo');
+    expect(ladder.rankOf('blue')).not.toBe(6);
+  });
+
   it('caps stripes by the grade', () => {
     const ladder = setup();
     useLadder('karate');

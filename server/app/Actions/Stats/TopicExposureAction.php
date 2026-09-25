@@ -8,6 +8,7 @@ use App\Enums\AthleteStatus;
 use App\Models\Academy;
 use App\Models\Athlete;
 use App\Models\SyllabusTopic;
+use App\Support\AthleteIdentity;
 use App\Support\Season;
 use App\Support\TopicAttendance;
 use Carbon\CarbonImmutable;
@@ -186,16 +187,9 @@ class TopicExposureAction
 
             $count = $mine['count'] ?? 0;
             $rows[] = [
-                'id' => $athlete->id,
-                'first_name' => $athlete->first_name,
-                'last_name' => $athlete->last_name,
-                'belt' => $athlete->belt->value,
-                'stripes' => $athlete->stripes,
+                ...AthleteIdentity::of($athlete),
                 'status' => $athlete->status->value,
                 'joined_at' => $athlete->joined_at->toDateString(),
-                'date_of_birth' => $athlete->date_of_birth?->toDateString(),
-                'photo_url' => $athlete->photo_url,
-                'user_avatar_url' => $athlete->user?->avatar_url,
                 'exposures' => $count,
                 'last_seen_on' => $mine['last'] ?? null,
                 'state' => match (true) {

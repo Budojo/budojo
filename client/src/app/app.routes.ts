@@ -239,7 +239,15 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
     children: [
-      { path: '', redirectTo: 'athletes', pathMatch: 'full' },
+      { path: '', redirectTo: 'today', pathMatch: 'full' },
+      {
+        // The app's first screen (#1643): tonight, what needs looking at,
+        // what to teach, the week. It used to open on the roster, which
+        // answers none of the questions the owner has at 18:30.
+        path: 'today',
+        loadComponent: () =>
+          import('./features/today/today.component').then((m) => m.TodayComponent),
+      },
       {
         path: 'academy',
         loadComponent: () =>

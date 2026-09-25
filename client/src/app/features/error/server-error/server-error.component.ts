@@ -22,7 +22,7 @@ import { BrandGlyphComponent } from '../../../shared/components/brand-glyph/bran
  *     `/error` by direct nav after a hard failure and just wants to re-
  *     fetch this page; without an "original URL to go back to" in scope
  *     here, reload is the safest retry the page can offer.
- *   - **Back to home** routes to `/dashboard/athletes`; the dashboard
+ *   - **Back to home** routes to `/dashboard`; the dashboard
  *     guards then route anonymous visitors to `/auth/login` — same
  *     pattern as the wildcard 404.
  */
@@ -47,7 +47,9 @@ export class ServerErrorComponent {
     this.document.location.reload();
   }
 
+  // `/dashboard`: its redirect decides where home is (Today, #1643), and
+  // its guards send anyone else where they belong.
   goHome(): void {
-    this.router.navigateByUrl('/dashboard/athletes');
+    this.router.navigateByUrl('/dashboard');
   }
 }

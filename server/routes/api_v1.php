@@ -603,6 +603,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
         // reachable behind a wildcard added here later.
         Route::get('/lessons/recent-topics', [\App\Http\Controllers\Lesson\LessonController::class, 'recent']);
         Route::get('/lessons/suggestions', [\App\Http\Controllers\Lesson\LessonController::class, 'suggestions']);
+        // What tonight's people missed, of what was already taught (#1860).
+        Route::get('/lessons/room-gaps', [\App\Http\Controllers\Lesson\LessonController::class, 'roomGaps']);
         Route::get('/lessons', [\App\Http\Controllers\Lesson\LessonController::class, 'show']);
         Route::put('/lessons/topics', [\App\Http\Controllers\Lesson\LessonController::class, 'setTopics']);
         Route::put('/lessons/notes', [\App\Http\Controllers\Lesson\LessonController::class, 'setNotes']);

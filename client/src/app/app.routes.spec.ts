@@ -11,17 +11,18 @@ import { routes } from './app.routes';
 describe('app routes', () => {
   const dashboard = routes.find((r) => r.path === 'dashboard');
 
-  it('lands the owner on the roster, not on the academy page', () => {
+  it('lands the owner on Today, not on the roster or the academy page (#1643)', () => {
     // Signing in navigates to `/dashboard`; this redirect is what decides
     // where that actually is. The academy page is a settings screen — you
-    // configure it once and rarely return — and the roster is what the app
-    // gets opened for.
+    // configure it once and rarely return. The roster answered one of the
+    // questions the app is opened with; Today answers all of them.
     const index = (dashboard?.children as Routes).find((r) => r.path === '');
 
-    expect(index?.redirectTo).toBe('athletes');
+    expect(index?.redirectTo).toBe('today');
     // `pathMatch: 'full'` matters: prefix-matching an empty path would
-    // redirect every dashboard route back to the roster.
+    // redirect every dashboard route back to Today.
     expect(index?.pathMatch).toBe('full');
+    expect((dashboard?.children as Routes).some((r) => r.path === 'today')).toBe(true);
   });
 
   it('gates both password-reset routes on a mail transport (#1620)', () => {
