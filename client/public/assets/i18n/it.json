@@ -2869,14 +2869,42 @@
     "syllabus": {
       "headline": "{{covered}} di {{total}} nel programma della stagione, fatti almeno due volte ciascuno",
       "headlineRule": "La scheda Programma di un atleta conta in un altro modo: una tecnica dopo una sola lezione a cui era presente, su quelle che la palestra ha fatto mentre era iscritto. Chiede se c'era, non quanto del programma è stato fatto.",
-      "byPosition": "Per posizione",
+      "map": {
+        "title": "Per posizione, settimana per settimana",
+        "legend": {
+          "more": "2 o più lezioni",
+          "once": "1 lezione",
+          "planned": "Pianificata",
+          "unconfirmed": "Pianificata, nessun appello",
+          "current": "Questa settimana"
+        },
+        "positionHeader": "Posizione",
+        "fractionHeader": "Coperte",
+        "week": "Settimana del {{date}}",
+        "weekCurrent": "Settimana del {{date}}, questa settimana",
+        "cell": "{{position}}, settimana del {{date}}: {{detail}}",
+        "heldOne": "{{count}} lezione",
+        "heldOther": "{{count}} lezioni",
+        "plannedOne": "{{count}} pianificata",
+        "plannedOther": "{{count}} pianificate",
+        "unconfirmedOne": "{{count}} pianificata senza appello",
+        "unconfirmedOther": "{{count}} pianificate senza appello",
+        "fraction": "{{covered}} su {{total}} coperte",
+        "popTitle": "{{position}}, settimana del {{date}}",
+        "seasonTitle": "{{position}}, in questa stagione",
+        "seasonAria": "{{position}}: tutte le settimane della stagione",
+        "seasonEmpty": "Ancora niente su questa posizione in questa stagione.",
+        "state": {
+          "planned": "Pianificata",
+          "unconfirmed": "Senza appello"
+        },
+        "error": "Impossibile caricare le settimane."
+      },
       "overTime": "Nel corso della stagione",
       "lastTaught": "L'ultima volta",
       "missingList": "Non ancora fatto ({{count}})",
       "nothingMissing": "Non manca niente: hai fatto tutto il programma.",
       "thinTag": "Una volta",
-      "worked": "fatta {{count}}×",
-      "barAria": "{{name}}: {{covered}} coperti, {{thin}} fatti una volta, {{missing}} non fatti",
       "state": {
         "coveredOne": "{{count}} coperto",
         "coveredOther": "{{count}} coperti",
