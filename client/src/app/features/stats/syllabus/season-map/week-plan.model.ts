@@ -15,19 +15,31 @@ interface TopicGroup {
 }
 
 /**
- * The week the message is about (#1863): this one while it still has a plan
- * ahead, and the next one once it has not — the Sunday-evening message, sent
- * when this week's lessons are behind it. Null when neither has anything
- * planned: a message about a week further out is not "the week's plan".
+ * Which week the message is about (#1863), or why there is none to send.
+ * `nextSeason` when that week runs past the end of the season the map holds:
+ * the next season's lessons are not in this payload, so a message for that
+ * week would leave them out — and on the evening a restart is announced,
+ * "nothing planned" would be wrong.
  */
-export function publishedWeek(calendar: SyllabusCalendar): string | null {
-  const thisWeek = mondayOf(calendar.today);
-  const nextWeek = addDays(thisWeek, 7);
+export type PublishedWeek =
+  | { readonly kind: 'week'; readonly week: string }
+  | { readonly kind: 'none' }
+  | { readonly kind: 'nextSeason' };
 
-  for (const week of [thisWeek, nextWeek]) {
-    if (plannedIn(calendar, week).length > 0) return week;
+/**
+ * This week while it still has a plan ahead, and the next one once it has
+ * not — the Sunday-evening message, sent when this week's lessons are behind
+ * it. Never further out: a message about a later week is not "the week's
+ * plan". `now` is the local time as `HH:MM` ({@link clockOf}).
+ */
+export function publishedWeek(calendar: SyllabusCalendar, now: string): PublishedWeek {
+  const thisWeek = mondayOf(calendar.today);
+
+  for (const week of [thisWeek, addDays(thisWeek, 7)]) {
+    if (addDays(week, 6) > calendar.season.end) return { kind: 'nextSeason' };
+    if (aheadIn(calendar, week, now).length > 0) return { kind: 'week', week };
   }
-  return null;
+  return { kind: 'none' };
 }
 
 /**
@@ -35,17 +47,19 @@ export function publishedWeek(calendar: SyllabusCalendar): string | null {
  * then one line per planned lesson — day, class, and what it covers, each
  * technique under its position.
  *
- * Planned lessons only. A lesson somebody was checked into already happened,
- * and one nobody confirmed is not a plan any more. The names are the
- * programme's own words, never translated; only the heading and the weekday
- * come from the reader's language. Null when the week has nothing planned.
+ * Lessons still ahead only. One somebody was checked into already happened,
+ * one nobody confirmed is not a plan any more, and today's is not news once
+ * it has started — though it stays "planned" until a check-in. The names are
+ * the programme's own words, never translated; only the heading and the
+ * weekday come from the reader's language. Null when nothing is ahead.
  */
 export function weekPlanText(
   calendar: SyllabusCalendar,
   week: string,
+  now: string,
   labels: WeekPlanLabels,
 ): string | null {
-  const lessons = [...plannedIn(calendar, week)].sort(byDayThenTime);
+  const lessons = [...aheadIn(calendar, week, now)].sort(byDayThenTime);
   if (lessons.length === 0) return null;
 
   const lines = lessons.map((lesson) =>
@@ -54,10 +68,21 @@ export function weekPlanText(
   return [labels.heading, ...lines].join('\n');
 }
 
-function plannedIn(calendar: SyllabusCalendar, week: string): CalendarLesson[] {
+function aheadIn(calendar: SyllabusCalendar, week: string, now: string): CalendarLesson[] {
   return calendar.lessons.filter(
-    (lesson) => lesson.state === 'planned' && mondayOf(lesson.held_on) === week,
+    (lesson) => mondayOf(lesson.held_on) === week && isAhead(lesson, calendar.today, now),
   );
+}
+
+/**
+ * Planned, and not started yet. A plan is dated today or later, so only
+ * today's needs the clock; one with no time stays ahead, since nothing says
+ * it is over.
+ */
+function isAhead(lesson: CalendarLesson, today: string, now: string): boolean {
+  if (lesson.state !== 'planned') return false;
+  if (lesson.held_on !== today || lesson.starts_at === null) return true;
+  return lesson.starts_at > now;
 }
 
 /** Day, then time; a class with no time after those that have one. */
@@ -121,4 +146,10 @@ function groupText(group: TopicGroup): string {
 function addDays(iso: string, days: number): string {
   const [y, m, d] = iso.split('-').map(Number);
   return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
+}
+
+/** The local time as `HH:MM`, the shape of a lesson's `starts_at`. */
+export function clockOf(date: Date): string {
+  const pad = (n: number): string => String(n).padStart(2, '0');
+  return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }

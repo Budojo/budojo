@@ -1,5 +1,8 @@
 import { CalendarLesson, SyllabusCalendar } from '../../../../core/services/stats.service';
-import { WeekPlanLabels, publishedWeek, weekPlanText } from './week-plan.model';
+import { WeekPlanLabels, clockOf, publishedWeek, weekPlanText } from './week-plan.model';
+
+/** The local time the message is built at: before any class of the day. */
+const MORNING = '08:00';
 
 const LABELS: WeekPlanLabels = {
   heading: 'Programma della settimana',
@@ -64,6 +67,7 @@ describe('the week plan as a message (#1863)', () => {
         }),
       ]),
       '2026-10-12',
+      MORNING,
       LABELS,
     );
 
@@ -88,6 +92,7 @@ describe('the week plan as a message (#1863)', () => {
         }),
       ]),
       '2026-10-12',
+      MORNING,
       LABELS,
     );
 
@@ -100,6 +105,7 @@ describe('the week plan as a message (#1863)', () => {
     const text = weekPlanText(
       calendar([lesson({ id: 1, topics: [{ id: 2, name: 'Half guard', parent_id: null }] })]),
       '2026-10-12',
+      MORNING,
       LABELS,
     );
 
@@ -115,6 +121,7 @@ describe('the week plan as a message (#1863)', () => {
         }),
       ]),
       '2026-10-12',
+      MORNING,
       LABELS,
     );
 
@@ -125,6 +132,7 @@ describe('the week plan as a message (#1863)', () => {
     const text = weekPlanText(
       calendar([lesson({ id: 1, topics: [{ id: 91, name: 'Worm guard sweep', parent_id: 9 }] })]),
       '2026-10-12',
+      MORNING,
       LABELS,
     );
 
@@ -143,6 +151,7 @@ describe('the week plan as a message (#1863)', () => {
         '2026-10-14',
       ),
       '2026-10-12',
+      MORNING,
       LABELS,
     );
 
@@ -152,20 +161,72 @@ describe('the week plan as a message (#1863)', () => {
   });
 
   it('yields no text for a week with nothing planned', () => {
-    expect(weekPlanText(calendar([]), '2026-10-12', LABELS)).toBeNull();
+    expect(weekPlanText(calendar([]), '2026-10-12', MORNING, LABELS)).toBeNull();
     expect(
       weekPlanText(
         calendar([lesson({ id: 1, state: 'held', topics: [KNEE_SHIELD] })]),
         '2026-10-12',
+        MORNING,
         LABELS,
       ),
     ).toBeNull();
+  });
+
+  it('prints a class with no time after the timed ones of its day', () => {
+    const text = weekPlanText(
+      calendar([
+        lesson({
+          id: 1,
+          held_on: '2026-10-14',
+          starts_at: null,
+          name: 'Open mat',
+          topics: [LOCKDOWN],
+        }),
+        lesson({ id: 2, held_on: '2026-10-14', starts_at: '20:30', topics: [KNEE_SHIELD] }),
+      ]),
+      '2026-10-12',
+      MORNING,
+      LABELS,
+    );
+
+    expect(text?.split('\n').slice(1)).toEqual([
+      'Mer 14 · Fondamentali · Half guard: Knee shield',
+      'Mer 14 · Open mat · Half guard: Lockdown',
+    ]);
+  });
+
+  it("leaves out today's class once it has started, and keeps a later one", () => {
+    const text = weekPlanText(
+      calendar(
+        [
+          lesson({ id: 1, held_on: '2026-10-14', starts_at: '19:00', topics: [KNEE_SHIELD] }),
+          lesson({
+            id: 2,
+            held_on: '2026-10-14',
+            starts_at: '20:30',
+            name: 'Avanzati',
+            topics: [BOW_AND_ARROW],
+          }),
+          lesson({ id: 3, held_on: '2026-10-16', topics: [LOCKDOWN] }),
+        ],
+        '2026-10-14',
+      ),
+      '2026-10-12',
+      '19:45',
+      LABELS,
+    );
+
+    expect(text?.split('\n').slice(1)).toEqual([
+      'Mer 14 · Avanzati · Back: Bow and arrow choke',
+      'Ven 16 · Fondamentali · Half guard: Lockdown',
+    ]);
   });
 
   it('names a Sunday lesson with the last weekday', () => {
     const text = weekPlanText(
       calendar([lesson({ id: 1, held_on: '2026-10-18', name: 'Open mat', topics: [LOCKDOWN] })]),
       '2026-10-12',
+      MORNING,
       LABELS,
     );
 
@@ -183,9 +244,10 @@ describe('which week the message is for (#1863)', () => {
         ],
         '2026-10-14',
       ),
+      MORNING,
     );
 
-    expect(week).toBe('2026-10-12');
+    expect(week).toEqual({ kind: 'week', week: '2026-10-12' });
   });
 
   it("is next week once this week's plan is behind it — a Sunday-evening message", () => {
@@ -197,16 +259,90 @@ describe('which week the message is for (#1863)', () => {
         ],
         '2026-10-18',
       ),
+      MORNING,
     );
 
-    expect(week).toBe('2026-10-19');
+    expect(week).toEqual({ kind: 'week', week: '2026-10-19' });
   });
 
   it('is none when neither this week nor the next has anything planned', () => {
     const week = publishedWeek(
       calendar([lesson({ id: 1, held_on: '2026-10-26', topics: [KNEE_SHIELD] })], '2026-10-14'),
+      MORNING,
     );
 
-    expect(week).toBeNull();
+    expect(week).toEqual({ kind: 'none' });
+  });
+
+  it('moves on once the last class of this week is over, though nobody checked in', () => {
+    // Sunday evening, after an open mat that stays "planned" until a check-in.
+    const sunday = calendar(
+      [
+        lesson({ id: 1, held_on: '2026-10-18', starts_at: '10:00', topics: [LOCKDOWN] }),
+        lesson({ id: 2, held_on: '2026-10-19', topics: [KNEE_SHIELD] }),
+      ],
+      '2026-10-18',
+    );
+
+    expect(publishedWeek(sunday, '21:30')).toEqual({ kind: 'week', week: '2026-10-19' });
+    // The same Sunday before the open mat: this week still has it ahead.
+    expect(publishedWeek(sunday, '09:00')).toEqual({ kind: 'week', week: '2026-10-12' });
+  });
+
+  it('keeps an untimed class of today ahead: nothing says it is over', () => {
+    const week = publishedWeek(
+      calendar(
+        [lesson({ id: 1, held_on: '2026-10-18', starts_at: null, topics: [LOCKDOWN] })],
+        '2026-10-18',
+      ),
+      '21:30',
+    );
+
+    expect(week).toEqual({ kind: 'week', week: '2026-10-12' });
+  });
+
+  it('says the week ahead opens the new season, which this season’s map does not hold', () => {
+    // Season ends on Monday 31 August 2026; Sunday the 30th, this week's plan behind it.
+    const lastSunday = {
+      ...calendar(
+        [
+          lesson({ id: 1, held_on: '2026-08-28', state: 'held', topics: [LOCKDOWN] }),
+          // In the payload, on the season's last day — the rest of that week is not.
+          lesson({ id: 2, held_on: '2026-08-31', topics: [KNEE_SHIELD] }),
+        ],
+        '2026-08-30',
+      ),
+      season: { start: '2025-09-01', end: '2026-08-31', label: '2025/26' },
+    };
+
+    expect(publishedWeek(lastSunday, '21:30')).toEqual({ kind: 'nextSeason' });
+  });
+
+  it('says so too when this week itself runs past the end of the season', () => {
+    const lastMonday = {
+      ...calendar(
+        [lesson({ id: 1, held_on: '2026-08-31', starts_at: '19:00', topics: [KNEE_SHIELD] })],
+        '2026-08-31',
+      ),
+      season: { start: '2025-09-01', end: '2026-08-31', label: '2025/26' },
+    };
+
+    expect(publishedWeek(lastMonday, MORNING)).toEqual({ kind: 'nextSeason' });
+  });
+
+  it('publishes a week that ends on the last day of the season', () => {
+    const lastWeek = {
+      ...calendar([lesson({ id: 1, held_on: '2026-08-26', topics: [KNEE_SHIELD] })], '2026-08-24'),
+      season: { start: '2025-09-01', end: '2026-08-30', label: '2025/26' },
+    };
+
+    expect(publishedWeek(lastWeek, MORNING)).toEqual({ kind: 'week', week: '2026-08-24' });
+  });
+});
+
+describe('the clock the message reads (#1863)', () => {
+  it('is the local time as HH:MM', () => {
+    expect(clockOf(new Date(2026, 9, 14, 9, 5))).toBe('09:05');
+    expect(clockOf(new Date(2026, 9, 14, 21, 30))).toBe('21:30');
   });
 });

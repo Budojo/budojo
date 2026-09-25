@@ -158,21 +158,16 @@
     </table>
   </div>
 
-  @if (calendar()) {
+  @if (canShare()) {
     <!--
-      The week's plan for the academy's group (#1863). Two secondary actions:
-      the page's own subject is the map, and neither of these is its primary
-      action. With nothing planned both stay, disabled, and the sentence says
-      why — an action that vanishes teaches nobody that it exists.
+      The week's plan for the academy's group (#1863), on the current season
+      only. Two secondary actions: the page's own subject is the map, and
+      neither of these is its primary action. With nothing to send both stay,
+      disabled, and the sentence says why — an action that vanishes teaches
+      nobody that it exists.
     -->
     <div class="season-map__share" data-cy="season-map-share">
-      <p class="season-map__share-text" data-cy="season-map-share-text">
-        @if (shareWeek(); as week) {
-          {{ 'stats.syllabus.map.share.ready' | translate: { date: shortDate(week) } }}
-        } @else {
-          {{ 'stats.syllabus.map.share.none' | translate }}
-        }
-      </p>
+      <p class="season-map__share-text" data-cy="season-map-share-text">{{ shareSentence() }}</p>
       <div class="season-map__share-actions">
         <p-button
           type="button"

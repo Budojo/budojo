@@ -1106,7 +1106,7 @@ const SYLLABUS_CALENDAR = {
       id: 5,
       name: 'Back',
       kind: 'both',
-      cells: [{ week: '2026-09-14', held: 0, planned: 1, unconfirmed: 0 }],
+      cells: [{ week: '2026-09-14', held: 0, planned: 2, unconfirmed: 0 }],
     },
     {
       id: 6,
@@ -1152,6 +1152,12 @@ const SYLLABUS_CALENDAR = {
     calendarLesson(506, '2026-09-11', 5, 'held', [{ id: 11, name: 'Armbar', parent_id: 1 }]),
     calendarLesson(507, '2026-09-14', 1, 'planned', [
       { id: 53, name: 'Back escape', parent_id: 5 },
+    ]),
+    // Wednesday's too, so the week's group message (#1863) is this week's
+    // whatever the wall clock: these screens run without the frozen clock,
+    // and tonight's 19:00 lesson drops out of it once it has started.
+    calendarLesson(514, '2026-09-16', 4, 'planned', [
+      { id: 52, name: 'Bow and arrow choke', parent_id: 5 },
     ]),
     calendarLesson(508, '2026-09-21', 1, 'planned', [
       { id: 21, name: 'Knee shield', parent_id: 2 },

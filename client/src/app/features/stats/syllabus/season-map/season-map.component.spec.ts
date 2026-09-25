@@ -618,4 +618,34 @@ describe('SeasonMapComponent — the week plan for the group (#1863)', () => {
     expect(fixture.nativeElement.querySelector('[data-cy="season-map-share"]')).toBeNull();
     flush(httpMock);
   });
+
+  it('offers nothing to share on a season gone by', () => {
+    const { fixture, httpMock } = setup();
+    flush(httpMock);
+    fixture.componentRef.setInput('seasonsBack', 1);
+    fixture.detectChanges();
+    flush(httpMock, calendar({ lessons: [], today: '2026-10-14' }));
+    fixture.detectChanges();
+
+    // A past season has no week ahead: no row, rather than "nothing planned".
+    expect(fixture.nativeElement.querySelector('[data-cy="season-map-share"]')).toBeNull();
+  });
+
+  it('says the week ahead opens the new season rather than that nothing is planned', () => {
+    const { fixture, httpMock } = setup();
+    flush(
+      httpMock,
+      calendar({
+        season: { start: '2025-09-01', end: '2026-08-31', label: '2025/26' },
+        today: '2026-08-30',
+        lessons: [],
+      }),
+    );
+    fixture.detectChanges();
+
+    const { text, copy } = share(fixture);
+    expect(text).toContain('the new season');
+    expect(text).not.toContain('Nothing is planned');
+    expect(copy.disabled).toBe(true);
+  });
 });
