@@ -38,12 +38,12 @@ import { RelativeTimePipe } from '../../shared/pipes/relative-time.pipe';
 import { academyChargesAFee } from '../../shared/utils/academy-fee';
 import { localeFor } from '../../shared/utils/locale';
 import { monthKey } from '../../shared/utils/months';
-import { pickDefaultClass } from '../attendance/daily/class-pick';
 import { LessonSheetComponent } from '../lessons/lesson-sheet/lesson-sheet.component';
 import {
   isoDay,
   joinedSince,
   nextClassAfter,
+  nextClassFrom,
   presencesSince,
   timeRange,
   tonightClasses,
@@ -168,8 +168,15 @@ export class TodayComponent implements OnInit {
       : this.translate.instant('today.tonight.next', { day, time: cls.starts_at, name: cls.name });
   });
 
-  /** The class whose lesson sheet is open, planning tonight's occurrence. */
-  protected readonly planning = signal<AcademyClass | null>(null);
+  /**
+   * The lesson whose sheet is open: a class and the date of the occurrence
+   * being planned — tonight's from "Stasera", the next class's own date from
+   * "Cosa insegnare" (#1752). The date travels with it, or topics chosen for
+   * Tuesday would land on tonight's lesson.
+   */
+  protected readonly planning = signal<{ readonly cls: AcademyClass; readonly date: Date } | null>(
+    null,
+  );
   protected readonly sheetOpen = signal<boolean>(false);
 
   // ── Da guardare ────────────────────────────────────────────────────────
@@ -254,13 +261,19 @@ export class TodayComponent implements OnInit {
   // ── Cosa insegnare ─────────────────────────────────────────────────────
 
   /**
-   * The class the suggestions are for: the one on now, or the nearest to the
-   * clock — the same pick the check-in opens on, so the two screens mean the
-   * same lesson by "tonight".
+   * The lesson the suggestions are for (#1752): the next class on the
+   * timetable at or after now, wrapping the week. On a rest day it is still
+   * worth asking — the ranking reads the season, not the date, and Sunday
+   * with the laptop open is when planning actually happens. Null only when
+   * there is no timetable at all, and then the card is not drawn.
    */
-  protected readonly teachClass = computed<AcademyClass | null>(() =>
-    pickDefaultClass(this.tonight(), this.now(), this.now()),
-  );
+  protected readonly teachSlot = computed<{
+    readonly academyClass: AcademyClass;
+    readonly date: Date;
+  } | null>(() => {
+    const c = this.classes();
+    return c.state === 'ready' ? nextClassFrom(c.value, this.now()) : null;
+  });
   protected readonly suggestions = signal<Load<readonly LessonSuggestion[]>>(LOADING);
 
   // ── Questa settimana ───────────────────────────────────────────────────
@@ -347,12 +360,20 @@ export class TodayComponent implements OnInit {
     return lesson.topics.map((t) => t.name).join(', ');
   }
 
-  protected plan(c: AcademyClass): void {
-    this.planning.set(c);
+  /** Opens the sheet on a class's occurrence — tonight's unless told otherwise. */
+  protected plan(c: AcademyClass, date: Date = this.now()): void {
+    this.planning.set({ cls: c, date });
     this.sheetOpen.set(true);
   }
 
-  protected onSaved(classId: number, saved: Lesson): void {
+  /**
+   * Only tonight's lessons have a line on "Stasera". A plan saved for another
+   * day — next Thursday's occurrence of the same weekly class — must not
+   * rewrite tonight's.
+   */
+  protected onSaved(saved: Lesson): void {
+    if (saved.academy_class_id === null || saved.held_on !== this.todayIso()) return;
+    const classId = saved.academy_class_id;
     this.lessons.update((m) => new Map(m).set(classId, saved));
   }
 
@@ -369,23 +390,47 @@ export class TodayComponent implements OnInit {
     return this.translate.instant(REASON_KEYS[s.reason], { date });
   }
 
-  protected teachHeading(c: AcademyClass): string {
+  /**
+   * "Per Fondamentali alle 19:00" tonight; "Per Fondamentali, lunedì 28
+   * settembre alle 19:00" on any other day — so the reader always knows which
+   * evening the suggestions are for.
+   */
+  protected teachHeading(slot: {
+    readonly academyClass: AcademyClass;
+    readonly date: Date;
+  }): string {
     this.languageService.currentLang();
+    const c = slot.academyClass;
+    if (isoDay(slot.date) === this.todayIso()) {
+      return c.starts_at === null
+        ? this.translate.instant('today.teach.forUntimed', { name: c.name })
+        : this.translate.instant('today.teach.for', { name: c.name, time: c.starts_at });
+    }
+    const day = this.longDate(slot.date);
     return c.starts_at === null
-      ? this.translate.instant('today.teach.forUntimed', { name: c.name })
-      : this.translate.instant('today.teach.for', { name: c.name, time: c.starts_at });
+      ? this.translate.instant('today.teach.forDayUntimed', { name: c.name, day })
+      : this.translate.instant('today.teach.forDay', { name: c.name, day, time: c.starts_at });
   }
 
-  protected readonly sheetDateLabel = computed<string>(() => {
-    this.languageService.currentLang();
+  /** "lunedì 28 settembre", in the reader's language. */
+  private longDate(date: Date): string {
     return new Intl.DateTimeFormat(localeFor(this.languageService.currentLang()), {
       weekday: 'long',
       day: 'numeric',
       month: 'long',
-    }).format(this.now());
+    }).format(date);
+  }
+
+  protected readonly sheetDateLabel = computed<string>(() => {
+    this.languageService.currentLang();
+    const p = this.planning();
+    return p === null ? '' : this.longDate(p.date);
   });
 
-  protected readonly heldOn = this.todayIso;
+  protected readonly sheetHeldOn = computed<string>(() => {
+    const p = this.planning();
+    return p === null ? this.todayIso() : isoDay(p.date);
+  });
 
   private loadClasses(): void {
     this.academyClassService
@@ -419,13 +464,13 @@ export class TodayComponent implements OnInit {
   }
 
   private loadSuggestions(): void {
-    const c = this.teachClass();
-    if (c === null) {
+    const slot = this.teachSlot();
+    if (slot === null) {
       this.suggestions.set({ state: 'ready', value: [] });
       return;
     }
     this.lessonService
-      .suggestions(c.id, 3)
+      .suggestions(slot.academyClass.id, 3)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: this.current((value: LessonSuggestion[]) =>

@@ -3110,10 +3110,11 @@
       "title": "Cosa insegnare",
       "for": "Per {{name}} alle {{time}}",
       "forUntimed": "Per {{name}}",
+      "forDay": "Per {{name}}, {{day}} alle {{time}}",
+      "forDayUntimed": "Per {{name}}, {{day}}",
       "openSheet": "Prepara la lezione",
       "none": "Nessun suggerimento: il programma è vuoto, o è tutto fuori stagione.",
       "programmeLink": "Apri il programma",
-      "noClass": "Stasera non c'è lezione, quindi non c'è niente da preparare.",
       "error": "Non riesco a caricare i suggerimenti."
     },
     "week": {

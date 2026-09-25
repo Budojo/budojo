@@ -3110,10 +3110,11 @@
       "title": "What to teach",
       "for": "For {{name}} at {{time}}",
       "forUntimed": "For {{name}}",
+      "forDay": "For {{name}}, {{day}} at {{time}}",
+      "forDayUntimed": "For {{name}}, {{day}}",
       "openSheet": "Plan the lesson",
       "none": "No suggestions: the programme is empty, or everything in it is out of season.",
       "programmeLink": "Open the programme",
-      "noClass": "No class tonight, so there is nothing to prepare.",
       "error": "Couldn't load the suggestions."
     },
     "week": {

@@ -1,13 +1,16 @@
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
+import { MessageService } from 'primeng/api';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { provideI18nTesting } from '../../../test-utils/i18n-test';
 import { useLadder } from '../../../test-utils/ladder-test';
 import { AcademyClass } from '../../core/services/academy-class.service';
 import { Athlete } from '../../core/services/athlete.service';
 import { Lesson } from '../../core/services/lesson.service';
+import { LessonSheetComponent } from '../lessons/lesson-sheet/lesson-sheet.component';
 import { TodayComponent } from './today.component';
 
 // Thursday 24 September 2026, 18:30 local.
@@ -60,7 +63,8 @@ function athlete(overrides: Partial<Athlete> = {}): Athlete {
 }
 
 interface Responses {
-  classes?: AcademyClass[] | 'error';
+  /** `skip` when the test has already answered the timetable itself. */
+  classes?: AcademyClass[] | 'error' | 'skip';
   lessons?: Record<number, Lesson | null>;
   suggestions?: unknown[];
   health?: unknown | 'error';
@@ -81,6 +85,8 @@ function setup(academy: Record<string, unknown> = {}): HttpTestingController {
       provideHttpClientTesting(),
       provideRouter([]),
       ...provideI18nTesting(),
+      // App-level in production (app.config.ts); the lesson sheet toasts through it.
+      MessageService,
     ],
   });
   useLadder('bjj', academy);
@@ -109,11 +115,13 @@ const HEALTH = {
 /** Answers every request the page makes, the way a healthy academy would. */
 function flushAll(http: HttpTestingController, r: Responses = {}): void {
   const classes = r.classes ?? [cls()];
-  const classesReq = http.expectOne((req) => req.url.endsWith('/academy/classes'));
-  if (classes === 'error') {
-    classesReq.flush({ message: 'boom' }, { status: 500, statusText: 'Server Error' });
-  } else {
-    classesReq.flush({ data: classes });
+  if (classes !== 'skip') {
+    const classesReq = http.expectOne((req) => req.url.endsWith('/academy/classes'));
+    if (classes === 'error') {
+      classesReq.flush({ message: 'boom' }, { status: 500, statusText: 'Server Error' });
+    } else {
+      classesReq.flush({ data: classes });
+    }
   }
 
   const health = r.health ?? HEALTH;
@@ -255,6 +263,10 @@ describe('TodayComponent', () => {
       '[data-cy="today-timetable-link"]',
     );
     expect(link?.getAttribute('href')).toBe('/dashboard/academy/timetable');
+    // With no class at all there is nothing to plan for: no card, not an empty one (#1752).
+    expect(
+      (fixture.nativeElement as HTMLElement).querySelector('[data-cy="today-teach"]'),
+    ).toBeNull();
     http.verify();
   });
 
@@ -439,6 +451,110 @@ describe('TodayComponent', () => {
     expect(req.request.params.get('limit')).toBe('3');
   });
 
+  describe('plans for the next class, not only for tonight (#1752)', () => {
+    const SUGGESTION = {
+      id: 21,
+      name: 'Triangle',
+      parent_name: 'Closed guard',
+      kind: 'gi',
+      reason: 'never',
+      last_taught_on: null,
+    };
+
+    it('on an evening with no class, suggests for the next one, and names its day', () => {
+      const http = setup();
+      const fixture = TestBed.createComponent(TodayComponent);
+      fixture.detectChanges();
+      http
+        .expectOne((req) => req.url.endsWith('/academy/classes'))
+        .flush({ data: [cls({ id: 8, weekday: 1, name: 'Fondamentali', starts_at: '19:00' })] });
+
+      const req = http.expectOne((q) => q.url.endsWith('/lessons/suggestions'));
+      expect(req.request.params.get('academy_class_id')).toBe('8');
+      req.flush({ data: [SUGGESTION] });
+      flushAll(http, { classes: 'skip' });
+      fixture.detectChanges();
+
+      const teach = text(fixture.nativeElement, 'today-teach');
+      expect(teach).toContain('Fondamentali');
+      expect(teach).toContain('Monday 28 September');
+      // The reason stays: a suggestion whose reasoning is invisible gets ignored.
+      expect(teach).toContain('Not taught yet this season');
+      http.verify();
+    });
+
+    it('at 19:30, plans the 20:30 class rather than the one already on the mat', () => {
+      vi.setSystemTime(new Date(2026, 8, 24, 19, 30));
+      const http = setup();
+      const fixture = TestBed.createComponent(TodayComponent);
+      fixture.detectChanges();
+      http
+        .expectOne((req) => req.url.endsWith('/academy/classes'))
+        .flush({
+          data: [cls({ id: 1, starts_at: '19:00' }), cls({ id: 2, starts_at: '20:30' })],
+        });
+
+      const req = http.expectOne((q) => q.url.endsWith('/lessons/suggestions'));
+      expect(req.request.params.get('academy_class_id')).toBe('2');
+    });
+
+    it("opens the lesson sheet on the next class's own date", () => {
+      const http = setup();
+      const fixture = TestBed.createComponent(TodayComponent);
+      fixture.detectChanges();
+      flushAll(http, {
+        classes: [cls({ id: 8, weekday: 1, name: 'Fondamentali' })],
+        suggestions: [SUGGESTION],
+      });
+      fixture.detectChanges();
+
+      (
+        (fixture.nativeElement as HTMLElement).querySelector(
+          '[data-cy="today-teach-plan"] button',
+        ) as HTMLButtonElement
+      ).click();
+      fixture.detectChanges();
+
+      const sheet = fixture.debugElement.query(By.directive(LessonSheetComponent))
+        .componentInstance as LessonSheetComponent;
+      // Monday's lesson, not tonight's: the topics must land on the day they are for.
+      expect(sheet.heldOn()).toBe('2026-09-28');
+    });
+
+    it("saving next week's plan leaves tonight's line alone", () => {
+      // Thursday 21:30: tonight's only class is over, so the next one is next Thursday.
+      vi.setSystemTime(new Date(2026, 8, 24, 21, 30));
+      const http = setup();
+      const fixture = TestBed.createComponent(TodayComponent);
+      fixture.detectChanges();
+      flushAll(http, { classes: [cls({ id: 1 })] });
+      fixture.detectChanges();
+
+      const component = fixture.componentInstance as unknown as {
+        onSaved(saved: Lesson): void;
+      };
+      component.onSaved(
+        lesson({
+          held_on: '2026-10-01',
+          topics: [
+            {
+              id: 9,
+              name: 'Kimura',
+              kind: 'gi',
+              parent_id: 4,
+              parent_name: 'Closed guard',
+              deleted: false,
+            },
+          ],
+        }),
+      );
+      fixture.detectChanges();
+
+      expect(text(fixture.nativeElement, 'today-class-1')).toContain('Nothing yet');
+      expect(text(fixture.nativeElement, 'today-class-1')).not.toContain('Kimura');
+    });
+  });
+
   it('counts the presences since Monday, the programme, and who joined this week', () => {
     const http = setup();
     const fixture = TestBed.createComponent(TodayComponent);
@@ -491,10 +607,9 @@ describe('TodayComponent', () => {
     fixture.detectChanges();
 
     const component = fixture.componentInstance as unknown as {
-      onSaved(classId: number, saved: Lesson): void;
+      onSaved(saved: Lesson): void;
     };
     component.onSaved(
-      1,
       lesson({
         topics: [
           {
