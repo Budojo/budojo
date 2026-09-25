@@ -1925,6 +1925,10 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
   screen('05-today-backup-local-only', '/dashboard/today', '[data-cy="today-watch-backup"]', {
     folder: { ...FOLDER_STATE, folder: null, lastCopyAt: null },
   });
+  // Copies stopped arriving with no error left behind: the last is two weeks old.
+  screen('05-today-backup-stale', '/dashboard/today', '[data-cy="today-watch-backup"]', {
+    folder: { ...FOLDER_STATE, lastCopyAt: '2026-08-31T01:00:20.000Z' },
+  });
   screen('05-today-lesson-sheet', '/dashboard/today', '[data-cy="today-class-1"]', {
     act: () => {
       press('[data-cy="today-class-plan-1"] button');

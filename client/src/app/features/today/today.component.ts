@@ -309,7 +309,10 @@ export class TodayComponent implements OnInit {
    */
   protected readonly backup = signal<BackupHealth | null>(null);
 
-  /** The backup as a "Da guardare" row, when it is failing or was never set up. */
+  /**
+   * The backup as a "Da guardare" row: failing, never set up, or silent for
+   * more than a week. Healthy copies stay a quiet line at the foot.
+   */
   private readonly backupAlert = computed<WatchRow | null>(() => {
     this.languageService.currentLang();
     const b = this.backup();
@@ -324,7 +327,22 @@ export class TodayComponent implements OnInit {
       return {
         ...row,
         label: this.translate.instant('today.backup.localOnly'),
-        detail: this.translate.instant('today.backup.localOnlyDetail'),
+        // Drive is offered only where it exists: a build without its client
+        // hides the card on the Backup page, so advice to link it is a dead end.
+        detail: this.translate.instant(
+          b.driveAvailable ? 'today.backup.localOnlyDetail' : 'today.backup.localOnlyDetailFolder',
+        ),
+      };
+    }
+    if (b.kind === 'stale') {
+      const date = new Intl.DateTimeFormat(localeFor(this.languageService.currentLang()), {
+        day: 'numeric',
+        month: 'long',
+      }).format(new Date(b.lastCopyAt));
+      return {
+        ...row,
+        label: this.translate.instant('today.backup.stale', { date }),
+        detail: this.translate.instant('today.backup.staleDetail'),
       };
     }
     const label =
@@ -566,7 +584,7 @@ export class TodayComponent implements OnInit {
       ? this.driveSync.state()
       : Promise.resolve({ configured: false, linked: false });
     void Promise.all([this.backupFolder.state(), drive]).then(
-      ([folder, link]) => this.backup.set(backupHealth(folder, link)),
+      ([folder, link]) => this.backup.set(backupHealth(folder, link, this.now())),
       () => this.backup.set(null),
     );
   }

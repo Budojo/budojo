@@ -19,13 +19,31 @@ export type BackupHealth =
       readonly where: string;
       readonly code: string;
     }
-  | { readonly kind: 'local-only' }
+  | {
+      readonly kind: 'local-only';
+      /** Whether this build can link Google Drive at all, so the advice offers it only then. */
+      readonly driveAvailable: boolean;
+    }
+  | {
+      /** Copies used to land and stopped: no error recorded, just no success lately. */
+      readonly kind: 'stale';
+      readonly lastCopyAt: string;
+    }
   | { readonly kind: 'ok'; readonly lastCopyAt: string | null };
 
+/** Older than this, a last copy is news, not reassurance. */
+export const STALE_AFTER_MS = 7 * 24 * 60 * 60 * 1000;
+
 /**
- * Three states, in this order: a copy that is failing, then no copy set up at
- * all, then copies landing. `lastError` is the current state; `lastErrorAt`
- * survives a later success on purpose and says nothing about now.
+ * Four states, in this order: a copy that is failing, no copy set up at all,
+ * copies that stopped landing, and copies landing. `lastError` is the current
+ * state; `lastErrorAt` survives a later success on purpose and says nothing
+ * about now.
+ *
+ * "Stopped landing" exists because a failure can leave no error behind: when
+ * the local backup throws, `desktop/src/main.ts` ends the tick before the
+ * folder copy and the Drive sync, so neither records anything and a
+ * weeks-old success would read as fine forever.
  *
  * `configured: false` is a build with no Drive client — the feature does not
  * exist, so it is neither a failure nor, on its own, evidence of anything:
@@ -34,6 +52,7 @@ export type BackupHealth =
 export function backupHealth(
   folder: BackupFolderStateView,
   drive: DriveLinkStateView,
+  now: Date,
 ): BackupHealth {
   if (folder.folder !== null && folder.lastError !== null) {
     return { kind: 'failing', target: 'folder', where: folder.folder, code: folder.lastError };
@@ -45,12 +64,17 @@ export function backupHealth(
   }
 
   if (folder.folder === null && !(drive.configured && drive.linked)) {
-    return { kind: 'local-only' };
+    return { kind: 'local-only', driveAvailable: drive.configured };
   }
 
   const copies = [folder.lastCopyAt, drive.linked ? (drive.lastSyncAt ?? null) : null].filter(
     (at): at is string => at !== null,
   );
+  const newest = copies.sort((x, y) => Date.parse(x) - Date.parse(y)).at(-1) ?? null;
 
-  return { kind: 'ok', lastCopyAt: copies.sort().at(-1) ?? null };
+  if (newest !== null && now.getTime() - Date.parse(newest) > STALE_AFTER_MS) {
+    return { kind: 'stale', lastCopyAt: newest };
+  }
+
+  return { kind: 'ok', lastCopyAt: newest };
 }

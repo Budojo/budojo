@@ -533,6 +533,21 @@ describe('TodayComponent', () => {
     };
     const NO_DRIVE: DriveLinkStateView = { configured: true, linked: false };
 
+    /**
+     * What the services really answer off the desktop: `available` false,
+     * and `state()` all-nulls / unconfigured rather than nothing at all. So
+     * a component that forgot the `available` gate would read those as "no
+     * folder, no Drive" and raise the alert — which the web-build test below
+     * must catch.
+     */
+    const OFF_DESKTOP_FOLDER: BackupFolderStateView = {
+      folder: null,
+      lastCopyAt: null,
+      lastError: null,
+      lastErrorAt: null,
+    };
+    const OFF_DESKTOP_DRIVE: DriveLinkStateView = { configured: false, linked: false };
+
     function bridges(
       folder: BackupFolderStateView | null,
       drive: DriveLinkStateView | null = NO_DRIVE,
@@ -540,11 +555,17 @@ describe('TodayComponent', () => {
       return [
         {
           provide: BackupFolderService,
-          useValue: { available: folder !== null, state: () => Promise.resolve(folder) },
+          useValue: {
+            available: folder !== null,
+            state: () => Promise.resolve(folder ?? OFF_DESKTOP_FOLDER),
+          },
         },
         {
           provide: DriveSyncService,
-          useValue: { available: drive !== null, state: () => Promise.resolve(drive) },
+          useValue: {
+            available: drive !== null,
+            state: () => Promise.resolve(drive ?? OFF_DESKTOP_DRIVE),
+          },
         },
       ];
     }
@@ -595,6 +616,30 @@ describe('TodayComponent', () => {
       const root = await render(bridges({ ...FOLDER, folder: null, lastCopyAt: null }));
 
       expect(text(root, 'today-watch-backup')).toContain('only on this computer');
+      expect(text(root, 'today-watch-backup')).toContain('link Google Drive');
+    });
+
+    it('does not suggest Google Drive in a build that cannot link it', async () => {
+      const root = await render(
+        bridges(
+          { ...FOLDER, folder: null, lastCopyAt: null },
+          { configured: false, linked: false },
+        ),
+      );
+
+      const row = text(root, 'today-watch-backup');
+      expect(row).toContain('only on this computer');
+      expect(row).toContain('Choose a folder');
+      expect(row).not.toContain('Google Drive');
+    });
+
+    it('a copy that stopped arriving more than a week ago is a warning with its date', async () => {
+      // No lastError: the local backup threw, and the copy after it never ran.
+      const root = await render(bridges({ ...FOLDER, lastCopyAt: '2026-09-10T03:00:00Z' }));
+
+      const row = text(root, 'today-watch-backup');
+      expect(row).toContain('The last copy outside this computer is from 10 September');
+      expect(root.querySelector('[data-cy="today-system"]')).toBeNull();
     });
 
     it('copies landing are one quiet line, and nothing to check', async () => {

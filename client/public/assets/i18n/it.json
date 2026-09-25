@@ -3139,7 +3139,10 @@
       "driveFailing": "La copia dei backup su Google Drive ({{where}}) non riesce",
       "driveFailingUnnamed": "La copia dei backup su Google Drive non riesce",
       "localOnly": "I backup sono solo su questo computer",
-      "localOnlyDetail": "Se si rompe questo disco, si perde tutta l'accademia. Scegli una cartella o collega Google Drive."
+      "localOnlyDetail": "Se si rompe questo disco, si perde tutta l'accademia. Scegli una cartella o collega Google Drive.",
+      "localOnlyDetailFolder": "Se si rompe questo disco, si perde tutta l'accademia. Scegli una cartella per i backup.",
+      "stale": "L'ultima copia fuori da questo computer è del {{date}}",
+      "staleDetail": "Da più di una settimana non ne arriva una nuova. Apri il backup per capire perché."
     }
   },
   "backup": {
