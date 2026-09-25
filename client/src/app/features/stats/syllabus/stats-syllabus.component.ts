@@ -17,6 +17,7 @@ import { Router } from '@angular/router';
 import { AcademyClass, AcademyClassService } from '../../../core/services/academy-class.service';
 import { AcademyService, TrainingMode } from '../../../core/services/academy.service';
 import { LanguageService } from '../../../core/services/language.service';
+import type { Lesson } from '../../../core/services/lesson.service';
 import {
   CoverageTopic,
   StatsService,
@@ -316,9 +317,26 @@ export class StatsSyllabusComponent {
     this.planOpen.set(true);
   }
 
-  /** A plan is not coverage — only the season map has anything new to draw. */
-  protected planned(): void {
+  /**
+   * The map always has something new to draw. The report only when the
+   * lesson was already held — tonight's class with people in it — because
+   * then the technique is taught, not planned: out of this list, into the
+   * headline. Read quietly, without the skeleton, so the page stays where
+   * the owner had scrolled it; a read that lands after the season or the
+   * filter moved is dropped.
+   */
+  protected planned(lesson: Lesson): void {
     this.seasonMap()?.refreshWeeks();
+    if (!lesson.held) return;
+
+    const seasonsBack = this.seasonsBack();
+    const kind = this.kind();
+    this.stats.syllabusCoverage(seasonsBack, kindParamOf(kind)).subscribe({
+      next: (report) => {
+        if (this.seasonsBack() === seasonsBack && this.kind() === kind) this.report.set(report);
+      },
+      error: () => undefined,
+    });
   }
 
   protected goToProgramme(): void {

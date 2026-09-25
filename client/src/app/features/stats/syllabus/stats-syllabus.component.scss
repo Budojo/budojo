@@ -213,8 +213,11 @@
 
   // Who has seen it (#1745): the whole taught row, 48 px tall so it clears
   // the touch floor, and plain at rest — a list of names, not a wall of
-  // links. Hover and focus say it can be pressed.
-  &__open {
+  // links. Hover and focus say it can be pressed. A never-taught row no
+  // class can take (#1656) keeps the same box, so its name and position
+  // sit where the plannable rows' do.
+  &__open,
+  &__static {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -223,6 +226,9 @@
     min-height: 3rem;
     padding: 0.5rem;
     margin: 0;
+  }
+
+  &__open {
     border: 0;
     border-radius: 8px;
     background: transparent;

@@ -211,12 +211,16 @@ export class LessonSheetComponent {
   });
 
   /**
-   * What a lesson still ahead will cover is planned, not covered. Tonight
-   * and the evenings gone by keep "covered".
+   * What a lesson still ahead will cover is planned, not covered — tonight's
+   * included, until somebody is checked in and the header stops saying
+   * "planned" too. The evenings gone by keep "covered".
    */
-  protected readonly chosenTitle = computed<string>(() =>
-    this.slot() > localIso(new Date()) ? 'lessons.sheet.chosenPlanned' : 'lessons.sheet.chosen',
-  );
+  protected readonly chosenTitle = computed<string>(() => {
+    const slot = this.slot();
+    const today = localIso(new Date());
+    const ahead = slot > today || (slot === today && !this.lesson()?.held);
+    return ahead ? 'lessons.sheet.chosenPlanned' : 'lessons.sheet.chosen';
+  });
 
   /**
    * "Tonight" only for tonight's lesson. Anything else — a plan three weeks
@@ -427,7 +431,7 @@ export class LessonSheetComponent {
     // checked in, is held — and still this evening, not the last one.
     this.lastNotesReads.add(
       this.lessonService
-        .lastNotes(id, this.heldOn())
+        .lastNotes(id, this.slot())
         .pipe(catchError(() => of(null)))
         .subscribe((lesson) => this.setLastEvening(id, { state: 'done', lesson })),
     );

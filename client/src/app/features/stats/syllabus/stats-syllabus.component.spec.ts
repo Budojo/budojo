@@ -635,11 +635,41 @@ describe('StatsSyllabusComponent — plan what was never taught (#1656)', () => 
 
     planButton(fixture, 31)!.click();
     fixture.detectChanges();
-    sheet(fixture)!.saved.emit({} as Lesson);
+    // A plan is not coverage: the report has nothing to read again.
+    sheet(fixture)!.saved.emit({ held: false } as Lesson);
 
     const map = fixture.debugElement.query(By.directive(SeasonMapStub))
       .componentInstance as SeasonMapStub;
     expect(map.refreshWeeks).toHaveBeenCalled();
+  });
+
+  it('reads the report again when the lesson planned into was already held', () => {
+    const { fixture, httpMock } = setup();
+    flush(httpMock);
+    fixture.detectChanges();
+
+    // Lockdown, onto tonight's no-gi class — which already has people in it.
+    planButton(fixture, 32)!.click();
+    fixture.detectChanges();
+    sheet(fixture)!.saved.emit({ held: true } as Lesson);
+    fixture.detectChanges();
+
+    // Read quietly: the page stays where the owner scrolled it.
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('[data-cy="syllabus-coverage"]')).not.toBeNull();
+
+    const again = httpMock.expectOne((r) => r.url === URL);
+    expect(again.request.params.get('seasons_back')).toBe('0');
+    again.flush({
+      data: report({
+        missing: [{ id: 31, name: 'Omoplata', parent_name: 'Closed guard', kind: 'both' }],
+      }),
+    });
+    fixture.detectChanges();
+
+    // Taught now: out of the list.
+    expect(el.querySelector('[data-cy="syllabus-missing-32"]')).toBeNull();
+    expect(el.querySelector('[data-cy="syllabus-missing-31"]')).not.toBeNull();
   });
 
   it('offers no plan where no class may teach it', () => {
@@ -650,9 +680,20 @@ describe('StatsSyllabusComponent — plan what was never taught (#1656)', () => 
 
     expect(planButton(fixture, 31)).not.toBeNull();
     expect(planButton(fixture, 32)).toBeNull();
+
+    // Laid out as a plannable row is, so the two columns line up when mixed:
+    // the position beside the name, in the same inset, only not pressable.
+    const el: HTMLElement = fixture.nativeElement;
+    const plain = el.querySelector('[data-cy="syllabus-missing-32"] .topics__static');
+    expect(plain?.querySelector('.topics__name')?.textContent).toContain('Lockdown');
+    expect(plain?.querySelector('.topics__name .topics__parent')?.textContent).toContain(
+      'Half guard',
+    );
     expect(
-      fixture.nativeElement.querySelector('[data-cy="syllabus-missing-32"]').textContent,
-    ).toContain('Lockdown');
+      el.querySelector(
+        '[data-cy="syllabus-missing-31"] .topics__open .topics__name .topics__parent',
+      ),
+    ).not.toBeNull();
   });
 
   it('offers no plan past the end of the season', () => {

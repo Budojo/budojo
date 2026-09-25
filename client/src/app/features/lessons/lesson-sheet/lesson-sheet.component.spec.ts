@@ -852,29 +852,58 @@ describe('LessonSheetComponent — planning ahead (#1859)', () => {
     req.flush({ data: lesson({ held_on: '2026-09-28' }) });
   });
 
-  it('calls what a lesson still ahead will cover "planned", not "covered"', () => {
-    const { fixture, httpMock } = setupPlanning({ heldOn: '2026-09-21', chooseTopicId: 11 });
+  /** The chosen group's heading, for a sheet opened on `heldOn` with the host's topic. */
+  function chosenHeading(heldOn: string, held = false): string {
+    TestBed.resetTestingModule();
+    const { fixture, httpMock } = setupPlanning({ heldOn, chooseTopicId: 11 });
+    if (held) {
+      httpMock
+        .expectOne((r) => r.url === LESSON_URL && r.method === 'GET')
+        .flush({ data: lesson({ held_on: heldOn, held: true }) });
+      httpMock.expectOne(SYLLABUS_URL).flush({ data: [CLOSED_GUARD, MOUNT] });
+      httpMock.expectOne(RECENT_URL).flush({ data: [] });
+      httpMock.expectOne((r) => r.url === SUGGEST_URL).flush({ data: [] });
+      httpMock
+        .expectOne((r) => r.url === '/api/v1/lessons/room-gaps')
+        .flush({ data: { present: 9, rows: [] } });
+    } else {
+      answerOpening(httpMock);
+    }
+    fixture.detectChanges();
+    return fixture.nativeElement.querySelector('[data-cy="lesson-sheet-chosen"] .group__title')
+      .textContent as string;
+  }
+
+  it('calls what a lesson still ahead will cover "planned", tonight included until it is held', () => {
+    expect(chosenHeading('2026-09-21')).toContain('Planned');
+    // Noon, nobody checked in yet: tonight is still a plan, as the header says.
+    expect(chosenHeading('2026-09-14')).toContain('Planned');
+  });
+
+  it('says "covered" once tonight has people in it, and for the evenings gone by', () => {
+    expect(chosenHeading('2026-09-14', true)).toContain('Covered');
+    expect(chosenHeading('2026-09-07')).toContain('Covered');
+  });
+
+  it('asks for the evening before the week it stepped to, not the one it opened on', () => {
+    const { fixture, httpMock } = setupPlanning({ heldOn: '2026-09-28' });
     answerOpening(httpMock);
     fixture.detectChanges();
 
-    expect(
-      fixture.nativeElement.querySelector('[data-cy="lesson-sheet-chosen"] .group__title')
-        .textContent,
-    ).toContain('Planned');
-  });
+    byCy(fixture, 'lesson-sheet-prev').click();
+    fixture.detectChanges();
+    expect(answerOpening(httpMock)).toBe('2026-09-21');
+    fixture.detectChanges();
 
-  it('keeps "covered" for tonight and for the evenings gone by', () => {
-    const heading = (heldOn: string) => {
-      TestBed.resetTestingModule();
-      const { fixture, httpMock } = setupPlanning({ heldOn, chooseTopicId: 11 });
-      answerOpening(httpMock);
-      fixture.detectChanges();
-      return fixture.nativeElement.querySelector('[data-cy="lesson-sheet-chosen"] .group__title')
-        .textContent as string;
-    };
+    byCy(fixture, 'lesson-expand-1').click();
+    fixture.detectChanges();
+    byCy(fixture, 'lesson-detail-toggle-tree-11').click();
+    fixture.detectChanges();
 
-    expect(heading('2026-09-14')).toContain('Covered');
-    expect(heading('2026-09-07')).toContain('Covered');
+    // Before the 28th, the 21st would be the evening itself.
+    const req = httpMock.expectOne((r) => r.url === '/api/v1/lessons/last-notes');
+    expect(req.request.params.get('before')).toBe('2026-09-21');
+    req.flush({ data: null });
   });
 
   it('holds the arrows once something besides the host’s topic is picked', () => {

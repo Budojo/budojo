@@ -203,11 +203,11 @@
                     Planned from where the gap is seen (#1656): the row opens
                     the next lesson that may teach it, with it ticked. Its
                     name is what it shows and what it does, like a taught
-                    row's. A row no class can take stays plain.
+                    row's. A row no class can take is laid out the same, so
+                    the two line up when they mix, and is not pressable.
                   -->
                   <li
-                    class="topics__row"
-                    [class.topics__row--open]="target !== undefined"
+                    class="topics__row topics__row--open"
                     [attr.data-cy]="'syllabus-missing-' + topic.id"
                   >
                     @if (target !== undefined) {
@@ -228,10 +228,14 @@
                         </span>
                       </button>
                     } @else {
-                      <span class="topics__name">{{ topic.name }}</span>
-                      @if (topic.parent_name) {
-                        <span class="topics__parent">{{ topic.parent_name }}</span>
-                      }
+                      <span class="topics__static">
+                        <span class="topics__name">
+                          {{ topic.name }}
+                          @if (topic.parent_name) {
+                            <span class="topics__parent">{{ topic.parent_name }}</span>
+                          }
+                        </span>
+                      </span>
                     }
                   </li>
                 }
@@ -329,6 +333,6 @@
     [steppable]="true"
     [focusTopicId]="slot.topicId"
     [chooseTopicId]="slot.topicId"
-    (saved)="planned()"
+    (saved)="planned($event)"
   />
 }
