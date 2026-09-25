@@ -360,50 +360,132 @@ describe('TodayComponent', () => {
   });
 
   it('comes back from a night asleep on the new day, and asks for its lessons', () => {
-    // Thursday 23:50: the window is left on Today.
+    // Thursday 23:50: the window is left on Today. Thursday's class is over,
+    // so the card already plans Friday's — named with its day.
+    const THU = cls({ id: 1, weekday: 4, name: 'Giovedi' });
+    const FRI = cls({ id: 2, weekday: 5, name: 'Venerdi' });
     vi.setSystemTime(new Date(2026, 8, 24, 23, 50));
     const http = setup();
     const fixture = TestBed.createComponent(TodayComponent);
     fixture.detectChanges();
-    flushAll(http, { classes: [cls({ id: 1, weekday: 5, name: 'Venerdi' })] });
+    http.expectOne((req) => req.url.endsWith('/academy/classes')).flush({ data: [THU, FRI] });
+    const before = http.expectOne((q) => q.url.endsWith('/lessons/suggestions'));
+    expect(before.request.params.get('academy_class_id')).toBe('2');
+    before.flush({ data: [] });
+    flushAll(http, { classes: 'skip' });
     fixture.detectChanges();
-    expect((fixture.nativeElement as HTMLElement).querySelector('h1')?.textContent).toContain(
-      'Thursday 24 September',
-    );
+    const root = fixture.nativeElement as HTMLElement;
+    expect(root.querySelector('h1')?.textContent).toContain('Thursday 24 September');
+    expect(text(root, 'today-teach')).toContain('Friday 25 September');
 
     // Friday 08:00: the laptop wakes and the window becomes visible again.
     vi.setSystemTime(new Date(2026, 8, 25, 8, 0));
     document.dispatchEvent(new Event('visibilitychange'));
     fixture.detectChanges();
 
-    http
-      .expectOne((req) => req.url.endsWith('/academy/classes'))
-      .flush({ data: [cls({ id: 1, weekday: 5, name: 'Venerdi' })] });
+    http.expectOne((req) => req.url.endsWith('/academy/classes')).flush({ data: [THU, FRI] });
     const lessonReq = http.expectOne((req) => req.url.endsWith('/lessons') && req.method === 'GET');
     // Tonight's topics belong to Friday's lesson now, not Thursday's.
     expect(lessonReq.request.params.get('held_on')).toBe('2026-09-25');
+    expect(lessonReq.request.params.get('academy_class_id')).toBe('2');
     lessonReq.flush({ data: null });
+    const after = http.expectOne((q) => q.url.endsWith('/lessons/suggestions'));
+    expect(after.request.params.get('academy_class_id')).toBe('2');
+    after.flush({ data: [] });
     for (const req of http.match((q) => q.method === 'GET')) {
       req.flush({ data: [], meta: { total: 0, current_page: 1, per_page: 20, last_page: 1 } });
     }
     fixture.detectChanges();
 
-    const root = fixture.nativeElement as HTMLElement;
     expect(root.querySelector('h1')?.textContent).toContain('Friday 25 September');
-    expect(root.querySelector('[data-cy="today-class-1"]')).not.toBeNull();
+    expect(root.querySelector('[data-cy="today-class-2"]')).not.toBeNull();
+    // The slot is tonight now: the heading drops the day it no longer needs.
+    expect(text(root, 'today-teach')).toContain('For Venerdi at 19:00');
+    expect(text(root, 'today-teach')).not.toContain('Friday');
+    http.verify();
   });
 
-  it('does not reload on a return the same day', () => {
+  it('does not reload on a return the same day, while the planned class is still ahead', () => {
     const http = setup();
     const fixture = TestBed.createComponent(TodayComponent);
     fixture.detectChanges();
     flushAll(http);
 
-    vi.setSystemTime(new Date(2026, 8, 24, 21, 0));
+    // 18:45: the 19:00 class is still the one to plan.
+    vi.setSystemTime(new Date(2026, 8, 24, 18, 45));
     document.dispatchEvent(new Event('visibilitychange'));
 
     http.expectNone((req) => req.url.endsWith('/academy/classes'));
+    http.expectNone((req) => req.url.endsWith('/lessons/suggestions'));
     http.verify();
+  });
+
+  it('on a return the same evening after the class, plans next week and asks again', () => {
+    const http = setup();
+    const fixture = TestBed.createComponent(TodayComponent);
+    fixture.detectChanges();
+    // 18:30: the only class is Thursday 19:00, so that is the one planned.
+    flushAll(http, { classes: [cls({ id: 1 })] });
+    fixture.detectChanges();
+    expect(text(fixture.nativeElement, 'today-teach')).toContain('For Fondamentali at 19:00');
+
+    // 21:30, same Thursday: the window comes back after the class.
+    vi.setSystemTime(new Date(2026, 8, 24, 21, 30));
+    document.dispatchEvent(new Event('visibilitychange'));
+    fixture.detectChanges();
+
+    http.expectNone((req) => req.url.endsWith('/academy/classes'));
+    const again = http.expectOne((q) => q.url.endsWith('/lessons/suggestions'));
+    expect(again.request.params.get('academy_class_id')).toBe('1');
+    again.flush({ data: [] });
+    fixture.detectChanges();
+
+    // Next Thursday's slot, named with its date — not tonight's, already held.
+    expect(text(fixture.nativeElement, 'today-teach')).toContain('Thursday 1 October');
+    http.verify();
+  });
+
+  it('drops a suggestions reply that arrives for a slot no longer planned', () => {
+    const http = setup();
+    const fixture = TestBed.createComponent(TodayComponent);
+    fixture.detectChanges();
+    http.expectOne((req) => req.url.endsWith('/academy/classes')).flush({ data: [cls({ id: 1 })] });
+    // Tonight's request is still in flight when the window comes back at 21:30.
+    const stale = http.expectOne((q) => q.url.endsWith('/lessons/suggestions'));
+    vi.setSystemTime(new Date(2026, 8, 24, 21, 30));
+    document.dispatchEvent(new Event('visibilitychange'));
+    const fresh = http.expectOne((q) => q.url.endsWith('/lessons/suggestions'));
+
+    fresh.flush({
+      data: [
+        {
+          id: 31,
+          name: 'Kimura',
+          parent_name: 'Closed guard',
+          kind: 'gi',
+          reason: 'never',
+          last_taught_on: null,
+        },
+      ],
+    });
+    stale.flush({
+      data: [
+        {
+          id: 21,
+          name: 'Triangle',
+          parent_name: 'Closed guard',
+          kind: 'gi',
+          reason: 'never',
+          last_taught_on: null,
+        },
+      ],
+    });
+    flushAll(http, { classes: 'skip' });
+    fixture.detectChanges();
+
+    const teach = text(fixture.nativeElement, 'today-teach');
+    expect(teach).toContain('Kimura');
+    expect(teach).not.toContain('Triangle');
   });
 
   it("suggests what to teach for the evening's class, with the reason", () => {

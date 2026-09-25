@@ -132,6 +132,8 @@ export class TodayComponent implements OnInit {
    * dropped instead of landing on today's cards.
    */
   private epoch = 0;
+  /** Bumped on every suggestions request; only the latest one may answer. */
+  private suggestionsCall = 0;
 
   protected readonly kindLabels = this.trainingModes.labels;
   protected readonly timeRange = timeRange;
@@ -316,10 +318,21 @@ export class TodayComponent implements OnInit {
       .subscribe(() => {
         if (this.document.visibilityState !== 'visible') return;
         const now = new Date();
-        if (isoDay(now) === this.todayIso()) return;
+        if (isoDay(now) !== this.todayIso()) {
+          this.now.set(now);
+          this.reset();
+          this.loadAll();
+          return;
+        }
+        // The same day, later: the cards stand, but the class to plan may
+        // have moved on — opened at 18:30 and back at 21:30, the 19:00 class
+        // is held and next week's is the one to prepare (#1752).
+        const before = this.teachSlot();
         this.now.set(now);
-        this.reset();
-        this.loadAll();
+        if (!sameSlot(before, this.teachSlot())) {
+          this.suggestions.set(LOADING);
+          this.loadSuggestions();
+        }
       });
   }
 
@@ -465,6 +478,14 @@ export class TodayComponent implements OnInit {
 
   private loadSuggestions(): void {
     const slot = this.teachSlot();
+    // Only the latest request may answer: a reply for a slot re-picked since
+    // (a same-day return) must not land under the new heading.
+    const call = ++this.suggestionsCall;
+    const latest =
+      <T>(apply: (value: T) => void) =>
+      (value: T): void => {
+        if (call === this.suggestionsCall) apply(value);
+      };
     if (slot === null) {
       this.suggestions.set({ state: 'ready', value: [] });
       return;
@@ -473,10 +494,10 @@ export class TodayComponent implements OnInit {
       .suggestions(slot.academyClass.id, 3)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: this.current((value: LessonSuggestion[]) =>
-          this.suggestions.set({ state: 'ready', value }),
+        next: this.current(
+          latest((value: LessonSuggestion[]) => this.suggestions.set({ state: 'ready', value })),
         ),
-        error: this.current(() => this.suggestions.set(FAILED)),
+        error: this.current(latest(() => this.suggestions.set(FAILED))),
       });
   }
 
@@ -566,6 +587,15 @@ export class TodayComponent implements OnInit {
       () => this.lastBackupAt.set(null),
     );
   }
+}
+
+/** The same class on the same date: the suggestions already on screen still apply. */
+function sameSlot(
+  a: { readonly academyClass: AcademyClass; readonly date: Date } | null,
+  b: { readonly academyClass: AcademyClass; readonly date: Date } | null,
+): boolean {
+  if (a === null || b === null) return a === b;
+  return a.academyClass.id === b.academyClass.id && isoDay(a.date) === isoDay(b.date);
 }
 
 /**
