@@ -6,9 +6,9 @@ namespace App\Http\Controllers\Attendance;
 
 use App\Actions\Athlete\LoadAthleteIdentitiesAction;
 use App\Actions\Attendance\DeleteAttendanceAction;
-use App\Actions\Attendance\GetClassRegularsAction;
 use App\Actions\Attendance\GetAthleteAttendanceAction;
 use App\Actions\Attendance\GetAthleteAttendanceSummaryAction;
+use App\Actions\Attendance\GetClassRegularsAction;
 use App\Actions\Attendance\GetDailyAttendanceAction;
 use App\Actions\Attendance\GetMonthlyAttendanceSummaryAction;
 use App\Actions\Attendance\MarkAttendanceAction;

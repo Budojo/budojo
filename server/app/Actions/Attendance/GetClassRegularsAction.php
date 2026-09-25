@@ -218,7 +218,7 @@ class GetClassRegularsAction
                 static fn (Athlete $a, Athlete $b): int => [$a->last_name, $a->first_name, $a->id] <=> [$b->last_name, $b->first_name, $b->id],
             ]);
 
-        return $athletes->map(static function (Athlete $athlete) use ($attended): array {
+        return array_values($athletes->map(static function (Athlete $athlete) use ($attended): array {
             $last = $athlete->getAttribute('last_attended_on');
 
             return [
@@ -226,6 +226,6 @@ class GetClassRegularsAction
                 'attended' => $attended[$athlete->id],
                 'last_attended_on' => \is_string($last) && $last !== '' ? substr($last, 0, 10) : null,
             ];
-        })->values()->all();
+        })->all());
     }
 }

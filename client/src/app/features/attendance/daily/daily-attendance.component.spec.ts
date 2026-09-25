@@ -1346,9 +1346,11 @@ describe('DailyAttendanceComponent — who usually comes and is not here (#1730)
     component['togglePresent'](makeAthlete({ id: 7 }));
     fixture.detectChanges();
 
-    expect(Array.from(
-      (fixture.nativeElement as HTMLElement).querySelectorAll('[data-cy^="missing-regular-"]'),
-    ).map((el) => el.getAttribute('data-cy'))).toEqual(['missing-regular-9']);
+    expect(
+      Array.from(
+        (fixture.nativeElement as HTMLElement).querySelectorAll('[data-cy^="missing-regular-"]'),
+      ).map((el) => el.getAttribute('data-cy')),
+    ).toEqual(['missing-regular-9']);
     // The tap is a mark, not a reason to re-read the class's history.
     expect(regularsRequests(httpMock)).toHaveLength(0);
     httpMock
@@ -1385,6 +1387,25 @@ describe('DailyAttendanceComponent — who usually comes and is not here (#1730)
     slow.flush(answer([7, 8]));
 
     expect(missingIds(fixture)).toEqual(['missing-regular-9']);
+  });
+
+  it('waits for the room before counting who is missing', () => {
+    const { fixture, httpMock } = setup();
+    fixture.detectChanges();
+    httpMock.expectOne((r) => r.url === '/api/v1/athletes').flush(emptyPage());
+    httpMock.expectOne('/api/v1/academy/classes').flush({ data: [KIDS, FUNDAMENTALS] });
+    const records = httpMock.expectOne((r) => r.url === '/api/v1/attendance');
+
+    // The regulars answer first: with nobody known on the mat yet, all three
+    // would read as missing.
+    regularsRequests(httpMock)[0].flush(answer([7, 8, 9]));
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    expect(root.querySelector('[data-cy="missing-regulars-toggle"]')).toBeNull();
+
+    records.flush({ data: [{ id: 100, athlete_id: 8, lesson_id: 3, attended_on: '2026-09-14' }] });
+
+    expect(missingIds(fixture)).toEqual(['missing-regular-7', 'missing-regular-9']);
   });
 
   it('says so when the answer fails, and asks again on retry', () => {

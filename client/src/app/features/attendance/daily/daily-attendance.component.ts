@@ -614,6 +614,7 @@ export class DailyAttendanceComponent implements OnInit {
           }
           this.presentMap.set(map);
           this.selfMarkedSet.set(selfSet);
+          this.presentEpoch.set(epoch);
         }
         settle();
       },
@@ -878,9 +879,22 @@ export class DailyAttendanceComponent implements OnInit {
 
   // ── Who usually comes and is not here (#1730) ─────────────────────────────
 
-  /** The selected class's regulars, or null while asked for (and with no class). */
-  protected readonly regulars = signal<ClassRegulars | null>(null);
+  /** Which load's records `presentMap` holds. */
+  private readonly presentEpoch = signal<number>(-1);
+  private readonly regularsAnswer = signal<{ epoch: number; regulars: ClassRegulars } | null>(null);
   protected readonly regularsFailed = signal<boolean>(false);
+
+  /**
+   * The selected class's regulars, once the room they are subtracted from is
+   * the same load's. Without the wait, a first load or a chip tap whose
+   * regulars answered before its records would flash every regular as
+   * missing, then correct itself — a wrong answer is worse than a moment of
+   * none.
+   */
+  protected readonly regulars = computed<ClassRegulars | null>(() => {
+    const answer = this.regularsAnswer();
+    return answer !== null && answer.epoch === this.presentEpoch() ? answer.regulars : null;
+  });
 
   /**
    * Once per (day, class) — on the day's load and on a chip — never per
@@ -890,7 +904,7 @@ export class DailyAttendanceComponent implements OnInit {
    * the one on screen.
    */
   protected loadRegulars(): void {
-    this.regulars.set(null);
+    this.regularsAnswer.set(null);
     this.regularsFailed.set(false);
     const classId = this.selectedClassId();
     if (classId === null) return;
@@ -898,7 +912,7 @@ export class DailyAttendanceComponent implements OnInit {
     const epoch = this.attendanceEpoch;
     this.attendanceService.regulars(this.selectedDateIso(), classId).subscribe({
       next: (regulars) => {
-        if (epoch === this.attendanceEpoch) this.regulars.set(regulars);
+        if (epoch === this.attendanceEpoch) this.regularsAnswer.set({ epoch, regulars });
       },
       error: () => {
         if (epoch === this.attendanceEpoch) this.regularsFailed.set(true);

@@ -29,6 +29,11 @@ describe('Today, the first screen (#1643)', () => {
       body: { data: { ...MOCK_ACADEMY, monthly_fee_cents: 6000 } },
     }).as('academy');
     cy.intercept('GET', '/api/v1/academy/classes', { statusCode: 200, body: { data: CLASSES } });
+    // The check-in this spec navigates to asks who usually comes (#1730).
+    cy.intercept('GET', '/api/v1/attendance/regulars*', {
+      statusCode: 200,
+      body: { data: [], meta: { occurrences: 0, occurrence_dates: [] } },
+    });
     cy.intercept('GET', '/api/v1/lessons?*', { statusCode: 200, body: { data: null } }).as(
       'lesson',
     );
