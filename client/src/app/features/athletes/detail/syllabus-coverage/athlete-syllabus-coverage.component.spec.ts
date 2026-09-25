@@ -104,6 +104,29 @@ describe('AthleteSyllabusCoverageComponent (#1567)', () => {
     ).toContain('twice or more');
   });
 
+  it('keeps one sentence under the number and folds the method behind it (#1853)', () => {
+    const { fixture, httpMock } = setup();
+    flush(httpMock, report());
+    fixture.detectChanges();
+
+    const root = fixture.nativeElement as HTMLElement;
+    const method = root.querySelector(
+      'details[data-cy="athlete-coverage-method"]',
+    ) as HTMLDetailsElement;
+    // The meaning stays in view, outside the fold...
+    expect(method.contains(root.querySelector('.coverage__fraction'))).toBe(false);
+    // ...and the method folds, closed at rest, #1748's cross-reference with
+    // it: the two screens still name each other, one tap away.
+    expect(method.open).toBe(false);
+    for (const cy of [
+      'athlete-coverage-consolidated',
+      'athlete-coverage-since',
+      'athlete-coverage-rule',
+    ]) {
+      expect(method.querySelector(`[data-cy="${cy}"]`)).not.toBeNull();
+    }
+  });
+
   it('keeps what nobody taught out of the number and says whose gap it is', () => {
     const { fixture, httpMock } = setup();
     flush(

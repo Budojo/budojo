@@ -416,6 +416,66 @@
     </div>
 
     <!--
+      The teaching notebook (#1862): how it is taught here, and the video it
+      came from. Both optional; the lesson sheet shows them beside the
+      technique when it is chosen for an evening.
+    -->
+    <div class="field">
+      <label for="topic-notes" class="field__label">
+        {{ 'academy.syllabus.form.notes' | translate }}
+      </label>
+      <textarea
+        pTextarea
+        id="topic-notes"
+        formControlName="notes"
+        rows="3"
+        maxlength="2000"
+        [placeholder]="'academy.syllabus.form.notesPlaceholder' | translate"
+        aria-describedby="topic-notes-hint"
+        data-cy="syllabus-form-notes"
+      ></textarea>
+      <small class="field__hint" id="topic-notes-hint">
+        {{ 'academy.syllabus.form.notesHint' | translate }}
+      </small>
+    </div>
+
+    <div class="field">
+      <label for="topic-video" class="field__label">
+        {{ 'academy.syllabus.form.video' | translate }}
+      </label>
+      <input
+        id="topic-video"
+        type="url"
+        inputmode="url"
+        pInputText
+        formControlName="videoUrl"
+        maxlength="500"
+        autocomplete="off"
+        spellcheck="false"
+        placeholder="https://…"
+        [class.ng-invalid]="videoError()"
+        [class.ng-dirty]="videoError()"
+        [attr.aria-invalid]="videoError() ? 'true' : null"
+        [attr.aria-describedby]="videoError() ? 'topic-video-error' : 'topic-video-hint'"
+        data-cy="syllabus-form-video"
+      />
+      @if (videoError()) {
+        <small
+          id="topic-video-error"
+          class="field__error"
+          role="alert"
+          data-cy="syllabus-form-video-error"
+        >
+          {{ 'academy.syllabus.form.videoInvalid' | translate }}
+        </small>
+      } @else {
+        <small class="field__hint" id="topic-video-hint">
+          {{ 'academy.syllabus.form.videoHint' | translate }}
+        </small>
+      }
+    </div>
+
+    <!--
       Order (#1661), editing only: a new topic goes at the end. Two steps and
       the place it lands, rather than drag handles on a tree whose rows
       already carry a tick and one or two buttons — on a phone a handle is a

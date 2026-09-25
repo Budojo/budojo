@@ -16,7 +16,8 @@ use Illuminate\Validation\Rule;
  *
  * `kind` is one of the academy's training modes or `both` (#1803) — never
  * `other`, which is a class's: a topic is the martial art by definition.
- * `from_belt` is a grade on the same art's ladder (#1861).
+ * `from_belt` is a grade on the same art's ladder (#1861); `notes` and
+ * `video_url` are the teaching notebook (#1862).
  */
 trait ValidatesSyllabusTopic
 {
@@ -51,6 +52,11 @@ trait ValidatesSyllabusTopic
             // Kids' grades are allowed even where the academy trains none:
             // that setting trims the SPA's pickers and is not enforced here.
             'from_belt' => ['sometimes', 'nullable', 'string', Rule::in($belts)],
+            // How it is taught here, and where it came from (#1862). The link
+            // ends up in an `href`, so it is `https://` and nothing else: no
+            // `javascript:`, no `file:`, no page the browser warns about.
+            'notes' => ['sometimes', 'nullable', 'string', 'max:2000'],
+            'video_url' => ['sometimes', 'nullable', 'string', 'max:500', 'url:https', 'starts_with:https://'],
         ];
     }
 }

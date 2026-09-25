@@ -266,6 +266,61 @@
     gap: 0.5rem;
   }
 
+  &__plan {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--p-content-border-color);
+  }
+
+  &__plan-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  // A lesson to plan into: an action, so a full-size row with the accent's
+  // chevron — the one place in the panel the accent means "press this".
+  &__plan-option {
+    appearance: none;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    min-height: 3rem;
+    padding: 0 1rem;
+    background: none;
+    border: 1px solid var(--p-content-border-color);
+    border-radius: var(--budojo-radius-small, 0.5rem);
+    font: inherit;
+    font-size: 0.875rem;
+    color: var(--p-text-color);
+    text-align: left;
+    cursor: pointer;
+
+    > span:first-child {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    .pi {
+      color: var(--p-primary-color);
+    }
+
+    &:hover {
+      background: var(--p-content-hover-background);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--p-primary-color);
+      outline-offset: 2px;
+    }
+  }
+
   &__group-title {
     margin: 0;
     font-size: 0.6875rem;
@@ -403,6 +458,12 @@ button.swatch {
 
   &:hover {
     box-shadow: 0 0 0 1px var(--p-text-color);
+  }
+
+  // An empty week still to come, open to a plan (#1859): under the pointer
+  // it shows the outline a plan would have.
+  &.swatch--plannable:hover {
+    box-shadow: inset 0 0 0 1.5px var(--p-primary-color);
   }
 
   &:focus-visible {

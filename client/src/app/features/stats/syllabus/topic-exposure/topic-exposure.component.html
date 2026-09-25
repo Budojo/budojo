@@ -42,6 +42,31 @@
       />
     </div>
   } @else if (report(); as data) {
+    @if (data.topic.notes || data.topic.video_url) {
+      <!--
+        How it is taught here (#1862), from the programme: this is where the
+        owner decides whether to teach it again, so what they wrote about it
+        comes first.
+      -->
+      <section class="exposure__section exposure__notebook" data-cy="exposure-notebook">
+        <h3 class="exposure__eyebrow">{{ 'stats.syllabus.exposure.notebook' | translate }}</h3>
+        @if (data.topic.notes; as notes) {
+          <p class="exposure__notes" data-cy="exposure-notes">{{ notes }}</p>
+        }
+        @if (data.topic.video_url; as url) {
+          <a
+            class="exposure__video"
+            [href]="url"
+            target="_blank"
+            rel="noopener noreferrer"
+            data-cy="exposure-video"
+          >
+            <i class="pi pi-external-link" aria-hidden="true"></i>
+            {{ 'lessons.sheet.detail.video' | translate }}
+          </a>
+        }
+      </section>
+    }
     @if (nobodyYet()) {
       <!--
         Nobody has seen it because nobody has taught it. The academy's gap,

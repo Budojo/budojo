@@ -1,8 +1,11 @@
+import type { AcademyClass } from '../../../../core/services/academy-class.service';
+import type { TrainingMode } from '../../../../core/services/academy.service';
 import {
   CalendarLesson,
   CoveragePosition,
   SyllabusCalendar,
 } from '../../../../core/services/stats.service';
+import { admitsTopic, occurrencesOf } from '../../../../shared/utils/class-occurrences';
 
 /**
  * How a week reads on a position's row (#1858).
@@ -30,11 +33,15 @@ export interface MapCell {
   readonly alsoUnconfirmed: boolean;
   /** The week holding the server's today. */
   readonly current: boolean;
+  /** This week or a later one: a plan can still land in it (#1859). */
+  readonly ahead: boolean;
 }
 
 export interface MapRow {
   readonly id: number;
   readonly name: string;
+  /** The position's kind: which classes of the timetable may be told to teach it. */
+  readonly kind: TrainingMode;
   readonly covered: number;
   readonly inScope: number;
   readonly cells: readonly MapCell[];
@@ -115,6 +122,7 @@ export function buildRows(
     return {
       id: position.id,
       name: position.name,
+      kind: position.kind,
       covered: position.covered,
       inScope: position.in_scope,
       cells: calendar.weeks.map((week) => {
@@ -131,10 +139,49 @@ export function buildRows(
           alsoPlanned: held > 0 && planned > 0,
           alsoUnconfirmed: unconfirmed > 0 && (held > 0 || planned > 0),
           current: week === currentWeek,
+          ahead: week >= currentWeek,
         };
       }),
     };
   });
+}
+
+/** One lesson of the timetable a plan can land on (#1859). */
+export interface PlanOption {
+  readonly classId: number;
+  readonly name: string;
+  readonly startsAt: string | null;
+  /** The day, `Y-m-d`. */
+  readonly date: string;
+}
+
+/**
+ * The lessons of the timetable in `[from, to]` that may be told to teach a
+ * position of `positionKind` — a gi position goes to the gi classes and to the
+ * `both` and `other` ones, never to no-gi (`TrainingMode::admittedTopicModes`).
+ * By day, then by time; an untimed class last on its day.
+ */
+export function planOptions(
+  classes: readonly AcademyClass[],
+  positionKind: TrainingMode,
+  from: string,
+  to: string,
+): PlanOption[] {
+  return classes
+    .filter((c) => admitsTopic(c.kind, positionKind))
+    .flatMap((c) =>
+      occurrencesOf(c, from, to).map((date) => ({
+        classId: c.id,
+        name: c.name,
+        startsAt: c.starts_at,
+        date,
+      })),
+    )
+    .sort(
+      (a, b) =>
+        a.date.localeCompare(b.date) ||
+        (a.startsAt ?? '99:99').localeCompare(b.startsAt ?? '99:99'),
+    );
 }
 
 export interface WeekLessons {

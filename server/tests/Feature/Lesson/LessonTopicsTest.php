@@ -11,6 +11,7 @@ use App\Models\Lesson;
 use App\Models\SyllabusTopic;
 use App\Models\User;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Carbon;
 
 /**
  * What a lesson covered (#1564) — the join between the timetable and the
@@ -25,6 +26,11 @@ use Carbon\CarbonImmutable;
 // helpers live in tests/Pest.php
 
 beforeEach(function (): void {
+    // A Monday — the class's own day. Since #1859 a write dated today or
+    // later must fall on the class's weekday, so "today" in these tests has
+    // to be one the class runs on rather than whatever day the suite runs.
+    Carbon::setTestNow(Carbon::parse('2026-09-21 18:00:00'));
+
     $this->user = userWithAcademy();
     $this->academy = $this->user->academy;
     $this->class = AcademyClass::factory()->for($this->academy)->create([
@@ -33,6 +39,10 @@ beforeEach(function (): void {
     $this->closedGuard = SyllabusTopic::factory()->for($this->academy)->create(['name' => 'Closed guard']);
     $this->armbar = SyllabusTopic::factory()->under($this->closedGuard)->create(['name' => 'Armbar']);
     $this->triangle = SyllabusTopic::factory()->under($this->closedGuard)->create(['name' => 'Triangle']);
+});
+
+afterEach(function (): void {
+    Carbon::setTestNow();
 });
 
 function setTopics(mixed $test, array $topicIds, string $date = '2026-09-14'): \Illuminate\Testing\TestResponse
@@ -164,9 +174,9 @@ it('refuses a list with the same topic twice', function (): void {
 // ─── Planned, then held ──────────────────────────────────────────────────────
 
 it('reports a planned lesson as not held, however many topics it carries', function (): void {
-    setTopics($this, [$this->armbar->id, $this->triangle->id], '2026-12-25')->assertOk();
+    setTopics($this, [$this->armbar->id, $this->triangle->id], '2026-12-28')->assertOk();
 
-    readLesson($this, '2026-12-25')
+    readLesson($this, '2026-12-28')
         ->assertOk()
         ->assertJsonPath('data.held', false)
         ->assertJsonCount(2, 'data.topics');
