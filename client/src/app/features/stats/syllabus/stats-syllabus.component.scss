@@ -259,6 +259,20 @@
     overflow-wrap: anywhere;
   }
 
+  // A taught row's name over its reach (#1746): what it was, then how many
+  // lessons and how many people.
+  &__what {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  &__reach {
+    font-size: 0.6875rem;
+    color: var(--p-text-muted-color);
+    font-variant-numeric: tabular-nums;
+  }
+
   &__parent,
   &__ago {
     flex: 0 0 auto;
