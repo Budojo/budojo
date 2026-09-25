@@ -23,7 +23,7 @@
  */
 import LADDERS from '../../src/test-utils/ladders.json';
 import TRAINING_MODES from '../../src/test-utils/training-modes.json';
-import { fixtureContradictions, type FixtureContext } from './fixture-rules';
+import { fixtureContradictions, stubBodyOf, stubLabel, type FixtureContext } from './fixture-rules';
 
 // ── The clock ────────────────────────────────────────────────────────────
 //
@@ -532,11 +532,16 @@ function assertFixtureAgrees(label: string, body: unknown): void {
   }
 }
 
-Cypress.Commands.overwrite('intercept', (originalFn, ...args: unknown[]) => {
-  const response = args[args.length - 1];
-  if (typeof response === 'object' && response !== null && 'body' in response) {
-    assertFixtureAgrees(`The stub for ${String(args[1] ?? args[0])}`, response.body);
+/** What the `cy.intercept` override runs on every call, testable on its own. */
+function checkStub(args: readonly unknown[]): void {
+  const body = stubBodyOf(args);
+  if (body !== undefined) {
+    assertFixtureAgrees(`The stub for ${stubLabel(args)}`, body);
   }
+}
+
+Cypress.Commands.overwrite('intercept', (originalFn, ...args: unknown[]) => {
+  checkStub(args);
   return (originalFn as (...a: unknown[]) => Cypress.Chainable)(...args);
 });
 
@@ -655,20 +660,26 @@ const ATTENDANCE_ONE = [
 
 /** Giulia's last 90 days: Monday and Wednesday, nothing in August. */
 const ATHLETE_SUMMARY = (() => {
-  const series = Array.from({ length: 90 }, (_, i) => {
+  const iso = (d: Date): string =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  // One point per LESSON day in the 90-day window, as the server sends it
+  // (GetAthleteAttendanceSummaryAction): the days the academy held a class,
+  // which DAILY draws as Monday, Wednesday, Friday and Saturday with August
+  // closed. Calendar days here drew 90 bars beside "17 of 30" (#1854).
+  const series: { date: string; attended: boolean }[] = [];
+  for (let i = 0; i < 90; i++) {
     const d = new Date(NOW - (89 - i) * 86_400_000);
-    const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    const trains = d.getMonth() !== 7 && (d.getDay() === 1 || d.getDay() === 3);
-    return { date: iso, attended: trains };
-  });
+    if (d.getMonth() === 7 || ![1, 3, 5, 6].includes(d.getDay())) continue;
+    series.push({ date: iso(d), attended: d.getDay() === 1 || d.getDay() === 3 });
+  }
   const attended = series.filter((p) => p.attended).length;
   return {
     range_days: 90,
-    range_start: series[0].date,
-    range_end: series[series.length - 1].date,
+    range_start: iso(new Date(NOW - 89 * 86_400_000)),
+    range_end: TODAY,
     attended_count: attended,
-    expected_count: 30,
-    rate: Math.round((attended / 30) * 100) / 100,
+    expected_count: series.length,
+    rate: Math.round((attended / series.length) * 10000) / 10000,
     series,
   };
 })();
@@ -1915,6 +1926,35 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
     expect(problems.join('\n')).to.contain('percentage 50 ≠ attended/taught 83');
     expect(problems.join('\n')).to.contain("is 'planned'");
     expect(problems.join('\n')).to.contain('attendance_total_count 0 but last_attended_on');
+
+    // The attendance summary: one point per lesson day, so 90 calendar-day
+    // points against 30 expected is a contradiction.
+    const summary = fixtureContradictions(
+      {
+        attended_count: 2,
+        expected_count: 30,
+        rate: 0.0667,
+        series: Array.from({ length: 90 }, (_, i) => ({ date: `d${i}`, attended: i < 2 })),
+      },
+      FIXTURE_CONTEXT,
+    );
+    expect(summary.join('\n')).to.contain('≠ 90 series points');
+
+    // Not stricter than the server: the month count and the last presence
+    // are not floored at joining, which is editable and was backfilled.
+    expect(
+      fixtureContradictions(
+        [
+          {
+            joined_at: '2026-09-10',
+            attendance_month_count: 3,
+            attendance_total_count: 2,
+            last_attended_on: '2026-09-12',
+          },
+        ],
+        FIXTURE_CONTEXT,
+      ),
+    ).to.deep.equal([]);
     // ...and an honest row passes.
     expect(
       fixtureContradictions(
@@ -1922,6 +1962,40 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
         FIXTURE_CONTEXT,
       ),
     ).to.deep.equal([]);
+  });
+
+  it('checks every shape of stub the harness registers', () => {
+    // The override has to see the body whatever form the call takes, or a
+    // whole class of stubs goes unchecked: the two-argument
+    // `cy.intercept(matcher, page([...]))` was, until #1854's review.
+    const body = { data: [] };
+    expect(stubBodyOf(['GET', '/api/v1/x', { statusCode: 200, body }])).to.equal(body);
+    expect(stubBodyOf([{ method: 'GET', pathname: '/api/v1/x' }, body])).to.equal(body);
+    expect(stubBodyOf(['/api/v1/x', { method: 'GET' }, { statusCode: 200, body }])).to.equal(body);
+    expect(stubBodyOf(['GET', '/api/v1/x'])).to.equal(undefined);
+    expect(stubBodyOf(['/api/v1/x', () => undefined])).to.equal(undefined);
+    expect(stubBodyOf(['/api/v1/x', 'plain text'])).to.equal(undefined);
+    expect(stubBodyOf(['/api/v1/x', { fixture: 'athletes.json' }])).to.equal(undefined);
+
+    // ...and the override fails a drifted stub in each of those shapes, with
+    // a label a person can read.
+    const drifted = page([
+      { joined_at: '2024-09-02', attendance_month_count: 5, attendance_total_count: 143 },
+    ]);
+    const matcher = {
+      method: 'GET',
+      pathname: '/api/v1/athletes',
+      query: { sort_by: 'joined_at' },
+    };
+    expect(() => checkStub([matcher, drifted])).to.throw(
+      "The stub for GET /api/v1/athletes?sort_by=joined_at contradicts the server's rules",
+    );
+    expect(() =>
+      checkStub(['GET', '/api/v1/athletes*', { statusCode: 200, body: drifted }]),
+    ).to.throw('The stub for /api/v1/athletes*');
+    expect(() =>
+      checkStub(['GET', '/api/v1/athletes*', { statusCode: 200, body: page([]) }]),
+    ).not.to.throw();
   });
 
   it('records the run environment', () => {
@@ -1971,9 +2045,23 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       // belt spine the way every list of people does.
       cy.intercept(
         { method: 'GET', pathname: '/api/v1/athletes', query: { sort_by: 'joined_at' } },
+        // Joined today, so nothing counted yet: a count or a last presence
+        // before today would be a day they had not joined for (#1854).
         page([
-          { ...ATHLETES[3], joined_at: TODAY },
-          { ...ATHLETES[5], joined_at: TODAY },
+          {
+            ...ATHLETES[3],
+            joined_at: TODAY,
+            attendance_month_count: 0,
+            attendance_total_count: 0,
+            last_attended_on: null,
+          },
+          {
+            ...ATHLETES[5],
+            joined_at: TODAY,
+            attendance_month_count: 0,
+            attendance_total_count: 0,
+            last_attended_on: null,
+          },
         ]),
       );
     },

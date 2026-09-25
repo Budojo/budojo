@@ -56,12 +56,12 @@ const RULES: Rule[] = [
     if (!isDate(o['joined_at'])) return out;
     const joined = day(o['joined_at']);
     const monthStart = `${ctx.today.slice(0, 7)}-01`;
-    const seasonDays = trainingDaysBetween(
-      later(ctx.seasonStart, joined),
-      ctx.today,
-      ctx.trainingDays,
-    );
-    const monthDays = trainingDaysBetween(later(monthStart, joined), ctx.today, ctx.trainingDays);
+    // The season count is floored at joining (#1484); the month count is not,
+    // and neither is the last presence (AthleteController): `joined_at` is
+    // editable and was backfilled, so a presence before it is real data.
+    const seasonFrom = later(ctx.seasonStart, joined);
+    const seasonDays = trainingDaysBetween(seasonFrom, ctx.today, ctx.trainingDays);
+    const monthDays = trainingDaysBetween(monthStart, ctx.today, ctx.trainingDays);
     const total = o['attendance_total_count'];
     const month = o['attendance_month_count'];
     if (isNum(total) && total > seasonDays) {
@@ -70,26 +70,31 @@ const RULES: Rule[] = [
     if (isNum(month) && month > monthDays) {
       out.push(`attendance_month_count ${month} > ${monthDays} training days this month`);
     }
-    if (isNum(month) && isNum(total) && ctx.seasonStart <= monthStart && month > total) {
-      out.push(`attendance_month_count ${month} > attendance_total_count ${total}`);
+    // The month sits inside the season only when both windows start before
+    // it: someone who joined mid-month has a season that starts later.
+    if (isNum(month) && isNum(total) && ctx.seasonStart <= monthStart && joined <= monthStart) {
+      if (month > total)
+        out.push(`attendance_month_count ${month} > attendance_total_count ${total}`);
     }
-    // Last presence (#1726): a real day, after joining and not after today,
-    // and in the window a count covers exactly when that count is not zero.
+    // Last presence (#1726): not after today, and inside a count's window
+    // exactly when that count is not zero.
     const last = o['last_attended_on'];
-    if (isDate(last) && (day(last) < joined || day(last) > ctx.today)) {
-      out.push(`last_attended_on ${last} outside ${joined}…${ctx.today}`);
+    if (isDate(last) && day(last) > ctx.today) {
+      out.push(`last_attended_on ${last} is after today ${ctx.today}`);
     }
     const windows: [string, unknown, string][] = [
-      ['attendance_total_count', total, ctx.seasonStart],
+      ['attendance_total_count', total, seasonFrom],
       ['attendance_month_count', month, monthStart],
     ];
-    for (const [name, count, start] of windows) {
+    for (const [name, count, from] of windows) {
       if (!isNum(count) || (last !== null && !isDate(last))) continue;
-      const inWindow = isDate(last) && day(last) >= start;
-      if (count > 0 && !inWindow)
-        out.push(`${name} ${count} but last_attended_on ${last} before ${start}`);
-      if (count === 0 && inWindow)
-        out.push(`${name} 0 but last_attended_on ${last} after ${start}`);
+      const inWindow = isDate(last) && day(last) >= from;
+      if (count > 0 && !inWindow) {
+        out.push(`${name} ${count} but last_attended_on ${last} before ${from}`);
+      }
+      if (count === 0 && inWindow) {
+        out.push(`${name} 0 but last_attended_on ${last} on or after ${from}`);
+      }
     }
     return out;
   },
@@ -216,13 +221,37 @@ const RULES: Rule[] = [
       ? [`remaining_entries ${o['remaining_entries']} > total_entries ${o['total_entries']}`]
       : [],
 
-  // An athlete's attendance summary (#893): attended out of expected.
-  (o) =>
-    isNum(o['attended_count']) &&
-    isNum(o['expected_count']) &&
-    o['attended_count'] > o['expected_count']
-      ? [`attended_count ${o['attended_count']} > expected_count ${o['expected_count']}`]
-      : [],
+  // An athlete's attendance summary (GetAthleteAttendanceSummaryAction, #893):
+  // one series point per lesson day in the window, so expected is the series'
+  // length, attended its attended points, and the rate the one over the other.
+  (o) => {
+    const out: string[] = [];
+    const attended = o['attended_count'];
+    const expected = o['expected_count'];
+    if (!isNum(attended) || !isNum(expected)) return out;
+    if (attended > expected) out.push(`attended_count ${attended} > expected_count ${expected}`);
+    const series = o['series'];
+    if (Array.isArray(series)) {
+      const hit = series.filter((p) => isObj(p) && p['attended'] === true).length;
+      if (series.length !== expected) {
+        out.push(
+          `expected_count ${expected} ≠ ${series.length} series points (one per lesson day)`,
+        );
+      }
+      if (hit !== attended) out.push(`attended_count ${attended} ≠ ${hit} attended points`);
+    }
+    const rate = o['rate'];
+    if (rate !== undefined) {
+      // Null when nothing was expected, else rounded to four places.
+      const want = expected === 0 ? null : Math.round((attended / expected) * 10000) / 10000;
+      const agrees =
+        rate === null
+          ? want === null
+          : isNum(rate) && want !== null && Math.abs(rate - want) <= 1e-4;
+      if (!agrees) out.push(`rate ${String(rate)} ≠ attended/expected ${String(want)}`);
+    }
+    return out;
+  },
 
   // A month-summary row (#1765) counts days: no more than the month has had.
   (o, ctx) => {
@@ -234,6 +263,53 @@ const RULES: Rule[] = [
       : [];
   },
 ];
+
+/** The keys that make an intercept's last argument a StaticResponse. */
+const STATIC_RESPONSE_KEYS = [
+  'statusCode',
+  'body',
+  'fixture',
+  'headers',
+  'forceNetworkError',
+  'delay',
+  'throttleKbps',
+];
+
+/**
+ * The JSON body a `cy.intercept(...)` call stubs, or `undefined` when it stubs
+ * none this guard can read (a handler function, a string, a fixture file).
+ *
+ * The response is the last argument whenever there are two or more. Cypress
+ * reads an object carrying any StaticResponse key as a StaticResponse, whose
+ * body is `body`; an object carrying none of them is the JSON body itself,
+ * which is how `cy.intercept(matcher, page([...]))` stubs. Both shapes have to
+ * be read, or a whole class of stubs goes unchecked.
+ */
+export function stubBodyOf(args: readonly unknown[]): unknown {
+  if (args.length < 2) return undefined;
+  const response = args[args.length - 1];
+  if (Array.isArray(response)) return response;
+  if (!isObj(response)) return undefined;
+  if (Object.keys(response).some((k) => STATIC_RESPONSE_KEYS.includes(k))) {
+    return response['body'];
+  }
+  return response;
+}
+
+/** A readable name for what an intercept matches, for the guard's message. */
+export function stubLabel(args: readonly unknown[]): string {
+  // `(method, url, …)` names the url second; every other form names it first.
+  const matcher = typeof args[1] === 'string' ? args[1] : args[0];
+  if (typeof matcher === 'string') return matcher;
+  if (isObj(matcher)) {
+    const where = matcher['pathname'] ?? matcher['url'] ?? matcher['path'];
+    const query = isObj(matcher['query'])
+      ? `?${new URLSearchParams(matcher['query'] as Record<string, string>)}`
+      : '';
+    return `${String(matcher['method'] ?? '*')} ${String(where ?? JSON.stringify(matcher))}${query}`;
+  }
+  return String(matcher);
+}
 
 /**
  * Every contradiction in a stub body, each with the path it was found at.
