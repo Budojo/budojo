@@ -236,6 +236,20 @@ it('names the Italian numbers still invalid for a person to check, without the n
         ->once();
 });
 
+it('masks a value too short to show only its end', function (): void {
+    Log::spy();
+    $short = athletePhoneOnDisk($this, '+39', '12');
+
+    phoneMigration()->up();
+
+    Log::shouldHaveReceived('warning')
+        ->withArgs(static fn (string $message, array $context): bool => str_contains($message, 'phone')
+            && ($context['rows'] ?? null) === [
+                ['table' => 'athletes', 'id' => $short->id, 'ends_with' => '***'],
+            ])
+        ->once();
+});
+
 it('changes nothing the second time', function (): void {
     $athlete = athletePhoneOnDisk($this, '+44', '07911123456');
 

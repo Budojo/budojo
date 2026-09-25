@@ -92,7 +92,7 @@ return new class extends Migration
                 'table' => $table,
                 'id' => $row->id,
                 'fix' => $fixed['fix'],
-                'ends_with' => substr($fixed['number'], -3),
+                'ends_with' => $this->endsWith($fixed['number']),
             ]);
         });
 
@@ -116,12 +116,21 @@ return new class extends Migration
                 }
                 $number = $this->parse($util, $countryCode . $national);
                 if ($number === null || ! $util->isValidNumber($number)) {
-                    $invalid[] = ['table' => $table, 'id' => $row->id, 'ends_with' => substr($national, -3)];
+                    $invalid[] = ['table' => $table, 'id' => $row->id, 'ends_with' => $this->endsWith($national)];
                 }
             });
         }
 
         return $invalid;
+    }
+
+    /**
+     * The last three digits, enough to find the row by eye. A value that short
+     * would be the whole number, so it is masked instead.
+     */
+    private function endsWith(string $national): string
+    {
+        return \strlen($national) > 3 ? substr($national, -3) : '***';
     }
 
     /**
