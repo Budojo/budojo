@@ -92,10 +92,12 @@ export interface ClassRegular extends AthleteIdentity {
 /**
  * `GET /attendance/regulars`. `data` is empty below three occurrences, and
  * `meta.occurrences` is what tells that apart from "everyone is here".
+ * Always sent; optional here so a reader treats its absence as no history
+ * instead of throwing.
  */
 export interface ClassRegulars {
   readonly data: readonly ClassRegular[];
-  readonly meta: {
+  readonly meta?: {
     readonly occurrences: number;
     readonly occurrence_dates: readonly string[];
   };

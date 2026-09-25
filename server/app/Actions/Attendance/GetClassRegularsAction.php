@@ -29,7 +29,8 @@ use Carbon\CarbonImmutable;
  * and no lesson on the day but this one. Where there were two, a presence
  * naming neither could have been at either, and a day on which nobody named
  * this class is not known to be one of its evenings at all — so it is not one.
- * A guess would be indistinguishable from a fact afterwards.
+ * A guess would be indistinguishable from a fact afterwards. For the same
+ * reason the walk ends where the timetable moved (`occurrences()`).
  */
 class GetClassRegularsAction
 {
@@ -67,22 +68,39 @@ class GetClassRegularsAction
      * has to say to count: the class's lesson that day, and whether naming no
      * lesson is enough.
      *
+     * The walk ends at the first evening another class held on this weekday
+     * while being timetabled elsewhere now: the timetable has moved, and that
+     * evening and the ones before it were that class's, lesson or no lesson.
+     * Reading past it would credit the old timetable's habit to this class.
+     * A class that shares the weekday says nothing of the kind — an evening
+     * only it ran is skipped, and the walk goes on.
+     *
      * @return array<string, array{lesson: int|null, unattributed: bool}> keyed by `Y-m-d`
      */
     private function occurrences(Academy $academy, AcademyClass $class, CarbonImmutable $date): array
     {
-        $sharedWeekday = AcademyClass::query()
-            ->where('academy_id', $academy->id)
-            ->where('weekday', $class->weekday)
-            ->count() > 1;
+        $weekdayClasses = array_values(array_map(
+            static fn (mixed $id): int => is_numeric($id) ? (int) $id : 0,
+            AcademyClass::query()
+                ->where('academy_id', $academy->id)
+                ->where('weekday', $class->weekday)
+                ->pluck('id')
+                ->all(),
+        ));
+        $sharedWeekday = \count($weekdayClasses) > 1;
         $lessons = $this->lessonsByDay($academy, $date);
 
         $occurrences = [];
         foreach ($this->sessionDays($academy, $class, $date) as $day) {
             $onDay = $lessons[$day] ?? [];
             $own = array_find($onDay, static fn (array $lesson): bool => $lesson['class'] === $class->id);
-            $settled = ! $sharedWeekday && ($onDay === [] || (\count($onDay) === 1 && $own !== null));
             $named = $own !== null && $own['held'];
+
+            if (! $named && $this->movedHere($onDay, $weekdayClasses)) {
+                break;
+            }
+
+            $settled = ! $sharedWeekday && ($onDay === [] || (\count($onDay) === 1 && $own !== null));
 
             if ($settled || $named) {
                 $occurrences[$day] = ['lesson' => $own['id'] ?? null, 'unattributed' => $settled];
@@ -93,6 +111,24 @@ class GetClassRegularsAction
         }
 
         return $occurrences;
+    }
+
+    /**
+     * Whether a class timetabled on another weekday now held this evening —
+     * the trace of a timetable that has moved. A class since deleted leaves a
+     * lesson with no class, which says nothing about where it is now.
+     *
+     * @param  list<array{id: int, class: int|null, held: bool}>  $onDay
+     * @param  list<int>  $weekdayClasses  the classes timetabled on this weekday
+     */
+    private function movedHere(array $onDay, array $weekdayClasses): bool
+    {
+        return array_any(
+            $onDay,
+            static fn (array $lesson): bool => $lesson['held']
+                && $lesson['class'] !== null
+                && ! \in_array($lesson['class'], $weekdayClasses, true),
+        );
     }
 
     /**

@@ -278,20 +278,58 @@ it('does not credit a presence naming no class on a shared weekday, even when th
     expect(regularIds(regularsOf($this, $this->gi)))->toBe([$gianni->id]);
 });
 
-it('does not read a day whose one lesson was another class as this one', function (): void {
+it('stops at the evening another class held, and does not read the old timetable as this one', function (): void {
     // The timetable moved: Wednesdays used to be no-gi, which is now on
-    // Thursdays. The day's one lesson says whose evening it was.
+    // Thursdays. 08-26 names no-gi, so it and every evening before it were
+    // no-gi's: 08-19 is the same story with no lesson to say so. Crediting it
+    // would make Marco a regular of gi on the strength of a no-gi habit.
     $noGi = AcademyClass::factory()->for($this->academy)->create([
         'name' => 'No-gi', 'weekday' => 4, 'starts_at' => '20:30', 'kind' => TrainingMode::NoGi,
     ]);
     $marco = regularsAthlete($this->academy, 'Marco');
     regularsPresent($marco, ['2026-09-09', '2026-09-02']);
     regularsHeld($noGi, '2026-08-26', $marco);
-    regularsPresent($marco, ['2026-08-19']);
+    regularsPresent($marco, ['2026-08-19', '2026-08-12']);
+
+    regularsOf($this, $this->gi)
+        ->assertJsonPath('data', [])
+        ->assertJsonPath('meta.occurrences', 2)
+        ->assertJsonPath('meta.occurrence_dates', ['2026-09-09', '2026-09-02']);
+});
+
+it('keeps walking past an evening only the class sharing its weekday held', function (): void {
+    // Gi and no-gi share Wednesday. On 09-02 only no-gi ran: that says nothing
+    // about when gi's history ends, so the walk goes on to find four of its own.
+    $noGi = AcademyClass::factory()->for($this->academy)->create([
+        'name' => 'No-gi', 'weekday' => 3, 'starts_at' => '20:30', 'kind' => TrainingMode::NoGi,
+    ]);
+    $gianni = regularsAthlete($this->academy, 'Gianni');
+
+    regularsHeld($this->gi, '2026-09-09', $gianni);
+    regularsHeld($noGi, '2026-09-02', $gianni);
+    regularsHeld($this->gi, '2026-08-26', $gianni);
+    regularsHeld($this->gi, '2026-08-19', $gianni);
+    regularsHeld($this->gi, '2026-08-12', $gianni);
 
     $response = regularsOf($this, $this->gi);
 
-    expect($response->json('meta.occurrence_dates'))->toBe(['2026-09-09', '2026-09-02', '2026-08-19'])
+    expect($response->json('meta.occurrence_dates'))
+        ->toBe(['2026-09-09', '2026-08-26', '2026-08-19', '2026-08-12'])
+        ->and(regularIds($response))->toBe([$gianni->id]);
+});
+
+it('finds a Sunday class on Sundays', function (): void {
+    // Carbon's `dayOfWeek` is 0 on Sunday, where `dayOfWeekIso` is 7: the two
+    // agree six days in seven, and a Wednesday test cannot tell them apart.
+    $openMat = AcademyClass::factory()->for($this->academy)->create([
+        'name' => 'Open mat', 'weekday' => 0, 'starts_at' => '10:00', 'kind' => TrainingMode::Both,
+    ]);
+    $marco = regularsAthlete($this->academy, 'Marco');
+    regularsPresent($marco, ['2026-09-13', '2026-09-06', '2026-08-30']);
+
+    $response = regularsOf($this, $openMat);
+
+    expect($response->json('meta.occurrence_dates'))->toBe(['2026-09-13', '2026-09-06', '2026-08-30'])
         ->and(regularIds($response))->toBe([$marco->id]);
 });
 

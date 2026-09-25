@@ -30,6 +30,7 @@ function render(
   value: ClassRegulars | null,
   present: ReadonlyMap<number, number> = new Map(),
   failed = false,
+  date: Date = new Date(),
 ) {
   TestBed.configureTestingModule({
     imports: [MissingRegularsComponent],
@@ -39,6 +40,7 @@ function render(
   fixture.componentRef.setInput('regulars', value);
   fixture.componentRef.setInput('present', present);
   fixture.componentRef.setInput('failed', failed);
+  fixture.componentRef.setInput('date', date);
   fixture.detectChanges();
   const root = fixture.nativeElement as HTMLElement;
   return { fixture, root };
@@ -96,6 +98,22 @@ describe('MissingRegularsComponent (#1730)', () => {
     );
     expect(root.querySelector('[data-cy="missing-contact-1-whatsapp"]')).not.toBeNull();
     expect(root.querySelector('[data-cy="missing-contact-1-call"]')).not.toBeNull();
+  });
+
+  it('measures "last seen" from the evening being checked in, not from today', () => {
+    // Browsing a past Monday: their last presence was the Friday before it.
+    const { fixture, root } = render(
+      regulars([regular({ id: 1, last_attended_on: '2026-03-06' })]),
+      new Map(),
+      false,
+      new Date(2026, 2, 9),
+    );
+
+    open(fixture);
+
+    expect(text(root, '[data-cy="missing-regular-1"] .missing__why')).toContain(
+      'Last seen 3 days ago',
+    );
   });
 
   it('offers a disabled contact control for a regular with no number', () => {
@@ -157,6 +175,12 @@ describe('MissingRegularsComponent (#1730)', () => {
     const { root } = render(regulars([], 4));
 
     expect(root.querySelector('[data-cy="missing-regulars-all-here"]')).not.toBeNull();
+  });
+
+  it('reads an answer with no meta as too little history, rather than breaking', () => {
+    const { root } = render({ data: [] } as unknown as ClassRegulars);
+
+    expect(root.querySelector('[data-cy="missing-regulars-not-enough"]')).not.toBeNull();
   });
 
   it('renders nothing while the answer is on its way', () => {

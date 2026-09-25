@@ -54,6 +54,13 @@ export class MissingRegularsComponent {
   /** Who is on the mat, keyed by athlete id — the check-in's present-map. */
   readonly present = input.required<ReadonlyMap<number, unknown>>();
 
+  /**
+   * The evening being checked in. "Last seen" is measured from it, not from
+   * today: the server's last presence is the one before this evening, so on
+   * a past day, today's distance would overstate the gap.
+   */
+  readonly date = input.required<Date>();
+
   /** The request failed. */
   readonly failed = input<boolean>(false);
 
@@ -67,7 +74,9 @@ export class MissingRegularsComponent {
     return (this.regulars()?.data ?? []).filter((r) => !present.has(r.id));
   });
 
-  protected readonly occurrences = computed<number>(() => this.regulars()?.meta.occurrences ?? 0);
+  // `?.` on `meta` too: a payload without it is read as no history, never as
+  // a crash that takes the check-in down with it.
+  protected readonly occurrences = computed<number>(() => this.regulars()?.meta?.occurrences ?? 0);
 
   protected readonly state = computed<PanelState>(() => {
     if (this.failed()) return 'error';
@@ -94,11 +103,12 @@ export class MissingRegularsComponent {
   protected readonly rows = computed<readonly MissingRow[]>(() => {
     // Read so the distances re-render in the new language.
     this.languageService.currentLang();
+    const evening = this.date();
     return this.missing().map((regular) => ({
       regular,
       name: `${regular.first_name} ${regular.last_name}`,
       lastSeen: regular.last_attended_on
-        ? relativeDay(regular.last_attended_on, this.translate)
+        ? relativeDay(regular.last_attended_on, this.translate, evening)
         : null,
     }));
   });

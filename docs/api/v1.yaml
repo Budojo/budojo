@@ -5611,7 +5611,9 @@ paths:
         academy had one session to be at (one class on the weekday, no other
         class's lesson that day). On a weekday two classes share, a presence
         naming neither counts for neither, and a day on which nobody named
-        this class is not one of its occurrences.
+        this class is not one of its occurrences. The walk back ends at the
+        first evening held by a class timetabled on another weekday now: the
+        timetable moved there, and the evenings before it were that class's.
 
         Fewer than 3 occurrences on record: `data` is empty and
         `meta.occurrences` says how many there were — "not enough history",
