@@ -2974,7 +2974,17 @@
           "planned": "Pianificata",
           "unconfirmed": "Senza appello"
         },
-        "error": "Impossibile caricare le settimane."
+        "error": "Impossibile caricare le settimane.",
+        "share": {
+          "heading": "Programma della settimana",
+          "ready": "Il programma della settimana del {{date}}, da mandare al gruppo.",
+          "none": "Nessuna lezione pianificata per questa settimana né per la prossima, quindi non c'è un programma da mandare.",
+          "nextSeason": "La settimana che viene entra nella nuova stagione, che questa mappa non mostra ancora. Il suo programma si manda da qui quando la nuova stagione è iniziata.",
+          "copy": "Copia il programma della settimana",
+          "whatsapp": "Invia su WhatsApp",
+          "copied": "Programma copiato: incollalo nel gruppo.",
+          "copyFailed": "Non è stato possibile copiarlo: usa «Invia su WhatsApp»."
+        }
       },
       "overTime": "Nel corso della stagione",
       "lastTaught": "L'ultima volta",

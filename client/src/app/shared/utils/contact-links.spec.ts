@@ -1,4 +1,4 @@
-import { contactLinks, phoneLabel } from './contact-links';
+import { contactLinks, phoneLabel, whatsappShareLink } from './contact-links';
 
 /**
  * One place that turns the stored phone pair into something you can press
@@ -55,5 +55,21 @@ describe('phoneLabel', () => {
   it('is null for a half pair', () => {
     expect(phoneLabel('+39', null)).toBeNull();
     expect(phoneLabel(null, '3331234567')).toBeNull();
+  });
+});
+
+describe('whatsappShareLink (#1863)', () => {
+  it('carries the message and no number, so WhatsApp asks which chat', () => {
+    const text = 'Programma della settimana\nLun 12 · Fondamentali · Half guard';
+    const link = whatsappShareLink(text);
+
+    expect(link.startsWith('https://wa.me/?text=')).toBe(true);
+    expect(decodeURIComponent(link.slice('https://wa.me/?text='.length))).toBe(text);
+  });
+
+  it('encodes what would otherwise end the text early or break the link', () => {
+    expect(whatsappShareLink('Back & side: 50% #1 ?')).toBe(
+      'https://wa.me/?text=Back%20%26%20side%3A%2050%25%20%231%20%3F',
+    );
   });
 });

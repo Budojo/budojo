@@ -2974,7 +2974,17 @@
           "planned": "Planned",
           "unconfirmed": "No check-in"
         },
-        "error": "The weeks could not be loaded."
+        "error": "The weeks could not be loaded.",
+        "share": {
+          "heading": "The week's plan",
+          "ready": "The plan for the week of {{date}}, to send to the group.",
+          "none": "Nothing is planned for this week or the next, so there is no plan to send yet.",
+          "nextSeason": "The week ahead runs into the new season, which this map does not cover yet. Send its plan from here once the new season has started.",
+          "copy": "Copy the week's plan",
+          "whatsapp": "Send on WhatsApp",
+          "copied": "Plan copied — paste it into the group.",
+          "copyFailed": "It could not be copied. Use “Send on WhatsApp” instead."
+        }
       },
       "overTime": "Across the season",
       "lastTaught": "Last taught",

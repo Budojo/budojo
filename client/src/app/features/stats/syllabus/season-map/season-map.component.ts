@@ -15,6 +15,7 @@ import {
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { DrawerModule } from 'primeng/drawer';
 import { Popover, PopoverModule } from 'primeng/popover';
@@ -28,6 +29,7 @@ import {
   StatsService,
   SyllabusCalendar,
 } from '../../../../core/services/stats.service';
+import { whatsappShareLink } from '../../../../shared/utils/contact-links';
 import { addDays, admitsTopic, localIso } from '../../../../shared/utils/class-occurrences';
 import { localeFor } from '../../../../shared/utils/locale';
 import { LessonSheetComponent } from '../../../lessons/lesson-sheet/lesson-sheet.component';
@@ -43,6 +45,7 @@ import {
   planOptions,
   positionSeason,
 } from './season-map.model';
+import { PublishedWeek, clockOf, publishedWeek, weekPlanText } from './week-plan.model';
 
 /**
  * What the panel shows: one week of one position (a cell, the pointer
@@ -92,6 +95,17 @@ function planningUntil(calendar: SyllabusCalendar, to: string): string {
   return to < calendar.season.end ? to : calendar.season.end;
 }
 
+/** Short weekday names for the group message, Monday first. */
+const WEEKDAY_KEYS = [
+  'weekdays.mon',
+  'weekdays.tue',
+  'weekdays.wed',
+  'weekdays.thu',
+  'weekdays.fri',
+  'weekdays.sat',
+  'weekdays.sun',
+] as const;
+
 /** Below this the panel is a bottom sheet; the popover is for a wide window. */
 const WIDE_QUERY = '(min-width: 768px)';
 
@@ -134,6 +148,7 @@ export class SeasonMapComponent {
   private readonly classService = inject(AcademyClassService);
   private readonly translate = inject(TranslateService);
   private readonly languageService = inject(LanguageService);
+  private readonly messages = inject(MessageService);
   private readonly injector = inject(Injector);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -171,6 +186,12 @@ export class SeasonMapComponent {
   };
 
   private readonly reloadTick = signal<number>(0);
+  /**
+   * The local time the weeks arrived at, `HH:MM`: today's lesson counts as
+   * ahead in the group message only until it starts (#1863). Read again with
+   * every load of the weeks, not ticked.
+   */
+  private readonly clock = signal<string>(clockOf(new Date()));
   private readonly popover = viewChild<Popover>('cellPopover');
   private readonly scroller = viewChild<ElementRef<HTMLElement>>('scroller');
   /** Where focus goes back to when the panel closes. */
@@ -199,7 +220,7 @@ export class SeasonMapComponent {
 
       const sub = this.stats.syllabusCalendar(seasonsBack, kind).subscribe({
         next: (calendar) => {
-          this.calendar.set(calendar);
+          this.showWeeks(calendar);
           this.revealThisWeek();
         },
         error: () => this.failed.set(true),
@@ -261,6 +282,78 @@ export class SeasonMapComponent {
   protected readonly tableMinWidth = computed<string>(
     () => `calc(10rem + 3.5rem + ${this.weeks().length} * 0.75rem)`,
   );
+
+  /**
+   * The group message (#1863) is offered on the current season only, as
+   * planning is: a season gone by has no week ahead to announce.
+   */
+  protected readonly canShare = computed<boolean>(
+    () => this.calendar() !== null && this.seasonsBack() === 0,
+  );
+
+  /**
+   * The week the group message is about (#1863): this one while it still has
+   * a plan ahead, else the next. The whole academy's plan, whatever the
+   * filter: the group is every athlete, not the half the map is showing.
+   */
+  protected readonly share = computed<PublishedWeek | null>(() => {
+    const calendar = this.calendar();
+    return calendar === null ? null : publishedWeek(calendar, this.clock());
+  });
+
+  /** Which week the message covers — or why there is none to send. */
+  protected readonly shareSentence = computed<string>(() => {
+    this.languageService.currentLang(); // signal dep — recompute on toggle
+    const share = this.share();
+    if (share?.kind === 'week') {
+      return this.translate.instant('stats.syllabus.map.share.ready', {
+        date: this.shortDate(share.week),
+      });
+    }
+    return this.translate.instant(
+      share?.kind === 'nextSeason'
+        ? 'stats.syllabus.map.share.nextSeason'
+        : 'stats.syllabus.map.share.none',
+    );
+  });
+
+  /** The message itself, or null when there is no week to send. */
+  protected readonly weekPlan = computed<string | null>(() => {
+    this.languageService.currentLang(); // signal dep — the heading and weekdays follow the toggle
+    const calendar = this.calendar();
+    const share = this.share();
+    if (calendar === null || share?.kind !== 'week') return null;
+
+    return weekPlanText(calendar, share.week, this.clock(), {
+      heading: this.translate.instant('stats.syllabus.map.share.heading'),
+      weekdays: WEEKDAY_KEYS.map((key) => this.translate.instant(key)),
+    });
+  });
+
+  protected readonly whatsappLink = computed<string | null>(() => {
+    const plan = this.weekPlan();
+    return plan === null ? null : whatsappShareLink(plan);
+  });
+
+  /** Copies the week's plan, the way the backup screen copies its code. */
+  protected async copyWeekPlan(): Promise<void> {
+    const plan = this.weekPlan();
+    if (plan === null) return;
+
+    try {
+      await navigator.clipboard.writeText(plan);
+      this.messages.add({
+        severity: 'success',
+        summary: this.translate.instant('stats.syllabus.map.share.copied'),
+      });
+    } catch {
+      // The clipboard can be refused; the WhatsApp link carries the same text.
+      this.messages.add({
+        severity: 'info',
+        summary: this.translate.instant('stats.syllabus.map.share.copyFailed'),
+      });
+    }
+  }
 
   protected weekAria(week: string): string {
     this.languageService.currentLang(); // signal dep — recompute on toggle
@@ -376,9 +469,15 @@ export class SeasonMapComponent {
   /** The plan was saved: redraw the weeks without blanking the map first. */
   protected refreshWeeks(): void {
     this.stats.syllabusCalendar(this.seasonsBack(), this.kind()).subscribe({
-      next: (calendar) => this.calendar.set(calendar),
+      next: (calendar) => this.showWeeks(calendar),
       error: () => undefined,
     });
+  }
+
+  /** The weeks, and the time they were read at, which the group message needs. */
+  private showWeeks(calendar: SyllabusCalendar): void {
+    this.clock.set(clockOf(new Date()));
+    this.calendar.set(calendar);
   }
 
   protected seasonAria(row: MapRow): string {
