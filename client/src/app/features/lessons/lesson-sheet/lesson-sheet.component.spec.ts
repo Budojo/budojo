@@ -652,7 +652,9 @@ describe('LessonSheetComponent — planning ahead (#1859)', () => {
     vi.useRealTimers();
   });
 
-  function setupPlanning(opts: { heldOn?: string; focusTopicId?: number | null } = {}) {
+  function setupPlanning(
+    opts: { heldOn?: string; focusTopicId?: number | null; chooseTopicId?: number | null } = {},
+  ) {
     TestBed.configureTestingModule({
       imports: [LessonSheetComponent],
       providers: [
@@ -670,6 +672,7 @@ describe('LessonSheetComponent — planning ahead (#1859)', () => {
     fixture.componentRef.setInput('className', 'Fundamentals');
     fixture.componentRef.setInput('steppable', true);
     fixture.componentRef.setInput('focusTopicId', opts.focusTopicId ?? null);
+    fixture.componentRef.setInput('chooseTopicId', opts.chooseTopicId ?? null);
     fixture.componentRef.setInput('visible', true);
     fixture.detectChanges();
 
@@ -678,13 +681,16 @@ describe('LessonSheetComponent — planning ahead (#1859)', () => {
   }
 
   /** Answer one opening's four reads; return the day the lesson read asked for. */
-  function answerOpening(httpMock: HttpTestingController): string | null {
+  function answerOpening(
+    httpMock: HttpTestingController,
+    suggestions: LessonSuggestion[] = [],
+  ): string | null {
     const req = httpMock.expectOne((r) => r.url === LESSON_URL && r.method === 'GET');
     const date = req.request.params.get('held_on');
     req.flush({ data: null });
     httpMock.expectOne(SYLLABUS_URL).flush({ data: [CLOSED_GUARD, MOUNT] });
     httpMock.expectOne(RECENT_URL).flush({ data: [] });
-    httpMock.expectOne((r) => r.url === SUGGEST_URL).flush({ data: [] });
+    httpMock.expectOne((r) => r.url === SUGGEST_URL).flush({ data: suggestions });
     return date;
   }
 
@@ -790,6 +796,61 @@ describe('LessonSheetComponent — planning ahead (#1859)', () => {
     } finally {
       delete (Element.prototype as unknown as { scrollIntoView?: unknown }).scrollIntoView;
     }
+  });
+
+  it('arrives with the host’s topic already chosen, and carries it to another week (#1656)', () => {
+    const { fixture, component, httpMock } = setupPlanning({ chooseTopicId: 11 });
+    answerOpening(httpMock);
+    fixture.detectChanges();
+
+    expect(component['isChosen'](11)).toBe(true);
+    // The host's choice is not an edit: the week can still move.
+    expect(byCy(fixture, 'lesson-sheet-next').disabled).toBe(false);
+    expect(byCy(fixture, 'lesson-sheet-step-hint')).toBeNull();
+
+    byCy(fixture, 'lesson-sheet-next').click();
+    fixture.detectChanges();
+    answerOpening(httpMock);
+    fixture.detectChanges();
+    expect(component['isChosen'](11)).toBe(true);
+
+    component['save']();
+    const req = httpMock.expectOne(`${LESSON_URL}/topics`);
+    expect(req.request.body.held_on).toBe('2026-09-28');
+    expect(req.request.body.topic_ids).toEqual([11]);
+    req.flush({ data: lesson({ held_on: '2026-09-28' }) });
+  });
+
+  it('holds the arrows once something besides the host’s topic is picked', () => {
+    const { fixture, component, httpMock } = setupPlanning({ chooseTopicId: 11 });
+    answerOpening(httpMock);
+    fixture.detectChanges();
+
+    component['toggle'](12);
+    fixture.detectChanges();
+
+    expect(byCy(fixture, 'lesson-sheet-next').disabled).toBe(true);
+  });
+
+  it('suggests "tonight" only for tonight, and "for this lesson" on any other day', () => {
+    const offered = [suggestion({ id: 12, name: 'Triangle' })];
+
+    const later = setupPlanning({ heldOn: '2026-09-21' });
+    answerOpening(later.httpMock, offered);
+    later.fixture.detectChanges();
+    const laterTitle = later.fixture.nativeElement.querySelector(
+      '[data-cy="lesson-sheet-suggestions"] .group__title',
+    );
+    expect(laterTitle.textContent).toContain('Suggested for this lesson');
+
+    TestBed.resetTestingModule();
+    const tonight = setupPlanning({ heldOn: '2026-09-14' });
+    answerOpening(tonight.httpMock, offered);
+    tonight.fixture.detectChanges();
+    const tonightTitle = tonight.fixture.nativeElement.querySelector(
+      '[data-cy="lesson-sheet-suggestions"] .group__title',
+    );
+    expect(tonightTitle.textContent).toContain('Suggested tonight');
   });
 
   it('shows no arrows to a host that did not ask for them', () => {
