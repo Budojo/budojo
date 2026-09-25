@@ -1,4 +1,5 @@
 import { MOCK_ACADEMY } from '../support/fixtures';
+import { stubToday } from '../support/today';
 
 const ACADEMY_OK = {
   statusCode: 200,
@@ -34,6 +35,8 @@ const LOGIN_OK = {
 
 describe('Login page', () => {
   beforeEach(() => {
+    // Every sign-in lands on Today (#1643); keep its requests off the proxy.
+    stubToday();
     cy.clearLocalStorage();
     // Post-login lands on /dashboard/athletes, where the M3.4 expiring-documents
     // widget fetches /api/v1/documents/expiring on mount. Stub it here so the
@@ -63,7 +66,7 @@ describe('Login page', () => {
     cy.contains('Enter a valid email address').should('be.visible');
   });
 
-  it('successful login with academy redirects to /dashboard/athletes', () => {
+  it('successful login with academy redirects to Today (#1643)', () => {
     cy.intercept('POST', '/api/v1/auth/login', LOGIN_OK).as('login');
     cy.intercept('GET', '/api/v1/academy', ACADEMY_OK).as('academy');
     cy.intercept('GET', '/api/v1/athletes*', ATHLETES_EMPTY);
@@ -74,7 +77,7 @@ describe('Login page', () => {
 
     cy.wait('@login');
     cy.wait('@academy');
-    cy.url().should('include', '/dashboard/athletes');
+    cy.url().should('include', '/dashboard/today');
   });
 
   it('successful login without academy redirects to /setup', () => {
@@ -117,6 +120,8 @@ describe('Login page', () => {
 
 describe('Register page', () => {
   beforeEach(() => {
+    // Every sign-in lands on Today (#1643); keep its requests off the proxy.
+    stubToday();
     cy.clearLocalStorage();
     // Post-register success → /dashboard/athletes → expiring widget fires.
     // Same defensive stub as the Login page describe above.
@@ -160,7 +165,7 @@ describe('Register page', () => {
     cy.contains('Passwords do not match').should('be.visible');
   });
 
-  it('successful registration with academy redirects to /dashboard/athletes', () => {
+  it('successful registration with academy redirects to Today (#1643)', () => {
     cy.intercept('POST', '/api/v1/auth/register', LOGIN_OK).as('register');
     cy.intercept('GET', '/api/v1/academy', ACADEMY_OK).as('academy');
     cy.intercept('GET', '/api/v1/athletes*', ATHLETES_EMPTY);
@@ -178,7 +183,7 @@ describe('Register page', () => {
 
     cy.wait('@register').its('request.body').should('include', { terms_accepted: true });
     cy.wait('@academy');
-    cy.url().should('include', '/dashboard/athletes');
+    cy.url().should('include', '/dashboard/today');
   });
 
   it('blocks submit + shows the privacy error when consent is missing (#219)', () => {

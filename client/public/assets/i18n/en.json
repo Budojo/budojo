@@ -25,6 +25,7 @@
   "nav": {
     "homeAriaLabel": "Budojo — go to dashboard home",
     "profileAriaLabel": "Open your profile",
+    "today": "Today",
     "academy": "Academy",
     "athletes": "Athletes",
     "attendance": "Attendance",
@@ -1757,9 +1758,17 @@
         "moveUp": "Move up",
         "moveDown": "Move down",
         "place": "{{n}} of {{total}}",
-        "orderHint": "Moves apply straight away; Save is for the name and \"Trained in\".",
-        "close": "Close"
+        "orderHint": "Moves apply straight away; Save is for the name, \"Trained in\" and the belt.",
+        "close": "Close",
+        "fromBelt": "In the programme from",
+        "fromBeltHint": "Expected of this belt and of every belt above it. Leave it for everyone when the grade does not matter."
       },
+      "fromBelt": "From",
+      "forEveryone": "For everyone",
+      "beltFilterPlaceholder": "Up to a belt",
+      "beltFilterAria": "Show what a belt is expected to know",
+      "beltSummaryOne": "{{count}} technique expected up to the {{belt}} belt",
+      "beltSummaryOther": "{{count}} techniques expected up to the {{belt}} belt",
       "confirm": {
         "remove": "Remove {{name}} from the programme?",
         "removePositionOne": "Remove {{name}} and the one technique under it?",
@@ -1778,6 +1787,9 @@
       "searchClear": "Clear the search",
       "searchSummary": "{{techniques}} across {{positions}}. Clear the search to get the tree back.",
       "searchNone": "Nothing in the programme matches \"{{query}}\".",
+      "searchSummaryBelt": "{{techniques}} across {{positions}}, up to the {{belt}} belt. Clear the search and the belt to get the whole tree back.",
+      "searchNoneForBelt": "\"{{query}}\" matches, but none of it is expected up to the {{belt}} belt.",
+      "beltNone": "Nothing in the programme is expected up to the {{belt}} belt yet.",
       "countSplit": "{{inSeason}} in season · {{total}} in total",
       "searchCountTechniqueOne": "{{count}} technique",
       "searchCountTechniqueOther": "{{count}} techniques",
@@ -1969,6 +1981,14 @@
         "errorSummary": "Something went wrong",
         "errorDetail": "The change was not saved. Try again.",
         "loadErrorDetail": "The lesson could not be loaded."
+      },
+      "room": {
+        "title": "For the people on the mat tonight",
+        "reasonOne": "{{missed}} of the {{present}} here tonight wasn't there · last taught {{date}}",
+        "reasonOther": "{{missed}} of the {{present}} here tonight weren't there · last taught {{date}}",
+        "who": "Who missed {{name}}",
+        "unsureOne": "1 more trained that day, at a lesson the record doesn't name.",
+        "unsureOther": "{{count}} more trained that day, at a lesson the record doesn't name."
       },
       "suggestions": {
         "title": "Suggested tonight",
@@ -2679,7 +2699,15 @@
       "nothingMissedOther": "They were at every one of them.",
       "consolidatedOne": "One seen twice or more, the bar Stats → Programme counts by.",
       "consolidatedOther": "{{count}} seen twice or more, the bar Stats → Programme counts by.",
-      "consolidatedNone": "None seen twice or more yet."
+      "consolidatedNone": "None seen twice or more yet.",
+      "grade": {
+        "title": "Programme up to the {{belt}} belt",
+        "fractionOne": "{{attended}} of {{taught}} technique the academy has taught so far",
+        "fractionOther": "{{attended}} of {{taught}} techniques the academy has taught so far",
+        "nothingTaught": "The academy has not taught any of it since they joined.",
+        "itemsOne": "{{count}} technique in the programme up to this belt",
+        "itemsOther": "{{count}} techniques in the programme up to this belt"
+      }
     }
   },
   "month": {
@@ -2870,14 +2898,42 @@
     "syllabus": {
       "headline": "{{covered}} of {{total}} in the season's programme, each taught at least twice",
       "headlineRule": "An athlete's own Programme tab counts differently: a technique after one lesson they attended, out of what the academy taught while they were on the roster. It asks whether they were there, not how much of the programme has been taught.",
-      "byPosition": "By position",
+      "map": {
+        "title": "By position, week by week",
+        "legend": {
+          "more": "2 or more lessons",
+          "once": "1 lesson",
+          "planned": "Planned",
+          "unconfirmed": "Planned, nobody checked in",
+          "current": "This week"
+        },
+        "positionHeader": "Position",
+        "fractionHeader": "Covered",
+        "week": "Week of {{date}}",
+        "weekCurrent": "Week of {{date}}, this week",
+        "cell": "{{position}}, week of {{date}}: {{detail}}",
+        "heldOne": "{{count}} lesson",
+        "heldOther": "{{count}} lessons",
+        "plannedOne": "{{count}} planned",
+        "plannedOther": "{{count}} planned",
+        "unconfirmedOne": "{{count}} planned with nobody checked in",
+        "unconfirmedOther": "{{count}} planned with nobody checked in",
+        "fraction": "{{covered}} of {{total}} covered",
+        "popTitle": "{{position}}, week of {{date}}",
+        "seasonTitle": "{{position}}, this season",
+        "seasonAria": "{{position}}: every week of the season",
+        "seasonEmpty": "Nothing on this position this season yet.",
+        "state": {
+          "planned": "Planned",
+          "unconfirmed": "No check-in"
+        },
+        "error": "The weeks could not be loaded."
+      },
       "overTime": "Across the season",
       "lastTaught": "Last taught",
       "missingList": "Not taught yet ({{count}})",
       "nothingMissing": "Nothing left — the whole programme has been taught.",
       "thinTag": "Once",
-      "worked": "worked {{count}}×",
-      "barAria": "{{name}}: {{covered}} covered, {{thin}} taught once, {{missing}} not taught",
       "state": {
         "coveredOne": "{{count}} covered",
         "coveredOther": "{{count}} covered",
@@ -3021,6 +3077,60 @@
     },
     "unmarkErrorToast": {
       "summary": "Couldn't cancel attendance"
+    }
+  },
+  "today": {
+    "season": "Season {{label}}",
+    "checkIn": "Open the check-in",
+    "tonight": {
+      "title": "Tonight",
+      "nothingYet": "Nothing yet",
+      "addTopics": "Add topics",
+      "editTopics": "Edit topics",
+      "noClass": "No class tonight.",
+      "next": "Next: {{day}} at {{time}}, {{name}}.",
+      "nextUntimed": "Next: {{day}}, {{name}}.",
+      "noTimetable": "There is no timetable yet, so tonight has nothing to show.",
+      "setUpTimetable": "Set up the timetable",
+      "error": "Couldn't load the timetable."
+    },
+    "watch": {
+      "title": "To check",
+      "certificateOne": "medical certificate to renew",
+      "certificateOther": "medical certificates to renew",
+      "missingOne": "athlete without a medical certificate",
+      "missingOther": "athletes without a medical certificate",
+      "documentOne": "other document to renew",
+      "documentOther": "other documents to renew",
+      "unpaidOne": "{{month}} fee not paid",
+      "unpaidOther": "{{month}} fees not paid",
+      "none": "Nothing to check today.",
+      "documentsError": "Couldn't load the documents to check.",
+      "unpaidError": "Couldn't load who has paid this month."
+    },
+    "teach": {
+      "title": "What to teach",
+      "for": "For {{name}} at {{time}}",
+      "forUntimed": "For {{name}}",
+      "openSheet": "Plan the lesson",
+      "none": "No suggestions: the programme is empty, or everything in it is out of season.",
+      "programmeLink": "Open the programme",
+      "noClass": "No class tonight, so there is nothing to prepare.",
+      "error": "Couldn't load the suggestions."
+    },
+    "week": {
+      "title": "This week",
+      "presences": "Presences since Monday",
+      "programme": "Programme this season",
+      "programmeValue": "{{percentage}}% · {{covered}} of {{total}}",
+      "joined": "New this week",
+      "joinedNone": "Nobody new this week.",
+      "joinedError": "Couldn't load the new members."
+    },
+    "system": {
+      "backup": "Last backup {{when}}",
+      "noBackup": "No backup on this computer yet",
+      "open": "Open backup"
     }
   },
   "backup": {

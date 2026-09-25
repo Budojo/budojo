@@ -603,6 +603,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
         // reachable behind a wildcard added here later.
         Route::get('/lessons/recent-topics', [\App\Http\Controllers\Lesson\LessonController::class, 'recent']);
         Route::get('/lessons/suggestions', [\App\Http\Controllers\Lesson\LessonController::class, 'suggestions']);
+        // What tonight's people missed, of what was already taught (#1860).
+        Route::get('/lessons/room-gaps', [\App\Http\Controllers\Lesson\LessonController::class, 'roomGaps']);
         Route::get('/lessons', [\App\Http\Controllers\Lesson\LessonController::class, 'show']);
         Route::put('/lessons/topics', [\App\Http\Controllers\Lesson\LessonController::class, 'setTopics']);
         Route::put('/lessons/notes', [\App\Http\Controllers\Lesson\LessonController::class, 'setNotes']);
@@ -666,6 +668,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::get('documents/compliance', [StatsController::class, 'documentsCompliance']);
             // The programme against what was actually taught (#1565).
             Route::get('syllabus/coverage', [StatsController::class, 'syllabusCoverage']);
+            // Each position, week by week — held, planned, unconfirmed (#1858).
+            Route::get('syllabus/calendar', [StatsController::class, 'syllabusCalendar']);
             // Who has seen one technique — a row of that report, opened (#1745).
             Route::get('syllabus/topics/{syllabusTopic}', \App\Http\Controllers\Stats\TopicExposureController::class);
         });

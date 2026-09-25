@@ -12,6 +12,8 @@ import { SkeletonModule } from 'primeng/skeleton';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { map, of } from 'rxjs';
 import { AthleteSyllabusCoverage, StatsService } from '../../../../core/services/stats.service';
+import { Belt } from '../../../../core/services/athlete.service';
+import { BeltLadderService } from '../../../../core/services/belt-ladder.service';
 import { LanguageService } from '../../../../core/services/language.service';
 import { EmptyStateComponent } from '../../../../shared/components/empty-state/empty-state.component';
 import { ErrorStateComponent } from '../../../../shared/components/error-state/error-state.component';
@@ -57,6 +59,7 @@ export class AthleteSyllabusCoverageComponent {
   private readonly translate = inject(TranslateService);
   private readonly languageService = inject(LanguageService);
   private readonly router = inject(Router);
+  private readonly ladder = inject(BeltLadderService);
 
   protected readonly loading = signal<boolean>(true);
   protected readonly failed = signal<boolean>(false);
@@ -110,11 +113,6 @@ export class AthleteSyllabusCoverageComponent {
   }
 
   /**
-   * The academy has taught nothing this athlete could have been at. Distinct
-   * from "they missed everything", and the difference matters: one is a
-   * sentence about the programme, the other about a person.
-   */
-  /**
    * "They were at every one of them" — or, when the academy taught exactly
    * one topic, the singular that does not claim a plural (#1710, #1646).
    */
@@ -136,9 +134,19 @@ export class AthleteSyllabusCoverageComponent {
     return seen === 1 ? 'athletes.coverage.consolidatedOne' : 'athletes.coverage.consolidatedOther';
   });
 
+  /**
+   * The academy has taught nothing this athlete could have been at. Distinct
+   * from "they missed everything", and the difference matters: one is a
+   * sentence about the programme, the other about a person.
+   */
   protected readonly nothingTaught = computed<boolean>(
     () => (this.report()?.totals.taught_by_academy ?? 0) === 0,
   );
+
+  /** The belt's name in the academy's own words — "Blue", "Verde (bambini)" (#1861). */
+  protected beltKey(belt: Belt): string {
+    return this.ladder.labelKey(belt);
+  }
 
   protected readonly hasProgramme = computed<boolean>(() => {
     const t = this.report()?.totals;

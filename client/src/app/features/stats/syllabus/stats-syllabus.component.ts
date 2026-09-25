@@ -20,6 +20,7 @@ import { EmptyStateComponent } from '../../../shared/components/empty-state/empt
 import { ErrorStateComponent } from '../../../shared/components/error-state/error-state.component';
 import { relativeDay } from '../../../shared/utils/relative-day';
 import { localeFor } from '../../../shared/utils/locale';
+import { SeasonMapComponent } from './season-map/season-map.component';
 import { TopicExposureComponent } from './topic-exposure/topic-exposure.component';
 import { HowCountedComponent } from '../../../shared/components/how-counted/how-counted.component';
 
@@ -32,6 +33,11 @@ type KindFilter = 'all' | TrainingMode;
  * cannot get out of.
  */
 const MAX_SEASONS_BACK = 10;
+
+/** The filter as the server spells it: `all` is the absence of one. */
+function kindParamOf(kind: KindFilter): TrainingMode | null {
+  return kind === 'all' ? null : kind;
+}
 
 interface FilterOption {
   readonly label: string;
@@ -66,6 +72,7 @@ interface FilterOption {
     SkeletonModule,
     EmptyStateComponent,
     ErrorStateComponent,
+    SeasonMapComponent,
     TopicExposureComponent,
     HowCountedComponent,
   ],
@@ -106,7 +113,7 @@ export class StatsSyllabusComponent {
       this.loading.set(true);
       this.failed.set(false);
 
-      const sub = this.stats.syllabusCoverage(seasonsBack, kind === 'all' ? null : kind).subscribe({
+      const sub = this.stats.syllabusCoverage(seasonsBack, kindParamOf(kind)).subscribe({
         next: (report) => {
           this.report.set(report);
           this.loading.set(false);
@@ -162,6 +169,9 @@ export class StatsSyllabusComponent {
     () => this.seasonsBack() >= MAX_SEASONS_BACK,
   );
 
+  /** The same filter, handed to the season map so it counts what the report counts. */
+  protected readonly kindParam = computed<TrainingMode | null>(() => kindParamOf(this.kind()));
+
   protected setKind(kind: KindFilter): void {
     this.kind.set(kind);
   }
@@ -215,11 +225,6 @@ export class StatsSyllabusComponent {
   protected readonly seasonLabel = computed<string>(
     () => this.report()?.season.label ?? this.academyService.academy()?.season_label ?? '',
   );
-
-  /** Segment widths as percentages of the position's own scope. */
-  protected segment(value: number, total: number): string {
-    return total === 0 ? '0%' : `${(value / total) * 100}%`;
-  }
 
   /** "12 Oct" — the day a topic was last on the mat, in the reader's locale. */
   protected shortDate(iso: string): string {

@@ -122,7 +122,16 @@ const CLASSES = [
 // ── The programme ────────────────────────────────────────────────────────
 
 function topic(id: number, parent_id: number | null, name: string, over: object = {}) {
-  return { id, parent_id, name, kind: 'both', in_season: true, sort_order: id, ...over };
+  return {
+    id,
+    parent_id,
+    name,
+    kind: 'both',
+    in_season: true,
+    from_belt: null,
+    sort_order: id,
+    ...over,
+  };
 }
 
 const SYLLABUS = [
@@ -191,6 +200,31 @@ const SYLLABUS = [
     ],
   },
 ];
+
+/**
+ * The same programme with grades (#1861): Mount from white, the leg locks
+ * from purple (one of them added before the position was graded, so it still
+ * says "for everyone"), an arm triangle from blue. The rest is for everyone.
+ */
+const GRADED_SYLLABUS = SYLLABUS.map((position) => {
+  if (position.id === 3) {
+    return {
+      ...position,
+      from_belt: 'white',
+      children: position.children.map((t) =>
+        t.id === 33 ? { ...t, from_belt: 'blue' } : { ...t, from_belt: 'white' },
+      ),
+    };
+  }
+  if (position.id === 7) {
+    return {
+      ...position,
+      from_belt: 'purple',
+      children: position.children.map((t) => (t.id === 71 ? t : { ...t, from_belt: 'purple' })),
+    };
+  }
+  return position;
+});
 
 function lessonTopic(id: number, name: string, parent: string, kind = 'both') {
   return { id, name, kind, parent_id: Math.floor(id / 10), parent_name: parent, deleted: false };
@@ -400,9 +434,9 @@ const ATHLETES = [
 
 /**
  * A roster athlete as the aggregate lists carry them since #1851: the monthly
- * summary, the owner's leaderboard and the expiring documents send the
- * identity the row draws with the belt spine. Read from `ATHLETES`, so a
- * person has the same belt on every screen of the audit.
+ * summary, the owner's leaderboard, the expiring documents and tonight's room
+ * (#1860) send the identity the row draws with the belt spine. Read from
+ * `ATHLETES`, so a person has the same belt on every screen of the audit.
  */
 function identityOf(id: number) {
   const a = ATHLETES.find((x) => x.id === id);
@@ -418,6 +452,38 @@ function identityOf(id: number) {
     user_avatar_url: a.user_avatar_url,
   };
 }
+
+/**
+ * What tonight's room missed (#1860): seven on the mat, two techniques most of
+ * them were not there for, names in register order.
+ */
+const ROOM_GAPS = {
+  present: 7,
+  rows: [
+    {
+      id: 21,
+      name: 'Knee shield',
+      parent_name: 'Half guard',
+      kind: 'both',
+      lessons: 1,
+      last_taught_on: '2026-09-07',
+      missed: 5,
+      unattributed: 0,
+      athletes: [4, 7, 8, 2, 6].map(identityOf),
+    },
+    {
+      id: 34,
+      name: 'Upa escape',
+      parent_name: 'Mount',
+      kind: 'both',
+      lessons: 1,
+      last_taught_on: '2026-09-04',
+      missed: 4,
+      unattributed: 1,
+      athletes: [7, 8, 2, 6].map(identityOf),
+    },
+  ],
+};
 
 function page(rows: unknown[], perPage = 20) {
   return {
@@ -768,6 +834,7 @@ const ATHLETE_COVERAGE = {
     { id: 61, name: 'Double leg', parent_name: 'Standing', lessons: 1, last_seen_on: '2026-09-02' },
   ],
   unattributed_presences: 1,
+  grade: null,
 };
 
 function coveragePosition(
@@ -885,6 +952,149 @@ const SYLLABUS_COVERAGE = {
   timeline: [
     { on: '2026-09-06', covered: 1 },
     { on: '2026-09-13', covered: 3 },
+  ],
+};
+
+/** The Monday of every week of the 2026/27 season, the first one before it opens. */
+const SEASON_WEEKS = Array.from({ length: 53 }, (_, i) => {
+  const d = new Date(2026, 7, 31 + i * 7);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+});
+
+function calendarLesson(
+  id: number,
+  held_on: string,
+  classId: number,
+  state: 'held' | 'planned' | 'unconfirmed',
+  topics: { id: number; name: string; parent_id: number | null }[],
+) {
+  const klass = CLASSES.find((c) => c.id === classId) ?? CLASSES[0];
+  return {
+    id,
+    academy_class_id: classId,
+    held_on,
+    name: klass.name,
+    starts_at: klass.starts_at,
+    kind: klass.kind,
+    state,
+    position_ids: [...new Set(topics.map((t) => t.parent_id ?? t.id))],
+    topics,
+  };
+}
+
+/**
+ * The season map (#1858), agreeing with SYLLABUS_COVERAGE's taught dates:
+ * two weeks taught, today's lesson planned, the next weeks planned ahead, and
+ * one no-gi plan from last week that nobody checked into.
+ */
+const SYLLABUS_CALENDAR = {
+  season: SYLLABUS_COVERAGE.season,
+  kind: null,
+  today: TODAY,
+  weeks: SEASON_WEEKS,
+  positions: [
+    {
+      id: 1,
+      name: 'Closed guard',
+      kind: 'both',
+      cells: [
+        { week: '2026-08-31', held: 2, planned: 0, unconfirmed: 0 },
+        { week: '2026-09-07', held: 3, planned: 0, unconfirmed: 0 },
+        { week: '2026-09-28', held: 0, planned: 1, unconfirmed: 0 },
+      ],
+    },
+    {
+      id: 2,
+      name: 'Half guard',
+      kind: 'both',
+      cells: [
+        { week: '2026-09-07', held: 1, planned: 0, unconfirmed: 0 },
+        { week: '2026-09-21', held: 0, planned: 2, unconfirmed: 0 },
+      ],
+    },
+    {
+      id: 3,
+      name: 'Mount',
+      kind: 'both',
+      cells: [
+        { week: '2026-08-31', held: 2, planned: 0, unconfirmed: 0 },
+        // Taught on Monday, and a plan for Monday's second class nobody
+        // checked into: both have to show.
+        { week: '2026-09-07', held: 1, planned: 0, unconfirmed: 1 },
+      ],
+    },
+    {
+      id: 4,
+      name: 'Side control',
+      kind: 'both',
+      cells: [{ week: '2026-09-21', held: 0, planned: 1, unconfirmed: 0 }],
+    },
+    {
+      id: 5,
+      name: 'Back',
+      kind: 'both',
+      cells: [{ week: '2026-09-14', held: 0, planned: 1, unconfirmed: 0 }],
+    },
+    {
+      id: 6,
+      name: 'Standing',
+      kind: 'both',
+      cells: [{ week: '2026-08-31', held: 1, planned: 0, unconfirmed: 0 }],
+    },
+    {
+      id: 7,
+      name: 'Leg entanglements',
+      kind: 'nogi',
+      cells: [
+        { week: '2026-09-07', held: 0, planned: 0, unconfirmed: 1 },
+        { week: '2026-10-05', held: 0, planned: 1, unconfirmed: 0 },
+      ],
+    },
+  ],
+  lessons: [
+    calendarLesson(501, '2026-09-02', 4, 'held', [
+      { id: 11, name: 'Armbar', parent_id: 1 },
+      { id: 31, name: 'Americana', parent_id: 3 },
+      { id: 61, name: 'Double leg', parent_id: 6 },
+    ]),
+    calendarLesson(502, '2026-09-04', 5, 'held', [
+      { id: 14, name: 'Hip bump sweep', parent_id: 1 },
+      { id: 34, name: 'Upa escape', parent_id: 3 },
+    ]),
+    calendarLesson(503, '2026-09-07', 1, 'held', [
+      { id: 11, name: 'Armbar', parent_id: 1 },
+      { id: 31, name: 'Americana', parent_id: 3 },
+      { id: 21, name: 'Knee shield', parent_id: 2 },
+    ]),
+    calendarLesson(513, '2026-09-07', 2, 'unconfirmed', [
+      { id: 35, name: 'Elbow-knee escape', parent_id: 3 },
+    ]),
+    calendarLesson(504, '2026-09-09', 4, 'held', [
+      { id: 14, name: 'Hip bump sweep', parent_id: 1 },
+      { id: 16, name: 'Omoplata', parent_id: 1 },
+    ]),
+    calendarLesson(505, '2026-09-09', 3, 'unconfirmed', [
+      { id: 71, name: 'Straight ankle lock', parent_id: 7 },
+    ]),
+    calendarLesson(506, '2026-09-11', 5, 'held', [{ id: 11, name: 'Armbar', parent_id: 1 }]),
+    calendarLesson(507, '2026-09-14', 1, 'planned', [
+      { id: 53, name: 'Back escape', parent_id: 5 },
+    ]),
+    calendarLesson(508, '2026-09-21', 1, 'planned', [
+      { id: 21, name: 'Knee shield', parent_id: 2 },
+      { id: 23, name: 'Lockdown', parent_id: 2 },
+    ]),
+    calendarLesson(509, '2026-09-23', 4, 'planned', [
+      { id: 22, name: 'Old school sweep', parent_id: 2 },
+    ]),
+    calendarLesson(510, '2026-09-25', 5, 'planned', [
+      { id: 41, name: 'Escape to guard', parent_id: 4 },
+    ]),
+    calendarLesson(511, '2026-09-28', 1, 'planned', [
+      { id: 12, name: 'Triangle', parent_id: 1 },
+      { id: 13, name: 'Kimura', parent_id: 1 },
+    ]),
+    calendarLesson(512, '2026-10-07', 3, 'planned', [{ id: 72, name: 'Heel hook', parent_id: 7 }]),
   ],
 };
 
@@ -1352,6 +1562,11 @@ function seed(): void {
     statusCode: 200,
     body: { data: SUGGESTIONS },
   });
+  // Asked for only when a lesson is held; an empty room unless a screen says otherwise.
+  cy.intercept('GET', '/api/v1/lessons/room-gaps*', {
+    statusCode: 200,
+    body: { data: { present: 0, rows: [] } },
+  });
   cy.intercept('GET', '/api/v1/payments/summary*', {
     statusCode: 200,
     body: { data: { paid: 4, unpaid: 3 } },
@@ -1373,6 +1588,10 @@ function seed(): void {
   cy.intercept('GET', '/api/v1/stats/syllabus/coverage*', {
     statusCode: 200,
     body: { data: SYLLABUS_COVERAGE },
+  });
+  cy.intercept('GET', '/api/v1/stats/syllabus/calendar*', {
+    statusCode: 200,
+    body: { data: SYLLABUS_CALENDAR },
   });
 }
 
@@ -1644,6 +1863,39 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
   screen('01-error-server', '/error', '[data-cy="server-error-retry"]', { public: true });
   screen('01-error-not-found', '/no-such-page', '[data-cy="not-found-cta"]', { public: true });
 
+  // ── 05. Today — the first screen (#1643) ────────────────────────────────
+  // Monday 18:30: two classes on, the first in half an hour.
+  screen('05-today', '/dashboard/today', '[data-cy="today-class-1"]', {
+    stubs: () => {
+      // Two people joined this week, so "Nuovi questa settimana" shows the
+      // belt spine the way every list of people does.
+      cy.intercept(
+        { method: 'GET', pathname: '/api/v1/athletes', query: { sort_by: 'joined_at' } },
+        page([
+          { ...ATHLETES[3], joined_at: TODAY },
+          { ...ATHLETES[5], joined_at: TODAY },
+        ]),
+      );
+    },
+  });
+  screen('05-today-rest-day', '/dashboard/today', '[data-cy="today-next-class"]', {
+    stubs: () => {
+      // Only Wednesday's classes: tonight is a rest night, and the card says
+      // when the next lesson is instead.
+      cy.intercept('GET', '/api/v1/academy/classes', {
+        statusCode: 200,
+        body: { data: CLASSES.filter((c) => c.weekday === 3) },
+      });
+    },
+  });
+  screen('05-today-lesson-sheet', '/dashboard/today', '[data-cy="today-class-1"]', {
+    act: () => {
+      press('[data-cy="today-class-plan-1"] button');
+      cy.get('[data-cy="lesson-sheet"]', { timeout: 10_000 }).should('exist');
+      settle();
+    },
+  });
+
   // ── 10. Academy ────────────────────────────────────────────────────────
   screen('10-academy-home', '/dashboard/academy', '[data-cy="academy-detail"]');
   screen('10-academy-edit', '/dashboard/academy/edit', '[data-cy="academy-form"]');
@@ -1719,6 +1971,37 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
     act: () => {
       press('[data-cy="syllabus-add"]');
       cy.get('[data-cy="syllabus-form"]').should('be.visible');
+    },
+  });
+  // The programme by grade (#1861): a few topics graded, the tree narrowed to
+  // what a blue belt is expected to know, one position open to show the
+  // belt said on the row only where it differs from its position's.
+  screen('12-syllabus-belt', '/dashboard/academy/syllabus', '[data-cy="syllabus-tree"]', {
+    stubs: () => {
+      cy.intercept('GET', '/api/v1/academy/syllabus', {
+        statusCode: 200,
+        body: { data: GRADED_SYLLABUS },
+      });
+    },
+    act: () => {
+      cy.get('[data-cy="syllabus-belt-filter"]').should('be.visible').click();
+      cy.get('.p-select-option').contains('Blu').click();
+      cy.get('[data-cy="syllabus-belt-summary"]').should('be.visible');
+      cy.get('.p-select-overlay').should('not.exist');
+      press('[data-cy="syllabus-toggle-3"]');
+      cy.get('[data-cy="syllabus-topic-31"]').should('be.visible');
+    },
+  });
+  screen('12-syllabus-belt-dialog', '/dashboard/academy/syllabus', '[data-cy="syllabus-tree"]', {
+    stubs: () => {
+      cy.intercept('GET', '/api/v1/academy/syllabus', {
+        statusCode: 200,
+        body: { data: GRADED_SYLLABUS },
+      });
+    },
+    act: () => {
+      press('[data-cy="syllabus-add-under-7"]');
+      cy.get('[data-cy="syllabus-form-from-belt"]').should('be.visible');
     },
   });
 
@@ -1885,6 +2168,26 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       },
     },
   );
+  // The programme of their own belt (#1861) — only there once the academy
+  // has graded something.
+  screen(
+    '22-athlete-coverage-belt',
+    '/dashboard/athletes/1/coverage',
+    '[data-cy="athlete-coverage-grade"]',
+    {
+      stubs: () => {
+        cy.intercept('GET', '/api/v1/athletes/*/syllabus-coverage*', {
+          statusCode: 200,
+          body: {
+            data: {
+              ...ATHLETE_COVERAGE,
+              grade: { belt: 'blue', items: 18, taught_by_academy: 6, attended: 5 },
+            },
+          },
+        });
+      },
+    },
+  );
   screen(
     '22-athlete-coverage-nothing-yet',
     '/dashboard/athletes/1/coverage',
@@ -1976,6 +2279,32 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       },
     },
   );
+  // Tonight, for the people on the mat (#1860): a held lesson, two techniques
+  // most of the room missed, and the names of the first one opened.
+  screen(
+    '30-attendance-lesson-sheet-room',
+    '/dashboard/attendance',
+    '[data-cy="attendance-class-picker"]',
+    {
+      stubs: () => {
+        cy.intercept('GET', '/api/v1/lessons?*', {
+          statusCode: 200,
+          body: { data: { ...LESSON_TONIGHT, held: true } },
+        });
+        cy.intercept('GET', '/api/v1/lessons/room-gaps*', {
+          statusCode: 200,
+          body: { data: ROOM_GAPS },
+        });
+      },
+      act: () => {
+        press('[data-cy="attendance-topics"]');
+        dialogOpen('[data-cy="lesson-sheet"]');
+        cy.get('[data-cy="lesson-sheet-room"]').should('be.visible');
+        press('[data-cy="lesson-room-who-21"]');
+        cy.get('[data-cy="lesson-room-people-21"]').should('be.visible');
+      },
+    },
+  );
   screen(
     '30-attendance-lesson-sheet-search',
     '/dashboard/attendance',
@@ -2064,6 +2393,32 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
     clock: false,
     // Chart.js animates in over a second; a shot before that is an empty canvas.
     act: () => cy.wait(1500),
+  });
+  // The season map with one week opened on the lessons it counts (#1858).
+  screen('40-stats-syllabus-week', '/dashboard/stats/syllabus', '[data-cy="syllabus-coverage"]', {
+    clock: false,
+    act: () => {
+      press('[data-cy="season-map-cell-2-2026-09-21"]');
+      cy.get('[data-cy="season-map-popover"]', { timeout: 4000 }).should('be.visible');
+    },
+  });
+  // A position's whole season, from its name — the control every keyboard
+  // and fingertip reaches (#1858).
+  screen('40-stats-syllabus-season', '/dashboard/stats/syllabus', '[data-cy="syllabus-coverage"]', {
+    clock: false,
+    act: () => {
+      press('[data-cy="season-map-position-1"]');
+      cy.get('[data-cy="season-map-popover"]', { timeout: 4000 }).should('be.visible');
+    },
+  });
+  // A week with a lesson held and a plan nobody checked into: the fill, a
+  // hatched corner, and both lessons in the popover.
+  screen('40-stats-syllabus-missed', '/dashboard/stats/syllabus', '[data-cy="syllabus-coverage"]', {
+    clock: false,
+    act: () => {
+      press('[data-cy="season-map-cell-3-2026-09-07"]');
+      cy.get('[data-cy="season-map-popover"]', { timeout: 4000 }).should('be.visible');
+    },
   });
   screen('40-stats-syllabus-no-programme', '/dashboard/stats/syllabus', '[data-cy="stats-tabs"]', {
     clock: false,

@@ -3,7 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { map, Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import type { TrainingMode } from './academy.service';
-import type { AthleteIdentity, AthleteStatus } from './athlete.service';
+import type { AthleteIdentity, AthleteStatus, Belt } from './athlete.service';
 
 export interface DailyAttendancePoint {
   readonly date: string; // 'YYYY-MM-DD'
@@ -97,6 +97,60 @@ export interface SyllabusCoverage {
   readonly taught: readonly CoverageTaughtTopic[];
   /** Cumulative covered topics, one point per week up to today. */
   readonly timeline: readonly { readonly on: string; readonly covered: number }[];
+}
+
+/**
+ * The season map (#1858): each position, week by week.
+ *
+ * `held` has at least one presence; `planned` has none and is dated today or
+ * later; `unconfirmed` has none and its day has passed. Derived on every read,
+ * never stored, split on the server's `today`.
+ */
+export type CalendarLessonState = 'held' | 'planned' | 'unconfirmed';
+
+export interface CalendarCell {
+  /** The Monday of the week. */
+  readonly week: string;
+  readonly held: number;
+  readonly planned: number;
+  readonly unconfirmed: number;
+}
+
+export interface CalendarPosition {
+  readonly id: number;
+  readonly name: string;
+  readonly kind: TrainingMode;
+  /** Sparse: only the weeks with a lesson on this position, oldest first. */
+  readonly cells: readonly CalendarCell[];
+}
+
+export interface CalendarLesson {
+  readonly id: number;
+  readonly academy_class_id: number | null;
+  readonly held_on: string;
+  readonly name: string;
+  readonly starts_at: string | null;
+  readonly kind: TrainingMode;
+  readonly state: CalendarLessonState;
+  /** The positions this lesson counts for under the filter in force. */
+  readonly position_ids: readonly number[];
+  readonly topics: readonly {
+    readonly id: number;
+    readonly name: string;
+    readonly parent_id: number | null;
+  }[];
+}
+
+export interface SyllabusCalendar {
+  readonly season: { readonly start: string; readonly end: string; readonly label: string };
+  readonly kind: TrainingMode | null;
+  /** The server's today — the day planned and unconfirmed were split on. */
+  readonly today: string;
+  /** The Monday of every week the season touches. */
+  readonly weeks: readonly string[];
+  readonly positions: readonly CalendarPosition[];
+  /** The season's tagged lessons, oldest first. */
+  readonly lessons: readonly CalendarLesson[];
 }
 
 /**
@@ -200,6 +254,17 @@ export interface AthleteSyllabusCoverage {
   readonly seen_lately: readonly SeenTopic[];
   /** Presences that name no lesson, and so can be attributed to no topic. */
   readonly unattributed_presences: number;
+  /**
+   * The programme of their own belt (#1861): what is expected up to it, how
+   * much of that the academy taught while they were here, how much they were
+   * at. Null while nothing in the programme names a belt.
+   */
+  readonly grade: {
+    readonly belt: Belt;
+    readonly items: number;
+    readonly taught_by_academy: number;
+    readonly attended: number;
+  } | null;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -259,6 +324,24 @@ export class StatsService {
 
     return this.http
       .get<{ data: SyllabusCoverage }>(`${environment.apiBase}/api/v1/stats/syllabus/coverage`, {
+        params,
+      })
+      .pipe(map((r) => r.data));
+  }
+
+  /**
+   * The season map (#1858) — the same season and filter as
+   * `syllabusCoverage()`, because the map is drawn beside its fractions.
+   */
+  syllabusCalendar(
+    seasonsBack = 0,
+    kind: TrainingMode | null = null,
+  ): Observable<SyllabusCalendar> {
+    let params = new HttpParams().set('seasons_back', seasonsBack);
+    if (kind !== null) params = params.set('kind', kind);
+
+    return this.http
+      .get<{ data: SyllabusCalendar }>(`${environment.apiBase}/api/v1/stats/syllabus/calendar`, {
         params,
       })
       .pipe(map((r) => r.data));

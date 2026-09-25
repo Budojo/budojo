@@ -25,6 +25,7 @@
   "nav": {
     "homeAriaLabel": "Budojo — torna alla dashboard",
     "profileAriaLabel": "Apri il tuo profilo",
+    "today": "Oggi",
     "academy": "Accademia",
     "athletes": "Atleti",
     "attendance": "Presenze",
@@ -1757,9 +1758,17 @@
         "moveUp": "Sposta su",
         "moveDown": "Sposta giù",
         "place": "{{n}} di {{total}}",
-        "orderHint": "Lo spostamento vale subito; Salva serve per il nome e per «Si allena».",
-        "close": "Chiudi"
+        "orderHint": "Lo spostamento vale subito; Salva serve per il nome, per «Si allena» e per la cintura.",
+        "close": "Chiudi",
+        "fromBelt": "Nel programma dalla cintura",
+        "fromBeltHint": "Previsto per questa cintura e per tutte quelle sopra. Lascialo per tutti quando la cintura non conta."
       },
+      "fromBelt": "Dalla",
+      "forEveryone": "Per tutti",
+      "beltFilterPlaceholder": "Fino a una cintura",
+      "beltFilterAria": "Mostra cosa ci si aspetta da una cintura",
+      "beltSummaryOne": "{{count}} tecnica prevista fino alla cintura {{belt}}",
+      "beltSummaryOther": "{{count}} tecniche previste fino alla cintura {{belt}}",
       "confirm": {
         "remove": "Rimuovere {{name}} dal programma?",
         "removePositionOne": "Rimuovere {{name}} e la tecnica che contiene?",
@@ -1778,6 +1787,9 @@
       "searchClear": "Cancella la ricerca",
       "searchSummary": "{{techniques}} in {{positions}}. Svuota la ricerca per tornare all’albero.",
       "searchNone": "Niente nel programma corrisponde a “{{query}}”.",
+      "searchSummaryBelt": "{{techniques}} in {{positions}}, fino alla cintura {{belt}}. Svuota la ricerca e la cintura per tornare all’albero intero.",
+      "searchNoneForBelt": "“{{query}}” trova qualcosa, ma niente di questo è previsto fino alla cintura {{belt}}.",
+      "beltNone": "Nel programma non c’è ancora niente previsto fino alla cintura {{belt}}.",
       "countSplit": "{{inSeason}} in stagione · {{total}} totali",
       "searchCountTechniqueOne": "{{count}} tecnica",
       "searchCountTechniqueOther": "{{count}} tecniche",
@@ -1969,6 +1981,14 @@
         "errorSummary": "Qualcosa è andato storto",
         "errorDetail": "La modifica non è stata salvata. Riprova.",
         "loadErrorDetail": "Impossibile caricare la lezione."
+      },
+      "room": {
+        "title": "Per chi c'è stasera",
+        "reasonOne": "{{missed}} dei {{present}} presenti non c'era · l'ultima volta il {{date}}",
+        "reasonOther": "{{missed}} dei {{present}} presenti non c'erano · l'ultima volta il {{date}}",
+        "who": "Chi non c'era per {{name}}",
+        "unsureOne": "Un altro si è allenato quel giorno, ma non si sa a quale lezione.",
+        "unsureOther": "Altri {{count}} si sono allenati quel giorno, ma non si sa a quale lezione."
       },
       "suggestions": {
         "title": "Suggeriti per stasera",
@@ -2679,7 +2699,15 @@
       "nothingMissedOther": "C'era a tutte.",
       "consolidatedOne": "Una vista due volte o più, la soglia di Statistiche → Programma.",
       "consolidatedOther": "{{count}} viste due volte o più, la soglia di Statistiche → Programma.",
-      "consolidatedNone": "Nessuna ancora vista due volte o più."
+      "consolidatedNone": "Nessuna ancora vista due volte o più.",
+      "grade": {
+        "title": "Programma fino alla cintura {{belt}}",
+        "fractionOne": "{{attended}} su {{taught}} tecnica fatta finora dalla palestra",
+        "fractionOther": "{{attended}} su {{taught}} tecniche fatte finora dalla palestra",
+        "nothingTaught": "La palestra non ne ha ancora fatta nessuna da quando è iscritto.",
+        "itemsOne": "{{count}} tecnica nel programma fino a questa cintura",
+        "itemsOther": "{{count}} tecniche nel programma fino a questa cintura"
+      }
     }
   },
   "month": {
@@ -2870,14 +2898,42 @@
     "syllabus": {
       "headline": "{{covered}} di {{total}} nel programma della stagione, fatti almeno due volte ciascuno",
       "headlineRule": "La scheda Programma di un atleta conta in un altro modo: una tecnica dopo una sola lezione a cui era presente, su quelle che la palestra ha fatto mentre era iscritto. Chiede se c'era, non quanto del programma è stato fatto.",
-      "byPosition": "Per posizione",
+      "map": {
+        "title": "Per posizione, settimana per settimana",
+        "legend": {
+          "more": "2 o più lezioni",
+          "once": "1 lezione",
+          "planned": "Pianificata",
+          "unconfirmed": "Pianificata, nessun appello",
+          "current": "Questa settimana"
+        },
+        "positionHeader": "Posizione",
+        "fractionHeader": "Coperte",
+        "week": "Settimana del {{date}}",
+        "weekCurrent": "Settimana del {{date}}, questa settimana",
+        "cell": "{{position}}, settimana del {{date}}: {{detail}}",
+        "heldOne": "{{count}} lezione",
+        "heldOther": "{{count}} lezioni",
+        "plannedOne": "{{count}} pianificata",
+        "plannedOther": "{{count}} pianificate",
+        "unconfirmedOne": "{{count}} pianificata senza appello",
+        "unconfirmedOther": "{{count}} pianificate senza appello",
+        "fraction": "{{covered}} su {{total}} coperte",
+        "popTitle": "{{position}}, settimana del {{date}}",
+        "seasonTitle": "{{position}}, in questa stagione",
+        "seasonAria": "{{position}}: tutte le settimane della stagione",
+        "seasonEmpty": "Ancora niente su questa posizione in questa stagione.",
+        "state": {
+          "planned": "Pianificata",
+          "unconfirmed": "Senza appello"
+        },
+        "error": "Impossibile caricare le settimane."
+      },
       "overTime": "Nel corso della stagione",
       "lastTaught": "L'ultima volta",
       "missingList": "Non ancora fatto ({{count}})",
       "nothingMissing": "Non manca niente: hai fatto tutto il programma.",
       "thinTag": "Una volta",
-      "worked": "fatta {{count}}×",
-      "barAria": "{{name}}: {{covered}} coperti, {{thin}} fatti una volta, {{missing}} non fatti",
       "state": {
         "coveredOne": "{{count}} coperto",
         "coveredOther": "{{count}} coperti",
@@ -3021,6 +3077,60 @@
     },
     "unmarkErrorToast": {
       "summary": "Impossibile annullare la presenza"
+    }
+  },
+  "today": {
+    "season": "Stagione {{label}}",
+    "checkIn": "Apri il check-in",
+    "tonight": {
+      "title": "Stasera",
+      "nothingYet": "Ancora niente",
+      "addTopics": "Aggiungi argomenti",
+      "editTopics": "Modifica argomenti",
+      "noClass": "Stasera non c'è lezione.",
+      "next": "La prossima: {{day}} alle {{time}}, {{name}}.",
+      "nextUntimed": "La prossima: {{day}}, {{name}}.",
+      "noTimetable": "Non c'è ancora un orario, quindi stasera non ha niente da mostrare.",
+      "setUpTimetable": "Imposta l'orario",
+      "error": "Non riesco a caricare l'orario."
+    },
+    "watch": {
+      "title": "Da guardare",
+      "certificateOne": "certificato medico da rinnovare",
+      "certificateOther": "certificati medici da rinnovare",
+      "missingOne": "atleta senza certificato medico",
+      "missingOther": "atleti senza certificato medico",
+      "documentOne": "altro documento da rinnovare",
+      "documentOther": "altri documenti da rinnovare",
+      "unpaidOne": "quota di {{month}} non pagata",
+      "unpaidOther": "quote di {{month}} non pagate",
+      "none": "Niente da controllare oggi.",
+      "documentsError": "Non riesco a caricare i documenti da controllare.",
+      "unpaidError": "Non riesco a caricare chi ha pagato questo mese."
+    },
+    "teach": {
+      "title": "Cosa insegnare",
+      "for": "Per {{name}} alle {{time}}",
+      "forUntimed": "Per {{name}}",
+      "openSheet": "Prepara la lezione",
+      "none": "Nessun suggerimento: il programma è vuoto, o è tutto fuori stagione.",
+      "programmeLink": "Apri il programma",
+      "noClass": "Stasera non c'è lezione, quindi non c'è niente da preparare.",
+      "error": "Non riesco a caricare i suggerimenti."
+    },
+    "week": {
+      "title": "Questa settimana",
+      "presences": "Presenze da lunedì",
+      "programme": "Programma della stagione",
+      "programmeValue": "{{percentage}}% · {{covered}} di {{total}}",
+      "joined": "Nuovi questa settimana",
+      "joinedNone": "Nessun nuovo iscritto questa settimana.",
+      "joinedError": "Non riesco a caricare i nuovi iscritti."
+    },
+    "system": {
+      "backup": "Ultimo backup {{when}}",
+      "noBackup": "Ancora nessun backup su questo computer",
+      "open": "Apri il backup"
     }
   },
   "backup": {
