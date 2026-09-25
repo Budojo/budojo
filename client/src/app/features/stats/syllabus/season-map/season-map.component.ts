@@ -15,6 +15,7 @@ import {
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { DrawerModule } from 'primeng/drawer';
 import { Popover, PopoverModule } from 'primeng/popover';
@@ -27,6 +28,7 @@ import {
   StatsService,
   SyllabusCalendar,
 } from '../../../../core/services/stats.service';
+import { whatsappShareLink } from '../../../../shared/utils/contact-links';
 import { localeFor } from '../../../../shared/utils/locale';
 import {
   MapCell,
@@ -38,6 +40,7 @@ import {
   monthStarts,
   positionSeason,
 } from './season-map.model';
+import { publishedWeek, weekPlanText } from './week-plan.model';
 
 /**
  * What the panel shows: one week of one position (a cell, the pointer
@@ -49,6 +52,17 @@ interface OpenPanel {
   readonly name: string;
   readonly groups: readonly WeekLessons[];
 }
+
+/** Short weekday names for the group message, Monday first. */
+const WEEKDAY_KEYS = [
+  'weekdays.mon',
+  'weekdays.tue',
+  'weekdays.wed',
+  'weekdays.thu',
+  'weekdays.fri',
+  'weekdays.sat',
+  'weekdays.sun',
+] as const;
 
 /** Below this the panel is a bottom sheet; the popover is for a wide window. */
 const WIDE_QUERY = '(min-width: 768px)';
@@ -90,6 +104,7 @@ export class SeasonMapComponent {
   private readonly stats = inject(StatsService);
   private readonly translate = inject(TranslateService);
   private readonly languageService = inject(LanguageService);
+  private readonly messages = inject(MessageService);
   private readonly injector = inject(Injector);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -194,6 +209,54 @@ export class SeasonMapComponent {
   protected readonly tableMinWidth = computed<string>(
     () => `calc(10rem + 3.5rem + ${this.weeks().length} * 0.75rem)`,
   );
+
+  /**
+   * The week the group message is about (#1863): this one while it still has
+   * a plan ahead, else the next. The whole academy's plan, whatever the
+   * filter: the group is every athlete, not the half the map is showing.
+   */
+  protected readonly shareWeek = computed<string | null>(() => {
+    const calendar = this.calendar();
+    return calendar === null ? null : publishedWeek(calendar);
+  });
+
+  /** The message itself, or null when that week has nothing planned. */
+  protected readonly weekPlan = computed<string | null>(() => {
+    this.languageService.currentLang(); // signal dep — the heading and weekdays follow the toggle
+    const calendar = this.calendar();
+    const week = this.shareWeek();
+    if (calendar === null || week === null) return null;
+
+    return weekPlanText(calendar, week, {
+      heading: this.translate.instant('stats.syllabus.map.share.heading'),
+      weekdays: WEEKDAY_KEYS.map((key) => this.translate.instant(key)),
+    });
+  });
+
+  protected readonly whatsappLink = computed<string | null>(() => {
+    const plan = this.weekPlan();
+    return plan === null ? null : whatsappShareLink(plan);
+  });
+
+  /** Copies the week's plan, the way the backup screen copies its code. */
+  protected async copyWeekPlan(): Promise<void> {
+    const plan = this.weekPlan();
+    if (plan === null) return;
+
+    try {
+      await navigator.clipboard.writeText(plan);
+      this.messages.add({
+        severity: 'success',
+        summary: this.translate.instant('stats.syllabus.map.share.copied'),
+      });
+    } catch {
+      // The clipboard can be refused; the WhatsApp link carries the same text.
+      this.messages.add({
+        severity: 'info',
+        summary: this.translate.instant('stats.syllabus.map.share.copyFailed'),
+      });
+    }
+  }
 
   protected weekAria(week: string): string {
     this.languageService.currentLang(); // signal dep — recompute on toggle

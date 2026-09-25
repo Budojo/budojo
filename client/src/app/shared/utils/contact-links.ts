@@ -59,3 +59,13 @@ export function phoneLabel(
 
   return `${(countryCode ?? '').trim()} ${(nationalNumber ?? '').trim()}`;
 }
+
+/**
+ * A WhatsApp link that carries a message and no number (#1863): WhatsApp
+ * asks which chat to send it to, which is how a message reaches the
+ * academy's group — the one place every athlete already reads. Opened with
+ * `target="_blank"`, like `contactLinks`' own `wa.me`.
+ */
+export function whatsappShareLink(text: string): string {
+  return `https://wa.me/?text=${encodeURIComponent(text)}`;
+}

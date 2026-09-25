@@ -80,6 +80,32 @@
     color: var(--p-text-muted-color);
   }
 
+  // The week's plan for the group (#1863): under the map, parted from it by
+  // a hairline, the sentence first and the two actions after it — they wrap
+  // under the sentence in a narrow window.
+  &__share {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--p-content-border-color);
+  }
+
+  &__share-text {
+    flex: 1 1 16rem;
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--p-text-muted-color);
+  }
+
+  &__share-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
   // `width: 0` with `min-width: 100%`: the box fills its panel but offers no
   // width of its own upward, so the table's minimum width becomes a scroll
   // here instead of widening the page wherever an ancestor is not itself a
