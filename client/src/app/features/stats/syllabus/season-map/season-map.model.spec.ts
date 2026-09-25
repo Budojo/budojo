@@ -190,9 +190,23 @@ describe('season map model (#1858)', () => {
 
   it('offers the classes that run in a window and admit the position, in date order', () => {
     const classes: AcademyClass[] = [
-      { id: 1, name: 'Fundamentals', weekday: 1, starts_at: '19:00', duration_minutes: 60, kind: 'gi' },
+      {
+        id: 1,
+        name: 'Fundamentals',
+        weekday: 1,
+        starts_at: '19:00',
+        duration_minutes: 60,
+        kind: 'gi',
+      },
       { id: 2, name: 'No-gi', weekday: 3, starts_at: '19:00', duration_minutes: 60, kind: 'nogi' },
-      { id: 3, name: 'Open mat', weekday: 6, starts_at: '10:00', duration_minutes: null, kind: 'other' },
+      {
+        id: 3,
+        name: 'Open mat',
+        weekday: 6,
+        starts_at: '10:00',
+        duration_minutes: null,
+        kind: 'other',
+      },
       { id: 4, name: 'Advanced', weekday: 1, starts_at: '20:00', duration_minutes: 75, kind: 'gi' },
     ];
 

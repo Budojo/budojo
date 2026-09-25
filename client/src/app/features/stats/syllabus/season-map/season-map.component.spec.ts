@@ -326,7 +326,9 @@ describe('SeasonMapComponent (#1858)', () => {
       ) as HTMLButtonElement;
       expect(ahead.tabIndex).toBe(-1);
       expect(ahead.getAttribute('aria-label')).toBe('Plan Half guard, week of 19 Oct');
-      expect(fixture.nativeElement.querySelector('[data-cy="season-map-cell-2-2026-10-05"]')).toBeNull();
+      expect(
+        fixture.nativeElement.querySelector('[data-cy="season-map-cell-2-2026-10-05"]'),
+      ).toBeNull();
     });
 
     it('offers the classes of the week that may teach the position, from today on', () => {
@@ -335,7 +337,9 @@ describe('SeasonMapComponent (#1858)', () => {
       fixture.detectChanges();
 
       (
-        fixture.nativeElement.querySelector('[data-cy="season-map-cell-2-2026-10-12"]') as HTMLButtonElement
+        fixture.nativeElement.querySelector(
+          '[data-cy="season-map-cell-2-2026-10-12"]',
+        ) as HTMLButtonElement
       ).click();
 
       // Monday the 12th is gone; Wednesday's no-gi class is today.
@@ -350,7 +354,9 @@ describe('SeasonMapComponent (#1858)', () => {
       fixture.detectChanges();
 
       (
-        fixture.nativeElement.querySelector('[data-cy="season-map-position-2"]') as HTMLButtonElement
+        fixture.nativeElement.querySelector(
+          '[data-cy="season-map-position-2"]',
+        ) as HTMLButtonElement
       ).click();
 
       // Today, Wednesday 14 October, through Tuesday the 27th.
@@ -365,13 +371,13 @@ describe('SeasonMapComponent (#1858)', () => {
     it('never offers a gi class for a no-gi position', () => {
       const { fixture, component, httpMock } = setup();
       flush(httpMock);
-      fixture.componentRef.setInput('positions', [
-        { ...POSITIONS[1], kind: 'nogi' },
-      ]);
+      fixture.componentRef.setInput('positions', [{ ...POSITIONS[1], kind: 'nogi' }]);
       fixture.detectChanges();
 
       (
-        fixture.nativeElement.querySelector('[data-cy="season-map-position-2"]') as HTMLButtonElement
+        fixture.nativeElement.querySelector(
+          '[data-cy="season-map-position-2"]',
+        ) as HTMLButtonElement
       ).click();
 
       expect(component['panel']()?.plan?.every((o) => o.classId === 8)).toBe(true);
@@ -383,7 +389,9 @@ describe('SeasonMapComponent (#1858)', () => {
       fixture.detectChanges();
 
       (
-        fixture.nativeElement.querySelector('[data-cy="season-map-position-2"]') as HTMLButtonElement
+        fixture.nativeElement.querySelector(
+          '[data-cy="season-map-position-2"]',
+        ) as HTMLButtonElement
       ).click();
       const panel = component['panel']()!;
       const monday = panel.plan!.find((o) => o.date === '2026-10-19')!;
@@ -412,7 +420,9 @@ describe('SeasonMapComponent (#1858)', () => {
       flush(none.httpMock);
       none.fixture.detectChanges();
       (
-        none.fixture.nativeElement.querySelector('[data-cy="season-map-position-2"]') as HTMLButtonElement
+        none.fixture.nativeElement.querySelector(
+          '[data-cy="season-map-position-2"]',
+        ) as HTMLButtonElement
       ).click();
       expect(none.component['panel']()?.plan).toBeNull();
     });

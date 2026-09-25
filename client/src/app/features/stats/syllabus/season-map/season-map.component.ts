@@ -19,10 +19,7 @@ import { ButtonModule } from 'primeng/button';
 import { DrawerModule } from 'primeng/drawer';
 import { Popover, PopoverModule } from 'primeng/popover';
 import { SkeletonModule } from 'primeng/skeleton';
-import {
-  AcademyClass,
-  AcademyClassService,
-} from '../../../../core/services/academy-class.service';
+import { AcademyClass, AcademyClassService } from '../../../../core/services/academy-class.service';
 import { TrainingMode } from '../../../../core/services/academy.service';
 import { LanguageService } from '../../../../core/services/language.service';
 import {

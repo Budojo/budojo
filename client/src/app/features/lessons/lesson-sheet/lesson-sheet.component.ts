@@ -163,9 +163,7 @@ export class LessonSheetComponent {
   /** Something picked or typed that Save would send. */
   protected readonly dirty = computed<boolean>(() => {
     const opened = this.openedWith();
-    return (
-      !sameIds([...this.selected()], opened.topicIds) || this.notes().trim() !== opened.notes
-    );
+    return !sameIds([...this.selected()], opened.topicIds) || this.notes().trim() !== opened.notes;
   });
 
   /**

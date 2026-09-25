@@ -26,7 +26,11 @@ export function localIso(date: Date): string {
  * Every date in `[from, to]` on which a class with this `weekday` runs.
  * `weekday` is Carbon's `dayOfWeek` — 0 is Sunday — as on the timetable.
  */
-export function occurrencesOf(klass: { readonly weekday: number }, from: string, to: string): string[] {
+export function occurrencesOf(
+  klass: { readonly weekday: number },
+  from: string,
+  to: string,
+): string[] {
   const [y, m, d] = from.split('-').map(Number);
   const fromDay = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
   const ahead = (klass.weekday - fromDay + 7) % 7;

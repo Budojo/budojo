@@ -276,6 +276,96 @@ describe('Syllabus coverage', () => {
     cy.get('[data-cy="season-map-cell-1-2026-10-19"]').should('have.class', 'swatch--planned');
   });
 
+  it('plans a lesson from a week still to come, and opens it on the position (#1859)', () => {
+    stub();
+    cy.intercept('GET', '/api/v1/academy/classes', {
+      statusCode: 200,
+      body: {
+        data: [
+          {
+            id: 7,
+            name: 'Fundamentals',
+            weekday: 1,
+            starts_at: '19:00',
+            duration_minutes: 60,
+            kind: 'gi',
+          },
+        ],
+      },
+    });
+    cy.intercept('GET', '/api/v1/academy/syllabus', {
+      statusCode: 200,
+      body: {
+        data: [
+          {
+            id: 2,
+            parent_id: null,
+            name: 'Half guard',
+            kind: 'both',
+            in_season: true,
+            sort_order: 0,
+            children: [
+              {
+                id: 21,
+                parent_id: 2,
+                name: 'Knee shield',
+                kind: 'both',
+                in_season: true,
+                sort_order: 0,
+              },
+            ],
+          },
+        ],
+      },
+    });
+    cy.intercept('GET', '/api/v1/lessons?*', { statusCode: 200, body: { data: null } }).as(
+      'lesson',
+    );
+
+    cy.visitAuthenticated('/dashboard/stats/syllabus');
+    cy.wait('@calendar');
+
+    // Half guard has nothing on the map; the week of the 19th is still to come.
+    cy.get('[data-cy="season-map-cell-2-2026-10-19"]').click();
+    cy.get('[data-cy="season-map-plan"]').should('contain.text', 'Fundamentals');
+    cy.get('[data-cy="season-map-plan-7-2026-10-19"]').click();
+
+    cy.wait('@lesson')
+      .its('request.url')
+      .should('contain', 'academy_class_id=7')
+      .and('contain', 'held_on=2026-10-19');
+    cy.get('[data-cy="lesson-expand-2"]').should('have.attr', 'aria-expanded', 'true');
+
+    cy.intercept('PUT', '/api/v1/lessons/topics', {
+      statusCode: 200,
+      body: {
+        data: {
+          id: 90,
+          academy_class_id: 7,
+          held_on: '2026-10-19',
+          name: 'Fundamentals',
+          starts_at: '19:00',
+          kind: 'gi',
+          notes: null,
+          held: false,
+          topics: [],
+        },
+      },
+    }).as('save');
+    cy.get('[data-cy="lesson-topic-21"]').click();
+    cy.get('[data-cy="lesson-sheet-save"]').click();
+
+    cy.wait('@save')
+      .its('request.body')
+      .should('deep.include', {
+        academy_class_id: 7,
+        held_on: '2026-10-19',
+        topic_ids: [21],
+      });
+    // The weeks are read again, so the new plan shows on the map.
+    cy.wait('@calendar');
+  });
+
   it('asks the map for the same filter as the report', () => {
     stub();
 
