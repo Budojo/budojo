@@ -685,13 +685,16 @@ describe('LessonSheetComponent — planning ahead (#1859)', () => {
   }
 
   /** Answer one opening's four reads; return the day the lesson read asked for. */
-  function answerOpening(httpMock: HttpTestingController): string | null {
+  function answerOpening(
+    httpMock: HttpTestingController,
+    suggestions: LessonSuggestion[] = [],
+  ): string | null {
     const req = httpMock.expectOne((r) => r.url === LESSON_URL && r.method === 'GET');
     const date = req.request.params.get('held_on');
     req.flush({ data: null });
     httpMock.expectOne(SYLLABUS_URL).flush({ data: [CLOSED_GUARD, MOUNT] });
     httpMock.expectOne(RECENT_URL).flush({ data: [] });
-    httpMock.expectOne((r) => r.url === SUGGEST_URL).flush({ data: [] });
+    httpMock.expectOne((r) => r.url === SUGGEST_URL).flush({ data: suggestions });
     return date;
   }
 
@@ -818,6 +821,38 @@ describe('LessonSheetComponent — planning ahead (#1859)', () => {
     } finally {
       delete (Element.prototype as unknown as { scrollIntoView?: unknown }).scrollIntoView;
     }
+  });
+
+  it('suggests "tonight" only for tonight, and "for this lesson" on any other day', () => {
+    const offered = [suggestion({ id: 12, name: 'Triangle' })];
+    const words = (fixture: { nativeElement: HTMLElement }) => {
+      const panel = fixture.nativeElement.querySelector(
+        '[data-cy="lesson-sheet-suggestions"]',
+      ) as HTMLElement;
+      return {
+        title: panel.querySelector('.group__title')?.textContent ?? '',
+        dismiss: panel.querySelector('[data-cy="lesson-suggestion-dismiss-12"]')?.getAttribute(
+          'aria-label',
+        ),
+      };
+    };
+
+    const later = setupPlanning({ heldOn: '2026-09-21' });
+    answerOpening(later.httpMock, offered);
+    later.fixture.detectChanges();
+    expect(words(later.fixture)).toEqual({
+      title: 'Suggested for this lesson',
+      dismiss: 'Not for this lesson',
+    });
+
+    TestBed.resetTestingModule();
+    const tonight = setupPlanning({ heldOn: '2026-09-14' });
+    answerOpening(tonight.httpMock, offered);
+    tonight.fixture.detectChanges();
+    expect(words(tonight.fixture)).toEqual({
+      title: 'Suggested tonight',
+      dismiss: 'Not tonight',
+    });
   });
 
   it('shows no arrows to a host that did not ask for them', () => {

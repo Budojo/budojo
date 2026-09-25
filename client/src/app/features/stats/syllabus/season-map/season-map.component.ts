@@ -28,7 +28,7 @@ import {
   StatsService,
   SyllabusCalendar,
 } from '../../../../core/services/stats.service';
-import { addDays } from '../../../../shared/utils/class-occurrences';
+import { addDays, admitsTopic, localIso } from '../../../../shared/utils/class-occurrences';
 import { localeFor } from '../../../../shared/utils/locale';
 import { LessonSheetComponent } from '../../../lessons/lesson-sheet/lesson-sheet.component';
 import {
@@ -72,6 +72,16 @@ interface PlanningSlot {
 
 /** How far ahead a position's season offers a lesson to plan: the next two weeks. */
 const SEASON_PLAN_DAYS = 13;
+
+/**
+ * The first day a plan can land on. The calendar's `today` is the server's
+ * date, in UTC: for an hour or two after midnight in Rome it is still
+ * yesterday, and last night's class would be offered as a plan.
+ */
+function planningToday(calendar: SyllabusCalendar): string {
+  const local = localIso(new Date());
+  return local > calendar.today ? local : calendar.today;
+}
 
 /** Below this the panel is a bottom sheet; the popover is for a wide window. */
 const WIDE_QUERY = '(min-width: 768px)';
@@ -193,12 +203,15 @@ export class SeasonMapComponent {
   protected readonly weeks = computed<readonly string[]>(() => this.calendar()?.weeks ?? []);
 
   /**
-   * Planning is offered in the current season, to an academy with a
-   * timetable. A season gone by has no week left to plan.
+   * Planning is offered in the current season, on a row some class of the
+   * timetable may teach. A season gone by has no week left to plan, and a
+   * no-gi position in a gi-only timetable has nowhere to go.
    */
-  protected readonly canPlan = computed<boolean>(
-    () => this.seasonsBack() === 0 && this.classes().length > 0,
-  );
+  protected canPlan(row: MapRow): boolean {
+    return (
+      this.seasonsBack() === 0 && this.classes().some((c) => admitsTopic(c.kind, row.kind))
+    );
+  }
 
   protected readonly currentWeek = computed<string | null>(() => {
     const today = this.calendar()?.today;
@@ -283,14 +296,15 @@ export class SeasonMapComponent {
 
     // From today, not from Monday: the days of this week already gone are
     // the check-in's, not a plan's.
-    const from = cell.week > calendar.today ? cell.week : calendar.today;
+    const today = planningToday(calendar);
+    const from = cell.week > today ? cell.week : today;
     this.present(event, {
       mode: 'week',
       positionId: row.id,
       name: row.name,
       groups: [{ week: cell.week, lessons: cellLessons(calendar, row.id, cell.week) }],
       plan:
-        cell.ahead && this.canPlan()
+        cell.ahead && this.canPlan(row)
           ? planOptions(this.classes(), row.kind, from, addDays(cell.week, 6))
           : null,
     });
@@ -305,18 +319,14 @@ export class SeasonMapComponent {
     const calendar = this.calendar();
     if (calendar === null) return;
 
+    const today = planningToday(calendar);
     this.present(event, {
       mode: 'season',
       positionId: row.id,
       name: row.name,
       groups: positionSeason(calendar, row.id),
-      plan: this.canPlan()
-        ? planOptions(
-            this.classes(),
-            row.kind,
-            calendar.today,
-            addDays(calendar.today, SEASON_PLAN_DAYS),
-          )
+      plan: this.canPlan(row)
+        ? planOptions(this.classes(), row.kind, today, addDays(today, SEASON_PLAN_DAYS))
         : null,
     });
   }

@@ -280,7 +280,7 @@
             wrong data the evening the instructor teaches something else.
           -->
           <section class="group" data-cy="lesson-sheet-suggestions">
-            <h3 class="group__title">{{ 'lessons.sheet.suggestions.title' | translate }}</h3>
+            <h3 class="group__title">{{ suggestionWords().title | translate }}</h3>
             <ul class="topics">
               @for (item of suggestionsOffered(); track item.id) {
                 <li class="suggestion">
@@ -311,8 +311,8 @@
                     type="button"
                     class="suggestion__dismiss"
                     (click)="dismissSuggestion(item.id)"
-                    [attr.aria-label]="'lessons.sheet.suggestions.dismiss' | translate"
-                    [pTooltip]="'lessons.sheet.suggestions.dismiss' | translate"
+                    [attr.aria-label]="suggestionWords().dismiss | translate"
+                    [pTooltip]="suggestionWords().dismiss | translate"
                     [attr.data-cy]="'lesson-suggestion-dismiss-' + item.id"
                   >
                     <i class="pi pi-times" aria-hidden="true"></i>

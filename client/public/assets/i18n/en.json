@@ -1994,6 +1994,8 @@
       "suggestions": {
         "title": "Suggested tonight",
         "dismiss": "Not tonight",
+        "titleLesson": "Suggested for this lesson",
+        "dismissLesson": "Not for this lesson",
         "reason": {
           "never": "Not taught yet this season",
           "thin": "Taught once, on {{date}}",

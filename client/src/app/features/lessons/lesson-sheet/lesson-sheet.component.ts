@@ -179,6 +179,19 @@ export class LessonSheetComponent {
   });
 
   /**
+   * "Tonight" only for tonight's lesson. Anything else — a plan three weeks
+   * out, an evening being backfilled — is "this lesson".
+   */
+  protected readonly suggestionWords = computed<{ title: string; dismiss: string }>(() =>
+    this.slot() === localIso(new Date())
+      ? { title: 'lessons.sheet.suggestions.title', dismiss: 'lessons.sheet.suggestions.dismiss' }
+      : {
+          title: 'lessons.sheet.suggestions.titleLesson',
+          dismiss: 'lessons.sheet.suggestions.dismissLesson',
+        },
+  );
+
+  /**
    * The previous occurrence is still today or later. The stepper is for
    * planning; recording a past evening is the check-in's job.
    */
