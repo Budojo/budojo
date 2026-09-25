@@ -1689,6 +1689,25 @@ function dialogOpen(hostSelector: string): void {
 }
 
 /**
+ * Wait until a dialog's own autofocus has landed on `fieldSelector`, before
+ * an `act` scrolls the dialog: focus arriving later scrolls it back to the
+ * top. The enter animation ends in real time and the focus call behind it
+ * then waits on the frozen clock, so neither a single tick nor a single wait
+ * is enough on a loaded machine — tick, look, and go round again.
+ */
+function dialogFocusSettled(fieldSelector: string, attempts = 20): void {
+  cy.tick(250);
+  cy.document().then((doc) => {
+    if (doc.activeElement?.matches(fieldSelector) || attempts === 0) {
+      cy.get(fieldSelector).should('have.focus');
+      return;
+    }
+    cy.wait(100);
+    dialogFocusSettled(fieldSelector, attempts - 1);
+  });
+}
+
+/**
  * Two frames per screen. The first is the viewport — what the owner sees
  * before scrolling, which is where the fold and the hierarchy get judged.
  * The dashboard shell scrolls inside `.main`, not the document, so a
@@ -2366,10 +2385,9 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       act: () => {
         press('[data-cy="attendance-topics"]');
         dialogOpen('[data-cy="lesson-sheet"]');
-        // Let the dialog's own autofocus land on the search field now, on the
-        // frozen clock, rather than during `shoot()`'s tick — where it
-        // scrolled the sheet back to the top over the details below.
-        cy.tick(1000);
+        // The dialog's autofocus lands on the search field first; landing
+        // during `shoot()` it scrolled the sheet back over the details.
+        dialogFocusSettled('[data-cy="lesson-sheet-search"]');
         press('[data-cy="lesson-expand-1"]');
         press('[data-cy="lesson-detail-toggle-tree-11"]');
         // The details sit below the fold of the sheet's own scroll area;
@@ -2656,6 +2674,8 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       act: () => {
         press('[data-cy="syllabus-toggle-1"]');
         press('[data-cy="syllabus-topic-edit-11"]');
+        dialogOpen('[data-cy="syllabus-form"]');
+        dialogFocusSettled('[data-cy="syllabus-form-name"]');
         // Below the fold at 960×600: focus scrolls the dialog to the two
         // new fields the way a keyboard would reach them.
         cy.get('[data-cy="syllabus-form-video"]').focus();
