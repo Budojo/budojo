@@ -13,6 +13,41 @@ import { VIEWPORT_IPHONE_SE } from '../support/viewports';
 const ACADEMY = { ...MOCK_ACADEMY, season_label: '2026/27' };
 
 /**
+ * Wednesday 14 October 2026 at noon, the calendar's `today`. Planning reads
+ * the local clock too, so a planning case left on the real one would stop
+ * passing the week its dates went by.
+ */
+const WEDNESDAY_NOON = new Date(2026, 9, 14, 12, 0).getTime();
+
+/** Monday gi fundamentals and Wednesday no-gi: where a plan can go. */
+const CLASSES = [
+  { id: 7, name: 'Fundamentals', weekday: 1, starts_at: '19:00', duration_minutes: 60, kind: 'gi' },
+  { id: 8, name: 'No-gi', weekday: 3, starts_at: '19:00', duration_minutes: 60, kind: 'nogi' },
+];
+
+/** The programme the lesson sheet opens on: half guard, and knee shield under it. */
+const HALF_GUARD_PROGRAMME = [
+  {
+    id: 2,
+    parent_id: null,
+    name: 'Half guard',
+    kind: 'both',
+    in_season: true,
+    sort_order: 0,
+    children: [
+      {
+        id: 21,
+        parent_id: 2,
+        name: 'Knee shield',
+        kind: 'gi',
+        in_season: true,
+        sort_order: 0,
+      },
+    ],
+  },
+];
+
+/**
  * Landing on `/dashboard/stats` opens the overview tab, which reads the
  * paginated athletes endpoint — a bare `{ data: [] }` has no `meta` and the
  * page throws on `meta.last_page` before this spec gets anywhere.
@@ -285,45 +320,14 @@ describe('Syllabus coverage', () => {
 
   it('plans a lesson from a week still to come, and opens it on the position (#1859)', () => {
     stub();
+    cy.clock(WEDNESDAY_NOON, ['Date']);
     cy.intercept('GET', '/api/v1/academy/classes', {
       statusCode: 200,
-      body: {
-        data: [
-          {
-            id: 7,
-            name: 'Fundamentals',
-            weekday: 1,
-            starts_at: '19:00',
-            duration_minutes: 60,
-            kind: 'gi',
-          },
-        ],
-      },
+      body: { data: [CLASSES[0]] },
     });
     cy.intercept('GET', '/api/v1/academy/syllabus', {
       statusCode: 200,
-      body: {
-        data: [
-          {
-            id: 2,
-            parent_id: null,
-            name: 'Half guard',
-            kind: 'both',
-            in_season: true,
-            sort_order: 0,
-            children: [
-              {
-                id: 21,
-                parent_id: 2,
-                name: 'Knee shield',
-                kind: 'both',
-                in_season: true,
-                sort_order: 0,
-              },
-            ],
-          },
-        ],
-      },
+      body: { data: HALF_GUARD_PROGRAMME },
     });
     cy.intercept('GET', '/api/v1/lessons?*', { statusCode: 200, body: { data: null } }).as(
       'lesson',
@@ -520,7 +524,8 @@ describe('Syllabus coverage', () => {
     cy.get('[data-cy="syllabus-coverage-no-programme"]').should('be.visible');
     cy.get('[data-cy="syllabus-coverage-positions"]').should('not.exist');
 
-    cy.get('[data-cy="syllabus-coverage-programme-link"]').click();
+    // The same filled button every other empty state has (STSY-2).
+    cy.get('[data-cy="syllabus-coverage-no-programme-cta"]').click();
     cy.location('pathname').should('eq', '/dashboard/academy/syllabus');
   });
 
@@ -636,14 +641,91 @@ describe('Who has seen a technique (#1745)', () => {
     cy.get('[data-cy="exposure-group-unplaced"]').should('contain.text', 'Paolo Neri');
     cy.get('[data-cy="exposure-group-never"]').should('not.contain.text', 'Paolo Neri');
   });
+});
 
-  it('leaves a never-taught row a plain row', () => {
-    stub();
+describe('Plan what was never taught (#1656)', () => {
+  it('opens the next class that may teach it, with it ticked, and carries it a week on', () => {
+    stub(
+      report({
+        missing: [{ id: 21, name: 'Knee shield', parent_name: 'Half guard', kind: 'gi' }],
+      }),
+    );
+    cy.clock(WEDNESDAY_NOON, ['Date']);
+    cy.intercept('GET', '/api/v1/academy/classes', {
+      statusCode: 200,
+      body: { data: CLASSES },
+    });
+    cy.intercept('GET', '/api/v1/academy/syllabus', {
+      statusCode: 200,
+      body: { data: HALF_GUARD_PROGRAMME },
+    });
+    cy.intercept('GET', '/api/v1/lessons?*', { statusCode: 200, body: { data: null } }).as(
+      'lesson',
+    );
 
     cy.visitAuthenticated('/dashboard/stats/syllabus');
     cy.wait('@coverage');
 
-    cy.get('[data-cy="syllabus-missing-31"]').should('contain.text', 'Omoplata');
-    cy.get('[data-cy="syllabus-missing-31"] button').should('not.exist');
+    // A gi technique: tonight's no-gi class is passed over for Monday's gi one.
+    cy.get('[data-cy="syllabus-missing-21"] button').should('contain.text', 'Plan').click();
+    cy.wait('@lesson')
+      .its('request.url')
+      .should('contain', 'academy_class_id=7')
+      .and('contain', 'held_on=2026-10-19');
+    cy.get('[data-cy="lesson-expand-2"]').should('have.attr', 'aria-expanded', 'true');
+    cy.get('[data-cy="lesson-topic-21"]').should('have.attr', 'aria-pressed', 'true');
+
+    // The technique is what the owner came for, not an edit: the week still moves.
+    cy.get('[data-cy="lesson-sheet-step-hint"]').should('not.exist');
+    cy.get('[data-cy="lesson-sheet-next"]').should('not.be.disabled').click();
+    cy.wait('@lesson').its('request.url').should('contain', 'held_on=2026-10-26');
+    cy.get('[data-cy="lesson-topic-21"]').should('have.attr', 'aria-pressed', 'true');
+
+    cy.intercept('PUT', '/api/v1/lessons/topics', {
+      statusCode: 200,
+      body: {
+        data: {
+          id: 91,
+          academy_class_id: 7,
+          held_on: '2026-10-26',
+          name: 'Fundamentals',
+          starts_at: '19:00',
+          kind: 'gi',
+          notes: null,
+          held: false,
+          topics: [],
+        },
+      },
+    }).as('save');
+    cy.get('[data-cy="lesson-sheet-save"]').click();
+
+    cy.wait('@save')
+      .its('request.body')
+      .should('deep.include', {
+        academy_class_id: 7,
+        held_on: '2026-10-26',
+        topic_ids: [21],
+      });
+    // The plan shows on the season map: its weeks are read again.
+    cy.wait('@calendar');
+  });
+
+  it('leaves a row no class may teach a plain row', () => {
+    stub(
+      report({
+        missing: [{ id: 32, name: 'Lockdown', parent_name: 'Half guard', kind: 'nogi' }],
+      }),
+    );
+    cy.clock(WEDNESDAY_NOON, ['Date']);
+    cy.intercept('GET', '/api/v1/academy/classes', {
+      statusCode: 200,
+      body: { data: [CLASSES[0]] },
+    });
+
+    cy.visitAuthenticated('/dashboard/stats/syllabus');
+    cy.wait('@coverage');
+
+    cy.get('[data-cy="syllabus-missing-32"]').should('contain.text', 'Lockdown');
+    cy.get('[data-cy="syllabus-missing-32"] button').should('not.exist');
   });
 });

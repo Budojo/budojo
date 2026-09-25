@@ -124,12 +124,6 @@
     font-size: 0.875rem;
     color: var(--p-text-muted-color);
   }
-
-  &__empty-link {
-    margin: 0;
-    text-align: center;
-    font-size: 0.875rem;
-  }
 }
 
 // The three counts, in words. No coloured dots: the accent's strengths key
@@ -219,8 +213,11 @@
 
   // Who has seen it (#1745): the whole taught row, 48 px tall so it clears
   // the touch floor, and plain at rest — a list of names, not a wall of
-  // links. Hover and focus say it can be pressed.
-  &__open {
+  // links. Hover and focus say it can be pressed. A never-taught row no
+  // class can take (#1656) keeps the same box, so its name and position
+  // sit where the plannable rows' do.
+  &__open,
+  &__static {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -229,6 +226,9 @@
     min-height: 3rem;
     padding: 0.5rem;
     margin: 0;
+  }
+
+  &__open {
     border: 0;
     border-radius: 8px;
     background: transparent;
@@ -246,6 +246,24 @@
       outline: 2px solid var(--p-primary-color);
       outline-offset: -2px;
     }
+  }
+
+  // What a never-taught row does (#1656). Muted at rest, like the taught
+  // rows beside it: twenty accent labels down a column would be a wall of
+  // links. The row's hover and focus bring it up in the action's colour.
+  &__plan {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.8125rem;
+    color: var(--p-text-muted-color);
+    white-space: nowrap;
+  }
+
+  &__open--plan:hover &__plan,
+  &__open--plan:focus-visible &__plan {
+    color: var(--p-primary-color);
   }
 
   &__name {

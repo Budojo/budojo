@@ -656,12 +656,15 @@ describe('LessonSheetComponent — planning ahead (#1859)', () => {
     vi.setSystemTime(new Date(2026, 8, 14, 12, 0));
   });
 
+  // The clock first: a failing verify() must not leave the next file on it.
   afterEach(() => {
-    TestBed.inject(HttpTestingController).verify();
     vi.useRealTimers();
+    TestBed.inject(HttpTestingController).verify();
   });
 
-  function setupPlanning(opts: { heldOn?: string; focusTopicId?: number | null } = {}) {
+  function setupPlanning(
+    opts: { heldOn?: string; focusTopicId?: number | null; chooseTopicId?: number | null } = {},
+  ) {
     TestBed.configureTestingModule({
       imports: [LessonSheetComponent],
       providers: [
@@ -679,6 +682,7 @@ describe('LessonSheetComponent — planning ahead (#1859)', () => {
     fixture.componentRef.setInput('className', 'Fundamentals');
     fixture.componentRef.setInput('steppable', true);
     fixture.componentRef.setInput('focusTopicId', opts.focusTopicId ?? null);
+    fixture.componentRef.setInput('chooseTopicId', opts.chooseTopicId ?? null);
     fixture.componentRef.setInput('visible', true);
     fixture.detectChanges();
 
@@ -823,6 +827,94 @@ describe('LessonSheetComponent — planning ahead (#1859)', () => {
     } finally {
       delete (Element.prototype as unknown as { scrollIntoView?: unknown }).scrollIntoView;
     }
+  });
+
+  it('arrives with the host’s topic already chosen, and carries it to another week (#1656)', () => {
+    const { fixture, component, httpMock } = setupPlanning({ chooseTopicId: 11 });
+    answerOpening(httpMock);
+    fixture.detectChanges();
+
+    expect(component['isChosen'](11)).toBe(true);
+    // The host's choice is not an edit: the week can still move.
+    expect(byCy(fixture, 'lesson-sheet-next').disabled).toBe(false);
+    expect(byCy(fixture, 'lesson-sheet-step-hint')).toBeNull();
+
+    byCy(fixture, 'lesson-sheet-next').click();
+    fixture.detectChanges();
+    answerOpening(httpMock);
+    fixture.detectChanges();
+    expect(component['isChosen'](11)).toBe(true);
+
+    component['save']();
+    const req = httpMock.expectOne(`${LESSON_URL}/topics`);
+    expect(req.request.body.held_on).toBe('2026-09-28');
+    expect(req.request.body.topic_ids).toEqual([11]);
+    req.flush({ data: lesson({ held_on: '2026-09-28' }) });
+  });
+
+  /** The chosen group's heading, for a sheet opened on `heldOn` with the host's topic. */
+  function chosenHeading(heldOn: string, held = false): string {
+    TestBed.resetTestingModule();
+    const { fixture, httpMock } = setupPlanning({ heldOn, chooseTopicId: 11 });
+    if (held) {
+      httpMock
+        .expectOne((r) => r.url === LESSON_URL && r.method === 'GET')
+        .flush({ data: lesson({ held_on: heldOn, held: true }) });
+      httpMock.expectOne(SYLLABUS_URL).flush({ data: [CLOSED_GUARD, MOUNT] });
+      httpMock.expectOne(RECENT_URL).flush({ data: [] });
+      httpMock.expectOne((r) => r.url === SUGGEST_URL).flush({ data: [] });
+      httpMock
+        .expectOne((r) => r.url === '/api/v1/lessons/room-gaps')
+        .flush({ data: { present: 9, rows: [] } });
+    } else {
+      answerOpening(httpMock);
+    }
+    fixture.detectChanges();
+    return fixture.nativeElement.querySelector('[data-cy="lesson-sheet-chosen"] .group__title')
+      .textContent as string;
+  }
+
+  it('calls what a lesson still ahead will cover "planned", tonight included until it is held', () => {
+    expect(chosenHeading('2026-09-21')).toContain('Planned');
+    // Noon, nobody checked in yet: tonight is still a plan, as the header says.
+    expect(chosenHeading('2026-09-14')).toContain('Planned');
+  });
+
+  it('says "covered" once tonight has people in it, and for the evenings gone by', () => {
+    expect(chosenHeading('2026-09-14', true)).toContain('Covered');
+    expect(chosenHeading('2026-09-07')).toContain('Covered');
+  });
+
+  it('asks for the evening before the week it stepped to, not the one it opened on', () => {
+    const { fixture, httpMock } = setupPlanning({ heldOn: '2026-09-28' });
+    answerOpening(httpMock);
+    fixture.detectChanges();
+
+    byCy(fixture, 'lesson-sheet-prev').click();
+    fixture.detectChanges();
+    expect(answerOpening(httpMock)).toBe('2026-09-21');
+    fixture.detectChanges();
+
+    byCy(fixture, 'lesson-expand-1').click();
+    fixture.detectChanges();
+    byCy(fixture, 'lesson-detail-toggle-tree-11').click();
+    fixture.detectChanges();
+
+    // Before the 28th, the 21st would be the evening itself.
+    const req = httpMock.expectOne((r) => r.url === '/api/v1/lessons/last-notes');
+    expect(req.request.params.get('before')).toBe('2026-09-21');
+    req.flush({ data: null });
+  });
+
+  it('holds the arrows once something besides the host’s topic is picked', () => {
+    const { fixture, component, httpMock } = setupPlanning({ chooseTopicId: 11 });
+    answerOpening(httpMock);
+    fixture.detectChanges();
+
+    component['toggle'](12);
+    fixture.detectChanges();
+
+    expect(byCy(fixture, 'lesson-sheet-next').disabled).toBe(true);
   });
 
   it('suggests "tonight" only for tonight, and "for this lesson" on any other day', () => {

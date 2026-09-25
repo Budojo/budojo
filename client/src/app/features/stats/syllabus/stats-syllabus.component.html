@@ -102,13 +102,11 @@
         icon="pi pi-book"
         [title]="'stats.syllabus.empty.noProgrammeTitle' | translate"
         [hint]="'stats.syllabus.empty.noProgrammeHint' | translate"
+        [ctaLabel]="'stats.syllabus.empty.openProgramme' | translate"
+        ctaIcon="pi pi-arrow-right"
+        (ctaClick)="goToProgramme()"
         dataCy="syllabus-coverage-no-programme"
       />
-      <p class="coverage__empty-link">
-        <a routerLink="/dashboard/academy/syllabus" data-cy="syllabus-coverage-programme-link">
-          {{ 'stats.syllabus.empty.openProgramme' | translate }}
-        </a>
-      </p>
     } @else {
       <!--
         Plain words, no coloured dots: the accent's strengths key the season
@@ -153,9 +151,11 @@
         only plans on it is exactly when the map is worth opening.
       -->
       <app-season-map
+        #seasonMap
         [positions]="data.positions"
         [seasonsBack]="seasonsBack()"
         [kind]="kindParam()"
+        [classes]="classes()"
       />
 
       @if (nothingTaught()) {
@@ -199,10 +199,44 @@
             } @else {
               <ul class="topics">
                 @for (topic of data.missing; track topic.id) {
-                  <li class="topics__row" [attr.data-cy]="'syllabus-missing-' + topic.id">
-                    <span class="topics__name">{{ topic.name }}</span>
-                    @if (topic.parent_name) {
-                      <span class="topics__parent">{{ topic.parent_name }}</span>
+                  @let target = planTargets().get(topic.id);
+                  <!--
+                    Planned from where the gap is seen (#1656): the row opens
+                    the next lesson that may teach it, with it ticked. Its
+                    name is what it shows and what it does, like a taught
+                    row's. A row no class can take is laid out the same, so
+                    the two line up when they mix, and is not pressable.
+                  -->
+                  <li
+                    class="topics__row topics__row--open"
+                    [attr.data-cy]="'syllabus-missing-' + topic.id"
+                  >
+                    @if (target !== undefined) {
+                      <button
+                        type="button"
+                        class="topics__open topics__open--plan"
+                        (click)="plan(topic, target)"
+                      >
+                        <span class="topics__name">
+                          {{ topic.name }}
+                          @if (topic.parent_name) {
+                            <span class="topics__parent">{{ topic.parent_name }}</span>
+                          }
+                        </span>
+                        <span class="topics__plan">
+                          {{ 'stats.syllabus.planAction' | translate }}
+                          <i class="pi pi-angle-right" aria-hidden="true"></i>
+                        </span>
+                      </button>
+                    } @else {
+                      <span class="topics__static">
+                        <span class="topics__name">
+                          {{ topic.name }}
+                          @if (topic.parent_name) {
+                            <span class="topics__parent">{{ topic.parent_name }}</span>
+                          }
+                        </span>
+                      </span>
                     }
                   </li>
                 }
@@ -286,3 +320,20 @@
   [topicId]="exposureTopicId()"
   [seasonsBack]="seasonsBack()"
 />
+
+<!--
+  The lesson a never-taught technique goes into (#1656): opened on it, with
+  it ticked and its position open, and the arrows for a later week.
+-->
+@if (planning(); as slot) {
+  <app-lesson-sheet
+    [(visible)]="planOpen"
+    [academyClassId]="slot.lesson.classId"
+    [heldOn]="slot.lesson.date"
+    [className]="slot.lesson.name"
+    [steppable]="true"
+    [focusTopicId]="slot.topicId"
+    [chooseTopicId]="slot.topicId"
+    (saved)="planned($event)"
+  />
+}

@@ -1,26 +1,37 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   computed,
   effect,
   inject,
   signal,
+  viewChild,
 } from '@angular/core';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ChartModule } from 'primeng/chart';
 import { SelectButtonModule } from 'primeng/selectbutton';
 import { SkeletonModule } from 'primeng/skeleton';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
+import { AcademyClass, AcademyClassService } from '../../../core/services/academy-class.service';
 import { AcademyService, TrainingMode } from '../../../core/services/academy.service';
 import { LanguageService } from '../../../core/services/language.service';
-import { StatsService, SyllabusCoverage } from '../../../core/services/stats.service';
+import type { Lesson } from '../../../core/services/lesson.service';
+import {
+  CoverageTopic,
+  StatsService,
+  SyllabusCoverage,
+} from '../../../core/services/stats.service';
 import { TrainingModesService } from '../../../core/services/training-modes.service';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { ErrorStateComponent } from '../../../shared/components/error-state/error-state.component';
+import { addDays, localIso } from '../../../shared/utils/class-occurrences';
 import { relativeDay } from '../../../shared/utils/relative-day';
 import { localeFor } from '../../../shared/utils/locale';
+import { LessonSheetComponent } from '../../lessons/lesson-sheet/lesson-sheet.component';
 import { SeasonMapComponent } from './season-map/season-map.component';
+import { PlanOption, planOptions } from './season-map/season-map.model';
 import { TopicExposureComponent } from './topic-exposure/topic-exposure.component';
 import { HowCountedComponent } from '../../../shared/components/how-counted/how-counted.component';
 
@@ -44,6 +55,12 @@ interface FilterOption {
   readonly value: KindFilter;
 }
 
+/** A never-taught technique on its way into a lesson (#1656). */
+interface PlanningTopic {
+  readonly topicId: number;
+  readonly lesson: PlanOption;
+}
+
 /**
  * Syllabus coverage across the season (#1565).
  *
@@ -65,13 +82,13 @@ interface FilterOption {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     FormsModule,
-    RouterLink,
     TranslatePipe,
     ChartModule,
     SelectButtonModule,
     SkeletonModule,
     EmptyStateComponent,
     ErrorStateComponent,
+    LessonSheetComponent,
     SeasonMapComponent,
     TopicExposureComponent,
     HowCountedComponent,
@@ -81,6 +98,8 @@ interface FilterOption {
 })
 export class StatsSyllabusComponent {
   private readonly stats = inject(StatsService);
+  private readonly classService = inject(AcademyClassService);
+  private readonly router = inject(Router);
   private readonly academyService = inject(AcademyService);
   private readonly trainingModes = inject(TrainingModesService);
   private readonly languageService = inject(LanguageService);
@@ -100,7 +119,27 @@ export class StatsSyllabusComponent {
   protected readonly exposureTopicId = signal<number | null>(null);
   protected readonly exposureOpen = signal<boolean>(false);
 
+  /**
+   * The timetable, for where a never-taught technique can be planned (#1656).
+   * Read once for the page and handed to the season map, which plans from
+   * the same one.
+   */
+  protected readonly classes = signal<readonly AcademyClass[]>([]);
+  /** The technique being planned, and whether its lesson sheet is open. */
+  protected readonly planning = signal<PlanningTopic | null>(null);
+  protected readonly planOpen = signal<boolean>(false);
+
+  private readonly seasonMap = viewChild<SeasonMapComponent>('seasonMap');
+
   constructor() {
+    // Once: the timetable does not move with the season or the filter. A
+    // failure offers no planning rather than a broken row.
+    const classes = this.classService.list().subscribe({
+      next: (list) => this.classes.set(list),
+      error: () => this.classes.set([]),
+    });
+    inject(DestroyRef).onDestroy(() => classes.unsubscribe());
+
     // The same refetch shape the attendance tab uses: an effect keyed on the
     // controls, and `onCleanup` cancelling the previous request. Two quick
     // presses on "previous season" would otherwise leave two reads in flight,
@@ -249,6 +288,63 @@ export class StatsSyllabusComponent {
 
   protected retry(): void {
     this.reloadTick.update((n) => n + 1);
+  }
+
+  /**
+   * Where each never-taught technique would be planned (#1656): the next
+   * lesson, over the coming week, of a class that may teach it — a gi
+   * technique goes to the next gi class, never to tonight's no-gi one.
+   * Nothing for a season gone by, for a technique no class can take, or
+   * past the season's end: a gap in this season is not next season's plan.
+   */
+  protected readonly planTargets = computed<ReadonlyMap<number, PlanOption>>(() => {
+    const report = this.report();
+    if (report === null || this.seasonsBack() !== 0) return new Map();
+
+    const today = localIso(new Date());
+    const weekOut = addDays(today, 6);
+    const until = weekOut < report.season.end ? weekOut : report.season.end;
+    const targets = new Map<number, PlanOption>();
+    for (const topic of report.missing) {
+      const next = planOptions(this.classes(), topic.kind, today, until)[0];
+      if (next !== undefined) targets.set(topic.id, next);
+    }
+    return targets;
+  });
+
+  /**
+   * Open the lesson sheet on that lesson with the technique already ticked,
+   * and its position open. The header's arrows move it to a later week.
+   */
+  protected plan(topic: CoverageTopic, lesson: PlanOption): void {
+    this.planning.set({ topicId: topic.id, lesson });
+    this.planOpen.set(true);
+  }
+
+  /**
+   * The map always has something new to draw. The report only when the
+   * lesson was already held — tonight's class with people in it — because
+   * then the technique is taught, not planned: out of this list, into the
+   * headline. Read quietly, without the skeleton, so the page stays where
+   * the owner had scrolled it; a read that lands after the season or the
+   * filter moved is dropped.
+   */
+  protected planned(lesson: Lesson): void {
+    this.seasonMap()?.refreshWeeks();
+    if (!lesson.held) return;
+
+    const seasonsBack = this.seasonsBack();
+    const kind = this.kind();
+    this.stats.syllabusCoverage(seasonsBack, kindParamOf(kind)).subscribe({
+      next: (report) => {
+        if (this.seasonsBack() === seasonsBack && this.kind() === kind) this.report.set(report);
+      },
+      error: () => undefined,
+    });
+  }
+
+  protected goToProgramme(): void {
+    void this.router.navigate(['/dashboard/academy/syllabus']);
   }
 
   /** Who has seen this technique — the row, opened in the season on screen. */
