@@ -1,11 +1,11 @@
 <div class="layout">
   <!-- Mobile topbar (<768px): brand + notification bell + avatar. The
        hamburger off-canvas drawer is retired (#1111) — the bottom tab bar
-       is the primary nav. The brand → /dashboard/academy (the owner's home,
-       the pi-home Home tab), matching its "go to home" aria-label (#1112). -->
+       is the primary nav. The brand → home, which is Today since #1643 (the
+       pi-home tab), matching its "go to home" aria-label (#1112). -->
   <header class="topbar" role="banner">
     <a
-      routerLink="/dashboard/academy"
+      routerLink="/dashboard/today"
       class="topbar__title"
       [attr.aria-label]="'nav.homeAriaLabel' | translate"
       data-cy="topbar-home-link"

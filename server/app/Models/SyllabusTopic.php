@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\Belt;
 use App\Enums\TrainingMode;
 use Carbon\Carbon;
 use Database\Factories\SyllabusTopicFactory;
@@ -30,12 +31,13 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property string      $name
  * @property TrainingMode   $kind
  * @property bool        $in_season   In scope for the current season — the coverage denominator
+ * @property Belt|null   $from_belt   The grade it belongs to the programme from (#1861); null for everyone
  * @property int         $sort_order
  * @property Carbon      $created_at
  * @property Carbon      $updated_at
  * @property Carbon|null $deleted_at
  */
-#[Fillable(['academy_id', 'parent_id', 'name', 'kind', 'in_season', 'sort_order'])]
+#[Fillable(['academy_id', 'parent_id', 'name', 'kind', 'in_season', 'from_belt', 'sort_order'])]
 class SyllabusTopic extends Model
 {
     /** @use HasFactory<SyllabusTopicFactory> */
@@ -85,6 +87,26 @@ class SyllabusTopic extends Model
     }
 
     /**
+     * What a class in `$mode` could be told to teach: in season, a technique
+     * and not a position, of a kind the mode admits
+     * ({@see TrainingMode::admittedTopicModes()}). Living rows only, through
+     * the soft-delete scope. The one definition the suggestions (#1566) and
+     * tonight's room (#1860) share, so the two can never disagree about scope.
+     *
+     * @param  Builder<SyllabusTopic>  $query
+     * @return Builder<SyllabusTopic>
+     */
+    public function scopeTeachableIn(Builder $query, TrainingMode $mode): Builder
+    {
+        $admitted = $mode->admittedTopicModes();
+
+        return $query
+            ->where('in_season', true)
+            ->whereNotNull('parent_id')
+            ->when($admitted !== null, static fn (Builder $q) => $q->whereIn('kind', $admitted));
+    }
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array
@@ -93,6 +115,7 @@ class SyllabusTopic extends Model
             'in_season' => 'boolean',
             'sort_order' => 'integer',
             'kind' => TrainingMode::class,
+            'from_belt' => Belt::class,
         ];
     }
 }

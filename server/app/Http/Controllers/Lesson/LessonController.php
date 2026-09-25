@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Lesson;
 
 use App\Actions\Lesson\RecentLessonTopicsAction;
+use App\Actions\Lesson\RoomGapsAction;
 use App\Actions\Lesson\SetLessonNotesAction;
 use App\Actions\Lesson\SetLessonTopicsAction;
 use App\Actions\Lesson\SuggestLessonTopicsAction;
 use App\Authorization\Capability;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Lesson\RoomGapsRequest;
 use App\Http\Requests\Lesson\SetLessonNotesRequest;
 use App\Http\Requests\Lesson\SetLessonTopicsRequest;
 use App\Http\Requests\Lesson\ShowLessonRequest;
@@ -36,6 +38,7 @@ class LessonController extends Controller
         private readonly SetLessonNotesAction $setNotes,
         private readonly RecentLessonTopicsAction $recentTopics,
         private readonly SuggestLessonTopicsAction $suggestTopics,
+        private readonly RoomGapsAction $roomGaps,
     ) {
     }
 
@@ -110,6 +113,27 @@ class LessonController extends Controller
 
         return response()->json([
             'data' => $this->suggestTopics->execute($academy, $request->academyClass(), $request->limit()),
+        ]);
+    }
+
+    /**
+     * Tonight, for the people on the mat (#1860): what most of the room
+     * missed, of what the academy has already taught this season.
+     */
+    public function roomGaps(RoomGapsRequest $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+        $academy = $user->activeAcademy();
+
+        // Unreachable — the FormRequest denies first — and answered the way
+        // `suggestions()` answers it, so the two cannot drift apart.
+        if ($academy === null) {
+            return response()->json(['message' => 'Forbidden.'], 403);
+        }
+
+        return response()->json([
+            'data' => $this->roomGaps->execute($academy, $request->academyClass(), $request->heldOn()),
         ]);
     }
 

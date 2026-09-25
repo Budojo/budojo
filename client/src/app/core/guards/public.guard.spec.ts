@@ -39,11 +39,11 @@ describe('publicGuard (#330)', () => {
     expect(result).toBe(true);
   });
 
-  it('redirects an authenticated visitor to /dashboard/athletes', () => {
+  it('redirects an authenticated visitor to /dashboard, whose redirect picks home (#1643)', () => {
     const result = runGuard(true) as UrlTree;
     expect(result).toBeInstanceOf(UrlTree);
     const router = TestBed.inject(Router);
-    expect(router.serializeUrl(result)).toBe('/dashboard/athletes');
+    expect(router.serializeUrl(result)).toBe('/dashboard');
   });
 });
 
@@ -78,9 +78,9 @@ describe('publicGuard — the desktop bypass, removed (#1497)', () => {
     expect(runGuard(false, false)).toBe(true);
   });
 
-  it('still prefers the roster when the desktop user is signed in', () => {
+  it('sends a signed-in desktop relaunch home too, not to the roster (#1643)', () => {
     const result = runGuard(true, true) as UrlTree;
 
-    expect(TestBed.inject(Router).serializeUrl(result)).toBe('/dashboard/athletes');
+    expect(TestBed.inject(Router).serializeUrl(result)).toBe('/dashboard');
   });
 });
