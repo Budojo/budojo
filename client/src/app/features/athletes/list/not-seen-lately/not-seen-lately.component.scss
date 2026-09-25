@@ -1,0 +1,164 @@
+:host {
+  display: block;
+}
+
+// One hairline-bordered block above the roster, not a card on a card: it is
+// part of the page, like the toolbar above it.
+.not-seen {
+  border: 1px solid var(--p-content-border-color);
+  border-radius: var(--p-border-radius-lg);
+  background: var(--p-content-background);
+}
+
+.not-seen__header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 3rem;
+  padding: 0.5rem 1rem;
+  border: 0;
+  background: transparent;
+  color: var(--p-text-color);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  border-radius: var(--p-border-radius-lg);
+
+  &:hover {
+    background: var(--p-content-hover-background);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--p-focus-ring-color);
+    outline-offset: -2px;
+  }
+}
+
+.not-seen__icon,
+.not-seen__chevron {
+  color: var(--p-text-muted-color);
+}
+
+.not-seen__title {
+  font-weight: 600;
+}
+
+.not-seen__count {
+  color: var(--p-text-muted-color);
+  font-variant-numeric: tabular-nums;
+}
+
+.not-seen__chevron {
+  margin-left: auto;
+}
+
+.not-seen__description {
+  margin: 0;
+  padding: 0 1rem 0.5rem;
+  font-size: 0.875rem;
+  color: var(--p-text-muted-color);
+}
+
+.not-seen__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+// Mobile first: who and the two ways to reach them on one line, the reason
+// underneath. The identity's belt spine is absolutely positioned, so the row
+// is its containing block and keeps a left gutter for it.
+.not-seen__row {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'who actions'
+    'why why';
+  align-items: center;
+  gap: 0.5rem 1rem;
+  padding: 0.5rem 1rem 0.5rem 1.5rem;
+  border-top: 1px solid var(--p-content-border-color);
+
+  @media (min-width: 768px) {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr) auto;
+    grid-template-areas: 'who why actions';
+  }
+}
+
+.not-seen__who {
+  grid-area: who;
+  min-width: 0;
+}
+
+.not-seen__why {
+  grid-area: why;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.not-seen__reason {
+  font-size: 0.875rem;
+  color: var(--p-text-muted-color);
+  font-variant-numeric: tabular-nums;
+}
+
+.not-seen__actions {
+  grid-area: actions;
+  display: flex;
+  align-items: center;
+}
+
+// 48 × 48 and drawn like the two contact actions beside it (canon § Fitts).
+.not-seen__more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  border: 0;
+  border-radius: var(--p-border-radius-md);
+  background: transparent;
+  color: var(--p-text-color);
+  cursor: pointer;
+  transition: background-color var(--budojo-motion-fast) var(--budojo-motion-decelerate);
+
+  &:hover {
+    background: var(--p-content-hover-background);
+  }
+
+  &:active {
+    background: var(--p-highlight-background);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--p-focus-ring-color);
+    outline-offset: -2px;
+  }
+}
+
+.not-seen__empty {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  color: var(--p-text-muted-color);
+
+  .not-seen__title {
+    color: var(--p-text-color);
+  }
+}
+
+.not-seen__link {
+  color: var(--p-primary-600);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  font-weight: 500;
+}
