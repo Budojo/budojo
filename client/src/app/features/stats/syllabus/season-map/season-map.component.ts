@@ -83,6 +83,15 @@ function planningToday(calendar: SyllabusCalendar): string {
   return local > calendar.today ? local : calendar.today;
 }
 
+/**
+ * The last day a plan can land on: `to`, or the season's end if that comes
+ * first. The map draws the season's last week whole, so a season closing on
+ * a Tuesday still shows that week's Wednesday — which belongs to the next one.
+ */
+function planningUntil(calendar: SyllabusCalendar, to: string): string {
+  return to < calendar.season.end ? to : calendar.season.end;
+}
+
 /** Below this the panel is a bottom sheet; the popover is for a wide window. */
 const WIDE_QUERY = '(min-width: 768px)';
 
@@ -303,7 +312,12 @@ export class SeasonMapComponent {
       groups: [{ week: cell.week, lessons: cellLessons(calendar, row.id, cell.week) }],
       plan:
         cell.ahead && this.canPlan(row)
-          ? planOptions(this.classes(), row.kind, from, addDays(cell.week, 6))
+          ? planOptions(
+              this.classes(),
+              row.kind,
+              from,
+              planningUntil(calendar, addDays(cell.week, 6)),
+            )
           : null,
     });
   }
@@ -324,7 +338,12 @@ export class SeasonMapComponent {
       name: row.name,
       groups: positionSeason(calendar, row.id),
       plan: this.canPlan(row)
-        ? planOptions(this.classes(), row.kind, today, addDays(today, SEASON_PLAN_DAYS))
+        ? planOptions(
+            this.classes(),
+            row.kind,
+            today,
+            planningUntil(calendar, addDays(today, SEASON_PLAN_DAYS)),
+          )
         : null,
     });
   }
