@@ -111,10 +111,11 @@ function setup(classes: AcademyClass[] = CLASSES) {
 
   const fixture = TestBed.createComponent(SeasonMapComponent);
   fixture.componentRef.setInput('positions', POSITIONS);
+  // The timetable comes from the host (#1656): the report reads it once for
+  // both planning views, so the map never asks for its own.
+  fixture.componentRef.setInput('classes', classes);
   const httpMock = TestBed.inject(HttpTestingController);
   fixture.detectChanges();
-  // The timetable, read once, for what a week ahead can be planned into.
-  httpMock.expectOne(CLASSES_URL).flush({ data: classes });
   return { fixture, component: fixture.componentInstance, httpMock };
 }
 
@@ -312,6 +313,13 @@ describe('SeasonMapComponent (#1858)', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.querySelector('[data-cy="season-map-error"]')).toBeNull();
+  });
+
+  it('plans from the timetable its host hands it, and never reads one itself', () => {
+    const { httpMock } = setup();
+    flush(httpMock);
+
+    httpMock.expectNone(CLASSES_URL);
   });
 
   describe('planning ahead (#1859)', () => {

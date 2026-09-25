@@ -5,6 +5,7 @@ import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { Router, provideRouter } from '@angular/router';
+import { MessageService } from 'primeng/api';
 import { AcademyClass } from '../../../core/services/academy-class.service';
 import type { Lesson } from '../../../core/services/lesson.service';
 import { CoveragePosition, SyllabusCoverage } from '../../../core/services/stats.service';
@@ -24,6 +25,7 @@ class SeasonMapStub {
   readonly positions = input<readonly CoveragePosition[]>([]);
   readonly seasonsBack = input<number>(0);
   readonly kind = input<TrainingMode | null>(null);
+  readonly classes = input<readonly AcademyClass[]>([]);
   readonly refreshWeeks = vi.fn();
 }
 
@@ -728,5 +730,57 @@ describe('StatsSyllabusComponent — plan what was never taught (#1656)', () => 
 
     expect(planButton(fixture, 31)).toBeNull();
     expect(planButton(fixture, 32)).toBeNull();
+  });
+});
+
+describe('StatsSyllabusComponent — one timetable for the page (#1656)', () => {
+  afterEach(() => TestBed.inject(HttpTestingController).verify());
+
+  it('reads the timetable once, and the season map plans from that same one', () => {
+    // The real map this time: the point is that it does not read its own.
+    TestBed.configureTestingModule({
+      imports: [StatsSyllabusComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        provideNoopAnimations(),
+        MessageService,
+        ...provideI18nTesting(),
+      ],
+    });
+    TestBed.overrideComponent(StatsSyllabusComponent, {
+      remove: { imports: [LessonSheetComponent] },
+      add: { imports: [LessonSheetStub] },
+    });
+
+    const fixture = TestBed.createComponent(StatsSyllabusComponent);
+    const httpMock = TestBed.inject(HttpTestingController);
+    fixture.detectChanges();
+    flush(httpMock);
+    fixture.detectChanges();
+    httpMock
+      .expectOne((r) => r.url === '/api/v1/stats/syllabus/calendar')
+      .flush({
+        data: {
+          season: { start: '2026-09-01', end: '2027-08-31', label: '2026/27' },
+          kind: null,
+          today: '2026-10-14',
+          weeks: [],
+          positions: [],
+          lessons: [],
+        },
+      });
+    fixture.detectChanges();
+
+    // Exactly one read, for the list and the map alike.
+    const reads = httpMock.match(CLASSES_URL);
+    expect(reads).toHaveLength(1);
+    reads[0].flush({ data: CLASSES });
+    fixture.detectChanges();
+
+    const map = fixture.debugElement.query(By.directive(SeasonMapComponent))
+      .componentInstance as SeasonMapComponent;
+    expect(map.classes()).toEqual(CLASSES);
   });
 });

@@ -119,8 +119,12 @@ export class StatsSyllabusComponent {
   protected readonly exposureTopicId = signal<number | null>(null);
   protected readonly exposureOpen = signal<boolean>(false);
 
-  /** The timetable, for where a never-taught technique can be planned (#1656). */
-  private readonly classes = signal<readonly AcademyClass[]>([]);
+  /**
+   * The timetable, for where a never-taught technique can be planned (#1656).
+   * Read once for the page and handed to the season map, which plans from
+   * the same one.
+   */
+  protected readonly classes = signal<readonly AcademyClass[]>([]);
   /** The technique being planned, and whether its lesson sheet is open. */
   protected readonly planning = signal<PlanningTopic | null>(null);
   protected readonly planOpen = signal<boolean>(false);

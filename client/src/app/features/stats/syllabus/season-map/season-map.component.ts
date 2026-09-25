@@ -19,7 +19,7 @@ import { ButtonModule } from 'primeng/button';
 import { DrawerModule } from 'primeng/drawer';
 import { Popover, PopoverModule } from 'primeng/popover';
 import { SkeletonModule } from 'primeng/skeleton';
-import { AcademyClass, AcademyClassService } from '../../../../core/services/academy-class.service';
+import type { AcademyClass } from '../../../../core/services/academy-class.service';
 import { TrainingMode } from '../../../../core/services/academy.service';
 import { LanguageService } from '../../../../core/services/language.service';
 import {
@@ -131,7 +131,6 @@ const STATE_KEYS: Record<Exclude<CalendarLessonState, 'held'>, string> = {
 })
 export class SeasonMapComponent {
   private readonly stats = inject(StatsService);
-  private readonly classService = inject(AcademyClassService);
   private readonly translate = inject(TranslateService);
   private readonly languageService = inject(LanguageService);
   private readonly injector = inject(Injector);
@@ -142,6 +141,12 @@ export class SeasonMapComponent {
   readonly seasonsBack = input<number>(0);
   /** The report's filter, or null for the whole programme. */
   readonly kind = input<TrainingMode | null>(null);
+  /**
+   * The timetable, for what a future week can be planned into (#1859). The
+   * host reads it once for the whole page — the report plans from it too
+   * (#1656) — so the two planning views agree and the page asks once.
+   */
+  readonly classes = input<readonly AcademyClass[]>([]);
 
   protected readonly calendar = signal<SyllabusCalendar | null>(null);
   protected readonly failed = signal<boolean>(false);
@@ -151,8 +156,6 @@ export class SeasonMapComponent {
   protected readonly drawerOpen = signal<boolean>(false);
   /** Wide enough for a popover beside the map; below that, a bottom sheet. */
   protected readonly wide = signal<boolean>(true);
-  /** The timetable, for what a future week can be planned into (#1859). */
-  protected readonly classes = signal<readonly AcademyClass[]>([]);
   /** The lesson being planned from the map, and whether its sheet is open. */
   protected readonly planning = signal<PlanningSlot | null>(null);
   protected readonly planSheetOpen = signal<boolean>(false);
@@ -178,14 +181,6 @@ export class SeasonMapComponent {
 
   constructor() {
     this.watchWidth();
-
-    // Once: the timetable does not move with the season or the filter. A
-    // failure offers no planning rather than a broken panel.
-    const classes = this.classService.list().subscribe({
-      next: (list) => this.classes.set(list),
-      error: () => this.classes.set([]),
-    });
-    this.destroyRef.onDestroy(() => classes.unsubscribe());
 
     // Keyed on the report's own controls, cancelling the previous read: two
     // quick presses on "previous season" must not paint a stale season.
