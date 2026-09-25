@@ -57,9 +57,7 @@ import { EmptyStateComponent } from '../../../shared/components/empty-state/empt
 import { IconButtonComponent } from '../../../shared/components/icon-button/icon-button.component';
 import { SortHeaderComponent } from '../../../shared/components/sort-header/sort-header.component';
 import { BeltSortButtonComponent } from '../../../shared/components/belt-sort-button/belt-sort-button.component';
-import { OnboardingChecklistComponent } from '../../onboarding/onboarding-checklist.component';
 import { NotSeenLatelyComponent } from './not-seen-lately/not-seen-lately.component';
-import { OnboardingService } from '../../../core/services/onboarding.service';
 import { academyChargesAFee } from '../../../shared/utils/academy-fee';
 import {
   countScheduledTrainingDays,
@@ -118,7 +116,6 @@ interface SelectOption<T extends string> {
     AthleteIdentityComponent,
     UserAvatarComponent,
     PaidBadgeComponent,
-    OnboardingChecklistComponent,
     NotSeenLatelyComponent,
     PageHeaderComponent,
     ErrorStateComponent,
@@ -151,7 +148,6 @@ export class AthletesListComponent implements OnInit {
   private readonly translate = inject(TranslateService);
   private readonly beltLadder = inject(BeltLadderService);
   private readonly languageService = inject(LanguageService);
-  private readonly onboardingService = inject(OnboardingService);
   private readonly documentService = inject(DocumentService);
 
   readonly athletes = signal<Athlete[]>([]);
@@ -482,17 +478,7 @@ export class AthletesListComponent implements OnInit {
       this.resetPage();
       this.load();
     });
-    // Lazy-load onboarding state — only when the user hasn't already
-    // dismissed/completed the tour. The component itself is the
-    // visibility gate; a single HTTP call hydrates the state.
     this.loadAlerts();
-    if (!this.onboardingService.loaded()) {
-      this.onboardingService.load().subscribe({
-        // Silent on error — the checklist just won't render, which is
-        // the no-op default anyway.
-        error: () => {},
-      });
-    }
   }
 
   onBeltChange(belt: Belt | ''): void {

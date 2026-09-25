@@ -3168,8 +3168,6 @@
       "noClass": "Stasera non c'è lezione.",
       "next": "La prossima: {{day}} alle {{time}}, {{name}}.",
       "nextUntimed": "La prossima: {{day}}, {{name}}.",
-      "noTimetable": "Non c'è ancora un orario, quindi stasera non ha niente da mostrare.",
-      "setUpTimetable": "Imposta l'orario",
       "error": "Non riesco a caricare l'orario."
     },
     "watch": {
@@ -3205,7 +3203,6 @@
       "programme": "Programma della stagione",
       "programmeValue": "{{percentage}}% · {{covered}} di {{total}}",
       "joined": "Nuovi questa settimana",
-      "joinedNone": "Nessun nuovo iscritto questa settimana.",
       "joinedError": "Non riesco a caricare i nuovi iscritti."
     },
     "birthdays": {

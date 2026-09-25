@@ -2280,6 +2280,59 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
   screen('05-today-backup-stale', '/dashboard/today', '[data-cy="today-watch-backup"]', {
     folder: { ...FOLDER_STATE, lastCopyAt: '2026-08-31T01:00:20.000Z' },
   });
+  // Day one (#1755): no timetable, nobody on the books, no register, no
+  // programme, and the tour not yet dismissed. Every card waits until it has
+  // something to say, so the page is the checklist — and the one thing a
+  // fresh install really does have to check: no copy leaves this computer.
+  screen('05-today-first-run', '/dashboard/today', '[data-cy="onboarding-checklist"]', {
+    folder: { ...FOLDER_STATE, folder: null, lastCopyAt: null },
+    stubs: () => {
+      cy.intercept('GET', '/api/v1/academy', {
+        statusCode: 200,
+        body: {
+          data: { ...ACADEMY, classes_count: 0, syllabus_topics_count: 0, fee_tier_count: 0 },
+        },
+      });
+      cy.intercept('GET', '/api/v1/academy/classes', NO_DATA);
+      cy.intercept('GET', '/api/v1/athletes*', EMPTY_PAGE);
+      cy.intercept('GET', '/api/v1/documents/expiring*', {
+        statusCode: 200,
+        body: { data: [], missing_medical_certificate: [] },
+      });
+      cy.intercept('GET', '/api/v1/stats/attendance/daily*', NO_DATA);
+      cy.intercept('GET', '/api/v1/stats/syllabus/coverage*', {
+        statusCode: 200,
+        body: {
+          data: {
+            ...SYLLABUS_COVERAGE,
+            totals: { in_scope: 0, covered: 0, thin: 0, missing: 0, percentage: 0 },
+            positions: [],
+            missing: [],
+            taught: [],
+            timeline: [],
+          },
+        },
+      });
+      cy.intercept('GET', '/api/v1/me/onboarding', {
+        statusCode: 200,
+        body: {
+          data: {
+            dismissed_at: null,
+            completed_steps: [],
+            available_steps: [
+              'add_athlete',
+              'set_timetable',
+              'write_syllabus',
+              'log_attendance',
+              'mark_payment',
+              'upload_document',
+              'view_stats',
+            ],
+          },
+        },
+      });
+    },
+  });
   screen('05-today-lesson-sheet', '/dashboard/today', '[data-cy="today-class-1"]', {
     act: () => {
       press('[data-cy="today-class-plan-1"] button');
@@ -2409,7 +2462,9 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       cy.get('[data-cy="athletes-alerts-panel"]').should('be.visible');
     },
   });
-  screen('20-athletes-first-run', '/dashboard/athletes', '[data-cy="onboarding-checklist"]', {
+  // The empty roster's own first-run state. The getting-started checklist is
+  // not here any more: it lives on Today (#1755), shot as 05-today-first-run.
+  screen('20-athletes-first-run', '/dashboard/athletes', '[data-cy="athletes-empty"]', {
     stubs: () => {
       cy.intercept('GET', '/api/v1/athletes*', EMPTY_PAGE);
       cy.intercept('GET', '/api/v1/documents/expiring*', {
@@ -2420,22 +2475,6 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
         statusCode: 200,
         body: {
           data: { ...ACADEMY, classes_count: 0, syllabus_topics_count: 0, fee_tier_count: 0 },
-        },
-      });
-      cy.intercept('GET', '/api/v1/me/onboarding', {
-        statusCode: 200,
-        body: {
-          data: {
-            dismissed_at: null,
-            completed_steps: [],
-            available_steps: [
-              'add_athlete',
-              'log_attendance',
-              'mark_payment',
-              'upload_document',
-              'view_stats',
-            ],
-          },
         },
       });
     },

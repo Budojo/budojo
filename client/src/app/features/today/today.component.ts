@@ -21,6 +21,7 @@ import { BackupFolderService } from '../../core/services/backup-folder.service';
 import { DocumentService, ExpiringDocumentsResponse } from '../../core/services/document.service';
 import { DriveSyncService } from '../../core/services/drive-sync.service';
 import { LanguageService } from '../../core/services/language.service';
+import { OnboardingService } from '../../core/services/onboarding.service';
 import {
   Lesson,
   LessonService,
@@ -42,6 +43,7 @@ import { driveErrorKey, folderErrorKey } from '../../shared/utils/backup-errors'
 import { localeFor } from '../../shared/utils/locale';
 import { monthKey } from '../../shared/utils/months';
 import { LessonSheetComponent } from '../lessons/lesson-sheet/lesson-sheet.component';
+import { OnboardingChecklistComponent } from '../onboarding/onboarding-checklist.component';
 import { Birthday, upcomingBirthdays } from './today-birthdays';
 import {
   isoDay,
@@ -124,6 +126,7 @@ interface DocumentsHealth {
     ContactActionsComponent,
     LessonSheetComponent,
     LocaleDatePipe,
+    OnboardingChecklistComponent,
     PageHeaderComponent,
     RouterLink,
     SkeletonModule,
@@ -141,6 +144,7 @@ export class TodayComponent implements OnInit {
   private readonly driveSync = inject(DriveSyncService);
   private readonly languageService = inject(LanguageService);
   private readonly lessonService = inject(LessonService);
+  private readonly onboarding = inject(OnboardingService);
   private readonly statsService = inject(StatsService);
   private readonly trainingModes = inject(TrainingModesService);
   private readonly translate = inject(TranslateService);
@@ -179,6 +183,14 @@ export class TodayComponent implements OnInit {
     const c = this.classes();
     return c.state === 'ready' && c.value.length > 0;
   });
+  /**
+   * Known to have no timetable: then neither "Stasera" nor "Cosa insegnare"
+   * is drawn (#1755). Not while it loads, and not after it failed — those
+   * are states of the card, and the card says them.
+   */
+  protected readonly noTimetable = computed<boolean>(
+    () => this.classes().state === 'ready' && !this.hasTimetable(),
+  );
   /** Tonight's lessons by class id; `null` once asked and none exists yet. */
   protected readonly lessons = signal<ReadonlyMap<number, Lesson | null>>(new Map());
 
@@ -264,6 +276,13 @@ export class TodayComponent implements OnInit {
       this.watchUnpaid()?.state !== 'error' &&
       this.watchRows().length === 0,
   );
+  /**
+   * "Nothing to check" is news about people: with nobody on the books it is
+   * true of every academy, and the card is left out rather than said (#1755).
+   */
+  protected readonly watchShown = computed<boolean>(
+    () => !(this.watchAllClear() && this.rosterSize() === 0),
+  );
 
   protected readonly watchRows = computed<readonly WatchRow[]>(() => {
     this.languageService.currentLang();
@@ -344,9 +363,29 @@ export class TodayComponent implements OnInit {
 
   // ── Questa settimana ───────────────────────────────────────────────────
 
+  /**
+   * Presences since Monday; null until answered, after a failure, and for an
+   * academy that has taken no register in the stats window — a zero there
+   * is not news (#1755). Once registers are being taken, zero is shown.
+   */
   protected readonly presences = signal<number | null>(null);
   protected readonly coverage = signal<SyllabusCoverage | null>(null);
   protected readonly joined = signal<Load<readonly Athlete[]>>(LOADING);
+  /** Everyone on the books, from the joiners' page; null until it answers. */
+  private readonly rosterSize = signal<number | null>(null);
+  /** Who joined this week; loading and failing are said, an empty week is not. */
+  protected readonly joinedShown = computed<boolean>(() => {
+    const j = this.joined();
+    return j.state !== 'ready' || j.value.length > 0;
+  });
+  /** The card is drawn only with a line in it: no heading over nothing (#1755). */
+  protected readonly weekShown = computed<boolean>(
+    () =>
+      this.presences() !== null ||
+      this.notYetPaid() !== null ||
+      (this.coverage()?.totals.in_scope ?? 0) > 0 ||
+      this.joinedShown(),
+  );
 
   // ── Compleanni ─────────────────────────────────────────────────────────
 
@@ -440,6 +479,15 @@ export class TodayComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    // The getting-started checklist is drawn here, the first screen (#1755),
+    // and gates itself on this state. Once per session: a dismissal or a
+    // finished tour does not change overnight.
+    if (!this.onboarding.loaded()) {
+      this.onboarding.load().subscribe({
+        // Silent: without its state the checklist simply does not render.
+        error: () => undefined,
+      });
+    }
     this.loadAll();
 
     // Back from a sleep, or from another window, on a different day: re-read
@@ -488,6 +536,7 @@ export class TodayComponent implements OnInit {
     this.presences.set(null);
     this.coverage.set(null);
     this.joined.set(LOADING);
+    this.rosterSize.set(null);
     this.birthdays.set([]);
     // The bridge is asked again too, and until it answers the card cannot
     // say "nothing to check": the night may have aged the last copy past
@@ -682,8 +731,10 @@ export class TodayComponent implements OnInit {
       .attendanceDaily(3)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
+        // Only days with a register come back: none at all is an academy
+        // that has not started taking them, not a quiet week.
         next: this.current((points: readonly DailyAttendancePoint[]) =>
-          this.presences.set(presencesSince(points, this.mondayIso())),
+          this.presences.set(points.length === 0 ? null : presencesSince(points, this.mondayIso())),
         ),
         error: () => undefined,
       });
@@ -705,12 +756,13 @@ export class TodayComponent implements OnInit {
       .list({ sortBy: 'joined_at', sortOrder: 'desc' })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: this.current((res: AthleteListResponse) =>
+        next: this.current((res: AthleteListResponse) => {
+          this.rosterSize.set(res.meta.total);
           this.joined.set({
             state: 'ready',
             value: joinedSince(res.data, this.mondayIso(), this.todayIso()),
-          }),
-        ),
+          });
+        }),
         error: this.current(() => this.joined.set(FAILED)),
       });
   }
