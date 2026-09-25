@@ -5,15 +5,14 @@ declare(strict_types=1);
 namespace App\Http\Requests\Syllabus;
 
 use App\Authorization\Capability;
-use App\Enums\Belt;
 use App\Enums\MartialArt;
-use App\Enums\TrainingMode;
 use App\Http\Requests\Concerns\AuthorizesAcademyCapability;
 use App\Http\Requests\Concerns\ValidatesSyllabusTopic;
 use App\Models\SyllabusTopic;
 use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Support\Arr;
 use Illuminate\Validation\Rule;
 
 class StoreSyllabusTopicRequest extends FormRequest
@@ -75,45 +74,27 @@ class StoreSyllabusTopicRequest extends FormRequest
     }
 
     /**
-     * The validated payload, typed. The rules above already guarantee these
-     * shapes; saying so here keeps the narrowing at the boundary rather than
-     * in the controller, which should be reading a topic, not a `mixed`.
-     */
-    public function topicName(): string
-    {
-        $name = $this->validated('name');
-
-        return \is_string($name) ? $name : '';
-    }
-
-    public function topicKind(): TrainingMode
-    {
-        $kind = $this->validated('kind');
-
-        return $kind instanceof TrainingMode ? $kind : TrainingMode::from(\is_string($kind) ? $kind : 'both');
-    }
-
-    public function inSeason(): bool
-    {
-        return (bool) ($this->validated('in_season') ?? true);
-    }
-
-    /**
-     * The grade the new topic belongs to the programme from (#1861).
+     * The new topic's own fields, with the defaults a topic starts from — the
+     * same shape `UpdateSyllabusTopicAction` takes, so the two writes read
+     * alike. `parent_id` is not among them: the parent is resolved on its own.
      *
-     * Not sent, a technique takes its position's — a default for what is added
-     * under a position, the rule `kind` follows in the dialog. Sent as null,
-     * it is for everyone, whatever the position says.
+     * - `in_season` absent means in season: a new topic is part of this year.
+     * - `from_belt` absent on a technique takes its position's (#1861) — a
+     *   default for what is added under a position, the rule `kind` follows
+     *   in the dialog. Sent as null, it is for everyone, whatever the
+     *   position says.
+     *
+     * @return array<string, mixed>
      */
-    public function fromBelt(): ?Belt
+    public function topicAttributes(): array
     {
-        if (! $this->has('from_belt')) {
-            return $this->parent()?->from_belt;
-        }
+        $attributes = Arr::except($this->validated(), ['parent_id']);
 
-        $belt = $this->validated('from_belt');
-
-        return \is_string($belt) ? Belt::tryFrom($belt) : null;
+        return [
+            'in_season' => true,
+            'from_belt' => $this->parent()?->from_belt,
+            ...$attributes,
+        ];
     }
 
     /** The position the new topic goes under, resolved after validation. */

@@ -74,6 +74,30 @@
     color: var(--p-text-muted-color);
   }
 
+  // How it is taught here (#1862): the programme's own words, line breaks
+  // kept, and the reference video as a link that leaves the app. It sits
+  // before the report's own sections, so it takes their gap below it.
+  &__notebook {
+    margin-bottom: 1.5rem;
+  }
+
+  &__notes {
+    margin: 0;
+    font-size: 0.875rem;
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+  }
+
+  &__video {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    align-self: flex-start;
+    min-height: 3rem;
+    font-size: 0.875rem;
+    color: var(--p-primary-color);
+  }
+
   // The report's three strengths of one hue (#1550): the same legend the
   // coverage tally draws, so the drill-down reads as that page, opened.
   &__dot {

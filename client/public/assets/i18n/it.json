@@ -1761,7 +1761,13 @@
         "orderHint": "Lo spostamento vale subito; Salva serve per il nome, per «Si allena» e per la cintura.",
         "close": "Chiudi",
         "fromBelt": "Nel programma dalla cintura",
-        "fromBeltHint": "Previsto per questa cintura e per tutte quelle sopra. Lascialo per tutti quando la cintura non conta."
+        "fromBeltHint": "Previsto per questa cintura e per tutte quelle sopra. Lascialo per tutti quando la cintura non conta.",
+        "notes": "Come si insegna qui",
+        "notesPlaceholder": "Parti dalla S-mount; presa sul gomito lontano…",
+        "notesHint": "Facoltativo. Chi la insegna lo ritrova nella scheda della lezione.",
+        "video": "Video di riferimento",
+        "videoHint": "Facoltativo. Un link che inizia con https://: si apre nel browser.",
+        "videoInvalid": "Incolla un link che inizia con https://."
       },
       "fromBelt": "Dalla",
       "forEveryone": "Per tutti",
@@ -2003,6 +2009,13 @@
           "thin": "Fatto una volta: {{date}}",
           "stale": "Ultima volta: {{date}}"
         }
+      },
+      "detail": {
+        "open": "Come si insegna qui {{name}}",
+        "video": "Guarda il video di riferimento",
+        "lastEvening": "Note della sera del {{date}} ({{class}}), l'ultima in cui l'avete fatta",
+        "lastEveningLoading": "Cerco l'ultima sera in cui l'avete fatta…",
+        "nothing": "Ancora nessuna nota su questa tecnica. Scrivile in Accademia → Programma."
       }
     }
   },
@@ -2978,6 +2991,7 @@
       "exposure": {
         "title": "Chi l'ha vista",
         "openPrefix": "Chi l'ha vista:",
+        "notebook": "Come si insegna qui",
         "lessonsOne": "Fatta in {{count}} lezione questa stagione",
         "lessonsOther": "Fatta in {{count}} lezioni questa stagione",
         "headcountOne": "{{count}} persona",

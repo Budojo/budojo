@@ -20,6 +20,7 @@ import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
 import { SkeletonModule } from 'primeng/skeleton';
+import { TextareaModule } from 'primeng/textarea';
 import { Toast } from 'primeng/toast';
 import { Tooltip } from 'primeng/tooltip';
 import { finalize } from 'rxjs';
@@ -83,6 +84,7 @@ interface FilterMessage {
     DialogModule,
     InputTextModule,
     SelectModule,
+    TextareaModule,
     BeltBadgeComponent,
     ChoiceGridComponent,
     SkeletonModule,
@@ -138,6 +140,8 @@ export class SyllabusComponent {
   protected readonly expanded = signal<ReadonlySet<number>>(new Set());
 
   protected readonly nameError = signal<boolean>(false);
+  /** The link is not an `https://` one (#1862) — said at the field, not in a toast. */
+  protected readonly videoError = signal<boolean>(false);
 
   protected readonly form = this.fb.group({
     name: this.fb.control<string>('', {
@@ -150,6 +154,19 @@ export class SyllabusComponent {
     }),
     /** The grade it belongs to the programme from (#1861); null is for everyone. */
     fromBelt: this.fb.control<Belt | null>(null),
+    /** How it is taught here (#1862). */
+    notes: this.fb.control<string>('', {
+      nonNullable: true,
+      validators: [Validators.maxLength(2000)],
+    }),
+    /**
+     * The reference instructional (#1862). `https://` only, the server's rule:
+     * the link lands in an `href`, and this is the first place to say so.
+     */
+    videoUrl: this.fb.control<string>('', {
+      nonNullable: true,
+      validators: [Validators.maxLength(500), Validators.pattern(/^\s*(https:\/\/\S+)?\s*$/)],
+    }),
   });
 
   /**
@@ -469,6 +486,9 @@ export class SyllabusComponent {
     this.form.controls.name.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.nameError.set(false));
+    this.form.controls.videoUrl.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.videoError.set(false));
   }
 
   /**
@@ -527,8 +547,8 @@ export class SyllabusComponent {
     this.moved.set(false);
     this.editing.set(null);
     this.addingUnder.set(null);
-    this.form.reset({ name: '', kind: 'both', fromBelt: null });
-    this.nameError.set(false);
+    this.form.reset({ name: '', kind: 'both', fromBelt: null, notes: '', videoUrl: '' });
+    this.clearErrors();
     this.dialogOpen.set(true);
   }
 
@@ -539,8 +559,14 @@ export class SyllabusComponent {
     // A technique starts as its position is trained — a submission under
     // "Lapel guards" is a gi technique until someone says otherwise — and
     // from its position's belt, the same default (#1861).
-    this.form.reset({ name: '', kind: position.kind, fromBelt: position.from_belt });
-    this.nameError.set(false);
+    this.form.reset({
+      name: '',
+      kind: position.kind,
+      fromBelt: position.from_belt,
+      notes: '',
+      videoUrl: '',
+    });
+    this.clearErrors();
     this.dialogOpen.set(true);
     // Adding into a closed position would hide the result.
     // Open it in the model that survives the search, not the one the search
@@ -662,8 +688,14 @@ export class SyllabusComponent {
     this.moved.set(false);
     this.editing.set(topic);
     this.addingUnder.set(null);
-    this.form.reset({ name: topic.name, kind: topic.kind, fromBelt: topic.from_belt });
-    this.nameError.set(false);
+    this.form.reset({
+      name: topic.name,
+      kind: topic.kind,
+      fromBelt: topic.from_belt,
+      notes: topic.notes ?? '',
+      videoUrl: topic.video_url ?? '',
+    });
+    this.clearErrors();
     this.dialogOpen.set(true);
   }
 
@@ -671,22 +703,27 @@ export class SyllabusComponent {
     if (this.saving()) return;
     if (this.form.invalid) {
       this.nameError.set(this.form.controls.name.invalid);
+      this.videoError.set(this.form.controls.videoUrl.invalid);
       return;
     }
 
     const raw = this.form.getRawValue();
     const name = raw.name.trim();
     const current = this.editing();
+    // The same fields either way; an emptied box is "none", as the server
+    // stores it.
+    const fields = {
+      name,
+      kind: raw.kind,
+      from_belt: raw.fromBelt,
+      notes: raw.notes.trim() || null,
+      video_url: raw.videoUrl.trim() || null,
+    };
 
     const op$ =
       current === null
-        ? this.syllabus.create({
-            name,
-            kind: raw.kind,
-            parent_id: this.addingUnder()?.id ?? null,
-            from_belt: raw.fromBelt,
-          })
-        : this.syllabus.update(current.id, { name, kind: raw.kind, from_belt: raw.fromBelt });
+        ? this.syllabus.create({ ...fields, parent_id: this.addingUnder()?.id ?? null })
+        : this.syllabus.update(current.id, fields);
 
     this.saving.set(true);
     op$
@@ -701,17 +738,28 @@ export class SyllabusComponent {
           this.refreshAcademy();
           this.toast('success', 'academy.syllabus.toast.saved');
         },
-        // A name already taken among its siblings is the one failure the
-        // owner can act on, and it is the likeliest one on a list this long.
-        error: (err: { status?: number }) =>
-          err.status === 422
-            ? this.nameError.set(true)
-            : this.toast(
-                'error',
-                'academy.syllabus.toast.errorSummary',
-                'academy.syllabus.toast.errorDetail',
-              ),
+        // A name already taken among its siblings is the failure the owner
+        // is likeliest to meet on a list this long; a link the server refuses
+        // is the other one they can act on (#1862). Each is said at its field.
+        error: (err: { status?: number; error?: { errors?: Record<string, unknown> } }) => {
+          if (err.status !== 422) {
+            this.toast(
+              'error',
+              'academy.syllabus.toast.errorSummary',
+              'academy.syllabus.toast.errorDetail',
+            );
+            return;
+          }
+          const fields = Object.keys(err.error?.errors ?? {});
+          this.videoError.set(fields.includes('video_url'));
+          this.nameError.set(fields.length === 0 || fields.includes('name'));
+        },
       });
+  }
+
+  private clearErrors(): void {
+    this.nameError.set(false);
+    this.videoError.set(false);
   }
 
   protected confirmRemove(): void {

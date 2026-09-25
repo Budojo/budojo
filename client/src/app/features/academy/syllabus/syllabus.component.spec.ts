@@ -19,6 +19,8 @@ function topic(overrides: Partial<SyllabusTopic> & { id: number }): SyllabusTopi
     kind: 'both',
     in_season: true,
     from_belt: null,
+    notes: null,
+    video_url: null,
     sort_order: 0,
     ...overrides,
   };
@@ -268,6 +270,8 @@ describe('SyllabusComponent (#1563)', () => {
       kind: 'both',
       parent_id: null,
       from_belt: null,
+      notes: null,
+      video_url: null,
     });
     req.flush({ data: topic({ id: 3, name: 'Mount' }) });
 
@@ -299,6 +303,8 @@ describe('SyllabusComponent (#1563)', () => {
       kind: 'nogi',
       parent_id: 2,
       from_belt: null,
+      notes: null,
+      video_url: null,
     });
     req.flush({ data: topic({ id: 21, parent_id: 2, name: 'Saddle entry', kind: 'nogi' }) });
 
@@ -342,6 +348,8 @@ describe('SyllabusComponent (#1563)', () => {
       name: 'Closed guard',
       kind: 'both',
       fromBelt: null,
+      notes: '',
+      videoUrl: '',
     });
 
     component['form'].patchValue({ name: 'Guardia chiusa' });
@@ -349,7 +357,13 @@ describe('SyllabusComponent (#1563)', () => {
 
     const req = httpMock.expectOne(`${SYLLABUS_URL}/1`);
     expect(req.request.method).toBe('PATCH');
-    expect(req.request.body).toEqual({ name: 'Guardia chiusa', kind: 'both', from_belt: null });
+    expect(req.request.body).toEqual({
+      name: 'Guardia chiusa',
+      kind: 'both',
+      from_belt: null,
+      notes: null,
+      video_url: null,
+    });
     req.flush({ data: { ...CLOSED_GUARD, name: 'Guardia chiusa' } });
 
     flushTree(httpMock, [{ ...CLOSED_GUARD, name: 'Guardia chiusa' }]);
@@ -1121,6 +1135,8 @@ describe('SyllabusComponent — the programme by grade (#1861)', () => {
       kind: 'both',
       parent_id: 3,
       from_belt: 'purple',
+      notes: null,
+      video_url: null,
     });
     req.flush({ data: topic({ id: 32, parent_id: 3, name: 'Kneebar', from_belt: 'purple' }) });
     flushTree(httpMock, [GUARD, LEG_LOCKS]);
@@ -1137,7 +1153,13 @@ describe('SyllabusComponent — the programme by grade (#1861)', () => {
     component['submit']();
 
     const req = httpMock.expectOne(`${SYLLABUS_URL}/23`);
-    expect(req.request.body).toEqual({ name: 'Triangle', kind: 'both', from_belt: null });
+    expect(req.request.body).toEqual({
+      name: 'Triangle',
+      kind: 'both',
+      from_belt: null,
+      notes: null,
+      video_url: null,
+    });
     req.flush({ data: { ...TRIANGLE, from_belt: null } });
     flushTree(httpMock, [GUARD, LEG_LOCKS]);
     flushAcademy(httpMock, 4);
@@ -1295,5 +1317,81 @@ describe('SyllabusComponent — the programme by grade (#1861)', () => {
     const { fixture } = graded();
 
     expect(fixture.nativeElement.querySelector('[data-cy="syllabus-belt-filter"]')).not.toBeNull();
+  });
+});
+
+describe('SyllabusComponent — notes and a reference video (#1862)', () => {
+  afterEach(() => TestBed.inject(HttpTestingController).verify());
+
+  const NOTED = topic({
+    id: 11,
+    parent_id: 1,
+    name: 'Armbar',
+    notes: 'Start from the S-mount.',
+    video_url: 'https://vimeo.com/1',
+  });
+  const GUARD = topic({ id: 1, name: 'Closed guard', children: [NOTED] });
+
+  it('opens a topic with its notes and video, and sends them edited', () => {
+    const { fixture, component, httpMock } = setup();
+    flushTree(httpMock, [GUARD]);
+    fixture.detectChanges();
+
+    component['startEditing'](NOTED);
+    expect(component['form'].getRawValue()).toMatchObject({
+      notes: 'Start from the S-mount.',
+      videoUrl: 'https://vimeo.com/1',
+    });
+
+    component['form'].patchValue({ notes: '  Grip on the far elbow.  ', videoUrl: '' });
+    component['submit']();
+
+    // Trimmed, and an emptied box is "none" — the way the server stores it.
+    const req = httpMock.expectOne(`${SYLLABUS_URL}/11`);
+    expect(req.request.body).toMatchObject({ notes: 'Grip on the far elbow.', video_url: null });
+    req.flush({ data: { ...NOTED, notes: 'Grip on the far elbow.', video_url: null } });
+    flushTree(httpMock, [GUARD]);
+    flushAcademy(httpMock, 1);
+  });
+
+  it('refuses a link that is not https:// at the field, before any request', () => {
+    const { fixture, component, httpMock } = setup();
+    flushTree(httpMock, [GUARD]);
+    fixture.detectChanges();
+
+    component['startAddingTechnique'](GUARD);
+    component['form'].patchValue({ name: 'Kimura', videoUrl: 'http://youtube.com/x' });
+    component['submit']();
+    fixture.detectChanges();
+
+    httpMock.expectNone(SYLLABUS_URL);
+    expect(component['videoError']()).toBe(true);
+    expect(component['nameError']()).toBe(false);
+    expect(document.querySelector('[data-cy="syllabus-form-video-error"]')?.textContent).toContain(
+      'https://',
+    );
+
+    // Fixing the link is the fix: the message goes as soon as it starts.
+    component['form'].patchValue({ videoUrl: 'https://youtube.com/x' });
+    expect(component['videoError']()).toBe(false);
+  });
+
+  it('puts a server refusal of the link on the link, not on the name', () => {
+    const { fixture, component, httpMock } = setup();
+    flushTree(httpMock, [GUARD]);
+    fixture.detectChanges();
+
+    component['startEditing'](NOTED);
+    component['submit']();
+    httpMock
+      .expectOne(`${SYLLABUS_URL}/11`)
+      .flush(
+        { message: 'Invalid.', errors: { video_url: ['The video url must be https.'] } },
+        { status: 422, statusText: 'Unprocessable' },
+      );
+
+    expect(component['videoError']()).toBe(true);
+    expect(component['nameError']()).toBe(false);
+    expect(component['dialogOpen']()).toBe(true);
   });
 });
