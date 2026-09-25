@@ -23,6 +23,7 @@
  */
 import LADDERS from '../../src/test-utils/ladders.json';
 import TRAINING_MODES from '../../src/test-utils/training-modes.json';
+import { fixtureContradictions, stubBodyOf, stubLabel, type FixtureContext } from './fixture-rules';
 
 // ── The clock ────────────────────────────────────────────────────────────
 //
@@ -122,7 +123,18 @@ const CLASSES = [
 // ── The programme ────────────────────────────────────────────────────────
 
 function topic(id: number, parent_id: number | null, name: string, over: object = {}) {
-  return { id, parent_id, name, kind: 'both', in_season: true, sort_order: id, ...over };
+  return {
+    id,
+    parent_id,
+    name,
+    kind: 'both',
+    in_season: true,
+    from_belt: null,
+    notes: null,
+    video_url: null,
+    sort_order: id,
+    ...over,
+  };
 }
 
 const SYLLABUS = [
@@ -191,6 +203,50 @@ const SYLLABUS = [
     ],
   },
 ];
+
+/**
+ * The same programme with grades (#1861): Mount from white, the leg locks
+ * from purple (one of them added before the position was graded, so it still
+ * says "for everyone"), an arm triangle from blue. The rest is for everyone.
+ */
+const GRADED_SYLLABUS = SYLLABUS.map((position) => {
+  if (position.id === 3) {
+    return {
+      ...position,
+      from_belt: 'white',
+      children: position.children.map((t) =>
+        t.id === 33 ? { ...t, from_belt: 'blue' } : { ...t, from_belt: 'white' },
+      ),
+    };
+  }
+  if (position.id === 7) {
+    return {
+      ...position,
+      from_belt: 'purple',
+      children: position.children.map((t) => (t.id === 71 ? t : { ...t, from_belt: 'purple' })),
+    };
+  }
+  return position;
+});
+
+/** The armbar with how it is taught here written down (#1862). */
+const NOTED_SYLLABUS = SYLLABUS.map((position) =>
+  position.id === 1
+    ? {
+        ...position,
+        children: position.children.map((t) =>
+          t.id === 11
+            ? {
+                ...t,
+                notes:
+                  'Parti dalla S-mount; presa sul gomito lontano.\nPrima il ginocchio sulla testa, poi la gamba.',
+                video_url: 'https://www.youtube.com/watch?v=abc123',
+              }
+            : t,
+        ),
+      }
+    : position,
+);
 
 function lessonTopic(id: number, name: string, parent: string, kind = 'both') {
   return { id, name, kind, parent_id: Math.floor(id / 10), parent_name: parent, deleted: false };
@@ -269,10 +325,15 @@ function athlete(over: Record<string, unknown>) {
     active_carnet: null,
     attendance_month_count: 0,
     attendance_total_count: 0,
+    last_attended_on: null,
     ...over,
   };
 }
 
+// The Sessions cell's two lines (#1455): this month, then the SEASON (#1484),
+// each over the training days since the later of its start and joining. On
+// 14 September both the month and the 2026/27 season began on the 1st, so the
+// two counts are the same number. Lifetime totals here painted "143/8" (#1854).
 const ATHLETES = [
   athlete({
     id: 1,
@@ -290,7 +351,8 @@ const ATHLETES = [
     billing_period_months: 3,
     payment_coverage: 'quarterly',
     attendance_month_count: 5,
-    attendance_total_count: 143,
+    attendance_total_count: 5,
+    last_attended_on: '2026-09-11',
     active_carnet: { id: 7, code: 'A7K2', remaining_entries: 3, expires_at: '2027-01-10' },
   }),
   athlete({
@@ -303,7 +365,8 @@ const ATHLETES = [
     joined_at: '2025-10-06',
     fee_tier: FEE_TIERS[0],
     attendance_month_count: 4,
-    attendance_total_count: 61,
+    attendance_total_count: 4,
+    last_attended_on: '2026-09-10',
   }),
   athlete({
     id: 3,
@@ -319,7 +382,8 @@ const ATHLETES = [
     paid_current_month: false,
     monthly_fee_cents: null,
     attendance_month_count: 6,
-    attendance_total_count: 812,
+    attendance_total_count: 6,
+    last_attended_on: '2026-09-14',
   }),
   athlete({
     id: 4,
@@ -332,7 +396,8 @@ const ATHLETES = [
     payment_coverage: 'annual',
     billing_period_months: 12,
     attendance_month_count: 3,
-    attendance_total_count: 402,
+    attendance_total_count: 3,
+    last_attended_on: '2026-09-03',
   }),
   athlete({
     id: 5,
@@ -346,7 +411,8 @@ const ATHLETES = [
     payment_coverage: 'none',
     paid_current_month: false,
     attendance_month_count: 0,
-    attendance_total_count: 9,
+    attendance_total_count: 0,
+    last_attended_on: '2026-03-20',
   }),
   athlete({
     id: 6,
@@ -356,11 +422,14 @@ const ATHLETES = [
     belt: 'blue',
     stripes: 4,
     joined_at: '2023-09-11',
+    phone_country_code: '+39',
+    phone_national_number: '3471234567',
     payment_coverage: 'carnet',
     paid_current_month: false,
     active_carnet: { id: 9, code: 'Q3M8', remaining_entries: 6, expires_at: '2027-03-01' },
     attendance_month_count: 2,
-    attendance_total_count: 188,
+    attendance_total_count: 2,
+    last_attended_on: '2026-09-09',
   }),
   athlete({
     id: 7,
@@ -372,8 +441,12 @@ const ATHLETES = [
     joined_at: '2019-05-20',
     payment_coverage: 'none',
     paid_current_month: false,
-    attendance_month_count: 1,
-    attendance_total_count: 530,
+    // Drifting (#1729): nothing this month, last seen in August — the `gone`
+    // row of the at-risk fixture below, so the two screens agree. Nothing this
+    // season either: it began on 1 September (#1854).
+    attendance_month_count: 0,
+    attendance_total_count: 0,
+    last_attended_on: '2026-08-12',
   }),
   athlete({
     id: 8,
@@ -386,8 +459,96 @@ const ATHLETES = [
     created_at: '2026-09-07T18:00:00+00:00',
     attendance_month_count: 2,
     attendance_total_count: 2,
+    last_attended_on: '2026-09-10',
   }),
 ];
+
+/**
+ * A roster athlete as the aggregate lists carry them since #1851: the monthly
+ * summary, the owner's leaderboard, the expiring documents and tonight's room
+ * (#1860) send the identity the row draws with the belt spine. Read from
+ * `ATHLETES`, so a person has the same belt on every screen of the audit.
+ */
+function identityOf(id: number) {
+  const a = ATHLETES.find((x) => x.id === id);
+  if (!a) throw new Error(`no roster athlete ${id}`);
+  return {
+    id: a.id,
+    first_name: a.first_name,
+    last_name: a.last_name,
+    belt: a.belt,
+    stripes: a.stripes,
+    date_of_birth: a.date_of_birth,
+    photo_url: a.photo_url,
+    user_avatar_url: a.user_avatar_url,
+  };
+}
+
+// Not seen lately (#1729): three roster athletes, one per tier, with the
+// numbers the endpoint would send for them. Taken FROM the roster fixture so
+// the section and the table never disagree about a person.
+function atRiskRow(
+  id: number,
+  tier: 'gone' | 'quiet' | 'dropping',
+  counts: { recent: number; baseline: number },
+) {
+  const a = ATHLETES.find((x) => x.id === id)!;
+  return {
+    athlete: {
+      ...identityOf(id),
+      status: a.status,
+      phone_country_code: a.phone_country_code,
+      phone_national_number: a.phone_national_number,
+    },
+    tier,
+    last_attended_on: a.last_attended_on,
+    recent_attended: counts.recent,
+    recent_sessions: 8,
+    baseline_attended: counts.baseline,
+    baseline_sessions: 24,
+  };
+}
+
+const AT_RISK = {
+  data: [
+    atRiskRow(7, 'gone', { recent: 0, baseline: 11 }),
+    atRiskRow(4, 'quiet', { recent: 3, baseline: 16 }),
+    atRiskRow(6, 'dropping', { recent: 2, baseline: 15 }),
+  ],
+  meta: { sessions_available: 41, sessions_needed: 20, has_attendance: true },
+};
+
+/**
+ * What tonight's room missed (#1860): seven on the mat, two techniques most of
+ * them were not there for, names in register order.
+ */
+const ROOM_GAPS = {
+  present: 7,
+  rows: [
+    {
+      id: 21,
+      name: 'Knee shield',
+      parent_name: 'Half guard',
+      kind: 'both',
+      lessons: 1,
+      last_taught_on: '2026-09-07',
+      missed: 5,
+      unattributed: 0,
+      athletes: [4, 7, 8, 2, 6].map(identityOf),
+    },
+    {
+      id: 34,
+      name: 'Upa escape',
+      parent_name: 'Mount',
+      kind: 'both',
+      lessons: 1,
+      last_taught_on: '2026-09-04',
+      missed: 4,
+      unattributed: 1,
+      athletes: [7, 8, 2, 6].map(identityOf),
+    },
+  ],
+};
 
 function page(rows: unknown[], perPage = 20) {
   return {
@@ -406,6 +567,43 @@ function page(rows: unknown[], perPage = 20) {
 }
 
 const ATHLETE_ONE = ATHLETES[0];
+
+// ── The fixture guard (#1854) ────────────────────────────────────────────
+//
+// The audit paints whatever its stubs say, so a stub that drifted behind a
+// server rule shows a number the product cannot produce, and gets filed as a
+// finding. Every stub body passes `fixtureContradictions` as it is registered:
+// seed() and every screen's own `stubs`, from any track, without anyone
+// having to remember to call it. A contradiction fails that screen before
+// the shutter, naming the path and the rule.
+
+/** What the guard measures against: this harness's clock, season and roster. */
+const FIXTURE_CONTEXT: FixtureContext = {
+  today: TODAY,
+  seasonStart: ACADEMY.season_start,
+  trainingDays: ACADEMY.training_days,
+  rosterSize: ATHLETES.length,
+};
+
+function assertFixtureAgrees(label: string, body: unknown): void {
+  const problems = fixtureContradictions(body, FIXTURE_CONTEXT);
+  if (problems.length > 0) {
+    throw new Error(`${label} contradicts the server's rules (#1854):\n${problems.join('\n')}`);
+  }
+}
+
+/** What the `cy.intercept` override runs on every call, testable on its own. */
+function checkStub(args: readonly unknown[]): void {
+  const body = stubBodyOf(args);
+  if (body !== undefined) {
+    assertFixtureAgrees(`The stub for ${stubLabel(args)}`, body);
+  }
+}
+
+Cypress.Commands.overwrite('intercept', (originalFn, ...args: unknown[]) => {
+  checkStub(args);
+  return (originalFn as (...a: unknown[]) => Cypress.Chainable)(...args);
+});
 
 // ── Documents ────────────────────────────────────────────────────────────
 
@@ -454,7 +652,7 @@ const EXPIRING = {
   data: [
     {
       ...DOCUMENTS_ONE[0],
-      athlete: { id: 1, first_name: 'Giulia', last_name: 'Ferraro' },
+      athlete: identityOf(1),
     },
     {
       ...document({
@@ -465,7 +663,7 @@ const EXPIRING = {
         issued_at: '2025-09-01',
         expires_at: '2026-09-10',
       }),
-      athlete: { id: 4, first_name: 'Sara', last_name: 'Colombo' },
+      athlete: identityOf(4),
     },
     {
       ...document({
@@ -476,13 +674,22 @@ const EXPIRING = {
         issued_at: '2025-10-01',
         expires_at: '2026-10-01',
       }),
-      athlete: { id: 7, first_name: 'Andrea', last_name: 'Gallo' },
+      athlete: identityOf(7),
     },
+    // One of the academy's own papers (#1743): no athlete, so no identity and
+    // no spine. Here so the card's inset is shot beside the athletes' (#1851).
+    document({
+      id: 47,
+      athlete_id: null,
+      academy_id: 1,
+      type: 'insurance',
+      original_name: 'polizza-rc-2026.pdf',
+      issued_at: '2025-10-12',
+      // Inside the 30-day window the endpoint uses, or it would not be listed.
+      expires_at: '2026-10-12',
+    }),
   ],
-  missing_medical_certificate: [
-    { id: 2, first_name: 'Luca', last_name: 'Moretti' },
-    { id: 8, first_name: 'Francesca', last_name: 'Marino' },
-  ],
+  missing_medical_certificate: [identityOf(2), identityOf(8)],
 };
 
 // ── Attendance, payments, promotions, carnets ────────────────────────────
@@ -502,6 +709,38 @@ function record(id: number, athlete_id: number, attended_on: string, lesson_id: 
 
 const ATTENDANCE_TONIGHT = [record(1, 1, TODAY, 7), record(2, 2, TODAY, 7), record(3, 4, TODAY, 7)];
 
+/**
+ * Who usually comes to tonight's class (#1730). The last four Mondays the
+ * academy held a session — August was closed, so they jump from 7 September
+ * to July. Giulia, Luca and Sara are on the mat already; Elena and Francesca
+ * are the two the panel names. Taken from the roster, so a person has the
+ * same belt and phone on every screen.
+ */
+function regularOf(id: number, attended: number, last_attended_on: string) {
+  const a = ATHLETES.find((x) => x.id === id);
+  if (!a) throw new Error(`no roster athlete ${id}`);
+  return {
+    ...identityOf(id),
+    phone_country_code: a.phone_country_code ?? null,
+    phone_national_number: a.phone_national_number ?? null,
+    attended,
+    last_attended_on,
+  };
+}
+
+const MONDAYS_HELD = ['2026-09-07', '2026-07-27', '2026-07-20', '2026-07-13'];
+
+const REGULARS_TONIGHT = {
+  data: [
+    regularOf(1, 4, '2026-09-11'),
+    regularOf(6, 4, '2026-09-09'),
+    regularOf(2, 3, '2026-09-10'),
+    regularOf(4, 3, '2026-09-03'),
+    regularOf(8, 3, '2026-09-10'),
+  ],
+  meta: { occurrences: 4, occurrence_dates: MONDAYS_HELD },
+};
+
 const ATTENDANCE_ONE = [
   record(10, 1, '2026-09-11', 5),
   record(11, 1, '2026-09-09', 3),
@@ -513,32 +752,37 @@ const ATTENDANCE_ONE = [
 
 /** Giulia's last 90 days: Monday and Wednesday, nothing in August. */
 const ATHLETE_SUMMARY = (() => {
-  const series = Array.from({ length: 90 }, (_, i) => {
+  const iso = (d: Date): string =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  // One point per LESSON day in the 90-day window, as the server sends it
+  // (GetAthleteAttendanceSummaryAction): the days the academy held a class,
+  // which DAILY draws as Monday, Wednesday, Friday and Saturday with August
+  // closed. Calendar days here drew 90 bars beside "17 of 30" (#1854).
+  const series: { date: string; attended: boolean }[] = [];
+  for (let i = 0; i < 90; i++) {
     const d = new Date(NOW - (89 - i) * 86_400_000);
-    const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    const trains = d.getMonth() !== 7 && (d.getDay() === 1 || d.getDay() === 3);
-    return { date: iso, attended: trains };
-  });
+    if (d.getMonth() === 7 || ![1, 3, 5, 6].includes(d.getDay())) continue;
+    series.push({ date: iso(d), attended: d.getDay() === 1 || d.getDay() === 3 });
+  }
   const attended = series.filter((p) => p.attended).length;
   return {
     range_days: 90,
-    range_start: series[0].date,
-    range_end: series[series.length - 1].date,
+    range_start: iso(new Date(NOW - 89 * 86_400_000)),
+    range_end: TODAY,
     attended_count: attended,
-    expected_count: 30,
-    rate: Math.round((attended / 30) * 100) / 100,
+    expected_count: series.length,
+    rate: Math.round((attended / series.length) * 10000) / 10000,
     series,
   };
 })();
 
 const ATTENDANCE_SUMMARY = [
-  { athlete_id: 3, first_name: 'Matteo', last_name: 'Bonanno', count: 6 },
-  { athlete_id: 1, first_name: 'Giulia', last_name: 'Ferraro', count: 5 },
-  { athlete_id: 2, first_name: 'Luca', last_name: 'Moretti', count: 4 },
-  { athlete_id: 4, first_name: 'Sara', last_name: 'Colombo', count: 3 },
-  { athlete_id: 6, first_name: 'Elena', last_name: 'Russo', count: 2 },
-  { athlete_id: 8, first_name: 'Francesca', last_name: 'Marino', count: 2 },
-  { athlete_id: 7, first_name: 'Andrea', last_name: 'Gallo', count: 1 },
+  { athlete_id: 3, first_name: 'Matteo', last_name: 'Bonanno', count: 6, athlete: identityOf(3) },
+  { athlete_id: 1, first_name: 'Giulia', last_name: 'Ferraro', count: 5, athlete: identityOf(1) },
+  { athlete_id: 2, first_name: 'Luca', last_name: 'Moretti', count: 4, athlete: identityOf(2) },
+  { athlete_id: 4, first_name: 'Sara', last_name: 'Colombo', count: 3, athlete: identityOf(4) },
+  { athlete_id: 6, first_name: 'Elena', last_name: 'Russo', count: 2, athlete: identityOf(6) },
+  { athlete_id: 8, first_name: 'Francesca', last_name: 'Marino', count: 2, athlete: identityOf(8) },
 ];
 
 const LEADERBOARD = {
@@ -552,6 +796,7 @@ const LEADERBOARD = {
       hours: 6.5,
       anonymous: false,
       is_self: true,
+      athlete: identityOf(3),
     },
     {
       rank: 2,
@@ -562,6 +807,7 @@ const LEADERBOARD = {
       hours: 5.25,
       anonymous: false,
       is_self: false,
+      athlete: identityOf(1),
     },
     {
       rank: 3,
@@ -572,6 +818,7 @@ const LEADERBOARD = {
       hours: 4,
       anonymous: false,
       is_self: false,
+      athlete: identityOf(2),
     },
     {
       rank: 4,
@@ -582,6 +829,7 @@ const LEADERBOARD = {
       hours: 3.5,
       anonymous: false,
       is_self: false,
+      athlete: identityOf(4),
     },
     {
       rank: 5,
@@ -592,6 +840,7 @@ const LEADERBOARD = {
       hours: 2,
       anonymous: false,
       is_self: false,
+      athlete: identityOf(6),
     },
   ],
   meta: { month: '2026-09' },
@@ -704,7 +953,9 @@ const ATHLETE_COVERAGE = {
     seen: 3,
     thin: 2,
     missed: 1,
-    percentage: 50,
+    // Attended over taught, 5 of 6, since #1723. It read 50 (seen over
+    // taught), and painted "50%" beside "5 su 6" (#1854).
+    percentage: 83,
     not_taught_yet: 23,
   },
   missed: [
@@ -724,6 +975,7 @@ const ATHLETE_COVERAGE = {
     { id: 61, name: 'Double leg', parent_name: 'Standing', lessons: 1, last_seen_on: '2026-09-02' },
   ],
   unattributed_presences: 1,
+  grade: null,
 };
 
 function coveragePosition(
@@ -780,6 +1032,8 @@ const SYLLABUS_COVERAGE = {
       parent_name: 'Closed guard',
       kind: 'both',
       lessons: 3,
+      reach: 5,
+      attendances: 9,
       last_taught_on: '2026-09-11',
       state: 'covered',
     },
@@ -789,6 +1043,8 @@ const SYLLABUS_COVERAGE = {
       parent_name: 'Closed guard',
       kind: 'both',
       lessons: 2,
+      reach: 6,
+      attendances: 9,
       last_taught_on: '2026-09-09',
       state: 'covered',
     },
@@ -798,6 +1054,8 @@ const SYLLABUS_COVERAGE = {
       parent_name: 'Mount',
       kind: 'both',
       lessons: 2,
+      reach: 4,
+      attendances: 7,
       last_taught_on: '2026-09-07',
       state: 'covered',
     },
@@ -807,6 +1065,8 @@ const SYLLABUS_COVERAGE = {
       parent_name: 'Closed guard',
       kind: 'both',
       lessons: 1,
+      reach: 7,
+      attendances: 7,
       last_taught_on: '2026-09-09',
       state: 'thin',
     },
@@ -816,6 +1076,8 @@ const SYLLABUS_COVERAGE = {
       parent_name: 'Half guard',
       kind: 'both',
       lessons: 1,
+      reach: 6,
+      attendances: 6,
       last_taught_on: '2026-09-07',
       state: 'thin',
     },
@@ -825,6 +1087,8 @@ const SYLLABUS_COVERAGE = {
       parent_name: 'Mount',
       kind: 'both',
       lessons: 1,
+      reach: 4,
+      attendances: 4,
       last_taught_on: '2026-09-04',
       state: 'thin',
     },
@@ -834,6 +1098,8 @@ const SYLLABUS_COVERAGE = {
       parent_name: 'Standing',
       kind: 'both',
       lessons: 1,
+      reach: 5,
+      attendances: 5,
       last_taught_on: '2026-09-02',
       state: 'thin',
     },
@@ -842,6 +1108,234 @@ const SYLLABUS_COVERAGE = {
     { on: '2026-09-06', covered: 1 },
     { on: '2026-09-13', covered: 3 },
   ],
+};
+
+/** The Monday of every week of the 2026/27 season, the first one before it opens. */
+const SEASON_WEEKS = Array.from({ length: 53 }, (_, i) => {
+  const d = new Date(2026, 7, 31 + i * 7);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+});
+
+function calendarLesson(
+  id: number,
+  held_on: string,
+  classId: number,
+  state: 'held' | 'planned' | 'unconfirmed',
+  topics: { id: number; name: string; parent_id: number | null }[],
+) {
+  const klass = CLASSES.find((c) => c.id === classId) ?? CLASSES[0];
+  return {
+    id,
+    academy_class_id: classId,
+    held_on,
+    name: klass.name,
+    starts_at: klass.starts_at,
+    kind: klass.kind,
+    state,
+    position_ids: [...new Set(topics.map((t) => t.parent_id ?? t.id))],
+    topics,
+  };
+}
+
+/**
+ * The season map (#1858), agreeing with SYLLABUS_COVERAGE's taught dates:
+ * two weeks taught, today's lesson planned, the next weeks planned ahead, and
+ * one no-gi plan from last week that nobody checked into.
+ */
+const SYLLABUS_CALENDAR = {
+  season: SYLLABUS_COVERAGE.season,
+  kind: null,
+  today: TODAY,
+  weeks: SEASON_WEEKS,
+  positions: [
+    {
+      id: 1,
+      name: 'Closed guard',
+      kind: 'both',
+      cells: [
+        { week: '2026-08-31', held: 2, planned: 0, unconfirmed: 0 },
+        { week: '2026-09-07', held: 3, planned: 0, unconfirmed: 0 },
+        { week: '2026-09-28', held: 0, planned: 1, unconfirmed: 0 },
+      ],
+    },
+    {
+      id: 2,
+      name: 'Half guard',
+      kind: 'both',
+      cells: [
+        { week: '2026-09-07', held: 1, planned: 0, unconfirmed: 0 },
+        { week: '2026-09-21', held: 0, planned: 2, unconfirmed: 0 },
+      ],
+    },
+    {
+      id: 3,
+      name: 'Mount',
+      kind: 'both',
+      cells: [
+        { week: '2026-08-31', held: 2, planned: 0, unconfirmed: 0 },
+        // Taught on Monday, and a plan for Monday's second class nobody
+        // checked into: both have to show.
+        { week: '2026-09-07', held: 1, planned: 0, unconfirmed: 1 },
+      ],
+    },
+    {
+      id: 4,
+      name: 'Side control',
+      kind: 'both',
+      cells: [{ week: '2026-09-21', held: 0, planned: 1, unconfirmed: 0 }],
+    },
+    {
+      id: 5,
+      name: 'Back',
+      kind: 'both',
+      cells: [{ week: '2026-09-14', held: 0, planned: 2, unconfirmed: 0 }],
+    },
+    {
+      id: 6,
+      name: 'Standing',
+      kind: 'both',
+      cells: [{ week: '2026-08-31', held: 1, planned: 0, unconfirmed: 0 }],
+    },
+    {
+      id: 7,
+      name: 'Leg entanglements',
+      kind: 'nogi',
+      cells: [
+        { week: '2026-09-07', held: 0, planned: 0, unconfirmed: 1 },
+        { week: '2026-10-05', held: 0, planned: 1, unconfirmed: 0 },
+      ],
+    },
+  ],
+  lessons: [
+    calendarLesson(501, '2026-09-02', 4, 'held', [
+      { id: 11, name: 'Armbar', parent_id: 1 },
+      { id: 31, name: 'Americana', parent_id: 3 },
+      { id: 61, name: 'Double leg', parent_id: 6 },
+    ]),
+    calendarLesson(502, '2026-09-04', 5, 'held', [
+      { id: 14, name: 'Hip bump sweep', parent_id: 1 },
+      { id: 34, name: 'Upa escape', parent_id: 3 },
+    ]),
+    calendarLesson(503, '2026-09-07', 1, 'held', [
+      { id: 11, name: 'Armbar', parent_id: 1 },
+      { id: 31, name: 'Americana', parent_id: 3 },
+      { id: 21, name: 'Knee shield', parent_id: 2 },
+    ]),
+    calendarLesson(513, '2026-09-07', 2, 'unconfirmed', [
+      { id: 35, name: 'Elbow-knee escape', parent_id: 3 },
+    ]),
+    calendarLesson(504, '2026-09-09', 4, 'held', [
+      { id: 14, name: 'Hip bump sweep', parent_id: 1 },
+      { id: 16, name: 'Omoplata', parent_id: 1 },
+    ]),
+    calendarLesson(505, '2026-09-09', 3, 'unconfirmed', [
+      { id: 71, name: 'Straight ankle lock', parent_id: 7 },
+    ]),
+    calendarLesson(506, '2026-09-11', 5, 'held', [{ id: 11, name: 'Armbar', parent_id: 1 }]),
+    calendarLesson(507, '2026-09-14', 1, 'planned', [
+      { id: 53, name: 'Back escape', parent_id: 5 },
+    ]),
+    // Wednesday's too, so the week's group message (#1863) is this week's
+    // whatever the wall clock: these screens run without the frozen clock,
+    // and tonight's 19:00 lesson drops out of it once it has started.
+    calendarLesson(514, '2026-09-16', 4, 'planned', [
+      { id: 52, name: 'Bow and arrow choke', parent_id: 5 },
+    ]),
+    calendarLesson(508, '2026-09-21', 1, 'planned', [
+      { id: 21, name: 'Knee shield', parent_id: 2 },
+      { id: 23, name: 'Lockdown', parent_id: 2 },
+    ]),
+    calendarLesson(509, '2026-09-23', 4, 'planned', [
+      { id: 22, name: 'Old school sweep', parent_id: 2 },
+    ]),
+    calendarLesson(510, '2026-09-25', 5, 'planned', [
+      { id: 41, name: 'Escape to guard', parent_id: 4 },
+    ]),
+    calendarLesson(511, '2026-09-28', 1, 'planned', [
+      { id: 12, name: 'Triangle', parent_id: 1 },
+      { id: 13, name: 'Kimura', parent_id: 1 },
+    ]),
+    calendarLesson(512, '2026-10-07', 3, 'planned', [{ id: 72, name: 'Heel hook', parent_id: 7 }]),
+  ],
+};
+
+/**
+ * Who has seen the armbar (#1745) — the report's first taught row, opened.
+ * Three lessons, as the row says, the last on 11 September; the headcounts
+ * are the people listed as there, so the numbers agree with each other.
+ */
+function exposureRow(id: number, exposures: number, lastSeenOn: string | null, state: string) {
+  const a = ATHLETES.find((row) => row.id === id) as Record<string, unknown>;
+  return {
+    id,
+    first_name: a['first_name'],
+    last_name: a['last_name'],
+    belt: a['belt'],
+    stripes: a['stripes'],
+    status: a['status'],
+    joined_at: a['joined_at'],
+    date_of_birth: a['date_of_birth'] ?? null,
+    photo_url: null,
+    user_avatar_url: null,
+    exposures,
+    last_seen_on: lastSeenOn,
+    state,
+  };
+}
+
+const TOPIC_EXPOSURE = {
+  topic: {
+    id: 11,
+    name: 'Armbar',
+    parent_name: 'Closed guard',
+    kind: 'both',
+    in_season: true,
+    // How it is taught here (#1862), so the drill-down shows its notebook.
+    notes: 'Parti dalla S-mount; presa sul gomito lontano.',
+    video_url: 'https://www.youtube.com/watch?v=abc123',
+  },
+  season: SYLLABUS_COVERAGE.season,
+  lessons: [
+    {
+      id: 901,
+      held_on: '2026-09-04',
+      name: 'Fondamentali',
+      kind: 'gi',
+      starts_at: '19:00',
+      headcount: 4,
+    },
+    {
+      id: 902,
+      held_on: '2026-09-07',
+      name: 'Fondamentali',
+      kind: 'gi',
+      starts_at: '19:00',
+      headcount: 3,
+    },
+    {
+      id: 903,
+      held_on: '2026-09-11',
+      name: 'Gi, tutti i livelli',
+      kind: 'gi',
+      starts_at: '19:00',
+      headcount: 2,
+    },
+  ],
+  // Register order, active first: Bonanno, Colombo, Ferraro, Gallo, Marino,
+  // Moretti, Russo, then Ricci, who is inactive with no date of departure.
+  // Marino trained on the 7th, her first day, at a lesson the record does not
+  // name. Gallo has not trained since August (#1729), so he was never there.
+  athletes: [
+    exposureRow(3, 2, '2026-09-11', 'seen'),
+    exposureRow(4, 2, '2026-09-07', 'seen'),
+    exposureRow(1, 3, '2026-09-11', 'seen'),
+    exposureRow(7, 0, null, 'never'),
+    exposureRow(8, 0, null, 'unplaced'),
+    exposureRow(2, 1, '2026-09-04', 'thin'),
+    exposureRow(6, 1, '2026-09-07', 'thin'),
+    exposureRow(5, 0, null, 'never'),
+  ],
+  totals: { lessons: 3, seen: 3, thin: 2, never: 2, unplaced: 1 },
 };
 
 // ── Stats ────────────────────────────────────────────────────────────────
@@ -1059,6 +1553,18 @@ const ARCHIVES = [
   },
 ];
 
+const FOLDER_STATE: {
+  folder: string | null;
+  lastCopyAt: string | null;
+  lastError: string | null;
+  lastErrorAt: string | null;
+} = {
+  folder: 'D:\\OneDrive\\Budojo backup',
+  lastCopyAt: '2026-09-14T01:00:20.000Z',
+  lastError: null,
+  lastErrorAt: null,
+};
+
 type UpdatePhase =
   | { phase: 'idle' }
   | { phase: 'checking' }
@@ -1072,6 +1578,8 @@ interface BridgeOptions {
   update?: UpdatePhase;
   /** What `backup.list()` answers; defaults to three nightly archives. */
   archives?: typeof ARCHIVES;
+  /** What `folder.state()` answers; defaults to a folder that copied last night. */
+  folder?: typeof FOLDER_STATE;
 }
 
 /**
@@ -1102,12 +1610,7 @@ function installBridge(win: Cypress.AUTWindow, opts: BridgeOptions): void {
       restore: ok({ ok: true }),
     },
     folder: {
-      state: ok({
-        folder: 'D:\\OneDrive\\Budojo backup',
-        lastCopyAt: '2026-09-14T01:00:20.000Z',
-        lastError: null,
-        lastErrorAt: null,
-      }),
+      state: ok(opts.folder ?? FOLDER_STATE),
       choose: ok({ ok: false }),
       clear: ok({ ok: true }),
       copy: ok({ ran: true, copied: 1 }),
@@ -1230,6 +1733,7 @@ function seed(): void {
     body: { data: ATTENDANCE_SUMMARY },
   });
   cy.intercept('GET', '/api/v1/attendance/leaderboard*', { statusCode: 200, body: LEADERBOARD });
+  cy.intercept('GET', '/api/v1/attendance/regulars*', { statusCode: 200, body: REGULARS_TONIGHT });
   cy.intercept('GET', '/api/v1/lessons?*', { statusCode: 200, body: { data: LESSON_TONIGHT } });
   cy.intercept('GET', '/api/v1/lessons/recent-topics', {
     statusCode: 200,
@@ -1239,12 +1743,18 @@ function seed(): void {
     statusCode: 200,
     body: { data: SUGGESTIONS },
   });
+  // Asked for only when a lesson is held; an empty room unless a screen says otherwise.
+  cy.intercept('GET', '/api/v1/lessons/room-gaps*', {
+    statusCode: 200,
+    body: { data: { present: 0, rows: [] } },
+  });
   cy.intercept('GET', '/api/v1/payments/summary*', {
     statusCode: 200,
     body: { data: { paid: 4, unpaid: 3 } },
   });
 
   // Stats.
+  cy.intercept('GET', '/api/v1/stats/attendance/at-risk', { statusCode: 200, body: AT_RISK });
   cy.intercept('GET', '/api/v1/stats/attendance/daily*', {
     statusCode: 200,
     body: { data: DAILY },
@@ -1260,6 +1770,10 @@ function seed(): void {
   cy.intercept('GET', '/api/v1/stats/syllabus/coverage*', {
     statusCode: 200,
     body: { data: SYLLABUS_COVERAGE },
+  });
+  cy.intercept('GET', '/api/v1/stats/syllabus/calendar*', {
+    statusCode: 200,
+    body: { data: SYLLABUS_CALENDAR },
   });
 }
 
@@ -1282,6 +1796,8 @@ interface ScreenOptions {
   clock?: false;
   /** The backup archives the bridge reports. */
   archives?: typeof ARCHIVES;
+  /** Where backups are copied, and how that last went. */
+  folder?: typeof FOLDER_STATE;
 }
 
 // Scroll a target to the middle before acting on it. The default scrolls it
@@ -1310,6 +1826,25 @@ function press(selector: string): void {
 function dialogOpen(hostSelector: string): void {
   cy.get(hostSelector, { timeout: 4000 }).should('exist');
   cy.get('.p-dialog', { timeout: 4000 }).should('be.visible');
+}
+
+/**
+ * Wait until a dialog's own autofocus has landed on `fieldSelector`, before
+ * an `act` scrolls the dialog: focus arriving later scrolls it back to the
+ * top. The enter animation ends in real time and the focus call behind it
+ * then waits on the frozen clock, so neither a single tick nor a single wait
+ * is enough on a loaded machine — tick, look, and go round again.
+ */
+function dialogFocusSettled(fieldSelector: string, attempts = 20): void {
+  cy.tick(250);
+  cy.document().then((doc) => {
+    if (doc.activeElement?.matches(fieldSelector) || attempts === 0) {
+      cy.get(fieldSelector).should('have.focus');
+      return;
+    }
+    cy.wait(100);
+    dialogFocusSettled(fieldSelector, attempts - 1);
+  });
 }
 
 /**
@@ -1457,7 +1992,12 @@ function screen(slug: string, route: string, ready: string, opts: ScreenOptions 
         failOnStatusCode: false,
         onBeforeLoad(win: Cypress.AUTWindow) {
           win.localStorage.setItem('budojoLang', 'it');
-          installBridge(win, { token, update: opts.update, archives: opts.archives });
+          installBridge(win, {
+            token,
+            update: opts.update,
+            archives: opts.archives,
+            folder: opts.folder,
+          });
           recordConsoleErrors(win);
         },
       };
@@ -1492,6 +2032,145 @@ const NO_DATA = { statusCode: 200, body: { data: [] } };
 describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian', () => {
   // What this run was asked to shoot, beside the pictures: `_env.json` says
   // which prefixes were in force when the folder was last written.
+  // Before any screen: the shared fixtures agree with the server's rules, and
+  // the guard would say so if they did not (#1854).
+  it('holds the shared fixtures to the server rules', () => {
+    assertFixtureAgrees('The shared fixtures', {
+      ATHLETES,
+      ATHLETE_COVERAGE,
+      SYLLABUS_COVERAGE,
+      SYLLABUS_CALENDAR,
+      TOPIC_EXPOSURE,
+      ATHLETE_SUMMARY,
+      ATTENDANCE_SUMMARY,
+      CARNETS_ONE,
+    });
+
+    // One question, two fixtures: the month summary's days for an athlete are
+    // the roster's month count, and whoever trained this month is listed. The
+    // per-object rules cannot see across fixtures; this is the pair that
+    // drifted apart when #1729 moved an athlete into "not seen lately".
+    for (const a of ATHLETES) {
+      const row = ATTENDANCE_SUMMARY.find((r) => r.athlete_id === a.id);
+      expect(row?.count ?? 0, `month summary vs roster, athlete ${a.id}`).to.equal(
+        a.attendance_month_count,
+      );
+    }
+  });
+
+  it('has a fixture guard that catches what it is for', () => {
+    // A guard that passes because it cannot match anything is not a guard.
+    // The two drifts the audit of 24 September 2026 actually shipped, and a
+    // season-map plan dated in the past:
+    const drifted = {
+      roster: [
+        { joined_at: '2024-09-02', attendance_month_count: 5, attendance_total_count: 143 },
+        // Nobody trained this season, yet the last presence is last week.
+        {
+          joined_at: '2024-09-02',
+          attendance_month_count: 0,
+          attendance_total_count: 0,
+          last_attended_on: '2026-09-10',
+        },
+      ],
+      coverage: { taught_by_academy: 6, attended: 5, seen: 3, thin: 2, missed: 1, percentage: 50 },
+      lesson: { held_on: '2026-09-08', state: 'planned' },
+    };
+    const problems = fixtureContradictions(drifted, FIXTURE_CONTEXT);
+    expect(problems.join('\n')).to.contain('attendance_total_count 143 > 8');
+    expect(problems.join('\n')).to.contain('percentage 50 ≠ attended/taught 83');
+    expect(problems.join('\n')).to.contain("is 'planned'");
+    expect(problems.join('\n')).to.contain('attendance_total_count 0 but last_attended_on');
+
+    // The attendance summary: one point per lesson day, so 90 calendar-day
+    // points against 30 expected is a contradiction.
+    const summary = fixtureContradictions(
+      {
+        attended_count: 2,
+        expected_count: 30,
+        rate: 0.0667,
+        series: Array.from({ length: 90 }, (_, i) => ({ date: `d${i}`, attended: i < 2 })),
+      },
+      FIXTURE_CONTEXT,
+    );
+    expect(summary.join('\n')).to.contain('≠ 90 series points');
+
+    // The rate is the server's four-place rounding exactly, not "near it".
+    const rate = (r: number) =>
+      fixtureContradictions(
+        {
+          attended_count: 1,
+          expected_count: 3,
+          rate: r,
+          series: [
+            { date: 'a', attended: true },
+            { date: 'b', attended: false },
+            { date: 'c', attended: false },
+          ],
+        },
+        FIXTURE_CONTEXT,
+      );
+    expect(rate(0.3333)).to.deep.equal([]);
+    expect(rate(0.3334).join('\n')).to.contain('rate 0.3334');
+
+    // Not stricter than the server: the month count and the last presence
+    // are not floored at joining, which is editable and was backfilled.
+    expect(
+      fixtureContradictions(
+        [
+          {
+            joined_at: '2026-09-10',
+            attendance_month_count: 3,
+            attendance_total_count: 2,
+            last_attended_on: '2026-09-12',
+          },
+        ],
+        FIXTURE_CONTEXT,
+      ),
+    ).to.deep.equal([]);
+    // ...and an honest row passes.
+    expect(
+      fixtureContradictions(
+        [{ joined_at: '2024-09-02', attendance_month_count: 5, attendance_total_count: 5 }],
+        FIXTURE_CONTEXT,
+      ),
+    ).to.deep.equal([]);
+  });
+
+  it('checks every shape of stub the harness registers', () => {
+    // The override has to see the body whatever form the call takes, or a
+    // whole class of stubs goes unchecked: the two-argument
+    // `cy.intercept(matcher, page([...]))` was, until #1854's review.
+    const body = { data: [] };
+    expect(stubBodyOf(['GET', '/api/v1/x', { statusCode: 200, body }])).to.equal(body);
+    expect(stubBodyOf([{ method: 'GET', pathname: '/api/v1/x' }, body])).to.equal(body);
+    expect(stubBodyOf(['/api/v1/x', { method: 'GET' }, { statusCode: 200, body }])).to.equal(body);
+    expect(stubBodyOf(['GET', '/api/v1/x'])).to.equal(undefined);
+    expect(stubBodyOf(['/api/v1/x', () => undefined])).to.equal(undefined);
+    expect(stubBodyOf(['/api/v1/x', 'plain text'])).to.equal(undefined);
+    expect(stubBodyOf(['/api/v1/x', { fixture: 'athletes.json' }])).to.equal(undefined);
+
+    // ...and the override fails a drifted stub in each of those shapes, with
+    // a label a person can read.
+    const drifted = page([
+      { joined_at: '2024-09-02', attendance_month_count: 5, attendance_total_count: 143 },
+    ]);
+    const matcher = {
+      method: 'GET',
+      pathname: '/api/v1/athletes',
+      query: { sort_by: 'joined_at' },
+    };
+    expect(() => checkStub([matcher, drifted])).to.throw(
+      "The stub for GET /api/v1/athletes?sort_by=joined_at contradicts the server's rules",
+    );
+    expect(() =>
+      checkStub(['GET', '/api/v1/athletes*', { statusCode: 200, body: drifted }]),
+    ).to.throw('The stub for /api/v1/athletes*');
+    expect(() =>
+      checkStub(['GET', '/api/v1/athletes*', { statusCode: 200, body: page([]) }]),
+    ).not.to.throw();
+  });
+
   it('records the run environment', () => {
     cy.writeFile('cypress/screenshots/desktop-audit.cy.ts/_env.json', {
       only: Cypress.env('ONLY') ?? null,
@@ -1530,6 +2209,137 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
   screen('01-error-offline', '/offline', '[data-cy="offline-retry"]', { public: true });
   screen('01-error-server', '/error', '[data-cy="server-error-retry"]', { public: true });
   screen('01-error-not-found', '/no-such-page', '[data-cy="not-found-cta"]', { public: true });
+
+  // ── 05. Today — the first screen (#1643) ────────────────────────────────
+  // Monday 18:30: two classes on, the first in half an hour.
+  screen('05-today', '/dashboard/today', '[data-cy="today-class-1"]', {
+    stubs: () => {
+      // Two people joined this week, so "Nuovi questa settimana" shows the
+      // belt spine the way every list of people does.
+      cy.intercept(
+        { method: 'GET', pathname: '/api/v1/athletes', query: { sort_by: 'joined_at' } },
+        // Joined today, so nothing counted yet: a count or a last presence
+        // before today would be a day they had not joined for (#1854).
+        page([
+          {
+            ...ATHLETES[3],
+            joined_at: TODAY,
+            attendance_month_count: 0,
+            attendance_total_count: 0,
+            last_attended_on: null,
+          },
+          {
+            ...ATHLETES[5],
+            joined_at: TODAY,
+            attendance_month_count: 0,
+            attendance_total_count: 0,
+            last_attended_on: null,
+          },
+        ]),
+      );
+    },
+  });
+  screen('05-today-rest-day', '/dashboard/today', '[data-cy="today-next-class"]', {
+    stubs: () => {
+      // Only Wednesday's classes: tonight is a rest night, and the card says
+      // when the next lesson is instead.
+      cy.intercept('GET', '/api/v1/academy/classes', {
+        statusCode: 200,
+        body: { data: CLASSES.filter((c) => c.weekday === 3) },
+      });
+    },
+  });
+  screen('05-today-birthdays', '/dashboard/today', '[data-cy="today-birthdays"]', {
+    stubs: () => {
+      // Two birthdays this week (#1754): today's with the age turned and a
+      // number to message, Friday's by its day and without one — both states
+      // of the contact actions. The default roster has none from 14 to 20
+      // September, which is why the other Today screens show no card.
+      cy.intercept(
+        { method: 'GET', pathname: '/api/v1/athletes', query: { birthday: 'week' } },
+        page([
+          {
+            ...ATHLETES[1],
+            date_of_birth: '1990-09-14',
+            phone_country_code: '+39',
+            phone_national_number: '3478123456',
+          },
+          { ...ATHLETES[4], date_of_birth: '1996-09-18' },
+        ]),
+      );
+    },
+  });
+  // The copy off this computer has been failing, and was never set up (#1751).
+  screen('05-today-backup-failing', '/dashboard/today', '[data-cy="today-watch-backup"]', {
+    folder: { ...FOLDER_STATE, lastError: 'ENOENT', lastErrorAt: '2026-09-10T01:00:20.000Z' },
+  });
+  screen('05-today-backup-local-only', '/dashboard/today', '[data-cy="today-watch-backup"]', {
+    folder: { ...FOLDER_STATE, folder: null, lastCopyAt: null },
+  });
+  // Copies stopped arriving with no error left behind: the last is two weeks old.
+  screen('05-today-backup-stale', '/dashboard/today', '[data-cy="today-watch-backup"]', {
+    folder: { ...FOLDER_STATE, lastCopyAt: '2026-08-31T01:00:20.000Z' },
+  });
+  // Day one (#1755): no timetable, nobody on the books, no register, no
+  // programme, and the tour not yet dismissed. Every card waits until it has
+  // something to say, so the page is the checklist — and the one thing a
+  // fresh install really does have to check: no copy leaves this computer.
+  screen('05-today-first-run', '/dashboard/today', '[data-cy="onboarding-checklist"]', {
+    folder: { ...FOLDER_STATE, folder: null, lastCopyAt: null },
+    stubs: () => {
+      cy.intercept('GET', '/api/v1/academy', {
+        statusCode: 200,
+        body: {
+          data: { ...ACADEMY, classes_count: 0, syllabus_topics_count: 0, fee_tier_count: 0 },
+        },
+      });
+      cy.intercept('GET', '/api/v1/academy/classes', NO_DATA);
+      cy.intercept('GET', '/api/v1/athletes*', EMPTY_PAGE);
+      cy.intercept('GET', '/api/v1/documents/expiring*', {
+        statusCode: 200,
+        body: { data: [], missing_medical_certificate: [] },
+      });
+      cy.intercept('GET', '/api/v1/stats/attendance/daily*', NO_DATA);
+      cy.intercept('GET', '/api/v1/stats/syllabus/coverage*', {
+        statusCode: 200,
+        body: {
+          data: {
+            ...SYLLABUS_COVERAGE,
+            totals: { in_scope: 0, covered: 0, thin: 0, missing: 0, percentage: 0 },
+            positions: [],
+            missing: [],
+            taught: [],
+            timeline: [],
+          },
+        },
+      });
+      cy.intercept('GET', '/api/v1/me/onboarding', {
+        statusCode: 200,
+        body: {
+          data: {
+            dismissed_at: null,
+            completed_steps: [],
+            available_steps: [
+              'add_athlete',
+              'set_timetable',
+              'write_syllabus',
+              'log_attendance',
+              'mark_payment',
+              'upload_document',
+              'view_stats',
+            ],
+          },
+        },
+      });
+    },
+  });
+  screen('05-today-lesson-sheet', '/dashboard/today', '[data-cy="today-class-1"]', {
+    act: () => {
+      press('[data-cy="today-class-plan-1"] button');
+      cy.get('[data-cy="lesson-sheet"]', { timeout: 10_000 }).should('exist');
+      settle();
+    },
+  });
 
   // ── 10. Academy ────────────────────────────────────────────────────────
   screen('10-academy-home', '/dashboard/academy', '[data-cy="academy-detail"]');
@@ -1608,6 +2418,37 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       cy.get('[data-cy="syllabus-form"]').should('be.visible');
     },
   });
+  // The programme by grade (#1861): a few topics graded, the tree narrowed to
+  // what a blue belt is expected to know, one position open to show the
+  // belt said on the row only where it differs from its position's.
+  screen('12-syllabus-belt', '/dashboard/academy/syllabus', '[data-cy="syllabus-tree"]', {
+    stubs: () => {
+      cy.intercept('GET', '/api/v1/academy/syllabus', {
+        statusCode: 200,
+        body: { data: GRADED_SYLLABUS },
+      });
+    },
+    act: () => {
+      cy.get('[data-cy="syllabus-belt-filter"]').should('be.visible').click();
+      cy.get('.p-select-option').contains('Blu').click();
+      cy.get('[data-cy="syllabus-belt-summary"]').should('be.visible');
+      cy.get('.p-select-overlay').should('not.exist');
+      press('[data-cy="syllabus-toggle-3"]');
+      cy.get('[data-cy="syllabus-topic-31"]').should('be.visible');
+    },
+  });
+  screen('12-syllabus-belt-dialog', '/dashboard/academy/syllabus', '[data-cy="syllabus-tree"]', {
+    stubs: () => {
+      cy.intercept('GET', '/api/v1/academy/syllabus', {
+        statusCode: 200,
+        body: { data: GRADED_SYLLABUS },
+      });
+    },
+    act: () => {
+      press('[data-cy="syllabus-add-under-7"]');
+      cy.get('[data-cy="syllabus-form-from-belt"]').should('be.visible');
+    },
+  });
 
   // ── 13. Activity ───────────────────────────────────────────────────────
   screen('13-activity', '/dashboard/academy/activity', '[data-cy="audit-filters"]');
@@ -1621,7 +2462,9 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       cy.get('[data-cy="athletes-alerts-panel"]').should('be.visible');
     },
   });
-  screen('20-athletes-first-run', '/dashboard/athletes', '[data-cy="onboarding-checklist"]', {
+  // The empty roster's own first-run state. The getting-started checklist is
+  // not here any more: it lives on Today (#1755), shot as 05-today-first-run.
+  screen('20-athletes-first-run', '/dashboard/athletes', '[data-cy="athletes-empty"]', {
     stubs: () => {
       cy.intercept('GET', '/api/v1/athletes*', EMPTY_PAGE);
       cy.intercept('GET', '/api/v1/documents/expiring*', {
@@ -1632,22 +2475,6 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
         statusCode: 200,
         body: {
           data: { ...ACADEMY, classes_count: 0, syllabus_topics_count: 0, fee_tier_count: 0 },
-        },
-      });
-      cy.intercept('GET', '/api/v1/me/onboarding', {
-        statusCode: 200,
-        body: {
-          data: {
-            dismissed_at: null,
-            completed_steps: [],
-            available_steps: [
-              'add_athlete',
-              'log_attendance',
-              'mark_payment',
-              'upload_document',
-              'view_stats',
-            ],
-          },
         },
       });
     },
@@ -1760,6 +2587,38 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
     },
   });
   screen('22-athlete-coverage', '/dashboard/athletes/1/coverage', '[data-cy="athlete-coverage"]');
+  // The method folded under the number, opened (#1853).
+  screen(
+    '22-athlete-coverage-method',
+    '/dashboard/athletes/1/coverage',
+    '[data-cy="athlete-coverage-method"]',
+    {
+      act: () => {
+        press('[data-cy="athlete-coverage-method"] summary');
+        settle();
+      },
+    },
+  );
+  // The programme of their own belt (#1861) — only there once the academy
+  // has graded something.
+  screen(
+    '22-athlete-coverage-belt',
+    '/dashboard/athletes/1/coverage',
+    '[data-cy="athlete-coverage-grade"]',
+    {
+      stubs: () => {
+        cy.intercept('GET', '/api/v1/athletes/*/syllabus-coverage*', {
+          statusCode: 200,
+          body: {
+            data: {
+              ...ATHLETE_COVERAGE,
+              grade: { belt: 'blue', items: 18, taught_by_academy: 6, attended: 5 },
+            },
+          },
+        });
+      },
+    },
+  );
   screen(
     '22-athlete-coverage-nothing-yet',
     '/dashboard/athletes/1/coverage',
@@ -1851,6 +2710,73 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       },
     },
   );
+  // Tonight, for the people on the mat (#1860): a held lesson, two techniques
+  // most of the room missed, and the names of the first one opened.
+  screen(
+    '30-attendance-lesson-sheet-room',
+    '/dashboard/attendance',
+    '[data-cy="attendance-class-picker"]',
+    {
+      stubs: () => {
+        cy.intercept('GET', '/api/v1/lessons?*', {
+          statusCode: 200,
+          body: { data: { ...LESSON_TONIGHT, held: true } },
+        });
+        cy.intercept('GET', '/api/v1/lessons/room-gaps*', {
+          statusCode: 200,
+          body: { data: ROOM_GAPS },
+        });
+      },
+      act: () => {
+        press('[data-cy="attendance-topics"]');
+        dialogOpen('[data-cy="lesson-sheet"]');
+        cy.get('[data-cy="lesson-sheet-room"]').should('be.visible');
+        press('[data-cy="lesson-room-who-21"]');
+        cy.get('[data-cy="lesson-room-people-21"]').should('be.visible');
+      },
+    },
+  );
+  // How a technique is taught here (#1862): the programme's notes and video,
+  // and the notes of the last evening that taught it, captioned as that
+  // evening's.
+  screen(
+    '30-attendance-lesson-sheet-detail',
+    '/dashboard/attendance',
+    '[data-cy="attendance-class-picker"]',
+    {
+      stubs: () => {
+        cy.intercept('GET', '/api/v1/academy/syllabus', {
+          statusCode: 200,
+          body: { data: NOTED_SYLLABUS },
+        });
+        cy.intercept('GET', '/api/v1/lessons/last-notes*', {
+          statusCode: 200,
+          body: {
+            data: {
+              ...LESSON_TONIGHT,
+              id: 5,
+              held_on: '2026-09-09',
+              notes: 'Primo giorno di Marco dopo lo stop: drill lenti, niente sparring.',
+              held: true,
+            },
+          },
+        });
+      },
+      act: () => {
+        press('[data-cy="attendance-topics"]');
+        dialogOpen('[data-cy="lesson-sheet"]');
+        // The dialog's autofocus lands on the search field first; landing
+        // during `shoot()` it scrolled the sheet back over the details.
+        dialogFocusSettled('[data-cy="lesson-sheet-search"]');
+        press('[data-cy="lesson-expand-1"]');
+        press('[data-cy="lesson-detail-toggle-tree-11"]');
+        // The details sit below the fold of the sheet's own scroll area;
+        // focus brings them into the frame the way a keyboard would.
+        cy.get('[data-cy="lesson-detail-video"]').focus();
+        cy.get('[data-cy="lesson-detail-last-evening"]').should('be.visible');
+      },
+    },
+  );
   screen(
     '30-attendance-lesson-sheet-search',
     '/dashboard/attendance',
@@ -1861,6 +2787,30 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
         dialogOpen('[data-cy="lesson-sheet"]');
         cy.get('[data-cy="lesson-sheet-search"]').type('kim');
         cy.get('[data-cy="lesson-sheet-results"]').should('be.visible');
+      },
+    },
+  );
+  // Who usually comes and is not here (#1730), opened: two regulars missing.
+  screen('30-attendance-missing', '/dashboard/attendance', '[data-cy="missing-regulars-toggle"]', {
+    act: () => {
+      press('[data-cy="missing-regulars-toggle"]');
+      cy.get('[data-cy="missing-regular-6"]').scrollIntoView().should('be.visible');
+    },
+  });
+  // A class with two sessions on record: "we cannot tell yet", never "all here".
+  screen(
+    '30-attendance-missing-not-enough',
+    '/dashboard/attendance',
+    '[data-cy="missing-regulars-not-enough"]',
+    {
+      stubs: () => {
+        cy.intercept('GET', '/api/v1/attendance/regulars*', {
+          statusCode: 200,
+          body: { data: [], meta: { occurrences: 2, occurrence_dates: MONDAYS_HELD.slice(0, 2) } },
+        });
+      },
+      act: () => {
+        cy.get('[data-cy="missing-regulars-not-enough"]').scrollIntoView();
       },
     },
   );
@@ -1901,6 +2851,18 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
     '/dashboard/attendance/summary',
     '[data-cy="monthly-summary-page"]',
   );
+  // The method folded under the header, opened (#1853).
+  screen(
+    '31-attendance-summary-method',
+    '/dashboard/attendance/summary',
+    '[data-cy="monthly-summary-method"]',
+    {
+      act: () => {
+        press('[data-cy="monthly-summary-method"] summary');
+        settle();
+      },
+    },
+  );
 
   // ── 40. Stats ──────────────────────────────────────────────────────────
   screen('40-stats-overview', '/dashboard/stats/overview', '[data-cy="stats-tabs"]', {
@@ -1928,6 +2890,106 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
     // Chart.js animates in over a second; a shot before that is an empty canvas.
     act: () => cy.wait(1500),
   });
+  // The season map with one week opened on the lessons it counts (#1858).
+  screen('40-stats-syllabus-week', '/dashboard/stats/syllabus', '[data-cy="syllabus-coverage"]', {
+    clock: false,
+    act: () => {
+      press('[data-cy="season-map-cell-2-2026-09-21"]');
+      cy.get('[data-cy="season-map-popover"]', { timeout: 4000 }).should('be.visible');
+    },
+  });
+  // A position's whole season, from its name — the control every keyboard
+  // and fingertip reaches (#1858).
+  screen('40-stats-syllabus-season', '/dashboard/stats/syllabus', '[data-cy="syllabus-coverage"]', {
+    clock: false,
+    act: () => {
+      press('[data-cy="season-map-position-1"]');
+      cy.get('[data-cy="season-map-popover"]', { timeout: 4000 }).should('be.visible');
+    },
+  });
+  // An empty week still to come, opened to plan it (#1859): the classes of
+  // that week that may teach the position.
+  screen('40-stats-syllabus-plan', '/dashboard/stats/syllabus', '[data-cy="syllabus-coverage"]', {
+    clock: false,
+    act: () => {
+      press('[data-cy="season-map-cell-5-2026-09-28"]');
+      cy.get('[data-cy="season-map-plan"]', { timeout: 4000 }).should('be.visible');
+    },
+  });
+  // A technique never taught, planned from the report's list (#1656): the
+  // next class that may teach it, opened with it ticked. No-gi Lockdown
+  // passes over tonight's two gi classes for Wednesday's no-gi one. On the
+  // harness clock, so the day it lands on is the same every run.
+  screen(
+    '40-stats-syllabus-plan-missing',
+    '/dashboard/stats/syllabus',
+    '[data-cy="syllabus-coverage"]',
+    {
+      stubs: () => {
+        cy.intercept('GET', '/api/v1/lessons?*', { statusCode: 200, body: { data: null } });
+      },
+      act: () => {
+        press('[data-cy="syllabus-missing-23"] button');
+        dialogOpen('[data-cy="lesson-sheet"]');
+      },
+    },
+  );
+  // A week with a lesson held and a plan nobody checked into: the fill, a
+  // hatched corner, and both lessons in the popover.
+  screen('40-stats-syllabus-missed', '/dashboard/stats/syllabus', '[data-cy="syllabus-coverage"]', {
+    clock: false,
+    act: () => {
+      press('[data-cy="season-map-cell-3-2026-09-07"]');
+      cy.get('[data-cy="season-map-popover"]', { timeout: 4000 }).should('be.visible');
+    },
+  });
+  // The week's plan for the academy's group (#1863), just copied: the row
+  // under the map, and the toast that says where to paste it.
+  screen('40-stats-syllabus-share', '/dashboard/stats/syllabus', '[data-cy="syllabus-coverage"]', {
+    clock: false,
+    act: () => {
+      // The runner's frame does not hold the clipboard; the copy is stubbed.
+      cy.window().then((win) => {
+        cy.stub(win.navigator.clipboard, 'writeText').resolves();
+      });
+      press('[data-cy="season-map-share-copy"]');
+      cy.get('.p-toast-message', { timeout: 4000 }).should('be.visible');
+      // Clear of the toast in the top corner, with the map's last rows above.
+      cy.get('[data-cy="season-map-share"]').scrollIntoView({ offset: { top: -320, left: 0 } });
+    },
+  });
+  // Nothing planned for this week or the next: both actions stay, disabled,
+  // and the sentence says why (#1863).
+  screen(
+    '40-stats-syllabus-share-none',
+    '/dashboard/stats/syllabus',
+    '[data-cy="syllabus-coverage"]',
+    {
+      clock: false,
+      stubs: () => {
+        cy.intercept('GET', '/api/v1/stats/syllabus/calendar*', {
+          statusCode: 200,
+          body: {
+            // The plans taken off the cells as well, so the map agrees.
+            data: {
+              ...SYLLABUS_CALENDAR,
+              positions: SYLLABUS_CALENDAR.positions.map((position) => ({
+                ...position,
+                cells: position.cells
+                  .map((cell) => ({ ...cell, planned: 0 }))
+                  .filter((cell) => cell.held + cell.unconfirmed > 0),
+              })),
+              lessons: SYLLABUS_CALENDAR.lessons.filter((lesson) => lesson.state !== 'planned'),
+            },
+          },
+        });
+      },
+      act: () => {
+        cy.get('[data-cy="season-map-share-copy"] button').should('be.disabled');
+        cy.get('[data-cy="season-map-share"]').scrollIntoView({ offset: { top: -320, left: 0 } });
+      },
+    },
+  );
   screen('40-stats-syllabus-no-programme', '/dashboard/stats/syllabus', '[data-cy="stats-tabs"]', {
     clock: false,
     stubs: () => {
@@ -1950,6 +3012,41 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       });
     },
   });
+  // The other screen's rule, folded under the headline and opened (#1853).
+  screen(
+    '40-stats-syllabus-method',
+    '/dashboard/stats/syllabus',
+    '[data-cy="syllabus-coverage-method"]',
+    {
+      clock: false,
+      act: () => {
+        cy.wait(1500);
+        press('[data-cy="syllabus-coverage-method"] summary');
+        settle();
+      },
+    },
+  );
+  // A taught row, opened on who has seen it (#1745).
+  screen(
+    '40-stats-syllabus-exposure',
+    '/dashboard/stats/syllabus',
+    '[data-cy="syllabus-coverage"]',
+    {
+      clock: false,
+      stubs: () => {
+        cy.intercept('GET', '/api/v1/stats/syllabus/topics/11*', {
+          statusCode: 200,
+          body: { data: TOPIC_EXPOSURE },
+        });
+      },
+      act: () => {
+        cy.wait(1500);
+        press('[data-cy="syllabus-taught-11"] button');
+        cy.get('[data-cy="exposure-group-seen"]', { timeout: 10_000 }).should('exist');
+        cy.wait(400);
+      },
+    },
+  );
 
   // ── 50. Account ────────────────────────────────────────────────────────
   screen('50-profile-identity', '/dashboard/profile', '[data-cy="profile-tabs"]');
@@ -2050,23 +3147,56 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
   screen('12-syllabus-edit-position', '/dashboard/academy/syllabus', '[data-cy="syllabus-tree"]', {
     act: () => {
       press('[data-cy="syllabus-edit-1"]');
-      cy.get('[data-cy="syllabus-form"]', { timeout: 4000 }).should('be.visible');
+      // The name field, not the form: since #1862 the form outgrows the
+      // dialog's scroll area at 960×600, and Cypress reads a form taller
+      // than its scroll container as not visible.
+      cy.get('[data-cy="syllabus-form-name"]', { timeout: 4000 }).should('be.visible');
     },
   });
   screen('12-syllabus-edit-technique', '/dashboard/academy/syllabus', '[data-cy="syllabus-tree"]', {
     act: () => {
       press('[data-cy="syllabus-toggle-1"]');
       press('[data-cy="syllabus-topic-11"] button');
-      cy.get('[data-cy="syllabus-form"]', { timeout: 4000 }).should('be.visible');
+      // The name field, not the form: since #1862 the form outgrows the
+      // dialog's scroll area at 960×600, and Cypress reads a form taller
+      // than its scroll container as not visible.
+      cy.get('[data-cy="syllabus-form-name"]', { timeout: 4000 }).should('be.visible');
     },
   });
+  // The teaching notebook in the dialog (#1862): notes and a reference video.
+  screen(
+    '12-syllabus-edit-technique-notes',
+    '/dashboard/academy/syllabus',
+    '[data-cy="syllabus-tree"]',
+    {
+      stubs: () => {
+        cy.intercept('GET', '/api/v1/academy/syllabus', {
+          statusCode: 200,
+          body: { data: NOTED_SYLLABUS },
+        });
+      },
+      act: () => {
+        press('[data-cy="syllabus-toggle-1"]');
+        press('[data-cy="syllabus-topic-edit-11"]');
+        dialogOpen('[data-cy="syllabus-form"]');
+        dialogFocusSettled('[data-cy="syllabus-form-name"]');
+        // Below the fold at 960×600: focus scrolls the dialog to the two
+        // new fields the way a keyboard would reach them.
+        cy.get('[data-cy="syllabus-form-video"]').focus();
+        cy.get('[data-cy="syllabus-form-notes"]').should('be.visible');
+      },
+    },
+  );
   // The other half of TT-5 (#1644): this confirm is opened from the footer of
   // the topic dialog, so an anchored popup hung below that dialog's edge. It
   // is a modal confirm now, photographed like the timetable's.
   screen('12-syllabus-remove-confirm', '/dashboard/academy/syllabus', '[data-cy="syllabus-tree"]', {
     act: () => {
       press('[data-cy="syllabus-edit-1"]');
-      cy.get('[data-cy="syllabus-form"]', { timeout: 4000 }).should('be.visible');
+      // The name field, not the form: since #1862 the form outgrows the
+      // dialog's scroll area at 960×600, and Cypress reads a form taller
+      // than its scroll container as not visible.
+      cy.get('[data-cy="syllabus-form-name"]', { timeout: 4000 }).should('be.visible');
       press('[data-cy="syllabus-form-remove"]');
       cy.get('.p-confirmdialog', { timeout: 4000 }).should('be.visible');
     },
@@ -2078,6 +3208,43 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
     act: () => {
       press('[data-cy="athletes-paid-filter"]');
       cy.wait(400);
+    },
+  });
+  // The Last seen header pressed once (#1726): longest absent first.
+  screen('20-athletes-last-seen-sort', '/dashboard/athletes', ROSTER_READY, {
+    act: () => {
+      press('[data-cy="athletes-th-last-seen"]');
+      cy.wait(400);
+    },
+  });
+  // Not seen lately (#1729): the ⋯ menu open, and the two empty answers that
+  // must never be confused — "nobody is drifting" and "we cannot tell yet".
+  screen('20-athletes-not-seen-menu', '/dashboard/athletes', ROSTER_READY, {
+    act: () => {
+      press('[data-cy="not-seen-more-7"]');
+      cy.get('.p-menu').should('be.visible');
+    },
+  });
+  screen('20-athletes-not-seen-healthy', '/dashboard/athletes', ROSTER_READY, {
+    stubs: () => {
+      cy.intercept('GET', '/api/v1/stats/attendance/at-risk', {
+        statusCode: 200,
+        body: {
+          data: [],
+          meta: { sessions_available: 41, sessions_needed: 20, has_attendance: true },
+        },
+      });
+    },
+  });
+  screen('20-athletes-not-seen-no-history', '/dashboard/athletes', ROSTER_READY, {
+    stubs: () => {
+      cy.intercept('GET', '/api/v1/stats/attendance/at-risk', {
+        statusCode: 200,
+        body: {
+          data: [],
+          meta: { sessions_available: 12, sessions_needed: 20, has_attendance: true },
+        },
+      });
     },
   });
   screen('20-athletes-inactive-revealed', '/dashboard/athletes', ROSTER_READY, {

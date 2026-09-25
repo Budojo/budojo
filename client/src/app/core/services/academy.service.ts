@@ -295,6 +295,13 @@ export interface Academy {
    */
   season_start_month?: number | null;
   /**
+   * Whether the academy has a kids' programme (#1651). When `false` the belt
+   * pickers and filters offer only adult grades (`BeltLadderService`). Absent
+   * on older payloads and on `/me/academy`, where it reads as `true` — the
+   * behaviour before the setting existed.
+   */
+  trains_kids?: boolean;
+  /**
    * The month this academy started recording fees in Budojo (#1742), as
    * `YYYY-MM-01`, or `null` for no floor.
    *
@@ -455,6 +462,8 @@ export interface UpdateAcademyPayload {
   training_days?: number[] | null;
   /** Month the training year restarts in, 1-12 (#1484). `null` = "not chosen". */
   season_start_month?: number | null;
+  /** Whether the academy has a kids' programme (#1651). */
+  trains_kids?: boolean;
   /**
    * The month fees start being recorded here (#1742), `YYYY-MM-DD`. Any day
    * is accepted; the server pins it to the 1st, so a floor set on the 17th
@@ -495,12 +504,14 @@ export class AcademyService {
    * Whichever academy this session has a ladder from: the owner's, else the
    * athlete's own (#1813). What `BeltLadderService` and `TrainingModesService`
    * read, so every belt in the app is drawn from the one the session belongs
-   * to.
+   * to. `trains_kids` rides along optionally (#1651): the owner's academy
+   * carries it, the athlete's `/me/academy` does not.
    */
-  readonly ladderAcademy = computed<Pick<
-    Academy,
-    'martial_art' | 'grades' | 'training_modes'
-  > | null>(() => this.academy() ?? this.mine());
+  readonly ladderAcademy = computed<
+    | (Pick<Academy, 'martial_art' | 'grades' | 'training_modes'> &
+        Pick<Partial<Academy>, 'trains_kids'>)
+    | null
+  >(() => this.academy() ?? this.mine());
 
   /**
    * Tracks the HTTP request that is currently in flight, if any. We reuse it

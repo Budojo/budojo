@@ -9,12 +9,14 @@ use App\Actions\Athlete\CreateAthleteAction;
 use App\Actions\Athlete\RestoreAthleteAction;
 use App\Actions\Athlete\UpdateAthleteAction;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Athlete\ListAthletesRequest;
 use App\Http\Requests\Athlete\StoreAthleteRequest;
 use App\Http\Requests\Athlete\UpdateAthleteRequest;
 use App\Http\Resources\AthleteResource;
 use App\Models\Academy;
 use App\Models\Athlete;
 use App\Models\User;
+use App\Support\BirthdayWindow;
 use App\Support\MartialArt\MartialArtProfile;
 use App\Support\MartialArt\RankLadder;
 use App\Support\NameFold;
@@ -75,15 +77,16 @@ class AthleteController extends Controller
 
     /**
      * Sortable AGGREGATES (#1447) — separate from the whitelist above because
-     * these are not columns on `athletes`. They are the `withCount` aliases
-     * the index selects, so they exist only inside this query and can be
-     * ordered by name the same way a column can.
+     * these are not columns on `athletes`. They are the `withCount` /
+     * `withMax` aliases the index selects, so they exist only inside this
+     * query and can be ordered by name the same way a column can.
      *
      * @var array<string, string>
      */
     private const SORTABLE_AGGREGATES = [
         'attendance_month' => 'attendance_month_count',
         'attendance_total' => 'attendance_total_count',
+        'last_seen' => 'last_attended_on',
     ];
 
     public function __construct(
@@ -93,7 +96,7 @@ class AthleteController extends Controller
     ) {
     }
 
-    public function index(Request $request): AnonymousResourceCollection|JsonResponse
+    public function index(ListAthletesRequest $request): AnonymousResourceCollection|JsonResponse
     {
         /** @var User $user */
         $user = $request->user();
@@ -133,6 +136,7 @@ class AthleteController extends Controller
         ]);
 
         $paid = $request->input('paid');
+        $birthdays = BirthdayWindow::monthDays($request->input('birthday'), $request->birthdayFrom());
 
         // `?status=trashed` (#700) is a special list mode: it surfaces
         // ONLY soft-deleted athletes (the restore picker UI). Detect it
@@ -223,6 +227,12 @@ class AthleteController extends Controller
                 'attendanceRecords as attendance_month_count' => fn ($q) => $currentMonthAttendanceScope($q)
                     ->select(DB::raw('count(distinct attended_on)')),
             ])
+            // When they last trained (#1726) — the recency the two counts
+            // cannot give: "7 this season" reads the same for someone who came
+            // yesterday and someone who stopped in March. Not floored at the
+            // season or at `joined_at`: a date either exists or it does not.
+            // The SoftDeletes global scope keeps a corrected presence out.
+            ->withMax('attendanceRecords as last_attended_on', 'attended_on')
             ->when($request->filled('belt'), fn ($q) => $q->where('belt', $request->input('belt')))
             ->when(
                 ! $trashedMode && $request->filled('status'),
@@ -243,6 +253,13 @@ class AthleteController extends Controller
             // list endpoint that's read by humans more than tools.
             ->when($paid === 'yes', fn ($q) => $q->coveredFor($currentYear, $currentMonth, $now))
             ->when($paid === 'no', fn ($q) => $q->owing($currentYear, $currentMonth, $now))
+            // ?birthday=today|week (#1754) — whose birthday it is, for Today's
+            // block. Like `paid=yes` it does not gate on status: the caller
+            // adds `status=active` when it wants only the people training.
+            // An unknown value is ignored, as above. The window starts from
+            // `from`, the caller's own day, when it sends one (see
+            // `ListAthletesRequest`), else from the server's.
+            ->when($birthdays, fn ($q, array $monthDays) => $q->birthdayOnAnyOf($monthDays))
             ->when($request->filled('q'), function (Builder|HasMany $q) use ($request) {
                 // `$request->string('q')` returns a `Stringable` — keeps PHPStan
                 // happy without the `mixed` → `string` cast that `input()` needs.
@@ -268,7 +285,15 @@ class AthleteController extends Controller
             // between pages and an athlete can appear on both page 1 and 2, or
             // on neither. Same reasoning as the name sort's own tiebreak
             // (#196).
-            $query->orderBy(self::SORTABLE_AGGREGATES[$sortBy], $sortOrder)
+            //
+            // Nulls last in BOTH directions (#1726). Only `last_seen` can be
+            // null — an athlete who has never trained — and they are neither
+            // the most recent nor the most overdue: they are unknown. SQLite
+            // puts NULL first on ASC, so the order says it explicitly. A
+            // count is never null, so for the other two this key is inert.
+            $alias = self::SORTABLE_AGGREGATES[$sortBy];
+            $query->orderByRaw("{$alias} IS NULL")
+                ->orderBy($alias, $sortOrder)
                 ->orderBy('last_name_sort')
                 ->orderBy('first_name_sort')
                 ->orderBy('id');
@@ -326,6 +351,9 @@ class AthleteController extends Controller
         // what this athlete pays, and a lazy load would issue them one at a
         // time from inside the serializer.
         $athlete->load(['latestActiveInvitation', 'feeTier', 'academy']);
+        // Unlike the two counts, the last presence is selected here too
+        // (#1726): the athlete header shows it.
+        $athlete->loadMax('attendanceRecords as last_attended_on', 'attended_on');
 
         return response()->json(['data' => new AthleteResource($athlete)]);
     }

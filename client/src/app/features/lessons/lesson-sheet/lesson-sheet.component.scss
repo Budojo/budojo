@@ -23,6 +23,43 @@
     color: var(--p-text-muted-color);
   }
 
+  // The week stepper (#1859): a toolbar chevron, 40 px drawn inside a 48 px
+  // hit region, as the touch-target rule allows for a supplementary control.
+  &__step {
+    appearance: none;
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 3rem;
+    height: 3rem;
+    padding: 0;
+    background: none;
+    border: 1px solid var(--p-content-border-color);
+    border-radius: var(--budojo-radius-small, 0.5rem);
+    color: var(--p-text-muted-color);
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      background: var(--p-content-hover-background);
+    }
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--p-primary-color);
+      outline-offset: 2px;
+    }
+  }
+
+  &__hint {
+    font-size: 0.75rem;
+    color: var(--p-text-muted-color);
+  }
+
   // Planned or held, as an eyebrow chip — the same monochrome shape the
   // timetable and the programme use for a dimension of the row.
   &__state {
@@ -273,6 +310,112 @@
   }
 }
 
+// ── How it is taught here (#1862) ─────────────────────────────────────────────
+//
+// A row that can open its details: the topic, the info button beside it, and
+// the details under both when open. The button is the dismiss button's shape
+// — the same quiet 48 px square — so a row carries one kind of side control.
+
+.pickable {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0.5rem;
+  min-width: 0;
+
+  .topic {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+}
+
+.topic-info {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  min-height: 3rem;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  // Muted until the programme has something written for it; then it reads
+  // like the text it opens.
+  color: var(--p-text-muted-color);
+  cursor: pointer;
+  transition: background var(--budojo-motion-fast) var(--budojo-motion-decelerate);
+
+  &--written {
+    color: var(--p-text-color);
+  }
+
+  &:hover,
+  &[aria-expanded='true'] {
+    background: var(--p-surface-100);
+    color: var(--p-text-color);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--p-primary-color);
+    outline-offset: -2px;
+  }
+}
+
+.topic-detail {
+  flex: 1 1 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0 0 0.5rem 2rem;
+  padding: 0.5rem 1rem;
+  border-left: 2px solid var(--p-content-border-color);
+  font-size: 0.8125rem;
+  color: var(--p-text-color);
+
+  &__notes {
+    margin: 0;
+    // The owner's own line breaks are part of what they wrote.
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+  }
+
+  &__video {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    align-self: flex-start;
+    min-height: 3rem;
+    color: var(--p-primary-color);
+  }
+
+  &__muted {
+    margin: 0;
+    color: var(--p-text-muted-color);
+  }
+
+  // The last evening's notes, quoted and captioned as that evening's: they
+  // are about the evening, never about the technique.
+  &__evening {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+
+    figcaption {
+      font-size: 0.75rem;
+      color: var(--p-text-muted-color);
+    }
+
+    blockquote {
+      margin: 0;
+      white-space: pre-line;
+      overflow-wrap: anywhere;
+      font-style: italic;
+    }
+  }
+}
+
 // ── The tree ──────────────────────────────────────────────────────────────────
 
 .tree {
@@ -360,40 +503,107 @@
 // instructor actually walked in with; the group below is the answer to a
 // different one ("what were we doing?").
 
+// The square beside a suggestion row: "not tonight" on a suggestion, "who" on
+// tonight's room (#1860). One shape in one place, because both sit in the
+// same spot on the same row. 48px, because it sits under a thumb at the edge
+// of a mat (Fitts).
+%row-square-button {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  min-height: 3rem;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--p-text-muted-color);
+  cursor: pointer;
+  // `--budojo-motion-ease` does not exist — only fast / base / slow /
+  // decelerate do — and an undefined `var()` with no fallback invalidates
+  // the whole declaration, so this transition never ran (#1786).
+  transition: background var(--budojo-motion-fast) var(--budojo-motion-decelerate);
+
+  &:hover {
+    background: var(--p-surface-100);
+    color: var(--p-text-color);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--p-primary-color);
+    outline-offset: -2px;
+  }
+}
+
 .suggestion {
   display: flex;
+  flex-wrap: wrap;
   align-items: stretch;
   gap: 0.5rem;
   min-width: 0;
 
   .topic {
-    flex: 1 1 auto;
+    // `0`, not `auto`: with the row wrapping for the details panel, an
+    // `auto` basis would push the two buttons onto a line of their own.
+    flex: 1 1 0;
     min-width: 0;
   }
 
-  // 48px, because it sits under a thumb at the edge of a mat (Fitts).
   &__dismiss {
-    flex: 0 0 auto;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 3rem;
-    min-height: 3rem;
-    padding: 0;
-    border: 0;
-    border-radius: 12px;
-    background: transparent;
-    color: var(--p-text-muted-color);
-    cursor: pointer;
-    // `--budojo-motion-ease` does not exist — only fast / base / slow /
-    // decelerate do — and an undefined `var()` with no fallback invalidates
-    // the whole declaration, so this transition never ran (#1786).
-    transition: background var(--budojo-motion-fast) var(--budojo-motion-decelerate);
+    @extend %row-square-button;
+  }
+}
 
-    &:hover {
-      background: var(--p-surface-100);
+// ── Tonight, for the people on the mat (#1860) ───────────────────────────────
+//
+// The same row as a suggestion — it is one, with a reason about the room — and
+// under it, on request, the people who missed it.
+
+.room {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+
+  // Where the suggestions put "not tonight", the room puts "who": the same
+  // 48 px square in the same place, so the row reads the same way.
+  &__who {
+    @extend %row-square-button;
+
+    &[aria-expanded='true'] {
+      background: var(--p-content-hover-background);
       color: var(--p-text-color);
     }
+  }
+
+  &__people {
+    list-style: none;
+    margin: 0;
+    padding: 0 0 0 1rem;
+    display: flex;
+    flex-direction: column;
+  }
+
+  // The identity's spine is absolutely positioned, so the row is its
+  // containing block — the roster's arrangement (#1458).
+  &__person {
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-height: 2.5rem;
+    padding: 0.25rem 0 0.25rem 1rem;
+
+    & + & {
+      border-top: 1px solid color-mix(in srgb, var(--p-content-border-color) 60%, transparent);
+    }
+  }
+
+  &__unsure {
+    margin: 0;
+    padding-left: 1rem;
+    font-size: 0.75rem;
+    color: var(--p-text-muted-color);
   }
 }
 

@@ -101,6 +101,24 @@ describe('AcademyFormComponent', () => {
     expect(component.slug()).toBe('gracie-barra-torino-a1b2c3d4');
   });
 
+  it("shows whether the academy trains kids, and sends the owner's answer (#1651)", () => {
+    const { fixture, component, httpMock } = setup(makeAcademy({ trains_kids: false }));
+
+    expect(component.form.controls.trains_kids.value).toBe(false);
+    const row = fixture.nativeElement.querySelector('[data-cy="academy-form-trains-kids"]');
+    expect(row.textContent).toContain('We also train kids');
+    // The hint says what switching off does; a screen reader reads it too.
+    expect(row.querySelector('input#academy-trains-kids')?.getAttribute('aria-describedby')).toBe(
+      'academy-trains-kids-hint',
+    );
+
+    component.form.controls.trains_kids.setValue(true);
+    component.submit();
+
+    const req = httpMock.expectOne({ method: 'PATCH', url: '/api/v1/academy' });
+    expect(req.request.body.trains_kids).toBe(true);
+  });
+
   it('hides the training-day pills and sends no training_days while the timetable sets them (#1575)', () => {
     const { fixture, component, httpMock } = setup(
       makeAcademy({ classes_count: 3, training_days: [1, 3, 5] }),
@@ -231,6 +249,9 @@ describe('AcademyFormComponent', () => {
       carnet_entries: null,
       carnet_entry_unit: 'lesson',
       season_start_month: null,
+      // makeAcademy() predates #1651 and sends no `trains_kids`; absent reads
+      // as true, which is what every payload before the setting meant.
+      trains_kids: true,
       billing_from: null,
       training_days: null,
       // Unlocked (no athletes, timetable, lessons or programme yet), so the picker's
@@ -284,6 +305,9 @@ describe('AcademyFormComponent', () => {
       carnet_entries: null,
       carnet_entry_unit: 'lesson',
       season_start_month: null,
+      // makeAcademy() predates #1651 and sends no `trains_kids`; absent reads
+      // as true, which is what every payload before the setting meant.
+      trains_kids: true,
       billing_from: null,
       training_days: null,
       // Unlocked (no athletes, timetable, lessons or programme yet), so the picker's

@@ -10,7 +10,7 @@ A drop-in override layer for the `@primeuix/themes/material` preset that deliver
 
 | Token | Light | Dark | Purpose |
 |---|---|---|---|
-| `--p-primary-color` | `#5b6cff` | `#7b8bff` | CTA, focus ring, active nav |
+| `--p-primary-color` | `#5b6cff` | `#7b8bff` | Action, selection and state; brand and decoration on their own surfaces; never data. See **The accent means action** below (#1852) |
 | `--p-primary-contrast-color` | `#ffffff` | `#0a0a0b` | Text on primary |
 | `--p-primary-hover-color` | `#4554ed` | `#9aa3ff` | Primary hover |
 | `--p-primary-active-color` | `#3644c7` | `#b4bbff` | Primary pressed |
@@ -44,6 +44,17 @@ A drop-in override layer for the `@primeuix/themes/material` preset that deliver
 | `--budojo-titlebar-background` | `#fafafa` | `#151517` | The Electron drag strip. Pinned to `titleBarOverlay.color` in `desktop/src/titlebar-theme.ts` by a spec — native paint cannot read CSS (#1793) |
 | `--budojo-skeleton-background` | `--p-surface-100` | `--p-surface-200` | A placeholder needs a step against the card it covers, and in dark `surface-100` **is** the card (#1793) |
 | `--budojo-belt-edge` | `rgb(0 0 0 / 12%)` | `rgb(255 255 255 / 22%)` | Ground contact around a belt spine and a belt pill; the belt itself never moves (#1793, #1801) |
+
+**The accent means action (#1852).** Indigo is the one colour that tells the owner "you can press this" or "this one is on". It keeps that meaning only while nothing on a working screen competes with it. Sanctioned uses:
+
+- **Action:** a primary button, a link (inside prose too), a text action such as "Annulla" on the undo toast.
+- **Selection:** the selected chip, day or option; the present row at check-in; the active nav item; the active sort signifier.
+- **State:** today on the timetable, an unread dot, an update ready to install, a deep-linked card, the caller's own row.
+- **Focus:** the focus ring.
+- **A chart's single hue:** an ordinal scale is one hue at several strengths (#1550), and the heatmaps and coverage bars use the accent as that hue. A bar is not mistaken for a button; a number would be.
+- **Brand and decoration:** the logo mark on the auth pages, brand tiles (`docs/design/README.md` § brand icons), the academy-logo placeholder, a public profile's initials, the decorative icons in notices and sheets. They are the product's colour, not a claim about what can be pressed.
+
+**Data is ink.** A percentage, a count, a remaining balance or a rank is `--p-text-color` (or `--p-text-muted-color` when it is context for something beside it), and its hierarchy comes from size and weight. `shared/styles/accent-means-action.spec.ts` fails the build when a class named like a number takes its text colour from the accent, directly or through a nested modifier or a selector list: `__number`, `__count`, `__remaining`, `__percentage`, `__percent`, `__headline`, `__rank`, `__total` (or the same word after a single `-`). Nor is a category: a notification's category tone never wears the accent, or an indigo close enough to read as it, because on an unread row the accent is already the dot and the wash.
 
 > **The surface scale inverts between themes, so its indices are not portable.**
 > `--p-surface-0` is white in light and `#1c1c1e` in dark; `--p-surface-900` is
@@ -114,6 +125,8 @@ Belt colors are domain constants, not theme roles, and they live **once** in `bu
 
 Third shadow ramp is forbidden. If you reach for it, use a hairline border.
 
+**Depth strategy: borders first.** Group with a hairline, a divider or space. Lift with `--budojo-elevation-floating` only what floats over the page: dialogs, menus, toasts. A card on a card is how a screen loses its focal point (#1855).
+
 ### 1.6 Motion
 
 | Token | Value | Use |
@@ -173,6 +186,28 @@ Page-chrome **padding** is set once at the dashboard shell `.main` element and c
 - Pages inside the dashboard shell declare only their container choice — `max-width: var(--budojo-page-content-max); margin: 0 auto;`. Padding is **never** redeclared on a page wrapper.
 - Public pages outside the dashboard shell (`/privacy`, `/sub-processors`) keep their own padding in `_legal-page.scss` and consume `--budojo-container-prose` directly — the shell's `.main` doesn't reach them, and the global `box-sizing: border-box` rule already includes their own padding inside `max-width`.
 - Narrow-card layouts (`/profile`, `/dashboard/academy`, `/dashboard/academy/edit`, athlete form) currently use raw `max-width` (40rem / 640px / 900px) because they're slated for a hierarchy rework — wide page header + narrow card aligned left, instead of a viewport-restricting page.
+
+### 1.8 Signature — the belt spine (#1855)
+
+Budojo is near-monochrome with one indigo accent. The colour in the product comes from the belts, as it does on the mat. **Wherever a person is listed, their belt is on the row**: a spine in the belt's colour, full height, down the left edge. It is the one element that could belong to no other product, which is what `interface-design` means by a *signature*. The product review of 24 September 2026 named it.
+
+**How.** Always through `<app-athlete-identity>` (`shared/components/athlete-identity/`, #1458): spine, avatar, full name, age chip. A page adds only what is its own (a payment chip, a present/absent control, a date) through `<ng-content>`. Never redraw a spine by hand: the spine carries the belt's name for a screen reader and a tooltip for a sighted reader who cannot tell brown from black in a 9 px stripe, and a hand-drawn copy loses both.
+
+**Where it appears.**
+
+| Screen | Since |
+|---|---|
+| Roster | #1458 |
+| Check-in (daily attendance) | #1458 |
+| Monthly summary, leaderboard, expiring documents | #1851 |
+| Every new list of people: Today (#1643), the promotion candidates (#1841), "not seen lately" (#1729) | as they ship |
+
+**What it is never used for.**
+
+- **A row that is not a person.** A class, a technique or a payment has no belt, and a coloured bar beside one reads as a rank that does not exist.
+- **State.** The spine is the belt and nothing else. No red spine for unpaid, no faded spine for inactive: state is a chip or words, beside the identity.
+- **Decoration.** No belt-coloured headers, gradients or backgrounds. The colour is information about one person, so it only appears next to that person.
+- **Recolouring.** The belt tokens (§ 1.1, `--budojo-belt-*`) are constants on `:root`, the same in both themes. Only the ground contact around the spine (`--budojo-belt-edge`) changes with the theme.
 
 ---
 
@@ -694,6 +729,7 @@ Reach for these before hand-rolling the same shape again. Shipped in the v2.32.0
 | `<app-error-state>` | "Load failed" surfaces | `role="alert"`, warn-tone icon, optional retry CTA (`severity="warn"` outlined). |
 | `<app-card>` | Card shells | surface-0 + hairline + `--p-border-radius-md` + named `[header]`/`[body]`/`[footer]` slots. |
 | `<app-confirm-destructive-button>` | Destructive actions | `p-button[severity=danger]` + `ConfirmationService.confirm()` with required `ariaLabel` — bakes in the "destructive actions confirm" rule. |
+| `<app-how-counted>` | The method behind a number (#1853) | A native `<details>` whose `<summary>` is the question "Come si conta?", closed at rest. Under a number goes one visible sentence saying what it counts; how it is counted, and why it differs from a same-looking number elsewhere, is projected in here. Used on the athlete's Programme tab, Stats → Programme and the monthly summary. |
 
 **Form-error reactivity pattern:** for inline validation that must appear on an empty submit, source the error signal from `toSignal(control.events)` (emits `TouchedChangeEvent`) — NOT `statusChanges`, which `markAllAsTouched()` doesn't fire. See `login.component.ts` for the canonical example.
 

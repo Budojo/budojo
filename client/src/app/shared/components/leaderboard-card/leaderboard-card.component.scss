@@ -50,6 +50,15 @@
     background: var(--p-surface-50);
   }
 
+  // Only a list that draws identities (#1851): the row becomes the containing
+  // block for the belt spine, which runs down its left edge as on the roster,
+  // and the wider padding keeps daylight between the spine and the rank. The
+  // portal's list draws none and keeps its old padding.
+  &__list--identities &__row {
+    position: relative;
+    padding-left: 1.5rem;
+  }
+
   &__row--self {
     background: color-mix(in srgb, var(--p-primary-color) 12%, var(--p-surface-0));
     border: 1px solid color-mix(in srgb, var(--p-primary-color) 30%, var(--p-surface-200));
@@ -57,8 +66,14 @@
 
   &__rank {
     font-weight: 700;
-    color: var(--p-primary-color);
+    // Muted ink, not the accent (#1852): the rank is context for the name
+    // beside it, and the accent is kept for what can be pressed or selected.
+    color: var(--p-text-muted-color);
     text-align: center;
+  }
+
+  &__identity {
+    min-width: 0;
   }
 
   &__name {

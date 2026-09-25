@@ -134,3 +134,52 @@ describe('StatsAthletesComponent — the federation the divisions come from (#18
     expect(fixture.componentInstance['chartData']().labels).toEqual(['master_b']);
   });
 });
+
+describe('StatsAthletesComponent — an academy that does not train kids (#1651)', () => {
+  let http: HttpTestingController;
+
+  function open(trainsKids: boolean, bands: object[]): ComponentFixture<StatsAthletesComponent> {
+    TestBed.configureTestingModule({
+      imports: [StatsAthletesComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting(), ...provideI18nTesting()],
+    });
+    useLadder('bjj', { trains_kids: trainsKids });
+    const fixture = TestBed.createComponent(StatsAthletesComponent);
+    http = TestBed.inject(HttpTestingController);
+    fixture.detectChanges();
+    http
+      .expectOne('/api/v1/stats/athletes/age-bands')
+      .flush({ data: { bands, total: 21, missing_dob: 0 } });
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  afterEach(() => http.verify());
+
+  const BANDS = [
+    { code: 'pee_wee', category: 'kids', min: 7, max: 9, count: 0 },
+    { code: 'teen', category: 'kids', min: 13, max: 15, count: 1 },
+    { code: 'adult', category: 'adults', min: 18, max: null, count: 20 },
+  ];
+
+  it('drops the Kids / Adults toggle, which had nothing to switch between', () => {
+    const fixture = open(false, BANDS);
+
+    expect(fixture.nativeElement.querySelector('[data-cy="stats-athletes-scope"]')).toBeNull();
+  });
+
+  it('leaves out the empty kids divisions, but not one with somebody in it', () => {
+    const fixture = open(false, BANDS);
+
+    // A teenager on an adult roster is still counted where they belong.
+    const codes = fixture.componentInstance['visibleBands']().map((b: { code: string }) => b.code);
+    expect(codes).toEqual(['teen', 'adult']);
+  });
+
+  it('keeps the toggle and every division for an academy that trains kids', () => {
+    const fixture = open(true, BANDS);
+
+    expect(fixture.nativeElement.querySelector('[data-cy="stats-athletes-scope"]')).toBeTruthy();
+    expect(fixture.componentInstance['visibleBands']()).toHaveLength(3);
+  });
+});

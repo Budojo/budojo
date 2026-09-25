@@ -72,6 +72,10 @@ class AcademyResource extends JsonResource
             // season starts — the client re-deriving it from the month would
             // be a second implementation of the same off-by-one.
             'season_start_month' => $academy->season_start_month,
+            // Whether the pickers offer the youth grades (#1651). The ladder
+            // below still carries every grade: an athlete already on a youth
+            // belt must still render.
+            'trains_kids' => $academy->trains_kids,
             // The month Budojo became where this academy's fees are recorded
             // (#1742). Emitted raw — it goes back into the settings form. The
             // ledger does NOT floor on it directly: the effective floor is

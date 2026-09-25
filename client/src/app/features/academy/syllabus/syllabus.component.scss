@@ -242,6 +242,19 @@
   white-space: nowrap;
 }
 
+// "From [Blue]" (#1861): the grade a topic belongs to the programme from,
+// drawn as the belt it is — the product's one domain colour — with the word
+// that keeps a blue pill on a technique from reading as "this is blue".
+.belt-from {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--p-text-muted-color);
+  white-space: nowrap;
+}
+
 // The same square control the toolbar rows use (#1526) — one more secondary
 // control, and a second visual language for it would read as a second kind
 // of button.
@@ -284,6 +297,20 @@
   }
 }
 
+// The two steps and where the topic now stands (#1661). Wraps on a phone,
+// the place dropping under the buttons rather than squeezing them.
+.topic-order {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+
+  &__place {
+    color: var(--p-text-muted-color);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
 .field {
   display: flex;
   flex-direction: column;
@@ -309,9 +336,29 @@
   }
 }
 
+// Search and the belt filter (#1861) on one row from a tablet up; stacked on
+// a phone, where a select squeezed beside the field would truncate both.
+.syllabus__tools {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  @media (min-width: 768px) {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+
+.syllabus__belt-filter {
+  @media (min-width: 768px) {
+    flex: 0 0 16rem;
+  }
+}
+
 // The programme's search (#1629). Same shape as the lesson sheet's field, so
 // the two searches over the same tree look like the same control.
 .syllabus__search {
+  flex: 1 1 auto;
   position: relative;
   display: flex;
   align-items: center;

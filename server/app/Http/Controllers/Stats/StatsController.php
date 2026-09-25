@@ -5,15 +5,19 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Stats;
 
 use App\Actions\Stats\AthleteAgeBandsAction;
+use App\Actions\Stats\AtRiskAthletesAction;
 use App\Actions\Stats\CertificateComplianceAction;
 use App\Actions\Stats\DailyAttendanceStatsAction;
 use App\Actions\Stats\MonthlyPaymentsStatsAction;
+use App\Actions\Stats\SyllabusCalendarAction;
 use App\Actions\Stats\SyllabusCoverageAction;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Stats\AtRiskAthletesRequest;
 use App\Http\Requests\Stats\DailyAttendanceRangeRequest;
 use App\Http\Requests\Stats\MonthsRangeRequest;
 use App\Http\Requests\Stats\SyllabusCoverageRequest;
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -24,7 +28,9 @@ class StatsController extends Controller
         private readonly MonthlyPaymentsStatsAction $monthlyPaymentsAction,
         private readonly AthleteAgeBandsAction $ageBandsAction,
         private readonly SyllabusCoverageAction $syllabusCoverageAction,
+        private readonly SyllabusCalendarAction $syllabusCalendarAction,
         private readonly CertificateComplianceAction $certificateComplianceAction,
+        private readonly AtRiskAthletesAction $atRiskAthletesAction,
     ) {
     }
 
@@ -83,6 +89,30 @@ class StatsController extends Controller
         ]);
     }
 
+    /**
+     * Each position, week by week (#1858): held, planned, and planned but
+     * never checked into. Same season and filter as the coverage report,
+     * because the map is drawn beside that report's fractions.
+     */
+    public function syllabusCalendar(SyllabusCoverageRequest $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+        $academy = $user->activeAcademy();
+
+        if ($academy === null) {
+            return response()->json(['message' => 'Forbidden.'], 403);
+        }
+
+        return response()->json([
+            'data' => $this->syllabusCalendarAction->execute(
+                $academy,
+                $request->seasonsBack(),
+                $request->kind(),
+            ),
+        ]);
+    }
+
     public function ageBands(Request $request): JsonResponse
     {
         /** @var User $user */
@@ -96,6 +126,23 @@ class StatsController extends Controller
         $payload = $this->ageBandsAction->execute($academy);
 
         return response()->json(['data' => $payload]);
+    }
+
+    /**
+     * Who is drifting, against their own attendance (#1728). Not cached: a
+     * presence ticked tonight must take someone off the list tonight.
+     */
+    public function atRisk(AtRiskAthletesRequest $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+        $academy = $user->activeAcademy();
+
+        if ($academy === null) {
+            return response()->json(['message' => 'Forbidden.'], 403);
+        }
+
+        return response()->json($this->atRiskAthletesAction->execute($academy, CarbonImmutable::today()));
     }
 
     /** How many active athletes a medical certificate covers (#1732). */

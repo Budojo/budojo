@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Academy;
 
 use App\Actions\Syllabus\CreateSyllabusTopicAction;
 use App\Actions\Syllabus\DeleteSyllabusTopicAction;
+use App\Actions\Syllabus\MoveSyllabusTopicAction;
 use App\Actions\Syllabus\SeedSyllabusAction;
 use App\Actions\Syllabus\UpdateSyllabusTopicAction;
 use App\Authorization\Capability;
@@ -13,6 +14,7 @@ use App\Exceptions\SyllabusNotEmptyException;
 use App\Exceptions\SyllabusProgrammeUnavailableException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Syllabus\DestroySyllabusTopicRequest;
+use App\Http\Requests\Syllabus\MoveSyllabusTopicRequest;
 use App\Http\Requests\Syllabus\SeedSyllabusRequest;
 use App\Http\Requests\Syllabus\StoreSyllabusTopicRequest;
 use App\Http\Requests\Syllabus\UpdateSyllabusTopicRequest;
@@ -33,6 +35,7 @@ class SyllabusTopicController extends Controller
         private readonly CreateSyllabusTopicAction $createTopic,
         private readonly UpdateSyllabusTopicAction $updateTopic,
         private readonly DeleteSyllabusTopicAction $deleteTopic,
+        private readonly MoveSyllabusTopicAction $moveTopic,
         private readonly SeedSyllabusAction $seedSyllabus,
     ) {
     }
@@ -64,13 +67,7 @@ class SyllabusTopicController extends Controller
         /** @var Academy $academy */
         $academy = $user->activeAcademy();
 
-        $topic = $this->createTopic->execute(
-            $academy,
-            $request->topicName(),
-            $request->topicKind(),
-            $request->parent(),
-            $request->inSeason(),
-        );
+        $topic = $this->createTopic->execute($academy, $request->parent(), $request->topicAttributes());
 
         return response()->json(['data' => new SyllabusTopicResource($topic)], 201);
     }
@@ -80,6 +77,14 @@ class SyllabusTopicController extends Controller
         $this->updateTopic->execute($syllabusTopic, $request->validated());
 
         return response()->json(['data' => new SyllabusTopicResource($syllabusTopic)]);
+    }
+
+    /** One place up or down among its siblings (#1661); answers with them, in order. */
+    public function move(MoveSyllabusTopicRequest $request, SyllabusTopic $syllabusTopic): JsonResponse
+    {
+        $siblings = $this->moveTopic->execute($syllabusTopic, $request->direction());
+
+        return response()->json(['data' => SyllabusTopicResource::collection($siblings)]);
     }
 
     public function destroy(DestroySyllabusTopicRequest $request, SyllabusTopic $syllabusTopic): JsonResponse

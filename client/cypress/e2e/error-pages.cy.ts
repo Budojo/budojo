@@ -16,7 +16,7 @@ describe('Public error pages (#425)', () => {
     cy.get('[data-cy="offline-retry"]').should('be.visible');
   });
 
-  it("server-error 'Back to home' navigates toward /dashboard/athletes", () => {
+  it("server-error 'Back to home' navigates toward /dashboard", () => {
     cy.visit('/error');
 
     cy.get('[data-cy="server-error-home"]').click();

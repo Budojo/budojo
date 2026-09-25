@@ -18,6 +18,7 @@ function makePage(): LeaderboardPage {
         hours: 18,
         anonymous: false,
         is_self: true,
+        athlete: null,
       },
     ],
     meta: { month: '2026-05' },

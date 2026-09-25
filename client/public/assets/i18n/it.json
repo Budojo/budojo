@@ -1,6 +1,7 @@
 {
   "common": {
-    "cancel": "Annulla"
+    "cancel": "Annulla",
+    "howCounted": "Come si conta?"
   },
   "language": {
     "label": "Lingua",
@@ -24,6 +25,7 @@
   "nav": {
     "homeAriaLabel": "Budojo — torna alla dashboard",
     "profileAriaLabel": "Apri il tuo profilo",
+    "today": "Oggi",
     "academy": "Accademia",
     "athletes": "Atleti",
     "attendance": "Presenze",
@@ -440,7 +442,7 @@
     "steps": {
       "add_athlete": {
         "label": "Aggiungi il primo atleta",
-        "hint": "Crea il profilo di un atleta — nome, cintura, stato. La roster è la base."
+        "hint": "Crea il profilo di un atleta — nome, cintura, stato. Il roster è la base."
       },
       "log_attendance": {
         "label": "Registra una presenza",
@@ -1579,6 +1581,11 @@
       "martialArt": {
         "label": "Arte marziale",
         "locked": "Non si cambia più: l'accademia ha già atleti, un orario, lezioni o un programma."
+      },
+      "trainsKids": {
+        "label": "Bambini",
+        "switch": "Alleniamo anche bambini",
+        "hint": "Se è spento, gli elenchi delle cinture non mostrano quelle dei bambini e le statistiche non dividono più tra Kids e Adulti. Chi ha già una cintura da bambino la tiene."
       }
     },
     "feeTiers": {
@@ -1746,8 +1753,28 @@
             "position": "Chagi (calci)",
             "technique": "Dollyeo-chagi"
           }
-        }
+        },
+        "order": "Ordine",
+        "moveUp": "Sposta su",
+        "moveDown": "Sposta giù",
+        "place": "{{n}} di {{total}}",
+        "orderHint": "Lo spostamento vale subito; Salva serve per il nome, per «Si allena» e per la cintura.",
+        "close": "Chiudi",
+        "fromBelt": "Nel programma dalla cintura",
+        "fromBeltHint": "Previsto per questa cintura e per tutte quelle sopra. Lascialo per tutti quando la cintura non conta.",
+        "notes": "Come si insegna qui",
+        "notesPlaceholder": "Parti dalla S-mount; presa sul gomito lontano…",
+        "notesHint": "Facoltativo. Chi la insegna lo ritrova nella scheda della lezione.",
+        "video": "Video di riferimento",
+        "videoHint": "Facoltativo. Un link che inizia con https://: si apre nel browser.",
+        "videoInvalid": "Incolla un link che inizia con https://."
       },
+      "fromBelt": "Dalla",
+      "forEveryone": "Per tutti",
+      "beltFilterPlaceholder": "Fino a una cintura",
+      "beltFilterAria": "Mostra cosa ci si aspetta da una cintura",
+      "beltSummaryOne": "{{count}} tecnica prevista fino alla cintura {{belt}}",
+      "beltSummaryOther": "{{count}} tecniche previste fino alla cintura {{belt}}",
       "confirm": {
         "remove": "Rimuovere {{name}} dal programma?",
         "removePositionOne": "Rimuovere {{name}} e la tecnica che contiene?",
@@ -1766,6 +1793,9 @@
       "searchClear": "Cancella la ricerca",
       "searchSummary": "{{techniques}} in {{positions}}. Svuota la ricerca per tornare all’albero.",
       "searchNone": "Niente nel programma corrisponde a “{{query}}”.",
+      "searchSummaryBelt": "{{techniques}} in {{positions}}, fino alla cintura {{belt}}. Svuota la ricerca e la cintura per tornare all’albero intero.",
+      "searchNoneForBelt": "“{{query}}” trova qualcosa, ma niente di questo è previsto fino alla cintura {{belt}}.",
+      "beltNone": "Nel programma non c’è ancora niente previsto fino alla cintura {{belt}}.",
       "countSplit": "{{inSeason}} in stagione · {{total}} totali",
       "searchCountTechniqueOne": "{{count}} tecnica",
       "searchCountTechniqueOther": "{{count}} tecniche",
@@ -1896,6 +1926,20 @@
       "monthlySummary": "Riepilogo del mese",
       "presentCountOne": "{{count}} presente",
       "presentCountOther": "{{count}} presenti",
+      "missing": {
+        "title": "Chi viene di solito",
+        "description": "Presenti ad almeno 3 delle ultime 4 lezioni di questa classe, e non ancora segnati.",
+        "countOne": "Manca {{count}} abituale",
+        "countOther": "Mancano {{count}} abituali",
+        "attended": "{{attended}} delle ultime {{total}}",
+        "lastSeen": "Ultima volta {{when}}",
+        "allHere": "Ci sono tutti quelli che vengono di solito",
+        "noHistory": "Nessuna lezione di questa classe registrata finora: è presto per dire chi viene di solito.",
+        "notEnoughHistoryOne": "Solo {{count}} lezione di questa classe registrata: non basta per dire chi viene di solito.",
+        "notEnoughHistoryOther": "Solo {{count}} lezioni di questa classe registrate: non bastano per dire chi viene di solito.",
+        "loadError": "Impossibile caricare chi viene di solito a questa classe.",
+        "retry": "Riprova"
+      },
       "topics": {
         "empty": "Ancora niente",
         "add": "Aggiungi argomenti",
@@ -1927,7 +1971,8 @@
       },
       "presencesOne": "{{count}} presenza",
       "presencesOther": "{{count}} presenze",
-      "noScheduleNote": "Nessun orario copre ancora questo mese, quindi non c'è un totale di giorni su cui calcolare le percentuali."
+      "noScheduleNote": "Nessun orario copre ancora questo mese, quindi non c'è un totale di giorni su cui calcolare le percentuali.",
+      "method": "Qui una presenza è un giorno di allenamento di un atleta: una sera con due lezioni conta una volta per ogni atleta presente, e le presenze in alto sommano i giorni di tutti gli atleti. La percentuale divide i giorni di un atleta per i giorni di allenamento del mese secondo l'orario, fino a oggi se il mese è in corso."
     }
   },
   "lessons": {
@@ -1935,11 +1980,15 @@
       "title": "Lezione",
       "planned": "Pianificata",
       "held": "Svolta",
+      "stepPrevious": "La settimana prima",
+      "stepNext": "La settimana dopo",
+      "stepSaveFirst": "Salva o annulla prima di cambiare settimana.",
       "searchPlaceholder": "Cerca nel programma",
       "searchAria": "Cerca nel programma",
       "clearSearch": "Cancella la ricerca",
       "noResults": "Niente nel programma corrisponde a «{{query}}».",
       "chosen": "Fatto",
+      "chosenPlanned": "In programma",
       "recent": "Fatto di recente",
       "programme": "Il programma",
       "noProgramme": "Nessun programma — impostalo da Accademia → Programma.",
@@ -1957,14 +2006,31 @@
         "errorDetail": "La modifica non è stata salvata. Riprova.",
         "loadErrorDetail": "Impossibile caricare la lezione."
       },
+      "room": {
+        "title": "Per chi c'è stasera",
+        "reasonOne": "{{missed}} dei {{present}} presenti non c'era · l'ultima volta il {{date}}",
+        "reasonOther": "{{missed}} dei {{present}} presenti non c'erano · l'ultima volta il {{date}}",
+        "who": "Chi non c'era per {{name}}",
+        "unsureOne": "Un altro si è allenato quel giorno, ma non si sa a quale lezione.",
+        "unsureOther": "Altri {{count}} si sono allenati quel giorno, ma non si sa a quale lezione."
+      },
       "suggestions": {
         "title": "Suggeriti per stasera",
         "dismiss": "Non stasera",
+        "titleLesson": "Suggeriti per questa lezione",
+        "dismissLesson": "Non per questa lezione",
         "reason": {
           "never": "Non ancora fatto questa stagione",
           "thin": "Fatto una volta: {{date}}",
           "stale": "Ultima volta: {{date}}"
         }
+      },
+      "detail": {
+        "open": "Come si insegna qui {{name}}",
+        "video": "Guarda il video di riferimento",
+        "lastEvening": "Note della sera del {{date}} ({{class}}), l'ultima in cui l'avete fatta",
+        "lastEveningLoading": "Cerco l'ultima sera in cui l'avete fatta…",
+        "nothing": "Ancora nessuna nota su questa tecnica. Scrivile in Accademia → Programma."
       }
     }
   },
@@ -1990,7 +2056,8 @@
         "fullName": "Nome e cognome",
         "payment": "Pagamento",
         "attendance": "Presenze",
-        "attendanceLines": "mese / stagione"
+        "attendanceLines": "mese / stagione",
+        "lastSeen": "Ultima volta"
       },
       "tooltip": {
         "edit": "Modifica",
@@ -2012,7 +2079,10 @@
         "attendanceSortMonthDesc": "Ordinato per presenze del mese (prima le più alte). Clicca per continuare.",
         "attendanceSortMonthAsc": "Ordinato per presenze del mese (prima le più basse). Clicca per continuare.",
         "attendanceSortTotalDesc": "Ordinato per presenze della stagione (prima le più alte). Clicca per continuare.",
-        "attendanceSortTotalAsc": "Ordinato per presenze della stagione (prima le più basse). Clicca per continuare."
+        "attendanceSortTotalAsc": "Ordinato per presenze della stagione (prima le più basse). Clicca per continuare.",
+        "lastSeenSortInitial": "Ordina per ultima presenza. Clicca per continuare.",
+        "lastSeenSortAsc": "Ordinato per ultima presenza (prima chi manca da più tempo). Clicca per continuare.",
+        "lastSeenSortDesc": "Ordinato per ultima presenza (prima la più recente). Clicca per continuare."
       },
       "social": {
         "facebookLabel": "Apri profilo Facebook",
@@ -2104,6 +2174,12 @@
         "tooltipTotal": "Questa stagione ({{season}})",
         "tooltipTotalJoined": "Questa stagione ({{season}}), contata dal {{joined}}, quando si è iscritto"
       },
+      "lastSeen": {
+        "never": "mai",
+        "inlineLabel": "Ultima volta:",
+        "aria": "Ultimo allenamento {{when}}",
+        "neverAria": "Nessun allenamento"
+      },
       "alerts": {
         "button": "Avvisi",
         "missingCertificate": "senza certificato medico",
@@ -2112,6 +2188,31 @@
         "expiringDocumentOne": "altro documento da rinnovare",
         "expiringDocumentOther": "altri documenti da rinnovare",
         "none": "Non c'è niente da controllare"
+      },
+      "atRisk": {
+        "title": "Non si vedono da un po'",
+        "description": "Chi viene meno del solito, rispetto alle sue stesse presenze.",
+        "countOne": "{{count}} atleta",
+        "countOther": "{{count}} atleti",
+        "tier": {
+          "gone": "Assente da tempo",
+          "quiet": "Assente di recente",
+          "dropping": "In calo"
+        },
+        "reasonDropping": "{{recent}} delle ultime {{recentTotal}} · prima {{baseline}} su {{baselineTotal}}",
+        "reasonAbsent": "Ultima volta {{when}}",
+        "reasonNever": "Nessuna presenza dall'iscrizione",
+        "emptyHealthy": "Nessuno sta calando: tutti vengono più o meno come al solito.",
+        "emptyNoHistory": "Non ci sono ancora abbastanza lezioni registrate per dirlo: {{available}} su {{needed}}.",
+        "emptyNoAttendance": "Nessuna presenza registrata. Fai l'appello dal check-in e questa lista si riempie da sola.",
+        "openCheckIn": "Apri il check-in",
+        "more": "Altro",
+        "moreAria": "Altre azioni per {{name}}",
+        "markInactive": "Segna come non in attività",
+        "markInactiveConfirm": "Segnare {{name}} come non in attività? Esce dalla vista predefinita degli atleti; non si cancella nulla.",
+        "markInactiveAccept": "Segna non in attività",
+        "markInactiveToast": "{{name}}: ora non in attività",
+        "markInactiveError": "Non è stato possibile aggiornare {{name}}. Riprova."
       }
     },
     "invitation": {
@@ -2241,6 +2342,8 @@
       "loading": "Caricamento atleta…",
       "loadError": "Impossibile caricare l'atleta.",
       "joinedLabel": "Dal {{date}}",
+      "lastSeen": "Ultimo allenamento {{when}}",
+      "lastSeenNever": "Nessun allenamento finora",
       "tabs": {
         "documents": "Documenti",
         "attendance": "Presenze",
@@ -2379,6 +2482,7 @@
       "reachAria": "Come contattare l'atleta",
       "reach": {
         "phone": "Chiama {{value}}",
+        "whatsapp": "Scrivi a {{value}} su WhatsApp",
         "email": "Scrivi a {{value}}"
       }
     },
@@ -2469,7 +2573,8 @@
       },
       "hint": {
         "address": "Lascia tutti i campi vuoti per non assegnare un indirizzo all'atleta.",
-        "feeTier": "Quale quota mensile paga. Lascia vuoto per la quota standard dell'accademia."
+        "feeTier": "Quale quota mensile paga. Lascia vuoto per la quota standard dell'accademia.",
+        "kidsBeltsHidden": "Le cinture dei bambini sono nascoste: attivale in Accademia → Modifica."
       },
       "button": {
         "cancel": "Annulla",
@@ -2652,7 +2757,15 @@
       "nothingMissedOther": "C'era a tutte.",
       "consolidatedOne": "Una vista due volte o più, la soglia di Statistiche → Programma.",
       "consolidatedOther": "{{count}} viste due volte o più, la soglia di Statistiche → Programma.",
-      "consolidatedNone": "Nessuna ancora vista due volte o più."
+      "consolidatedNone": "Nessuna ancora vista due volte o più.",
+      "grade": {
+        "title": "Programma fino alla cintura {{belt}}",
+        "fractionOne": "{{attended}} su {{taught}} tecnica fatta finora dalla palestra",
+        "fractionOther": "{{attended}} su {{taught}} tecniche fatte finora dalla palestra",
+        "nothingTaught": "La palestra non ne ha ancora fatta nessuna da quando è iscritto.",
+        "itemsOne": "{{count}} tecnica nel programma fino a questa cintura",
+        "itemsOther": "{{count}} tecniche nel programma fino a questa cintura"
+      }
     }
   },
   "month": {
@@ -2713,6 +2826,13 @@
       "futureOther": "tra {{count}} giorni",
       "pastOne": "scaduto da {{count}} giorno",
       "pastOther": "scaduto da {{count}} giorni"
+    },
+    "contact": {
+      "call": "Chiama",
+      "whatsapp": "WhatsApp",
+      "callAria": "Chiama {{name}}",
+      "whatsappAria": "Scrivi a {{name}} su WhatsApp",
+      "noPhone": "Nessun numero in archivio"
     }
   },
   "stats": {
@@ -2836,14 +2956,61 @@
     "syllabus": {
       "headline": "{{covered}} di {{total}} nel programma della stagione, fatti almeno due volte ciascuno",
       "headlineRule": "La scheda Programma di un atleta conta in un altro modo: una tecnica dopo una sola lezione a cui era presente, su quelle che la palestra ha fatto mentre era iscritto. Chiede se c'era, non quanto del programma è stato fatto.",
-      "byPosition": "Per posizione",
+      "map": {
+        "title": "Per posizione, settimana per settimana",
+        "legend": {
+          "more": "2 o più lezioni",
+          "once": "1 lezione",
+          "planned": "Pianificata",
+          "unconfirmed": "Pianificata, nessun appello",
+          "current": "Questa settimana"
+        },
+        "positionHeader": "Posizione",
+        "fractionHeader": "Coperte",
+        "week": "Settimana del {{date}}",
+        "weekCurrent": "Settimana del {{date}}, questa settimana",
+        "cell": "{{position}}, settimana del {{date}}: {{detail}}",
+        "heldOne": "{{count}} lezione",
+        "heldOther": "{{count}} lezioni",
+        "plannedOne": "{{count}} pianificata",
+        "plannedOther": "{{count}} pianificate",
+        "unconfirmedOne": "{{count}} pianificata senza appello",
+        "unconfirmedOther": "{{count}} pianificate senza appello",
+        "fraction": "{{covered}} su {{total}} coperte",
+        "popTitle": "{{position}}, settimana del {{date}}",
+        "seasonTitle": "{{position}}, in questa stagione",
+        "seasonAria": "{{position}}: tutte le settimane della stagione",
+        "seasonEmpty": "Ancora niente su questa posizione in questa stagione.",
+        "planTitle": "Pianifica una lezione",
+        "planAria": "Pianifica {{position}}, settimana del {{date}}",
+        "planNoneWeek": "Quella settimana nessuna classe dell'orario può fare questa posizione.",
+        "planNoneSeason": "Nelle prossime due settimane nessuna classe dell'orario può fare questa posizione.",
+        "state": {
+          "planned": "Pianificata",
+          "unconfirmed": "Senza appello"
+        },
+        "error": "Impossibile caricare le settimane.",
+        "share": {
+          "heading": "Programma della settimana",
+          "ready": "Il programma della settimana del {{date}}, da mandare al gruppo.",
+          "none": "Nessuna lezione pianificata per questa settimana né per la prossima, quindi non c'è un programma da mandare.",
+          "nextSeason": "La settimana che viene entra nella nuova stagione, che questa mappa non mostra ancora. Il suo programma si manda da qui quando la nuova stagione è iniziata.",
+          "copy": "Copia il programma della settimana",
+          "whatsapp": "Invia su WhatsApp",
+          "copied": "Programma copiato: incollalo nel gruppo.",
+          "copyFailed": "Non è stato possibile copiarlo: usa «Invia su WhatsApp»."
+        }
+      },
       "overTime": "Nel corso della stagione",
       "lastTaught": "L'ultima volta",
       "missingList": "Non ancora fatto ({{count}})",
       "nothingMissing": "Non manca niente: hai fatto tutto il programma.",
+      "planAction": "Pianifica",
       "thinTag": "Una volta",
-      "worked": "fatta {{count}}×",
-      "barAria": "{{name}}: {{covered}} coperti, {{thin}} fatti una volta, {{missing}} non fatti",
+      "lessonsOne": "{{count}} lezione",
+      "lessonsOther": "{{count}} lezioni",
+      "reachOne": "{{count}} persona",
+      "reachOther": "{{count}} persone",
       "state": {
         "coveredOne": "{{count}} coperto",
         "coveredOther": "{{count}} coperti",
@@ -2871,6 +3038,28 @@
         "title": "Impossibile caricare la copertura",
         "hint": "Qualcosa è andato storto da parte nostra. Riprova.",
         "retry": "Riprova"
+      },
+      "exposure": {
+        "title": "Chi l'ha vista",
+        "openPrefix": "Chi l'ha vista:",
+        "notebook": "Come si insegna qui",
+        "lessonsOne": "Fatta in {{count}} lezione questa stagione",
+        "lessonsOther": "Fatta in {{count}} lezioni questa stagione",
+        "headcountOne": "{{count}} persona",
+        "headcountOther": "{{count}} persone",
+        "seenOne": "{{count}} presente due volte o più",
+        "seenOther": "{{count}} presenti due volte o più",
+        "thinOne": "{{count}} presente una volta",
+        "thinOther": "{{count}} presenti una volta",
+        "neverOne": "{{count}} mai presente",
+        "neverOther": "{{count}} mai presenti",
+        "unplacedOne": "{{count}} si è allenato quel giorno, ma non si sa a quale lezione",
+        "unplacedOther": "{{count}} si sono allenati quel giorno, ma non si sa a quale lezione",
+        "timesOne": "{{count}} lezione",
+        "timesOther": "{{count}} lezioni",
+        "inactive": "Non più attivi",
+        "nobodyYet": "Nessuno l'ha vista perché non l'avete ancora fatta in questa stagione.",
+        "error": "Impossibile caricare chi l'ha vista."
       }
     },
     "totalOne": "Su {{count}} atleta attivo.",
@@ -2966,6 +3155,76 @@
     },
     "unmarkErrorToast": {
       "summary": "Impossibile annullare la presenza"
+    }
+  },
+  "today": {
+    "season": "Stagione {{label}}",
+    "checkIn": "Apri il check-in",
+    "tonight": {
+      "title": "Stasera",
+      "nothingYet": "Ancora niente",
+      "addTopics": "Aggiungi argomenti",
+      "editTopics": "Modifica argomenti",
+      "noClass": "Stasera non c'è lezione.",
+      "next": "La prossima: {{day}} alle {{time}}, {{name}}.",
+      "nextUntimed": "La prossima: {{day}}, {{name}}.",
+      "error": "Non riesco a caricare l'orario."
+    },
+    "watch": {
+      "title": "Da guardare",
+      "certificateOne": "certificato medico da rinnovare",
+      "certificateOther": "certificati medici da rinnovare",
+      "missingOne": "atleta senza certificato medico",
+      "missingOther": "atleti senza certificato medico",
+      "documentOne": "altro documento da rinnovare",
+      "documentOther": "altri documenti da rinnovare",
+      "unpaidOne": "quota di {{month}} non pagata",
+      "unpaidOther": "quote di {{month}} non pagate",
+      "none": "Niente da controllare oggi.",
+      "documentsError": "Non riesco a caricare i documenti da controllare.",
+      "unpaidError": "Non riesco a caricare chi ha pagato questo mese."
+    },
+    "teach": {
+      "title": "Cosa insegnare",
+      "for": "Per {{name}} alle {{time}}",
+      "forUntimed": "Per {{name}}",
+      "forDay": "Per {{name}}, {{day}} alle {{time}}",
+      "forDayUntimed": "Per {{name}}, {{day}}",
+      "openSheet": "Prepara la lezione",
+      "none": "Nessun suggerimento: il programma è vuoto, o è tutto fuori stagione.",
+      "programmeLink": "Apri il programma",
+      "error": "Non riesco a caricare i suggerimenti."
+    },
+    "week": {
+      "title": "Questa settimana",
+      "presences": "Presenze da lunedì",
+      "notYetPaidOne": "Quota di {{month}} ancora da pagare",
+      "notYetPaidOther": "Quote di {{month}} ancora da pagare",
+      "programme": "Programma della stagione",
+      "programmeValue": "{{percentage}}% · {{covered}} di {{total}}",
+      "joined": "Nuovi questa settimana",
+      "joinedError": "Non riesco a caricare i nuovi iscritti."
+    },
+    "birthdays": {
+      "title": "Compleanni",
+      "turnsOne": "Compie {{years}} anno oggi",
+      "turnsOther": "Compie {{years}} anni oggi",
+      "today": "Oggi"
+    },
+    "system": {
+      "lastCopy": "Ultima copia fuori da questo computer: {{when}}",
+      "firstCopyPending": "La prima copia fuori da questo computer arriva con il prossimo backup",
+      "open": "Apri il backup"
+    },
+    "backup": {
+      "folderFailing": "La copia dei backup in {{where}} non riesce",
+      "driveFailing": "La copia dei backup su Google Drive ({{where}}) non riesce",
+      "driveFailingUnnamed": "La copia dei backup su Google Drive non riesce",
+      "localOnly": "I backup sono solo su questo computer",
+      "localOnlyDetail": "Se si rompe questo disco, si perde tutta l'accademia. Scegli una cartella o collega Google Drive.",
+      "localOnlyDetailFolder": "Se si rompe questo disco, si perde tutta l'accademia. Scegli una cartella per i backup.",
+      "stale": "L'ultima copia fuori da questo computer è del {{date}}",
+      "staleDetail": "Da più di una settimana non ne arriva una nuova. Apri il backup per capire perché."
     }
   },
   "backup": {
@@ -3081,7 +3340,11 @@
     "yesterday": "ieri",
     "days": "{{count}} giorni fa",
     "weekOne": "una settimana fa",
-    "weeks": "{{count}} settimane fa"
+    "weeks": "{{count}} settimane fa",
+    "monthOne": "un mese fa",
+    "monthOther": "{{count}} mesi fa",
+    "yearOne": "un anno fa",
+    "yearOther": "{{count}} anni fa"
   },
   "martialArts": {
     "bjj": "Brazilian jiu-jitsu",

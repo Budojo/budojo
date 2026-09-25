@@ -121,7 +121,7 @@ What we took from it is the part that survives outside a landing page: **craft t
 - **Contrast is arithmetic, not taste.** Every semantic text token clears WCAG AA (4.5:1 body, 3:1 large) against every surface it is painted on, **in both themes**. `shared/styles/text-contrast.spec.ts` computes it from `budojo-theme.scss` and fails the build. This is how `--p-text-muted-color` shipped at 3.26:1 across 212 call sites: it lints, type-checks, renders and screenshots perfectly, and a washy grey looks like a decision in every frame.
 - **The touch-target floor is a floor.** ≥48 CSS px. 44 is allowed for a supplementary control (a close ✕, a toolbar chevron) **only** wrapped in a 48-dp hit region. Two adjacent round controls where one is under the floor is a mis-tap generator, not a spec-sheet complaint.
 - **One icon family, one stroke weight**, no hand-drawn SVG paths, no emoji standing in for a glyph.
-- **One accent, used identically.** In product UI the accent carries meaning — primary action, selected row, active nav — so a second one is not merely inconsistent, it is ambiguous.
+- **One accent, used identically.** In product UI the accent carries meaning — primary action, selected row, active nav — so a second one is not merely inconsistent, it is ambiguous. Data is never accent-coloured: a number or a name is ink. The sanctioned uses are listed under the colour table in `DESIGN_SYSTEM.md` § 1.1, and `accent-means-action.spec.ts` guards the numbers (#1852).
 - **A card only where elevation says something.** Otherwise group with a hairline, a divider or space. Card-on-card is how a screen stops having a focal point.
 - **One radius system**, or a written rule that is then followed everywhere.
 - **Ship the whole interaction cycle**, not the happy static state: skeletons shaped like the result, empty states that say how to fill them, inline form errors, a tactile `:active`.
@@ -136,6 +136,25 @@ What we took from it is the part that survives outside a landing page: **craft t
 | Snap every font size to the scale, tighten eyebrow tracking, unify two legend shapes on routes that never co-occur | **No.** Each was verified real and judged invisible to an owner: sub-pixel differences, in files carrying screenshot coverage. Churn with a review cost and no user on the other end. |
 
 If a rule from the skill and a rule here ever disagree, **this file wins** — that is already the rule at the top of the root `CLAUDE.md`, and it is the whole reason the skill is a check rather than a canon.
+
+### Before a visible change ships (#1855)
+
+The anti-slop catalogue says what to avoid. It says nothing about what to aim for, and by its own account it is not written for dashboards. [`interface-design`](https://github.com/Dammyjay93/interface-design) is: dashboards, admin panels, data interfaces. We consult it as a **method**, not as a style. Its own `.interface-design/system.md` would be a second design system beside ours, and [`docs/design/DESIGN_SYSTEM.md`](../docs/design/DESIGN_SYSTEM.md) is that file. Run its four checks on anything the owner will see:
+
+- **Swap.** Would a standard admin template feel the same with this screen's content poured in? If yes, nothing on it was decided.
+- **Squint.** Blur the screenshot. The one thing that matters on the screen should still be the first thing you see.
+- **Signature.** Where does the belt spine appear? Wherever the screen lists people, it should be on the row, through `app-athlete-identity` ([`DESIGN_SYSTEM.md` § 1.8](../docs/design/DESIGN_SYSTEM.md#18-signature--the-belt-spine-1855)).
+- **Token.** Do the colours, radii and shadows come from this product's tokens, or from habit?
+
+**The code-level check is [`web-design-guidelines`](https://github.com/vercel-labs/agent-skills)** (Vercel, MIT). It reads the templates you touched and reports `file:line` findings: focus, labels, keyboard, `…` over `...`, `tabular-nums`, `transition: all`, `Intl` formats. It is installed at **user level** with its rules **pinned** in `~/.claude/skills/web-design-guidelines/guidelines.md` (upstream commit `e3d624b`). The upstream skill fetches its rules from a URL on every run; the pinned copy never does. Environments without it skip this line. Three of its rules lose to ours, so read its findings with these in mind:
+
+| Its rule | Our call |
+|---|---|
+| Title Case for headings and buttons | **Sentence case**, as the hard visual rules above say. |
+| React idioms and the whole *Hydration Safety* section | Apply to a CSR Angular app **only by equivalent** (a signal, not `useState`; a router link, not `<Link>`), or not at all. There is no hydration. |
+| Curly quotes `“ ”` | Right for English copy. **Italian copy keeps «»**. |
+
+Both skills are checks, like the anti-slop catalogue. When one of them disagrees with this file, this file wins.
 
 ### Red flags in code review
 

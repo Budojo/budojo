@@ -123,7 +123,7 @@ Full checklist + labels + body conventions in [`docs/development/pr-labels.md`](
 The automated post-push reviewer was retired in #1234 — it cost a paid API key per PR and this is a single-developer project. What replaces it:
 
 - Run `/prereview` on anything non-trivial **before** pushing. It is now the only independent pass a change gets.
-- Merge once CI is green. There are no reviewer threads left to resolve.
+- Merge once CI is green **and every review thread is resolved**. The paid reviewer is gone, but Copilot's code review still posts threads on PRs, and the `develop` and `main` rulesets require them resolved: a PR with every check green and one open thread reads `BLOCKED`. Read them — they have been real — fix or answer, then resolve.
 - The PR body still matters: it is the record of why a change looks the way it does.
 
 ---

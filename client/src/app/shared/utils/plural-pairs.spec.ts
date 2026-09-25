@@ -58,7 +58,6 @@ describe('plural pairs (#1646)', () => {
       'relativeDay.days',
       'relativeDay.weeks',
       'stats.syllabus.missingList',
-      'stats.syllabus.worked',
     ]);
 
     const missing = Object.entries(flat)

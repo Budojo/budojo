@@ -32,6 +32,7 @@ import { ChoiceGridComponent } from '../../../shared/components/choice-grid/choi
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { TrainingDaysPickerComponent } from '../../../shared/components/training-days-picker/training-days-picker.component';
+import { addDays, localIso, occurrencesOf } from '../../../shared/utils/class-occurrences';
 import { localeFor } from '../../../shared/utils/locale';
 import {
   CONFIRM_ACCEPT_DESTRUCTIVE,
@@ -231,16 +232,13 @@ export class TimetableComponent {
    *
    * The timetable is a recurring week and carries no dates, so planning has
    * to pick one — and the one the owner means by "plan Monday's lesson" is
-   * the next Monday there is. Further out than that is a date picker nobody
-   * asked for; the check-in covers everything up to today.
+   * the next Monday there is. The sheet's arrows reach the weeks after it
+   * (#1859); the check-in covers everything up to today.
    */
   protected nextOccurrenceIso(c: AcademyClass): string {
-    const today = new Date();
-    const ahead = (c.weekday - today.getDay() + 7) % 7;
-    const date = new Date(today.getFullYear(), today.getMonth(), today.getDate() + ahead);
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${date.getFullYear()}-${month}-${day}`;
+    const today = localIso(new Date());
+    // A week always holds exactly one occurrence of a weekly class.
+    return occurrencesOf(c, today, addDays(today, 6))[0];
   }
 
   /** The same date, named in the reader's language for the sheet's header. */

@@ -22,6 +22,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -52,6 +53,7 @@ use Illuminate\Support\Facades\Storage;
  * @property string                  $last_name_sort         Same, for `last_name`.
  * @property-read int|null           $attendance_month_count Present only on the roster index (#1447), which selects it as a `withCount` alias. Null everywhere else — read it as "not asked for", never as "zero".
  * @property-read int|null           $attendance_total_count Same, for the current SEASON (#1484) — the academy's training year, floored per row at this athlete's `joined_at`. It was an all-time count until then.
+ * @property-read string|null        $last_attended_on       The latest live presence (#1726), selected as a `withMax` alias on the roster index and on show. Null when they never trained; the resource omits the key where the query did not ask.
  */
 #[Fillable(['academy_id', 'fee_tier_id', 'billing_period_months', 'user_id', 'is_self', 'first_name', 'last_name', 'email', 'phone_country_code', 'phone_national_number', 'website', 'facebook', 'instagram', 'date_of_birth', 'belt', 'stripes', 'status', 'joined_at'])]
 #[ObservedBy([AthleteObserver::class, AthleteAuditObserver::class])]
@@ -278,6 +280,24 @@ class Athlete extends Model implements HasAddress
             ->orWhere(fn (Builder $noTier) => $noTier
                 ->whereNull('fee_tier_id')
                 ->whereHas('academy', fn (Builder $academy) => $academy->where('monthly_fee_cents', '>', 0))));
+    }
+
+    /**
+     * Athletes whose birthday falls on one of the month-days (`03-14`) —
+     * the roster's `?birthday=` (#1754), with `BirthdayWindow` building the
+     * days. A null `date_of_birth` formats to null and matches nothing.
+     *
+     * **No index, deliberately.** `strftime()` on the column cannot use one,
+     * so this scans the academy's athletes: tens of rows on a local SQLite
+     * file. Do not add a generated column or an index to "fix" it.
+     *
+     * @param  Builder<$this>  $query
+     * @param  list<string>  $monthDays
+     * @return Builder<$this>
+     */
+    public function scopeBirthdayOnAnyOf(Builder $query, array $monthDays): Builder
+    {
+        return $query->whereIn(DB::raw("strftime('%m-%d', athletes.date_of_birth)"), $monthDays);
     }
 
     /**

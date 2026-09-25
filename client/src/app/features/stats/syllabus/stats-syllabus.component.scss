@@ -40,7 +40,9 @@
     font-size: 3rem;
     font-weight: 600;
     line-height: 1;
-    color: var(--p-primary-color);
+    // Ink, not the accent (#1852): the accent means action, selection or
+    // state. A number earns its weight from its size.
+    color: var(--p-text-color);
     font-variant-numeric: tabular-nums;
   }
 
@@ -55,10 +57,9 @@
     color: var(--p-text-muted-color);
   }
 
+  // In the method fold (#1853), which sets its width and spacing.
   &__rule {
     margin: 0;
-    margin-top: 0.5rem;
-    max-width: 40rem;
     font-size: 0.8125rem;
     color: var(--p-text-muted-color);
   }
@@ -123,36 +124,18 @@
     font-size: 0.875rem;
     color: var(--p-text-muted-color);
   }
-
-  &__empty-link {
-    margin: 0;
-    text-align: center;
-    font-size: 0.875rem;
-  }
 }
 
-// The legend, carrying the same three strengths the bars use.
+// The three counts, in words. No coloured dots: the accent's strengths key
+// the season map (#1858), and here they would mean something else.
 .tally {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
 
-  &__dot {
-    width: 0.75rem;
-    height: 0.75rem;
-    border-radius: 4px;
-  }
-
-  &--covered &__dot {
-    background: var(--p-primary-color);
-  }
-
-  &--thin &__dot {
-    background: color-mix(in srgb, var(--p-primary-color) 35%, transparent);
-  }
-
-  &--missing &__dot {
-    background: var(--p-surface-200);
+  & + &::before {
+    content: '·';
+    margin-right: 1rem;
+    color: var(--p-text-muted-color);
   }
 }
 
@@ -200,88 +183,6 @@
   }
 }
 
-// ── The position bars ─────────────────────────────────────────────────────────
-
-.bars {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-
-  &__row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas:
-      'name count'
-      'bar bar';
-    align-items: center;
-    gap: 0.25rem 0.5rem;
-
-    // Name, bar and count on one line once the row is wide enough to hold
-    // all three without the name ellipsing away to nothing.
-    @media (min-width: 768px) {
-      grid-template-columns: 12rem minmax(0, 1fr) auto;
-      grid-template-areas: 'name bar count';
-    }
-  }
-
-  &__name {
-    grid-area: name;
-    min-width: 0;
-    display: flex;
-    align-items: baseline;
-    gap: 0.5rem;
-    font-size: 0.875rem;
-    color: var(--p-text-color);
-    overflow-wrap: anywhere;
-  }
-
-  &__worked {
-    flex: 0 0 auto;
-    font-size: 0.6875rem;
-    color: var(--p-text-muted-color);
-    white-space: nowrap;
-  }
-
-  &__count {
-    grid-area: count;
-    font-size: 0.75rem;
-    color: var(--p-text-muted-color);
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
-  }
-}
-
-.bar {
-  grid-area: bar;
-  display: flex;
-  width: 100%;
-  height: 0.75rem;
-  border-radius: 999px;
-  overflow: hidden;
-  background: var(--p-surface-200);
-
-  &__seg {
-    height: 100%;
-
-    &--covered {
-      background: var(--p-primary-color);
-    }
-
-    &--thin {
-      background: color-mix(in srgb, var(--p-primary-color) 35%, transparent);
-    }
-
-    // The remainder is the track showing through: a segment that paints the
-    // same colour as the background it sits on is a rule with nothing to do.
-    &--missing {
-      background: transparent;
-    }
-  }
-}
-
 // ── The two lists ─────────────────────────────────────────────────────────────
 
 .topics {
@@ -302,6 +203,67 @@
     & + & {
       border-top: 1px solid color-mix(in srgb, var(--p-content-border-color) 60%, transparent);
     }
+
+    // A taught row is a button the width of the list (#1745), so the row
+    // itself gives up its padding to it.
+    &--open {
+      padding: 0;
+    }
+  }
+
+  // Who has seen it (#1745): the whole taught row, 48 px tall so it clears
+  // the touch floor, and plain at rest — a list of names, not a wall of
+  // links. Hover and focus say it can be pressed. A never-taught row no
+  // class can take (#1656) keeps the same box, so its name and position
+  // sit where the plannable rows' do.
+  &__open,
+  &__static {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    width: 100%;
+    min-height: 3rem;
+    padding: 0.5rem;
+    margin: 0;
+  }
+
+  &__open {
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color var(--budojo-motion-fast) var(--budojo-motion-decelerate);
+
+    &:hover {
+      background: var(--p-content-hover-background);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--p-primary-color);
+      outline-offset: -2px;
+    }
+  }
+
+  // What a never-taught row does (#1656). Muted at rest, like the taught
+  // rows beside it: twenty accent labels down a column would be a wall of
+  // links. The row's hover and focus bring it up in the action's colour.
+  &__plan {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.8125rem;
+    color: var(--p-text-muted-color);
+    white-space: nowrap;
+  }
+
+  &__open--plan:hover &__plan,
+  &__open--plan:focus-visible &__plan {
+    color: var(--p-primary-color);
   }
 
   &__name {
@@ -312,6 +274,20 @@
     font-size: 0.875rem;
     color: var(--p-text-color);
     overflow-wrap: anywhere;
+  }
+
+  // A taught row's name over its reach (#1746): what it was, then how many
+  // lessons and how many people.
+  &__what {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  &__reach {
+    font-size: 0.6875rem;
+    color: var(--p-text-muted-color);
+    font-variant-numeric: tabular-nums;
   }
 
   &__parent,

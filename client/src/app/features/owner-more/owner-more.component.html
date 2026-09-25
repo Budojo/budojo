@@ -2,8 +2,17 @@
   <app-page-header [title]="'nav.more' | translate" />
 
   <ul class="owner-more__list">
-    <li></li>
-    <li></li>
+    <!--
+      The academy left the phone's bottom bar when Today took the home slot
+      (#1643). It is mostly settings, so this is where it lives on a phone.
+    -->
+    <li>
+      <a class="owner-more__row" routerLink="/dashboard/academy" data-cy="owner-more-academy">
+        <i class="pi pi-building" aria-hidden="true"></i>
+        <span class="owner-more__label">{{ 'nav.academy' | translate }}</span>
+        <i class="pi pi-angle-right owner-more__chevron" aria-hidden="true"></i>
+      </a>
+    </li>
     <li>
       <a
         class="owner-more__row"

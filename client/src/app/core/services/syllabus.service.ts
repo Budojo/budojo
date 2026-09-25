@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import type { TrainingMode } from './academy.service';
+import type { Belt } from './athlete.service';
 
 /**
  * One entry in the academy's programme (#1563) — a position when `parent_id`
@@ -17,6 +18,15 @@ export interface SyllabusTopic {
   readonly name: string;
   readonly kind: TrainingMode;
   readonly in_season: boolean;
+  /**
+   * The grade it belongs to the programme from (#1861): expected of that belt
+   * and every grade above it on the academy's ladder. Null is for everyone.
+   */
+  readonly from_belt: Belt | null;
+  /** How it is taught here (#1862). */
+  readonly notes: string | null;
+  /** The reference instructional, always `https://` (#1862). */
+  readonly video_url: string | null;
   readonly sort_order: number;
   readonly children?: readonly SyllabusTopic[];
 }
@@ -26,12 +36,18 @@ export interface SyllabusTopicPayload {
   readonly kind: TrainingMode;
   readonly parent_id?: number | null;
   readonly in_season?: boolean;
+  readonly from_belt?: Belt | null;
+  readonly notes?: string | null;
+  readonly video_url?: string | null;
 }
 
 export interface SyllabusTopicPatch {
   readonly name?: string;
   readonly kind?: TrainingMode;
   readonly in_season?: boolean;
+  readonly from_belt?: Belt | null;
+  readonly notes?: string | null;
+  readonly video_url?: string | null;
   readonly sort_order?: number;
 }
 
@@ -52,6 +68,17 @@ export class SyllabusService {
   update(id: number, patch: SyllabusTopicPatch): Observable<SyllabusTopic> {
     return this.http
       .patch<{ data: SyllabusTopic }>(`${this.base}/${id}`, patch)
+      .pipe(map((r) => r.data));
+  }
+
+  /**
+   * One place up or down among its siblings (#1661). Answers with the
+   * siblings in their new order — the techniques of its position, or the
+   * positions — without their children.
+   */
+  move(id: number, direction: 'up' | 'down'): Observable<SyllabusTopic[]> {
+    return this.http
+      .post<{ data: SyllabusTopic[] }>(`${this.base}/${id}/move`, { direction })
       .pipe(map((r) => r.data));
   }
 

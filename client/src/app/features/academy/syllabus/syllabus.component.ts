@@ -2,8 +2,11 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  Injector,
+  afterNextRender,
   computed,
   inject,
+  runInInjectionContext,
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -15,11 +18,15 @@ import { CheckboxModule } from 'primeng/checkbox';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
+import { SelectModule } from 'primeng/select';
 import { SkeletonModule } from 'primeng/skeleton';
+import { TextareaModule } from 'primeng/textarea';
 import { Toast } from 'primeng/toast';
 import { Tooltip } from 'primeng/tooltip';
 import { finalize } from 'rxjs';
 import { AcademyService, TrainingMode } from '../../../core/services/academy.service';
+import { Belt } from '../../../core/services/athlete.service';
+import { BeltLadderService, BeltOption } from '../../../core/services/belt-ladder.service';
 import { LanguageService } from '../../../core/services/language.service';
 import { SyllabusService, SyllabusTopic } from '../../../core/services/syllabus.service';
 import { TrainingModesService } from '../../../core/services/training-modes.service';
@@ -28,6 +35,7 @@ import {
   SYLLABUS_NAME_PLACEHOLDER_KEYS,
   starterProgrammeKeys,
 } from '../../../shared/utils/i18n-enum-keys';
+import { BeltBadgeComponent } from '../../../shared/components/belt-badge/belt-badge.component';
 import { ChoiceGridComponent } from '../../../shared/components/choice-grid/choice-grid.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
@@ -35,6 +43,13 @@ import {
   CONFIRM_ACCEPT_DESTRUCTIVE,
   CONFIRM_REJECT_BUTTON,
 } from '../../../shared/utils/confirm-buttons';
+
+/** The one line under the search and belt filter: what they kept, or why nothing. */
+interface FilterMessage {
+  readonly tone: 'summary' | 'empty';
+  readonly dataCy: string;
+  readonly text: string;
+}
 
 /**
  * The academy's programme (#1563).
@@ -68,6 +83,9 @@ import {
     ConfirmDialogModule,
     DialogModule,
     InputTextModule,
+    SelectModule,
+    TextareaModule,
+    BeltBadgeComponent,
     ChoiceGridComponent,
     SkeletonModule,
     Toast,
@@ -85,11 +103,14 @@ export class SyllabusComponent {
   private readonly academyService = inject(AcademyService);
   /** The academy's modes (#1803): gi and no-gi here, kata and kumite in a karate one. */
   private readonly trainingModes = inject(TrainingModesService);
+  /** The academy's grades, in ladder order (#1861) — the only way to compare two belts. */
+  private readonly ladder = inject(BeltLadderService);
   private readonly languageService = inject(LanguageService);
   private readonly translate = inject(TranslateService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly messageService = inject(MessageService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly injector = inject(Injector);
 
   protected readonly loading = signal<boolean>(true);
   protected readonly positions = signal<readonly SyllabusTopic[]>([]);
@@ -119,6 +140,8 @@ export class SyllabusComponent {
   protected readonly expanded = signal<ReadonlySet<number>>(new Set());
 
   protected readonly nameError = signal<boolean>(false);
+  /** The link is not an `https://` one (#1862) — said at the field, not in a toast. */
+  protected readonly videoError = signal<boolean>(false);
 
   protected readonly form = this.fb.group({
     name: this.fb.control<string>('', {
@@ -128,6 +151,21 @@ export class SyllabusComponent {
     kind: this.fb.control<TrainingMode>('both', {
       nonNullable: true,
       validators: [Validators.required],
+    }),
+    /** The grade it belongs to the programme from (#1861); null is for everyone. */
+    fromBelt: this.fb.control<Belt | null>(null),
+    /** How it is taught here (#1862). */
+    notes: this.fb.control<string>('', {
+      nonNullable: true,
+      validators: [Validators.maxLength(2000)],
+    }),
+    /**
+     * The reference instructional (#1862). `https://` only, the server's rule:
+     * the link lands in an `href`, and this is the first place to say so.
+     */
+    videoUrl: this.fb.control<string>('', {
+      nonNullable: true,
+      validators: [Validators.maxLength(500), Validators.pattern(/^\s*(https:\/\/\S+)?\s*$/)],
     }),
   });
 
@@ -167,7 +205,7 @@ export class SyllabusComponent {
    * identical names answers nothing. A position whose own name matches keeps
    * all of its techniques — you searched for the position.
    */
-  protected readonly filteredPositions = computed<readonly SyllabusTopic[]>(() => {
+  private readonly searchedPositions = computed<readonly SyllabusTopic[]>(() => {
     const needle = this.query().trim().toLocaleLowerCase();
     if (needle === '') return this.positions();
 
@@ -181,6 +219,177 @@ export class SyllabusComponent {
       })
       .filter((position): position is SyllabusTopic => position !== null);
   });
+
+  // ── The programme by grade (#1861) ──────────────────────────────────────
+
+  /**
+   * "What is a green belt expected to know": the belt the tree is narrowed to,
+   * or null for the whole programme. Cumulative — a grade's programme is its
+   * own items, those of every grade below it, and those for everyone.
+   */
+  protected readonly beltFilter = signal<Belt | null>(null);
+
+  protected setBeltFilter(belt: Belt | null): void {
+    this.beltFilter.set(belt);
+  }
+
+  /**
+   * Whether anything in the programme names a belt. Until something does,
+   * every topic is for everyone and a belt filter would filter nothing, so it
+   * is not offered — the dialog's field is where grading starts.
+   */
+  protected readonly graded = computed<boolean>(() =>
+    this.positions().some(
+      (position) =>
+        position.from_belt !== null ||
+        (position.children ?? []).some((child) => child.from_belt !== null),
+    ),
+  );
+
+  /**
+   * The belt actually narrowing the tree. The filter is only offered while
+   * something is graded, so once the last graded topic goes back to "for
+   * everyone" the select is gone — and a choice left in `beltFilter` would
+   * keep filtering a tree with no control on screen to undo it.
+   */
+  private readonly activeBelt = computed<Belt | null>(() =>
+    this.graded() ? this.beltFilter() : null,
+  );
+
+  /**
+   * The academy's grades, in ladder order, without the kids' ones when it
+   * trains none (#1651). `keep` holds on to the one the dialog opens on —
+   * the topic's own, or, for a new technique, its position's — or the
+   * select would show its "for everyone" placeholder while Save sent the
+   * hidden belt.
+   */
+  protected readonly beltOptions = computed<BeltOption<Belt>[]>(() =>
+    this.ladder.beltOptions(this.editing()?.from_belt ?? this.addingUnder()?.from_belt ?? null),
+  );
+
+  /** The same grades for the filter, which has no topic of its own to keep. */
+  protected readonly filterBeltOptions = computed<BeltOption<Belt>[]>(() =>
+    this.ladder.beltOptions(),
+  );
+
+  /**
+   * Search first, then the belt: a position stays when at least one of its
+   * techniques is expected by the chosen belt. A technique is judged by its
+   * own `from_belt`, never its position's — a position's belt is a default
+   * for what is added under it, not a rule over what is already there.
+   */
+  protected readonly filteredPositions = computed<readonly SyllabusTopic[]>(() => {
+    const searched = this.searchedPositions();
+    const belt = this.activeBelt();
+    const rank = belt === null ? null : this.ladder.rankOf(belt);
+    if (rank === null) return searched;
+
+    const expected = (topic: SyllabusTopic): boolean => {
+      if (topic.from_belt === null) return true;
+      const from = this.ladder.rankOf(topic.from_belt);
+      return from !== null && from <= rank;
+    };
+
+    return searched
+      .map((position) => ({ ...position, children: (position.children ?? []).filter(expected) }))
+      .filter((position) => position.children.length > 0);
+  });
+
+  /**
+   * One line saying what the tree is showing, chosen by which filters are on
+   * — search, belt, or both — and whether anything survived them.
+   *
+   * One line and not two: a search summary saying "clear the search to get
+   * the tree back" beside a belt still narrowing it is a promise the page
+   * does not keep, and "nothing matches 'leg'" is false when the search
+   * matched and the belt emptied the result. `dataCy` keeps the hooks the
+   * harness and the specs already read.
+   */
+  protected readonly filterMessage = computed<FilterMessage | null>(() => {
+    this.languageService.currentLang(); // signal dep — recompute on toggle
+    const searching = this.searching();
+    const belt = this.activeBelt();
+    if (!searching && belt === null) return null;
+
+    const query = this.query().trim();
+    const beltLabel = belt === null ? '' : this.ladder.label(belt);
+    const shown = this.filteredPositions();
+
+    if (shown.length === 0) {
+      // The search found nothing on its own: the belt is beside the point.
+      if (searching && this.searchedPositions().length === 0) {
+        return this.message('empty', 'syllabus-no-results', 'academy.syllabus.searchNone', {
+          query,
+        });
+      }
+      return searching
+        ? this.message('empty', 'syllabus-no-results', 'academy.syllabus.searchNoneForBelt', {
+            query,
+            belt: beltLabel,
+          })
+        : this.message('empty', 'syllabus-no-results', 'academy.syllabus.beltNone', {
+            belt: beltLabel,
+          });
+    }
+
+    const techniques = shown.reduce((n, p) => n + (p.children?.length ?? 0), 0);
+    if (!searching) {
+      return this.message(
+        'summary',
+        'syllabus-belt-summary',
+        techniques === 1 ? 'academy.syllabus.beltSummaryOne' : 'academy.syllabus.beltSummaryOther',
+        { count: techniques, belt: beltLabel },
+      );
+    }
+
+    // Two counts that vary independently, so each picks its own One/Other —
+    // ngx-translate has no plural rule, and a single hardcoded-plural string
+    // renders "1 techniques across 1 positions" on the commonest search
+    // there is. The same mistake is already documented in `confirmRemove`.
+    const counts = {
+      techniques: this.translate.instant(
+        techniques === 1
+          ? 'academy.syllabus.searchCountTechniqueOne'
+          : 'academy.syllabus.searchCountTechniqueOther',
+        { count: techniques },
+      ),
+      positions: this.translate.instant(
+        shown.length === 1
+          ? 'academy.syllabus.searchCountPositionOne'
+          : 'academy.syllabus.searchCountPositionOther',
+        { count: shown.length },
+      ),
+    };
+    return belt === null
+      ? this.message('summary', 'syllabus-search-summary', 'academy.syllabus.searchSummary', counts)
+      : this.message('summary', 'syllabus-search-summary', 'academy.syllabus.searchSummaryBelt', {
+          ...counts,
+          belt: beltLabel,
+        });
+  });
+
+  private message(
+    tone: FilterMessage['tone'],
+    dataCy: string,
+    key: string,
+    params: Record<string, unknown>,
+  ): FilterMessage {
+    return { tone, dataCy, text: this.translate.instant(key, params) };
+  }
+
+  /**
+   * The belt said on a row only where it tells the reader something — the
+   * rule `kindChip` follows: on a position when it has one, on a technique
+   * when it differs from its position's. "For everyone" under a graded
+   * position is worth saying: it is how a technique added before the
+   * position was graded shows that it did not follow.
+   *
+   * `undefined` for nothing to say; null for "for everyone".
+   */
+  protected beltChip(topic: SyllabusTopic, position?: SyllabusTopic): Belt | null | undefined {
+    const inherited = position === undefined ? null : position.from_belt;
+    return topic.from_belt === inherited ? undefined : topic.from_belt;
+  }
 
   /**
    * How many techniques each position really holds, by id.
@@ -197,33 +406,6 @@ export class SyllabusComponent {
   protected techniqueTotal(position: SyllabusTopic): number {
     return this.totalByPosition().get(position.id) ?? position.children?.length ?? 0;
   }
-
-  /** How many techniques the search turned up, and across how many positions. */
-  protected readonly resultSummary = computed<string>(() => {
-    this.languageService.currentLang(); // signal dep — recompute on toggle
-    const positions = this.filteredPositions();
-    const techniques = positions.reduce((n, p) => n + (p.children?.length ?? 0), 0);
-    // Two counts that vary independently, so each picks its own One/Other —
-    // ngx-translate has no plural rule, and a single hardcoded-plural string
-    // renders "1 techniques across 1 positions" on the commonest search
-    // there is. The same mistake is already documented in `confirmRemove`.
-    const t = this.translate.instant(
-      techniques === 1
-        ? 'academy.syllabus.searchCountTechniqueOne'
-        : 'academy.syllabus.searchCountTechniqueOther',
-      { count: techniques },
-    );
-    const p = this.translate.instant(
-      positions.length === 1
-        ? 'academy.syllabus.searchCountPositionOne'
-        : 'academy.syllabus.searchCountPositionOther',
-      { count: positions.length },
-    );
-    return this.translate.instant('academy.syllabus.searchSummary', {
-      techniques: t,
-      positions: p,
-    });
-  });
 
   /**
    * In-season and total, said separately (#1629).
@@ -304,6 +486,9 @@ export class SyllabusComponent {
     this.form.controls.name.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.nameError.set(false));
+    this.form.controls.videoUrl.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.videoError.set(false));
   }
 
   /**
@@ -359,20 +544,29 @@ export class SyllabusComponent {
   }
 
   protected startAddingPosition(): void {
+    this.moved.set(false);
     this.editing.set(null);
     this.addingUnder.set(null);
-    this.form.reset({ name: '', kind: 'both' });
-    this.nameError.set(false);
+    this.form.reset({ name: '', kind: 'both', fromBelt: null, notes: '', videoUrl: '' });
+    this.clearErrors();
     this.dialogOpen.set(true);
   }
 
   protected startAddingTechnique(position: SyllabusTopic): void {
+    this.moved.set(false);
     this.editing.set(null);
     this.addingUnder.set(position);
     // A technique starts as its position is trained — a submission under
-    // "Lapel guards" is a gi technique until someone says otherwise.
-    this.form.reset({ name: '', kind: position.kind });
-    this.nameError.set(false);
+    // "Lapel guards" is a gi technique until someone says otherwise — and
+    // from its position's belt, the same default (#1861).
+    this.form.reset({
+      name: '',
+      kind: position.kind,
+      fromBelt: position.from_belt,
+      notes: '',
+      videoUrl: '',
+    });
+    this.clearErrors();
     this.dialogOpen.set(true);
     // Adding into a closed position would hide the result.
     // Open it in the model that survives the search, not the one the search
@@ -389,11 +583,119 @@ export class SyllabusComponent {
     });
   }
 
+  /** A move is on its way; a second press waits for it (#1661). */
+  protected readonly moving = signal<boolean>(false);
+
+  /**
+   * Something was moved while this dialog was open (#1661). Moves are saved
+   * as they happen, so "Cancel" would promise an undo that does not exist —
+   * the footer says "Close" instead.
+   */
+  protected readonly moved = signal<boolean>(false);
+
+  /**
+   * Where the topic being edited stands among its siblings (#1661): the
+   * techniques of its position, or the positions. `null` while adding — a
+   * new topic goes at the end, and there is nothing to move yet.
+   */
+  protected readonly place = computed<{ index: number; total: number } | null>(() => {
+    const topic = this.editing();
+    if (topic === null) return null;
+    const siblings = this.siblingsOf(topic);
+    const index = siblings.findIndex((s) => s.id === topic.id);
+    return index === -1 ? null : { index, total: siblings.length };
+  });
+
+  /**
+   * One place up or down, straight away (#1661). Moves are not held for
+   * Save: each press is the change, the way a list is reordered anywhere
+   * else, and the dialog stays open for the next one.
+   */
+  protected move(direction: 'up' | 'down'): void {
+    const topic = this.editing();
+    if (topic === null || this.moving()) return;
+
+    this.moving.set(true);
+    this.syllabus
+      .move(topic.id, direction)
+      .pipe(
+        finalize(() => this.moving.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (siblings) => {
+          this.applyOrder(topic, siblings);
+          this.moved.set(true);
+          this.keepFocusAfterMove(direction);
+        },
+        error: () =>
+          this.toast(
+            'error',
+            'academy.syllabus.toast.errorSummary',
+            'academy.syllabus.toast.errorDetail',
+          ),
+      });
+  }
+
+  /**
+   * At either end the pressed button disables itself, and a focused button
+   * that becomes disabled drops focus to the page. Hand it to the other one,
+   * so a keyboard can keep going the way it can.
+   */
+  private keepFocusAfterMove(direction: 'up' | 'down'): void {
+    const place = this.place();
+    if (place === null) return;
+    const atEnd = direction === 'up' ? place.index === 0 : place.index === place.total - 1;
+    if (!atEnd) return;
+
+    const other = direction === 'up' ? 'syllabus-form-move-down' : 'syllabus-form-move-up';
+    runInInjectionContext(this.injector, () =>
+      afterNextRender(() =>
+        document.querySelector<HTMLButtonElement>(`[data-cy="${other}"] button`)?.focus(),
+      ),
+    );
+  }
+
+  private siblingsOf(topic: SyllabusTopic): readonly SyllabusTopic[] {
+    if (topic.parent_id === null) return this.positions();
+    return this.positions().find((p) => p.id === topic.parent_id)?.children ?? [];
+  }
+
+  /**
+   * Re-sort the siblings in the tree by the order the server answered with.
+   * The tree's own objects are kept, not the answer's: a position in the
+   * answer carries no children.
+   */
+  private applyOrder(topic: SyllabusTopic, ordered: readonly SyllabusTopic[]): void {
+    const rank = new Map(ordered.map((s, index) => [s.id, index]));
+    const byRank = (list: readonly SyllabusTopic[]): SyllabusTopic[] =>
+      [...list].sort((a, b) => (rank.get(a.id) ?? 0) - (rank.get(b.id) ?? 0));
+
+    if (topic.parent_id === null) {
+      this.positions.set(byRank(this.positions()));
+      return;
+    }
+    this.positions.set(
+      this.positions().map((position) =>
+        position.id === topic.parent_id
+          ? { ...position, children: byRank(position.children ?? []) }
+          : position,
+      ),
+    );
+  }
+
   protected startEditing(topic: SyllabusTopic): void {
+    this.moved.set(false);
     this.editing.set(topic);
     this.addingUnder.set(null);
-    this.form.reset({ name: topic.name, kind: topic.kind });
-    this.nameError.set(false);
+    this.form.reset({
+      name: topic.name,
+      kind: topic.kind,
+      fromBelt: topic.from_belt,
+      notes: topic.notes ?? '',
+      videoUrl: topic.video_url ?? '',
+    });
+    this.clearErrors();
     this.dialogOpen.set(true);
   }
 
@@ -401,21 +703,27 @@ export class SyllabusComponent {
     if (this.saving()) return;
     if (this.form.invalid) {
       this.nameError.set(this.form.controls.name.invalid);
+      this.videoError.set(this.form.controls.videoUrl.invalid);
       return;
     }
 
     const raw = this.form.getRawValue();
     const name = raw.name.trim();
     const current = this.editing();
+    // The same fields either way; an emptied box is "none", as the server
+    // stores it.
+    const fields = {
+      name,
+      kind: raw.kind,
+      from_belt: raw.fromBelt,
+      notes: raw.notes.trim() || null,
+      video_url: raw.videoUrl.trim() || null,
+    };
 
     const op$ =
       current === null
-        ? this.syllabus.create({
-            name,
-            kind: raw.kind,
-            parent_id: this.addingUnder()?.id ?? null,
-          })
-        : this.syllabus.update(current.id, { name, kind: raw.kind });
+        ? this.syllabus.create({ ...fields, parent_id: this.addingUnder()?.id ?? null })
+        : this.syllabus.update(current.id, fields);
 
     this.saving.set(true);
     op$
@@ -430,17 +738,28 @@ export class SyllabusComponent {
           this.refreshAcademy();
           this.toast('success', 'academy.syllabus.toast.saved');
         },
-        // A name already taken among its siblings is the one failure the
-        // owner can act on, and it is the likeliest one on a list this long.
-        error: (err: { status?: number }) =>
-          err.status === 422
-            ? this.nameError.set(true)
-            : this.toast(
-                'error',
-                'academy.syllabus.toast.errorSummary',
-                'academy.syllabus.toast.errorDetail',
-              ),
+        // A name already taken among its siblings is the failure the owner
+        // is likeliest to meet on a list this long; a link the server refuses
+        // is the other one they can act on (#1862). Each is said at its field.
+        error: (err: { status?: number; error?: { errors?: Record<string, unknown> } }) => {
+          if (err.status !== 422) {
+            this.toast(
+              'error',
+              'academy.syllabus.toast.errorSummary',
+              'academy.syllabus.toast.errorDetail',
+            );
+            return;
+          }
+          const fields = Object.keys(err.error?.errors ?? {});
+          this.videoError.set(fields.includes('video_url'));
+          this.nameError.set(fields.length === 0 || fields.includes('name'));
+        },
       });
+  }
+
+  private clearErrors(): void {
+    this.nameError.set(false);
+    this.videoError.set(false);
   }
 
   protected confirmRemove(): void {
@@ -590,7 +909,13 @@ export class SyllabusComponent {
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
-        next: (positions) => this.positions.set(positions),
+        next: (positions) => {
+          this.positions.set(positions);
+          // The last graded topic went back to "for everyone": the filter is
+          // gone from the page, so its choice goes too — otherwise grading
+          // one topic later would bring back a filter nobody just picked.
+          if (!this.graded()) this.beltFilter.set(null);
+        },
         // Keep whatever was on screen: an empty tree reads as "you have no
         // programme", which is a different and wrong claim.
         error: () =>

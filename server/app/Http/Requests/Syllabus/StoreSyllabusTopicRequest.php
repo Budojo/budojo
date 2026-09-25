@@ -6,13 +6,13 @@ namespace App\Http\Requests\Syllabus;
 
 use App\Authorization\Capability;
 use App\Enums\MartialArt;
-use App\Enums\TrainingMode;
 use App\Http\Requests\Concerns\AuthorizesAcademyCapability;
 use App\Http\Requests\Concerns\ValidatesSyllabusTopic;
 use App\Models\SyllabusTopic;
 use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Support\Arr;
 use Illuminate\Validation\Rule;
 
 class StoreSyllabusTopicRequest extends FormRequest
@@ -74,27 +74,27 @@ class StoreSyllabusTopicRequest extends FormRequest
     }
 
     /**
-     * The validated payload, typed. The rules above already guarantee these
-     * shapes; saying so here keeps the narrowing at the boundary rather than
-     * in the controller, which should be reading a topic, not a `mixed`.
+     * The new topic's own fields, with the defaults a topic starts from — the
+     * same shape `UpdateSyllabusTopicAction` takes, so the two writes read
+     * alike. `parent_id` is not among them: the parent is resolved on its own.
+     *
+     * - `in_season` absent means in season: a new topic is part of this year.
+     * - `from_belt` absent on a technique takes its position's (#1861) — a
+     *   default for what is added under a position, the rule `kind` follows
+     *   in the dialog. Sent as null, it is for everyone, whatever the
+     *   position says.
+     *
+     * @return array<string, mixed>
      */
-    public function topicName(): string
+    public function topicAttributes(): array
     {
-        $name = $this->validated('name');
+        $attributes = Arr::except($this->validated(), ['parent_id']);
 
-        return \is_string($name) ? $name : '';
-    }
-
-    public function topicKind(): TrainingMode
-    {
-        $kind = $this->validated('kind');
-
-        return $kind instanceof TrainingMode ? $kind : TrainingMode::from(\is_string($kind) ? $kind : 'both');
-    }
-
-    public function inSeason(): bool
-    {
-        return (bool) ($this->validated('in_season') ?? true);
+        return [
+            'in_season' => true,
+            'from_belt' => $this->parent()?->from_belt,
+            ...$attributes,
+        ];
     }
 
     /** The position the new topic goes under, resolved after validation. */

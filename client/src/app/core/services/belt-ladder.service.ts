@@ -43,6 +43,16 @@ export class BeltLadderService {
     () => this.academyService.ladderAcademy()?.grades ?? [],
   );
 
+  /**
+   * Whether to offer the youth grades (#1651). An academy with no kids'
+   * programme skipped four of them on every belt pick. `true` until an
+   * academy says otherwise, which is what every payload before the setting
+   * means.
+   */
+  readonly trainsKids = computed<boolean>(
+    () => this.academyService.ladderAcademy()?.trains_kids ?? true,
+  );
+
   /** The belts this academy awards, in rank order. */
   readonly belts = computed<readonly Belt[]>(() => this.grades().map((grade) => grade.belt));
 
@@ -57,6 +67,16 @@ export class BeltLadderService {
 
   gradeOf(belt: Belt): Grade | undefined {
     return this.grades().find((grade) => grade.belt === belt);
+  }
+
+  /**
+   * 1-based place on the ladder, or null for a colour this art does not award
+   * — `RankLadder::rankOf()` on the server. The one way to compare two belts:
+   * blue is 6th in BJJ and 7th in taekwondo, so a colour alone orders nothing.
+   */
+  rankOf(belt: Belt): number | null {
+    const index = this.belts().indexOf(belt);
+    return index === -1 ? null : index + 1;
   }
 
   /** How many stripes this belt may carry here. */
@@ -90,8 +110,25 @@ export class BeltLadderService {
     });
   }
 
-  /** Every belt this academy awards, labelled, in rank order — for a picker or a filter. */
-  beltOptions(): BeltOption<Belt>[] {
+  /**
+   * The belts to offer in a picker or a filter, labelled, in rank order: every
+   * grade, less the youth ones when the academy does not train kids (#1651).
+   * `keep` is a belt that must stay whatever the setting — the one an athlete
+   * already holds, so editing a teenager on a green belt does not silently
+   * move them off it.
+   */
+  beltOptions(keep: Belt | null = null): BeltOption<Belt>[] {
+    const trainsKids = this.trainsKids();
+    return this.grades()
+      .filter((grade) => trainsKids || !grade.kids || grade.belt === keep)
+      .map((grade) => ({ label: this.label(grade.belt), value: grade.belt }));
+  }
+
+  /**
+   * Every grade on the ladder, whatever the setting — for writing history,
+   * where an adult's record can start on a youth belt earned somewhere else.
+   */
+  allBeltOptions(): BeltOption<Belt>[] {
     return this.belts().map((belt) => ({ label: this.label(belt), value: belt }));
   }
 

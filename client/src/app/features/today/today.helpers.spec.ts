@@ -1,0 +1,165 @@
+import { describe, expect, it } from 'vitest';
+import { AcademyClass } from '../../core/services/academy-class.service';
+import {
+  isoDay,
+  joinedSince,
+  nextClassAfter,
+  nextClassFrom,
+  presencesSince,
+  timeRange,
+  tonightClasses,
+  weekStart,
+} from './today.helpers';
+
+function cls(overrides: Partial<AcademyClass> = {}): AcademyClass {
+  return {
+    id: 1,
+    name: 'Fondamentali',
+    weekday: 1,
+    starts_at: '19:00',
+    duration_minutes: 90,
+    kind: 'gi',
+    ...overrides,
+  };
+}
+
+// Thursday 24 September 2026, 18:30 local.
+const THURSDAY = new Date(2026, 8, 24, 18, 30);
+
+describe('today helpers', () => {
+  it('isoDay formats the local calendar day, not the UTC one', () => {
+    expect(isoDay(new Date(2026, 8, 24, 23, 59))).toBe('2026-09-24');
+    expect(isoDay(new Date(2026, 0, 3, 0, 1))).toBe('2026-01-03');
+  });
+
+  it("tonightClasses keeps the date's weekday only, in the server's order", () => {
+    const classes = [
+      cls({ id: 1, weekday: 4, starts_at: '19:00' }),
+      cls({ id: 2, weekday: 2 }),
+      cls({ id: 3, weekday: 4, starts_at: '20:30' }),
+    ];
+
+    expect(tonightClasses(classes, THURSDAY).map((c) => c.id)).toEqual([1, 3]);
+  });
+
+  it('nextClassAfter finds the first class on a later day, wrapping the week', () => {
+    const classes = [
+      cls({ id: 1, weekday: 1, starts_at: '19:00' }),
+      cls({ id: 2, weekday: 3, starts_at: '19:00' }),
+    ];
+
+    // Thursday → the next is Monday, four days on.
+    const next = nextClassAfter(classes, THURSDAY);
+    expect(next?.academyClass.id).toBe(1);
+    expect(isoDay(next!.date)).toBe('2026-09-28');
+  });
+
+  it("nextClassAfter never answers with today's own class", () => {
+    const classes = [cls({ id: 1, weekday: 4 })];
+
+    // The only class is on Thursdays, so the next one is a week away.
+    expect(isoDay(nextClassAfter(classes, THURSDAY)!.date)).toBe('2026-10-01');
+  });
+
+  it('nextClassAfter is null for an empty timetable', () => {
+    expect(nextClassAfter([], THURSDAY)).toBeNull();
+  });
+
+  it('weekStart is the Monday of the week, and Sunday belongs to the week it ends', () => {
+    expect(isoDay(weekStart(THURSDAY))).toBe('2026-09-21');
+    expect(isoDay(weekStart(new Date(2026, 8, 21, 8, 0)))).toBe('2026-09-21');
+    expect(isoDay(weekStart(new Date(2026, 8, 27, 20, 0)))).toBe('2026-09-21');
+  });
+
+  it('presencesSince sums the points from the first day on, and nothing earlier', () => {
+    const points = [
+      { date: '2026-09-18', count: 30 },
+      { date: '2026-09-21', count: 12 },
+      { date: '2026-09-23', count: 9 },
+    ];
+
+    expect(presencesSince(points, '2026-09-21')).toBe(21);
+    expect(presencesSince([], '2026-09-21')).toBe(0);
+  });
+
+  it('joinedSince keeps the athletes who joined from the first day to the last', () => {
+    const athletes = [
+      { id: 1, joined_at: '2026-09-21' },
+      { id: 2, joined_at: '2026-09-20' },
+      { id: 3, joined_at: '2026-09-24' },
+    ];
+
+    expect(joinedSince(athletes, '2026-09-21', '2026-09-24').map((a) => a.id)).toEqual([1, 3]);
+  });
+
+  it('joinedSince leaves out someone pre-registered for a later date', () => {
+    const athletes = [
+      { id: 1, joined_at: '2026-09-22' },
+      // Signed up today, starts on the 1st: not new this week yet.
+      { id: 2, joined_at: '2026-10-01' },
+    ];
+
+    expect(joinedSince(athletes, '2026-09-21', '2026-09-24').map((a) => a.id)).toEqual([1]);
+  });
+
+  it('timeRange reads start and end, the start alone, or nothing', () => {
+    expect(timeRange(cls({ starts_at: '19:00', duration_minutes: 90 }))).toBe('19:00–20:30');
+    expect(timeRange(cls({ starts_at: '23:30', duration_minutes: 60 }))).toBe('23:30–00:30');
+    expect(timeRange(cls({ starts_at: '19:00', duration_minutes: null }))).toBe('19:00');
+    expect(timeRange(cls({ starts_at: null }))).toBeNull();
+  });
+
+  describe('nextClassFrom (#1752): the class to plan for, at or after now', () => {
+    const MON = cls({ id: 1, weekday: 1, starts_at: '19:00' });
+    const WED = cls({ id: 3, weekday: 3, starts_at: '19:00' });
+    const FRI = cls({ id: 5, weekday: 5, starts_at: '19:00' });
+    const MON_LATE = cls({ id: 2, weekday: 1, starts_at: '20:00' });
+
+    it('on a Sunday evening, the Monday class', () => {
+      const next = nextClassFrom([MON, WED, FRI], new Date(2026, 8, 27, 20, 0));
+      expect(next?.academyClass.id).toBe(1);
+      expect(isoDay(next!.date)).toBe('2026-09-28');
+    });
+
+    it('on Monday at 19:30, the 20:00 class, not the one already on the mat', () => {
+      const next = nextClassFrom([MON, MON_LATE], new Date(2026, 8, 28, 19, 30));
+      expect(next?.academyClass.id).toBe(2);
+    });
+
+    it('at the very minute a class starts, that class', () => {
+      expect(nextClassFrom([MON, MON_LATE], new Date(2026, 8, 28, 19, 0))?.academyClass.id).toBe(1);
+    });
+
+    it('on Monday at 21:30, after both, the Wednesday class', () => {
+      const next = nextClassFrom([MON, MON_LATE, WED], new Date(2026, 8, 28, 21, 30));
+      expect(next?.academyClass.id).toBe(3);
+    });
+
+    it('on Saturday night, wraps past the weekend to Monday', () => {
+      const next = nextClassFrom([MON, WED], new Date(2026, 9, 3, 22, 0));
+      expect(next?.academyClass.id).toBe(1);
+      expect(isoDay(next!.date)).toBe('2026-10-05');
+    });
+
+    it('a class with no time today is still today, not already past', () => {
+      const untimed = cls({ id: 7, weekday: 1, starts_at: null });
+      const next = nextClassFrom([untimed], new Date(2026, 8, 28, 19, 30));
+      expect(next?.academyClass.id).toBe(7);
+      expect(isoDay(next!.date)).toBe('2026-09-28');
+    });
+
+    it('an untimed class comes after the timed ones of its day, whatever the array order', () => {
+      const untimed = cls({ id: 7, weekday: 1, starts_at: null });
+      expect(nextClassFrom([untimed, MON], new Date(2026, 8, 28, 18, 0))?.academyClass.id).toBe(1);
+    });
+
+    it('with only a Monday class, after it has gone, next Monday', () => {
+      const next = nextClassFrom([MON], new Date(2026, 8, 28, 21, 0));
+      expect(isoDay(next!.date)).toBe('2026-10-05');
+    });
+
+    it('an empty timetable has no next class', () => {
+      expect(nextClassFrom([], new Date(2026, 8, 28, 18, 0))).toBeNull();
+    });
+  });
+});

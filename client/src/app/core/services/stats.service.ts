@@ -3,6 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { map, Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import type { TrainingMode } from './academy.service';
+import type { AthleteIdentity, AthleteStatus, Belt } from './athlete.service';
 
 export interface DailyAttendancePoint {
   readonly date: string; // 'YYYY-MM-DD'
@@ -75,6 +76,13 @@ export interface CoverageTopic {
 
 export interface CoverageTaughtTopic extends CoverageTopic {
   readonly lessons: number;
+  /**
+   * Distinct athletes at one or more of those lessons (#1746) — three lessons
+   * to the same four people reach four. A column, never part of the headline.
+   */
+  readonly reach: number;
+  /** Distinct (athlete, lesson) presences across them. */
+  readonly attendances: number;
   readonly last_taught_on: string;
   readonly state: CoverageState;
 }
@@ -96,6 +104,117 @@ export interface SyllabusCoverage {
   readonly taught: readonly CoverageTaughtTopic[];
   /** Cumulative covered topics, one point per week up to today. */
   readonly timeline: readonly { readonly on: string; readonly covered: number }[];
+}
+
+/**
+ * The season map (#1858): each position, week by week.
+ *
+ * `held` has at least one presence; `planned` has none and is dated today or
+ * later; `unconfirmed` has none and its day has passed. Derived on every read,
+ * never stored, split on the server's `today`.
+ */
+export type CalendarLessonState = 'held' | 'planned' | 'unconfirmed';
+
+export interface CalendarCell {
+  /** The Monday of the week. */
+  readonly week: string;
+  readonly held: number;
+  readonly planned: number;
+  readonly unconfirmed: number;
+}
+
+export interface CalendarPosition {
+  readonly id: number;
+  readonly name: string;
+  readonly kind: TrainingMode;
+  /** Sparse: only the weeks with a lesson on this position, oldest first. */
+  readonly cells: readonly CalendarCell[];
+}
+
+export interface CalendarLesson {
+  readonly id: number;
+  readonly academy_class_id: number | null;
+  readonly held_on: string;
+  readonly name: string;
+  readonly starts_at: string | null;
+  readonly kind: TrainingMode;
+  readonly state: CalendarLessonState;
+  /** The positions this lesson counts for under the filter in force. */
+  readonly position_ids: readonly number[];
+  readonly topics: readonly {
+    readonly id: number;
+    readonly name: string;
+    readonly parent_id: number | null;
+  }[];
+}
+
+export interface SyllabusCalendar {
+  readonly season: { readonly start: string; readonly end: string; readonly label: string };
+  readonly kind: TrainingMode | null;
+  /** The server's today — the day planned and unconfirmed were split on. */
+  readonly today: string;
+  /** The Monday of every week the season touches. */
+  readonly weeks: readonly string[];
+  readonly positions: readonly CalendarPosition[];
+  /** The season's tagged lessons, oldest first. */
+  readonly lessons: readonly CalendarLesson[];
+}
+
+/**
+ * Where one athlete stands against a technique's lessons (#1745). `unplaced`
+ * is at none of them by the record, but trained on one of those days with no
+ * lesson named (#1590): could have been there, so never read as an absence.
+ */
+export type ExposureState = 'seen' | 'thin' | 'never' | 'unplaced';
+
+/** A held lesson that named the technique, with how many were in the room. */
+export interface ExposureLesson {
+  readonly id: number;
+  readonly held_on: string;
+  /** The class name, as the lesson snapshotted it. */
+  readonly name: string;
+  readonly kind: TrainingMode;
+  readonly starts_at: string | null;
+  readonly headcount: number;
+}
+
+export interface ExposureAthlete extends AthleteIdentity {
+  readonly status: AthleteStatus;
+  readonly joined_at: string;
+  /** How many of the lessons they were at. */
+  readonly exposures: number;
+  readonly last_seen_on: string | null;
+  readonly state: ExposureState;
+}
+
+/**
+ * Who has seen one technique this season (#1745) — the coverage report's
+ * row, opened. A technique nobody taught comes back with no lessons and no
+ * athletes: the academy's gap is never filed under people.
+ */
+export interface TopicExposure {
+  readonly topic: {
+    readonly id: number;
+    readonly name: string;
+    readonly parent_name: string | null;
+    readonly kind: TrainingMode;
+    readonly in_season: boolean;
+    /** How it is taught here, and the video it came from (#1862). */
+    readonly notes: string | null;
+    readonly video_url: string | null;
+  };
+  readonly season: { readonly start: string; readonly end: string; readonly label: string };
+  /** Held lessons that named it, oldest first. */
+  readonly lessons: readonly ExposureLesson[];
+  /** Register order, active first — never ranked. */
+  readonly athletes: readonly ExposureAthlete[];
+  readonly totals: {
+    readonly lessons: number;
+    readonly seen: number;
+    readonly thin: number;
+    readonly never: number;
+    readonly unplaced: number;
+  };
 }
 
 /** One thing this athlete has not seen yet (#1567). */
@@ -145,6 +264,56 @@ export interface AthleteSyllabusCoverage {
   readonly seen_lately: readonly SeenTopic[];
   /** Presences that name no lesson, and so can be attributed to no topic. */
   readonly unattributed_presences: number;
+  /**
+   * The programme of their own belt (#1861): what is expected up to it, how
+   * much of that the academy taught while they were here, how much they were
+   * at. Null while nothing in the programme names a belt.
+   */
+  readonly grade: {
+    readonly belt: Belt;
+    readonly items: number;
+    readonly taught_by_academy: number;
+    readonly attended: number;
+  } | null;
+}
+
+/** The three at-risk tiers (#1728), most severe first. */
+export type AtRiskTier = 'gone' | 'quiet' | 'dropping';
+
+/** One athlete who is drifting, with the numbers that say why (#1728). */
+export interface AtRiskRow {
+  /** Enough to draw the row with the belt spine and to reach the person. */
+  readonly athlete: AthleteIdentity & {
+    readonly status: AthleteStatus;
+    readonly phone_country_code: string | null;
+    readonly phone_national_number: string | null;
+  };
+  readonly tier: AtRiskTier;
+  /** `null` — never trained since joining. */
+  readonly last_attended_on: string | null;
+  readonly recent_attended: number;
+  readonly recent_sessions: number;
+  readonly baseline_attended: number;
+  readonly baseline_sessions: number;
+}
+
+/**
+ * Who is drifting, against their own attendance (#1728). The tiers are the
+ * server's: a client that recomputed one would be a second copy of the rule.
+ */
+export interface AtRiskList {
+  readonly data: readonly AtRiskRow[];
+  readonly meta: {
+    /** Realised sessions the academy has recorded. */
+    readonly sessions_available: number;
+    /** The fewest the rules can judge anyone on — below it, "we cannot tell yet". */
+    readonly sessions_needed: number;
+    /**
+     * Any attendance at all, tonight included. What tells an academy's first
+     * evening ("not enough history") from one that never took the register.
+     */
+    readonly has_attendance: boolean;
+  };
 }
 
 @Injectable({ providedIn: 'root' })
@@ -206,6 +375,40 @@ export class StatsService {
       .get<{ data: SyllabusCoverage }>(`${environment.apiBase}/api/v1/stats/syllabus/coverage`, {
         params,
       })
+      .pipe(map((r) => r.data));
+  }
+
+  /**
+   * The season map (#1858) — the same season and filter as
+   * `syllabusCoverage()`, because the map is drawn beside its fractions.
+   */
+  syllabusCalendar(
+    seasonsBack = 0,
+    kind: TrainingMode | null = null,
+  ): Observable<SyllabusCalendar> {
+    let params = new HttpParams().set('seasons_back', seasonsBack);
+    if (kind !== null) params = params.set('kind', kind);
+
+    return this.http
+      .get<{ data: SyllabusCalendar }>(`${environment.apiBase}/api/v1/stats/syllabus/calendar`, {
+        params,
+      })
+      .pipe(map((r) => r.data));
+  }
+
+  /** Who is drifting, against their own attendance (#1728). The whole envelope: `meta` is read. */
+  atRisk(): Observable<AtRiskList> {
+    return this.http.get<AtRiskList>(`${environment.apiBase}/api/v1/stats/attendance/at-risk`);
+  }
+
+  /** Who has seen one technique — a row of the coverage report, opened (#1745). */
+  topicExposure(topicId: number, seasonsBack = 0): Observable<TopicExposure> {
+    const params = new HttpParams().set('seasons_back', seasonsBack);
+
+    return this.http
+      .get<{
+        data: TopicExposure;
+      }>(`${environment.apiBase}/api/v1/stats/syllabus/topics/${topicId}`, { params })
       .pipe(map((r) => r.data));
   }
 }

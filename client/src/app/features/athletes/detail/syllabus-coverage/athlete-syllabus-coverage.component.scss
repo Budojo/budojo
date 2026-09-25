@@ -26,7 +26,9 @@
     margin: 0;
     display: flex;
     align-items: baseline;
-    color: var(--p-primary-color);
+    // Ink, not the accent (#1852): the accent means action, selection or
+    // state. A number earns its weight from its size.
+    color: var(--p-text-color);
   }
 
   &__percent {
@@ -41,14 +43,16 @@
     margin-left: 0.25rem;
   }
 
-  &__fraction {
+  &__fraction,
+  &__grade-fraction {
     margin: 0;
     font-size: 0.875rem;
     color: var(--p-text-color);
   }
 
-  // Said out loud rather than left implicit: the window this number covers is
-  // the difference between a fair measure and an accusation.
+  // The window this number covers is the difference between a fair measure
+  // and an accusation. It sits in the method fold (#1853), one tap under the
+  // number; the note shares the style.
   &__since,
   &__note {
     margin: 0;
@@ -173,9 +177,10 @@
   }
 }
 
-// The two lines under the fraction. "Nothing missed" is the one that undoes
-// the old headline's accusation, so it carries the weight; the consolidated
-// count is context and reads as context (#1710).
+// "Nothing missed" stays under the fraction: it undoes the old headline's
+// accusation, so it carries the weight (#1710). The consolidated count and the
+// rule are context, and live in the method fold (#1853), which sets their
+// width and the gap between them.
 .coverage__nothing-missed {
   margin: 0.25rem 0 0;
   font-size: 0.875rem;
@@ -183,15 +188,13 @@
 }
 
 .coverage__consolidated {
-  margin: 0.125rem 0 0;
+  margin: 0;
   font-size: 0.8125rem;
   color: var(--p-text-muted-color);
 }
 
 .coverage__rule {
   margin: 0;
-  margin-top: 0.5rem;
-  max-width: 40rem;
   font-size: 0.8125rem;
   color: var(--p-text-muted-color);
 }

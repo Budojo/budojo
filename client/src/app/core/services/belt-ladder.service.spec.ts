@@ -31,6 +31,20 @@ describe('BeltLadderService (#1801)', () => {
     });
   });
 
+  it('ranks a belt by its place on the ladder, not by the colour (#1861)', () => {
+    const ladder = setup();
+    useLadder('bjj');
+
+    // Blue is 6th in BJJ, below the kids' greys that open the ladder…
+    expect(ladder.rankOf('blue')).toBe(6);
+    expect(ladder.rankOf('grey')).toBe(1);
+    // …and a colour the art does not award has no rank at all.
+    expect(ladder.rankOf('white-and-yellow')).toBeNull();
+
+    useLadder('taekwondo');
+    expect(ladder.rankOf('blue')).not.toBe(6);
+  });
+
   it('caps stripes by the grade', () => {
     const ladder = setup();
     useLadder('karate');
@@ -142,5 +156,56 @@ describe('BeltLadderService — on the athlete portal (#1813)', () => {
 
     expect(ladder.martialArt()).toBe('bjj');
     expect(ladder.belts()).toEqual([]);
+  });
+
+  describe('an academy that does not train kids (#1651)', () => {
+    const values = (options: { value: string }[]) => options.map((o) => o.value);
+
+    it('leaves the youth grades out of the pickers', () => {
+      const ladder = setup();
+      useLadder('bjj', { trains_kids: false });
+
+      // Every belt pick used to start by skipping four options.
+      const offered = values(ladder.beltOptions());
+      expect(offered[0]).toBe('white');
+      expect(offered).not.toContain('grey');
+      expect(offered).not.toContain('green');
+    });
+
+    it("trims each art's own youth grades — the judo half belts", () => {
+      const ladder = setup();
+      useLadder('judo', { trains_kids: false });
+
+      expect(values(ladder.beltOptions())).not.toContain('white-and-yellow');
+      expect(values(ladder.beltOptions())).toContain('yellow');
+    });
+
+    it('keeps a youth belt an athlete already holds, in its place', () => {
+      const ladder = setup();
+      useLadder('bjj', { trains_kids: false });
+
+      const offered = values(ladder.beltOptions('green'));
+      expect(offered).toContain('green');
+      expect(offered.indexOf('green')).toBeLessThan(offered.indexOf('white'));
+      expect(offered).not.toContain('grey');
+    });
+
+    it('offers every grade when the academy trains kids, or has not said', () => {
+      const ladder = setup();
+      useLadder('bjj', { trains_kids: true });
+      expect(values(ladder.beltOptions())).toContain('grey');
+
+      // An older payload without the field reads as before, not as a trim.
+      useLadder('bjj');
+      expect(values(ladder.beltOptions())).toContain('grey');
+    });
+
+    it('keeps the whole ladder where history is written', () => {
+      const ladder = setup();
+      useLadder('bjj', { trains_kids: false });
+
+      // An adult's record can start on a youth belt earned somewhere else.
+      expect(values(ladder.allBeltOptions())).toContain('grey');
+    });
   });
 });

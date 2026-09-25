@@ -29,6 +29,7 @@ import { localeFor } from '../../../shared/utils/locale';
 import { ErrorStateComponent } from '../../../shared/components/error-state/error-state.component';
 import { SortHeaderComponent } from '../../../shared/components/sort-header/sort-header.component';
 import { SortToggleComponent } from '../../../shared/components/sort-toggle/sort-toggle.component';
+import { AthleteIdentityComponent } from '../../../shared/components/athlete-identity/athlete-identity.component';
 import {
   nameSortAria,
   nameSortSignifier,
@@ -37,6 +38,7 @@ import {
   type SortState,
 } from '../../../shared/utils/athlete-sort';
 import type { AthleteSortOrder } from '../../../core/services/athlete.service';
+import { HowCountedComponent } from '../../../shared/components/how-counted/how-counted.component';
 
 interface YearMonth {
   year: number;
@@ -114,6 +116,8 @@ function compareYearMonth(a: YearMonth, b: YearMonth): number {
     ErrorStateComponent,
     SortHeaderComponent,
     SortToggleComponent,
+    AthleteIdentityComponent,
+    HowCountedComponent,
   ],
   templateUrl: './monthly-summary.component.html',
   styleUrl: './monthly-summary.component.scss',

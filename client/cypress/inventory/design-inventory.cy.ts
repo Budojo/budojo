@@ -379,10 +379,33 @@ const SYLLABUS = [
     name: 'Closed guard',
     kind: 'both',
     in_season: true,
+    from_belt: null,
+    notes: null,
+    video_url: null,
     sort_order: 0,
     children: [
-      { id: 11, parent_id: 1, name: 'Armbar', kind: 'both', in_season: true, sort_order: 0 },
-      { id: 12, parent_id: 1, name: 'Triangle', kind: 'both', in_season: true, sort_order: 1 },
+      {
+        id: 11,
+        parent_id: 1,
+        name: 'Armbar',
+        kind: 'both',
+        in_season: true,
+        from_belt: null,
+        notes: null,
+        video_url: null,
+        sort_order: 0,
+      },
+      {
+        id: 12,
+        parent_id: 1,
+        name: 'Triangle',
+        kind: 'both',
+        in_season: true,
+        from_belt: null,
+        notes: null,
+        video_url: null,
+        sort_order: 1,
+      },
     ],
   },
   {
@@ -391,9 +414,22 @@ const SYLLABUS = [
     name: 'Mount',
     kind: 'both',
     in_season: true,
+    from_belt: null,
+    notes: null,
+    video_url: null,
     sort_order: 1,
     children: [
-      { id: 21, parent_id: 2, name: 'Americana', kind: 'both', in_season: true, sort_order: 0 },
+      {
+        id: 21,
+        parent_id: 2,
+        name: 'Americana',
+        kind: 'both',
+        in_season: true,
+        from_belt: null,
+        notes: null,
+        video_url: null,
+        sort_order: 0,
+      },
     ],
   },
 ];
@@ -424,6 +460,8 @@ const SYLLABUS_COVERAGE = {
       kind: 'both',
       lessons: 2,
       last_taught_on: '2026-04-20',
+      reach: 5,
+      attendances: 8,
       state: 'covered',
     },
     {
@@ -433,6 +471,8 @@ const SYLLABUS_COVERAGE = {
       kind: 'both',
       lessons: 1,
       last_taught_on: '2026-04-13',
+      reach: 3,
+      attendances: 3,
       state: 'thin',
     },
   ],
@@ -462,6 +502,7 @@ const ATHLETE_COVERAGE = {
     { id: 11, name: 'Armbar', parent_name: 'Closed guard', lessons: 2, last_seen_on: '2026-04-20' },
   ],
   unattributed_presences: 0,
+  grade: null,
 };
 
 const FROZEN_NOW = new Date('2026-04-24T12:00:00Z').getTime();
@@ -530,6 +571,13 @@ function seedIntercepts(role: 'owner' | 'athlete' = 'owner'): void {
   // subscribe with no guard, so the catch-all's bare `{ data: [] }` throws an
   // uncaught TypeError and takes the whole host page down — the stats
   // overview and the athlete's profile both.
+  // The check-in's missing-regulars panel (#1730) reads `meta` off this; the
+  // catch-all above has none. Two sessions on record: the honest young-class
+  // line, which needs no fixture of its own.
+  cy.intercept('GET', '/api/v1/attendance/regulars*', {
+    statusCode: 200,
+    body: { data: [], meta: { occurrences: 2, occurrence_dates: ['2026-05-04', '2026-04-27'] } },
+  });
   cy.intercept('GET', '/api/v1/attendance/leaderboard*', {
     statusCode: 200,
     body: {

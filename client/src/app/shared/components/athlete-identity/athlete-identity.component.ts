@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Tooltip } from 'primeng/tooltip';
-import { Athlete } from '../../../core/services/athlete.service';
+import { AthleteIdentity } from '../../../core/services/athlete.service';
 import { LanguageService } from '../../../core/services/language.service';
 import { BeltLadderService } from '../../../core/services/belt-ladder.service';
 import { AgeBadgeComponent } from '../age-badge/age-badge.component';
@@ -36,7 +36,11 @@ export class AthleteIdentityComponent {
   private readonly languageService = inject(LanguageService);
   private readonly beltLadder = inject(BeltLadderService);
 
-  readonly athlete = input.required<Athlete>();
+  /**
+   * The person, as little of them as a row needs (#1851). The roster passes a
+   * whole `Athlete`; the lists built on aggregates pass the identity alone.
+   */
+  readonly athlete = input.required<AthleteIdentity>();
 
   /**
    * Whether the name opens the athlete's detail page.
@@ -47,6 +51,27 @@ export class AthleteIdentityComponent {
    * and you navigate away instead of marking someone present.
    */
   readonly linkToDetail = input<boolean>(false);
+
+  /**
+   * The detail tab the name opens, when the page is about one (#1851): the
+   * monthly summary leads to the athlete's attendance, the expiring list to
+   * their documents. Null opens the detail page's default tab, as the roster
+   * does.
+   */
+  readonly detailTab = input<string | null>(null);
+
+  /**
+   * Stretch the name link over the nearest positioned ancestor (#1851), so a
+   * phone card is one tap target rather than a 19 px line of text. The card
+   * supplies `position: relative`, as it already must for the spine.
+   */
+  readonly stretchLink = input<boolean>(false);
+
+  protected readonly detailLink = computed(() => {
+    const tab = this.detailTab();
+    const base: (string | number)[] = ['/dashboard/athletes', this.athlete().id];
+    return tab ? [...base, tab] : base;
+  });
 
   /** The public-profile route the avatar links to, when the athlete has a handle. */
   readonly avatarHandle = input<string | null>(null);

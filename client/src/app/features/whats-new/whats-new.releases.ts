@@ -60,6 +60,84 @@ export function localised(value: Localised, lang: string): string {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.67.0',
+    date: '2026-09-25',
+    headline: {
+      en: 'Today, and a programme you can plan: a first screen for the evening, who is slipping away, and the season laid out week by week.',
+      it: 'Oggi, e un programma che si pianifica: una prima schermata per la serata, chi si sta allontanando, e la stagione settimana per settimana.',
+    },
+    sections: [
+      {
+        heading: { en: 'Today: the first screen', it: 'Oggi: la prima schermata' },
+        bullets: [
+          {
+            en: 'The app opens on Today, first on the bar: tonight’s classes with the check-in a tap away, what to look at, what to teach, this week and the week’s birthdays. Academy moves further down (on a phone, into More).',
+            it: 'L’app si apre su Oggi, il primo pulsante della barra: le lezioni di stasera con il check-in a un tocco, cosa guardare, cosa insegnare, questa settimana e i compleanni. Accademia scende più in basso (dal telefono, sta in Altro).',
+          },
+          {
+            en: 'What to look at: expiring or missing certificates, and a warning when backups stay only on this computer or the last copy outside it is more than 7 days old. Unpaid fees join it from the 16th, as the bell does; before that they are a neutral line under This week.',
+            it: 'Da guardare: certificati in scadenza o mancanti, e un avviso se le copie restano solo su questo computer o se l’ultima copia fuori ha più di 7 giorni. Le quote non pagate compaiono qui dal 16, come la campanella; prima sono una riga neutra in Questa settimana.',
+          },
+          {
+            en: 'What to teach suggests for the next class on the timetable, rest days included, and "Prepare the lesson" opens that day’s sheet. The getting-started list now lives on Today.',
+            it: 'Cosa insegnare propone per la prossima lezione in orario, anche nei giorni di riposo, e «Prepara la lezione» apre la scheda di quel giorno. La lista per iniziare ora è su Oggi.',
+          },
+        ],
+      },
+      {
+        heading: { en: 'Who is slipping away', it: 'Chi si sta allontanando' },
+        bullets: [
+          {
+            en: 'Each athlete’s last presence: a sortable column on the athlete list and a line on their page.',
+            it: 'L’ultima presenza di ogni atleta: una colonna ordinabile nell’elenco atleti e una riga nella sua scheda.',
+          },
+          {
+            en: '"Not seen lately" above the athlete list: who comes less than their own habit, not less than a fixed number, each with WhatsApp, call and "Mark inactive".',
+            it: '«Non si vedono da un po’» sopra l’elenco atleti: chi viene meno del suo solito, non meno di un numero fisso, con WhatsApp, chiamata e «Segna come inattivo».',
+          },
+          {
+            en: 'At check-in, "Who usually comes": the regulars of that class (3 of its last 4 lessons) not yet ticked tonight. WhatsApp and call sit beside the name on these lists, the week’s birthdays and the athlete’s page.',
+            it: 'Nel check-in, «Chi viene di solito»: gli abituali di quella lezione (3 delle ultime 4) non ancora spuntati stasera. WhatsApp e chiamata sono accanto al nome in questi elenchi, nei compleanni della settimana e nella scheda dell’atleta.',
+          },
+        ],
+      },
+      {
+        heading: { en: 'The programme becomes a plan', it: 'Il programma diventa un piano' },
+        bullets: [
+          {
+            en: 'The season map in Stats → Programme: every position, week by week, taught, planned, or planned with no check-in. Plan any lesson of the season from the map or with the arrows in the lesson sheet, and "Plan" any technique not yet taught.',
+            it: 'La mappa della stagione in Statistiche → Programma: ogni posizione, settimana per settimana, fatta, pianificata o pianificata senza appello. Pianifichi qualsiasi lezione dalla mappa o con le frecce nella scheda della lezione, e «Pianifica» ogni tecnica non ancora fatta.',
+          },
+          {
+            en: 'The week’s plan for the academy’s WhatsApp group, copied or sent from under the map.',
+            it: 'Il programma della settimana per il gruppo WhatsApp dell’accademia, da copiare o inviare sotto la mappa.',
+          },
+          {
+            en: 'Who has seen a technique, how many people ("3 lessons · 11 people"), and, in the lesson sheet, the techniques most of tonight’s room missed.',
+            it: 'Chi ha visto una tecnica, quante persone («3 lezioni · 11 persone»), e nella scheda della lezione le tecniche che la maggior parte dei presenti di stasera non ha visto.',
+          },
+          {
+            en: 'The programme by belt (from which belt a technique belongs, and how much of it an athlete has seen), notes and a reference video on each technique, and moving positions and techniques up or down.',
+            it: 'Il programma per cintura (da che cintura una tecnica entra nel programma, e quanto ne ha visto l’atleta), appunti e un video su ogni tecnica, e posizioni e tecniche da spostare in su o in giù.',
+          },
+        ],
+      },
+      {
+        heading: { en: 'Clearer, and fixed', it: 'Più chiaro, e corretto' },
+        bullets: [
+          {
+            en: 'The belt stripe on every list of people, indigo only for what you press, and "How is this counted?" folded under the numbers. An adults-only academy can hide the youth belts.',
+            it: 'La striscia della cintura su ogni elenco di persone, l’indaco solo per ciò che si preme, e «Come si conta?» sotto i numeri. Un’accademia di soli adulti può nascondere le cinture dei ragazzi.',
+          },
+          {
+            en: 'Phone numbers are stored in international form, so WhatsApp links open, and the CSV import no longer drops the leading zero of Italian landlines.',
+            it: 'I numeri di telefono si salvano nella forma internazionale, così il link a WhatsApp si apre, e l’importazione da CSV non toglie più lo zero ai fissi italiani.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.66.0',
     date: '2026-09-24',
     headline: {

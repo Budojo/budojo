@@ -66,16 +66,26 @@
           {{ nothingMissedKey() | translate }}
         </p>
       }
-      <p class="coverage__consolidated" data-cy="athlete-coverage-consolidated">
-        {{ consolidatedKey() | translate: { count: r.totals.seen } }}
-      </p>
-      <p class="coverage__since">
-        {{ 'athletes.coverage.since' | translate: { date: shortDate(r.joined_on) } }}
-      </p>
-      <!-- The reverse of the line on Stats → Programme (#1748). -->
-      <p class="coverage__rule" data-cy="athlete-coverage-rule">
-        {{ 'athletes.coverage.headlineRule' | translate }}
-      </p>
+      <!--
+        One sentence under the number says what it counts; the method folds
+        behind it (#1853). What folds is still here, one tap away: the two-
+        lesson threshold, the joining date the count starts from, and the
+        line that names Stats → Programme and why the two numbers differ
+        (#1748). The screens still name each other; they just do not open on
+        it.
+      -->
+      <app-how-counted dataCy="athlete-coverage-method">
+        <p class="coverage__consolidated" data-cy="athlete-coverage-consolidated">
+          {{ consolidatedKey() | translate: { count: r.totals.seen } }}
+        </p>
+        <p class="coverage__since" data-cy="athlete-coverage-since">
+          {{ 'athletes.coverage.since' | translate: { date: shortDate(r.joined_on) } }}
+        </p>
+        <!-- The reverse of the line on Stats → Programme (#1748). -->
+        <p class="coverage__rule" data-cy="athlete-coverage-rule">
+          {{ 'athletes.coverage.headlineRule' | translate }}
+        </p>
+      </app-how-counted>
     </header>
 
     <ul class="legend">
@@ -148,6 +158,40 @@
           ) | translate: { count: r.unattributed_presences }
         }}
       </p>
+    }
+
+    @if (r.grade; as g) {
+      <!--
+        The programme of their own belt (#1861). Exposure, never competence:
+        what the academy taught of it and whether they were in the room. What
+        is still to come is the academy's to teach, so it stands beside the
+        fraction, not inside it.
+      -->
+      <section class="panel" data-cy="athlete-coverage-grade">
+        <h3 class="panel__title">
+          {{ 'athletes.coverage.grade.title' | translate: { belt: (beltKey(g.belt) | translate) } }}
+        </h3>
+        <p class="coverage__grade-fraction">
+          @if (g.taught_by_academy > 0) {
+            {{
+              (g.taught_by_academy === 1
+                ? 'athletes.coverage.grade.fractionOne'
+                : 'athletes.coverage.grade.fractionOther'
+              ) | translate: { attended: g.attended, taught: g.taught_by_academy }
+            }}
+          } @else {
+            {{ 'athletes.coverage.grade.nothingTaught' | translate }}
+          }
+        </p>
+        <p class="coverage__note">
+          {{
+            (g.items === 1
+              ? 'athletes.coverage.grade.itemsOne'
+              : 'athletes.coverage.grade.itemsOther'
+            ) | translate: { count: g.items }
+          }}
+        </p>
+      </section>
     }
 
     @if (r.missed.length > 0) {

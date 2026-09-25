@@ -39,12 +39,15 @@
           </p>
           <!--
             The athlete tab counts one lesson and this counts two, both on
-            purpose (#1748). Said under the number, not in a tooltip: nobody
-            hovers a number they do not know is ambiguous.
+            purpose (#1748). Folded under the number, not in a tooltip (#1853):
+            nobody hovers a number they do not know is ambiguous, but a
+            question under it ("Come si conta?") is there when they wonder.
           -->
-          <p class="coverage__rule" data-cy="syllabus-coverage-rule">
-            {{ 'stats.syllabus.headlineRule' | translate }}
-          </p>
+          <app-how-counted dataCy="syllabus-coverage-method">
+            <p class="coverage__rule" data-cy="syllabus-coverage-rule">
+              {{ 'stats.syllabus.headlineRule' | translate }}
+            </p>
+          </app-how-counted>
         </div>
       }
 
@@ -99,17 +102,19 @@
         icon="pi pi-book"
         [title]="'stats.syllabus.empty.noProgrammeTitle' | translate"
         [hint]="'stats.syllabus.empty.noProgrammeHint' | translate"
+        [ctaLabel]="'stats.syllabus.empty.openProgramme' | translate"
+        ctaIcon="pi pi-arrow-right"
+        (ctaClick)="goToProgramme()"
         dataCy="syllabus-coverage-no-programme"
       />
-      <p class="coverage__empty-link">
-        <a routerLink="/dashboard/academy/syllabus" data-cy="syllabus-coverage-programme-link">
-          {{ 'stats.syllabus.empty.openProgramme' | translate }}
-        </a>
-      </p>
     } @else {
+      <!--
+        Plain words, no coloured dots: the accent's strengths key the season
+        map below (a lesson, two or more), and the same colours here would
+        mean something else on the same screen.
+      -->
       <p class="coverage__totals" data-cy="syllabus-coverage-totals">
-        <span class="tally tally--covered">
-          <span class="tally__dot" aria-hidden="true"></span>
+        <span class="tally">
           {{
             (data.totals.covered === 1
               ? 'stats.syllabus.state.coveredOne'
@@ -117,8 +122,7 @@
             ) | translate: { count: data.totals.covered }
           }}
         </span>
-        <span class="tally tally--thin">
-          <span class="tally__dot" aria-hidden="true"></span>
+        <span class="tally">
           {{
             (data.totals.thin === 1
               ? 'stats.syllabus.state.thinOne'
@@ -126,8 +130,7 @@
             ) | translate: { count: data.totals.thin }
           }}
         </span>
-        <span class="tally tally--missing">
-          <span class="tally__dot" aria-hidden="true"></span>
+        <span class="tally">
           {{
             (data.totals.missing === 1
               ? 'stats.syllabus.state.missingOne'
@@ -137,6 +140,24 @@
         </span>
       </p>
 
+      <!--
+        The position axis first, because it is what exposes real gaps:
+        "you have done nothing from half guard all year" is information an
+        instructor acts on, and a flat list of techniques is not. Week by week
+        (#1858), because *when* is the other half of that sentence; each row
+        still ends on the fraction the bars used to draw.
+
+        Drawn whenever there is a programme, taught or not: a new season with
+        only plans on it is exactly when the map is worth opening.
+      -->
+      <app-season-map
+        #seasonMap
+        [positions]="data.positions"
+        [seasonsBack]="seasonsBack()"
+        [kind]="kindParam()"
+        [classes]="classes()"
+      />
+
       @if (nothingTaught()) {
         <app-empty-state
           icon="pi pi-calendar"
@@ -145,59 +166,6 @@
           dataCy="syllabus-coverage-nothing-taught"
         />
       } @else {
-        <!--
-          The position axis first, because it is what exposes real gaps:
-          "you have done nothing from half guard all year" is information an
-          instructor acts on, and a flat list of techniques is not.
-        -->
-        <section class="panel" data-cy="syllabus-coverage-positions">
-          <h3 class="panel__title">{{ 'stats.syllabus.byPosition' | translate }}</h3>
-          <ul class="bars">
-            @for (position of data.positions; track position.id) {
-              <li class="bars__row" [attr.data-cy]="'syllabus-position-' + position.id">
-                <span class="bars__name">
-                  {{ position.name }}
-                  @if (position.worked > 0) {
-                    <!-- "We worked half guard" — an answer that fills no
-                         technique, and is not nothing either. -->
-                    <span class="bars__worked">
-                      {{ 'stats.syllabus.worked' | translate: { count: position.worked } }}
-                    </span>
-                  }
-                </span>
-                <span
-                  class="bar"
-                  role="img"
-                  [attr.aria-label]="
-                    'stats.syllabus.barAria'
-                      | translate
-                        : {
-                            name: position.name,
-                            covered: position.covered,
-                            thin: position.thin,
-                            missing: position.missing,
-                          }
-                  "
-                >
-                  <span
-                    class="bar__seg bar__seg--covered"
-                    [style.width]="segment(position.covered, position.in_scope)"
-                  ></span>
-                  <span
-                    class="bar__seg bar__seg--thin"
-                    [style.width]="segment(position.thin, position.in_scope)"
-                  ></span>
-                  <span
-                    class="bar__seg bar__seg--missing"
-                    [style.width]="segment(position.missing, position.in_scope)"
-                  ></span>
-                </span>
-                <span class="bars__count">{{ position.covered }}/{{ position.in_scope }}</span>
-              </li>
-            }
-          </ul>
-        </section>
-
         <!--
           Coverage over the season, so the owner can see whether they are on
           pace or drifting. A topic joins the line on the day of its second
@@ -231,10 +199,44 @@
             } @else {
               <ul class="topics">
                 @for (topic of data.missing; track topic.id) {
-                  <li class="topics__row" [attr.data-cy]="'syllabus-missing-' + topic.id">
-                    <span class="topics__name">{{ topic.name }}</span>
-                    @if (topic.parent_name) {
-                      <span class="topics__parent">{{ topic.parent_name }}</span>
+                  @let target = planTargets().get(topic.id);
+                  <!--
+                    Planned from where the gap is seen (#1656): the row opens
+                    the next lesson that may teach it, with it ticked. Its
+                    name is what it shows and what it does, like a taught
+                    row's. A row no class can take is laid out the same, so
+                    the two line up when they mix, and is not pressable.
+                  -->
+                  <li
+                    class="topics__row topics__row--open"
+                    [attr.data-cy]="'syllabus-missing-' + topic.id"
+                  >
+                    @if (target !== undefined) {
+                      <button
+                        type="button"
+                        class="topics__open topics__open--plan"
+                        (click)="plan(topic, target)"
+                      >
+                        <span class="topics__name">
+                          {{ topic.name }}
+                          @if (topic.parent_name) {
+                            <span class="topics__parent">{{ topic.parent_name }}</span>
+                          }
+                        </span>
+                        <span class="topics__plan">
+                          {{ 'stats.syllabus.planAction' | translate }}
+                          <i class="pi pi-angle-right" aria-hidden="true"></i>
+                        </span>
+                      </button>
+                    } @else {
+                      <span class="topics__static">
+                        <span class="topics__name">
+                          {{ topic.name }}
+                          @if (topic.parent_name) {
+                            <span class="topics__parent">{{ topic.parent_name }}</span>
+                          }
+                        </span>
+                      </span>
                     }
                   </li>
                 }
@@ -250,17 +252,59 @@
             <h3 class="panel__title">{{ 'stats.syllabus.lastTaught' | translate }}</h3>
             <ul class="topics">
               @for (topic of data.taught; track topic.id) {
-                <li class="topics__row" [attr.data-cy]="'syllabus-taught-' + topic.id">
-                  <span class="topics__name">
-                    {{ topic.name }}
-                    @if (topic.state === 'thin') {
-                      <span class="topics__thin">{{ 'stats.syllabus.thinTag' | translate }}</span>
-                    }
-                  </span>
-                  <span class="topics__when">
-                    <span>{{ shortDate(topic.last_taught_on) }}</span>
-                    <span class="topics__ago">{{ ago(topic.last_taught_on) }}</span>
-                  </span>
+                <!--
+                  A taught row opens who has seen it (#1745). Its accessible
+                  name is what it shows, with a hidden lead-in and the
+                  position: the seed repeats technique names across
+                  positions, and a label that replaced the visible text would
+                  read nine identical "Back take" buttons.
+                -->
+                <li
+                  class="topics__row topics__row--open"
+                  [attr.data-cy]="'syllabus-taught-' + topic.id"
+                >
+                  <button type="button" class="topics__open" (click)="openExposure(topic.id)">
+                    <span class="visually-hidden">{{
+                      'stats.syllabus.exposure.openPrefix' | translate
+                    }}</span>
+                    <span class="topics__what">
+                      <span class="topics__name">
+                        {{ topic.name }}
+                        @if (topic.parent_name) {
+                          <span class="visually-hidden">({{ topic.parent_name }})</span>
+                        }
+                        @if (topic.state === 'thin') {
+                          <span class="topics__thin">{{
+                            'stats.syllabus.thinTag' | translate
+                          }}</span>
+                        }
+                      </span>
+                      <!--
+                        Three lessons to fifteen people and three to four read
+                        the same without this line (#1746). Beside the count,
+                        never in the headline: covered still takes two lessons.
+                      -->
+                      <span class="topics__reach" data-cy="syllabus-taught-reach">
+                        {{
+                          (topic.lessons === 1
+                            ? 'stats.syllabus.lessonsOne'
+                            : 'stats.syllabus.lessonsOther'
+                          ) | translate: { count: topic.lessons }
+                        }}
+                        ·
+                        {{
+                          (topic.reach === 1
+                            ? 'stats.syllabus.reachOne'
+                            : 'stats.syllabus.reachOther'
+                          ) | translate: { count: topic.reach }
+                        }}
+                      </span>
+                    </span>
+                    <span class="topics__when">
+                      <span>{{ shortDate(topic.last_taught_on) }}</span>
+                      <span class="topics__ago">{{ ago(topic.last_taught_on) }}</span>
+                    </span>
+                  </button>
                 </li>
               }
             </ul>
@@ -269,4 +313,27 @@
       }
     }
   </section>
+}
+
+<app-topic-exposure
+  [(visible)]="exposureOpen"
+  [topicId]="exposureTopicId()"
+  [seasonsBack]="seasonsBack()"
+/>
+
+<!--
+  The lesson a never-taught technique goes into (#1656): opened on it, with
+  it ticked and its position open, and the arrows for a later week.
+-->
+@if (planning(); as slot) {
+  <app-lesson-sheet
+    [(visible)]="planOpen"
+    [academyClassId]="slot.lesson.classId"
+    [heldOn]="slot.lesson.date"
+    [className]="slot.lesson.name"
+    [steppable]="true"
+    [focusTopicId]="slot.topicId"
+    [chooseTopicId]="slot.topicId"
+    (saved)="planned($event)"
+  />
 }

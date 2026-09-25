@@ -57,8 +57,7 @@ import { EmptyStateComponent } from '../../../shared/components/empty-state/empt
 import { IconButtonComponent } from '../../../shared/components/icon-button/icon-button.component';
 import { SortHeaderComponent } from '../../../shared/components/sort-header/sort-header.component';
 import { BeltSortButtonComponent } from '../../../shared/components/belt-sort-button/belt-sort-button.component';
-import { OnboardingChecklistComponent } from '../../onboarding/onboarding-checklist.component';
-import { OnboardingService } from '../../../core/services/onboarding.service';
+import { NotSeenLatelyComponent } from './not-seen-lately/not-seen-lately.component';
 import { academyChargesAFee } from '../../../shared/utils/academy-fee';
 import {
   countScheduledTrainingDays,
@@ -76,6 +75,8 @@ import {
   type SortState,
 } from '../../../shared/utils/athlete-sort';
 import { localeFor } from '../../../shared/utils/locale';
+import { relativeDay } from '../../../shared/utils/relative-day';
+import { LocaleDatePipe } from '../../../shared/pipes/locale-date.pipe';
 import { CarnetService } from '../../../core/services/carnet.service';
 import { CONFIRM_REJECT_BUTTON } from '../../../shared/utils/confirm-buttons';
 import { NgTemplateOutlet } from '@angular/common';
@@ -108,13 +109,14 @@ interface SelectOption<T extends string> {
     Tooltip,
     Popover,
     TranslatePipe,
+    LocaleDatePipe,
     AgeBadgeComponent,
     FilterSheetComponent,
     BeltBadgeComponent,
     AthleteIdentityComponent,
     UserAvatarComponent,
     PaidBadgeComponent,
-    OnboardingChecklistComponent,
+    NotSeenLatelyComponent,
     PageHeaderComponent,
     ErrorStateComponent,
     EmptyStateComponent,
@@ -146,7 +148,6 @@ export class AthletesListComponent implements OnInit {
   private readonly translate = inject(TranslateService);
   private readonly beltLadder = inject(BeltLadderService);
   private readonly languageService = inject(LanguageService);
-  private readonly onboardingService = inject(OnboardingService);
   private readonly documentService = inject(DocumentService);
 
   readonly athletes = signal<Athlete[]>([]);
@@ -401,6 +402,16 @@ export class AthletesListComponent implements OnInit {
   });
 
   /**
+   * Whether the academy has anybody on its books. False only while the roster
+   * shows its first-run state — including before the first answer, so the
+   * not-seen-lately section (#1729) cannot flash a nudge to take the register
+   * above a first-run state that is about to say there is nobody to check in.
+   */
+  readonly hasAthletes = computed<boolean>(
+    () => this.totalRecords() > 0 || this.emptyStateKind() !== 'first-run',
+  );
+
+  /**
    * How many athletes exist once the default `active` is lifted — asked only
    * when the roster comes back empty on a query the owner did not narrow,
    * and only then. `null` is "not asked", never zero.
@@ -467,17 +478,7 @@ export class AthletesListComponent implements OnInit {
       this.resetPage();
       this.load();
     });
-    // Lazy-load onboarding state — only when the user hasn't already
-    // dismissed/completed the tour. The component itself is the
-    // visibility gate; a single HTTP call hydrates the state.
     this.loadAlerts();
-    if (!this.onboardingService.loaded()) {
-      this.onboardingService.load().subscribe({
-        // Silent on error — the checklist just won't render, which is
-        // the no-op default anyway.
-        error: () => {},
-      });
-    }
   }
 
   onBeltChange(belt: Belt | ''): void {
@@ -778,6 +779,85 @@ export class AthletesListComponent implements OnInit {
     if (!this.isAttendanceSort(this.sortField())) return 'none';
     return this.sortOrder() === 'asc' ? 'ascending' : 'descending';
   });
+
+  /**
+   * Two states on the Last seen column (#1726): longest absent first, then
+   * most recent first, then back.
+   *
+   * **Ascending first**, the opposite of the count column beside it. The
+   * question this column is opened with is "who have I not seen", and the
+   * answer is the oldest date. Two states rather than three for the reason
+   * the belt sort has two (#1457): "off" is a state nobody reaches for, and
+   * the other headers are how the order leaves this column. The server puts
+   * the never-trained last in both directions.
+   */
+  cycleLastSeenSort(): void {
+    const next: AthleteSortOrder =
+      this.sortField() === 'last_seen' && this.sortOrder() === 'asc' ? 'desc' : 'asc';
+    this.sortField.set('last_seen');
+    this.sortOrder.set(next);
+    this.resetPage();
+    this.load();
+  }
+
+  /** `↑` / `↓` while the roster is sorted by the last presence, else the neutral glyph. */
+  readonly lastSeenSortLabel = computed<string | null>(() => {
+    if (this.sortField() !== 'last_seen') return null;
+    return this.sortOrder() === 'asc' ? '↑' : '↓';
+  });
+
+  readonly lastSeenSortTooltip = computed<string>(() => {
+    this.languageService.currentLang();
+    if (this.sortField() !== 'last_seen') {
+      return this.translate.instant('athletes.list.tooltip.lastSeenSortInitial');
+    }
+    return this.translate.instant(
+      this.sortOrder() === 'asc'
+        ? 'athletes.list.tooltip.lastSeenSortAsc'
+        : 'athletes.list.tooltip.lastSeenSortDesc',
+    );
+  });
+
+  readonly lastSeenAriaSort = computed<'ascending' | 'descending' | 'none'>(() => {
+    if (this.sortField() !== 'last_seen') return 'none';
+    return this.sortOrder() === 'asc' ? 'ascending' : 'descending';
+  });
+
+  /**
+   * Whether this server sends the last presence at all (#1726). Latched the
+   * same way as `attendanceCountsSeen`, for the same reasons: an empty page
+   * proves nothing, and a column that comes and goes with the rows on screen
+   * shifts the table on every reload. `null` counts as sent — it is the
+   * answer "never trained", not a missing field.
+   */
+  private readonly lastSeenFieldSeen = signal(false);
+  readonly hasLastSeen = this.lastSeenFieldSeen.asReadonly();
+
+  /**
+   * "3 days ago", "5 months ago", or "never" — lower case throughout, so a
+   * column of them reads as one set (the coverage screens' distances are
+   * lower case too). The exact day goes in the tooltip.
+   */
+  protected lastSeenLabel(athlete: Athlete): string {
+    const iso = athlete.last_attended_on;
+    return iso
+      ? relativeDay(iso, this.translate)
+      : this.translate.instant('athletes.list.lastSeen.never');
+  }
+
+  /**
+   * "Last trained 3 days ago", or "Never trained". The mobile card's
+   * visible text — the card has no header to say what the bare "3 days ago"
+   * is about.
+   */
+  protected lastSeenSentence(athlete: Athlete): string {
+    const iso = athlete.last_attended_on;
+    return iso
+      ? this.translate.instant('athletes.list.lastSeen.aria', {
+          when: relativeDay(iso, this.translate),
+        })
+      : this.translate.instant('athletes.list.lastSeen.neverAria');
+  }
 
   /**
    * Whether this server sends attendance numbers at all.
@@ -1753,6 +1833,9 @@ export class AthletesListComponent implements OnInit {
           // page already showed.
           if (res.data.some((a) => this.hasAttendance(a))) {
             this.attendanceCountsSeen.set(true);
+          }
+          if (res.data.some((a) => a.last_attended_on !== undefined)) {
+            this.lastSeenFieldSeen.set(true);
           }
         },
         error: () => {

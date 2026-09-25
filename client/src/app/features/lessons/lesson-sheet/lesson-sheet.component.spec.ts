@@ -4,7 +4,13 @@ import { TestBed } from '@angular/core/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { TranslateService } from '@ngx-translate/core';
 import { MessageService } from 'primeng/api';
-import { Lesson, LessonSuggestion, LessonTopic } from '../../../core/services/lesson.service';
+import {
+  Lesson,
+  LessonSuggestion,
+  LessonTopic,
+  RoomGap,
+  RoomGaps,
+} from '../../../core/services/lesson.service';
 import { SyllabusTopic } from '../../../core/services/syllabus.service';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 import { LessonSheetComponent } from './lesson-sheet.component';
@@ -20,6 +26,9 @@ function topic(over: Partial<SyllabusTopic> & { id: number }): SyllabusTopic {
     name: `Topic ${over.id}`,
     kind: 'both',
     in_season: true,
+    from_belt: null,
+    notes: null,
+    video_url: null,
     sort_order: 0,
     ...over,
   };
@@ -637,5 +646,626 @@ describe('LessonSheetComponent — a suggestions hiccup is not a broken sheet', 
     expect(search.getAttribute('type')).toBe('text');
     expect(search.getAttribute('role')).toBe('searchbox');
     expect(search.getAttribute('enterkeyhint')).toBe('search');
+  });
+});
+
+describe('LessonSheetComponent — planning ahead (#1859)', () => {
+  beforeEach(() => {
+    // Monday 14 September 2026: the class runs on Mondays.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 8, 14, 12, 0));
+  });
+
+  // The clock first: a failing verify() must not leave the next file on it.
+  afterEach(() => {
+    vi.useRealTimers();
+    TestBed.inject(HttpTestingController).verify();
+  });
+
+  function setupPlanning(
+    opts: { heldOn?: string; focusTopicId?: number | null; chooseTopicId?: number | null } = {},
+  ) {
+    TestBed.configureTestingModule({
+      imports: [LessonSheetComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideNoopAnimations(),
+        MessageService,
+        ...provideI18nTesting(),
+      ],
+    });
+
+    const fixture = TestBed.createComponent(LessonSheetComponent);
+    fixture.componentRef.setInput('academyClassId', 3);
+    fixture.componentRef.setInput('heldOn', opts.heldOn ?? '2026-09-21');
+    fixture.componentRef.setInput('className', 'Fundamentals');
+    fixture.componentRef.setInput('steppable', true);
+    fixture.componentRef.setInput('focusTopicId', opts.focusTopicId ?? null);
+    fixture.componentRef.setInput('chooseTopicId', opts.chooseTopicId ?? null);
+    fixture.componentRef.setInput('visible', true);
+    fixture.detectChanges();
+
+    const httpMock = TestBed.inject(HttpTestingController);
+    return { fixture, component: fixture.componentInstance, httpMock };
+  }
+
+  /** Answer one opening's four reads; return the day the lesson read asked for. */
+  function answerOpening(
+    httpMock: HttpTestingController,
+    suggestions: LessonSuggestion[] = [],
+  ): string | null {
+    const req = httpMock.expectOne((r) => r.url === LESSON_URL && r.method === 'GET');
+    const date = req.request.params.get('held_on');
+    req.flush({ data: null });
+    httpMock.expectOne(SYLLABUS_URL).flush({ data: [CLOSED_GUARD, MOUNT] });
+    httpMock.expectOne(RECENT_URL).flush({ data: [] });
+    httpMock.expectOne((r) => r.url === SUGGEST_URL).flush({ data: suggestions });
+    return date;
+  }
+
+  function byCy(fixture: { nativeElement: HTMLElement }, cy: string): HTMLButtonElement {
+    return fixture.nativeElement.querySelector(`[data-cy="${cy}"]`) as HTMLButtonElement;
+  }
+
+  it('moves a week at a time, and reads the week it lands on', () => {
+    const { fixture, httpMock } = setupPlanning();
+    expect(answerOpening(httpMock)).toBe('2026-09-21');
+    fixture.detectChanges();
+
+    byCy(fixture, 'lesson-sheet-next').click();
+    fixture.detectChanges();
+
+    expect(answerOpening(httpMock)).toBe('2026-09-28');
+    fixture.detectChanges();
+    expect(byCy(fixture, 'lesson-sheet-date').textContent).toContain('28 September');
+  });
+
+  it('steps back to today, never before it: the past is the check-in’s', () => {
+    const { fixture, httpMock } = setupPlanning({ heldOn: '2026-09-21' });
+    answerOpening(httpMock);
+    fixture.detectChanges();
+
+    // 14 September is today: still reachable.
+    expect(byCy(fixture, 'lesson-sheet-prev').disabled).toBe(false);
+    byCy(fixture, 'lesson-sheet-prev').click();
+    fixture.detectChanges();
+    expect(answerOpening(httpMock)).toBe('2026-09-14');
+    fixture.detectChanges();
+
+    // 7 September is last week: not.
+    expect(byCy(fixture, 'lesson-sheet-prev').disabled).toBe(true);
+  });
+
+  it('holds the arrows while something is unsaved, and says why', () => {
+    const { fixture, component, httpMock } = setupPlanning();
+    answerOpening(httpMock);
+    fixture.detectChanges();
+
+    component['toggle'](11);
+    fixture.detectChanges();
+
+    expect(byCy(fixture, 'lesson-sheet-next').disabled).toBe(true);
+    expect(byCy(fixture, 'lesson-sheet-prev').disabled).toBe(true);
+    expect(byCy(fixture, 'lesson-sheet-step-hint')).not.toBeNull();
+  });
+
+  it('saves to the week stepped to, not the one it opened on', () => {
+    const { fixture, component, httpMock } = setupPlanning();
+    answerOpening(httpMock);
+    fixture.detectChanges();
+
+    byCy(fixture, 'lesson-sheet-next').click();
+    fixture.detectChanges();
+    answerOpening(httpMock);
+    fixture.detectChanges();
+
+    component['toggle'](11);
+    component['save']();
+
+    const req = httpMock.expectOne(`${LESSON_URL}/topics`);
+    expect(req.request.body.held_on).toBe('2026-09-28');
+    req.flush({ data: lesson({ held_on: '2026-09-28' }) });
+  });
+
+  it('reads the room of the week it stepped to, not the one it opened on', () => {
+    const { fixture, httpMock } = setupPlanning({ heldOn: '2026-09-21' });
+    answerOpening(httpMock);
+    fixture.detectChanges();
+
+    byCy(fixture, 'lesson-sheet-prev').click();
+    fixture.detectChanges();
+
+    // Tonight already has people in it.
+    httpMock
+      .expectOne((r) => r.url === LESSON_URL && r.method === 'GET')
+      .flush({ data: lesson({ held: true }) });
+    httpMock.expectOne(SYLLABUS_URL).flush({ data: [CLOSED_GUARD, MOUNT] });
+    httpMock.expectOne(RECENT_URL).flush({ data: [] });
+    httpMock.expectOne((r) => r.url === SUGGEST_URL).flush({ data: [] });
+
+    const room = httpMock.expectOne((r) => r.url === '/api/v1/lessons/room-gaps');
+    expect(room.request.params.get('held_on')).toBe('2026-09-14');
+    room.flush({ data: { present: 0, rows: [] } });
+  });
+
+  it('opens on the host’s day again, whatever week it was left on', () => {
+    const { fixture, component, httpMock } = setupPlanning();
+    answerOpening(httpMock);
+    fixture.detectChanges();
+
+    byCy(fixture, 'lesson-sheet-next').click();
+    fixture.detectChanges();
+    answerOpening(httpMock);
+
+    component['close']();
+    fixture.detectChanges();
+    // As the host's two-way binding would: closed, then opened again.
+    fixture.componentRef.setInput('visible', false);
+    fixture.detectChanges();
+    fixture.componentRef.setInput('visible', true);
+    fixture.detectChanges();
+
+    expect(answerOpening(httpMock)).toBe('2026-09-21');
+  });
+
+  it('opens the programme on the position of the topic it was asked about', () => {
+    // The test environment lays nothing out, so it has nothing to scroll with.
+    Object.defineProperty(Element.prototype, 'scrollIntoView', {
+      value: () => undefined,
+      configurable: true,
+      writable: true,
+    });
+    try {
+      // Ezekiel sits under Mount.
+      const { fixture, component, httpMock } = setupPlanning({ focusTopicId: 21 });
+      answerOpening(httpMock);
+      fixture.detectChanges();
+
+      expect(component['expanded']()).toEqual(new Set([2]));
+      expect(byCy(fixture, 'lesson-expand-2').getAttribute('aria-expanded')).toBe('true');
+    } finally {
+      delete (Element.prototype as unknown as { scrollIntoView?: unknown }).scrollIntoView;
+    }
+  });
+
+  it('arrives with the host’s topic already chosen, and carries it to another week (#1656)', () => {
+    const { fixture, component, httpMock } = setupPlanning({ chooseTopicId: 11 });
+    answerOpening(httpMock);
+    fixture.detectChanges();
+
+    expect(component['isChosen'](11)).toBe(true);
+    // The host's choice is not an edit: the week can still move.
+    expect(byCy(fixture, 'lesson-sheet-next').disabled).toBe(false);
+    expect(byCy(fixture, 'lesson-sheet-step-hint')).toBeNull();
+
+    byCy(fixture, 'lesson-sheet-next').click();
+    fixture.detectChanges();
+    answerOpening(httpMock);
+    fixture.detectChanges();
+    expect(component['isChosen'](11)).toBe(true);
+
+    component['save']();
+    const req = httpMock.expectOne(`${LESSON_URL}/topics`);
+    expect(req.request.body.held_on).toBe('2026-09-28');
+    expect(req.request.body.topic_ids).toEqual([11]);
+    req.flush({ data: lesson({ held_on: '2026-09-28' }) });
+  });
+
+  /** The chosen group's heading, for a sheet opened on `heldOn` with the host's topic. */
+  function chosenHeading(heldOn: string, held = false): string {
+    TestBed.resetTestingModule();
+    const { fixture, httpMock } = setupPlanning({ heldOn, chooseTopicId: 11 });
+    if (held) {
+      httpMock
+        .expectOne((r) => r.url === LESSON_URL && r.method === 'GET')
+        .flush({ data: lesson({ held_on: heldOn, held: true }) });
+      httpMock.expectOne(SYLLABUS_URL).flush({ data: [CLOSED_GUARD, MOUNT] });
+      httpMock.expectOne(RECENT_URL).flush({ data: [] });
+      httpMock.expectOne((r) => r.url === SUGGEST_URL).flush({ data: [] });
+      httpMock
+        .expectOne((r) => r.url === '/api/v1/lessons/room-gaps')
+        .flush({ data: { present: 9, rows: [] } });
+    } else {
+      answerOpening(httpMock);
+    }
+    fixture.detectChanges();
+    return fixture.nativeElement.querySelector('[data-cy="lesson-sheet-chosen"] .group__title')
+      .textContent as string;
+  }
+
+  it('calls what a lesson still ahead will cover "planned", tonight included until it is held', () => {
+    expect(chosenHeading('2026-09-21')).toContain('Planned');
+    // Noon, nobody checked in yet: tonight is still a plan, as the header says.
+    expect(chosenHeading('2026-09-14')).toContain('Planned');
+  });
+
+  it('says "covered" once tonight has people in it, and for the evenings gone by', () => {
+    expect(chosenHeading('2026-09-14', true)).toContain('Covered');
+    expect(chosenHeading('2026-09-07')).toContain('Covered');
+  });
+
+  it('asks for the evening before the week it stepped to, not the one it opened on', () => {
+    const { fixture, httpMock } = setupPlanning({ heldOn: '2026-09-28' });
+    answerOpening(httpMock);
+    fixture.detectChanges();
+
+    byCy(fixture, 'lesson-sheet-prev').click();
+    fixture.detectChanges();
+    expect(answerOpening(httpMock)).toBe('2026-09-21');
+    fixture.detectChanges();
+
+    byCy(fixture, 'lesson-expand-1').click();
+    fixture.detectChanges();
+    byCy(fixture, 'lesson-detail-toggle-tree-11').click();
+    fixture.detectChanges();
+
+    // Before the 28th, the 21st would be the evening itself.
+    const req = httpMock.expectOne((r) => r.url === '/api/v1/lessons/last-notes');
+    expect(req.request.params.get('before')).toBe('2026-09-21');
+    req.flush({ data: null });
+  });
+
+  it('holds the arrows once something besides the host’s topic is picked', () => {
+    const { fixture, component, httpMock } = setupPlanning({ chooseTopicId: 11 });
+    answerOpening(httpMock);
+    fixture.detectChanges();
+
+    component['toggle'](12);
+    fixture.detectChanges();
+
+    expect(byCy(fixture, 'lesson-sheet-next').disabled).toBe(true);
+  });
+
+  it('suggests "tonight" only for tonight, and "for this lesson" on any other day', () => {
+    const offered = [suggestion({ id: 12, name: 'Triangle' })];
+    const words = (fixture: { nativeElement: HTMLElement }) => {
+      const panel = fixture.nativeElement.querySelector(
+        '[data-cy="lesson-sheet-suggestions"]',
+      ) as HTMLElement;
+      return {
+        title: panel.querySelector('.group__title')?.textContent ?? '',
+        dismiss: panel
+          .querySelector('[data-cy="lesson-suggestion-dismiss-12"]')
+          ?.getAttribute('aria-label'),
+      };
+    };
+
+    const later = setupPlanning({ heldOn: '2026-09-21' });
+    answerOpening(later.httpMock, offered);
+    later.fixture.detectChanges();
+    expect(words(later.fixture)).toEqual({
+      title: 'Suggested for this lesson',
+      dismiss: 'Not for this lesson',
+    });
+
+    TestBed.resetTestingModule();
+    const tonight = setupPlanning({ heldOn: '2026-09-14' });
+    answerOpening(tonight.httpMock, offered);
+    tonight.fixture.detectChanges();
+    expect(words(tonight.fixture)).toEqual({
+      title: 'Suggested tonight',
+      dismiss: 'Not tonight',
+    });
+  });
+
+  it('shows no arrows to a host that did not ask for them', () => {
+    const { fixture, httpMock } = setup();
+    flushOpen(httpMock, {});
+    fixture.detectChanges();
+
+    expect(byCy(fixture, 'lesson-sheet-next')).toBeNull();
+    expect(byCy(fixture, 'lesson-sheet-date').textContent?.trim()).toBe('');
+  });
+});
+
+describe('LessonSheetComponent — tonight, for the people on the mat (#1860)', () => {
+  afterEach(() => TestBed.inject(HttpTestingController).verify());
+
+  const ROOM_URL = '/api/v1/lessons/room-gaps';
+
+  function gap(over: Partial<RoomGap> & { id: number }): RoomGap {
+    return {
+      name: `Topic ${over.id}`,
+      parent_name: null,
+      kind: 'both',
+      lessons: 2,
+      last_taught_on: '2026-10-14',
+      missed: 6,
+      unattributed: 0,
+      athletes: [
+        {
+          id: 101,
+          first_name: 'Anna',
+          last_name: 'Bianchi',
+          belt: 'white',
+          stripes: 2,
+          date_of_birth: null,
+          photo_url: null,
+          user_avatar_url: null,
+        },
+      ],
+      ...over,
+    };
+  }
+
+  function openHeld(
+    httpMock: HttpTestingController,
+    room: RoomGaps,
+    suggestions: LessonSuggestion[] = [],
+  ) {
+    flushOpen(httpMock, { lesson: lesson({ held: true }), suggestions });
+    const ask = httpMock.expectOne((r) => r.url === ROOM_URL);
+    ask.flush({ data: room });
+    return ask;
+  }
+
+  it('asks by the slot, once the lesson turns out to have people in it', () => {
+    const { httpMock } = setup();
+
+    const ask = openHeld(httpMock, { present: 9, rows: [] });
+    expect(ask.request.params.get('academy_class_id')).toBe('3');
+    expect(ask.request.params.get('held_on')).toBe('2026-09-14');
+  });
+
+  it('does not ask for a lesson that is only a plan', () => {
+    const { httpMock } = setup();
+    flushOpen(httpMock, { lesson: lesson({ held: false }) });
+
+    httpMock.expectNone((r) => r.url === ROOM_URL);
+  });
+
+  it('says how many of tonight missed it, and when it was last taught', () => {
+    const { fixture, httpMock } = setup();
+    openHeld(httpMock, {
+      present: 9,
+      rows: [gap({ id: 11, name: 'Knee shield', parent_name: 'Half guard', missed: 6 })],
+    });
+    fixture.detectChanges();
+
+    const panel: HTMLElement = fixture.nativeElement.querySelector('[data-cy="lesson-sheet-room"]');
+    expect(panel.textContent).toContain('Knee shield');
+    expect(panel.textContent).toContain('Half guard');
+    expect(panel.textContent?.replace(/\s+/g, ' ')).toContain(
+      "6 of the 9 here tonight weren't there",
+    );
+    expect(panel.textContent).toContain('14 Oct');
+  });
+
+  it('keeps the names folded until asked, then draws them as the roster does', () => {
+    const { fixture, httpMock } = setup();
+    openHeld(httpMock, { present: 9, rows: [gap({ id: 11 })] });
+    fixture.detectChanges();
+
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('[data-cy="lesson-room-people-11"]')).toBeNull();
+
+    const who = el.querySelector('[data-cy="lesson-room-who-11"]') as HTMLButtonElement;
+    expect(who.getAttribute('aria-expanded')).toBe('false');
+    who.click();
+    fixture.detectChanges();
+
+    const people = el.querySelector('[data-cy="lesson-room-people-11"]') as HTMLElement;
+    expect(people.querySelector('app-athlete-identity')).not.toBeNull();
+    expect(people.textContent).toContain('Anna Bianchi');
+    expect(who.getAttribute('aria-expanded')).toBe('true');
+  });
+
+  it('says how many it could not place, beside the names', () => {
+    const { fixture, httpMock } = setup();
+    openHeld(httpMock, { present: 9, rows: [gap({ id: 11, unattributed: 2 })] });
+    fixture.detectChanges();
+
+    (
+      fixture.nativeElement.querySelector('[data-cy="lesson-room-who-11"]') as HTMLButtonElement
+    ).click();
+    fixture.detectChanges();
+
+    expect(
+      fixture.nativeElement.querySelector('[data-cy="lesson-room-unsure-11"]')?.textContent,
+    ).toContain('2 more');
+  });
+
+  it('takes one in a single tap, like a suggestion', () => {
+    const { fixture, httpMock } = setup();
+    openHeld(httpMock, { present: 9, rows: [gap({ id: 11, name: 'Armbar' })] });
+    fixture.detectChanges();
+
+    fixture.nativeElement.querySelector('[data-cy="lesson-room-11"]').click();
+    fixture.detectChanges();
+
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('[data-cy="lesson-chip-11"]')).not.toBeNull();
+    expect(el.querySelector('[data-cy="lesson-sheet-room"]')).toBeNull();
+  });
+
+  it('offers a technique once, with the reason about the room', () => {
+    const { fixture, httpMock } = setup();
+    openHeld(httpMock, { present: 9, rows: [gap({ id: 11, name: 'Armbar' })] }, [
+      suggestion({ id: 11, name: 'Armbar', reason: 'stale', last_taught_on: '2026-10-14' }),
+      suggestion({ id: 12, name: 'Triangle' }),
+    ]);
+    fixture.detectChanges();
+
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('[data-cy="lesson-room-11"]')).not.toBeNull();
+    expect(el.querySelector('[data-cy="lesson-suggestion-11"]')).toBeNull();
+    expect(el.querySelector('[data-cy="lesson-suggestion-12"]')).not.toBeNull();
+  });
+
+  it('shows nothing when the read fails, and the sheet still works', () => {
+    const { fixture, httpMock } = setup();
+    flushOpen(httpMock, { lesson: lesson({ held: true }) });
+    httpMock
+      .expectOne((r) => r.url === ROOM_URL)
+      .flush({ message: 'boom' }, { status: 500, statusText: 'Server Error' });
+    fixture.detectChanges();
+
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('[data-cy="lesson-sheet-room"]')).toBeNull();
+    expect(el.querySelector('[data-cy="lesson-sheet-tree"]')).not.toBeNull();
+  });
+});
+
+describe('LessonSheetComponent — how it is taught here (#1862)', () => {
+  afterEach(() => TestBed.inject(HttpTestingController).verify());
+
+  const LAST_NOTES_URL = '/api/v1/lessons/last-notes';
+  const NOTED_ARMBAR = topic({
+    id: 11,
+    parent_id: 1,
+    name: 'Armbar',
+    notes: 'Start from the S-mount.\nGrip on the far elbow.',
+    video_url: 'https://www.youtube.com/watch?v=abc123',
+  });
+  const GUARD = topic({ id: 1, name: 'Closed guard', children: [NOTED_ARMBAR, TRIANGLE] });
+
+  type Fixture = { nativeElement: HTMLElement; detectChanges(): void };
+
+  function openTree(fixture: Fixture): void {
+    (fixture.nativeElement.querySelector('[data-cy="lesson-expand-1"]') as HTMLElement).click();
+    fixture.detectChanges();
+  }
+
+  function toggle(fixture: Fixture, key: string): void {
+    (
+      fixture.nativeElement.querySelector(`[data-cy="lesson-detail-toggle-${key}"]`) as HTMLElement
+    ).click();
+    fixture.detectChanges();
+  }
+
+  it("shows the programme's notes and video, and the last evening's notes as that evening's", () => {
+    const { fixture, httpMock } = setup();
+    flushOpen(httpMock, { positions: [GUARD] });
+    fixture.detectChanges();
+    openTree(fixture);
+
+    toggle(fixture, 'tree-11');
+    const el: HTMLElement = fixture.nativeElement;
+    const req = httpMock.expectOne((r) => r.url === LAST_NOTES_URL);
+    expect(req.request.params.get('syllabus_topic_id')).toBe('11');
+    // Only evenings before the one the sheet is open on: tonight's plan, once
+    // held, is this evening — not the last one.
+    expect(req.request.params.get('before')).toBe('2026-09-14');
+    // Loading is said, not left blank.
+    expect(el.querySelector('[data-cy="lesson-detail-tree-11"]')?.textContent).toContain(
+      'Looking for the last evening',
+    );
+    req.flush({
+      data: lesson({ held_on: '2026-10-07', notes: "Marco's first day back", held: true }),
+    });
+    fixture.detectChanges();
+
+    const detail = el.querySelector('[data-cy="lesson-detail-tree-11"]') as HTMLElement;
+    expect(detail.querySelector('[data-cy="lesson-detail-notes"]')?.textContent).toContain(
+      'Start from the S-mount.',
+    );
+    const video = detail.querySelector('[data-cy="lesson-detail-video"]') as HTMLAnchorElement;
+    expect(video.getAttribute('href')).toBe('https://www.youtube.com/watch?v=abc123');
+    // The desktop shell opens target=_blank in the system browser.
+    expect(video.getAttribute('target')).toBe('_blank');
+    expect(video.getAttribute('rel')).toContain('noopener');
+    // Captioned as the evening's notes — with its class — never the technique's.
+    const evening = detail.querySelector('[data-cy="lesson-detail-last-evening"]') as HTMLElement;
+    expect(evening.querySelector('figcaption')?.textContent).toContain('Fundamentals');
+    expect(evening.querySelector('blockquote')?.textContent).toContain("Marco's first day back");
+
+    const button = el.querySelector('[data-cy="lesson-detail-toggle-tree-11"]') as HTMLElement;
+    expect(button.getAttribute('aria-expanded')).toBe('true');
+  });
+
+  it('asks for the last evening once per opening of the sheet, not every time', () => {
+    const { fixture, httpMock } = setup();
+    flushOpen(httpMock, { positions: [GUARD] });
+    fixture.detectChanges();
+    openTree(fixture);
+
+    toggle(fixture, 'tree-11');
+    httpMock.expectOne((r) => r.url === LAST_NOTES_URL).flush({ data: null });
+    toggle(fixture, 'tree-11');
+    toggle(fixture, 'tree-11');
+
+    httpMock.expectNone((r) => r.url === LAST_NOTES_URL);
+    expect(fixture.nativeElement.querySelector('[data-cy="lesson-detail-tree-11"]')).not.toBeNull();
+  });
+
+  it('drops a last-evening read still out when the sheet opens again, on another evening', () => {
+    const { fixture, httpMock } = setup();
+    flushOpen(httpMock, { positions: [GUARD] });
+    fixture.detectChanges();
+    openTree(fixture);
+    toggle(fixture, 'tree-11');
+    const stale = httpMock.expectOne((r) => r.url === LAST_NOTES_URL);
+
+    // Closed, and opened on another evening, before that answer came back.
+    fixture.componentRef.setInput('visible', false);
+    fixture.detectChanges();
+    fixture.componentRef.setInput('heldOn', '2026-09-16');
+    fixture.componentRef.setInput('visible', true);
+    fixture.detectChanges();
+
+    // The previous opening's read is cancelled, so its notes cannot land here.
+    expect(stale.cancelled).toBe(true);
+
+    flushOpen(httpMock, { positions: [GUARD] });
+    fixture.detectChanges();
+    openTree(fixture);
+    toggle(fixture, 'tree-11');
+    const fresh = httpMock.expectOne((r) => r.url === LAST_NOTES_URL);
+    expect(fresh.request.params.get('before')).toBe('2026-09-16');
+    expect(
+      fixture.nativeElement.querySelector('[data-cy="lesson-detail-tree-11"]')?.textContent,
+    ).toContain('Looking for the last evening');
+    fresh.flush({ data: null });
+  });
+
+  it('says there is nothing yet when nothing is written and no evening left notes', () => {
+    const { fixture, httpMock } = setup();
+    flushOpen(httpMock, { positions: [GUARD] });
+    fixture.detectChanges();
+    openTree(fixture);
+
+    toggle(fixture, 'tree-12');
+    httpMock.expectOne((r) => r.url === LAST_NOTES_URL).flush({ data: null });
+    fixture.detectChanges();
+
+    expect(
+      fixture.nativeElement.querySelector('[data-cy="lesson-detail-nothing"]')?.textContent,
+    ).toContain('No notes on this technique yet');
+  });
+
+  it("keeps the programme's notes when the last-evening read fails, and says nothing about it", () => {
+    const { fixture, httpMock } = setup();
+    flushOpen(httpMock, { positions: [GUARD] });
+    fixture.detectChanges();
+    openTree(fixture);
+
+    toggle(fixture, 'tree-11');
+    httpMock
+      .expectOne((r) => r.url === LAST_NOTES_URL)
+      .flush({ message: 'boom' }, { status: 500, statusText: 'Server Error' });
+    fixture.detectChanges();
+
+    const detail = fixture.nativeElement.querySelector('[data-cy="lesson-detail-tree-11"]');
+    expect(detail.querySelector('[data-cy="lesson-detail-notes"]')).not.toBeNull();
+    expect(detail.querySelector('[data-cy="lesson-detail-last-evening"]')).toBeNull();
+  });
+
+  it('opens a technique in the group it was pressed in, not in every group that lists it', () => {
+    const { fixture, httpMock } = setup();
+    flushOpen(httpMock, {
+      positions: [GUARD],
+      suggestions: [suggestion({ id: 11, name: 'Armbar' })],
+    });
+    fixture.detectChanges();
+    openTree(fixture);
+
+    toggle(fixture, 'suggestions-11');
+    httpMock.expectOne((r) => r.url === LAST_NOTES_URL).flush({ data: null });
+    fixture.detectChanges();
+
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('[data-cy="lesson-detail-suggestions-11"]')).not.toBeNull();
+    expect(el.querySelector('[data-cy="lesson-detail-tree-11"]')).toBeNull();
   });
 });

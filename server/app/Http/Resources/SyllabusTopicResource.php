@@ -28,6 +28,9 @@ class SyllabusTopicResource extends JsonResource
             'name' => $topic->name,
             'kind' => $topic->kind->value,
             'in_season' => $topic->in_season,
+            'from_belt' => $topic->from_belt?->value,
+            'notes' => $topic->notes,
+            'video_url' => $topic->video_url,
             'sort_order' => $topic->sort_order,
             'children' => $this->whenLoaded(
                 'children',

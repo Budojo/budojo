@@ -1,5 +1,6 @@
 import { MOCK_ACADEMY } from '../support/fixtures';
 import { VIEWPORT_PIXEL_8_PRO } from '../support/viewports';
+import { stubToday } from '../support/today';
 
 const ACADEMY_OK = {
   statusCode: 200,
@@ -32,6 +33,8 @@ const OWNER_ME = {
 
 describe('Navigation guards', () => {
   beforeEach(() => {
+    // Every sign-in lands on Today (#1643); keep its requests off the proxy.
+    stubToday();
     cy.clearLocalStorage();
     // M3.4 widget fires on /dashboard/athletes load; stub to avoid proxy noise.
     cy.intercept('GET', '/api/v1/documents/expiring*', { statusCode: 200, body: { data: [] } });
@@ -92,6 +95,8 @@ describe('Navigation guards', () => {
 
 describe('Rail brand (#1112)', () => {
   beforeEach(() => {
+    // Every sign-in lands on Today (#1643); keep its requests off the proxy.
+    stubToday();
     cy.clearLocalStorage();
     // Catch-all + /auth/me so the shell hydrates without an unmocked call
     // 401-ing through the dev proxy (which bounces the spec to /auth/login).
@@ -101,7 +106,7 @@ describe('Rail brand (#1112)', () => {
     cy.intercept('GET', '/api/v1/documents/expiring*', { statusCode: 200, body: { data: [] } });
   });
 
-  it('renders the academy name as the dominant rail brand, linking to the academy home (#1112)', () => {
+  it('renders the academy name as the dominant rail brand, linking to home (#1112, #1643)', () => {
     cy.intercept('GET', '/api/v1/academy', ACADEMY_OK).as('academy');
     cy.intercept('GET', '/api/v1/athletes*', ATHLETES_EMPTY).as('athletes');
     cy.visitAuthenticated('/dashboard/athletes');
@@ -109,9 +114,9 @@ describe('Rail brand (#1112)', () => {
     cy.wait('@athletes');
 
     cy.get('.rail__brand-text').should('contain.text', 'Test Academy');
-    // The dense sidebar is retired (#1112) — the rail brand is now a link to
-    // the academy home (the pi-home Home tab), matching its aria-label.
-    cy.get('a.rail__brand').should('have.attr', 'href').and('include', '/dashboard/academy');
+    // The dense sidebar is retired (#1112) — the rail brand is a link home,
+    // which is Today since #1643 (the pi-home tab).
+    cy.get('a.rail__brand').should('have.attr', 'href').and('include', '/dashboard/today');
   });
 
   // Sign-out moved off the desktop sidebar into the owner More hub with the
@@ -123,6 +128,8 @@ describe('Rail brand (#1112)', () => {
 
 describe('Topbar home link', () => {
   beforeEach(() => {
+    // Every sign-in lands on Today (#1643); keep its requests off the proxy.
+    stubToday();
     cy.clearLocalStorage();
     // Catch-all + /auth/me so the shell hydrates without an unmocked call
     // 401-ing through the dev proxy (which bounces the spec to /auth/login).
@@ -131,7 +138,7 @@ describe('Topbar home link', () => {
     cy.intercept('GET', '/api/v1/documents/expiring*', { statusCode: 200, body: { data: [] } });
   });
 
-  it('navigates to the academy home when the Budojo wordmark is tapped (#1112)', () => {
+  it('navigates home, to Today, when the Budojo wordmark is tapped (#1112, #1643)', () => {
     // Topbar is mobile-only (`display: none` above the sidebar breakpoint
     // — see dashboard.component.scss). Cypress defaults to 1280×720 which
     // hides it. Flip to a representative mobile viewport from the shared
@@ -141,22 +148,22 @@ describe('Topbar home link', () => {
     cy.intercept('GET', '/api/v1/academy', ACADEMY_OK).as('academy');
     cy.intercept('GET', '/api/v1/athletes*', ATHLETES_EMPTY).as('athletes');
 
-    // Start on the athletes roster (the default landing) so the brand →
-    // academy-home navigation is observable.
+    // Start on the athletes roster so the brand → home navigation is
+    // observable.
     cy.visitAuthenticated('/dashboard/athletes');
     cy.wait('@academy');
     cy.url().should('include', '/dashboard/athletes');
 
     cy.get('[data-cy="topbar-home-link"]').click();
-    // The brand points at the academy home (#1112), not the /dashboard index.
-    cy.url().should('include', '/dashboard/academy');
+    // The brand points home (#1112), which is Today since #1643.
+    cy.url().should('include', '/dashboard/today');
   });
 
-  it('the /dashboard index still redirects to the athletes roster', () => {
+  it('the /dashboard index redirects to Today, the first screen (#1643)', () => {
     cy.intercept('GET', '/api/v1/academy', ACADEMY_OK).as('academy');
     cy.intercept('GET', '/api/v1/athletes*', ATHLETES_EMPTY).as('athletes');
     cy.visitAuthenticated('/dashboard');
     cy.wait('@academy');
-    cy.url().should('include', '/dashboard/athletes');
+    cy.url().should('include', '/dashboard/today');
   });
 });

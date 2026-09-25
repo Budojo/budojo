@@ -1,0 +1,193 @@
+// Who has seen one technique (#1745). The dialog's own `[style]` width and
+// `[breakpoints]` size it; PrimeNG scrolls the content past the fold.
+
+.exposure-head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+
+  &__title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--p-text-color);
+    overflow-wrap: anywhere;
+  }
+
+  &__meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+    color: var(--p-text-muted-color);
+  }
+}
+
+.exposure {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  min-width: 0;
+
+  &__loading {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  &__error {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+
+    p {
+      margin: 0;
+      color: var(--p-text-color);
+    }
+  }
+
+  // The academy's gap, as a sentence: the same size and ink as body text,
+  // because it is an answer, not an alarm.
+  &__nobody {
+    margin: 0;
+    color: var(--p-text-color);
+    line-height: 1.5;
+  }
+
+  &__section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 0;
+  }
+
+  &__eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--p-text-muted-color);
+  }
+
+  // How it is taught here (#1862): the programme's own words, line breaks
+  // kept, and the reference video as a link that leaves the app. It sits
+  // before the report's own sections, so it takes their gap below it.
+  &__notebook {
+    margin-bottom: 1.5rem;
+  }
+
+  &__notes {
+    margin: 0;
+    font-size: 0.875rem;
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+  }
+
+  &__video {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    align-self: flex-start;
+    min-height: 3rem;
+    font-size: 0.875rem;
+    color: var(--p-primary-color);
+  }
+
+  // The report's three strengths of one hue (#1550): the same legend the
+  // coverage tally draws, so the drill-down reads as that page, opened.
+  &__dot {
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 4px;
+    background: var(--p-surface-200);
+  }
+
+  &__section[data-state='seen'] &__dot {
+    background: var(--p-primary-color);
+  }
+
+  &__section[data-state='thin'] &__dot {
+    background: color-mix(in srgb, var(--p-primary-color) 35%, transparent);
+  }
+
+  // The record cannot say: an outline, no fill — neither there nor absent.
+  &__section[data-state='unplaced'] &__dot {
+    background: transparent;
+    border: 1px dashed var(--p-text-muted-color);
+  }
+
+  &__lessons,
+  &__people {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  &__lesson {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    min-height: 2rem;
+    padding: 0.25rem 0;
+    font-size: 0.875rem;
+    color: var(--p-text-color);
+
+    & + & {
+      border-top: 1px solid color-mix(in srgb, var(--p-content-border-color) 60%, transparent);
+    }
+  }
+
+  &__lesson-day {
+    flex: 0 0 auto;
+    min-width: 6.5rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__lesson-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  &__lesson-count,
+  &__person-when {
+    flex: 0 0 auto;
+    font-size: 0.8125rem;
+    color: var(--p-text-muted-color);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  // The identity's spine is absolutely positioned, so the row is its
+  // containing block — the same arrangement as the roster's name cell (#1458).
+  &__person {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    min-height: 3rem;
+    padding: 0.25rem 0 0.25rem 1rem;
+
+    & + & {
+      border-top: 1px solid color-mix(in srgb, var(--p-content-border-color) 60%, transparent);
+    }
+
+    app-athlete-identity {
+      min-width: 0;
+    }
+  }
+
+  &__inactive {
+    margin: 0.5rem 0 0;
+    font-size: 0.75rem;
+    color: var(--p-text-muted-color);
+  }
+}

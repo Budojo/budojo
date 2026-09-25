@@ -1,0 +1,328 @@
+/*
+ * The harness's fixtures, held to the server's current rules (#1854).
+ *
+ * The audit paints whatever its stubs say. When a stub drifts behind a server
+ * rule, the screenshot shows a number the product cannot produce ("143/8" on
+ * the roster, "50%" beside "5 of 6"), and a reader files it as a finding. That
+ * happened twice in one run. So every stub body is checked against the rules
+ * below as it is registered, and a contradiction fails the screen before the
+ * shutter.
+ *
+ * The rules are keyed on the contract's field names, not on which fixture
+ * carries them, so a screen added by any track is covered the moment it
+ * stubs one of these shapes. Each rule names the server code it mirrors.
+ */
+
+export interface FixtureContext {
+  /** The frozen "today" of the harness, `YYYY-MM-DD`. */
+  today: string;
+  /** The first day of the current season, `YYYY-MM-DD`. */
+  seasonStart: string;
+  /** The academy's training weekdays, 0 = Sunday … 6 = Saturday. */
+  trainingDays: readonly number[];
+  /** How many athletes the roster holds. */
+  rosterSize: number;
+}
+
+type Obj = Record<string, unknown>;
+
+const isObj = (v: unknown): v is Obj => typeof v === 'object' && v !== null && !Array.isArray(v);
+const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+const isDate = (v: unknown): v is string => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}/.test(v);
+const day = (iso: string): string => iso.slice(0, 10);
+const later = (a: string, b: string): string => (a > b ? a : b);
+
+/** Training days from `from` to `to`, both included: the roster's denominator. */
+export function trainingDaysBetween(from: string, to: string, days: readonly number[]): number {
+  let count = 0;
+  const [fy, fm, fd] = day(from).split('-').map(Number);
+  const [ty, tm, td] = day(to).split('-').map(Number);
+  const cursor = new Date(fy, fm - 1, fd);
+  const end = new Date(ty, tm - 1, td);
+  while (cursor <= end) {
+    if (days.includes(cursor.getDay())) count++;
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return count;
+}
+
+type Rule = (o: Obj, ctx: FixtureContext) => string[];
+
+const RULES: Rule[] = [
+  // The roster's two fractions (#1455, #1484): the month and the SEASON, each
+  // over the training days since the later of its start and joining.
+  (o, ctx) => {
+    const out: string[] = [];
+    if (!isDate(o['joined_at'])) return out;
+    const joined = day(o['joined_at']);
+    const monthStart = `${ctx.today.slice(0, 7)}-01`;
+    // The season count is floored at joining (#1484); the month count is not,
+    // and neither is the last presence (AthleteController): `joined_at` is
+    // editable and was backfilled, so a presence before it is real data.
+    const seasonFrom = later(ctx.seasonStart, joined);
+    const seasonDays = trainingDaysBetween(seasonFrom, ctx.today, ctx.trainingDays);
+    const monthDays = trainingDaysBetween(monthStart, ctx.today, ctx.trainingDays);
+    const total = o['attendance_total_count'];
+    const month = o['attendance_month_count'];
+    if (isNum(total) && total > seasonDays) {
+      out.push(`attendance_total_count ${total} > ${seasonDays} training days this season`);
+    }
+    if (isNum(month) && month > monthDays) {
+      out.push(`attendance_month_count ${month} > ${monthDays} training days this month`);
+    }
+    // The month sits inside the season only when both windows start before
+    // it: someone who joined mid-month has a season that starts later.
+    if (isNum(month) && isNum(total) && ctx.seasonStart <= monthStart && joined <= monthStart) {
+      if (month > total)
+        out.push(`attendance_month_count ${month} > attendance_total_count ${total}`);
+    }
+    // Last presence (#1726): not after today, and inside a count's window
+    // exactly when that count is not zero.
+    const last = o['last_attended_on'];
+    if (isDate(last) && day(last) > ctx.today) {
+      out.push(`last_attended_on ${last} is after today ${ctx.today}`);
+    }
+    const windows: [string, unknown, string][] = [
+      ['attendance_total_count', total, seasonFrom],
+      ['attendance_month_count', month, monthStart],
+    ];
+    for (const [name, count, from] of windows) {
+      if (!isNum(count) || (last !== null && !isDate(last))) continue;
+      const inWindow = isDate(last) && day(last) >= from;
+      if (count > 0 && !inWindow) {
+        out.push(`${name} ${count} but last_attended_on ${last} before ${from}`);
+      }
+      if (count === 0 && inWindow) {
+        out.push(`${name} 0 but last_attended_on ${last} on or after ${from}`);
+      }
+    }
+    return out;
+  },
+
+  // An athlete's programme (AthleteSyllabusCoverageAction, #1723): attended is
+  // seen + thin, attended + missed is what the academy taught, and the
+  // headline is attended over taught.
+  (o) => {
+    const out: string[] = [];
+    const { taught_by_academy: taught, attended, seen, thin, missed, percentage } = o;
+    if (!isNum(taught) || !isNum(attended)) return out;
+    if (attended > taught) out.push(`attended ${attended} > taught_by_academy ${taught}`);
+    if (isNum(seen) && isNum(thin) && seen + thin !== attended) {
+      out.push(`seen ${seen} + thin ${thin} ≠ attended ${attended}`);
+    }
+    if (isNum(missed) && attended + missed !== taught) {
+      out.push(`attended ${attended} + missed ${missed} ≠ taught_by_academy ${taught}`);
+    }
+    const expected = taught === 0 ? 0 : Math.round((attended / taught) * 100);
+    if (isNum(percentage) && percentage !== expected) {
+      out.push(`percentage ${percentage} ≠ attended/taught ${expected}`);
+    }
+    return out;
+  },
+
+  // The academy's programme (SyllabusCoverageAction): three states that sum to
+  // what is in scope, and a headline of covered over in scope.
+  (o) => {
+    const out: string[] = [];
+    const { in_scope: scope, covered, thin, missing, percentage } = o;
+    if (!isNum(scope) || !isNum(covered)) return out;
+    if (covered > scope) out.push(`covered ${covered} > in_scope ${scope}`);
+    if (isNum(thin) && isNum(missing) && covered + thin + missing !== scope) {
+      out.push(`covered ${covered} + thin ${thin} + missing ${missing} ≠ in_scope ${scope}`);
+    }
+    const expected = scope === 0 ? 0 : Math.round((covered / scope) * 100);
+    if (isNum(percentage) && percentage !== expected) {
+      out.push(`percentage ${percentage} ≠ covered/in_scope ${expected}`);
+    }
+    return out;
+  },
+
+  // Who has seen a technique (TopicExposureAction, #1745): the buckets hold
+  // the people listed, nobody was at more lessons than were held, and a state
+  // agrees with its count (seen ≥ 2, thin = 1, never and unplaced = 0).
+  (o) => {
+    const out: string[] = [];
+    const lessons = o['lessons'];
+    const athletes = o['athletes'];
+    const totals = o['totals'];
+    if (!Array.isArray(lessons) || !Array.isArray(athletes) || !isObj(totals)) return out;
+    if (isNum(totals['lessons']) && totals['lessons'] !== lessons.length) {
+      out.push(`totals.lessons ${totals['lessons']} ≠ ${lessons.length} lessons listed`);
+    }
+    const buckets = ['seen', 'thin', 'never', 'unplaced'].map((k) => totals[k]).filter(isNum);
+    const sum = buckets.reduce((a, b) => a + b, 0);
+    if (buckets.length > 0 && sum !== athletes.length) {
+      out.push(`totals buckets sum to ${sum}, but ${athletes.length} athletes are listed`);
+    }
+    for (const a of athletes.filter(isObj)) {
+      const n = a['exposures'];
+      const state = a['state'];
+      if (!isNum(n)) continue;
+      if (n > lessons.length)
+        out.push(`athlete ${a['id']} exposures ${n} > ${lessons.length} lessons`);
+      const agrees =
+        (state === 'seen' && n >= 2) ||
+        (state === 'thin' && n === 1) ||
+        ((state === 'never' || state === 'unplaced') && n === 0);
+      if (typeof state === 'string' && !agrees) {
+        out.push(`athlete ${a['id']} is '${state}' with ${n} exposures`);
+      }
+    }
+    return out;
+  },
+
+  // The season map's lessons (SyllabusCalendarAction, #1858): held when
+  // someone was checked in, planned when dated today or later with nobody
+  // yet, unconfirmed when dated before today with nobody.
+  (o, ctx) => {
+    const state = o['state'];
+    const on = o['held_on'];
+    if (!isDate(on) || (state !== 'held' && state !== 'planned' && state !== 'unconfirmed')) {
+      return [];
+    }
+    const d = day(on);
+    const wrong =
+      (state === 'held' && d > ctx.today) ||
+      (state === 'planned' && d < ctx.today) ||
+      (state === 'unconfirmed' && d >= ctx.today);
+    return wrong ? [`lesson on ${d} is '${state}' with today ${ctx.today}`] : [];
+  },
+
+  // …and its week cells: nothing is held or unconfirmed in a week that has
+  // not started, and nothing is planned in a week that is over.
+  (o, ctx) => {
+    const week = o['week'];
+    if (!isDate(week) || !isNum(o['held']) || !isNum(o['planned'])) return [];
+    const [y, m, d] = day(week).split('-').map(Number);
+    const sunday = new Date(y, m - 1, d + 6);
+    const lastDay = `${sunday.getFullYear()}-${String(sunday.getMonth() + 1).padStart(2, '0')}-${String(sunday.getDate()).padStart(2, '0')}`;
+    const out: string[] = [];
+    const unconfirmed = o['unconfirmed'];
+    if (o['held'] > 0 && day(week) > ctx.today)
+      out.push(`week ${week} holds lessons before it starts`);
+    if (isNum(unconfirmed) && unconfirmed > 0 && day(week) > ctx.today) {
+      out.push(`week ${week} has unconfirmed plans before it starts`);
+    }
+    if (o['planned'] > 0 && lastDay < ctx.today) out.push(`week ${week} has plans after it ended`);
+    return out;
+  },
+
+  // A lesson's headcount is people on the roster.
+  (o, ctx) =>
+    isNum(o['headcount']) && o['headcount'] > ctx.rosterSize
+      ? [`headcount ${o['headcount']} > roster of ${ctx.rosterSize}`]
+      : [],
+
+  // A carnet (#1364): never more left than it was sold with.
+  (o) =>
+    isNum(o['remaining_entries']) &&
+    isNum(o['total_entries']) &&
+    o['remaining_entries'] > o['total_entries']
+      ? [`remaining_entries ${o['remaining_entries']} > total_entries ${o['total_entries']}`]
+      : [],
+
+  // An athlete's attendance summary (GetAthleteAttendanceSummaryAction, #893):
+  // one series point per lesson day in the window, so expected is the series'
+  // length, attended its attended points, and the rate the one over the other.
+  (o) => {
+    const out: string[] = [];
+    const attended = o['attended_count'];
+    const expected = o['expected_count'];
+    if (!isNum(attended) || !isNum(expected)) return out;
+    if (attended > expected) out.push(`attended_count ${attended} > expected_count ${expected}`);
+    const series = o['series'];
+    if (Array.isArray(series)) {
+      const hit = series.filter((p) => isObj(p) && p['attended'] === true).length;
+      if (series.length !== expected) {
+        out.push(
+          `expected_count ${expected} ≠ ${series.length} series points (one per lesson day)`,
+        );
+      }
+      if (hit !== attended) out.push(`attended_count ${attended} ≠ ${hit} attended points`);
+    }
+    const rate = o['rate'];
+    if (rate !== undefined) {
+      // Null when nothing was expected, else rounded to four places.
+      const want = expected === 0 ? null : Math.round((attended / expected) * 10000) / 10000;
+      const agrees =
+        rate === null
+          ? want === null
+          : isNum(rate) && want !== null && Math.round(rate * 10000) === Math.round(want * 10000);
+      if (!agrees) out.push(`rate ${String(rate)} ≠ attended/expected ${String(want)}`);
+    }
+    return out;
+  },
+
+  // A month-summary row (#1765) counts days: no more than the month has had.
+  (o, ctx) => {
+    if (!isNum(o['athlete_id']) || !isNum(o['count']) || !('first_name' in o)) return [];
+    const monthStart = `${ctx.today.slice(0, 7)}-01`;
+    const monthDays = trainingDaysBetween(monthStart, ctx.today, ctx.trainingDays);
+    return o['count'] > monthDays
+      ? [`summary count ${o['count']} > ${monthDays} days this month`]
+      : [];
+  },
+];
+
+/** The keys that make an intercept's last argument a StaticResponse. */
+const STATIC_RESPONSE_KEYS = [
+  'statusCode',
+  'body',
+  'fixture',
+  'headers',
+  'forceNetworkError',
+  'delay',
+  'throttleKbps',
+];
+
+/**
+ * The JSON body a `cy.intercept(...)` call stubs, or `undefined` when it stubs
+ * none this guard can read (a handler function, a string, a fixture file).
+ *
+ * The response is the last argument whenever there are two or more. Cypress
+ * reads an object carrying any StaticResponse key as a StaticResponse, whose
+ * body is `body`; an object carrying none of them is the JSON body itself,
+ * which is how `cy.intercept(matcher, page([...]))` stubs. Both shapes have to
+ * be read, or a whole class of stubs goes unchecked.
+ */
+export function stubBodyOf(args: readonly unknown[]): unknown {
+  if (args.length < 2) return undefined;
+  const response = args[args.length - 1];
+  if (Array.isArray(response)) return response;
+  if (!isObj(response)) return undefined;
+  if (Object.keys(response).some((k) => STATIC_RESPONSE_KEYS.includes(k))) {
+    return response['body'];
+  }
+  return response;
+}
+
+/** A readable name for what an intercept matches, for the guard's message. */
+export function stubLabel(args: readonly unknown[]): string {
+  // `(method, url, …)` names the url second; every other form names it first.
+  const matcher = typeof args[1] === 'string' ? args[1] : args[0];
+  if (typeof matcher === 'string') return matcher;
+  if (isObj(matcher)) {
+    const where = matcher['pathname'] ?? matcher['url'] ?? matcher['path'];
+    const query = isObj(matcher['query'])
+      ? `?${new URLSearchParams(matcher['query'] as Record<string, string>)}`
+      : '';
+    return `${String(matcher['method'] ?? '*')} ${String(where ?? JSON.stringify(matcher))}${query}`;
+  }
+  return String(matcher);
+}
+
+/**
+ * Every contradiction in a stub body, each with the path it was found at.
+ * Walks the whole value, so a rule applies wherever its shape appears.
+ */
+export function fixtureContradictions(body: unknown, ctx: FixtureContext, path = '$'): string[] {
+  if (Array.isArray(body)) {
+    return body.flatMap((item, i) => fixtureContradictions(item, ctx, `${path}[${i}]`));
+  }
+  if (!isObj(body)) return [];
+  const here = RULES.flatMap((rule) => rule(body, ctx)).map((p) => `${path}: ${p}`);
+  const below = Object.entries(body).flatMap(([k, v]) =>
+    fixtureContradictions(v, ctx, `${path}.${k}`),
+  );
+  return [...here, ...below];
+}

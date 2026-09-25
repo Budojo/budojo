@@ -405,3 +405,33 @@ it('returns 422 when the summary month is not in YYYY-MM format', function (): v
         ->assertUnprocessable()
         ->assertJsonValidationErrors(['month']);
 });
+
+it('carries each athlete\'s identity on a monthly summary row, so the row can show the belt (#1851)', function (): void {
+    $user = userWithAcademy();
+    $mario = Athlete::factory()->for($user->academy)->create([
+        'first_name' => 'Mario',
+        'last_name' => 'Rossi',
+        'belt' => \App\Enums\Belt::Purple->value,
+        'stripes' => 2,
+        'date_of_birth' => '1990-03-14',
+    ]);
+    $mario->forceFill(['photo_path' => "athletes/photos/{$mario->id}.jpg"])->save();
+    AttendanceRecord::factory()->for($mario)->on('2026-04-05')->create();
+
+    Sanctum::actingAs($user);
+
+    $row = collect($this->getJson('/api/v1/attendance/summary?month=2026-04')->assertOk()->json('data'))
+        ->firstWhere('athlete_id', $mario->id);
+
+    expect($row['athlete'])->toMatchArray([
+        'id' => $mario->id,
+        'first_name' => 'Mario',
+        'last_name' => 'Rossi',
+        'belt' => 'purple',
+        'stripes' => 2,
+        'date_of_birth' => '1990-03-14',
+    ]);
+    expect($row['athlete']['photo_url'])->toContain("athletes/photos/{$mario->id}.jpg");
+    // The existing flat fields stay: the row is additive, not reshaped.
+    expect($row['first_name'])->toBe('Mario');
+});

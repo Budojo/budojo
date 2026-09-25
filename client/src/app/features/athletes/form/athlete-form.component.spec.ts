@@ -97,6 +97,35 @@ describe("AthleteFormComponent — the academy's ladder (#1801)", () => {
     expect(values).not.toContain('purple');
   });
 
+  it("leaves the youth belts out for an academy that doesn't train kids (#1651)", () => {
+    setupTestBed(null);
+    useLadder('bjj', { trains_kids: false });
+    const form = TestBed.createComponent(AthleteFormComponent).componentInstance;
+
+    const values = form.beltOptions().map((o) => o.value);
+    expect(values[0]).toBe('white');
+    expect(values).not.toContain('grey');
+    // And says where they went: setup never asks, so nothing else would.
+    expect(form.kidsBeltsHidden()).toBe(true);
+  });
+
+  it("keeps the youth belt of the athlete being edited, so saving doesn't move them (#1651)", () => {
+    setupTestBed('42');
+    useLadder('bjj', { trains_kids: false });
+    const fixture = TestBed.createComponent(AthleteFormComponent);
+    const httpMock = TestBed.inject(HttpTestingController);
+    fixture.detectChanges();
+    httpMock
+      .expectOne('/api/v1/athletes/42')
+      .flush({ data: makeAthlete({ id: 42, belt: 'green' }) });
+    fixture.detectChanges();
+
+    const values = fixture.componentInstance.beltOptions().map((o) => o.value);
+    expect(values).toContain('green');
+    expect(values).not.toContain('grey');
+    expect(fixture.componentInstance.form.controls.belt.value).toBe('green');
+  });
+
   it("starts a new athlete on the art's adult starting belt, not the kids' grey", () => {
     expect(build('bjj').form.controls.belt.value).toBe('white');
   });
