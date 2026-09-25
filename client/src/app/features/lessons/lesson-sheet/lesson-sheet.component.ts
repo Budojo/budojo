@@ -124,6 +124,12 @@ export class LessonSheetComponent {
    * on half guard instead of the top of sixty positions.
    */
   readonly focusTopicId = input<number | null>(null);
+  /**
+   * A topic the host is planning (#1656): ticked on every lesson the sheet
+   * opens or steps to, and not counted as an edit — the owner asked for it by
+   * opening the sheet. Save sends it; unticking it is an ordinary choice.
+   */
+  readonly chooseTopicId = input<number | null>(null);
 
   /** The saved lesson, so the host can refresh its summary without re-reading. */
   readonly saved = output<Lesson>();
@@ -167,6 +173,8 @@ export class LessonSheetComponent {
     topicIds: [],
     notes: '',
   });
+  /** The same, plus the host's topic: the selection the sheet was handed. */
+  private readonly arrivedWith = signal<readonly number[]>([]);
 
   constructor() {
     // Opening is the load: the slot can change between two openings (another
@@ -188,6 +196,30 @@ export class LessonSheetComponent {
   protected readonly dirty = computed<boolean>(() => {
     const opened = this.openedWith();
     return !sameIds([...this.selected()], opened.topicIds) || this.notes().trim() !== opened.notes;
+  });
+
+  /**
+   * Something the owner picked or typed that moving would throw away. The
+   * host's own topic is not that: it comes along to the next week.
+   */
+  protected readonly stepHeld = computed<boolean>(() => {
+    if (!this.dirty()) return false;
+    const asHanded =
+      sameIds([...this.selected()], this.arrivedWith()) &&
+      this.notes().trim() === this.openedWith().notes;
+    return !asHanded;
+  });
+
+  /**
+   * What a lesson still ahead will cover is planned, not covered — tonight's
+   * included, until somebody is checked in and the header stops saying
+   * "planned" too. The evenings gone by keep "covered".
+   */
+  protected readonly chosenTitle = computed<string>(() => {
+    const slot = this.slot();
+    const today = localIso(new Date());
+    const ahead = slot > today || (slot === today && !this.lesson()?.held);
+    return ahead ? 'lessons.sheet.chosenPlanned' : 'lessons.sheet.chosen';
   });
 
   /**
@@ -231,7 +263,7 @@ export class LessonSheetComponent {
    * throw it away, and a plan silently lost is worse than a disabled arrow.
    */
   protected step(direction: 1 | -1): void {
-    if (this.loading() || this.saving() || this.dirty()) return;
+    if (this.loading() || this.saving() || this.stepHeld()) return;
     if (direction === -1 && !this.canStepBack()) return;
 
     this.slot.set(addDays(this.slot(), 7 * direction));
@@ -399,7 +431,7 @@ export class LessonSheetComponent {
     // checked in, is held — and still this evening, not the last one.
     this.lastNotesReads.add(
       this.lessonService
-        .lastNotes(id, this.heldOn())
+        .lastNotes(id, this.slot())
         .pipe(catchError(() => of(null)))
         .subscribe((lesson) => this.setLastEvening(id, { state: 'done', lesson })),
     );
@@ -574,9 +606,11 @@ export class LessonSheetComponent {
         // Departed topics are not in the selectable set: they cannot be
         // unticked here, and the server carries them through the sync.
         const living = (lesson?.topics ?? []).filter((t) => !t.deleted).map((t) => t.id);
-        this.selected.set(new Set(living));
+        const handed = [...new Set([...living, ...this.hostTopic()])];
+        this.selected.set(new Set(handed));
         this.notes.set(lesson?.notes ?? '');
         this.openedWith.set({ topicIds: living, notes: lesson?.notes ?? '' });
+        this.arrivedWith.set(handed);
         this.loading.set(false);
         this.revealFocus(positions);
         if (lesson?.held) this.loadRoom();
@@ -594,6 +628,7 @@ export class LessonSheetComponent {
         this.selected.set(new Set());
         this.notes.set('');
         this.openedWith.set({ topicIds: [], notes: '' });
+        this.arrivedWith.set([]);
         this.loadFailed.set(true);
         this.loading.set(false);
         this.toast(
@@ -603,6 +638,12 @@ export class LessonSheetComponent {
         );
       },
     });
+  }
+
+  /** The host's topic, when it is still in the programme; nothing otherwise. */
+  private hostTopic(): number[] {
+    const id = this.chooseTopicId();
+    return id !== null && this.allTopics().some((t) => t.id === id) ? [id] : [];
   }
 
   /**

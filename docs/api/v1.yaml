@@ -4313,6 +4313,48 @@ paths:
           schema:
             type: string
             enum: [yes, no]
+        - name: birthday
+          in: query
+          description: |
+            Athletes whose birthday falls in the window (#1754), by month and
+            day of `date_of_birth`, on the server's calendar.
+
+            - `today` is today's month-day.
+            - `week` is today and the six days after it: seven month-days,
+              matched as a set, so a week that crosses the new year works.
+
+            Someone born on 29 February has their birthday on the 29th in a
+            leap year and on 28 February in any other year, so they are not
+            missed three years in four.
+
+            A null `date_of_birth` never matches either value. Neither value
+            says anything about status: an inactive athlete whose birthday it
+            is is included, as with `paid=yes`. A caller that wants only the
+            people training adds `status=active` (Today does). Unrecognised
+            values are silently ignored (no filter applied), as for `paid`.
+          required: false
+          schema:
+            type: string
+            enum: [today, week]
+        - name: from
+          in: query
+          description: |
+            The day the `birthday` window starts from (#1754), as the
+            caller's own calendar day. Without it the window starts from the
+            server's day, which is UTC: near midnight that is a day away from
+            the owner's, and a week built from it can leave out the owner's
+            seventh day, which no client-side filtering can add back.
+
+            Accepted only within one day of the server's today, either way;
+            anything else, or a value that is not `YYYY-MM-DD`, is a **422**
+            on `from` — unlike `birthday` itself, which ignores a value it
+            does not know. The bound keeps it from being a query of any
+            window at all. Read only together with `birthday`.
+          required: false
+          schema:
+            type: string
+            format: date
+            example: '2026-09-25'
         - name: page
           in: query
           description: Page number, starting at 1. Page size is fixed at 20.
@@ -5585,6 +5627,61 @@ paths:
           $ref: '#/components/responses/Unauthenticated'
         '403':
           description: Authenticated user has no academy, so attendance access is forbidden.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorMessage' }
+              example: { message: Forbidden. }
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /attendance/regulars:
+    get:
+      tags: [attendance]
+      summary: The regulars of a class, as of one evening
+      description: |
+        Who usually comes to this class (#1730), so the check-in can say who
+        of them is not here tonight. All the regulars, not only the missing
+        ones: the check-in already knows who is on the mat and subtracts them
+        locally, so a tick takes someone off the list without a request.
+
+        A regular is an **active** athlete present at **3 of the class's last
+        4 occurrences**. An occurrence is a day before `date` on which the
+        academy held a session on the class's weekday — read from the
+        attendance, not from `lessons`, so history recorded before the
+        timetable existed still counts. A presence counts for the class when
+        it names the class's lesson that day, or names no lesson on a day the
+        academy had one session to be at (one class on the weekday, no other
+        class's lesson that day). On a weekday two classes share, a presence
+        naming neither counts for neither, and a day on which nobody named
+        this class is not one of its occurrences. The walk back ends at the
+        first evening held by a class timetabled on another weekday now: the
+        timetable moved there, and the evenings before it were that class's.
+
+        Fewer than 3 occurrences on record: `data` is empty and
+        `meta.occurrences` says how many there were — "not enough history",
+        never "everyone is here".
+      operationId: attendanceClassRegulars
+      parameters:
+        - name: date
+          in: query
+          required: true
+          schema: { type: string, format: date }
+          description: YYYY-MM-DD — the evening being checked in. Only days before it are read.
+        - name: academy_class_id
+          in: query
+          required: true
+          schema: { type: integer, format: int64 }
+          description: The class. One from another academy, or none at all, is a 403.
+      responses:
+        '200':
+          description: The class's regulars, most regular first, then by name.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ClassRegulars' }
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          description: No academy, no `attendance_read`, or a class that is not this academy's.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorMessage' }
@@ -7842,6 +7939,67 @@ components:
                 tonight included. On an academy's first evening
                 `sessions_available` is 0 and this is `true`: "not enough
                 history yet", never "no attendance recorded".
+
+    ClassRegulars:
+      type: object
+      description: Who usually comes to a class (#1730).
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          description: Empty below 3 occurrences.
+          items:
+            type: object
+            description: |
+              The identity every list of people is drawn with (#1851), the
+              phone pair the contact buttons need, and the habit.
+            required:
+              [
+                id,
+                first_name,
+                last_name,
+                belt,
+                stripes,
+                phone_country_code,
+                phone_national_number,
+                attended,
+                last_attended_on,
+              ]
+            properties:
+              id: { type: integer }
+              first_name: { type: string }
+              last_name: { type: string }
+              belt: { type: string, example: purple }
+              stripes: { type: integer, minimum: 0 }
+              date_of_birth: { type: string, format: date, nullable: true }
+              photo_url: { type: string, nullable: true }
+              user_avatar_url: { type: string, nullable: true }
+              phone_country_code: { type: string, nullable: true, example: '+39' }
+              phone_national_number: { type: string, nullable: true }
+              attended:
+                type: integer
+                minimum: 3
+                maximum: 4
+                description: Occurrences attended, out of `meta.occurrences`.
+              last_attended_on:
+                type: string
+                format: date
+                nullable: true
+                description: Their latest presence before `date`, in any class.
+        meta:
+          type: object
+          required: [occurrences, occurrence_dates]
+          properties:
+            occurrences:
+              type: integer
+              minimum: 0
+              maximum: 4
+              description: How many of the class's last occurrences were found.
+            occurrence_dates:
+              type: array
+              description: Those days, newest first.
+              items: { type: string, format: date }
+              example: ['2026-09-09', '2026-09-02', '2026-08-26', '2026-08-19']
 
     # ── Generic envelopes ─────────────────────────────────────────────────
 

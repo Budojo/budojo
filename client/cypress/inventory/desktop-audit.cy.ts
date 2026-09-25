@@ -23,6 +23,7 @@
  */
 import LADDERS from '../../src/test-utils/ladders.json';
 import TRAINING_MODES from '../../src/test-utils/training-modes.json';
+import { fixtureContradictions, stubBodyOf, stubLabel, type FixtureContext } from './fixture-rules';
 
 // ── The clock ────────────────────────────────────────────────────────────
 //
@@ -329,6 +330,10 @@ function athlete(over: Record<string, unknown>) {
   };
 }
 
+// The Sessions cell's two lines (#1455): this month, then the SEASON (#1484),
+// each over the training days since the later of its start and joining. On
+// 14 September both the month and the 2026/27 season began on the 1st, so the
+// two counts are the same number. Lifetime totals here painted "143/8" (#1854).
 const ATHLETES = [
   athlete({
     id: 1,
@@ -346,7 +351,7 @@ const ATHLETES = [
     billing_period_months: 3,
     payment_coverage: 'quarterly',
     attendance_month_count: 5,
-    attendance_total_count: 143,
+    attendance_total_count: 5,
     last_attended_on: '2026-09-11',
     active_carnet: { id: 7, code: 'A7K2', remaining_entries: 3, expires_at: '2027-01-10' },
   }),
@@ -360,7 +365,7 @@ const ATHLETES = [
     joined_at: '2025-10-06',
     fee_tier: FEE_TIERS[0],
     attendance_month_count: 4,
-    attendance_total_count: 61,
+    attendance_total_count: 4,
     last_attended_on: '2026-09-10',
   }),
   athlete({
@@ -377,7 +382,7 @@ const ATHLETES = [
     paid_current_month: false,
     monthly_fee_cents: null,
     attendance_month_count: 6,
-    attendance_total_count: 812,
+    attendance_total_count: 6,
     last_attended_on: '2026-09-14',
   }),
   athlete({
@@ -391,7 +396,7 @@ const ATHLETES = [
     payment_coverage: 'annual',
     billing_period_months: 12,
     attendance_month_count: 3,
-    attendance_total_count: 402,
+    attendance_total_count: 3,
     last_attended_on: '2026-09-03',
   }),
   athlete({
@@ -406,7 +411,7 @@ const ATHLETES = [
     payment_coverage: 'none',
     paid_current_month: false,
     attendance_month_count: 0,
-    attendance_total_count: 9,
+    attendance_total_count: 0,
     last_attended_on: '2026-03-20',
   }),
   athlete({
@@ -423,7 +428,7 @@ const ATHLETES = [
     paid_current_month: false,
     active_carnet: { id: 9, code: 'Q3M8', remaining_entries: 6, expires_at: '2027-03-01' },
     attendance_month_count: 2,
-    attendance_total_count: 188,
+    attendance_total_count: 2,
     last_attended_on: '2026-09-09',
   }),
   athlete({
@@ -437,9 +442,10 @@ const ATHLETES = [
     payment_coverage: 'none',
     paid_current_month: false,
     // Drifting (#1729): nothing this month, last seen in August — the `gone`
-    // row of the at-risk fixture below, so the two screens agree.
+    // row of the at-risk fixture below, so the two screens agree. Nothing this
+    // season either: it began on 1 September (#1854).
     attendance_month_count: 0,
-    attendance_total_count: 530,
+    attendance_total_count: 0,
     last_attended_on: '2026-08-12',
   }),
   athlete({
@@ -562,6 +568,43 @@ function page(rows: unknown[], perPage = 20) {
 
 const ATHLETE_ONE = ATHLETES[0];
 
+// ── The fixture guard (#1854) ────────────────────────────────────────────
+//
+// The audit paints whatever its stubs say, so a stub that drifted behind a
+// server rule shows a number the product cannot produce, and gets filed as a
+// finding. Every stub body passes `fixtureContradictions` as it is registered:
+// seed() and every screen's own `stubs`, from any track, without anyone
+// having to remember to call it. A contradiction fails that screen before
+// the shutter, naming the path and the rule.
+
+/** What the guard measures against: this harness's clock, season and roster. */
+const FIXTURE_CONTEXT: FixtureContext = {
+  today: TODAY,
+  seasonStart: ACADEMY.season_start,
+  trainingDays: ACADEMY.training_days,
+  rosterSize: ATHLETES.length,
+};
+
+function assertFixtureAgrees(label: string, body: unknown): void {
+  const problems = fixtureContradictions(body, FIXTURE_CONTEXT);
+  if (problems.length > 0) {
+    throw new Error(`${label} contradicts the server's rules (#1854):\n${problems.join('\n')}`);
+  }
+}
+
+/** What the `cy.intercept` override runs on every call, testable on its own. */
+function checkStub(args: readonly unknown[]): void {
+  const body = stubBodyOf(args);
+  if (body !== undefined) {
+    assertFixtureAgrees(`The stub for ${stubLabel(args)}`, body);
+  }
+}
+
+Cypress.Commands.overwrite('intercept', (originalFn, ...args: unknown[]) => {
+  checkStub(args);
+  return (originalFn as (...a: unknown[]) => Cypress.Chainable)(...args);
+});
+
 // ── Documents ────────────────────────────────────────────────────────────
 
 function document(over: Record<string, unknown>) {
@@ -666,6 +709,38 @@ function record(id: number, athlete_id: number, attended_on: string, lesson_id: 
 
 const ATTENDANCE_TONIGHT = [record(1, 1, TODAY, 7), record(2, 2, TODAY, 7), record(3, 4, TODAY, 7)];
 
+/**
+ * Who usually comes to tonight's class (#1730). The last four Mondays the
+ * academy held a session — August was closed, so they jump from 7 September
+ * to July. Giulia, Luca and Sara are on the mat already; Elena and Francesca
+ * are the two the panel names. Taken from the roster, so a person has the
+ * same belt and phone on every screen.
+ */
+function regularOf(id: number, attended: number, last_attended_on: string) {
+  const a = ATHLETES.find((x) => x.id === id);
+  if (!a) throw new Error(`no roster athlete ${id}`);
+  return {
+    ...identityOf(id),
+    phone_country_code: a.phone_country_code ?? null,
+    phone_national_number: a.phone_national_number ?? null,
+    attended,
+    last_attended_on,
+  };
+}
+
+const MONDAYS_HELD = ['2026-09-07', '2026-07-27', '2026-07-20', '2026-07-13'];
+
+const REGULARS_TONIGHT = {
+  data: [
+    regularOf(1, 4, '2026-09-11'),
+    regularOf(6, 4, '2026-09-09'),
+    regularOf(2, 3, '2026-09-10'),
+    regularOf(4, 3, '2026-09-03'),
+    regularOf(8, 3, '2026-09-10'),
+  ],
+  meta: { occurrences: 4, occurrence_dates: MONDAYS_HELD },
+};
+
 const ATTENDANCE_ONE = [
   record(10, 1, '2026-09-11', 5),
   record(11, 1, '2026-09-09', 3),
@@ -677,20 +752,26 @@ const ATTENDANCE_ONE = [
 
 /** Giulia's last 90 days: Monday and Wednesday, nothing in August. */
 const ATHLETE_SUMMARY = (() => {
-  const series = Array.from({ length: 90 }, (_, i) => {
+  const iso = (d: Date): string =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  // One point per LESSON day in the 90-day window, as the server sends it
+  // (GetAthleteAttendanceSummaryAction): the days the academy held a class,
+  // which DAILY draws as Monday, Wednesday, Friday and Saturday with August
+  // closed. Calendar days here drew 90 bars beside "17 of 30" (#1854).
+  const series: { date: string; attended: boolean }[] = [];
+  for (let i = 0; i < 90; i++) {
     const d = new Date(NOW - (89 - i) * 86_400_000);
-    const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    const trains = d.getMonth() !== 7 && (d.getDay() === 1 || d.getDay() === 3);
-    return { date: iso, attended: trains };
-  });
+    if (d.getMonth() === 7 || ![1, 3, 5, 6].includes(d.getDay())) continue;
+    series.push({ date: iso(d), attended: d.getDay() === 1 || d.getDay() === 3 });
+  }
   const attended = series.filter((p) => p.attended).length;
   return {
     range_days: 90,
-    range_start: series[0].date,
-    range_end: series[series.length - 1].date,
+    range_start: iso(new Date(NOW - 89 * 86_400_000)),
+    range_end: TODAY,
     attended_count: attended,
-    expected_count: 30,
-    rate: Math.round((attended / 30) * 100) / 100,
+    expected_count: series.length,
+    rate: Math.round((attended / series.length) * 10000) / 10000,
     series,
   };
 })();
@@ -702,7 +783,6 @@ const ATTENDANCE_SUMMARY = [
   { athlete_id: 4, first_name: 'Sara', last_name: 'Colombo', count: 3, athlete: identityOf(4) },
   { athlete_id: 6, first_name: 'Elena', last_name: 'Russo', count: 2, athlete: identityOf(6) },
   { athlete_id: 8, first_name: 'Francesca', last_name: 'Marino', count: 2, athlete: identityOf(8) },
-  { athlete_id: 7, first_name: 'Andrea', last_name: 'Gallo', count: 1, athlete: identityOf(7) },
 ];
 
 const LEADERBOARD = {
@@ -873,7 +953,9 @@ const ATHLETE_COVERAGE = {
     seen: 3,
     thin: 2,
     missed: 1,
-    percentage: 50,
+    // Attended over taught, 5 of 6, since #1723. It read 50 (seen over
+    // taught), and painted "50%" beside "5 su 6" (#1854).
+    percentage: 83,
     not_taught_yet: 23,
   },
   missed: [
@@ -1106,7 +1188,7 @@ const SYLLABUS_CALENDAR = {
       id: 5,
       name: 'Back',
       kind: 'both',
-      cells: [{ week: '2026-09-14', held: 0, planned: 1, unconfirmed: 0 }],
+      cells: [{ week: '2026-09-14', held: 0, planned: 2, unconfirmed: 0 }],
     },
     {
       id: 6,
@@ -1152,6 +1234,12 @@ const SYLLABUS_CALENDAR = {
     calendarLesson(506, '2026-09-11', 5, 'held', [{ id: 11, name: 'Armbar', parent_id: 1 }]),
     calendarLesson(507, '2026-09-14', 1, 'planned', [
       { id: 53, name: 'Back escape', parent_id: 5 },
+    ]),
+    // Wednesday's too, so the week's group message (#1863) is this week's
+    // whatever the wall clock: these screens run without the frozen clock,
+    // and tonight's 19:00 lesson drops out of it once it has started.
+    calendarLesson(514, '2026-09-16', 4, 'planned', [
+      { id: 52, name: 'Bow and arrow choke', parent_id: 5 },
     ]),
     calendarLesson(508, '2026-09-21', 1, 'planned', [
       { id: 21, name: 'Knee shield', parent_id: 2 },
@@ -1235,13 +1323,14 @@ const TOPIC_EXPOSURE = {
   ],
   // Register order, active first: Bonanno, Colombo, Ferraro, Gallo, Marino,
   // Moretti, Russo, then Ricci, who is inactive with no date of departure.
-  // Gallo trained on the 7th at a lesson the record does not name.
+  // Marino trained on the 7th, her first day, at a lesson the record does not
+  // name. Gallo has not trained since August (#1729), so he was never there.
   athletes: [
     exposureRow(3, 2, '2026-09-11', 'seen'),
     exposureRow(4, 2, '2026-09-07', 'seen'),
     exposureRow(1, 3, '2026-09-11', 'seen'),
-    exposureRow(7, 0, null, 'unplaced'),
-    exposureRow(8, 0, null, 'never'),
+    exposureRow(7, 0, null, 'never'),
+    exposureRow(8, 0, null, 'unplaced'),
     exposureRow(2, 1, '2026-09-04', 'thin'),
     exposureRow(6, 1, '2026-09-07', 'thin'),
     exposureRow(5, 0, null, 'never'),
@@ -1644,6 +1733,7 @@ function seed(): void {
     body: { data: ATTENDANCE_SUMMARY },
   });
   cy.intercept('GET', '/api/v1/attendance/leaderboard*', { statusCode: 200, body: LEADERBOARD });
+  cy.intercept('GET', '/api/v1/attendance/regulars*', { statusCode: 200, body: REGULARS_TONIGHT });
   cy.intercept('GET', '/api/v1/lessons?*', { statusCode: 200, body: { data: LESSON_TONIGHT } });
   cy.intercept('GET', '/api/v1/lessons/recent-topics', {
     statusCode: 200,
@@ -1942,6 +2032,145 @@ const NO_DATA = { statusCode: 200, body: { data: [] } };
 describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian', () => {
   // What this run was asked to shoot, beside the pictures: `_env.json` says
   // which prefixes were in force when the folder was last written.
+  // Before any screen: the shared fixtures agree with the server's rules, and
+  // the guard would say so if they did not (#1854).
+  it('holds the shared fixtures to the server rules', () => {
+    assertFixtureAgrees('The shared fixtures', {
+      ATHLETES,
+      ATHLETE_COVERAGE,
+      SYLLABUS_COVERAGE,
+      SYLLABUS_CALENDAR,
+      TOPIC_EXPOSURE,
+      ATHLETE_SUMMARY,
+      ATTENDANCE_SUMMARY,
+      CARNETS_ONE,
+    });
+
+    // One question, two fixtures: the month summary's days for an athlete are
+    // the roster's month count, and whoever trained this month is listed. The
+    // per-object rules cannot see across fixtures; this is the pair that
+    // drifted apart when #1729 moved an athlete into "not seen lately".
+    for (const a of ATHLETES) {
+      const row = ATTENDANCE_SUMMARY.find((r) => r.athlete_id === a.id);
+      expect(row?.count ?? 0, `month summary vs roster, athlete ${a.id}`).to.equal(
+        a.attendance_month_count,
+      );
+    }
+  });
+
+  it('has a fixture guard that catches what it is for', () => {
+    // A guard that passes because it cannot match anything is not a guard.
+    // The two drifts the audit of 24 September 2026 actually shipped, and a
+    // season-map plan dated in the past:
+    const drifted = {
+      roster: [
+        { joined_at: '2024-09-02', attendance_month_count: 5, attendance_total_count: 143 },
+        // Nobody trained this season, yet the last presence is last week.
+        {
+          joined_at: '2024-09-02',
+          attendance_month_count: 0,
+          attendance_total_count: 0,
+          last_attended_on: '2026-09-10',
+        },
+      ],
+      coverage: { taught_by_academy: 6, attended: 5, seen: 3, thin: 2, missed: 1, percentage: 50 },
+      lesson: { held_on: '2026-09-08', state: 'planned' },
+    };
+    const problems = fixtureContradictions(drifted, FIXTURE_CONTEXT);
+    expect(problems.join('\n')).to.contain('attendance_total_count 143 > 8');
+    expect(problems.join('\n')).to.contain('percentage 50 ≠ attended/taught 83');
+    expect(problems.join('\n')).to.contain("is 'planned'");
+    expect(problems.join('\n')).to.contain('attendance_total_count 0 but last_attended_on');
+
+    // The attendance summary: one point per lesson day, so 90 calendar-day
+    // points against 30 expected is a contradiction.
+    const summary = fixtureContradictions(
+      {
+        attended_count: 2,
+        expected_count: 30,
+        rate: 0.0667,
+        series: Array.from({ length: 90 }, (_, i) => ({ date: `d${i}`, attended: i < 2 })),
+      },
+      FIXTURE_CONTEXT,
+    );
+    expect(summary.join('\n')).to.contain('≠ 90 series points');
+
+    // The rate is the server's four-place rounding exactly, not "near it".
+    const rate = (r: number) =>
+      fixtureContradictions(
+        {
+          attended_count: 1,
+          expected_count: 3,
+          rate: r,
+          series: [
+            { date: 'a', attended: true },
+            { date: 'b', attended: false },
+            { date: 'c', attended: false },
+          ],
+        },
+        FIXTURE_CONTEXT,
+      );
+    expect(rate(0.3333)).to.deep.equal([]);
+    expect(rate(0.3334).join('\n')).to.contain('rate 0.3334');
+
+    // Not stricter than the server: the month count and the last presence
+    // are not floored at joining, which is editable and was backfilled.
+    expect(
+      fixtureContradictions(
+        [
+          {
+            joined_at: '2026-09-10',
+            attendance_month_count: 3,
+            attendance_total_count: 2,
+            last_attended_on: '2026-09-12',
+          },
+        ],
+        FIXTURE_CONTEXT,
+      ),
+    ).to.deep.equal([]);
+    // ...and an honest row passes.
+    expect(
+      fixtureContradictions(
+        [{ joined_at: '2024-09-02', attendance_month_count: 5, attendance_total_count: 5 }],
+        FIXTURE_CONTEXT,
+      ),
+    ).to.deep.equal([]);
+  });
+
+  it('checks every shape of stub the harness registers', () => {
+    // The override has to see the body whatever form the call takes, or a
+    // whole class of stubs goes unchecked: the two-argument
+    // `cy.intercept(matcher, page([...]))` was, until #1854's review.
+    const body = { data: [] };
+    expect(stubBodyOf(['GET', '/api/v1/x', { statusCode: 200, body }])).to.equal(body);
+    expect(stubBodyOf([{ method: 'GET', pathname: '/api/v1/x' }, body])).to.equal(body);
+    expect(stubBodyOf(['/api/v1/x', { method: 'GET' }, { statusCode: 200, body }])).to.equal(body);
+    expect(stubBodyOf(['GET', '/api/v1/x'])).to.equal(undefined);
+    expect(stubBodyOf(['/api/v1/x', () => undefined])).to.equal(undefined);
+    expect(stubBodyOf(['/api/v1/x', 'plain text'])).to.equal(undefined);
+    expect(stubBodyOf(['/api/v1/x', { fixture: 'athletes.json' }])).to.equal(undefined);
+
+    // ...and the override fails a drifted stub in each of those shapes, with
+    // a label a person can read.
+    const drifted = page([
+      { joined_at: '2024-09-02', attendance_month_count: 5, attendance_total_count: 143 },
+    ]);
+    const matcher = {
+      method: 'GET',
+      pathname: '/api/v1/athletes',
+      query: { sort_by: 'joined_at' },
+    };
+    expect(() => checkStub([matcher, drifted])).to.throw(
+      "The stub for GET /api/v1/athletes?sort_by=joined_at contradicts the server's rules",
+    );
+    expect(() =>
+      checkStub(['GET', '/api/v1/athletes*', { statusCode: 200, body: drifted }]),
+    ).to.throw('The stub for /api/v1/athletes*');
+    expect(() =>
+      checkStub(['GET', '/api/v1/athletes*', { statusCode: 200, body: page([]) }]),
+    ).not.to.throw();
+  });
+
   it('records the run environment', () => {
     cy.writeFile('cypress/screenshots/desktop-audit.cy.ts/_env.json', {
       only: Cypress.env('ONLY') ?? null,
@@ -1989,9 +2218,23 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       // belt spine the way every list of people does.
       cy.intercept(
         { method: 'GET', pathname: '/api/v1/athletes', query: { sort_by: 'joined_at' } },
+        // Joined today, so nothing counted yet: a count or a last presence
+        // before today would be a day they had not joined for (#1854).
         page([
-          { ...ATHLETES[3], joined_at: TODAY },
-          { ...ATHLETES[5], joined_at: TODAY },
+          {
+            ...ATHLETES[3],
+            joined_at: TODAY,
+            attendance_month_count: 0,
+            attendance_total_count: 0,
+            last_attended_on: null,
+          },
+          {
+            ...ATHLETES[5],
+            joined_at: TODAY,
+            attendance_month_count: 0,
+            attendance_total_count: 0,
+            last_attended_on: null,
+          },
         ]),
       );
     },
@@ -2004,6 +2247,26 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
         statusCode: 200,
         body: { data: CLASSES.filter((c) => c.weekday === 3) },
       });
+    },
+  });
+  screen('05-today-birthdays', '/dashboard/today', '[data-cy="today-birthdays"]', {
+    stubs: () => {
+      // Two birthdays this week (#1754): today's with the age turned and a
+      // number to message, Friday's by its day and without one — both states
+      // of the contact actions. The default roster has none from 14 to 20
+      // September, which is why the other Today screens show no card.
+      cy.intercept(
+        { method: 'GET', pathname: '/api/v1/athletes', query: { birthday: 'week' } },
+        page([
+          {
+            ...ATHLETES[1],
+            date_of_birth: '1990-09-14',
+            phone_country_code: '+39',
+            phone_national_number: '3478123456',
+          },
+          { ...ATHLETES[4], date_of_birth: '1996-09-18' },
+        ]),
+      );
     },
   });
   // The copy off this computer has been failing, and was never set up (#1751).
@@ -2488,6 +2751,30 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       },
     },
   );
+  // Who usually comes and is not here (#1730), opened: two regulars missing.
+  screen('30-attendance-missing', '/dashboard/attendance', '[data-cy="missing-regulars-toggle"]', {
+    act: () => {
+      press('[data-cy="missing-regulars-toggle"]');
+      cy.get('[data-cy="missing-regular-6"]').scrollIntoView().should('be.visible');
+    },
+  });
+  // A class with two sessions on record: "we cannot tell yet", never "all here".
+  screen(
+    '30-attendance-missing-not-enough',
+    '/dashboard/attendance',
+    '[data-cy="missing-regulars-not-enough"]',
+    {
+      stubs: () => {
+        cy.intercept('GET', '/api/v1/attendance/regulars*', {
+          statusCode: 200,
+          body: { data: [], meta: { occurrences: 2, occurrence_dates: MONDAYS_HELD.slice(0, 2) } },
+        });
+      },
+      act: () => {
+        cy.get('[data-cy="missing-regulars-not-enough"]').scrollIntoView();
+      },
+    },
+  );
   // Monday is not a training day at this academy: the banner says so, and
   // the check-in has no class to propose.
   screen(
@@ -2590,6 +2877,24 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       cy.get('[data-cy="season-map-plan"]', { timeout: 4000 }).should('be.visible');
     },
   });
+  // A technique never taught, planned from the report's list (#1656): the
+  // next class that may teach it, opened with it ticked. No-gi Lockdown
+  // passes over tonight's two gi classes for Wednesday's no-gi one. On the
+  // harness clock, so the day it lands on is the same every run.
+  screen(
+    '40-stats-syllabus-plan-missing',
+    '/dashboard/stats/syllabus',
+    '[data-cy="syllabus-coverage"]',
+    {
+      stubs: () => {
+        cy.intercept('GET', '/api/v1/lessons?*', { statusCode: 200, body: { data: null } });
+      },
+      act: () => {
+        press('[data-cy="syllabus-missing-23"] button');
+        dialogOpen('[data-cy="lesson-sheet"]');
+      },
+    },
+  );
   // A week with a lesson held and a plan nobody checked into: the fill, a
   // hatched corner, and both lessons in the popover.
   screen('40-stats-syllabus-missed', '/dashboard/stats/syllabus', '[data-cy="syllabus-coverage"]', {
@@ -2599,6 +2904,53 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       cy.get('[data-cy="season-map-popover"]', { timeout: 4000 }).should('be.visible');
     },
   });
+  // The week's plan for the academy's group (#1863), just copied: the row
+  // under the map, and the toast that says where to paste it.
+  screen('40-stats-syllabus-share', '/dashboard/stats/syllabus', '[data-cy="syllabus-coverage"]', {
+    clock: false,
+    act: () => {
+      // The runner's frame does not hold the clipboard; the copy is stubbed.
+      cy.window().then((win) => {
+        cy.stub(win.navigator.clipboard, 'writeText').resolves();
+      });
+      press('[data-cy="season-map-share-copy"]');
+      cy.get('.p-toast-message', { timeout: 4000 }).should('be.visible');
+      // Clear of the toast in the top corner, with the map's last rows above.
+      cy.get('[data-cy="season-map-share"]').scrollIntoView({ offset: { top: -320, left: 0 } });
+    },
+  });
+  // Nothing planned for this week or the next: both actions stay, disabled,
+  // and the sentence says why (#1863).
+  screen(
+    '40-stats-syllabus-share-none',
+    '/dashboard/stats/syllabus',
+    '[data-cy="syllabus-coverage"]',
+    {
+      clock: false,
+      stubs: () => {
+        cy.intercept('GET', '/api/v1/stats/syllabus/calendar*', {
+          statusCode: 200,
+          body: {
+            // The plans taken off the cells as well, so the map agrees.
+            data: {
+              ...SYLLABUS_CALENDAR,
+              positions: SYLLABUS_CALENDAR.positions.map((position) => ({
+                ...position,
+                cells: position.cells
+                  .map((cell) => ({ ...cell, planned: 0 }))
+                  .filter((cell) => cell.held + cell.unconfirmed > 0),
+              })),
+              lessons: SYLLABUS_CALENDAR.lessons.filter((lesson) => lesson.state !== 'planned'),
+            },
+          },
+        });
+      },
+      act: () => {
+        cy.get('[data-cy="season-map-share-copy"] button').should('be.disabled');
+        cy.get('[data-cy="season-map-share"]').scrollIntoView({ offset: { top: -320, left: 0 } });
+      },
+    },
+  );
   screen('40-stats-syllabus-no-programme', '/dashboard/stats/syllabus', '[data-cy="stats-tabs"]', {
     clock: false,
     stubs: () => {

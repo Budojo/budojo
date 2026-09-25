@@ -571,6 +571,13 @@ function seedIntercepts(role: 'owner' | 'athlete' = 'owner'): void {
   // subscribe with no guard, so the catch-all's bare `{ data: [] }` throws an
   // uncaught TypeError and takes the whole host page down — the stats
   // overview and the athlete's profile both.
+  // The check-in's missing-regulars panel (#1730) reads `meta` off this; the
+  // catch-all above has none. Two sessions on record: the honest young-class
+  // line, which needs no fixture of its own.
+  cy.intercept('GET', '/api/v1/attendance/regulars*', {
+    statusCode: 200,
+    body: { data: [], meta: { occurrences: 2, occurrence_dates: ['2026-05-04', '2026-04-27'] } },
+  });
   cy.intercept('GET', '/api/v1/attendance/leaderboard*', {
     statusCode: 200,
     body: {

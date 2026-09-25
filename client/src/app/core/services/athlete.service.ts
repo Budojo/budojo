@@ -280,6 +280,8 @@ export type AthleteSortOrder = 'asc' | 'desc';
 
 export type AthletePaidFilter = 'yes' | 'no';
 
+export type AthleteBirthdayFilter = 'today' | 'week';
+
 export interface AthleteFilters {
   belt?: Belt;
   status?: AthleteListStatus;
@@ -300,6 +302,19 @@ export interface AthleteFilters {
    * rows. Hidden in the UI when the academy hasn't configured a fee.
    */
   paid?: AthletePaidFilter;
+  /**
+   * Whose birthday falls today, or today and the six days after (#1754).
+   * Server-side for the same reason as `paid`. Says nothing about status:
+   * pass `status: 'active'` for only the people training.
+   */
+  birthday?: AthleteBirthdayFilter;
+  /**
+   * `YYYY-MM-DD`, sent as `from`: the local day the birthday window starts
+   * on. The server's day is UTC and near midnight is a day away from the
+   * owner's, so the caller names its own; the server accepts it within a
+   * day of its own and answers 422 otherwise.
+   */
+  birthdayFrom?: string;
 }
 
 /**
@@ -466,6 +481,8 @@ export class AthleteService {
     if (filters.sortOrder) params = params.set('sort_order', filters.sortOrder);
     if (filters.q) params = params.set('q', filters.q);
     if (filters.paid) params = params.set('paid', filters.paid);
+    if (filters.birthday) params = params.set('birthday', filters.birthday);
+    if (filters.birthdayFrom) params = params.set('from', filters.birthdayFrom);
     return this.http.get<AthleteListResponse>(this.base, { params });
   }
 

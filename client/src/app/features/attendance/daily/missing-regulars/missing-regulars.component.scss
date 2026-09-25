@@ -1,0 +1,153 @@
+:host {
+  display: block;
+}
+
+// One hairline-bordered block under the register, not a card on a card: it is
+// part of the page, like the roster's not-seen-lately section (#1729).
+.missing {
+  margin: 0;
+  border: 1px solid var(--p-content-border-color);
+  border-radius: var(--p-border-radius-lg);
+  background: var(--p-content-background);
+}
+
+.missing__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 3rem;
+  padding: 0.5rem 1rem;
+  border: 0;
+  background: transparent;
+  color: var(--p-text-color);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  border-radius: var(--p-border-radius-lg);
+  transition: background-color var(--budojo-motion-fast) var(--budojo-motion-decelerate);
+
+  &:hover {
+    background: var(--p-content-hover-background);
+  }
+
+  &:active {
+    background: var(--p-highlight-background);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--p-focus-ring-color);
+    outline-offset: -2px;
+  }
+}
+
+.missing__icon,
+.missing__chevron {
+  color: var(--p-text-muted-color);
+}
+
+.missing__title {
+  font-weight: 600;
+  color: var(--p-text-color);
+}
+
+.missing__tally {
+  color: var(--p-text-muted-color);
+  font-variant-numeric: tabular-nums;
+}
+
+.missing__chevron {
+  margin-left: auto;
+}
+
+.missing__description {
+  margin: 0;
+  padding: 0 1rem 0.5rem;
+  font-size: 0.875rem;
+  color: var(--p-text-muted-color);
+}
+
+.missing__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+// Mobile first, for the phone held in one hand on the mat: who and the two
+// ways to reach them on one line, the habit underneath. The identity's belt
+// spine is absolutely positioned, so the row is its containing block and
+// keeps a left gutter for it.
+.missing__row {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'who actions'
+    'why why';
+  align-items: center;
+  gap: 0.5rem 1rem;
+  padding: 0.5rem 1rem 0.5rem 1.5rem;
+  border-top: 1px solid var(--p-content-border-color);
+
+  @media (min-width: 768px) {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr) auto;
+    grid-template-areas: 'who why actions';
+  }
+}
+
+.missing__who {
+  grid-area: who;
+  min-width: 0;
+}
+
+.missing__why {
+  grid-area: why;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 0.5rem;
+  min-width: 0;
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--p-text-muted-color);
+  font-variant-numeric: tabular-nums;
+}
+
+.missing__actions {
+  grid-area: actions;
+}
+
+// The folded states that have nothing to open: one line, no chevron, no
+// button — a toggle that opens onto nothing would be a false affordance.
+.missing__line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 3rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  color: var(--p-text-muted-color);
+}
+
+.missing__retry {
+  min-height: 3rem;
+  padding: 0 1rem;
+  border: 0;
+  border-radius: var(--p-border-radius-md);
+  background: transparent;
+  color: var(--p-primary-600);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color var(--budojo-motion-fast) var(--budojo-motion-decelerate);
+
+  &:hover {
+    background: var(--p-content-hover-background);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--p-focus-ring-color);
+    outline-offset: -2px;
+  }
+}

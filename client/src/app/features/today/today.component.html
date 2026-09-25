@@ -87,9 +87,11 @@
       </h2>
 
       <!--
-        Two requests feed this card, and each fails on its own. The all-clear
-        is said only when both have answered and found nothing: a count still
-        loading, or one that failed, is not a zero.
+        Three sources feed this card, and each fails on its own: the
+        documents, the backup bridge (#1751), and the unpaid count from the
+        16th (#1753). The all-clear is said only when all of them have
+        answered and found nothing: a count still loading, or one that
+        failed, is not a zero.
       -->
       @if (watchRows().length > 0) {
         <ul class="today-rows">
@@ -130,7 +132,7 @@
           {{ 'today.watch.documentsError' | translate }}
         </p>
       }
-      @if (unpaid()?.state === 'error') {
+      @if (unpaidIsAlert() && unpaid()?.state === 'error') {
         <p class="today-card__note" data-cy="today-watch-unpaid-error">
           {{ 'today.watch.unpaidError' | translate }}
         </p>
@@ -201,6 +203,24 @@
             <span class="today-row__value">{{ presences() }}</span>
           </li>
         }
+        <!--
+          Before the 16th, "not paid yet" is the normal state of the month
+          (#1753): a line with the week's other numbers, not a row to check.
+        -->
+        @if (notYetPaid(); as due) {
+          <li>
+            <a
+              class="today-row today-row--link"
+              routerLink="/dashboard/athletes"
+              [queryParams]="{ paid: 'no' }"
+              data-cy="today-week-unpaid"
+            >
+              <span class="today-row__label">{{ due.label }}</span>
+              <span class="today-row__value">{{ due.count }}</span>
+              <i class="pi pi-angle-right today-row__chevron" aria-hidden="true"></i>
+            </a>
+          </li>
+        }
         @if (coverage(); as cov) {
           @if (cov.totals.in_scope > 0) {
             <li>
@@ -253,6 +273,39 @@
         }
       </div>
     </section>
+
+    <!-- ── Compleanni ────────────────────────────────────────────────── -->
+    <!--
+      "Who do I message today" (#1754): no card on a week without a birthday,
+      and on each row the way to send it — WhatsApp and a call, the contact
+      actions the not-seen-lately rows use (#1869), which work on the desktop
+      build through the owner's own phone and browser.
+    -->
+    @if (birthdayRows().length > 0) {
+      <section class="today-card" aria-labelledby="today-birthdays-title" data-cy="today-birthdays">
+        <h2 id="today-birthdays-title" class="today-card__title">
+          {{ 'today.birthdays.title' | translate }}
+        </h2>
+        <ul class="today-birthdays">
+          @for (b of birthdayRows(); track b.athlete.id) {
+            <li
+              class="today-birthdays__row"
+              [class.today-birthdays__row--today]="b.ahead === 0"
+              [attr.data-cy]="'today-birthday-' + b.athlete.id"
+            >
+              <app-athlete-identity [athlete]="b.athlete" [linkToDetail]="true" />
+              <span class="today-birthdays__when">{{ b.label }}</span>
+              <app-contact-actions
+                [countryCode]="b.athlete.phone_country_code"
+                [nationalNumber]="b.athlete.phone_national_number"
+                [name]="b.athlete.first_name + ' ' + b.athlete.last_name"
+                [dataCy]="'birthday-contact-' + b.athlete.id"
+              />
+            </li>
+          }
+        </ul>
+      </section>
+    }
   </div>
 
   <!--

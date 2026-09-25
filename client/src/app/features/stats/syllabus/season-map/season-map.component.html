@@ -158,6 +158,56 @@
     </table>
   </div>
 
+  @if (canShare()) {
+    <!--
+      The week's plan for the academy's group (#1863), on the current season
+      only. Two secondary actions: the page's own subject is the map, and
+      neither of these is its primary action. With nothing to send both stay,
+      disabled, and the sentence says why — an action that vanishes teaches
+      nobody that it exists.
+    -->
+    <div class="season-map__share" data-cy="season-map-share">
+      <p class="season-map__share-text" data-cy="season-map-share-text">{{ shareSentence() }}</p>
+      <div class="season-map__share-actions">
+        <p-button
+          type="button"
+          severity="secondary"
+          [outlined]="true"
+          icon="pi pi-copy"
+          [label]="'stats.syllabus.map.share.copy' | translate"
+          [disabled]="weekPlan() === null"
+          (onClick)="copyWeekPlan()"
+          data-cy="season-map-share-copy"
+        />
+        @if (whatsappLink(); as link) {
+          <a
+            pButton
+            class="season-map__share-link"
+            severity="secondary"
+            [outlined]="true"
+            [href]="link"
+            target="_blank"
+            rel="noopener noreferrer"
+            data-cy="season-map-share-whatsapp"
+          >
+            <i class="pi pi-whatsapp" pButtonIcon aria-hidden="true"></i>
+            <span pButtonLabel>{{ 'stats.syllabus.map.share.whatsapp' | translate }}</span>
+          </a>
+        } @else {
+          <p-button
+            type="button"
+            severity="secondary"
+            [outlined]="true"
+            icon="pi pi-whatsapp"
+            [label]="'stats.syllabus.map.share.whatsapp' | translate"
+            [disabled]="true"
+            data-cy="season-map-share-whatsapp"
+          />
+        }
+      </div>
+    </div>
+  }
+
   <!--
     One panel, two forms: a popover beside the map in a wide window, a bottom
     sheet in a narrow one. Either way it is a dialog, so it takes focus on its

@@ -81,6 +81,8 @@ interface Responses {
   daily?: { date: string; count: number }[];
   coverage?: unknown | 'error';
   recent?: Athlete[];
+  /** `?birthday=week` (#1754); `'error'` fails it. */
+  birthdays?: Athlete[] | 'error';
   /** Everyone on the books; the joiners' page carries it as `meta.total`. */
   roster?: number;
   /** The getting-started checklist's state; dismissed unless a test says otherwise. */
@@ -210,6 +212,18 @@ function flushAll(http: HttpTestingController, r: Responses = {}): void {
       data: r.recent ?? [],
       meta: { total: r.roster ?? 12, current_page: 1, per_page: 20, last_page: 1 },
     });
+
+  const birthdaysReq = http.expectOne(
+    (req) => req.url.endsWith('/athletes') && req.params.get('birthday') === 'week',
+  );
+  if (r.birthdays === 'error') {
+    birthdaysReq.flush({ message: 'boom' }, { status: 500, statusText: 'Server Error' });
+  } else {
+    birthdaysReq.flush({
+      data: r.birthdays ?? [],
+      meta: { total: 0, current_page: 1, per_page: 20, last_page: 1 },
+    });
+  }
 }
 
 function text(root: HTMLElement, cy: string): string {
@@ -382,6 +396,81 @@ describe('TodayComponent', () => {
     expect(text(fixture.nativeElement, 'today-watch')).not.toContain('Nothing to check');
   });
 
+  describe('unpaid fees are news only from the 16th, like the bell (#1753)', () => {
+    function renderOn(day: number, unpaidTotal: number, more: Responses = {}): HTMLElement {
+      vi.setSystemTime(new Date(2026, 8, day, 18, 30));
+      const http = setup({ monthly_fee_cents: 5000 });
+      const fixture = TestBed.createComponent(TodayComponent);
+      fixture.detectChanges();
+      flushAll(http, {
+        health: { data: [], missing_medical_certificate: [] },
+        unpaidTotal,
+        ...more,
+      });
+      fixture.detectChanges();
+      if (!more.unpaidPending) http.verify();
+      return fixture.nativeElement as HTMLElement;
+    }
+
+    it('on the 3rd, a neutral line in the week, not a row to check', () => {
+      const root = renderOn(3, 4);
+
+      expect(root.querySelector('[data-cy="today-watch-unpaid"]')).toBeNull();
+      expect(text(root, 'today-week-unpaid')).toContain('4');
+      expect(text(root, 'today-week-unpaid')).toContain('September fees not paid yet');
+      expect(root.querySelector('[data-cy="today-week-unpaid"]')?.getAttribute('href')).toContain(
+        '/dashboard/athletes?paid=no',
+      );
+      // Nothing else to check, and a not-yet-paid fee is not something to check yet.
+      expect(text(root, 'today-watch')).toContain('Nothing to check');
+    });
+
+    it('on the 15th, still neutral', () => {
+      const root = renderOn(15, 4);
+
+      expect(root.querySelector('[data-cy="today-watch-unpaid"]')).toBeNull();
+      expect(root.querySelector('[data-cy="today-week-unpaid"]')).not.toBeNull();
+    });
+
+    it('on the 16th, a row to check, and no longer in the week', () => {
+      const root = renderOn(16, 4);
+
+      expect(text(root, 'today-watch-unpaid')).toContain('September fees not paid');
+      expect(root.querySelector('[data-cy="today-week-unpaid"]')).toBeNull();
+    });
+
+    it('on the 17th, still a row to check', () => {
+      const root = renderOn(17, 4);
+
+      expect(root.querySelector('[data-cy="today-watch-unpaid"]')).not.toBeNull();
+    });
+
+    it('on the 3rd, a count still loading does not hold up "nothing to check"', () => {
+      const root = renderOn(3, 4, { unpaidPending: true });
+
+      expect(text(root, 'today-watch')).toContain('Nothing to check');
+      expect(root.querySelector('[data-cy="today-watch-unpaid-error"]')).toBeNull();
+    });
+
+    it('on the 3rd, a count that failed is not something to check either', () => {
+      const root = renderOn(3, 4, { unpaidError: true });
+
+      expect(text(root, 'today-watch')).toContain('Nothing to check');
+      expect(root.querySelector('[data-cy="today-watch-unpaid-error"]')).toBeNull();
+      // And the week's line, like the week's other lines, fails silently.
+      expect(root.querySelector('[data-cy="today-week-unpaid"]')).toBeNull();
+    });
+
+    it('with nobody owing, nothing at all — not "0"', () => {
+      for (const day of [3, 16]) {
+        TestBed.resetTestingModule();
+        const root = renderOn(day, 0);
+        expect(root.querySelector('[data-cy="today-watch-unpaid"]')).toBeNull();
+        expect(root.querySelector('[data-cy="today-week-unpaid"]')).toBeNull();
+      }
+    });
+  });
+
   it('keeps a loaded unpaid count when the documents check fails', () => {
     const http = setup({ monthly_fee_cents: 5000 });
     const fixture = TestBed.createComponent(TodayComponent);
@@ -439,6 +528,102 @@ describe('TodayComponent', () => {
     expect(text(root, 'today-teach')).toContain('For Venerdi at 19:00');
     expect(text(root, 'today-teach')).not.toContain('Friday');
     http.verify();
+  });
+
+  it("asks once for the week's birthdays of the people training", () => {
+    const http = setup();
+    const fixture = TestBed.createComponent(TodayComponent);
+    fixture.detectChanges();
+    const birthdaysReq = http
+      .match((req) => req.url.endsWith('/athletes') && req.params.get('birthday') !== null)
+      .map((req) => req.request);
+    // One request, for the people training: an inactive athlete is not
+    // someone to message on Today.
+    expect(birthdaysReq).toHaveLength(1);
+    expect(birthdaysReq[0].params.get('birthday')).toBe('week');
+    expect(birthdaysReq[0].params.get('status')).toBe('active');
+    // The window starts from the owner's own day, not the server's UTC one.
+    expect(birthdaysReq[0].params.get('from')).toBe('2026-09-24');
+    http.expectNone((req) => req.url.endsWith('/athletes') && req.params.get('birthday') !== null);
+  });
+
+  it("names today's birthdays first with the age turned, and the week's by day", () => {
+    const http = setup();
+    const fixture = TestBed.createComponent(TodayComponent);
+    fixture.detectChanges();
+    flushAll(http, {
+      birthdays: [
+        athlete({ id: 7, first_name: 'Luca', last_name: 'Conti', date_of_birth: '1995-09-26' }),
+        athlete({ id: 8, first_name: 'Sara', last_name: 'Neri', date_of_birth: '1990-09-24' }),
+      ],
+    });
+    fixture.detectChanges();
+
+    const root = fixture.nativeElement as HTMLElement;
+    const rows = [...root.querySelectorAll('[data-cy^="today-birthday-"]')];
+    expect(rows.map((r) => r.getAttribute('data-cy'))).toEqual([
+      'today-birthday-8',
+      'today-birthday-7',
+    ]);
+    expect(text(root, 'today-birthday-8')).toContain('Sara Neri');
+    expect(text(root, 'today-birthday-8')).toContain('Turns 36 today');
+    // Saturday, from the weekday names the timetable already uses.
+    expect(text(root, 'today-birthday-7')).toContain('Sat');
+    expect(text(root, 'today-birthday-7')).not.toContain('Turns');
+    expect(rows[0].querySelector('a')?.getAttribute('href')).toBe('/dashboard/athletes/8');
+    http.verify();
+  });
+
+  it('puts the message and the call on every birthday row, and says why when there is no number', () => {
+    const http = setup();
+    const fixture = TestBed.createComponent(TodayComponent);
+    fixture.detectChanges();
+    flushAll(http, {
+      birthdays: [
+        athlete({
+          id: 8,
+          first_name: 'Sara',
+          last_name: 'Neri',
+          date_of_birth: '1990-09-24',
+          phone_country_code: '+39',
+          phone_national_number: '3331234567',
+        }),
+        athlete({ id: 7, first_name: 'Luca', last_name: 'Conti', date_of_birth: '1995-09-26' }),
+      ],
+    });
+    fixture.detectChanges();
+
+    // The card answers "who do I message today": the answer carries the way
+    // to do it (#1869), as the not-seen-lately rows do.
+    const root = fixture.nativeElement as HTMLElement;
+    const whatsapp = root.querySelector(
+      '[data-cy="today-birthday-8"] [data-cy="birthday-contact-8-whatsapp"]',
+    );
+    expect(whatsapp?.getAttribute('href')).toBe('https://wa.me/393331234567');
+    expect(
+      root
+        .querySelector('[data-cy="today-birthday-8"] [data-cy="birthday-contact-8-call"]')
+        ?.getAttribute('href'),
+    ).toBe('tel:+393331234567');
+    expect(
+      root.querySelector('[data-cy="today-birthday-7"] [data-cy="birthday-contact-7-none"]'),
+    ).not.toBeNull();
+    http.verify();
+  });
+
+  it('shows no birthdays card when nobody has one this week, or the list could not be read', () => {
+    for (const birthdays of [[], 'error'] as const) {
+      TestBed.resetTestingModule();
+      const http = setup();
+      const fixture = TestBed.createComponent(TodayComponent);
+      fixture.detectChanges();
+      flushAll(http, { birthdays: birthdays === 'error' ? 'error' : [] });
+      fixture.detectChanges();
+
+      const root = fixture.nativeElement as HTMLElement;
+      expect(root.querySelector('[data-cy="today-birthdays"]')).toBeNull();
+      http.verify();
+    }
   });
 
   it('does not reload on a return the same day, while the planned class is still ahead', () => {
@@ -904,6 +1089,55 @@ describe('TodayComponent', () => {
 
       expect(text(root, 'today-watch')).not.toContain('Nothing to check');
       expect(text(root, 'today-watch-backup')).toContain('only on this computer');
+      http.verify();
+    });
+
+    it('reads the backup again overnight before saying all clear', async () => {
+      // Six days old on Thursday evening, eight on Friday morning: the night
+      // is what turns this copy into an alert.
+      const aging: BackupFolderStateView = { ...FOLDER, lastCopyAt: '2026-09-18T00:00:00Z' };
+      let calls = 0;
+      let answer: (state: BackupFolderStateView) => void = () => undefined;
+      const http = setup({}, [
+        {
+          provide: BackupFolderService,
+          useValue: {
+            available: true,
+            state: () =>
+              ++calls === 1
+                ? Promise.resolve(aging)
+                : new Promise<BackupFolderStateView>((resolve) => (answer = resolve)),
+          },
+        },
+        {
+          provide: DriveSyncService,
+          useValue: { available: true, state: () => Promise.resolve(NO_DRIVE) },
+        },
+      ]);
+      const quiet = { health: { data: [], missing_medical_certificate: [] } };
+      const fixture = TestBed.createComponent(TodayComponent);
+      fixture.detectChanges();
+      flushAll(http, quiet);
+      await fixture.whenStable();
+      fixture.detectChanges();
+      const root = fixture.nativeElement as HTMLElement;
+      expect(text(root, 'today-watch')).toContain('Nothing to check');
+
+      // Friday 08:00: everything else answers before the bridge does.
+      vi.setSystemTime(new Date(2026, 8, 25, 8, 0));
+      document.dispatchEvent(new Event('visibilitychange'));
+      fixture.detectChanges();
+      flushAll(http, quiet);
+      fixture.detectChanges();
+      expect(calls).toBe(2);
+      expect(text(root, 'today-watch')).not.toContain('Nothing to check');
+
+      answer(aging);
+      // The bridge's promise chain is not a tracked task: let it drain.
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      fixture.detectChanges();
+      expect(text(root, 'today-watch-backup')).toContain('The last copy outside this computer');
+      expect(text(root, 'today-watch')).not.toContain('Nothing to check');
       http.verify();
     });
 

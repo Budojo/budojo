@@ -65,6 +65,18 @@ describe('AthleteService', () => {
       );
       req.flush({ data: [], meta: { current_page: 2, last_page: 2, total: 0, per_page: 20 } });
     });
+
+    it('asks the server for a birthday window, never filtering the page itself (#1754)', () => {
+      service.list({ birthday: 'week', birthdayFrom: '2026-09-25', status: 'active' }).subscribe();
+      const req = httpMock.expectOne(
+        (r) =>
+          r.url === '/api/v1/athletes' &&
+          r.params.get('birthday') === 'week' &&
+          r.params.get('from') === '2026-09-25' &&
+          r.params.get('status') === 'active',
+      );
+      req.flush({ data: [], meta: { current_page: 1, last_page: 1, total: 0, per_page: 20 } });
+    });
   });
 
   describe('get', () => {

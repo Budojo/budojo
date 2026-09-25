@@ -442,6 +442,23 @@
       }}
     </p>
   }
+
+  <!--
+    Who usually comes to this class and is not here (#1730). Below the
+    register, folded: the table is what the screen is for, and the header's
+    count says whether to open it. Only with a class — a regular is a regular
+    of a class, and the screen already refuses to record without one.
+  -->
+  @if (selectedClassId() !== null) {
+    <app-missing-regulars
+      class="attendance__missing"
+      [regulars]="regulars()"
+      [failed]="regularsFailed()"
+      [present]="presentMap()"
+      [date]="selectedDate()"
+      (retry)="loadRegulars()"
+    />
+  }
 </section>
 
 <!--

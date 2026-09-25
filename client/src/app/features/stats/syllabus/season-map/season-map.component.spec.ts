@@ -111,10 +111,11 @@ function setup(classes: AcademyClass[] = CLASSES) {
 
   const fixture = TestBed.createComponent(SeasonMapComponent);
   fixture.componentRef.setInput('positions', POSITIONS);
+  // The timetable comes from the host (#1656): the report reads it once for
+  // both planning views, so the map never asks for its own.
+  fixture.componentRef.setInput('classes', classes);
   const httpMock = TestBed.inject(HttpTestingController);
   fixture.detectChanges();
-  // The timetable, read once, for what a week ahead can be planned into.
-  httpMock.expectOne(CLASSES_URL).flush({ data: classes });
   return { fixture, component: fixture.componentInstance, httpMock };
 }
 
@@ -314,6 +315,13 @@ describe('SeasonMapComponent (#1858)', () => {
     expect(fixture.nativeElement.querySelector('[data-cy="season-map-error"]')).toBeNull();
   });
 
+  it('plans from the timetable its host hands it, and never reads one itself', () => {
+    const { httpMock } = setup();
+    flush(httpMock);
+
+    httpMock.expectNone(CLASSES_URL);
+  });
+
   describe('planning ahead (#1859)', () => {
     // Wednesday 14 October 2026, midday, as the calendar says: the window a
     // plan opens on also reads the local clock.
@@ -511,5 +519,141 @@ describe('SeasonMapComponent (#1858)', () => {
       ).click();
       expect(none.component['panel']()?.plan).toBeNull();
     });
+  });
+});
+
+describe('SeasonMapComponent — the week plan for the group (#1863)', () => {
+  afterEach(() => {
+    TestBed.inject(HttpTestingController).verify();
+    Reflect.deleteProperty(navigator, 'clipboard');
+  });
+
+  // The default calendar's today is Wednesday 14 October, with nothing left
+  // planned that week: the plan is next week's, Monday 19.
+  const NEXT_WEEK_TEXT = "The week's plan\nMon 19 · Fundamentals · Closed guard";
+
+  function stubClipboard(writeText: () => Promise<void>) {
+    const spy = vi.fn(writeText);
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: spy },
+      configurable: true,
+    });
+    return spy;
+  }
+
+  function share(fixture: { nativeElement: HTMLElement }) {
+    const el = fixture.nativeElement;
+    return {
+      text: el.querySelector('[data-cy="season-map-share-text"]')?.textContent ?? '',
+      copy: el.querySelector('[data-cy="season-map-share-copy"] button') as HTMLButtonElement,
+      whatsapp: el.querySelector('[data-cy="season-map-share-whatsapp"]') as HTMLElement,
+    };
+  }
+
+  it('offers the plan of the week ahead, and a WhatsApp link that carries it', () => {
+    const { fixture, httpMock } = setup();
+    flush(httpMock);
+    fixture.detectChanges();
+
+    const { text, copy, whatsapp } = share(fixture);
+    expect(text).toContain('19 Oct');
+    expect(copy.disabled).toBe(false);
+    expect(whatsapp.tagName).toBe('A');
+    expect(whatsapp.getAttribute('href')).toBe(
+      `https://wa.me/?text=${encodeURIComponent(NEXT_WEEK_TEXT)}`,
+    );
+    // The desktop shell opens target=_blank in the system browser.
+    expect(whatsapp.getAttribute('target')).toBe('_blank');
+    expect(whatsapp.getAttribute('rel')).toContain('noopener');
+  });
+
+  it('copies the plan and says so', async () => {
+    const { fixture, httpMock } = setup();
+    const messages = TestBed.inject(MessageService);
+    const toast = vi.spyOn(messages, 'add');
+    const writeText = stubClipboard(() => Promise.resolve());
+    flush(httpMock);
+    fixture.detectChanges();
+
+    share(fixture).copy.click();
+    await fixture.whenStable();
+
+    expect(writeText).toHaveBeenCalledWith(NEXT_WEEK_TEXT);
+    expect(toast).toHaveBeenCalledWith(
+      expect.objectContaining({
+        severity: 'success',
+        summary: 'Plan copied — paste it into the group.',
+      }),
+    );
+  });
+
+  it('points at WhatsApp when the clipboard refuses', async () => {
+    const { fixture, httpMock } = setup();
+    const toast = vi.spyOn(TestBed.inject(MessageService), 'add');
+    stubClipboard(() => Promise.reject(new Error('denied')));
+    flush(httpMock);
+    fixture.detectChanges();
+
+    share(fixture).copy.click();
+    await fixture.whenStable();
+
+    expect(toast).toHaveBeenCalledWith(
+      expect.objectContaining({ severity: 'info', summary: expect.stringContaining('WhatsApp') }),
+    );
+  });
+
+  it('says in words why there is nothing to send, with both actions off', () => {
+    const { fixture, httpMock } = setup();
+    flush(
+      httpMock,
+      calendar({
+        lessons: calendar().lessons.filter((lesson) => lesson.state === 'held'),
+      }),
+    );
+    fixture.detectChanges();
+
+    const { text, copy, whatsapp } = share(fixture);
+    expect(text).toContain('Nothing is planned for this week or the next');
+    expect(copy.disabled).toBe(true);
+    // No link to follow: a disabled button, not an anchor.
+    expect(whatsapp.tagName).not.toBe('A');
+    expect(whatsapp.querySelector('button')?.disabled).toBe(true);
+  });
+
+  it('shows nothing to share until the weeks arrive', () => {
+    const { fixture, httpMock } = setup();
+
+    expect(fixture.nativeElement.querySelector('[data-cy="season-map-share"]')).toBeNull();
+    flush(httpMock);
+  });
+
+  it('offers nothing to share on a season gone by', () => {
+    const { fixture, httpMock } = setup();
+    flush(httpMock);
+    fixture.componentRef.setInput('seasonsBack', 1);
+    fixture.detectChanges();
+    flush(httpMock, calendar({ lessons: [], today: '2026-10-14' }));
+    fixture.detectChanges();
+
+    // A past season has no week ahead: no row, rather than "nothing planned".
+    expect(fixture.nativeElement.querySelector('[data-cy="season-map-share"]')).toBeNull();
+  });
+
+  it('says the week ahead opens the new season rather than that nothing is planned', () => {
+    const { fixture, httpMock } = setup();
+    flush(
+      httpMock,
+      calendar({
+        season: { start: '2025-09-01', end: '2026-08-31', label: '2025/26' },
+        today: '2026-08-30',
+        lessons: [],
+      }),
+    );
+    fixture.detectChanges();
+
+    const { text, copy } = share(fixture);
+    expect(text).toContain('the new season');
+    expect(text).not.toContain('Nothing is planned');
+    expect(copy.disabled).toBe(true);
   });
 });

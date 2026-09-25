@@ -21,7 +21,7 @@
           <button
             type="button"
             class="sheet-head__step"
-            [disabled]="!canStepBack() || dirty() || loading()"
+            [disabled]="!canStepBack() || stepHeld() || loading()"
             (click)="step(-1)"
             [attr.aria-label]="'lessons.sheet.stepPrevious' | translate"
             data-cy="lesson-sheet-prev"
@@ -34,7 +34,7 @@
           <button
             type="button"
             class="sheet-head__step"
-            [disabled]="dirty() || loading()"
+            [disabled]="stepHeld() || loading()"
             (click)="step(1)"
             [attr.aria-label]="'lessons.sheet.stepNext' | translate"
             data-cy="lesson-sheet-next"
@@ -53,7 +53,7 @@
           </span>
         }
       </span>
-      @if (steppable() && dirty()) {
+      @if (steppable() && stepHeld()) {
         <!-- Why the arrows went quiet, said where they are. -->
         <span class="sheet-head__hint" data-cy="lesson-sheet-step-hint">
           {{ 'lessons.sheet.stepSaveFirst' | translate }}
@@ -159,7 +159,7 @@
       } @else {
         @if (chosen().length > 0 || departed().length > 0) {
           <section class="group" data-cy="lesson-sheet-chosen">
-            <h3 class="group__title">{{ 'lessons.sheet.chosen' | translate }}</h3>
+            <h3 class="group__title">{{ chosenTitle() | translate }}</h3>
             <div class="chips">
               @for (topic of chosen(); track topic.id) {
                 <button
