@@ -248,6 +248,35 @@ it('does NOT count an athlete with an EXPIRED medical certificate as missing (th
     expect(collect($response->json('missing_medical_certificate'))->pluck('id'))->not->toContain($athlete->id);
 });
 
+it('inlines the athlete\'s identity on an expiring document and a missing certificate (#1851)', function (): void {
+    $user = userWithAcademy();
+    $withDoc = Athlete::factory()->for($user->academy)->create([
+        'belt' => \App\Enums\Belt::Brown->value,
+        'stripes' => 1,
+        'date_of_birth' => '1985-07-02',
+    ]);
+    // An ID card, not a certificate: so this athlete is also missing one.
+    idCard($withDoc)->expiringIn(5)->create();
+
+    $response = $this->actingAs($user)->getJson('/api/v1/documents/expiring')->assertOk();
+
+    expect($response->json('data.0.athlete'))->toMatchArray([
+        'id' => $withDoc->id,
+        'belt' => 'brown',
+        'stripes' => 1,
+        'date_of_birth' => '1985-07-02',
+        'photo_url' => null,
+    ]);
+    $missing = collect($response->json('missing_medical_certificate'))->firstWhere('id', $withDoc->id);
+    expect($missing)->toMatchArray([
+        'first_name' => $withDoc->first_name,
+        'last_name' => $withDoc->last_name,
+        'belt' => 'brown',
+        'stripes' => 1,
+        'date_of_birth' => '1985-07-02',
+    ]);
+});
+
 it('ignores non-medical document types when computing missing_medical_certificate', function (): void {
     $user = userWithAcademy();
     $athlete = Athlete::factory()->for($user->academy)->create();

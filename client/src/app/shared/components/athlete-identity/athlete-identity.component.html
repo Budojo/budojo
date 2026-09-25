@@ -46,7 +46,8 @@
   @if (linkToDetail()) {
     <a
       class="athlete-identity__name"
-      [routerLink]="['/dashboard/athletes', athlete().id]"
+      [class.athlete-identity__name--stretched]="stretchLink()"
+      [routerLink]="detailLink()"
       data-cy="athlete-name-link"
       >{{ fullName() }}</a
     >

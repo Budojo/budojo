@@ -402,6 +402,27 @@ const ATHLETES = [
   }),
 ];
 
+/**
+ * A roster athlete as the aggregate lists carry them since #1851: the monthly
+ * summary, the owner's leaderboard and the expiring documents send the
+ * identity the row draws with the belt spine. Read from `ATHLETES`, so a
+ * person has the same belt on every screen of the audit.
+ */
+function identityOf(id: number) {
+  const a = ATHLETES.find((x) => x.id === id);
+  if (!a) throw new Error(`no roster athlete ${id}`);
+  return {
+    id: a.id,
+    first_name: a.first_name,
+    last_name: a.last_name,
+    belt: a.belt,
+    stripes: a.stripes,
+    date_of_birth: a.date_of_birth,
+    photo_url: a.photo_url,
+    user_avatar_url: a.user_avatar_url,
+  };
+}
+
 // Not seen lately (#1729): three roster athletes, one per tier, with the
 // numbers the endpoint would send for them. Taken FROM the roster fixture so
 // the section and the table never disagree about a person.
@@ -413,15 +434,8 @@ function atRiskRow(
   const a = ATHLETES.find((x) => x.id === id)!;
   return {
     athlete: {
-      id: a.id,
-      first_name: a.first_name,
-      last_name: a.last_name,
-      belt: a.belt,
-      stripes: a.stripes,
-      date_of_birth: a.date_of_birth,
+      ...identityOf(id),
       status: a.status,
-      photo_url: a.photo_url,
-      user_avatar_url: a.user_avatar_url,
       phone_country_code: a.phone_country_code,
       phone_national_number: a.phone_national_number,
     },
@@ -508,7 +522,7 @@ const EXPIRING = {
   data: [
     {
       ...DOCUMENTS_ONE[0],
-      athlete: { id: 1, first_name: 'Giulia', last_name: 'Ferraro' },
+      athlete: identityOf(1),
     },
     {
       ...document({
@@ -519,7 +533,7 @@ const EXPIRING = {
         issued_at: '2025-09-01',
         expires_at: '2026-09-10',
       }),
-      athlete: { id: 4, first_name: 'Sara', last_name: 'Colombo' },
+      athlete: identityOf(4),
     },
     {
       ...document({
@@ -530,13 +544,22 @@ const EXPIRING = {
         issued_at: '2025-10-01',
         expires_at: '2026-10-01',
       }),
-      athlete: { id: 7, first_name: 'Andrea', last_name: 'Gallo' },
+      athlete: identityOf(7),
     },
+    // One of the academy's own papers (#1743): no athlete, so no identity and
+    // no spine. Here so the card's inset is shot beside the athletes' (#1851).
+    document({
+      id: 47,
+      athlete_id: null,
+      academy_id: 1,
+      type: 'insurance',
+      original_name: 'polizza-rc-2026.pdf',
+      issued_at: '2025-10-12',
+      // Inside the 30-day window the endpoint uses, or it would not be listed.
+      expires_at: '2026-10-12',
+    }),
   ],
-  missing_medical_certificate: [
-    { id: 2, first_name: 'Luca', last_name: 'Moretti' },
-    { id: 8, first_name: 'Francesca', last_name: 'Marino' },
-  ],
+  missing_medical_certificate: [identityOf(2), identityOf(8)],
 };
 
 // ── Attendance, payments, promotions, carnets ────────────────────────────
@@ -586,13 +609,13 @@ const ATHLETE_SUMMARY = (() => {
 })();
 
 const ATTENDANCE_SUMMARY = [
-  { athlete_id: 3, first_name: 'Matteo', last_name: 'Bonanno', count: 6 },
-  { athlete_id: 1, first_name: 'Giulia', last_name: 'Ferraro', count: 5 },
-  { athlete_id: 2, first_name: 'Luca', last_name: 'Moretti', count: 4 },
-  { athlete_id: 4, first_name: 'Sara', last_name: 'Colombo', count: 3 },
-  { athlete_id: 6, first_name: 'Elena', last_name: 'Russo', count: 2 },
-  { athlete_id: 8, first_name: 'Francesca', last_name: 'Marino', count: 2 },
-  { athlete_id: 7, first_name: 'Andrea', last_name: 'Gallo', count: 1 },
+  { athlete_id: 3, first_name: 'Matteo', last_name: 'Bonanno', count: 6, athlete: identityOf(3) },
+  { athlete_id: 1, first_name: 'Giulia', last_name: 'Ferraro', count: 5, athlete: identityOf(1) },
+  { athlete_id: 2, first_name: 'Luca', last_name: 'Moretti', count: 4, athlete: identityOf(2) },
+  { athlete_id: 4, first_name: 'Sara', last_name: 'Colombo', count: 3, athlete: identityOf(4) },
+  { athlete_id: 6, first_name: 'Elena', last_name: 'Russo', count: 2, athlete: identityOf(6) },
+  { athlete_id: 8, first_name: 'Francesca', last_name: 'Marino', count: 2, athlete: identityOf(8) },
+  { athlete_id: 7, first_name: 'Andrea', last_name: 'Gallo', count: 1, athlete: identityOf(7) },
 ];
 
 const LEADERBOARD = {
@@ -606,6 +629,7 @@ const LEADERBOARD = {
       hours: 6.5,
       anonymous: false,
       is_self: true,
+      athlete: identityOf(3),
     },
     {
       rank: 2,
@@ -616,6 +640,7 @@ const LEADERBOARD = {
       hours: 5.25,
       anonymous: false,
       is_self: false,
+      athlete: identityOf(1),
     },
     {
       rank: 3,
@@ -626,6 +651,7 @@ const LEADERBOARD = {
       hours: 4,
       anonymous: false,
       is_self: false,
+      athlete: identityOf(2),
     },
     {
       rank: 4,
@@ -636,6 +662,7 @@ const LEADERBOARD = {
       hours: 3.5,
       anonymous: false,
       is_self: false,
+      athlete: identityOf(4),
     },
     {
       rank: 5,
@@ -646,6 +673,7 @@ const LEADERBOARD = {
       hours: 2,
       anonymous: false,
       is_self: false,
+      athlete: identityOf(6),
     },
   ],
   meta: { month: '2026-09' },
@@ -895,6 +923,149 @@ const SYLLABUS_COVERAGE = {
   timeline: [
     { on: '2026-09-06', covered: 1 },
     { on: '2026-09-13', covered: 3 },
+  ],
+};
+
+/** The Monday of every week of the 2026/27 season, the first one before it opens. */
+const SEASON_WEEKS = Array.from({ length: 53 }, (_, i) => {
+  const d = new Date(2026, 7, 31 + i * 7);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+});
+
+function calendarLesson(
+  id: number,
+  held_on: string,
+  classId: number,
+  state: 'held' | 'planned' | 'unconfirmed',
+  topics: { id: number; name: string; parent_id: number | null }[],
+) {
+  const klass = CLASSES.find((c) => c.id === classId) ?? CLASSES[0];
+  return {
+    id,
+    academy_class_id: classId,
+    held_on,
+    name: klass.name,
+    starts_at: klass.starts_at,
+    kind: klass.kind,
+    state,
+    position_ids: [...new Set(topics.map((t) => t.parent_id ?? t.id))],
+    topics,
+  };
+}
+
+/**
+ * The season map (#1858), agreeing with SYLLABUS_COVERAGE's taught dates:
+ * two weeks taught, today's lesson planned, the next weeks planned ahead, and
+ * one no-gi plan from last week that nobody checked into.
+ */
+const SYLLABUS_CALENDAR = {
+  season: SYLLABUS_COVERAGE.season,
+  kind: null,
+  today: TODAY,
+  weeks: SEASON_WEEKS,
+  positions: [
+    {
+      id: 1,
+      name: 'Closed guard',
+      kind: 'both',
+      cells: [
+        { week: '2026-08-31', held: 2, planned: 0, unconfirmed: 0 },
+        { week: '2026-09-07', held: 3, planned: 0, unconfirmed: 0 },
+        { week: '2026-09-28', held: 0, planned: 1, unconfirmed: 0 },
+      ],
+    },
+    {
+      id: 2,
+      name: 'Half guard',
+      kind: 'both',
+      cells: [
+        { week: '2026-09-07', held: 1, planned: 0, unconfirmed: 0 },
+        { week: '2026-09-21', held: 0, planned: 2, unconfirmed: 0 },
+      ],
+    },
+    {
+      id: 3,
+      name: 'Mount',
+      kind: 'both',
+      cells: [
+        { week: '2026-08-31', held: 2, planned: 0, unconfirmed: 0 },
+        // Taught on Monday, and a plan for Monday's second class nobody
+        // checked into: both have to show.
+        { week: '2026-09-07', held: 1, planned: 0, unconfirmed: 1 },
+      ],
+    },
+    {
+      id: 4,
+      name: 'Side control',
+      kind: 'both',
+      cells: [{ week: '2026-09-21', held: 0, planned: 1, unconfirmed: 0 }],
+    },
+    {
+      id: 5,
+      name: 'Back',
+      kind: 'both',
+      cells: [{ week: '2026-09-14', held: 0, planned: 1, unconfirmed: 0 }],
+    },
+    {
+      id: 6,
+      name: 'Standing',
+      kind: 'both',
+      cells: [{ week: '2026-08-31', held: 1, planned: 0, unconfirmed: 0 }],
+    },
+    {
+      id: 7,
+      name: 'Leg entanglements',
+      kind: 'nogi',
+      cells: [
+        { week: '2026-09-07', held: 0, planned: 0, unconfirmed: 1 },
+        { week: '2026-10-05', held: 0, planned: 1, unconfirmed: 0 },
+      ],
+    },
+  ],
+  lessons: [
+    calendarLesson(501, '2026-09-02', 4, 'held', [
+      { id: 11, name: 'Armbar', parent_id: 1 },
+      { id: 31, name: 'Americana', parent_id: 3 },
+      { id: 61, name: 'Double leg', parent_id: 6 },
+    ]),
+    calendarLesson(502, '2026-09-04', 5, 'held', [
+      { id: 14, name: 'Hip bump sweep', parent_id: 1 },
+      { id: 34, name: 'Upa escape', parent_id: 3 },
+    ]),
+    calendarLesson(503, '2026-09-07', 1, 'held', [
+      { id: 11, name: 'Armbar', parent_id: 1 },
+      { id: 31, name: 'Americana', parent_id: 3 },
+      { id: 21, name: 'Knee shield', parent_id: 2 },
+    ]),
+    calendarLesson(513, '2026-09-07', 2, 'unconfirmed', [
+      { id: 35, name: 'Elbow-knee escape', parent_id: 3 },
+    ]),
+    calendarLesson(504, '2026-09-09', 4, 'held', [
+      { id: 14, name: 'Hip bump sweep', parent_id: 1 },
+      { id: 16, name: 'Omoplata', parent_id: 1 },
+    ]),
+    calendarLesson(505, '2026-09-09', 3, 'unconfirmed', [
+      { id: 71, name: 'Straight ankle lock', parent_id: 7 },
+    ]),
+    calendarLesson(506, '2026-09-11', 5, 'held', [{ id: 11, name: 'Armbar', parent_id: 1 }]),
+    calendarLesson(507, '2026-09-14', 1, 'planned', [
+      { id: 53, name: 'Back escape', parent_id: 5 },
+    ]),
+    calendarLesson(508, '2026-09-21', 1, 'planned', [
+      { id: 21, name: 'Knee shield', parent_id: 2 },
+      { id: 23, name: 'Lockdown', parent_id: 2 },
+    ]),
+    calendarLesson(509, '2026-09-23', 4, 'planned', [
+      { id: 22, name: 'Old school sweep', parent_id: 2 },
+    ]),
+    calendarLesson(510, '2026-09-25', 5, 'planned', [
+      { id: 41, name: 'Escape to guard', parent_id: 4 },
+    ]),
+    calendarLesson(511, '2026-09-28', 1, 'planned', [
+      { id: 12, name: 'Triangle', parent_id: 1 },
+      { id: 13, name: 'Kimura', parent_id: 1 },
+    ]),
+    calendarLesson(512, '2026-10-07', 3, 'planned', [{ id: 72, name: 'Heel hook', parent_id: 7 }]),
   ],
 };
 
@@ -1384,6 +1555,10 @@ function seed(): void {
   cy.intercept('GET', '/api/v1/stats/syllabus/coverage*', {
     statusCode: 200,
     body: { data: SYLLABUS_COVERAGE },
+  });
+  cy.intercept('GET', '/api/v1/stats/syllabus/calendar*', {
+    statusCode: 200,
+    body: { data: SYLLABUS_CALENDAR },
   });
 }
 
@@ -2051,6 +2226,32 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
     clock: false,
     // Chart.js animates in over a second; a shot before that is an empty canvas.
     act: () => cy.wait(1500),
+  });
+  // The season map with one week opened on the lessons it counts (#1858).
+  screen('40-stats-syllabus-week', '/dashboard/stats/syllabus', '[data-cy="syllabus-coverage"]', {
+    clock: false,
+    act: () => {
+      press('[data-cy="season-map-cell-2-2026-09-21"]');
+      cy.get('[data-cy="season-map-popover"]', { timeout: 4000 }).should('be.visible');
+    },
+  });
+  // A position's whole season, from its name — the control every keyboard
+  // and fingertip reaches (#1858).
+  screen('40-stats-syllabus-season', '/dashboard/stats/syllabus', '[data-cy="syllabus-coverage"]', {
+    clock: false,
+    act: () => {
+      press('[data-cy="season-map-position-1"]');
+      cy.get('[data-cy="season-map-popover"]', { timeout: 4000 }).should('be.visible');
+    },
+  });
+  // A week with a lesson held and a plan nobody checked into: the fill, a
+  // hatched corner, and both lessons in the popover.
+  screen('40-stats-syllabus-missed', '/dashboard/stats/syllabus', '[data-cy="syllabus-coverage"]', {
+    clock: false,
+    act: () => {
+      press('[data-cy="season-map-cell-3-2026-09-07"]');
+      cy.get('[data-cy="season-map-popover"]', { timeout: 4000 }).should('be.visible');
+    },
   });
   screen('40-stats-syllabus-no-programme', '/dashboard/stats/syllabus', '[data-cy="stats-tabs"]', {
     clock: false,
