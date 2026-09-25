@@ -392,6 +392,30 @@ describe('SeasonMapComponent (#1858)', () => {
       expect(component['panel']()?.plan?.every((o) => o.classId === 8)).toBe(true);
     });
 
+    it('never offers a lesson past the end of the season', () => {
+      const { fixture, component, httpMock } = setup();
+      // The season closes on Tuesday 20 October; its last week still runs to Sunday.
+      flush(
+        httpMock,
+        calendar({ season: { start: '2026-09-01', end: '2026-10-20', label: '2026/27' } }),
+      );
+      fixture.detectChanges();
+
+      (
+        fixture.nativeElement.querySelector(
+          '[data-cy="season-map-cell-2-2026-10-19"]',
+        ) as HTMLButtonElement
+      ).click();
+      expect(component['panel']()?.plan?.map((o) => o.date)).toEqual(['2026-10-19']);
+
+      (
+        fixture.nativeElement.querySelector(
+          '[data-cy="season-map-position-2"]',
+        ) as HTMLButtonElement
+      ).click();
+      expect(component['panel']()?.plan?.map((o) => o.date)).toEqual(['2026-10-14', '2026-10-19']);
+    });
+
     it('offers no plan on a row no class of the timetable may teach', () => {
       // A gi-only timetable, and a no-gi position.
       const { fixture, component, httpMock } = setup([CLASSES[0]]);
