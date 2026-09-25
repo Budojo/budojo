@@ -1974,6 +1974,7 @@
       "clearSearch": "Cancella la ricerca",
       "noResults": "Niente nel programma corrisponde a «{{query}}».",
       "chosen": "Fatto",
+      "chosenPlanned": "In programma",
       "recent": "Fatto di recente",
       "programme": "Il programma",
       "noProgramme": "Nessun programma — impostalo da Accademia → Programma.",

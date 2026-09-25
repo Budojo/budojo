@@ -159,7 +159,7 @@
       } @else {
         @if (chosen().length > 0 || departed().length > 0) {
           <section class="group" data-cy="lesson-sheet-chosen">
-            <h3 class="group__title">{{ 'lessons.sheet.chosen' | translate }}</h3>
+            <h3 class="group__title">{{ chosenTitle() | translate }}</h3>
             <div class="chips">
               @for (topic of chosen(); track topic.id) {
                 <button

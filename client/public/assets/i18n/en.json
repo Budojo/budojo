@@ -1974,6 +1974,7 @@
       "clearSearch": "Clear the search",
       "noResults": "Nothing in the programme matches \"{{query}}\".",
       "chosen": "Covered",
+      "chosenPlanned": "Planned",
       "recent": "Taught lately",
       "programme": "The programme",
       "noProgramme": "No programme yet — set one up under Academy → Programme.",

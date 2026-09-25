@@ -852,6 +852,31 @@ describe('LessonSheetComponent — planning ahead (#1859)', () => {
     req.flush({ data: lesson({ held_on: '2026-09-28' }) });
   });
 
+  it('calls what a lesson still ahead will cover "planned", not "covered"', () => {
+    const { fixture, httpMock } = setupPlanning({ heldOn: '2026-09-21', chooseTopicId: 11 });
+    answerOpening(httpMock);
+    fixture.detectChanges();
+
+    expect(
+      fixture.nativeElement.querySelector('[data-cy="lesson-sheet-chosen"] .group__title')
+        .textContent,
+    ).toContain('Planned');
+  });
+
+  it('keeps "covered" for tonight and for the evenings gone by', () => {
+    const heading = (heldOn: string) => {
+      TestBed.resetTestingModule();
+      const { fixture, httpMock } = setupPlanning({ heldOn, chooseTopicId: 11 });
+      answerOpening(httpMock);
+      fixture.detectChanges();
+      return fixture.nativeElement.querySelector('[data-cy="lesson-sheet-chosen"] .group__title')
+        .textContent as string;
+    };
+
+    expect(heading('2026-09-14')).toContain('Covered');
+    expect(heading('2026-09-07')).toContain('Covered');
+  });
+
   it('holds the arrows once something besides the host’s topic is picked', () => {
     const { fixture, component, httpMock } = setupPlanning({ chooseTopicId: 11 });
     answerOpening(httpMock);

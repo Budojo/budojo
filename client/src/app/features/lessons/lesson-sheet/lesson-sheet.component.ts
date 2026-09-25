@@ -211,6 +211,14 @@ export class LessonSheetComponent {
   });
 
   /**
+   * What a lesson still ahead will cover is planned, not covered. Tonight
+   * and the evenings gone by keep "covered".
+   */
+  protected readonly chosenTitle = computed<string>(() =>
+    this.slot() > localIso(new Date()) ? 'lessons.sheet.chosenPlanned' : 'lessons.sheet.chosen',
+  );
+
+  /**
    * "Tonight" only for tonight's lesson. Anything else — a plan three weeks
    * out, an evening being backfilled — is "this lesson".
    */
@@ -632,31 +640,6 @@ export class LessonSheetComponent {
   private hostTopic(): number[] {
     const id = this.chooseTopicId();
     return id !== null && this.allTopics().some((t) => t.id === id) ? [id] : [];
-  }
-
-  /**
-   * Open the programme on the host's topic: its position expanded — the
-   * position itself, or the one a technique sits under — and scrolled into
-   * the middle of the sheet once it is drawn.
-   */
-  private revealFocus(positions: readonly SyllabusTopic[]): void {
-    const focus = this.focusTopicId();
-    if (focus === null) return;
-
-    const position = positions.find(
-      (p) => p.id === focus || (p.children ?? []).some((c) => c.id === focus),
-    );
-    if (position === undefined) return;
-
-    this.expanded.set(new Set([position.id]));
-    runInInjectionContext(this.injector, () =>
-      afterNextRender(() => {
-        document.querySelector(`[data-cy="lesson-expand-${position.id}"]`)?.scrollIntoView({
-          block: 'center',
-          behavior: prefersReducedMotion() ? 'auto' : 'smooth',
-        });
-      }),
-    );
   }
 
   /**
