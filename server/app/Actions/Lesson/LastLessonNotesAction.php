@@ -6,6 +6,7 @@ namespace App\Actions\Lesson;
 
 use App\Models\Lesson;
 use App\Models\SyllabusTopic;
+use Carbon\CarbonImmutable;
 
 class LastLessonNotesAction
 {
@@ -22,12 +23,19 @@ class LastLessonNotesAction
      * Held means somebody was checked in, the definition every coverage read
      * uses: a plan for next week that already says "add the belly-down
      * finish" did not happen, and must not read as the last time.
+     *
+     * And "last" means **before** the evening being looked at. The sheet is
+     * open on a day; that day's lesson — a plan whose note becomes held the
+     * moment somebody is checked in — is this evening, not the last one, and
+     * answering with it would hide the real previous notes behind tonight's.
+     * Two classes on the same earlier evening: the later one answers.
      */
-    public function execute(SyllabusTopic $topic): ?Lesson
+    public function execute(SyllabusTopic $topic, CarbonImmutable $before): ?Lesson
     {
         /** @var Lesson|null $lesson */
         $lesson = Lesson::query()
             ->where('academy_id', $topic->academy_id)
+            ->whereDate('held_on', '<', $before->toDateString())
             ->whereHas('topics', static fn ($q) => $q->whereKey($topic->id))
             ->whereHas('attendanceRecords')
             ->whereNotNull('notes')

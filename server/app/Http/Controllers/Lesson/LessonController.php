@@ -122,7 +122,7 @@ class LessonController extends Controller
      */
     public function lastNotes(LastLessonNotesRequest $request): JsonResponse
     {
-        $lesson = $this->lastNotes->execute($request->topic());
+        $lesson = $this->lastNotes->execute($request->topic(), $request->before());
 
         return response()->json([
             'data' => $lesson === null ? null : new LessonResource($lesson),

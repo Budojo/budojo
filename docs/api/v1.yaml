@@ -3587,9 +3587,13 @@ paths:
       tags: [attendance]
       summary: The notes of the last evening that taught a topic (#1862)
       description: |
-        The latest **held** lesson that named this topic and carried notes —
-        blank ones skipped — or `null`. Held means somebody was checked in: a
-        plan that already carries a note did not happen, and never answers.
+        The latest **held** lesson **before `before`** that named this topic
+        and carried notes — blank ones skipped — or `null`. Held means
+        somebody was checked in: a plan that already carries a note did not
+        happen, and never answers. `before` is the day of the lesson the
+        sheet is open on: that evening's own lesson — a plan whose note is
+        held the moment somebody is checked in — is this evening, not the
+        last one. Two classes on the same earlier day: the later one answers.
 
         Lesson notes are about the evening and are never parsed into topics
         (#1564); this finds a lesson, not a sentence, and the whole lesson
@@ -3607,6 +3611,13 @@ paths:
           schema:
             type: integer
             format: int64
+        - in: query
+          name: before
+          required: true
+          description: '`YYYY-MM-DD`, the day of the lesson being looked at. Only lessons held before it answer.'
+          schema:
+            type: string
+            format: date
       responses:
         '200':
           description: The lesson, or null

@@ -8,6 +8,7 @@ use App\Authorization\Capability;
 use App\Http\Requests\Concerns\AuthorizesAcademyCapability;
 use App\Models\SyllabusTopic;
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Validation\Rule;
@@ -44,7 +45,20 @@ class LastLessonNotesRequest extends FormRequest
                     ->where('academy_id', $user?->activeAcademyId() ?? 0)
                     ->whereNull('deleted_at'),
             ],
+            // The day of the lesson the sheet is open on. "The last evening"
+            // is one before it: tonight's plan, once somebody is checked in,
+            // is held — and still this evening, not the last one.
+            'before' => ['required', 'date_format:Y-m-d'],
         ];
+    }
+
+    /** The sheet's own day; only evenings before it answer. */
+    public function before(): CarbonImmutable
+    {
+        $day = $this->validated('before');
+
+        return CarbonImmutable::createFromFormat('Y-m-d', \is_string($day) ? $day : '')
+            ?: CarbonImmutable::today();
     }
 
     /** The topic, resolved after validation. */

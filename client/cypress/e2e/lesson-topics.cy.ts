@@ -257,7 +257,11 @@ describe('Lesson topics — check-in', () => {
     cy.get('[data-cy="lesson-expand-1"]').click();
 
     cy.get('[data-cy="lesson-detail-toggle-tree-11"]').click();
-    cy.wait('@lastNotes').its('request.url').should('contain', 'syllabus_topic_id=11');
+    cy.wait('@lastNotes')
+      .its('request.url')
+      .should('contain', 'syllabus_topic_id=11')
+      // Evenings before tonight only: tonight's own plan is not "the last".
+      .and('contain', `before=${TODAY_ISO}`);
 
     cy.get('[data-cy="lesson-detail-tree-11"]').within(() => {
       cy.get('[data-cy="lesson-detail-notes"]').should('contain.text', 'S-mount');

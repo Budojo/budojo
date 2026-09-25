@@ -276,8 +276,10 @@ export class LessonSheetComponent {
     this.setLastEvening(id, { state: 'loading' });
     // A side panel failing must not cost the sheet anything: no notes found
     // and no notes fetched read the same, and the rest of the detail stands.
+    // Only evenings before this sheet's day: tonight's plan, once somebody is
+    // checked in, is held — and still this evening, not the last one.
     this.lessonService
-      .lastNotes(id)
+      .lastNotes(id, this.heldOn())
       .pipe(catchError(() => of(null)))
       .subscribe((lesson) => this.setLastEvening(id, { state: 'done', lesson }));
   }

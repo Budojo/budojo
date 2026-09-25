@@ -680,6 +680,9 @@ describe('LessonSheetComponent — how it is taught here (#1862)', () => {
     const el: HTMLElement = fixture.nativeElement;
     const req = httpMock.expectOne((r) => r.url === LAST_NOTES_URL);
     expect(req.request.params.get('syllabus_topic_id')).toBe('11');
+    // Only evenings before the one the sheet is open on: tonight's plan, once
+    // held, is this evening — not the last one.
+    expect(req.request.params.get('before')).toBe('2026-09-14');
     // Loading is said, not left blank.
     expect(el.querySelector('[data-cy="lesson-detail-tree-11"]')?.textContent).toContain(
       'Looking for the last evening',

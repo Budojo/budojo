@@ -55,10 +55,11 @@ function notedLesson(mixed $test, string $date, array $topics, ?string $notes, b
     return $lesson;
 }
 
-function lastNotes(mixed $test, int $topicId): mixed
+/** The last evening before the sheet's own date — tonight, unless told otherwise. */
+function lastNotes(mixed $test, int $topicId, string $before = '2026-11-18'): mixed
 {
     return $test->actingAs($test->user)
-        ->getJson("/api/v1/lessons/last-notes?syllabus_topic_id={$topicId}")
+        ->getJson("/api/v1/lessons/last-notes?syllabus_topic_id={$topicId}&before={$before}")
         ->assertOk()
         ->json('data');
 }
@@ -85,11 +86,66 @@ it('skips a later lesson that taught it without notes', function (): void {
 
 it('never answers with a plan — a lesson nobody was checked into', function (): void {
     notedLesson($this, '2026-10-07', [$this->armbar], 'Worked it from the S-mount.');
-    // Next week's plan already carries a note; it did not happen yet.
-    notedLesson($this, '2026-11-25', [$this->armbar], 'Plan: add the belly-down finish.', held: false);
+    // A plan with a note that nobody was ever checked into: it did not happen.
+    notedLesson($this, '2026-11-11', [$this->armbar], 'Plan: add the belly-down finish.', held: false);
 
     expect(lastNotes($this, $this->armbar->id)['held_on'])->toBe('2026-10-07');
 });
+
+it('never answers with the evening the sheet is open on, once that plan is held', function (): void {
+    notedLesson($this, '2026-10-07', [$this->armbar], 'Worked it from the S-mount.');
+    // Tonight's plan carried a note, and tonight somebody was checked in:
+    // held now, and still not "the last evening" — it is this one.
+    notedLesson($this, '2026-11-18', [$this->armbar], 'Plan: add the belly-down finish.');
+
+    expect(lastNotes($this, $this->armbar->id, before: '2026-11-18')['held_on'])->toBe('2026-10-07');
+});
+
+it('answers with the later of two classes on the same evening', function (): void {
+    $late = AcademyClass::factory()->for($this->academy)->create(['name' => 'Advanced', 'starts_at' => '20:30']);
+    foreach ([[$this->class, '19:00', 'Early class: the setup.'], [$late, '20:30', 'Late class: the finish.']] as [$class, $time, $notes]) {
+        $lesson = Lesson::factory()->for($this->academy)->create([
+            'academy_class_id' => $class->id,
+            'held_on' => '2026-11-04',
+            'starts_at' => $time,
+            'notes' => $notes,
+        ]);
+        $lesson->topics()->sync([$this->armbar->id]);
+        AttendanceRecord::factory()->create([
+            'athlete_id' => $this->athlete->id,
+            'lesson_id' => $lesson->id,
+            'attended_on' => '2026-11-04',
+        ]);
+    }
+
+    expect(lastNotes($this, $this->armbar->id))->toMatchArray([
+        'starts_at' => '20:30',
+        'notes' => 'Late class: the finish.',
+    ]);
+});
+
+it('refuses a topic that has left the programme', function (): void {
+    notedLesson($this, '2026-10-07', [$this->armbar], 'Worked it from the S-mount.');
+    $this->armbar->delete();
+
+    $this->actingAs($this->user)
+        ->getJson("/api/v1/lessons/last-notes?syllabus_topic_id={$this->armbar->id}&before=2026-11-18")
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['syllabus_topic_id']);
+});
+
+it('asks for the evening it is asked from, as a day', function (?string $before): void {
+    $query = "syllabus_topic_id={$this->armbar->id}" . ($before === null ? '' : "&before={$before}");
+
+    $this->actingAs($this->user)
+        ->getJson("/api/v1/lessons/last-notes?{$query}")
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['before']);
+})->with([
+    'missing' => [null],
+    'not a day' => ['yesterday'],
+    'a day and a time' => ['2026-11-18T19:00:00'],
+]);
 
 it('ignores lessons that named something else', function (): void {
     $triangle = SyllabusTopic::factory()->under($this->guard)->create(['name' => 'Triangle']);
@@ -108,7 +164,7 @@ it('refuses a topic of another academy', function (): void {
     $foreign = SyllabusTopic::factory()->for(Academy::factory()->create())->create(['name' => 'Altrove']);
 
     $this->actingAs($this->user)
-        ->getJson("/api/v1/lessons/last-notes?syllabus_topic_id={$foreign->id}")
+        ->getJson("/api/v1/lessons/last-notes?syllabus_topic_id={$foreign->id}&before=2026-11-18")
         ->assertUnprocessable()
         ->assertJsonValidationErrors(['syllabus_topic_id']);
 });
@@ -124,6 +180,6 @@ it('refuses somebody with no standing in the academy', function (): void {
     $outsider = User::factory()->create(['active_academy_id' => $this->academy->id]);
 
     $this->actingAs($outsider)
-        ->getJson("/api/v1/lessons/last-notes?syllabus_topic_id={$this->armbar->id}")
+        ->getJson("/api/v1/lessons/last-notes?syllabus_topic_id={$this->armbar->id}&before=2026-11-18")
         ->assertForbidden();
 });
