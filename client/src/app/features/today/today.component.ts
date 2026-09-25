@@ -83,7 +83,8 @@ interface DocumentsHealth {
  * whether the data is safe. Every answer already lived on some screen; none
  * was on the first one. This page asks the endpoints those screens already
  * use and puts the answers side by side. It computes nothing new on the
- * server, by rule: a block that needs a new aggregate waits for one.
+ * server, by rule: a block that needs a new aggregate waits for one. The
+ * birthdays block did (#1754), and came with its `?birthday=` roster filter.
  *
  * Each block fetches and fails on its own. A reader whose role cannot see
  * the stats still gets tonight's classes; a failed documents check costs one
