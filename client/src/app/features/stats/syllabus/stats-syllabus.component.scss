@@ -125,12 +125,6 @@
     font-size: 0.875rem;
     color: var(--p-text-muted-color);
   }
-
-  &__empty-link {
-    margin: 0;
-    text-align: center;
-    font-size: 0.875rem;
-  }
 }
 
 // The three counts, in words. No coloured dots: the accent's strengths key
@@ -247,6 +241,24 @@
       outline: 2px solid var(--p-primary-color);
       outline-offset: -2px;
     }
+  }
+
+  // What a never-taught row does (#1656). Muted at rest, like the taught
+  // rows beside it: twenty accent labels down a column would be a wall of
+  // links. The row's hover and focus bring it up in the action's colour.
+  &__plan {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.8125rem;
+    color: var(--p-text-muted-color);
+    white-space: nowrap;
+  }
+
+  &__open--plan:hover &__plan,
+  &__open--plan:focus-visible &__plan {
+    color: var(--p-primary-color);
   }
 
   &__name {

@@ -2940,6 +2940,7 @@
       "lastTaught": "Last taught",
       "missingList": "Not taught yet ({{count}})",
       "nothingMissing": "Nothing left — the whole programme has been taught.",
+      "planAction": "Plan",
       "thinTag": "Once",
       "lessonsOne": "{{count}} lesson",
       "lessonsOther": "{{count}} lessons",

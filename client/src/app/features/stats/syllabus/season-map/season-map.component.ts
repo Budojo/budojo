@@ -354,8 +354,11 @@ export class SeasonMapComponent {
     this.planSheetOpen.set(true);
   }
 
-  /** The plan was saved: redraw the weeks without blanking the map first. */
-  protected refreshWeeks(): void {
+  /**
+   * A plan was saved, here or from the report's list (#1656): redraw the
+   * weeks without blanking the map first.
+   */
+  refreshWeeks(): void {
     this.stats.syllabusCalendar(this.seasonsBack(), this.kind()).subscribe({
       next: (calendar) => this.calendar.set(calendar),
       error: () => undefined,
