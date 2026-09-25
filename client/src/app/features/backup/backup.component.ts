@@ -29,25 +29,7 @@ import {
   type DriveLinkStateView,
 } from '../../core/services/drive-sync.service';
 import { LocaleDatePipe } from '../../shared/pipes/locale-date.pipe';
-
-/**
- * The error codes with a translation of their own. Anything else falls back to
- * `unknown`, which interpolates the raw code so the thread back to the cause is
- * never lost. Keep in step with `backup.drive.errors` in both i18n files.
- */
-/** Same allow-list discipline as the Drive codes: never build a key from a value. */
-const KNOWN_FOLDER_ERRORS = new Set(['ENOENT', 'EACCES', 'EPERM', 'ENOSPC', 'EROFS']);
-
-const KNOWN_DRIVE_ERRORS = new Set([
-  'invalid_grant',
-  'unauthorized',
-  'storageQuotaExceeded',
-  'network',
-  'access_denied',
-  'consent_timeout',
-  'no_refresh_token',
-  'not_configured',
-]);
+import { driveErrorKey, folderErrorKey } from '../../shared/utils/backup-errors';
 
 /**
  * `budojo-backup-YYYYMMDD-HHMMSS.zip` -> ISO, for archives that exist only in
@@ -268,12 +250,11 @@ export class BackupComponent {
   /**
    * Turns the stored error code into a sentence.
    *
-   * An allow-list, not `'backup.drive.errors.' + code`: building a key from a
-   * value is a documented red flag (client/CLAUDE.md), the parity check cannot
-   * see such keys, and `drive-io.ts` emits codes well past the ones translated
-   * here — `http_403`, `no_upload_session`, `rateLimitExceeded`, anything
-   * Google's API passes through. Each of those would render the raw key on the
-   * page that is the ONLY surface for a silently-failing feature.
+   * Through `driveErrorKey`'s allow-list, never a key built from the code:
+   * `drive-io.ts` emits codes well past the translated ones — `http_403`,
+   * `no_upload_session`, anything Google passes through — and each would
+   * render its raw key on the page that is the only surface for a
+   * silently-failing feature. Today (#1751) reads the same map.
    */
   protected driveErrorMessage(): string {
     const code = this.driveState().lastError;
@@ -282,9 +263,7 @@ export class BackupComponent {
       return '';
     }
 
-    const known = KNOWN_DRIVE_ERRORS.has(code) ? code : 'unknown';
-
-    return this.translate.instant(`backup.drive.errors.${known}`, { code });
+    return this.translate.instant(driveErrorKey(code), { code });
   }
 
   protected async chooseFolder(): Promise<void> {
@@ -337,9 +316,7 @@ export class BackupComponent {
       return '';
     }
 
-    const known = KNOWN_FOLDER_ERRORS.has(code) ? code : 'unknown';
-
-    return this.translate.instant(`backup.folder.errors.${known}`, { code });
+    return this.translate.instant(folderErrorKey(code), { code });
   }
 
   /** The automatic sync already follows every backup; this is for impatience. */
