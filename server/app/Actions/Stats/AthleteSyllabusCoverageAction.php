@@ -85,7 +85,7 @@ class AthleteSyllabusCoverageAction
             // They joined after this season ended, or it has not started.
             return [
                 ...$this->report($techniques, $positions, [], [], $start, $end, $label, $joined, 0),
-                'grade' => $this->ownBeltProgramme($athlete, $academy, $techniques, [], []),
+                'grade' => $this->ownBeltProgramme($athlete, $academy, $techniques, $positions, [], []),
             ];
         }
 
@@ -105,7 +105,14 @@ class AthleteSyllabusCoverageAction
                 $joined,
                 $unattributed,
             ),
-            'grade' => $this->ownBeltProgramme($athlete, $academy, $techniques, $taughtByAcademy, $attendedByAthlete),
+            'grade' => $this->ownBeltProgramme(
+                $athlete,
+                $academy,
+                $techniques,
+                $positions,
+                $taughtByAcademy,
+                $attendedByAthlete,
+            ),
         ];
     }
 
@@ -116,18 +123,35 @@ class AthleteSyllabusCoverageAction
      * were here and how many they were at. Exposure, never competence: every
      * number is a derivation from attendance.
      *
-     * Null while nothing in season names a belt, because the headline already
-     * is the whole programme then; and null for a belt the ladder does not
-     * hold, which has no rank to compare against.
+     * Null while nothing in season names a belt — no technique and no
+     * position — because the headline already is the whole programme then;
+     * and null for a belt the ladder does not hold, which has no rank to
+     * compare against.
+     *
+     * **A graded position does not grade its techniques here either.** Only
+     * techniques are counted, each by its own `from_belt`: nothing cascades
+     * (a position's belt is a default for what is added under it), and the
+     * programme page already shows an ungraded technique under a graded
+     * position as "for everyone" and filters it that way. Reading it
+     * differently here would make this the one screen with a second rule —
+     * the disagreement #1748 had to fix between the two coverage headlines.
      *
      * @param  Collection<int, SyllabusTopic>  $techniques
+     * @param  Collection<int, SyllabusTopic>  $positions
      * @param  array<int, int>  $taught
      * @param  array<int, array{lessons: int, last: string}>  $attended
      * @return array{belt: string, items: int, taught_by_academy: int, attended: int}|null
      */
-    private function ownBeltProgramme(Athlete $athlete, Academy $academy, Collection $techniques, array $taught, array $attended): ?array
-    {
-        if (! $techniques->contains(static fn (SyllabusTopic $technique): bool => $technique->from_belt !== null)) {
+    private function ownBeltProgramme(
+        Athlete $athlete,
+        Academy $academy,
+        Collection $techniques,
+        Collection $positions,
+        array $taught,
+        array $attended,
+    ): ?array {
+        $graded = static fn (SyllabusTopic $topic): bool => $topic->in_season && $topic->from_belt !== null;
+        if (! $techniques->contains($graded) && ! $positions->contains($graded)) {
             return null;
         }
 

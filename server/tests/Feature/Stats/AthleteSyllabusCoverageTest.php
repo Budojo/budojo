@@ -440,6 +440,35 @@ it('reads the new belt programme after a promotion, rewriting nothing', function
     expect(athleteCoverage($this)['grade'])->toMatchArray(['belt' => 'purple', 'items' => 2]);
 });
 
+it('shows the belt line when only a position names a belt, its ungraded techniques for everyone', function (): void {
+    // The owner graded the position and not yet its techniques. Nothing
+    // cascades (#1861), so the programme page already says "for everyone" on
+    // each of those rows — and this line counts them the same way, rather
+    // than being the one screen with a second rule.
+    $this->athlete->update(['belt' => 'blue']);
+    $this->guard->update(['from_belt' => 'purple']);
+    $armbar = gradedTechnique($this, 'Armbar', null, 1);
+    gradedTechnique($this, 'Triangle', null, 2);
+    lessonWith($this, '2026-09-16', [$armbar], [$this->athlete]);
+
+    expect(athleteCoverage($this)['grade'])->toBe([
+        'belt' => 'blue',
+        'items' => 2,
+        'taught_by_academy' => 1,
+        'attended' => 1,
+    ]);
+});
+
+it('does not count a graded position that is out of season as naming a belt', function (): void {
+    $this->athlete->update(['belt' => 'blue']);
+    gradedTechnique($this, 'Armbar', null, 1);
+    SyllabusTopic::factory()->for($this->academy)->create([
+        'name' => 'Leg locks', 'from_belt' => 'purple', 'in_season' => false, 'sort_order' => 2,
+    ]);
+
+    expect(athleteCoverage($this)['grade'])->toBeNull();
+});
+
 it('has no belt line for a belt the academy ladder does not hold', function (): void {
     // Only reachable by an art change after the athlete was written; the
     // line would have no rank to compare against.

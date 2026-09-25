@@ -3665,8 +3665,11 @@ paths:
         techniques marked from their belt or a grade below it on the academy's
         ladder, plus those for everyone, with how many the academy taught in
         the same window and how many they were at. Null while no in-season
-        technique names a belt, and for a belt the ladder does not hold.
-        Exposure only — never an assessment.
+        topic — position or technique — names a belt, and for a belt the
+        ladder does not hold. Only techniques are counted, each by its own
+        `from_belt`: an ungraded technique under a graded position is for
+        everyone, as the programme page shows it. Exposure only — never an
+        assessment.
 
         Requires `attendance_read`, not `stats_view` — this lives beside the
         athlete's attendance, and the reader is the instructor planning their
