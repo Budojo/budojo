@@ -8329,6 +8329,10 @@ components:
           description: |
             Unformatted national digits (no spaces / dashes / parentheses).
             Validated together with `phone_country_code` via libphonenumber.
+            A valid number is stored as its national significant number
+            (#1867): a trunk zero typed after the dial code is dropped
+            (`+44` / `07911123456` → `7911123456`), an Italian landline's
+            leading zero is kept (`+39` / `061234567`).
           example: '3331234567'
         website:
           type: string
@@ -8542,7 +8546,10 @@ components:
           nullable: true
           maxLength: 20
           pattern: '^[0-9]+$'
-          description: Unformatted national digits.
+          description: |
+            The national significant number, digits only (#1867) — no trunk
+            zero, an Italian landline's leading zero kept. With
+            `phone_country_code` it is the number in E.164.
           example: '3331234567'
         website:
           type: string
@@ -9451,7 +9458,12 @@ components:
           maxLength: 20
           nullable: true
           pattern: '^[0-9]+$'
-          description: Unformatted national digits — no spaces, no dashes. Must be sent together with `phone_country_code`.
+          description: |
+            Unformatted national digits — no spaces, no dashes. Must be sent together with
+            `phone_country_code`. A valid number is stored as its national significant
+            number (#1867): a trunk zero typed after the dial code is dropped
+            (`+44` / `07911123456` → `7911123456`), an Italian landline's leading zero is
+            kept (`+39` / `061234567`).
           example: '3331234567'
         website:
           type: string
@@ -9548,7 +9560,11 @@ components:
           maxLength: 20
           nullable: true
           pattern: '^[0-9]+$'
-          description: Unformatted national digits — must be sent together with `phone_country_code`.
+          description: |
+            Unformatted national digits — must be sent together with `phone_country_code`.
+            A valid number is stored as its national significant number (#1867): a trunk
+            zero typed after the dial code is dropped, an Italian landline's leading zero
+            is kept.
           example: '3331234567'
         website:
           type: string
@@ -9739,7 +9755,12 @@ components:
           type: string
           nullable: true
           example: '3331234567'
-          description: Unformatted national digits. Always paired with `phone_country_code`.
+          description: |
+            The national significant number, digits only (#1867) — no trunk zero, an
+            Italian landline's leading zero kept. Always paired with `phone_country_code`;
+            the two together are the number in E.164. An Italian landline imported before
+            #1867 may still lack its leading zero: those rows are not rewritten, because
+            the zero would be a guess, and they fail validation until corrected.
         website:
           type: string
           format: uri

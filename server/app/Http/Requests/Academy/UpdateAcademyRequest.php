@@ -158,6 +158,12 @@ class UpdateAcademyRequest extends FormRequest
         $validator->after(fn (Validator $validator) => $this->validateMartialArtLock($validator));
     }
 
+    /** The phone is stored as its national significant number (#1867). */
+    protected function prepareForValidation(): void
+    {
+        $this->normalisePhonePair();
+    }
+
     /**
      * Match the wire-level contract used by the rest of the API for
      * ownership failures: `{"message":"Forbidden."}` with 403 — same JSON
