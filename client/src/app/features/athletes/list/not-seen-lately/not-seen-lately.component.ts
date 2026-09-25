@@ -102,6 +102,12 @@ export class NotSeenLatelyComponent implements OnInit {
    */
   readonly hasAthletes = input.required<boolean>();
 
+  /**
+   * Drawn or not, without being destroyed: the roster hides the section in
+   * its restore picker, and coming back must not ask the server again.
+   */
+  readonly visible = input<boolean>(true);
+
   /** An athlete marked inactive from here — the roster reloads its table. */
   readonly markedInactive = output<number>();
 
@@ -114,7 +120,9 @@ export class NotSeenLatelyComponent implements OnInit {
   /** Only meaningful with no rows: which of the three empty answers is true. */
   protected readonly emptyKind = computed<EmptyKind>(() => {
     const meta = this.list()?.meta;
-    if (!meta || meta.sessions_available === 0) return 'no-attendance';
+    // `sessions_available` leaves tonight out; on the first evening there is
+    // attendance but no history, which is "not enough yet", not "none".
+    if (!meta || !meta.has_attendance) return 'no-attendance';
     return meta.sessions_available < meta.sessions_needed ? 'no-history' : 'healthy';
   });
 

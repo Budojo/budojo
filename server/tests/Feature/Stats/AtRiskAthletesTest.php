@@ -100,7 +100,7 @@ it('leaves out an athlete who came to every one of the last 8 sessions', functio
     $response = atRiskResponse($this);
 
     expect($response['data'])->toBe([])
-        ->and($response['meta'])->toBe(['sessions_available' => 32, 'sessions_needed' => 20]);
+        ->and($response['meta'])->toBe(['sessions_available' => 32, 'sessions_needed' => 20, 'has_attendance' => true]);
 });
 
 it('flags a drop against the athlete\'s own baseline, with the numbers that say why', function (): void {
@@ -280,7 +280,7 @@ it('says how many sessions exist, so a young academy is not reported as healthy'
     $response = atRiskResponse($this);
 
     expect($response['data'])->toBe([])
-        ->and($response['meta'])->toBe(['sessions_available' => 15, 'sessions_needed' => 20]);
+        ->and($response['meta'])->toBe(['sessions_available' => 15, 'sessions_needed' => 20, 'has_attendance' => true]);
 });
 
 it('does not count tonight as history before it is over', function (): void {
@@ -295,7 +295,23 @@ it('does not count tonight as history before it is over', function (): void {
     $response = atRiskResponse($this);
 
     expect($response['data'])->toBe([])
-        ->and($response['meta'])->toBe(['sessions_available' => 19, 'sessions_needed' => 20]);
+        ->and($response['meta'])->toBe(['sessions_available' => 19, 'sessions_needed' => 20, 'has_attendance' => true]);
+});
+
+it('tells the first evening of an academy apart from one that never took the register', function (): void {
+    // Nothing before today, and today's register under way: no history yet,
+    // but attendance has been recorded — the client must not say "no
+    // attendance recorded" to someone who has just recorded some.
+    AttendanceRecord::query()->forceDelete();
+    atRiskPresent($this->regular, ['2026-09-24']);
+
+    expect(atRiskResponse($this)['meta'])
+        ->toBe(['sessions_available' => 0, 'sessions_needed' => 20, 'has_attendance' => true]);
+
+    AttendanceRecord::query()->forceDelete();
+
+    expect(atRiskResponse($this)['meta'])
+        ->toBe(['sessions_available' => 0, 'sessions_needed' => 20, 'has_attendance' => false]);
 });
 
 it('refuses an athlete account the way the other stats routes do', function (): void {

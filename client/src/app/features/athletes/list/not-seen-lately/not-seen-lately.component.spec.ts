@@ -44,11 +44,14 @@ function row(over: Partial<AtRiskRow> & { id: number; last?: string; phone?: boo
   };
 }
 
-function list(data: AtRiskRow[], available = 32, needed = 20): AtRiskList {
-  return { data, meta: { sessions_available: available, sessions_needed: needed } };
+function list(data: AtRiskRow[], available = 32, needed = 20, hasAttendance = true): AtRiskList {
+  return {
+    data,
+    meta: { sessions_available: available, sessions_needed: needed, has_attendance: hasAttendance },
+  };
 }
 
-function render(response: Observable<AtRiskList>, hasAthletes = true) {
+function render(response: Observable<AtRiskList>, hasAthletes = true, visible = true) {
   const stats = { atRisk: vi.fn(() => response) };
   const athletes = { update: vi.fn(() => of({})) };
   TestBed.configureTestingModule({
@@ -63,6 +66,7 @@ function render(response: Observable<AtRiskList>, hasAthletes = true) {
   });
   const fixture = TestBed.createComponent(NotSeenLatelyComponent);
   fixture.componentRef.setInput('hasAthletes', hasAthletes);
+  fixture.componentRef.setInput('visible', visible);
   fixture.detectChanges();
   const root = fixture.nativeElement as HTMLElement;
   return { fixture, root, stats, athletes };
@@ -134,17 +138,37 @@ describe('NotSeenLatelyComponent (#1729)', () => {
   });
 
   it('points an academy with no attendance at all to the check-in', () => {
-    const { root } = render(of(list([], 0, 20)));
+    const { root } = render(of(list([], 0, 20, false)));
 
     const empty = root.querySelector('[data-cy="not-seen-empty-no-attendance"]');
     expect(empty).not.toBeNull();
     expect(empty?.querySelector('a')?.getAttribute('href')).toBe('/dashboard/attendance');
   });
 
+  it('reads the first evening as too little history, not as no attendance', () => {
+    // Tonight's register is under way and nothing came before it: sending the
+    // owner to the check-in they are standing in would be false.
+    const { root } = render(of(list([], 0, 20, true)));
+
+    expect(root.querySelector('[data-cy="not-seen-empty-no-attendance"]')).toBeNull();
+    expect(text(root, '[data-cy="not-seen-empty-no-history"]')).toContain('0 of the 20 needed');
+  });
+
+  it('keeps its answer while hidden, and shows it again without asking', () => {
+    const { fixture, root, stats } = render(of(list([row({ id: 1 })])), true, false);
+    expect(root.querySelector('[data-cy="not-seen-lately"]')).toBeNull();
+
+    fixture.componentRef.setInput('visible', true);
+    fixture.detectChanges();
+
+    expect(root.querySelector('[data-cy="not-seen-row-1"]')).not.toBeNull();
+    expect(stats.atRisk).toHaveBeenCalledTimes(1);
+  });
+
   it('says nothing on an academy with nobody on its books yet', () => {
     // The roster's first-run state and the onboarding checklist speak there;
     // a link to an empty check-in above them would be a third voice.
-    const { root } = render(of(list([], 0, 20)), false);
+    const { root } = render(of(list([], 0, 20, false)), false);
 
     expect(root.querySelector('[data-cy="not-seen-lately"]')).toBeNull();
   });

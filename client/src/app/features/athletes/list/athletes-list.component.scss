@@ -10,8 +10,10 @@
 
   // Not seen lately (#1729): between the toolbar and the table, with the
   // same space under it that the toolbar leaves.
-  &__not-seen {
-    display: block;
+  // Spaced only while it draws something. Loading, failed, hidden in the
+  // restore picker or with nothing to say, it leaves only Angular's comment
+  // anchors in the host, and an empty host must not push the table down.
+  &__not-seen:not(:empty) {
     margin-bottom: 1rem;
   }
 

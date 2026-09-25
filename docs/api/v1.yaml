@@ -7753,7 +7753,7 @@ components:
                 description: Sessions in the baseline — fewer than 24 for someone who joined within it.
         meta:
           type: object
-          required: [sessions_available, sessions_needed]
+          required: [sessions_available, sessions_needed, has_attendance]
           properties:
             sessions_available:
               type: integer
@@ -7771,6 +7771,13 @@ components:
                 The fewest sessions the rules can judge anyone on — the 8
                 recent plus the shortest accepted baseline of 12 (#1729). Sent
                 so a client never hard-codes the threshold the tiers use.
+            has_attendance:
+              type: boolean
+              description: |
+                Whether the academy has recorded any attendance at all,
+                tonight included. On an academy's first evening
+                `sessions_available` is 0 and this is `true`: "not enough
+                history yet", never "no attendance recorded".
 
     # ── Generic envelopes ─────────────────────────────────────────────────
 

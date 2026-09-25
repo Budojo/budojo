@@ -88,7 +88,7 @@ class AtRiskAthletesAction
      *         baseline_attended: int,
      *         baseline_sessions: int,
      *     }>,
-     *     meta: array{sessions_available: int, sessions_needed: int},
+     *     meta: array{sessions_available: int, sessions_needed: int, has_attendance: bool},
      * }
      */
     public function execute(Academy $academy, CarbonImmutable $today): array
@@ -103,7 +103,7 @@ class AtRiskAthletesAction
         $sessions = $this->latestSessions($academy, $today);
 
         if ($sessions === []) {
-            return ['data' => [], 'meta' => $this->meta($sessionsAvailable)];
+            return ['data' => [], 'meta' => $this->meta($sessionsAvailable, hasAttendance: false)];
         }
 
         $athletes = $this->candidates($academy, $today);
@@ -130,7 +130,7 @@ class AtRiskAthletesAction
             $b['athlete']['id'],
         ]);
 
-        return ['data' => $rows, 'meta' => $this->meta($sessionsAvailable)];
+        return ['data' => $rows, 'meta' => $this->meta($sessionsAvailable, hasAttendance: true)];
     }
 
     /**
@@ -139,13 +139,18 @@ class AtRiskAthletesAction
      * Sent rather than known by the client, so "not enough history yet" is
      * decided by the same numbers that decide the tiers.
      *
-     * @return array{sessions_available: int, sessions_needed: int}
+     * `has_attendance` counts tonight, which `sessions_available` does not: on
+     * an academy's first evening there is no history yet, but "no attendance
+     * recorded" would be false to the owner who has just taken the register.
+     *
+     * @return array{sessions_available: int, sessions_needed: int, has_attendance: bool}
      */
-    private function meta(int $sessionsAvailable): array
+    private function meta(int $sessionsAvailable, bool $hasAttendance): array
     {
         return [
             'sessions_available' => $sessionsAvailable,
             'sessions_needed' => self::RECENT_SESSIONS + self::BASELINE_FLOOR_SESSIONS,
+            'has_attendance' => $hasAttendance,
         ];
     }
 

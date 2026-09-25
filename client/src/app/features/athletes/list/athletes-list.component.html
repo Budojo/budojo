@@ -404,17 +404,18 @@
   <!--
     Not seen lately (#1729): who is drifting, against their own attendance,
     actionable in place. Asked once, on the roster's first load — never on a
-    filter or a page change — and not in the restore picker, which is a
-    different question about different people. Marking someone inactive from
-    here reloads the table, or with the inactive hidden their row would stay.
+    filter or a page change — and not drawn in the restore picker, which is a
+    different question about different people. Hidden there rather than
+    removed: re-created, it would ask again on the way back. Marking someone
+    inactive from here reloads the table, or with the inactive hidden their
+    row would stay.
   -->
-  @if (!isTrashedMode()) {
-    <app-not-seen-lately
-      class="athletes-page__not-seen"
-      [hasAthletes]="hasAthletes()"
-      (markedInactive)="reload()"
-    />
-  }
+  <app-not-seen-lately
+    class="athletes-page__not-seen"
+    [visible]="!isTrashedMode()"
+    [hasAthletes]="hasAthletes()"
+    (markedInactive)="reload()"
+  />
 
   @if (loadError()) {
     <app-error-state

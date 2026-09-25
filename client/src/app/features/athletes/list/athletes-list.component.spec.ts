@@ -2665,21 +2665,35 @@ describe('AthletesListComponent — not seen lately (#1729)', () => {
     expect(atRiskRequests(http)).toHaveLength(0);
   });
 
-  it('is not in the restore picker, which is about different people', () => {
-    const { fixture } = render([makeAthlete()]);
-    expect(fixture.debugElement.query(By.directive(NotSeenLatelyComponent))).not.toBeNull();
-
-    fixture.componentInstance.onStatusChange('trashed');
+  it('is not in the restore picker, and coming back does not ask again', () => {
+    const { fixture, http } = render([makeAthlete()]);
+    atRiskRequests(http)[0].flush({
+      data: [],
+      meta: { sessions_available: 32, sessions_needed: 20, has_attendance: true },
+    });
     fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    expect(root.querySelector('[data-cy="not-seen-lately"]')).not.toBeNull();
 
-    expect(fixture.debugElement.query(By.directive(NotSeenLatelyComponent))).toBeNull();
+    // Into the restore picker and back, twice: hidden, never re-created.
+    for (let i = 0; i < 2; i++) {
+      fixture.componentInstance.onStatusChange('trashed');
+      fixture.detectChanges();
+      expect(root.querySelector('[data-cy="not-seen-lately"]')).toBeNull();
+
+      fixture.componentInstance.onStatusChange('active');
+      fixture.detectChanges();
+      expect(root.querySelector('[data-cy="not-seen-lately"]')).not.toBeNull();
+    }
+
+    expect(atRiskRequests(http)).toHaveLength(0);
   });
 
   it('says nothing on an academy with nobody on its books, and speaks once it has someone', () => {
     const empty = render([]);
     atRiskRequests(empty.http)[0].flush({
       data: [],
-      meta: { sessions_available: 0, sessions_needed: 20 },
+      meta: { sessions_available: 0, sessions_needed: 20, has_attendance: false },
     });
     empty.fixture.detectChanges();
 
@@ -2693,7 +2707,7 @@ describe('AthletesListComponent — not seen lately (#1729)', () => {
     const peopled = render([makeAthlete()]);
     atRiskRequests(peopled.http)[0].flush({
       data: [],
-      meta: { sessions_available: 0, sessions_needed: 20 },
+      meta: { sessions_available: 0, sessions_needed: 20, has_attendance: false },
     });
     peopled.fixture.detectChanges();
 

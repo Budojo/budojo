@@ -488,7 +488,7 @@ const AT_RISK = {
     atRiskRow(4, 'quiet', { recent: 3, baseline: 16 }),
     atRiskRow(6, 'dropping', { recent: 2, baseline: 15 }),
   ],
-  meta: { sessions_available: 41, sessions_needed: 20 },
+  meta: { sessions_available: 41, sessions_needed: 20, has_attendance: true },
 };
 
 /**
@@ -2641,7 +2641,10 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
     stubs: () => {
       cy.intercept('GET', '/api/v1/stats/attendance/at-risk', {
         statusCode: 200,
-        body: { data: [], meta: { sessions_available: 41, sessions_needed: 20 } },
+        body: {
+          data: [],
+          meta: { sessions_available: 41, sessions_needed: 20, has_attendance: true },
+        },
       });
     },
   });
@@ -2649,7 +2652,10 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
     stubs: () => {
       cy.intercept('GET', '/api/v1/stats/attendance/at-risk', {
         statusCode: 200,
-        body: { data: [], meta: { sessions_available: 12, sessions_needed: 20 } },
+        body: {
+          data: [],
+          meta: { sessions_available: 12, sessions_needed: 20, has_attendance: true },
+        },
       });
     },
   });

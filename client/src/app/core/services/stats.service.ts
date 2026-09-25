@@ -305,6 +305,11 @@ export interface AtRiskList {
     readonly sessions_available: number;
     /** The fewest the rules can judge anyone on — below it, "we cannot tell yet". */
     readonly sessions_needed: number;
+    /**
+     * Any attendance at all, tonight included. What tells an academy's first
+     * evening ("not enough history") from one that never took the register.
+     */
+    readonly has_attendance: boolean;
   };
 }
 
