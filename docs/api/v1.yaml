@@ -3461,6 +3461,11 @@ paths:
         attached survives every sync — tidying the syllabus must not rewrite
         what a past lesson was about.
 
+        **A plan lands on a day the class runs (#1859).** A `held_on` of
+        today or later that is not the class's weekday is a 422 on `held_on`
+        — unless the lesson already exists, so a plan made before the class
+        moved day can still be edited or cleared. The past keeps no rule.
+
         Requires `attendance_record`, not `academy_settings_update`: writing
         down what was taught is the same act of witness as writing down who
         was there.
@@ -3512,6 +3517,9 @@ paths:
         "Marco's first day back", not data entry — the note is never parsed
         into topics. Materialises the lesson like the topics write does; an
         empty or whitespace-only note is stored as `null`.
+
+        Held to the topics write's weekday rule (#1859): a new lesson dated
+        today or later must fall on the class's weekday.
 
         Requires `attendance_record`.
       operationId: lessonSetNotes
@@ -3581,6 +3589,62 @@ paths:
           $ref: '#/components/responses/Unauthenticated'
         '403':
           $ref: '#/components/responses/Forbidden'
+
+  /lessons/last-notes:
+    get:
+      tags: [attendance]
+      summary: The notes of the last evening that taught a topic (#1862)
+      description: |
+        The latest **held** lesson **before `before`** that named this topic
+        and carried notes — blank ones skipped — or `null`. Held means
+        somebody was checked in: a plan that already carries a note did not
+        happen, and never answers. `before` is the day of the lesson the
+        sheet is open on: that evening's own lesson — a plan whose note is
+        held the moment somebody is checked in — is this evening, not the
+        last one. Two classes on the same earlier day: the later one answers.
+
+        Lesson notes are about the evening and are never parsed into topics
+        (#1564); this finds a lesson, not a sentence, and the whole lesson
+        comes back so the reader can label its notes as that evening's, with
+        its date and class. The lesson sheet asks for it when the owner opens
+        a technique's details, not for every row.
+
+        Requires `attendance_read`. The topic must be a living topic of the
+        caller's academy, else 422.
+      operationId: lessonLastNotes
+      parameters:
+        - in: query
+          name: syllabus_topic_id
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - in: query
+          name: before
+          required: true
+          description: '`YYYY-MM-DD`, the day of the lesson being looked at. Only lessons held before it answer.'
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: The lesson, or null
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    nullable: true
+                    allOf:
+                      - $ref: '#/components/schemas/Lesson'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
 
   /athletes/{athlete}/syllabus-coverage:
     get:
@@ -6331,8 +6395,9 @@ paths:
 
         Sorted `gone`, `quiet`, `dropping`; within a tier, longest absent
         first (never-seen first of all). `meta.sessions_available` counts
-        the academy's realised sessions, so a client can tell "nobody is
-        drifting" from "not enough sessions recorded yet". Not cached.
+        the academy's realised sessions before today, so a client can tell
+        "nobody is drifting" from "not enough sessions recorded yet". Not
+        cached.
 
         Owner-only, and requires `stats_view`: the route sits in the
         `role:owner` group with every other `/stats` read, so any other role
@@ -7805,15 +7870,31 @@ components:
                 description: Sessions in the baseline — fewer than 24 for someone who joined within it.
         meta:
           type: object
-          required: [sessions_available]
+          required: [sessions_available, sessions_needed, has_attendance]
           properties:
             sessions_available:
               type: integer
               minimum: 0
               description: |
-                Every realised session the academy has recorded. Below 20
-                (8 recent + 12 baseline) nobody can be judged yet, and an
-                empty list means "not enough history", not "nobody drifting".
+                Every realised session the academy has recorded before
+                today. Tonight is left out until it is over, as it is for
+                everyone not yet ticked. Below `sessions_needed` nobody can be
+                judged yet, and an empty list means "not enough history", not
+                "nobody drifting".
+            sessions_needed:
+              type: integer
+              example: 20
+              description: |
+                The fewest sessions the rules can judge anyone on — the 8
+                recent plus the shortest accepted baseline of 12 (#1729). Sent
+                so a client never hard-codes the threshold the tiers use.
+            has_attendance:
+              type: boolean
+              description: |
+                Whether the academy has recorded any attendance at all,
+                tonight included. On an academy's first evening
+                `sessions_available` is 0 and this is `true`: "not enough
+                history yet", never "no attendance recorded".
 
     ClassRegulars:
       type: object
@@ -8362,6 +8443,10 @@ components:
           description: |
             Unformatted national digits (no spaces / dashes / parentheses).
             Validated together with `phone_country_code` via libphonenumber.
+            A valid number is stored as its national significant number
+            (#1867): a trunk zero typed after the dial code is dropped
+            (`+44` / `07911123456` → `7911123456`), an Italian landline's
+            leading zero is kept (`+39` / `061234567`).
           example: '3331234567'
         website:
           type: string
@@ -8575,7 +8660,10 @@ components:
           nullable: true
           maxLength: 20
           pattern: '^[0-9]+$'
-          description: Unformatted national digits.
+          description: |
+            The national significant number, digits only (#1867) — no trunk
+            zero, an Italian landline's leading zero kept. With
+            `phone_country_code` it is the number in E.164.
           example: '3331234567'
         website:
           type: string
@@ -8969,7 +9057,7 @@ components:
       properties:
         topic:
           type: object
-          required: [id, name, parent_name, kind, in_season]
+          required: [id, name, parent_name, kind, in_season, notes, video_url]
           properties:
             id: { type: integer }
             name: { type: string }
@@ -8980,6 +9068,10 @@ components:
             kind:
               $ref: '#/components/schemas/TrainingMode'
             in_season: { type: boolean }
+            notes:
+              $ref: '#/components/schemas/SyllabusTopicNotes'
+            video_url:
+              $ref: '#/components/schemas/SyllabusTopicVideoUrl'
         season:
           type: object
           required: [start, end, label]
@@ -9286,6 +9378,28 @@ components:
             academy's own ladder, anything else is a 422. Null is for
             everyone. **Absent**, a technique takes its position's belt: a
             default for what is added under a position, never a cascade.
+        notes:
+          $ref: '#/components/schemas/SyllabusTopicNotes'
+        video_url:
+          $ref: '#/components/schemas/SyllabusTopicVideoUrl'
+
+    SyllabusTopicNotes:
+      type: string
+      nullable: true
+      maxLength: 2000
+      description: How it is taught here (#1862). An empty string is stored as null.
+      example: Start from the S-mount; grip on the far elbow.
+
+    SyllabusTopicVideoUrl:
+      type: string
+      nullable: true
+      maxLength: 500
+      pattern: '^https://'
+      description: |
+        The instructional it was taken from (#1862). `https://` only — it
+        ends up in an `href`, so `javascript:`, `file:` and plain `http` are
+        422s. Opens in the system browser.
+      example: https://www.youtube.com/watch?v=abc123
 
     SyllabusTopicUpdatePayload:
       type: object
@@ -9310,6 +9424,10 @@ components:
             The grade it belongs to the programme from (#1861), on the
             academy's own ladder; null for everyone. On a position it does
             not cascade to the techniques already under it.
+        notes:
+          $ref: '#/components/schemas/SyllabusTopicNotes'
+        video_url:
+          $ref: '#/components/schemas/SyllabusTopicVideoUrl'
         sort_order:
           type: integer
           minimum: 0
@@ -9323,7 +9441,7 @@ components:
         One entry in the academy's programme (#1563) — a position when
         `parent_id` is null, a technique under it otherwise. A position
         carries its techniques as `children`; a technique has none.
-      required: [id, parent_id, name, kind, in_season, from_belt, sort_order]
+      required: [id, parent_id, name, kind, in_season, from_belt, notes, video_url, sort_order]
       properties:
         id:
           type: integer
@@ -9349,6 +9467,10 @@ components:
             The grade it belongs to the programme from (#1861): expected of
             that belt and of every grade above it on the academy's ladder.
             Null is for everyone.
+        notes:
+          $ref: '#/components/schemas/SyllabusTopicNotes'
+        video_url:
+          $ref: '#/components/schemas/SyllabusTopicVideoUrl'
         sort_order:
           type: integer
         children:
@@ -9450,7 +9572,12 @@ components:
           maxLength: 20
           nullable: true
           pattern: '^[0-9]+$'
-          description: Unformatted national digits — no spaces, no dashes. Must be sent together with `phone_country_code`.
+          description: |
+            Unformatted national digits — no spaces, no dashes. Must be sent together with
+            `phone_country_code`. A valid number is stored as its national significant
+            number (#1867): a trunk zero typed after the dial code is dropped
+            (`+44` / `07911123456` → `7911123456`), an Italian landline's leading zero is
+            kept (`+39` / `061234567`).
           example: '3331234567'
         website:
           type: string
@@ -9547,7 +9674,11 @@ components:
           maxLength: 20
           nullable: true
           pattern: '^[0-9]+$'
-          description: Unformatted national digits — must be sent together with `phone_country_code`.
+          description: |
+            Unformatted national digits — must be sent together with `phone_country_code`.
+            A valid number is stored as its national significant number (#1867): a trunk
+            zero typed after the dial code is dropped, an Italian landline's leading zero
+            is kept.
           example: '3331234567'
         website:
           type: string
@@ -9738,7 +9869,12 @@ components:
           type: string
           nullable: true
           example: '3331234567'
-          description: Unformatted national digits. Always paired with `phone_country_code`.
+          description: |
+            The national significant number, digits only (#1867) — no trunk zero, an
+            Italian landline's leading zero kept. Always paired with `phone_country_code`;
+            the two together are the number in E.164. An Italian landline imported before
+            #1867 may still lack its leading zero: those rows are not rewritten, because
+            the zero would be a guess, and they fail validation until corrected.
         website:
           type: string
           format: uri

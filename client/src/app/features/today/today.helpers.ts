@@ -47,6 +47,45 @@ export function nextClassAfter(
   return null;
 }
 
+/** Minutes since midnight for an `HH:MM` string. */
+function minutesOf(hhmm: string): number {
+  const [h, m] = hhmm.split(':').map(Number);
+  return h * 60 + m;
+}
+
+/**
+ * The class to plan for (#1752): the first on the timetable at or after
+ * now, and the date it falls on. Today's classes count until they start —
+ * the one already on the mat is being taught, not planned — and a class with
+ * no time today is still today, never "past". After today, the week wraps:
+ * a Saturday night against a Mon/Wed/Fri week answers Monday, and a single
+ * weekly class that has just ended answers the same weekday a week on.
+ *
+ * Sorted here rather than trusted from the server: timed first by time,
+ * untimed last, as `GET /academy/classes` also orders them.
+ */
+export function nextClassFrom(
+  classes: readonly AcademyClass[],
+  now: Date,
+): { readonly academyClass: AcademyClass; readonly date: Date } | null {
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const byStart = (a: AcademyClass, b: AcademyClass): number => {
+    if (a.starts_at === null) return b.starts_at === null ? 0 : 1;
+    if (b.starts_at === null) return -1;
+    return minutesOf(a.starts_at) - minutesOf(b.starts_at);
+  };
+
+  for (let ahead = 0; ahead <= 7; ahead++) {
+    const date = new Date(now.getFullYear(), now.getMonth(), now.getDate() + ahead);
+    const candidates = [...tonightClasses(classes, date)]
+      .sort(byStart)
+      .filter((c) => ahead > 0 || c.starts_at === null || minutesOf(c.starts_at) >= nowMinutes);
+    if (candidates.length > 0) return { academyClass: candidates[0], date };
+  }
+
+  return null;
+}
+
 /** Midnight of the Monday that starts the date's week. Sunday ends a week. */
 export function weekStart(date: Date): Date {
   const sinceMonday = (date.getDay() + 6) % 7;

@@ -1,13 +1,22 @@
+import { Provider } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
+import { MessageService } from 'primeng/api';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { provideI18nTesting } from '../../../test-utils/i18n-test';
 import { useLadder } from '../../../test-utils/ladder-test';
 import { AcademyClass } from '../../core/services/academy-class.service';
+import {
+  BackupFolderService,
+  BackupFolderStateView,
+} from '../../core/services/backup-folder.service';
+import { DriveLinkStateView, DriveSyncService } from '../../core/services/drive-sync.service';
 import { Athlete } from '../../core/services/athlete.service';
 import { Lesson } from '../../core/services/lesson.service';
+import { LessonSheetComponent } from '../lessons/lesson-sheet/lesson-sheet.component';
 import { TodayComponent } from './today.component';
 
 // Thursday 24 September 2026, 18:30 local.
@@ -60,7 +69,8 @@ function athlete(overrides: Partial<Athlete> = {}): Athlete {
 }
 
 interface Responses {
-  classes?: AcademyClass[] | 'error';
+  /** `skip` when the test has already answered the timetable itself. */
+  classes?: AcademyClass[] | 'error' | 'skip';
   lessons?: Record<number, Lesson | null>;
   suggestions?: unknown[];
   health?: unknown | 'error';
@@ -73,7 +83,10 @@ interface Responses {
   recent?: Athlete[];
 }
 
-function setup(academy: Record<string, unknown> = {}): HttpTestingController {
+function setup(
+  academy: Record<string, unknown> = {},
+  providers: Provider[] = [],
+): HttpTestingController {
   TestBed.configureTestingModule({
     imports: [TodayComponent],
     providers: [
@@ -81,6 +94,9 @@ function setup(academy: Record<string, unknown> = {}): HttpTestingController {
       provideHttpClientTesting(),
       provideRouter([]),
       ...provideI18nTesting(),
+      // App-level in production (app.config.ts); the lesson sheet toasts through it.
+      MessageService,
+      ...providers,
     ],
   });
   useLadder('bjj', academy);
@@ -109,11 +125,13 @@ const HEALTH = {
 /** Answers every request the page makes, the way a healthy academy would. */
 function flushAll(http: HttpTestingController, r: Responses = {}): void {
   const classes = r.classes ?? [cls()];
-  const classesReq = http.expectOne((req) => req.url.endsWith('/academy/classes'));
-  if (classes === 'error') {
-    classesReq.flush({ message: 'boom' }, { status: 500, statusText: 'Server Error' });
-  } else {
-    classesReq.flush({ data: classes });
+  if (classes !== 'skip') {
+    const classesReq = http.expectOne((req) => req.url.endsWith('/academy/classes'));
+    if (classes === 'error') {
+      classesReq.flush({ message: 'boom' }, { status: 500, statusText: 'Server Error' });
+    } else {
+      classesReq.flush({ data: classes });
+    }
   }
 
   const health = r.health ?? HEALTH;
@@ -255,6 +273,10 @@ describe('TodayComponent', () => {
       '[data-cy="today-timetable-link"]',
     );
     expect(link?.getAttribute('href')).toBe('/dashboard/academy/timetable');
+    // With no class at all there is nothing to plan for: no card, not an empty one (#1752).
+    expect(
+      (fixture.nativeElement as HTMLElement).querySelector('[data-cy="today-teach"]'),
+    ).toBeNull();
     http.verify();
   });
 
@@ -348,50 +370,132 @@ describe('TodayComponent', () => {
   });
 
   it('comes back from a night asleep on the new day, and asks for its lessons', () => {
-    // Thursday 23:50: the window is left on Today.
+    // Thursday 23:50: the window is left on Today. Thursday's class is over,
+    // so the card already plans Friday's — named with its day.
+    const THU = cls({ id: 1, weekday: 4, name: 'Giovedi' });
+    const FRI = cls({ id: 2, weekday: 5, name: 'Venerdi' });
     vi.setSystemTime(new Date(2026, 8, 24, 23, 50));
     const http = setup();
     const fixture = TestBed.createComponent(TodayComponent);
     fixture.detectChanges();
-    flushAll(http, { classes: [cls({ id: 1, weekday: 5, name: 'Venerdi' })] });
+    http.expectOne((req) => req.url.endsWith('/academy/classes')).flush({ data: [THU, FRI] });
+    const before = http.expectOne((q) => q.url.endsWith('/lessons/suggestions'));
+    expect(before.request.params.get('academy_class_id')).toBe('2');
+    before.flush({ data: [] });
+    flushAll(http, { classes: 'skip' });
     fixture.detectChanges();
-    expect((fixture.nativeElement as HTMLElement).querySelector('h1')?.textContent).toContain(
-      'Thursday 24 September',
-    );
+    const root = fixture.nativeElement as HTMLElement;
+    expect(root.querySelector('h1')?.textContent).toContain('Thursday 24 September');
+    expect(text(root, 'today-teach')).toContain('Friday 25 September');
 
     // Friday 08:00: the laptop wakes and the window becomes visible again.
     vi.setSystemTime(new Date(2026, 8, 25, 8, 0));
     document.dispatchEvent(new Event('visibilitychange'));
     fixture.detectChanges();
 
-    http
-      .expectOne((req) => req.url.endsWith('/academy/classes'))
-      .flush({ data: [cls({ id: 1, weekday: 5, name: 'Venerdi' })] });
+    http.expectOne((req) => req.url.endsWith('/academy/classes')).flush({ data: [THU, FRI] });
     const lessonReq = http.expectOne((req) => req.url.endsWith('/lessons') && req.method === 'GET');
     // Tonight's topics belong to Friday's lesson now, not Thursday's.
     expect(lessonReq.request.params.get('held_on')).toBe('2026-09-25');
+    expect(lessonReq.request.params.get('academy_class_id')).toBe('2');
     lessonReq.flush({ data: null });
+    const after = http.expectOne((q) => q.url.endsWith('/lessons/suggestions'));
+    expect(after.request.params.get('academy_class_id')).toBe('2');
+    after.flush({ data: [] });
     for (const req of http.match((q) => q.method === 'GET')) {
       req.flush({ data: [], meta: { total: 0, current_page: 1, per_page: 20, last_page: 1 } });
     }
     fixture.detectChanges();
 
-    const root = fixture.nativeElement as HTMLElement;
     expect(root.querySelector('h1')?.textContent).toContain('Friday 25 September');
-    expect(root.querySelector('[data-cy="today-class-1"]')).not.toBeNull();
+    expect(root.querySelector('[data-cy="today-class-2"]')).not.toBeNull();
+    // The slot is tonight now: the heading drops the day it no longer needs.
+    expect(text(root, 'today-teach')).toContain('For Venerdi at 19:00');
+    expect(text(root, 'today-teach')).not.toContain('Friday');
+    http.verify();
   });
 
-  it('does not reload on a return the same day', () => {
+  it('does not reload on a return the same day, while the planned class is still ahead', () => {
     const http = setup();
     const fixture = TestBed.createComponent(TodayComponent);
     fixture.detectChanges();
     flushAll(http);
 
-    vi.setSystemTime(new Date(2026, 8, 24, 21, 0));
+    // 18:45: the 19:00 class is still the one to plan.
+    vi.setSystemTime(new Date(2026, 8, 24, 18, 45));
     document.dispatchEvent(new Event('visibilitychange'));
 
     http.expectNone((req) => req.url.endsWith('/academy/classes'));
+    http.expectNone((req) => req.url.endsWith('/lessons/suggestions'));
     http.verify();
+  });
+
+  it('on a return the same evening after the class, plans next week and asks again', () => {
+    const http = setup();
+    const fixture = TestBed.createComponent(TodayComponent);
+    fixture.detectChanges();
+    // 18:30: the only class is Thursday 19:00, so that is the one planned.
+    flushAll(http, { classes: [cls({ id: 1 })] });
+    fixture.detectChanges();
+    expect(text(fixture.nativeElement, 'today-teach')).toContain('For Fondamentali at 19:00');
+
+    // 21:30, same Thursday: the window comes back after the class.
+    vi.setSystemTime(new Date(2026, 8, 24, 21, 30));
+    document.dispatchEvent(new Event('visibilitychange'));
+    fixture.detectChanges();
+
+    http.expectNone((req) => req.url.endsWith('/academy/classes'));
+    const again = http.expectOne((q) => q.url.endsWith('/lessons/suggestions'));
+    expect(again.request.params.get('academy_class_id')).toBe('1');
+    again.flush({ data: [] });
+    fixture.detectChanges();
+
+    // Next Thursday's slot, named with its date — not tonight's, already held.
+    expect(text(fixture.nativeElement, 'today-teach')).toContain('Thursday 1 October');
+    http.verify();
+  });
+
+  it('drops a suggestions reply that arrives for a slot no longer planned', () => {
+    const http = setup();
+    const fixture = TestBed.createComponent(TodayComponent);
+    fixture.detectChanges();
+    http.expectOne((req) => req.url.endsWith('/academy/classes')).flush({ data: [cls({ id: 1 })] });
+    // Tonight's request is still in flight when the window comes back at 21:30.
+    const stale = http.expectOne((q) => q.url.endsWith('/lessons/suggestions'));
+    vi.setSystemTime(new Date(2026, 8, 24, 21, 30));
+    document.dispatchEvent(new Event('visibilitychange'));
+    const fresh = http.expectOne((q) => q.url.endsWith('/lessons/suggestions'));
+
+    fresh.flush({
+      data: [
+        {
+          id: 31,
+          name: 'Kimura',
+          parent_name: 'Closed guard',
+          kind: 'gi',
+          reason: 'never',
+          last_taught_on: null,
+        },
+      ],
+    });
+    stale.flush({
+      data: [
+        {
+          id: 21,
+          name: 'Triangle',
+          parent_name: 'Closed guard',
+          kind: 'gi',
+          reason: 'never',
+          last_taught_on: null,
+        },
+      ],
+    });
+    flushAll(http, { classes: 'skip' });
+    fixture.detectChanges();
+
+    const teach = text(fixture.nativeElement, 'today-teach');
+    expect(teach).toContain('Kimura');
+    expect(teach).not.toContain('Triangle');
   });
 
   it("suggests what to teach for the evening's class, with the reason", () => {
@@ -437,6 +541,110 @@ describe('TodayComponent', () => {
     const req = http.expectOne((q) => q.url.endsWith('/lessons/suggestions'));
     expect(req.request.params.get('academy_class_id')).toBe('1');
     expect(req.request.params.get('limit')).toBe('3');
+  });
+
+  describe('plans for the next class, not only for tonight (#1752)', () => {
+    const SUGGESTION = {
+      id: 21,
+      name: 'Triangle',
+      parent_name: 'Closed guard',
+      kind: 'gi',
+      reason: 'never',
+      last_taught_on: null,
+    };
+
+    it('on an evening with no class, suggests for the next one, and names its day', () => {
+      const http = setup();
+      const fixture = TestBed.createComponent(TodayComponent);
+      fixture.detectChanges();
+      http
+        .expectOne((req) => req.url.endsWith('/academy/classes'))
+        .flush({ data: [cls({ id: 8, weekday: 1, name: 'Fondamentali', starts_at: '19:00' })] });
+
+      const req = http.expectOne((q) => q.url.endsWith('/lessons/suggestions'));
+      expect(req.request.params.get('academy_class_id')).toBe('8');
+      req.flush({ data: [SUGGESTION] });
+      flushAll(http, { classes: 'skip' });
+      fixture.detectChanges();
+
+      const teach = text(fixture.nativeElement, 'today-teach');
+      expect(teach).toContain('Fondamentali');
+      expect(teach).toContain('Monday 28 September');
+      // The reason stays: a suggestion whose reasoning is invisible gets ignored.
+      expect(teach).toContain('Not taught yet this season');
+      http.verify();
+    });
+
+    it('at 19:30, plans the 20:30 class rather than the one already on the mat', () => {
+      vi.setSystemTime(new Date(2026, 8, 24, 19, 30));
+      const http = setup();
+      const fixture = TestBed.createComponent(TodayComponent);
+      fixture.detectChanges();
+      http
+        .expectOne((req) => req.url.endsWith('/academy/classes'))
+        .flush({
+          data: [cls({ id: 1, starts_at: '19:00' }), cls({ id: 2, starts_at: '20:30' })],
+        });
+
+      const req = http.expectOne((q) => q.url.endsWith('/lessons/suggestions'));
+      expect(req.request.params.get('academy_class_id')).toBe('2');
+    });
+
+    it("opens the lesson sheet on the next class's own date", () => {
+      const http = setup();
+      const fixture = TestBed.createComponent(TodayComponent);
+      fixture.detectChanges();
+      flushAll(http, {
+        classes: [cls({ id: 8, weekday: 1, name: 'Fondamentali' })],
+        suggestions: [SUGGESTION],
+      });
+      fixture.detectChanges();
+
+      (
+        (fixture.nativeElement as HTMLElement).querySelector(
+          '[data-cy="today-teach-plan"] button',
+        ) as HTMLButtonElement
+      ).click();
+      fixture.detectChanges();
+
+      const sheet = fixture.debugElement.query(By.directive(LessonSheetComponent))
+        .componentInstance as LessonSheetComponent;
+      // Monday's lesson, not tonight's: the topics must land on the day they are for.
+      expect(sheet.heldOn()).toBe('2026-09-28');
+    });
+
+    it("saving next week's plan leaves tonight's line alone", () => {
+      // Thursday 21:30: tonight's only class is over, so the next one is next Thursday.
+      vi.setSystemTime(new Date(2026, 8, 24, 21, 30));
+      const http = setup();
+      const fixture = TestBed.createComponent(TodayComponent);
+      fixture.detectChanges();
+      flushAll(http, { classes: [cls({ id: 1 })] });
+      fixture.detectChanges();
+
+      const component = fixture.componentInstance as unknown as {
+        onSaved(saved: Lesson): void;
+      };
+      component.onSaved(
+        lesson({
+          held_on: '2026-10-01',
+          topics: [
+            {
+              id: 9,
+              name: 'Kimura',
+              kind: 'gi',
+              parent_id: 4,
+              parent_name: 'Closed guard',
+              deleted: false,
+            },
+          ],
+        }),
+      );
+      fixture.detectChanges();
+
+      expect(text(fixture.nativeElement, 'today-class-1')).toContain('Nothing yet');
+      expect(text(fixture.nativeElement, 'today-class-1')).not.toContain('Kimura');
+    });
   });
 
   it('counts the presences since Monday, the programme, and who joined this week', () => {
@@ -491,10 +699,9 @@ describe('TodayComponent', () => {
     fixture.detectChanges();
 
     const component = fixture.componentInstance as unknown as {
-      onSaved(classId: number, saved: Lesson): void;
+      onSaved(saved: Lesson): void;
     };
     component.onSaved(
-      1,
       lesson({
         topics: [
           {
@@ -512,5 +719,173 @@ describe('TodayComponent', () => {
 
     expect(text(fixture.nativeElement, 'today-class-1')).toContain('Kimura');
     http.verify();
+  });
+
+  describe('is there a copy anywhere but this computer (#1751)', () => {
+    const FOLDER: BackupFolderStateView = {
+      folder: 'D:\\OneDrive\\Budojo',
+      lastCopyAt: '2026-09-24T03:00:00Z',
+      lastError: null,
+      lastErrorAt: null,
+    };
+    const NO_DRIVE: DriveLinkStateView = { configured: true, linked: false };
+
+    /**
+     * What the services really answer off the desktop: `available` false,
+     * and `state()` all-nulls / unconfigured rather than nothing at all. So
+     * a component that forgot the `available` gate would read those as "no
+     * folder, no Drive" and raise the alert — which the web-build test below
+     * must catch.
+     */
+    const OFF_DESKTOP_FOLDER: BackupFolderStateView = {
+      folder: null,
+      lastCopyAt: null,
+      lastError: null,
+      lastErrorAt: null,
+    };
+    const OFF_DESKTOP_DRIVE: DriveLinkStateView = { configured: false, linked: false };
+
+    function bridges(
+      folder: BackupFolderStateView | null,
+      drive: DriveLinkStateView | null = NO_DRIVE,
+    ): Provider[] {
+      return [
+        {
+          provide: BackupFolderService,
+          useValue: {
+            available: folder !== null,
+            state: () => Promise.resolve(folder ?? OFF_DESKTOP_FOLDER),
+          },
+        },
+        {
+          provide: DriveSyncService,
+          useValue: {
+            available: drive !== null,
+            state: () => Promise.resolve(drive ?? OFF_DESKTOP_DRIVE),
+          },
+        },
+      ];
+    }
+
+    async function render(providers: Provider[]): Promise<HTMLElement> {
+      const http = setup({}, providers);
+      const fixture = TestBed.createComponent(TodayComponent);
+      fixture.detectChanges();
+      flushAll(http, { health: { data: [], missing_medical_certificate: [] } });
+      await fixture.whenStable();
+      fixture.detectChanges();
+      http.verify();
+      return fixture.nativeElement as HTMLElement;
+    }
+
+    it('a failing folder copy is an alert naming the folder and the reason', async () => {
+      const root = await render(
+        bridges({ ...FOLDER, lastError: 'ENOENT', lastErrorAt: '2026-09-23T03:00:00Z' }),
+      );
+
+      const row = text(root, 'today-watch-backup');
+      expect(row).toContain('D:\\OneDrive\\Budojo');
+      // The Backup page's own sentence for the errno, not a second copy of it.
+      expect(row).toContain('The backup folder no longer exists');
+      expect(root.querySelector('[data-cy="today-watch-backup"]')?.getAttribute('href')).toBe(
+        '/dashboard/backup',
+      );
+      expect(root.querySelector('[data-cy="today-system"]')).toBeNull();
+    });
+
+    it('a failing Drive sync is an alert naming the account', async () => {
+      const root = await render(
+        bridges(
+          { ...FOLDER, folder: null, lastCopyAt: null },
+          {
+            configured: true,
+            linked: true,
+            account: 'dojo@example.com',
+            lastError: 'invalid_grant',
+          },
+        ),
+      );
+
+      expect(text(root, 'today-watch-backup')).toContain('dojo@example.com');
+    });
+
+    it('no folder and no Drive link is the "only on this computer" alert', async () => {
+      const root = await render(bridges({ ...FOLDER, folder: null, lastCopyAt: null }));
+
+      expect(text(root, 'today-watch-backup')).toContain('only on this computer');
+      expect(text(root, 'today-watch-backup')).toContain('link Google Drive');
+    });
+
+    it('does not suggest Google Drive in a build that cannot link it', async () => {
+      const root = await render(
+        bridges(
+          { ...FOLDER, folder: null, lastCopyAt: null },
+          { configured: false, linked: false },
+        ),
+      );
+
+      const row = text(root, 'today-watch-backup');
+      expect(row).toContain('only on this computer');
+      expect(row).toContain('Choose a folder');
+      expect(row).not.toContain('Google Drive');
+    });
+
+    it('a copy that stopped arriving more than a week ago is a warning with its date', async () => {
+      // No lastError: the local backup threw, and the copy after it never ran.
+      const root = await render(bridges({ ...FOLDER, lastCopyAt: '2026-09-10T03:00:00Z' }));
+
+      const row = text(root, 'today-watch-backup');
+      expect(row).toContain('The last copy outside this computer is from 10 September');
+      expect(root.querySelector('[data-cy="today-system"]')).toBeNull();
+    });
+
+    it('copies landing are one quiet line, and nothing to check', async () => {
+      const root = await render(bridges(FOLDER));
+
+      expect(root.querySelector('[data-cy="today-watch-backup"]')).toBeNull();
+      expect(text(root, 'today-watch')).toContain('Nothing to check');
+      expect(text(root, 'today-system')).toContain('Last copy off this computer');
+    });
+
+    it('never says all clear before the backup state has been read', async () => {
+      // The bridge answers last: documents and payments are already in.
+      let answer: (state: BackupFolderStateView) => void = () => undefined;
+      const slowFolder = new Promise<BackupFolderStateView>((resolve) => (answer = resolve));
+      const http = setup({}, [
+        {
+          provide: BackupFolderService,
+          useValue: { available: true, state: () => slowFolder },
+        },
+        {
+          provide: DriveSyncService,
+          useValue: { available: true, state: () => Promise.resolve(NO_DRIVE) },
+        },
+      ]);
+      const fixture = TestBed.createComponent(TodayComponent);
+      fixture.detectChanges();
+      flushAll(http, { health: { data: [], missing_medical_certificate: [] } });
+      await Promise.resolve();
+      fixture.detectChanges();
+
+      const root = fixture.nativeElement as HTMLElement;
+      expect(text(root, 'today-watch')).not.toContain('Nothing to check');
+
+      // Then the backup turns out to exist nowhere but here.
+      answer({ ...FOLDER, folder: null, lastCopyAt: null });
+      // The bridge's promise chain is not a tracked task: let it drain.
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      fixture.detectChanges();
+
+      expect(text(root, 'today-watch')).not.toContain('Nothing to check');
+      expect(text(root, 'today-watch-backup')).toContain('only on this computer');
+      http.verify();
+    });
+
+    it('says nothing at all on the web build, where there is no bridge', async () => {
+      const root = await render(bridges(null, null));
+
+      expect(root.querySelector('[data-cy="today-watch-backup"]')).toBeNull();
+      expect(root.querySelector('[data-cy="today-system"]')).toBeNull();
+    });
   });
 });

@@ -17,8 +17,9 @@ import { SkeletonModule } from 'primeng/skeleton';
 import { AcademyClass, AcademyClassService } from '../../core/services/academy-class.service';
 import { AcademyService } from '../../core/services/academy.service';
 import { Athlete, AthleteListResponse, AthleteService } from '../../core/services/athlete.service';
-import { DesktopBackupService } from '../../core/services/desktop-backup.service';
+import { BackupFolderService } from '../../core/services/backup-folder.service';
 import { DocumentService, ExpiringDocumentsResponse } from '../../core/services/document.service';
+import { DriveSyncService } from '../../core/services/drive-sync.service';
 import { LanguageService } from '../../core/services/language.service';
 import {
   Lesson,
@@ -34,21 +35,23 @@ import {
 import { TrainingModesService } from '../../core/services/training-modes.service';
 import { AthleteIdentityComponent } from '../../shared/components/athlete-identity/athlete-identity.component';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
-import { RelativeTimePipe } from '../../shared/pipes/relative-time.pipe';
+import { LocaleDatePipe } from '../../shared/pipes/locale-date.pipe';
 import { academyChargesAFee } from '../../shared/utils/academy-fee';
+import { driveErrorKey, folderErrorKey } from '../../shared/utils/backup-errors';
 import { localeFor } from '../../shared/utils/locale';
 import { monthKey } from '../../shared/utils/months';
-import { pickDefaultClass } from '../attendance/daily/class-pick';
 import { LessonSheetComponent } from '../lessons/lesson-sheet/lesson-sheet.component';
 import {
   isoDay,
   joinedSince,
   nextClassAfter,
+  nextClassFrom,
   presencesSince,
   timeRange,
   tonightClasses,
   weekStart,
 } from './today.helpers';
+import { BackupHealth, backupHealth } from './today-backup';
 
 /** A block's own request: in flight, answered, or failed on its own. */
 type Load<T> =
@@ -59,11 +62,16 @@ type Load<T> =
 const LOADING = { state: 'loading' } as const;
 const FAILED = { state: 'error' } as const;
 
-/** One line of "Da guardare": a count, what it counts, and where to act on it. */
+/**
+ * One line of "Da guardare": a count, what it counts, and where to act on it.
+ * A row with no count is an alert about a state, not a tally (#1751): it
+ * carries a warning mark in the count's place and a line saying why.
+ */
 interface WatchRow {
   readonly dataCy: string;
-  readonly count: number;
+  readonly count: number | null;
   readonly label: string;
+  readonly detail: string | null;
   readonly link: string;
   readonly queryParams: Record<string, string> | null;
 }
@@ -95,8 +103,8 @@ interface DocumentsHealth {
     AthleteIdentityComponent,
     ButtonModule,
     LessonSheetComponent,
+    LocaleDatePipe,
     PageHeaderComponent,
-    RelativeTimePipe,
     RouterLink,
     SkeletonModule,
     TranslatePipe,
@@ -108,8 +116,9 @@ export class TodayComponent implements OnInit {
   private readonly academyClassService = inject(AcademyClassService);
   private readonly academyService = inject(AcademyService);
   private readonly athleteService = inject(AthleteService);
-  private readonly backupService = inject(DesktopBackupService);
+  private readonly backupFolder = inject(BackupFolderService);
   private readonly documentService = inject(DocumentService);
+  private readonly driveSync = inject(DriveSyncService);
   private readonly languageService = inject(LanguageService);
   private readonly lessonService = inject(LessonService);
   private readonly statsService = inject(StatsService);
@@ -132,6 +141,8 @@ export class TodayComponent implements OnInit {
    * dropped instead of landing on today's cards.
    */
   private epoch = 0;
+  /** Bumped on every suggestions request; only the latest one may answer. */
+  private suggestionsCall = 0;
 
   protected readonly kindLabels = this.trainingModes.labels;
   protected readonly timeRange = timeRange;
@@ -168,8 +179,15 @@ export class TodayComponent implements OnInit {
       : this.translate.instant('today.tonight.next', { day, time: cls.starts_at, name: cls.name });
   });
 
-  /** The class whose lesson sheet is open, planning tonight's occurrence. */
-  protected readonly planning = signal<AcademyClass | null>(null);
+  /**
+   * The lesson whose sheet is open: a class and the date of the occurrence
+   * being planned — tonight's from "Stasera", the next class's own date from
+   * "Cosa insegnare" (#1752). The date travels with it, or topics chosen for
+   * Tuesday would land on tonight's lesson.
+   */
+  protected readonly planning = signal<{ readonly cls: AcademyClass; readonly date: Date } | null>(
+    null,
+  );
   protected readonly sheetOpen = signal<boolean>(false);
 
   // ── Da guardare ────────────────────────────────────────────────────────
@@ -188,7 +206,9 @@ export class TodayComponent implements OnInit {
    * found nothing — never while one is loading, and never after one failed.
    */
   protected readonly watchState = computed<'loading' | 'settled'>(() =>
-    this.health().state === 'loading' || this.unpaid()?.state === 'loading' ? 'loading' : 'settled',
+    this.health().state === 'loading' || this.unpaid()?.state === 'loading' || !this.backupRead()
+      ? 'loading'
+      : 'settled',
   );
   protected readonly watchAllClear = computed<boolean>(
     () =>
@@ -203,7 +223,9 @@ export class TodayComponent implements OnInit {
     const h = this.health();
     const t = (one: string, other: string, count: number, params = {}): string =>
       this.translate.instant(count === 1 ? one : other, params);
-    const rows: WatchRow[] = [];
+    // The one failure that loses the whole academy goes first (#1751).
+    const backup = this.backupAlert();
+    const rows: WatchRow[] = backup === null ? [] : [backup];
     const expiring = '/dashboard/documents/expiring';
     if (h.state === 'ready' && h.value.certificates > 0) {
       rows.push({
@@ -214,6 +236,7 @@ export class TodayComponent implements OnInit {
           'today.watch.certificateOther',
           h.value.certificates,
         ),
+        detail: null,
         link: expiring,
         queryParams: null,
       });
@@ -223,6 +246,7 @@ export class TodayComponent implements OnInit {
         dataCy: 'today-watch-missing',
         count: h.value.missing,
         label: t('today.watch.missingOne', 'today.watch.missingOther', h.value.missing),
+        detail: null,
         link: expiring,
         queryParams: null,
       });
@@ -232,6 +256,7 @@ export class TodayComponent implements OnInit {
         dataCy: 'today-watch-documents',
         count: h.value.documents,
         label: t('today.watch.documentOne', 'today.watch.documentOther', h.value.documents),
+        detail: null,
         link: expiring,
         queryParams: null,
       });
@@ -244,6 +269,7 @@ export class TodayComponent implements OnInit {
         dataCy: 'today-watch-unpaid',
         count: unpaid,
         label: t('today.watch.unpaidOne', 'today.watch.unpaidOther', unpaid, { month }),
+        detail: null,
         link: '/dashboard/athletes',
         queryParams: { paid: 'no' },
       });
@@ -254,13 +280,19 @@ export class TodayComponent implements OnInit {
   // ── Cosa insegnare ─────────────────────────────────────────────────────
 
   /**
-   * The class the suggestions are for: the one on now, or the nearest to the
-   * clock — the same pick the check-in opens on, so the two screens mean the
-   * same lesson by "tonight".
+   * The lesson the suggestions are for (#1752): the next class on the
+   * timetable at or after now, wrapping the week. On a rest day it is still
+   * worth asking — the ranking reads the season, not the date, and Sunday
+   * with the laptop open is when planning actually happens. Null only when
+   * there is no timetable at all, and then the card is not drawn.
    */
-  protected readonly teachClass = computed<AcademyClass | null>(() =>
-    pickDefaultClass(this.tonight(), this.now(), this.now()),
-  );
+  protected readonly teachSlot = computed<{
+    readonly academyClass: AcademyClass;
+    readonly date: Date;
+  } | null>(() => {
+    const c = this.classes();
+    return c.state === 'ready' ? nextClassFrom(c.value, this.now()) : null;
+  });
   protected readonly suggestions = signal<Load<readonly LessonSuggestion[]>>(LOADING);
 
   // ── Questa settimana ───────────────────────────────────────────────────
@@ -288,9 +320,64 @@ export class TodayComponent implements OnInit {
     return c === null ? null : this.translate.instant('today.season', { label: c.season.label });
   });
 
-  protected readonly isDesktop = this.backupService.available;
-  /** The newest local archive's timestamp; null when there is none; undefined until read. */
-  protected readonly lastBackupAt = signal<string | null | undefined>(undefined);
+  /**
+   * Whether a copy of the academy exists off this computer (#1751), or null
+   * until read — and forever on the web build, which has no bridge to ask.
+   */
+  protected readonly backup = signal<BackupHealth | null>(null);
+  /**
+   * Whether the bridge has answered — the third half of "Da guardare". The
+   * bridge is asynchronous, and the documents and payments can land first:
+   * without this the card would say "nothing to check" and then grow a
+   * backup alert. True from the start on the web build, which never asks.
+   */
+  private readonly backupRead = signal<boolean>(!this.backupFolder.available);
+
+  /**
+   * The backup as a "Da guardare" row: failing, never set up, or silent for
+   * more than a week. Healthy copies stay a quiet line at the foot.
+   */
+  private readonly backupAlert = computed<WatchRow | null>(() => {
+    this.languageService.currentLang();
+    const b = this.backup();
+    if (b === null || b.kind === 'ok') return null;
+    const row = {
+      dataCy: 'today-watch-backup',
+      count: null,
+      link: '/dashboard/backup',
+      queryParams: null,
+    };
+    if (b.kind === 'local-only') {
+      return {
+        ...row,
+        label: this.translate.instant('today.backup.localOnly'),
+        // Drive is offered only where it exists: a build without its client
+        // hides the card on the Backup page, so advice to link it is a dead end.
+        detail: this.translate.instant(
+          b.driveAvailable ? 'today.backup.localOnlyDetail' : 'today.backup.localOnlyDetailFolder',
+        ),
+      };
+    }
+    if (b.kind === 'stale') {
+      const date = new Intl.DateTimeFormat(localeFor(this.languageService.currentLang()), {
+        day: 'numeric',
+        month: 'long',
+      }).format(new Date(b.lastCopyAt));
+      return {
+        ...row,
+        label: this.translate.instant('today.backup.stale', { date }),
+        detail: this.translate.instant('today.backup.staleDetail'),
+      };
+    }
+    const label =
+      b.target === 'folder'
+        ? this.translate.instant('today.backup.folderFailing', { where: b.where })
+        : b.where === ''
+          ? this.translate.instant('today.backup.driveFailingUnnamed')
+          : this.translate.instant('today.backup.driveFailing', { where: b.where });
+    const reasonKey = b.target === 'folder' ? folderErrorKey(b.code) : driveErrorKey(b.code);
+    return { ...row, label, detail: this.translate.instant(reasonKey, { code: b.code }) };
+  });
 
   ngOnInit(): void {
     this.loadAll();
@@ -303,10 +390,21 @@ export class TodayComponent implements OnInit {
       .subscribe(() => {
         if (this.document.visibilityState !== 'visible') return;
         const now = new Date();
-        if (isoDay(now) === this.todayIso()) return;
+        if (isoDay(now) !== this.todayIso()) {
+          this.now.set(now);
+          this.reset();
+          this.loadAll();
+          return;
+        }
+        // The same day, later: the cards stand, but the class to plan may
+        // have moved on — opened at 18:30 and back at 21:30, the 19:00 class
+        // is held and next week's is the one to prepare (#1752).
+        const before = this.teachSlot();
         this.now.set(now);
-        this.reset();
-        this.loadAll();
+        if (!sameSlot(before, this.teachSlot())) {
+          this.suggestions.set(LOADING);
+          this.loadSuggestions();
+        }
       });
   }
 
@@ -347,12 +445,20 @@ export class TodayComponent implements OnInit {
     return lesson.topics.map((t) => t.name).join(', ');
   }
 
-  protected plan(c: AcademyClass): void {
-    this.planning.set(c);
+  /** Opens the sheet on a class's occurrence — tonight's unless told otherwise. */
+  protected plan(c: AcademyClass, date: Date = this.now()): void {
+    this.planning.set({ cls: c, date });
     this.sheetOpen.set(true);
   }
 
-  protected onSaved(classId: number, saved: Lesson): void {
+  /**
+   * Only tonight's lessons have a line on "Stasera". A plan saved for another
+   * day — next Thursday's occurrence of the same weekly class — must not
+   * rewrite tonight's.
+   */
+  protected onSaved(saved: Lesson): void {
+    if (saved.academy_class_id === null || saved.held_on !== this.todayIso()) return;
+    const classId = saved.academy_class_id;
     this.lessons.update((m) => new Map(m).set(classId, saved));
   }
 
@@ -369,23 +475,47 @@ export class TodayComponent implements OnInit {
     return this.translate.instant(REASON_KEYS[s.reason], { date });
   }
 
-  protected teachHeading(c: AcademyClass): string {
+  /**
+   * "Per Fondamentali alle 19:00" tonight; "Per Fondamentali, lunedì 28
+   * settembre alle 19:00" on any other day — so the reader always knows which
+   * evening the suggestions are for.
+   */
+  protected teachHeading(slot: {
+    readonly academyClass: AcademyClass;
+    readonly date: Date;
+  }): string {
     this.languageService.currentLang();
+    const c = slot.academyClass;
+    if (isoDay(slot.date) === this.todayIso()) {
+      return c.starts_at === null
+        ? this.translate.instant('today.teach.forUntimed', { name: c.name })
+        : this.translate.instant('today.teach.for', { name: c.name, time: c.starts_at });
+    }
+    const day = this.longDate(slot.date);
     return c.starts_at === null
-      ? this.translate.instant('today.teach.forUntimed', { name: c.name })
-      : this.translate.instant('today.teach.for', { name: c.name, time: c.starts_at });
+      ? this.translate.instant('today.teach.forDayUntimed', { name: c.name, day })
+      : this.translate.instant('today.teach.forDay', { name: c.name, day, time: c.starts_at });
   }
 
-  protected readonly sheetDateLabel = computed<string>(() => {
-    this.languageService.currentLang();
+  /** "lunedì 28 settembre", in the reader's language. */
+  private longDate(date: Date): string {
     return new Intl.DateTimeFormat(localeFor(this.languageService.currentLang()), {
       weekday: 'long',
       day: 'numeric',
       month: 'long',
-    }).format(this.now());
+    }).format(date);
+  }
+
+  protected readonly sheetDateLabel = computed<string>(() => {
+    this.languageService.currentLang();
+    const p = this.planning();
+    return p === null ? '' : this.longDate(p.date);
   });
 
-  protected readonly heldOn = this.todayIso;
+  protected readonly sheetHeldOn = computed<string>(() => {
+    const p = this.planning();
+    return p === null ? this.todayIso() : isoDay(p.date);
+  });
 
   private loadClasses(): void {
     this.academyClassService
@@ -419,19 +549,27 @@ export class TodayComponent implements OnInit {
   }
 
   private loadSuggestions(): void {
-    const c = this.teachClass();
-    if (c === null) {
+    const slot = this.teachSlot();
+    // Only the latest request may answer: a reply for a slot re-picked since
+    // (a same-day return) must not land under the new heading.
+    const call = ++this.suggestionsCall;
+    const latest =
+      <T>(apply: (value: T) => void) =>
+      (value: T): void => {
+        if (call === this.suggestionsCall) apply(value);
+      };
+    if (slot === null) {
       this.suggestions.set({ state: 'ready', value: [] });
       return;
     }
     this.lessonService
-      .suggestions(c.id, 3)
+      .suggestions(slot.academyClass.id, 3)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: this.current((value: LessonSuggestion[]) =>
-          this.suggestions.set({ state: 'ready', value }),
+        next: this.current(
+          latest((value: LessonSuggestion[]) => this.suggestions.set({ state: 'ready', value })),
         ),
-        error: this.current(() => this.suggestions.set(FAILED)),
+        error: this.current(latest(() => this.suggestions.set(FAILED))),
       });
   }
 
@@ -512,15 +650,31 @@ export class TodayComponent implements OnInit {
   }
 
   private loadBackup(): void {
-    if (!this.isDesktop) return;
-    void this.backupService.list().then(
-      (archives) => {
-        const newest = [...archives].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
-        this.lastBackupAt.set(newest?.createdAt ?? null);
-      },
-      () => this.lastBackupAt.set(null),
-    );
+    // `state()` answers all-nulls where there is no bridge, and on the web an
+    // absent folder means "no such feature", not "none chosen". Only the
+    // desktop is asked, or the web build would raise a backup alarm about a
+    // feature it does not have.
+    if (!this.backupFolder.available) return;
+    const drive = this.driveSync.available
+      ? this.driveSync.state()
+      : Promise.resolve({ configured: false, linked: false });
+    void Promise.all([this.backupFolder.state(), drive])
+      .then(
+        ([folder, link]) => this.backup.set(backupHealth(folder, link, this.now())),
+        // A bridge that fails to answer costs the backup line, not the card.
+        () => this.backup.set(null),
+      )
+      .finally(() => this.backupRead.set(true));
   }
+}
+
+/** The same class on the same date: the suggestions already on screen still apply. */
+function sameSlot(
+  a: { readonly academyClass: AcademyClass; readonly date: Date } | null,
+  b: { readonly academyClass: AcademyClass; readonly date: Date } | null,
+): boolean {
+  if (a === null || b === null) return a === b;
+  return a.academyClass.id === b.academyClass.id && isoDay(a.date) === isoDay(b.date);
 }
 
 /**

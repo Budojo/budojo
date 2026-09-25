@@ -88,16 +88,22 @@ class AtRiskAthletesAction
      *         baseline_attended: int,
      *         baseline_sessions: int,
      *     }>,
-     *     meta: array{sessions_available: int},
+     *     meta: array{sessions_available: int, sessions_needed: int, has_attendance: bool},
      * }
      */
     public function execute(Academy $academy, CarbonImmutable $today): array
     {
-        $sessionsAvailable = $this->sessionsOf($academy, $today)->distinct()->count('attended_on');
+        // Tonight is not history yet. `assess()` leaves it out for everyone
+        // not ticked, so counting it here would say "enough" an evening early,
+        // and the empty list would read as "nobody drifting".
+        $sessionsAvailable = $this->sessionsOf($academy, $today)
+            ->whereDate('attended_on', '<', $today->toDateString())
+            ->distinct()
+            ->count('attended_on');
         $sessions = $this->latestSessions($academy, $today);
 
         if ($sessions === []) {
-            return ['data' => [], 'meta' => ['sessions_available' => $sessionsAvailable]];
+            return ['data' => [], 'meta' => $this->meta($sessionsAvailable, hasAttendance: false)];
         }
 
         $athletes = $this->candidates($academy, $today);
@@ -124,7 +130,28 @@ class AtRiskAthletesAction
             $b['athlete']['id'],
         ]);
 
-        return ['data' => $rows, 'meta' => ['sessions_available' => $sessionsAvailable]];
+        return ['data' => $rows, 'meta' => $this->meta($sessionsAvailable, hasAttendance: true)];
+    }
+
+    /**
+     * How many sessions exist, and how many the rules need before anyone can
+     * be judged at all (#1729): the recent window plus the shortest baseline.
+     * Sent rather than known by the client, so "not enough history yet" is
+     * decided by the same numbers that decide the tiers.
+     *
+     * `has_attendance` counts tonight, which `sessions_available` does not: on
+     * an academy's first evening there is no history yet, but "no attendance
+     * recorded" would be false to the owner who has just taken the register.
+     *
+     * @return array{sessions_available: int, sessions_needed: int, has_attendance: bool}
+     */
+    private function meta(int $sessionsAvailable, bool $hasAttendance): array
+    {
+        return [
+            'sessions_available' => $sessionsAvailable,
+            'sessions_needed' => self::RECENT_SESSIONS + self::BASELINE_FLOOR_SESSIONS,
+            'has_attendance' => $hasAttendance,
+        ];
     }
 
     /**

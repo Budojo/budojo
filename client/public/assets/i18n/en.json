@@ -1,6 +1,7 @@
 {
   "common": {
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "howCounted": "How is this counted?"
   },
   "language": {
     "label": "Language",
@@ -1760,7 +1761,13 @@
         "orderHint": "Moves apply straight away; Save is for the name, \"Trained in\" and the belt.",
         "close": "Close",
         "fromBelt": "In the programme from",
-        "fromBeltHint": "Expected of this belt and of every belt above it. Leave it for everyone when the grade does not matter."
+        "fromBeltHint": "Expected of this belt and of every belt above it. Leave it for everyone when the grade does not matter.",
+        "notes": "How it is taught here",
+        "notesPlaceholder": "Start from the S-mount; grip on the far elbow…",
+        "notesHint": "Optional. Whoever teaches it finds this in the lesson sheet.",
+        "video": "Reference video",
+        "videoHint": "Optional. A link starting with https:// — it opens in your browser.",
+        "videoInvalid": "Paste a link that starts with https://."
       },
       "fromBelt": "From",
       "forEveryone": "For everyone",
@@ -1964,7 +1971,8 @@
       },
       "presencesOne": "{{count}} attendance",
       "presencesOther": "{{count}} attendances",
-      "noScheduleNote": "No timetable covers this month yet, so there is no day count to work the percentages against."
+      "noScheduleNote": "No timetable covers this month yet, so there is no day count to work the percentages against.",
+      "method": "Here an attendance is one athlete's day of training: an evening with two lessons counts once for each athlete who was there, and the attendances above add up every athlete's days. The percentage divides an athlete's days by the month's training days in the timetable, up to today while the month is running."
     }
   },
   "lessons": {
@@ -1972,6 +1980,9 @@
       "title": "Lesson",
       "planned": "Planned",
       "held": "Held",
+      "stepPrevious": "The week before",
+      "stepNext": "The week after",
+      "stepSaveFirst": "Save or cancel before moving to another week.",
       "searchPlaceholder": "Search the programme",
       "searchAria": "Search the programme",
       "clearSearch": "Clear the search",
@@ -2005,11 +2016,20 @@
       "suggestions": {
         "title": "Suggested tonight",
         "dismiss": "Not tonight",
+        "titleLesson": "Suggested for this lesson",
+        "dismissLesson": "Not for this lesson",
         "reason": {
           "never": "Not taught yet this season",
           "thin": "Taught once, on {{date}}",
           "stale": "Last taught {{date}}"
         }
+      },
+      "detail": {
+        "open": "How {{name}} is taught here",
+        "video": "Watch the reference video",
+        "lastEvening": "Notes from the evening of {{date}} ({{class}}), when it was last taught",
+        "lastEveningLoading": "Looking for the last evening it was taught…",
+        "nothing": "No notes on this technique yet. Write them under Academy → Programme."
       }
     }
   },
@@ -2167,6 +2187,31 @@
         "expiringDocumentOne": "other document to renew",
         "expiringDocumentOther": "other documents to renew",
         "none": "Nothing needs attention"
+      },
+      "atRisk": {
+        "title": "Not seen lately",
+        "description": "Who is coming less than they used to, measured against their own attendance.",
+        "countOne": "{{count}} athlete",
+        "countOther": "{{count}} athletes",
+        "tier": {
+          "gone": "Away for a while",
+          "quiet": "Absent lately",
+          "dropping": "Coming less"
+        },
+        "reasonDropping": "{{recent}} of the last {{recentTotal}} · was {{baseline}} of {{baselineTotal}}",
+        "reasonAbsent": "Last seen {{when}}",
+        "reasonNever": "No sessions since joining",
+        "emptyHealthy": "Nobody is drifting: everyone is coming about as often as they usually do.",
+        "emptyNoHistory": "Not enough sessions recorded yet to tell: {{available}} of the {{needed}} needed.",
+        "emptyNoAttendance": "No attendance recorded yet. Take the register at the check-in and this list fills itself.",
+        "openCheckIn": "Open the check-in",
+        "more": "More",
+        "moreAria": "More actions for {{name}}",
+        "markInactive": "Mark as inactive",
+        "markInactiveConfirm": "Mark {{name}} as inactive? They leave the roster's default view; nothing is deleted.",
+        "markInactiveAccept": "Mark inactive",
+        "markInactiveToast": "{{name}} is now inactive",
+        "markInactiveError": "Could not update {{name}}. Try again."
       }
     },
     "invitation": {
@@ -2935,6 +2980,10 @@
         "seasonTitle": "{{position}}, this season",
         "seasonAria": "{{position}}: every week of the season",
         "seasonEmpty": "Nothing on this position this season yet.",
+        "planTitle": "Plan a lesson",
+        "planAria": "Plan {{position}}, week of {{date}}",
+        "planNoneWeek": "No class on the timetable that week can teach this position.",
+        "planNoneSeason": "No class on the timetable in the next two weeks can teach this position.",
         "state": {
           "planned": "Planned",
           "unconfirmed": "No check-in"
@@ -2981,6 +3030,7 @@
       "exposure": {
         "title": "Who has seen it",
         "openPrefix": "Who has seen it:",
+        "notebook": "How it is taught here",
         "lessonsOne": "Taught in {{count}} lesson this season",
         "lessonsOther": "Taught in {{count}} lessons this season",
         "headcountOne": "{{count}} person",
@@ -3128,10 +3178,11 @@
       "title": "What to teach",
       "for": "For {{name}} at {{time}}",
       "forUntimed": "For {{name}}",
+      "forDay": "For {{name}}, {{day}} at {{time}}",
+      "forDayUntimed": "For {{name}}, {{day}}",
       "openSheet": "Plan the lesson",
       "none": "No suggestions: the programme is empty, or everything in it is out of season.",
       "programmeLink": "Open the programme",
-      "noClass": "No class tonight, so there is nothing to prepare.",
       "error": "Couldn't load the suggestions."
     },
     "week": {
@@ -3144,9 +3195,19 @@
       "joinedError": "Couldn't load the new members."
     },
     "system": {
-      "backup": "Last backup {{when}}",
-      "noBackup": "No backup on this computer yet",
+      "lastCopy": "Last copy off this computer: {{when}}",
+      "firstCopyPending": "The first copy off this computer comes with the next backup",
       "open": "Open backup"
+    },
+    "backup": {
+      "folderFailing": "Copying backups to {{where}} is failing",
+      "driveFailing": "Copying backups to Google Drive ({{where}}) is failing",
+      "driveFailingUnnamed": "Copying backups to Google Drive is failing",
+      "localOnly": "Backups are only on this computer",
+      "localOnlyDetail": "If this disk breaks, the academy goes with it. Choose a folder or link Google Drive.",
+      "localOnlyDetailFolder": "If this disk breaks, the academy goes with it. Choose a folder for the backups.",
+      "stale": "The last copy outside this computer is from {{date}}",
+      "staleDetail": "Nothing has reached it for more than a week. Open the backup page to see why."
     }
   },
   "backup": {

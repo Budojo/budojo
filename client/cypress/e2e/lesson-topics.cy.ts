@@ -55,6 +55,9 @@ function topic(over: Record<string, unknown> = {}) {
     name: 'Closed guard',
     kind: 'both',
     in_season: true,
+    from_belt: null,
+    notes: null,
+    video_url: null,
     sort_order: 0,
     ...over,
   };
@@ -279,6 +282,61 @@ describe('Lesson topics — check-in', () => {
     cy.get('[data-cy="lesson-chip-12"]').should('be.visible');
     cy.get('[data-cy="lesson-sheet-room"]').should('not.exist');
   });
+
+  it("shows how a technique is taught here, and the last evening's notes as that evening's (#1862)", () => {
+    stub();
+    const NOTED_TREE = [
+      {
+        ...TREE[0],
+        children: [
+          topic({
+            id: 11,
+            parent_id: 1,
+            name: 'Armbar',
+            notes: 'Start from the S-mount; grip on the far elbow.',
+            video_url: 'https://www.youtube.com/watch?v=abc123',
+          }),
+          topic({ id: 12, parent_id: 1, name: 'Triangle' }),
+        ],
+      },
+      TREE[1],
+    ];
+    cy.intercept('GET', '/api/v1/academy/syllabus', {
+      statusCode: 200,
+      body: { data: NOTED_TREE },
+    });
+    // After `stub()`, so it wins over the `/lessons?*` glob that would match it too.
+    cy.intercept('GET', '/api/v1/lessons/last-notes*', {
+      statusCode: 200,
+      body: {
+        data: lesson({ held_on: '2026-10-07', notes: "Marco's first day back", held: true }),
+      },
+    }).as('lastNotes');
+
+    cy.visitAuthenticated('/dashboard/attendance');
+    cy.wait('@lesson');
+    cy.get('[data-cy="attendance-topics"]').click();
+    cy.get('[data-cy="lesson-expand-1"]').click();
+
+    cy.get('[data-cy="lesson-detail-toggle-tree-11"]').click();
+    cy.wait('@lastNotes')
+      .its('request.url')
+      .should('contain', 'syllabus_topic_id=11')
+      // Evenings before tonight only: tonight's own plan is not "the last".
+      .and('contain', `before=${TODAY_ISO}`);
+
+    cy.get('[data-cy="lesson-detail-tree-11"]').within(() => {
+      cy.get('[data-cy="lesson-detail-notes"]').should('contain.text', 'S-mount');
+      cy.get('[data-cy="lesson-detail-video"]')
+        .should('have.attr', 'href', 'https://www.youtube.com/watch?v=abc123')
+        .and('have.attr', 'target', '_blank');
+      cy.get('[data-cy="lesson-detail-last-evening"]')
+        .should('contain.text', 'Fundamentals')
+        .and('contain.text', "Marco's first day back");
+    });
+    // Opening the details picks nothing.
+    cy.get('[data-cy="lesson-topic-11"]').should('have.attr', 'aria-pressed', 'false');
+  });
 });
 
 describe('Lesson topics — planning from the timetable', () => {
@@ -309,5 +367,55 @@ describe('Lesson topics — planning from the timetable', () => {
     cy.get('[data-cy="lesson-sheet"]').should('be.visible');
     cy.wait('@lesson').its('request.url').should('contain', `held_on=${expectedIso}`);
     cy.get('[data-cy="lesson-sheet-state"]').should('not.exist');
+  });
+
+  it('steps a week at a time, and saves to the week it lands on (#1859)', () => {
+    stub();
+    const weekday = (TODAY.getDay() + 2) % 7;
+    cy.intercept('GET', '/api/v1/academy/classes', {
+      statusCode: 200,
+      body: { data: [{ ...CLASS, weekday }] },
+    });
+
+    const next = new Date(
+      TODAY.getFullYear(),
+      TODAY.getMonth(),
+      TODAY.getDate() + ((weekday - TODAY.getDay() + 7) % 7),
+    );
+    const weekAfter = new Date(next.getFullYear(), next.getMonth(), next.getDate() + 7);
+    const iso = (d: Date) =>
+      [
+        d.getFullYear(),
+        String(d.getMonth() + 1).padStart(2, '0'),
+        String(d.getDate()).padStart(2, '0'),
+      ].join('-');
+
+    cy.visitAuthenticated('/dashboard/academy/timetable');
+    cy.get('[data-cy="timetable-plan-3"]', { timeout: 15000 }).click();
+    cy.wait('@lesson')
+      .its('request.url')
+      .should('contain', `held_on=${iso(next)}`);
+
+    // The next occurrence is the first the timetable can plan: nothing before it.
+    cy.get('[data-cy="lesson-sheet-prev"]').should('be.disabled');
+    cy.get('[data-cy="lesson-sheet-next"]').click();
+    cy.wait('@lesson')
+      .its('request.url')
+      .should('contain', `held_on=${iso(weekAfter)}`);
+    cy.get('[data-cy="lesson-sheet-prev"]').should('not.be.disabled');
+
+    // Something picked: the arrows hold, and say why.
+    cy.get('[data-cy="lesson-expand-1"]').click();
+    cy.get('[data-cy="lesson-topic-11"]').click();
+    cy.get('[data-cy="lesson-sheet-next"]').should('be.disabled');
+    cy.get('[data-cy="lesson-sheet-step-hint"]').should('be.visible');
+
+    cy.intercept('PUT', '/api/v1/lessons/topics', {
+      statusCode: 200,
+      body: { data: lesson({ held_on: iso(weekAfter) }) },
+    }).as('save');
+    cy.get('[data-cy="lesson-sheet-save"]').click();
+
+    cy.wait('@save').its('request.body.held_on').should('eq', iso(weekAfter));
   });
 });

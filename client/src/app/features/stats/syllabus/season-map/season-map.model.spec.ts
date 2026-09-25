@@ -3,12 +3,14 @@ import {
   CoveragePosition,
   SyllabusCalendar,
 } from '../../../../core/services/stats.service';
+import { AcademyClass } from '../../../../core/services/academy-class.service';
 import {
   buildRows,
   cellLessons,
   mondayOf,
   monthOfWeek,
   monthStarts,
+  planOptions,
   positionSeason,
 } from './season-map.model';
 
@@ -184,6 +186,50 @@ describe('season map model (#1858)', () => {
     expect(season.map((g) => g.week)).toEqual(['2026-10-05', '2026-10-19']);
     expect(season[1].lessons.map((l) => l.id)).toEqual([2, 3]);
     expect(positionSeason(data, 9)).toEqual([]);
+  });
+
+  it('offers the classes that run in a window and admit the position, in date order', () => {
+    const classes: AcademyClass[] = [
+      {
+        id: 1,
+        name: 'Fundamentals',
+        weekday: 1,
+        starts_at: '19:00',
+        duration_minutes: 60,
+        kind: 'gi',
+      },
+      { id: 2, name: 'No-gi', weekday: 3, starts_at: '19:00', duration_minutes: 60, kind: 'nogi' },
+      {
+        id: 3,
+        name: 'Open mat',
+        weekday: 6,
+        starts_at: '10:00',
+        duration_minutes: null,
+        kind: 'other',
+      },
+      { id: 4, name: 'Advanced', weekday: 1, starts_at: '20:00', duration_minutes: 75, kind: 'gi' },
+    ];
+
+    // A gi position: the gi classes and the open mat, never the no-gi one.
+    expect(planOptions(classes, 'gi', '2026-09-21', '2026-09-27')).toEqual([
+      { classId: 1, name: 'Fundamentals', startsAt: '19:00', date: '2026-09-21' },
+      { classId: 4, name: 'Advanced', startsAt: '20:00', date: '2026-09-21' },
+      { classId: 3, name: 'Open mat', startsAt: '10:00', date: '2026-09-26' },
+    ]);
+    // A both-ways position: every class.
+    expect(planOptions(classes, 'both', '2026-09-21', '2026-09-27').map((o) => o.classId)).toEqual([
+      1, 4, 2, 3,
+    ]);
+    // A window starting mid-week leaves Monday out.
+    expect(planOptions(classes, 'gi', '2026-09-24', '2026-09-27').map((o) => o.classId)).toEqual([
+      3,
+    ]);
+  });
+
+  it('marks the weeks from this one on as ones a plan can still land in', () => {
+    const [guard] = buildRows([position(1, 'Closed guard')], calendar());
+
+    expect(guard.cells.map((c) => c.ahead)).toEqual([false, true, true]);
   });
 
   it('names what each lesson did on the position, the position itself included', () => {
