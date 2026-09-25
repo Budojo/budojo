@@ -130,7 +130,7 @@ describe('Today, the first screen (#1643)', () => {
   });
 
   it("names the week's birthdays, today's first, and opens the athlete (#1754)", () => {
-    const athlete = (id: number, first: string, last: string, dob: string) => ({
+    const athlete = (id: number, first: string, last: string, dob: string, phone?: string) => ({
       id,
       first_name: first,
       last_name: last,
@@ -139,10 +139,15 @@ describe('Today, the first screen (#1643)', () => {
       status: 'active',
       joined_at: '2024-09-01',
       date_of_birth: dob,
+      phone_country_code: phone ? '+39' : null,
+      phone_national_number: phone ?? null,
     });
     cy.intercept(
       { method: 'GET', pathname: '/api/v1/athletes', query: { birthday: 'week' } },
-      PAGE([athlete(12, 'Luca', 'Conti', '1995-09-26'), athlete(11, 'Sara', 'Neri', '1990-09-24')]),
+      PAGE([
+        athlete(12, 'Luca', 'Conti', '1995-09-26'),
+        athlete(11, 'Sara', 'Neri', '1990-09-24', '3331234567'),
+      ]),
     ).as('birthdays');
     cy.intercept('GET', '/api/v1/athletes/11', {
       statusCode: 200,
@@ -158,6 +163,13 @@ describe('Today, the first screen (#1643)', () => {
       .should('contain.text', 'Sara Neri')
       .and('contain.text', 'Turns 36 today');
     cy.get('[data-cy="today-birthday-12"]').should('contain.text', 'Sat');
+
+    // The message itself is one tap away (#1869): WhatsApp in a new window,
+    // and a row without a number says so instead of lacking the action.
+    cy.get('[data-cy="birthday-contact-11-whatsapp"]')
+      .should('have.attr', 'href', 'https://wa.me/393331234567')
+      .and('have.attr', 'target', '_blank');
+    cy.get('[data-cy="birthday-contact-12-none"]').should('be.visible');
 
     // The detail page opens on its default tab.
     cy.get('[data-cy="today-birthday-11"] a').first().click();

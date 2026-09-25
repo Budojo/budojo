@@ -18,7 +18,7 @@ beforeEach(function (): void {
     $this->academy = $this->user->academy;
 });
 
-function bornOn(object $test, ?string $dateOfBirth, AthleteStatus $status = AthleteStatus::Active): Athlete
+function birthdayAthleteBornOn(object $test, ?string $dateOfBirth, AthleteStatus $status = AthleteStatus::Active): Athlete
 {
     return Athlete::factory()->for($test->academy)->create([
         'date_of_birth' => $dateOfBirth,
@@ -40,7 +40,7 @@ function birthdayIds(object $test, string $query): array
 }
 
 it('finds the athlete whose birthday is today, and not the next day', function (): void {
-    $athlete = bornOn($this, '1990-03-14');
+    $athlete = birthdayAthleteBornOn($this, '1990-03-14');
 
     $this->travelTo('2026-03-14 10:00');
     expect(birthdayIds($this, 'birthday=today'))->toBe([$athlete->id]);
@@ -50,7 +50,7 @@ it('finds the athlete whose birthday is today, and not the next day', function (
 });
 
 it('never matches an athlete without a date of birth', function (): void {
-    bornOn($this, null);
+    birthdayAthleteBornOn($this, null);
     $this->travelTo('2026-03-14 10:00');
 
     expect(birthdayIds($this, 'birthday=today'))->toBe([])
@@ -58,33 +58,33 @@ it('never matches an athlete without a date of birth', function (): void {
 });
 
 it('takes the week across the new year', function (): void {
-    $january = bornOn($this, '1995-01-02');
-    bornOn($this, '1995-01-05');
+    $january = birthdayAthleteBornOn($this, '1995-01-02');
+    birthdayAthleteBornOn($this, '1995-01-05');
     $this->travelTo('2026-12-29 10:00');
 
     expect(birthdayIds($this, 'birthday=week'))->toBe([$january->id]);
 });
 
 it('covers today and the six days after it, no more', function (): void {
-    $today = bornOn($this, '2001-06-10');
-    $sixth = bornOn($this, '2001-06-16');
-    bornOn($this, '2001-06-09');
-    bornOn($this, '2001-06-17');
+    $today = birthdayAthleteBornOn($this, '2001-06-10');
+    $sixth = birthdayAthleteBornOn($this, '2001-06-16');
+    birthdayAthleteBornOn($this, '2001-06-09');
+    birthdayAthleteBornOn($this, '2001-06-17');
     $this->travelTo('2026-06-10 10:00');
 
     expect(birthdayIds($this, 'birthday=week'))->toEqualCanonicalizing([$today->id, $sixth->id]);
 });
 
 it('finds a 29 February birthday in the week of a leap year', function (): void {
-    $leapling = bornOn($this, '2000-02-29');
-    bornOn($this, '2000-03-04');
+    $leapling = birthdayAthleteBornOn($this, '2000-02-29');
+    birthdayAthleteBornOn($this, '2000-03-04');
     $this->travelTo('2028-02-26 10:00');
 
     expect(birthdayIds($this, 'birthday=week'))->toBe([$leapling->id]);
 });
 
 it('keeps a 29 February birthday on the 29th in a leap year, not the 28th', function (): void {
-    $leapling = bornOn($this, '2000-02-29');
+    $leapling = birthdayAthleteBornOn($this, '2000-02-29');
 
     $this->travelTo('2028-02-28 10:00');
     expect(birthdayIds($this, 'birthday=today'))->toBe([]);
@@ -95,9 +95,9 @@ it('keeps a 29 February birthday on the 29th in a leap year, not the 28th', func
 
 it('marks a 29 February birthday on 28 February in a year without one', function (): void {
     // Otherwise it would be missed three years in four.
-    $leapling = bornOn($this, '2000-02-29');
-    $twentyEighth = bornOn($this, '1999-02-28');
-    bornOn($this, '1999-03-01');
+    $leapling = birthdayAthleteBornOn($this, '2000-02-29');
+    $twentyEighth = birthdayAthleteBornOn($this, '1999-02-28');
+    birthdayAthleteBornOn($this, '1999-03-01');
 
     $this->travelTo('2027-02-28 10:00');
     expect(birthdayIds($this, 'birthday=today'))->toEqualCanonicalizing([$leapling->id, $twentyEighth->id]);
@@ -110,17 +110,17 @@ it('marks a 29 February birthday on 28 February in a year without one', function
 });
 
 it('ignores a value it does not know, as it does for paid', function (): void {
-    $athlete = bornOn($this, '1990-03-14');
-    $other = bornOn($this, '1990-07-01');
+    $athlete = birthdayAthleteBornOn($this, '1990-03-14');
+    $other = birthdayAthleteBornOn($this, '1990-07-01');
     $this->travelTo('2026-03-14 10:00');
 
     expect(birthdayIds($this, 'birthday=nonsense'))->toEqualCanonicalizing([$athlete->id, $other->id]);
 });
 
 it('says nothing about status on its own; the caller asks for it', function (): void {
-    $active = bornOn($this, '1990-03-14');
-    $inactive = bornOn($this, '1988-03-14', AthleteStatus::Inactive);
-    bornOn($this, '1988-03-15');
+    $active = birthdayAthleteBornOn($this, '1990-03-14');
+    $inactive = birthdayAthleteBornOn($this, '1988-03-14', AthleteStatus::Inactive);
+    birthdayAthleteBornOn($this, '1988-03-15');
     $this->travelTo('2026-03-14 10:00');
 
     expect(birthdayIds($this, 'birthday=today&status=active'))->toBe([$active->id])
@@ -128,8 +128,8 @@ it('says nothing about status on its own; the caller asks for it', function (): 
 });
 
 it('keeps to the academy the reader is in', function (): void {
-    $mine = bornOn($this, '1990-03-14');
-    bornOn($this, '1990-04-14');
+    $mine = birthdayAthleteBornOn($this, '1990-03-14');
+    birthdayAthleteBornOn($this, '1990-04-14');
     $elsewhere = userWithAcademy();
     Athlete::factory()->for($elsewhere->academy)->create(['date_of_birth' => '1990-03-14']);
     $this->travelTo('2026-03-14 10:00');

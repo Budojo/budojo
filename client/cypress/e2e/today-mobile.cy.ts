@@ -40,8 +40,9 @@ MOBILE_VIEWPORTS.forEach(({ name, width, height }) => {
         statusCode: 200,
         body: { data: [{ id: 1, type: 'medical_certificate' }], missing_medical_certificate: [] },
       });
-      // A birthday today with a long name (#1754): the widest row the card
-      // can have, name and "Turns 36 today" side by side.
+      // A birthday today with a long name and a phone (#1754): the widest row
+      // the card can have — the name, "Turns 36 today" and the two 48-px
+      // contact actions.
       cy.intercept(
         { method: 'GET', pathname: '/api/v1/athletes', query: { birthday: 'week' } },
         {
@@ -58,6 +59,8 @@ MOBILE_VIEWPORTS.forEach(({ name, width, height }) => {
                 status: 'active',
                 joined_at: '2020-09-01',
                 date_of_birth: '1990-09-24',
+                phone_country_code: '+39',
+                phone_national_number: '3331234567',
               },
             ],
           },
@@ -71,6 +74,7 @@ MOBILE_VIEWPORTS.forEach(({ name, width, height }) => {
       cy.get('[data-cy="today-class-1"]').should('be.visible');
       cy.get('[data-cy="today-watch-unpaid"]').should('be.visible');
       cy.get('[data-cy="today-birthday-7"]').scrollIntoView().should('be.visible');
+      cy.get('[data-cy="birthday-contact-7-whatsapp"]').should('be.visible');
 
       cy.document().then((doc) => {
         expect(doc.documentElement.scrollWidth).to.be.at.most(doc.documentElement.clientWidth);

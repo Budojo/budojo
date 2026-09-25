@@ -273,24 +273,47 @@
   margin: 0;
   padding: 0;
 
-  // Same room for the spine as the joiners above; the day sits at the end.
+  // Mobile first, the shape of the not-seen-lately rows: who and the two ways
+  // to reach them on one line, the day underneath. One line from the tablet
+  // up. Same room for the spine as the joiners above.
   &__row {
     position: relative;
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'who actions'
+      'when actions';
     align-items: center;
-    gap: 1rem;
+    gap: 0 1rem;
     padding: 0.5rem 0 0.5rem 1rem;
 
+    @media (min-width: 768px) {
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      grid-template-areas: 'who when actions';
+    }
+
     app-athlete-identity {
-      flex: 1;
+      grid-area: who;
       min-width: 0;
+    }
+
+    app-contact-actions {
+      grid-area: actions;
     }
   }
 
   &__when {
+    grid-area: when;
+    // Under the name on a phone, clear of the spine the identity draws down
+    // the whole row; beside it from the tablet up, where it needs no gap.
+    padding-left: 0.5rem;
     color: var(--p-text-muted-color);
     font-size: 0.875rem;
     white-space: nowrap;
+
+    @media (min-width: 768px) {
+      padding-left: 0;
+    }
   }
 
   // Today's is the one to act on: ink and weight, never the accent (#1852).

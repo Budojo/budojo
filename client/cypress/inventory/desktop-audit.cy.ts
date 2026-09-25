@@ -2008,13 +2008,19 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
   });
   screen('05-today-birthdays', '/dashboard/today', '[data-cy="today-birthdays"]', {
     stubs: () => {
-      // Two birthdays this week (#1754): today's with the age turned, and
-      // Friday's by its day. The default roster has none from 14 to 20
+      // Two birthdays this week (#1754): today's with the age turned and a
+      // number to message, Friday's by its day and without one — both states
+      // of the contact actions. The default roster has none from 14 to 20
       // September, which is why the other Today screens show no card.
       cy.intercept(
         { method: 'GET', pathname: '/api/v1/athletes', query: { birthday: 'week' } },
         page([
-          { ...ATHLETES[1], date_of_birth: '1990-09-14' },
+          {
+            ...ATHLETES[1],
+            date_of_birth: '1990-09-14',
+            phone_country_code: '+39',
+            phone_national_number: '3478123456',
+          },
           { ...ATHLETES[4], date_of_birth: '1996-09-18' },
         ]),
       );

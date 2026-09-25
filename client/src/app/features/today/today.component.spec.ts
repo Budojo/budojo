@@ -447,6 +447,43 @@ describe('TodayComponent', () => {
     http.verify();
   });
 
+  it('puts the message and the call on every birthday row, and says why when there is no number', () => {
+    const http = setup();
+    const fixture = TestBed.createComponent(TodayComponent);
+    fixture.detectChanges();
+    flushAll(http, {
+      birthdays: [
+        athlete({
+          id: 8,
+          first_name: 'Sara',
+          last_name: 'Neri',
+          date_of_birth: '1990-09-24',
+          phone_country_code: '+39',
+          phone_national_number: '3331234567',
+        }),
+        athlete({ id: 7, first_name: 'Luca', last_name: 'Conti', date_of_birth: '1995-09-26' }),
+      ],
+    });
+    fixture.detectChanges();
+
+    // The card answers "who do I message today": the answer carries the way
+    // to do it (#1869), as the not-seen-lately rows do.
+    const root = fixture.nativeElement as HTMLElement;
+    const whatsapp = root.querySelector(
+      '[data-cy="today-birthday-8"] [data-cy="birthday-contact-8-whatsapp"]',
+    );
+    expect(whatsapp?.getAttribute('href')).toBe('https://wa.me/393331234567');
+    expect(
+      root
+        .querySelector('[data-cy="today-birthday-8"] [data-cy="birthday-contact-8-call"]')
+        ?.getAttribute('href'),
+    ).toBe('tel:+393331234567');
+    expect(
+      root.querySelector('[data-cy="today-birthday-7"] [data-cy="birthday-contact-7-none"]'),
+    ).not.toBeNull();
+    http.verify();
+  });
+
   it('shows no birthdays card when nobody has one this week, or the list could not be read', () => {
     for (const birthdays of [[], 'error'] as const) {
       TestBed.resetTestingModule();

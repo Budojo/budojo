@@ -34,6 +34,7 @@ import {
 } from '../../core/services/stats.service';
 import { TrainingModesService } from '../../core/services/training-modes.service';
 import { AthleteIdentityComponent } from '../../shared/components/athlete-identity/athlete-identity.component';
+import { ContactActionsComponent } from '../../shared/components/contact-actions/contact-actions.component';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { LocaleDatePipe } from '../../shared/pipes/locale-date.pipe';
 import { academyChargesAFee } from '../../shared/utils/academy-fee';
@@ -104,6 +105,7 @@ interface DocumentsHealth {
   imports: [
     AthleteIdentityComponent,
     ButtonModule,
+    ContactActionsComponent,
     LessonSheetComponent,
     LocaleDatePipe,
     PageHeaderComponent,
