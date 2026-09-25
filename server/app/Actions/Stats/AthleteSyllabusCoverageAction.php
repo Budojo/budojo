@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Actions\Stats;
 
+use App\Enums\MartialArt;
 use App\Models\Academy;
 use App\Models\Athlete;
 use App\Models\Lesson;
 use App\Models\SyllabusTopic;
+use App\Support\MartialArt\MartialArtProfile;
 use App\Support\Season;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
@@ -33,10 +35,10 @@ use Illuminate\Support\Facades\DB;
  *   - `missed`     taught while they were on the roster, and they were not there
  *   - `not_taught` the academy has not covered it yet this season
  *
- * The headline is `seen` over what the academy **taught**, so it answers "how
- * much of what happened did you catch?" and never "how much of the syllabus
- * are you?". `not_taught` is reported beside it as the academy's context, not
- * as the athlete's gap.
+ * The headline is `attended` — seen or thin, at least one lesson (#1710) —
+ * over what the academy **taught**, so it answers "how much of what happened
+ * did you catch?" and never "how much of the syllabus are you?". `not_taught`
+ * is reported beside it as the academy's context, not as the athlete's gap.
  *
  * **Everything is scoped to on or after `joined_at`.** A white belt who walked
  * in last month did not miss October, and a denominator that says otherwise is
@@ -81,24 +83,105 @@ class AthleteSyllabusCoverageAction
 
         if ($from->greaterThan($to)) {
             // They joined after this season ended, or it has not started.
-            return $this->report($techniques, $positions, [], [], $start, $end, $label, $joined, 0);
+            return [
+                ...$this->report($techniques, $positions, [], [], $start, $end, $label, $joined, 0),
+                'grade' => $this->ownBeltProgramme($athlete, $academy, $techniques, $positions, [], []),
+            ];
         }
 
         $taughtByAcademy = $this->taughtByAcademy($academy->id, $from, $to);
         $attendedByAthlete = $this->attendedByAthlete($athlete, $from, $to);
         $unattributed = $this->unattributedPresences($athlete, $from, $to);
 
-        return $this->report(
-            $techniques,
-            $positions,
-            $taughtByAcademy,
-            $attendedByAthlete,
-            $start,
-            $end,
-            $label,
-            $joined,
-            $unattributed,
-        );
+        return [
+            ...$this->report(
+                $techniques,
+                $positions,
+                $taughtByAcademy,
+                $attendedByAthlete,
+                $start,
+                $end,
+                $label,
+                $joined,
+                $unattributed,
+            ),
+            'grade' => $this->ownBeltProgramme(
+                $athlete,
+                $academy,
+                $techniques,
+                $positions,
+                $taughtByAcademy,
+                $attendedByAthlete,
+            ),
+        ];
+    }
+
+    /**
+     * The programme of their own belt (#1861): the items expected of their
+     * grade — those marked from it or from any grade below it on the ladder,
+     * and those for everyone — with how many the academy taught while they
+     * were here and how many they were at. Exposure, never competence: every
+     * number is a derivation from attendance.
+     *
+     * Null while nothing in season names a belt — no technique and no
+     * position — because the headline already is the whole programme then;
+     * and null for a belt the ladder does not hold, which has no rank to
+     * compare against.
+     *
+     * **A graded position does not grade its techniques here either.** Only
+     * techniques are counted, each by its own `from_belt`: nothing cascades
+     * (a position's belt is a default for what is added under it), and the
+     * programme page already shows an ungraded technique under a graded
+     * position as "for everyone" and filters it that way. Reading it
+     * differently here would make this the one screen with a second rule —
+     * the disagreement #1748 had to fix between the two coverage headlines.
+     *
+     * @param  Collection<int, SyllabusTopic>  $techniques
+     * @param  Collection<int, SyllabusTopic>  $positions
+     * @param  array<int, int>  $taught
+     * @param  array<int, array{lessons: int, last: string}>  $attended
+     * @return array{belt: string, items: int, taught_by_academy: int, attended: int}|null
+     */
+    private function ownBeltProgramme(
+        Athlete $athlete,
+        Academy $academy,
+        Collection $techniques,
+        Collection $positions,
+        array $taught,
+        array $attended,
+    ): ?array {
+        $graded = static fn (SyllabusTopic $topic): bool => $topic->in_season && $topic->from_belt !== null;
+        if (! $techniques->contains($graded) && ! $positions->contains($graded)) {
+            return null;
+        }
+
+        // Rank from the ladder, never from the enum's case order: blue is 6th
+        // of 12 in BJJ and 7th of 12 in taekwondo.
+        $ladder = MartialArtProfile::for($academy->martial_art ?? MartialArt::Bjj)->ladder();
+        $rank = $ladder->rankOf($athlete->belt);
+        if ($rank === null) {
+            return null;
+        }
+
+        $items = $techniques->filter(static function (SyllabusTopic $technique) use ($ladder, $rank): bool {
+            if ($technique->from_belt === null) {
+                return true;
+            }
+            $from = $ladder->rankOf($technique->from_belt);
+
+            return $from !== null && $from <= $rank;
+        });
+
+        return [
+            'belt' => $athlete->belt->value,
+            'items' => $items->count(),
+            'taught_by_academy' => $items->filter(
+                static fn (SyllabusTopic $technique): bool => ($taught[$technique->id] ?? 0) > 0,
+            )->count(),
+            'attended' => $items->filter(
+                static fn (SyllabusTopic $technique): bool => ($attended[$technique->id]['lessons'] ?? 0) > 0,
+            )->count(),
+        ];
     }
 
     /**

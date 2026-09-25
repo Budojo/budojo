@@ -41,7 +41,8 @@
     margin-left: 0.25rem;
   }
 
-  &__fraction {
+  &__fraction,
+  &__grade-fraction {
     margin: 0;
     font-size: 0.875rem;
     color: var(--p-text-color);
