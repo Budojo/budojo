@@ -3,6 +3,7 @@ import { TranslateService } from '@ngx-translate/core';
 import { TagModule } from 'primeng/tag';
 import { Tooltip } from 'primeng/tooltip';
 import { LanguageService } from '../../../core/services/language.service';
+import { ageOn, parseDateOfBirth } from '../../utils/age';
 import { localeFor } from '../../utils/locale';
 
 /**
@@ -45,20 +46,7 @@ export class AgeBadgeComponent {
   readonly dateOfBirth = input<string | null | undefined>(null);
 
   /** Whole-year age. `null` when DOB is missing or the year is in the future. */
-  protected readonly years = computed<number | null>(() => {
-    const dob = this.dateOfBirth();
-    if (!dob) return null;
-    const parsed = parseDob(dob);
-    if (!parsed) return null;
-    const today = new Date();
-    let age = today.getFullYear() - parsed.year;
-    // Subtract a year if the birthday hasn't happened yet this calendar year.
-    const beforeBirthday =
-      today.getMonth() + 1 < parsed.month ||
-      (today.getMonth() + 1 === parsed.month && today.getDate() < parsed.day);
-    if (beforeBirthday) age -= 1;
-    return age >= 0 ? age : null;
-  });
+  protected readonly years = computed<number | null>(() => ageOn(this.dateOfBirth(), new Date()));
 
   /**
    * The chip's own text. It was `years + 'y'` — a unit built in code, which
@@ -80,20 +68,10 @@ export class AgeBadgeComponent {
   protected readonly dobLabel = computed<string>(() => {
     const dob = this.dateOfBirth();
     if (!dob) return '';
-    const parsed = parseDob(dob);
+    const parsed = parseDateOfBirth(dob);
     if (!parsed) return '';
     const d = new Date(parsed.year, parsed.month - 1, parsed.day);
     const locale = localeFor(this.languageService.currentLang());
     return d.toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' });
   });
-}
-
-function parseDob(dob: string): { year: number; month: number; day: number } | null {
-  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(dob);
-  if (!match) return null;
-  const year = Number(match[1]);
-  const month = Number(match[2]);
-  const day = Number(match[3]);
-  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
-  return { year, month, day };
 }

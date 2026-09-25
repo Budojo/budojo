@@ -22,6 +22,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -279,6 +280,24 @@ class Athlete extends Model implements HasAddress
             ->orWhere(fn (Builder $noTier) => $noTier
                 ->whereNull('fee_tier_id')
                 ->whereHas('academy', fn (Builder $academy) => $academy->where('monthly_fee_cents', '>', 0))));
+    }
+
+    /**
+     * Athletes whose birthday falls on one of the month-days (`03-14`) —
+     * the roster's `?birthday=` (#1754), with `BirthdayWindow` building the
+     * days. A null `date_of_birth` formats to null and matches nothing.
+     *
+     * **No index, deliberately.** `strftime()` on the column cannot use one,
+     * so this scans the academy's athletes: tens of rows on a local SQLite
+     * file. Do not add a generated column or an index to "fix" it.
+     *
+     * @param  Builder<$this>  $query
+     * @param  list<string>  $monthDays
+     * @return Builder<$this>
+     */
+    public function scopeBirthdayOnAnyOf(Builder $query, array $monthDays): Builder
+    {
+        return $query->whereIn(DB::raw("strftime('%m-%d', athletes.date_of_birth)"), $monthDays);
     }
 
     /**

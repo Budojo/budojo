@@ -2249,6 +2249,26 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       });
     },
   });
+  screen('05-today-birthdays', '/dashboard/today', '[data-cy="today-birthdays"]', {
+    stubs: () => {
+      // Two birthdays this week (#1754): today's with the age turned and a
+      // number to message, Friday's by its day and without one — both states
+      // of the contact actions. The default roster has none from 14 to 20
+      // September, which is why the other Today screens show no card.
+      cy.intercept(
+        { method: 'GET', pathname: '/api/v1/athletes', query: { birthday: 'week' } },
+        page([
+          {
+            ...ATHLETES[1],
+            date_of_birth: '1990-09-14',
+            phone_country_code: '+39',
+            phone_national_number: '3478123456',
+          },
+          { ...ATHLETES[4], date_of_birth: '1996-09-18' },
+        ]),
+      );
+    },
+  });
   // The copy off this computer has been failing, and was never set up (#1751).
   screen('05-today-backup-failing', '/dashboard/today', '[data-cy="today-watch-backup"]', {
     folder: { ...FOLDER_STATE, lastError: 'ENOENT', lastErrorAt: '2026-09-10T01:00:20.000Z' },

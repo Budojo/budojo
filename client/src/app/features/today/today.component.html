@@ -273,6 +273,39 @@
         }
       </div>
     </section>
+
+    <!-- ── Compleanni ────────────────────────────────────────────────── -->
+    <!--
+      "Who do I message today" (#1754): no card on a week without a birthday,
+      and on each row the way to send it — WhatsApp and a call, the contact
+      actions the not-seen-lately rows use (#1869), which work on the desktop
+      build through the owner's own phone and browser.
+    -->
+    @if (birthdayRows().length > 0) {
+      <section class="today-card" aria-labelledby="today-birthdays-title" data-cy="today-birthdays">
+        <h2 id="today-birthdays-title" class="today-card__title">
+          {{ 'today.birthdays.title' | translate }}
+        </h2>
+        <ul class="today-birthdays">
+          @for (b of birthdayRows(); track b.athlete.id) {
+            <li
+              class="today-birthdays__row"
+              [class.today-birthdays__row--today]="b.ahead === 0"
+              [attr.data-cy]="'today-birthday-' + b.athlete.id"
+            >
+              <app-athlete-identity [athlete]="b.athlete" [linkToDetail]="true" />
+              <span class="today-birthdays__when">{{ b.label }}</span>
+              <app-contact-actions
+                [countryCode]="b.athlete.phone_country_code"
+                [nationalNumber]="b.athlete.phone_national_number"
+                [name]="b.athlete.first_name + ' ' + b.athlete.last_name"
+                [dataCy]="'birthday-contact-' + b.athlete.id"
+              />
+            </li>
+          }
+        </ul>
+      </section>
+    }
   </div>
 
   <!--

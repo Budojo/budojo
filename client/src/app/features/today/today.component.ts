@@ -34,6 +34,7 @@ import {
 } from '../../core/services/stats.service';
 import { TrainingModesService } from '../../core/services/training-modes.service';
 import { AthleteIdentityComponent } from '../../shared/components/athlete-identity/athlete-identity.component';
+import { ContactActionsComponent } from '../../shared/components/contact-actions/contact-actions.component';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { LocaleDatePipe } from '../../shared/pipes/locale-date.pipe';
 import { academyChargesAFee } from '../../shared/utils/academy-fee';
@@ -41,6 +42,7 @@ import { driveErrorKey, folderErrorKey } from '../../shared/utils/backup-errors'
 import { localeFor } from '../../shared/utils/locale';
 import { monthKey } from '../../shared/utils/months';
 import { LessonSheetComponent } from '../lessons/lesson-sheet/lesson-sheet.component';
+import { Birthday, upcomingBirthdays } from './today-birthdays';
 import {
   isoDay,
   joinedSince,
@@ -106,7 +108,8 @@ interface DocumentsHealth {
  * whether the data is safe. Every answer already lived on some screen; none
  * was on the first one. This page asks the endpoints those screens already
  * use and puts the answers side by side. It computes nothing new on the
- * server, by rule: a block that needs a new aggregate waits for one.
+ * server, by rule: a block that needs a new aggregate waits for one. The
+ * birthdays block did (#1754), and came with its `?birthday=` roster filter.
  *
  * Each block fetches and fails on its own. A reader whose role cannot see
  * the stats still gets tonight's classes; a failed documents check costs one
@@ -118,6 +121,7 @@ interface DocumentsHealth {
   imports: [
     AthleteIdentityComponent,
     ButtonModule,
+    ContactActionsComponent,
     LessonSheetComponent,
     LocaleDatePipe,
     PageHeaderComponent,
@@ -344,6 +348,19 @@ export class TodayComponent implements OnInit {
   protected readonly coverage = signal<SyllabusCoverage | null>(null);
   protected readonly joined = signal<Load<readonly Athlete[]>>(LOADING);
 
+  // ── Compleanni ─────────────────────────────────────────────────────────
+
+  /**
+   * The week's birthdays (#1754), today's first. Empty until answered, and
+   * after a failure too: the card is a prompt, not a report, so it shows
+   * only when it has someone to name — never empty, never as an error.
+   */
+  private readonly birthdays = signal<readonly Birthday<Athlete>[]>([]);
+  protected readonly birthdayRows = computed(() => {
+    this.languageService.currentLang();
+    return this.birthdays().map((b) => ({ ...b, label: this.birthdayLabel(b) }));
+  });
+
   // ── Header and system line ─────────────────────────────────────────────
 
   protected readonly dateTitle = computed<string>(() => {
@@ -456,6 +473,7 @@ export class TodayComponent implements OnInit {
     this.loadHealth();
     this.loadUnpaid();
     this.loadWeek();
+    this.loadBirthdays();
     this.loadBackup();
   }
 
@@ -470,6 +488,7 @@ export class TodayComponent implements OnInit {
     this.presences.set(null);
     this.coverage.set(null);
     this.joined.set(LOADING);
+    this.birthdays.set([]);
     // The bridge is asked again too, and until it answers the card cannot
     // say "nothing to check": the night may have aged the last copy past
     // the week that makes it an alert.
@@ -696,6 +715,37 @@ export class TodayComponent implements OnInit {
       });
   }
 
+  /**
+   * One request for the week, of the people training: an inactive athlete is
+   * not someone to message from here. The roster pages by 20, and a week
+   * with more birthdays than that is not one this academy will have.
+   *
+   * The window starts from the owner's own day (`from`), not the server's:
+   * the server's is UTC, and a week built from yesterday leaves out the
+   * owner's seventh day, which no filtering here could add back.
+   */
+  private loadBirthdays(): void {
+    this.athleteService
+      .list({ birthday: 'week', birthdayFrom: this.todayIso(), status: 'active' })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: this.current((res: AthleteListResponse) =>
+          this.birthdays.set(upcomingBirthdays(res.data, this.now())),
+        ),
+        error: () => undefined,
+      });
+  }
+
+  /** "Turns 34 today" for today's; the weekday for the rest of the window. */
+  private birthdayLabel(b: Birthday<Athlete>): string {
+    if (b.ahead > 0) return this.translate.instant(WEEKDAY_KEYS[b.date.getDay()]);
+    if (b.turns === null) return this.translate.instant('today.birthdays.today');
+    return this.translate.instant(
+      b.turns === 1 ? 'today.birthdays.turnsOne' : 'today.birthdays.turnsOther',
+      { years: b.turns },
+    );
+  }
+
   private loadBackup(): void {
     // `state()` answers all-nulls where there is no bridge, and on the web an
     // absent folder means "no such feature", not "none chosen". Only the
@@ -738,3 +788,18 @@ const REASON_KEYS: Readonly<Record<SuggestionReason, string>> = {
   thin: 'lessons.sheet.suggestions.reason.thin',
   stale: 'lessons.sheet.suggestions.reason.stale',
 };
+
+/**
+ * `Date.getDay()` to the weekday names the timetable already uses (#1754).
+ * Within a window of seven days a weekday names one date, so it needs no
+ * more. An explicit list, never a built key.
+ */
+const WEEKDAY_KEYS: readonly string[] = [
+  'weekdays.sun',
+  'weekdays.mon',
+  'weekdays.tue',
+  'weekdays.wed',
+  'weekdays.thu',
+  'weekdays.fri',
+  'weekdays.sat',
+];
