@@ -150,6 +150,40 @@
       </p>
     }
 
+    @if (r.grade; as g) {
+      <!--
+        The programme of their own belt (#1861). Exposure, never competence:
+        what the academy taught of it and whether they were in the room. What
+        is still to come is the academy's to teach, so it stands beside the
+        fraction, not inside it.
+      -->
+      <section class="panel" data-cy="athlete-coverage-grade">
+        <h3 class="panel__title">
+          {{ 'athletes.coverage.grade.title' | translate: { belt: (beltKey(g.belt) | translate) } }}
+        </h3>
+        <p class="coverage__grade-fraction">
+          @if (g.taught_by_academy > 0) {
+            {{
+              (g.taught_by_academy === 1
+                ? 'athletes.coverage.grade.fractionOne'
+                : 'athletes.coverage.grade.fractionOther'
+              ) | translate: { attended: g.attended, taught: g.taught_by_academy }
+            }}
+          } @else {
+            {{ 'athletes.coverage.grade.nothingTaught' | translate }}
+          }
+        </p>
+        <p class="coverage__note">
+          {{
+            (g.items === 1
+              ? 'athletes.coverage.grade.itemsOne'
+              : 'athletes.coverage.grade.itemsOther'
+            ) | translate: { count: g.items }
+          }}
+        </p>
+      </section>
+    }
+
     @if (r.missed.length > 0) {
       <section class="panel" data-cy="athlete-coverage-missed">
         <h3 class="panel__title">{{ 'athletes.coverage.missed.title' | translate }}</h3>

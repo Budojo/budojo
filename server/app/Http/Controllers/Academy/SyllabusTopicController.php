@@ -71,8 +71,9 @@ class SyllabusTopicController extends Controller
             $academy,
             $request->topicName(),
             $request->topicKind(),
-            $request->parent(),
-            $request->inSeason(),
+            parent: $request->parent(),
+            inSeason: $request->inSeason(),
+            fromBelt: $request->fromBelt(),
         );
 
         return response()->json(['data' => new SyllabusTopicResource($topic)], 201);

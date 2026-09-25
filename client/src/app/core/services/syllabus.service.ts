@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import type { TrainingMode } from './academy.service';
+import type { Belt } from './athlete.service';
 
 /**
  * One entry in the academy's programme (#1563) — a position when `parent_id`
@@ -17,6 +18,11 @@ export interface SyllabusTopic {
   readonly name: string;
   readonly kind: TrainingMode;
   readonly in_season: boolean;
+  /**
+   * The grade it belongs to the programme from (#1861): expected of that belt
+   * and every grade above it on the academy's ladder. Null is for everyone.
+   */
+  readonly from_belt: Belt | null;
   readonly sort_order: number;
   readonly children?: readonly SyllabusTopic[];
 }
@@ -26,12 +32,14 @@ export interface SyllabusTopicPayload {
   readonly kind: TrainingMode;
   readonly parent_id?: number | null;
   readonly in_season?: boolean;
+  readonly from_belt?: Belt | null;
 }
 
 export interface SyllabusTopicPatch {
   readonly name?: string;
   readonly kind?: TrainingMode;
   readonly in_season?: boolean;
+  readonly from_belt?: Belt | null;
   readonly sort_order?: number;
 }
 

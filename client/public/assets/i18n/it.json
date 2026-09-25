@@ -1756,9 +1756,17 @@
         "moveUp": "Sposta su",
         "moveDown": "Sposta giù",
         "place": "{{n}} di {{total}}",
-        "orderHint": "Lo spostamento vale subito; Salva serve per il nome e per «Si allena».",
-        "close": "Chiudi"
+        "orderHint": "Lo spostamento vale subito; Salva serve per il nome, per «Si allena» e per la cintura.",
+        "close": "Chiudi",
+        "fromBelt": "Nel programma dalla cintura",
+        "fromBeltHint": "Previsto per questa cintura e per tutte quelle sopra. Lascialo per tutti quando la cintura non conta."
       },
+      "fromBelt": "Dalla",
+      "forEveryone": "Per tutti",
+      "beltFilterPlaceholder": "Fino a una cintura",
+      "beltFilterAria": "Mostra cosa ci si aspetta da una cintura",
+      "beltSummaryOne": "{{count}} tecnica prevista fino alla cintura {{belt}}",
+      "beltSummaryOther": "{{count}} tecniche previste fino alla cintura {{belt}}",
       "confirm": {
         "remove": "Rimuovere {{name}} dal programma?",
         "removePositionOne": "Rimuovere {{name}} e la tecnica che contiene?",
@@ -1777,6 +1785,9 @@
       "searchClear": "Cancella la ricerca",
       "searchSummary": "{{techniques}} in {{positions}}. Svuota la ricerca per tornare all’albero.",
       "searchNone": "Niente nel programma corrisponde a “{{query}}”.",
+      "searchSummaryBelt": "{{techniques}} in {{positions}}, fino alla cintura {{belt}}. Svuota la ricerca e la cintura per tornare all’albero intero.",
+      "searchNoneForBelt": "“{{query}}” trova qualcosa, ma niente di questo è previsto fino alla cintura {{belt}}.",
+      "beltNone": "Nel programma non c’è ancora niente previsto fino alla cintura {{belt}}.",
       "countSplit": "{{inSeason}} in stagione · {{total}} totali",
       "searchCountTechniqueOne": "{{count}} tecnica",
       "searchCountTechniqueOther": "{{count}} tecniche",
@@ -2685,7 +2696,15 @@
       "nothingMissedOther": "C'era a tutte.",
       "consolidatedOne": "Una vista due volte o più, la soglia di Statistiche → Programma.",
       "consolidatedOther": "{{count}} viste due volte o più, la soglia di Statistiche → Programma.",
-      "consolidatedNone": "Nessuna ancora vista due volte o più."
+      "consolidatedNone": "Nessuna ancora vista due volte o più.",
+      "grade": {
+        "title": "Programma fino alla cintura {{belt}}",
+        "fractionOne": "{{attended}} su {{taught}} tecnica fatta finora dalla palestra",
+        "fractionOther": "{{attended}} su {{taught}} tecniche fatte finora dalla palestra",
+        "nothingTaught": "La palestra non ne ha ancora fatta nessuna da quando è iscritto.",
+        "itemsOne": "{{count}} tecnica nel programma fino a questa cintura",
+        "itemsOther": "{{count}} tecniche nel programma fino a questa cintura"
+      }
     }
   },
   "month": {

@@ -26,6 +26,7 @@ function topic(over: Partial<SyllabusTopic> & { id: number }): SyllabusTopic {
     name: `Topic ${over.id}`,
     kind: 'both',
     in_season: true,
+    from_belt: null,
     sort_order: 0,
     ...over,
   };
