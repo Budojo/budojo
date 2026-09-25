@@ -460,6 +460,8 @@ const SYLLABUS_COVERAGE = {
       kind: 'both',
       lessons: 2,
       last_taught_on: '2026-04-20',
+      reach: 5,
+      attendances: 8,
       state: 'covered',
     },
     {
@@ -469,6 +471,8 @@ const SYLLABUS_COVERAGE = {
       kind: 'both',
       lessons: 1,
       last_taught_on: '2026-04-13',
+      reach: 3,
+      attendances: 3,
       state: 'thin',
     },
   ],

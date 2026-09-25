@@ -66,7 +66,9 @@
 
   &__rank {
     font-weight: 700;
-    color: var(--p-primary-color);
+    // Muted ink, not the accent (#1852): the rank is context for the name
+    // beside it, and the accent is kept for what can be pressed or selected.
+    color: var(--p-text-muted-color);
     text-align: center;
   }
 

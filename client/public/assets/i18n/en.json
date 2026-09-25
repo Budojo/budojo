@@ -2945,6 +2945,10 @@
       "missingList": "Not taught yet ({{count}})",
       "nothingMissing": "Nothing left — the whole programme has been taught.",
       "thinTag": "Once",
+      "lessonsOne": "{{count}} lesson",
+      "lessonsOther": "{{count}} lessons",
+      "reachOne": "{{count}} person",
+      "reachOther": "{{count}} people",
       "state": {
         "coveredOne": "{{count}} covered",
         "coveredOther": "{{count}} covered",
