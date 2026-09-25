@@ -155,7 +155,11 @@ describe('Today, the first screen (#1643)', () => {
     });
 
     cy.visitAuthenticated('/dashboard/today');
-    cy.wait('@birthdays').its('request.query.status').should('eq', 'active');
+    // For the people training, in the week starting on the owner's own day.
+    cy.wait('@birthdays').then(({ request }) => {
+      expect(request.query['status']).to.eq('active');
+      expect(request.query['from']).to.eq('2026-09-24');
+    });
 
     cy.get('[data-cy^="today-birthday-"]').should('have.length', 2);
     cy.get('[data-cy^="today-birthday-"]')

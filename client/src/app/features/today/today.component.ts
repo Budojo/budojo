@@ -672,10 +672,14 @@ export class TodayComponent implements OnInit {
    * One request for the week, of the people training: an inactive athlete is
    * not someone to message from here. The roster pages by 20, and a week
    * with more birthdays than that is not one this academy will have.
+   *
+   * The window starts from the owner's own day (`from`), not the server's:
+   * the server's is UTC, and a week built from yesterday leaves out the
+   * owner's seventh day, which no filtering here could add back.
    */
   private loadBirthdays(): void {
     this.athleteService
-      .list({ birthday: 'week', status: 'active' })
+      .list({ birthday: 'week', birthdayFrom: this.todayIso(), status: 'active' })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: this.current((res: AthleteListResponse) =>

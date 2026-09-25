@@ -109,6 +109,35 @@ it('marks a 29 February birthday on 28 February in a year without one', function
     expect(birthdayIds($this, 'birthday=week'))->toEqualCanonicalizing([$leapling->id, $twentyEighth->id]);
 });
 
+it("builds the window from the caller's own day, a day ahead of the server's", function (): void {
+    // The server runs on UTC. At 01:30 in Rome on 25 September it is still
+    // the 24th here, and a week built from the 24th ends on 30 September: a
+    // birthday on 1 October, the owner's seventh day, would never come back.
+    $seventhLocalDay = birthdayAthleteBornOn($this, '1992-10-01');
+    $yesterdayForTheOwner = birthdayAthleteBornOn($this, '1992-09-24');
+    $this->travelTo('2026-09-24 23:30');
+
+    expect(birthdayIds($this, 'birthday=week'))->toBe([$yesterdayForTheOwner->id])
+        ->and(birthdayIds($this, 'birthday=week&from=2026-09-25'))->toBe([$seventhLocalDay->id]);
+});
+
+it('takes a day behind the server too, west of it', function (): void {
+    $athlete = birthdayAthleteBornOn($this, '1992-09-23');
+    $this->travelTo('2026-09-24 02:00');
+
+    expect(birthdayIds($this, 'birthday=today&from=2026-09-23'))->toBe([$athlete->id]);
+});
+
+it('refuses a from further than a day from the server, so it cannot query any window', function (string $from): void {
+    birthdayAthleteBornOn($this, '1992-09-24');
+    $this->travelTo('2026-09-24 12:00');
+
+    $this->actingAs($this->user)
+        ->getJson("/api/v1/athletes?birthday=week&from={$from}")
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['from']);
+})->with(['2026-09-26', '2026-09-22', '2026-12-25', 'tomorrow', '25/09/2026']);
+
 it('ignores a value it does not know, as it does for paid', function (): void {
     $athlete = birthdayAthleteBornOn($this, '1990-03-14');
     $other = birthdayAthleteBornOn($this, '1990-07-01');

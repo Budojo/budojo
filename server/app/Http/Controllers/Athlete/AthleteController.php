@@ -9,6 +9,7 @@ use App\Actions\Athlete\CreateAthleteAction;
 use App\Actions\Athlete\RestoreAthleteAction;
 use App\Actions\Athlete\UpdateAthleteAction;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Athlete\ListAthletesRequest;
 use App\Http\Requests\Athlete\StoreAthleteRequest;
 use App\Http\Requests\Athlete\UpdateAthleteRequest;
 use App\Http\Resources\AthleteResource;
@@ -95,7 +96,7 @@ class AthleteController extends Controller
     ) {
     }
 
-    public function index(Request $request): AnonymousResourceCollection|JsonResponse
+    public function index(ListAthletesRequest $request): AnonymousResourceCollection|JsonResponse
     {
         /** @var User $user */
         $user = $request->user();
@@ -135,7 +136,7 @@ class AthleteController extends Controller
         ]);
 
         $paid = $request->input('paid');
-        $birthdays = BirthdayWindow::monthDays($request->input('birthday'), CarbonImmutable::today());
+        $birthdays = BirthdayWindow::monthDays($request->input('birthday'), $request->birthdayFrom());
 
         // `?status=trashed` (#700) is a special list mode: it surfaces
         // ONLY soft-deleted athletes (the restore picker UI). Detect it
@@ -255,7 +256,9 @@ class AthleteController extends Controller
             // ?birthday=today|week (#1754) — whose birthday it is, for Today's
             // block. Like `paid=yes` it does not gate on status: the caller
             // adds `status=active` when it wants only the people training.
-            // An unknown value is ignored, as above.
+            // An unknown value is ignored, as above. The window starts from
+            // `from`, the caller's own day, when it sends one (see
+            // `ListAthletesRequest`), else from the server's.
             ->when($birthdays, fn ($q, array $monthDays) => $q->birthdayOnAnyOf($monthDays))
             ->when($request->filled('q'), function (Builder|HasMany $q) use ($request) {
                 // `$request->string('q')` returns a `Stringable` — keeps PHPStan

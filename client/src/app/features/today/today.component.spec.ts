@@ -441,6 +441,8 @@ describe('TodayComponent', () => {
     expect(birthdaysReq).toHaveLength(1);
     expect(birthdaysReq[0].params.get('birthday')).toBe('week');
     expect(birthdaysReq[0].params.get('status')).toBe('active');
+    // The window starts from the owner's own day, not the server's UTC one.
+    expect(birthdaysReq[0].params.get('from')).toBe('2026-09-24');
     http.expectNone((req) => req.url.endsWith('/athletes') && req.params.get('birthday') !== null);
   });
 

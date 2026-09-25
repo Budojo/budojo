@@ -26,9 +26,10 @@ interface Person {
  * Places each athlete on the day of the window their birthday falls on,
  * today's first, then by day, then by name.
  *
- * The server chose them by its own calendar, and near midnight that can be a
- * day away from the one on the owner's wall: an athlete whose birthday falls
- * on no day of THIS window is left out rather than placed on a wrong one.
+ * Today asks the server for the window starting on this same local day
+ * (`from`), so every row should fall in it. One that does not — a clock
+ * that moved between the request and the answer — is left out rather than
+ * placed on a wrong day.
  * Each day is matched against the birthday of that day's own year
  * (`birthdayIn`), which is how 29 February lands on the 28th in a year
  * without it, as it does on the server.
