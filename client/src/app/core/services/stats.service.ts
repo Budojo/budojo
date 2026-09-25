@@ -76,6 +76,13 @@ export interface CoverageTopic {
 
 export interface CoverageTaughtTopic extends CoverageTopic {
   readonly lessons: number;
+  /**
+   * Distinct athletes at one or more of those lessons (#1746) — three lessons
+   * to the same four people reach four. A column, never part of the headline.
+   */
+  readonly reach: number;
+  /** Distinct (athlete, lesson) presences across them. */
+  readonly attendances: number;
   readonly last_taught_on: string;
   readonly state: CoverageState;
 }
