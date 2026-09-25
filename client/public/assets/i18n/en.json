@@ -3184,6 +3184,8 @@
     "week": {
       "title": "This week",
       "presences": "Presences since Monday",
+      "notYetPaidOne": "{{month}} fee not paid yet",
+      "notYetPaidOther": "{{month}} fees not paid yet",
       "programme": "Programme this season",
       "programmeValue": "{{percentage}}% · {{covered}} of {{total}}",
       "joined": "New this week",

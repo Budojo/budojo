@@ -60,6 +60,22 @@ type Load<T> =
   | { readonly state: 'error' };
 
 const LOADING = { state: 'loading' } as const;
+
+/**
+ * The day of the month from which an unpaid fee is something to chase (#1753).
+ *
+ * Before it, "not paid yet" is the normal state — most members settle in the
+ * first half of the month — and Today says so in a neutral line. From it,
+ * the fee joins "Da guardare". The bell makes the same call on the server:
+ * `SendUnpaidAthletesDigest` runs on the 16th only, gated in
+ * `DesktopSchedule`. Nothing can share this number across the HTTP boundary,
+ * so change the two together.
+ *
+ * The browser's local day is used, not Europe/Rome's. On a machine set to
+ * another timezone the two can disagree for a few hours around midnight of
+ * the 15th — accepted: the owner's clock is the one on their wall.
+ */
+const UNPAID_ALERT_DAY = 16;
 const FAILED = { state: 'error' } as const;
 
 /**
@@ -195,18 +211,45 @@ export class TodayComponent implements OnInit {
   protected readonly health = signal<Load<DocumentsHealth>>(LOADING);
   /**
    * Owing this month; `null` when the academy charges nothing, so there is
-   * no request and no line. Its own load state, because "nothing to check"
-   * is a claim about BOTH halves of the card: a count still loading, or one
-   * that failed, is not a zero.
+   * no request and no line. Its own load state, because from the 16th
+   * "nothing to check" is a claim about it too: a count still loading, or
+   * one that failed, is not a zero. Before the 16th it is a line in the
+   * week, and the card does not wait for it (#1753).
    */
   protected readonly unpaid = signal<Load<number> | null>(null);
+  /** From the 16th the unpaid count is a row to check; before, a neutral line. */
+  protected readonly unpaidIsAlert = computed<boolean>(
+    () => this.now().getDate() >= UNPAID_ALERT_DAY,
+  );
+  /** The unpaid count while it is still neutral: the owing total, or null for no line. */
+  protected readonly notYetPaid = computed<{ count: number; label: string } | null>(() => {
+    this.languageService.currentLang();
+    const u = this.unpaid();
+    if (this.unpaidIsAlert() || u?.state !== 'ready' || u.value === 0) return null;
+    const month = this.translate.instant(monthKey(this.now().getMonth() + 1));
+    return {
+      count: u.value,
+      label: this.translate.instant(
+        u.value === 1 ? 'today.week.notYetPaidOne' : 'today.week.notYetPaidOther',
+        { month },
+      ),
+    };
+  });
+  /** The unpaid half of "Da guardare": absent before the 16th. */
+  private readonly watchUnpaid = computed<Load<number> | null>(() =>
+    this.unpaidIsAlert() ? this.unpaid() : null,
+  );
 
   /**
-   * The card says "nothing to check" only when every half has answered and
+   * The card says "nothing to check" only when every source has answered and
    * found nothing — never while one is loading, and never after one failed.
+   * Three sources: the documents, the backup bridge (#1751), and the unpaid
+   * count from the 16th (#1753).
    */
   protected readonly watchState = computed<'loading' | 'settled'>(() =>
-    this.health().state === 'loading' || this.unpaid()?.state === 'loading' || !this.backupRead()
+    this.health().state === 'loading' ||
+    this.watchUnpaid()?.state === 'loading' ||
+    !this.backupRead()
       ? 'loading'
       : 'settled',
   );
@@ -214,7 +257,7 @@ export class TodayComponent implements OnInit {
     () =>
       this.watchState() === 'settled' &&
       this.health().state === 'ready' &&
-      this.unpaid()?.state !== 'error' &&
+      this.watchUnpaid()?.state !== 'error' &&
       this.watchRows().length === 0,
   );
 
@@ -261,7 +304,7 @@ export class TodayComponent implements OnInit {
         queryParams: null,
       });
     }
-    const u = this.unpaid();
+    const u = this.watchUnpaid();
     const unpaid = u?.state === 'ready' ? u.value : 0;
     if (unpaid > 0) {
       const month = this.translate.instant(monthKey(this.now().getMonth() + 1));
@@ -427,6 +470,10 @@ export class TodayComponent implements OnInit {
     this.presences.set(null);
     this.coverage.set(null);
     this.joined.set(LOADING);
+    // The bridge is asked again too, and until it answers the card cannot
+    // say "nothing to check": the night may have aged the last copy past
+    // the week that makes it an alert.
+    this.backupRead.set(!this.backupFolder.available);
     this.sheetOpen.set(false);
     this.planning.set(null);
   }
@@ -658,13 +705,17 @@ export class TodayComponent implements OnInit {
     const drive = this.driveSync.available
       ? this.driveSync.state()
       : Promise.resolve({ configured: false, linked: false });
-    void Promise.all([this.backupFolder.state(), drive])
-      .then(
-        ([folder, link]) => this.backup.set(backupHealth(folder, link, this.now())),
-        // A bridge that fails to answer costs the backup line, not the card.
-        () => this.backup.set(null),
-      )
-      .finally(() => this.backupRead.set(true));
+    // Only the latest read may answer: one from before a reload must not
+    // mark the new day's backup as read.
+    const settle = this.current((health: BackupHealth | null) => {
+      this.backup.set(health);
+      this.backupRead.set(true);
+    });
+    void Promise.all([this.backupFolder.state(), drive]).then(
+      ([folder, link]) => settle(backupHealth(folder, link, this.now())),
+      // A bridge that fails to answer costs the backup line, not the card.
+      () => settle(null),
+    );
   }
 }
 

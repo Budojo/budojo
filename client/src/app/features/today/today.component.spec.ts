@@ -356,6 +356,81 @@ describe('TodayComponent', () => {
     expect(text(fixture.nativeElement, 'today-watch')).not.toContain('Nothing to check');
   });
 
+  describe('unpaid fees are news only from the 16th, like the bell (#1753)', () => {
+    function renderOn(day: number, unpaidTotal: number, more: Responses = {}): HTMLElement {
+      vi.setSystemTime(new Date(2026, 8, day, 18, 30));
+      const http = setup({ monthly_fee_cents: 5000 });
+      const fixture = TestBed.createComponent(TodayComponent);
+      fixture.detectChanges();
+      flushAll(http, {
+        health: { data: [], missing_medical_certificate: [] },
+        unpaidTotal,
+        ...more,
+      });
+      fixture.detectChanges();
+      if (!more.unpaidPending) http.verify();
+      return fixture.nativeElement as HTMLElement;
+    }
+
+    it('on the 3rd, a neutral line in the week, not a row to check', () => {
+      const root = renderOn(3, 4);
+
+      expect(root.querySelector('[data-cy="today-watch-unpaid"]')).toBeNull();
+      expect(text(root, 'today-week-unpaid')).toContain('4');
+      expect(text(root, 'today-week-unpaid')).toContain('September fees not paid yet');
+      expect(root.querySelector('[data-cy="today-week-unpaid"]')?.getAttribute('href')).toContain(
+        '/dashboard/athletes?paid=no',
+      );
+      // Nothing else to check, and a not-yet-paid fee is not something to check yet.
+      expect(text(root, 'today-watch')).toContain('Nothing to check');
+    });
+
+    it('on the 15th, still neutral', () => {
+      const root = renderOn(15, 4);
+
+      expect(root.querySelector('[data-cy="today-watch-unpaid"]')).toBeNull();
+      expect(root.querySelector('[data-cy="today-week-unpaid"]')).not.toBeNull();
+    });
+
+    it('on the 16th, a row to check, and no longer in the week', () => {
+      const root = renderOn(16, 4);
+
+      expect(text(root, 'today-watch-unpaid')).toContain('September fees not paid');
+      expect(root.querySelector('[data-cy="today-week-unpaid"]')).toBeNull();
+    });
+
+    it('on the 17th, still a row to check', () => {
+      const root = renderOn(17, 4);
+
+      expect(root.querySelector('[data-cy="today-watch-unpaid"]')).not.toBeNull();
+    });
+
+    it('on the 3rd, a count still loading does not hold up "nothing to check"', () => {
+      const root = renderOn(3, 4, { unpaidPending: true });
+
+      expect(text(root, 'today-watch')).toContain('Nothing to check');
+      expect(root.querySelector('[data-cy="today-watch-unpaid-error"]')).toBeNull();
+    });
+
+    it('on the 3rd, a count that failed is not something to check either', () => {
+      const root = renderOn(3, 4, { unpaidError: true });
+
+      expect(text(root, 'today-watch')).toContain('Nothing to check');
+      expect(root.querySelector('[data-cy="today-watch-unpaid-error"]')).toBeNull();
+      // And the week's line, like the week's other lines, fails silently.
+      expect(root.querySelector('[data-cy="today-week-unpaid"]')).toBeNull();
+    });
+
+    it('with nobody owing, nothing at all — not "0"', () => {
+      for (const day of [3, 16]) {
+        TestBed.resetTestingModule();
+        const root = renderOn(day, 0);
+        expect(root.querySelector('[data-cy="today-watch-unpaid"]')).toBeNull();
+        expect(root.querySelector('[data-cy="today-week-unpaid"]')).toBeNull();
+      }
+    });
+  });
+
   it('keeps a loaded unpaid count when the documents check fails', () => {
     const http = setup({ monthly_fee_cents: 5000 });
     const fixture = TestBed.createComponent(TodayComponent);
@@ -878,6 +953,55 @@ describe('TodayComponent', () => {
 
       expect(text(root, 'today-watch')).not.toContain('Nothing to check');
       expect(text(root, 'today-watch-backup')).toContain('only on this computer');
+      http.verify();
+    });
+
+    it('reads the backup again overnight before saying all clear', async () => {
+      // Six days old on Thursday evening, eight on Friday morning: the night
+      // is what turns this copy into an alert.
+      const aging: BackupFolderStateView = { ...FOLDER, lastCopyAt: '2026-09-18T00:00:00Z' };
+      let calls = 0;
+      let answer: (state: BackupFolderStateView) => void = () => undefined;
+      const http = setup({}, [
+        {
+          provide: BackupFolderService,
+          useValue: {
+            available: true,
+            state: () =>
+              ++calls === 1
+                ? Promise.resolve(aging)
+                : new Promise<BackupFolderStateView>((resolve) => (answer = resolve)),
+          },
+        },
+        {
+          provide: DriveSyncService,
+          useValue: { available: true, state: () => Promise.resolve(NO_DRIVE) },
+        },
+      ]);
+      const quiet = { health: { data: [], missing_medical_certificate: [] } };
+      const fixture = TestBed.createComponent(TodayComponent);
+      fixture.detectChanges();
+      flushAll(http, quiet);
+      await fixture.whenStable();
+      fixture.detectChanges();
+      const root = fixture.nativeElement as HTMLElement;
+      expect(text(root, 'today-watch')).toContain('Nothing to check');
+
+      // Friday 08:00: everything else answers before the bridge does.
+      vi.setSystemTime(new Date(2026, 8, 25, 8, 0));
+      document.dispatchEvent(new Event('visibilitychange'));
+      fixture.detectChanges();
+      flushAll(http, quiet);
+      fixture.detectChanges();
+      expect(calls).toBe(2);
+      expect(text(root, 'today-watch')).not.toContain('Nothing to check');
+
+      answer(aging);
+      // The bridge's promise chain is not a tracked task: let it drain.
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      fixture.detectChanges();
+      expect(text(root, 'today-watch-backup')).toContain('The last copy outside this computer');
+      expect(text(root, 'today-watch')).not.toContain('Nothing to check');
       http.verify();
     });
 
