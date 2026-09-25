@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests\Syllabus;
 
 use App\Authorization\Capability;
+use App\Enums\Belt;
 use App\Enums\MartialArt;
 use App\Enums\TrainingMode;
 use App\Http\Requests\Concerns\AuthorizesAcademyCapability;
@@ -95,6 +96,24 @@ class StoreSyllabusTopicRequest extends FormRequest
     public function inSeason(): bool
     {
         return (bool) ($this->validated('in_season') ?? true);
+    }
+
+    /**
+     * The grade the new topic belongs to the programme from (#1861).
+     *
+     * Not sent, a technique takes its position's — a default for what is added
+     * under a position, the rule `kind` follows in the dialog. Sent as null,
+     * it is for everyone, whatever the position says.
+     */
+    public function fromBelt(): ?Belt
+    {
+        if (! $this->has('from_belt')) {
+            return $this->parent()?->from_belt;
+        }
+
+        $belt = $this->validated('from_belt');
+
+        return \is_string($belt) ? Belt::tryFrom($belt) : null;
     }
 
     /** The position the new topic goes under, resolved after validation. */

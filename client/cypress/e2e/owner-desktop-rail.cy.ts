@@ -54,6 +54,10 @@ describe('Owner desktop social rail (#1112)', () => {
     cy.visitAuthenticated('/dashboard/athletes');
     cy.wait('@academy');
     cy.get('[data-cy="owner-rail"]').should('be.visible');
+    // Today is the first destination (#1643); the academy moved down beside More.
+    cy.get('[data-cy="owner-rail"] a.rail__item')
+      .first()
+      .should('have.attr', 'href', '/dashboard/today');
     cy.get('[data-cy="owner-rail"] a.rail__item[href="/dashboard/academy"]').should('be.visible');
     cy.get('[data-cy="owner-rail"] a.rail__item[href="/dashboard/athletes"]').should('be.visible');
     cy.get('[data-cy="owner-rail"] a.rail__item[href="/dashboard/community"]').should('be.visible');
@@ -113,10 +117,10 @@ describe('Owner desktop social rail (#1112)', () => {
   // The chip linked to the More hub until #1351. It shows your avatar, your
   // name and your handle, and every app that shows a user that block opens
   // THAT USER'S profile from it — a settings menu is a signifier that lies.
-  it('points the brand at the academy home + pins a profile chip linking to your profile', () => {
+  it('points the brand at home (Today, #1643) + pins a profile chip linking to your profile', () => {
     cy.visitAuthenticated('/dashboard/athletes');
     cy.wait('@academy');
-    cy.get('a.rail__brand').should('have.attr', 'href', '/dashboard/academy');
+    cy.get('a.rail__brand').should('have.attr', 'href', '/dashboard/today');
     cy.get('[data-cy="rail-profile"]')
       .should('be.visible')
       .and('have.attr', 'href', '/dashboard/profile');

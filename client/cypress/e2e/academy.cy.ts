@@ -43,9 +43,9 @@ describe('Academy home page', () => {
     cy.intercept('GET', '/api/v1/academy', { statusCode: 200, body: { data: ACADEMY_TORINO } }).as(
       'academy',
     );
-    // Defensive intercepts — `/dashboard` lands on `/dashboard/athletes` by
-    // default on first load, which fires both widgets. Silence them so the
-    // Vite proxy never falls through to a non-existent `api` host in CI.
+    // Defensive intercepts — the roster and Today (the `/dashboard` default
+    // since #1643) both fire these. Silence them so the Vite proxy never
+    // falls through to a non-existent `api` host in CI.
     cy.intercept('GET', '/api/v1/athletes*', ATHLETES_EMPTY);
     cy.intercept('GET', '/api/v1/documents/expiring*', { statusCode: 200, body: { data: [] } });
   });

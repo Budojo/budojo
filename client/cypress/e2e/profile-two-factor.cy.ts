@@ -1,4 +1,5 @@
 import { MOCK_ACADEMY } from '../support/fixtures';
+import { stubToday } from '../support/today';
 
 /**
  * E2E coverage for the "Two-factor authentication" panel on
@@ -178,6 +179,8 @@ describe('Two-factor authentication panel (#412)', () => {
 
 describe('Login 2FA challenge (#412)', () => {
   beforeEach(() => {
+    // Every sign-in lands on Today (#1643); keep its requests off the proxy.
+    stubToday();
     cy.clearLocalStorage();
   });
 
