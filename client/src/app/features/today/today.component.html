@@ -87,9 +87,11 @@
       </h2>
 
       <!--
-        Two requests feed this card, and each fails on its own. The all-clear
-        is said only when both have answered and found nothing: a count still
-        loading, or one that failed, is not a zero.
+        Three sources feed this card, and each fails on its own: the
+        documents, the backup bridge (#1751), and the unpaid count from the
+        16th (#1753). The all-clear is said only when all of them have
+        answered and found nothing: a count still loading, or one that
+        failed, is not a zero.
       -->
       @if (watchRows().length > 0) {
         <ul class="today-rows">

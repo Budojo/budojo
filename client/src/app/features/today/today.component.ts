@@ -211,9 +211,10 @@ export class TodayComponent implements OnInit {
   protected readonly health = signal<Load<DocumentsHealth>>(LOADING);
   /**
    * Owing this month; `null` when the academy charges nothing, so there is
-   * no request and no line. Its own load state, because "nothing to check"
-   * is a claim about BOTH halves of the card: a count still loading, or one
-   * that failed, is not a zero.
+   * no request and no line. Its own load state, because from the 16th
+   * "nothing to check" is a claim about it too: a count still loading, or
+   * one that failed, is not a zero. Before the 16th it is a line in the
+   * week, and the card does not wait for it (#1753).
    */
   protected readonly unpaid = signal<Load<number> | null>(null);
   /** From the 16th the unpaid count is a row to check; before, a neutral line. */
@@ -240,8 +241,10 @@ export class TodayComponent implements OnInit {
   );
 
   /**
-   * The card says "nothing to check" only when every half has answered and
+   * The card says "nothing to check" only when every source has answered and
    * found nothing — never while one is loading, and never after one failed.
+   * Three sources: the documents, the backup bridge (#1751), and the unpaid
+   * count from the 16th (#1753).
    */
   protected readonly watchState = computed<'loading' | 'settled'>(() =>
     this.health().state === 'loading' ||
@@ -467,6 +470,10 @@ export class TodayComponent implements OnInit {
     this.presences.set(null);
     this.coverage.set(null);
     this.joined.set(LOADING);
+    // The bridge is asked again too, and until it answers the card cannot
+    // say "nothing to check": the night may have aged the last copy past
+    // the week that makes it an alert.
+    this.backupRead.set(!this.backupFolder.available);
     this.sheetOpen.set(false);
     this.planning.set(null);
   }
@@ -698,13 +705,17 @@ export class TodayComponent implements OnInit {
     const drive = this.driveSync.available
       ? this.driveSync.state()
       : Promise.resolve({ configured: false, linked: false });
-    void Promise.all([this.backupFolder.state(), drive])
-      .then(
-        ([folder, link]) => this.backup.set(backupHealth(folder, link, this.now())),
-        // A bridge that fails to answer costs the backup line, not the card.
-        () => this.backup.set(null),
-      )
-      .finally(() => this.backupRead.set(true));
+    // Only the latest read may answer: one from before a reload must not
+    // mark the new day's backup as read.
+    const settle = this.current((health: BackupHealth | null) => {
+      this.backup.set(health);
+      this.backupRead.set(true);
+    });
+    void Promise.all([this.backupFolder.state(), drive]).then(
+      ([folder, link]) => settle(backupHealth(folder, link, this.now())),
+      // A bridge that fails to answer costs the backup line, not the card.
+      () => settle(null),
+    );
   }
 }
 
