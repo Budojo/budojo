@@ -1,5 +1,6 @@
 import { MOCK_ACADEMY } from '../support/fixtures';
 import { MOBILE_VIEWPORTS } from '../support/viewports';
+import { stubToday } from '../support/today';
 
 /**
  * "What's new" page (#254) — user-facing changelog accessible from
@@ -21,6 +22,8 @@ const ATHLETES_EMPTY = {
 
 describe("What's new page (#254)", () => {
   beforeEach(() => {
+    // Every sign-in lands on Today (#1643); keep its requests off the proxy.
+    stubToday();
     cy.intercept('GET', '/api/v1/academy', ACADEMY_OK).as('academy');
     cy.intercept('GET', '/api/v1/athletes*', ATHLETES_EMPTY);
     cy.intercept('GET', '/api/v1/documents/expiring*', EXPIRING_EMPTY);
@@ -96,10 +99,10 @@ describe("What's new page (#254)", () => {
     cy.get('[data-cy="whats-new-release-v1.3.0"]').should('exist');
   });
 
-  it('the back-to-dashboard CTA returns to /dashboard/athletes', () => {
+  it('the back-to-dashboard CTA returns to Today (#1643)', () => {
     cy.get('[data-cy="whats-new-back"]').click();
-    // /dashboard redirects to /dashboard/athletes per the route config.
-    cy.location('pathname').should('eq', '/dashboard/athletes');
+    // /dashboard redirects to /dashboard/today per the route config.
+    cy.location('pathname').should('eq', '/dashboard/today');
   });
 
   // What's-new + sign-out moved off the desktop sidebar into the owner More

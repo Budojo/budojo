@@ -1,4 +1,5 @@
 import LADDERS from '../../src/test-utils/ladders.json';
+import { stubToday } from '../support/today';
 
 const ATHLETES_EMPTY = {
   statusCode: 200,
@@ -11,6 +12,8 @@ const ATHLETES_EMPTY = {
 
 describe('Academy setup page', () => {
   beforeEach(() => {
+    // Every sign-in lands on Today (#1643); keep its requests off the proxy.
+    stubToday();
     // Intercept the first GET /api/v1/academy (noAcademyGuard) exactly once — return 404
     // so the guard allows access to /setup. Tests that trigger a redirect to /dashboard
     // must set up their own intercept for the subsequent hasAcademyGuard call.
@@ -77,9 +80,11 @@ describe('Academy setup page', () => {
     cy.get('button[type="submit"]').click();
 
     cy.wait('@createAcademy').its('request.body.martial_art').should('eq', 'judo');
-    cy.url().should('include', '/dashboard/athletes');
+    cy.url().should('include', '/dashboard/today');
 
-    // In-app, so the ladder comes from the academy the POST returned.
+    // In-app, so the ladder comes from the academy the POST returned: through
+    // the rail to the roster, never a reload.
+    cy.get('[data-cy="owner-rail"] a.rail__item[href="/dashboard/athletes"]').click();
     cy.get('[data-cy="add-athlete-btn"]').click();
     cy.get('#belt').click();
     cy.get('.p-select-option').should('have.length', LADDERS.judo.length);
@@ -98,11 +103,11 @@ describe('Academy setup page', () => {
     cy.contains('Academy name is required').should('be.visible');
   });
 
-  it('successful setup redirects to /dashboard/athletes', () => {
+  it('successful setup redirects to Today (#1643)', () => {
     // Note: `hasAcademyGuard` no longer fires a GET /api/v1/academy after a
     // successful POST — `AcademyService.create()` sets the cached signal via
     // `tap()`, and the guard short-circuits off that cache (see #40).
-    // We assert the user-visible outcome: create, redirect, land on the list.
+    // We assert the user-visible outcome: create, redirect, land on Today.
     cy.intercept('POST', '/api/v1/academy', {
       statusCode: 201,
       body: {
@@ -117,7 +122,7 @@ describe('Academy setup page', () => {
 
     cy.wait('@createAcademy');
     cy.wait('@athletesList');
-    cy.url().should('include', '/dashboard/athletes');
+    cy.url().should('include', '/dashboard/today');
   });
 
   // #72: setup is now name-only (plus optional training days). The address
@@ -144,7 +149,7 @@ describe('Academy setup page', () => {
     cy.wait('@createAcademy');
     cy.wait('@enrollMe');
     cy.wait('@athletesList');
-    cy.url().should('include', '/dashboard/athletes');
+    cy.url().should('include', '/dashboard/today');
   });
 
   it('default "Not now" → POST /me/athlete is NOT fired (#751)', () => {
@@ -165,7 +170,7 @@ describe('Academy setup page', () => {
     cy.get('input[id="name"]').type('My Academy');
     cy.get('button[type="submit"]').click();
     cy.wait('@createAcademy');
-    cy.url().should('include', '/dashboard/athletes');
+    cy.url().should('include', '/dashboard/today');
   });
 
   it('shows error message when creation fails', () => {
