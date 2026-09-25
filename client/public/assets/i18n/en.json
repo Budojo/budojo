@@ -3131,6 +3131,12 @@
       "joinedNone": "Nobody new this week.",
       "joinedError": "Couldn't load the new members."
     },
+    "birthdays": {
+      "title": "Birthdays",
+      "turnsOne": "Turns {{years}} today",
+      "turnsOther": "Turns {{years}} today",
+      "today": "Today"
+    },
     "system": {
       "backup": "Last backup {{when}}",
       "noBackup": "No backup on this computer yet",

@@ -15,6 +15,7 @@ use App\Http\Resources\AthleteResource;
 use App\Models\Academy;
 use App\Models\Athlete;
 use App\Models\User;
+use App\Support\BirthdayWindow;
 use App\Support\MartialArt\MartialArtProfile;
 use App\Support\MartialArt\RankLadder;
 use App\Support\NameFold;
@@ -134,6 +135,7 @@ class AthleteController extends Controller
         ]);
 
         $paid = $request->input('paid');
+        $birthdays = BirthdayWindow::monthDays($request->input('birthday'), CarbonImmutable::today());
 
         // `?status=trashed` (#700) is a special list mode: it surfaces
         // ONLY soft-deleted athletes (the restore picker UI). Detect it
@@ -250,6 +252,11 @@ class AthleteController extends Controller
             // list endpoint that's read by humans more than tools.
             ->when($paid === 'yes', fn ($q) => $q->coveredFor($currentYear, $currentMonth, $now))
             ->when($paid === 'no', fn ($q) => $q->owing($currentYear, $currentMonth, $now))
+            // ?birthday=today|week (#1754) — whose birthday it is, for Today's
+            // block. Like `paid=yes` it does not gate on status: the caller
+            // adds `status=active` when it wants only the people training.
+            // An unknown value is ignored, as above.
+            ->when($birthdays, fn ($q, array $monthDays) => $q->birthdayOnAnyOf($monthDays))
             ->when($request->filled('q'), function (Builder|HasMany $q) use ($request) {
                 // `$request->string('q')` returns a `Stringable` — keeps PHPStan
                 // happy without the `mixed` → `string` cast that `input()` needs.

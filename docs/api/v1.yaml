@@ -4249,6 +4249,29 @@ paths:
           schema:
             type: string
             enum: [yes, no]
+        - name: birthday
+          in: query
+          description: |
+            Athletes whose birthday falls in the window (#1754), by month and
+            day of `date_of_birth`, on the server's calendar.
+
+            - `today` is today's month-day.
+            - `week` is today and the six days after it: seven month-days,
+              matched as a set, so a week that crosses the new year works.
+
+            Someone born on 29 February has their birthday on the 29th in a
+            leap year and on 28 February in any other year, so they are not
+            missed three years in four.
+
+            A null `date_of_birth` never matches either value. Neither value
+            says anything about status: an inactive athlete whose birthday it
+            is is included, as with `paid=yes`. A caller that wants only the
+            people training adds `status=active` (Today does). Unrecognised
+            values are silently ignored (no filter applied), as for `paid`.
+          required: false
+          schema:
+            type: string
+            enum: [today, week]
         - name: page
           in: query
           description: Page number, starting at 1. Page size is fixed at 20.

@@ -237,6 +237,32 @@
         }
       </div>
     </section>
+
+    <!-- ── Compleanni ────────────────────────────────────────────────── -->
+    <!--
+      A prompt, not an obligation (#1754): no card on a week without a
+      birthday, and no "send a message" button — the shipping build has no
+      way to reach an athlete but the owner's own phone.
+    -->
+    @if (birthdayRows().length > 0) {
+      <section class="today-card" aria-labelledby="today-birthdays-title" data-cy="today-birthdays">
+        <h2 id="today-birthdays-title" class="today-card__title">
+          {{ 'today.birthdays.title' | translate }}
+        </h2>
+        <ul class="today-birthdays">
+          @for (b of birthdayRows(); track b.athlete.id) {
+            <li
+              class="today-birthdays__row"
+              [class.today-birthdays__row--today]="b.ahead === 0"
+              [attr.data-cy]="'today-birthday-' + b.athlete.id"
+            >
+              <app-athlete-identity [athlete]="b.athlete" [linkToDetail]="true" />
+              <span class="today-birthdays__when">{{ b.label }}</span>
+            </li>
+          }
+        </ul>
+      </section>
+    }
   </div>
 
   @if (isDesktop && lastBackupAt() !== undefined) {

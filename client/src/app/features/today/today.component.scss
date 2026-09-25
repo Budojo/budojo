@@ -252,3 +252,37 @@
     padding: 0.5rem 0 0.5rem 1rem;
   }
 }
+
+// ── Birthdays (#1754) ───────────────────────────────────────────────────────
+
+.today-birthdays {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+
+  // Same room for the spine as the joiners above; the day sits at the end.
+  &__row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.5rem 0 0.5rem 1rem;
+
+    app-athlete-identity {
+      flex: 1;
+      min-width: 0;
+    }
+  }
+
+  &__when {
+    color: var(--p-text-muted-color);
+    font-size: 0.875rem;
+    white-space: nowrap;
+  }
+
+  // Today's is the one to act on: ink and weight, never the accent (#1852).
+  &__row--today &__when {
+    color: var(--p-text-color);
+    font-weight: 600;
+  }
+}

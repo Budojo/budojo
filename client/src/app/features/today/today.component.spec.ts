@@ -71,6 +71,8 @@ interface Responses {
   daily?: { date: string; count: number }[];
   coverage?: unknown | 'error';
   recent?: Athlete[];
+  /** `?birthday=week` (#1754); `'error'` fails it. */
+  birthdays?: Athlete[] | 'error';
 }
 
 function setup(academy: Record<string, unknown> = {}): HttpTestingController {
@@ -163,6 +165,18 @@ function flushAll(http: HttpTestingController, r: Responses = {}): void {
       data: r.recent ?? [],
       meta: { total: 0, current_page: 1, per_page: 20, last_page: 1 },
     });
+
+  const birthdaysReq = http.expectOne(
+    (req) => req.url.endsWith('/athletes') && req.params.get('birthday') === 'week',
+  );
+  if (r.birthdays === 'error') {
+    birthdaysReq.flush({ message: 'boom' }, { status: 500, statusText: 'Server Error' });
+  } else {
+    birthdaysReq.flush({
+      data: r.birthdays ?? [],
+      meta: { total: 0, current_page: 1, per_page: 20, last_page: 1 },
+    });
+  }
 }
 
 function text(root: HTMLElement, cy: string): string {
@@ -379,6 +393,64 @@ describe('TodayComponent', () => {
     const root = fixture.nativeElement as HTMLElement;
     expect(root.querySelector('h1')?.textContent).toContain('Friday 25 September');
     expect(root.querySelector('[data-cy="today-class-1"]')).not.toBeNull();
+  });
+
+  it("asks once for the week's birthdays of the people training", () => {
+    const http = setup();
+    const fixture = TestBed.createComponent(TodayComponent);
+    fixture.detectChanges();
+    const birthdaysReq = http
+      .match((req) => req.url.endsWith('/athletes') && req.params.get('birthday') !== null)
+      .map((req) => req.request);
+    // One request, for the people training: an inactive athlete is not
+    // someone to message on Today.
+    expect(birthdaysReq).toHaveLength(1);
+    expect(birthdaysReq[0].params.get('birthday')).toBe('week');
+    expect(birthdaysReq[0].params.get('status')).toBe('active');
+    http
+      .expectNone((req) => req.url.endsWith('/athletes') && req.params.get('birthday') !== null);
+  });
+
+  it("names today's birthdays first with the age turned, and the week's by day", () => {
+    const http = setup();
+    const fixture = TestBed.createComponent(TodayComponent);
+    fixture.detectChanges();
+    flushAll(http, {
+      birthdays: [
+        athlete({ id: 7, first_name: 'Luca', last_name: 'Conti', date_of_birth: '1995-09-26' }),
+        athlete({ id: 8, first_name: 'Sara', last_name: 'Neri', date_of_birth: '1990-09-24' }),
+      ],
+    });
+    fixture.detectChanges();
+
+    const root = fixture.nativeElement as HTMLElement;
+    const rows = [...root.querySelectorAll('[data-cy^="today-birthday-"]')];
+    expect(rows.map((r) => r.getAttribute('data-cy'))).toEqual([
+      'today-birthday-8',
+      'today-birthday-7',
+    ]);
+    expect(text(root, 'today-birthday-8')).toContain('Sara Neri');
+    expect(text(root, 'today-birthday-8')).toContain('Turns 36 today');
+    // Saturday, from the weekday names the timetable already uses.
+    expect(text(root, 'today-birthday-7')).toContain('Sat');
+    expect(text(root, 'today-birthday-7')).not.toContain('Turns');
+    expect(rows[0].querySelector('a')?.getAttribute('href')).toBe('/dashboard/athletes/8');
+    http.verify();
+  });
+
+  it('shows no birthdays card when nobody has one this week, or the list could not be read', () => {
+    for (const birthdays of [[], 'error'] as const) {
+      TestBed.resetTestingModule();
+      const http = setup();
+      const fixture = TestBed.createComponent(TodayComponent);
+      fixture.detectChanges();
+      flushAll(http, { birthdays: birthdays === 'error' ? 'error' : [] });
+      fixture.detectChanges();
+
+      const root = fixture.nativeElement as HTMLElement;
+      expect(root.querySelector('[data-cy="today-birthdays"]')).toBeNull();
+      http.verify();
+    }
   });
 
   it('does not reload on a return the same day', () => {

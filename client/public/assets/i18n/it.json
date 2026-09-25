@@ -3131,6 +3131,12 @@
       "joinedNone": "Nessun nuovo iscritto questa settimana.",
       "joinedError": "Non riesco a caricare i nuovi iscritti."
     },
+    "birthdays": {
+      "title": "Compleanni",
+      "turnsOne": "Compie {{years}} anno oggi",
+      "turnsOther": "Compie {{years}} anni oggi",
+      "today": "Oggi"
+    },
     "system": {
       "backup": "Ultimo backup {{when}}",
       "noBackup": "Ancora nessun backup su questo computer",

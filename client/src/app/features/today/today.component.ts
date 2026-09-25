@@ -40,6 +40,7 @@ import { localeFor } from '../../shared/utils/locale';
 import { monthKey } from '../../shared/utils/months';
 import { pickDefaultClass } from '../attendance/daily/class-pick';
 import { LessonSheetComponent } from '../lessons/lesson-sheet/lesson-sheet.component';
+import { Birthday, upcomingBirthdays } from './today-birthdays';
 import {
   isoDay,
   joinedSince,
@@ -269,6 +270,19 @@ export class TodayComponent implements OnInit {
   protected readonly coverage = signal<SyllabusCoverage | null>(null);
   protected readonly joined = signal<Load<readonly Athlete[]>>(LOADING);
 
+  // ── Compleanni ─────────────────────────────────────────────────────────
+
+  /**
+   * The week's birthdays (#1754), today's first. Empty until answered, and
+   * after a failure too: the card is a prompt, not a report, so it shows
+   * only when it has someone to name — never empty, never as an error.
+   */
+  private readonly birthdays = signal<readonly Birthday<Athlete>[]>([]);
+  protected readonly birthdayRows = computed(() => {
+    this.languageService.currentLang();
+    return this.birthdays().map((b) => ({ ...b, label: this.birthdayLabel(b) }));
+  });
+
   // ── Header and system line ─────────────────────────────────────────────
 
   protected readonly dateTitle = computed<string>(() => {
@@ -315,6 +329,7 @@ export class TodayComponent implements OnInit {
     this.loadHealth();
     this.loadUnpaid();
     this.loadWeek();
+    this.loadBirthdays();
     this.loadBackup();
   }
 
@@ -329,6 +344,7 @@ export class TodayComponent implements OnInit {
     this.presences.set(null);
     this.coverage.set(null);
     this.joined.set(LOADING);
+    this.birthdays.set([]);
     this.sheetOpen.set(false);
     this.planning.set(null);
   }
@@ -511,6 +527,33 @@ export class TodayComponent implements OnInit {
       });
   }
 
+  /**
+   * One request for the week, of the people training: an inactive athlete is
+   * not someone to message from here. The roster pages by 20, and a week
+   * with more birthdays than that is not one this academy will have.
+   */
+  private loadBirthdays(): void {
+    this.athleteService
+      .list({ birthday: 'week', status: 'active' })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: this.current((res: AthleteListResponse) =>
+          this.birthdays.set(upcomingBirthdays(res.data, this.now())),
+        ),
+        error: () => undefined,
+      });
+  }
+
+  /** "Turns 34 today" for today's; the weekday for the rest of the window. */
+  private birthdayLabel(b: Birthday<Athlete>): string {
+    if (b.ahead > 0) return this.translate.instant(WEEKDAY_KEYS[b.date.getDay()]);
+    if (b.turns === null) return this.translate.instant('today.birthdays.today');
+    return this.translate.instant(
+      b.turns === 1 ? 'today.birthdays.turnsOne' : 'today.birthdays.turnsOther',
+      { years: b.turns },
+    );
+  }
+
   private loadBackup(): void {
     if (!this.isDesktop) return;
     void this.backupService.list().then(
@@ -533,3 +576,18 @@ const REASON_KEYS: Readonly<Record<SuggestionReason, string>> = {
   thin: 'lessons.sheet.suggestions.reason.thin',
   stale: 'lessons.sheet.suggestions.reason.stale',
 };
+
+/**
+ * `Date.getDay()` to the weekday names the timetable already uses (#1754).
+ * Within a window of seven days a weekday names one date, so it needs no
+ * more. An explicit list, never a built key.
+ */
+const WEEKDAY_KEYS: readonly string[] = [
+  'weekdays.sun',
+  'weekdays.mon',
+  'weekdays.tue',
+  'weekdays.wed',
+  'weekdays.thu',
+  'weekdays.fri',
+  'weekdays.sat',
+];
