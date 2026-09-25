@@ -9643,7 +9643,9 @@ components:
           description: |
             The national significant number, digits only (#1867) — no trunk zero, an
             Italian landline's leading zero kept. Always paired with `phone_country_code`;
-            the two together are the number in E.164.
+            the two together are the number in E.164. An Italian landline imported before
+            #1867 may still lack its leading zero: those rows are not rewritten, because
+            the zero would be a guess, and they fail validation until corrected.
         website:
           type: string
           format: uri

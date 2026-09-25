@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Support\Import;
 
+use libphonenumber\NumberParseException;
+use libphonenumber\PhoneNumber;
 use libphonenumber\PhoneNumberUtil;
 
 /**
@@ -81,13 +83,38 @@ final class PhoneText
 
         return [
             'phone_country_code' => '+' . $countryCode,
-            // The national SIGNIFICANT number, not the national number (#1867).
-            // The latter drops an Italian landline's leading zero into a
-            // separate flag, so `06 1234567` was stored as `61234567` and
-            // dialled a different line. This keeps that zero and drops a trunk
-            // zero (`+44 07911…`), which is what `PhonePair` stores too.
-            'phone_national_number' => $util->getNationalSignificantNumber($number),
+            'phone_national_number' => self::nationalPart($util, $number),
         ];
+    }
+
+    /**
+     * The national SIGNIFICANT number, not the national number (#1867). The
+     * latter drops an Italian landline's leading zero into a separate flag,
+     * so `06 1234567` was stored as `61234567` and dialled a different line.
+     * The significant number keeps that zero and drops a trunk zero
+     * (`+44 07911…`), which is what `PhonePair` stores too.
+     *
+     * Except where the zero makes the number invalid and dropping it makes it
+     * valid: an Italian mobile written the pre-1998 way, `0333 1234567`, which
+     * libphonenumber reads as a landline's zero. That is the mobile
+     * `3331234567`, as the import stored it before it kept landline zeros.
+     */
+    private static function nationalPart(PhoneNumberUtil $util, PhoneNumber $number): string
+    {
+        $significant = $util->getNationalSignificantNumber($number);
+        if ($util->isValidNumber($number)) {
+            return $significant;
+        }
+
+        $national = (string) $number->getNationalNumber();
+
+        try {
+            $withoutZero = $util->parse('+' . $number->getCountryCode() . $national, null);
+        } catch (NumberParseException) {
+            return $significant;
+        }
+
+        return $util->isValidNumber($withoutZero) ? $national : $significant;
     }
 
     private static function regionFor(PhoneNumberUtil $util, ?string $dialCode): ?string

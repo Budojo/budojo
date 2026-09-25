@@ -22,8 +22,10 @@ use Illuminate\Support\Facades\Log;
  *   `61234567` and dialled a different line.
  *
  * The national significant number drops a trunk zero and keeps an Italian
- * leading zero. Every write stores it, and a one-off migration puts the rows
- * already on disk right.
+ * leading zero. Every write stores it. A one-off migration drops the trunk
+ * zeros already on disk; it does NOT put an Italian zero back, because a zero
+ * guessed onto an import's unchecked value can make a stranger's landline. It
+ * names those rows in the log for a person to check instead.
  */
 beforeEach(function (): void {
     $this->user = userWithAcademy();
@@ -132,13 +134,17 @@ function athletePhoneOnDisk(mixed $test, ?string $countryCode, ?string $national
     return $athlete;
 }
 
-it('restores the leading zero the import dropped from an Italian landline', function (): void {
-    $athlete = athletePhoneOnDisk($this, '+39', '61234567');
+it('does not guess a leading zero back onto an Italian number it cannot read', function (string $stored): void {
+    // `0` + 6 to 11 digits is a plausible Italian landline to libphonenumber,
+    // so `61234567` with a zero is valid — and so is the import's unchecked
+    // junk. A guessed number that rings a stranger is worse than an invalid
+    // one the owner will notice.
+    $athlete = athletePhoneOnDisk($this, '+39', $stored);
 
     phoneMigration()->up();
 
-    expect($athlete->refresh()->phone_national_number)->toBe('061234567');
-});
+    expect($athlete->refresh()->phone_national_number)->toBe($stored);
+})->with(['61234567', '123456', '1234567', '5512345']);
 
 it('drops a trunk zero already on disk', function (): void {
     $athlete = athletePhoneOnDisk($this, '+44', '07911123456');
@@ -169,18 +175,18 @@ it("puts an academy's own phone right too, and a deleted athlete's", function ()
         'phone_country_code' => '+44',
         'phone_national_number' => '07911123456',
     ]);
-    $gone = athletePhoneOnDisk($this, '+39', '61234567');
+    $gone = athletePhoneOnDisk($this, '+33', '0612345678');
     $gone->delete();
 
     phoneMigration()->up();
 
     expect(Academy::query()->find($this->academy->id)?->phone_national_number)->toBe('7911123456')
-        ->and(Athlete::withTrashed()->find($gone->id)?->phone_national_number)->toBe('061234567');
+        ->and(Athlete::withTrashed()->find($gone->id)?->phone_national_number)->toBe('612345678');
 });
 
 it('says what it changed in the log, without writing the numbers out', function (): void {
     Log::spy();
-    $athlete = athletePhoneOnDisk($this, '+39', '61234567');
+    $athlete = athletePhoneOnDisk($this, '+44', '07911123456');
     athletePhoneOnDisk($this, '+39', '3331234567');
 
     phoneMigration()->up();
@@ -192,21 +198,49 @@ it('says what it changed in the log, without writing the numbers out', function 
         ->withArgs(static fn (string $message, array $context): bool => str_contains($message, 'phone')
             && ($context['table'] ?? null) === 'athletes'
             && ($context['id'] ?? null) === $athlete->id
-            && ($context['fix'] ?? null) === 'restored the Italian leading zero'
-            && ($context['ends_with'] ?? null) === '567'
-            && ! str_contains(json_encode($context, JSON_THROW_ON_ERROR), '61234567'))
+            && ($context['fix'] ?? null) === 'dropped a trunk zero'
+            && ($context['ends_with'] ?? null) === '456'
+            && ! str_contains(json_encode($context, JSON_THROW_ON_ERROR), '7911123456'))
         ->once();
     Log::shouldHaveReceived('info')
         ->withArgs(static fn (string $message, array $context): bool => ($context['changed'] ?? null) === 1)
         ->once();
     Log::shouldHaveReceived('info')->twice();
+    Log::shouldNotHaveReceived('warning');
+});
+
+it('names the Italian numbers still invalid for a person to check, without the numbers', function (): void {
+    Log::spy();
+    // A landline the import stored without its zero, before this fix.
+    $dropped = athletePhoneOnDisk($this, '+39', '61234567');
+    athletePhoneOnDisk($this, '+39', '3331234567');
+    // Only Italian numbers: this is the import's dial code, and another
+    // country's invalid number is not a zero it dropped.
+    athletePhoneOnDisk($this, '+44', '1');
+    DB::table('academies')->where('id', $this->academy->id)->update([
+        'phone_country_code' => '+39',
+        'phone_national_number' => '5512345',
+    ]);
+    $academyId = $this->academy->id;
+
+    phoneMigration()->up();
+
+    Log::shouldHaveReceived('warning')
+        ->withArgs(static fn (string $message, array $context): bool => str_contains($message, 'phone')
+            && ($context['count'] ?? null) === 2
+            && ($context['rows'] ?? null) === [
+                ['table' => 'athletes', 'id' => $dropped->id, 'ends_with' => '567'],
+                ['table' => 'academies', 'id' => $academyId, 'ends_with' => '345'],
+            ]
+            && ! str_contains(json_encode($context, JSON_THROW_ON_ERROR), '61234567'))
+        ->once();
 });
 
 it('changes nothing the second time', function (): void {
-    $athlete = athletePhoneOnDisk($this, '+39', '61234567');
+    $athlete = athletePhoneOnDisk($this, '+44', '07911123456');
 
     phoneMigration()->up();
     phoneMigration()->up();
 
-    expect($athlete->refresh()->phone_national_number)->toBe('061234567');
+    expect($athlete->refresh()->phone_national_number)->toBe('7911123456');
 });

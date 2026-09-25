@@ -39,6 +39,19 @@ it('keeps the leading zero of an Italian landline (#1867)', function (string $te
     'with its own prefix' => ['+39 06 1234567', null],
 ]);
 
+it('reads an Italian mobile written the pre-1998 way as the mobile it is (#1867)', function (string $text, ?string $fallback): void {
+    // `0333…` takes libphonenumber for a landline's leading zero, and with it
+    // the number is not valid. Without it, it is the mobile it always was —
+    // which is what the import stored before it kept landline zeros.
+    expect(PhoneText::parse($text, $fallback))->toBe([
+        'phone_country_code' => '+39',
+        'phone_national_number' => '3331234567',
+    ]);
+})->with([
+    'bare, with the academy prefix' => ['0333 1234567', '+39'],
+    'with its own prefix' => ['+39 0333 1234567', null],
+]);
+
 it('drops a trunk zero typed after an international prefix (#1867)', function (): void {
     // `+44 07911…` is how people write it; the zero is a trunk prefix, not
     // part of the number, and `wa.me/4407911…` does not open.
