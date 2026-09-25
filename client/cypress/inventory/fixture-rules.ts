@@ -56,7 +56,11 @@ const RULES: Rule[] = [
     if (!isDate(o['joined_at'])) return out;
     const joined = day(o['joined_at']);
     const monthStart = `${ctx.today.slice(0, 7)}-01`;
-    const seasonDays = trainingDaysBetween(later(ctx.seasonStart, joined), ctx.today, ctx.trainingDays);
+    const seasonDays = trainingDaysBetween(
+      later(ctx.seasonStart, joined),
+      ctx.today,
+      ctx.trainingDays,
+    );
     const monthDays = trainingDaysBetween(later(monthStart, joined), ctx.today, ctx.trainingDays);
     const total = o['attendance_total_count'];
     const month = o['attendance_month_count'];
@@ -69,10 +73,23 @@ const RULES: Rule[] = [
     if (isNum(month) && isNum(total) && ctx.seasonStart <= monthStart && month > total) {
       out.push(`attendance_month_count ${month} > attendance_total_count ${total}`);
     }
-    // Last presence (#1726): a real day, after joining and not after today.
+    // Last presence (#1726): a real day, after joining and not after today,
+    // and in the window a count covers exactly when that count is not zero.
     const last = o['last_attended_on'];
     if (isDate(last) && (day(last) < joined || day(last) > ctx.today)) {
       out.push(`last_attended_on ${last} outside ${joined}…${ctx.today}`);
+    }
+    const windows: [string, unknown, string][] = [
+      ['attendance_total_count', total, ctx.seasonStart],
+      ['attendance_month_count', month, monthStart],
+    ];
+    for (const [name, count, start] of windows) {
+      if (!isNum(count) || (last !== null && !isDate(last))) continue;
+      const inWindow = isDate(last) && day(last) >= start;
+      if (count > 0 && !inWindow)
+        out.push(`${name} ${count} but last_attended_on ${last} before ${start}`);
+      if (count === 0 && inWindow)
+        out.push(`${name} 0 but last_attended_on ${last} after ${start}`);
     }
     return out;
   },
@@ -136,7 +153,8 @@ const RULES: Rule[] = [
       const n = a['exposures'];
       const state = a['state'];
       if (!isNum(n)) continue;
-      if (n > lessons.length) out.push(`athlete ${a['id']} exposures ${n} > ${lessons.length} lessons`);
+      if (n > lessons.length)
+        out.push(`athlete ${a['id']} exposures ${n} > ${lessons.length} lessons`);
       const agrees =
         (state === 'seen' && n >= 2) ||
         (state === 'thin' && n === 1) ||
@@ -175,7 +193,8 @@ const RULES: Rule[] = [
     const lastDay = `${sunday.getFullYear()}-${String(sunday.getMonth() + 1).padStart(2, '0')}-${String(sunday.getDate()).padStart(2, '0')}`;
     const out: string[] = [];
     const unconfirmed = o['unconfirmed'];
-    if (o['held'] > 0 && day(week) > ctx.today) out.push(`week ${week} holds lessons before it starts`);
+    if (o['held'] > 0 && day(week) > ctx.today)
+      out.push(`week ${week} holds lessons before it starts`);
     if (isNum(unconfirmed) && unconfirmed > 0 && day(week) > ctx.today) {
       out.push(`week ${week} has unconfirmed plans before it starts`);
     }
@@ -210,7 +229,9 @@ const RULES: Rule[] = [
     if (!isNum(o['athlete_id']) || !isNum(o['count']) || !('first_name' in o)) return [];
     const monthStart = `${ctx.today.slice(0, 7)}-01`;
     const monthDays = trainingDaysBetween(monthStart, ctx.today, ctx.trainingDays);
-    return o['count'] > monthDays ? [`summary count ${o['count']} > ${monthDays} days this month`] : [];
+    return o['count'] > monthDays
+      ? [`summary count ${o['count']} > ${monthDays} days this month`]
+      : [];
   },
 ];
 
@@ -224,7 +245,8 @@ export function fixtureContradictions(body: unknown, ctx: FixtureContext, path =
   }
   if (!isObj(body)) return [];
   const here = RULES.flatMap((rule) => rule(body, ctx)).map((p) => `${path}: ${p}`);
-  const below = Object.entries(body).flatMap(([k, v]) => fixtureContradictions(v, ctx, `${path}.${k}`));
+  const below = Object.entries(body).flatMap(([k, v]) =>
+    fixtureContradictions(v, ctx, `${path}.${k}`),
+  );
   return [...here, ...below];
 }
-
