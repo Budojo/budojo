@@ -72,8 +72,7 @@ final class PhoneText
         }
 
         $countryCode = $number->getCountryCode();
-        $nationalNumber = $number->getNationalNumber();
-        if ($countryCode === null || $nationalNumber === null) {
+        if ($countryCode === null || $number->getNationalNumber() === null) {
             // A bare number with no fallback: nothing here says which country
             // it belongs to, and defaulting to Italy because the app is
             // written in Italian would be inventing data.
@@ -82,7 +81,12 @@ final class PhoneText
 
         return [
             'phone_country_code' => '+' . $countryCode,
-            'phone_national_number' => (string) $nationalNumber,
+            // The national SIGNIFICANT number, not the national number (#1867).
+            // The latter drops an Italian landline's leading zero into a
+            // separate flag, so `06 1234567` was stored as `61234567` and
+            // dialled a different line. This keeps that zero and drops a trunk
+            // zero (`+44 07911…`), which is what `PhonePair` stores too.
+            'phone_national_number' => $util->getNationalSignificantNumber($number),
         ];
     }
 

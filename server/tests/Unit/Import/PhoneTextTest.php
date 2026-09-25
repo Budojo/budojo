@@ -26,6 +26,28 @@ it('splits an international number into the pair the column expects', function (
     '0039 333 1234567',
 ]);
 
+it('keeps the leading zero of an Italian landline (#1867)', function (string $text, ?string $fallback): void {
+    // libphonenumber's national number drops it and keeps it in a separate
+    // flag; stored without it, `06 1234567` dials a different line. The
+    // national SIGNIFICANT number is the one that keeps it.
+    expect(PhoneText::parse($text, $fallback))->toBe([
+        'phone_country_code' => '+39',
+        'phone_national_number' => '061234567',
+    ]);
+})->with([
+    'bare, with the academy prefix' => ['06 1234567', '+39'],
+    'with its own prefix' => ['+39 06 1234567', null],
+]);
+
+it('drops a trunk zero typed after an international prefix (#1867)', function (): void {
+    // `+44 07911…` is how people write it; the zero is a trunk prefix, not
+    // part of the number, and `wa.me/4407911…` does not open.
+    expect(PhoneText::parse('+44 07911 123456', '+39'))->toBe([
+        'phone_country_code' => '+44',
+        'phone_national_number' => '7911123456',
+    ]);
+});
+
 it('uses the academy own prefix when the number has none', function (): void {
     // Which is most sheets: an Italian academy writes Italian numbers without
     // a prefix, because everyone they call is Italian. The academy's own phone
