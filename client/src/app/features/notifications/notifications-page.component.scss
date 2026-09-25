@@ -211,15 +211,20 @@
 // (#1852). On an unread row the accent is the dot and the wash, meaning
 // "unread"; a promotion badge in the same indigo would make one colour mean
 // two things on one row.
+//
+// Each tone is a fill under the badge's white glyph, so it holds 3:1 against
+// white (WCAG 1.4.11, `notification-tones.spec.ts`): the 500 shades of teal,
+// orange, green and amber fail it, their 600s pass. Payment steps to green-700
+// so it stays apart from member's green-600.
 $notification-tones: (
-  promotion: var(--p-teal-500, #14b8a6),
-  member: var(--p-green-500, #22c55e),
+  promotion: var(--p-teal-600, #0d9488),
+  member: var(--p-green-600, #16a34a),
   comment: var(--p-blue-500, #3b82f6),
   reaction: var(--p-pink-500, #ec4899),
   event: var(--p-purple-500, #a855f7),
-  payment: var(--p-green-600, #16a34a),
-  document: var(--p-amber-500, #f59e0b),
-  training: var(--p-orange-500, #f97316),
+  payment: var(--p-green-700, #15803d),
+  document: var(--p-amber-600, #d97706),
+  training: var(--p-orange-600, #ea580c),
   alert: var(--p-red-500, #ef4444),
   recap: var(--p-cyan-600, #0891b2),
   system: var(--p-surface-500, #6b7280),
