@@ -63,6 +63,8 @@ function report(over: Partial<SyllabusCoverage> = {}): SyllabusCoverage {
         parent_name: 'Closed guard',
         kind: 'both',
         lessons: 3,
+        reach: 11,
+        attendances: 24,
         last_taught_on: '2026-10-05',
         state: 'covered',
       },
@@ -72,6 +74,8 @@ function report(over: Partial<SyllabusCoverage> = {}): SyllabusCoverage {
         parent_name: 'Closed guard',
         kind: 'both',
         lessons: 1,
+        reach: 1,
+        attendances: 1,
         last_taught_on: '2026-09-07',
         state: 'thin',
       },
@@ -422,6 +426,37 @@ describe('StatsSyllabusComponent — who has seen it (#1745)', () => {
     expect(name).toContain('Who has seen it:');
     expect(name).toContain('Armbar');
     expect(name).toContain('(Closed guard)');
+  });
+
+  it('says how many people a taught technique reached, beside its lessons (#1746)', () => {
+    const { fixture, httpMock } = setup();
+    flush(httpMock);
+    fixture.detectChanges();
+
+    const el: HTMLElement = fixture.nativeElement;
+    const reach = (id: number) =>
+      el
+        .querySelector(`[data-cy="syllabus-taught-${id}"] [data-cy="syllabus-taught-reach"]`)
+        ?.textContent?.replace(/\s+/g, ' ')
+        .trim();
+
+    // Three evenings of fifteen and three of four read the same without it.
+    expect(reach(11)).toBe('3 lessons · 11 people');
+    // One and one: both singular.
+    expect(reach(12)).toBe('1 lesson · 1 person');
+  });
+
+  it('keeps reach out of the headline, number and caption alike', () => {
+    const { fixture, httpMock } = setup();
+    flush(httpMock);
+    fixture.detectChanges();
+
+    // The whole headline block: the percentage, the caption and the rule.
+    // Reach is a column on the rows; it must never climb into the fraction.
+    const headline: HTMLElement = fixture.nativeElement.querySelector('.coverage__headline');
+    expect(headline).not.toBeNull();
+    expect(headline.textContent).not.toContain('11');
+    expect(headline.textContent).not.toMatch(/people|person/);
   });
 
   it('leaves a never-taught row a plain row — planning it is #1656', () => {
