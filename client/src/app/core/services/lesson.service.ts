@@ -3,6 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import type { TrainingMode } from './academy.service';
+import type { AthleteIdentity } from './athlete.service';
 
 /**
  * A syllabus topic as a lesson names it (#1564).
@@ -57,6 +58,32 @@ export interface LessonSuggestion {
   readonly reason: SuggestionReason;
   /** `null` exactly when the reason is `never`. */
   readonly last_taught_on: string | null;
+}
+
+/**
+ * One technique most of tonight's room missed (#1860): taught this season
+ * before tonight, and at least two — and at least half — of the people checked
+ * in were at none of its lessons.
+ */
+export interface RoomGap {
+  readonly id: number;
+  readonly name: string;
+  readonly parent_name: string | null;
+  readonly kind: TrainingMode;
+  /** Held lessons that taught it this season, before tonight. */
+  readonly lessons: number;
+  readonly last_taught_on: string;
+  readonly missed: number;
+  /** Trained on one of those days with no lesson named — neither there nor missed. */
+  readonly unattributed: number;
+  /** Who missed it, in register order. */
+  readonly athletes: readonly AthleteIdentity[];
+}
+
+export interface RoomGaps {
+  /** Distinct athletes checked into this lesson. */
+  readonly present: number;
+  readonly rows: readonly RoomGap[];
 }
 
 @Injectable({ providedIn: 'root' })
@@ -122,6 +149,19 @@ export class LessonService {
 
     return this.http
       .get<{ data: LessonSuggestion[] }>(`${this.base}/suggestions`, { params })
+      .pipe(map((r) => r.data));
+  }
+
+  /**
+   * What most of the people checked into this lesson missed, of what the
+   * academy already taught this season (#1860). Addressed by the slot, because
+   * the people are the ones in that one lesson.
+   */
+  roomGaps(academyClassId: number, heldOn: string): Observable<RoomGaps> {
+    const params = new HttpParams().set('academy_class_id', academyClassId).set('held_on', heldOn);
+
+    return this.http
+      .get<{ data: RoomGaps }>(`${this.base}/room-gaps`, { params })
       .pipe(map((r) => r.data));
   }
 

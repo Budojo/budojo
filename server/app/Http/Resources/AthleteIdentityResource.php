@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Resources;
 
 use App\Models\Athlete;
+use App\Support\AthleteIdentity;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -15,12 +16,11 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * spine, the avatar, the full name and the age chip. The roster has all of
  * that from `AthleteResource`, but the monthly summary, the leaderboard and
  * the expiring-documents list carried only a name, so they could not draw
- * the belt. This is the smallest shape the component needs, in one place, so
- * the three payloads cannot drift apart.
+ * the belt.
  *
- * `user_avatar_url` needs the `user` relation. Eager-load `user` wherever a
- * list of these is built; without it the field reads null rather than
- * costing one query per row.
+ * The shape itself is {@see AthleteIdentity::of()}, which the Actions that
+ * list people (#1745, #1860) call directly; this resource is the HTTP layer's
+ * door to the same shape, so the payloads cannot drift apart.
  */
 class AthleteIdentityResource extends JsonResource
 {
@@ -41,15 +41,6 @@ class AthleteIdentityResource extends JsonResource
         /** @var Athlete $athlete */
         $athlete = $this->resource;
 
-        return [
-            'id' => $athlete->id,
-            'first_name' => $athlete->first_name,
-            'last_name' => $athlete->last_name,
-            'belt' => $athlete->belt->value,
-            'stripes' => $athlete->stripes,
-            'date_of_birth' => $athlete->date_of_birth?->toDateString(),
-            'photo_url' => $athlete->photo_url,
-            'user_avatar_url' => $athlete->relationLoaded('user') ? $athlete->user?->avatar_url : null,
-        ];
+        return AthleteIdentity::of($athlete);
     }
 }

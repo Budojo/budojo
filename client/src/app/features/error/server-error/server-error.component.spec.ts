@@ -68,12 +68,12 @@ describe('ServerErrorComponent', () => {
     expect(reload).toHaveBeenCalledOnce();
   });
 
-  it('goHome() navigates to /dashboard/athletes — the dashboard guards do the rest', () => {
+  it('goHome() navigates to /dashboard — its redirect and guards do the rest', () => {
     const { cmp } = setup();
     const router = TestBed.inject(Router);
 
     cmp.goHome();
 
-    expect(router.navigateByUrl).toHaveBeenCalledWith('/dashboard/athletes');
+    expect(router.navigateByUrl).toHaveBeenCalledWith('/dashboard');
   });
 });

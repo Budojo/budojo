@@ -100,6 +100,60 @@ export interface SyllabusCoverage {
 }
 
 /**
+ * The season map (#1858): each position, week by week.
+ *
+ * `held` has at least one presence; `planned` has none and is dated today or
+ * later; `unconfirmed` has none and its day has passed. Derived on every read,
+ * never stored, split on the server's `today`.
+ */
+export type CalendarLessonState = 'held' | 'planned' | 'unconfirmed';
+
+export interface CalendarCell {
+  /** The Monday of the week. */
+  readonly week: string;
+  readonly held: number;
+  readonly planned: number;
+  readonly unconfirmed: number;
+}
+
+export interface CalendarPosition {
+  readonly id: number;
+  readonly name: string;
+  readonly kind: TrainingMode;
+  /** Sparse: only the weeks with a lesson on this position, oldest first. */
+  readonly cells: readonly CalendarCell[];
+}
+
+export interface CalendarLesson {
+  readonly id: number;
+  readonly academy_class_id: number | null;
+  readonly held_on: string;
+  readonly name: string;
+  readonly starts_at: string | null;
+  readonly kind: TrainingMode;
+  readonly state: CalendarLessonState;
+  /** The positions this lesson counts for under the filter in force. */
+  readonly position_ids: readonly number[];
+  readonly topics: readonly {
+    readonly id: number;
+    readonly name: string;
+    readonly parent_id: number | null;
+  }[];
+}
+
+export interface SyllabusCalendar {
+  readonly season: { readonly start: string; readonly end: string; readonly label: string };
+  readonly kind: TrainingMode | null;
+  /** The server's today — the day planned and unconfirmed were split on. */
+  readonly today: string;
+  /** The Monday of every week the season touches. */
+  readonly weeks: readonly string[];
+  readonly positions: readonly CalendarPosition[];
+  /** The season's tagged lessons, oldest first. */
+  readonly lessons: readonly CalendarLesson[];
+}
+
+/**
  * Where one athlete stands against a technique's lessons (#1745). `unplaced`
  * is at none of them by the record, but trained on one of those days with no
  * lesson named (#1590): could have been there, so never read as an absence.
@@ -273,6 +327,24 @@ export class StatsService {
 
     return this.http
       .get<{ data: SyllabusCoverage }>(`${environment.apiBase}/api/v1/stats/syllabus/coverage`, {
+        params,
+      })
+      .pipe(map((r) => r.data));
+  }
+
+  /**
+   * The season map (#1858) — the same season and filter as
+   * `syllabusCoverage()`, because the map is drawn beside its fractions.
+   */
+  syllabusCalendar(
+    seasonsBack = 0,
+    kind: TrainingMode | null = null,
+  ): Observable<SyllabusCalendar> {
+    let params = new HttpParams().set('seasons_back', seasonsBack);
+    if (kind !== null) params = params.set('kind', kind);
+
+    return this.http
+      .get<{ data: SyllabusCalendar }>(`${environment.apiBase}/api/v1/stats/syllabus/calendar`, {
         params,
       })
       .pipe(map((r) => r.data));

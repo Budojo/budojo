@@ -221,6 +221,63 @@ describe('Lesson topics — check-in', () => {
       .and('contain.text', 'Worm guard');
   });
 
+  it('on a held lesson, says what most of the room missed, and who, on request (#1860)', () => {
+    stub({ lesson: lesson({ held: true }) });
+    cy.intercept('GET', '/api/v1/lessons/room-gaps*', {
+      statusCode: 200,
+      body: {
+        data: {
+          present: 9,
+          rows: [
+            {
+              id: 12,
+              name: 'Triangle',
+              parent_name: 'Closed guard',
+              kind: 'both',
+              lessons: 2,
+              last_taught_on: '2026-10-14',
+              missed: 6,
+              unattributed: 0,
+              athletes: [
+                {
+                  id: 1,
+                  first_name: 'Mario',
+                  last_name: 'Rossi',
+                  belt: 'blue',
+                  stripes: 2,
+                  date_of_birth: null,
+                  photo_url: null,
+                  user_avatar_url: null,
+                },
+              ],
+            },
+          ],
+        },
+      },
+    }).as('room');
+
+    cy.visitAuthenticated('/dashboard/attendance');
+    cy.wait('@lesson');
+    cy.get('[data-cy="attendance-topics"]').click();
+
+    cy.wait('@room').then(({ request }) => {
+      expect(request.url).to.contain('academy_class_id=3');
+      expect(request.url).to.contain(`held_on=${TODAY_ISO}`);
+    });
+    cy.get('[data-cy="lesson-sheet-room"]')
+      .should('be.visible')
+      .and('contain.text', "6 of the 9 here tonight weren't there");
+
+    cy.get('[data-cy="lesson-room-people-12"]').should('not.exist');
+    cy.get('[data-cy="lesson-room-who-12"]').click();
+    cy.get('[data-cy="lesson-room-people-12"]').should('contain.text', 'Mario Rossi');
+
+    // One tap takes it, like a suggestion.
+    cy.get('[data-cy="lesson-room-12"]').click();
+    cy.get('[data-cy="lesson-chip-12"]').should('be.visible');
+    cy.get('[data-cy="lesson-sheet-room"]').should('not.exist');
+  });
+
   it("shows how a technique is taught here, and the last evening's notes as that evening's (#1862)", () => {
     stub();
     const NOTED_TREE = [

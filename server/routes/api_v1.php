@@ -603,6 +603,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
         // reachable behind a wildcard added here later.
         Route::get('/lessons/recent-topics', [\App\Http\Controllers\Lesson\LessonController::class, 'recent']);
         Route::get('/lessons/suggestions', [\App\Http\Controllers\Lesson\LessonController::class, 'suggestions']);
+        // What tonight's people missed, of what was already taught (#1860).
+        Route::get('/lessons/room-gaps', [\App\Http\Controllers\Lesson\LessonController::class, 'roomGaps']);
         // The notes of the last evening that taught a topic (#1862).
         Route::get('/lessons/last-notes', [\App\Http\Controllers\Lesson\LessonController::class, 'lastNotes']);
         Route::get('/lessons', [\App\Http\Controllers\Lesson\LessonController::class, 'show']);
@@ -660,12 +662,16 @@ Route::middleware('auth:sanctum')->group(function (): void {
         // this block without touching other route sections.
         Route::prefix('stats')->group(function (): void {
             Route::get('attendance/daily', [StatsController::class, 'attendanceDaily']);
+            // Who is drifting, against their own attendance (#1728).
+            Route::get('attendance/at-risk', [StatsController::class, 'atRisk']);
             Route::get('payments/monthly', [StatsController::class, 'paymentsMonthly']);
             Route::get('athletes/age-bands', [StatsController::class, 'ageBands']);
             // Athletes a medical certificate covers, not rows (#1732).
             Route::get('documents/compliance', [StatsController::class, 'documentsCompliance']);
             // The programme against what was actually taught (#1565).
             Route::get('syllabus/coverage', [StatsController::class, 'syllabusCoverage']);
+            // Each position, week by week — held, planned, unconfirmed (#1858).
+            Route::get('syllabus/calendar', [StatsController::class, 'syllabusCalendar']);
             // Who has seen one technique — a row of that report, opened (#1745).
             Route::get('syllabus/topics/{syllabusTopic}', \App\Http\Controllers\Stats\TopicExposureController::class);
         });
