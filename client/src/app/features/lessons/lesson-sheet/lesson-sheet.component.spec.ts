@@ -654,9 +654,10 @@ describe('LessonSheetComponent — planning ahead (#1859)', () => {
     vi.setSystemTime(new Date(2026, 8, 14, 12, 0));
   });
 
+  // The clock first: a failing verify() must not leave the next file on it.
   afterEach(() => {
-    TestBed.inject(HttpTestingController).verify();
     vi.useRealTimers();
+    TestBed.inject(HttpTestingController).verify();
   });
 
   function setupPlanning(

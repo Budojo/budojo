@@ -287,16 +287,19 @@ export class StatsSyllabusComponent {
    * Where each never-taught technique would be planned (#1656): the next
    * lesson, over the coming week, of a class that may teach it — a gi
    * technique goes to the next gi class, never to tonight's no-gi one.
-   * Nothing for a season gone by, or for a technique no class can take.
+   * Nothing for a season gone by, for a technique no class can take, or
+   * past the season's end: a gap in this season is not next season's plan.
    */
   protected readonly planTargets = computed<ReadonlyMap<number, PlanOption>>(() => {
     const report = this.report();
     if (report === null || this.seasonsBack() !== 0) return new Map();
 
     const today = localIso(new Date());
+    const weekOut = addDays(today, 6);
+    const until = weekOut < report.season.end ? weekOut : report.season.end;
     const targets = new Map<number, PlanOption>();
     for (const topic of report.missing) {
-      const next = planOptions(this.classes(), topic.kind, today, addDays(today, 6))[0];
+      const next = planOptions(this.classes(), topic.kind, today, until)[0];
       if (next !== undefined) targets.set(topic.id, next);
     }
     return targets;

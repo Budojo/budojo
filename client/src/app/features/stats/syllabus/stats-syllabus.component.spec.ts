@@ -548,9 +548,10 @@ describe('StatsSyllabusComponent — plan what was never taught (#1656)', () => 
     vi.setSystemTime(new Date(2026, 9, 14, 12, 0));
   });
 
+  // The clock first: a failing verify() must not leave the next file on it.
   afterEach(() => {
-    TestBed.inject(HttpTestingController).verify();
     vi.useRealTimers();
+    TestBed.inject(HttpTestingController).verify();
   });
 
   const GI_ONLY = report({
@@ -558,8 +559,8 @@ describe('StatsSyllabusComponent — plan what was never taught (#1656)', () => 
   });
 
   function sheet(fixture: { debugElement: DebugElement }) {
-    return fixture.debugElement.query(By.directive(LessonSheetStub))
-      ?.componentInstance as LessonSheetStub | undefined;
+    return fixture.debugElement.query(By.directive(LessonSheetStub))?.componentInstance as
+      LessonSheetStub | undefined;
   }
 
   function planButton(fixture: { nativeElement: HTMLElement }, id: number) {
@@ -638,6 +639,26 @@ describe('StatsSyllabusComponent — plan what was never taught (#1656)', () => 
     expect(
       fixture.nativeElement.querySelector('[data-cy="syllabus-missing-32"]').textContent,
     ).toContain('Lockdown');
+  });
+
+  it('offers no plan past the end of the season', () => {
+    const { fixture, httpMock } = setup();
+    // The season closes on Sunday the 18th: Monday's gi class is the next one's.
+    flush(
+      httpMock,
+      report({
+        season: { start: '2025-10-19', end: '2026-10-18', label: '2025/26' },
+        missing: [
+          { id: 31, name: 'Omoplata', parent_name: 'Closed guard', kind: 'gi' },
+          { id: 32, name: 'Lockdown', parent_name: 'Half guard', kind: 'nogi' },
+        ],
+      }),
+    );
+    fixture.detectChanges();
+
+    expect(planButton(fixture, 31)).toBeNull();
+    // Tonight's no-gi class is still inside it.
+    expect(planButton(fixture, 32)).not.toBeNull();
   });
 
   it('offers no plan in a season gone by', () => {

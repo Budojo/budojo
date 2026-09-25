@@ -2410,6 +2410,24 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       cy.get('[data-cy="season-map-plan"]', { timeout: 4000 }).should('be.visible');
     },
   });
+  // A technique never taught, planned from the report's list (#1656): the
+  // next class that may teach it, opened with it ticked. No-gi Lockdown
+  // passes over tonight's two gi classes for Wednesday's no-gi one. On the
+  // harness clock, so the day it lands on is the same every run.
+  screen(
+    '40-stats-syllabus-plan-missing',
+    '/dashboard/stats/syllabus',
+    '[data-cy="syllabus-coverage"]',
+    {
+      stubs: () => {
+        cy.intercept('GET', '/api/v1/lessons?*', { statusCode: 200, body: { data: null } });
+      },
+      act: () => {
+        press('[data-cy="syllabus-missing-23"] button');
+        dialogOpen('[data-cy="lesson-sheet"]');
+      },
+    },
+  );
   // A week with a lesson held and a plan nobody checked into: the fill, a
   // hatched corner, and both lessons in the popover.
   screen('40-stats-syllabus-missed', '/dashboard/stats/syllabus', '[data-cy="syllabus-coverage"]', {
