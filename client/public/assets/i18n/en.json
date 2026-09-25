@@ -1960,6 +1960,9 @@
       "title": "Lesson",
       "planned": "Planned",
       "held": "Held",
+      "stepPrevious": "The week before",
+      "stepNext": "The week after",
+      "stepSaveFirst": "Save or cancel before moving to another week.",
       "searchPlaceholder": "Search the programme",
       "searchAria": "Search the programme",
       "clearSearch": "Clear the search",
@@ -1993,6 +1996,8 @@
       "suggestions": {
         "title": "Suggested tonight",
         "dismiss": "Not tonight",
+        "titleLesson": "Suggested for this lesson",
+        "dismissLesson": "Not for this lesson",
         "reason": {
           "never": "Not taught yet this season",
           "thin": "Taught once, on {{date}}",
@@ -2923,6 +2928,10 @@
         "seasonTitle": "{{position}}, this season",
         "seasonAria": "{{position}}: every week of the season",
         "seasonEmpty": "Nothing on this position this season yet.",
+        "planTitle": "Plan a lesson",
+        "planAria": "Plan {{position}}, week of {{date}}",
+        "planNoneWeek": "No class on the timetable that week can teach this position.",
+        "planNoneSeason": "No class on the timetable in the next two weeks can teach this position.",
         "state": {
           "planned": "Planned",
           "unconfirmed": "No check-in"

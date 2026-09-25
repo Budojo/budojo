@@ -1960,6 +1960,9 @@
       "title": "Lezione",
       "planned": "Pianificata",
       "held": "Svolta",
+      "stepPrevious": "La settimana prima",
+      "stepNext": "La settimana dopo",
+      "stepSaveFirst": "Salva o annulla prima di cambiare settimana.",
       "searchPlaceholder": "Cerca nel programma",
       "searchAria": "Cerca nel programma",
       "clearSearch": "Cancella la ricerca",
@@ -1993,6 +1996,8 @@
       "suggestions": {
         "title": "Suggeriti per stasera",
         "dismiss": "Non stasera",
+        "titleLesson": "Suggeriti per questa lezione",
+        "dismissLesson": "Non per questa lezione",
         "reason": {
           "never": "Non ancora fatto questa stagione",
           "thin": "Fatto una volta: {{date}}",
@@ -2923,6 +2928,10 @@
         "seasonTitle": "{{position}}, in questa stagione",
         "seasonAria": "{{position}}: tutte le settimane della stagione",
         "seasonEmpty": "Ancora niente su questa posizione in questa stagione.",
+        "planTitle": "Pianifica una lezione",
+        "planAria": "Pianifica {{position}}, settimana del {{date}}",
+        "planNoneWeek": "Quella settimana nessuna classe dell'orario può fare questa posizione.",
+        "planNoneSeason": "Nelle prossime due settimane nessuna classe dell'orario può fare questa posizione.",
         "state": {
           "planned": "Pianificata",
           "unconfirmed": "Senza appello"

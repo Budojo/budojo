@@ -1,13 +1,17 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  Injector,
+  afterNextRender,
   computed,
   effect,
   inject,
   input,
   model,
   output,
+  runInInjectionContext,
   signal,
+  untracked,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
@@ -31,7 +35,9 @@ import { LanguageService } from '../../../core/services/language.service';
 import { SyllabusService, SyllabusTopic } from '../../../core/services/syllabus.service';
 import type { TrainingMode } from '../../../core/services/academy.service';
 import { AthleteIdentityComponent } from '../../../shared/components/athlete-identity/athlete-identity.component';
+import { addDays, localIso } from '../../../shared/utils/class-occurrences';
 import { localeFor } from '../../../shared/utils/locale';
+import { prefersReducedMotion } from '../../../shared/utils/prefers-reduced-motion';
 
 /** A topic as the picker shows it, whichever list it came from. */
 interface Pickable {
@@ -83,6 +89,7 @@ export class LessonSheetComponent {
   private readonly translate = inject(TranslateService);
   private readonly messageService = inject(MessageService);
   private readonly languageService = inject(LanguageService);
+  private readonly injector = inject(Injector);
 
   /** Two-way, so the host can close it and the dialog can close itself. */
   readonly visible = model<boolean>(false);
@@ -93,6 +100,18 @@ export class LessonSheetComponent {
   readonly className = input<string>('');
   /** Already-localised day label for the header — the host knows the locale. */
   readonly dateLabel = input<string>('');
+  /**
+   * Planning hosts (#1859): the header steps one occurrence of the class at a
+   * time — a week — so the owner can plan the Monday after next without
+   * leaving the sheet. Never before today: the past is the check-in's.
+   */
+  readonly steppable = input<boolean>(false);
+  /**
+   * A topic to open the programme on (#1859): its position is expanded and
+   * brought into view, so planning "half guard" from the season map lands
+   * on half guard instead of the top of sixty positions.
+   */
+  readonly focusTopicId = input<number | null>(null);
 
   /** The saved lesson, so the host can refresh its summary without re-reading. */
   readonly saved = output<Lesson>();
@@ -125,15 +144,86 @@ export class LessonSheetComponent {
   protected readonly query = signal<string>('');
   protected readonly expanded = signal<ReadonlySet<number>>(new Set());
 
+  /**
+   * The day this sheet reads and writes. The host's `heldOn` on every
+   * opening; the stepper moves it a week at a time from there (#1859).
+   */
+  protected readonly slot = signal<string>('');
+
   /** What was on the lesson when it opened — so Save can send only changes. */
-  private openedWith: { topicIds: readonly number[]; notes: string } = { topicIds: [], notes: '' };
+  private readonly openedWith = signal<{ topicIds: readonly number[]; notes: string }>({
+    topicIds: [],
+    notes: '',
+  });
 
   constructor() {
     // Opening is the load: the slot can change between two openings (another
-    // class, another day), and nothing here is worth keeping across them.
+    // class, another day), and nothing here is worth keeping across them —
+    // a week stepped to last time included, so the sheet opens where the
+    // host said.
     effect(() => {
-      if (this.visible()) this.load();
+      if (!this.visible()) return;
+      const heldOn = this.heldOn();
+      this.academyClassId();
+      untracked(() => {
+        this.slot.set(heldOn);
+        this.load();
+      });
     });
+  }
+
+  /** Something picked or typed that Save would send. */
+  protected readonly dirty = computed<boolean>(() => {
+    const opened = this.openedWith();
+    return !sameIds([...this.selected()], opened.topicIds) || this.notes().trim() !== opened.notes;
+  });
+
+  /**
+   * "Tonight" only for tonight's lesson. Anything else — a plan three weeks
+   * out, an evening being backfilled — is "this lesson".
+   */
+  protected readonly suggestionWords = computed<{ title: string; dismiss: string }>(() =>
+    this.slot() === localIso(new Date())
+      ? { title: 'lessons.sheet.suggestions.title', dismiss: 'lessons.sheet.suggestions.dismiss' }
+      : {
+          title: 'lessons.sheet.suggestions.titleLesson',
+          dismiss: 'lessons.sheet.suggestions.dismissLesson',
+        },
+  );
+
+  /**
+   * The previous occurrence is still today or later. The stepper is for
+   * planning; recording a past evening is the check-in's job.
+   */
+  protected readonly canStepBack = computed<boolean>(() => {
+    const slot = this.slot();
+    return slot !== '' && addDays(slot, -7) >= localIso(new Date());
+  });
+
+  /** The header's day: the host's words, or the stepped day's own once it can move. */
+  protected readonly headerDate = computed<string>(() => {
+    if (!this.steppable()) return this.dateLabel();
+    const iso = this.slot();
+    if (iso === '') return '';
+    const [y, m, d] = iso.split('-').map(Number);
+    return new Intl.DateTimeFormat(localeFor(this.languageService.currentLang()), {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+    }).format(new Date(y, m - 1, d));
+  });
+
+  /**
+   * One occurrence of the class forward or back — a week, since a timetable
+   * class runs once a week. Held while something is unsaved: moving would
+   * throw it away, and a plan silently lost is worse than a disabled arrow.
+   */
+  protected step(direction: 1 | -1): void {
+    if (this.loading() || this.saving() || this.dirty()) return;
+    if (direction === -1 && !this.canStepBack()) return;
+
+    this.slot.set(addDays(this.slot(), 7 * direction));
+    this.load();
   }
 
   /** Every topic in the programme, flattened once for search and lookup. */
@@ -315,12 +405,13 @@ export class LessonSheetComponent {
     if (this.saving()) return;
 
     const classId = this.academyClassId();
-    const heldOn = this.heldOn();
+    const heldOn = this.slot();
     const topicIds = [...this.selected()];
     const notes = this.notes().trim();
 
-    const topicsChanged = !sameIds(topicIds, this.openedWith.topicIds);
-    const notesChanged = notes !== this.openedWith.notes;
+    const opened = this.openedWith();
+    const topicsChanged = !sameIds(topicIds, opened.topicIds);
+    const notesChanged = notes !== opened.notes;
 
     if (!topicsChanged && !notesChanged) {
       this.close();
@@ -372,7 +463,7 @@ export class LessonSheetComponent {
     this.clearRoom();
 
     forkJoin({
-      lesson: this.lessonService.get(this.academyClassId(), this.heldOn()),
+      lesson: this.lessonService.get(this.academyClassId(), this.slot()),
       positions: this.syllabusService.list(),
       recent: this.lessonService.recentTopics(),
       // Caught here and not in the shared error branch: suggestions are the
@@ -394,8 +485,9 @@ export class LessonSheetComponent {
         const living = (lesson?.topics ?? []).filter((t) => !t.deleted).map((t) => t.id);
         this.selected.set(new Set(living));
         this.notes.set(lesson?.notes ?? '');
-        this.openedWith = { topicIds: living, notes: lesson?.notes ?? '' };
+        this.openedWith.set({ topicIds: living, notes: lesson?.notes ?? '' });
         this.loading.set(false);
+        this.revealFocus(positions);
         if (lesson?.held) this.loadRoom();
       },
       error: () => {
@@ -410,7 +502,7 @@ export class LessonSheetComponent {
         this.suggestions.set([]);
         this.selected.set(new Set());
         this.notes.set('');
-        this.openedWith = { topicIds: [], notes: '' };
+        this.openedWith.set({ topicIds: [], notes: '' });
         this.loadFailed.set(true);
         this.loading.set(false);
         this.toast(
@@ -423,13 +515,38 @@ export class LessonSheetComponent {
   }
 
   /**
+   * Open the programme on the host's topic: its position expanded — the
+   * position itself, or the one a technique sits under — and scrolled into
+   * the middle of the sheet once it is drawn.
+   */
+  private revealFocus(positions: readonly SyllabusTopic[]): void {
+    const focus = this.focusTopicId();
+    if (focus === null) return;
+
+    const position = positions.find(
+      (p) => p.id === focus || (p.children ?? []).some((c) => c.id === focus),
+    );
+    if (position === undefined) return;
+
+    this.expanded.set(new Set([position.id]));
+    runInInjectionContext(this.injector, () =>
+      afterNextRender(() => {
+        document.querySelector(`[data-cy="lesson-expand-${position.id}"]`)?.scrollIntoView({
+          block: 'center',
+          behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+        });
+      }),
+    );
+  }
+
+  /**
    * Tonight's room (#1860), read after the sheet is already usable: it is a
    * panel on top of the picker, never a reason to hold the picker back, and a
    * failure leaves it out rather than failing the sheet.
    */
   private loadRoom(): void {
     this.roomRead = this.lessonService
-      .roomGaps(this.academyClassId(), this.heldOn())
+      .roomGaps(this.academyClassId(), this.slot())
       .pipe(catchError(() => of(null)))
       .subscribe((room) => {
         this.roomGaps.set(room?.rows ?? []);

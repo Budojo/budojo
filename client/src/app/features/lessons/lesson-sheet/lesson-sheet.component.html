@@ -13,7 +13,35 @@
         className() || ('lessons.sheet.title' | translate)
       }}</span>
       <span class="sheet-head__meta">
-        <span>{{ dateLabel() }}</span>
+        @if (steppable()) {
+          <!--
+            One occurrence of the class at a time (#1859). Held while
+            something is unsaved: moving would throw it away.
+          -->
+          <button
+            type="button"
+            class="sheet-head__step"
+            [disabled]="!canStepBack() || dirty() || loading()"
+            (click)="step(-1)"
+            [attr.aria-label]="'lessons.sheet.stepPrevious' | translate"
+            data-cy="lesson-sheet-prev"
+          >
+            <i class="pi pi-chevron-left" aria-hidden="true"></i>
+          </button>
+        }
+        <span data-cy="lesson-sheet-date">{{ headerDate() }}</span>
+        @if (steppable()) {
+          <button
+            type="button"
+            class="sheet-head__step"
+            [disabled]="dirty() || loading()"
+            (click)="step(1)"
+            [attr.aria-label]="'lessons.sheet.stepNext' | translate"
+            data-cy="lesson-sheet-next"
+          >
+            <i class="pi pi-chevron-right" aria-hidden="true"></i>
+          </button>
+        }
         @if (heldLabel(); as key) {
           <!--
             Planned or held, said plainly. A plan is never counted as taught
@@ -25,6 +53,12 @@
           </span>
         }
       </span>
+      @if (steppable() && dirty()) {
+        <!-- Why the arrows went quiet, said where they are. -->
+        <span class="sheet-head__hint" data-cy="lesson-sheet-step-hint">
+          {{ 'lessons.sheet.stepSaveFirst' | translate }}
+        </span>
+      }
     </div>
   </ng-template>
 
@@ -246,7 +280,7 @@
             wrong data the evening the instructor teaches something else.
           -->
           <section class="group" data-cy="lesson-sheet-suggestions">
-            <h3 class="group__title">{{ 'lessons.sheet.suggestions.title' | translate }}</h3>
+            <h3 class="group__title">{{ suggestionWords().title | translate }}</h3>
             <ul class="topics">
               @for (item of suggestionsOffered(); track item.id) {
                 <li class="suggestion">
@@ -277,8 +311,8 @@
                     type="button"
                     class="suggestion__dismiss"
                     (click)="dismissSuggestion(item.id)"
-                    [attr.aria-label]="'lessons.sheet.suggestions.dismiss' | translate"
-                    [pTooltip]="'lessons.sheet.suggestions.dismiss' | translate"
+                    [attr.aria-label]="suggestionWords().dismiss | translate"
+                    [pTooltip]="suggestionWords().dismiss | translate"
                     [attr.data-cy]="'lesson-suggestion-dismiss-' + item.id"
                   >
                     <i class="pi pi-times" aria-hidden="true"></i>

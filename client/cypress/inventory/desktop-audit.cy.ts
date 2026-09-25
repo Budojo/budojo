@@ -2425,6 +2425,15 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       cy.get('[data-cy="season-map-popover"]', { timeout: 4000 }).should('be.visible');
     },
   });
+  // An empty week still to come, opened to plan it (#1859): the classes of
+  // that week that may teach the position.
+  screen('40-stats-syllabus-plan', '/dashboard/stats/syllabus', '[data-cy="syllabus-coverage"]', {
+    clock: false,
+    act: () => {
+      press('[data-cy="season-map-cell-5-2026-09-28"]');
+      cy.get('[data-cy="season-map-plan"]', { timeout: 4000 }).should('be.visible');
+    },
+  });
   // A week with a lesson held and a plan nobody checked into: the fill, a
   // hatched corner, and both lessons in the popover.
   screen('40-stats-syllabus-missed', '/dashboard/stats/syllabus', '[data-cy="syllabus-coverage"]', {
