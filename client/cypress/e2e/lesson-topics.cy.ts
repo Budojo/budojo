@@ -55,6 +55,9 @@ function topic(over: Record<string, unknown> = {}) {
     name: 'Closed guard',
     kind: 'both',
     in_season: true,
+    from_belt: null,
+    notes: null,
+    video_url: null,
     sort_order: 0,
     ...over,
   };
@@ -273,6 +276,61 @@ describe('Lesson topics — check-in', () => {
     cy.get('[data-cy="lesson-room-12"]').click();
     cy.get('[data-cy="lesson-chip-12"]').should('be.visible');
     cy.get('[data-cy="lesson-sheet-room"]').should('not.exist');
+  });
+
+  it("shows how a technique is taught here, and the last evening's notes as that evening's (#1862)", () => {
+    stub();
+    const NOTED_TREE = [
+      {
+        ...TREE[0],
+        children: [
+          topic({
+            id: 11,
+            parent_id: 1,
+            name: 'Armbar',
+            notes: 'Start from the S-mount; grip on the far elbow.',
+            video_url: 'https://www.youtube.com/watch?v=abc123',
+          }),
+          topic({ id: 12, parent_id: 1, name: 'Triangle' }),
+        ],
+      },
+      TREE[1],
+    ];
+    cy.intercept('GET', '/api/v1/academy/syllabus', {
+      statusCode: 200,
+      body: { data: NOTED_TREE },
+    });
+    // After `stub()`, so it wins over the `/lessons?*` glob that would match it too.
+    cy.intercept('GET', '/api/v1/lessons/last-notes*', {
+      statusCode: 200,
+      body: {
+        data: lesson({ held_on: '2026-10-07', notes: "Marco's first day back", held: true }),
+      },
+    }).as('lastNotes');
+
+    cy.visitAuthenticated('/dashboard/attendance');
+    cy.wait('@lesson');
+    cy.get('[data-cy="attendance-topics"]').click();
+    cy.get('[data-cy="lesson-expand-1"]').click();
+
+    cy.get('[data-cy="lesson-detail-toggle-tree-11"]').click();
+    cy.wait('@lastNotes')
+      .its('request.url')
+      .should('contain', 'syllabus_topic_id=11')
+      // Evenings before tonight only: tonight's own plan is not "the last".
+      .and('contain', `before=${TODAY_ISO}`);
+
+    cy.get('[data-cy="lesson-detail-tree-11"]').within(() => {
+      cy.get('[data-cy="lesson-detail-notes"]').should('contain.text', 'S-mount');
+      cy.get('[data-cy="lesson-detail-video"]')
+        .should('have.attr', 'href', 'https://www.youtube.com/watch?v=abc123')
+        .and('have.attr', 'target', '_blank');
+      cy.get('[data-cy="lesson-detail-last-evening"]')
+        .should('contain.text', 'Fundamentals')
+        .and('contain.text', "Marco's first day back");
+    });
+    // Opening the details picks nothing.
+    cy.get('[data-cy="lesson-topic-11"]').should('have.attr', 'aria-pressed', 'false');
   });
 });
 

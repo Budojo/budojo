@@ -1,0 +1,52 @@
+:host {
+  display: block;
+}
+
+// A quiet control, not a heading: muted at rest, ink on hover, and the chevron
+// turns to say it opened. It is still a control, so it keeps the 48 px floor.
+.how-counted__summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 3rem;
+  list-style: none;
+  cursor: pointer;
+  font-size: 0.8125rem;
+  color: var(--p-text-muted-color);
+  border-radius: var(--p-border-radius-sm);
+  transition: color var(--budojo-motion-fast) var(--budojo-motion-decelerate);
+
+  // The native disclosure triangle, in the engines that still draw one.
+  &::-webkit-details-marker {
+    display: none;
+  }
+
+  &:hover {
+    color: var(--p-text-color);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--p-primary-color);
+    outline-offset: 2px;
+  }
+}
+
+.how-counted__chevron {
+  font-size: 0.75rem;
+  transition: transform var(--budojo-motion-fast) var(--budojo-motion-decelerate);
+}
+
+.how-counted[open] .how-counted__chevron {
+  transform: rotate(90deg);
+}
+
+// The method reads as notes on the number, at prose width.
+.how-counted__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 40rem;
+  padding-bottom: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--p-text-muted-color);
+}

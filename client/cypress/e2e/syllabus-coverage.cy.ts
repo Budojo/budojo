@@ -518,7 +518,15 @@ describe('Who has seen a technique (#1745)', () => {
   }
 
   const EXPOSURE = {
-    topic: { id: 11, name: 'Armbar', parent_name: 'Closed guard', kind: 'both', in_season: true },
+    topic: {
+      id: 11,
+      name: 'Armbar',
+      parent_name: 'Closed guard',
+      kind: 'both',
+      in_season: true,
+      notes: null,
+      video_url: null,
+    },
     season: { start: '2026-09-01', end: '2027-08-31', label: '2026/27' },
     lessons: [
       {

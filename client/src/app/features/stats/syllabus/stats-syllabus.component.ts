@@ -32,6 +32,7 @@ import { LessonSheetComponent } from '../../lessons/lesson-sheet/lesson-sheet.co
 import { SeasonMapComponent } from './season-map/season-map.component';
 import { PlanOption, planOptions } from './season-map/season-map.model';
 import { TopicExposureComponent } from './topic-exposure/topic-exposure.component';
+import { HowCountedComponent } from '../../../shared/components/how-counted/how-counted.component';
 
 /** Everything, or one of the academy's two modes — never `both`, which every filter admits. */
 type KindFilter = 'all' | TrainingMode;
@@ -89,6 +90,7 @@ interface PlanningTopic {
     LessonSheetComponent,
     SeasonMapComponent,
     TopicExposureComponent,
+    HowCountedComponent,
   ],
   templateUrl: './stats-syllabus.component.html',
   styleUrl: './stats-syllabus.component.scss',

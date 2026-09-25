@@ -29,7 +29,15 @@ function athlete(over: Partial<ExposureAthlete> & Pick<ExposureAthlete, 'id'>): 
 
 function exposure(over: Partial<TopicExposure> = {}): TopicExposure {
   return {
-    topic: { id: 11, name: 'Armbar', parent_name: 'Closed guard', kind: 'both', in_season: true },
+    topic: {
+      id: 11,
+      name: 'Armbar',
+      parent_name: 'Closed guard',
+      kind: 'both',
+      in_season: true,
+      notes: null,
+      video_url: null,
+    },
     season: { start: '2026-09-01', end: '2027-08-31', label: '2026/27' },
     lessons: [
       {
@@ -125,6 +133,38 @@ describe('TopicExposureComponent (#1745)', () => {
     expect(head.textContent).toContain('Armbar');
     expect(head.textContent).toContain('Closed guard');
     expect(head.textContent).toContain('2026/27');
+  });
+
+  it('shows how it is taught here first, when the programme says (#1862)', () => {
+    const { fixture, httpMock } = setup();
+    const base = exposure();
+    flush(
+      httpMock,
+      exposure({
+        topic: {
+          ...base.topic,
+          notes: 'Start from the S-mount.',
+          video_url: 'https://vimeo.com/1',
+        },
+      }),
+    );
+    fixture.detectChanges();
+
+    const notebook: HTMLElement = fixture.nativeElement.querySelector(
+      '[data-cy="exposure-notebook"]',
+    );
+    expect(notebook.querySelector('[data-cy="exposure-notes"]')?.textContent).toContain('S-mount');
+    const video = notebook.querySelector('[data-cy="exposure-video"]') as HTMLAnchorElement;
+    expect(video.getAttribute('href')).toBe('https://vimeo.com/1');
+    expect(video.getAttribute('target')).toBe('_blank');
+  });
+
+  it('says nothing about how it is taught when the programme says nothing', () => {
+    const { fixture, httpMock } = setup();
+    flush(httpMock);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('[data-cy="exposure-notebook"]')).toBeNull();
   });
 
   it('lists the lessons that taught it, with how many were in the room', () => {

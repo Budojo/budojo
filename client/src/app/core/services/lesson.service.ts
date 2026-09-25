@@ -164,4 +164,18 @@ export class LessonService {
       .get<{ data: RoomGaps }>(`${this.base}/room-gaps`, { params })
       .pipe(map((r) => r.data));
   }
+
+  /**
+   * The last evening before `before` (`YYYY-MM-DD`, the day being looked at)
+   * that taught this topic and left notes, or null (#1862). The whole lesson
+   * comes back so its notes can be labelled as that evening's — with its date
+   * and class — and never read as the technique's.
+   */
+  lastNotes(syllabusTopicId: number, before: string): Observable<Lesson | null> {
+    const params = new HttpParams().set('syllabus_topic_id', syllabusTopicId).set('before', before);
+
+    return this.http
+      .get<{ data: Lesson | null }>(`${this.base}/last-notes`, { params })
+      .pipe(map((r) => r.data));
+  }
 }

@@ -23,6 +23,10 @@ export interface SyllabusTopic {
    * and every grade above it on the academy's ladder. Null is for everyone.
    */
   readonly from_belt: Belt | null;
+  /** How it is taught here (#1862). */
+  readonly notes: string | null;
+  /** The reference instructional, always `https://` (#1862). */
+  readonly video_url: string | null;
   readonly sort_order: number;
   readonly children?: readonly SyllabusTopic[];
 }
@@ -33,6 +37,8 @@ export interface SyllabusTopicPayload {
   readonly parent_id?: number | null;
   readonly in_season?: boolean;
   readonly from_belt?: Belt | null;
+  readonly notes?: string | null;
+  readonly video_url?: string | null;
 }
 
 export interface SyllabusTopicPatch {
@@ -40,6 +46,8 @@ export interface SyllabusTopicPatch {
   readonly kind?: TrainingMode;
   readonly in_season?: boolean;
   readonly from_belt?: Belt | null;
+  readonly notes?: string | null;
+  readonly video_url?: string | null;
   readonly sort_order?: number;
 }
 

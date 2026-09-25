@@ -380,6 +380,8 @@ const SYLLABUS = [
     kind: 'both',
     in_season: true,
     from_belt: null,
+    notes: null,
+    video_url: null,
     sort_order: 0,
     children: [
       {
@@ -389,6 +391,8 @@ const SYLLABUS = [
         kind: 'both',
         in_season: true,
         from_belt: null,
+        notes: null,
+        video_url: null,
         sort_order: 0,
       },
       {
@@ -398,6 +402,8 @@ const SYLLABUS = [
         kind: 'both',
         in_season: true,
         from_belt: null,
+        notes: null,
+        video_url: null,
         sort_order: 1,
       },
     ],
@@ -409,6 +415,8 @@ const SYLLABUS = [
     kind: 'both',
     in_season: true,
     from_belt: null,
+    notes: null,
+    video_url: null,
     sort_order: 1,
     children: [
       {
@@ -418,6 +426,8 @@ const SYLLABUS = [
         kind: 'both',
         in_season: true,
         from_belt: null,
+        notes: null,
+        video_url: null,
         sort_order: 0,
       },
     ],

@@ -32,12 +32,14 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property TrainingMode   $kind
  * @property bool        $in_season   In scope for the current season — the coverage denominator
  * @property Belt|null   $from_belt   The grade it belongs to the programme from (#1861); null for everyone
+ * @property string|null $notes       How it is taught here (#1862)
+ * @property string|null $video_url   The reference instructional, always https:// (#1862)
  * @property int         $sort_order
  * @property Carbon      $created_at
  * @property Carbon      $updated_at
  * @property Carbon|null $deleted_at
  */
-#[Fillable(['academy_id', 'parent_id', 'name', 'kind', 'in_season', 'from_belt', 'sort_order'])]
+#[Fillable(['academy_id', 'parent_id', 'name', 'kind', 'in_season', 'from_belt', 'notes', 'video_url', 'sort_order'])]
 class SyllabusTopic extends Model
 {
     /** @use HasFactory<SyllabusTopicFactory> */

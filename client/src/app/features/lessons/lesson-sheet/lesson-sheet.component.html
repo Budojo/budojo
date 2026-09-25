@@ -125,7 +125,7 @@
       @if (searching()) {
         <ul class="topics" data-cy="lesson-sheet-results">
           @for (topic of results(); track topic.id) {
-            <li>
+            <li class="pickable">
               <button
                 type="button"
                 class="topic"
@@ -145,6 +145,10 @@
                   <span class="topic__parent">{{ topic.parentName }}</span>
                 }
               </button>
+              <ng-container
+                [ngTemplateOutlet]="detailRow"
+                [ngTemplateOutletContext]="{ where: 'results', id: topic.id, name: topic.name }"
+              />
             </li>
           } @empty {
             <li class="topics__none" data-cy="lesson-sheet-no-results">
@@ -317,6 +321,14 @@
                   >
                     <i class="pi pi-times" aria-hidden="true"></i>
                   </button>
+                  <ng-container
+                    [ngTemplateOutlet]="detailRow"
+                    [ngTemplateOutletContext]="{
+                      where: 'suggestions',
+                      id: item.id,
+                      name: item.name,
+                    }"
+                  />
                 </li>
               }
             </ul>
@@ -333,7 +345,7 @@
             <h3 class="group__title">{{ 'lessons.sheet.recent' | translate }}</h3>
             <ul class="topics">
               @for (topic of recentOffered(); track topic.id) {
-                <li>
+                <li class="pickable">
                   <button
                     type="button"
                     class="topic"
@@ -347,6 +359,10 @@
                       <span class="topic__parent">{{ topic.parent_name }}</span>
                     }
                   </button>
+                  <ng-container
+                    [ngTemplateOutlet]="detailRow"
+                    [ngTemplateOutletContext]="{ where: 'recent', id: topic.id, name: topic.name }"
+                  />
                 </li>
               }
             </ul>
@@ -407,7 +423,7 @@
                 @if (isExpanded(position)) {
                   <ul class="topics topics--nested" [id]="'lesson-children-' + position.id">
                     @for (child of position.children; track child.id) {
-                      <li>
+                      <li class="pickable">
                         <button
                           type="button"
                           class="topic"
@@ -424,6 +440,14 @@
                           ></i>
                           <span class="topic__name">{{ child.name }}</span>
                         </button>
+                        <ng-container
+                          [ngTemplateOutlet]="detailRow"
+                          [ngTemplateOutletContext]="{
+                            where: 'tree',
+                            id: child.id,
+                            name: child.name,
+                          }"
+                        />
                       </li>
                     } @empty {
                       <li class="topics__none">{{ 'lessons.sheet.noTechniques' | translate }}</li>
@@ -458,6 +482,73 @@
       }
     </div>
   }
+
+  <!--
+    How a technique is taught here (#1862), behind a button on its row: the
+    programme's notes and video, and the notes of the last evening that
+    taught it — labelled as that evening's, with its date and class, because
+    lesson notes are about the evening ("Marco's first day back") and never
+    about the technique. Fetched when opened, not for every row.
+  -->
+  <ng-template #detailRow let-where="where" let-id="id" let-name="name">
+    <button
+      type="button"
+      class="topic-info"
+      [class.topic-info--written]="hasWritten(id)"
+      (click)="toggleDetail(where, id)"
+      [attr.aria-expanded]="isDetailOpen(where, id)"
+      [attr.aria-controls]="'lesson-detail-' + detailKey(where, id)"
+      [attr.aria-label]="'lessons.sheet.detail.open' | translate: { name: name }"
+      [pTooltip]="'lessons.sheet.detail.open' | translate: { name: name }"
+      tooltipPosition="left"
+      [attr.data-cy]="'lesson-detail-toggle-' + detailKey(where, id)"
+    >
+      <i class="pi pi-info-circle" aria-hidden="true"></i>
+    </button>
+    @if (isDetailOpen(where, id)) {
+      <div
+        class="topic-detail"
+        [id]="'lesson-detail-' + detailKey(where, id)"
+        [attr.data-cy]="'lesson-detail-' + detailKey(where, id)"
+      >
+        @let topic = detailOf(id);
+        @if (topic?.notes; as notes) {
+          <p class="topic-detail__notes" data-cy="lesson-detail-notes">{{ notes }}</p>
+        }
+        @if (topic?.videoUrl; as url) {
+          <a
+            class="topic-detail__video"
+            [href]="url"
+            target="_blank"
+            rel="noopener noreferrer"
+            data-cy="lesson-detail-video"
+          >
+            <i class="pi pi-external-link" aria-hidden="true"></i>
+            {{ 'lessons.sheet.detail.video' | translate }}
+          </a>
+        }
+        @if (lastEveningLoading(id)) {
+          <p class="topic-detail__muted" role="status">
+            {{ 'lessons.sheet.detail.lastEveningLoading' | translate }}
+          </p>
+        } @else if (lastEveningOf(id); as evening) {
+          <figure class="topic-detail__evening" data-cy="lesson-detail-last-evening">
+            <figcaption>
+              {{
+                'lessons.sheet.detail.lastEvening'
+                  | translate: { date: shortDate(evening.held_on), class: evening.name }
+              }}
+            </figcaption>
+            <blockquote>{{ evening.notes }}</blockquote>
+          </figure>
+        } @else if (detailEmpty(id)) {
+          <p class="topic-detail__muted" data-cy="lesson-detail-nothing">
+            {{ 'lessons.sheet.detail.nothing' | translate }}
+          </p>
+        }
+      </div>
+    }
+  </ng-template>
 
   <ng-template pTemplate="footer">
     <div class="sheet__footer">

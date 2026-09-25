@@ -13,6 +13,7 @@ import {
   signal,
   untracked,
 } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { MessageService } from 'primeng/api';
@@ -45,7 +46,17 @@ interface Pickable {
   readonly name: string;
   readonly parentName: string | null;
   readonly kind: TrainingMode;
+  /** How it is taught here, and the video it came from (#1862). */
+  readonly notes: string | null;
+  readonly videoUrl: string | null;
 }
+
+/** The groups a topic row can sit in — one row's details open at a time. */
+type DetailGroup = 'results' | 'suggestions' | 'recent' | 'tree';
+
+/** The last evening that taught a topic and left notes (#1862), fetched when asked. */
+type LastEvening =
+  { readonly state: 'loading' } | { readonly state: 'done'; readonly lesson: Lesson | null };
 
 /**
  * What a lesson covers (#1564) — the plan before it is held, the record
@@ -71,6 +82,7 @@ interface Pickable {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     FormsModule,
+    NgTemplateOutlet,
     TranslatePipe,
     ButtonModule,
     DialogModule,
@@ -249,13 +261,8 @@ export class LessonSheetComponent {
   /** Every topic in the programme, flattened once for search and lookup. */
   private readonly allTopics = computed<readonly Pickable[]>(() =>
     this.positions().flatMap((position) => [
-      { id: position.id, name: position.name, parentName: null, kind: position.kind },
-      ...(position.children ?? []).map((child) => ({
-        id: child.id,
-        name: child.name,
-        parentName: position.name,
-        kind: child.kind,
-      })),
+      pickable(position, null),
+      ...(position.children ?? []).map((child) => pickable(child, position.name)),
     ]),
   );
 
@@ -337,6 +344,89 @@ export class LessonSheetComponent {
 
   protected isChosen(id: number): boolean {
     return this.selected().has(id);
+  }
+
+  // ── How it is taught here (#1862) ───────────────────────────────────────
+
+  /**
+   * The one row whose details are open, or null — one at a time, it is a
+   * list. Keyed by the group as well as the topic: the same technique can be
+   * a suggestion, a recent one and a row in the tree at once, and opening it
+   * in one place must not open it in all three.
+   */
+  protected readonly detailOpen = signal<string | null>(null);
+
+  protected detailKey(where: DetailGroup, id: number): string {
+    return `${where}-${id}`;
+  }
+
+  protected isDetailOpen(where: DetailGroup, id: number): boolean {
+    return this.detailOpen() === this.detailKey(where, id);
+  }
+
+  /**
+   * The last evening each opened topic was taught with notes, fetched the
+   * first time its details are opened — never for every row in the list.
+   */
+  private readonly lastEvenings = signal<ReadonlyMap<number, LastEvening>>(new Map());
+  /**
+   * Those reads still in flight. They belong to one opening of the sheet and
+   * are cancelled with it, as the room's read is: an answer for last
+   * Monday's slot must not land in tonight's.
+   */
+  private lastNotesReads = new Subscription();
+
+  /** What the programme says about a topic: its notes and its video. */
+  protected detailOf(id: number): Pickable | undefined {
+    return this.byId().get(id);
+  }
+
+  /** Whether the programme has anything written for it — the info button says so. */
+  protected hasWritten(id: number): boolean {
+    const topic = this.byId().get(id);
+    return (topic?.notes ?? null) !== null || (topic?.videoUrl ?? null) !== null;
+  }
+
+  protected lastEveningLoading(id: number): boolean {
+    return this.lastEvenings().get(id)?.state === 'loading';
+  }
+
+  /** The last evening's lesson once fetched; null when there is none (or it failed). */
+  protected lastEveningOf(id: number): Lesson | null {
+    const entry = this.lastEvenings().get(id);
+    return entry?.state === 'done' ? entry.lesson : null;
+  }
+
+  /** Nothing written in the programme and no evening with notes: say so, once fetched. */
+  protected detailEmpty(id: number): boolean {
+    const entry = this.lastEvenings().get(id);
+    return !this.hasWritten(id) && entry?.state === 'done' && entry.lesson === null;
+  }
+
+  protected toggleDetail(where: DetailGroup, id: number): void {
+    const key = this.detailKey(where, id);
+    if (this.detailOpen() === key) {
+      this.detailOpen.set(null);
+      return;
+    }
+    this.detailOpen.set(key);
+    if (this.lastEvenings().has(id)) return;
+
+    this.setLastEvening(id, { state: 'loading' });
+    // A side panel failing must not cost the sheet anything: no notes found
+    // and no notes fetched read the same, and the rest of the detail stands.
+    // Only evenings before this sheet's day: tonight's plan, once somebody is
+    // checked in, is held — and still this evening, not the last one.
+    this.lastNotesReads.add(
+      this.lessonService
+        .lastNotes(id, this.heldOn())
+        .pipe(catchError(() => of(null)))
+        .subscribe((lesson) => this.setLastEvening(id, { state: 'done', lesson })),
+    );
+  }
+
+  private setLastEvening(id: number, value: LastEvening): void {
+    this.lastEvenings.update((all) => new Map(all).set(id, value));
   }
 
   protected isExpanded(position: SyllabusTopic): boolean {
@@ -481,6 +571,7 @@ export class LessonSheetComponent {
     this.expanded.set(new Set());
     this.dismissed.set(new Set());
     this.clearRoom();
+    this.clearDetails();
 
     forkJoin({
       lesson: this.lessonService.get(this.academyClassId(), this.slot()),
@@ -569,6 +660,31 @@ export class LessonSheetComponent {
   }
 
   /**
+   * Open the programme on the host's topic: its position expanded — the
+   * position itself, or the one a technique sits under — and scrolled into
+   * the middle of the sheet once it is drawn.
+   */
+  private revealFocus(positions: readonly SyllabusTopic[]): void {
+    const focus = this.focusTopicId();
+    if (focus === null) return;
+
+    const position = positions.find(
+      (p) => p.id === focus || (p.children ?? []).some((c) => c.id === focus),
+    );
+    if (position === undefined) return;
+
+    this.expanded.set(new Set([position.id]));
+    runInInjectionContext(this.injector, () =>
+      afterNextRender(() => {
+        document.querySelector(`[data-cy="lesson-expand-${position.id}"]`)?.scrollIntoView({
+          block: 'center',
+          behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+        });
+      }),
+    );
+  }
+
+  /**
    * Tonight's room (#1860), read after the sheet is already usable: it is a
    * panel on top of the picker, never a reason to hold the picker back, and a
    * failure leaves it out rather than failing the sheet.
@@ -596,6 +712,14 @@ export class LessonSheetComponent {
     this.roomNamesOpen.set(new Set());
   }
 
+  /** Same rule for the technique details (#1862): the last opening's reads go with it. */
+  private clearDetails(): void {
+    this.lastNotesReads.unsubscribe();
+    this.lastNotesReads = new Subscription();
+    this.detailOpen.set(null);
+    this.lastEvenings.set(new Map());
+  }
+
   private toast(severity: 'success' | 'error', summaryKey: string, detailKey?: string): void {
     this.messageService.add({
       severity,
@@ -604,6 +728,17 @@ export class LessonSheetComponent {
       life: severity === 'error' ? 4000 : 3000,
     });
   }
+}
+
+function pickable(topic: SyllabusTopic, parentName: string | null): Pickable {
+  return {
+    id: topic.id,
+    name: topic.name,
+    parentName,
+    kind: topic.kind,
+    notes: topic.notes,
+    videoUrl: topic.video_url,
+  };
 }
 
 /** Set equality by value — order is not part of what a topic list means. */
