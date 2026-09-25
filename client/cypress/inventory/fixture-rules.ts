@@ -247,7 +247,7 @@ const RULES: Rule[] = [
       const agrees =
         rate === null
           ? want === null
-          : isNum(rate) && want !== null && Math.abs(rate - want) <= 1e-4;
+          : isNum(rate) && want !== null && Math.round(rate * 10000) === Math.round(want * 10000);
       if (!agrees) out.push(`rate ${String(rate)} ≠ attended/expected ${String(want)}`);
     }
     return out;

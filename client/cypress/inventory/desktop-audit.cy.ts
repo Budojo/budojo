@@ -2040,6 +2040,24 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
     );
     expect(summary.join('\n')).to.contain('≠ 90 series points');
 
+    // The rate is the server's four-place rounding exactly, not "near it".
+    const rate = (r: number) =>
+      fixtureContradictions(
+        {
+          attended_count: 1,
+          expected_count: 3,
+          rate: r,
+          series: [
+            { date: 'a', attended: true },
+            { date: 'b', attended: false },
+            { date: 'c', attended: false },
+          ],
+        },
+        FIXTURE_CONTEXT,
+      );
+    expect(rate(0.3333)).to.deep.equal([]);
+    expect(rate(0.3334).join('\n')).to.contain('rate 0.3334');
+
     // Not stricter than the server: the month count and the last presence
     // are not floored at joining, which is editable and was backfilled.
     expect(
