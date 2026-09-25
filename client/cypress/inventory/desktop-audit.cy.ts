@@ -2434,6 +2434,53 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       cy.get('[data-cy="season-map-popover"]', { timeout: 4000 }).should('be.visible');
     },
   });
+  // The week's plan for the academy's group (#1863), just copied: the row
+  // under the map, and the toast that says where to paste it.
+  screen('40-stats-syllabus-share', '/dashboard/stats/syllabus', '[data-cy="syllabus-coverage"]', {
+    clock: false,
+    act: () => {
+      // The runner's frame does not hold the clipboard; the copy is stubbed.
+      cy.window().then((win) => {
+        cy.stub(win.navigator.clipboard, 'writeText').resolves();
+      });
+      press('[data-cy="season-map-share-copy"]');
+      cy.get('.p-toast-message', { timeout: 4000 }).should('be.visible');
+      // Clear of the toast in the top corner, with the map's last rows above.
+      cy.get('[data-cy="season-map-share"]').scrollIntoView({ offset: { top: -320, left: 0 } });
+    },
+  });
+  // Nothing planned for this week or the next: both actions stay, disabled,
+  // and the sentence says why (#1863).
+  screen(
+    '40-stats-syllabus-share-none',
+    '/dashboard/stats/syllabus',
+    '[data-cy="syllabus-coverage"]',
+    {
+      clock: false,
+      stubs: () => {
+        cy.intercept('GET', '/api/v1/stats/syllabus/calendar*', {
+          statusCode: 200,
+          body: {
+            // The plans taken off the cells as well, so the map agrees.
+            data: {
+              ...SYLLABUS_CALENDAR,
+              positions: SYLLABUS_CALENDAR.positions.map((position) => ({
+                ...position,
+                cells: position.cells
+                  .map((cell) => ({ ...cell, planned: 0 }))
+                  .filter((cell) => cell.held + cell.unconfirmed > 0),
+              })),
+              lessons: SYLLABUS_CALENDAR.lessons.filter((lesson) => lesson.state !== 'planned'),
+            },
+          },
+        });
+      },
+      act: () => {
+        cy.get('[data-cy="season-map-share-copy"] button').should('be.disabled');
+        cy.get('[data-cy="season-map-share"]').scrollIntoView({ offset: { top: -320, left: 0 } });
+      },
+    },
+  );
   screen('40-stats-syllabus-no-programme', '/dashboard/stats/syllabus', '[data-cy="stats-tabs"]', {
     clock: false,
     stubs: () => {
