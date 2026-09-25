@@ -138,53 +138,57 @@
     </section>
 
     <!-- ── Cosa insegnare ─────────────────────────────────────────────── -->
-    <section class="today-card" aria-labelledby="today-teach-title" data-cy="today-teach">
-      <h2 id="today-teach-title" class="today-card__title">
-        {{ 'today.teach.title' | translate }}
-      </h2>
+    <!--
+      For the next class on the timetable, today's or a later day's (#1752).
+      With no timetable at all there is nothing to plan for, so no card.
+    -->
+    @if (classes().state !== 'ready' || hasTimetable()) {
+      <section class="today-card" aria-labelledby="today-teach-title" data-cy="today-teach">
+        <h2 id="today-teach-title" class="today-card__title">
+          {{ 'today.teach.title' | translate }}
+        </h2>
 
-      @if (classes().state === 'loading' || suggestions().state === 'loading') {
-        <p-skeleton height="3.5rem" />
-      } @else if (suggestions().state === 'error') {
-        <p class="today-card__note">{{ 'today.teach.error' | translate }}</p>
-      } @else if (teachClass(); as c) {
-        <p class="today-card__lead">{{ teachHeading(c) }}</p>
-        @if (suggestions(); as s) {
-          @if (s.state === 'ready' && s.value.length > 0) {
-            <ul class="today-rows">
-              @for (item of s.value; track item.id) {
-                <li
-                  class="today-row today-row--stacked"
-                  [attr.data-cy]="'today-suggestion-' + item.id"
-                >
-                  <span class="today-row__label">
-                    {{ item.name }}
-                    @if (item.parent_name) {
-                      <span class="today-row__muted">· {{ item.parent_name }}</span>
-                    }
-                  </span>
-                  <span class="today-row__reason">{{ reasonLabel(item) }}</span>
-                </li>
-              }
-            </ul>
-            <p-button
-              [text]="true"
-              size="small"
-              [label]="'today.teach.openSheet' | translate"
-              (onClick)="plan(c)"
-              data-cy="today-teach-plan"
-            />
-          } @else {
-            <p class="today-card__note">{{ 'today.teach.none' | translate }}</p>
-            <a class="today-card__link" routerLink="/dashboard/academy/syllabus">{{
-              'today.teach.programmeLink' | translate
-            }}</a>
+        @if (classes().state === 'loading' || suggestions().state === 'loading') {
+          <p-skeleton height="3.5rem" />
+        } @else if (classes().state === 'error' || suggestions().state === 'error') {
+          <p class="today-card__note">{{ 'today.teach.error' | translate }}</p>
+        } @else if (teachSlot(); as slot) {
+          <p class="today-card__lead">{{ teachHeading(slot) }}</p>
+          @if (suggestions(); as s) {
+            @if (s.state === 'ready' && s.value.length > 0) {
+              <ul class="today-rows">
+                @for (item of s.value; track item.id) {
+                  <li
+                    class="today-row today-row--stacked"
+                    [attr.data-cy]="'today-suggestion-' + item.id"
+                  >
+                    <span class="today-row__label">
+                      {{ item.name }}
+                      @if (item.parent_name) {
+                        <span class="today-row__muted">· {{ item.parent_name }}</span>
+                      }
+                    </span>
+                    <span class="today-row__reason">{{ reasonLabel(item) }}</span>
+                  </li>
+                }
+              </ul>
+              <p-button
+                [text]="true"
+                size="small"
+                [label]="'today.teach.openSheet' | translate"
+                (onClick)="plan(slot.academyClass, slot.date)"
+                data-cy="today-teach-plan"
+              />
+            } @else {
+              <p class="today-card__note">{{ 'today.teach.none' | translate }}</p>
+              <a class="today-card__link" routerLink="/dashboard/academy/syllabus">{{
+                'today.teach.programmeLink' | translate
+              }}</a>
+            }
           }
         }
-      } @else {
-        <p class="today-card__note">{{ 'today.teach.noClass' | translate }}</p>
-      }
-    </section>
+      </section>
+    }
 
     <!-- ── Questa settimana ──────────────────────────────────────────── -->
     <section class="today-card" aria-labelledby="today-week-title" data-cy="today-week">
@@ -304,13 +308,13 @@
   }
 </div>
 
-@if (planning(); as c) {
+@if (planning(); as p) {
   <app-lesson-sheet
     [(visible)]="sheetOpen"
-    [academyClassId]="c.id"
-    [heldOn]="heldOn()"
-    [className]="c.name"
+    [academyClassId]="p.cls.id"
+    [heldOn]="sheetHeldOn()"
+    [className]="p.cls.name"
     [dateLabel]="sheetDateLabel()"
-    (saved)="onSaved(c.id, $event)"
+    (saved)="onSaved($event)"
   />
 }
