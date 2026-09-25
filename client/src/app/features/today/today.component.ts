@@ -57,6 +57,22 @@ type Load<T> =
   | { readonly state: 'error' };
 
 const LOADING = { state: 'loading' } as const;
+
+/**
+ * The day of the month from which an unpaid fee is something to chase (#1753).
+ *
+ * Before it, "not paid yet" is the normal state — most members settle in the
+ * first half of the month — and Today says so in a neutral line. From it,
+ * the fee joins "Da guardare". The bell makes the same call on the server:
+ * `SendUnpaidAthletesDigest` runs on the 16th only, gated in
+ * `DesktopSchedule`. Nothing can share this number across the HTTP boundary,
+ * so change the two together.
+ *
+ * The browser's local day is used, not Europe/Rome's. On a machine set to
+ * another timezone the two can disagree for a few hours around midnight of
+ * the 15th — accepted: the owner's clock is the one on their wall.
+ */
+const UNPAID_ALERT_DAY = 16;
 const FAILED = { state: 'error' } as const;
 
 /** One line of "Da guardare": a count, what it counts, and where to act on it. */
@@ -182,19 +198,43 @@ export class TodayComponent implements OnInit {
    * that failed, is not a zero.
    */
   protected readonly unpaid = signal<Load<number> | null>(null);
+  /** From the 16th the unpaid count is a row to check; before, a neutral line. */
+  protected readonly unpaidIsAlert = computed<boolean>(
+    () => this.now().getDate() >= UNPAID_ALERT_DAY,
+  );
+  /** The unpaid count while it is still neutral: the owing total, or null for no line. */
+  protected readonly notYetPaid = computed<{ count: number; label: string } | null>(() => {
+    this.languageService.currentLang();
+    const u = this.unpaid();
+    if (this.unpaidIsAlert() || u?.state !== 'ready' || u.value === 0) return null;
+    const month = this.translate.instant(monthKey(this.now().getMonth() + 1));
+    return {
+      count: u.value,
+      label: this.translate.instant(
+        u.value === 1 ? 'today.week.notYetPaidOne' : 'today.week.notYetPaidOther',
+        { month },
+      ),
+    };
+  });
+  /** The unpaid half of "Da guardare": absent before the 16th. */
+  private readonly watchUnpaid = computed<Load<number> | null>(() =>
+    this.unpaidIsAlert() ? this.unpaid() : null,
+  );
 
   /**
    * The card says "nothing to check" only when every half has answered and
    * found nothing — never while one is loading, and never after one failed.
    */
   protected readonly watchState = computed<'loading' | 'settled'>(() =>
-    this.health().state === 'loading' || this.unpaid()?.state === 'loading' ? 'loading' : 'settled',
+    this.health().state === 'loading' || this.watchUnpaid()?.state === 'loading'
+      ? 'loading'
+      : 'settled',
   );
   protected readonly watchAllClear = computed<boolean>(
     () =>
       this.watchState() === 'settled' &&
       this.health().state === 'ready' &&
-      this.unpaid()?.state !== 'error' &&
+      this.watchUnpaid()?.state !== 'error' &&
       this.watchRows().length === 0,
   );
 
@@ -236,7 +276,7 @@ export class TodayComponent implements OnInit {
         queryParams: null,
       });
     }
-    const u = this.unpaid();
+    const u = this.watchUnpaid();
     const unpaid = u?.state === 'ready' ? u.value : 0;
     if (unpaid > 0) {
       const month = this.translate.instant(monthKey(this.now().getMonth() + 1));

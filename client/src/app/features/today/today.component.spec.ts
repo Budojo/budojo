@@ -334,6 +334,61 @@ describe('TodayComponent', () => {
     expect(text(fixture.nativeElement, 'today-watch')).not.toContain('Nothing to check');
   });
 
+  describe('unpaid fees are news only from the 16th, like the bell (#1753)', () => {
+    function renderOn(day: number, unpaidTotal: number): HTMLElement {
+      vi.setSystemTime(new Date(2026, 8, day, 18, 30));
+      const http = setup({ monthly_fee_cents: 5000 });
+      const fixture = TestBed.createComponent(TodayComponent);
+      fixture.detectChanges();
+      flushAll(http, { health: { data: [], missing_medical_certificate: [] }, unpaidTotal });
+      fixture.detectChanges();
+      http.verify();
+      return fixture.nativeElement as HTMLElement;
+    }
+
+    it('on the 3rd, a neutral line in the week, not a row to check', () => {
+      const root = renderOn(3, 4);
+
+      expect(root.querySelector('[data-cy="today-watch-unpaid"]')).toBeNull();
+      expect(text(root, 'today-week-unpaid')).toContain('4');
+      expect(text(root, 'today-week-unpaid')).toContain('September fees not paid yet');
+      expect(root.querySelector('[data-cy="today-week-unpaid"]')?.getAttribute('href')).toContain(
+        '/dashboard/athletes?paid=no',
+      );
+      // Nothing else to check, and a not-yet-paid fee is not something to check yet.
+      expect(text(root, 'today-watch')).toContain('Nothing to check');
+    });
+
+    it('on the 15th, still neutral', () => {
+      const root = renderOn(15, 4);
+
+      expect(root.querySelector('[data-cy="today-watch-unpaid"]')).toBeNull();
+      expect(root.querySelector('[data-cy="today-week-unpaid"]')).not.toBeNull();
+    });
+
+    it('on the 16th, a row to check, and no longer in the week', () => {
+      const root = renderOn(16, 4);
+
+      expect(text(root, 'today-watch-unpaid')).toContain('September fees not paid');
+      expect(root.querySelector('[data-cy="today-week-unpaid"]')).toBeNull();
+    });
+
+    it('on the 17th, still a row to check', () => {
+      const root = renderOn(17, 4);
+
+      expect(root.querySelector('[data-cy="today-watch-unpaid"]')).not.toBeNull();
+    });
+
+    it('with nobody owing, nothing at all — not "0"', () => {
+      for (const day of [3, 16]) {
+        TestBed.resetTestingModule();
+        const root = renderOn(day, 0);
+        expect(root.querySelector('[data-cy="today-watch-unpaid"]')).toBeNull();
+        expect(root.querySelector('[data-cy="today-week-unpaid"]')).toBeNull();
+      }
+    });
+  });
+
   it('keeps a loaded unpaid count when the documents check fails', () => {
     const http = setup({ monthly_fee_cents: 5000 });
     const fixture = TestBed.createComponent(TodayComponent);

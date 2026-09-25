@@ -137,4 +137,22 @@ describe('Today, the first screen (#1643)', () => {
     cy.location('pathname').should('eq', '/dashboard/athletes');
     cy.location('search').should('eq', '?paid=no');
   });
+
+  it('before the 16th, counts the unpaid fees with the week, not as something to check (#1753)', () => {
+    // Thursday 3 September: same class tonight, but the month is young. The
+    // suite's clock is swapped, not moved — a moved clock does not survive the visit.
+    cy.clock().then((clock) => clock.restore());
+    cy.clock(new Date(2026, 8, 3, 18, 30).getTime(), ['Date']);
+    cy.visitAuthenticated('/dashboard/today');
+    cy.wait('@academy');
+
+    cy.get('[data-cy="today-week-unpaid"]')
+      .should('contain.text', 'September fees not paid yet')
+      .and('contain.text', '3');
+    cy.get('[data-cy="today-watch-unpaid"]').should('not.exist');
+
+    cy.get('[data-cy="today-week-unpaid"]').click();
+    cy.location('pathname').should('eq', '/dashboard/athletes');
+    cy.location('search').should('eq', '?paid=no');
+  });
 });

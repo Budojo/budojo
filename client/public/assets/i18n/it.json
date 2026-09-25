@@ -3173,6 +3173,8 @@
     "week": {
       "title": "Questa settimana",
       "presences": "Presenze da lunedì",
+      "notYetPaidOne": "Quota di {{month}} ancora da pagare",
+      "notYetPaidOther": "Quote di {{month}} ancora da pagare",
       "programme": "Programma della stagione",
       "programmeValue": "{{percentage}}% · {{covered}} di {{total}}",
       "joined": "Nuovi questa settimana",
