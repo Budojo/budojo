@@ -46,9 +46,7 @@ export class AgeBadgeComponent {
   readonly dateOfBirth = input<string | null | undefined>(null);
 
   /** Whole-year age. `null` when DOB is missing or the year is in the future. */
-  protected readonly years = computed<number | null>(() =>
-    ageOn(this.dateOfBirth(), new Date()),
-  );
+  protected readonly years = computed<number | null>(() => ageOn(this.dateOfBirth(), new Date()));
 
   /**
    * The chip's own text. It was `years + 'y'` — a unit built in code, which

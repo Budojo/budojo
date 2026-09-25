@@ -129,6 +129,48 @@ describe('Today, the first screen (#1643)', () => {
     cy.location('pathname').should('eq', '/dashboard/attendance');
   });
 
+  it("names the week's birthdays, today's first, and opens the athlete (#1754)", () => {
+    const athlete = (id: number, first: string, last: string, dob: string) => ({
+      id,
+      first_name: first,
+      last_name: last,
+      belt: 'blue',
+      stripes: 1,
+      status: 'active',
+      joined_at: '2024-09-01',
+      date_of_birth: dob,
+    });
+    cy.intercept(
+      { method: 'GET', pathname: '/api/v1/athletes', query: { birthday: 'week' } },
+      PAGE([athlete(12, 'Luca', 'Conti', '1995-09-26'), athlete(11, 'Sara', 'Neri', '1990-09-24')]),
+    ).as('birthdays');
+    cy.intercept('GET', '/api/v1/athletes/11', {
+      statusCode: 200,
+      body: { data: athlete(11, 'Sara', 'Neri', '1990-09-24') },
+    });
+
+    cy.visitAuthenticated('/dashboard/today');
+    cy.wait('@birthdays').its('request.query.status').should('eq', 'active');
+
+    cy.get('[data-cy^="today-birthday-"]').should('have.length', 2);
+    cy.get('[data-cy^="today-birthday-"]')
+      .first()
+      .should('contain.text', 'Sara Neri')
+      .and('contain.text', 'Turns 36 today');
+    cy.get('[data-cy="today-birthday-12"]').should('contain.text', 'Sat');
+
+    // The detail page opens on its default tab.
+    cy.get('[data-cy="today-birthday-11"] a').first().click();
+    cy.location('pathname').should('match', /^\/dashboard\/athletes\/11(\/|$)/);
+  });
+
+  it('shows no birthdays card on a week without one', () => {
+    cy.visitAuthenticated('/dashboard/today');
+    cy.wait('@academy');
+    cy.get('[data-cy="today-week"]').should('be.visible');
+    cy.get('[data-cy="today-birthdays"]').should('not.exist');
+  });
+
   it('goes to the roster filtered to who owes, from the unpaid line', () => {
     cy.visitAuthenticated('/dashboard/today');
     cy.wait('@academy');

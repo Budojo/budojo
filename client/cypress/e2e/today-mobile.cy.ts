@@ -40,6 +40,29 @@ MOBILE_VIEWPORTS.forEach(({ name, width, height }) => {
         statusCode: 200,
         body: { data: [{ id: 1, type: 'medical_certificate' }], missing_medical_certificate: [] },
       });
+      // A birthday today with a long name (#1754): the widest row the card
+      // can have, name and "Turns 36 today" side by side.
+      cy.intercept(
+        { method: 'GET', pathname: '/api/v1/athletes', query: { birthday: 'week' } },
+        {
+          statusCode: 200,
+          body: {
+            ...PAGE,
+            data: [
+              {
+                id: 7,
+                first_name: 'Maria Francesca',
+                last_name: 'Buonarroti Lombardini',
+                belt: 'purple',
+                stripes: 2,
+                status: 'active',
+                joined_at: '2020-09-01',
+                date_of_birth: '1990-09-24',
+              },
+            ],
+          },
+        },
+      );
     });
 
     it('renders Today without horizontal-scrolling the body', () => {
@@ -47,6 +70,7 @@ MOBILE_VIEWPORTS.forEach(({ name, width, height }) => {
       cy.wait('@academy');
       cy.get('[data-cy="today-class-1"]').should('be.visible');
       cy.get('[data-cy="today-watch-unpaid"]').should('be.visible');
+      cy.get('[data-cy="today-birthday-7"]').scrollIntoView().should('be.visible');
 
       cy.document().then((doc) => {
         expect(doc.documentElement.scrollWidth).to.be.at.most(doc.documentElement.clientWidth);

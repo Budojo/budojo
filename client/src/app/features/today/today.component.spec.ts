@@ -407,8 +407,7 @@ describe('TodayComponent', () => {
     expect(birthdaysReq).toHaveLength(1);
     expect(birthdaysReq[0].params.get('birthday')).toBe('week');
     expect(birthdaysReq[0].params.get('status')).toBe('active');
-    http
-      .expectNone((req) => req.url.endsWith('/athletes') && req.params.get('birthday') !== null);
+    http.expectNone((req) => req.url.endsWith('/athletes') && req.params.get('birthday') !== null);
   });
 
   it("names today's birthdays first with the age turned, and the week's by day", () => {
