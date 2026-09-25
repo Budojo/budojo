@@ -23,6 +23,7 @@
  */
 import LADDERS from '../../src/test-utils/ladders.json';
 import TRAINING_MODES from '../../src/test-utils/training-modes.json';
+import { fixtureContradictions, stubBodyOf, stubLabel, type FixtureContext } from './fixture-rules';
 
 // ── The clock ────────────────────────────────────────────────────────────
 //
@@ -329,6 +330,10 @@ function athlete(over: Record<string, unknown>) {
   };
 }
 
+// The Sessions cell's two lines (#1455): this month, then the SEASON (#1484),
+// each over the training days since the later of its start and joining. On
+// 14 September both the month and the 2026/27 season began on the 1st, so the
+// two counts are the same number. Lifetime totals here painted "143/8" (#1854).
 const ATHLETES = [
   athlete({
     id: 1,
@@ -346,7 +351,7 @@ const ATHLETES = [
     billing_period_months: 3,
     payment_coverage: 'quarterly',
     attendance_month_count: 5,
-    attendance_total_count: 143,
+    attendance_total_count: 5,
     last_attended_on: '2026-09-11',
     active_carnet: { id: 7, code: 'A7K2', remaining_entries: 3, expires_at: '2027-01-10' },
   }),
@@ -360,7 +365,7 @@ const ATHLETES = [
     joined_at: '2025-10-06',
     fee_tier: FEE_TIERS[0],
     attendance_month_count: 4,
-    attendance_total_count: 61,
+    attendance_total_count: 4,
     last_attended_on: '2026-09-10',
   }),
   athlete({
@@ -377,7 +382,7 @@ const ATHLETES = [
     paid_current_month: false,
     monthly_fee_cents: null,
     attendance_month_count: 6,
-    attendance_total_count: 812,
+    attendance_total_count: 6,
     last_attended_on: '2026-09-14',
   }),
   athlete({
@@ -391,7 +396,7 @@ const ATHLETES = [
     payment_coverage: 'annual',
     billing_period_months: 12,
     attendance_month_count: 3,
-    attendance_total_count: 402,
+    attendance_total_count: 3,
     last_attended_on: '2026-09-03',
   }),
   athlete({
@@ -406,7 +411,7 @@ const ATHLETES = [
     payment_coverage: 'none',
     paid_current_month: false,
     attendance_month_count: 0,
-    attendance_total_count: 9,
+    attendance_total_count: 0,
     last_attended_on: '2026-03-20',
   }),
   athlete({
@@ -423,7 +428,7 @@ const ATHLETES = [
     paid_current_month: false,
     active_carnet: { id: 9, code: 'Q3M8', remaining_entries: 6, expires_at: '2027-03-01' },
     attendance_month_count: 2,
-    attendance_total_count: 188,
+    attendance_total_count: 2,
     last_attended_on: '2026-09-09',
   }),
   athlete({
@@ -437,9 +442,10 @@ const ATHLETES = [
     payment_coverage: 'none',
     paid_current_month: false,
     // Drifting (#1729): nothing this month, last seen in August — the `gone`
-    // row of the at-risk fixture below, so the two screens agree.
+    // row of the at-risk fixture below, so the two screens agree. Nothing this
+    // season either: it began on 1 September (#1854).
     attendance_month_count: 0,
-    attendance_total_count: 530,
+    attendance_total_count: 0,
     last_attended_on: '2026-08-12',
   }),
   athlete({
@@ -561,6 +567,43 @@ function page(rows: unknown[], perPage = 20) {
 }
 
 const ATHLETE_ONE = ATHLETES[0];
+
+// ── The fixture guard (#1854) ────────────────────────────────────────────
+//
+// The audit paints whatever its stubs say, so a stub that drifted behind a
+// server rule shows a number the product cannot produce, and gets filed as a
+// finding. Every stub body passes `fixtureContradictions` as it is registered:
+// seed() and every screen's own `stubs`, from any track, without anyone
+// having to remember to call it. A contradiction fails that screen before
+// the shutter, naming the path and the rule.
+
+/** What the guard measures against: this harness's clock, season and roster. */
+const FIXTURE_CONTEXT: FixtureContext = {
+  today: TODAY,
+  seasonStart: ACADEMY.season_start,
+  trainingDays: ACADEMY.training_days,
+  rosterSize: ATHLETES.length,
+};
+
+function assertFixtureAgrees(label: string, body: unknown): void {
+  const problems = fixtureContradictions(body, FIXTURE_CONTEXT);
+  if (problems.length > 0) {
+    throw new Error(`${label} contradicts the server's rules (#1854):\n${problems.join('\n')}`);
+  }
+}
+
+/** What the `cy.intercept` override runs on every call, testable on its own. */
+function checkStub(args: readonly unknown[]): void {
+  const body = stubBodyOf(args);
+  if (body !== undefined) {
+    assertFixtureAgrees(`The stub for ${stubLabel(args)}`, body);
+  }
+}
+
+Cypress.Commands.overwrite('intercept', (originalFn, ...args: unknown[]) => {
+  checkStub(args);
+  return (originalFn as (...a: unknown[]) => Cypress.Chainable)(...args);
+});
 
 // ── Documents ────────────────────────────────────────────────────────────
 
@@ -709,20 +752,26 @@ const ATTENDANCE_ONE = [
 
 /** Giulia's last 90 days: Monday and Wednesday, nothing in August. */
 const ATHLETE_SUMMARY = (() => {
-  const series = Array.from({ length: 90 }, (_, i) => {
+  const iso = (d: Date): string =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  // One point per LESSON day in the 90-day window, as the server sends it
+  // (GetAthleteAttendanceSummaryAction): the days the academy held a class,
+  // which DAILY draws as Monday, Wednesday, Friday and Saturday with August
+  // closed. Calendar days here drew 90 bars beside "17 of 30" (#1854).
+  const series: { date: string; attended: boolean }[] = [];
+  for (let i = 0; i < 90; i++) {
     const d = new Date(NOW - (89 - i) * 86_400_000);
-    const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    const trains = d.getMonth() !== 7 && (d.getDay() === 1 || d.getDay() === 3);
-    return { date: iso, attended: trains };
-  });
+    if (d.getMonth() === 7 || ![1, 3, 5, 6].includes(d.getDay())) continue;
+    series.push({ date: iso(d), attended: d.getDay() === 1 || d.getDay() === 3 });
+  }
   const attended = series.filter((p) => p.attended).length;
   return {
     range_days: 90,
-    range_start: series[0].date,
-    range_end: series[series.length - 1].date,
+    range_start: iso(new Date(NOW - 89 * 86_400_000)),
+    range_end: TODAY,
     attended_count: attended,
-    expected_count: 30,
-    rate: Math.round((attended / 30) * 100) / 100,
+    expected_count: series.length,
+    rate: Math.round((attended / series.length) * 10000) / 10000,
     series,
   };
 })();
@@ -734,7 +783,6 @@ const ATTENDANCE_SUMMARY = [
   { athlete_id: 4, first_name: 'Sara', last_name: 'Colombo', count: 3, athlete: identityOf(4) },
   { athlete_id: 6, first_name: 'Elena', last_name: 'Russo', count: 2, athlete: identityOf(6) },
   { athlete_id: 8, first_name: 'Francesca', last_name: 'Marino', count: 2, athlete: identityOf(8) },
-  { athlete_id: 7, first_name: 'Andrea', last_name: 'Gallo', count: 1, athlete: identityOf(7) },
 ];
 
 const LEADERBOARD = {
@@ -905,7 +953,9 @@ const ATHLETE_COVERAGE = {
     seen: 3,
     thin: 2,
     missed: 1,
-    percentage: 50,
+    // Attended over taught, 5 of 6, since #1723. It read 50 (seen over
+    // taught), and painted "50%" beside "5 su 6" (#1854).
+    percentage: 83,
     not_taught_yet: 23,
   },
   missed: [
@@ -1273,13 +1323,14 @@ const TOPIC_EXPOSURE = {
   ],
   // Register order, active first: Bonanno, Colombo, Ferraro, Gallo, Marino,
   // Moretti, Russo, then Ricci, who is inactive with no date of departure.
-  // Gallo trained on the 7th at a lesson the record does not name.
+  // Marino trained on the 7th, her first day, at a lesson the record does not
+  // name. Gallo has not trained since August (#1729), so he was never there.
   athletes: [
     exposureRow(3, 2, '2026-09-11', 'seen'),
     exposureRow(4, 2, '2026-09-07', 'seen'),
     exposureRow(1, 3, '2026-09-11', 'seen'),
-    exposureRow(7, 0, null, 'unplaced'),
-    exposureRow(8, 0, null, 'never'),
+    exposureRow(7, 0, null, 'never'),
+    exposureRow(8, 0, null, 'unplaced'),
     exposureRow(2, 1, '2026-09-04', 'thin'),
     exposureRow(6, 1, '2026-09-07', 'thin'),
     exposureRow(5, 0, null, 'never'),
@@ -1981,6 +2032,145 @@ const NO_DATA = { statusCode: 200, body: { data: [] } };
 describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian', () => {
   // What this run was asked to shoot, beside the pictures: `_env.json` says
   // which prefixes were in force when the folder was last written.
+  // Before any screen: the shared fixtures agree with the server's rules, and
+  // the guard would say so if they did not (#1854).
+  it('holds the shared fixtures to the server rules', () => {
+    assertFixtureAgrees('The shared fixtures', {
+      ATHLETES,
+      ATHLETE_COVERAGE,
+      SYLLABUS_COVERAGE,
+      SYLLABUS_CALENDAR,
+      TOPIC_EXPOSURE,
+      ATHLETE_SUMMARY,
+      ATTENDANCE_SUMMARY,
+      CARNETS_ONE,
+    });
+
+    // One question, two fixtures: the month summary's days for an athlete are
+    // the roster's month count, and whoever trained this month is listed. The
+    // per-object rules cannot see across fixtures; this is the pair that
+    // drifted apart when #1729 moved an athlete into "not seen lately".
+    for (const a of ATHLETES) {
+      const row = ATTENDANCE_SUMMARY.find((r) => r.athlete_id === a.id);
+      expect(row?.count ?? 0, `month summary vs roster, athlete ${a.id}`).to.equal(
+        a.attendance_month_count,
+      );
+    }
+  });
+
+  it('has a fixture guard that catches what it is for', () => {
+    // A guard that passes because it cannot match anything is not a guard.
+    // The two drifts the audit of 24 September 2026 actually shipped, and a
+    // season-map plan dated in the past:
+    const drifted = {
+      roster: [
+        { joined_at: '2024-09-02', attendance_month_count: 5, attendance_total_count: 143 },
+        // Nobody trained this season, yet the last presence is last week.
+        {
+          joined_at: '2024-09-02',
+          attendance_month_count: 0,
+          attendance_total_count: 0,
+          last_attended_on: '2026-09-10',
+        },
+      ],
+      coverage: { taught_by_academy: 6, attended: 5, seen: 3, thin: 2, missed: 1, percentage: 50 },
+      lesson: { held_on: '2026-09-08', state: 'planned' },
+    };
+    const problems = fixtureContradictions(drifted, FIXTURE_CONTEXT);
+    expect(problems.join('\n')).to.contain('attendance_total_count 143 > 8');
+    expect(problems.join('\n')).to.contain('percentage 50 ≠ attended/taught 83');
+    expect(problems.join('\n')).to.contain("is 'planned'");
+    expect(problems.join('\n')).to.contain('attendance_total_count 0 but last_attended_on');
+
+    // The attendance summary: one point per lesson day, so 90 calendar-day
+    // points against 30 expected is a contradiction.
+    const summary = fixtureContradictions(
+      {
+        attended_count: 2,
+        expected_count: 30,
+        rate: 0.0667,
+        series: Array.from({ length: 90 }, (_, i) => ({ date: `d${i}`, attended: i < 2 })),
+      },
+      FIXTURE_CONTEXT,
+    );
+    expect(summary.join('\n')).to.contain('≠ 90 series points');
+
+    // The rate is the server's four-place rounding exactly, not "near it".
+    const rate = (r: number) =>
+      fixtureContradictions(
+        {
+          attended_count: 1,
+          expected_count: 3,
+          rate: r,
+          series: [
+            { date: 'a', attended: true },
+            { date: 'b', attended: false },
+            { date: 'c', attended: false },
+          ],
+        },
+        FIXTURE_CONTEXT,
+      );
+    expect(rate(0.3333)).to.deep.equal([]);
+    expect(rate(0.3334).join('\n')).to.contain('rate 0.3334');
+
+    // Not stricter than the server: the month count and the last presence
+    // are not floored at joining, which is editable and was backfilled.
+    expect(
+      fixtureContradictions(
+        [
+          {
+            joined_at: '2026-09-10',
+            attendance_month_count: 3,
+            attendance_total_count: 2,
+            last_attended_on: '2026-09-12',
+          },
+        ],
+        FIXTURE_CONTEXT,
+      ),
+    ).to.deep.equal([]);
+    // ...and an honest row passes.
+    expect(
+      fixtureContradictions(
+        [{ joined_at: '2024-09-02', attendance_month_count: 5, attendance_total_count: 5 }],
+        FIXTURE_CONTEXT,
+      ),
+    ).to.deep.equal([]);
+  });
+
+  it('checks every shape of stub the harness registers', () => {
+    // The override has to see the body whatever form the call takes, or a
+    // whole class of stubs goes unchecked: the two-argument
+    // `cy.intercept(matcher, page([...]))` was, until #1854's review.
+    const body = { data: [] };
+    expect(stubBodyOf(['GET', '/api/v1/x', { statusCode: 200, body }])).to.equal(body);
+    expect(stubBodyOf([{ method: 'GET', pathname: '/api/v1/x' }, body])).to.equal(body);
+    expect(stubBodyOf(['/api/v1/x', { method: 'GET' }, { statusCode: 200, body }])).to.equal(body);
+    expect(stubBodyOf(['GET', '/api/v1/x'])).to.equal(undefined);
+    expect(stubBodyOf(['/api/v1/x', () => undefined])).to.equal(undefined);
+    expect(stubBodyOf(['/api/v1/x', 'plain text'])).to.equal(undefined);
+    expect(stubBodyOf(['/api/v1/x', { fixture: 'athletes.json' }])).to.equal(undefined);
+
+    // ...and the override fails a drifted stub in each of those shapes, with
+    // a label a person can read.
+    const drifted = page([
+      { joined_at: '2024-09-02', attendance_month_count: 5, attendance_total_count: 143 },
+    ]);
+    const matcher = {
+      method: 'GET',
+      pathname: '/api/v1/athletes',
+      query: { sort_by: 'joined_at' },
+    };
+    expect(() => checkStub([matcher, drifted])).to.throw(
+      "The stub for GET /api/v1/athletes?sort_by=joined_at contradicts the server's rules",
+    );
+    expect(() =>
+      checkStub(['GET', '/api/v1/athletes*', { statusCode: 200, body: drifted }]),
+    ).to.throw('The stub for /api/v1/athletes*');
+    expect(() =>
+      checkStub(['GET', '/api/v1/athletes*', { statusCode: 200, body: page([]) }]),
+    ).not.to.throw();
+  });
+
   it('records the run environment', () => {
     cy.writeFile('cypress/screenshots/desktop-audit.cy.ts/_env.json', {
       only: Cypress.env('ONLY') ?? null,
@@ -2028,9 +2218,23 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       // belt spine the way every list of people does.
       cy.intercept(
         { method: 'GET', pathname: '/api/v1/athletes', query: { sort_by: 'joined_at' } },
+        // Joined today, so nothing counted yet: a count or a last presence
+        // before today would be a day they had not joined for (#1854).
         page([
-          { ...ATHLETES[3], joined_at: TODAY },
-          { ...ATHLETES[5], joined_at: TODAY },
+          {
+            ...ATHLETES[3],
+            joined_at: TODAY,
+            attendance_month_count: 0,
+            attendance_total_count: 0,
+            last_attended_on: null,
+          },
+          {
+            ...ATHLETES[5],
+            joined_at: TODAY,
+            attendance_month_count: 0,
+            attendance_total_count: 0,
+            last_attended_on: null,
+          },
         ]),
       );
     },
