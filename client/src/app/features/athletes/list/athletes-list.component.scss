@@ -8,6 +8,15 @@
   max-width: var(--budojo-page-content-max);
   margin: 0 auto;
 
+  // Not seen lately (#1729): between the toolbar and the table, with the
+  // same space under it that the toolbar leaves.
+  // Spaced only while it draws something. Loading, failed, hidden in the
+  // restore picker or with nothing to say, it leaves only Angular's comment
+  // anchors in the host, and an empty host must not push the table down.
+  &__not-seen:not(:empty) {
+    margin-bottom: 1rem;
+  }
+
   // Mobile first: the search takes the full width and the rest wraps under it
   // — four controls do not share 375px, and the canon is explicit that the
   // base styles are the phone (#1428).
