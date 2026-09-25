@@ -200,9 +200,22 @@
     font-variant-numeric: tabular-nums;
   }
 
+  // A warning is semantic colour, not the accent: it says "look", not "press".
+  &__count--alert {
+    color: var(--budojo-warning-ink);
+  }
+
   &__label {
     flex: 1;
     min-width: 0;
+  }
+
+  &__detail {
+    display: block;
+    margin-top: 0.25rem;
+    color: var(--p-text-muted-color);
+    font-size: 0.875rem;
+    line-height: 1.5;
   }
 
   &__muted {

@@ -1464,6 +1464,18 @@ const ARCHIVES = [
   },
 ];
 
+const FOLDER_STATE: {
+  folder: string | null;
+  lastCopyAt: string | null;
+  lastError: string | null;
+  lastErrorAt: string | null;
+} = {
+  folder: 'D:\\OneDrive\\Budojo backup',
+  lastCopyAt: '2026-09-14T01:00:20.000Z',
+  lastError: null,
+  lastErrorAt: null,
+};
+
 type UpdatePhase =
   | { phase: 'idle' }
   | { phase: 'checking' }
@@ -1477,6 +1489,8 @@ interface BridgeOptions {
   update?: UpdatePhase;
   /** What `backup.list()` answers; defaults to three nightly archives. */
   archives?: typeof ARCHIVES;
+  /** What `folder.state()` answers; defaults to a folder that copied last night. */
+  folder?: typeof FOLDER_STATE;
 }
 
 /**
@@ -1507,12 +1521,7 @@ function installBridge(win: Cypress.AUTWindow, opts: BridgeOptions): void {
       restore: ok({ ok: true }),
     },
     folder: {
-      state: ok({
-        folder: 'D:\\OneDrive\\Budojo backup',
-        lastCopyAt: '2026-09-14T01:00:20.000Z',
-        lastError: null,
-        lastErrorAt: null,
-      }),
+      state: ok(opts.folder ?? FOLDER_STATE),
       choose: ok({ ok: false }),
       clear: ok({ ok: true }),
       copy: ok({ ran: true, copied: 1 }),
@@ -1697,6 +1706,8 @@ interface ScreenOptions {
   clock?: false;
   /** The backup archives the bridge reports. */
   archives?: typeof ARCHIVES;
+  /** Where backups are copied, and how that last went. */
+  folder?: typeof FOLDER_STATE;
 }
 
 // Scroll a target to the middle before acting on it. The default scrolls it
@@ -1891,7 +1902,12 @@ function screen(slug: string, route: string, ready: string, opts: ScreenOptions 
         failOnStatusCode: false,
         onBeforeLoad(win: Cypress.AUTWindow) {
           win.localStorage.setItem('budojoLang', 'it');
-          installBridge(win, { token, update: opts.update, archives: opts.archives });
+          installBridge(win, {
+            token,
+            update: opts.update,
+            archives: opts.archives,
+            folder: opts.folder,
+          });
           recordConsoleErrors(win);
         },
       };
@@ -2003,6 +2019,17 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
         ]),
       );
     },
+  });
+  // The copy off this computer has been failing, and was never set up (#1751).
+  screen('05-today-backup-failing', '/dashboard/today', '[data-cy="today-watch-backup"]', {
+    folder: { ...FOLDER_STATE, lastError: 'ENOENT', lastErrorAt: '2026-09-10T01:00:20.000Z' },
+  });
+  screen('05-today-backup-local-only', '/dashboard/today', '[data-cy="today-watch-backup"]', {
+    folder: { ...FOLDER_STATE, folder: null, lastCopyAt: null },
+  });
+  // Copies stopped arriving with no error left behind: the last is two weeks old.
+  screen('05-today-backup-stale', '/dashboard/today', '[data-cy="today-watch-backup"]', {
+    folder: { ...FOLDER_STATE, lastCopyAt: '2026-08-31T01:00:20.000Z' },
   });
   screen('05-today-lesson-sheet', '/dashboard/today', '[data-cy="today-class-1"]', {
     act: () => {
