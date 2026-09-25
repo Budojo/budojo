@@ -10,6 +10,14 @@
  * any such spec; stubs registered after it still win.
  */
 export function stubToday(): void {
+  // The getting-started tour lives on Today (#1755). Dismissed, so a spec
+  // that only passes through sees the cards, not the checklist.
+  cy.intercept('GET', '/api/v1/me/onboarding', {
+    statusCode: 200,
+    body: {
+      data: { dismissed_at: '2026-01-01T00:00:00Z', completed_steps: [], available_steps: [] },
+    },
+  });
   cy.intercept('GET', '/api/v1/academy/classes', { statusCode: 200, body: { data: [] } });
   cy.intercept('GET', '/api/v1/lessons/suggestions*', { statusCode: 200, body: { data: [] } });
   cy.intercept('GET', '/api/v1/documents/expiring*', {

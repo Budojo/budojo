@@ -28,6 +28,14 @@ describe('Today, the first screen (#1643)', () => {
       statusCode: 200,
       body: { data: { ...MOCK_ACADEMY, monthly_fee_cents: 6000 } },
     }).as('academy');
+    // An academy past its first days: the getting-started tour is dismissed,
+    // so Today is its cards (the tour itself: onboarding-checklist.cy.ts).
+    cy.intercept('GET', '/api/v1/me/onboarding', {
+      statusCode: 200,
+      body: {
+        data: { dismissed_at: '2026-09-01T00:00:00Z', completed_steps: [], available_steps: [] },
+      },
+    });
     cy.intercept('GET', '/api/v1/academy/classes', { statusCode: 200, body: { data: CLASSES } });
     // The check-in this spec navigates to asks who usually comes (#1730).
     cy.intercept('GET', '/api/v1/attendance/regulars*', {

@@ -93,13 +93,6 @@
 <p-menu #paymentMenu [popup]="true" [model]="paymentMenuItems()" appendTo="body" />
 
 <div class="athletes-page">
-  <!--
-    First-run onboarding checklist (#424). Self-gated: renders only
-    when the user hasn't dismissed the tour AND hasn't ticked every
-    step. The component handles its own visibility internally.
-  -->
-  <app-onboarding-checklist />
-
   <app-page-header [title]="'athletes.list.title' | translate" [countLabel]="totalCountLabel()">
     <!-- Secondary beside the primary, not a second primary (#1346). An
          academy arriving with an existing roster needs to FIND this on day

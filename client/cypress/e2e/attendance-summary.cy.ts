@@ -50,19 +50,6 @@ describe('monthly attendance summary', () => {
     // before the dashboard widget renders. Specific stubs are registered
     // after, so they win (Cypress resolves most-recently-defined).
     cy.intercept('GET', '/api/v1/**', { statusCode: 200, body: { data: [] } });
-    // The athletes-list page also mounts <app-onboarding-checklist> (#424),
-    // which reads `data.completed_steps` / `data.available_steps`. The
-    // catch-all's bare `{ data: [] }` (an array) makes those undefined, the
-    // checklist throws during change detection, and the throw poisons every
-    // subsequent CD tick — so when the summary widget's response sets
-    // loading=false the re-render throws again and the widget stays frozen on
-    // its skeleton. Stub the dismissed object so the checklist self-hides.
-    cy.intercept('GET', '/api/v1/me/onboarding', {
-      statusCode: 200,
-      body: {
-        data: { dismissed_at: '2026-01-01T00:00:00Z', completed_steps: [], available_steps: [] },
-      },
-    });
     cy.intercept('GET', '/api/v1/academy', ACADEMY_OK).as('academy');
     // Composite envelope (#881): the sibling expiring-documents widget reads
     // `missing_medical_certificate` and calls `.length` on it. A bare

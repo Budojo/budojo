@@ -265,6 +265,23 @@ describe('DashboardComponent', () => {
       }
     });
 
+    it("keeps the phone's bar at five, Today first and the academy under More (#1755)", () => {
+      const fixture = TestBed.createComponent(DashboardComponent);
+      fixture.detectChanges();
+
+      const bar = (fixture.nativeElement as HTMLElement).querySelector('app-bottom-nav')!;
+      const tabs = Array.from(bar.querySelectorAll('[data-cy^="bottomnav-"]'))
+        .map((el) => el.getAttribute('data-cy'))
+        .filter((cy) => cy !== 'bottomnav-create');
+      expect(tabs).toEqual([
+        'bottomnav-today',
+        'bottomnav-athletes',
+        'bottomnav-attendance',
+        'bottomnav-community',
+        'bottomnav-more',
+      ]);
+    });
+
     it('the More tab points at the /dashboard/more hub', () => {
       const fixture = TestBed.createComponent(DashboardComponent);
       fixture.detectChanges();
