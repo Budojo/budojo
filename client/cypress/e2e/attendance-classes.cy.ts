@@ -91,6 +91,11 @@ describe('Check-in by class', () => {
     cy.intercept('GET', '/api/v1/attendance*', { statusCode: 200, body: { data: [] } }).as(
       'attendance',
     );
+    // The missing-regulars panel (#1730) asks once a class is picked.
+    cy.intercept('GET', '/api/v1/attendance/regulars*', {
+      statusCode: 200,
+      body: { data: [], meta: { occurrences: 0, occurrence_dates: [] } },
+    });
   });
 
   it("offers the day's classes as chips and opens on the one the clock points at", () => {

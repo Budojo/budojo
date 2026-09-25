@@ -29,6 +29,11 @@ describe('Today, the first screen (#1643)', () => {
       body: { data: { ...MOCK_ACADEMY, monthly_fee_cents: 6000 } },
     }).as('academy');
     cy.intercept('GET', '/api/v1/academy/classes', { statusCode: 200, body: { data: CLASSES } });
+    // The check-in this spec navigates to asks who usually comes (#1730).
+    cy.intercept('GET', '/api/v1/attendance/regulars*', {
+      statusCode: 200,
+      body: { data: [], meta: { occurrences: 0, occurrence_dates: [] } },
+    });
     cy.intercept('GET', '/api/v1/lessons?*', { statusCode: 200, body: { data: null } }).as(
       'lesson',
     );
@@ -192,6 +197,24 @@ describe('Today, the first screen (#1643)', () => {
     cy.wait('@academy');
 
     cy.get('[data-cy="today-watch-unpaid"]').click();
+    cy.location('pathname').should('eq', '/dashboard/athletes');
+    cy.location('search').should('eq', '?paid=no');
+  });
+
+  it('before the 16th, counts the unpaid fees with the week, not as something to check (#1753)', () => {
+    // Thursday 3 September: same class tonight, but the month is young. The
+    // suite's clock is swapped, not moved — a moved clock does not survive the visit.
+    cy.clock().then((clock) => clock.restore());
+    cy.clock(new Date(2026, 8, 3, 18, 30).getTime(), ['Date']);
+    cy.visitAuthenticated('/dashboard/today');
+    cy.wait('@academy');
+
+    cy.get('[data-cy="today-week-unpaid"]')
+      .should('contain.text', 'September fees not paid yet')
+      .and('contain.text', '3');
+    cy.get('[data-cy="today-watch-unpaid"]').should('not.exist');
+
+    cy.get('[data-cy="today-week-unpaid"]').click();
     cy.location('pathname').should('eq', '/dashboard/athletes');
     cy.location('search').should('eq', '?paid=no');
   });

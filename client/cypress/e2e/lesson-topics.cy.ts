@@ -98,6 +98,11 @@ function stub(opts: { lesson?: unknown; recent?: unknown[] } = {}): void {
   cy.intercept('GET', '/api/v1/academy/syllabus', { statusCode: 200, body: { data: TREE } });
   cy.intercept('GET', '/api/v1/athletes*', ATHLETES);
   cy.intercept('GET', '/api/v1/attendance*', { statusCode: 200, body: { data: [] } });
+  // The check-in's missing-regulars panel (#1730) reads `meta` off this.
+  cy.intercept('GET', '/api/v1/attendance/regulars*', {
+    statusCode: 200,
+    body: { data: [], meta: { occurrences: 0, occurrence_dates: [] } },
+  });
   cy.intercept('GET', '/api/v1/lessons/recent-topics', {
     statusCode: 200,
     body: { data: opts.recent ?? [] },

@@ -384,6 +384,49 @@ describe('Syllabus coverage', () => {
     cy.wait('@calendar').its('request.url').should('contain', 'kind=nogi');
   });
 
+  it("copies the week's plan for the group, and hands the same text to WhatsApp (#1863)", () => {
+    stub();
+
+    cy.visitAuthenticated('/dashboard/stats/syllabus');
+    cy.wait('@calendar');
+    cy.window().then((win) => {
+      cy.stub(win.navigator.clipboard, 'writeText').resolves().as('copy');
+    });
+
+    // Nothing is left this week (today is Wednesday 14): the plan is next week's.
+    const plan = "The week's plan\nMon 19 · Fundamentals · Closed guard";
+    cy.get('[data-cy="season-map-share-text"]').should('contain.text', '19 Oct');
+    cy.get('[data-cy="season-map-share-whatsapp"]')
+      .should('have.attr', 'href', `https://wa.me/?text=${encodeURIComponent(plan)}`)
+      .and('have.attr', 'target', '_blank');
+
+    cy.get('[data-cy="season-map-share-copy"]').click();
+    cy.get('@copy').should('have.been.calledOnceWith', plan);
+    cy.contains('.p-toast-message', 'Plan copied').should('be.visible');
+  });
+
+  it('says why there is no plan to send when nothing is planned', () => {
+    stub();
+    cy.intercept('GET', '/api/v1/stats/syllabus/calendar*', {
+      statusCode: 200,
+      body: {
+        data: calendar({
+          lessons: calendar().lessons.filter((lesson) => lesson.state === 'held'),
+        }),
+      },
+    }).as('calendar');
+
+    cy.visitAuthenticated('/dashboard/stats/syllabus');
+    cy.wait('@calendar');
+
+    cy.get('[data-cy="season-map-share-text"]').should(
+      'contain.text',
+      'Nothing is planned for this week or the next',
+    );
+    cy.get('[data-cy="season-map-share-copy"] button').should('be.disabled');
+    cy.get('[data-cy="season-map-share-whatsapp"] button').should('be.disabled');
+  });
+
   it('keeps the names and fractions when the weeks cannot be loaded', () => {
     stub();
     cy.intercept('GET', '/api/v1/stats/syllabus/calendar*', { statusCode: 500, body: {} }).as(

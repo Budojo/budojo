@@ -87,9 +87,11 @@
       </h2>
 
       <!--
-        Two requests feed this card, and each fails on its own. The all-clear
-        is said only when both have answered and found nothing: a count still
-        loading, or one that failed, is not a zero.
+        Three sources feed this card, and each fails on its own: the
+        documents, the backup bridge (#1751), and the unpaid count from the
+        16th (#1753). The all-clear is said only when all of them have
+        answered and found nothing: a count still loading, or one that
+        failed, is not a zero.
       -->
       @if (watchRows().length > 0) {
         <ul class="today-rows">
@@ -130,7 +132,7 @@
           {{ 'today.watch.documentsError' | translate }}
         </p>
       }
-      @if (unpaid()?.state === 'error') {
+      @if (unpaidIsAlert() && unpaid()?.state === 'error') {
         <p class="today-card__note" data-cy="today-watch-unpaid-error">
           {{ 'today.watch.unpaidError' | translate }}
         </p>
@@ -199,6 +201,24 @@
           <li class="today-row" data-cy="today-week-presences">
             <span class="today-row__label">{{ 'today.week.presences' | translate }}</span>
             <span class="today-row__value">{{ presences() }}</span>
+          </li>
+        }
+        <!--
+          Before the 16th, "not paid yet" is the normal state of the month
+          (#1753): a line with the week's other numbers, not a row to check.
+        -->
+        @if (notYetPaid(); as due) {
+          <li>
+            <a
+              class="today-row today-row--link"
+              routerLink="/dashboard/athletes"
+              [queryParams]="{ paid: 'no' }"
+              data-cy="today-week-unpaid"
+            >
+              <span class="today-row__label">{{ due.label }}</span>
+              <span class="today-row__value">{{ due.count }}</span>
+              <i class="pi pi-angle-right today-row__chevron" aria-hidden="true"></i>
+            </a>
           </li>
         }
         @if (coverage(); as cov) {
