@@ -129,6 +129,8 @@ function topic(id: number, parent_id: number | null, name: string, over: object 
     kind: 'both',
     in_season: true,
     from_belt: null,
+    notes: null,
+    video_url: null,
     sort_order: id,
     ...over,
   };
@@ -225,6 +227,25 @@ const GRADED_SYLLABUS = SYLLABUS.map((position) => {
   }
   return position;
 });
+
+/** The armbar with how it is taught here written down (#1862). */
+const NOTED_SYLLABUS = SYLLABUS.map((position) =>
+  position.id === 1
+    ? {
+        ...position,
+        children: position.children.map((t) =>
+          t.id === 11
+            ? {
+                ...t,
+                notes:
+                  'Parti dalla S-mount; presa sul gomito lontano.\nPrima il ginocchio sulla testa, poi la gamba.',
+                video_url: 'https://www.youtube.com/watch?v=abc123',
+              }
+            : t,
+        ),
+      }
+    : position,
+);
 
 function lessonTopic(id: number, name: string, parent: string, kind = 'both') {
   return { id, name, kind, parent_id: Math.floor(id / 10), parent_name: parent, deleted: false };
@@ -396,6 +417,8 @@ const ATHLETES = [
     belt: 'blue',
     stripes: 4,
     joined_at: '2023-09-11',
+    phone_country_code: '+39',
+    phone_national_number: '3471234567',
     payment_coverage: 'carnet',
     paid_current_month: false,
     active_carnet: { id: 9, code: 'Q3M8', remaining_entries: 6, expires_at: '2027-03-01' },
@@ -413,9 +436,11 @@ const ATHLETES = [
     joined_at: '2019-05-20',
     payment_coverage: 'none',
     paid_current_month: false,
-    attendance_month_count: 1,
+    // Drifting (#1729): nothing this month, last seen in August — the `gone`
+    // row of the at-risk fixture below, so the two screens agree.
+    attendance_month_count: 0,
     attendance_total_count: 530,
-    last_attended_on: '2026-09-01',
+    last_attended_on: '2026-08-12',
   }),
   athlete({
     id: 8,
@@ -452,6 +477,40 @@ function identityOf(id: number) {
     user_avatar_url: a.user_avatar_url,
   };
 }
+
+// Not seen lately (#1729): three roster athletes, one per tier, with the
+// numbers the endpoint would send for them. Taken FROM the roster fixture so
+// the section and the table never disagree about a person.
+function atRiskRow(
+  id: number,
+  tier: 'gone' | 'quiet' | 'dropping',
+  counts: { recent: number; baseline: number },
+) {
+  const a = ATHLETES.find((x) => x.id === id)!;
+  return {
+    athlete: {
+      ...identityOf(id),
+      status: a.status,
+      phone_country_code: a.phone_country_code,
+      phone_national_number: a.phone_national_number,
+    },
+    tier,
+    last_attended_on: a.last_attended_on,
+    recent_attended: counts.recent,
+    recent_sessions: 8,
+    baseline_attended: counts.baseline,
+    baseline_sessions: 24,
+  };
+}
+
+const AT_RISK = {
+  data: [
+    atRiskRow(7, 'gone', { recent: 0, baseline: 11 }),
+    atRiskRow(4, 'quiet', { recent: 3, baseline: 16 }),
+    atRiskRow(6, 'dropping', { recent: 2, baseline: 15 }),
+  ],
+  meta: { sessions_available: 41, sessions_needed: 20, has_attendance: true },
+};
 
 /**
  * What tonight's room missed (#1860): seven on the mat, two techniques most of
@@ -1137,7 +1196,16 @@ function exposureRow(id: number, exposures: number, lastSeenOn: string | null, s
 }
 
 const TOPIC_EXPOSURE = {
-  topic: { id: 11, name: 'Armbar', parent_name: 'Closed guard', kind: 'both', in_season: true },
+  topic: {
+    id: 11,
+    name: 'Armbar',
+    parent_name: 'Closed guard',
+    kind: 'both',
+    in_season: true,
+    // How it is taught here (#1862), so the drill-down shows its notebook.
+    notes: 'Parti dalla S-mount; presa sul gomito lontano.',
+    video_url: 'https://www.youtube.com/watch?v=abc123',
+  },
   season: SYLLABUS_COVERAGE.season,
   lessons: [
     {
@@ -1587,6 +1655,7 @@ function seed(): void {
   });
 
   // Stats.
+  cy.intercept('GET', '/api/v1/stats/attendance/at-risk', { statusCode: 200, body: AT_RISK });
   cy.intercept('GET', '/api/v1/stats/attendance/daily*', {
     statusCode: 200,
     body: { data: DAILY },
@@ -1656,6 +1725,25 @@ function press(selector: string): void {
 function dialogOpen(hostSelector: string): void {
   cy.get(hostSelector, { timeout: 4000 }).should('exist');
   cy.get('.p-dialog', { timeout: 4000 }).should('be.visible');
+}
+
+/**
+ * Wait until a dialog's own autofocus has landed on `fieldSelector`, before
+ * an `act` scrolls the dialog: focus arriving later scrolls it back to the
+ * top. The enter animation ends in real time and the focus call behind it
+ * then waits on the frozen clock, so neither a single tick nor a single wait
+ * is enough on a loaded machine — tick, look, and go round again.
+ */
+function dialogFocusSettled(fieldSelector: string, attempts = 20): void {
+  cy.tick(250);
+  cy.document().then((doc) => {
+    if (doc.activeElement?.matches(fieldSelector) || attempts === 0) {
+      cy.get(fieldSelector).should('have.focus');
+      return;
+    }
+    cy.wait(100);
+    dialogFocusSettled(fieldSelector, attempts - 1);
+  });
 }
 
 /**
@@ -2319,6 +2407,47 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       },
     },
   );
+  // How a technique is taught here (#1862): the programme's notes and video,
+  // and the notes of the last evening that taught it, captioned as that
+  // evening's.
+  screen(
+    '30-attendance-lesson-sheet-detail',
+    '/dashboard/attendance',
+    '[data-cy="attendance-class-picker"]',
+    {
+      stubs: () => {
+        cy.intercept('GET', '/api/v1/academy/syllabus', {
+          statusCode: 200,
+          body: { data: NOTED_SYLLABUS },
+        });
+        cy.intercept('GET', '/api/v1/lessons/last-notes*', {
+          statusCode: 200,
+          body: {
+            data: {
+              ...LESSON_TONIGHT,
+              id: 5,
+              held_on: '2026-09-09',
+              notes: 'Primo giorno di Marco dopo lo stop: drill lenti, niente sparring.',
+              held: true,
+            },
+          },
+        });
+      },
+      act: () => {
+        press('[data-cy="attendance-topics"]');
+        dialogOpen('[data-cy="lesson-sheet"]');
+        // The dialog's autofocus lands on the search field first; landing
+        // during `shoot()` it scrolled the sheet back over the details.
+        dialogFocusSettled('[data-cy="lesson-sheet-search"]');
+        press('[data-cy="lesson-expand-1"]');
+        press('[data-cy="lesson-detail-toggle-tree-11"]');
+        // The details sit below the fold of the sheet's own scroll area;
+        // focus brings them into the frame the way a keyboard would.
+        cy.get('[data-cy="lesson-detail-video"]').focus();
+        cy.get('[data-cy="lesson-detail-last-evening"]').should('be.visible');
+      },
+    },
+  );
   screen(
     '30-attendance-lesson-sheet-search',
     '/dashboard/attendance',
@@ -2423,6 +2552,15 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
     act: () => {
       press('[data-cy="season-map-position-1"]');
       cy.get('[data-cy="season-map-popover"]', { timeout: 4000 }).should('be.visible');
+    },
+  });
+  // An empty week still to come, opened to plan it (#1859): the classes of
+  // that week that may teach the position.
+  screen('40-stats-syllabus-plan', '/dashboard/stats/syllabus', '[data-cy="syllabus-coverage"]', {
+    clock: false,
+    act: () => {
+      press('[data-cy="season-map-cell-5-2026-09-28"]');
+      cy.get('[data-cy="season-map-plan"]', { timeout: 4000 }).should('be.visible');
     },
   });
   // A week with a lesson held and a plan nobody checked into: the fill, a
@@ -2638,23 +2776,56 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
   screen('12-syllabus-edit-position', '/dashboard/academy/syllabus', '[data-cy="syllabus-tree"]', {
     act: () => {
       press('[data-cy="syllabus-edit-1"]');
-      cy.get('[data-cy="syllabus-form"]', { timeout: 4000 }).should('be.visible');
+      // The name field, not the form: since #1862 the form outgrows the
+      // dialog's scroll area at 960×600, and Cypress reads a form taller
+      // than its scroll container as not visible.
+      cy.get('[data-cy="syllabus-form-name"]', { timeout: 4000 }).should('be.visible');
     },
   });
   screen('12-syllabus-edit-technique', '/dashboard/academy/syllabus', '[data-cy="syllabus-tree"]', {
     act: () => {
       press('[data-cy="syllabus-toggle-1"]');
       press('[data-cy="syllabus-topic-11"] button');
-      cy.get('[data-cy="syllabus-form"]', { timeout: 4000 }).should('be.visible');
+      // The name field, not the form: since #1862 the form outgrows the
+      // dialog's scroll area at 960×600, and Cypress reads a form taller
+      // than its scroll container as not visible.
+      cy.get('[data-cy="syllabus-form-name"]', { timeout: 4000 }).should('be.visible');
     },
   });
+  // The teaching notebook in the dialog (#1862): notes and a reference video.
+  screen(
+    '12-syllabus-edit-technique-notes',
+    '/dashboard/academy/syllabus',
+    '[data-cy="syllabus-tree"]',
+    {
+      stubs: () => {
+        cy.intercept('GET', '/api/v1/academy/syllabus', {
+          statusCode: 200,
+          body: { data: NOTED_SYLLABUS },
+        });
+      },
+      act: () => {
+        press('[data-cy="syllabus-toggle-1"]');
+        press('[data-cy="syllabus-topic-edit-11"]');
+        dialogOpen('[data-cy="syllabus-form"]');
+        dialogFocusSettled('[data-cy="syllabus-form-name"]');
+        // Below the fold at 960×600: focus scrolls the dialog to the two
+        // new fields the way a keyboard would reach them.
+        cy.get('[data-cy="syllabus-form-video"]').focus();
+        cy.get('[data-cy="syllabus-form-notes"]').should('be.visible');
+      },
+    },
+  );
   // The other half of TT-5 (#1644): this confirm is opened from the footer of
   // the topic dialog, so an anchored popup hung below that dialog's edge. It
   // is a modal confirm now, photographed like the timetable's.
   screen('12-syllabus-remove-confirm', '/dashboard/academy/syllabus', '[data-cy="syllabus-tree"]', {
     act: () => {
       press('[data-cy="syllabus-edit-1"]');
-      cy.get('[data-cy="syllabus-form"]', { timeout: 4000 }).should('be.visible');
+      // The name field, not the form: since #1862 the form outgrows the
+      // dialog's scroll area at 960×600, and Cypress reads a form taller
+      // than its scroll container as not visible.
+      cy.get('[data-cy="syllabus-form-name"]', { timeout: 4000 }).should('be.visible');
       press('[data-cy="syllabus-form-remove"]');
       cy.get('.p-confirmdialog', { timeout: 4000 }).should('be.visible');
     },
@@ -2673,6 +2844,36 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
     act: () => {
       press('[data-cy="athletes-th-last-seen"]');
       cy.wait(400);
+    },
+  });
+  // Not seen lately (#1729): the ⋯ menu open, and the two empty answers that
+  // must never be confused — "nobody is drifting" and "we cannot tell yet".
+  screen('20-athletes-not-seen-menu', '/dashboard/athletes', ROSTER_READY, {
+    act: () => {
+      press('[data-cy="not-seen-more-7"]');
+      cy.get('.p-menu').should('be.visible');
+    },
+  });
+  screen('20-athletes-not-seen-healthy', '/dashboard/athletes', ROSTER_READY, {
+    stubs: () => {
+      cy.intercept('GET', '/api/v1/stats/attendance/at-risk', {
+        statusCode: 200,
+        body: {
+          data: [],
+          meta: { sessions_available: 41, sessions_needed: 20, has_attendance: true },
+        },
+      });
+    },
+  });
+  screen('20-athletes-not-seen-no-history', '/dashboard/athletes', ROSTER_READY, {
+    stubs: () => {
+      cy.intercept('GET', '/api/v1/stats/attendance/at-risk', {
+        statusCode: 200,
+        body: {
+          data: [],
+          meta: { sessions_available: 12, sessions_needed: 20, has_attendance: true },
+        },
+      });
     },
   });
   screen('20-athletes-inactive-revealed', '/dashboard/athletes', ROSTER_READY, {

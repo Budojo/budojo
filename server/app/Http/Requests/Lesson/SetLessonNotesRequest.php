@@ -46,6 +46,17 @@ class SetLessonNotesRequest extends FormRequest
         return $this->lessonSlotMessages();
     }
 
+    /**
+     * A plan lands on a day the class runs (#1859), notes included: a note is
+     * enough to create the lesson.
+     *
+     * @return list<\Closure>
+     */
+    public function after(): array
+    {
+        return [$this->futureSlotOnClassWeekday()];
+    }
+
     public function notes(): ?string
     {
         $notes = $this->validated('notes');

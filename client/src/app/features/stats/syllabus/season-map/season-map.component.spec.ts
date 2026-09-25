@@ -3,11 +3,19 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { MessageService } from 'primeng/api';
+import { AcademyClass } from '../../../../core/services/academy-class.service';
 import { CoveragePosition, SyllabusCalendar } from '../../../../core/services/stats.service';
 import { provideI18nTesting } from '../../../../../test-utils/i18n-test';
 import { SeasonMapComponent } from './season-map.component';
 
 const URL = '/api/v1/stats/syllabus/calendar';
+const CLASSES_URL = '/api/v1/academy/classes';
+
+/** Monday gi fundamentals, Wednesday no-gi. */
+const CLASSES: AcademyClass[] = [
+  { id: 7, name: 'Fundamentals', weekday: 1, starts_at: '19:00', duration_minutes: 60, kind: 'gi' },
+  { id: 8, name: 'No-gi', weekday: 3, starts_at: '19:00', duration_minutes: 60, kind: 'nogi' },
+];
 
 const POSITIONS: CoveragePosition[] = [
   {
@@ -89,7 +97,7 @@ function calendar(over: Partial<SyllabusCalendar> = {}): SyllabusCalendar {
   };
 }
 
-function setup() {
+function setup(classes: AcademyClass[] = CLASSES) {
   TestBed.configureTestingModule({
     imports: [SeasonMapComponent],
     providers: [
@@ -105,6 +113,8 @@ function setup() {
   fixture.componentRef.setInput('positions', POSITIONS);
   const httpMock = TestBed.inject(HttpTestingController);
   fixture.detectChanges();
+  // The timetable, read once, for what a week ahead can be planned into.
+  httpMock.expectOne(CLASSES_URL).flush({ data: classes });
   return { fixture, component: fixture.componentInstance, httpMock };
 }
 
@@ -155,7 +165,8 @@ describe('SeasonMapComponent (#1858)', () => {
   });
 
   it('makes a week with something in it a labelled pointer shortcut, and an empty one nothing', () => {
-    const { fixture, httpMock } = setup();
+    // No timetable: an empty week ahead has nothing to plan into (#1859).
+    const { fixture, httpMock } = setup([]);
     flush(httpMock);
     fixture.detectChanges();
 
@@ -301,6 +312,205 @@ describe('SeasonMapComponent (#1858)', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.querySelector('[data-cy="season-map-error"]')).toBeNull();
+  });
+
+  describe('planning ahead (#1859)', () => {
+    // Wednesday 14 October 2026, midday, as the calendar says: the window a
+    // plan opens on also reads the local clock.
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date(2026, 9, 14, 12, 0));
+    });
+
+    afterEach(() => vi.useRealTimers());
+
+    it('lets an empty week still to come be planned, and a week gone by not', () => {
+      const { fixture, httpMock } = setup();
+      flush(httpMock);
+      fixture.detectChanges();
+
+      // Half guard has nothing on the map; today is Wednesday 14 October.
+      const ahead = fixture.nativeElement.querySelector(
+        '[data-cy="season-map-cell-2-2026-10-19"]',
+      ) as HTMLButtonElement;
+      expect(ahead.tabIndex).toBe(-1);
+      expect(ahead.getAttribute('aria-label')).toBe('Plan Half guard, week of 19 Oct');
+      expect(
+        fixture.nativeElement.querySelector('[data-cy="season-map-cell-2-2026-10-05"]'),
+      ).toBeNull();
+    });
+
+    it('offers the classes of the week that may teach the position, from today on', () => {
+      const { fixture, component, httpMock } = setup();
+      flush(httpMock);
+      fixture.detectChanges();
+
+      (
+        fixture.nativeElement.querySelector(
+          '[data-cy="season-map-cell-2-2026-10-12"]',
+        ) as HTMLButtonElement
+      ).click();
+
+      // Monday the 12th is gone; Wednesday's no-gi class is today.
+      expect(component['panel']()?.plan?.map((o) => [o.classId, o.date])).toEqual([
+        [8, '2026-10-14'],
+      ]);
+    });
+
+    it("offers the next two weeks from a position's name", () => {
+      const { fixture, component, httpMock } = setup();
+      flush(httpMock);
+      fixture.detectChanges();
+
+      (
+        fixture.nativeElement.querySelector(
+          '[data-cy="season-map-position-2"]',
+        ) as HTMLButtonElement
+      ).click();
+
+      // Today, Wednesday 14 October, through Tuesday the 27th.
+      expect(component['panel']()?.plan?.map((o) => o.date)).toEqual([
+        '2026-10-14',
+        '2026-10-19',
+        '2026-10-21',
+        '2026-10-26',
+      ]);
+    });
+
+    it('never offers a gi class for a no-gi position', () => {
+      const { fixture, component, httpMock } = setup();
+      flush(httpMock);
+      fixture.componentRef.setInput('positions', [{ ...POSITIONS[1], kind: 'nogi' }]);
+      fixture.detectChanges();
+
+      (
+        fixture.nativeElement.querySelector(
+          '[data-cy="season-map-position-2"]',
+        ) as HTMLButtonElement
+      ).click();
+
+      expect(component['panel']()?.plan?.every((o) => o.classId === 8)).toBe(true);
+    });
+
+    it('never offers a lesson past the end of the season', () => {
+      const { fixture, component, httpMock } = setup();
+      // The season closes on Tuesday 20 October; its last week still runs to Sunday.
+      flush(
+        httpMock,
+        calendar({ season: { start: '2026-09-01', end: '2026-10-20', label: '2026/27' } }),
+      );
+      fixture.detectChanges();
+
+      (
+        fixture.nativeElement.querySelector(
+          '[data-cy="season-map-cell-2-2026-10-19"]',
+        ) as HTMLButtonElement
+      ).click();
+      expect(component['panel']()?.plan?.map((o) => o.date)).toEqual(['2026-10-19']);
+
+      (
+        fixture.nativeElement.querySelector(
+          '[data-cy="season-map-position-2"]',
+        ) as HTMLButtonElement
+      ).click();
+      expect(component['panel']()?.plan?.map((o) => o.date)).toEqual(['2026-10-14', '2026-10-19']);
+    });
+
+    it('offers no plan on a row no class of the timetable may teach', () => {
+      // A gi-only timetable, and a no-gi position.
+      const { fixture, component, httpMock } = setup([CLASSES[0]]);
+      flush(httpMock);
+      fixture.componentRef.setInput('positions', [{ ...POSITIONS[1], kind: 'nogi' }]);
+      fixture.detectChanges();
+
+      expect(
+        fixture.nativeElement.querySelector('[data-cy="season-map-cell-2-2026-10-19"]'),
+      ).toBeNull();
+
+      (
+        fixture.nativeElement.querySelector(
+          '[data-cy="season-map-position-2"]',
+        ) as HTMLButtonElement
+      ).click();
+      expect(component['panel']()?.plan).toBeNull();
+    });
+
+    it('starts from the local day when the server’s date is still yesterday', () => {
+      // Half past midnight on Thursday in Rome; the server, on UTC, still
+      // says Wednesday. Last night's class is not a plan.
+      vi.setSystemTime(new Date(2026, 9, 15, 0, 30));
+      const { fixture, component, httpMock } = setup();
+      flush(httpMock);
+      fixture.detectChanges();
+
+      (
+        fixture.nativeElement.querySelector(
+          '[data-cy="season-map-position-2"]',
+        ) as HTMLButtonElement
+      ).click();
+      expect(component['panel']()?.plan?.map((o) => o.date)).toEqual([
+        '2026-10-19',
+        '2026-10-21',
+        '2026-10-26',
+        '2026-10-28',
+      ]);
+
+      (
+        fixture.nativeElement.querySelector(
+          '[data-cy="season-map-cell-2-2026-10-12"]',
+        ) as HTMLButtonElement
+      ).click();
+      expect(component['panel']()?.plan).toEqual([]);
+    });
+
+    it('opens the lesson sheet on the chosen class and day, on the position', () => {
+      const { fixture, component, httpMock } = setup();
+      flush(httpMock);
+      fixture.detectChanges();
+
+      (
+        fixture.nativeElement.querySelector(
+          '[data-cy="season-map-position-2"]',
+        ) as HTMLButtonElement
+      ).click();
+      const panel = component['panel']()!;
+      const monday = panel.plan!.find((o) => o.date === '2026-10-19')!;
+      component['plan'](monday, panel);
+
+      expect(component['planning']()).toEqual({
+        classId: 7,
+        heldOn: '2026-10-19',
+        className: 'Fundamentals',
+        positionId: 2,
+      });
+      expect(component['planSheetOpen']()).toBe(true);
+    });
+
+    it('offers no planning for a season gone by, nor without a timetable', () => {
+      const past = setup();
+      flush(past.httpMock);
+      past.fixture.componentRef.setInput('seasonsBack', 1);
+      past.fixture.detectChanges();
+      flush(past.httpMock, calendar({ today: '2027-10-14' }));
+      past.fixture.detectChanges();
+      (
+        past.fixture.nativeElement.querySelector(
+          '[data-cy="season-map-position-2"]',
+        ) as HTMLButtonElement
+      ).click();
+      expect(past.component['panel']()?.plan).toBeNull();
+
+      TestBed.resetTestingModule();
+      const none = setup([]);
+      flush(none.httpMock);
+      none.fixture.detectChanges();
+      (
+        none.fixture.nativeElement.querySelector(
+          '[data-cy="season-map-position-2"]',
+        ) as HTMLButtonElement
+      ).click();
+      expect(none.component['panel']()?.plan).toBeNull();
+    });
   });
 });
 
