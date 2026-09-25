@@ -39,12 +39,15 @@
           </p>
           <!--
             The athlete tab counts one lesson and this counts two, both on
-            purpose (#1748). Said under the number, not in a tooltip: nobody
-            hovers a number they do not know is ambiguous.
+            purpose (#1748). Folded under the number, not in a tooltip (#1853):
+            nobody hovers a number they do not know is ambiguous, but a
+            question under it ("Come si conta?") is there when they wonder.
           -->
-          <p class="coverage__rule" data-cy="syllabus-coverage-rule">
-            {{ 'stats.syllabus.headlineRule' | translate }}
-          </p>
+          <app-how-counted dataCy="syllabus-coverage-method">
+            <p class="coverage__rule" data-cy="syllabus-coverage-rule">
+              {{ 'stats.syllabus.headlineRule' | translate }}
+            </p>
+          </app-how-counted>
         </div>
       }
 

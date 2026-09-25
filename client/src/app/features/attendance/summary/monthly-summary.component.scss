@@ -183,6 +183,12 @@ $summary-mobile-breakpoint: 768px;
   min-height: 3rem;
 }
 
+// The method, folded under the header (#1853). The fold sets the size and the
+// colour; the paragraph only drops the browser's margin.
+.summary-page__method {
+  margin: 0;
+}
+
 // The belt spine's anchor (#1851): `position` on the cell, not the row, as on
 // the roster (#1429), because a `<td>` is a reliable containing block and a
 // `<tr>` is not.

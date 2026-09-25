@@ -2170,6 +2170,18 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
     },
   });
   screen('22-athlete-coverage', '/dashboard/athletes/1/coverage', '[data-cy="athlete-coverage"]');
+  // The method folded under the number, opened (#1853).
+  screen(
+    '22-athlete-coverage-method',
+    '/dashboard/athletes/1/coverage',
+    '[data-cy="athlete-coverage-method"]',
+    {
+      act: () => {
+        press('[data-cy="athlete-coverage-method"] summary');
+        settle();
+      },
+    },
+  );
   // The programme of their own belt (#1861) — only there once the academy
   // has graded something.
   screen(
@@ -2357,6 +2369,18 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
     '/dashboard/attendance/summary',
     '[data-cy="monthly-summary-page"]',
   );
+  // The method folded under the header, opened (#1853).
+  screen(
+    '31-attendance-summary-method',
+    '/dashboard/attendance/summary',
+    '[data-cy="monthly-summary-method"]',
+    {
+      act: () => {
+        press('[data-cy="monthly-summary-method"] summary');
+        settle();
+      },
+    },
+  );
 
   // ── 40. Stats ──────────────────────────────────────────────────────────
   screen('40-stats-overview', '/dashboard/stats/overview', '[data-cy="stats-tabs"]', {
@@ -2432,6 +2456,20 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       });
     },
   });
+  // The other screen's rule, folded under the headline and opened (#1853).
+  screen(
+    '40-stats-syllabus-method',
+    '/dashboard/stats/syllabus',
+    '[data-cy="syllabus-coverage-method"]',
+    {
+      clock: false,
+      act: () => {
+        cy.wait(1500);
+        press('[data-cy="syllabus-coverage-method"] summary');
+        settle();
+      },
+    },
+  );
   // A taught row, opened on who has seen it (#1745).
   screen(
     '40-stats-syllabus-exposure',
