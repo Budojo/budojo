@@ -879,6 +879,36 @@ describe('LessonSheetComponent — how it is taught here (#1862)', () => {
     expect(fixture.nativeElement.querySelector('[data-cy="lesson-detail-tree-11"]')).not.toBeNull();
   });
 
+  it('drops a last-evening read still out when the sheet opens again, on another evening', () => {
+    const { fixture, httpMock } = setup();
+    flushOpen(httpMock, { positions: [GUARD] });
+    fixture.detectChanges();
+    openTree(fixture);
+    toggle(fixture, 'tree-11');
+    const stale = httpMock.expectOne((r) => r.url === LAST_NOTES_URL);
+
+    // Closed, and opened on another evening, before that answer came back.
+    fixture.componentRef.setInput('visible', false);
+    fixture.detectChanges();
+    fixture.componentRef.setInput('heldOn', '2026-09-16');
+    fixture.componentRef.setInput('visible', true);
+    fixture.detectChanges();
+
+    // The previous opening's read is cancelled, so its notes cannot land here.
+    expect(stale.cancelled).toBe(true);
+
+    flushOpen(httpMock, { positions: [GUARD] });
+    fixture.detectChanges();
+    openTree(fixture);
+    toggle(fixture, 'tree-11');
+    const fresh = httpMock.expectOne((r) => r.url === LAST_NOTES_URL);
+    expect(fresh.request.params.get('before')).toBe('2026-09-16');
+    expect(
+      fixture.nativeElement.querySelector('[data-cy="lesson-detail-tree-11"]')?.textContent,
+    ).toContain('Looking for the last evening');
+    fresh.flush({ data: null });
+  });
+
   it('says there is nothing yet when nothing is written and no evening left notes', () => {
     const { fixture, httpMock } = setup();
     flushOpen(httpMock, { positions: [GUARD] });

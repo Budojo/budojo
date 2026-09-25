@@ -259,6 +259,12 @@ export class LessonSheetComponent {
    * first time its details are opened — never for every row in the list.
    */
   private readonly lastEvenings = signal<ReadonlyMap<number, LastEvening>>(new Map());
+  /**
+   * Those reads still in flight. They belong to one opening of the sheet and
+   * are cancelled with it, as the room's read is: an answer for last
+   * Monday's slot must not land in tonight's.
+   */
+  private lastNotesReads = new Subscription();
 
   /** What the programme says about a topic: its notes and its video. */
   protected detailOf(id: number): Pickable | undefined {
@@ -301,10 +307,12 @@ export class LessonSheetComponent {
     // and no notes fetched read the same, and the rest of the detail stands.
     // Only evenings before this sheet's day: tonight's plan, once somebody is
     // checked in, is held — and still this evening, not the last one.
-    this.lessonService
-      .lastNotes(id, this.heldOn())
-      .pipe(catchError(() => of(null)))
-      .subscribe((lesson) => this.setLastEvening(id, { state: 'done', lesson }));
+    this.lastNotesReads.add(
+      this.lessonService
+        .lastNotes(id, this.heldOn())
+        .pipe(catchError(() => of(null)))
+        .subscribe((lesson) => this.setLastEvening(id, { state: 'done', lesson })),
+    );
   }
 
   private setLastEvening(id: number, value: LastEvening): void {
@@ -452,8 +460,7 @@ export class LessonSheetComponent {
     this.expanded.set(new Set());
     this.dismissed.set(new Set());
     this.clearRoom();
-    this.detailOpen.set(null);
-    this.lastEvenings.set(new Map());
+    this.clearDetails();
 
     forkJoin({
       lesson: this.lessonService.get(this.academyClassId(), this.heldOn()),
@@ -532,6 +539,14 @@ export class LessonSheetComponent {
     this.roomGaps.set([]);
     this.roomPresent.set(0);
     this.roomNamesOpen.set(new Set());
+  }
+
+  /** Same rule for the technique details (#1862): the last opening's reads go with it. */
+  private clearDetails(): void {
+    this.lastNotesReads.unsubscribe();
+    this.lastNotesReads = new Subscription();
+    this.detailOpen.set(null);
+    this.lastEvenings.set(new Map());
   }
 
   private toast(severity: 'success' | 'error', summaryKey: string, detailKey?: string): void {
