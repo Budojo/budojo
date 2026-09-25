@@ -121,6 +121,12 @@ class UpdateAthleteRequest extends FormRequest
         $this->validatePhonePairWithLibphonenumber($validator);
     }
 
+    /** The phone is stored as its national significant number (#1867). */
+    protected function prepareForValidation(): void
+    {
+        $this->normalisePhonePair();
+    }
+
     /**
      * Match the canonical wire-level 403 contract used by every other write
      * FormRequest: `{"message":"Forbidden."}`. See StoreAthleteRequest for the

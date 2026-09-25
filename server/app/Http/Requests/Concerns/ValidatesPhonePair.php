@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Concerns;
 
+use App\Support\PhonePair;
 use Illuminate\Contracts\Validation\Validator;
 use libphonenumber\NumberParseException;
 use libphonenumber\PhoneNumberUtil;
@@ -19,9 +20,37 @@ use libphonenumber\PhoneNumberUtil;
  * The shape rules in `rules()` already enforce the "both filled or both null"
  * pair; this trait adds the reachability check (e.g. a `+39` prefix with a
  * national digit count that doesn't match any Italian numbering plan).
+ *
+ * It also normalises what is stored (#1867): call `normalisePhonePair()` from
+ * `prepareForValidation()`, and a valid pair is rewritten to its national
+ * significant number before the rules see it (`PhonePair`).
  */
 trait ValidatesPhonePair
 {
+    /**
+     * Rewrite a valid pair's national part to its national significant
+     * number: `+44` / `07911123456` becomes `7911123456`, and an Italian
+     * `061234567` stays as it is.
+     *
+     * Only digits are touched, so the shape rules still judge exactly what
+     * was sent — libphonenumber would happily read letters and spaces, and
+     * the contract says digits. An invalid pair is left as typed, so the
+     * reachability error below names the number the person entered.
+     */
+    protected function normalisePhonePair(): void
+    {
+        $cc = $this->input('phone_country_code');
+        $nn = $this->input('phone_national_number');
+        if (! \is_string($cc) || ! \is_string($nn) || $cc === '' || ! ctype_digit($nn)) {
+            return;
+        }
+
+        $significant = PhonePair::nationalSignificant($cc, $nn);
+        if ($significant !== null) {
+            $this->merge(['phone_national_number' => $significant]);
+        }
+    }
+
     protected function validatePhonePairWithLibphonenumber(Validator $validator): void
     {
         $validator->after(function (Validator $v): void {
