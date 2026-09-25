@@ -259,6 +259,18 @@ it('does not count a presence that was corrected away', function (): void {
         ->and($report['lessons'][0]['headcount'])->toBe(1);
 });
 
+it('leaves a deleted athlete out of the headcount, as it leaves them off the list', function (): void {
+    exposureLesson($this, '2026-09-16', [$this->armbar], [$this->anna, $this->marco]);
+    $this->marco->delete();
+
+    $report = exposureOf($this, $this->armbar);
+
+    // Two people were checked in; one of them is gone from the roster. The
+    // lesson row and the list below it must agree.
+    expect($report['lessons'][0]['headcount'])->toBe(1)
+        ->and(collect($report['athletes'])->pluck('id')->all())->toBe([$this->anna->id]);
+});
+
 it('counts people in the room, not rows', function (): void {
     $lesson = exposureLesson($this, '2026-09-16', [$this->armbar], [$this->anna, $this->marco]);
 
