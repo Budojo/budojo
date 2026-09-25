@@ -96,8 +96,8 @@ export const RELEASES: readonly Release[] = [
             it: '«Non si vedono da un po’» sopra l’elenco atleti: chi viene meno del suo solito, non meno di un numero fisso, con WhatsApp, chiamata e «Segna come inattivo».',
           },
           {
-            en: 'At check-in, "Who usually comes": the regulars of that class (3 of its last 4 lessons) not yet ticked tonight. WhatsApp and call sit beside a name wherever athletes are listed.',
-            it: 'Nel check-in, «Chi viene di solito»: gli abituali di quella lezione (3 delle ultime 4) non ancora spuntati stasera. WhatsApp e chiamata sono accanto al nome ovunque ci sia un elenco di atleti.',
+            en: 'At check-in, "Who usually comes": the regulars of that class (3 of its last 4 lessons) not yet ticked tonight. WhatsApp and call sit beside the name on these lists, the week’s birthdays and the athlete’s page.',
+            it: 'Nel check-in, «Chi viene di solito»: gli abituali di quella lezione (3 delle ultime 4) non ancora spuntati stasera. WhatsApp e chiamata sono accanto al nome in questi elenchi, nei compleanni della settimana e nella scheda dell’atleta.',
           },
         ],
       },
