@@ -597,6 +597,9 @@ Route::middleware('auth:sanctum')->group(function (): void {
         // Attendance — M4. `/attendance/summary` must come BEFORE `/attendance/{id}`
         // or Laravel binds "summary" as an attendance-record id and returns 404.
         Route::get('/attendance/summary', [\App\Http\Controllers\Attendance\AttendanceController::class, 'summary']);
+        // Who usually comes to a class (#1730). Before `/attendance/{attendance}`
+        // for the same reason as `summary` above.
+        Route::get('/attendance/regulars', [\App\Http\Controllers\Attendance\AttendanceController::class, 'regulars']);
         // What a lesson covered (#1564). Addressed by its slot — the class
         // and the day — because when the owner is planning it, the row does
         // not exist yet. `/recent-topics` first, or it would never be

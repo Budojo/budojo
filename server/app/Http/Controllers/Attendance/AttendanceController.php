@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Attendance;
 
 use App\Actions\Athlete\LoadAthleteIdentitiesAction;
 use App\Actions\Attendance\DeleteAttendanceAction;
+use App\Actions\Attendance\GetClassRegularsAction;
 use App\Actions\Attendance\GetAthleteAttendanceAction;
 use App\Actions\Attendance\GetAthleteAttendanceSummaryAction;
 use App\Actions\Attendance\GetDailyAttendanceAction;
@@ -13,10 +14,12 @@ use App\Actions\Attendance\GetMonthlyAttendanceSummaryAction;
 use App\Actions\Attendance\MarkAttendanceAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Attendance\AthleteAttendanceSummaryRequest;
+use App\Http\Requests\Attendance\ClassRegularsRequest;
 use App\Http\Requests\Attendance\MarkAttendanceRequest;
 use App\Http\Requests\Attendance\MonthlySummaryRequest;
 use App\Http\Resources\AthleteIdentityResource;
 use App\Http\Resources\AttendanceRecordResource;
+use App\Http\Resources\ClassRegularResource;
 use App\Models\Academy;
 use App\Models\AcademyClass;
 use App\Models\Athlete;
@@ -46,6 +49,7 @@ class AttendanceController extends Controller
         private readonly GetMonthlyAttendanceSummaryAction $summaryAction,
         private readonly GetAthleteAttendanceSummaryAction $athleteSummaryAction,
         private readonly LoadAthleteIdentitiesAction $identities,
+        private readonly GetClassRegularsAction $regularsAction,
     ) {
     }
 
@@ -248,6 +252,39 @@ class AttendanceController extends Controller
         });
 
         return response()->json(['data' => $data]);
+    }
+
+    /**
+     * Who usually comes to this class (#1730). All of them, not only the ones
+     * missing: the check-in already knows who is on the mat, and subtracting
+     * locally is what lets a tick take someone off the list without a request.
+     */
+    public function regulars(ClassRegularsRequest $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+        $academy = $user->activeAcademy();
+
+        // Same invariant reasoning as store(): authorize() gates this.
+        if ($academy === null) {
+            return response()->json(['message' => 'Forbidden.'], 403);
+        }
+
+        // The rules make the class required, so `classFor` never answers null.
+        $academyClass = $this->classFor($academy, $request->input('academy_class_id'));
+        if (! $academyClass instanceof AcademyClass) {
+            return $academyClass ?? response()->json(['message' => 'Forbidden.'], 403);
+        }
+
+        $result = $this->regularsAction->execute($academy, $academyClass, $request->day());
+
+        return response()->json([
+            'data' => ClassRegularResource::collection($result['regulars'])->resolve($request),
+            'meta' => [
+                'occurrences' => \count($result['occurrences']),
+                'occurrence_dates' => $result['occurrences'],
+            ],
+        ]);
     }
 
     /**
