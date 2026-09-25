@@ -9020,9 +9020,19 @@ components:
             allOf:
               - $ref: '#/components/schemas/CoverageTopic'
               - type: object
-                required: [lessons, last_taught_on, state]
+                required: [lessons, reach, attendances, last_taught_on, state]
                 properties:
                   lessons: { type: integer }
+                  reach:
+                    type: integer
+                    description: |
+                      Distinct athletes at one or more of those lessons (#1746).
+                      Three lessons to the same four people reach four. A
+                      column beside `lessons`, never part of the headline and
+                      never a threshold: covered still takes two lessons.
+                  attendances:
+                    type: integer
+                    description: Distinct (athlete, lesson) presences across those lessons — what makes `reach` checkable.
                   last_taught_on: { type: string, format: date }
                   state:
                     type: string

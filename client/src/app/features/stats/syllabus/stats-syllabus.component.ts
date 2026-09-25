@@ -22,6 +22,7 @@ import { relativeDay } from '../../../shared/utils/relative-day';
 import { localeFor } from '../../../shared/utils/locale';
 import { SeasonMapComponent } from './season-map/season-map.component';
 import { TopicExposureComponent } from './topic-exposure/topic-exposure.component';
+import { HowCountedComponent } from '../../../shared/components/how-counted/how-counted.component';
 
 /** Everything, or one of the academy's two modes — never `both`, which every filter admits. */
 type KindFilter = 'all' | TrainingMode;
@@ -73,6 +74,7 @@ interface FilterOption {
     ErrorStateComponent,
     SeasonMapComponent,
     TopicExposureComponent,
+    HowCountedComponent,
   ],
   templateUrl: './stats-syllabus.component.html',
   styleUrl: './stats-syllabus.component.scss',

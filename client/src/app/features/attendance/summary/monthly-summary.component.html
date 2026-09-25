@@ -26,6 +26,18 @@
        the skeleton, the empty state and the table all rendered flush
        against each other (#1355). -->
   <div class="summary-page__body">
+    <!--
+      How the header's attendances and each row's percentage are counted
+      (#1853): folded under the header, and only when there is a number to
+      explain. Gated on the rows alone, not on loading: the previous month's
+      rows stay until the next arrive, so the fold stays mounted (and open, if
+      it was) instead of the layout jumping on every month change.
+    -->
+    @if (rows().length > 0) {
+      <app-how-counted dataCy="monthly-summary-method">
+        <p class="summary-page__method">{{ 'attendance.summary.method' | translate }}</p>
+      </app-how-counted>
+    }
     <div class="summary-page__filter">
       <input
         pInputText

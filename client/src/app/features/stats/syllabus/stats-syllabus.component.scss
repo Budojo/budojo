@@ -40,7 +40,9 @@
     font-size: 3rem;
     font-weight: 600;
     line-height: 1;
-    color: var(--p-primary-color);
+    // Ink, not the accent (#1852): the accent means action, selection or
+    // state. A number earns its weight from its size.
+    color: var(--p-text-color);
     font-variant-numeric: tabular-nums;
   }
 
@@ -55,10 +57,9 @@
     color: var(--p-text-muted-color);
   }
 
+  // In the method fold (#1853), which sets its width and spacing.
   &__rule {
     margin: 0;
-    margin-top: 0.5rem;
-    max-width: 40rem;
     font-size: 0.8125rem;
     color: var(--p-text-muted-color);
   }
@@ -255,6 +256,20 @@
     font-size: 0.875rem;
     color: var(--p-text-color);
     overflow-wrap: anywhere;
+  }
+
+  // A taught row's name over its reach (#1746): what it was, then how many
+  // lessons and how many people.
+  &__what {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  &__reach {
+    font-size: 0.6875rem;
+    color: var(--p-text-muted-color);
+    font-variant-numeric: tabular-nums;
   }
 
   &__parent,
