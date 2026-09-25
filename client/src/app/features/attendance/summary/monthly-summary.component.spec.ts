@@ -491,7 +491,37 @@ describe('MonthlySummaryComponent', () => {
       'details[data-cy="monthly-summary-method"]',
     ) as HTMLDetailsElement;
     expect(method.open).toBe(false);
-    expect(method.textContent).toContain('an evening with two lessons is one day');
+    // One unit, named as the header names it: the header's "attendances" are
+    // days too (#1765), so the fold explains them rather than opposing them.
+    expect(method.textContent).toContain('an attendance is a day of training');
+    expect(method.textContent).not.toContain('not the presences');
+    http.verify();
+  });
+
+  it('keeps the fold mounted, and open, while the next month loads (#1853)', () => {
+    const { http, setMonthParam } = setupTestBed();
+    const fixture = TestBed.createComponent(MonthlySummaryComponent);
+    fixture.detectChanges();
+    setMonthParam(null);
+    http.expectOne('/api/v1/attendance/summary?month=2026-04').flush({ data: [makeRow(1, 5)] });
+    fixture.detectChanges();
+
+    const fold = (): HTMLDetailsElement | null =>
+      fixture.nativeElement.querySelector('details[data-cy="monthly-summary-method"]');
+    const opened = fold() as HTMLDetailsElement;
+    opened.open = true;
+
+    // The owner steps back a month: while it loads the old rows stay, and so
+    // does the fold. The layout does not jump and the fold does not close.
+    setMonthParam('2026-03');
+    fixture.detectChanges();
+    expect(fold()).toBe(opened);
+    expect(fold()?.open).toBe(true);
+
+    http.expectOne('/api/v1/attendance/summary?month=2026-03').flush({ data: [makeRow(2, 3)] });
+    fixture.detectChanges();
+    expect(fold()).toBe(opened);
+    expect(fold()?.open).toBe(true);
     http.verify();
   });
 

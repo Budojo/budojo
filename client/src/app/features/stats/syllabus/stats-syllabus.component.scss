@@ -55,10 +55,9 @@
     color: var(--p-text-muted-color);
   }
 
+  // In the method fold (#1853), which sets its width and spacing.
   &__rule {
     margin: 0;
-    margin-top: 0.5rem;
-    max-width: 40rem;
     font-size: 0.8125rem;
     color: var(--p-text-muted-color);
   }

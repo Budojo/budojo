@@ -1940,7 +1940,7 @@
       "presencesOne": "{{count}} attendance",
       "presencesOther": "{{count}} attendances",
       "noScheduleNote": "No timetable covers this month yet, so there is no day count to work the percentages against.",
-      "method": "Days counts the days the athlete came, not the presences: an evening with two lessons is one day. The percentage divides them by the month's training days in the timetable, up to today while the month is running."
+      "method": "Here an attendance is a day of training: an evening with two lessons counts once, in the attendances above and in each athlete's days. The percentage divides an athlete's days by the month's training days in the timetable, up to today while the month is running."
     }
   },
   "lessons": {

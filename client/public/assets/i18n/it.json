@@ -1940,7 +1940,7 @@
       "presencesOne": "{{count}} presenza",
       "presencesOther": "{{count}} presenze",
       "noScheduleNote": "Nessun orario copre ancora questo mese, quindi non c'è un totale di giorni su cui calcolare le percentuali.",
-      "method": "Giorni conta i giorni in cui l'atleta è venuto, non le presenze: una sera con due lezioni vale un giorno. La percentuale li divide per i giorni di allenamento del mese secondo l'orario, fino a oggi se il mese è in corso."
+      "method": "Qui una presenza è un giorno di allenamento: una sera con due lezioni conta una volta, nelle presenze in alto e nei giorni di ogni atleta. La percentuale divide i giorni di un atleta per i giorni di allenamento del mese secondo l'orario, fino a oggi se il mese è in corso."
     }
   },
   "lessons": {
