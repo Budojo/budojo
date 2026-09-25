@@ -48,7 +48,7 @@ function list(data: AtRiskRow[], available = 32, needed = 20): AtRiskList {
   return { data, meta: { sessions_available: available, sessions_needed: needed } };
 }
 
-function render(response: Observable<AtRiskList>) {
+function render(response: Observable<AtRiskList>, hasAthletes = true) {
   const stats = { atRisk: vi.fn(() => response) };
   const athletes = { update: vi.fn(() => of({})) };
   TestBed.configureTestingModule({
@@ -62,6 +62,7 @@ function render(response: Observable<AtRiskList>) {
     ],
   });
   const fixture = TestBed.createComponent(NotSeenLatelyComponent);
+  fixture.componentRef.setInput('hasAthletes', hasAthletes);
   fixture.detectChanges();
   const root = fixture.nativeElement as HTMLElement;
   return { fixture, root, stats, athletes };
@@ -138,6 +139,14 @@ describe('NotSeenLatelyComponent (#1729)', () => {
     const empty = root.querySelector('[data-cy="not-seen-empty-no-attendance"]');
     expect(empty).not.toBeNull();
     expect(empty?.querySelector('a')?.getAttribute('href')).toBe('/dashboard/attendance');
+  });
+
+  it('says nothing on an academy with nobody on its books yet', () => {
+    // The roster's first-run state and the onboarding checklist speak there;
+    // a link to an empty check-in above them would be a third voice.
+    const { root } = render(of(list([], 0, 20)), false);
+
+    expect(root.querySelector('[data-cy="not-seen-lately"]')).toBeNull();
   });
 
   it('renders nothing when the request fails, so the roster stays whole', () => {

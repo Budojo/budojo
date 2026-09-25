@@ -1,8 +1,11 @@
 <!--
   Nothing until the answer arrives, and nothing if it fails: the roster is
   what the owner came for, and a side panel must not be able to break it.
+  Nothing either while the academy has nobody on its books: the roster's own
+  first-run state and the onboarding checklist speak then, and a nudge to take
+  the register would point at a check-in with nobody to check in.
 -->
-@if (list(); as l) {
+@if (hasAthletes() && list(); as l) {
   <section class="not-seen" data-cy="not-seen-lately">
     @if (rows().length > 0) {
       <button

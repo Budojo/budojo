@@ -93,7 +93,13 @@ class AtRiskAthletesAction
      */
     public function execute(Academy $academy, CarbonImmutable $today): array
     {
-        $sessionsAvailable = $this->sessionsOf($academy, $today)->distinct()->count('attended_on');
+        // Tonight is not history yet. `assess()` leaves it out for everyone
+        // not ticked, so counting it here would say "enough" an evening early,
+        // and the empty list would read as "nobody drifting".
+        $sessionsAvailable = $this->sessionsOf($academy, $today)
+            ->whereDate('attended_on', '<', $today->toDateString())
+            ->distinct()
+            ->count('attended_on');
         $sessions = $this->latestSessions($academy, $today);
 
         if ($sessions === []) {

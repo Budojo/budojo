@@ -406,6 +406,16 @@ export class AthletesListComponent implements OnInit {
   });
 
   /**
+   * Whether the academy has anybody on its books. False only while the roster
+   * shows its first-run state — including before the first answer, so the
+   * not-seen-lately section (#1729) cannot flash a nudge to take the register
+   * above a first-run state that is about to say there is nobody to check in.
+   */
+  readonly hasAthletes = computed<boolean>(
+    () => this.totalRecords() > 0 || this.emptyStateKind() !== 'first-run',
+  );
+
+  /**
    * How many athletes exist once the default `active` is lifted — asked only
    * when the roster comes back empty on a query the owner did not narrow,
    * and only then. `null` is "not asked", never zero.

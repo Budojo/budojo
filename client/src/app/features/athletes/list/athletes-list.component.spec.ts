@@ -10,6 +10,7 @@ import { Tooltip } from 'primeng/tooltip';
 import type { Mock } from 'vitest';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 import { AthletesListComponent } from './athletes-list.component';
+import { NotSeenLatelyComponent } from './not-seen-lately/not-seen-lately.component';
 import { AcademyService, type Academy } from '../../../core/services/academy.service';
 import { RuntimeService } from '../../../core/services/runtime.service';
 import { AthleteService, type Athlete } from '../../../core/services/athlete.service';
@@ -2581,5 +2582,122 @@ describe('AthletesListComponent — sessions out of sessions held (#1455)', () =
       );
       expect(badge?.textContent?.trim()).toBe('2');
     });
+  });
+});
+
+describe('AthletesListComponent — not seen lately (#1729)', () => {
+  const AT_RISK = '/api/v1/stats/attendance/at-risk';
+
+  function makeAthlete(over: Partial<Athlete> = {}): Athlete {
+    return {
+      id: 42,
+      first_name: 'Mario',
+      last_name: 'Rossi',
+      email: null,
+      phone_country_code: null,
+      phone_national_number: null,
+      address: null,
+      date_of_birth: null,
+      belt: 'white',
+      stripes: 0,
+      status: 'active',
+      joined_at: '2026-01-01',
+      created_at: '2026-01-01T00:00:00Z',
+      ...over,
+    } as Athlete;
+  }
+
+  function configure() {
+    TestBed.configureTestingModule({
+      imports: [AthletesListComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        { provide: AthleteService, useClass: FakeAthleteService },
+        { provide: PaymentService, useClass: FakePaymentService },
+        ...provideI18nTesting(),
+      ],
+    });
+  }
+
+  beforeEach(configure);
+
+  function render(rows: Athlete[]) {
+    const athleteService = TestBed.inject(AthleteService) as unknown as FakeAthleteService;
+    athleteService.list.mockReturnValue(
+      of({
+        data: rows,
+        meta: { total: rows.length, current_page: 1, per_page: 20, last_page: 1 },
+      }),
+    );
+    const fixture = TestBed.createComponent(AthletesListComponent);
+    fixture.detectChanges();
+
+    return { fixture, list: athleteService.list, http: TestBed.inject(HttpTestingController) };
+  }
+
+  function atRiskRequests(http: HttpTestingController) {
+    return http.match((req) => req.url.endsWith(AT_RISK));
+  }
+
+  it('reloads the table exactly once when someone is marked inactive from the section', () => {
+    const { fixture, list } = render([makeAthlete()]);
+    list.mockClear();
+
+    const section = fixture.debugElement.query(By.directive(NotSeenLatelyComponent));
+    (section.componentInstance as NotSeenLatelyComponent).markedInactive.emit(42);
+
+    // With the inactive hidden, their row would otherwise stay on the table.
+    expect(list).toHaveBeenCalledTimes(1);
+  });
+
+  it('asks who is drifting once — never again on a search or a page change', () => {
+    const { fixture, list, http } = render([makeAthlete()]);
+    expect(atRiskRequests(http)).toHaveLength(1);
+
+    fixture.componentInstance.applySearch('mario');
+    fixture.componentInstance.onPageChange({ first: 20, rows: 20 });
+    fixture.detectChanges();
+
+    // The table did go back to the server, twice; the section did not.
+    expect(list.mock.calls.length).toBeGreaterThanOrEqual(3);
+    expect(atRiskRequests(http)).toHaveLength(0);
+  });
+
+  it('is not in the restore picker, which is about different people', () => {
+    const { fixture } = render([makeAthlete()]);
+    expect(fixture.debugElement.query(By.directive(NotSeenLatelyComponent))).not.toBeNull();
+
+    fixture.componentInstance.onStatusChange('trashed');
+    fixture.detectChanges();
+
+    expect(fixture.debugElement.query(By.directive(NotSeenLatelyComponent))).toBeNull();
+  });
+
+  it('says nothing on an academy with nobody on its books, and speaks once it has someone', () => {
+    const empty = render([]);
+    atRiskRequests(empty.http)[0].flush({
+      data: [],
+      meta: { sessions_available: 0, sessions_needed: 20 },
+    });
+    empty.fixture.detectChanges();
+
+    // The first-run state and the onboarding checklist speak here: a link to
+    // take the register would point at a check-in with nobody to check in.
+    const root = empty.fixture.nativeElement as HTMLElement;
+    expect(root.querySelector('[data-cy="not-seen-lately"]')).toBeNull();
+
+    TestBed.resetTestingModule();
+    configure();
+    const peopled = render([makeAthlete()]);
+    atRiskRequests(peopled.http)[0].flush({
+      data: [],
+      meta: { sessions_available: 0, sessions_needed: 20 },
+    });
+    peopled.fixture.detectChanges();
+
+    const peopledRoot = peopled.fixture.nativeElement as HTMLElement;
+    expect(peopledRoot.querySelector('[data-cy="not-seen-empty-no-attendance"]')).not.toBeNull();
   });
 });

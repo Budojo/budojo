@@ -5,6 +5,7 @@ import {
   OnInit,
   computed,
   inject,
+  input,
   output,
   signal,
 } from '@angular/core';
@@ -94,6 +95,12 @@ export class NotSeenLatelyComponent implements OnInit {
   private readonly confirmation = inject(ConfirmationService);
   private readonly messages = inject(MessageService);
   private readonly destroyRef = inject(DestroyRef);
+
+  /**
+   * Whether the academy has anybody on its books, as the roster knows it.
+   * False on a brand-new academy, where this section has nothing to say.
+   */
+  readonly hasAthletes = input.required<boolean>();
 
   /** An athlete marked inactive from here — the roster reloads its table. */
   readonly markedInactive = output<number>();

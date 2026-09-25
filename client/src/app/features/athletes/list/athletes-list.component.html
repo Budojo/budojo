@@ -409,7 +409,11 @@
     here reloads the table, or with the inactive hidden their row would stay.
   -->
   @if (!isTrashedMode()) {
-    <app-not-seen-lately class="athletes-page__not-seen" (markedInactive)="reload()" />
+    <app-not-seen-lately
+      class="athletes-page__not-seen"
+      [hasAthletes]="hasAthletes()"
+      (markedInactive)="reload()"
+    />
   }
 
   @if (loadError()) {

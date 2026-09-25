@@ -283,6 +283,21 @@ it('says how many sessions exist, so a young academy is not reported as healthy'
         ->and($response['meta'])->toBe(['sessions_available' => 15, 'sessions_needed' => 20]);
 });
 
+it('does not count tonight as history before it is over', function (): void {
+    // Nineteen sessions before today, and a twentieth in progress with one
+    // person ticked. Everyone not ticked is judged on nineteen, which is too
+    // few: the client must hear "not enough history", not "nobody drifting".
+    AttendanceRecord::query()->forceDelete();
+    $before = atRiskSessionDates(19);
+    atRiskPresent($this->regular, [...$before, '2026-09-24']);
+    atRiskPresent(atRiskAthlete($this->academy, 'Drifting'), atRiskAt($before, range(8, 18)));
+
+    $response = atRiskResponse($this);
+
+    expect($response['data'])->toBe([])
+        ->and($response['meta'])->toBe(['sessions_available' => 19, 'sessions_needed' => 20]);
+});
+
 it('refuses an athlete account the way the other stats routes do', function (): void {
     $athlete = User::factory()->athlete()->create();
 

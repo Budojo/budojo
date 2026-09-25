@@ -6278,8 +6278,9 @@ paths:
 
         Sorted `gone`, `quiet`, `dropping`; within a tier, longest absent
         first (never-seen first of all). `meta.sessions_available` counts
-        the academy's realised sessions, so a client can tell "nobody is
-        drifting" from "not enough sessions recorded yet". Not cached.
+        the academy's realised sessions before today, so a client can tell
+        "nobody is drifting" from "not enough sessions recorded yet". Not
+        cached.
 
         Owner-only, and requires `stats_view`: the route sits in the
         `role:owner` group with every other `/stats` read, so any other role
@@ -7758,9 +7759,11 @@ components:
               type: integer
               minimum: 0
               description: |
-                Every realised session the academy has recorded. Below
-                `sessions_needed` nobody can be judged yet, and an empty list
-                means "not enough history", not "nobody drifting".
+                Every realised session the academy has recorded before
+                today. Tonight is left out until it is over, as it is for
+                everyone not yet ticked. Below `sessions_needed` nobody can be
+                judged yet, and an empty list means "not enough history", not
+                "nobody drifting".
             sessions_needed:
               type: integer
               example: 20
