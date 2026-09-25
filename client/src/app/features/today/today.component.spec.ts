@@ -80,7 +80,10 @@ interface Responses {
   unpaidPending?: boolean;
   daily?: { date: string; count: number }[];
   coverage?: unknown | 'error';
-  recent?: Athlete[];
+  /** The joiners' page (it also counts the roster); `'error'` fails it. */
+  recent?: Athlete[] | 'error';
+  /** Leave the joiners' page unanswered, as if still in flight. */
+  joinedPending?: boolean;
   /** `?birthday=week` (#1754); `'error'` fails it. */
   birthdays?: Athlete[] | 'error';
   /** Everyone on the books; the joiners' page carries it as `meta.total`. */
@@ -206,12 +209,19 @@ function flushAll(http: HttpTestingController, r: Responses = {}): void {
     coverageReq.flush({ data: coverage });
   }
 
-  http
-    .expectOne((req) => req.url.endsWith('/athletes') && req.params.get('sort_by') === 'joined_at')
-    .flush({
-      data: r.recent ?? [],
-      meta: { total: r.roster ?? 12, current_page: 1, per_page: 20, last_page: 1 },
-    });
+  if (!r.joinedPending) {
+    const joinedReq = http.expectOne(
+      (req) => req.url.endsWith('/athletes') && req.params.get('sort_by') === 'joined_at',
+    );
+    if (r.recent === 'error') {
+      joinedReq.flush({ message: 'boom' }, { status: 500, statusText: 'Server Error' });
+    } else {
+      joinedReq.flush({
+        data: r.recent ?? [],
+        meta: { total: r.roster ?? 12, current_page: 1, per_page: 20, last_page: 1 },
+      });
+    }
+  }
 
   const birthdaysReq = http.expectOne(
     (req) => req.url.endsWith('/athletes') && req.params.get('birthday') === 'week',
@@ -1217,6 +1227,45 @@ describe('TodayComponent', () => {
       // Last Thursday's class: a register exists, this week's is still empty.
       const taking = render({ daily: [{ date: '2026-09-17', count: 9 }] });
       expect(text(taking, 'today-week-presences')).toContain('0');
+    });
+
+    it('holds the watch card on its skeleton until it knows whether anyone is on the books', () => {
+      const http = setup();
+      const fixture = TestBed.createComponent(TodayComponent);
+      fixture.detectChanges();
+      // The documents answer first — the desktop's server takes one request
+      // at a time — while the joiners' page, which counts the roster, is out.
+      flushAll(http, { ...EMPTY, joinedPending: true });
+      fixture.detectChanges();
+      const root = fixture.nativeElement as HTMLElement;
+      expect(text(root, 'today-watch')).not.toContain('Nothing to check');
+      expect(root.querySelector('[data-cy="today-watch"] p-skeleton')).not.toBeNull();
+
+      // Nobody on the books: the card goes, without having said the all-clear.
+      http
+        .expectOne(
+          (req) => req.url.endsWith('/athletes') && req.params.get('sort_by') === 'joined_at',
+        )
+        .flush({ data: [], meta: { total: 0, current_page: 1, per_page: 20, last_page: 1 } });
+      fixture.detectChanges();
+      expect(root.querySelector('[data-cy="today-watch"]')).toBeNull();
+      http.verify();
+    });
+
+    it('when the roster cannot be counted, still settles, and draws no week for the error alone', () => {
+      const root = render({ ...EMPTY, recent: 'error' });
+
+      // The skeleton always resolves: with the count unknown, the all-clear is said.
+      expect(text(root, 'today-watch')).toContain('Nothing to check');
+      // "Couldn't load new members" is not a card on its own.
+      expect(root.querySelector('[data-cy="today-week"]')).toBeNull();
+    });
+
+    it("says the joiners' failure inside a week that has other lines", () => {
+      const root = render({ recent: 'error' });
+
+      expect(text(root, 'today-week-joined')).toContain("Couldn't load");
+      expect(root.querySelector('[data-cy="today-week-programme"]')).not.toBeNull();
     });
 
     it('lists who joined this week, and says nothing in a week nobody did', () => {

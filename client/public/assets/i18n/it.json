@@ -442,7 +442,7 @@
     "steps": {
       "add_athlete": {
         "label": "Aggiungi il primo atleta",
-        "hint": "Crea il profilo di un atleta — nome, cintura, stato. La roster è la base."
+        "hint": "Crea il profilo di un atleta — nome, cintura, stato. Il roster è la base."
       },
       "log_attendance": {
         "label": "Registra una presenza",

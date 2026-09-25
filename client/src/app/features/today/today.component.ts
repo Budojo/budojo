@@ -260,12 +260,16 @@ export class TodayComponent implements OnInit {
    * The card says "nothing to check" only when every source has answered and
    * found nothing — never while one is loading, and never after one failed.
    * Three sources: the documents, the backup bridge (#1751), and the unpaid
-   * count from the 16th (#1753).
+   * count from the 16th (#1753). And a fourth question before it says so:
+   * whether anyone is on the books (#1755), which the joiners' page answers.
+   * Its failure settles the card too — the all-clear is then said — or the
+   * skeleton would never resolve.
    */
   protected readonly watchState = computed<'loading' | 'settled'>(() =>
     this.health().state === 'loading' ||
     this.watchUnpaid()?.state === 'loading' ||
-    !this.backupRead()
+    !this.backupRead() ||
+    this.joined().state === 'loading'
       ? 'loading'
       : 'settled',
   );
@@ -378,14 +382,21 @@ export class TodayComponent implements OnInit {
     const j = this.joined();
     return j.state !== 'ready' || j.value.length > 0;
   });
-  /** The card is drawn only with a line in it: no heading over nothing (#1755). */
-  protected readonly weekShown = computed<boolean>(
-    () =>
+  /**
+   * The card is drawn only with a line in it: no heading over nothing (#1755).
+   * The joiners' failure is said inside a card that has other lines, but is
+   * not a card on its own.
+   */
+  protected readonly weekShown = computed<boolean>(() => {
+    const j = this.joined();
+    return (
       this.presences() !== null ||
       this.notYetPaid() !== null ||
       (this.coverage()?.totals.in_scope ?? 0) > 0 ||
-      this.joinedShown(),
-  );
+      j.state === 'loading' ||
+      (j.state === 'ready' && j.value.length > 0)
+    );
+  });
 
   // ── Compleanni ─────────────────────────────────────────────────────────
 
