@@ -1926,6 +1926,20 @@
       "monthlySummary": "Riepilogo del mese",
       "presentCountOne": "{{count}} presente",
       "presentCountOther": "{{count}} presenti",
+      "missing": {
+        "title": "Chi viene di solito",
+        "description": "Presenti ad almeno 3 delle ultime 4 lezioni di questa classe, e non ancora segnati.",
+        "countOne": "Manca {{count}} abituale",
+        "countOther": "Mancano {{count}} abituali",
+        "attended": "{{attended}} delle ultime {{total}}",
+        "lastSeen": "Ultima volta {{when}}",
+        "allHere": "Ci sono tutti quelli che vengono di solito",
+        "noHistory": "Nessuna lezione di questa classe registrata finora: è presto per dire chi viene di solito.",
+        "notEnoughHistoryOne": "Solo {{count}} lezione di questa classe registrata: non basta per dire chi viene di solito.",
+        "notEnoughHistoryOther": "Solo {{count}} lezioni di questa classe registrate: non bastano per dire chi viene di solito.",
+        "loadError": "Impossibile caricare chi viene di solito a questa classe.",
+        "retry": "Riprova"
+      },
       "topics": {
         "empty": "Ancora niente",
         "add": "Aggiungi argomenti",

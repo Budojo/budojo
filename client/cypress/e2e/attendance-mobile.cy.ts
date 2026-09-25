@@ -88,3 +88,74 @@ MOBILE_VIEWPORTS.forEach(({ name, width, height }) => {
     });
   });
 });
+
+// The missing-regulars panel (#1730) on the phone held in one hand: two
+// icon buttons per row and the habit under the name, never a sideways
+// scroll. Its behaviour is covered at desktop width in
+// `attendance-missing.cy.ts`; this is only its layout.
+const FUNDAMENTALS = {
+  id: 2,
+  name: 'Fundamentals',
+  weekday: 1,
+  starts_at: '19:00',
+  duration_minutes: 60,
+  kind: 'gi',
+};
+const REGULARS = {
+  statusCode: 200,
+  body: {
+    data: [
+      {
+        id: 3,
+        first_name: 'Annamaria',
+        last_name: 'Bianchi-Castelfranchi',
+        belt: 'purple',
+        stripes: 3,
+        date_of_birth: '1992-03-01',
+        photo_url: null,
+        user_avatar_url: null,
+        phone_country_code: '+39',
+        phone_national_number: '3471234567',
+        attended: 4,
+        last_attended_on: '2026-09-10',
+      },
+    ],
+    meta: {
+      occurrences: 4,
+      occurrence_dates: ['2026-09-07', '2026-08-31', '2026-08-24', '2026-08-17'],
+    },
+  },
+};
+
+MOBILE_VIEWPORTS.forEach(({ name, width, height }) => {
+  describe(`Missing regulars fit on mobile (${name}, ${width}×${height})`, () => {
+    beforeEach(() => {
+      cy.clock(new Date(2026, 8, 14, 18, 30).getTime(), ['Date']);
+      cy.viewport(width, height);
+      cy.intercept('GET', '/api/v1/academy', ACADEMY_OK);
+      cy.intercept('GET', '/api/v1/athletes*', ATHLETES_TWO);
+      cy.intercept('GET', '/api/v1/documents/expiring*', EXPIRING_EMPTY);
+      cy.intercept('GET', '/api/v1/lessons?*', { statusCode: 200, body: { data: null } });
+      cy.intercept('GET', '/api/v1/academy/classes', {
+        statusCode: 200,
+        body: { data: [FUNDAMENTALS] },
+      });
+      cy.intercept('GET', '/api/v1/attendance*', ATTENDANCE_EMPTY);
+      cy.intercept('GET', '/api/v1/attendance/regulars*', REGULARS).as('regulars');
+      cy.visitAuthenticated('/dashboard/attendance');
+      cy.wait('@regulars');
+    });
+
+    it('opens without a sideways scroll, with both ways to reach them in reach', () => {
+      cy.get('[data-cy="missing-regulars-toggle"]').click();
+      cy.get('[data-cy="missing-regular-3"]').should('be.visible');
+      cy.get('[data-cy="missing-contact-3-whatsapp"]').should('be.visible');
+      cy.get('[data-cy="missing-contact-3-call"]').should('be.visible');
+
+      cy.document().then((doc) => {
+        const root = doc.documentElement;
+        expect(root.scrollWidth, 'documentElement.scrollWidth').to.be.lte(root.clientWidth);
+      });
+    });
+  });
+});

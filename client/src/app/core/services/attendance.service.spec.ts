@@ -53,6 +53,26 @@ describe('AttendanceService', () => {
     });
   });
 
+  describe('regulars (#1730)', () => {
+    it('GETs /attendance/regulars for the day and the class, and keeps the envelope', () => {
+      const body = {
+        data: [],
+        meta: { occurrences: 2, occurrence_dates: ['2026-09-09', '2026-09-02'] },
+      };
+      let received: unknown;
+      service.regulars('2026-09-16', 4).subscribe((r) => (received = r));
+
+      const req = httpMock.expectOne((r) => r.url === '/api/v1/attendance/regulars');
+      expect(req.request.method).toBe('GET');
+      expect(req.request.params.get('date')).toBe('2026-09-16');
+      expect(req.request.params.get('academy_class_id')).toBe('4');
+      req.flush(body);
+
+      // The meta is the whole "not enough history" answer: it must survive.
+      expect(received).toEqual(body);
+    });
+  });
+
   describe('markBulk', () => {
     it('POSTs the date + athlete_ids body and unwraps the records list', () => {
       const created = [

@@ -666,6 +666,38 @@ function record(id: number, athlete_id: number, attended_on: string, lesson_id: 
 
 const ATTENDANCE_TONIGHT = [record(1, 1, TODAY, 7), record(2, 2, TODAY, 7), record(3, 4, TODAY, 7)];
 
+/**
+ * Who usually comes to tonight's class (#1730). The last four Mondays the
+ * academy held a session — August was closed, so they jump from 7 September
+ * to July. Giulia, Luca and Sara are on the mat already; Elena and Francesca
+ * are the two the panel names. Taken from the roster, so a person has the
+ * same belt and phone on every screen.
+ */
+function regularOf(id: number, attended: number, last_attended_on: string) {
+  const a = ATHLETES.find((x) => x.id === id);
+  if (!a) throw new Error(`no roster athlete ${id}`);
+  return {
+    ...identityOf(id),
+    phone_country_code: a.phone_country_code ?? null,
+    phone_national_number: a.phone_national_number ?? null,
+    attended,
+    last_attended_on,
+  };
+}
+
+const MONDAYS_HELD = ['2026-09-07', '2026-07-27', '2026-07-20', '2026-07-13'];
+
+const REGULARS_TONIGHT = {
+  data: [
+    regularOf(1, 4, '2026-09-11'),
+    regularOf(6, 4, '2026-09-09'),
+    regularOf(2, 3, '2026-09-10'),
+    regularOf(4, 3, '2026-09-03'),
+    regularOf(8, 3, '2026-09-10'),
+  ],
+  meta: { occurrences: 4, occurrence_dates: MONDAYS_HELD },
+};
+
 const ATTENDANCE_ONE = [
   record(10, 1, '2026-09-11', 5),
   record(11, 1, '2026-09-09', 3),
@@ -1650,6 +1682,7 @@ function seed(): void {
     body: { data: ATTENDANCE_SUMMARY },
   });
   cy.intercept('GET', '/api/v1/attendance/leaderboard*', { statusCode: 200, body: LEADERBOARD });
+  cy.intercept('GET', '/api/v1/attendance/regulars*', { statusCode: 200, body: REGULARS_TONIGHT });
   cy.intercept('GET', '/api/v1/lessons?*', { statusCode: 200, body: { data: LESSON_TONIGHT } });
   cy.intercept('GET', '/api/v1/lessons/recent-topics', {
     statusCode: 200,
@@ -2491,6 +2524,30 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
         dialogOpen('[data-cy="lesson-sheet"]');
         cy.get('[data-cy="lesson-sheet-search"]').type('kim');
         cy.get('[data-cy="lesson-sheet-results"]').should('be.visible');
+      },
+    },
+  );
+  // Who usually comes and is not here (#1730), opened: two regulars missing.
+  screen('30-attendance-missing', '/dashboard/attendance', '[data-cy="missing-regulars-toggle"]', {
+    act: () => {
+      press('[data-cy="missing-regulars-toggle"]');
+      cy.get('[data-cy="missing-regular-6"]').scrollIntoView().should('be.visible');
+    },
+  });
+  // A class with two sessions on record: "we cannot tell yet", never "all here".
+  screen(
+    '30-attendance-missing-not-enough',
+    '/dashboard/attendance',
+    '[data-cy="missing-regulars-not-enough"]',
+    {
+      stubs: () => {
+        cy.intercept('GET', '/api/v1/attendance/regulars*', {
+          statusCode: 200,
+          body: { data: [], meta: { occurrences: 2, occurrence_dates: MONDAYS_HELD.slice(0, 2) } },
+        });
+      },
+      act: () => {
+        cy.get('[data-cy="missing-regulars-not-enough"]').scrollIntoView();
       },
     },
   );

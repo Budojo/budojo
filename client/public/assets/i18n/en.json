@@ -1926,6 +1926,20 @@
       "monthlySummary": "Monthly summary",
       "presentCountOne": "{{count}} present",
       "presentCountOther": "{{count}} present",
+      "missing": {
+        "title": "Who usually comes",
+        "description": "At 3 of this class's last 4 sessions, and not checked in yet.",
+        "countOne": "{{count}} regular missing",
+        "countOther": "{{count}} regulars missing",
+        "attended": "{{attended}} of the last {{total}}",
+        "lastSeen": "Last seen {{when}}",
+        "allHere": "Everyone who usually comes is here",
+        "noHistory": "No session of this class on record yet: too soon to tell who usually comes.",
+        "notEnoughHistoryOne": "Only {{count}} session of this class on record: too few to tell who usually comes.",
+        "notEnoughHistoryOther": "Only {{count}} sessions of this class on record: too few to tell who usually comes.",
+        "loadError": "Could not load who usually comes to this class.",
+        "retry": "Try again"
+      },
       "topics": {
         "empty": "Nothing tagged yet",
         "add": "Add topics",

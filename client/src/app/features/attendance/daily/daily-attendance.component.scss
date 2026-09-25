@@ -264,6 +264,12 @@
   text-align: center;
 }
 
+// Below the register, with the room to be read as its own block (#1730).
+.attendance__missing {
+  display: block;
+  margin-top: 1rem;
+}
+
 // ── Toast undo button — minimal, no PrimeNG default chrome ────────────────────
 
 .attendance-toast {
