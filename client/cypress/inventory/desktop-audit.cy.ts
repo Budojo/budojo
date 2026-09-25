@@ -891,6 +891,8 @@ const SYLLABUS_COVERAGE = {
       parent_name: 'Closed guard',
       kind: 'both',
       lessons: 3,
+      reach: 5,
+      attendances: 9,
       last_taught_on: '2026-09-11',
       state: 'covered',
     },
@@ -900,6 +902,8 @@ const SYLLABUS_COVERAGE = {
       parent_name: 'Closed guard',
       kind: 'both',
       lessons: 2,
+      reach: 6,
+      attendances: 9,
       last_taught_on: '2026-09-09',
       state: 'covered',
     },
@@ -909,6 +913,8 @@ const SYLLABUS_COVERAGE = {
       parent_name: 'Mount',
       kind: 'both',
       lessons: 2,
+      reach: 4,
+      attendances: 7,
       last_taught_on: '2026-09-07',
       state: 'covered',
     },
@@ -918,6 +924,8 @@ const SYLLABUS_COVERAGE = {
       parent_name: 'Closed guard',
       kind: 'both',
       lessons: 1,
+      reach: 7,
+      attendances: 7,
       last_taught_on: '2026-09-09',
       state: 'thin',
     },
@@ -927,6 +935,8 @@ const SYLLABUS_COVERAGE = {
       parent_name: 'Half guard',
       kind: 'both',
       lessons: 1,
+      reach: 6,
+      attendances: 6,
       last_taught_on: '2026-09-07',
       state: 'thin',
     },
@@ -936,6 +946,8 @@ const SYLLABUS_COVERAGE = {
       parent_name: 'Mount',
       kind: 'both',
       lessons: 1,
+      reach: 4,
+      attendances: 4,
       last_taught_on: '2026-09-04',
       state: 'thin',
     },
@@ -945,6 +957,8 @@ const SYLLABUS_COVERAGE = {
       parent_name: 'Standing',
       kind: 'both',
       lessons: 1,
+      reach: 5,
+      attendances: 5,
       last_taught_on: '2026-09-02',
       state: 'thin',
     },
@@ -2156,6 +2170,18 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
     },
   });
   screen('22-athlete-coverage', '/dashboard/athletes/1/coverage', '[data-cy="athlete-coverage"]');
+  // The method folded under the number, opened (#1853).
+  screen(
+    '22-athlete-coverage-method',
+    '/dashboard/athletes/1/coverage',
+    '[data-cy="athlete-coverage-method"]',
+    {
+      act: () => {
+        press('[data-cy="athlete-coverage-method"] summary');
+        settle();
+      },
+    },
+  );
   // The programme of their own belt (#1861) — only there once the academy
   // has graded something.
   screen(
@@ -2343,6 +2369,18 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
     '/dashboard/attendance/summary',
     '[data-cy="monthly-summary-page"]',
   );
+  // The method folded under the header, opened (#1853).
+  screen(
+    '31-attendance-summary-method',
+    '/dashboard/attendance/summary',
+    '[data-cy="monthly-summary-method"]',
+    {
+      act: () => {
+        press('[data-cy="monthly-summary-method"] summary');
+        settle();
+      },
+    },
+  );
 
   // ── 40. Stats ──────────────────────────────────────────────────────────
   screen('40-stats-overview', '/dashboard/stats/overview', '[data-cy="stats-tabs"]', {
@@ -2418,6 +2456,20 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       });
     },
   });
+  // The other screen's rule, folded under the headline and opened (#1853).
+  screen(
+    '40-stats-syllabus-method',
+    '/dashboard/stats/syllabus',
+    '[data-cy="syllabus-coverage-method"]',
+    {
+      clock: false,
+      act: () => {
+        cy.wait(1500);
+        press('[data-cy="syllabus-coverage-method"] summary');
+        settle();
+      },
+    },
+  );
   // A taught row, opened on who has seen it (#1745).
   screen(
     '40-stats-syllabus-exposure',

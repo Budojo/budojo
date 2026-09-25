@@ -94,7 +94,13 @@ final class TopicAttendance
     }
 
     /**
-     * Lesson id → the distinct athletes with a live presence on it.
+     * Lesson id → the distinct living athletes with a live presence on it.
+     *
+     * A deleted athlete's presence rows stay live, but the person is gone
+     * from every list that names people, so they are not counted here
+     * either: a technique's reach and a lesson's headcount must agree with
+     * the names shown under them (#1746). Whether the lesson was *held* is a
+     * separate question, answered above on presences alone.
      *
      * @param  list<int>  $lessonIds
      * @return array<int, list<int>>
@@ -102,12 +108,14 @@ final class TopicAttendance
     private function athletesPresentAt(array $lessonIds): array
     {
         $rows = DB::table('attendance_records')
-            ->whereIn('lesson_id', $lessonIds)
-            ->whereNull('deleted_at')
+            ->join('athletes', 'athletes.id', '=', 'attendance_records.athlete_id')
+            ->whereIn('attendance_records.lesson_id', $lessonIds)
+            ->whereNull('attendance_records.deleted_at')
+            ->whereNull('athletes.deleted_at')
             ->distinct()
-            ->orderBy('lesson_id')
-            ->orderBy('athlete_id')
-            ->get(['lesson_id', 'athlete_id']);
+            ->orderBy('attendance_records.lesson_id')
+            ->orderBy('attendance_records.athlete_id')
+            ->get(['attendance_records.lesson_id as lesson_id', 'attendance_records.athlete_id as athlete_id']);
 
         $out = [];
         foreach ($rows as $row) {

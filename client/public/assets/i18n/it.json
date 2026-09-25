@@ -1,6 +1,7 @@
 {
   "common": {
-    "cancel": "Annulla"
+    "cancel": "Annulla",
+    "howCounted": "Come si conta?"
   },
   "language": {
     "label": "Lingua",
@@ -1950,7 +1951,8 @@
       },
       "presencesOne": "{{count}} presenza",
       "presencesOther": "{{count}} presenze",
-      "noScheduleNote": "Nessun orario copre ancora questo mese, quindi non c'è un totale di giorni su cui calcolare le percentuali."
+      "noScheduleNote": "Nessun orario copre ancora questo mese, quindi non c'è un totale di giorni su cui calcolare le percentuali.",
+      "method": "Qui una presenza è un giorno di allenamento di un atleta: una sera con due lezioni conta una volta per ogni atleta presente, e le presenze in alto sommano i giorni di tutti gli atleti. La percentuale divide i giorni di un atleta per i giorni di allenamento del mese secondo l'orario, fino a oggi se il mese è in corso."
     }
   },
   "lessons": {
@@ -2932,6 +2934,10 @@
       "missingList": "Non ancora fatto ({{count}})",
       "nothingMissing": "Non manca niente: hai fatto tutto il programma.",
       "thinTag": "Una volta",
+      "lessonsOne": "{{count}} lezione",
+      "lessonsOther": "{{count}} lezioni",
+      "reachOne": "{{count}} persona",
+      "reachOther": "{{count}} persone",
       "state": {
         "coveredOne": "{{count}} coperto",
         "coveredOther": "{{count}} coperti",

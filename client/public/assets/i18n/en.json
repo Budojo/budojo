@@ -1,6 +1,7 @@
 {
   "common": {
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "howCounted": "How is this counted?"
   },
   "language": {
     "label": "Language",
@@ -1950,7 +1951,8 @@
       },
       "presencesOne": "{{count}} attendance",
       "presencesOther": "{{count}} attendances",
-      "noScheduleNote": "No timetable covers this month yet, so there is no day count to work the percentages against."
+      "noScheduleNote": "No timetable covers this month yet, so there is no day count to work the percentages against.",
+      "method": "Here an attendance is one athlete's day of training: an evening with two lessons counts once for each athlete who was there, and the attendances above add up every athlete's days. The percentage divides an athlete's days by the month's training days in the timetable, up to today while the month is running."
     }
   },
   "lessons": {
@@ -2932,6 +2934,10 @@
       "missingList": "Not taught yet ({{count}})",
       "nothingMissing": "Nothing left — the whole programme has been taught.",
       "thinTag": "Once",
+      "lessonsOne": "{{count}} lesson",
+      "lessonsOther": "{{count}} lessons",
+      "reachOne": "{{count}} person",
+      "reachOther": "{{count}} people",
       "state": {
         "coveredOne": "{{count}} covered",
         "coveredOther": "{{count}} covered",
