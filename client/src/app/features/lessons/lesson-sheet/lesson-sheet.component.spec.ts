@@ -831,9 +831,9 @@ describe('LessonSheetComponent — planning ahead (#1859)', () => {
       ) as HTMLElement;
       return {
         title: panel.querySelector('.group__title')?.textContent ?? '',
-        dismiss: panel.querySelector('[data-cy="lesson-suggestion-dismiss-12"]')?.getAttribute(
-          'aria-label',
-        ),
+        dismiss: panel
+          .querySelector('[data-cy="lesson-suggestion-dismiss-12"]')
+          ?.getAttribute('aria-label'),
       };
     };
 

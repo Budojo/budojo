@@ -208,9 +208,7 @@ export class SeasonMapComponent {
    * no-gi position in a gi-only timetable has nowhere to go.
    */
   protected canPlan(row: MapRow): boolean {
-    return (
-      this.seasonsBack() === 0 && this.classes().some((c) => admitsTopic(c.kind, row.kind))
-    );
+    return this.seasonsBack() === 0 && this.classes().some((c) => admitsTopic(c.kind, row.kind));
   }
 
   protected readonly currentWeek = computed<string | null>(() => {
