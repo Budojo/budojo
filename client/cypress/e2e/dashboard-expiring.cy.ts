@@ -55,19 +55,6 @@ describe('Expiring documents widget + deep-link', () => {
     // backend, 401s on the fake token, and trips the auth redirect.
     // Specific stubs registered after still win (most-recently-defined).
     cy.intercept('GET', '/api/v1/**', { statusCode: 200, body: { data: [] } });
-    // The `/dashboard/athletes` page co-mounts <app-onboarding-checklist>
-    // (#424) ABOVE <app-expiring-documents-widget> in the template. The
-    // checklist reads `data.completed_steps` / `data.available_steps`; the
-    // catch-all's bare `{ data: [] }` leaves those undefined, the checklist
-    // throws during change detection, and that throw aborts the CD tick
-    // that would paint the expiring widget below it — so the count never
-    // renders. Stub the dismissed object so the checklist self-hides.
-    cy.intercept('GET', '/api/v1/me/onboarding', {
-      statusCode: 200,
-      body: {
-        data: { dismissed_at: '2026-01-01T00:00:00Z', completed_steps: [], available_steps: [] },
-      },
-    });
     cy.intercept('GET', '/api/v1/academy', ACADEMY_OK).as('academy');
     cy.intercept('GET', '/api/v1/athletes*', ATHLETES_EMPTY).as('athletes');
   });

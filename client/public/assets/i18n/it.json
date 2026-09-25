@@ -442,7 +442,7 @@
     "steps": {
       "add_athlete": {
         "label": "Aggiungi il primo atleta",
-        "hint": "Crea il profilo di un atleta — nome, cintura, stato. La roster è la base."
+        "hint": "Crea il profilo di un atleta — nome, cintura, stato. Il roster è la base."
       },
       "log_attendance": {
         "label": "Registra una presenza",
@@ -3168,8 +3168,6 @@
       "noClass": "Stasera non c'è lezione.",
       "next": "La prossima: {{day}} alle {{time}}, {{name}}.",
       "nextUntimed": "La prossima: {{day}}, {{name}}.",
-      "noTimetable": "Non c'è ancora un orario, quindi stasera non ha niente da mostrare.",
-      "setUpTimetable": "Imposta l'orario",
       "error": "Non riesco a caricare l'orario."
     },
     "watch": {
@@ -3205,7 +3203,6 @@
       "programme": "Programma della stagione",
       "programmeValue": "{{percentage}}% · {{covered}} di {{total}}",
       "joined": "Nuovi questa settimana",
-      "joinedNone": "Nessun nuovo iscritto questa settimana.",
       "joinedError": "Non riesco a caricare i nuovi iscritti."
     },
     "birthdays": {

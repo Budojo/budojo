@@ -80,9 +80,16 @@ interface Responses {
   unpaidPending?: boolean;
   daily?: { date: string; count: number }[];
   coverage?: unknown | 'error';
-  recent?: Athlete[];
+  /** The joiners' page (it also counts the roster); `'error'` fails it. */
+  recent?: Athlete[] | 'error';
+  /** Leave the joiners' page unanswered, as if still in flight. */
+  joinedPending?: boolean;
   /** `?birthday=week` (#1754); `'error'` fails it. */
   birthdays?: Athlete[] | 'error';
+  /** Everyone on the books; the joiners' page carries it as `meta.total`. */
+  roster?: number;
+  /** The getting-started checklist's state; dismissed unless a test says otherwise. */
+  onboarding?: unknown;
 }
 
 function setup(
@@ -115,6 +122,27 @@ const COVERAGE = {
   timeline: [],
 };
 
+const NO_COVERAGE = {
+  ...COVERAGE,
+  totals: { in_scope: 0, covered: 0, thin: 0, missing: 0, percentage: 0 },
+};
+
+const ONBOARDING_STEPS = [
+  'add_athlete',
+  'set_timetable',
+  'write_syllabus',
+  'log_attendance',
+  'mark_payment',
+  'upload_document',
+  'view_stats',
+];
+const FRESH_ONBOARDING = {
+  dismissed_at: null,
+  completed_steps: [],
+  available_steps: ONBOARDING_STEPS,
+};
+const DISMISSED_ONBOARDING = { ...FRESH_ONBOARDING, dismissed_at: '2026-09-01T00:00:00Z' };
+
 const HEALTH = {
   data: [
     { id: 1, type: 'medical_certificate' },
@@ -126,6 +154,10 @@ const HEALTH = {
 
 /** Answers every request the page makes, the way a healthy academy would. */
 function flushAll(http: HttpTestingController, r: Responses = {}): void {
+  for (const req of http.match((q) => q.url.endsWith('/me/onboarding'))) {
+    req.flush({ data: r.onboarding ?? DISMISSED_ONBOARDING });
+  }
+
   const classes = r.classes ?? [cls()];
   if (classes !== 'skip') {
     const classesReq = http.expectOne((req) => req.url.endsWith('/academy/classes'));
@@ -177,12 +209,19 @@ function flushAll(http: HttpTestingController, r: Responses = {}): void {
     coverageReq.flush({ data: coverage });
   }
 
-  http
-    .expectOne((req) => req.url.endsWith('/athletes') && req.params.get('sort_by') === 'joined_at')
-    .flush({
-      data: r.recent ?? [],
-      meta: { total: 0, current_page: 1, per_page: 20, last_page: 1 },
-    });
+  if (!r.joinedPending) {
+    const joinedReq = http.expectOne(
+      (req) => req.url.endsWith('/athletes') && req.params.get('sort_by') === 'joined_at',
+    );
+    if (r.recent === 'error') {
+      joinedReq.flush({ message: 'boom' }, { status: 500, statusText: 'Server Error' });
+    } else {
+      joinedReq.flush({
+        data: r.recent ?? [],
+        meta: { total: r.roster ?? 12, current_page: 1, per_page: 20, last_page: 1 },
+      });
+    }
+  }
 
   const birthdaysReq = http.expectOne(
     (req) => req.url.endsWith('/athletes') && req.params.get('birthday') === 'week',
@@ -276,21 +315,18 @@ describe('TodayComponent', () => {
     http.verify();
   });
 
-  it('with no timetable, points at the timetable instead', () => {
+  it('with no timetable, draws neither tonight nor what to teach (#1752, #1755)', () => {
     const http = setup();
     const fixture = TestBed.createComponent(TodayComponent);
     fixture.detectChanges();
     flushAll(http, { classes: [] });
     fixture.detectChanges();
 
-    const link = (fixture.nativeElement as HTMLElement).querySelector(
-      '[data-cy="today-timetable-link"]',
-    );
-    expect(link?.getAttribute('href')).toBe('/dashboard/academy/timetable');
-    // With no class at all there is nothing to plan for: no card, not an empty one (#1752).
-    expect(
-      (fixture.nativeElement as HTMLElement).querySelector('[data-cy="today-teach"]'),
-    ).toBeNull();
+    // With no class at all there is no evening to answer and nothing to plan
+    // for: no card, not an empty one. The checklist asks for a timetable.
+    const root = fixture.nativeElement as HTMLElement;
+    expect(root.querySelector('[data-cy="today-tonight"]')).toBeNull();
+    expect(root.querySelector('[data-cy="today-teach"]')).toBeNull();
     http.verify();
   });
 
@@ -1120,6 +1156,124 @@ describe('TodayComponent', () => {
 
       expect(root.querySelector('[data-cy="today-watch-backup"]')).toBeNull();
       expect(root.querySelector('[data-cy="today-system"]')).toBeNull();
+    });
+  });
+
+  describe('the first screen carries the getting-started checklist (#1755)', () => {
+    /** An academy the day it was created: no timetable, nobody, no register. */
+    const EMPTY: Responses = {
+      classes: [],
+      health: { data: [], missing_medical_certificate: [] },
+      daily: [],
+      coverage: NO_COVERAGE,
+      recent: [],
+      roster: 0,
+    };
+    const CARDS = ['today-tonight', 'today-watch', 'today-teach', 'today-week'];
+
+    function render(r: Responses): HTMLElement {
+      const http = setup();
+      const fixture = TestBed.createComponent(TodayComponent);
+      fixture.detectChanges();
+      flushAll(http, r);
+      fixture.detectChanges();
+      http.verify();
+      return fixture.nativeElement as HTMLElement;
+    }
+
+    function cardsShown(root: HTMLElement): string[] {
+      return CARDS.filter((cy) => root.querySelector(`[data-cy="${cy}"]`) !== null);
+    }
+
+    it('shows the checklist above the cards while the tour is on', () => {
+      const root = render({ onboarding: FRESH_ONBOARDING });
+
+      expect(root.querySelector('[data-cy="onboarding-checklist"]')).not.toBeNull();
+      expect(cardsShown(root)).toEqual(CARDS);
+    });
+
+    it('is the checklist and nothing else for an academy with nothing in it yet', () => {
+      const root = render({ ...EMPTY, onboarding: FRESH_ONBOARDING });
+
+      expect(root.querySelector('[data-cy="onboarding-checklist"]')).not.toBeNull();
+      expect(cardsShown(root)).toEqual([]);
+      // No heading over an empty card: the only section titles are the checklist's.
+      const titles = Array.from(root.querySelectorAll('h2')).map((h) => h.textContent?.trim());
+      expect(titles).toEqual(['Getting started']);
+    });
+
+    it('leaves no placeholder behind once the checklist is dismissed', () => {
+      const root = render(EMPTY);
+
+      expect(root.querySelector('[data-cy="onboarding-checklist"]')).toBeNull();
+      expect(cardsShown(root)).toEqual([]);
+      expect(root.querySelector('h1')?.textContent).toContain('Thursday 24 September');
+    });
+
+    it('says "nothing to check" only when someone is on the books to check', () => {
+      const quiet = render({ health: { data: [], missing_medical_certificate: [] }, roster: 0 });
+      expect(quiet.querySelector('[data-cy="today-watch"]')).toBeNull();
+
+      TestBed.resetTestingModule();
+      const peopled = render({ health: { data: [], missing_medical_certificate: [] } });
+      expect(text(peopled, 'today-watch')).toContain('Nothing to check');
+    });
+
+    it("counts the week's presences once registers are being taken, zero included", () => {
+      const before = render({ daily: [] });
+      expect(before.querySelector('[data-cy="today-week-presences"]')).toBeNull();
+
+      TestBed.resetTestingModule();
+      // Last Thursday's class: a register exists, this week's is still empty.
+      const taking = render({ daily: [{ date: '2026-09-17', count: 9 }] });
+      expect(text(taking, 'today-week-presences')).toContain('0');
+    });
+
+    it('holds the watch card on its skeleton until it knows whether anyone is on the books', () => {
+      const http = setup();
+      const fixture = TestBed.createComponent(TodayComponent);
+      fixture.detectChanges();
+      // The documents answer first — the desktop's server takes one request
+      // at a time — while the joiners' page, which counts the roster, is out.
+      flushAll(http, { ...EMPTY, joinedPending: true });
+      fixture.detectChanges();
+      const root = fixture.nativeElement as HTMLElement;
+      expect(text(root, 'today-watch')).not.toContain('Nothing to check');
+      expect(root.querySelector('[data-cy="today-watch"] p-skeleton')).not.toBeNull();
+
+      // Nobody on the books: the card goes, without having said the all-clear.
+      http
+        .expectOne(
+          (req) => req.url.endsWith('/athletes') && req.params.get('sort_by') === 'joined_at',
+        )
+        .flush({ data: [], meta: { total: 0, current_page: 1, per_page: 20, last_page: 1 } });
+      fixture.detectChanges();
+      expect(root.querySelector('[data-cy="today-watch"]')).toBeNull();
+      http.verify();
+    });
+
+    it('when the roster cannot be counted, still settles, and draws no week for the error alone', () => {
+      const root = render({ ...EMPTY, recent: 'error' });
+
+      // The skeleton always resolves: with the count unknown, the all-clear is said.
+      expect(text(root, 'today-watch')).toContain('Nothing to check');
+      // "Couldn't load new members" is not a card on its own.
+      expect(root.querySelector('[data-cy="today-week"]')).toBeNull();
+    });
+
+    it("says the joiners' failure inside a week that has other lines", () => {
+      const root = render({ recent: 'error' });
+
+      expect(text(root, 'today-week-joined')).toContain("Couldn't load");
+      expect(root.querySelector('[data-cy="today-week-programme"]')).not.toBeNull();
+    });
+
+    it('lists who joined this week, and says nothing in a week nobody did', () => {
+      const root = render({ recent: [] });
+
+      expect(root.querySelector('[data-cy="today-week-joined"]')).toBeNull();
+      // The week still has its other lines.
+      expect(root.querySelector('[data-cy="today-week-programme"]')).not.toBeNull();
     });
   });
 });

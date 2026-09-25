@@ -1074,6 +1074,18 @@ describe('AthletesListComponent', () => {
     });
   });
 
+  describe('the getting-started checklist moved to Today (#1755)', () => {
+    it('neither renders the checklist nor asks for its state', () => {
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      fixture.detectChanges();
+
+      // One instance of a widget with a dismiss-forever state: Today's.
+      const http = TestBed.inject(HttpTestingController);
+      expect(fixture.nativeElement.querySelector('app-onboarding-checklist')).toBeNull();
+      expect(http.match((req) => req.url.endsWith('/me/onboarding'))).toHaveLength(0);
+    });
+  });
+
   describe('empty-state onboarding CTA (#1033 wave 3)', () => {
     it('renders the first-run state — add or import — when the roster is empty and no filters are set', () => {
       const fixture = TestBed.createComponent(AthletesListComponent);

@@ -40,7 +40,7 @@ const STEP_HINT_KEY: Record<OnboardingStep, string> = {
 
 /**
  * "Getting started" checklist card (#424). Renders one row per
- * onboarding step on `/dashboard/athletes` while the user hasn't
+ * onboarding step on Today, the first screen, while the user hasn't
  * dismissed the tour AND hasn't completed every step.
  *
  * Each row has:
@@ -55,9 +55,10 @@ const STEP_HINT_KEY: Record<OnboardingStep, string> = {
  * action is irreversible from the UI (no "re-show tour" surface
  * shipped today).
  *
- * Mounted at the top of `/dashboard/athletes` (the dashboard
- * default landing) — the same component is reusable wherever a
- * dashboard "home" surface lands in a future PR.
+ * Mounted once, on Today (`/dashboard/today`, where `/dashboard`
+ * lands since #1643), which also loads its state (#1755). Not on a
+ * second screen: two instances of a widget whose dismissal is
+ * forever would disagree the moment one of them is dismissed.
  */
 @Component({
   selector: 'app-onboarding-checklist',
