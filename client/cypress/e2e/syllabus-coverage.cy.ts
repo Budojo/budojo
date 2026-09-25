@@ -68,6 +68,8 @@ function report(over: Record<string, unknown> = {}) {
         parent_name: 'Closed guard',
         kind: 'both',
         lessons: 3,
+        reach: 11,
+        attendances: 24,
         last_taught_on: '2026-10-05',
         state: 'covered',
       },
@@ -183,6 +185,11 @@ describe('Syllabus coverage', () => {
 
     cy.get('[data-cy="syllabus-coverage-missing"]').should('contain.text', 'Omoplata');
     cy.get('[data-cy="syllabus-coverage-taught"]').should('contain.text', 'Armbar');
+    // How many people it reached, beside how many lessons (#1746).
+    cy.get('[data-cy="syllabus-taught-11"] [data-cy="syllabus-taught-reach"]').should(
+      'contain.text',
+      '3 lessons · 11 people',
+    );
   });
 
   it('lays each position out week by week, and opens a week on the lessons it counts (#1858)', () => {

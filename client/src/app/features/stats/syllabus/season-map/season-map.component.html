@@ -122,7 +122,7 @@
                       (click)="openWeek($event, row, cell)"
                       [attr.data-cy]="'season-map-cell-' + row.id + '-' + cell.week"
                     ></button>
-                  } @else if (cell.ahead && canPlan()) {
+                  } @else if (cell.ahead && canPlan(row)) {
                     <!--
                       An empty week still to come: a pointer shortcut to plan
                       it (#1859). The row's name offers the same, one tab stop

@@ -147,13 +147,9 @@ class SuggestLessonTopicsAction
      */
     private function techniquesInScope(Academy $academy, TrainingMode $kind): Collection
     {
-        $admitted = $kind->admittedTopicModes();
-
         return SyllabusTopic::query()
             ->where('academy_id', $academy->id)
-            ->where('in_season', true)
-            ->whereNotNull('parent_id')
-            ->when($admitted !== null, static fn ($q) => $q->whereIn('kind', $admitted))
+            ->teachableIn($kind)
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get();

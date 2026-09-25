@@ -3,7 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { map, Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import type { TrainingMode } from './academy.service';
-import type { AthleteIdentity, AthleteStatus } from './athlete.service';
+import type { AthleteIdentity, AthleteStatus, Belt } from './athlete.service';
 
 export interface DailyAttendancePoint {
   readonly date: string; // 'YYYY-MM-DD'
@@ -76,6 +76,13 @@ export interface CoverageTopic {
 
 export interface CoverageTaughtTopic extends CoverageTopic {
   readonly lessons: number;
+  /**
+   * Distinct athletes at one or more of those lessons (#1746) — three lessons
+   * to the same four people reach four. A column, never part of the headline.
+   */
+  readonly reach: number;
+  /** Distinct (athlete, lesson) presences across them. */
+  readonly attendances: number;
   readonly last_taught_on: string;
   readonly state: CoverageState;
 }
@@ -254,6 +261,17 @@ export interface AthleteSyllabusCoverage {
   readonly seen_lately: readonly SeenTopic[];
   /** Presences that name no lesson, and so can be attributed to no topic. */
   readonly unattributed_presences: number;
+  /**
+   * The programme of their own belt (#1861): what is expected up to it, how
+   * much of that the academy taught while they were here, how much they were
+   * at. Null while nothing in the programme names a belt.
+   */
+  readonly grade: {
+    readonly belt: Belt;
+    readonly items: number;
+    readonly taught_by_academy: number;
+    readonly attended: number;
+  } | null;
 }
 
 @Injectable({ providedIn: 'root' })

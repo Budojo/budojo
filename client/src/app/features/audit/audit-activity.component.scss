@@ -89,7 +89,9 @@
     font-family:
       'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
     font-size: 0.875rem;
-    color: var(--p-primary-color);
+    // Ink, not the accent (#1852): a raw action code shown when the entry has
+    // no label is data, and the accent means action, selection or state.
+    color: var(--p-text-color);
   }
 
   &__date {

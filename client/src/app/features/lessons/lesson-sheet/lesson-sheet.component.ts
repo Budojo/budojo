@@ -22,17 +22,19 @@ import { InputTextModule } from 'primeng/inputtext';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TextareaModule } from 'primeng/textarea';
 import { TooltipModule } from 'primeng/tooltip';
-import { catchError, forkJoin, of, switchMap } from 'rxjs';
+import { Subscription, catchError, forkJoin, of, switchMap } from 'rxjs';
 import {
   Lesson,
   LessonService,
   LessonSuggestion,
   LessonTopic,
+  RoomGap,
   SuggestionReason,
 } from '../../../core/services/lesson.service';
 import { LanguageService } from '../../../core/services/language.service';
 import { SyllabusService, SyllabusTopic } from '../../../core/services/syllabus.service';
 import type { TrainingMode } from '../../../core/services/academy.service';
+import { AthleteIdentityComponent } from '../../../shared/components/athlete-identity/athlete-identity.component';
 import { addDays, localIso } from '../../../shared/utils/class-occurrences';
 import { localeFor } from '../../../shared/utils/locale';
 import { prefersReducedMotion } from '../../../shared/utils/prefers-reduced-motion';
@@ -76,6 +78,7 @@ interface Pickable {
     SkeletonModule,
     TextareaModule,
     TooltipModule,
+    AthleteIdentityComponent,
   ],
   templateUrl: './lesson-sheet.component.html',
   styleUrl: './lesson-sheet.component.scss',
@@ -127,6 +130,15 @@ export class LessonSheetComponent {
    * the programme without anyone deciding to.
    */
   protected readonly dismissed = signal<ReadonlySet<number>>(new Set());
+  /**
+   * What most of tonight's room missed (#1860), and how many are in it. Read
+   * after the lesson, and only for one with people in it: a plan has no room.
+   */
+  protected readonly roomGaps = signal<readonly RoomGap[]>([]);
+  protected readonly roomPresent = signal<number>(0);
+  /** The room rows whose names are open. Folded by default: a count, not a list of people. */
+  protected readonly roomNamesOpen = signal<ReadonlySet<number>>(new Set());
+  private roomRead: Subscription | null = null;
   protected readonly selected = signal<ReadonlySet<number>>(new Set());
   protected readonly notes = signal<string>('');
   protected readonly query = signal<string>('');
@@ -165,6 +177,19 @@ export class LessonSheetComponent {
     const opened = this.openedWith();
     return !sameIds([...this.selected()], opened.topicIds) || this.notes().trim() !== opened.notes;
   });
+
+  /**
+   * "Tonight" only for tonight's lesson. Anything else — a plan three weeks
+   * out, an evening being backfilled — is "this lesson".
+   */
+  protected readonly suggestionWords = computed<{ title: string; dismiss: string }>(() =>
+    this.slot() === localIso(new Date())
+      ? { title: 'lessons.sheet.suggestions.title', dismiss: 'lessons.sheet.suggestions.dismiss' }
+      : {
+          title: 'lessons.sheet.suggestions.titleLesson',
+          dismiss: 'lessons.sheet.suggestions.dismissLesson',
+        },
+  );
 
   /**
    * The previous occurrence is still today or later. The stepper is for
@@ -270,7 +295,18 @@ export class LessonSheetComponent {
   protected readonly suggestionsOffered = computed<readonly LessonSuggestion[]>(() => {
     const picked = this.selected();
     const waved = this.dismissed();
-    return this.suggestions().filter((s) => !picked.has(s.id) && !waved.has(s.id));
+    // Offered once: a technique the room group already names comes with the
+    // reason about tonight's people, which is the sharper of the two.
+    const room = new Set(this.roomGapsOffered().map((g) => g.id));
+    return this.suggestions().filter(
+      (s) => !picked.has(s.id) && !waved.has(s.id) && !room.has(s.id),
+    );
+  });
+
+  /** The room rows not already chosen — a tick moves one into "Fatto", like a suggestion. */
+  protected readonly roomGapsOffered = computed<readonly RoomGap[]>(() => {
+    const picked = this.selected();
+    return this.roomGaps().filter((g) => !picked.has(g.id));
   });
 
   protected readonly heldLabel = computed<string | null>(() => {
@@ -305,6 +341,20 @@ export class LessonSheetComponent {
       next.add(id);
     }
     this.selected.set(next);
+  }
+
+  protected isRoomNamesOpen(id: number): boolean {
+    return this.roomNamesOpen().has(id);
+  }
+
+  protected toggleRoomNames(id: number): void {
+    const next = new Set(this.roomNamesOpen());
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
+    this.roomNamesOpen.set(next);
   }
 
   /** Wave one away without touching the lesson. Always available. */
@@ -410,6 +460,7 @@ export class LessonSheetComponent {
     this.query.set('');
     this.expanded.set(new Set());
     this.dismissed.set(new Set());
+    this.clearRoom();
 
     forkJoin({
       lesson: this.lessonService.get(this.academyClassId(), this.slot()),
@@ -437,6 +488,7 @@ export class LessonSheetComponent {
         this.openedWith.set({ topicIds: living, notes: lesson?.notes ?? '' });
         this.loading.set(false);
         this.revealFocus(positions);
+        if (lesson?.held) this.loadRoom();
       },
       error: () => {
         // Everything the previous opening left behind, cleared. The component
@@ -485,6 +537,34 @@ export class LessonSheetComponent {
         });
       }),
     );
+  }
+
+  /**
+   * Tonight's room (#1860), read after the sheet is already usable: it is a
+   * panel on top of the picker, never a reason to hold the picker back, and a
+   * failure leaves it out rather than failing the sheet.
+   */
+  private loadRoom(): void {
+    this.roomRead = this.lessonService
+      .roomGaps(this.academyClassId(), this.slot())
+      .pipe(catchError(() => of(null)))
+      .subscribe((room) => {
+        this.roomGaps.set(room?.rows ?? []);
+        this.roomPresent.set(room?.present ?? 0);
+      });
+  }
+
+  /**
+   * The instance outlives a slot change, so a read still in flight for the
+   * last slot is cancelled rather than allowed to paint its room over this
+   * one.
+   */
+  private clearRoom(): void {
+    this.roomRead?.unsubscribe();
+    this.roomRead = null;
+    this.roomGaps.set([]);
+    this.roomPresent.set(0);
+    this.roomNamesOpen.set(new Set());
   }
 
   private toast(severity: 'success' | 'error', summaryKey: string, detailKey?: string): void {

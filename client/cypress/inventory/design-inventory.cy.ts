@@ -379,10 +379,27 @@ const SYLLABUS = [
     name: 'Closed guard',
     kind: 'both',
     in_season: true,
+    from_belt: null,
     sort_order: 0,
     children: [
-      { id: 11, parent_id: 1, name: 'Armbar', kind: 'both', in_season: true, sort_order: 0 },
-      { id: 12, parent_id: 1, name: 'Triangle', kind: 'both', in_season: true, sort_order: 1 },
+      {
+        id: 11,
+        parent_id: 1,
+        name: 'Armbar',
+        kind: 'both',
+        in_season: true,
+        from_belt: null,
+        sort_order: 0,
+      },
+      {
+        id: 12,
+        parent_id: 1,
+        name: 'Triangle',
+        kind: 'both',
+        in_season: true,
+        from_belt: null,
+        sort_order: 1,
+      },
     ],
   },
   {
@@ -391,9 +408,18 @@ const SYLLABUS = [
     name: 'Mount',
     kind: 'both',
     in_season: true,
+    from_belt: null,
     sort_order: 1,
     children: [
-      { id: 21, parent_id: 2, name: 'Americana', kind: 'both', in_season: true, sort_order: 0 },
+      {
+        id: 21,
+        parent_id: 2,
+        name: 'Americana',
+        kind: 'both',
+        in_season: true,
+        from_belt: null,
+        sort_order: 0,
+      },
     ],
   },
 ];
@@ -424,6 +450,8 @@ const SYLLABUS_COVERAGE = {
       kind: 'both',
       lessons: 2,
       last_taught_on: '2026-04-20',
+      reach: 5,
+      attendances: 8,
       state: 'covered',
     },
     {
@@ -433,6 +461,8 @@ const SYLLABUS_COVERAGE = {
       kind: 'both',
       lessons: 1,
       last_taught_on: '2026-04-13',
+      reach: 3,
+      attendances: 3,
       state: 'thin',
     },
   ],
@@ -462,6 +492,7 @@ const ATHLETE_COVERAGE = {
     { id: 11, name: 'Armbar', parent_name: 'Closed guard', lessons: 2, last_seen_on: '2026-04-20' },
   ],
   unattributed_presences: 0,
+  grade: null,
 };
 
 const FROZEN_NOW = new Date('2026-04-24T12:00:00Z').getTime();

@@ -157,7 +157,7 @@ describe('DashboardComponent', () => {
   });
 
   describe('topbar home link', () => {
-    it('wraps the Budojo wordmark in a routerLink to the academy home (#1112)', () => {
+    it('wraps the Budojo wordmark in a routerLink to home, which is Today (#1112, #1643)', () => {
       const fixture = TestBed.createComponent(DashboardComponent);
       fixture.detectChanges();
 
@@ -166,10 +166,9 @@ describe('DashboardComponent', () => {
       ) as HTMLAnchorElement | null;
       expect(link).not.toBeNull();
       expect(link!.tagName).toBe('A');
-      // The brand now points at the academy home (the pi-home Home tab),
-      // matching its "go to home" aria-label — not the /dashboard index
-      // (which redirects to the athletes roster). #1112.
-      expect(link!.getAttribute('href')).toBe('/dashboard/academy');
+      // The brand points at home — the pi-home tab, which is Today since
+      // #1643 — matching its "go to home" aria-label.
+      expect(link!.getAttribute('href')).toBe('/dashboard/today');
       expect(link!.getAttribute('aria-label')).toContain('go to dashboard home');
     });
   });
@@ -256,7 +255,7 @@ describe('DashboardComponent', () => {
       const el: HTMLElement = fixture.nativeElement;
       expect(el.querySelector('app-bottom-nav')).not.toBeNull();
       for (const cy of [
-        'bottomnav-academy',
+        'bottomnav-today',
         'bottomnav-athletes',
         'bottomnav-community',
         'bottomnav-more',
@@ -315,7 +314,7 @@ describe('DashboardComponent', () => {
       avatar_url: null,
     };
 
-    it('renders the rail with the same destinations as the bottom nav (academy/athletes/community/more)', () => {
+    it('renders the rail with the bottom nav destinations, plus stats and the academy (#1643)', () => {
       const fixture = TestBed.createComponent(DashboardComponent);
       fixture.detectChanges();
 
@@ -323,13 +322,14 @@ describe('DashboardComponent', () => {
         '[data-cy="owner-rail"]',
       ) as HTMLElement | null;
       expect(rail).not.toBeNull();
+      expect(rail!.querySelector('a[href="/dashboard/today"]')).not.toBeNull();
       expect(rail!.querySelector('a[href="/dashboard/academy"]')).not.toBeNull();
       expect(rail!.querySelector('a[href="/dashboard/athletes"]')).not.toBeNull();
       expect(rail!.querySelector('a[href="/dashboard/community"]')).not.toBeNull();
       expect(rail!.querySelector('a[href="/dashboard/more"]')).not.toBeNull();
     });
 
-    it('points the brand link at the academy home, matching its aria-label', () => {
+    it('points the brand link at home, which is Today (#1643)', () => {
       const fixture = TestBed.createComponent(DashboardComponent);
       fixture.detectChanges();
 
@@ -337,7 +337,19 @@ describe('DashboardComponent', () => {
         'a.rail__brand',
       ) as HTMLAnchorElement | null;
       expect(brand).not.toBeNull();
-      expect(brand!.getAttribute('href')).toBe('/dashboard/academy');
+      expect(brand!.getAttribute('href')).toBe('/dashboard/today');
+    });
+
+    it('puts Today first, and the academy down beside More (#1643)', () => {
+      const fixture = TestBed.createComponent(DashboardComponent);
+      fixture.detectChanges();
+
+      const rail = fixture.nativeElement.querySelector('[data-cy="owner-rail"]') as HTMLElement;
+      const order = Array.from(rail.querySelectorAll('.rail__nav a')).map((a) =>
+        a.getAttribute('href'),
+      );
+      expect(order[0]).toBe('/dashboard/today');
+      expect(order.indexOf('/dashboard/academy')).toBe(order.indexOf('/dashboard/more') - 1);
     });
 
     it('has no Create button, and still opens the sheet from the bar (#1462)', () => {

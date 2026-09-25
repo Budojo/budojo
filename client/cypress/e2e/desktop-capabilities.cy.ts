@@ -1,5 +1,6 @@
 import { MOCK_ACADEMY } from '../support/fixtures';
 import { VIEWPORT_PIXEL_8_PRO } from '../support/viewports';
+import { stubToday } from '../support/today';
 
 /**
  * Runtime capability list (#1229). The API reports what the runtime offers;
@@ -33,6 +34,8 @@ const ATHLETES_EMPTY = {
 
 describe('Desktop runtime capabilities (#1229)', () => {
   beforeEach(() => {
+    // Every sign-in lands on Today (#1643); keep its requests off the proxy.
+    stubToday();
     cy.clearLocalStorage();
     cy.intercept('GET', '/api/v1/documents/expiring*', { statusCode: 200, body: { data: [] } });
     cy.intercept('GET', '/api/v1/academy', ACADEMY_OK).as('academy');

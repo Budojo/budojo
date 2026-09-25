@@ -55,6 +55,31 @@ it('plans a Monday months ahead just the same', function (): void {
     planTopics($this, '2027-01-11')->assertOk();
 });
 
+it('reads the weekday as the column stores it: a Sunday class plans on Sundays', function (): void {
+    // 0 = Sunday. Read as ISO the same Sunday is a 7, which no row can hold.
+    $this->class = AcademyClass::factory()->for($this->academy)->create(['weekday' => 0]);
+
+    planTopics($this, '2026-09-27')->assertOk();
+    planTopics($this, '2026-09-28')->assertUnprocessable()->assertJsonValidationErrors(['held_on']);
+});
+
+it('answers a future plan with no class, or another academy\'s, on the class and not the day', function (): void {
+    $this->actingAs($this->user)->putJson('/api/v1/lessons/topics', [
+        'held_on' => '2026-09-30',
+        'topic_ids' => [$this->guard->id],
+    ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['academy_class_id'])
+        ->assertJsonMissingValidationErrors(['held_on']);
+
+    $this->class = AcademyClass::factory()->for(userWithAcademy()->academy)->create(['weekday' => 1]);
+
+    planTopics($this, '2026-09-30')
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['academy_class_id'])
+        ->assertJsonMissingValidationErrors(['held_on']);
+});
+
 it('refuses a plan on a Wednesday for a Monday class, and creates nothing', function (): void {
     planTopics($this, '2026-09-30')
         ->assertUnprocessable()

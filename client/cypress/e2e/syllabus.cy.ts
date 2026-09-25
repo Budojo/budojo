@@ -27,6 +27,7 @@ function topic(over: Record<string, unknown> = {}) {
     name: 'Closed guard',
     kind: 'both',
     in_season: true,
+    from_belt: null,
     sort_order: 0,
     ...over,
   };
@@ -124,7 +125,61 @@ describe('Academy programme', () => {
       name: 'Saddle entry',
       kind: 'nogi',
       parent_id: 2,
+      from_belt: null,
     });
+  });
+
+  it('puts a technique in the programme from a belt, then shows what that belt is expected to know (#1861)', () => {
+    stub([CLOSED_GUARD, K_GUARD]);
+
+    cy.visitAuthenticated('/dashboard/academy/syllabus');
+    cy.wait('@syllabus');
+
+    // Nothing names a belt yet: there is nothing for a filter to narrow.
+    cy.get('[data-cy="syllabus-belt-filter"]').should('not.exist');
+
+    cy.get('[data-cy="syllabus-toggle-1"]').click();
+    cy.get('[data-cy="syllabus-topic-edit-12"]').click();
+    cy.get('[data-cy="syllabus-form-from-belt"]').click();
+    cy.get('.p-select-option')
+      .contains(/^\s*Purple\s*$/)
+      .click();
+
+    const GRADED_COLLAR = { ...CROSS_COLLAR, from_belt: 'purple' };
+    cy.intercept('PATCH', '/api/v1/academy/syllabus/12', {
+      statusCode: 200,
+      body: { data: GRADED_COLLAR },
+    }).as('grade');
+    cy.intercept('GET', '/api/v1/academy/syllabus', {
+      statusCode: 200,
+      body: { data: [{ ...CLOSED_GUARD, children: [ARMBAR, GRADED_COLLAR] }, K_GUARD] },
+    }).as('reload');
+    cy.get('[data-cy="syllabus-form-submit"]').click();
+
+    cy.wait('@grade').its('request.body').should('deep.equal', {
+      name: 'Cross collar choke',
+      kind: 'gi',
+      from_belt: 'purple',
+    });
+    cy.wait('@reload');
+
+    // The row says so, and the filter appears.
+    cy.get('[data-cy="syllabus-topic-12"] [data-cy="syllabus-belt"]').should(
+      'contain.text',
+      'Purple',
+    );
+    cy.get('[data-cy="syllabus-belt-filter"]').click();
+    cy.get('.p-select-option')
+      .contains(/^\s*Blue\s*$/)
+      .click();
+
+    // A blue belt is expected to know the armbar, not the purple-belt choke.
+    cy.get('[data-cy="syllabus-belt-summary"]').should(
+      'contain.text',
+      '1 technique expected up to the Blue belt',
+    );
+    cy.get('[data-cy="syllabus-topic-11"]').should('be.visible');
+    cy.get('[data-cy="syllabus-topic-12"]').should('not.exist');
   });
 
   it('offers a karate academy its own modes and its own example (#1803)', () => {
