@@ -493,7 +493,7 @@ describe('MonthlySummaryComponent', () => {
     expect(method.open).toBe(false);
     // One unit, named as the header names it: the header's "attendances" are
     // days too (#1765), so the fold explains them rather than opposing them.
-    expect(method.textContent).toContain('an attendance is a day of training');
+    expect(method.textContent).toContain("an attendance is one athlete's day of training");
     expect(method.textContent).not.toContain('not the presences');
     http.verify();
   });
