@@ -650,6 +650,40 @@ describe('TodayComponent', () => {
       expect(text(root, 'today-system')).toContain('Last copy off this computer');
     });
 
+    it('never says all clear before the backup state has been read', async () => {
+      // The bridge answers last: documents and payments are already in.
+      let answer: (state: BackupFolderStateView) => void = () => undefined;
+      const slowFolder = new Promise<BackupFolderStateView>((resolve) => (answer = resolve));
+      const http = setup({}, [
+        {
+          provide: BackupFolderService,
+          useValue: { available: true, state: () => slowFolder },
+        },
+        {
+          provide: DriveSyncService,
+          useValue: { available: true, state: () => Promise.resolve(NO_DRIVE) },
+        },
+      ]);
+      const fixture = TestBed.createComponent(TodayComponent);
+      fixture.detectChanges();
+      flushAll(http, { health: { data: [], missing_medical_certificate: [] } });
+      await Promise.resolve();
+      fixture.detectChanges();
+
+      const root = fixture.nativeElement as HTMLElement;
+      expect(text(root, 'today-watch')).not.toContain('Nothing to check');
+
+      // Then the backup turns out to exist nowhere but here.
+      answer({ ...FOLDER, folder: null, lastCopyAt: null });
+      // The bridge's promise chain is not a tracked task: let it drain.
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      fixture.detectChanges();
+
+      expect(text(root, 'today-watch')).not.toContain('Nothing to check');
+      expect(text(root, 'today-watch-backup')).toContain('only on this computer');
+      http.verify();
+    });
+
     it('says nothing at all on the web build, where there is no bridge', async () => {
       const root = await render(bridges(null, null));
 

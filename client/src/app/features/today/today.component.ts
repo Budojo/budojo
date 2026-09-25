@@ -197,7 +197,9 @@ export class TodayComponent implements OnInit {
    * found nothing — never while one is loading, and never after one failed.
    */
   protected readonly watchState = computed<'loading' | 'settled'>(() =>
-    this.health().state === 'loading' || this.unpaid()?.state === 'loading' ? 'loading' : 'settled',
+    this.health().state === 'loading' || this.unpaid()?.state === 'loading' || !this.backupRead()
+      ? 'loading'
+      : 'settled',
   );
   protected readonly watchAllClear = computed<boolean>(
     () =>
@@ -308,6 +310,13 @@ export class TodayComponent implements OnInit {
    * until read — and forever on the web build, which has no bridge to ask.
    */
   protected readonly backup = signal<BackupHealth | null>(null);
+  /**
+   * Whether the bridge has answered — the third half of "Da guardare". The
+   * bridge is asynchronous, and the documents and payments can land first:
+   * without this the card would say "nothing to check" and then grow a
+   * backup alert. True from the start on the web build, which never asks.
+   */
+  private readonly backupRead = signal<boolean>(!this.backupFolder.available);
 
   /**
    * The backup as a "Da guardare" row: failing, never set up, or silent for
@@ -583,10 +592,13 @@ export class TodayComponent implements OnInit {
     const drive = this.driveSync.available
       ? this.driveSync.state()
       : Promise.resolve({ configured: false, linked: false });
-    void Promise.all([this.backupFolder.state(), drive]).then(
-      ([folder, link]) => this.backup.set(backupHealth(folder, link, this.now())),
-      () => this.backup.set(null),
-    );
+    void Promise.all([this.backupFolder.state(), drive])
+      .then(
+        ([folder, link]) => this.backup.set(backupHealth(folder, link, this.now())),
+        // A bridge that fails to answer costs the backup line, not the card.
+        () => this.backup.set(null),
+      )
+      .finally(() => this.backupRead.set(true));
   }
 }
 
