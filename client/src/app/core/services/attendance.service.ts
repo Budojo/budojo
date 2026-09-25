@@ -75,6 +75,32 @@ export interface AttendanceListOptions {
   classId?: number;
 }
 
+/**
+ * One regular of a class (#1730): an active athlete present at three of the
+ * class's last four occurrences. Carries the identity the row is drawn with,
+ * the phone the contact buttons need, and the habit that made them a regular.
+ */
+export interface ClassRegular extends AthleteIdentity {
+  readonly phone_country_code: string | null;
+  readonly phone_national_number: string | null;
+  /** Occurrences attended, out of `meta.occurrences`. */
+  readonly attended: number;
+  /** Their latest presence before the day asked about, in any class. */
+  readonly last_attended_on: string | null;
+}
+
+/**
+ * `GET /attendance/regulars`. `data` is empty below three occurrences, and
+ * `meta.occurrences` is what tells that apart from "everyone is here".
+ */
+export interface ClassRegulars {
+  readonly data: readonly ClassRegular[];
+  readonly meta: {
+    readonly occurrences: number;
+    readonly occurrence_dates: readonly string[];
+  };
+}
+
 interface AttendanceListResponse {
   data: AttendanceRecord[];
 }
@@ -261,6 +287,16 @@ export class AttendanceService {
         return throwError(() => err);
       }),
     );
+  }
+
+  /**
+   * Who usually comes to this class, as of `date` (#1730). All of them, not
+   * only the missing: the check-in subtracts who it already has on the mat,
+   * so a tick takes someone off the list without asking again.
+   */
+  regulars(date: string, classId: number): Observable<ClassRegulars> {
+    const params = new HttpParams().set('date', date).set('academy_class_id', String(classId));
+    return this.http.get<ClassRegulars>(`${this.base}/regulars`, { params });
   }
 
   /**

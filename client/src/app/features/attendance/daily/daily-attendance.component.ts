@@ -33,7 +33,7 @@ import {
   Belt,
 } from '../../../core/services/athlete.service';
 import { AcademyClass, AcademyClassService } from '../../../core/services/academy-class.service';
-import { AttendanceService } from '../../../core/services/attendance.service';
+import { AttendanceService, ClassRegulars } from '../../../core/services/attendance.service';
 import { Lesson, LessonService, LessonTopic } from '../../../core/services/lesson.service';
 import { LessonSheetComponent } from '../../lessons/lesson-sheet/lesson-sheet.component';
 import { AthleteIdentityComponent } from '../../../shared/components/athlete-identity/athlete-identity.component';
@@ -51,6 +51,7 @@ import {
   type SortState,
 } from '../../../shared/utils/athlete-sort';
 import { pickDefaultClass } from './class-pick';
+import { MissingRegularsComponent } from './missing-regulars/missing-regulars.component';
 
 interface SelectOption<T extends string> {
   label: string;
@@ -95,6 +96,7 @@ function toLocalDateString(d: Date): string {
     SortHeaderComponent,
     BeltSortButtonComponent,
     LessonSheetComponent,
+    MissingRegularsComponent,
   ],
   providers: [MessageService],
   templateUrl: './daily-attendance.component.html',
@@ -504,8 +506,10 @@ export class DailyAttendanceComponent implements OnInit {
         );
       }
       this.fetchAttendance(attendanceEpoch, settle);
-      // The topic row reads the same slot the records do.
+      // The topic row and the missing regulars read the same slot the
+      // records do.
       this.loadLesson();
+      this.loadRegulars();
     });
   }
 
@@ -789,6 +793,7 @@ export class DailyAttendanceComponent implements OnInit {
     this.selectedClassId.set(id);
     this.loadAttendanceOnly();
     this.loadLesson();
+    this.loadRegulars();
   }
 
   // ── What the lesson covered (#1564) ────────────────────────────────────────
@@ -867,6 +872,36 @@ export class DailyAttendanceComponent implements OnInit {
       // it.
       error: () => {
         if (epoch === this.attendanceEpoch) this.lesson.set(null);
+      },
+    });
+  }
+
+  // ── Who usually comes and is not here (#1730) ─────────────────────────────
+
+  /** The selected class's regulars, or null while asked for (and with no class). */
+  protected readonly regulars = signal<ClassRegulars | null>(null);
+  protected readonly regularsFailed = signal<boolean>(false);
+
+  /**
+   * Once per (day, class) — on the day's load and on a chip — never per
+   * tap: the panel subtracts `presentMap` itself, so a tick takes someone
+   * off it with nothing asked of the server. Epoch-gated on the counter the
+   * records use, so a slow answer for the previous class cannot land over
+   * the one on screen.
+   */
+  protected loadRegulars(): void {
+    this.regulars.set(null);
+    this.regularsFailed.set(false);
+    const classId = this.selectedClassId();
+    if (classId === null) return;
+
+    const epoch = this.attendanceEpoch;
+    this.attendanceService.regulars(this.selectedDateIso(), classId).subscribe({
+      next: (regulars) => {
+        if (epoch === this.attendanceEpoch) this.regulars.set(regulars);
+      },
+      error: () => {
+        if (epoch === this.attendanceEpoch) this.regularsFailed.set(true);
       },
     });
   }

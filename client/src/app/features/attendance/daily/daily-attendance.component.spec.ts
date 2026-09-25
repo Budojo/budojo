@@ -1247,3 +1247,161 @@ describe('DailyAttendanceComponent — what the lesson covered (#1564)', () => {
     expect(link?.getAttribute('href')).toBe('/dashboard/athletes');
   });
 });
+
+describe('DailyAttendanceComponent — who usually comes and is not here (#1730)', () => {
+  // Monday: kids at 17:00, fundamentals at 19:00 — the clock picks fundamentals.
+  const KIDS: AcademyClass = {
+    id: 1,
+    name: 'Kids',
+    weekday: 1,
+    starts_at: '17:00',
+    duration_minutes: 60,
+    kind: 'gi',
+  };
+  const FUNDAMENTALS: AcademyClass = { ...KIDS, id: 2, name: 'Fundamentals', starts_at: '19:00' };
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 8, 14, 18, 30));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function regular(id: number) {
+    return {
+      id,
+      first_name: 'Athlete',
+      last_name: `N${id}`,
+      belt: 'blue',
+      stripes: 0,
+      date_of_birth: null,
+      photo_url: null,
+      user_avatar_url: null,
+      phone_country_code: '+39',
+      phone_national_number: '3471234567',
+      attended: 4,
+      last_attended_on: '2026-09-07',
+    };
+  }
+
+  function answer(ids: number[]) {
+    return {
+      data: ids.map(regular),
+      meta: {
+        occurrences: 4,
+        occurrence_dates: ['2026-09-07', '2026-08-31', '2026-08-24', '2026-08-17'],
+      },
+    };
+  }
+
+  function regularsRequests(httpMock: HttpTestingController) {
+    return httpMock.match((r) => r.url === '/api/v1/attendance/regulars');
+  }
+
+  function missingIds(fixture: Harness['fixture']): string[] {
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    root.querySelector<HTMLButtonElement>('[data-cy="missing-regulars-toggle"]')?.click();
+    fixture.detectChanges();
+    return Array.from(root.querySelectorAll('[data-cy^="missing-regular-"]')).map(
+      (el) => el.getAttribute('data-cy') ?? '',
+    );
+  }
+
+  it('asks once for the selected class and day, when the day loads', () => {
+    const { fixture, httpMock } = setup();
+    fixture.detectChanges();
+    flushInit(httpMock, { classes: [KIDS, FUNDAMENTALS] });
+
+    const requests = regularsRequests(httpMock);
+    expect(requests).toHaveLength(1);
+    expect(requests[0].request.params.get('date')).toBe('2026-09-14');
+    expect(requests[0].request.params.get('academy_class_id')).toBe('2');
+  });
+
+  it('does not ask, and draws nothing, when there is no class to ask about', () => {
+    const { fixture, httpMock } = setup();
+    fixture.detectChanges();
+    flushInit(httpMock, { classes: [] });
+    fixture.detectChanges();
+
+    expect(regularsRequests(httpMock)).toHaveLength(0);
+    expect(fixture.nativeElement.querySelector('app-missing-regulars')).toBeNull();
+  });
+
+  it('lists the regulars who are not ticked, and drops one the moment they are — without asking again', () => {
+    const { fixture, component, httpMock } = setup();
+    fixture.detectChanges();
+    flushInit(httpMock, {
+      athletes: [makeAthlete({ id: 7 })],
+      classes: [KIDS, FUNDAMENTALS],
+      presentRecords: [{ id: 100, athlete_id: 8, attended_on: '2026-09-14' }],
+    });
+    regularsRequests(httpMock)[0].flush(answer([7, 8, 9]));
+
+    expect(missingIds(fixture)).toEqual(['missing-regular-7', 'missing-regular-9']);
+
+    component['togglePresent'](makeAthlete({ id: 7 }));
+    fixture.detectChanges();
+
+    expect(Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('[data-cy^="missing-regular-"]'),
+    ).map((el) => el.getAttribute('data-cy'))).toEqual(['missing-regular-9']);
+    // The tap is a mark, not a reason to re-read the class's history.
+    expect(regularsRequests(httpMock)).toHaveLength(0);
+    httpMock
+      .expectOne((r) => r.url === '/api/v1/attendance' && r.method === 'POST')
+      .flush({ data: [{ id: 501, athlete_id: 7, lesson_id: 3, attended_on: '2026-09-14' }] });
+  });
+
+  it('asks again for the other class when another chip is tapped', () => {
+    const { fixture, component, httpMock } = setup();
+    fixture.detectChanges();
+    flushInit(httpMock, { classes: [KIDS, FUNDAMENTALS] });
+    regularsRequests(httpMock)[0].flush(answer([7]));
+
+    component['selectClass'](KIDS.id);
+    httpMock.expectOne((r) => r.url === '/api/v1/attendance').flush({ data: [] });
+
+    const again = regularsRequests(httpMock);
+    expect(again).toHaveLength(1);
+    expect(again[0].request.params.get('academy_class_id')).toBe('1');
+  });
+
+  it('never lets a slow answer for the previous class land over the current one', () => {
+    const { fixture, component, httpMock } = setup();
+    fixture.detectChanges();
+    flushInit(httpMock, { classes: [KIDS, FUNDAMENTALS] });
+    const slow = regularsRequests(httpMock)[0];
+
+    component['selectClass'](KIDS.id);
+    httpMock.expectOne((r) => r.url === '/api/v1/attendance').flush({ data: [] });
+    const current = regularsRequests(httpMock)[0];
+
+    current.flush(answer([9]));
+    // Fundamentals answers last, long after the owner moved on to kids.
+    slow.flush(answer([7, 8]));
+
+    expect(missingIds(fixture)).toEqual(['missing-regular-9']);
+  });
+
+  it('says so when the answer fails, and asks again on retry', () => {
+    const { fixture, httpMock } = setup();
+    fixture.detectChanges();
+    flushInit(httpMock, { classes: [KIDS, FUNDAMENTALS] });
+    regularsRequests(httpMock)[0].flush('boom', { status: 500, statusText: 'Server Error' });
+    fixture.detectChanges();
+
+    const root = fixture.nativeElement as HTMLElement;
+    expect(root.querySelector('[data-cy="missing-regulars-error"]')).not.toBeNull();
+
+    root.querySelector<HTMLButtonElement>('[data-cy="missing-regulars-retry"]')?.click();
+    regularsRequests(httpMock)[0].flush(answer([7]));
+    fixture.detectChanges();
+
+    expect(root.querySelector('[data-cy="missing-regulars-error"]')).toBeNull();
+    expect(root.querySelector('[data-cy="missing-regulars-toggle"]')).not.toBeNull();
+  });
+});
