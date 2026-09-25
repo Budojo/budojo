@@ -6342,8 +6342,9 @@ paths:
 
         Sorted `gone`, `quiet`, `dropping`; within a tier, longest absent
         first (never-seen first of all). `meta.sessions_available` counts
-        the academy's realised sessions, so a client can tell "nobody is
-        drifting" from "not enough sessions recorded yet". Not cached.
+        the academy's realised sessions before today, so a client can tell
+        "nobody is drifting" from "not enough sessions recorded yet". Not
+        cached.
 
         Owner-only, and requires `stats_view`: the route sits in the
         `role:owner` group with every other `/stats` read, so any other role
@@ -7816,15 +7817,31 @@ components:
                 description: Sessions in the baseline — fewer than 24 for someone who joined within it.
         meta:
           type: object
-          required: [sessions_available]
+          required: [sessions_available, sessions_needed, has_attendance]
           properties:
             sessions_available:
               type: integer
               minimum: 0
               description: |
-                Every realised session the academy has recorded. Below 20
-                (8 recent + 12 baseline) nobody can be judged yet, and an
-                empty list means "not enough history", not "nobody drifting".
+                Every realised session the academy has recorded before
+                today. Tonight is left out until it is over, as it is for
+                everyone not yet ticked. Below `sessions_needed` nobody can be
+                judged yet, and an empty list means "not enough history", not
+                "nobody drifting".
+            sessions_needed:
+              type: integer
+              example: 20
+              description: |
+                The fewest sessions the rules can judge anyone on — the 8
+                recent plus the shortest accepted baseline of 12 (#1729). Sent
+                so a client never hard-codes the threshold the tiers use.
+            has_attendance:
+              type: boolean
+              description: |
+                Whether the academy has recorded any attendance at all,
+                tonight included. On an academy's first evening
+                `sessions_available` is 0 and this is `true`: "not enough
+                history yet", never "no attendance recorded".
 
     # ── Generic envelopes ─────────────────────────────────────────────────
 
@@ -8312,6 +8329,10 @@ components:
           description: |
             Unformatted national digits (no spaces / dashes / parentheses).
             Validated together with `phone_country_code` via libphonenumber.
+            A valid number is stored as its national significant number
+            (#1867): a trunk zero typed after the dial code is dropped
+            (`+44` / `07911123456` → `7911123456`), an Italian landline's
+            leading zero is kept (`+39` / `061234567`).
           example: '3331234567'
         website:
           type: string
@@ -8525,7 +8546,10 @@ components:
           nullable: true
           maxLength: 20
           pattern: '^[0-9]+$'
-          description: Unformatted national digits.
+          description: |
+            The national significant number, digits only (#1867) — no trunk
+            zero, an Italian landline's leading zero kept. With
+            `phone_country_code` it is the number in E.164.
           example: '3331234567'
         website:
           type: string
@@ -9434,7 +9458,12 @@ components:
           maxLength: 20
           nullable: true
           pattern: '^[0-9]+$'
-          description: Unformatted national digits — no spaces, no dashes. Must be sent together with `phone_country_code`.
+          description: |
+            Unformatted national digits — no spaces, no dashes. Must be sent together with
+            `phone_country_code`. A valid number is stored as its national significant
+            number (#1867): a trunk zero typed after the dial code is dropped
+            (`+44` / `07911123456` → `7911123456`), an Italian landline's leading zero is
+            kept (`+39` / `061234567`).
           example: '3331234567'
         website:
           type: string
@@ -9531,7 +9560,11 @@ components:
           maxLength: 20
           nullable: true
           pattern: '^[0-9]+$'
-          description: Unformatted national digits — must be sent together with `phone_country_code`.
+          description: |
+            Unformatted national digits — must be sent together with `phone_country_code`.
+            A valid number is stored as its national significant number (#1867): a trunk
+            zero typed after the dial code is dropped, an Italian landline's leading zero
+            is kept.
           example: '3331234567'
         website:
           type: string
@@ -9722,7 +9755,12 @@ components:
           type: string
           nullable: true
           example: '3331234567'
-          description: Unformatted national digits. Always paired with `phone_country_code`.
+          description: |
+            The national significant number, digits only (#1867) — no trunk zero, an
+            Italian landline's leading zero kept. Always paired with `phone_country_code`;
+            the two together are the number in E.164. An Italian landline imported before
+            #1867 may still lack its leading zero: those rows are not rewritten, because
+            the zero would be a guess, and they fail validation until corrected.
         website:
           type: string
           format: uri

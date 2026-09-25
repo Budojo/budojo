@@ -2173,6 +2173,31 @@
         "expiringDocumentOne": "other document to renew",
         "expiringDocumentOther": "other documents to renew",
         "none": "Nothing needs attention"
+      },
+      "atRisk": {
+        "title": "Not seen lately",
+        "description": "Who is coming less than they used to, measured against their own attendance.",
+        "countOne": "{{count}} athlete",
+        "countOther": "{{count}} athletes",
+        "tier": {
+          "gone": "Away for a while",
+          "quiet": "Absent lately",
+          "dropping": "Coming less"
+        },
+        "reasonDropping": "{{recent}} of the last {{recentTotal}} · was {{baseline}} of {{baselineTotal}}",
+        "reasonAbsent": "Last seen {{when}}",
+        "reasonNever": "No sessions since joining",
+        "emptyHealthy": "Nobody is drifting: everyone is coming about as often as they usually do.",
+        "emptyNoHistory": "Not enough sessions recorded yet to tell: {{available}} of the {{needed}} needed.",
+        "emptyNoAttendance": "No attendance recorded yet. Take the register at the check-in and this list fills itself.",
+        "openCheckIn": "Open the check-in",
+        "more": "More",
+        "moreAria": "More actions for {{name}}",
+        "markInactive": "Mark as inactive",
+        "markInactiveConfirm": "Mark {{name}} as inactive? They leave the roster's default view; nothing is deleted.",
+        "markInactiveAccept": "Mark inactive",
+        "markInactiveToast": "{{name}} is now inactive",
+        "markInactiveError": "Could not update {{name}}. Try again."
       }
     },
     "invitation": {
