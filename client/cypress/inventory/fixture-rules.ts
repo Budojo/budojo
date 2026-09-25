@@ -148,6 +148,41 @@ const RULES: Rule[] = [
     return out;
   },
 
+  // The season map's lessons (SyllabusCalendarAction, #1858): held when
+  // someone was checked in, planned when dated today or later with nobody
+  // yet, unconfirmed when dated before today with nobody.
+  (o, ctx) => {
+    const state = o['state'];
+    const on = o['held_on'];
+    if (!isDate(on) || (state !== 'held' && state !== 'planned' && state !== 'unconfirmed')) {
+      return [];
+    }
+    const d = day(on);
+    const wrong =
+      (state === 'held' && d > ctx.today) ||
+      (state === 'planned' && d < ctx.today) ||
+      (state === 'unconfirmed' && d >= ctx.today);
+    return wrong ? [`lesson on ${d} is '${state}' with today ${ctx.today}`] : [];
+  },
+
+  // …and its week cells: nothing is held or unconfirmed in a week that has
+  // not started, and nothing is planned in a week that is over.
+  (o, ctx) => {
+    const week = o['week'];
+    if (!isDate(week) || !isNum(o['held']) || !isNum(o['planned'])) return [];
+    const [y, m, d] = day(week).split('-').map(Number);
+    const sunday = new Date(y, m - 1, d + 6);
+    const lastDay = `${sunday.getFullYear()}-${String(sunday.getMonth() + 1).padStart(2, '0')}-${String(sunday.getDate()).padStart(2, '0')}`;
+    const out: string[] = [];
+    const unconfirmed = o['unconfirmed'];
+    if (o['held'] > 0 && day(week) > ctx.today) out.push(`week ${week} holds lessons before it starts`);
+    if (isNum(unconfirmed) && unconfirmed > 0 && day(week) > ctx.today) {
+      out.push(`week ${week} has unconfirmed plans before it starts`);
+    }
+    if (o['planned'] > 0 && lastDay < ctx.today) out.push(`week ${week} has plans after it ended`);
+    return out;
+  },
+
   // A lesson's headcount is people on the roster.
   (o, ctx) =>
     isNum(o['headcount']) && o['headcount'] > ctx.rosterSize
