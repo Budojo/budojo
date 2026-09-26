@@ -733,7 +733,17 @@ describe('PromotionsListComponent — time at the belt (#1772)', () => {
 });
 
 describe('PromotionsListComponent — missing steps (#1966)', () => {
-  afterEach(() => TestBed.resetTestingModule());
+  // The day the server's payloads below were captured on, pinned: a window
+  // that runs "up to today" must not move with the machine's clock.
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-26T12:00:00Z'));
+  });
+
+  afterEach(() => {
+    TestBed.resetTestingModule();
+    vi.useRealTimers();
+  });
 
   /*
    * Every payload below is the server's own output for GET /promotions
@@ -914,10 +924,11 @@ describe('PromotionsListComponent — missing steps (#1966)', () => {
     const { el, fixture, component } = jacopo();
     click(el, 'gap-add-date-belt:blue:0');
     fixture.detectChanges();
-    const c = component as unknown as Internals & { maxDate: Date };
+    const c = component as unknown as Internals;
 
     expect(c.fillWindow()?.min).toEqual(new Date(2024, 2, 13));
-    expect(c.fillWindow()?.max).toEqual(c.maxDate);
+    // Today, the owner's day (#1968) — not 20 Sep, the day he was entered.
+    expect(c.fillWindow()?.max).toEqual(new Date(2026, 8, 26));
   });
 
   it('never offers "Saltato" on the step an opening row stands for', () => {
