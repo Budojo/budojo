@@ -1580,25 +1580,59 @@ describe('DailyAttendanceComponent — type a name and press Enter (#1930)', () 
     post.flush({ data: [{ id: 900, athlete_id: 7, attended_on: '2026-09-14' }] });
   });
 
-  it('searches at once when Enter beats the typing pause, and marks the match when it lands', () => {
+  it('searches at once when Enter beats the typing pause, and the pause does not search again', () => {
     const { fixture, httpMock } = ready();
     const input = type(fixture, 'gallo');
-
     press(input, 'Enter'); // well inside the 200 ms pause
-    roster(httpMock, 'gallo').flush(page([GALLO]));
+
+    // The pause runs out while that search is still on the way. Asking again
+    // would supersede it, and its answer would then mark nobody.
+    vi.advanceTimersByTime(250);
+    const searches = httpMock.match(
+      (r) => r.url === '/api/v1/athletes' && r.params.get('q') === 'gallo',
+    );
+    expect(searches).toHaveLength(1);
+
+    searches[0].flush(page([GALLO]));
     fixture.detectChanges();
 
     const [post] = marks(httpMock);
     expect(post.request.body.athlete_ids).toEqual([7]);
     expect(input.value).toBe('');
     roster(httpMock, null).flush(page([GALLO, GALLI]));
-
-    // The keystroke still waiting out its pause must not put "gallo" back.
-    vi.advanceTimersByTime(250);
-    fixture.detectChanges();
-    httpMock.expectNone((r) => r.url === '/api/v1/athletes' && r.params.get('q') === 'gallo');
-    expect(input.value).toBe('');
     post.flush({ data: [{ id: 900, athlete_id: 7, attended_on: '2026-09-14' }] });
+
+    // Nor does the emptied box, once its own pause runs out.
+    vi.advanceTimersByTime(250);
+    httpMock.verify();
+  });
+
+  it('never marks the name on screen after the search for another name failed', () => {
+    const { fixture, component, httpMock } = ready();
+    const input = type(fixture, 'gallo');
+    vi.advanceTimersByTime(250);
+    roster(httpMock, 'gallo').flush(page([GALLO]));
+    fixture.detectChanges();
+
+    // "galli" and Enter: that search fails, and Andrea Gallo stays on screen.
+    input.value = 'galli';
+    input.dispatchEvent(new Event('input'));
+    press(input, 'Enter');
+    roster(httpMock, 'galli').flush('boom', { status: 500, statusText: 'Server Error' });
+    fixture.detectChanges();
+    expect(component['athletes']().map((a) => a.id)).toEqual([7]);
+
+    // Enter again asks again. It never marks the one name the list still shows.
+    press(input, 'Enter');
+    expect(marks(httpMock)).toHaveLength(0);
+    roster(httpMock, 'galli').flush(page([GALLI]));
+    fixture.detectChanges();
+
+    const [post] = marks(httpMock);
+    expect(post.request.body.athlete_ids).toEqual([8]);
+    expect(component['isPresent'](7)).toBe(false);
+    roster(httpMock, null).flush(page([GALLO, GALLI]));
+    post.flush({ data: [{ id: 901, athlete_id: 8, attended_on: '2026-09-14' }] });
   });
 
   it('marks nobody when the name matches two people, or none', () => {

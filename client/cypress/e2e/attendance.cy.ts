@@ -185,21 +185,35 @@ describe('Daily attendance check-in', () => {
     cy.get('[data-cy="attendance-row-1"]').should('have.attr', 'aria-pressed', 'false');
   });
 
-  it('checks the one match in on Enter, and hands the box back empty (#1930)', () => {
-    // The search narrows the register to Mario alone; everything else is both.
+  it('checks three people in at the door, one name and Enter each (#1930)', () => {
+    const bianchi = {
+      ...ATHLETES_TWO.body.data[0],
+      id: 3,
+      first_name: 'Anna',
+      last_name: 'Bianchi',
+    };
+    const everyone = [...ATHLETES_TWO.body.data, bianchi];
+    const byName: Record<string, typeof everyone> = {
+      rossi: [everyone[0]],
+      verdi: [everyone[1]],
+      bianchi: [bianchi],
+    };
+    const page = (data: typeof everyone) => ({
+      ...ATHLETES_TWO.body,
+      data,
+      meta: { ...ATHLETES_TWO.body.meta, to: data.length, total: data.length },
+    });
+
+    // Each search answers its one person. The whole register comes back slowly,
+    // so the next name is typed while the reload after a tick is still on its
+    // way: the queue at the door does not wait for the list.
     cy.intercept('GET', '/api/v1/athletes*', (req) => {
-      if (req.query['q'] === 'rossi') {
-        req.reply({
-          statusCode: 200,
-          body: {
-            ...ATHLETES_TWO.body,
-            data: [ATHLETES_TWO.body.data[0]],
-            meta: { ...ATHLETES_TWO.body.meta, to: 1, total: 1 },
-          },
-        });
+      const q = req.query['q'];
+      if (typeof q === 'string' && byName[q]) {
+        req.reply({ statusCode: 200, body: page(byName[q]) });
         return;
       }
-      req.reply(ATHLETES_TWO);
+      req.reply({ statusCode: 200, body: page(everyone), delay: 800 });
     }).as('athletes');
     cy.intercept('POST', '/api/v1/attendance', (req) => {
       req.reply({
@@ -207,7 +221,7 @@ describe('Daily attendance check-in', () => {
         body: {
           data: [
             {
-              id: 888,
+              id: 880 + Number(req.body.athlete_ids[0]),
               athlete_id: req.body.athlete_ids[0],
               attended_on: req.body.date,
               notes: null,
@@ -222,14 +236,18 @@ describe('Daily attendance check-in', () => {
     cy.visitAuthenticated('/dashboard/attendance');
     cy.wait(['@academy', '@athletes', '@getDaily']);
 
-    // Typed and entered in one breath — faster than the search's pause.
+    // Each one typed and entered in one breath, faster than the search's pause.
     cy.get('[data-cy="attendance-search-input"]').type('rossi{enter}');
+    cy.wait('@mark').its('request.body.athlete_ids').should('deep.equal', [1]);
+    cy.get('[data-cy="attendance-search-input"]').should('have.value', '').type('verdi{enter}');
+    cy.wait('@mark').its('request.body.athlete_ids').should('deep.equal', [2]);
+    cy.get('[data-cy="attendance-search-input"]').should('have.value', '').type('bianchi{enter}');
+    cy.wait('@mark').its('request.body.athlete_ids').should('deep.equal', [3]);
 
-    cy.wait('@mark')
-      .its('request.body')
-      .should('deep.include', { athlete_ids: [1] });
+    // The box ready for a fourth, and the whole register back with all three on it.
     cy.get('[data-cy="attendance-search-input"]').should('have.value', '').and('have.focus');
-    cy.get('[data-cy="attendance-row-1"]').should('have.attr', 'aria-pressed', 'true');
-    cy.get('[data-cy="attendance-row-2"]').should('exist');
+    [1, 2, 3].forEach((id) =>
+      cy.get(`[data-cy="attendance-row-${id}"]`).should('have.attr', 'aria-pressed', 'true'),
+    );
   });
 });

@@ -393,6 +393,13 @@ export class DailyAttendanceComponent implements OnInit {
   // with the main list (Jakob's law).
 
   protected readonly searchTerm = signal<string>('');
+
+  /**
+   * The search the list on screen answers (#1930) — not the one asked for.
+   * `searchTerm` moves the moment a search is sent; this only when its answer
+   * lands, so a failed search leaves it naming the list still shown.
+   */
+  private readonly listedTerm = signal<string>('');
   protected readonly selectedBelt = signal<Belt | ''>('');
 
   /**
@@ -618,6 +625,7 @@ export class DailyAttendanceComponent implements OnInit {
           if (epoch === this.loadEpoch) {
             this.athletes.set(page.data);
             this.totalActiveAthletes.set(page.meta.total);
+            this.listedTerm.set(q);
           }
           settle(true);
         },
@@ -1011,12 +1019,13 @@ export class DailyAttendanceComponent implements OnInit {
   protected onSearchEnter(): void {
     const typed = this.typed();
     if (typed === '') return;
-    if (typed === this.searchTerm() && !this.loading()) {
+    if (typed === this.listedTerm() && !this.loading()) {
       this.markOnlyMatch();
       return;
     }
-    // The list does not show this name yet (Enter beat the typing pause, or
-    // its answer is still on the way): search now, and decide when it lands.
+    // The list on screen does not answer this name (Enter beat the typing
+    // pause, its answer is still on the way, or its search failed): search
+    // now, and decide when the answer lands.
     this.applySearch(typed, () => this.markOnlyMatch());
   }
 
@@ -1031,8 +1040,9 @@ export class DailyAttendanceComponent implements OnInit {
    * takes anyone off: that is what the tap on the row is for.
    */
   private markOnlyMatch(): void {
-    // Changed while its answer was on the way: the list is not what is typed.
-    if (this.typed() !== this.searchTerm()) return;
+    // The list on screen must answer exactly what is in the box — never a
+    // search still on its way, nor the one before a search that failed.
+    if (this.typed() !== this.listedTerm()) return;
     const matches = this.athletes();
     if (matches.length !== 1 || this.totalActiveAthletes() !== 1) return;
 

@@ -133,6 +133,12 @@
   padding: 0.5rem 1rem;
   font-size: 0.875rem;
   color: var(--p-text-muted-color);
+
+  // The all-here line takes the keyboard after the last tick (#1930).
+  &:focus-visible {
+    outline: 2px solid var(--p-focus-ring-color);
+    outline-offset: -2px;
+  }
 }
 
 .missing__retry {
