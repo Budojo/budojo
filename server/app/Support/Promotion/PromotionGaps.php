@@ -26,12 +26,17 @@ use Carbon\CarbonImmutable;
  *   into its belt — the one step it stands for, reported to be **completed**
  *   (`completes_promotion_id`) rather than added as a second row.
  *
- * **Never a guess.** An interval the ladder cannot walk — a belt that went
- * backwards, rows that contradict each other, a kids' grade an adult's ladder
- * never passes — reports nothing. So does a walk that would step into a belt
- * the history already has a row for, or has already been offered: a belt is
- * reached once, and a second row for it is the one thing a ghost must never
- * lead to.
+ * **Never a guess.** An interval the ladder cannot walk — rows that
+ * contradict each other, a kids' grade an adult's ladder never passes —
+ * reports nothing. So does a walk that would step into a belt the history
+ * already has a row for, or has already been offered: a belt is reached
+ * once, and a second row for it is the one thing a ghost must never lead to.
+ *
+ * **Corrections are not promotions.** A belt set by mistake and set back —
+ * b1 → b2, then b2 → b1 with no belt row between — cancels out: the athlete
+ * never left b1, so neither row is replayed, and b2 is not reached. A belt
+ * row that goes down with nothing undoing it is a contradiction: nothing is
+ * missing before it, and the count on the belt it returns to is held.
  *
  * **Held until the belt is dated.** Once a walk takes a starting row's belt
  * step, nothing after it on that walk is offered: those steps come after a
@@ -46,8 +51,9 @@ use Carbon\CarbonImmutable;
  *
  * **A window, or nothing.** A step goes after the row the walk left from and
  * no later than the next row after it (today, when there is none), never
- * counting the stripe reset a live promotion writes beside its belt row, nor
- * the starting row a step completes. A step with no day left in its window —
+ * counting the stripe reset a live promotion writes beside its belt row. A
+ * step that completes a starting row goes no later than that row's own day
+ * either: the athlete held the belt when entered. A step with no day left in its window —
  * two rows on the same day with steps between them, jumped in one save, or a
  * row dated today with steps still after it — is not offered: it could never
  * be filled.
@@ -112,7 +118,7 @@ final class PromotionGaps
             return ['gaps' => [], 'history_starts_at' => null];
         }
 
-        $this->rows = array_values(array_filter($sorted, static fn (PromotionRecord $row): bool => ! $row->isReset()));
+        $this->rows = $this->withoutUndone(array_values(array_filter($sorted, static fn (PromotionRecord $row): bool => ! $row->isReset())));
         $found = $this->rows === [] ? [] : $this->replay($currentBelt, $currentStripes);
 
         return [
@@ -221,6 +227,50 @@ final class PromotionGaps
     }
 
     /**
+     * The rows without the belt mistakes that were set back: a belt row
+     * b1 → b2 undone by a later b2 → b1, with no belt row between them. The
+     * athlete never left b1, so neither row is a step, a boundary, or a belt
+     * reached; the stripe rows between them still count on b1. Nested pairs
+     * cancel from the inside out.
+     *
+     * @param list<PromotionRecord> $rows
+     *
+     * @return list<PromotionRecord>
+     */
+    private function withoutUndone(array $rows): array
+    {
+        $open = [];
+        $undone = [];
+        foreach ($rows as $position => $row) {
+            if ($row->kind !== 'belt') {
+                continue;
+            }
+
+            $last = $open === [] ? null : $open[\count($open) - 1];
+            if ($last !== null && self::undoes($row, $rows[$last])) {
+                array_pop($open);
+                $undone[$last] = true;
+                $undone[$position] = true;
+
+                continue;
+            }
+            $open[] = $position;
+        }
+
+        return array_values(array_filter(
+            $rows,
+            static fn (int $position): bool => ! isset($undone[$position]),
+            ARRAY_FILTER_USE_KEY,
+        ));
+    }
+
+    private static function undoes(PromotionRecord $row, PromotionRecord $earlier): bool
+    {
+        return $row->fromBelt !== null && $earlier->fromBelt !== null
+            && $row->fromBelt === $earlier->toBelt && $row->toBelt === $earlier->fromBelt;
+    }
+
+    /**
      * The steps missing before one row, and where it leaves the athlete.
      *
      * @param State $state
@@ -231,6 +281,12 @@ final class PromotionGaps
     {
         if ($row->isOpening()) {
             return $this->arrival($row, $state, $enteredOn, $anchor);
+        }
+
+        if ($row->kind === 'belt' && $this->wentDown($row)) {
+            // A correction, not a promotion: nothing is missing before it,
+            // and the count on the belt it returns to is the one held there.
+            return [[], ['belt' => $row->belt(), 'stripes' => $state['stripes']], $row->belt()];
         }
 
         $target = $row->kind === 'stripe'
@@ -249,6 +305,15 @@ final class PromotionGaps
         $stripes = $next !== null && $next['kind'] === 'belt' && $next['belt'] === $row->belt() ? $next['stripes'] : 0;
 
         return [$found, ['belt' => $row->belt(), 'stripes' => $stripes], null];
+    }
+
+    /** A belt row whose belt sits below the one it left, in the order people climb. */
+    private function wentDown(PromotionRecord $row): bool
+    {
+        $from = $row->fromBelt === null ? null : $this->ladder->climbPosition($row->fromBelt);
+        $to = $this->ladder->climbPosition($row->belt());
+
+        return $from !== null && $to !== null && $to < $from;
     }
 
     /**
@@ -428,9 +493,22 @@ final class PromotionGaps
     }
 
     /**
-     * Oldest first. Rows sharing a moment — a day's backfill, all stored at
-     * midnight — go in the order the ladder climbs, not the order they were
-     * typed: two stripes transcribed newest first are still one then two.
+     * Oldest first. Rows sharing a moment — since #1963 every row of a day is
+     * stored at the owner's midnight — go by where each one **starts** on
+     * the ladder, then by id:
+     *
+     * - a starting row starts on its own belt, before anything else on it:
+     *   a same-day correction off it (created on purple by mistake, then
+     *   purple → blue) replays after it, the way it was made;
+     * - a stripe row starts at its `from_stripes`, so two stripes transcribed
+     *   newest first are still one then two;
+     * - a belt row starts where it leaves its `from_belt`, after the stripes
+     *   on that belt.
+     *
+     * Not by id alone: a step filled on the day of the row after it (its
+     * window ends on that day, inclusive) is written later but happened
+     * before it. Not by where a row ends, which replays a downward
+     * correction backwards.
      *
      * @param list<PromotionRecord> $records
      *
@@ -440,17 +518,33 @@ final class PromotionGaps
     {
         usort($records, fn (PromotionRecord $a, PromotionRecord $b): int => [
             $a->recordedAt->getTimestamp(),
-            $this->ladder->climbPosition($a->belt()) ?? PHP_INT_MAX,
-            $a->stripes(),
+            ...$this->start($a),
             $a->id,
         ] <=> [
             $b->recordedAt->getTimestamp(),
-            $this->ladder->climbPosition($b->belt()) ?? PHP_INT_MAX,
-            $b->stripes(),
+            ...$this->start($b),
             $b->id,
         ]);
 
         return $records;
+    }
+
+    /**
+     * Where a row starts on the ladder: the climb position of the belt it
+     * starts on, then how far along that belt.
+     *
+     * @return array{int, int}
+     */
+    private function start(PromotionRecord $row): array
+    {
+        if ($row->isOpening()) {
+            return [$this->ladder->climbPosition($row->belt()) ?? PHP_INT_MAX, -1];
+        }
+        if ($row->kind === 'belt') {
+            return [$this->ladder->climbPosition($row->fromBelt ?? $row->belt()) ?? PHP_INT_MAX, PHP_INT_MAX];
+        }
+
+        return [$this->ladder->climbPosition($row->beltAtEvent) ?? PHP_INT_MAX, $row->fromStripes ?? 0];
     }
 
     /**
@@ -468,7 +562,7 @@ final class PromotionGaps
                 continue;
             }
 
-            $before = $this->rowAfter($after, $completes);
+            $before = $this->bound($after, $completes);
             if (($before?->day() ?? $this->today->toDateString()) <= $after->day()) {
                 continue;
             }
@@ -490,24 +584,25 @@ final class PromotionGaps
     }
 
     /**
-     * The first row after this one (resets are already out), passing over
-     * the starting row a step completes: a step cannot be bounded by the row
-     * it moves.
+     * The row a step must come no later than: the first row after the one it
+     * follows (resets are already out). For a step that completes a starting
+     * row, that is the earlier of the next row and the starting row itself —
+     * the athlete held the belt the day they were entered, so the promotion
+     * was that day at the latest. A starting row that comes before the row
+     * the step follows leaves it no day at all.
      */
-    private function rowAfter(PromotionRecord $row, ?PromotionRecord $completes): ?PromotionRecord
+    private function bound(PromotionRecord $after, ?PromotionRecord $completes): ?PromotionRecord
     {
-        $position = array_search($row, $this->rows, true);
+        $position = array_search($after, $this->rows, true);
         if (! \is_int($position)) {
             return null;
         }
 
-        foreach (\array_slice($this->rows, $position + 1) as $next) {
-            if ($next !== $completes) {
-                return $next;
-            }
+        if ($completes !== null && array_search($completes, $this->rows, true) < $position) {
+            return $completes;
         }
 
-        return null;
+        return $this->rows[$position + 1] ?? null;
     }
 
     /** @return Neighbour|null */
