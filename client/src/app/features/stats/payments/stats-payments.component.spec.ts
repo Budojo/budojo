@@ -48,11 +48,12 @@ describe('StatsPaymentsComponent', () => {
 
     expect(componentOptions().maintainAspectRatio).toBe(false);
     // …and the chart has a height to fill: without one the p-chart host is
-    // auto-height, and Chart.js falls back to a 150px canvas.
+    // auto-height, and Chart.js falls back to a 150px canvas. 100% of the
+    // wrap, so the SCSS box stays the one place the size is set.
     const box = (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>(
       '[data-cy="stats-payments-chart"] p-chart',
     );
-    expect(box?.style.height).toBe('20rem');
+    expect(box?.style.height).toBe('100%');
   });
 
   it('shows the loading skeleton while fetching', () => {
