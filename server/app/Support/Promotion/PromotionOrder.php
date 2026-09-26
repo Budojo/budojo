@@ -26,6 +26,11 @@ use App\Support\MartialArt\RankLadder;
  * Not by id alone: a step filled on the day of the row after it (its window
  * ends on that day, inclusive) is written later but happened before it. Not
  * by where a row ends, which replays a downward correction backwards.
+ *
+ * A mistake corrected at the same moment is ordered like any other row, by
+ * where it starts — which may put the undo first. Keeping them in the order
+ * they were made was tried and changed the gaps (#1966): the replay's
+ * guarantees come first, the listing's cosmetics second.
  */
 final class PromotionOrder
 {
@@ -51,6 +56,26 @@ final class PromotionOrder
         ]);
 
         return $records;
+    }
+
+    /**
+     * Whether one row sets the other back: the same belt change the other
+     * way round, or the same stripe change on the same belt the other way
+     * round. A starting row sets nothing back.
+     */
+    public static function undoEachOther(PromotionRecord $a, PromotionRecord $b): bool
+    {
+        if ($a->kind !== $b->kind) {
+            return false;
+        }
+
+        if ($a->kind === 'belt') {
+            return $a->fromBelt !== null && $b->fromBelt !== null
+                && $a->fromBelt === $b->toBelt && $a->toBelt === $b->fromBelt;
+        }
+
+        return $a->beltAtEvent === $b->beltAtEvent
+            && $a->fromStripes === $b->toStripes && $a->toStripes === $b->fromStripes;
     }
 
     /**

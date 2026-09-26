@@ -471,6 +471,22 @@ it('cancels the shortest round trip first, when a real promotion could pair eith
         ->and($result['gaps'][0]['after'])->toBe(['promotion_id' => 1, 'recorded_at' => '2018-01-01']);
 });
 
+it('cancels nested corrections from the inside out, on distinct days', function (): void {
+    // Purple by mistake, then brown, then back to purple and back to blue.
+    $result = gapsOf([
+        beltRow(1, Belt::White, Belt::Blue, '2024-01-10'),
+        beltRow(2, Belt::Blue, Belt::Purple, '2026-09-10'),
+        beltRow(3, Belt::Purple, Belt::Brown, '2026-09-11'),
+        beltRow(4, Belt::Brown, Belt::Purple, '2026-09-12'),
+        beltRow(5, Belt::Purple, Belt::Blue, '2026-09-13'),
+        stripeRow(6, Belt::Blue, 1, 2, '2027-01-10'),
+    ], Belt::Blue, 2);
+
+    // Only the stripe nobody wrote down, after the real blue.
+    expect(keysOf($result))->toBe(['stripe:blue:1'])
+        ->and($result['gaps'][0]['after'])->toBe(['promotion_id' => 1, 'recorded_at' => '2024-01-10']);
+});
+
 it('keeps a real promotion that follows a set-back mistake to the same belt', function (): void {
     // Purple by mistake and back the same day; purple for real months later,
     // with nothing recorded on blue in between.

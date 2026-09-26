@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
+use App\Support\OperatorDay;
 use App\Enums\TrainingMode;
 use App\Models\Academy;
 use App\Models\AcademyClass;
@@ -30,7 +31,7 @@ class LessonFactory extends Factory
         return [
             'academy_id' => Academy::factory(),
             'academy_class_id' => null,
-            'held_on' => now()->toDateString(),
+            'held_on' => OperatorDay::today()->toDateString(),
             'name' => 'Fundamentals',
             'starts_at' => '19:00',
             'kind' => TrainingMode::Gi,

@@ -102,7 +102,11 @@ Before this table, only **belt** changes left a trace (as a `belt_promotion` `Co
     - The athlete never left b1, so neither row is replayed. No stripes are re-offered, and no "walk up to purple" steps appear before the mistake.
     - The stripe rows around the pair still count on b1. b2 is not reached, so a later real promotion to it can still be offered.
     - When two pairs share a row, the shorter one is the correction. Example: a real promotion into blue years ago, a demotion by mistake, and the promotion that undid it the next day. The real promotion stays.
-    - Pairs are taken shortest first, so nested ones cancel from the inside out.
+    - Pairs are taken shortest first, so nested ones cancel from the inside out **when made on distinct days**.
+    - **Known limits, left on purpose.** Neither one ever offers a row twice:
+      - Nested corrections made at the same midnight do not cancel: the outer undo sorts between the inner pair.
+      - A double mistake (blue → purple → brown, then brown → blue) is no round trip, so the steps up to purple stay on offer.
+      - A belt or stripe mistake corrected on the same day may list the mistake above its undo. The gaps are unaffected, and deleting both rows tidies the history.
   - **A belt row that goes down with nothing undoing it is a contradiction.** Nothing is reported before it, and the count on the belt it returns to is held, as on arrival.
 - **Nothing before the record.** Nothing is reported before the first row; the page says "prima del … la storia non è registrata" in one line. A starting row records the belt, not the count, so the stripes on its belt are taken as held on arrival, whether the row opens the history or older rows were transcribed before it.
 - **A starting row that is not the first is completed, never duplicated.** It is dated the day the athlete was entered, not the day of the promotion. Its belt step is reported with `completes_promotion_id`, and `PATCH` sets its `from_belt` and real date. This is the one case where a row's transition changes: a starting row never described one. It is also what moves `belt_since` off the data-entry day. **Nothing after that step is offered until it is completed.** Those steps come after a promotion whose day is not known yet, so they have no honest window; once the row is completed they appear, bounded by its real date. A completing step cannot be skipped: it is a belt the athlete holds.

@@ -47,8 +47,13 @@ class ListAthletePromotionsAction
             $ordered[] = $row;
         }
 
+        // A page past the last is an empty page, as the query builder gave —
+        // and the offset of a page number that large is not an int any more.
+        $lastPage = max(1, (int) ceil(\count($ordered) / self::PER_PAGE));
+        $items = $page > $lastPage ? [] : \array_slice($ordered, ($page - 1) * self::PER_PAGE, self::PER_PAGE);
+
         return new LengthAwarePaginator(
-            \array_slice($ordered, ($page - 1) * self::PER_PAGE, self::PER_PAGE),
+            $items,
             \count($ordered),
             self::PER_PAGE,
             $page,
