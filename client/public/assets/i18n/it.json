@@ -1955,7 +1955,6 @@
         "noAthletes": "Nessun atleta attivo ancora.",
         "noAthletesCta": "Vai ad Atleti"
       },
-      "paginationHint": "Mostrati {{shown}} di {{total}} atleti attivi. La paginazione arriva nel follow-up M4.2.5.",
       "undo": "Annulla",
       "toast": {
         "loadAthletesError": "Impossibile caricare la lista atleti.",

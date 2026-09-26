@@ -441,15 +441,6 @@
     }
   </div>
 
-  @if (!loading() && athletes().length > 0 && totalActiveAthletes() > athletes().length) {
-    <p class="attendance__pagination-hint">
-      {{
-        'attendance.daily.paginationHint'
-          | translate: { shown: athletes().length, total: totalActiveAthletes() }
-      }}
-    </p>
-  }
-
   <!--
     Who usually comes to this class and is not here (#1730). Below the
     register, folded: the table is what the screen is for, and the header's
