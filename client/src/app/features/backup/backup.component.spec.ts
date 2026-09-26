@@ -238,6 +238,38 @@ describe('BackupComponent', () => {
       expect(errorToast?.detail).toBe('This file is not a Budojo backup.');
     });
 
+    it('says Budojo is busy when a backup or restore is already running', async () => {
+      const { fixture, added } = setup({
+        restoreFromFile: vi.fn(async () => ({
+          ok: false,
+          code: 'busy' as const,
+          reason: 'A backup or restore is already running.',
+        })),
+      });
+      await fixture.whenStable();
+
+      await fixture.componentInstance['restoreFromFile']();
+
+      const errorToast = added.find((m) => (m as { severity: string }).severity === 'error') as {
+        detail?: string;
+      };
+      expect(errorToast?.detail).toBe(
+        'Budojo is already backing up or restoring: try again in a moment.',
+      );
+    });
+
+    it('stops spinning when the desktop does not answer', async () => {
+      const { fixture } = setup({
+        restoreFromFile: vi.fn(async () => {
+          throw new Error('ipc gone');
+        }),
+      });
+      await fixture.whenStable();
+
+      await expect(fixture.componentInstance['restoreFromFile']()).rejects.toThrow('ipc gone');
+      expect(fixture.componentInstance['restoringFromFile']()).toBe(false);
+    });
+
     it('confirms a restored file like any other restore', async () => {
       const { fixture, added } = setup();
       await fixture.whenStable();

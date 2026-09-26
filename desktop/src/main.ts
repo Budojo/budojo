@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, Notification, protocol, safeStorage, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, Notification, type OpenDialogOptions, protocol, safeStorage, shell } from 'electron';
 import { createWriteStream, existsSync, readFileSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -806,7 +806,9 @@ function registerBackupBridge(
   ipcMain.handle('budojo:backup:list', async () => (await backupOf()?.list()) ?? []);
 
   ipcMain.handle('budojo:backup:run', async () => {
-    const path = await backupOf()?.backup();
+    // An answer, never a rejection: a rejected invoke leaves the page's button
+    // spinning. `backup()` throws while a restore holds the lock (#1909).
+    const path = await backupOf()?.backup().catch(() => undefined);
 
     return { ok: path !== undefined, path: path ?? null };
   });
@@ -825,10 +827,21 @@ function registerBackupBridge(
       return { ok: false, reason: 'Budojo is not ready to restore yet.' };
     }
 
+    // Before PHP is stopped, not after: a refused restore still restarts the
+    // server on its way out, and doing that under a restore that is still
+    // swapping is the one thing the swap must never overlap (#1909).
+    if (service.busy) {
+      return { ok: false, code: 'busy', reason: 'A backup or restore is already running.' };
+    }
+
     await supervisor.stop();
-    let check;
+    let check: RestoreCheck;
     try {
       check = await run(service);
+    } catch (error) {
+      // An answer, never a rejection: a rejected invoke leaves the page's
+      // button spinning with nothing said.
+      check = { ok: false, code: 'unreadable', reason: error instanceof Error ? error.message : String(error) };
     } finally {
       await supervisor.start();
     }
@@ -854,16 +867,24 @@ function registerBackupBridge(
   // download, a USB stick — the only way back on a new computer. The renderer
   // only asks; the path is the one the system dialog returned, never one the
   // renderer sent.
-  ipcMain.handle('budojo:backup:restoreFromFile', async () => {
+  ipcMain.handle('budojo:backup:restoreFromFile', async (event) => {
+    if (backupOf()?.busy === true) {
+      return { ok: false, code: 'busy', reason: 'A backup or restore is already running.' };
+    }
+
     // Open in the copies folder when there is one: it is where the owner's
     // backups are, and Electron's default is Downloads (see folder:choose).
     const folder = (await folderOf()?.state())?.folder ?? null;
-    const picked = await dialog.showOpenDialog({
+    const options: OpenDialogOptions = {
       title: 'Choose a Budojo backup',
       properties: ['openFile'],
       filters: [{ name: 'Budojo backup', extensions: ['zip'] }],
       ...(folder === null ? {} : { defaultPath: folder }),
-    });
+    };
+    // Modal on the window that asked, so the page behind cannot start a second
+    // restore while the dialog is open.
+    const parent = BrowserWindow.fromWebContents(event.sender);
+    const picked = parent === null ? await dialog.showOpenDialog(options) : await dialog.showOpenDialog(parent, options);
 
     const file = picked.filePaths[0];
     if (picked.canceled || file === undefined) {

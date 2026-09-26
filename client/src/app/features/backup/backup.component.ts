@@ -339,8 +339,7 @@ export class BackupComponent {
 
   protected async backupNow(): Promise<void> {
     this.backingUp.set(true);
-    const ok = await this.backup.backupNow();
-    this.backingUp.set(false);
+    const ok = await this.backup.backupNow().finally(() => this.backingUp.set(false));
 
     this.messages.add({
       severity: ok ? 'success' : 'error',
@@ -354,8 +353,11 @@ export class BackupComponent {
 
   protected async restore(archive: BackupArchiveView): Promise<void> {
     this.restoringName.set(archive.name);
-    const result = await this.backup.restore(archive.name);
-    this.restoringName.set(null);
+    // `finally`: a spinner that outlives a failed call is a page that looks
+    // stuck with nothing said (#1909).
+    const result = await this.backup
+      .restore(archive.name)
+      .finally(() => this.restoringName.set(null));
 
     this.reportRestore(result);
   }
@@ -367,8 +369,9 @@ export class BackupComponent {
    */
   protected async restoreFromFile(): Promise<void> {
     this.restoringFromFile.set(true);
-    const result = await this.backup.restoreFromFile();
-    this.restoringFromFile.set(false);
+    const result = await this.backup
+      .restoreFromFile()
+      .finally(() => this.restoringFromFile.set(false));
 
     if (result.canceled !== true) {
       this.reportRestore(result);
@@ -406,6 +409,8 @@ export class BackupComponent {
         return this.translate.instant('backup.toast.notABackup');
       case 'newer':
         return this.translate.instant('backup.toast.newerBackup');
+      case 'busy':
+        return this.translate.instant('backup.toast.busy');
       default:
         return result.reason;
     }

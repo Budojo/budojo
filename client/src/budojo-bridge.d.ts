@@ -26,8 +26,11 @@ interface DriveArchive {
 /** What a restore answered (#1228, #1909). */
 interface BackupRestoreResult {
   readonly ok: boolean;
-  /** Why it was refused: not a Budojo backup at all, or one from a newer Budojo. */
-  readonly code?: 'unreadable' | 'newer';
+  /**
+   * Why it was refused: not a Budojo backup at all, one from a newer Budojo,
+   * or a backup or restore already running.
+   */
+  readonly code?: 'unreadable' | 'newer' | 'busy';
   /** The same refusal in English, for the log. */
   readonly reason?: string;
 }

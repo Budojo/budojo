@@ -1,4 +1,4 @@
-import { copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { constants, copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -124,8 +124,12 @@ export function createBackupIO(config: BackupIOConfig): BackupIO {
 
     copyIn: async (sourcePath, name) => {
       mkdirSync(config.backupsDir, { recursive: true });
-      copyFileSync(sourcePath, path.join(config.backupsDir, name));
+      // Never over an existing file: a name already taken is an archive the
+      // list holds, and the engine does not copy those.
+      copyFileSync(sourcePath, path.join(config.backupsDir, name), constants.COPYFILE_EXCL);
     },
+
+    hasDatabase: async (extractedDir) => existsSync(path.join(extractedDir, 'budojo.sqlite')),
 
     swapIn: async (extractedDir) => {
       const restoredDb = path.join(extractedDir, 'budojo.sqlite');

@@ -3337,7 +3337,8 @@
       "restored": "Backup restored",
       "restoreRefused": "This backup could not be restored",
       "notABackup": "This file is not a Budojo backup.",
-      "newerBackup": "This backup comes from a newer version of Budojo. Update Budojo, then restore it."
+      "newerBackup": "This backup comes from a newer version of Budojo. Update Budojo, then restore it.",
+      "busy": "Budojo is already backing up or restoring: try again in a moment."
     },
     "keys": {
       "heading": "Recovery keys",
