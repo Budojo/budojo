@@ -98,6 +98,21 @@ it('says nothing about an inactive athlete', function (): void {
     Notification::assertNothingSent();
 });
 
+it('says nothing about the owner training in their own academy (#1913)', function (): void {
+    // The owner missing their own classes is not a churn signal, and the
+    // alert about it went to the owner: "Matteo Bonanno hasn't trained".
+    $academy = academyTrainingMonWedFri();
+    Athlete::factory()->selfFor($academy->owner)->create([
+        'academy_id' => $academy->id,
+        'status' => AthleteStatus::Active,
+        'joined_at' => '2026-01-01',
+    ]);
+
+    $this->artisan(SendAthleteMissedStreakPushes::class)->assertSuccessful();
+
+    Notification::assertNothingSent();
+});
+
 it('says nothing about someone who joined after the streak began', function (): void {
     $academy = academyTrainingMonWedFri();
     Athlete::factory()->create([
