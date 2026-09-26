@@ -53,6 +53,14 @@
     background: currentColor;
     border-radius: 0.0625rem; // 1px — square-ish but with a hint of softening
     opacity: 0.85; // muted enough to not compete with the label
+
+    // The stripe a history is missing (#1966): the same tile, empty. Drawn in
+    // the belt's own ink, so it reads on every belt the filled ones read on.
+    &--missing {
+      background: transparent;
+      box-shadow: inset 0 0 0 1px currentColor;
+      opacity: 1;
+    }
   }
 }
 

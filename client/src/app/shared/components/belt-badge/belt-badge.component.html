@@ -22,20 +22,31 @@
       @if (countLabel(); as count) {
         <span class="belt-badge__count" data-cy="belt-count">{{ count }}</span>
       }
-      @if (stripeTiles().length > 0) {
+      @if (stripeTiles().length > 0 || showsMissingStripe()) {
         <span
           class="belt-badge__stripes"
           [attr.aria-label]="
-            (stripeTiles().length === 1
-              ? 'shared.beltBadge.stripeOne'
-              : 'shared.beltBadge.stripeMany'
-            ) | translate: { count: stripeTiles().length }
+            stripeTiles().length === 0
+              ? null
+              : ((stripeTiles().length === 1
+                  ? 'shared.beltBadge.stripeOne'
+                  : 'shared.beltBadge.stripeMany'
+                ) | translate: { count: stripeTiles().length })
           "
         >
           @for (_ of stripeTiles(); track $index) {
             <span
               class="belt-badge__stripe-tile"
               data-cy="belt-stripe-tile"
+              aria-hidden="true"
+            ></span>
+          }
+          @if (showsMissingStripe()) {
+            <!-- The stripe the history is missing (#1966): the row around it
+                 says so in words, so the tile is decoration to a reader. -->
+            <span
+              class="belt-badge__stripe-tile belt-badge__stripe-tile--missing"
+              data-cy="belt-stripe-missing"
               aria-hidden="true"
             ></span>
           }
