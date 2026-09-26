@@ -34,6 +34,7 @@ A closure only ever **subtracts**: a day inside one is not a scheduled training 
 - **Read through `App\Support\ScheduledDays`**, which removes closed days from every window it returns (`between`, `countBetween`, `isScheduledOn`, `lastBefore`). A window that is all closure counts **zero**, not unknown. The schedule is configured; the academy was just shut.
 - **A presence on a closed day still counts** in the numerator: an open mat during the break is real training, and a rate may exceed 100% for off-schedule sessions (`attendance-rate.ts`).
 - **The missed-streak alert** reads its last three sessions through `ScheduledDays::lastBefore()`, so it walks over a closure instead of into it. After a break longer than its 30-day reach it stays quiet until three sessions have been held again.
+- **The SPA applies the same rule** until the denominators move to the server (#1767–#1769): `closureOn()` in `attendance-rate.ts` takes closed days out of the roster fractions, the month summary and the athlete tab's ring. The athlete calendar paints a closed day as "not a training day" and lists the month's closures under its legend. The check-in lands on the last session actually held and says the academy is closed today.
 - **Dates stay `Y-m-d` strings**, uncast, so they compare as dates in SQLite's TEXT, as `academy_schedules.effective_from` does.
 
 ## API surface

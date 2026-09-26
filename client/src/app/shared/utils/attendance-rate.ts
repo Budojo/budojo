@@ -1,4 +1,4 @@
-import type { Academy, AcademySchedule } from '../../core/services/academy.service';
+import type { Academy, AcademyClosure, AcademySchedule } from '../../core/services/academy.service';
 
 /**
  * Returns `YYYY-MM-DD` for the local-time calendar day of `d`. Used to
@@ -40,6 +40,21 @@ export function scheduleForDate(
 }
 
 /**
+ * The closure a calendar day falls in (#1766), or null. Ends are inclusive,
+ * and overlapping closures are fine: the first match answers. Mirrors
+ * `App\Support\ScheduledDays` on the server, where a closed day is never a
+ * scheduled one.
+ */
+export function closureOn(
+  closures: readonly AcademyClosure[] | null | undefined,
+  candidate: Date,
+): AcademyClosure | null {
+  if (!closures || closures.length === 0) return null;
+  const iso = toLocalIsoDate(candidate);
+  return closures.find((c) => c.starts_on <= iso && iso <= c.ends_on) ?? null;
+}
+
+/**
  * Counts the academy's *scheduled* training days that have already
  * occurred in a given calendar month, capped at `today`. The athlete's
  * attendance is compared against THIS denominator, not the calendar-day
@@ -71,6 +86,7 @@ export function countScheduledTrainingDays(
   year: number,
   month: number,
   today: Date = new Date(),
+  closures: readonly AcademyClosure[] | null = null,
 ): number | null {
   if (!schedules || schedules.length === 0) {
     return null;
@@ -95,6 +111,7 @@ export function countScheduledTrainingDays(
     new Date(year, month - 1, 1),
     new Date(year, month - 1, lastDayOfMonth),
     today,
+    closures,
   );
 }
 
@@ -115,12 +132,16 @@ export function countScheduledTrainingDays(
  * Returns `null` on the same "no schedule configured anywhere" condition,
  * and `0` for a range that is entirely in the future — known-to-be-zero
  * rather than unknown, same distinction the month case draws.
+ *
+ * A day inside one of `closures` (#1766) is not scheduled, whatever the
+ * weekly pattern says; a range that is all closure is `0`, not `null`.
  */
 export function countScheduledTrainingDaysBetween(
   schedules: readonly AcademySchedule[] | null | undefined,
   from: Date,
   to: Date,
   today: Date = new Date(),
+  closures: readonly AcademyClosure[] | null = null,
 ): number | null {
   if (!schedules || schedules.length === 0) {
     return null;
@@ -150,7 +171,12 @@ export function countScheduledTrainingDaysBetween(
     // No schedule in effect (date precedes the academy's history) OR the
     // in-effect schedule is the "not configured" sentinel. Either way the
     // day doesn't contribute.
-    if (trainingDays && trainingDays.length > 0 && trainingDays.includes(candidate.getDay())) {
+    if (
+      trainingDays &&
+      trainingDays.length > 0 &&
+      trainingDays.includes(candidate.getDay()) &&
+      closureOn(closures, candidate) === null
+    ) {
       count++;
     }
     candidate.setDate(candidate.getDate() + 1);

@@ -1676,7 +1676,40 @@
         "loadErrorDetail": "Impossibile caricare l'orario."
       },
       "plan": "Pianifica",
-      "editHint": "Apri la lezione per modificarla"
+      "editHint": "Apri la lezione per modificarla",
+      "closures": {
+        "title": "Chiusure",
+        "hint": "I giorni in cui l'accademia è chiusa. Non contano come allenamenti saltati.",
+        "add": "Aggiungi una chiusura",
+        "empty": "Nessuna chiusura. Aggiungi la pausa estiva o una festività.",
+        "daysOne": "{{count}} giorno",
+        "daysOther": "{{count}} giorni",
+        "editAria": "Modifica la chiusura {{range}}",
+        "form": {
+          "addTitle": "Nuova chiusura",
+          "editTitle": "Modifica chiusura",
+          "from": "Primo giorno",
+          "to": "Ultimo giorno (compreso)",
+          "label": "Nome (facoltativo)",
+          "labelPlaceholder": "Chiusura estiva",
+          "datesError": "Scegli il primo e l'ultimo giorno.",
+          "orderError": "L'ultimo giorno non può venire prima del primo.",
+          "create": "Aggiungi",
+          "save": "Salva",
+          "remove": "Elimina"
+        },
+        "confirm": {
+          "title": "Eliminare questa chiusura?",
+          "remove": "{{range}} tornerà a contare come giorni di allenamento.",
+          "accept": "Elimina"
+        },
+        "toast": {
+          "saved": "Chiusura salvata",
+          "removed": "Chiusura eliminata",
+          "error": "Impossibile salvare la chiusura. Riprova.",
+          "removeError": "Impossibile eliminare la chiusura. Riprova."
+        }
+      }
     },
     "syllabus": {
       "title": "Programma",
@@ -1944,7 +1977,9 @@
         "empty": "Ancora niente",
         "add": "Aggiungi argomenti",
         "edit": "Modifica"
-      }
+      },
+      "closedToday": "Oggi l'accademia è chiusa — stai vedendo la sessione di {{date}}.",
+      "closedTodayLabel": "Oggi l'accademia è chiusa ({{label}}) — stai vedendo la sessione di {{date}}."
     },
     "summary": {
       "daysOne": "{{count}} giorno di allenamento",
@@ -2444,7 +2479,10 @@
           "upcoming": "Da venire",
           "off": "Non si allena"
         },
-        "windowSoFar": "finora questo mese"
+        "windowSoFar": "finora questo mese",
+        "dayClosed": "{{day}} — accademia chiusa",
+        "closedRange": "Chiuso {{range}}",
+        "closedRangeLabel": "Chiuso {{range}} · {{label}}"
       },
       "carnets": {
         "title": "Carnet ingressi",

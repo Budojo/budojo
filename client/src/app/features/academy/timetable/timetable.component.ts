@@ -28,6 +28,7 @@ import { AcademyService, TrainingMode } from '../../../core/services/academy.ser
 import { TrainingModesService } from '../../../core/services/training-modes.service';
 import { LanguageService } from '../../../core/services/language.service';
 import { LessonSheetComponent } from '../../lessons/lesson-sheet/lesson-sheet.component';
+import { AcademyClosuresComponent } from './closures/academy-closures.component';
 import { ChoiceGridComponent } from '../../../shared/components/choice-grid/choice-grid.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
@@ -94,6 +95,7 @@ interface Day {
     PageHeaderComponent,
     TrainingDaysPickerComponent,
     LessonSheetComponent,
+    AcademyClosuresComponent,
   ],
   providers: [ConfirmationService, MessageService],
   templateUrl: './timetable.component.html',
