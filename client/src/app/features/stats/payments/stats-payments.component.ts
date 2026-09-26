@@ -88,6 +88,9 @@ export class StatsPaymentsComponent {
     const money = this.money();
 
     return {
+      // Fill the 20rem wrap: left at its default 2:1 the canvas runs past it,
+      // onto the arrears list below (#1760).
+      maintainAspectRatio: false,
       plugins: {
         legend: { display: false },
         tooltip: {

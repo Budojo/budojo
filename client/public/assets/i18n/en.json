@@ -1940,7 +1940,7 @@
       "classPicker": {
         "aria": "Which class"
       },
-      "searchPlaceholder": "Search by name — Enter checks in",
+      "searchPlaceholder": "Search by name, then Enter",
       "beltPlaceholder": "Belt",
       "table": {
         "fullName": "Full name",

@@ -6,6 +6,7 @@ import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 import { LanguageService } from '../../../core/services/language.service';
 
 interface ChartOptions {
+  readonly maintainAspectRatio?: boolean;
   readonly plugins: {
     readonly tooltip: { readonly callbacks: { label(c: { parsed: { y: number } }): string } };
   };
@@ -34,6 +35,25 @@ describe('StatsPaymentsComponent', () => {
   /** The chart options are a computed now, because the formatter follows the language. */
   const componentOptions = (): ChartOptions =>
     (fixture.componentInstance as unknown as { chartOptions(): ChartOptions }).chartOptions();
+
+  it('lets the chart fill its box instead of spilling onto the arrears below', () => {
+    // Chart.js keeps a 2:1 canvas unless told not to, so the bars ran ~150px
+    // past the 20rem wrap. Harmless while nothing sat below the chart; since
+    // the arrears list (#1760) did, the bars were drawn over it.
+    fixture.detectChanges();
+    http.expectOne('/api/v1/stats/payments/monthly?months=12').flush({
+      data: [{ month: '2026-09', currency: 'EUR', amount_cents: 1761, future: false }],
+    });
+    fixture.detectChanges();
+
+    expect(componentOptions().maintainAspectRatio).toBe(false);
+    // …and the chart has a height to fill: without one the p-chart host is
+    // auto-height, and Chart.js falls back to a 150px canvas.
+    const box = (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>(
+      '[data-cy="stats-payments-chart"] p-chart',
+    );
+    expect(box?.style.height).toBe('20rem');
+  });
 
   it('shows the loading skeleton while fetching', () => {
     fixture.detectChanges();

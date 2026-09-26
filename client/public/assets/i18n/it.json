@@ -1940,7 +1940,7 @@
       "classPicker": {
         "aria": "Quale lezione"
       },
-      "searchPlaceholder": "Cerca per nome — Invio segna presente",
+      "searchPlaceholder": "Cerca per nome, poi Invio",
       "beltPlaceholder": "Cintura",
       "table": {
         "fullName": "Nome e cognome",
