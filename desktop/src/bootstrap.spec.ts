@@ -150,21 +150,32 @@ describe('planRecovery (#1919)', () => {
 
     expect(plan.situation).toBe('rolled-back');
     expect(plan.steps).toEqual([
-      { kind: 'rename', from: `${db}.previous`, to: db },
       // The restore never finished, and the archive it came from is still
-      // there: its staged copies are only in the way of the next one.
-      { kind: 'remove', path: `${db}.restoring` },
+      // there: its staged copies are only in the way of the next one. First,
+      // while the missing database still marks the swap as interrupted.
       { kind: 'remove', path: `${storage}.restoring` },
+      { kind: 'remove', path: `${db}.restoring` },
+      { kind: 'rename', from: `${db}.previous`, to: db },
     ]);
+  });
+
+  it('puts the database itself back last, so a boot stopped half-way is still a crash to the next one', () => {
+    // The missing database is the only sign of an interrupted swap. Put back
+    // first, a -wal still under `.previous` would be forgotten by the next
+    // boot — and a -wal holds writes the main file does not have yet.
+    const plan = planRecovery(layout, on(`${db}.previous`, `${db}.previous-wal`, `${storage}.previous`, `${db}.restoring`));
+
+    expect(plan.steps.at(-1)).toEqual({ kind: 'rename', from: `${db}.previous`, to: db });
+    expect(plan.steps.slice(0, -1).every((step) => !(step.kind === 'rename' && step.to === db))).toBe(true);
   });
 
   it('brings back the -wal and -shm that stepped aside with it', () => {
     const plan = planRecovery(layout, on(`${db}.previous`, `${db}.previous-wal`, `${db}.previous-shm`, storage));
 
     expect(plan.steps).toEqual([
-      { kind: 'rename', from: `${db}.previous`, to: db },
       { kind: 'rename', from: `${db}.previous-wal`, to: `${db}-wal` },
       { kind: 'rename', from: `${db}.previous-shm`, to: `${db}-shm` },
+      { kind: 'rename', from: `${db}.previous`, to: db },
     ]);
   });
 
@@ -185,8 +196,8 @@ describe('planRecovery (#1919)', () => {
     const plan = planRecovery(layout, on(`${db}.previous`, `${storage}.previous`));
 
     expect(plan.steps).toEqual([
-      { kind: 'rename', from: `${db}.previous`, to: db },
       { kind: 'rename', from: `${storage}.previous`, to: storage },
+      { kind: 'rename', from: `${db}.previous`, to: db },
     ]);
   });
 
@@ -243,10 +254,10 @@ describe('planRecovery (#1919)', () => {
       candidates.filter((_, bit) => ((mask >> bit) & 1) === 1),
     );
 
-    /** The files left once a plan has run, or a failure naming the step that could not. */
-    const apply = (present: string[]): Set<string> => {
+    /** The files left once `steps` (by default the whole plan) have run, failing on a step that could not. */
+    const apply = (present: string[], steps = planRecovery(layout, on(...present)).steps): Set<string> => {
       const files = new Set(present);
-      for (const step of planRecovery(layout, on(...present)).steps) {
+      for (const step of steps) {
         if (step.kind === 'rename') {
           expect(files.has(step.from), `rename from a missing ${step.from}`).toBe(true);
           expect(files.has(step.to), `rename onto a taken ${step.to}`).toBe(false);
@@ -275,6 +286,28 @@ describe('planRecovery (#1919)', () => {
       for (const present of states) {
         if (!present.includes(db) && !present.includes(`${db}.previous`)) continue;
         expect(apply(present).has(db)).toBe(true);
+      }
+    });
+
+    it('finishes from wherever a boot stopped: any part of the plan, then a fresh plan, ends where the whole plan does', () => {
+      // A rename that fails after its retries stops the boot, and so does a
+      // power cut. Whatever part of the plan ran, the next boot must see an
+      // interrupted swap still — and finish the same job.
+      for (const present of states) {
+        const steps = planRecovery(layout, on(...present)).steps;
+        const whole = [...apply(present)].sort();
+        for (let ran = 1; ran < steps.length; ran++) {
+          const stopped = [...apply(present, steps.slice(0, ran))];
+          expect([...apply(stopped)].sort(), `stopped after ${ran} of ${steps.length} from ${present.join(', ')}`).toEqual(
+            whole,
+          );
+        }
+      }
+    });
+
+    it('leaves nothing to do once a plan has run', () => {
+      for (const present of states) {
+        expect(planRecovery(layout, on(...apply(present))).steps).toEqual([]);
       }
     });
 

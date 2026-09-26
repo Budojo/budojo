@@ -207,7 +207,7 @@ export interface RecoveryPlan {
 }
 
 /** What steps aside with the database: a -wal can hold writes the main file does not have yet. */
-const DATABASE_SIBLINGS = ['', '-wal', '-shm', '-journal'];
+const DATABASE_SIDECARS = ['-wal', '-shm', '-journal'];
 
 /**
  * What a restore interrupted mid-swap left behind, and how to put it back
@@ -222,11 +222,18 @@ const DATABASE_SIBLINGS = ['', '-wal', '-shm', '-journal'];
  * - **No database, a `.previous` one:** the crash came before the restored
  *   database was in. Everything that stepped aside is put back, and the staged
  *   copies go: the restore never finished, and the archive it came from is
- *   still there.
+ *   still there. **The database itself comes back last.** Its absence is the
+ *   only sign of an interrupted swap, so every step before it can stop — a
+ *   rename that fails, a second power cut — and the next boot still sees the
+ *   crash and finishes the job. Put back first, a `-wal` left under
+ *   `.previous` would be forgotten, and the writes it holds with it.
  * - **A database, a `.previous` one, a staged `storage` but no staged
  *   database:** the restored database was in and `storage` was not. The staged
  *   storage is complete — every copy is made before the first rename — so the
- *   swap is finished rather than undone.
+ *   swap is finished rather than undone. That reading holds because `swapIn`
+ *   sets any older `.previous` aside before it copies anything, and removes
+ *   the staged storage before the staged database: a staged storage beside a
+ *   `.previous` database, with no staged database, can only be this swap's.
  * - **Anything else is left alone.** A `.previous` beside a database is what a
  *   finished restore could not tidy, and the next restore sets it aside; a
  *   staged database still there means the crash came while copying, and a copy
@@ -252,15 +259,18 @@ export function planRecovery(
       return { situation: 'none', steps: [] };
     }
 
-    const steps: RecoveryStep[] = DATABASE_SIBLINGS.filter(
-      (sibling) => exists(`${db}.previous${sibling}`) && !exists(db + sibling),
-    ).map((sibling) => ({ kind: 'rename', from: `${db}.previous${sibling}`, to: db + sibling }));
+    const steps: RecoveryStep[] = [stagedStorage, stagedDb]
+      .filter((staged) => exists(staged))
+      .map((staged) => ({ kind: 'remove', path: staged }));
+    for (const sidecar of DATABASE_SIDECARS) {
+      if (exists(`${db}.previous${sidecar}`) && !exists(db + sidecar)) {
+        steps.push({ kind: 'rename', from: `${db}.previous${sidecar}`, to: db + sidecar });
+      }
+    }
     if (exists(previousStorage) && !exists(storage)) {
       steps.push({ kind: 'rename', from: previousStorage, to: storage });
     }
-    for (const staged of [stagedDb, stagedStorage]) {
-      if (exists(staged)) steps.push({ kind: 'remove', path: staged });
-    }
+    steps.push({ kind: 'rename', from: `${db}.previous`, to: db });
 
     return { situation: 'rolled-back', steps };
   }
@@ -441,9 +451,13 @@ export async function runBootstrap(options: BootstrapOptions): Promise<Bootstrap
 
 /**
  * Carries out {@link planRecovery} on the real files. The renames retry while
- * the antivirus holds a file for a moment, as the swap's own do; a step that
+ * the antivirus holds a file for a moment, as the swap's own do; a rename that
  * still fails stops the boot with the error, rather than carrying on into
- * first-run setup beside the owner's data.
+ * first-run setup beside the owner's data — and the next boot, finding the
+ * database still missing, picks up where this one stopped.
+ *
+ * A staged copy that cannot be removed does not stop it: the owner's data does
+ * not depend on it, and the next restore clears it before staging its own.
  */
 export async function recoverInterruptedRestore(
   layout: Pick<DataLayout, 'databasePath' | 'storageDir'>,
@@ -464,8 +478,15 @@ export async function recoverInterruptedRestore(
       await retryWhileBusy(() => renameSync(step.from, step.to), RECOVERY_RETRY);
       log(`[bootstrap]   ${path.basename(step.from)} -> ${path.basename(step.to)}`);
     } else {
-      rmSync(step.path, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
-      log(`[bootstrap]   removed ${path.basename(step.path)}`);
+      try {
+        rmSync(step.path, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+        log(`[bootstrap]   removed ${path.basename(step.path)}`);
+      } catch (error) {
+        log(
+          `[bootstrap]   could not remove ${path.basename(step.path)} (${error instanceof Error ? error.message : String(error)}); ` +
+            'left for the next restore to clear',
+        );
+      }
     }
   }
 
