@@ -29,7 +29,7 @@ It makes "one attendance consumes at most one entry" a property of the schema ra
 
 - `PRIMARY KEY(id)`
 - `UNIQUE(attendance_record_id)` — see above
-- `INDEX(carnet_id)` (#1722). The foreign key does not make one: SQLite does not index a referencing column on its own, and this line used to say it did. It serves the balance subquery in `Carnet::scopeSpendableOn`, which runs once per athlete when the roster asks who owes the month.
+- `INDEX(carnet_id)` (#1722). The foreign key does not make one: SQLite does not index a referencing column on its own, and this line used to say it did. It serves the balance subqueries in `Carnet::scopeSpendableOn`, which runs once per athlete when the roster asks who owes the month, and `Carnet::scopeSpendableDuring` (#1760), which the arrears list runs once per past month.
 
 ## Relations
 

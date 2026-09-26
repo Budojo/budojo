@@ -271,9 +271,30 @@ class Athlete extends Model implements HasAddress
     }
 
     /**
+     * Something paid for a **past** month (#1760): a payment whose period
+     * covers it, or a carnet spendable on some day of it
+     * (`Carnet::scopeSpendableDuring`). The month-long twin of `paidFor`,
+     * which asks about today and so cannot answer for last July.
+     *
+     * @param  Builder<$this>  $query
+     * @return Builder<$this>
+     */
+    public function scopePaidDuring(Builder $query, int $year, int $month): Builder
+    {
+        $covering = fn ($q) => $q->covering($year, $month);
+        $spendable = fn ($q) => $q->spendableDuring($year, $month);
+
+        return $query->where(fn (Builder $q) => $q
+            ->whereHas('payments', $covering)
+            ->orWhereHas('carnets', $spendable));
+    }
+
+    /**
      * Athletes whose resolved fee is more than zero — the athlete-level twin
-     * of `Academy::scopeChargingMoreThanNothing`, for the one reader that
-     * chases the athlete rather than informing the owner: the overdue push.
+     * of `Academy::scopeChargingMoreThanNothing`, for the readers that need a
+     * debt worth naming rather than a fee that merely applies: the overdue
+     * push, which chases the athlete, and the arrears list (#1760), where a
+     * free tier would otherwise add a row owing €0.
      *
      * The athlete's own fee wins, then the tier, as in
      * `MonthlyFee::forAthlete()`: a free tier is free even at an academy

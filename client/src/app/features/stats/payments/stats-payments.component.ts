@@ -8,12 +8,20 @@ import { LanguageService } from '../../../core/services/language.service';
 import { localeFor } from '../../../shared/utils/locale';
 import { ErrorStateComponent } from '../../../shared/components/error-state/error-state.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
+import { PaymentsArrearsComponent } from './arrears/payments-arrears.component';
 
 @Component({
   selector: 'app-stats-payments',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ChartModule, SkeletonModule, TranslatePipe, ErrorStateComponent, EmptyStateComponent],
+  imports: [
+    ChartModule,
+    SkeletonModule,
+    TranslatePipe,
+    ErrorStateComponent,
+    EmptyStateComponent,
+    PaymentsArrearsComponent,
+  ],
   templateUrl: './stats-payments.component.html',
   styleUrl: './stats-payments.component.scss',
 })
