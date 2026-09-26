@@ -143,7 +143,7 @@ it('walks a BJJ child from white through the kids\' belts, and a sixteen-year-ol
     $this->academy->update(['trains_kids' => true]);
     // IBJJF: a child starts on white and climbs grey to green; blue from 16.
     $child = candidateAthlete($this->academy, ['belt' => Belt::White, 'stripes' => 4, 'date_of_birth' => '2017-03-01']);
-    $sixteen = candidateAthlete($this->academy, ['belt' => Belt::Orange, 'stripes' => 4, 'date_of_birth' => '2010-10-01']);
+    $sixteen = candidateAthlete($this->academy, ['belt' => Belt::Orange, 'stripes' => 1, 'date_of_birth' => '2010-10-01']);
     $adult = candidateAthlete($this->academy, ['belt' => Belt::White, 'stripes' => 4, 'date_of_birth' => '1990-01-01']);
 
     $rows = collect(candidates($this))->keyBy('athlete.id');
@@ -151,6 +151,13 @@ it('walks a BJJ child from white through the kids\' belts, and a sixteen-year-ol
     expect($rows[$child->id]['next'])->toBe(['kind' => 'belt', 'belt' => 'grey', 'stripes' => 0])
         ->and($rows[$sixteen->id]['next'])->toBe(['kind' => 'belt', 'belt' => 'blue', 'stripes' => 0])
         ->and($rows[$adult->id]['next'])->toBe(['kind' => 'belt', 'belt' => 'blue', 'stripes' => 0]);
+});
+
+it('keeps a child already on a kids\' grade on them, even where the academy does not train kids', function (): void {
+    $this->academy->update(['trains_kids' => false]);
+    candidateAthlete($this->academy, ['belt' => Belt::Grey, 'stripes' => 4, 'date_of_birth' => '2017-03-01']);
+
+    expect(candidates($this)[0]['next'])->toBe(['kind' => 'belt', 'belt' => 'yellow', 'stripes' => 0]);
 });
 
 it('reads a kids\' grade as a child\'s when the date of birth is unknown, whatever the setting', function (): void {
@@ -172,12 +179,15 @@ it('counts a taekwondo dan as the next step on a black belt, and a poom only for
     $black = candidateAthlete($this->academy, ['belt' => Belt::Black, 'stripes' => 2, 'date_of_birth' => '1985-01-01']);
     $cadet = candidateAthlete($this->academy, ['belt' => Belt::RedAndBlack, 'stripes' => 0, 'date_of_birth' => '2013-01-01']);
     $adult = candidateAthlete($this->academy, ['belt' => Belt::RedAndBlack, 'stripes' => 0, 'date_of_birth' => '1995-01-01']);
+    // Fifteen this year: a junior, so the poom becomes a dan, not another poom.
+    $fifteen = candidateAthlete($this->academy, ['belt' => Belt::BlackAndRed, 'stripes' => 1, 'date_of_birth' => '2011-11-01']);
 
     $rows = collect(candidates($this))->keyBy('athlete.id');
 
     expect($rows[$black->id]['next'])->toBe(['kind' => 'stripe', 'belt' => 'black', 'stripes' => 3])
         ->and($rows[$cadet->id]['next'])->toBe(['kind' => 'belt', 'belt' => 'black-and-red', 'stripes' => 0])
-        ->and($rows[$adult->id]['next'])->toBe(['kind' => 'belt', 'belt' => 'black', 'stripes' => 0]);
+        ->and($rows[$adult->id]['next'])->toBe(['kind' => 'belt', 'belt' => 'black', 'stripes' => 0])
+        ->and($rows[$fifteen->id]['next'])->toBe(['kind' => 'belt', 'belt' => 'black', 'stripes' => 0]);
 });
 
 it('lists the longest since the last promotion first, and the unknown last', function (): void {

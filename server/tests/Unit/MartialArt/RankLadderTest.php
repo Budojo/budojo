@@ -97,9 +97,15 @@ it('climbs the kids grades a ladder lists below the starting belt right after it
         ->toBe(['kind' => 'belt', 'belt' => Belt::Blue, 'stripes' => 0]);
 });
 
-it('moves someone on a kids grade who is no longer eligible to the next adult grade', function (): void {
+it('moves someone on a kids grade who is no longer eligible to the next adult grade, stripes left or not', function (): void {
+    // IBJJF moves a sixteen-year-old to blue whatever the stripes on the kids'
+    // belt; WT turns a poom into a dan at fifteen the same way.
     expect(bjjLikeLadder()->nextStep(Belt::Grey, 4, kidsEligible: false))
-        ->toBe(['kind' => 'belt', 'belt' => Belt::Blue, 'stripes' => 0]);
+        ->toBe(['kind' => 'belt', 'belt' => Belt::Blue, 'stripes' => 0])
+        ->and(bjjLikeLadder()->nextStep(Belt::Grey, 1, kidsEligible: false))
+        ->toBe(['kind' => 'belt', 'belt' => Belt::Blue, 'stripes' => 0])
+        ->and(bjjLikeLadder()->nextStep(Belt::Grey, 1, kidsEligible: true))
+        ->toBe(['kind' => 'stripe', 'belt' => Belt::Grey, 'stripes' => 2]);
 });
 
 it('tells a kids grade from an adult one', function (): void {

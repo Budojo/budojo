@@ -115,8 +115,9 @@ final class RankLadder
      * Grades come in the order people climb them ({@see self::climbingOrder()}),
      * and kids-only grades are skipped unless the athlete is eligible for them:
      * an adult judoka goes from white to yellow, not to the half belt, and a
-     * sixteen-year-old BJJ orange belt goes to blue. Who is eligible is the
-     * caller's to decide; the ladder knows grades, not ages.
+     * sixteen-year-old BJJ orange belt goes to blue, with or without stripes
+     * left on the orange. Who is eligible is the caller's to decide; the
+     * ladder knows grades, not ages.
      *
      * @return array{kind: 'stripe'|'belt', belt: Belt, stripes: int}|null
      */
@@ -127,7 +128,10 @@ final class RankLadder
             return null;
         }
 
-        if ($stripes < $current->maxStripes) {
+        // Someone who has outgrown a kids' grade moves on whatever its stripes:
+        // no more of them, and no more of its colours.
+        $outgrown = $current->kids && ! $kidsEligible;
+        if ($stripes < $current->maxStripes && ! $outgrown) {
             return ['kind' => 'stripe', 'belt' => $belt, 'stripes' => $stripes + 1];
         }
 
