@@ -501,7 +501,9 @@ describe('MonthlySummaryComponent', () => {
     expect(method.textContent).toContain("an attendance is one athlete's day of training");
     expect(method.textContent).not.toContain('not the presences');
     // Each athlete from the day they joined, as the server divides (#1767).
-    expect(method.textContent).toContain('from the day they joined');
+    expect(method.textContent).toContain(
+      'from the day they joined (or their first session, if earlier)',
+    );
     http.verify();
   });
 

@@ -9,8 +9,8 @@ use Carbon\CarbonImmutable;
 
 /**
  * #1767 — the month summary divides on the server, once per athlete: each
- * row's own scheduled days, floored at the day that athlete joined, closures
- * already out. The header's academy-wide count rides beside the rows and is
+ * row's own scheduled days, from the day that athlete joined or their first
+ * presence in the month if earlier, closures already out. The header's academy-wide count rides beside the rows and is
  * nobody's denominator.
  *
  * April 2026 on Mon/Wed/Fri is 13 sessions: 1, 3, 6, 8, 10, 13, 15, 17, 20,

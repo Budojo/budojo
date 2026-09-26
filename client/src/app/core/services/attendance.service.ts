@@ -44,8 +44,8 @@ export interface AttendanceSummaryRow {
   count: number;
   /**
    * This athlete's denominator (#1767): the days the academy was scheduled
-   * to train in the month from the day they joined, closures out, capped at
-   * today. Computed on the server; null when no schedule was ever
+   * to train in the month from the day they joined (or their first presence
+   * in the month, if earlier), closures out, capped at today. Computed on the server; null when no schedule was ever
    * configured, which hides the fraction. Zero is a real zero.
    */
   expected_count: number | null;
