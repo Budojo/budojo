@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Athlete;
 
 use App\Actions\Address\AddressIntent;
 use App\Actions\Athlete\CreateAthleteAction;
+use App\Actions\Athlete\ResolveRosterDenominatorsAction;
 use App\Actions\Athlete\RestoreAthleteAction;
 use App\Actions\Athlete\UpdateAthleteAction;
 use App\Http\Controllers\Controller;
@@ -93,6 +94,7 @@ class AthleteController extends Controller
         private readonly CreateAthleteAction $createAthlete,
         private readonly UpdateAthleteAction $updateAthlete,
         private readonly RestoreAthleteAction $restoreAthlete,
+        private readonly ResolveRosterDenominatorsAction $rosterDenominators,
     ) {
     }
 
@@ -233,6 +235,9 @@ class AthleteController extends Controller
             // season or at `joined_at`: a date either exists or it does not.
             // The SoftDeletes global scope keeps a corrected presence out.
             ->withMax('attendanceRecords as last_attended_on', 'attended_on')
+            // The first presence this month (#1768): where the month's
+            // denominator starts for someone who trained before joining.
+            ->withMin(['attendanceRecords as first_attended_this_month' => $currentMonthAttendanceScope], 'attended_on')
             ->when($request->filled('belt'), fn ($q) => $q->where('belt', $request->input('belt')))
             ->when(
                 ! $trashedMode && $request->filled('status'),
@@ -304,6 +309,8 @@ class AthleteController extends Controller
         }
 
         $athletes = $query->paginate(20);
+        // The Sessions cell's denominators (#1768), for this page only.
+        $this->rosterDenominators->execute($academy, $athletes->getCollection(), $now);
 
         return AthleteResource::collection($athletes);
     }

@@ -305,6 +305,27 @@ const SUGGESTIONS = [
 
 // ── The roster ───────────────────────────────────────────────────────────
 
+/**
+ * The server's denominator for the Sessions cell (#1768): the academy's
+ * training days from the later of 1 September (the month's and the season's
+ * start alike) and the day the athlete joined, up to TODAY.
+ */
+function heldSince(joinedAt: unknown): number {
+  const from =
+    typeof joinedAt === 'string' && joinedAt > ACADEMY.season_start
+      ? joinedAt
+      : ACADEMY.season_start;
+  let held = 0;
+  for (
+    let d = new Date(`${from}T00:00:00`);
+    d <= new Date(`${TODAY}T00:00:00`);
+    d.setDate(d.getDate() + 1)
+  ) {
+    if (ACADEMY.training_days.includes(d.getDay())) held++;
+  }
+  return held;
+}
+
 function athlete(over: Record<string, unknown>) {
   return {
     email: null,
@@ -329,6 +350,8 @@ function athlete(over: Record<string, unknown>) {
     active_carnet: null,
     attendance_month_count: 0,
     attendance_total_count: 0,
+    attendance_month_expected: heldSince(over['joined_at']),
+    attendance_season_expected: heldSince(over['joined_at']),
     last_attended_on: null,
     ...over,
   };

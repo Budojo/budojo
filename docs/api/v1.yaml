@@ -10339,6 +10339,33 @@ components:
             the athlete the roster is most worth spotting: the one with a full
             season of sessions who has not appeared this month.
           example: 214
+        attendance_month_expected:
+          type: integer
+          nullable: true
+          minimum: 0
+          description: |
+            What `attendance_month_count` divides by (#1768): the academy's
+            scheduled days this month, from the day the athlete joined, or
+            their first presence this month if that came earlier (trial
+            sessions entered after registering), closures left out, up to
+            today. The same window as the month summary's `expected_count`
+            (#1767), so one athlete's month reads the same on both screens.
+
+            On the roster index only; every other endpoint leaves the key
+            out, because null here is an answer: no schedule was ever
+            configured, and the cell shows the count alone.
+          example: 8
+        attendance_season_expected:
+          type: integer
+          nullable: true
+          minimum: 0
+          description: |
+            What `attendance_total_count` divides by (#1768): the scheduled
+            days this season from the later of its start and the day the
+            athlete joined, closures left out, up to today. The same floor as
+            the count. Same presence and null rules as
+            `attendance_month_expected`.
+          example: 33
         last_attended_on:
           type: string
           format: date

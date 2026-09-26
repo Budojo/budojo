@@ -2161,38 +2161,68 @@ describe('AthletesListComponent — sessions out of sessions held (#1455)', () =
     );
   }
 
-  it('writes each line as attended over sessions held', () => {
-    // Training every day, so the denominator is "days elapsed this month" —
-    // deterministic without freezing the clock, since both lines count the
-    // same days the component does.
-    const fixture = render([makeAthlete()]);
+  /**
+   * The roster with no academy loaded (#1768): the denominators are the
+   * server's, on each row, so the page must not need the academy to divide.
+   */
+  function renderWithoutAcademy(rows: Athlete[]) {
+    const athleteService = TestBed.inject(AthleteService) as unknown as FakeAthleteService;
+    athleteService.list.mockReturnValue(
+      of({
+        data: rows,
+        meta: { total: rows.length, current_page: 1, per_page: 20, last_page: 1 },
+      }),
+    );
+    const fixture = TestBed.createComponent(AthletesListComponent);
+    fixture.detectChanges();
+    fixture.detectChanges();
+    return fixture;
+  }
 
-    expect(text(fixture, '.athlete-attendance__month')).toMatch(/^2\/\d+$/);
-    expect(text(fixture, '.athlete-attendance__total')).toMatch(/^2\/\d+$/);
-  });
-
-  it('measures the total against the athlete, not against the academy', () => {
-    // Someone who joined yesterday is compared to yesterday's sessions. The
-    // alternative — every athlete over the academy's whole history — reports
-    // a number about the gym and calls it the athlete's.
-    const joinedToday = new Date();
-    const iso = `${joinedToday.getFullYear()}-${String(joinedToday.getMonth() + 1).padStart(2, '0')}-${String(joinedToday.getDate()).padStart(2, '0')}`;
-    const fixture = render([
-      makeAthlete({ joined_at: iso, attendance_month_count: 1, attendance_total_count: 1 }),
+  it("writes each line as attended over the server's own denominator", () => {
+    const fixture = renderWithoutAcademy([
+      makeAthlete({
+        attendance_month_count: 2,
+        attendance_month_expected: 8,
+        attendance_total_count: 5,
+        attendance_season_expected: 20,
+      }),
     ]);
 
-    // One session held since they joined today, and they were at it. No
-    // season on this fixture, so the window is theirs alone.
-    expect(text(fixture, '.athlete-attendance__total')).toBe('1/1');
+    expect(text(fixture, '.athlete-attendance__month')).toBe('2/8');
+    expect(text(fixture, '.athlete-attendance__total')).toBe('5/20');
   });
 
-  it('drops the denominator when the academy has no schedule on file', () => {
+  it('drops the denominator when the server says there is no schedule', () => {
     // Not a zero: nobody has said which days they train, so "out of how
     // many" has no answer and the cell shows the counts alone.
-    const fixture = render([makeAthlete()], null);
+    const fixture = renderWithoutAcademy([
+      makeAthlete({ attendance_month_expected: null, attendance_season_expected: null }),
+    ]);
 
     expect(text(fixture, '.athlete-attendance__month')).toBe('2');
     expect(text(fixture, '.athlete-attendance__total')).toBe('2');
+  });
+
+  it('shows the counts alone, never 0/0, when the payload carries no denominator', () => {
+    const fixture = renderWithoutAcademy([makeAthlete()]);
+
+    expect(text(fixture, '.athlete-attendance__month')).toBe('2');
+    expect(text(fixture, '.athlete-attendance__total')).toBe('2');
+  });
+
+  it('shows a real zero as one', () => {
+    const fixture = renderWithoutAcademy([
+      makeAthlete({
+        attendance_month_count: 0,
+        attendance_month_expected: 0,
+        attendance_total_count: 0,
+        attendance_season_expected: 4,
+      }),
+    ]);
+
+    expect(text(fixture, '.athlete-attendance__month')).toBe('0/0');
+    expect(text(fixture, '.athlete-attendance__total')).toBe('0/4');
   });
 
   it('says both windows in words for a screen reader', () => {
@@ -2208,32 +2238,8 @@ describe('AthletesListComponent — sessions out of sessions held (#1455)', () =
     expect(label).toContain('this season');
   });
 
-  it('measures the lower line against the season, not the whole membership', () => {
-    // A veteran of three years, in a season 20 days old. The denominator has
-    // to be the season's sessions, not the academy's history — that is the
-    // entire point of #1484, and the bug it replaces showed a 900-session
-    // denominator next to a number that only ever counted this year.
-    const fixture = render(
-      [makeAthlete({ joined_at: '2023-01-10', attendance_total_count: 12 })],
-      [1, 2, 3, 4, 5, 6, 0],
-      { season_start: isoDaysAgo(19), season_label: '2025/26' },
-    );
-
-    // 20 days of a train-every-day schedule, inclusive of both ends.
-    expect(text(fixture, '.athlete-attendance__total')).toBe('12/20');
-  });
-
-  it('starts a mid-season arrival at their own joining day', () => {
-    // Joined ten days into a twenty-day season. Dividing them by the season's
-    // twenty would report the academy's calendar as if it were their record.
-    const fixture = render(
-      [makeAthlete({ joined_at: isoDaysAgo(9), attendance_total_count: 4 })],
-      [1, 2, 3, 4, 5, 6, 0],
-      { season_start: isoDaysAgo(19), season_label: '2025/26' },
-    );
-
-    expect(text(fixture, '.athlete-attendance__total')).toBe('4/10');
-  });
+  // The season floor and the joining floor are the server's now (#1768):
+  // `RosterDenominatorsTest` pins them, where the numbers are worked out.
 
   it('names the season in the lower line\u2019s tooltip', () => {
     const fixture = render([makeAthlete({ joined_at: '2023-01-10' })], [1, 2, 3, 4, 5, 6, 0], {
