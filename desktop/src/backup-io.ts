@@ -11,6 +11,13 @@ import { runPhp } from './php-exec.js';
 const RENAME_RETRY = { attempts: 10, delayMs: 100 };
 
 /**
+ * Removing what a scanner may still hold: Node retries `EBUSY` / `EPERM` for
+ * about half a second. Only honoured with `recursive`, which a plain file
+ * accepts too.
+ */
+const REMOVE_RETRY = { recursive: true, force: true, maxRetries: 5, retryDelay: 100 } as const;
+
+/**
  * The real filesystem + subprocess backing for BackupService (#1228).
  *
  * VACUUM INTO goes through the bundled PHP (SQLite's online backup, correct
@@ -173,10 +180,24 @@ export function createBackupIO(config: BackupIOConfig): BackupIO {
 
       // The staged storage is cleared whether or not this archive has one,
       // and always before the staged database: a staged storage with no staged
-      // database is what the boot reads as "the database went in" (#1919).
+      // database is what the boot reads as "the database went in" (#1919). A
+      // storage that will not go stops here, so the database is never removed
+      // without it.
       const clearStaged = (): void => {
-        rmSync(stagedStorage, { recursive: true, force: true });
-        rmSync(stagedDb, { force: true });
+        rmSync(stagedStorage, REMOVE_RETRY);
+        rmSync(stagedDb, REMOVE_RETRY);
+      };
+      // On the way out of a failure, the cleanup is best-effort and must never
+      // become the error (#1959). The error is what tells the owner what
+      // happened — after a failed undo, where their data is — and an `EBUSY`
+      // on a staged copy would say nothing of the kind. What it leaves is a
+      // staged copy the next restore clears before it starts.
+      const clearStagedAfterFailure = (): void => {
+        try {
+          clearStaged();
+        } catch {
+          // Left for the next restore.
+        }
       };
       try {
         clearStaged();
@@ -185,7 +206,7 @@ export function createBackupIO(config: BackupIOConfig): BackupIO {
           cpSync(restoredStorage, stagedStorage, { recursive: true });
         }
       } catch (error) {
-        clearStaged();
+        clearStagedAfterFailure();
         throw error;
       }
 
@@ -226,7 +247,7 @@ export function createBackupIO(config: BackupIOConfig): BackupIO {
         for (const [from, to] of moved.reverse()) {
           await retryWhileBusy(() => renameSync(to, from), RENAME_RETRY).catch(() => stuck.push(to));
         }
-        clearStaged();
+        clearStagedAfterFailure();
 
         if (stuck.length > 0) {
           throw new Error(
@@ -240,10 +261,9 @@ export function createBackupIO(config: BackupIOConfig): BackupIO {
       // happened, and a scanner still holding a file in `storage.previous` must
       // not turn it into a reported failure. What stays is set aside, not
       // deleted, by the next restore.
-      const tidy = { recursive: true, force: true, maxRetries: 5, retryDelay: 100 };
       for (const leftover of [...siblings.map((sibling) => previousDb + sibling), previousStorage]) {
         try {
-          rmSync(leftover, tidy);
+          rmSync(leftover, REMOVE_RETRY);
         } catch {
           // Left for the next restore to set aside.
         }
