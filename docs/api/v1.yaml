@@ -5999,12 +5999,13 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [data, meta]
+                required: [data, meta, progression]
                 properties:
                   data:
                     type: array
                     items: { $ref: '#/components/schemas/AthletePromotion' }
                   meta: { $ref: '#/components/schemas/PaginationMeta' }
+                  progression: { $ref: '#/components/schemas/AthleteProgression' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '403':
           description: Athlete is not in the authenticated academy.
@@ -8027,6 +8028,31 @@ components:
             email:
               - The email has already been taken.
 
+    AthleteProgression:
+      type: object
+      description: |
+        How long the athlete has held their belt, and how many sessions
+        since their last stripe (#1772). Computed once per request, the same
+        on every page of the timeline, beside `meta` (never in it: `meta` is
+        the pagination block).
+
+        Measured from recorded promotion rows only. A field is null when
+        there is no row of that kind: no fallback to `joined_at`. A stripe
+        row older than the latest belt row is not the last stripe, so the
+        stripe fields are null then too. Days compare whole days, so a belt
+        given at 18:42 still counts that evening's session. Sessions are
+        distinct training days; a corrected-away presence does not count.
+      required: [belt, stripes, belt_since, days_at_belt, months_at_belt, sessions_at_belt, stripe_since, days_since_stripe, sessions_since_stripe]
+      properties:
+        belt: { $ref: '#/components/schemas/Belt' }
+        stripes: { type: integer, minimum: 0, description: "The athlete's current stripe (or dan, or poom) count, so a reader can tell no stripe from stripes with no dated row." }
+        belt_since: { type: string, format: date, nullable: true, description: Day of the latest belt row. }
+        days_at_belt: { type: integer, nullable: true, description: Whole days from belt_since to today. }
+        months_at_belt: { type: integer, nullable: true, description: 'Whole months from belt_since to today, floored.' }
+        sessions_at_belt: { type: integer, nullable: true, description: Distinct training days on or after belt_since. }
+        stripe_since: { type: string, format: date, nullable: true, description: 'Day of the latest stripe row that raised the count, when it is not older than belt_since.' }
+        days_since_stripe: { type: integer, nullable: true, description: Whole days from stripe_since to today. }
+        sessions_since_stripe: { type: integer, nullable: true, description: Distinct training days on or after stripe_since. }
     AthletePromotion:
       type: object
       description: |
