@@ -6917,6 +6917,75 @@ paths:
               schema: { $ref: '#/components/schemas/ErrorMessage' }
               example: { message: Forbidden. }
         '422': { description: Validation error }
+  /stats/payments/arrears:
+    get:
+      operationId: statsPaymentsArrears
+      summary: Who is behind on their fee, since when, and by how much
+      description: |
+        One row per athlete with at least one unpaid month (#1760), from their
+        billing floor up to **last** month. The current month is never
+        arrears: it belongs to the roster's unpaid chip and its day-16 digest.
+
+        - **Who can owe** — the roster's `owing` population (active, not the
+          owner, expected to pay) with a fee above zero.
+        - **What pays a month** — a payment whose period covers it, or a
+          carnet spendable on some day of it, with the balance as it stood
+          then: a carnet that expired in August still paid for August.
+        - **From when** — the later of the academy's `billing_from` and the
+          athlete's joining month (`BillingFloor`). With no `billing_from`,
+          the joining month alone.
+
+        `owed_cents` is `months_behind` × the athlete's fee **today**
+        (`MonthlyFee`): nothing records what the fee was in a past month, so
+        the amount is an estimate and the SPA says so.
+
+        Sorted by `months_behind` descending, then surname and name.
+      tags: [Stats]
+      responses:
+        '200':
+          description: The athletes behind, longest first
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required: [athlete, months_behind, first_unpaid, owed_cents]
+                      properties:
+                        athlete:
+                          type: object
+                          description: The athlete as every listed row draws them (`AthleteIdentity`, #1851).
+                          required: [id, first_name, last_name, belt, stripes, date_of_birth, photo_url, user_avatar_url]
+                          properties:
+                            id: { type: integer }
+                            first_name: { type: string }
+                            last_name: { type: string }
+                            belt:
+                              $ref: '#/components/schemas/Belt'
+                            stripes: { type: integer }
+                            date_of_birth: { type: string, format: date, nullable: true }
+                            photo_url: { type: string, nullable: true }
+                            user_avatar_url: { type: string, nullable: true }
+                        months_behind: { type: integer, minimum: 1 }
+                        first_unpaid:
+                          type: string
+                          pattern: '^\d{4}-\d{2}$'
+                          description: The oldest unpaid month.
+                        owed_cents:
+                          type: integer
+                          minimum: 1
+                          description: '`months_behind` × the fee today — an estimate.'
+        '401': { description: Unauthenticated }
+        '403':
+          description: Forbidden — authed user has no academy, or is not the owner.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorMessage' }
+              example: { message: Forbidden. }
 
   /stats/athletes/age-bands:
     get:
