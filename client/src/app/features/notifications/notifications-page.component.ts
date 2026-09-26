@@ -10,7 +10,9 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
-import { finalize } from 'rxjs';
+import { Tooltip } from 'primeng/tooltip';
+import { NgTemplateOutlet } from '@angular/common';
+import { finalize, forkJoin } from 'rxjs';
 import { SkeletonModule } from 'primeng/skeleton';
 import {
   InboxNotification,
@@ -22,6 +24,9 @@ import { PageHeaderComponent } from '../../shared/components/page-header/page-he
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component';
 import { groupNotifications } from './notification-grouping';
 import { notificationVisual } from './notification-visual';
+
+/** How long "Annulla" stays after an archive (#1914). */
+const UNDO_MS = 8000;
 
 /**
  * Social-native notifications page (#1129, epic #1128). Full-screen,
@@ -41,6 +46,8 @@ import { notificationVisual } from './notification-visual';
   imports: [
     TranslatePipe,
     SkeletonModule,
+    Tooltip,
+    NgTemplateOutlet,
     UserAvatarComponent,
     RelativeTimePipe,
     PageHeaderComponent,
@@ -56,19 +63,38 @@ export class NotificationsPageComponent implements OnInit {
 
   protected readonly loading = signal(true);
   protected readonly loadError = signal(false);
-  protected readonly unreadOnly = signal(false);
+
+  /**
+   * Two views of one inbox (#1914): what still needs the owner, and what they
+   * archived. They replace "Tutte / Non lette", which answered "have I seen
+   * it?" — unread rows already lead the inbox as "Nuove" — and never "have I
+   * dealt with it?".
+   */
+  protected readonly view = signal<'inbox' | 'archived'>('inbox');
+  protected readonly archived = signal<readonly InboxNotification[] | null>(null);
 
   protected readonly unread = this.inbox.unread;
-  protected readonly groups = computed(() =>
-    groupNotifications(this.inbox.rows(), this.unreadOnly()),
+  protected readonly groups = computed(() => groupNotifications(this.inbox.rows()));
+  protected readonly isEmpty = computed(() =>
+    this.view() === 'inbox' ? this.groups().length === 0 : (this.archived()?.length ?? 0) === 0,
   );
-  protected readonly isEmpty = computed(() => this.groups().length === 0);
+  /** "Archivia le lette" has something to do. */
+  protected readonly hasRead = computed(() => this.inbox.rows().some((n) => n.read_at !== null));
+
+  /**
+   * What was just archived, offered back for a few seconds (#1914). Undo, not
+   * a confirmation: archiving loses nothing, so asking first would only slow
+   * down the one thing the owner does here most.
+   */
+  protected readonly justArchived = signal<readonly string[] | null>(null);
+  private undoTimer: ReturnType<typeof setTimeout> | null = null;
 
   /** Template helper — `kind` → { icon, tone } for the badge / tile. */
   protected readonly visualFor = notificationVisual;
 
   ngOnInit(): void {
     this.load();
+    this.destroyRef.onDestroy(() => this.clearUndo());
   }
 
   /**
@@ -90,8 +116,84 @@ export class NotificationsPageComponent implements OnInit {
       .subscribe({ error: () => this.loadError.set(true) });
   }
 
-  protected setUnreadOnly(unreadOnly: boolean): void {
-    this.unreadOnly.set(unreadOnly);
+  protected setView(view: 'inbox' | 'archived'): void {
+    this.view.set(view);
+    if (view === 'archived') {
+      this.loadArchived();
+    }
+  }
+
+  private loadArchived(): void {
+    this.loading.set(true);
+    this.loadError.set(false);
+    this.inbox
+      .listArchived()
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.loading.set(false)),
+      )
+      .subscribe({
+        next: (rows) => this.archived.set(rows),
+        error: () => this.loadError.set(true),
+      });
+  }
+
+  /** The retry the error state offers, for whichever view failed. */
+  protected reload(): void {
+    if (this.view() === 'archived') {
+      this.loadArchived();
+    } else {
+      this.load();
+    }
+  }
+
+  protected archive(notification: InboxNotification): void {
+    this.inbox
+      .archive(notification.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.offerUndo([notification.id]));
+  }
+
+  protected archiveRead(): void {
+    this.inbox
+      .archiveRead()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((ids) => this.offerUndo(ids));
+  }
+
+  /** "Ripristina" on an archived row: back into the inbox, in its place. */
+  protected unarchive(notification: InboxNotification): void {
+    this.inbox
+      .unarchive(notification.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.archived.update((rows) => rows?.filter((n) => n.id !== notification.id) ?? null);
+        this.inbox.load().pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
+      });
+  }
+
+  /** "Annulla": everything just archived goes back, and the inbox is read again. */
+  protected undo(): void {
+    const ids = this.justArchived();
+    this.clearUndo();
+    if (ids === null || ids.length === 0) return;
+
+    forkJoin(ids.map((id) => this.inbox.unarchive(id)))
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.inbox.load().pipe(takeUntilDestroyed(this.destroyRef)).subscribe());
+  }
+
+  private offerUndo(ids: readonly string[]): void {
+    if (ids.length === 0) return;
+    this.clearUndo();
+    this.justArchived.set(ids);
+    this.undoTimer = setTimeout(() => this.justArchived.set(null), UNDO_MS);
+  }
+
+  private clearUndo(): void {
+    if (this.undoTimer !== null) clearTimeout(this.undoTimer);
+    this.undoTimer = null;
+    this.justArchived.set(null);
   }
 
   protected open(notification: InboxNotification): void {

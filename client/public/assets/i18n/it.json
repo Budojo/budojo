@@ -405,8 +405,8 @@
     "title": "Notifiche",
     "markAll": "Segna tutte come lette",
     "filter": {
-      "all": "Tutte",
-      "unread": "Non lette"
+      "inbox": "Da vedere",
+      "archived": "Archiviate"
     },
     "group": {
       "new": "Nuove",
@@ -415,7 +415,6 @@
       "earlier": "Prima"
     },
     "empty": "Sei in pari, nessuna notifica.",
-    "emptyUnread": "Nessuna notifica non letta.",
     "bell": {
       "ariaLabel": "Notifiche",
       "tooltip": "Notifiche",
@@ -427,7 +426,16 @@
     },
     "errorTitle": "Non siamo riusciti a caricare le notifiche",
     "errorHint": "Qualcosa è andato storto. Riprova tra un momento.",
-    "errorRetry": "Riprova"
+    "errorRetry": "Riprova",
+    "archive": "Archivia",
+    "archiveAria": "Archivia: {{title}}",
+    "unarchive": "Ripristina",
+    "unarchiveAria": "Ripristina: {{title}}",
+    "archiveRead": "Archivia le lette",
+    "archivedOne": "Notifica archiviata",
+    "archivedOther": "{{count}} notifiche archiviate",
+    "undo": "Annulla",
+    "emptyArchived": "Nessuna notifica archiviata."
   },
   "onboarding": {
     "checklist": {

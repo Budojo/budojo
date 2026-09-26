@@ -32,13 +32,21 @@ class NotificationInboxController extends Controller
         /** @var User $user */
         $user = $request->user();
 
+        // Two views of one inbox (#1914): what still needs the owner, and what
+        // they archived. The bell counts only the first.
+        $archived = $request->boolean('archived');
+
         /** @var \Illuminate\Database\Eloquent\Collection<int, DatabaseNotification> $rows */
         $rows = $user->notifications()
-            ->orderByDesc('created_at')
+            ->when(
+                $archived,
+                static fn ($q) => $q->whereNotNull('archived_at')->reorder('archived_at', 'desc'),
+                static fn ($q) => $q->whereNull('archived_at'),
+            )
             ->limit(20)
             ->get();
 
-        $unread = $user->unreadNotifications()->count();
+        $unread = $user->unreadNotifications()->whereNull('archived_at')->count();
         // The owner's language, for the sentences written from `params`
         // (#1912). English until the SPA has said.
         $locale = $user->locale->value ?? 'en';
@@ -71,6 +79,7 @@ class NotificationInboxController extends Controller
                     // notifications (recap, payment, …) carry no actor.
                     'actor' => \is_array($actor) ? $actor : null,
                     'read_at' => $n->read_at?->toIso8601String(),
+                    'archived_at' => self::archivedAt($n),
                     'created_at' => $n->created_at?->toIso8601String(),
                 ];
             })->all(),
@@ -123,5 +132,67 @@ class NotificationInboxController extends Controller
                 'marked_read' => $flipped,
             ],
         ]);
+    }
+
+    /** Takes a notification out of "Da vedere", into "Archiviate" (#1914). */
+    public function archive(Request $request, string $id): JsonResponse
+    {
+        return $this->setArchived($request, $id, now());
+    }
+
+    /** Brings an archived notification back (#1914). */
+    public function unarchive(Request $request, string $id): JsonResponse
+    {
+        return $this->setArchived($request, $id, null);
+    }
+
+    /**
+     * "Archivia le lette" (#1914): every read notification still in the inbox,
+     * in one UPDATE. Unread ones stay — archiving what nobody has seen yet
+     * would hide it before it was read.
+     */
+    public function archiveRead(Request $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        $archived = $user->notifications()
+            ->whereNotNull('read_at')
+            ->whereNull('archived_at')
+            ->update(['archived_at' => now()]);
+
+        return response()->json(['data' => ['archived' => $archived]]);
+    }
+
+    /** 404 for anyone else's id, as `markAsRead` does: no probing by status. */
+    private function setArchived(Request $request, string $id, ?\Illuminate\Support\Carbon $at): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        /** @var DatabaseNotification|null $row */
+        $row = $user->notifications()->find($id);
+        if ($row === null) {
+            return response()->json(['message' => 'Not found.'], 404);
+        }
+
+        $row->forceFill(['archived_at' => $at])->save();
+
+        return response()->json(['data' => ['id' => $row->id, 'archived_at' => self::archivedAt($row)]]);
+    }
+
+    /**
+     * `archived_at` is not a cast on Laravel's own model, so it comes back as
+     * the stored string; it goes out in the same ISO shape as the others.
+     */
+    private static function archivedAt(DatabaseNotification $n): ?string
+    {
+        $at = $n->getAttribute('archived_at');
+
+        return match (true) {
+            $at instanceof \DateTimeInterface => \Illuminate\Support\Carbon::instance($at)->toIso8601String(),
+            \is_string($at) => \Illuminate\Support\Carbon::parse($at)->toIso8601String(),
+            default => null,
+        };
     }
 }

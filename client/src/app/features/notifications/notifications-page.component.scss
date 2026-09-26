@@ -98,9 +98,92 @@
   overflow: hidden;
 }
 
-// Hairline divider between rows (iOS grouped-list pattern).
-.notifications__list li + li .notification {
+// Hairline divider between rows (iOS grouped-list pattern). On the row, not
+// the button inside it: since #1914 a row is the notification and its action.
+.notifications__list li + li {
   border-top: 1px solid var(--p-content-border-color);
+}
+
+// The notification and its one action side by side (#1914).
+.notification-row {
+  display: flex;
+  align-items: stretch;
+
+  .notification {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+}
+
+// Archive / restore: a 48 × 48 target (Fitts), quiet until pressed — the
+// row is what the owner reads, this is what they do once they have.
+.notification-row__action {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  min-height: 3rem;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  color: var(--p-text-muted-color);
+  cursor: pointer;
+  transition: background var(--budojo-motion-fast) var(--budojo-motion-decelerate);
+
+  &:hover {
+    background: var(--p-content-hover-background);
+    color: var(--p-text-color);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--p-primary-color);
+    outline-offset: -2px;
+  }
+}
+
+// An unread row's wash runs the whole row, action included: stopping at the
+// button would split one notification into two tiles.
+.notification-row:has(> .notification--unread) .notification-row__action {
+  background: color-mix(in srgb, var(--p-primary-500, #5b6cff) 7%, transparent);
+}
+
+// "Archiviata · Annulla" (#1914): held at the bottom of the list while it
+// lasts, so the undo is where the eye already is.
+.notifications__undo {
+  position: sticky;
+  bottom: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding: 0.5rem 0.5rem 0.5rem 1rem;
+  border: 1px solid var(--p-content-border-color);
+  border-radius: var(--p-border-radius-lg);
+  background: var(--p-content-background);
+  box-shadow: var(--budojo-elevation-floating);
+  color: var(--p-text-color);
+}
+
+.notifications__undo-action {
+  min-height: 3rem;
+  padding: 0 1rem;
+  background: transparent;
+  border: 0;
+  border-radius: var(--p-border-radius-md);
+  color: var(--p-primary-color);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--p-content-hover-background);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--p-primary-color);
+  }
 }
 
 // ── Row ───────────────────────────────────────────────────────────────

@@ -405,8 +405,8 @@
     "title": "Notifications",
     "markAll": "Mark all as read",
     "filter": {
-      "all": "All",
-      "unread": "Unread"
+      "inbox": "To see",
+      "archived": "Archived"
     },
     "group": {
       "new": "New",
@@ -415,7 +415,6 @@
       "earlier": "Earlier"
     },
     "empty": "You're all caught up.",
-    "emptyUnread": "No unread notifications.",
     "bell": {
       "ariaLabel": "Notifications",
       "tooltip": "Notifications",
@@ -427,7 +426,16 @@
     },
     "errorTitle": "Couldn't load your notifications",
     "errorHint": "Something went wrong. Try again in a moment.",
-    "errorRetry": "Try again"
+    "errorRetry": "Try again",
+    "archive": "Archive",
+    "archiveAria": "Archive: {{title}}",
+    "unarchive": "Restore",
+    "unarchiveAria": "Restore: {{title}}",
+    "archiveRead": "Archive the read ones",
+    "archivedOne": "Notification archived",
+    "archivedOther": "{{count}} notifications archived",
+    "undo": "Undo",
+    "emptyArchived": "No archived notifications."
   },
   "onboarding": {
     "checklist": {

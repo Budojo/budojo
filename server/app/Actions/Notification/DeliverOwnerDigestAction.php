@@ -35,6 +35,29 @@ final class DeliverOwnerDigestAction
             return;
         }
 
+        // A newer digest makes the older ones of its kind stale (#1914): the
+        // unpaid list of last week is not the unpaid list of today. They are
+        // archived, not deleted — and only those that were there before this
+        // one, so the new row is never the one set aside.
+        $kind = $this->kindOf($inApp, $owner);
+        $older = $kind === null ? [] : $owner->notifications()
+            ->whereNull('archived_at')
+            ->where('data->kind', $kind)
+            ->pluck('id')
+            ->all();
+
         $owner->notify($inApp);
+
+        if ($older !== []) {
+            $owner->notifications()->whereIn('id', $older)->update(['archived_at' => now()]);
+        }
+    }
+
+    private function kindOf(Notification $inApp, User $owner): ?string
+    {
+        $data = method_exists($inApp, 'toDatabase') ? $inApp->toDatabase($owner) : null;
+        $kind = \is_array($data) ? ($data['kind'] ?? null) : null;
+
+        return \is_string($kind) ? $kind : null;
     }
 }

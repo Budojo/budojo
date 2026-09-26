@@ -1080,7 +1080,19 @@ paths:
         `locale` (#1912) from the row's stored parameters, for the
         owner's alerts and digests; any other row returns the sentence
         it was stored with.
+
+        Two views (#1914): without `archived` it is the inbox, the rows
+        not archived; with `archived=1` it is the archived rows, most
+        recently archived first. `unread_count` is always the inbox's —
+        an archived row never counts on the bell.
       operationId: meNotificationsIndex
+      parameters:
+        - in: query
+          name: archived
+          required: false
+          schema:
+            type: boolean
+          description: '`1` for the archived rows instead of the inbox (#1914).'
       responses:
         '200':
           description: Latest notifications + unread count.
@@ -1132,6 +1144,11 @@ paths:
                           type: string
                           format: date-time
                           nullable: true
+                        archived_at:
+                          type: string
+                          format: date-time
+                          nullable: true
+                          description: When it was archived (#1914); null in the inbox.
                         created_at:
                           type: string
                           format: date-time
@@ -1146,6 +1163,86 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthenticated'
 
+  /me/notifications/archive-read:
+    post:
+      tags: [auth]
+      summary: Archive every read notification still in the inbox
+      description: |
+        "Archivia le lette" (#1914): every row with a `read_at` and no
+        `archived_at`, in one update. Unread rows stay in the inbox.
+      operationId: meNotificationsArchiveRead
+      responses:
+        '200':
+          description: How many rows were archived.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [archived]
+                    properties:
+                      archived: { type: integer }
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+  /me/notifications/{id}/archive:
+    post:
+      tags: [auth]
+      summary: Archive one notification
+      description: |
+        Out of the inbox, kept under the archived view (#1914). Nothing is
+        deleted. 404 for an id that is not the user's, as for `/read`.
+
+        Two kinds archive themselves: a missed-streak alert once that
+        athlete checks in again, and a digest once a newer one of the same
+        kind arrives.
+      operationId: meNotificationsArchive
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Archived.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationArchiveState'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          description: Not the user's notification.
+  /me/notifications/{id}/unarchive:
+    post:
+      tags: [auth]
+      summary: Bring an archived notification back to the inbox
+      description: |
+        The undo of `/archive` (#1914). 404 for an id that is not the
+        user's.
+      operationId: meNotificationsUnarchive
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Back in the inbox.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationArchiveState'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          description: Not the user's notification.
   /me/notifications/{id}/read:
     post:
       tags: [auth]
@@ -8613,6 +8710,19 @@ components:
           description: Plain-text Sanctum Bearer token. Returned once, never again.
           example: "1|aBc123XyZ..."
 
+    NotificationArchiveState:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [id, archived_at]
+          properties:
+            id: { type: string, format: uuid }
+            archived_at:
+              type: string
+              format: date-time
+              nullable: true
     AppLocale:
       type: string
       enum: [en, it]

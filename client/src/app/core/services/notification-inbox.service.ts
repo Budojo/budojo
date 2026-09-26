@@ -19,6 +19,8 @@ export interface InboxNotification {
   /** Who triggered it (for the avatar). Null/absent for system notifications (recap, payment, …). */
   readonly actor?: NotificationActor | null;
   readonly read_at: string | null;
+  /** When the owner archived it (#1914), or null while it is in "Da vedere". */
+  readonly archived_at?: string | null;
   readonly created_at: string | null;
 }
 
@@ -83,6 +85,50 @@ export class NotificationInboxService {
         }
       }),
     );
+  }
+
+  /**
+   * Out of "Da vedere", into "Archiviate" (#1914). The row leaves the inbox
+   * at once; an unread one stops counting on the bell with it.
+   */
+  archive(id: string): Observable<void> {
+    return this.http.post(`${this.base}/${id}/archive`, {}).pipe(
+      tap(() => {
+        const wasUnread = this._rows().some((n) => n.id === id && n.read_at === null);
+        this._rows.set(this._rows().filter((n) => n.id !== id));
+        if (wasUnread) {
+          this._unread.update((v) => Math.max(0, v - 1));
+        }
+      }),
+      map(() => undefined),
+    );
+  }
+
+  /** Back into "Da vedere" (#1914). The caller reloads the inbox to put it in its place. */
+  unarchive(id: string): Observable<void> {
+    return this.http.post(`${this.base}/${id}/unarchive`, {}).pipe(map(() => undefined));
+  }
+
+  /**
+   * "Archivia le lette" (#1914): every read row, in one request. Resolves to
+   * the ids it took, so the page can offer them back.
+   */
+  archiveRead(): Observable<string[]> {
+    const ids = this._rows()
+      .filter((n) => n.read_at !== null)
+      .map((n) => n.id);
+
+    return this.http.post(`${this.base}/archive-read`, {}).pipe(
+      tap(() => this._rows.set(this._rows().filter((n) => n.read_at === null))),
+      map(() => ids),
+    );
+  }
+
+  /** "Archiviate" (#1914): not cached — it is read when the owner opens it. */
+  listArchived(): Observable<readonly InboxNotification[]> {
+    return this.http
+      .get<ListResponse>(this.base, { params: { archived: '1' } })
+      .pipe(map((r) => r.data));
   }
 
   markAllAsRead(): Observable<number> {

@@ -70,15 +70,84 @@ describe('NotificationsPageComponent (#1129)', () => {
     expect(row?.querySelector('app-user-avatar')).toBeFalsy();
   });
 
-  it('filters to unread only', () => {
-    const { el, fixture } = setup(
+  // #1914 — the inbox is a to-do list the owner can tick things off.
+  it('archives a row: out of the inbox at once, and offered back', () => {
+    const { el, fixture, http } = setup([
+      notif({ id: 'a', read_at: new Date().toISOString() }),
+      notif({ id: 'b', read_at: new Date().toISOString() }),
+    ]);
+
+    (el.querySelector('[data-cy="notification-archive-a"]') as HTMLButtonElement).click();
+    http.expectOne(`${BASE}/a/archive`).flush({ data: { id: 'a', archived_at: 'x' } });
+    fixture.detectChanges();
+
+    expect(el.querySelector('[data-cy="notification-a"]')).toBeNull();
+    expect(el.querySelector('[data-cy="notification-b"]')).not.toBeNull();
+    expect(el.querySelector('[data-cy="notifications-undo"]')?.textContent).toContain(
+      'Notification archived',
+    );
+  });
+
+  it('names the archive button by the notification it archives', () => {
+    const { el } = setup([notif({ id: 'a', title: 'Giorgi has not trained' })]);
+
+    const button = el.querySelector('[data-cy="notification-archive-a"]') as HTMLButtonElement;
+    expect(button.getAttribute('aria-label')).toBe('Archive: Giorgi has not trained');
+    // Beside the row, never inside it: a button in a button is not a thing.
+    expect(button.closest('[data-cy="notification-a"]')).toBeNull();
+  });
+
+  it('puts an archived row back on "Undo", and reads the inbox again', () => {
+    const { el, fixture, http } = setup([notif({ id: 'a', read_at: new Date().toISOString() })]);
+    (el.querySelector('[data-cy="notification-archive-a"]') as HTMLButtonElement).click();
+    http.expectOne(`${BASE}/a/archive`).flush({ data: { id: 'a', archived_at: 'x' } });
+    fixture.detectChanges();
+
+    (el.querySelector('[data-cy="notifications-undo-action"]') as HTMLButtonElement).click();
+    http.expectOne(`${BASE}/a/unarchive`).flush({ data: { id: 'a', archived_at: null } });
+    http.expectOne(BASE).flush({ data: [notif({ id: 'a' })], meta: { unread_count: 1 } });
+    fixture.detectChanges();
+
+    expect(el.querySelector('[data-cy="notification-a"]')).not.toBeNull();
+    expect(el.querySelector('[data-cy="notifications-undo"]')).toBeNull();
+  });
+
+  it('archives the read ones in one go, and leaves the unread', () => {
+    const { el, fixture, http } = setup(
       [notif({ id: 'u', read_at: null }), notif({ id: 'r', read_at: new Date().toISOString() })],
       1,
     );
-    (el.querySelector('[data-cy="notifications-filter-unread"]') as HTMLButtonElement).click();
+
+    (el.querySelector('[data-cy="notifications-archive-read"]') as HTMLButtonElement).click();
+    http.expectOne(`${BASE}/archive-read`).flush({ data: { archived: 1 } });
     fixture.detectChanges();
-    expect(el.querySelector('[data-cy="notification-u"]')).toBeTruthy();
-    expect(el.querySelector('[data-cy="notification-r"]')).toBeFalsy();
+
+    expect(el.querySelector('[data-cy="notification-u"]')).not.toBeNull();
+    expect(el.querySelector('[data-cy="notification-r"]')).toBeNull();
+  });
+
+  it('offers "archive the read ones" only when there are read ones', () => {
+    const { el } = setup([notif({ id: 'u', read_at: null })], 1);
+
+    expect(el.querySelector('[data-cy="notifications-archive-read"]')).toBeNull();
+  });
+
+  it('lists the archived ones on their own tab, each with a way back', () => {
+    const { el, fixture, http } = setup([]);
+
+    (el.querySelector('[data-cy="notifications-filter-archived"]') as HTMLButtonElement).click();
+    http
+      .expectOne((r) => r.url === BASE && r.params.get('archived') === '1')
+      .flush({ data: [notif({ id: 'z', archived_at: 'x' })], meta: { unread_count: 0 } });
+    fixture.detectChanges();
+
+    expect(el.querySelector('[data-cy="notification-z"]')).not.toBeNull();
+    (el.querySelector('[data-cy="notification-unarchive-z"]') as HTMLButtonElement).click();
+    http.expectOne(`${BASE}/z/unarchive`).flush({ data: { id: 'z', archived_at: null } });
+    http.expectOne(BASE).flush({ data: [], meta: { unread_count: 0 } });
+    fixture.detectChanges();
+
+    expect(el.querySelector('[data-cy="notification-z"]')).toBeNull();
   });
 
   it('marks all as read via the header CTA', () => {

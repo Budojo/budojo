@@ -73,4 +73,46 @@ describe('NotificationInboxService (#418)', () => {
     expect(service.unread()).toBe(0);
     expect(service.rows().every((n) => n.read_at !== null)).toBe(true);
   });
+
+  // #1914
+  it('archive takes the row out, and an unread one off the bell', () => {
+    service.load().subscribe();
+    httpMock.expectOne('/api/v1/me/notifications').flush({
+      data: [row({ id: 'a' }), row({ id: 'b', read_at: '2026-05-10T08:00:00Z' })],
+      meta: { unread_count: 1 },
+    });
+
+    service.archive('a').subscribe();
+    httpMock.expectOne('/api/v1/me/notifications/a/archive').flush({ data: { id: 'a' } });
+
+    expect(service.rows().map((n) => n.id)).toEqual(['b']);
+    expect(service.unread()).toBe(0);
+  });
+
+  it('archiveRead takes every read row and answers with their ids', () => {
+    service.load().subscribe();
+    httpMock.expectOne('/api/v1/me/notifications').flush({
+      data: [row({ id: 'u' }), row({ id: 'r', read_at: '2026-05-10T08:00:00Z' })],
+      meta: { unread_count: 1 },
+    });
+
+    let ids: string[] = [];
+    service.archiveRead().subscribe((taken) => (ids = taken));
+    httpMock.expectOne('/api/v1/me/notifications/archive-read').flush({ data: { archived: 1 } });
+
+    expect(ids).toEqual(['r']);
+    expect(service.rows().map((n) => n.id)).toEqual(['u']);
+    expect(service.unread()).toBe(1);
+  });
+
+  it('listArchived asks for the archived view, without touching the inbox', () => {
+    let archived: readonly InboxNotification[] = [];
+    service.listArchived().subscribe((rows) => (archived = rows));
+    httpMock
+      .expectOne((r) => r.url === '/api/v1/me/notifications' && r.params.get('archived') === '1')
+      .flush({ data: [row({ id: 'z' })], meta: { unread_count: 0 } });
+
+    expect(archived.map((n) => n.id)).toEqual(['z']);
+    expect(service.rows()).toEqual([]);
+  });
 });
