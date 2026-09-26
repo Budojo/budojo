@@ -27,8 +27,11 @@ use Carbon\CarbonImmutable;
  * Both stop at today and leave closures out (`ScheduledDays`). Null when no
  * schedule was ever configured.
  *
- * Walked once per distinct window start, not per row: on a page of twenty,
- * everyone who joined before the season shares one walk.
+ * **One walk per request.** Every window lies inside [season start, today]
+ * (the month never starts before the season, and both stop at today), so the
+ * scheduled days of that span are listed once and each row counts the ones
+ * on or after its own start. A page of twenty costs one walk, whatever the
+ * joining dates.
  */
 class ResolveRosterDenominatorsAction
 {
@@ -43,25 +46,34 @@ class ResolveRosterDenominatorsAction
     {
         $today = $now->startOfDay();
         $monthStart = $today->startOfMonth();
-        $monthEnd = $today->endOfMonth()->startOfDay();
         $seasonStart = Season::startFor($academy, $today);
-        $seasonEnd = Season::endFor($academy, $today);
 
-        $memo = [];
-        $count = function (CarbonImmutable $from, CarbonImmutable $to) use ($academy, $today, &$memo): ?int {
-            $key = $from->toDateString() . '|' . $to->toDateString();
-
-            return $memo[$key] ??= ScheduledDays::countBetween($academy, $from, $to, $today);
-        };
+        // Null: no schedule was ever configured, and every row says so.
+        $held = ScheduledDays::between($academy, $seasonStart, $today, $today);
 
         foreach ($athletes as $athlete) {
             $joined = $athlete->joined_at->toImmutable()->startOfDay();
             $first = $this->firstThisMonth($athlete);
             $monthFrom = $first !== null && $first->lessThan($joined) ? $first : $joined;
 
-            $athlete->setAttribute('attendance_month_expected', $count($monthFrom->max($monthStart), $monthEnd));
-            $athlete->setAttribute('attendance_season_expected', $count($joined->max($seasonStart), $seasonEnd));
+            $athlete->setAttribute('attendance_month_expected', self::heldSince($held, $monthFrom->max($monthStart)));
+            $athlete->setAttribute('attendance_season_expected', self::heldSince($held, $joined->max($seasonStart)));
         }
+    }
+
+    /**
+     * How many of the listed days fall on or after `$from`.
+     *
+     * @param  list<string>|null  $held  `Y-m-d`, ascending
+     */
+    private static function heldSince(?array $held, CarbonImmutable $from): ?int
+    {
+        if ($held === null) {
+            return null;
+        }
+        $since = $from->toDateString();
+
+        return \count(array_filter($held, static fn (string $day): bool => $day >= $since));
     }
 
     private function firstThisMonth(Athlete $athlete): ?CarbonImmutable

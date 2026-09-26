@@ -23,7 +23,14 @@
  */
 import LADDERS from '../../src/test-utils/ladders.json';
 import TRAINING_MODES from '../../src/test-utils/training-modes.json';
-import { fixtureContradictions, stubBodyOf, stubLabel, type FixtureContext } from './fixture-rules';
+import {
+  fixtureContradictions,
+  later,
+  stubBodyOf,
+  stubLabel,
+  trainingDaysBetween,
+  type FixtureContext,
+} from './fixture-rules';
 
 // ── The clock ────────────────────────────────────────────────────────────
 //
@@ -311,19 +318,8 @@ const SUGGESTIONS = [
  * start alike) and the day the athlete joined, up to TODAY.
  */
 function heldSince(joinedAt: unknown): number {
-  const from =
-    typeof joinedAt === 'string' && joinedAt > ACADEMY.season_start
-      ? joinedAt
-      : ACADEMY.season_start;
-  let held = 0;
-  for (
-    let d = new Date(`${from}T00:00:00`);
-    d <= new Date(`${TODAY}T00:00:00`);
-    d.setDate(d.getDate() + 1)
-  ) {
-    if (ACADEMY.training_days.includes(d.getDay())) held++;
-  }
-  return held;
+  const joined = typeof joinedAt === 'string' ? joinedAt : ACADEMY.season_start;
+  return trainingDaysBetween(later(ACADEMY.season_start, joined), TODAY, ACADEMY.training_days);
 }
 
 function athlete(over: Record<string, unknown>) {
@@ -2268,6 +2264,14 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
     expect(rate(0.3333)).to.deep.equal([]);
     expect(rate(0.3334).join('\n')).to.contain('rate 0.3334');
 
+    // The roster's denominators (#1768): a newcomer's still carrying the
+    // academy's eight is the stale spread the Today stubs once shipped.
+    expect(
+      fixtureContradictions(
+        [{ joined_at: TODAY, attendance_month_expected: 8, attendance_season_expected: 1 }],
+        FIXTURE_CONTEXT,
+      ),
+    ).to.deep.equal([`$[0]: attendance_month_expected 8, but 1 training days since ${TODAY}`]);
     // Not stricter than the server: the month count and the last presence
     // are not floored at joining, which is editable and was backfilled.
     expect(
@@ -2381,6 +2385,9 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
             joined_at: TODAY,
             attendance_month_count: 0,
             attendance_total_count: 0,
+            // The server's windows start today for them (#1768).
+            attendance_month_expected: heldSince(TODAY),
+            attendance_season_expected: heldSince(TODAY),
             last_attended_on: null,
           },
           {
@@ -2388,6 +2395,9 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
             joined_at: TODAY,
             attendance_month_count: 0,
             attendance_total_count: 0,
+            // The server's windows start today for them (#1768).
+            attendance_month_expected: heldSince(TODAY),
+            attendance_season_expected: heldSince(TODAY),
             last_attended_on: null,
           },
         ]),

@@ -1865,13 +1865,26 @@ describe('AthletesListComponent — how often they actually turn up (#1447)', ()
     // The separator between them is `aria-hidden`, so without this a screen
     // reader would read "6 214" and leave the listener to guess.
     const fixture = render([
+      makeAthlete({
+        id: 1,
+        attendance_month_count: 6,
+        attendance_total_count: 214,
+        attendance_month_expected: 8,
+        attendance_season_expected: 230,
+      }),
+    ]);
+
+    const label = el(fixture, '.athlete-attendance')?.getAttribute('aria-label');
+    expect(label).toBe('6 of 8 days this month, 214 of 230 this season');
+  });
+
+  it('spells out the counts alone when there is no denominator', () => {
+    const fixture = render([
       makeAthlete({ id: 1, attendance_month_count: 6, attendance_total_count: 214 }),
     ]);
 
     const label = el(fixture, '.athlete-attendance')?.getAttribute('aria-label');
-    expect(label).toContain('6');
-    expect(label).toContain('214');
-    expect(label).not.toBe('');
+    expect(label).toBe('6 days this month, 214 this season');
   });
 
   it('puts only this month on the mobile card, where there is no header to sort from', () => {
@@ -2228,14 +2241,16 @@ describe('AthletesListComponent — sessions out of sessions held (#1455)', () =
   it('says both windows in words for a screen reader', () => {
     // The stacking is the only thing distinguishing the two lines visually,
     // and a screen reader cannot see a layout.
-    const fixture = render([makeAthlete()]);
+    const fixture = render([
+      makeAthlete({ attendance_month_expected: 8, attendance_season_expected: 20 }),
+    ]);
     const label =
       (fixture.nativeElement as HTMLElement)
         .querySelector('.athlete-attendance')
         ?.getAttribute('aria-label') ?? '';
 
-    expect(label).toContain('this month');
-    expect(label).toContain('this season');
+    expect(label).toContain('2 of 8 days this month');
+    expect(label).toContain('2 of 20 this season');
   });
 
   // The season floor and the joining floor are the server's now (#1768):
