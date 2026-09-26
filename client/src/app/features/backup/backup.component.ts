@@ -187,7 +187,10 @@ export class BackupComponent {
    * leads with the way back instead of an empty list.
    */
   protected readonly newComputer = computed<boolean>(
-    () => !this.loading() && this.rows().length === 0,
+    // This computer's own archives, not the list merged with Drive: a fresh
+    // machine whose owner linked Drive first shows remote-only rows, none of
+    // which can be restored here, and the way back must not vanish behind them.
+    () => !this.loading() && this.archives().length === 0,
   );
 
   /**
@@ -198,9 +201,8 @@ export class BackupComponent {
   protected readonly visibleRows = computed<BackupRow[]>(() =>
     this.showAll() ? this.rows() : this.rows().slice(0, LIST_LIMIT),
   );
-  protected readonly hiddenCount = computed<number>(() =>
-    this.showAll() ? 0 : Math.max(0, this.rows().length - LIST_LIMIT),
-  );
+  /** Whether the list is long enough to fold at all; the toggle stays while it is. */
+  protected readonly foldable = computed<boolean>(() => this.rows().length > LIST_LIMIT);
 
   private readonly keysImport = viewChild<ElementRef<HTMLTextAreaElement>>('keysImport');
 

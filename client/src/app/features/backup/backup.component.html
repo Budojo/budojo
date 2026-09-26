@@ -46,37 +46,49 @@
     -->
     <section class="backup-page__arrival" data-cy="backup-new-computer">
       <h2 class="backup-page__arrival-title">{{ 'backup.newComputer.title' | translate }}</h2>
-      <p class="backup-page__arrival-text">
-        {{
-          (keysAvailable ? 'backup.newComputer.text' : 'backup.newComputer.textNoKeys') | translate
-        }}
-      </p>
-      <div class="backup-page__arrival-actions">
-        <app-confirm-destructive-button
-          icon="pi pi-folder-open"
-          severity="secondary"
-          [label]="'backup.restoreFromFile' | translate"
-          [ariaLabel]="'backup.restoreFromFile' | translate"
-          [confirmMessage]="'backup.confirmRestoreFromFile' | translate"
-          [acceptLabel]="'backup.confirmRestoreFromFileAccept' | translate"
-          [rejectLabel]="'common.cancel' | translate"
-          [text]="false"
-          size="large"
-          [loading]="restoringFromFile()"
-          (confirmed)="restoreFromFile()"
-          dataCy="backup-new-computer-restore"
-        />
+      <!--
+        The recovery code first: a restore reloads the window, and the
+        archive it brings lands in the list, so this block is gone by the time
+        a second step would be read — and a restore without the keys is the
+        silent half-recovery the docs warn about. The order does not matter
+        to the app; it matters to what the owner is still shown.
+      -->
+      <ol class="backup-page__arrival-steps">
         @if (keysAvailable) {
-          <p-button
-            [label]="'backup.newComputer.keys' | translate"
-            icon="pi pi-key"
-            severity="secondary"
-            [text]="true"
-            (onClick)="goToKeysImport()"
-            data-cy="backup-new-computer-keys"
-          />
+          <li class="backup-page__arrival-step">
+            <p class="backup-page__arrival-text">{{ 'backup.newComputer.keysStep' | translate }}</p>
+            <p-button
+              [label]="'backup.newComputer.keys' | translate"
+              icon="pi pi-key"
+              severity="secondary"
+              (onClick)="goToKeysImport()"
+              data-cy="backup-new-computer-keys"
+            />
+          </li>
         }
-      </div>
+        <li class="backup-page__arrival-step">
+          <p class="backup-page__arrival-text">
+            {{
+              (keysAvailable ? 'backup.newComputer.restoreStep' : 'backup.newComputer.textNoKeys')
+                | translate
+            }}
+          </p>
+          <app-confirm-destructive-button
+            icon="pi pi-folder-open"
+            severity="secondary"
+            [label]="'backup.restoreFromFile' | translate"
+            [ariaLabel]="'backup.restoreFromFile' | translate"
+            [confirmMessage]="'backup.confirmRestoreFromFile' | translate"
+            [acceptLabel]="'backup.confirmRestoreFromFileAccept' | translate"
+            [rejectLabel]="'common.cancel' | translate"
+            [text]="false"
+            size="large"
+            [loading]="restoringFromFile()"
+            (confirmed)="restoreFromFile()"
+            dataCy="backup-new-computer-restore"
+          />
+        </li>
+      </ol>
     </section>
   }
 
@@ -317,12 +329,21 @@
         </li>
       }
     </ul>
-    @if (hiddenCount() > 0) {
+    @if (foldable()) {
+      <!--
+        A toggle that stays put, not a button that removes itself: focus
+        would fall to the page and a keyboard user would lose their place.
+      -->
       <p-button
-        [label]="'backup.showAll' | translate: { total: rows().length }"
+        [label]="
+          showAll()
+            ? ('backup.showFewer' | translate)
+            : ('backup.showAll' | translate: { total: rows().length })
+        "
         severity="secondary"
         [text]="true"
-        (onClick)="showAll.set(true)"
+        [ariaExpanded]="showAll()"
+        (onClick)="showAll.set(!showAll())"
         data-cy="backup-show-all"
       />
     }

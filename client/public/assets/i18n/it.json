@@ -3331,10 +3331,12 @@
     "restoreFromFile": "Ripristina da un file…",
     "latest": "Il più recente",
     "showAll": "Mostra tutti ({{total}})",
+    "showFewer": "Mostra meno",
     "newComputer": {
       "title": "Arrivi da un altro computer?",
-      "text": "Ripristina il backup che avevi salvato: dalla cartella dei backup, da Google Drive o da una chiavetta. Poi inserisci il codice di recupero, perché senza i certificati medici restano illeggibili.",
       "textNoKeys": "Ripristina il backup che avevi salvato: dalla cartella dei backup, da Google Drive o da una chiavetta.",
+      "keysStep": "Inserisci il codice di recupero che avevi salvato: Budojo si riavvia con le tue chiavi, e i certificati medici tornano leggibili.",
+      "restoreStep": "Poi ripristina il backup: dalla cartella dei backup, da Google Drive o da una chiavetta. Se il codice non l'avevi salvato, ripristina lo stesso: tornano tutti i dati tranne i documenti.",
       "keys": "Inserisci il codice di recupero"
     },
     "confirmRestoreFromFile": "Scegli un backup di Budojo: i dati attuali verranno sostituiti con il suo contenuto.",

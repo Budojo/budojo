@@ -3331,10 +3331,12 @@
     "restoreFromFile": "Restore from a file…",
     "latest": "Latest",
     "showAll": "Show all ({{total}})",
+    "showFewer": "Show fewer",
     "newComputer": {
       "title": "Coming from another computer?",
-      "text": "Restore the backup you kept: from your backup folder, from Google Drive or from a USB stick. Then enter your recovery code: without it, the medical certificates cannot be opened.",
       "textNoKeys": "Restore the backup you kept: from your backup folder, from Google Drive or from a USB stick.",
+      "keysStep": "Enter the recovery code you saved: Budojo restarts with your keys, and the medical certificates can be opened again.",
+      "restoreStep": "Then restore the backup: from your backup folder, from Google Drive or from a USB stick. If you never saved the code, restore anyway: everything comes back except the documents.",
       "keys": "Enter your recovery code"
     },
     "confirmRestoreFromFile": "Choose a Budojo backup: the current data will be replaced with its contents.",

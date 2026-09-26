@@ -781,14 +781,62 @@ describe('BackupComponent', () => {
       await settled(fixture);
 
       expect(fixture.nativeElement.querySelectorAll('.backup-page__row')).toHaveLength(5);
-      const showAll = el(fixture, 'backup-show-all');
-      expect(showAll?.textContent).toContain('Show all (7)');
+      const toggle = (): HTMLButtonElement | null | undefined =>
+        el(fixture, 'backup-show-all')?.querySelector('button');
+      expect(toggle()?.textContent).toContain('Show all (7)');
 
-      showAll?.querySelector('button')?.click();
+      const pressed = toggle();
+      pressed?.focus();
+      pressed?.click();
       fixture.detectChanges();
 
       expect(fixture.nativeElement.querySelectorAll('.backup-page__row')).toHaveLength(7);
-      expect(el(fixture, 'backup-show-all')).toBeNull();
+      // The same control, still there, still holding focus: a button that
+      // removed itself would drop a keyboard user onto the page.
+      expect(toggle()?.textContent).toContain('Show fewer');
+      expect(document.activeElement).toBe(pressed);
+
+      toggle()?.click();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelectorAll('.backup-page__row')).toHaveLength(5);
+    });
+
+    it('still leads with the way back when only Drive has backups', async () => {
+      // None of those can be restored here yet, so they are not a way back.
+      const { fixture } = setup(
+        { list: vi.fn(async () => []) },
+        { available: true },
+        {
+          available: true,
+          state: vi.fn(async () => ({ configured: true, linked: true, account: 'gym@example.it' })),
+          archives: vi.fn(async () => [
+            {
+              name: 'budojo-backup-20260816-120000.zip',
+              sizeBytes: 2_000_000,
+              createdAt: null,
+              local: false,
+              remote: true,
+              remoteId: 'id-1',
+            },
+          ]),
+        },
+      );
+      await settled(fixture);
+      await settled(fixture);
+
+      expect(el(fixture, 'backup-new-computer')).not.toBeNull();
+    });
+
+    it('asks for the recovery code before the restore', async () => {
+      // A restore reloads the window and fills the list, so this block is gone
+      // by the time a second step would be read.
+      const { fixture } = setup({ list: vi.fn(async () => []) }, { available: true });
+      await settled(fixture);
+
+      const steps = fixture.nativeElement.querySelectorAll('.backup-page__arrival-step');
+      expect(steps).toHaveLength(2);
+      expect(steps[0].querySelector('[data-cy="backup-new-computer-keys"]')).not.toBeNull();
+      expect(steps[1].querySelector('[data-cy="backup-new-computer-restore"]')).not.toBeNull();
     });
 
     it('does not paint restore red on every row', async () => {
