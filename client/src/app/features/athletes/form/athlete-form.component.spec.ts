@@ -990,24 +990,25 @@ describe('AthleteFormComponent', () => {
       expect(httpMock.expectOne('/api/v1/athletes/42').request.body.fee_override_cents).toBeNull();
     });
 
-    it('re-reads the academy after the first personal fee in one that charged nothing', () => {
-      // No flat fee, no tiers: the paid chip and filter are shut until the
-      // academy knows it now charges someone.
-      TestBed.inject(AcademyService).academy.set({
-        ...ACADEMY_BASE,
-        monthly_fee_cents: null,
-        fee_tier_count: 0,
-      });
-      const { cmp, httpMock } = editing(makeAthlete({ id: 42, fee_override_cents: null }));
+    it('re-reads the academy when a personal fee appears or goes away, and only then', () => {
+      // The fee is part of the academy's "charges anything" gate, which the
+      // roster reads from the cached academy.
+      const saveWith = (loaded: number | null, typed: number | null) => {
+        const { cmp, httpMock } = editing(makeAthlete({ id: 42, fee_override_cents: loaded }));
+        cmp.form.patchValue({ fee_override: typed });
+        cmp.submit();
+        const cents = typed === null ? null : Math.round(typed * 100);
+        httpMock
+          .expectOne('/api/v1/athletes/42')
+          .flush({ data: makeAthlete({ id: 42, fee_override_cents: cents }) });
+        const reloads = httpMock.match('/api/v1/academy').length;
+        return reloads;
+      };
 
-      cmp.form.patchValue({ fee_override: 40 });
-      cmp.submit();
-      httpMock
-        .expectOne('/api/v1/athletes/42')
-        .flush({ data: makeAthlete({ id: 42, fee_override_cents: 4000 }) });
-
-      const reload = httpMock.expectOne('/api/v1/academy');
-      expect(reload.request.method).toBe('GET');
+      expect(saveWith(null, 40)).toBe(1); // the first one
+      expect(saveWith(4000, null)).toBe(1); // cleared
+      expect(saveWith(4000, 0)).toBe(1); // trains free now: not a charge
+      expect(saveWith(4000, 35)).toBe(0); // one amount for another moves nothing
     });
 
     it('says "trains free" under the field the moment it holds a 0', () => {

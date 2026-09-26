@@ -545,7 +545,9 @@ export class AthletesListComponent implements OnInit {
 
   private restore(athlete: Athlete): void {
     this.athleteService.restore(athlete.id).subscribe({
-      next: () => {
+      next: (restored) => {
+        // Their personal fee comes back with them (#1757).
+        this.academyService.refreshForPersonalFee(null, restored.fee_override_cents);
         // Drop the athlete from the trashed list — they're now active
         // and would no longer match the `?status=trashed` scope on a
         // fresh load. The toast confirms the action; the user can

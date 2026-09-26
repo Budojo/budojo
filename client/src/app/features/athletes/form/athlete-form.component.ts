@@ -46,7 +46,6 @@ import {
 import { FeeTier, FeeTierService } from '../../../core/services/fee-tier.service';
 import { LanguageService } from '../../../core/services/language.service';
 import { localeFor, datePickerFormatFor } from '../../../shared/utils/locale';
-import { academyChargesAFee } from '../../../shared/utils/academy-fee';
 import { BudojoFormFieldComponent } from '../../../shared/components/budojo-form-field/budojo-form-field.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { ConfirmDestructiveButtonComponent } from '../../../shared/components/confirm-destructive-button/confirm-destructive-button.component';
@@ -585,15 +584,12 @@ export class AthleteFormComponent implements OnInit {
           detail: `${athlete.first_name} ${athlete.last_name}`,
           life: 3000,
         });
-        // The first personal fee in an academy that charged nothing opens the
-        // paid chip and filter (#1757), and the cached academy does not know
-        // yet. Re-read it, or the roster keeps them shut until a restart.
-        if (
-          (athlete.fee_override_cents ?? 0) > 0 &&
-          !academyChargesAFee(this.academyService.academy())
-        ) {
-          this.academyService.get({ forceRefresh: true }).subscribe();
-        }
+        // A personal fee is part of the academy's "charges anything" gate
+        // (#1757); the roster reads it from the cached academy.
+        this.academyService.refreshForPersonalFee(
+          this.loadedAthlete()?.fee_override_cents,
+          athlete.fee_override_cents,
+        );
         // After #281, Edit lives INSIDE the athlete detail as a sub-tab.
         // On update, return the user to the detail (Documents is the
         // default child) instead of bouncing back to the list — keeps
@@ -658,6 +654,8 @@ export class AthleteFormComponent implements OnInit {
     this.deleting.set(true);
     this.athleteService.delete(id).subscribe({
       next: () => {
+        // Their personal fee leaves with them (#1757).
+        this.academyService.refreshForPersonalFee(athlete.fee_override_cents, null);
         this.messageService.add({
           severity: 'success',
           summary: this.translate.instant('athletes.list.toast.deletedSummary'),
