@@ -83,13 +83,13 @@ Failures are quiet, because the copy on this computer has already been written a
 
 From **Data & backup**, pick an archive and choose **Restore** (it asks for confirmation — a restore replaces the current data). The app:
 
-1. stops the PHP API,
-2. copies the archived database and `storage/` in **beside** the live ones (`budojo.sqlite.restoring`, `storage.restoring`), then drops the live database's stale `-wal`/`-shm` files and swaps the copies in by renaming,
+1. holds the scheduler and the notification poll — their own `php` processes open the same database — and stops the PHP API,
+2. copies the archived database and `storage/` in **beside** the live ones (`budojo.sqlite.restoring`, `storage.restoring`), then swaps by renaming: the live database (with its `-wal`/`-shm`) and `storage/` step aside as `.previous`, the copies take their place, and the `.previous` files are deleted only once every rename has succeeded,
 3. restarts the API and reloads the window onto the restored data.
 
 A restore **refuses an archive from a newer version of Budojo** than the one running (its schema would be ahead of the code) and refuses an archive with a missing or unreadable manifest — an unknown archive is not a safe one. An **older** archive is fine: the boot migrations bring it forward.
 
-The live database is only replaced after the archive extracts and validates cleanly **and** after every copy has succeeded (#1909). Until #1909 the swap deleted the live database and then copied the archived one over it, so a copy that failed half-way — a full disk is enough — left the database replaced and the documents gone. Now every step that can run out of room happens while the live data is untouched, the half-made copies are removed if one fails, and what follows is renames on one volume. One restore or backup runs at a time: a second is refused as busy.
+The live database is only replaced after the archive extracts and validates cleanly **and** after every copy has succeeded (#1909). Until #1909 the swap deleted the live database and then copied the archived one over it, so a copy that failed half-way — a full disk is enough — left the database replaced and the documents gone. Now every step that can run out of room happens while the live data is untouched, the half-made copies are removed if one fails, and what follows is renames on one volume. Each rename is retried for about a second when Windows reports the file busy (the antivirus scanning what was just written is the usual holder), and if one still fails, the renames already done are undone in reverse order, so the database and the documents always belong to the same backup. One restore or backup runs at a time: a second is refused as busy.
 
 ### Restoring from a file (#1909)
 

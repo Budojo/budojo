@@ -20,6 +20,7 @@ export interface PeriodicRunResult {
 export type PeriodicTaskEvent =
   | { type: 'ran'; code: number | null; durationMs: number; timedOut: boolean }
   | { type: 'skipped-overlap' }
+  | { type: 'skipped-paused' }
   | { type: 'failed'; error: string }
   | { type: 'stopped' };
 
@@ -45,6 +46,7 @@ export class PeriodicTask {
   private initial: NodeJS.Timeout | null = null;
   private inFlight: Promise<void> | null = null;
   private stopped = false;
+  private paused = false;
   private readonly now: () => number;
 
   constructor(private readonly options: PeriodicTaskOptions) {
@@ -77,6 +79,12 @@ export class PeriodicTask {
   /** Runs one tick unless one is already in flight. Exposed for the harness. */
   tick(): Promise<void> {
     if (this.stopped) {
+      return Promise.resolve();
+    }
+
+    if (this.paused) {
+      this.options.onEvent?.({ type: 'skipped-paused' });
+
       return Promise.resolve();
     }
 
@@ -118,6 +126,26 @@ export class PeriodicTask {
       });
 
     return this.inFlight;
+  }
+
+  /**
+   * Holds the ticks until `resume()` (#1909): a restore swaps the database this
+   * runner's PHP opens on its own, and stopping the server does not stop it.
+   * Resolves once a run already in flight has finished — or after the stop
+   * grace, so a hung run cannot hold a restore forever. Unlike `stop()`, it
+   * can be undone.
+   */
+  async pause(): Promise<void> {
+    this.paused = true;
+
+    if (this.inFlight !== null) {
+      const grace = this.options.stopGraceMs ?? DEFAULTS.stopGraceMs;
+      await Promise.race([this.inFlight, new Promise<void>((resolve) => setTimeout(resolve, grace).unref?.())]);
+    }
+  }
+
+  resume(): void {
+    this.paused = false;
   }
 
   async stop(): Promise<void> {

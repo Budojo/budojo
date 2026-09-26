@@ -4,7 +4,11 @@ import path from 'node:path';
 
 import type { BackupEntry, BackupIO, BackupManifest } from './backup.js';
 import { isBackupArchive } from './backup.js';
+import { retryWhileBusy } from './fs-retry.js';
 import { runPhp } from './php-exec.js';
+
+/** About a second in all: long enough for a scan to let go, short enough not to feel hung. */
+const RENAME_RETRY = { attempts: 10, delayMs: 100 };
 
 /**
  * The real filesystem + subprocess backing for BackupService (#1228).
@@ -161,23 +165,65 @@ export function createBackupIO(config: BackupIOConfig): BackupIO {
         throw error;
       }
 
-      // Drop the WAL/SHM siblings of the live DB — a stale -wal against a
-      // freshly swapped database is corruption. The server is stopped, so
-      // nothing holds them. The rename then replaces the file in one step.
-      for (const sibling of ['-wal', '-shm', '-journal']) {
-        rmSync(config.databasePath + sibling, { force: true });
+      // The swap is renames, each one undone if a later one fails. Replacing
+      // the database outright and then failing on `storage` — a directory
+      // Windows will not rename while the antivirus holds a file in it —
+      // left the archive's database with the old documents or none, and no
+      // old database to go back to. So the live files step aside first, as
+      // `.previous`, and go only once everything is in place.
+      const previousDb = `${config.databasePath}.previous`;
+      const previousStorage = `${config.storageDir}.previous`;
+      const siblings = ['', '-wal', '-shm', '-journal'];
+      for (const sibling of siblings) {
+        rmSync(previousDb + sibling, { force: true });
       }
-      renameSync(stagedDb, config.databasePath);
+      rmSync(previousStorage, { recursive: true, force: true });
 
-      if (hasStorage) {
-        const previous = `${config.storageDir}.previous`;
-        rmSync(previous, { recursive: true, force: true });
-        if (existsSync(config.storageDir)) {
-          renameSync(config.storageDir, previous);
+      const moved: Array<[from: string, to: string]> = [];
+      const move = async (from: string, to: string): Promise<void> => {
+        await retryWhileBusy(() => renameSync(from, to), RENAME_RETRY);
+        moved.push([from, to]);
+      };
+
+      try {
+        // The live database with its WAL and SHM: a -wal can hold writes the
+        // main file does not have yet, so it travels with it — and a stale
+        // one left against the restored database would be corruption.
+        for (const sibling of siblings) {
+          if (existsSync(config.databasePath + sibling)) {
+            await move(config.databasePath + sibling, previousDb + sibling);
+          }
         }
-        renameSync(stagedStorage, config.storageDir);
-        rmSync(previous, { recursive: true, force: true });
+        await move(stagedDb, config.databasePath);
+
+        if (hasStorage) {
+          if (existsSync(config.storageDir)) {
+            await move(config.storageDir, previousStorage);
+          }
+          await move(stagedStorage, config.storageDir);
+        }
+      } catch (error) {
+        // Put back what moved, newest first. What cannot be put back stays
+        // under `.previous`, and the error says so: never deleted.
+        const stuck: string[] = [];
+        for (const [from, to] of moved.reverse()) {
+          await retryWhileBusy(() => renameSync(to, from), RENAME_RETRY).catch(() => stuck.push(to));
+        }
+        rmSync(stagedDb, { force: true });
+        rmSync(stagedStorage, { recursive: true, force: true });
+
+        if (stuck.length > 0) {
+          throw new Error(
+            `${error instanceof Error ? error.message : String(error)}; could not put back ${stuck.join(', ')}`,
+          );
+        }
+        throw error;
       }
+
+      for (const sibling of siblings) {
+        rmSync(previousDb + sibling, { force: true });
+      }
+      rmSync(previousStorage, { recursive: true, force: true });
     },
   };
 }

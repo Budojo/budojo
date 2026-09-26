@@ -802,6 +802,8 @@ function registerBackupBridge(
   supervisorOf: () => PhpSupervisor | null,
   backupOf: () => BackupService | null,
   folderOf: () => FolderCopyService | null,
+  /** The other PHP processes that open the database on their own: the scheduler and the notification poll. */
+  otherPhpOf: () => PeriodicTask[],
 ): void {
   ipcMain.handle('budojo:backup:list', async () => (await backupOf()?.list()) ?? []);
 
@@ -844,8 +846,15 @@ function registerBackupBridge(
     }
     restoring = true;
 
+    // Stopping the server is not enough: `schedule:run` and the notification
+    // poll open the same SQLite file from their own php processes, and on
+    // Windows an open handle stops the rename, or a write lands in the
+    // database being swapped out. They hold their ticks until the restore is
+    // over, after any run already in flight has finished.
+    const held = otherPhpOf();
     let check: RestoreCheck;
     try {
+      await Promise.all(held.map((task) => task.pause()));
       await supervisor.stop();
       try {
         check = await run(service);
@@ -858,6 +867,9 @@ function registerBackupBridge(
         await supervisor.start();
       }
     } finally {
+      for (const task of held) {
+        task.resume();
+      }
       restoring = false;
     }
 
@@ -1222,7 +1234,12 @@ if (!gotTheLock) {
       backupPoll = runtime.backupPoll;
       driveService = runtime.driveService;
       folderCopy = runtime.folderCopy;
-      registerBackupBridge(() => supervisor, () => backupService, () => folderCopy);
+      registerBackupBridge(
+        () => supervisor,
+        () => backupService,
+        () => folderCopy,
+        () => [scheduler, notifierPoll].filter((task): task is PeriodicTask => task !== null),
+      );
       registerDriveBridge(() => driveService);
       registerFolderBridge(() => folderCopy);
       apiBase = runtime.apiBase;
