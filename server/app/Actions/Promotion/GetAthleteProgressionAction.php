@@ -36,8 +36,10 @@ use Carbon\CarbonImmutable;
  * written live carries a time of day, so the belt given at 18:42 must not
  * exclude that evening's own session.
  *
- * **Sessions are days.** At most one live presence exists per athlete and
- * day, and the SoftDeletes scope drops a corrected-away one.
+ * **Sessions are days, not rows (#1765).** Since the timetable an athlete in
+ * the gi class and the no-gi one has two rows for that evening, so the count
+ * is of distinct `attended_on`, as on the roster. The SoftDeletes scope drops
+ * a corrected-away presence.
  */
 class GetAthleteProgressionAction
 {
@@ -100,6 +102,7 @@ class GetAthleteProgressionAction
     {
         return $athlete->attendanceRecords()
             ->whereDate('attended_on', '>=', $since->toDateString())
-            ->count();
+            ->distinct()
+            ->count('attended_on');
     }
 }

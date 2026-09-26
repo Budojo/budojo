@@ -85,7 +85,8 @@ it('says there is no stripe on this belt when the only stripe predates it', func
 
 it('counts a day once, and never a corrected-away presence', function (): void {
     progressionPromotion($this->athlete, 'belt', '2026-05-01 00:00:00', $this->owner->id);
-    progressionDays($this->athlete, ['2026-05-04']);
+    // Gi at 19:00 and no-gi at 20:30: two rows, one evening (#1765).
+    progressionDays($this->athlete, ['2026-05-04', '2026-05-04']);
     AttendanceRecord::factory()->for($this->athlete)->on('2026-05-06')->create()->delete();
 
     $p = app(GetAthleteProgressionAction::class)->execute($this->athlete);

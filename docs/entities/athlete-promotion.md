@@ -73,7 +73,7 @@ Before this table, only **belt** changes left a trace (as a `belt_promotion` `Co
 - **Only a stripe given counts.** Promoting blue-four to purple-zero in one save writes a belt row and a 4 → 0 stripe row at the same moment; that reset is not the last stripe. Stripe rows that do not raise the count are skipped.
 - **The current `belt` and `stripes` ride along**, so the SPA can word a dan or a poom as such, show no stripe line on a grade that carries none (a judo or taekwondo kyu), and tell "no stripe on this belt" from stripes that exist with no dated row (an athlete created on two stripes opens with a belt row only).
 - **Whole days.** `recorded_at` carries a time of day on live rows, so the comparison is on dates: a belt given at 18:42 still counts that evening's session.
-- **Sessions are distinct training days**, at most one live presence per athlete and day; a soft-deleted (corrected-away) presence does not count.
+- **Sessions are distinct training days**, not rows: since the timetable a gi-and-no-gi evening has two rows, counted once (#1765). A soft-deleted (corrected-away) presence does not count.
 
 ## Future / TODO
 
