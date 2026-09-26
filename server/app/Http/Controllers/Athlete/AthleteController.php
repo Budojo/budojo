@@ -21,6 +21,7 @@ use App\Support\BirthdayWindow;
 use App\Support\MartialArt\MartialArtProfile;
 use App\Support\MartialArt\RankLadder;
 use App\Support\NameFold;
+use App\Support\OperatorDay;
 use App\Support\Season;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
@@ -110,8 +111,8 @@ class AthleteController extends Controller
         $sortBy = \is_string($request->input('sort_by')) ? $request->input('sort_by') : null;
         $sortOrder = $request->input('sort_order') === 'asc' ? 'asc' : 'desc';
 
-        $currentYear = (int) now()->year;
-        $currentMonth = (int) now()->month;
+        $currentYear = (int) OperatorDay::today()->year;
+        $currentMonth = (int) OperatorDay::today()->month;
 
         // The eager-load scope, so the resource sees only the payments that
         // could cover this month. The `?paid` filter below asks the same
@@ -151,9 +152,10 @@ class AthleteController extends Controller
         $academy = $user->activeAcademy();
         \assert($academy !== null); // guarded above
 
-        // The season this moment falls in (#1484) — see App\Support\Season for
-        // why the academy stores a recurring month rather than a date.
-        $now = CarbonImmutable::now();
+        // The season today falls in (#1484) — see App\Support\Season for why
+        // the academy stores a recurring month rather than a date. The owner's
+        // today (#1963): the paid filter below asks what is spendable on it.
+        $now = OperatorDay::today();
         $seasonAttendanceScope = fn ($q) => $q
             ->whereBetween('attended_on', [
                 Season::startFor($academy, $now)->toDateString(),
@@ -187,7 +189,7 @@ class AthleteController extends Controller
             // carnets inside today's validity window, counted, so
             // `active_carnet` resolves in one extra query for the page
             // instead of two per row.
-            ->with(['carnets' => static fn ($q) => $q->validOn(CarbonImmutable::today())])
+            ->with(['carnets' => static fn ($q) => $q->validOn(OperatorDay::today())])
             // Eager-load the morph address (#72b) so AthleteResource's
             // `$athlete->address` access on each row is one batched query
             // instead of 20.

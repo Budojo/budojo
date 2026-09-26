@@ -6,6 +6,7 @@ namespace App\Support\Promotion;
 
 use App\Enums\Belt;
 use App\Models\AthletePromotion;
+use App\Support\OperatorDay;
 use Carbon\CarbonImmutable;
 
 /**
@@ -39,7 +40,7 @@ final readonly class PromotionRecord
             $promotion->from_stripes,
             $promotion->to_stripes,
             $promotion->belt_at_event,
-            CarbonImmutable::make($promotion->recorded_at) ?? CarbonImmutable::now(),
+            CarbonImmutable::make($promotion->recorded_at) ?? OperatorDay::today(),
         );
     }
 

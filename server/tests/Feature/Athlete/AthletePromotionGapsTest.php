@@ -157,6 +157,24 @@ it('completes a starting row only inside its window when a gap stands for it', f
         ->and($athlete->promotions()->where('kind', 'belt')->where('to_belt', 'blue')->count())->toBe(1);
 });
 
+it("bounds a window by the owner's today, which after 22:00 UTC is already tomorrow (#1963)", function (): void {
+    // 22:30 UTC on the 10th is 00:30 on the 11th in Rome.
+    $this->travelTo('2026-10-10 22:30:00');
+    $athlete = gapsAthlete($this->academy, Belt::Blue, 1);
+    beltRowOn($athlete, $this->owner, Belt::White, Belt::Blue, '2026-10-10 00:00:00');
+
+    // Judged in UTC the window would be (10th, 10th] — no day — and the gap gone.
+    $gaps = $this->actingAs($this->owner)->getJson("/api/v1/athletes/{$athlete->id}/promotions")->assertOk()->json('gaps');
+    expect(array_column($gaps, 'key'))->toBe(['stripe:blue:1'])
+        ->and($gaps[0]['before'])->toBeNull();
+
+    $this->actingAs($this->owner)->postJson("/api/v1/athletes/{$athlete->id}/promotions", [
+        'kind' => 'stripe', 'recorded_at' => '2026-10-11', 'belt_at_event' => 'blue', 'from_stripes' => 0, 'to_stripes' => 1,
+    ])->assertCreated();
+
+    expect(gapKeys($this, $athlete))->toBe([]);
+});
+
 it('reads the gaps over the whole history, whatever the page', function (): void {
     $athlete = gapsAthlete($this->academy, Belt::Blue, 0);
     stripeRowOn($athlete, $this->owner, Belt::White, 2, 3, '2024-03-12 00:00:00');

@@ -12,8 +12,8 @@ use App\Http\Requests\Concerns\ValidatesPromotionChainConsistency;
 use App\Models\Athlete;
 use App\Models\AthletePromotion;
 use App\Rules\BeltInLadder;
+use App\Support\OperatorDay;
 use App\Support\Promotion\PromotionGaps;
-use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -54,7 +54,7 @@ class UpdateAthletePromotionRequest extends FormRequest
             // (#1431 PR 1 of 2). Date-only, matching the timeline's display
             // precision (`mediumDate`) — a promotion can't be recorded ahead
             // of today.
-            'recorded_at' => ['required', 'date_format:Y-m-d', 'before_or_equal:today'],
+            'recorded_at' => ['required', 'date_format:Y-m-d', OperatorDay::notAfterToday()],
             // The one exception (#1966): the belt a STARTING row's athlete
             // came from, which that row never recorded. Refused on any row
             // that already has one — see `withValidator()`.
@@ -116,7 +116,7 @@ class UpdateAthletePromotionRequest extends FormRequest
         }
 
         $gap = $this->gapCompleting($athlete, $promotion);
-        if ($gap !== null && ! PromotionGaps::inWindow($gap, $recordedAt->toDateString(), CarbonImmutable::today())) {
+        if ($gap !== null && ! PromotionGaps::inWindow($gap, $recordedAt->toDateString(), OperatorDay::today())) {
             $validator->errors()->add('recorded_at', self::windowMessage($gap));
 
             return;

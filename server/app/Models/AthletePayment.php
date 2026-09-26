@@ -38,7 +38,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int           $month  First month of the covered period, 1-12
  * @property BillingPeriod $period_months
  * @property int           $amount_cents
- * @property Carbon        $paid_at        When the money arrived (#1761): the start of the chosen day, or — when no day was chosen, and on every row before #1761 — the moment it was recorded
+ * @property Carbon        $paid_at        When the money arrived (#1761): the start of the chosen day, or of the owner's today when none was chosen (#1963); rows before #1761 hold the moment it was recorded
  * @property PaymentMethod|null $payment_method Null is "not recorded" (#1761)
  * @property Carbon        $created_at
  * @property Carbon        $updated_at

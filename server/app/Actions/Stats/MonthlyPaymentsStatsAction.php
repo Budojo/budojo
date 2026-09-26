@@ -7,7 +7,7 @@ namespace App\Actions\Stats;
 use App\Models\Academy;
 use App\Models\AthletePayment;
 use App\Support\CollectedByMonth;
-use Carbon\CarbonImmutable;
+use App\Support\OperatorDay;
 
 /**
  * Aggregates what the academy took per business (year, month) over the
@@ -49,7 +49,7 @@ class MonthlyPaymentsStatsAction
      */
     public function execute(Academy $academy, int $months): array
     {
-        $now = CarbonImmutable::now()->startOfMonth();
+        $now = OperatorDay::today()->startOfMonth();
         $start = $now->subMonths($months - 1);
 
         $firstBucket = AthletePayment::monthIndex((int) $start->format('Y'), (int) $start->format('m'));

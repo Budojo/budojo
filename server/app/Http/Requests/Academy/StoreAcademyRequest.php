@@ -6,6 +6,7 @@ namespace App\Http\Requests\Academy;
 
 use App\Enums\MartialArt;
 use App\Http\Requests\Concerns\ValidatesAddress;
+use App\Support\OperatorDay;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -57,7 +58,7 @@ class StoreAcademyRequest extends FormRequest
             // it. The rule lives here, once, rather than in four consumers —
             // and deliberately NOT in the picker, where a `maxDate` silently
             // blanked an already-stored future value instead of showing it.
-            'billing_from' => ['sometimes', 'nullable', 'date', 'before_or_equal:today'],
+            'billing_from' => ['sometimes', 'nullable', 'date', OperatorDay::notAfterToday()],
             ...$this->addressRules(),
         ];
     }

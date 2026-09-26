@@ -6,6 +6,7 @@ namespace App\Actions\Attendance;
 
 use App\Models\Athlete;
 use App\Models\AttendanceRecord;
+use App\Support\OperatorDay;
 use App\Support\ScheduledDays;
 use Carbon\CarbonImmutable;
 
@@ -51,7 +52,7 @@ class GetAthleteAttendanceSummaryAction
      */
     public function execute(Athlete $athlete, CarbonImmutable $windowStart, CarbonImmutable $windowEnd): array
     {
-        $today = CarbonImmutable::today();
+        $today = OperatorDay::today();
         $windowStart = $windowStart->startOfDay();
         $windowEnd = $windowEnd->startOfDay();
         $last = $windowEnd->min($today);
