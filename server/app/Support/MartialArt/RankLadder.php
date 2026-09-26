@@ -106,6 +106,41 @@ final class RankLadder
         return array_pad($values, self::MAX_GRADES, null);
     }
 
+    /**
+     * The step after this belt and stripe count (#1841): the next stripe while
+     * the grade has room for one, otherwise the next grade with its stripes
+     * back to none. A dan or a poom counts as a stripe does, since the ladder
+     * stores them as the grade's count.
+     *
+     * Kids-only grades are skipped unless the athlete is eligible for them (a
+     * minor in an academy that trains kids) or already on one: an adult judoka
+     * goes from white to yellow, not to the half belt, and a BJJ adult never
+     * steps back into the kids' colours that open the ladder.
+     *
+     * @return array{kind: 'stripe'|'belt', belt: Belt, stripes: int}|null
+     */
+    public function nextStep(Belt $belt, int $stripes, bool $kidsEligible): ?array
+    {
+        $rank = $this->rankOf($belt);
+        if ($rank === null) {
+            return null;
+        }
+
+        $current = $this->grades[$rank - 1];
+        if ($stripes < $current->maxStripes) {
+            return ['kind' => 'stripe', 'belt' => $belt, 'stripes' => $stripes + 1];
+        }
+
+        $includeKids = $kidsEligible || $current->kids;
+        foreach (\array_slice($this->grades, $rank) as $grade) {
+            if (! $grade->kids || $includeKids) {
+                return ['kind' => 'belt', 'belt' => $grade->belt, 'stripes' => 0];
+            }
+        }
+
+        return null;
+    }
+
     private function gradeOf(Belt $belt): ?Grade
     {
         $rank = $this->rankOf($belt);

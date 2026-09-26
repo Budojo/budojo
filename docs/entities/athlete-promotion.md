@@ -75,6 +75,15 @@ Before this table, only **belt** changes left a trace (as a `belt_promotion` `Co
 - **Whole days.** `recorded_at` carries a time of day on live rows, so the comparison is on dates: a belt given at 18:42 still counts that evening's session.
 - **Sessions are distinct training days**, not rows: since the timetable a gi-and-no-gi evening has two rows, counted once (#1765). A soft-deleted (corrected-away) presence does not count.
 
+## Ready for the next step (#1841)
+
+`GET /promotions/candidates` lists every active athlete with the facts side by side: time at the belt, the last promotion (the later of the belt and the last stripe given on it), the whole days and the distinct training days since, and the next step. `GetPromotionCandidatesAction` calls `GetAthleteProgressionAction` per athlete, so every rule above holds here too and the list cannot disagree with the athlete page.
+
+- **No score and no threshold.** Stripe policy differs between academies and between coaches; the list only orders, longest since the last promotion first, with athletes who have no belt row last.
+- **The next step comes from the ladder** (`RankLadder::nextStep()`): the next stripe, dan or poom while the grade has room for one, otherwise the next grade with no stripes; null at the top.
+- **Kids' grades** (BJJ's grey to green, judo's and karate's half belts, the taekwondo poom) are offered only to a young athlete in an academy that trains kids, or to one already on a kids' grade. Young means not yet in any of the art's adult age divisions, by the age reached this calendar year, as the federations count it. An unknown date of birth reads as an adult.
+- **Not included: the programme per person** (#1744). It is one query per athlete and does not batch yet, so it stays on the athlete card.
+
 ## Future / TODO
 
 - **Academy-wide promotion analytics.** Aggregate reads (average time-to-blue, days-per-stripe across the academy) would surface in a future "academy insights" view. The per-athlete half shipped in #1772: see *Time at the belt* above.

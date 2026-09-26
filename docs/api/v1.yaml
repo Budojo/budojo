@@ -5968,6 +5968,47 @@ paths:
         '403':
           description: The athlete belongs to another academy.
 
+  /promotions/candidates:
+    get:
+      tags: [athletes]
+      summary: The athletes who may be ready for their next step (#1841)
+      description: |
+        Every active athlete of the academy with the facts a coach reads before
+        a promotion, side by side: time at the current belt, the last stripe
+        given on it, the last promotion (the later of the two), the whole days
+        and the distinct training days since it, and the next step as the
+        academy's ladder counts it.
+
+        **No score and no threshold.** Nobody is filtered out by a rule the
+        owner did not set; the list is ordered by days since the last
+        promotion, longest first, and athletes with no belt row come last.
+
+        The numbers are `AthleteProgression`'s (#1772), computed by the same
+        code, so they match the athlete page. Kids' grades are offered as the
+        next step only to a young athlete (not yet in any of the art's adult
+        age divisions, by the age reached this calendar year) in an academy
+        that trains kids. An unknown date of birth reads as an adult.
+
+        Owner-only; requires `athletes_read` in the active academy.
+      operationId: promotionCandidates
+      responses:
+        '200':
+          description: The academy's active athletes, longest since their last promotion first.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PromotionCandidate'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
   /athletes/{athlete}/promotions:
     get:
       tags: [athletes]
@@ -8053,6 +8094,30 @@ components:
         stripe_since: { type: string, format: date, nullable: true, description: 'Day of the latest stripe row that raised the count, when it is not older than belt_since.' }
         days_since_stripe: { type: integer, nullable: true, description: Whole days from stripe_since to today. }
         sessions_since_stripe: { type: integer, nullable: true, description: Distinct training days on or after stripe_since. }
+    PromotionCandidate:
+      type: object
+      description: |
+        One athlete of `/promotions/candidates` (#1841). Dates and counts are
+        null when the athlete has no belt row: nothing falls back to
+        `joined_at`.
+      required: [athlete, belt_since, months_at_belt, stripe_since, last_promoted_on, days_since_last_promotion, sessions_since_last_promotion, next]
+      properties:
+        athlete: { $ref: '#/components/schemas/AthleteSummary' }
+        belt_since: { type: string, format: date, nullable: true, description: Day of the latest belt row. }
+        months_at_belt: { type: integer, nullable: true, description: 'Whole months from belt_since to today, floored.' }
+        stripe_since: { type: string, format: date, nullable: true, description: 'Day of the latest stripe given on the current belt; null when there is none.' }
+        last_promoted_on: { type: string, format: date, nullable: true, description: 'stripe_since when there is one, otherwise belt_since.' }
+        days_since_last_promotion: { type: integer, nullable: true, description: Whole days from last_promoted_on to today. }
+        sessions_since_last_promotion: { type: integer, nullable: true, description: Distinct training days on or after last_promoted_on. }
+        next:
+          type: object
+          nullable: true
+          description: 'The next stripe (or dan, or poom) while the grade has room for one, otherwise the next grade with no stripes. Null at the top of the ladder.'
+          required: [kind, belt, stripes]
+          properties:
+            kind: { type: string, enum: [stripe, belt] }
+            belt: { $ref: '#/components/schemas/Belt' }
+            stripes: { type: integer, minimum: 0 }
     AthletePromotion:
       type: object
       description: |
