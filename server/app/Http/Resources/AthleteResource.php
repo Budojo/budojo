@@ -131,6 +131,10 @@ class AthleteResource extends JsonResource
             // Which line of the price list this athlete is on (#1381), and the
             // amount that actually applies to them — resolved server-side so
             // the SPA never has to re-derive "tier, or academy fallback".
+            // This athlete's own fee (#1757), so the form round-trips it:
+            // null for none, 0 for training free. `monthly_fee_cents` below
+            // is already the resolved amount.
+            'fee_override_cents' => $athlete->fee_override_cents,
             'fee_tier' => $athlete->feeTier === null ? null : [
                 'id' => $athlete->feeTier->id,
                 'label' => $athlete->feeTier->label,

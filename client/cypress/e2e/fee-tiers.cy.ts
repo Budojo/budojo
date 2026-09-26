@@ -45,6 +45,13 @@ const ATHLETE_MARIO = {
   monthly_fee_cents: 6500,
 };
 
+// Registered first, so every intercept a test adds wins over it. Without it
+// the shell's own calls (`/me/notifications`) reach whatever is listening: in
+// CI nothing is, but a local API answers 401 and the app signs the test out.
+beforeEach(() => {
+  cy.intercept('GET', '/api/v1/**', { statusCode: 200, body: { data: [] } });
+});
+
 function tiersResponse(tiers: object[]) {
   return {
     statusCode: 200,
@@ -197,5 +204,62 @@ describe('Putting an athlete on a tier', () => {
     cy.wait('@tiers');
 
     cy.get('[data-cy="athlete-form-fee-tier"]').scrollIntoView().should('contain', '3 lezioni');
+  });
+});
+
+describe("One athlete's own fee (#1757)", () => {
+  beforeEach(() => {
+    cy.intercept('GET', '/api/v1/academy', ACADEMY_OK).as('academy');
+    cy.intercept('GET', '/api/v1/academy/fee-tiers*', tiersResponse([TIER_TWO])).as('tiers');
+    cy.intercept('GET', '/api/v1/athletes/42', {
+      statusCode: 200,
+      body: { data: { ...ATHLETE_MARIO, fee_override_cents: null } },
+    }).as('getAthlete');
+  });
+
+  it('turns a typed 0 into "trains free" and sends it as a 0, not as empty', () => {
+    cy.intercept('PUT', '/api/v1/athletes/42', {
+      statusCode: 200,
+      body: { data: { ...ATHLETE_MARIO, fee_override_cents: 0, monthly_fee_cents: 0 } },
+    }).as('updateAthlete');
+
+    cy.visitAuthenticated('/dashboard/athletes/42/edit');
+    cy.wait('@getAthlete');
+    cy.wait('@tiers');
+
+    cy.get('[data-cy="athlete-form-fee-override"] input').scrollIntoView().type('0').blur();
+    // A 0 and an empty field look alike and mean opposite things.
+    cy.get('#fee_override-hint').should('contain', 'Trains free');
+
+    cy.contains('button', 'Save changes').scrollIntoView().click();
+
+    cy.wait('@updateAthlete').its('request.body.fee_override_cents').should('equal', 0);
+  });
+
+  it('sends euros as cents and an emptied field as no personal fee', () => {
+    cy.intercept('GET', '/api/v1/athletes/42', {
+      statusCode: 200,
+      body: { data: { ...ATHLETE_MARIO, fee_override_cents: 4000, monthly_fee_cents: 4000 } },
+    }).as('getDiscounted');
+    cy.intercept('PUT', '/api/v1/athletes/42', {
+      statusCode: 200,
+      body: { data: ATHLETE_MARIO },
+    }).as('updateAthlete');
+
+    cy.visitAuthenticated('/dashboard/athletes/42/edit');
+    cy.wait('@getDiscounted');
+    cy.wait('@tiers');
+
+    cy.get('[data-cy="athlete-form-fee-override"] input')
+      .scrollIntoView()
+      .should('have.value', '€40.00')
+      .clear()
+      .blur();
+    cy.contains('button', 'Save changes').scrollIntoView().click();
+
+    // `its()` refuses to land on a null, so the key is asserted on the body.
+    cy.wait('@updateAthlete')
+      .its('request.body')
+      .should('have.property', 'fee_override_cents', null);
   });
 });

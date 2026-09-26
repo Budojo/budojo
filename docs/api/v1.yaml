@@ -4413,14 +4413,16 @@ paths:
 
             - `no` is the "Unpaid" chip: the athlete is `active` (#805), is
               not the owner's own row (`is_self`), is charged a fee
-              (`monthly_fee_cents` is not null), and neither a payment
+              (`monthly_fee_cents` is not null, and their own
+              `fee_override_cents` is not `0`, #1757), and neither a payment
               covering the month nor a carnet spendable today pays for it.
             - `yes` is every other chip: a payment covering the month, or a
               spendable carnet. Until #1722 it meant a payment row only and
               left carnet holders out. It deliberately carries no status
               gate: an athlete who paid and then went inactive has still
-              paid. Rows on which no payment is expected (`is_self`, or
-              `monthly_fee_cents` null) are under neither value.
+              paid. Rows on which no payment is expected (`is_self`,
+              `monthly_fee_cents` null, or a personal fee of `0` — someone
+              who trains free, #1757) are under neither value.
 
             The owner's digest and the athlete's overdue push ask the same
             question the same way. Unrecognised values are silently ignored
@@ -5317,13 +5319,15 @@ paths:
         a March monthly and a February quarterly start in different months and
         both cover March. `amount_cents` on the resulting
         row is snapshotted from **the fee that applies to this athlete** —
-        their price tier's amount if they are on one, the academy's flat
-        `monthly_fee_cents` otherwise (#1381). Future fee, tier, or
-        tier-membership changes do NOT rewrite past records.
+        their own `fee_override_cents` if set (#1757), else their price
+        tier's amount, else the academy's flat `monthly_fee_cents` (#1381).
+        Future fee, tier, or tier-membership changes do NOT rewrite past
+        records.
 
-        Returns 422 when no fee applies at all: the athlete is on no tier
-        **and** `academy.monthly_fee_cents` is null. An athlete on a tier is
-        payable even when the academy has no flat fee. The athlete resource's
+        Returns 422 when no fee applies at all: no override, no tier **and**
+        `academy.monthly_fee_cents` null. An athlete on a tier or with an
+        override is payable even when the academy has no flat fee, and one
+        whose override is `0` records a payment of 0. The athlete resource's
         `monthly_fee_cents` is the resolved amount, so a client can tell
         upfront. Cross-academy returns 403.
       operationId: athletePaymentRecord
@@ -9014,6 +9018,15 @@ components:
             neither this nor `monthly_fee_cents` answers alone, since an
             academy priced only by tier leaves the flat fee null.
           example: 0
+        fee_override_count:
+          type: integer
+          minimum: 0
+          description: |
+            How many athletes have a personal fee above zero (#1757). The same
+            gate reads it: an academy with no flat fee and no tiers still
+            charges these athletes. Athletes whose personal fee is `0` train
+            free and are not counted.
+          example: 0
         carnet_price_cents:
           type: integer
           minimum: 0
@@ -9953,6 +9966,16 @@ components:
             tier belonging to the athlete's own academy — anything else is a
             422 on `fee_tier_id`.
           example: 3
+        fee_override_cents:
+          type: integer
+          nullable: true
+          minimum: 0
+          maximum: 1000000
+          description: |
+            This athlete's own monthly fee, in cents (#1757). Wins over the
+            tier and the academy fee. `0` means they train free — not owed,
+            not chased; `null` (or omitted on create) means no override.
+          example: 0
         address:
           allOf:
             - $ref: '#/components/schemas/Address'
@@ -10052,6 +10075,16 @@ components:
             tier belonging to the athlete's own academy — anything else is a
             422 on `fee_tier_id`.
           example: 3
+        fee_override_cents:
+          type: integer
+          nullable: true
+          minimum: 0
+          maximum: 1000000
+          description: |
+            This athlete's own monthly fee, in cents (#1757). Wins over the
+            tier and the academy fee. `0` means they train free — not owed,
+            not chased; `null` (or omitted on create) means no override.
+          example: 0
         address:
           allOf:
             - $ref: '#/components/schemas/Address'
@@ -10434,15 +10467,27 @@ components:
 
             It is a display and aggregation rule only — recording a payment
             for a month below the floor still succeeds.
+        fee_override_cents:
+          type: integer
+          nullable: true
+          minimum: 0
+          description: |
+            This athlete's own monthly fee, in cents (#1757), as set on the
+            form — `null` when they inherit the tier or the academy fee, `0`
+            when they train free. `monthly_fee_cents` is the resolved amount;
+            this is what the form edits.
+          example: null
         monthly_fee_cents:
           type: integer
           nullable: true
           minimum: 0
           description: |
             What this athlete actually pays each month, in cents (#1381) —
-            their tier's amount if they are on one, the academy's flat
-            `monthly_fee_cents` otherwise. Resolved server-side so the client
-            never re-derives the fallback and the two cannot disagree.
+            their own `fee_override_cents` if set (#1757), else their tier's
+            amount if they are on one, else the academy's flat
+            `monthly_fee_cents`. Resolved server-side so the client never
+            re-derives the fallback and the two cannot disagree. `0` is a fee
+            of nothing: the athlete trains free and is not expected to pay.
 
             `null` means neither exists and `POST /athletes/{id}/payments`
             will refuse with 422.
@@ -10554,9 +10599,10 @@ components:
           minimum: 0
           description: |
             Snapshot of the fee that applied to this athlete at recording
-            time — their tier's amount if they were on one, the academy's
-            flat `monthly_fee_cents` otherwise (#1381) — **times the months
-            covered** (#1382). Budojo has nowhere to record a discounted
+            time — their own `fee_override_cents` if set (#1757), else their
+            tier's amount, else the academy's flat `monthly_fee_cents`
+            (#1381) — **times the months covered** (#1382). `0` for an
+            athlete who trains free. Budojo has nowhere to record a discounted
             annual and does not pretend to.
         paid_at:
           type: string

@@ -127,6 +127,11 @@ class Academy extends Model implements HasAddress
      * set the fee to nothing is still managing payments here, and its unpaid
      * list is still meaningful.
      *
+     * A personal fee above zero counts too (#1757): an academy with no flat
+     * fee and no tiers can still charge the one athlete it set a price on. A
+     * personal fee of zero does not — that athlete trains free, and is the
+     * one person nobody tracks.
+     *
      * @param  Builder<$this>  $query
      * @return Builder<$this>
      */
@@ -134,7 +139,8 @@ class Academy extends Model implements HasAddress
     {
         return $query->where(fn (Builder $q) => $q
             ->whereNotNull('monthly_fee_cents')
-            ->orHas('feeTiers'));
+            ->orHas('feeTiers')
+            ->orWhereHas('athletes', fn (Builder $athletes) => $athletes->where('fee_override_cents', '>', 0)));
     }
 
     /**
@@ -152,7 +158,9 @@ class Academy extends Model implements HasAddress
     {
         return $query->where(fn (Builder $q) => $q
             ->where('monthly_fee_cents', '>', 0)
-            ->orWhereHas('feeTiers', fn (Builder $tiers) => $tiers->where('amount_cents', '>', 0)));
+            ->orWhereHas('feeTiers', fn (Builder $tiers) => $tiers->where('amount_cents', '>', 0))
+            // One athlete's own fee is money owed as much as a tier's (#1757).
+            ->orWhereHas('athletes', fn (Builder $athletes) => $athletes->where('fee_override_cents', '>', 0)));
     }
 
     /** @return HasMany<Athlete, $this> */

@@ -2322,7 +2322,10 @@
         "periodStartsHereOne": "Copre anche {{next}}",
         "periodStartsHereOther": "Copre anche {{next}}",
         "periodCoveredBy": "Incluso nel pagamento di {{month}}",
-        "beforeBillingFloor": "Prima che questa accademia iniziasse a registrare le quote su Budojo"
+        "beforeBillingFloor": "Prima che questa accademia iniziasse a registrare le quote su Budojo",
+        "trainsFree": "Si allena gratis",
+        "trainsFreeHint": "Si allena gratis · nessuna quota da pagare.",
+        "feeOverrideHint": "Quota personale · {{amount}} al mese."
       },
       "documents": {
         "confirm": {
@@ -2576,7 +2579,8 @@
         "addressZip": "CAP",
         "addressCity": "Città",
         "addressProvince": "Provincia",
-        "feeTier": "Fascia di quota"
+        "feeTier": "Fascia di quota",
+        "feeOverride": "Quota personale"
       },
       "placeholder": {
         "phoneCountryCode": "Prefisso",
@@ -2630,6 +2634,8 @@
       "hint": {
         "address": "Lascia tutti i campi vuoti per non assegnare un indirizzo all'atleta.",
         "feeTier": "Quale quota mensile paga. Lascia vuoto per la quota standard dell'accademia.",
+        "feeOverride": "Solo per questo atleta: sostituisce la fascia e la quota dell'accademia. Metti 0 se si allena gratis.",
+        "feeOverrideFree": "Si allena gratis: non deve niente e non compare tra chi non ha pagato.",
         "kidsBeltsHidden": "Le cinture dei bambini sono nascoste: attivale in Accademia → Modifica."
       },
       "button": {

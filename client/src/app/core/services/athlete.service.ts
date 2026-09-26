@@ -171,10 +171,17 @@ export interface Athlete {
    */
   fee_tier?: FeeTier | null;
   /**
-   * What this athlete actually pays each month: their tier's amount if they
-   * are on one, the academy's flat fee otherwise. Resolved server-side so the
-   * SPA never re-derives the fallback and the two can't disagree. `null` means
-   * no fee applies and a payment cannot be recorded.
+   * This athlete's own monthly fee, in cents (#1757), as the form edits it:
+   * `null` when they inherit the tier or the academy fee, `0` when they
+   * train free. Read `monthly_fee_cents` for what they actually pay.
+   */
+  fee_override_cents?: number | null;
+  /**
+   * What this athlete actually pays each month: their own fee if set
+   * (#1757), else their tier's amount, else the academy's flat fee. Resolved
+   * server-side so the SPA never re-derives the fallback and the two can't
+   * disagree. `null` means no fee applies and a payment cannot be recorded;
+   * `0` means they train free.
    */
   monthly_fee_cents?: number | null;
   /**
@@ -364,6 +371,11 @@ export interface AthletePayload {
    * academy's flat fee; omitting the key leaves the tier untouched.
    */
   fee_tier_id?: number | null;
+  /**
+   * This athlete's own fee in cents (#1757). `null` clears it, `0` means
+   * they train free; omitting the key leaves it untouched.
+   */
+  fee_override_cents?: number | null;
   /** How many months each payment covers (#1382): 1, 3, 6 or 12. */
   billing_period_months?: number;
 }

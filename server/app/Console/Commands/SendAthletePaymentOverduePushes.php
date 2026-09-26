@@ -21,9 +21,10 @@ use Illuminate\Support\Facades\Log;
  * the owner about every athlete; this tells each athlete personally.
  *
  * Eligibility:
- *   - Academy charges something — a flat `monthly_fee_cents` > 0 or a
- *     price tier above zero (#1381). Zero everywhere skips the academy
- *     wholesale: no fee = nothing owed = no reminder.
+ *   - Academy charges something — a flat `monthly_fee_cents` > 0, a
+ *     price tier above zero (#1381), or an athlete's personal fee above
+ *     zero (#1757). Zero everywhere skips the academy wholesale: no fee =
+ *     nothing owed = no reminder.
  *   - Athlete owes the month, by the roster's own rule
  *     (`Athlete::scopeOwing`, #1722): active, not the owner, charged a
  *     fee, and neither a payment covering the month nor a carnet

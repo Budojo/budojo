@@ -44,6 +44,8 @@
       <p class="payments-list__hint" data-cy="payments-no-fee-hint">
         {{ 'athletes.detail.payments.noFeeHint' | translate }}
       </p>
+    } @else if (feeOverrideHint(); as overrideHint) {
+      <p class="payments-list__hint" data-cy="payments-fee-override">{{ overrideHint }}</p>
     } @else if (feeTier(); as tier) {
       <!--
         Which price tier this athlete is on (#1381). Shown only when they are
@@ -100,10 +102,10 @@
                 severity="success"
                 [rounded]="true"
               />
-            } @else if (row.beforeBillingFloor) {
+            } @else if (row.notOwedReason; as reason) {
               <!--
                 Before this academy kept its fees here, or before the athlete
-                joined (#1742). A missing record says nothing about this month,
+                joined (#1742), or an athlete who trains free (#1757). A missing record says nothing about this month,
                 so the row says nothing — an em-dash, the same neutral mark a
                 no-fee athlete already gets, rather than an amber accusation
                 about money handled in cash years ago.
@@ -118,9 +120,9 @@
                 class="payment-card__dash"
                 role="img"
                 tabindex="0"
-                [pTooltip]="'athletes.detail.payments.beforeBillingFloor' | translate"
+                [pTooltip]="reason | translate"
                 tooltipPosition="left"
-                [attr.aria-label]="'athletes.detail.payments.beforeBillingFloor' | translate"
+                [attr.aria-label]="reason | translate"
                 >&mdash;</span
               >
             } @else {
@@ -235,15 +237,15 @@
                   severity="success"
                   [rounded]="true"
                 />
-              } @else if (row.beforeBillingFloor) {
-                <!-- See the card above: a month with no answer gets none (#1742). -->
+              } @else if (row.notOwedReason; as reason) {
+                <!-- See the card above: a month with no answer gets none (#1742, #1757). -->
                 <span
                   class="payments-list__dash"
                   role="img"
                   tabindex="0"
-                  [pTooltip]="'athletes.detail.payments.beforeBillingFloor' | translate"
+                  [pTooltip]="reason | translate"
                   tooltipPosition="top"
-                  [attr.aria-label]="'athletes.detail.payments.beforeBillingFloor' | translate"
+                  [attr.aria-label]="reason | translate"
                   >&mdash;</span
                 >
               } @else {

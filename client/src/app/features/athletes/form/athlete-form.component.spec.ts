@@ -227,6 +227,7 @@ describe('AthleteFormComponent', () => {
         joined_at: new Date(2026, 3, 23), // April 23 2026 local
         fee_tier_id: null,
         billing_period_months: 1,
+        fee_override: null,
         address: { line1: '', line2: '', city: '', postal_code: '', province: '', country: 'IT' },
       });
 
@@ -237,6 +238,7 @@ describe('AthleteFormComponent', () => {
       expect(req.request.body).toEqual({
         fee_tier_id: null,
         billing_period_months: 1,
+        fee_override_cents: null,
         first_name: 'Mario',
         last_name: 'Rossi',
         email: null,
@@ -357,6 +359,7 @@ describe('AthleteFormComponent', () => {
         joined_at: new Date(2026, 3, 23),
         fee_tier_id: null,
         billing_period_months: 1,
+        fee_override: null,
         address: { line1: '', line2: '', city: '', postal_code: '', province: '', country: 'IT' },
       });
       cmp.submit();
@@ -941,6 +944,80 @@ describe('AthleteFormComponent', () => {
       expect(
         (fixture.nativeElement as HTMLElement).querySelector('[data-cy="athlete-form-fee-tier"]'),
       ).toBeNull();
+    });
+  });
+
+  describe('personal fee (#1757)', () => {
+    beforeEach(() => setupTestBed('42'));
+
+    function editing(athlete: Athlete) {
+      const fixture = TestBed.createComponent(AthleteFormComponent);
+      const httpMock = TestBed.inject(HttpTestingController);
+      fixture.detectChanges();
+      httpMock.expectOne('/api/v1/athletes/42').flush({ data: athlete });
+      flushFeeTiers(httpMock);
+      fixture.detectChanges();
+      return { fixture, cmp: fixture.componentInstance, httpMock };
+    }
+
+    function hintText(fixture: { nativeElement: HTMLElement }): string {
+      return fixture.nativeElement.querySelector('#fee_override-hint')?.textContent?.trim() ?? '';
+    }
+
+    it('shows the stored fee in euros and sends it back in cents', () => {
+      const { cmp, httpMock } = editing(makeAthlete({ id: 42, fee_override_cents: 4050 }));
+      expect(cmp.form.controls.fee_override.value).toBe(40.5);
+
+      cmp.form.patchValue({ fee_override: 35.9 });
+      cmp.submit();
+
+      // 35.9 * 100 is 3589.9999… in floating point: rounded, not truncated.
+      expect(httpMock.expectOne('/api/v1/athletes/42').request.body.fee_override_cents).toBe(3590);
+    });
+
+    it('keeps a zero as a zero, and an empty field as no personal fee', () => {
+      const { cmp, httpMock } = editing(makeAthlete({ id: 42, fee_override_cents: 0 }));
+      expect(cmp.form.controls.fee_override.value).toBe(0);
+
+      cmp.submit();
+      const first = httpMock.expectOne('/api/v1/athletes/42');
+      expect(first.request.body.fee_override_cents).toBe(0);
+      // The form waits on its save before it takes another.
+      first.flush({ data: makeAthlete({ id: 42, fee_override_cents: 0 }) });
+
+      cmp.form.patchValue({ fee_override: null });
+      cmp.submit();
+      expect(httpMock.expectOne('/api/v1/athletes/42').request.body.fee_override_cents).toBeNull();
+    });
+
+    it('re-reads the academy when a personal fee appears or goes away, and only then', () => {
+      // The fee is part of the academy's "charges anything" gate, which the
+      // roster reads from the cached academy.
+      const saveWith = (loaded: number | null, typed: number | null) => {
+        const { cmp, httpMock } = editing(makeAthlete({ id: 42, fee_override_cents: loaded }));
+        cmp.form.patchValue({ fee_override: typed });
+        cmp.submit();
+        const cents = typed === null ? null : Math.round(typed * 100);
+        httpMock
+          .expectOne('/api/v1/athletes/42')
+          .flush({ data: makeAthlete({ id: 42, fee_override_cents: cents }) });
+        const reloads = httpMock.match('/api/v1/academy').length;
+        return reloads;
+      };
+
+      expect(saveWith(null, 40)).toBe(1); // the first one
+      expect(saveWith(4000, null)).toBe(1); // cleared
+      expect(saveWith(4000, 0)).toBe(1); // trains free now: not a charge
+      expect(saveWith(4000, 35)).toBe(0); // one amount for another moves nothing
+    });
+
+    it('says "trains free" under the field the moment it holds a 0', () => {
+      const { fixture, cmp } = editing(makeAthlete({ id: 42, fee_override_cents: null }));
+      expect(hintText(fixture)).toContain('Enter 0 if they train free');
+
+      cmp.form.controls.fee_override.setValue(0);
+      fixture.detectChanges();
+      expect(hintText(fixture)).toContain('Trains free: nothing is due');
     });
   });
 

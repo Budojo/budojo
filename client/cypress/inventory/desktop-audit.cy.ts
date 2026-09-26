@@ -3757,6 +3757,19 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       cy.intercept('GET', '/api/v1/athletes/*/carnets*', NO_DATA);
     },
   });
+  // An athlete who trains free by their own fee (#1757): the caption says so
+  // and the unpaid months are dashes, not amber.
+  screen('22-athlete-payments-trains-free', '/dashboard/athletes/1/payments', DETAIL_READY, {
+    stubs: () => {
+      cy.intercept('GET', '/api/v1/athletes/1', {
+        statusCode: 200,
+        body: { data: { ...ATHLETE_ONE, fee_override_cents: 0, monthly_fee_cents: 0 } },
+      });
+      // Nothing recorded, so every month shows what a free athlete's
+      // unpaid month looks like.
+      cy.intercept('GET', '/api/v1/athletes/*/payments*', NO_DATA);
+    },
+  });
   screen('22-athlete-payments-carnet-validity', '/dashboard/athletes/1/payments', DETAIL_READY, {
     act: () => {
       press('[data-cy="carnet-edit-validity"]');

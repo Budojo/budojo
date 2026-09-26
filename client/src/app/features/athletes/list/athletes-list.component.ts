@@ -210,7 +210,8 @@ export class AthletesListComponent implements OnInit {
    *     conflated "no payment recorded" with "owes";
    *   - nobody resolved a fee for them (#1381) — on an academy priced only
    *     by tier, an athlete on no tier owes nothing, and offering the toggle
-   *     would send the owner into a 422.
+   *     would send the owner into a 422;
+   *   - someone whose own fee is 0 (#1757) — they train free.
    *
    * `monthly_fee_cents` is absent on pre-#1381 payloads, and `undefined` is
    * read as "a fee applies" so old fixtures and cached responses keep the
@@ -218,7 +219,12 @@ export class AthletesListComponent implements OnInit {
    */
   paymentNotExpected(athlete: Athlete): boolean {
     return (
-      athlete.is_self === true || athlete.status !== 'active' || athlete.monthly_fee_cents === null
+      athlete.is_self === true ||
+      athlete.status !== 'active' ||
+      athlete.monthly_fee_cents === null ||
+      // The same exclusion as the server's `expectedToPay`, which leaves
+      // them out of `?paid=no`.
+      athlete.fee_override_cents === 0
     );
   }
 
@@ -539,7 +545,9 @@ export class AthletesListComponent implements OnInit {
 
   private restore(athlete: Athlete): void {
     this.athleteService.restore(athlete.id).subscribe({
-      next: () => {
+      next: (restored) => {
+        // Their personal fee comes back with them (#1757).
+        this.academyService.refreshForPersonalFee(null, restored.fee_override_cents);
         // Drop the athlete from the trashed list — they're now active
         // and would no longer match the `?status=trashed` scope on a
         // fresh load. The toast confirms the action; the user can
