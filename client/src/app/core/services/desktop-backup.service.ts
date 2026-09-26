@@ -1,5 +1,8 @@
 import { Injectable } from '@angular/core';
 
+/** What a restore answered: ok, or the code and reason it was refused (#1909). */
+export type RestoreResult = BackupRestoreResult;
+
 export interface BackupArchiveView {
   name: string;
   createdAt: string;
@@ -35,10 +38,23 @@ export class DesktopBackupService {
     return result?.ok ?? false;
   }
 
-  /** Restores an archive by name; resolves ok, or a reason when refused. */
-  async restore(name: string): Promise<{ ok: boolean; reason?: string }> {
+  /** Restores an archive by name; resolves ok, or a code and reason when refused. */
+  async restore(name: string): Promise<RestoreResult> {
     return (
       (await this.bridge?.restore(name)) ?? {
+        ok: false,
+        reason: 'Backups are only available in the desktop app.',
+      }
+    );
+  }
+
+  /**
+   * Restores a backup from anywhere on disk (#1909). The desktop opens the
+   * file dialog itself; `canceled` means the owner closed it.
+   */
+  async restoreFromFile(): Promise<RestoreResult & { canceled?: boolean }> {
+    return (
+      (await this.bridge?.restoreFromFile()) ?? {
         ok: false,
         reason: 'Backups are only available in the desktop app.',
       }

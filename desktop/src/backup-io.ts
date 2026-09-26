@@ -1,4 +1,4 @@
-import { cpSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -121,6 +121,11 @@ export function createBackupIO(config: BackupIOConfig): BackupIO {
     removeArchive: async (name) => rmSync(path.join(config.backupsDir, name), { force: true }),
 
     archivePathFor: (name) => path.join(config.backupsDir, name),
+
+    copyIn: async (sourcePath, name) => {
+      mkdirSync(config.backupsDir, { recursive: true });
+      copyFileSync(sourcePath, path.join(config.backupsDir, name));
+    },
 
     swapIn: async (extractedDir) => {
       const restoredDb = path.join(extractedDir, 'budojo.sqlite');

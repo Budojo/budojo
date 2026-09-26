@@ -47,6 +47,7 @@ describe('BackupComponent', () => {
       list: vi.fn(async () => archives),
       backupNow: vi.fn(async () => true),
       restore: vi.fn(async () => ({ ok: true })),
+      restoreFromFile: vi.fn(async () => ({ ok: true })),
       ...overrides,
     };
     // Default: the recovery-keys bridge is absent (like the web), so the section
@@ -161,10 +162,11 @@ describe('BackupComponent', () => {
     expect(added.some((m) => (m as { severity: string }).severity === 'success')).toBe(true);
   });
 
-  it('surfaces the reason when a restore is refused', async () => {
+  it('says why a restore is refused, in the page language', async () => {
     const { fixture, added } = setup({
       restore: vi.fn(async () => ({
         ok: false,
+        code: 'newer' as const,
         reason: 'This backup is from a newer version of Budojo.',
       })),
     });
@@ -175,7 +177,75 @@ describe('BackupComponent', () => {
     const errorToast = added.find((m) => (m as { severity: string }).severity === 'error') as {
       detail?: string;
     };
-    expect(errorToast?.detail).toContain('newer version');
+    expect(errorToast?.detail).toBe(
+      'This backup comes from a newer version of Budojo. Update Budojo, then restore it.',
+    );
+  });
+
+  it('falls back to the reason for a refusal it has no words for', async () => {
+    const { fixture, added } = setup({
+      restore: vi.fn(async () => ({ ok: false, reason: 'Budojo is not ready to restore yet.' })),
+    });
+    await fixture.whenStable();
+
+    await fixture.componentInstance['restore'](archives[0]);
+
+    const errorToast = added.find((m) => (m as { severity: string }).severity === 'error') as {
+      detail?: string;
+    };
+    expect(errorToast?.detail).toBe('Budojo is not ready to restore yet.');
+  });
+
+  describe('restoring from a file (#1909)', () => {
+    it('offers it beside the list, even when the list is empty', async () => {
+      // A new computer: nothing in the list, and this is the way back.
+      const { fixture } = setup({ list: vi.fn(async () => []) });
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      const button = (fixture.nativeElement as HTMLElement).querySelector(
+        '[data-cy="backup-restore-from-file"]',
+      );
+      expect(button?.textContent).toContain('Restore from a file');
+    });
+
+    it('says nothing when the owner closes the file dialog', async () => {
+      const { fixture, added } = setup({
+        restoreFromFile: vi.fn(async () => ({ ok: false, canceled: true })),
+      });
+      await fixture.whenStable();
+
+      await fixture.componentInstance['restoreFromFile']();
+
+      expect(added).toHaveLength(0);
+    });
+
+    it('says the file is not a Budojo backup', async () => {
+      const { fixture, added } = setup({
+        restoreFromFile: vi.fn(async () => ({
+          ok: false,
+          code: 'unreadable' as const,
+          reason: 'Not a zip archive',
+        })),
+      });
+      await fixture.whenStable();
+
+      await fixture.componentInstance['restoreFromFile']();
+
+      const errorToast = added.find((m) => (m as { severity: string }).severity === 'error') as {
+        detail?: string;
+      };
+      expect(errorToast?.detail).toBe('This file is not a Budojo backup.');
+    });
+
+    it('confirms a restored file like any other restore', async () => {
+      const { fixture, added } = setup();
+      await fixture.whenStable();
+
+      await fixture.componentInstance['restoreFromFile']();
+
+      expect(added.some((m) => (m as { severity: string }).severity === 'success')).toBe(true);
+    });
   });
 
   // The confirm button asks ConfirmationService for a popup; only a

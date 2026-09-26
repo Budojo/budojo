@@ -1779,6 +1779,7 @@ function installBridge(win: Cypress.AUTWindow, opts: BridgeOptions): void {
       list: () => Promise.resolve(opts.archives ?? ARCHIVES),
       run: ok({ ok: true, path: ARCHIVES[0].path }),
       restore: ok({ ok: true }),
+      restoreFromFile: ok({ ok: false, canceled: true }),
     },
     folder: {
       state: ok(opts.folder ?? FOLDER_STATE),
@@ -4077,6 +4078,13 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
   });
   // No archives yet: a fresh install's backup page.
   screen('53-backup-empty', '/dashboard/backup', '[data-cy="backup-empty"]', { archives: [] });
+  // Restoring from a file (#1909), confirmed before the file dialog opens.
+  screen('53-backup-restore-file-confirm', '/dashboard/backup', '[data-cy="backup-list"]', {
+    act: () => {
+      press('[data-cy="backup-restore-from-file"]');
+      cy.get('.p-confirmpopup', { timeout: 4000 }).should('be.visible');
+    },
+  });
   screen('55-search-palette-no-results', '/dashboard/athletes', ROSTER_READY, {
     stubs: () => {
       cy.intercept('GET', '/api/v1/search*', NO_DATA);

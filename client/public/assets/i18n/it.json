@@ -3328,11 +3328,16 @@
     "restore": "Ripristina",
     "confirmRestore": "Ripristinare questo backup? I dati attuali verranno sostituiti con il contenuto di questo archivio.",
     "confirmRestoreAccept": "Ripristina",
+    "restoreFromFile": "Ripristina da un file…",
+    "confirmRestoreFromFile": "Scegli un backup di Budojo: i dati attuali verranno sostituiti con il suo contenuto.",
+    "confirmRestoreFromFileAccept": "Scegli il file",
     "toast": {
       "created": "Backup creato",
       "failed": "Backup non riuscito — controlla il log",
       "restored": "Backup ripristinato",
-      "restoreRefused": "Impossibile ripristinare questo backup"
+      "restoreRefused": "Impossibile ripristinare questo backup",
+      "notABackup": "Questo file non è un backup di Budojo.",
+      "newerBackup": "Questo backup viene da una versione più recente di Budojo. Aggiorna Budojo, poi ripristinalo."
     },
     "keys": {
       "heading": "Chiavi di recupero",

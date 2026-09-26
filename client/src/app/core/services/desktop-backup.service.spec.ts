@@ -36,6 +36,7 @@ describe('DesktopBackupService', () => {
       list: vi.fn(async () => [{ name: 'a.zip', path: '/b/a.zip', createdAt: 'x', sizeBytes: 5 }]),
       run: vi.fn(async () => ({ ok: true, path: '/b/a.zip' })),
       restore: vi.fn(async () => ({ ok: false, reason: 'newer version' })),
+      restoreFromFile: vi.fn(async () => ({ ok: false, canceled: true })),
     };
     bridgeWindow.__BUDOJO__ = stubBridge({
       apiBase: '',
@@ -52,5 +53,8 @@ describe('DesktopBackupService', () => {
     expect(await svc.backupNow()).toBe(true);
     expect(await svc.restore('a.zip')).toEqual({ ok: false, reason: 'newer version' });
     expect(backup.restore).toHaveBeenCalledWith('a.zip');
+    // The desktop opens the file dialog itself; the page sends no path (#1909).
+    expect(await svc.restoreFromFile()).toEqual({ ok: false, canceled: true });
+    expect(backup.restoreFromFile).toHaveBeenCalledWith();
   });
 });

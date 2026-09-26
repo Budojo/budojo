@@ -5,7 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { dataLayout, parseSecrets, runBootstrap, serializeSecrets, type Secrets } from './bootstrap.js';
-import { BackupService, RETENTION } from './backup.js';
+import { BackupService, RETENTION, type RestoreCheck, type RestoreRefusal } from './backup.js';
 import { createBackupIO } from './backup-io.js';
 import { createFolderCopyIO } from './folder-copy-io.js';
 import { FolderCopyService } from './folder-copy-service.js';
@@ -801,6 +801,7 @@ function registerFolderBridge(folderOf: () => FolderCopyService | null): void {
 function registerBackupBridge(
   supervisorOf: () => PhpSupervisor | null,
   backupOf: () => BackupService | null,
+  folderOf: () => FolderCopyService | null,
 ): void {
   ipcMain.handle('budojo:backup:list', async () => (await backupOf()?.list()) ?? []);
 
@@ -810,17 +811,24 @@ function registerBackupBridge(
     return { ok: path !== undefined, path: path ?? null };
   });
 
-  ipcMain.handle('budojo:backup:restore', async (_event, name: unknown) => {
+  /**
+   * Stops PHP, runs one restore, starts PHP again whatever happened, and
+   * reloads the windows onto the restored data when it went through. The same
+   * sequence for a listed archive and for a file from anywhere else.
+   */
+  const restoreWith = async (
+    run: (service: BackupService) => Promise<RestoreCheck>,
+  ): Promise<{ ok: boolean; code?: RestoreRefusal; reason?: string }> => {
     const service = backupOf();
     const supervisor = supervisorOf();
-    if (service === null || supervisor === null || typeof name !== 'string') {
+    if (service === null || supervisor === null) {
       return { ok: false, reason: 'Budojo is not ready to restore yet.' };
     }
 
     await supervisor.stop();
     let check;
     try {
-      check = await service.restore(name);
+      check = await run(service);
     } finally {
       await supervisor.start();
     }
@@ -833,7 +841,36 @@ function registerBackupBridge(
       }
     }
 
-    return check.ok ? { ok: true } : { ok: false, reason: check.reason };
+    return check.ok ? { ok: true } : { ok: false, code: check.code, reason: check.reason };
+  };
+
+  ipcMain.handle('budojo:backup:restore', async (_event, name: unknown) =>
+    typeof name === 'string'
+      ? restoreWith((service) => service.restore(name))
+      : { ok: false, reason: 'Budojo is not ready to restore yet.' },
+  );
+
+  // A backup from anywhere on disk (#1909): the copies folder, a Drive
+  // download, a USB stick — the only way back on a new computer. The renderer
+  // only asks; the path is the one the system dialog returned, never one the
+  // renderer sent.
+  ipcMain.handle('budojo:backup:restoreFromFile', async () => {
+    // Open in the copies folder when there is one: it is where the owner's
+    // backups are, and Electron's default is Downloads (see folder:choose).
+    const folder = (await folderOf()?.state())?.folder ?? null;
+    const picked = await dialog.showOpenDialog({
+      title: 'Choose a Budojo backup',
+      properties: ['openFile'],
+      filters: [{ name: 'Budojo backup', extensions: ['zip'] }],
+      ...(folder === null ? {} : { defaultPath: folder }),
+    });
+
+    const file = picked.filePaths[0];
+    if (picked.canceled || file === undefined) {
+      return { ok: false, canceled: true };
+    }
+
+    return restoreWith((service) => service.restoreFile(file));
   });
 }
 
@@ -1149,7 +1186,7 @@ if (!gotTheLock) {
       backupPoll = runtime.backupPoll;
       driveService = runtime.driveService;
       folderCopy = runtime.folderCopy;
-      registerBackupBridge(() => supervisor, () => backupService);
+      registerBackupBridge(() => supervisor, () => backupService, () => folderCopy);
       registerDriveBridge(() => driveService);
       registerFolderBridge(() => folderCopy);
       apiBase = runtime.apiBase;

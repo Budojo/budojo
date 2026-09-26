@@ -163,7 +163,28 @@
     </section>
   }
 
-  <h2 class="backup-page__heading">{{ 'backup.archives' | translate }}</h2>
+  <div class="backup-page__archives-head">
+    <h2 class="backup-page__heading">{{ 'backup.archives' | translate }}</h2>
+    <!--
+      A backup from anywhere on disk (#1909): the copies folder, a Drive
+      download, a USB stick. On a new computer the list below is empty, and
+      this is the way back. Confirmed before the file dialog opens, like every
+      restore: it replaces the data on this computer.
+    -->
+    <app-confirm-destructive-button
+      icon="pi pi-folder-open"
+      [label]="'backup.restoreFromFile' | translate"
+      [ariaLabel]="'backup.restoreFromFile' | translate"
+      [confirmMessage]="'backup.confirmRestoreFromFile' | translate"
+      [acceptLabel]="'backup.confirmRestoreFromFileAccept' | translate"
+      [rejectLabel]="'common.cancel' | translate"
+      [text]="false"
+      [outlined]="true"
+      [loading]="restoringFromFile()"
+      (confirmed)="restoreFromFile()"
+      dataCy="backup-restore-from-file"
+    />
+  </div>
 
   @if (loading()) {
     <!--

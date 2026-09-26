@@ -91,6 +91,14 @@ A restore **refuses an archive from a newer version of Budojo** than the one run
 
 The live database is only replaced after the archive extracts and validates cleanly, so an interrupted restore leaves your current data intact.
 
+### Restoring from a file (#1909)
+
+The list shows only the archives in the app's own folder. A backup anywhere else — your backup folder, a zip downloaded from Google Drive, a USB stick — comes back with **Data & backup → Restore from a file…**. It asks for confirmation, then opens the system file dialog, starting in your backup folder when you have one. On a new computer, where the list is empty, this is the way back.
+
+- The file is **checked where it is** — the same manifest and version check as a listed archive — and nothing is copied or swapped until it passes. A file that is not a Budojo backup is refused with *"This file is not a Budojo backup"*; one from a newer Budojo, with *"Update Budojo, then restore it"*.
+- Once it passes it is **copied into the app's own folder**, so it shows in the list like any other, and then restored. An archive the list already holds is not copied twice, and a renamed copy (`… (1).zip` from a second download) goes in under the name its backup had, from the manifest's timestamp.
+- The path comes from the system dialog in the main process, never from the page.
+
 ## The part that can silently fail: encryption keys
 
 The medical certificates in `storage/` are encrypted with `DOCUMENT_ENCRYPTION_KEY`. Some database fields may be encrypted with `APP_KEY`. **Both keys live only in `secrets.bin`, and `secrets.bin` is not in the backup.**
@@ -133,8 +141,8 @@ Also worth knowing:
 ## Quick recovery checklist
 
 1. Install Budojo on the new machine and let it finish first-run setup.
-2. Get your latest `budojo-backup-*.zip` onto the machine — from your backup folder if you set one up, otherwise from wherever you keep them.
-3. **Data & backup → Restore →** pick the archive → confirm.
+2. Make your latest `budojo-backup-*.zip` reachable from this computer: your backup folder synced by OneDrive / Dropbox / the Drive client, a download from Google Drive, or a USB stick. No need to put it anywhere in particular.
+3. **Data & backup → Restore from a file… →** confirm → pick the zip. Budojo checks it, copies it into its own list and restores it.
 4. **Data & backup → Recovery keys → Restore keys from a recovery code →** paste the code you saved → confirm. Budojo restarts under the original keys.
 5. Verify: athletes, attendance and payments are present, and a medical certificate downloads. ✅
 

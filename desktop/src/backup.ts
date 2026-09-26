@@ -155,9 +155,17 @@ export function buildManifest(input: { appVersion: string; schemaVersion: string
   };
 }
 
+/**
+ * Why a restore was refused, for the page to say in the owner's language
+ * (#1909): `unreadable` is not a Budojo backup at all — no zip, no manifest —
+ * and `newer` comes from a Budojo newer than this one. `reason` stays, in
+ * English, for the log.
+ */
+export type RestoreRefusal = 'unreadable' | 'newer';
+
 export type RestoreCheck =
   | { ok: true }
-  | { ok: false; reason: string };
+  | { ok: false; code: RestoreRefusal; reason: string };
 
 /**
  * Whether an archive is safe to restore into the running app.
@@ -171,12 +179,13 @@ export type RestoreCheck =
  */
 export function checkRestore(manifest: Partial<BackupManifest> | null, currentSchemaVersion: string): RestoreCheck {
   if (manifest === null || manifest.format !== 1 || typeof manifest.schemaVersion !== 'string') {
-    return { ok: false, reason: 'The archive has no readable manifest and cannot be trusted.' };
+    return { ok: false, code: 'unreadable', reason: 'The archive has no readable manifest and cannot be trusted.' };
   }
 
   if (manifest.schemaVersion > currentSchemaVersion) {
     return {
       ok: false,
+      code: 'newer',
       reason:
         `This backup is from a newer version of Budojo (schema ${manifest.schemaVersion}) than the one ` +
         `installed (schema ${currentSchemaVersion}). Update Budojo, then restore.`,
@@ -212,6 +221,13 @@ export interface BackupIO {
   /** Replace the live database + storage with the extracted ones. Caller has stopped PHP. */
   swapIn: (extractedDir: string) => Promise<void>;
   archivePathFor: (name: string) => string;
+  /** Copy an archive from anywhere into the backups folder, as `name` (#1909). */
+  copyIn: (sourcePath: string, name: string) => Promise<void>;
+}
+
+/** The file name at the end of a path, on Windows or anywhere else. */
+function fileNameOf(filePath: string): string {
+  return filePath.split(/[\\/]/).pop() ?? filePath;
 }
 
 export interface BackupServiceOptions {
@@ -310,5 +326,72 @@ export class BackupService {
     } finally {
       await io.removeDir(extractDir);
     }
+  }
+
+  /**
+   * Restores an archive from anywhere on disk (#1909): the copies folder, a
+   * Drive download, a USB stick — the one way back on a new computer, where
+   * the list is empty. The caller got `sourcePath` from the system file
+   * dialog, never from the renderer.
+   *
+   * The file is checked **where it is**, with the same manifest and version
+   * check as a listed archive, and nothing is copied or swapped until it
+   * passes: a stray zip must not land in the backups folder, let alone in the
+   * live data. Only then is it copied in, so it shows in the list like any
+   * other, and swapped in.
+   *
+   * A renamed copy ("… (1).zip" from a second download) keeps its place: it
+   * goes in under the name its backup had, from the manifest's timestamp. An
+   * archive the list already holds is not copied twice.
+   */
+  async restoreFile(sourcePath: string): Promise<RestoreCheck> {
+    const { io } = this.options;
+    const extractDir = await io.makeTempDir('restore');
+
+    try {
+      try {
+        await io.unzip(sourcePath, extractDir);
+      } catch (error) {
+        const reason = `Not a zip archive: ${error instanceof Error ? error.message : String(error)}`;
+        this.options.log(`[restore] refused ${sourcePath}: ${reason}`);
+
+        return { ok: false, code: 'unreadable', reason };
+      }
+
+      const manifest = await io.readManifest(extractDir);
+      const check = checkRestore(manifest, await io.currentSchemaVersion());
+
+      if (!check.ok) {
+        this.options.log(`[restore] refused ${sourcePath}: ${check.reason}`);
+
+        return check;
+      }
+
+      const name = this.listedNameFor(sourcePath, manifest?.createdAt);
+      const listed = (await io.listArchives()).some((entry) => entry.name === name);
+
+      if (!listed) {
+        await io.copyIn(sourcePath, name);
+      }
+
+      await io.swapIn(extractDir);
+      this.options.log(`[restore] restored ${sourcePath} as ${name}`);
+
+      return check;
+    } finally {
+      await io.removeDir(extractDir);
+    }
+  }
+
+  /** Its own name when it still has one; otherwise the one its backup had. */
+  private listedNameFor(sourcePath: string, createdAt: string | undefined): string {
+    const own = fileNameOf(sourcePath);
+    if (isBackupArchive(own)) {
+      return own;
+    }
+
+    const made = createdAt === undefined ? Number.NaN : Date.parse(createdAt);
+
+    return backupArchiveName(Number.isNaN(made) ? this.now() : new Date(made));
   }
 }
