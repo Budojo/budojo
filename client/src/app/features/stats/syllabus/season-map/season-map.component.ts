@@ -9,6 +9,7 @@ import {
   effect,
   inject,
   input,
+  output,
   runInInjectionContext,
   signal,
   viewChild,
@@ -26,9 +27,12 @@ import { LanguageService } from '../../../../core/services/language.service';
 import {
   CalendarLessonState,
   CoveragePosition,
+  CoverageTaughtTopic,
+  CoverageTopic,
   StatsService,
   SyllabusCalendar,
 } from '../../../../core/services/stats.service';
+import { relativeDay } from '../../../../shared/utils/relative-day';
 import { whatsappShareLink } from '../../../../shared/utils/contact-links';
 import { addDays, admitsTopic, localIso } from '../../../../shared/utils/class-occurrences';
 import { localeFor } from '../../../../shared/utils/locale';
@@ -162,6 +166,23 @@ export class SeasonMapComponent {
    * (#1656) — so the two planning views agree and the page asks once.
    */
   readonly classes = input<readonly AcademyClass[]>([]);
+
+  /**
+   * The report's techniques (#1911), shown under their position when its
+   * name is opened: what is still to do, what was done once, what is done.
+   * They used to be two flat lists under the map — the whole programme
+   * reprinted, 264 rows in week three — and this is where they belong: a
+   * position holds a handful.
+   */
+  readonly missing = input<readonly CoverageTopic[]>([]);
+  readonly taught = input<readonly CoverageTaughtTopic[]>([]);
+  /** The techniques some class of the coming week can take (#1656). */
+  readonly plannable = input<ReadonlySet<number>>(new Set<number>());
+
+  /** "Pianifica" on a technique: the host opens the lesson it goes into. */
+  readonly planTechnique = output<number>();
+  /** A taught technique: the host opens who has seen it (#1745). */
+  readonly openTechnique = output<number>();
 
   protected readonly calendar = signal<SyllabusCalendar | null>(null);
   protected readonly failed = signal<boolean>(false);
@@ -436,6 +457,48 @@ export class SeasonMapComponent {
     });
   }
 
+  /**
+   * The open position's techniques, in three groups (#1911): to do, done
+   * once, done. Grouped by the position's id, not its name — names repeat
+   * across positions.
+   */
+  protected techniquesOf(positionId: number): {
+    todo: readonly CoverageTopic[];
+    once: readonly CoverageTaughtTopic[];
+    done: readonly CoverageTaughtTopic[];
+  } {
+    const taught = this.taught().filter((t) => t.parent_id === positionId);
+
+    return {
+      todo: this.missing().filter((t) => t.parent_id === positionId),
+      once: taught.filter((t) => t.state === 'thin'),
+      done: taught.filter((t) => t.state === 'covered'),
+    };
+  }
+
+  /** The panel closes first: a sheet on top of a popover is one dialog too many. */
+  protected planTopic(topicId: number): void {
+    this.close();
+    this.planTechnique.emit(topicId);
+  }
+
+  protected openTopic(topicId: number): void {
+    this.close();
+    this.openTechnique.emit(topicId);
+  }
+
+  private close(): void {
+    this.popover()?.hide();
+    this.drawerOpen.set(false);
+  }
+
+  /** "3 weeks ago" — the shared helper (#1602), as the report's lists used. */
+  protected ago(iso: string): string {
+    this.languageService.currentLang();
+
+    return relativeDay(iso, this.translate);
+  }
+
   /** "Plan closed guard, week of 12 Oct" — an empty week ahead, as a pointer shortcut. */
   protected planAria(row: MapRow, cell: MapCell): string {
     return this.translate.instant('stats.syllabus.map.planAria', {
@@ -450,8 +513,7 @@ export class SeasonMapComponent {
    * each other is one too many.
    */
   protected plan(option: PlanOption, panel: OpenPanel): void {
-    this.popover()?.hide();
-    this.drawerOpen.set(false);
+    this.close();
     this.planning.set({
       classId: option.classId,
       heldOn: option.date,

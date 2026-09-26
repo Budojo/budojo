@@ -156,8 +156,19 @@
         [seasonsBack]="seasonsBack()"
         [kind]="kindParam()"
         [classes]="classes()"
+        [missing]="data.missing"
+        [taught]="data.taught"
+        [plannable]="plannableIds()"
+        (planTechnique)="planTechnique($event)"
+        (openTechnique)="openExposure($event)"
       />
 
+      <!--
+        The map is the page (#1911). The line chart that stood here drew
+        covered techniques against the whole programme — a flat line on the
+        floor for months — and the two lists beside it reprinted the
+        programme flat. A position's techniques now open under its name.
+      -->
       @if (nothingTaught()) {
         <app-empty-state
           icon="pi pi-calendar"
@@ -165,151 +176,6 @@
           [hint]="'stats.syllabus.empty.nothingTaughtHint' | translate"
           dataCy="syllabus-coverage-nothing-taught"
         />
-      } @else {
-        <!--
-          Coverage over the season, so the owner can see whether they are on
-          pace or drifting. A topic joins the line on the day of its second
-          lesson — the same rule the headline uses, because a chart arguing
-          with its own number is worse than no chart.
-        -->
-        <section class="panel" data-cy="syllabus-coverage-timeline">
-          <h3 class="panel__title">{{ 'stats.syllabus.overTime' | translate }}</h3>
-          <div class="panel__chart">
-            <p-chart
-              type="line"
-              [data]="timelineData()"
-              [options]="timelineOptions()"
-              height="200px"
-            />
-          </div>
-        </section>
-
-        <div class="panel-pair">
-          <!--
-            Blunt on purpose: this is the list an instructor acts on.
-          -->
-          <section class="panel" data-cy="syllabus-coverage-missing">
-            <h3 class="panel__title">
-              {{ 'stats.syllabus.missingList' | translate: { count: data.missing.length } }}
-            </h3>
-            @if (data.missing.length === 0) {
-              <p class="panel__none" data-cy="syllabus-coverage-nothing-missing">
-                {{ 'stats.syllabus.nothingMissing' | translate }}
-              </p>
-            } @else {
-              <ul class="topics">
-                @for (topic of data.missing; track topic.id) {
-                  @let target = planTargets().get(topic.id);
-                  <!--
-                    Planned from where the gap is seen (#1656): the row opens
-                    the next lesson that may teach it, with it ticked. Its
-                    name is what it shows and what it does, like a taught
-                    row's. A row no class can take is laid out the same, so
-                    the two line up when they mix, and is not pressable.
-                  -->
-                  <li
-                    class="topics__row topics__row--open"
-                    [attr.data-cy]="'syllabus-missing-' + topic.id"
-                  >
-                    @if (target !== undefined) {
-                      <button
-                        type="button"
-                        class="topics__open topics__open--plan"
-                        (click)="plan(topic, target)"
-                      >
-                        <span class="topics__name">
-                          {{ topic.name }}
-                          @if (topic.parent_name) {
-                            <span class="topics__parent">{{ topic.parent_name }}</span>
-                          }
-                        </span>
-                        <span class="topics__plan">
-                          {{ 'stats.syllabus.planAction' | translate }}
-                          <i class="pi pi-angle-right" aria-hidden="true"></i>
-                        </span>
-                      </button>
-                    } @else {
-                      <span class="topics__static">
-                        <span class="topics__name">
-                          {{ topic.name }}
-                          @if (topic.parent_name) {
-                            <span class="topics__parent">{{ topic.parent_name }}</span>
-                          }
-                        </span>
-                      </span>
-                    }
-                  </li>
-                }
-              </ul>
-            }
-          </section>
-
-          <!--
-            "Didn't I just do armbars?" — the question nobody's notebook ever
-            answers, so the date and the distance are both given.
-          -->
-          <section class="panel" data-cy="syllabus-coverage-taught">
-            <h3 class="panel__title">{{ 'stats.syllabus.lastTaught' | translate }}</h3>
-            <ul class="topics">
-              @for (topic of data.taught; track topic.id) {
-                <!--
-                  A taught row opens who has seen it (#1745). Its accessible
-                  name is what it shows, with a hidden lead-in and the
-                  position: the seed repeats technique names across
-                  positions, and a label that replaced the visible text would
-                  read nine identical "Back take" buttons.
-                -->
-                <li
-                  class="topics__row topics__row--open"
-                  [attr.data-cy]="'syllabus-taught-' + topic.id"
-                >
-                  <button type="button" class="topics__open" (click)="openExposure(topic.id)">
-                    <span class="visually-hidden">{{
-                      'stats.syllabus.exposure.openPrefix' | translate
-                    }}</span>
-                    <span class="topics__what">
-                      <span class="topics__name">
-                        {{ topic.name }}
-                        @if (topic.parent_name) {
-                          <span class="visually-hidden">({{ topic.parent_name }})</span>
-                        }
-                        @if (topic.state === 'thin') {
-                          <span class="topics__thin">{{
-                            'stats.syllabus.thinTag' | translate
-                          }}</span>
-                        }
-                      </span>
-                      <!--
-                        Three lessons to fifteen people and three to four read
-                        the same without this line (#1746). Beside the count,
-                        never in the headline: covered still takes two lessons.
-                      -->
-                      <span class="topics__reach" data-cy="syllabus-taught-reach">
-                        {{
-                          (topic.lessons === 1
-                            ? 'stats.syllabus.lessonsOne'
-                            : 'stats.syllabus.lessonsOther'
-                          ) | translate: { count: topic.lessons }
-                        }}
-                        ·
-                        {{
-                          (topic.reach === 1
-                            ? 'stats.syllabus.reachOne'
-                            : 'stats.syllabus.reachOther'
-                          ) | translate: { count: topic.reach }
-                        }}
-                      </span>
-                    </span>
-                    <span class="topics__when">
-                      <span>{{ shortDate(topic.last_taught_on) }}</span>
-                      <span class="topics__ago">{{ ago(topic.last_taught_on) }}</span>
-                    </span>
-                  </button>
-                </li>
-              }
-            </ul>
-          </section>
-        </div>
       }
     }
   </section>

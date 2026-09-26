@@ -26,6 +26,15 @@
       </li>
     </ul>
   </header>
+  @if (calendar()) {
+    <!--
+      A position's techniques live under its name now (#1911), and a name
+      does not look pressable on its own: one line says so, once.
+    -->
+    <p class="season-map__hint" data-cy="season-map-hint">
+      {{ 'stats.syllabus.map.hint' | translate }}
+    </p>
+  }
 
   @if (failed()) {
     <div class="season-map__error" role="alert" data-cy="season-map-error">
@@ -247,6 +256,116 @@
         <p class="season-map__pop-title" tabindex="-1" [id]="titleId">
           {{ panelTitle(open) }}
         </p>
+        @if (open.mode === 'season') {
+          <!--
+            The position's techniques first (#1911): what is still to do, what
+            was done once, what is done. They used to be two flat lists under
+            the map — the whole programme reprinted — and a position holds a
+            handful. Each group only when it has something in it.
+          -->
+          @let topics = techniquesOf(open.positionId);
+          <div class="season-map__techniques" data-cy="season-map-techniques">
+            @if (topics.todo.length > 0) {
+              <section class="season-map__group">
+                <h4 class="season-map__group-title">
+                  {{ 'stats.syllabus.map.todoTitle' | translate }}
+                </h4>
+                <ul class="season-map__topics">
+                  @for (topic of topics.todo; track topic.id) {
+                    <li>
+                      @if (plannable().has(topic.id)) {
+                        <!-- Its name is what it shows and what it does (#1656). -->
+                        <button
+                          type="button"
+                          class="season-map__topic season-map__topic--action"
+                          (click)="planTopic(topic.id)"
+                          [attr.data-cy]="'season-map-todo-' + topic.id"
+                        >
+                          <span class="season-map__topic-name">{{ topic.name }}</span>
+                          <span class="season-map__topic-plan">
+                            {{ 'stats.syllabus.planAction' | translate }}
+                            <i class="pi pi-angle-right" aria-hidden="true"></i>
+                          </span>
+                        </button>
+                      } @else {
+                        <span
+                          class="season-map__topic"
+                          [attr.data-cy]="'season-map-todo-' + topic.id"
+                        >
+                          <span class="season-map__topic-name">{{ topic.name }}</span>
+                        </span>
+                      }
+                    </li>
+                  }
+                </ul>
+              </section>
+            }
+            @for (
+              group of [
+                { key: 'stats.syllabus.map.onceTitle', rows: topics.once, cy: 'once' },
+                { key: 'stats.syllabus.map.doneTitle', rows: topics.done, cy: 'done' },
+              ];
+              track group.cy
+            ) {
+              @if (group.rows.length > 0) {
+                <section class="season-map__group">
+                  <h4 class="season-map__group-title">{{ group.key | translate }}</h4>
+                  <ul class="season-map__topics">
+                    @for (topic of group.rows; track topic.id) {
+                      <li>
+                        <!--
+                          Opens who has seen it (#1745). Named by what it shows,
+                          with a hidden lead-in, as the report's rows were.
+                        -->
+                        <button
+                          type="button"
+                          class="season-map__topic season-map__topic--action"
+                          (click)="openTopic(topic.id)"
+                          [attr.data-cy]="'season-map-' + group.cy + '-' + topic.id"
+                        >
+                          <span class="season-map__topic-what">
+                            <span class="visually-hidden">{{
+                              'stats.syllabus.exposure.openPrefix' | translate
+                            }}</span>
+                            <span class="season-map__topic-name">{{ topic.name }}</span>
+                            <!--
+                              Three lessons to fifteen people and three to four
+                              read the same without this line (#1746).
+                            -->
+                            <span class="season-map__topic-meta">
+                              {{
+                                (topic.lessons === 1
+                                  ? 'stats.syllabus.lessonsOne'
+                                  : 'stats.syllabus.lessonsOther'
+                                ) | translate: { count: topic.lessons }
+                              }}
+                              ·
+                              {{
+                                (topic.reach === 1
+                                  ? 'stats.syllabus.reachOne'
+                                  : 'stats.syllabus.reachOther'
+                                ) | translate: { count: topic.reach }
+                              }}
+                            </span>
+                          </span>
+                          <span class="season-map__topic-when">
+                            <span>{{ shortDate(topic.last_taught_on) }}</span>
+                            <span class="season-map__topic-ago">{{
+                              ago(topic.last_taught_on)
+                            }}</span>
+                          </span>
+                        </button>
+                      </li>
+                    }
+                  </ul>
+                </section>
+              }
+            }
+          </div>
+          <h4 class="season-map__group-title season-map__lessons-title">
+            {{ 'stats.syllabus.map.lessonsTitle' | translate }}
+          </h4>
+        }
         @if (open.groups.length === 0) {
           <p class="season-map__none" data-cy="season-map-season-empty">
             {{ 'stats.syllabus.map.seasonEmpty' | translate }}
