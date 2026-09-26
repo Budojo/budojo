@@ -1,13 +1,20 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  ElementRef,
+  Injector,
+  afterNextRender,
   computed,
   inject,
   input,
   output,
+  runInInjectionContext,
   signal,
+  viewChild,
+  viewChildren,
 } from '@angular/core';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { ButtonModule } from 'primeng/button';
 import type { ClassRegular, ClassRegulars } from '../../../../core/services/attendance.service';
 import { LanguageService } from '../../../../core/services/language.service';
 import { AthleteIdentityComponent } from '../../../../shared/components/athlete-identity/athlete-identity.component';
@@ -36,11 +43,15 @@ interface MissingRow {
  *
  * Folded by default, below the table: the register is what the screen is
  * for, and the header's count is enough to know whether to open it.
+ *
+ * Each row can be ticked from here (#1930): this is the one list that means
+ * "who is about to walk in", so it is where the owner looks when they do.
+ * The page does the marking, through the same path as the register.
  */
 @Component({
   selector: 'app-missing-regulars',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [TranslatePipe, AthleteIdentityComponent, ContactActionsComponent],
+  imports: [TranslatePipe, ButtonModule, AthleteIdentityComponent, ContactActionsComponent],
   templateUrl: './missing-regulars.component.html',
   styleUrl: './missing-regulars.component.scss',
 })
@@ -66,6 +77,12 @@ export class MissingRegularsComponent {
 
   /** Ask again, after a failure. */
   readonly retry = output<void>();
+
+  /** The register is loading: a tick now would be refused, so say so. */
+  readonly locked = input<boolean>(false);
+
+  /** Check this regular in (#1930). */
+  readonly markPresent = output<ClassRegular>();
 
   protected readonly expanded = signal(false);
 
@@ -115,5 +132,42 @@ export class MissingRegularsComponent {
 
   protected toggle(): void {
     this.expanded.update((open) => !open);
+  }
+
+  private readonly injector = inject(Injector);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly presentButtons = viewChildren('presentButton', { read: ElementRef });
+  private readonly header = viewChild<ElementRef<HTMLElement>>('header');
+  private readonly allHereLine = viewChild<ElementRef<HTMLElement>>('allHere');
+
+  /**
+   * Check a regular in, and keep the keyboard where it was (WCAG 2.4.3).
+   *
+   * The page marks them on this same click, so the row leaves on the next
+   * render — taking the focused button with it, and a keyboard user back to
+   * the top of the page. The focus goes to the button now in that row's
+   * place, the one before it when it was the last, and the line saying
+   * everyone is here when nobody is left.
+   */
+  protected mark(regular: ClassRegular, index: number): void {
+    this.markPresent.emit(regular);
+    runInInjectionContext(this.injector, () => afterNextRender(() => this.refocus(index)));
+  }
+
+  private refocus(index: number): void {
+    // Moved elsewhere meanwhile (the search box, say): leave it there.
+    const active = document.activeElement;
+    if (active !== null && active !== document.body && !this.host.nativeElement.contains(active)) {
+      return;
+    }
+
+    const buttons = this.presentButtons();
+    const inPlace = buttons[Math.min(index, buttons.length - 1)] as
+      ElementRef<HTMLElement> | undefined;
+    const target =
+      inPlace?.nativeElement.querySelector('button') ??
+      this.allHereLine()?.nativeElement ??
+      this.header()?.nativeElement;
+    target?.focus();
   }
 }

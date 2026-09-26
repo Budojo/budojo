@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Payment;
 
+use App\Enums\PaymentMethod;
 use App\Models\Athlete;
 use App\Models\Carnet;
 use App\Support\CarnetCode;
@@ -46,6 +47,7 @@ class SellCarnetAction
         int $priceCents,
         CarbonImmutable $purchasedAt,
         ?CarbonImmutable $validFrom = null,
+        ?PaymentMethod $method = null,
     ): Carnet {
         // Validity defaults to the sale, which is what happens when the owner
         // just clicks sell. Setting it earlier is the point of #1380: the
@@ -56,6 +58,8 @@ class SellCarnetAction
             'total_entries' => $totalEntries,
             'price_cents' => $priceCents,
             'purchased_at' => $purchasedAt->toDateString(),
+            // How it was paid (#1761); null is "not recorded".
+            'payment_method' => $method,
             'valid_from' => $validFrom->toDateString(),
             // Anchored to `valid_from`, not the sale (#1380): the window is
             // always exactly twelve months, so back-dating it spends validity

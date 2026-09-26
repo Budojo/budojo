@@ -1,5 +1,20 @@
 import type { MartialArt, TrainingMode } from '../../core/services/academy.service';
 import { AthleteStatus, Belt } from '../../core/services/athlete.service';
+import type { PaymentMethod } from '../../core/services/payment.service';
+
+/**
+ * How a fee or a carnet was paid (#1761), in the order the picker lists them.
+ * Shared by the mark-paid confirm and the carnet sale, so both say the same
+ * four words.
+ */
+export const PAYMENT_METHODS: readonly PaymentMethod[] = ['cash', 'transfer', 'pos', 'other'];
+
+export const PAYMENT_METHOD_KEYS: Readonly<Record<PaymentMethod, string>> = {
+  cash: 'payments.method.cash',
+  transfer: 'payments.method.transfer',
+  pos: 'payments.method.pos',
+  other: 'payments.method.other',
+};
 
 /**
  * The neutral name of every belt colour (#357, #1800): "White", "Green and
@@ -199,6 +214,22 @@ export const AGE_BANDS_TITLE_KEYS: Readonly<Record<MartialArt, string>> = {
   judo: 'stats.athletes.ageBandsTitle.judo',
   karate: 'stats.athletes.ageBandsTitle.karate',
   taekwondo: 'stats.athletes.ageBandsTitle.taekwondo',
+};
+
+/**
+ * The two halves of the age toggle, in the words the art's federation splits
+ * by (#1953). FIJLKAM counts preagonisti and agonisti, and its registry puts a
+ * 12-year-old esordiente among the agonisti — under "Adults" that reads as a
+ * mistake to a kids' instructor. IBJJF and WT split kids and adults.
+ */
+export const AGE_SCOPE_KEYS: Readonly<Record<MartialArt, { kids: string; adults: string }>> = {
+  bjj: { kids: 'stats.athletes.scope.kids', adults: 'stats.athletes.scope.adults' },
+  judo: { kids: 'stats.athletes.scope.preCompetitive', adults: 'stats.athletes.scope.competitive' },
+  karate: {
+    kids: 'stats.athletes.scope.preCompetitive',
+    adults: 'stats.athletes.scope.competitive',
+  },
+  taekwondo: { kids: 'stats.athletes.scope.kids', adults: 'stats.athletes.scope.adults' },
 };
 
 /** The seed button, its hint and its toast, as each shipped starter programme is named (#1804). */

@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, catchError, map, of, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import type { PaymentMethod } from './payment.service';
 
 /**
  * Entry carnets (#1364) — the pre-paid alternative to the monthly fee.
@@ -26,6 +27,11 @@ export interface Carnet {
   readonly remaining_entries: number;
   readonly price_cents: number;
   readonly purchased_at: string;
+  /**
+   * How the sale was paid (#1761); null is "not recorded". Optional so fixtures
+   * written before it keep compiling.
+   */
+  readonly payment_method?: PaymentMethod | null;
   /**
    * When the carnet starts covering sessions (#1380). Distinct from the sale:
    * back-dating it makes the carnet pay for training already on the register,
@@ -70,12 +76,19 @@ export class CarnetService {
   /**
    * Sell one carnet. `purchasedAt` (YYYY-MM-DD) back-dates the sale when the
    * owner is transcribing a paper register; omitted means today. The server
-   * rejects a future date.
+   * rejects a future date. `method` is how it was paid (#1761), left out when
+   * the owner did not say.
    */
-  sell(athleteId: number, purchasedAt?: string, validFrom?: string): Observable<Carnet> {
+  sell(
+    athleteId: number,
+    purchasedAt?: string,
+    validFrom?: string,
+    method?: PaymentMethod,
+  ): Observable<Carnet> {
     const body: Record<string, string> = {};
     if (purchasedAt) body['purchased_at'] = purchasedAt;
     if (validFrom) body['valid_from'] = validFrom;
+    if (method) body['payment_method'] = method;
 
     return this.http
       .post<CarnetResponse>(`${this.base}/${athleteId}/carnets`, body)

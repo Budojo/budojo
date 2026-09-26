@@ -11,6 +11,19 @@ import { runPhp } from './php-exec.js';
 const RENAME_RETRY = { attempts: 10, delayMs: 100 };
 
 /**
+ * Removing what a scanner may still hold: Node retries `EBUSY` / `EPERM`,
+ * sleeping `attempt × retryDelay` between tries — about 2 s per call on
+ * Windows (100 + 200 + … ms), and the sleep blocks the main process, so a
+ * window can freeze for a few seconds when two removals are both held. Linux
+ * rounds that sleep to nothing, which is why no harness there shows it.
+ * Acceptable because nothing waits unless a file is held, which is the
+ * failure path this exists for; a restore with nothing in the way removes on
+ * the first try. Only honoured with `recursive`, which a plain file accepts
+ * too.
+ */
+const REMOVE_RETRY = { recursive: true, force: true, maxRetries: 5, retryDelay: 100 } as const;
+
+/**
  * The real filesystem + subprocess backing for BackupService (#1228).
  *
  * VACUUM INTO goes through the bundled PHP (SQLite's online backup, correct
@@ -152,16 +165,54 @@ export function createBackupIO(config: BackupIOConfig): BackupIO {
       const stagedDb = `${config.databasePath}.restoring`;
       const stagedStorage = `${config.storageDir}.restoring`;
       const hasStorage = existsSync(restoredStorage);
+      const previousDb = `${config.databasePath}.previous`;
+      const previousStorage = `${config.storageDir}.previous`;
+      const siblings = ['', '-wal', '-shm', '-journal'];
+
+      // A `.previous` already here is what an earlier restore could not put
+      // back — possibly the owner's newest data, newer than any backup. Never
+      // deleted: set aside under the moment it was found, and left alone.
+      //
+      // Before anything is staged (#1919): the next boot reads a staged
+      // `storage` beside a `.previous` database, with no staged database, as
+      // this swap's database having gone in. An older `.previous` still here
+      // while copying would let a copy cut short be read that way.
+      const keptAt = new Date().toISOString().replace(/[:.]/g, '-');
+      for (const leftover of [...siblings.map((sibling) => previousDb + sibling), previousStorage]) {
+        if (existsSync(leftover)) {
+          await retryWhileBusy(() => renameSync(leftover, `${leftover}.kept-${keptAt}`), RENAME_RETRY);
+        }
+      }
+
+      // The staged storage is cleared whether or not this archive has one,
+      // and always before the staged database: a staged storage with no staged
+      // database is what the boot reads as "the database went in" (#1919). A
+      // storage that will not go stops here, so the database is never removed
+      // without it.
+      const clearStaged = (): void => {
+        rmSync(stagedStorage, REMOVE_RETRY);
+        rmSync(stagedDb, REMOVE_RETRY);
+      };
+      // On the way out of a failure, the cleanup is best-effort and must never
+      // become the error (#1959). The error is what tells the owner what
+      // happened — after a failed undo, where their data is — and an `EBUSY`
+      // on a staged copy would say nothing of the kind. What it leaves is a
+      // staged copy the next restore clears before it starts.
+      const clearStagedAfterFailure = (): void => {
+        try {
+          clearStaged();
+        } catch {
+          // Left for the next restore.
+        }
+      };
       try {
-        rmSync(stagedDb, { force: true });
+        clearStaged();
         cpSync(restoredDb, stagedDb);
         if (hasStorage) {
-          rmSync(stagedStorage, { recursive: true, force: true });
           cpSync(restoredStorage, stagedStorage, { recursive: true });
         }
       } catch (error) {
-        rmSync(stagedDb, { force: true });
-        rmSync(stagedStorage, { recursive: true, force: true });
+        clearStagedAfterFailure();
         throw error;
       }
 
@@ -171,19 +222,6 @@ export function createBackupIO(config: BackupIOConfig): BackupIO {
       // left the archive's database with the old documents or none, and no
       // old database to go back to. So the live files step aside first, as
       // `.previous`, and go only once everything is in place.
-      const previousDb = `${config.databasePath}.previous`;
-      const previousStorage = `${config.storageDir}.previous`;
-      const siblings = ['', '-wal', '-shm', '-journal'];
-
-      // A `.previous` already here is what an earlier restore could not put
-      // back — possibly the owner's newest data, newer than any backup. Never
-      // deleted: set aside under the moment it was found, and left alone.
-      const keptAt = new Date().toISOString().replace(/[:.]/g, '-');
-      for (const leftover of [...siblings.map((sibling) => previousDb + sibling), previousStorage]) {
-        if (existsSync(leftover)) {
-          await retryWhileBusy(() => renameSync(leftover, `${leftover}.kept-${keptAt}`), RENAME_RETRY);
-        }
-      }
 
       const moved: Array<[from: string, to: string]> = [];
       const move = async (from: string, to: string): Promise<void> => {
@@ -215,8 +253,7 @@ export function createBackupIO(config: BackupIOConfig): BackupIO {
         for (const [from, to] of moved.reverse()) {
           await retryWhileBusy(() => renameSync(to, from), RENAME_RETRY).catch(() => stuck.push(to));
         }
-        rmSync(stagedDb, { force: true });
-        rmSync(stagedStorage, { recursive: true, force: true });
+        clearStagedAfterFailure();
 
         if (stuck.length > 0) {
           throw new Error(
@@ -230,10 +267,9 @@ export function createBackupIO(config: BackupIOConfig): BackupIO {
       // happened, and a scanner still holding a file in `storage.previous` must
       // not turn it into a reported failure. What stays is set aside, not
       // deleted, by the next restore.
-      const tidy = { recursive: true, force: true, maxRetries: 5, retryDelay: 100 };
       for (const leftover of [...siblings.map((sibling) => previousDb + sibling), previousStorage]) {
         try {
-          rmSync(leftover, tidy);
+          rmSync(leftover, REMOVE_RETRY);
         } catch {
           // Left for the next restore to set aside.
         }

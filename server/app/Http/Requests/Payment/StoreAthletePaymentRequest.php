@@ -6,6 +6,7 @@ namespace App\Http\Requests\Payment;
 
 use App\Authorization\Capability;
 use App\Enums\BillingPeriod;
+use App\Enums\PaymentMethod;
 use App\Http\Requests\Concerns\AuthorizesAcademyCapability;
 use App\Models\Athlete;
 use Illuminate\Foundation\Http\FormRequest;
@@ -50,6 +51,15 @@ class StoreAthletePaymentRequest extends FormRequest
             // out, the athlete's own `billing_period_months` applies, which is
             // monthly for everybody until someone changes it.
             'period_months' => ['sometimes', 'integer', Rule::enum(BillingPeriod::class)],
+            // The day the money arrived (#1761) — September's fee handed over
+            // on 3 October. The same rule as a carnet's `purchased_at`, so the
+            // two dialogs behave alike: `date_format` rather than `date`,
+            // because the bare rule reads `03/10/2026` as one of two days and
+            // lets a zoned datetime land on the neighbouring one. Left out,
+            // it is today.
+            'paid_at' => ['sometimes', 'nullable', 'date_format:Y-m-d', 'before_or_equal:today'],
+            // How it was paid. Optional forever: null is "not recorded".
+            'payment_method' => ['sometimes', 'nullable', Rule::enum(PaymentMethod::class)],
         ];
     }
 

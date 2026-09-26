@@ -688,6 +688,10 @@ Route::middleware('auth:sanctum')->group(function (): void {
             // Who is drifting, against their own attendance (#1728).
             Route::get('attendance/at-risk', [StatsController::class, 'atRisk']);
             Route::get('payments/monthly', [StatsController::class, 'paymentsMonthly']);
+            // Expected, collected and outstanding for one month (#1758).
+            Route::get('payments/summary', [StatsController::class, 'paymentsSummary']);
+            // Who is behind, since when, and by how much (#1760).
+            Route::get('payments/arrears', \App\Http\Controllers\Stats\PaymentsArrearsController::class);
             Route::get('athletes/age-bands', [StatsController::class, 'ageBands']);
             // Athletes a medical certificate covers, not rows (#1732).
             Route::get('documents/compliance', [StatsController::class, 'documentsCompliance']);

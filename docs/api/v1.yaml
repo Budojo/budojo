@@ -4802,6 +4802,11 @@ paths:
         - A UTF-8 BOM, which Excel writes and never mentions.
         - Which column is which, from Italian or English header names.
         - Belts written as `Blu`, `cintura blu` or `blue`.
+        - A grade as the grade counts it (#1927): `3`, `3°` or `3° dan` on a
+          judo black belt is 3° dan, stored as `stripes: 2` like the form
+          stores it. A grade the belt does not carry, a unit it does not count
+          (`2 kyu`, `2 dan` on a coloured belt), or a cell that is not a number
+          makes the row `invalid` with the reason — never a silent `0`.
         - Dates as `gg/mm/aaaa`, `gg-mm-aa`, ISO, with or without a time.
         - A phone in one column, split into the stored pair. A number with no
           prefix takes the academy's own dial code.
@@ -6852,7 +6857,8 @@ paths:
         bucket contains the total `amount_cents` for that business month.
         Bucketing uses the business months on `athlete_payments` — NOT
         `paid_at` — so the figures reflect the fee period the payment covers,
-        not the wall-clock recording time.
+        not the day the money arrived (#1761): September's fee paid on
+        3 October is September revenue.
 
         **So the response can be longer than `months`.** A quarterly bought
         this month puts two buckets to the right of today. The window used to
@@ -6912,6 +6918,166 @@ paths:
               schema: { $ref: '#/components/schemas/ErrorMessage' }
               example: { message: Forbidden. }
         '422': { description: Validation error }
+  /stats/payments/arrears:
+    get:
+      operationId: statsPaymentsArrears
+      summary: Who is behind on their fee, since when, and by how much
+      description: |
+        One row per athlete with at least one unpaid month (#1760), from their
+        billing floor up to **last** month. The current month is never
+        arrears: it belongs to the roster's unpaid chip and its day-16 digest.
+
+        - **Who can owe** — the roster's `owing` population (active, not the
+          owner, expected to pay) with a fee above zero.
+        - **What pays a month** — a payment whose period covers it, or a
+          carnet spendable on some day of it, with the balance as it stood
+          then: a carnet that expired in August still paid for August.
+        - **From when** — the later of the academy's `billing_from` and the
+          athlete's joining month (`BillingFloor`). With no `billing_from`,
+          the joining month alone.
+
+        `owed_cents` is `months_behind` × the athlete's fee **today**
+        (`MonthlyFee`): nothing records what the fee was in a past month, so
+        the amount is an estimate and the SPA says so.
+
+        Sorted by `months_behind` descending, then surname and name.
+      tags: [Stats]
+      responses:
+        '200':
+          description: The athletes behind, longest first
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required: [athlete, months_behind, first_unpaid, owed_cents]
+                      properties:
+                        athlete:
+                          type: object
+                          description: The athlete as every listed row draws them (`AthleteIdentity`, #1851).
+                          required: [id, first_name, last_name, belt, stripes, date_of_birth, photo_url, user_avatar_url]
+                          properties:
+                            id: { type: integer }
+                            first_name: { type: string }
+                            last_name: { type: string }
+                            belt:
+                              $ref: '#/components/schemas/Belt'
+                            stripes: { type: integer }
+                            date_of_birth: { type: string, format: date, nullable: true }
+                            photo_url: { type: string, nullable: true }
+                            user_avatar_url: { type: string, nullable: true }
+                        months_behind: { type: integer, minimum: 1 }
+                        first_unpaid:
+                          type: string
+                          pattern: '^\d{4}-\d{2}$'
+                          description: The oldest unpaid month.
+                        owed_cents:
+                          type: integer
+                          minimum: 1
+                          description: '`months_behind` × the fee today — an estimate.'
+        '401': { description: Unauthenticated }
+        '403':
+          description: Forbidden — authed user has no academy, or is not the owner.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorMessage' }
+              example: { message: Forbidden. }
+
+  /stats/payments/summary:
+    get:
+      operationId: statsPaymentsSummary
+      summary: One month's money — expected, collected, outstanding
+      description: |
+        The four figures the revenue chart implies and never states (#1758),
+        for one business month: what should have come in, what did, who is
+        still out and for how much. Owner-only, like every `/stats/*` route.
+
+        - **Population** — active athletes, not the owner training in their
+          own academy (`is_self`), not trashed, whose monthly fee resolves
+          **above zero** (the athlete's own fee, then the tier, then the
+          academy's — #1757). An athlete who trains free is on neither side.
+          And only from their billing floor on (#1742): the later of the
+          month they joined and the academy's `billing_from`, so nobody owes a
+          month before they started, or before the academy kept its fees here.
+        - **`expected_cents`** — the sum of that population's monthly fee:
+          **one month's worth per athlete**, whatever their billing period. An
+          annual payer adds a twelfth of the year, never the whole of it.
+        - **`collected_cents`** — **exactly the bucket
+          `GET /stats/payments/monthly` draws for the same month**: a fee
+          spread across the months it pays for, a carnet whole in the month it
+          was sold. Everything the academy took, from anyone.
+        - **`outstanding_count` / `outstanding_cents`** — the population with
+          nothing paying for the month, and the sum of their monthly fee. For
+          the current month that is no fee whose period includes it and no
+          carnet spendable today (the roster's `?paid=no`, #1722). For a month
+          already over it is no such fee and no carnet spendable on **some day
+          of it**, with the balance that month began with (#1760): exactly the
+          athletes `GET /stats/payments/arrears` counts behind for that month.
+        - **`collection_rate`** — `collected_cents / expected_cents`, money
+          not heads, rounded to three decimals; **null** when nothing is
+          expected. It can exceed 1: advance payments and carnets sold that
+          month are collected in it.
+        - **`estimated`** — true for any month but the current one. What
+          paid for a past month is history, carnet balances included; who
+          was expected to pay, and how much, is not. There is no status or
+          tier history, so a past month is read against **today's** roster at
+          **today's** fees: someone who left since is missing from it, and a
+          fee raised since reprices it. The SPA says so beside the figures.
+      tags: [Stats]
+      parameters:
+        - in: query
+          name: year
+          required: false
+          description: Required with `month`. Both absent means the current month.
+          schema: { type: integer, minimum: 2000, maximum: 2100 }
+        - in: query
+          name: month
+          required: false
+          description: Required with `year`.
+          schema: { type: integer, minimum: 1, maximum: 12 }
+      responses:
+        '200':
+          description: The month's money
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - year
+                      - month
+                      - currency
+                      - expected_cents
+                      - collected_cents
+                      - outstanding_count
+                      - outstanding_cents
+                      - collection_rate
+                      - estimated
+                    properties:
+                      year: { type: integer, example: 2026 }
+                      month: { type: integer, minimum: 1, maximum: 12, example: 9 }
+                      currency: { type: string, example: EUR }
+                      expected_cents: { type: integer, minimum: 0, example: 310000 }
+                      collected_cents: { type: integer, minimum: 0, example: 256000 }
+                      outstanding_count: { type: integer, minimum: 0, example: 7 }
+                      outstanding_cents: { type: integer, minimum: 0, example: 54000 }
+                      collection_rate: { type: number, nullable: true, example: 0.826 }
+                      estimated: { type: boolean, example: false }
+        '401': { description: Unauthenticated }
+        '403':
+          description: Forbidden — authed user has no academy.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorMessage' }
+              example: { message: Forbidden. }
+        '422': { description: 'Validation error — a month without a year, or out of range' }
 
   /stats/athletes/age-bands:
     get:
@@ -10810,6 +10976,29 @@ components:
         paid_at:
           type: string
           format: date-time
+          description: |
+            When the money arrived (#1761). A business date the owner may set
+            (September's fee handed over on 3 October), stored as the start of
+            that day, UTC. When none is sent — and on every row before #1761 —
+            it is the moment the payment was recorded. Read it as a date, not a
+            time. It is the transaction's date,
+            **never** the month the revenue belongs to: that is `year` /
+            `month` / `period_months`, and `GET /stats/payments/monthly`
+            buckets by them.
+        payment_method:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/PaymentMethod'
+          description: How it was paid (#1761). Null is "not recorded".
+
+    PaymentMethod:
+      type: string
+      enum: [cash, transfer, pos, other]
+      description: |
+        How a fee or a carnet was paid (#1761), the `App\Enums\PaymentMethod`
+        PHP enum: `cash`, a bank `transfer`, a card through the gym's `pos`
+        terminal, or `other`. Four cases and no free text. Always optional —
+        null on a row means "not recorded", never a guess.
 
     AthletePaymentCreateRequest:
       type: object
@@ -10834,6 +11023,22 @@ components:
             until someone changes it. A period that shares a month with one
             already recorded is refused with a 422 on this field.
           example: 3
+        paid_at:
+          type: string
+          format: date
+          nullable: true
+          description: |
+            The day the money arrived (#1761), `Y-m-d`. Today when omitted or
+            null; a future date, or anything that is not exactly `Y-m-d`, is
+            refused with a 422. It does not move the revenue: the payment still
+            belongs to the months it covers. On an idempotent re-post the row
+            keeps its **first** date.
+          example: '2026-10-03'
+        payment_method:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/PaymentMethod'
+          description: How it was paid. Optional; an unknown value is a 422.
 
     Carnet:
       type: object
@@ -10875,6 +11080,11 @@ components:
           type: string
           format: date
           description: When money changed hands.
+        payment_method:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/PaymentMethod'
+          description: How the sale was paid (#1761). Null is "not recorded".
         valid_from:
           type: string
           format: date
@@ -10936,6 +11146,11 @@ components:
             Where the carnet starts covering sessions. Defaults to the sale.
             Set it earlier to count training already on the register — those
             sessions are charged immediately. A future date is rejected.
+        payment_method:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/PaymentMethod'
+          description: How the sale was paid (#1761). Optional; an unknown value is a 422.
 
     CarnetValidityUpdateRequest:
       type: object

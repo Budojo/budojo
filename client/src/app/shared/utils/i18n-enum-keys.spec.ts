@@ -7,6 +7,8 @@ import {
   BELT_KEYS,
   BELT_KEY_OVERRIDES,
   beltKey,
+  PAYMENT_METHOD_KEYS,
+  PAYMENT_METHODS,
   STATUS_KEYS,
   STATUS_ORDER,
 } from './i18n-enum-keys';
@@ -51,6 +53,17 @@ describe('i18n enum-key bindings (#357)', () => {
         }
         expect(typeof lookup(EN, AGE_BANDS_TITLE_KEYS[art]), `${art} title in en`).toBe('string');
         expect(typeof lookup(IT, AGE_BANDS_TITLE_KEYS[art]), `${art} title in it`).toBe('string');
+      }
+    });
+  });
+
+  describe('payment method keys (#1761)', () => {
+    it('names every method, in the picker order, with a key that exists in both bundles', () => {
+      expect(PAYMENT_METHODS).toEqual(['cash', 'transfer', 'pos', 'other']);
+      for (const method of PAYMENT_METHODS) {
+        const key = PAYMENT_METHOD_KEYS[method];
+        expect(typeof lookup(EN, key), `${method} → ${key} in en`).toBe('string');
+        expect(typeof lookup(IT, key), `${method} → ${key} in it`).toBe('string');
       }
     });
   });

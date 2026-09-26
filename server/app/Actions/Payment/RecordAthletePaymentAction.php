@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace App\Actions\Payment;
 
 use App\Enums\BillingPeriod;
+use App\Enums\PaymentMethod;
 use App\Models\Athlete;
 use App\Models\AthletePayment;
 use App\Notifications\AthletePaymentMarkedPaidNotification;
 use App\Support\NotificationCategory;
 use App\Support\NotificationPreferences;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
@@ -46,6 +48,15 @@ class RecordAthletePaymentAction
      * `wasRecentlyCreated` flag is the canonical Eloquent way to tell
      * which branch of `createOrFirst` returned — same shape used in
      * other observers.
+     *
+     * `$paidAt` is the day the money arrived (#1761), stored as the start of
+     * that day; null records the moment of the call, as every row before
+     * #1761 did. It is the transaction's date, **never** the
+     * month the revenue belongs to — `(year, month)` and the period decide
+     * that, and the chart buckets by them. Like `$method`, it goes in the
+     * *values* of `createOrFirst`, not the keys: a re-post of the same month
+     * returns the first row with its first date, which is what keeps the
+     * double-click idempotent.
      */
     public function execute(
         Athlete $athlete,
@@ -53,11 +64,20 @@ class RecordAthletePaymentAction
         int $month,
         int $amountCents,
         BillingPeriod $period = BillingPeriod::Monthly,
+        ?CarbonImmutable $paidAt = null,
+        ?PaymentMethod $method = null,
     ): AthletePayment {
+        $values = [
+            'period_months' => $period,
+            'amount_cents' => $amountCents,
+            'paid_at' => $paidAt?->startOfDay() ?? now(),
+            'payment_method' => $method,
+        ];
+
         // The insert and the rebuild share a transaction: a payment recorded
         // without the ledger catching up leaves exactly the stale balance the
         // derived design exists to prevent.
-        $payment = DB::transaction(function () use ($athlete, $year, $month, $amountCents, $period): AthletePayment {
+        $payment = DB::transaction(function () use ($athlete, $year, $month, $period, $values): AthletePayment {
             $this->rejectOverlap($athlete, $year, $month, $period);
 
             $payment = AthletePayment::query()->createOrFirst(
@@ -66,11 +86,7 @@ class RecordAthletePaymentAction
                     'year' => $year,
                     'month' => $month,
                 ],
-                [
-                    'period_months' => $period,
-                    'amount_cents' => $amountCents,
-                    'paid_at' => now(),
-                ],
+                $values,
             );
 
             if ($payment->wasRecentlyCreated) {

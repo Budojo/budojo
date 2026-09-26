@@ -6,6 +6,7 @@ namespace App\Actions\Athlete;
 
 use App\Actions\Address\AddressIntent;
 use App\Enums\AthleteStatus;
+use App\Enums\Belt;
 use App\Models\Academy;
 use App\Models\Athlete;
 use App\Models\User;
@@ -14,7 +15,9 @@ use App\Support\Import\AthleteCsv;
 use App\Support\Import\BeltText;
 use App\Support\Import\DateText;
 use App\Support\Import\PhoneText;
+use App\Support\Import\StripesText;
 use App\Support\MartialArt\MartialArtProfile;
+use App\Support\MartialArt\RankLadder;
 use App\Support\NameFold;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -73,10 +76,10 @@ final class ImportAthletesAction
         // sheet listing the same person twice imports them twice — and a file
         // assembled from two registers usually does.
         $seen = $this->existingPeople($academy);
+        $ladder = MartialArtProfile::for($academy->martial_art)->ladder();
 
         foreach ($csv->rows as $row) {
-            $values = $this->valuesFor($csv->keyed($row['cells']), $map, $academy);
-            $errors = $this->errorsFor($values, $academy);
+            ['values' => $values, 'errors' => $errors] = $this->read($csv->keyed($row['cells']), $map, $academy, $ladder);
 
             if ($errors !== []) {
                 $rows[] = ['row' => $row['number'], 'status' => 'invalid', 'values' => $values, 'errors' => $errors];
@@ -130,6 +133,44 @@ final class ImportAthletesAction
     }
 
     /**
+     * One row: the payload it would write, and everything wrong with it.
+     *
+     * The grade is read against the row's own belt (#1927) — "3" is 3° dan on
+     * a judo black and three stripes on a BJJ blue — and a grade the reader
+     * refuses is reported in its own words rather than by the validator, which
+     * only ever sees the 0 left in its place.
+     *
+     * @param array<string, string> $cells
+     * @param array<string, string> $map
+     *
+     * @return array{values: array<string, mixed>, errors: array<string, list<string>>}
+     */
+    private function read(array $cells, array $map, Academy $academy, RankLadder $ladder): array
+    {
+        $values = $this->valuesFor($cells, $map, $academy);
+
+        $belt = \is_string($values['belt']) ? Belt::tryFrom($values['belt']) : null;
+        $grade = StripesText::parse($this->cell($cells, $map, 'stripes'), $belt === null ? null : $ladder->gradeOf($belt));
+        $values['stripes'] = $grade->stripes;
+
+        $errors = $this->errorsFor($values, $academy->id, $ladder);
+        if ($grade->refusal !== null) {
+            $errors['stripes'] = [$grade->refusal];
+        }
+
+        return ['values' => $values, 'errors' => $errors];
+    }
+
+    /**
+     * @param array<string, string> $cells
+     * @param array<string, string> $map
+     */
+    private function cell(array $cells, array $map, string $field): string
+    {
+        return trim($cells[$map[$field] ?? ''] ?? '');
+    }
+
+    /**
      * The cells of one row, turned into the payload `CreateAthleteAction` takes.
      *
      * Defaults live here rather than in the parsers: a sheet that carries no
@@ -144,13 +185,13 @@ final class ImportAthletesAction
      */
     private function valuesFor(array $cells, array $map, Academy $academy): array
     {
-        $cell = static fn (string $field): string => trim($cells[$map[$field] ?? ''] ?? '');
+        $cell = fn (string $field): string => $this->cell($cells, $map, $field);
 
         $values = [
             'first_name' => $cell('first_name'),
             'last_name' => $cell('last_name'),
             'belt' => BeltText::parse($cell('belt'))?->value,
-            'stripes' => ctype_digit($cell('stripes')) ? (int) $cell('stripes') : 0,
+            'stripes' => 0, // read against the belt, in `read()`
             'status' => $this->statusFor($cell('status')),
             'joined_at' => DateText::parse($cell('joined_at'))?->toDateString() ?? now()->toDateString(),
         ];
@@ -204,9 +245,9 @@ final class ImportAthletesAction
      *
      * @return array<string, list<string>>
      */
-    private function errorsFor(array $values, Academy $academy): array
+    private function errorsFor(array $values, int $academyId, RankLadder $ladder): array
     {
-        $validator = Validator::make($values, AthleteFieldRules::for($academy->id, MartialArtProfile::for($academy->martial_art)->ladder()));
+        $validator = Validator::make($values, AthleteFieldRules::for($academyId, $ladder));
 
         /** @var array<string, list<string>> $errors */
         $errors = $validator->errors()->toArray();

@@ -227,6 +227,23 @@
       <small class="carnets__dialog-hint">
         {{ 'athletes.detail.carnets.dialog.validFromHint' | translate }}
       </small>
+
+      <!-- How the money came in (#1761). Optional: a cleared picker records
+           nothing, which is the honest answer when the owner did not say. -->
+      <label class="carnets__dialog-label" for="carnet-payment-method">
+        {{ 'athletes.detail.carnets.dialog.methodLabel' | translate }}
+      </label>
+      <p-select
+        inputId="carnet-payment-method"
+        formControlName="payment_method"
+        [options]="methodOptions()"
+        optionLabel="label"
+        optionValue="value"
+        [showClear]="true"
+        [placeholder]="'payments.method.none' | translate"
+        appendTo="body"
+        data-cy="carnet-payment-method"
+      />
     </form>
 
     <ng-template pTemplate="footer">

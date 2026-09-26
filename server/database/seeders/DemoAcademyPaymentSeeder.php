@@ -94,10 +94,10 @@ class DemoAcademyPaymentSeeder extends Seeder
             }
 
             foreach ($candidates as $bucket) {
-                // `paid_at` is the wall-clock recording time. For seeded
+                // `paid_at` is the day the money arrived (#1761). For seeded
                 // historical payments we backdate it to the END of the
                 // business month they cover — closer to "this fee was
-                // recorded around then" than collapsing every row onto
+                // paid around then" than collapsing every row onto
                 // today, which would skew any future cash-flow analytics
                 // run on the seed.
                 $paidAt = CarbonImmutable::create($bucket['year'], $bucket['month'])

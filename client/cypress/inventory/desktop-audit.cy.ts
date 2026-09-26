@@ -1969,6 +1969,44 @@ function seed(): void {
     statusCode: 200,
     body: { data: MONTHLY_PAYMENTS },
   });
+  // Who is behind (#1760): one long debt, one short, so both plurals show.
+  cy.intercept('GET', '/api/v1/stats/payments/arrears', {
+    statusCode: 200,
+    body: {
+      data: [
+        {
+          athlete: {
+            id: 3,
+            first_name: 'Andrea',
+            last_name: 'Gallo',
+            belt: 'blue',
+            stripes: 2,
+            date_of_birth: '1994-05-12',
+            photo_url: null,
+            user_avatar_url: null,
+          },
+          months_behind: 3,
+          first_unpaid: '2026-06',
+          owed_cents: 21000,
+        },
+        {
+          athlete: {
+            id: 5,
+            first_name: 'Sara',
+            last_name: 'Colombo',
+            belt: 'white',
+            stripes: 3,
+            date_of_birth: '2001-11-02',
+            photo_url: null,
+            user_avatar_url: null,
+          },
+          months_behind: 1,
+          first_unpaid: '2026-08',
+          owed_cents: 7000,
+        },
+      ],
+    },
+  });
   cy.intercept('GET', '/api/v1/stats/athletes/age-bands', {
     statusCode: 200,
     body: { data: AGE_BANDS },

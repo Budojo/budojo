@@ -1940,7 +1940,7 @@
       "classPicker": {
         "aria": "Which class"
       },
-      "searchPlaceholder": "Search by name",
+      "searchPlaceholder": "Search by name, then Enter",
       "beltPlaceholder": "Belt",
       "table": {
         "fullName": "Full name",
@@ -1955,7 +1955,6 @@
         "noAthletes": "No active athletes yet.",
         "noAthletesCta": "Go to Athletes"
       },
-      "paginationHint": "Showing {{shown}} of {{total}} active athletes. Pagination is on the M4.2.5 follow-up.",
       "undo": "Undo",
       "toast": {
         "loadAthletesError": "Could not load the athletes list.",
@@ -1981,7 +1980,9 @@
         "notEnoughHistoryOne": "Only {{count}} session of this class on record: too few to tell who usually comes.",
         "notEnoughHistoryOther": "Only {{count}} sessions of this class on record: too few to tell who usually comes.",
         "loadError": "Could not load who usually comes to this class.",
-        "retry": "Try again"
+        "retry": "Try again",
+        "markPresent": "Present",
+        "markPresentAria": "Mark {{name}} present"
       },
       "topics": {
         "empty": "Nothing tagged yet",
@@ -2306,7 +2307,9 @@
           "errorGeneric": "Couldn't update the payment. Please try again.",
           "loadErrorDetail": "Couldn't load payments.",
           "errorOverlap": "That month is already covered by another payment.",
-          "errorYear": "That year is outside the range payments can be recorded for."
+          "errorYear": "That year is outside the range payments can be recorded for.",
+          "errorPaidOn": "The date the money arrived can't be later than today.",
+          "errorInvalid": "Something you entered wasn't accepted. Check it and try again."
         },
         "title": "Payments — {{year}}",
         "noFeeHint": "Set a monthly fee on the academy to start recording payments. Until then this page stays read-only.",
@@ -2334,7 +2337,9 @@
         "beforeBillingFloor": "Before this academy started recording fees in Budojo",
         "trainsFree": "Trains free",
         "trainsFreeHint": "Trains free · no fee is due.",
-        "feeOverrideHint": "Personal fee · {{amount}} a month."
+        "feeOverrideHint": "Personal fee · {{amount}} a month.",
+        "paidOnLabel": "Paid on",
+        "paidOnHint": "Leave empty for today. The payment still counts for the months it covers."
       },
       "documents": {
         "confirm": {
@@ -2516,7 +2521,8 @@
           "confirm": "Sell carnet",
           "cancel": "Cancel",
           "validFrom": "Covers sessions from",
-          "validFromHint": "Leave empty to start from the purchase date. Set it earlier to count training already recorded."
+          "validFromHint": "Leave empty to start from the purchase date. Set it earlier to count training already recorded.",
+          "methodLabel": "Paid by"
         },
         "toast": {
           "soldSummary": "Carnet sold",
@@ -2975,7 +2981,20 @@
       "monthlyHint": "Last 12 months and whatever is already paid for · fees spread across the months they cover, carnets booked when sold",
       "loading": "Loading revenue trend…",
       "errored": "Couldn't load revenue trend.",
-      "empty": "Nothing collected in the last 12 months."
+      "empty": "Nothing collected in the last 12 months.",
+      "arrears": {
+        "title": "Behind on fees",
+        "hint": "Months before this one that no payment covers, counted from when you started recording fees here. Amounts are at today's fee. Someone who left and came back also counts the months they were away.",
+        "totalOne": "1 athlete · {{amount}} estimated",
+        "totalOther": "{{count}} athletes · {{amount}} estimated",
+        "monthsBehindOne": "1 month",
+        "monthsBehindOther": "{{count}} months",
+        "since": "since {{month}}",
+        "empty": "Nobody is behind on a past month.",
+        "loading": "Loading who is behind…",
+        "errored": "Couldn't load who is behind.",
+        "retry": "Try again"
+      }
     },
     "athletes": {
       "ageBandsTitle": {
@@ -2991,7 +3010,9 @@
       "scope": {
         "kids": "Kids",
         "adults": "Adults",
-        "all": "All"
+        "all": "All",
+        "preCompetitive": "Pre-competitive",
+        "competitive": "Competitive"
       },
       "missingDobOne": "{{count}} athlete without a date of birth",
       "missingDobOther": "{{count}} athletes without a date of birth",
@@ -3467,5 +3488,15 @@
     "judo": "Judo",
     "karate": "Karate",
     "taekwondo": "Taekwondo"
+  },
+  "payments": {
+    "method": {
+      "label": "Paid by",
+      "none": "Not recorded",
+      "cash": "Cash",
+      "transfer": "Bank transfer",
+      "pos": "Card",
+      "other": "Other"
+    }
   }
 }

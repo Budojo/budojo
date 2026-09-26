@@ -67,6 +67,27 @@ describe('PaymentService (#182)', () => {
     expect(actual).toEqual(expected);
   });
 
+  it('markPaid sends the day the money arrived and how, only when said (#1761)', () => {
+    service
+      .markPaid(42, 2026, 9, undefined, { paidAt: '2026-10-03', method: 'transfer' })
+      .subscribe();
+    const withReceipt = httpMock.expectOne(`${base}/42/payments`);
+    expect(withReceipt.request.body).toEqual({
+      year: 2026,
+      month: 9,
+      paid_at: '2026-10-03',
+      payment_method: 'transfer',
+    });
+    withReceipt.flush({ data: {} });
+
+    // An empty receipt is the server's own default — today, not recorded —
+    // so nothing extra goes on the wire.
+    service.markPaid(42, 2026, 9, 3, {}).subscribe();
+    const bare = httpMock.expectOne(`${base}/42/payments`);
+    expect(bare.request.body).toEqual({ year: 2026, month: 9, period_months: 3 });
+    bare.flush({ data: {} });
+  });
+
   it('unmarkPaid DELETEs /athletes/{id}/payments/{year}/{month} and emits void on 204', () => {
     let completed = false;
     let nextCalled = false;

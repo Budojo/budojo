@@ -192,8 +192,41 @@ describe('CarnetPanelComponent', () => {
     ).sellForm.patchValue({ purchased_at: new Date(2026, 2, 5) });
     (component as unknown as { confirmSell: () => void }).confirmSell();
 
-    expect(service.sell).toHaveBeenCalledWith(42, '2026-03-05', undefined);
+    expect(service.sell).toHaveBeenCalledWith(42, '2026-03-05', undefined, undefined);
     expect(service.list).toHaveBeenCalledTimes(1);
+  });
+
+  it('says how the carnet was paid when the owner picks it, and nothing when not (#1761)', () => {
+    const { component, service } = setup();
+    const form = (
+      component as unknown as {
+        sellForm: { patchValue: (v: { payment_method: string | null }) => void };
+      }
+    ).sellForm;
+    const sell = (): void => (component as unknown as { confirmSell: () => void }).confirmSell();
+
+    form.patchValue({ payment_method: 'cash' });
+    sell();
+    expect(service.sell).toHaveBeenLastCalledWith(42, undefined, undefined, 'cash');
+
+    // A cleared picker is "not recorded": nothing on the wire, never a guess.
+    form.patchValue({ payment_method: null });
+    sell();
+    expect(service.sell).toHaveBeenLastCalledWith(42, undefined, undefined, undefined);
+  });
+
+  it('offers the four methods in the owner language', () => {
+    const { component } = setup();
+    const options = (
+      component as unknown as { methodOptions: () => { label: string; value: string }[] }
+    ).methodOptions();
+
+    expect(options).toEqual([
+      { label: 'Cash', value: 'cash' },
+      { label: 'Bank transfer', value: 'transfer' },
+      { label: 'Card', value: 'pos' },
+      { label: 'Other', value: 'other' },
+    ]);
   });
 
   it('keeps the last known carnets when the reload fails', () => {
@@ -215,7 +248,7 @@ describe('CarnetPanelComponent', () => {
 
     (component as unknown as { confirmSell: () => void }).confirmSell();
 
-    expect(service.sell).toHaveBeenCalledWith(42, undefined, undefined);
+    expect(service.sell).toHaveBeenCalledWith(42, undefined, undefined, undefined);
   });
 
   it('sends a back-dated validity when the owner sets one', () => {
@@ -230,7 +263,7 @@ describe('CarnetPanelComponent', () => {
     ).sellForm.patchValue({ valid_from: new Date(2026, 5, 1) });
     (component as unknown as { confirmSell: () => void }).confirmSell();
 
-    expect(service.sell).toHaveBeenCalledWith(42, undefined, '2026-06-01');
+    expect(service.sell).toHaveBeenCalledWith(42, undefined, '2026-06-01', undefined);
   });
 
   it('previews the expiry the chosen validity start would produce', () => {

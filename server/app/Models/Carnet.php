@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\PaymentMethod;
 use App\Observers\Audit\CarnetAuditObserver;
 use Carbon\Carbon;
+use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Database\Factories\CarnetFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -28,13 +30,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int      $total_entries
  * @property int      $price_cents
  * @property Carbon   $purchased_at
+ * @property PaymentMethod|null $payment_method Null is "not recorded" (#1761)
  * @property Carbon   $valid_from
  * @property Carbon   $expires_at
  * @property Carbon   $created_at
  * @property Carbon   $updated_at
  * @property-read int|null $entries_count Present only when the query used `withCount('entries')`
  */
-#[Fillable(['code', 'athlete_id', 'total_entries', 'price_cents', 'purchased_at', 'valid_from', 'expires_at'])]
+#[Fillable(['code', 'athlete_id', 'total_entries', 'price_cents', 'purchased_at', 'payment_method', 'valid_from', 'expires_at'])]
 #[ObservedBy([CarnetAuditObserver::class])]
 class Carnet extends Model
 {
@@ -101,6 +104,44 @@ class Carnet extends Model
     }
 
     /**
+     * Carnets that paid for some day of a **past** month (#1760): the same
+     * rule as `scopeSpendableOn`, asked of a month instead of a day, and with
+     * the balance as it stood then.
+     *
+     * Two things change when the question moves into the past, and each one
+     * is a wrong answer if it is not changed:
+     *
+     * - **the window** must touch the month, not contain today — a carnet
+     *   that expired on 31 August paid for August, whatever it is now;
+     * - **the balance** is the one on the first day of the month the carnet
+     *   was valid, counting only the entries spent before it. Spending only
+     *   ever lowers a balance, so if there was an entry left that morning,
+     *   the carnet was spendable that day; if there was none, it was not
+     *   spendable on any later day of the month either. Today's balance would
+     *   call every carnet spent out since then unpaid for months it paid.
+     *
+     * `PaymentsArrearsTest` holds it to `CarnetAvailability::isActiveOn` asked
+     * of every day of the month, over both window edges and the balance.
+     *
+     * @param  Builder<$this>  $query
+     * @return Builder<$this>
+     */
+    public function scopeSpendableDuring(Builder $query, int $year, int $month): Builder
+    {
+        $first = CarbonImmutable::create($year, $month, 1);
+        \assert($first instanceof CarbonImmutable);
+
+        return $query
+            ->whereDate('valid_from', '<=', $first->endOfMonth()->toDateString())
+            ->whereDate('expires_at', '>=', $first->toDateString())
+            ->whereRaw(
+                'total_entries > (select count(*) from carnet_entries where carnet_entries.carnet_id = carnets.id '
+                . 'and date(carnet_entries.used_on) < max(?, date(carnets.valid_from)))',
+                [$first->toDateString()],
+            );
+    }
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array
@@ -111,6 +152,7 @@ class Carnet extends Model
             'expires_at' => 'date:Y-m-d',
             'total_entries' => 'integer',
             'price_cents' => 'integer',
+            'payment_method' => PaymentMethod::class,
         ];
     }
 }

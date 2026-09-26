@@ -38,7 +38,6 @@ import { profileBaseForUser } from '../../shared/utils/profile-base';
 import type { Belt } from '../../core/services/athlete.service';
 import { BeltBadgeComponent } from '../../shared/components/belt-badge/belt-badge.component';
 import { UserAvatarComponent } from '../../shared/components/user-avatar/user-avatar.component';
-import { UserFlairComponent } from '../../shared/components/user-flair/user-flair.component';
 import { MentionTextComponent } from '../../shared/components/mention-text/mention-text.component';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component';
@@ -92,7 +91,6 @@ import {
     ConfirmDialog,
     BeltBadgeComponent,
     UserAvatarComponent,
-    UserFlairComponent,
     PageHeaderComponent,
     ErrorStateComponent,
     EmptyStateComponent,
