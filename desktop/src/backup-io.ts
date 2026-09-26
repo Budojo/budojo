@@ -11,9 +11,15 @@ import { runPhp } from './php-exec.js';
 const RENAME_RETRY = { attempts: 10, delayMs: 100 };
 
 /**
- * Removing what a scanner may still hold: Node retries `EBUSY` / `EPERM` for
- * about half a second. Only honoured with `recursive`, which a plain file
- * accepts too.
+ * Removing what a scanner may still hold: Node retries `EBUSY` / `EPERM`,
+ * sleeping `attempt × retryDelay` between tries — about 2 s per call on
+ * Windows (100 + 200 + … ms), and the sleep blocks the main process, so a
+ * window can freeze for a few seconds when two removals are both held. Linux
+ * rounds that sleep to nothing, which is why no harness there shows it.
+ * Acceptable because nothing waits unless a file is held, which is the
+ * failure path this exists for; a restore with nothing in the way removes on
+ * the first try. Only honoured with `recursive`, which a plain file accepts
+ * too.
  */
 const REMOVE_RETRY = { recursive: true, force: true, maxRetries: 5, retryDelay: 100 } as const;
 
