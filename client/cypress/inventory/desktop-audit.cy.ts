@@ -2282,6 +2282,10 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
             attendance_month_count: 3,
             attendance_total_count: 2,
             last_attended_on: '2026-09-12',
+            // Trained on the 5th, before joining: the server starts the month
+            // there (#1768), which the row does not say (5, 7, 9, 11, 12, 14).
+            attendance_month_expected: 6,
+            attendance_season_expected: 3,
           },
         ],
         FIXTURE_CONTEXT,

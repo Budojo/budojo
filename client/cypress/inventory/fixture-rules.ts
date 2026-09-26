@@ -66,9 +66,23 @@ const RULES: Rule[] = [
         later(ctx.seasonStart, joined),
       ],
     ];
+    // Not stricter than the server: a presence this month before the joining
+    // day (a month count above the season's, which is floored at joining)
+    // moves the month's start earlier, to a day the row does not carry. Then
+    // the value only has to lie between the two possible starts.
+    const month = o['attendance_month_count'];
+    const total = o['attendance_total_count'];
+    const trainedBeforeJoining = isNum(month) && isNum(total) && month > total;
     for (const [name, value, from] of expected) {
       if (!isNum(value)) continue;
       const held = trainingDaysBetween(from, ctx.today, ctx.trainingDays);
+      if (name === 'attendance_month_expected' && trainedBeforeJoining) {
+        const most = trainingDaysBetween(monthStart, ctx.today, ctx.trainingDays);
+        if (value < held || value > most) {
+          out.push(`${name} ${value}, outside ${held}–${most} training days this month`);
+        }
+        continue;
+      }
       if (value !== held) out.push(`${name} ${value}, but ${held} training days since ${from}`);
     }
     return out;
