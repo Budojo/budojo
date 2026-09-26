@@ -190,6 +190,49 @@ $payments-mobile-breakpoint: 768px;
   color: var(--p-text-muted-color);
 }
 
+// How a payment came in (#1761), under its date: secondary to the date, the
+// same muted caption the period uses.
+.payments-list__method {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--p-text-muted-color);
+}
+
+.payment-card__method {
+  color: var(--p-text-muted-color);
+}
+
+// The mark-paid confirm's fields (#1761). A column, narrow enough for the
+// popup and the phone; the pickers fill it (`fluid`).
+.mark-paid {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: min(20rem, 80vw);
+}
+
+.mark-paid__message {
+  margin: 0;
+}
+
+.mark-paid__fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.mark-paid__label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--p-text-color);
+}
+
+.mark-paid__hint {
+  margin-bottom: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--p-text-muted-color);
+}
+
 // Title and its year stepper on one line (#1636).
 .payments-list__year {
   display: flex;

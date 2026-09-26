@@ -2333,7 +2333,9 @@
         "beforeBillingFloor": "Before this academy started recording fees in Budojo",
         "trainsFree": "Trains free",
         "trainsFreeHint": "Trains free · no fee is due.",
-        "feeOverrideHint": "Personal fee · {{amount}} a month."
+        "feeOverrideHint": "Personal fee · {{amount}} a month.",
+        "paidOnLabel": "Paid on",
+        "paidOnHint": "Leave empty for today. The payment still counts for the months it covers."
       },
       "documents": {
         "confirm": {
@@ -2515,7 +2517,8 @@
           "confirm": "Sell carnet",
           "cancel": "Cancel",
           "validFrom": "Covers sessions from",
-          "validFromHint": "Leave empty to start from the purchase date. Set it earlier to count training already recorded."
+          "validFromHint": "Leave empty to start from the purchase date. Set it earlier to count training already recorded.",
+          "methodLabel": "Paid by"
         },
         "toast": {
           "soldSummary": "Carnet sold",
@@ -3481,5 +3484,15 @@
     "judo": "Judo",
     "karate": "Karate",
     "taekwondo": "Taekwondo"
+  },
+  "payments": {
+    "method": {
+      "label": "Paid by",
+      "none": "Not recorded",
+      "cash": "Cash",
+      "transfer": "Bank transfer",
+      "pos": "Card",
+      "other": "Other"
+    }
   }
 }

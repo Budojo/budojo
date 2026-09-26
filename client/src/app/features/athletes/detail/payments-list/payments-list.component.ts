@@ -8,11 +8,14 @@ import {
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { finalize, map, forkJoin } from 'rxjs';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ButtonModule } from 'primeng/button';
 import { ConfirmPopup } from 'primeng/confirmpopup';
+import { DatePickerModule } from 'primeng/datepicker';
+import { SelectModule } from 'primeng/select';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
@@ -22,12 +25,26 @@ import { ConfirmationService, MessageService } from 'primeng/api';
 import { AthleteService } from '../../../../core/services/athlete.service';
 import { LanguageService } from '../../../../core/services/language.service';
 import { FeeTier } from '../../../../core/services/fee-tier.service';
-import { AthletePayment, PaymentService } from '../../../../core/services/payment.service';
-import { formatIsoDate, localeFor } from '../../../../shared/utils/locale';
+import {
+  AthletePayment,
+  PaymentMethod,
+  PaymentReceipt,
+  PaymentService,
+} from '../../../../core/services/payment.service';
+import { localIso } from '../../../../shared/utils/class-occurrences';
+import { PAYMENT_METHOD_KEYS } from '../../../../shared/utils/i18n-enum-keys';
+import { datePickerFormatFor, formatIsoDate, localeFor } from '../../../../shared/utils/locale';
+import {
+  PaymentMethodOption,
+  paymentMethodOptions,
+} from '../../../../shared/utils/payment-method-options';
 import { CarnetPanelComponent } from '../carnet-panel/carnet-panel.component';
 import { CONFIRM_REJECT_BUTTON } from '../../../../shared/utils/confirm-buttons';
 import { MONTH_KEYS } from '../../../../shared/utils/months';
 import { AcademyService } from '../../../../core/services/academy.service';
+
+/** The keyed popup that asks for the date and the method (#1761). */
+const MARK_PAID_CONFIRM_KEY = 'mark-paid';
 
 /**
  * Per-athlete payments tab on the detail page (#182 Surface 2).
@@ -112,9 +129,12 @@ interface MonthRow {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     TranslatePipe,
+    ReactiveFormsModule,
     CarnetPanelComponent,
     ButtonModule,
     ConfirmPopup,
+    DatePickerModule,
+    SelectModule,
     SkeletonModule,
     TableModule,
     TagModule,
@@ -135,6 +155,31 @@ export class PaymentsListComponent implements OnInit {
   private readonly languageService = inject(LanguageService);
   private readonly academyService = inject(AcademyService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly fb = inject(FormBuilder);
+
+  /**
+   * What the owner may say about the money in the mark-paid confirm (#1761):
+   * the day it arrived and how. Both start empty, which is the server's own
+   * default — today, method not recorded — so a plain "Segna pagato" stays two
+   * taps, the way the owner marks a batch at the end of an evening.
+   */
+  protected readonly markPaidForm = this.fb.group({
+    paid_at: this.fb.control<Date | null>(null),
+    payment_method: this.fb.control<PaymentMethod | null>(null),
+  });
+
+  /** Today, so the confirm cannot offer a day the money has not arrived yet. */
+  protected readonly maxPaidOn = new Date();
+
+  protected readonly datePickerFormat = computed(() =>
+    datePickerFormatFor(this.languageService.currentLang()),
+  );
+
+  /** "Paid by" options, re-labelled when the sidebar language changes. */
+  protected readonly methodOptions = computed<PaymentMethodOption[]>(() => {
+    this.languageService.currentLang();
+    return paymentMethodOptions(this.translate);
+  });
 
   protected readonly athleteId = signal<number | null>(null);
   protected readonly athleteName = signal<string>('');
@@ -506,7 +551,15 @@ export class PaymentsListComponent implements OnInit {
             { name: fullName, month: this.translate.instant(row.labelKey), year: row.year },
           );
 
+    // Marking asks for the transaction too (#1761), so it has a popup of its
+    // own: the keyed one carries the date and method fields. Unmarking keeps
+    // the plain popup — there is nothing to say about money being undone.
+    if (willMarkPaid) {
+      this.markPaidForm.reset({ paid_at: null, payment_method: null });
+    }
+
     this.confirmationService.confirm({
+      key: willMarkPaid ? MARK_PAID_CONFIRM_KEY : undefined,
       target: event.currentTarget as EventTarget,
       message,
       // Without labels PrimeNG renders its own "Yes"/"No" in one colour, so
@@ -536,7 +589,9 @@ export class PaymentsListComponent implements OnInit {
     if (id === null) return;
 
     const op$ = markPaid
-      ? this.paymentService.markPaid(id, year, month).pipe(map(() => undefined))
+      ? this.paymentService
+          .markPaid(id, year, month, undefined, this.receiptFromForm())
+          .pipe(map(() => undefined))
       : this.paymentService.unmarkPaid(id, year, month);
 
     op$.subscribe({
@@ -839,5 +894,24 @@ export class PaymentsListComponent implements OnInit {
    */
   protected formatPaidAt(iso: string): string {
     return formatIsoDate(iso, this.languageService.currentLang());
+  }
+
+  /** How a recorded payment came in (#1761), or null when nobody said. */
+  protected methodLabel(payment: AthletePayment): string | null {
+    const method = payment.payment_method ?? null;
+    return method === null ? null : this.translate.instant(PAYMENT_METHOD_KEYS[method]);
+  }
+
+  /**
+   * Only what the owner filled in. An empty date is today and an empty method
+   * is "not recorded" — the server's defaults, so neither is sent. The date is
+   * the owner's calendar day, never a UTC instant a timezone could shift.
+   */
+  private receiptFromForm(): PaymentReceipt {
+    const { paid_at: paidAt, payment_method: method } = this.markPaidForm.getRawValue();
+    return {
+      ...(paidAt !== null ? { paidAt: localIso(paidAt) } : {}),
+      ...(method !== null ? { method } : {}),
+    };
   }
 }

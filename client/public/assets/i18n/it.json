@@ -2333,7 +2333,9 @@
         "beforeBillingFloor": "Prima che questa accademia iniziasse a registrare le quote su Budojo",
         "trainsFree": "Si allena gratis",
         "trainsFreeHint": "Si allena gratis · nessuna quota da pagare.",
-        "feeOverrideHint": "Quota personale · {{amount}} al mese."
+        "feeOverrideHint": "Quota personale · {{amount}} al mese.",
+        "paidOnLabel": "Pagato il",
+        "paidOnHint": "Vuoto vale oggi. Il pagamento resta dei mesi che copre."
       },
       "documents": {
         "confirm": {
@@ -2515,7 +2517,8 @@
           "confirm": "Vendi carnet",
           "cancel": "Annulla",
           "validFrom": "Copre gli allenamenti da",
-          "validFromHint": "Lascia vuoto per partire dalla data di acquisto. Anticipala per conteggiare allenamenti già registrati."
+          "validFromHint": "Lascia vuoto per partire dalla data di acquisto. Anticipala per conteggiare allenamenti già registrati.",
+          "methodLabel": "Pagato con"
         },
         "toast": {
           "soldSummary": "Carnet venduto",
@@ -3481,5 +3484,15 @@
     "judo": "Judo",
     "karate": "Karate",
     "taekwondo": "Taekwondo"
+  },
+  "payments": {
+    "method": {
+      "label": "Pagato con",
+      "none": "Non indicato",
+      "cash": "Contanti",
+      "transfer": "Bonifico",
+      "pos": "Carta",
+      "other": "Altro"
+    }
   }
 }

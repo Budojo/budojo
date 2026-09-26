@@ -40,7 +40,31 @@ export interface AthletePayment {
   readonly period_months?: number;
   /** What was actually handed over — the fee times the months covered. */
   readonly amount_cents: number;
+  /**
+   * When the money arrived (#1761) — a business date the owner may set, the
+   * start of that day. Never the month the payment is for: that is `year` /
+   * `month`.
+   */
   readonly paid_at: string;
+  /**
+   * How it was paid (#1761); null is "not recorded". Optional on the interface
+   * so fixtures written before it keep compiling; a missing value reads as null.
+   */
+  readonly payment_method?: PaymentMethod | null;
+}
+
+/** How a fee or a carnet was paid (#1761), the server's `PaymentMethod` enum. */
+export type PaymentMethod = 'cash' | 'transfer' | 'pos' | 'other';
+
+/**
+ * What the owner may say about the transaction when marking a month paid
+ * (#1761). Both optional: left out, the server dates it today and records no
+ * method.
+ */
+export interface PaymentReceipt {
+  /** `YYYY-MM-DD`, never in the future. */
+  readonly paidAt?: string;
+  readonly method?: PaymentMethod;
 }
 
 interface AthletePaymentResponse {
@@ -104,9 +128,15 @@ export class PaymentService {
     year: number,
     month: number,
     periodMonths?: number,
+    receipt: PaymentReceipt = {},
   ): Observable<AthletePayment> {
-    const body =
-      periodMonths === undefined ? { year, month } : { year, month, period_months: periodMonths };
+    // Only what was said goes on the wire: an absent field is the server's
+    // default (today, not recorded), and sending null would say the same thing
+    // less plainly.
+    const body: Record<string, number | string> = { year, month };
+    if (periodMonths !== undefined) body['period_months'] = periodMonths;
+    if (receipt.paidAt !== undefined) body['paid_at'] = receipt.paidAt;
+    if (receipt.method !== undefined) body['payment_method'] = receipt.method;
     return this.http
       .post<AthletePaymentResponse>(`${this.base}/${athleteId}/payments`, body)
       .pipe(map((res) => res.data));

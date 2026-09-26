@@ -16,12 +16,18 @@ import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
 import { DialogModule } from 'primeng/dialog';
 import { ConfirmationService, MessageService } from 'primeng/api';
+import { SelectModule } from 'primeng/select';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TagModule } from 'primeng/tag';
 import { AcademyService } from '../../../../core/services/academy.service';
 import { Carnet, CarnetEntry, CarnetService } from '../../../../core/services/carnet.service';
 import { LanguageService } from '../../../../core/services/language.service';
+import type { PaymentMethod } from '../../../../core/services/payment.service';
 import { activeCarnetOf } from '../../../../shared/utils/active-carnet';
+import {
+  PaymentMethodOption,
+  paymentMethodOptions,
+} from '../../../../shared/utils/payment-method-options';
 import { localeFor, datePickerFormatFor } from '../../../../shared/utils/locale';
 import {
   CONFIRM_ACCEPT_DESTRUCTIVE,
@@ -52,6 +58,7 @@ import {
     ButtonModule,
     DatePickerModule,
     DialogModule,
+    SelectModule,
     SkeletonModule,
     TagModule,
   ],
@@ -114,6 +121,14 @@ export class CarnetPanelComponent {
     // Where the carnet starts covering sessions (#1380). Left empty it follows
     // the sale; set earlier, the carnet pays for training already recorded.
     valid_from: this.fb.control<Date | null>(null),
+    // How it was paid (#1761). Empty records nothing, never a guess.
+    payment_method: this.fb.control<PaymentMethod | null>(null),
+  });
+
+  /** "Paid by" options, re-labelled when the sidebar language changes. */
+  protected readonly methodOptions = computed<PaymentMethodOption[]>(() => {
+    this.languageService.currentLang();
+    return paymentMethodOptions(this.translate);
   });
 
   /** Re-dating an existing carnet. Separate form, separate dialog. */
@@ -215,7 +230,7 @@ export class CarnetPanelComponent {
   }
 
   protected openSellDialog(): void {
-    this.sellForm.reset({ purchased_at: null, valid_from: null });
+    this.sellForm.reset({ purchased_at: null, valid_from: null, payment_method: null });
     this.sellDialogOpen.set(true);
   }
 
@@ -227,6 +242,7 @@ export class CarnetPanelComponent {
     // present only when the owner deliberately back-dated it.
     const purchasedAt = this.sellForm.controls.purchased_at.value;
     const validFrom = this.sellForm.controls.valid_from.value;
+    const method = this.sellForm.controls.payment_method.value;
 
     this.selling.set(true);
     this.carnetService
@@ -234,6 +250,7 @@ export class CarnetPanelComponent {
         id,
         purchasedAt === null ? undefined : toIsoDate(purchasedAt),
         validFrom === null ? undefined : toIsoDate(validFrom),
+        method ?? undefined,
       )
       .pipe(finalize(() => this.selling.set(false)))
       .subscribe({
