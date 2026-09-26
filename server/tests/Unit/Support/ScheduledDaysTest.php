@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\Academy;
+use App\Models\AcademyClosure;
 use App\Models\AcademySchedule;
 use App\Support\ScheduledDays;
 use Carbon\CarbonImmutable;
@@ -20,8 +21,9 @@ use Illuminate\Database\Eloquent\Collection;
  * helper that read the column instead of the history would fail every test.
  *
  * @param  array<string, list<int>|null>  $rows  effective_from => training_days
+ * @param  list<array{0: string, 1: string}>  $closures  [starts_on, ends_on], inclusive
  */
-function academyWithHistory(array $rows): Academy
+function academyWithHistory(array $rows, array $closures = []): Academy
 {
     $academy = new Academy(['training_days' => [6]]);
     $schedules = [];
@@ -29,6 +31,10 @@ function academyWithHistory(array $rows): Academy
         $schedules[] = new AcademySchedule(['training_days' => $days, 'effective_from' => $from]);
     }
     $academy->setRelation('schedules', new Collection($schedules));
+    $academy->setRelation('closures', new Collection(array_map(
+        static fn (array $range): AcademyClosure => new AcademyClosure(['starts_on' => $range[0], 'ends_on' => $range[1]]),
+        $closures,
+    )));
 
     return $academy;
 }
@@ -103,4 +109,24 @@ it('returns fewer days than asked when the history is too short', function (): v
 
     expect(ScheduledDays::lastBefore($new, onDay('2026-05-21'), 3))->toBe(['2026-05-20', '2026-05-18'])
         ->and(ScheduledDays::lastBefore(academyWithHistory([]), onDay('2026-05-21'), 3))->toBe([]);
+});
+
+it('leaves the days the academy was closed out of every window (#1766)', function (): void {
+    // Mon/Wed/Fri August, shut from the 10th to the 25th, and a one-day
+    // closure inside it that changes nothing: a closure only subtracts.
+    $academy = academyWithHistory(['2026-01-01' => [1, 3, 5]], [['2026-08-10', '2026-08-25'], ['2026-08-12', '2026-08-12']]);
+
+    expect(ScheduledDays::between($academy, onDay('2026-08-01'), onDay('2026-08-31'), onDay('2026-09-01')))
+        ->toBe(['2026-08-03', '2026-08-05', '2026-08-07', '2026-08-26', '2026-08-28', '2026-08-31'])
+        ->and(ScheduledDays::isScheduledOn($academy, onDay('2026-08-10')))->toBeFalse()
+        ->and(ScheduledDays::isScheduledOn($academy, onDay('2026-08-26')))->toBeTrue()
+        // Walking back from the 28th steps over the closure.
+        ->and(ScheduledDays::lastBefore($academy, onDay('2026-08-28'), 3))
+        ->toBe(['2026-08-26', '2026-08-07', '2026-08-05']);
+});
+
+it('keeps a window that is all closure known, not unknown', function (): void {
+    $academy = academyWithHistory(['2026-01-01' => [1, 3, 5]], [['2026-08-01', '2026-08-31']]);
+
+    expect(ScheduledDays::countBetween($academy, onDay('2026-08-01'), onDay('2026-08-31'), onDay('2026-09-01')))->toBe(0);
 });

@@ -38,6 +38,7 @@ Today the model is 1-to-1 with `User` — one owner per academy, one academy per
 - `hasMany(Athlete::class)` — all athletes in this academy
 - `hasMany(AcademyFeeTier::class)` — the monthly price list (#1381); empty on an academy that charges one flat fee. See [`academy-fee-tier.md`](./academy-fee-tier.md)
 - `hasMany(AcademySchedule::class)` — schedule history (#1094); see [`academy-schedule.md`](./academy-schedule.md). Read-side helpers: `scheduleForDate(Carbon)`, `currentSchedule()`, `nextSchedule()`
+- `hasMany(AcademyClosure::class)` — the days it is shut (#1766), taken out of every scheduled day. See [`academy-closure.md`](./academy-closure.md)
 - `hasMany(AcademyClass::class)` — the weekly timetable (#1562); empty on an academy that never set one up, which changes nothing. See [`academy-class.md`](./academy-class.md)
 - `hasMany(Lesson::class)` — every lesson actually held, the occurrences the classes produced (#1562). See [`lesson.md`](./lesson.md)
 - `hasMany(SyllabusTopic::class)` — the programme (#1563), positions and techniques alike; empty until the academy starts one. See [`syllabus-topic.md`](./syllabus-topic.md)
@@ -82,6 +83,7 @@ Today the model is 1-to-1 with `User` — one owner per academy, one academy per
 - `POST /api/v1/academy/logo` — upload/replace logo
 - `DELETE /api/v1/academy/logo` — remove logo
 - `GET|POST /api/v1/academy/fee-tiers`, `PATCH|DELETE /api/v1/academy/fee-tiers/{tier}` — the monthly price list (#1381); see [`academy-fee-tier.md`](./academy-fee-tier.md)
+- `GET|POST /api/v1/academy/closures`, `PATCH|DELETE /api/v1/academy/closures/{closure}` — the days it is shut (#1766); see [`academy-closure.md`](./academy-closure.md)
 
 ## Related tables
 

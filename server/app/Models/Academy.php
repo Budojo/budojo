@@ -236,6 +236,17 @@ class Academy extends Model implements HasAddress
     }
 
     /**
+     * The days the academy is shut (#1766), read through
+     * `App\Support\ScheduledDays`, which takes them out of every window.
+     *
+     * @return HasMany<AcademyClosure, $this>
+     */
+    public function closures(): HasMany
+    {
+        return $this->hasMany(AcademyClosure::class);
+    }
+
+    /**
      * The schedule effective on a given date — the row with the largest
      * `effective_from <= $date` (#1094). Returns null when no row
      * covers the date (post-backfill that means the date is before

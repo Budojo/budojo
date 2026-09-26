@@ -572,6 +572,13 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::patch('/academy/classes/{academyClass}', [\App\Http\Controllers\Academy\AcademyClassController::class, 'update']);
         Route::delete('/academy/classes/{academyClass}', [\App\Http\Controllers\Academy\AcademyClassController::class, 'destroy']);
 
+        // The days the academy is shut (#1766): taken out of every scheduled
+        // day, so August stops counting as sessions everyone missed.
+        Route::get('/academy/closures', [\App\Http\Controllers\Academy\AcademyClosureController::class, 'index']);
+        Route::post('/academy/closures', [\App\Http\Controllers\Academy\AcademyClosureController::class, 'store']);
+        Route::patch('/academy/closures/{closure}', [\App\Http\Controllers\Academy\AcademyClosureController::class, 'update']);
+        Route::delete('/academy/closures/{closure}', [\App\Http\Controllers\Academy\AcademyClosureController::class, 'destroy']);
+
         // The programme (#1563): positions and the techniques under them,
         // per academy, with the shipped BJJ starter one POST away.
         Route::get('/academy/syllabus', [\App\Http\Controllers\Academy\SyllabusTopicController::class, 'index']);

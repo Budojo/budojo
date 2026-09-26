@@ -209,3 +209,27 @@ it('warns again once the fortnight has passed and new sessions were missed', fun
 
     Notification::assertSentTo($academy->owner, OwnerAthleteMissedStreakNotification::class);
 });
+
+it('says nothing about sessions the academy was closed for (#1766)', function (): void {
+    // Shut from the 7th: without the closure the streak is 14, 11 and 9
+    // September and the athlete is warned; with it, the last sessions held
+    // are 4, 2 and 31 August, and nobody missed anything since.
+    $academy = academyTrainingMonWedFri();
+    $athlete = athleteJoinedLongAgo($academy);
+    AttendanceRecord::factory()->create(['athlete_id' => $athlete->id, 'attended_on' => '2026-09-04']);
+    $academy->closures()->create(['starts_on' => '2026-09-07', 'ends_on' => '2026-09-20', 'label' => 'Seminar']);
+
+    $this->artisan(SendAthleteMissedStreakPushes::class)->assertSuccessful();
+
+    Notification::assertNothingSent();
+});
+
+it('warns about the same athlete when the academy was open', function (): void {
+    $academy = academyTrainingMonWedFri();
+    $athlete = athleteJoinedLongAgo($academy);
+    AttendanceRecord::factory()->create(['athlete_id' => $athlete->id, 'attended_on' => '2026-09-04']);
+
+    $this->artisan(SendAthleteMissedStreakPushes::class)->assertSuccessful();
+
+    Notification::assertSentTo($academy->owner, OwnerAthleteMissedStreakNotification::class);
+});

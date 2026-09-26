@@ -60,4 +60,5 @@ Dedicated CRUD endpoints for schedule rows ship in **PR 2** (`POST /api/v1/acade
 
 - [`academy.md`](./academy.md) — owning entity, denormalised `training_days` cache
 - [`attendance-record.md`](./attendance-record.md) — the read consumer; percentage denominators depend on schedule history
+- [`academy-closure.md`](./academy-closure.md) — the days the academy is shut (#1766); `ScheduledDays` takes them out of the pattern described here
 - `docs/specs/training-schedule-history.md` — full PRD (#1095)

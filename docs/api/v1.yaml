@@ -3142,6 +3142,123 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /academy/closures:
+    get:
+      tags: [academy]
+      summary: The days the academy is shut (#1766)
+      description: |
+        Every closure, ordered by `starts_on` then `ends_on`. Requires
+        `academy_settings_read`, which every membership role holds.
+      operationId: academyClosureIndex
+      responses:
+        '200':
+          description: The closures
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AcademyClosure'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [academy]
+      summary: Record a closure (#1766)
+      description: |
+        Requires `academy_settings_update`, like the timetable: whoever may
+        change when the academy trains may say when it is shut. `ends_on`
+        before `starts_on` is a 422.
+      operationId: academyClosureStore
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcademyClosurePayload'
+      responses:
+        '201':
+          description: Closure recorded
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/AcademyClosure'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /academy/closures/{closure}:
+    patch:
+      tags: [academy]
+      summary: Change a closure (#1766)
+      description: Same rules as creating one; a closure of another academy is a 403.
+      operationId: academyClosureUpdate
+      parameters:
+        - in: path
+          name: closure
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcademyClosurePayload'
+      responses:
+        '200':
+          description: Closure changed
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/AcademyClosure'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [academy]
+      summary: Remove a closure (#1766)
+      description: The days it covered count as scheduled again.
+      operationId: academyClosureDelete
+      parameters:
+        - in: path
+          name: closure
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: Closure removed
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /academy/syllabus:
     get:
       tags: [academy]
@@ -8705,6 +8822,7 @@ components:
           current_schedule,
           next_schedule,
           schedules,
+          closures,
         ]
       properties:
         id:
@@ -8934,6 +9052,13 @@ components:
             transitions on the FE.
           items:
             $ref: '#/components/schemas/AcademySchedule'
+        closures:
+          type: array
+          description: |
+            The days the academy is shut (#1766), in date order. The calendar
+            and the check-in paint per day, so they need them client-side.
+          items:
+            $ref: '#/components/schemas/AcademyClosure'
 
     CarnetEntryUnit:
       type: string
@@ -9002,6 +9127,27 @@ components:
         kind:
           $ref: '#/components/schemas/TrainingMode'
 
+    AcademyClosure:
+      type: object
+      description: |
+        Days the academy is shut (#1766): whole days, inclusive at both ends,
+        so a single day starts and ends on it. Overlapping closures are
+        allowed and mean nothing more. A closed day is never a scheduled one,
+        so it leaves every attendance denominator and the missed-streak alert.
+      required: [id, starts_on, ends_on, label]
+      properties:
+        id: { type: integer, format: int64 }
+        starts_on: { type: string, format: date, example: '2026-08-10' }
+        ends_on: { type: string, format: date, example: '2026-08-25', description: Inclusive; equal to starts_on for one day. }
+        label: { type: string, maxLength: 80, nullable: true, example: Chiusura estiva }
+    AcademyClosurePayload:
+      type: object
+      description: Both dates every time, on create and on edit.
+      required: [starts_on, ends_on]
+      properties:
+        starts_on: { type: string, format: date }
+        ends_on: { type: string, format: date, description: 'On or after starts_on.' }
+        label: { type: string, maxLength: 80, nullable: true }
     AcademyClass:
       type: object
       description: |

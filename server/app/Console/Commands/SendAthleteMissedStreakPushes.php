@@ -66,7 +66,7 @@ class SendAthleteMissedStreakPushes extends Command
         // Every academy: the schedule HISTORY decides, and one whose history
         // yields fewer than three training days is skipped below (#1764).
         Academy::query()
-            ->with('schedules')
+            ->with(['schedules', 'closures'])
             ->each(function (Academy $academy) use ($today, &$hasFailures): void {
                 try {
                     $this->processAcademy($academy, $today);
