@@ -27,11 +27,10 @@ use App\Support\MartialArt\RankLadder;
  * ends on that day, inclusive) is written later but happened before it. Not
  * by where a row ends, which replays a downward correction backwards.
  *
- * One exception: two rows of the same moment that undo each other — a belt
- * set back, stripes set back — stay in the order they were made, by id. Where
- * they start would put the undo first (white → blue starts below
- * blue → white), and the timeline would then show a demotion as the latest
- * thing that happened to someone who is blue.
+ * A mistake corrected at the same moment is ordered like any other row, by
+ * where it starts — which may put the undo first. Keeping them in the order
+ * they were made was tried and changed the gaps (#1966): the replay's
+ * guarantees come first, the listing's cosmetics second.
  */
 final class PromotionOrder
 {
@@ -56,7 +55,7 @@ final class PromotionOrder
             $b->id,
         ]);
 
-        return self::undoesInEditOrder($records);
+        return $records;
     }
 
     /**
@@ -77,25 +76,6 @@ final class PromotionOrder
 
         return $a->beltAtEvent === $b->beltAtEvent
             && $a->fromStripes === $b->toStripes && $a->toStripes === $b->fromStripes;
-    }
-
-    /**
-     * @param list<PromotionRecord> $records sorted
-     *
-     * @return list<PromotionRecord>
-     */
-    private static function undoesInEditOrder(array $records): array
-    {
-        $count = \count($records);
-        for ($i = 0; $i < $count; $i++) {
-            for ($j = $i + 1; $j < $count && $records[$j]->recordedAt->equalTo($records[$i]->recordedAt); $j++) {
-                if ($records[$i]->id > $records[$j]->id && self::undoEachOther($records[$i], $records[$j])) {
-                    [$records[$i], $records[$j]] = [$records[$j], $records[$i]];
-                }
-            }
-        }
-
-        return array_values($records);
     }
 
     /**
