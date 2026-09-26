@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  computed,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ConfirmationService, MessageService } from 'primeng/api';
@@ -7,6 +15,7 @@ import { ConfirmPopup } from 'primeng/confirmpopup';
 import { ToastModule } from 'primeng/toast';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TooltipModule } from 'primeng/tooltip';
+import { TagModule } from 'primeng/tag';
 import { ConfirmDestructiveButtonComponent } from '../../shared/components/confirm-destructive-button/confirm-destructive-button.component';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import {
@@ -31,6 +40,10 @@ import {
 } from '../../core/services/drive-sync.service';
 import { LocaleDatePipe } from '../../shared/pipes/locale-date.pipe';
 import { driveErrorKey, folderErrorKey } from '../../shared/utils/backup-errors';
+import { prefersReducedMotion } from '../../shared/utils/prefers-reduced-motion';
+
+/** How many archives the list shows before "Mostra tutti" (#1910). */
+const LIST_LIMIT = 5;
 
 /**
  * `budojo-backup-YYYYMMDD-HHMMSS.zip` -> ISO, for archives that exist only in
@@ -68,6 +81,7 @@ function timestampFromName(name: string): string {
     ButtonModule,
     ToastModule,
     TooltipModule,
+    TagModule,
     SkeletonModule,
     ConfirmDestructiveButtonComponent,
     ConfirmPopup,
@@ -167,8 +181,46 @@ export class BackupComponent {
     }));
   });
 
+  /**
+   * A computer with no backups on it (#1910): a fresh install, which is
+   * exactly the moment someone arrives from a dead or replaced one. The page
+   * leads with the way back instead of an empty list.
+   */
+  protected readonly newComputer = computed<boolean>(
+    // This computer's own archives, not the list merged with Drive: a fresh
+    // machine whose owner linked Drive first shows remote-only rows, none of
+    // which can be restored here, and the way back must not vanish behind them.
+    () => !this.loading() && this.archives().length === 0,
+  );
+
+  /**
+   * The newest few, then "Mostra tutti" (#1910). A dozen identical rows made
+   * the one that matters — the latest good copy — the hardest to find.
+   */
+  protected readonly showAll = signal(false);
+  protected readonly visibleRows = computed<BackupRow[]>(() =>
+    this.showAll() ? this.rows() : this.rows().slice(0, LIST_LIMIT),
+  );
+  /** Whether the list is long enough to fold at all; the toggle stays while it is. */
+  protected readonly foldable = computed<boolean>(() => this.rows().length > LIST_LIMIT);
+
+  private readonly keysImport = viewChild<ElementRef<HTMLTextAreaElement>>('keysImport');
+
   constructor() {
     void this.refresh();
+  }
+
+  /** "Inserisci il codice di recupero": to the field, with the cursor in it. */
+  protected goToKeysImport(): void {
+    const field = this.keysImport()?.nativeElement;
+    if (field === undefined) {
+      return;
+    }
+    field.scrollIntoView?.({
+      block: 'center',
+      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+    });
+    field.focus({ preventScroll: true });
   }
 
   protected async refresh(): Promise<void> {
