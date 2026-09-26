@@ -396,3 +396,108 @@ describe('the promotion dialog is one column (#1495)', () => {
       });
   });
 });
+
+/**
+ * A missing step, filled with one date or skipped (#1966). The server finds
+ * the gaps; the client draws them in place and fills the backfill with
+ * everything but the date. Every call is intercepted.
+ */
+describe('a missing promotion step (#1966)', () => {
+  // Blue since 1 Sep 2026, and blue's first stripe never recorded: the one
+  // missing step sits after the last row, so its window runs up to today.
+  const blueBelt = promotion({
+    id: 8,
+    kind: 'belt',
+    from_belt: 'white',
+    to_belt: 'blue',
+    from_stripes: null,
+    to_stripes: null,
+    recorded_at: '2026-09-01T10:00:00+00:00',
+  });
+  const firstBlueStripe = {
+    key: 'stripe:blue:1',
+    kind: 'stripe',
+    belt: 'blue',
+    from_belt: null,
+    from_stripes: 0,
+    to_stripes: 1,
+    after: { promotion_id: 8, recorded_at: '2026-09-01' },
+    before: null,
+    completes_promotion_id: null,
+  };
+
+  function withGaps(gaps: unknown[]) {
+    const response = promotionsPage([blueBelt]);
+    return { ...response, body: { ...response.body, gaps, history_starts_at: '2026-09-01' } };
+  }
+
+  beforeEach(() => {
+    cy.intercept('GET', '/api/v1/**', { statusCode: 200, body: { data: [] } });
+    cy.intercept('GET', '/api/v1/academy', ACADEMY_OK).as('academy');
+    cy.intercept('GET', '/api/v1/athletes/1', { statusCode: 200, body: { data: ATHLETE } }).as(
+      'athlete',
+    );
+    cy.intercept('GET', '/api/v1/athletes/1/promotions*', withGaps([firstBlueStripe])).as(
+      'promotions',
+    );
+  });
+
+  it('asks for the date alone and writes the step it stands for', () => {
+    cy.intercept('POST', '/api/v1/athletes/1/promotions', {
+      statusCode: 201,
+      body: { data: promotion({ id: 10, from_stripes: 0, to_stripes: 1 }) },
+    }).as('create');
+
+    cy.visitAuthenticated('/dashboard/athletes/1/promotions');
+    cy.wait(['@academy', '@athlete', '@promotions']);
+    cy.get('[data-cy="promotion-gap-stripe:blue:1"]').should('contain.text', 'When?');
+
+    cy.intercept('GET', '/api/v1/athletes/1/promotions*', withGaps([])).as('reload');
+    cy.get('[data-cy="gap-add-date-stripe:blue:1"]').click();
+    cy.get('[data-cy="promotion-create-dialog"]')
+      .should('be.visible')
+      .and('contain.text', 'When did they get stripe 1?');
+    // Nothing to choose but the date: the step is shown, not asked.
+    cy.get('[data-cy="promotion-create-kind"]').should('not.exist');
+    cy.get('[data-cy="gap-fill-date"] input').click();
+    cy.get('.p-datepicker-panel td span:not(.p-disabled)').last().click();
+    cy.get('[data-cy="promotion-create-confirm"]').click();
+
+    cy.wait('@create').then(({ request }) => {
+      expect(request.body).to.deep.include({
+        kind: 'stripe',
+        from_stripes: 0,
+        to_stripes: 1,
+        belt_at_event: 'blue',
+      });
+      // Inside the window: after the blue belt's day.
+      expect(request.body.recorded_at > '2026-09-01').to.equal(true);
+    });
+    cy.wait('@reload');
+    cy.get('[data-cy="promotion-gap-stripe:blue:1"]').should('not.exist');
+  });
+
+  it('skips the step, and brings it back from the toast', () => {
+    cy.intercept('POST', '/api/v1/athletes/1/promotion-skips', { statusCode: 201 }).as('skip');
+    cy.intercept('DELETE', '/api/v1/athletes/1/promotion-skips/blue/1', { statusCode: 204 }).as(
+      'unskip',
+    );
+
+    cy.visitAuthenticated('/dashboard/athletes/1/promotions');
+    cy.wait(['@academy', '@athlete', '@promotions']);
+
+    cy.intercept('GET', '/api/v1/athletes/1/promotions*', withGaps([])).as('afterSkip');
+    cy.get('[data-cy="gap-skip-stripe:blue:1"]').click();
+    cy.wait('@skip').its('request.body').should('deep.equal', { belt: 'blue', stripes: 1 });
+    cy.wait('@afterSkip');
+    cy.get('[data-cy="promotion-gap-stripe:blue:1"]').should('not.exist');
+
+    cy.intercept('GET', '/api/v1/athletes/1/promotions*', withGaps([firstBlueStripe])).as(
+      'afterUndo',
+    );
+    cy.get('[data-cy="promotion-skip-undo"]').click();
+    cy.wait('@unskip');
+    cy.wait('@afterUndo');
+    cy.get('[data-cy="promotion-gap-stripe:blue:1"]').should('be.visible');
+  });
+});

@@ -2431,7 +2431,8 @@
           "undatedStripesOne": "{{count}} grado, data non registrata",
           "undatedStripesOther": "{{count}} gradi, date non registrate",
           "gradeSince": "{{grade}} dal {{date}}",
-          "gradeUndated": "{{grade}}, data non registrata"
+          "gradeUndated": "{{grade}}, data non registrata",
+          "entryDay": "È la data d'inserimento in Budojo, non quella della promozione."
         },
         "prevPage": "Pagina precedente",
         "nextPage": "Pagina successiva",
@@ -2474,6 +2475,30 @@
           "deleteErrorDetail": "Impossibile eliminare questa promozione. Riprova.",
           "errorSummary": "Qualcosa è andato storto",
           "errorGeneric": "Impossibile aggiornare la data. Riprova."
+        },
+        "gap": {
+          "when": "Quando?",
+          "enteredOn": "In Budojo dal {{date}}",
+          "addDate": "Aggiungi la data",
+          "addDateAria": "Aggiungi la data: {{step}}",
+          "skip": "Saltato",
+          "skipBelt": "Saltata",
+          "skipped": "{{step}}: segnato come saltato",
+          "skipError": "Non è stato possibile segnarlo come saltato. Riprova.",
+          "undoError": "Non è stato possibile rimetterlo. Riprova.",
+          "undo": "Annulla",
+          "stepStripe": "{{belt}}, {{n}}° grado",
+          "stepGrade": "{{belt}}, {{grade}}",
+          "stepBelt": "cintura {{belt}}",
+          "titleStripe": "Quando ha preso il {{n}}° grado?",
+          "titleGrade": "Quando ha preso il {{grade}}?",
+          "titleBelt": "Quando ha preso la cintura {{belt}}?",
+          "window": "Tra il {{from}} e il {{to}}: fuori da qui il passaggio non starebbe al suo posto.",
+          "windowUntil": "Fino al {{to}}.",
+          "run": "{{total}} passaggi senza data",
+          "show": "Mostra",
+          "showAria": "Mostra i {{total}} passaggi senza data",
+          "before": "Prima del {{date}} la storia non è registrata."
         }
       },
       "attendance": {

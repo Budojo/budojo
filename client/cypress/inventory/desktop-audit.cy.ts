@@ -1113,6 +1113,98 @@ const PROMOTIONS_ONE = [
   },
 ];
 
+// The step between the white → blue row and blue's second stripe (#1966).
+const PROMOTION_GAP_BLUE_ONE = {
+  key: 'stripe:blue:1',
+  kind: 'stripe',
+  belt: 'blue',
+  from_belt: null,
+  from_stripes: 0,
+  to_stripes: 1,
+  after: { promotion_id: 8, recorded_at: '2025-12-20' },
+  before: { promotion_id: 9, recorded_at: '2026-06-15' },
+  completes_promotion_id: null,
+};
+
+/**
+ * A history entered the way most are (#1966): the opening row "→ blue",
+ * dated the day the athlete was entered, and one white stripe transcribed
+ * from paper. Missing: white's fourth stripe, the real blue day (which the
+ * opening row stands for), and blue's two stripes since.
+ */
+const PROMOTIONS_OPENING = [
+  {
+    id: 15,
+    kind: 'belt',
+    from_belt: null,
+    to_belt: 'blue',
+    from_stripes: null,
+    to_stripes: null,
+    belt_at_event: 'blue',
+    recorded_at: '2026-09-02T10:00:00+00:00',
+    recorded_by: { id: 1, full_name: 'Matteo Bonanno' },
+    is_opening: true,
+  },
+  {
+    id: 12,
+    kind: 'stripe',
+    from_belt: null,
+    to_belt: null,
+    from_stripes: 2,
+    to_stripes: 3,
+    belt_at_event: 'white',
+    recorded_at: '2024-03-12T10:00:00+00:00',
+    recorded_by: { id: 1, full_name: 'Matteo Bonanno' },
+  },
+];
+
+const PROMOTION_GAPS_OPENING = [
+  {
+    key: 'stripe:white:4',
+    kind: 'stripe',
+    belt: 'white',
+    from_belt: null,
+    from_stripes: 3,
+    to_stripes: 4,
+    after: { promotion_id: 12, recorded_at: '2024-03-12' },
+    before: { promotion_id: 15, recorded_at: '2026-09-02' },
+    completes_promotion_id: null,
+  },
+  {
+    key: 'belt:blue:0',
+    kind: 'belt',
+    belt: 'blue',
+    from_belt: 'white',
+    from_stripes: null,
+    to_stripes: null,
+    after: { promotion_id: 12, recorded_at: '2024-03-12' },
+    before: null,
+    completes_promotion_id: 15,
+  },
+  {
+    key: 'stripe:blue:1',
+    kind: 'stripe',
+    belt: 'blue',
+    from_belt: null,
+    from_stripes: 0,
+    to_stripes: 1,
+    after: { promotion_id: 15, recorded_at: '2026-09-02' },
+    before: null,
+    completes_promotion_id: null,
+  },
+  {
+    key: 'stripe:blue:2',
+    kind: 'stripe',
+    belt: 'blue',
+    from_belt: null,
+    from_stripes: 1,
+    to_stripes: 2,
+    after: { promotion_id: 15, recorded_at: '2026-09-02' },
+    before: null,
+    completes_promotion_id: null,
+  },
+];
+
 // ── Coverage ─────────────────────────────────────────────────────────────
 
 const ATHLETE_COVERAGE = {
@@ -1915,6 +2007,10 @@ function seed(): void {
         days_since_stripe: 91,
         sessions_since_stripe: 23,
       },
+      // Blue's first stripe was never recorded, and nothing before white's
+      // fourth (#1966): one ghost row, and the "not recorded" line.
+      gaps: [PROMOTION_GAP_BLUE_ONE],
+      history_starts_at: '2025-09-10',
     },
   });
   cy.intercept('GET', '/api/v1/athletes/*/syllabus-coverage*', {
@@ -2884,6 +2980,37 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
     },
   });
   screen('22-athlete-promotions', '/dashboard/athletes/1/promotions', DETAIL_READY);
+  // The opening row asking for its real date, and the steps around it (#1966).
+  screen('22-athlete-promotions-opening', '/dashboard/athletes/1/promotions', DETAIL_READY, {
+    stubs: () => {
+      cy.intercept('GET', '/api/v1/athletes/*/promotions*', {
+        statusCode: 200,
+        body: {
+          ...page(PROMOTIONS_OPENING),
+          progression: {
+            belt: 'blue',
+            stripes: 2,
+            belt_since: '2026-09-02',
+            days_at_belt: 12,
+            months_at_belt: 0,
+            sessions_at_belt: 4,
+            stripe_since: null,
+            days_since_stripe: null,
+            sessions_since_stripe: null,
+          },
+          gaps: PROMOTION_GAPS_OPENING,
+          history_starts_at: '2024-03-12',
+        },
+      });
+    },
+  });
+  // A missing step's one question: when (#1966).
+  screen('22-athlete-promotions-gap-fill', '/dashboard/athletes/1/promotions', DETAIL_READY, {
+    act: () => {
+      press('[data-cy="gap-add-date-stripe:blue:1"]');
+      dialogOpen('[data-cy="promotion-create-dialog"]');
+    },
+  });
   screen('22-athlete-promotions-dialog', '/dashboard/athletes/1/promotions', DETAIL_READY, {
     act: () => {
       press('[data-cy="promotions-add"]');

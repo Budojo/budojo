@@ -2431,7 +2431,8 @@
           "undatedStripesOne": "{{count}} stripe, date not recorded",
           "undatedStripesOther": "{{count}} stripes, dates not recorded",
           "gradeSince": "{{grade}} since {{date}}",
-          "gradeUndated": "{{grade}}, date not recorded"
+          "gradeUndated": "{{grade}}, date not recorded",
+          "entryDay": "That's the day they were entered in Budojo, not the day of the promotion."
         },
         "prevPage": "Previous page",
         "nextPage": "Next page",
@@ -2474,6 +2475,30 @@
           "deleteErrorDetail": "Couldn't delete this promotion. Try again.",
           "errorSummary": "Something went wrong",
           "errorGeneric": "Couldn't update the date. Try again."
+        },
+        "gap": {
+          "when": "When?",
+          "enteredOn": "In Budojo since {{date}}",
+          "addDate": "Add the date",
+          "addDateAria": "Add the date: {{step}}",
+          "skip": "Skipped",
+          "skipBelt": "Skipped",
+          "skipped": "{{step}}: marked as skipped",
+          "skipError": "It couldn't be marked as skipped. Try again.",
+          "undoError": "It couldn't be brought back. Try again.",
+          "undo": "Undo",
+          "stepStripe": "{{belt}}, stripe {{n}}",
+          "stepGrade": "{{belt}}, {{grade}}",
+          "stepBelt": "{{belt}} belt",
+          "titleStripe": "When did they get stripe {{n}}?",
+          "titleGrade": "When did they reach {{grade}}?",
+          "titleBelt": "When did they get the {{belt}} belt?",
+          "window": "Between {{from}} and {{to}}: outside it, this step wouldn't fit the history.",
+          "windowUntil": "Up to {{to}}.",
+          "run": "{{total}} steps with no date",
+          "show": "Show",
+          "showAria": "Show the {{total}} steps with no date",
+          "before": "Before {{date}} the history isn't recorded."
         }
       },
       "attendance": {
