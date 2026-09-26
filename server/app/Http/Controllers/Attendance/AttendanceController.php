@@ -184,9 +184,9 @@ class AttendanceController extends Controller
     /**
      * Per-athlete attendance summary over the last N days (#893) or a
      * calendar month (#1769). Cached for 5 min per athlete and window, under
-     * a version the academy's closures and schedule bump
-     * (`AttendanceSummaryCache`), so a change to the denominator is read at
-     * once.
+     * a version per academy (`AttendanceSummaryCache`) that a closure, a
+     * schedule row, a presence or a corrected joining date bumps, so a change
+     * to either number is read at once.
      */
     public function athleteSummary(AthleteAttendanceSummaryRequest $request, Athlete $athlete): JsonResponse
     {

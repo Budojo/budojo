@@ -328,3 +328,19 @@ it('forgets the cached answers when the training days change, twice on the same 
     $this->patchJson('/api/v1/academy', ['training_days' => [1, 3, 5]])->assertOk();
     expect(summaryOf($this, $mario, 'month=2026-05')['expected_count'])->toBe(9);
 });
+
+it('forgets the cached answers when the joining date is corrected', function (): void {
+    $user = summaryAcademyOwner();
+    $mario = Athlete::factory()->for($user->academy)->create(['joined_at' => '2025-01-01']);
+    Sanctum::actingAs($user);
+    Cache::flush();
+    expect(summaryOf($this, $mario, 'month=2026-05')['expected_count'])->toBe(9);
+
+    // Joined on Monday the 11th after all: 11, 13, 15, 18, 20.
+    $mario->update(['joined_at' => '2026-05-11']);
+
+    expect(summaryOf($this, $mario, 'month=2026-05'))->toMatchArray([
+        'window_start' => '2026-05-11',
+        'expected_count' => 5,
+    ]);
+});

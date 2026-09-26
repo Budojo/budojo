@@ -6406,9 +6406,9 @@ paths:
         `expected_count` is 0. `series` has one entry per scheduled day, plus
         any other day the athlete trained, oldest first.
 
-        Cached for 5 minutes per athlete and window, under a version the
-        academy's closures and schedule bump, so a change to the denominator
-        is read at once.
+        Cached for 5 minutes per athlete and window, under a version per
+        academy that a closure, a schedule row, a presence or a corrected
+        `joined_at` bumps, so any change to either number is read at once.
       operationId: attendanceAthleteSummary
       parameters:
         - name: athlete
@@ -6438,11 +6438,12 @@ paths:
                 properties:
                   data:
                     type: object
-                    required: [range_days, range_start, range_end, attended_count, expected_count, rate, series]
+                    required: [range_days, range_start, range_end, window_start, attended_count, expected_count, rate, series]
                     properties:
                       range_days: { type: integer, minimum: 1, description: '30, 90 or 365, or the days in the month.' }
                       range_start: { type: string, format: date }
                       range_end: { type: string, format: date, description: The window's last day; a month's last day even while it is running. }
+                      window_start: { type: string, format: date, description: 'Where this athlete''s window begins: the joining day, or the first presence if earlier, never before range_start. No day before it is counted.' }
                       attended_count: { type: integer, minimum: 0 }
                       expected_count: { type: integer, minimum: 0, nullable: true, description: Scheduled days in the window; null when no schedule was ever configured. }
                       rate:

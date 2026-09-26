@@ -10,6 +10,7 @@ use App\Enums\Belt;
 use App\Enums\DocumentType;
 use App\Observers\AthleteObserver;
 use App\Observers\Audit\AthleteAuditObserver;
+use App\Observers\ForgetsAttendanceSummaries;
 use Carbon\CarbonInterface;
 use Database\Factories\AthleteFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -56,7 +57,7 @@ use Illuminate\Support\Facades\Storage;
  * @property-read string|null        $last_attended_on       The latest live presence (#1726), selected as a `withMax` alias on the roster index and on show. Null when they never trained; the resource omits the key where the query did not ask.
  */
 #[Fillable(['academy_id', 'fee_tier_id', 'billing_period_months', 'user_id', 'is_self', 'first_name', 'last_name', 'email', 'phone_country_code', 'phone_national_number', 'website', 'facebook', 'instagram', 'date_of_birth', 'belt', 'stripes', 'status', 'joined_at'])]
-#[ObservedBy([AthleteObserver::class, AthleteAuditObserver::class])]
+#[ObservedBy([AthleteObserver::class, AthleteAuditObserver::class, ForgetsAttendanceSummaries::class])]
 class Athlete extends Model implements HasAddress
 {
     /** @use HasFactory<AthleteFactory> */
