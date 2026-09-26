@@ -841,14 +841,62 @@ const ATHLETE_SUMMARY = (() => {
   };
 })();
 
+/**
+ * The month summary (#1767): each row carries its own denominator, the
+ * sessions from 1 September (or the day that athlete joined) to TODAY on
+ * Mon/Wed/Fri/Sat — eight, and five for Francesca, who joined on the 7th.
+ */
 const ATTENDANCE_SUMMARY = [
-  { athlete_id: 3, first_name: 'Matteo', last_name: 'Bonanno', count: 6, athlete: identityOf(3) },
-  { athlete_id: 1, first_name: 'Giulia', last_name: 'Ferraro', count: 5, athlete: identityOf(1) },
-  { athlete_id: 2, first_name: 'Luca', last_name: 'Moretti', count: 4, athlete: identityOf(2) },
-  { athlete_id: 4, first_name: 'Sara', last_name: 'Colombo', count: 3, athlete: identityOf(4) },
-  { athlete_id: 6, first_name: 'Elena', last_name: 'Russo', count: 2, athlete: identityOf(6) },
-  { athlete_id: 8, first_name: 'Francesca', last_name: 'Marino', count: 2, athlete: identityOf(8) },
+  {
+    athlete_id: 3,
+    first_name: 'Matteo',
+    last_name: 'Bonanno',
+    count: 6,
+    expected_count: 8,
+    athlete: identityOf(3),
+  },
+  {
+    athlete_id: 1,
+    first_name: 'Giulia',
+    last_name: 'Ferraro',
+    count: 5,
+    expected_count: 8,
+    athlete: identityOf(1),
+  },
+  {
+    athlete_id: 2,
+    first_name: 'Luca',
+    last_name: 'Moretti',
+    count: 4,
+    expected_count: 8,
+    athlete: identityOf(2),
+  },
+  {
+    athlete_id: 4,
+    first_name: 'Sara',
+    last_name: 'Colombo',
+    count: 3,
+    expected_count: 8,
+    athlete: identityOf(4),
+  },
+  {
+    athlete_id: 6,
+    first_name: 'Elena',
+    last_name: 'Russo',
+    count: 2,
+    expected_count: 8,
+    athlete: identityOf(6),
+  },
+  {
+    athlete_id: 8,
+    first_name: 'Francesca',
+    last_name: 'Marino',
+    count: 2,
+    expected_count: 5,
+    athlete: identityOf(8),
+  },
 ];
+const ATTENDANCE_SUMMARY_META = { training_days: 8, month: '2026-09' };
 
 const LEADERBOARD = {
   data: [
@@ -1809,7 +1857,7 @@ function seed(): void {
   });
   cy.intercept('GET', '/api/v1/attendance/summary*', {
     statusCode: 200,
-    body: { data: ATTENDANCE_SUMMARY },
+    body: { data: ATTENDANCE_SUMMARY, meta: ATTENDANCE_SUMMARY_META },
   });
   cy.intercept('GET', '/api/v1/attendance/leaderboard*', { statusCode: 200, body: LEADERBOARD });
   cy.intercept('GET', '/api/v1/attendance/regulars*', { statusCode: 200, body: REGULARS_TONIGHT });
@@ -2966,7 +3014,10 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
     stubs: () => {
       cy.intercept('GET', '/api/v1/athletes*', EMPTY_PAGE);
       cy.intercept('GET', '/api/v1/attendance*', NO_DATA);
-      cy.intercept('GET', '/api/v1/attendance/summary*', NO_DATA);
+      cy.intercept('GET', '/api/v1/attendance/summary*', {
+        statusCode: 200,
+        body: { data: [], meta: ATTENDANCE_SUMMARY_META },
+      });
       cy.intercept('GET', '/api/v1/attendance/leaderboard*', {
         statusCode: 200,
         body: { data: [], meta: { month: '2026-09' } },

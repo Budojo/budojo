@@ -40,7 +40,15 @@ export interface AttendanceSummaryRow {
   athlete_id: number;
   first_name: string;
   last_name: string;
+  /** Distinct days trained this month (#1765). */
   count: number;
+  /**
+   * This athlete's denominator (#1767): the days the academy was scheduled
+   * to train in the month from the day they joined, closures out, capped at
+   * today. Computed on the server; null when no schedule was ever
+   * configured, which hides the fraction. Zero is a real zero.
+   */
+  expected_count: number | null;
   /**
    * The person behind the count (#1851), so the row is drawn with the belt
    * spine like every other list of people. Null only when the athlete could
@@ -107,8 +115,18 @@ interface AttendanceListResponse {
   data: AttendanceRecord[];
 }
 
+/**
+ * The month summary (#1767): the rows, and the academy's own scheduled-day
+ * count for the header, which is deliberately no row's denominator.
+ */
+export interface MonthlySummary {
+  rows: AttendanceSummaryRow[];
+  trainingDays: number | null;
+}
+
 interface AttendanceSummaryResponse {
   data: AttendanceSummaryRow[];
+  meta: { training_days: number | null; month: string };
 }
 
 /**
@@ -305,10 +323,10 @@ export class AttendanceService {
    * Per-month aggregate count, one row per athlete who trained that
    * month. Used by the M4.4 dashboard summary widget.
    */
-  getMonthlySummary(month: string): Observable<AttendanceSummaryRow[]> {
+  getMonthlySummary(month: string): Observable<MonthlySummary> {
     const params = new HttpParams().set('month', month);
     return this.http
       .get<AttendanceSummaryResponse>(`${this.base}/summary`, { params })
-      .pipe(map((res) => res.data));
+      .pipe(map((res) => ({ rows: res.data, trainingDays: res.meta.training_days })));
   }
 }

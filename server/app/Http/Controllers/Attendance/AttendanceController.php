@@ -228,7 +228,9 @@ class AttendanceController extends Controller
         }
 
         $monthInput = $request->string('month')->toString();
-        $month = CarbonImmutable::createFromFormat('Y-m', $monthInput);
+        // `!` zeroes the unparsed fields: without it the day comes from today,
+        // and on the 31st "2026-02" is 31 February, which is March.
+        $month = CarbonImmutable::createFromFormat('!Y-m', $monthInput);
         if (! $month instanceof CarbonImmutable) {
             // Shouldn't reach here — the FormRequest's regex rule catches
             // malformed input first. Defensive fallback kept so a future
@@ -236,7 +238,7 @@ class AttendanceController extends Controller
             return response()->json(['message' => 'Invalid month.'], 422);
         }
 
-        $rows = $this->summaryAction->execute($academy, $month);
+        ['rows' => $rows, 'meta' => $meta] = $this->summaryAction->execute($academy, $month);
 
         // Each row also carries the person's identity (#1851), so the page
         // draws it with the belt like every other list of people. Additive:
@@ -251,7 +253,7 @@ class AttendanceController extends Controller
             ];
         });
 
-        return response()->json(['data' => $data]);
+        return response()->json(['data' => $data, 'meta' => $meta]);
     }
 
     /**

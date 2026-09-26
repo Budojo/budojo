@@ -6,7 +6,6 @@ import { Subject } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 import { MonthlySummaryComponent } from './monthly-summary.component';
-import { AcademyService } from '../../../core/services/academy.service';
 import { AttendanceSummaryRow } from '../../../core/services/attendance.service';
 
 function makeRow(
@@ -15,7 +14,19 @@ function makeRow(
   first = `First${id}`,
   last = `Last${id}`,
 ): AttendanceSummaryRow {
-  return { athlete_id: id, first_name: first, last_name: last, count, athlete: null };
+  return {
+    athlete_id: id,
+    first_name: first,
+    last_name: last,
+    count,
+    expected_count: null,
+    athlete: null,
+  };
+}
+
+/** The envelope's `meta` (#1767): the academy's scheduled days for the header. */
+function meta(trainingDays: number | null, month = '2026-04') {
+  return { training_days: trainingDays, month };
 }
 
 function withIdentity(row: AttendanceSummaryRow): AttendanceSummaryRow {
@@ -85,7 +96,7 @@ describe('MonthlySummaryComponent', () => {
 
     http
       .expectOne('/api/v1/attendance/summary?month=2026-04')
-      .flush({ data: [makeRow(1, 5), makeRow(2, 3)] });
+      .flush({ meta: meta(null), data: [makeRow(1, 5), makeRow(2, 3)] });
 
     expect(fixture.componentInstance['rows']()).toHaveLength(2);
     http.verify();
@@ -97,7 +108,9 @@ describe('MonthlySummaryComponent', () => {
     fixture.detectChanges();
     setMonthParam('2026-02');
 
-    http.expectOne('/api/v1/attendance/summary?month=2026-02').flush({ data: [] });
+    http
+      .expectOne('/api/v1/attendance/summary?month=2026-02')
+      .flush({ meta: meta(null), data: [] });
     expect(fixture.componentInstance['visible']()).toEqual({ year: 2026, month: 2 });
     http.verify();
   });
@@ -119,7 +132,9 @@ describe('MonthlySummaryComponent', () => {
 
     // Simulate the navigate emitting the corrected query param.
     setMonthParam('2026-04');
-    http.expectOne('/api/v1/attendance/summary?month=2026-04').flush({ data: [] });
+    http
+      .expectOne('/api/v1/attendance/summary?month=2026-04')
+      .flush({ meta: meta(null), data: [] });
     expect(fixture.componentInstance['visible']()).toEqual({ year: 2026, month: 4 });
     http.verify();
   });
@@ -132,7 +147,7 @@ describe('MonthlySummaryComponent', () => {
 
     http
       .expectOne('/api/v1/attendance/summary?month=2026-04')
-      .flush({ data: [makeRow(1, 3), makeRow(2, 9), makeRow(3, 6)] });
+      .flush({ meta: meta(null), data: [makeRow(1, 3), makeRow(2, 9), makeRow(3, 6)] });
 
     expect(fixture.componentInstance['displayRows']().map((r) => r.athlete_id)).toEqual([2, 3, 1]);
     http.verify();
@@ -146,7 +161,7 @@ describe('MonthlySummaryComponent', () => {
 
     http
       .expectOne('/api/v1/attendance/summary?month=2026-04')
-      .flush({ data: [makeRow(1, 3), makeRow(2, 9), makeRow(3, 6)] });
+      .flush({ meta: meta(null), data: [makeRow(1, 3), makeRow(2, 9), makeRow(3, 6)] });
 
     fixture.componentInstance['cycleDaysSort']();
     expect(fixture.componentInstance['displayRows']().map((r) => r.athlete_id)).toEqual([1, 3, 2]);
@@ -167,6 +182,7 @@ describe('MonthlySummaryComponent', () => {
     // Three Marios — the case the primary key cannot decide on its own, and
     // the one every fixture above happens to avoid.
     http.expectOne('/api/v1/attendance/summary?month=2026-04').flush({
+      meta: meta(null),
       data: [
         makeRow(1, 5, 'Mario', 'Rossi'),
         makeRow(2, 3, 'Mario', 'Bianchi'),
@@ -193,6 +209,7 @@ describe('MonthlySummaryComponent', () => {
     setMonthParam(null);
 
     http.expectOne('/api/v1/attendance/summary?month=2026-04').flush({
+      meta: meta(null),
       data: [
         makeRow(1, 4, 'Mario', 'Rossi'),
         makeRow(2, 4, 'Luigi', 'Bianchi'),
@@ -218,6 +235,7 @@ describe('MonthlySummaryComponent', () => {
     setMonthParam(null);
 
     http.expectOne('/api/v1/attendance/summary?month=2026-04').flush({
+      meta: meta(null),
       data: [
         makeRow(1, 5, 'Mario', 'Rossi'),
         makeRow(2, 3, 'Luigi', 'Bianchi'),
@@ -259,6 +277,7 @@ describe('MonthlySummaryComponent', () => {
     setMonthParam(null);
 
     http.expectOne('/api/v1/attendance/summary?month=2026-04').flush({
+      meta: meta(null),
       data: [
         makeRow(1, 5, 'Mario', 'Rossi'),
         makeRow(2, 3, 'Marco', 'Bianchi'),
@@ -280,6 +299,7 @@ describe('MonthlySummaryComponent', () => {
     setMonthParam(null);
 
     http.expectOne('/api/v1/attendance/summary?month=2026-04').flush({
+      meta: meta(null),
       data: [
         makeRow(1, 5, 'Mario', 'Rossi'),
         makeRow(2, 3, 'Luigi', 'Verdi'),
@@ -298,7 +318,9 @@ describe('MonthlySummaryComponent', () => {
     fixture.detectChanges();
     setMonthParam(null);
 
-    http.expectOne('/api/v1/attendance/summary?month=2026-04').flush({ data: [] });
+    http
+      .expectOne('/api/v1/attendance/summary?month=2026-04')
+      .flush({ meta: meta(null), data: [] });
     expect(fixture.componentInstance['canGoNext']()).toBe(false);
 
     fixture.componentInstance.prevMonth();
@@ -308,7 +330,9 @@ describe('MonthlySummaryComponent', () => {
 
     // Simulate the URL emitting after navigate resolves.
     setMonthParam('2026-03');
-    http.expectOne('/api/v1/attendance/summary?month=2026-03').flush({ data: [] });
+    http
+      .expectOne('/api/v1/attendance/summary?month=2026-03')
+      .flush({ meta: meta(null), data: [] });
     expect(fixture.componentInstance['canGoNext']()).toBe(true);
     http.verify();
   });
@@ -319,15 +343,17 @@ describe('MonthlySummaryComponent', () => {
     fixture.detectChanges();
     setMonthParam(null);
 
-    http.expectOne('/api/v1/attendance/summary?month=2026-04').flush({ data: [] });
+    http
+      .expectOne('/api/v1/attendance/summary?month=2026-04')
+      .flush({ meta: meta(null), data: [] });
 
     setMonthParam('2026-03');
     const marchReq = http.expectOne('/api/v1/attendance/summary?month=2026-03');
     setMonthParam('2026-02');
     const februaryReq = http.expectOne('/api/v1/attendance/summary?month=2026-02');
 
-    februaryReq.flush({ data: [makeRow(99, 4)] });
-    marchReq.flush({ data: [makeRow(88, 9)] });
+    februaryReq.flush({ meta: meta(null), data: [makeRow(99, 4)] });
+    marchReq.flush({ meta: meta(null), data: [makeRow(88, 9)] });
 
     expect(fixture.componentInstance['rows']().some((r) => r.athlete_id === 99)).toBe(true);
     expect(fixture.componentInstance['rows']().some((r) => r.athlete_id === 88)).toBe(false);
@@ -349,53 +375,48 @@ describe('MonthlySummaryComponent', () => {
     http.verify();
   });
 
-  // ─── Scheduled denominator (#88b) ───────────────────────────────────────────
+  // ─── The denominator is the server's (#1767) ─────────────────────────────────
+  // No academy is loaded in any of these: the page must not need one to divide.
 
-  it('exposes scheduledCount + per-row ratePercent when academy.training_days is configured', () => {
+  it("divides each row by that athlete's own expected count", () => {
     const { http, setMonthParam } = setupTestBed();
-    // System time Apr 15 2026. Schedule [2, 4, 6] = Tue/Thu/Sat.
-    // April Tue/Thu/Sat through Apr 15: 6 sessions held.
-    TestBed.inject(AcademyService).academy.set({
-      id: 1,
-      name: 'Test',
-      slug: 'test',
-      address: null,
-      logo_url: null,
-      training_days: [2, 4, 6],
+    const fixture = TestBed.createComponent(MonthlySummaryComponent);
+    fixture.detectChanges();
+    setMonthParam(null);
+
+    // A newcomer who joined on the 20th has three sessions to be measured by.
+    http.expectOne('/api/v1/attendance/summary?month=2026-04').flush({
+      meta: meta(6),
+      data: [
+        { ...makeRow(1, 4), expected_count: 6 },
+        { ...makeRow(2, 2), expected_count: 3 },
+      ],
     });
+    fixture.detectChanges();
+
+    const rows = fixture.componentInstance['rows']();
+    expect(fixture.componentInstance.ratePercent(rows[0])).toBe(67);
+    expect(fixture.componentInstance.ratePercent(rows[1])).toBe(67);
+    const cell = fixture.nativeElement.querySelector(
+      '[data-cy="monthly-summary-mobile-row-2"] .summary-card__count',
+    ) as HTMLElement;
+    expect(cell.textContent?.replace(/\s+/g, ' ').trim()).toBe('2 / 3 · 67%');
+    http.verify();
+  });
+
+  it('shows bare counts when the server sends no denominator', () => {
+    const { http, setMonthParam } = setupTestBed();
     const fixture = TestBed.createComponent(MonthlySummaryComponent);
     fixture.detectChanges();
     setMonthParam(null);
 
     http
       .expectOne('/api/v1/attendance/summary?month=2026-04')
-      .flush({ data: [makeRow(1, 4), makeRow(2, 6)] });
+      .flush({ meta: meta(null), data: [makeRow(1, 5)] });
 
-    expect(fixture.componentInstance['scheduledCount']()).toBe(6);
-    // 4/6 → 67%, 6/6 → 100%.
-    expect(fixture.componentInstance.ratePercent(4)).toBe(67);
-    expect(fixture.componentInstance.ratePercent(6)).toBe(100);
-    http.verify();
-  });
-
-  it('returns null counters when training_days is unconfigured (rows fall back to bare count)', () => {
-    const { http, setMonthParam } = setupTestBed();
-    TestBed.inject(AcademyService).academy.set({
-      id: 1,
-      name: 'Test',
-      slug: 'test',
-      address: null,
-      logo_url: null,
-      training_days: null,
-    });
-    const fixture = TestBed.createComponent(MonthlySummaryComponent);
-    fixture.detectChanges();
-    setMonthParam(null);
-
-    http.expectOne('/api/v1/attendance/summary?month=2026-04').flush({ data: [makeRow(1, 5)] });
-
-    expect(fixture.componentInstance['scheduledCount']()).toBeNull();
-    expect(fixture.componentInstance.ratePercent(5)).toBeNull();
+    const row = fixture.componentInstance['rows']()[0];
+    expect(fixture.componentInstance.ratePercent(row)).toBeNull();
+    expect(fixture.componentInstance['noDenominator']()).toBe(true);
     http.verify();
   });
 
@@ -403,20 +424,16 @@ describe('MonthlySummaryComponent', () => {
 
   it('calls the presences presences, and the days the days', () => {
     const { http, setMonthParam } = setupTestBed();
-    TestBed.inject(AcademyService).academy.set({
-      id: 1,
-      name: 'Test',
-      slug: 'test',
-      address: null,
-      logo_url: null,
-      training_days: [2, 4, 6],
-    });
     const fixture = TestBed.createComponent(MonthlySummaryComponent);
     fixture.detectChanges();
     setMonthParam(null);
-    http
-      .expectOne('/api/v1/attendance/summary?month=2026-04')
-      .flush({ data: [makeRow(1, 4), makeRow(2, 6)] });
+    http.expectOne('/api/v1/attendance/summary?month=2026-04').flush({
+      meta: meta(6),
+      data: [
+        { ...makeRow(1, 4), expected_count: 6 },
+        { ...makeRow(2, 6), expected_count: 6 },
+      ],
+    });
     fixture.detectChanges();
 
     // Ten presences across two athletes, over six sessions actually held.
@@ -433,22 +450,14 @@ describe('MonthlySummaryComponent', () => {
     // header would have read "5 presenze · 1 atleta · 0 giorni di
     // allenamento" beside rows with no fraction.
     const { http, setMonthParam } = setupTestBed();
-    TestBed.inject(AcademyService).academy.set({
-      id: 1,
-      name: 'Test',
-      slug: 'test',
-      address: null,
-      logo_url: null,
-      training_days: [2, 4, 6],
-      schedules: [{ effective_from: '2026-06-01', training_days: [2, 4, 6] }],
-    } as never);
     const fixture = TestBed.createComponent(MonthlySummaryComponent);
     fixture.detectChanges();
     setMonthParam('2026-01');
-    http.expectOne('/api/v1/attendance/summary?month=2026-01').flush({ data: [makeRow(1, 5)] });
+    http
+      .expectOne('/api/v1/attendance/summary?month=2026-01')
+      .flush({ meta: meta(0, '2026-01'), data: [{ ...makeRow(1, 5), expected_count: 0 }] });
     fixture.detectChanges();
 
-    expect(fixture.componentInstance['scheduledCount']()).toBe(0);
     expect(fixture.componentInstance['summaryCountLabel']()).not.toContain('0 training days');
     expect(
       fixture.nativeElement.querySelector('[data-cy="monthly-summary-no-schedule"]'),
@@ -458,18 +467,12 @@ describe('MonthlySummaryComponent', () => {
 
   it('drops the day segment and says why when the month has no timetable', () => {
     const { http, setMonthParam } = setupTestBed();
-    TestBed.inject(AcademyService).academy.set({
-      id: 1,
-      name: 'Test',
-      slug: 'test',
-      address: null,
-      logo_url: null,
-      training_days: null,
-    });
     const fixture = TestBed.createComponent(MonthlySummaryComponent);
     fixture.detectChanges();
     setMonthParam(null);
-    http.expectOne('/api/v1/attendance/summary?month=2026-04').flush({ data: [makeRow(1, 5)] });
+    http
+      .expectOne('/api/v1/attendance/summary?month=2026-04')
+      .flush({ meta: meta(null), data: [makeRow(1, 5)] });
     fixture.detectChanges();
 
     expect(fixture.componentInstance['summaryCountLabel']()).not.toContain('training day');
@@ -484,7 +487,9 @@ describe('MonthlySummaryComponent', () => {
     const fixture = TestBed.createComponent(MonthlySummaryComponent);
     fixture.detectChanges();
     setMonthParam(null);
-    http.expectOne('/api/v1/attendance/summary?month=2026-04').flush({ data: [makeRow(1, 5)] });
+    http
+      .expectOne('/api/v1/attendance/summary?month=2026-04')
+      .flush({ meta: meta(null), data: [makeRow(1, 5)] });
     fixture.detectChanges();
 
     const method = fixture.nativeElement.querySelector(
@@ -495,6 +500,8 @@ describe('MonthlySummaryComponent', () => {
     // days too (#1765), so the fold explains them rather than opposing them.
     expect(method.textContent).toContain("an attendance is one athlete's day of training");
     expect(method.textContent).not.toContain('not the presences');
+    // Each athlete from the day they joined, as the server divides (#1767).
+    expect(method.textContent).toContain('from the day they joined');
     http.verify();
   });
 
@@ -503,7 +510,9 @@ describe('MonthlySummaryComponent', () => {
     const fixture = TestBed.createComponent(MonthlySummaryComponent);
     fixture.detectChanges();
     setMonthParam(null);
-    http.expectOne('/api/v1/attendance/summary?month=2026-04').flush({ data: [makeRow(1, 5)] });
+    http
+      .expectOne('/api/v1/attendance/summary?month=2026-04')
+      .flush({ meta: meta(null), data: [makeRow(1, 5)] });
     fixture.detectChanges();
 
     const fold = (): HTMLDetailsElement | null =>
@@ -518,7 +527,9 @@ describe('MonthlySummaryComponent', () => {
     expect(fold()).toBe(opened);
     expect(fold()?.open).toBe(true);
 
-    http.expectOne('/api/v1/attendance/summary?month=2026-03').flush({ data: [makeRow(2, 3)] });
+    http
+      .expectOne('/api/v1/attendance/summary?month=2026-03')
+      .flush({ meta: meta(null), data: [makeRow(2, 3)] });
     fixture.detectChanges();
     expect(fold()).toBe(opened);
     expect(fold()?.open).toBe(true);
@@ -530,7 +541,9 @@ describe('MonthlySummaryComponent', () => {
     const fixture = TestBed.createComponent(MonthlySummaryComponent);
     fixture.detectChanges();
     setMonthParam(null);
-    http.expectOne('/api/v1/attendance/summary?month=2026-04').flush({ data: [] });
+    http
+      .expectOne('/api/v1/attendance/summary?month=2026-04')
+      .flush({ meta: meta(null), data: [] });
     fixture.detectChanges();
 
     expect(fixture.nativeElement.querySelector('[data-cy="monthly-summary-method"]')).toBeNull();
@@ -557,7 +570,9 @@ describe('MonthlySummaryComponent', () => {
     fixture.detectChanges();
     queryParams.next(convertToParamMap({}));
 
-    http.expectOne('/api/v1/attendance/summary?month=2026-04').flush({ data: [makeRow(7, 3)] });
+    http
+      .expectOne('/api/v1/attendance/summary?month=2026-04')
+      .flush({ meta: meta(null), data: [makeRow(7, 3)] });
     fixture.detectChanges();
 
     const link = fixture.nativeElement.querySelector(
@@ -592,7 +607,7 @@ describe('MonthlySummaryComponent', () => {
 
     http
       .expectOne('/api/v1/attendance/summary?month=2026-04')
-      .flush({ data: [withIdentity(makeRow(7, 3, 'Anna', 'Bianchi'))] });
+      .flush({ meta: meta(null), data: [withIdentity(makeRow(7, 3, 'Anna', 'Bianchi'))] });
     fixture.detectChanges();
 
     const root = fixture.nativeElement as HTMLElement;
