@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
+use App\Support\OperatorDay;
 use App\Enums\AttendanceSource;
 use App\Models\Athlete;
 use App\Models\AttendanceRecord;
@@ -25,7 +26,7 @@ class AttendanceRecordFactory extends Factory
             'athlete_id' => Athlete::factory(),
             // Default: a random date in the last 30 days, so tests exercising
             // "recent attendance" don't need to pick dates by hand.
-            'attended_on' => now()->subDays($this->faker->numberBetween(0, 30))->toDateString(),
+            'attended_on' => OperatorDay::today()->subDays($this->faker->numberBetween(0, 30))->toDateString(),
             'notes' => null,
             'source' => AttendanceSource::Instructor,
         ];
