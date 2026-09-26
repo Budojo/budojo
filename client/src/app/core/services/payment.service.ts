@@ -41,9 +41,10 @@ export interface AthletePayment {
   /** What was actually handed over — the fee times the months covered. */
   readonly amount_cents: number;
   /**
-   * When the money arrived (#1761) — a business date the owner may set, the
-   * start of that day. Never the month the payment is for: that is `year` /
-   * `month`.
+   * When the money arrived (#1761): the start of the day the owner chose, or —
+   * when they chose none, and on every row before #1761 — the moment it was
+   * recorded. Read it as a date, never a time. Never the month the payment is
+   * for: that is `year` / `month`.
    */
   readonly paid_at: string;
   /**

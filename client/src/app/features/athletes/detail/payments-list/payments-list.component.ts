@@ -47,6 +47,35 @@ import { AcademyService } from '../../../../core/services/academy.service';
 const MARK_PAID_CONFIRM_KEY = 'mark-paid';
 
 /**
+ * What a 422 on marking a month paid means, by the field the server blamed —
+ * first match wins.
+ *
+ * A 422 meant one thing for a long time, "no fee configured", and every new
+ * field the endpoint grew fell through to that sentence: a period clash
+ * (#1382), a year out of range, then a refused date (#1761) — each on an
+ * academy whose fee was fine. So the fee message now has to be *earned* by
+ * its own field.
+ */
+const VALIDATION_TOAST_KEYS: readonly (readonly [field: string, key: string])[] = [
+  ['period_months', 'athletes.detail.payments.toast.errorOverlap'],
+  ['year', 'athletes.detail.payments.toast.errorYear'],
+  ['paid_at', 'athletes.detail.payments.toast.errorPaidOn'],
+  ['monthly_fee_cents', 'athletes.detail.payments.toast.errorMissingFee'],
+];
+
+function validationToastKey(fields: Record<string, unknown>): string {
+  const match = VALIDATION_TOAST_KEYS.find(([field]) => field in fields);
+  if (match !== undefined) return match[1];
+
+  // No field named at all is the oldest shape of the missing-fee answer; a
+  // field with no sentence of its own gets one that blames nothing it cannot
+  // see.
+  return Object.keys(fields).length === 0
+    ? 'athletes.detail.payments.toast.errorMissingFee'
+    : 'athletes.detail.payments.toast.errorInvalid';
+}
+
+/**
  * Per-athlete payments tab on the detail page (#182 Surface 2).
  * Renders a 12-row table of the current calendar year, one row per
  * month, showing whether a payment row exists. Inline "Mark paid" /
@@ -616,21 +645,10 @@ export class PaymentsListComponent implements OnInit {
         });
       },
       error: (err: { status?: number; error?: { errors?: Record<string, unknown> } }) => {
-        // A 422 has meant one thing for a long time — "no fee configured" —
-        // and since #1382 it can also mean "a period already covers that
-        // month". Read which field the server complained about rather than
-        // showing a message that is flatly untrue half the time.
-        const fields = err.error?.errors ?? {};
         const detail = this.translate.instant(
           err.status !== 422
             ? 'athletes.detail.payments.toast.errorGeneric'
-            : 'period_months' in fields
-              ? 'athletes.detail.payments.toast.errorOverlap'
-              : // A year outside the server's window used to fall through to
-                // "set a monthly fee first", on an academy that has one.
-                'year' in fields
-                ? 'athletes.detail.payments.toast.errorYear'
-                : 'athletes.detail.payments.toast.errorMissingFee',
+            : validationToastKey(err.error?.errors ?? {}),
         );
         this.messageService.add({
           severity: 'error',

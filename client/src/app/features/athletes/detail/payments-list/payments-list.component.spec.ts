@@ -612,6 +612,24 @@ describe('PaymentsListComponent — the 422 that is not about the fee (#1382)', 
     expect(toastDetailFor({ monthly_fee_cents: ['missing'] })).toContain('monthly fee');
   });
 
+  it('blames the date when the date was refused, not the fee (#1761)', () => {
+    // The academy has a fee; "set a monthly fee first" would send the owner
+    // to a setting that is already right.
+    const detail = toastDetailFor({
+      paid_at: ['The paid at field must be a date before or equal to today.'],
+    });
+
+    expect(detail).toContain('later than today');
+    expect(detail).not.toContain('monthly fee');
+  });
+
+  it('says what it knows for a field it has no sentence for, and never blames the fee', () => {
+    const detail = toastDetailFor({ payment_method: ['The selected payment method is invalid.'] });
+
+    expect(detail).toContain("wasn't accepted");
+    expect(detail).not.toContain('monthly fee');
+  });
+
   // ─── A way to another year (#1636, PAY-1) ────────────────────────────────
 
   // Frozen in FEBRUARY 2027 on purpose, and consistent with the fixture's

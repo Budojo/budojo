@@ -2305,7 +2305,9 @@
           "errorGeneric": "Couldn't update the payment. Please try again.",
           "loadErrorDetail": "Couldn't load payments.",
           "errorOverlap": "That month is already covered by another payment.",
-          "errorYear": "That year is outside the range payments can be recorded for."
+          "errorYear": "That year is outside the range payments can be recorded for.",
+          "errorPaidOn": "The date the money arrived can't be later than today.",
+          "errorInvalid": "Something you entered wasn't accepted. Check it and try again."
         },
         "title": "Payments — {{year}}",
         "noFeeHint": "Set a monthly fee on the academy to start recording payments. Until then this page stays read-only.",

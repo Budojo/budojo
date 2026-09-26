@@ -10977,9 +10977,11 @@ components:
           type: string
           format: date-time
           description: |
-            When the money arrived (#1761) — the start of that day, UTC. A
-            business date the owner may set (September's fee handed over on
-            3 October); today when not sent. It is the transaction's date,
+            When the money arrived (#1761). A business date the owner may set
+            (September's fee handed over on 3 October), stored as the start of
+            that day, UTC. When none is sent — and on every row before #1761 —
+            it is the moment the payment was recorded. Read it as a date, not a
+            time. It is the transaction's date,
             **never** the month the revenue belongs to: that is `year` /
             `month` / `period_months`, and `GET /stats/payments/monthly`
             buckets by them.

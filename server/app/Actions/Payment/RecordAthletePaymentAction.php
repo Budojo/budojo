@@ -50,7 +50,8 @@ class RecordAthletePaymentAction
      * other observers.
      *
      * `$paidAt` is the day the money arrived (#1761), stored as the start of
-     * that day; null is today. It is the transaction's date, **never** the
+     * that day; null records the moment of the call, as every row before
+     * #1761 did. It is the transaction's date, **never** the
      * month the revenue belongs to — `(year, month)` and the period decide
      * that, and the chart buckets by them. Like `$method`, it goes in the
      * *values* of `createOrFirst`, not the keys: a re-post of the same month
