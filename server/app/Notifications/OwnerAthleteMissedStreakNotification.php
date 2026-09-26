@@ -63,6 +63,10 @@ class OwnerAthleteMissedStreakNotification extends Notification
             'kind' => 'owner_athlete_missed_streak',
             'athlete_id' => $this->athlete->id,
             'consecutive' => $this->consecutive,
+            // What `NotificationText` writes the sentence from, in the
+            // owner's language (#1912). `title` and `body` stay as the
+            // fallback for a reader that does not know the kind.
+            'params' => ['name' => $athleteName, 'count' => $this->consecutive],
         ];
     }
 }

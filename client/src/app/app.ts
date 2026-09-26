@@ -6,6 +6,7 @@ import { DesktopBridgeService } from './core/services/desktop-bridge.service';
 import { LanguageService } from './core/services/language.service';
 import { RuntimeService } from './core/services/runtime.service';
 import { ThemeService } from './core/services/theme.service';
+import { LocaleSyncService } from './core/services/locale-sync.service';
 import { VersionCheckService } from './core/services/version-check.service';
 import { CookieBannerComponent } from './features/cookie-banner/cookie-banner.component';
 import { NotificationOnboardingDialogComponent } from './shared/components/notification-onboarding-dialog/notification-onboarding-dialog.component';
@@ -31,6 +32,9 @@ export class App implements OnInit {
   private readonly versionCheckService = inject(VersionCheckService);
   private readonly runtimeService = inject(RuntimeService);
   private readonly themeService = inject(ThemeService);
+  // Constructed for its effect: it keeps the server told which language the
+  // owner's notifications are written in (#1912).
+  private readonly localeSync = inject(LocaleSyncService);
 
   /**
    * Exposed to the template for the consent banner's gate (#1508). Defaults

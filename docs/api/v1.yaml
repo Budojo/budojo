@@ -1026,6 +1026,46 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationError'
 
+  /me/locale:
+    patch:
+      tags: [auth]
+      summary: Set the language the server writes this user's notifications in
+      description: |
+        The app's language (#1912), sent by the SPA whenever its language
+        switch changes, and once when a signed-in user loads with a language
+        the server has not heard. The server writes the owner's
+        notifications itself — the inbox (`GET /me/notifications`) and the
+        desktop's Windows notification — in this language. Echoes it back.
+      operationId: meLocaleUpdate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [locale]
+              properties:
+                locale:
+                  $ref: '#/components/schemas/AppLocale'
+      responses:
+        '200':
+          description: The language, as stored.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [locale]
+                    properties:
+                      locale:
+                        $ref: '#/components/schemas/AppLocale'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          description: Missing, or a language the app does not speak.
   /me/notifications:
     get:
       tags: [auth]
@@ -1036,12 +1076,10 @@ paths:
         user (`ORDER BY created_at DESC LIMIT 20`) plus an unread
         count for the badge.
 
-        **Population is deferred** — the inbox surface ships here;
-        wiring the existing reminder Actions (medical-cert expiry
-        digest, unpaid-athletes monthly digest) to ALSO call
-        `$user->notify(...)` alongside their email channel is a
-        focused follow-up. Today the `notifications` table is empty
-        in production until that follow-up lands.
+        `title` and `body` are written at read time in the user's
+        `locale` (#1912) from the row's stored parameters, for the
+        owner's alerts and digests; any other row returns the sentence
+        it was stored with.
       operationId: meNotificationsIndex
       responses:
         '200':
@@ -8575,6 +8613,12 @@ components:
           description: Plain-text Sanctum Bearer token. Returned once, never again.
           example: "1|aBc123XyZ..."
 
+    AppLocale:
+      type: string
+      enum: [en, it]
+      description: |
+        A language the app speaks (#1912), as the SPA's language switch names
+        it. The `App\Enums\AppLocale` PHP enum.
     User:
       type: object
       required: [id, first_name, last_name, full_name, handle, email, email_verified_at, avatar_url, deletion_pending]
@@ -8664,6 +8708,14 @@ components:
             scheduled_for:
               type: string
               format: date-time
+        locale:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/AppLocale'
+          description: |
+            The language the server writes this user's notifications in
+            (#1912). `null` until the SPA has sent it with
+            `PATCH /me/locale`; the server then writes in English.
 
     # ── Academy ───────────────────────────────────────────────────────────
 

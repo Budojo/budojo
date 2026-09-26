@@ -49,6 +49,12 @@ export interface User {
    * always emits it.
    */
   role?: UserRole;
+  /**
+   * The language the server writes this user's notifications in (#1912),
+   * kept in step with the app's language switch by `LocaleSyncService`.
+   * Null until the SPA has sent it. Optional for fixtures that predate it.
+   */
+  locale?: 'en' | 'it' | null;
   /** ISO-8601 timestamp; null until the user clicks the verify link. */
   email_verified_at: string | null;
   /**

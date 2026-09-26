@@ -141,14 +141,16 @@ it('lists owner notifications newer than the watermark, oldest first, as JSON', 
     $rows = json_decode(Artisan::output(), true, 512, JSON_THROW_ON_ERROR);
 
     expect($rows)->toHaveCount(1)
-        ->and($rows[0]['title'])->toBe('1 athlete has not paid this month')
+        // Written from the row's parameters in the owner's language (#1912),
+        // English for an owner who never chose one.
+        ->and($rows[0]['title'])->toBe("1 athlete hasn't paid August's fee yet")
         ->and($rows[0]['link'])->toBe('/dashboard/athletes?paid=no')
         ->and($rows[0]['created_at'])->toBe('2026-08-15T09:10:00+00:00')
         ->and($rows[0]['id'])->toBeString();
 
     Artisan::call('budojo:list-desktop-notifications', ['--after' => '2026-08-15T08:00:00+00:00']);
     $all = json_decode(Artisan::output(), true, 512, JSON_THROW_ON_ERROR);
-    expect(array_column($all, 'title'))->toBe(['A medical certificate is expiring', '1 athlete has not paid this month']);
+    expect(array_column($all, 'title'))->toBe(['A medical certificate is expiring', "1 athlete hasn't paid August's fee yet"]);
 });
 
 it('excludes athlete-side rows and rows without a title', function (): void {

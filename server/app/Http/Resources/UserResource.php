@@ -64,6 +64,9 @@ class UserResource extends JsonResource
             'attendance_peer_visible' => $user->attendance_peer_visible,
             'email' => $user->email,
             'role' => $user->role->value,
+            // The language the server writes this user's notifications in
+            // (#1912); null until the SPA has sent it.
+            'locale' => $user->locale?->value,
             'email_verified_at' => $user->email_verified_at?->toIso8601String(),
             // Avatar (#411). Always emit the FULL URL, never the on-disk
             // path — the Resource is the API boundary, downstream consumers

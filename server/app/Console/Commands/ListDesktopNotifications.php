@@ -6,6 +6,7 @@ namespace App\Console\Commands;
 
 use App\Enums\UserRole;
 use App\Models\User;
+use App\Support\NotificationText;
 use Illuminate\Console\Command;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Carbon;
@@ -55,17 +56,25 @@ class ListDesktopNotifications extends Command
             ->limit($limit)
             ->get();
 
+        // Each owner's language, for the sentences written from `params`
+        // (#1912): the Windows notification says what the inbox says.
+        $locales = User::query()
+            ->whereIn('id', $rows->pluck('notifiable_id')->unique())
+            ->get(['id', 'locale'])
+            ->mapWithKeys(static fn (User $user): array => [$user->id => $user->locale->value ?? 'en']);
+
         $payload = $rows
-            ->map(static function (DatabaseNotification $row): array {
+            ->map(static function (DatabaseNotification $row) use ($locales): array {
                 /** @var array<string, mixed> $data */
                 $data = $row->data;
                 $text = static fn (string $key): string => \is_string($data[$key] ?? null) ? $data[$key] : '';
+                $sentence = NotificationText::of($data, $locales->get($row->notifiable_id, 'en'));
 
                 return [
                     'id' => $row->id,
                     'created_at' => $row->created_at?->toIso8601String(),
-                    'title' => $text('title'),
-                    'body' => $text('body'),
+                    'title' => $sentence['title'],
+                    'body' => $sentence['body'],
                     'link' => $text('link'),
                     'kind' => $text('kind'),
                 ];
