@@ -265,9 +265,13 @@ final class PromotionGaps
         $belt = $row->belt();
         $here = $this->ladder->climbPosition($state['belt']);
         $there = $this->ladder->climbPosition($belt);
-        if ($here === null || $there === null || $here >= $there) {
-            // Already on it or past it: the walk to an earlier row stepped in.
+        if ($here === null || $there === null || $here > $there) {
             return [[], $state, $enteredOn];
+        }
+        if ($here === $there) {
+            // Already on it: a row typed in before this one stepped in. The
+            // stripes on it are still the ones held on arrival.
+            return [[], $state, $belt];
         }
 
         $walk = $this->walk($state, $enteredOn, ['type' => 'entering', 'belt' => $belt, 'stripes' => 0], $row->recordedAt);

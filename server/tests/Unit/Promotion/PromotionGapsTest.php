@@ -277,6 +277,20 @@ it('takes the stripes Jacopo was entered with as held on arrival, whatever came 
         ->and($result['gaps'][1]['before'])->toBeNull();
 });
 
+it('holds the stripes on arrival even when an older row on that belt was typed in before the starting row', function (): void {
+    $result = gapsOf([
+        stripeRow(12, Belt::White, 2, 3, '2024-03-12'),
+        beltRow(15, null, Belt::Blue, '2026-01-10'),
+        stripeRow(20, Belt::Blue, 0, 1, '2025-02-01'),
+    ], Belt::Blue, 3);
+
+    expect(keysOf($result))->toBe(['stripe:white:4', 'belt:blue:0'])
+        ->and(array_column($result['gaps'], 'before'))->toBe([
+            ['promotion_id' => 20, 'recorded_at' => '2025-02-01'],
+            ['promotion_id' => 20, 'recorded_at' => '2025-02-01'],
+        ]);
+});
+
 it('never offers a belt the history already has a row for', function (): void {
     // A white stripe backfilled after the day he was entered on blue: the
     // history contradicts itself, and no blue belt is offered to fix it.
@@ -363,6 +377,7 @@ it('can never be led into a second row on a belt, whatever the order and the dat
 })->with([
     'Jacopo, blue' => [[stripeRow(12, Belt::White, 2, 3, '2024-03-12'), beltRow(15, null, Belt::Blue, '2026-09-26 10:00:00')], Belt::Blue, 0, MartialArt::Bjj],
     'Jacopo, blue with two stripes' => [[stripeRow(12, Belt::White, 2, 3, '2024-03-12'), beltRow(15, null, Belt::Blue, '2026-09-26 10:00:00')], Belt::Blue, 2, MartialArt::Bjj],
+    'a blue stripe typed in before the starting row' => [[stripeRow(12, Belt::White, 2, 3, '2024-03-12'), beltRow(15, null, Belt::Blue, '2026-01-10'), stripeRow(20, Belt::Blue, 0, 1, '2025-02-01')], Belt::Blue, 3, MartialArt::Bjj],
     'a starting row out of order' => [[beltRow(1, null, Belt::White, '2015-01-01'), beltRow(15, null, Belt::Blue, '2026-01-10'), stripeRow(20, Belt::Blue, 0, 1, '2020-05-01')], Belt::Blue, 1, MartialArt::Bjj],
     'imported on purple, one white stripe known' => [[stripeRow(3, Belt::White, 0, 1, '2016-02-01'), beltRow(9, null, Belt::Purple, '2026-09-01')], Belt::Purple, 2, MartialArt::Bjj],
     'a judoka imported on black' => [[beltRow(1, Belt::White, Belt::Yellow, '2005-01-01'), beltRow(9, null, Belt::Black, '2026-09-01')], Belt::Black, 1, MartialArt::Judo],
