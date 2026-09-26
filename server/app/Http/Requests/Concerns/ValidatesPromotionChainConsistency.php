@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Concerns;
 
+use App\Actions\Promotion\GetPromotionGapsAction;
 use App\Models\Athlete;
 use App\Models\AthletePromotion;
+use App\Support\Promotion\PromotionGaps;
+use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Contracts\Validation\Validator;
 
@@ -34,6 +37,14 @@ use Illuminate\Contracts\Validation\Validator;
  * that side — that is the legitimate "earliest/latest known event of this
  * kind" case, most commonly an athlete who joined already holding a belt
  * or stripe count Budojo never generated a row for.
+ *
+ * **A row that fills a gap exactly is consistent by construction (#1966).**
+ * The gaps are the steps the ladder walks through between the rows that
+ * exist, so one of them, dated inside its window, cannot contradict its
+ * neighbours — even where this narrower check would say otherwise: the
+ * first stripe on a new belt after the old belt's stripes, or the middle of
+ * three missing stripes filled before its neighbours. Anything else is
+ * checked exactly as before.
  */
 trait ValidatesPromotionChainConsistency
 {
@@ -54,17 +65,41 @@ trait ValidatesPromotionChainConsistency
             return; // the shape rule on `recorded_at` already failed separately
         }
 
+        $fields = $this->only(['kind', 'from_belt', 'to_belt', 'from_stripes', 'to_stripes', 'belt_at_event']);
+        if ($this->fillsAGap($athlete, $fields, $recordedAt)) {
+            return;
+        }
+
         $kind === 'belt'
-            ? $this->validateBeltChain($validator, $athlete, $recordedAt)
+            ? $this->validateBeltChain($validator, $athlete, $recordedAt, $this->input('from_belt'), $this->input('to_belt'))
             : $this->validateStripeChain($validator, $athlete, $recordedAt);
     }
 
-    private function validateBeltChain(Validator $validator, Athlete $athlete, CarbonInterface $recordedAt): void
+    /**
+     * Whether this row is exactly one of the athlete's missing steps, dated
+     * inside its window ({@see PromotionGaps::admits()}).
+     *
+     * @param array<string, mixed> $fields
+     */
+    protected function fillsAGap(Athlete $athlete, array $fields, CarbonInterface $recordedAt): bool
     {
-        $fromBelt = $this->input('from_belt');
-        $toBelt = $this->input('to_belt');
+        $gaps = app(GetPromotionGapsAction::class)->execute($athlete)['gaps'];
 
-        $previous = $this->neighbour($athlete, 'belt', $recordedAt, earlier: true);
+        return PromotionGaps::admits($gaps, $fields, $recordedAt->toDateString(), CarbonImmutable::today());
+    }
+
+    /**
+     * @param int|null $editing the row being edited, which is never its own neighbour
+     */
+    protected function validateBeltChain(
+        Validator $validator,
+        Athlete $athlete,
+        CarbonInterface $recordedAt,
+        mixed $fromBelt,
+        mixed $toBelt,
+        ?int $editing = null,
+    ): void {
+        $previous = $this->neighbour($athlete, 'belt', $recordedAt, earlier: true, editing: $editing);
         if ($previous !== null && $fromBelt !== $previous->to_belt?->value) {
             $validator->errors()->add(
                 'from_belt',
@@ -72,7 +107,7 @@ trait ValidatesPromotionChainConsistency
             );
         }
 
-        $next = $this->neighbour($athlete, 'belt', $recordedAt, earlier: false);
+        $next = $this->neighbour($athlete, 'belt', $recordedAt, earlier: false, editing: $editing);
         // A later row with no `from_belt` is a starting point — every timeline
         // opens with one (#1771). It says which belt was held that day and
         // nothing about how, so it constrains nothing before it: a paper
@@ -126,7 +161,7 @@ trait ValidatesPromotionChainConsistency
      * this, a live row from later the same day would wrongly compare as
      * "after" a same-day backfill instead of sharing its day.
      */
-    private function neighbour(Athlete $athlete, string $kind, CarbonInterface $recordedAt, bool $earlier): ?AthletePromotion
+    private function neighbour(Athlete $athlete, string $kind, CarbonInterface $recordedAt, bool $earlier, ?int $editing = null): ?AthletePromotion
     {
         // `Athlete::promotions()` bakes in its own `recorded_at DESC, id
         // DESC` default order for the read-timeline use case. `orderBy()`
@@ -135,7 +170,8 @@ trait ValidatesPromotionChainConsistency
         // would never actually take effect — id is unique, so the
         // inherited DESC pair alone would always decide the row, handing
         // back the FARTHEST future row instead of the nearest one.
-        $query = $athlete->promotions()->reorder()->where('kind', $kind);
+        $query = $athlete->promotions()->reorder()->where('kind', $kind)
+            ->when($editing !== null, static fn ($q) => $q->whereKeyNot($editing));
         $day = $recordedAt->toDateString();
 
         return $earlier

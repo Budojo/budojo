@@ -8,7 +8,7 @@ use App\Enums\AthleteStatus;
 use App\Models\Academy;
 use App\Models\Athlete;
 use App\Support\AthleteIdentity;
-use App\Support\MartialArt\FederationAge;
+use App\Support\MartialArt\KidsEligibility;
 use App\Support\MartialArt\MartialArtProfile;
 use App\Support\MartialArt\RankLadder;
 use Carbon\CarbonImmutable;
@@ -38,7 +38,7 @@ use Carbon\CarbonImmutable;
  * **The next step comes from the academy's ladder**
  * ({@see RankLadder::nextStep()}), in the order people climb it: a BJJ child
  * goes from white through grey to green, and on to blue. Kids' grades are
- * offered only to a child ({@see self::isKidsEligible()}).
+ * offered only to a child ({@see KidsEligibility}).
  */
 class GetPromotionCandidatesAction
 {
@@ -107,7 +107,7 @@ class GetPromotionCandidatesAction
         $next = $profile->ladder()->nextStep(
             $athlete->belt,
             $athlete->stripes,
-            $this->isKidsEligible($athlete, $profile, $trainsKids),
+            KidsEligibility::of($athlete, $profile, $trainsKids, $athlete->belt, CarbonImmutable::now()),
         );
 
         return [
@@ -120,23 +120,5 @@ class GetPromotionCandidatesAction
             'sessions_since_last_promotion' => $sinceStripe ? $p['sessions_since_stripe'] : $p['sessions_at_belt'],
             'next' => $next === null ? null : [...$next, 'belt' => $next['belt']->value],
         ];
-    }
-
-    /**
-     * Whether the kids' grades are this athlete's to climb. A known date of
-     * birth decides by the art's adult divisions, and counts only where the
-     * academy trains kids or the athlete is already on a kids' grade (#1651).
-     * An unknown one reads the belt: on a kids' grade, a child; otherwise an
-     * adult.
-     */
-    private function isKidsEligible(Athlete $athlete, MartialArtProfile $profile, bool $trainsKids): bool
-    {
-        $onKidsGrade = $profile->ladder()->isKidsGrade($athlete->belt);
-        if ($athlete->date_of_birth === null) {
-            return $onKidsGrade;
-        }
-
-        return ($trainsKids || $onKidsGrade)
-            && ! $profile->isAdultAge(FederationAge::of($athlete->date_of_birth, CarbonImmutable::now()));
     }
 }

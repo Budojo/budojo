@@ -359,6 +359,17 @@ class Athlete extends Model implements HasAddress
     }
 
     /**
+     * The steps the owner said this athlete never took (#1966), so the
+     * promotion timeline stops offering them as missing.
+     *
+     * @return HasMany<AthletePromotionSkip, $this>
+     */
+    public function promotionSkips(): HasMany
+    {
+        return $this->hasMany(AthletePromotionSkip::class);
+    }
+
+    /**
      * Polymorphic address (#72b). Same shape and same enforcement as Academy:
      * `morphOne` is read-side, the 1:1 invariant is carried by the UNIQUE
      * index on `(addressable_type, addressable_id)` plus

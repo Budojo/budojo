@@ -6342,6 +6342,24 @@ paths:
 
         Academy-scoped: caller must own the athlete's academy or
         the response is a canonical 403 envelope.
+
+        **The missing steps ride along (#1966).** `gaps` lists, oldest
+        first, the steps the history does not record: the academy's ladder
+        walked from each row to the next, and from the last row to the
+        belt and stripes the athlete holds today, with the same climbing
+        rule and kids' rule as `GET /promotions/candidates`. Computed over
+        the whole history, not the page. Nothing is reported before the
+        first row, for an interval the ladder cannot walk, for the stripes
+        an athlete was entered with, or for a step the owner skipped
+        (`POST /athletes/{athlete}/promotion-skips`).
+
+        A gap is filled with the existing backfill (`POST` below) carrying
+        exactly its fields and a date in its window
+        `(after.recorded_at, before.recorded_at]` — up to today when
+        `before` is null — and such a fill is never refused by the chain
+        check. A gap with `completes_promotion_id` is the belt a starting
+        row stands for: it is completed with `PATCH …/promotions/{id}`
+        (`from_belt` + the real date), never added as a second row.
       operationId: athletePromotionHistory
       parameters:
         - name: athlete
@@ -6359,13 +6377,21 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [data, meta, progression]
+                required: [data, meta, progression, gaps, history_starts_at]
                 properties:
                   data:
                     type: array
                     items: { $ref: '#/components/schemas/AthletePromotion' }
                   meta: { $ref: '#/components/schemas/PaginationMeta' }
                   progression: { $ref: '#/components/schemas/AthleteProgression' }
+                  gaps:
+                    type: array
+                    items: { $ref: '#/components/schemas/PromotionGap' }
+                  history_starts_at:
+                    type: string
+                    format: date
+                    nullable: true
+                    description: The date of the earliest row; null when there are none.
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '403':
           description: Athlete is not in the authenticated academy.
@@ -6398,6 +6424,12 @@ paths:
         timeline opens with one (#1771) — and constrains nothing before it:
         it says which belt was held that day, not how. So a register can be
         entered oldest-first, or left incomplete, beneath it.
+
+        A row that is exactly one of the `gaps` the history reports, dated
+        inside its window, skips the chain check (#1966): it is consistent
+        by construction, including where the same-kind check alone would
+        refuse it — the first stripe on a new belt after the old belt's
+        stripes, or the middle one of several missing stripes filled first.
 
         `belt_at_event` is not accepted for `kind=belt` — it always equals
         `to_belt` and is derived server-side.
@@ -6448,6 +6480,15 @@ paths:
         Writes straight to the row; never touches the athlete's current
         `belt` or `stripes`, so it cannot fire the `AthleteObserver` or spawn
         another promotion row. `recorded_at` may not be set in the future.
+
+        **Completing a starting row (#1966).** `from_belt` is accepted only
+        while the row's own `from_belt` is null — the row a timeline opens
+        with, dated the day the athlete was entered. It sets the belt they
+        came from along with the real date, so "on this belt since" moves
+        off the data-entry day. Anywhere else, or equal to the row's
+        `to_belt`, it is a 422 on `from_belt`. It must fit the belt rows
+        around it (the row itself excluded), unless it is exactly the gap
+        with `completes_promotion_id` for this row, dated in its window.
 
         403 when the promotion does not belong to the athlete in the path.
       operationId: athletePromotionUpdateRecordedAt
@@ -6522,6 +6563,79 @@ paths:
               example: { message: Forbidden. }
         '404':
           $ref: '#/components/responses/NotFound'
+
+  /athletes/{athlete}/promotion-skips:
+    post:
+      tags: [athletes]
+      summary: Say a missing promotion step never happened (#1966)
+      description: |
+        "Saltato" on a ghost row: the step leading to `belt` + `stripes` is
+        not missing, it was never taken — a BJJ white belt promoted to blue
+        from three stripes. The matching gap stops being reported in
+        `GET /athletes/{athlete}/promotions`. Idempotent: a second call
+        returns 201 without a second row.
+      operationId: athletePromotionSkipCreate
+      parameters:
+        - name: athlete
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PromotionSkipRequest' }
+      responses:
+        '201':
+          description: The step is recorded as skipped.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/PromotionSkipRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403':
+          description: Athlete is not in the authenticated academy.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorMessage' }
+              example: { message: Forbidden. }
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /athletes/{athlete}/promotion-skips/{belt}/{stripes}:
+    delete:
+      tags: [athletes]
+      summary: Undo a skipped promotion step (#1966)
+      description: |
+        The undo of "Saltato": the gap is reported again. Idempotent — 204
+        whether or not the skip existed.
+      operationId: athletePromotionSkipDelete
+      parameters:
+        - name: athlete
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+        - name: belt
+          in: path
+          required: true
+          schema: { $ref: '#/components/schemas/Belt' }
+        - name: stripes
+          in: path
+          required: true
+          schema: { type: integer, minimum: 0, maximum: 10 }
+      responses:
+        '204':
+          description: The step is no longer skipped.
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403':
+          description: Athlete is not in the authenticated academy.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorMessage' }
+              example: { message: Forbidden. }
 
   /athletes/{athlete}/attendance:
     get:
@@ -8638,10 +8752,13 @@ components:
         belt-badge context on stripe rows without joining back to the
         (possibly belt-changed-since) athlete. `recorded_by` is
         nullable as a defensive guard against hard-deleted User rows.
-      required: [id, kind, from_belt, to_belt, from_stripes, to_stripes, belt_at_event, recorded_at, recorded_by]
+      required: [id, kind, from_belt, to_belt, from_stripes, to_stripes, belt_at_event, is_opening, recorded_at, recorded_by]
       properties:
         id: { type: integer, format: int64 }
         kind: { type: string, enum: [belt, stripe] }
+        is_opening:
+          type: boolean
+          description: A starting row — `kind = belt` with no `from_belt` (#1966).
         from_belt:
           allOf:
             - $ref: '#/components/schemas/Belt'
@@ -11173,6 +11290,62 @@ components:
           description: |
             Date-only, matching the timeline's display precision. Must not be
             in the future — a promotion can't be recorded ahead of today.
+        from_belt:
+          allOf:
+            - $ref: '#/components/schemas/Belt'
+          description: |
+            Only on a starting row (`from_belt: null`, #1966): the belt the
+            athlete came from. Refused with a 422 on any other row.
+
+    PromotionGap:
+      type: object
+      description: |
+        A step the athlete's promotion history does not record (#1966).
+        `key` is `<kind>:<belt>:<stripes after the step>` and identifies it.
+        `belt` is the belt a stripe step is on, or the belt a belt step
+        reaches. `after` / `before` are the nearest recorded rows either side;
+        the fill's date goes in `(after.recorded_at, before.recorded_at]`,
+        up to today when `before` is null. `completes_promotion_id` names
+        the starting row this belt step completes (PATCH it, don't POST).
+      required: [key, kind, belt, from_belt, from_stripes, to_stripes, after, before, completes_promotion_id]
+      properties:
+        key: { type: string, example: 'stripe:white:4' }
+        kind: { type: string, enum: [belt, stripe] }
+        belt: { $ref: '#/components/schemas/Belt' }
+        from_belt:
+          allOf:
+            - $ref: '#/components/schemas/Belt'
+          nullable: true
+          description: The belt a belt step leaves; null on a stripe step.
+        from_stripes: { type: integer, minimum: 0, maximum: 10, nullable: true }
+        to_stripes: { type: integer, minimum: 0, maximum: 10, nullable: true }
+        after:
+          allOf:
+            - $ref: '#/components/schemas/PromotionGapNeighbour'
+          nullable: true
+        before:
+          allOf:
+            - $ref: '#/components/schemas/PromotionGapNeighbour'
+          nullable: true
+        completes_promotion_id: { type: integer, format: int64, nullable: true }
+
+    PromotionGapNeighbour:
+      type: object
+      required: [promotion_id, recorded_at]
+      properties:
+        promotion_id: { type: integer, format: int64 }
+        recorded_at: { type: string, format: date }
+
+    PromotionSkipRequest:
+      type: object
+      required: [belt, stripes]
+      description: |
+        The grade the skipped step would have led to — a gap's `belt` and
+        its `to_stripes` (0 for a belt step, or the count a poom carries
+        into its dan). Judged against the academy's ladder.
+      properties:
+        belt: { $ref: '#/components/schemas/Belt' }
+        stripes: { type: integer, minimum: 0, maximum: 10 }
 
     AthletePromotionCreateRequest:
       type: object
