@@ -126,9 +126,9 @@ final class NotificationText
                 return null;
             }
             $expiresOn = $document['expires_on'] ?? null;
-            // ISO only: a date Carbon cannot parse would take the whole inbox
-            // down with it, not just this row.
-            $lines[] = \is_string($expiresOn) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $expiresOn) === 1
+            // A real ISO date only: one Carbon cannot parse would take the
+            // whole inbox down with it, not just this row.
+            $lines[] = \is_string($expiresOn) && self::isIsoDate($expiresOn)
                 ? self::line('notifications.document_expires', [
                     'name' => $document['name'],
                     'date' => self::dateIn(CarbonImmutable::parse($expiresOn), 'j F Y', $locale),
@@ -164,6 +164,12 @@ final class NotificationText
         return $more > 0
             ? self::line('notifications.names_and_more', ['names' => $shown, 'more' => (string) $more], $locale)
             : $shown;
+    }
+
+    private static function isIsoDate(string $value): bool
+    {
+        return preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $value, $m) === 1
+            && checkdate((int) $m[2], (int) $m[3], (int) $m[1]);
     }
 
     /** "settembre", "1 ottobre 2026": month names in the reader's language. */
