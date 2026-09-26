@@ -24,8 +24,9 @@ use Illuminate\Support\Facades\Notification;
 
 beforeEach(function (): void {
     Notification::fake();
-    // A Wednesday. The academy trains Mon/Wed/Fri, so the last three training
-    // days are Wed 16th, Mon 14th and Fri 11th.
+    // A Wednesday. The academy trains Mon/Wed/Fri, and today does not count
+    // (the evening's session has not happened), so the last three training
+    // days are Mon 14th, Fri 11th and Wed 9th.
     Carbon::setTestNow('2026-09-16 20:00:00');
 });
 
@@ -102,8 +103,8 @@ it('says nothing about someone who joined after the streak began', function (): 
     Athlete::factory()->create([
         'academy_id' => $academy->id,
         'status' => AthleteStatus::Active,
-        // After Friday the 11th, the oldest day in the window: they were not
-        // on the roster when those sessions happened.
+        // After Wednesday the 9th, the oldest day in the window: they were
+        // not on the roster when those sessions happened.
         'joined_at' => '2026-09-15',
         'user_id' => null,
     ]);
@@ -115,13 +116,16 @@ it('says nothing about someone who joined after the streak began', function (): 
 
 it('walks the schedule in force on each day, not today\'s', function (): void {
     // Tue/Thu from Tuesday 15th. The last three training days are then Tue
-    // 15th (new schedule), Mon 14th and Fri 11th (old) — not Tue 15th, Thu
-    // 10th and Tue 8th, which is what today's snapshot alone would say.
+    // 15th (new schedule), Mon 14th and Fri 11th (old). Today's snapshot
+    // alone would say Tue 15th, Thu 10th and Tue 8th; the old schedule alone,
+    // Mon 14th, Fri 11th and Wed 9th. The athlete came on the 10th and the
+    // 9th, so only the right streak finds three misses.
     $academy = academyTrainingMonWedFri();
     $academy->schedules()->create(['training_days' => [2, 4], 'effective_from' => '2026-09-15']);
     $academy->update(['training_days' => [2, 4]]);
     $athlete = athleteJoinedLongAgo($academy);
     AttendanceRecord::factory()->create(['athlete_id' => $athlete->id, 'attended_on' => '2026-09-10']);
+    AttendanceRecord::factory()->create(['athlete_id' => $athlete->id, 'attended_on' => '2026-09-09']);
 
     $this->artisan(SendAthleteMissedStreakPushes::class)->assertSuccessful();
 
@@ -130,6 +134,19 @@ it('walks the schedule in force on each day, not today\'s', function (): void {
 
 it('says nothing for an academy whose schedule was never configured', function (): void {
     $academy = academyTrainingMonWedFri([]);
+    athleteJoinedLongAgo($academy);
+
+    $this->artisan(SendAthleteMissedStreakPushes::class)->assertSuccessful();
+
+    Notification::assertNothingSent();
+});
+
+it('says nothing while the schedule is paused, about the sessions before the pause', function (): void {
+    // Mon/Wed/Fri until August, then not configured. The last three scheduled
+    // days are at the end of July: missing them says nothing about now.
+    $academy = academyTrainingMonWedFri();
+    $academy->schedules()->create(['training_days' => null, 'effective_from' => '2026-08-01']);
+    $academy->update(['training_days' => null]);
     athleteJoinedLongAgo($academy);
 
     $this->artisan(SendAthleteMissedStreakPushes::class)->assertSuccessful();

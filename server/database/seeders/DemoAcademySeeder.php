@@ -52,6 +52,16 @@ class DemoAcademySeeder extends Seeder
             ])->save();
         }
 
+        // The history every scheduled-days reader uses (#1764), backdated like
+        // the #1094 backfill: the column alone leaves the seeded past with no
+        // schedule, so the demo would read as never configured. Three years
+        // covers every seeded joining date and the attendance window.
+        $academy->schedules()->delete();
+        $academy->schedules()->create([
+            'training_days' => $academy->training_days,
+            'effective_from' => Carbon::today()->subYears(3)->toDateString(),
+        ]);
+
         // Address (#72) lives on a polymorphic relation now, so it's seeded
         // through the dedicated upsert action — same code path the API uses.
         app(SyncAddressAction::class)->execute($academy, $fixture->academyAddress);

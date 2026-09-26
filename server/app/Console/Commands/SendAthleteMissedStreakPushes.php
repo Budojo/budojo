@@ -27,7 +27,8 @@ use Illuminate\Support\Facades\Log;
  *   for each academy:
  *       streak_dates = the last 3 scheduled days before today, each read
  *                      against the schedule in force on it (ScheduledDays)
- *       fewer than 3 → skip the academy (not configured, or too new)
+ *       fewer than 3, or older than 30 days → skip the academy (not
+ *                      configured, too new, or paused)
  *       for each active athlete:
  *           if attendance is present for ALL streak_dates → skip
  *           if attendance is absent for ALL streak_dates →
@@ -41,6 +42,14 @@ class SendAthleteMissedStreakPushes extends Command
 {
     private const int STREAK_LENGTH = 3;
     private const int RENOTIFY_AFTER_DAYS = 14;
+
+    /**
+     * How far back the streak may reach. Thirty days holds three sessions even
+     * for an academy that trains weekly; a streak older than that is about a
+     * schedule that stopped (a pause, a not-configured period), not about the
+     * athlete, and warning about it would repeat every fortnight of the pause.
+     */
+    private const int STREAK_REACH_DAYS = 30;
 
     /** @var string */
     protected $signature = 'budojo:send-athlete-missed-streak-pushes';
@@ -83,6 +92,9 @@ class SendAthleteMissedStreakPushes extends Command
         $streakDates = ScheduledDays::lastBefore($academy, $today->toImmutable(), self::STREAK_LENGTH);
         if (\count($streakDates) < self::STREAK_LENGTH) {
             return; // Not configured, or too newly: not enough history.
+        }
+        if ($streakDates[self::STREAK_LENGTH - 1] < $today->copy()->subDays(self::STREAK_REACH_DAYS)->toDateString()) {
+            return; // Paused: the last sessions are too long ago to be news.
         }
 
         $owner = $academy->owner;
