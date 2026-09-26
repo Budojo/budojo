@@ -781,8 +781,8 @@ describe('BackupComponent', () => {
       await settled(fixture);
 
       expect(fixture.nativeElement.querySelectorAll('.backup-page__row')).toHaveLength(5);
-      const toggle = (): HTMLButtonElement | null | undefined =>
-        el(fixture, 'backup-show-all')?.querySelector('button');
+      const toggle = (): HTMLButtonElement | null =>
+        el(fixture, 'backup-show-all') as HTMLButtonElement | null;
       expect(toggle()?.textContent).toContain('Show all (7)');
 
       const pressed = toggle();
@@ -795,6 +795,9 @@ describe('BackupComponent', () => {
       // removed itself would drop a keyboard user onto the page.
       expect(toggle()?.textContent).toContain('Show fewer');
       expect(document.activeElement).toBe(pressed);
+      // The state is on the control that has focus, where a screen reader hears it.
+      expect(toggle()?.getAttribute('aria-expanded')).toBe('true');
+      expect(toggle()?.getAttribute('aria-controls')).toBe('backup-list');
 
       toggle()?.click();
       fixture.detectChanges();

@@ -262,7 +262,7 @@
   } @else if (rows().length === 0) {
     <p class="backup-page__muted" data-cy="backup-empty">{{ 'backup.empty' | translate }}</p>
   } @else {
-    <ul class="backup-page__list" data-cy="backup-list">
+    <ul id="backup-list" class="backup-page__list" data-cy="backup-list">
       @for (archive of visibleRows(); track archive.name; let first = $first) {
         <li class="backup-page__row">
           <div class="backup-page__row-info">
@@ -334,18 +334,22 @@
         A toggle that stays put, not a button that removes itself: focus
         would fall to the page and a keyboard user would lose their place.
       -->
-      <p-button
-        [label]="
+      <button
+        pButton
+        type="button"
+        severity="secondary"
+        [text]="true"
+        [attr.aria-expanded]="showAll()"
+        aria-controls="backup-list"
+        (click)="showAll.set(!showAll())"
+        data-cy="backup-show-all"
+      >
+        <span pButtonLabel>{{
           showAll()
             ? ('backup.showFewer' | translate)
             : ('backup.showAll' | translate: { total: rows().length })
-        "
-        severity="secondary"
-        [text]="true"
-        [ariaExpanded]="showAll()"
-        (onClick)="showAll.set(!showAll())"
-        data-cy="backup-show-all"
-      />
+        }}</span>
+      </button>
     }
   }
 
