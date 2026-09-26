@@ -33,13 +33,19 @@ afterEach(function (): void {
     Carbon::setTestNow();
 });
 
-function academyTrainingMonWedFri(): Academy
+/**
+ * Mon/Wed/Fri since January, as a schedule row: the days come from the
+ * schedule history (#1764), the way `CreateAcademyAction` writes it.
+ *
+ * @param  list<int>  $days
+ */
+function academyTrainingMonWedFri(array $days = [1, 3, 5]): Academy
 {
     $user = User::factory()->create();
+    $academy = Academy::factory()->for($user, 'owner')->create(['training_days' => $days]);
+    $academy->schedules()->create(['training_days' => $days, 'effective_from' => '2026-01-01']);
 
-    return Academy::factory()->for($user, 'owner')->create([
-        'training_days' => [1, 3, 5],
-    ]);
+    return $academy;
 }
 
 function athleteJoinedLongAgo(Academy $academy, AthleteStatus $status = AthleteStatus::Active): Athlete
@@ -101,6 +107,30 @@ it('says nothing about someone who joined after the streak began', function (): 
         'joined_at' => '2026-09-15',
         'user_id' => null,
     ]);
+
+    $this->artisan(SendAthleteMissedStreakPushes::class)->assertSuccessful();
+
+    Notification::assertNothingSent();
+});
+
+it('walks the schedule in force on each day, not today\'s', function (): void {
+    // Tue/Thu from Tuesday 15th. The last three training days are then Tue
+    // 15th (new schedule), Mon 14th and Fri 11th (old) — not Tue 15th, Thu
+    // 10th and Tue 8th, which is what today's snapshot alone would say.
+    $academy = academyTrainingMonWedFri();
+    $academy->schedules()->create(['training_days' => [2, 4], 'effective_from' => '2026-09-15']);
+    $academy->update(['training_days' => [2, 4]]);
+    $athlete = athleteJoinedLongAgo($academy);
+    AttendanceRecord::factory()->create(['athlete_id' => $athlete->id, 'attended_on' => '2026-09-10']);
+
+    $this->artisan(SendAthleteMissedStreakPushes::class)->assertSuccessful();
+
+    Notification::assertSentTo($academy->owner, OwnerAthleteMissedStreakNotification::class);
+});
+
+it('says nothing for an academy whose schedule was never configured', function (): void {
+    $academy = academyTrainingMonWedFri([]);
+    athleteJoinedLongAgo($academy);
 
     $this->artisan(SendAthleteMissedStreakPushes::class)->assertSuccessful();
 
