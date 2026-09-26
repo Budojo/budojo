@@ -8,7 +8,7 @@ use App\Actions\Payment\ReconcileCarnetEntriesAction;
 use App\Enums\AttendanceSource;
 use App\Models\Athlete;
 use App\Models\AttendanceRecord;
-use Carbon\Carbon;
+use App\Support\OperatorDay;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -29,7 +29,7 @@ class UnmarkTodayAttendanceAction
     {
         $record = AttendanceRecord::query()
             ->where('athlete_id', $athlete->id)
-            ->whereDate('attended_on', Carbon::today()->toDateString())
+            ->whereDate('attended_on', OperatorDay::today()->toDateString())
             ->first();
 
         if ($record === null) {

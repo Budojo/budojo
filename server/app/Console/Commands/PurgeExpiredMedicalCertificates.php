@@ -7,8 +7,8 @@ namespace App\Console\Commands;
 use App\Actions\Document\DeleteDocumentAction;
 use App\Enums\DocumentType;
 use App\Models\Document;
+use App\Support\OperatorDay;
 use Illuminate\Console\Command;
-use Illuminate\Support\Carbon;
 
 /**
  * GDPR retention enforcement for medical certificates (#537,
@@ -68,9 +68,9 @@ class PurgeExpiredMedicalCertificates extends Command
         // cutoff aligns with the retention rule precisely — a cert
         // whose expiry sits EXACTLY 24 months ago today is STILL
         // within the window (strict `>` semantics in the doc/DPIA).
-        // Carbon::today() snaps to the start of the day so the cron's
-        // wall-clock time (e.g. 03:15) doesn't shift the cutoff.
-        $cutoff = Carbon::today()->subMonths(self::RETENTION_MONTHS);
+        // The owner's today (OperatorDay, #1963), at the start of the day,
+        // so the cron's wall-clock time (e.g. 03:15) doesn't shift the cutoff.
+        $cutoff = OperatorDay::today()->subMonths(self::RETENTION_MONTHS);
         $dryRun = (bool) $this->option('dry-run');
 
         // Uncapped count first so the log line + dry-run report the

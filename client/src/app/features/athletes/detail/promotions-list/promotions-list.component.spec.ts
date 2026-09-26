@@ -103,6 +103,29 @@ function makePromotion(over: Partial<AthletePromotion> = {}): AthletePromotion {
 describe('PromotionsListComponent (#799)', () => {
   afterEach(() => TestBed.resetTestingModule());
 
+  describe("the picker's last day (#1963)", () => {
+    const tz = process.env['TZ'];
+
+    afterEach(() => {
+      vi.useRealTimers();
+      process.env['TZ'] = tz;
+    });
+
+    it("ends on the owner's today, not UTC's", () => {
+      // 00:30 on the 11th in Rome is still the 10th in UTC. The server now
+      // accepts the owner's day, so the picker must offer it — capped at
+      // UTC's day it refused tonight's promotion for two hours after midnight.
+      process.env['TZ'] = 'Europe/Rome';
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date('2026-10-10T22:30:00Z'));
+
+      const { component } = setup();
+      const maxDate = (component as unknown as { maxDate: Date }).maxDate;
+
+      expect([maxDate.getFullYear(), maxDate.getMonth(), maxDate.getDate()]).toEqual([2026, 9, 11]);
+    });
+  });
+
   it('reads a stripe row the way its grade counts — dan, not stripes (#1801)', () => {
     const { fixture, el, svc } = setup();
     useLadder('judo');

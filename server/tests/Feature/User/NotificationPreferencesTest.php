@@ -10,7 +10,7 @@ use App\Models\Document;
 use App\Models\User;
 use App\Support\NotificationCategory;
 use App\Support\NotificationPreferences;
-use Illuminate\Support\Carbon;
+use App\Support\OperatorDay;
 use Illuminate\Support\Facades\Mail;
 
 // ─── Helper ────────────────────────────────────────────────────────────────────
@@ -189,7 +189,7 @@ it('SendUnpaidAthletesDigest skips owners who opted out of the category', functi
     ]);
 
     $this->artisan('budojo:send-unpaid-athletes-digest --year='
-        . Carbon::now()->year . ' --month=' . Carbon::now()->month)
+        . OperatorDay::today()->year . ' --month=' . OperatorDay::today()->month)
         ->assertExitCode(0);
 
     Mail::assertQueued(UnpaidAthletesDigestMail::class, 1);
@@ -210,7 +210,7 @@ function createTwoAcademiesWithExpiringCerts(): array
         $athlete = Athlete::factory()->for($academy)->create();
         Document::factory()->for($athlete)->create([
             'type' => \App\Enums\DocumentType::MedicalCertificate,
-            'expires_at' => Carbon::today()->addDays(7), // T-7 reminder window
+            'expires_at' => OperatorDay::today()->addDays(7), // T-7 reminder window
         ]);
     }
 

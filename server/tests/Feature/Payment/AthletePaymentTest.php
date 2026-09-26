@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Models\Academy;
 use App\Models\Athlete;
 use App\Models\AthletePayment;
+use App\Support\OperatorDay;
 
 // helpers live in tests/Pest.php
 
@@ -111,7 +112,7 @@ it('lists payments for the requested year, ordered by month asc', function (): v
 });
 
 it('defaults to the current year when no year query param is supplied', function (): void {
-    $currentYear = (int) now()->year;
+    $currentYear = (int) OperatorDay::today()->year;
     AthletePayment::factory()->for($this->athlete)->forYearMonth($currentYear, 5)->create();
     AthletePayment::factory()->for($this->athlete)->forYearMonth($currentYear - 1, 5)->create();
 

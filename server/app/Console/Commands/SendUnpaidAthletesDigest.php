@@ -10,6 +10,7 @@ use App\Models\Academy;
 use App\Models\Athlete;
 use App\Models\NotificationLog;
 use App\Notifications\OwnerUnpaidAthletesDigestNotification;
+use App\Support\OperatorDay;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -54,7 +55,7 @@ class SendUnpaidAthletesDigest extends Command
     public function handle(DeliverOwnerDigestAction $deliverOwnerDigest): int
     {
         $this->deliverOwnerDigest = $deliverOwnerDigest;
-        $today = Carbon::today();
+        $today = OperatorDay::today();
 
         // Validate --year / --month BEFORE casting to int (#404 follow-up
         // round 2). PHP's (int) cast eats non-digit suffixes silently —
@@ -241,7 +242,7 @@ class SendUnpaidAthletesDigest extends Command
     {
         return Athlete::query()
             ->where('academy_id', $academy->id)
-            ->owing($year, $month, Carbon::today())
+            ->owing($year, $month, OperatorDay::today())
             ->orderBy('last_name_sort', 'asc')
             ->orderBy('first_name_sort', 'asc')
             ->orderBy('id')

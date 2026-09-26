@@ -20,6 +20,7 @@ use App\Models\Academy;
 use App\Models\Athlete;
 use App\Models\Carnet;
 use App\Models\User;
+use App\Support\OperatorDay;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -83,7 +84,7 @@ class CarnetController extends Controller
             athlete: $athlete,
             totalEntries: $academy->carnet_entries,
             priceCents: $academy->carnet_price_cents,
-            purchasedAt: CarbonImmutable::make($request->date('purchased_at')) ?? CarbonImmutable::today(),
+            purchasedAt: CarbonImmutable::make($request->date('purchased_at')) ?? OperatorDay::today(),
             validFrom: CarbonImmutable::make($request->date('valid_from')),
             method: $request->enum('payment_method', PaymentMethod::class),
         );

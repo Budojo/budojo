@@ -10,6 +10,7 @@ use App\Models\Athlete;
 use App\Models\AttendanceRecord;
 use App\Models\Carnet;
 use App\Models\CarnetEntry;
+use App\Support\OperatorDay;
 use Carbon\CarbonImmutable;
 
 // helpers live in tests/Pest.php
@@ -57,11 +58,11 @@ it('costs exactly one entry to correct a mistake', function (): void {
 });
 
 it('gives the entry back when the athlete reverts their own self-mark', function (): void {
-    $this->academy->update(['training_days' => [(int) CarbonImmutable::today()->dayOfWeek]]);
+    $this->academy->update(['training_days' => [(int) OperatorDay::today()->dayOfWeek]]);
 
     AttendanceRecord::create([
         'athlete_id' => $this->athlete->id,
-        'attended_on' => CarbonImmutable::today()->toDateString(),
+        'attended_on' => OperatorDay::today()->toDateString(),
         'source' => AttendanceSource::Self,
     ]);
     $record = AttendanceRecord::firstOrFail();

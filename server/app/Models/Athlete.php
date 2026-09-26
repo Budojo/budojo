@@ -349,10 +349,12 @@ class Athlete extends Model implements HasAddress
      */
     public function promotions(): HasMany
     {
-        // Stable order — `recorded_at DESC, id DESC` tiebreaks two
-        // events written in the same second (belt + stripe in a single
-        // save), so the API and the UI render the same row first on
-        // every call (Copilot review on #654).
+        // Stable order — `recorded_at DESC, id DESC`. Since #1963 live rows
+        // are the owner's day at midnight, so every row of one day shares
+        // its `recorded_at` (a belt + stripe in a single save included) and
+        // the id decides; rows written before carry a time of day. Either
+        // way the API and the UI render the same row first on every call
+        // (Copilot review on #654).
         return $this->hasMany(AthletePromotion::class)
             ->orderByDesc('recorded_at')
             ->orderByDesc('id');

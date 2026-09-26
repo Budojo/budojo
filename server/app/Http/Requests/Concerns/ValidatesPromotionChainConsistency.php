@@ -7,8 +7,8 @@ namespace App\Http\Requests\Concerns;
 use App\Actions\Promotion\GetPromotionGapsAction;
 use App\Models\Athlete;
 use App\Models\AthletePromotion;
+use App\Support\OperatorDay;
 use App\Support\Promotion\PromotionGaps;
-use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Contracts\Validation\Validator;
 
@@ -85,7 +85,7 @@ trait ValidatesPromotionChainConsistency
      */
     protected function fillsAGap(Athlete $athlete, array $fields, CarbonInterface $recordedAt): bool
     {
-        return PromotionGaps::admits($this->promotionGaps($athlete), $fields, $recordedAt->toDateString(), CarbonImmutable::today());
+        return PromotionGaps::admits($this->promotionGaps($athlete), $fields, $recordedAt->toDateString(), OperatorDay::today());
     }
 
     /**
@@ -165,11 +165,12 @@ trait ValidatesPromotionChainConsistency
      * existing row counts as the earlier one — the new row is treated as
      * appended after whatever already happened that day, which is the
      * only ordering a date-only backfill can express. Compares whole
-     * calendar days (`whereDate`), not raw datetimes: a backfilled or
-     * edited row is always stored at midnight, but a LIVE row written by
-     * `AthleteObserver` carries a real time-of-day (`now()`) — without
-     * this, a live row from later the same day would wrongly compare as
-     * "after" a same-day backfill instead of sharing its day.
+     * calendar days (`whereDate`), not raw datetimes: since #1963 every
+     * row — backfilled, edited or written live by `AthleteObserver` — is
+     * stored at midnight of the owner's day and ordered by id, but rows
+     * written before it carry the time of day they were saved, and a live
+     * one from later that day must still share its day with a backfill,
+     * not compare as "after" it.
      */
     private function neighbour(Athlete $athlete, string $kind, CarbonInterface $recordedAt, bool $earlier, ?int $editing = null): ?AthletePromotion
     {

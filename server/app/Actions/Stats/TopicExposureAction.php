@@ -9,9 +9,9 @@ use App\Models\Academy;
 use App\Models\Athlete;
 use App\Models\SyllabusTopic;
 use App\Support\AthleteIdentity;
+use App\Support\OperatorDay;
 use App\Support\Season;
 use App\Support\TopicAttendance;
-use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -73,7 +73,7 @@ class TopicExposureAction
         // broken database, not a case to render.
         \assert($academy instanceof Academy);
 
-        $reference = CarbonImmutable::now()->subYears($seasonsBack);
+        $reference = OperatorDay::today()->subYears($seasonsBack);
         $start = Season::startFor($academy, $reference);
         $end = Season::endFor($academy, $reference);
 

@@ -10,6 +10,7 @@ use App\Models\Athlete;
 use App\Models\AthletePromotionSkip;
 use App\Support\MartialArt\KidsEligibility;
 use App\Support\MartialArt\MartialArtProfile;
+use App\Support\OperatorDay;
 use App\Support\Promotion\PromotionGaps;
 use App\Support\Promotion\PromotionRecord;
 use Carbon\CarbonImmutable;
@@ -34,7 +35,9 @@ class GetPromotionGapsAction
         $academy = $athlete->academy;
         $profile = MartialArtProfile::for($academy->martial_art ?? MartialArt::Bjj);
         $trainsKids = $academy->trains_kids ?? false;
-        $today = CarbonImmutable::today();
+        // The owner's day (#1963): at 23:30 UTC a gap after a row dated
+        // their today would otherwise have no day left in its window.
+        $today = OperatorDay::today();
 
         $finder = new PromotionGaps(
             $profile->ladder(),

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Schedules;
 
+use App\Support\OperatorDay;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Carbon;
 
@@ -51,7 +52,7 @@ final class WebSchedule implements ScheduleDefinition
         // index, so a re-run on the same day is a fast no-op.
         $schedule->command('budojo:send-medical-cert-expiry-reminders')
             ->dailyAt('09:00')
-            ->timezone('Europe/Rome')
+            ->timezone(OperatorDay::timezone())
             ->withoutOverlapping(60);
 
         // The academy's own papers (#1743), beside the medical digest and on
@@ -59,7 +60,7 @@ final class WebSchedule implements ScheduleDefinition
         // chased with the same phone call.
         $schedule->command('budojo:send-academy-document-expiry-reminders')
             ->dailyAt('09:00')
-            ->timezone('Europe/Rome')
+            ->timezone(OperatorDay::timezone())
             ->withoutOverlapping(60);
 
         // Monthly digest of athletes still unpaid for the current month
@@ -70,7 +71,7 @@ final class WebSchedule implements ScheduleDefinition
         // the cert-expiry digest.
         $schedule->command('budojo:send-unpaid-athletes-digest')
             ->monthlyOn(16, '09:00')
-            ->timezone('Europe/Rome')
+            ->timezone(OperatorDay::timezone())
             ->withoutOverlapping(60);
 
         // Athlete-side overdue payment push (#729 B4). 09:00 Europe/Rome on
@@ -81,7 +82,7 @@ final class WebSchedule implements ScheduleDefinition
         // the SendAthleteTrainingTodayPushes command uses.
         $schedule->command('budojo:send-athlete-payment-overdue-pushes')
             ->monthlyOn(6, '09:00')
-            ->timezone('Europe/Rome')
+            ->timezone(OperatorDay::timezone())
             ->withoutOverlapping(60);
 
         // Daily engagement-signal push to academy owners when an active
@@ -93,7 +94,7 @@ final class WebSchedule implements ScheduleDefinition
         // streak) or another 14 days pass.
         $schedule->command('budojo:send-athlete-missed-streak-pushes')
             ->dailyAt('09:30')
-            ->timezone('Europe/Rome')
+            ->timezone(OperatorDay::timezone())
             ->withoutOverlapping(60);
 
         // Daily 07:00 Europe/Rome push reminder to athletes whose academy
@@ -106,7 +107,7 @@ final class WebSchedule implements ScheduleDefinition
         // multiple times in a day (Copilot review on #730).
         $schedule->command('budojo:send-athlete-training-today-pushes')
             ->dailyAt('07:00')
-            ->timezone('Europe/Rome')
+            ->timezone(OperatorDay::timezone())
             ->withoutOverlapping(30);
 
         // Weekly recap fanout (#960). Fires Sunday 19:00 local — domenica
@@ -117,7 +118,7 @@ final class WebSchedule implements ScheduleDefinition
         // no-op.
         $schedule->command('budojo:send-weekly-recap-pushes')
             ->weeklyOn(Carbon::SUNDAY, '19:00')
-            ->timezone('Europe/Rome')
+            ->timezone(OperatorDay::timezone())
             ->withoutOverlapping(30);
 
         // Time-based achievement evaluator (#961). Runs nightly at 02:00
@@ -126,7 +127,7 @@ final class WebSchedule implements ScheduleDefinition
         // never fires; the date alone closes the window).
         $schedule->command('budojo:evaluate-time-based-achievements')
             ->dailyAt('02:00')
-            ->timezone('Europe/Rome')
+            ->timezone(OperatorDay::timezone())
             ->withoutOverlapping(60);
 
         // Daily prune of `login_attempts` rows older than 90 days (#430).
@@ -139,7 +140,7 @@ final class WebSchedule implements ScheduleDefinition
         // volume spike.
         $schedule->command('budojo:purge-expired-login-attempts')
             ->dailyAt('03:00')
-            ->timezone('Europe/Rome')
+            ->timezone(OperatorDay::timezone())
             ->withoutOverlapping(60);
 
         // GDPR retention for medical certificates (#537, DPIA-lite § R6).
@@ -152,7 +153,7 @@ final class WebSchedule implements ScheduleDefinition
         // large multi-academy backlog.
         $schedule->command('budojo:purge-expired-medical-certificates')
             ->dailyAt('03:15')
-            ->timezone('Europe/Rome')
+            ->timezone(OperatorDay::timezone())
             ->withoutOverlapping(60);
     }
 }

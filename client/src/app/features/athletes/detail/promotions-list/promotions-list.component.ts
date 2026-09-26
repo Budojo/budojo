@@ -180,17 +180,13 @@ export class PromotionsListComponent implements OnInit {
   protected readonly saving = signal(false);
   protected readonly editing = signal<AthletePromotion | null>(null);
   /**
-   * A promotion can't be recorded ahead of today — same rule the server
-   * enforces (`before_or_equal:today`, evaluated in the app's UTC
-   * timezone). Built via `utcCalendarDayAsLocalMidnight` rather than a
-   * bare `new Date()` so the picker's upper bound matches what the
-   * server will actually accept: a bare `new Date()` reads the
-   * BROWSER's local calendar day, which runs up to a day ahead of
-   * UTC's for any timezone east of Greenwich (Italy included) during
-   * the first hours of the local day — the picker would let the owner
-   * choose a date the server then rejects as "in the future".
+   * A promotion can't be recorded ahead of today — the owner's today, which
+   * is what the server judges it by since #1963 (`OperatorDay`), and what the
+   * browser's own calendar day is. It used to be capped at UTC's day, to match
+   * a server that still judged in UTC; that refused tonight's promotion for
+   * two hours after midnight in Rome.
    */
-  protected readonly maxDate = utcCalendarDayAsLocalMidnight(new Date());
+  protected readonly maxDate = startOfLocalDay(new Date());
   protected readonly editForm = this.fb.group({
     recorded_at: this.fb.control<Date | null>(null),
   });
@@ -888,6 +884,11 @@ function toIsoDate(date: Date): string {
   const month = `${date.getMonth() + 1}`.padStart(2, '0');
   const day = `${date.getDate()}`.padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+/** Midnight of `instant`'s own local calendar day. */
+function startOfLocalDay(instant: Date): Date {
+  return new Date(instant.getFullYear(), instant.getMonth(), instant.getDate());
 }
 
 /**

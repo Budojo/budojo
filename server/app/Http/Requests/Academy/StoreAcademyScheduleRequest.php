@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests\Academy;
 
 use App\Models\User;
+use App\Support\OperatorDay;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -49,7 +50,7 @@ class StoreAcademyScheduleRequest extends FormRequest
             // `date_format` pins the wire shape to ISO calendar date.
             // `after:today` rejects today and earlier — same-day goes
             // through PATCH /academy.
-            'effective_from' => ['required', 'date_format:Y-m-d', 'after:today'],
+            'effective_from' => ['required', 'date_format:Y-m-d', OperatorDay::after()],
         ];
     }
 
