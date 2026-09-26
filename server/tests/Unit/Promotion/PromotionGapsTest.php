@@ -377,11 +377,37 @@ it('can never be led into a second row on a belt, whatever the order and the dat
 })->with([
     'Jacopo, blue' => [[stripeRow(12, Belt::White, 2, 3, '2024-03-12'), beltRow(15, null, Belt::Blue, '2026-09-26 10:00:00')], Belt::Blue, 0, MartialArt::Bjj],
     'Jacopo, blue with two stripes' => [[stripeRow(12, Belt::White, 2, 3, '2024-03-12'), beltRow(15, null, Belt::Blue, '2026-09-26 10:00:00')], Belt::Blue, 2, MartialArt::Bjj],
+    'Jacopo, every row at midnight' => [[stripeRow(12, Belt::White, 2, 3, '2024-03-12'), beltRow(15, null, Belt::Blue, '2026-09-20')], Belt::Blue, 2, MartialArt::Bjj],
+    'a same-day correction at midnight' => [[beltRow(1, null, Belt::Purple, '2026-09-10'), beltRow(2, Belt::Purple, Belt::Blue, '2026-09-10')], Belt::Blue, 0, MartialArt::Bjj],
     'a blue stripe typed in before the starting row' => [[stripeRow(12, Belt::White, 2, 3, '2024-03-12'), beltRow(15, null, Belt::Blue, '2026-01-10'), stripeRow(20, Belt::Blue, 0, 1, '2025-02-01')], Belt::Blue, 3, MartialArt::Bjj],
     'a starting row out of order' => [[beltRow(1, null, Belt::White, '2015-01-01'), beltRow(15, null, Belt::Blue, '2026-01-10'), stripeRow(20, Belt::Blue, 0, 1, '2020-05-01')], Belt::Blue, 1, MartialArt::Bjj],
     'imported on purple, one white stripe known' => [[stripeRow(3, Belt::White, 0, 1, '2016-02-01'), beltRow(9, null, Belt::Purple, '2026-09-01')], Belt::Purple, 2, MartialArt::Bjj],
     'a judoka imported on black' => [[beltRow(1, Belt::White, Belt::Yellow, '2005-01-01'), beltRow(9, null, Belt::Black, '2026-09-01')], Belt::Black, 1, MartialArt::Judo],
 ]);
+
+it('replays a same-day correction in the order it was made, with both rows at midnight (#1963)', function (): void {
+    // Created on purple by mistake, corrected to blue the same day.
+    $result = gapsOf([
+        beltRow(1, null, Belt::Purple, '2026-09-10'),
+        beltRow(2, Belt::Purple, Belt::Blue, '2026-09-10'),
+    ], Belt::Blue, 0);
+
+    expect($result['gaps'])->toBe([]);
+});
+
+it('puts a step filled on the day of the row after it before that row, though it was written later', function (): void {
+    // The fourth stripe, filled on the very day Jacopo was entered on blue:
+    // written after the starting row (a higher id), happened before it.
+    $result = gapsOf([
+        stripeRow(12, Belt::White, 2, 3, '2024-03-12'),
+        beltRow(15, null, Belt::Blue, '2026-09-20'),
+        stripeRow(30, Belt::White, 3, 4, '2026-09-20'),
+    ], Belt::Blue, 0);
+
+    expect(keysOf($result))->toBe(['belt:blue:0'])
+        ->and($result['gaps'][0]['completes_promotion_id'])->toBe(15)
+        ->and($result['gaps'][0]['after'])->toBe(['promotion_id' => 30, 'recorded_at' => '2026-09-20']);
+});
 
 it('has no history, and no gaps, without a single row', function (): void {
     expect(gapsOf([], Belt::Blue, 2))->toBe(['gaps' => [], 'history_starts_at' => null]);
