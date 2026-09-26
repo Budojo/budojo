@@ -1,5 +1,7 @@
 # PRD — Training-schedule history (#1094)
 
+> **Since #1764–#1769** the counting this PRD specifies for the SPA lives on the server, as `App\Support\ScheduledDays`, and every attendance denominator comes from there. The client keeps only the per-day predicate the calendar paints with (`training-days.ts`, formerly `attendance-rate.ts`). The rules below still hold; the place they run has changed.
+
 **Status**: drafted 2026-05-28, awaiting PR-1 implementation.
 
 ## Why

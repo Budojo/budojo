@@ -57,7 +57,7 @@
           <span class="attendance-history__rate-detail" data-cy="attendance-rate-detail">
             {{
               'athletes.detail.attendance.daysFormat'
-                | translate: { attended: attendedCount(), scheduled: scheduledCount() }
+                | translate: { attended: ringAttended(), scheduled: scheduledCount() }
             }}
             <!--
               Which window this number covers (#1635, ATT-2). The card above

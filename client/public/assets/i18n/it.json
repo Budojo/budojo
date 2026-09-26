@@ -1357,14 +1357,15 @@
       "days90": "90g",
       "year1": "1a"
     },
-    "attendedOfExpected": "{{attended}} su {{expected}} lezioni effettive",
+    "attendedOfExpected": "{{attended}} su {{expected}} allenamenti in programma",
     "legend": {
       "attended": "Presente",
       "missed": "Assente"
     },
     "empty": {
-      "title": "Nessuna lezione in questo intervallo",
-      "hint": "L'accademia non ha registrato sessioni nel periodo selezionato."
+      "title": "Nessun allenamento in programma in questo intervallo",
+      "hint": "La percentuale conta i giorni di allenamento in programma, e in questo periodo non ce n'è nessuno.",
+      "noScheduleHint": "L'accademia non ha ancora impostato i giorni di allenamento, quindi non c'è nulla su cui misurare."
     },
     "error": {
       "title": "Impossibile caricare il grafico",

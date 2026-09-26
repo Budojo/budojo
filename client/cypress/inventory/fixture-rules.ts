@@ -259,29 +259,34 @@ const RULES: Rule[] = [
       ? [`remaining_entries ${o['remaining_entries']} > total_entries ${o['total_entries']}`]
       : [],
 
-  // An athlete's attendance summary (GetAthleteAttendanceSummaryAction, #893):
-  // one series point per lesson day in the window, so expected is the series'
-  // length, attended its attended points, and the rate the one over the other.
+  // An athlete's attendance summary (GetAthleteAttendanceSummaryAction, #893,
+  // #1769): expected is the scheduled days in the window, or null with no
+  // schedule; attended every day trained, scheduled or not, so it may pass
+  // expected. The series is one point per scheduled day plus any other day
+  // trained, so its length lies between expected and expected + attended,
+  // and its attended points are the attended count.
   (o) => {
     const out: string[] = [];
     const attended = o['attended_count'];
     const expected = o['expected_count'];
-    if (!isNum(attended) || !isNum(expected)) return out;
-    if (attended > expected) out.push(`attended_count ${attended} > expected_count ${expected}`);
+    if (!isNum(attended) || !(isNum(expected) || expected === null)) return out;
     const series = o['series'];
     if (Array.isArray(series)) {
       const hit = series.filter((p) => isObj(p) && p['attended'] === true).length;
-      if (series.length !== expected) {
+      if (hit !== attended) out.push(`attended_count ${attended} ≠ ${hit} attended points`);
+      if (isNum(expected) && (series.length < expected || series.length > expected + attended)) {
         out.push(
-          `expected_count ${expected} ≠ ${series.length} series points (one per lesson day)`,
+          `${series.length} series points, outside ${expected}–${expected + attended} (scheduled days, plus days trained off them)`,
         );
       }
-      if (hit !== attended) out.push(`attended_count ${attended} ≠ ${hit} attended points`);
     }
     const rate = o['rate'];
     if (rate !== undefined) {
-      // Null when nothing was expected, else rounded to four places.
-      const want = expected === 0 ? null : Math.round((attended / expected) * 10000) / 10000;
+      // Null with no denominator or a zero one, else rounded to four places.
+      const want =
+        expected === null || expected === 0
+          ? null
+          : Math.round((attended / expected) * 10000) / 10000;
       const agrees =
         rate === null
           ? want === null

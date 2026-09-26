@@ -72,13 +72,19 @@ const ACADEMY = {
   carnet_entry_unit: 'lesson',
   syllabus_topics_count: 31,
   training_days: [1, 3, 5, 6],
-  current_schedule: { id: 1, training_days: [1, 3, 5, 6], effective_from: '2026-09-01' },
+  // From the season before: the 90-day card reaches back into the summer, and
+  // since #1769 its denominator is the scheduled days there.
+  current_schedule: { id: 1, training_days: [1, 3, 5, 6], effective_from: '2025-09-01' },
   next_schedule: null,
-  schedules: [{ id: 1, training_days: [1, 3, 5, 6], effective_from: '2026-09-01' }],
-  // The days it is shut (#1766). Only a future one here: it shows on the
-  // timetable and moves no count on any other screen. The screens that need
-  // one inside September stub their own.
-  closures: [{ id: 1, starts_on: '2026-12-24', ends_on: '2027-01-06', label: 'Vacanze di Natale' }],
+  schedules: [{ id: 1, training_days: [1, 3, 5, 6], effective_from: '2025-09-01' }],
+  // The days it is shut (#1766): August, which the 90-day card and DAILY have
+  // always drawn closed, and a Christmas still to come for the timetable.
+  // Neither touches September, so no count on the other screens moves. The
+  // screens that need one inside September stub their own.
+  closures: [
+    { id: 2, starts_on: '2026-08-01', ends_on: '2026-08-31', label: 'Chiusura estiva' },
+    { id: 1, starts_on: '2026-12-24', ends_on: '2027-01-06', label: 'Vacanze di Natale' },
+  ],
   season_start_month: 9,
   season_start: '2026-09-01',
   season_label: '2026/27',
@@ -853,12 +859,45 @@ const ATHLETE_SUMMARY = (() => {
     range_days: 90,
     range_start: iso(new Date(NOW - 89 * 86_400_000)),
     range_end: TODAY,
+    window_start: iso(new Date(NOW - 89 * 86_400_000)),
     attended_count: attended,
     expected_count: series.length,
     rate: Math.round((attended / series.length) * 10000) / 10000,
     series,
   };
 })();
+
+/**
+ * The ring's answer for a month (#1769), as the server builds it: one point
+ * per scheduled day up to TODAY (Mon/Wed/Fri/Sat, August closed), plus any
+ * other day trained. Giulia trained on 2, 4, 7, 9 and 11 September, and once
+ * on 28 August, when the academy was closed.
+ */
+function athleteMonthSummary(month: string) {
+  const trained = new Set(ATTENDANCE_ONE.map((r) => r.attended_on));
+  const [y, m] = month.split('-').map(Number);
+  const last = new Date(y, m, 0).getDate();
+  const series: { date: string; attended: boolean }[] = [];
+  let scheduled = 0;
+  for (let d = 1; d <= last; d++) {
+    const iso = `${month}-${String(d).padStart(2, '0')}`;
+    if (iso > TODAY) break;
+    const isScheduled = m !== 8 && [1, 3, 5, 6].includes(new Date(y, m - 1, d).getDay());
+    if (isScheduled) scheduled++;
+    if (isScheduled || trained.has(iso)) series.push({ date: iso, attended: trained.has(iso) });
+  }
+  const attended = series.filter((p) => p.attended).length;
+  return {
+    range_days: last,
+    range_start: `${month}-01`,
+    range_end: `${month}-${String(last).padStart(2, '0')}`,
+    window_start: `${month}-01`,
+    attended_count: attended,
+    expected_count: scheduled,
+    rate: scheduled === 0 ? null : Math.round((attended / scheduled) * 10000) / 10000,
+    series,
+  };
+}
 
 /**
  * The month summary (#1767): each row carries its own denominator, the
@@ -1832,9 +1871,15 @@ function seed(): void {
     statusCode: 200,
     body: { data: ATTENDANCE_ONE },
   });
-  cy.intercept('GET', '/api/v1/athletes/*/attendance/summary*', {
-    statusCode: 200,
-    body: { data: ATHLETE_SUMMARY },
+  // The card asks for 30/90/365 days, the ring for the visible month (#1769):
+  // Giulia's September so far is 5 of 8 sessions (ATTENDANCE_ONE against
+  // Mon/Wed/Fri/Sat), and August was closed, so it has no denominator.
+  cy.intercept('GET', '/api/v1/athletes/*/attendance/summary*', (req) => {
+    const month = req.query['month'];
+    req.reply({
+      statusCode: 200,
+      body: { data: typeof month === 'string' ? athleteMonthSummary(month) : ATHLETE_SUMMARY },
+    });
   });
   cy.intercept('GET', '/api/v1/athletes/*/payments*', {
     statusCode: 200,
@@ -2193,6 +2238,7 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       SYLLABUS_CALENDAR,
       TOPIC_EXPOSURE,
       ATHLETE_SUMMARY,
+      ATHLETE_MONTHS: [athleteMonthSummary('2026-09'), athleteMonthSummary('2026-08')],
       ATTENDANCE_SUMMARY,
       CARNETS_ONE,
     });
@@ -2233,8 +2279,9 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
     expect(problems.join('\n')).to.contain("is 'planned'");
     expect(problems.join('\n')).to.contain('attendance_total_count 0 but last_attended_on');
 
-    // The attendance summary: one point per lesson day, so 90 calendar-day
-    // points against 30 expected is a contradiction.
+    // The attendance summary: one point per scheduled day plus the days
+    // trained off them, so 90 calendar-day points against 30 expected is a
+    // contradiction (#1769).
     const summary = fixtureContradictions(
       {
         attended_count: 2,
@@ -2244,7 +2291,23 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       },
       FIXTURE_CONTEXT,
     );
-    expect(summary.join('\n')).to.contain('≠ 90 series points');
+    expect(summary.join('\n')).to.contain('90 series points, outside 30–32');
+    // ...while an open mat on top of every session is not: past 100%, unclamped.
+    expect(
+      fixtureContradictions(
+        {
+          attended_count: 3,
+          expected_count: 2,
+          rate: 1.5,
+          series: [
+            { date: 'a', attended: true },
+            { date: 'b', attended: true },
+            { date: 'c', attended: true },
+          ],
+        },
+        FIXTURE_CONTEXT,
+      ),
+    ).to.deep.equal([]);
 
     // The rate is the server's four-place rounding exactly, not "near it".
     const rate = (r: number) =>

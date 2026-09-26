@@ -52,6 +52,35 @@ function makeRecord(overrides: Partial<AttendanceRecord> = {}): AttendanceRecord
  * by its own spec. Without this drain, `httpMock.verify()` flags the
  * orphan request as a test leak.
  */
+/**
+ * Answer the ring's month request (#1769) — the server's numbers for the
+ * visible month, which the ring now reads instead of counting.
+ */
+function flushMonth(
+  httpMock: HttpTestingController,
+  month: string,
+  counts: { attended: number; expected: number | null; rate: number | null; windowStart?: string },
+): void {
+  httpMock
+    .expectOne(
+      (r) =>
+        r.url === `/api/v1/athletes/${ATHLETE_ID}/attendance/summary` &&
+        r.params.get('month') === month,
+    )
+    .flush({
+      data: {
+        range_days: 30,
+        range_start: `${month}-01`,
+        range_end: `${month}-30`,
+        window_start: counts.windowStart ?? `${month}-01`,
+        attended_count: counts.attended,
+        expected_count: counts.expected,
+        rate: counts.rate,
+        series: [],
+      },
+    });
+}
+
 function flushSummary(httpMock: HttpTestingController): void {
   const summaryReqs = httpMock.match((r) => r.url.endsWith('/attendance/summary'));
   for (const r of summaryReqs) {
@@ -138,7 +167,7 @@ describe('AttendanceHistoryComponent', () => {
 
   // ─── Training-days percentage (#106) ────────────────────────────────────────
 
-  it('exposes scheduledCount + ratePercent when the academy has training_days configured', () => {
+  it("reads the ring's denominator and rate from the server's month answer (#1769)", () => {
     const httpMock = setupTestBed();
     // System time is Apr 25 2026 (per beforeEach). Academy trains
     // Mon/Wed/Fri = [1, 3, 5]. April 2026: 1 (Wed), 3 (Fri), 6 (Mon),
@@ -169,6 +198,8 @@ describe('AttendanceHistoryComponent', () => {
         ],
       });
 
+    flushMonth(httpMock, '2026-04', { attended: 5, expected: 11, rate: 0.4545 });
+
     expect(fixture.componentInstance['attendedCount']()).toBe(5);
     expect(fixture.componentInstance['scheduledCount']()).toBe(11);
     expect(fixture.componentInstance['ratePercent']()).toBe(45); // 5/11 = 0.4545 -> 45
@@ -195,6 +226,8 @@ describe('AttendanceHistoryComponent', () => {
     httpMock
       .expectOne(`/api/v1/athletes/${ATHLETE_ID}/attendance?from=2026-04-01&to=2026-04-30`)
       .flush({ data: [] });
+    // The server leaves the closure out of the ring (#1769).
+    flushMonth(httpMock, '2026-04', { attended: 0, expected: 8, rate: 0 });
     fixture.detectChanges();
 
     const root = fixture.nativeElement as HTMLElement;
@@ -227,6 +260,8 @@ describe('AttendanceHistoryComponent', () => {
     httpMock
       .expectOne(`/api/v1/athletes/${ATHLETE_ID}/attendance?from=2026-04-01&to=2026-04-30`)
       .flush({ data: [] });
+
+    flushMonth(httpMock, '2026-04', { attended: 0, expected: null, rate: null });
 
     // No academy schedule → no denominator → no percentage UI; the template
     // falls back to the raw count.
@@ -261,15 +296,22 @@ describe('AttendanceHistoryComponent', () => {
     flushSummary(httpMock);
     httpMock.verify();
 
-    // Step the visible month FORWARD past today — now scheduledCount = 0.
-    // Strictly: canGoNext is false for "current month", but for tests we
-    // can directly poke the signal for behavior coverage.
+    // A month with no session held yet: the server answers zero, and the
+    // rate is null.
     const component = fixture.componentInstance as unknown as {
-      visible: { set: (v: { year: number; month: number }) => void };
+      monthSummary: { set: (v: unknown) => void };
       scheduledCount: () => number | null;
       ratePercent: () => number | null;
     };
-    component.visible.set({ year: 2026, month: 6 });
+    component.monthSummary.set({
+      range_days: 30,
+      range_start: '2026-06-01',
+      range_end: '2026-06-30',
+      attended_count: 0,
+      expected_count: 0,
+      rate: null,
+      series: [],
+    });
     expect(component.scheduledCount()).toBe(0);
     // ratePercent is null when scheduled=0 → template renders fallback
     // "X days this month" instead of an ambiguous "X / 0 days · null%".
@@ -296,6 +338,7 @@ describe('AttendanceHistoryComponent', () => {
     httpMock
       .expectOne(`/api/v1/athletes/${ATHLETE_ID}/attendance?from=2026-04-01&to=2026-04-30`)
       .flush({ data: [] });
+    flushMonth(httpMock, '2026-04', { attended: 0, expected: 11, rate: 0 });
     fixture.detectChanges();
 
     // Apr 1 (Wednesday → in training_days)
@@ -335,6 +378,7 @@ describe('AttendanceHistoryComponent', () => {
     httpMock
       .expectOne(`/api/v1/athletes/${ATHLETE_ID}/attendance?from=2026-04-01&to=2026-04-30`)
       .flush({ data: [] });
+    flushMonth(httpMock, '2026-04', { attended: 0, expected: 11, rate: 0 });
     fixture.detectChanges();
 
     const cell = (day: number): HTMLElement =>
@@ -387,6 +431,7 @@ describe('AttendanceHistoryComponent', () => {
     httpMock
       .expectOne(`/api/v1/athletes/${ATHLETE_ID}/attendance?from=2026-04-01&to=2026-04-30`)
       .flush({ data: [] });
+    flushMonth(httpMock, '2026-04', { attended: 0, expected: 11, rate: 0 });
     fixture.detectChanges();
 
     const today = fixture.nativeElement.querySelector('[data-day="25"]') as HTMLElement;
@@ -422,6 +467,7 @@ describe('AttendanceHistoryComponent', () => {
     httpMock
       .expectOne(`/api/v1/athletes/${ATHLETE_ID}/attendance?from=2026-04-01&to=2026-04-30`)
       .flush({ data: [] });
+    flushMonth(httpMock, '2026-04', { attended: 0, expected: 11, rate: 0 });
     fixture.detectChanges();
 
     const root = fixture.nativeElement as HTMLElement;
@@ -449,6 +495,7 @@ describe('AttendanceHistoryComponent', () => {
     httpMock
       .expectOne(`/api/v1/athletes/${ATHLETE_ID}/attendance?from=2026-03-01&to=2026-03-31`)
       .flush({ data: [] });
+    flushMonth(httpMock, '2026-03', { attended: 0, expected: 13, rate: 0 });
     fixture.detectChanges();
     expect(root.querySelector('[data-cy="attendance-rate-window"]')?.textContent?.trim()).toBe(
       'March 2026',
@@ -514,6 +561,7 @@ describe('AttendanceHistoryComponent', () => {
           makeRecord({ id: 6, attended_on: '2026-04-22' }),
         ],
       });
+    flushMonth(httpMock, '2026-04', { attended: 6, expected: 4, rate: 1.5 });
 
     const component = fixture.componentInstance as unknown as {
       ratePercent: () => number | null;
@@ -556,6 +604,7 @@ describe('AttendanceHistoryComponent', () => {
           makeRecord({ id: 6, attended_on: '2026-04-22' }),
         ],
       });
+    flushMonth(httpMock, '2026-04', { attended: 6, expected: 4, rate: 1.5 });
 
     expect(fixture.componentInstance['ratePercent']()).toBe(150);
     // The visible bar is clamped — but the percentage label still shows the
@@ -599,6 +648,7 @@ describe('AttendanceHistoryComponent', () => {
           makeRecord({ id: 6, attended_on: '2026-04-22' }),
         ],
       });
+    flushMonth(httpMock, '2026-04', { attended: 6, expected: 4, rate: 1.5 });
     fixture.detectChanges();
 
     // Knob is rendered.
@@ -616,6 +666,62 @@ describe('AttendanceHistoryComponent', () => {
     const detailText = (detail as HTMLElement).textContent?.trim() ?? '';
     expect(detailText).toContain('6');
     expect(detailText).toContain('4');
+    flushSummary(httpMock);
+    httpMock.verify();
+  });
+
+  it('draws the ring from the server with no academy loaded (#1769)', () => {
+    // The page must not need the academy to divide any more.
+    const httpMock = setupTestBed();
+    const fixture = TestBed.createComponent(AttendanceHistoryComponent);
+    fixture.detectChanges();
+    httpMock.expectOne(`/api/v1/athletes/${ATHLETE_ID}`).flush({ data: makeAthlete() });
+    httpMock
+      .expectOne(`/api/v1/athletes/${ATHLETE_ID}/attendance?from=2026-04-01&to=2026-04-30`)
+      .flush({ data: [makeRecord({ id: 1, attended_on: '2026-04-15' })] });
+    flushMonth(httpMock, '2026-04', { attended: 1, expected: 8, rate: 0.125 });
+    fixture.detectChanges();
+
+    const pct = fixture.nativeElement.querySelector(
+      '[data-cy="attendance-rate-pct"]',
+    ) as HTMLElement;
+    expect(pct.textContent?.trim()).toBe('13%');
+    const detail = fixture.nativeElement.querySelector(
+      '[data-cy="attendance-rate-detail"]',
+    ) as HTMLElement;
+    expect(detail.textContent).toContain('1');
+    expect(detail.textContent).toContain('8');
+    flushSummary(httpMock);
+    httpMock.verify();
+  });
+
+  it('paints no day before the athlete joined as a training day (#1769)', () => {
+    const httpMock = setupTestBed();
+    TestBed.inject(AcademyService).academy.set({
+      id: 1,
+      name: 'Test',
+      slug: 'test',
+      address: null,
+      logo_url: null,
+      training_days: [1, 3, 5],
+    });
+    const fixture = TestBed.createComponent(AttendanceHistoryComponent);
+    fixture.detectChanges();
+    httpMock.expectOne(`/api/v1/athletes/${ATHLETE_ID}`).flush({ data: makeAthlete() });
+    httpMock
+      .expectOne(`/api/v1/athletes/${ATHLETE_ID}/attendance?from=2026-04-01&to=2026-04-30`)
+      .flush({ data: [] });
+    // Joined on Monday 13 April: the server's window starts there.
+    flushMonth(httpMock, '2026-04', {
+      attended: 0,
+      expected: 5,
+      rate: 0,
+      windowStart: '2026-04-13',
+    });
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance['isTrainingDay'](8)).toBe(false);
+    expect(fixture.componentInstance['isTrainingDay'](13)).toBe(true);
     flushSummary(httpMock);
     httpMock.verify();
   });
@@ -640,6 +746,7 @@ describe('AttendanceHistoryComponent', () => {
       .flush({
         data: [makeRecord({ id: 1, attended_on: '2026-04-15' })],
       });
+    flushMonth(httpMock, '2026-04', { attended: 1, expected: null, rate: null });
     fixture.detectChanges();
 
     // No rate → no knob; the bare-count fallback paragraph renders instead.

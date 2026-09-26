@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Enums\AttendanceSource;
 use App\Observers\AttendanceObserver;
+use App\Observers\ForgetsAttendanceSummaries;
 use Database\Factories\AttendanceRecordFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
@@ -32,7 +33,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'notes',
     'source',
 ])]
-#[ObservedBy([AttendanceObserver::class])]
+#[ObservedBy([AttendanceObserver::class, ForgetsAttendanceSummaries::class])]
 class AttendanceRecord extends Model
 {
     /** @use HasFactory<AttendanceRecordFactory> */

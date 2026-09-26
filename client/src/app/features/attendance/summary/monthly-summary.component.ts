@@ -19,7 +19,6 @@ import { PageHeaderComponent } from '../../../shared/components/page-header/page
 import { AttendanceService, AttendanceSummaryRow } from '../../../core/services/attendance.service';
 import { RouterLink } from '@angular/router';
 import { LanguageService } from '../../../core/services/language.service';
-import { attendanceRate } from '../../../shared/utils/attendance-rate';
 import { localeFor } from '../../../shared/utils/locale';
 import { ErrorStateComponent } from '../../../shared/components/error-state/error-state.component';
 import { SortHeaderComponent } from '../../../shared/components/sort-header/sort-header.component';
@@ -256,8 +255,9 @@ export class MonthlySummaryComponent implements OnInit {
 
   /** The row's own rate, or null when it has nothing to divide by. */
   ratePercent(row: AttendanceSummaryRow): number | null {
-    const r = attendanceRate(row.count, row.expected_count);
-    return r === null ? null : Math.round(r * 100);
+    const expected = row.expected_count;
+    if (expected === null || expected === 0) return null;
+    return Math.round((row.count / expected) * 100);
   }
 
   ngOnInit(): void {

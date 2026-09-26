@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Observers\ForgetsAttendanceSummaries;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -31,6 +33,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon             $updated_at
  */
 #[Fillable(['academy_id', 'training_days', 'effective_from'])]
+#[ObservedBy([ForgetsAttendanceSummaries::class])]
 class AcademySchedule extends Model
 {
     /** @return BelongsTo<Academy, $this> */
