@@ -6,6 +6,7 @@ namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\NotificationText;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\DatabaseNotification;
@@ -38,15 +39,17 @@ class NotificationInboxController extends Controller
             ->get();
 
         $unread = $user->unreadNotifications()->count();
+        // The owner's language, for the sentences written from `params`
+        // (#1912). English until the SPA has said.
+        $locale = $user->locale->value ?? 'en';
 
         return response()->json([
-            'data' => $rows->map(static function (DatabaseNotification $n): array {
+            'data' => $rows->map(static function (DatabaseNotification $n) use ($locale): array {
                 // The Notification's toDatabase() return is in `data`.
                 // Project a flat shape that mirrors what the SPA renders.
                 /** @var array<string, mixed> $data */
                 $data = $n->data;
-                $title = $data['title'] ?? '';
-                $body = $data['body'] ?? '';
+                $text = NotificationText::of($data, $locale);
                 $link = $data['link'] ?? null;
                 $kind = $data['kind'] ?? null;
                 $actor = $data['actor'] ?? null;
@@ -54,8 +57,8 @@ class NotificationInboxController extends Controller
                 return [
                     'id' => $n->id,
                     'type' => $n->type,
-                    'title' => \is_string($title) ? $title : '',
-                    'body' => \is_string($body) ? $body : '',
+                    'title' => $text['title'],
+                    'body' => $text['body'],
                     'link' => \is_string($link) ? $link : null,
                     // Surface the stable `kind` discriminator so the
                     // SPA can render category-specific icons / styling

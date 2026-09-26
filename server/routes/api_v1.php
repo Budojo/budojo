@@ -274,6 +274,10 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('/me/notification-preferences', [\App\Http\Controllers\User\NotificationPreferencesController::class, 'show']);
     Route::patch('/me/notification-preferences', [\App\Http\Controllers\User\NotificationPreferencesController::class, 'update']);
 
+    // The app's language (#1912): the server writes the owner's notifications
+    // itself, in the inbox and in the Windows notification, so it is told.
+    Route::patch('/me/locale', [\App\Http\Controllers\Me\LocaleController::class, 'update']);
+
     // In-app notification inbox (#418). Bell-icon dropdown on the
     // dashboard topbar; per-user state in the standard Laravel
     // `notifications` table. The inbox SURFACE ships here. Wiring

@@ -70,3 +70,14 @@ beforeEach(() => {
     },
   });
 });
+
+// Default `PATCH /api/v1/me/locale` mock (#1912). The SPA tells the server its
+// language as soon as a signed-in user loads with one the server has not
+// heard, which is every fixture user above. Unmocked, it reaches whatever is
+// listening: nothing in CI, but a local API answers 401 and the app signs the
+// test out. Echoes the language back, as the server does.
+beforeEach(() => {
+  cy.intercept('PATCH', '/api/v1/me/locale', (req) => {
+    req.reply({ statusCode: 200, body: { data: { locale: req.body.locale } } });
+  });
+});

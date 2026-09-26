@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\AppLocale;
 use App\Enums\UserRole;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -34,6 +35,7 @@ use Laravel\Sanctum\HasApiTokens;
  * @property string|null  $avatar_path        Relative path on the `public` disk of the user's uploaded avatar (#411). Null until the first upload.
  * @property-read string|null $avatar_url     Public URL accessor for `avatar_path` — null when no avatar is set.
  * @property UserRole     $role               Persona discriminator (#445). `owner` for every public-register row; `athlete` only via the M7 invite flow.
+ * @property AppLocale|null $locale           The language the user reads the app in (#1912); null until the SPA says, then English is written.
  * @property string       $password
  * @property string|null  $remember_token
  * @property array<string, bool>|null $notification_preferences Per-category opt-out for digest / reminder emails (#416). Null = all categories enabled.
@@ -48,7 +50,7 @@ use Laravel\Sanctum\HasApiTokens;
  * @property Carbon       $created_at
  * @property Carbon       $updated_at
  */
-#[Fillable(['first_name', 'last_name', 'handle', 'profile_is_public', 'attendance_peer_visible', 'leaderboard_visible', 'email', 'password', 'terms_accepted_at', 'avatar_path', 'role', 'notification_preferences', 'two_factor_secret', 'two_factor_recovery_codes', 'two_factor_confirmed_at', 'onboarding_dismissed_at', 'onboarding_completed_steps', 'active_academy_id', 'quiet_hours_start_local', 'quiet_hours_end_local'])]
+#[Fillable(['first_name', 'last_name', 'handle', 'profile_is_public', 'attendance_peer_visible', 'leaderboard_visible', 'email', 'password', 'terms_accepted_at', 'avatar_path', 'role', 'locale', 'notification_preferences', 'two_factor_secret', 'two_factor_recovery_codes', 'two_factor_confirmed_at', 'onboarding_dismissed_at', 'onboarding_completed_steps', 'active_academy_id', 'quiet_hours_start_local', 'quiet_hours_end_local'])]
 #[Hidden(['password', 'remember_token', 'two_factor_secret', 'two_factor_recovery_codes'])]
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -295,6 +297,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'terms_accepted_at' => 'datetime',
             'password' => 'hashed',
             'role' => UserRole::class,
+            'locale' => AppLocale::class,
             // Per-category opt-out preferences for digest / reminder
             // emails (#416). Keys are category strings (see
             // `App\Support\NotificationCategory`), values are booleans

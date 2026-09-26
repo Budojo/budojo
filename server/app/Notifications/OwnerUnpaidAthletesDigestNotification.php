@@ -63,6 +63,19 @@ class OwnerUnpaidAthletesDigestNotification extends Notification
             'academy_id' => $this->academy->id,
             'year' => $this->year,
             'month' => $this->month,
+            // What `NotificationText` writes the sentence from, in the
+            // owner's language (#1912).
+            'params' => [
+                'count' => $count,
+                'names' => $this->athletes
+                    ->map(static fn (Athlete $athlete): string => trim($athlete->first_name . ' ' . $athlete->last_name))
+                    ->take(3)
+                    ->values()
+                    ->all(),
+                'more' => max(0, $count - 3),
+                'year' => $this->year,
+                'month' => $this->month,
+            ],
         ];
     }
 }
