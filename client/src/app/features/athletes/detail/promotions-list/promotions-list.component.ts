@@ -49,9 +49,6 @@ interface SelectOption<T> {
   readonly value: T;
 }
 
-/** The toast that carries the "Saltato" undo, kept apart from the plain ones (#1966). */
-const SKIP_TOAST_KEY = 'promotion-skip';
-
 /** The dates a missing step can be given and still sit where it belongs (#1966). */
 interface GapWindow {
   /** The first day that fits, or null when nothing recorded comes before it. */
@@ -158,11 +155,20 @@ export class PromotionsListComponent implements OnInit {
   /** The steps no row records, across the whole history (#1966). */
   protected readonly gaps = signal<readonly PromotionGap[]>([]);
   protected readonly historyStartsAt = signal<string | null>(null);
-  /** Folded runs of missing steps the owner has opened. */
+  /** The keys of the steps in folded runs the owner has opened. */
   private readonly openRuns = signal<ReadonlySet<string>>(new Set());
   /** The step whose "Saltato" is on its way to the server. */
   protected readonly skippingKey = signal<string | null>(null);
-  protected readonly skipToastKey = SKIP_TOAST_KEY;
+  /** Steps skipped during this visit, drawn in place with their undo until a reload. */
+  private readonly skipped = signal<ReadonlySet<string>>(new Set());
+  /** What the status region last said — a skip or its undo. */
+  protected readonly announcement = signal('');
+  /**
+   * The 48px floor, on each action's own `<button>`: `p-button` hands `style`
+   * to the element that takes the click, so the floor is on the target, not
+   * on a wrapper around it (Fitts, client/CLAUDE.md).
+   */
+  protected readonly hitArea = { 'min-height': '3rem' } as const;
 
   /** The page's rows with the missing steps between them (#1966). */
   protected readonly entries = computed<TimelineEntry[]>(() =>
@@ -336,6 +342,8 @@ export class PromotionsListComponent implements OnInit {
           this.progression.set(resp.progression ?? null);
           this.gaps.set(resp.gaps ?? []);
           this.historyStartsAt.set(resp.history_starts_at ?? null);
+          // A skipped step is no longer in the reply: its line ends here.
+          this.skipped.set(new Set());
           this.currentPage.set(resp.meta.current_page);
           this.lastPage.set(resp.meta.last_page);
           this.loading.set(false);
@@ -531,9 +539,10 @@ export class PromotionsListComponent implements OnInit {
 
   /**
    * The server's window, `(after, before]`, and up to today with no `before`
-   * (`PromotionGaps::inWindow`) — for a step an opening row stands for too:
-   * that row's own date is only the day of entry, and the server already
-   * passes over it when it works out `before`.
+   * (`PromotionGaps::inWindow`). One rule for every step: for the one an
+   * opening row stands for, the server's `before` is that row itself, so the
+   * window ends on the day the athlete was entered — they held the belt by
+   * then — and the picker opens on it.
    */
   private windowOf(gap: PromotionGap): GapWindow {
     const before = gap.before === null ? null : dayOf(gap.before.recorded_at);
@@ -588,33 +597,33 @@ export class PromotionsListComponent implements OnInit {
 
   /**
    * "Saltato" (#1966): the step never happened — a BJJ white belt can go from
-   * three stripes to blue. Remembered on the server so it stops asking, with
-   * an undo in the toast. The keyboard stays in the list, on the row that
-   * took the step's place: the toast leaves on its own after five seconds,
-   * and focus parked on its button would fall to <body> with it. The toast
-   * speaks for itself — PrimeNG gives each message `aria-live`.
+   * three stripes to blue. Remembered on the server so it stops asking.
+   *
+   * The undo sits in place, not in a toast: the ghost row becomes a line
+   * saying the step was skipped, with its own "Annulla", for the rest of the
+   * visit. A toast closes on its own after five seconds and sits elsewhere in
+   * the page, so a keyboard could not reach its undo in time; the line keeps
+   * it where the step was, and focus goes straight to it. Nothing reloads —
+   * a skip changes no other step — and the always-present status region says
+   * what happened.
    */
   protected skip(gap: PromotionGap): void {
     // A step an opening row stands for is a belt they hold: it is completed,
     // never skipped, and the server ignores a skip there.
     if (this.skippingKey() !== null || !canSkip(gap)) return;
-    const index = this.entryIndexOf(gap);
     this.skippingKey.set(gap.key);
     this.athleteService
       .skipPromotionStep(this.athleteId, gap.belt, stepStripes(gap))
       .pipe(finalize(() => this.skippingKey.set(null)))
       .subscribe({
         next: () => {
-          this.load(this.currentPage(), () => this.focusEntry(null, index));
-          this.messageService.add({
-            key: SKIP_TOAST_KEY,
-            severity: 'success',
-            summary: this.translate.instant('athletes.detail.promotions.gap.skipped', {
+          this.skipped.update((keys) => new Set([...keys, gap.key]));
+          this.announcement.set(
+            this.translate.instant('athletes.detail.promotions.gap.skipped', {
               step: this.stepLabel(gap),
             }),
-            data: { undo: () => this.unskip(gap) },
-            life: 5000,
-          });
+          );
+          this.focusAfterRender(unskipSelector(gap));
         },
         error: () => {
           this.messageService.add({
@@ -627,10 +636,18 @@ export class PromotionsListComponent implements OnInit {
       });
   }
 
-  private unskip(gap: PromotionGap): void {
-    this.messageService.clear(SKIP_TOAST_KEY);
+  /** "Annulla" on a skipped line: the ghost row comes back, and focus to its "Aggiungi la data". */
+  protected unskip(gap: PromotionGap): void {
     this.athleteService.unskipPromotionStep(this.athleteId, gap.belt, stepStripes(gap)).subscribe({
-      next: () => this.load(this.currentPage(), () => this.focusAfterRender(addDateSelector(gap))),
+      next: () => {
+        this.skipped.update((keys) => new Set([...keys].filter((key) => key !== gap.key)));
+        this.announcement.set(
+          this.translate.instant('athletes.detail.promotions.gap.restored', {
+            step: this.stepLabel(gap),
+          }),
+        );
+        this.focusAfterRender(addDateSelector(gap));
+      },
       error: () => {
         this.messageService.add({
           severity: 'error',
@@ -681,8 +698,14 @@ export class PromotionsListComponent implements OnInit {
     );
   }
 
-  protected openRun(runKey: string): void {
-    this.openRuns.update((open) => new Set([...open, runKey]));
+  /** "Mostra" on a folded run: its steps stay open, whatever gets filled next. */
+  protected openRun(gaps: readonly PromotionGap[]): void {
+    this.openRuns.update((open) => new Set([...open, ...gaps.map((gap) => gap.key)]));
+  }
+
+  /** Skipped during this visit: drawn as a line with its undo, not as a ghost. */
+  protected isSkipped(gap: PromotionGap): boolean {
+    return this.skipped().has(gap.key);
   }
 
   /** "Bianca, 4° grado" / "Nera, 3° dan" / "cintura Blu" — a step named in words. */
@@ -839,6 +862,11 @@ export class PromotionsListComponent implements OnInit {
 /** Whether "Saltato" applies: not to the step an opening row stands for. */
 function canSkip(gap: PromotionGap): boolean {
   return gap.completes_promotion_id === null;
+}
+
+/** The "Annulla" a skipped step's line carries, where focus goes after the skip. */
+function unskipSelector(gap: PromotionGap): string {
+  return `[data-cy="gap-unskip-${gap.key}"] button`;
 }
 
 /** Where focus returns when a skipped step is brought back. */

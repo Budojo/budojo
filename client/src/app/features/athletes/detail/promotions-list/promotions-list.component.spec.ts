@@ -795,7 +795,8 @@ describe('PromotionsListComponent — missing steps (#1966)', () => {
     from_stripes: null,
     to_stripes: null,
     after: { promotion_id: 12, recorded_at: '2024-03-12' },
-    before: null,
+    // The opening row itself: the blue belt came no later than his entry.
+    before: { promotion_id: 15, recorded_at: '2026-09-20' },
     completes_promotion_id: 15,
   };
   const jacopoProgression = {
@@ -918,17 +919,17 @@ describe('PromotionsListComponent — missing steps (#1966)', () => {
     expect(svc.createPromotion).not.toHaveBeenCalled();
   });
 
-  it("bounds the opening row's step as the server does: after its older row, up to today", () => {
-    // `before: null` on a completing step runs to today — not to the opening
-    // row's own date, which is only the day of entry (`PromotionGaps::inWindow`).
+  it("bounds the opening row's step as the server does: after its older row, up to his entry", () => {
+    // The server's `before` for this step is the opening row itself: he was
+    // blue by the day he was entered, so the window ends there, inclusive
+    // (`PromotionGaps::inWindow`) — not today, six days later.
     const { el, fixture, component } = jacopo();
     click(el, 'gap-add-date-belt:blue:0');
     fixture.detectChanges();
     const c = component as unknown as Internals;
 
     expect(c.fillWindow()?.min).toEqual(new Date(2024, 2, 13));
-    // Today, the owner's day (#1968) — not 20 Sep, the day he was entered.
-    expect(c.fillWindow()?.max).toEqual(new Date(2026, 8, 26));
+    expect(c.fillWindow()?.max).toEqual(new Date(2026, 8, 20));
   });
 
   it('never offers "Saltato" on the step an opening row stands for', () => {
@@ -987,18 +988,71 @@ describe('PromotionsListComponent — missing steps (#1966)', () => {
     expect(ctx.el.querySelector('[data-cy="promotion-15"]')?.textContent).not.toContain('When?');
   });
 
-  it('skips a step, and brings it back from the toast', () => {
+  it('turns a skipped step into a line with its own undo, in place, and says so', async () => {
     const { el, fixture, svc } = jacopo();
-    const add = vi.spyOn(fixture.componentRef.injector.get(MessageService), 'add');
+    const announced = (): string =>
+      el.querySelector('[data-cy="promotions-announce"]')?.textContent?.trim() ?? '';
 
     click(el, 'gap-skip-stripe:white:4');
+    fixture.detectChanges();
+    await fixture.whenStable();
 
     expect(svc.skipPromotionStep).toHaveBeenCalledWith(7, 'white', 4);
-    const toast = add.mock.calls.at(-1)?.[0] as { summary: string; data: { undo: () => void } };
-    expect(toast.summary).toBe('White, stripe 4: marked as skipped');
+    // The ghost row is gone; a line stands in its place with the undo on it.
+    expect(el.querySelector('[data-cy="promotion-gap-stripe:white:4"]')).toBeNull();
+    const line = el.querySelector('[data-cy="promotion-skipped-stripe:white:4"]');
+    expect(line?.textContent).toContain('White, stripe 4: marked as skipped');
+    const cys = Array.from(el.querySelectorAll('[data-cy="promotions-list"] > li')).map((li) =>
+      li.getAttribute('data-cy'),
+    );
+    expect(cys).toEqual(['promotion-15', 'promotion-skipped-stripe:white:4', 'promotion-12']);
+    // Said out loud, from a region that was on the page before the change.
+    expect(announced()).toBe('White, stripe 4: marked as skipped');
+    // The keyboard is on the one control that can take it back.
+    const undo = el.querySelector<HTMLButtonElement>(
+      '[data-cy="gap-unskip-stripe:white:4"] button',
+    );
+    expect(document.activeElement).toBe(undo);
 
-    toast.data.undo();
+    undo!.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
     expect(svc.unskipPromotionStep).toHaveBeenCalledWith(7, 'white', 4);
+    expect(el.querySelector('[data-cy="promotion-skipped-stripe:white:4"]')).toBeNull();
+    expect(el.querySelector('[data-cy="promotion-gap-stripe:white:4"]')).not.toBeNull();
+    expect(announced()).toBe('White, stripe 4: back among the steps to date');
+    expect(document.activeElement).toBe(
+      el.querySelector('[data-cy="gap-add-date-stripe:white:4"] button'),
+    );
+  });
+
+  it('gives every action on a missing step a 48px floor on the button itself', async () => {
+    const { el, fixture, svc } = jacopo();
+    const floor = (cy: string): string | undefined =>
+      el.querySelector<HTMLButtonElement>(`[data-cy="${cy}"] button`)?.style.minHeight;
+
+    expect(floor('gap-add-date-stripe:white:4')).toBe('3rem');
+    expect(floor('gap-skip-stripe:white:4')).toBe('3rem');
+    expect(floor('gap-add-date-belt:blue:0')).toBe('3rem');
+    expect(floor('promotions-history-add')).toBe('3rem');
+
+    click(el, 'gap-skip-stripe:white:4');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(floor('gap-unskip-stripe:white:4')).toBe('3rem');
+
+    // A folded run's "show".
+    const stripe = (n: number): PromotionGap => ({
+      ...fourthStripe,
+      key: `stripe:white:${n}`,
+      from_stripes: n - 1,
+      to_stripes: n,
+    });
+    svc.promotions.mockReturnValue(page([opening, whiteThree], [stripe(1), stripe(2), stripe(3)]));
+    (fixture.componentInstance as unknown as { load: (page: number) => void }).load(1);
+    fixture.detectChanges();
+    expect(floor('gap-run-show')).toBe('3rem');
   });
 
   it('keys a poom → dan skip by the degree it carries, not by 0', () => {
@@ -1037,31 +1091,27 @@ describe('PromotionsListComponent — missing steps (#1966)', () => {
       }),
     );
     fixture.detectChanges();
-    const add = vi.spyOn(fixture.componentRef.injector.get(MessageService), 'add');
 
     click(el, 'gap-skip-belt:black:1');
     expect(svc.skipPromotionStep).toHaveBeenCalledWith(7, 'black', 1);
+    fixture.detectChanges();
 
-    (add.mock.calls.at(-1)?.[0] as { data: { undo: () => void } }).data.undo();
+    click(el, 'gap-unskip-belt:black:1');
     expect(svc.unskipPromotionStep).toHaveBeenCalledWith(7, 'black', 1);
   });
 
-  it('keeps the keyboard in the list after a skip, on the row that took its place', async () => {
+  it('keeps the skipped line when the skip fails, and says why', async () => {
     const { el, fixture, svc } = jacopo();
-    // The server's reply once white's fourth stripe is skipped.
-    svc.promotions.mockReturnValue(page([opening, whiteThree], [blueBelt]));
+    svc.skipPromotionStep.mockReturnValue(throwError(() => new Error('boom')));
+    const add = vi.spyOn(fixture.componentRef.injector.get(MessageService), 'add');
 
-    const skipButton = el.querySelector<HTMLButtonElement>(
-      '[data-cy="gap-skip-stripe:white:4"] button',
-    )!;
-    skipButton.focus();
-    skipButton.click();
+    click(el, 'gap-skip-stripe:white:4');
     fixture.detectChanges();
-    await fixture.whenStable();
 
-    // Not the toast's undo: the toast leaves after five seconds, and focus
-    // would fall to <body> with it.
-    expect(document.activeElement).toBe(el.querySelector('[data-cy="promotion-edit-12"] button'));
+    // Nothing was skipped: the ghost row stays, and the error is a toast.
+    expect(el.querySelector('[data-cy="promotion-gap-stripe:white:4"]')).not.toBeNull();
+    expect(el.querySelector('[data-cy="promotion-skipped-stripe:white:4"]')).toBeNull();
+    expect(add).toHaveBeenCalledWith(expect.objectContaining({ severity: 'error' }));
   });
 
   it('puts the keyboard on the row a fill wrote, not on <body> after the reload', async () => {

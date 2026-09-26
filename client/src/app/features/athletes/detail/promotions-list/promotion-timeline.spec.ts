@@ -110,12 +110,35 @@ describe('composeTimeline (#1966)', () => {
 
     const run = folded[1];
     if (run.kind !== 'collapsed') throw new Error('expected a collapsed run');
-    expect(shape(composeTimeline(rows, gaps, new Set([run.runKey])))).toEqual([
+    const opened = new Set(run.gaps.map((g) => g.key));
+    expect(shape(composeTimeline(rows, gaps, opened))).toEqual([
       'r3',
       'gstripe:purple:4',
       'gstripe:purple:3',
       'gstripe:purple:2',
       'r1',
+    ]);
+  });
+
+  it('keeps an opened run open when a fill leaves the rest of it with new neighbours', () => {
+    // Four blue stripes missing between the belt row and the fourth stripe.
+    const before = [row(9, '2025-06-01'), row(8, '2024-01-10')];
+    const four = [1, 2, 3, 4].map((n) => gap(`stripe:blue:${n}`, 8, 9));
+    const run = composeTimeline(before, four, new Set())[1];
+    if (run.kind !== 'collapsed') throw new Error('expected a collapsed run');
+    const opened = new Set(run.gaps.map((g) => g.key));
+
+    // The first one filled: row 20, and the other three now after it.
+    const after = [row(9, '2025-06-01'), row(20, '2024-03-01'), row(8, '2024-01-10')];
+    const three = [2, 3, 4].map((n) => gap(`stripe:blue:${n}`, 20, 9));
+
+    expect(shape(composeTimeline(after, three, opened))).toEqual([
+      'r9',
+      'gstripe:blue:4',
+      'gstripe:blue:3',
+      'gstripe:blue:2',
+      'r20',
+      'r8',
     ]);
   });
 

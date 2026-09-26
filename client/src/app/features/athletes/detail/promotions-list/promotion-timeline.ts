@@ -30,7 +30,10 @@ const LONGEST_UNFOLDED_RUN = 2;
  * A gap an opening row stands for is never a ghost of its own: it rides on
  * that row, which is what gets completed when the date is added.
  *
- * @param expanded the `runKey`s of folded runs the owner has opened
+ * @param expanded the keys of the steps in runs the owner has opened. By
+ *                 step, not by run: filling one step changes the rest of the
+ *                 run's neighbours and so its identity, and a run remembered
+ *                 whole would fold back after every date the owner adds.
  */
 export function composeTimeline(
   rows: readonly AthletePromotion[],
@@ -81,8 +84,9 @@ function run(
 ): TimelineEntry[] {
   if (gaps === undefined) return [];
   const newestFirst = [...gaps].reverse();
-  const runKey = newestFirst.map((g) => g.key).join('|');
-  if (newestFirst.length > LONGEST_UNFOLDED_RUN && !expanded.has(runKey)) {
+  const opened = newestFirst.some((g) => expanded.has(g.key));
+  if (newestFirst.length > LONGEST_UNFOLDED_RUN && !opened) {
+    const runKey = newestFirst.map((g) => g.key).join('|');
     return [{ kind: 'collapsed', runKey, gaps: newestFirst }];
   }
   return newestFirst.map((gap) => ({ kind: 'gap', gap }));

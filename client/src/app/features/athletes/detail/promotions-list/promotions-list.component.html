@@ -1,24 +1,11 @@
 <p-toast position="top-right" />
-<!-- The "Saltato" toast carries its undo (#1966): a toast of its own so the
-     plain ones keep PrimeNG's default layout. -->
-<p-toast [key]="skipToastKey" position="bottom-center">
-  <ng-template let-message pTemplate="message">
-    <div class="promotions-toast">
-      <span class="promotions-toast__summary">{{ message.summary }}</span>
-      @if (message.data?.undo) {
-        <button
-          type="button"
-          class="promotions-toast__undo"
-          (click)="message.data.undo()"
-          data-cy="promotion-skip-undo"
-        >
-          {{ 'athletes.detail.promotions.gap.undo' | translate }}
-        </button>
-      }
-    </div>
-  </ng-template>
-</p-toast>
 <p-confirmpopup />
+
+<!-- Always on the page, so a screen reader hears it change: a skip and its
+     undo happen in place, with no toast to speak for them (#1966). -->
+<p class="promotions__announce" role="status" data-cy="promotions-announce">
+  {{ announcement() }}
+</p>
 
 <!-- A missing step's transition (#1966), shared by the ghost row, the opening
      row it completes and the fill dialog. -->
@@ -187,7 +174,31 @@
          was on is gone and no other row is left to take it (#1966). -->
     <ul class="promotions__list" data-cy="promotions-list" tabindex="-1">
       @for (entry of entries(); track trackEntry(entry)) {
-        @if (entry.kind === 'gap') {
+        @if (entry.kind === 'gap' && isSkipped(entry.gap)) {
+          <!-- A step skipped during this visit: a line in its place, with the
+               undo where the step was, until the next reload (#1966). -->
+          <li
+            class="promotions__row promotions__row--skipped"
+            [attr.data-cy]="'promotion-skipped-' + entry.gap.key"
+          >
+            <span class="promotions__skipped-text">{{
+              'athletes.detail.promotions.gap.skipped' | translate: { step: stepLabel(entry.gap) }
+            }}</span>
+            <div class="promotions__gap-actions">
+              <p-button
+                [label]="'athletes.detail.promotions.gap.undo' | translate"
+                [text]="true"
+                [style]="hitArea"
+                [ariaLabel]="
+                  'athletes.detail.promotions.gap.undoAria'
+                    | translate: { step: stepLabel(entry.gap) }
+                "
+                (onClick)="unskip(entry.gap)"
+                [attr.data-cy]="'gap-unskip-' + entry.gap.key"
+              />
+            </div>
+          </li>
+        } @else if (entry.kind === 'gap') {
           <!-- A step the history must have and no row records (#1966). -->
           <li
             class="promotions__row promotions__row--ghost"
@@ -203,6 +214,7 @@
               <p-button
                 [label]="'athletes.detail.promotions.gap.addDate' | translate"
                 [text]="true"
+                [style]="hitArea"
                 [ariaLabel]="
                   'athletes.detail.promotions.gap.addDateAria'
                     | translate: { step: stepLabel(entry.gap) }
@@ -215,6 +227,7 @@
                   [label]="skipLabelKey(entry.gap) | translate"
                   [text]="true"
                   severity="secondary"
+                  [style]="hitArea"
                   [ariaLabel]="(skipLabelKey(entry.gap) | translate) + ': ' + stepLabel(entry.gap)"
                   [loading]="skippingKey() === entry.gap.key"
                   [disabled]="skippingKey() !== null"
@@ -257,11 +270,12 @@
               <p-button
                 [label]="'athletes.detail.promotions.gap.show' | translate"
                 [text]="true"
+                [style]="hitArea"
                 [ariaLabel]="
                   'athletes.detail.promotions.gap.showAria'
                     | translate: { total: entry.gaps.length }
                 "
-                (onClick)="openRun(entry.runKey)"
+                (onClick)="openRun(entry.gaps)"
                 data-cy="gap-run-show"
               />
             </div>
@@ -318,6 +332,7 @@
                 <p-button
                   [label]="'athletes.detail.promotions.gap.addDate' | translate"
                   [text]="true"
+                  [style]="hitArea"
                   [ariaLabel]="
                     'athletes.detail.promotions.gap.addDateAria'
                       | translate: { step: stepLabel(gap) }
@@ -386,6 +401,7 @@
         <p-button
           [label]="'athletes.detail.promotions.addPast' | translate"
           [link]="true"
+          [style]="hitArea"
           (onClick)="openCreateDialog()"
           data-cy="promotions-history-add"
         />

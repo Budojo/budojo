@@ -1188,7 +1188,7 @@ const PROMOTION_GAPS_OPENING = [
     from_stripes: null,
     to_stripes: null,
     after: { promotion_id: 12, recorded_at: '2024-03-12' },
-    before: null,
+    before: { promotion_id: 15, recorded_at: '2026-09-02' },
     completes_promotion_id: 15,
   },
 ];

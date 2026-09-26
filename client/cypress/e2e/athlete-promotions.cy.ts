@@ -499,7 +499,7 @@ describe('a missing promotion step (#1966)', () => {
     cy.get('[data-cy="promotion-gap-stripe:blue:2"]').should('be.visible');
   });
 
-  it('skips the step, and brings it back from the toast', () => {
+  it('skips the step, and brings it back from the line left in its place', () => {
     cy.intercept('POST', '/api/v1/athletes/1/promotion-skips', { statusCode: 201 }).as('skip');
     cy.intercept('DELETE', '/api/v1/athletes/1/promotion-skips/blue/1', { statusCode: 204 }).as(
       'unskip',
@@ -508,23 +508,24 @@ describe('a missing promotion step (#1966)', () => {
     cy.visitAuthenticated('/dashboard/athletes/1/promotions');
     cy.wait(['@academy', '@athlete', '@promotions']);
 
-    // As the server answers once the first stripe is skipped.
-    cy.intercept('GET', '/api/v1/athletes/1/promotions*', timeline([blueBelt], [blueStripe(2)])).as(
-      'afterSkip',
-    );
     cy.get('[data-cy="gap-skip-stripe:blue:1"]').click();
     cy.wait('@skip').its('request.body').should('deep.equal', { belt: 'blue', stripes: 1 });
-    cy.wait('@afterSkip');
+    // No reload: the ghost row becomes a line with its own undo, and the
+    // keyboard is already on it.
     cy.get('[data-cy="promotion-gap-stripe:blue:1"]').should('not.exist');
+    cy.get('[data-cy="promotion-skipped-stripe:blue:1"]').should(
+      'contain.text',
+      'Blue, stripe 1: marked as skipped',
+    );
+    cy.focused().should('contain.text', 'Undo');
+    cy.get('[data-cy="promotions-announce"]').should(
+      'contain.text',
+      'Blue, stripe 1: marked as skipped',
+    );
 
-    cy.intercept(
-      'GET',
-      '/api/v1/athletes/1/promotions*',
-      timeline([blueBelt], [blueStripe(1), blueStripe(2)]),
-    ).as('afterUndo');
-    cy.get('[data-cy="promotion-skip-undo"]').click();
+    cy.get('[data-cy="gap-unskip-stripe:blue:1"]').click();
     cy.wait('@unskip');
-    cy.wait('@afterUndo');
     cy.get('[data-cy="promotion-gap-stripe:blue:1"]').should('be.visible');
+    cy.focused().should('contain.text', 'Add the date');
   });
 });

@@ -77,9 +77,6 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 0.5rem;
-    // The hit area is a floor, whatever a text button's own padding comes to
-    // (Fitts, client/CLAUDE.md): the athletes list's 3rem.
-    min-height: 3rem;
 
     @media (min-width: 768px) {
       justify-content: flex-end;
@@ -255,38 +252,35 @@
   font-size: 0.875rem;
 }
 
-// The "Saltato" toast and its undo (#1966), the attendance toast's shape.
-.promotions-toast {
+// A step skipped during this visit (#1966): a compact line where the ghost
+// row was, the sentence and its undo on one line, no card around it.
+.promotions__row--skipped {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  width: 100%;
+  gap: 0.5rem;
+  padding-block: 0;
+  background: transparent;
+  border-style: dashed;
+  border-color: var(--p-surface-300);
 }
 
-.promotions-toast__summary {
-  flex: 1;
-  font-weight: 500;
+.promotions__skipped-text {
+  color: var(--p-text-muted-color);
+  font-size: 0.875rem;
 }
 
-.promotions-toast__undo {
-  all: unset;
-  cursor: pointer;
-  // `all: unset` takes the global button floor with it: without these the
-  // undo is ~37px tall, under the 48px target (#1966).
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 3rem;
-  min-width: 3rem;
-  box-sizing: border-box;
-  font-weight: 600;
-  color: var(--p-primary-color);
-  padding-inline: 1rem;
-  border-radius: var(--p-border-radius-sm);
-
-  &:focus-visible {
-    outline: 2px solid var(--p-primary-color);
-    outline-offset: 2px;
-  }
+// The status region for a skip and its undo: read, never seen. Always in the
+// DOM so a screen reader is listening before the text changes.
+.promotions__announce {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }

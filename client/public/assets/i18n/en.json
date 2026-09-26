@@ -2498,7 +2498,9 @@
           "run": "{{total}} steps with no date",
           "show": "Show",
           "showAria": "Show the {{total}} steps with no date",
-          "before": "Before {{date}} the history isn't recorded."
+          "before": "Before {{date}} the history isn't recorded.",
+          "restored": "{{step}}: back among the steps to date",
+          "undoAria": "Undo: {{step}}"
         }
       },
       "attendance": {
