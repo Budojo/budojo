@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Mail;
 
+use App\Support\OperatorDay;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
@@ -65,7 +66,7 @@ class AthleteInvitationMail extends Mailable implements ShouldQueue
                 'ownerName' => $this->ownerName,
                 'inviteUrl' => $this->resolvedInviteUrl(),
                 'expiresAt' => $this->expiresAt,
-                'expiryDays' => max(1, $this->expiresAt->diffInDays(now()->startOfDay())),
+                'expiryDays' => max(1, $this->expiresAt->diffInDays(OperatorDay::today())),
             ],
         );
     }

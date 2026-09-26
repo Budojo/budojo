@@ -197,7 +197,7 @@ class AttendanceController extends Controller
         // A calendar month for the attendance tab's ring, or the last N days
         // for its card (#1769): one question, two windows.
         $month = $request->month();
-        $today = CarbonImmutable::today();
+        $today = OperatorDay::today();
         [$window, $from, $to] = $month !== null
             ? ['month.' . $month->format('Y-m'), $month, $month->endOfMonth()]
             : ['range.' . $request->rangeDays(), $today->subDays($request->rangeDays() - 1), $today];

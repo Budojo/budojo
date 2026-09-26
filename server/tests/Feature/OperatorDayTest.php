@@ -6,6 +6,7 @@ use App\Enums\Belt;
 use App\Models\Athlete;
 use App\Models\AthletePayment;
 use App\Models\Carnet;
+use App\Models\User;
 use Illuminate\Http\UploadedFile;
 
 /**
@@ -65,7 +66,90 @@ it('accepts a carnet sold and valid from the operator\'s today, and dates an und
     $this->actingAs($this->user)
         ->postJson($url, [])
         ->assertCreated()
-        ->assertJsonPath('data.purchased_at', '2026-10-11');
+        ->assertJsonPath('data.purchased_at', '2026-10-11')
+        // …and it is spendable today. Read against UTC's day it was not yet
+        // valid, so the pack just sold showed inactive until 02:00.
+        ->assertJsonPath('data.is_active', true);
+});
+
+it('shows a carnet sold after midnight as paying for the month, on the roster and in the search', function (): void {
+    $this->actingAs($this->user)
+        ->postJson("/api/v1/athletes/{$this->athlete->id}/carnets", [])
+        ->assertCreated();
+
+    $this->actingAs($this->user)
+        ->getJson('/api/v1/athletes')
+        ->assertOk()
+        ->assertJsonPath('data.0.payment_coverage', 'carnet')
+        ->assertJsonPath('data.0.active_carnet.remaining_entries', 10);
+
+    $unpaid = $this->actingAs($this->user)->getJson('/api/v1/athletes?paid=no')->assertOk()->json('data');
+    expect($unpaid)->toBe([]);
+
+    $this->actingAs($this->user)
+        ->getJson("/api/v1/athletes/{$this->athlete->id}")
+        ->assertOk()
+        ->assertJsonPath('data.payment_coverage', 'carnet');
+});
+
+it('counts time at the belt from the operator\'s today, never below zero', function (): void {
+    $this->actingAs($this->user)
+        ->postJson("/api/v1/athletes/{$this->athlete->id}/promotions", [
+            'kind' => 'belt', 'from_belt' => 'white', 'to_belt' => 'blue', 'recorded_at' => '2026-10-11',
+        ])
+        ->assertCreated();
+
+    // Promoted today: zero days and zero months. Against UTC's 10th it was
+    // -1 of each, and the template printed "-1 mesi".
+    $this->actingAs($this->user)
+        ->getJson("/api/v1/athletes/{$this->athlete->id}/promotions")
+        ->assertOk()
+        ->assertJsonPath('progression.belt_since', '2026-10-11')
+        ->assertJsonPath('progression.days_at_belt', 0)
+        ->assertJsonPath('progression.months_at_belt', 0);
+});
+
+it('starts a new academy\'s billing and schedule on the operator\'s day', function (): void {
+    // 00:30 on 1 October in Rome, still 30 September in UTC: an academy
+    // created now starts billing in October. September would be the phantom
+    // month #1742 exists to remove.
+    $this->travelTo('2026-09-30 22:30:00');
+
+    $this->actingAs(User::factory()->create())
+        ->postJson('/api/v1/academy', ['name' => 'Dojo', 'martial_art' => 'bjj', 'training_days' => [1, 3, 5]])
+        ->assertCreated()
+        ->assertJsonPath('data.billing_from', '2026-10-01')
+        ->assertJsonPath('data.current_schedule.effective_from', '2026-10-01');
+});
+
+it('dates a training-days change to the operator\'s today, and keeps it current', function (): void {
+    $this->actingAs($this->user)
+        ->patchJson('/api/v1/academy', ['training_days' => [2, 4]])
+        ->assertOk()
+        ->assertJsonPath('data.current_schedule.effective_from', '2026-10-11')
+        ->assertJsonPath('data.current_schedule.training_days', [2, 4]);
+});
+
+it('schedules a change from the operator\'s tomorrow, and not from today', function (): void {
+    $this->actingAs($this->user)
+        ->postJson('/api/v1/academy/schedules', ['training_days' => [1], 'effective_from' => '2026-10-11'])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('effective_from');
+
+    $this->actingAs($this->user)
+        ->postJson('/api/v1/academy/schedules', ['training_days' => [1], 'effective_from' => '2026-10-12'])
+        ->assertCreated();
+});
+
+it('refuses a birth date of the operator\'s today', function (): void {
+    $this->actingAs($this->user)
+        ->putJson("/api/v1/athletes/{$this->athlete->id}", ['date_of_birth' => '2026-10-11'])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('date_of_birth');
+
+    $this->actingAs($this->user)
+        ->putJson("/api/v1/athletes/{$this->athlete->id}", ['date_of_birth' => '2026-10-10'])
+        ->assertOk();
 });
 
 it('accepts a carnet validity moved to the operator\'s today, and still refuses tomorrow', function (): void {

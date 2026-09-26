@@ -8,6 +8,7 @@ use App\Enums\AchievementKind;
 use App\Models\Achievement;
 use App\Models\Athlete;
 use App\Models\AttendanceRecord;
+use App\Support\OperatorDay;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 
@@ -113,7 +114,7 @@ class EvaluateAchievementsAction
      */
     private function checkThirtyDayStreak(Athlete $athlete): ?array
     {
-        $today = CarbonImmutable::today();
+        $today = OperatorDay::today();
         $thirtyDaysAgo = $today->subDays(29);
 
         $days = AttendanceRecord::query()
@@ -159,7 +160,7 @@ class EvaluateAchievementsAction
      */
     private function checkOneYearAtAcademy(Athlete $athlete): ?array
     {
-        $today = CarbonImmutable::today();
+        $today = OperatorDay::today();
         // joined_at is `not null` at the schema level (see athletes
         // migration) — guaranteed Carbon instance.
         $joinedAt = $athlete->joined_at;

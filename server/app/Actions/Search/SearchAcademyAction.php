@@ -7,7 +7,7 @@ namespace App\Actions\Search;
 use App\Models\Academy;
 use App\Models\Athlete;
 use App\Support\NameFold;
-use Carbon\CarbonImmutable;
+use App\Support\OperatorDay;
 use Illuminate\Database\Eloquent\Collection;
 
 /**
@@ -82,8 +82,8 @@ class SearchAcademyAction
         // The current-month payments slice is filtered to keep the eager
         // load proportional — all-time payments would balloon the response
         // for athletes with long histories.
-        $year = (int) now()->year;
-        $month = (int) now()->month;
+        $year = (int) OperatorDay::today()->year;
+        $month = (int) OperatorDay::today()->month;
         $builder->with([
             'address',
             // Both halves of the fee rule (#1381): the tier, and the academy
@@ -97,7 +97,7 @@ class SearchAcademyAction
             // Same reason, for the `active_carnet` block (#1364): without this
             // the resource falls back to a per-row carnet query and the
             // palette pays 20 extra round-trips per keystroke.
-            'carnets' => fn ($query) => $query->validOn(CarbonImmutable::today()),
+            'carnets' => fn ($query) => $query->validOn(OperatorDay::today()),
         ]);
 
         // Stable ordering for deterministic results. last_name asc + id asc

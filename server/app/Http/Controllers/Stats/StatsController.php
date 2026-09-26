@@ -19,7 +19,7 @@ use App\Http\Requests\Stats\MonthsRangeRequest;
 use App\Http\Requests\Stats\PaymentsSummaryRequest;
 use App\Http\Requests\Stats\SyllabusCoverageRequest;
 use App\Models\User;
-use Carbon\CarbonImmutable;
+use App\Support\OperatorDay;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -161,7 +161,7 @@ class StatsController extends Controller
             return response()->json(['message' => 'Forbidden.'], 403);
         }
 
-        return response()->json($this->atRiskAthletesAction->execute($academy, CarbonImmutable::today()));
+        return response()->json($this->atRiskAthletesAction->execute($academy, OperatorDay::today()));
     }
 
     /** How many active athletes a medical certificate covers (#1732). */

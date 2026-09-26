@@ -45,4 +45,16 @@ final class OperatorDay
     {
         return 'before_or_equal:' . self::today()->toDateString();
     }
+
+    /** "Strictly before the owner's today" — a birth date, say. */
+    public static function before(): string
+    {
+        return 'before:' . self::today()->toDateString();
+    }
+
+    /** "Strictly after the owner's today" — a change scheduled for later. */
+    public static function after(): string
+    {
+        return 'after:' . self::today()->toDateString();
+    }
 }

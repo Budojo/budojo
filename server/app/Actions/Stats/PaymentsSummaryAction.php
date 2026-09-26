@@ -11,7 +11,7 @@ use App\Models\AthletePayment;
 use App\Support\BillingFloor;
 use App\Support\CollectedByMonth;
 use App\Support\MonthlyFee;
-use Carbon\CarbonImmutable;
+use App\Support\OperatorDay;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
@@ -71,7 +71,7 @@ class PaymentsSummaryAction
      */
     public function execute(Academy $academy, int $year, int $month): array
     {
-        $today = CarbonImmutable::today();
+        $today = OperatorDay::today();
         $bucket = AthletePayment::monthIndex($year, $month);
         $current = AthletePayment::monthIndex($today->year, $today->month);
 
@@ -126,7 +126,7 @@ class PaymentsSummaryAction
     {
         $query = $isPast
             ? $this->query($academy)->whereNot(fn (Builder $q) => $q->paidDuring($year, $month))
-            : $this->query($academy)->owing($year, $month, CarbonImmutable::today());
+            : $this->query($academy)->owing($year, $month, OperatorDay::today());
 
         /** @var list<int> $ids */
         $ids = $query->pluck('id')->all();

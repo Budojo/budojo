@@ -7,6 +7,7 @@ use App\Models\Academy;
 use App\Models\Athlete;
 use App\Models\AttendanceRecord;
 use App\Models\User;
+use App\Support\OperatorDay;
 use Carbon\Carbon;
 
 /**
@@ -24,7 +25,7 @@ beforeEach(function (): void {
     // Today (Carbon::today() in the controller) must be a configured
     // training day for the academy. Pin to today's dayOfWeek so the
     // tests don't depend on what wall-clock day they run on.
-    $academy->update(['training_days' => [(int) Carbon::today()->dayOfWeek]]);
+    $academy->update(['training_days' => [(int) OperatorDay::today()->dayOfWeek]]);
     $this->academy = $academy;
 });
 
@@ -51,12 +52,12 @@ it('marks the athlete present for today with source=self', function (): void {
         ->postJson('/api/v1/me/attendance/today')
         ->assertStatus(201)
         ->assertJsonPath('data.athlete_id', $athlete->id)
-        ->assertJsonPath('data.attended_on', Carbon::today()->toDateString())
+        ->assertJsonPath('data.attended_on', OperatorDay::today()->toDateString())
         ->assertJsonPath('data.source', 'self');
 
     $record = AttendanceRecord::query()
         ->where('athlete_id', $athlete->id)
-        ->whereDate('attended_on', Carbon::today()->toDateString())
+        ->whereDate('attended_on', OperatorDay::today()->toDateString())
         ->firstOrFail();
     expect($record->source)->toBe(AttendanceSource::Self);
 });
@@ -71,7 +72,7 @@ it('is idempotent — second POST returns 200 with the existing row', function (
     expect(
         AttendanceRecord::query()
             ->where('athlete_id', $athlete->id)
-            ->whereDate('attended_on', Carbon::today()->toDateString())
+            ->whereDate('attended_on', OperatorDay::today()->toDateString())
             ->count(),
     )->toBe(1);
     expect($response->json('data.source'))->toBe('self');
@@ -81,7 +82,7 @@ it('preserves source=instructor when the instructor already marked the athlete t
     [$user, $athlete] = authedSelfMarkAthlete($this->academy);
     AttendanceRecord::factory()
         ->for($athlete)
-        ->create(['attended_on' => Carbon::today()->toDateString(), 'source' => AttendanceSource::Instructor]);
+        ->create(['attended_on' => OperatorDay::today()->toDateString(), 'source' => AttendanceSource::Instructor]);
 
     $response = $this->actingAs($user)
         ->postJson('/api/v1/me/attendance/today')
@@ -132,7 +133,7 @@ it('un-marks the athletes own self-mark for today', function (): void {
     AttendanceRecord::factory()
         ->for($athlete)
         ->selfMarked()
-        ->create(['attended_on' => Carbon::today()->toDateString()]);
+        ->create(['attended_on' => OperatorDay::today()->toDateString()]);
 
     $this->actingAs($user)
         ->deleteJson('/api/v1/me/attendance/today')
@@ -141,7 +142,7 @@ it('un-marks the athletes own self-mark for today', function (): void {
     expect(
         AttendanceRecord::query()
             ->where('athlete_id', $athlete->id)
-            ->whereDate('attended_on', Carbon::today()->toDateString())
+            ->whereDate('attended_on', OperatorDay::today()->toDateString())
             ->count(),
     )->toBe(0);
 });
@@ -150,7 +151,7 @@ it('refuses to delete an instructor-marked row (only the instructor can revert t
     [$user, $athlete] = authedSelfMarkAthlete($this->academy);
     AttendanceRecord::factory()
         ->for($athlete)
-        ->create(['attended_on' => Carbon::today()->toDateString(), 'source' => AttendanceSource::Instructor]);
+        ->create(['attended_on' => OperatorDay::today()->toDateString(), 'source' => AttendanceSource::Instructor]);
 
     $this->actingAs($user)
         ->deleteJson('/api/v1/me/attendance/today')
@@ -160,7 +161,7 @@ it('refuses to delete an instructor-marked row (only the instructor can revert t
     expect(
         AttendanceRecord::query()
             ->where('athlete_id', $athlete->id)
-            ->whereDate('attended_on', Carbon::today()->toDateString())
+            ->whereDate('attended_on', OperatorDay::today()->toDateString())
             ->count(),
     )->toBe(1);
 });

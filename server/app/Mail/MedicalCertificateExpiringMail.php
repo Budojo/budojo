@@ -75,7 +75,7 @@ class MedicalCertificateExpiringMail extends Mailable implements ShouldQueue
         // captured once for the whole digest; status strings stay
         // human-readable + locale-friendly when we add IT in a follow-
         // up. Copilot caught the readability issue on PR-D.
-        $today = \Illuminate\Support\Carbon::today();
+        $today = \App\Support\OperatorDay::today();
         $rows = $this->documents->map(static function (\App\Models\Document $doc) use ($today): array {
             $athlete = $doc->athlete;
             $expiresAt = $doc->expires_at;

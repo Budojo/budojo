@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Observers\ForgetsAttendanceSummaries;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -65,7 +66,7 @@ class AcademySchedule extends Model
                 return \is_string($value) ? Carbon::parse($value) : null;
             },
             set: function (mixed $value): string {
-                if ($value instanceof Carbon) {
+                if ($value instanceof CarbonInterface) {
                     return $value->toDateString();
                 }
                 if (\is_string($value)) {

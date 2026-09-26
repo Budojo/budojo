@@ -47,6 +47,33 @@ it('reads the operator\'s timezone from config, one place', function (): void {
         ->and(OperatorDay::today()->toDateString())->toBe('2026-10-10');
 });
 
+it('asks the operator, never UTC, which day it is', function (): void {
+    // A stored date written as the owner's day and read back against UTC's is
+    // the whole of #1963, twice over: a carnet sold at 00:30 read inactive,
+    // and a promotion given today was "-1 months" old. Every "what day is it"
+    // in app/ goes through OperatorDay. `now()` itself — an instant — is fine.
+    $patterns = [
+        '/\bCarbon(Immutable)?::today\(/',
+        '/\bnow\(\)->(toDateString|startOfDay|startOfMonth|year|month|day|dayOfWeek)\b/',
+        '/\bCarbon(Immutable)?::now\([^)]*\)->(toDateString|startOfDay|startOfMonth|year|month|day|dayOfWeek)\b/',
+        "/'(before|after|before_or_equal|after_or_equal):(today|tomorrow|yesterday)'/",
+    ];
+    $offenders = [];
+    $files = Finder::create()->files()->name('*.php')->in(base_path('app'))->notPath('Support/OperatorDay.php');
+    foreach ($files as $file) {
+        foreach (explode("\n", $file->getContents()) as $number => $line) {
+            $code = preg_replace('#^\s*(//|\*|/\*).*#', '', $line) ?? '';
+            foreach ($patterns as $pattern) {
+                if (preg_match($pattern, $code) === 1) {
+                    $offenders[] = $file->getRelativePathname() . ':' . ($number + 1);
+                }
+            }
+        }
+    }
+
+    expect($offenders)->toBe([]);
+});
+
 it('leaves no hard-coded operator timezone outside config', function (): void {
     // A literal anywhere else is a second answer to "what day is it for the
     // owner", which is how #1963 happened.

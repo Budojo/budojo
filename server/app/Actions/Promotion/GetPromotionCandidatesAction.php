@@ -11,7 +11,7 @@ use App\Support\AthleteIdentity;
 use App\Support\MartialArt\FederationAge;
 use App\Support\MartialArt\MartialArtProfile;
 use App\Support\MartialArt\RankLadder;
-use Carbon\CarbonImmutable;
+use App\Support\OperatorDay;
 
 /**
  * The athletes who may be ready for their next step (#1841), each with the
@@ -137,6 +137,6 @@ class GetPromotionCandidatesAction
         }
 
         return ($trainsKids || $onKidsGrade)
-            && ! $profile->isAdultAge(FederationAge::of($athlete->date_of_birth, CarbonImmutable::now()));
+            && ! $profile->isAdultAge(FederationAge::of($athlete->date_of_birth, OperatorDay::today()));
     }
 }
