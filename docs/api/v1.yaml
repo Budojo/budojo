@@ -6918,6 +6918,90 @@ paths:
               example: { message: Forbidden. }
         '422': { description: Validation error }
 
+  /stats/payments/summary:
+    get:
+      operationId: statsPaymentsSummary
+      summary: One month's money — expected, collected, outstanding
+      description: |
+        The four figures the revenue chart implies and never states (#1758),
+        for one business month: what should have come in, what did, who is
+        still out and for how much. Owner-only, like every `/stats/*` route.
+
+        - **Population** — active athletes, not the owner training in their
+          own academy (`is_self`), not trashed, whose monthly fee resolves
+          **above zero** (the athlete's own fee, then the tier, then the
+          academy's — #1757). An athlete who trains free is on neither side.
+        - **`expected_cents`** — the sum of that population's monthly fee:
+          **one month's worth per athlete**, whatever their billing period. An
+          annual payer adds a twelfth of the year, never the whole of it.
+        - **`collected_cents`** — **exactly the bucket
+          `GET /stats/payments/monthly` draws for the same month**: a fee
+          spread across the months it pays for, a carnet whole in the month it
+          was sold. Everything the academy took, from anyone.
+        - **`outstanding_count` / `outstanding_cents`** — the population with
+          nothing covering the month: no fee whose period includes it and no
+          spendable carnet (the roster's `?paid=no`, #1722); the sum of their
+          monthly fee.
+        - **`collection_rate`** — `collected_cents / expected_cents`, money
+          not heads, rounded to three decimals; **null** when nothing is
+          expected. It can exceed 1: advance payments and carnets sold that
+          month are collected in it.
+        - **`estimated`** — true for any month but the current one. There is
+          no status or tier history, so a past month is read against
+          **today's** roster, and a carnet is judged spendable on that
+          month's last day with the entries it has today. The SPA says so
+          beside the figures.
+      tags: [Stats]
+      parameters:
+        - in: query
+          name: year
+          required: false
+          description: Required with `month`. Both absent means the current month.
+          schema: { type: integer, minimum: 2000, maximum: 2100 }
+        - in: query
+          name: month
+          required: false
+          description: Required with `year`.
+          schema: { type: integer, minimum: 1, maximum: 12 }
+      responses:
+        '200':
+          description: The month's money
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - year
+                      - month
+                      - currency
+                      - expected_cents
+                      - collected_cents
+                      - outstanding_count
+                      - outstanding_cents
+                      - collection_rate
+                      - estimated
+                    properties:
+                      year: { type: integer, example: 2026 }
+                      month: { type: integer, minimum: 1, maximum: 12, example: 9 }
+                      currency: { type: string, example: EUR }
+                      expected_cents: { type: integer, minimum: 0, example: 310000 }
+                      collected_cents: { type: integer, minimum: 0, example: 256000 }
+                      outstanding_count: { type: integer, minimum: 0, example: 7 }
+                      outstanding_cents: { type: integer, minimum: 0, example: 54000 }
+                      collection_rate: { type: number, nullable: true, example: 0.826 }
+                      estimated: { type: boolean, example: false }
+        '401': { description: Unauthenticated }
+        '403':
+          description: Forbidden — authed user has no academy.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorMessage' }
+              example: { message: Forbidden. }
+        '422': { description: 'Validation error — a month without a year, or out of range' }
+
   /stats/athletes/age-bands:
     get:
       operationId: statsAthleteAgeBands
