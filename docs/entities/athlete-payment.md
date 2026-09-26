@@ -89,7 +89,7 @@ The endpoint does NOT split by payment status today — the schema currently has
 
 `GET /api/v1/stats/payments/summary?year=&month=` (`PaymentsSummaryAction`, #1758) states the four figures the chart implies: what the month should have brought in, what it did, who is still out and for how much. Each definition is composed from a rule that already exists, never restated:
 
-- **Population** — active, `Athlete::scopeExpectedToPay` (not the owner, a fee applies) and `scopeChargedMoreThanNothing` (it resolves above zero). An athlete on a zero `fee_override_cents` trains free and is on neither side of the rate.
+- **Population** — active, `Athlete::scopeExpectedToPay` (not the owner, a fee applies) and `scopeChargedMoreThanNothing` (it resolves above zero). An athlete on a zero `fee_override_cents` trains free and is on neither side of the rate. Only from `App\Support\BillingFloor` on (#1742): the later of the month they joined and the academy's `billing_from`.
 - **Expected** — Σ `MonthlyFee::forAthlete()` over the population: **one month's worth per athlete**, whatever `billing_period_months` says. An annual payer adds a twelfth of the year: the tile compares a month with a month.
 - **Collected** — the chart's own bucket for that month, from `CollectedByMonth`: a quarterly paid in September contributes only its September third, a carnet counts whole in its sale month, and money from anyone counts.
 - **Outstanding** — the population `Athlete::scopeOwing` returns for the month (no covering fee, no spendable carnet, #1722), and Σ their monthly fee.

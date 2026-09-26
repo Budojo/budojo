@@ -6931,6 +6931,9 @@ paths:
           own academy (`is_self`), not trashed, whose monthly fee resolves
           **above zero** (the athlete's own fee, then the tier, then the
           academy's — #1757). An athlete who trains free is on neither side.
+          And only from their billing floor on (#1742): the later of the
+          month they joined and the academy's `billing_from`, so nobody owes a
+          month before they started, or before the academy kept its fees here.
         - **`expected_cents`** — the sum of that population's monthly fee:
           **one month's worth per athlete**, whatever their billing period. An
           annual payer adds a twelfth of the year, never the whole of it.
