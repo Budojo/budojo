@@ -1,0 +1,102 @@
+<div class="ready-page">
+  <app-page-header
+    [title]="'athletes.ready.title' | translate"
+    [subtitle]="'athletes.ready.subtitle' | translate"
+    [countLabel]="countLabel()"
+  >
+    <p-button
+      pageHeaderCta
+      [label]="'athletes.ready.back' | translate"
+      icon="pi pi-arrow-left"
+      severity="secondary"
+      [text]="true"
+      size="small"
+      (onClick)="goToRoster()"
+      data-cy="ready-back"
+    />
+  </app-page-header>
+
+  @if (loading()) {
+    <div class="ready__loading" aria-hidden="true" data-cy="ready-loading">
+      @for (i of [1, 2, 3, 4]; track i) {
+        <p-skeleton height="3.5rem" borderRadius="0.5rem" />
+      }
+    </div>
+  } @else if (failed()) {
+    <div class="ready__error" role="alert" data-cy="ready-error">
+      <p>{{ 'athletes.ready.error' | translate }}</p>
+      <p-button
+        [label]="'athletes.ready.retry' | translate"
+        severity="secondary"
+        (onClick)="load()"
+        data-cy="ready-retry"
+      />
+    </div>
+  } @else if (rows().length === 0) {
+    <app-empty-state
+      icon="pi pi-users"
+      [title]="'athletes.ready.empty.title' | translate"
+      [hint]="'athletes.ready.empty.hint' | translate"
+      [ctaLabel]="'athletes.ready.back' | translate"
+      ctaIcon="pi pi-arrow-left"
+      ctaSeverity="secondary"
+      (ctaClick)="goToRoster()"
+      dataCy="ready-empty"
+    />
+  } @else {
+    <!--
+      Every row drawn the same way: no colour, no badge, no "due". A row
+      singled out would be a verdict; the order is the only thing the list
+      says, and the owner reads the facts.
+    -->
+    <ul class="ready__list" data-cy="ready-list">
+      @for (row of rows(); track row.athlete.id) {
+        <li class="ready__row" [attr.data-cy]="'ready-row-' + row.athlete.id">
+          <app-athlete-identity
+            class="ready__who"
+            [athlete]="row.athlete"
+            [linkToDetail]="true"
+            detailTab="promotions"
+          />
+          <div class="ready__facts">
+            @if (monthsLabel(row); as months) {
+              <span class="ready__months" data-cy="ready-months">{{ months }}</span>
+            }
+            <span class="ready__since" data-cy="ready-since">
+              @let line = sinceLine(row);
+              @if (line.kind === 'stripe') {
+                @if (line.grade) {
+                  {{
+                    'athletes.ready.gradeSince'
+                      | translate
+                        : { grade: line.grade, date: (line.date | localeDate: 'calendar-day') }
+                  }}
+                } @else {
+                  {{
+                    'athletes.ready.lastStripe'
+                      | translate: { date: (line.date | localeDate: 'calendar-day') }
+                  }}
+                }
+                · {{ sessionsLabel(row) }}
+              } @else if (line.kind === 'belt') {
+                {{
+                  'athletes.ready.onBeltSince'
+                    | translate: { date: (line.date | localeDate: 'calendar-day') }
+                }}
+                · {{ sessionsLabel(row) }}
+              } @else {
+                {{ 'athletes.ready.noBeltRow' | translate }}
+              }
+            </span>
+          </div>
+          <p class="ready__next" data-cy="ready-next">
+            <!-- `&ngsp;` keeps a real space, which Angular strips between
+                 elements: without it a screen reader reads "NextPurple". -->
+            <span class="ready__next-label">{{ 'athletes.ready.next' | translate }}</span
+            >&ngsp;<span class="ready__next-value">{{ nextLabel(row.next) }}</span>
+          </p>
+        </li>
+      }
+    </ul>
+  }
+</div>

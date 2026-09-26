@@ -64,7 +64,27 @@ Before this table, only **belt** changes left a trace (as a `belt_promotion` `Co
 - `DELETE /api/v1/athletes/{athlete}/promotions/{promotion}` — #1431 PR 2 of 2. Hard delete, 204 on success. Same 403 double-check as the edit path (promotion must belong to the athlete in the URL); 404 for an id that doesn't exist.
 - `AthleteObserver` — internal: writes rows on `belt` / `stripes` change; also emits the `belt_promotion` or `stripe_promotion` feed post for the celebration UX. Never runs on a `recorded_at` edit or a backfilled create — both bypass the athlete model entirely.
 
+## Time at the belt (#1772)
+
+`GetAthleteProgressionAction` answers the two questions a coach reads before deciding whether someone is due: how long on this belt, and how many sessions since the last stripe. It rides on `GET /athletes/{athlete}/promotions` as `progression`, beside `data` / `meta`.
+
+- **From recorded rows only.** `belt_since` is the latest `kind = belt` row. With no belt row every field is null; nothing falls back to `joined_at`. Since #1771 every new or imported athlete opens with a starting belt row, so this is rare.
+- **The last stripe belongs to the current belt.** A stripe row older than the latest belt row is ignored, because a belt promotion resets stripes and the chain validator does not cross-check the two kinds.
+- **Only a stripe given counts.** Promoting blue-four to purple-zero in one save writes a belt row and a 4 → 0 stripe row at the same moment; that reset is not the last stripe. Stripe rows that do not raise the count are skipped.
+- **The current `belt` and `stripes` ride along**, so the SPA can word a dan or a poom as such, show no stripe line on a grade that carries none (a judo or taekwondo kyu), and tell "no stripe on this belt" from stripes that exist with no dated row (an athlete created on two stripes opens with a belt row only).
+- **Whole days.** `recorded_at` carries a time of day on live rows, so the comparison is on dates: a belt given at 18:42 still counts that evening's session.
+- **Sessions are distinct training days**, not rows: since the timetable a gi-and-no-gi evening has two rows, counted once (#1765). A soft-deleted (corrected-away) presence does not count.
+
+## Ready for the next step (#1841)
+
+`GET /promotions/candidates` lists every active athlete with the facts side by side: time at the belt, the last promotion (the later of the belt and the last stripe given on it), the whole days and the distinct training days since, and the next step. `GetPromotionCandidatesAction` calls `GetAthleteProgressionAction` per athlete, so every rule above holds here too and the list cannot disagree with the athlete page.
+
+- **No score and no threshold.** Stripe policy differs between academies and between coaches; the list only orders, longest since the last promotion first, with athletes who have no belt row last.
+- **The next step comes from the ladder** (`RankLadder::nextStep()`): the next stripe, dan or poom while the grade has room for one, otherwise the next grade with no stripes, except that a poom leads to the dan of the same number; null at the top. Grades come **in the order people climb them**, which is not always rank order: BJJ ranks its kids' grades (grey to green) below white, but a child starts on white, climbs grey to green, and goes on to blue (IBJJF graduation system). For judo, karate and taekwondo the two orders are the same.
+- **Kids' grades** (BJJ's grey to green, judo's and karate's half belts, the taekwondo poom) are skipped unless the athlete is a child. A known date of birth decides by the art's adult age divisions, using the age reached this calendar year as the federations count it (`FederationAge`), and counts only where the academy trains kids or the athlete is already on a kids' grade. An unknown date of birth reads the belt: someone on a kids' grade is taken as a child, anyone else as an adult. So a sixteen-year-old BJJ orange belt goes to blue, however many stripes the orange carries, a fifteen-year-old taekwondo poom goes to the black belt's dan of the same number (2nd poom, 2nd dan: Kukkiwon), a karateka of twelve leaves the half belts for the next full belt (FIJLKAM's agonisti start at twelve), and an adult judoka goes from white to yellow.
+- **Not included: the programme per person** (#1744). It is one query per athlete and does not batch yet, so it stays on the athlete card.
+
 ## Future / TODO
 
-- **Per-athlete promotion analytics.** Aggregate read (average time-to-blue, days-per-stripe) would surface in a future "academy insights" view.
+- **Academy-wide promotion analytics.** Aggregate reads (average time-to-blue, days-per-stripe across the academy) would surface in a future "academy insights" view. The per-athlete half shipped in #1772: see *Time at the belt* above.
 - **Athlete-side visibility.** A future opt-in toggle could let the athlete portal carry "my promotion history" — gated by an owner setting (PRD open question).

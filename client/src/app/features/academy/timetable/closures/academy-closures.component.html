@@ -1,0 +1,175 @@
+<p-confirmdialog />
+
+<section class="closures" aria-labelledby="closures-title" data-cy="closures">
+  <div class="closures__head">
+    <div class="closures__heading">
+      <h2 id="closures-title" class="closures__title">
+        {{ 'academy.timetable.closures.title' | translate }}
+      </h2>
+      <p class="closures__hint">{{ 'academy.timetable.closures.hint' | translate }}</p>
+    </div>
+    <!-- Secondary: the page's one primary is "Add a class". -->
+    <p-button
+      [label]="'academy.timetable.closures.add' | translate"
+      icon="pi pi-plus"
+      severity="secondary"
+      [outlined]="true"
+      size="small"
+      (onClick)="startAdding()"
+      data-cy="closures-add"
+    />
+  </div>
+
+  @if (rows().length === 0) {
+    <p class="closures__empty" data-cy="closures-empty">
+      {{ 'academy.timetable.closures.empty' | translate }}
+    </p>
+  } @else {
+    <ul class="closures__list" data-cy="closures-list">
+      @for (row of rows(); track row.closure.id) {
+        <li>
+          <!-- The whole row opens the edit, like a class slot on the week. -->
+          <button
+            type="button"
+            class="closures__row"
+            [attr.aria-label]="
+              'academy.timetable.closures.editAria' | translate: { range: row.range }
+            "
+            (click)="startEditing(row.closure)"
+            [attr.data-cy]="'closures-row-' + row.closure.id"
+          >
+            <i class="pi pi-lock closures__icon" aria-hidden="true"></i>
+            <span class="closures__what">
+              <span class="closures__range">{{ row.range }}</span>
+              @if (row.closure.label) {
+                <span class="closures__label">{{ row.closure.label }}</span>
+              }
+            </span>
+            <span class="closures__days">{{ row.days }}</span>
+            <i class="pi pi-chevron-right closures__chevron" aria-hidden="true"></i>
+          </button>
+        </li>
+      }
+    </ul>
+  }
+</section>
+
+<p-dialog
+  [visible]="dialogOpen()"
+  (visibleChange)="dialogOpen.set($event)"
+  [modal]="true"
+  [draggable]="false"
+  [breakpoints]="{ '768px': '92vw' }"
+  [style]="{ width: '30rem' }"
+  [header]="
+    (editing()
+      ? 'academy.timetable.closures.form.editTitle'
+      : 'academy.timetable.closures.form.addTitle'
+    ) | translate
+  "
+  data-cy="closures-dialog"
+>
+  <form class="closure-form" [formGroup]="form" (ngSubmit)="submit()" data-cy="closures-form">
+    <div class="closure-form__row">
+      <div class="field">
+        <label for="closure-from" class="field__label">
+          {{ 'academy.timetable.closures.form.from' | translate }}
+        </label>
+        <p-datepicker
+          inputId="closure-from"
+          formControlName="starts_on"
+          [dateFormat]="datePickerFormat()"
+          appendTo="body"
+          [showIcon]="true"
+          [fluid]="true"
+          [invalid]="datesError() !== null"
+          data-cy="closures-form-from"
+        />
+      </div>
+      <div class="field">
+        <label for="closure-to" class="field__label">
+          {{ 'academy.timetable.closures.form.to' | translate }}
+        </label>
+        <p-datepicker
+          inputId="closure-to"
+          formControlName="ends_on"
+          [dateFormat]="datePickerFormat()"
+          [minDate]="form.controls.starts_on.value"
+          [defaultDate]="form.controls.starts_on.value"
+          appendTo="body"
+          [showIcon]="true"
+          [fluid]="true"
+          [invalid]="datesError() !== null"
+          data-cy="closures-form-to"
+        />
+      </div>
+    </div>
+    @if (datesError(); as error) {
+      <small class="field__error" role="alert" data-cy="closures-form-dates-error">
+        {{
+          (error === 'order'
+            ? 'academy.timetable.closures.form.orderError'
+            : 'academy.timetable.closures.form.datesError'
+          ) | translate
+        }}
+      </small>
+    }
+
+    <div class="field">
+      <label for="closure-label" class="field__label">
+        {{ 'academy.timetable.closures.form.label' | translate }}
+      </label>
+      <input
+        id="closure-label"
+        type="text"
+        pInputText
+        formControlName="label"
+        maxlength="80"
+        autocomplete="off"
+        [placeholder]="'academy.timetable.closures.form.labelPlaceholder' | translate"
+        data-cy="closures-form-label"
+      />
+    </div>
+  </form>
+
+  <ng-template pTemplate="footer">
+    <div class="closure-form__footer">
+      @if (editing()) {
+        <p-button
+          type="button"
+          [label]="'academy.timetable.closures.form.remove' | translate"
+          icon="pi pi-trash"
+          severity="danger"
+          [text]="true"
+          [fluid]="true"
+          (onClick)="confirmRemove()"
+          data-cy="closures-form-remove"
+        />
+      }
+      <span class="closure-form__spacer"></span>
+      <p-button
+        type="button"
+        [label]="'common.cancel' | translate"
+        severity="secondary"
+        [text]="true"
+        [fluid]="true"
+        (onClick)="closeDialog()"
+        data-cy="closures-form-cancel"
+      />
+      <p-button
+        type="button"
+        [label]="
+          (editing()
+            ? 'academy.timetable.closures.form.save'
+            : 'academy.timetable.closures.form.create'
+          ) | translate
+        "
+        [loading]="saving()"
+        [disabled]="saving()"
+        [fluid]="true"
+        (onClick)="submit()"
+        data-cy="closures-form-save"
+      />
+    </div>
+  </ng-template>
+</p-dialog>

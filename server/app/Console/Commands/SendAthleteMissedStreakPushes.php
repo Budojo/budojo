@@ -11,6 +11,7 @@ use App\Models\AttendanceRecord;
 use App\Notifications\OwnerAthleteMissedStreakNotification;
 use App\Support\NotificationCategory;
 use App\Support\NotificationPreferences;
+use App\Support\ScheduledDays;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
@@ -23,13 +24,17 @@ use Illuminate\Support\Facades\Log;
  *
  * Algorithm:
  *
- *   for each academy with training_days configured:
- *       streak_dates = the last 3 academy training_days (today + back)
+ *   for each academy:
+ *       streak_dates = the last 3 scheduled days before today, each read
+ *                      against the schedule in force on it (ScheduledDays)
+ *       fewer than 3, or older than 30 days → skip the academy (not
+ *                      configured, too new, or paused)
  *       for each active athlete:
- *           if attendance is present for ALL streak_dates → skip
+ *           if attendance is present for ANY streak_date → skip
  *           if attendance is absent for ALL streak_dates →
  *             owner gets notified (once per 14 days per athlete to
- *             avoid daily spam — checked via the inbox's existing
+ *             avoid daily spam, and never twice about the same streak —
+ *             checked via the inbox's existing
  *             "owner_athlete_missed_streak" kind rows).
  *
  * Per-academy failures are logged and don't stop the loop.
@@ -38,6 +43,14 @@ class SendAthleteMissedStreakPushes extends Command
 {
     private const int STREAK_LENGTH = 3;
     private const int RENOTIFY_AFTER_DAYS = 14;
+
+    /**
+     * How far back the streak may reach. Thirty days holds three sessions even
+     * for an academy that trains weekly; a streak older than that is about a
+     * schedule that stopped (a pause, a not-configured period), not about the
+     * athlete, and warning about it would repeat every fortnight of the pause.
+     */
+    private const int STREAK_REACH_DAYS = 30;
 
     /** @var string */
     protected $signature = 'budojo:send-athlete-missed-streak-pushes';
@@ -50,8 +63,10 @@ class SendAthleteMissedStreakPushes extends Command
         $today = Carbon::today();
         $hasFailures = false;
 
+        // Every academy: the schedule HISTORY decides, and one whose history
+        // yields fewer than three training days is skipped below (#1764).
         Academy::query()
-            ->whereNotNull('training_days')
+            ->with(['schedules', 'closures'])
             ->each(function (Academy $academy) use ($today, &$hasFailures): void {
                 try {
                     $this->processAcademy($academy, $today);
@@ -70,15 +85,17 @@ class SendAthleteMissedStreakPushes extends Command
 
     private function processAcademy(Academy $academy, Carbon $today): void
     {
-        /** @var list<int>|null $trainingDays */
-        $trainingDays = $academy->training_days;
-        if ($trainingDays === null || $trainingDays === []) {
-            return;
-        }
-
-        $streakDates = $this->lastTrainingDays($trainingDays, $today, self::STREAK_LENGTH);
+        // Before today, never today: the command runs from 09:30 and the
+        // day's own session has not happened yet (Copilot review on #735).
+        // Each day is read against the schedule in force on it (#1764), so a
+        // timetable change last week does not rewrite which sessions those
+        // were.
+        $streakDates = ScheduledDays::lastBefore($academy, $today->toImmutable(), self::STREAK_LENGTH);
         if (\count($streakDates) < self::STREAK_LENGTH) {
-            return; // Academy too newly configured — not enough history.
+            return; // Not configured, or too newly: not enough history.
+        }
+        if ($streakDates[self::STREAK_LENGTH - 1] < $today->copy()->subDays(self::STREAK_REACH_DAYS)->toDateString()) {
+            return; // Paused: the last sessions are too long ago to be news.
         }
 
         $owner = $academy->owner;
@@ -105,7 +122,7 @@ class SendAthleteMissedStreakPushes extends Command
             ->get();
 
         foreach ($athletes as $athlete) {
-            if ($this->wasNotifiedRecently($owner, $athlete, $today)) {
+            if ($this->alreadyTold($owner, $athlete, $today, $streakDates)) {
                 continue;
             }
             if (! $this->missedAllStreakDates($athlete, $streakDates)) {
@@ -126,34 +143,6 @@ class SendAthleteMissedStreakPushes extends Command
     }
 
     /**
-     * Walk back from today, collecting the last `$count` dates whose
-     * dayOfWeek lies in `$trainingDays`. Returns ISO date strings.
-     *
-     * @param  list<int>  $trainingDays  Carbon dayOfWeek ints (0..6)
-     * @return list<string>
-     */
-    private function lastTrainingDays(array $trainingDays, Carbon $today, int $count): array
-    {
-        // Start from YESTERDAY — the command runs at 09:30, the
-        // current day's session has not happened yet. Counting today
-        // as a "missed" date would false-positive every Monday on a
-        // Mon/Wed/Fri academy at 09:30 just because the Monday class
-        // is at 19:00. Copilot review on #735.
-        $cursor = $today->copy()->subDay();
-        $dates = [];
-        // Bounded walk: 30 days of history is more than enough to find
-        // 3 training days even on an academy that trains weekly.
-        for ($i = 0; $i < 30 && \count($dates) < $count; ++$i) {
-            if (\in_array((int) $cursor->dayOfWeek, $trainingDays, true)) {
-                $dates[] = $cursor->toDateString();
-            }
-            $cursor->subDay();
-        }
-
-        return $dates;
-    }
-
-    /**
      * @param  list<string>  $streakDates
      */
     private function missedAllStreakDates(Athlete $athlete, array $streakDates): bool
@@ -161,8 +150,8 @@ class SendAthleteMissedStreakPushes extends Command
         // Guard: an athlete who joined AFTER the earliest streak date
         // wasn't even rostered when those sessions happened — counting
         // them as "missed" is a false positive. The earliest streak
-        // date is the LAST element (the walk in lastTrainingDays()
-        // pushes today-first, so $streakDates[0] is most recent and
+        // date is the LAST element (`ScheduledDays::lastBefore()` returns
+        // the most recent first, so $streakDates[0] is most recent and
         // [count-1] is oldest). Copilot review on #738.
         $oldestStreakDate = end($streakDates) ?: null;
         if ($oldestStreakDate !== null
@@ -179,12 +168,23 @@ class SendAthleteMissedStreakPushes extends Command
         return $present === 0;
     }
 
-    private function wasNotifiedRecently(\App\Models\User $owner, Athlete $athlete, Carbon $today): bool
+    /**
+     * Told within the fortnight, or told since the latest session of this
+     * streak — the same three sessions, with nothing new missed since. The
+     * second half is what keeps a pause quiet: its streak does not move, and
+     * the fortnight alone would repeat the same news once it ran out.
+     *
+     * @param  list<string>  $streakDates  most recent first
+     */
+    private function alreadyTold(\App\Models\User $owner, Athlete $athlete, Carbon $today, array $streakDates): bool
     {
+        $fortnight = $today->copy()->subDays(self::RENOTIFY_AFTER_DAYS);
+        $afterStreak = Carbon::parse($streakDates[0])->addDay();
+
         return $owner->notifications()
             ->where('data->kind', 'owner_athlete_missed_streak')
             ->where('data->athlete_id', $athlete->id)
-            ->where('created_at', '>=', $today->copy()->subDays(self::RENOTIFY_AFTER_DAYS))
+            ->where('created_at', '>=', $fortnight->min($afterStreak))
             ->exists();
     }
 }

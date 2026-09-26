@@ -1357,14 +1357,15 @@
       "days90": "90d",
       "year1": "1y"
     },
-    "attendedOfExpected": "{{attended}} of {{expected}} lessons held",
+    "attendedOfExpected": "{{attended}} of {{expected}} scheduled sessions",
     "legend": {
       "attended": "Attended",
       "missed": "Missed"
     },
     "empty": {
-      "title": "No lessons in this window yet",
-      "hint": "Your academy hasn't recorded any training session in the selected range."
+      "title": "No scheduled sessions in this window",
+      "hint": "The rate counts the days the academy was scheduled to train, and none fell in this range.",
+      "noScheduleHint": "The academy has no training days set yet, so there is nothing to measure against."
     },
     "error": {
       "title": "Couldn't load the chart",
@@ -1676,7 +1677,40 @@
         "loadErrorDetail": "The timetable could not be loaded."
       },
       "plan": "Plan",
-      "editHint": "Open this class to edit it"
+      "editHint": "Open this class to edit it",
+      "closures": {
+        "title": "Closures",
+        "hint": "Days the academy is shut. They stop counting as sessions anyone missed.",
+        "add": "Add a closure",
+        "empty": "No closures yet. Add the summer break or a holiday.",
+        "daysOne": "{{count}} day",
+        "daysOther": "{{count}} days",
+        "editAria": "Edit the closure {{range}}",
+        "form": {
+          "addTitle": "New closure",
+          "editTitle": "Edit closure",
+          "from": "First day",
+          "to": "Last day (included)",
+          "label": "Name (optional)",
+          "labelPlaceholder": "Summer break",
+          "datesError": "Pick the first and the last day.",
+          "orderError": "The last day can't come before the first.",
+          "create": "Add",
+          "save": "Save",
+          "remove": "Remove"
+        },
+        "confirm": {
+          "title": "Remove this closure?",
+          "remove": "{{range}} will count as training days again.",
+          "accept": "Remove"
+        },
+        "toast": {
+          "saved": "Closure saved",
+          "removed": "Closure removed",
+          "error": "Couldn't save the closure. Try again.",
+          "removeError": "Couldn't remove the closure. Try again."
+        }
+      }
     },
     "syllabus": {
       "title": "Programme",
@@ -1944,7 +1978,9 @@
         "empty": "Nothing tagged yet",
         "add": "Add topics",
         "edit": "Edit"
-      }
+      },
+      "closedToday": "The academy is closed today — you're looking at the {{date}} session.",
+      "closedTodayLabel": "The academy is closed today ({{label}}) — you're looking at the {{date}} session."
     },
     "summary": {
       "daysOne": "{{count}} training day",
@@ -1972,7 +2008,7 @@
       "presencesOne": "{{count}} attendance",
       "presencesOther": "{{count}} attendances",
       "noScheduleNote": "No timetable covers this month yet, so there is no day count to work the percentages against.",
-      "method": "Here an attendance is one athlete's day of training: an evening with two lessons counts once for each athlete who was there, and the attendances above add up every athlete's days. The percentage divides an athlete's days by the month's training days in the timetable, up to today while the month is running."
+      "method": "Here an attendance is one athlete's day of training: an evening with two lessons counts once for each athlete who was there, and the attendances above add up every athlete's days. The percentage divides an athlete's days by the month's training days in the timetable from the day they joined (or their first session, if earlier), up to today while the month is running, leaving out the days the academy was closed."
     }
   },
   "lessons": {
@@ -2363,6 +2399,23 @@
         "firstBelt": "Starting belt",
         "stripes": "stripes",
         "recordedBy": "Recorded by {{name}}",
+        "progression": {
+          "beltSince": "On this belt since {{date}}",
+          "monthsAtBeltOne": "{{count}} month",
+          "monthsAtBeltOther": "{{count}} months",
+          "underAMonth": "under a month",
+          "sessionsAtBeltOne": "{{count}} session",
+          "sessionsAtBeltOther": "{{count}} sessions",
+          "stripeSince": "Last stripe on {{date}}",
+          "sessionsSinceStripeOne": "{{count}} session since",
+          "sessionsSinceStripeOther": "{{count}} sessions since",
+          "noBeltRow": "No belt recorded yet: time at a belt starts from the first promotion.",
+          "noStripeOnThisBelt": "No stripe on this belt yet",
+          "undatedStripesOne": "{{count}} stripe, date not recorded",
+          "undatedStripesOther": "{{count}} stripes, dates not recorded",
+          "gradeSince": "{{grade}} since {{date}}",
+          "gradeUndated": "{{grade}}, date not recorded"
+        },
         "prevPage": "Previous page",
         "nextPage": "Next page",
         "editDate": "Correct the date",
@@ -2427,7 +2480,10 @@
           "upcoming": "Still to come",
           "off": "Not a training day"
         },
-        "windowSoFar": "so far this month"
+        "windowSoFar": "so far this month",
+        "dayClosed": "{{day}} — academy closed",
+        "closedRange": "Closed {{range}}",
+        "closedRangeLabel": "Closed {{range}} · {{label}}"
       },
       "carnets": {
         "title": "Entry carnets",
@@ -2766,6 +2822,33 @@
         "itemsOne": "{{count}} technique in the programme up to this belt",
         "itemsOther": "{{count}} techniques in the programme up to this belt"
       }
+    },
+    "ready": {
+      "title": "Who to promote?",
+      "openButton": "Who to promote?",
+      "subtitle": "Everyone on the mat, longest since their last promotion first. The facts are here; the call is yours.",
+      "back": "Back to athletes",
+      "countOne": "{{count}} athlete",
+      "countOther": "{{count}} athletes",
+      "monthsOnBeltOne": "{{count}} month on this belt",
+      "monthsOnBeltOther": "{{count}} months on this belt",
+      "underAMonthOnBelt": "Under a month on this belt",
+      "lastStripe": "Last stripe on {{date}}",
+      "gradeSince": "{{grade}} since {{date}}",
+      "onBeltSince": "On this belt since {{date}}",
+      "sessionsSinceOne": "{{count}} session since",
+      "sessionsSinceOther": "{{count}} sessions since",
+      "noBeltRow": "No belt recorded yet",
+      "next": "Next",
+      "nextStripe": "stripe {{n}}",
+      "beltWithGrade": "{{belt}}, {{grade}}",
+      "topOfLadder": "Top of the ladder",
+      "empty": {
+        "title": "Nobody on the mat yet",
+        "hint": "Active athletes appear here with the time since their last promotion."
+      },
+      "error": "The list could not be loaded.",
+      "retry": "Try again"
     }
   },
   "month": {

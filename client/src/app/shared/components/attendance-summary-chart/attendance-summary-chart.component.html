@@ -38,7 +38,10 @@
         {{ 'attendanceSummary.empty.title' | translate }}
       </p>
       <p class="attendance-chart__empty-hint">
-        {{ 'attendanceSummary.empty.hint' | translate }}
+        {{
+          (noSchedule() ? 'attendanceSummary.empty.noScheduleHint' : 'attendanceSummary.empty.hint')
+            | translate
+        }}
       </p>
     </div>
   } @else {
@@ -67,7 +70,8 @@
         {{ rangeWindowKey() | translate }}
       </p>
 
-      <!-- Bar timeline — one bar per lesson day held, colour-encoded
+      <!-- Bar timeline — one bar per scheduled day, plus any other day
+           trained (#1769), colour-encoded
            by attendance. Keeps a fast "are they trending up or down?"
            read alongside the bare % number. -->
       <div class="attendance-chart__timeline">

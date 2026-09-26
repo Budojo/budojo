@@ -272,11 +272,17 @@ export interface Academy {
   next_schedule?: AcademySchedule | null;
   /**
    * Full schedule history (#1094), ordered most-recent `effective_from`
-   * first. Consumed by `countScheduledTrainingDays` to compute correct
-   * per-day denominators across mid-period schedule transitions.
+   * first. The calendar paints each day against the row in force on it
+   * (`training-days.ts`); the denominators are the server's since #1769.
    * Optional for fixture-compat.
    */
   schedules?: AcademySchedule[];
+  /**
+   * The days the academy is shut (#1766), in date order. Every scheduled-day
+   * count leaves them out (`attendance-rate.ts`, and `ScheduledDays` on the
+   * server). Optional for fixture-compat.
+   */
+  closures?: AcademyClosure[];
   /**
    * The training year (#1484), in three parts because three places need
    * different halves of it.
@@ -320,6 +326,17 @@ export interface Academy {
    * second request. Optional for fixture-compat; absent reads as zero.
    */
   classes_count?: number;
+}
+
+/**
+ * Days the academy is shut (#1766): whole days, `ends_on` inclusive, equal to
+ * `starts_on` for one day. Both are `YYYY-MM-DD`.
+ */
+export interface AcademyClosure {
+  readonly id: number;
+  readonly starts_on: string;
+  readonly ends_on: string;
+  readonly label: string | null;
 }
 
 /**

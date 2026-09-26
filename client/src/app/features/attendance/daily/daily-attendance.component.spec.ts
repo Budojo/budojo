@@ -316,6 +316,31 @@ describe('DailyAttendanceComponent', () => {
     }
   });
 
+  it('walks back past a closure to the last session held, and says the academy is closed (#1766)', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 3, 29, 10)); // Wed
+    try {
+      const { fixture, component, httpMock } = setup();
+      TestBed.inject(AcademyService).academy.set({
+        ...ACADEMY_BASE,
+        training_days: [1, 3, 5],
+        closures: [{ id: 1, starts_on: '2026-04-27', ends_on: '2026-04-29', label: 'Seminar' }],
+      });
+      fixture.detectChanges();
+      flushInit(httpMock, {});
+      fixture.detectChanges();
+
+      // Wed 29 and Mon 27 are shut: the last session held is Fri 24.
+      expect(component['selectedDate']().toDateString()).toBe(new Date(2026, 3, 24).toDateString());
+      const banner = (fixture.nativeElement as HTMLElement).querySelector(
+        '[data-cy="attendance-no-class-banner"]',
+      );
+      expect(banner?.textContent).toContain('closed today (Seminar)');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('keeps today as the default date when training_days is unconfigured (legacy)', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(2026, 3, 29, 10)); // Wed

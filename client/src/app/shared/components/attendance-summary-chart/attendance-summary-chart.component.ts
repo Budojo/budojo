@@ -26,14 +26,16 @@ import { LanguageService } from '../../../core/services/language.service';
  *
  * Reads `/api/v1/athletes/{id}/attendance/summary?range=N` and renders:
  *  - A donut with the headline rate in the centre (e.g. "75%").
- *  - A short bar timeline below it, one bar per lesson day held,
- *    colour-encoded (primary = attended, muted = missed).
+ *  - A short bar timeline below it, one bar per scheduled day, plus any
+ *    other day trained (#1769), colour-encoded (primary = attended, muted =
+ *    missed).
  *  - A 30 / 90 / 365 range switcher above.
  *
  * Three render states besides loading:
  *  - `errored`     — fetch failed, friendly retry hint.
- *  - `empty`       — `expected_count === 0` (no lessons in the window).
- *                    Do NOT render `0%` — that's misleading; show a hint.
+ *  - `empty`       — `expected_count` 0 (no scheduled day in the window) or
+ *                    null (no schedule set, #1769): two different hints.
+ *                    Do NOT render `0%` — that's misleading.
  *  - `ready`       — donut + timeline.
  *
  * Reused by:
@@ -90,8 +92,14 @@ export class AttendanceSummaryChartComponent {
 
   protected readonly hasData = computed<boolean>(() => {
     const s = this.summary();
-    return s !== null && s.expected_count > 0;
+    return s !== null && s.expected_count !== null && s.expected_count > 0;
   });
+
+  /**
+   * Which empty answer is true (#1769): no training days set at all, or
+   * none scheduled in this window. Two different sentences.
+   */
+  protected readonly noSchedule = computed<boolean>(() => this.summary()?.expected_count === null);
 
   /**
    * Headline rate string for the donut centre. The empty-state branch
@@ -134,7 +142,7 @@ export class AttendanceSummaryChartComponent {
     this.languageService.currentLang(); // signal dep — the slice labels are translated
     const s = this.summary();
     if (s === null) return { labels: [], datasets: [] };
-    const missed = Math.max(0, s.expected_count - s.attended_count);
+    const missed = Math.max(0, (s.expected_count ?? 0) - s.attended_count);
     return {
       labels: [
         this.translate.instant('attendanceSummary.legend.attended'),
@@ -159,8 +167,8 @@ export class AttendanceSummaryChartComponent {
   } as const;
 
   /**
-   * Timeline bars — one bar per lesson day held. Height is constant
-   * (1 = "lesson happened"); colour is the encoding (primary = athlete
+   * Timeline bars — one bar per scheduled day, plus any other day trained
+   * (#1769). Height is constant; colour is the encoding (primary = athlete
    * attended, muted = missed). Keeps the read fast without needing a
    * legend.
    */

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions\Academy;
 
 use App\Models\Academy;
+use App\Support\AttendanceSummaryCache;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Carbon;
 
@@ -63,6 +64,9 @@ class RecordTrainingDaysAction
             $academy->schedules()
                 ->where('effective_from', $today)
                 ->update(['training_days' => $trainingDays]);
+            // A query-builder update fires no model event, so the observer
+            // that forgets the attendance summaries (#1769) never hears it.
+            AttendanceSummaryCache::forgetAcademy($academy->id);
         }
     }
 }

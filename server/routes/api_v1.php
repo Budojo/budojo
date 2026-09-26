@@ -532,6 +532,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
         // of 2) — transcribing a paper register from before Budojo existed.
         Route::post('/athletes/{athlete}/promotions', [\App\Http\Controllers\Athlete\AthletePromotionController::class, 'store']);
         Route::delete('/athletes/{athlete}/promotions/{promotion}', [\App\Http\Controllers\Athlete\AthletePromotionController::class, 'destroy']);
+        // Who may be ready for their next step (#1841) — facts, no score.
+        Route::get('/promotions/candidates', \App\Http\Controllers\Promotion\PromotionCandidatesController::class);
         // Documents — flat routes for operations that target a single document.
         // `/expiring` must come before `/{document}` routes or Laravel tries to
         // bind the literal "expiring" as a document id.
@@ -571,6 +573,13 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::post('/academy/classes', [\App\Http\Controllers\Academy\AcademyClassController::class, 'store']);
         Route::patch('/academy/classes/{academyClass}', [\App\Http\Controllers\Academy\AcademyClassController::class, 'update']);
         Route::delete('/academy/classes/{academyClass}', [\App\Http\Controllers\Academy\AcademyClassController::class, 'destroy']);
+
+        // The days the academy is shut (#1766): taken out of every scheduled
+        // day, so August stops counting as sessions everyone missed.
+        Route::get('/academy/closures', [\App\Http\Controllers\Academy\AcademyClosureController::class, 'index']);
+        Route::post('/academy/closures', [\App\Http\Controllers\Academy\AcademyClosureController::class, 'store']);
+        Route::patch('/academy/closures/{closure}', [\App\Http\Controllers\Academy\AcademyClosureController::class, 'update']);
+        Route::delete('/academy/closures/{closure}', [\App\Http\Controllers\Academy\AcademyClosureController::class, 'destroy']);
 
         // The programme (#1563): positions and the techniques under them,
         // per academy, with the shipped BJJ starter one POST away.

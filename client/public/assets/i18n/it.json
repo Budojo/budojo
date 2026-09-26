@@ -1357,14 +1357,15 @@
       "days90": "90g",
       "year1": "1a"
     },
-    "attendedOfExpected": "{{attended}} su {{expected}} lezioni effettive",
+    "attendedOfExpected": "{{attended}} su {{expected}} allenamenti in programma",
     "legend": {
       "attended": "Presente",
       "missed": "Assente"
     },
     "empty": {
-      "title": "Nessuna lezione in questo intervallo",
-      "hint": "L'accademia non ha registrato sessioni nel periodo selezionato."
+      "title": "Nessun allenamento in programma in questo intervallo",
+      "hint": "La percentuale conta i giorni di allenamento in programma, e in questo periodo non ce n'è nessuno.",
+      "noScheduleHint": "L'accademia non ha ancora impostato i giorni di allenamento, quindi non c'è nulla su cui misurare."
     },
     "error": {
       "title": "Impossibile caricare il grafico",
@@ -1676,7 +1677,40 @@
         "loadErrorDetail": "Impossibile caricare l'orario."
       },
       "plan": "Pianifica",
-      "editHint": "Apri la lezione per modificarla"
+      "editHint": "Apri la lezione per modificarla",
+      "closures": {
+        "title": "Chiusure",
+        "hint": "I giorni in cui l'accademia è chiusa. Non contano come allenamenti saltati.",
+        "add": "Aggiungi una chiusura",
+        "empty": "Nessuna chiusura. Aggiungi la pausa estiva o una festività.",
+        "daysOne": "{{count}} giorno",
+        "daysOther": "{{count}} giorni",
+        "editAria": "Modifica la chiusura {{range}}",
+        "form": {
+          "addTitle": "Nuova chiusura",
+          "editTitle": "Modifica chiusura",
+          "from": "Primo giorno",
+          "to": "Ultimo giorno (compreso)",
+          "label": "Nome (facoltativo)",
+          "labelPlaceholder": "Chiusura estiva",
+          "datesError": "Scegli il primo e l'ultimo giorno.",
+          "orderError": "L'ultimo giorno non può venire prima del primo.",
+          "create": "Aggiungi",
+          "save": "Salva",
+          "remove": "Elimina"
+        },
+        "confirm": {
+          "title": "Eliminare questa chiusura?",
+          "remove": "{{range}} tornerà a contare come giorni di allenamento.",
+          "accept": "Elimina"
+        },
+        "toast": {
+          "saved": "Chiusura salvata",
+          "removed": "Chiusura eliminata",
+          "error": "Impossibile salvare la chiusura. Riprova.",
+          "removeError": "Impossibile eliminare la chiusura. Riprova."
+        }
+      }
     },
     "syllabus": {
       "title": "Programma",
@@ -1944,7 +1978,9 @@
         "empty": "Ancora niente",
         "add": "Aggiungi argomenti",
         "edit": "Modifica"
-      }
+      },
+      "closedToday": "Oggi l'accademia è chiusa — stai vedendo la sessione di {{date}}.",
+      "closedTodayLabel": "Oggi l'accademia è chiusa ({{label}}) — stai vedendo la sessione di {{date}}."
     },
     "summary": {
       "daysOne": "{{count}} giorno di allenamento",
@@ -1972,7 +2008,7 @@
       "presencesOne": "{{count}} presenza",
       "presencesOther": "{{count}} presenze",
       "noScheduleNote": "Nessun orario copre ancora questo mese, quindi non c'è un totale di giorni su cui calcolare le percentuali.",
-      "method": "Qui una presenza è un giorno di allenamento di un atleta: una sera con due lezioni conta una volta per ogni atleta presente, e le presenze in alto sommano i giorni di tutti gli atleti. La percentuale divide i giorni di un atleta per i giorni di allenamento del mese secondo l'orario, fino a oggi se il mese è in corso."
+      "method": "Qui una presenza è un giorno di allenamento di un atleta: una sera con due lezioni conta una volta per ogni atleta presente, e le presenze in alto sommano i giorni di tutti gli atleti. La percentuale divide i giorni di un atleta per i giorni di allenamento del mese secondo l'orario da quando si è iscritto (o dal primo allenamento, se prima), fino a oggi se il mese è in corso, esclusi i giorni di chiusura."
     }
   },
   "lessons": {
@@ -2363,6 +2399,23 @@
         "firstBelt": "Cintura di partenza",
         "stripes": "gradi",
         "recordedBy": "Registrato da {{name}}",
+        "progression": {
+          "beltSince": "Su questa cintura dal {{date}}",
+          "monthsAtBeltOne": "{{count}} mese",
+          "monthsAtBeltOther": "{{count}} mesi",
+          "underAMonth": "meno di un mese",
+          "sessionsAtBeltOne": "{{count}} allenamento",
+          "sessionsAtBeltOther": "{{count}} allenamenti",
+          "stripeSince": "Ultimo grado il {{date}}",
+          "sessionsSinceStripeOne": "{{count}} allenamento da allora",
+          "sessionsSinceStripeOther": "{{count}} allenamenti da allora",
+          "noBeltRow": "Nessuna cintura registrata: il tempo in cintura parte dalla prima promozione.",
+          "noStripeOnThisBelt": "Nessun grado su questa cintura",
+          "undatedStripesOne": "{{count}} grado, data non registrata",
+          "undatedStripesOther": "{{count}} gradi, date non registrate",
+          "gradeSince": "{{grade}} dal {{date}}",
+          "gradeUndated": "{{grade}}, data non registrata"
+        },
         "prevPage": "Pagina precedente",
         "nextPage": "Pagina successiva",
         "editDate": "Correggi la data",
@@ -2427,7 +2480,10 @@
           "upcoming": "Da venire",
           "off": "Non si allena"
         },
-        "windowSoFar": "finora questo mese"
+        "windowSoFar": "finora questo mese",
+        "dayClosed": "{{day}} — accademia chiusa",
+        "closedRange": "Chiuso {{range}}",
+        "closedRangeLabel": "Chiuso {{range}} · {{label}}"
       },
       "carnets": {
         "title": "Carnet ingressi",
@@ -2766,6 +2822,33 @@
         "itemsOne": "{{count}} tecnica nel programma fino a questa cintura",
         "itemsOther": "{{count}} tecniche nel programma fino a questa cintura"
       }
+    },
+    "ready": {
+      "title": "Chi promuovere?",
+      "openButton": "Chi promuovere?",
+      "subtitle": "Tutti gli atleti attivi, prima chi aspetta da più tempo dall'ultima promozione. Qui trovi i fatti; la decisione è tua.",
+      "back": "Torna agli atleti",
+      "countOne": "{{count}} atleta",
+      "countOther": "{{count}} atleti",
+      "monthsOnBeltOne": "{{count}} mese con questa cintura",
+      "monthsOnBeltOther": "{{count}} mesi con questa cintura",
+      "underAMonthOnBelt": "Meno di un mese con questa cintura",
+      "lastStripe": "Ultimo grado il {{date}}",
+      "gradeSince": "{{grade}} dal {{date}}",
+      "onBeltSince": "Su questa cintura dal {{date}}",
+      "sessionsSinceOne": "{{count}} allenamento da allora",
+      "sessionsSinceOther": "{{count}} allenamenti da allora",
+      "noBeltRow": "Nessuna cintura registrata",
+      "next": "Prossimo",
+      "nextStripe": "{{n}}° grado",
+      "beltWithGrade": "{{belt}}, {{grade}}",
+      "topOfLadder": "In cima alla scala",
+      "empty": {
+        "title": "Nessun atleta attivo",
+        "hint": "Gli atleti attivi compaiono qui con il tempo dall'ultima promozione."
+      },
+      "error": "Impossibile caricare l'elenco.",
+      "retry": "Riprova"
     }
   },
   "month": {

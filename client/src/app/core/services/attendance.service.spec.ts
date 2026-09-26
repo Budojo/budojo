@@ -1,7 +1,12 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { AttendanceRecord, AttendanceService, AttendanceSummaryRow } from './attendance.service';
+import {
+  AttendanceRecord,
+  AttendanceService,
+  AttendanceSummaryRow,
+  MonthlySummary,
+} from './attendance.service';
 
 function makeRecord(overrides: Partial<AttendanceRecord> = {}): AttendanceRecord {
   return {
@@ -123,19 +128,26 @@ describe('AttendanceService', () => {
   });
 
   describe('getMonthlySummary', () => {
-    it('GETs /attendance/summary with the month param and unwraps rows', () => {
+    it('GETs /attendance/summary with the month param, and returns the rows with the header count', () => {
       const rows: AttendanceSummaryRow[] = [
-        { athlete_id: 1, first_name: 'Mario', last_name: 'Rossi', count: 12, athlete: null },
+        {
+          athlete_id: 1,
+          first_name: 'Mario',
+          last_name: 'Rossi',
+          count: 12,
+          expected_count: 13,
+          athlete: null,
+        },
       ];
-      let received: AttendanceSummaryRow[] | undefined;
+      let received: MonthlySummary | undefined;
 
       service.getMonthlySummary('2026-04').subscribe((r) => (received = r));
 
       const req = httpMock.expectOne((r) => r.url === '/api/v1/attendance/summary');
       expect(req.request.params.get('month')).toBe('2026-04');
-      req.flush({ data: rows });
+      req.flush({ data: rows, meta: { training_days: 13, month: '2026-04' } });
 
-      expect(received).toEqual(rows);
+      expect(received).toEqual({ rows, trainingDays: 13 });
     });
   });
 

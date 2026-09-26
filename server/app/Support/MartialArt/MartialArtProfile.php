@@ -100,6 +100,21 @@ final class MartialArtProfile
     }
 
     /**
+     * Whether a federation age ({@see FederationAge}) falls in one of this
+     * art's adult divisions. Below the youngest division is not adult either.
+     */
+    public function isAdultAge(int $federationAge): bool
+    {
+        foreach ($this->ageDivisions as $division) {
+            if ($division->category === 'adults' && $division->contains($federationAge)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * The starter programmes this art offers, by key, in the order the
      * programme page lists them. Empty until the first one ships — the seed
      * endpoint then answers 404 and the page offers no button.

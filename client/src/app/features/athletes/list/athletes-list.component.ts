@@ -59,11 +59,6 @@ import { SortHeaderComponent } from '../../../shared/components/sort-header/sort
 import { BeltSortButtonComponent } from '../../../shared/components/belt-sort-button/belt-sort-button.component';
 import { NotSeenLatelyComponent } from './not-seen-lately/not-seen-lately.component';
 import { academyChargesAFee } from '../../../shared/utils/academy-fee';
-import {
-  countScheduledTrainingDays,
-  countScheduledTrainingDaysBetween,
-  schedulesForAcademy,
-} from '../../../shared/utils/attendance-rate';
 import { DocumentService } from '../../../core/services/document.service';
 import { BeltLadderService } from '../../../core/services/belt-ladder.service';
 import {
@@ -892,25 +887,6 @@ export class AthletesListComponent implements OnInit {
   }
 
   /**
-   * The academy's schedule history, resolved once per render pass.
-   *
-   * Every denominator below reads it, and it is the same value for every row
-   * — pulling it out keeps 20 rows from re-deriving the same back-compat
-   * bridge twenty times.
-   */
-  private readonly schedules = computed(() => schedulesForAcademy(this.academyService.academy()));
-
-  /**
-   * Sessions the academy has actually held this month, capped at today.
-   * `null` when nobody has configured `training_days` — then the cell falls
-   * back to bare counts, the same way the summary widget does.
-   */
-  private readonly scheduledThisMonth = computed<number | null>(() => {
-    const now = new Date();
-    return countScheduledTrainingDays(this.schedules(), now.getFullYear(), now.getMonth() + 1);
-  });
-
-  /**
    * The day the current season began (#1484), as the server resolved it.
    *
    * Not computed here from `season_start_month`: the boundary rule ("March
@@ -936,47 +912,6 @@ export class AthletesListComponent implements OnInit {
   );
 
   /**
-   * Sessions held this season, floored at the day THIS athlete joined — a
-   * different window per row.
-   *
-   * Both bounds matter, and for the same reason. The season bound is the
-   * point of #1484: a lifetime total answers a question about the gym's
-   * history rather than about this year. The joining bound is what keeps that
-   * honest per row — someone who arrived in November cannot have attended
-   * September's sessions, and dividing by them reports the academy's calendar
-   * as if it were their record.
-   *
-   * Memoised on `joined_at`: the schedule and the season are shared, so two
-   * athletes who joined the same day have the same denominator, and the walk
-   * is one day at a time.
-   *
-   * The memo lives inside a `computed` WITH the inputs it was built from, so
-   * a new academy discards it. As a bare field it outlived them: the academy
-   * arrives over HTTP, the first rows can render before it does, and every
-   * `null` computed against an absent schedule was then served forever.
-   */
-  private readonly seasonDenominators = computed(() => ({
-    schedules: this.schedules(),
-    seasonStart: this.seasonStart(),
-    cache: new Map<string, number | null>(),
-  }));
-
-  private scheduledSince(joinedAt: string): number | null {
-    const { schedules, seasonStart, cache } = this.seasonDenominators();
-
-    const cached = cache.get(joinedAt);
-    if (cached !== undefined) return cached;
-
-    const [y, m, d] = joinedAt.split('-').map(Number);
-    const joined = new Date(y, m - 1, d);
-    const from = seasonStart !== null && seasonStart > joined ? seasonStart : joined;
-
-    const value = countScheduledTrainingDaysBetween(schedules, from, new Date());
-    cache.set(joinedAt, value);
-    return value;
-  }
-
-  /**
    * Whether this athlete's window starts later than the season's — i.e. they
    * joined mid-year, and their two numbers cover less of it than everyone
    * else's. The tooltip says so; without that the row reads as a low
@@ -999,6 +934,11 @@ export class AthletesListComponent implements OnInit {
    * and nothing in a month with twelve. `scheduled: null` means the academy
    * has no schedule on file, and the cell then shows the counts alone rather
    * than inventing a denominator.
+   *
+   * Both denominators are the server's (#1768), worked out beside the counts
+   * with the same windows, closures out: the page no longer walks the
+   * schedule. A payload without them (another endpoint, an older server)
+   * reads as no denominator, never as `0/0`.
    */
   protected sessions(athlete: Athlete): {
     monthAttended: number;
@@ -1008,9 +948,9 @@ export class AthletesListComponent implements OnInit {
   } {
     return {
       monthAttended: athlete.attendance_month_count ?? 0,
-      monthScheduled: this.scheduledThisMonth(),
+      monthScheduled: athlete.attendance_month_expected ?? null,
       totalAttended: athlete.attendance_total_count ?? 0,
-      totalScheduled: this.scheduledSince(athlete.joined_at),
+      totalScheduled: athlete.attendance_season_expected ?? null,
     };
   }
 
@@ -1239,6 +1179,11 @@ export class AthletesListComponent implements OnInit {
   /** The bulk path to the same place (#1346). */
   goToImport(): void {
     void this.router.navigate(['/dashboard/athletes/import']);
+  }
+
+  /** Who to promote? (#1841) */
+  goToReady(): void {
+    void this.router.navigate(['/dashboard/athletes/ready']);
   }
 
   goToEdit(athlete: Athlete): void {

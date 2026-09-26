@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Support\MartialArt;
 
 use App\Enums\Belt;
+use App\Enums\GradeCount;
 
 /**
  * The belts a martial art awards, in rank order, with the stripe cap of each
@@ -104,6 +105,90 @@ final class RankLadder
         $values = array_map(static fn (Grade $grade): string => $grade->belt->value, $this->grades);
 
         return array_pad($values, self::MAX_GRADES, null);
+    }
+
+    /**
+     * The step after this belt and stripe count (#1841): the next stripe while
+     * the grade has room for one, otherwise the next grade with its stripes
+     * back to none. A dan or a poom counts as a stripe does, since the ladder
+     * stores them as the grade's count.
+     *
+     * Grades come in the order people climb them ({@see self::climbingOrder()}),
+     * and kids-only grades are skipped unless the athlete is eligible for them:
+     * an adult judoka goes from white to yellow, not to the half belt, and a
+     * sixteen-year-old BJJ orange belt goes to blue, with or without stripes
+     * left on the orange. A poom leads to the dan of its own number. Who is
+     * eligible is the caller's to decide; the ladder knows grades, not ages.
+     *
+     * @return array{kind: 'stripe'|'belt', belt: Belt, stripes: int}|null
+     */
+    public function nextStep(Belt $belt, int $stripes, bool $kidsEligible): ?array
+    {
+        $current = $this->gradeOf($belt);
+        if ($current === null) {
+            return null;
+        }
+
+        // Someone who has outgrown a kids' grade moves on whatever its stripes:
+        // no more of them, and no more of its colours.
+        $outgrown = $current->kids && ! $kidsEligible;
+        if ($stripes < $current->maxStripes && ! $outgrown) {
+            return ['kind' => 'stripe', 'belt' => $belt, 'stripes' => $stripes + 1];
+        }
+
+        $order = $this->climbingOrder();
+        $position = array_search($current, $order, true);
+        \assert(\is_int($position));
+        foreach (\array_slice($order, $position + 1) as $grade) {
+            if (! $grade->kids || $kidsEligible) {
+                return ['kind' => 'belt', 'belt' => $grade->belt, 'stripes' => self::degreesCarried($current, $stripes, $grade)];
+            }
+        }
+
+        return null;
+    }
+
+    /** Whether this belt is a children's step (#1651). False for a colour this art does not award. */
+    public function isKidsGrade(Belt $belt): bool
+    {
+        return $this->gradeOf($belt)?->kids === true;
+    }
+
+    /**
+     * The count a new grade opens on: none, except that a poom becomes the
+     * dan of the same number (Kukkiwon, at fifteen), so 2nd poom leads to 2nd
+     * dan and not back to the 1st.
+     */
+    private static function degreesCarried(Grade $from, int $stripes, Grade $to): int
+    {
+        if ($from->count !== GradeCount::Poom || $to->count !== GradeCount::Dan) {
+            return 0;
+        }
+
+        return max(0, min($to->maxStripes, $from->first + $stripes - $to->first));
+    }
+
+    /**
+     * The grades in the order people climb them, which is not always rank
+     * order. BJJ ranks its kids' grades (grey to green) below white, so the
+     * roster sorts a child below an adult beginner; but a child starts on
+     * white and climbs them from there, and green leads on to blue. So the
+     * starting belt comes first, then any kids' grades ranked below it, then
+     * the rest. For a ladder that opens on its starting belt (judo, karate,
+     * taekwondo) this is rank order.
+     *
+     * @return list<Grade>
+     */
+    private function climbingOrder(): array
+    {
+        $start = $this->rankOf($this->startingBelt());
+        \assert($start !== null);
+
+        return [
+            $this->grades[$start - 1],
+            ...\array_slice($this->grades, 0, $start - 1),
+            ...\array_slice($this->grades, $start),
+        ];
     }
 
     private function gradeOf(Belt $belt): ?Grade

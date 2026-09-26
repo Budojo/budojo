@@ -127,7 +127,7 @@ docker exec budojo_api php artisan db:seed --class=AcademySeeder
 |---|---|
 | `make test` | Run every pre-push gate |
 | `make test-server` | PHP gates: cs-fixer + phpstan + pest |
-| `make test-client` | Angular gates: prettier + eslint + vitest |
+| `make test-client` | Angular gates: prettier + eslint + stylelint + vitest |
 | `make test-desktop` | Desktop gates: tsc + vitest |
 | `make e2e` | Cypress against the dev server, waiting out the ng-serve rebuild (`SPEC=athletes-sort`) |
 | `make shot` | Screenshot a route's chrome at 1280 and 375, empty-state (`PAGE=/dashboard/athletes`) |

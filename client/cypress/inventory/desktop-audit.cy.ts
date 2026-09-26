@@ -23,7 +23,14 @@
  */
 import LADDERS from '../../src/test-utils/ladders.json';
 import TRAINING_MODES from '../../src/test-utils/training-modes.json';
-import { fixtureContradictions, stubBodyOf, stubLabel, type FixtureContext } from './fixture-rules';
+import {
+  fixtureContradictions,
+  later,
+  stubBodyOf,
+  stubLabel,
+  trainingDaysBetween,
+  type FixtureContext,
+} from './fixture-rules';
 
 // ── The clock ────────────────────────────────────────────────────────────
 //
@@ -65,9 +72,19 @@ const ACADEMY = {
   carnet_entry_unit: 'lesson',
   syllabus_topics_count: 31,
   training_days: [1, 3, 5, 6],
-  current_schedule: { id: 1, training_days: [1, 3, 5, 6], effective_from: '2026-09-01' },
+  // From the season before: the 90-day card reaches back into the summer, and
+  // since #1769 its denominator is the scheduled days there.
+  current_schedule: { id: 1, training_days: [1, 3, 5, 6], effective_from: '2025-09-01' },
   next_schedule: null,
-  schedules: [{ id: 1, training_days: [1, 3, 5, 6], effective_from: '2026-09-01' }],
+  schedules: [{ id: 1, training_days: [1, 3, 5, 6], effective_from: '2025-09-01' }],
+  // The days it is shut (#1766): August, which the 90-day card and DAILY have
+  // always drawn closed, and a Christmas still to come for the timetable.
+  // Neither touches September, so no count on the other screens moves. The
+  // screens that need one inside September stub their own.
+  closures: [
+    { id: 2, starts_on: '2026-08-01', ends_on: '2026-08-31', label: 'Chiusura estiva' },
+    { id: 1, starts_on: '2026-12-24', ends_on: '2027-01-06', label: 'Vacanze di Natale' },
+  ],
   season_start_month: 9,
   season_start: '2026-09-01',
   season_label: '2026/27',
@@ -301,6 +318,16 @@ const SUGGESTIONS = [
 
 // ── The roster ───────────────────────────────────────────────────────────
 
+/**
+ * The server's denominator for the Sessions cell (#1768): the academy's
+ * training days from the later of 1 September (the month's and the season's
+ * start alike) and the day the athlete joined, up to TODAY.
+ */
+function heldSince(joinedAt: unknown): number {
+  const joined = typeof joinedAt === 'string' ? joinedAt : ACADEMY.season_start;
+  return trainingDaysBetween(later(ACADEMY.season_start, joined), TODAY, ACADEMY.training_days);
+}
+
 function athlete(over: Record<string, unknown>) {
   return {
     email: null,
@@ -325,6 +352,8 @@ function athlete(over: Record<string, unknown>) {
     active_carnet: null,
     attendance_month_count: 0,
     attendance_total_count: 0,
+    attendance_month_expected: heldSince(over['joined_at']),
+    attendance_season_expected: heldSince(over['joined_at']),
     last_attended_on: null,
     ...over,
   };
@@ -517,6 +546,67 @@ const AT_RISK = {
   ],
   meta: { sessions_available: 41, sessions_needed: 20, has_attendance: true },
 };
+
+/**
+ * Who to promote? (#1841): the roster's active athletes, longest since their
+ * last promotion first, with the numbers the endpoint would send on TODAY.
+ * Elena is blue with four stripes, so her next step is the belt.
+ */
+function candidate(
+  id: number,
+  f: {
+    beltSince: string;
+    months: number;
+    stripeSince: string | null;
+    days: number;
+    sessions: number;
+  },
+  next: { kind: 'stripe' | 'belt'; belt: string; stripes: number },
+) {
+  return {
+    athlete: identityOf(id),
+    belt_since: f.beltSince,
+    months_at_belt: f.months,
+    stripe_since: f.stripeSince,
+    last_promoted_on: f.stripeSince ?? f.beltSince,
+    days_since_last_promotion: f.days,
+    sessions_since_last_promotion: f.sessions,
+    next,
+  };
+}
+
+const PROMOTION_CANDIDATES = [
+  candidate(
+    7,
+    { beltSince: '2026-02-02', months: 7, stripeSince: null, days: 224, sessions: 31 },
+    { kind: 'stripe', belt: 'brown', stripes: 1 },
+  ),
+  candidate(
+    6,
+    { beltSince: '2025-06-10', months: 15, stripeSince: '2026-03-18', days: 180, sessions: 38 },
+    { kind: 'belt', belt: 'purple', stripes: 0 },
+  ),
+  candidate(
+    5,
+    { beltSince: '2026-04-13', months: 5, stripeSince: null, days: 154, sessions: 22 },
+    { kind: 'stripe', belt: 'white', stripes: 1 },
+  ),
+  candidate(
+    4,
+    { beltSince: '2024-11-20', months: 21, stripeSince: '2026-05-06', days: 131, sessions: 29 },
+    { kind: 'stripe', belt: 'purple', stripes: 2 },
+  ),
+  candidate(
+    2,
+    { beltSince: '2025-10-01', months: 11, stripeSince: '2026-06-24', days: 82, sessions: 17 },
+    { kind: 'stripe', belt: 'white', stripes: 4 },
+  ),
+  candidate(
+    8,
+    { beltSince: '2026-09-07', months: 0, stripeSince: null, days: 7, sessions: 2 },
+    { kind: 'stripe', belt: 'white', stripes: 1 },
+  ),
+];
 
 /**
  * What tonight's room missed (#1860): seven on the mat, two techniques most of
@@ -769,6 +859,7 @@ const ATHLETE_SUMMARY = (() => {
     range_days: 90,
     range_start: iso(new Date(NOW - 89 * 86_400_000)),
     range_end: TODAY,
+    window_start: iso(new Date(NOW - 89 * 86_400_000)),
     attended_count: attended,
     expected_count: series.length,
     rate: Math.round((attended / series.length) * 10000) / 10000,
@@ -776,14 +867,94 @@ const ATHLETE_SUMMARY = (() => {
   };
 })();
 
+/**
+ * The ring's answer for a month (#1769), as the server builds it: one point
+ * per scheduled day up to TODAY (Mon/Wed/Fri/Sat, August closed), plus any
+ * other day trained. Giulia trained on 2, 4, 7, 9 and 11 September, and once
+ * on 28 August, when the academy was closed.
+ */
+function athleteMonthSummary(month: string) {
+  const trained = new Set(ATTENDANCE_ONE.map((r) => r.attended_on));
+  const [y, m] = month.split('-').map(Number);
+  const last = new Date(y, m, 0).getDate();
+  const series: { date: string; attended: boolean }[] = [];
+  let scheduled = 0;
+  for (let d = 1; d <= last; d++) {
+    const iso = `${month}-${String(d).padStart(2, '0')}`;
+    if (iso > TODAY) break;
+    const isScheduled = m !== 8 && [1, 3, 5, 6].includes(new Date(y, m - 1, d).getDay());
+    if (isScheduled) scheduled++;
+    if (isScheduled || trained.has(iso)) series.push({ date: iso, attended: trained.has(iso) });
+  }
+  const attended = series.filter((p) => p.attended).length;
+  return {
+    range_days: last,
+    range_start: `${month}-01`,
+    range_end: `${month}-${String(last).padStart(2, '0')}`,
+    window_start: `${month}-01`,
+    attended_count: attended,
+    expected_count: scheduled,
+    rate: scheduled === 0 ? null : Math.round((attended / scheduled) * 10000) / 10000,
+    series,
+  };
+}
+
+/**
+ * The month summary (#1767): each row carries its own denominator, the
+ * sessions from 1 September (or the day that athlete joined) to TODAY on
+ * Mon/Wed/Fri/Sat — eight, and five for Francesca, who joined on the 7th.
+ */
 const ATTENDANCE_SUMMARY = [
-  { athlete_id: 3, first_name: 'Matteo', last_name: 'Bonanno', count: 6, athlete: identityOf(3) },
-  { athlete_id: 1, first_name: 'Giulia', last_name: 'Ferraro', count: 5, athlete: identityOf(1) },
-  { athlete_id: 2, first_name: 'Luca', last_name: 'Moretti', count: 4, athlete: identityOf(2) },
-  { athlete_id: 4, first_name: 'Sara', last_name: 'Colombo', count: 3, athlete: identityOf(4) },
-  { athlete_id: 6, first_name: 'Elena', last_name: 'Russo', count: 2, athlete: identityOf(6) },
-  { athlete_id: 8, first_name: 'Francesca', last_name: 'Marino', count: 2, athlete: identityOf(8) },
+  {
+    athlete_id: 3,
+    first_name: 'Matteo',
+    last_name: 'Bonanno',
+    count: 6,
+    expected_count: 8,
+    athlete: identityOf(3),
+  },
+  {
+    athlete_id: 1,
+    first_name: 'Giulia',
+    last_name: 'Ferraro',
+    count: 5,
+    expected_count: 8,
+    athlete: identityOf(1),
+  },
+  {
+    athlete_id: 2,
+    first_name: 'Luca',
+    last_name: 'Moretti',
+    count: 4,
+    expected_count: 8,
+    athlete: identityOf(2),
+  },
+  {
+    athlete_id: 4,
+    first_name: 'Sara',
+    last_name: 'Colombo',
+    count: 3,
+    expected_count: 8,
+    athlete: identityOf(4),
+  },
+  {
+    athlete_id: 6,
+    first_name: 'Elena',
+    last_name: 'Russo',
+    count: 2,
+    expected_count: 8,
+    athlete: identityOf(6),
+  },
+  {
+    athlete_id: 8,
+    first_name: 'Francesca',
+    last_name: 'Marino',
+    count: 2,
+    expected_count: 5,
+    athlete: identityOf(8),
+  },
 ];
+const ATTENDANCE_SUMMARY_META = { training_days: 8, month: '2026-09' };
 
 const LEADERBOARD = {
   data: [
@@ -1700,9 +1871,15 @@ function seed(): void {
     statusCode: 200,
     body: { data: ATTENDANCE_ONE },
   });
-  cy.intercept('GET', '/api/v1/athletes/*/attendance/summary*', {
-    statusCode: 200,
-    body: { data: ATHLETE_SUMMARY },
+  // The card asks for 30/90/365 days, the ring for the visible month (#1769):
+  // Giulia's September so far is 5 of 8 sessions (ATTENDANCE_ONE against
+  // Mon/Wed/Fri/Sat), and August was closed, so it has no denominator.
+  cy.intercept('GET', '/api/v1/athletes/*/attendance/summary*', (req) => {
+    const month = req.query['month'];
+    req.reply({
+      statusCode: 200,
+      body: { data: typeof month === 'string' ? athleteMonthSummary(month) : ATHLETE_SUMMARY },
+    });
   });
   cy.intercept('GET', '/api/v1/athletes/*/payments*', {
     statusCode: 200,
@@ -1714,7 +1891,21 @@ function seed(): void {
   });
   cy.intercept('GET', '/api/v1/athletes/*/promotions*', {
     statusCode: 200,
-    body: page(PROMOTIONS_ONE),
+    body: {
+      ...page(PROMOTIONS_ONE),
+      // Blue since 20 Dec 2025, last stripe 15 Jun 2026, against TODAY (#1772).
+      progression: {
+        belt: 'blue',
+        stripes: 2,
+        belt_since: '2025-12-20',
+        days_at_belt: 268,
+        months_at_belt: 8,
+        sessions_at_belt: 64,
+        stripe_since: '2026-06-15',
+        days_since_stripe: 91,
+        sessions_since_stripe: 23,
+      },
+    },
   });
   cy.intercept('GET', '/api/v1/athletes/*/syllabus-coverage*', {
     statusCode: 200,
@@ -1730,7 +1921,7 @@ function seed(): void {
   });
   cy.intercept('GET', '/api/v1/attendance/summary*', {
     statusCode: 200,
-    body: { data: ATTENDANCE_SUMMARY },
+    body: { data: ATTENDANCE_SUMMARY, meta: ATTENDANCE_SUMMARY_META },
   });
   cy.intercept('GET', '/api/v1/attendance/leaderboard*', { statusCode: 200, body: LEADERBOARD });
   cy.intercept('GET', '/api/v1/attendance/regulars*', { statusCode: 200, body: REGULARS_TONIGHT });
@@ -1751,6 +1942,11 @@ function seed(): void {
   cy.intercept('GET', '/api/v1/payments/summary*', {
     statusCode: 200,
     body: { data: { paid: 4, unpaid: 3 } },
+  });
+
+  cy.intercept('GET', '/api/v1/promotions/candidates', {
+    statusCode: 200,
+    body: { data: PROMOTION_CANDIDATES },
   });
 
   // Stats.
@@ -2042,6 +2238,7 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       SYLLABUS_CALENDAR,
       TOPIC_EXPOSURE,
       ATHLETE_SUMMARY,
+      ATHLETE_MONTHS: [athleteMonthSummary('2026-09'), athleteMonthSummary('2026-08')],
       ATTENDANCE_SUMMARY,
       CARNETS_ONE,
     });
@@ -2082,8 +2279,9 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
     expect(problems.join('\n')).to.contain("is 'planned'");
     expect(problems.join('\n')).to.contain('attendance_total_count 0 but last_attended_on');
 
-    // The attendance summary: one point per lesson day, so 90 calendar-day
-    // points against 30 expected is a contradiction.
+    // The attendance summary: one point per scheduled day plus the days
+    // trained off them, so 90 calendar-day points against 30 expected is a
+    // contradiction (#1769).
     const summary = fixtureContradictions(
       {
         attended_count: 2,
@@ -2093,7 +2291,23 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       },
       FIXTURE_CONTEXT,
     );
-    expect(summary.join('\n')).to.contain('≠ 90 series points');
+    expect(summary.join('\n')).to.contain('90 series points, outside 30–32');
+    // ...while an open mat on top of every session is not: past 100%, unclamped.
+    expect(
+      fixtureContradictions(
+        {
+          attended_count: 3,
+          expected_count: 2,
+          rate: 1.5,
+          series: [
+            { date: 'a', attended: true },
+            { date: 'b', attended: true },
+            { date: 'c', attended: true },
+          ],
+        },
+        FIXTURE_CONTEXT,
+      ),
+    ).to.deep.equal([]);
 
     // The rate is the server's four-place rounding exactly, not "near it".
     const rate = (r: number) =>
@@ -2113,6 +2327,14 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
     expect(rate(0.3333)).to.deep.equal([]);
     expect(rate(0.3334).join('\n')).to.contain('rate 0.3334');
 
+    // The roster's denominators (#1768): a newcomer's still carrying the
+    // academy's eight is the stale spread the Today stubs once shipped.
+    expect(
+      fixtureContradictions(
+        [{ joined_at: TODAY, attendance_month_expected: 8, attendance_season_expected: 1 }],
+        FIXTURE_CONTEXT,
+      ),
+    ).to.deep.equal([`$[0]: attendance_month_expected 8, but 1 training days since ${TODAY}`]);
     // Not stricter than the server: the month count and the last presence
     // are not floored at joining, which is editable and was backfilled.
     expect(
@@ -2123,6 +2345,10 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
             attendance_month_count: 3,
             attendance_total_count: 2,
             last_attended_on: '2026-09-12',
+            // Trained on the 5th, before joining: the server starts the month
+            // there (#1768), which the row does not say (5, 7, 9, 11, 12, 14).
+            attendance_month_expected: 6,
+            attendance_season_expected: 3,
           },
         ],
         FIXTURE_CONTEXT,
@@ -2226,6 +2452,9 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
             joined_at: TODAY,
             attendance_month_count: 0,
             attendance_total_count: 0,
+            // The server's windows start today for them (#1768).
+            attendance_month_expected: heldSince(TODAY),
+            attendance_season_expected: heldSince(TODAY),
             last_attended_on: null,
           },
           {
@@ -2233,6 +2462,9 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
             joined_at: TODAY,
             attendance_month_count: 0,
             attendance_total_count: 0,
+            // The server's windows start today for them (#1768).
+            attendance_month_expected: heldSince(TODAY),
+            attendance_season_expected: heldSince(TODAY),
             last_attended_on: null,
           },
         ]),
@@ -2543,6 +2775,7 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
   });
   screen('21-athlete-new', '/dashboard/athletes/new', '[data-cy="athlete-form"]');
   screen('21-athlete-import', '/dashboard/athletes/import', '[data-cy="import-back"]');
+  screen('21-athlete-ready', '/dashboard/athletes/ready', '[data-cy="ready-list"]');
 
   // ── 22. One athlete ────────────────────────────────────────────────────
   const DETAIL_READY = '[data-cy="athlete-detail-back"]';
@@ -2570,6 +2803,27 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
   screen('22-athlete-attendance', '/dashboard/athletes/1/attendance', DETAIL_READY, {
     act: () => {
       cy.get('[data-cy="attendance-summary-chart"] canvas').should('have.length', 2);
+    },
+  });
+  // A closure inside the month (#1766): its days paint as not a training day,
+  // the ring leaves them out, and the legend says why.
+  screen('22-athlete-attendance-closure', '/dashboard/athletes/1/attendance', DETAIL_READY, {
+    stubs: () => {
+      cy.intercept('GET', '/api/v1/academy', {
+        statusCode: 200,
+        body: {
+          data: {
+            ...ACADEMY,
+            closures: [
+              { id: 2, starts_on: '2026-09-07', ends_on: '2026-09-09', label: 'Seminario' },
+            ],
+          },
+        },
+      });
+    },
+    act: () => {
+      cy.get('[data-cy="attendance-summary-chart"] canvas').should('have.length', 2);
+      cy.get('[data-cy="attendance-closures"]').scrollIntoView().should('be.visible');
     },
   });
   screen('22-athlete-payments', '/dashboard/athletes/1/payments', DETAIL_READY);
@@ -2698,6 +2952,27 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
 
   // ── 30. Tonight's check-in ─────────────────────────────────────────────
   screen('30-attendance', '/dashboard/attendance', '[data-cy="attendance-class-picker"]');
+  // Shut today (#1766): the check-in lands on the last session held and says why.
+  screen(
+    '30-attendance-closed-today',
+    '/dashboard/attendance',
+    '[data-cy="attendance-no-class-banner"]',
+    {
+      stubs: () => {
+        cy.intercept('GET', '/api/v1/academy', {
+          statusCode: 200,
+          body: {
+            data: {
+              ...ACADEMY,
+              closures: [
+                { id: 3, starts_on: '2026-09-14', ends_on: '2026-09-15', label: 'Seminario' },
+              ],
+            },
+          },
+        });
+      },
+    },
+  );
   screen(
     '30-attendance-lesson-sheet',
     '/dashboard/attendance',
@@ -2839,7 +3114,10 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
     stubs: () => {
       cy.intercept('GET', '/api/v1/athletes*', EMPTY_PAGE);
       cy.intercept('GET', '/api/v1/attendance*', NO_DATA);
-      cy.intercept('GET', '/api/v1/attendance/summary*', NO_DATA);
+      cy.intercept('GET', '/api/v1/attendance/summary*', {
+        statusCode: 200,
+        body: { data: [], meta: ATTENDANCE_SUMMARY_META },
+      });
       cy.intercept('GET', '/api/v1/attendance/leaderboard*', {
         statusCode: 200,
         body: { data: [], meta: { month: '2026-09' } },

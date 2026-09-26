@@ -3142,6 +3142,123 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /academy/closures:
+    get:
+      tags: [academy]
+      summary: The days the academy is shut (#1766)
+      description: |
+        Every closure, ordered by `starts_on` then `ends_on`. Requires
+        `academy_settings_read`, which every membership role holds.
+      operationId: academyClosureIndex
+      responses:
+        '200':
+          description: The closures
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AcademyClosure'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [academy]
+      summary: Record a closure (#1766)
+      description: |
+        Requires `academy_settings_update`, like the timetable: whoever may
+        change when the academy trains may say when it is shut. `ends_on`
+        before `starts_on` is a 422.
+      operationId: academyClosureStore
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcademyClosurePayload'
+      responses:
+        '201':
+          description: Closure recorded
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/AcademyClosure'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /academy/closures/{closure}:
+    patch:
+      tags: [academy]
+      summary: Change a closure (#1766)
+      description: Same rules as creating one; a closure of another academy is a 403.
+      operationId: academyClosureUpdate
+      parameters:
+        - in: path
+          name: closure
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcademyClosurePayload'
+      responses:
+        '200':
+          description: Closure changed
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/AcademyClosure'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [academy]
+      summary: Remove a closure (#1766)
+      description: The days it covered count as scheduled again.
+      operationId: academyClosureDelete
+      parameters:
+        - in: path
+          name: closure
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: Closure removed
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /academy/syllabus:
     get:
       tags: [academy]
@@ -5610,6 +5727,16 @@ paths:
         rows and one day. Soft-deleted rows are not counted. Only athletes
         with at least one record in the month appear. Sorted DESC by count, then by
         last_name ASC for stable ordering at ties.
+
+        Each row carries its own denominator (#1767), `expected_count`: the
+        days the academy was scheduled to train in the month **from the day
+        that athlete joined**, or from their first presence in the month if
+        that came earlier (trial sessions entered after registering), closures
+        left out and nothing after today. An athlete who joined on the 20th is
+        measured against the sessions after the 20th. `meta.training_days`
+        is the academy's own count for the month, for the page's header, and
+        is deliberately no row's denominator. Both are null when no schedule
+        was ever configured; zero is a real zero.
       operationId: attendanceMonthlySummary
       parameters:
         - name: month
@@ -5968,6 +6095,50 @@ paths:
         '403':
           description: The athlete belongs to another academy.
 
+  /promotions/candidates:
+    get:
+      tags: [athletes]
+      summary: The athletes who may be ready for their next step (#1841)
+      description: |
+        Every active athlete of the academy with the facts a coach reads before
+        a promotion, side by side: time at the current belt, the last stripe
+        given on it, the last promotion (the later of the two), the whole days
+        and the distinct training days since it, and the next step as the
+        academy's ladder counts it.
+
+        **No score and no threshold.** Nobody is filtered out by a rule the
+        owner did not set; the list is ordered by days since the last
+        promotion, longest first, and athletes with no belt row come last.
+
+        The numbers are `AthleteProgression`'s (#1772), computed by the same
+        code, so they match the athlete page. The next step follows the order
+        people climb the ladder: a BJJ child goes from white through grey to
+        green, then to blue. Kids' grades are skipped unless the athlete is a
+        child: a known date of birth decides by the art's adult age divisions
+        (age reached this calendar year), and counts where the academy trains
+        kids or the athlete is already on a kids' grade; with no date of
+        birth, someone on a kids' grade is taken as a child.
+
+        Owner-only; requires `athletes_read` in the active academy.
+      operationId: promotionCandidates
+      responses:
+        '200':
+          description: The academy's active athletes, longest since their last promotion first.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PromotionCandidate'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
   /athletes/{athlete}/promotions:
     get:
       tags: [athletes]
@@ -5999,12 +6170,13 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [data, meta]
+                required: [data, meta, progression]
                 properties:
                   data:
                     type: array
                     items: { $ref: '#/components/schemas/AthletePromotion' }
                   meta: { $ref: '#/components/schemas/PaginationMeta' }
+                  progression: { $ref: '#/components/schemas/AthleteProgression' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '403':
           description: Athlete is not in the authenticated academy.
@@ -6202,23 +6374,41 @@ paths:
   /athletes/{athlete}/attendance/summary:
     get:
       tags: [attendance]
-      summary: Per-athlete attendance summary over the last N days
+      summary: Per-athlete attendance summary over the last N days, or a month
       description: |
-        Aggregate attendance % for one athlete over the trailing window.
-        `range` is one of {30, 90, 365}; default 90.
+        How often one athlete trained in a window: the last `range` days (one
+        of {30, 90, 365}; default 90) for the attendance card, or a calendar
+        `month` (`YYYY-MM`) for the attendance tab's ring (#1769). One or the
+        other, never both.
 
-        **Denominator semantic.** `expected_count` is the count of *realized
-        lesson days* in the window — distinct dates where the academy has at
-        least one attendance row AND the athlete was already on the roster
-        (`joined_at <= date`). This avoids penalizing the athlete for
-        cancellations / holidays / pre-roster days.
+        **Denominator semantic (#1769).** `expected_count` is the number of
+        days the academy was **scheduled to train** in the window: each day
+        resolved against the schedule in force on it, closures left out,
+        nothing after today (`App\Support\ScheduledDays`). It is the rule
+        every attendance number in the app shares. It used to be "realized
+        lesson days", every date anyone in the academy was checked in, which
+        made one athlete's denominator depend on other people: an open mat on
+        a Sunday added a day everybody else had missed, and a session nobody
+        registered vanished from everyone's count. A registered-late session
+        now counts against everyone, which is the trade that makes the number
+        comparable month to month.
 
-        `rate = attended_count / expected_count`, rounded to 4 decimal places.
-        When the academy held no lessons in the window (`expected_count = 0`),
-        `rate` is `null`. The `series` array exposes one entry per realized
-        lesson day, oldest first — sparkline-ready.
+        **The window** starts at its first day, or later at the athlete's
+        `joined_at`, unless they trained before joining (trial sessions
+        entered after registering): then at that first presence. The same
+        start as the month summary and the roster.
 
-        Response is cached for 5 minutes per (athlete_id, range).
+        `attended_count` is every distinct day they trained in the window,
+        scheduled or not. `rate = attended_count / expected_count`, rounded to
+        4 decimal places; an off-schedule session can take it past 1, and it
+        is not clamped. `expected_count` and `rate` are `null` when no
+        schedule was ever configured; `rate` is also `null` when
+        `expected_count` is 0. `series` has one entry per scheduled day, plus
+        any other day the athlete trained, oldest first.
+
+        Cached for 5 minutes per athlete and window, under a version per
+        academy that a closure, a schedule row, a presence or a corrected
+        `joined_at` bumps, so any change to either number is read at once.
       operationId: attendanceAthleteSummary
       parameters:
         - name: athlete
@@ -6232,6 +6422,11 @@ paths:
             type: integer
             enum: [30, 90, 365]
             default: 90
+        - name: month
+          in: query
+          required: false
+          description: A calendar month instead of a range (#1769); prohibited together with `range`.
+          schema: { type: string, pattern: '^\d{4}-(0[1-9]|1[0-2])$' }
       responses:
         '200':
           description: Attendance summary payload.
@@ -6243,21 +6438,22 @@ paths:
                 properties:
                   data:
                     type: object
-                    required: [range_days, range_start, range_end, attended_count, expected_count, rate, series]
+                    required: [range_days, range_start, range_end, window_start, attended_count, expected_count, rate, series]
                     properties:
-                      range_days: { type: integer, enum: [30, 90, 365] }
+                      range_days: { type: integer, minimum: 1, description: '30, 90 or 365, or the days in the month.' }
                       range_start: { type: string, format: date }
-                      range_end: { type: string, format: date }
+                      range_end: { type: string, format: date, description: The window's last day; a month's last day even while it is running. }
+                      window_start: { type: string, format: date, description: 'Where this athlete''s window begins: the joining day, or the first presence if earlier, never before range_start. No day before it is counted.' }
                       attended_count: { type: integer, minimum: 0 }
-                      expected_count: { type: integer, minimum: 0 }
+                      expected_count: { type: integer, minimum: 0, nullable: true, description: Scheduled days in the window; null when no schedule was ever configured. }
                       rate:
                         type: number
                         nullable: true
                         minimum: 0
-                        maximum: 1
                         description: |
-                          `null` when `expected_count` is 0 (no realized lesson
-                          days in the window); a 0..1 fraction otherwise.
+                          `null` when there is no denominator or it is 0;
+                          otherwise attended over scheduled, which an
+                          off-schedule session can take past 1 (not clamped).
                       series:
                         type: array
                         items:
@@ -8027,6 +8223,55 @@ components:
             email:
               - The email has already been taken.
 
+    AthleteProgression:
+      type: object
+      description: |
+        How long the athlete has held their belt, and how many sessions
+        since their last stripe (#1772). Computed once per request, the same
+        on every page of the timeline, beside `meta` (never in it: `meta` is
+        the pagination block).
+
+        Measured from recorded promotion rows only. A field is null when
+        there is no row of that kind: no fallback to `joined_at`. A stripe
+        row older than the latest belt row is not the last stripe, so the
+        stripe fields are null then too. Days compare whole days, so a belt
+        given at 18:42 still counts that evening's session. Sessions are
+        distinct training days; a corrected-away presence does not count.
+      required: [belt, stripes, belt_since, days_at_belt, months_at_belt, sessions_at_belt, stripe_since, days_since_stripe, sessions_since_stripe]
+      properties:
+        belt: { $ref: '#/components/schemas/Belt' }
+        stripes: { type: integer, minimum: 0, description: "The athlete's current stripe (or dan, or poom) count, so a reader can tell no stripe from stripes with no dated row." }
+        belt_since: { type: string, format: date, nullable: true, description: Day of the latest belt row. }
+        days_at_belt: { type: integer, nullable: true, description: Whole days from belt_since to today. }
+        months_at_belt: { type: integer, nullable: true, description: 'Whole months from belt_since to today, floored.' }
+        sessions_at_belt: { type: integer, nullable: true, description: Distinct training days on or after belt_since. }
+        stripe_since: { type: string, format: date, nullable: true, description: 'Day of the latest stripe row that raised the count, when it is not older than belt_since.' }
+        days_since_stripe: { type: integer, nullable: true, description: Whole days from stripe_since to today. }
+        sessions_since_stripe: { type: integer, nullable: true, description: Distinct training days on or after stripe_since. }
+    PromotionCandidate:
+      type: object
+      description: |
+        One athlete of `/promotions/candidates` (#1841). Dates and counts are
+        null when the athlete has no belt row: nothing falls back to
+        `joined_at`.
+      required: [athlete, belt_since, months_at_belt, stripe_since, last_promoted_on, days_since_last_promotion, sessions_since_last_promotion, next]
+      properties:
+        athlete: { $ref: '#/components/schemas/AthleteSummary' }
+        belt_since: { type: string, format: date, nullable: true, description: Day of the latest belt row. }
+        months_at_belt: { type: integer, nullable: true, description: 'Whole months from belt_since to today, floored.' }
+        stripe_since: { type: string, format: date, nullable: true, description: 'Day of the latest stripe given on the current belt; null when there is none.' }
+        last_promoted_on: { type: string, format: date, nullable: true, description: 'stripe_since when there is one, otherwise belt_since.' }
+        days_since_last_promotion: { type: integer, nullable: true, description: Whole days from last_promoted_on to today. }
+        sessions_since_last_promotion: { type: integer, nullable: true, description: Distinct training days on or after last_promoted_on. }
+        next:
+          type: object
+          nullable: true
+          description: 'The next stripe (or dan, or poom) while the grade has room for one, otherwise the next grade with no stripes, except that a poom leads to the dan of the same number. Someone who has outgrown a kids'' grade goes straight to the next adult grade. Null at the top of the ladder.'
+          required: [kind, belt, stripes]
+          properties:
+            kind: { type: string, enum: [stripe, belt] }
+            belt: { $ref: '#/components/schemas/Belt' }
+            stripes: { type: integer, minimum: 0 }
     AthletePromotion:
       type: object
       description: |
@@ -8679,6 +8924,7 @@ components:
           current_schedule,
           next_schedule,
           schedules,
+          closures,
         ]
       properties:
         id:
@@ -8908,6 +9154,13 @@ components:
             transitions on the FE.
           items:
             $ref: '#/components/schemas/AcademySchedule'
+        closures:
+          type: array
+          description: |
+            The days the academy is shut (#1766), in date order. The calendar
+            and the check-in paint per day, so they need them client-side.
+          items:
+            $ref: '#/components/schemas/AcademyClosure'
 
     CarnetEntryUnit:
       type: string
@@ -8976,6 +9229,27 @@ components:
         kind:
           $ref: '#/components/schemas/TrainingMode'
 
+    AcademyClosure:
+      type: object
+      description: |
+        Days the academy is shut (#1766): whole days, inclusive at both ends,
+        so a single day starts and ends on it. Overlapping closures are
+        allowed and mean nothing more. A closed day is never a scheduled one,
+        so it leaves every attendance denominator and the missed-streak alert.
+      required: [id, starts_on, ends_on, label]
+      properties:
+        id: { type: integer, format: int64 }
+        starts_on: { type: string, format: date, example: '2026-08-10' }
+        ends_on: { type: string, format: date, example: '2026-08-25', description: Inclusive; equal to starts_on for one day. }
+        label: { type: string, maxLength: 80, nullable: true, example: Chiusura estiva }
+    AcademyClosurePayload:
+      type: object
+      description: Both dates every time, on create and on edit.
+      required: [starts_on, ends_on]
+      properties:
+        starts_on: { type: string, format: date }
+        ends_on: { type: string, format: date, description: 'On or after starts_on.' }
+        label: { type: string, maxLength: 80, nullable: true }
     AcademyClass:
       type: object
       description: |
@@ -10089,6 +10363,33 @@ components:
             the athlete the roster is most worth spotting: the one with a full
             season of sessions who has not appeared this month.
           example: 214
+        attendance_month_expected:
+          type: integer
+          nullable: true
+          minimum: 0
+          description: |
+            What `attendance_month_count` divides by (#1768): the academy's
+            scheduled days this month, from the day the athlete joined, or
+            their first presence this month if that came earlier (trial
+            sessions entered after registering), closures left out, up to
+            today. The same window as the month summary's `expected_count`
+            (#1767), so one athlete's month reads the same on both screens.
+
+            On the roster index only; every other endpoint leaves the key
+            out, because null here is an answer: no schedule was ever
+            configured, and the cell shows the count alone.
+          example: 8
+        attendance_season_expected:
+          type: integer
+          nullable: true
+          minimum: 0
+          description: |
+            What `attendance_total_count` divides by (#1768): the scheduled
+            days this season from the later of its start and the day the
+            athlete joined, closures left out, up to today. The same floor as
+            the count. Same presence and null rules as
+            `attendance_month_expected`.
+          example: 33
         last_attended_on:
           type: string
           format: date
@@ -10765,7 +11066,7 @@ components:
 
     AttendanceSummaryRow:
       type: object
-      required: [athlete_id, first_name, last_name, count, athlete]
+      required: [athlete_id, first_name, last_name, count, expected_count, athlete]
       properties:
         athlete_id:
           type: integer
@@ -10777,7 +11078,16 @@ components:
         count:
           type: integer
           minimum: 1
-          description: Number of active attendance records in the month.
+          description: Distinct days with an active attendance record in the month (#1765).
+        expected_count:
+          type: integer
+          minimum: 0
+          nullable: true
+          description: |
+            This athlete's denominator (#1767): scheduled training days in the
+            month from `max(first of the month, min(joined_at, first presence
+            in the month))`, closures out, capped at today. Null when no
+            schedule was ever configured.
         athlete:
           allOf:
             - $ref: '#/components/schemas/AthleteSummary'
@@ -10788,12 +11098,25 @@ components:
 
     AttendanceSummaryEnvelope:
       type: object
-      required: [data]
+      required: [data, meta]
       properties:
         data:
           type: array
           items:
             $ref: '#/components/schemas/AttendanceSummaryRow'
+        meta:
+          type: object
+          required: [training_days, month]
+          properties:
+            training_days:
+              type: integer
+              minimum: 0
+              nullable: true
+              description: The academy's scheduled training days in the month, capped at today, closures out; for the header, never a row's denominator. Null when no schedule was ever configured.
+            month:
+              type: string
+              pattern: '^\d{4}-(0[1-9]|1[0-2])$'
+              description: The month the rows cover, YYYY-MM.
 
     AthleteInvitation:
       type: object

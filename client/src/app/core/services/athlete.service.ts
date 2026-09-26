@@ -220,6 +220,13 @@ export interface Athlete {
   attendance_month_count?: number | null;
   attendance_total_count?: number | null;
   /**
+   * What the two counts divide by (#1768): the scheduled days in the same
+   * windows, closures out, from the server. Only on the roster; null when no
+   * schedule was ever configured, absent where they were not worked out.
+   */
+  attendance_month_expected?: number | null;
+  attendance_season_expected?: number | null;
+  /**
    * The day of their latest presence (#1726), `YYYY-MM-DD`. Selected on the
    * roster index AND on show. `null` means they have never trained; absent
    * means the payload did not carry it, and the roster then shows no column.
@@ -690,6 +697,19 @@ export class AthleteService {
   deletePromotion(athleteId: number, promotionId: number): Observable<void> {
     return this.http.delete<void>(`${this.base}/${athleteId}/promotions/${promotionId}`);
   }
+
+  /**
+   * The athletes who may be ready for their next step (#1841): every active
+   * athlete, longest since their last promotion first. Facts only; the server
+   * sends no score, and the page adds none.
+   */
+  promotionCandidates(): Observable<PromotionCandidate[]> {
+    return this.http
+      .get<{
+        data: PromotionCandidate[];
+      }>(`${environment.apiBase}/api/v1/promotions/candidates`)
+      .pipe(map((res) => res.data));
+  }
 }
 
 export interface AthletePromotion {
@@ -717,6 +737,50 @@ export interface AthletePromotionPage {
     readonly total: number;
     readonly last_page: number;
   };
+  /** How long on this belt and since the last stripe (#1772). */
+  readonly progression?: AthleteProgression;
+}
+
+/**
+ * Measured from recorded promotion rows only: null means no row of that kind,
+ * never a fallback to the joining date. A stripe older than the current belt
+ * is not "the last stripe", so `stripe_since` is null then too (#1772).
+ */
+export interface AthleteProgression {
+  /** The athlete's current belt and stripes, to word a dan or a poom and to
+   *  tell "no stripe" from stripes with no dated row. */
+  readonly belt: Belt;
+  readonly stripes: number;
+  readonly belt_since: string | null;
+  readonly days_at_belt: number | null;
+  readonly months_at_belt: number | null;
+  readonly sessions_at_belt: number | null;
+  readonly stripe_since: string | null;
+  readonly days_since_stripe: number | null;
+  readonly sessions_since_stripe: number | null;
+}
+
+/** The step after an athlete's current belt and stripes, as the academy's ladder counts it. */
+export interface NextStep {
+  readonly kind: 'stripe' | 'belt';
+  readonly belt: Belt;
+  readonly stripes: number;
+}
+
+/**
+ * One row of the "ready for the next step" list (#1841). The dates and counts
+ * are null when the athlete has no belt row; `next` is null at the top of the
+ * ladder. Wire shape: `PromotionCandidate` in docs/api/v1.yaml.
+ */
+export interface PromotionCandidate {
+  readonly athlete: AthleteIdentity;
+  readonly belt_since: string | null;
+  readonly months_at_belt: number | null;
+  readonly stripe_since: string | null;
+  readonly last_promoted_on: string | null;
+  readonly days_since_last_promotion: number | null;
+  readonly sessions_since_last_promotion: number | null;
+  readonly next: NextStep | null;
 }
 
 /**

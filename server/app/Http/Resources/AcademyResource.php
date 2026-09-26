@@ -6,6 +6,7 @@ namespace App\Http\Resources;
 
 use App\Enums\TrainingMode;
 use App\Models\Academy;
+use App\Models\AcademyClosure;
 use App\Support\MartialArt\Grade;
 use App\Support\MartialArt\MartialArtLock;
 use App\Support\MartialArt\MartialArtProfile;
@@ -105,6 +106,14 @@ class AcademyResource extends JsonResource
             // are also now byte-for-byte identical to entries in
             // `schedules`, no two-source-of-truth risk.
             ...$this->schedulePayload($academy, $request),
+            // The days it is shut (#1766), in date order: the calendar and the
+            // check-in paint per day and need them on the client.
+            'closures' => $academy->closures()
+                ->orderBy('starts_on')
+                ->orderBy('ends_on')
+                ->get()
+                ->map(fn (AcademyClosure $closure): array => new AcademyClosureResource($closure)->toArray($request))
+                ->all(),
         ];
     }
 

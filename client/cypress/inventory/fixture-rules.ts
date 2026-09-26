@@ -30,7 +30,7 @@ const isObj = (v: unknown): v is Obj => typeof v === 'object' && v !== null && !
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 const isDate = (v: unknown): v is string => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}/.test(v);
 const day = (iso: string): string => iso.slice(0, 10);
-const later = (a: string, b: string): string => (a > b ? a : b);
+export const later = (a: string, b: string): string => (a > b ? a : b);
 
 /** Training days from `from` to `to`, both included: the roster's denominator. */
 export function trainingDaysBetween(from: string, to: string, days: readonly number[]): number {
@@ -49,6 +49,44 @@ export function trainingDaysBetween(from: string, to: string, days: readonly num
 type Rule = (o: Obj, ctx: FixtureContext) => string[];
 
 const RULES: Rule[] = [
+  // The roster's denominators (#1768), sent beside the counts: the training
+  // days in the same two windows. The fixtures model no presence before the
+  // joining day, so the month starts at the later of the month and joining
+  // (ResolveRosterDenominatorsAction).
+  (o, ctx) => {
+    const out: string[] = [];
+    if (!isDate(o['joined_at'])) return out;
+    const joined = day(o['joined_at']);
+    const monthStart = `${ctx.today.slice(0, 7)}-01`;
+    const expected: [string, unknown, string][] = [
+      ['attendance_month_expected', o['attendance_month_expected'], later(monthStart, joined)],
+      [
+        'attendance_season_expected',
+        o['attendance_season_expected'],
+        later(ctx.seasonStart, joined),
+      ],
+    ];
+    // Not stricter than the server: a presence this month before the joining
+    // day (a month count above the season's, which is floored at joining)
+    // moves the month's start earlier, to a day the row does not carry. Then
+    // the value only has to lie between the two possible starts.
+    const month = o['attendance_month_count'];
+    const total = o['attendance_total_count'];
+    const trainedBeforeJoining = isNum(month) && isNum(total) && month > total;
+    for (const [name, value, from] of expected) {
+      if (!isNum(value)) continue;
+      const held = trainingDaysBetween(from, ctx.today, ctx.trainingDays);
+      if (name === 'attendance_month_expected' && trainedBeforeJoining) {
+        const most = trainingDaysBetween(monthStart, ctx.today, ctx.trainingDays);
+        if (value < held || value > most) {
+          out.push(`${name} ${value}, outside ${held}–${most} training days this month`);
+        }
+        continue;
+      }
+      if (value !== held) out.push(`${name} ${value}, but ${held} training days since ${from}`);
+    }
+    return out;
+  },
   // The roster's two fractions (#1455, #1484): the month and the SEASON, each
   // over the training days since the later of its start and joining.
   (o, ctx) => {
@@ -221,29 +259,34 @@ const RULES: Rule[] = [
       ? [`remaining_entries ${o['remaining_entries']} > total_entries ${o['total_entries']}`]
       : [],
 
-  // An athlete's attendance summary (GetAthleteAttendanceSummaryAction, #893):
-  // one series point per lesson day in the window, so expected is the series'
-  // length, attended its attended points, and the rate the one over the other.
+  // An athlete's attendance summary (GetAthleteAttendanceSummaryAction, #893,
+  // #1769): expected is the scheduled days in the window, or null with no
+  // schedule; attended every day trained, scheduled or not, so it may pass
+  // expected. The series is one point per scheduled day plus any other day
+  // trained, so its length lies between expected and expected + attended,
+  // and its attended points are the attended count.
   (o) => {
     const out: string[] = [];
     const attended = o['attended_count'];
     const expected = o['expected_count'];
-    if (!isNum(attended) || !isNum(expected)) return out;
-    if (attended > expected) out.push(`attended_count ${attended} > expected_count ${expected}`);
+    if (!isNum(attended) || !(isNum(expected) || expected === null)) return out;
     const series = o['series'];
     if (Array.isArray(series)) {
       const hit = series.filter((p) => isObj(p) && p['attended'] === true).length;
-      if (series.length !== expected) {
+      if (hit !== attended) out.push(`attended_count ${attended} ≠ ${hit} attended points`);
+      if (isNum(expected) && (series.length < expected || series.length > expected + attended)) {
         out.push(
-          `expected_count ${expected} ≠ ${series.length} series points (one per lesson day)`,
+          `${series.length} series points, outside ${expected}–${expected + attended} (scheduled days, plus days trained off them)`,
         );
       }
-      if (hit !== attended) out.push(`attended_count ${attended} ≠ ${hit} attended points`);
     }
     const rate = o['rate'];
     if (rate !== undefined) {
-      // Null when nothing was expected, else rounded to four places.
-      const want = expected === 0 ? null : Math.round((attended / expected) * 10000) / 10000;
+      // Null with no denominator or a zero one, else rounded to four places.
+      const want =
+        expected === null || expected === 0
+          ? null
+          : Math.round((attended / expected) * 10000) / 10000;
       const agrees =
         rate === null
           ? want === null
