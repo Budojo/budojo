@@ -161,7 +161,7 @@
               <tr [class.import-table__row--skipped]="row.status !== 'ok'">
                 <td class="import-table__num">{{ row.row }}</td>
                 <td>{{ nameOf(row) }}</td>
-                <td>{{ beltLabel(row) }}</td>
+                <td data-cy="import-belt">{{ beltLabel(row) }}</td>
                 <td>{{ dateLabel(row, 'date_of_birth') }}</td>
                 <td>{{ dateLabel(row, 'joined_at') }}</td>
                 <td>

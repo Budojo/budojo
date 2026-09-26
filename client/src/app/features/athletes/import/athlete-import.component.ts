@@ -231,11 +231,42 @@ export class AthleteImportComponent {
    * against vocabulary they do not use defeats the point of showing it.
    * Named the way the academy's martial art names it (#1801); a value that is
    * not a belt at all is shown as typed, which is what the owner must fix.
+   *
+   * With the grade beside it, as the grade counts it (#1927): stored 2 on a
+   * judo black is "3° dan", and this is the one place a wrong offset can be
+   * seen before it is written. A refused grade shows the belt alone, so the
+   * row never states a grade its own reason says was not read.
    */
   protected beltLabel(row: AthleteImportRow): string {
     const value = this.valueOf(row, 'belt');
+    if (!(value in BELT_KEYS)) {
+      return value;
+    }
 
-    return value in BELT_KEYS ? this.beltLadder.label(value as Belt) : value;
+    const belt = value as Belt;
+    const grade = this.gradeLabel(row, belt);
+
+    return grade === null
+      ? this.beltLadder.label(belt)
+      : `${this.beltLadder.label(belt)} · ${grade}`;
+  }
+
+  /** "3° dan", "2 stripes", or nothing: no stripes, or a grade that was refused. */
+  private gradeLabel(row: AthleteImportRow, belt: Belt): string | null {
+    const stripes = row.values['stripes'];
+    if (typeof stripes !== 'number' || row.errors['stripes'] !== undefined) {
+      return null;
+    }
+    if (!this.beltLadder.countsStripes(belt)) {
+      return this.beltLadder.stripesLabel(belt, stripes);
+    }
+
+    return stripes === 0
+      ? null
+      : this.translate.instant(
+          stripes === 1 ? 'shared.beltBadge.stripeOne' : 'shared.beltBadge.stripeMany',
+          { count: stripes },
+        );
   }
 
   /**

@@ -4802,6 +4802,11 @@ paths:
         - A UTF-8 BOM, which Excel writes and never mentions.
         - Which column is which, from Italian or English header names.
         - Belts written as `Blu`, `cintura blu` or `blue`.
+        - A grade as the grade counts it (#1927): `3`, `3°` or `3° dan` on a
+          judo black belt is 3° dan, stored as `stripes: 2` like the form
+          stores it. A grade the belt does not carry, a unit it does not count
+          (`2 kyu`, `2 dan` on a coloured belt), or a cell that is not a number
+          makes the row `invalid` with the reason — never a silent `0`.
         - Dates as `gg/mm/aaaa`, `gg-mm-aa`, ISO, with or without a time.
         - A phone in one column, split into the stored pair. A number with no
           prefix takes the academy's own dial code.
