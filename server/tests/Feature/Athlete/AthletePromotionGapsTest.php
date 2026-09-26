@@ -216,6 +216,54 @@ it('pages the listing in that order with the same meta as before', function (): 
         ->and(substr((string) $second->json('data.4.recorded_at'), 0, 10))->toBe('2024-04-01');
 });
 
+/** Blue with two stripes, recorded one by one since 2024. */
+function blueWithTwoStripes(object $test): array
+{
+    $athlete = gapsAthlete($test->academy, Belt::Blue, 2);
+    $belt = beltRowOn($athlete, $test->owner, Belt::White, Belt::Blue, '2024-01-10 00:00:00');
+    $first = stripeRowOn($athlete, $test->owner, Belt::Blue, 0, 1, '2024-06-01 00:00:00');
+    $second = stripeRowOn($athlete, $test->owner, Belt::Blue, 1, 2, '2025-01-01 00:00:00');
+
+    return [$athlete, [$second->id, $first->id, $belt->id]];
+}
+
+it('lists a belt set back the same day in the order it was done, newest last undone', function (): void {
+    [$athlete, $history] = blueWithTwoStripes($this);
+    // White by mistake, blue again: the same midnight since #1963.
+    $mistake = beltRowOn($athlete, $this->owner, Belt::Blue, Belt::White, '2026-09-10 00:00:00');
+    $undo = beltRowOn($athlete, $this->owner, Belt::White, Belt::Blue, '2026-09-10 00:00:00');
+
+    $page = $this->actingAs($this->owner)->getJson("/api/v1/athletes/{$athlete->id}/promotions")->assertOk();
+
+    expect(array_column($page->json('data'), 'id'))->toBe([$undo->id, $mistake->id, ...$history])
+        ->and($page->json('gaps'))->toBe([]);
+});
+
+it('lists stripes set back the same day in the order it was done', function (): void {
+    [$athlete, $history] = blueWithTwoStripes($this);
+    $mistake = stripeRowOn($athlete, $this->owner, Belt::Blue, 2, 0, '2026-09-10 00:00:00');
+    $undo = stripeRowOn($athlete, $this->owner, Belt::Blue, 0, 2, '2026-09-10 00:00:00');
+
+    $page = $this->actingAs($this->owner)->getJson("/api/v1/athletes/{$athlete->id}/promotions")->assertOk();
+
+    expect(array_column($page->json('data'), 'id'))->toBe([$undo->id, $mistake->id, ...$history])
+        ->and($page->json('gaps'))->toBe([]);
+});
+
+it('answers a page far past the last with an empty page, not an error', function (): void {
+    [$athlete] = blueWithTwoStripes($this);
+
+    $page = $this->actingAs($this->owner)
+        ->getJson("/api/v1/athletes/{$athlete->id}/promotions?page=500000000000000000")
+        ->assertOk();
+
+    expect($page->json('data'))->toBe([])
+        ->and($page->json('meta.current_page'))->toBe(500000000000000000)
+        ->and($page->json('meta.from'))->toBeNull()
+        ->and($page->json('meta.to'))->toBeNull()
+        ->and($page->json('meta.total'))->toBe(3);
+});
+
 it('reads the gaps over the whole history, whatever the page', function (): void {
     $athlete = gapsAthlete($this->academy, Belt::Blue, 0);
     stripeRowOn($athlete, $this->owner, Belt::White, 2, 3, '2024-03-12 00:00:00');

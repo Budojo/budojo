@@ -26,6 +26,12 @@ use App\Support\MartialArt\RankLadder;
  * Not by id alone: a step filled on the day of the row after it (its window
  * ends on that day, inclusive) is written later but happened before it. Not
  * by where a row ends, which replays a downward correction backwards.
+ *
+ * One exception: two rows of the same moment that undo each other — a belt
+ * set back, stripes set back — stay in the order they were made, by id. Where
+ * they start would put the undo first (white → blue starts below
+ * blue → white), and the timeline would then show a demotion as the latest
+ * thing that happened to someone who is blue.
  */
 final class PromotionOrder
 {
@@ -50,7 +56,46 @@ final class PromotionOrder
             $b->id,
         ]);
 
-        return $records;
+        return self::undoesInEditOrder($records);
+    }
+
+    /**
+     * Whether one row sets the other back: the same belt change the other
+     * way round, or the same stripe change on the same belt the other way
+     * round. A starting row sets nothing back.
+     */
+    public static function undoEachOther(PromotionRecord $a, PromotionRecord $b): bool
+    {
+        if ($a->kind !== $b->kind) {
+            return false;
+        }
+
+        if ($a->kind === 'belt') {
+            return $a->fromBelt !== null && $b->fromBelt !== null
+                && $a->fromBelt === $b->toBelt && $a->toBelt === $b->fromBelt;
+        }
+
+        return $a->beltAtEvent === $b->beltAtEvent
+            && $a->fromStripes === $b->toStripes && $a->toStripes === $b->fromStripes;
+    }
+
+    /**
+     * @param list<PromotionRecord> $records sorted
+     *
+     * @return list<PromotionRecord>
+     */
+    private static function undoesInEditOrder(array $records): array
+    {
+        $count = \count($records);
+        for ($i = 0; $i < $count; $i++) {
+            for ($j = $i + 1; $j < $count && $records[$j]->recordedAt->equalTo($records[$i]->recordedAt); $j++) {
+                if ($records[$i]->id > $records[$j]->id && self::undoEachOther($records[$i], $records[$j])) {
+                    [$records[$i], $records[$j]] = [$records[$j], $records[$i]];
+                }
+            }
+        }
+
+        return array_values($records);
     }
 
     /**

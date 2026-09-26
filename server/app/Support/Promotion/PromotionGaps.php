@@ -39,6 +39,12 @@ use Carbon\CarbonImmutable;
  * row that goes down with nothing undoing it is a contradiction: nothing is
  * missing before it, and the count on the belt it returns to is held.
  *
+ * Known limits, left on purpose: a double mistake (blue → purple → brown,
+ * then brown → blue) is no round trip, so the steps up to purple stay on
+ * offer; and nested corrections cancel from the inside out only on distinct
+ * days — made at the same midnight, the outer undo sorts between the inner
+ * pair and nothing cancels. Neither offers a row twice.
+ *
  * **Held until the belt is dated.** Once a walk takes a starting row's belt
  * step, nothing after it on that walk is offered: those steps come after a
  * promotion whose day is not known yet, and would have no honest window. They
@@ -266,7 +272,7 @@ final class PromotionGaps
         $span = PHP_INT_MAX;
         foreach (\array_slice($belts, 1) as $index => $later) {
             $earlier = $belts[$index];
-            if (! self::undoes($rows[$later], $rows[$earlier]) || self::held($rows, $earlier, $later)) {
+            if (! PromotionOrder::undoEachOther($rows[$later], $rows[$earlier]) || self::held($rows, $earlier, $later)) {
                 continue;
             }
 
@@ -295,12 +301,6 @@ final class PromotionGaps
         }
 
         return false;
-    }
-
-    private static function undoes(PromotionRecord $row, PromotionRecord $earlier): bool
-    {
-        return $row->fromBelt !== null && $earlier->fromBelt !== null
-            && $row->fromBelt === $earlier->toBelt && $row->toBelt === $earlier->fromBelt;
     }
 
     /**
