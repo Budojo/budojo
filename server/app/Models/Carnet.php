@@ -118,6 +118,9 @@ class Carnet extends Model
      *   spendable on any later day of the month either. Today's balance would
      *   call every carnet spent out since then unpaid for months it paid.
      *
+     * `PaymentsArrearsTest` holds it to `CarnetAvailability::isActiveOn` asked
+     * of every day of the month, over both window edges and the balance.
+     *
      * @param  Builder<$this>  $query
      * @return Builder<$this>
      */
