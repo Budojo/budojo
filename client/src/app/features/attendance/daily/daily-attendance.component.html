@@ -169,13 +169,18 @@
   <div class="attendance__filters">
     <p-iconfield iconPosition="left" styleClass="attendance__search">
       <p-inputicon><i class="pi pi-search"></i></p-inputicon>
+      <!-- Enter marks the one match present; Esc clears the box (#1930). -->
       <input
+        #searchInput
         pInputText
         type="text"
         [placeholder]="'attendance.daily.searchPlaceholder' | translate"
         [ngModel]="searchTerm()"
         (ngModelChange)="onSearchInput($event)"
+        (keydown.enter)="onSearchEnter()"
+        (keydown.escape)="onSearchEscape()"
         autocomplete="off"
+        enterkeyhint="done"
         data-cy="attendance-search-input"
       />
     </p-iconfield>
@@ -454,7 +459,9 @@
       [failed]="regularsFailed()"
       [present]="presentMap()"
       [date]="selectedDate()"
+      [locked]="loading()"
       (retry)="loadRegulars()"
+      (markPresent)="markRegular($event)"
     />
   }
 </section>

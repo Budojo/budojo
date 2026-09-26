@@ -184,4 +184,52 @@ describe('Daily attendance check-in', () => {
     cy.wait('@undoDelete');
     cy.get('[data-cy="attendance-row-1"]').should('have.attr', 'aria-pressed', 'false');
   });
+
+  it('checks the one match in on Enter, and hands the box back empty (#1930)', () => {
+    // The search narrows the register to Mario alone; everything else is both.
+    cy.intercept('GET', '/api/v1/athletes*', (req) => {
+      if (req.query['q'] === 'rossi') {
+        req.reply({
+          statusCode: 200,
+          body: {
+            ...ATHLETES_TWO.body,
+            data: [ATHLETES_TWO.body.data[0]],
+            meta: { ...ATHLETES_TWO.body.meta, to: 1, total: 1 },
+          },
+        });
+        return;
+      }
+      req.reply(ATHLETES_TWO);
+    }).as('athletes');
+    cy.intercept('POST', '/api/v1/attendance', (req) => {
+      req.reply({
+        statusCode: 201,
+        body: {
+          data: [
+            {
+              id: 888,
+              athlete_id: req.body.athlete_ids[0],
+              attended_on: req.body.date,
+              notes: null,
+              created_at: null,
+              deleted_at: null,
+            },
+          ],
+        },
+      });
+    }).as('mark');
+
+    cy.visitAuthenticated('/dashboard/attendance');
+    cy.wait(['@academy', '@athletes', '@getDaily']);
+
+    // Typed and entered in one breath — faster than the search's pause.
+    cy.get('[data-cy="attendance-search-input"]').type('rossi{enter}');
+
+    cy.wait('@mark')
+      .its('request.body')
+      .should('deep.include', { athlete_ids: [1] });
+    cy.get('[data-cy="attendance-search-input"]').should('have.value', '').and('have.focus');
+    cy.get('[data-cy="attendance-row-1"]').should('have.attr', 'aria-pressed', 'true');
+    cy.get('[data-cy="attendance-row-2"]').should('exist');
+  });
 });

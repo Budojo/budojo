@@ -140,6 +140,28 @@ describe('MissingRegularsComponent (#1730)', () => {
     expect(text(root, '[data-cy="missing-regulars-count"]')).toBe('1 regular missing');
   });
 
+  it('offers to check each regular in, and hands the regular to the page (#1930)', () => {
+    const { fixture, root } = render(regulars([regular({ id: 1 }), regular({ id: 2 })]));
+    const marked: number[] = [];
+    fixture.componentInstance.markPresent.subscribe((r) => marked.push(r.id));
+    open(fixture);
+
+    const button = root.querySelector<HTMLButtonElement>('[data-cy="missing-present-2"] button');
+    expect(button?.textContent).toContain('Present');
+    button?.click();
+
+    expect(marked).toEqual([2]);
+  });
+
+  it('holds the button while the register is loading, like the rows above it', () => {
+    const { fixture, root } = render(regulars([regular({ id: 1 })]));
+    fixture.componentRef.setInput('locked', true);
+    open(fixture);
+
+    const button = root.querySelector<HTMLButtonElement>('[data-cy="missing-present-1"] button');
+    expect(button?.disabled).toBe(true);
+  });
+
   it('says everyone is here only when every regular is ticked', () => {
     const { root } = render(regulars([regular({ id: 1 })]), new Map([[1, 501]]));
 

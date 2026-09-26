@@ -1940,7 +1940,7 @@
       "classPicker": {
         "aria": "Which class"
       },
-      "searchPlaceholder": "Search by name",
+      "searchPlaceholder": "Search by name — Enter checks in",
       "beltPlaceholder": "Belt",
       "table": {
         "fullName": "Full name",
@@ -1980,7 +1980,9 @@
         "notEnoughHistoryOne": "Only {{count}} session of this class on record: too few to tell who usually comes.",
         "notEnoughHistoryOther": "Only {{count}} sessions of this class on record: too few to tell who usually comes.",
         "loadError": "Could not load who usually comes to this class.",
-        "retry": "Try again"
+        "retry": "Try again",
+        "markPresent": "Present",
+        "markPresentAria": "Mark {{name}} present"
       },
       "topics": {
         "empty": "Nothing tagged yet",

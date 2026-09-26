@@ -31,7 +31,7 @@
             <li class="missing__row" [attr.data-cy]="'missing-regular-' + row.regular.id">
               <!--
                 Not linked: a tap that leaves the check-in mid-session loses the
-                register the owner is holding. The two buttons are the action.
+                register the owner is holding. The buttons are the action.
               -->
               <app-athlete-identity class="missing__who" [athlete]="row.regular" />
               <p class="missing__why">
@@ -50,6 +50,19 @@
                 [nationalNumber]="row.regular.phone_national_number"
                 [name]="row.name"
                 [dataCy]="'missing-contact-' + row.regular.id"
+              />
+              <!-- They walked in (#1930): tick them here, not by searching above. -->
+              <p-button
+                class="missing__present"
+                severity="secondary"
+                icon="pi pi-check"
+                [label]="'attendance.daily.missing.markPresent' | translate"
+                [ariaLabel]="
+                  'attendance.daily.missing.markPresentAria' | translate: { name: row.name }
+                "
+                [disabled]="locked()"
+                (onClick)="markPresent.emit(row.regular)"
+                [attr.data-cy]="'missing-present-' + row.regular.id"
               />
             </li>
           }

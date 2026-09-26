@@ -75,24 +75,25 @@
 }
 
 // Mobile first, for the phone held in one hand on the mat: who and the two
-// ways to reach them on one line, the habit underneath. The identity's belt
-// spine is absolutely positioned, so the row is its containing block and
-// keeps a left gutter for it.
+// ways to reach them on one line, the habit underneath beside "Presente"
+// (#1930) — three controls beside the name would squeeze the name out. The
+// identity's belt spine is absolutely positioned, so the row is its
+// containing block and keeps a left gutter for it.
 .missing__row {
   position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   grid-template-areas:
     'who actions'
-    'why why';
+    'why present';
   align-items: center;
   gap: 0.5rem 1rem;
   padding: 0.5rem 1rem 0.5rem 1.5rem;
   border-top: 1px solid var(--p-content-border-color);
 
   @media (min-width: 768px) {
-    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr) auto;
-    grid-template-areas: 'who why actions';
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr) auto auto;
+    grid-template-areas: 'who why actions present';
   }
 }
 
@@ -115,6 +116,10 @@
 
 .missing__actions {
   grid-area: actions;
+}
+
+.missing__present {
+  grid-area: present;
 }
 
 // The folded states that have nothing to open: one line, no chevron, no

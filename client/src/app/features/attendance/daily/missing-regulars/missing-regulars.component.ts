@@ -8,6 +8,7 @@ import {
   signal,
 } from '@angular/core';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { ButtonModule } from 'primeng/button';
 import type { ClassRegular, ClassRegulars } from '../../../../core/services/attendance.service';
 import { LanguageService } from '../../../../core/services/language.service';
 import { AthleteIdentityComponent } from '../../../../shared/components/athlete-identity/athlete-identity.component';
@@ -36,11 +37,15 @@ interface MissingRow {
  *
  * Folded by default, below the table: the register is what the screen is
  * for, and the header's count is enough to know whether to open it.
+ *
+ * Each row can be ticked from here (#1930): this is the one list that means
+ * "who is about to walk in", so it is where the owner looks when they do.
+ * The page does the marking, through the same path as the register.
  */
 @Component({
   selector: 'app-missing-regulars',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [TranslatePipe, AthleteIdentityComponent, ContactActionsComponent],
+  imports: [TranslatePipe, ButtonModule, AthleteIdentityComponent, ContactActionsComponent],
   templateUrl: './missing-regulars.component.html',
   styleUrl: './missing-regulars.component.scss',
 })
@@ -66,6 +71,12 @@ export class MissingRegularsComponent {
 
   /** Ask again, after a failure. */
   readonly retry = output<void>();
+
+  /** The register is loading: a tick now would be refused, so say so. */
+  readonly locked = input<boolean>(false);
+
+  /** Check this regular in (#1930). */
+  readonly markPresent = output<ClassRegular>();
 
   protected readonly expanded = signal(false);
 
