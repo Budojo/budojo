@@ -2991,7 +2991,9 @@
       "scope": {
         "kids": "Kids",
         "adults": "Adulti",
-        "all": "Tutti"
+        "all": "Tutti",
+        "preCompetitive": "Preagonisti",
+        "competitive": "Agonisti"
       },
       "missingDobOne": "{{count}} atleta senza data di nascita",
       "missingDobOther": "{{count}} atleti senza data di nascita",
