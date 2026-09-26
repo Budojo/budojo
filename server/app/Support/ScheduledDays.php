@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Support;
 
 use App\Models\Academy;
+use App\Models\AcademyClosure;
 use App\Models\AcademySchedule;
 use Carbon\CarbonImmutable;
 
@@ -24,6 +25,12 @@ use Carbon\CarbonImmutable;
  *   with no scheduled day in the window, and the caller shows zero.
  * - **Nothing after today.** A session on Friday has not been missed on
  *   Wednesday. Today itself counts, as on the client.
+ *
+ * **Closures only subtract** (#1766). A day inside an `academy_closures`
+ * range is not scheduled, whatever the weekly pattern says; overlapping
+ * closures change nothing more. A window that is all closure is zero, not
+ * unknown: the schedule is configured, the academy was just shut. A presence
+ * recorded on a closed day is not this class's business; the numerator is.
  *
  * The history comes from `academy_schedules` through `loadMissing`, walked in
  * memory: a roster page asks for twenty windows, and one query each is the
@@ -45,10 +52,11 @@ final class ScheduledDays
             return null;
         }
 
+        $closures = self::closures($academy);
         $last = $to->startOfDay()->min($today->startOfDay());
         $days = [];
         for ($day = $from->startOfDay(); $day->lte($last); $day = $day->addDay()) {
-            if (self::scheduledIn($history, $day)) {
+            if (self::scheduledIn($history, $closures, $day)) {
                 $days[] = $day->toDateString();
             }
         }
@@ -66,7 +74,7 @@ final class ScheduledDays
 
     public static function isScheduledOn(Academy $academy, CarbonImmutable $date): bool
     {
-        return self::scheduledIn(self::history($academy), $date);
+        return self::scheduledIn(self::history($academy), self::closures($academy), $date);
     }
 
     /**
@@ -84,9 +92,10 @@ final class ScheduledDays
 
         // Nothing is scheduled before the oldest row, so the walk ends there.
         $oldest = $history[\count($history) - 1]['from'];
+        $closures = self::closures($academy);
         $days = [];
         for ($day = $date->startOfDay()->subDay(); \count($days) < $count && $day->toDateString() >= $oldest; $day = $day->subDay()) {
-            if (self::scheduledIn($history, $day)) {
+            if (self::scheduledIn($history, $closures, $day)) {
                 $days[] = $day->toDateString();
             }
         }
@@ -130,10 +139,33 @@ final class ScheduledDays
         return false;
     }
 
-    /** @param list<array{from: string, days: list<int>}> $history */
-    private static function scheduledIn(array $history, CarbonImmutable $day): bool
+    /**
+     * The academy's closures as inclusive `Y-m-d` pairs, loaded with the
+     * history and walked in memory for the same reason.
+     *
+     * @return list<array{0: string, 1: string}>
+     */
+    private static function closures(Academy $academy): array
+    {
+        $academy->loadMissing('closures');
+
+        return array_values($academy->closures
+            ->map(static fn (AcademyClosure $closure): array => [$closure->starts_on, $closure->ends_on])
+            ->all());
+    }
+
+    /**
+     * @param  list<array{from: string, days: list<int>}>  $history
+     * @param  list<array{0: string, 1: string}>  $closures
+     */
+    private static function scheduledIn(array $history, array $closures, CarbonImmutable $day): bool
     {
         $date = $day->toDateString();
+        foreach ($closures as [$startsOn, $endsOn]) {
+            if ($startsOn <= $date && $date <= $endsOn) {
+                return false;
+            }
+        }
         foreach ($history as $row) {
             if ($row['from'] <= $date) {
                 return \in_array($day->dayOfWeek, $row['days'], true);
