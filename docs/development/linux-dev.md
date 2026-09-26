@@ -95,7 +95,7 @@ Unchanged. Server and client run inside their containers; desktop runs on the ho
 ```bash
 make test           # all three
 make test-server    # cs-fixer + phpstan + pest      (in budojo_api, as www-data)
-make test-client    # prettier + eslint + vitest      (in budojo_client)
+make test-client    # prettier + eslint + stylelint + vitest (in budojo_client)
 make test-desktop   # tsc --noEmit + vitest           (on the host)
 ```
 

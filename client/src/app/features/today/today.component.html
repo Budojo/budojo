@@ -25,11 +25,7 @@
     <!-- ── Stasera ───────────────────────────────────────────────────── -->
     <!-- With no timetable there is no evening to answer, so no card (#1755). -->
     @if (!noTimetable()) {
-      <section
-        class="today-card"
-        aria-labelledby="today-tonight-title"
-        data-cy="today-tonight"
-      >
+      <section class="today-card" aria-labelledby="today-tonight-title" data-cy="today-tonight">
         <h2 id="today-tonight-title" class="today-card__title">
           {{ 'today.tonight.title' | translate }}
         </h2>
