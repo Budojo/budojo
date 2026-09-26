@@ -100,7 +100,6 @@ describe('Today, the first screen (#1643)', () => {
           positions: [],
           missing: [],
           taught: [],
-          timeline: [],
         },
       },
     });

@@ -35,7 +35,6 @@ export function stubToday(): void {
         positions: [],
         missing: [],
         taught: [],
-        timeline: [],
       },
     },
   });

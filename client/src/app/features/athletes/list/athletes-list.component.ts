@@ -50,7 +50,6 @@ import { BeltBadgeComponent } from '../../../shared/components/belt-badge/belt-b
 import { UserAvatarComponent } from '../../../shared/components/user-avatar/user-avatar.component';
 import { AgeBadgeComponent } from '../../../shared/components/age-badge/age-badge.component';
 import { FilterSheetComponent } from '../../../shared/components/filter-sheet/filter-sheet.component';
-import { PaidBadgeComponent } from '../../../shared/components/paid-badge/paid-badge.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { ErrorStateComponent } from '../../../shared/components/error-state/error-state.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
@@ -110,7 +109,6 @@ interface SelectOption<T extends string> {
     BeltBadgeComponent,
     AthleteIdentityComponent,
     UserAvatarComponent,
-    PaidBadgeComponent,
     NotSeenLatelyComponent,
     PageHeaderComponent,
     ErrorStateComponent,
