@@ -151,7 +151,7 @@ it('pushes a WeeklyRecapNotification to athletes with ≥1 session', function ()
     Notification::fake();
     [$user, $athlete] = authedRecapAthlete($this->academy);
     // Pin the date so the command's "this week" window catches it.
-    $today = CarbonImmutable::now();
+    $today = OperatorDay::today();
     AttendanceRecord::factory()->for($athlete)->create(['attended_on' => $today->toDateString()]);
 
     $this->artisan('budojo:send-weekly-recap-pushes')->assertExitCode(0);
@@ -162,7 +162,7 @@ it('pushes a WeeklyRecapNotification to athletes with ≥1 session', function ()
 it('respects WEEKLY_RECAP opt-out', function (): void {
     Notification::fake();
     [$user, $athlete] = authedRecapAthlete($this->academy);
-    $today = CarbonImmutable::now();
+    $today = OperatorDay::today();
     AttendanceRecord::factory()->for($athlete)->create(['attended_on' => $today->toDateString()]);
     $user->update([
         'notification_preferences' => [NotificationCategory::WEEKLY_RECAP => false],
@@ -176,7 +176,7 @@ it('respects WEEKLY_RECAP opt-out', function (): void {
 it('does not push again when a notification for the same iso week already exists (dedup)', function (): void {
     Notification::fake();
     [$user, $athlete] = authedRecapAthlete($this->academy);
-    $today = CarbonImmutable::now();
+    $today = OperatorDay::today();
     AttendanceRecord::factory()->for($athlete)->create(['attended_on' => $today->toDateString()]);
 
     // Seed a prior notification row that mimics a previous fanout's
@@ -184,7 +184,7 @@ it('does not push again when a notification for the same iso week already exists
     // must find this and skip — without it, the cron would double-push
     // on a Monday-morning manual rerun. Using a raw insert avoids the
     // notify() path (which Notification::fake would intercept).
-    $weekStart = CarbonImmutable::now()->startOfWeek(CarbonImmutable::MONDAY);
+    $weekStart = OperatorDay::today()->startOfWeek(CarbonImmutable::MONDAY);
     $user->notifications()->create([
         'id' => (string) \Illuminate\Support\Str::uuid(),
         'type' => \App\Notifications\WeeklyRecapNotification::class,

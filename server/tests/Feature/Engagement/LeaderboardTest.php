@@ -6,7 +6,7 @@ use App\Models\Academy;
 use App\Models\Athlete;
 use App\Models\AttendanceRecord;
 use App\Models\User;
-use Carbon\CarbonImmutable;
+use App\Support\OperatorDay;
 
 /**
  * Monthly mat-hours leaderboard endpoint (#962).
@@ -30,7 +30,7 @@ function makeLeaderboardAthlete(Academy $academy, int $sessionsThisMonth, ?bool 
     ]);
     $athlete->update(['user_id' => $user->id]);
 
-    $month = CarbonImmutable::now()->startOfMonth();
+    $month = OperatorDay::today()->startOfMonth();
     for ($i = 0; $i < $sessionsThisMonth; $i++) {
         AttendanceRecord::factory()->for($athlete)->create([
             'attended_on' => $month->addDays($i)->toDateString(),

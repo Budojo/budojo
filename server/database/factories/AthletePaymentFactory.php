@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
+use App\Support\OperatorDay;
 use App\Enums\BillingPeriod;
 use App\Models\Athlete;
 use App\Models\AthletePayment;
@@ -23,7 +24,7 @@ class AthletePaymentFactory extends Factory
     {
         return [
             'athlete_id' => Athlete::factory(),
-            'year' => (int) now()->year,
+            'year' => OperatorDay::today()->year,
             'month' => $this->faker->numberBetween(1, 12),
             // Monthly by default (#1382) — what every payment recorded before
             // billing periods existed was, and what most still are.
@@ -37,8 +38,8 @@ class AthletePaymentFactory extends Factory
     public function forCurrentMonth(): static
     {
         return $this->state([
-            'year' => (int) now()->year,
-            'month' => (int) now()->month,
+            'year' => OperatorDay::today()->year,
+            'month' => OperatorDay::today()->month,
         ]);
     }
 
