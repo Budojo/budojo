@@ -16,7 +16,8 @@ This is the explicit **fact-of-payment** ledger. Marking a month "paid" creates 
 | `month` | unsigned tinyint | not null | Calendar month the covered period **starts** in, 1-12. Validated at the request layer (`between:1,12`) — the column type allows 0-255 |
 | `period_months` | unsigned tinyint | not null, default `1` | How many months this one payment covers (#1382). Backed by [`BillingPeriod`](#billingperiod): `1` monthly, `3` quarterly, `6` half-yearly, `12` annual. The default of `1` is what makes every pre-#1382 row correct without a backfill |
 | `amount_cents` | unsigned int | not null | Snapshot of **the fee that applied to this athlete** at the moment the payment was recorded — `App\Support\MonthlyFee::forAthlete()`: their own `athletes.fee_override_cents` if set (#1757), else their price tier's amount, else `academies.monthly_fee_cents` (#1381). `0` for an athlete who trains free. Future fee, tier, or tier-membership changes do NOT rewrite this value |
-| `paid_at` | timestamp | not null | Wall-clock time the payment was recorded. Today equal to `created_at`; kept as a separate column so a future "back-date a payment" feature has somewhere to store the business date |
+| `paid_at` | timestamp | not null | **When the money arrived** (#1761) — a business date: September's fee handed over on 3 October is `2026-10-03`. Sent as `Y-m-d` (`date_format`, not `date`, so a zoned datetime cannot land on the neighbouring day), never in the future, and stored as the **start of that day** (UTC). Not sent means today. It is the transaction's date, **never** the month the revenue belongs to — see Business rules |
+| `payment_method` | string(16) | nullable | How it was paid (#1761): [`PaymentMethod`](#paymentmethod). **Null is "not recorded"** — every row written before #1761 is null and stays null; nothing is backfilled with a guess, and the field stays optional |
 | `created_at` | timestamp | nullable | Standard Eloquent timestamp |
 | `updated_at` | timestamp | nullable | Standard Eloquent timestamp |
 
@@ -44,6 +45,19 @@ This is the explicit **fact-of-payment** ledger. Marking a month "paid" creates 
 
 Naming four cases rather than accepting any integer keeps the picker short and keeps "somebody paid for seven months" out of the data.
 
+## `PaymentMethod`
+
+`App\Enums\PaymentMethod` (#1761), string-backed, shared by `athlete_payments.payment_method` and `carnets.payment_method`. It is what tells the money that went through the bank from the money in the drawer — the difference between "revenue for September" and "what I have to reconcile".
+
+| Case | Value | Meaning |
+|---|---|---|
+| `Cash` | `cash` | Contanti |
+| `Transfer` | `transfer` | A bank transfer (bonifico) |
+| `Pos` | `pos` | A card, through the gym's terminal |
+| `Other` | `other` | Anything else — a voucher, a mix |
+
+Four cases and no free text: the list stays short enough to pick from at the end of an evening, and a year of rows can be summed by method.
+
 ## Business rules
 
 - **A payment covers a period, not a month (#1382).** `(year, month)` is where the period **starts**; it runs `period_months` from there and may cross a year boundary. Every "does a payment cover this month?" question goes through `AthletePayment::scopeCovering(year, month)` — the twelve-month table, `paid_current_month`, the months the fee covers during carnet reconciliation, and the payment branch of `Athlete::scopeOwing`. That scope is the whole "who owes" rule the `?paid` filter, the owner's digest and the overdue push read: a spendable carnet (`Carnet::scopeSpendableOn`) and a fee to pay count too (#1722, see [`athlete.md`](./athlete.md)). A caller writing the arithmetic itself is how two surfaces come to disagree.
@@ -51,6 +65,9 @@ Naming four cases rather than accepting any integer keeps the picker short and k
 - **Idempotent recording.** `POST /athletes/{id}/payments` with the same `{year, month, period_months}` twice returns the *same* row both times — the action does a "find first, return if exists" check before insert. The DB unique index is the safety net. Re-posting the same start month with a **different** length is refused instead: the caller is asking for something else, and silently handing back the quarterly would claim the athlete paid for a year.
 - **Overlap is rejected in the Action, not by the schema (#1382).** `UNIQUE(athlete_id, year, month)` used to carry this invariant on its own, because a row *was* a month. It cannot any more: a March monthly and a February quarterly start in different months and both cover March. `RecordAthletePaymentAction::rejectOverlap()` refuses the second with a 422 on `period_months`, inside the same transaction as the insert so the read and the write cannot interleave. Losing a structural guarantee to an application check is a real cost, and it is written down here so nobody assumes the index still covers it.
 - **Adjacent periods are fine.** Jan–Mar then Apr–Jun do not overlap; rejecting them would make renewing impossible.
+- **`paid_at` does not decide which month the revenue belongs to (#1761).** The month is `(year, month)` and the period; `paid_at` is when the money changed hands. September's fee marked on 3 October is September revenue with an October date. `MonthlyPaymentsStatsAction` buckets by the covered months, and bucketing by `paid_at` instead would silently redefine every historical figure on the chart and in the money tiles. "What arrived in October" is a different question — the accountant's export answers it (#1762).
+- **The date and the method are values, not the key.** `RecordAthletePaymentAction` writes them in the *values* of `createOrFirst`; the idempotency key stays `(athlete_id, year, month)`. A re-post of the same month returns the first row **with its first date and method** — the double-click must not move the date, and must never create a second row.
+- **The method is optional, forever.** A required field would turn a two-tap mark-paid into a form, and the owner marks in batches at the end of the evening. Neither field touches carnet reconciliation (#1380): the transaction boundary is unchanged.
 - **`amount_cents` is snapshotted, not derived.** When a payment is recorded, we copy whatever `App\Support\MonthlyFee::forAthlete()` resolves **times `period_months`** (#1382) into the row at that moment. There is deliberately nowhere to record a *discounted* annual — Budojo does not model a per-period price, and half-modelling it would be worse than the gap. Revisit if an academy asks. If the academy raises the fee — or re-prices the athlete's tier, or moves them to a different one — paid history doesn't suddenly show different amounts. This is why the price list (#1381) shipped without migrating a single past payment.
 - **Cannot record without a configured fee.** `POST` returns `422 Unprocessable Entity` with the error key `monthly_fee_cents` when **no fee applies to this athlete**: no personal fee, no price tier *and* `academies.monthly_fee_cents` `null` (#1381, #1757). An athlete with a personal fee or on a tier is payable even when the academy has no flat fee at all, and an academy on a flat fee is payable with no tiers configured. A personal fee of `0` is a fee that applies: the payment is recorded at 0. The owner sets a flat fee via `PATCH /api/v1/academy` or adds a tier via `POST /api/v1/academy/fee-tiers`; see [`academy-fee-tier.md`](./academy-fee-tier.md).
 - **Undoing removes the whole period.** `DELETE /athletes/{id}/payments/{year}/{month}` deletes the payment **covering** that month, whichever month its period started in — the owner looking at April clicks unmark and the February quarterly comes off. Keying on the start month would make a quarterly undeletable from two of the three months it pays for. One payment, one receipt, one deletion: releasing a single month would leave the amount no longer matching what it covers, and a partial refund is an accounting event Budojo does not model.
@@ -66,7 +83,7 @@ Naming four cases rather than accepting any integer keeps the picker short and k
 ## Related endpoints
 
 - `GET /api/v1/athletes/{athlete}/payments?year=YYYY` — list payments for the year (default = current year), ordered by month asc
-- `POST /api/v1/athletes/{athlete}/payments` — record a payment (body: `{year, month}`); returns 201 with the row (existing or new)
+- `POST /api/v1/athletes/{athlete}/payments` — record a payment (body: `{year, month, period_months?, paid_at?, payment_method?}`); returns 201 with the row (existing or new)
 - `DELETE /api/v1/athletes/{athlete}/payments/{year}/{month}` — undo a paid month; 404 if no row exists, 204 on success
 
 ## Related tables
@@ -82,7 +99,7 @@ Since #1382 a payment covers a period, so its `amount_cents` is **spread evenly 
 
 **Carnets are on the same axis under the same rule (#1383).** A pack is collected in one go but bought for its whole validity window, so `carnets.price_cents` is spread across the months from `valid_from` to `expires_at` — €70 valid twelve months contributes about €5.83 a month. The expiry month itself gets nothing: a carnet valid 1 Sep 2026 → 1 Sep 2027 covers the twelve months September–August. Booking it whole into the sale month would leave two different rules on one chart. Attributing it to the months entries are actually *consumed* is the truer reading and was considered and rejected: it rewrites past months every time a back-dated presence is marked, and never books an entry nobody used. See [`carnet.md`](./carnet.md).
 
-The two values are typically equal today because the API does not accept a custom `paid_at`. They can diverge the day a "back-date a payment" feature ships. The chart label "Monthly revenue" always means *revenue **for** this month*, not *revenue **received in** this month*. Consumers building UI on top of this endpoint should respect that semantic.
+The two diverge since #1761, which lets the owner date a payment the day the money arrived: September's fee paid on 3 October stays in the September bucket. The chart label "Monthly revenue" always means *revenue **for** this month*, not *revenue **received in** this month*. Consumers building UI on top of this endpoint should respect that semantic.
 
 Because `amount_cents` is snapshotted at insert time (see Business rules above), historical sums returned by the trend endpoint stay stable against future changes to `academies.monthly_fee_cents`.
 

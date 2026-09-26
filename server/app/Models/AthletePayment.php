@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\BillingPeriod;
+use App\Enums\PaymentMethod;
 use App\Observers\Audit\AthletePaymentAuditObserver;
 use Carbon\Carbon;
 use Database\Factories\AthletePaymentFactory;
@@ -37,11 +38,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int           $month  First month of the covered period, 1-12
  * @property BillingPeriod $period_months
  * @property int           $amount_cents
- * @property Carbon        $paid_at
+ * @property Carbon        $paid_at        When the money arrived: a business date, stored as the start of that day (#1761)
+ * @property PaymentMethod|null $payment_method Null is "not recorded" (#1761)
  * @property Carbon        $created_at
  * @property Carbon        $updated_at
  */
-#[Fillable(['athlete_id', 'year', 'month', 'period_months', 'amount_cents', 'paid_at'])]
+#[Fillable(['athlete_id', 'year', 'month', 'period_months', 'amount_cents', 'paid_at', 'payment_method'])]
 #[ObservedBy([AthletePaymentAuditObserver::class])]
 class AthletePayment extends Model
 {
@@ -123,6 +125,7 @@ class AthletePayment extends Model
             'month' => 'integer',
             'period_months' => BillingPeriod::class,
             'amount_cents' => 'integer',
+            'payment_method' => PaymentMethod::class,
         ];
     }
 }

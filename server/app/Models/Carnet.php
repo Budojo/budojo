@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\PaymentMethod;
 use App\Observers\Audit\CarnetAuditObserver;
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
@@ -29,13 +30,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int      $total_entries
  * @property int      $price_cents
  * @property Carbon   $purchased_at
+ * @property PaymentMethod|null $payment_method Null is "not recorded" (#1761)
  * @property Carbon   $valid_from
  * @property Carbon   $expires_at
  * @property Carbon   $created_at
  * @property Carbon   $updated_at
  * @property-read int|null $entries_count Present only when the query used `withCount('entries')`
  */
-#[Fillable(['code', 'athlete_id', 'total_entries', 'price_cents', 'purchased_at', 'valid_from', 'expires_at'])]
+#[Fillable(['code', 'athlete_id', 'total_entries', 'price_cents', 'purchased_at', 'payment_method', 'valid_from', 'expires_at'])]
 #[ObservedBy([CarnetAuditObserver::class])]
 class Carnet extends Model
 {
@@ -150,6 +152,7 @@ class Carnet extends Model
             'expires_at' => 'date:Y-m-d',
             'total_entries' => 'integer',
             'price_cents' => 'integer',
+            'payment_method' => PaymentMethod::class,
         ];
     }
 }
