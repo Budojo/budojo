@@ -1086,6 +1086,7 @@ const PROMOTIONS_ONE = [
     from_stripes: 1,
     to_stripes: 2,
     belt_at_event: 'blue',
+    is_opening: false,
     recorded_at: '2026-06-15T10:00:00+00:00',
     recorded_by: { id: 1, full_name: 'Matteo Bonanno' },
   },
@@ -1097,6 +1098,7 @@ const PROMOTIONS_ONE = [
     from_stripes: 4,
     to_stripes: 0,
     belt_at_event: 'blue',
+    is_opening: false,
     recorded_at: '2025-12-20T10:00:00+00:00',
     recorded_by: { id: 1, full_name: 'Matteo Bonanno' },
   },
@@ -1108,8 +1110,86 @@ const PROMOTIONS_ONE = [
     from_stripes: 3,
     to_stripes: 4,
     belt_at_event: 'white',
+    is_opening: false,
     recorded_at: '2025-09-10T10:00:00+00:00',
     recorded_by: { id: 1, full_name: 'Matteo Bonanno' },
+  },
+];
+
+/**
+ * The server's gap for Giulia (#1970, `PromotionGaps`), captured from the
+ * endpoint with exactly these rows and her blue with two stripes: blue's
+ * first stripe, between the white → blue row and blue's second.
+ */
+const PROMOTION_GAP_BLUE_ONE = {
+  key: 'stripe:blue:1',
+  kind: 'stripe',
+  belt: 'blue',
+  from_belt: null,
+  from_stripes: 0,
+  to_stripes: 1,
+  after: { promotion_id: 8, recorded_at: '2025-12-20' },
+  before: { promotion_id: 9, recorded_at: '2026-06-15' },
+  completes_promotion_id: null,
+};
+
+/**
+ * Jacopo, as most histories are entered (#1966): the opening row "→ blue"
+ * dated the day he was entered, and one white stripe transcribed from paper.
+ * The gaps below are the server's own reply for these two rows (#1970,
+ * `PromotionGaps`), the same whether he is blue with no stripe or was entered
+ * on two: white's fourth stripe, and the blue belt the opening row stands
+ * for. Blue's own stripes are not offered until the blue belt is dated.
+ */
+const PROMOTIONS_OPENING = [
+  {
+    id: 15,
+    kind: 'belt',
+    from_belt: null,
+    to_belt: 'blue',
+    from_stripes: null,
+    to_stripes: null,
+    belt_at_event: 'blue',
+    is_opening: true,
+    recorded_at: '2026-09-02T10:00:00+00:00',
+    recorded_by: { id: 1, full_name: 'Matteo Bonanno' },
+  },
+  {
+    id: 12,
+    kind: 'stripe',
+    from_belt: null,
+    to_belt: null,
+    from_stripes: 2,
+    to_stripes: 3,
+    belt_at_event: 'white',
+    is_opening: false,
+    recorded_at: '2024-03-12T00:00:00+00:00',
+    recorded_by: { id: 1, full_name: 'Matteo Bonanno' },
+  },
+];
+
+const PROMOTION_GAPS_OPENING = [
+  {
+    key: 'stripe:white:4',
+    kind: 'stripe',
+    belt: 'white',
+    from_belt: null,
+    from_stripes: 3,
+    to_stripes: 4,
+    after: { promotion_id: 12, recorded_at: '2024-03-12' },
+    before: { promotion_id: 15, recorded_at: '2026-09-02' },
+    completes_promotion_id: null,
+  },
+  {
+    key: 'belt:blue:0',
+    kind: 'belt',
+    belt: 'blue',
+    from_belt: 'white',
+    from_stripes: null,
+    to_stripes: null,
+    after: { promotion_id: 12, recorded_at: '2024-03-12' },
+    before: null,
+    completes_promotion_id: 15,
   },
 ];
 
@@ -1915,6 +1995,10 @@ function seed(): void {
         days_since_stripe: 91,
         sessions_since_stripe: 23,
       },
+      // Blue's first stripe was never recorded, and nothing before white's
+      // fourth (#1966): one ghost row, and the "not recorded" line.
+      gaps: [PROMOTION_GAP_BLUE_ONE],
+      history_starts_at: '2025-09-10',
     },
   });
   cy.intercept('GET', '/api/v1/athletes/*/syllabus-coverage*', {
@@ -2884,6 +2968,37 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
     },
   });
   screen('22-athlete-promotions', '/dashboard/athletes/1/promotions', DETAIL_READY);
+  // The opening row asking for its real date, and the steps around it (#1966).
+  screen('22-athlete-promotions-opening', '/dashboard/athletes/1/promotions', DETAIL_READY, {
+    stubs: () => {
+      cy.intercept('GET', '/api/v1/athletes/*/promotions*', {
+        statusCode: 200,
+        body: {
+          ...page(PROMOTIONS_OPENING),
+          progression: {
+            belt: 'blue',
+            stripes: 2,
+            belt_since: '2026-09-02',
+            days_at_belt: 12,
+            months_at_belt: 0,
+            sessions_at_belt: 4,
+            stripe_since: null,
+            days_since_stripe: null,
+            sessions_since_stripe: null,
+          },
+          gaps: PROMOTION_GAPS_OPENING,
+          history_starts_at: '2024-03-12',
+        },
+      });
+    },
+  });
+  // A missing step's one question: when (#1966).
+  screen('22-athlete-promotions-gap-fill', '/dashboard/athletes/1/promotions', DETAIL_READY, {
+    act: () => {
+      press('[data-cy="gap-add-date-stripe:blue:1"]');
+      dialogOpen('[data-cy="promotion-create-dialog"]');
+    },
+  });
   screen('22-athlete-promotions-dialog', '/dashboard/athletes/1/promotions', DETAIL_READY, {
     act: () => {
       press('[data-cy="promotions-add"]');

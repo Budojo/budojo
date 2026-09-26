@@ -47,7 +47,55 @@ class CountlessHostComponent {
   belt: Belt = 'black';
 }
 
+/** A ghost promotion row's badge (#1966): the stripes it has, and the one it is missing. */
+@Component({
+  imports: [BeltBadgeComponent],
+  template: `<app-belt-badge [belt]="belt" [stripes]="stripes" [missingStripe]="true" />`,
+})
+class MissingStripeHostComponent {
+  belt: Belt = 'white';
+  stripes = 3;
+}
+
+function setupMissing(art: MartialArt, belt: Belt, stripes: number): HTMLElement {
+  TestBed.configureTestingModule({
+    imports: [BeltBadgeComponent, MissingStripeHostComponent],
+    providers: [...provideI18nTesting()],
+  });
+  useLadder(art);
+  const fixture = TestBed.createComponent(MissingStripeHostComponent);
+  Object.assign(fixture.componentInstance, { belt, stripes });
+  fixture.detectChanges();
+  return fixture.nativeElement as HTMLElement;
+}
+
 describe('BeltBadgeComponent', () => {
+  describe('the missing stripe (#1966)', () => {
+    afterEach(() => TestBed.resetTestingModule());
+
+    it('draws the next stripe as an empty tile after the filled ones', () => {
+      const el = setupMissing('bjj', 'white', 3);
+      expect(el.querySelectorAll('[data-cy="belt-stripe-tile"]').length).toBe(3);
+      expect(el.querySelectorAll('[data-cy="belt-stripe-missing"]').length).toBe(1);
+    });
+
+    it('draws it even on a belt with no stripe yet', () => {
+      const el = setupMissing('bjj', 'blue', 0);
+      expect(el.querySelectorAll('[data-cy="belt-stripe-tile"]').length).toBe(0);
+      expect(el.querySelector('[data-cy="belt-stripe-missing"]')).not.toBeNull();
+    });
+
+    it('draws none where the grade is full, or where it counts dan', () => {
+      expect(
+        setupMissing('bjj', 'white', 4).querySelector('[data-cy="belt-stripe-missing"]'),
+      ).toBeNull();
+      TestBed.resetTestingModule();
+      expect(
+        setupMissing('judo', 'black', 1).querySelector('[data-cy="belt-stripe-missing"]'),
+      ).toBeNull();
+    });
+  });
+
   it('renders the belt name via the shared i18n key', () => {
     TestBed.configureTestingModule({
       imports: [BeltBadgeComponent, HostComponent],

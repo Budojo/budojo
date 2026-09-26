@@ -1,5 +1,58 @@
 <p-toast position="top-right" />
+<!-- The "Saltato" toast carries its undo (#1966): a toast of its own so the
+     plain ones keep PrimeNG's default layout. -->
+<p-toast [key]="skipToastKey" position="bottom-center">
+  <ng-template let-message pTemplate="message">
+    <div class="promotions-toast">
+      <span class="promotions-toast__summary">{{ message.summary }}</span>
+      @if (message.data?.undo) {
+        <button
+          type="button"
+          class="promotions-toast__undo"
+          (click)="message.data.undo()"
+          data-cy="promotion-skip-undo"
+        >
+          {{ 'athletes.detail.promotions.gap.undo' | translate }}
+        </button>
+      }
+    </div>
+  </ng-template>
+</p-toast>
 <p-confirmpopup />
+
+<!-- A missing step's transition (#1966), shared by the ghost row, the opening
+     row it completes and the fill dialog. -->
+<ng-template #gapMove let-gap>
+  <div class="promotions__transition" data-cy="gap-move">
+    @if (gap.kind === 'stripe') {
+      <app-belt-badge
+        [belt]="gap.belt"
+        [stripes]="countsStripesOn(gap.belt) ? gap.from_stripes : null"
+        [missingStripe]="true"
+      />
+      <span class="promotions__stripe-count">
+        {{ countOn(gap.belt, gap.from_stripes) }}
+        <i class="pi pi-arrow-right" aria-hidden="true"></i>
+        {{ countOn(gap.belt, gap.to_stripes) }}
+      </span>
+      @if (countsStripesOn(gap.belt)) {
+        <span class="promotions__stripe-label">
+          {{ 'athletes.detail.promotions.stripes' | translate }}
+        </span>
+      }
+    } @else {
+      @if (gap.from_belt) {
+        <app-belt-badge [belt]="gap.from_belt" />
+      } @else {
+        <span class="promotions__first-belt">{{
+          'athletes.detail.promotions.firstBelt' | translate
+        }}</span>
+      }
+      <i class="pi pi-arrow-right" aria-hidden="true"></i>
+      <app-belt-badge [belt]="gap.belt" />
+    }
+  </div>
+</ng-template>
 
 <section class="promotions">
   <div class="promotions__header">
@@ -45,6 +98,16 @@
             ) | translate: { count: pr.sessions_at_belt }
           }}
         </p>
+        @if (beltSinceIsEntryDay()) {
+          <!-- The date above is the day the athlete was entered, and the
+               number reads as the promotion's unless it is said (#1966). -->
+          <p
+            class="promotions__progression-line promotions__progression-line--note"
+            data-cy="promotions-entry-day"
+          >
+            {{ 'athletes.detail.promotions.progression.entryDay' | translate }}
+          </p>
+        }
         @if (stripeLine(pr); as line) {
           <p class="promotions__progression-line promotions__progression-line--muted">
             @switch (line.kind) {
@@ -120,79 +183,214 @@
       {{ 'athletes.detail.promotions.emptyBody' | translate }}
     </p>
   } @else {
-    <ul class="promotions__list" data-cy="promotions-list">
-      @for (p of promotions(); track p.id) {
-        <li class="promotions__row" [attr.data-cy]="'promotion-' + p.id">
-          <div class="promotions__date-row">
-            <time class="promotions__date" [dateTime]="p.recorded_at">
-              {{ p.recorded_at | localeDate: 'calendar-day' }}
-            </time>
-            <p-button
-              icon="pi pi-pencil"
-              severity="secondary"
-              [text]="true"
-              [rounded]="true"
-              size="small"
-              [ariaLabel]="'athletes.detail.promotions.editDateAria' | translate"
-              [pTooltip]="'athletes.detail.promotions.editDate' | translate"
-              tooltipPosition="top"
-              (onClick)="openEditDialog(p)"
-              [attr.data-cy]="'promotion-edit-' + p.id"
-            />
-            <app-confirm-destructive-button
-              [ariaLabel]="'athletes.detail.promotions.deleteAria' | translate"
-              [confirmMessage]="'athletes.detail.promotions.confirmDelete' | translate"
-              [acceptLabel]="'athletes.detail.promotions.deleteConfirm' | translate"
-              [rejectLabel]="'common.cancel' | translate"
-              confirmIcon="pi pi-exclamation-triangle"
-              [loading]="deletingId() === p.id"
-              (confirmed)="deletePromotion(p)"
-              [dataCy]="'promotion-delete-' + p.id"
-            />
-          </div>
-          @switch (p.kind) {
-            @case ('belt') {
-              <div class="promotions__transition" data-cy="promotion-belt">
-                @if (p.from_belt) {
-                  <app-belt-badge [belt]="p.from_belt" />
-                } @else {
-                  <span class="promotions__first-belt">{{
-                    'athletes.detail.promotions.firstBelt' | translate
-                  }}</span>
-                }
-                <i class="pi pi-arrow-right" aria-hidden="true"></i>
-                @if (p.to_belt) {
-                  <app-belt-badge [belt]="p.to_belt" />
-                }
-              </div>
-            }
-            @case ('stripe') {
-              <div class="promotions__transition" data-cy="promotion-stripe">
-                @if (p.belt_at_event) {
-                  <!-- Context only: the count is the row's own subject, below. -->
-                  <app-belt-badge [belt]="p.belt_at_event" />
-                }
+    <!-- Focusable from script only: where the keyboard lands when the row it
+         was on is gone and no other row is left to take it (#1966). -->
+    <ul class="promotions__list" data-cy="promotions-list" tabindex="-1">
+      @for (entry of entries(); track trackEntry(entry)) {
+        @if (entry.kind === 'gap') {
+          <!-- A step the history must have and no row records (#1966). -->
+          <li
+            class="promotions__row promotions__row--ghost"
+            [attr.data-cy]="'promotion-gap-' + entry.gap.key"
+          >
+            <div class="promotions__date-row">
+              <span class="promotions__when">{{
+                'athletes.detail.promotions.gap.when' | translate
+              }}</span>
+            </div>
+            <ng-container *ngTemplateOutlet="gapMove; context: { $implicit: entry.gap }" />
+            <div class="promotions__gap-actions">
+              <p-button
+                [label]="'athletes.detail.promotions.gap.addDate' | translate"
+                [text]="true"
+                [ariaLabel]="
+                  'athletes.detail.promotions.gap.addDateAria'
+                    | translate: { step: stepLabel(entry.gap) }
+                "
+                (onClick)="openFillDialog(entry.gap)"
+                [attr.data-cy]="'gap-add-date-' + entry.gap.key"
+              />
+              @if (canSkip(entry.gap)) {
+                <p-button
+                  [label]="skipLabelKey(entry.gap) | translate"
+                  [text]="true"
+                  severity="secondary"
+                  [ariaLabel]="(skipLabelKey(entry.gap) | translate) + ': ' + stepLabel(entry.gap)"
+                  [loading]="skippingKey() === entry.gap.key"
+                  [disabled]="skippingKey() !== null"
+                  (onClick)="skip(entry.gap)"
+                  [attr.data-cy]="'gap-skip-' + entry.gap.key"
+                />
+              }
+            </div>
+          </li>
+        } @else if (entry.kind === 'collapsed') {
+          <!-- More than two missing steps in a row fold into one (#1966). -->
+          <li class="promotions__row promotions__row--ghost" data-cy="promotion-gap-run">
+            <div class="promotions__date-row">
+              <span class="promotions__when">{{
+                'athletes.detail.promotions.gap.run' | translate: { total: entry.gaps.length }
+              }}</span>
+            </div>
+            @if (runSummary(entry.gaps); as run) {
+              <div class="promotions__transition">
+                <app-belt-badge
+                  [belt]="run.belt"
+                  [stripes]="countsStripesOn(run.belt) ? run.from : null"
+                  [missingStripe]="true"
+                />
                 <span class="promotions__stripe-count">
-                  {{ stripeCount(p, p.from_stripes) }}
+                  {{ countOn(run.belt, run.from) }}
                   <i class="pi pi-arrow-right" aria-hidden="true"></i>
-                  {{ stripeCount(p, p.to_stripes) }}
+                  {{ countOn(run.belt, run.to) }}
                 </span>
-                @if (countsStripes(p)) {
+                @if (countsStripesOn(run.belt)) {
                   <span class="promotions__stripe-label">
                     {{ 'athletes.detail.promotions.stripes' | translate }}
                   </span>
                 }
               </div>
+            } @else {
+              <span></span>
             }
-          }
-          @if (p.recorded_by; as editor) {
-            <span class="promotions__editor">
-              {{ 'athletes.detail.promotions.recordedBy' | translate: { name: editor.full_name } }}
-            </span>
-          }
-        </li>
+            <div class="promotions__gap-actions">
+              <p-button
+                [label]="'athletes.detail.promotions.gap.show' | translate"
+                [text]="true"
+                [ariaLabel]="
+                  'athletes.detail.promotions.gap.showAria'
+                    | translate: { total: entry.gaps.length }
+                "
+                (onClick)="openRun(entry.runKey)"
+                data-cy="gap-run-show"
+              />
+            </div>
+          </li>
+        } @else {
+          @let p = entry.row;
+          <li
+            class="promotions__row"
+            [class.promotions__row--flag]="entry.completing !== null"
+            [attr.data-cy]="'promotion-' + p.id"
+          >
+            <div class="promotions__date-row">
+              @if (entry.completing) {
+                <!-- An opening row the history can complete (#1966): its date is
+                   the day of entry, so the row asks for the real one. -->
+                <span class="promotions__when">
+                  {{ 'athletes.detail.promotions.gap.when' | translate }}
+                  <small class="promotions__entered">{{
+                    'athletes.detail.promotions.gap.enteredOn'
+                      | translate: { date: (p.recorded_at | localeDate: 'calendar-day') }
+                  }}</small>
+                </span>
+              } @else {
+                <time class="promotions__date" [dateTime]="p.recorded_at">
+                  {{ p.recorded_at | localeDate: 'calendar-day' }}
+                </time>
+                <p-button
+                  icon="pi pi-pencil"
+                  severity="secondary"
+                  [text]="true"
+                  [rounded]="true"
+                  size="small"
+                  [ariaLabel]="'athletes.detail.promotions.editDateAria' | translate"
+                  [pTooltip]="'athletes.detail.promotions.editDate' | translate"
+                  tooltipPosition="top"
+                  (onClick)="openEditDialog(p)"
+                  [attr.data-cy]="'promotion-edit-' + p.id"
+                />
+              }
+              <app-confirm-destructive-button
+                [ariaLabel]="'athletes.detail.promotions.deleteAria' | translate"
+                [confirmMessage]="'athletes.detail.promotions.confirmDelete' | translate"
+                [acceptLabel]="'athletes.detail.promotions.deleteConfirm' | translate"
+                [rejectLabel]="'common.cancel' | translate"
+                confirmIcon="pi pi-exclamation-triangle"
+                [loading]="deletingId() === p.id"
+                (confirmed)="deletePromotion(p)"
+                [dataCy]="'promotion-delete-' + p.id"
+              />
+            </div>
+            @if (entry.completing; as gap) {
+              <ng-container *ngTemplateOutlet="gapMove; context: { $implicit: gap }" />
+              <div class="promotions__gap-actions">
+                <p-button
+                  [label]="'athletes.detail.promotions.gap.addDate' | translate"
+                  [text]="true"
+                  [ariaLabel]="
+                    'athletes.detail.promotions.gap.addDateAria'
+                      | translate: { step: stepLabel(gap) }
+                  "
+                  (onClick)="openFillDialog(gap)"
+                  [attr.data-cy]="'gap-add-date-' + gap.key"
+                />
+              </div>
+            } @else {
+              @switch (p.kind) {
+                @case ('belt') {
+                  <div class="promotions__transition" data-cy="promotion-belt">
+                    @if (p.from_belt) {
+                      <app-belt-badge [belt]="p.from_belt" />
+                    } @else {
+                      <span class="promotions__first-belt">{{
+                        'athletes.detail.promotions.firstBelt' | translate
+                      }}</span>
+                    }
+                    <i class="pi pi-arrow-right" aria-hidden="true"></i>
+                    @if (p.to_belt) {
+                      <app-belt-badge [belt]="p.to_belt" />
+                    }
+                  </div>
+                }
+                @case ('stripe') {
+                  <div class="promotions__transition" data-cy="promotion-stripe">
+                    @if (p.belt_at_event) {
+                      <!-- Context only: the count is the row's own subject, below. -->
+                      <app-belt-badge [belt]="p.belt_at_event" />
+                    }
+                    <span class="promotions__stripe-count">
+                      {{ stripeCount(p, p.from_stripes) }}
+                      <i class="pi pi-arrow-right" aria-hidden="true"></i>
+                      {{ stripeCount(p, p.to_stripes) }}
+                    </span>
+                    @if (countsStripes(p)) {
+                      <span class="promotions__stripe-label">
+                        {{ 'athletes.detail.promotions.stripes' | translate }}
+                      </span>
+                    }
+                  </div>
+                }
+              }
+              @if (p.recorded_by; as editor) {
+                <span class="promotions__editor">
+                  {{
+                    'athletes.detail.promotions.recordedBy' | translate: { name: editor.full_name }
+                  }}
+                </span>
+              }
+            }
+          </li>
+        }
       }
     </ul>
+
+    @if (historyUnrecordedBefore(); as since) {
+      <!-- One line for everything before the first known point, instead of
+           a ghost for each of those steps (#1966). -->
+      <p class="promotions__history-before" data-cy="promotions-history-before">
+        <span>{{
+          'athletes.detail.promotions.gap.before'
+            | translate: { date: (since | localeDate: 'calendar-day') }
+        }}</span>
+        <p-button
+          [label]="'athletes.detail.promotions.addPast' | translate"
+          [link]="true"
+          (onClick)="openCreateDialog()"
+          data-cy="promotions-history-add"
+        />
+      </p>
+    }
 
     @if (lastPage() > 1) {
       <nav class="promotions__pager" data-cy="promotions-pager">
@@ -275,114 +473,158 @@
   [draggable]="false"
   [breakpoints]="{ '768px': '92vw' }"
   [style]="{ width: '26rem' }"
-  [header]="'athletes.detail.promotions.createDialog.title' | translate"
+  [header]="createDialogTitle()"
   data-cy="promotion-create-dialog"
 >
-  <p class="promotions__dialog-body">
-    {{ 'athletes.detail.promotions.createDialog.body' | translate }}
-  </p>
-
-  <form [formGroup]="createForm" class="promotions__create-form">
-    <label class="promotions__dialog-label" for="promotion-create-kind">
-      {{ 'athletes.detail.promotions.createDialog.kindLabel' | translate }}
-    </label>
-    <p-selectbutton
-      inputId="promotion-create-kind"
-      [options]="kindOptions()"
-      formControlName="kind"
-      optionLabel="label"
-      optionValue="value"
-      data-cy="promotion-create-kind"
-      [allowEmpty]="false"
-    />
-
-    <label class="promotions__dialog-label" for="promotion-create-date">
-      {{ 'athletes.detail.promotions.createDialog.dateLabel' | translate }}
-    </label>
-    <p-datepicker
-      inputId="promotion-create-date"
-      formControlName="recorded_at"
-      [maxDate]="maxDate"
-      [showIcon]="true"
-      [dateFormat]="datePickerFormat()"
-      appendTo="body"
-      data-cy="promotion-create-date"
-    />
-
-    @if (createForm.controls.kind.value === 'belt') {
-      <label class="promotions__dialog-label" for="promotion-create-from-belt">
-        {{ 'athletes.detail.promotions.createDialog.fromBelt' | translate }}
+  @if (filling(); as gap) {
+    <!-- Filling a missing step (#1966): the step is known, so it is shown,
+         not asked; the date is the one question, bounded to the days that
+         fit between the step's neighbours. -->
+    <div class="promotions__fill-context" data-cy="gap-fill-context">
+      <ng-container *ngTemplateOutlet="gapMove; context: { $implicit: gap }" />
+    </div>
+    <form [formGroup]="createForm" class="promotions__create-form">
+      <label class="promotions__dialog-label" for="promotion-fill-date">
+        {{ 'athletes.detail.promotions.createDialog.dateLabel' | translate }}
       </label>
-      <p-select
-        inputId="promotion-create-from-belt"
-        [options]="fromBeltOptions()"
-        formControlName="from_belt"
-        optionLabel="label"
-        optionValue="value"
+      <p-datepicker
+        inputId="promotion-fill-date"
+        formControlName="recorded_at"
+        [minDate]="fillWindow()?.min ?? null"
+        [maxDate]="fillWindow()?.max ?? maxDate"
+        [defaultDate]="fillWindow()?.max ?? null"
+        [showIcon]="true"
+        [dateFormat]="datePickerFormat()"
         appendTo="body"
-        data-cy="promotion-create-from-belt"
+        data-cy="gap-fill-date"
       />
-
-      <label class="promotions__dialog-label" for="promotion-create-to-belt">
-        {{ 'athletes.detail.promotions.createDialog.toBelt' | translate }}
-      </label>
-      <p-select
-        inputId="promotion-create-to-belt"
-        [options]="beltOptions()"
-        formControlName="to_belt"
-        optionLabel="label"
-        optionValue="value"
-        appendTo="body"
-        data-cy="promotion-create-to-belt"
-      />
-    } @else {
-      <label class="promotions__dialog-label" for="promotion-create-belt-at-event">
-        {{ 'athletes.detail.promotions.createDialog.beltAtEvent' | translate }}
-      </label>
-      <p-select
-        inputId="promotion-create-belt-at-event"
-        [options]="beltOptions()"
-        formControlName="belt_at_event"
-        optionLabel="label"
-        optionValue="value"
-        appendTo="body"
-        data-cy="promotion-create-belt-at-event"
-      />
-
-      <div class="promotions__create-stripes">
-        <div>
-          <label class="promotions__dialog-label" for="promotion-create-from-stripes">
-            {{ 'athletes.detail.promotions.createDialog.fromStripes' | translate }}
-          </label>
-          <p-select
-            inputId="promotion-create-from-stripes"
-            [options]="createStripesOptions()"
-            formControlName="from_stripes"
-            optionLabel="label"
-            optionValue="value"
-            [disabled]="createStripesOptions().length === 0"
-            appendTo="body"
-            data-cy="promotion-create-from-stripes"
-          />
-        </div>
-        <div>
-          <label class="promotions__dialog-label" for="promotion-create-to-stripes">
-            {{ 'athletes.detail.promotions.createDialog.toStripes' | translate }}
-          </label>
-          <p-select
-            inputId="promotion-create-to-stripes"
-            [options]="createStripesOptions()"
-            formControlName="to_stripes"
-            optionLabel="label"
-            optionValue="value"
-            [disabled]="createStripesOptions().length === 0"
-            appendTo="body"
-            data-cy="promotion-create-to-stripes"
-          />
-        </div>
-      </div>
+    </form>
+    @if (fillWindowIso(); as window) {
+      <p class="promotions__fill-hint" data-cy="gap-fill-window">
+        @if (window.from) {
+          {{
+            'athletes.detail.promotions.gap.window'
+              | translate
+                : {
+                    from: (window.from | localeDate: 'calendar-day'),
+                    to: (window.to | localeDate: 'calendar-day'),
+                  }
+          }}
+        } @else {
+          {{
+            'athletes.detail.promotions.gap.windowUntil'
+              | translate: { to: (window.to | localeDate: 'calendar-day') }
+          }}
+        }
+      </p>
     }
-  </form>
+  } @else {
+    <p class="promotions__dialog-body">
+      {{ 'athletes.detail.promotions.createDialog.body' | translate }}
+    </p>
+
+    <form [formGroup]="createForm" class="promotions__create-form">
+      <label class="promotions__dialog-label" for="promotion-create-kind">
+        {{ 'athletes.detail.promotions.createDialog.kindLabel' | translate }}
+      </label>
+      <p-selectbutton
+        inputId="promotion-create-kind"
+        [options]="kindOptions()"
+        formControlName="kind"
+        optionLabel="label"
+        optionValue="value"
+        data-cy="promotion-create-kind"
+        [allowEmpty]="false"
+      />
+
+      <label class="promotions__dialog-label" for="promotion-create-date">
+        {{ 'athletes.detail.promotions.createDialog.dateLabel' | translate }}
+      </label>
+      <p-datepicker
+        inputId="promotion-create-date"
+        formControlName="recorded_at"
+        [maxDate]="maxDate"
+        [showIcon]="true"
+        [dateFormat]="datePickerFormat()"
+        appendTo="body"
+        data-cy="promotion-create-date"
+      />
+
+      @if (createForm.controls.kind.value === 'belt') {
+        <label class="promotions__dialog-label" for="promotion-create-from-belt">
+          {{ 'athletes.detail.promotions.createDialog.fromBelt' | translate }}
+        </label>
+        <p-select
+          inputId="promotion-create-from-belt"
+          [options]="fromBeltOptions()"
+          formControlName="from_belt"
+          optionLabel="label"
+          optionValue="value"
+          appendTo="body"
+          data-cy="promotion-create-from-belt"
+        />
+
+        <label class="promotions__dialog-label" for="promotion-create-to-belt">
+          {{ 'athletes.detail.promotions.createDialog.toBelt' | translate }}
+        </label>
+        <p-select
+          inputId="promotion-create-to-belt"
+          [options]="beltOptions()"
+          formControlName="to_belt"
+          optionLabel="label"
+          optionValue="value"
+          appendTo="body"
+          data-cy="promotion-create-to-belt"
+        />
+      } @else {
+        <label class="promotions__dialog-label" for="promotion-create-belt-at-event">
+          {{ 'athletes.detail.promotions.createDialog.beltAtEvent' | translate }}
+        </label>
+        <p-select
+          inputId="promotion-create-belt-at-event"
+          [options]="beltOptions()"
+          formControlName="belt_at_event"
+          optionLabel="label"
+          optionValue="value"
+          appendTo="body"
+          data-cy="promotion-create-belt-at-event"
+        />
+
+        <div class="promotions__create-stripes">
+          <div>
+            <label class="promotions__dialog-label" for="promotion-create-from-stripes">
+              {{ 'athletes.detail.promotions.createDialog.fromStripes' | translate }}
+            </label>
+            <p-select
+              inputId="promotion-create-from-stripes"
+              [options]="createStripesOptions()"
+              formControlName="from_stripes"
+              optionLabel="label"
+              optionValue="value"
+              [disabled]="createStripesOptions().length === 0"
+              appendTo="body"
+              data-cy="promotion-create-from-stripes"
+            />
+          </div>
+          <div>
+            <label class="promotions__dialog-label" for="promotion-create-to-stripes">
+              {{ 'athletes.detail.promotions.createDialog.toStripes' | translate }}
+            </label>
+            <p-select
+              inputId="promotion-create-to-stripes"
+              [options]="createStripesOptions()"
+              formControlName="to_stripes"
+              optionLabel="label"
+              optionValue="value"
+              [disabled]="createStripesOptions().length === 0"
+              appendTo="body"
+              data-cy="promotion-create-to-stripes"
+            />
+          </div>
+        </div>
+      }
+    </form>
+  }
 
   @if (createError(); as error) {
     <p-message severity="error" [text]="error" data-cy="promotion-create-error" />

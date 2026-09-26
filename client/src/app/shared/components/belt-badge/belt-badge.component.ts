@@ -67,6 +67,13 @@ export class BeltBadgeComponent {
    */
   readonly appearance = input<'badge' | 'spine'>('badge');
 
+  /**
+   * Draw the next stripe as an empty outline after the filled ones (#1966):
+   * the stripe a promotion history is missing, on the row that asks when it
+   * was given. Only where stripes are tiles and the grade has room for one.
+   */
+  readonly missingStripe = input<boolean>(false);
+
   protected readonly paint = computed(() => beltPaint(this.belt()));
 
   readonly labelKey = computed(() => this.ladder.labelKey(this.belt()));
@@ -85,6 +92,17 @@ export class BeltBadgeComponent {
     return stripes !== null && this.ladder.countsStripes(this.belt())
       ? Array.from({ length: stripes })
       : [];
+  });
+
+  /** The empty tile after the filled ones — see `missingStripe`. */
+  readonly showsMissingStripe = computed(() => {
+    const stripes = this.clampedStripes();
+    return (
+      this.missingStripe() &&
+      stripes !== null &&
+      this.ladder.countsStripes(this.belt()) &&
+      stripes < this.ladder.stripeCap(this.belt())
+    );
   });
 
   /** "3° dan" for a grade that counts dan or poom; null where tiles say it. */

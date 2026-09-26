@@ -712,6 +712,41 @@ export class AthleteService {
   }
 
   /**
+   * Completes an opening row (#1966): the row written when the athlete was
+   * entered says "first belt → blue" on the day of entry. Once the history
+   * shows the belt before it, this gives the row that belt and the day the
+   * promotion really happened — one row corrected, never a second one added.
+   * The server takes `from_belt` only while the row's own is still null.
+   */
+  completeOpeningPromotion(
+    athleteId: number,
+    promotionId: number,
+    body: { readonly recorded_at: string; readonly from_belt: Belt },
+  ): Observable<AthletePromotion> {
+    return this.http
+      .patch<{
+        data: AthletePromotion;
+      }>(`${this.base}/${athleteId}/promotions/${promotionId}`, body)
+      .pipe(map((res) => res.data));
+  }
+
+  /**
+   * "This step never happened" (#1966): a BJJ white belt can go from three
+   * stripes to blue, and the missing fourth must not ask forever. Keyed by the
+   * state the step would have led to; idempotent on the server.
+   */
+  skipPromotionStep(athleteId: number, belt: Belt, stripes: number): Observable<void> {
+    return this.http.post<void>(`${this.base}/${athleteId}/promotion-skips`, { belt, stripes });
+  }
+
+  /** The undo of `skipPromotionStep`: the step shows as missing again. */
+  unskipPromotionStep(athleteId: number, belt: Belt, stripes: number): Observable<void> {
+    return this.http.delete<void>(
+      `${this.base}/${athleteId}/promotion-skips/${encodeURIComponent(belt)}/${stripes}`,
+    );
+  }
+
+  /**
    * The athletes who may be ready for their next step (#1841): every active
    * athlete, longest since their last promotion first. Facts only; the server
    * sends no score, and the page adds none.
@@ -740,6 +775,39 @@ export interface AthletePromotion {
     readonly id: number;
     readonly full_name: string;
   } | null;
+  /**
+   * A belt row with no `from_belt`: the row written when the athlete was
+   * entered (#1771), dated the day of entry, not of the promotion (#1966).
+   * Optional so a server before #1966 reads as false.
+   */
+  readonly is_opening?: boolean;
+}
+
+/** A recorded row on one side of a missing step (#1966). */
+export interface PromotionGapNeighbour {
+  readonly promotion_id: number;
+  readonly recorded_at: string;
+}
+
+/**
+ * A step the athlete must have taken that no row records (#1966), found by
+ * walking the academy's ladder between two recorded states. The dates that
+ * fit the chain are `(after.recorded_at, before.recorded_at]`; `before: null`
+ * runs to today. Wire shape: `PromotionGap` in docs/api/v1.yaml.
+ */
+export interface PromotionGap {
+  /** `<kind>:<belt>:<stripes after the step>` — what a skip is keyed by. */
+  readonly key: string;
+  readonly kind: 'belt' | 'stripe';
+  /** A stripe step: the belt it is on. A belt step: the belt reached. */
+  readonly belt: Belt;
+  readonly from_belt: Belt | null;
+  readonly from_stripes: number | null;
+  readonly to_stripes: number | null;
+  readonly after: PromotionGapNeighbour | null;
+  readonly before: PromotionGapNeighbour | null;
+  /** Set when this belt step is the one an opening row stands for: filling it completes that row. */
+  readonly completes_promotion_id: number | null;
 }
 
 export interface AthletePromotionPage {
@@ -752,6 +820,13 @@ export interface AthletePromotionPage {
   };
   /** How long on this belt and since the last stripe (#1772). */
   readonly progression?: AthleteProgression;
+  /**
+   * The missing steps across the whole history, oldest first (#1966) — not
+   * just this page's. Optional so a server before #1966 reads as none.
+   */
+  readonly gaps?: readonly PromotionGap[];
+  /** The earliest row's date; null with no rows (#1966). */
+  readonly history_starts_at?: string | null;
 }
 
 /**

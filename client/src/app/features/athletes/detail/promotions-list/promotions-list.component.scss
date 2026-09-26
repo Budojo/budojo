@@ -35,6 +35,81 @@
     &--skeleton {
       gap: 0.5rem;
     }
+
+    // A step the history must have and no row records (#1966): the same row,
+    // with its date missing. Dashed and unfilled, because it is a hole in the
+    // record, not an error — no warning colour, no alarm.
+    &--ghost {
+      background: transparent;
+      border-style: dashed;
+      border-color: var(--p-surface-400);
+
+      .promotions__transition {
+        color: var(--p-text-muted-color);
+      }
+    }
+
+    // An opening row the history can complete: still a real row, with the
+    // edge a notch stronger so the "Quando?" reads as a question on it.
+    &--flag {
+      border-color: var(--p-surface-400);
+    }
+  }
+
+  // "Quando?" where a date would be (#1966).
+  &__when {
+    display: flex;
+    flex-direction: column;
+    font-weight: 500;
+    font-size: 0.875rem;
+    color: var(--p-text-muted-color);
+  }
+
+  &__entered {
+    font-size: 0.75rem;
+    font-weight: 400;
+  }
+
+  // One action that matters and a quiet one; on a phone they get a line of
+  // their own so the step is never squeezed (#1966).
+  &__gap-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    // The hit area is a floor, whatever a text button's own padding comes to
+    // (Fitts, client/CLAUDE.md): the athletes list's 3rem.
+    min-height: 3rem;
+
+    @media (min-width: 768px) {
+      justify-content: flex-end;
+    }
+  }
+
+  // Everything before the first known point, in one line (#1966).
+  &__history-before {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0.5rem 1rem;
+    border-left: 2px dashed var(--p-surface-400);
+    color: var(--p-text-muted-color);
+    font-size: 0.875rem;
+  }
+
+  &__fill-context {
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: 12px;
+    background: var(--p-surface-100);
+  }
+
+  &__fill-hint {
+    margin: 0.5rem 0 0;
+    font-size: 0.8125rem;
+    color: var(--p-text-muted-color);
   }
 
   &__date-row {
@@ -171,4 +246,47 @@
 .promotions__progression-line--muted {
   color: var(--p-text-muted-color);
   font-weight: 400;
+}
+
+// The date above is the day of entry, not of the promotion (#1966).
+.promotions__progression-line--note {
+  color: var(--budojo-warning-ink);
+  font-weight: 400;
+  font-size: 0.875rem;
+}
+
+// The "Saltato" toast and its undo (#1966), the attendance toast's shape.
+.promotions-toast {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+}
+
+.promotions-toast__summary {
+  flex: 1;
+  font-weight: 500;
+}
+
+.promotions-toast__undo {
+  all: unset;
+  cursor: pointer;
+  // `all: unset` takes the global button floor with it: without these the
+  // undo is ~37px tall, under the 48px target (#1966).
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 3rem;
+  min-width: 3rem;
+  box-sizing: border-box;
+  font-weight: 600;
+  color: var(--p-primary-color);
+  padding-inline: 1rem;
+  border-radius: var(--p-border-radius-sm);
+
+  &:focus-visible {
+    outline: 2px solid var(--p-primary-color);
+    outline-offset: 2px;
+  }
 }

@@ -137,6 +137,16 @@ it('counts a dan the way it counts a stripe', function (): void {
         ->toBe(['kind' => 'stripe', 'belt' => Belt::Black, 'stripes' => 3]);
 });
 
+it('places the kids\' grades after white in the climb, though they rank below it (#1966)', function (): void {
+    $ladder = bjjLikeLadder();
+
+    expect($ladder->climbPosition(Belt::White))->toBe(0)
+        ->and($ladder->climbPosition(Belt::Grey))->toBe(1)
+        ->and($ladder->climbPosition(Belt::Green))->toBe(2)
+        ->and($ladder->climbPosition(Belt::Blue))->toBe(3)
+        ->and($ladder->climbPosition(Belt::Black))->toBeNull();
+});
+
 it('has no next step at the top of the ladder, nor for a colour it does not award', function (): void {
     expect(bjjLikeLadder()->nextStep(Belt::Purple, 4, kidsEligible: false))->toBeNull()
         ->and(bjjLikeLadder()->nextStep(Belt::Red, 0, kidsEligible: false))->toBeNull();

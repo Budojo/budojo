@@ -396,3 +396,135 @@ describe('the promotion dialog is one column (#1495)', () => {
       });
   });
 });
+
+/**
+ * A missing step, filled with one date or skipped (#1966). The server finds
+ * the gaps; the client draws them in place and fills the backfill with
+ * everything but the date. Every call is intercepted.
+ */
+describe('a missing promotion step (#1966)', () => {
+  // The server's reply (#1970) for this athlete — blue with two stripes, and
+  // one row: white → blue on 1 Sep 2026. Both blue stripes are missing, each
+  // after the blue belt and with no row after it, so up to today.
+  const blueBelt = promotion({
+    id: 8,
+    kind: 'belt',
+    from_belt: 'white',
+    to_belt: 'blue',
+    from_stripes: null,
+    to_stripes: null,
+    belt_at_event: 'blue',
+    is_opening: false,
+    recorded_at: '2026-09-01T10:00:00+00:00',
+  });
+  const blueStripe = (n: number, after = { promotion_id: 8, recorded_at: '2026-09-01' }) => ({
+    key: `stripe:blue:${n}`,
+    kind: 'stripe',
+    belt: 'blue',
+    from_belt: null,
+    from_stripes: n - 1,
+    to_stripes: n,
+    after,
+    before: null,
+    completes_promotion_id: null,
+  });
+
+  function timeline(rows: unknown[], gaps: unknown[]) {
+    const response = promotionsPage(rows);
+    return { ...response, body: { ...response.body, gaps, history_starts_at: '2026-09-01' } };
+  }
+
+  beforeEach(() => {
+    cy.intercept('GET', '/api/v1/**', { statusCode: 200, body: { data: [] } });
+    cy.intercept('GET', '/api/v1/academy', ACADEMY_OK).as('academy');
+    cy.intercept('GET', '/api/v1/athletes/1', { statusCode: 200, body: { data: ATHLETE } }).as(
+      'athlete',
+    );
+    cy.intercept(
+      'GET',
+      '/api/v1/athletes/1/promotions*',
+      timeline([blueBelt], [blueStripe(1), blueStripe(2)]),
+    ).as('promotions');
+  });
+
+  it('asks for the date alone and writes the step it stands for', () => {
+    const written = promotion({
+      id: 10,
+      from_stripes: 0,
+      to_stripes: 1,
+      is_opening: false,
+      recorded_at: '2026-09-20T00:00:00+00:00',
+    });
+    cy.intercept('POST', '/api/v1/athletes/1/promotions', {
+      statusCode: 201,
+      body: { data: written },
+    }).as('create');
+
+    cy.visitAuthenticated('/dashboard/athletes/1/promotions');
+    cy.wait(['@academy', '@athlete', '@promotions']);
+    cy.get('[data-cy="promotion-gap-stripe:blue:1"]').should('contain.text', 'When?');
+
+    // As the server answers after the fill: the second stripe now starts
+    // after the one just written.
+    cy.intercept(
+      'GET',
+      '/api/v1/athletes/1/promotions*',
+      timeline(
+        [written, blueBelt],
+        [blueStripe(2, { promotion_id: 10, recorded_at: '2026-09-20' })],
+      ),
+    ).as('reload');
+    cy.get('[data-cy="gap-add-date-stripe:blue:1"]').click();
+    cy.get('[data-cy="promotion-create-dialog"]')
+      .should('be.visible')
+      .and('contain.text', 'When did they get stripe 1?');
+    // Nothing to choose but the date: the step is shown, not asked.
+    cy.get('[data-cy="promotion-create-kind"]').should('not.exist');
+    cy.get('[data-cy="gap-fill-date"] input').click();
+    cy.get('.p-datepicker-panel td span:not(.p-disabled)').last().click();
+    cy.get('[data-cy="promotion-create-confirm"]').click();
+
+    cy.wait('@create').then(({ request }) => {
+      expect(request.body).to.deep.include({
+        kind: 'stripe',
+        from_stripes: 0,
+        to_stripes: 1,
+        belt_at_event: 'blue',
+      });
+      // Inside the window: after the blue belt's day.
+      expect(request.body.recorded_at > '2026-09-01').to.equal(true);
+    });
+    cy.wait('@reload');
+    cy.get('[data-cy="promotion-gap-stripe:blue:1"]').should('not.exist');
+    cy.get('[data-cy="promotion-gap-stripe:blue:2"]').should('be.visible');
+  });
+
+  it('skips the step, and brings it back from the toast', () => {
+    cy.intercept('POST', '/api/v1/athletes/1/promotion-skips', { statusCode: 201 }).as('skip');
+    cy.intercept('DELETE', '/api/v1/athletes/1/promotion-skips/blue/1', { statusCode: 204 }).as(
+      'unskip',
+    );
+
+    cy.visitAuthenticated('/dashboard/athletes/1/promotions');
+    cy.wait(['@academy', '@athlete', '@promotions']);
+
+    // As the server answers once the first stripe is skipped.
+    cy.intercept('GET', '/api/v1/athletes/1/promotions*', timeline([blueBelt], [blueStripe(2)])).as(
+      'afterSkip',
+    );
+    cy.get('[data-cy="gap-skip-stripe:blue:1"]').click();
+    cy.wait('@skip').its('request.body').should('deep.equal', { belt: 'blue', stripes: 1 });
+    cy.wait('@afterSkip');
+    cy.get('[data-cy="promotion-gap-stripe:blue:1"]').should('not.exist');
+
+    cy.intercept(
+      'GET',
+      '/api/v1/athletes/1/promotions*',
+      timeline([blueBelt], [blueStripe(1), blueStripe(2)]),
+    ).as('afterUndo');
+    cy.get('[data-cy="promotion-skip-undo"]').click();
+    cy.wait('@unskip');
+    cy.wait('@afterUndo');
+    cy.get('[data-cy="promotion-gap-stripe:blue:1"]').should('be.visible');
+  });
+});
