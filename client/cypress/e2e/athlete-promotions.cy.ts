@@ -500,7 +500,9 @@ describe('a missing promotion step (#1966)', () => {
   });
 
   it('skips the step, and brings it back from the line left in its place', () => {
-    cy.intercept('POST', '/api/v1/athletes/1/promotion-skips', { statusCode: 201 }).as('skip');
+    cy.intercept('POST', '/api/v1/athletes/1/promotion-skips', { statusCode: 201 }).as(
+      'recordSkip',
+    );
     cy.intercept('DELETE', '/api/v1/athletes/1/promotion-skips/blue/1', { statusCode: 204 }).as(
       'unskip',
     );
@@ -509,7 +511,7 @@ describe('a missing promotion step (#1966)', () => {
     cy.wait(['@academy', '@athlete', '@promotions']);
 
     cy.get('[data-cy="gap-skip-stripe:blue:1"]').click();
-    cy.wait('@skip').its('request.body').should('deep.equal', { belt: 'blue', stripes: 1 });
+    cy.wait('@recordSkip').its('request.body').should('deep.equal', { belt: 'blue', stripes: 1 });
     // No reload: the ghost row becomes a line with its own undo, and the
     // keyboard is already on it.
     cy.get('[data-cy="promotion-gap-stripe:blue:1"]').should('not.exist');
