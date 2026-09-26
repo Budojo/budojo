@@ -174,10 +174,16 @@ export function createBackupIO(config: BackupIOConfig): BackupIO {
       const previousDb = `${config.databasePath}.previous`;
       const previousStorage = `${config.storageDir}.previous`;
       const siblings = ['', '-wal', '-shm', '-journal'];
-      for (const sibling of siblings) {
-        rmSync(previousDb + sibling, { force: true });
+
+      // A `.previous` already here is what an earlier restore could not put
+      // back — possibly the owner's newest data, newer than any backup. Never
+      // deleted: set aside under the moment it was found, and left alone.
+      const keptAt = new Date().toISOString().replace(/[:.]/g, '-');
+      for (const leftover of [...siblings.map((sibling) => previousDb + sibling), previousStorage]) {
+        if (existsSync(leftover)) {
+          await retryWhileBusy(() => renameSync(leftover, `${leftover}.kept-${keptAt}`), RENAME_RETRY);
+        }
       }
-      rmSync(previousStorage, { recursive: true, force: true });
 
       const moved: Array<[from: string, to: string]> = [];
       const move = async (from: string, to: string): Promise<void> => {
@@ -220,10 +226,18 @@ export function createBackupIO(config: BackupIOConfig): BackupIO {
         throw error;
       }
 
-      for (const sibling of siblings) {
-        rmSync(previousDb + sibling, { force: true });
+      // Done: the old generation can go. Best-effort — the restore has already
+      // happened, and a scanner still holding a file in `storage.previous` must
+      // not turn it into a reported failure. What stays is set aside, not
+      // deleted, by the next restore.
+      const tidy = { recursive: true, force: true, maxRetries: 5, retryDelay: 100 };
+      for (const leftover of [...siblings.map((sibling) => previousDb + sibling), previousStorage]) {
+        try {
+          rmSync(leftover, tidy);
+        } catch {
+          // Left for the next restore to set aside.
+        }
       }
-      rmSync(previousStorage, { recursive: true, force: true });
     },
   };
 }
