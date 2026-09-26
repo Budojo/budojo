@@ -27,10 +27,10 @@ interface DriveArchive {
 interface BackupRestoreResult {
   readonly ok: boolean;
   /**
-   * Why it was refused: not a Budojo backup at all, one from a newer Budojo,
-   * or a backup or restore already running.
+   * Why it did not happen: not a Budojo backup at all, one from a newer
+   * Budojo, a backup or restore already running, or a swap that broke.
    */
-  readonly code?: 'unreadable' | 'newer' | 'busy';
+  readonly code?: 'unreadable' | 'newer' | 'busy' | 'failed';
   /** The same refusal in English, for the log. */
   readonly reason?: string;
 }

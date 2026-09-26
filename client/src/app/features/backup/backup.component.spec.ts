@@ -258,6 +258,25 @@ describe('BackupComponent', () => {
       );
     });
 
+    it('does not call a broken swap "not a backup"', async () => {
+      // The archive passed every check; what broke was writing it in.
+      const { fixture, added } = setup({
+        restoreFromFile: vi.fn(async () => ({
+          ok: false,
+          code: 'failed' as const,
+          reason: 'ENOSPC: no space left on device',
+        })),
+      });
+      await fixture.whenStable();
+
+      await fixture.componentInstance['restoreFromFile']();
+
+      const errorToast = added.find((m) => (m as { severity: string }).severity === 'error') as {
+        detail?: string;
+      };
+      expect(errorToast?.detail).toBe("The restore did not finish. The reason is in Budojo's log.");
+    });
+
     it('stops spinning when the desktop does not answer', async () => {
       const { fixture } = setup({
         restoreFromFile: vi.fn(async () => {

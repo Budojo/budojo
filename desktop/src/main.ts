@@ -814,6 +814,15 @@ function registerBackupBridge(
   });
 
   /**
+   * Taken synchronously, before the first `await` (#1909). The engine's own
+   * lock is only taken once PHP has stopped, so two clicks inside that stop
+   * would both pass a `busy` check — and the refused one would restart PHP on
+   * its way out, under the other one's swap.
+   */
+  let restoring = false;
+  const busyAnswer = { ok: false, code: 'busy' as const, reason: 'A backup or restore is already running.' };
+
+  /**
    * Stops PHP, runs one restore, starts PHP again whatever happened, and
    * reloads the windows onto the restored data when it went through. The same
    * sequence for a listed archive and for a file from anywhere else.
@@ -829,21 +838,27 @@ function registerBackupBridge(
 
     // Before PHP is stopped, not after: a refused restore still restarts the
     // server on its way out, and doing that under a restore that is still
-    // swapping is the one thing the swap must never overlap (#1909).
-    if (service.busy) {
-      return { ok: false, code: 'busy', reason: 'A backup or restore is already running.' };
+    // swapping is the one thing the swap must never overlap.
+    if (restoring || service.busy) {
+      return busyAnswer;
     }
+    restoring = true;
 
-    await supervisor.stop();
     let check: RestoreCheck;
     try {
-      check = await run(service);
-    } catch (error) {
-      // An answer, never a rejection: a rejected invoke leaves the page's
-      // button spinning with nothing said.
-      check = { ok: false, code: 'unreadable', reason: error instanceof Error ? error.message : String(error) };
+      await supervisor.stop();
+      try {
+        check = await run(service);
+      } catch (error) {
+        // An answer, never a rejection: a rejected invoke leaves the page's
+        // button spinning with nothing said. `failed`, not `unreadable`: the
+        // archive passed its checks, and what broke is the swap itself.
+        check = { ok: false, code: 'failed', reason: error instanceof Error ? error.message : String(error) };
+      } finally {
+        await supervisor.start();
+      }
     } finally {
-      await supervisor.start();
+      restoring = false;
     }
 
     if (check.ok) {
@@ -868,8 +883,8 @@ function registerBackupBridge(
   // only asks; the path is the one the system dialog returned, never one the
   // renderer sent.
   ipcMain.handle('budojo:backup:restoreFromFile', async (event) => {
-    if (backupOf()?.busy === true) {
-      return { ok: false, code: 'busy', reason: 'A backup or restore is already running.' };
+    if (restoring || backupOf()?.busy === true) {
+      return busyAnswer;
     }
 
     // Open in the copies folder when there is one: it is where the owner's

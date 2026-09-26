@@ -1,4 +1,4 @@
-import { constants, copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { constants, copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -139,17 +139,44 @@ export function createBackupIO(config: BackupIOConfig): BackupIO {
         throw new Error('the archive contains no budojo.sqlite');
       }
 
-      // Drop the WAL/SHM siblings of the live DB first — a stale -wal against a
+      // Copy everything in beside the live files first, and only then swap by
+      // renaming (#1909). This used to delete the live database and then copy
+      // the archived one over it, so a copy that failed half-way — a full disk
+      // is enough — left no database at all. Every step that can fail for lack
+      // of room happens here, while the live data is untouched; what follows
+      // is renames on one volume.
+      const stagedDb = `${config.databasePath}.restoring`;
+      const stagedStorage = `${config.storageDir}.restoring`;
+      const hasStorage = existsSync(restoredStorage);
+      try {
+        rmSync(stagedDb, { force: true });
+        cpSync(restoredDb, stagedDb);
+        if (hasStorage) {
+          rmSync(stagedStorage, { recursive: true, force: true });
+          cpSync(restoredStorage, stagedStorage, { recursive: true });
+        }
+      } catch (error) {
+        rmSync(stagedDb, { force: true });
+        rmSync(stagedStorage, { recursive: true, force: true });
+        throw error;
+      }
+
+      // Drop the WAL/SHM siblings of the live DB — a stale -wal against a
       // freshly swapped database is corruption. The server is stopped, so
-      // nothing holds them.
-      for (const sibling of ['', '-wal', '-shm', '-journal']) {
+      // nothing holds them. The rename then replaces the file in one step.
+      for (const sibling of ['-wal', '-shm', '-journal']) {
         rmSync(config.databasePath + sibling, { force: true });
       }
-      cpSync(restoredDb, config.databasePath);
+      renameSync(stagedDb, config.databasePath);
 
-      if (existsSync(restoredStorage)) {
-        rmSync(config.storageDir, { recursive: true, force: true });
-        cpSync(restoredStorage, config.storageDir, { recursive: true });
+      if (hasStorage) {
+        const previous = `${config.storageDir}.previous`;
+        rmSync(previous, { recursive: true, force: true });
+        if (existsSync(config.storageDir)) {
+          renameSync(config.storageDir, previous);
+        }
+        renameSync(stagedStorage, config.storageDir);
+        rmSync(previous, { recursive: true, force: true });
       }
     },
   };

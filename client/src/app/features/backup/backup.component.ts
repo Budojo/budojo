@@ -411,6 +411,8 @@ export class BackupComponent {
         return this.translate.instant('backup.toast.newerBackup');
       case 'busy':
         return this.translate.instant('backup.toast.busy');
+      case 'failed':
+        return this.translate.instant('backup.toast.restoreFailed');
       default:
         return result.reason;
     }

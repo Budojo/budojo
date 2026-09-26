@@ -156,13 +156,14 @@ export function buildManifest(input: { appVersion: string; schemaVersion: string
 }
 
 /**
- * Why a restore was refused, for the page to say in the owner's language
+ * Why a restore did not happen, for the page to say in the owner's language
  * (#1909): `unreadable` is not a Budojo backup at all — no zip, no manifest,
- * no database — `newer` comes from a Budojo newer than this one, and `busy`
- * means a backup or another restore is running. `reason` stays, in English,
- * for the log.
+ * no database — `newer` comes from a Budojo newer than this one, `busy` means
+ * a backup or another restore is running, and `failed` is an archive that
+ * passed every check and broke while being swapped in. `reason` stays, in
+ * English, for the log.
  */
-export type RestoreRefusal = 'unreadable' | 'newer' | 'busy';
+export type RestoreRefusal = 'unreadable' | 'newer' | 'busy' | 'failed';
 
 export type RestoreCheck =
   | { ok: true }

@@ -3338,7 +3338,8 @@
       "restoreRefused": "Impossibile ripristinare questo backup",
       "notABackup": "Questo file non è un backup di Budojo.",
       "newerBackup": "Questo backup viene da una versione più recente di Budojo. Aggiorna Budojo, poi ripristinalo.",
-      "busy": "Budojo sta già facendo un backup o un ripristino: riprova tra un momento."
+      "busy": "Budojo sta già facendo un backup o un ripristino: riprova tra un momento.",
+      "restoreFailed": "Il ripristino non è stato completato. Il motivo è nel log di Budojo."
     },
     "keys": {
       "heading": "Chiavi di recupero",
