@@ -14,7 +14,7 @@ use Carbon\CarbonImmutable;
  * trailing N months ending with the current month, INCLUSIVE.
  *
  * Bucketing field: the business month(s) the money covers, NOT `paid_at`
- * (the wall-clock recording time). What lands in each month — a fee spread
+ * (the day the money arrived, #1761). What lands in each month — a fee spread
  * across its period, a carnet whole in its sale month (#1553) — is decided by
  * `CollectedByMonth`, which the money tiles read too (#1758): a bar and a tile
  * for the same month cannot disagree when neither computes it.

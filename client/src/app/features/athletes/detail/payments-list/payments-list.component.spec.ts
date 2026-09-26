@@ -612,6 +612,16 @@ describe('PaymentsListComponent — the 422 that is not about the fee (#1382)', 
     expect(toastDetailFor({ monthly_fee_cents: ['missing'] })).toContain('monthly fee');
   });
 
+  it('keeps the oldest answer for a 422 that names no field', () => {
+    // The fallback branch: no field at all is the missing-fee reply as it
+    // was first shaped, not "something you entered wasn't accepted".
+    expect(toastDetailFor({})).toContain('monthly fee');
+  });
+
+  it('says a year is out of range, not that no fee is configured', () => {
+    expect(toastDetailFor({ year: ['x'] })).toContain('outside the range');
+  });
+
   it('blames the date when the date was refused, not the fee (#1761)', () => {
     // The academy has a fee; "set a monthly fee first" would send the owner
     // to a setting that is already right.
