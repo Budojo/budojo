@@ -1027,6 +1027,70 @@ describe('PromotionsListComponent — missing steps (#1966)', () => {
     );
   });
 
+  it('keeps same-day rows and their missing steps in replay order', () => {
+    // The server's reply (#1970, `PromotionOrder`): blue with four stripes,
+    // white → blue on 10 Jan 2024, blue 3 → 4 on 1 Jun 2025, and blue 2 → 3
+    // filled on that same day. Same-day rows come in exactly the reverse of
+    // the replay order, and the two steps still missing sit under 2 → 3.
+    const whiteToBlue = makePromotion({
+      id: 8,
+      kind: 'belt',
+      from_belt: 'white',
+      to_belt: 'blue',
+      from_stripes: null,
+      to_stripes: null,
+      belt_at_event: 'blue',
+      is_opening: false,
+      recorded_at: '2024-01-10T00:00:00+00:00',
+    });
+    const blueStripeRow = (id: number, from: number, to: number) =>
+      makePromotion({
+        id,
+        kind: 'stripe',
+        from_belt: null,
+        to_belt: null,
+        from_stripes: from,
+        to_stripes: to,
+        belt_at_event: 'blue',
+        is_opening: false,
+        recorded_at: '2025-06-01T00:00:00+00:00',
+      });
+    const missing = (n: number): PromotionGap => ({
+      key: `stripe:blue:${n}`,
+      kind: 'stripe',
+      belt: 'blue',
+      from_belt: null,
+      from_stripes: n - 1,
+      to_stripes: n,
+      after: { promotion_id: 8, recorded_at: '2024-01-10' },
+      before: { promotion_id: 20, recorded_at: '2025-06-01' },
+      completes_promotion_id: null,
+    });
+    const { el, fixture, svc } = setup({ athleteId: '7' });
+    useLadder('bjj');
+    svc.promotions.mockReturnValue(
+      of({
+        data: [blueStripeRow(9, 3, 4), blueStripeRow(20, 2, 3), whiteToBlue],
+        meta: { current_page: 1, per_page: 20, total: 3, last_page: 1 },
+        gaps: [missing(1), missing(2)],
+        history_starts_at: '2024-01-10',
+      }),
+    );
+    fixture.detectChanges();
+
+    const cys = Array.from(el.querySelectorAll('[data-cy="promotions-list"] > li')).map((li) =>
+      li.getAttribute('data-cy'),
+    );
+    // 3 → 4, 2 → 3, ghost 1 → 2, ghost 0 → 1, white → blue.
+    expect(cys).toEqual([
+      'promotion-9',
+      'promotion-20',
+      'promotion-gap-stripe:blue:2',
+      'promotion-gap-stripe:blue:1',
+      'promotion-8',
+    ]);
+  });
+
   it('keys a poom → dan skip by the degree it carries, not by 0', () => {
     // Taekwondo, the server's reply: a 2nd poom on record, black with the
     // 2nd dan today (stored 1) — the poom → dan step never written down.
