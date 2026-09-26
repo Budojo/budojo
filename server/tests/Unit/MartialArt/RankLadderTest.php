@@ -82,9 +82,30 @@ it('skips the kids-only grades for someone who is not eligible for them', functi
         ->toBe(['kind' => 'belt', 'belt' => Belt::WhiteAndYellow, 'stripes' => 0]);
 });
 
-it('moves someone already on a kids grade to the next rung, whatever it is', function (): void {
-    expect(bjjLikeLadder()->nextStep(Belt::Green, 4, kidsEligible: false))
-        ->toBe(['kind' => 'belt', 'belt' => Belt::White, 'stripes' => 0]);
+it('climbs the kids grades a ladder lists below the starting belt right after it', function (): void {
+    // BJJ lists grey to green below white, but a child starts on white and
+    // climbs them from there; green then leads to blue, never back to white.
+    $ladder = bjjLikeLadder();
+
+    expect($ladder->nextStep(Belt::White, 4, kidsEligible: true))
+        ->toBe(['kind' => 'belt', 'belt' => Belt::Grey, 'stripes' => 0])
+        ->and($ladder->nextStep(Belt::Grey, 4, kidsEligible: true))
+        ->toBe(['kind' => 'belt', 'belt' => Belt::Green, 'stripes' => 0])
+        ->and($ladder->nextStep(Belt::Green, 4, kidsEligible: true))
+        ->toBe(['kind' => 'belt', 'belt' => Belt::Blue, 'stripes' => 0])
+        ->and($ladder->nextStep(Belt::White, 4, kidsEligible: false))
+        ->toBe(['kind' => 'belt', 'belt' => Belt::Blue, 'stripes' => 0]);
+});
+
+it('moves someone on a kids grade who is no longer eligible to the next adult grade', function (): void {
+    expect(bjjLikeLadder()->nextStep(Belt::Grey, 4, kidsEligible: false))
+        ->toBe(['kind' => 'belt', 'belt' => Belt::Blue, 'stripes' => 0]);
+});
+
+it('tells a kids grade from an adult one', function (): void {
+    expect(bjjLikeLadder()->isKidsGrade(Belt::Green))->toBeTrue()
+        ->and(bjjLikeLadder()->isKidsGrade(Belt::White))->toBeFalse()
+        ->and(bjjLikeLadder()->isKidsGrade(Belt::Red))->toBeFalse();
 });
 
 it('counts a dan the way it counts a stripe', function (): void {

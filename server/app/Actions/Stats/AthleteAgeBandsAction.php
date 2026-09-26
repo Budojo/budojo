@@ -7,6 +7,7 @@ namespace App\Actions\Stats;
 use App\Enums\AthleteStatus;
 use App\Models\Academy;
 use App\Support\MartialArt\AgeDivision;
+use App\Support\MartialArt\FederationAge;
 use App\Support\MartialArt\MartialArtProfile;
 use Carbon\CarbonImmutable;
 
@@ -17,11 +18,10 @@ use Carbon\CarbonImmutable;
  * through `MartialArtProfile`. Always returns every division, empty ones
  * included, so the chart draws the whole distribution.
  *
- * An athlete's age is the one they **reach this calendar year**, which is
- * how all four federations class athletes (FIJLKAM's "dal 12° anno", WT's
- * "the year, not the date"). The chart used to read today's age, which put
- * everyone born after today's date in the division below until their
- * birthday.
+ * An athlete's age is the one they **reach this calendar year**
+ * ({@see FederationAge}), as all four federations class athletes. The chart
+ * used to read today's age, which put everyone born after today's date in the
+ * division below until their birthday.
  *
  * @return array{bands: list<array{code: string, category: 'kids'|'adults', min: int, max: int|null, count: int}>, total: int, missing_dob: int}
  */
@@ -49,7 +49,7 @@ class AthleteAgeBandsAction
      */
     public function execute(Academy $academy): array
     {
-        $thisYear = CarbonImmutable::now()->year;
+        $today = CarbonImmutable::now();
         $divisions = MartialArtProfile::for($academy->martial_art)->ageDivisions();
 
         // Initialise every band at count 0 so empty bands stay in the
@@ -80,8 +80,7 @@ class AthleteAgeBandsAction
                 continue;
             }
 
-            // The age reached this calendar year, not today's (see above).
-            $code = self::bandCodeFor($thisYear - $dob->year, $divisions);
+            $code = self::bandCodeFor(FederationAge::of($dob, $today), $divisions);
             if ($code !== null) {
                 $counts[$code]++;
             }

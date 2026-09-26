@@ -739,6 +739,20 @@ export interface AthletePromotionPage {
  * never a fallback to the joining date. A stripe older than the current belt
  * is not "the last stripe", so `stripe_since` is null then too (#1772).
  */
+export interface AthleteProgression {
+  /** The athlete's current belt and stripes, to word a dan or a poom and to
+   *  tell "no stripe" from stripes with no dated row. */
+  readonly belt: Belt;
+  readonly stripes: number;
+  readonly belt_since: string | null;
+  readonly days_at_belt: number | null;
+  readonly months_at_belt: number | null;
+  readonly sessions_at_belt: number | null;
+  readonly stripe_since: string | null;
+  readonly days_since_stripe: number | null;
+  readonly sessions_since_stripe: number | null;
+}
+
 /** The step after an athlete's current belt and stripes, as the academy's ladder counts it. */
 export interface NextStep {
   readonly kind: 'stripe' | 'belt';
@@ -760,20 +774,6 @@ export interface PromotionCandidate {
   readonly days_since_last_promotion: number | null;
   readonly sessions_since_last_promotion: number | null;
   readonly next: NextStep | null;
-}
-
-export interface AthleteProgression {
-  /** The athlete's current belt and stripes, to word a dan or a poom and to
-   *  tell "no stripe" from stripes with no dated row. */
-  readonly belt: Belt;
-  readonly stripes: number;
-  readonly belt_since: string | null;
-  readonly days_at_belt: number | null;
-  readonly months_at_belt: number | null;
-  readonly sessions_at_belt: number | null;
-  readonly stripe_since: string | null;
-  readonly days_since_stripe: number | null;
-  readonly sessions_since_stripe: number | null;
 }
 
 /**

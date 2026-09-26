@@ -112,33 +112,64 @@ final class RankLadder
      * back to none. A dan or a poom counts as a stripe does, since the ladder
      * stores them as the grade's count.
      *
-     * Kids-only grades are skipped unless the athlete is eligible for them (a
-     * minor in an academy that trains kids) or already on one: an adult judoka
-     * goes from white to yellow, not to the half belt, and a BJJ adult never
-     * steps back into the kids' colours that open the ladder.
+     * Grades come in the order people climb them ({@see self::climbingOrder()}),
+     * and kids-only grades are skipped unless the athlete is eligible for them:
+     * an adult judoka goes from white to yellow, not to the half belt, and a
+     * sixteen-year-old BJJ orange belt goes to blue. Who is eligible is the
+     * caller's to decide; the ladder knows grades, not ages.
      *
      * @return array{kind: 'stripe'|'belt', belt: Belt, stripes: int}|null
      */
     public function nextStep(Belt $belt, int $stripes, bool $kidsEligible): ?array
     {
-        $rank = $this->rankOf($belt);
-        if ($rank === null) {
+        $current = $this->gradeOf($belt);
+        if ($current === null) {
             return null;
         }
 
-        $current = $this->grades[$rank - 1];
         if ($stripes < $current->maxStripes) {
             return ['kind' => 'stripe', 'belt' => $belt, 'stripes' => $stripes + 1];
         }
 
-        $includeKids = $kidsEligible || $current->kids;
-        foreach (\array_slice($this->grades, $rank) as $grade) {
-            if (! $grade->kids || $includeKids) {
+        $order = $this->climbingOrder();
+        $position = array_search($current, $order, true);
+        \assert(\is_int($position));
+        foreach (\array_slice($order, $position + 1) as $grade) {
+            if (! $grade->kids || $kidsEligible) {
                 return ['kind' => 'belt', 'belt' => $grade->belt, 'stripes' => 0];
             }
         }
 
         return null;
+    }
+
+    /** Whether this belt is a children's step (#1651). False for a colour this art does not award. */
+    public function isKidsGrade(Belt $belt): bool
+    {
+        return $this->gradeOf($belt)?->kids === true;
+    }
+
+    /**
+     * The grades in the order people climb them, which is not always rank
+     * order. BJJ ranks its kids' grades (grey to green) below white, so the
+     * roster sorts a child below an adult beginner; but a child starts on
+     * white and climbs them from there, and green leads on to blue. So the
+     * starting belt comes first, then any kids' grades ranked below it, then
+     * the rest. For a ladder that opens on its starting belt (judo, karate,
+     * taekwondo) this is rank order.
+     *
+     * @return list<Grade>
+     */
+    private function climbingOrder(): array
+    {
+        $start = $this->rankOf($this->startingBelt());
+        \assert($start !== null);
+
+        return [
+            $this->grades[$start - 1],
+            ...\array_slice($this->grades, 0, $start - 1),
+            ...\array_slice($this->grades, $start),
+        ];
     }
 
     private function gradeOf(Belt $belt): ?Grade

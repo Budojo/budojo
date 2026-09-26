@@ -139,6 +139,27 @@ it('offers a judo half belt to a child in an academy that trains kids, and not t
         ->and($rows[$unknownAge->id]['next'])->toBe(['kind' => 'belt', 'belt' => 'yellow', 'stripes' => 0]);
 });
 
+it('walks a BJJ child from white through the kids\' belts, and a sixteen-year-old on to blue', function (): void {
+    $this->academy->update(['trains_kids' => true]);
+    // IBJJF: a child starts on white and climbs grey to green; blue from 16.
+    $child = candidateAthlete($this->academy, ['belt' => Belt::White, 'stripes' => 4, 'date_of_birth' => '2017-03-01']);
+    $sixteen = candidateAthlete($this->academy, ['belt' => Belt::Orange, 'stripes' => 4, 'date_of_birth' => '2010-10-01']);
+    $adult = candidateAthlete($this->academy, ['belt' => Belt::White, 'stripes' => 4, 'date_of_birth' => '1990-01-01']);
+
+    $rows = collect(candidates($this))->keyBy('athlete.id');
+
+    expect($rows[$child->id]['next'])->toBe(['kind' => 'belt', 'belt' => 'grey', 'stripes' => 0])
+        ->and($rows[$sixteen->id]['next'])->toBe(['kind' => 'belt', 'belt' => 'blue', 'stripes' => 0])
+        ->and($rows[$adult->id]['next'])->toBe(['kind' => 'belt', 'belt' => 'blue', 'stripes' => 0]);
+});
+
+it('reads a kids\' grade as a child\'s when the date of birth is unknown, whatever the setting', function (): void {
+    $this->academy->update(['trains_kids' => false]);
+    candidateAthlete($this->academy, ['belt' => Belt::Yellow, 'stripes' => 4, 'date_of_birth' => null]);
+
+    expect(candidates($this)[0]['next'])->toBe(['kind' => 'belt', 'belt' => 'orange', 'stripes' => 0]);
+});
+
 it('keeps kids\' grades out when the academy does not train kids', function (): void {
     $this->academy->update(['martial_art' => 'judo', 'trains_kids' => false]);
     candidateAthlete($this->academy, ['belt' => Belt::White, 'stripes' => 0, 'date_of_birth' => '2017-03-01']);

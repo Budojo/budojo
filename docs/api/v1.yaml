@@ -5984,10 +5984,13 @@ paths:
         promotion, longest first, and athletes with no belt row come last.
 
         The numbers are `AthleteProgression`'s (#1772), computed by the same
-        code, so they match the athlete page. Kids' grades are offered as the
-        next step only to a young athlete (not yet in any of the art's adult
-        age divisions, by the age reached this calendar year) in an academy
-        that trains kids. An unknown date of birth reads as an adult.
+        code, so they match the athlete page. The next step follows the order
+        people climb the ladder: a BJJ child goes from white through grey to
+        green, then to blue. Kids' grades are skipped unless the athlete is a
+        child: a known date of birth decides by the art's adult age divisions
+        (age reached this calendar year), and counts where the academy trains
+        kids or the athlete is already on a kids' grade; with no date of
+        birth, someone on a kids' grade is taken as a child.
 
         Owner-only; requires `athletes_read` in the active academy.
       operationId: promotionCandidates

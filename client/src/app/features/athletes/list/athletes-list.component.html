@@ -94,9 +94,6 @@
 
 <div class="athletes-page">
   <app-page-header [title]="'athletes.list.title' | translate" [countLabel]="totalCountLabel()">
-    <!-- Secondary beside the primary, not a second primary (#1346). An
-         academy arriving with an existing roster needs to FIND this on day
-         one, so it sits in the header rather than behind an overflow. -->
     <!-- Who to promote? (#1841). A secondary like the import: the owner
          decides promotions a few times a season, from the roster. -->
     <p-button
@@ -109,6 +106,9 @@
       (onClick)="goToReady()"
       data-cy="ready-athletes-btn"
     />
+    <!-- Secondary beside the primary, not a second primary (#1346). An
+         academy arriving with an existing roster needs to FIND this on day
+         one, so it sits in the header rather than behind an overflow. -->
     <p-button
       pageHeaderCta
       [label]="'athletes.list.importButton' | translate"
