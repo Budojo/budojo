@@ -230,7 +230,7 @@ providePrimeNG({
 
 ## Testing — Vitest 4 (unit) + Cypress 15 (E2E)
 
-Run locally via `./.claude/scripts/test-client.sh` (prettier --write + lint + vitest). Cypress runs in CI.
+Run locally via `./.claude/scripts/test-client.sh` (prettier --write + lint + stylelint + vitest). Cypress runs in CI.
 
 ### Unit tests (Vitest)
 
@@ -266,6 +266,6 @@ Multi-viewport specs catch layout breaks mechanically, but the rendered result o
 - **Components are OnPush by default.** No exceptions without a comment.
 - **State via signals**, not `BehaviorSubject` where a `signal()` works.
 - **Reactive Forms, not template-driven**, for anything beyond a two-field filter.
-- **Run `./.claude/scripts/test-client.sh` before every push.** All three (prettier + lint + vitest) must be clean. Cypress runs in CI.
+- **Run `./.claude/scripts/test-client.sh` before every push.** All four (prettier, lint, stylelint, vitest) must be clean. Cypress runs in CI.
 - **Visually verify EVERY visible change before push.** Gates verify code, not the rendered result. Anything the user sees — template, SCSS, icon, copy, colour, layout, shared-component adoption, responsive — gets a real-browser smoke at desktop + mobile (no "trivial" exception). See [`docs/development/visual-verification.md`](../docs/development/visual-verification.md) for the screenshot recipe. Skip only when the environment genuinely can't render it — then say so explicitly.
 - **Keep `docs/api/v1.yaml` in sync** if you change how the SPA consumes the API (e.g. new query param). See root `CLAUDE.md` § Documentation discipline.

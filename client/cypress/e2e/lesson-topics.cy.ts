@@ -173,6 +173,11 @@ describe('Lesson topics — check-in', () => {
     cy.wait('@lesson');
     cy.get('[data-cy="attendance-topics"]').click();
 
+    // Opening the sheet runs its load(), which clears the search before the
+    // programme arrives. Typing before then lost the first letters and the
+    // results never appeared (the one flake in CI on #1879). The tree renders
+    // only once the load has finished, so wait for it first.
+    cy.get('[data-cy="lesson-sheet-tree"]').should('be.visible');
     cy.get('[data-cy="lesson-sheet-search"]').type('guard');
     // The position and everything under it.
     cy.get('[data-cy="lesson-sheet-results"]').within(() => {
