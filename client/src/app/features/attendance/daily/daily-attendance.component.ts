@@ -22,7 +22,8 @@ import { SkeletonModule } from 'primeng/skeleton';
 import { Toast } from 'primeng/toast';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { BeltLadderService } from '../../../core/services/belt-ladder.service';
-import { AcademyService } from '../../../core/services/academy.service';
+import { AcademyClosure, AcademyService } from '../../../core/services/academy.service';
+import { closureOn } from '../../../shared/utils/attendance-rate';
 import { LanguageService } from '../../../core/services/language.service';
 import { datePickerFormatFor } from '../../../shared/utils/locale';
 import {
@@ -59,6 +60,12 @@ interface SelectOption<T extends string> {
 }
 
 const ALL_WEEKDAYS = [0, 1, 2, 3, 4, 5, 6] as const;
+
+/**
+ * How far back the check-in looks for the last session held when today is not
+ * one (#195, #1766): long enough to cross a summer closure.
+ */
+const RESEAT_REACH_DAYS = 62;
 
 /**
  * YYYY-MM-DD from the LOCAL date components — NOT `toISOString()`, which
@@ -242,8 +249,16 @@ export class DailyAttendanceComponent implements OnInit {
     const trainingDays = this.academyService.academy()?.training_days ?? null;
     if (trainingDays === null || trainingDays.length === 0) return false;
     const today = new Date();
-    return !trainingDays.includes(today.getDay());
+    return !trainingDays.includes(today.getDay()) || this.closedToday() !== null;
   });
+
+  /**
+   * The closure today falls in (#1766), or null. The banner names it, and
+   * `initSelectedDate()` walks back past it to the last session held.
+   */
+  protected readonly closedToday = computed<AcademyClosure | null>(() =>
+    closureOn(this.academyService.academy()?.closures, new Date()),
+  );
 
   /**
    * Localised "weekday DD month" form of `selectedDate`. Used by the
@@ -441,24 +456,27 @@ export class DailyAttendanceComponent implements OnInit {
    * unconfigured so every weekday is fair game.
    */
   private initSelectedDate(): void {
-    const trainingDays = this.academyService.academy()?.training_days ?? null;
+    const academy = this.academyService.academy();
+    const trainingDays = academy?.training_days ?? null;
     if (trainingDays === null || trainingDays.length === 0) {
       return;
     }
     const trainingSet = new Set(trainingDays);
+    // A day the academy is shut is not a session, whatever its weekday
+    // (#1766): the default lands on the last one actually held.
+    const isSession = (d: Date): boolean =>
+      trainingSet.has(d.getDay()) && closureOn(academy?.closures, d) === null;
     const today = new Date();
-    if (trainingSet.has(today.getDay())) {
+    if (isSession(today)) {
       return;
     }
-    // Walk back up to 7 days to find the most recent past training day.
-    // The 7-iteration cap guarantees termination even if `training_days`
-    // ever ends up containing only weekday values that aren't actually
-    // weekdays — the early-out `length === 0` check above is the common
-    // case, this loop's bound is the defensive backstop.
+    // Walk back to the most recent past session. A week finds one on any
+    // weekly pattern; the rest of the bound is for a closure (August, the
+    // Christmas break), and it guarantees termination whatever the data.
     const cursor = new Date(today);
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < RESEAT_REACH_DAYS; i++) {
       cursor.setDate(cursor.getDate() - 1);
-      if (trainingSet.has(cursor.getDay())) {
+      if (isSession(cursor)) {
         this.selectedDate.set(cursor);
         return;
       }

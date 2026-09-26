@@ -18,15 +18,19 @@ import { KnobModule } from 'primeng/knob';
 import { Popover, PopoverModule } from 'primeng/popover';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TooltipModule } from 'primeng/tooltip';
-import { AcademyService } from '../../../../core/services/academy.service';
+import { AcademyClosure, AcademyService } from '../../../../core/services/academy.service';
 import { Athlete, AthleteService } from '../../../../core/services/athlete.service';
 import { AttendanceRecord, AttendanceService } from '../../../../core/services/attendance.service';
 import {
   attendanceRate,
+  closureOn,
   countScheduledTrainingDays,
   schedulesForAcademy,
   scheduleForDate,
 } from '../../../../shared/utils/attendance-rate';
+import { formatClosureRange } from '../../../../shared/utils/closure-range';
+import { localeFor } from '../../../../shared/utils/locale';
+import { LanguageService } from '../../../../core/services/language.service';
 import { YearMonth, buildCalendarGrid, shiftMonth } from './calendar-grid';
 import { AttendanceMonthHeatmapComponent } from './attendance-month-heatmap.component';
 import { AttendanceSummaryChartComponent } from '../../../../shared/components/attendance-summary-chart/attendance-summary-chart.component';
@@ -110,6 +114,7 @@ export class AttendanceHistoryComponent implements OnInit {
   private readonly athleteService = inject(AthleteService);
   private readonly attendanceService = inject(AttendanceService);
   private readonly academyService = inject(AcademyService);
+  private readonly languageService = inject(LanguageService);
   private readonly destroyRef = inject(DestroyRef);
 
   @ViewChild('notesPopover') private notesPopover?: Popover;
@@ -177,10 +182,15 @@ export class AttendanceHistoryComponent implements OnInit {
     // day against the schedule effective on THAT day, so May 31 uses
     // the May schedule and Jun 1 uses the June one even if both fall
     // inside the visible month.
+    const academy = this.academyService.academy();
     return countScheduledTrainingDays(
-      schedulesForAcademy(this.academyService.academy()),
+      schedulesForAcademy(academy),
       ym.year,
       ym.month,
+      new Date(),
+      // The same closures the grid paints as "not a training day" (#1766),
+      // so the ring never counts a day the cells call off.
+      academy?.closures ?? null,
     );
   });
 
@@ -244,7 +254,34 @@ export class AttendanceHistoryComponent implements OnInit {
     const date = new Date(ym.year, ym.month - 1, day);
     const set = this.trainingDaysOn(date);
     if (set === null) return false;
-    return set.has(date.getDay());
+    return set.has(date.getDay()) && this.closureOnDay(day) === null;
+  }
+
+  /**
+   * The closures that touch the visible month (#1766), their dates in words,
+   * listed under the legend. Text, not a tooltip: the cells are disabled
+   * buttons, which never open one, and a phone has no hover.
+   */
+  protected readonly closuresThisMonth = computed<
+    { id: number; range: string; label: string | null }[]
+  >(() => {
+    const ym = this.visible();
+    const locale = localeFor(this.languageService.currentLang());
+    const first = `${ym.year}-${String(ym.month).padStart(2, '0')}-01`;
+    const last = `${ym.year}-${String(ym.month).padStart(2, '0')}-${String(new Date(ym.year, ym.month, 0).getDate()).padStart(2, '0')}`;
+    return (this.academyService.academy()?.closures ?? [])
+      .filter((c) => c.starts_on <= last && c.ends_on >= first)
+      .map((c) => ({ id: c.id, range: formatClosureRange(c, locale), label: c.label }));
+  });
+
+  /**
+   * The closure a day of the visible month falls in (#1766). Such a day
+   * paints as "not a training day", with the closure's name as its tooltip,
+   * rather than earning a fifth legend state.
+   */
+  protected closureOnDay(day: number): AcademyClosure | null {
+    const ym = this.visible();
+    return closureOn(this.academyService.academy()?.closures, new Date(ym.year, ym.month - 1, day));
   }
 
   /**

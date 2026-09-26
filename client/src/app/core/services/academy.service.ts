@@ -278,6 +278,12 @@ export interface Academy {
    */
   schedules?: AcademySchedule[];
   /**
+   * The days the academy is shut (#1766), in date order. Every scheduled-day
+   * count leaves them out (`attendance-rate.ts`, and `ScheduledDays` on the
+   * server). Optional for fixture-compat.
+   */
+  closures?: AcademyClosure[];
+  /**
    * The training year (#1484), in three parts because three places need
    * different halves of it.
    *
@@ -320,6 +326,17 @@ export interface Academy {
    * second request. Optional for fixture-compat; absent reads as zero.
    */
   classes_count?: number;
+}
+
+/**
+ * Days the academy is shut (#1766): whole days, `ends_on` inclusive, equal to
+ * `starts_on` for one day. Both are `YYYY-MM-DD`.
+ */
+export interface AcademyClosure {
+  readonly id: number;
+  readonly starts_on: string;
+  readonly ends_on: string;
+  readonly label: string | null;
 }
 
 /**

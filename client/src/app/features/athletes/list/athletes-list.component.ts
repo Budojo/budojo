@@ -899,6 +899,8 @@ export class AthletesListComponent implements OnInit {
    * bridge twenty times.
    */
   private readonly schedules = computed(() => schedulesForAcademy(this.academyService.academy()));
+  /** The days the academy was shut (#1766): out of every denominator below. */
+  private readonly closures = computed(() => this.academyService.academy()?.closures ?? null);
 
   /**
    * Sessions the academy has actually held this month, capped at today.
@@ -907,7 +909,13 @@ export class AthletesListComponent implements OnInit {
    */
   private readonly scheduledThisMonth = computed<number | null>(() => {
     const now = new Date();
-    return countScheduledTrainingDays(this.schedules(), now.getFullYear(), now.getMonth() + 1);
+    return countScheduledTrainingDays(
+      this.schedules(),
+      now.getFullYear(),
+      now.getMonth() + 1,
+      now,
+      this.closures(),
+    );
   });
 
   /**
@@ -957,12 +965,13 @@ export class AthletesListComponent implements OnInit {
    */
   private readonly seasonDenominators = computed(() => ({
     schedules: this.schedules(),
+    closures: this.closures(),
     seasonStart: this.seasonStart(),
     cache: new Map<string, number | null>(),
   }));
 
   private scheduledSince(joinedAt: string): number | null {
-    const { schedules, seasonStart, cache } = this.seasonDenominators();
+    const { schedules, closures, seasonStart, cache } = this.seasonDenominators();
 
     const cached = cache.get(joinedAt);
     if (cached !== undefined) return cached;
@@ -971,7 +980,8 @@ export class AthletesListComponent implements OnInit {
     const joined = new Date(y, m - 1, d);
     const from = seasonStart !== null && seasonStart > joined ? seasonStart : joined;
 
-    const value = countScheduledTrainingDaysBetween(schedules, from, new Date());
+    const now = new Date();
+    const value = countScheduledTrainingDaysBetween(schedules, from, now, now, closures);
     cache.set(joinedAt, value);
     return value;
   }

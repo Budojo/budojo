@@ -157,6 +157,7 @@
             @let hasNotes = notedDates().has(key);
             @let training = isTrainingDay(day);
             @let upcoming = training && !attended && hasNotHappenedYet(day);
+            @let closure = closureOnDay(day);
             <!--
               A training day that has not happened yet is not a missed one
               (#1635, ATT-3). Both used to render as the same grey square, so
@@ -170,6 +171,7 @@
               [class.attendance-history__cell--upcoming]="upcoming"
               [class.attendance-history__cell--has-notes]="hasNotes"
               [disabled]="!hasNotes"
+              [attr.data-closure]="closure ? closure.id : null"
               [attr.data-cy]="
                 attended
                   ? 'attendance-day-attended'
@@ -183,7 +185,9 @@
                   ? 'athletes.detail.attendance.dayPresent'
                   : upcoming
                     ? 'athletes.detail.attendance.dayUpcoming'
-                    : 'athletes.detail.attendance.dayNotRecorded'
+                    : closure
+                      ? 'athletes.detail.attendance.dayClosed'
+                      : 'athletes.detail.attendance.dayNotRecorded'
                 ) | translate: { day: day }
               "
               (click)="hasNotes && openNotesFor($event, key)"
@@ -223,6 +227,22 @@
       {{ 'athletes.detail.attendance.legend.off' | translate }}
     </li>
   </ul>
+  @if (closuresThisMonth().length > 0) {
+    <!-- Why some "not a training day" cells fall on a training weekday (#1766). -->
+    <ul class="attendance-history__closures" data-cy="attendance-closures">
+      @for (c of closuresThisMonth(); track c.id) {
+        <li>
+          <i class="pi pi-lock" aria-hidden="true"></i>
+          {{
+            (c.label
+              ? 'athletes.detail.attendance.closedRangeLabel'
+              : 'athletes.detail.attendance.closedRange'
+            ) | translate: { range: c.range, label: c.label }
+          }}
+        </li>
+      }
+    </ul>
+  }
 
   <p-popover #notesPopover>
     @if (activeNotes(); as notes) {

@@ -1,6 +1,7 @@
-import type { AcademySchedule } from '../../core/services/academy.service';
+import type { AcademyClosure, AcademySchedule } from '../../core/services/academy.service';
 import {
   attendanceRate,
+  closureOn,
   countScheduledTrainingDays,
   countScheduledTrainingDaysBetween,
   schedulesForAcademy,
@@ -312,5 +313,40 @@ describe('countScheduledTrainingDaysBetween (#1455)', () => {
 
     // Tue 1, Thu 3, Tue 8, Thu 10 (old) + Mon 21, Mon 28 (new).
     expect(n).toBe(6);
+  });
+});
+
+describe('closures (#1766)', () => {
+  const monWedFri = singleSchedule([1, 3, 5]);
+  const summer: AcademyClosure[] = [
+    { id: 1, starts_on: '2026-08-10', ends_on: '2026-08-25', label: 'Chiusura estiva' },
+    // Inside the first: overlapping closures change nothing.
+    { id: 2, starts_on: '2026-08-15', ends_on: '2026-08-15', label: null },
+  ];
+  const afterAugust = new Date(2026, 8, 1);
+
+  it('leaves closed days out of a month', () => {
+    // August 2026 has 13 Mon/Wed/Fri; the 10th–25th closure removes 7.
+    expect(countScheduledTrainingDays(monWedFri, 2026, 8, afterAugust)).toBe(13);
+    expect(countScheduledTrainingDays(monWedFri, 2026, 8, afterAugust, summer)).toBe(6);
+  });
+
+  it('leaves closed days out of a range, and counts a range that is all closure as zero', () => {
+    expect(
+      countScheduledTrainingDaysBetween(
+        monWedFri,
+        new Date(2026, 7, 10),
+        new Date(2026, 7, 25),
+        afterAugust,
+        summer,
+      ),
+    ).toBe(0);
+  });
+
+  it('finds the closure a day falls in, ends inclusive', () => {
+    expect(closureOn(summer, new Date(2026, 7, 10))?.label).toBe('Chiusura estiva');
+    expect(closureOn(summer, new Date(2026, 7, 25))?.id).toBe(1);
+    expect(closureOn(summer, new Date(2026, 7, 26))).toBeNull();
+    expect(closureOn(undefined, new Date(2026, 7, 12))).toBeNull();
   });
 });

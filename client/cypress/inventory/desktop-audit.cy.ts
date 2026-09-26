@@ -68,6 +68,10 @@ const ACADEMY = {
   current_schedule: { id: 1, training_days: [1, 3, 5, 6], effective_from: '2026-09-01' },
   next_schedule: null,
   schedules: [{ id: 1, training_days: [1, 3, 5, 6], effective_from: '2026-09-01' }],
+  // The days it is shut (#1766). Only a future one here: it shows on the
+  // timetable and moves no count on any other screen. The screens that need
+  // one inside September stub their own.
+  closures: [{ id: 1, starts_on: '2026-12-24', ends_on: '2027-01-06', label: 'Vacanze di Natale' }],
   season_start_month: 9,
   season_start: '2026-09-01',
   season_label: '2026/27',
@@ -2586,6 +2590,27 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       cy.get('[data-cy="attendance-summary-chart"] canvas').should('have.length', 2);
     },
   });
+  // A closure inside the month (#1766): its days paint as not a training day,
+  // the ring leaves them out, and the legend says why.
+  screen('22-athlete-attendance-closure', '/dashboard/athletes/1/attendance', DETAIL_READY, {
+    stubs: () => {
+      cy.intercept('GET', '/api/v1/academy', {
+        statusCode: 200,
+        body: {
+          data: {
+            ...ACADEMY,
+            closures: [
+              { id: 2, starts_on: '2026-09-07', ends_on: '2026-09-09', label: 'Seminario' },
+            ],
+          },
+        },
+      });
+    },
+    act: () => {
+      cy.get('[data-cy="attendance-summary-chart"] canvas').should('have.length', 2);
+      cy.get('[data-cy="attendance-closures"]').scrollIntoView().should('be.visible');
+    },
+  });
   screen('22-athlete-payments', '/dashboard/athletes/1/payments', DETAIL_READY);
   screen('22-athlete-payments-carnet-sell', '/dashboard/athletes/1/payments', DETAIL_READY, {
     act: () => {
@@ -2712,6 +2737,27 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
 
   // ── 30. Tonight's check-in ─────────────────────────────────────────────
   screen('30-attendance', '/dashboard/attendance', '[data-cy="attendance-class-picker"]');
+  // Shut today (#1766): the check-in lands on the last session held and says why.
+  screen(
+    '30-attendance-closed-today',
+    '/dashboard/attendance',
+    '[data-cy="attendance-no-class-banner"]',
+    {
+      stubs: () => {
+        cy.intercept('GET', '/api/v1/academy', {
+          statusCode: 200,
+          body: {
+            data: {
+              ...ACADEMY,
+              closures: [
+                { id: 3, starts_on: '2026-09-14', ends_on: '2026-09-15', label: 'Seminario' },
+              ],
+            },
+          },
+        });
+      },
+    },
+  );
   screen(
     '30-attendance-lesson-sheet',
     '/dashboard/attendance',

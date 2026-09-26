@@ -261,10 +261,14 @@ export class MonthlySummaryComponent implements OnInit {
     const ym = this.visible();
     // Schedule-history aware (#1094) — see attendance-history.component
     // for the segment-math rationale.
+    const academy = this.academyService.academy();
     return countScheduledTrainingDays(
-      schedulesForAcademy(this.academyService.academy()),
+      schedulesForAcademy(academy),
       ym.year,
       ym.month,
+      new Date(),
+      // Shut days are nobody's absence (#1766).
+      academy?.closures ?? null,
     );
   });
 

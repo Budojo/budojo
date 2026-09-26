@@ -176,6 +176,39 @@ describe('AttendanceHistoryComponent', () => {
     httpMock.verify();
   });
 
+  it('leaves closures out of the ring and paints them as not a training day (#1766)', () => {
+    const httpMock = setupTestBed();
+    // Mon/Wed/Fri April, shut Mon 13 – Fri 17: 11 sessions less three.
+    TestBed.inject(AcademyService).academy.set({
+      id: 1,
+      name: 'Test',
+      slug: 'test',
+      address: null,
+      logo_url: null,
+      training_days: [1, 3, 5],
+      closures: [{ id: 7, starts_on: '2026-04-13', ends_on: '2026-04-17', label: 'Pasqua' }],
+    });
+
+    const fixture = TestBed.createComponent(AttendanceHistoryComponent);
+    fixture.detectChanges();
+    httpMock.expectOne(`/api/v1/athletes/${ATHLETE_ID}`).flush({ data: makeAthlete() });
+    httpMock
+      .expectOne(`/api/v1/athletes/${ATHLETE_ID}/attendance?from=2026-04-01&to=2026-04-30`)
+      .flush({ data: [] });
+    fixture.detectChanges();
+
+    const root = fixture.nativeElement as HTMLElement;
+    expect(fixture.componentInstance['scheduledCount']()).toBe(8);
+    expect(fixture.componentInstance['isTrainingDay'](15)).toBe(false);
+    expect(fixture.componentInstance['isTrainingDay'](20)).toBe(true);
+    const closedCell = root.querySelector('[data-day="15"]');
+    expect(closedCell?.getAttribute('data-closure')).toBe('7');
+    expect(closedCell?.getAttribute('aria-label')).toBe('15 — academy closed');
+    expect(root.querySelector('[data-cy="attendance-closures"]')?.textContent).toContain('Pasqua');
+    flushSummary(httpMock);
+    httpMock.verify();
+  });
+
   it('returns scheduledCount=null when the academy has no training_days configured', () => {
     const httpMock = setupTestBed();
     TestBed.inject(AcademyService).academy.set({

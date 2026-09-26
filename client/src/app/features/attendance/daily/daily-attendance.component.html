@@ -63,7 +63,14 @@
     <div class="attendance__no-class-banner" role="status" data-cy="attendance-no-class-banner">
       <i class="pi pi-info-circle" aria-hidden="true"></i>
       <p>
-        {{ 'attendance.daily.noClassToday' | translate: { date: selectedDateLabel() } }}
+        @if (closedToday(); as closure) {
+          {{
+            (closure.label ? 'attendance.daily.closedTodayLabel' : 'attendance.daily.closedToday')
+              | translate: { date: selectedDateLabel(), label: closure.label }
+          }}
+        } @else {
+          {{ 'attendance.daily.noClassToday' | translate: { date: selectedDateLabel() } }}
+        }
       </p>
     </div>
   }

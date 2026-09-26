@@ -135,6 +135,11 @@
         }
       </ol>
     }
+
+    @if (!loading()) {
+      <!-- The days it is shut (#1766): the other half of "when do we train". -->
+      <app-academy-closures />
+    }
   </div>
 </section>
 
