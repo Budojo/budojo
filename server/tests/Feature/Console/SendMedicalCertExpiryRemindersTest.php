@@ -10,8 +10,10 @@ use App\Models\Athlete;
 use App\Models\Document;
 use App\Models\NotificationLog;
 use App\Models\User;
+use App\Notifications\AthleteMedicalCertExpiringNotification;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Notification;
 
 beforeEach(function (): void {
     Mail::fake();
@@ -296,4 +298,32 @@ it('does not chase a certificate for an athlete who stopped training', function 
     \Artisan::call('budojo:send-medical-cert-expiry-reminders');
 
     Mail::assertNothingQueued();
+});
+
+it('does not send the owner a second, personal reminder about their own certificate (#1913)', function (): void {
+    // The owner's own row is linked to the owner: after the digest named the
+    // certificate, the athlete-side "your certificate expires" landed in the
+    // same inbox about the same document.
+    Notification::fake();
+    $academy = makeAcademy();
+    $self = Athlete::factory()->selfFor($academy->owner)->create(['academy_id' => $academy->id]);
+    Document::factory()->create([
+        'athlete_id' => $self->id,
+        'type' => DocumentType::MedicalCertificate,
+        'expires_at' => Carbon::today()->addDays(7)->toDateString(),
+    ]);
+    // The positive control: an athlete with an account of their own is still
+    // told, so the silence above is the owner rule and not a dead path.
+    $theirUser = User::factory()->create();
+    $linked = Athlete::factory()->create(['academy_id' => $academy->id, 'user_id' => $theirUser->id]);
+    Document::factory()->create([
+        'athlete_id' => $linked->id,
+        'type' => DocumentType::MedicalCertificate,
+        'expires_at' => Carbon::today()->addDays(7)->toDateString(),
+    ]);
+
+    $this->artisan(SendMedicalCertExpiryReminders::class)->assertSuccessful();
+
+    Notification::assertSentTo($theirUser, AthleteMedicalCertExpiringNotification::class);
+    Notification::assertNotSentTo($academy->owner, AthleteMedicalCertExpiringNotification::class);
 });

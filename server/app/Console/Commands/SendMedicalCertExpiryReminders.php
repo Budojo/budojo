@@ -220,15 +220,17 @@ class SendMedicalCertExpiryReminders extends Command
 
     /**
      * Athlete-side notification path (#729 B1). Skipped when the
-     * athlete row has no linked user_id (invite-pending) or the user
-     * opted out of `athlete_medical_cert_expiring`. Failures don't
+     * athlete row has no linked user_id (invite-pending), for the owner's
+     * own row (#1913: it is linked to the owner, whose digest has just
+     * named the same certificate), or when the user opted out of
+     * `athlete_medical_cert_expiring`. Failures don't
      * stop the digest send — same best-effort posture as the rest of
      * the M5 dispatch surfaces (Log::warning + continue).
      */
     private function notifyAthlete(Document $document, Carbon $today): void
     {
         $athlete = $document->athlete;
-        if ($athlete === null) {
+        if ($athlete === null || $athlete->is_self) {
             return;
         }
         $user = $athlete->user;

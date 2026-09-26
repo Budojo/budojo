@@ -57,7 +57,8 @@ class OwnerUnpaidAthletesDigestNotification extends Notification
                 ->map(static fn (Athlete $athlete): string => trim($athlete->first_name . ' ' . $athlete->last_name))
                 ->take(3)
                 ->implode(', ') . ($count > 3 ? \sprintf(' and %d more', $count - 3) : ''),
-            'link' => '/dashboard/athletes?paid=0',
+            // The roster reads `paid=yes|no`: `0` opened everybody (#1913).
+            'link' => '/dashboard/athletes?paid=no',
             'kind' => 'unpaid_athletes_digest',
             'academy_id' => $this->academy->id,
             'year' => $this->year,
