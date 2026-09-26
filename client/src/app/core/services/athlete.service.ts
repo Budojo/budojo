@@ -565,13 +565,14 @@ export class AthleteService {
    */
   importAthletes(
     file: File,
-    options: { dryRun: boolean; mapping?: Record<string, string> } = { dryRun: true },
+    options: { dryRun: boolean; mapping?: Partial<Record<string, string>> } = { dryRun: true },
   ): Observable<AthleteImportReport> {
     const form = new FormData();
     form.append('file', file);
     form.append('validate_only', options.dryRun ? '1' : '0');
 
     for (const [field, column] of Object.entries(options.mapping ?? {})) {
+      if (column === undefined) continue;
       form.append(`mapping[${field}]`, column);
     }
 

@@ -78,7 +78,6 @@ describe('First-run onboarding checklist (#424, on Today since #1755)', () => {
           positions: [],
           missing: [],
           taught: [],
-          timeline: [],
         },
       },
     });

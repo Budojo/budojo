@@ -85,7 +85,8 @@ export class AthleteImportComponent {
   protected readonly columns = signal<string[]>([]);
 
   /** field → column, edited in place. Seeded from the server's guess. */
-  protected readonly mapping = signal<Record<string, string>>({});
+  /** Field → column. Partial: a field the file has no column for is absent, not `''`. */
+  protected readonly mapping = signal<Partial<Record<string, string>>>({});
 
   protected readonly requiredFields = REQUIRED_FIELDS;
 
