@@ -1,8 +1,9 @@
 import { randomBytes as nodeRandomBytes } from 'node:crypto';
-import { existsSync } from 'node:fs';
+import { existsSync, renameSync, rmSync } from 'node:fs';
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
+import { retryWhileBusy } from './fs-retry.js';
 import { runPhp as execPhp } from './php-exec.js';
 
 /**
@@ -191,6 +192,100 @@ export function planMigration(input: { databaseBytes: number; pendingExitCode: n
   return { migrate: true, snapshot: true };
 }
 
+// --- an interrupted restore --------------------------------------------------
+
+export type RecoveryStep = { kind: 'rename'; from: string; to: string } | { kind: 'remove'; path: string };
+
+export interface RecoveryPlan {
+  /**
+   * `rolled-back` — the swap stopped before the restored database came in, so
+   * the owner's own is put back. `rolled-forward` — the restored database was
+   * already in and only `storage` was left, so the swap is finished.
+   */
+  situation: 'none' | 'rolled-back' | 'rolled-forward';
+  steps: RecoveryStep[];
+}
+
+/** What steps aside with the database: a -wal can hold writes the main file does not have yet. */
+const DATABASE_SIBLINGS = ['', '-wal', '-shm', '-journal'];
+
+/**
+ * What a restore interrupted mid-swap left behind, and how to put it back
+ * together (#1919).
+ *
+ * The swap (#1909) is renames: the live database and its siblings step aside
+ * as `.previous`, the staged `.restoring` copy is renamed in, then `storage`
+ * does the same. A crash between two renames used to leave no `budojo.sqlite`
+ * at all — and the next boot ran first-run setup on an empty one, while the
+ * owner's data, possibly newer than any backup, sat beside it unnoticed.
+ *
+ * - **No database, a `.previous` one:** the crash came before the restored
+ *   database was in. Everything that stepped aside is put back, and the staged
+ *   copies go: the restore never finished, and the archive it came from is
+ *   still there.
+ * - **A database, a `.previous` one, a staged `storage` but no staged
+ *   database:** the restored database was in and `storage` was not. The staged
+ *   storage is complete — every copy is made before the first rename — so the
+ *   swap is finished rather than undone.
+ * - **Anything else is left alone.** A `.previous` beside a database is what a
+ *   finished restore could not tidy, and the next restore sets it aside; a
+ *   staged database still there means the crash came while copying, and a copy
+ *   that may be cut short is never rolled forward.
+ *
+ * Whatever the files, the plan only ever renames onto a free name and removes
+ * nothing but a staged `.restoring` copy: the owner's data is never deleted,
+ * and never overwritten. `exists` is injected so the decision is testable
+ * against every combination of files.
+ */
+export function planRecovery(
+  layout: Pick<DataLayout, 'databasePath' | 'storageDir'>,
+  exists: (file: string) => boolean,
+): RecoveryPlan {
+  const db = layout.databasePath;
+  const storage = layout.storageDir;
+  const stagedDb = `${db}.restoring`;
+  const stagedStorage = `${storage}.restoring`;
+  const previousStorage = `${storage}.previous`;
+
+  if (!exists(db)) {
+    if (!exists(`${db}.previous`)) {
+      return { situation: 'none', steps: [] };
+    }
+
+    const steps: RecoveryStep[] = DATABASE_SIBLINGS.filter(
+      (sibling) => exists(`${db}.previous${sibling}`) && !exists(db + sibling),
+    ).map((sibling) => ({ kind: 'rename', from: `${db}.previous${sibling}`, to: db + sibling }));
+    if (exists(previousStorage) && !exists(storage)) {
+      steps.push({ kind: 'rename', from: previousStorage, to: storage });
+    }
+    for (const staged of [stagedDb, stagedStorage]) {
+      if (exists(staged)) steps.push({ kind: 'remove', path: staged });
+    }
+
+    return { situation: 'rolled-back', steps };
+  }
+
+  const databaseSwappedIn = exists(`${db}.previous`) && !exists(stagedDb);
+  if (!databaseSwappedIn || !exists(stagedStorage)) {
+    return { situation: 'none', steps: [] };
+  }
+
+  if (!exists(storage)) {
+    return { situation: 'rolled-forward', steps: [{ kind: 'rename', from: stagedStorage, to: storage }] };
+  }
+  if (!exists(previousStorage)) {
+    return {
+      situation: 'rolled-forward',
+      steps: [
+        { kind: 'rename', from: storage, to: previousStorage },
+        { kind: 'rename', from: stagedStorage, to: storage },
+      ],
+    };
+  }
+
+  return { situation: 'none', steps: [] };
+}
+
 /** `pre-migration-YYYYMMDD-HHMMSS.sqlite`, sortable and unambiguous. */
 export function snapshotFileName(now: Date): string {
   const pad = (n: number): string => String(n).padStart(2, '0');
@@ -245,6 +340,10 @@ export async function runBootstrap(options: BootstrapOptions): Promise<Bootstrap
   const now = options.now ?? (() => new Date());
 
   await mkdir(layout.root, { recursive: true });
+  // First, before anything looks at the files: the directories below would
+  // create an empty `storage/` over the one an interrupted restore set aside,
+  // and an empty database would be first-run setup over the owner's (#1919).
+  await recoverInterruptedRestore(layout, log);
   await Promise.all(
     [layout.logsDir, layout.backupsDir, layout.tempDir, ...storageSubdirs(layout.storageDir)].map((dir) =>
       mkdir(dir, { recursive: true }),
@@ -339,6 +438,41 @@ export async function runBootstrap(options: BootstrapOptions): Promise<Bootstrap
 
   return { secrets, firstRun, migrated: plan.migrate, snapshotPath };
 }
+
+/**
+ * Carries out {@link planRecovery} on the real files. The renames retry while
+ * the antivirus holds a file for a moment, as the swap's own do; a step that
+ * still fails stops the boot with the error, rather than carrying on into
+ * first-run setup beside the owner's data.
+ */
+export async function recoverInterruptedRestore(
+  layout: Pick<DataLayout, 'databasePath' | 'storageDir'>,
+  log: (line: string) => void,
+): Promise<RecoveryPlan> {
+  const plan = planRecovery(layout, existsSync);
+  if (plan.situation === 'none') {
+    return plan;
+  }
+
+  log(
+    plan.situation === 'rolled-back'
+      ? '[bootstrap] a restore was interrupted before the restored database was in: putting the previous one back'
+      : '[bootstrap] a restore was interrupted after the restored database was in: finishing the swap of storage',
+  );
+  for (const step of plan.steps) {
+    if (step.kind === 'rename') {
+      await retryWhileBusy(() => renameSync(step.from, step.to), RECOVERY_RETRY);
+      log(`[bootstrap]   ${path.basename(step.from)} -> ${path.basename(step.to)}`);
+    } else {
+      rmSync(step.path, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+      log(`[bootstrap]   removed ${path.basename(step.path)}`);
+    }
+  }
+
+  return plan;
+}
+
+const RECOVERY_RETRY = { attempts: 10, delayMs: 100 };
 
 async function readState(file: string): Promise<BootstrapState | null> {
   try {
