@@ -50,6 +50,25 @@ function pickAttendedDay(): string {
 
 describe('attendance history tab', () => {
   beforeEach(() => {
+    // Registered first, so the specific stubs below win: an unstubbed read
+    // otherwise reaches no server, 401s and signs the test out.
+    cy.intercept('GET', '/api/v1/**', { statusCode: 200, body: { data: [] } });
+    // The card and the ring both ask the server (#1769); this academy has no
+    // schedule, so neither has a denominator and the ring shows the count.
+    cy.intercept('GET', '/api/v1/athletes/42/attendance/summary*', {
+      statusCode: 200,
+      body: {
+        data: {
+          range_days: 90,
+          range_start: '2026-01-01',
+          range_end: '2026-03-31',
+          attended_count: 1,
+          expected_count: null,
+          rate: null,
+          series: [],
+        },
+      },
+    });
     cy.intercept('GET', '/api/v1/academy', ACADEMY_OK).as('academy');
     cy.intercept('GET', '/api/v1/documents/expiring*', { statusCode: 200, body: { data: [] } });
     cy.intercept('GET', '/api/v1/athletes/42', ATHLETE_OK).as('athlete');

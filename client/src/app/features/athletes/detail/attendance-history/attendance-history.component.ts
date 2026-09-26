@@ -22,12 +22,14 @@ import { AcademyClosure, AcademyService } from '../../../../core/services/academ
 import { Athlete, AthleteService } from '../../../../core/services/athlete.service';
 import { AttendanceRecord, AttendanceService } from '../../../../core/services/attendance.service';
 import {
-  attendanceRate,
+  AttendanceSummary,
+  AttendanceSummaryService,
+} from '../../../../core/services/attendance-summary.service';
+import {
   closureOn,
-  countScheduledTrainingDays,
   schedulesForAcademy,
   scheduleForDate,
-} from '../../../../shared/utils/attendance-rate';
+} from '../../../../shared/utils/training-days';
 import { formatClosureRange } from '../../../../shared/utils/closure-range';
 import { localeFor } from '../../../../shared/utils/locale';
 import { LanguageService } from '../../../../core/services/language.service';
@@ -114,6 +116,7 @@ export class AttendanceHistoryComponent implements OnInit {
   private readonly athleteService = inject(AthleteService);
   private readonly attendanceService = inject(AttendanceService);
   private readonly academyService = inject(AcademyService);
+  private readonly summaryService = inject(AttendanceSummaryService);
   private readonly languageService = inject(LanguageService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -170,29 +173,20 @@ export class AttendanceHistoryComponent implements OnInit {
   });
 
   /**
-   * Sessions actually held by the academy in the visible month (capped at
-   * today). The denominator for the attendance percentage. `null` when the
-   * academy hasn't configured `training_days` — the template falls back to
-   * the raw "X days this month" display in that case (#106).
+   * The server's answer for the visible month (#1769): the same rule as the
+   * card above, over the month the ring shows — scheduled days, closures
+   * out, up to today, from the day the athlete joined. Null until it arrives
+   * or when it failed; the ring then shows the bare count.
    */
-  protected readonly scheduledCount = computed(() => {
-    const ym = this.visible();
-    // Schedule-history aware (#1094): a mid-month change splits the
-    // denominator across the two segments. The helper resolves each
-    // day against the schedule effective on THAT day, so May 31 uses
-    // the May schedule and Jun 1 uses the June one even if both fall
-    // inside the visible month.
-    const academy = this.academyService.academy();
-    return countScheduledTrainingDays(
-      schedulesForAcademy(academy),
-      ym.year,
-      ym.month,
-      new Date(),
-      // The same closures the grid paints as "not a training day" (#1766),
-      // so the ring never counts a day the cells call off.
-      academy?.closures ?? null,
-    );
-  });
+  protected readonly monthSummary = signal<AttendanceSummary | null>(null);
+
+  /** The ring's denominator, from the server. Null: no schedule configured. */
+  protected readonly scheduledCount = computed(() => this.monthSummary()?.expected_count ?? null);
+
+  /** The ring's numerator, from the same answer as its denominator. */
+  protected readonly ringAttended = computed(
+    () => this.monthSummary()?.attended_count ?? this.attendedCount(),
+  );
 
   /**
    * The schedule history, resolved once per academy change.
@@ -298,10 +292,8 @@ export class AttendanceHistoryComponent implements OnInit {
     return ym.year === now.getFullYear() && ym.month === now.getMonth() + 1;
   });
 
-  /** Ratio of attended-to-scheduled, 0..1 (or > 1 for off-schedule sessions). */
-  protected readonly rate = computed(() =>
-    attendanceRate(this.attendedCount(), this.scheduledCount()),
-  );
+  /** Ratio of attended-to-scheduled, 0..1 (or > 1 for off-schedule sessions), from the server. */
+  protected readonly rate = computed(() => this.monthSummary()?.rate ?? null);
 
   /** Whole-percent integer for the eyebrow display (e.g. 67). `null` when no rate. */
   protected readonly ratePercent = computed(() => {
@@ -417,10 +409,11 @@ export class AttendanceHistoryComponent implements OnInit {
     this.loading.set(true);
 
     const epoch = ++this.loadEpoch;
-    let pending = 2;
+    let pending = 3;
     const settle = () => {
       if (--pending === 0) this.loading.set(false);
     };
+    this.loadMonthSummary(athleteId, epoch, settle);
 
     this.athleteService
       .get(athleteId)
@@ -457,6 +450,11 @@ export class AttendanceHistoryComponent implements OnInit {
 
     const epoch = ++this.loadEpoch;
     this.loading.set(true);
+    let pending = 2;
+    const settle = () => {
+      if (--pending === 0 && epoch === this.loadEpoch) this.loading.set(false);
+    };
+    this.loadMonthSummary(a.id, epoch, settle);
     this.attendanceService
       .getAthleteHistory(a.id, {
         from: firstOfMonth(this.visible()),
@@ -464,13 +462,27 @@ export class AttendanceHistoryComponent implements OnInit {
       })
       .pipe(
         catchError(() => of<AttendanceRecord[]>([])),
-        finalize(() => {
-          if (epoch === this.loadEpoch) this.loading.set(false);
-        }),
+        finalize(settle),
       )
       .subscribe((records) => {
         if (epoch !== this.loadEpoch) return;
         this.records.set(records);
+      });
+  }
+
+  /** The ring's numbers for the visible month, from the server (#1769). */
+  private loadMonthSummary(athleteId: number, epoch: number, settle: () => void): void {
+    this.monthSummary.set(null);
+    const ym = this.visible();
+    this.summaryService
+      .fetchMonth(athleteId, `${ym.year}-${String(ym.month).padStart(2, '0')}`)
+      .pipe(
+        catchError(() => of<AttendanceSummary | null>(null)),
+        finalize(settle),
+      )
+      .subscribe((summary) => {
+        if (epoch !== this.loadEpoch) return;
+        this.monthSummary.set(summary);
       });
   }
 }

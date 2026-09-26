@@ -1357,14 +1357,15 @@
       "days90": "90d",
       "year1": "1y"
     },
-    "attendedOfExpected": "{{attended}} of {{expected}} lessons held",
+    "attendedOfExpected": "{{attended}} of {{expected}} scheduled sessions",
     "legend": {
       "attended": "Attended",
       "missed": "Missed"
     },
     "empty": {
-      "title": "No lessons in this window yet",
-      "hint": "Your academy hasn't recorded any training session in the selected range."
+      "title": "No scheduled sessions in this window",
+      "hint": "The rate counts the days the academy was scheduled to train, and none fell in this range.",
+      "noScheduleHint": "The academy has no training days set yet, so there is nothing to measure against."
     },
     "error": {
       "title": "Couldn't load the chart",

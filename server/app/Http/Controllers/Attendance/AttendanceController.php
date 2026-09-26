@@ -25,6 +25,7 @@ use App\Models\AcademyClass;
 use App\Models\Athlete;
 use App\Models\AttendanceRecord;
 use App\Models\User;
+use App\Support\AttendanceSummaryCache;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -33,14 +34,6 @@ use Illuminate\Support\Facades\Cache;
 
 class AttendanceController extends Controller
 {
-    /**
-     * Cache TTL for the per-athlete summary endpoint (#893). 5 min is the
-     * sweet spot between freshness (instructor marks attendance mid-class
-     * and wants the chart to reflect it on the next reload) and load
-     * (chart re-fetch on every page nav is fine to serve from cache).
-     */
-    private const ATHLETE_SUMMARY_TTL_SECONDS = 300;
-
     public function __construct(
         private readonly MarkAttendanceAction $markAction,
         private readonly DeleteAttendanceAction $deleteAction,
@@ -189,27 +182,29 @@ class AttendanceController extends Controller
     }
 
     /**
-     * Per-athlete attendance summary over the last N days (#893). Cached
-     * for 5 min per (athlete_id, range) — chart is read-heavy and the
-     * underlying lesson-day pivot is stable in the short term.
+     * Per-athlete attendance summary over the last N days (#893) or a
+     * calendar month (#1769). Cached for 5 min per athlete and window, under
+     * a version the academy's closures and schedule bump
+     * (`AttendanceSummaryCache`), so a change to the denominator is read at
+     * once.
      */
     public function athleteSummary(AthleteAttendanceSummaryRequest $request, Athlete $athlete): JsonResponse
     {
         // Authorization (caller owns this athlete) is enforced by the
         // FormRequest's authorize() — Laravel returns 403 before we get
         // here on a foreign-academy athlete.
-        // `validated('range')` is mixed at the PHPStan view; the in:30,90,365
-        // rule narrows it at runtime, but we re-narrow with a regex + cast
-        // so the type stays explicit.
-        $rangeInput = $request->validated('range');
-        $range = is_numeric($rangeInput) ? (int) $rangeInput : 90;
-
-        $cacheKey = \sprintf('attendance.summary.athlete.%d.range.%d', $athlete->id, $range);
+        // A calendar month for the attendance tab's ring, or the last N days
+        // for its card (#1769): one question, two windows.
+        $month = $request->month();
+        $today = CarbonImmutable::today();
+        [$window, $from, $to] = $month !== null
+            ? ['month.' . $month->format('Y-m'), $month, $month->endOfMonth()]
+            : ['range.' . $request->rangeDays(), $today->subDays($request->rangeDays() - 1), $today];
 
         $payload = Cache::remember(
-            $cacheKey,
-            self::ATHLETE_SUMMARY_TTL_SECONDS,
-            fn (): array => $this->athleteSummaryAction->execute($athlete, $range),
+            AttendanceSummaryCache::key($athlete, $window),
+            AttendanceSummaryCache::TTL_SECONDS,
+            fn (): array => $this->athleteSummaryAction->execute($athlete, $from, $to),
         );
 
         return response()->json(['data' => $payload]);

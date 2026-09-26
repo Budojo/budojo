@@ -6374,23 +6374,41 @@ paths:
   /athletes/{athlete}/attendance/summary:
     get:
       tags: [attendance]
-      summary: Per-athlete attendance summary over the last N days
+      summary: Per-athlete attendance summary over the last N days, or a month
       description: |
-        Aggregate attendance % for one athlete over the trailing window.
-        `range` is one of {30, 90, 365}; default 90.
+        How often one athlete trained in a window: the last `range` days (one
+        of {30, 90, 365}; default 90) for the attendance card, or a calendar
+        `month` (`YYYY-MM`) for the attendance tab's ring (#1769). One or the
+        other, never both.
 
-        **Denominator semantic.** `expected_count` is the count of *realized
-        lesson days* in the window — distinct dates where the academy has at
-        least one attendance row AND the athlete was already on the roster
-        (`joined_at <= date`). This avoids penalizing the athlete for
-        cancellations / holidays / pre-roster days.
+        **Denominator semantic (#1769).** `expected_count` is the number of
+        days the academy was **scheduled to train** in the window: each day
+        resolved against the schedule in force on it, closures left out,
+        nothing after today (`App\Support\ScheduledDays`). It is the rule
+        every attendance number in the app shares. It used to be "realized
+        lesson days", every date anyone in the academy was checked in, which
+        made one athlete's denominator depend on other people: an open mat on
+        a Sunday added a day everybody else had missed, and a session nobody
+        registered vanished from everyone's count. A registered-late session
+        now counts against everyone, which is the trade that makes the number
+        comparable month to month.
 
-        `rate = attended_count / expected_count`, rounded to 4 decimal places.
-        When the academy held no lessons in the window (`expected_count = 0`),
-        `rate` is `null`. The `series` array exposes one entry per realized
-        lesson day, oldest first — sparkline-ready.
+        **The window** starts at its first day, or later at the athlete's
+        `joined_at`, unless they trained before joining (trial sessions
+        entered after registering): then at that first presence. The same
+        start as the month summary and the roster.
 
-        Response is cached for 5 minutes per (athlete_id, range).
+        `attended_count` is every distinct day they trained in the window,
+        scheduled or not. `rate = attended_count / expected_count`, rounded to
+        4 decimal places; an off-schedule session can take it past 1, and it
+        is not clamped. `expected_count` and `rate` are `null` when no
+        schedule was ever configured; `rate` is also `null` when
+        `expected_count` is 0. `series` has one entry per scheduled day, plus
+        any other day the athlete trained, oldest first.
+
+        Cached for 5 minutes per athlete and window, under a version the
+        academy's closures and schedule bump, so a change to the denominator
+        is read at once.
       operationId: attendanceAthleteSummary
       parameters:
         - name: athlete
@@ -6404,6 +6422,11 @@ paths:
             type: integer
             enum: [30, 90, 365]
             default: 90
+        - name: month
+          in: query
+          required: false
+          description: A calendar month instead of a range (#1769); prohibited together with `range`.
+          schema: { type: string, pattern: '^\d{4}-(0[1-9]|1[0-2])$' }
       responses:
         '200':
           description: Attendance summary payload.
@@ -6417,19 +6440,19 @@ paths:
                     type: object
                     required: [range_days, range_start, range_end, attended_count, expected_count, rate, series]
                     properties:
-                      range_days: { type: integer, enum: [30, 90, 365] }
+                      range_days: { type: integer, minimum: 1, description: '30, 90 or 365, or the days in the month.' }
                       range_start: { type: string, format: date }
-                      range_end: { type: string, format: date }
+                      range_end: { type: string, format: date, description: The window's last day; a month's last day even while it is running. }
                       attended_count: { type: integer, minimum: 0 }
-                      expected_count: { type: integer, minimum: 0 }
+                      expected_count: { type: integer, minimum: 0, nullable: true, description: Scheduled days in the window; null when no schedule was ever configured. }
                       rate:
                         type: number
                         nullable: true
                         minimum: 0
-                        maximum: 1
                         description: |
-                          `null` when `expected_count` is 0 (no realized lesson
-                          days in the window); a 0..1 fraction otherwise.
+                          `null` when there is no denominator or it is 0;
+                          otherwise attended over scheduled, which an
+                          off-schedule session can take past 1 (not clamped).
                       series:
                         type: array
                         items:

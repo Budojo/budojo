@@ -21,7 +21,8 @@ use Illuminate\Database\Eloquent\Collection;
  *
  * **Counted in sessions the academy held, not in weeks.** The denominator is
  * the academy's realised session dates — every distinct day anyone was checked
- * in — the same primitive `GetAthleteAttendanceSummaryAction` divides by. A
+ * in. Deliberately not the scheduled days every other rate divides by since
+ * #1769: this asks about a person's habit against what was actually held. A
  * closure contributes nothing to it, so a closed August does not halve every
  * baseline and flag the whole roster in September. Per athlete the list is
  * clipped at `joined_at`: nobody misses what predates them. Tonight counts

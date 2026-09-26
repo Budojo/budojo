@@ -38,7 +38,10 @@
         {{ 'attendanceSummary.empty.title' | translate }}
       </p>
       <p class="attendance-chart__empty-hint">
-        {{ 'attendanceSummary.empty.hint' | translate }}
+        {{
+          (noSchedule() ? 'attendanceSummary.empty.noScheduleHint' : 'attendanceSummary.empty.hint')
+            | translate
+        }}
       </p>
     </div>
   } @else {

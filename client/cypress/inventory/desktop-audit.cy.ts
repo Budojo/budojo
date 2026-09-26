@@ -72,13 +72,19 @@ const ACADEMY = {
   carnet_entry_unit: 'lesson',
   syllabus_topics_count: 31,
   training_days: [1, 3, 5, 6],
-  current_schedule: { id: 1, training_days: [1, 3, 5, 6], effective_from: '2026-09-01' },
+  // From the season before: the 90-day card reaches back into the summer, and
+  // since #1769 its denominator is the scheduled days there.
+  current_schedule: { id: 1, training_days: [1, 3, 5, 6], effective_from: '2025-09-01' },
   next_schedule: null,
-  schedules: [{ id: 1, training_days: [1, 3, 5, 6], effective_from: '2026-09-01' }],
-  // The days it is shut (#1766). Only a future one here: it shows on the
-  // timetable and moves no count on any other screen. The screens that need
-  // one inside September stub their own.
-  closures: [{ id: 1, starts_on: '2026-12-24', ends_on: '2027-01-06', label: 'Vacanze di Natale' }],
+  schedules: [{ id: 1, training_days: [1, 3, 5, 6], effective_from: '2025-09-01' }],
+  // The days it is shut (#1766): August, which the 90-day card and DAILY have
+  // always drawn closed, and a Christmas still to come for the timetable.
+  // Neither touches September, so no count on the other screens moves. The
+  // screens that need one inside September stub their own.
+  closures: [
+    { id: 2, starts_on: '2026-08-01', ends_on: '2026-08-31', label: 'Chiusura estiva' },
+    { id: 1, starts_on: '2026-12-24', ends_on: '2027-01-06', label: 'Vacanze di Natale' },
+  ],
   season_start_month: 9,
   season_start: '2026-09-01',
   season_label: '2026/27',
@@ -1832,9 +1838,30 @@ function seed(): void {
     statusCode: 200,
     body: { data: ATTENDANCE_ONE },
   });
-  cy.intercept('GET', '/api/v1/athletes/*/attendance/summary*', {
-    statusCode: 200,
-    body: { data: ATHLETE_SUMMARY },
+  // The card asks for 30/90/365 days, the ring for the visible month (#1769):
+  // Giulia's September so far is 5 of 8 sessions (ATTENDANCE_ONE against
+  // Mon/Wed/Fri/Sat), and August was closed, so it has no denominator.
+  cy.intercept('GET', '/api/v1/athletes/*/attendance/summary*', (req) => {
+    const month = req.query['month'];
+    if (typeof month !== 'string') {
+      req.reply({ statusCode: 200, body: { data: ATHLETE_SUMMARY } });
+      return;
+    }
+    const september = month === '2026-09';
+    req.reply({
+      statusCode: 200,
+      body: {
+        data: {
+          range_days: september ? 30 : 31,
+          range_start: `${month}-01`,
+          range_end: `${month}-${september ? 30 : 31}`,
+          attended_count: september ? 5 : month === '2026-08' ? 1 : 0,
+          expected_count: september ? 8 : 0,
+          rate: september ? 0.625 : null,
+          series: [],
+        },
+      },
+    });
   });
   cy.intercept('GET', '/api/v1/athletes/*/payments*', {
     statusCode: 200,

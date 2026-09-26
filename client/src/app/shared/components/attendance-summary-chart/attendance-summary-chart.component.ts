@@ -90,8 +90,14 @@ export class AttendanceSummaryChartComponent {
 
   protected readonly hasData = computed<boolean>(() => {
     const s = this.summary();
-    return s !== null && s.expected_count > 0;
+    return s !== null && s.expected_count !== null && s.expected_count > 0;
   });
+
+  /**
+   * Which empty answer is true (#1769): no training days set at all, or
+   * none scheduled in this window. Two different sentences.
+   */
+  protected readonly noSchedule = computed<boolean>(() => this.summary()?.expected_count === null);
 
   /**
    * Headline rate string for the donut centre. The empty-state branch
@@ -134,7 +140,7 @@ export class AttendanceSummaryChartComponent {
     this.languageService.currentLang(); // signal dep — the slice labels are translated
     const s = this.summary();
     if (s === null) return { labels: [], datasets: [] };
-    const missed = Math.max(0, s.expected_count - s.attended_count);
+    const missed = Math.max(0, (s.expected_count ?? 0) - s.attended_count);
     return {
       labels: [
         this.translate.instant('attendanceSummary.legend.attended'),

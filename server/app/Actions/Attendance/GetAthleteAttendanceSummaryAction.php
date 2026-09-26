@@ -6,108 +6,126 @@ namespace App\Actions\Attendance;
 
 use App\Models\Athlete;
 use App\Models\AttendanceRecord;
+use App\Support\ScheduledDays;
 use Carbon\CarbonImmutable;
 
 class GetAthleteAttendanceSummaryAction
 {
     /**
-     * Per-athlete attendance summary over the last N days.
+     * How often one athlete trained in a window (#893): the last 30, 90 or
+     * 365 days for the card, or a calendar month for the ring (#1769).
      *
-     * Denominator is "realized lesson days" — every distinct date in the
-     * window where ANY attendance row exists for the athlete's academy
-     * AND the athlete was already on the roster (joined_at ≤ date). This
-     * avoids penalizing athletes for closures / cancellations and gives
-     * an honest "out of lessons that happened, you came to X%".
+     * **Divided by the days the academy was scheduled to train** (#1769),
+     * closures out, nothing after today (`ScheduledDays`), the rule every
+     * attendance number in the app now shares. It used to divide by
+     * "realised lesson days", every date anyone in the academy was checked
+     * in, which made one athlete's denominator depend on other people: an
+     * open mat on a Sunday added a day everybody else had missed, and a
+     * session the owner forgot to register vanished from everyone's count.
+     * The honest cost of the new rule is that such a forgotten session now
+     * counts against everyone, which is the correct trade: a denominator
+     * that flexes with data entry cannot be compared month to month.
+     *
+     * **The window starts** at its own first day, or later at the day the
+     * athlete joined, unless they trained before joining (trial sessions
+     * entered after registering): then at that first presence. The same
+     * start as the month summary and the roster, so one athlete reads the
+     * same everywhere.
+     *
+     * **Every day they trained counts**, scheduled or not: an open mat is
+     * real training, so the rate may pass 1 and is not clamped. The series
+     * has one entry per scheduled day, plus any other day they trained.
+     *
+     * Null denominator and rate when no schedule was ever configured.
      *
      * @return array{
      *   range_days: int,
      *   range_start: string,
      *   range_end: string,
      *   attended_count: int,
-     *   expected_count: int,
+     *   expected_count: int|null,
      *   rate: float|null,
      *   series: list<array{date: string, attended: bool}>
      * }
      */
-    public function execute(Athlete $athlete, int $rangeDays): array
+    public function execute(Athlete $athlete, CarbonImmutable $windowStart, CarbonImmutable $windowEnd): array
     {
-        $today = CarbonImmutable::now()->startOfDay();
-        $windowStart = $today->subDays($rangeDays - 1);
+        $today = CarbonImmutable::today();
+        $windowStart = $windowStart->startOfDay();
+        $windowEnd = $windowEnd->startOfDay();
+        $last = $windowEnd->min($today);
 
-        // Clip the lower bound at joined_at — a lesson day before the
-        // athlete was on the roster cannot be expected of them.
-        $athleteJoined = CarbonImmutable::parse($athlete->joined_at->toDateString());
-        $effectiveStart = $athleteJoined->greaterThan($windowStart)
-            ? $athleteJoined
-            : $windowStart;
+        $attended = $this->daysTrained($athlete, $windowStart, $last);
+        $start = $this->startOf($athlete, $windowStart, $attended);
+        $attended = array_values(array_filter($attended, static fn (string $day): bool => $day >= $start->toDateString()));
 
-        $rangeStart = $windowStart->toDateString();
-        $rangeEnd = $today->toDateString();
+        $academy = $athlete->academy;
+        \assert($academy !== null);
+        $scheduled = ScheduledDays::between($academy, $start, $last, $today);
+        $expected = $scheduled === null ? null : \count($scheduled);
 
-        // Empty short-circuit: if joined_at is past today (defensive — the
-        // backfill on athletes.joined_at is `today` by default), there are
-        // no realized lesson days for this athlete.
-        if ($effectiveStart->greaterThan($today)) {
-            return [
-                'range_days' => $rangeDays,
-                'range_start' => $rangeStart,
-                'range_end' => $rangeEnd,
-                'attended_count' => 0,
-                'expected_count' => 0,
-                'rate' => null,
-                'series' => [],
-            ];
+        return [
+            'range_days' => (int) $windowStart->diffInDays($windowEnd) + 1,
+            'range_start' => $windowStart->toDateString(),
+            'range_end' => $windowEnd->toDateString(),
+            'attended_count' => \count($attended),
+            'expected_count' => $expected,
+            'rate' => $expected === null || $expected === 0 ? null : round(\count($attended) / $expected, 4),
+            'series' => $this->series($scheduled ?? [], $attended),
+        ];
+    }
+
+    /**
+     * The distinct days this athlete trained in the window, ascending. The
+     * SoftDeletes scope keeps a corrected presence out.
+     *
+     * @return list<string>
+     */
+    private function daysTrained(Athlete $athlete, CarbonImmutable $from, CarbonImmutable $to): array
+    {
+        if ($from->greaterThan($to)) {
+            return [];
         }
 
-        // All distinct lesson dates (any athlete in the academy) inside
-        // the clipped window. One query, ordered ASC so the series array
-        // is sparkline-ready without a re-sort.
-        $lessonDates = AttendanceRecord::query()
-            ->whereHas('athlete', static fn ($q) => $q->where('academy_id', $athlete->academy_id))
-            ->whereDate('attended_on', '>=', $effectiveStart->toDateString())
-            ->whereDate('attended_on', '<=', $rangeEnd)
-            ->orderBy('attended_on')
-            ->distinct()
+        return array_values(AttendanceRecord::query()
+            ->where('athlete_id', $athlete->id)
+            ->whereDate('attended_on', '>=', $from->toDateString())
+            ->whereDate('attended_on', '<=', $to->toDateString())
             ->get(['attended_on'])
             ->map(static fn (AttendanceRecord $r): string => $r->attended_on->toDateString())
             ->unique()
-            ->values()
-            ->all();
+            ->sort()
+            ->all());
+    }
 
-        // Dates THIS athlete attended (within the clipped window). Flipped
-        // to a set so the series-build join below stays O(N).
-        $attendedDates = AttendanceRecord::query()
-            ->where('athlete_id', $athlete->id)
-            ->whereDate('attended_on', '>=', $effectiveStart->toDateString())
-            ->whereDate('attended_on', '<=', $rangeEnd)
-            ->get(['attended_on'])
-            ->map(static fn (AttendanceRecord $r): string => $r->attended_on->toDateString())
-            ->flip()
-            ->all();
-
-        $series = [];
-        $attendedCount = 0;
-        foreach ($lessonDates as $date) {
-            $isAttended = isset($attendedDates[$date]);
-            if ($isAttended) {
-                $attendedCount++;
-            }
-            $series[] = ['date' => $date, 'attended' => $isAttended];
+    /** @param list<string> $attended */
+    private function startOf(Athlete $athlete, CarbonImmutable $windowStart, array $attended): CarbonImmutable
+    {
+        $start = CarbonImmutable::parse($athlete->joined_at->toDateString());
+        if ($attended !== [] && $attended[0] < $start->toDateString()) {
+            $start = CarbonImmutable::parse($attended[0]);
         }
 
-        $expectedCount = \count($lessonDates);
-        $rate = $expectedCount === 0
-            ? null
-            : round($attendedCount / $expectedCount, 4);
+        return $start->max($windowStart);
+    }
 
-        return [
-            'range_days' => $rangeDays,
-            'range_start' => $rangeStart,
-            'range_end' => $rangeEnd,
-            'attended_count' => $attendedCount,
-            'expected_count' => $expectedCount,
-            'rate' => $rate,
-            'series' => $series,
-        ];
+    /**
+     * One entry per scheduled day, plus any other day they trained, oldest
+     * first, so the strip is drawable without a re-sort.
+     *
+     * @param  list<string>  $scheduled
+     * @param  list<string>  $attended
+     * @return list<array{date: string, attended: bool}>
+     */
+    private function series(array $scheduled, array $attended): array
+    {
+        $trained = array_flip($attended);
+        $days = array_unique([...$scheduled, ...$attended]);
+        sort($days);
+
+        return array_map(
+            static fn (string $day): array => ['date' => $day, 'attended' => isset($trained[$day])],
+            $days,
+        );
     }
 }

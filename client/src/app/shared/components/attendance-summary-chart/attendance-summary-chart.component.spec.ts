@@ -71,9 +71,10 @@ describe('AttendanceSummaryChartComponent (#894)', () => {
   // The buttons read `30g / 90g / 1a` in BOTH languages — Italian abbreviations
   // hardcoded in the component — and the English counts line said "realized
   // lessons", a false friend of `lezioni effettive` that in English means
-  // "came to understand".
+  // "came to understand". Since #1769 the denominator is the scheduled
+  // sessions, and the line says so in both languages.
 
-  it('labels the range switcher in English, and calls the lessons "held"', async () => {
+  it('labels the range switcher in English, and counts scheduled sessions (#1769)', async () => {
     const { fixture, http } = setup();
     fixture.detectChanges();
     flush(http, makePayload());
@@ -89,7 +90,7 @@ describe('AttendanceSummaryChartComponent (#894)', () => {
     expect(switcher).not.toContain('30g');
 
     const counts = el.querySelector('[data-cy="attendance-summary-counts"]')?.textContent ?? '';
-    expect(counts.replace(/\s+/g, ' ').trim()).toBe('3 of 4 lessons held');
+    expect(counts.replace(/\s+/g, ' ').trim()).toBe('3 of 4 scheduled sessions');
   });
 
   it('re-renders the switcher and the counts line when the language is toggled after render', async () => {
@@ -111,7 +112,7 @@ describe('AttendanceSummaryChartComponent (#894)', () => {
         .replace(/\s+/g, ' ')
         .trim();
     expect(switcher()).toContain('30d');
-    expect(counts()).toBe('3 of 4 lessons held');
+    expect(counts()).toBe('3 of 4 scheduled sessions');
 
     TestBed.inject(LanguageService).setLanguage('it');
     fixture.detectChanges();
@@ -120,7 +121,7 @@ describe('AttendanceSummaryChartComponent (#894)', () => {
     expect(switcher()).toContain('90g');
     expect(switcher()).toContain('1a');
     expect(switcher()).not.toContain('30d');
-    expect(counts()).toBe('3 su 4 lezioni effettive');
+    expect(counts()).toBe('3 su 4 allenamenti in programma');
   });
 
   it('renders the empty-state block when expected_count is 0 (no lessons in the window)', async () => {

@@ -23,7 +23,7 @@ import { Toast } from 'primeng/toast';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { BeltLadderService } from '../../../core/services/belt-ladder.service';
 import { AcademyClosure, AcademyService } from '../../../core/services/academy.service';
-import { closureOn } from '../../../shared/utils/attendance-rate';
+import { closureOn } from '../../../shared/utils/training-days';
 import { LanguageService } from '../../../core/services/language.service';
 import { datePickerFormatFor } from '../../../shared/utils/locale';
 import {
