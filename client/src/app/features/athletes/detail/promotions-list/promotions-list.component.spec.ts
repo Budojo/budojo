@@ -565,6 +565,8 @@ describe('PromotionsListComponent — time at the belt (#1772)', () => {
   }
 
   const FULL = {
+    belt: 'blue',
+    stripes: 2,
     belt_since: '2025-03-01',
     days_at_belt: 440,
     months_at_belt: 14,
@@ -588,6 +590,7 @@ describe('PromotionsListComponent — time at the belt (#1772)', () => {
   it('says there is no stripe on this belt yet', () => {
     const { el } = withProgression({
       ...FULL,
+      stripes: 0,
       stripe_since: null,
       days_since_stripe: null,
       sessions_since_stripe: null,
@@ -610,6 +613,76 @@ describe('PromotionsListComponent — time at the belt (#1772)', () => {
     expect(strip).toContain('under a month');
     expect(strip).toContain('1 session');
     expect(strip).not.toContain('1 sessions');
+  });
+
+  it('names stripes that exist with no dated row, rather than saying there are none', () => {
+    const { el } = withProgression({
+      ...FULL,
+      stripes: 2,
+      stripe_since: null,
+      days_since_stripe: null,
+      sessions_since_stripe: null,
+    });
+    const strip = el.querySelector('[data-cy="promotions-progression"]')?.textContent ?? '';
+
+    expect(strip).toContain('2 stripes, dates not recorded');
+    expect(strip).not.toContain('No stripe on this belt yet');
+  });
+
+  it('shows no stripe line on a grade that carries none (a judo kyu)', () => {
+    const ctx = setup();
+    useLadder('judo');
+    ctx.svc.promotions.mockReturnValue(
+      of({
+        data: [makePromotion()],
+        meta: { current_page: 1, per_page: 20, total: 1, last_page: 1 },
+        progression: {
+          ...FULL,
+          belt: 'yellow',
+          stripes: 0,
+          stripe_since: null,
+          days_since_stripe: null,
+          sessions_since_stripe: null,
+        },
+      }) as unknown as ReturnType<typeof ctx.svc.promotions>,
+    );
+    ctx.fixture.detectChanges();
+    const strip = ctx.el.querySelector('[data-cy="promotions-progression"]')?.textContent ?? '';
+
+    expect(strip).toContain('On this belt since');
+    expect(strip).not.toContain('stripe');
+  });
+
+  it('words a dan as a dan, not as a stripe', () => {
+    const ctx = setup();
+    useLadder('judo');
+    ctx.svc.promotions.mockReturnValue(
+      of({
+        data: [makePromotion()],
+        meta: { current_page: 1, per_page: 20, total: 1, last_page: 1 },
+        progression: { ...FULL, belt: 'black', stripes: 2 },
+      }) as unknown as ReturnType<typeof ctx.svc.promotions>,
+    );
+    ctx.fixture.detectChanges();
+    const strip = ctx.el.querySelector('[data-cy="promotions-progression"]')?.textContent ?? '';
+
+    expect(strip).toContain('3° dan since');
+    expect(strip).not.toContain('Last stripe');
+  });
+
+  it('leaves the empty timeline to its own message', () => {
+    const ctx = setup();
+    ctx.svc.promotions.mockReturnValue(
+      of({
+        data: [],
+        meta: { current_page: 1, per_page: 20, total: 0, last_page: 1 },
+        progression: { ...FULL, belt_since: null },
+      }) as unknown as ReturnType<typeof ctx.svc.promotions>,
+    );
+    ctx.fixture.detectChanges();
+
+    expect(ctx.el.querySelector('[data-cy="promotions-progression"]')).toBeNull();
+    expect(ctx.el.querySelector('[data-cy="promotions-empty"]')).not.toBeNull();
   });
 
   it('says no belt is recorded rather than measuring from the joining date', () => {

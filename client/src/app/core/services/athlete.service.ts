@@ -727,6 +727,10 @@ export interface AthletePromotionPage {
  * is not "the last stripe", so `stripe_since` is null then too (#1772).
  */
 export interface AthleteProgression {
+  /** The athlete's current belt and stripes, to word a dan or a poom and to
+   *  tell "no stripe" from stripes with no dated row. */
+  readonly belt: Belt;
+  readonly stripes: number;
   readonly belt_since: string | null;
   readonly days_at_belt: number | null;
   readonly months_at_belt: number | null;

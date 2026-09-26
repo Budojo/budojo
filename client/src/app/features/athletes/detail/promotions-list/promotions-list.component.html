@@ -18,7 +18,7 @@
     From recorded rows only: no belt row says so, it never counts from the
     joining date.
   -->
-  @if (!loading() && !loadError() && progression(); as pr) {
+  @if (!loading() && !loadError() && promotions().length > 0 && progression(); as pr) {
     <div class="promotions__progression" data-cy="promotions-progression">
       @if (pr.belt_since) {
         <p class="promotions__progression-line">
@@ -45,23 +45,54 @@
             ) | translate: { count: pr.sessions_at_belt }
           }}
         </p>
-        <p class="promotions__progression-line promotions__progression-line--muted">
-          @if (pr.stripe_since) {
-            {{
-              'athletes.detail.promotions.progression.stripeSince'
-                | translate: { date: (pr.stripe_since | localeDate: 'calendar-day') }
-            }}
-            ·
-            {{
-              (pr.sessions_since_stripe === 1
-                ? 'athletes.detail.promotions.progression.sessionsSinceStripeOne'
-                : 'athletes.detail.promotions.progression.sessionsSinceStripeOther'
-              ) | translate: { count: pr.sessions_since_stripe }
-            }}
-          } @else {
-            {{ 'athletes.detail.promotions.progression.noStripeOnThisBelt' | translate }}
-          }
-        </p>
+        @if (stripeLine(pr); as line) {
+          <p class="promotions__progression-line promotions__progression-line--muted">
+            @switch (line.kind) {
+              @case ('dated') {
+                @if (line.grade) {
+                  {{
+                    'athletes.detail.promotions.progression.gradeSince'
+                      | translate
+                        : {
+                            grade: line.grade,
+                            date: (pr.stripe_since | localeDate: 'calendar-day'),
+                          }
+                  }}
+                } @else {
+                  {{
+                    'athletes.detail.promotions.progression.stripeSince'
+                      | translate: { date: (pr.stripe_since | localeDate: 'calendar-day') }
+                  }}
+                }
+                ·
+                {{
+                  (pr.sessions_since_stripe === 1
+                    ? 'athletes.detail.promotions.progression.sessionsSinceStripeOne'
+                    : 'athletes.detail.promotions.progression.sessionsSinceStripeOther'
+                  ) | translate: { count: pr.sessions_since_stripe }
+                }}
+              }
+              @case ('undated') {
+                @if (line.grade) {
+                  {{
+                    'athletes.detail.promotions.progression.gradeUndated'
+                      | translate: { grade: line.grade }
+                  }}
+                } @else {
+                  {{
+                    (pr.stripes === 1
+                      ? 'athletes.detail.promotions.progression.undatedStripesOne'
+                      : 'athletes.detail.promotions.progression.undatedStripesOther'
+                    ) | translate: { count: pr.stripes }
+                  }}
+                }
+              }
+              @case ('none') {
+                {{ 'athletes.detail.promotions.progression.noStripeOnThisBelt' | translate }}
+              }
+            }
+          </p>
+        }
       } @else {
         <p class="promotions__progression-line promotions__progression-line--muted">
           {{ 'athletes.detail.promotions.progression.noBeltRow' | translate }}

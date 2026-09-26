@@ -70,6 +70,8 @@ Before this table, only **belt** changes left a trace (as a `belt_promotion` `Co
 
 - **From recorded rows only.** `belt_since` is the latest `kind = belt` row. With no belt row every field is null; nothing falls back to `joined_at`. Since #1771 every new or imported athlete opens with a starting belt row, so this is rare.
 - **The last stripe belongs to the current belt.** A stripe row older than the latest belt row is ignored, because a belt promotion resets stripes and the chain validator does not cross-check the two kinds.
+- **Only a stripe given counts.** Promoting blue-four to purple-zero in one save writes a belt row and a 4 → 0 stripe row at the same moment; that reset is not the last stripe. Stripe rows that do not raise the count are skipped.
+- **The current `belt` and `stripes` ride along**, so the SPA can word a dan or a poom as such, show no stripe line on a grade that carries none (a judo or taekwondo kyu), and tell "no stripe on this belt" from stripes that exist with no dated row (an athlete created on two stripes opens with a belt row only).
 - **Whole days.** `recorded_at` carries a time of day on live rows, so the comparison is on dates: a belt given at 18:42 still counts that evening's session.
 - **Sessions are distinct training days**, at most one live presence per athlete and day; a soft-deleted (corrected-away) presence does not count.
 

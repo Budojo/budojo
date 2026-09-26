@@ -22,6 +22,16 @@ use Carbon\CarbonImmutable;
  * promotion resets stripes, and the chain validator deliberately does not
  * cross-check the two kinds, so a stripe row can predate the belt row.
  *
+ * **Only a stripe given counts.** Promoting blue-four to purple-zero in one
+ * save writes a belt row and a 4 → 0 stripe row at the same moment; that
+ * reset is not "the last stripe". Rows that do not raise the count are
+ * skipped.
+ *
+ * **The current belt and stripes ride along**, so the reader can tell "no
+ * stripe on this belt" from stripes that exist with no dated row (an athlete
+ * created on two stripes opens with a belt row only, #1771), and word a dan
+ * or a poom as such.
+ *
  * **Whole days.** `recorded_at` is a datetime on a date-only surface: a row
  * written live carries a time of day, so the belt given at 18:42 must not
  * exclude that evening's own session.
@@ -33,6 +43,8 @@ class GetAthleteProgressionAction
 {
     /**
      * @return array{
+     *     belt: string,
+     *     stripes: int,
      *     belt_since: string|null,
      *     days_at_belt: int|null,
      *     months_at_belt: int|null,
@@ -47,12 +59,14 @@ class GetAthleteProgressionAction
         $today = CarbonImmutable::today();
 
         $beltSince = $this->dayOf($this->latest($athlete, 'belt'));
-        $stripeSince = $beltSince === null ? null : $this->dayOf($this->latest($athlete, 'stripe'));
+        $stripeSince = $beltSince === null ? null : $this->dayOf($this->latestStripeGiven($athlete));
         if ($beltSince !== null && $stripeSince?->lt($beltSince)) {
             $stripeSince = null;
         }
 
         return [
+            'belt' => $athlete->belt->value,
+            'stripes' => $athlete->stripes,
             'belt_since' => $beltSince?->toDateString(),
             'days_at_belt' => $beltSince === null ? null : (int) $beltSince->diffInDays($today),
             'months_at_belt' => $beltSince === null ? null : (int) floor($beltSince->diffInMonths($today)),
@@ -67,6 +81,14 @@ class GetAthleteProgressionAction
     {
         // `promotions()` is ordered `recorded_at DESC, id DESC`.
         return $athlete->promotions()->where('kind', $kind)->first();
+    }
+
+    private function latestStripeGiven(Athlete $athlete): ?AthletePromotion
+    {
+        return $athlete->promotions()
+            ->where('kind', 'stripe')
+            ->whereColumn('to_stripes', '>', 'from_stripes')
+            ->first();
     }
 
     private function dayOf(?AthletePromotion $row): ?CarbonImmutable

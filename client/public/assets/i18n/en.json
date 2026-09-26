@@ -2374,7 +2374,11 @@
           "sessionsSinceStripeOne": "{{count}} session since",
           "sessionsSinceStripeOther": "{{count}} sessions since",
           "noBeltRow": "No belt recorded yet: time at a belt starts from the first promotion.",
-          "noStripeOnThisBelt": "No stripe on this belt yet"
+          "noStripeOnThisBelt": "No stripe on this belt yet",
+          "undatedStripesOne": "{{count}} stripe, date not recorded",
+          "undatedStripesOther": "{{count}} stripes, dates not recorded",
+          "gradeSince": "{{grade}} since {{date}}",
+          "gradeUndated": "{{grade}}, date not recorded"
         },
         "prevPage": "Previous page",
         "nextPage": "Next page",

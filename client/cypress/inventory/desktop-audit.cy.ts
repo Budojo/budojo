@@ -1718,6 +1718,8 @@ function seed(): void {
       ...page(PROMOTIONS_ONE),
       // Blue since 20 Dec 2025, last stripe 15 Jun 2026, against TODAY (#1772).
       progression: {
+        belt: 'blue',
+        stripes: 2,
         belt_since: '2025-12-20',
         days_at_belt: 268,
         months_at_belt: 8,

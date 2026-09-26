@@ -2374,7 +2374,11 @@
           "sessionsSinceStripeOne": "{{count}} allenamento da allora",
           "sessionsSinceStripeOther": "{{count}} allenamenti da allora",
           "noBeltRow": "Nessuna cintura registrata: il tempo in cintura parte dalla prima promozione.",
-          "noStripeOnThisBelt": "Nessun grado su questa cintura"
+          "noStripeOnThisBelt": "Nessun grado su questa cintura",
+          "undatedStripesOne": "{{count}} grado, data non registrata",
+          "undatedStripesOther": "{{count}} gradi, date non registrate",
+          "gradeSince": "{{grade}} dal {{date}}",
+          "gradeUndated": "{{grade}}, data non registrata"
         },
         "prevPage": "Pagina precedente",
         "nextPage": "Pagina successiva",

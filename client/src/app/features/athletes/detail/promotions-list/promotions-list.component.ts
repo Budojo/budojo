@@ -70,6 +70,13 @@ interface SelectOption<T> {
  * failure. Each row also carries a delete, for one entered by
  * mistake.
  */
+/** The time-at-belt strip's second line (#1772). */
+interface StripeLine {
+  readonly kind: 'dated' | 'undated' | 'none';
+  /** "3° dan" on a grade that counts dan or poom; null where it counts stripes. */
+  readonly grade: string | null;
+}
+
 @Component({
   selector: 'app-promotions-list',
   standalone: true,
@@ -187,6 +194,24 @@ export class PromotionsListComponent implements OnInit {
     return promotion.belt_at_event === null
       ? String(stripes)
       : this.beltLadder.stripesLabel(promotion.belt_at_event, stripes);
+  }
+
+  /**
+   * The strip's second line, read the way this grade counts (#1772):
+   * nothing on a grade that carries no stripes (a judo or taekwondo kyu);
+   * a dan or a poom named as such; and stripes that exist with no dated row
+   * (an athlete created on two stripes, #1771) kept apart from none at all.
+   */
+  protected stripeLine(pr: AthleteProgression): StripeLine | null {
+    const countsStripes = this.beltLadder.countsStripes(pr.belt);
+    if (countsStripes && this.beltLadder.stripeCap(pr.belt) === 0) return null;
+
+    const grade = countsStripes ? null : this.beltLadder.stripesLabel(pr.belt, pr.stripes);
+    if (pr.stripe_since !== null) return { kind: 'dated', grade };
+    if (pr.stripes > 0) return { kind: 'undated', grade };
+
+    // A black belt's first dan is the belt row itself: nothing to add.
+    return countsStripes ? { kind: 'none', grade: null } : null;
   }
 
   /** Whether the row's count is stripes (and so needs the "stripes" noun). */

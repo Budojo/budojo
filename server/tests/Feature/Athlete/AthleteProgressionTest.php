@@ -124,6 +124,38 @@ it('does not fall back to the joining date when there is no belt row', function 
         ->and($p['stripe_since'])->toBeNull();
 });
 
+it('does not read the stripe reset of a belt promotion as the last stripe', function (): void {
+    // The usual BJJ promotion: blue with four stripes to purple, stripes back
+    // to zero, in one save. The observer writes a belt row and a 4 → 0
+    // stripe row with the same moment; the reset is not a stripe given.
+    $this->athlete->update(['stripes' => 4]);
+    $this->travelTo(CarbonImmutable::parse('2026-05-15 12:00'));
+
+    $response = $this->actingAs($this->owner)
+        ->putJson("/api/v1/athletes/{$this->athlete->id}", ['belt' => 'purple', 'stripes' => 0])
+        ->assertOk();
+    unset($response);
+
+    $p = app(GetAthleteProgressionAction::class)->execute($this->athlete->refresh());
+
+    expect($p['belt'])->toBe('purple')
+        ->and($p['belt_since'])->toBe('2026-05-15')
+        ->and($p['stripes'])->toBe(0)
+        ->and($p['stripe_since'])->toBeNull();
+});
+
+it('carries the current belt and stripes, so undated stripes are not read as none', function (): void {
+    // An athlete created as blue with one stripe: the opening row (#1771) is
+    // a belt row only, and the stripe has no row of its own.
+    progressionPromotion($this->athlete, 'belt', '2025-03-01 00:00:00', $this->owner->id);
+
+    $p = app(GetAthleteProgressionAction::class)->execute($this->athlete);
+
+    expect($p['belt'])->toBe('blue')
+        ->and($p['stripes'])->toBe(1)
+        ->and($p['stripe_since'])->toBeNull();
+});
+
 it('returns the progression beside the timeline, leaving the pagination meta alone', function (): void {
     progressionPromotion($this->athlete, 'belt', '2025-03-01 00:00:00', $this->owner->id);
     AthletePromotion::factory()->count(24)->create([
