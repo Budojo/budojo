@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Observers\Audit\CarnetAuditObserver;
 use Carbon\Carbon;
+use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Database\Factories\CarnetFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -98,6 +99,41 @@ class Carnet extends Model
             ->whereDate('valid_from', '<=', $date->toDateString())
             ->whereDate('expires_at', '>=', $date->toDateString())
             ->whereRaw('total_entries > (select count(*) from carnet_entries where carnet_entries.carnet_id = carnets.id)');
+    }
+
+    /**
+     * Carnets that paid for some day of a **past** month (#1760): the same
+     * rule as `scopeSpendableOn`, asked of a month instead of a day, and with
+     * the balance as it stood then.
+     *
+     * Two things change when the question moves into the past, and each one
+     * is a wrong answer if it is not changed:
+     *
+     * - **the window** must touch the month, not contain today — a carnet
+     *   that expired on 31 August paid for August, whatever it is now;
+     * - **the balance** is the one on the first day of the month the carnet
+     *   was valid, counting only the entries spent before it. Spending only
+     *   ever lowers a balance, so if there was an entry left that morning,
+     *   the carnet was spendable that day; if there was none, it was not
+     *   spendable on any later day of the month either. Today's balance would
+     *   call every carnet spent out since then unpaid for months it paid.
+     *
+     * @param  Builder<$this>  $query
+     * @return Builder<$this>
+     */
+    public function scopeSpendableDuring(Builder $query, int $year, int $month): Builder
+    {
+        $first = CarbonImmutable::create($year, $month, 1);
+        \assert($first instanceof CarbonImmutable);
+
+        return $query
+            ->whereDate('valid_from', '<=', $first->endOfMonth()->toDateString())
+            ->whereDate('expires_at', '>=', $first->toDateString())
+            ->whereRaw(
+                'total_entries > (select count(*) from carnet_entries where carnet_entries.carnet_id = carnets.id '
+                . 'and date(carnet_entries.used_on) < max(?, date(carnets.valid_from)))',
+                [$first->toDateString()],
+            );
     }
 
     /**

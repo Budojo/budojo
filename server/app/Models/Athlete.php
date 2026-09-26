@@ -271,6 +271,25 @@ class Athlete extends Model implements HasAddress
     }
 
     /**
+     * Something paid for a **past** month (#1760): a payment whose period
+     * covers it, or a carnet spendable on some day of it
+     * (`Carnet::scopeSpendableDuring`). The month-long twin of `paidFor`,
+     * which asks about today and so cannot answer for last July.
+     *
+     * @param  Builder<$this>  $query
+     * @return Builder<$this>
+     */
+    public function scopePaidDuring(Builder $query, int $year, int $month): Builder
+    {
+        $covering = fn ($q) => $q->covering($year, $month);
+        $spendable = fn ($q) => $q->spendableDuring($year, $month);
+
+        return $query->where(fn (Builder $q) => $q
+            ->whereHas('payments', $covering)
+            ->orWhereHas('carnets', $spendable));
+    }
+
+    /**
      * Athletes whose resolved fee is more than zero — the athlete-level twin
      * of `Academy::scopeChargingMoreThanNothing`, for the one reader that
      * chases the athlete rather than informing the owner: the overdue push.
