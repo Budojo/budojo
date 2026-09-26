@@ -657,3 +657,79 @@ describe('SeasonMapComponent — the week plan for the group (#1863)', () => {
     expect(copy.disabled).toBe(true);
   });
 });
+
+// #1911 — a position's techniques open under its name, where the report's two
+// flat lists used to reprint the whole programme.
+describe("SeasonMapComponent — a position's techniques", () => {
+  afterEach(() => TestBed.inject(HttpTestingController).verify());
+
+  const MISSING = [
+    { id: 31, name: 'Omoplata', parent_id: 1, parent_name: 'Closed guard', kind: 'both' as const },
+    { id: 32, name: 'Lockdown', parent_id: 2, parent_name: 'Half guard', kind: 'nogi' as const },
+  ];
+  const taughtRow = (id: number, name: string, parentId: number, state: 'covered' | 'thin') => ({
+    id,
+    name,
+    parent_id: parentId,
+    parent_name: parentId === 1 ? 'Closed guard' : 'Half guard',
+    kind: 'both' as const,
+    lessons: state === 'covered' ? 3 : 1,
+    reach: 4,
+    attendances: 6,
+    last_taught_on: '2026-10-05',
+    state,
+  });
+  const TAUGHT = [
+    taughtRow(11, 'Armbar', 1, 'covered'),
+    taughtRow(12, 'Triangle', 1, 'thin'),
+    // The seed repeats names across positions: grouping is by id.
+    taughtRow(13, 'Armbar', 2, 'covered'),
+  ];
+
+  function withTechniques() {
+    const ctx = setup();
+    flush(ctx.httpMock);
+    ctx.fixture.componentRef.setInput('missing', MISSING);
+    ctx.fixture.componentRef.setInput('taught', TAUGHT);
+    ctx.fixture.detectChanges();
+    return ctx;
+  }
+
+  it('groups them under their position, by id: to do, done once, done', () => {
+    const { component } = withTechniques();
+
+    const closedGuard = component['techniquesOf'](1);
+    expect(closedGuard.todo.map((t) => t.id)).toEqual([31]);
+    expect(closedGuard.once.map((t) => t.id)).toEqual([12]);
+    expect(closedGuard.done.map((t) => t.id)).toEqual([11]);
+
+    const halfGuard = component['techniquesOf'](2);
+    expect(halfGuard.todo.map((t) => t.id)).toEqual([32]);
+    expect(halfGuard.done.map((t) => t.id)).toEqual([13]);
+  });
+
+  it('closes the panel and asks the host to plan a technique', () => {
+    const { component } = withTechniques();
+    const asked: number[] = [];
+    component.planTechnique.subscribe((id) => asked.push(id));
+    component['drawerOpen'].set(true);
+
+    component['planTopic'](31);
+
+    expect(asked).toEqual([31]);
+    // A sheet on top of the panel would be one dialog too many.
+    expect(component['drawerOpen']()).toBe(false);
+  });
+
+  it('closes the panel and asks the host who has seen a technique', () => {
+    const { component } = withTechniques();
+    const asked: number[] = [];
+    component.openTechnique.subscribe((id) => asked.push(id));
+    component['drawerOpen'].set(true);
+
+    component['openTopic'](11);
+
+    expect(asked).toEqual([11]);
+    expect(component['drawerOpen']()).toBe(false);
+  });
+});

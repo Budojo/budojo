@@ -60,6 +60,10 @@ class AcademyResource extends JsonResource
             // than embedded — the list itself has its own endpoint, and the
             // callers here only need to know whether it is empty.
             'fee_tier_count' => $academy->feeTiers()->count(),
+            // Athletes with a personal fee above zero (#1757), for the same
+            // gate: an academy with no flat fee and no tiers still charges
+            // them. Zero-fee athletes train free and do not count.
+            'fee_override_count' => $academy->athletes()->where('fee_override_cents', '>', 0)->count(),
             'carnet_price_cents' => $academy->carnet_price_cents,
             'carnet_entries' => $academy->carnet_entries,
             'carnet_entry_unit' => $academy->carnet_entry_unit->value,

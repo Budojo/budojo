@@ -9,7 +9,6 @@ import {
   viewChild,
 } from '@angular/core';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { ChartModule } from 'primeng/chart';
 import { SelectButtonModule } from 'primeng/selectbutton';
 import { SkeletonModule } from 'primeng/skeleton';
 import { FormsModule } from '@angular/forms';
@@ -27,8 +26,6 @@ import { TrainingModesService } from '../../../core/services/training-modes.serv
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { ErrorStateComponent } from '../../../shared/components/error-state/error-state.component';
 import { addDays, localIso } from '../../../shared/utils/class-occurrences';
-import { relativeDay } from '../../../shared/utils/relative-day';
-import { localeFor } from '../../../shared/utils/locale';
 import { LessonSheetComponent } from '../../lessons/lesson-sheet/lesson-sheet.component';
 import { SeasonMapComponent } from './season-map/season-map.component';
 import { PlanOption, planOptions } from './season-map/season-map.model';
@@ -83,7 +80,6 @@ interface PlanningTopic {
   imports: [
     FormsModule,
     TranslatePipe,
-    ChartModule,
     SelectButtonModule,
     SkeletonModule,
     EmptyStateComponent,
@@ -220,71 +216,9 @@ export class StatsSyllabusComponent {
     this.seasonsBack.set(Math.min(MAX_SEASONS_BACK, Math.max(0, this.seasonsBack() + by)));
   }
 
-  /**
-   * Cumulative covered topics across the season.
-   *
-   * Literal hex because Chart.js draws on a canvas and cannot resolve
-   * `var(--*)` — the same reason the payments chart carries its own copy of
-   * the primary indigo.
-   */
-  protected readonly timelineData = computed(() => {
-    const points = this.report()?.timeline ?? [];
-    return {
-      labels: points.map((p) => this.shortDate(p.on)),
-      datasets: [
-        {
-          data: points.map((p) => p.covered),
-          borderColor: '#5b6cff',
-          backgroundColor: '#5b6cff22',
-          fill: true,
-          tension: 0.3,
-          pointRadius: 0,
-          borderWidth: 2,
-        },
-      ],
-    };
-  });
-
-  protected readonly timelineOptions = computed(() => ({
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: { legend: { display: false } },
-    scales: {
-      y: {
-        beginAtZero: true,
-        // The denominator, so the line is read against what there was to do
-        // rather than against its own maximum.
-        suggestedMax: this.report()?.totals.in_scope ?? undefined,
-        ticks: { precision: 0 },
-      },
-      x: { ticks: { maxTicksLimit: 6 } },
-    },
-  }));
-
   protected readonly seasonLabel = computed<string>(
     () => this.report()?.season.label ?? this.academyService.academy()?.season_label ?? '',
   );
-
-  /** "12 Oct" — the day a topic was last on the mat, in the reader's locale. */
-  protected shortDate(iso: string): string {
-    if (iso === '') return '';
-    const [y, m, d] = iso.split('-').map(Number);
-    return new Intl.DateTimeFormat(localeFor(this.languageService.currentLang()), {
-      day: 'numeric',
-      month: 'short',
-    }).format(new Date(y, m - 1, d));
-  }
-
-  /**
-   * "3 weeks ago" — the shared helper (#1602), so the wording and its
-   * pluralisation live in one place rather than drifting between the two
-   * coverage screens.
-   */
-  protected ago(iso: string): string {
-    this.languageService.currentLang(); // signal dep — recompute on toggle
-
-    return relativeDay(iso, this.translate);
-  }
 
   protected retry(): void {
     this.reloadTick.update((n) => n + 1);
@@ -319,6 +253,20 @@ export class StatsSyllabusComponent {
   protected plan(topic: CoverageTopic, lesson: PlanOption): void {
     this.planning.set({ topicId: topic.id, lesson });
     this.planOpen.set(true);
+  }
+
+  /** The techniques the map may offer to plan: those with a lesson to go into. */
+  protected readonly plannableIds = computed<ReadonlySet<number>>(
+    () => new Set(this.planTargets().keys()),
+  );
+
+  /** "Pianifica" on a technique in the map's panel (#1911). */
+  protected planTechnique(topicId: number): void {
+    const topic = this.report()?.missing.find((t) => t.id === topicId);
+    const lesson = this.planTargets().get(topicId);
+    if (topic !== undefined && lesson !== undefined) {
+      this.plan(topic, lesson);
+    }
   }
 
   /**

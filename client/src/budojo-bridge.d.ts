@@ -23,6 +23,18 @@ interface DriveArchive {
  * and "how old is the newest copy over there?" are different questions, and the
  * second is the one that matters the day this disk dies.
  */
+/** What a restore answered (#1228, #1909). */
+interface BackupRestoreResult {
+  readonly ok: boolean;
+  /**
+   * Why it did not happen: not a Budojo backup at all, one from a newer
+   * Budojo, a backup or restore already running, or a swap that broke.
+   */
+  readonly code?: 'unreadable' | 'newer' | 'busy' | 'failed';
+  /** The same refusal in English, for the log. */
+  readonly reason?: string;
+}
+
 interface BackupFolderState {
   /** Absolute path, or null when the owner has not chosen one. */
   readonly folder: string | null;
@@ -99,7 +111,13 @@ interface BudojoBridge {
   readonly backup: {
     list(): Promise<BackupArchive[]>;
     run(): Promise<{ ok: boolean; path: string | null }>;
-    restore(name: string): Promise<{ ok: boolean; reason?: string }>;
+    restore(name: string): Promise<BackupRestoreResult>;
+    /**
+     * A backup from anywhere on disk (#1909): the main process opens the file
+     * dialog itself and restores what it returns. `canceled` when the owner
+     * closed the dialog; `code` says why a file was refused.
+     */
+    restoreFromFile(): Promise<BackupRestoreResult & { canceled?: boolean }>;
   };
   /**
    * Backup folder (#1320). The owner picks any folder — one their cloud client

@@ -16,14 +16,9 @@ export interface NotificationGroup {
  */
 export function groupNotifications(
   rows: readonly InboxNotification[],
-  unreadOnly: boolean,
   now: Date = new Date(),
 ): readonly NotificationGroup[] {
   const unread = rows.filter((r) => r.read_at === null);
-
-  if (unreadOnly) {
-    return unread.length > 0 ? [{ key: 'new', items: unread }] : [];
-  }
 
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   const sevenDaysAgo = startOfToday - 6 * 24 * 60 * 60 * 1000; // today + the 6 prior days

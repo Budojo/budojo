@@ -405,8 +405,8 @@
     "title": "Notifiche",
     "markAll": "Segna tutte come lette",
     "filter": {
-      "all": "Tutte",
-      "unread": "Non lette"
+      "inbox": "Da vedere",
+      "archived": "Archiviate"
     },
     "group": {
       "new": "Nuove",
@@ -415,7 +415,6 @@
       "earlier": "Prima"
     },
     "empty": "Sei in pari, nessuna notifica.",
-    "emptyUnread": "Nessuna notifica non letta.",
     "bell": {
       "ariaLabel": "Notifiche",
       "tooltip": "Notifiche",
@@ -427,7 +426,17 @@
     },
     "errorTitle": "Non siamo riusciti a caricare le notifiche",
     "errorHint": "Qualcosa è andato storto. Riprova tra un momento.",
-    "errorRetry": "Riprova"
+    "errorRetry": "Riprova",
+    "archive": "Archivia",
+    "archiveAria": "Archivia: {{title}}",
+    "unarchive": "Ripristina",
+    "unarchiveAria": "Ripristina: {{title}}",
+    "archiveRead": "Archivia le lette",
+    "archivedOne": "Notifica archiviata",
+    "archivedOther": "{{count}} notifiche archiviate",
+    "undo": "Annulla",
+    "emptyArchived": "Nessuna notifica archiviata.",
+    "undoFailed": "Non è stato possibile annullare: le notifiche sono sotto «Archiviate»."
   },
   "onboarding": {
     "checklist": {
@@ -2322,7 +2331,10 @@
         "periodStartsHereOne": "Copre anche {{next}}",
         "periodStartsHereOther": "Copre anche {{next}}",
         "periodCoveredBy": "Incluso nel pagamento di {{month}}",
-        "beforeBillingFloor": "Prima che questa accademia iniziasse a registrare le quote su Budojo"
+        "beforeBillingFloor": "Prima che questa accademia iniziasse a registrare le quote su Budojo",
+        "trainsFree": "Si allena gratis",
+        "trainsFreeHint": "Si allena gratis · nessuna quota da pagare.",
+        "feeOverrideHint": "Quota personale · {{amount}} al mese."
       },
       "documents": {
         "confirm": {
@@ -2576,7 +2588,8 @@
         "addressZip": "CAP",
         "addressCity": "Città",
         "addressProvince": "Provincia",
-        "feeTier": "Fascia di quota"
+        "feeTier": "Fascia di quota",
+        "feeOverride": "Quota personale"
       },
       "placeholder": {
         "phoneCountryCode": "Prefisso",
@@ -2630,6 +2643,8 @@
       "hint": {
         "address": "Lascia tutti i campi vuoti per non assegnare un indirizzo all'atleta.",
         "feeTier": "Quale quota mensile paga. Lascia vuoto per la quota standard dell'accademia.",
+        "feeOverride": "Solo per questo atleta: sostituisce la fascia e la quota dell'accademia. Metti 0 se si allena gratis.",
+        "feeOverrideFree": "Si allena gratis: non deve niente e non compare tra chi non ha pagato.",
         "kidsBeltsHidden": "Le cinture dei bambini sono nascoste: attivale in Accademia → Modifica."
       },
       "button": {
@@ -3041,6 +3056,7 @@
       "headlineRule": "La scheda Programma di un atleta conta in un altro modo: una tecnica dopo una sola lezione a cui era presente, su quelle che la palestra ha fatto mentre era iscritto. Chiede se c'era, non quanto del programma è stato fatto.",
       "map": {
         "title": "Per posizione, settimana per settimana",
+        "hint": "Tocca il nome di una posizione per vedere le sue tecniche: cosa manca, cosa hai fatto, e pianificarle.",
         "legend": {
           "more": "2 o più lezioni",
           "once": "1 lezione",
@@ -3065,6 +3081,10 @@
         "seasonAria": "{{position}}: tutte le settimane della stagione",
         "seasonEmpty": "Ancora niente su questa posizione in questa stagione.",
         "planTitle": "Pianifica una lezione",
+        "todoTitle": "Da fare",
+        "onceTitle": "Fatte una volta",
+        "doneTitle": "Fatte",
+        "lessonsTitle": "Le lezioni della stagione",
         "planAria": "Pianifica {{position}}, settimana del {{date}}",
         "planNoneWeek": "Quella settimana nessuna classe dell'orario può fare questa posizione.",
         "planNoneSeason": "Nelle prossime due settimane nessuna classe dell'orario può fare questa posizione.",
@@ -3084,12 +3104,7 @@
           "copyFailed": "Non è stato possibile copiarlo: usa «Invia su WhatsApp»."
         }
       },
-      "overTime": "Nel corso della stagione",
-      "lastTaught": "L'ultima volta",
-      "missingList": "Non ancora fatto ({{count}})",
-      "nothingMissing": "Non manca niente: hai fatto tutto il programma.",
       "planAction": "Pianifica",
-      "thinTag": "Una volta",
       "lessonsOne": "{{count}} lezione",
       "lessonsOther": "{{count}} lezioni",
       "reachOne": "{{count}} persona",
@@ -3322,11 +3337,28 @@
     "restore": "Ripristina",
     "confirmRestore": "Ripristinare questo backup? I dati attuali verranno sostituiti con il contenuto di questo archivio.",
     "confirmRestoreAccept": "Ripristina",
+    "restoreFromFile": "Ripristina da un file…",
+    "latest": "Il più recente",
+    "showAll": "Mostra tutti ({{total}})",
+    "showFewer": "Mostra meno",
+    "newComputer": {
+      "title": "Arrivi da un altro computer?",
+      "textNoKeys": "Ripristina il backup che avevi salvato: dalla cartella dei backup, da Google Drive o da una chiavetta.",
+      "keysStep": "Inserisci il codice di recupero che avevi salvato: Budojo si riavvia con le tue chiavi, e i certificati medici tornano leggibili.",
+      "restoreStep": "Poi ripristina il backup: dalla cartella dei backup, da Google Drive o da una chiavetta. Se il codice non l'avevi salvato, ripristina lo stesso: tornano tutti i dati tranne i documenti.",
+      "keys": "Inserisci il codice di recupero"
+    },
+    "confirmRestoreFromFile": "Scegli un backup di Budojo: i dati attuali verranno sostituiti con il suo contenuto.",
+    "confirmRestoreFromFileAccept": "Scegli il file",
     "toast": {
       "created": "Backup creato",
       "failed": "Backup non riuscito — controlla il log",
       "restored": "Backup ripristinato",
-      "restoreRefused": "Impossibile ripristinare questo backup"
+      "restoreRefused": "Impossibile ripristinare questo backup",
+      "notABackup": "Questo file non è un backup di Budojo.",
+      "newerBackup": "Questo backup viene da una versione più recente di Budojo. Aggiorna Budojo, poi ripristinalo.",
+      "busy": "Budojo sta già facendo un backup o un ripristino: riprova tra un momento.",
+      "restoreFailed": "Il ripristino non è stato completato. Il motivo è nel log di Budojo."
     },
     "keys": {
       "heading": "Chiavi di recupero",
@@ -3385,6 +3417,7 @@
     "folder": {
       "title": "Cartella dei backup",
       "why": "I backup salvati su questo computer non sopravvivono a questo computer. Scegli una cartella — una che il tuo servizio cloud già sincronizza, un disco di rete o una chiavetta USB — e ogni backup viene copiato lì automaticamente.",
+      "whyRestore": "Se cambi computer, sono queste le copie da riportare indietro con «Ripristina da un file…».",
       "choose": "Scegli cartella",
       "change": "Cambia cartella",
       "chosen": "Cartella dei backup impostata",

@@ -58,18 +58,35 @@ class OwnerMedicalCertExpiringDigestNotification extends Notification
             'kind' => 'medical_cert_expiry_reminders',
             'academy_id' => $this->academy->id,
             'document_ids' => $this->documents->pluck('id')->values()->all(),
+            // What `NotificationText` writes the sentence from, in the
+            // owner's language (#1912).
+            'params' => [
+                'count' => $count,
+                'names' => $this->names()->take(3)->values()->all(),
+                'more' => max(0, $this->names()->count() - 3),
+            ],
         ];
     }
 
-    private function body(): string
+    /**
+     * Each athlete once, however many of their certificates are expiring.
+     *
+     * @return Collection<int, non-falsy-string>
+     */
+    private function names(): Collection
     {
-        $names = $this->documents
+        return $this->documents
             ->map(static fn (Document $document): string => trim(
                 ($document->athlete->first_name ?? '') . ' ' . ($document->athlete->last_name ?? ''),
             ))
             ->filter()
             ->unique()
             ->values();
+    }
+
+    private function body(): string
+    {
+        $names = $this->names();
 
         $shown = $names->take(3)->implode(', ');
         $more = $names->count() - 3;

@@ -156,6 +156,56 @@ describe('PeriodicTask', () => {
     expect(run).toHaveBeenCalledTimes(1);
   });
 
+  // #1909 — a restore swaps the database the scheduler and the notification
+  // poll open on their own; they hold their ticks while it runs.
+  describe('pause / resume', () => {
+    it('skips every tick while paused, then runs on time again', async () => {
+      const run = vi.fn(async () => ok());
+      const tick = make(run);
+      tick.start();
+      await vi.advanceTimersByTimeAsync(5_000);
+      expect(run).toHaveBeenCalledTimes(1);
+
+      await tick.pause();
+      await vi.advanceTimersByTimeAsync(180_000);
+      expect(run).toHaveBeenCalledTimes(1);
+      expect(events).toContainEqual({ type: 'skipped-paused' });
+
+      tick.resume();
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(run).toHaveBeenCalledTimes(2);
+
+      await tick.stop();
+    });
+
+    it('waits for a run already in flight before it counts as paused', async () => {
+      let release: (() => void) | null = null;
+      const run = vi.fn(
+        () =>
+          new Promise<PeriodicRunResult>((resolve) => {
+            release = () => resolve(ok());
+          }),
+      );
+      const tick = make(run);
+      tick.start();
+      await vi.advanceTimersByTimeAsync(5_000);
+
+      let paused = false;
+      const pausing = tick.pause().then(() => {
+        paused = true;
+      });
+      await vi.advanceTimersByTimeAsync(1_000);
+      expect(paused).toBe(false);
+
+      release!();
+      await pausing;
+      expect(paused).toBe(true);
+      expect(tick.running).toBe(false);
+
+      await tick.stop();
+    });
+  });
+
   it('gives up waiting after the grace period', async () => {
     const tick = make(() => new Promise<PeriodicRunResult>(() => undefined), { stopGraceMs: 2_000 });
 

@@ -50,6 +50,7 @@ export function stubBridge(overrides: BridgeOverrides = {}): Bridge {
       list: async () => [],
       run: async () => ({ ok: false, path: null }),
       restore: async () => ({ ok: false }),
+      restoreFromFile: async () => ({ ok: false }),
     },
     drive: {
       state: async () => ({ configured: false, linked: false }),

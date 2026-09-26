@@ -72,6 +72,8 @@ function setup(
     payments?: AthletePayment[];
     joinedAt?: string;
     billingPeriodMonths?: number;
+    /** The athlete's own fee in cents (#1757); it wins over `fee` and the tier. */
+    feeOverride?: number | null;
     /** The resolved floor as the server sends it, `YYYY-MM-01` (#1742). */
     billingFloor?: string | null;
     /** Override the academy's season — the table is built on it (#1709). */
@@ -110,8 +112,14 @@ function setup(
       id: 42,
       first_name: 'Mario',
       last_name: 'Rossi',
-      monthly_fee_cents: opts.feeTier ? opts.feeTier.amount_cents : fee,
+      monthly_fee_cents:
+        opts.feeOverride != null
+          ? opts.feeOverride
+          : opts.feeTier
+            ? opts.feeTier.amount_cents
+            : fee,
       fee_tier: opts.feeTier ?? null,
+      fee_override_cents: opts.feeOverride ?? null,
       // Undefined unless a test says otherwise — that is how the fixture was,
       // and reading it unguarded threw 16 unhandled rxjs errors without
       // failing a single test (#1636).
@@ -263,6 +271,49 @@ describe('PaymentsListComponent (#182 Surface 2)', () => {
     expect(fixture.nativeElement.querySelector('[data-cy="payments-no-fee-hint"]')).toBeNull();
     const marks = fixture.nativeElement.querySelectorAll('[data-cy^="payment-mark-"]');
     expect(marks.length).toBeGreaterThan(0);
+  });
+
+  describe('a personal fee (#1757)', () => {
+    const tier = { id: 7, label: '2 lezioni', amount_cents: 5500, lessons_per_week: 2 };
+
+    it('names the personal fee instead of the tier it replaces', () => {
+      const { fixture } = setup({ feeTier: tier, feeOverride: 4000 });
+      const el: HTMLElement = fixture.nativeElement;
+
+      // Two captions naming two amounts would leave the owner to work out
+      // which one wins.
+      expect(el.querySelector('[data-cy="payments-fee-tier"]')).toBeNull();
+      const hint = el.querySelector('[data-cy="payments-fee-override"]');
+      expect(hint?.textContent).toContain('Personal fee');
+      expect(hint?.textContent).toContain('40');
+    });
+
+    it('says an athlete who trains free owes nothing, and dashes the unpaid months', () => {
+      const { fixture } = setup({ feeTier: tier, feeOverride: 0, billingPeriodMonths: 3 });
+      const el: HTMLElement = fixture.nativeElement;
+
+      expect(el.querySelector('[data-cy="payments-fee-override"]')?.textContent).toContain(
+        'Trains free',
+      );
+      // No "Quarterly · €0.00": there is no period to a fee of nothing.
+      expect(el.querySelector('[data-cy="payments-period-hint"]')).toBeNull();
+      // Not a month of amber "Unpaid" for money nobody owes.
+      const rows: { notOwedReason: string | null }[] = fixture.componentInstance['monthRows']();
+      expect(rows.every((row) => row.notOwedReason === 'athletes.detail.payments.trainsFree')).toBe(
+        true,
+      );
+      expect(el.textContent).not.toContain('Unpaid');
+    });
+
+    it('still lets a payment be recorded for them', () => {
+      // A fee of 0 is a fee that applies: the server records it at 0.
+      const { fixture } = setup({ feeOverride: 0 });
+
+      expect(fixture.nativeElement.querySelector('[data-cy="payments-no-fee-hint"]')).toBeNull();
+      expect(
+        fixture.nativeElement.querySelectorAll('[data-cy^="payment-mark-"]').length,
+      ).toBeGreaterThan(0);
+    });
   });
 
   it('names no tier when the athlete is on the academy flat fee', () => {

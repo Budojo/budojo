@@ -228,6 +228,12 @@ export interface Academy {
    */
   fee_tier_count?: number;
   /**
+   * Athletes with a personal fee above zero (#1757). An academy with no flat
+   * fee and no tiers still charges them, so the same gate reads this too.
+   * Optional for the same fixture-compat reason.
+   */
+  fee_override_count?: number;
+  /**
    * Entry-carnet offering (#1364): price of one carnet in cents, and how
    * many entries it holds. `null` on either means "this academy doesn't sell
    * carnets" — selling is rejected until both are set, and the carnet UI
@@ -581,6 +587,21 @@ export class AcademyService {
     // A season runs a year from its start, so it has ended once today has
     // reached the same date a year on.
     return new Date() >= new Date(y + 1, m - 1, d);
+  }
+
+  /**
+   * Re-read the academy when an athlete's personal fee above zero appeared or
+   * went away (#1757): saved, cleared, deleted with the athlete or restored
+   * with them. `fee_override_count` is part of "does this academy charge
+   * anything", and the cached academy only learns it moved from the server.
+   * A change between two amounts moves nothing, so it asks nothing.
+   *
+   * Fire and forget. A failed re-read leaves the gate where it was, which is
+   * where it would be without this.
+   */
+  refreshForPersonalFee(before: number | null | undefined, after: number | null | undefined): void {
+    if ((before ?? 0) > 0 === (after ?? 0) > 0) return;
+    this.get({ forceRefresh: true }).subscribe({ error: () => undefined });
   }
 
   get(options: { forceRefresh?: boolean } = {}): Observable<Academy> {

@@ -70,6 +70,8 @@ export interface CoveragePosition {
 export interface CoverageTopic {
   readonly id: number;
   readonly name: string;
+  /** The position it sits under, by id (#1911): what the season map groups by. */
+  readonly parent_id: number | null;
   readonly parent_name: string | null;
   readonly kind: TrainingMode;
 }
@@ -102,8 +104,6 @@ export interface SyllabusCoverage {
   readonly missing: readonly CoverageTopic[];
   /** Everything taught at least once, most recent first. */
   readonly taught: readonly CoverageTaughtTopic[];
-  /** Cumulative covered topics, one point per week up to today. */
-  readonly timeline: readonly { readonly on: string; readonly covered: number }[];
 }
 
 /**

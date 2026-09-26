@@ -16,6 +16,7 @@ describe('DesktopBridgeService', () => {
     list: async () => [],
     run: async () => ({ ok: false, path: null }),
     restore: async () => ({ ok: false }),
+    restoreFromFile: async () => ({ ok: false }),
   };
   const noKeys = {
     export: async () => ({ ok: false }),

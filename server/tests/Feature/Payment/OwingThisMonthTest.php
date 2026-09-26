@@ -166,6 +166,11 @@ it('agrees with the payment badge on every row of the roster', function (): void
     AthletePayment::factory()->for($inactivePaid)->forCurrentMonth()->create();
     $self = Athlete::factory()->for($this->academy)->selfFor($this->user)->create();
     AthletePayment::factory()->for($self)->forCurrentMonth()->create();
+    // Their own fee wins over the tier both ways (#1757): free on a paying
+    // tier is a dash, and paying on a free tier is owed.
+    $freeTier = AcademyFeeTier::factory()->for($this->academy)->create(['label' => 'Esente', 'amount_cents' => 0]);
+    Athlete::factory()->for($this->academy)->create(['fee_tier_id' => $tier->id, 'fee_override_cents' => 0]);
+    Athlete::factory()->for($this->academy)->create(['fee_tier_id' => $freeTier->id, 'fee_override_cents' => 4000]);
 
     $rows = collect($this->actingAs($this->user)
         ->getJson('/api/v1/athletes')
@@ -178,19 +183,21 @@ it('agrees with the payment badge on every row of the roster', function (): void
         ->filter(fn (array $r): bool => $r['payment_coverage'] === 'none'
             && $r['status'] === 'active'
             && $r['is_self'] === false
-            && $r['monthly_fee_cents'] !== null)
+            && $r['monthly_fee_cents'] !== null
+            && $r['fee_override_cents'] !== 0)
         ->pluck('id')->sort()->values()->all();
     // Paid is every other chip, and deliberately not gated on status (#805):
     // an athlete who paid and then went inactive has still paid.
     $badgeCovered = $rows
         ->filter(fn (array $r): bool => $r['payment_coverage'] !== 'none'
             && $r['is_self'] === false
-            && $r['monthly_fee_cents'] !== null)
+            && $r['monthly_fee_cents'] !== null
+            && $r['fee_override_cents'] !== 0)
         ->pluck('id')->sort()->values()->all();
 
     expect(collect(idsFor($this, 'paid=no'))->sort()->values()->all())->toBe($badgeUnpaid)
         ->and(collect(idsFor($this, 'paid=yes'))->sort()->values()->all())->toBe($badgeCovered)
-        ->and($badgeUnpaid)->toHaveCount(3)
+        ->and($badgeUnpaid)->toHaveCount(4)
         ->and($badgeCovered)->toHaveCount(3);
 });
 
@@ -244,6 +251,41 @@ it('does not push an overdue reminder to an athlete on a free tier', function ()
 
     Notification::assertSentTo($onPaying, AthletePaymentOverdueNotification::class);
     Notification::assertNotSentTo($onFree, AthletePaymentOverdueNotification::class);
+});
+
+it('pushes by the personal fee, over the tier either way (#1757)', function (): void {
+    $this->academy->update(['monthly_fee_cents' => null]);
+    $paying = AcademyFeeTier::factory()->for($this->academy)->create(['label' => 'Adulti', 'amount_cents' => 6500]);
+    $free = AcademyFeeTier::factory()->for($this->academy)->create(['label' => 'Esente', 'amount_cents' => 0]);
+    $freeOnPaying = User::factory()->create();
+    Athlete::factory()->for($this->academy)->create(['user_id' => $freeOnPaying->id, 'fee_tier_id' => $paying->id, 'fee_override_cents' => 0]);
+    $payingOnFree = User::factory()->create();
+    Athlete::factory()->for($this->academy)->create(['user_id' => $payingOnFree->id, 'fee_tier_id' => $free->id, 'fee_override_cents' => 4000]);
+
+    Notification::fake();
+    $this->artisan('budojo:send-athlete-payment-overdue-pushes')->assertSuccessful();
+
+    Notification::assertSentTo($payingOnFree, AthletePaymentOverdueNotification::class);
+    Notification::assertNotSentTo($freeOnPaying, AthletePaymentOverdueNotification::class);
+});
+
+it('chases a personal fee at an academy that charges nothing else (#1757)', function (): void {
+    // No flat fee, no tiers: only the academy-level gates stood between this
+    // athlete and the digest and the push.
+    $this->academy->update(['monthly_fee_cents' => null]);
+    $user = User::factory()->create();
+    $owing = Athlete::factory()->for($this->academy)->create(['user_id' => $user->id, 'fee_override_cents' => 4000]);
+
+    Notification::fake();
+    $this->artisan('budojo:send-athlete-payment-overdue-pushes')->assertSuccessful();
+    Notification::assertSentTo($user, AthletePaymentOverdueNotification::class);
+
+    Mail::fake();
+    $this->artisan('budojo:send-unpaid-athletes-digest')->assertSuccessful();
+    Mail::assertQueued(
+        UnpaidAthletesDigestMail::class,
+        fn (UnpaidAthletesDigestMail $mail): bool => $mail->athletes->pluck('id')->all() === [$owing->id],
+    );
 });
 
 it('still pushes an athlete on no tier at a flat-fee academy', function (): void {

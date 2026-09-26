@@ -15,5 +15,11 @@ import { Academy } from '../../core/services/academy.service';
  */
 export function academyChargesAFee(academy: Academy | null | undefined): boolean {
   if (!academy) return false;
-  return (academy.monthly_fee_cents ?? null) !== null || (academy.fee_tier_count ?? 0) > 0;
+  return (
+    (academy.monthly_fee_cents ?? null) !== null ||
+    (academy.fee_tier_count ?? 0) > 0 ||
+    // One athlete's own fee (#1757): an academy with neither of the above
+    // still charges them.
+    (academy.fee_override_count ?? 0) > 0
+  );
 }

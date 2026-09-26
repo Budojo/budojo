@@ -405,8 +405,8 @@
     "title": "Notifications",
     "markAll": "Mark all as read",
     "filter": {
-      "all": "All",
-      "unread": "Unread"
+      "inbox": "To see",
+      "archived": "Archived"
     },
     "group": {
       "new": "New",
@@ -415,7 +415,6 @@
       "earlier": "Earlier"
     },
     "empty": "You're all caught up.",
-    "emptyUnread": "No unread notifications.",
     "bell": {
       "ariaLabel": "Notifications",
       "tooltip": "Notifications",
@@ -427,7 +426,17 @@
     },
     "errorTitle": "Couldn't load your notifications",
     "errorHint": "Something went wrong. Try again in a moment.",
-    "errorRetry": "Try again"
+    "errorRetry": "Try again",
+    "archive": "Archive",
+    "archiveAria": "Archive: {{title}}",
+    "unarchive": "Restore",
+    "unarchiveAria": "Restore: {{title}}",
+    "archiveRead": "Archive the read ones",
+    "archivedOne": "Notification archived",
+    "archivedOther": "{{count}} notifications archived",
+    "undo": "Undo",
+    "emptyArchived": "No archived notifications.",
+    "undoFailed": "Could not undo: the notifications are under “Archived”."
   },
   "onboarding": {
     "checklist": {
@@ -2322,7 +2331,10 @@
         "periodStartsHereOne": "Also covers {{next}}",
         "periodStartsHereOther": "Also covers {{next}}",
         "periodCoveredBy": "Part of the {{month}} payment",
-        "beforeBillingFloor": "Before this academy started recording fees in Budojo"
+        "beforeBillingFloor": "Before this academy started recording fees in Budojo",
+        "trainsFree": "Trains free",
+        "trainsFreeHint": "Trains free · no fee is due.",
+        "feeOverrideHint": "Personal fee · {{amount}} a month."
       },
       "documents": {
         "confirm": {
@@ -2576,7 +2588,8 @@
         "addressZip": "ZIP",
         "addressCity": "City",
         "addressProvince": "Province",
-        "feeTier": "Fee tier"
+        "feeTier": "Fee tier",
+        "feeOverride": "Personal fee"
       },
       "placeholder": {
         "phoneCountryCode": "Code",
@@ -2630,6 +2643,8 @@
       "hint": {
         "address": "Leave every field empty to keep the athlete without an address on file.",
         "feeTier": "Which monthly fee they pay. Leave empty for the academy's standard fee.",
+        "feeOverride": "Only for this athlete: it replaces the tier and the academy's fee. Enter 0 if they train free.",
+        "feeOverrideFree": "Trains free: nothing is due, and they won't appear among those who haven't paid.",
         "kidsBeltsHidden": "Kids' belts are hidden: turn them on in Academy → Edit."
       },
       "button": {
@@ -3041,6 +3056,7 @@
       "headlineRule": "An athlete's own Programme tab counts differently: a technique after one lesson they attended, out of what the academy taught while they were on the roster. It asks whether they were there, not how much of the programme has been taught.",
       "map": {
         "title": "By position, week by week",
+        "hint": "Tap a position's name to see its techniques: what is missing, what you have done, and to plan them.",
         "legend": {
           "more": "2 or more lessons",
           "once": "1 lesson",
@@ -3065,6 +3081,10 @@
         "seasonAria": "{{position}}: every week of the season",
         "seasonEmpty": "Nothing on this position this season yet.",
         "planTitle": "Plan a lesson",
+        "todoTitle": "To do",
+        "onceTitle": "Done once",
+        "doneTitle": "Done",
+        "lessonsTitle": "The season's lessons",
         "planAria": "Plan {{position}}, week of {{date}}",
         "planNoneWeek": "No class on the timetable that week can teach this position.",
         "planNoneSeason": "No class on the timetable in the next two weeks can teach this position.",
@@ -3084,12 +3104,7 @@
           "copyFailed": "It could not be copied. Use “Send on WhatsApp” instead."
         }
       },
-      "overTime": "Across the season",
-      "lastTaught": "Last taught",
-      "missingList": "Not taught yet ({{count}})",
-      "nothingMissing": "Nothing left — the whole programme has been taught.",
       "planAction": "Plan",
-      "thinTag": "Once",
       "lessonsOne": "{{count}} lesson",
       "lessonsOther": "{{count}} lessons",
       "reachOne": "{{count}} person",
@@ -3322,11 +3337,28 @@
     "restore": "Restore",
     "confirmRestore": "Restore this backup? Your current data will be replaced with the contents of this archive.",
     "confirmRestoreAccept": "Restore",
+    "restoreFromFile": "Restore from a file…",
+    "latest": "Latest",
+    "showAll": "Show all ({{total}})",
+    "showFewer": "Show fewer",
+    "newComputer": {
+      "title": "Coming from another computer?",
+      "textNoKeys": "Restore the backup you kept: from your backup folder, from Google Drive or from a USB stick.",
+      "keysStep": "Enter the recovery code you saved: Budojo restarts with your keys, and the medical certificates can be opened again.",
+      "restoreStep": "Then restore the backup: from your backup folder, from Google Drive or from a USB stick. If you never saved the code, restore anyway: everything comes back except the documents.",
+      "keys": "Enter your recovery code"
+    },
+    "confirmRestoreFromFile": "Choose a Budojo backup: the current data will be replaced with its contents.",
+    "confirmRestoreFromFileAccept": "Choose the file",
     "toast": {
       "created": "Backup created",
       "failed": "Backup failed — see the log",
       "restored": "Backup restored",
-      "restoreRefused": "This backup could not be restored"
+      "restoreRefused": "This backup could not be restored",
+      "notABackup": "This file is not a Budojo backup.",
+      "newerBackup": "This backup comes from a newer version of Budojo. Update Budojo, then restore it.",
+      "busy": "Budojo is already backing up or restoring: try again in a moment.",
+      "restoreFailed": "The restore did not finish. The reason is in Budojo's log."
     },
     "keys": {
       "heading": "Recovery keys",
@@ -3385,6 +3417,7 @@
     "folder": {
       "title": "Backup folder",
       "why": "Backups saved on this computer do not survive this computer. Choose a folder — one your cloud service already syncs, a network drive, or a USB stick — and every backup is copied there automatically.",
+      "whyRestore": "If you change computers, these are the copies to bring back with “Restore from a file…”.",
       "choose": "Choose folder",
       "change": "Change folder",
       "chosen": "Backup folder set",

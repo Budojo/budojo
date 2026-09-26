@@ -38,6 +38,14 @@ describe('academyChargesAFee', () => {
     expect(academyChargesAFee(academy({ monthly_fee_cents: 0, fee_tier_count: 0 }))).toBe(true);
   });
 
+  it('is true for an academy that charges only one athlete their own fee (#1757)', () => {
+    expect(
+      academyChargesAFee(
+        academy({ monthly_fee_cents: null, fee_tier_count: 0, fee_override_count: 1 }),
+      ),
+    ).toBe(true);
+  });
+
   it('treats a missing fee_tier_count as no tiers, for pre-#1381 payloads', () => {
     expect(academyChargesAFee(academy({ monthly_fee_cents: null }))).toBe(false);
   });

@@ -229,12 +229,14 @@ class AthleteObserver
      * Distinct from the community-fanout: those notify OTHERS about
      * the promotion; this is the personal "congratulations" ping
      * to the affected athlete. Skipped when the athlete has no
-     * linked user_id (invitation pending).
+     * linked user_id (invitation pending), and for the owner's own row
+     * (#1913): it is linked to the owner, who has just set that belt and
+     * does not need congratulating on their own edit.
      */
     private function notifyPromotedAthlete(Athlete $athlete, string $oldBelt, string $newBelt): void
     {
         $userId = $athlete->user_id;
-        if ($userId === null) {
+        if ($userId === null || $athlete->is_self) {
             return;
         }
         $user = User::query()->find($userId);

@@ -61,6 +61,19 @@ class OwnerAcademyDocumentExpiringNotification extends Notification
             'kind' => 'academy_document_expiry_reminders',
             'academy_id' => $this->academy->id,
             'document_ids' => $this->documents->pluck('id')->values()->all(),
+            // What `NotificationText` writes the sentence from, in the
+            // owner's language (#1912). The date stays ISO here and is
+            // written out in the reader's language.
+            'params' => [
+                'count' => $count,
+                'documents' => $this->documents
+                    ->map(static fn (Document $document): array => [
+                        'name' => $document->original_name !== '' ? $document->original_name : $document->type->value,
+                        'expires_on' => $document->expires_at?->toDateString(),
+                    ])
+                    ->values()
+                    ->all(),
+            ],
         ];
     }
 

@@ -236,9 +236,13 @@ describe('checkRestore', () => {
     const check = checkRestore(manifest('2026_09_01_100000'), '2026_05_28_100000');
     expect(check.ok).toBe(false);
     expect(check.ok === false && check.reason).toMatch(/newer version/);
+    // A code, so the page can say it in the owner's language (#1909).
+    expect(check.ok === false && check.code).toBe('newer');
   });
 
   it('refuses a missing or malformed manifest', () => {
+    const missing = checkRestore(null, '2026_05_28_100000');
+    expect(missing.ok === false && missing.code).toBe('unreadable');
     expect(checkRestore(null, '2026_05_28_100000').ok).toBe(false);
     expect(checkRestore({ format: 2 } as unknown as BackupManifest, 'x').ok).toBe(false);
     expect(checkRestore({ format: 1 } as BackupManifest, 'x').ok).toBe(false);
@@ -279,6 +283,8 @@ describe('BackupService', () => {
       removeArchive: vi.fn(async () => undefined),
       swapIn: vi.fn(async () => undefined),
       archivePathFor: (name) => `/backups/${name}`,
+      copyIn: vi.fn(async () => undefined),
+      hasDatabase: vi.fn(async () => true),
       ...overrides,
     };
   }
@@ -395,5 +401,152 @@ describe('BackupService', () => {
       'budojo-backup-20260812-090000.zip',
       'budojo-backup-20260810-090000.zip',
     ]);
+  });
+
+  // #1909 — a backup from outside the app's own folder: the copies folder, a
+  // Drive download, a USB stick, a new computer with an empty list.
+  describe('restoreFile', () => {
+    const outside = '/media/usb/budojo-backup-20260920-100000.zip';
+
+    it('checks the file where it is, copies it in under its own name, then swaps', async () => {
+      const io = fakeIO();
+      const check = await service(io).restoreFile(outside);
+
+      expect(check.ok).toBe(true);
+      expect(io.unzip).toHaveBeenCalledWith(outside, '/tmp/restore');
+      expect(io.copyIn).toHaveBeenCalledWith(outside, 'budojo-backup-20260920-100000.zip');
+      expect(io.swapIn).toHaveBeenCalledWith('/tmp/restore');
+      expect(io.removeDir).toHaveBeenCalledWith('/tmp/restore');
+    });
+
+    it('does not copy in an archive the list already holds', async () => {
+      const io = fakeIO({
+        listArchives: vi.fn(async () => [
+          { name: 'budojo-backup-20260920-100000.zip', path: 'x', createdAt: 'x', sizeBytes: 1 },
+        ]),
+      });
+
+      expect((await service(io).restoreFile(outside)).ok).toBe(true);
+      expect(io.copyIn).not.toHaveBeenCalled();
+      expect(io.swapIn).toHaveBeenCalled();
+    });
+
+    it('names a renamed copy after the moment its backup was made', async () => {
+      // "budojo-backup-… (1).zip" from a second Drive download: still ours, and
+      // it goes into the list under the name the backup had.
+      const createdAt = '2026-09-20T10:00:00.000Z';
+      const io = fakeIO({
+        readManifest: vi.fn(async () => ({ format: 1 as const, appVersion: '2', schemaVersion: '2026_01_01_0', createdAt })),
+      });
+
+      await service(io).restoreFile('C:\\Users\\gym\\Downloads\\budojo-backup-20260920-100000 (1).zip');
+
+      expect(io.copyIn).toHaveBeenCalledWith(
+        'C:\\Users\\gym\\Downloads\\budojo-backup-20260920-100000 (1).zip',
+        backupArchiveName(new Date(createdAt)),
+      );
+    });
+
+    it('refuses a file that is not an archive at all, and touches nothing', async () => {
+      const io = fakeIO({
+        unzip: vi.fn(async () => {
+          throw new Error('unzip failed (exit 1): not a zip archive');
+        }),
+      });
+
+      const check = await service(io).restoreFile('/home/gym/notes.zip');
+
+      expect(check.ok === false && check.code).toBe('unreadable');
+      expect(io.copyIn).not.toHaveBeenCalled();
+      expect(io.swapIn).not.toHaveBeenCalled();
+      expect(io.removeDir).toHaveBeenCalledWith('/tmp/restore');
+    });
+
+    it('refuses a zip with no manifest, and copies nothing in', async () => {
+      const io = fakeIO({ readManifest: vi.fn(async () => null) });
+
+      const check = await service(io).restoreFile('/home/gym/photos.zip');
+
+      expect(check.ok === false && check.code).toBe('unreadable');
+      expect(io.copyIn).not.toHaveBeenCalled();
+      expect(io.swapIn).not.toHaveBeenCalled();
+    });
+
+    it('refuses a backup from a newer Budojo, and copies nothing in', async () => {
+      const io = fakeIO({
+        readManifest: vi.fn(async () => ({ format: 1 as const, appVersion: '9', schemaVersion: '2027_01_01_0', createdAt: 'x' })),
+      });
+
+      const check = await service(io).restoreFile(outside);
+
+      expect(check.ok === false && check.code).toBe('newer');
+      expect(io.copyIn).not.toHaveBeenCalled();
+      expect(io.swapIn).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('restoreFile — the ways it must not half-work (#1909)', () => {
+    const outside = '/media/usb/budojo-backup-20260920-100000.zip';
+
+    it('refuses an archive with a manifest but no database, and copies nothing in', async () => {
+      // It would pass the manifest check, land in the list, and then fail the
+      // swap: a backup that cannot be restored, sitting among the ones that can.
+      const io = fakeIO({ hasDatabase: vi.fn(async () => false) });
+
+      const check = await service(io).restoreFile(outside);
+
+      expect(check.ok === false && check.code).toBe('unreadable');
+      expect(io.copyIn).not.toHaveBeenCalled();
+      expect(io.swapIn).not.toHaveBeenCalled();
+    });
+
+    it('still restores when copying it into the list fails', async () => {
+      // The list is a convenience; the owner's data is the point.
+      const io = fakeIO({
+        copyIn: vi.fn(async () => {
+          throw new Error('no space left on device');
+        }),
+      });
+
+      expect((await service(io).restoreFile(outside)).ok).toBe(true);
+      expect(io.swapIn).toHaveBeenCalled();
+    });
+
+    it('refuses a second restore while one is running, and says it is busy', async () => {
+      let release: () => void = () => undefined;
+      const io = fakeIO({
+        swapIn: vi.fn(
+          () =>
+            new Promise<void>((resolve) => {
+              release = resolve;
+            }),
+        ),
+      });
+      const backups = service(io);
+
+      const first = backups.restoreFile(outside);
+      await vi.waitFor(() => expect(io.swapIn).toHaveBeenCalled());
+      expect(backups.busy).toBe(true);
+
+      const second = await backups.restore('budojo-backup-20260810-090000.zip');
+      expect(second.ok === false && second.code).toBe('busy');
+      await expect(backups.backup()).rejects.toThrow(/already running/);
+
+      release();
+      expect((await first).ok).toBe(true);
+      expect(backups.busy).toBe(false);
+    });
+
+    it('frees the lock when a restore fails', async () => {
+      const io = fakeIO({
+        swapIn: vi.fn(async () => {
+          throw new Error('disk gone');
+        }),
+      });
+      const backups = service(io);
+
+      await expect(backups.restoreFile(outside)).rejects.toThrow('disk gone');
+      expect(backups.busy).toBe(false);
+    });
   });
 });

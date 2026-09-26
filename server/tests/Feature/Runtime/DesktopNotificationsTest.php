@@ -16,6 +16,7 @@ use App\Support\NotificationPreferences;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 
 /**
  * Native notifications on the desktop (#1225): the owner digests that were
@@ -119,7 +120,8 @@ it('turns the unpaid digest into a notification row on the desktop', function ()
     expect($row->type)->toBe(OwnerUnpaidAthletesDigestNotification::class)
         ->and($row->data['title'])->toBe('1 athlete has not paid this month')
         ->and($row->data['body'])->toBe('Anna Bianchi')
-        ->and($row->data['link'])->toBe('/dashboard/athletes?paid=0');
+        // The roster reads `paid=yes|no`; `0` opened everybody (#1913).
+        ->and($row->data['link'])->toBe('/dashboard/athletes?paid=no');
 });
 
 // ── budojo:list-desktop-notifications ────────────────────────────────────────
@@ -139,14 +141,16 @@ it('lists owner notifications newer than the watermark, oldest first, as JSON', 
     $rows = json_decode(Artisan::output(), true, 512, JSON_THROW_ON_ERROR);
 
     expect($rows)->toHaveCount(1)
-        ->and($rows[0]['title'])->toBe('1 athlete has not paid this month')
-        ->and($rows[0]['link'])->toBe('/dashboard/athletes?paid=0')
+        // Written from the row's parameters in the owner's language (#1912),
+        // English for an owner who never chose one.
+        ->and($rows[0]['title'])->toBe("1 athlete hasn't paid August's fee yet")
+        ->and($rows[0]['link'])->toBe('/dashboard/athletes?paid=no')
         ->and($rows[0]['created_at'])->toBe('2026-08-15T09:10:00+00:00')
         ->and($rows[0]['id'])->toBeString();
 
     Artisan::call('budojo:list-desktop-notifications', ['--after' => '2026-08-15T08:00:00+00:00']);
     $all = json_decode(Artisan::output(), true, 512, JSON_THROW_ON_ERROR);
-    expect(array_column($all, 'title'))->toBe(['A medical certificate is expiring', '1 athlete has not paid this month']);
+    expect(array_column($all, 'title'))->toBe(['A medical certificate is expiring', "1 athlete hasn't paid August's fee yet"]);
 });
 
 it('excludes athlete-side rows and rows without a title', function (): void {
@@ -172,4 +176,25 @@ it('excludes athlete-side rows and rows without a title', function (): void {
 
 it('rejects a malformed watermark loudly', function (): void {
     expect(Artisan::call('budojo:list-desktop-notifications', ['--after' => 'yesterday-ish']))->toBe(2);
+});
+
+it('points the unpaid digests already in an inbox at the unpaid filter (#1913)', function (): void {
+    $owner = User::factory()->create();
+    $owner->notifications()->create([
+        'id' => (string) Str::uuid(),
+        'type' => OwnerUnpaidAthletesDigestNotification::class,
+        'data' => ['kind' => 'unpaid_athletes_digest', 'title' => 't', 'body' => 'b', 'link' => '/dashboard/athletes?paid=0'],
+    ]);
+    $owner->notifications()->create([
+        'id' => (string) Str::uuid(),
+        'type' => 'App\Notifications\SomethingElse',
+        'data' => ['kind' => 'owner_athlete_missed_streak', 'title' => 't', 'body' => 'b', 'link' => '/dashboard/athletes/7'],
+    ]);
+
+    (require database_path('migrations/2026_09_26_140000_point_unpaid_digests_at_the_unpaid_filter.php'))->up();
+
+    $links = $owner->notifications()->get()->mapWithKeys(fn (DatabaseNotification $n): array => [(string) $n->data['kind'] => $n->data['link']]);
+    expect($links['unpaid_athletes_digest'])->toBe('/dashboard/athletes?paid=no')
+        // Only the digest moves; every other kind keeps its own link.
+        ->and($links['owner_athlete_missed_streak'])->toBe('/dashboard/athletes/7');
 });

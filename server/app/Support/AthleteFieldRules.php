@@ -90,16 +90,19 @@ final class AthleteFieldRules
             'stripes' => ['integer', 'min:0', 'max:10', new StripesWithinGrade($ladder)],
             'status' => ['required', Rule::enum(AthleteStatus::class)],
             'joined_at' => ['required', 'date'],
-            // Which price tier the athlete starts on (#1381). Optional: an
-            // athlete on none pays the academy's flat fee, which is every
-            // athlete an academy has today.
             // How often this athlete is expected to pay (#1382). Monthly for
             // everyone until someone changes it.
             'billing_period_months' => ['sometimes', 'integer', Rule::enum(BillingPeriod::class)],
+            // Which price tier the athlete starts on (#1381). Optional: an
+            // athlete on none pays the academy's flat fee, which is every
+            // athlete an academy has today.
             'fee_tier_id' => [
                 'sometimes', 'nullable', 'integer',
                 Rule::exists('academy_fee_tiers', 'id')->where('academy_id', $academyId),
             ],
+            // This athlete's own monthly fee, in cents (#1757): null for
+            // none, 0 for training free.
+            'fee_override_cents' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:1000000'],
         ];
     }
 }

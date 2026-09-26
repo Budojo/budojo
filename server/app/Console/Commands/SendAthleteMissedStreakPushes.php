@@ -117,8 +117,13 @@ class SendAthleteMissedStreakPushes extends Command
         // NOBODY on the shipping desktop build, where `athlete_accounts` is
         // off and therefore no athlete has a `user_id` at all. An owner who
         // had the preference switched on believed they were being warned.
+        //
+        // The owner's own row is left out (#1913): the owner missing their
+        // own classes is not a churn signal, and the alert about it went to
+        // the owner.
         $athletes = $academy->athletes()
             ->where('status', AthleteStatus::Active)
+            ->where('is_self', false)
             ->get();
 
         foreach ($athletes as $athlete) {

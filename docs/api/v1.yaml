@@ -1026,6 +1026,46 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationError'
 
+  /me/locale:
+    patch:
+      tags: [auth]
+      summary: Set the language the server writes this user's notifications in
+      description: |
+        The app's language (#1912), sent by the SPA whenever its language
+        switch changes, and once when a signed-in user loads with a language
+        the server has not heard. The server writes the owner's
+        notifications itself — the inbox (`GET /me/notifications`) and the
+        desktop's Windows notification — in this language. Echoes it back.
+      operationId: meLocaleUpdate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [locale]
+              properties:
+                locale:
+                  $ref: '#/components/schemas/AppLocale'
+      responses:
+        '200':
+          description: The language, as stored.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [locale]
+                    properties:
+                      locale:
+                        $ref: '#/components/schemas/AppLocale'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          description: Missing, or a language the app does not speak.
   /me/notifications:
     get:
       tags: [auth]
@@ -1036,13 +1076,23 @@ paths:
         user (`ORDER BY created_at DESC LIMIT 20`) plus an unread
         count for the badge.
 
-        **Population is deferred** — the inbox surface ships here;
-        wiring the existing reminder Actions (medical-cert expiry
-        digest, unpaid-athletes monthly digest) to ALSO call
-        `$user->notify(...)` alongside their email channel is a
-        focused follow-up. Today the `notifications` table is empty
-        in production until that follow-up lands.
+        `title` and `body` are written at read time in the user's
+        `locale` (#1912) from the row's stored parameters, for the
+        owner's alerts and digests; any other row returns the sentence
+        it was stored with.
+
+        Two views (#1914): without `archived` it is the inbox, the rows
+        not archived; with `archived=1` it is the archived rows, most
+        recently archived first. `unread_count` is always the inbox's —
+        an archived row never counts on the bell.
       operationId: meNotificationsIndex
+      parameters:
+        - in: query
+          name: archived
+          required: false
+          schema:
+            type: boolean
+          description: '`1` for the archived rows instead of the inbox (#1914).'
       responses:
         '200':
           description: Latest notifications + unread count.
@@ -1094,6 +1144,11 @@ paths:
                           type: string
                           format: date-time
                           nullable: true
+                        archived_at:
+                          type: string
+                          format: date-time
+                          nullable: true
+                          description: When it was archived (#1914); null in the inbox.
                         created_at:
                           type: string
                           format: date-time
@@ -1108,6 +1163,131 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthenticated'
 
+  /me/notifications/archive-read:
+    post:
+      tags: [auth]
+      summary: Archive every read notification still in the inbox
+      description: |
+        "Archivia le lette" (#1914): every row with a `read_at` and no
+        `archived_at`, in one update. Unread rows stay in the inbox.
+        Answers with the ids it archived, so an undo can bring back all of
+        them and not only the rows a page had loaded.
+      operationId: meNotificationsArchiveRead
+      responses:
+        '200':
+          description: How many rows were archived.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [archived, ids]
+                    properties:
+                      archived: { type: integer }
+                      ids:
+                        type: array
+                        items: { type: string, format: uuid }
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+  /me/notifications/unarchive:
+    post:
+      tags: [auth]
+      summary: Bring a batch of archived notifications back to the inbox
+      description: |
+        The undo of "Archivia le lette" (#1914), in one request. Ids that are
+        not the user's are ignored.
+      operationId: meNotificationsUnarchiveMany
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ids]
+              properties:
+                ids:
+                  type: array
+                  maxItems: 1000
+                  items: { type: string, format: uuid }
+      responses:
+        '200':
+          description: How many came back.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [unarchived]
+                    properties:
+                      unarchived: { type: integer }
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          description: Not a list of ids.
+  /me/notifications/{id}/archive:
+    post:
+      tags: [auth]
+      summary: Archive one notification
+      description: |
+        Out of the inbox, kept under the archived view (#1914). Nothing is
+        deleted. 404 for an id that is not the user's, as for `/read`.
+
+        Two kinds archive themselves: a missed-streak alert once that
+        athlete checks in again (a presence dated after the alert, not an
+        old register filled in), and an unpaid digest once a newer one for
+        its month or a later one arrives. The certificate and document
+        digests never do: each lists only what crossed a threshold that day.
+      operationId: meNotificationsArchive
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Archived.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationArchiveState'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          description: Not the user's notification.
+  /me/notifications/{id}/unarchive:
+    post:
+      tags: [auth]
+      summary: Bring an archived notification back to the inbox
+      description: |
+        The undo of `/archive` (#1914). 404 for an id that is not the
+        user's.
+      operationId: meNotificationsUnarchive
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Back in the inbox.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationArchiveState'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          description: Not the user's notification.
   /me/notifications/{id}/read:
     post:
       tags: [auth]
@@ -4413,14 +4593,16 @@ paths:
 
             - `no` is the "Unpaid" chip: the athlete is `active` (#805), is
               not the owner's own row (`is_self`), is charged a fee
-              (`monthly_fee_cents` is not null), and neither a payment
+              (`monthly_fee_cents` is not null, and their own
+              `fee_override_cents` is not `0`, #1757), and neither a payment
               covering the month nor a carnet spendable today pays for it.
             - `yes` is every other chip: a payment covering the month, or a
               spendable carnet. Until #1722 it meant a payment row only and
               left carnet holders out. It deliberately carries no status
               gate: an athlete who paid and then went inactive has still
-              paid. Rows on which no payment is expected (`is_self`, or
-              `monthly_fee_cents` null) are under neither value.
+              paid. Rows on which no payment is expected (`is_self`,
+              `monthly_fee_cents` null, or a personal fee of `0` — someone
+              who trains free, #1757) are under neither value.
 
             The owner's digest and the athlete's overdue push ask the same
             question the same way. Unrecognised values are silently ignored
@@ -5317,13 +5499,15 @@ paths:
         a March monthly and a February quarterly start in different months and
         both cover March. `amount_cents` on the resulting
         row is snapshotted from **the fee that applies to this athlete** —
-        their price tier's amount if they are on one, the academy's flat
-        `monthly_fee_cents` otherwise (#1381). Future fee, tier, or
-        tier-membership changes do NOT rewrite past records.
+        their own `fee_override_cents` if set (#1757), else their price
+        tier's amount, else the academy's flat `monthly_fee_cents` (#1381).
+        Future fee, tier, or tier-membership changes do NOT rewrite past
+        records.
 
-        Returns 422 when no fee applies at all: the athlete is on no tier
-        **and** `academy.monthly_fee_cents` is null. An athlete on a tier is
-        payable even when the academy has no flat fee. The athlete resource's
+        Returns 422 when no fee applies at all: no override, no tier **and**
+        `academy.monthly_fee_cents` null. An athlete on a tier or with an
+        override is payable even when the academy has no flat fee, and one
+        whose override is `0` records a payment of 0. The athlete resource's
         `monthly_fee_cents` is the resolved amount, so a client can tell
         upfront. Cross-academy returns 403.
       operationId: athletePaymentRecord
@@ -8571,6 +8755,25 @@ components:
           description: Plain-text Sanctum Bearer token. Returned once, never again.
           example: "1|aBc123XyZ..."
 
+    NotificationArchiveState:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [id, archived_at]
+          properties:
+            id: { type: string, format: uuid }
+            archived_at:
+              type: string
+              format: date-time
+              nullable: true
+    AppLocale:
+      type: string
+      enum: [en, it]
+      description: |
+        A language the app speaks (#1912), as the SPA's language switch names
+        it. The `App\Enums\AppLocale` PHP enum.
     User:
       type: object
       required: [id, first_name, last_name, full_name, handle, email, email_verified_at, avatar_url, deletion_pending]
@@ -8660,6 +8863,14 @@ components:
             scheduled_for:
               type: string
               format: date-time
+        locale:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/AppLocale'
+          description: |
+            The language the server writes this user's notifications in
+            (#1912). `null` until the SPA has sent it with
+            `PATCH /me/locale`; the server then writes in English.
 
     # ── Academy ───────────────────────────────────────────────────────────
 
@@ -9013,6 +9224,15 @@ components:
             widget on "does this academy manage payments at all" — a question
             neither this nor `monthly_fee_cents` answers alone, since an
             academy priced only by tier leaves the flat fee null.
+          example: 0
+        fee_override_count:
+          type: integer
+          minimum: 0
+          description: |
+            How many athletes have a personal fee above zero (#1757). The same
+            gate reads it: an academy with no flat fee and no tiers still
+            charges these athletes. Athletes whose personal fee is `0` train
+            free and are not counted.
           example: 0
         carnet_price_cents:
           type: integer
@@ -9469,7 +9689,7 @@ components:
       description: |
         The coverage report for one season (#1565). Every count is of
         **techniques** — positions are a grouping, not a unit of work.
-      required: [season, kind, totals, positions, missing, taught, timeline]
+      required: [season, kind, totals, positions, missing, taught]
       properties:
         season:
           type: object
@@ -9554,18 +9774,6 @@ components:
                   state:
                     type: string
                     enum: [covered, thin, missing]
-        timeline:
-          type: array
-          description: |
-            Cumulative covered techniques, one point per week from the season
-            start up to today — a topic joins on the day of its **second**
-            lesson, the same rule the headline uses.
-          items:
-            type: object
-            required: [on, covered]
-            properties:
-              on: { type: string, format: date }
-              covered: { type: integer }
 
     SyllabusCalendar:
       type: object
@@ -9654,10 +9862,18 @@ components:
 
     CoverageTopic:
       type: object
-      required: [id, name, parent_name, kind]
+      required: [id, name, parent_id, parent_name, kind]
       properties:
         id: { type: integer, format: int64 }
         name: { type: string, example: Omoplata }
+        parent_id:
+          type: integer
+          format: int64
+          nullable: true
+          description: |
+            The position it sits under, by id (#1911): the season map groups a
+            position's techniques under it, and names repeat across positions.
+          example: 12
         parent_name:
           type: string
           nullable: true
@@ -9953,6 +10169,16 @@ components:
             tier belonging to the athlete's own academy — anything else is a
             422 on `fee_tier_id`.
           example: 3
+        fee_override_cents:
+          type: integer
+          nullable: true
+          minimum: 0
+          maximum: 1000000
+          description: |
+            This athlete's own monthly fee, in cents (#1757). Wins over the
+            tier and the academy fee. `0` means they train free — not owed,
+            not chased; `null` (or omitted on create) means no override.
+          example: 0
         address:
           allOf:
             - $ref: '#/components/schemas/Address'
@@ -10052,6 +10278,16 @@ components:
             tier belonging to the athlete's own academy — anything else is a
             422 on `fee_tier_id`.
           example: 3
+        fee_override_cents:
+          type: integer
+          nullable: true
+          minimum: 0
+          maximum: 1000000
+          description: |
+            This athlete's own monthly fee, in cents (#1757). Wins over the
+            tier and the academy fee. `0` means they train free — not owed,
+            not chased; `null` (or omitted on create) means no override.
+          example: 0
         address:
           allOf:
             - $ref: '#/components/schemas/Address'
@@ -10434,15 +10670,27 @@ components:
 
             It is a display and aggregation rule only — recording a payment
             for a month below the floor still succeeds.
+        fee_override_cents:
+          type: integer
+          nullable: true
+          minimum: 0
+          description: |
+            This athlete's own monthly fee, in cents (#1757), as set on the
+            form — `null` when they inherit the tier or the academy fee, `0`
+            when they train free. `monthly_fee_cents` is the resolved amount;
+            this is what the form edits.
+          example: null
         monthly_fee_cents:
           type: integer
           nullable: true
           minimum: 0
           description: |
             What this athlete actually pays each month, in cents (#1381) —
-            their tier's amount if they are on one, the academy's flat
-            `monthly_fee_cents` otherwise. Resolved server-side so the client
-            never re-derives the fallback and the two cannot disagree.
+            their own `fee_override_cents` if set (#1757), else their tier's
+            amount if they are on one, else the academy's flat
+            `monthly_fee_cents`. Resolved server-side so the client never
+            re-derives the fallback and the two cannot disagree. `0` is a fee
+            of nothing: the athlete trains free and is not expected to pay.
 
             `null` means neither exists and `POST /athletes/{id}/payments`
             will refuse with 422.
@@ -10554,9 +10802,10 @@ components:
           minimum: 0
           description: |
             Snapshot of the fee that applied to this athlete at recording
-            time — their tier's amount if they were on one, the academy's
-            flat `monthly_fee_cents` otherwise (#1381) — **times the months
-            covered** (#1382). Budojo has nowhere to record a discounted
+            time — their own `fee_override_cents` if set (#1757), else their
+            tier's amount, else the academy's flat `monthly_fee_cents`
+            (#1381) — **times the months covered** (#1382). `0` for an
+            athlete who trains free. Budojo has nowhere to record a discounted
             annual and does not pretend to.
         paid_at:
           type: string

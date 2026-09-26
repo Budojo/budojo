@@ -1175,31 +1175,38 @@ const SYLLABUS_COVERAGE = {
     coveragePosition(7, 'Leg entanglements', 2, 0, 0, 0, 'nogi'),
   ],
   missing: [
-    { id: 12, name: 'Triangle', parent_name: 'Closed guard', kind: 'both' },
-    { id: 13, name: 'Kimura', parent_name: 'Closed guard', kind: 'both' },
-    { id: 15, name: 'Cross collar choke', parent_name: 'Closed guard', kind: 'gi' },
-    { id: 22, name: 'Old school sweep', parent_name: 'Half guard', kind: 'both' },
-    { id: 23, name: 'Lockdown', parent_name: 'Half guard', kind: 'nogi' },
-    { id: 32, name: 'Cross collar choke', parent_name: 'Mount', kind: 'gi' },
-    { id: 33, name: 'Arm triangle', parent_name: 'Mount', kind: 'both' },
-    { id: 35, name: 'Elbow-knee escape', parent_name: 'Mount', kind: 'both' },
-    { id: 41, name: 'Escape to guard', parent_name: 'Side control', kind: 'both' },
-    { id: 42, name: 'Kimura', parent_name: 'Side control', kind: 'both' },
-    { id: 43, name: 'Paper cutter choke', parent_name: 'Side control', kind: 'gi' },
-    { id: 44, name: 'North-south choke', parent_name: 'Side control', kind: 'both' },
-    { id: 51, name: 'Rear naked choke', parent_name: 'Back', kind: 'both' },
-    { id: 52, name: 'Bow and arrow choke', parent_name: 'Back', kind: 'gi' },
-    { id: 53, name: 'Back escape', parent_name: 'Back', kind: 'both' },
-    { id: 62, name: 'Osoto gari', parent_name: 'Standing', kind: 'gi' },
-    { id: 63, name: 'Guard pull', parent_name: 'Standing', kind: 'gi' },
-    { id: 64, name: 'Snap down', parent_name: 'Standing', kind: 'nogi' },
-    { id: 71, name: 'Straight ankle lock', parent_name: 'Leg entanglements', kind: 'both' },
-    { id: 72, name: 'Heel hook', parent_name: 'Leg entanglements', kind: 'nogi' },
+    { id: 12, name: 'Triangle', parent_id: 1, parent_name: 'Closed guard', kind: 'both' },
+    { id: 13, name: 'Kimura', parent_id: 1, parent_name: 'Closed guard', kind: 'both' },
+    { id: 15, name: 'Cross collar choke', parent_id: 1, parent_name: 'Closed guard', kind: 'gi' },
+    { id: 22, name: 'Old school sweep', parent_id: 2, parent_name: 'Half guard', kind: 'both' },
+    { id: 23, name: 'Lockdown', parent_id: 2, parent_name: 'Half guard', kind: 'nogi' },
+    { id: 32, name: 'Cross collar choke', parent_id: 3, parent_name: 'Mount', kind: 'gi' },
+    { id: 33, name: 'Arm triangle', parent_id: 3, parent_name: 'Mount', kind: 'both' },
+    { id: 35, name: 'Elbow-knee escape', parent_id: 3, parent_name: 'Mount', kind: 'both' },
+    { id: 41, name: 'Escape to guard', parent_id: 4, parent_name: 'Side control', kind: 'both' },
+    { id: 42, name: 'Kimura', parent_id: 4, parent_name: 'Side control', kind: 'both' },
+    { id: 43, name: 'Paper cutter choke', parent_id: 4, parent_name: 'Side control', kind: 'gi' },
+    { id: 44, name: 'North-south choke', parent_id: 4, parent_name: 'Side control', kind: 'both' },
+    { id: 51, name: 'Rear naked choke', parent_id: 5, parent_name: 'Back', kind: 'both' },
+    { id: 52, name: 'Bow and arrow choke', parent_id: 5, parent_name: 'Back', kind: 'gi' },
+    { id: 53, name: 'Back escape', parent_id: 5, parent_name: 'Back', kind: 'both' },
+    { id: 62, name: 'Osoto gari', parent_id: 6, parent_name: 'Standing', kind: 'gi' },
+    { id: 63, name: 'Guard pull', parent_id: 6, parent_name: 'Standing', kind: 'gi' },
+    { id: 64, name: 'Snap down', parent_id: 6, parent_name: 'Standing', kind: 'nogi' },
+    {
+      id: 71,
+      name: 'Straight ankle lock',
+      parent_id: 7,
+      parent_name: 'Leg entanglements',
+      kind: 'both',
+    },
+    { id: 72, name: 'Heel hook', parent_id: 7, parent_name: 'Leg entanglements', kind: 'nogi' },
   ],
   taught: [
     {
       id: 11,
       name: 'Armbar',
+      parent_id: 1,
       parent_name: 'Closed guard',
       kind: 'both',
       lessons: 3,
@@ -1211,6 +1218,7 @@ const SYLLABUS_COVERAGE = {
     {
       id: 14,
       name: 'Hip bump sweep',
+      parent_id: 1,
       parent_name: 'Closed guard',
       kind: 'both',
       lessons: 2,
@@ -1222,6 +1230,7 @@ const SYLLABUS_COVERAGE = {
     {
       id: 31,
       name: 'Americana',
+      parent_id: 3,
       parent_name: 'Mount',
       kind: 'both',
       lessons: 2,
@@ -1233,6 +1242,7 @@ const SYLLABUS_COVERAGE = {
     {
       id: 16,
       name: 'Omoplata',
+      parent_id: 1,
       parent_name: 'Closed guard',
       kind: 'both',
       lessons: 1,
@@ -1244,6 +1254,7 @@ const SYLLABUS_COVERAGE = {
     {
       id: 21,
       name: 'Knee shield',
+      parent_id: 2,
       parent_name: 'Half guard',
       kind: 'both',
       lessons: 1,
@@ -1255,6 +1266,7 @@ const SYLLABUS_COVERAGE = {
     {
       id: 34,
       name: 'Upa escape',
+      parent_id: 3,
       parent_name: 'Mount',
       kind: 'both',
       lessons: 1,
@@ -1266,6 +1278,7 @@ const SYLLABUS_COVERAGE = {
     {
       id: 61,
       name: 'Double leg',
+      parent_id: 6,
       parent_name: 'Standing',
       kind: 'both',
       lessons: 1,
@@ -1274,10 +1287,6 @@ const SYLLABUS_COVERAGE = {
       last_taught_on: '2026-09-02',
       state: 'thin',
     },
-  ],
-  timeline: [
-    { on: '2026-09-06', covered: 1 },
-    { on: '2026-09-13', covered: 3 },
   ],
 };
 
@@ -1779,6 +1788,7 @@ function installBridge(win: Cypress.AUTWindow, opts: BridgeOptions): void {
       list: () => Promise.resolve(opts.archives ?? ARCHIVES),
       run: ok({ ok: true, path: ARCHIVES[0].path }),
       restore: ok({ ok: true }),
+      restoreFromFile: ok({ ok: false, canceled: true }),
     },
     folder: {
       state: ok(opts.folder ?? FOLDER_STATE),
@@ -1994,6 +2004,8 @@ interface ScreenOptions {
   archives?: typeof ARCHIVES;
   /** Where backups are copied, and how that last went. */
   folder?: typeof FOLDER_STATE;
+  /** The owner's theme choice, as the theme toggle stores it. Light when unset. */
+  theme?: 'dark';
 }
 
 // Scroll a target to the middle before acting on it. The default scrolls it
@@ -2188,6 +2200,7 @@ function screen(slug: string, route: string, ready: string, opts: ScreenOptions 
         failOnStatusCode: false,
         onBeforeLoad(win: Cypress.AUTWindow) {
           win.localStorage.setItem('budojoLang', 'it');
+          if (opts.theme) win.localStorage.setItem('budojoTheme', opts.theme);
           installBridge(win, {
             token,
             update: opts.update,
@@ -2541,7 +2554,6 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
             positions: [],
             missing: [],
             taught: [],
-            timeline: [],
           },
         },
       });
@@ -3207,7 +3219,9 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
         cy.intercept('GET', '/api/v1/lessons?*', { statusCode: 200, body: { data: null } });
       },
       act: () => {
-        press('[data-cy="syllabus-missing-23"] button');
+        // From its position's panel (#1911): Half guard, then its technique.
+        press('[data-cy="season-map-position-2"]');
+        press('[data-cy="season-map-todo-23"]');
         dialogOpen('[data-cy="lesson-sheet"]');
       },
     },
@@ -3221,6 +3235,19 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       cy.get('[data-cy="season-map-popover"]', { timeout: 4000 }).should('be.visible');
     },
   });
+  // A position's techniques under its name (#1911): to do, done once, done,
+  // above its season's lessons — where the report's two lists went.
+  screen(
+    '40-stats-syllabus-position',
+    '/dashboard/stats/syllabus',
+    '[data-cy="syllabus-coverage"]',
+    {
+      act: () => {
+        press('[data-cy="season-map-position-1"]');
+        cy.get('[data-cy="season-map-techniques"]', { timeout: 4000 }).should('be.visible');
+      },
+    },
+  );
   // The week's plan for the academy's group (#1863), just copied: the row
   // under the map, and the toast that says where to paste it.
   screen('40-stats-syllabus-share', '/dashboard/stats/syllabus', '[data-cy="syllabus-coverage"]', {
@@ -3236,6 +3263,26 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       cy.get('[data-cy="season-map-share"]').scrollIntoView({ offset: { top: -320, left: 0 } });
     },
   });
+  // The same toast in the dark theme (#1908): its title and icon took
+  // PrimeNG's `surface.0`, which the dark ramp makes near-black, so it read
+  // as an empty panel.
+  screen(
+    '40-stats-syllabus-share-dark',
+    '/dashboard/stats/syllabus',
+    '[data-cy="syllabus-coverage"]',
+    {
+      clock: false,
+      theme: 'dark',
+      act: () => {
+        cy.window().then((win) => {
+          cy.stub(win.navigator.clipboard, 'writeText').resolves();
+        });
+        press('[data-cy="season-map-share-copy"]');
+        cy.get('.p-toast-message', { timeout: 4000 }).should('be.visible');
+        cy.get('[data-cy="season-map-share"]').scrollIntoView({ offset: { top: -320, left: 0 } });
+      },
+    },
+  );
   // Nothing planned for this week or the next: both actions stay, disabled,
   // and the sentence says why (#1863).
   screen(
@@ -3284,7 +3331,6 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
             positions: [],
             missing: [],
             taught: [],
-            timeline: [],
           },
         },
       });
@@ -3319,7 +3365,9 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       },
       act: () => {
         cy.wait(1500);
-        press('[data-cy="syllabus-taught-11"] button');
+        // From its position's panel (#1911): Closed guard, then the technique.
+        press('[data-cy="season-map-position-1"]');
+        press('[data-cy="season-map-done-11"]');
         cy.get('[data-cy="exposure-group-seen"]', { timeout: 10_000 }).should('exist');
         cy.wait(400);
       },
@@ -3351,7 +3399,7 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
   });
 
   // ── 51. Notifications, what's new, backup, more ────────────────────────
-  screen('51-notifications', '/dashboard/notifications', '[data-cy="notifications-filter-all"]');
+  screen('51-notifications', '/dashboard/notifications', '[data-cy="notifications-filter-inbox"]');
   screen('51-notifications-empty', '/dashboard/notifications', '[data-cy="notifications-empty"]', {
     stubs: () => {
       cy.intercept('GET', '/api/v1/me/notifications*', {
@@ -3757,6 +3805,19 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       cy.intercept('GET', '/api/v1/athletes/*/carnets*', NO_DATA);
     },
   });
+  // An athlete who trains free by their own fee (#1757): the caption says so
+  // and the unpaid months are dashes, not amber.
+  screen('22-athlete-payments-trains-free', '/dashboard/athletes/1/payments', DETAIL_READY, {
+    stubs: () => {
+      cy.intercept('GET', '/api/v1/athletes/1', {
+        statusCode: 200,
+        body: { data: { ...ATHLETE_ONE, fee_override_cents: 0, monthly_fee_cents: 0 } },
+      });
+      // Nothing recorded, so every month shows what a free athlete's
+      // unpaid month looks like.
+      cy.intercept('GET', '/api/v1/athletes/*/payments*', NO_DATA);
+    },
+  });
   screen('22-athlete-payments-carnet-validity', '/dashboard/athletes/1/payments', DETAIL_READY, {
     act: () => {
       press('[data-cy="carnet-edit-validity"]');
@@ -4004,14 +4065,21 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
   // reports a desktop runtime, so there is nothing here to shoot.
 
   // ── 51–55. Notifications, backup, palette, inside ──────────────────────
+  // Just archived (#1914): the row gone, and the undo held at the bottom.
   screen(
-    '51-notifications-unread',
+    '51-notifications-archived-undo',
     '/dashboard/notifications',
-    '[data-cy="notifications-filter-unread"]',
+    '[data-cy="notifications-filter-inbox"]',
     {
+      stubs: () => {
+        cy.intercept('POST', '/api/v1/me/notifications/*/archive', {
+          statusCode: 200,
+          body: { data: { id: 'x', archived_at: '2026-09-14T10:00:00+00:00' } },
+        });
+      },
       act: () => {
-        press('[data-cy="notifications-filter-unread"]');
-        cy.wait(300);
+        cy.get('[data-cy^="notification-archive-"]').first().click({ force: true });
+        cy.get('[data-cy="notifications-undo"]', { timeout: 4000 }).should('be.visible');
       },
     },
   );
@@ -4041,6 +4109,22 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
   });
   // No archives yet: a fresh install's backup page.
   screen('53-backup-empty', '/dashboard/backup', '[data-cy="backup-empty"]', { archives: [] });
+  // A fortnight of history (#1910): the newest five, marked, and "Mostra tutti".
+  screen('53-backup-many', '/dashboard/backup', '[data-cy="backup-list"]', {
+    archives: Array.from({ length: 9 }, (_, i) => ({
+      name: `budojo-2026-09-${String(14 - i).padStart(2, '0')}-0300.zip`,
+      path: `C:\\Users\\matteo\\AppData\\Roaming\\Budojo\\backups\\budojo-2026-09-${String(14 - i).padStart(2, '0')}-0300.zip`,
+      createdAt: `2026-09-${String(14 - i).padStart(2, '0')}T01:00:00.000Z`,
+      sizeBytes: 2_400_000,
+    })),
+  });
+  // Restoring from a file (#1909), confirmed before the file dialog opens.
+  screen('53-backup-restore-file-confirm', '/dashboard/backup', '[data-cy="backup-list"]', {
+    act: () => {
+      press('[data-cy="backup-restore-from-file"]');
+      cy.get('.p-confirmpopup', { timeout: 4000 }).should('be.visible');
+    },
+  });
   screen('55-search-palette-no-results', '/dashboard/athletes', ROSTER_READY, {
     stubs: () => {
       cy.intercept('GET', '/api/v1/search*', NO_DATA);

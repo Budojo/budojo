@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  computed,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ConfirmationService, MessageService } from 'primeng/api';
@@ -7,11 +15,13 @@ import { ConfirmPopup } from 'primeng/confirmpopup';
 import { ToastModule } from 'primeng/toast';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TooltipModule } from 'primeng/tooltip';
+import { TagModule } from 'primeng/tag';
 import { ConfirmDestructiveButtonComponent } from '../../shared/components/confirm-destructive-button/confirm-destructive-button.component';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import {
   DesktopBackupService,
   type BackupArchiveView,
+  type RestoreResult,
 } from '../../core/services/desktop-backup.service';
 
 /** An archive row, plus whether it is on this disk and therefore restorable. */
@@ -30,6 +40,10 @@ import {
 } from '../../core/services/drive-sync.service';
 import { LocaleDatePipe } from '../../shared/pipes/locale-date.pipe';
 import { driveErrorKey, folderErrorKey } from '../../shared/utils/backup-errors';
+import { prefersReducedMotion } from '../../shared/utils/prefers-reduced-motion';
+
+/** How many archives the list shows before "Mostra tutti" (#1910). */
+const LIST_LIMIT = 5;
 
 /**
  * `budojo-backup-YYYYMMDD-HHMMSS.zip` -> ISO, for archives that exist only in
@@ -67,6 +81,7 @@ function timestampFromName(name: string): string {
     ButtonModule,
     ToastModule,
     TooltipModule,
+    TagModule,
     SkeletonModule,
     ConfirmDestructiveButtonComponent,
     ConfirmPopup,
@@ -126,6 +141,7 @@ export class BackupComponent {
   protected readonly syncing = signal(false);
   protected readonly loading = signal(true);
   protected readonly backingUp = signal(false);
+  protected readonly restoringFromFile = signal(false);
   protected readonly restoringName = signal<string | null>(null);
 
   /** Recovery keys (#1254): reveal the code, and paste one to import. */
@@ -165,8 +181,46 @@ export class BackupComponent {
     }));
   });
 
+  /**
+   * A computer with no backups on it (#1910): a fresh install, which is
+   * exactly the moment someone arrives from a dead or replaced one. The page
+   * leads with the way back instead of an empty list.
+   */
+  protected readonly newComputer = computed<boolean>(
+    // This computer's own archives, not the list merged with Drive: a fresh
+    // machine whose owner linked Drive first shows remote-only rows, none of
+    // which can be restored here, and the way back must not vanish behind them.
+    () => !this.loading() && this.archives().length === 0,
+  );
+
+  /**
+   * The newest few, then "Mostra tutti" (#1910). A dozen identical rows made
+   * the one that matters — the latest good copy — the hardest to find.
+   */
+  protected readonly showAll = signal(false);
+  protected readonly visibleRows = computed<BackupRow[]>(() =>
+    this.showAll() ? this.rows() : this.rows().slice(0, LIST_LIMIT),
+  );
+  /** Whether the list is long enough to fold at all; the toggle stays while it is. */
+  protected readonly foldable = computed<boolean>(() => this.rows().length > LIST_LIMIT);
+
+  private readonly keysImport = viewChild<ElementRef<HTMLTextAreaElement>>('keysImport');
+
   constructor() {
     void this.refresh();
+  }
+
+  /** "Inserisci il codice di recupero": to the field, with the cursor in it. */
+  protected goToKeysImport(): void {
+    const field = this.keysImport()?.nativeElement;
+    if (field === undefined) {
+      return;
+    }
+    field.scrollIntoView?.({
+      block: 'center',
+      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+    });
+    field.focus({ preventScroll: true });
   }
 
   protected async refresh(): Promise<void> {
@@ -337,8 +391,7 @@ export class BackupComponent {
 
   protected async backupNow(): Promise<void> {
     this.backingUp.set(true);
-    const ok = await this.backup.backupNow();
-    this.backingUp.set(false);
+    const ok = await this.backup.backupNow().finally(() => this.backingUp.set(false));
 
     this.messages.add({
       severity: ok ? 'success' : 'error',
@@ -352,9 +405,32 @@ export class BackupComponent {
 
   protected async restore(archive: BackupArchiveView): Promise<void> {
     this.restoringName.set(archive.name);
-    const result = await this.backup.restore(archive.name);
-    this.restoringName.set(null);
+    // `finally`: a spinner that outlives a failed call is a page that looks
+    // stuck with nothing said (#1909).
+    const result = await this.backup
+      .restore(archive.name)
+      .finally(() => this.restoringName.set(null));
 
+    this.reportRestore(result);
+  }
+
+  /**
+   * A backup from anywhere on disk (#1909): the copies folder, a Drive
+   * download, a USB stick — the only way back on a new computer, where the
+   * list is empty. The desktop opens the file dialog after the confirmation.
+   */
+  protected async restoreFromFile(): Promise<void> {
+    this.restoringFromFile.set(true);
+    const result = await this.backup
+      .restoreFromFile()
+      .finally(() => this.restoringFromFile.set(false));
+
+    if (result.canceled !== true) {
+      this.reportRestore(result);
+    }
+  }
+
+  private reportRestore(result: RestoreResult): void {
     if (result.ok) {
       // The main process reloads the window onto the restored data; this toast
       // may not survive that, which is fine — the reload is the confirmation.
@@ -362,13 +438,35 @@ export class BackupComponent {
         severity: 'success',
         summary: this.translate.instant('backup.toast.restored'),
       });
-    } else {
-      this.messages.add({
-        severity: 'error',
-        summary: this.translate.instant('backup.toast.restoreRefused'),
-        detail: result.reason,
-        life: 8000,
-      });
+
+      return;
+    }
+
+    this.messages.add({
+      severity: 'error',
+      summary: this.translate.instant('backup.toast.restoreRefused'),
+      detail: this.refusalDetail(result),
+      life: 8000,
+    });
+  }
+
+  /**
+   * The refusal in the owner's language (#1909), from the code the desktop
+   * sends. The engine's own `reason` is English and written for the log; it is
+   * shown only for a refusal the page has no words for.
+   */
+  private refusalDetail(result: RestoreResult): string | undefined {
+    switch (result.code) {
+      case 'unreadable':
+        return this.translate.instant('backup.toast.notABackup');
+      case 'newer':
+        return this.translate.instant('backup.toast.newerBackup');
+      case 'busy':
+        return this.translate.instant('backup.toast.busy');
+      case 'failed':
+        return this.translate.instant('backup.toast.restoreFailed');
+      default:
+        return result.reason;
     }
   }
 

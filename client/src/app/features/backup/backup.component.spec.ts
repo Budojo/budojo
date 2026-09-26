@@ -47,6 +47,7 @@ describe('BackupComponent', () => {
       list: vi.fn(async () => archives),
       backupNow: vi.fn(async () => true),
       restore: vi.fn(async () => ({ ok: true })),
+      restoreFromFile: vi.fn(async () => ({ ok: true })),
       ...overrides,
     };
     // Default: the recovery-keys bridge is absent (like the web), so the section
@@ -161,10 +162,11 @@ describe('BackupComponent', () => {
     expect(added.some((m) => (m as { severity: string }).severity === 'success')).toBe(true);
   });
 
-  it('surfaces the reason when a restore is refused', async () => {
+  it('says why a restore is refused, in the page language', async () => {
     const { fixture, added } = setup({
       restore: vi.fn(async () => ({
         ok: false,
+        code: 'newer' as const,
         reason: 'This backup is from a newer version of Budojo.',
       })),
     });
@@ -175,7 +177,127 @@ describe('BackupComponent', () => {
     const errorToast = added.find((m) => (m as { severity: string }).severity === 'error') as {
       detail?: string;
     };
-    expect(errorToast?.detail).toContain('newer version');
+    expect(errorToast?.detail).toBe(
+      'This backup comes from a newer version of Budojo. Update Budojo, then restore it.',
+    );
+  });
+
+  it('falls back to the reason for a refusal it has no words for', async () => {
+    const { fixture, added } = setup({
+      restore: vi.fn(async () => ({ ok: false, reason: 'Budojo is not ready to restore yet.' })),
+    });
+    await fixture.whenStable();
+
+    await fixture.componentInstance['restore'](archives[0]);
+
+    const errorToast = added.find((m) => (m as { severity: string }).severity === 'error') as {
+      detail?: string;
+    };
+    expect(errorToast?.detail).toBe('Budojo is not ready to restore yet.');
+  });
+
+  describe('restoring from a file (#1909)', () => {
+    it('offers it beside the list, even when the list is empty', async () => {
+      // A new computer: nothing in the list, and this is the way back.
+      const { fixture } = setup({ list: vi.fn(async () => []) });
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      // Since #1910 it is the new-computer block that offers it on an empty list.
+      const button = (fixture.nativeElement as HTMLElement).querySelector(
+        '[data-cy="backup-new-computer-restore"]',
+      );
+      expect(button?.textContent).toContain('Restore from a file');
+    });
+
+    it('says nothing when the owner closes the file dialog', async () => {
+      const { fixture, added } = setup({
+        restoreFromFile: vi.fn(async () => ({ ok: false, canceled: true })),
+      });
+      await fixture.whenStable();
+
+      await fixture.componentInstance['restoreFromFile']();
+
+      expect(added).toHaveLength(0);
+    });
+
+    it('says the file is not a Budojo backup', async () => {
+      const { fixture, added } = setup({
+        restoreFromFile: vi.fn(async () => ({
+          ok: false,
+          code: 'unreadable' as const,
+          reason: 'Not a zip archive',
+        })),
+      });
+      await fixture.whenStable();
+
+      await fixture.componentInstance['restoreFromFile']();
+
+      const errorToast = added.find((m) => (m as { severity: string }).severity === 'error') as {
+        detail?: string;
+      };
+      expect(errorToast?.detail).toBe('This file is not a Budojo backup.');
+    });
+
+    it('says Budojo is busy when a backup or restore is already running', async () => {
+      const { fixture, added } = setup({
+        restoreFromFile: vi.fn(async () => ({
+          ok: false,
+          code: 'busy' as const,
+          reason: 'A backup or restore is already running.',
+        })),
+      });
+      await fixture.whenStable();
+
+      await fixture.componentInstance['restoreFromFile']();
+
+      const errorToast = added.find((m) => (m as { severity: string }).severity === 'error') as {
+        detail?: string;
+      };
+      expect(errorToast?.detail).toBe(
+        'Budojo is already backing up or restoring: try again in a moment.',
+      );
+    });
+
+    it('does not call a broken swap "not a backup"', async () => {
+      // The archive passed every check; what broke was writing it in.
+      const { fixture, added } = setup({
+        restoreFromFile: vi.fn(async () => ({
+          ok: false,
+          code: 'failed' as const,
+          reason: 'ENOSPC: no space left on device',
+        })),
+      });
+      await fixture.whenStable();
+
+      await fixture.componentInstance['restoreFromFile']();
+
+      const errorToast = added.find((m) => (m as { severity: string }).severity === 'error') as {
+        detail?: string;
+      };
+      expect(errorToast?.detail).toBe("The restore did not finish. The reason is in Budojo's log.");
+    });
+
+    it('stops spinning when the desktop does not answer', async () => {
+      const { fixture } = setup({
+        restoreFromFile: vi.fn(async () => {
+          throw new Error('ipc gone');
+        }),
+      });
+      await fixture.whenStable();
+
+      await expect(fixture.componentInstance['restoreFromFile']()).rejects.toThrow('ipc gone');
+      expect(fixture.componentInstance['restoringFromFile']()).toBe(false);
+    });
+
+    it('confirms a restored file like any other restore', async () => {
+      const { fixture, added } = setup();
+      await fixture.whenStable();
+
+      await fixture.componentInstance['restoreFromFile']();
+
+      expect(added.some((m) => (m as { severity: string }).severity === 'success')).toBe(true);
+    });
   });
 
   // The confirm button asks ConfirmationService for a popup; only a
@@ -587,6 +709,167 @@ describe('BackupComponent', () => {
 
       expect(el.querySelector('[data-cy="folder-choose"]')).not.toBeNull();
       expect(el.querySelector('[data-cy="folder-loading"]')).toBeNull();
+    });
+  });
+
+  // #1910 — the page says how to come back, and restoring stops being loud.
+  describe('the way back (#1910)', () => {
+    const el = (fixture: { nativeElement: HTMLElement }, cy: string): HTMLElement | null =>
+      fixture.nativeElement.querySelector(`[data-cy="${cy}"]`);
+
+    async function settled(fixture: { whenStable(): Promise<unknown>; detectChanges(): void }) {
+      await fixture.whenStable();
+      fixture.detectChanges();
+    }
+
+    it('leads with the way back on a computer with no backups', async () => {
+      const { fixture } = setup({ list: vi.fn(async () => []) }, { available: true });
+      await settled(fixture);
+
+      expect(el(fixture, 'backup-new-computer')?.textContent).toContain(
+        'Coming from another computer?',
+      );
+      expect(el(fixture, 'backup-new-computer-restore')).not.toBeNull();
+      expect(el(fixture, 'backup-new-computer-keys')).not.toBeNull();
+      // Once, not twice: the list's own button steps back while the block leads.
+      expect(el(fixture, 'backup-restore-from-file')).toBeNull();
+    });
+
+    it('does not offer the recovery code on a build without the keys bridge', async () => {
+      const { fixture } = setup({ list: vi.fn(async () => []) });
+      await settled(fixture);
+
+      expect(el(fixture, 'backup-new-computer')?.textContent).not.toContain('recovery code');
+      expect(el(fixture, 'backup-new-computer-keys')).toBeNull();
+    });
+
+    it('takes the owner to the recovery code field, cursor in it', async () => {
+      const { fixture } = setup({ list: vi.fn(async () => []) }, { available: true });
+      await settled(fixture);
+
+      el(fixture, 'backup-new-computer-keys')?.querySelector('button')?.click();
+
+      expect(document.activeElement).toBe(el(fixture, 'recovery-import-input'));
+    });
+
+    it('stays out of the way once there are backups', async () => {
+      const { fixture } = setup();
+      await settled(fixture);
+
+      expect(el(fixture, 'backup-new-computer')).toBeNull();
+      expect(el(fixture, 'backup-restore-from-file')).not.toBeNull();
+    });
+
+    it('marks the latest backup, and only that one', async () => {
+      const { fixture } = setup();
+      await settled(fixture);
+
+      const tags = fixture.nativeElement.querySelectorAll('[data-cy="backup-latest"]');
+      expect(tags).toHaveLength(1);
+      expect(fixture.nativeElement.querySelector('.backup-page__row')?.textContent).toContain(
+        'Latest',
+      );
+    });
+
+    it('shows the newest five, and all of them on request', async () => {
+      const many: BackupArchiveView[] = Array.from({ length: 7 }, (_, i) => ({
+        name: `budojo-backup-2026081${9 - i}-090000.zip`,
+        createdAt: `2026-08-1${9 - i}T09:00:00Z`,
+        sizeBytes: 2_000_000,
+      }));
+      const { fixture } = setup({ list: vi.fn(async () => many) });
+      await settled(fixture);
+
+      expect(fixture.nativeElement.querySelectorAll('.backup-page__row')).toHaveLength(5);
+      const toggle = (): HTMLButtonElement | null =>
+        el(fixture, 'backup-show-all') as HTMLButtonElement | null;
+      expect(toggle()?.textContent).toContain('Show all (7)');
+
+      const pressed = toggle();
+      pressed?.focus();
+      pressed?.click();
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelectorAll('.backup-page__row')).toHaveLength(7);
+      // The same control, still there, still holding focus: a button that
+      // removed itself would drop a keyboard user onto the page.
+      expect(toggle()?.textContent).toContain('Show fewer');
+      expect(document.activeElement).toBe(pressed);
+      // The state is on the control that has focus, where a screen reader hears it.
+      expect(toggle()?.getAttribute('aria-expanded')).toBe('true');
+      expect(toggle()?.getAttribute('aria-controls')).toBe('backup-list');
+
+      toggle()?.click();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelectorAll('.backup-page__row')).toHaveLength(5);
+    });
+
+    it('still leads with the way back when only Drive has backups', async () => {
+      // None of those can be restored here yet, so they are not a way back.
+      const { fixture } = setup(
+        { list: vi.fn(async () => []) },
+        { available: true },
+        {
+          available: true,
+          state: vi.fn(async () => ({ configured: true, linked: true, account: 'gym@example.it' })),
+          archives: vi.fn(async () => [
+            {
+              name: 'budojo-backup-20260816-120000.zip',
+              sizeBytes: 2_000_000,
+              createdAt: null,
+              local: false,
+              remote: true,
+              remoteId: 'id-1',
+            },
+          ]),
+        },
+      );
+      await settled(fixture);
+      await settled(fixture);
+
+      expect(el(fixture, 'backup-new-computer')).not.toBeNull();
+    });
+
+    it('asks for the recovery code before the restore', async () => {
+      // A restore reloads the window and fills the list, so this block is gone
+      // by the time a second step would be read.
+      const { fixture } = setup({ list: vi.fn(async () => []) }, { available: true });
+      await settled(fixture);
+
+      const steps = fixture.nativeElement.querySelectorAll('.backup-page__arrival-step');
+      expect(steps).toHaveLength(2);
+      expect(steps[0].querySelector('[data-cy="backup-new-computer-keys"]')).not.toBeNull();
+      expect(steps[1].querySelector('[data-cy="backup-new-computer-restore"]')).not.toBeNull();
+    });
+
+    it('does not paint restore red on every row', async () => {
+      const { fixture } = setup();
+      await settled(fixture);
+
+      const restore = el(fixture, `backup-restore-${archives[0].name}`)?.querySelector('button');
+      expect(restore?.className).toContain('p-button-secondary');
+      expect(restore?.className).not.toContain('p-button-danger');
+    });
+
+    it('says in the folder section that those copies are the way back', async () => {
+      const { fixture } = setup(
+        {},
+        {},
+        {},
+        {
+          available: true,
+          state: vi.fn(async () => ({
+            folder: 'D:\\OneDrive\\Budojo',
+            lastCopyAt: '2026-08-15T09:00:00Z',
+            lastError: null,
+            lastErrorAt: null,
+          })),
+        },
+      );
+      await settled(fixture);
+      await settled(fixture);
+
+      expect(el(fixture, 'folder-why-restore')?.textContent).toContain('If you change computers');
     });
   });
 });

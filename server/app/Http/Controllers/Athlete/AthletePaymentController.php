@@ -52,10 +52,11 @@ class AthletePaymentController extends Controller
         // 403 ("you can't touch this resource at all"). The academy null
         // check is defensive — authorize() guarantees it, but PHPStan
         // can't follow that invariant across class boundaries.
-        // What this athlete pays: their price tier if they are on one, the
-        // academy's flat fee otherwise (#1381). Null means neither is set and
-        // there is no amount to record — the same 422 as before, since an
-        // academy with no fee configured is still the case being refused.
+        // What this athlete pays: their own fee (#1757), else their price
+        // tier, else the academy's flat fee (#1381). Null means none is set
+        // and there is no amount to record — the same 422 as before, since an
+        // academy with no fee configured is still the case being refused. A
+        // personal fee of 0 is not null: it records a payment of 0.
         $amountCents = MonthlyFee::forAthlete($athlete);
         if ($amountCents === null) {
             return response()->json([
