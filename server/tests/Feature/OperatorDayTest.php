@@ -141,6 +141,46 @@ it('schedules a change from the operator\'s tomorrow, and not from today', funct
         ->assertCreated();
 });
 
+it('names the season the operator is in, the same one its start date names', function (): void {
+    // 00:30 on 1 September in Rome: the new season has begun for the owner,
+    // while UTC is still in August — in last season.
+    $this->travelTo('2026-08-31 22:30:00');
+    $this->user->academy->update(['season_start_month' => 9]);
+
+    $this->actingAs($this->user)
+        ->getJson('/api/v1/academy')
+        ->assertOk()
+        ->assertJsonPath('data.season_start', '2026-09-01')
+        ->assertJsonPath('data.season_label', '2026/27');
+});
+
+it('dates a belt given after midnight to the operator\'s day, and counts from it', function (): void {
+    $this->actingAs($this->user)
+        ->putJson("/api/v1/athletes/{$this->athlete->id}", ['belt' => 'purple', 'stripes' => 0])
+        ->assertOk();
+
+    $rows = $this->actingAs($this->user)
+        ->getJson("/api/v1/athletes/{$this->athlete->id}/promotions")
+        ->assertOk();
+
+    expect(collect($rows->json('data'))->firstWhere('to_belt', 'purple')['recorded_at'])->toStartWith('2026-10-11')
+        ->and($rows->json('progression.belt_since'))->toBe('2026-10-11')
+        ->and($rows->json('progression.days_at_belt'))->toBe(0);
+});
+
+it('opens a new athlete\'s timeline on the operator\'s day', function (): void {
+    $id = $this->actingAs($this->user)
+        ->postJson('/api/v1/athletes', ['first_name' => 'Luca', 'last_name' => 'Bianchi', 'belt' => 'white', 'status' => 'active', 'joined_at' => '2026-10-11'])
+        ->assertCreated()
+        ->json('data.id');
+
+    $this->actingAs($this->user)
+        ->getJson("/api/v1/athletes/{$id}/promotions")
+        ->assertOk()
+        ->assertJsonPath('data.0.recorded_at', fn (string $at): bool => str_starts_with($at, '2026-10-11'))
+        ->assertJsonPath('progression.belt_since', '2026-10-11');
+});
+
 it('refuses a birth date of the operator\'s today', function (): void {
     $this->actingAs($this->user)
         ->putJson("/api/v1/athletes/{$this->athlete->id}", ['date_of_birth' => '2026-10-11'])

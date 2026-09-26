@@ -4640,11 +4640,12 @@ paths:
           description: |
             The day the `birthday` window starts from (#1754), as the
             caller's own calendar day. Without it the window starts from the
-            server's day, which is UTC: near midnight that is a day away from
-            the owner's, and a week built from it can leave out the owner's
+            owner's today (`OperatorDay`, #1963), not UTC's. The browser's own
+            day is still the better answer for a reader in another timezone,
+            and near midnight a week built from the wrong day leaves out the
             seventh day, which no client-side filtering can add back.
 
-            Accepted only within one day of the server's today, either way;
+            Accepted only within one day of the owner's today, either way;
             anything else, or a value that is not `YYYY-MM-DD`, is a **422**
             on `from` — unlike `birthday` itself, which ignores a value it
             does not know. The bound keeps it from being a query of any
@@ -9963,7 +9964,7 @@ components:
         today:
           type: string
           format: date
-          description: The server's today — the day `planned` and `unconfirmed` were split on.
+          description: The owner's today (`OperatorDay`, #1963) — the day `planned` and `unconfirmed` were split on.
         weeks:
           type: array
           description: The Monday of every ISO week the season touches, oldest first. The first can fall before the season opens.

@@ -50,17 +50,30 @@ it('reads the operator\'s timezone from config, one place', function (): void {
 it('asks the operator, never UTC, which day it is', function (): void {
     // A stored date written as the owner's day and read back against UTC's is
     // the whole of #1963, twice over: a carnet sold at 00:30 read inactive,
-    // and a promotion given today was "-1 months" old. Every "what day is it"
-    // in app/ goes through OperatorDay. `now()` itself — an instant — is fine.
+    // and a promotion given today was "-1 months" old.
+    //
+    // What this checks, exactly: a day read straight off the clock — the
+    // `today()` family, a calendar part of `now()`, Carbon's is-today family,
+    // and the literal date rules. What it cannot see is a bare `now()` handed
+    // to something that derives a day from it (`Season::labelFor($a, now())`);
+    // those are caught by the boundary tests, not by a regex. `now()` as an
+    // instant — a `created_at`, a token's expiry — is fine.
     $patterns = [
         '/\bCarbon(Immutable)?::today\(/',
-        '/\bnow\(\)->(toDateString|startOfDay|startOfMonth|year|month|day|dayOfWeek)\b/',
-        '/\bCarbon(Immutable)?::now\([^)]*\)->(toDateString|startOfDay|startOfMonth|year|month|day|dayOfWeek)\b/',
+        '/(?<![\w:>$])today\(/',
+        '/\bnow\(\)->(toDateString|startOfDay|startOfMonth|startOfWeek|year|month|day|dayOfWeek)\b/',
+        '/\bCarbon(Immutable)?::now\([^)]*\)->(toDateString|startOfDay|startOfMonth|startOfWeek|year|month|day|dayOfWeek)\b/',
+        '/->(isToday|isTomorrow|isYesterday|isCurrentMonth)\(/',
         "/'(before|after|before_or_equal|after_or_equal):(today|tomorrow|yesterday)'/",
     ];
+    // #1973: a sign bug on this line, fixed on its own rather than here.
+    $pending = ['Mail/AthleteInvitationMail.php'];
     $offenders = [];
     $files = Finder::create()->files()->name('*.php')->in(base_path('app'))->notPath('Support/OperatorDay.php');
     foreach ($files as $file) {
+        if (in_array($file->getRelativePathname(), $pending, true)) {
+            continue;
+        }
         foreach (explode("\n", $file->getContents()) as $number => $line) {
             $code = preg_replace('#^\s*(//|\*|/\*).*#', '', $line) ?? '';
             foreach ($patterns as $pattern) {

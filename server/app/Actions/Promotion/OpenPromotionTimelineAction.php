@@ -7,7 +7,7 @@ namespace App\Actions\Promotion;
 use App\Models\Athlete;
 use App\Models\AthletePromotion;
 use App\Models\User;
-use Carbon\CarbonImmutable;
+use App\Support\OperatorDay;
 
 /**
  * The first row of an athlete's promotion timeline (#1771): the belt they hold
@@ -50,7 +50,7 @@ class OpenPromotionTimelineAction
             fromStripes: null,
             toStripes: null,
             beltAtEvent: null,
-            recordedAt: CarbonImmutable::now(),
+            recordedAt: OperatorDay::today(),
             recordedByUserId: $recordedBy->id,
         );
     }

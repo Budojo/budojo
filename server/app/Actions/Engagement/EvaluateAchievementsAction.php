@@ -197,7 +197,10 @@ class EvaluateAchievementsAction
             // unlock this on creation — and `UNIQUE (athlete_id, kind)` would
             // then keep the athlete's real first promotion from ever counting.
             ->whereNotNull('from_belt')
+            // Same-day rows are common since live rows are dated to the day
+            // (#1963): id breaks the tie, as the promotions relation does.
             ->orderBy('recorded_at')
+            ->orderBy('id')
             ->first();
         if ($firstPromotion === null) {
             return null;

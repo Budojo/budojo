@@ -12,7 +12,6 @@ use App\Support\MartialArt\MartialArtLock;
 use App\Support\MartialArt\MartialArtProfile;
 use App\Support\OperatorDay;
 use App\Support\Season;
-use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Storage;
@@ -98,8 +97,11 @@ class AcademyResource extends JsonResource
             // nothing under it is a heading, not something to teach.
             'syllabus_topics_count' => $academy->syllabusTopics()->whereNotNull('parent_id')->count(),
             ...$this->martialArtPayload($academy),
+            // Both from the owner's day (#1963): on 1 September at 00:30 in
+            // Rome a start of this season beside last season's name is a
+            // contradiction on one screen.
             'season_start' => Season::startFor($academy, OperatorDay::today())->toDateString(),
-            'season_label' => Season::labelFor($academy, CarbonImmutable::now()),
+            'season_label' => Season::labelFor($academy, OperatorDay::today()),
             // Schedule history (#1094). Pull the full history once,
             // then derive current/next from the in-memory collection —
             // 1 query instead of separate `currentSchedule()` /

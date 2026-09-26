@@ -180,7 +180,7 @@ class AthleteObserver
             'from_stripes' => null,
             'to_stripes' => null,
             'belt_at_event' => $newBeltString,
-            'recorded_at' => now(),
+            'recorded_at' => OperatorDay::today(),
             'recorded_by_user_id' => $userId,
         ]);
 
@@ -281,7 +281,7 @@ class AthleteObserver
             'from_stripes' => $oldStripes,
             'to_stripes' => $newStripes,
             'belt_at_event' => $athlete->belt->value,
-            'recorded_at' => now(),
+            'recorded_at' => OperatorDay::today(),
             'recorded_by_user_id' => $userId,
         ]);
 
