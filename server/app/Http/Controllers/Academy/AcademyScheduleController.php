@@ -11,6 +11,7 @@ use App\Http\Requests\Academy\StoreAcademyScheduleRequest;
 use App\Http\Resources\AcademyScheduleResource;
 use App\Models\AcademySchedule;
 use App\Models\User;
+use App\Support\OperatorDay;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -82,7 +83,7 @@ class AcademyScheduleController extends Controller
             return response()->json(['message' => 'Not found.'], 404);
         }
 
-        if ($schedule->effective_from->lessThanOrEqualTo(Carbon::today())) {
+        if ($schedule->effective_from->lessThanOrEqualTo(OperatorDay::today())) {
             return response()->json([
                 'message' => 'Past or today schedules are immutable.',
             ], 422);

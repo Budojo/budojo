@@ -7,8 +7,7 @@ namespace App\Actions\Attendance;
 use App\Enums\AttendanceSource;
 use App\Models\Athlete;
 use App\Models\AttendanceRecord;
-use Carbon\Carbon;
-use Carbon\CarbonImmutable;
+use App\Support\OperatorDay;
 
 /**
  * Self-mark today's presence for one athlete (#960). Three branches:
@@ -45,7 +44,7 @@ class MarkTodayAttendanceAction
             return MarkTodayResult::notTrainingDay();
         }
 
-        $today = CarbonImmutable::today();
+        $today = OperatorDay::today();
         $existing = AttendanceRecord::query()
             ->where('athlete_id', $athlete->id)
             ->whereDate('attended_on', $today->toDateString())
@@ -82,6 +81,6 @@ class MarkTodayAttendanceAction
             return false;
         }
 
-        return \in_array((int) Carbon::today()->dayOfWeek, $trainingDays, true);
+        return \in_array((int) OperatorDay::today()->dayOfWeek, $trainingDays, true);
     }
 }

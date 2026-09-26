@@ -11,7 +11,9 @@ use App\Models\AttendanceRecord;
 use App\Notifications\OwnerAthleteMissedStreakNotification;
 use App\Support\NotificationCategory;
 use App\Support\NotificationPreferences;
+use App\Support\OperatorDay;
 use App\Support\ScheduledDays;
+use Carbon\CarbonInterface;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
@@ -60,7 +62,7 @@ class SendAthleteMissedStreakPushes extends Command
 
     public function handle(): int
     {
-        $today = Carbon::today();
+        $today = OperatorDay::today();
         $hasFailures = false;
 
         // Every academy: the schedule HISTORY decides, and one whose history
@@ -83,7 +85,7 @@ class SendAthleteMissedStreakPushes extends Command
         return $hasFailures ? Command::FAILURE : Command::SUCCESS;
     }
 
-    private function processAcademy(Academy $academy, Carbon $today): void
+    private function processAcademy(Academy $academy, CarbonInterface $today): void
     {
         // Before today, never today: the command runs from 09:30 and the
         // day's own session has not happened yet (Copilot review on #735).
@@ -181,7 +183,7 @@ class SendAthleteMissedStreakPushes extends Command
      *
      * @param  list<string>  $streakDates  most recent first
      */
-    private function alreadyTold(\App\Models\User $owner, Athlete $athlete, Carbon $today, array $streakDates): bool
+    private function alreadyTold(\App\Models\User $owner, Athlete $athlete, CarbonInterface $today, array $streakDates): bool
     {
         $fortnight = $today->copy()->subDays(self::RENOTIFY_AFTER_DAYS);
         $afterStreak = Carbon::parse($streakDates[0])->addDay();

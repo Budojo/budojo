@@ -6,6 +6,7 @@ namespace App\Actions\Promotion;
 
 use App\Models\Athlete;
 use App\Models\AthletePromotion;
+use App\Support\OperatorDay;
 use Carbon\CarbonImmutable;
 
 /**
@@ -58,7 +59,7 @@ class GetAthleteProgressionAction
      */
     public function execute(Athlete $athlete): array
     {
-        $today = CarbonImmutable::today();
+        $today = OperatorDay::today();
 
         $beltSince = $this->dayOf($this->latest($athlete, 'belt'));
         $stripeSince = $beltSince === null ? null : $this->dayOf($this->latestStripeGiven($athlete));

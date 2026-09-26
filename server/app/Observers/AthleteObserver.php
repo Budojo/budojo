@@ -18,6 +18,7 @@ use App\Notifications\CommunityNewPostNotification;
 use App\Support\NameFold;
 use App\Support\NotificationCategory;
 use App\Support\NotificationPreferences;
+use App\Support\OperatorDay;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
@@ -161,7 +162,7 @@ class AthleteObserver
             return;
         }
 
-        $athlete->status_changed_at = now()->startOfDay();
+        $athlete->status_changed_at = OperatorDay::today()->toMutable();
     }
 
     private function handleBeltChange(Athlete $athlete, int $userId): void
@@ -179,7 +180,7 @@ class AthleteObserver
             'from_stripes' => null,
             'to_stripes' => null,
             'belt_at_event' => $newBeltString,
-            'recorded_at' => now(),
+            'recorded_at' => OperatorDay::today(),
             'recorded_by_user_id' => $userId,
         ]);
 
@@ -280,7 +281,7 @@ class AthleteObserver
             'from_stripes' => $oldStripes,
             'to_stripes' => $newStripes,
             'belt_at_event' => $athlete->belt->value,
-            'recorded_at' => now(),
+            'recorded_at' => OperatorDay::today(),
             'recorded_by_user_id' => $userId,
         ]);
 

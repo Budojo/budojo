@@ -15,6 +15,8 @@ use App\Notifications\AthleteMedicalCertExpiringNotification;
 use App\Notifications\OwnerMedicalCertExpiringDigestNotification;
 use App\Support\NotificationCategory;
 use App\Support\NotificationPreferences;
+use App\Support\OperatorDay;
+use Carbon\CarbonInterface;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -72,7 +74,7 @@ class SendMedicalCertExpiryReminders extends Command
     public function handle(DeliverOwnerDigestAction $deliverOwnerDigest): int
     {
         $this->deliverOwnerDigest = $deliverOwnerDigest;
-        $today = Carbon::today();
+        $today = OperatorDay::today();
 
         $triggerDates = array_map(
             fn (int $offset): string => $today->copy()->addDays($offset)->toDateString(),
@@ -227,7 +229,7 @@ class SendMedicalCertExpiryReminders extends Command
      * stop the digest send — same best-effort posture as the rest of
      * the M5 dispatch surfaces (Log::warning + continue).
      */
-    private function notifyAthlete(Document $document, Carbon $today): void
+    private function notifyAthlete(Document $document, CarbonInterface $today): void
     {
         $athlete = $document->athlete;
         if ($athlete === null || $athlete->is_self) {

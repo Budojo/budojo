@@ -6,7 +6,7 @@ namespace App\Actions\Attendance;
 
 use App\Models\Academy;
 use App\Models\Athlete;
-use Carbon\Carbon;
+use App\Support\OperatorDay;
 use Illuminate\Support\Collection;
 
 /**
@@ -30,10 +30,10 @@ class GetTodayPeersAction
                 $q->where('attendance_peer_visible', true);
             })
             ->whereHas('attendanceRecords', function ($q): void {
-                $q->whereDate('attended_on', Carbon::today()->toDateString());
+                $q->whereDate('attended_on', OperatorDay::today()->toDateString());
             })
             ->with(['user', 'attendanceRecords' => function ($q): void {
-                $q->whereDate('attended_on', Carbon::today()->toDateString());
+                $q->whereDate('attended_on', OperatorDay::today()->toDateString());
             }])
             ->limit(self::MAX_PREVIEW)
             ->get();

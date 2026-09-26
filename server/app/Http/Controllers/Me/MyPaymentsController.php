@@ -8,6 +8,7 @@ use App\Actions\Payment\ListAthletePaymentsAction;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\AthletePaymentResource;
 use App\Models\User;
+use App\Support\OperatorDay;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -41,7 +42,7 @@ class MyPaymentsController extends Controller
             return response()->json(['message' => 'No athlete profile found.'], 404);
         }
 
-        $year = $request->integer('year', (int) now()->year);
+        $year = $request->integer('year', (int) OperatorDay::today()->year);
 
         return AthletePaymentResource::collection(
             $this->list->execute($athlete, $year),

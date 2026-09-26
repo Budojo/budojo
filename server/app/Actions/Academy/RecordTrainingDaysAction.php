@@ -6,6 +6,7 @@ namespace App\Actions\Academy;
 
 use App\Models\Academy;
 use App\Support\AttendanceSummaryCache;
+use App\Support\OperatorDay;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Carbon;
 
@@ -53,7 +54,7 @@ class RecordTrainingDaysAction
      */
     private function upsertTodaySchedule(Academy $academy, ?array $trainingDays): void
     {
-        $today = Carbon::today()->toDateString();
+        $today = OperatorDay::today()->toDateString();
 
         try {
             $academy->schedules()->create([

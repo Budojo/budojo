@@ -70,12 +70,12 @@ class MedicalCertificateExpiringMail extends Mailable implements ShouldQueue
     public function content(): Content
     {
         // Pre-compute per-row labels in PHP land so the blade template
-        // renders simple `{{ $row['status'] }}` instead of inlining
-        // `@php` + Carbon::today() per iteration. Carbon::today() is
-        // captured once for the whole digest; status strings stay
+        // renders simple `{{ $row['status'] }}` instead of inlining a
+        // date read per iteration. The owner's today (OperatorDay, #1963)
+        // is captured once for the whole digest; status strings stay
         // human-readable + locale-friendly when we add IT in a follow-
         // up. Copilot caught the readability issue on PR-D.
-        $today = \Illuminate\Support\Carbon::today();
+        $today = \App\Support\OperatorDay::today();
         $rows = $this->documents->map(static function (\App\Models\Document $doc) use ($today): array {
             $athlete = $doc->athlete;
             $expiresAt = $doc->expires_at;
@@ -85,8 +85,8 @@ class MedicalCertificateExpiringMail extends Mailable implements ShouldQueue
 
             $status = match (true) {
                 $expiresAt === null => '—',
-                $expiresAt->isToday() => '**Expires today**',
-                $expiresAt->isPast() => '**Already expired**',
+                $expiresAt->isSameDay($today) => '**Expires today**',
+                $expiresAt->lt($today) => '**Already expired**',
                 default => 'In ' . (int) $today->diffInDays($expiresAt) . ' days',
             };
 

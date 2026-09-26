@@ -9,6 +9,7 @@ use App\Models\Academy;
 use App\Notifications\WeeklyRecapNotification;
 use App\Support\NotificationCategory;
 use App\Support\NotificationPreferences;
+use App\Support\OperatorDay;
 use Carbon\CarbonImmutable;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
@@ -41,7 +42,7 @@ class SendWeeklyRecapPushes extends Command
         // Recap covers the week JUST ended — yesterday's date is in
         // it, today's (Sunday at fire time) is the last day. Anchor
         // to last Monday at 00:00 to land at the ISO week's start.
-        $weekStart = CarbonImmutable::now()->startOfWeek(CarbonImmutable::MONDAY);
+        $weekStart = OperatorDay::today()->startOfWeek(CarbonImmutable::MONDAY);
 
         $hasFailures = false;
 

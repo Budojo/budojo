@@ -6,6 +6,7 @@ namespace App\Http\Requests\Attendance;
 
 use App\Authorization\Capability;
 use App\Http\Requests\Concerns\AuthorizesAcademyCapability;
+use App\Support\OperatorDay;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
@@ -38,12 +39,11 @@ class MarkAttendanceRequest extends FormRequest
         // trust model is "you control your own data".
         //
         // Future cap is still enforced — attendance for tomorrow is
-        // semantically wrong and the FormRequest blocks it. `today` is
-        // Laravel's idiomatic literal for "start of the current day" —
-        // equivalent to `now()->toDateString()` at the same instant but
-        // self-documenting in the rules array.
+        // semantically wrong and the FormRequest blocks it. "Tomorrow" is
+        // the owner's (#1963): Laravel's `today` literal is UTC's, which
+        // refused tonight's class for two hours after midnight in Rome.
         return [
-            'date' => ['required', 'date_format:Y-m-d', 'before_or_equal:today'],
+            'date' => ['required', 'date_format:Y-m-d', OperatorDay::notAfterToday()],
             // `distinct` drops duplicate ids at the request layer — the
             // controller's cross-academy count check would otherwise treat
             // `[1, 1]` as "only one owned out of two" and false-403.

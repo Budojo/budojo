@@ -9,6 +9,7 @@ use App\Models\AttendanceRecord;
 use App\Models\User;
 use App\Notifications\WeeklyRecapNotification;
 use App\Support\NotificationCategory;
+use App\Support\OperatorDay;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Notification;
 
@@ -257,7 +258,7 @@ it('skips users with no linked user account', function (): void {
     // Athlete without user_id — invitation pending state.
     Athlete::factory()->for($this->academy)->create(['user_id' => null]);
     $athlete = Athlete::query()->latest()->first();
-    AttendanceRecord::factory()->for($athlete)->create(['attended_on' => CarbonImmutable::now()->toDateString()]);
+    AttendanceRecord::factory()->for($athlete)->create(['attended_on' => OperatorDay::today()->toDateString()]);
 
     $this->artisan('budojo:send-weekly-recap-pushes')->assertExitCode(0);
 

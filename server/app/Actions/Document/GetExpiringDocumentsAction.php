@@ -8,9 +8,9 @@ use App\Enums\AthleteStatus;
 use App\Enums\DocumentType;
 use App\Models\Academy;
 use App\Models\Athlete;
+use App\Support\OperatorDay;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
-use Illuminate\Support\Carbon;
 
 class GetExpiringDocumentsAction
 {
@@ -56,7 +56,7 @@ class GetExpiringDocumentsAction
      */
     public function execute(Academy $academy, int $days = 30): Collection
     {
-        $cutoff = Carbon::today()->addDays($days)->toDateString();
+        $cutoff = OperatorDay::today()->addDays($days)->toDateString();
 
         /** @var HasManyThrough<\App\Models\Document, \App\Models\Athlete, \App\Models\Academy> $through */
         $through = $academy->hasManyThrough(

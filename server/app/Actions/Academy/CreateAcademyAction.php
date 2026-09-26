@@ -8,6 +8,7 @@ use App\Actions\Address\SyncAddressAction;
 use App\Enums\MartialArt;
 use App\Models\Academy;
 use App\Models\User;
+use App\Support\OperatorDay;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -50,7 +51,7 @@ class CreateAcademyAction
                 // see exactly the years of phantom "Non pagato" #1742 exists
                 // to remove — on the shipping path, where the migration's
                 // backfill has nothing to backfill.
-                'billing_from' => Carbon::today()->startOfMonth(),
+                'billing_from' => OperatorDay::today()->startOfMonth(),
             ]);
 
             // Schedule history (#1094). Seed the brand-new academy's
@@ -63,7 +64,7 @@ class CreateAcademyAction
             // of when the academy was created".
             $academy->schedules()->create([
                 'training_days' => $trainingDays,
-                'effective_from' => Carbon::today(),
+                'effective_from' => OperatorDay::today(),
             ]);
 
             if ($address !== null) {

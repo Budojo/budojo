@@ -6,6 +6,7 @@ use App\Models\Academy;
 use App\Models\Athlete;
 use App\Models\AthletePayment;
 use App\Models\User;
+use App\Support\OperatorDay;
 
 /**
  * M7 PR-D slice 4 — feature tests for `GET /api/v1/me/payments`.
@@ -63,7 +64,7 @@ it("returns the athlete's own payments for the requested year", function (): voi
 
 it('defaults to the current calendar year when year is omitted', function (): void {
     [$user, $athlete] = paymentAthlete($this->academy);
-    $currentYear = (int) now()->year;
+    $currentYear = (int) OperatorDay::today()->year;
 
     AthletePayment::factory()->for($athlete)->create([
         'year' => $currentYear,

@@ -8,6 +8,7 @@ use App\Authorization\Capability;
 use App\Http\Requests\Concerns\AuthorizesAcademyCapability;
 use App\Models\SyllabusTopic;
 use App\Models\User;
+use App\Support\OperatorDay;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -58,7 +59,7 @@ class LastLessonNotesRequest extends FormRequest
         $day = $this->validated('before');
 
         return CarbonImmutable::createFromFormat('Y-m-d', \is_string($day) ? $day : '')
-            ?: CarbonImmutable::today();
+            ?: OperatorDay::today();
     }
 
     /** The topic, resolved after validation. */

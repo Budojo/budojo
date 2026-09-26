@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Actions\Academy;
 
 use App\Models\Academy;
-use Illuminate\Support\Carbon;
+use App\Support\OperatorDay;
 
 /**
  * The training days ARE the days with a class on the timetable (#1575).
@@ -51,7 +51,7 @@ class DeriveTrainingDaysFromTimetableAction
         }
 
         $academy->schedules()
-            ->where('effective_from', '>', Carbon::today()->toDateString())
+            ->where('effective_from', '>', OperatorDay::today()->toDateString())
             ->delete();
 
         $current = $academy->training_days ?? [];
