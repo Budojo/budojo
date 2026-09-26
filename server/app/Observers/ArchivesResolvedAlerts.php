@@ -17,12 +17,18 @@ use Illuminate\Notifications\DatabaseNotification;
  */
 class ArchivesResolvedAlerts
 {
+    /**
+     * Only the alerts raised by the end of the day the athlete came back. A
+     * presence dated before an alert — an old register being filled in —
+     * says nothing about whether they have come back since.
+     */
     public function created(AttendanceRecord $record): void
     {
         DatabaseNotification::query()
             ->whereNull('archived_at')
             ->where('data->kind', 'owner_athlete_missed_streak')
             ->where('data->athlete_id', $record->athlete_id)
+            ->where('created_at', '<=', $record->attended_on->copy()->endOfDay())
             ->update(['archived_at' => now()]);
     }
 }

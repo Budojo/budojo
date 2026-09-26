@@ -6,13 +6,18 @@ import {
   computed,
   inject,
   signal,
+  ElementRef,
+  Injector,
+  afterNextRender,
+  runInInjectionContext,
+  viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { Tooltip } from 'primeng/tooltip';
 import { NgTemplateOutlet } from '@angular/common';
-import { finalize, forkJoin } from 'rxjs';
+import { finalize } from 'rxjs';
 import { SkeletonModule } from 'primeng/skeleton';
 import {
   InboxNotification,
@@ -88,6 +93,8 @@ export class NotificationsPageComponent implements OnInit {
    */
   protected readonly justArchived = signal<readonly string[] | null>(null);
   private undoTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly undoButton = viewChild<ElementRef<HTMLButtonElement>>('undoButton');
+  private readonly injector = inject(Injector);
 
   /** Template helper — `kind` → { icon, tone } for the badge / tile. */
   protected readonly visualFor = notificationVisual;
@@ -178,7 +185,8 @@ export class NotificationsPageComponent implements OnInit {
     this.clearUndo();
     if (ids === null || ids.length === 0) return;
 
-    forkJoin(ids.map((id) => this.inbox.unarchive(id)))
+    this.inbox
+      .unarchiveMany(ids)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.inbox.load().pipe(takeUntilDestroyed(this.destroyRef)).subscribe());
   }
@@ -188,6 +196,11 @@ export class NotificationsPageComponent implements OnInit {
     this.clearUndo();
     this.justArchived.set(ids);
     this.undoTimer = setTimeout(() => this.justArchived.set(null), UNDO_MS);
+    // The row that held focus is gone: focus goes to "Annulla", the one
+    // thing that can follow, instead of falling to the page.
+    runInInjectionContext(this.injector, () =>
+      afterNextRender(() => this.undoButton()?.nativeElement.focus()),
+    );
   }
 
   private clearUndo(): void {

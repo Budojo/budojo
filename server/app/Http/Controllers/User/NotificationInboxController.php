@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\User\UnarchiveNotificationsRequest;
 use App\Models\User;
 use App\Support\NotificationText;
 use Illuminate\Http\JsonResponse;
@@ -156,12 +157,33 @@ class NotificationInboxController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        $archived = $user->notifications()
+        // The ids first: "Annulla" has to bring back every row this took, not
+        // only the twenty the page had loaded.
+        /** @var list<string> $ids */
+        $ids = $user->notifications()
             ->whereNotNull('read_at')
             ->whereNull('archived_at')
-            ->update(['archived_at' => now()]);
+            ->pluck('id')
+            ->all();
+        $archived = $user->notifications()->whereIn('id', $ids)->update(['archived_at' => now()]);
 
-        return response()->json(['data' => ['archived' => $archived]]);
+        return response()->json(['data' => ['archived' => $archived, 'ids' => $ids]]);
+    }
+
+    /**
+     * "Annulla" for a batch (#1914): the rows back into the inbox in one
+     * request. Scoped to the user — an id that is not theirs is ignored.
+     */
+    public function unarchiveMany(UnarchiveNotificationsRequest $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+        /** @var list<string> $ids */
+        $ids = $request->validated('ids');
+
+        $unarchived = $user->notifications()->whereIn('id', $ids)->update(['archived_at' => null]);
+
+        return response()->json(['data' => ['unarchived' => $unarchived]]);
     }
 
     /** 404 for anyone else's id, as `markAsRead` does: no probing by status. */

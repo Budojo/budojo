@@ -85,9 +85,9 @@ describe('Notifications page (#1129)', () => {
       statusCode: 200,
       body: { data: { id: '2', archived_at: '2026-09-26T10:00:00+00:00' } },
     }).as('archive');
-    cy.intercept('POST', '/api/v1/me/notifications/*/unarchive', {
+    cy.intercept('POST', '/api/v1/me/notifications/unarchive', {
       statusCode: 200,
-      body: { data: { id: '2', archived_at: null } },
+      body: { data: { unarchived: 1 } },
     }).as('unarchive');
 
     cy.visitAuthenticated('/dashboard/me/notifications');
@@ -99,8 +99,12 @@ describe('Notifications page (#1129)', () => {
 
     // Undo, not a confirmation: it goes straight back.
     cy.get('[data-cy="notifications-undo"]').should('contain.text', 'Notification archived');
+    // Focus is already on it: the row that held focus is gone.
+    cy.focused().should('have.attr', 'data-cy', 'notifications-undo-action');
     cy.get('[data-cy="notifications-undo-action"]').click();
-    cy.wait('@unarchive');
+    cy.wait('@unarchive')
+      .its('request.body')
+      .should('deep.equal', { ids: ['2'] });
     cy.wait('@inbox');
   });
 

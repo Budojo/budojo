@@ -149,10 +149,14 @@
 }
 
 // "Archiviata · Annulla" (#1914): held at the bottom of the list while it
-// lasts, so the undo is where the eye already is.
-.notifications__undo {
+// lasts, so the undo is where the eye already is. The region itself is always
+// in the page and takes no room while empty.
+.notifications__undo-region {
   position: sticky;
   bottom: 1rem;
+}
+
+.notifications__undo {
   display: flex;
   align-items: center;
   justify-content: space-between;

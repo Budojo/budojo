@@ -293,6 +293,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('/me/notifications/read-all', [\App\Http\Controllers\User\NotificationInboxController::class, 'markAllAsRead']);
     // Archive (#1914): out of "Da vedere", kept under "Archiviate".
     Route::post('/me/notifications/archive-read', [\App\Http\Controllers\User\NotificationInboxController::class, 'archiveRead']);
+    Route::post('/me/notifications/unarchive', [\App\Http\Controllers\User\NotificationInboxController::class, 'unarchiveMany']);
     Route::post('/me/notifications/{id}/archive', [\App\Http\Controllers\User\NotificationInboxController::class, 'archive'])
         ->where('id', '[A-Za-z0-9\-]{36}');
     Route::post('/me/notifications/{id}/unarchive', [\App\Http\Controllers\User\NotificationInboxController::class, 'unarchive'])

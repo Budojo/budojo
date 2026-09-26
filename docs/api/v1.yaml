@@ -1170,6 +1170,8 @@ paths:
       description: |
         "Archivia le lette" (#1914): every row with a `read_at` and no
         `archived_at`, in one update. Unread rows stay in the inbox.
+        Answers with the ids it archived, so an undo can bring back all of
+        them and not only the rows a page had loaded.
       operationId: meNotificationsArchiveRead
       responses:
         '200':
@@ -1182,11 +1184,52 @@ paths:
                 properties:
                   data:
                     type: object
-                    required: [archived]
+                    required: [archived, ids]
                     properties:
                       archived: { type: integer }
+                      ids:
+                        type: array
+                        items: { type: string, format: uuid }
         '401':
           $ref: '#/components/responses/Unauthenticated'
+  /me/notifications/unarchive:
+    post:
+      tags: [auth]
+      summary: Bring a batch of archived notifications back to the inbox
+      description: |
+        The undo of "Archivia le lette" (#1914), in one request. Ids that are
+        not the user's are ignored.
+      operationId: meNotificationsUnarchiveMany
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ids]
+              properties:
+                ids:
+                  type: array
+                  maxItems: 1000
+                  items: { type: string, format: uuid }
+      responses:
+        '200':
+          description: How many came back.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [unarchived]
+                    properties:
+                      unarchived: { type: integer }
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          description: Not a list of ids.
   /me/notifications/{id}/archive:
     post:
       tags: [auth]
@@ -1196,8 +1239,10 @@ paths:
         deleted. 404 for an id that is not the user's, as for `/read`.
 
         Two kinds archive themselves: a missed-streak alert once that
-        athlete checks in again, and a digest once a newer one of the same
-        kind arrives.
+        athlete checks in again (a presence dated after the alert, not an
+        old register filled in), and an unpaid digest once a newer one for
+        its month or a later one arrives. The certificate and document
+        digests never do: each lists only what crossed a threshold that day.
       operationId: meNotificationsArchive
       parameters:
         - in: path

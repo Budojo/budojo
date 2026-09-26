@@ -66,15 +66,35 @@ it('brings an archived row back', function (): void {
         ->and(inboxIds($this, '?archived=1'))->not->toContain($row->id);
 });
 
-it('archives only the read rows, all at once', function (): void {
+it('archives only the read rows, all at once, and says which', function (): void {
     $read = inboxRow($this->owner, ['kind' => 'a'], read: true);
     $unread = inboxRow($this->owner, ['kind' => 'b']);
 
     $this->actingAs($this->owner)->postJson('/api/v1/me/notifications/archive-read')
-        ->assertOk()->assertJsonPath('data.archived', 1);
+        ->assertOk()->assertJsonPath('data.archived', 1)->assertJsonPath('data.ids', [$read->id]);
 
     expect(inboxIds($this))->toBe([$unread->id])
         ->and(inboxIds($this, '?archived=1'))->toBe([$read->id]);
+});
+
+it('brings back a whole batch in one request, and only the user\'s own', function (): void {
+    // "Annulla" after "Archivia le lette": every row it took, not only the
+    // twenty the page had loaded.
+    $rows = collect(range(1, 25))->map(fn (): DatabaseNotification => inboxRow($this->owner, ['kind' => 'a'], read: true));
+    $ids = $this->actingAs($this->owner)->postJson('/api/v1/me/notifications/archive-read')->json('data.ids');
+    $theirs = inboxRow(User::factory()->create(), ['kind' => 'a'], read: true);
+    $theirs->forceFill(['archived_at' => now()])->save();
+
+    $this->actingAs($this->owner)->postJson('/api/v1/me/notifications/unarchive', ['ids' => [...$ids, $theirs->id]])
+        ->assertOk()->assertJsonPath('data.unarchived', 25);
+
+    expect($rows->every(fn (DatabaseNotification $r): bool => $r->fresh()->archived_at === null))->toBeTrue()
+        ->and($theirs->fresh()->archived_at)->not->toBeNull();
+});
+
+it('refuses a batch that is not a list of ids', function (): void {
+    $this->actingAs($this->owner)->postJson('/api/v1/me/notifications/unarchive', ['ids' => 'nope'])
+        ->assertUnprocessable()->assertJsonValidationErrors(['ids']);
 });
 
 it('does not count an archived unread row on the bell', function (): void {
@@ -116,16 +136,32 @@ it('archives the "has not trained" alert once that athlete trains again', functi
     $aboutGiorgi = inboxRow($this->owner, ['kind' => 'owner_athlete_missed_streak', 'athlete_id' => $giorgi->id]);
     $aboutAnna = inboxRow($this->owner, ['kind' => 'owner_athlete_missed_streak', 'athlete_id' => $anna->id]);
 
-    AttendanceRecord::factory()->for($giorgi)->create();
+    AttendanceRecord::factory()->for($giorgi)->create(['attended_on' => now()->toDateString()]);
 
     expect($aboutGiorgi->fresh()->archived_at)->not->toBeNull()
         // Anna has not come back: her alert is still true.
         ->and($aboutAnna->fresh()->archived_at)->toBeNull();
 });
 
-it('archives an older digest when a newer one of the same kind arrives', function (): void {
+it('leaves the alert alone when an old register is filled in', function (): void {
+    // A presence dated before the alert says nothing about whether the
+    // athlete has come back since.
+    Carbon::setTestNow('2026-09-20 10:00:00');
+    $giorgi = Athlete::factory()->for($this->owner->academy)->create();
+    $alert = inboxRow($this->owner, ['kind' => 'owner_athlete_missed_streak', 'athlete_id' => $giorgi->id]);
+
+    AttendanceRecord::factory()->for($giorgi)->create(['attended_on' => '2026-08-20']);
+
+    expect($alert->fresh()->archived_at)->toBeNull();
+});
+
+it('archives an older unpaid digest when a newer one arrives', function (): void {
     config()->set('budojo.runtime', 'desktop');
-    $older = inboxRow($this->owner, ['kind' => 'unpaid_athletes_digest']);
+    $older = inboxRow($this->owner, ['kind' => 'unpaid_athletes_digest', 'year' => 2026, 'month' => 8]);
+    $sameMonth = inboxRow($this->owner, ['kind' => 'unpaid_athletes_digest', 'year' => 2026, 'month' => 9]);
+    // A later month is not made stale by an earlier one (a `--month` backfill).
+    $later = inboxRow($this->owner, ['kind' => 'unpaid_athletes_digest', 'year' => 2026, 'month' => 10]);
+    // Other digests list only what crossed a threshold today: not a restatement.
     $otherKind = inboxRow($this->owner, ['kind' => 'medical_cert_expiry_reminders']);
     $athletes = Athlete::factory()->for($this->owner->academy)->count(1)->create();
 
@@ -135,9 +171,24 @@ it('archives an older digest when a newer one of the same kind arrives', functio
         new OwnerUnpaidAthletesDigestNotification($this->owner->academy, $athletes, 2026, 9),
     );
 
-    $newest = $this->owner->notifications()->where('data->kind', 'unpaid_athletes_digest')->whereNull('archived_at')->get();
-    expect($newest)->toHaveCount(1)
-        ->and($newest->first()->id)->not->toBe($older->id)
-        ->and($older->fresh()->archived_at)->not->toBeNull()
-        ->and($otherKind->fresh()->archived_at)->toBeNull();
+    expect($older->fresh()->archived_at)->not->toBeNull()
+        ->and($sameMonth->fresh()->archived_at)->not->toBeNull()
+        ->and($later->fresh()->archived_at)->toBeNull()
+        ->and($otherKind->fresh()->archived_at)->toBeNull()
+        ->and($this->owner->notifications()->whereNull('archived_at')->where('data->kind', 'unpaid_athletes_digest')->count())->toBe(2);
+});
+
+it('does not archive an older medical-certificate digest with a newer one', function (): void {
+    config()->set('budojo.runtime', 'desktop');
+    $mario = inboxRow($this->owner, ['kind' => 'medical_cert_expiry_reminders']);
+    $documents = new \Illuminate\Database\Eloquent\Collection();
+
+    app(DeliverOwnerDigestAction::class)->execute(
+        $this->owner,
+        new \App\Mail\MedicalCertificateExpiringMail($this->owner->academy, $documents),
+        new \App\Notifications\OwnerMedicalCertExpiringDigestNotification($this->owner->academy, $documents),
+    );
+
+    // Tomorrow's "Anna expires in 30 days" is not today's "Mario in 7".
+    expect($mario->fresh()->archived_at)->toBeNull();
 });

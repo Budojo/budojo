@@ -114,14 +114,20 @@ export class NotificationInboxService {
    * the ids it took, so the page can offer them back.
    */
   archiveRead(): Observable<string[]> {
-    const ids = this._rows()
-      .filter((n) => n.read_at !== null)
-      .map((n) => n.id);
+    // The server's ids, not the loaded rows': it archives every read row,
+    // including those past the twenty on screen, and "Annulla" must bring
+    // back all of them.
+    return this.http
+      .post<{ data: { archived: number; ids: string[] } }>(`${this.base}/archive-read`, {})
+      .pipe(
+        tap(() => this._rows.set(this._rows().filter((n) => n.read_at === null))),
+        map((r) => r.data.ids),
+      );
+  }
 
-    return this.http.post(`${this.base}/archive-read`, {}).pipe(
-      tap(() => this._rows.set(this._rows().filter((n) => n.read_at === null))),
-      map(() => ids),
-    );
+  /** "Annulla" for a batch (#1914): one request, however many rows it took. */
+  unarchiveMany(ids: readonly string[]): Observable<void> {
+    return this.http.post(`${this.base}/unarchive`, { ids }).pipe(map(() => undefined));
   }
 
   /** "Archiviate" (#1914): not cached — it is read when the owner opens it. */

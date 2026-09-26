@@ -148,25 +148,32 @@
       }
     }
 
-    @if (justArchived(); as ids) {
-      <!-- Undo, not a confirmation (#1914): archiving loses nothing. -->
-      <div class="notifications__undo" role="status" data-cy="notifications-undo">
-        <span>
-          {{
-            (ids.length === 1 ? 'notifications.archivedOne' : 'notifications.archivedOther')
-              | translate: { count: ids.length }
-          }}
-        </span>
-        <button
-          type="button"
-          class="notifications__undo-action"
-          (click)="undo()"
-          data-cy="notifications-undo-action"
-        >
-          {{ 'notifications.undo' | translate }}
-        </button>
-      </div>
-    }
+    <!--
+      Undo, not a confirmation (#1914): archiving loses nothing. The status
+      region is always there and only its content changes — a live region
+      created with its text is often never announced.
+    -->
+    <div role="status" class="notifications__undo-region">
+      @if (justArchived(); as ids) {
+        <div class="notifications__undo" data-cy="notifications-undo">
+          <span>
+            {{
+              (ids.length === 1 ? 'notifications.archivedOne' : 'notifications.archivedOther')
+                | translate: { count: ids.length }
+            }}
+          </span>
+          <button
+            #undoButton
+            type="button"
+            class="notifications__undo-action"
+            (click)="undo()"
+            data-cy="notifications-undo-action"
+          >
+            {{ 'notifications.undo' | translate }}
+          </button>
+        </div>
+      }
+    </div>
   </div>
 </div>
 

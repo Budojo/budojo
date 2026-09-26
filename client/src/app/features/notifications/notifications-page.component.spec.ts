@@ -88,6 +88,20 @@ describe('NotificationsPageComponent (#1129)', () => {
     );
   });
 
+  it('moves focus to "Undo" once the row that held it is gone', async () => {
+    const { el, fixture, http } = setup([notif({ id: 'a', read_at: new Date().toISOString() })]);
+    const button = el.querySelector('[data-cy="notification-archive-a"]') as HTMLButtonElement;
+    button.focus();
+    button.click();
+    http.expectOne(`${BASE}/a/archive`).flush({ data: { id: 'a', archived_at: 'x' } });
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(document.activeElement).toBe(el.querySelector('[data-cy="notifications-undo-action"]'));
+    // The status region was there before, so the new text is announced.
+    expect(el.querySelector('[role="status"] [data-cy="notifications-undo"]')).not.toBeNull();
+  });
+
   it('names the archive button by the notification it archives', () => {
     const { el } = setup([notif({ id: 'a', title: 'Giorgi has not trained' })]);
 
@@ -104,7 +118,9 @@ describe('NotificationsPageComponent (#1129)', () => {
     fixture.detectChanges();
 
     (el.querySelector('[data-cy="notifications-undo-action"]') as HTMLButtonElement).click();
-    http.expectOne(`${BASE}/a/unarchive`).flush({ data: { id: 'a', archived_at: null } });
+    const undo = http.expectOne(`${BASE}/unarchive`);
+    expect(undo.request.body).toEqual({ ids: ['a'] });
+    undo.flush({ data: { unarchived: 1 } });
     http.expectOne(BASE).flush({ data: [notif({ id: 'a' })], meta: { unread_count: 1 } });
     fixture.detectChanges();
 
@@ -119,7 +135,7 @@ describe('NotificationsPageComponent (#1129)', () => {
     );
 
     (el.querySelector('[data-cy="notifications-archive-read"]') as HTMLButtonElement).click();
-    http.expectOne(`${BASE}/archive-read`).flush({ data: { archived: 1 } });
+    http.expectOne(`${BASE}/archive-read`).flush({ data: { archived: 1, ids: ['r'] } });
     fixture.detectChanges();
 
     expect(el.querySelector('[data-cy="notification-u"]')).not.toBeNull();

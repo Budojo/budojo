@@ -98,9 +98,12 @@ describe('NotificationInboxService (#418)', () => {
 
     let ids: string[] = [];
     service.archiveRead().subscribe((taken) => (ids = taken));
-    httpMock.expectOne('/api/v1/me/notifications/archive-read').flush({ data: { archived: 1 } });
+    // The server's ids: it archives read rows past the twenty on screen too.
+    httpMock
+      .expectOne('/api/v1/me/notifications/archive-read')
+      .flush({ data: { archived: 2, ids: ['r', 'beyond-the-page'] } });
 
-    expect(ids).toEqual(['r']);
+    expect(ids).toEqual(['r', 'beyond-the-page']);
     expect(service.rows().map((n) => n.id)).toEqual(['u']);
     expect(service.unread()).toBe(1);
   });
