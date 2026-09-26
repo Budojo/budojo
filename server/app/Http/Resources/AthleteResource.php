@@ -171,6 +171,18 @@ class AthleteResource extends JsonResource
             // someone who has genuinely never trained.
             'attendance_month_count' => $athlete->attendance_month_count,
             'attendance_total_count' => $athlete->attendance_total_count,
+            // What each count divides by (#1768): the scheduled days in the
+            // same window, closures out, worked out on the roster only
+            // (`ResolveRosterDenominatorsAction`). Every other endpoint leaves
+            // the keys out: null here is an answer, "no schedule configured".
+            'attendance_month_expected' => $this->when(
+                \array_key_exists('attendance_month_expected', $athlete->getAttributes()),
+                fn (): mixed => $athlete->getAttribute('attendance_month_expected'),
+            ),
+            'attendance_season_expected' => $this->when(
+                \array_key_exists('attendance_season_expected', $athlete->getAttributes()),
+                fn (): mixed => $athlete->getAttribute('attendance_season_expected'),
+            ),
             // When they last trained (#1726), `Y-m-d`, or null when they
             // never have. Selected on the index and on show; every other
             // endpoint leaves the KEY out rather than sending null, because

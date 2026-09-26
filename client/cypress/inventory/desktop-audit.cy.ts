@@ -23,7 +23,14 @@
  */
 import LADDERS from '../../src/test-utils/ladders.json';
 import TRAINING_MODES from '../../src/test-utils/training-modes.json';
-import { fixtureContradictions, stubBodyOf, stubLabel, type FixtureContext } from './fixture-rules';
+import {
+  fixtureContradictions,
+  later,
+  stubBodyOf,
+  stubLabel,
+  trainingDaysBetween,
+  type FixtureContext,
+} from './fixture-rules';
 
 // ── The clock ────────────────────────────────────────────────────────────
 //
@@ -305,6 +312,16 @@ const SUGGESTIONS = [
 
 // ── The roster ───────────────────────────────────────────────────────────
 
+/**
+ * The server's denominator for the Sessions cell (#1768): the academy's
+ * training days from the later of 1 September (the month's and the season's
+ * start alike) and the day the athlete joined, up to TODAY.
+ */
+function heldSince(joinedAt: unknown): number {
+  const joined = typeof joinedAt === 'string' ? joinedAt : ACADEMY.season_start;
+  return trainingDaysBetween(later(ACADEMY.season_start, joined), TODAY, ACADEMY.training_days);
+}
+
 function athlete(over: Record<string, unknown>) {
   return {
     email: null,
@@ -329,6 +346,8 @@ function athlete(over: Record<string, unknown>) {
     active_carnet: null,
     attendance_month_count: 0,
     attendance_total_count: 0,
+    attendance_month_expected: heldSince(over['joined_at']),
+    attendance_season_expected: heldSince(over['joined_at']),
     last_attended_on: null,
     ...over,
   };
@@ -2245,6 +2264,14 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
     expect(rate(0.3333)).to.deep.equal([]);
     expect(rate(0.3334).join('\n')).to.contain('rate 0.3334');
 
+    // The roster's denominators (#1768): a newcomer's still carrying the
+    // academy's eight is the stale spread the Today stubs once shipped.
+    expect(
+      fixtureContradictions(
+        [{ joined_at: TODAY, attendance_month_expected: 8, attendance_season_expected: 1 }],
+        FIXTURE_CONTEXT,
+      ),
+    ).to.deep.equal([`$[0]: attendance_month_expected 8, but 1 training days since ${TODAY}`]);
     // Not stricter than the server: the month count and the last presence
     // are not floored at joining, which is editable and was backfilled.
     expect(
@@ -2255,6 +2282,10 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
             attendance_month_count: 3,
             attendance_total_count: 2,
             last_attended_on: '2026-09-12',
+            // Trained on the 5th, before joining: the server starts the month
+            // there (#1768), which the row does not say (5, 7, 9, 11, 12, 14).
+            attendance_month_expected: 6,
+            attendance_season_expected: 3,
           },
         ],
         FIXTURE_CONTEXT,
@@ -2358,6 +2389,9 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
             joined_at: TODAY,
             attendance_month_count: 0,
             attendance_total_count: 0,
+            // The server's windows start today for them (#1768).
+            attendance_month_expected: heldSince(TODAY),
+            attendance_season_expected: heldSince(TODAY),
             last_attended_on: null,
           },
           {
@@ -2365,6 +2399,9 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
             joined_at: TODAY,
             attendance_month_count: 0,
             attendance_total_count: 0,
+            // The server's windows start today for them (#1768).
+            attendance_month_expected: heldSince(TODAY),
+            attendance_season_expected: heldSince(TODAY),
             last_attended_on: null,
           },
         ]),

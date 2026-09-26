@@ -30,7 +30,7 @@ const isObj = (v: unknown): v is Obj => typeof v === 'object' && v !== null && !
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 const isDate = (v: unknown): v is string => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}/.test(v);
 const day = (iso: string): string => iso.slice(0, 10);
-const later = (a: string, b: string): string => (a > b ? a : b);
+export const later = (a: string, b: string): string => (a > b ? a : b);
 
 /** Training days from `from` to `to`, both included: the roster's denominator. */
 export function trainingDaysBetween(from: string, to: string, days: readonly number[]): number {
@@ -49,6 +49,44 @@ export function trainingDaysBetween(from: string, to: string, days: readonly num
 type Rule = (o: Obj, ctx: FixtureContext) => string[];
 
 const RULES: Rule[] = [
+  // The roster's denominators (#1768), sent beside the counts: the training
+  // days in the same two windows. The fixtures model no presence before the
+  // joining day, so the month starts at the later of the month and joining
+  // (ResolveRosterDenominatorsAction).
+  (o, ctx) => {
+    const out: string[] = [];
+    if (!isDate(o['joined_at'])) return out;
+    const joined = day(o['joined_at']);
+    const monthStart = `${ctx.today.slice(0, 7)}-01`;
+    const expected: [string, unknown, string][] = [
+      ['attendance_month_expected', o['attendance_month_expected'], later(monthStart, joined)],
+      [
+        'attendance_season_expected',
+        o['attendance_season_expected'],
+        later(ctx.seasonStart, joined),
+      ],
+    ];
+    // Not stricter than the server: a presence this month before the joining
+    // day (a month count above the season's, which is floored at joining)
+    // moves the month's start earlier, to a day the row does not carry. Then
+    // the value only has to lie between the two possible starts.
+    const month = o['attendance_month_count'];
+    const total = o['attendance_total_count'];
+    const trainedBeforeJoining = isNum(month) && isNum(total) && month > total;
+    for (const [name, value, from] of expected) {
+      if (!isNum(value)) continue;
+      const held = trainingDaysBetween(from, ctx.today, ctx.trainingDays);
+      if (name === 'attendance_month_expected' && trainedBeforeJoining) {
+        const most = trainingDaysBetween(monthStart, ctx.today, ctx.trainingDays);
+        if (value < held || value > most) {
+          out.push(`${name} ${value}, outside ${held}–${most} training days this month`);
+        }
+        continue;
+      }
+      if (value !== held) out.push(`${name} ${value}, but ${held} training days since ${from}`);
+    }
+    return out;
+  },
   // The roster's two fractions (#1455, #1484): the month and the SEASON, each
   // over the training days since the later of its start and joining.
   (o, ctx) => {

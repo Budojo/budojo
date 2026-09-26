@@ -220,6 +220,13 @@ export interface Athlete {
   attendance_month_count?: number | null;
   attendance_total_count?: number | null;
   /**
+   * What the two counts divide by (#1768): the scheduled days in the same
+   * windows, closures out, from the server. Only on the roster; null when no
+   * schedule was ever configured, absent where they were not worked out.
+   */
+  attendance_month_expected?: number | null;
+  attendance_season_expected?: number | null;
+  /**
    * The day of their latest presence (#1726), `YYYY-MM-DD`. Selected on the
    * roster index AND on show. `null` means they have never trained; absent
    * means the payload did not carry it, and the roster then shows no column.
