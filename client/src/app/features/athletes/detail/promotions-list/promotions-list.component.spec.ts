@@ -712,19 +712,25 @@ describe('PromotionsListComponent — time at the belt (#1772)', () => {
 describe('PromotionsListComponent — missing steps (#1966)', () => {
   afterEach(() => TestBed.resetTestingModule());
 
-  /**
-   * Jacopo: blue, with the opening row "→ blue" dated the day he was entered
-   * and a backfilled "white 2 → 3". Missing: the 4th white stripe, and the
-   * real day of the blue belt, which the opening row stands for.
+  /*
+   * Every payload below is the server's own output for GET /promotions
+   * (#1970, `PromotionGaps`), captured from the endpoint with the rows of
+   * `AthletePromotionGapsTest`. Only the row ids are renamed — 15 for
+   * Jacopo's opening row, 12 for his "white 2 → 3" — so a spec never
+   * describes a shape the server does not send.
    */
+
+  /** The opening row "→ blue", dated the day Jacopo was entered. */
   const opening = makePromotion({
     id: 15,
     kind: 'belt',
     from_belt: null,
     to_belt: 'blue',
+    from_stripes: null,
+    to_stripes: null,
     belt_at_event: 'blue',
-    recorded_at: '2025-06-01T09:00:00Z',
     is_opening: true,
+    recorded_at: '2026-09-20T10:00:00+00:00',
   });
   const whiteThree = makePromotion({
     id: 12,
@@ -734,7 +740,8 @@ describe('PromotionsListComponent — missing steps (#1966)', () => {
     from_stripes: 2,
     to_stripes: 3,
     belt_at_event: 'white',
-    recorded_at: '2024-03-12T00:00:00Z',
+    is_opening: false,
+    recorded_at: '2024-03-12T00:00:00+00:00',
   });
   const fourthStripe: PromotionGap = {
     key: 'stripe:white:4',
@@ -744,7 +751,7 @@ describe('PromotionsListComponent — missing steps (#1966)', () => {
     from_stripes: 3,
     to_stripes: 4,
     after: { promotion_id: 12, recorded_at: '2024-03-12' },
-    before: { promotion_id: 15, recorded_at: '2025-06-01' },
+    before: { promotion_id: 15, recorded_at: '2026-09-20' },
     completes_promotion_id: null,
   };
   const blueBelt: PromotionGap = {
@@ -758,29 +765,32 @@ describe('PromotionsListComponent — missing steps (#1966)', () => {
     before: null,
     completes_promotion_id: 15,
   };
+  const jacopoProgression = {
+    belt: 'blue' as const,
+    stripes: 2,
+    belt_since: '2026-09-20',
+    days_at_belt: 6,
+    months_at_belt: 0,
+    sessions_at_belt: 0,
+    stripe_since: null,
+    days_since_stripe: null,
+    sessions_since_stripe: null,
+  };
+
+  function page(data: AthletePromotion[], gaps: PromotionGap[]) {
+    return of({
+      data,
+      meta: { current_page: 1, per_page: 20, total: data.length, last_page: 1 },
+      progression: jacopoProgression,
+      gaps,
+      history_starts_at: '2024-03-12',
+    });
+  }
 
   function jacopo(gaps: PromotionGap[] = [fourthStripe, blueBelt]) {
     const ctx = setup({ athleteId: '7' });
     useLadder('bjj');
-    ctx.svc.promotions.mockReturnValue(
-      of({
-        data: [opening, whiteThree],
-        meta: { current_page: 1, per_page: 20, total: 2, last_page: 1 },
-        progression: {
-          belt: 'blue' as const,
-          stripes: 0,
-          belt_since: '2025-06-01',
-          days_at_belt: 30,
-          months_at_belt: 1,
-          sessions_at_belt: 4,
-          stripe_since: null,
-          days_since_stripe: null,
-          sessions_since_stripe: null,
-        },
-        gaps,
-        history_starts_at: '2024-03-12',
-      }),
-    );
+    ctx.svc.promotions.mockReturnValue(page([opening, whiteThree], gaps));
     ctx.fixture.detectChanges();
     return ctx;
   }
@@ -839,9 +849,10 @@ describe('PromotionsListComponent — missing steps (#1966)', () => {
 
     expect(c.createDialogTitle()).toBe('When did they get stripe 4?');
     const window = c.fillWindow();
-    // The day after the white-three row, up to the opening row's day.
+    // `(after, before]`: the day after the white-three row, up to the
+    // opening row it sits under.
     expect(window?.min).toEqual(new Date(2024, 2, 13));
-    expect(window?.max).toEqual(new Date(2025, 5, 1));
+    expect(window?.max).toEqual(new Date(2026, 8, 20));
 
     c.createForm.patchValue({ recorded_at: new Date(2024, 8, 20) });
     c.confirmCreate();
@@ -863,7 +874,6 @@ describe('PromotionsListComponent — missing steps (#1966)', () => {
     const c = component as unknown as Internals;
 
     expect(c.createDialogTitle()).toBe('When did they get the Blue belt?');
-    expect(c.fillWindow()?.max).toEqual(new Date(2025, 5, 1));
 
     c.createForm.patchValue({ recorded_at: new Date(2025, 0, 10) });
     c.confirmCreate();
@@ -873,6 +883,74 @@ describe('PromotionsListComponent — missing steps (#1966)', () => {
       from_belt: 'white',
     });
     expect(svc.createPromotion).not.toHaveBeenCalled();
+  });
+
+  it("bounds the opening row's step as the server does: after its older row, up to today", () => {
+    // `before: null` on a completing step runs to today — not to the opening
+    // row's own date, which is only the day of entry (`PromotionGaps::inWindow`).
+    const { el, fixture, component } = jacopo();
+    click(el, 'gap-add-date-belt:blue:0');
+    fixture.detectChanges();
+    const c = component as unknown as Internals & { maxDate: Date };
+
+    expect(c.fillWindow()?.min).toEqual(new Date(2024, 2, 13));
+    expect(c.fillWindow()?.max).toEqual(c.maxDate);
+  });
+
+  it('never offers "Saltato" on the step an opening row stands for', () => {
+    // The server ignores a skip there: the belt is one they hold.
+    const { el, component, svc } = jacopo();
+
+    expect(el.querySelector('[data-cy="gap-skip-belt:blue:0"]')).toBeNull();
+    (component as unknown as { skip: (gap: PromotionGap) => void }).skip(blueBelt);
+    expect(svc.skipPromotionStep).not.toHaveBeenCalled();
+  });
+
+  it('draws the blue stripes above the completed row, once the blue belt is dated', () => {
+    // The server's reply after PATCH 15 → white → blue on 10 Jan 2025.
+    const completed = makePromotion({
+      ...opening,
+      from_belt: 'white',
+      is_opening: false,
+      recorded_at: '2025-01-10T00:00:00+00:00',
+    });
+    const blueStripe = (n: number): PromotionGap => ({
+      key: `stripe:blue:${n}`,
+      kind: 'stripe',
+      belt: 'blue',
+      from_belt: null,
+      from_stripes: n - 1,
+      to_stripes: n,
+      after: { promotion_id: 15, recorded_at: '2025-01-10' },
+      before: null,
+      completes_promotion_id: null,
+    });
+    const ctx = setup({ athleteId: '7' });
+    useLadder('bjj');
+    ctx.svc.promotions.mockReturnValue(
+      page(
+        [completed, whiteThree],
+        [
+          { ...fourthStripe, before: { promotion_id: 15, recorded_at: '2025-01-10' } },
+          blueStripe(1),
+          blueStripe(2),
+        ],
+      ),
+    );
+    ctx.fixture.detectChanges();
+
+    const cys = Array.from(ctx.el.querySelectorAll('[data-cy="promotions-list"] > li')).map((li) =>
+      li.getAttribute('data-cy'),
+    );
+    expect(cys).toEqual([
+      'promotion-gap-stripe:blue:2',
+      'promotion-gap-stripe:blue:1',
+      'promotion-15',
+      'promotion-gap-stripe:white:4',
+      'promotion-12',
+    ]);
+    // A dated belt row: no "Quando?" on it any more.
+    expect(ctx.el.querySelector('[data-cy="promotion-15"]')?.textContent).not.toContain('When?');
   });
 
   it('skips a step, and brings it back from the toast', () => {
@@ -890,7 +968,19 @@ describe('PromotionsListComponent — missing steps (#1966)', () => {
   });
 
   it('keys a poom → dan skip by the degree it carries, not by 0', () => {
-    // Taekwondo: 2nd poom leads to the 2nd dan (Kukkiwon), stored 1 on black.
+    // Taekwondo, the server's reply: a 2nd poom on record, black with the
+    // 2nd dan today (stored 1) — the poom → dan step never written down.
+    const secondPoom = makePromotion({
+      id: 7,
+      kind: 'stripe',
+      from_belt: null,
+      to_belt: null,
+      from_stripes: 0,
+      to_stripes: 1,
+      belt_at_event: 'black-and-red',
+      is_opening: false,
+      recorded_at: '2022-05-01T10:00:00+00:00',
+    });
     const poomToDan: PromotionGap = {
       key: 'belt:black:1',
       kind: 'belt',
@@ -898,12 +988,20 @@ describe('PromotionsListComponent — missing steps (#1966)', () => {
       from_belt: 'black-and-red',
       from_stripes: null,
       to_stripes: null,
-      after: { promotion_id: 12, recorded_at: '2024-03-12' },
-      before: { promotion_id: 15, recorded_at: '2025-06-01' },
+      after: { promotion_id: 7, recorded_at: '2022-05-01' },
+      before: null,
       completes_promotion_id: null,
     };
-    const { el, fixture, svc } = jacopo([poomToDan]);
+    const { el, fixture, svc } = setup({ athleteId: '7' });
     useLadder('taekwondo');
+    svc.promotions.mockReturnValue(
+      of({
+        data: [secondPoom],
+        meta: { current_page: 1, per_page: 20, total: 1, last_page: 1 },
+        gaps: [poomToDan],
+        history_starts_at: '2022-05-01',
+      }),
+    );
     fixture.detectChanges();
     const add = vi.spyOn(fixture.componentRef.injector.get(MessageService), 'add');
 
@@ -916,15 +1014,8 @@ describe('PromotionsListComponent — missing steps (#1966)', () => {
 
   it('keeps the keyboard in the list after a skip, on the row that took its place', async () => {
     const { el, fixture, svc } = jacopo();
-    // The reload the skip triggers: the stripe step is gone.
-    svc.promotions.mockReturnValue(
-      of({
-        data: [opening, whiteThree],
-        meta: { current_page: 1, per_page: 20, total: 2, last_page: 1 },
-        gaps: [blueBelt],
-        history_starts_at: '2024-03-12',
-      }),
-    );
+    // The server's reply once white's fourth stripe is skipped.
+    svc.promotions.mockReturnValue(page([opening, whiteThree], [blueBelt]));
 
     const skipButton = el.querySelector<HTMLButtonElement>(
       '[data-cy="gap-skip-stripe:white:4"] button',
@@ -943,6 +1034,8 @@ describe('PromotionsListComponent — missing steps (#1966)', () => {
     const { el, fixture, component, svc } = jacopo();
     click(el, 'gap-add-date-stripe:white:4');
     fixture.detectChanges();
+    // The server's replies: the POST's row, then the timeline, where the blue
+    // step now starts after the stripe just written, not after row 12.
     const written = makePromotion({
       id: 20,
       kind: 'stripe',
@@ -951,16 +1044,15 @@ describe('PromotionsListComponent — missing steps (#1966)', () => {
       from_stripes: 3,
       to_stripes: 4,
       belt_at_event: 'white',
-      recorded_at: '2024-09-20T00:00:00Z',
+      is_opening: false,
+      recorded_at: '2024-09-20T00:00:00+00:00',
     });
     svc.createPromotion.mockReturnValue(of(written));
     svc.promotions.mockReturnValue(
-      of({
-        data: [opening, written, whiteThree],
-        meta: { current_page: 1, per_page: 20, total: 3, last_page: 1 },
-        gaps: [blueBelt],
-        history_starts_at: '2024-03-12',
-      }),
+      page(
+        [opening, written, whiteThree],
+        [{ ...blueBelt, after: { promotion_id: 20, recorded_at: '2024-09-20' } }],
+      ),
     );
 
     const c = component as unknown as Internals;
@@ -973,14 +1065,52 @@ describe('PromotionsListComponent — missing steps (#1966)', () => {
   });
 
   it('folds more than two missing steps in a row, and opens them on "show"', () => {
+    // The server's reply for a blue belt with four stripes, a white → blue
+    // and a blue 3 → 4 on record: three stripes missing between them.
+    const blue = makePromotion({
+      id: 8,
+      kind: 'belt',
+      from_belt: 'white',
+      to_belt: 'blue',
+      from_stripes: null,
+      to_stripes: null,
+      belt_at_event: 'blue',
+      is_opening: false,
+      recorded_at: '2024-01-10T00:00:00+00:00',
+    });
+    const fourth = makePromotion({
+      id: 9,
+      kind: 'stripe',
+      from_belt: null,
+      to_belt: null,
+      from_stripes: 3,
+      to_stripes: 4,
+      belt_at_event: 'blue',
+      is_opening: false,
+      recorded_at: '2025-06-01T00:00:00+00:00',
+    });
     const stripe = (n: number): PromotionGap => ({
-      ...fourthStripe,
       key: `stripe:blue:${n}`,
+      kind: 'stripe',
       belt: 'blue',
+      from_belt: null,
       from_stripes: n - 1,
       to_stripes: n,
+      after: { promotion_id: 8, recorded_at: '2024-01-10' },
+      before: { promotion_id: 9, recorded_at: '2025-06-01' },
+      completes_promotion_id: null,
     });
-    const { el, fixture } = jacopo([stripe(1), stripe(2), stripe(3)]);
+    const { el, fixture, svc } = setup({ athleteId: '7' });
+    useLadder('bjj');
+    svc.promotions.mockReturnValue(
+      of({
+        data: [fourth, blue],
+        meta: { current_page: 1, per_page: 20, total: 2, last_page: 1 },
+        gaps: [stripe(1), stripe(2), stripe(3)],
+        history_starts_at: '2024-01-10',
+      }),
+    );
+    fixture.detectChanges();
 
     expect(el.querySelectorAll('[data-cy^="promotion-gap-stripe"]').length).toBe(0);
     expect(el.querySelector('[data-cy="promotion-gap-run"]')?.textContent).toContain(

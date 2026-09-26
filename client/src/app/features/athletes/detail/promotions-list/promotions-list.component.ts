@@ -533,16 +533,17 @@ export class PromotionsListComponent implements OnInit {
         };
   });
 
+  /**
+   * The server's window, `(after, before]`, and up to today with no `before`
+   * (`PromotionGaps::inWindow`) — for a step an opening row stands for too:
+   * that row's own date is only the day of entry, and the server already
+   * passes over it when it works out `before`.
+   */
   private windowOf(gap: PromotionGap): GapWindow {
-    const ends = [this.maxDate];
-    if (gap.before !== null) ends.push(dayOf(gap.before.recorded_at));
-    // An opening row's step ends on the row itself: the day it was entered.
-    const opening = this.promotions().find((p) => p.id === gap.completes_promotion_id);
-    if (opening !== undefined) ends.push(dayOf(opening.recorded_at));
-
+    const before = gap.before === null ? null : dayOf(gap.before.recorded_at);
     return {
       min: gap.after === null ? null : nextDay(dayOf(gap.after.recorded_at)),
-      max: new Date(Math.min(...ends.map((d) => d.getTime()))),
+      max: before === null || before > this.maxDate ? this.maxDate : before,
     };
   }
 
@@ -598,7 +599,9 @@ export class PromotionsListComponent implements OnInit {
    * speaks for itself — PrimeNG gives each message `aria-live`.
    */
   protected skip(gap: PromotionGap): void {
-    if (this.skippingKey() !== null) return;
+    // A step an opening row stands for is a belt they hold: it is completed,
+    // never skipped, and the server ignores a skip there.
+    if (this.skippingKey() !== null || !canSkip(gap)) return;
     const index = this.entryIndexOf(gap);
     this.skippingKey.set(gap.key);
     this.athleteService
@@ -752,6 +755,10 @@ export class PromotionsListComponent implements OnInit {
     }
   }
 
+  protected canSkip(gap: PromotionGap): boolean {
+    return canSkip(gap);
+  }
+
   /** "Saltato" agrees with what was skipped: a grade, or a belt. */
   protected skipLabelKey(gap: PromotionGap): string {
     return gap.kind === 'belt'
@@ -831,6 +838,11 @@ export class PromotionsListComponent implements OnInit {
         },
       });
   }
+}
+
+/** Whether "Saltato" applies: not to the step an opening row stands for. */
+function canSkip(gap: PromotionGap): boolean {
+  return gap.completes_promotion_id === null;
 }
 
 /** Where focus returns when a skipped step is brought back. */

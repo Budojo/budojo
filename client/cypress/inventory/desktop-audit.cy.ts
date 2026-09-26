@@ -1086,6 +1086,7 @@ const PROMOTIONS_ONE = [
     from_stripes: 1,
     to_stripes: 2,
     belt_at_event: 'blue',
+    is_opening: false,
     recorded_at: '2026-06-15T10:00:00+00:00',
     recorded_by: { id: 1, full_name: 'Matteo Bonanno' },
   },
@@ -1097,6 +1098,7 @@ const PROMOTIONS_ONE = [
     from_stripes: 4,
     to_stripes: 0,
     belt_at_event: 'blue',
+    is_opening: false,
     recorded_at: '2025-12-20T10:00:00+00:00',
     recorded_by: { id: 1, full_name: 'Matteo Bonanno' },
   },
@@ -1108,12 +1110,17 @@ const PROMOTIONS_ONE = [
     from_stripes: 3,
     to_stripes: 4,
     belt_at_event: 'white',
+    is_opening: false,
     recorded_at: '2025-09-10T10:00:00+00:00',
     recorded_by: { id: 1, full_name: 'Matteo Bonanno' },
   },
 ];
 
-// The step between the white → blue row and blue's second stripe (#1966).
+/**
+ * The server's gap for Giulia (#1970, `PromotionGaps`), captured from the
+ * endpoint with exactly these rows and her blue with two stripes: blue's
+ * first stripe, between the white → blue row and blue's second.
+ */
 const PROMOTION_GAP_BLUE_ONE = {
   key: 'stripe:blue:1',
   kind: 'stripe',
@@ -1127,10 +1134,12 @@ const PROMOTION_GAP_BLUE_ONE = {
 };
 
 /**
- * A history entered the way most are (#1966): the opening row "→ blue",
- * dated the day the athlete was entered, and one white stripe transcribed
- * from paper. Missing: white's fourth stripe, the real blue day (which the
- * opening row stands for), and blue's two stripes since.
+ * Jacopo, as most histories are entered (#1966): the opening row "→ blue"
+ * dated the day he was entered, and one white stripe transcribed from paper.
+ * The gaps below are the server's own reply for these two rows (#1970,
+ * `PromotionGaps`), the same whether he is blue with no stripe or was entered
+ * on two: white's fourth stripe, and the blue belt the opening row stands
+ * for. Blue's own stripes are not offered until the blue belt is dated.
  */
 const PROMOTIONS_OPENING = [
   {
@@ -1141,9 +1150,9 @@ const PROMOTIONS_OPENING = [
     from_stripes: null,
     to_stripes: null,
     belt_at_event: 'blue',
+    is_opening: true,
     recorded_at: '2026-09-02T10:00:00+00:00',
     recorded_by: { id: 1, full_name: 'Matteo Bonanno' },
-    is_opening: true,
   },
   {
     id: 12,
@@ -1153,7 +1162,8 @@ const PROMOTIONS_OPENING = [
     from_stripes: 2,
     to_stripes: 3,
     belt_at_event: 'white',
-    recorded_at: '2024-03-12T10:00:00+00:00',
+    is_opening: false,
+    recorded_at: '2024-03-12T00:00:00+00:00',
     recorded_by: { id: 1, full_name: 'Matteo Bonanno' },
   },
 ];
@@ -1180,28 +1190,6 @@ const PROMOTION_GAPS_OPENING = [
     after: { promotion_id: 12, recorded_at: '2024-03-12' },
     before: null,
     completes_promotion_id: 15,
-  },
-  {
-    key: 'stripe:blue:1',
-    kind: 'stripe',
-    belt: 'blue',
-    from_belt: null,
-    from_stripes: 0,
-    to_stripes: 1,
-    after: { promotion_id: 15, recorded_at: '2026-09-02' },
-    before: null,
-    completes_promotion_id: null,
-  },
-  {
-    key: 'stripe:blue:2',
-    kind: 'stripe',
-    belt: 'blue',
-    from_belt: null,
-    from_stripes: 1,
-    to_stripes: 2,
-    after: { promotion_id: 15, recorded_at: '2026-09-02' },
-    before: null,
-    completes_promotion_id: null,
   },
 ];
 

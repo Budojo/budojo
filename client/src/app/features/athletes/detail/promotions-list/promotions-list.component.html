@@ -210,16 +210,18 @@
                 (onClick)="openFillDialog(entry.gap)"
                 [attr.data-cy]="'gap-add-date-' + entry.gap.key"
               />
-              <p-button
-                [label]="skipLabelKey(entry.gap) | translate"
-                [text]="true"
-                severity="secondary"
-                [ariaLabel]="(skipLabelKey(entry.gap) | translate) + ': ' + stepLabel(entry.gap)"
-                [loading]="skippingKey() === entry.gap.key"
-                [disabled]="skippingKey() !== null"
-                (onClick)="skip(entry.gap)"
-                [attr.data-cy]="'gap-skip-' + entry.gap.key"
-              />
+              @if (canSkip(entry.gap)) {
+                <p-button
+                  [label]="skipLabelKey(entry.gap) | translate"
+                  [text]="true"
+                  severity="secondary"
+                  [ariaLabel]="(skipLabelKey(entry.gap) | translate) + ': ' + stepLabel(entry.gap)"
+                  [loading]="skippingKey() === entry.gap.key"
+                  [disabled]="skippingKey() !== null"
+                  (onClick)="skip(entry.gap)"
+                  [attr.data-cy]="'gap-skip-' + entry.gap.key"
+                />
+              }
             </div>
           </li>
         } @else if (entry.kind === 'collapsed') {
@@ -490,6 +492,7 @@
         formControlName="recorded_at"
         [minDate]="fillWindow()?.min ?? null"
         [maxDate]="fillWindow()?.max ?? maxDate"
+        [defaultDate]="fillWindow()?.max ?? null"
         [showIcon]="true"
         [dateFormat]="datePickerFormat()"
         appendTo="body"
