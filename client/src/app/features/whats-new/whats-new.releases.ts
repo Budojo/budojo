@@ -63,7 +63,7 @@ export const RELEASES: readonly Release[] = [
     version: 'v2.70.0',
     date: '2026-09-26',
     headline: {
-      en: 'Who is behind on fees, and checking people in at the door: an arrears list, when and how the money came in, Enter to check someone in, and the right dan from an imported sheet.',
+      en: 'Who is behind on fees, and checking people in at the door: a behind-on-fees list, when and how the money came in, Enter to check someone in, and the right dan from an imported sheet.',
       it: 'Chi è indietro coi pagamenti, e il check-in alla porta: l’elenco degli arretrati, quando e come sono arrivati i soldi, Invio per segnare presente, e il dan giusto da un foglio importato.',
     },
     sections: [
@@ -71,12 +71,12 @@ export const RELEASES: readonly Release[] = [
         heading: { en: 'Payments', it: 'Pagamenti' },
         bullets: [
           {
-            en: 'Arrears, under the chart on Stats → Payments: who has unpaid months before this one, since when and how much, estimated at today’s fee. The current month stays with "Unpaid" on the athletes list.',
+            en: 'Behind on fees, under the chart on Stats → Payments: who has unpaid months before this one, since when and how much, estimated at today’s fee. The current month stays with "Unpaid" on the athletes list.',
             it: 'Arretrati, sotto il grafico in Statistiche → Pagamenti: chi ha mesi non pagati prima di questo, da quando e quanto, stimato alla quota di oggi. Il mese in corso resta con «Non pagato» sull’elenco degli atleti.',
           },
           {
-            en: 'When the money came in, and how: marking a month paid can take the day (empty means today) and the method: cash, bank transfer, card or other. Selling a carnet can take the method too, and the payment history shows it under the date.',
-            it: 'Quando sono arrivati i soldi, e come: segnando un mese pagato puoi scegliere il giorno (vuoto vuol dire oggi) e il modo: contanti, bonifico, carta o altro. Anche vendendo un carnet puoi dire come, e lo storico dei pagamenti lo mostra sotto la data.',
+            en: 'When the money came in, and how: marking a month paid from the athlete’s payment history can take the day (empty means today) and the method: cash, bank transfer, card or other, shown with the date. Selling a carnet can take the method too. The quick "Mark paid" on the athletes list is unchanged.',
+            it: 'Quando sono arrivati i soldi, e come: segnando un mese pagato dallo storico dei pagamenti dell’atleta puoi scegliere il giorno (vuoto vuol dire oggi) e il modo: contanti, bonifico, carta o altro, mostrato accanto alla data. Anche vendendo un carnet puoi dire come. Il «Segna pagato» rapido dall’elenco degli atleti resta com’era.',
           },
           {
             en: 'The payment day never moves your revenue: September paid on 3 October is still September’s money in the chart.',
@@ -113,8 +113,8 @@ export const RELEASES: readonly Release[] = [
             it: 'Un grado che non si legge viene rifiutato con il motivo, mai messo a zero. Le colonne «Dan», «Poom» e «Tacche» vengono riconosciute, e l’anteprima mostra il grado accanto alla cintura.',
           },
           {
-            en: 'If you imported black belts (judo, karate, taekwondo) with an earlier version, check their dan on the athlete page: it may be one too high.',
-            it: 'Se hai importato cinture nere (judo, karate, taekwondo) con una versione precedente, controlla il loro dan nella scheda dell’atleta: potrebbe essere uno più alto del vero.',
+            en: 'If you imported black belts (judo, karate, taekwondo) or taekwondo black-and-red belts (poom) with an earlier version, check their grade on the athlete page: it may be one too high.',
+            it: 'Se hai importato cinture nere (judo, karate, taekwondo) o nere e rosse del taekwondo (poom) con una versione precedente, controlla il loro grado nella scheda dell’atleta: potrebbe essere uno più alto del vero.',
           },
         ],
       },
@@ -128,6 +128,10 @@ export const RELEASES: readonly Release[] = [
           {
             en: 'A restore cut short by a power cut or a restart is put back together the next time Budojo starts: your previous data, or the whole backup if it was already in. The app could restart empty before.',
             it: 'Un ripristino interrotto da un blackout o un riavvio viene rimesso a posto al riavvio successivo di Budojo: i tuoi dati di prima, o il backup completo se era già dentro. Prima l’app poteva ripartire vuota.',
+          },
+          {
+            en: 'If a restore fails, the message saying where your data is always comes through, even when the antivirus holds a file.',
+            it: 'Se un ripristino non riesce, il messaggio che dice dove sono i tuoi dati arriva sempre, anche quando l’antivirus tiene bloccato un file.',
           },
         ],
       },
