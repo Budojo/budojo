@@ -1994,6 +1994,8 @@ interface ScreenOptions {
   archives?: typeof ARCHIVES;
   /** Where backups are copied, and how that last went. */
   folder?: typeof FOLDER_STATE;
+  /** The owner's theme choice, as the theme toggle stores it. Light when unset. */
+  theme?: 'dark';
 }
 
 // Scroll a target to the middle before acting on it. The default scrolls it
@@ -2188,6 +2190,7 @@ function screen(slug: string, route: string, ready: string, opts: ScreenOptions 
         failOnStatusCode: false,
         onBeforeLoad(win: Cypress.AUTWindow) {
           win.localStorage.setItem('budojoLang', 'it');
+          if (opts.theme) win.localStorage.setItem('budojoTheme', opts.theme);
           installBridge(win, {
             token,
             update: opts.update,
@@ -3236,6 +3239,26 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       cy.get('[data-cy="season-map-share"]').scrollIntoView({ offset: { top: -320, left: 0 } });
     },
   });
+  // The same toast in the dark theme (#1908): its title and icon took
+  // PrimeNG's `surface.0`, which the dark ramp makes near-black, so it read
+  // as an empty panel.
+  screen(
+    '40-stats-syllabus-share-dark',
+    '/dashboard/stats/syllabus',
+    '[data-cy="syllabus-coverage"]',
+    {
+      clock: false,
+      theme: 'dark',
+      act: () => {
+        cy.window().then((win) => {
+          cy.stub(win.navigator.clipboard, 'writeText').resolves();
+        });
+        press('[data-cy="season-map-share-copy"]');
+        cy.get('.p-toast-message', { timeout: 4000 }).should('be.visible');
+        cy.get('[data-cy="season-map-share"]').scrollIntoView({ offset: { top: -320, left: 0 } });
+      },
+    },
+  );
   // Nothing planned for this week or the next: both actions stay, disabled,
   // and the sentence says why (#1863).
   screen(
