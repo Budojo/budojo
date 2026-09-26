@@ -364,6 +364,22 @@
   --budojo-danger-ink: #b42318;
   --budojo-info-soft: #e1efff;
   --budojo-info-ink: #0a67d9;
+
+  // Toasts (#1908). PrimeNG picks a toast's title, icon and close colour by
+  // palette INDEX — `surface.0` in its dark theme, expecting white — and our
+  // dark ramp runs the other way (see the overlay note in the dark block), so
+  // every dark toast was near-black text on a near-black banner: an empty
+  // panel. The banner is our own surface (`.p-toast .p-toast-message` below),
+  // so the ink is ours too: the status ink for the title and icon, body text
+  // for the detail. Declared once here; the dark values follow the tokens.
+  --p-toast-success-color: var(--budojo-success-ink);
+  --p-toast-info-color: var(--budojo-info-ink);
+  --p-toast-warn-color: var(--budojo-warning-ink);
+  --p-toast-error-color: var(--budojo-danger-ink);
+  --p-toast-success-detail-color: var(--p-text-color);
+  --p-toast-info-detail-color: var(--p-text-color);
+  --p-toast-warn-detail-color: var(--p-text-color);
+  --p-toast-error-detail-color: var(--p-text-color);
 }
 
 // Page padding scales up at the sidebar breakpoint — see `--budojo-page-

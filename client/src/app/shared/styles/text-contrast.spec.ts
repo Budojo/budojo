@@ -59,20 +59,26 @@ const halves = {
   dark: darkAt === -1 ? '' : source.slice(darkAt),
 };
 
-/** Resolve a token to a hex, following one level of `var(--other)` indirection. */
+/**
+ * Resolve a token to a hex, following `var(--other)` indirection. A chain, not
+ * one step: the toast inks (#1908) read `--p-text-color`, which reads
+ * `--p-surface-900`. Each link is looked up in the mode's own half first, as
+ * the cascade does on the root element that carries both `:root` and `.dark`.
+ */
 function resolve(token: string, mode: 'light' | 'dark'): string | null {
   const read = (name: string, where: string): string | null => {
     const hits = [...where.matchAll(new RegExp(`--${name}:\\s*([^;]+);`, 'g'))];
     return hits.length ? hits[hits.length - 1][1].trim() : null;
   };
   // Dark overrides a subset; anything it does not redeclare falls through.
-  let value = (mode === 'dark' ? read(token, halves.dark) : null) ?? read(token, halves.light);
-  if (value === null) return null;
+  const lookup = (name: string): string | null =>
+    (mode === 'dark' ? read(name, halves.dark) : null) ?? read(name, halves.light);
 
-  const indirect = /^var\(\s*--([a-z0-9-]+)\s*\)$/.exec(value);
-  if (indirect) {
-    value =
-      (mode === 'dark' ? read(indirect[1], halves.dark) : null) ?? read(indirect[1], halves.light);
+  let value = lookup(token);
+  for (let hop = 0; value !== null && hop < 4; hop++) {
+    const indirect = /^var\(\s*--([a-z0-9-]+)\s*\)$/.exec(value);
+    if (!indirect) break;
+    value = lookup(indirect[1]);
   }
   return value && /^#[0-9a-f]{6}$/i.test(value.trim()) ? value.trim() : null;
 }
@@ -100,6 +106,21 @@ const CASES: ReadonlyArray<{ token: string; on: readonly string[]; floor: number
   { token: 'budojo-warning-ink', on: ['budojo-warning-soft'], floor: 4.5 },
   { token: 'budojo-danger-ink', on: ['budojo-danger-soft'], floor: 4.5 },
   { token: 'budojo-info-ink', on: ['budojo-info-soft'], floor: 4.5 },
+  // Toasts (#1908). The banner is `--p-content-background` at 92%, over the
+  // page; checked on both. The dark toast shipped near-black on near-black,
+  // an empty panel, because PrimeNG picked its ink by palette index.
+  ...(['success', 'info', 'warn', 'error'] as const).flatMap((severity) => [
+    {
+      token: `p-toast-${severity}-color`,
+      on: ['p-content-background', 'p-surface-50'],
+      floor: 4.5,
+    },
+    {
+      token: `p-toast-${severity}-detail-color`,
+      on: ['p-content-background', 'p-surface-50'],
+      floor: 4.5,
+    },
+  ]),
 ];
 
 describe('semantic text tokens clear WCAG AA in both themes (#1786)', () => {
