@@ -195,10 +195,27 @@ const FEE_TIERS = [
   { id: 2, name: 'Ragazzi', amount_cents: 3500, athlete_count: 7 },
 ];
 
+// The month summary's shape (#1767): each row with its own denominator, and
+// the academy's count in `meta` for the header.
 const ATTENDANCE_SUMMARY = [
-  { athlete_id: 1, athlete_name: 'Isabella Conciarelli', count: 6 },
-  { athlete_id: 2, athlete_name: 'Matteo Bonanno', count: 3 },
+  {
+    athlete_id: 1,
+    first_name: 'Isabella',
+    last_name: 'Conciarelli',
+    count: 6,
+    expected_count: 8,
+    athlete: null,
+  },
+  {
+    athlete_id: 2,
+    first_name: 'Matteo',
+    last_name: 'Bonanno',
+    count: 3,
+    expected_count: 8,
+    athlete: null,
+  },
 ];
+const ATTENDANCE_SUMMARY_META = { training_days: 8, month: '2026-04' };
 
 const ATTENDANCE_DAY = [
   { id: 1, athlete_id: 1, attended_on: '2026-04-24', created_at: '2026-04-24T18:00:00+00:00' },
@@ -564,7 +581,7 @@ function seedIntercepts(role: 'owner' | 'athlete' = 'owner'): void {
   // the populated one is the surface people actually live in.
   cy.intercept('GET', '/api/v1/attendance/summary*', {
     statusCode: 200,
-    body: { data: ATTENDANCE_SUMMARY },
+    body: { data: ATTENDANCE_SUMMARY, meta: ATTENDANCE_SUMMARY_META },
   });
   cy.intercept('GET', '/api/v1/attendance*', { statusCode: 200, body: { data: ATTENDANCE_DAY } });
   // The leaderboard card reads `page.meta.month` straight out of the

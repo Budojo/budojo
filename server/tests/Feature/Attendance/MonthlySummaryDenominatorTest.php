@@ -45,6 +45,19 @@ it('gives each athlete their own denominator, floored at the day they joined', f
         ->and($response->json('meta'))->toBe(['training_days' => 13, 'month' => '2026-04']);
 });
 
+it('starts the window at the first presence when it comes before the joining day', function (): void {
+    // Trial sessions on the 15th and 17th, registered on the 27th: measured
+    // from the 15th (15, 17, 20, 22, 24, 27, 29), never above 100%.
+    $trial = summaryAthlete($this->academy, '2026-04-27', '2026-04-15');
+    AttendanceRecord::factory()->for($trial)->on('2026-04-17')->create();
+    AttendanceRecord::factory()->for($trial)->on('2026-04-29')->create();
+
+    $row = $this->actingAs($this->owner)->getJson('/api/v1/attendance/summary?month=2026-04')->assertOk()->json('data.0');
+
+    expect($row['count'])->toBe(3)
+        ->and($row['expected_count'])->toBe(7);
+});
+
 it('leaves the days the academy was closed out of both numbers', function (): void {
     $athlete = summaryAthlete($this->academy, '2025-09-01', '2026-04-01');
     $this->academy->closures()->create(['starts_on' => '2026-04-13', 'ends_on' => '2026-04-17']);

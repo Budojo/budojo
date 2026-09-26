@@ -5730,9 +5730,10 @@ paths:
 
         Each row carries its own denominator (#1767), `expected_count`: the
         days the academy was scheduled to train in the month **from the day
-        that athlete joined**, closures left out and nothing after today. An
-        athlete who joined on the 20th is measured against the sessions after
-        the 20th, as on the roster and the athlete tab. `meta.training_days`
+        that athlete joined**, or from their first presence in the month if
+        that came earlier (trial sessions entered after registering), closures
+        left out and nothing after today. An athlete who joined on the 20th is
+        measured against the sessions after the 20th. `meta.training_days`
         is the academy's own count for the month, for the page's header, and
         is deliberately no row's denominator. Both are null when no schedule
         was ever configured; zero is a real zero.
@@ -11033,8 +11034,9 @@ components:
           nullable: true
           description: |
             This athlete's denominator (#1767): scheduled training days in the
-            month from `max(first of the month, joined_at)`, closures out,
-            capped at today. Null when no schedule was ever configured.
+            month from `max(first of the month, min(joined_at, first presence
+            in the month))`, closures out, capped at today. Null when no
+            schedule was ever configured.
         athlete:
           allOf:
             - $ref: '#/components/schemas/AthleteSummary'

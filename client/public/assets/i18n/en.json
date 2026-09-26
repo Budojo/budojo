@@ -2007,7 +2007,7 @@
       "presencesOne": "{{count}} attendance",
       "presencesOther": "{{count}} attendances",
       "noScheduleNote": "No timetable covers this month yet, so there is no day count to work the percentages against.",
-      "method": "Here an attendance is one athlete's day of training: an evening with two lessons counts once for each athlete who was there, and the attendances above add up every athlete's days. The percentage divides an athlete's days by the month's training days in the timetable from the day they joined, up to today while the month is running, leaving out the days the academy was closed."
+      "method": "Here an attendance is one athlete's day of training: an evening with two lessons counts once for each athlete who was there, and the attendances above add up every athlete's days. The percentage divides an athlete's days by the month's training days in the timetable from the day they joined (or their first session, if earlier), up to today while the month is running, leaving out the days the academy was closed."
     }
   },
   "lessons": {

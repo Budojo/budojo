@@ -24,11 +24,12 @@ class GetMonthlyAttendanceSummaryAction
      * The leaderboard counts the same way.
      *
      * `expected_count` is **that athlete's** denominator (#1767): the days the
-     * academy was scheduled to train in the month, from the day they joined,
+     * academy was scheduled to train in the month from the day they joined
+     * (or their first presence, if earlier: {@see self::windowStart()}),
      * closures out and nothing after today (`ScheduledDays`). Someone who
-     * joined on the 20th is measured against the sessions after the 20th, as
-     * on the roster and the athlete tab. Null when no schedule was ever
-     * configured, which hides the fraction; zero is a real zero.
+     * joined on the 20th is measured against the sessions after the 20th.
+     * Null when no schedule was ever configured, which hides the fraction;
+     * zero is a real zero.
      *
      * `meta.training_days` is the academy's own count for the month, for the
      * page's header. It is deliberately nobody's denominator.
@@ -66,6 +67,7 @@ class GetMonthlyAttendanceSummaryAction
                 'athletes.last_name',
                 'athletes.joined_at',
                 DB::raw('COUNT(DISTINCT attendance_records.attended_on) as count'),
+                DB::raw('MIN(attendance_records.attended_on) as first_on'),
             ])
             ->orderByDesc('count')
             ->orderBy('athletes.last_name_sort')
@@ -77,9 +79,8 @@ class GetMonthlyAttendanceSummaryAction
         // One walk per distinct window: athletes who joined before the month
         // all share the first one.
         $expected = [];
-        $expectedFrom = function (mixed $joinedAt) use ($academy, $monthStart, $monthEnd, $today, &$expected): ?int {
-            $joined = \is_string($joinedAt) ? CarbonImmutable::parse(substr($joinedAt, 0, 10)) : $monthStart;
-            $from = $joined->greaterThan($monthStart) ? $joined : $monthStart;
+        $expectedFrom = function (mixed $joinedAt, mixed $firstOn) use ($academy, $monthStart, $monthEnd, $today, &$expected): ?int {
+            $from = $this->windowStart($monthStart, $joinedAt, $firstOn);
             $key = $from->toDateString();
 
             return $expected[$key] ??= ScheduledDays::countBetween($academy, $from, $monthEnd, $today);
@@ -91,12 +92,32 @@ class GetMonthlyAttendanceSummaryAction
                 'first_name' => (string) $row->first_name,
                 'last_name' => (string) $row->last_name,
                 'count' => (int) $row->count,
-                'expected_count' => $expectedFrom($row->joined_at),
+                'expected_count' => $expectedFrom($row->joined_at, $row->first_on),
             ]),
             'meta' => [
                 'training_days' => ScheduledDays::countBetween($academy, $monthStart, $monthEnd, $today),
                 'month' => $monthStart->format('Y-m'),
             ],
         ];
+    }
+
+    /**
+     * Where an athlete's month begins: the first of it, or the day they
+     * joined if later — unless they trained before that day. Trial sessions
+     * entered for someone registered afterwards are real presences, and
+     * measuring them against a window that starts later would read 200%.
+     * So the window starts at the earlier of the joining day and the first
+     * presence: nobody is measured before they started, and nobody is
+     * credited with days they could not have missed.
+     */
+    private function windowStart(CarbonImmutable $monthStart, mixed $joinedAt, mixed $firstOn): CarbonImmutable
+    {
+        $start = \is_string($joinedAt) ? CarbonImmutable::parse(substr($joinedAt, 0, 10)) : $monthStart;
+        if (\is_string($firstOn)) {
+            $first = CarbonImmutable::parse(substr($firstOn, 0, 10));
+            $start = $first->lessThan($start) ? $first : $start;
+        }
+
+        return $start->greaterThan($monthStart) ? $start : $monthStart;
     }
 }
