@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Enums\Belt;
+use App\Enums\GradeCount;
 use App\Support\MartialArt\Grade;
 use App\Support\MartialArt\RankLadder;
 
@@ -106,6 +107,21 @@ it('moves someone on a kids grade who is no longer eligible to the next adult gr
         ->toBe(['kind' => 'belt', 'belt' => Belt::Blue, 'stripes' => 0])
         ->and(bjjLikeLadder()->nextStep(Belt::Grey, 1, kidsEligible: true))
         ->toBe(['kind' => 'stripe', 'belt' => Belt::Grey, 'stripes' => 2]);
+});
+
+it('turns an outgrown poom into the dan of the same number', function (): void {
+    // Kukkiwon: at fifteen a poom converts to the dan of the same degree.
+    $ladder = new RankLadder([
+        new Grade(Belt::RedAndBlack, 0),
+        new Grade(Belt::BlackAndRed, 3, GradeCount::Poom, first: 1, kids: true),
+        new Grade(Belt::Black, 8, GradeCount::Dan, first: 1),
+    ]);
+
+    expect($ladder->nextStep(Belt::BlackAndRed, 1, kidsEligible: false))
+        ->toBe(['kind' => 'belt', 'belt' => Belt::Black, 'stripes' => 1])
+        // At the poom cap too: the 4th poom leads to the 4th dan, not the 1st.
+        ->and($ladder->nextStep(Belt::BlackAndRed, 3, kidsEligible: true))
+        ->toBe(['kind' => 'belt', 'belt' => Belt::Black, 'stripes' => 3]);
 });
 
 it('tells a kids grade from an adult one', function (): void {

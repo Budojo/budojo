@@ -8115,7 +8115,7 @@ components:
         next:
           type: object
           nullable: true
-          description: 'The next stripe (or dan, or poom) while the grade has room for one, otherwise the next grade with no stripes. Null at the top of the ladder.'
+          description: 'The next stripe (or dan, or poom) while the grade has room for one, otherwise the next grade with no stripes, except that a poom leads to the dan of the same number. Someone who has outgrown a kids'' grade goes straight to the next adult grade. Null at the top of the ladder.'
           required: [kind, belt, stripes]
           properties:
             kind: { type: string, enum: [stripe, belt] }

@@ -146,12 +146,21 @@ export class PromotionCandidatesComponent implements OnInit {
 
   /**
    * The next step in the ladder's own words: "stripe 3", "4° dan", or the
-   * next belt's name.
+   * next belt's name, with its degree when it does not open on the first (a
+   * 2nd poom leads to "Black, 2° dan").
    */
   protected nextLabel(next: NextStep | null): string {
     this.languageService.currentLang();
     if (next === null) return this.translate.instant('athletes.ready.topOfLadder');
-    if (next.kind === 'belt') return this.beltLadder.label(next.belt);
+    if (next.kind === 'belt') {
+      const belt = this.beltLadder.label(next.belt);
+      return next.stripes === 0
+        ? belt
+        : this.translate.instant('athletes.ready.beltWithGrade', {
+            belt,
+            grade: this.beltLadder.stripesLabel(next.belt, next.stripes),
+          });
+    }
     return this.beltLadder.countsStripes(next.belt)
       ? this.translate.instant('athletes.ready.nextStripe', { n: next.stripes })
       : this.beltLadder.stripesLabel(next.belt, next.stripes);

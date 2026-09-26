@@ -2802,6 +2802,7 @@
       "noBeltRow": "No belt recorded yet",
       "next": "Next",
       "nextStripe": "stripe {{n}}",
+      "beltWithGrade": "{{belt}}, {{grade}}",
       "topOfLadder": "Top of the ladder",
       "empty": {
         "title": "Nobody on the mat yet",

@@ -97,6 +97,21 @@ describe('PromotionCandidatesComponent (#1841)', () => {
     expect(text(root, '[data-cy="ready-next"]')).toBe('Next 4° dan');
   });
 
+  it('names the degree a new grade opens on, when it is not the first', () => {
+    const { root } = render(
+      of([
+        candidate(1, {
+          belt: 'black-and-red',
+          stripes: 1,
+          next: { kind: 'belt', belt: 'black', stripes: 1 },
+        }),
+      ]),
+      'taekwondo',
+    );
+
+    expect(text(root, '[data-cy="ready-next"]')).toMatch(/^Next .+, 2° dan$/);
+  });
+
   it('names the next stripe, the next belt, and the top of the ladder', () => {
     const { root } = render(
       of([

@@ -2802,6 +2802,7 @@
       "noBeltRow": "Nessuna cintura registrata",
       "next": "Prossimo",
       "nextStripe": "{{n}}° grado",
+      "beltWithGrade": "{{belt}}, {{grade}}",
       "topOfLadder": "In cima alla scala",
       "empty": {
         "title": "Nessun atleta attivo",

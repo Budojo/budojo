@@ -167,6 +167,18 @@ it('reads a kids\' grade as a child\'s when the date of birth is unknown, whatev
     expect(candidates($this)[0]['next'])->toBe(['kind' => 'belt', 'belt' => 'orange', 'stripes' => 0]);
 });
 
+it('moves a karateka past the half belts at twelve, tacche left or not', function (): void {
+    // FIJLKAM's agonisti start at twelve, where the half belts end.
+    $this->academy->update(['martial_art' => 'karate', 'trains_kids' => true]);
+    $twelve = candidateAthlete($this->academy, ['belt' => Belt::WhiteAndYellow, 'stripes' => 1, 'date_of_birth' => '2014-09-01']);
+    $eleven = candidateAthlete($this->academy, ['belt' => Belt::WhiteAndYellow, 'stripes' => 1, 'date_of_birth' => '2015-02-01']);
+
+    $rows = collect(candidates($this))->keyBy('athlete.id');
+
+    expect($rows[$twelve->id]['next'])->toBe(['kind' => 'belt', 'belt' => 'yellow', 'stripes' => 0])
+        ->and($rows[$eleven->id]['next'])->toBe(['kind' => 'stripe', 'belt' => 'white-and-yellow', 'stripes' => 2]);
+});
+
 it('keeps kids\' grades out when the academy does not train kids', function (): void {
     $this->academy->update(['martial_art' => 'judo', 'trains_kids' => false]);
     candidateAthlete($this->academy, ['belt' => Belt::White, 'stripes' => 0, 'date_of_birth' => '2017-03-01']);
@@ -179,7 +191,7 @@ it('counts a taekwondo dan as the next step on a black belt, and a poom only for
     $black = candidateAthlete($this->academy, ['belt' => Belt::Black, 'stripes' => 2, 'date_of_birth' => '1985-01-01']);
     $cadet = candidateAthlete($this->academy, ['belt' => Belt::RedAndBlack, 'stripes' => 0, 'date_of_birth' => '2013-01-01']);
     $adult = candidateAthlete($this->academy, ['belt' => Belt::RedAndBlack, 'stripes' => 0, 'date_of_birth' => '1995-01-01']);
-    // Fifteen this year: a junior, so the poom becomes a dan, not another poom.
+    // Fifteen this year: a junior, so the 2nd poom becomes the 2nd dan.
     $fifteen = candidateAthlete($this->academy, ['belt' => Belt::BlackAndRed, 'stripes' => 1, 'date_of_birth' => '2011-11-01']);
 
     $rows = collect(candidates($this))->keyBy('athlete.id');
@@ -187,7 +199,7 @@ it('counts a taekwondo dan as the next step on a black belt, and a poom only for
     expect($rows[$black->id]['next'])->toBe(['kind' => 'stripe', 'belt' => 'black', 'stripes' => 3])
         ->and($rows[$cadet->id]['next'])->toBe(['kind' => 'belt', 'belt' => 'black-and-red', 'stripes' => 0])
         ->and($rows[$adult->id]['next'])->toBe(['kind' => 'belt', 'belt' => 'black', 'stripes' => 0])
-        ->and($rows[$fifteen->id]['next'])->toBe(['kind' => 'belt', 'belt' => 'black', 'stripes' => 0]);
+        ->and($rows[$fifteen->id]['next'])->toBe(['kind' => 'belt', 'belt' => 'black', 'stripes' => 1]);
 });
 
 it('lists the longest since the last promotion first, and the unknown last', function (): void {

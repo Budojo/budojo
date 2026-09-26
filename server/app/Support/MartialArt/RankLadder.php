@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Support\MartialArt;
 
 use App\Enums\Belt;
+use App\Enums\GradeCount;
 
 /**
  * The belts a martial art awards, in rank order, with the stripe cap of each
@@ -116,7 +117,8 @@ final class RankLadder
      * and kids-only grades are skipped unless the athlete is eligible for them:
      * an adult judoka goes from white to yellow, not to the half belt, and a
      * sixteen-year-old BJJ orange belt goes to blue, with or without stripes
-     * left on the orange. Who is eligible is the caller's to decide; the
+     * left on the orange. A poom leads to the dan of its own number. Who is
+     * eligible is the caller's to decide; the
      * ladder knows grades, not ages.
      *
      * @return array{kind: 'stripe'|'belt', belt: Belt, stripes: int}|null
@@ -140,7 +142,7 @@ final class RankLadder
         \assert(\is_int($position));
         foreach (\array_slice($order, $position + 1) as $grade) {
             if (! $grade->kids || $kidsEligible) {
-                return ['kind' => 'belt', 'belt' => $grade->belt, 'stripes' => 0];
+                return ['kind' => 'belt', 'belt' => $grade->belt, 'stripes' => self::degreesCarried($current, $stripes, $grade)];
             }
         }
 
@@ -151,6 +153,20 @@ final class RankLadder
     public function isKidsGrade(Belt $belt): bool
     {
         return $this->gradeOf($belt)?->kids === true;
+    }
+
+    /**
+     * The count a new grade opens on: none, except that a poom becomes the
+     * dan of the same number (Kukkiwon, at fifteen), so 2nd poom leads to 2nd
+     * dan and not back to the 1st.
+     */
+    private static function degreesCarried(Grade $from, int $stripes, Grade $to): int
+    {
+        if ($from->count !== GradeCount::Poom || $to->count !== GradeCount::Dan) {
+            return 0;
+        }
+
+        return max(0, min($to->maxStripes, $from->first + $stripes - $to->first));
     }
 
     /**
