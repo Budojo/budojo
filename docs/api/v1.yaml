@@ -1080,7 +1080,19 @@ paths:
         `locale` (#1912) from the row's stored parameters, for the
         owner's alerts and digests; any other row returns the sentence
         it was stored with.
+
+        Two views (#1914): without `archived` it is the inbox, the rows
+        not archived; with `archived=1` it is the archived rows, most
+        recently archived first. `unread_count` is always the inbox's —
+        an archived row never counts on the bell.
       operationId: meNotificationsIndex
+      parameters:
+        - in: query
+          name: archived
+          required: false
+          schema:
+            type: boolean
+          description: '`1` for the archived rows instead of the inbox (#1914).'
       responses:
         '200':
           description: Latest notifications + unread count.
@@ -1132,6 +1144,11 @@ paths:
                           type: string
                           format: date-time
                           nullable: true
+                        archived_at:
+                          type: string
+                          format: date-time
+                          nullable: true
+                          description: When it was archived (#1914); null in the inbox.
                         created_at:
                           type: string
                           format: date-time
@@ -1146,6 +1163,131 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthenticated'
 
+  /me/notifications/archive-read:
+    post:
+      tags: [auth]
+      summary: Archive every read notification still in the inbox
+      description: |
+        "Archivia le lette" (#1914): every row with a `read_at` and no
+        `archived_at`, in one update. Unread rows stay in the inbox.
+        Answers with the ids it archived, so an undo can bring back all of
+        them and not only the rows a page had loaded.
+      operationId: meNotificationsArchiveRead
+      responses:
+        '200':
+          description: How many rows were archived.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [archived, ids]
+                    properties:
+                      archived: { type: integer }
+                      ids:
+                        type: array
+                        items: { type: string, format: uuid }
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+  /me/notifications/unarchive:
+    post:
+      tags: [auth]
+      summary: Bring a batch of archived notifications back to the inbox
+      description: |
+        The undo of "Archivia le lette" (#1914), in one request. Ids that are
+        not the user's are ignored.
+      operationId: meNotificationsUnarchiveMany
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ids]
+              properties:
+                ids:
+                  type: array
+                  maxItems: 1000
+                  items: { type: string, format: uuid }
+      responses:
+        '200':
+          description: How many came back.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [unarchived]
+                    properties:
+                      unarchived: { type: integer }
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          description: Not a list of ids.
+  /me/notifications/{id}/archive:
+    post:
+      tags: [auth]
+      summary: Archive one notification
+      description: |
+        Out of the inbox, kept under the archived view (#1914). Nothing is
+        deleted. 404 for an id that is not the user's, as for `/read`.
+
+        Two kinds archive themselves: a missed-streak alert once that
+        athlete checks in again (a presence dated after the alert, not an
+        old register filled in), and an unpaid digest once a newer one for
+        its month or a later one arrives. The certificate and document
+        digests never do: each lists only what crossed a threshold that day.
+      operationId: meNotificationsArchive
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Archived.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationArchiveState'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          description: Not the user's notification.
+  /me/notifications/{id}/unarchive:
+    post:
+      tags: [auth]
+      summary: Bring an archived notification back to the inbox
+      description: |
+        The undo of `/archive` (#1914). 404 for an id that is not the
+        user's.
+      operationId: meNotificationsUnarchive
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Back in the inbox.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationArchiveState'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          description: Not the user's notification.
   /me/notifications/{id}/read:
     post:
       tags: [auth]
@@ -8613,6 +8755,19 @@ components:
           description: Plain-text Sanctum Bearer token. Returned once, never again.
           example: "1|aBc123XyZ..."
 
+    NotificationArchiveState:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [id, archived_at]
+          properties:
+            id: { type: string, format: uuid }
+            archived_at:
+              type: string
+              format: date-time
+              nullable: true
     AppLocale:
       type: string
       enum: [en, it]

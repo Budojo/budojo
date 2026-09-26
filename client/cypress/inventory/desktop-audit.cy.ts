@@ -3399,7 +3399,7 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
   });
 
   // ── 51. Notifications, what's new, backup, more ────────────────────────
-  screen('51-notifications', '/dashboard/notifications', '[data-cy="notifications-filter-all"]');
+  screen('51-notifications', '/dashboard/notifications', '[data-cy="notifications-filter-inbox"]');
   screen('51-notifications-empty', '/dashboard/notifications', '[data-cy="notifications-empty"]', {
     stubs: () => {
       cy.intercept('GET', '/api/v1/me/notifications*', {
@@ -4065,14 +4065,21 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
   // reports a desktop runtime, so there is nothing here to shoot.
 
   // ── 51–55. Notifications, backup, palette, inside ──────────────────────
+  // Just archived (#1914): the row gone, and the undo held at the bottom.
   screen(
-    '51-notifications-unread',
+    '51-notifications-archived-undo',
     '/dashboard/notifications',
-    '[data-cy="notifications-filter-unread"]',
+    '[data-cy="notifications-filter-inbox"]',
     {
+      stubs: () => {
+        cy.intercept('POST', '/api/v1/me/notifications/*/archive', {
+          statusCode: 200,
+          body: { data: { id: 'x', archived_at: '2026-09-14T10:00:00+00:00' } },
+        });
+      },
       act: () => {
-        press('[data-cy="notifications-filter-unread"]');
-        cy.wait(300);
+        cy.get('[data-cy^="notification-archive-"]').first().click({ force: true });
+        cy.get('[data-cy="notifications-undo"]', { timeout: 4000 }).should('be.visible');
       },
     },
   );

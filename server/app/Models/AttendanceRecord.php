@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\AttendanceSource;
+use App\Observers\ArchivesResolvedAlerts;
 use App\Observers\AttendanceObserver;
 use App\Observers\ForgetsAttendanceSummaries;
 use Database\Factories\AttendanceRecordFactory;
@@ -33,7 +34,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'notes',
     'source',
 ])]
-#[ObservedBy([AttendanceObserver::class, ForgetsAttendanceSummaries::class])]
+#[ObservedBy([AttendanceObserver::class, ForgetsAttendanceSummaries::class, ArchivesResolvedAlerts::class])]
 class AttendanceRecord extends Model
 {
     /** @use HasFactory<AttendanceRecordFactory> */

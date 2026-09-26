@@ -80,13 +80,63 @@ describe('Notifications page (#1129)', () => {
     cy.get('[data-cy="notification-2"] .notification__tile').should('exist');
   });
 
-  it('filters to unread only', () => {
+  it('archives a notification, offers it back, and keeps it under Archiviate (#1914)', () => {
+    cy.intercept('POST', '/api/v1/me/notifications/*/archive', {
+      statusCode: 200,
+      body: { data: { id: '2', archived_at: '2026-09-26T10:00:00+00:00' } },
+    }).as('archive');
+    cy.intercept('POST', '/api/v1/me/notifications/unarchive', {
+      statusCode: 200,
+      body: { data: { unarchived: 1 } },
+    }).as('unarchive');
+
     cy.visitAuthenticated('/dashboard/me/notifications');
     cy.wait('@inbox');
 
-    cy.get('[data-cy="notifications-filter-unread"]').click();
-    cy.get('[data-cy="notification-1"]').should('exist');
+    cy.get('[data-cy="notification-archive-2"]').click();
+    cy.wait('@archive').its('request.url').should('contain', '/notifications/2/archive');
     cy.get('[data-cy="notification-2"]').should('not.exist');
+
+    // Undo, not a confirmation: it goes straight back.
+    cy.get('[data-cy="notifications-undo"]').should('contain.text', 'Notification archived');
+    // Focus is already on it: the row that held focus is gone.
+    cy.focused().should('have.attr', 'data-cy', 'notifications-undo-action');
+    cy.get('[data-cy="notifications-undo-action"]').click();
+    cy.wait('@unarchive')
+      .its('request.body')
+      .should('deep.equal', { ids: ['2'] });
+    cy.wait('@inbox');
+  });
+
+  it('lists the archived ones on their own tab', () => {
+    cy.intercept('GET', '/api/v1/me/notifications?archived=1', {
+      statusCode: 200,
+      body: {
+        data: [
+          {
+            id: '9',
+            type: 'x',
+            kind: 'owner_athlete_missed_streak',
+            title: "Giorgi Giorgio non si allena da un po'",
+            body: '',
+            link: null,
+            actor: null,
+            read_at: '2026-09-20T10:00:00+00:00',
+            archived_at: '2026-09-21T10:00:00+00:00',
+            created_at: '2026-09-20T09:00:00+00:00',
+          },
+        ],
+        meta: { unread_count: 0 },
+      },
+    }).as('archived');
+
+    cy.visitAuthenticated('/dashboard/me/notifications');
+    cy.wait('@inbox');
+
+    cy.get('[data-cy="notifications-filter-archived"]').click();
+    cy.wait('@archived');
+    cy.get('[data-cy="notification-9"]').should('contain.text', 'Giorgi Giorgio');
+    cy.get('[data-cy="notification-unarchive-9"]').should('exist');
   });
 
   it('marks all as read from the header CTA', () => {

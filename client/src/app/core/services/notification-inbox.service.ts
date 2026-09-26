@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { Observable, map, tap } from 'rxjs';
+import { Observable, concatMap, from, map, tap, toArray } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 export interface NotificationActor {
@@ -19,6 +19,8 @@ export interface InboxNotification {
   /** Who triggered it (for the avatar). Null/absent for system notifications (recap, payment, …). */
   readonly actor?: NotificationActor | null;
   readonly read_at: string | null;
+  /** When the owner archived it (#1914), or null while it is in "Da vedere". */
+  readonly archived_at?: string | null;
   readonly created_at: string | null;
 }
 
@@ -41,6 +43,9 @@ interface MarkAllResponse {
  * rows + the unread count so the badge updates in lockstep with
  * mark-as-read calls.
  */
+/** The most ids `POST /me/notifications/unarchive` takes in one request. */
+const UNARCHIVE_BATCH = 1000;
+
 @Injectable({ providedIn: 'root' })
 export class NotificationInboxService {
   private readonly http = inject(HttpClient);
@@ -83,6 +88,69 @@ export class NotificationInboxService {
         }
       }),
     );
+  }
+
+  /**
+   * Out of "Da vedere", into "Archiviate" (#1914). The row leaves the inbox
+   * at once; an unread one stops counting on the bell with it.
+   */
+  archive(id: string): Observable<void> {
+    return this.http.post(`${this.base}/${id}/archive`, {}).pipe(
+      tap(() => {
+        const wasUnread = this._rows().some((n) => n.id === id && n.read_at === null);
+        this._rows.set(this._rows().filter((n) => n.id !== id));
+        if (wasUnread) {
+          this._unread.update((v) => Math.max(0, v - 1));
+        }
+      }),
+      map(() => undefined),
+    );
+  }
+
+  /** Back into "Da vedere" (#1914). The caller reloads the inbox to put it in its place. */
+  unarchive(id: string): Observable<void> {
+    return this.http.post(`${this.base}/${id}/unarchive`, {}).pipe(map(() => undefined));
+  }
+
+  /**
+   * "Archivia le lette" (#1914): every read row, in one request. Resolves to
+   * the ids it took, so the page can offer them back.
+   */
+  archiveRead(): Observable<string[]> {
+    // The server's ids, not the loaded rows': it archives every read row,
+    // including those past the twenty on screen, and "Annulla" must bring
+    // back all of them.
+    return this.http
+      .post<{ data: { archived: number; ids: string[] } }>(`${this.base}/archive-read`, {})
+      .pipe(
+        tap(() => this._rows.set(this._rows().filter((n) => n.read_at === null))),
+        map((r) => r.data.ids),
+      );
+  }
+
+  /**
+   * "Annulla" for a batch (#1914). In requests of a thousand — what the
+   * server takes at once — because the first "Archivia le lette" after an
+   * upgrade can take a whole history.
+   */
+  unarchiveMany(ids: readonly string[]): Observable<void> {
+    const batches: string[][] = [];
+    for (let i = 0; i < ids.length; i += UNARCHIVE_BATCH) {
+      batches.push(ids.slice(i, i + UNARCHIVE_BATCH));
+    }
+
+    return from(batches).pipe(
+      concatMap((batch) => this.http.post(`${this.base}/unarchive`, { ids: batch })),
+      toArray(),
+      map(() => undefined),
+    );
+  }
+
+  /** "Archiviate" (#1914): not cached — it is read when the owner opens it. */
+  listArchived(): Observable<readonly InboxNotification[]> {
+    return this.http
+      .get<ListResponse>(this.base, { params: { archived: '1' } })
+      .pipe(map((r) => r.data));
   }
 
   markAllAsRead(): Observable<number> {

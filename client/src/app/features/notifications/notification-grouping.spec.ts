@@ -26,7 +26,7 @@ describe('groupNotifications', () => {
       n({ id: 'ancient', read_at: null, created_at: new Date(2026, 0, 1).toISOString() }),
     ];
 
-    const groups = groupNotifications(rows, false, now);
+    const groups = groupNotifications(rows, now);
 
     expect(groups).toHaveLength(1);
     expect(groups[0].key).toBe('new');
@@ -40,29 +40,14 @@ describe('groupNotifications', () => {
       n({ id: 'earlier', created_at: new Date(2026, 3, 1, 8).toISOString() }),
     ];
 
-    const groups = groupNotifications(rows, false, now);
+    const groups = groupNotifications(rows, now);
 
     expect(groups.map((g) => g.key)).toEqual(['today', 'week', 'earlier']);
     expect(groups[0].items[0].id).toBe('today');
   });
 
-  it('returns only the "new" group when unreadOnly is set', () => {
-    const rows = [
-      n({ id: 'u', read_at: null }),
-      n({ id: 'r', created_at: new Date(2026, 4, 20, 8).toISOString() }),
-    ];
-
-    const groups = groupNotifications(rows, true, now);
-
-    expect(groups).toHaveLength(1);
-    expect(groups[0].key).toBe('new');
-    expect(groups[0].items.map((r) => r.id)).toEqual(['u']);
-  });
-
   it('omits empty groups', () => {
-    expect(groupNotifications([], false, now)).toEqual([]);
-    expect(groupNotifications([n({ read_at: null })], false, now).map((g) => g.key)).toEqual([
-      'new',
-    ]);
+    expect(groupNotifications([], now)).toEqual([]);
+    expect(groupNotifications([n({ read_at: null })], now).map((g) => g.key)).toEqual(['new']);
   });
 });
