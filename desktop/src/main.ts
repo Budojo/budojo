@@ -1,11 +1,11 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, Notification, protocol, safeStorage, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, Notification, type OpenDialogOptions, protocol, safeStorage, shell } from 'electron';
 import { createWriteStream, existsSync, readFileSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { dataLayout, parseSecrets, runBootstrap, serializeSecrets, type Secrets } from './bootstrap.js';
-import { BackupService, RETENTION } from './backup.js';
+import { BackupService, RETENTION, type RestoreCheck, type RestoreRefusal } from './backup.js';
 import { createBackupIO } from './backup-io.js';
 import { createFolderCopyIO } from './folder-copy-io.js';
 import { FolderCopyService } from './folder-copy-service.js';
@@ -801,28 +801,76 @@ function registerFolderBridge(folderOf: () => FolderCopyService | null): void {
 function registerBackupBridge(
   supervisorOf: () => PhpSupervisor | null,
   backupOf: () => BackupService | null,
+  folderOf: () => FolderCopyService | null,
+  /** The other PHP processes that open the database on their own: the scheduler and the notification poll. */
+  otherPhpOf: () => PeriodicTask[],
 ): void {
   ipcMain.handle('budojo:backup:list', async () => (await backupOf()?.list()) ?? []);
 
   ipcMain.handle('budojo:backup:run', async () => {
-    const path = await backupOf()?.backup();
+    // An answer, never a rejection: a rejected invoke leaves the page's button
+    // spinning. `backup()` throws while a restore holds the lock (#1909).
+    const path = await backupOf()?.backup().catch(() => undefined);
 
     return { ok: path !== undefined, path: path ?? null };
   });
 
-  ipcMain.handle('budojo:backup:restore', async (_event, name: unknown) => {
+  /**
+   * Taken synchronously, before the first `await` (#1909). The engine's own
+   * lock is only taken once PHP has stopped, so two clicks inside that stop
+   * would both pass a `busy` check — and the refused one would restart PHP on
+   * its way out, under the other one's swap.
+   */
+  let restoring = false;
+  const busyAnswer = { ok: false, code: 'busy' as const, reason: 'A backup or restore is already running.' };
+
+  /**
+   * Stops PHP, runs one restore, starts PHP again whatever happened, and
+   * reloads the windows onto the restored data when it went through. The same
+   * sequence for a listed archive and for a file from anywhere else.
+   */
+  const restoreWith = async (
+    run: (service: BackupService) => Promise<RestoreCheck>,
+  ): Promise<{ ok: boolean; code?: RestoreRefusal; reason?: string }> => {
     const service = backupOf();
     const supervisor = supervisorOf();
-    if (service === null || supervisor === null || typeof name !== 'string') {
+    if (service === null || supervisor === null) {
       return { ok: false, reason: 'Budojo is not ready to restore yet.' };
     }
 
-    await supervisor.stop();
-    let check;
+    // Before PHP is stopped, not after: a refused restore still restarts the
+    // server on its way out, and doing that under a restore that is still
+    // swapping is the one thing the swap must never overlap.
+    if (restoring || service.busy) {
+      return busyAnswer;
+    }
+    restoring = true;
+
+    // Stopping the server is not enough: `schedule:run` and the notification
+    // poll open the same SQLite file from their own php processes, and on
+    // Windows an open handle stops the rename, or a write lands in the
+    // database being swapped out. They hold their ticks until the restore is
+    // over, after any run already in flight has finished.
+    const held = otherPhpOf();
+    let check: RestoreCheck;
     try {
-      check = await service.restore(name);
+      await Promise.all(held.map((task) => task.pause()));
+      await supervisor.stop();
+      try {
+        check = await run(service);
+      } catch (error) {
+        // An answer, never a rejection: a rejected invoke leaves the page's
+        // button spinning with nothing said. `failed`, not `unreadable`: the
+        // archive passed its checks, and what broke is the swap itself.
+        check = { ok: false, code: 'failed', reason: error instanceof Error ? error.message : String(error) };
+      } finally {
+        await supervisor.start();
+      }
     } finally {
-      await supervisor.start();
+      for (const task of held) {
+        task.resume();
+      }
+      restoring = false;
     }
 
     if (check.ok) {
@@ -833,7 +881,44 @@ function registerBackupBridge(
       }
     }
 
-    return check.ok ? { ok: true } : { ok: false, reason: check.reason };
+    return check.ok ? { ok: true } : { ok: false, code: check.code, reason: check.reason };
+  };
+
+  ipcMain.handle('budojo:backup:restore', async (_event, name: unknown) =>
+    typeof name === 'string'
+      ? restoreWith((service) => service.restore(name))
+      : { ok: false, reason: 'Budojo is not ready to restore yet.' },
+  );
+
+  // A backup from anywhere on disk (#1909): the copies folder, a Drive
+  // download, a USB stick — the only way back on a new computer. The renderer
+  // only asks; the path is the one the system dialog returned, never one the
+  // renderer sent.
+  ipcMain.handle('budojo:backup:restoreFromFile', async (event) => {
+    if (restoring || backupOf()?.busy === true) {
+      return busyAnswer;
+    }
+
+    // Open in the copies folder when there is one: it is where the owner's
+    // backups are, and Electron's default is Downloads (see folder:choose).
+    const folder = (await folderOf()?.state())?.folder ?? null;
+    const options: OpenDialogOptions = {
+      title: 'Choose a Budojo backup',
+      properties: ['openFile'],
+      filters: [{ name: 'Budojo backup', extensions: ['zip'] }],
+      ...(folder === null ? {} : { defaultPath: folder }),
+    };
+    // Modal on the window that asked, so the page behind cannot start a second
+    // restore while the dialog is open.
+    const parent = BrowserWindow.fromWebContents(event.sender);
+    const picked = parent === null ? await dialog.showOpenDialog(options) : await dialog.showOpenDialog(parent, options);
+
+    const file = picked.filePaths[0];
+    if (picked.canceled || file === undefined) {
+      return { ok: false, canceled: true };
+    }
+
+    return restoreWith((service) => service.restoreFile(file));
   });
 }
 
@@ -1149,7 +1234,12 @@ if (!gotTheLock) {
       backupPoll = runtime.backupPoll;
       driveService = runtime.driveService;
       folderCopy = runtime.folderCopy;
-      registerBackupBridge(() => supervisor, () => backupService);
+      registerBackupBridge(
+        () => supervisor,
+        () => backupService,
+        () => folderCopy,
+        () => [scheduler, notifierPoll].filter((task): task is PeriodicTask => task !== null),
+      );
       registerDriveBridge(() => driveService);
       registerFolderBridge(() => folderCopy);
       apiBase = runtime.apiBase;

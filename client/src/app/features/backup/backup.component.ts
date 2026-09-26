@@ -12,6 +12,7 @@ import { PageHeaderComponent } from '../../shared/components/page-header/page-he
 import {
   DesktopBackupService,
   type BackupArchiveView,
+  type RestoreResult,
 } from '../../core/services/desktop-backup.service';
 
 /** An archive row, plus whether it is on this disk and therefore restorable. */
@@ -126,6 +127,7 @@ export class BackupComponent {
   protected readonly syncing = signal(false);
   protected readonly loading = signal(true);
   protected readonly backingUp = signal(false);
+  protected readonly restoringFromFile = signal(false);
   protected readonly restoringName = signal<string | null>(null);
 
   /** Recovery keys (#1254): reveal the code, and paste one to import. */
@@ -337,8 +339,7 @@ export class BackupComponent {
 
   protected async backupNow(): Promise<void> {
     this.backingUp.set(true);
-    const ok = await this.backup.backupNow();
-    this.backingUp.set(false);
+    const ok = await this.backup.backupNow().finally(() => this.backingUp.set(false));
 
     this.messages.add({
       severity: ok ? 'success' : 'error',
@@ -352,9 +353,32 @@ export class BackupComponent {
 
   protected async restore(archive: BackupArchiveView): Promise<void> {
     this.restoringName.set(archive.name);
-    const result = await this.backup.restore(archive.name);
-    this.restoringName.set(null);
+    // `finally`: a spinner that outlives a failed call is a page that looks
+    // stuck with nothing said (#1909).
+    const result = await this.backup
+      .restore(archive.name)
+      .finally(() => this.restoringName.set(null));
 
+    this.reportRestore(result);
+  }
+
+  /**
+   * A backup from anywhere on disk (#1909): the copies folder, a Drive
+   * download, a USB stick — the only way back on a new computer, where the
+   * list is empty. The desktop opens the file dialog after the confirmation.
+   */
+  protected async restoreFromFile(): Promise<void> {
+    this.restoringFromFile.set(true);
+    const result = await this.backup
+      .restoreFromFile()
+      .finally(() => this.restoringFromFile.set(false));
+
+    if (result.canceled !== true) {
+      this.reportRestore(result);
+    }
+  }
+
+  private reportRestore(result: RestoreResult): void {
     if (result.ok) {
       // The main process reloads the window onto the restored data; this toast
       // may not survive that, which is fine — the reload is the confirmation.
@@ -362,13 +386,35 @@ export class BackupComponent {
         severity: 'success',
         summary: this.translate.instant('backup.toast.restored'),
       });
-    } else {
-      this.messages.add({
-        severity: 'error',
-        summary: this.translate.instant('backup.toast.restoreRefused'),
-        detail: result.reason,
-        life: 8000,
-      });
+
+      return;
+    }
+
+    this.messages.add({
+      severity: 'error',
+      summary: this.translate.instant('backup.toast.restoreRefused'),
+      detail: this.refusalDetail(result),
+      life: 8000,
+    });
+  }
+
+  /**
+   * The refusal in the owner's language (#1909), from the code the desktop
+   * sends. The engine's own `reason` is English and written for the log; it is
+   * shown only for a refusal the page has no words for.
+   */
+  private refusalDetail(result: RestoreResult): string | undefined {
+    switch (result.code) {
+      case 'unreadable':
+        return this.translate.instant('backup.toast.notABackup');
+      case 'newer':
+        return this.translate.instant('backup.toast.newerBackup');
+      case 'busy':
+        return this.translate.instant('backup.toast.busy');
+      case 'failed':
+        return this.translate.instant('backup.toast.restoreFailed');
+      default:
+        return result.reason;
     }
   }
 

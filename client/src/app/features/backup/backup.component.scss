@@ -40,6 +40,21 @@
     font-weight: 600;
   }
 
+  // The list's heading with the one action that fills an empty list (#1909):
+  // side by side while they fit, the button under the heading on a phone.
+  &__archives-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem 1rem;
+    margin: 2rem 0 0.5rem;
+
+    .backup-page__heading {
+      margin: 0;
+    }
+  }
+
   &__muted {
     color: var(--p-text-muted-color);
   }

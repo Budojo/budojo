@@ -83,13 +83,21 @@ Failures are quiet, because the copy on this computer has already been written a
 
 From **Data & backup**, pick an archive and choose **Restore** (it asks for confirmation — a restore replaces the current data). The app:
 
-1. stops the PHP API,
-2. drops the live database's stale `-wal`/`-shm` files and swaps in the archived database + `storage/`,
+1. holds the scheduler and the notification poll — their own `php` processes open the same database — and stops the PHP API,
+2. copies the archived database and `storage/` in **beside** the live ones (`budojo.sqlite.restoring`, `storage.restoring`), then swaps by renaming: the live database (with its `-wal`/`-shm`) and `storage/` step aside as `.previous`, the copies take their place, and the `.previous` files are deleted only once every rename has succeeded,
 3. restarts the API and reloads the window onto the restored data.
 
 A restore **refuses an archive from a newer version of Budojo** than the one running (its schema would be ahead of the code) and refuses an archive with a missing or unreadable manifest — an unknown archive is not a safe one. An **older** archive is fine: the boot migrations bring it forward.
 
-The live database is only replaced after the archive extracts and validates cleanly, so an interrupted restore leaves your current data intact.
+The live database is only replaced after the archive extracts and validates cleanly **and** after every copy has succeeded (#1909). Until #1909 the swap deleted the live database and then copied the archived one over it, so a copy that failed half-way — a full disk is enough — left the database replaced and the documents gone. Now every step that can run out of room happens while the live data is untouched, the half-made copies are removed if one fails, and what follows is renames on one volume. Each rename is retried for about a second when Windows reports the file busy (the antivirus scanning what was just written is the usual holder), and if one still fails, the renames already done are undone in reverse order, so the database and the documents always belong to the same backup. Anything that could not be put back stays as `.previous` and is **never deleted**: the next restore sets it aside as `….kept-<timestamp>` before it starts. One restore or backup runs at a time: a second is refused as busy.
+
+### Restoring from a file (#1909)
+
+The list shows only the archives in the app's own folder. A backup anywhere else — your backup folder, a zip downloaded from Google Drive, a USB stick — comes back with **Data & backup → Restore from a file…**. It asks for confirmation, then opens the system file dialog, starting in your backup folder when you have one. On a new computer, where the list is empty, this is the way back.
+
+- The file is **checked where it is** — the same manifest and version check as a listed archive — and nothing is copied or swapped until it passes. A file that is not a Budojo backup is refused with *"This file is not a Budojo backup"*; one from a newer Budojo, with *"Update Budojo, then restore it"*.
+- Once it passes it is **copied into the app's own folder**, so it shows in the list like any other, and then restored. An archive the list already holds is not copied twice, and a renamed copy (`… (1).zip` from a second download) goes in under the name its backup had, from the manifest's timestamp.
+- The path comes from the system dialog in the main process, never from the page.
 
 ## The part that can silently fail: encryption keys
 
@@ -133,8 +141,8 @@ Also worth knowing:
 ## Quick recovery checklist
 
 1. Install Budojo on the new machine and let it finish first-run setup.
-2. Get your latest `budojo-backup-*.zip` onto the machine — from your backup folder if you set one up, otherwise from wherever you keep them.
-3. **Data & backup → Restore →** pick the archive → confirm.
+2. Make your latest `budojo-backup-*.zip` reachable from this computer: your backup folder synced by OneDrive / Dropbox / the Drive client, a download from Google Drive, or a USB stick. No need to put it anywhere in particular.
+3. **Data & backup → Restore from a file… →** confirm → pick the zip. Budojo checks it, copies it into its own list and restores it.
 4. **Data & backup → Recovery keys → Restore keys from a recovery code →** paste the code you saved → confirm. Budojo restarts under the original keys.
 5. Verify: athletes, attendance and payments are present, and a medical certificate downloads. ✅
 

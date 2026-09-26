@@ -74,6 +74,9 @@ contextBridge.exposeInMainWorld('__BUDOJO__', {
     list: () => ipcRenderer.invoke('budojo:backup:list'),
     run: () => ipcRenderer.invoke('budojo:backup:run'),
     restore: (name: string) => ipcRenderer.invoke('budojo:backup:restore', name),
+    // A backup from anywhere on disk (#1909). No argument on purpose: the main
+    // process opens the file dialog and restores what it returns.
+    restoreFromFile: () => ipcRenderer.invoke('budojo:backup:restoreFromFile'),
   },
   // Google Drive backup sync (#1301). Opt-in and off by default. `state()`
   // answers even when the build carries no OAuth client — it returns

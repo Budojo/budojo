@@ -155,9 +155,19 @@ export function buildManifest(input: { appVersion: string; schemaVersion: string
   };
 }
 
+/**
+ * Why a restore did not happen, for the page to say in the owner's language
+ * (#1909): `unreadable` is not a Budojo backup at all — no zip, no manifest,
+ * no database — `newer` comes from a Budojo newer than this one, `busy` means
+ * a backup or another restore is running, and `failed` is an archive that
+ * passed every check and broke while being swapped in. `reason` stays, in
+ * English, for the log.
+ */
+export type RestoreRefusal = 'unreadable' | 'newer' | 'busy' | 'failed';
+
 export type RestoreCheck =
   | { ok: true }
-  | { ok: false; reason: string };
+  | { ok: false; code: RestoreRefusal; reason: string };
 
 /**
  * Whether an archive is safe to restore into the running app.
@@ -171,12 +181,13 @@ export type RestoreCheck =
  */
 export function checkRestore(manifest: Partial<BackupManifest> | null, currentSchemaVersion: string): RestoreCheck {
   if (manifest === null || manifest.format !== 1 || typeof manifest.schemaVersion !== 'string') {
-    return { ok: false, reason: 'The archive has no readable manifest and cannot be trusted.' };
+    return { ok: false, code: 'unreadable', reason: 'The archive has no readable manifest and cannot be trusted.' };
   }
 
   if (manifest.schemaVersion > currentSchemaVersion) {
     return {
       ok: false,
+      code: 'newer',
       reason:
         `This backup is from a newer version of Budojo (schema ${manifest.schemaVersion}) than the one ` +
         `installed (schema ${currentSchemaVersion}). Update Budojo, then restore.`,
@@ -212,6 +223,15 @@ export interface BackupIO {
   /** Replace the live database + storage with the extracted ones. Caller has stopped PHP. */
   swapIn: (extractedDir: string) => Promise<void>;
   archivePathFor: (name: string) => string;
+  /** Copy an archive from anywhere into the backups folder, as `name` (#1909). */
+  copyIn: (sourcePath: string, name: string) => Promise<void>;
+  /** Whether an extracted archive holds a database to swap in. */
+  hasDatabase: (extractedDir: string) => Promise<boolean>;
+}
+
+/** The file name at the end of a path, on Windows or anywhere else. */
+function fileNameOf(filePath: string): string {
+  return filePath.split(/[\\/]/).pop() ?? filePath;
 }
 
 export interface BackupServiceOptions {
@@ -222,15 +242,43 @@ export interface BackupServiceOptions {
   now?: () => Date;
 }
 
+const BUSY = 'A backup or restore is already running.';
+
 export class BackupService {
   private readonly now: () => Date;
+
+  /**
+   * One operation at a time (#1909). A restore swaps the database a backup is
+   * reading, and a second restore would swap it while the first still is; the
+   * page offers restore on every row and from a file, and the schedule backs
+   * up every six hours, so nothing else serialises them. The main process also
+   * reads `busy` before it stops PHP, so a refused restore never restarts the
+   * server under one that is still swapping.
+   */
+  private operation: 'backup' | 'restore' | null = null;
 
   constructor(private readonly options: BackupServiceOptions) {
     this.now = options.now ?? (() => new Date());
   }
 
+  get busy(): boolean {
+    return this.operation !== null;
+  }
+
   /** Creates one archive, prunes to retention, returns the archive path. */
   async backup(): Promise<string> {
+    if (this.busy) {
+      throw new Error(BUSY);
+    }
+    this.operation = 'backup';
+    try {
+      return await this.makeArchive();
+    } finally {
+      this.operation = null;
+    }
+  }
+
+  private async makeArchive(): Promise<string> {
     const { io } = this.options;
     const stagingDir = await io.makeTempDir('backup');
 
@@ -290,12 +338,48 @@ export class BackupService {
    * live connection. Returns the check so a refusal surfaces its reason.
    */
   async restore(archiveName: string): Promise<RestoreCheck> {
+    return this.exclusively(() => this.restoreListed(archiveName));
+  }
+
+  /**
+   * Runs one restore under the lock, or refuses as `busy`. The lock is freed
+   * however the restore ends, so a failure cannot wedge the page.
+   */
+  private async exclusively(restore: () => Promise<RestoreCheck>): Promise<RestoreCheck> {
+    if (this.busy) {
+      return { ok: false, code: 'busy', reason: BUSY };
+    }
+    this.operation = 'restore';
+    try {
+      return await restore();
+    } finally {
+      this.operation = null;
+    }
+  }
+
+  /** The manifest and version check, then a database to swap in. */
+  private async validate(extractDir: string): Promise<{ check: RestoreCheck; manifest: Partial<BackupManifest> | null }> {
+    const { io } = this.options;
+    const manifest = await io.readManifest(extractDir);
+    const check = checkRestore(manifest, await io.currentSchemaVersion());
+
+    if (check.ok && !(await io.hasDatabase(extractDir))) {
+      return {
+        check: { ok: false, code: 'unreadable', reason: 'The archive contains no database to restore.' },
+        manifest,
+      };
+    }
+
+    return { check, manifest };
+  }
+
+  private async restoreListed(archiveName: string): Promise<RestoreCheck> {
     const { io } = this.options;
     const extractDir = await io.makeTempDir('restore');
 
     try {
       await io.unzip(io.archivePathFor(archiveName), extractDir);
-      const check = checkRestore(await io.readManifest(extractDir), await io.currentSchemaVersion());
+      const { check } = await this.validate(extractDir);
 
       if (!check.ok) {
         this.options.log(`[restore] refused ${archiveName}: ${check.reason}`);
@@ -310,5 +394,79 @@ export class BackupService {
     } finally {
       await io.removeDir(extractDir);
     }
+  }
+
+  /**
+   * Restores an archive from anywhere on disk (#1909): the copies folder, a
+   * Drive download, a USB stick — the one way back on a new computer, where
+   * the list is empty. The caller got `sourcePath` from the system file
+   * dialog, never from the renderer.
+   *
+   * The file is checked **where it is**, with the same manifest and version
+   * check as a listed archive, and nothing is copied or swapped until it
+   * passes: a stray zip must not land in the backups folder, let alone in the
+   * live data. Only then is it copied in, so it shows in the list like any
+   * other, and swapped in.
+   *
+   * A renamed copy ("… (1).zip" from a second download) keeps its place: it
+   * goes in under the name its backup had, from the manifest's timestamp. An
+   * archive the list already holds is not copied twice.
+   */
+  async restoreFile(sourcePath: string): Promise<RestoreCheck> {
+    return this.exclusively(() => this.restoreOutside(sourcePath));
+  }
+
+  private async restoreOutside(sourcePath: string): Promise<RestoreCheck> {
+    const { io } = this.options;
+    const extractDir = await io.makeTempDir('restore');
+
+    try {
+      try {
+        await io.unzip(sourcePath, extractDir);
+      } catch (error) {
+        const reason = `Not a zip archive: ${error instanceof Error ? error.message : String(error)}`;
+        this.options.log(`[restore] refused ${sourcePath}: ${reason}`);
+
+        return { ok: false, code: 'unreadable', reason };
+      }
+
+      const { check, manifest } = await this.validate(extractDir);
+
+      if (!check.ok) {
+        this.options.log(`[restore] refused ${sourcePath}: ${check.reason}`);
+
+        return check;
+      }
+
+      const name = this.listedNameFor(sourcePath, manifest?.createdAt);
+      const listed = (await io.listArchives()).some((entry) => entry.name === name);
+
+      if (!listed) {
+        // Best-effort: the list is a convenience, the owner's data is the
+        // point. A full disk here must not stop the restore itself.
+        await io.copyIn(sourcePath, name).catch((error: unknown) => {
+          this.options.log(`[restore] could not copy ${sourcePath} into the list: ${String(error)}`);
+        });
+      }
+
+      await io.swapIn(extractDir);
+      this.options.log(`[restore] restored ${sourcePath} as ${name}`);
+
+      return check;
+    } finally {
+      await io.removeDir(extractDir);
+    }
+  }
+
+  /** Its own name when it still has one; otherwise the one its backup had. */
+  private listedNameFor(sourcePath: string, createdAt: string | undefined): string {
+    const own = fileNameOf(sourcePath);
+    if (isBackupArchive(own)) {
+      return own;
+    }
+
+    const made = createdAt === undefined ? Number.NaN : Date.parse(createdAt);
+
+    return backupArchiveName(Number.isNaN(made) ? this.now() : new Date(made));
   }
 }
