@@ -859,12 +859,45 @@ const ATHLETE_SUMMARY = (() => {
     range_days: 90,
     range_start: iso(new Date(NOW - 89 * 86_400_000)),
     range_end: TODAY,
+    window_start: iso(new Date(NOW - 89 * 86_400_000)),
     attended_count: attended,
     expected_count: series.length,
     rate: Math.round((attended / series.length) * 10000) / 10000,
     series,
   };
 })();
+
+/**
+ * The ring's answer for a month (#1769), as the server builds it: one point
+ * per scheduled day up to TODAY (Mon/Wed/Fri/Sat, August closed), plus any
+ * other day trained. Giulia trained on 2, 4, 7, 9 and 11 September, and once
+ * on 28 August, when the academy was closed.
+ */
+function athleteMonthSummary(month: string) {
+  const trained = new Set(ATTENDANCE_ONE.map((r) => r.attended_on));
+  const [y, m] = month.split('-').map(Number);
+  const last = new Date(y, m, 0).getDate();
+  const series: { date: string; attended: boolean }[] = [];
+  let scheduled = 0;
+  for (let d = 1; d <= last; d++) {
+    const iso = `${month}-${String(d).padStart(2, '0')}`;
+    if (iso > TODAY) break;
+    const isScheduled = m !== 8 && [1, 3, 5, 6].includes(new Date(y, m - 1, d).getDay());
+    if (isScheduled) scheduled++;
+    if (isScheduled || trained.has(iso)) series.push({ date: iso, attended: trained.has(iso) });
+  }
+  const attended = series.filter((p) => p.attended).length;
+  return {
+    range_days: last,
+    range_start: `${month}-01`,
+    range_end: `${month}-${String(last).padStart(2, '0')}`,
+    window_start: `${month}-01`,
+    attended_count: attended,
+    expected_count: scheduled,
+    rate: scheduled === 0 ? null : Math.round((attended / scheduled) * 10000) / 10000,
+    series,
+  };
+}
 
 /**
  * The month summary (#1767): each row carries its own denominator, the
@@ -1843,24 +1876,9 @@ function seed(): void {
   // Mon/Wed/Fri/Sat), and August was closed, so it has no denominator.
   cy.intercept('GET', '/api/v1/athletes/*/attendance/summary*', (req) => {
     const month = req.query['month'];
-    if (typeof month !== 'string') {
-      req.reply({ statusCode: 200, body: { data: ATHLETE_SUMMARY } });
-      return;
-    }
-    const september = month === '2026-09';
     req.reply({
       statusCode: 200,
-      body: {
-        data: {
-          range_days: september ? 30 : 31,
-          range_start: `${month}-01`,
-          range_end: `${month}-${september ? 30 : 31}`,
-          attended_count: september ? 5 : month === '2026-08' ? 1 : 0,
-          expected_count: september ? 8 : 0,
-          rate: september ? 0.625 : null,
-          series: [],
-        },
-      },
+      body: { data: typeof month === 'string' ? athleteMonthSummary(month) : ATHLETE_SUMMARY },
     });
   });
   cy.intercept('GET', '/api/v1/athletes/*/payments*', {
@@ -2220,6 +2238,7 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       SYLLABUS_CALENDAR,
       TOPIC_EXPOSURE,
       ATHLETE_SUMMARY,
+      ATHLETE_MONTHS: [athleteMonthSummary('2026-09'), athleteMonthSummary('2026-08')],
       ATTENDANCE_SUMMARY,
       CARNETS_ONE,
     });
@@ -2260,8 +2279,9 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
     expect(problems.join('\n')).to.contain("is 'planned'");
     expect(problems.join('\n')).to.contain('attendance_total_count 0 but last_attended_on');
 
-    // The attendance summary: one point per lesson day, so 90 calendar-day
-    // points against 30 expected is a contradiction.
+    // The attendance summary: one point per scheduled day plus the days
+    // trained off them, so 90 calendar-day points against 30 expected is a
+    // contradiction (#1769).
     const summary = fixtureContradictions(
       {
         attended_count: 2,
@@ -2271,7 +2291,23 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       },
       FIXTURE_CONTEXT,
     );
-    expect(summary.join('\n')).to.contain('≠ 90 series points');
+    expect(summary.join('\n')).to.contain('90 series points, outside 30–32');
+    // ...while an open mat on top of every session is not: past 100%, unclamped.
+    expect(
+      fixtureContradictions(
+        {
+          attended_count: 3,
+          expected_count: 2,
+          rate: 1.5,
+          series: [
+            { date: 'a', attended: true },
+            { date: 'b', attended: true },
+            { date: 'c', attended: true },
+          ],
+        },
+        FIXTURE_CONTEXT,
+      ),
+    ).to.deep.equal([]);
 
     // The rate is the server's four-place rounding exactly, not "near it".
     const rate = (r: number) =>

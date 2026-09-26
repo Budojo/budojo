@@ -22,6 +22,7 @@ describe('AttendanceSummaryService (#894)', () => {
       range_days: 90,
       range_start: '2026-02-20',
       range_end: '2026-05-20',
+      window_start: '2026-02-20',
       attended_count: 3,
       expected_count: 4,
       rate: 0.75,

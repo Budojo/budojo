@@ -272,8 +272,8 @@ export interface Academy {
   next_schedule?: AcademySchedule | null;
   /**
    * Full schedule history (#1094), ordered most-recent `effective_from`
-   * first. Consumed by `countScheduledTrainingDays` to compute correct
-   * per-day denominators across mid-period schedule transitions.
+   * first. The calendar paints each day against the row in force on it
+   * (`training-days.ts`); the denominators are the server's since #1769.
    * Optional for fixture-compat.
    */
   schedules?: AcademySchedule[];

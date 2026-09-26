@@ -15,6 +15,12 @@ export interface AttendanceSummary {
   readonly range_days: number;
   readonly range_start: string;
   readonly range_end: string;
+  /**
+   * Where this athlete's window begins (#1769): the joining day, or their
+   * first presence if earlier, never before `range_start`. No day before it
+   * is counted, so the calendar paints none as missed.
+   */
+  readonly window_start: string;
   readonly attended_count: number;
   /**
    * The days the academy was scheduled to train in the window (#1769),

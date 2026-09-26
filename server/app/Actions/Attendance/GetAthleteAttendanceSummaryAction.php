@@ -42,6 +42,7 @@ class GetAthleteAttendanceSummaryAction
      *   range_days: int,
      *   range_start: string,
      *   range_end: string,
+     *   window_start: string,
      *   attended_count: int,
      *   expected_count: int|null,
      *   rate: float|null,
@@ -55,9 +56,10 @@ class GetAthleteAttendanceSummaryAction
         $windowEnd = $windowEnd->startOfDay();
         $last = $windowEnd->min($today);
 
+        // Every day trained in the window counts: the start never passes the
+        // first presence, so none of them falls before it.
         $attended = $this->daysTrained($athlete, $windowStart, $last);
         $start = $this->startOf($athlete, $windowStart, $attended);
-        $attended = array_values(array_filter($attended, static fn (string $day): bool => $day >= $start->toDateString()));
 
         $academy = $athlete->academy;
         \assert($academy !== null);
@@ -68,6 +70,9 @@ class GetAthleteAttendanceSummaryAction
             'range_days' => (int) $windowStart->diffInDays($windowEnd) + 1,
             'range_start' => $windowStart->toDateString(),
             'range_end' => $windowEnd->toDateString(),
+            // Where this athlete's window begins, so the calendar paints no
+            // day before it as missed.
+            'window_start' => $start->toDateString(),
             'attended_count' => \count($attended),
             'expected_count' => $expected,
             'rate' => $expected === null || $expected === 0 ? null : round(\count($attended) / $expected, 4),

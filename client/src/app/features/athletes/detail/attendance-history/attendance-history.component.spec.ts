@@ -59,7 +59,7 @@ function makeRecord(overrides: Partial<AttendanceRecord> = {}): AttendanceRecord
 function flushMonth(
   httpMock: HttpTestingController,
   month: string,
-  counts: { attended: number; expected: number | null; rate: number | null },
+  counts: { attended: number; expected: number | null; rate: number | null; windowStart?: string },
 ): void {
   httpMock
     .expectOne(
@@ -72,6 +72,7 @@ function flushMonth(
         range_days: 30,
         range_start: `${month}-01`,
         range_end: `${month}-30`,
+        window_start: counts.windowStart ?? `${month}-01`,
         attended_count: counts.attended,
         expected_count: counts.expected,
         rate: counts.rate,
@@ -690,6 +691,37 @@ describe('AttendanceHistoryComponent', () => {
     ) as HTMLElement;
     expect(detail.textContent).toContain('1');
     expect(detail.textContent).toContain('8');
+    flushSummary(httpMock);
+    httpMock.verify();
+  });
+
+  it('paints no day before the athlete joined as a training day (#1769)', () => {
+    const httpMock = setupTestBed();
+    TestBed.inject(AcademyService).academy.set({
+      id: 1,
+      name: 'Test',
+      slug: 'test',
+      address: null,
+      logo_url: null,
+      training_days: [1, 3, 5],
+    });
+    const fixture = TestBed.createComponent(AttendanceHistoryComponent);
+    fixture.detectChanges();
+    httpMock.expectOne(`/api/v1/athletes/${ATHLETE_ID}`).flush({ data: makeAthlete() });
+    httpMock
+      .expectOne(`/api/v1/athletes/${ATHLETE_ID}/attendance?from=2026-04-01&to=2026-04-30`)
+      .flush({ data: [] });
+    // Joined on Monday 13 April: the server's window starts there.
+    flushMonth(httpMock, '2026-04', {
+      attended: 0,
+      expected: 5,
+      rate: 0,
+      windowStart: '2026-04-13',
+    });
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance['isTrainingDay'](8)).toBe(false);
+    expect(fixture.componentInstance['isTrainingDay'](13)).toBe(true);
     flushSummary(httpMock);
     httpMock.verify();
   });

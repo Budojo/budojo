@@ -119,7 +119,11 @@ it('starts at the first presence when it came before the joining day, as every s
     Sanctum::actingAs($user);
 
     // From 27 April: 27, 29, 1, 4, 6, 8, 11, 13, 15, 18, 20.
-    expect(summaryOf($this, $trial, 'range=30'))->toMatchArray(['attended_count' => 3, 'expected_count' => 11]);
+    expect(summaryOf($this, $trial, 'range=30'))->toMatchArray([
+        'window_start' => '2026-04-27',
+        'attended_count' => 3,
+        'expected_count' => 11,
+    ]);
 });
 
 it('leaves a closure out, which raises the rate of someone who came to everything else', function (): void {
@@ -153,12 +157,15 @@ it('answers a calendar month for the ring, stopping at today', function (): void
     Sanctum::actingAs($user);
 
     expect(summaryOf($this, $mario, 'month=2026-04'))->toMatchArray([
+        'range_days' => 30,
         'range_start' => '2026-04-01',
         'range_end' => '2026-04-30',
+        'window_start' => '2026-04-01',
         'attended_count' => 1,
         'expected_count' => 13,
     ])
         ->and(summaryOf($this, $mario, 'month=2026-05'))->toMatchArray([
+            'range_days' => 31,
             'range_start' => '2026-05-01',
             'range_end' => '2026-05-31',
             'attended_count' => 1,
@@ -288,4 +295,36 @@ it('cache key segregates by athlete id and range so different windows do not col
         ->json('data');
     expect($april['range_start'])->toBe('2026-04-01')
         ->and($april['attended_count'])->toBe(1);
+});
+
+it('forgets the cached answers when a presence is marked', function (): void {
+    // The calendar showed a tick made on the check-in page at once, and the
+    // ring five minutes later.
+    $user = summaryAcademyOwner();
+    $mario = Athlete::factory()->for($user->academy)->create(['joined_at' => '2025-01-01']);
+    Sanctum::actingAs($user);
+    Cache::flush();
+    expect(summaryOf($this, $mario, 'month=2026-05')['attended_count'])->toBe(0);
+
+    AttendanceRecord::factory()->for($mario)->create(['attended_on' => '2026-05-18']);
+
+    expect(summaryOf($this, $mario, 'month=2026-05')['attended_count'])->toBe(1);
+});
+
+it('forgets the cached answers when the training days change, twice on the same day', function (): void {
+    // The second change of a day updates the schedule row through the query
+    // builder, which fires no model event (RecordTrainingDaysAction).
+    $user = summaryAcademyOwner();
+    $mario = Athlete::factory()->for($user->academy)->create(['joined_at' => '2025-01-01']);
+    Sanctum::actingAs($user);
+    Cache::flush();
+    expect(summaryOf($this, $mario, 'month=2026-05')['expected_count'])->toBe(9);
+
+    // Today is Wednesday the 20th: dropping Wednesday from today on takes
+    // today out of May (8); putting it back, the same day, updates that row.
+    $this->patchJson('/api/v1/academy', ['training_days' => [1, 5]])->assertOk();
+    expect(summaryOf($this, $mario, 'month=2026-05')['expected_count'])->toBe(8);
+
+    $this->patchJson('/api/v1/academy', ['training_days' => [1, 3, 5]])->assertOk();
+    expect(summaryOf($this, $mario, 'month=2026-05')['expected_count'])->toBe(9);
 });

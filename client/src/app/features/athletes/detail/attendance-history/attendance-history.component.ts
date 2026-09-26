@@ -248,6 +248,11 @@ export class AttendanceHistoryComponent implements OnInit {
     const date = new Date(ym.year, ym.month - 1, day);
     const set = this.trainingDaysOn(date);
     if (set === null) return false;
+    // Before the athlete's window (they had not joined yet) nothing was
+    // expected of them: the ring does not count it, so no cell calls it
+    // missed (#1769).
+    const windowStart = this.monthSummary()?.window_start;
+    if (windowStart && this.dayKey(day) < windowStart) return false;
     return set.has(date.getDay()) && this.closureOnDay(day) === null;
   }
 
