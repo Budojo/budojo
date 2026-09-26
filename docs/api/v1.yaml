@@ -6345,13 +6345,20 @@ paths:
 
         **The missing steps ride along (#1966).** `gaps` lists, oldest
         first, the steps the history does not record: the academy's ladder
-        walked from each row to the next, and from the last row to the
-        belt and stripes the athlete holds today, with the same climbing
-        rule and kids' rule as `GET /promotions/candidates`. Computed over
-        the whole history, not the page. Nothing is reported before the
-        first row, for an interval the ladder cannot walk, for the stripes
-        an athlete was entered with, or for a step the owner skipped
-        (`POST /athletes/{athlete}/promotion-skips`).
+        walked from where each row leaves the athlete to where the next one
+        starts, and from the last row to the belt and stripes the athlete
+        holds today, with the same climbing rule and kids' rule as
+        `GET /promotions/candidates`. A row covers however many steps it
+        jumps. Computed over the whole history, not the page. Nothing is
+        reported:
+        - before the first row;
+        - for an interval the ladder cannot walk;
+        - into a belt the history already has a row for;
+        - for the stripes held on a starting row's belt;
+        - for a step with no day left in its window;
+        - after a starting row's belt step, until it is completed;
+        - for a step the owner skipped
+          (`POST /athletes/{athlete}/promotion-skips`).
 
         A gap is filled with the existing backfill (`POST` below) carrying
         exactly its fields and a date in its window
@@ -6486,9 +6493,12 @@ paths:
         with, dated the day the athlete was entered. It sets the belt they
         came from along with the real date, so "on this belt since" moves
         off the data-entry day. Anywhere else, or equal to the row's
-        `to_belt`, it is a 422 on `from_belt`. It must fit the belt rows
-        around it (the row itself excluded), unless it is exactly the gap
-        with `completes_promotion_id` for this row, dated in its window.
+        `to_belt`, it is a 422 on `from_belt`. When a gap has
+        `completes_promotion_id` for this row, its window is binding (a
+        date outside it is a 422 on `recorded_at`), and its own
+        `from_belt` needs no further check; any other `from_belt`, or a row
+        with no such gap, must fit the belt rows around it (the row itself
+        excluded).
 
         403 when the promotion does not belong to the athlete in the path.
       operationId: athletePromotionUpdateRecordedAt
@@ -11303,10 +11313,13 @@ components:
         A step the athlete's promotion history does not record (#1966).
         `key` is `<kind>:<belt>:<stripes after the step>` and identifies it.
         `belt` is the belt a stripe step is on, or the belt a belt step
-        reaches. `after` / `before` are the nearest recorded rows either side;
-        the fill's date goes in `(after.recorded_at, before.recorded_at]`,
-        up to today when `before` is null. `completes_promotion_id` names
-        the starting row this belt step completes (PATCH it, don't POST).
+        reaches. `after` is the row the walk left from, `before` the next
+        row after it — never a stripe reset, nor the starting row the step
+        completes; the fill's date goes in `(after.recorded_at,
+        before.recorded_at]`, up to today when `before` is null, and a step
+        whose window has no day left in it is not reported.
+        `completes_promotion_id` names the starting row this belt step
+        completes (PATCH it, don't POST); it cannot be skipped.
       required: [key, kind, belt, from_belt, from_stripes, to_stripes, after, before, completes_promotion_id]
       properties:
         key: { type: string, example: 'stripe:white:4' }

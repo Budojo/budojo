@@ -220,6 +220,154 @@ it('orders rows written on the same day by the ladder, not by the order they wer
     expect($result['gaps'])->toBe([]);
 });
 
+it("bounds a gap by the next real row, never by a live promotion's stripe reset", function (): void {
+    $result = gapsOf([
+        beltRow(1, Belt::White, Belt::Blue, '2022-01-01 10:00:00'),
+        stripeRow(2, Belt::Blue, 4, 0, '2022-01-01 10:00:00'),
+        stripeRow(3, Belt::Blue, 1, 2, '2023-05-01'),
+    ], Belt::Blue, 2);
+
+    expect(keysOf($result))->toBe(['stripe:blue:1'])
+        ->and($result['gaps'][0]['after'])->toBe(['promotion_id' => 1, 'recorded_at' => '2022-01-01'])
+        ->and($result['gaps'][0]['before'])->toBe(['promotion_id' => 3, 'recorded_at' => '2023-05-01']);
+});
+
+it('lets one row cover every step it jumps: a stripe row 1 → 3', function (): void {
+    $result = gapsOf([
+        beltRow(1, Belt::White, Belt::Blue, '2022-01-01'),
+        stripeRow(2, Belt::Blue, 1, 3, '2023-05-01'),
+    ], Belt::Blue, 3);
+
+    expect(keysOf($result))->toBe(['stripe:blue:1']);
+});
+
+it('lets one row cover every step it jumps: a judo double promotion', function (): void {
+    $result = gapsOf([
+        beltRow(1, Belt::White, Belt::Yellow, '2010-05-01'),
+        beltRow(2, Belt::Yellow, Belt::Green, '2012-05-01'),
+    ], Belt::Green, 0, MartialArt::Judo);
+
+    expect($result['gaps'])->toBe([]);
+});
+
+it('ends a completing step before the next real row, when a later-dated starting row is out of order', function (): void {
+    // Opened on white in 2015; imported on blue in 2026; a blue stripe from
+    // 2020 backfilled since. The blue belt came before that stripe.
+    $result = gapsOf([
+        beltRow(1, null, Belt::White, '2015-01-01'),
+        beltRow(15, null, Belt::Blue, '2026-01-10'),
+        stripeRow(20, Belt::Blue, 0, 1, '2020-05-01'),
+    ], Belt::Blue, 1);
+
+    expect($result['gaps'])->toHaveCount(1)
+        ->and($result['gaps'][0]['key'])->toBe('belt:blue:0')
+        ->and($result['gaps'][0]['completes_promotion_id'])->toBe(15)
+        ->and($result['gaps'][0]['after'])->toBe(['promotion_id' => 1, 'recorded_at' => '2015-01-01'])
+        ->and($result['gaps'][0]['before'])->toBe(['promotion_id' => 20, 'recorded_at' => '2020-05-01']);
+});
+
+it('takes the stripes Jacopo was entered with as held on arrival, whatever came before', function (): void {
+    $result = gapsOf([
+        stripeRow(12, Belt::White, 2, 3, '2024-03-12'),
+        beltRow(15, null, Belt::Blue, '2026-09-26 10:00:00'),
+    ], Belt::Blue, 2);
+
+    // Exactly the two steps; no blue stripe dated before the blue itself.
+    expect(keysOf($result))->toBe(['stripe:white:4', 'belt:blue:0'])
+        ->and($result['gaps'][1]['before'])->toBeNull();
+});
+
+it('never offers a belt the history already has a row for', function (): void {
+    // A white stripe backfilled after the day he was entered on blue: the
+    // history contradicts itself, and no blue belt is offered to fix it.
+    $result = gapsOf([
+        beltRow(15, null, Belt::Blue, '2026-09-20'),
+        stripeRow(12, Belt::White, 2, 3, '2026-09-25'),
+    ], Belt::Blue, 0);
+
+    expect($result['gaps'])->toBe([]);
+});
+
+it('drops a step that has no day left to go on', function (): void {
+    $result = gapsOf([
+        stripeRow(1, Belt::White, 1, 2, '2024-01-01'),
+        stripeRow(2, Belt::White, 3, 4, '2024-01-01 10:00:00'),
+    ], Belt::White, 4);
+
+    expect($result['gaps'])->toBe([]);
+});
+
+it('never lets a starting row be skipped: it is completed', function (): void {
+    $result = gapsOf([
+        stripeRow(12, Belt::White, 2, 3, '2024-03-12'),
+        beltRow(15, null, Belt::Blue, '2026-09-26 10:00:00'),
+    ], Belt::Blue, 0, skipped: ['blue:0', 'white:4']);
+
+    expect(keysOf($result))->toBe(['belt:blue:0']);
+});
+
+/**
+ * Fills every ghost row the history offers, one at a time, the way the page
+ * does — exactly its fields, on a date inside its window — until none is left.
+ *
+ * @param list<PromotionRecord> $records
+ *
+ * @return list<PromotionRecord>
+ */
+function fillEveryGap(array $records, Belt $belt, int $stripes, MartialArt $art, bool $lastFirst, bool $latestDate): array
+{
+    $today = CarbonImmutable::parse('2026-09-26');
+    $nextId = 1000;
+
+    for ($round = 0; $round < 40; $round++) {
+        $gaps = gapsOf($records, $belt, $stripes, $art)['gaps'];
+        if ($gaps === []) {
+            return $records;
+        }
+
+        $gap = $lastFirst ? $gaps[count($gaps) - 1] : $gaps[0];
+        $floor = CarbonImmutable::parse($gap['after']['recorded_at'] ?? '2000-01-01')->addDay();
+        $ceiling = CarbonImmutable::parse($gap['before']['recorded_at'] ?? $today->toDateString());
+        $on = $latestDate ? $ceiling : $floor;
+        expect($on->lessThanOrEqualTo($ceiling))->toBeTrue("{$gap['key']} has an empty window");
+
+        $fields = $gap['kind'] === 'belt'
+            ? ['kind' => 'belt', 'from_belt' => $gap['from_belt'], 'to_belt' => $gap['belt'], 'completes' => $gap['completes_promotion_id']]
+            : ['kind' => 'stripe', 'belt_at_event' => $gap['belt'], 'from_stripes' => $gap['from_stripes'], 'to_stripes' => $gap['to_stripes']];
+        expect(PromotionGaps::admits($gaps, $fields, $on->toDateString(), $today))->toBeTrue("{$gap['key']} refused on {$on->toDateString()}");
+
+        $filled = $gap['kind'] === 'stripe'
+            ? stripeRow($nextId++, Belt::from($gap['belt']), (int) $gap['from_stripes'], (int) $gap['to_stripes'], $on->toDateString())
+            : beltRow($gap['completes_promotion_id'] ?? $nextId++, Belt::from((string) $gap['from_belt']), Belt::from($gap['belt']), $on->toDateString());
+        $records = [
+            ...array_values(array_filter($records, static fn (PromotionRecord $r): bool => $r->id !== $gap['completes_promotion_id'])),
+            $filled,
+        ];
+
+        $belts = array_map(
+            static fn (PromotionRecord $r): string => $r->belt()->value,
+            array_values(array_filter($records, static fn (PromotionRecord $r): bool => $r->kind === 'belt')),
+        );
+        expect(array_count_values($belts))->each->toBe(1);
+    }
+
+    throw new RuntimeException('The gaps never ran out.');
+}
+
+it('can never be led into a second row on a belt, whatever the order and the dates', function (array $records, Belt $belt, int $stripes, MartialArt $art): void {
+    foreach ([[false, false], [false, true], [true, false], [true, true]] as [$lastFirst, $latestDate]) {
+        $filled = fillEveryGap($records, $belt, $stripes, $art, $lastFirst, $latestDate);
+
+        expect(gapsOf($filled, $belt, $stripes, $art)['gaps'])->toBe([]);
+    }
+})->with([
+    'Jacopo, blue' => [[stripeRow(12, Belt::White, 2, 3, '2024-03-12'), beltRow(15, null, Belt::Blue, '2026-09-26 10:00:00')], Belt::Blue, 0, MartialArt::Bjj],
+    'Jacopo, blue with two stripes' => [[stripeRow(12, Belt::White, 2, 3, '2024-03-12'), beltRow(15, null, Belt::Blue, '2026-09-26 10:00:00')], Belt::Blue, 2, MartialArt::Bjj],
+    'a starting row out of order' => [[beltRow(1, null, Belt::White, '2015-01-01'), beltRow(15, null, Belt::Blue, '2026-01-10'), stripeRow(20, Belt::Blue, 0, 1, '2020-05-01')], Belt::Blue, 1, MartialArt::Bjj],
+    'imported on purple, one white stripe known' => [[stripeRow(3, Belt::White, 0, 1, '2016-02-01'), beltRow(9, null, Belt::Purple, '2026-09-01')], Belt::Purple, 2, MartialArt::Bjj],
+    'a judoka imported on black' => [[beltRow(1, Belt::White, Belt::Yellow, '2005-01-01'), beltRow(9, null, Belt::Black, '2026-09-01')], Belt::Black, 1, MartialArt::Judo],
+]);
+
 it('has no history, and no gaps, without a single row', function (): void {
     expect(gapsOf([], Belt::Blue, 2))->toBe(['gaps' => [], 'history_starts_at' => null]);
 });

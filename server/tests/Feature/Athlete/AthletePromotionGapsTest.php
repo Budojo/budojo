@@ -97,13 +97,73 @@ it("reads Jacopo's missing steps beside his timeline, and marks his starting row
         ->and($isOpening[$third->id])->toBeFalse();
 });
 
+it('reads the same two steps for Jacopo entered on blue with two stripes', function (): void {
+    $jacopo = gapsAthlete($this->academy, Belt::Blue, 2);
+    stripeRowOn($jacopo, $this->owner, Belt::White, 2, 3, '2024-03-12 00:00:00');
+    $opening = beltRowOn($jacopo, $this->owner, null, Belt::Blue, '2026-09-20 10:00:00');
+
+    $gaps = $this->actingAs($this->owner)->getJson("/api/v1/athletes/{$jacopo->id}/promotions")->assertOk()->json('gaps');
+
+    expect(array_column($gaps, 'key'))->toBe(['stripe:white:4', 'belt:blue:0'])
+        ->and($gaps[1]['completes_promotion_id'])->toBe($opening->id)
+        ->and($gaps[1]['before'])->toBeNull();
+});
+
+it('offers the blue stripes only once the blue belt is dated, and never a second blue', function (): void {
+    $jacopo = gapsAthlete($this->academy, Belt::Blue, 2);
+    stripeRowOn($jacopo, $this->owner, Belt::White, 2, 3, '2024-03-12 00:00:00');
+    $opening = beltRowOn($jacopo, $this->owner, null, Belt::Blue, '2026-09-20 10:00:00');
+
+    // Not a gap yet, so the chain check still decides — and refuses it.
+    $this->actingAs($this->owner)->postJson("/api/v1/athletes/{$jacopo->id}/promotions", [
+        'kind' => 'stripe', 'recorded_at' => '2024-05-01', 'belt_at_event' => 'blue', 'from_stripes' => 0, 'to_stripes' => 1,
+    ])->assertUnprocessable();
+
+    $this->actingAs($this->owner)
+        ->patchJson("/api/v1/athletes/{$jacopo->id}/promotions/{$opening->id}", ['recorded_at' => '2025-01-10', 'from_belt' => 'white'])
+        ->assertOk();
+    $gaps = $this->actingAs($this->owner)->getJson("/api/v1/athletes/{$jacopo->id}/promotions")->assertOk()->json('gaps');
+    expect(array_column($gaps, 'key'))->toBe(['stripe:white:4', 'stripe:blue:1', 'stripe:blue:2'])
+        ->and($gaps[1]['after'])->toBe(['promotion_id' => $opening->id, 'recorded_at' => '2025-01-10']);
+
+    $this->actingAs($this->owner)->postJson("/api/v1/athletes/{$jacopo->id}/promotions", [
+        'kind' => 'stripe', 'recorded_at' => '2025-06-01', 'belt_at_event' => 'blue', 'from_stripes' => 0, 'to_stripes' => 1,
+    ])->assertCreated();
+
+    expect(gapKeys($this, $jacopo))->toBe(['stripe:white:4', 'stripe:blue:2'])
+        ->and($jacopo->promotions()->where('kind', 'belt')->where('to_belt', 'blue')->count())->toBe(1);
+});
+
+it('completes a starting row only inside its window when a gap stands for it', function (): void {
+    // Opened on white in 2015, imported on blue in 2026, a blue stripe from
+    // 2020 backfilled since: the blue belt came before that stripe.
+    $athlete = gapsAthlete($this->academy, Belt::Blue, 1);
+    beltRowOn($athlete, $this->owner, null, Belt::White, '2015-01-01 00:00:00');
+    $opening = beltRowOn($athlete, $this->owner, null, Belt::Blue, '2026-01-10 00:00:00');
+    $stripe = stripeRowOn($athlete, $this->owner, Belt::Blue, 0, 1, '2020-05-01 00:00:00');
+
+    $gaps = $this->actingAs($this->owner)->getJson("/api/v1/athletes/{$athlete->id}/promotions")->assertOk()->json('gaps');
+    expect(array_column($gaps, 'key'))->toBe(['belt:blue:0'])
+        ->and($gaps[0]['before'])->toBe(['promotion_id' => $stripe->id, 'recorded_at' => '2020-05-01']);
+
+    $patch = "/api/v1/athletes/{$athlete->id}/promotions/{$opening->id}";
+    $this->actingAs($this->owner)
+        ->patchJson($patch, ['recorded_at' => '2023-01-01', 'from_belt' => 'white'])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('recorded_at');
+    $this->actingAs($this->owner)->patchJson($patch, ['recorded_at' => '2019-01-01', 'from_belt' => 'white'])->assertOk();
+
+    expect(gapKeys($this, $athlete))->toBe([])
+        ->and($athlete->promotions()->where('kind', 'belt')->where('to_belt', 'blue')->count())->toBe(1);
+});
+
 it('reads the gaps over the whole history, whatever the page', function (): void {
     $athlete = gapsAthlete($this->academy, Belt::Blue, 0);
     stripeRowOn($athlete, $this->owner, Belt::White, 2, 3, '2024-03-12 00:00:00');
     foreach (range(1, 22) as $day) {
-        // Filler rows that change nothing (a no-op belt row per day), so the
-        // page boundary falls between the two rows the gaps hang off.
-        beltRowOn($athlete, $this->owner, Belt::White, Belt::White, sprintf('2024-04-%02d 00:00:00', $day));
+        // Filler rows the walk ignores (a stripe count that does not rise),
+        // so the page boundary falls between the two rows the gaps hang off.
+        stripeRowOn($athlete, $this->owner, Belt::White, 3, 3, sprintf('2024-04-%02d 00:00:00', $day));
     }
     beltRowOn($athlete, $this->owner, null, Belt::Blue, '2026-09-20 10:00:00');
 

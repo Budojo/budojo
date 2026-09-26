@@ -45,6 +45,8 @@ use Illuminate\Contracts\Validation\Validator;
  * first stripe on a new belt after the old belt's stripes, or the middle of
  * three missing stripes filled before its neighbours. Anything else is
  * checked exactly as before.
+ *
+ * @phpstan-import-type Gap from PromotionGaps
  */
 trait ValidatesPromotionChainConsistency
 {
@@ -83,9 +85,17 @@ trait ValidatesPromotionChainConsistency
      */
     protected function fillsAGap(Athlete $athlete, array $fields, CarbonInterface $recordedAt): bool
     {
-        $gaps = app(GetPromotionGapsAction::class)->execute($athlete)['gaps'];
+        return PromotionGaps::admits($this->promotionGaps($athlete), $fields, $recordedAt->toDateString(), CarbonImmutable::today());
+    }
 
-        return PromotionGaps::admits($gaps, $fields, $recordedAt->toDateString(), CarbonImmutable::today());
+    /**
+     * The steps this athlete's history is missing, as the timeline reports them.
+     *
+     * @return list<Gap>
+     */
+    protected function promotionGaps(Athlete $athlete): array
+    {
+        return app(GetPromotionGapsAction::class)->execute($athlete)['gaps'];
     }
 
     /**
