@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Enums\DocumentType;
 use App\Models\Athlete;
 use App\Models\Document;
+use App\Support\OperatorDay;
 use Illuminate\Support\Facades\Storage;
 
 beforeEach(function (): void {
@@ -25,7 +26,7 @@ it('purges medical certificates whose expires_at is older than 24 months', funct
     $old = Document::factory()->create([
         'athlete_id' => $athlete->id,
         'type' => DocumentType::MedicalCertificate->value,
-        'expires_at' => now()->subMonths(25)->toDateString(),
+        'expires_at' => OperatorDay::today()->subMonths(25)->toDateString(),
         'file_path' => 'documents/expired-cert.pdf',
     ]);
 
@@ -34,14 +35,14 @@ it('purges medical certificates whose expires_at is older than 24 months', funct
     $recentlyExpired = Document::factory()->create([
         'athlete_id' => $athlete->id,
         'type' => DocumentType::MedicalCertificate->value,
-        'expires_at' => now()->subMonths(12)->toDateString(),
+        'expires_at' => OperatorDay::today()->subMonths(12)->toDateString(),
     ]);
 
     // Cert #3: still valid (expires in the future) → MUST remain.
     $stillValid = Document::factory()->create([
         'athlete_id' => $athlete->id,
         'type' => DocumentType::MedicalCertificate->value,
-        'expires_at' => now()->addMonths(3)->toDateString(),
+        'expires_at' => OperatorDay::today()->addMonths(3)->toDateString(),
     ]);
 
     $exitCode = \Artisan::call('budojo:purge-expired-medical-certificates');
@@ -74,7 +75,7 @@ it('does NOT purge a certificate whose expires_at sits exactly on the cutoff (st
     $boundary = Document::factory()->create([
         'athlete_id' => $athlete->id,
         'type' => DocumentType::MedicalCertificate->value,
-        'expires_at' => now()->startOfDay()->subMonths(24)->toDateString(),
+        'expires_at' => OperatorDay::today()->subMonths(24)->toDateString(),
     ]);
 
     \Artisan::call('budojo:purge-expired-medical-certificates');
@@ -94,7 +95,7 @@ it('does not touch non-medical documents even when they are well-aged', function
     $oldFederationDoc = Document::factory()->create([
         'athlete_id' => $athlete->id,
         'type' => $nonMedicalType->value,
-        'expires_at' => now()->subYears(5)->toDateString(),
+        'expires_at' => OperatorDay::today()->subYears(5)->toDateString(),
     ]);
 
     \Artisan::call('budojo:purge-expired-medical-certificates');
@@ -109,7 +110,7 @@ it('--dry-run reports the candidate count without deleting', function (): void {
     $doc = Document::factory()->create([
         'athlete_id' => $athlete->id,
         'type' => DocumentType::MedicalCertificate->value,
-        'expires_at' => now()->subMonths(30)->toDateString(),
+        'expires_at' => OperatorDay::today()->subMonths(30)->toDateString(),
     ]);
 
     $exitCode = \Artisan::call('budojo:purge-expired-medical-certificates', ['--dry-run' => true]);
@@ -126,7 +127,7 @@ it('returns SUCCESS exit code when no expired certificates exist', function (): 
     Document::factory()->create([
         'athlete_id' => $athlete->id,
         'type' => DocumentType::MedicalCertificate->value,
-        'expires_at' => now()->addMonths(2)->toDateString(),
+        'expires_at' => OperatorDay::today()->addMonths(2)->toDateString(),
     ]);
 
     $exitCode = \Artisan::call('budojo:purge-expired-medical-certificates');
