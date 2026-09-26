@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Athlete;
 
+use App\Actions\Promotion\CompleteOpeningPromotionAction;
 use App\Actions\Promotion\CreateAthletePromotionAction;
 use App\Actions\Promotion\DeleteAthletePromotionAction;
 use App\Actions\Promotion\GetAthleteProgressionAction;
+use App\Actions\Promotion\GetPromotionGapsAction;
 use App\Actions\Promotion\UpdateAthletePromotionRecordedAtAction;
 use App\Authorization\Capability;
 use App\Enums\Belt;
@@ -42,6 +44,8 @@ class AthletePromotionController extends Controller
         private readonly CreateAthletePromotionAction $createPromotion,
         private readonly DeleteAthletePromotionAction $deletePromotion,
         private readonly GetAthleteProgressionAction $progression,
+        private readonly GetPromotionGapsAction $gaps,
+        private readonly CompleteOpeningPromotionAction $completeOpening,
     ) {
     }
 
@@ -58,9 +62,13 @@ class AthletePromotionController extends Controller
 
         // Beside `data`, not in `meta`: `meta` is the pagination block the SPA
         // pages with, and overwriting it breaks paging (#1772). Computed once
-        // here, because it does not change between pages of one timeline.
+        // here, because it does not change between pages of one timeline —
+        // the gaps (#1966) no more than the progression.
         return AthletePromotionResource::collection($promotions)
-            ->additional(['progression' => $this->progression->execute($athlete)]);
+            ->additional([
+                'progression' => $this->progression->execute($athlete),
+                ...$this->gaps->execute($athlete),
+            ]);
     }
 
     /**
@@ -83,7 +91,12 @@ class AthletePromotionController extends Controller
         $recordedAt = CarbonImmutable::make($request->date('recorded_at'));
         \assert($recordedAt instanceof CarbonImmutable); // `required` + `date_format` in the request
 
-        $promotion = $this->updateRecordedAt->execute($promotion, $recordedAt);
+        // A first belt only ever completes a starting row (#1966) — the
+        // request refuses it anywhere else.
+        $fromBelt = $request->string('from_belt')->toString();
+        $promotion = $fromBelt === ''
+            ? $this->updateRecordedAt->execute($promotion, $recordedAt)
+            : $this->completeOpening->execute($promotion, Belt::from($fromBelt), $recordedAt);
 
         return response()->json([
             'data' => new AthletePromotionResource($promotion->load('recordedBy:id,first_name,last_name')),
