@@ -22,7 +22,27 @@ use App\Support\MartialArt\Grade;
  */
 final class StripesText
 {
-    private const NUMBER = '/^(\d{1,2})\s*°?\s*(dan|poom|kyu|gradi|grado|strisce|tacche)?$/iu';
+    /** A number, the degree sign or the ordinal indicator a Mac types, and one word. */
+    private const NUMBER = '/^(\d{1,2})\s*[°º]?\s*(\p{L}+)?$/u';
+
+    /**
+     * The words a cell may name its unit with, and the count each one means.
+     * `grado` / `gradi` is the import's own column name, so it fits any grade.
+     *
+     * @var array<string, GradeCount|null>
+     */
+    private const UNITS = [
+        'grado' => null,
+        'gradi' => null,
+        'dan' => GradeCount::Dan,
+        'poom' => GradeCount::Poom,
+        'tacca' => GradeCount::Stripe,
+        'tacche' => GradeCount::Stripe,
+        'striscia' => GradeCount::Stripe,
+        'strisce' => GradeCount::Stripe,
+        'stripe' => GradeCount::Stripe,
+        'stripes' => GradeCount::Stripe,
+    ];
 
     /**
      * @param Grade|null $grade the grade of the row's belt, or null when the belt
@@ -37,7 +57,24 @@ final class StripesText
         }
 
         if (preg_match(self::NUMBER, $trimmed, $match) !== 1) {
-            return StripesReading::refused("\"{$trimmed}\" is not a grade: write it as a number, like 2 or 3° dan.");
+            return self::notAGrade($trimmed);
+        }
+
+        $word = mb_strtolower($match[2] ?? '');
+        if ($word === 'kyu') {
+            // A kyu counts down to the black belt: "2 kyu" is a colour, and
+            // storing it as two tacche is a guess on someone's record.
+            return StripesReading::refused("\"{$trimmed}\" is a kyu, which names the belt: write the belt's colour, and its tacche as a number.");
+        }
+        if ($word !== '' && ! \array_key_exists($word, self::UNITS)) {
+            return self::notAGrade($trimmed);
+        }
+
+        $unit = self::UNITS[$word] ?? null;
+        if ($grade !== null && $unit !== null && $unit !== $grade->count) {
+            $counts = $grade->count === GradeCount::Stripe ? 'stripes' : $grade->count->value;
+
+            return StripesReading::refused("\"{$trimmed}\" does not fit the " . self::beltName($grade) . " belt, which counts {$counts}.");
         }
 
         $number = (int) $match[1];
@@ -60,10 +97,19 @@ final class StripesText
     /** "The black belt goes from 1° dan to 5° dan." — in the grade's own words. */
     private static function outOfRange(Grade $grade): string
     {
-        $belt = str_replace('-', ' ', $grade->belt->value);
         $unit = $grade->count->value;
         $last = $grade->first + $grade->maxStripes;
 
-        return "The {$belt} belt goes from {$grade->first}° {$unit} to {$last}° {$unit}.";
+        return 'The ' . self::beltName($grade) . " belt goes from {$grade->first}° {$unit} to {$last}° {$unit}.";
+    }
+
+    private static function notAGrade(string $cell): StripesReading
+    {
+        return StripesReading::refused("\"{$cell}\" is not a grade: write it as a number, like 2 or 3° dan.");
+    }
+
+    private static function beltName(Grade $grade): string
+    {
+        return str_replace('-', ' ', $grade->belt->value);
     }
 }
