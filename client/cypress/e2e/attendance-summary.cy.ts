@@ -18,6 +18,8 @@ function summaryRow(id: number, first: string, last: string, count: number, belt
     first_name: first,
     last_name: last,
     count,
+    // This athlete's own denominator, from the server (#1767).
+    expected_count: 12,
     athlete: {
       id,
       first_name: first,
@@ -39,6 +41,7 @@ const SUMMARY_THREE = {
       summaryRow(2, 'Luigi', 'Verdi', 3, 'white'),
       summaryRow(3, 'Marco', 'Bianchi', 12, 'purple'),
     ],
+    meta: { training_days: 12, month: '2026-01' },
   },
 };
 

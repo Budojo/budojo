@@ -5727,6 +5727,16 @@ paths:
         rows and one day. Soft-deleted rows are not counted. Only athletes
         with at least one record in the month appear. Sorted DESC by count, then by
         last_name ASC for stable ordering at ties.
+
+        Each row carries its own denominator (#1767), `expected_count`: the
+        days the academy was scheduled to train in the month **from the day
+        that athlete joined**, or from their first presence in the month if
+        that came earlier (trial sessions entered after registering), closures
+        left out and nothing after today. An athlete who joined on the 20th is
+        measured against the sessions after the 20th. `meta.training_days`
+        is the academy's own count for the month, for the page's header, and
+        is deliberately no row's denominator. Both are null when no schedule
+        was ever configured; zero is a real zero.
       operationId: attendanceMonthlySummary
       parameters:
         - name: month
@@ -11005,7 +11015,7 @@ components:
 
     AttendanceSummaryRow:
       type: object
-      required: [athlete_id, first_name, last_name, count, athlete]
+      required: [athlete_id, first_name, last_name, count, expected_count, athlete]
       properties:
         athlete_id:
           type: integer
@@ -11017,7 +11027,16 @@ components:
         count:
           type: integer
           minimum: 1
-          description: Number of active attendance records in the month.
+          description: Distinct days with an active attendance record in the month (#1765).
+        expected_count:
+          type: integer
+          minimum: 0
+          nullable: true
+          description: |
+            This athlete's denominator (#1767): scheduled training days in the
+            month from `max(first of the month, min(joined_at, first presence
+            in the month))`, closures out, capped at today. Null when no
+            schedule was ever configured.
         athlete:
           allOf:
             - $ref: '#/components/schemas/AthleteSummary'
@@ -11028,12 +11047,25 @@ components:
 
     AttendanceSummaryEnvelope:
       type: object
-      required: [data]
+      required: [data, meta]
       properties:
         data:
           type: array
           items:
             $ref: '#/components/schemas/AttendanceSummaryRow'
+        meta:
+          type: object
+          required: [training_days, month]
+          properties:
+            training_days:
+              type: integer
+              minimum: 0
+              nullable: true
+              description: The academy's scheduled training days in the month, capped at today, closures out; for the header, never a row's denominator. Null when no schedule was ever configured.
+            month:
+              type: string
+              pattern: '^\d{4}-(0[1-9]|1[0-2])$'
+              description: The month the rows cover, YYYY-MM.
 
     AthleteInvitation:
       type: object

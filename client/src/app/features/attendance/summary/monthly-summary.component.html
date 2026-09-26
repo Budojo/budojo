@@ -92,15 +92,11 @@
       <!-- Mobile card list (audit row 6). Below 768px the desktop table
            is display:none and this <ul> renders instead. Each row carries
            the same name + count/percent payload, optimised for thumb-
-           scrolling rather than horizontal column inspection.
-
-           `scheduledCount()` is invariant across rows for the current
-           month so it's hoisted outside the @for — one signal read per
-           render instead of N (Copilot review on #678). -->
-      @let mobileScheduled = scheduledCount();
+           scrolling rather than horizontal column inspection. Each row
+           divides by its own `expected_count` (#1767). -->
       <ul class="summary-page__mobile-list" data-cy="monthly-summary-mobile-list">
         @for (row of displayRows(); track row.athlete_id) {
-          @let mobilePercent = ratePercent(row.count);
+          @let mobilePercent = ratePercent(row);
           <li class="summary-card" [attr.data-cy]="'monthly-summary-mobile-row-' + row.athlete_id">
             <!--
               The person as every list draws them (#1851): belt spine, avatar,
@@ -124,8 +120,8 @@
               >
             }
             <span class="summary-card__count">
-              @if (mobileScheduled !== null && mobilePercent !== null) {
-                {{ row.count }} / {{ mobileScheduled }}
+              @if (mobilePercent !== null) {
+                {{ row.count }} / {{ row.expected_count }}
                 <span class="summary-card__pct">· {{ mobilePercent }}%</span>
               } @else {
                 {{ row.count }}
@@ -183,8 +179,7 @@
             </tr>
           </ng-template>
           <ng-template pTemplate="body" let-row>
-            @let scheduled = scheduledCount();
-            @let percent = ratePercent(row.count);
+            @let percent = ratePercent(row);
             <tr [attr.data-cy]="'monthly-summary-table-row-' + row.athlete_id">
               <!-- The cell anchors the belt spine, as on the roster (#1851). -->
               <td class="summary-page__athlete-cell">
@@ -204,8 +199,8 @@
                 }
               </td>
               <td class="summary-page__count-col">
-                @if (scheduled !== null && percent !== null) {
-                  {{ row.count }} / {{ scheduled }}
+                @if (percent !== null) {
+                  {{ row.count }} / {{ row.expected_count }}
                   <span class="summary-page__count-pct">· {{ percent }}%</span>
                 } @else {
                   {{ row.count }}

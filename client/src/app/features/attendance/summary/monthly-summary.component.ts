@@ -16,15 +16,10 @@ import { SkeletonModule } from 'primeng/skeleton';
 import { TableModule } from 'primeng/table';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
-import { AcademyService } from '../../../core/services/academy.service';
 import { AttendanceService, AttendanceSummaryRow } from '../../../core/services/attendance.service';
 import { RouterLink } from '@angular/router';
 import { LanguageService } from '../../../core/services/language.service';
-import {
-  attendanceRate,
-  countScheduledTrainingDays,
-  schedulesForAcademy,
-} from '../../../shared/utils/attendance-rate';
+import { attendanceRate } from '../../../shared/utils/attendance-rate';
 import { localeFor } from '../../../shared/utils/locale';
 import { ErrorStateComponent } from '../../../shared/components/error-state/error-state.component';
 import { SortHeaderComponent } from '../../../shared/components/sort-header/sort-header.component';
@@ -126,7 +121,6 @@ export class MonthlySummaryComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly attendanceService = inject(AttendanceService);
-  private readonly academyService = inject(AcademyService);
   private readonly translate = inject(TranslateService);
   private readonly languageService = inject(LanguageService);
   private readonly destroyRef = inject(DestroyRef);
@@ -220,7 +214,7 @@ export class MonthlySummaryComponent implements OnInit {
     this.languageService.currentLang();
     const presences = this.totalPresences();
     const athletes = this.rows().length;
-    const scheduled = this.scheduledCount();
+    const scheduled = this.trainingDays();
 
     const presencesKey =
       presences === 1 ? 'attendance.summary.presencesOne' : 'attendance.summary.presencesOther';
@@ -242,38 +236,27 @@ export class MonthlySummaryComponent implements OnInit {
   });
 
   /**
-   * True when this month has no day count to divide by — either no timetable
+   * True when this month has no day count to divide by: either no timetable
    * was ever configured (`null`) or the one that exists starts after this
-   * month (`0`). Both make the rows drop their fraction, and until #1639
-   * neither said so.
+   * month (`0`). The rows then show bare counts, and until #1639 nothing said
+   * so. The server's answer since #1767; the page no longer counts days.
    */
   protected readonly noDenominator = computed<boolean>(() => {
-    const scheduled = this.scheduledCount();
-    return scheduled === null || scheduled === 0;
+    const days = this.trainingDays();
+    return days === null || days === 0;
   });
 
   /**
-   * Scheduled training-day count for the visible month, capped at today.
-   * `null` when the academy hasn't configured `training_days` — rows fall
-   * back to the bare-count display in that state (#88b).
+   * The academy's scheduled days this month, capped at today, closures out:
+   * the header's "8 training days". From the server (#1767), and deliberately
+   * no row's denominator: each row divides by its own `expected_count`,
+   * floored at the day that athlete joined.
    */
-  protected readonly scheduledCount = computed<number | null>(() => {
-    const ym = this.visible();
-    // Schedule-history aware (#1094) — see attendance-history.component
-    // for the segment-math rationale.
-    const academy = this.academyService.academy();
-    return countScheduledTrainingDays(
-      schedulesForAcademy(academy),
-      ym.year,
-      ym.month,
-      new Date(),
-      // Shut days are nobody's absence (#1766).
-      academy?.closures ?? null,
-    );
-  });
+  protected readonly trainingDays = signal<number | null>(null);
 
-  ratePercent(count: number): number | null {
-    const r = attendanceRate(count, this.scheduledCount());
+  /** The row's own rate, or null when it has nothing to divide by. */
+  ratePercent(row: AttendanceSummaryRow): number | null {
+    const r = attendanceRate(row.count, row.expected_count);
     return r === null ? null : Math.round(r * 100);
   }
 
@@ -390,14 +373,16 @@ export class MonthlySummaryComponent implements OnInit {
     this.loading.set(true);
     this.errored.set(false);
     this.attendanceService.getMonthlySummary(toMonthString(this.visible())).subscribe({
-      next: (rows) => {
+      next: (summary) => {
         if (epoch !== this.loadEpoch) return;
-        this.rows.set(rows);
+        this.rows.set(summary.rows);
+        this.trainingDays.set(summary.trainingDays);
         this.loading.set(false);
       },
       error: () => {
         if (epoch !== this.loadEpoch) return;
         this.rows.set([]);
+        this.trainingDays.set(null);
         this.errored.set(true);
         this.loading.set(false);
       },
