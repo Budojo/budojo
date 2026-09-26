@@ -312,8 +312,18 @@ it('does not send the owner a second, personal reminder about their own certific
         'type' => DocumentType::MedicalCertificate,
         'expires_at' => Carbon::today()->addDays(7)->toDateString(),
     ]);
+    // The positive control: an athlete with an account of their own is still
+    // told, so the silence above is the owner rule and not a dead path.
+    $theirUser = User::factory()->create();
+    $linked = Athlete::factory()->create(['academy_id' => $academy->id, 'user_id' => $theirUser->id]);
+    Document::factory()->create([
+        'athlete_id' => $linked->id,
+        'type' => DocumentType::MedicalCertificate,
+        'expires_at' => Carbon::today()->addDays(7)->toDateString(),
+    ]);
 
     $this->artisan(SendMedicalCertExpiryReminders::class)->assertSuccessful();
 
+    Notification::assertSentTo($theirUser, AthleteMedicalCertExpiringNotification::class);
     Notification::assertNotSentTo($academy->owner, AthleteMedicalCertExpiringNotification::class);
 });
