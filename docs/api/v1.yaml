@@ -6857,7 +6857,8 @@ paths:
         bucket contains the total `amount_cents` for that business month.
         Bucketing uses the business months on `athlete_payments` — NOT
         `paid_at` — so the figures reflect the fee period the payment covers,
-        not the wall-clock recording time.
+        not the day the money arrived (#1761): September's fee paid on
+        3 October is September revenue.
 
         **So the response can be longer than `months`.** A quarterly bought
         this month puts two buckets to the right of today. The window used to

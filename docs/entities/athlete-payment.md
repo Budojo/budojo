@@ -93,7 +93,7 @@ Four cases and no free text: the list stays short enough to pick from at the end
 
 ## Stats aggregation — monthly revenue trend
 
-`GET /api/v1/stats/payments/monthly` (defined in the `Stats` group of `routes/api_v1.php`, served by `MonthlyPaymentsStatsAction`) buckets revenue by the **business month(s)** the fee covers — NOT by `paid_at` (the wall-clock recording time).
+`GET /api/v1/stats/payments/monthly` (defined in the `Stats` group of `routes/api_v1.php`, served by `MonthlyPaymentsStatsAction`) buckets revenue by the **business month(s)** the fee covers — NOT by `paid_at` (the day the money arrived, #1761).
 
 Since #1382 a payment covers a period, so its `amount_cents` is **spread evenly across every month that period pays for**: a €165 quarterly contributes €55 to each of three buckets rather than €165 to one. Booking it whole would make an academy that bills quarterly read €0 for two months in three, against the "revenue *for* this month" promise below. The split is integer with the remainder on the first month, so the buckets always add back up to what was actually paid. It is done in PHP — SQL cannot expand one row into three buckets without a calendar table — and the query pulls every payment whose period *overlaps* the window, not just those starting inside it.
 
@@ -101,7 +101,7 @@ Since #1382 a payment covers a period, so its `amount_cents` is **spread evenly 
 
 **Both rules live in one place, `App\Support\CollectedByMonth` (#1758),** which the chart and the money summary below both read, so a bar and a tile for the same month cannot show two numbers.
 
-The two diverge since #1761, which lets the owner date a payment the day the money arrived: September's fee paid on 3 October stays in the September bucket. The chart label "Monthly revenue" always means *revenue **for** this month*, not *revenue **received in** this month*. Consumers building UI on top of this endpoint should respect that semantic.
+The covered month and `paid_at` diverge since #1761, which lets the owner date a payment the day the money arrived: September's fee paid on 3 October stays in the September bucket. The chart label "Monthly revenue" always means *revenue **for** this month*, not *revenue **received in** this month*. Consumers building UI on top of this endpoint should respect that semantic.
 
 Because `amount_cents` is snapshotted at insert time (see Business rules above), historical sums returned by the trend endpoint stay stable against future changes to `academies.monthly_fee_cents`.
 
