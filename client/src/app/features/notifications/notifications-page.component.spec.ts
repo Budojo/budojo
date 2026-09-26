@@ -176,6 +176,26 @@ describe('NotificationsPageComponent (#1129)', () => {
     expect(el.querySelector('[data-cy="notifications-undo"]')).toBeNull();
   });
 
+  it('puts focus on a restored row that is on screen, or else on the tab', async () => {
+    // The server's ids come unordered and can reach past the twenty shown.
+    const { el, fixture, http } = setup([
+      notif({ id: 'shown', read_at: new Date().toISOString() }),
+    ]);
+    (el.querySelector('[data-cy="notifications-archive-read"]') as HTMLButtonElement).click();
+    http
+      .expectOne(`${BASE}/archive-read`)
+      .flush({ data: { archived: 2, ids: ['off-screen', 'shown'] } });
+    fixture.detectChanges();
+
+    (el.querySelector('[data-cy="notifications-undo-action"]') as HTMLButtonElement).click();
+    http.expectOne(`${BASE}/unarchive`).flush({ data: { unarchived: 2 } });
+    http.expectOne(BASE).flush({ data: [notif({ id: 'shown' })], meta: { unread_count: 1 } });
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(document.activeElement).toBe(el.querySelector('[data-cy="notification-shown"]'));
+  });
+
   it('puts focus on the row "Undo" brought back', async () => {
     const { el, fixture, http } = setup([notif({ id: 'a', read_at: new Date().toISOString() })]);
     (el.querySelector('[data-cy="notification-archive-a"]') as HTMLButtonElement).click();

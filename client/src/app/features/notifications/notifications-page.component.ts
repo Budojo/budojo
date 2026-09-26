@@ -198,12 +198,12 @@ export class NotificationsPageComponent implements OnInit {
           this.inbox
             .load()
             .pipe(takeUntilDestroyed(this.destroyRef))
-            .subscribe(() => this.focusAfterRender(`[data-cy="notification-${ids[0]}"]`)),
+            .subscribe(() => this.focusAfterRender(ids)),
         // Said where the undo was, rather than failing without a word: the
         // rows are still under "Archiviate".
         error: () => {
           this.undoFailed.set(true);
-          this.focusAfterRender('[data-cy="notifications-filter-inbox"]');
+          this.focusAfterRender([]);
         },
       });
   }
@@ -237,11 +237,20 @@ export class NotificationsPageComponent implements OnInit {
     if (this.justArchived() !== null) this.startUndoTimer();
   }
 
-  private focusAfterRender(selector: string): void {
+  /**
+   * The first of these rows that is on screen — a batch can reach past the
+   * twenty the inbox shows — or else the "Da vedere" tab, so focus never
+   * falls to the page.
+   */
+  private focusAfterRender(ids: readonly string[]): void {
     runInInjectionContext(this.injector, () =>
-      afterNextRender(() =>
-        (this.host.nativeElement.querySelector(selector) as HTMLElement | null)?.focus(),
-      ),
+      afterNextRender(() => {
+        const root = this.host.nativeElement;
+        const row = ids
+          .map((id) => root.querySelector<HTMLElement>(`[data-cy="notification-${id}"]`))
+          .find((el) => el !== null);
+        (row ?? root.querySelector<HTMLElement>('[data-cy="notifications-filter-inbox"]'))?.focus();
+      }),
     );
   }
 
