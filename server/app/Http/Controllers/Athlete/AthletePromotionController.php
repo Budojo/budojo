@@ -9,6 +9,7 @@ use App\Actions\Promotion\CreateAthletePromotionAction;
 use App\Actions\Promotion\DeleteAthletePromotionAction;
 use App\Actions\Promotion\GetAthleteProgressionAction;
 use App\Actions\Promotion\GetPromotionGapsAction;
+use App\Actions\Promotion\ListAthletePromotionsAction;
 use App\Actions\Promotion\UpdateAthletePromotionRecordedAtAction;
 use App\Authorization\Capability;
 use App\Enums\Belt;
@@ -23,6 +24,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Pagination\Paginator;
 
 /**
  * Owner-facing read + write of an athlete's belt + stripe promotion
@@ -46,6 +48,7 @@ class AthletePromotionController extends Controller
         private readonly GetAthleteProgressionAction $progression,
         private readonly GetPromotionGapsAction $gaps,
         private readonly CompleteOpeningPromotionAction $completeOpening,
+        private readonly ListAthletePromotionsAction $list,
     ) {
     }
 
@@ -58,7 +61,7 @@ class AthletePromotionController extends Controller
             return response()->json(['message' => 'Forbidden.'], 403);
         }
 
-        $promotions = $athlete->promotions()->with('recordedBy:id,first_name,last_name')->paginate(20);
+        $promotions = $this->list->execute($athlete, Paginator::resolveCurrentPage());
 
         // Beside `data`, not in `meta`: `meta` is the pagination block the SPA
         // pages with, and overwriting it breaks paging (#1772). Computed once

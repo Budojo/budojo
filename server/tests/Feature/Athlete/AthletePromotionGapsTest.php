@@ -176,6 +176,46 @@ it("bounds a window by the owner's today, which after 22:00 UTC is already tomor
     expect(gapKeys($this, $athlete))->toBe([]);
 });
 
+it('lists a step filled on the day of the row after it below that row, the way the gaps replay it', function (): void {
+    $athlete = gapsAthlete($this->academy, Belt::Blue, 4);
+    $belt = beltRowOn($athlete, $this->owner, Belt::White, Belt::Blue, '2024-01-10 00:00:00');
+    $fourth = stripeRowOn($athlete, $this->owner, Belt::Blue, 3, 4, '2025-06-01 00:00:00');
+
+    // The third stripe, filled on the day of the fourth: a higher id, an
+    // earlier step.
+    $third = $this->actingAs($this->owner)->postJson("/api/v1/athletes/{$athlete->id}/promotions", [
+        'kind' => 'stripe', 'recorded_at' => '2025-06-01', 'belt_at_event' => 'blue', 'from_stripes' => 2, 'to_stripes' => 3,
+    ])->assertCreated()->json('data.id');
+
+    $page = $this->actingAs($this->owner)->getJson("/api/v1/athletes/{$athlete->id}/promotions")->assertOk();
+
+    expect(array_column($page->json('data'), 'id'))->toBe([$fourth->id, $third, $belt->id])
+        ->and(array_column($page->json('gaps'), 'key'))->toBe(['stripe:blue:1', 'stripe:blue:2'])
+        ->and($page->json('gaps.1.before.promotion_id'))->toBe($third);
+});
+
+it('pages the listing in that order with the same meta as before', function (): void {
+    $athlete = gapsAthlete($this->academy, Belt::Blue, 0);
+    foreach (range(1, 25) as $day) {
+        stripeRowOn($athlete, $this->owner, Belt::White, 3, 3, sprintf('2024-04-%02d 00:00:00', $day));
+    }
+
+    $first = $this->actingAs($this->owner)->getJson("/api/v1/athletes/{$athlete->id}/promotions")->assertOk();
+    $second = $this->actingAs($this->owner)->getJson("/api/v1/athletes/{$athlete->id}/promotions?page=2")->assertOk();
+
+    expect(array_keys($first->json('meta')))->toBe(['current_page', 'from', 'last_page', 'links', 'path', 'per_page', 'to', 'total'])
+        ->and(array_keys($first->json('links')))->toBe(['first', 'last', 'prev', 'next'])
+        ->and($first->json('meta.per_page'))->toBe(20)
+        ->and($first->json('meta.total'))->toBe(25)
+        ->and($second->json('meta.current_page'))->toBe(2)
+        ->and($second->json('meta.from'))->toBe(21)
+        ->and($second->json('meta.to'))->toBe(25)
+        ->and($first->json('meta.path'))->toEndWith("/api/v1/athletes/{$athlete->id}/promotions")
+        // Newest first across the page boundary.
+        ->and(substr((string) $first->json('data.0.recorded_at'), 0, 10))->toBe('2024-04-25')
+        ->and(substr((string) $second->json('data.4.recorded_at'), 0, 10))->toBe('2024-04-01');
+});
+
 it('reads the gaps over the whole history, whatever the page', function (): void {
     $athlete = gapsAthlete($this->academy, Belt::Blue, 0);
     stripeRowOn($athlete, $this->owner, Belt::White, 2, 3, '2024-03-12 00:00:00');
