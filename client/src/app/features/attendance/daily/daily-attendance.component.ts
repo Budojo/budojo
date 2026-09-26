@@ -1,15 +1,17 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  ElementRef,
   OnInit,
   computed,
   inject,
   signal,
+  viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { Subject, debounceTime, distinctUntilChanged, map } from 'rxjs';
+import { Subject, debounceTime, filter, map } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
 import { IconFieldModule } from 'primeng/iconfield';
@@ -34,7 +36,11 @@ import {
   Belt,
 } from '../../../core/services/athlete.service';
 import { AcademyClass, AcademyClassService } from '../../../core/services/academy-class.service';
-import { AttendanceService, ClassRegulars } from '../../../core/services/attendance.service';
+import {
+  AttendanceService,
+  ClassRegular,
+  ClassRegulars,
+} from '../../../core/services/attendance.service';
 import { Lesson, LessonService, LessonTopic } from '../../../core/services/lesson.service';
 import { LessonSheetComponent } from '../../lessons/lesson-sheet/lesson-sheet.component';
 import { AthleteIdentityComponent } from '../../../shared/components/athlete-identity/athlete-identity.component';
@@ -58,6 +64,12 @@ interface SelectOption<T extends string> {
   label: string;
   value: T | '';
 }
+
+/**
+ * What marking needs of a person: who, and a name for the toast. A row of
+ * the register and a regular from the panel (#1930) are both this.
+ */
+type Markable = Pick<Athlete, 'id' | 'first_name' | 'last_name'>;
 
 const ALL_WEEKDAYS = [0, 1, 2, 3, 4, 5, 6] as const;
 
@@ -381,6 +393,13 @@ export class DailyAttendanceComponent implements OnInit {
   // with the main list (Jakob's law).
 
   protected readonly searchTerm = signal<string>('');
+
+  /**
+   * The search the list on screen answers (#1930) — not the one asked for.
+   * `searchTerm` moves the moment a search is sent; this only when its answer
+   * lands, so a failed search leaves it naming the list still shown.
+   */
+  private readonly listedTerm = signal<string>('');
   protected readonly selectedBelt = signal<Belt | ''>('');
 
   /**
@@ -419,11 +438,14 @@ export class DailyAttendanceComponent implements OnInit {
   });
 
   constructor() {
+    // Compared with the search on screen, not with the pipe's last value:
+    // Enter and Esc apply a search directly (#1930), and a keystroke still
+    // waiting out its pause must not put back a name they already cleared.
     this.searchInputSubject
       .pipe(
         debounceTime(200),
         map((value) => value.trim()),
-        distinctUntilChanged(),
+        filter((q) => q !== this.searchTerm()),
         takeUntilDestroyed(),
       )
       .subscribe((q) => this.applySearch(q));
@@ -565,12 +587,16 @@ export class DailyAttendanceComponent implements OnInit {
    * present-map, so an in-flight optimistic mark can't be clobbered
    * by a parallel attendance refetch racing the POST.
    */
-  private loadAthletes(): void {
+  private loadAthletes(onLoaded?: () => void): void {
     this.loading.set(true);
     const epoch = ++this.loadEpoch;
-    this.fetchAthletes(epoch, () => {
+    this.fetchAthletes(epoch, (ok) => {
       if (epoch === this.loadEpoch) {
         this.loading.set(false);
+        // Only on the answer for this very load: a failed one leaves the
+        // previous list on screen, and acting on it would act on the wrong
+        // people.
+        if (ok) onLoaded?.();
       }
     });
   }
@@ -580,7 +606,7 @@ export class DailyAttendanceComponent implements OnInit {
    * response from a previous filter / sort / date change can no
    * longer clobber the current state.
    */
-  private fetchAthletes(epoch: number, settle: () => void): void {
+  private fetchAthletes(epoch: number, settle: (ok: boolean) => void): void {
     const belt = this.selectedBelt();
     const sortBy = this.sortField();
     const q = this.searchTerm().trim();
@@ -599,14 +625,15 @@ export class DailyAttendanceComponent implements OnInit {
           if (epoch === this.loadEpoch) {
             this.athletes.set(page.data);
             this.totalActiveAthletes.set(page.meta.total);
+            this.listedTerm.set(q);
           }
-          settle();
+          settle(true);
         },
         error: () => {
           if (epoch === this.loadEpoch) {
             this.toastError(this.translate.instant('attendance.daily.toast.loadAthletesError'));
           }
-          settle();
+          settle(false);
         },
       });
   }
@@ -664,7 +691,7 @@ export class DailyAttendanceComponent implements OnInit {
    * current state. Disabled (no-op) while a request for this athlete is
    * already in flight.
    */
-  protected togglePresent(athlete: Athlete): void {
+  protected togglePresent(athlete: Markable): void {
     // Not while the day is still loading (#1562): before the timetable has
     // answered, `selectedClassId` is null and a tap would record a
     // class-less presence on a day that has classes — a row that then shows
@@ -690,7 +717,7 @@ export class DailyAttendanceComponent implements OnInit {
    * an undo of a previous unmark (PRD § P0.3: "No new toast is emitted
    * for the undo itself").
    */
-  private mark(athlete: Athlete, options: { silent?: boolean } = {}): void {
+  private mark(athlete: Markable, options: { silent?: boolean } = {}): void {
     const date = toLocalDateString(this.selectedDate());
     this.optimisticAdd(athlete.id, -1);
     this.markInflight(athlete.id, true);
@@ -738,7 +765,7 @@ export class DailyAttendanceComponent implements OnInit {
    * the DELETE, on error puts it back. `silent` skips the success toast
    * for the same Undo-of-undo reason as `mark()`.
    */
-  private unmark(athlete: Athlete, recordId: number, options: { silent?: boolean } = {}): void {
+  private unmark(athlete: Markable, recordId: number, options: { silent?: boolean } = {}): void {
     this.optimisticRemove(athlete.id);
     this.markInflight(athlete.id, true);
 
@@ -967,14 +994,78 @@ export class DailyAttendanceComponent implements OnInit {
     this.searchInputSubject.next(value);
   }
 
-  protected applySearch(q: string): void {
+  protected applySearch(q: string, onLoaded?: () => void): void {
     this.searchTerm.set(q.trim());
     this.resetPage();
     // Filter/sort changes reload the ROSTER only — the date hasn't
     // moved, so the attendance records on the wire are unchanged
     // and a parallel re-fetch would race any in-flight optimistic
     // mark on the present-map.
-    this.loadAthletes();
+    this.loadAthletes(onLoaded);
+  }
+
+  // ── Type a name, press Enter (#1930) ───────────────────────────────────────
+  // Twelve people in five minutes at the door: a search, a wait, a reach for
+  // the mouse and a clear, per person, is the queue. Enter marks the one
+  // match and hands the box back empty for the next name.
+
+  private readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
+
+  /** What is in the box right now — ahead of the search, while typing. */
+  private typed(): string {
+    return this.searchInput()?.nativeElement.value.trim() ?? '';
+  }
+
+  protected onSearchEnter(): void {
+    const typed = this.typed();
+    if (typed === '') return;
+    if (typed === this.listedTerm() && !this.loading()) {
+      this.markOnlyMatch();
+      return;
+    }
+    // The list on screen does not answer this name (Enter beat the typing
+    // pause, its answer is still on the way, or its search failed): search
+    // now, and decide when the answer lands.
+    this.applySearch(typed, () => this.markOnlyMatch());
+  }
+
+  protected onSearchEscape(): void {
+    this.clearSearch();
+  }
+
+  /**
+   * One person matches, and they are not on the mat yet: mark them, through
+   * the same path as a tap on their row. Nobody otherwise — two matches is a
+   * choice the owner makes, not one Enter makes for them, and Enter never
+   * takes anyone off: that is what the tap on the row is for.
+   */
+  private markOnlyMatch(): void {
+    // The list on screen must answer exactly what is in the box — never a
+    // search still on its way, nor the one before a search that failed.
+    if (this.typed() !== this.listedTerm()) return;
+    const matches = this.athletes();
+    if (matches.length !== 1 || this.totalActiveAthletes() !== 1) return;
+
+    const [only] = matches;
+    if (this.isPresent(only.id)) return;
+    this.togglePresent(only);
+    // Refused (the day is still loading): leave the name where it is.
+    if (this.isInflight(only.id)) this.clearSearch();
+  }
+
+  /** The box empty, the whole register back, the cursor still in the box. */
+  private clearSearch(): void {
+    const input = this.searchInput()?.nativeElement;
+    if (input !== undefined) input.value = '';
+    // Also cancels a keystroke still waiting out its pause.
+    this.searchInputSubject.next('');
+    if (this.searchTerm() !== '') this.applySearch('');
+  }
+
+  /** "Presente" on a regular in the panel below (#1930). Only ever marks. */
+  protected markRegular(regular: ClassRegular): void {
+    if (this.isPresent(regular.id)) return;
+    this.togglePresent(regular);
   }
 
   protected onBeltChange(belt: Belt | ''): void {

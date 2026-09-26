@@ -2,6 +2,7 @@
   @case ('missing') {
     <section class="missing" data-cy="missing-regulars">
       <button
+        #header
         type="button"
         class="missing__header"
         [attr.aria-expanded]="expanded()"
@@ -27,11 +28,11 @@
           {{ 'attendance.daily.missing.description' | translate }}
         </p>
         <ul id="missing-regulars-list" class="missing__list">
-          @for (row of rows(); track row.regular.id) {
+          @for (row of rows(); track row.regular.id; let i = $index) {
             <li class="missing__row" [attr.data-cy]="'missing-regular-' + row.regular.id">
               <!--
                 Not linked: a tap that leaves the check-in mid-session loses the
-                register the owner is holding. The two buttons are the action.
+                register the owner is holding. The buttons are the action.
               -->
               <app-athlete-identity class="missing__who" [athlete]="row.regular" />
               <p class="missing__why">
@@ -51,6 +52,20 @@
                 [name]="row.name"
                 [dataCy]="'missing-contact-' + row.regular.id"
               />
+              <!-- They walked in (#1930): tick them here, not by searching above. -->
+              <p-button
+                #presentButton
+                class="missing__present"
+                severity="secondary"
+                icon="pi pi-check"
+                [label]="'attendance.daily.missing.markPresent' | translate"
+                [ariaLabel]="
+                  'attendance.daily.missing.markPresentAria' | translate: { name: row.name }
+                "
+                [disabled]="locked()"
+                (onClick)="mark(row.regular, i)"
+                [attr.data-cy]="'missing-present-' + row.regular.id"
+              />
             </li>
           }
         </ul>
@@ -58,7 +73,8 @@
     </section>
   }
   @case ('all-here') {
-    <p class="missing missing__line" data-cy="missing-regulars-all-here">
+    <!-- Focusable by script only: where the keyboard lands after the last tick (#1930). -->
+    <p #allHere class="missing missing__line" tabindex="-1" data-cy="missing-regulars-all-here">
       <i class="pi pi-check-circle missing__icon" aria-hidden="true"></i>
       <span class="missing__title">{{ 'attendance.daily.missing.title' | translate }}</span>
       <span>{{ 'attendance.daily.missing.allHere' | translate }}</span>

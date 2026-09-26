@@ -1413,6 +1413,33 @@ describe('DailyAttendanceComponent — who usually comes and is not here (#1730)
     expect(again[0].request.params.get('academy_class_id')).toBe('1');
   });
 
+  it('checks a regular in from the panel, through the same mark, and the row leaves it (#1930)', () => {
+    const { fixture, httpMock } = setup();
+    fixture.detectChanges();
+    flushInit(httpMock, { athletes: [], classes: [KIDS, FUNDAMENTALS] });
+    regularsRequests(httpMock)[0].flush(answer([7, 9]));
+    missingIds(fixture);
+
+    const root = fixture.nativeElement as HTMLElement;
+    root.querySelector<HTMLElement>('[data-cy="missing-present-9"] button')?.click();
+    fixture.detectChanges();
+
+    // Not on this page of the register, and still marked: the panel is the
+    // list of who is about to walk in, whatever the search above shows.
+    const post = httpMock.expectOne((r) => r.url === '/api/v1/attendance' && r.method === 'POST');
+    expect(post.request.body).toEqual({
+      date: '2026-09-14',
+      athlete_ids: [9],
+      academy_class_id: FUNDAMENTALS.id,
+    });
+    expect(
+      Array.from(root.querySelectorAll('[data-cy^="missing-regular-"]')).map((el) =>
+        el.getAttribute('data-cy'),
+      ),
+    ).toEqual(['missing-regular-7']);
+    post.flush({ data: [{ id: 502, athlete_id: 9, lesson_id: 3, attended_on: '2026-09-14' }] });
+  });
+
   it('never lets a slow answer for the previous class land over the current one', () => {
     const { fixture, component, httpMock } = setup();
     fixture.detectChanges();
@@ -1465,5 +1492,209 @@ describe('DailyAttendanceComponent — who usually comes and is not here (#1730)
 
     expect(root.querySelector('[data-cy="missing-regulars-error"]')).toBeNull();
     expect(root.querySelector('[data-cy="missing-regulars-toggle"]')).not.toBeNull();
+  });
+});
+
+describe('DailyAttendanceComponent — type a name and press Enter (#1930)', () => {
+  const GALLO = makeAthlete({ id: 7, first_name: 'Andrea', last_name: 'Gallo' });
+  const GALLI = makeAthlete({ id: 8, first_name: 'Marta', last_name: 'Galli' });
+
+  function page(athletes: Athlete[]) {
+    return {
+      data: athletes,
+      links: { first: null, last: null, prev: null, next: null },
+      meta: {
+        current_page: 1,
+        from: athletes.length ? 1 : null,
+        last_page: 1,
+        path: '',
+        per_page: 20,
+        to: athletes.length || null,
+        total: athletes.length,
+      },
+    };
+  }
+
+  /** Types into the search box the way a keyboard does. */
+  function type(fixture: Harness['fixture'], text: string): HTMLInputElement {
+    const input = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>(
+      '[data-cy="attendance-search-input"]',
+    )!;
+    input.focus();
+    input.value = text;
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    return input;
+  }
+
+  function press(input: HTMLInputElement, key: 'Enter' | 'Escape'): void {
+    input.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+  }
+
+  function roster(httpMock: HttpTestingController, q: string | null) {
+    return httpMock.expectOne(
+      (r) =>
+        r.url === '/api/v1/athletes' &&
+        r.method === 'GET' &&
+        (q === null ? !r.params.has('q') : r.params.get('q') === q),
+    );
+  }
+
+  function marks(httpMock: HttpTestingController) {
+    return httpMock.match((r) => r.url === '/api/v1/attendance' && r.method === 'POST');
+  }
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function ready(): Harness {
+    const harness = setup();
+    harness.fixture.detectChanges();
+    flushInit(harness.httpMock, { athletes: [GALLO, GALLI] });
+    harness.fixture.detectChanges();
+    return harness;
+  }
+
+  it('marks the one match present, empties the box and keeps the cursor there', () => {
+    const { fixture, component, httpMock } = ready();
+    const input = type(fixture, 'gallo');
+    vi.advanceTimersByTime(250);
+    roster(httpMock, 'gallo').flush(page([GALLO]));
+    fixture.detectChanges();
+
+    press(input, 'Enter');
+    fixture.detectChanges();
+
+    const [post] = marks(httpMock);
+    expect(post.request.body.athlete_ids).toEqual([7]);
+    expect(component['isPresent'](7)).toBe(true);
+    // The box is ready for the next name, and the whole register is back.
+    expect(input.value).toBe('');
+    expect(document.activeElement).toBe(input);
+    roster(httpMock, null).flush(page([GALLO, GALLI]));
+    post.flush({ data: [{ id: 900, athlete_id: 7, attended_on: '2026-09-14' }] });
+  });
+
+  it('searches at once when Enter beats the typing pause, and the pause does not search again', () => {
+    const { fixture, httpMock } = ready();
+    const input = type(fixture, 'gallo');
+    press(input, 'Enter'); // well inside the 200 ms pause
+
+    // The pause runs out while that search is still on the way. Asking again
+    // would supersede it, and its answer would then mark nobody.
+    vi.advanceTimersByTime(250);
+    const searches = httpMock.match(
+      (r) => r.url === '/api/v1/athletes' && r.params.get('q') === 'gallo',
+    );
+    expect(searches).toHaveLength(1);
+
+    searches[0].flush(page([GALLO]));
+    fixture.detectChanges();
+
+    const [post] = marks(httpMock);
+    expect(post.request.body.athlete_ids).toEqual([7]);
+    expect(input.value).toBe('');
+    roster(httpMock, null).flush(page([GALLO, GALLI]));
+    post.flush({ data: [{ id: 900, athlete_id: 7, attended_on: '2026-09-14' }] });
+
+    // Nor does the emptied box, once its own pause runs out.
+    vi.advanceTimersByTime(250);
+    httpMock.verify();
+  });
+
+  it('never marks the name on screen after the search for another name failed', () => {
+    const { fixture, component, httpMock } = ready();
+    const input = type(fixture, 'gallo');
+    vi.advanceTimersByTime(250);
+    roster(httpMock, 'gallo').flush(page([GALLO]));
+    fixture.detectChanges();
+
+    // "galli" and Enter: that search fails, and Andrea Gallo stays on screen.
+    input.value = 'galli';
+    input.dispatchEvent(new Event('input'));
+    press(input, 'Enter');
+    roster(httpMock, 'galli').flush('boom', { status: 500, statusText: 'Server Error' });
+    fixture.detectChanges();
+    expect(component['athletes']().map((a) => a.id)).toEqual([7]);
+
+    // Enter again asks again. It never marks the one name the list still shows.
+    press(input, 'Enter');
+    expect(marks(httpMock)).toHaveLength(0);
+    roster(httpMock, 'galli').flush(page([GALLI]));
+    fixture.detectChanges();
+
+    const [post] = marks(httpMock);
+    expect(post.request.body.athlete_ids).toEqual([8]);
+    expect(component['isPresent'](7)).toBe(false);
+    roster(httpMock, null).flush(page([GALLO, GALLI]));
+    post.flush({ data: [{ id: 901, athlete_id: 8, attended_on: '2026-09-14' }] });
+  });
+
+  it('marks nobody when the name matches two people, or none', () => {
+    const { fixture, httpMock } = ready();
+    const input = type(fixture, 'gall');
+    vi.advanceTimersByTime(250);
+    roster(httpMock, 'gall').flush(page([GALLO, GALLI]));
+    fixture.detectChanges();
+
+    press(input, 'Enter');
+    expect(marks(httpMock)).toHaveLength(0);
+    expect(input.value).toBe('gall');
+
+    type(fixture, 'zzz');
+    vi.advanceTimersByTime(250);
+    roster(httpMock, 'zzz').flush(page([]));
+    fixture.detectChanges();
+
+    press(input, 'Enter');
+    expect(marks(httpMock)).toHaveLength(0);
+  });
+
+  it('never takes someone off the mat: Enter on a person already present does nothing', () => {
+    const { fixture, component, httpMock } = ready();
+    component['togglePresent'](GALLO);
+    marks(httpMock)[0].flush({ data: [{ id: 900, athlete_id: 7, attended_on: '2026-09-14' }] });
+
+    const input = type(fixture, 'gallo');
+    vi.advanceTimersByTime(250);
+    roster(httpMock, 'gallo').flush(page([GALLO]));
+    fixture.detectChanges();
+
+    press(input, 'Enter');
+    httpMock.expectNone((r) => r.method === 'DELETE');
+    expect(marks(httpMock)).toHaveLength(0);
+    expect(component['isPresent'](7)).toBe(true);
+  });
+
+  it('marks nobody when the name was changed while its search was on the way', () => {
+    const { fixture, httpMock } = ready();
+    const input = type(fixture, 'gallo');
+    press(input, 'Enter');
+
+    input.value = 'gallo m'; // still typing
+    roster(httpMock, 'gallo').flush(page([GALLO]));
+    fixture.detectChanges();
+
+    expect(marks(httpMock)).toHaveLength(0);
+  });
+
+  it('clears the box and the search on Esc', () => {
+    const { fixture, component, httpMock } = ready();
+    const input = type(fixture, 'gallo');
+    vi.advanceTimersByTime(250);
+    roster(httpMock, 'gallo').flush(page([GALLO]));
+    fixture.detectChanges();
+
+    press(input, 'Escape');
+    fixture.detectChanges();
+
+    expect(input.value).toBe('');
+    expect(component['searchTerm']()).toBe('');
+    roster(httpMock, null).flush(page([GALLO, GALLI]));
   });
 });

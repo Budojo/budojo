@@ -140,6 +140,66 @@ describe('MissingRegularsComponent (#1730)', () => {
     expect(text(root, '[data-cy="missing-regulars-count"]')).toBe('1 regular missing');
   });
 
+  it('offers to check each regular in, and hands the regular to the page (#1930)', () => {
+    const { fixture, root } = render(regulars([regular({ id: 1 }), regular({ id: 2 })]));
+    const marked: number[] = [];
+    fixture.componentInstance.markPresent.subscribe((r) => marked.push(r.id));
+    open(fixture);
+
+    const button = root.querySelector<HTMLButtonElement>('[data-cy="missing-present-2"] button');
+    expect(button?.textContent).toContain('Present');
+    button?.click();
+
+    expect(marked).toEqual([2]);
+  });
+
+  it('keeps the keyboard in the list as rows leave it, and ends on the all-here line (WCAG 2.4.3)', async () => {
+    const { fixture, root } = render(
+      regulars([regular({ id: 1 }), regular({ id: 2 }), regular({ id: 3 })]),
+    );
+    // What the page does on the same click: the regular is on the mat now.
+    const present = new Map<number, number>();
+    fixture.componentInstance.markPresent.subscribe((r) => {
+      present.set(r.id, -1);
+      fixture.componentRef.setInput('present', new Map(present));
+    });
+    open(fixture);
+
+    const presentButton = (id: number): HTMLButtonElement | null =>
+      root.querySelector<HTMLButtonElement>(`[data-cy="missing-present-${id}"] button`);
+    const press = async (id: number): Promise<void> => {
+      const button = presentButton(id)!;
+      button.focus();
+      button.click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+    };
+
+    // The row goes; the button that took its place takes the focus.
+    await press(2);
+    expect(presentButton(2)).toBeNull();
+    expect(document.activeElement).toBe(presentButton(3));
+
+    // The last row goes; the one before it takes the focus.
+    await press(3);
+    expect(document.activeElement).toBe(presentButton(1));
+
+    // Nobody left to tick: the line that says so takes it, not <body>.
+    await press(1);
+    expect(document.activeElement).toBe(
+      root.querySelector('[data-cy="missing-regulars-all-here"]'),
+    );
+  });
+
+  it('holds the button while the register is loading, like the rows above it', () => {
+    const { fixture, root } = render(regulars([regular({ id: 1 })]));
+    fixture.componentRef.setInput('locked', true);
+    open(fixture);
+
+    const button = root.querySelector<HTMLButtonElement>('[data-cy="missing-present-1"] button');
+    expect(button?.disabled).toBe(true);
+  });
+
   it('says everyone is here only when every regular is ticked', () => {
     const { root } = render(regulars([regular({ id: 1 })]), new Map([[1, 501]]));
 

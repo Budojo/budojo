@@ -1940,7 +1940,7 @@
       "classPicker": {
         "aria": "Quale lezione"
       },
-      "searchPlaceholder": "Cerca per nome",
+      "searchPlaceholder": "Cerca per nome — Invio segna presente",
       "beltPlaceholder": "Cintura",
       "table": {
         "fullName": "Nome e cognome",
@@ -1980,7 +1980,9 @@
         "notEnoughHistoryOne": "Solo {{count}} lezione di questa classe registrata: non basta per dire chi viene di solito.",
         "notEnoughHistoryOther": "Solo {{count}} lezioni di questa classe registrate: non bastano per dire chi viene di solito.",
         "loadError": "Impossibile caricare chi viene di solito a questa classe.",
-        "retry": "Riprova"
+        "retry": "Riprova",
+        "markPresent": "Presente",
+        "markPresentAria": "Segna {{name}} presente"
       },
       "topics": {
         "empty": "Ancora niente",
