@@ -97,13 +97,26 @@ Four cases and no free text: the list stays short enough to pick from at the end
 
 Since #1382 a payment covers a period, so its `amount_cents` is **spread evenly across every month that period pays for**: a €165 quarterly contributes €55 to each of three buckets rather than €165 to one. Booking it whole would make an academy that bills quarterly read €0 for two months in three, against the "revenue *for* this month" promise below. The split is integer with the remainder on the first month, so the buckets always add back up to what was actually paid. It is done in PHP — SQL cannot expand one row into three buckets without a calendar table — and the query pulls every payment whose period *overlaps* the window, not just those starting inside it.
 
-**Carnets are on the same axis under the same rule (#1383).** A pack is collected in one go but bought for its whole validity window, so `carnets.price_cents` is spread across the months from `valid_from` to `expires_at` — €70 valid twelve months contributes about €5.83 a month. The expiry month itself gets nothing: a carnet valid 1 Sep 2026 → 1 Sep 2027 covers the twelve months September–August. Booking it whole into the sale month would leave two different rules on one chart. Attributing it to the months entries are actually *consumed* is the truer reading and was considered and rejected: it rewrites past months every time a back-dated presence is marked, and never books an entry nobody used. See [`carnet.md`](./carnet.md).
+**Carnets are on the same axis under a different rule (#1383, changed in #1553).** A pack lands **whole in the month it was sold**, keyed on `purchased_at` — not `valid_from`: a carnet bought in August to start in September is August's takings. It was spread across its validity window until #1553, which made a sale invisible: €70 valid twelve months moved the chart by €5.83, and the owner who had just taken €70 could not find it. A carnet is a lump the academy either took or did not; a fee is an entitlement that accrues. Two rules on one chart, deliberately, and the SPA's hint says so. Attributing the money to the months entries are actually *consumed* was considered and rejected: it rewrites past months every time a back-dated presence is marked, and never books an entry nobody used. See [`carnet.md`](./carnet.md).
+
+**Both rules live in one place, `App\Support\CollectedByMonth` (#1758),** which the chart and the money summary below both read, so a bar and a tile for the same month cannot show two numbers.
 
 The two diverge since #1761, which lets the owner date a payment the day the money arrived: September's fee paid on 3 October stays in the September bucket. The chart label "Monthly revenue" always means *revenue **for** this month*, not *revenue **received in** this month*. Consumers building UI on top of this endpoint should respect that semantic.
 
 Because `amount_cents` is snapshotted at insert time (see Business rules above), historical sums returned by the trend endpoint stay stable against future changes to `academies.monthly_fee_cents`.
 
 The endpoint does NOT split by payment status today — the schema currently has no `payment_status` column (only paid rows exist as records). When that schema grows, the response can extend to a stacked split without breaking clients (additive change).
+
+## Stats aggregation — one month's money: expected, collected, outstanding
+
+`GET /api/v1/stats/payments/summary?year=&month=` (`PaymentsSummaryAction`, #1758) states the four figures the chart implies: what the month should have brought in, what it did, who is still out and for how much. Each definition is composed from a rule that already exists, never restated:
+
+- **Population** — active, `Athlete::scopeExpectedToPay` (not the owner, a fee applies) and `scopeChargedMoreThanNothing` (it resolves above zero). An athlete on a zero `fee_override_cents` trains free and is on neither side of the rate. Only from `App\Support\BillingFloor` on (#1742): the later of the month they joined and the academy's `billing_from`.
+- **Expected** — Σ `MonthlyFee::forAthlete()` over the population: **one month's worth per athlete**, whatever `billing_period_months` says. An annual payer adds a twelfth of the year: the tile compares a month with a month.
+- **Collected** — the chart's own bucket for that month, from `CollectedByMonth`: a quarterly paid in September contributes only its September third, a carnet counts whole in its sale month, and money from anyone counts.
+- **Outstanding** — the population with nothing paying for the month, and Σ their monthly fee. The current month asks `Athlete::scopeOwing` (no covering fee, no carnet spendable today, #1722); a month already over asks `Athlete::scopePaidDuring` (a carnet spendable on some day of it, at the balance the month began with, #1760) — the arrears list's rule and split, so a past month's outstanding is exactly who the list says was behind in it.
+- **Rate** — collected ÷ expected, by money not by heads; `null` when nothing is expected. It can exceed 1.
+- **`estimated`** — true for every month but the current one. What paid for a past month is history, carnet balances included; who was expected to pay and how much is not. There is no status or tier history on `athletes`, so a past month is read against today's roster at today's fees — the same estimate the arrears list makes of its amounts.
 
 ## Resource-level derivation: `paid_current_month` and `payment_coverage`
 
