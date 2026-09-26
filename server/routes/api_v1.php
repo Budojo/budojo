@@ -532,6 +532,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
         // of 2) — transcribing a paper register from before Budojo existed.
         Route::post('/athletes/{athlete}/promotions', [\App\Http\Controllers\Athlete\AthletePromotionController::class, 'store']);
         Route::delete('/athletes/{athlete}/promotions/{promotion}', [\App\Http\Controllers\Athlete\AthletePromotionController::class, 'destroy']);
+        // Who may be ready for their next step (#1841) — facts, no score.
+        Route::get('/promotions/candidates', \App\Http\Controllers\Promotion\PromotionCandidatesController::class);
         // Documents — flat routes for operations that target a single document.
         // `/expiring` must come before `/{document}` routes or Laravel tries to
         // bind the literal "expiring" as a document id.

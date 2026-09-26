@@ -519,6 +519,67 @@ const AT_RISK = {
 };
 
 /**
+ * Who to promote? (#1841): the roster's active athletes, longest since their
+ * last promotion first, with the numbers the endpoint would send on TODAY.
+ * Elena is blue with four stripes, so her next step is the belt.
+ */
+function candidate(
+  id: number,
+  f: {
+    beltSince: string;
+    months: number;
+    stripeSince: string | null;
+    days: number;
+    sessions: number;
+  },
+  next: { kind: 'stripe' | 'belt'; belt: string; stripes: number },
+) {
+  return {
+    athlete: identityOf(id),
+    belt_since: f.beltSince,
+    months_at_belt: f.months,
+    stripe_since: f.stripeSince,
+    last_promoted_on: f.stripeSince ?? f.beltSince,
+    days_since_last_promotion: f.days,
+    sessions_since_last_promotion: f.sessions,
+    next,
+  };
+}
+
+const PROMOTION_CANDIDATES = [
+  candidate(
+    7,
+    { beltSince: '2026-02-02', months: 7, stripeSince: null, days: 224, sessions: 31 },
+    { kind: 'stripe', belt: 'brown', stripes: 1 },
+  ),
+  candidate(
+    6,
+    { beltSince: '2025-06-10', months: 15, stripeSince: '2026-03-18', days: 180, sessions: 38 },
+    { kind: 'belt', belt: 'purple', stripes: 0 },
+  ),
+  candidate(
+    5,
+    { beltSince: '2026-04-13', months: 5, stripeSince: null, days: 154, sessions: 22 },
+    { kind: 'stripe', belt: 'white', stripes: 1 },
+  ),
+  candidate(
+    4,
+    { beltSince: '2024-11-20', months: 21, stripeSince: '2026-05-06', days: 131, sessions: 29 },
+    { kind: 'stripe', belt: 'purple', stripes: 2 },
+  ),
+  candidate(
+    2,
+    { beltSince: '2025-10-01', months: 11, stripeSince: '2026-06-24', days: 82, sessions: 17 },
+    { kind: 'stripe', belt: 'white', stripes: 4 },
+  ),
+  candidate(
+    8,
+    { beltSince: '2026-09-07', months: 0, stripeSince: null, days: 7, sessions: 2 },
+    { kind: 'stripe', belt: 'white', stripes: 1 },
+  ),
+];
+
+/**
  * What tonight's room missed (#1860): seven on the mat, two techniques most of
  * them were not there for, names in register order.
  */
@@ -1767,6 +1828,11 @@ function seed(): void {
     body: { data: { paid: 4, unpaid: 3 } },
   });
 
+  cy.intercept('GET', '/api/v1/promotions/candidates', {
+    statusCode: 200,
+    body: { data: PROMOTION_CANDIDATES },
+  });
+
   // Stats.
   cy.intercept('GET', '/api/v1/stats/attendance/at-risk', { statusCode: 200, body: AT_RISK });
   cy.intercept('GET', '/api/v1/stats/attendance/daily*', {
@@ -2557,6 +2623,7 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
   });
   screen('21-athlete-new', '/dashboard/athletes/new', '[data-cy="athlete-form"]');
   screen('21-athlete-import', '/dashboard/athletes/import', '[data-cy="import-back"]');
+  screen('21-athlete-ready', '/dashboard/athletes/ready', '[data-cy="ready-list"]');
 
   // ── 22. One athlete ────────────────────────────────────────────────────
   const DETAIL_READY = '[data-cy="athlete-detail-back"]';

@@ -2783,6 +2783,33 @@
         "itemsOne": "{{count}} tecnica nel programma fino a questa cintura",
         "itemsOther": "{{count}} tecniche nel programma fino a questa cintura"
       }
+    },
+    "ready": {
+      "title": "Chi promuovere?",
+      "openButton": "Chi promuovere?",
+      "subtitle": "Tutti gli atleti attivi, prima chi aspetta da più tempo dall'ultima promozione. Qui trovi i fatti; la decisione è tua.",
+      "back": "Torna agli atleti",
+      "countOne": "{{count}} atleta",
+      "countOther": "{{count}} atleti",
+      "monthsOnBeltOne": "{{count}} mese con questa cintura",
+      "monthsOnBeltOther": "{{count}} mesi con questa cintura",
+      "underAMonthOnBelt": "Meno di un mese con questa cintura",
+      "lastStripe": "Ultimo grado il {{date}}",
+      "gradeSince": "{{grade}} dal {{date}}",
+      "onBeltSince": "Su questa cintura dal {{date}}",
+      "sessionsSinceOne": "{{count}} allenamento da allora",
+      "sessionsSinceOther": "{{count}} allenamenti da allora",
+      "noBeltRow": "Nessuna cintura registrata",
+      "next": "Prossimo",
+      "nextStripe": "{{n}}° grado",
+      "beltWithGrade": "{{belt}}, {{grade}}",
+      "topOfLadder": "In cima alla scala",
+      "empty": {
+        "title": "Nessun atleta attivo",
+        "hint": "Gli atleti attivi compaiono qui con il tempo dall'ultima promozione."
+      },
+      "error": "Impossibile caricare l'elenco.",
+      "retry": "Riprova"
     }
   },
   "month": {
