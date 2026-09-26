@@ -6,7 +6,9 @@ use App\Enums\AthleteStatus;
 use App\Models\AcademyFeeTier;
 use App\Models\Athlete;
 use App\Models\AthletePayment;
+use App\Models\AttendanceRecord;
 use App\Models\Carnet;
+use App\Models\CarnetEntry;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Laravel\Sanctum\Sanctum;
@@ -105,7 +107,7 @@ it('says so when the month is not the current one', function (): void {
         ->toMatchArray(['year' => 2026, 'month' => 9, 'estimated' => false]);
 });
 
-it('reads a past month against its own last day, not today', function (): void {
+it('does not let a carnet bought in September pay for August', function (): void {
     $user = septemberRoster();
     $tier = AcademyFeeTier::factory()->for($user->academy)->create(['label' => 'Una volta', 'amount_cents' => 4000, 'lessons_per_week' => 1]);
     $late = Athlete::factory()->for($user->academy)->create(['fee_tier_id' => $tier->id, 'joined_at' => '2025-01-10']);
@@ -120,6 +122,68 @@ it('reads a past month against its own last day, not today', function (): void {
     // C's carnet was bought on 20 August and covers it.
     expect($august)->toMatchArray(['outstanding_count' => 3, 'outstanding_cents' => 5500 + 6500 + 4000])
         ->and($september)->toMatchArray(['outstanding_count' => 1, 'outstanding_cents' => 6500]);
+});
+
+/** Spends one entry of the carnet on each day, as the check-in would. */
+function spendOn(Carnet $carnet, array $days): void
+{
+    foreach ($days as $day) {
+        $presence = AttendanceRecord::factory()->create(['athlete_id' => $carnet->athlete_id, 'attended_on' => $day]);
+        CarnetEntry::factory()->for($carnet)->create(['attendance_record_id' => $presence->id]);
+    }
+}
+
+it('lets a carnet used up in June pay for April and May, read in September', function (): void {
+    CarbonImmutable::setTestNow(CarbonImmutable::create(2026, 9, 20));
+    $user = userWithAcademy();
+    $giulia = Athlete::factory()->for($user->academy)->create(['fee_override_cents' => 5000, 'joined_at' => '2025-01-10']);
+    $pack = Carnet::factory()->for($giulia)->create([
+        'total_entries' => 3,
+        'purchased_at' => '2026-04-01',
+        'valid_from' => '2026-04-01',
+        'expires_at' => '2026-12-31',
+    ]);
+    spendOn($pack, ['2026-04-10', '2026-05-10', '2026-06-10']);
+    Sanctum::actingAs($user);
+
+    $owed = fn (int $month): int => $this->getJson("/api/v1/stats/payments/summary?year=2026&month={$month}")
+        ->assertOk()->json('data.outstanding_count');
+
+    // Today's balance is nothing, and April, May and June were still paid:
+    // the balance that counts is the one the month began with (#1760).
+    expect([$owed(4), $owed(5), $owed(6), $owed(7)])->toBe([0, 0, 0, 1]);
+});
+
+it('owes a past month exactly as the arrears list does', function (): void {
+    $user = septemberRoster();
+    $academy = $user->academy;
+    // A one-month arrears window: August is the only month the list counts,
+    // so its rows are exactly who owes August.
+    $academy->update(['billing_from' => '2026-08-01']);
+    $athlete = fn (int $fee, string $joined = '2025-01-10'): Athlete => Athlete::factory()->for($academy)
+        ->create(['fee_override_cents' => $fee, 'joined_at' => $joined]);
+
+    // Spent out on 20 August: paid for August.
+    $spentInAugust = Carnet::factory()->for($athlete(4100))->create(['total_entries' => 1, 'purchased_at' => '2026-08-01', 'valid_from' => '2026-08-01', 'expires_at' => '2026-12-31']);
+    spendOn($spentInAugust, ['2026-08-20']);
+    // Spent out in July: nothing left for August.
+    $spentInJuly = Carnet::factory()->for($athlete(4200))->create(['total_entries' => 1, 'purchased_at' => '2026-07-01', 'valid_from' => '2026-07-01', 'expires_at' => '2026-12-31']);
+    spendOn($spentInJuly, ['2026-07-20']);
+    // Expired on 31 August: paid for August all the same.
+    Carnet::factory()->for($athlete(4300))->create(['purchased_at' => '2026-06-01', 'valid_from' => '2026-06-01', 'expires_at' => '2026-08-31']);
+    // A quarter from June covers August.
+    AthletePayment::factory()->for($athlete(4400))->state(['year' => 2026, 'month' => 6, 'period_months' => 3, 'amount_cents' => 13200])->create();
+    // Joined in September: on neither.
+    $athlete(4500, '2026-09-10');
+    Sanctum::actingAs($user);
+
+    $arrears = collect($this->getJson('/api/v1/stats/payments/arrears')->assertOk()->json('data'));
+    $august = $this->getJson('/api/v1/stats/payments/summary?year=2026&month=8')->assertOk()->json('data');
+
+    // A (paid September only), B, and the carnet spent out in July.
+    expect($arrears->pluck('first_unpaid')->unique()->all())->toBe(['2026-08'])
+        ->and($august['outstanding_count'])->toBe($arrears->count())->toBe(3)
+        ->and($august['outstanding_cents'])->toBe($arrears->sum('owed_cents'))->toBe(5500 + 6500 + 4200);
 });
 
 it('owes nothing for a month before someone joined, or before the academy kept its fees here', function (): void {

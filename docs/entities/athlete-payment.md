@@ -97,9 +97,9 @@ The endpoint does NOT split by payment status today — the schema currently has
 - **Population** — active, `Athlete::scopeExpectedToPay` (not the owner, a fee applies) and `scopeChargedMoreThanNothing` (it resolves above zero). An athlete on a zero `fee_override_cents` trains free and is on neither side of the rate. Only from `App\Support\BillingFloor` on (#1742): the later of the month they joined and the academy's `billing_from`.
 - **Expected** — Σ `MonthlyFee::forAthlete()` over the population: **one month's worth per athlete**, whatever `billing_period_months` says. An annual payer adds a twelfth of the year: the tile compares a month with a month.
 - **Collected** — the chart's own bucket for that month, from `CollectedByMonth`: a quarterly paid in September contributes only its September third, a carnet counts whole in its sale month, and money from anyone counts.
-- **Outstanding** — the population `Athlete::scopeOwing` returns for the month (no covering fee, no spendable carnet, #1722), and Σ their monthly fee.
+- **Outstanding** — the population with nothing paying for the month, and Σ their monthly fee. The current month asks `Athlete::scopeOwing` (no covering fee, no carnet spendable today, #1722); a month already over asks `Athlete::scopePaidDuring` (a carnet spendable on some day of it, at the balance the month began with, #1760) — the arrears list's rule and split, so a past month's outstanding is exactly who the list says was behind in it.
 - **Rate** — collected ÷ expected, by money not by heads; `null` when nothing is expected. It can exceed 1.
-- **`estimated`** — true for every month but the current one. There is no status or tier history on `athletes`, so a past month is read against today's roster; a carnet is judged spendable on the last day of that month, with the entries it has today.
+- **`estimated`** — true for every month but the current one. What paid for a past month is history, carnet balances included; who was expected to pay and how much is not. There is no status or tier history on `athletes`, so a past month is read against today's roster at today's fees — the same estimate the arrears list makes of its amounts.
 
 ## Resource-level derivation: `paid_current_month` and `payment_coverage`
 

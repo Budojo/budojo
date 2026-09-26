@@ -39,17 +39,25 @@ use Illuminate\Support\Collection;
  *   from `CollectedByMonth`: a fee spread over its period, a carnet whole in
  *   its sale month. Everything the academy took, including from athletes
  *   outside the population — the tile says what came in, not what was owed.
- * - **`outstanding_count` / `outstanding_cents`** — the population that
- *   `Athlete::scopeOwing` says owes the month (no covering fee, no spendable
- *   carnet, #1722), and Σ their monthly fee.
+ * - **`outstanding_count` / `outstanding_cents`** — the population with
+ *   nothing paying for the month, and Σ their monthly fee. For the current
+ *   month (and later) that is `Athlete::scopeOwing` — no covering fee, no
+ *   carnet spendable today (#1722), the roster's `?paid=no`. For a month
+ *   already over it is `Athlete::scopePaidDuring` — a carnet spendable on
+ *   some day of it, with the balance that month began with (#1760) — the same
+ *   rule and the same split as the arrears list, so a past month's
+ *   outstanding is exactly the athletes the list says were behind in it.
  * - **`collection_rate`** — `collected / expected`, money not heads (two
  *   athletes at €55 and €120 are not half the problem each), and null when
  *   nothing is expected rather than a division by zero.
- * - **`estimated`** — true for any month but the current one. There is no
- *   status history on `athletes` and no tier history, so a past month's
- *   population is today's roster. A carnet is judged spendable on the last
- *   day of a past month, with the entries it has today. The flag is in the
- *   payload because the screen has to say it out loud.
+ * - **`estimated`** — true for any month but the current one. What paid for
+ *   a past month is history (payments, carnets and their balance then), but
+ *   who was expected to pay, and how much, is not: there is no status or tier
+ *   history on `athletes`, so a past month is read against today's roster at
+ *   today's fees — someone who left in August is missing from August, and a
+ *   fee raised in September reprices it. The arrears list prices its months
+ *   the same way. The flag is in the payload because the screen has to say
+ *   it out loud.
  */
 class PaymentsSummaryAction
 {
@@ -67,14 +75,8 @@ class PaymentsSummaryAction
         $bucket = AthletePayment::monthIndex($year, $month);
         $current = AthletePayment::monthIndex($today->year, $today->month);
 
-        // What "spendable" is judged against: today for this month and later,
-        // the month's last day for a month already over.
-        $asOf = $bucket < $current
-            ? $today->setDate($year, $month, 1)->endOfMonth()->startOfDay()
-            : $today;
-
         $population = $this->population($academy, $bucket);
-        $owingIds = $this->query($academy)->owing($year, $month, $asOf)->pluck('id')->all();
+        $owingIds = $this->owingIds($academy, $year, $month, $bucket < $current);
         $owing = $population->filter(static fn (Athlete $athlete): bool => \in_array($athlete->id, $owingIds, true));
         $expected = $this->feesOf($population);
         $collected = $this->collected->from($academy, $bucket, $bucket)[$bucket];
@@ -110,6 +112,26 @@ class PaymentsSummaryAction
                 return $floor === null || $floor <= $bucket;
             })
             ->values();
+    }
+
+    /**
+     * Who nothing paid for. A month already over asks what paid for **some
+     * day of it** (`paidDuring`, the arrears list's rule); the current month
+     * asks what pays **today** (`owing`, the roster's chip). The same split
+     * `PaymentsArrearsAction` makes, which is what keeps the two agreeing.
+     *
+     * @return list<int>
+     */
+    private function owingIds(Academy $academy, int $year, int $month, bool $isPast): array
+    {
+        $query = $isPast
+            ? $this->query($academy)->whereNot(fn (Builder $q) => $q->paidDuring($year, $month))
+            : $this->query($academy)->owing($year, $month, CarbonImmutable::today());
+
+        /** @var list<int> $ids */
+        $ids = $query->pluck('id')->all();
+
+        return $ids;
     }
 
     /** @return Builder<Athlete> */

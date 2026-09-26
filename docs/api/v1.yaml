@@ -7011,18 +7011,22 @@ paths:
           spread across the months it pays for, a carnet whole in the month it
           was sold. Everything the academy took, from anyone.
         - **`outstanding_count` / `outstanding_cents`** — the population with
-          nothing covering the month: no fee whose period includes it and no
-          spendable carnet (the roster's `?paid=no`, #1722); the sum of their
-          monthly fee.
+          nothing paying for the month, and the sum of their monthly fee. For
+          the current month that is no fee whose period includes it and no
+          carnet spendable today (the roster's `?paid=no`, #1722). For a month
+          already over it is no such fee and no carnet spendable on **some day
+          of it**, with the balance that month began with (#1760): exactly the
+          athletes `GET /stats/payments/arrears` counts behind for that month.
         - **`collection_rate`** — `collected_cents / expected_cents`, money
           not heads, rounded to three decimals; **null** when nothing is
           expected. It can exceed 1: advance payments and carnets sold that
           month are collected in it.
-        - **`estimated`** — true for any month but the current one. There is
-          no status or tier history, so a past month is read against
-          **today's** roster, and a carnet is judged spendable on that
-          month's last day with the entries it has today. The SPA says so
-          beside the figures.
+        - **`estimated`** — true for any month but the current one. What
+          paid for a past month is history, carnet balances included; who
+          was expected to pay, and how much, is not. There is no status or
+          tier history, so a past month is read against **today's** roster at
+          **today's** fees: someone who left since is missing from it, and a
+          fee raised since reprices it. The SPA says so beside the figures.
       tags: [Stats]
       parameters:
         - in: query
