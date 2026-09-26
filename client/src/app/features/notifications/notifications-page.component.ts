@@ -96,6 +96,7 @@ export class NotificationsPageComponent implements OnInit {
   private undoTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly undoButton = viewChild<ElementRef<HTMLButtonElement>>('undoButton');
   private readonly injector = inject(Injector);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   /** Template helper — `kind` → { icon, tone } for the badge / tile. */
   protected readonly visualFor = notificationVisual;
@@ -126,6 +127,7 @@ export class NotificationsPageComponent implements OnInit {
 
   protected setView(view: 'inbox' | 'archived'): void {
     this.view.set(view);
+    this.undoFailed.set(false);
     if (view === 'archived') {
       this.loadArchived();
     }
@@ -186,14 +188,23 @@ export class NotificationsPageComponent implements OnInit {
     this.clearUndo();
     if (ids === null || ids.length === 0) return;
 
+    // "Annulla" takes itself away as it is pressed: focus goes to the first
+    // row it brought back, or to the tab if it could not.
     this.inbox
       .unarchiveMany(ids)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: () => this.inbox.load().pipe(takeUntilDestroyed(this.destroyRef)).subscribe(),
+        next: () =>
+          this.inbox
+            .load()
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe(() => this.focusAfterRender(`[data-cy="notification-${ids[0]}"]`)),
         // Said where the undo was, rather than failing without a word: the
         // rows are still under "Archiviate".
-        error: () => this.undoFailed.set(true),
+        error: () => {
+          this.undoFailed.set(true);
+          this.focusAfterRender('[data-cy="notifications-filter-inbox"]');
+        },
       });
   }
 
@@ -224,6 +235,14 @@ export class NotificationsPageComponent implements OnInit {
     const region = event.currentTarget as HTMLElement | null;
     if (region?.contains(event.relatedTarget as Node | null)) return;
     if (this.justArchived() !== null) this.startUndoTimer();
+  }
+
+  private focusAfterRender(selector: string): void {
+    runInInjectionContext(this.injector, () =>
+      afterNextRender(() =>
+        (this.host.nativeElement.querySelector(selector) as HTMLElement | null)?.focus(),
+      ),
+    );
   }
 
   private startUndoTimer(): void {

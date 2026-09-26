@@ -140,6 +140,14 @@ describe('NotificationsPageComponent (#1129)', () => {
     expect(el.querySelector('[data-cy="notifications-undo-failed"]')?.textContent).toContain(
       'Could not undo',
     );
+
+    // And it does not follow the owner to the other tab.
+    (el.querySelector('[data-cy="notifications-filter-archived"]') as HTMLButtonElement).click();
+    http
+      .expectOne((r) => r.url === BASE && r.params.get('archived') === '1')
+      .flush({ data: [], meta: { unread_count: 0 } });
+    fixture.detectChanges();
+    expect(el.querySelector('[data-cy="notifications-undo-failed"]')).toBeNull();
   });
 
   it('names the archive button by the notification it archives', () => {
@@ -166,6 +174,21 @@ describe('NotificationsPageComponent (#1129)', () => {
 
     expect(el.querySelector('[data-cy="notification-a"]')).not.toBeNull();
     expect(el.querySelector('[data-cy="notifications-undo"]')).toBeNull();
+  });
+
+  it('puts focus on the row "Undo" brought back', async () => {
+    const { el, fixture, http } = setup([notif({ id: 'a', read_at: new Date().toISOString() })]);
+    (el.querySelector('[data-cy="notification-archive-a"]') as HTMLButtonElement).click();
+    http.expectOne(`${BASE}/a/archive`).flush({ data: { id: 'a', archived_at: 'x' } });
+    fixture.detectChanges();
+
+    (el.querySelector('[data-cy="notifications-undo-action"]') as HTMLButtonElement).click();
+    http.expectOne(`${BASE}/unarchive`).flush({ data: { unarchived: 1 } });
+    http.expectOne(BASE).flush({ data: [notif({ id: 'a' })], meta: { unread_count: 1 } });
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(document.activeElement).toBe(el.querySelector('[data-cy="notification-a"]'));
   });
 
   it('archives the read ones in one go, and leaves the unread', () => {
