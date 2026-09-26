@@ -17,7 +17,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * register (#1431). The transition a row describes — `kind`, the
  * belt/stripe from-to pair, and who recorded it — is immutable once
  * created; only `recorded_at` can be corrected afterwards
- * (`UpdateAthletePromotionRecordedAtAction`), and a row entered by
+ * (`UpdateAthletePromotionRecordedAtAction`) — plus, on a starting row
+ * alone, the `from_belt` it never recorded (`CompleteOpeningPromotionAction`,
+ * #1966) — and a row entered by
  * mistake can be hard-deleted (`DeleteAthletePromotionAction`). Never
  * updated or removed by anything that also touches `Athlete::$belt` /
  * `Athlete::$stripes` — the audit trail and the athlete's current

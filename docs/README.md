@@ -18,6 +18,7 @@ docs/
 │   ├── athlete.md
 │   ├── athlete-payment.md
 │   ├── athlete-promotion.md           # belt + stripe history audit log (v2.10.0, #654)
+│   ├── athlete-promotion-skip.md      # a step the owner said was never taken — "Saltato" on a ghost row (#1966)
 │   ├── address.md                     # polymorphic, owned by Academy + Athlete (#72)
 │   ├── document.md
 │   ├── achievement.md                 # lifetime milestone unlocks (#961, v2.30.0)

@@ -48,6 +48,10 @@ class AthletePromotionResource extends JsonResource
             // back to the athlete — the athlete's current belt may
             // have changed since.
             'belt_at_event' => $promotion->belt_at_event->value,
+            // A belt row with no belt before it: the row a timeline opens
+            // with (#1771), dated the day the athlete was entered — which
+            // the ghost rows (#1966) offer to complete with the real day.
+            'is_opening' => $promotion->kind === 'belt' && $promotion->from_belt === null,
             'recorded_at' => $promotion->recorded_at->toIso8601String(),
             'recorded_by' => $recordedBy !== null ? [
                 'id' => $recordedBy->id,
