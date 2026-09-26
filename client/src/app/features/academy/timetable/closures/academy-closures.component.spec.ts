@@ -1,6 +1,8 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { DatePicker } from 'primeng/datepicker';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { AcademyClosure } from '../../../../core/services/academy.service';
@@ -160,6 +162,16 @@ describe('AcademyClosuresComponent (#1766)', () => {
     });
     req.flush({ data: { ...SUMMER, ends_on: '2026-08-30' } });
     flushAcademy(httpMock, [{ ...SUMMER, ends_on: '2026-08-30' }]);
+  });
+
+  it("opens the last-day calendar on the first day's month, not today's", () => {
+    const { component, fixture } = setup([SUMMER]);
+    component['startEditing'](SUMMER);
+    fixture.detectChanges();
+
+    const to = fixture.debugElement.query(By.css('[data-cy="closures-form-to"]'))
+      .componentInstance as DatePicker;
+    expect(to.defaultDate).toEqual(new Date(2026, 7, 10));
   });
 
   it('removes a closure once the confirm is accepted', () => {

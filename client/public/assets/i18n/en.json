@@ -1706,7 +1706,8 @@
         "toast": {
           "saved": "Closure saved",
           "removed": "Closure removed",
-          "error": "Couldn't save the closure. Try again."
+          "error": "Couldn't save the closure. Try again.",
+          "removeError": "Couldn't remove the closure. Try again."
         }
       }
     },

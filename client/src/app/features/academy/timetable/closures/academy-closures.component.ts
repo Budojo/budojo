@@ -204,7 +204,7 @@ export class AcademyClosuresComponent {
           this.refreshAcademy();
           this.toast('success', 'academy.timetable.closures.toast.removed');
         },
-        error: () => this.toast('error', 'academy.timetable.closures.toast.error'),
+        error: () => this.toast('error', 'academy.timetable.closures.toast.removeError'),
       });
   }
 

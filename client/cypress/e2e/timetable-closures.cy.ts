@@ -85,7 +85,7 @@ describe('Timetable closures', () => {
     cy.get('[data-cy="closures-row-1"]').should('contain.text', 'Chiusura estiva');
   });
 
-  it('refuses a last day before the first, saying why', () => {
+  it('asks for both dates before saving, and sends nothing', () => {
     cy.intercept('GET', '/api/v1/academy', academy([]));
     cy.visitAuthenticated('/dashboard/academy/timetable');
 

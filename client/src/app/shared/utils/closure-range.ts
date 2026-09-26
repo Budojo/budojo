@@ -31,10 +31,17 @@ export function formatClosureRange(
   return `${start.getDate()}–${full.format(end)}`;
 }
 
-/** Whole days in a closure, both ends counted. */
+/**
+ * Whole days in a closure, both ends counted. Counted on UTC calendar days, so
+ * a clock change inside the range cannot make a day 23 or 25 hours long.
+ */
 export function closureDayCount(closure: Pick<AcademyClosure, 'starts_on' | 'ends_on'>): number {
-  const ms = fromIso(closure.ends_on).getTime() - fromIso(closure.starts_on).getTime();
-  return Math.round(ms / 86_400_000) + 1;
+  return (utcDay(closure.ends_on) - utcDay(closure.starts_on)) / 86_400_000 + 1;
+}
+
+function utcDay(iso: string): number {
+  const [y, m, d] = iso.split('-').map(Number);
+  return Date.UTC(y, m - 1, d);
 }
 
 /** `YYYY-MM-DD` as local midnight: the calendar day, not a UTC instant. */

@@ -26,7 +26,7 @@ describe('formatClosureRange (#1766)', () => {
 });
 
 describe('closureDayCount', () => {
-  it('counts both ends, across a clock change', () => {
+  it('counts both ends, a clock change inside the range included', () => {
     expect(closureDayCount({ starts_on: '2026-08-15', ends_on: '2026-08-15' })).toBe(1);
     expect(closureDayCount({ starts_on: '2026-08-10', ends_on: '2026-08-25' })).toBe(16);
     // Italy leaves summer time on 25 October 2026.

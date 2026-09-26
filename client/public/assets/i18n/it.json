@@ -1706,7 +1706,8 @@
         "toast": {
           "saved": "Chiusura salvata",
           "removed": "Chiusura eliminata",
-          "error": "Impossibile salvare la chiusura. Riprova."
+          "error": "Impossibile salvare la chiusura. Riprova.",
+          "removeError": "Impossibile eliminare la chiusura. Riprova."
         }
       }
     },

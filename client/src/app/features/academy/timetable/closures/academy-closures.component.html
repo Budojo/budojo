@@ -95,6 +95,7 @@
           formControlName="ends_on"
           [dateFormat]="datePickerFormat()"
           [minDate]="form.controls.starts_on.value"
+          [defaultDate]="form.controls.starts_on.value"
           appendTo="body"
           [showIcon]="true"
           [fluid]="true"
