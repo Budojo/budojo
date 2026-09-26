@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Models\Athlete;
 use App\Models\Carnet;
 use App\Support\CarnetCode;
+use App\Support\OperatorDay;
 
 // helpers live in tests/Pest.php
 
@@ -96,10 +97,11 @@ it('ignores a code, price or size supplied by the client', function (): void {
 });
 
 it('defaults the purchase date to today', function (): void {
+    // The owner's today (#1963), which UTC's is not between 22:00 and 24:00.
     $this->actingAs($this->user)
         ->postJson("/api/v1/athletes/{$this->athlete->id}/carnets")
         ->assertCreated()
-        ->assertJsonPath('data.purchased_at', now()->toDateString());
+        ->assertJsonPath('data.purchased_at', OperatorDay::today()->toDateString());
 });
 
 it('accepts a back-dated purchase so the paper register can be transcribed', function (): void {
@@ -131,7 +133,7 @@ it('rejects an ambiguous or non-ISO purchase date', function (): void {
 it('rejects a purchase dated in the future', function (): void {
     $this->actingAs($this->user)
         ->postJson("/api/v1/athletes/{$this->athlete->id}/carnets", [
-            'purchased_at' => now()->addDay()->toDateString(),
+            'purchased_at' => OperatorDay::today()->addDay()->toDateString(),
         ])
         ->assertUnprocessable()
         ->assertJsonValidationErrors(['purchased_at']);

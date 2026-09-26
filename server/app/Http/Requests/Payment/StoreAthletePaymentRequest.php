@@ -9,6 +9,7 @@ use App\Enums\BillingPeriod;
 use App\Enums\PaymentMethod;
 use App\Http\Requests\Concerns\AuthorizesAcademyCapability;
 use App\Models\Athlete;
+use App\Support\OperatorDay;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Validation\Rule;
@@ -57,7 +58,7 @@ class StoreAthletePaymentRequest extends FormRequest
             // because the bare rule reads `03/10/2026` as one of two days and
             // lets a zoned datetime land on the neighbouring one. Left out,
             // it is today.
-            'paid_at' => ['sometimes', 'nullable', 'date_format:Y-m-d', 'before_or_equal:today'],
+            'paid_at' => ['sometimes', 'nullable', 'date_format:Y-m-d', OperatorDay::notAfterToday()],
             // How it was paid. Optional forever: null is "not recorded".
             'payment_method' => ['sometimes', 'nullable', Rule::enum(PaymentMethod::class)],
         ];

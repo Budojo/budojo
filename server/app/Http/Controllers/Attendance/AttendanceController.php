@@ -26,6 +26,7 @@ use App\Models\Athlete;
 use App\Models\AttendanceRecord;
 use App\Models\User;
 use App\Support\AttendanceSummaryCache;
+use App\Support\OperatorDay;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -56,7 +57,7 @@ class AttendanceController extends Controller
             return response()->json(['message' => 'Forbidden.'], 403);
         }
 
-        $dateInput = (string) $request->query('date', now()->toDateString());
+        $dateInput = (string) $request->query('date', OperatorDay::today()->toDateString());
 
         // Strict parse: malformed `?date=` must 422, not silently fall
         // back to today. CarbonImmutable::createFromFormat returns

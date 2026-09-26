@@ -7,6 +7,7 @@ namespace App\Http\Requests\Promotion;
 use App\Authorization\Capability;
 use App\Http\Requests\Concerns\AuthorizesAcademyCapability;
 use App\Models\Athlete;
+use App\Support\OperatorDay;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
@@ -40,7 +41,7 @@ class UpdateAthletePromotionRequest extends FormRequest
             // itself and aren't in scope for a date correction. Date-only,
             // matching the timeline's display precision (`mediumDate`) — a
             // promotion can't be recorded ahead of today.
-            'recorded_at' => ['required', 'date_format:Y-m-d', 'before_or_equal:today'],
+            'recorded_at' => ['required', 'date_format:Y-m-d', OperatorDay::notAfterToday()],
         ];
     }
 
