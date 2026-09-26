@@ -298,6 +298,14 @@ export const routes: Routes = [
           ),
       },
       {
+        // Who to promote? (#1841) — before `athletes/:id`, like the import.
+        path: 'athletes/ready',
+        loadComponent: () =>
+          import('./features/athletes/ready/promotion-candidates.component').then(
+            (m) => m.PromotionCandidatesComponent,
+          ),
+      },
+      {
         path: 'athletes/new',
         loadComponent: () =>
           import('./features/athletes/form/athlete-form.component').then(

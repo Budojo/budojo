@@ -1241,6 +1241,11 @@ export class AthletesListComponent implements OnInit {
     void this.router.navigate(['/dashboard/athletes/import']);
   }
 
+  /** Who to promote? (#1841) */
+  goToReady(): void {
+    void this.router.navigate(['/dashboard/athletes/ready']);
+  }
+
   goToEdit(athlete: Athlete): void {
     void this.router.navigate(['/dashboard/athletes', athlete.id, 'edit']);
   }

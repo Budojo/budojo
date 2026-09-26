@@ -690,6 +690,19 @@ export class AthleteService {
   deletePromotion(athleteId: number, promotionId: number): Observable<void> {
     return this.http.delete<void>(`${this.base}/${athleteId}/promotions/${promotionId}`);
   }
+
+  /**
+   * The athletes who may be ready for their next step (#1841): every active
+   * athlete, longest since their last promotion first. Facts only; the server
+   * sends no score, and the page adds none.
+   */
+  promotionCandidates(): Observable<PromotionCandidate[]> {
+    return this.http
+      .get<{
+        data: PromotionCandidate[];
+      }>(`${environment.apiBase}/api/v1/promotions/candidates`)
+      .pipe(map((res) => res.data));
+  }
 }
 
 export interface AthletePromotion {
@@ -726,6 +739,29 @@ export interface AthletePromotionPage {
  * never a fallback to the joining date. A stripe older than the current belt
  * is not "the last stripe", so `stripe_since` is null then too (#1772).
  */
+/** The step after an athlete's current belt and stripes, as the academy's ladder counts it. */
+export interface NextStep {
+  readonly kind: 'stripe' | 'belt';
+  readonly belt: Belt;
+  readonly stripes: number;
+}
+
+/**
+ * One row of the "ready for the next step" list (#1841). The dates and counts
+ * are null when the athlete has no belt row; `next` is null at the top of the
+ * ladder. Wire shape: `PromotionCandidate` in docs/api/v1.yaml.
+ */
+export interface PromotionCandidate {
+  readonly athlete: AthleteIdentity;
+  readonly belt_since: string | null;
+  readonly months_at_belt: number | null;
+  readonly stripe_since: string | null;
+  readonly last_promoted_on: string | null;
+  readonly days_since_last_promotion: number | null;
+  readonly sessions_since_last_promotion: number | null;
+  readonly next: NextStep | null;
+}
+
 export interface AthleteProgression {
   /** The athlete's current belt and stripes, to word a dan or a poom and to
    *  tell "no stripe" from stripes with no dated row. */

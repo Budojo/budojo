@@ -2783,6 +2783,32 @@
         "itemsOne": "{{count}} technique in the programme up to this belt",
         "itemsOther": "{{count}} techniques in the programme up to this belt"
       }
+    },
+    "ready": {
+      "title": "Who to promote?",
+      "openButton": "Who to promote?",
+      "subtitle": "Everyone on the mat, longest since their last promotion first. The facts are here; the call is yours.",
+      "back": "Back to athletes",
+      "countOne": "{{count}} athlete",
+      "countOther": "{{count}} athletes",
+      "monthsOnBeltOne": "{{count}} month on this belt",
+      "monthsOnBeltOther": "{{count}} months on this belt",
+      "underAMonthOnBelt": "Under a month on this belt",
+      "lastStripe": "Last stripe on {{date}}",
+      "gradeSince": "{{grade}} since {{date}}",
+      "onBeltSince": "On this belt since {{date}}",
+      "sessionsSinceOne": "{{count}} session since",
+      "sessionsSinceOther": "{{count}} sessions since",
+      "noBeltRow": "No belt recorded yet",
+      "next": "Next",
+      "nextStripe": "stripe {{n}}",
+      "topOfLadder": "Top of the ladder",
+      "empty": {
+        "title": "Nobody on the mat yet",
+        "hint": "Active athletes appear here with the time since their last promotion."
+      },
+      "error": "The list could not be loaded.",
+      "retry": "Try again"
     }
   },
   "month": {
