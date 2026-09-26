@@ -468,11 +468,12 @@ const SYLLABUS_COVERAGE = {
     },
     { id: 2, name: 'Mount', kind: 'both', in_scope: 1, covered: 0, thin: 0, missing: 1, worked: 0 },
   ],
-  missing: [{ id: 21, name: 'Americana', parent_name: 'Mount', kind: 'both' }],
+  missing: [{ id: 21, name: 'Americana', parent_id: 2, parent_name: 'Mount', kind: 'both' }],
   taught: [
     {
       id: 11,
       name: 'Armbar',
+      parent_id: 1,
       parent_name: 'Closed guard',
       kind: 'both',
       lessons: 2,
@@ -484,6 +485,7 @@ const SYLLABUS_COVERAGE = {
     {
       id: 12,
       name: 'Triangle',
+      parent_id: 1,
       parent_name: 'Closed guard',
       kind: 'both',
       lessons: 1,
@@ -492,11 +494,6 @@ const SYLLABUS_COVERAGE = {
       attendances: 3,
       state: 'thin',
     },
-  ],
-  timeline: [
-    { on: '2026-04-05', covered: 0 },
-    { on: '2026-04-12', covered: 0 },
-    { on: '2026-04-19', covered: 1 },
   ],
 };
 
