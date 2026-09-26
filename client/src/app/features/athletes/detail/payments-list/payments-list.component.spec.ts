@@ -360,7 +360,9 @@ describe('PaymentsListComponent (#182 Surface 2)', () => {
     expect(markSpy).toHaveBeenCalledTimes(1);
     // February of a 2026/27 season is February 2027, and the write has to
     // carry that rather than the season's own year (#1709).
-    expect(markSpy.mock.calls[0]).toEqual([42, 2027, 2]);
+    // No period override, and an empty receipt: nothing was said about the
+    // transaction, so the server dates it today and records no method (#1761).
+    expect(markSpy.mock.calls[0]).toEqual([42, 2027, 2, undefined, {}]);
     // After success the table reloads. Two requests per load, one per
     // calendar year the season spans — so init + reload is four.
     expect(listSpy).toHaveBeenCalledTimes(4);
@@ -610,6 +612,34 @@ describe('PaymentsListComponent — the 422 that is not about the fee (#1382)', 
     expect(toastDetailFor({ monthly_fee_cents: ['missing'] })).toContain('monthly fee');
   });
 
+  it('keeps the oldest answer for a 422 that names no field', () => {
+    // The fallback branch: no field at all is the missing-fee reply as it
+    // was first shaped, not "something you entered wasn't accepted".
+    expect(toastDetailFor({})).toContain('monthly fee');
+  });
+
+  it('says a year is out of range, not that no fee is configured', () => {
+    expect(toastDetailFor({ year: ['x'] })).toContain('outside the range');
+  });
+
+  it('blames the date when the date was refused, not the fee (#1761)', () => {
+    // The academy has a fee; "set a monthly fee first" would send the owner
+    // to a setting that is already right.
+    const detail = toastDetailFor({
+      paid_at: ['The paid at field must be a date before or equal to today.'],
+    });
+
+    expect(detail).toContain('later than today');
+    expect(detail).not.toContain('monthly fee');
+  });
+
+  it('says what it knows for a field it has no sentence for, and never blames the fee', () => {
+    const detail = toastDetailFor({ payment_method: ['The selected payment method is invalid.'] });
+
+    expect(detail).toContain("wasn't accepted");
+    expect(detail).not.toContain('monthly fee');
+  });
+
   // ─── A way to another year (#1636, PAY-1) ────────────────────────────────
 
   // Frozen in FEBRUARY 2027 on purpose, and consistent with the fixture's
@@ -799,10 +829,10 @@ describe('PaymentsListComponent — the 422 that is not about the fee (#1382)', 
     expect(february.year).toBe(2027);
 
     component['applyToggle'](february.year, february.month, true);
-    expect(svc.markPaid).toHaveBeenCalledWith(42, 2027, 2);
+    expect(svc.markPaid).toHaveBeenCalledWith(42, 2027, 2, undefined, {});
 
     component['applyToggle'](october.year, october.month, true);
-    expect(svc.markPaid).toHaveBeenLastCalledWith(42, 2026, 10);
+    expect(svc.markPaid).toHaveBeenLastCalledWith(42, 2026, 10, undefined, {});
   });
 
   it('does not leave a year on the heading that the rows are not from', () => {
@@ -956,5 +986,126 @@ describe('PaymentsListComponent — the ledger stops asserting a debt it cannot 
 
     expect(component['seasonLabel']()).toBe('2023/24');
     expect(component['canGoPrev']()).toBe(false);
+  });
+});
+
+describe('PaymentsListComponent — when the money arrived, and how (#1761)', () => {
+  /** Captures what the component asks the popup for, without opening one. */
+  function captureConfirm(fixture: ReturnType<typeof setup>['fixture']) {
+    const confirmService = fixture.componentRef.injector.get(ConfirmationService);
+    const asked: { key?: string; accept: () => void }[] = [];
+    confirmService.confirm = vi.fn((cfg: { key?: string; accept: () => void }) => {
+      asked.push(cfg);
+      return confirmService;
+    }) as never;
+    return asked;
+  }
+
+  function click(): MouseEvent {
+    const event = new MouseEvent('click');
+    Object.defineProperty(event, 'currentTarget', { value: document.createElement('button') });
+    return event;
+  }
+
+  it('asks for the date and the method only when marking, not when unmarking', () => {
+    const paid: AthletePayment = {
+      id: 1,
+      athlete_id: 42,
+      year: 2027,
+      month: 1,
+      amount_cents: 9500,
+      paid_at: '2027-01-15T00:00:00+00:00',
+    };
+    const { fixture, component } = setup({ payments: [paid] });
+    const asked = captureConfirm(fixture);
+    const rows = component['monthRows']();
+
+    component.confirmToggleRow(
+      click(),
+      rows.find((r: { month: number }) => r.month === 2)!,
+    );
+    component.confirmToggleRow(
+      click(),
+      rows.find((r: { month: number }) => r.month === 1)!,
+    );
+
+    // The keyed popup is the one with the fields; undoing money needs none.
+    expect(asked.map((a) => a.key)).toEqual(['mark-paid', undefined]);
+  });
+
+  it('sends the day the money arrived and how it was paid', () => {
+    const { fixture, component } = setup();
+    const asked = captureConfirm(fixture);
+    const svc = TestBed.inject(PaymentService) as unknown as { markPaid: Mock };
+    const february = component['monthRows']().find((r: { month: number }) => r.month === 2)!;
+
+    component.confirmToggleRow(click(), february);
+    // February paid in advance, by transfer, on 20 September.
+    component['markPaidForm'].setValue({
+      paid_at: new Date(2026, 8, 20),
+      payment_method: 'transfer',
+    });
+    asked[0].accept();
+
+    // The owner's calendar day, as the day it is — never a UTC instant a
+    // timezone could move back to the 19th. February stays the month paid for.
+    expect(svc.markPaid).toHaveBeenCalledWith(42, 2027, 2, undefined, {
+      paidAt: '2026-09-20',
+      method: 'transfer',
+    });
+  });
+
+  it('opens empty every time, so a date picked for one month never lands on the next', () => {
+    const { fixture, component } = setup();
+    captureConfirm(fixture);
+    const rows = component['monthRows']();
+
+    component.confirmToggleRow(
+      click(),
+      rows.find((r: { month: number }) => r.month === 2)!,
+    );
+    component['markPaidForm'].setValue({ paid_at: new Date(2026, 8, 20), payment_method: 'cash' });
+    // The owner walks away, then opens March.
+    component.confirmToggleRow(
+      click(),
+      rows.find((r: { month: number }) => r.month === 3)!,
+    );
+
+    expect(component['markPaidForm'].getRawValue()).toEqual({
+      paid_at: null,
+      payment_method: null,
+    });
+  });
+
+  it('shows how a payment was paid under its date, and nothing when nobody said', () => {
+    const { fixture } = setup({
+      payments: [
+        {
+          id: 1,
+          athlete_id: 42,
+          year: 2027,
+          month: 1,
+          amount_cents: 9500,
+          paid_at: '2027-01-15T00:00:00+00:00',
+          payment_method: 'transfer',
+        },
+        {
+          id: 2,
+          athlete_id: 42,
+          year: 2027,
+          month: 2,
+          amount_cents: 9500,
+          paid_at: '2027-02-10T00:00:00+00:00',
+          payment_method: null,
+        },
+      ],
+    });
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+
+    expect(root.querySelector('[data-cy="payment-method-1"]')?.textContent?.trim()).toBe(
+      'Bank transfer',
+    );
+    expect(root.querySelector('[data-cy="payment-method-2"]')).toBeNull();
   });
 });

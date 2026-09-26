@@ -31,6 +31,8 @@ class CarnetResource extends JsonResource
             // what the carnet pays for (#1380) — the two differ whenever the
             // owner dates a carnet to cover a period already on the register.
             'purchased_at' => $carnet->purchased_at->toDateString(),
+            // How it was paid (#1761); null is "not recorded".
+            'payment_method' => $carnet->payment_method?->value,
             'valid_from' => $carnet->valid_from->toDateString(),
             'expires_at' => $carnet->expires_at->toDateString(),
             // Spendable *today* — the read-side view. Consumption asks the

@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Http\Requests\Carnet;
 
 use App\Authorization\Capability;
+use App\Enums\PaymentMethod;
 use App\Http\Requests\Concerns\AuthorizesAcademyCapability;
 use App\Models\Athlete;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Validation\Rule;
 
 class StoreCarnetRequest extends FormRequest
 {
@@ -55,6 +57,8 @@ class StoreCarnetRequest extends FormRequest
             // a future start is refused for the same reason a future sale is —
             // validity runs from a day that has happened.
             'valid_from' => ['sometimes', 'nullable', 'date_format:Y-m-d', 'before_or_equal:today'],
+            // How it was paid (#1761). Optional forever: null is "not recorded".
+            'payment_method' => ['sometimes', 'nullable', Rule::enum(PaymentMethod::class)],
         ];
     }
 

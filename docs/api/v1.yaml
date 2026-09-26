@@ -6857,7 +6857,8 @@ paths:
         bucket contains the total `amount_cents` for that business month.
         Bucketing uses the business months on `athlete_payments` — NOT
         `paid_at` — so the figures reflect the fee period the payment covers,
-        not the wall-clock recording time.
+        not the day the money arrived (#1761): September's fee paid on
+        3 October is September revenue.
 
         **So the response can be longer than `months`.** A quarterly bought
         this month puts two buckets to the right of today. The window used to
@@ -10975,6 +10976,29 @@ components:
         paid_at:
           type: string
           format: date-time
+          description: |
+            When the money arrived (#1761). A business date the owner may set
+            (September's fee handed over on 3 October), stored as the start of
+            that day, UTC. When none is sent — and on every row before #1761 —
+            it is the moment the payment was recorded. Read it as a date, not a
+            time. It is the transaction's date,
+            **never** the month the revenue belongs to: that is `year` /
+            `month` / `period_months`, and `GET /stats/payments/monthly`
+            buckets by them.
+        payment_method:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/PaymentMethod'
+          description: How it was paid (#1761). Null is "not recorded".
+
+    PaymentMethod:
+      type: string
+      enum: [cash, transfer, pos, other]
+      description: |
+        How a fee or a carnet was paid (#1761), the `App\Enums\PaymentMethod`
+        PHP enum: `cash`, a bank `transfer`, a card through the gym's `pos`
+        terminal, or `other`. Four cases and no free text. Always optional —
+        null on a row means "not recorded", never a guess.
 
     AthletePaymentCreateRequest:
       type: object
@@ -10999,6 +11023,22 @@ components:
             until someone changes it. A period that shares a month with one
             already recorded is refused with a 422 on this field.
           example: 3
+        paid_at:
+          type: string
+          format: date
+          nullable: true
+          description: |
+            The day the money arrived (#1761), `Y-m-d`. Today when omitted or
+            null; a future date, or anything that is not exactly `Y-m-d`, is
+            refused with a 422. It does not move the revenue: the payment still
+            belongs to the months it covers. On an idempotent re-post the row
+            keeps its **first** date.
+          example: '2026-10-03'
+        payment_method:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/PaymentMethod'
+          description: How it was paid. Optional; an unknown value is a 422.
 
     Carnet:
       type: object
@@ -11040,6 +11080,11 @@ components:
           type: string
           format: date
           description: When money changed hands.
+        payment_method:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/PaymentMethod'
+          description: How the sale was paid (#1761). Null is "not recorded".
         valid_from:
           type: string
           format: date
@@ -11101,6 +11146,11 @@ components:
             Where the carnet starts covering sessions. Defaults to the sale.
             Set it earlier to count training already on the register — those
             sessions are charged immediately. A future date is rejected.
+        payment_method:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/PaymentMethod'
+          description: How the sale was paid (#1761). Optional; an unknown value is a 422.
 
     CarnetValidityUpdateRequest:
       type: object

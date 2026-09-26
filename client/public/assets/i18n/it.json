@@ -2307,7 +2307,9 @@
           "errorGeneric": "Impossibile aggiornare il pagamento. Riprova.",
           "loadErrorDetail": "Impossibile caricare i pagamenti.",
           "errorOverlap": "Quel mese è già coperto da un altro pagamento.",
-          "errorYear": "Quell’anno è fuori dall’intervallo in cui si possono registrare pagamenti."
+          "errorYear": "Quell’anno è fuori dall’intervallo in cui si possono registrare pagamenti.",
+          "errorPaidOn": "La data del pagamento non può essere dopo oggi.",
+          "errorInvalid": "Qualcosa di quanto inserito non è stato accettato. Controlla e riprova."
         },
         "title": "Pagamenti — {{year}}",
         "noFeeHint": "Imposta una quota mensile sull'accademia per iniziare a registrare i pagamenti. Fino ad allora questa pagina rimane di sola lettura.",
@@ -2335,7 +2337,9 @@
         "beforeBillingFloor": "Prima che questa accademia iniziasse a registrare le quote su Budojo",
         "trainsFree": "Si allena gratis",
         "trainsFreeHint": "Si allena gratis · nessuna quota da pagare.",
-        "feeOverrideHint": "Quota personale · {{amount}} al mese."
+        "feeOverrideHint": "Quota personale · {{amount}} al mese.",
+        "paidOnLabel": "Pagato il",
+        "paidOnHint": "Vuoto vale oggi. Il pagamento resta dei mesi che copre."
       },
       "documents": {
         "confirm": {
@@ -2517,7 +2521,8 @@
           "confirm": "Vendi carnet",
           "cancel": "Annulla",
           "validFrom": "Copre gli allenamenti da",
-          "validFromHint": "Lascia vuoto per partire dalla data di acquisto. Anticipala per conteggiare allenamenti già registrati."
+          "validFromHint": "Lascia vuoto per partire dalla data di acquisto. Anticipala per conteggiare allenamenti già registrati.",
+          "methodLabel": "Pagato con"
         },
         "toast": {
           "soldSummary": "Carnet venduto",
@@ -3483,5 +3488,15 @@
     "judo": "Judo",
     "karate": "Karate",
     "taekwondo": "Taekwondo"
+  },
+  "payments": {
+    "method": {
+      "label": "Pagato con",
+      "none": "Non indicato",
+      "cash": "Contanti",
+      "transfer": "Bonifico",
+      "pos": "Carta",
+      "other": "Altro"
+    }
   }
 }

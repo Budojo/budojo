@@ -16,6 +16,7 @@ A carnet row is the **fact of a sale**. It is never edited and never deleted thr
 | `total_entries` | unsigned tinyint | not null | Snapshot of `academies.carnet_entries` at sale. Resizing the offering later does NOT resize carnets already sold |
 | `price_cents` | unsigned int | not null | Snapshot of `academies.carnet_price_cents` at sale. Raising the price later does NOT rewrite sold carnets |
 | `purchased_at` | date | not null | Business date of the **sale** — when money changed hands. Back-dateable; never post-dated |
+| `payment_method` | string(16) | nullable | How the sale was paid (#1761): `cash`, `transfer`, `pos` or `other` — the same [`PaymentMethod`](./athlete-payment.md#paymentmethod) a fee carries. **Null is "not recorded"**: every carnet sold before #1761 is null and stays null, and the field is optional |
 | `valid_from` | date | not null | When the carnet starts **covering sessions** (#1380). Defaults to the sale, editable afterwards, and may precede it: a carnet dated to cover March pays for training already on the register for March |
 | `expires_at` | date | not null | `valid_from` + 12 months, recomputed whenever `valid_from` moves |
 | `created_at` | timestamp | nullable | Standard Eloquent timestamp |
@@ -74,7 +75,7 @@ Scope of uniqueness is the whole table, not per academy: a Budojo install is nor
 ## Related endpoints
 
 - `GET /api/v1/athletes/{athlete}/carnets` — list the athlete's carnets, newest purchase first, each with `remaining_entries`
-- `POST /api/v1/athletes/{athlete}/carnets` — sell one (body: optional `{purchased_at, valid_from}`); returns 201
+- `POST /api/v1/athletes/{athlete}/carnets` — sell one (body: optional `{purchased_at, valid_from, payment_method}`); returns 201
 - `PATCH /api/v1/athletes/{athlete}/carnets/{carnet}` — move `valid_from` (and with it the expiry and the ledger)
 - `DELETE /api/v1/athletes/{athlete}/carnets/{carnet}` — undo a mis-sale; 204
 

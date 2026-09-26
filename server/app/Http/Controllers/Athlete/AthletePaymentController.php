@@ -8,12 +8,14 @@ use App\Actions\Payment\DeleteAthletePaymentAction;
 use App\Actions\Payment\ListAthletePaymentsAction;
 use App\Actions\Payment\RecordAthletePaymentAction;
 use App\Enums\BillingPeriod;
+use App\Enums\PaymentMethod;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Payment\StoreAthletePaymentRequest;
 use App\Http\Resources\AthletePaymentResource;
 use App\Models\Athlete;
 use App\Models\User;
 use App\Support\MonthlyFee;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -81,6 +83,8 @@ class AthletePaymentController extends Controller
             month: $request->integer('month'),
             amountCents: $amountCents * $period->value,
             period: $period,
+            paidAt: CarbonImmutable::make($request->date('paid_at', 'Y-m-d')),
+            method: $request->enum('payment_method', PaymentMethod::class),
         );
 
         return response()->json(['data' => new AthletePaymentResource($payment)], 201);

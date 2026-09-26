@@ -65,6 +65,52 @@
   </header>
 
   <p-confirmpopup />
+  <!--
+    Marking a month paid has a popup of its own (#1761): the question, then
+    the day the money arrived and how. Both optional, both empty on open, so
+    "Segna pagato" is still two taps. The pickers keep the default overlay
+    placement ('self'): appended to the body they would sit outside the popup,
+    and a click on a date would read as a click outside and close it.
+  -->
+  <p-confirmpopup key="mark-paid">
+    <ng-template #content let-confirmation>
+      <div class="mark-paid" data-cy="mark-paid-confirm">
+        <p class="mark-paid__message">{{ confirmation.message }}</p>
+        <form [formGroup]="markPaidForm" class="mark-paid__fields">
+          <label class="mark-paid__label" for="mark-paid-on">
+            {{ 'athletes.detail.payments.paidOnLabel' | translate }}
+          </label>
+          <p-datepicker
+            inputId="mark-paid-on"
+            formControlName="paid_at"
+            [maxDate]="maxPaidOn"
+            [showIcon]="true"
+            [fluid]="true"
+            [dateFormat]="datePickerFormat()"
+            data-cy="mark-paid-on"
+          />
+          <small class="mark-paid__hint">
+            {{ 'athletes.detail.payments.paidOnHint' | translate }}
+          </small>
+
+          <label class="mark-paid__label" for="mark-paid-method">
+            {{ 'payments.method.label' | translate }}
+          </label>
+          <p-select
+            inputId="mark-paid-method"
+            formControlName="payment_method"
+            [options]="methodOptions()"
+            optionLabel="label"
+            optionValue="value"
+            [showClear]="true"
+            [fluid]="true"
+            [placeholder]="'payments.method.none' | translate"
+            data-cy="mark-paid-method"
+          />
+        </form>
+      </div>
+    </ng-template>
+  </p-confirmpopup>
   <p-toast />
 
   <!--
@@ -146,6 +192,10 @@
               <time class="payment-card__paid-at" [attr.datetime]="row.payment.paid_at">
                 {{ formatPaidAt(row.payment.paid_at) }}
               </time>
+              @if (methodLabel(row.payment); as method) {
+                <span class="payment-card__sep" aria-hidden="true">·</span>
+                <span class="payment-card__method">{{ method }}</span>
+              }
             } @else {
               <!-- Two dashes (one for amount + one for paid-on date)
                    mirror the paid layout '{amount} · {date}' so the
@@ -276,6 +326,15 @@
                 <time [attr.datetime]="row.payment.paid_at">{{
                   formatPaidAt(row.payment.paid_at)
                 }}</time>
+                <!-- How it came in (#1761), when the owner said. -->
+                @if (methodLabel(row.payment); as method) {
+                  <span
+                    class="payments-list__method"
+                    [attr.data-cy]="'payment-method-' + row.month"
+                  >
+                    {{ method }}
+                  </span>
+                }
               } @else {
                 <span class="payments-list__dash">—</span>
               }

@@ -10,6 +10,7 @@ use App\Actions\Payment\ListCarnetEntriesAction;
 use App\Actions\Payment\SellCarnetAction;
 use App\Actions\Payment\UpdateCarnetValidityAction;
 use App\Authorization\Capability;
+use App\Enums\PaymentMethod;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Carnet\StoreCarnetRequest;
 use App\Http\Requests\Carnet\UpdateCarnetRequest;
@@ -84,6 +85,7 @@ class CarnetController extends Controller
             priceCents: $academy->carnet_price_cents,
             purchasedAt: CarbonImmutable::make($request->date('purchased_at')) ?? CarbonImmutable::today(),
             validFrom: CarbonImmutable::make($request->date('valid_from')),
+            method: $request->enum('payment_method', PaymentMethod::class),
         );
 
         return response()->json(['data' => new CarnetResource($carnet)], 201);

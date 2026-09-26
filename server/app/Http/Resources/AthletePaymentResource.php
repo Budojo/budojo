@@ -27,7 +27,11 @@ class AthletePaymentResource extends JsonResource
             // (#1382). Always present; `1` is a plain monthly payment.
             'period_months' => $payment->period_months->value,
             'amount_cents' => $payment->amount_cents,
+            // When the money arrived (#1761) — the transaction's day, not the
+            // month the revenue belongs to, which is (year, month) above.
             'paid_at' => $payment->paid_at->toIso8601String(),
+            // How it was paid; null is "not recorded".
+            'payment_method' => $payment->payment_method?->value,
         ];
     }
 }

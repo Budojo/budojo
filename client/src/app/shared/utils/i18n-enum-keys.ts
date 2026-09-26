@@ -1,5 +1,20 @@
 import type { MartialArt, TrainingMode } from '../../core/services/academy.service';
 import { AthleteStatus, Belt } from '../../core/services/athlete.service';
+import type { PaymentMethod } from '../../core/services/payment.service';
+
+/**
+ * How a fee or a carnet was paid (#1761), in the order the picker lists them.
+ * Shared by the mark-paid confirm and the carnet sale, so both say the same
+ * four words.
+ */
+export const PAYMENT_METHODS: readonly PaymentMethod[] = ['cash', 'transfer', 'pos', 'other'];
+
+export const PAYMENT_METHOD_KEYS: Readonly<Record<PaymentMethod, string>> = {
+  cash: 'payments.method.cash',
+  transfer: 'payments.method.transfer',
+  pos: 'payments.method.pos',
+  other: 'payments.method.other',
+};
 
 /**
  * The neutral name of every belt colour (#357, #1800): "White", "Green and
