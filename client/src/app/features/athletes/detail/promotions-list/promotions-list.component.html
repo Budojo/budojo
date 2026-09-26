@@ -183,7 +183,9 @@
       {{ 'athletes.detail.promotions.emptyBody' | translate }}
     </p>
   } @else {
-    <ul class="promotions__list" data-cy="promotions-list">
+    <!-- Focusable from script only: where the keyboard lands when the row it
+         was on is gone and no other row is left to take it (#1966). -->
+    <ul class="promotions__list" data-cy="promotions-list" tabindex="-1">
       @for (entry of entries(); track trackEntry(entry)) {
         @if (entry.kind === 'gap') {
           <!-- A step the history must have and no row records (#1966). -->

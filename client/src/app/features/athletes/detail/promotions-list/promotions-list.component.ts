@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  ElementRef,
   Injector,
   OnInit,
   afterNextRender,
@@ -50,7 +51,6 @@ interface SelectOption<T> {
 
 /** The toast that carries the "Saltato" undo, kept apart from the plain ones (#1966). */
 const SKIP_TOAST_KEY = 'promotion-skip';
-const SKIP_UNDO_SELECTOR = '[data-cy="promotion-skip-undo"]';
 
 /** The dates a missing step can be given and still sit where it belongs (#1966). */
 interface GapWindow {
@@ -134,6 +134,7 @@ export class PromotionsListComponent implements OnInit {
   private readonly beltLadder = inject(BeltLadderService);
   private readonly languageService = inject(LanguageService);
   private readonly injector = inject(Injector);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   /**
    * The date format for every picker on this component (#1498).
@@ -558,13 +559,17 @@ export class PromotionsListComponent implements OnInit {
           })
         : this.athleteService.createPromotion(this.athleteId, payloadFor(gap, recordedAt));
 
+    // Where the step sat, for when the row it became is not on this page.
+    const index = this.entryIndexOf(gap);
     this.creating.set(true);
     this.createError.set(null);
     request.pipe(finalize(() => this.creating.set(false))).subscribe({
-      next: () => {
+      next: (row) => {
         this.createDialogOpen.set(false);
         this.filling.set(null);
-        this.load(this.currentPage());
+        // The reload's skeleton takes the trigger away: put the keyboard on
+        // the row the fill wrote, so it does not fall to <body>.
+        this.load(this.currentPage(), () => this.focusEntry(row?.id ?? null, index));
         this.messageService.add({
           severity: 'success',
           summary: this.translate.instant('athletes.detail.promotions.toast.createdSummary'),
@@ -587,17 +592,21 @@ export class PromotionsListComponent implements OnInit {
   /**
    * "Saltato" (#1966): the step never happened — a BJJ white belt can go from
    * three stripes to blue. Remembered on the server so it stops asking, with
-   * an undo in the toast, where focus goes so a keyboard can reach it.
+   * an undo in the toast. The keyboard stays in the list, on the row that
+   * took the step's place: the toast leaves on its own after five seconds,
+   * and focus parked on its button would fall to <body> with it. The toast
+   * speaks for itself — PrimeNG gives each message `aria-live`.
    */
   protected skip(gap: PromotionGap): void {
     if (this.skippingKey() !== null) return;
+    const index = this.entryIndexOf(gap);
     this.skippingKey.set(gap.key);
     this.athleteService
-      .skipPromotionStep(this.athleteId, gap.belt, stripesAfter(gap))
+      .skipPromotionStep(this.athleteId, gap.belt, stepStripes(gap))
       .pipe(finalize(() => this.skippingKey.set(null)))
       .subscribe({
         next: () => {
-          this.load(this.currentPage(), () => this.focusAfterRender(SKIP_UNDO_SELECTOR));
+          this.load(this.currentPage(), () => this.focusEntry(null, index));
           this.messageService.add({
             key: SKIP_TOAST_KEY,
             severity: 'success',
@@ -621,7 +630,7 @@ export class PromotionsListComponent implements OnInit {
 
   private unskip(gap: PromotionGap): void {
     this.messageService.clear(SKIP_TOAST_KEY);
-    this.athleteService.unskipPromotionStep(this.athleteId, gap.belt, stripesAfter(gap)).subscribe({
+    this.athleteService.unskipPromotionStep(this.athleteId, gap.belt, stepStripes(gap)).subscribe({
       next: () => this.load(this.currentPage(), () => this.focusAfterRender(addDateSelector(gap))),
       error: () => {
         this.messageService.add({
@@ -634,12 +643,42 @@ export class PromotionsListComponent implements OnInit {
     });
   }
 
-  /** The row that asked is gone once it is skipped: focus goes where the next action is. */
+  /** Focus an element in this tab once the reload has drawn it. */
   private focusAfterRender(selector: string): void {
     runInInjectionContext(this.injector, () =>
       afterNextRender(() => {
-        document.querySelector<HTMLElement>(selector)?.focus();
+        this.host.nativeElement.querySelector<HTMLElement>(selector)?.focus();
       }),
+    );
+  }
+
+  /**
+   * After a reload that took the focused control away: the row `rowId` when
+   * it is on the page, otherwise the entry now at `index` (the one that took
+   * the old one's place, or the last), otherwise the list itself.
+   */
+  private focusEntry(rowId: number | null, index: number): void {
+    runInInjectionContext(this.injector, () =>
+      afterNextRender(() => {
+        const list = this.host.nativeElement.querySelector<HTMLElement>(
+          '[data-cy="promotions-list"]',
+        );
+        if (list === null) return;
+        const byId =
+          rowId === null ? null : list.querySelector<HTMLElement>(`[data-cy="promotion-${rowId}"]`);
+        const entries = Array.from(list.children) as HTMLElement[];
+        const entry = byId ?? entries[Math.min(Math.max(index, 0), entries.length - 1)];
+        (entry?.querySelector<HTMLElement>('button') ?? list).focus();
+      }),
+    );
+  }
+
+  /** Where a step sits in the list as drawn now. */
+  private entryIndexOf(gap: PromotionGap): number {
+    return this.entries().findIndex(
+      (e) =>
+        (e.kind === 'gap' && e.gap.key === gap.key) ||
+        (e.kind === 'row' && e.completing?.key === gap.key),
     );
   }
 
@@ -799,9 +838,15 @@ function addDateSelector(gap: PromotionGap): string {
   return `[data-cy="gap-add-date-${gap.key}"] button`;
 }
 
-/** A skip is keyed by the state the step leads to: the stripes after it, or 0 on a new belt. */
-function stripesAfter(gap: PromotionGap): number {
-  return gap.kind === 'belt' ? 0 : (gap.to_stripes ?? 0);
+/**
+ * A skip is keyed by the state the step leads to, which the contract puts in
+ * the key's last segment (`<kind>:<belt>:<stripes after>`). Read from there,
+ * not worked out: a belt step does not always start at 0 — taekwondo's 2nd
+ * poom leads to the black belt's 2nd dan, `belt:black:1`.
+ */
+function stepStripes(gap: PromotionGap): number {
+  const last = Number(gap.key.split(':').pop());
+  return Number.isInteger(last) ? last : (gap.to_stripes ?? 0);
 }
 
 /** The create payload for a missing step: everything is known but the date. */

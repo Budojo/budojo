@@ -889,6 +889,89 @@ describe('PromotionsListComponent — missing steps (#1966)', () => {
     expect(svc.unskipPromotionStep).toHaveBeenCalledWith(7, 'white', 4);
   });
 
+  it('keys a poom → dan skip by the degree it carries, not by 0', () => {
+    // Taekwondo: 2nd poom leads to the 2nd dan (Kukkiwon), stored 1 on black.
+    const poomToDan: PromotionGap = {
+      key: 'belt:black:1',
+      kind: 'belt',
+      belt: 'black',
+      from_belt: 'black-and-red',
+      from_stripes: null,
+      to_stripes: null,
+      after: { promotion_id: 12, recorded_at: '2024-03-12' },
+      before: { promotion_id: 15, recorded_at: '2025-06-01' },
+      completes_promotion_id: null,
+    };
+    const { el, fixture, svc } = jacopo([poomToDan]);
+    useLadder('taekwondo');
+    fixture.detectChanges();
+    const add = vi.spyOn(fixture.componentRef.injector.get(MessageService), 'add');
+
+    click(el, 'gap-skip-belt:black:1');
+    expect(svc.skipPromotionStep).toHaveBeenCalledWith(7, 'black', 1);
+
+    (add.mock.calls.at(-1)?.[0] as { data: { undo: () => void } }).data.undo();
+    expect(svc.unskipPromotionStep).toHaveBeenCalledWith(7, 'black', 1);
+  });
+
+  it('keeps the keyboard in the list after a skip, on the row that took its place', async () => {
+    const { el, fixture, svc } = jacopo();
+    // The reload the skip triggers: the stripe step is gone.
+    svc.promotions.mockReturnValue(
+      of({
+        data: [opening, whiteThree],
+        meta: { current_page: 1, per_page: 20, total: 2, last_page: 1 },
+        gaps: [blueBelt],
+        history_starts_at: '2024-03-12',
+      }),
+    );
+
+    const skipButton = el.querySelector<HTMLButtonElement>(
+      '[data-cy="gap-skip-stripe:white:4"] button',
+    )!;
+    skipButton.focus();
+    skipButton.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    // Not the toast's undo: the toast leaves after five seconds, and focus
+    // would fall to <body> with it.
+    expect(document.activeElement).toBe(el.querySelector('[data-cy="promotion-edit-12"] button'));
+  });
+
+  it('puts the keyboard on the row a fill wrote, not on <body> after the reload', async () => {
+    const { el, fixture, component, svc } = jacopo();
+    click(el, 'gap-add-date-stripe:white:4');
+    fixture.detectChanges();
+    const written = makePromotion({
+      id: 20,
+      kind: 'stripe',
+      from_belt: null,
+      to_belt: null,
+      from_stripes: 3,
+      to_stripes: 4,
+      belt_at_event: 'white',
+      recorded_at: '2024-09-20T00:00:00Z',
+    });
+    svc.createPromotion.mockReturnValue(of(written));
+    svc.promotions.mockReturnValue(
+      of({
+        data: [opening, written, whiteThree],
+        meta: { current_page: 1, per_page: 20, total: 3, last_page: 1 },
+        gaps: [blueBelt],
+        history_starts_at: '2024-03-12',
+      }),
+    );
+
+    const c = component as unknown as Internals;
+    c.createForm.patchValue({ recorded_at: new Date(2024, 8, 20) });
+    c.confirmCreate();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(document.activeElement).toBe(el.querySelector('[data-cy="promotion-edit-20"] button'));
+  });
+
   it('folds more than two missing steps in a row, and opens them on "show"', () => {
     const stripe = (n: number): PromotionGap => ({
       ...fourthStripe,

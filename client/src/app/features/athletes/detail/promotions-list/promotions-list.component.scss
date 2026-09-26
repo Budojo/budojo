@@ -77,6 +77,9 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 0.5rem;
+    // The hit area is a floor, whatever a text button's own padding comes to
+    // (Fitts, client/CLAUDE.md): the athletes list's 3rem.
+    min-height: 3rem;
 
     @media (min-width: 768px) {
       justify-content: flex-end;
@@ -269,9 +272,17 @@
 .promotions-toast__undo {
   all: unset;
   cursor: pointer;
+  // `all: unset` takes the global button floor with it: without these the
+  // undo is ~37px tall, under the 48px target (#1966).
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 3rem;
+  min-width: 3rem;
+  box-sizing: border-box;
   font-weight: 600;
   color: var(--p-primary-color);
-  padding: 0.5rem;
+  padding-inline: 1rem;
   border-radius: var(--p-border-radius-sm);
 
   &:focus-visible {
