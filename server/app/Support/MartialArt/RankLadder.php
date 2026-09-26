@@ -118,8 +118,7 @@ final class RankLadder
      * an adult judoka goes from white to yellow, not to the half belt, and a
      * sixteen-year-old BJJ orange belt goes to blue, with or without stripes
      * left on the orange. A poom leads to the dan of its own number. Who is
-     * eligible is the caller's to decide; the
-     * ladder knows grades, not ages.
+     * eligible is the caller's to decide; the ladder knows grades, not ages.
      *
      * @return array{kind: 'stripe'|'belt', belt: Belt, stripes: int}|null
      */
