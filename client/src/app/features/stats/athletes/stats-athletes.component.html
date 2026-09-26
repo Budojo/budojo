@@ -39,7 +39,7 @@
     }
 
     <div class="stats-athletes__chart" data-cy="stats-athletes-chart">
-      <p-chart type="bar" [data]="chartData()" [options]="chartOptions" />
+      <p-chart type="bar" [data]="chartData()" [options]="chartOptions" height="100%" />
     </div>
 
     @if (payload().missing_dob > 0) {
