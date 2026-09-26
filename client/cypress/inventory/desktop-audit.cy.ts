@@ -1714,7 +1714,19 @@ function seed(): void {
   });
   cy.intercept('GET', '/api/v1/athletes/*/promotions*', {
     statusCode: 200,
-    body: page(PROMOTIONS_ONE),
+    body: {
+      ...page(PROMOTIONS_ONE),
+      // Blue since 20 Dec 2025, last stripe 15 Jun 2026, against TODAY (#1772).
+      progression: {
+        belt_since: '2025-12-20',
+        days_at_belt: 268,
+        months_at_belt: 8,
+        sessions_at_belt: 64,
+        stripe_since: '2026-06-15',
+        days_since_stripe: 91,
+        sessions_since_stripe: 23,
+      },
+    },
   });
   cy.intercept('GET', '/api/v1/athletes/*/syllabus-coverage*', {
     statusCode: 200,

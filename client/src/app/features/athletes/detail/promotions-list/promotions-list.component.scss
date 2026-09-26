@@ -149,3 +149,26 @@
     width: 100%;
   }
 }
+
+// The time-at-belt summary above the timeline (#1772): two quiet lines, in
+// ink, not a card: it reads the list below it, it is not a second object.
+.promotions__progression {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--p-content-border-color);
+  font-variant-numeric: tabular-nums;
+}
+
+.promotions__progression-line {
+  margin: 0;
+  color: var(--p-text-color);
+  font-weight: 500;
+}
+
+.promotions__progression-line--muted {
+  color: var(--p-text-muted-color);
+  font-weight: 400;
+}

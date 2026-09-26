@@ -64,7 +64,16 @@ Before this table, only **belt** changes left a trace (as a `belt_promotion` `Co
 - `DELETE /api/v1/athletes/{athlete}/promotions/{promotion}` — #1431 PR 2 of 2. Hard delete, 204 on success. Same 403 double-check as the edit path (promotion must belong to the athlete in the URL); 404 for an id that doesn't exist.
 - `AthleteObserver` — internal: writes rows on `belt` / `stripes` change; also emits the `belt_promotion` or `stripe_promotion` feed post for the celebration UX. Never runs on a `recorded_at` edit or a backfilled create — both bypass the athlete model entirely.
 
+## Time at the belt (#1772)
+
+`GetAthleteProgressionAction` answers the two questions a coach reads before deciding whether someone is due: how long on this belt, and how many sessions since the last stripe. It rides on `GET /athletes/{athlete}/promotions` as `progression`, beside `data` / `meta`.
+
+- **From recorded rows only.** `belt_since` is the latest `kind = belt` row. With no belt row every field is null; nothing falls back to `joined_at`. Since #1771 every new or imported athlete opens with a starting belt row, so this is rare.
+- **The last stripe belongs to the current belt.** A stripe row older than the latest belt row is ignored, because a belt promotion resets stripes and the chain validator does not cross-check the two kinds.
+- **Whole days.** `recorded_at` carries a time of day on live rows, so the comparison is on dates: a belt given at 18:42 still counts that evening's session.
+- **Sessions are distinct training days**, at most one live presence per athlete and day; a soft-deleted (corrected-away) presence does not count.
+
 ## Future / TODO
 
-- **Per-athlete promotion analytics.** Aggregate read (average time-to-blue, days-per-stripe) would surface in a future "academy insights" view.
+- **Academy-wide promotion analytics.** Aggregate reads (average time-to-blue, days-per-stripe across the academy) would surface in a future "academy insights" view. The per-athlete half shipped in #1772: see *Time at the belt* above.
 - **Athlete-side visibility.** A future opt-in toggle could let the athlete portal carry "my promotion history" — gated by an owner setting (PRD open question).

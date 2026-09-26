@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Athlete;
 
 use App\Actions\Promotion\CreateAthletePromotionAction;
 use App\Actions\Promotion\DeleteAthletePromotionAction;
+use App\Actions\Promotion\GetAthleteProgressionAction;
 use App\Actions\Promotion\UpdateAthletePromotionRecordedAtAction;
 use App\Authorization\Capability;
 use App\Enums\Belt;
@@ -40,6 +41,7 @@ class AthletePromotionController extends Controller
         private readonly UpdateAthletePromotionRecordedAtAction $updateRecordedAt,
         private readonly CreateAthletePromotionAction $createPromotion,
         private readonly DeleteAthletePromotionAction $deletePromotion,
+        private readonly GetAthleteProgressionAction $progression,
     ) {
     }
 
@@ -54,7 +56,11 @@ class AthletePromotionController extends Controller
 
         $promotions = $athlete->promotions()->with('recordedBy:id,first_name,last_name')->paginate(20);
 
-        return AthletePromotionResource::collection($promotions);
+        // Beside `data`, not in `meta`: `meta` is the pagination block the SPA
+        // pages with, and overwriting it breaks paging (#1772). Computed once
+        // here, because it does not change between pages of one timeline.
+        return AthletePromotionResource::collection($promotions)
+            ->additional(['progression' => $this->progression->execute($athlete)]);
     }
 
     /**

@@ -25,6 +25,7 @@ import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
 import {
   type AthletePromotion,
+  type AthleteProgression,
   type AthletePromotionCreatePayload,
   AthleteService,
   Belt,
@@ -116,6 +117,8 @@ export class PromotionsListComponent implements OnInit {
   );
 
   protected readonly promotions = signal<readonly AthletePromotion[]>([]);
+  /** How long on this belt and since the last stripe, above the timeline (#1772). */
+  protected readonly progression = signal<AthleteProgression | null>(null);
   protected readonly loading = signal(true);
   protected readonly loadError = signal(false);
   protected readonly currentPage = signal(1);
@@ -264,6 +267,7 @@ export class PromotionsListComponent implements OnInit {
       .subscribe({
         next: (resp) => {
           this.promotions.set(resp.data);
+          this.progression.set(resp.progression ?? null);
           this.currentPage.set(resp.meta.current_page);
           this.lastPage.set(resp.meta.last_page);
           this.loading.set(false);

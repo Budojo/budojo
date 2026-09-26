@@ -549,3 +549,82 @@ describe('PromotionsListComponent (#799)', () => {
     });
   });
 });
+
+describe('PromotionsListComponent — time at the belt (#1772)', () => {
+  function withProgression(progression: Record<string, unknown>) {
+    const ctx = setup();
+    ctx.svc.promotions.mockReturnValue(
+      of({
+        data: [makePromotion()],
+        meta: { current_page: 1, per_page: 20, total: 1, last_page: 1 },
+        progression,
+      }) as unknown as ReturnType<typeof ctx.svc.promotions>,
+    );
+    ctx.fixture.detectChanges();
+    return ctx;
+  }
+
+  const FULL = {
+    belt_since: '2025-03-01',
+    days_at_belt: 440,
+    months_at_belt: 14,
+    sessions_at_belt: 148,
+    stripe_since: '2026-01-10',
+    days_since_stripe: 125,
+    sessions_since_stripe: 41,
+  };
+
+  it('says how long on this belt, and since the last stripe', () => {
+    const { el } = withProgression(FULL);
+    const strip = el.querySelector('[data-cy="promotions-progression"]')?.textContent ?? '';
+
+    expect(strip).toContain('On this belt since');
+    expect(strip).toContain('14 months');
+    expect(strip).toContain('148 sessions');
+    expect(strip).toContain('Last stripe on');
+    expect(strip).toContain('41 sessions since');
+  });
+
+  it('says there is no stripe on this belt yet', () => {
+    const { el } = withProgression({
+      ...FULL,
+      stripe_since: null,
+      days_since_stripe: null,
+      sessions_since_stripe: null,
+    });
+    const strip = el.querySelector('[data-cy="promotions-progression"]')?.textContent ?? '';
+
+    expect(strip).toContain('No stripe on this belt yet');
+    expect(strip).not.toContain('Last stripe on');
+  });
+
+  it('says under a month, in singular and plural', () => {
+    const { el } = withProgression({
+      ...FULL,
+      months_at_belt: 0,
+      sessions_at_belt: 1,
+      sessions_since_stripe: 1,
+    });
+    const strip = el.querySelector('[data-cy="promotions-progression"]')?.textContent ?? '';
+
+    expect(strip).toContain('under a month');
+    expect(strip).toContain('1 session');
+    expect(strip).not.toContain('1 sessions');
+  });
+
+  it('says no belt is recorded rather than measuring from the joining date', () => {
+    const { el } = withProgression({
+      belt_since: null,
+      days_at_belt: null,
+      months_at_belt: null,
+      sessions_at_belt: null,
+      stripe_since: null,
+      days_since_stripe: null,
+      sessions_since_stripe: null,
+    });
+    const strip = el.querySelector('[data-cy="promotions-progression"]')?.textContent ?? '';
+
+    expect(strip).toContain('No belt recorded yet');
+    expect(strip).not.toContain('On this belt since');
+  });
+});

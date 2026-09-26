@@ -717,6 +717,23 @@ export interface AthletePromotionPage {
     readonly total: number;
     readonly last_page: number;
   };
+  /** How long on this belt and since the last stripe (#1772). */
+  readonly progression?: AthleteProgression;
+}
+
+/**
+ * Measured from recorded promotion rows only: null means no row of that kind,
+ * never a fallback to the joining date. A stripe older than the current belt
+ * is not "the last stripe", so `stripe_since` is null then too (#1772).
+ */
+export interface AthleteProgression {
+  readonly belt_since: string | null;
+  readonly days_at_belt: number | null;
+  readonly months_at_belt: number | null;
+  readonly sessions_at_belt: number | null;
+  readonly stripe_since: string | null;
+  readonly days_since_stripe: number | null;
+  readonly sessions_since_stripe: number | null;
 }
 
 /**
