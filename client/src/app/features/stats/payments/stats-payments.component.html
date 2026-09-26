@@ -28,4 +28,8 @@
       <p-chart type="bar" [data]="chartData()" [options]="chartOptions()" />
     </div>
   }
+
+  <!-- Outside the chart's states: an academy with nothing collected this year
+       is exactly the one whose arrears matter. -->
+  <app-payments-arrears />
 </section>

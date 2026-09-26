@@ -20,7 +20,8 @@ use Carbon\CarbonInterface;
  * **Its SQL twin is `Carnet::scopeSpendableOn`** (#1722), for the one caller
  * that has to filter a query rather than inspect rows: who owes the month.
  * `OwingThisMonthTest` holds the two to one answer, so a change here must be
- * made there too.
+ * made there too — and in `Carnet::scopeSpendableDuring` (#1760), the same
+ * rule asked of a past month, which `PaymentsArrearsTest` holds to this one.
  *
  * Static for the same reason as `RoleCapabilities`: no state, no dependency,
  * nothing to swap in a test — and a readable call site.

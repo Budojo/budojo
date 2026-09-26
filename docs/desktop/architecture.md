@@ -106,6 +106,7 @@ Everything that persists lives under Electron's **`userData`** directory (`%APPD
 | `drive-sync.json` | Drive link bookkeeping — account, folder id, last sync, last error. Holds no secret. |
 | `backup-folder.json` | Which folder backups are copied into and how that last went (#1320). Holds no secret. |
 | `bootstrap.json` | First-run state marker. |
+| `budojo.sqlite.previous`, `storage.previous`, `*.restoring`, `*.kept-<timestamp>` | Only ever present around a restore ([#1909](https://github.com/Budojo/budojo/issues/1909)): the live files step aside as `.previous`, the staged copies are `.restoring`, and a leftover `.previous` is set aside as `.kept-*`, never deleted. A crash mid-swap is put back together by the bootstrap before anything else reads the folder ([#1919](https://github.com/Budojo/budojo/issues/1919), [`backup-restore.md`](./backup-restore.md)). |
 | `theme.json` | Which theme was painted last run ([#1793](https://github.com/Budojo/budojo/issues/1793)). The window's `backgroundColor` and native title-bar overlay are chosen **before** any renderer exists, and the main process cannot read the renderer's localStorage — without a remembered answer, every launch on a dark theme opens with a white flash. Holds no secret and describes this screen, not the owner's data, so it is deliberately not restored from a backup. |
 | `php.ini`, `php-server.pid` | Generated PHP config + supervisor pid. |
 | `notifications-ledger.json` | Once-only ledger so a native reminder fires at most once. |

@@ -152,16 +152,40 @@ export function createBackupIO(config: BackupIOConfig): BackupIO {
       const stagedDb = `${config.databasePath}.restoring`;
       const stagedStorage = `${config.storageDir}.restoring`;
       const hasStorage = existsSync(restoredStorage);
-      try {
+      const previousDb = `${config.databasePath}.previous`;
+      const previousStorage = `${config.storageDir}.previous`;
+      const siblings = ['', '-wal', '-shm', '-journal'];
+
+      // A `.previous` already here is what an earlier restore could not put
+      // back — possibly the owner's newest data, newer than any backup. Never
+      // deleted: set aside under the moment it was found, and left alone.
+      //
+      // Before anything is staged (#1919): the next boot reads a staged
+      // `storage` beside a `.previous` database, with no staged database, as
+      // this swap's database having gone in. An older `.previous` still here
+      // while copying would let a copy cut short be read that way.
+      const keptAt = new Date().toISOString().replace(/[:.]/g, '-');
+      for (const leftover of [...siblings.map((sibling) => previousDb + sibling), previousStorage]) {
+        if (existsSync(leftover)) {
+          await retryWhileBusy(() => renameSync(leftover, `${leftover}.kept-${keptAt}`), RENAME_RETRY);
+        }
+      }
+
+      // The staged storage is cleared whether or not this archive has one,
+      // and always before the staged database: a staged storage with no staged
+      // database is what the boot reads as "the database went in" (#1919).
+      const clearStaged = (): void => {
+        rmSync(stagedStorage, { recursive: true, force: true });
         rmSync(stagedDb, { force: true });
+      };
+      try {
+        clearStaged();
         cpSync(restoredDb, stagedDb);
         if (hasStorage) {
-          rmSync(stagedStorage, { recursive: true, force: true });
           cpSync(restoredStorage, stagedStorage, { recursive: true });
         }
       } catch (error) {
-        rmSync(stagedDb, { force: true });
-        rmSync(stagedStorage, { recursive: true, force: true });
+        clearStaged();
         throw error;
       }
 
@@ -171,19 +195,6 @@ export function createBackupIO(config: BackupIOConfig): BackupIO {
       // left the archive's database with the old documents or none, and no
       // old database to go back to. So the live files step aside first, as
       // `.previous`, and go only once everything is in place.
-      const previousDb = `${config.databasePath}.previous`;
-      const previousStorage = `${config.storageDir}.previous`;
-      const siblings = ['', '-wal', '-shm', '-journal'];
-
-      // A `.previous` already here is what an earlier restore could not put
-      // back — possibly the owner's newest data, newer than any backup. Never
-      // deleted: set aside under the moment it was found, and left alone.
-      const keptAt = new Date().toISOString().replace(/[:.]/g, '-');
-      for (const leftover of [...siblings.map((sibling) => previousDb + sibling), previousStorage]) {
-        if (existsSync(leftover)) {
-          await retryWhileBusy(() => renameSync(leftover, `${leftover}.kept-${keptAt}`), RENAME_RETRY);
-        }
-      }
 
       const moved: Array<[from: string, to: string]> = [];
       const move = async (from: string, to: string): Promise<void> => {
@@ -215,8 +226,7 @@ export function createBackupIO(config: BackupIOConfig): BackupIO {
         for (const [from, to] of moved.reverse()) {
           await retryWhileBusy(() => renameSync(to, from), RENAME_RETRY).catch(() => stuck.push(to));
         }
-        rmSync(stagedDb, { force: true });
-        rmSync(stagedStorage, { recursive: true, force: true });
+        clearStaged();
 
         if (stuck.length > 0) {
           throw new Error(

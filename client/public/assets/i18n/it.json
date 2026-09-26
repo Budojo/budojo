@@ -1955,7 +1955,6 @@
         "noAthletes": "Nessun atleta attivo ancora.",
         "noAthletesCta": "Vai ad Atleti"
       },
-      "paginationHint": "Mostrati {{shown}} di {{total}} atleti attivi. La paginazione arriva nel follow-up M4.2.5.",
       "undo": "Annulla",
       "toast": {
         "loadAthletesError": "Impossibile caricare la lista atleti.",
@@ -2975,7 +2974,20 @@
       "monthlyHint": "Ultimi 12 mesi più quello che è già stato pagato · le quote spalmate sui mesi che coprono, i carnet nel mese in cui li vendi",
       "loading": "Caricamento incassi…",
       "errored": "Impossibile caricare il trend.",
-      "empty": "Nessun incasso negli ultimi 12 mesi."
+      "empty": "Nessun incasso negli ultimi 12 mesi.",
+      "arrears": {
+        "title": "Arretrati",
+        "hint": "I mesi prima di questo che nessun pagamento copre, contati da quando registri le quote qui. Gli importi sono alla quota di oggi. Chi è andato via ed è tornato conta anche i mesi in cui non c'era.",
+        "totalOne": "1 atleta · {{amount}} stimati",
+        "totalOther": "{{count}} atleti · {{amount}} stimati",
+        "monthsBehindOne": "1 mese",
+        "monthsBehindOther": "{{count}} mesi",
+        "since": "da {{month}}",
+        "empty": "Nessuno è indietro con i mesi passati.",
+        "loading": "Caricamento arretrati…",
+        "errored": "Impossibile caricare gli arretrati.",
+        "retry": "Riprova"
+      }
     },
     "athletes": {
       "ageBandsTitle": {
@@ -2991,7 +3003,9 @@
       "scope": {
         "kids": "Kids",
         "adults": "Adulti",
-        "all": "Tutti"
+        "all": "Tutti",
+        "preCompetitive": "Preagonisti",
+        "competitive": "Agonisti"
       },
       "missingDobOne": "{{count}} atleta senza data di nascita",
       "missingDobOther": "{{count}} atleti senza data di nascita",

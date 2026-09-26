@@ -1,0 +1,47 @@
+<section class="arrears" data-cy="arrears" aria-labelledby="arrears-title">
+  <header class="arrears__header">
+    <h3 id="arrears-title" class="arrears__title">
+      {{ 'stats.payments.arrears.title' | translate }}
+    </h3>
+    @if (!loading() && !errored() && rows().length > 0) {
+      <p class="arrears__total" data-cy="arrears-total">{{ total() }}</p>
+    }
+    <p class="arrears__hint">{{ 'stats.payments.arrears.hint' | translate }}</p>
+  </header>
+
+  @if (errored()) {
+    <app-error-state
+      [title]="'stats.payments.arrears.errored' | translate"
+      [headingLevel]="4"
+      [retryLabel]="'stats.payments.arrears.retry' | translate"
+      (retry)="load()"
+      dataCy="arrears-error"
+    />
+  } @else if (loading()) {
+    <p-skeleton
+      height="8rem"
+      data-cy="arrears-loading"
+      [attr.aria-label]="'stats.payments.arrears.loading' | translate"
+    />
+  } @else if (rows().length === 0) {
+    <p class="arrears__empty" data-cy="arrears-empty">
+      {{ 'stats.payments.arrears.empty' | translate }}
+    </p>
+  } @else {
+    <ul class="arrears__list" data-cy="arrears-list">
+      @for (row of rows(); track row.athlete.id) {
+        <li class="arrears__row" [attr.data-cy]="'arrears-row-' + row.athlete.id">
+          <app-athlete-identity
+            class="arrears__who"
+            [athlete]="row.athlete"
+            [linkToDetail]="true"
+            detailTab="payments"
+            [stretchLink]="true"
+          />
+          <span class="arrears__since">{{ behind(row) }}</span>
+          <span class="arrears__owed">{{ money(row.owed_cents) }}</span>
+        </li>
+      }
+    </ul>
+  }
+</section>

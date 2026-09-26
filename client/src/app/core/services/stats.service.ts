@@ -5,6 +5,17 @@ import { environment } from '../../../environments/environment';
 import type { TrainingMode } from './academy.service';
 import type { AthleteIdentity, AthleteStatus, Belt } from './athlete.service';
 
+/**
+ * One athlete behind on their fee (#1760): the unpaid months before this one,
+ * counted from the billing floor. `owed_cents` is at today's fee — an estimate.
+ */
+export interface ArrearsRow {
+  readonly athlete: AthleteIdentity;
+  readonly months_behind: number;
+  readonly first_unpaid: string; // 'YYYY-MM'
+  readonly owed_cents: number;
+}
+
 export interface DailyAttendancePoint {
   readonly date: string; // 'YYYY-MM-DD'
   readonly count: number;
@@ -341,6 +352,13 @@ export class StatsService {
       .get<{
         data: DailyAttendancePoint[];
       }>(`${environment.apiBase}/api/v1/stats/attendance/daily?months=${months}`)
+      .pipe(map((r) => r.data));
+  }
+
+  /** Who is behind on their fee, since when and by how much, longest first (#1760). */
+  paymentsArrears(): Observable<readonly ArrearsRow[]> {
+    return this.http
+      .get<{ data: ArrearsRow[] }>(`${environment.apiBase}/api/v1/stats/payments/arrears`)
       .pipe(map((r) => r.data));
   }
 

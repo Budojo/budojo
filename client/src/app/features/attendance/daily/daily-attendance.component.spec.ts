@@ -134,6 +134,22 @@ describe('DailyAttendanceComponent', () => {
     expect(component['loading']()).toBe(false);
   });
 
+  it('never tells a roster longer than a page about a milestone (#1937)', () => {
+    const { fixture, httpMock } = setup();
+    fixture.detectChanges();
+    flushInit(httpMock, {
+      athletes: Array.from({ length: 20 }, (_, i) => makeAthlete({ id: i + 1 })),
+      meta: { total: 25 },
+    });
+    fixture.detectChanges();
+
+    // The paginator already says where the other five are; the note that
+    // used to sit under it named an internal milestone ("M4.2.5").
+    const page = fixture.nativeElement as HTMLElement;
+    expect(page.querySelector('.attendance__pagination-hint')).toBeNull();
+    expect(page.textContent).not.toContain('M4.2.5');
+  });
+
   it('tapping an unmarked athlete optimistically flips to present and POSTs', () => {
     const { fixture, component, httpMock } = setup();
     fixture.detectChanges();

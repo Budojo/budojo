@@ -25,7 +25,11 @@ describe('StatsPaymentsComponent', () => {
     http = TestBed.inject(HttpTestingController);
   });
 
-  afterEach(() => http.verify());
+  afterEach(() => {
+    // The arrears list reads on its own (#1760); its spec is where it is tested.
+    http.match('/api/v1/stats/payments/arrears').forEach((req) => req.flush({ data: [] }));
+    http.verify();
+  });
 
   /** The chart options are a computed now, because the formatter follows the language. */
   const componentOptions = (): ChartOptions =>

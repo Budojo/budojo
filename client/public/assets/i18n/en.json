@@ -1955,7 +1955,6 @@
         "noAthletes": "No active athletes yet.",
         "noAthletesCta": "Go to Athletes"
       },
-      "paginationHint": "Showing {{shown}} of {{total}} active athletes. Pagination is on the M4.2.5 follow-up.",
       "undo": "Undo",
       "toast": {
         "loadAthletesError": "Could not load the athletes list.",
@@ -2975,7 +2974,20 @@
       "monthlyHint": "Last 12 months and whatever is already paid for · fees spread across the months they cover, carnets booked when sold",
       "loading": "Loading revenue trend…",
       "errored": "Couldn't load revenue trend.",
-      "empty": "Nothing collected in the last 12 months."
+      "empty": "Nothing collected in the last 12 months.",
+      "arrears": {
+        "title": "Behind on fees",
+        "hint": "Months before this one that no payment covers, counted from when you started recording fees here. Amounts are at today's fee. Someone who left and came back also counts the months they were away.",
+        "totalOne": "1 athlete · {{amount}} estimated",
+        "totalOther": "{{count}} athletes · {{amount}} estimated",
+        "monthsBehindOne": "1 month",
+        "monthsBehindOther": "{{count}} months",
+        "since": "since {{month}}",
+        "empty": "Nobody is behind on a past month.",
+        "loading": "Loading who is behind…",
+        "errored": "Couldn't load who is behind.",
+        "retry": "Try again"
+      }
     },
     "athletes": {
       "ageBandsTitle": {
@@ -2991,7 +3003,9 @@
       "scope": {
         "kids": "Kids",
         "adults": "Adults",
-        "all": "All"
+        "all": "All",
+        "preCompetitive": "Pre-competitive",
+        "competitive": "Competitive"
       },
       "missingDobOne": "{{count}} athlete without a date of birth",
       "missingDobOther": "{{count}} athletes without a date of birth",
