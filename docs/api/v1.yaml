@@ -6367,7 +6367,8 @@ paths:
         `before` is null — and such a fill is never refused by the chain
         check. A gap with `completes_promotion_id` is the belt a starting
         row stands for: it is completed with `PATCH …/promotions/{id}`
-        (`from_belt` + the real date), never added as a second row.
+        (`from_belt` + the real date, on the starting row's own day at the
+        latest), never added as a second row.
       operationId: athletePromotionHistory
       parameters:
         - name: athlete
@@ -11316,10 +11317,12 @@ components:
         `key` is `<kind>:<belt>:<stripes after the step>` and identifies it.
         `belt` is the belt a stripe step is on, or the belt a belt step
         reaches. `after` is the row the walk left from, `before` the next
-        row after it — never a stripe reset, nor the starting row the step
-        completes; the fill's date goes in `(after.recorded_at,
-        before.recorded_at]`, up to today when `before` is null, and a step
-        whose window has no day left in it is not reported.
+        row after it, never a stripe reset. For a step that completes a
+        starting row it is the earlier of that next row and the starting row
+        itself: the athlete held the belt the day they were entered. The
+        fill's date goes in `(after.recorded_at, before.recorded_at]`, up to
+        today when `before` is null, and a step whose window has no day left
+        in it is not reported.
         `completes_promotion_id` names the starting row this belt step
         completes (PATCH it, don't POST); it cannot be skipped.
       required: [key, kind, belt, from_belt, from_stripes, to_stripes, after, before, completes_promotion_id]

@@ -90,7 +90,8 @@ it("reads Jacopo's missing steps beside his timeline, and marks his starting row
         ->and($response->json('gaps.1.completes_promotion_id'))->toBe($opening->id)
         ->and($response->json('gaps.1.from_belt'))->toBe('white')
         ->and($response->json('gaps.1.after.promotion_id'))->toBe($third->id)
-        ->and($response->json('gaps.1.before'))->toBeNull();
+        // Already blue the day he was entered: the promotion is no later.
+        ->and($response->json('gaps.1.before'))->toBe(['promotion_id' => $opening->id, 'recorded_at' => '2026-09-20']);
 
     $isOpening = array_column($response->json('data'), 'is_opening', 'id');
     expect($isOpening[$opening->id])->toBeTrue()
@@ -106,7 +107,7 @@ it('reads the same two steps for Jacopo entered on blue with two stripes', funct
 
     expect(array_column($gaps, 'key'))->toBe(['stripe:white:4', 'belt:blue:0'])
         ->and($gaps[1]['completes_promotion_id'])->toBe($opening->id)
-        ->and($gaps[1]['before'])->toBeNull();
+        ->and($gaps[1]['before'])->toBe(['promotion_id' => $opening->id, 'recorded_at' => '2026-09-20']);
 });
 
 it('offers the blue stripes only once the blue belt is dated, and never a second blue', function (): void {
@@ -247,6 +248,21 @@ it("keeps another academy's athletes out of skips", function (): void {
     $this->actingAs($this->owner)
         ->deleteJson("/api/v1/athletes/{$stranger->id}/promotion-skips/white/4")
         ->assertForbidden();
+});
+
+it('completes a starting row on its own day at the latest: the athlete held the belt when entered', function (): void {
+    $jacopo = gapsAthlete($this->academy, Belt::Blue, 0);
+    stripeRowOn($jacopo, $this->owner, Belt::White, 2, 3, '2024-03-12 00:00:00');
+    $opening = beltRowOn($jacopo, $this->owner, null, Belt::Blue, '2026-09-20 00:00:00');
+    $patch = "/api/v1/athletes/{$jacopo->id}/promotions/{$opening->id}";
+
+    $this->actingAs($this->owner)
+        ->patchJson($patch, ['recorded_at' => '2026-09-21', 'from_belt' => 'white'])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('recorded_at');
+    $this->actingAs($this->owner)->patchJson($patch, ['recorded_at' => '2026-09-20', 'from_belt' => 'white'])->assertOk();
+
+    expect($opening->fresh()?->from_belt)->toBe(Belt::White);
 });
 
 it('completes a starting row with its first belt and real date, instead of adding a second', function (): void {

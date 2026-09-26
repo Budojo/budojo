@@ -79,7 +79,8 @@ it("finds Jacopo's two missing steps: the fourth stripe, and the blue his starti
                 'from_stripes' => null,
                 'to_stripes' => null,
                 'after' => ['promotion_id' => 12, 'recorded_at' => '2024-03-12'],
-                'before' => null,
+                // He was already blue the day he was entered: no later.
+                'before' => ['promotion_id' => 15, 'recorded_at' => '2026-09-26'],
                 'completes_promotion_id' => 15,
             ],
         ]);
@@ -274,7 +275,7 @@ it('takes the stripes Jacopo was entered with as held on arrival, whatever came 
 
     // Exactly the two steps; no blue stripe dated before the blue itself.
     expect(keysOf($result))->toBe(['stripe:white:4', 'belt:blue:0'])
-        ->and($result['gaps'][1]['before'])->toBeNull();
+        ->and($result['gaps'][1]['before'])->toBe(['promotion_id' => 15, 'recorded_at' => '2026-09-26']);
 });
 
 it('holds the stripes on arrival even when an older row on that belt was typed in before the starting row', function (): void {
@@ -396,17 +397,30 @@ it('replays a same-day correction in the order it was made, with both rows at mi
 });
 
 it('puts a step filled on the day of the row after it before that row, though it was written later', function (): void {
+    // A stripe filled on the day of the next stripe row: written after it (a
+    // higher id), happened before it. Replayed by id, it would be offered
+    // again, and so would the ones around it.
+    $result = gapsOf([
+        beltRow(1, Belt::White, Belt::Blue, '2024-01-01'),
+        stripeRow(2, Belt::Blue, 2, 3, '2025-06-01'),
+        stripeRow(30, Belt::Blue, 1, 2, '2025-06-01'),
+    ], Belt::Blue, 3);
+
+    expect(keysOf($result))->toBe(['stripe:blue:1'])
+        ->and($result['gaps'][0]['before'])->toBe(['promotion_id' => 30, 'recorded_at' => '2025-06-01']);
+});
+
+it("leaves a starting row's belt unoffered when the step before it took its whole window", function (): void {
     // The fourth stripe, filled on the very day Jacopo was entered on blue:
-    // written after the starting row (a higher id), happened before it.
+    // the blue came after it and no later than that day — no day is left.
+    // Replayed by id instead, the recorded stripe would be offered again.
     $result = gapsOf([
         stripeRow(12, Belt::White, 2, 3, '2024-03-12'),
         beltRow(15, null, Belt::Blue, '2026-09-20'),
         stripeRow(30, Belt::White, 3, 4, '2026-09-20'),
     ], Belt::Blue, 0);
 
-    expect(keysOf($result))->toBe(['belt:blue:0'])
-        ->and($result['gaps'][0]['completes_promotion_id'])->toBe(15)
-        ->and($result['gaps'][0]['after'])->toBe(['promotion_id' => 30, 'recorded_at' => '2026-09-20']);
+    expect($result['gaps'])->toBe([]);
 });
 
 it('has no history, and no gaps, without a single row', function (): void {

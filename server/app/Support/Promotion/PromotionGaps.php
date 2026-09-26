@@ -46,8 +46,9 @@ use Carbon\CarbonImmutable;
  *
  * **A window, or nothing.** A step goes after the row the walk left from and
  * no later than the next row after it (today, when there is none), never
- * counting the stripe reset a live promotion writes beside its belt row, nor
- * the starting row a step completes. A step with no day left in its window —
+ * counting the stripe reset a live promotion writes beside its belt row. A
+ * step that completes a starting row goes no later than that row's own day
+ * either: the athlete held the belt when entered. A step with no day left in its window —
  * two rows on the same day with steps between them, jumped in one save, or a
  * row dated today with steps still after it — is not offered: it could never
  * be filled.
@@ -497,7 +498,7 @@ final class PromotionGaps
                 continue;
             }
 
-            $before = $this->rowAfter($after, $completes);
+            $before = $this->bound($after, $completes);
             if (($before?->day() ?? $this->today->toDateString()) <= $after->day()) {
                 continue;
             }
@@ -519,24 +520,25 @@ final class PromotionGaps
     }
 
     /**
-     * The first row after this one (resets are already out), passing over
-     * the starting row a step completes: a step cannot be bounded by the row
-     * it moves.
+     * The row a step must come no later than: the first row after the one it
+     * follows (resets are already out). For a step that completes a starting
+     * row, that is the earlier of the next row and the starting row itself —
+     * the athlete held the belt the day they were entered, so the promotion
+     * was that day at the latest. A starting row that comes before the row
+     * the step follows leaves it no day at all.
      */
-    private function rowAfter(PromotionRecord $row, ?PromotionRecord $completes): ?PromotionRecord
+    private function bound(PromotionRecord $after, ?PromotionRecord $completes): ?PromotionRecord
     {
-        $position = array_search($row, $this->rows, true);
+        $position = array_search($after, $this->rows, true);
         if (! \is_int($position)) {
             return null;
         }
 
-        foreach (\array_slice($this->rows, $position + 1) as $next) {
-            if ($next !== $completes) {
-                return $next;
-            }
+        if ($completes !== null && array_search($completes, $this->rows, true) < $position) {
+            return $completes;
         }
 
-        return null;
+        return $this->rows[$position + 1] ?? null;
     }
 
     /** @return Neighbour|null */
