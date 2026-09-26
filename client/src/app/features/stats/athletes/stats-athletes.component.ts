@@ -8,7 +8,11 @@ import { SkeletonModule } from 'primeng/skeleton';
 import { AcademyService } from '../../../core/services/academy.service';
 import { LanguageService } from '../../../core/services/language.service';
 import { AgeBandsPayload, StatsService } from '../../../core/services/stats.service';
-import { AGE_BANDS_TITLE_KEYS, ageBandKey } from '../../../shared/utils/i18n-enum-keys';
+import {
+  AGE_BANDS_TITLE_KEYS,
+  AGE_SCOPE_KEYS,
+  ageBandKey,
+} from '../../../shared/utils/i18n-enum-keys';
 import { ErrorStateComponent } from '../../../shared/components/error-state/error-state.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 
@@ -46,17 +50,19 @@ export class StatsAthletesComponent {
   protected readonly payload = signal<AgeBandsPayload>({ bands: [], total: 0, missing_dob: 0 });
   protected readonly scope = signal<ScopeValue>('all');
 
-  /** Scope toggle options — re-evaluated when the active locale changes. */
+  /**
+   * Scope toggle options — re-evaluated when the active locale changes, and
+   * named the way the art's federation splits (#1953): kids and adults for
+   * IBJJF and WT, preagonisti and agonisti for FIJLKAM.
+   */
   protected readonly scopeOptions = computed(() => {
     // Depend on the current language signal so labels re-render on locale switch.
     this.language.currentLang();
+    const halves = AGE_SCOPE_KEYS[this.martialArt()];
     return [
       { label: this.translate.instant('stats.athletes.scope.all'), value: 'all' as ScopeValue },
-      { label: this.translate.instant('stats.athletes.scope.kids'), value: 'kids' as ScopeValue },
-      {
-        label: this.translate.instant('stats.athletes.scope.adults'),
-        value: 'adults' as ScopeValue,
-      },
+      { label: this.translate.instant(halves.kids), value: 'kids' as ScopeValue },
+      { label: this.translate.instant(halves.adults), value: 'adults' as ScopeValue },
     ];
   });
 

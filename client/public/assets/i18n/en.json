@@ -2990,7 +2990,9 @@
       "scope": {
         "kids": "Kids",
         "adults": "Adults",
-        "all": "All"
+        "all": "All",
+        "preCompetitive": "Pre-competitive",
+        "competitive": "Competitive"
       },
       "missingDobOne": "{{count}} athlete without a date of birth",
       "missingDobOther": "{{count}} athletes without a date of birth",

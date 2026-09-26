@@ -4,6 +4,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { StatsAthletesComponent } from './stats-athletes.component';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 import { useLadder } from '../../../../test-utils/ladder-test';
+import type { MartialArt } from '../../../core/services/academy.service';
 
 const MOCK_BANDS_PAYLOAD = {
   bands: [
@@ -89,7 +90,7 @@ describe('StatsAthletesComponent — the federation the divisions come from (#18
   let fixture: ComponentFixture<StatsAthletesComponent>;
   let http: HttpTestingController;
 
-  function open(art: 'bjj' | 'judo', bands: object[]): HTMLElement {
+  function open(art: MartialArt, bands: object[]): HTMLElement {
     TestBed.configureTestingModule({
       imports: [StatsAthletesComponent],
       providers: [provideHttpClient(), provideHttpClientTesting(), ...provideI18nTesting()],
@@ -126,6 +127,32 @@ describe('StatsAthletesComponent — the federation the divisions come from (#18
       'Athletes by IBJJF age division',
     );
     expect(fixture.componentInstance['chartData']().labels).toEqual(['Mighty Mite']);
+  });
+
+  // The data already follows FIJLKAM — a 12-year-old esordiente is in the
+  // `adults` category because the federation counts them as agonisti — and
+  // "Adults" was the label saying otherwise (#1953).
+  it.each(['judo', 'karate'] as const)(
+    'splits %s the way FIJLKAM does: pre-competitive and competitive',
+    (art) => {
+      open(art, [{ code: 'esordienti_a', category: 'adults', min: 12, max: 12, count: 1 }]);
+
+      expect(fixture.componentInstance['scopeOptions']().map((o) => o.label)).toEqual([
+        'All',
+        'Pre-competitive',
+        'Competitive',
+      ]);
+    },
+  );
+
+  it.each(['bjj', 'taekwondo'] as const)('keeps Kids / Adults for %s', (art) => {
+    open(art, [{ code: 'adult', category: 'adults', min: 18, max: null, count: 1 }]);
+
+    expect(fixture.componentInstance['scopeOptions']().map((o) => o.label)).toEqual([
+      'All',
+      'Kids',
+      'Adults',
+    ]);
   });
 
   it('reads a division it has no words for as its code, never as a raw key', () => {
