@@ -60,6 +60,89 @@ export function localised(value: Localised, lang: string): string {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.69.0',
+    date: '2026-09-26',
+    headline: {
+      en: 'Getting your data back, and an app in your language: restore a backup from any file, notifications in Italian that you can archive, the programme page as one map, and a fee for one athlete.',
+      it: 'Riprendersi i dati, e un’app nella tua lingua: il ripristino da qualunque file, notifiche in italiano che si possono archiviare, la pagina del programma come una mappa sola, e una quota per un atleta.',
+    },
+    sections: [
+      {
+        heading: { en: 'Backup: getting your data back', it: 'Backup: riportare indietro i dati' },
+        bullets: [
+          {
+            en: '"Restore from a file…" on Data & backup: a backup from your backup folder, a Google Drive download or a USB stick comes back straight from the app. On a new computer, where the list is empty, this is the way back.',
+            it: '«Ripristina da un file…» in Dati e backup: un backup dalla cartella dei backup, scaricato da Google Drive o da una chiavetta torna indietro direttamente dall’app. Su un computer nuovo, dove la lista è vuota, è la strada per tornare.',
+          },
+          {
+            en: 'On a computer with no backups the page opens with "Coming from another computer?": the recovery code first, then the restore. Without the code the data comes back, the medical certificates do not.',
+            it: 'Su un computer senza backup la pagina si apre con «Arrivi da un altro computer?»: prima il codice di recupero, poi il ripristino. Senza il codice i dati tornano, i certificati medici no.',
+          },
+          {
+            en: 'A file that is not a Budojo backup is refused and says so; one from a newer Budojo asks you to update first. A restore that stops half-way (a full disk, a file held by the antivirus) leaves your data as it was.',
+            it: 'Un file che non è un backup di Budojo viene rifiutato e lo dice; uno di una versione più recente chiede di aggiornare prima. Un ripristino che si interrompe (disco pieno, un file bloccato dall’antivirus) lascia i tuoi dati come erano.',
+          },
+          {
+            en: 'The Restore buttons are no longer red (the red stays in the confirmation), the latest backup is marked, and the list shows the newest five with "Show all".',
+            it: 'I pulsanti «Ripristina» non sono più rossi (il rosso resta nella conferma), il backup più recente è segnato, e la lista mostra i cinque più recenti con «Mostra tutti».',
+          },
+        ],
+      },
+      {
+        heading: { en: 'Notifications', it: 'Notifiche' },
+        bullets: [
+          {
+            en: 'In your language, in the app and in the Windows notifications, including the ones you already had. The unpaid summary names the month instead of "this month".',
+            it: 'Nella tua lingua, nell’app e nelle notifiche di Windows, anche quelle che avevi già. Il riepilogo dei pagamenti dice il mese invece di «questo mese».',
+          },
+          {
+            en: 'Archive: on every notification, and "Archive the read ones" for all you have seen, with Undo for a few seconds. Archived ones stay under "Archived"; nothing is deleted.',
+            it: 'Archivia: su ogni notifica, e «Archivia le lette» per tutte quelle già viste, con «Annulla» per qualche secondo. Le archiviate restano in «Archiviate»; niente viene cancellato.',
+          },
+          {
+            en: 'They archive themselves once they stop being true: "hasn’t trained in a while" when the athlete comes back, an old payment summary when the new one arrives.',
+            it: 'Si archiviano da sole quando non sono più vere: «non si allena da un po’» quando l’atleta torna, il riepilogo dei pagamenti vecchio quando arriva quello nuovo.',
+          },
+          {
+            en: 'No more alerts about yourself if you train in your own academy, and "6 athletes have not paid" opens those six, not the whole list.',
+            it: 'Niente più avvisi su te stesso se ti alleni nella tua accademia, e «6 atleti non hanno pagato» apre quei sei, non tutto l’elenco.',
+          },
+        ],
+      },
+      {
+        heading: { en: 'Stats → Programme', it: 'Statistiche → Programma' },
+        bullets: [
+          {
+            en: 'The page is the map: the "Over the season" chart and the two long lists below it are gone.',
+            it: 'La pagina è la mappa: il grafico «Nel corso della stagione» e i due elenchi lunghi sotto non ci sono più.',
+          },
+          {
+            en: 'A position’s techniques open from its name: to do (with Plan), done once, done, with how many lessons and people.',
+            it: 'Le tecniche di una posizione si aprono dal suo nome: da fare (con «Pianifica»), fatte una volta, fatte, con quante lezioni e quante persone.',
+          },
+        ],
+      },
+      {
+        heading: { en: 'Payments', it: 'Pagamenti' },
+        bullets: [
+          {
+            en: 'A fee for one athlete only: "Personal fee" on the athlete form. It wins over the tier and the academy fee; at 0 the athlete trains free and is not counted among those who have not paid.',
+            it: 'Una quota per un atleta solo: «Quota personale» nel modulo dell’atleta. Vince sulla fascia e sulla quota dell’accademia; a 0 l’atleta si allena gratis e non compare tra chi non ha pagato.',
+          },
+        ],
+      },
+      {
+        heading: { en: 'Fixed', it: 'Corretto' },
+        bullets: [
+          {
+            en: 'Messages in the dark theme (after planning a lesson or copying the week’s programme, for example) were an empty panel: dark text on dark. They read now.',
+            it: 'I messaggi in tema scuro (per esempio dopo aver pianificato una lezione o copiato il programma della settimana) erano un riquadro vuoto: testo scuro su scuro. Ora si leggono.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.68.0',
     date: '2026-09-26',
     headline: {
