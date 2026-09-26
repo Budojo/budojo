@@ -3329,6 +3329,14 @@
     "confirmRestore": "Ripristinare questo backup? I dati attuali verranno sostituiti con il contenuto di questo archivio.",
     "confirmRestoreAccept": "Ripristina",
     "restoreFromFile": "Ripristina da un file…",
+    "latest": "Il più recente",
+    "showAll": "Mostra tutti ({{total}})",
+    "newComputer": {
+      "title": "Arrivi da un altro computer?",
+      "text": "Ripristina il backup che avevi salvato: dalla cartella dei backup, da Google Drive o da una chiavetta. Poi inserisci il codice di recupero, perché senza i certificati medici restano illeggibili.",
+      "textNoKeys": "Ripristina il backup che avevi salvato: dalla cartella dei backup, da Google Drive o da una chiavetta.",
+      "keys": "Inserisci il codice di recupero"
+    },
     "confirmRestoreFromFile": "Scegli un backup di Budojo: i dati attuali verranno sostituiti con il suo contenuto.",
     "confirmRestoreFromFileAccept": "Scegli il file",
     "toast": {
@@ -3398,6 +3406,7 @@
     "folder": {
       "title": "Cartella dei backup",
       "why": "I backup salvati su questo computer non sopravvivono a questo computer. Scegli una cartella — una che il tuo servizio cloud già sincronizza, un disco di rete o una chiavetta USB — e ogni backup viene copiato lì automaticamente.",
+      "whyRestore": "Se cambi computer, sono queste le copie da riportare indietro con «Ripristina da un file…».",
       "choose": "Scegli cartella",
       "change": "Cambia cartella",
       "chosen": "Cartella dei backup impostata",

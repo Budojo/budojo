@@ -4078,6 +4078,15 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
   });
   // No archives yet: a fresh install's backup page.
   screen('53-backup-empty', '/dashboard/backup', '[data-cy="backup-empty"]', { archives: [] });
+  // A fortnight of history (#1910): the newest five, marked, and "Mostra tutti".
+  screen('53-backup-many', '/dashboard/backup', '[data-cy="backup-list"]', {
+    archives: Array.from({ length: 9 }, (_, i) => ({
+      name: `budojo-2026-09-${String(14 - i).padStart(2, '0')}-0300.zip`,
+      path: `C:\\Users\\matteo\\AppData\\Roaming\\Budojo\\backups\\budojo-2026-09-${String(14 - i).padStart(2, '0')}-0300.zip`,
+      createdAt: `2026-09-${String(14 - i).padStart(2, '0')}T01:00:00.000Z`,
+      sizeBytes: 2_400_000,
+    })),
+  });
   // Restoring from a file (#1909), confirmed before the file dialog opens.
   screen('53-backup-restore-file-confirm', '/dashboard/backup', '[data-cy="backup-list"]', {
     act: () => {

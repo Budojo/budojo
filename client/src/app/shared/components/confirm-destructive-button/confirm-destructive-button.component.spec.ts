@@ -22,6 +22,21 @@ function setup(inputs: {
 }
 
 describe('ConfirmDestructiveButtonComponent (#1034)', () => {
+  it('is red by default, and neutral when asked, with the confirmation still red (#1910)', () => {
+    const { fixture, confirmationService } = setup({});
+    const button = (): HTMLElement => fixture.nativeElement.querySelector('button');
+    expect(button().className).toContain('p-button-danger');
+
+    fixture.componentRef.setInput('severity', 'secondary');
+    fixture.detectChanges();
+    expect(button().className).toContain('p-button-secondary');
+    expect(button().className).not.toContain('p-button-danger');
+
+    const confirm = vi.spyOn(confirmationService, 'confirm');
+    button().click();
+    expect(confirm.mock.calls[0][0].acceptButtonProps).toMatchObject({ severity: 'danger' });
+  });
+
   it('mounts a p-button host with the default icon binding', () => {
     const { fixture } = setup({});
     const btn = fixture.nativeElement.querySelector('p-button');

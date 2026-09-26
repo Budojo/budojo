@@ -36,6 +36,50 @@
     />
   </div>
 
+  @if (newComputer()) {
+    <!--
+      The way back, first, on a computer with no backups (#1910): a fresh
+      install is the moment someone arrives from a dead or replaced one, and
+      the page used to greet it with an empty list. Restore and the recovery
+      code sit together because they are one job: without the code the
+      restored certificates cannot be opened.
+    -->
+    <section class="backup-page__arrival" data-cy="backup-new-computer">
+      <h2 class="backup-page__arrival-title">{{ 'backup.newComputer.title' | translate }}</h2>
+      <p class="backup-page__arrival-text">
+        {{
+          (keysAvailable ? 'backup.newComputer.text' : 'backup.newComputer.textNoKeys') | translate
+        }}
+      </p>
+      <div class="backup-page__arrival-actions">
+        <app-confirm-destructive-button
+          icon="pi pi-folder-open"
+          severity="secondary"
+          [label]="'backup.restoreFromFile' | translate"
+          [ariaLabel]="'backup.restoreFromFile' | translate"
+          [confirmMessage]="'backup.confirmRestoreFromFile' | translate"
+          [acceptLabel]="'backup.confirmRestoreFromFileAccept' | translate"
+          [rejectLabel]="'common.cancel' | translate"
+          [text]="false"
+          size="large"
+          [loading]="restoringFromFile()"
+          (confirmed)="restoreFromFile()"
+          dataCy="backup-new-computer-restore"
+        />
+        @if (keysAvailable) {
+          <p-button
+            [label]="'backup.newComputer.keys' | translate"
+            icon="pi pi-key"
+            severity="secondary"
+            [text]="true"
+            (onClick)="goToKeysImport()"
+            data-cy="backup-new-computer-keys"
+          />
+        }
+      </div>
+    </section>
+  }
+
   @if (folderAvailable) {
     <section class="backup-page__drive" data-cy="backup-folder">
       <h2 class="backup-page__heading">{{ 'backup.folder.title' | translate }}</h2>
@@ -51,6 +95,9 @@
           } @else {
             {{ 'backup.folder.neverCopied' | translate }}
           }
+        </p>
+        <p class="backup-page__muted" data-cy="folder-why-restore">
+          {{ 'backup.folder.whyRestore' | translate }}
         </p>
         @if (folderState().lastError) {
           <p class="backup-page__drive-error" data-cy="folder-error" role="status">
@@ -171,19 +218,21 @@
       this is the way back. Confirmed before the file dialog opens, like every
       restore: it replaces the data on this computer.
     -->
-    <app-confirm-destructive-button
-      icon="pi pi-folder-open"
-      [label]="'backup.restoreFromFile' | translate"
-      [ariaLabel]="'backup.restoreFromFile' | translate"
-      [confirmMessage]="'backup.confirmRestoreFromFile' | translate"
-      [acceptLabel]="'backup.confirmRestoreFromFileAccept' | translate"
-      [rejectLabel]="'common.cancel' | translate"
-      [text]="false"
-      [outlined]="true"
-      [loading]="restoringFromFile()"
-      (confirmed)="restoreFromFile()"
-      dataCy="backup-restore-from-file"
-    />
+    <!-- Not on a new computer: the block above already leads with it. -->
+    @if (!newComputer()) {
+      <app-confirm-destructive-button
+        icon="pi pi-folder-open"
+        severity="secondary"
+        [label]="'backup.restoreFromFile' | translate"
+        [ariaLabel]="'backup.restoreFromFile' | translate"
+        [confirmMessage]="'backup.confirmRestoreFromFile' | translate"
+        [acceptLabel]="'backup.confirmRestoreFromFileAccept' | translate"
+        [rejectLabel]="'common.cancel' | translate"
+        [loading]="restoringFromFile()"
+        (confirmed)="restoreFromFile()"
+        dataCy="backup-restore-from-file"
+      />
+    }
   </div>
 
   @if (loading()) {
@@ -202,10 +251,21 @@
     <p class="backup-page__muted" data-cy="backup-empty">{{ 'backup.empty' | translate }}</p>
   } @else {
     <ul class="backup-page__list" data-cy="backup-list">
-      @for (archive of rows(); track archive.name) {
+      @for (archive of visibleRows(); track archive.name; let first = $first) {
         <li class="backup-page__row">
           <div class="backup-page__row-info">
-            <span class="backup-page__row-date">{{ archive.createdAt | localeDate }}</span>
+            <span class="backup-page__row-date">
+              {{ archive.createdAt | localeDate }}
+              @if (first) {
+                <!-- The copy someone restoring after a mistake reaches for. -->
+                <p-tag
+                  [value]="'backup.latest' | translate"
+                  severity="secondary"
+                  [rounded]="true"
+                  data-cy="backup-latest"
+                />
+              }
+            </span>
             <span class="backup-page__row-size">{{
               'backup.size' | translate: { mb: sizeMb(archive.sizeBytes) }
             }}</span>
@@ -223,8 +283,14 @@
             }
           </div>
           @if (archive.local) {
+            <!--
+              Neutral, not red (#1910): the rarest action on the page, on
+              every row, was its loudest element. The confirmation keeps the
+              red — that is where the decision is made.
+            -->
             <app-confirm-destructive-button
               icon="pi pi-history"
+              severity="secondary"
               [label]="'backup.restore' | translate"
               [ariaLabel]="'backup.restore' | translate"
               [confirmMessage]="'backup.confirmRestore' | translate"
@@ -251,6 +317,15 @@
         </li>
       }
     </ul>
+    @if (hiddenCount() > 0) {
+      <p-button
+        [label]="'backup.showAll' | translate: { total: rows().length }"
+        severity="secondary"
+        [text]="true"
+        (onClick)="showAll.set(true)"
+        data-cy="backup-show-all"
+      />
+    }
   }
 
   @if (keysAvailable) {
@@ -298,8 +373,10 @@
       <h3 class="backup-page__subheading">{{ 'backup.keys.importHeading' | translate }}</h3>
       <p class="backup-page__muted">{{ 'backup.keys.importIntro' | translate }}</p>
       <textarea
+        #keysImport
         class="backup-page__keys-code"
         rows="3"
+        [attr.aria-label]="'backup.keys.importHeading' | translate"
         [value]="importValue()"
         (input)="setImportValue($any($event.target).value)"
         [placeholder]="'backup.keys.importPlaceholder' | translate"

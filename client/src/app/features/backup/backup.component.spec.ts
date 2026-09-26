@@ -203,8 +203,9 @@ describe('BackupComponent', () => {
       await fixture.whenStable();
       fixture.detectChanges();
 
+      // Since #1910 it is the new-computer block that offers it on an empty list.
       const button = (fixture.nativeElement as HTMLElement).querySelector(
-        '[data-cy="backup-restore-from-file"]',
+        '[data-cy="backup-new-computer-restore"]',
       );
       expect(button?.textContent).toContain('Restore from a file');
     });
@@ -708,6 +709,116 @@ describe('BackupComponent', () => {
 
       expect(el.querySelector('[data-cy="folder-choose"]')).not.toBeNull();
       expect(el.querySelector('[data-cy="folder-loading"]')).toBeNull();
+    });
+  });
+
+  // #1910 — the page says how to come back, and restoring stops being loud.
+  describe('the way back (#1910)', () => {
+    const el = (fixture: { nativeElement: HTMLElement }, cy: string): HTMLElement | null =>
+      fixture.nativeElement.querySelector(`[data-cy="${cy}"]`);
+
+    async function settled(fixture: { whenStable(): Promise<unknown>; detectChanges(): void }) {
+      await fixture.whenStable();
+      fixture.detectChanges();
+    }
+
+    it('leads with the way back on a computer with no backups', async () => {
+      const { fixture } = setup({ list: vi.fn(async () => []) }, { available: true });
+      await settled(fixture);
+
+      expect(el(fixture, 'backup-new-computer')?.textContent).toContain(
+        'Coming from another computer?',
+      );
+      expect(el(fixture, 'backup-new-computer-restore')).not.toBeNull();
+      expect(el(fixture, 'backup-new-computer-keys')).not.toBeNull();
+      // Once, not twice: the list's own button steps back while the block leads.
+      expect(el(fixture, 'backup-restore-from-file')).toBeNull();
+    });
+
+    it('does not offer the recovery code on a build without the keys bridge', async () => {
+      const { fixture } = setup({ list: vi.fn(async () => []) });
+      await settled(fixture);
+
+      expect(el(fixture, 'backup-new-computer')?.textContent).not.toContain('recovery code');
+      expect(el(fixture, 'backup-new-computer-keys')).toBeNull();
+    });
+
+    it('takes the owner to the recovery code field, cursor in it', async () => {
+      const { fixture } = setup({ list: vi.fn(async () => []) }, { available: true });
+      await settled(fixture);
+
+      el(fixture, 'backup-new-computer-keys')?.querySelector('button')?.click();
+
+      expect(document.activeElement).toBe(el(fixture, 'recovery-import-input'));
+    });
+
+    it('stays out of the way once there are backups', async () => {
+      const { fixture } = setup();
+      await settled(fixture);
+
+      expect(el(fixture, 'backup-new-computer')).toBeNull();
+      expect(el(fixture, 'backup-restore-from-file')).not.toBeNull();
+    });
+
+    it('marks the latest backup, and only that one', async () => {
+      const { fixture } = setup();
+      await settled(fixture);
+
+      const tags = fixture.nativeElement.querySelectorAll('[data-cy="backup-latest"]');
+      expect(tags).toHaveLength(1);
+      expect(fixture.nativeElement.querySelector('.backup-page__row')?.textContent).toContain(
+        'Latest',
+      );
+    });
+
+    it('shows the newest five, and all of them on request', async () => {
+      const many: BackupArchiveView[] = Array.from({ length: 7 }, (_, i) => ({
+        name: `budojo-backup-2026081${9 - i}-090000.zip`,
+        createdAt: `2026-08-1${9 - i}T09:00:00Z`,
+        sizeBytes: 2_000_000,
+      }));
+      const { fixture } = setup({ list: vi.fn(async () => many) });
+      await settled(fixture);
+
+      expect(fixture.nativeElement.querySelectorAll('.backup-page__row')).toHaveLength(5);
+      const showAll = el(fixture, 'backup-show-all');
+      expect(showAll?.textContent).toContain('Show all (7)');
+
+      showAll?.querySelector('button')?.click();
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelectorAll('.backup-page__row')).toHaveLength(7);
+      expect(el(fixture, 'backup-show-all')).toBeNull();
+    });
+
+    it('does not paint restore red on every row', async () => {
+      const { fixture } = setup();
+      await settled(fixture);
+
+      const restore = el(fixture, `backup-restore-${archives[0].name}`)?.querySelector('button');
+      expect(restore?.className).toContain('p-button-secondary');
+      expect(restore?.className).not.toContain('p-button-danger');
+    });
+
+    it('says in the folder section that those copies are the way back', async () => {
+      const { fixture } = setup(
+        {},
+        {},
+        {},
+        {
+          available: true,
+          state: vi.fn(async () => ({
+            folder: 'D:\\OneDrive\\Budojo',
+            lastCopyAt: '2026-08-15T09:00:00Z',
+            lastError: null,
+            lastErrorAt: null,
+          })),
+        },
+      );
+      await settled(fixture);
+      await settled(fixture);
+
+      expect(el(fixture, 'folder-why-restore')?.textContent).toContain('If you change computers');
     });
   });
 });

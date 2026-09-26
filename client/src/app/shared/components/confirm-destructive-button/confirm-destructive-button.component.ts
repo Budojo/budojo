@@ -59,7 +59,7 @@ import {
   template: `
     <p-button
       type="button"
-      severity="danger"
+      [severity]="severity()"
       [text]="text()"
       [outlined]="outlined()"
       [size]="size()"
@@ -130,6 +130,15 @@ export class ConfirmDestructiveButtonComponent {
   protected readonly resolvedTooltip = computed(
     () => this.tooltip() ?? (this.label() !== null ? undefined : this.ariaLabel()),
   );
+
+  /**
+   * The trigger's tone (#1910). `danger` by default. `secondary` is for an
+   * action that is destructive but rare, repeated down a list: ten red
+   * "Ripristina" were the loudest thing on the backup page, louder than the
+   * backup itself. The confirmation keeps its red accept either way — that
+   * is where the decision is made, so that is where the warning belongs.
+   */
+  readonly severity = input<'danger' | 'secondary'>('danger');
 
   /** Visual variant — text and outlined map to PrimeNG button modifiers. Defaults match the canonical low-stakes destructive style on list rows. */
   readonly text = input<boolean>(true);

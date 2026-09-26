@@ -3329,6 +3329,14 @@
     "confirmRestore": "Restore this backup? Your current data will be replaced with the contents of this archive.",
     "confirmRestoreAccept": "Restore",
     "restoreFromFile": "Restore from a file…",
+    "latest": "Latest",
+    "showAll": "Show all ({{total}})",
+    "newComputer": {
+      "title": "Coming from another computer?",
+      "text": "Restore the backup you kept: from your backup folder, from Google Drive or from a USB stick. Then enter your recovery code: without it, the medical certificates cannot be opened.",
+      "textNoKeys": "Restore the backup you kept: from your backup folder, from Google Drive or from a USB stick.",
+      "keys": "Enter your recovery code"
+    },
     "confirmRestoreFromFile": "Choose a Budojo backup: the current data will be replaced with its contents.",
     "confirmRestoreFromFileAccept": "Choose the file",
     "toast": {
@@ -3398,6 +3406,7 @@
     "folder": {
       "title": "Backup folder",
       "why": "Backups saved on this computer do not survive this computer. Choose a folder — one your cloud service already syncs, a network drive, or a USB stick — and every backup is copied there automatically.",
+      "whyRestore": "If you change computers, these are the copies to bring back with “Restore from a file…”.",
       "choose": "Choose folder",
       "change": "Change folder",
       "chosen": "Backup folder set",

@@ -93,7 +93,7 @@ The live database is only replaced after the archive extracts and validates clea
 
 ### Restoring from a file (#1909)
 
-The list shows only the archives in the app's own folder. A backup anywhere else — your backup folder, a zip downloaded from Google Drive, a USB stick — comes back with **Data & backup → Restore from a file…**. It asks for confirmation, then opens the system file dialog, starting in your backup folder when you have one. On a new computer, where the list is empty, this is the way back.
+The list shows only the archives in the app's own folder. A backup anywhere else — your backup folder, a zip downloaded from Google Drive, a USB stick — comes back with **Data & backup → Restore from a file…**. It asks for confirmation, then opens the system file dialog, starting in your backup folder when you have one. On a new computer, where the list is empty, this is the way back, and the page leads with it: a **Coming from another computer?** block that puts *Restore from a file…* next to *Enter your recovery code*, because a restored backup without its keys cannot open the documents (#1910).
 
 - The file is **checked where it is** — the same manifest and version check as a listed archive — and nothing is copied or swapped until it passes. A file that is not a Budojo backup is refused with *"This file is not a Budojo backup"*; one from a newer Budojo, with *"Update Budojo, then restore it"*.
 - Once it passes it is **copied into the app's own folder**, so it shows in the list like any other, and then restored. An archive the list already holds is not copied twice, and a renamed copy (`… (1).zip` from a second download) goes in under the name its backup had, from the manifest's timestamp.
