@@ -126,7 +126,9 @@ final class NotificationText
                 return null;
             }
             $expiresOn = $document['expires_on'] ?? null;
-            $lines[] = \is_string($expiresOn)
+            // ISO only: a date Carbon cannot parse would take the whole inbox
+            // down with it, not just this row.
+            $lines[] = \is_string($expiresOn) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $expiresOn) === 1
                 ? self::line('notifications.document_expires', [
                     'name' => $document['name'],
                     'date' => self::dateIn(CarbonImmutable::parse($expiresOn), 'j F Y', $locale),

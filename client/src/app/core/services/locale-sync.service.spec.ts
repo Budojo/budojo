@@ -5,6 +5,7 @@ import { provideI18nTesting } from '../../../test-utils/i18n-test';
 import { AuthService, User } from './auth.service';
 import { LanguageService } from './language.service';
 import { LocaleSyncService } from './locale-sync.service';
+import { NotificationInboxService } from './notification-inbox.service';
 
 /**
  * #1912 — the server writes the owner's notifications, so it has to be told
@@ -55,6 +56,20 @@ describe('LocaleSyncService', () => {
     // The user now carries it, so the effect has nothing left to say.
     expect(auth.user()?.locale).toBe('it');
     http.expectNone('/api/v1/me/locale');
+  });
+
+  it('reads the inbox again in the new language, when it was already on screen', () => {
+    language.setLanguage('en');
+    signIn('en');
+    TestBed.inject(NotificationInboxService).load().subscribe();
+    http.expectOne('/api/v1/me/notifications').flush({ data: [], meta: { unread_count: 0 } });
+
+    language.setLanguage('it');
+    TestBed.tick();
+    http.expectOne('/api/v1/me/locale').flush({ data: { locale: 'it' } });
+
+    // The server words the rows at read time: the ones on screen are stale.
+    expect(http.expectOne('/api/v1/me/notifications').request.method).toBe('GET');
   });
 
   it('says nothing when the server already has it', () => {

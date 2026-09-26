@@ -102,6 +102,12 @@ it('writes both expiry digests in the language', function (): void {
     ]);
 });
 
+it('shows a document name alone when its expiry is not a date', function (): void {
+    $papers = ['kind' => 'academy_document_expiry_reminders', 'params' => ['count' => 1, 'documents' => [['name' => 'Assicurazione.pdf', 'expires_on' => 'soon']]]];
+
+    expect(NotificationText::of($papers, 'it')['body'])->toBe('Assicurazione.pdf');
+});
+
 it('falls back to the stored sentence for a kind it does not write', function (): void {
     $data = ['kind' => 'community_new_post', 'title' => 'Stored title', 'body' => 'Stored body'];
 

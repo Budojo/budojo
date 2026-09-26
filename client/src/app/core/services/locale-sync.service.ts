@@ -3,6 +3,7 @@ import { Injectable, effect, inject } from '@angular/core';
 import { environment } from '../../../environments/environment';
 import { AuthService } from './auth.service';
 import { LanguageService, SupportedLanguage } from './language.service';
+import { NotificationInboxService } from './notification-inbox.service';
 
 /**
  * Tells the server which language the app is in (#1912).
@@ -21,6 +22,7 @@ export class LocaleSyncService {
   private readonly http = inject(HttpClient);
   private readonly auth = inject(AuthService);
   private readonly language = inject(LanguageService);
+  private readonly inbox = inject(NotificationInboxService);
 
   constructor() {
     effect(() => {
@@ -37,8 +39,14 @@ export class LocaleSyncService {
         locale,
       })
       .subscribe({
-        next: (res) =>
-          this.auth.user.update((user) => (user ? { ...user, locale: res.data.locale } : user)),
+        next: (res) => {
+          this.auth.user.update((user) => (user ? { ...user, locale: res.data.locale } : user));
+          // The rows already on screen were written in the previous language:
+          // the server words them at read time, so read them again.
+          if (this.inbox.loaded()) {
+            this.inbox.load().subscribe({ error: () => undefined });
+          }
+        },
         error: () => undefined,
       });
   }
