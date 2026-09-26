@@ -1027,34 +1027,6 @@ describe('PromotionsListComponent — missing steps (#1966)', () => {
     );
   });
 
-  it('gives every action on a missing step a 48px floor on the button itself', async () => {
-    const { el, fixture, svc } = jacopo();
-    const floor = (cy: string): string | undefined =>
-      el.querySelector<HTMLButtonElement>(`[data-cy="${cy}"] button`)?.style.minHeight;
-
-    expect(floor('gap-add-date-stripe:white:4')).toBe('3rem');
-    expect(floor('gap-skip-stripe:white:4')).toBe('3rem');
-    expect(floor('gap-add-date-belt:blue:0')).toBe('3rem');
-    expect(floor('promotions-history-add')).toBe('3rem');
-
-    click(el, 'gap-skip-stripe:white:4');
-    fixture.detectChanges();
-    await fixture.whenStable();
-    expect(floor('gap-unskip-stripe:white:4')).toBe('3rem');
-
-    // A folded run's "show".
-    const stripe = (n: number): PromotionGap => ({
-      ...fourthStripe,
-      key: `stripe:white:${n}`,
-      from_stripes: n - 1,
-      to_stripes: n,
-    });
-    svc.promotions.mockReturnValue(page([opening, whiteThree], [stripe(1), stripe(2), stripe(3)]));
-    (fixture.componentInstance as unknown as { load: (page: number) => void }).load(1);
-    fixture.detectChanges();
-    expect(floor('gap-run-show')).toBe('3rem');
-  });
-
   it('keys a poom → dan skip by the degree it carries, not by 0', () => {
     // Taekwondo, the server's reply: a 2nd poom on record, black with the
     // 2nd dan today (stored 1) — the poom → dan step never written down.

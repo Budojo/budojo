@@ -188,7 +188,6 @@
               <p-button
                 [label]="'athletes.detail.promotions.gap.undo' | translate"
                 [text]="true"
-                [style]="hitArea"
                 [ariaLabel]="
                   'athletes.detail.promotions.gap.undoAria'
                     | translate: { step: stepLabel(entry.gap) }
@@ -214,7 +213,6 @@
               <p-button
                 [label]="'athletes.detail.promotions.gap.addDate' | translate"
                 [text]="true"
-                [style]="hitArea"
                 [ariaLabel]="
                   'athletes.detail.promotions.gap.addDateAria'
                     | translate: { step: stepLabel(entry.gap) }
@@ -227,7 +225,6 @@
                   [label]="skipLabelKey(entry.gap) | translate"
                   [text]="true"
                   severity="secondary"
-                  [style]="hitArea"
                   [ariaLabel]="(skipLabelKey(entry.gap) | translate) + ': ' + stepLabel(entry.gap)"
                   [loading]="skippingKey() === entry.gap.key"
                   [disabled]="skippingKey() !== null"
@@ -270,7 +267,6 @@
               <p-button
                 [label]="'athletes.detail.promotions.gap.show' | translate"
                 [text]="true"
-                [style]="hitArea"
                 [ariaLabel]="
                   'athletes.detail.promotions.gap.showAria'
                     | translate: { total: entry.gaps.length }
@@ -332,7 +328,6 @@
                 <p-button
                   [label]="'athletes.detail.promotions.gap.addDate' | translate"
                   [text]="true"
-                  [style]="hitArea"
                   [ariaLabel]="
                     'athletes.detail.promotions.gap.addDateAria'
                       | translate: { step: stepLabel(gap) }
@@ -401,7 +396,6 @@
         <p-button
           [label]="'athletes.detail.promotions.addPast' | translate"
           [link]="true"
-          [style]="hitArea"
           (onClick)="openCreateDialog()"
           data-cy="promotions-history-add"
         />

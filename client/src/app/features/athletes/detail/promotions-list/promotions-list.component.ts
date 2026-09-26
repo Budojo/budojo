@@ -163,12 +163,6 @@ export class PromotionsListComponent implements OnInit {
   private readonly skipped = signal<ReadonlySet<string>>(new Set());
   /** What the status region last said — a skip or its undo. */
   protected readonly announcement = signal('');
-  /**
-   * The 48px floor, on each action's own `<button>`: `p-button` hands `style`
-   * to the element that takes the click, so the floor is on the target, not
-   * on a wrapper around it (Fitts, client/CLAUDE.md).
-   */
-  protected readonly hitArea = { 'min-height': '3rem' } as const;
 
   /** The page's rows with the missing steps between them (#1966). */
   protected readonly entries = computed<TimelineEntry[]>(() =>
