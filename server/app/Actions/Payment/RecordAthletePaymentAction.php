@@ -34,9 +34,9 @@ class RecordAthletePaymentAction
      * work — see `create_athlete_payments_table` migration.
      *
      * `amountCents` is supplied by the caller — the controller passes what
-     * `App\Support\MonthlyFee::forAthlete()` resolves (the athlete's price
-     * tier if they are on one, the academy's flat `monthly_fee_cents`
-     * otherwise, #1381) after verifying it is non-null. Snapshotting at the
+     * `App\Support\MonthlyFee::forAthlete()` resolves (the athlete's own
+     * fee, #1757, else their price tier, else the academy's flat
+     * `monthly_fee_cents`, #1381) after verifying it is non-null. Snapshotting at the
      * call site means future fee or tier changes do NOT rewrite past
      * records.
      *

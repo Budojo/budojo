@@ -4413,14 +4413,16 @@ paths:
 
             - `no` is the "Unpaid" chip: the athlete is `active` (#805), is
               not the owner's own row (`is_self`), is charged a fee
-              (`monthly_fee_cents` is not null), and neither a payment
+              (`monthly_fee_cents` is not null, and their own
+              `fee_override_cents` is not `0`, #1757), and neither a payment
               covering the month nor a carnet spendable today pays for it.
             - `yes` is every other chip: a payment covering the month, or a
               spendable carnet. Until #1722 it meant a payment row only and
               left carnet holders out. It deliberately carries no status
               gate: an athlete who paid and then went inactive has still
-              paid. Rows on which no payment is expected (`is_self`, or
-              `monthly_fee_cents` null) are under neither value.
+              paid. Rows on which no payment is expected (`is_self`,
+              `monthly_fee_cents` null, or a personal fee of `0` — someone
+              who trains free, #1757) are under neither value.
 
             The owner's digest and the athlete's overdue push ask the same
             question the same way. Unrecognised values are silently ignored
@@ -9016,6 +9018,15 @@ components:
             neither this nor `monthly_fee_cents` answers alone, since an
             academy priced only by tier leaves the flat fee null.
           example: 0
+        fee_override_count:
+          type: integer
+          minimum: 0
+          description: |
+            How many athletes have a personal fee above zero (#1757). The same
+            gate reads it: an academy with no flat fee and no tiers still
+            charges these athletes. Athletes whose personal fee is `0` train
+            free and are not counted.
+          example: 0
         carnet_price_cents:
           type: integer
           minimum: 0
@@ -10588,9 +10599,10 @@ components:
           minimum: 0
           description: |
             Snapshot of the fee that applied to this athlete at recording
-            time — their tier's amount if they were on one, the academy's
-            flat `monthly_fee_cents` otherwise (#1381) — **times the months
-            covered** (#1382). Budojo has nowhere to record a discounted
+            time — their own `fee_override_cents` if set (#1757), else their
+            tier's amount, else the academy's flat `monthly_fee_cents`
+            (#1381) — **times the months covered** (#1382). `0` for an
+            athlete who trains free. Budojo has nowhere to record a discounted
             annual and does not pretend to.
         paid_at:
           type: string

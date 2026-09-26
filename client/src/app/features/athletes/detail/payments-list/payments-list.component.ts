@@ -337,7 +337,7 @@ export class PaymentsListComponent implements OnInit {
 
   /**
    * What this athlete pays each month, resolved server-side (#1381): their
-   * price tier if they are on one, the academy's flat fee otherwise.
+   * own fee (#1757), else their price tier, else the academy's flat fee.
    *
    * Three states, and the third one matters: `undefined` means the athlete
    * request has not answered yet, `null` means no fee applies, a number is

@@ -88,13 +88,18 @@ it('owes nothing when the athlete trains free, and owes the override otherwise',
 });
 
 it('owes a personal fee even where the academy charges none', function (): void {
+    // No flat fee and no tier: the personal fee is the only charge there is.
     $this->academy->update(['monthly_fee_cents' => null]);
+    $this->tier->delete();
     $discounted = Athlete::factory()->for($this->academy)->create(['fee_tier_id' => null, 'fee_override_cents' => 4000]);
     $nobody = Athlete::factory()->for($this->academy)->create(['fee_tier_id' => null, 'fee_override_cents' => null]);
 
     $owing = $this->actingAs($this->user)->getJson('/api/v1/athletes?paid=no')->assertOk()->json('data.*.id');
 
     expect($owing)->toContain($discounted->id)->not->toContain($nobody->id);
+    // …and the academy says so, which is what opens the chip and the filter.
+    $this->actingAs($this->user)->getJson('/api/v1/academy')
+        ->assertOk()->assertJsonPath('data.fee_tier_count', 0)->assertJsonPath('data.fee_override_count', 1);
 });
 
 it('still records a payment for someone who trains free', function (): void {

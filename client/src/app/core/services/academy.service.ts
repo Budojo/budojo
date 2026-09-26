@@ -228,6 +228,12 @@ export interface Academy {
    */
   fee_tier_count?: number;
   /**
+   * Athletes with a personal fee above zero (#1757). An academy with no flat
+   * fee and no tiers still charges them, so the same gate reads this too.
+   * Optional for the same fixture-compat reason.
+   */
+  fee_override_count?: number;
+  /**
    * Entry-carnet offering (#1364): price of one carnet in cents, and how
    * many entries it holds. `null` on either means "this academy doesn't sell
    * carnets" — selling is rejected until both are set, and the carnet UI
