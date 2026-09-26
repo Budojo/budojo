@@ -2322,7 +2322,10 @@
         "periodStartsHereOne": "Also covers {{next}}",
         "periodStartsHereOther": "Also covers {{next}}",
         "periodCoveredBy": "Part of the {{month}} payment",
-        "beforeBillingFloor": "Before this academy started recording fees in Budojo"
+        "beforeBillingFloor": "Before this academy started recording fees in Budojo",
+        "trainsFree": "Trains free",
+        "trainsFreeHint": "Trains free · no fee is due.",
+        "feeOverrideHint": "Personal fee · {{amount}} a month."
       },
       "documents": {
         "confirm": {
@@ -2576,7 +2579,8 @@
         "addressZip": "ZIP",
         "addressCity": "City",
         "addressProvince": "Province",
-        "feeTier": "Fee tier"
+        "feeTier": "Fee tier",
+        "feeOverride": "Personal fee"
       },
       "placeholder": {
         "phoneCountryCode": "Code",
@@ -2630,6 +2634,8 @@
       "hint": {
         "address": "Leave every field empty to keep the athlete without an address on file.",
         "feeTier": "Which monthly fee they pay. Leave empty for the academy's standard fee.",
+        "feeOverride": "Only for this athlete: it replaces the tier and the academy's fee. Enter 0 if they train free.",
+        "feeOverrideFree": "Trains free: nothing is due, and they won't appear among those who haven't paid.",
         "kidsBeltsHidden": "Kids' belts are hidden: turn them on in Academy → Edit."
       },
       "button": {

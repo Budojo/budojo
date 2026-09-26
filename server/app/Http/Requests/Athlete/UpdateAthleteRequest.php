@@ -102,16 +102,19 @@ class UpdateAthleteRequest extends FormRequest
             'stripes' => ['sometimes', 'integer', 'min:0', 'max:10', new StripesWithinGrade($this->rankLadder(), storedBelt: $athlete?->belt)],
             'status' => ['sometimes', Rule::enum(AthleteStatus::class)],
             'joined_at' => ['sometimes', 'date'],
-            // Which price tier the athlete is on (#1381). Scoped to their own
-            // academy: attaching academy B's tier to academy A's athlete would
-            // make the fee resolve to a price the owner cannot even see.
             // How often this athlete is expected to pay (#1382). Monthly for
             // everyone until someone changes it.
             'billing_period_months' => ['sometimes', 'integer', Rule::enum(BillingPeriod::class)],
+            // Which price tier the athlete is on (#1381). Scoped to their own
+            // academy: attaching academy B's tier to academy A's athlete would
+            // make the fee resolve to a price the owner cannot even see.
             'fee_tier_id' => [
                 'sometimes', 'nullable', 'integer',
                 Rule::exists('academy_fee_tiers', 'id')->where('academy_id', $academyId),
             ],
+            // This athlete's own monthly fee, in cents (#1757): null for
+            // none, 0 for training free.
+            'fee_override_cents' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:1000000'],
             ...$this->addressRules(),
         ];
     }

@@ -30,6 +30,7 @@ use Illuminate\Support\Facades\Storage;
  * @property int                     $id
  * @property int                     $academy_id
  * @property int|null                $fee_tier_id
+ * @property int|null                $fee_override_cents  This athlete's own monthly fee (#1757); null: none, the tier or academy fee applies; 0: trains free
  * @property int                     $billing_period_months
  * @property int|null                $user_id                M7 athlete-login link (#445). Null until the athlete accepts the invite; non-null afterwards.
  * @property bool                    $is_self                Owner-as-athlete row marker (#748) — see class doc.
@@ -56,7 +57,7 @@ use Illuminate\Support\Facades\Storage;
  * @property-read int|null           $attendance_total_count Same, for the current SEASON (#1484) — the academy's training year, floored per row at this athlete's `joined_at`. It was an all-time count until then.
  * @property-read string|null        $last_attended_on       The latest live presence (#1726), selected as a `withMax` alias on the roster index and on show. Null when they never trained; the resource omits the key where the query did not ask.
  */
-#[Fillable(['academy_id', 'fee_tier_id', 'billing_period_months', 'user_id', 'is_self', 'first_name', 'last_name', 'email', 'phone_country_code', 'phone_national_number', 'website', 'facebook', 'instagram', 'date_of_birth', 'belt', 'stripes', 'status', 'joined_at'])]
+#[Fillable(['academy_id', 'fee_tier_id', 'fee_override_cents', 'billing_period_months', 'user_id', 'is_self', 'first_name', 'last_name', 'email', 'phone_country_code', 'phone_national_number', 'website', 'facebook', 'instagram', 'date_of_birth', 'belt', 'stripes', 'status', 'joined_at'])]
 #[ObservedBy([AthleteObserver::class, AthleteAuditObserver::class, ForgetsAttendanceSummaries::class])]
 class Athlete extends Model implements HasAddress
 {
@@ -225,9 +226,12 @@ class Athlete extends Model implements HasAddress
      * not a dash, status aside (#1722):
      *
      * - **not the owner** training in their own academy (#748);
-     * - **charged a fee** — on a tier, or at an academy with a flat fee; the
-     *   SQL side of `MonthlyFee::forAthlete()` being non-null (#1381). A
-     *   deliberate zero counts, as it does for `Academy::scopeChargingAFee`.
+     * - **charged a fee** — a fee of their own above zero (#1757), or with
+     *   no override, on a tier or at an academy with a flat fee; the SQL
+     *   side of `MonthlyFee::forAthlete()` being non-null (#1381). A
+     *   deliberate zero on the tier or the academy counts, as it does for
+     *   `Academy::scopeChargingAFee`; a zero of the athlete's own does not:
+     *   that athlete trains free, and the roster draws a dash.
      *
      * @param  Builder<$this>  $query
      * @return Builder<$this>
@@ -237,8 +241,13 @@ class Athlete extends Model implements HasAddress
         return $query
             ->where('is_self', false)
             ->where(fn (Builder $q) => $q
-                ->whereNotNull('fee_tier_id')
-                ->orWhereHas('academy', fn (Builder $academy) => $academy->whereNotNull('monthly_fee_cents')));
+                // Their own fee (#1757): owed when above zero; zero trains free.
+                ->where('fee_override_cents', '>', 0)
+                ->orWhere(fn (Builder $noOverride) => $noOverride
+                    ->whereNull('fee_override_cents')
+                    ->where(fn (Builder $inherited) => $inherited
+                        ->whereNotNull('fee_tier_id')
+                        ->orWhereHas('academy', fn (Builder $academy) => $academy->whereNotNull('monthly_fee_cents')))));
     }
 
     /**
@@ -266,8 +275,9 @@ class Athlete extends Model implements HasAddress
      * of `Academy::scopeChargingMoreThanNothing`, for the one reader that
      * chases the athlete rather than informing the owner: the overdue push.
      *
-     * The tier wins when there is one, as in `MonthlyFee::forAthlete()`: a
-     * free tier is free even at an academy with a flat fee.
+     * The athlete's own fee wins, then the tier, as in
+     * `MonthlyFee::forAthlete()`: a free tier is free even at an academy
+     * with a flat fee, and so is an override of zero on a paying tier.
      *
      * @param  Builder<$this>  $query
      * @return Builder<$this>
@@ -277,10 +287,15 @@ class Athlete extends Model implements HasAddress
         $payingTier = fn ($q) => $q->where('amount_cents', '>', 0);
 
         return $query->where(fn (Builder $q) => $q
-            ->whereHas('feeTier', $payingTier)
-            ->orWhere(fn (Builder $noTier) => $noTier
-                ->whereNull('fee_tier_id')
-                ->whereHas('academy', fn (Builder $academy) => $academy->where('monthly_fee_cents', '>', 0))));
+            // Their own fee wins when there is one (#1757).
+            ->where('fee_override_cents', '>', 0)
+            ->orWhere(fn (Builder $noOverride) => $noOverride
+                ->whereNull('fee_override_cents')
+                ->where(fn (Builder $inherited) => $inherited
+                    ->whereHas('feeTier', $payingTier)
+                    ->orWhere(fn (Builder $noTier) => $noTier
+                        ->whereNull('fee_tier_id')
+                        ->whereHas('academy', fn (Builder $academy) => $academy->where('monthly_fee_cents', '>', 0))))));
     }
 
     /**
@@ -373,6 +388,7 @@ class Athlete extends Model implements HasAddress
             'joined_at' => 'date',
             'status_changed_at' => 'date',
             'stripes' => 'integer',
+            'fee_override_cents' => 'integer',
             'is_self' => 'boolean',
         ];
     }

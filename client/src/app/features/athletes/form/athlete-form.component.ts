@@ -375,6 +375,10 @@ export class AthleteFormComponent implements OnInit {
     // How often they pay (#1382). Monthly for everybody until changed, which
     // is exactly what the app did before periods existed.
     billing_period_months: this.fb.nonNullable.control<number>(1, Validators.required),
+    // This athlete's own monthly fee (#1757), in euros here and cents on the
+    // wire. Empty is "no personal fee": the tier or the academy's applies.
+    // Zero is a value, not an empty field: they train free.
+    fee_override: this.fb.control<number | null>(null, [Validators.min(0), Validators.max(10000)]),
     joined_at: this.fb.nonNullable.control<Date>(new Date(), Validators.required),
     // Structured address (#72b) — same shape as the academy form.
     // The HTML fieldset is duplicated between the two forms; the validators,
@@ -402,6 +406,29 @@ export class AthleteFormComponent implements OnInit {
   private readonly beltSignal = toSignal(this.form.controls.belt.valueChanges, {
     initialValue: this.form.controls.belt.value,
   });
+
+  private readonly feeOverride = toSignal(this.form.controls.fee_override.valueChanges, {
+    initialValue: this.form.controls.fee_override.value,
+  });
+
+  /**
+   * The personal fee's hint says what the value in it means (#1757). Zero
+   * and empty look alike in a number field and mean opposite things — one
+   * is "pays nothing", the other "pays the normal fee" — so the line under
+   * it changes the moment someone types a 0.
+   */
+  protected readonly feeOverrideHint = computed<string>(() => {
+    this.languageService.currentLang();
+    return this.translate.instant(
+      this.feeOverride() === 0
+        ? 'athletes.form.hint.feeOverrideFree'
+        : 'athletes.form.hint.feeOverride',
+    );
+  });
+
+  protected readonly currencyLocale = computed<string>(() =>
+    localeFor(this.languageService.currentLang()),
+  );
 
   /**
    * Stripes options scoped to the SELECTED belt's grade (#229, #1801): 0-6 on
@@ -842,6 +869,8 @@ export class AthleteFormComponent implements OnInit {
             status: athlete.status,
             fee_tier_id: athlete.fee_tier?.id ?? null,
             billing_period_months: athlete.billing_period_months ?? 1,
+            fee_override:
+              athlete.fee_override_cents == null ? null : athlete.fee_override_cents / 100,
             ...(joinedAt ? { joined_at: joinedAt } : {}),
             address: {
               line1: athlete.address?.line1 ?? '',
@@ -895,6 +924,7 @@ export class AthleteFormComponent implements OnInit {
       joined_at: joinedAt,
       fee_tier_id: v.fee_tier_id,
       billing_period_months: v.billing_period_months,
+      fee_override_cents: v.fee_override == null ? null : Math.round(v.fee_override * 100),
       address: this.buildAddressPayload(v.address),
     };
   }

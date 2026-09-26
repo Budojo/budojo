@@ -52,9 +52,9 @@ The athlete side is one nullable column on `athletes`:
 - `DELETE /api/v1/academy/fee-tiers/{tier}` — remove a tier; athletes on it fall back to the academy fee
 - `PUT /api/v1/athletes/{athlete}` — `fee_tier_id` puts an athlete on a tier, `null` takes them off
 
-## Not yet done
+## The per-athlete override
 
-The **per-athlete override** — a flat amount on the athlete that wins over the tier, for the black belt who trains free — is the second half of #1381 and is not built. The schema was shaped knowing it is coming: it lands as one more branch inside `MonthlyFee::forAthlete()` rather than as a second rule somewhere else.
+The second half of #1381, built in #1757: `athletes.fee_override_cents`, a flat amount on one athlete that wins over the tier — the black belt who trains free, the discounted friend. It is one more branch at the head of `MonthlyFee::forAthlete()` (override → tier → academy fee), not a second rule somewhere else, and `0` is a value (trains free), not an absence. See [`athlete.md`](./athlete.md).
 
 ## Related tables
 

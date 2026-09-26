@@ -240,6 +240,34 @@
                 data-cy="athlete-form-billing-period"
               />
             </app-budojo-form-field>
+            <!--
+              One athlete's own fee (#1757): the black belt who trains free,
+              the discounted friend. Euros like the academy's fee, and the
+              hint turns into "trains free" on a 0, because a 0 and an empty
+              field look the same and mean opposite things.
+            -->
+            <app-budojo-form-field
+              class="athlete-form__field--medium"
+              [label]="'athletes.form.label.feeOverride' | translate"
+              [optionalLabel]="'athletes.form.optional' | translate"
+              controlId="fee_override"
+              [hint]="feeOverrideHint()"
+            >
+              <p-inputnumber
+                inputId="fee_override"
+                formControlName="fee_override"
+                mode="currency"
+                currency="EUR"
+                [locale]="currencyLocale()"
+                [min]="0"
+                [max]="10000"
+                [maxFractionDigits]="2"
+                [showButtons]="false"
+                placeholder="—"
+                ariaDescribedBy="fee_override-hint"
+                data-cy="athlete-form-fee-override"
+              />
+            </app-budojo-form-field>
           </div>
         </section>
 

@@ -1265,6 +1265,18 @@ describe('AthletesListComponent — who is expected to pay (#1381)', () => {
     expect(predicate()(athlete({ monthly_fee_cents: null }))).toBe(true);
   });
 
+  it('does not expect payment from someone who trains free by their own fee (#1757)', () => {
+    // The server's `expectedToPay` leaves them out of `?paid=no`: a toggle
+    // here would be a chip the filter never agrees with.
+    expect(predicate()(athlete({ monthly_fee_cents: 0, fee_override_cents: 0 }))).toBe(true);
+  });
+
+  it('still expects payment from someone on a free tier with no override', () => {
+    // A 0 tier is the academy's deliberate price and keeps its chip; only the
+    // athlete's own 0 means "not expected to pay".
+    expect(predicate()(athlete({ monthly_fee_cents: 0, fee_override_cents: null }))).toBe(false);
+  });
+
   it('still expects payment on a pre-#1381 payload with no fee field', () => {
     expect(predicate()(athlete({ monthly_fee_cents: undefined }))).toBe(false);
   });

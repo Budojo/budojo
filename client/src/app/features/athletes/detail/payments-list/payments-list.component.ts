@@ -90,6 +90,13 @@ interface MonthRow {
    */
   readonly beforeBillingFloor: boolean;
   /**
+   * Why an unpaid month shows a neutral dash instead of "Non pagato", as a
+   * translation key, or null when it is simply unpaid. Below the billing
+   * floor (#1742), or for an athlete who trains free by their own fee
+   * (#1757): in both a missing record is not a debt.
+   */
+  readonly notOwedReason: string | null;
+  /**
    * True when this month is covered by a period that started somewhere else
    * (#1382). The row still reads "paid", but the amount belongs to the month
    * the period started in — repeating €165 on all three months of a quarterly
@@ -344,6 +351,11 @@ export class PaymentsListComponent implements OnInit {
   /** The tier they are on, or null when they are on the academy's flat fee. */
   protected readonly feeTier = signal<FeeTier | null>(null);
 
+  /** Their own fee (#1757): null when they inherit, 0 when they train free. */
+  protected readonly feeOverrideCents = signal<number | null>(null);
+
+  protected readonly trainsFree = computed(() => this.feeOverrideCents() === 0);
+
   /**
    * How many months this athlete's payments cover (#1382). Read from the
    * athlete rather than chosen at the click, so the confirmation can say what
@@ -384,6 +396,7 @@ export class PaymentsListComponent implements OnInit {
     }
 
     const fee = this.hasMonthlyFee();
+    const free = this.trainsFree();
     const floorMonth = this.billingFloorMonth();
     const first = this.seasonYear() * 12 + (this.seasonStartMonth() - 1);
 
@@ -392,6 +405,7 @@ export class PaymentsListComponent implements OnInit {
       const year = Math.floor(absolute / 12);
       const month = (absolute % 12) + 1;
       const payment = byAbsolute.get(absolute) ?? null;
+      const beforeBillingFloor = floorMonth !== null && absolute < floorMonth;
       // Read-only when no monthly fee is configured at all — there's nothing
       // to record. While the fee is still unknown the buttons stay live: a
       // click that really has no fee behind it gets the server's 422 and its
@@ -418,7 +432,12 @@ export class PaymentsListComponent implements OnInit {
         // `min:2020` — a write the API will refuse. This one is a statement
         // about knowledge, and the owner transcribing a paper register must
         // still be able to record against it.
-        beforeBillingFloor: floorMonth !== null && absolute < floorMonth,
+        beforeBillingFloor,
+        notOwedReason: beforeBillingFloor
+          ? 'athletes.detail.payments.beforeBillingFloor'
+          : free
+            ? 'athletes.detail.payments.trainsFree'
+            : null,
         coveredByEarlierPeriod:
           payment !== null && !(payment.year === year && payment.month === month),
         periodMonths: payment?.period_months ?? 1,
@@ -659,6 +678,7 @@ export class PaymentsListComponent implements OnInit {
         this.athleteName.set(`${athlete.first_name} ${athlete.last_name}`);
         this.athleteFeeCents.set(athlete.monthly_fee_cents ?? null);
         this.feeTier.set(athlete.fee_tier ?? null);
+        this.feeOverrideCents.set(athlete.fee_override_cents ?? null);
         this.athleteBillingPeriod.set(athlete.billing_period_months ?? 1);
       },
       // Silent failure here — the confirm popup falls back to "this
@@ -690,7 +710,8 @@ export class PaymentsListComponent implements OnInit {
     this.languageService.currentLang(); // signal dep — recompute on toggle
     const months = this.athleteBillingPeriod();
     const monthly = this.athleteFeeCents();
-    if (months <= 1 || monthly === null || monthly === undefined) return null;
+    // Nothing to say about the period of a fee of nothing (#1757).
+    if (months <= 1 || monthly === null || monthly === undefined || monthly === 0) return null;
 
     const KEYS: Readonly<Record<number, string>> = {
       3: 'athletes.form.billingPeriod.quarterly',
@@ -706,6 +727,23 @@ export class PaymentsListComponent implements OnInit {
     return this.translate.instant('athletes.detail.payments.periodHint', {
       period,
       amount: this.formatAmount(monthly * months),
+    });
+  });
+
+  /**
+   * "Personal fee: €40.00 a month" or "Trains free" (#1757). It replaces the
+   * tier line, because the override is what they pay whatever tier they are
+   * on, and two captions naming two amounts would leave the owner to work
+   * out which one wins.
+   */
+  protected readonly feeOverrideHint = computed<string | null>(() => {
+    this.languageService.currentLang(); // signal dep — recompute on toggle
+    const cents = this.feeOverrideCents();
+    if (cents === null) return null;
+    if (cents === 0) return this.translate.instant('athletes.detail.payments.trainsFreeHint');
+
+    return this.translate.instant('athletes.detail.payments.feeOverrideHint', {
+      amount: this.formatAmount(cents),
     });
   });
 
