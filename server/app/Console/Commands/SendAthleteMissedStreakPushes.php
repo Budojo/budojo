@@ -122,7 +122,7 @@ class SendAthleteMissedStreakPushes extends Command
             ->get();
 
         foreach ($athletes as $athlete) {
-            if ($this->wasNotifiedRecently($owner, $athlete, $today, $streakDates)) {
+            if ($this->alreadyTold($owner, $athlete, $today, $streakDates)) {
                 continue;
             }
             if (! $this->missedAllStreakDates($athlete, $streakDates)) {
@@ -176,7 +176,7 @@ class SendAthleteMissedStreakPushes extends Command
      *
      * @param  list<string>  $streakDates  most recent first
      */
-    private function wasNotifiedRecently(\App\Models\User $owner, Athlete $athlete, Carbon $today, array $streakDates): bool
+    private function alreadyTold(\App\Models\User $owner, Athlete $athlete, Carbon $today, array $streakDates): bool
     {
         $fortnight = $today->copy()->subDays(self::RENOTIFY_AFTER_DAYS);
         $afterStreak = Carbon::parse($streakDates[0])->addDay();

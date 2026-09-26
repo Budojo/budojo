@@ -189,6 +189,17 @@ it('does not warn twice about the same three sessions, however long the pause', 
     Notification::assertNothingSent();
 });
 
+it('does not warn again within the fortnight, even about a streak that moved on', function (): void {
+    // Told on the 12th; the streak has since moved to 14, 11 and 9 September.
+    $academy = academyTrainingMonWedFri();
+    $athlete = athleteJoinedLongAgo($academy);
+    earlierStreakAlert($academy, $athlete, '2026-09-12 09:30:00');
+
+    $this->artisan(SendAthleteMissedStreakPushes::class)->assertSuccessful();
+
+    Notification::assertNothingSent();
+});
+
 it('warns again once the fortnight has passed and new sessions were missed', function (): void {
     $academy = academyTrainingMonWedFri();
     $athlete = athleteJoinedLongAgo($academy);
