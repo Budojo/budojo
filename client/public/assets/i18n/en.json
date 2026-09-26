@@ -435,7 +435,8 @@
     "archivedOne": "Notification archived",
     "archivedOther": "{{count}} notifications archived",
     "undo": "Undo",
-    "emptyArchived": "No archived notifications."
+    "emptyArchived": "No archived notifications.",
+    "undoFailed": "Could not undo: the notifications are under “Archived”."
   },
   "onboarding": {
     "checklist": {

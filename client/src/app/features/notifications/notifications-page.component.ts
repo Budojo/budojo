@@ -92,6 +92,7 @@ export class NotificationsPageComponent implements OnInit {
    * down the one thing the owner does here most.
    */
   protected readonly justArchived = signal<readonly string[] | null>(null);
+  protected readonly undoFailed = signal(false);
   private undoTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly undoButton = viewChild<ElementRef<HTMLButtonElement>>('undoButton');
   private readonly injector = inject(Injector);
@@ -188,19 +189,46 @@ export class NotificationsPageComponent implements OnInit {
     this.inbox
       .unarchiveMany(ids)
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => this.inbox.load().pipe(takeUntilDestroyed(this.destroyRef)).subscribe());
+      .subscribe({
+        next: () => this.inbox.load().pipe(takeUntilDestroyed(this.destroyRef)).subscribe(),
+        // Said where the undo was, rather than failing without a word: the
+        // rows are still under "Archiviate".
+        error: () => this.undoFailed.set(true),
+      });
   }
 
   private offerUndo(ids: readonly string[]): void {
     if (ids.length === 0) return;
     this.clearUndo();
+    this.undoFailed.set(false);
     this.justArchived.set(ids);
-    this.undoTimer = setTimeout(() => this.justArchived.set(null), UNDO_MS);
+    this.startUndoTimer();
     // The row that held focus is gone: focus goes to "Annulla", the one
     // thing that can follow, instead of falling to the page.
     runInInjectionContext(this.injector, () =>
       afterNextRender(() => this.undoButton()?.nativeElement.focus()),
     );
+  }
+
+  /**
+   * The undo closes on its own only while nobody is in it (#1914): a bar
+   * that vanishes under the focus drops a keyboard user onto the page, and
+   * cuts short the time to read it. Paused on focus in, restarted on out.
+   */
+  protected holdUndo(): void {
+    if (this.undoTimer !== null) clearTimeout(this.undoTimer);
+    this.undoTimer = null;
+  }
+
+  protected releaseUndo(event: FocusEvent): void {
+    const region = event.currentTarget as HTMLElement | null;
+    if (region?.contains(event.relatedTarget as Node | null)) return;
+    if (this.justArchived() !== null) this.startUndoTimer();
+  }
+
+  private startUndoTimer(): void {
+    this.holdUndo();
+    this.undoTimer = setTimeout(() => this.justArchived.set(null), UNDO_MS);
   }
 
   private clearUndo(): void {

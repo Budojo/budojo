@@ -153,7 +153,17 @@
       region is always there and only its content changes — a live region
       created with its text is often never announced.
     -->
-    <div role="status" class="notifications__undo-region">
+    <div
+      role="status"
+      class="notifications__undo-region"
+      (focusin)="holdUndo()"
+      (focusout)="releaseUndo($event)"
+    >
+      @if (undoFailed()) {
+        <div class="notifications__undo" data-cy="notifications-undo-failed">
+          {{ 'notifications.undoFailed' | translate }}
+        </div>
+      }
       @if (justArchived(); as ids) {
         <div class="notifications__undo" data-cy="notifications-undo">
           <span>

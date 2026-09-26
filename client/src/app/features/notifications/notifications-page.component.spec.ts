@@ -102,6 +102,46 @@ describe('NotificationsPageComponent (#1129)', () => {
     expect(el.querySelector('[role="status"] [data-cy="notifications-undo"]')).not.toBeNull();
   });
 
+  it('keeps "Undo" while the focus is on it, and lets it go once the focus leaves', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      const { el, fixture, http } = setup([notif({ id: 'a', read_at: new Date().toISOString() })]);
+      (el.querySelector('[data-cy="notification-archive-a"]') as HTMLButtonElement).click();
+      http.expectOne(`${BASE}/a/archive`).flush({ data: { id: 'a', archived_at: 'x' } });
+      fixture.detectChanges();
+      await fixture.whenStable();
+      const undo = el.querySelector('[data-cy="notifications-undo-action"]') as HTMLButtonElement;
+      undo.focus();
+
+      vi.advanceTimersByTime(30_000);
+      fixture.detectChanges();
+      // A bar that vanished under the focus would drop the user onto the page.
+      expect(el.querySelector('[data-cy="notifications-undo"]')).not.toBeNull();
+
+      undo.blur();
+      vi.advanceTimersByTime(8_000);
+      fixture.detectChanges();
+      expect(el.querySelector('[data-cy="notifications-undo"]')).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('says so when the undo fails, rather than nothing', () => {
+    const { el, fixture, http } = setup([notif({ id: 'a', read_at: new Date().toISOString() })]);
+    (el.querySelector('[data-cy="notification-archive-a"]') as HTMLButtonElement).click();
+    http.expectOne(`${BASE}/a/archive`).flush({ data: { id: 'a', archived_at: 'x' } });
+    fixture.detectChanges();
+
+    (el.querySelector('[data-cy="notifications-undo-action"]') as HTMLButtonElement).click();
+    http.expectOne(`${BASE}/unarchive`).flush(null, { status: 500, statusText: 'Server Error' });
+    fixture.detectChanges();
+
+    expect(el.querySelector('[data-cy="notifications-undo-failed"]')?.textContent).toContain(
+      'Could not undo',
+    );
+  });
+
   it('names the archive button by the notification it archives', () => {
     const { el } = setup([notif({ id: 'a', title: 'Giorgi has not trained' })]);
 

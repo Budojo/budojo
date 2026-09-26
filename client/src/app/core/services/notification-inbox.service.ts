@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { Observable, map, tap } from 'rxjs';
+import { Observable, concatMap, from, map, tap, toArray } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 export interface NotificationActor {
@@ -43,6 +43,9 @@ interface MarkAllResponse {
  * rows + the unread count so the badge updates in lockstep with
  * mark-as-read calls.
  */
+/** The most ids `POST /me/notifications/unarchive` takes in one request. */
+const UNARCHIVE_BATCH = 1000;
+
 @Injectable({ providedIn: 'root' })
 export class NotificationInboxService {
   private readonly http = inject(HttpClient);
@@ -125,9 +128,22 @@ export class NotificationInboxService {
       );
   }
 
-  /** "Annulla" for a batch (#1914): one request, however many rows it took. */
+  /**
+   * "Annulla" for a batch (#1914). In requests of a thousand — what the
+   * server takes at once — because the first "Archivia le lette" after an
+   * upgrade can take a whole history.
+   */
   unarchiveMany(ids: readonly string[]): Observable<void> {
-    return this.http.post(`${this.base}/unarchive`, { ids }).pipe(map(() => undefined));
+    const batches: string[][] = [];
+    for (let i = 0; i < ids.length; i += UNARCHIVE_BATCH) {
+      batches.push(ids.slice(i, i + UNARCHIVE_BATCH));
+    }
+
+    return from(batches).pipe(
+      concatMap((batch) => this.http.post(`${this.base}/unarchive`, { ids: batch })),
+      toArray(),
+      map(() => undefined),
+    );
   }
 
   /** "Archiviate" (#1914): not cached — it is read when the owner opens it. */

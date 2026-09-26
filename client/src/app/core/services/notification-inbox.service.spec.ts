@@ -118,4 +118,18 @@ describe('NotificationInboxService (#418)', () => {
     expect(archived.map((n) => n.id)).toEqual(['z']);
     expect(service.rows()).toEqual([]);
   });
+
+  it('unarchiveMany sends a whole history in batches the server takes', () => {
+    const ids = Array.from({ length: 2500 }, (_, i) => `id-${i}`);
+    let done = false;
+    service.unarchiveMany(ids).subscribe(() => (done = true));
+
+    // One at a time, in order: a thousand, a thousand, five hundred.
+    for (const size of [1000, 1000, 500]) {
+      const req = httpMock.expectOne('/api/v1/me/notifications/unarchive');
+      expect(req.request.body.ids).toHaveLength(size);
+      req.flush({ data: { unarchived: size } });
+    }
+    expect(done).toBe(true);
+  });
 });

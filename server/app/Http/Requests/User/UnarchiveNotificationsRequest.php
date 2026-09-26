@@ -20,6 +20,7 @@ class UnarchiveNotificationsRequest extends FormRequest
     public function rules(): array
     {
         return [
+            // A thousand at a time; the SPA sends a larger batch in several.
             'ids' => ['required', 'array', 'max:1000'],
             'ids.*' => ['string', 'uuid'],
         ];

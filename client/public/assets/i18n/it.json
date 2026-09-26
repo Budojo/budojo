@@ -435,7 +435,8 @@
     "archivedOne": "Notifica archiviata",
     "archivedOther": "{{count}} notifiche archiviate",
     "undo": "Annulla",
-    "emptyArchived": "Nessuna notifica archiviata."
+    "emptyArchived": "Nessuna notifica archiviata.",
+    "undoFailed": "Non è stato possibile annullare: le notifiche sono sotto «Archiviate»."
   },
   "onboarding": {
     "checklist": {
