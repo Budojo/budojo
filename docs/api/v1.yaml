@@ -9534,7 +9534,7 @@ components:
       description: |
         The coverage report for one season (#1565). Every count is of
         **techniques** — positions are a grouping, not a unit of work.
-      required: [season, kind, totals, positions, missing, taught, timeline]
+      required: [season, kind, totals, positions, missing, taught]
       properties:
         season:
           type: object
@@ -9619,18 +9619,6 @@ components:
                   state:
                     type: string
                     enum: [covered, thin, missing]
-        timeline:
-          type: array
-          description: |
-            Cumulative covered techniques, one point per week from the season
-            start up to today — a topic joins on the day of its **second**
-            lesson, the same rule the headline uses.
-          items:
-            type: object
-            required: [on, covered]
-            properties:
-              on: { type: string, format: date }
-              covered: { type: integer }
 
     SyllabusCalendar:
       type: object
@@ -9719,10 +9707,18 @@ components:
 
     CoverageTopic:
       type: object
-      required: [id, name, parent_name, kind]
+      required: [id, name, parent_id, parent_name, kind]
       properties:
         id: { type: integer, format: int64 }
         name: { type: string, example: Omoplata }
+        parent_id:
+          type: integer
+          format: int64
+          nullable: true
+          description: |
+            The position it sits under, by id (#1911): the season map groups a
+            position's techniques under it, and names repeat across positions.
+          example: 12
         parent_name:
           type: string
           nullable: true

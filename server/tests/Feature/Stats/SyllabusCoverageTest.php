@@ -8,7 +8,6 @@ use App\Models\Athlete;
 use App\Models\AttendanceRecord;
 use App\Models\Lesson;
 use App\Models\SyllabusTopic;
-use Carbon\CarbonImmutable;
 use Illuminate\Support\Carbon;
 use Laravel\Sanctum\Sanctum;
 
@@ -229,6 +228,18 @@ it('lists what is missing, named with the position it belongs to', function (): 
     expect($missing[0])->toMatchArray(['name' => 'Triangle', 'parent_name' => 'Closed guard']);
 });
 
+it('says which position each technique belongs to by id, in both lists (#1911)', function (): void {
+    // The map groups a position's techniques under it, and names repeat
+    // across positions in the seed: the id is what groups them.
+    lessonOn($this, '2026-09-07', [$this->armbar]);
+
+    $data = coverage($this);
+
+    expect($data['missing'][0]['parent_id'])->toBe($this->triangle->parent_id)
+        ->and($data['taught'][0]['parent_id'])->toBe($this->armbar->parent_id)
+        ->and($data['taught'][0]['parent_id'])->not->toBeNull();
+});
+
 it('answers "didn\'t I just do armbars?" with the most recent first', function (): void {
     lessonOn($this, '2026-09-07', [$this->triangle]);
     lessonOn($this, '2026-10-05', [$this->armbar]);
@@ -236,29 +247,6 @@ it('answers "didn\'t I just do armbars?" with the most recent first', function (
     $taught = coverage($this)['taught'];
     expect(array_column($taught, 'name'))->toBe(['Armbar', 'Triangle']);
     expect($taught[0])->toMatchArray(['last_taught_on' => '2026-10-05', 'lessons' => 1, 'state' => 'thin']);
-});
-
-it('grows the timeline on the day a topic became covered, not the day it was first taught', function (): void {
-    lessonOn($this, '2026-09-07', [$this->armbar]);
-    lessonOn($this, '2026-10-05', [$this->armbar]);
-
-    $timeline = coverage($this)['timeline'];
-    expect($timeline)->not->toBeEmpty();
-
-    $beforeSecond = array_values(array_filter($timeline, static fn (array $p): bool => $p['on'] < '2026-10-05'));
-    $afterSecond = array_values(array_filter($timeline, static fn (array $p): bool => $p['on'] >= '2026-10-05'));
-
-    expect(array_column($beforeSecond, 'covered'))->each->toBe(0);
-    expect($afterSecond[0]['covered'])->toBe(1);
-});
-
-it('stops the timeline at today rather than drawing a flat line into next summer', function (): void {
-    lessonOn($this, '2026-09-07', [$this->armbar]);
-
-    $timeline = coverage($this)['timeline'];
-    $last = $timeline[count($timeline) - 1]['on'];
-    expect($last)->toBeLessThanOrEqual(CarbonImmutable::today()->addWeek()->toDateString());
-    expect($last)->toBeLessThan('2027-08-31');
 });
 
 // ─── Nothing to report ───────────────────────────────────────────────────────
@@ -322,18 +310,6 @@ it('lists what is missing in programme order, not interleaved across positions',
     $names = array_column(coverage($this)['missing'], 'name');
 
     expect($names)->toBe(['Armbar', 'Triangle', 'Ezekiel', 'Americana']);
-});
-
-it('draws the week that ends today, not the one before it', function (): void {
-    // A Sunday: `endOfWeek()` lands on 23:59:59 of the same day, and the
-    // comparison against midnight dropped the newest point entirely.
-    Carbon::setTestNow(Carbon::parse('2026-11-15 10:00:00')); // a Sunday
-    lessonOn($this, '2026-11-09', [$this->armbar]);
-
-    $timeline = coverage($this)['timeline'];
-    $last = $timeline[count($timeline) - 1]['on'];
-
-    expect($last)->toBe('2026-11-15');
 });
 
 // ─── Scoping ─────────────────────────────────────────────────────────────────

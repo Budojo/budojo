@@ -130,9 +130,8 @@ class SyllabusCoverageAction
      * Read through {@see TopicAttendance}, the one place the join from a topic
      * to the people in the room is written, so "held" here is the same held
      * the drill-down (#1745) and tonight's room (#1860) use. Taken whole, not
-     * aggregated in SQL, because the timeline needs the day a topic reached
-     * its *second* lesson, which no aggregate can answer — and a season of
-     * one academy is a few hundred rows.
+     * aggregated in SQL: reach needs the people behind each lesson, and a
+     * season of one academy is a few hundred rows.
      *
      * **Reach is people, attendances are presences (#1746).** Three evenings
      * of fifteen and three of four both read `lessons: 3`; `reach` — distinct
@@ -141,7 +140,7 @@ class SyllabusCoverageAction
      * `reach` counted as rows fail a test instead of passing for a number.
      *
      * @param  list<int>  $topicIds
-     * @return array<int, array{lessons: int, last: string, second: string|null, reach: int, attendances: int}>
+     * @return array<int, array{lessons: int, last: string, reach: int, attendances: int}>
      */
     private function taughtInSeason(Academy $academy, array $topicIds, CarbonImmutable $start, CarbonImmutable $end): array
     {
@@ -160,7 +159,6 @@ class SyllabusCoverageAction
             $taught[$topicId] = [
                 'lessons' => \count($lessons),
                 'last' => $dates[\count($dates) - 1],
-                'second' => $dates[self::COVERED_AT - 1] ?? null,
                 'reach' => \count(array_unique(array_merge(...$people))),
                 'attendances' => array_sum(array_map('count', $people)),
             ];
@@ -172,7 +170,7 @@ class SyllabusCoverageAction
     /**
      * @param  Collection<int, SyllabusTopic>  $techniques
      * @param  Collection<int, SyllabusTopic>  $positions
-     * @param  array<int, array{lessons: int, last: string, second: string|null, reach: int, attendances: int}>  $taught
+     * @param  array<int, array{lessons: int, last: string, reach: int, attendances: int}>  $taught
      * @return array<string, mixed>
      */
     private function report(
@@ -207,6 +205,9 @@ class SyllabusCoverageAction
                 $missing[] = [
                     'id' => $technique->id,
                     'name' => $technique->name,
+                    // By id, for the map to group under (#1911): names
+                    // repeat across positions, and a name is not a key.
+                    'parent_id' => $technique->parent_id,
                     'parent_name' => $parent?->name,
                     'kind' => $technique->kind->value,
                     // Sort key only; stripped before the list is returned.
@@ -218,6 +219,7 @@ class SyllabusCoverageAction
                 $done[] = [
                     'id' => $technique->id,
                     'name' => $technique->name,
+                    'parent_id' => $technique->parent_id,
                     'parent_name' => $parent?->name,
                     'kind' => $technique->kind->value,
                     'lessons' => $lessons,
@@ -265,7 +267,6 @@ class SyllabusCoverageAction
             'positions' => $this->positionRows($positions, $byPosition, $taught),
             'missing' => $missing,
             'taught' => $done,
-            'timeline' => $this->timeline($techniques, $taught, $start, $end),
         ];
     }
 
@@ -276,7 +277,7 @@ class SyllabusCoverageAction
      *
      * @param  Collection<int, SyllabusTopic>  $positions
      * @param  array<int, array{covered: int, thin: int, missing: int}>  $byPosition
-     * @param  array<int, array{lessons: int, last: string, second: string|null, reach: int, attendances: int}>  $taught
+     * @param  array<int, array{lessons: int, last: string, reach: int, attendances: int}>  $taught
      * @return list<array<string, mixed>>
      */
     private function positionRows(Collection $positions, array $byPosition, array $taught): array
@@ -305,61 +306,5 @@ class SyllabusCoverageAction
         }
 
         return $rows;
-    }
-
-    /**
-     * Covered topics week by week, cumulative — whether the season is on
-     * pace or drifting.
-     *
-     * A topic joins the count on the day of its **second** lesson, because
-     * that is the day it became covered by the same rule the headline uses.
-     * Two different definitions of "covered" on one screen would be a chart
-     * arguing with its own number.
-     *
-     * @param  Collection<int, SyllabusTopic>  $techniques
-     * @param  array<int, array{lessons: int, last: string, second: string|null, reach: int, attendances: int}>  $taught
-     * @return list<array{on: string, covered: int}>
-     */
-    private function timeline(Collection $techniques, array $taught, CarbonImmutable $start, CarbonImmutable $end): array
-    {
-        $seconds = [];
-        foreach ($techniques as $technique) {
-            $second = $taught[$technique->id]['second'] ?? null;
-            if ($second !== null) {
-                $seconds[] = $second;
-            }
-        }
-        sort($seconds);
-
-        // The season stops at today: drawing a flat line into next June says
-        // the academy has stopped teaching, which is not what an empty future
-        // means.
-        $last = CarbonImmutable::today()->lessThan($end) ? CarbonImmutable::today() : $end;
-
-        $points = [];
-        // Start of day, not the 23:59:59.999999 `endOfWeek()` hands back: the
-        // comparison below is against midnight today, and the difference
-        // silently dropped the newest point every Sunday.
-        $cursor = $start->endOfWeek()->startOfDay();
-        $index = 0;
-        $running = 0;
-
-        while ($cursor->lessThanOrEqualTo($last)) {
-            $on = $cursor->toDateString();
-            while ($index < \count($seconds) && $seconds[$index] <= $on) {
-                $running++;
-                $index++;
-            }
-            $points[] = ['on' => $on, 'covered' => $running];
-            $cursor = $cursor->addWeek();
-        }
-
-        // A season that has only just started still gets one point, so the
-        // chart has a line rather than an axis.
-        if ($points === []) {
-            $points[] = ['on' => $last->toDateString(), 'covered' => $running];
-        }
-
-        return $points;
     }
 }

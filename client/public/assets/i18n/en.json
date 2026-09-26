@@ -3047,6 +3047,7 @@
       "headlineRule": "An athlete's own Programme tab counts differently: a technique after one lesson they attended, out of what the academy taught while they were on the roster. It asks whether they were there, not how much of the programme has been taught.",
       "map": {
         "title": "By position, week by week",
+        "hint": "Tap a position's name to see its techniques: what is missing, what you have done, and to plan them.",
         "legend": {
           "more": "2 or more lessons",
           "once": "1 lesson",
@@ -3071,6 +3072,10 @@
         "seasonAria": "{{position}}: every week of the season",
         "seasonEmpty": "Nothing on this position this season yet.",
         "planTitle": "Plan a lesson",
+        "todoTitle": "To do",
+        "onceTitle": "Done once",
+        "doneTitle": "Done",
+        "lessonsTitle": "The season's lessons",
         "planAria": "Plan {{position}}, week of {{date}}",
         "planNoneWeek": "No class on the timetable that week can teach this position.",
         "planNoneSeason": "No class on the timetable in the next two weeks can teach this position.",
@@ -3090,12 +3095,7 @@
           "copyFailed": "It could not be copied. Use “Send on WhatsApp” instead."
         }
       },
-      "overTime": "Across the season",
-      "lastTaught": "Last taught",
-      "missingList": "Not taught yet ({{count}})",
-      "nothingMissing": "Nothing left — the whole programme has been taught.",
       "planAction": "Plan",
-      "thinTag": "Once",
       "lessonsOne": "{{count}} lesson",
       "lessonsOther": "{{count}} lessons",
       "reachOne": "{{count}} person",

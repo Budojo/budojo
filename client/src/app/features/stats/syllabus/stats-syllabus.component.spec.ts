@@ -8,7 +8,12 @@ import { Router, provideRouter } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import { AcademyClass } from '../../../core/services/academy-class.service';
 import type { Lesson } from '../../../core/services/lesson.service';
-import { CoveragePosition, SyllabusCoverage } from '../../../core/services/stats.service';
+import {
+  CoveragePosition,
+  CoverageTaughtTopic,
+  CoverageTopic,
+  SyllabusCoverage,
+} from '../../../core/services/stats.service';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 import { useLadder } from '../../../../test-utils/ladder-test';
 import type { MartialArt, TrainingMode } from '../../../core/services/academy.service';
@@ -26,7 +31,16 @@ class SeasonMapStub {
   readonly seasonsBack = input<number>(0);
   readonly kind = input<TrainingMode | null>(null);
   readonly classes = input<readonly AcademyClass[]>([]);
+  readonly missing = input<readonly CoverageTopic[]>([]);
+  readonly taught = input<readonly CoverageTaughtTopic[]>([]);
+  readonly plannable = input<ReadonlySet<number>>(new Set<number>());
+  readonly planTechnique = output<number>();
+  readonly openTechnique = output<number>();
   readonly refreshWeeks = vi.fn();
+}
+
+function mapOf(fixture: { debugElement: DebugElement }): SeasonMapStub {
+  return fixture.debugElement.query(By.directive(SeasonMapStub)).componentInstance as SeasonMapStub;
 }
 
 /** The lesson sheet has its own spec; here it only has to be opened on the right lesson. */
@@ -80,13 +94,14 @@ function report(over: Partial<SyllabusCoverage> = {}): SyllabusCoverage {
       },
     ],
     missing: [
-      { id: 31, name: 'Omoplata', parent_name: 'Closed guard', kind: 'both' },
-      { id: 32, name: 'Lockdown', parent_name: 'Half guard', kind: 'nogi' },
+      { id: 31, name: 'Omoplata', parent_id: 1, parent_name: 'Closed guard', kind: 'both' },
+      { id: 32, name: 'Lockdown', parent_id: 2, parent_name: 'Half guard', kind: 'nogi' },
     ],
     taught: [
       {
         id: 11,
         name: 'Armbar',
+        parent_id: 1,
         parent_name: 'Closed guard',
         kind: 'both',
         lessons: 3,
@@ -98,6 +113,7 @@ function report(over: Partial<SyllabusCoverage> = {}): SyllabusCoverage {
       {
         id: 12,
         name: 'Triangle',
+        parent_id: 1,
         parent_name: 'Closed guard',
         kind: 'both',
         lessons: 1,
@@ -106,10 +122,6 @@ function report(over: Partial<SyllabusCoverage> = {}): SyllabusCoverage {
         last_taught_on: '2026-09-07',
         state: 'thin',
       },
-    ],
-    timeline: [
-      { on: '2026-09-06', covered: 0 },
-      { on: '2026-09-13', covered: 2 },
     ],
     ...over,
   };
@@ -240,37 +252,28 @@ describe('StatsSyllabusComponent (#1565)', () => {
     expect(filtered.kind()).toBe('nogi');
   });
 
-  it('lists what has not been taught, with the position it belongs to', () => {
+  it('hands the season map the techniques, as the server sent them (#1911)', () => {
     const { fixture, httpMock } = setup();
     flush(httpMock);
     fixture.detectChanges();
 
-    const missing = fixture.nativeElement.querySelector('[data-cy="syllabus-coverage-missing"]');
-    expect(missing.textContent).toContain('Not taught yet (2)');
-    expect(missing.textContent).toContain('Omoplata');
-    expect(missing.textContent).toContain('Closed guard');
+    const map = mapOf(fixture);
+    expect(map.missing().map((t) => t.id)).toEqual([31, 32]);
+    expect(map.taught().map((t) => t.id)).toEqual([11, 12]);
   });
 
-  it('answers when each topic was last on the mat, and how long ago', () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(2026, 9, 19)); // 19 October 2026
-    try {
-      const { fixture, httpMock } = setup();
-      flush(httpMock);
-      fixture.detectChanges();
+  it('draws no timeline and no flat lists under the map (#1911)', () => {
+    // The chart read as a flat line on the floor for months, and the lists
+    // reprinted the programme: 264 rows in week three.
+    const { fixture, httpMock } = setup();
+    flush(httpMock);
+    fixture.detectChanges();
 
-      const row = fixture.nativeElement.querySelector(
-        '[data-cy="syllabus-taught-11"]',
-      ) as HTMLElement;
-      // 5 October → two weeks before 19 October.
-      expect(row.textContent?.replace(/\s+/g, ' ')).toContain('2 weeks ago');
-      // Taught once carries its own mark, so "last taught" does not read as
-      // "done".
-      const thinRow = fixture.nativeElement.querySelector('[data-cy="syllabus-taught-12"]');
-      expect(thinRow.textContent).toContain('Once');
-    } finally {
-      vi.useRealTimers();
-    }
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('[data-cy="syllabus-coverage-timeline"]')).toBeNull();
+    expect(el.querySelector('[data-cy="syllabus-coverage-missing"]')).toBeNull();
+    expect(el.querySelector('[data-cy="syllabus-coverage-taught"]')).toBeNull();
+    expect(el.querySelector('p-chart')).toBeNull();
   });
 
   it('re-asks with the filter, and narrows both halves of the fraction', () => {
@@ -364,16 +367,6 @@ describe('StatsSyllabusComponent (#1565)', () => {
     expect(el.querySelector('app-season-map')).not.toBeNull();
   });
 
-  it('says nothing is missing rather than drawing an empty list', () => {
-    const { fixture, httpMock } = setup();
-    flush(httpMock, report({ missing: [] }));
-    fixture.detectChanges();
-
-    expect(
-      fixture.nativeElement.querySelector('[data-cy="syllabus-coverage-nothing-missing"]'),
-    ).not.toBeNull();
-  });
-
   it('offers a retry when the read fails', () => {
     const { fixture, httpMock } = setup();
     httpMock
@@ -417,70 +410,22 @@ describe('StatsSyllabusComponent (#1565)', () => {
     fixture.detectChanges();
     httpMock.expectNone((r) => r.url === URL);
   });
-
-  it('scales the timeline against the denominator, not against its own peak', () => {
-    const { fixture, component, httpMock } = setup();
-    flush(httpMock);
-    fixture.detectChanges();
-
-    const options = component['timelineOptions']() as { scales: { y: { suggestedMax: number } } };
-    expect(options.scales.y.suggestedMax).toBe(10);
-    expect(component['timelineData']().datasets[0].data).toEqual([0, 2]);
-  });
 });
 
 describe('StatsSyllabusComponent — who has seen it (#1745)', () => {
   afterEach(() => TestBed.inject(HttpTestingController).verify());
 
-  it('opens a taught row on who has seen that technique, in the season on screen', () => {
+  it('opens who has seen a technique the map asks for, in the season on screen', () => {
     const { fixture, httpMock } = setup();
     flush(httpMock);
     fixture.detectChanges();
 
-    const open: HTMLButtonElement = fixture.nativeElement.querySelector(
-      '[data-cy="syllabus-taught-11"] button',
-    );
-    open.click();
+    mapOf(fixture).openTechnique.emit(11);
     fixture.detectChanges();
 
     const req = httpMock.expectOne((r) => r.url === '/api/v1/stats/syllabus/topics/11');
     expect(req.request.params.get('seasons_back')).toBe('0');
     req.flush({ message: 'not the point' }, { status: 500, statusText: 'Server Error' });
-  });
-
-  it('names the button by what it shows, with a lead-in and the position', () => {
-    const { fixture, httpMock } = setup();
-    flush(httpMock);
-    fixture.detectChanges();
-
-    const open: HTMLButtonElement = fixture.nativeElement.querySelector(
-      '[data-cy="syllabus-taught-11"] button',
-    );
-    // No aria-label replacing the visible text (WCAG 2.5.3): the name is the
-    // content, and it carries the position, because the seed repeats names.
-    expect(open.hasAttribute('aria-label')).toBe(false);
-    const name = open.textContent?.replace(/\s+/g, ' ') ?? '';
-    expect(name).toContain('Who has seen it:');
-    expect(name).toContain('Armbar');
-    expect(name).toContain('(Closed guard)');
-  });
-
-  it('says how many people a taught technique reached, beside its lessons (#1746)', () => {
-    const { fixture, httpMock } = setup();
-    flush(httpMock);
-    fixture.detectChanges();
-
-    const el: HTMLElement = fixture.nativeElement;
-    const reach = (id: number) =>
-      el
-        .querySelector(`[data-cy="syllabus-taught-${id}"] [data-cy="syllabus-taught-reach"]`)
-        ?.textContent?.replace(/\s+/g, ' ')
-        .trim();
-
-    // Three evenings of fifteen and three of four read the same without it.
-    expect(reach(11)).toBe('3 lessons · 11 people');
-    // One and one: both singular.
-    expect(reach(12)).toBe('1 lesson · 1 person');
   });
 
   it('keeps reach out of the headline, number and caption alike', () => {
@@ -494,23 +439,6 @@ describe('StatsSyllabusComponent — who has seen it (#1745)', () => {
     expect(headline).not.toBeNull();
     expect(headline.textContent).not.toContain('11');
     expect(headline.textContent).not.toMatch(/people|person/);
-  });
-
-  it('keeps both lists in the order the server sent them', () => {
-    const { fixture, httpMock } = setup();
-    flush(httpMock);
-    fixture.detectChanges();
-
-    const ids = (panel: string) =>
-      Array.from(fixture.nativeElement.querySelectorAll(`[data-cy="${panel}"] li[data-cy]`)).map(
-        (li) => (li as HTMLElement).getAttribute('data-cy'),
-      );
-
-    expect(ids('syllabus-coverage-missing')).toEqual([
-      'syllabus-missing-31',
-      'syllabus-missing-32',
-    ]);
-    expect(ids('syllabus-coverage-taught')).toEqual(['syllabus-taught-11', 'syllabus-taught-12']);
   });
 });
 
@@ -571,7 +499,7 @@ describe('StatsSyllabusComponent — plan what was never taught (#1656)', () => 
   });
 
   const GI_ONLY = report({
-    missing: [{ id: 31, name: 'Omoplata', parent_name: 'Closed guard', kind: 'gi' }],
+    missing: [{ id: 31, name: 'Omoplata', parent_id: 1, parent_name: 'Closed guard', kind: 'gi' }],
   });
 
   function sheet(fixture: { debugElement: DebugElement }) {
@@ -579,10 +507,14 @@ describe('StatsSyllabusComponent — plan what was never taught (#1656)', () => 
       LessonSheetStub | undefined;
   }
 
-  function planButton(fixture: { nativeElement: HTMLElement }, id: number) {
-    return fixture.nativeElement.querySelector(
-      `[data-cy="syllabus-missing-${id}"] button`,
-    ) as HTMLButtonElement | null;
+  /** "Pianifica" on a technique in the map's panel (#1911). */
+  function planFromMap(fixture: { debugElement: DebugElement; detectChanges(): void }, id: number) {
+    mapOf(fixture).planTechnique.emit(id);
+    fixture.detectChanges();
+  }
+
+  function plannable(fixture: { debugElement: DebugElement }): number[] {
+    return [...mapOf(fixture).plannable()].sort();
   }
 
   it('plans a gi technique onto the next gi class, with the technique chosen', () => {
@@ -590,8 +522,7 @@ describe('StatsSyllabusComponent — plan what was never taught (#1656)', () => 
     flush(httpMock, GI_ONLY);
     fixture.detectChanges();
 
-    planButton(fixture, 31)!.click();
-    fixture.detectChanges();
+    planFromMap(fixture, 31);
 
     // Tonight's no-gi class is skipped: it may not teach a gi technique.
     const opened = sheet(fixture)!;
@@ -610,24 +541,10 @@ describe('StatsSyllabusComponent — plan what was never taught (#1656)', () => 
     fixture.detectChanges();
 
     // Lockdown is no-gi: Wednesday's class, today.
-    planButton(fixture, 32)!.click();
-    fixture.detectChanges();
+    planFromMap(fixture, 32);
 
     expect(sheet(fixture)!.heldOn()).toBe('2026-10-14');
     expect(sheet(fixture)!.academyClassId()).toBe(8);
-  });
-
-  it('names the row by what it shows, and by what pressing it does', () => {
-    const { fixture, httpMock } = setup();
-    flush(httpMock);
-    fixture.detectChanges();
-
-    const button = planButton(fixture, 31)!;
-    expect(button.hasAttribute('aria-label')).toBe(false);
-    const name = button.textContent?.replace(/\s+/g, ' ') ?? '';
-    expect(name).toContain('Omoplata');
-    expect(name).toContain('Closed guard');
-    expect(name).toContain('Plan');
   });
 
   it('shows the plan on the season map once it is saved', () => {
@@ -635,14 +552,11 @@ describe('StatsSyllabusComponent — plan what was never taught (#1656)', () => 
     flush(httpMock, GI_ONLY);
     fixture.detectChanges();
 
-    planButton(fixture, 31)!.click();
-    fixture.detectChanges();
+    planFromMap(fixture, 31);
     // A plan is not coverage: the report has nothing to read again.
     sheet(fixture)!.saved.emit({ held: false } as Lesson);
 
-    const map = fixture.debugElement.query(By.directive(SeasonMapStub))
-      .componentInstance as SeasonMapStub;
-    expect(map.refreshWeeks).toHaveBeenCalled();
+    expect(mapOf(fixture).refreshWeeks).toHaveBeenCalled();
   });
 
   it('reads the report again when the lesson planned into was already held', () => {
@@ -651,8 +565,7 @@ describe('StatsSyllabusComponent — plan what was never taught (#1656)', () => 
     fixture.detectChanges();
 
     // Lockdown, onto tonight's no-gi class — which already has people in it.
-    planButton(fixture, 32)!.click();
-    fixture.detectChanges();
+    planFromMap(fixture, 32);
     sheet(fixture)!.saved.emit({ held: true } as Lesson);
     fixture.detectChanges();
 
@@ -664,14 +577,19 @@ describe('StatsSyllabusComponent — plan what was never taught (#1656)', () => 
     expect(again.request.params.get('seasons_back')).toBe('0');
     again.flush({
       data: report({
-        missing: [{ id: 31, name: 'Omoplata', parent_name: 'Closed guard', kind: 'both' }],
+        missing: [
+          { id: 31, name: 'Omoplata', parent_id: 1, parent_name: 'Closed guard', kind: 'both' },
+        ],
       }),
     });
     fixture.detectChanges();
 
-    // Taught now: out of the list.
-    expect(el.querySelector('[data-cy="syllabus-missing-32"]')).toBeNull();
-    expect(el.querySelector('[data-cy="syllabus-missing-31"]')).not.toBeNull();
+    // Taught now: out of what the map lists as still to do.
+    expect(
+      mapOf(fixture)
+        .missing()
+        .map((t) => t.id),
+    ).toEqual([31]);
   });
 
   it('offers no plan where no class may teach it', () => {
@@ -680,22 +598,7 @@ describe('StatsSyllabusComponent — plan what was never taught (#1656)', () => 
     flush(httpMock);
     fixture.detectChanges();
 
-    expect(planButton(fixture, 31)).not.toBeNull();
-    expect(planButton(fixture, 32)).toBeNull();
-
-    // Laid out as a plannable row is, so the two columns line up when mixed:
-    // the position beside the name, in the same inset, only not pressable.
-    const el: HTMLElement = fixture.nativeElement;
-    const plain = el.querySelector('[data-cy="syllabus-missing-32"] .topics__static');
-    expect(plain?.querySelector('.topics__name')?.textContent).toContain('Lockdown');
-    expect(plain?.querySelector('.topics__name .topics__parent')?.textContent).toContain(
-      'Half guard',
-    );
-    expect(
-      el.querySelector(
-        '[data-cy="syllabus-missing-31"] .topics__open .topics__name .topics__parent',
-      ),
-    ).not.toBeNull();
+    expect(plannable(fixture)).toEqual([31]);
   });
 
   it('offers no plan past the end of the season', () => {
@@ -706,16 +609,15 @@ describe('StatsSyllabusComponent — plan what was never taught (#1656)', () => 
       report({
         season: { start: '2025-10-19', end: '2026-10-18', label: '2025/26' },
         missing: [
-          { id: 31, name: 'Omoplata', parent_name: 'Closed guard', kind: 'gi' },
-          { id: 32, name: 'Lockdown', parent_name: 'Half guard', kind: 'nogi' },
+          { id: 31, name: 'Omoplata', parent_id: 1, parent_name: 'Closed guard', kind: 'gi' },
+          { id: 32, name: 'Lockdown', parent_id: 2, parent_name: 'Half guard', kind: 'nogi' },
         ],
       }),
     );
     fixture.detectChanges();
 
-    expect(planButton(fixture, 31)).toBeNull();
     // Tonight's no-gi class is still inside it.
-    expect(planButton(fixture, 32)).not.toBeNull();
+    expect(plannable(fixture)).toEqual([32]);
   });
 
   it('offers no plan in a season gone by', () => {
@@ -728,8 +630,7 @@ describe('StatsSyllabusComponent — plan what was never taught (#1656)', () => 
     flush(httpMock);
     fixture.detectChanges();
 
-    expect(planButton(fixture, 31)).toBeNull();
-    expect(planButton(fixture, 32)).toBeNull();
+    expect(plannable(fixture)).toEqual([]);
   });
 });
 

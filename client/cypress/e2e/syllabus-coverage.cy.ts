@@ -93,13 +93,14 @@ function report(over: Record<string, unknown> = {}) {
       }),
     ],
     missing: [
-      { id: 31, name: 'Omoplata', parent_name: 'Closed guard', kind: 'both' },
-      { id: 32, name: 'Lockdown', parent_name: 'Half guard', kind: 'nogi' },
+      { id: 31, name: 'Omoplata', parent_id: 1, parent_name: 'Closed guard', kind: 'both' },
+      { id: 32, name: 'Lockdown', parent_id: 2, parent_name: 'Half guard', kind: 'nogi' },
     ],
     taught: [
       {
         id: 11,
         name: 'Armbar',
+        parent_id: 1,
         parent_name: 'Closed guard',
         kind: 'both',
         lessons: 3,
@@ -108,11 +109,6 @@ function report(over: Record<string, unknown> = {}) {
         last_taught_on: '2026-10-05',
         state: 'covered',
       },
-    ],
-    timeline: [
-      { on: '2026-09-06', covered: 0 },
-      { on: '2026-09-13', covered: 2 },
-      { on: '2026-09-20', covered: 4 },
     ],
     ...over,
   };
@@ -218,13 +214,27 @@ describe('Syllabus coverage', () => {
       .and('contain.text', '3/6');
     cy.get('[data-cy="syllabus-position-2"]').should('contain.text', '1/4');
 
-    cy.get('[data-cy="syllabus-coverage-missing"]').should('contain.text', 'Omoplata');
-    cy.get('[data-cy="syllabus-coverage-taught"]').should('contain.text', 'Armbar');
+    // The map is the page (#1911): no timeline, no flat lists under it.
+    cy.get('[data-cy="syllabus-coverage-timeline"]').should('not.exist');
+    cy.get('[data-cy="syllabus-coverage-missing"]').should('not.exist');
+  });
+
+  it("opens a position's techniques under its name: to do, and done (#1911)", () => {
+    stub();
+
+    cy.visitAuthenticated('/dashboard/stats/syllabus');
+    cy.wait('@calendar');
+
+    cy.get('[data-cy="season-map-position-1"]').click();
+    cy.get('[data-cy="season-map-techniques"]')
+      .should('contain.text', 'To do')
+      .and('contain.text', 'Omoplata')
+      .and('contain.text', 'Done')
+      .and('contain.text', 'Armbar')
+      // Another position's technique stays under its own name.
+      .and('not.contain.text', 'Lockdown');
     // How many people it reached, beside how many lessons (#1746).
-    cy.get('[data-cy="syllabus-taught-11"] [data-cy="syllabus-taught-reach"]').should(
-      'contain.text',
-      '3 lessons · 11 people',
-    );
+    cy.get('[data-cy="season-map-done-11"]').should('contain.text', '3 lessons · 11 people');
   });
 
   it('lays each position out week by week, and opens a week on the lessons it counts (#1858)', () => {
@@ -607,7 +617,9 @@ describe('Who has seen a technique (#1745)', () => {
     cy.visitAuthenticated('/dashboard/stats/syllabus');
     cy.wait('@coverage');
 
-    cy.get('[data-cy="syllabus-taught-11"] button').click();
+    cy.wait('@calendar');
+    cy.get('[data-cy="season-map-position-1"]').click();
+    cy.get('[data-cy="season-map-done-11"]').click();
     cy.wait('@exposure').its('request.url').should('contain', 'seasons_back=0');
 
     cy.get('[data-cy="exposure-head"]').should('contain.text', 'Armbar');
@@ -635,7 +647,9 @@ describe('Who has seen a technique (#1745)', () => {
     cy.visitAuthenticated('/dashboard/stats/syllabus');
     cy.wait('@coverage');
 
-    cy.get('[data-cy="syllabus-taught-11"] button').click();
+    cy.wait('@calendar');
+    cy.get('[data-cy="season-map-position-1"]').click();
+    cy.get('[data-cy="season-map-done-11"]').click();
     cy.wait('@exposure');
 
     cy.get('[data-cy="exposure-group-unplaced"]').should('contain.text', 'Paolo Neri');
@@ -647,7 +661,9 @@ describe('Plan what was never taught (#1656)', () => {
   it('opens the next class that may teach it, with it ticked, and carries it a week on', () => {
     stub(
       report({
-        missing: [{ id: 21, name: 'Knee shield', parent_name: 'Half guard', kind: 'gi' }],
+        missing: [
+          { id: 21, name: 'Knee shield', parent_id: 2, parent_name: 'Half guard', kind: 'gi' },
+        ],
       }),
     );
     cy.clock(WEDNESDAY_NOON, ['Date']);
@@ -666,8 +682,11 @@ describe('Plan what was never taught (#1656)', () => {
     cy.visitAuthenticated('/dashboard/stats/syllabus');
     cy.wait('@coverage');
 
-    // A gi technique: tonight's no-gi class is passed over for Monday's gi one.
-    cy.get('[data-cy="syllabus-missing-21"] button').should('contain.text', 'Plan').click();
+    // From its position's panel (#1911). A gi technique: tonight's no-gi
+    // class is passed over for Monday's gi one.
+    cy.wait('@calendar');
+    cy.get('[data-cy="season-map-position-2"]').click();
+    cy.get('[data-cy="season-map-todo-21"]').should('contain.text', 'Plan').click();
     cy.wait('@lesson')
       .its('request.url')
       .should('contain', 'academy_class_id=7')
@@ -713,7 +732,9 @@ describe('Plan what was never taught (#1656)', () => {
   it('leaves a row no class may teach a plain row', () => {
     stub(
       report({
-        missing: [{ id: 32, name: 'Lockdown', parent_name: 'Half guard', kind: 'nogi' }],
+        missing: [
+          { id: 32, name: 'Lockdown', parent_id: 2, parent_name: 'Half guard', kind: 'nogi' },
+        ],
       }),
     );
     cy.clock(WEDNESDAY_NOON, ['Date']);
@@ -725,7 +746,11 @@ describe('Plan what was never taught (#1656)', () => {
     cy.visitAuthenticated('/dashboard/stats/syllabus');
     cy.wait('@coverage');
 
-    cy.get('[data-cy="syllabus-missing-32"]').should('contain.text', 'Lockdown');
-    cy.get('[data-cy="syllabus-missing-32"] button').should('not.exist');
+    cy.wait('@calendar');
+    cy.get('[data-cy="season-map-position-2"]').click();
+    cy.get('[data-cy="season-map-todo-32"]')
+      .should('contain.text', 'Lockdown')
+      .and('not.contain.text', 'Plan')
+      .and('not.match', 'button');
   });
 });
