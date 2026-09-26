@@ -76,7 +76,7 @@ export const RELEASES: readonly Release[] = [
           },
           {
             en: 'When the money came in, and how: marking a month paid from the athlete’s payment history can take the day (empty means today) and the method: cash, bank transfer, card or other, shown with the date. Selling a carnet can take the method too. The quick "Mark paid" on the athletes list is unchanged.',
-            it: 'Quando sono arrivati i soldi, e come: segnando un mese pagato dallo storico dei pagamenti dell’atleta puoi scegliere il giorno (vuoto vuol dire oggi) e il modo: contanti, bonifico, carta o altro, mostrato accanto alla data. Anche vendendo un carnet puoi dire come. Il «Segna pagato» rapido dall’elenco degli atleti resta com’era.',
+            it: 'Quando sono arrivati i soldi, e come: segnando un mese pagato dallo storico dei pagamenti dell’atleta puoi scegliere il giorno (vuoto vuol dire oggi) e il modo: contanti, bonifico, carta o altro, mostrato con la data. Anche vendendo un carnet puoi dire come. Il «Segna pagato» rapido dall’elenco degli atleti resta com’era.',
           },
           {
             en: 'The payment day never moves your revenue: September paid on 3 October is still September’s money in the chart.',
