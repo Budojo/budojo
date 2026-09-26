@@ -6335,7 +6335,10 @@ paths:
       summary: Belt + stripe promotion history for an athlete (owner-only)
       description: |
         Returns every belt and stripe promotion event recorded for
-        the athlete, descending by `recorded_at`. Written by the
+        the athlete, newest first: by day, and within a day in the
+        reverse of the order the rows happened in — where each starts
+        on the ladder, then id — the same order `gaps` are computed in,
+        so a gap always sits between the rows it names (#1966). Written by the
         `AthleteObserver` in lock-step with the corresponding
         `belt_promotion` / `stripe_promotion` CommunityPost so the
         owner can answer "when did I give which stripe to whom" from

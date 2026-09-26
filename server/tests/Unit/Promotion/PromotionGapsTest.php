@@ -367,6 +367,14 @@ function fillEveryGap(array $records, Belt $belt, int $stripes, MartialArt $art,
             : ['kind' => 'stripe', 'belt_at_event' => $gap['belt'], 'from_stripes' => $gap['from_stripes'], 'to_stripes' => $gap['to_stripes']];
         expect(PromotionGaps::admits($gaps, $fields, $on->toDateString(), $today))->toBeTrue("{$gap['key']} refused on {$on->toDateString()}");
 
+        if ($gap['kind'] === 'stripe') {
+            foreach ($records as $record) {
+                $recorded = $record->kind === 'stripe' && ! $record->isReset()
+                    && $record->beltAtEvent->value === $gap['belt'] && $record->toStripes === $gap['to_stripes'];
+                expect($recorded)->toBeFalse("{$gap['key']} is already recorded");
+            }
+        }
+
         $filled = $gap['kind'] === 'stripe'
             ? stripeRow($nextId++, Belt::from($gap['belt']), (int) $gap['from_stripes'], (int) $gap['to_stripes'], $on->toDateString())
             : beltRow($gap['completes_promotion_id'] ?? $nextId++, Belt::from((string) $gap['from_belt']), Belt::from($gap['belt']), $on->toDateString());
@@ -395,12 +403,88 @@ it('can never be led into a second row on a belt, whatever the order and the dat
     'Jacopo, every row at midnight' => [[stripeRow(12, Belt::White, 2, 3, '2024-03-12'), beltRow(15, null, Belt::Blue, '2026-09-20')], Belt::Blue, 2, MartialArt::Bjj],
     'a same-day correction pair' => [[beltRow(1, Belt::White, Belt::Blue, '2024-01-01'), stripeRow(2, Belt::Blue, 0, 1, '2024-06-01'), stripeRow(3, Belt::Blue, 1, 2, '2025-01-01'), beltRow(4, Belt::Blue, Belt::Purple, '2026-09-10'), beltRow(5, Belt::Purple, Belt::Blue, '2026-09-10')], Belt::Blue, 4, MartialArt::Bjj],
     'a next-day correction pair' => [[beltRow(1, Belt::White, Belt::Blue, '2024-01-01'), stripeRow(2, Belt::Blue, 0, 1, '2024-06-01'), stripeRow(3, Belt::Blue, 1, 2, '2025-01-01'), beltRow(4, Belt::Blue, Belt::Purple, '2026-09-10'), beltRow(5, Belt::Purple, Belt::Blue, '2026-09-11')], Belt::Blue, 3, MartialArt::Bjj],
+    'T1: a demotion by mistake, undone the next day' => [t1History(), Belt::Blue, 2, MartialArt::Bjj],
+    'T2: a demotion by mistake, undone the same morning, timed rows' => [t2History(), Belt::Blue, 2, MartialArt::Bjj],
+    'S1: a real stay on blue, then a demotion nothing undoes' => [s1History(), Belt::White, 2, MartialArt::Bjj],
     'a same-day correction at midnight' => [[beltRow(1, null, Belt::Purple, '2026-09-10'), beltRow(2, Belt::Purple, Belt::Blue, '2026-09-10')], Belt::Blue, 0, MartialArt::Bjj],
     'a blue stripe typed in before the starting row' => [[stripeRow(12, Belt::White, 2, 3, '2024-03-12'), beltRow(15, null, Belt::Blue, '2026-01-10'), stripeRow(20, Belt::Blue, 0, 1, '2025-02-01')], Belt::Blue, 3, MartialArt::Bjj],
     'a starting row out of order' => [[beltRow(1, null, Belt::White, '2015-01-01'), beltRow(15, null, Belt::Blue, '2026-01-10'), stripeRow(20, Belt::Blue, 0, 1, '2020-05-01')], Belt::Blue, 1, MartialArt::Bjj],
     'imported on purple, one white stripe known' => [[stripeRow(3, Belt::White, 0, 1, '2016-02-01'), beltRow(9, null, Belt::Purple, '2026-09-01')], Belt::Purple, 2, MartialArt::Bjj],
     'a judoka imported on black' => [[beltRow(1, Belt::White, Belt::Yellow, '2005-01-01'), beltRow(9, null, Belt::Black, '2026-09-01')], Belt::Black, 1, MartialArt::Judo],
 ]);
+
+/** @return list<PromotionRecord> */
+function t1History(): array
+{
+    return [
+        beltRow(1, Belt::White, Belt::Blue, '2018-01-01'),
+        stripeRow(2, Belt::Blue, 0, 1, '2018-06-01'),
+        stripeRow(3, Belt::Blue, 1, 2, '2019-01-01'),
+        beltRow(4, Belt::Blue, Belt::White, '2026-09-10'),
+        beltRow(5, Belt::White, Belt::Blue, '2026-09-11'),
+    ];
+}
+
+/** @return list<PromotionRecord> */
+function t2History(): array
+{
+    return [
+        beltRow(1, Belt::White, Belt::Blue, '2018-01-01'),
+        stripeRow(2, Belt::Blue, 0, 1, '2018-06-01'),
+        stripeRow(3, Belt::Blue, 1, 2, '2019-01-01'),
+        beltRow(4, Belt::Blue, Belt::White, '2026-09-10 10:00:00'),
+        beltRow(5, Belt::White, Belt::Blue, '2026-09-10 10:05:00'),
+    ];
+}
+
+/** @return list<PromotionRecord> */
+function s1History(): array
+{
+    return [
+        beltRow(1, null, Belt::White, '2017-01-01'),
+        beltRow(2, Belt::White, Belt::Blue, '2018-01-01'),
+        stripeRow(3, Belt::Blue, 0, 1, '2018-06-01'),
+        stripeRow(4, Belt::Blue, 1, 2, '2019-01-01'),
+        beltRow(5, Belt::Blue, Belt::White, '2020-01-01'),
+    ];
+}
+
+it('pairs a demotion by mistake with the promotion that undid it, never with the real one before it', function (array $records, Belt $belt, int $stripes): void {
+    expect(gapsOf($records, $belt, $stripes)['gaps'])->toBe([]);
+})->with([
+    'T1, undone the next day' => [t1History(), Belt::Blue, 2],
+    'T2, undone the same morning' => [t2History(), Belt::Blue, 2],
+    'S1, a real stay on blue that nothing undoes' => [s1History(), Belt::White, 2],
+]);
+
+it('cancels the shortest round trip first, when a real promotion could pair either way', function (): void {
+    // Blue with no stripe recorded, a demotion by mistake eight years on,
+    // undone the next day: the correction is the day, not the eight years.
+    $result = gapsOf([
+        beltRow(1, Belt::White, Belt::Blue, '2018-01-01'),
+        beltRow(4, Belt::Blue, Belt::White, '2026-09-10'),
+        beltRow(5, Belt::White, Belt::Blue, '2026-09-11'),
+        stripeRow(6, Belt::Blue, 1, 2, '2027-01-01'),
+    ], Belt::Blue, 2);
+
+    expect(keysOf($result))->toBe(['stripe:blue:1'])
+        ->and($result['gaps'][0]['after'])->toBe(['promotion_id' => 1, 'recorded_at' => '2018-01-01']);
+});
+
+it('keeps a real promotion that follows a set-back mistake to the same belt', function (): void {
+    // Purple by mistake and back the same day; purple for real months later,
+    // with nothing recorded on blue in between.
+    $result = gapsOf([
+        beltRow(1, Belt::White, Belt::Blue, '2024-01-01'),
+        stripeRow(2, Belt::Blue, 3, 4, '2025-01-01'),
+        beltRow(3, Belt::Blue, Belt::Purple, '2026-09-10'),
+        beltRow(4, Belt::Purple, Belt::Blue, '2026-09-10'),
+        beltRow(5, Belt::Blue, Belt::Purple, '2027-03-01'),
+    ], Belt::Purple, 0);
+
+    expect(keysOf($result))->toBe(['stripe:blue:1', 'stripe:blue:2', 'stripe:blue:3'])
+        ->and($result['gaps'][0]['before'])->toBe(['promotion_id' => 2, 'recorded_at' => '2025-01-01']);
+});
 
 /** White to blue in 2024, two blue stripes, then purple by mistake on 2026-09-10 and blue again. */
 function correctedHistory(string $undoneOn): array

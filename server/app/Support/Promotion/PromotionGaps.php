@@ -32,8 +32,9 @@ use Carbon\CarbonImmutable;
  * already has a row for, or has already been offered: a belt is reached
  * once, and a second row for it is the one thing a ghost must never lead to.
  *
- * **Corrections are not promotions.** A belt set by mistake and set back —
- * b1 → b2, then b2 → b1 with no belt row between — cancels out: the athlete
+ * **Corrections are not promotions.** A belt set by mistake and set back
+ * cancels out — the shortest round trip b1 → b2, b2 → b1 between two
+ * consecutive belt rows, with nothing recorded on b2 in between: the athlete
  * never left b1, so neither row is replayed, and b2 is not reached. A belt
  * row that goes down with nothing undoing it is a contradiction: nothing is
  * missing before it, and the count on the belt it returns to is held.
@@ -113,7 +114,7 @@ final class PromotionGaps
      */
     public function find(array $records, Belt $currentBelt, int $currentStripes, array $skipped): array
     {
-        $sorted = $this->chronological($records);
+        $sorted = new PromotionOrder($this->ladder)->chronological($records);
         if ($sorted === []) {
             return ['gaps' => [], 'history_starts_at' => null];
         }
@@ -227,11 +228,17 @@ final class PromotionGaps
     }
 
     /**
-     * The rows without the belt mistakes that were set back: a belt row
-     * b1 → b2 undone by a later b2 → b1, with no belt row between them. The
-     * athlete never left b1, so neither row is a step, a boundary, or a belt
-     * reached; the stripe rows between them still count on b1. Nested pairs
-     * cancel from the inside out.
+     * The rows without the belt mistakes that were set back. A correction is
+     * the shortest round trip: a belt row b1 → b2 and the very next belt row,
+     * b2 → b1, with nothing recorded on b2 between them — a stripe there means
+     * the athlete really held it. Such a pair cancels: the athlete never left
+     * b1, so neither row is a step, a boundary, or a belt reached, and the
+     * stripe rows around them still count on b1.
+     *
+     * Where two pairs share a row — a real promotion into blue years ago, a
+     * demotion by mistake, and the promotion that undid it the next day — the
+     * shorter one is the correction, and the real promotion stays. Pairs are
+     * taken shortest first, so nested ones cancel from the inside out.
      *
      * @param list<PromotionRecord> $rows
      *
@@ -239,29 +246,55 @@ final class PromotionGaps
      */
     private function withoutUndone(array $rows): array
     {
-        $open = [];
-        $undone = [];
-        foreach ($rows as $position => $row) {
-            if ($row->kind !== 'belt') {
-                continue;
-            }
-
-            $last = $open === [] ? null : $open[\count($open) - 1];
-            if ($last !== null && self::undoes($row, $rows[$last])) {
-                array_pop($open);
-                $undone[$last] = true;
-                $undone[$position] = true;
-
-                continue;
-            }
-            $open[] = $position;
+        while (($pair = $this->shortestRoundTrip($rows)) !== null) {
+            unset($rows[$pair[0]], $rows[$pair[1]]);
+            $rows = array_values($rows);
         }
 
-        return array_values(array_filter(
-            $rows,
-            static fn (int $position): bool => ! isset($undone[$position]),
-            ARRAY_FILTER_USE_KEY,
-        ));
+        return $rows;
+    }
+
+    /**
+     * @param list<PromotionRecord> $rows
+     *
+     * @return array{int, int}|null the positions of the correction pair to cancel next
+     */
+    private function shortestRoundTrip(array $rows): ?array
+    {
+        $belts = array_keys(array_filter($rows, static fn (PromotionRecord $row): bool => $row->kind === 'belt'));
+        $shortest = null;
+        $span = PHP_INT_MAX;
+        foreach (\array_slice($belts, 1) as $index => $later) {
+            $earlier = $belts[$index];
+            if (! self::undoes($rows[$later], $rows[$earlier]) || self::held($rows, $earlier, $later)) {
+                continue;
+            }
+
+            $length = $rows[$later]->recordedAt->getTimestamp() - $rows[$earlier]->recordedAt->getTimestamp();
+            if ($length < $span) {
+                $shortest = [$earlier, $later];
+                $span = $length;
+            }
+        }
+
+        return $shortest;
+    }
+
+    /**
+     * Whether anything was recorded on the belt the earlier row went to,
+     * between the two: then it was held, not a slip.
+     *
+     * @param list<PromotionRecord> $rows
+     */
+    private static function held(array $rows, int $earlier, int $later): bool
+    {
+        foreach (\array_slice($rows, $earlier + 1, $later - $earlier - 1) as $between) {
+            if ($between->kind === 'stripe' && $between->beltAtEvent === $rows[$earlier]->toBelt) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static function undoes(PromotionRecord $row, PromotionRecord $earlier): bool
@@ -490,61 +523,6 @@ final class PromotionGaps
         $this->reached = [...$this->reached, ...$reached];
 
         return $found;
-    }
-
-    /**
-     * Oldest first. Rows sharing a moment — since #1963 every row of a day is
-     * stored at the owner's midnight — go by where each one **starts** on
-     * the ladder, then by id:
-     *
-     * - a starting row starts on its own belt, before anything else on it:
-     *   a same-day correction off it (created on purple by mistake, then
-     *   purple → blue) replays after it, the way it was made;
-     * - a stripe row starts at its `from_stripes`, so two stripes transcribed
-     *   newest first are still one then two;
-     * - a belt row starts where it leaves its `from_belt`, after the stripes
-     *   on that belt.
-     *
-     * Not by id alone: a step filled on the day of the row after it (its
-     * window ends on that day, inclusive) is written later but happened
-     * before it. Not by where a row ends, which replays a downward
-     * correction backwards.
-     *
-     * @param list<PromotionRecord> $records
-     *
-     * @return list<PromotionRecord>
-     */
-    private function chronological(array $records): array
-    {
-        usort($records, fn (PromotionRecord $a, PromotionRecord $b): int => [
-            $a->recordedAt->getTimestamp(),
-            ...$this->start($a),
-            $a->id,
-        ] <=> [
-            $b->recordedAt->getTimestamp(),
-            ...$this->start($b),
-            $b->id,
-        ]);
-
-        return $records;
-    }
-
-    /**
-     * Where a row starts on the ladder: the climb position of the belt it
-     * starts on, then how far along that belt.
-     *
-     * @return array{int, int}
-     */
-    private function start(PromotionRecord $row): array
-    {
-        if ($row->isOpening()) {
-            return [$this->ladder->climbPosition($row->belt()) ?? PHP_INT_MAX, -1];
-        }
-        if ($row->kind === 'belt') {
-            return [$this->ladder->climbPosition($row->fromBelt ?? $row->belt()) ?? PHP_INT_MAX, PHP_INT_MAX];
-        }
-
-        return [$this->ladder->climbPosition($row->beltAtEvent) ?? PHP_INT_MAX, $row->fromStripes ?? 0];
     }
 
     /**
