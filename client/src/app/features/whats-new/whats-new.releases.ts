@@ -60,6 +60,84 @@ export function localised(value: Localised, lang: string): string {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.70.0',
+    date: '2026-09-26',
+    headline: {
+      en: 'Who is behind on fees, and checking people in at the door: a behind-on-fees list, when and how the money came in, Enter to check someone in, and the right dan from an imported sheet.',
+      it: 'Chi è indietro coi pagamenti, e il check-in alla porta: l’elenco degli arretrati, quando e come sono arrivati i soldi, Invio per segnare presente, e il dan giusto da un foglio importato.',
+    },
+    sections: [
+      {
+        heading: { en: 'Payments', it: 'Pagamenti' },
+        bullets: [
+          {
+            en: 'Behind on fees, under the chart on Stats → Payments: who has unpaid months before this one, since when and how much, estimated at today’s fee. The current month stays with "Unpaid" on the athletes list.',
+            it: 'Arretrati, sotto il grafico in Statistiche → Pagamenti: chi ha mesi non pagati prima di questo, da quando e quanto, stimato alla quota di oggi. Il mese in corso resta con «Non pagato» sull’elenco degli atleti.',
+          },
+          {
+            en: 'When the money came in, and how: marking a month paid from the athlete’s payment history can take the day (empty means today) and the method: cash, bank transfer, card or other, shown with the date. Selling a carnet can take the method too. The quick "Mark paid" on the athletes list is unchanged.',
+            it: 'Quando sono arrivati i soldi, e come: segnando un mese pagato dallo storico dei pagamenti dell’atleta puoi scegliere il giorno (vuoto vuol dire oggi) e il modo: contanti, bonifico, carta o altro, mostrato con la data. Anche vendendo un carnet puoi dire come. Il «Segna pagato» rapido dall’elenco degli atleti resta com’era.',
+          },
+          {
+            en: 'The payment day never moves your revenue: September paid on 3 October is still September’s money in the chart.',
+            it: 'Il giorno del pagamento non sposta gli incassi: settembre pagato il 3 ottobre resta un incasso di settembre nel grafico.',
+          },
+        ],
+      },
+      {
+        heading: { en: 'Attendance', it: 'Presenze' },
+        bullets: [
+          {
+            en: 'Type the name and press Enter: when one athlete matches, they are checked in and the box clears for the next one. Esc clears it.',
+            it: 'Scrivi il nome e premi Invio: se corrisponde un solo atleta è segnato presente, e la casella si svuota per il prossimo. Esc la svuota.',
+          },
+          {
+            en: '"Present" on "Who usually comes": a regular who has not been checked in yet is checked in from there, in one tap.',
+            it: '«Presente» in «Chi viene di solito»: chi viene sempre e non è ancora segnato si segna da lì, con un tocco.',
+          },
+          {
+            en: 'The "pagination is on the M4.2.5 follow-up" note under a list of more than twenty athletes is gone: it was ours, and reached the screen by mistake.',
+            it: 'Sparita la nota «La paginazione arriva nel follow-up M4.2.5» sotto un elenco di più di venti atleti: era nostra, finita sullo schermo per sbaglio.',
+          },
+        ],
+      },
+      {
+        heading: { en: 'Importing athletes', it: 'Importare gli atleti' },
+        bullets: [
+          {
+            en: 'The dan is the one you write: "3", "3°" or "3° dan" on a judo black belt is 3rd dan. Every black belt used to land one dan too high, and "3°" became 1st dan without a word.',
+            it: 'Il dan è quello che scrivi: «3», «3°» o «3° dan» su una cintura nera di judo è il 3° dan. Prima ogni cintura nera finiva un dan più su, e «3°» diventava 1° dan senza dirlo.',
+          },
+          {
+            en: 'A grade that cannot be read is refused with the reason, never stored as zero. "Dan", "Poom" and "Tacche" columns are recognised, and the preview shows the grade beside the belt.',
+            it: 'Un grado che non si legge viene rifiutato con il motivo, mai messo a zero. Le colonne «Dan», «Poom» e «Tacche» vengono riconosciute, e l’anteprima mostra il grado accanto alla cintura.',
+          },
+          {
+            en: 'If you imported black belts (judo, karate, taekwondo) or taekwondo black-and-red belts (poom) with an earlier version, check their grade on the athlete page: it may be one too high.',
+            it: 'Se hai importato cinture nere (judo, karate, taekwondo) o nere e rosse del taekwondo (poom) con una versione precedente, controlla il loro grado nella scheda dell’atleta: potrebbe essere uno più alto del vero.',
+          },
+        ],
+      },
+      {
+        heading: { en: 'Stats and backup', it: 'Statistiche e backup' },
+        bullets: [
+          {
+            en: 'Judo and karate: the age split reads "Pre-competitive / Competitive", as the federation says. The bar charts fill their space instead of sitting squashed at the top.',
+            it: 'Judo e karate: la divisione per età dice «Preagonisti / Agonisti», come la federazione. I grafici a barre riempiono il loro spazio invece di stare schiacciati in alto.',
+          },
+          {
+            en: 'A restore cut short by a power cut or a restart is put back together the next time Budojo starts: your previous data, or the whole backup if it was already in. The app could restart empty before.',
+            it: 'Un ripristino interrotto da un blackout o un riavvio viene rimesso a posto al riavvio successivo di Budojo: i tuoi dati di prima, o il backup completo se era già dentro. Prima l’app poteva ripartire vuota.',
+          },
+          {
+            en: 'If a restore fails, the message saying where your data is always comes through, even when the antivirus holds a file.',
+            it: 'Se un ripristino non riesce, il messaggio che dice dove sono i tuoi dati arriva sempre, anche quando l’antivirus tiene bloccato un file.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.69.0',
     date: '2026-09-26',
     headline: {
