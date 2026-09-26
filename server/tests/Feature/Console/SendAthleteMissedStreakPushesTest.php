@@ -153,3 +153,48 @@ it('says nothing while the schedule is paused, about the sessions before the pau
 
     Notification::assertNothingSent();
 });
+
+it('reaches three weeks back for an academy that trains once a week', function (): void {
+    // Wednesdays only: the streak is 9th, 2nd and 26 August, 21 days back.
+    $academy = academyTrainingMonWedFri([3]);
+    athleteJoinedLongAgo($academy);
+
+    $this->artisan(SendAthleteMissedStreakPushes::class)->assertSuccessful();
+
+    Notification::assertSentTo($academy->owner, OwnerAthleteMissedStreakNotification::class);
+});
+
+/** An earlier alert about this athlete, as the inbox holds it. */
+function earlierStreakAlert(Academy $academy, Athlete $athlete, string $at): void
+{
+    $academy->owner->notifications()->create([
+        'id' => (string) Illuminate\Support\Str::uuid(),
+        'type' => OwnerAthleteMissedStreakNotification::class,
+        'data' => ['kind' => 'owner_athlete_missed_streak', 'athlete_id' => $athlete->id],
+        'created_at' => $at,
+    ]);
+}
+
+it('does not warn twice about the same three sessions, however long the pause', function (): void {
+    // Paused from 1 September: the last sessions are 31, 28 and 26 August,
+    // and the owner was told on the 1st. The fortnight has passed, but
+    // nothing new has been missed since.
+    $academy = academyTrainingMonWedFri();
+    $academy->schedules()->create(['training_days' => null, 'effective_from' => '2026-09-01']);
+    $athlete = athleteJoinedLongAgo($academy);
+    earlierStreakAlert($academy, $athlete, '2026-09-01 09:30:00');
+
+    $this->artisan(SendAthleteMissedStreakPushes::class)->assertSuccessful();
+
+    Notification::assertNothingSent();
+});
+
+it('warns again once the fortnight has passed and new sessions were missed', function (): void {
+    $academy = academyTrainingMonWedFri();
+    $athlete = athleteJoinedLongAgo($academy);
+    earlierStreakAlert($academy, $athlete, '2026-08-31 09:30:00');
+
+    $this->artisan(SendAthleteMissedStreakPushes::class)->assertSuccessful();
+
+    Notification::assertSentTo($academy->owner, OwnerAthleteMissedStreakNotification::class);
+});

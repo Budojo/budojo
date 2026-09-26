@@ -55,7 +55,7 @@ class DemoAcademySeeder extends Seeder
         // The history every scheduled-days reader uses (#1764), backdated like
         // the #1094 backfill: the column alone leaves the seeded past with no
         // schedule, so the demo would read as never configured. Three years
-        // covers every seeded joining date and the attendance window.
+        // covers the attendance window the demo seeds (365 days).
         $academy->schedules()->delete();
         $academy->schedules()->create([
             'training_days' => $academy->training_days,

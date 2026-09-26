@@ -30,10 +30,11 @@ use Illuminate\Support\Facades\Log;
  *       fewer than 3, or older than 30 days → skip the academy (not
  *                      configured, too new, or paused)
  *       for each active athlete:
- *           if attendance is present for ALL streak_dates → skip
+ *           if attendance is present for ANY streak_date → skip
  *           if attendance is absent for ALL streak_dates →
  *             owner gets notified (once per 14 days per athlete to
- *             avoid daily spam — checked via the inbox's existing
+ *             avoid daily spam, and never twice about the same streak —
+ *             checked via the inbox's existing
  *             "owner_athlete_missed_streak" kind rows).
  *
  * Per-academy failures are logged and don't stop the loop.
@@ -121,7 +122,7 @@ class SendAthleteMissedStreakPushes extends Command
             ->get();
 
         foreach ($athletes as $athlete) {
-            if ($this->wasNotifiedRecently($owner, $athlete, $today)) {
+            if ($this->wasNotifiedRecently($owner, $athlete, $today, $streakDates)) {
                 continue;
             }
             if (! $this->missedAllStreakDates($athlete, $streakDates)) {
@@ -167,12 +168,23 @@ class SendAthleteMissedStreakPushes extends Command
         return $present === 0;
     }
 
-    private function wasNotifiedRecently(\App\Models\User $owner, Athlete $athlete, Carbon $today): bool
+    /**
+     * Told within the fortnight, or told since the latest session of this
+     * streak — the same three sessions, with nothing new missed since. The
+     * second half is what keeps a pause quiet: its streak does not move, and
+     * the fortnight alone would repeat the same news once it ran out.
+     *
+     * @param  list<string>  $streakDates  most recent first
+     */
+    private function wasNotifiedRecently(\App\Models\User $owner, Athlete $athlete, Carbon $today, array $streakDates): bool
     {
+        $fortnight = $today->copy()->subDays(self::RENOTIFY_AFTER_DAYS);
+        $afterStreak = Carbon::parse($streakDates[0])->addDay();
+
         return $owner->notifications()
             ->where('data->kind', 'owner_athlete_missed_streak')
             ->where('data->athlete_id', $athlete->id)
-            ->where('created_at', '>=', $today->copy()->subDays(self::RENOTIFY_AFTER_DAYS))
+            ->where('created_at', '>=', $fortnight->min($afterStreak))
             ->exists();
     }
 }
