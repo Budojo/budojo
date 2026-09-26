@@ -64,6 +64,10 @@ final class AthleteColumnMap
         'gradi' => 'stripes',
         'strisce' => 'stripes',
         'degrees' => 'stripes',
+        // A dan column is a grade column, read against the belt (#1927).
+        'dan' => 'stripes',
+        'poom' => 'stripes',
+        'tacche' => 'stripes',
 
         'status' => 'status',
         'stato' => 'status',

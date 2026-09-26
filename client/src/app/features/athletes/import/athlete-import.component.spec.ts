@@ -6,6 +6,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { MessageService } from 'primeng/api';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 import type { AthleteImportReport } from '../../../core/services/athlete.service';
+import { useLadder } from '../../../../test-utils/ladder-test';
 import { AthleteImportComponent } from './athlete-import.component';
 
 const URL = '/api/v1/athletes/import';
@@ -85,6 +86,65 @@ describe('AthleteImportComponent', () => {
     http = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(AthleteImportComponent);
     fixture.detectChanges();
+  });
+
+  it("shows the grade each row would get, in the grade's own words (#1927)", () => {
+    useLadder('judo');
+    choose();
+    http.expectOne(URL).flush({
+      data: report({
+        rows: [
+          {
+            row: 2,
+            status: 'ok',
+            values: { first_name: 'Mario', last_name: 'Rossi', belt: 'black', stripes: 2 },
+            errors: {},
+          },
+          {
+            row: 3,
+            status: 'ok',
+            values: { first_name: 'Luca', last_name: 'Bianchi', belt: 'blue', stripes: 0 },
+            errors: {},
+          },
+          {
+            row: 4,
+            status: 'invalid',
+            values: { first_name: 'Anna', last_name: 'Verdi', belt: 'black', stripes: 0 },
+            errors: { stripes: ['"tre" is not a grade: write it as a number, like 2 or 3° dan.'] },
+          },
+        ],
+      }),
+    });
+    fixture.detectChanges();
+
+    const cells = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('[data-cy="import-belt"]'),
+    ).map((cell) => cell.textContent?.trim());
+
+    // Stored 2 is 3° dan: the preview is where a wrong offset gets caught.
+    // A refused grade shows the belt alone — "1° dan" beside "not a grade"
+    // would contradict the reason printed on the same row.
+    expect(cells).toEqual(['Black · 3° dan', 'Blue', 'Black']);
+  });
+
+  it('counts stripes on a belt that carries them', () => {
+    useLadder('bjj');
+    choose();
+    http.expectOne(URL).flush({
+      data: report({
+        rows: [
+          {
+            row: 2,
+            status: 'ok',
+            values: { first_name: 'Mario', last_name: 'Rossi', belt: 'blue', stripes: 2 },
+            errors: {},
+          },
+        ],
+      }),
+    });
+    fixture.detectChanges();
+
+    expect(query('[data-cy="import-belt"]')?.textContent?.trim()).toBe('Blue · 2 stripes');
   });
 
   it('shows only the file picker until there is a file', () => {

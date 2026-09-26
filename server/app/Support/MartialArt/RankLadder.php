@@ -71,6 +71,14 @@ final class RankLadder
         return $this->ranks[$belt->value] ?? null;
     }
 
+    /** The rung itself — how its stripes count, and from where (#1927). */
+    public function gradeOf(Belt $belt): ?Grade
+    {
+        $rank = $this->rankOf($belt);
+
+        return $rank === null ? null : $this->grades[$rank - 1];
+    }
+
     /** Null for a colour this art does not award — the belt rule reports that. */
     public function maxStripes(Belt $belt): ?int
     {
@@ -189,12 +197,5 @@ final class RankLadder
             ...\array_slice($this->grades, 0, $start - 1),
             ...\array_slice($this->grades, $start),
         ];
-    }
-
-    private function gradeOf(Belt $belt): ?Grade
-    {
-        $rank = $this->rankOf($belt);
-
-        return $rank === null ? null : $this->grades[$rank - 1];
     }
 }
