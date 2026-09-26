@@ -60,6 +60,64 @@ export function localised(value: Localised, lang: string): string {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.68.0',
+    date: '2026-09-26',
+    headline: {
+      en: 'Who to promote, and attendance counted on the right days: the facts beside each athlete, closures the academy can mark, and one rule for every rate.',
+      it: 'Chi promuovere, e presenze contate sui giorni giusti: i fatti accanto a ogni atleta, le chiusure dell’accademia, e una regola sola per ogni percentuale.',
+    },
+    sections: [
+      {
+        heading: { en: 'Who to promote', it: 'Chi promuovere' },
+        bullets: [
+          {
+            en: 'On an athlete’s Promotions tab: how long they have held the belt, in months and sessions, and their last stripe with the sessions since. Dan and poom are named as such.',
+            it: 'Nella scheda Promozioni dell’atleta: da quanto ha la cintura, in mesi e allenamenti, e l’ultimo grado con gli allenamenti da allora. Dan e poom sono chiamati con il loro nome.',
+          },
+          {
+            en: '"Who to promote?", from the athlete list: every active athlete, longest since their last promotion first, with the facts side by side and the next step (a stripe, a dan or the next belt). No score and no threshold: the call is yours.',
+            it: '«Chi promuovere?», dall’elenco atleti: tutti gli attivi, prima chi aspetta da più tempo, con i fatti affiancati e il prossimo passo (un grado, un dan o la cintura successiva). Nessun punteggio e nessuna soglia: la decisione è tua.',
+          },
+        ],
+      },
+      {
+        heading: { en: 'Closures', it: 'Le chiusure' },
+        bullets: [
+          {
+            en: 'Timetable → Closures: mark the days the academy is shut (the summer break, Christmas, a seminar). They stop counting as missed sessions everywhere, the "missed the last 3 sessions" alert included.',
+            it: 'Orario → Chiusure: segna i giorni in cui l’accademia è chiusa (la pausa estiva, Natale, un seminario). Non contano più come allenamenti saltati, nemmeno nell’avviso «ha saltato gli ultimi 3 allenamenti».',
+          },
+          {
+            en: 'The athlete’s calendar shows a closed day as "Not a training day" and names the closure under its legend; on a closed day the check-in opens on the last session held.',
+            it: 'Il calendario dell’atleta mostra un giorno di chiusura come «Non si allena» e ne scrive il nome sotto la legenda; in un giorno di chiusura il check-in apre sull’ultimo allenamento fatto.',
+          },
+        ],
+      },
+      {
+        heading: { en: 'One way to count attendance', it: 'Un solo modo di contare le presenze' },
+        bullets: [
+          {
+            en: 'Every rate divides by the scheduled sessions (your timetable, less closures, up to today) since the athlete joined: the month summary, the athlete list and the athlete’s page now agree.',
+            it: 'Ogni percentuale divide per gli allenamenti in programma (il tuo orario, meno le chiusure, fino a oggi) da quando l’atleta si è iscritto: riepilogo del mese, elenco atleti e scheda dell’atleta ora dicono lo stesso.',
+          },
+          {
+            en: 'Someone who joined mid-month reads 2 of 5, not 2 of 8, and someone else training on a Sunday no longer moves anyone’s rate. A session held but not registered now counts as missed for everyone, so take the register every time.',
+            it: 'Chi si è iscritto a metà mese è 2 su 5, non 2 su 8, e chi si allena di domenica non sposta più la percentuale degli altri. Una lezione fatta ma non registrata ora conta come saltata per tutti: fai l’appello a ogni lezione.',
+          },
+        ],
+      },
+      {
+        heading: { en: 'Fixed', it: 'Corretto' },
+        bullets: [
+          {
+            en: 'The "missed the last 3 sessions" alert no longer reports sessions from before a pause, nor repeats itself about the same three; the month summary no longer opens the wrong month on the last days of a long one.',
+            it: 'L’avviso «ha saltato gli ultimi 3 allenamenti» non parla più di lezioni di prima di una pausa e non si ripete sulle stesse tre; il riepilogo del mese non apre più il mese sbagliato negli ultimi giorni di un mese lungo.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.67.0',
     date: '2026-09-25',
     headline: {
