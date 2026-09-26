@@ -105,7 +105,7 @@ test: test-server test-client test-desktop ## Run every pre-push gate
 test-server: ## PHP gates: cs-fixer + phpstan + pest
 	$(SCRIPTS)/test-server.sh
 
-test-client: ## Angular gates: prettier + eslint + vitest
+test-client: ## Angular gates: prettier + eslint + stylelint + vitest
 	$(SCRIPTS)/test-client.sh
 
 test-desktop: ## Desktop gates: tsc + vitest

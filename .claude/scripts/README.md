@@ -23,8 +23,9 @@ Encapsulates the 3-step GraphQL pipeline (lookup node id, add to project, set St
 One wrapper per area — the pre-push gates, without retyping the container prefix.
 
 ```bash
-./.claude/scripts/test-client.sh           # all client gates: prettier + lint + vitest
-./.claude/scripts/test-client.sh quick     # skip prettier rewrite, just lint + vitest
+./.claude/scripts/test-client.sh           # all client gates: prettier + lint + stylelint + vitest
+./.claude/scripts/test-client.sh quick     # skip prettier rewrite: lint + stylelint + vitest
+./.claude/scripts/test-client.sh scss      # stylelint only, errors only (CI's SCSS Lint job)
 ./.claude/scripts/test-client.sh vitest    # vitest only
 
 ./.claude/scripts/test-server.sh           # all server gates: cs-fixer + phpstan + pest

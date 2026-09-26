@@ -45,6 +45,6 @@ _Optional — what this PR deliberately does NOT do, especially when reviewers m
 ## Test plan
 
 - [ ] `./.claude/scripts/test-server.sh` (PHP changes) — phpstan + cs-fixer + pest green
-- [ ] `./.claude/scripts/test-client.sh` (Angular changes) — prettier + lint + vitest green
+- [ ] `./.claude/scripts/test-client.sh` (Angular changes) — prettier + lint + stylelint + vitest green
 - [ ] Cypress green in CI
 - [ ] Manual smoke: _what to click + expected outcome_

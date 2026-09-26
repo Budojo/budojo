@@ -147,7 +147,7 @@ Both gate suites run inside Docker containers via wrappers under `.claude/script
 
 ```bash
 ./.claude/scripts/test-server.sh        # cs-fixer + phpstan + pest
-./.claude/scripts/test-client.sh        # prettier --write + lint + vitest
+./.claude/scripts/test-client.sh        # prettier --write + lint + stylelint + vitest
 ```
 
 Subcommands: `all` (default), `quick` (skip `--write` formatters when re-running mid-session), or any individual gate name (`pest`, `phpstan`, `vitest`, `lint`, …).

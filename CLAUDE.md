@@ -85,7 +85,7 @@ One wrapper per area, under `.claude/scripts/`. Server and client run inside Doc
 
 ```bash
 ./.claude/scripts/test-server.sh        # cs-fixer + phpstan + pest
-./.claude/scripts/test-client.sh        # prettier --write + lint + vitest
+./.claude/scripts/test-client.sh        # prettier --write + lint + stylelint + vitest
 ./.claude/scripts/test-desktop.sh       # tsc --noEmit + vitest
 ```
 

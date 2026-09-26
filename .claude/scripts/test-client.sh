@@ -4,11 +4,12 @@
 # `budojo_client` Docker container.
 #
 # Usage:
-#   ./test-client.sh             # full pass: prettier --write + lint + vitest
+#   ./test-client.sh             # full pass: prettier --write + lint + stylelint + vitest
 #   ./test-client.sh prettier    # just prettier
 #   ./test-client.sh lint        # just ESLint
 #   ./test-client.sh vitest      # just vitest
-#   ./test-client.sh quick       # lint + vitest (skip prettier rewrite)
+#   ./test-client.sh quick       # lint + stylelint + vitest (skip prettier rewrite)
+#   ./test-client.sh scss        # just stylelint, errors only (CI's SCSS Lint job)
 #
 # Why: every pre-push gate I run for a frontend change boils down to
 #   docker exec budojo_client sh -c "cd /app && <cmd>"
@@ -49,19 +50,28 @@ lint() {
   run_in_client "npm run lint 2>&1 | tail -10"
 }
 
+# CI's "SCSS Lint" job. Errors fail it; its 8dp-grid warnings do not (there
+# are several hundred already), so --quiet prints errors only. Missing here,
+# an @extend without a placeholder reached CI on #1873.
+scss() {
+  echo "── stylelint (errors only) ──"
+  run_in_client "npx stylelint 'src/**/*.scss' --quiet 2>&1 | tail -15"
+}
+
 vitest() {
   echo "── npm test (watch=false) ──"
   run_in_client "npm test -- --watch=false 2>&1 | tail -10"
 }
 
 case "${1:-all}" in
-  all)      prettier_fix && lint && vitest ;;
-  quick)    lint && vitest ;;
+  all)      prettier_fix && lint && scss && vitest ;;
+  quick)    lint && scss && vitest ;;
+  scss)     scss ;;
   prettier) prettier_fix ;;
   lint)     lint ;;
   vitest)   vitest ;;
   *)
-    echo "usage: $0 [all|quick|prettier|lint|vitest]" >&2
+    echo "usage: $0 [all|quick|prettier|lint|scss|vitest]" >&2
     exit 2
     ;;
 esac
