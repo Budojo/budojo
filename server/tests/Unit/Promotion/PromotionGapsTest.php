@@ -322,6 +322,19 @@ it('never lets a starting row be skipped: it is completed', function (): void {
 });
 
 /**
+ * @param list<PromotionRecord> $records
+ *
+ * @return list<string> the belt every belt row reaches
+ */
+function beltsOf(array $records): array
+{
+    return array_map(
+        static fn (PromotionRecord $r): string => $r->belt()->value,
+        array_values(array_filter($records, static fn (PromotionRecord $r): bool => $r->kind === 'belt')),
+    );
+}
+
+/**
  * Fills every ghost row the history offers, one at a time, the way the page
  * does — exactly its fields, on a date inside its window — until none is left.
  *
@@ -333,6 +346,9 @@ function fillEveryGap(array $records, Belt $belt, int $stripes, MartialArt $art,
 {
     $today = CarbonImmutable::parse('2026-09-26');
     $nextId = 1000;
+    // A correction pair already holds two rows on one belt: the invariant is
+    // that no fill ever adds one, not that the history started clean.
+    $allowed = array_count_values(beltsOf($records));
 
     for ($round = 0; $round < 40; $round++) {
         $gaps = gapsOf($records, $belt, $stripes, $art)['gaps'];
@@ -359,11 +375,9 @@ function fillEveryGap(array $records, Belt $belt, int $stripes, MartialArt $art,
             $filled,
         ];
 
-        $belts = array_map(
-            static fn (PromotionRecord $r): string => $r->belt()->value,
-            array_values(array_filter($records, static fn (PromotionRecord $r): bool => $r->kind === 'belt')),
-        );
-        expect(array_count_values($belts))->each->toBe(1);
+        foreach (array_count_values(beltsOf($records)) as $reached => $rows) {
+            expect($rows)->toBeLessThanOrEqual(max(1, $allowed[$reached] ?? 0), "a second {$reached} row");
+        }
     }
 
     throw new RuntimeException('The gaps never ran out.');
@@ -379,12 +393,56 @@ it('can never be led into a second row on a belt, whatever the order and the dat
     'Jacopo, blue' => [[stripeRow(12, Belt::White, 2, 3, '2024-03-12'), beltRow(15, null, Belt::Blue, '2026-09-26 10:00:00')], Belt::Blue, 0, MartialArt::Bjj],
     'Jacopo, blue with two stripes' => [[stripeRow(12, Belt::White, 2, 3, '2024-03-12'), beltRow(15, null, Belt::Blue, '2026-09-26 10:00:00')], Belt::Blue, 2, MartialArt::Bjj],
     'Jacopo, every row at midnight' => [[stripeRow(12, Belt::White, 2, 3, '2024-03-12'), beltRow(15, null, Belt::Blue, '2026-09-20')], Belt::Blue, 2, MartialArt::Bjj],
+    'a same-day correction pair' => [[beltRow(1, Belt::White, Belt::Blue, '2024-01-01'), stripeRow(2, Belt::Blue, 0, 1, '2024-06-01'), stripeRow(3, Belt::Blue, 1, 2, '2025-01-01'), beltRow(4, Belt::Blue, Belt::Purple, '2026-09-10'), beltRow(5, Belt::Purple, Belt::Blue, '2026-09-10')], Belt::Blue, 4, MartialArt::Bjj],
+    'a next-day correction pair' => [[beltRow(1, Belt::White, Belt::Blue, '2024-01-01'), stripeRow(2, Belt::Blue, 0, 1, '2024-06-01'), stripeRow(3, Belt::Blue, 1, 2, '2025-01-01'), beltRow(4, Belt::Blue, Belt::Purple, '2026-09-10'), beltRow(5, Belt::Purple, Belt::Blue, '2026-09-11')], Belt::Blue, 3, MartialArt::Bjj],
     'a same-day correction at midnight' => [[beltRow(1, null, Belt::Purple, '2026-09-10'), beltRow(2, Belt::Purple, Belt::Blue, '2026-09-10')], Belt::Blue, 0, MartialArt::Bjj],
     'a blue stripe typed in before the starting row' => [[stripeRow(12, Belt::White, 2, 3, '2024-03-12'), beltRow(15, null, Belt::Blue, '2026-01-10'), stripeRow(20, Belt::Blue, 0, 1, '2025-02-01')], Belt::Blue, 3, MartialArt::Bjj],
     'a starting row out of order' => [[beltRow(1, null, Belt::White, '2015-01-01'), beltRow(15, null, Belt::Blue, '2026-01-10'), stripeRow(20, Belt::Blue, 0, 1, '2020-05-01')], Belt::Blue, 1, MartialArt::Bjj],
     'imported on purple, one white stripe known' => [[stripeRow(3, Belt::White, 0, 1, '2016-02-01'), beltRow(9, null, Belt::Purple, '2026-09-01')], Belt::Purple, 2, MartialArt::Bjj],
     'a judoka imported on black' => [[beltRow(1, Belt::White, Belt::Yellow, '2005-01-01'), beltRow(9, null, Belt::Black, '2026-09-01')], Belt::Black, 1, MartialArt::Judo],
 ]);
+
+/** White to blue in 2024, two blue stripes, then purple by mistake on 2026-09-10 and blue again. */
+function correctedHistory(string $undoneOn): array
+{
+    return [
+        beltRow(1, Belt::White, Belt::Blue, '2024-01-01'),
+        stripeRow(2, Belt::Blue, 0, 1, '2024-06-01'),
+        stripeRow(3, Belt::Blue, 1, 2, '2025-01-01'),
+        beltRow(4, Belt::Blue, Belt::Purple, '2026-09-10'),
+        beltRow(5, Belt::Purple, Belt::Blue, $undoneOn),
+    ];
+}
+
+it('cancels a belt set by mistake and set back: he never left blue', function (): void {
+    expect(gapsOf(correctedHistory('2026-09-10'), Belt::Blue, 2)['gaps'])->toBe([])
+        ->and(gapsOf(correctedHistory('2026-09-11'), Belt::Blue, 2)['gaps'])->toBe([]);
+});
+
+it('counts a stripe given the day of a correction on the belt it never left', function (): void {
+    $sameDay = gapsOf([...correctedHistory('2026-09-10'), stripeRow(6, Belt::Blue, 2, 3, '2026-09-10')], Belt::Blue, 3);
+    $nextDay = gapsOf([...correctedHistory('2026-09-10'), stripeRow(6, Belt::Blue, 2, 3, '2026-09-11')], Belt::Blue, 3);
+
+    expect($sameDay['gaps'])->toBe([])
+        ->and($nextDay['gaps'])->toBe([]);
+});
+
+it('still offers a real promotion to the belt a cancelled mistake named', function (): void {
+    $result = gapsOf([...correctedHistory('2026-09-10'), stripeRow(6, Belt::Purple, 0, 1, '2027-03-01')], Belt::Purple, 1);
+
+    // Purple was never reached by the mistake: the real promotion is missing.
+    expect(keysOf($result))->toBe(['stripe:blue:3', 'stripe:blue:4', 'belt:purple:0']);
+});
+
+it('reads a belt that went down, with nothing undoing it, as a contradiction that keeps the count', function (): void {
+    $result = gapsOf([
+        beltRow(1, Belt::White, Belt::Blue, '2024-01-01'),
+        stripeRow(2, Belt::Blue, 0, 1, '2024-06-01'),
+        beltRow(3, Belt::Blue, Belt::White, '2026-09-10'),
+    ], Belt::White, 1);
+
+    expect($result['gaps'])->toBe([]);
+});
 
 it('replays a same-day correction in the order it was made, with both rows at midnight (#1963)', function (): void {
     // Created on purple by mistake, corrected to blue the same day.
