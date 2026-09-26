@@ -543,6 +543,11 @@ Route::middleware('auth:sanctum')->group(function (): void {
         // of 2) — transcribing a paper register from before Budojo existed.
         Route::post('/athletes/{athlete}/promotions', [\App\Http\Controllers\Athlete\AthletePromotionController::class, 'store']);
         Route::delete('/athletes/{athlete}/promotions/{promotion}', [\App\Http\Controllers\Athlete\AthletePromotionController::class, 'destroy']);
+        // "Saltato" on a ghost row, and its undo (#1966): a step this athlete
+        // never took, so the timeline stops offering it as missing.
+        Route::post('/athletes/{athlete}/promotion-skips', [\App\Http\Controllers\Athlete\AthletePromotionSkipController::class, 'store']);
+        Route::delete('/athletes/{athlete}/promotion-skips/{belt}/{stripes}', [\App\Http\Controllers\Athlete\AthletePromotionSkipController::class, 'destroy'])
+            ->whereNumber('stripes');
         // Who may be ready for their next step (#1841) — facts, no score.
         Route::get('/promotions/candidates', \App\Http\Controllers\Promotion\PromotionCandidatesController::class);
         // Documents — flat routes for operations that target a single document.
