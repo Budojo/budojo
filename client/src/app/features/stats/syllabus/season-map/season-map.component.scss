@@ -260,11 +260,15 @@
     gap: 1rem;
   }
 
+  // In the sheet's header, sized like the other sheets' titles (#1992): the
+  // panel hands over to the lesson sheet, and the two headers read as one.
   &__pop-title {
     margin: 0;
-    font-size: 0.875rem;
+    min-width: 0;
+    font-size: 1rem;
     font-weight: 600;
     color: var(--p-text-color);
+    overflow-wrap: anywhere;
 
     // Focus lands here when the panel opens; the ring shows only for the
     // keyboard, as everywhere else.

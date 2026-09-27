@@ -218,6 +218,32 @@ describe('SeasonMapComponent (#1858)', () => {
     expect(fixture.nativeElement.querySelector('p-drawer')).toBeNull();
   });
 
+  it('hands focus back to the control that opened the sheet, when closed from its header (#1992)', () => {
+    const { fixture, component, httpMock } = setup();
+    flush(httpMock);
+    fixture.detectChanges();
+
+    const trigger = fixture.nativeElement.querySelector(
+      '[data-cy="season-map-position-1"]',
+    ) as HTMLButtonElement;
+    trigger.click();
+    fixture.detectChanges();
+
+    // The ✕ and the title live in the dialog's header, outside the body.
+    const dialog = document.createElement('div');
+    dialog.className = 'p-dialog';
+    const close = document.createElement('button');
+    dialog.appendChild(close);
+    document.body.appendChild(dialog);
+    try {
+      close.focus();
+      component['restoreFocus']();
+      expect(document.activeElement).toBe(trigger);
+    } finally {
+      dialog.remove();
+    }
+  });
+
   it('keeps a missed plan on the map, and in the words, beside a lesson held that week', () => {
     const { fixture, httpMock } = setup();
     flush(

@@ -13,7 +13,6 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { NgTemplateOutlet } from '@angular/common';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
@@ -130,14 +129,7 @@ const STATE_KEYS: Record<Exclude<CalendarLessonState, 'held'>, string> = {
 @Component({
   selector: 'app-season-map',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
-    NgTemplateOutlet,
-    TranslatePipe,
-    ButtonModule,
-    DialogModule,
-    SkeletonModule,
-    LessonSheetComponent,
-  ],
+  imports: [TranslatePipe, ButtonModule, DialogModule, SkeletonModule, LessonSheetComponent],
   templateUrl: './season-map.component.html',
   styleUrl: './season-map.component.scss',
 })
@@ -545,8 +537,8 @@ export class SeasonMapComponent {
    */
   protected restoreFocus(): void {
     const active = document.activeElement;
-    const insidePanel =
-      active instanceof HTMLElement && active.closest('[data-cy="season-map-popover"]') !== null;
+    // Anywhere in the sheet — its header holds the title and the close button.
+    const insidePanel = active instanceof HTMLElement && active.closest('.p-dialog') !== null;
     if (active === null || active === document.body || insidePanel) this.lastTrigger?.focus();
   }
 
