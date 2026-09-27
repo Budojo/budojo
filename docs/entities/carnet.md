@@ -78,6 +78,7 @@ Scope of uniqueness is the whole table, not per academy: a Budojo install is nor
 - `POST /api/v1/athletes/{athlete}/carnets` — sell one (body: optional `{purchased_at, valid_from, payment_method}`); returns 201
 - `PATCH /api/v1/athletes/{athlete}/carnets/{carnet}` — move `valid_from` (and with it the expiry and the ledger)
 - `DELETE /api/v1/athletes/{athlete}/carnets/{carnet}` — undo a mis-sale; 204
+- `GET /api/v1/stats/payments/export?season=YYYY` — the season's sales in the accountant's CSV (#1762), dated by `purchased_at`, with the code and the validity window; see [`athlete-payment.md`](./athlete-payment.md) § Related endpoints
 
 ## Related tables
 
