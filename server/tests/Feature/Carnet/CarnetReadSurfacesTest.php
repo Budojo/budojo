@@ -3,8 +3,10 @@
 declare(strict_types=1);
 
 use App\Models\Athlete;
+use App\Models\AttendanceRecord;
 use App\Models\Carnet;
 use App\Models\CarnetEntry;
+use App\Models\Lesson;
 
 // helpers live in tests/Pest.php
 
@@ -26,6 +28,34 @@ it('lists the sessions a carnet paid for, most recent first', function (): void 
         ->assertJsonCount(2, 'data')
         ->assertJsonPath('data.0.used_on', '2026-03-09')
         ->assertJsonPath('data.1.used_on', '2026-03-01');
+});
+
+it('names the class each entry paid for, and nothing for a presence with no class (#1654)', function (): void {
+    $carnet = Carnet::factory()->for($this->athlete)->create();
+    $lesson = Lesson::factory()->create([
+        'academy_id' => $this->user->academy->id,
+        'held_on' => '2026-03-09',
+        'name' => 'Avanzati',
+    ]);
+    $inClass = AttendanceRecord::factory()->for($this->athlete)->create([
+        'attended_on' => '2026-03-09',
+        'lesson_id' => $lesson->id,
+    ]);
+    // A self-mark, or a presence from before the timetable: a day, no class.
+    $dayOnly = AttendanceRecord::factory()->for($this->athlete)->create([
+        'attended_on' => '2026-03-01',
+        'lesson_id' => null,
+    ]);
+    CarnetEntry::factory()->for($carnet)->create(['attendance_record_id' => $inClass->id]);
+    CarnetEntry::factory()->for($carnet)->create(['attendance_record_id' => $dayOnly->id]);
+
+    $this->actingAs($this->user)
+        ->getJson("/api/v1/athletes/{$this->athlete->id}/carnets/{$carnet->id}/entries")
+        ->assertOk()
+        ->assertJsonPath('data.0.used_on', '2026-03-09')
+        ->assertJsonPath('data.0.lesson_name', 'Avanzati')
+        ->assertJsonPath('data.1.used_on', '2026-03-01')
+        ->assertJsonPath('data.1.lesson_name', null);
 });
 
 it('refuses to read a register through an athlete the carnet does not belong to', function (): void {

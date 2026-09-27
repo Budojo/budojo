@@ -11351,6 +11351,14 @@ components:
           type: string
           format: date
           description: Copy of the attendance record's `attended_on`
+        lesson_name:
+          type: string
+          nullable: true
+          description: |
+            The class this entry paid for, as the lesson recorded its name that
+            day (#1654), so a class renamed or deleted since still reads as it
+            was. Null for a presence with no lesson: a self-mark, or one
+            recorded before the timetable (#1562).
 
     CarnetCreateRequest:
       type: object
