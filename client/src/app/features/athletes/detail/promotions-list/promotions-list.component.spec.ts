@@ -1272,3 +1272,203 @@ describe('PromotionsListComponent — missing steps (#1966)', () => {
     expect(ctx.el.querySelector('[data-cy="promotions-entry-day"]')).toBeNull();
   });
 });
+
+describe('PromotionsListComponent — a history that opens on its starting row (#1974)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-26T12:00:00Z'));
+  });
+
+  afterEach(() => {
+    TestBed.resetTestingModule();
+    vi.useRealTimers();
+  });
+
+  /*
+   * The server's own GET /promotions output for a judoka imported on black,
+   * nothing typed in before (`AthletePromotionGapsTest`, #1974): no known row
+   * says which belt came before, so the step lists the ladder's own choices.
+   */
+  const opening = makePromotion({
+    id: 9,
+    kind: 'belt',
+    from_belt: null,
+    to_belt: 'black',
+    from_stripes: null,
+    to_stripes: null,
+    belt_at_event: 'black',
+    is_opening: true,
+    recorded_at: '2026-01-10T00:00:00+00:00',
+  });
+  const blackBelt: PromotionGap = {
+    key: 'belt:black:0',
+    kind: 'belt',
+    belt: 'black',
+    from_belt: 'brown',
+    from_stripes: null,
+    to_stripes: null,
+    after: null,
+    before: { promotion_id: 9, recorded_at: '2026-01-10' },
+    completes_promotion_id: 9,
+    from_belt_options: ['white', 'yellow', 'orange', 'green', 'blue', 'brown'],
+  };
+
+  function judoka(gaps: PromotionGap[] = [blackBelt]) {
+    const ctx = setup({ athleteId: '7' });
+    useLadder('judo');
+    ctx.svc.promotions.mockReturnValue(
+      of({
+        data: [opening],
+        meta: { current_page: 1, per_page: 20, total: 1, last_page: 1 },
+        gaps,
+        history_starts_at: '2026-01-10',
+      }),
+    );
+    ctx.fixture.detectChanges();
+    return ctx;
+  }
+
+  interface Internals {
+    confirmCreate: () => void;
+    confirmCompletion: () => void;
+    addAnyway: () => void;
+    openCreateDialog: () => void;
+    createForm: { patchValue: (v: Record<string, unknown>) => void };
+    fillWindow: () => { min: Date | null; max: Date } | null;
+    fillFromBeltOptions: () => { label: string; value: string }[];
+    completionOffer: () => PromotionGap | null;
+  }
+
+  function openFill(ctx: ReturnType<typeof judoka>): Internals {
+    (
+      ctx.el.querySelector('[data-cy="gap-add-date-belt:black:0"] button') as HTMLButtonElement
+    ).click();
+    ctx.fixture.detectChanges();
+    return ctx.component as unknown as Internals;
+  }
+
+  it('asks the opening row for its real date and the belt before it, with no lower bound', () => {
+    const ctx = judoka();
+    const c = openFill(ctx);
+
+    expect(c.fillFromBeltOptions().map((o) => o.value)).toEqual([
+      'white',
+      'yellow',
+      'orange',
+      'green',
+      'blue',
+      'brown',
+    ]);
+    // Nothing is known before it; he held black by the day he was entered.
+    expect(c.fillWindow()?.min).toBeNull();
+    expect(c.fillWindow()?.max).toEqual(new Date(2026, 0, 10));
+    expect(document.querySelector('[data-cy="gap-fill-from-belt"]')).not.toBeNull();
+  });
+
+  it('completes the row with the suggested belt when the owner keeps it', () => {
+    const ctx = judoka();
+    const c = openFill(ctx);
+
+    c.createForm.patchValue({ recorded_at: new Date(2015, 4, 1) });
+    c.confirmCreate();
+
+    expect(ctx.svc.completeOpeningPromotion).toHaveBeenCalledWith(7, 9, {
+      recorded_at: '2015-05-01',
+      from_belt: 'brown',
+    });
+    expect(ctx.svc.createPromotion).not.toHaveBeenCalled();
+  });
+
+  it('completes the row with the belt the owner chose instead', () => {
+    const ctx = judoka();
+    const c = openFill(ctx);
+
+    c.createForm.patchValue({ recorded_at: new Date(2015, 4, 1), from_belt: 'blue' });
+    c.confirmCreate();
+
+    expect(ctx.svc.completeOpeningPromotion).toHaveBeenCalledWith(7, 9, {
+      recorded_at: '2015-05-01',
+      from_belt: 'blue',
+    });
+  });
+
+  it('asks nothing about the belt before when a known row already says it', () => {
+    const ctx = judoka([{ ...blackBelt, from_belt_options: null }]);
+    const c = openFill(ctx);
+
+    expect(c.fillFromBeltOptions()).toEqual([]);
+    expect(document.querySelector('[data-cy="gap-fill-from-belt"]')).toBeNull();
+  });
+
+  it('asks nothing either when the ladder allows one belt only — the step already names it', () => {
+    // An adult BJJ blue: white is the only belt before it, and the dialog's
+    // own "White → Blue" already says so. A one-option picker is noise.
+    const ctx = judoka([{ ...blackBelt, from_belt: 'blue', from_belt_options: ['blue'] }]);
+    const c = openFill(ctx);
+
+    expect(document.querySelector('[data-cy="gap-fill-from-belt"]')).toBeNull();
+    c.createForm.patchValue({ recorded_at: new Date(2015, 4, 1) });
+    c.confirmCreate();
+    expect(ctx.svc.completeOpeningPromotion).toHaveBeenCalledWith(7, 9, {
+      recorded_at: '2015-05-01',
+      from_belt: 'blue',
+    });
+  });
+
+  describe('the safety net in "Aggiungi una promozione passata"', () => {
+    function addByHand(ctx: ReturnType<typeof judoka>, toBelt: string): Internals {
+      const c = ctx.component as unknown as Internals;
+      c.openCreateDialog();
+      ctx.fixture.detectChanges();
+      c.createForm.patchValue({
+        kind: 'belt',
+        recorded_at: new Date(2015, 4, 1),
+        from_belt: 'brown',
+        to_belt: toBelt,
+      });
+      c.confirmCreate();
+      ctx.fixture.detectChanges();
+      return c;
+    }
+
+    it('offers to complete the opening row instead of adding a second black row', () => {
+      const ctx = judoka();
+      const c = addByHand(ctx, 'black');
+
+      expect(ctx.svc.createPromotion).not.toHaveBeenCalled();
+      expect(c.completionOffer()?.completes_promotion_id).toBe(9);
+      expect(document.querySelector('[data-cy="promotion-create-complete-offer"]')).not.toBeNull();
+
+      c.confirmCompletion();
+
+      expect(ctx.svc.completeOpeningPromotion).toHaveBeenCalledWith(7, 9, {
+        recorded_at: '2015-05-01',
+        from_belt: 'brown',
+      });
+      expect(ctx.svc.createPromotion).not.toHaveBeenCalled();
+    });
+
+    it('still adds a second row when the owner insists — the register case #1771 keeps', () => {
+      const ctx = judoka();
+      const c = addByHand(ctx, 'black');
+
+      c.addAnyway();
+
+      expect(ctx.svc.createPromotion).toHaveBeenCalledWith(7, {
+        kind: 'belt',
+        recorded_at: '2015-05-01',
+        from_belt: 'brown',
+        to_belt: 'black',
+      });
+      expect(ctx.svc.completeOpeningPromotion).not.toHaveBeenCalled();
+    });
+
+    it('stays out of the way for a belt no opening row stands for', () => {
+      const ctx = judoka();
+      const c = addByHand(ctx, 'brown');
+
+      expect(c.completionOffer()).toBeNull();
+      expect(ctx.svc.createPromotion).toHaveBeenCalledTimes(1);
+    });
+  });
+});

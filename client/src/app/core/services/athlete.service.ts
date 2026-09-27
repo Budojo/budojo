@@ -808,6 +808,13 @@ export interface PromotionGap {
   readonly before: PromotionGapNeighbour | null;
   /** Set when this belt step is the one an opening row stands for: filling it completes that row. */
   readonly completes_promotion_id: number | null;
+  /**
+   * Only on the step of an opening row that opens the history (#1974): the
+   * belts the ladder allows before it, for the owner to choose — `from_belt`
+   * is the suggestion. Null (or absent, from a server before #1974) where a
+   * known row says which belt it was.
+   */
+  readonly from_belt_options?: readonly Belt[] | null;
 }
 
 export interface AthletePromotionPage {

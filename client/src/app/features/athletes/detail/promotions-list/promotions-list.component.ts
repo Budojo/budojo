@@ -302,6 +302,37 @@ export class PromotionsListComponent implements OnInit {
     return this.beltLadder.stripeOptions(belt);
   });
 
+  private readonly fromBeltValue = toSignal(this.createForm.controls.from_belt.valueChanges, {
+    initialValue: null,
+  });
+
+  /**
+   * The belts the owner may say came before an opening row that opens the
+   * history (#1974) — the server's list, from the athlete's own ladder and
+   * kids' rule; empty when a known row already says which belt it was.
+   */
+  protected readonly fillFromBeltOptions = computed<SelectOption<Belt>[]>(() => {
+    this.languageService.currentLang();
+    return (this.filling()?.from_belt_options ?? []).map((belt) => ({
+      label: this.beltLadder.label(belt),
+      value: belt,
+    }));
+  });
+
+  /** The step being filled, drawn with the belt the owner has chosen before it. */
+  protected readonly fillingShown = computed<PromotionGap | null>(() => {
+    const gap = this.filling();
+    const chosen = this.chosenFromBelt(gap, this.fromBeltValue());
+    return gap === null || chosen === gap.from_belt ? gap : { ...gap, from_belt: chosen };
+  });
+
+  /**
+   * The opening row the owner is about to duplicate by hand (#1974): the
+   * belt typed in "Aggiungi una promozione passata" is the one that row
+   * stands for, and the history can complete it. Null otherwise.
+   */
+  protected readonly completionOffer = signal<PromotionGap | null>(null);
+
   private athleteId = 0;
 
   constructor() {
@@ -314,6 +345,16 @@ export class PromotionsListComponent implements OnInit {
       .subscribe(() => {
         this.createForm.patchValue({ from_stripes: null, to_stripes: null });
       });
+    // The offer answers the row as typed: any change asks again on confirm.
+    this.createForm.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.completionOffer.set(null));
+  }
+
+  /** A belt in the owner's words, for sentences that name one. */
+  protected beltLabel(belt: Belt): string {
+    this.languageService.currentLang();
+    return this.beltLadder.label(belt);
   }
 
   ngOnInit(): void {
@@ -423,6 +464,7 @@ export class PromotionsListComponent implements OnInit {
       to_stripes: null,
     });
     this.createError.set(null);
+    this.completionOffer.set(null);
     this.createDialogOpen.set(true);
   }
 
@@ -434,30 +476,60 @@ export class PromotionsListComponent implements OnInit {
     const recordedAt = toIsoDate(v.recorded_at);
     const gap = this.filling();
     if (gap !== null) {
-      this.saveFilled(gap, recordedAt);
+      this.saveFilled(gap, recordedAt, this.chosenFromBelt(gap, v.from_belt));
       return;
     }
 
-    let payload: AthletePromotionCreatePayload;
-    if (v.kind === 'belt') {
-      if (v.to_belt === null) return;
-      payload = {
-        kind: 'belt',
-        recorded_at: recordedAt,
-        from_belt: v.from_belt,
-        to_belt: v.to_belt,
-      };
-    } else {
-      if (v.belt_at_event === null || v.from_stripes === null || v.to_stripes === null) return;
-      payload = {
-        kind: 'stripe',
-        recorded_at: recordedAt,
-        from_stripes: Number(v.from_stripes),
-        to_stripes: Number(v.to_stripes),
-        belt_at_event: v.belt_at_event,
-      };
+    const payload = createPayload(v, recordedAt);
+    if (payload === null) return;
+
+    // The belt an opening row stands for, typed in by hand: offer to
+    // complete that row before writing a second one (#1974).
+    const completing = payload.kind === 'belt' ? this.completingStepFor(payload.to_belt) : null;
+    if (completing !== null) {
+      this.completionOffer.set(completing);
+      return;
     }
 
+    this.postCreate(payload);
+  }
+
+  /** "Completa quella riga": the offer taken — the opening row gets the date and the belt before. */
+  protected confirmCompletion(): void {
+    const offer = this.completionOffer();
+    const v = this.createForm.getRawValue();
+    if (offer === null || v.recorded_at === null || this.creating()) return;
+
+    this.saveFilled(offer, toIsoDate(v.recorded_at), this.chosenFromBelt(offer, v.from_belt));
+  }
+
+  /** "Aggiungine comunque una seconda": a register transcribed row by row (#1771). */
+  protected addAnyway(): void {
+    const v = this.createForm.getRawValue();
+    if (v.recorded_at === null || this.creating()) return;
+    const payload = createPayload(v, toIsoDate(v.recorded_at));
+    if (payload === null) return;
+
+    this.completionOffer.set(null);
+    this.postCreate(payload);
+  }
+
+  /** The step that completes the opening row standing for this belt, if the history has one. */
+  private completingStepFor(belt: Belt): PromotionGap | null {
+    return this.gaps().find((g) => g.completes_promotion_id !== null && g.belt === belt) ?? null;
+  }
+
+  /**
+   * The belt before a step, as the owner means it: one of the step's options
+   * when it has them and they picked one, otherwise the step's own.
+   */
+  private chosenFromBelt(gap: PromotionGap | null, picked: Belt | null): Belt | null {
+    if (gap === null) return null;
+    const options = gap.from_belt_options ?? null;
+    return options !== null && picked !== null && options.includes(picked) ? picked : gap.from_belt;
+  }
+
+  private postCreate(payload: AthletePromotionCreatePayload): void {
     this.creating.set(true);
     this.createError.set(null);
     this.athleteService
@@ -504,7 +576,8 @@ export class PromotionsListComponent implements OnInit {
     this.createForm.reset({
       kind: gap.kind,
       recorded_at: null,
-      from_belt: null,
+      // The suggestion, preselected, when the owner has a belt to choose (#1974).
+      from_belt: (gap.from_belt_options ?? []).length > 0 ? gap.from_belt : null,
       to_belt: null,
       belt_at_event: null,
       from_stripes: null,
@@ -550,12 +623,12 @@ export class PromotionsListComponent implements OnInit {
    * Writes the step. A step an opening row stands for completes that row —
    * the belt before it and its real date — instead of adding a second one.
    */
-  private saveFilled(gap: PromotionGap, recordedAt: string): void {
+  private saveFilled(gap: PromotionGap, recordedAt: string, fromBelt: Belt | null): void {
     const request =
-      gap.completes_promotion_id !== null && gap.from_belt !== null
+      gap.completes_promotion_id !== null && fromBelt !== null
         ? this.athleteService.completeOpeningPromotion(this.athleteId, gap.completes_promotion_id, {
             recorded_at: recordedAt,
-            from_belt: gap.from_belt,
+            from_belt: fromBelt,
           })
         : this.athleteService.createPromotion(this.athleteId, payloadFor(gap, recordedAt));
 
@@ -890,6 +963,36 @@ function payloadFor(gap: PromotionGap, recordedAt: string): AthletePromotionCrea
         to_stripes: gap.to_stripes ?? 0,
         belt_at_event: gap.belt,
       };
+}
+
+/** The "Aggiungi una promozione passata" form, as its raw value reads. */
+interface CreateFormValue {
+  readonly kind: 'belt' | 'stripe';
+  readonly from_belt: Belt | null;
+  readonly to_belt: Belt | null;
+  readonly belt_at_event: Belt | null;
+  readonly from_stripes: string | null;
+  readonly to_stripes: string | null;
+}
+
+/** The create payload for a row typed in by hand; null while a field it needs is empty. */
+function createPayload(
+  v: CreateFormValue,
+  recordedAt: string,
+): AthletePromotionCreatePayload | null {
+  if (v.kind === 'belt') {
+    return v.to_belt === null
+      ? null
+      : { kind: 'belt', recorded_at: recordedAt, from_belt: v.from_belt, to_belt: v.to_belt };
+  }
+  if (v.belt_at_event === null || v.from_stripes === null || v.to_stripes === null) return null;
+  return {
+    kind: 'stripe',
+    recorded_at: recordedAt,
+    from_stripes: Number(v.from_stripes),
+    to_stripes: Number(v.to_stripes),
+    belt_at_event: v.belt_at_event,
+  };
 }
 
 /** A server day (`YYYY-MM-DD` or an instant) as the local midnight a date picker reads. */
