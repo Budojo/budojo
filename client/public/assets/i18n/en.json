@@ -2463,7 +2463,10 @@
           "fromStripes": "From stripes",
           "toStripes": "To stripes",
           "confirm": "Add promotion",
-          "error": "Couldn't add this promotion. Try again."
+          "error": "Couldn't add this promotion. Try again.",
+          "completeOffer": "{{belt}} is already in the history: it's the row written when you added the athlete. Complete that row with this date instead of adding a second one.",
+          "completeConfirm": "Complete that row",
+          "addAnyway": "Add a second one anyway"
         },
         "toast": {
           "updatedSummary": "Date updated",
@@ -2500,7 +2503,8 @@
           "showAria": "Show the {{total}} steps with no date",
           "before": "Before {{date}} the history isn't recorded.",
           "restored": "{{step}}: back among the steps to date",
-          "undoAria": "Undo: {{step}}"
+          "undoAria": "Undo: {{step}}",
+          "fromBeltLabel": "Belt before"
         }
       },
       "attendance": {
