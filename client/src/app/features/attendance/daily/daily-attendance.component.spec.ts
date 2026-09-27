@@ -1253,7 +1253,7 @@ describe('DailyAttendanceComponent', () => {
       expect(summary).toContain('carnet');
     });
 
-    it('says nothing about carnets when nobody carried holds one, whatever the academy sells', () => {
+    it('says nothing about carnets today, with everyone listed and no holder among them', () => {
       const summary = carryOneAndReadToast(setup(), makeAthlete({ id: 1, active_carnet: null }), {
         carnet_price_cents: 7000,
         carnet_entries: 10,
@@ -1261,6 +1261,80 @@ describe('DailyAttendanceComponent', () => {
       });
 
       expect(summary).not.toContain('carnet');
+    });
+
+    it('says it when a carried athlete is not on the list, whatever the academy sells', () => {
+      // A search, a belt, the cap or a departure can keep someone off the
+      // list: nothing on the page can vouch for them, so the note stays.
+      const { fixture, httpMock } = setup();
+      TestBed.inject(AcademyService).academy.set({
+        ...ACADEMY_BASE,
+        carnet_price_cents: null,
+        carnet_entry_unit: 'lesson',
+      });
+      const add = vi.spyOn(fixture.debugElement.injector.get(MessageService), 'add');
+      fixture.detectChanges();
+      flushToCarryOver(httpMock, [makeAthlete({ id: 2, active_carnet: null })]).flush({
+        data: [{ id: 7, athlete_id: 1, lesson_id: 3, attended_on: '2026-09-14' }],
+      });
+      fixture.detectChanges();
+
+      carryButton(fixture)!.click();
+      httpMock
+        .expectOne((r) => r.url === '/api/v1/attendance' && r.method === 'POST')
+        .flush({ data: [{ id: 20, athlete_id: 1, lesson_id: 9, attended_on: '2026-09-14' }] });
+
+      expect(String(add.mock.calls.at(-1)![0].summary)).toContain('carnet');
+    });
+
+    it("says it on a past day, where today's carnets say nothing about that day", () => {
+      // Backfilling last Monday: a carnet that covered that day may have run
+      // out since, and reconciliation still charges it.
+      const { fixture, component, httpMock } = setup();
+      TestBed.inject(AcademyService).academy.set({
+        ...ACADEMY_BASE,
+        carnet_price_cents: null,
+        carnet_entry_unit: 'lesson',
+      });
+      const listed = [makeAthlete({ id: 1, active_carnet: null })];
+      const add = vi.spyOn(fixture.debugElement.injector.get(MessageService), 'add');
+      fixture.detectChanges();
+      flushToCarryOver(httpMock, listed).flush({ data: [] });
+
+      component['onDateChanged'](new Date(2026, 8, 7));
+      httpMock
+        .expectOne((r) => r.url === '/api/v1/athletes')
+        .flush({
+          ...emptyPage(),
+          data: listed,
+          meta: { ...emptyPage().meta, total: 1 },
+        });
+      // A past day opens on its first class; there is nothing before 17:00.
+      httpMock
+        .expectOne(
+          (r) => r.url === '/api/v1/attendance' && r.params.get('academy_class_id') === '1',
+        )
+        .flush({ data: [] });
+
+      component['selectClass'](FUNDAMENTALS.id);
+      httpMock
+        .expectOne(
+          (r) => r.url === '/api/v1/attendance' && r.params.get('academy_class_id') === '2',
+        )
+        .flush({ data: [] });
+      httpMock
+        .expectOne(
+          (r) => r.url === '/api/v1/attendance' && r.params.get('academy_class_id') === '1',
+        )
+        .flush({ data: [{ id: 7, athlete_id: 1, lesson_id: 3, attended_on: '2026-09-07' }] });
+      fixture.detectChanges();
+
+      carryButton(fixture)!.click();
+      const post = httpMock.expectOne((r) => r.url === '/api/v1/attendance' && r.method === 'POST');
+      expect(post.request.body.date).toBe('2026-09-07');
+      post.flush({ data: [{ id: 20, athlete_id: 1, lesson_id: 9, attended_on: '2026-09-07' }] });
+
+      expect(String(add.mock.calls.at(-1)![0].summary)).toContain('carnet');
     });
 
     it('says nothing about carnets when an entry counts per day', () => {

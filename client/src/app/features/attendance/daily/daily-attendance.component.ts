@@ -1099,11 +1099,10 @@ export class DailyAttendanceComponent implements OnInit {
 
   /**
    * "7 segnati come alle 19:00", and the carnet note where it applies: when
-   * entries count per lesson and someone carried holds a carnet. Asked of the
-   * people, not of the academy's price — an academy can stop selling carnets
-   * while holders still have entries left. Someone the loaded list does not
-   * show (a search or a belt narrowed it) cannot be ruled out, so for them
-   * the academy still selling carnets is the best answer there is.
+   * entries count per lesson and a carried athlete may spend one. #1930 asks
+   * that a spent entry is never hidden, so the note stays unless the page can
+   * vouch for everyone carried — an extra note costs a line, a missing one
+   * costs an entry nobody was told about.
    */
   private carriedMessage(records: readonly AttendanceRecord[], time: string): string {
     const count = records.length;
@@ -1112,17 +1111,25 @@ export class DailyAttendanceComponent implements OnInit {
     const done = this.translate.instant(key, { count, time });
     const academy = this.academyService.academy();
     const perLesson = (academy?.carnet_entry_unit ?? 'lesson') === 'lesson';
-    return perLesson && this.anyHolder(records.map((r) => r.athlete_id))
+    return perLesson && this.mayHoldACarnet(records.map((r) => r.athlete_id))
       ? `${done} ${this.translate.instant('attendance.daily.carryOver.carnetNote')}`
       : done;
   }
 
-  private anyHolder(athleteIds: readonly number[]): boolean {
+  /**
+   * Whether any of these athletes may spend an entry. Only answerable as "no"
+   * when the page knows them all: today (an athlete's `active_carnet` is
+   * today's — the carnet that covered a backfilled day may have run out or
+   * expired since, and reconciliation still charges it), and every one of
+   * them on the loaded list (a search, a belt, the page's cap or someone no
+   * longer active can keep them off it). Otherwise: yes, say it.
+   */
+  private mayHoldACarnet(athleteIds: readonly number[]): boolean {
+    if (this.selectedDateIso() !== toLocalDateString(new Date())) return true;
     const listed = new Map(this.athletes().map((a) => [a.id, a]));
-    const sellsCarnets = (this.academyService.academy()?.carnet_price_cents ?? null) !== null;
     return athleteIds.some((id) => {
       const athlete = listed.get(id);
-      return athlete === undefined ? sellsCarnets : (athlete.active_carnet ?? null) !== null;
+      return athlete === undefined || (athlete.active_carnet ?? null) !== null;
     });
   }
 
