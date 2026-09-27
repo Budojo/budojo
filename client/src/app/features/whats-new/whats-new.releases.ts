@@ -79,8 +79,8 @@ export const RELEASES: readonly Release[] = [
             it: '«Aggiungi la data» apre la finestra già compilata: scegli il giorno, e si possono scegliere solo i giorni tra il passaggio prima e quello dopo. «Saltato» è per un passaggio che non c’è mai stato, con «Annulla» proprio dove era la riga.',
           },
           {
-            en: 'The row written when you added the athlete carries the day you entered them, and now says so. Adding the real date corrects that row, never a second one, so "On this belt since…" becomes true.',
-            it: 'La riga creata quando hai inserito l’atleta porta il giorno dell’inserimento, e ora lo dice. Aggiungere la data vera corregge quella riga, mai una seconda, così «Su questa cintura dal…» torna vero.',
+            en: 'The row written when you added the athlete carries the day you entered them, and now says so. When the history shows the belt before it, "Add the date" on that row corrects it, never a second one, so "On this belt since…" becomes true. An athlete with only that row is not covered yet: correct its date with the pencil.',
+            it: 'La riga creata quando hai inserito l’atleta porta il giorno dell’inserimento, e ora lo dice. Quando la storia mostra la cintura di prima, «Aggiungi la data» su quella riga la corregge, mai una seconda, così «Su questa cintura dal…» torna vero. Un atleta con solo quella riga non è ancora coperto: correggi la data con la matita.',
           },
           {
             en: 'It works for every art: judo, karate and taekwondo dan and poom follow their own ladder.',
