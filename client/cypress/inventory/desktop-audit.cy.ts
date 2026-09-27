@@ -2113,6 +2113,24 @@ function seed(): void {
     statusCode: 200,
     body: { data: MONTHLY_PAYMENTS },
   });
+  // This month in four tiles (#1759). Collected is the chart's own September
+  // bucket, the agreement the tiles exist to show.
+  cy.intercept('GET', '/api/v1/stats/payments/summary*', {
+    statusCode: 200,
+    body: {
+      data: {
+        year: 2026,
+        month: 9,
+        currency: 'EUR',
+        expected_cents: 70_000,
+        collected_cents: MONTHLY_PAYMENTS[MONTHLY_PAYMENTS.length - 1].amount_cents,
+        outstanding_count: 1,
+        outstanding_cents: 7000,
+        collection_rate: 0.9,
+        estimated: false,
+      },
+    },
+  });
   // Who is behind (#1760): one long debt, one short, so both plurals show.
   cy.intercept('GET', '/api/v1/stats/payments/arrears', {
     statusCode: 200,
