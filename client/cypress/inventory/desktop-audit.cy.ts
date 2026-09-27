@@ -658,6 +658,45 @@ function page(rows: unknown[], perPage = 20) {
 
 const ATHLETE_ONE = ATHLETES[0];
 
+/**
+ * A room past the roster's page of 20 (#1930): the audit's own people, then
+ * eighteen more with ordinary names and the belts a neighbourhood gym has.
+ */
+const EXTRA_NAMES: readonly (readonly [string, string, string, number])[] = [
+  ['Alessandro', 'Bianchi', 'white', 1],
+  ['Chiara', 'Romano', 'white', 3],
+  ['Davide', 'Greco', 'blue', 0],
+  ['Federica', 'Marino', 'white', 0],
+  ['Giorgio', 'Costa', 'purple', 1],
+  ['Ilaria', 'Fontana', 'white', 2],
+  ['Lorenzo', 'Rizzo', 'blue', 3],
+  ['Martina', 'Lombardi', 'white', 4],
+  ['Nicola', 'Barbieri', 'brown', 0],
+  ['Paola', 'Galli', 'white', 1],
+  ['Riccardo', 'Conti', 'blue', 1],
+  ['Silvia', 'Mancini', 'white', 0],
+  ['Tommaso', 'Caruso', 'white', 2],
+  ['Valentina', 'De Luca', 'blue', 2],
+  ['Andrea', 'Ferri', 'white', 0],
+  ['Beatrice', 'Rinaldi', 'purple', 0],
+  ['Emanuele', 'Villa', 'white', 3],
+  ['Francesca', 'Serra', 'blue', 0],
+];
+const LONG_ROSTER = [
+  ...ATHLETES,
+  ...EXTRA_NAMES.map(([first_name, last_name, belt, stripes], i) =>
+    athlete({
+      id: 109 + i,
+      first_name,
+      last_name,
+      belt,
+      stripes,
+      date_of_birth: null,
+      joined_at: '2025-09-01',
+    }),
+  ),
+];
+
 // ── The fixture guard (#1854) ────────────────────────────────────────────
 //
 // The audit paints whatever its stubs say, so a stub that drifted behind a
@@ -3233,6 +3272,42 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
 
   // ── 30. Tonight's check-in ─────────────────────────────────────────────
   screen('30-attendance', '/dashboard/attendance', '[data-cy="attendance-class-picker"]');
+  // A real-sized room (#1930, #1937): 26 active athletes, the whole roster on
+  // one page — no paginator, and nothing on the page about pagination.
+  screen(
+    '30-attendance-long-roster',
+    '/dashboard/attendance',
+    '[data-cy="attendance-class-picker"]',
+    {
+      stubs: () => {
+        cy.intercept('GET', '/api/v1/athletes*', { statusCode: 200, body: page(LONG_ROSTER, 200) });
+      },
+      act: () => {
+        cy.get('[data-cy="attendance-row-126"]').should('exist');
+      },
+    },
+  );
+  // Bring the earlier class over (#1930): Avanzati at 20:00 is still empty,
+  // and Fondamentali at 19:00 had three people.
+  screen(
+    '30-attendance-carry-over',
+    '/dashboard/attendance',
+    '[data-cy="attendance-class-picker"]',
+    {
+      stubs: () => {
+        cy.intercept({ method: 'GET', pathname: '/api/v1/attendance' }, (req) => {
+          req.reply({
+            statusCode: 200,
+            body: { data: req.url.includes('academy_class_id=2') ? [] : ATTENDANCE_TONIGHT },
+          });
+        });
+      },
+      act: () => {
+        press('[data-cy="attendance-class-2"]');
+        cy.get('[data-cy="attendance-carry"]', { timeout: 6000 }).should('be.visible');
+      },
+    },
+  );
   // Shut today (#1766): the check-in lands on the last session held and says why.
   screen(
     '30-attendance-closed-today',

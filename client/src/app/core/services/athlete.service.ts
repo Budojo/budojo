@@ -300,6 +300,11 @@ export interface AthleteFilters {
   belt?: Belt;
   status?: AthleteListStatus;
   page?: number;
+  /**
+   * Athletes per page (#1930): the server's default is 20, its cap 200. The
+   * check-in asks for the whole active roster at once; nothing else sends it.
+   */
+  perPage?: number;
   sortBy?: AthleteSortField;
   sortOrder?: AthleteSortOrder;
   /**
@@ -496,6 +501,7 @@ export class AthleteService {
     if (filters.belt) params = params.set('belt', filters.belt);
     if (filters.status) params = params.set('status', filters.status);
     if (filters.page) params = params.set('page', filters.page.toString());
+    if (filters.perPage) params = params.set('per_page', filters.perPage.toString());
     if (filters.sortBy) params = params.set('sort_by', filters.sortBy);
     if (filters.sortOrder) params = params.set('sort_order', filters.sortOrder);
     if (filters.q) params = params.set('q', filters.q);

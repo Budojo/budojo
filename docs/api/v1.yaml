@@ -4548,8 +4548,8 @@ paths:
       tags: [athletes]
       summary: Paginated list of athletes in the authenticated academy
       description: |
-        Returns 20 athletes per page, newest first. Soft-deleted athletes are
-        never returned. Optional filters `belt`, `status`, and `q` narrow the
+        Returns 20 athletes per page by default (`per_page` asks for more, up
+        to 200), newest first. Soft-deleted athletes are never returned. Optional filters `belt`, `status`, and `q` narrow the
         set; the first two match exactly one enum value, `q` is a free-text
         name search.
       operationId: athleteList
@@ -4657,12 +4657,26 @@ paths:
             example: '2026-09-25'
         - name: page
           in: query
-          description: Page number, starting at 1. Page size is fixed at 20.
+          description: Page number, starting at 1.
           required: false
           schema:
             type: integer
             minimum: 1
             default: 1
+        - name: per_page
+          in: query
+          description: |
+            Athletes per page (#1930). The roster keeps the default 20; the
+            check-in asks for the whole active roster on one page, so a room
+            of forty is forty taps and no paginator. Capped at 200, which
+            keeps one request a request: past it the answer is `422`, and a
+            bigger centre searches by name.
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 20
         - name: sort_by
           in: query
           description: |

@@ -1934,6 +1934,17 @@
   },
   "attendance": {
     "daily": {
+      "truncated": "Showing the first {{shown}} of {{total}} active athletes — search by name to find the others.",
+      "carryOver": {
+        "action": "Bring over the {{time}} class",
+        "hintOne": "{{count}} person was at the {{time}} class",
+        "hintOther": "{{count}} people were at the {{time}} class",
+        "doneOne": "{{count}} checked in, as at {{time}}.",
+        "doneOther": "{{count}} checked in, as at {{time}}.",
+        "carnetNote": "Anyone on a carnet uses an entry for this lesson too.",
+        "error": "The earlier class couldn't be brought over. Try again.",
+        "undoError": "Not everyone could be taken back — the register shows what is recorded."
+      },
       "title": "Today's check-in",
       "titleForDate": "Check-in · {{date}}",
       "noClassToday": "No class today — you're looking at the {{date}} session.",
