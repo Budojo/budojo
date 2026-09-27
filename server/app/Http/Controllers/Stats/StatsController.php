@@ -8,20 +8,25 @@ use App\Actions\Stats\AthleteAgeBandsAction;
 use App\Actions\Stats\AtRiskAthletesAction;
 use App\Actions\Stats\CertificateComplianceAction;
 use App\Actions\Stats\DailyAttendanceStatsAction;
+use App\Actions\Stats\ExportSeasonPaymentsAction;
 use App\Actions\Stats\MonthlyPaymentsStatsAction;
 use App\Actions\Stats\PaymentsSummaryAction;
 use App\Actions\Stats\SyllabusCalendarAction;
 use App\Actions\Stats\SyllabusCoverageAction;
+use App\Enums\AppLocale;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Stats\AtRiskAthletesRequest;
 use App\Http\Requests\Stats\DailyAttendanceRangeRequest;
+use App\Http\Requests\Stats\ExportSeasonPaymentsRequest;
 use App\Http\Requests\Stats\MonthsRangeRequest;
 use App\Http\Requests\Stats\PaymentsSummaryRequest;
 use App\Http\Requests\Stats\SyllabusCoverageRequest;
 use App\Models\User;
+use App\Support\Csv\CsvWriter;
 use App\Support\OperatorDay;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class StatsController extends Controller
 {
@@ -34,6 +39,7 @@ class StatsController extends Controller
         private readonly SyllabusCalendarAction $syllabusCalendarAction,
         private readonly CertificateComplianceAction $certificateComplianceAction,
         private readonly AtRiskAthletesAction $atRiskAthletesAction,
+        private readonly ExportSeasonPaymentsAction $exportSeasonPaymentsAction,
     ) {
     }
 
@@ -83,6 +89,43 @@ class StatsController extends Controller
         $summary = $this->paymentsSummaryAction->execute($academy, $request->year(), $request->month());
 
         return response()->json(['data' => $summary]);
+    }
+
+    /**
+     * A season of payments as a CSV for the accountant (#1762).
+     *
+     * Not the JSON envelope, on purpose: the reader is a spreadsheet, and the
+     * body is the file. Streamed row by row through the one CSV writer.
+     */
+    public function paymentsExport(ExportSeasonPaymentsRequest $request): StreamedResponse|JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+        $academy = $user->activeAcademy();
+
+        if ($academy === null) {
+            return response()->json(['message' => 'Forbidden.'], 403);
+        }
+
+        $export = $this->exportSeasonPaymentsAction->execute(
+            $academy,
+            $request->seasonStartYear($academy),
+            $user->locale ?? AppLocale::En,
+        );
+
+        return response()->streamDownload(static function () use ($export): void {
+            $output = fopen('php://output', 'wb');
+            if ($output === false) {
+                return;
+            }
+
+            $csv = CsvWriter::open($output);
+            $csv->row($export['header']);
+            foreach ($export['rows'] as $row) {
+                $csv->row($row);
+            }
+            fclose($output);
+        }, $export['filename'], ['Content-Type' => 'text/csv; charset=utf-8']);
     }
 
     /**

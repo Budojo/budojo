@@ -11,11 +11,21 @@ use Illuminate\Foundation\Http\FormRequest;
 /**
  * The roster index. Its filters stay forgiving — an unknown `paid`,
  * `birthday` or `sort_by` applies no filter rather than refusing the list
- * (see `AthleteController::index`) — so this validates the one parameter
- * that must be exact.
+ * (see `AthleteController::index`) — so this validates the parameters that
+ * must be exact.
  */
 class ListAthletesRequest extends FormRequest
 {
+    /** The roster's own page, and what every caller gets unless it asks. */
+    public const DEFAULT_PER_PAGE = 20;
+
+    /**
+     * The most one page may carry (#1930). The check-in asks for the whole
+     * active roster so twelve arrivals are twelve taps, not a paginator; the
+     * cap keeps one request a request, and a centre past it searches.
+     */
+    public const MAX_PER_PAGE = 200;
+
     /** The academy check is the controller's, with the index's own 403 body. */
     public function authorize(): bool
     {
@@ -38,6 +48,7 @@ class ListAthletesRequest extends FormRequest
         $today = OperatorDay::today();
 
         return [
+            'per_page' => ['sometimes', 'integer', 'min:1', 'max:' . self::MAX_PER_PAGE],
             'from' => [
                 'sometimes',
                 'date_format:Y-m-d',
@@ -45,6 +56,14 @@ class ListAthletesRequest extends FormRequest
                 'before_or_equal:' . $today->addDay()->toDateString(),
             ],
         ];
+    }
+
+    /** How many athletes a page carries: the caller's, or the roster's 20. */
+    public function perPage(): int
+    {
+        $value = $this->validated('per_page');
+
+        return is_numeric($value) ? (int) $value : self::DEFAULT_PER_PAGE;
     }
 
     /** The day a birthday window starts from: the caller's, or the owner's. */

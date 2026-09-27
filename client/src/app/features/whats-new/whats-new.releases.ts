@@ -60,6 +60,55 @@ export function localised(value: Localised, lang: string): string {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.72.0',
+    date: '2026-09-27',
+    headline: {
+      en: 'This month’s money, a file for the accountant, and the check-in on one page: four money tiles, a season of payments that opens in Excel, every athlete on one check-in page, and the entry row completed even when the history starts there.',
+      it: 'I conti del mese, il file per il commercialista, e il check-in in una pagina: quattro riquadri con i soldi del mese, una stagione di pagamenti che si apre in Excel, tutti gli atleti in una pagina di check-in, e la riga d’inserimento completata anche quando la storia comincia da lì.',
+    },
+    sections: [
+      {
+        heading: { en: 'Payments', it: 'Pagamenti' },
+        bullets: [
+          {
+            en: 'This month in four tiles above the revenue chart: expected, collected, collected of expected, and how many athletes still owe and how much. Collected includes carnets sold this month, so it can pass 100% while someone still owes, as the note under the tiles says.',
+            it: 'Il mese in quattro riquadri sopra il grafico degli incassi: atteso, incassato, incassato sull’atteso, e quanti atleti devono ancora pagare e quanto. Gli incassi comprendono i carnet venduti nel mese, quindi possono superare il 100% mentre qualcuno deve ancora pagare, come dice la nota sotto i riquadri.',
+          },
+          {
+            en: '"Export for the accountant": pick this season or the one before and download every fee and carnet with its date, athlete, amount, how it was paid and the period it covers. It opens in Italian Excel with the right columns and decimal commas.',
+            it: '«Esporta per il commercialista»: scegli questa stagione o quella prima e scarichi ogni quota e carnet con data, atleta, importo, modo di pagamento e periodo coperto. Si apre in Excel in italiano con le colonne giuste e gli importi con la virgola.',
+          },
+        ],
+      },
+      {
+        heading: { en: 'Attendance', it: 'Presenze' },
+        bullets: [
+          {
+            en: 'Every athlete on one check-in page: no more pages of twenty. Past two hundred active athletes, a line says how many you see and to use the search.',
+            it: 'Tutti gli atleti in una pagina di check-in: niente più pagine da venti. Oltre i duecento atleti attivi, una riga dice quanti ne vedi e di usare la ricerca.',
+          },
+          {
+            en: '"Bring over the 19:00 class": on an empty class, when the class right before it that day had people, one button checks them all in. Undo for a few seconds and, where carnet entries count per class, a reminder that anyone on a carnet uses an entry for this class too.',
+            it: '«Porta chi c’era alle 19:00»: in una lezione vuota, se la lezione subito prima lo stesso giorno aveva qualcuno, un tasto li segna tutti. «Annulla» per qualche secondo e, dove i carnet contano gli ingressi per lezione, un promemoria che chi ha un carnet scala un ingresso anche per questa.',
+          },
+        ],
+      },
+      {
+        heading: { en: 'Promotions', it: 'Promozioni' },
+        bullets: [
+          {
+            en: 'The entry row can be completed even when the history starts there, the usual case for an imported athlete: it asks "When?" and, when the belt before is not obvious, which belt they came from. Saving corrects that row, never a second one, and the entry-date note goes away.',
+            it: 'La riga d’inserimento si completa anche quando la storia comincia da lì, il caso solito per chi hai importato: chiede «Quando?» e, se la cintura di prima non è ovvia, da quale cintura è arrivato. Salvando si corregge quella riga, mai una seconda, e la nota sulla data d’inserimento sparisce.',
+          },
+          {
+            en: 'Adding by hand a past promotion to the entry row’s belt, dated no later than the entry row, now offers to complete that row instead. You can still add it anyway.',
+            it: 'Aggiungendo a mano una promozione passata alla cintura della riga d’inserimento, con una data non dopo quella d’inserimento, Budojo propone di completare quella riga. Puoi comunque aggiungerla.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.71.0',
     date: '2026-09-27',
     headline: {

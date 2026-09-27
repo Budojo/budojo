@@ -475,3 +475,130 @@ it('still refuses a backfill that is no gap and contradicts the rows around it',
     'a stripe the next row already holds' => [['recorded_at' => '2024-06-01', 'from_stripes' => 3, 'to_stripes' => 4]],
     'a gap, dated outside its window' => [['recorded_at' => '2023-06-01', 'from_stripes' => 0, 'to_stripes' => 1]],
 ]);
+
+// ── A history that opens on its starting row (#1974) ─────────────────────────
+
+it('asks for the real date and the belt before, when the history opens on the starting row', function (): void {
+    // The most common imported athlete: entered as blue, stripes given live since.
+    $athlete = gapsAthlete($this->academy, Belt::Blue, 2);
+    $opening = beltRowOn($athlete, $this->owner, null, Belt::Blue, '2026-01-10 00:00:00');
+    stripeRowOn($athlete, $this->owner, Belt::Blue, 0, 1, '2026-03-01 00:00:00');
+    stripeRowOn($athlete, $this->owner, Belt::Blue, 1, 2, '2026-06-01 00:00:00');
+
+    $gaps = $this->actingAs($this->owner)->getJson("/api/v1/athletes/{$athlete->id}/promotions")->assertOk()->json('gaps');
+
+    expect($gaps)->toBe([[
+        'key' => 'belt:blue:0',
+        'kind' => 'belt',
+        'belt' => 'blue',
+        'from_belt' => 'white',
+        'from_stripes' => null,
+        'to_stripes' => null,
+        'after' => null,
+        'before' => ['promotion_id' => $opening->id, 'recorded_at' => '2026-01-10'],
+        'completes_promotion_id' => $opening->id,
+        'from_belt_options' => ['white'],
+    ]]);
+});
+
+it('completes a starting row that opens the history, and "since" counts from the real day', function (): void {
+    $athlete = gapsAthlete($this->academy, Belt::Blue, 0);
+    $opening = beltRowOn($athlete, $this->owner, null, Belt::Blue, '2026-01-10 00:00:00');
+
+    $response = $this->actingAs($this->owner)
+        ->patchJson("/api/v1/athletes/{$athlete->id}/promotions/{$opening->id}", [
+            'recorded_at' => '2019-05-01',
+            'from_belt' => 'white',
+        ])
+        ->assertOk();
+
+    expect($response->json('data.from_belt'))->toBe('white')
+        ->and($response->json('data.is_opening'))->toBeFalse()
+        // Completed, never duplicated.
+        ->and($athlete->promotions()->count())->toBe(1);
+
+    $timeline = $this->actingAs($this->owner)->getJson("/api/v1/athletes/{$athlete->id}/promotions")->assertOk();
+    // An ordinary belt row with a date: nothing before it is offered.
+    expect($timeline->json('gaps'))->toBe([])
+        ->and($timeline->json('progression.belt_since'))->toStartWith('2019-05-01');
+});
+
+it('completes it no later than the day the athlete was entered, however far back', function (string $on, bool $accepted): void {
+    $athlete = gapsAthlete($this->academy, Belt::Blue, 0);
+    $opening = beltRowOn($athlete, $this->owner, null, Belt::Blue, '2026-01-10 00:00:00');
+
+    $response = $this->actingAs($this->owner)
+        ->patchJson("/api/v1/athletes/{$athlete->id}/promotions/{$opening->id}", ['recorded_at' => $on, 'from_belt' => 'white']);
+
+    $accepted ? $response->assertOk() : $response->assertUnprocessable()->assertJsonValidationErrors('recorded_at');
+})->with([
+    'years before' => ['1998-06-01', true],
+    'the day of entry' => ['2026-01-10', true],
+    'the day after' => ['2026-01-11', false],
+]);
+
+it('lets the owner choose any belt the ladder allows before, and refuses one it does not', function (): void {
+    $this->academy->update(['martial_art' => MartialArt::Judo]);
+    $judoka = gapsAthlete($this->academy, Belt::Black, 0);
+    $opening = beltRowOn($judoka, $this->owner, null, Belt::Black, '2026-01-10 00:00:00');
+    $patch = "/api/v1/athletes/{$judoka->id}/promotions/{$opening->id}";
+
+    $gap = $this->actingAs($this->owner)->getJson("/api/v1/athletes/{$judoka->id}/promotions")->assertOk()->json('gaps.0');
+    expect($gap['from_belt'])->toBe('brown')
+        ->and($gap['from_belt_options'])->toContain('blue');
+
+    // Not the suggestion, but a belt the ladder allows: the owner knows.
+    $this->actingAs($this->owner)->patchJson($patch, ['recorded_at' => '2020-01-01', 'from_belt' => 'blue'])->assertOk();
+
+    $other = gapsAthlete($this->academy, Belt::Blue, 0);
+    $below = beltRowOn($other, $this->owner, null, Belt::Blue, '2026-01-10 00:00:00');
+    $this->actingAs($this->owner)
+        ->patchJson("/api/v1/athletes/{$other->id}/promotions/{$below->id}", ['recorded_at' => '2020-01-01', 'from_belt' => 'brown'])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('from_belt');
+});
+
+it('offers an imported adult with no date of birth only the adult belts before', function (): void {
+    // The most common import: a BJJ blue, no date of birth on file. Asked
+    // about each candidate, the kids' rule offered grey to green and
+    // preselected green — "Verde → Blu" recorded for an adult.
+    $athlete = Athlete::factory()->for($this->academy)->create(['belt' => Belt::Blue, 'stripes' => 0, 'date_of_birth' => null]);
+    beltRowOn($athlete, $this->owner, null, Belt::Blue, '2026-01-10 00:00:00');
+
+    $gap = $this->actingAs($this->owner)->getJson("/api/v1/athletes/{$athlete->id}/promotions")->assertOk()->json('gaps.0');
+
+    expect($gap['from_belt'])->toBe('white')
+        ->and($gap['from_belt_options'])->toBe(['white']);
+});
+
+it('admits every belt it lists before a row that opens the history, anywhere in the window', function (string $option, string $on): void {
+    // A later row on a higher belt must not turn a listed option down: the
+    // list and the window are the check for a row nothing precedes.
+    $this->academy->update(['martial_art' => MartialArt::Judo]);
+    $judoka = gapsAthlete($this->academy, Belt::Blue, 0);
+    // Orange on entry, then green → blue with the step out of orange never
+    // recorded: the next belt row starts on green, not on the row's orange.
+    $opening = beltRowOn($judoka, $this->owner, null, Belt::Orange, '2024-01-10 00:00:00');
+    beltRowOn($judoka, $this->owner, Belt::Green, Belt::Blue, '2025-06-01 00:00:00');
+
+    $gap = $this->actingAs($this->owner)->getJson("/api/v1/athletes/{$judoka->id}/promotions")->assertOk()->json('gaps.0');
+    expect($gap['completes_promotion_id'])->toBe($opening->id)
+        ->and($gap['from_belt_options'])->toContain($option);
+
+    $this->actingAs($this->owner)
+        ->patchJson("/api/v1/athletes/{$judoka->id}/promotions/{$opening->id}", ['recorded_at' => $on, 'from_belt' => $option])
+        ->assertOk();
+    expect($opening->fresh()?->from_belt?->value)->toBe($option);
+})->with([
+    'white, years before' => ['white', '1998-06-01'],
+    'white, the day of entry' => ['white', '2024-01-10'],
+    'yellow, years before' => ['yellow', '1998-06-01'],
+    'yellow, the day of entry' => ['yellow', '2024-01-10'],
+]);
+
+it('offers nothing to complete on a history that opens on the first belt of the ladder', function (): void {
+    $athlete = gapsAthlete($this->academy, Belt::White, 1);
+    beltRowOn($athlete, $this->owner, null, Belt::White, '2026-01-10 00:00:00');
+
+    expect(gapKeys($this, $athlete))->toBe([]);
+});

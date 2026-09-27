@@ -139,7 +139,11 @@ describe('Check-in by class', () => {
 
     cy.visitAuthenticated('/dashboard/attendance');
     cy.wait('@classes');
-    cy.wait('@attendance');
+    cy.wait('@attendance').its('request.url').should('include', 'academy_class_id=2');
+    // 19:00 came back empty, so the page also read 17:00, to offer bringing
+    // that room over (#1930). The same URL the chip tap will send: consume it
+    // here, or the wait after the tap would be satisfied by this one.
+    cy.wait('@attendance').its('request.url').should('include', 'academy_class_id=1');
 
     cy.get('[data-cy="attendance-row-1"]').click();
     cy.wait('@mark');
@@ -147,6 +151,8 @@ describe('Check-in by class', () => {
 
     cy.get('[data-cy="attendance-class-1"]').click();
     cy.wait('@attendance').its('request.url').should('include', 'academy_class_id=1');
+    // Three reads: 19:00, the earlier class, and the tap on 17:00.
+    cy.get('@attendance.all').should('have.length', 3);
     // The roster was not re-read: only the records move with the class.
     cy.get('@athletes.all').should('have.length', 1);
     cy.get('[data-cy="attendance-class-1"]').should('have.attr', 'aria-checked', 'true');
@@ -164,6 +170,87 @@ describe('Check-in by class', () => {
 
     cy.get('[data-cy="attendance-class-picker"]').should('not.exist');
     cy.get('[data-cy="attendance-class-single"]').should('contain', 'Fundamentals · 19:00');
+  });
+
+  it('brings the earlier class over to an empty one, and Undo takes them all back (#1930)', () => {
+    cy.intercept('GET', '/api/v1/academy/classes', {
+      statusCode: 200,
+      body: { data: [KIDS, FUNDAMENTALS] },
+    }).as('classes');
+    // 19:00 is empty; 17:00 had both of them.
+    cy.intercept('GET', '/api/v1/attendance*', (req) => {
+      const kids = req.url.includes('academy_class_id=1');
+      req.reply({
+        statusCode: 200,
+        body: {
+          data: kids
+            ? [
+                {
+                  id: 11,
+                  athlete_id: 1,
+                  lesson_id: 5,
+                  attended_on: '2026-09-14',
+                  source: 'instructor',
+                },
+                {
+                  id: 12,
+                  athlete_id: 2,
+                  lesson_id: 5,
+                  attended_on: '2026-09-14',
+                  source: 'instructor',
+                },
+              ]
+            : [],
+        },
+      });
+    }).as('records');
+    cy.intercept('POST', '/api/v1/attendance', (req) => {
+      expect(req.body).to.deep.equal({
+        date: '2026-09-14',
+        athlete_ids: [1, 2],
+        academy_class_id: 2,
+      });
+      req.reply({
+        statusCode: 201,
+        body: {
+          data: [
+            {
+              id: 21,
+              athlete_id: 1,
+              lesson_id: 8,
+              attended_on: '2026-09-14',
+              source: 'instructor',
+            },
+            {
+              id: 22,
+              athlete_id: 2,
+              lesson_id: 8,
+              attended_on: '2026-09-14',
+              source: 'instructor',
+            },
+          ],
+        },
+      });
+    }).as('bringOver');
+    cy.intercept('DELETE', '/api/v1/attendance/*', { statusCode: 204 }).as('takeBack');
+
+    cy.visitAuthenticated('/dashboard/attendance');
+    cy.wait('@classes');
+
+    cy.get('[data-cy="attendance-carry"]').should('contain', '2').and('contain', '17:00');
+    cy.get('[data-cy="attendance-carry-over"] button').click();
+    cy.wait('@bringOver');
+
+    cy.get('[data-cy="attendance-row-1"]').should('have.attr', 'aria-pressed', 'true');
+    cy.get('[data-cy="attendance-row-2"]').should('have.attr', 'aria-pressed', 'true');
+    // The room is no longer empty: the offer goes.
+    cy.get('[data-cy="attendance-carry"]').should('not.exist');
+
+    cy.get('[data-cy="attendance-undo"]').click();
+    cy.wait('@takeBack');
+    cy.wait('@takeBack');
+    cy.get('[data-cy="attendance-row-1"]').should('have.attr', 'aria-pressed', 'false');
+    cy.get('[data-cy="attendance-row-2"]').should('have.attr', 'aria-pressed', 'false');
   });
 
   it('is the page it always was on a day with no class', () => {

@@ -1,7 +1,41 @@
 <section class="stats-payments" data-cy="stats-payments">
+  <!-- This month in four figures, first on the page (#1759). Before the
+       chart's header, not after it: "Monthly revenue · last 12 months" is the
+       chart's title, and between the two it read as the tiles' own. -->
+  <app-payments-summary />
+
   <header class="stats-payments__header">
-    <h2 class="stats-payments__title">{{ 'stats.payments.monthlyTitle' | translate }}</h2>
-    <p class="stats-payments__hint">{{ 'stats.payments.monthlyHint' | translate }}</p>
+    <div class="stats-payments__heading">
+      <h2 class="stats-payments__title">{{ 'stats.payments.monthlyTitle' | translate }}</h2>
+      <p class="stats-payments__hint">{{ 'stats.payments.monthlyHint' | translate }}</p>
+    </div>
+    <!-- The accountant's file (#1762): one button, and the season in a menu —
+         the current one, and the one before, which in September is the
+         finished season the accountant is asking for. -->
+    @if (exportSeasons().length > 0) {
+      <!-- A native button, so `aria-haspopup` sits on the element a screen
+           reader announces; `p-button` would put it on its host. Primary:
+           it is the page's only action (the lone-CTA rule). -->
+      <button
+        pButton
+        type="button"
+        aria-haspopup="menu"
+        [disabled]="exporting()"
+        (click)="openSeasonMenu($event)"
+        data-cy="stats-payments-export"
+      >
+        <i
+          [class]="exporting() ? 'pi pi-spin pi-spinner' : 'pi pi-download'"
+          pButtonIcon
+          aria-hidden="true"
+        ></i>
+        <span pButtonLabel>{{
+          (exporting() ? 'stats.payments.export.inProgress' : 'stats.payments.export.button')
+            | translate
+        }}</span>
+      </button>
+      <p-menu #seasonMenu [popup]="true" [model]="seasonItems()" appendTo="body" />
+    }
   </header>
 
   @if (errored()) {

@@ -66,8 +66,7 @@ it('asks the operator, never UTC, which day it is', function (): void {
         '/->(isToday|isTomorrow|isYesterday|isCurrentMonth)\(/',
         "/'(before|after|before_or_equal|after_or_equal):(today|tomorrow|yesterday)'/",
     ];
-    // #1973: a sign bug on this line, fixed on its own rather than here.
-    $pending = ['Mail/AthleteInvitationMail.php'];
+    $pending = [];
     $offenders = [];
     $files = Finder::create()->files()->name('*.php')->in(base_path('app'))->notPath('Support/OperatorDay.php');
     foreach ($files as $file) {

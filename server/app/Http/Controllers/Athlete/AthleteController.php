@@ -310,7 +310,7 @@ class AthleteController extends Controller
             $query->latest();
         }
 
-        $athletes = $query->paginate(20);
+        $athletes = $query->paginate($request->perPage());
         // The Sessions cell's denominators (#1768), for this page only.
         $this->rosterDenominators->execute($academy, $athletes->getCollection(), $now);
 
