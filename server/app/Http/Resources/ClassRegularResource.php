@@ -28,9 +28,7 @@ class ClassRegularResource extends JsonResource
         $athlete = $regular['athlete'];
 
         return [
-            ...new AthleteIdentityResource($athlete)->toArray($request),
-            'phone_country_code' => $athlete->phone_country_code,
-            'phone_national_number' => $athlete->phone_national_number,
+            ...new ContactableAthleteResource($athlete)->toArray($request),
             'attended' => $regular['attended'],
             'last_attended_on' => $regular['last_attended_on'],
         ];
