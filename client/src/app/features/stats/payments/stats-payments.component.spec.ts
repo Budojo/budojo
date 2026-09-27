@@ -221,11 +221,41 @@ describe('StatsPaymentsComponent', () => {
       vi.restoreAllMocks();
     });
 
+    /** The seasons the button's menu offers, as the component builds them. */
+    const seasonItems = (): { label: string; command(): void }[] =>
+      (
+        fixture.componentInstance as unknown as {
+          seasonItems(): { label: string; command(): void }[];
+        }
+      ).seasonItems();
+
+    it('is one secondary button that opens the seasons, not a split button', () => {
+      inSeason('2026-09-01', '2026/27');
+      renderPage();
+
+      // A real button that says it opens a menu, drawn as the app's secondary.
+      const button = exportHost() as HTMLButtonElement;
+      expect(button.tagName.toLowerCase()).toBe('button');
+      expect(button.textContent).toContain('Export for the accountant');
+      expect(button.classList).toContain('p-button-secondary');
+      expect(button.getAttribute('aria-haspopup')).toBe('menu');
+      expect((fixture.nativeElement as HTMLElement).querySelector('p-splitbutton')).toBeNull();
+
+      // Pressing it opens the menu; it does not download anything on its own.
+      const menu = (
+        fixture.componentInstance as unknown as { seasonMenu(): { toggle(e: Event): void } }
+      ).seasonMenu();
+      const toggle = vi.spyOn(menu, 'toggle');
+      button.click();
+      expect(toggle).toHaveBeenCalledTimes(1);
+      http.expectNone((r) => r.url === EXPORT);
+    });
+
     it('downloads the current season as a file named after it', () => {
       inSeason('2026-09-01', '2026/27');
       renderPage();
 
-      exportHost()!.querySelector<HTMLButtonElement>('button')!.click();
+      seasonItems()[0].command();
 
       // A blob, through HttpClient: a bare link would carry no Bearer token.
       const req = http.expectOne((r) => r.url === EXPORT && r.params.get('season') === '2026');
@@ -239,11 +269,7 @@ describe('StatsPaymentsComponent', () => {
       inSeason('2026-09-01', '2026/27');
       renderPage();
 
-      const items = (
-        fixture.componentInstance as unknown as {
-          seasonItems(): { label: string; command(): void }[];
-        }
-      ).seasonItems();
+      const items = seasonItems();
       expect(items.map((i) => i.label)).toEqual(['Season 2026/27', 'Season 2025/26']);
 
       items[1].command();
@@ -258,11 +284,7 @@ describe('StatsPaymentsComponent', () => {
       inSeason('2026-01-01', '2026');
       renderPage();
 
-      const items = (
-        fixture.componentInstance as unknown as { seasonItems(): { label: string }[] }
-      ).seasonItems();
-
-      expect(items.map((i) => i.label)).toEqual(['Season 2026', 'Season 2025']);
+      expect(seasonItems().map((i) => i.label)).toEqual(['Season 2026', 'Season 2025']);
     });
 
     it('says so when the file could not be made', () => {
@@ -270,7 +292,7 @@ describe('StatsPaymentsComponent', () => {
       renderPage();
       const toast = vi.spyOn(TestBed.inject(MessageService), 'add');
 
-      exportHost()!.querySelector<HTMLButtonElement>('button')!.click();
+      seasonItems()[0].command();
       http
         .expectOne((r) => r.url === EXPORT)
         .flush(new Blob(['boom']), { status: 500, statusText: 'Server Error' });

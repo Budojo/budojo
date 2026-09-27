@@ -1,11 +1,19 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { finalize } from 'rxjs';
 import { MenuItem, MessageService } from 'primeng/api';
+import { ButtonModule } from 'primeng/button';
 import { ChartModule } from 'primeng/chart';
+import { Menu, MenuModule } from 'primeng/menu';
 import { SkeletonModule } from 'primeng/skeleton';
-import { SplitButtonModule } from 'primeng/splitbutton';
 import { AcademyService } from '../../../core/services/academy.service';
 import { triggerBrowserDownload } from '../../../shared/utils/download';
 import { MonthlyPaymentsBucket, StatsService } from '../../../core/services/stats.service';
@@ -38,9 +46,10 @@ function previousSeason(current: ExportSeason): ExportSeason {
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    ButtonModule,
     ChartModule,
+    MenuModule,
     SkeletonModule,
-    SplitButtonModule,
     TranslatePipe,
     ErrorStateComponent,
     EmptyStateComponent,
@@ -165,6 +174,17 @@ export class StatsPaymentsComponent {
   });
 
   protected readonly exporting = signal(false);
+
+  /**
+   * The seasons open as a popup menu under one secondary button — the app's
+   * pattern for "one action, a choice of what" (the athletes list's payment
+   * menu), rather than a split button nothing else here uses.
+   */
+  private readonly seasonMenu = viewChild<Menu>('seasonMenu');
+
+  protected openSeasonMenu(event: MouseEvent): void {
+    this.seasonMenu()?.toggle(event);
+  }
 
   /**
    * Download one season as the accountant's CSV. The file is named after the

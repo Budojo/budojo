@@ -3023,10 +3023,9 @@
         "retry": "Riprova"
       },
       "export": {
-        "button": "Esporta la stagione {{label}}",
+        "button": "Esporta per il commercialista",
         "season": "Stagione {{label}}",
-        "otherSeasons": "Altre stagioni",
-        "inProgress": "Preparo la stagione {{label}}…",
+        "inProgress": "Preparo il file…",
         "errorSummary": "Esportazione non riuscita",
         "errorDetail": "Il file non è stato creato. Riprova."
       }

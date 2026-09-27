@@ -66,7 +66,7 @@ it('hands over the season as a csv, oldest first, fees and carnets together', fu
     expect($response->streamedContent())->toBe(
         "\xEF\xBB\xBF"
         . EXPORT_HEADER_IT
-        . "03/09/2026;Quota;\"Rossi Marco\";165,00;EUR;3;Contanti;\"set 2026 – nov 2026\";\r\n"
+        . "03/09/2026;Quota;\"Rossi Marco\";165,00;EUR;3;Contanti;\"01/09/2026 – 30/11/2026\";\r\n"
         . "11/09/2026;Carnet;\"Bianchi Luca\";70,00;EUR;10;Bonifico;\"11/09/2026 – 11/09/2027\";A7K2\r\n",
     );
 });
@@ -77,7 +77,7 @@ it("speaks the owner's language", function (): void {
     $body = $this->actingAs($user)->get('/api/v1/stats/payments/export?season=2026')->streamedContent();
 
     expect($body)->toContain("Date;Type;Athlete;Amount;Currency;\"Months or entries\";Method;Covers;Code\r\n")
-        ->and($body)->toContain("03/09/2026;Fee;\"Rossi Marco\";165,00;EUR;3;Cash;\"Sep 2026 – Nov 2026\";\r\n")
+        ->and($body)->toContain("03/09/2026;Fee;\"Rossi Marco\";165,00;EUR;3;Cash;\"01/09/2026 – 30/11/2026\";\r\n")
         ->and($body)->toContain(';Carnet;"Bianchi Luca";70,00;EUR;10;"Bank transfer";');
 });
 
@@ -87,9 +87,29 @@ it('reads the season from the academy, not the calendar year', function (): void
     // 2025/26 runs to 31 August 2026: the August fee is in it, September's are not.
     $body = $this->actingAs($user)->get('/api/v1/stats/payments/export?season=2025')->streamedContent();
 
-    expect($body)->toContain("20/08/2026;Quota;\"Rossi Marco\";55,00;EUR;1;;\"ago 2026\";\r\n")
+    expect($body)->toContain("20/08/2026;Quota;\"Rossi Marco\";55,00;EUR;1;;\"01/08/2026 – 31/08/2026\";\r\n")
         ->and($body)->not->toContain('03/09/2026')
         ->and($body)->not->toContain('A7K2');
+});
+
+it('writes every period as a range of days, never a lone month Excel would take for a date', function (): void {
+    $user = exportAcademy();
+    $marco = Athlete::query()->where('last_name', 'Rossi')->firstOrFail();
+    // A monthly fee in February of a leap year: the range ends on the 29th.
+    AthletePayment::factory()->for($marco)->create([
+        'year' => 2028, 'month' => 2, 'period_months' => BillingPeriod::Monthly,
+        'amount_cents' => 5500, 'paid_at' => '2027-02-01 00:00:00',
+    ]);
+    // An annual fee crossing new year.
+    AthletePayment::factory()->for($marco)->create([
+        'year' => 2026, 'month' => 12, 'period_months' => BillingPeriod::Annual,
+        'amount_cents' => 60000, 'paid_at' => '2026-12-01 00:00:00',
+    ]);
+
+    $body = $this->actingAs($user)->get('/api/v1/stats/payments/export?season=2026')->streamedContent();
+
+    expect($body)->toContain(';"01/02/2028 – 29/02/2028";')
+        ->and($body)->toContain(';"01/12/2026 – 30/11/2027";');
 });
 
 it('defaults to the season the owner is in today', function (): void {

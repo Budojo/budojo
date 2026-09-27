@@ -82,9 +82,11 @@ final class ExportSeasonPaymentsAction
                 $day = CarbonImmutable::instance($payment->paid_at)->setTimezone($tz);
                 $first = CarbonImmutable::create($payment->year, $payment->month, 1);
                 \assert($first !== null);
-                $last = $first->addMonths($payment->period_months->value - 1);
-                $covers = $this->month($first, $locale)
-                    . ($first->equalTo($last) ? '' : ' – ' . $this->month($last, $locale));
+                // First to last day of the months covered, for one month as
+                // for twelve: a lone month (`ago 2026`) is the one form Excel
+                // reads as a date, and the column would mix dates and text.
+                $covers = CsvValue::date($first)
+                    . ' – ' . CsvValue::date($first->addMonths($payment->period_months->value - 1)->endOfMonth());
 
                 return [
                     'order' => [$day->toDateString(), 0, $payment->id],
@@ -155,15 +157,6 @@ final class ExportSeasonPaymentsAction
             fn (string $column): string => $this->label('header.' . $column, $locale),
             ['date', 'type', 'athlete', 'amount', 'currency', 'period_or_entries', 'method', 'covers', 'code'],
         );
-    }
-
-    /** `set 2026`: a month in words, so Excel never takes it for a date. */
-    private function month(CarbonImmutable $month, AppLocale $locale): string
-    {
-        $localized = $month->locale($locale->value);
-        \assert($localized instanceof CarbonImmutable);
-
-        return $localized->translatedFormat('M Y');
     }
 
     private function athleteName(?Athlete $athlete): string

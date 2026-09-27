@@ -3023,10 +3023,9 @@
         "retry": "Try again"
       },
       "export": {
-        "button": "Export season {{label}}",
+        "button": "Export for the accountant",
         "season": "Season {{label}}",
-        "otherSeasons": "Other seasons",
-        "inProgress": "Preparing {{label}}…",
+        "inProgress": "Preparing the file…",
         "errorSummary": "Export failed",
         "errorDetail": "The file wasn't created. Try again."
       }

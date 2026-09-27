@@ -7141,8 +7141,10 @@ paths:
         as mojibake), `;` between cells, `\r\n` after each row, dates as
         `dd/mm/yyyy`, amounts with a decimal comma (`165,00`; Italian Excel
         reads a dot as a thousands separator). A cell that would start with
-        `=`, `+`, `-` or `@` gets a leading apostrophe, so no value is ever run
-        as a formula.
+        `=`, `+`, `-`, `@`, a tab or a carriage return gets a leading
+        apostrophe, so no value is ever run as a formula. Every period is a
+        range of days (`01/08/2026 – 31/08/2026`), one month included: a lone
+        month is the one form Excel would read as a date.
 
         Columns — the header and the type and method words are in the owner's
         language (`users.locale`, English when unset):
@@ -7156,7 +7158,7 @@ paths:
         | Valuta / Currency | EUR | EUR |
         | Mesi o ingressi / Months or entries | `period_months` | `total_entries` |
         | Metodo / Method | `payment_method` in words, empty when not recorded | same |
-        | Periodo / Covers | the months, in words (`set 2026 – nov 2026`) | `valid_from – expires_at` |
+        | Periodo / Covers | first to last day of the months covered (`01/09/2026 – 30/11/2026`) | `valid_from – expires_at` |
         | Codice / Code | empty | the carnet's code |
       tags: [Stats]
       parameters:
@@ -7175,7 +7177,7 @@ paths:
           content:
             text/csv:
               schema: { type: string }
-              example: "﻿Data;Tipo;Atleta;Importo;Valuta;\"Mesi o ingressi\";Metodo;Periodo;Codice\r\n03/09/2026;Quota;\"Rossi Marco\";165,00;EUR;3;Contanti;\"set 2026 – nov 2026\";\r\n11/09/2026;Carnet;\"Bianchi Luca\";70,00;EUR;10;Bonifico;\"11/09/2026 – 11/09/2027\";A7K2\r\n"
+              example: "﻿Data;Tipo;Atleta;Importo;Valuta;\"Mesi o ingressi\";Metodo;Periodo;Codice\r\n03/09/2026;Quota;\"Rossi Marco\";165,00;EUR;3;Contanti;\"01/09/2026 – 30/11/2026\";\r\n11/09/2026;Carnet;\"Bianchi Luca\";70,00;EUR;10;Bonifico;\"11/09/2026 – 11/09/2027\";A7K2\r\n"
         '401': { description: Unauthenticated }
         '403':
           description: Forbidden — authed user has no academy, or is not the owner.
