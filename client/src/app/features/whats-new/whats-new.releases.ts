@@ -88,8 +88,8 @@ export const RELEASES: readonly Release[] = [
             it: 'Tutti gli atleti in una pagina di check-in: niente più pagine da venti. Oltre i duecento atleti attivi, una riga dice quanti ne vedi e di usare la ricerca.',
           },
           {
-            en: '"Bring over the 19:00 class": on an empty class, when an earlier class that day had people, one button checks them all in. Undo for a few seconds, and a reminder when a carnet holder spends an entry for this class too.',
-            it: '«Porta chi c’era alle 19:00»: in una lezione vuota, se prima lo stesso giorno ce n’è stata un’altra con qualcuno, un tasto li segna tutti. «Annulla» per qualche secondo, e un promemoria quando chi ha un carnet scala un ingresso anche per questa lezione.',
+            en: '"Bring over the 19:00 class": on an empty class, when the class right before it that day had people, one button checks them all in. Undo for a few seconds and, where carnet entries count per class, a reminder that anyone on a carnet uses an entry for this class too.',
+            it: '«Porta chi c’era alle 19:00»: in una lezione vuota, se la lezione subito prima lo stesso giorno aveva qualcuno, un tasto li segna tutti. «Annulla» per qualche secondo e, dove i carnet contano gli ingressi per lezione, un promemoria che chi ha un carnet scala un ingresso anche per questa.',
           },
         ],
       },
@@ -101,17 +101,8 @@ export const RELEASES: readonly Release[] = [
             it: 'La riga d’inserimento si completa anche quando la storia comincia da lì, il caso solito per chi hai importato: chiede «Quando?» e, se la cintura di prima non è ovvia, da quale cintura è arrivato. Salvando si corregge quella riga, mai una seconda, e la nota sulla data d’inserimento sparisce.',
           },
           {
-            en: 'Adding by hand a past promotion to the entry row’s belt, dated where it fits, now offers to complete that row instead. You can still add it anyway.',
-            it: 'Aggiungendo a mano una promozione passata alla cintura della riga d’inserimento, con una data che le corrisponde, Budojo propone di completare quella riga. Puoi comunque aggiungerla.',
-          },
-        ],
-      },
-      {
-        heading: { en: 'Fixed', it: 'Corretto' },
-        bullets: [
-          {
-            en: 'The athlete invitation always said the link was valid for 1 days. It now says how many days are really left: 7 for a new invitation.',
-            it: 'L’invito a un atleta diceva sempre che il link era valido per 1 giorni. Ora dice quanti giorni restano davvero: 7 per un invito nuovo.',
+            en: 'Adding by hand a past promotion to the entry row’s belt, dated no later than the entry row, now offers to complete that row instead. You can still add it anyway.',
+            it: 'Aggiungendo a mano una promozione passata alla cintura della riga d’inserimento, con una data non dopo quella d’inserimento, Budojo propone di completare quella riga. Puoi comunque aggiungerla.',
           },
         ],
       },
