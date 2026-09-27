@@ -7117,6 +7117,78 @@ paths:
               schema: { $ref: '#/components/schemas/ErrorMessage' }
               example: { message: Forbidden. }
 
+  /stats/payments/export:
+    get:
+      operationId: statsPaymentsExport
+      summary: A season of payments as a CSV for the accountant
+      description: |
+        Every fee and every carnet that came in during one academy season
+        (#1762), oldest first, as a file. **This response is `text/csv`, not
+        the JSON envelope, on purpose**: the reader is a spreadsheet and the
+        body is the file. Do not "fix" it into `{data: …}`.
+
+        - **The season, not the calendar year.** `season` is the year the
+          season starts in, resolved with the academy's `season_start_month`
+          (September by default): `season=2026` is 2026/27, from 1 September
+          2026 to 31 August 2027. Omitted, the season the owner is in today.
+        - **The day the money came in.** A fee by `paid_at` (#1761), a carnet
+          by `purchased_at`, both read on the owner's day (OperatorDay, #1963).
+        - **Every athlete**, including one deleted since: the money came in.
+        - **An empty season** is a file with the header row alone, not a 404.
+
+        **Written for an Italian Excel**, which opens it by double-click:
+        UTF-8 with a byte-order mark (without it accented surnames come back
+        as mojibake), `;` between cells, `\r\n` after each row, dates as
+        `dd/mm/yyyy`, amounts with a decimal comma (`165,00`; Italian Excel
+        reads a dot as a thousands separator). A cell that would start with
+        `=`, `+`, `-` or `@` gets a leading apostrophe, so no value is ever run
+        as a formula.
+
+        Columns — the header and the type and method words are in the owner's
+        language (`users.locale`, English when unset):
+
+        | Column (it / en) | Fee | Carnet |
+        |---|---|---|
+        | Data / Date | `paid_at` | `purchased_at` |
+        | Tipo / Type | Quota / Fee | Carnet |
+        | Atleta / Athlete | Surname Name | Surname Name |
+        | Importo / Amount | `amount_cents` | `price_cents` |
+        | Valuta / Currency | EUR | EUR |
+        | Mesi o ingressi / Months or entries | `period_months` | `total_entries` |
+        | Metodo / Method | `payment_method` in words, empty when not recorded | same |
+        | Periodo / Covers | the months, in words (`set 2026 – nov 2026`) | `valid_from – expires_at` |
+        | Codice / Code | empty | the carnet's code |
+      tags: [Stats]
+      parameters:
+        - name: season
+          in: query
+          required: false
+          schema: { type: integer, minimum: 2000, maximum: 2100 }
+          description: The year the season starts in. Defaults to the owner's current season.
+      responses:
+        '200':
+          description: The season's payments, as a download named `budojo-payments-<season label>.csv` (e.g. `budojo-payments-2026-27.csv`)
+          headers:
+            Content-Disposition:
+              schema: { type: string }
+              description: '`attachment; filename=budojo-payments-2026-27.csv`'
+          content:
+            text/csv:
+              schema: { type: string }
+              example: "﻿Data;Tipo;Atleta;Importo;Valuta;\"Mesi o ingressi\";Metodo;Periodo;Codice\r\n03/09/2026;Quota;\"Rossi Marco\";165,00;EUR;3;Contanti;\"set 2026 – nov 2026\";\r\n11/09/2026;Carnet;\"Bianchi Luca\";70,00;EUR;10;Bonifico;\"11/09/2026 – 11/09/2027\";A7K2\r\n"
+        '401': { description: Unauthenticated }
+        '403':
+          description: Forbidden — authed user has no academy, or is not the owner.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorMessage' }
+              example: { message: Forbidden. }
+        '422':
+          description: A `season` outside 2000–2100.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ValidationErrorBody' }
+
   /stats/payments/summary:
     get:
       operationId: statsPaymentsSummary
