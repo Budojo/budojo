@@ -218,51 +218,39 @@
   }
 
   <!--
-    One panel, two forms: a popover beside the map in a wide window, a bottom
-    sheet in a narrow one. Either way it is a dialog, so it takes focus on its
-    title and hands it back when it closes.
+    One panel, the app's sheet (#1992): a dialog like the lesson sheet and
+    "who has seen it". A popover anchored to a row low on the page opened
+    upwards and was cut off by the window; a dialog is centred and scrolls
+    inside itself, at every width.
   -->
-  <p-popover
-    #cellPopover
-    ariaLabelledBy="season-map-pop-title"
-    (onShow)="focusTitle()"
-    (onHide)="restoreFocus()"
-  >
-    <ng-container *ngTemplateOutlet="panelBody; context: { $implicit: 'season-map-pop-title' }" />
-  </p-popover>
-
-  <p-drawer
-    [visible]="drawerOpen()"
-    (visibleChange)="drawerOpen.set($event)"
-    position="bottom"
+  <p-dialog
+    [visible]="panelOpen()"
+    (visibleChange)="panelOpen.set($event)"
     [modal]="true"
-    [pt]="drawerPt"
-    [style]="{ height: 'auto', maxHeight: '80dvh' }"
+    [draggable]="false"
+    [dismissableMask]="true"
+    [breakpoints]="{ '768px': '96vw' }"
+    [style]="{ width: '32rem' }"
     (onShow)="focusTitle()"
     (onHide)="restoreFocus()"
   >
-    <ng-container
-      *ngTemplateOutlet="panelBody; context: { $implicit: 'season-map-drawer-title' }"
-    />
-  </p-drawer>
-
-  <ng-template #panelBody let-titleId>
-    @if (panel(); as open) {
-      <div
-        class="season-map__pop"
-        [class.season-map__pop--sheet]="titleId === 'season-map-drawer-title'"
-        data-cy="season-map-popover"
-      >
-        <p class="season-map__pop-title" tabindex="-1" [id]="titleId">
+    <!-- The dialog names itself by the id it hands the header template. -->
+    <ng-template pTemplate="header" let-labelledBy="ariaLabelledBy">
+      @if (panel(); as open) {
+        <span class="season-map__pop-title" [id]="labelledBy" tabindex="-1">
           {{ panelTitle(open) }}
-        </p>
+        </span>
+      }
+    </ng-template>
+    @if (panel(); as open) {
+      <div class="season-map__pop" data-cy="season-map-popover">
         @if (open.mode === 'season') {
           <!--
-            The position's techniques first (#1911): what is still to do, what
-            was done once, what is done. They used to be two flat lists under
-            the map — the whole programme reprinted — and a position holds a
-            handful. Each group only when it has something in it.
-          -->
+              The position's techniques first (#1911): what is still to do, what
+              was done once, what is done. They used to be two flat lists under
+              the map — the whole programme reprinted — and a position holds a
+              handful. Each group only when it has something in it.
+            -->
           @let topics = techniquesOf(open.positionId);
           <div class="season-map__techniques" data-cy="season-map-techniques">
             @if (topics.todo.length > 0) {
@@ -314,9 +302,9 @@
                     @for (topic of group.rows; track topic.id) {
                       <li>
                         <!--
-                          Opens who has seen it (#1745). Named by what it shows,
-                          with a hidden lead-in, as the report's rows were.
-                        -->
+                            Opens who has seen it (#1745). Named by what it shows,
+                            with a hidden lead-in, as the report's rows were.
+                          -->
                         <button
                           type="button"
                           class="season-map__topic season-map__topic--action"
@@ -329,9 +317,9 @@
                             }}</span>
                             <span class="season-map__topic-name">{{ topic.name }}</span>
                             <!--
-                              Three lessons to fifteen people and three to four
-                              read the same without this line (#1746).
-                            -->
+                                Three lessons to fifteen people and three to four
+                                read the same without this line (#1746).
+                              -->
                             <span class="season-map__topic-meta">
                               {{
                                 (topic.lessons === 1
@@ -401,10 +389,10 @@
         }
         @if (open.plan; as options) {
           <!--
-            Where a plan can land (#1859): the classes of that week, or of the
-            next two, that may teach this position. Picking one opens the
-            lesson sheet on that day with the position already open.
-          -->
+              Where a plan can land (#1859): the classes of that week, or of the
+              next two, that may teach this position. Picking one opens the
+              lesson sheet on that day with the position already open.
+            -->
           <section class="season-map__plan" data-cy="season-map-plan">
             <h4 class="season-map__group-title">
               {{ 'stats.syllabus.map.planTitle' | translate }}
@@ -442,7 +430,7 @@
         }
       </div>
     }
-  </ng-template>
+  </p-dialog>
 
   <!--
     The lesson sheet the map plans into (#1859): the chosen class and day,

@@ -1,7 +1,6 @@
 import {
   ChangeDetectionStrategy,
   Component,
-  DestroyRef,
   ElementRef,
   Injector,
   afterNextRender,
@@ -18,8 +17,7 @@ import { NgTemplateOutlet } from '@angular/common';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
-import { DrawerModule } from 'primeng/drawer';
-import { Popover, PopoverModule } from 'primeng/popover';
+import { DialogModule } from 'primeng/dialog';
 import { SkeletonModule } from 'primeng/skeleton';
 import type { AcademyClass } from '../../../../core/services/academy-class.service';
 import { TrainingMode } from '../../../../core/services/academy.service';
@@ -110,9 +108,6 @@ const WEEKDAY_KEYS = [
   'weekdays.sun',
 ] as const;
 
-/** Below this the panel is a bottom sheet; the popover is for a wide window. */
-const WIDE_QUERY = '(min-width: 768px)';
-
 /** The two states that carry a tag; a held lesson needs none. */
 const STATE_KEYS: Record<Exclude<CalendarLessonState, 'held'>, string> = {
   planned: 'stats.syllabus.map.state.planned',
@@ -139,8 +134,7 @@ const STATE_KEYS: Record<Exclude<CalendarLessonState, 'held'>, string> = {
     NgTemplateOutlet,
     TranslatePipe,
     ButtonModule,
-    DrawerModule,
-    PopoverModule,
+    DialogModule,
     SkeletonModule,
     LessonSheetComponent,
   ],
@@ -153,7 +147,6 @@ export class SeasonMapComponent {
   private readonly languageService = inject(LanguageService);
   private readonly messages = inject(MessageService);
   private readonly injector = inject(Injector);
-  private readonly destroyRef = inject(DestroyRef);
 
   /** The coverage report's rows: they decide which positions are drawn, and in which order. */
   readonly positions = input.required<readonly CoveragePosition[]>();
@@ -188,26 +181,11 @@ export class SeasonMapComponent {
   protected readonly failed = signal<boolean>(false);
   /** What the panel is showing, or null before anything was opened. */
   protected readonly panel = signal<OpenPanel | null>(null);
-  /** The bottom sheet, the panel's form in a narrow window. */
-  protected readonly drawerOpen = signal<boolean>(false);
-  /** Wide enough for a popover beside the map; below that, a bottom sheet. */
-  protected readonly wide = signal<boolean>(true);
+  /** Whether the panel's sheet is open (#1992: one dialog at every width). */
+  protected readonly panelOpen = signal<boolean>(false);
   /** The lesson being planned from the map, and whether its sheet is open. */
   protected readonly planning = signal<PlanningSlot | null>(null);
   protected readonly planSheetOpen = signal<boolean>(false);
-
-  /**
-   * The bottom sheet is a modal dialog named by its title, as the popover is.
-   * `p-drawer` has no input for either — its panel says `complementary` — so
-   * they go onto the panel through PrimeNG's pass-through.
-   */
-  protected readonly drawerPt = {
-    root: {
-      role: 'dialog',
-      'aria-modal': 'true',
-      'aria-labelledby': 'season-map-drawer-title',
-    },
-  };
 
   private readonly reloadTick = signal<number>(0);
   /**
@@ -216,14 +194,11 @@ export class SeasonMapComponent {
    * every load of the weeks, not ticked.
    */
   private readonly clock = signal<string>(clockOf(new Date()));
-  private readonly popover = viewChild<Popover>('cellPopover');
   private readonly scroller = viewChild<ElementRef<HTMLElement>>('scroller');
   /** Where focus goes back to when the panel closes. */
   private lastTrigger: HTMLElement | null = null;
 
   constructor() {
-    this.watchWidth();
-
     // Keyed on the report's own controls, cancelling the previous read: two
     // quick presses on "previous season" must not paint a stale season.
     effect((onCleanup) => {
@@ -488,8 +463,7 @@ export class SeasonMapComponent {
   }
 
   private close(): void {
-    this.popover()?.hide();
-    this.drawerOpen.set(false);
+    this.panelOpen.set(false);
   }
 
   /** "3 weeks ago" — the shared helper (#1602), as the report's lists used. */
@@ -559,17 +533,13 @@ export class SeasonMapComponent {
     return this.translate.instant('stats.syllabus.map.week', { date: this.shortDate(week) });
   }
 
-  /**
-   * The panel is up: move focus onto its title, as a dialog must. By id, not
-   * by a view query: the same body is stamped into the popover and the sheet.
-   */
+  /** The panel is up: move focus onto its title, as a dialog must. */
   protected focusTitle(): void {
-    const id = this.wide() ? 'season-map-pop-title' : 'season-map-drawer-title';
-    document.getElementById(id)?.focus();
+    document.querySelector<HTMLElement>('.p-dialog .season-map__pop-title')?.focus();
   }
 
   /**
-   * The panel closed. When it took focus with it (Escape, the drawer's own
+   * The panel closed. When it took focus with it (Escape, the sheet's own
    * close), hand it back to the control that opened it; when the reader
    * clicked somewhere else, leave it there.
    */
@@ -604,45 +574,11 @@ export class SeasonMapComponent {
     this.reloadTick.update((n) => n + 1);
   }
 
-  /**
-   * Show the panel for this trigger. A popover already open for another cell
-   * gets the new content and is moved to the new cell: PrimeNG's `show()`
-   * does not re-align a panel that is already visible, so it stayed pinned
-   * to the first cell.
-   */
+  /** Show the panel for this trigger; the sheet is modal, so one at a time. */
   private present(event: Event, panel: OpenPanel): void {
     this.lastTrigger = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
     this.panel.set(panel);
-
-    if (!this.wide()) {
-      this.drawerOpen.set(true);
-      return;
-    }
-
-    const popover = this.popover();
-    if (popover === undefined) return;
-
-    const wasOpen = popover.overlayVisible;
-    popover.show(event);
-    if (wasOpen) {
-      runInInjectionContext(this.injector, () =>
-        afterNextRender(() => {
-          popover.align();
-          this.focusTitle();
-        }),
-      );
-    }
-  }
-
-  /** Track the window's width, so the panel is a popover or a bottom sheet as it should be. */
-  private watchWidth(): void {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
-
-    const query = window.matchMedia(WIDE_QUERY);
-    this.wide.set(query.matches);
-    const onChange = (e: MediaQueryListEvent): void => this.wide.set(e.matches);
-    query.addEventListener('change', onChange);
-    this.destroyRef.onDestroy(() => query.removeEventListener('change', onChange));
+    this.panelOpen.set(true);
   }
 
   private count(what: 'held' | 'planned' | 'unconfirmed', n: number): string {
