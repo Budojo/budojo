@@ -79,7 +79,7 @@ function validationToastKey(fields: Record<string, unknown>): string {
  * Per-athlete payments tab on the detail page (#182 Surface 2).
  * Renders a 12-row table of the current calendar year, one row per
  * month, showing whether a payment row exists. Inline "Mark paid" /
- * "Unmark paid" buttons let the coach record back-payments and undo
+ * "Undo payment" buttons let the coach record back-payments and undo
  * mistakes — the same write path as the athletes-list inline toggle
  * (Surface 1), differs only in that here every month is reachable,
  * not just "this month".
@@ -149,8 +149,21 @@ interface MonthRow {
    * would treble the year's takings on a table people read as a ledger.
    */
   readonly coveredByEarlierPeriod: boolean;
+  /**
+   * A covered month whose period started in a month this table does not show
+   * (#1654): a July quarter reaching into a September season. Its own row is
+   * then the only place this season can undo the payment from, so it keeps
+   * the control the other covered months give up.
+   */
+  readonly periodStartsOffTable: boolean;
   /** How long the covering period is, for the row's "Feb-Apr" caption. */
   readonly periodMonths: number;
+  /**
+   * Unpaid, owed, and before the owner's current month (#1654, PAY-6): late,
+   * not merely unpaid. This month stays "Non pagato" — it is due, not late —
+   * and a month ahead is neither.
+   */
+  readonly overdue: boolean;
 }
 
 @Component({
@@ -222,6 +235,13 @@ export class PaymentsListComponent implements OnInit {
   private readonly nowUtc = new Date();
   private readonly currentYear = this.nowUtc.getUTCFullYear();
   private readonly currentMonth = this.nowUtc.getUTCMonth() + 1;
+  /**
+   * The owner's current month, as an absolute month index, for "late" (#1654).
+   * Their calendar, not UTC's: on the evening of the 31st in Rome the month
+   * has already turned for the owner, and an unpaid month does not become
+   * late at 01:00 on the 1st for them just because UTC is an hour behind.
+   */
+  private readonly ownerMonthIndex = this.nowUtc.getFullYear() * 12 + this.nowUtc.getMonth();
 
   /**
    * The year on screen (#1636, PAY-1).
@@ -480,6 +500,12 @@ export class PaymentsListComponent implements OnInit {
       const month = (absolute % 12) + 1;
       const payment = byAbsolute.get(absolute) ?? null;
       const beforeBillingFloor = floorMonth !== null && absolute < floorMonth;
+      // Why an unpaid month is not a debt, when it is not (#1742, #1757).
+      const notOwedReason = beforeBillingFloor
+        ? 'athletes.detail.payments.beforeBillingFloor'
+        : free
+          ? 'athletes.detail.payments.trainsFree'
+          : null;
       // Read-only when no monthly fee is configured at all — there's nothing
       // to record. While the fee is still unknown the buttons stay live: a
       // click that really has no fee behind it gets the server's 422 and its
@@ -507,14 +533,12 @@ export class PaymentsListComponent implements OnInit {
         // about knowledge, and the owner transcribing a paper register must
         // still be able to record against it.
         beforeBillingFloor,
-        notOwedReason: beforeBillingFloor
-          ? 'athletes.detail.payments.beforeBillingFloor'
-          : free
-            ? 'athletes.detail.payments.trainsFree'
-            : null,
+        notOwedReason,
         coveredByEarlierPeriod:
           payment !== null && !(payment.year === year && payment.month === month),
+        periodStartsOffTable: payment !== null && payment.year * 12 + (payment.month - 1) < first,
         periodMonths: payment?.period_months ?? 1,
+        overdue: payment === null && notOwedReason === null && absolute < this.ownerMonthIndex,
       };
     });
   });
@@ -830,6 +854,22 @@ export class PaymentsListComponent implements OnInit {
         amount: this.formatAmount(tier.amount_cents),
         count: tier.lessons_per_week,
       },
+    );
+  }
+
+  /**
+   * Whether this row carries the undo (#1654, PAY-2). One payment, one
+   * control: on the month its period started, which is where its amount and
+   * date sit — not repeated on every month it also covers, where a ✕ on each
+   * row read as three payments to undo. The exception is a period that
+   * started in a month this table does not show: then a covered row is the
+   * only place this season can undo it from.
+   */
+  protected undoesHere(row: MonthRow): boolean {
+    return (
+      row.canEdit &&
+      row.payment !== null &&
+      (!row.coveredByEarlierPeriod || row.periodStartsOffTable)
     );
   }
 

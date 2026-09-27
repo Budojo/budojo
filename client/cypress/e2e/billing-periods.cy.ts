@@ -65,6 +65,10 @@ const QUARTERLY_FEB = {
 
 describe('A payment that covers a quarter', () => {
   beforeEach(() => {
+    // Early in the fixture's season, so every month after September is ahead
+    // and an unpaid one reads "Unpaid", never "Overdue" (#1654) — whatever
+    // the real calendar says the day CI runs this.
+    cy.clock(new Date(SEASON, 8, 20, 12).getTime(), ['Date']);
     cy.intercept('GET', '/api/v1/academy', ACADEMY_OK).as('academy');
     cy.intercept('GET', '/api/v1/athletes/42', {
       statusCode: 200,
@@ -82,8 +86,13 @@ describe('A payment that covers a quarter', () => {
     cy.visitAuthenticated('/dashboard/athletes/42/payments');
     cy.wait('@payments');
 
-    for (const month of [2, 3, 4]) {
-      cy.get(`[data-cy="payment-row-${month}"]`).scrollIntoView().should('contain', 'Paid');
+    // The month it started in carries the badge; the months it covers say
+    // they are part of it, once (#1654).
+    cy.get('[data-cy="payment-row-2"]').scrollIntoView().should('contain', 'Paid');
+    for (const month of [3, 4]) {
+      cy.get(`[data-cy="payment-row-${month}"]`)
+        .scrollIntoView()
+        .should('contain', 'Part of the February payment');
     }
     cy.get('[data-cy="payment-row-5"]').scrollIntoView().should('contain', 'Unpaid');
   });
@@ -118,9 +127,10 @@ describe('A payment that covers a quarter', () => {
     cy.visitAuthenticated('/dashboard/athletes/42/payments');
     cy.wait('@payments');
 
-    // Clicking unmark on April removes February to April. Norman: show the
-    // consequence before the act, not after.
-    cy.get('[data-cy="payment-unmark-4"]').scrollIntoView().click();
+    // One payment, one undo, on the month it started (#1654) — and it removes
+    // February to April. Norman: show the consequence before the act.
+    cy.get('[data-cy="payment-unmark-4"]').should('not.exist');
+    cy.get('[data-cy="payment-unmark-2"]').scrollIntoView().click();
     cy.get('.p-confirmpopup').should('contain', 'February').and('contain', 'April');
   });
 
@@ -145,8 +155,10 @@ describe('A payment that covers a quarter', () => {
     cy.visitAuthenticated('/dashboard/athletes/42/payments');
     cy.wait('@payments');
 
-    cy.get('[data-cy="payment-row-1"]').scrollIntoView().should('contain', 'Paid');
-    cy.get('[data-cy="payment-row-2"]').should('contain', 'Paid');
+    cy.get('[data-cy="payment-row-1"]')
+      .scrollIntoView()
+      .should('contain', 'Part of the December payment');
+    cy.get('[data-cy="payment-row-2"]').should('contain', 'Part of the December payment');
     cy.get('[data-cy="payment-row-3"]').should('contain', 'Unpaid');
   });
 });

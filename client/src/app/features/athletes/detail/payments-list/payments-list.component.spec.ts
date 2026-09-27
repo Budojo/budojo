@@ -5,6 +5,7 @@ import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import type { Mock } from 'vitest';
+import { TranslateService } from '@ngx-translate/core';
 import { provideI18nTesting } from '../../../../../test-utils/i18n-test';
 import { AcademyService } from '../../../../core/services/academy.service';
 import { AthleteService } from '../../../../core/services/athlete.service';
@@ -427,9 +428,15 @@ describe('PaymentsListComponent — billing periods (#1382)', () => {
   it('marks every month of the period paid, not only the one it started in', () => {
     const { fixture } = setup({ payments: [quarterlyFrom(2)] });
 
-    for (const month of [2, 3, 4]) {
+    // The month it started in carries the badge; the months it covers say
+    // they are part of it (#1654), and none of them is unpaid.
+    expect(fixture.nativeElement.querySelector('[data-cy="payment-row-2"]').textContent).toContain(
+      'Paid',
+    );
+    for (const month of [3, 4]) {
       const row = fixture.nativeElement.querySelector(`[data-cy="payment-row-${month}"]`);
-      expect(row.textContent, `month ${month}`).toContain('Paid');
+      expect(row.textContent, `month ${month}`).toContain('Part of the February payment');
+      expect(row.textContent, `month ${month}`).not.toContain('Unpaid');
     }
     expect(fixture.nativeElement.querySelector('[data-cy="payment-row-5"]').textContent).toContain(
       'Unpaid',
@@ -540,12 +547,12 @@ describe('PaymentsListComponent — billing periods (#1382)', () => {
     const { fixture } = setup({ payments: [payment] });
 
     // December's own row is in THIS table now; January and February
-    // are what this year sees of it.
+    // are what this year sees of it — part of December's payment (#1654).
     for (const month of [1, 2]) {
       expect(
         fixture.nativeElement.querySelector(`[data-cy="payment-row-${month}"]`).textContent,
         `month ${month}`,
-      ).toContain('Paid');
+      ).toContain('Part of the December payment');
     }
     expect(fixture.nativeElement.querySelector('[data-cy="payment-row-3"]').textContent).toContain(
       'Unpaid',
@@ -1107,5 +1114,133 @@ describe('PaymentsListComponent — when the money arrived, and how (#1761)', ()
       'Bank transfer',
     );
     expect(root.querySelector('[data-cy="payment-method-2"]')).toBeNull();
+  });
+});
+
+describe('PaymentsListComponent — a ledger that reads at a glance (#1654)', () => {
+  // February 2027, inside the fixture academy's 2026/27 season: September to
+  // January are behind us, February is this month, March onwards are ahead.
+  beforeEach(() => vi.setSystemTime(new Date(2027, 1, 15, 12)));
+  afterEach(() => vi.useRealTimers());
+
+  const row = (fixture: ReturnType<typeof setup>['fixture'], month: number): HTMLElement =>
+    fixture.nativeElement.querySelector(`[data-cy="payment-row-${month}"]`) as HTMLElement;
+
+  function quarterly(year: number, month: number): AthletePayment {
+    return {
+      id: 7,
+      athlete_id: 42,
+      year,
+      month,
+      period_months: 3,
+      amount_cents: 16500,
+      paid_at: `${year}-${`${month}`.padStart(2, '0')}-05T10:00:00Z`,
+    };
+  }
+
+  describe('an unpaid month in the past is late, not merely unpaid (PAY-6)', () => {
+    it('calls a past unpaid month overdue, and this month unpaid', () => {
+      const { fixture } = setup();
+
+      // January is two weeks late; the owner chasing money needs that word.
+      expect(row(fixture, 1).textContent).toContain('Overdue');
+      expect(row(fixture, 9).textContent).toContain('Overdue');
+      // February is this month: due, not late.
+      expect(row(fixture, 2).textContent).toContain('Unpaid');
+      expect(row(fixture, 2).textContent).not.toContain('Overdue');
+      // March has not come yet.
+      expect(row(fixture, 3).textContent).not.toContain('Overdue');
+    });
+
+    it('never calls a month overdue when nothing is owed for it', () => {
+      const { fixture } = setup({ billingFloor: '2027-01-01' });
+
+      // September to December sit below the floor: no answer, so no accusation.
+      expect(row(fixture, 10).textContent).not.toContain('Overdue');
+      expect(row(fixture, 1).textContent).toContain('Overdue');
+    });
+
+    it('says the same on the phone card', () => {
+      const { fixture } = setup();
+      const card = fixture.nativeElement.querySelector('[data-cy="payment-card-1"]') as HTMLElement;
+
+      expect(card.textContent).toContain('Overdue');
+    });
+  });
+
+  describe('the controls say what they do (PAY-5)', () => {
+    it('labels the mark and the undo instead of a bare tick and cross', () => {
+      const paid: AthletePayment = {
+        id: 1,
+        athlete_id: 42,
+        year: 2027,
+        month: 1,
+        amount_cents: 9500,
+        paid_at: '2027-01-15T00:00:00+00:00',
+      };
+      const { fixture } = setup({ payments: [paid] });
+      const el: HTMLElement = fixture.nativeElement;
+
+      const mark = el.querySelector('[data-cy="payment-mark-2"]') as HTMLElement;
+      const undo = el.querySelector('[data-cy="payment-unmark-1"]') as HTMLElement;
+      expect(mark.textContent?.trim()).toBe('Mark paid');
+      expect(undo.textContent?.trim()).toBe('Undo payment');
+      // A visible label, not an icon standing in for one.
+      expect(mark.querySelector('.p-button-icon-only')).toBeNull();
+      expect(undo.querySelector('.p-button-icon-only')).toBeNull();
+    });
+  });
+
+  describe('one payment reads as one payment (PAY-2)', () => {
+    it('keeps the date, the amount and the undo on the month the period started', () => {
+      const { fixture } = setup({ payments: [quarterly(2026, 10)] });
+
+      expect(row(fixture, 10).textContent).toContain('165');
+      expect(row(fixture, 10).textContent).toContain('5 October 2026');
+      expect(fixture.nativeElement.querySelector('[data-cy="payment-unmark-10"]')).not.toBeNull();
+    });
+
+    it('greys the months it also covers instead of repeating the payment on them', () => {
+      const { fixture } = setup({ payments: [quarterly(2026, 10)] });
+
+      for (const month of [11, 12]) {
+        const r = row(fixture, month);
+        expect(r.classList.contains('payments-list__row--continued'), `month ${month}`).toBe(true);
+        // What the row is, once — not "Paid · — · 5 October" a second time.
+        expect(r.textContent, `month ${month}`).toContain('Part of the October payment');
+        expect(r.textContent, `month ${month}`).not.toContain('5 October 2026');
+        expect(r.querySelector('p-tag'), `month ${month}`).toBeNull();
+        expect(
+          fixture.nativeElement.querySelector(`[data-cy="payment-unmark-${month}"]`),
+          `month ${month}`,
+        ).toBeNull();
+      }
+    });
+
+    it('keeps the undo on a covered month when the month it started in is not in this table', () => {
+      // July's quarter reaches into September: July is last season's table,
+      // so September is the only place this season can undo it from.
+      const { fixture } = setup({ payments: [quarterly(2026, 7)] });
+
+      expect(fixture.nativeElement.querySelector('[data-cy="payment-unmark-9"]')).not.toBeNull();
+    });
+  });
+
+  describe('a period inside a sentence (PAY-7)', () => {
+    it('writes the Italian period in lower case, as the middle of a sentence', () => {
+      const { fixture, component } = setup({ billingPeriodMonths: 3 });
+      TestBed.inject(TranslateService).use('it');
+      const confirmation = fixture.componentRef.injector.get(ConfirmationService);
+      const spy = vi.spyOn(confirmation, 'confirm').mockImplementation(() => confirmation);
+      const event = new MouseEvent('click');
+      Object.defineProperty(event, 'currentTarget', { value: document.createElement('button') });
+
+      const march = component['monthRows']().find((r: { month: number }) => r.month === 3)!;
+      component.confirmToggleRow(event, march);
+
+      const message = spy.mock.calls[0][0].message as string;
+      expect(message).toContain('copre: da marzo a maggio 2027');
+      expect(message).not.toContain('Da ');
+    });
   });
 });

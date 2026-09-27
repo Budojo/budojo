@@ -29,37 +29,40 @@
     gap: 0.5rem;
   }
 
-  // Icon-only action column — narrow enough to keep the row centred on
-  // Month / Status / Amount / Paid on without the action eating layout
-  // weight, but wide enough that the 32-px text-button never touches
-  // the cell wall. The dash placeholder for read-only rows uses the
-  // same slot, keeping vertical rhythm consistent across past, current
-  // AND future months. Canon § 8dp grid + Krug § scan-friendly tables.
+  // The action column shrinks to its labelled button (#1654, PAY-5): "Annulla
+  // pagamento" is the widest thing in it, and a fixed width sized for the old
+  // bare ✓ / ✕ would wrap it.
   &__th-actions {
-    width: 3.5rem;
+    width: 1%;
+    white-space: nowrap;
   }
 
   &__actions {
     text-align: right;
+    white-space: nowrap;
 
-    // Pin every direct child of the actions cell — the icon-only
-    // p-button (when the row is editable) OR the dash placeholder
-    // (when it isn't) — to a 2rem-tall inline-flex box with a
-    // minimum inline size of 2rem. Without this, the bare text-dash
-    // undershoots the button's intrinsic min-height (small icon-only
-    // p-button is ~2rem tall on the Apple-minimal theme) and rows
-    // alternate between two visibly different heights — exactly the
-    // jumpy-grid regression #317 reported. The selector deliberately
-    // catches both <p-button> and <span class="payments-list__dash">
-    // so the cell's content box stays load-bearing for row height
-    // regardless of which child is rendered.
+    // Every direct child — the labelled button, or the dash of a read-only
+    // row — gets the same 48px-tall box, the canon's touch target. Without
+    // it the bare dash undershoots the button and rows alternate between two
+    // heights, the jumpy grid #317 reported.
     & > * {
       display: inline-flex;
       align-items: center;
-      justify-content: center;
-      block-size: 2rem;
-      min-inline-size: 2rem;
+      justify-content: flex-end;
+      min-block-size: 3rem;
     }
+  }
+
+  // A month another month's period covers (#1654, PAY-2): greyed, so one
+  // payment reads as one payment and the eye skips to the months that
+  // still ask for something.
+  &__row--continued > td {
+    color: var(--p-text-muted-color);
+  }
+
+  &__covered {
+    font-size: 0.875rem;
+    color: var(--p-text-muted-color);
   }
 
   &__dash {
@@ -171,6 +174,17 @@ $payments-mobile-breakpoint: 768px;
     margin-left: auto;
     display: flex;
     align-items: center;
+  }
+
+  // A month another month's period covers (#1654, PAY-2): greyed and flat,
+  // so the phone list reads as one payment rather than three.
+  &--continued {
+    background: transparent;
+
+    .payment-card__month {
+      font-weight: 500;
+      color: var(--p-text-muted-color);
+    }
   }
 }
 
