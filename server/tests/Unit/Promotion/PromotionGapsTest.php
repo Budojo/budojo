@@ -682,6 +682,30 @@ it("offers a child's kids' grades as the belt before, by the child's eligibility
         ->and($child['from_belt_options'])->toBe(['white', 'grey', 'yellow']);
 });
 
+it('asks the kids\' rule once, about the belt held, as "Chi promuovere?" does', function (): void {
+    // No date of birth: `KidsEligibility` answers by the belt it is asked
+    // about. Asked about each candidate, an imported adult BJJ blue was
+    // offered the whole kids' ladder, with green preselected (#1974).
+    $byBelt = static fn (Belt $belt, CarbonImmutable $on): bool => ladderFor(MartialArt::Bjj)->isKidsGrade($belt);
+
+    $adult = gapsOf([beltRow(15, null, Belt::Blue, '2026-01-10')], Belt::Blue, 0, MartialArt::Bjj, $byBelt)['gaps'][0];
+    expect($adult['from_belt'])->toBe('white')
+        ->and($adult['from_belt_options'])->toBe(['white']);
+
+    $judoka = gapsOf(
+        [beltRow(9, null, Belt::Black, '2026-01-10')],
+        Belt::Black,
+        0,
+        MartialArt::Judo,
+        static fn (Belt $belt, CarbonImmutable $on): bool => ladderFor(MartialArt::Judo)->isKidsGrade($belt),
+    )['gaps'][0];
+    expect($judoka['from_belt_options'])->toBe(['white', 'yellow', 'orange', 'green', 'blue', 'brown']);
+
+    // A child on a kids' grade still gets the kids' grades before it.
+    $child = gapsOf([beltRow(5, null, Belt::Orange, '2026-01-10')], Belt::Orange, 0, MartialArt::Bjj, $byBelt)['gaps'][0];
+    expect($child['from_belt_options'])->toBe(['white', 'grey', 'yellow']);
+});
+
 it('offers nothing before a completed starting row: it is an ordinary belt row with a date', function (): void {
     // Completing it gave it the belt before and its real day.
     expect(keysOf(gapsOf([beltRow(15, Belt::White, Belt::Blue, '2019-05-01')], Belt::Blue, 0)))->toBe([]);

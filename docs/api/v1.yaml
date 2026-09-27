@@ -6504,8 +6504,9 @@ paths:
         `from_belt` needs no further check; any other `from_belt`, or a row
         with no such gap, must fit the belt rows around it (the row itself
         excluded). A gap with `from_belt_options` (a starting row that opens
-        the history, #1974) accepts only one of them: another belt is a 422
-        on `from_belt`.
+        the history, #1974) accepts any one of them inside its window, with
+        no further check (nothing precedes the row, and its own belt does not
+        change); another belt is a 422 on `from_belt`.
 
         403 when the promotion does not belong to the athlete in the path.
       operationId: athletePromotionUpdateRecordedAt

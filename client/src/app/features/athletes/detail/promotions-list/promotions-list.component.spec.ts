@@ -1470,5 +1470,64 @@ describe('PromotionsListComponent — a history that opens on its starting row (
       expect(c.completionOffer()).toBeNull();
       expect(ctx.svc.createPromotion).toHaveBeenCalledTimes(1);
     });
+
+    it('stays out of the way for a date the opening row could not take', () => {
+      // After the day he was entered on black, the server would refuse the
+      // completion: the offer would only lead to a 422.
+      const ctx = judoka();
+      const c = ctx.component as unknown as Internals;
+      c.openCreateDialog();
+      ctx.fixture.detectChanges();
+      c.createForm.patchValue({
+        kind: 'belt',
+        recorded_at: new Date(2026, 7, 1),
+        from_belt: 'brown',
+        to_belt: 'black',
+      });
+      c.confirmCreate();
+
+      expect(c.completionOffer()).toBeNull();
+      expect(ctx.svc.createPromotion).toHaveBeenCalledTimes(1);
+    });
+
+    it('never swaps the typed belt before for the suggestion', () => {
+      // "First belt" is not one of the options: completing with brown would
+      // record something the owner never typed.
+      const ctx = judoka();
+      const c = ctx.component as unknown as Internals;
+      c.openCreateDialog();
+      ctx.fixture.detectChanges();
+      c.createForm.patchValue({
+        kind: 'belt',
+        recorded_at: new Date(2015, 4, 1),
+        from_belt: null,
+        to_belt: 'black',
+      });
+      c.confirmCreate();
+
+      expect(c.completionOffer()).toBeNull();
+      expect(ctx.svc.completeOpeningPromotion).not.toHaveBeenCalled();
+      expect(ctx.svc.createPromotion).toHaveBeenCalledTimes(1);
+    });
+
+    it('completes with the listed belt the owner typed, not the suggestion', () => {
+      const ctx = judoka();
+      const c = ctx.component as unknown as Internals;
+      c.openCreateDialog();
+      ctx.fixture.detectChanges();
+      c.createForm.patchValue({
+        kind: 'belt',
+        recorded_at: new Date(2015, 4, 1),
+        from_belt: 'blue',
+        to_belt: 'black',
+      });
+      c.confirmCreate();
+      c.confirmCompletion();
+
+      expect(ctx.svc.completeOpeningPromotion).toHaveBeenCalledWith(7, 9, {
+        recorded_at: '2015-05-01',
+        from_belt: 'blue',
+      });
+    });
   });
 });

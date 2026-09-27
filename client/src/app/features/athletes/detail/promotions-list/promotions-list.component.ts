@@ -485,7 +485,10 @@ export class PromotionsListComponent implements OnInit {
 
     // The belt an opening row stands for, typed in by hand: offer to
     // complete that row before writing a second one (#1974).
-    const completing = payload.kind === 'belt' ? this.completingStepFor(payload.to_belt) : null;
+    const completing =
+      payload.kind === 'belt'
+        ? this.completingStepFor(payload.to_belt, payload.from_belt, v.recorded_at)
+        : null;
     if (completing !== null) {
       this.completionOffer.set(completing);
       return;
@@ -494,13 +497,19 @@ export class PromotionsListComponent implements OnInit {
     this.postCreate(payload);
   }
 
-  /** "Completa quella riga": the offer taken — the opening row gets the date and the belt before. */
+  /**
+   * "Completa quella riga": the offer taken — the opening row gets the date
+   * and exactly the belt before the owner typed, which the offer only ever
+   * appears for when the server would take it.
+   */
   protected confirmCompletion(): void {
     const offer = this.completionOffer();
     const v = this.createForm.getRawValue();
-    if (offer === null || v.recorded_at === null || this.creating()) return;
+    if (offer === null || v.recorded_at === null || v.from_belt === null || this.creating()) {
+      return;
+    }
 
-    this.saveFilled(offer, toIsoDate(v.recorded_at), this.chosenFromBelt(offer, v.from_belt));
+    this.saveFilled(offer, toIsoDate(v.recorded_at), v.from_belt);
   }
 
   /** "Aggiungine comunque una seconda": a register transcribed row by row (#1771). */
@@ -514,9 +523,23 @@ export class PromotionsListComponent implements OnInit {
     this.postCreate(payload);
   }
 
-  /** The step that completes the opening row standing for this belt, if the history has one. */
-  private completingStepFor(belt: Belt): PromotionGap | null {
-    return this.gaps().find((g) => g.completes_promotion_id !== null && g.belt === belt) ?? null;
+  /**
+   * The step that completes the opening row standing for this belt — only
+   * when the row as typed is one the server would take as that completion:
+   * dated inside the step's window, and from a belt it accepts (one of its
+   * options, or the one a known row already says). Anything else is not
+   * that completion, and the offer would only lead to a 422 or record a belt
+   * the owner never typed.
+   */
+  private completingStepFor(belt: Belt, fromBelt: Belt | null, on: Date): PromotionGap | null {
+    const gap = this.gaps().find((g) => g.completes_promotion_id !== null && g.belt === belt);
+    if (gap === undefined || fromBelt === null) return null;
+
+    const accepted = gap.from_belt_options ?? (gap.from_belt === null ? [] : [gap.from_belt]);
+    const window = this.windowOf(gap);
+    const inWindow = (window.min === null || on >= window.min) && on <= window.max;
+
+    return accepted.includes(fromBelt) && inWindow ? gap : null;
   }
 
   /**

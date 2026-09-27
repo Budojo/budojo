@@ -647,6 +647,13 @@ final class PromotionGaps
      * The belts an athlete can hold before this one, in the order people
      * climb them: the kids' grades only when they were the athlete's to climb.
      *
+     * The kids' rule is asked **once, about the belt held** — the starting
+     * row's own, on its day — as "Chi promuovere?" asks it about the athlete's
+     * belt (#1841). Asked about each candidate instead, an athlete with no
+     * date of birth reads as a child on every kids' grade (the rule falls back
+     * to the belt it is asked about), and an imported adult blue was offered
+     * the whole kids' ladder with green suggested.
+     *
      * @return list<Belt>
      */
     private function beltsBefore(Belt $belt, CarbonImmutable $on): array
@@ -656,10 +663,11 @@ final class PromotionGaps
             return [];
         }
 
+        $child = ($this->kidsEligible)($belt, $on);
         $before = array_values(array_filter(
             $this->ladder->belts(),
             fn (Belt $candidate): bool => ($this->ladder->climbPosition($candidate) ?? $there) < $there
-                && (! $this->ladder->isKidsGrade($candidate) || ($this->kidsEligible)($candidate, $on)),
+                && ($child || ! $this->ladder->isKidsGrade($candidate)),
         ));
         usort($before, fn (Belt $a, Belt $b): int => $this->ladder->climbPosition($a) <=> $this->ladder->climbPosition($b));
 
