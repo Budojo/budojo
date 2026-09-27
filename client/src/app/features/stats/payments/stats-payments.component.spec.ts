@@ -63,6 +63,19 @@ describe('StatsPaymentsComponent', () => {
     expect(box?.style.height).toBe('100%');
   });
 
+  it("puts the month's tiles before the chart's own header, not under it (#1759)", () => {
+    // Between the header and the chart, "Monthly revenue · last 12 months"
+    // read as the title of the four this-month figures.
+    fixture.detectChanges();
+    const section = (fixture.nativeElement as HTMLElement).querySelector(
+      '[data-cy="stats-payments"]',
+    );
+    const order = Array.from(section?.children ?? []).map((el) => el.tagName.toLowerCase());
+
+    expect(order.indexOf('app-payments-summary')).toBeLessThan(order.indexOf('header'));
+    http.expectOne('/api/v1/stats/payments/monthly?months=12').flush({ data: [] });
+  });
+
   it('shows the loading skeleton while fetching', () => {
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('[data-cy="stats-payments-loading"]')).toBeTruthy();

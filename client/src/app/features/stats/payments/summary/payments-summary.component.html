@@ -1,0 +1,59 @@
+@if (show()) {
+  <section class="summary" data-cy="summary">
+    @if (errored()) {
+      <p class="summary__error" data-cy="summary-error">
+        {{ 'stats.payments.summary.errored' | translate }}
+      </p>
+    } @else {
+      <!-- The labels and the hint are static text, so they render in both
+           states: only the figures wait for the server, and nothing below
+           moves when they arrive. -->
+      <ul
+        class="summary__tiles"
+        [attr.data-cy]="loading() ? 'summary-loading' : null"
+        [attr.aria-busy]="loading()"
+      >
+        <li class="summary__tile" data-cy="summary-expected">
+          <span class="summary__label">{{
+            'stats.payments.summary.expectedLabel' | translate
+          }}</span>
+          @if (view(); as v) {
+            <span class="summary__number">{{ v.expected }}</span>
+          } @else {
+            <p-skeleton width="80%" height="1.8rem" />
+          }
+        </li>
+        <li class="summary__tile" data-cy="summary-collected">
+          <span class="summary__label">{{
+            'stats.payments.summary.collectedLabel' | translate
+          }}</span>
+          @if (view(); as v) {
+            <span class="summary__number">{{ v.collected }}</span>
+          } @else {
+            <p-skeleton width="80%" height="1.8rem" />
+          }
+        </li>
+        <li class="summary__tile" data-cy="summary-rate">
+          <span class="summary__label">{{ 'stats.payments.summary.rateLabel' | translate }}</span>
+          @if (view(); as v) {
+            <span class="summary__number">{{ v.rate }}</span>
+          } @else {
+            <p-skeleton width="50%" height="1.8rem" />
+          }
+        </li>
+        <li class="summary__tile" data-cy="summary-outstanding">
+          @if (view(); as v) {
+            <span class="summary__total">{{ v.outstanding }}</span>
+          } @else {
+            <p-skeleton
+              width="90%"
+              height="1.8rem"
+              [attr.aria-label]="'stats.payments.summary.loading' | translate"
+            />
+          }
+        </li>
+      </ul>
+      <p class="summary__hint">{{ 'stats.payments.summary.hint' | translate }}</p>
+    }
+  </section>
+}

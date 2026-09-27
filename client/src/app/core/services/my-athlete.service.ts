@@ -15,10 +15,10 @@ import { environment } from '../../../environments/environment';
  * The `state()` discovery call hits the dedicated `/state` endpoint
  * (#761). The previous implementation walked one page of
  * `/api/v1/athletes` looking for an `is_self === true` row — but the
- * athletes index ignores `per_page` and always paginates 20 items, so
- * on academies with a roster larger than 20 the self-row could sit on
- * a later page and the toggle would silently report `enrolled: false`
- * (Copilot review on #754). The dedicated endpoint queries the
+ * athletes index then ignored `per_page` and always paginated 20 items
+ * (it accepts one since #1930, capped at 200), so on academies with a
+ * roster larger than 20 the self-row could sit on a later page and the
+ * toggle would silently report `enrolled: false` (Copilot review on #754). The dedicated endpoint queries the
  * (academy_id, user_id, is_self=true) tuple directly so the result is
  * unambiguous regardless of roster size.
  */

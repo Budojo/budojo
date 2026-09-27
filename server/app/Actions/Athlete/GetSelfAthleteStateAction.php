@@ -16,11 +16,11 @@ use App\Models\User;
  *
  * The previous implementation (`MyAthleteService::state()` consumer)
  * walked one page of `GET /api/v1/athletes` looking for a row with
- * `is_self === true`. `AthleteController@index` ignores the `per_page`
- * query parameter and always paginates 20 items, so on academies with
- * a roster larger than 20 the self-row could be off the first page
- * and the toggle would silently report `enrolled: false` (#761,
- * Copilot review on #754).
+ * `is_self === true`. `AthleteController@index` then ignored the
+ * `per_page` query parameter and always paginated 20 items (it accepts
+ * one since #1930, capped at 200), so on academies with a roster larger
+ * than 20 the self-row could be off the first page and the toggle would
+ * silently report `enrolled: false` (#761, Copilot review on #754).
  *
  * This Action narrows the lookup to (academy_id, user_id, is_self=true)
  * directly — there is at most one such row per (academy, user) so the

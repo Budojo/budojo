@@ -18,10 +18,11 @@ import { AcademyService } from '../../../core/services/academy.service';
 import { triggerBrowserDownload } from '../../../shared/utils/download';
 import { MonthlyPaymentsBucket, StatsService } from '../../../core/services/stats.service';
 import { LanguageService } from '../../../core/services/language.service';
-import { localeFor } from '../../../shared/utils/locale';
+import { formatMoney } from '../../../shared/utils/money';
 import { ErrorStateComponent } from '../../../shared/components/error-state/error-state.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { PaymentsArrearsComponent } from './arrears/payments-arrears.component';
+import { PaymentsSummaryComponent } from './summary/payments-summary.component';
 
 /** A season the accountant's file can be asked for: the year it starts in, and its name. */
 interface ExportSeason {
@@ -54,6 +55,7 @@ function previousSeason(current: ExportSeason): ExportSeason {
     ErrorStateComponent,
     EmptyStateComponent,
     PaymentsArrearsComponent,
+    PaymentsSummaryComponent,
   ],
   templateUrl: './stats-payments.component.html',
   styleUrl: './stats-payments.component.scss',
@@ -72,21 +74,15 @@ export class StatsPaymentsComponent {
   protected readonly currency = computed(() => this.buckets()[0]?.currency ?? 'EUR');
 
   /**
-   * Money, written as money (#1549).
-   *
-   * The chart drew bare floats — hovering a bar gave `17.61`, and the owner's
-   * question was the right one: seventeen WHAT? The currency arrives on every
-   * bucket and was computed here from the first release, and then never
-   * rendered; this is the one line that was missing.
-   *
-   * `Intl` rather than a hand-rolled `€` prefix: the symbol's side and the
-   * decimal separator both move with the language, and Italian writes
-   * `2.560,00 €` where English writes `€2,560.00`.
+   * Money, written as money (#1549): the chart drew bare floats, and the
+   * owner's question was the right one — seventeen WHAT? One formatter for
+   * the whole page (#1759), so the bars, the month's tiles and the arrears
+   * list write the same sum the same way.
    */
   private readonly money = computed(() => {
-    const locale = localeFor(this.languageService.currentLang());
+    const lang = this.languageService.currentLang();
     const currency = this.currency();
-    return (value: number): string => value.toLocaleString(locale, { style: 'currency', currency });
+    return (value: number): string => formatMoney(value, currency, lang);
   });
 
   protected readonly isEmpty = computed(() => this.buckets().every((b) => b.amount_cents === 0));

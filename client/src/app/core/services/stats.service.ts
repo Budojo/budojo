@@ -16,6 +16,27 @@ export interface ArrearsRow {
   readonly owed_cents: number;
 }
 
+/**
+ * One month's money (#1758), as `GET /stats/payments/summary` sends it.
+ *
+ * `collected_cents` is exactly the chart's bucket for the same month, so a
+ * tile and the bar it sits above can never disagree. `collection_rate` is
+ * null when nothing was expected — read it, never divide the two figures
+ * here, or the zero case prints `NaN%`.
+ */
+export interface PaymentsSummary {
+  readonly year: number;
+  readonly month: number;
+  readonly currency: string;
+  readonly expected_cents: number;
+  readonly collected_cents: number;
+  readonly outstanding_count: number;
+  readonly outstanding_cents: number;
+  readonly collection_rate: number | null;
+  /** True for any month but the current one: read against today's roster. */
+  readonly estimated: boolean;
+}
+
 export interface DailyAttendancePoint {
   readonly date: string; // 'YYYY-MM-DD'
   readonly count: number;
@@ -359,6 +380,20 @@ export class StatsService {
   paymentsArrears(): Observable<readonly ArrearsRow[]> {
     return this.http
       .get<{ data: ArrearsRow[] }>(`${environment.apiBase}/api/v1/stats/payments/arrears`)
+      .pipe(map((r) => r.data));
+  }
+
+  /**
+   * One month's expected, collected and outstanding money (#1758). With no
+   * arguments the server answers for the current month — the owner's month,
+   * not the browser's guess at it.
+   */
+  paymentsSummary(year?: number, month?: number): Observable<PaymentsSummary> {
+    const query = year !== undefined && month !== undefined ? `?year=${year}&month=${month}` : '';
+    return this.http
+      .get<{ data: PaymentsSummary }>(
+        `${environment.apiBase}/api/v1/stats/payments/summary${query}`,
+      )
       .pipe(map((r) => r.data));
   }
 

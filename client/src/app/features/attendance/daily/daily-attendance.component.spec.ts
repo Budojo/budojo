@@ -2,6 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { MessageService } from 'primeng/api';
 import { AcademyClass } from '../../../core/services/academy-class.service';
 import { AcademyService } from '../../../core/services/academy.service';
 import { Athlete } from '../../../core/services/athlete.service';
@@ -101,6 +102,22 @@ function flushInit(
     .flush({ data: opts.presentRecords ?? [] });
 }
 
+/**
+ * An empty class with an earlier one that day also reads the earlier one, to
+ * offer bringing its room over (#1930). A test about something else settles
+ * that read, answered empty, so its own requests are the only ones left.
+ */
+function flushCarryOver(httpMock: HttpTestingController, earlierClassId: number): void {
+  httpMock
+    .expectOne(
+      (r) =>
+        r.url === '/api/v1/attendance' &&
+        r.method === 'GET' &&
+        r.params.get('academy_class_id') === String(earlierClassId),
+    )
+    .flush({ data: [] });
+}
+
 /** An empty first page — the sort specs only care about the request. */
 function emptyPage() {
   return {
@@ -134,17 +151,16 @@ describe('DailyAttendanceComponent', () => {
     expect(component['loading']()).toBe(false);
   });
 
-  it('never tells a roster longer than a page about a milestone (#1937)', () => {
+  it('never tells a roster longer than twenty about a milestone (#1937)', () => {
     const { fixture, httpMock } = setup();
     fixture.detectChanges();
     flushInit(httpMock, {
-      athletes: Array.from({ length: 20 }, (_, i) => makeAthlete({ id: i + 1 })),
-      meta: { total: 25 },
+      athletes: Array.from({ length: 25 }, (_, i) => makeAthlete({ id: i + 1 })),
     });
     fixture.detectChanges();
 
-    // The paginator already says where the other five are; the note that
-    // used to sit under it named an internal milestone ("M4.2.5").
+    // The note that used to sit under a long roster named an internal
+    // milestone ("M4.2.5"); since #1930 the whole roster is on one page.
     const page = fixture.nativeElement as HTMLElement;
     expect(page.querySelector('.attendance__pagination-hint')).toBeNull();
     expect(page.textContent).not.toContain('M4.2.5');
@@ -660,194 +676,84 @@ describe('DailyAttendanceComponent', () => {
     httpMock.match((r) => r.url === '/api/v1/athletes')[0].flush(emptyPage());
   });
 
-  // ─── Pagination (#527) ─────────────────────────────────────────────────────
-  // Daily attendance reuses the SAME paginated /api/v1/athletes endpoint as
-  // athletes-list, so it must walk the same pagination path. Without it,
-  // sorting a roster of > 20 athletes by belt rank pinned the user to page 1
-  // — the entire blue+ tier silently disappeared because the first 20 rows
-  // were exhausted by white belts (Luigi's bug report).
+  // ─── The whole roster on one page (#1930) ──────────────────────────────────
+  // Twelve people arrive in five minutes, and half of a 40-athlete room used
+  // to sit on page 2: every name meant paging back and forth at the door. The
+  // check-in asks for every active athlete at once; the roster keeps its 20.
 
-  it('forwards page=N to the athletes endpoint when onPageChange runs', () => {
-    const { fixture, component, httpMock } = setup();
+  it('asks for the whole active roster on one page', () => {
+    const { fixture, httpMock } = setup();
     fixture.detectChanges();
-    flushInit(httpMock, {});
 
-    // PrimeNG's <p-table> emits {first, rows} on (onPage). first=20 + rows=20
-    // means "page 2" in 1-indexed terms.
-    component['onPageChange']({ first: 20, rows: 20 });
-
-    httpMock
-      .expectOne((r) => r.url === '/api/v1/athletes' && r.params.get('page') === '2')
-      .flush({
-        data: [],
-        links: { first: null, last: null, prev: null, next: null },
-        meta: {
-          current_page: 2,
-          from: null,
-          last_page: 2,
-          path: '',
-          per_page: 20,
-          to: null,
-          total: 25,
-        },
-      });
-    // Pagination is roster-only — attendance records for the date are
-    // unchanged across pages, so no /api/v1/attendance re-hit.
-    httpMock.expectNone((r) => r.url === '/api/v1/attendance');
-
-    expect(component['first']()).toBe(20);
+    const req = httpMock.expectOne((r) => r.url === '/api/v1/athletes');
+    expect(req.request.params.get('per_page')).toBe('200');
+    expect(req.request.params.get('page')).toBeNull();
   });
 
-  it('resets to page 1 when the search term changes', () => {
+  it('draws no paginator, however long the room', () => {
+    const { fixture, component, httpMock } = setup();
+    fixture.detectChanges();
+    flushInit(httpMock, {
+      athletes: Array.from({ length: 45 }, (_, i) => makeAthlete({ id: i + 1 })),
+    });
+    fixture.detectChanges();
+
+    const page = fixture.nativeElement as HTMLElement;
+    expect(component['athletes']().length).toBe(45);
+    expect(page.querySelector('.p-paginator')).toBeNull();
+    expect(page.querySelectorAll('[data-cy^="attendance-row-"]').length).toBe(45);
+  });
+
+  it('keeps asking for the whole roster when the search, the belt or the sort changes', () => {
     const { fixture, component, httpMock } = setup();
     fixture.detectChanges();
     flushInit(httpMock, {});
 
-    // Land on page 3 first.
-    component['onPageChange']({ first: 40, rows: 20 });
-    httpMock
-      .expectOne((r) => r.url === '/api/v1/athletes' && r.params.get('page') === '3')
-      .flush({
-        data: [],
-        links: { first: null, last: null, prev: null, next: null },
-        meta: {
-          current_page: 3,
-          from: null,
-          last_page: 3,
-          path: '',
-          per_page: 20,
-          to: null,
-          total: 50,
-        },
-      });
-
-    // Now searching should bounce back to page 1 — otherwise a filter that
-    // matches fewer than 41 rows leaves us on an empty phantom page.
     component['applySearch']('mario');
-
-    httpMock
-      .expectOne(
-        (r) =>
-          r.url === '/api/v1/athletes' &&
-          r.params.get('q') === 'mario' &&
-          // Page 1 is the implicit default — the service omits the param when
-          // page === 1, so we assert the absence of the `page` query param.
-          r.params.get('page') === null,
-      )
-      .flush({
-        data: [],
-        links: { first: null, last: null, prev: null, next: null },
-        meta: {
-          current_page: 1,
-          from: null,
-          last_page: 1,
-          path: '',
-          per_page: 20,
-          to: null,
-          total: 0,
-        },
-      });
-
-    expect(component['first']()).toBe(0);
-  });
-
-  it('resets to page 1 when the belt filter changes', () => {
-    const { fixture, component, httpMock } = setup();
-    fixture.detectChanges();
-    flushInit(httpMock, {});
-
-    component['onPageChange']({ first: 40, rows: 20 });
-    httpMock
-      .expectOne((r) => r.url === '/api/v1/athletes' && r.params.get('page') === '3')
-      .flush({
-        data: [],
-        links: { first: null, last: null, prev: null, next: null },
-        meta: {
-          current_page: 3,
-          from: null,
-          last_page: 3,
-          path: '',
-          per_page: 20,
-          to: null,
-          total: 50,
-        },
-      });
+    const search = httpMock.expectOne((r) => r.url === '/api/v1/athletes');
+    expect(search.request.params.get('per_page')).toBe('200');
+    expect(search.request.params.get('q')).toBe('mario');
+    search.flush(emptyPage());
 
     component['onBeltChange']('blue');
+    const belt = httpMock.expectOne((r) => r.url === '/api/v1/athletes');
+    expect(belt.request.params.get('per_page')).toBe('200');
+    belt.flush(emptyPage());
 
-    httpMock
-      .expectOne(
-        (r) =>
-          r.url === '/api/v1/athletes' &&
-          r.params.get('belt') === 'blue' &&
-          r.params.get('page') === null,
-      )
-      .flush({
-        data: [],
-        links: { first: null, last: null, prev: null, next: null },
-        meta: {
-          current_page: 1,
-          from: null,
-          last_page: 1,
-          path: '',
-          per_page: 20,
-          to: null,
-          total: 0,
-        },
-      });
-
-    expect(component['first']()).toBe(0);
+    component['cycleBeltSort']();
+    const sort = httpMock.expectOne((r) => r.url === '/api/v1/athletes');
+    expect(sort.request.params.get('per_page')).toBe('200');
+    expect(sort.request.params.get('page')).toBeNull();
+    sort.flush(emptyPage());
   });
 
-  it('resets to page 1 when the sort header is clicked (the bug)', () => {
-    const { fixture, component, httpMock } = setup();
+  it('says so when the roster is past what one page carries, and points to the search', () => {
+    const { fixture, httpMock } = setup();
     fixture.detectChanges();
-    flushInit(httpMock, {});
+    flushInit(httpMock, {
+      athletes: Array.from({ length: 200 }, (_, i) => makeAthlete({ id: i + 1 })),
+      meta: { total: 230 },
+    });
+    fixture.detectChanges();
 
-    component['onPageChange']({ first: 40, rows: 20 });
-    httpMock
-      .expectOne((r) => r.url === '/api/v1/athletes' && r.params.get('page') === '3')
-      .flush({
-        data: [],
-        links: { first: null, last: null, prev: null, next: null },
-        meta: {
-          current_page: 3,
-          from: null,
-          last_page: 3,
-          path: '',
-          per_page: 20,
-          to: null,
-          total: 50,
-        },
-      });
+    const note = (fixture.nativeElement as HTMLElement).querySelector(
+      '[data-cy="attendance-truncated"]',
+    );
+    expect(note?.textContent).toContain('200');
+    expect(note?.textContent).toContain('230');
+  });
 
-    // Belt sort from page 3 must bounce to page 1 — otherwise a sort that
-    // changes the row order leaves us on a stale slice.
-    component['cycleBeltSort']();
+  it('says nothing about the page when the whole roster is on it', () => {
+    const { fixture, httpMock } = setup();
+    fixture.detectChanges();
+    flushInit(httpMock, {
+      athletes: Array.from({ length: 45 }, (_, i) => makeAthlete({ id: i + 1 })),
+    });
+    fixture.detectChanges();
 
-    httpMock
-      .expectOne(
-        (r) =>
-          r.url === '/api/v1/athletes' &&
-          r.params.get('sort_by') === 'belt' &&
-          r.params.get('sort_order') === 'asc' &&
-          r.params.get('page') === null,
-      )
-      .flush({
-        data: [],
-        links: { first: null, last: null, prev: null, next: null },
-        meta: {
-          current_page: 1,
-          from: null,
-          last_page: 1,
-          path: '',
-          per_page: 20,
-          to: null,
-          total: 0,
-        },
-      });
-
-    expect(component['first']()).toBe(0);
+    expect(
+      (fixture.nativeElement as HTMLElement).querySelector('[data-cy="attendance-truncated"]'),
+    ).toBeNull();
   });
 
   it('mobile filter sheet hosts the same Belt control and resetFilters clears the signal (#711)', () => {
@@ -971,6 +877,7 @@ describe('DailyAttendanceComponent', () => {
       const { fixture, component, httpMock } = setup();
       fixture.detectChanges();
       flushInit(httpMock, { classes: [KIDS, FUNDAMENTALS] });
+      flushCarryOver(httpMock, KIDS.id);
 
       component['selectClass'](KIDS.id);
       const records = httpMock.expectOne((r) => r.url === '/api/v1/attendance');
@@ -1008,6 +915,7 @@ describe('DailyAttendanceComponent', () => {
       const { fixture, component, httpMock } = setup();
       fixture.detectChanges();
       flushInit(httpMock, { classes: [KIDS, FUNDAMENTALS] });
+      flushCarryOver(httpMock, KIDS.id);
 
       component['selectClass'](KIDS.id);
 
@@ -1060,6 +968,7 @@ describe('DailyAttendanceComponent', () => {
       const { fixture, component, httpMock } = setup();
       fixture.detectChanges();
       flushInit(httpMock, { classes: [KIDS, FUNDAMENTALS, ADVANCED] });
+      flushCarryOver(httpMock, KIDS.id);
       const before = component['selectedDate']();
 
       component['onDateChanged'](null);
@@ -1123,6 +1032,7 @@ describe('DailyAttendanceComponent', () => {
       const { fixture, component, httpMock } = setup();
       fixture.detectChanges();
       flushInit(httpMock, { athletes: [makeAthlete({ id: 1 })], classes: [KIDS, FUNDAMENTALS] });
+      flushCarryOver(httpMock, KIDS.id);
 
       component['togglePresent'](makeAthlete({ id: 1 })); // POST pending
       component['selectClass'](KIDS.id);
@@ -1149,6 +1059,375 @@ describe('DailyAttendanceComponent', () => {
 
       expect(component['loading']()).toBe(false);
       expect(component['dayClasses']()).toEqual([]);
+    });
+
+    // ─── Bringing the earlier class over (#1930) ───────────────────────────
+    // At 20:00, seven of the twelve from 19:00 stay on. The earlier room is
+    // already on the register; one button copies it into the empty class.
+
+    /** Init flushed with the selected class empty; the earlier class's read handed back. */
+    function flushToCarryOver(
+      httpMock: HttpTestingController,
+      athletes: Athlete[] = [makeAthlete({ id: 1 }), makeAthlete({ id: 2, first_name: 'Luigi' })],
+    ) {
+      flushInit(httpMock, { athletes, classes: [KIDS, FUNDAMENTALS] });
+      return httpMock.expectOne(
+        (r) =>
+          r.url === '/api/v1/attendance' &&
+          r.method === 'GET' &&
+          r.params.get('academy_class_id') === String(KIDS.id),
+      );
+    }
+
+    const carryButton = (fixture: Harness['fixture']): HTMLButtonElement | null =>
+      (fixture.nativeElement as HTMLElement).querySelector(
+        '[data-cy="attendance-carry-over"] button',
+      );
+
+    it('offers the earlier class when this one is empty and that one had people', () => {
+      const { fixture, httpMock } = setup();
+      fixture.detectChanges();
+      flushToCarryOver(httpMock).flush({
+        data: [
+          { id: 7, athlete_id: 1, lesson_id: 3, attended_on: '2026-09-14' },
+          { id: 8, athlete_id: 2, lesson_id: 3, attended_on: '2026-09-14' },
+        ],
+      });
+      fixture.detectChanges();
+
+      const offer = (fixture.nativeElement as HTMLElement).querySelector(
+        '[data-cy="attendance-carry"]',
+      );
+      expect(carryButton(fixture)?.textContent).toContain('17:00');
+      expect(offer?.textContent).toContain('2');
+    });
+
+    it('offers nothing when the earlier class was empty', () => {
+      const { fixture, httpMock } = setup();
+      fixture.detectChanges();
+      flushToCarryOver(httpMock).flush({ data: [] });
+      fixture.detectChanges();
+
+      expect(carryButton(fixture)).toBeNull();
+    });
+
+    it('does not even ask about the earlier class when this one already has people', () => {
+      const { fixture, httpMock } = setup();
+      fixture.detectChanges();
+      flushInit(httpMock, {
+        athletes: [makeAthlete({ id: 1 })],
+        classes: [KIDS, FUNDAMENTALS],
+        presentRecords: [{ id: 5, athlete_id: 1, attended_on: '2026-09-14' }],
+      });
+      fixture.detectChanges();
+
+      httpMock.expectNone(
+        (r) => r.url === '/api/v1/attendance' && r.params.get('academy_class_id') === '1',
+      );
+      expect(carryButton(fixture)).toBeNull();
+    });
+
+    it('has nothing to offer on the first class of the day', () => {
+      const { fixture, component, httpMock } = setup();
+      fixture.detectChanges();
+      flushInit(httpMock, { classes: [KIDS, FUNDAMENTALS] });
+      // The read for 19:00's earlier class, answered empty, then a tap on 17:00.
+      httpMock
+        .expectOne(
+          (r) => r.url === '/api/v1/attendance' && r.params.get('academy_class_id') === '1',
+        )
+        .flush({ data: [] });
+
+      component['selectClass'](KIDS.id);
+      httpMock
+        .expectOne(
+          (r) => r.url === '/api/v1/attendance' && r.params.get('academy_class_id') === '1',
+        )
+        .flush({ data: [] });
+      fixture.detectChanges();
+
+      // Nothing before 17:00: no second read, no button.
+      httpMock.expectNone((r) => r.url === '/api/v1/attendance' && r.method === 'GET');
+      expect(carryButton(fixture)).toBeNull();
+    });
+
+    it('marks the whole earlier room in one request, and Undo takes them all back', () => {
+      const { fixture, component, httpMock } = setup();
+      const messages = fixture.debugElement.injector.get(MessageService);
+      const add = vi.spyOn(messages, 'add');
+      fixture.detectChanges();
+      flushToCarryOver(httpMock).flush({
+        data: [
+          { id: 7, athlete_id: 1, lesson_id: 3, attended_on: '2026-09-14' },
+          { id: 8, athlete_id: 2, lesson_id: 3, attended_on: '2026-09-14' },
+        ],
+      });
+      fixture.detectChanges();
+
+      carryButton(fixture)!.click();
+
+      const post = httpMock.expectOne((r) => r.url === '/api/v1/attendance' && r.method === 'POST');
+      expect(post.request.body).toEqual({
+        date: '2026-09-14',
+        athlete_ids: [1, 2],
+        academy_class_id: FUNDAMENTALS.id,
+      });
+      // Optimistic: both rows flip before the server answers.
+      expect(component['isPresent'](1)).toBe(true);
+      expect(component['isPresent'](2)).toBe(true);
+      post.flush({
+        data: [
+          { id: 20, athlete_id: 1, lesson_id: 9, attended_on: '2026-09-14' },
+          { id: 21, athlete_id: 2, lesson_id: 9, attended_on: '2026-09-14' },
+        ],
+      });
+      fixture.detectChanges();
+
+      // The room is no longer empty: the offer goes.
+      expect(carryButton(fixture)).toBeNull();
+      const toast = add.mock.calls.at(-1)![0];
+      expect(toast.summary).toContain('2');
+      expect(toast.summary).toContain('17:00');
+
+      (toast.data as { undo: () => void }).undo();
+      expect(component['isPresent'](1)).toBe(false);
+      expect(component['isPresent'](2)).toBe(false);
+      httpMock.expectOne('/api/v1/attendance/20').flush(null);
+      httpMock.expectOne('/api/v1/attendance/21').flush(null);
+      expect(component['anyInflight']()).toBe(false);
+    });
+
+    it('puts the room back as it was when the request fails', () => {
+      const { fixture, component, httpMock } = setup();
+      fixture.detectChanges();
+      flushToCarryOver(httpMock).flush({
+        data: [{ id: 7, athlete_id: 1, lesson_id: 3, attended_on: '2026-09-14' }],
+      });
+      fixture.detectChanges();
+
+      carryButton(fixture)!.click();
+      httpMock
+        .expectOne((r) => r.url === '/api/v1/attendance' && r.method === 'POST')
+        .flush({ message: 'boom' }, { status: 500, statusText: 'Server Error' });
+
+      expect(component['isPresent'](1)).toBe(false);
+      expect(component['anyInflight']()).toBe(false);
+    });
+
+    /** Brings the one athlete from 17:00 over; returns the toast summary. */
+    function carryOneAndReadToast(
+      harness: Harness,
+      athlete: Athlete,
+      academy: Record<string, unknown>,
+    ): string {
+      const { fixture, httpMock } = harness;
+      TestBed.inject(AcademyService).academy.set({ ...ACADEMY_BASE, ...academy });
+      const add = vi.spyOn(fixture.debugElement.injector.get(MessageService), 'add');
+      fixture.detectChanges();
+      flushToCarryOver(httpMock, [athlete]).flush({
+        data: [{ id: 7, athlete_id: athlete.id, lesson_id: 3, attended_on: '2026-09-14' }],
+      });
+      fixture.detectChanges();
+
+      carryButton(fixture)!.click();
+      httpMock
+        .expectOne((r) => r.url === '/api/v1/attendance' && r.method === 'POST')
+        .flush({
+          data: [{ id: 20, athlete_id: athlete.id, lesson_id: 9, attended_on: '2026-09-14' }],
+        });
+      return String(add.mock.calls.at(-1)![0].summary);
+    }
+
+    const HOLDER = makeAthlete({
+      id: 1,
+      active_carnet: { id: 4, code: 'A7K2', remaining_entries: 3, expires_at: '2027-01-10' },
+    });
+
+    it('says a carnet pays for this lesson too, when a holder is among those carried', () => {
+      // The academy no longer sells carnets, but this athlete still has one.
+      const summary = carryOneAndReadToast(setup(), HOLDER, {
+        carnet_price_cents: null,
+        carnet_entry_unit: 'lesson',
+      });
+
+      expect(summary).toContain('carnet');
+    });
+
+    it('says nothing about carnets today, with everyone listed and no holder among them', () => {
+      const summary = carryOneAndReadToast(setup(), makeAthlete({ id: 1, active_carnet: null }), {
+        carnet_price_cents: 7000,
+        carnet_entries: 10,
+        carnet_entry_unit: 'lesson',
+      });
+
+      expect(summary).not.toContain('carnet');
+    });
+
+    it('says it when a carried athlete is not on the list, whatever the academy sells', () => {
+      // A search, a belt, the cap or a departure can keep someone off the
+      // list: nothing on the page can vouch for them, so the note stays.
+      const { fixture, httpMock } = setup();
+      TestBed.inject(AcademyService).academy.set({
+        ...ACADEMY_BASE,
+        carnet_price_cents: null,
+        carnet_entry_unit: 'lesson',
+      });
+      const add = vi.spyOn(fixture.debugElement.injector.get(MessageService), 'add');
+      fixture.detectChanges();
+      flushToCarryOver(httpMock, [makeAthlete({ id: 2, active_carnet: null })]).flush({
+        data: [{ id: 7, athlete_id: 1, lesson_id: 3, attended_on: '2026-09-14' }],
+      });
+      fixture.detectChanges();
+
+      carryButton(fixture)!.click();
+      httpMock
+        .expectOne((r) => r.url === '/api/v1/attendance' && r.method === 'POST')
+        .flush({ data: [{ id: 20, athlete_id: 1, lesson_id: 9, attended_on: '2026-09-14' }] });
+
+      expect(String(add.mock.calls.at(-1)![0].summary)).toContain('carnet');
+    });
+
+    it("says it on a past day, where today's carnets say nothing about that day", () => {
+      // Backfilling last Monday: a carnet that covered that day may have run
+      // out since, and reconciliation still charges it.
+      const { fixture, component, httpMock } = setup();
+      TestBed.inject(AcademyService).academy.set({
+        ...ACADEMY_BASE,
+        carnet_price_cents: null,
+        carnet_entry_unit: 'lesson',
+      });
+      const listed = [makeAthlete({ id: 1, active_carnet: null })];
+      const add = vi.spyOn(fixture.debugElement.injector.get(MessageService), 'add');
+      fixture.detectChanges();
+      flushToCarryOver(httpMock, listed).flush({ data: [] });
+
+      component['onDateChanged'](new Date(2026, 8, 7));
+      httpMock
+        .expectOne((r) => r.url === '/api/v1/athletes')
+        .flush({
+          ...emptyPage(),
+          data: listed,
+          meta: { ...emptyPage().meta, total: 1 },
+        });
+      // A past day opens on its first class; there is nothing before 17:00.
+      httpMock
+        .expectOne(
+          (r) => r.url === '/api/v1/attendance' && r.params.get('academy_class_id') === '1',
+        )
+        .flush({ data: [] });
+
+      component['selectClass'](FUNDAMENTALS.id);
+      httpMock
+        .expectOne(
+          (r) => r.url === '/api/v1/attendance' && r.params.get('academy_class_id') === '2',
+        )
+        .flush({ data: [] });
+      httpMock
+        .expectOne(
+          (r) => r.url === '/api/v1/attendance' && r.params.get('academy_class_id') === '1',
+        )
+        .flush({ data: [{ id: 7, athlete_id: 1, lesson_id: 3, attended_on: '2026-09-07' }] });
+      fixture.detectChanges();
+
+      carryButton(fixture)!.click();
+      const post = httpMock.expectOne((r) => r.url === '/api/v1/attendance' && r.method === 'POST');
+      expect(post.request.body.date).toBe('2026-09-07');
+      post.flush({ data: [{ id: 20, athlete_id: 1, lesson_id: 9, attended_on: '2026-09-07' }] });
+
+      expect(String(add.mock.calls.at(-1)![0].summary)).toContain('carnet');
+    });
+
+    it('says nothing about carnets when an entry counts per day', () => {
+      const summary = carryOneAndReadToast(setup(), HOLDER, {
+        carnet_price_cents: 7000,
+        carnet_entries: 10,
+        carnet_entry_unit: 'day',
+      });
+
+      expect(summary).not.toContain('carnet');
+    });
+
+    // ── An Undo never reaches into another room (#1930) ──────────────────────
+
+    it('an undo pressed after moving to another class never unticks anyone there', () => {
+      const { fixture, component, httpMock } = setup();
+      const add = vi.spyOn(fixture.debugElement.injector.get(MessageService), 'add');
+      fixture.detectChanges();
+      flushToCarryOver(httpMock).flush({
+        data: [
+          { id: 7, athlete_id: 1, lesson_id: 3, attended_on: '2026-09-14' },
+          { id: 8, athlete_id: 2, lesson_id: 3, attended_on: '2026-09-14' },
+        ],
+      });
+      fixture.detectChanges();
+      carryButton(fixture)!.click();
+      httpMock
+        .expectOne((r) => r.url === '/api/v1/attendance' && r.method === 'POST')
+        .flush({
+          data: [
+            { id: 20, athlete_id: 1, lesson_id: 9, attended_on: '2026-09-14' },
+            { id: 21, athlete_id: 2, lesson_id: 9, attended_on: '2026-09-14' },
+          ],
+        });
+      const undo = (add.mock.calls.at(-1)![0].data as { undo: () => void }).undo;
+
+      // Over to 17:00, where the same two really were present.
+      component['selectClass'](KIDS.id);
+      httpMock
+        .expectOne(
+          (r) => r.url === '/api/v1/attendance' && r.params.get('academy_class_id') === '1',
+        )
+        .flush({
+          data: [
+            { id: 7, athlete_id: 1, lesson_id: 3, attended_on: '2026-09-14' },
+            { id: 8, athlete_id: 2, lesson_id: 3, attended_on: '2026-09-14' },
+          ],
+        });
+
+      undo();
+
+      // The presences the button wrote in 19:00 still go…
+      httpMock.expectOne('/api/v1/attendance/20').flush(null);
+      httpMock.expectOne('/api/v1/attendance/21').flush(null);
+      // …and 17:00, the room on screen, is left exactly as it is.
+      expect(component['isPresent'](1)).toBe(true);
+      expect(component['isPresent'](2)).toBe(true);
+    });
+
+    it('takes the undo off the screen when the class changes', () => {
+      const { fixture, component, httpMock } = setup();
+      const messages = fixture.debugElement.injector.get(MessageService);
+      fixture.detectChanges();
+      flushInit(httpMock, { athletes: [makeAthlete({ id: 1 })], classes: [KIDS, FUNDAMENTALS] });
+      flushCarryOver(httpMock, KIDS.id);
+      component['togglePresent'](makeAthlete({ id: 1 }));
+      httpMock
+        .expectOne((r) => r.url === '/api/v1/attendance' && r.method === 'POST')
+        .flush({ data: [{ id: 9, athlete_id: 1, lesson_id: 5, attended_on: '2026-09-14' }] });
+      const clear = vi.spyOn(messages, 'clear');
+
+      component['selectClass'](KIDS.id);
+
+      expect(clear).toHaveBeenCalled();
+      httpMock
+        .expectOne((r) => r.url === '/api/v1/attendance' && r.method === 'GET')
+        .flush({ data: [] });
+    });
+
+    it('takes the undo off the screen when the day changes', () => {
+      const { fixture, component, httpMock } = setup();
+      const messages = fixture.debugElement.injector.get(MessageService);
+      fixture.detectChanges();
+      flushInit(httpMock, { classes: [KIDS, FUNDAMENTALS] });
+      flushCarryOver(httpMock, KIDS.id);
+      const clear = vi.spyOn(messages, 'clear');
+
+      component['onDateChanged'](new Date(2026, 8, 13));
+
+      expect(clear).toHaveBeenCalled();
+      httpMock
+        .match(() => true)
+        .forEach((r) => r.flush(r.request.url.includes('athletes') ? emptyPage() : { data: [] }));
     });
   });
 });
@@ -1403,6 +1682,7 @@ describe('DailyAttendanceComponent — who usually comes and is not here (#1730)
     const { fixture, component, httpMock } = setup();
     fixture.detectChanges();
     flushInit(httpMock, { classes: [KIDS, FUNDAMENTALS] });
+    flushCarryOver(httpMock, KIDS.id);
     regularsRequests(httpMock)[0].flush(answer([7]));
 
     component['selectClass'](KIDS.id);
@@ -1444,6 +1724,7 @@ describe('DailyAttendanceComponent — who usually comes and is not here (#1730)
     const { fixture, component, httpMock } = setup();
     fixture.detectChanges();
     flushInit(httpMock, { classes: [KIDS, FUNDAMENTALS] });
+    flushCarryOver(httpMock, KIDS.id);
     const slow = regularsRequests(httpMock)[0];
 
     component['selectClass'](KIDS.id);

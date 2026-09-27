@@ -658,6 +658,45 @@ function page(rows: unknown[], perPage = 20) {
 
 const ATHLETE_ONE = ATHLETES[0];
 
+/**
+ * A room past the roster's page of 20 (#1930): the audit's own people, then
+ * eighteen more with ordinary names and the belts a neighbourhood gym has.
+ */
+const EXTRA_NAMES: readonly (readonly [string, string, string, number])[] = [
+  ['Alessandro', 'Bianchi', 'white', 1],
+  ['Chiara', 'Romano', 'white', 3],
+  ['Davide', 'Greco', 'blue', 0],
+  ['Federica', 'Marino', 'white', 0],
+  ['Giorgio', 'Costa', 'purple', 1],
+  ['Ilaria', 'Fontana', 'white', 2],
+  ['Lorenzo', 'Rizzo', 'blue', 3],
+  ['Martina', 'Lombardi', 'white', 4],
+  ['Nicola', 'Barbieri', 'brown', 0],
+  ['Paola', 'Galli', 'white', 1],
+  ['Riccardo', 'Conti', 'blue', 1],
+  ['Silvia', 'Mancini', 'white', 0],
+  ['Tommaso', 'Caruso', 'white', 2],
+  ['Valentina', 'De Luca', 'blue', 2],
+  ['Andrea', 'Ferri', 'white', 0],
+  ['Beatrice', 'Rinaldi', 'purple', 0],
+  ['Emanuele', 'Villa', 'white', 3],
+  ['Francesca', 'Serra', 'blue', 0],
+];
+const LONG_ROSTER = [
+  ...ATHLETES,
+  ...EXTRA_NAMES.map(([first_name, last_name, belt, stripes], i) =>
+    athlete({
+      id: 109 + i,
+      first_name,
+      last_name,
+      belt,
+      stripes,
+      date_of_birth: null,
+      joined_at: '2025-09-01',
+    }),
+  ),
+];
+
 // ── The fixture guard (#1854) ────────────────────────────────────────────
 //
 // The audit paints whatever its stubs say, so a stub that drifted behind a
@@ -1190,6 +1229,66 @@ const PROMOTION_GAPS_OPENING = [
     after: { promotion_id: 12, recorded_at: '2024-03-12' },
     before: { promotion_id: 15, recorded_at: '2026-09-02' },
     completes_promotion_id: 15,
+  },
+];
+
+/**
+ * An athlete whose history opens on the opening row (#1974): imported as
+ * blue, stripes given live since. The server's own reply
+ * (`AthletePromotionGapsTest`): the one step is the blue belt that row stands
+ * for, with no lower bound and white as the only belt before it.
+ */
+const PROMOTIONS_OPENING_ONLY = [
+  {
+    id: 17,
+    kind: 'stripe',
+    from_belt: null,
+    to_belt: null,
+    from_stripes: 1,
+    to_stripes: 2,
+    belt_at_event: 'blue',
+    is_opening: false,
+    recorded_at: '2026-06-01T00:00:00+00:00',
+    recorded_by: { id: 1, full_name: 'Matteo Bonanno' },
+  },
+  {
+    id: 16,
+    kind: 'stripe',
+    from_belt: null,
+    to_belt: null,
+    from_stripes: 0,
+    to_stripes: 1,
+    belt_at_event: 'blue',
+    is_opening: false,
+    recorded_at: '2026-03-01T00:00:00+00:00',
+    recorded_by: { id: 1, full_name: 'Matteo Bonanno' },
+  },
+  {
+    id: 15,
+    kind: 'belt',
+    from_belt: null,
+    to_belt: 'blue',
+    from_stripes: null,
+    to_stripes: null,
+    belt_at_event: 'blue',
+    is_opening: true,
+    recorded_at: '2026-01-10T00:00:00+00:00',
+    recorded_by: { id: 1, full_name: 'Matteo Bonanno' },
+  },
+];
+
+const PROMOTION_GAPS_OPENING_ONLY = [
+  {
+    key: 'belt:blue:0',
+    kind: 'belt',
+    belt: 'blue',
+    from_belt: 'white',
+    from_stripes: null,
+    to_stripes: null,
+    after: null,
+    before: { promotion_id: 15, recorded_at: '2026-01-10' },
+    completes_promotion_id: 15,
+    from_belt_options: ['white'],
   },
 ];
 
@@ -2052,6 +2151,24 @@ function seed(): void {
   cy.intercept('GET', '/api/v1/stats/payments/monthly*', {
     statusCode: 200,
     body: { data: MONTHLY_PAYMENTS },
+  });
+  // This month in four tiles (#1759). Collected is the chart's own September
+  // bucket, the agreement the tiles exist to show.
+  cy.intercept('GET', '/api/v1/stats/payments/summary*', {
+    statusCode: 200,
+    body: {
+      data: {
+        year: 2026,
+        month: 9,
+        currency: 'EUR',
+        expected_cents: 70_000,
+        collected_cents: MONTHLY_PAYMENTS[MONTHLY_PAYMENTS.length - 1].amount_cents,
+        outstanding_count: 1,
+        outstanding_cents: 7000,
+        collection_rate: 0.9,
+        estimated: false,
+      },
+    },
   });
   // Who is behind (#1760): one long debt, one short, so both plurals show.
   cy.intercept('GET', '/api/v1/stats/payments/arrears', {
@@ -2999,6 +3116,44 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       dialogOpen('[data-cy="promotion-create-dialog"]');
     },
   });
+  // A history that opens on the opening row (#1974): the row still asks for
+  // its real date, and the dialog has no lower bound.
+  const openingOnlyStubs = (): void => {
+    cy.intercept('GET', '/api/v1/athletes/*/promotions*', {
+      statusCode: 200,
+      body: {
+        ...page(PROMOTIONS_OPENING_ONLY),
+        progression: {
+          belt: 'blue',
+          stripes: 2,
+          belt_since: '2026-01-10',
+          days_at_belt: 259,
+          months_at_belt: 8,
+          sessions_at_belt: 64,
+          stripe_since: '2026-06-01',
+          days_since_stripe: 117,
+          sessions_since_stripe: 23,
+        },
+        gaps: PROMOTION_GAPS_OPENING_ONLY,
+        history_starts_at: '2026-01-10',
+      },
+    });
+  };
+  screen('22-athlete-promotions-opening-only', '/dashboard/athletes/1/promotions', DETAIL_READY, {
+    stubs: openingOnlyStubs,
+  });
+  screen(
+    '22-athlete-promotions-opening-only-fill',
+    '/dashboard/athletes/1/promotions',
+    DETAIL_READY,
+    {
+      stubs: openingOnlyStubs,
+      act: () => {
+        press('[data-cy="gap-add-date-belt:blue:0"]');
+        dialogOpen('[data-cy="promotion-create-dialog"]');
+      },
+    },
+  );
   screen('22-athlete-promotions-dialog', '/dashboard/athletes/1/promotions', DETAIL_READY, {
     act: () => {
       press('[data-cy="promotions-add"]');
@@ -3117,6 +3272,42 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
 
   // ── 30. Tonight's check-in ─────────────────────────────────────────────
   screen('30-attendance', '/dashboard/attendance', '[data-cy="attendance-class-picker"]');
+  // A real-sized room (#1930, #1937): 26 active athletes, the whole roster on
+  // one page — no paginator, and nothing on the page about pagination.
+  screen(
+    '30-attendance-long-roster',
+    '/dashboard/attendance',
+    '[data-cy="attendance-class-picker"]',
+    {
+      stubs: () => {
+        cy.intercept('GET', '/api/v1/athletes*', { statusCode: 200, body: page(LONG_ROSTER, 200) });
+      },
+      act: () => {
+        cy.get('[data-cy="attendance-row-126"]').should('exist');
+      },
+    },
+  );
+  // Bring the earlier class over (#1930): Avanzati at 20:00 is still empty,
+  // and Fondamentali at 19:00 had three people.
+  screen(
+    '30-attendance-carry-over',
+    '/dashboard/attendance',
+    '[data-cy="attendance-class-picker"]',
+    {
+      stubs: () => {
+        cy.intercept({ method: 'GET', pathname: '/api/v1/attendance' }, (req) => {
+          req.reply({
+            statusCode: 200,
+            body: { data: req.url.includes('academy_class_id=2') ? [] : ATTENDANCE_TONIGHT },
+          });
+        });
+      },
+      act: () => {
+        press('[data-cy="attendance-class-2"]');
+        cy.get('[data-cy="attendance-carry"]', { timeout: 6000 }).should('be.visible');
+      },
+    },
+  );
   // Shut today (#1766): the check-in lands on the last session held and says why.
   screen(
     '30-attendance-closed-today',
