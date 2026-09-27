@@ -229,15 +229,17 @@ describe('StatsPaymentsComponent', () => {
         }
       ).seasonItems();
 
-    it('is one secondary button that opens the seasons, not a split button', () => {
+    it('is one primary button that opens the seasons, not a split button', () => {
       inSeason('2026-09-01', '2026/27');
       renderPage();
 
-      // A real button that says it opens a menu, drawn as the app's secondary.
+      // A real button that says it opens a menu. Primary, because it is the
+      // page's only action: a secondary fill on the page ground is ~1.04:1.
       const button = exportHost() as HTMLButtonElement;
       expect(button.tagName.toLowerCase()).toBe('button');
       expect(button.textContent).toContain('Export for the accountant');
-      expect(button.classList).toContain('p-button-secondary');
+      expect(button.classList).toContain('p-button');
+      expect(button.className).not.toMatch(/p-button-(secondary|outlined|text)/);
       expect(button.getAttribute('aria-haspopup')).toBe('menu');
       expect((fixture.nativeElement as HTMLElement).querySelector('p-splitbutton')).toBeNull();
 

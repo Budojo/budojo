@@ -9,11 +9,11 @@
          finished season the accountant is asking for. -->
     @if (exportSeasons().length > 0) {
       <!-- A native button, so `aria-haspopup` sits on the element a screen
-           reader announces; `p-button` would put it on its host. -->
+           reader announces; `p-button` would put it on its host. Primary:
+           it is the page's only action (the lone-CTA rule). -->
       <button
         pButton
         type="button"
-        severity="secondary"
         aria-haspopup="menu"
         [disabled]="exporting()"
         (click)="openSeasonMenu($event)"
