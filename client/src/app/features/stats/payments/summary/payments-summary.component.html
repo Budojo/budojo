@@ -4,45 +4,53 @@
       <p class="summary__error" data-cy="summary-error">
         {{ 'stats.payments.summary.errored' | translate }}
       </p>
-    } @else if (loading()) {
-      <!-- Shaped like the result: four tiles on the same grid, then the hint
-           line, so the chart below does not jump when the figures arrive. -->
-      <div
-        class="summary__skeleton"
-        data-cy="summary-loading"
-        role="status"
-        [attr.aria-label]="'stats.payments.summary.loading' | translate"
+    } @else {
+      <!-- The labels and the hint are static text, so they render in both
+           states: only the figures wait for the server, and nothing below
+           moves when they arrive. -->
+      <ul
+        class="summary__tiles"
+        [attr.data-cy]="loading() ? 'summary-loading' : null"
+        [attr.aria-busy]="loading()"
       >
-        <ul class="summary__tiles" aria-hidden="true">
-          @for (i of [1, 2, 3, 4]; track i) {
-            <li class="summary__tile">
-              <p-skeleton width="60%" height="0.875rem" />
-              <p-skeleton width="80%" height="1.75rem" />
-            </li>
-          }
-        </ul>
-        <p-skeleton width="70%" height="0.875rem" styleClass="summary__hint-skeleton" />
-      </div>
-    } @else if (view(); as v) {
-      <ul class="summary__tiles">
         <li class="summary__tile" data-cy="summary-expected">
           <span class="summary__label">{{
             'stats.payments.summary.expectedLabel' | translate
           }}</span>
-          <span class="summary__number">{{ v.expected }}</span>
+          @if (view(); as v) {
+            <span class="summary__number">{{ v.expected }}</span>
+          } @else {
+            <p-skeleton width="80%" height="1.8rem" />
+          }
         </li>
         <li class="summary__tile" data-cy="summary-collected">
           <span class="summary__label">{{
             'stats.payments.summary.collectedLabel' | translate
           }}</span>
-          <span class="summary__number">{{ v.collected }}</span>
+          @if (view(); as v) {
+            <span class="summary__number">{{ v.collected }}</span>
+          } @else {
+            <p-skeleton width="80%" height="1.8rem" />
+          }
         </li>
         <li class="summary__tile" data-cy="summary-rate">
           <span class="summary__label">{{ 'stats.payments.summary.rateLabel' | translate }}</span>
-          <span class="summary__number">{{ v.rate }}</span>
+          @if (view(); as v) {
+            <span class="summary__number">{{ v.rate }}</span>
+          } @else {
+            <p-skeleton width="50%" height="1.8rem" />
+          }
         </li>
         <li class="summary__tile" data-cy="summary-outstanding">
-          <span class="summary__total">{{ v.outstanding }}</span>
+          @if (view(); as v) {
+            <span class="summary__total">{{ v.outstanding }}</span>
+          } @else {
+            <p-skeleton
+              width="90%"
+              height="1.8rem"
+              [attr.aria-label]="'stats.payments.summary.loading' | translate"
+            />
+          }
         </li>
       </ul>
       <p class="summary__hint">{{ 'stats.payments.summary.hint' | translate }}</p>

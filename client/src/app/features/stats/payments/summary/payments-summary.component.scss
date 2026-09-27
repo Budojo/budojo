@@ -4,8 +4,8 @@
   gap: 0.5rem;
 
   // Four figures read side by side: two by two on a phone, one row from
-  // tablet up. The loading state draws the same grid, so nothing below
-  // jumps when the figures arrive.
+  // tablet up. While loading, the same tiles and labels render with a
+  // skeleton only where each figure goes, so nothing below jumps.
   &__tiles {
     list-style: none;
     margin: 0;
@@ -53,12 +53,6 @@
     line-height: 1.4;
     color: var(--p-text-color);
     font-variant-numeric: tabular-nums;
-  }
-
-  &__skeleton {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
   }
 
   &__hint,

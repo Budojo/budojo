@@ -80,17 +80,25 @@ describe('PaymentsSummaryComponent', () => {
     expect(text('summary-outstanding')).toContain('7 athletes owe €490.00');
   });
 
-  it('loads in the shape of the result, so the chart below does not jump', () => {
+  it('loads in the shape of the result, so nothing below jumps', () => {
     render(CHARGING);
+    const root = fixture.nativeElement as HTMLElement;
 
-    const loading = (fixture.nativeElement as HTMLElement).querySelector(
-      '[data-cy="summary-loading"]',
-    );
-    // Four tiles on the same grid, then the hint line — not one short bar.
-    expect(loading?.querySelectorAll('.summary__tiles .summary__tile').length).toBe(4);
-    expect(loading?.querySelectorAll(':scope > p-skeleton').length).toBe(1);
+    // The real tiles, labels and hint — static text that wraps the same way
+    // loaded or not — with a skeleton only where each figure goes.
+    const loading = root.querySelector('[data-cy="summary-loading"]');
+    expect(loading?.querySelectorAll('.summary__tile').length).toBe(4);
+    expect(loading?.querySelectorAll('p-skeleton').length).toBe(4);
+    expect(text('summary-expected')).toContain('Expected this month');
+    expect(text('summary-collected')).toContain('Collected');
+    expect(text('summary-rate')).toContain('Collected of expected');
+    expect(root.querySelector('.summary__hint')?.textContent).toContain('This month so far');
 
     http.expectOne(URL).flush({ data: summary() });
+    fixture.detectChanges();
+
+    expect(root.querySelector('[data-cy="summary-loading"]')).toBeNull();
+    expect(root.querySelectorAll('p-skeleton').length).toBe(0);
   });
 
   it('prints the figures in the classes the accent guard watches', () => {
