@@ -11,7 +11,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { Subject, debounceTime, filter, map } from 'rxjs';
+import { Subject, debounceTime, filter, forkJoin, map } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
 import { IconFieldModule } from 'primeng/iconfield';
@@ -37,6 +37,7 @@ import {
 } from '../../../core/services/athlete.service';
 import { AcademyClass, AcademyClassService } from '../../../core/services/academy-class.service';
 import {
+  AttendanceRecord,
   AttendanceService,
   ClassRegular,
   ClassRegulars,
@@ -78,6 +79,13 @@ const ALL_WEEKDAYS = [0, 1, 2, 3, 4, 5, 6] as const;
  * one (#195, #1766): long enough to cross a summer closure.
  */
 const RESEAT_REACH_DAYS = 62;
+
+/**
+ * How many active athletes the check-in reads at once (#1930): the server's
+ * cap on `per_page`. A room of forty is forty taps, not a paginator; a
+ * centre past this many searches for the rest, and the page says so.
+ */
+const CHECK_IN_ROSTER_SIZE = 200;
 
 /**
  * YYYY-MM-DD from the LOCAL date components — NOT `toISOString()`, which
@@ -289,31 +297,23 @@ export class DailyAttendanceComponent implements OnInit {
   });
 
   /**
-   * Active athletes on the currently-selected page. Backed by the SAME
-   * paginated `/api/v1/athletes` endpoint as athletes-list, so the
-   * default 20-row slice applies — the page walks via `onPageChange()`
-   * (#527). Without pagination, sorting a > 20-row roster by belt rank
-   * pinned the user to page 1 and silently hid every belt above the
-   * first 20 rows in rank order.
+   * The whole active roster, on one page (#1930). Twelve people arrive in
+   * five minutes, and with the roster's 20 a page half of a forty-athlete
+   * room sat on page 2: every name meant paging back and forth at the door.
+   * The same `/api/v1/athletes` endpoint, asked for up to its cap; the
+   * roster page keeps its 20. Filters, search and sort narrow or reorder
+   * this one page, so there is no page to fall off any more (#527).
    */
   protected readonly athletes = signal<Athlete[]>([]);
   protected readonly totalActiveAthletes = signal<number>(0);
 
   /**
-   * Current 1-indexed page. Mirrors `AthletesListComponent.page` —
-   * incremented through `onPageChange()` and reset to 1 on every
-   * filter / sort / search change so a narrower result set never
-   * leaves the user on a phantom empty page (#527).
+   * More active athletes than one page carries — a centre past the cap.
+   * Said under the list, with the way to the others: the search.
    */
-  private page = 1;
-
-  /**
-   * `<p-table>`'s 0-indexed offset of the first row on the current
-   * page (page 2 with rows=20 → first=20). Bound to `[first]` so the
-   * paginator's active-page indicator stays in sync after a programmatic
-   * reset (e.g. filter change).
-   */
-  protected readonly first = signal(0);
+  protected readonly truncated = computed<boolean>(
+    () => this.totalActiveAthletes() > this.athletes().length,
+  );
 
   /**
    * athlete_id → record_id for each present athlete. The record_id is the
@@ -616,9 +616,7 @@ export class DailyAttendanceComponent implements OnInit {
         ...(belt ? { belt } : {}),
         ...(q ? { q } : {}),
         ...(sortBy ? { sortBy, sortOrder: this.sortOrder() } : {}),
-        // Page 1 is the implicit default — omit the param here so the wire
-        // stays clean for the common case (single-page rosters).
-        ...(this.page > 1 ? { page: this.page } : {}),
+        perPage: CHECK_IN_ROSTER_SIZE,
       })
       .subscribe({
         next: (page) => {
@@ -660,6 +658,8 @@ export class DailyAttendanceComponent implements OnInit {
           this.presentMap.set(map);
           this.selfMarkedSet.set(selfSet);
           this.presentEpoch.set(epoch);
+          // Only an empty room has anyone to bring over (#1930).
+          if (map.size === 0) this.loadCarryOver(epoch);
         }
         settle();
       },
@@ -987,6 +987,142 @@ export class DailyAttendanceComponent implements OnInit {
     });
   }
 
+  // ── Bring the earlier class over (#1930) ──────────────────────────────────
+  // At 20:00, seven of the twelve from 19:00 stay on for the advanced class.
+  // They are already on the register once; ticking them again one by one is
+  // the work the earlier tick already did. When this class is empty and the
+  // one before it had people, one button copies that room across.
+
+  /** The class right before the selected one on this day, by start time. */
+  protected readonly previousClass = computed<AcademyClass | null>(() => {
+    const classes = this.dayClasses();
+    const selected = classes.find((c) => c.id === this.selectedClassId());
+    const startsAt = selected?.starts_at ?? null;
+    if (startsAt === null) return null;
+
+    let previous: AcademyClass | null = null;
+    for (const c of classes) {
+      if (c.starts_at === null || c.starts_at >= startsAt) continue;
+      if (previous === null || c.starts_at > (previous.starts_at ?? '')) previous = c;
+    }
+    return previous;
+  });
+
+  /** Who the earlier class had, for the load of the room it would fill. */
+  private readonly carryAnswer = signal<{
+    epoch: number;
+    classId: number;
+    athleteIds: readonly number[];
+  } | null>(null);
+
+  /**
+   * What can be brought over: the earlier class and its people, while this
+   * class is still empty and the answer is about the room on screen. Gone the
+   * moment anyone is ticked here — the button is for an empty room, and
+   * pressing it twice would be a no-op dressed as an action.
+   */
+  protected readonly carryOver = computed<{
+    from: AcademyClass;
+    time: string;
+    athleteIds: readonly number[];
+  } | null>(() => {
+    const answer = this.carryAnswer();
+    const from = this.previousClass();
+    if (answer === null || from === null || answer.classId !== from.id) return null;
+    if (answer.epoch !== this.presentEpoch() || answer.athleteIds.length === 0) return null;
+    if (this.presentMap().size > 0) return null;
+    return { from, time: (from.starts_at ?? '').slice(0, 5), athleteIds: answer.athleteIds };
+  });
+
+  /**
+   * Reads the earlier class's room. Quiet on failure: the offer is a
+   * shortcut, and the register works exactly as before without it.
+   */
+  private loadCarryOver(epoch: number): void {
+    this.carryAnswer.set(null);
+    const from = this.previousClass();
+    if (from === null) return;
+
+    this.attendanceService.getDaily(this.selectedDateIso(), { classId: from.id }).subscribe({
+      next: (records) => {
+        if (epoch !== this.attendanceEpoch) return;
+        const athleteIds = [...new Set(records.map((r) => r.athlete_id))];
+        this.carryAnswer.set({ epoch, classId: from.id, athleteIds });
+      },
+      error: () => undefined,
+    });
+  }
+
+  /**
+   * One request for the whole room: the bulk endpoint the single tick already
+   * uses. Optimistic like a tick; one Undo takes them all back. Under
+   * per-lesson carnets each holder spends an entry on this lesson too — the
+   * academy's rule, and correct, but not something the toast may hide.
+   */
+  protected bringOver(): void {
+    const offer = this.carryOver();
+    const classId = this.selectedClassId();
+    if (offer === null || classId === null || this.loading() || this.anyInflight()) return;
+
+    const ids = [...offer.athleteIds];
+    for (const id of ids) {
+      this.optimisticAdd(id, -1);
+      this.markInflight(id, true);
+    }
+
+    this.attendanceService
+      .markBulk({ date: this.selectedDateIso(), athlete_ids: ids, academy_class_id: classId })
+      .subscribe({
+        next: (records) => {
+          const created = records.filter((r) => ids.includes(r.athlete_id));
+          for (const r of created) this.optimisticAdd(r.athlete_id, r.id);
+          for (const id of ids) this.markInflight(id, false);
+          this.toastUndo(this.carriedMessage(created.length, offer.time), () =>
+            this.takeBack(created),
+          );
+        },
+        error: () => {
+          for (const id of ids) {
+            this.optimisticRemove(id);
+            this.markInflight(id, false);
+          }
+          this.toastError(this.translate.instant('attendance.daily.carryOver.error'));
+        },
+      });
+  }
+
+  /** "7 segnati come alle 19:00", and the carnet note where it applies. */
+  private carriedMessage(count: number, time: string): string {
+    const key =
+      count === 1 ? 'attendance.daily.carryOver.doneOne' : 'attendance.daily.carryOver.doneOther';
+    const done = this.translate.instant(key, { count, time });
+    const academy = this.academyService.academy();
+    const sellsCarnets = (academy?.carnet_price_cents ?? null) !== null;
+    const perLesson = (academy?.carnet_entry_unit ?? 'lesson') === 'lesson';
+    return sellsCarnets && perLesson
+      ? `${done} ${this.translate.instant('attendance.daily.carryOver.carnetNote')}`
+      : done;
+  }
+
+  /** The Undo: every presence the button wrote, deleted, as one gesture. */
+  private takeBack(records: readonly AttendanceRecord[]): void {
+    for (const r of records) {
+      this.optimisticRemove(r.athlete_id);
+      this.markInflight(r.athlete_id, true);
+    }
+    forkJoin(records.map((r) => this.attendanceService.delete(r.id))).subscribe({
+      next: () => {
+        for (const r of records) this.markInflight(r.athlete_id, false);
+      },
+      error: () => {
+        for (const r of records) this.markInflight(r.athlete_id, false);
+        // Some went, some did not: the server is the only honest answer.
+        this.loadAttendanceOnly();
+        this.toastError(this.translate.instant('attendance.daily.carryOver.undoError'));
+      },
+    });
+  }
+
   // ── Filter handlers (#184) ─────────────────────────────────────────────────
 
   /** Each keystroke pushes into the debounce pipeline. */
@@ -996,7 +1132,6 @@ export class DailyAttendanceComponent implements OnInit {
 
   protected applySearch(q: string, onLoaded?: () => void): void {
     this.searchTerm.set(q.trim());
-    this.resetPage();
     // Filter/sort changes reload the ROSTER only — the date hasn't
     // moved, so the attendance records on the wire are unchanged
     // and a parallel re-fetch would race any in-flight optimistic
@@ -1070,7 +1205,6 @@ export class DailyAttendanceComponent implements OnInit {
 
   protected onBeltChange(belt: Belt | ''): void {
     this.selectedBelt.set(belt);
-    this.resetPage();
     this.loadAthletes();
   }
 
@@ -1087,7 +1221,6 @@ export class DailyAttendanceComponent implements OnInit {
   /** Reset every dropdown in one shot from the mobile filter-sheet (#711). */
   protected resetFilters(): void {
     this.selectedBelt.set('');
-    this.resetPage();
     this.loadAthletes();
   }
 
@@ -1105,7 +1238,6 @@ export class DailyAttendanceComponent implements OnInit {
     const next = nextNameSort(this.sortState());
     this.sortField.set(next.field);
     this.sortOrder.set(next.order);
-    this.resetPage();
     this.loadAthletes();
   }
 
@@ -1113,7 +1245,6 @@ export class DailyAttendanceComponent implements OnInit {
     const next = nextBeltSort(this.sortState());
     this.sortField.set(next.field);
     this.sortOrder.set(next.order);
-    this.resetPage();
     this.loadAthletes();
   }
 
@@ -1132,29 +1263,6 @@ export class DailyAttendanceComponent implements OnInit {
   protected readonly fullNameAriaSort = computed<'ascending' | 'descending' | 'none'>(() =>
     nameSortAria(this.sortState()),
   );
-
-  /**
-   * `<p-table>` (paginator) emits `{first, rows}` on page change.
-   * `first` is the 0-indexed offset of the first row on the new page,
-   * so the 1-indexed page number is `floor(first / rows) + 1`. Mirrors
-   * `AthletesListComponent.onPageChange` so the two pages walk in
-   * lockstep when the same roster is browsed under either UI (#527).
-   */
-  protected onPageChange(event: { first: number; rows: number }): void {
-    this.page = Math.floor(event.first / event.rows) + 1;
-    this.first.set(event.first);
-    this.loadAthletes();
-  }
-
-  /**
-   * Resets pagination to page 1 + first row. Called from every filter /
-   * sort / search handler — without it, narrowing a result set while on
-   * page 3 leaves the user on a phantom empty page (#527).
-   */
-  private resetPage(): void {
-    this.page = 1;
-    this.first.set(0);
-  }
 
   // ── Helpers ────────────────────────────────────────────────────────
 

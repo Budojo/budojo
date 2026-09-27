@@ -256,6 +256,35 @@
   padding: 0 1rem;
 }
 
+// Bring the earlier class over (#1930): a quiet line above the register,
+// the count and the one button, wrapping on a phone.
+.attendance__carry {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  row-gap: 0.5rem;
+  column-gap: 1rem;
+  margin-bottom: 1rem;
+  padding-block: 0.5rem;
+  padding-inline: 1rem;
+  border: 1px solid var(--p-content-border-color);
+  border-radius: 12px;
+}
+
+.attendance__carry-text {
+  font-size: 0.875rem;
+  color: var(--p-text-muted-color);
+}
+
+// More active athletes than one page carries (#1930): say it, point to search.
+.attendance__truncated {
+  margin: 0;
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--p-text-muted-color);
+}
+
 // Below the register, with the room to be read as its own block (#1730).
 .attendance__missing {
   display: block;

@@ -232,17 +232,38 @@
     />
   </div>
 
+  <!--
+    Bring the earlier class over (#1930). Only on an empty class whose earlier
+    class had people: seven of the twelve from 19:00 staying for 20:00 are one
+    tap, not seven. Secondary, not primary — the register below is still what
+    this screen is for.
+  -->
+  @if (carryOver(); as offer) {
+    <div class="attendance__carry" data-cy="attendance-carry">
+      <span class="attendance__carry-text">
+        {{
+          (offer.athleteIds.length === 1
+            ? 'attendance.daily.carryOver.hintOne'
+            : 'attendance.daily.carryOver.hintOther'
+          ) | translate: { count: offer.athleteIds.length, time: offer.time }
+        }}
+      </span>
+      <p-button
+        severity="secondary"
+        icon="pi pi-users"
+        [label]="'attendance.daily.carryOver.action' | translate: { time: offer.time }"
+        [disabled]="loading() || anyInflight()"
+        (onClick)="bringOver()"
+        data-cy="attendance-carry-over"
+      />
+    </div>
+  }
+
   <div class="attendance__table-wrapper">
     <p-table
       [value]="athletes()"
       [loading]="loading()"
       [showLoader]="false"
-      [rows]="20"
-      [first]="first()"
-      [totalRecords]="totalActiveAthletes()"
-      [paginator]="totalActiveAthletes() > 20"
-      (onPage)="onPageChange($event)"
-      [lazy]="true"
       responsiveLayout="scroll"
       styleClass="p-datatable-sm"
       data-cy="attendance-list"
@@ -445,6 +466,20 @@
       </ul>
     }
   </div>
+
+  <!--
+    The whole active roster is on the page (#1930) — unless a centre has more
+    than one page carries. Then say how many are shown, and where the rest
+    are: the search, which reaches everyone.
+  -->
+  @if (truncated()) {
+    <p class="attendance__truncated" data-cy="attendance-truncated">
+      {{
+        'attendance.daily.truncated'
+          | translate: { shown: athletes().length, total: totalActiveAthletes() }
+      }}
+    </p>
+  }
 
   <!--
     Who usually comes to this class and is not here (#1730). Below the

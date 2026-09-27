@@ -1934,6 +1934,17 @@
   },
   "attendance": {
     "daily": {
+      "truncated": "Mostrati i primi {{shown}} di {{total}} atleti attivi: cerca per nome per trovare gli altri.",
+      "carryOver": {
+        "action": "Porta chi c'era alle {{time}}",
+        "hintOne": "{{count}} persona era alla lezione delle {{time}}",
+        "hintOther": "{{count}} persone erano alla lezione delle {{time}}",
+        "doneOne": "{{count}} segnato come alle {{time}}.",
+        "doneOther": "{{count}} segnati come alle {{time}}.",
+        "carnetNote": "Chi ha un carnet scala un ingresso anche per questa lezione.",
+        "error": "Non è stato possibile portare la lezione precedente. Riprova.",
+        "undoError": "Non è stato possibile annullare per tutti: il registro mostra cosa è segnato."
+      },
       "title": "Check-in di oggi",
       "titleForDate": "Check-in · {{date}}",
       "noClassToday": "Oggi nessun allenamento — stai vedendo la sessione di {{date}}.",
