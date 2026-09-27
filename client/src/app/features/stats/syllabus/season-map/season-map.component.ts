@@ -22,7 +22,7 @@ import { DrawerModule } from 'primeng/drawer';
 import { Popover, PopoverModule } from 'primeng/popover';
 import { SkeletonModule } from 'primeng/skeleton';
 import type { AcademyClass } from '../../../../core/services/academy-class.service';
-import { TrainingMode } from '../../../../core/services/academy.service';
+import { AcademyService, TrainingMode } from '../../../../core/services/academy.service';
 import { LanguageService } from '../../../../core/services/language.service';
 import {
   CalendarLessonState,
@@ -34,7 +34,12 @@ import {
 } from '../../../../core/services/stats.service';
 import { relativeDay } from '../../../../shared/utils/relative-day';
 import { whatsappShareLink } from '../../../../shared/utils/contact-links';
-import { addDays, admitsTopic, localIso } from '../../../../shared/utils/class-occurrences';
+import {
+  addDays,
+  admitsTopic,
+  localIso,
+  mondayOf,
+} from '../../../../shared/utils/class-occurrences';
 import { localeFor } from '../../../../shared/utils/locale';
 import { LessonSheetComponent } from '../../../lessons/lesson-sheet/lesson-sheet.component';
 import {
@@ -44,12 +49,18 @@ import {
   WeekLessons,
   buildRows,
   cellLessons,
-  mondayOf,
   monthStarts,
   planOptions,
   positionSeason,
 } from './season-map.model';
-import { PublishedWeek, clockOf, publishedWeek, weekPlanText } from './week-plan.model';
+import {
+  PublishedWeek,
+  WeekSchedule,
+  clockOf,
+  publishedWeek,
+  weekMessageText,
+} from '../../../../shared/utils/week-message';
+import { weekMessageLabels } from '../../../../shared/utils/week-message-labels';
 
 /**
  * What the panel shows: one week of one position (a cell, the pointer
@@ -99,17 +110,6 @@ function planningUntil(calendar: SyllabusCalendar, to: string): string {
   return to < calendar.season.end ? to : calendar.season.end;
 }
 
-/** Short weekday names for the group message, Monday first. */
-const WEEKDAY_KEYS = [
-  'weekdays.mon',
-  'weekdays.tue',
-  'weekdays.wed',
-  'weekdays.thu',
-  'weekdays.fri',
-  'weekdays.sat',
-  'weekdays.sun',
-] as const;
-
 /** Below this the panel is a bottom sheet; the popover is for a wide window. */
 const WIDE_QUERY = '(min-width: 768px)';
 
@@ -151,6 +151,7 @@ export class SeasonMapComponent {
   private readonly stats = inject(StatsService);
   private readonly translate = inject(TranslateService);
   private readonly languageService = inject(LanguageService);
+  private readonly academyService = inject(AcademyService);
   private readonly messages = inject(MessageService);
   private readonly injector = inject(Injector);
   private readonly destroyRef = inject(DestroyRef);
@@ -314,8 +315,18 @@ export class SeasonMapComponent {
    */
   protected readonly share = computed<PublishedWeek | null>(() => {
     const calendar = this.calendar();
-    return calendar === null ? null : publishedWeek(calendar, this.clock());
+    return calendar === null ? null : publishedWeek(calendar, this.clock(), this.schedule());
   });
+
+  /**
+   * The timetable and the closed days (#1940), so the message here is the
+   * one the timetable sends: every class with its time, not only the ones
+   * with a plan.
+   */
+  private readonly schedule = computed<WeekSchedule>(() => ({
+    classes: this.classes(),
+    closures: this.academyService.academy()?.closures ?? [],
+  }));
 
   /** Which week the message covers — or why there is none to send. */
   protected readonly shareSentence = computed<string>(() => {
@@ -335,15 +346,18 @@ export class SeasonMapComponent {
 
   /** The message itself, or null when there is no week to send. */
   protected readonly weekPlan = computed<string | null>(() => {
-    this.languageService.currentLang(); // signal dep — the heading and weekdays follow the toggle
+    const lang = this.languageService.currentLang(); // signal dep — the words follow the toggle
     const calendar = this.calendar();
     const share = this.share();
     if (calendar === null || share?.kind !== 'week') return null;
 
-    return weekPlanText(calendar, share.week, this.clock(), {
-      heading: this.translate.instant('stats.syllabus.map.share.heading'),
-      weekdays: WEEKDAY_KEYS.map((key) => this.translate.instant(key)),
-    });
+    return weekMessageText(
+      calendar,
+      share.week,
+      this.clock(),
+      weekMessageLabels(this.translate, lang),
+      this.schedule(),
+    );
   });
 
   protected readonly whatsappLink = computed<string | null>(() => {

@@ -51,3 +51,13 @@ export function admitsTopic(classKind: TrainingMode, topicKind: TrainingMode): b
   if (classKind === 'both' || classKind === 'other') return true;
   return topicKind === classKind || topicKind === 'both';
 }
+
+/** The Monday of the ISO week holding `iso` (a `Y-m-d` string). */
+export function mondayOf(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  const day = new Date(Date.UTC(y, m - 1, d));
+  // getUTCDay: 0 = Sunday. ISO weeks start on Monday.
+  const back = (day.getUTCDay() + 6) % 7;
+  day.setUTCDate(day.getUTCDate() - back);
+  return day.toISOString().slice(0, 10);
+}

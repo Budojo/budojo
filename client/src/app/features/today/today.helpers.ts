@@ -92,6 +92,14 @@ export function weekStart(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate() - sinceMonday);
 }
 
+/**
+ * Sunday from 14:00, the owner's own clock (#1940): when the week's message is
+ * sent to the group. Earlier, this week still has its Sunday ahead.
+ */
+export function isSundayAfternoon(date: Date): boolean {
+  return date.getDay() === 0 && date.getHours() >= 14;
+}
+
 /** The presences recorded from `fromIso` on, from the daily stats series. */
 export function presencesSince(
   points: readonly { readonly date: string; readonly count: number }[],

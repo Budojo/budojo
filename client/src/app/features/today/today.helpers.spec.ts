@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { AcademyClass } from '../../core/services/academy-class.service';
 import {
+  isSundayAfternoon,
   isoDay,
   joinedSince,
   nextClassAfter,
@@ -161,5 +162,19 @@ describe('today helpers', () => {
     it('an empty timetable has no next class', () => {
       expect(nextClassFrom([], new Date(2026, 8, 28, 18, 0))).toBeNull();
     });
+  });
+});
+
+describe('the Sunday-afternoon line (#1940)', () => {
+  it('is on from Sunday at 14:00', () => {
+    // 4 October 2026 is a Sunday.
+    expect(isSundayAfternoon(new Date(2026, 9, 4, 14, 0))).toBe(true);
+    expect(isSundayAfternoon(new Date(2026, 9, 4, 22, 30))).toBe(true);
+  });
+
+  it('is off on Sunday morning and on every other day', () => {
+    expect(isSundayAfternoon(new Date(2026, 9, 4, 13, 59))).toBe(false);
+    expect(isSundayAfternoon(new Date(2026, 9, 3, 18, 0))).toBe(false);
+    expect(isSundayAfternoon(new Date(2026, 9, 5, 14, 0))).toBe(false);
   });
 });

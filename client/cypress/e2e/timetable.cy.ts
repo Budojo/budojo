@@ -264,4 +264,51 @@ describe('Weekly timetable', () => {
     cy.wait('@classes');
     cy.get('[data-cy="timetable-week"]').should('be.visible');
   });
+
+  it('sends the week to the group from the header: every class with its time (#1940)', () => {
+    // Monday 14 September 2026, 08:00: both of Monday's classes are ahead.
+    cy.clock(new Date(2026, 8, 14, 8, 0).getTime(), ['Date']);
+    cy.intercept('GET', '/api/v1/academy/classes', classes([KIDS, FUNDAMENTALS])).as('classes');
+    cy.intercept('GET', '/api/v1/stats/syllabus/calendar*', {
+      statusCode: 200,
+      body: {
+        data: {
+          season: { start: '2026-09-01', end: '2027-08-31', label: '2026/27' },
+          kind: null,
+          today: '2026-09-14',
+          weeks: [],
+          positions: [{ id: 1, name: 'Closed guard', kind: 'both', cells: [] }],
+          lessons: [
+            {
+              id: 50,
+              academy_class_id: 2,
+              held_on: '2026-09-14',
+              name: 'Fundamentals',
+              starts_at: '19:00',
+              kind: 'gi',
+              state: 'planned',
+              position_ids: [1],
+              topics: [{ id: 11, name: 'Armbar', parent_id: 1 }],
+            },
+          ],
+        },
+      },
+    }).as('calendar');
+
+    cy.visitAuthenticated('/dashboard/academy/timetable');
+    cy.wait(['@classes', '@calendar']);
+
+    cy.get('[data-cy="week-share"]').should('have.attr', 'aria-haspopup', 'menu').click();
+
+    const text = [
+      "The week's plan",
+      'Mon 14 · 17:00 Kids',
+      'Mon 14 · 19:00 Fundamentals · Closed guard: Armbar',
+    ].join('\n');
+    cy.get('.p-menu')
+      .contains('a', 'Open WhatsApp')
+      .should('have.attr', 'href', `https://wa.me/?text=${encodeURIComponent(text)}`)
+      .and('have.attr', 'target', '_blank');
+    cy.get('.p-menu').should('contain', 'Copy the text');
+  });
 });

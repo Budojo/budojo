@@ -3174,7 +3174,6 @@
         },
         "error": "The weeks could not be loaded.",
         "share": {
-          "heading": "The week's plan",
           "ready": "The plan for the week of {{date}}, to send to the group.",
           "none": "Nothing is planned for this week or the next, so there is no plan to send yet.",
           "nextSeason": "The week ahead runs into the new season, which this map does not cover yet. Send its plan from here once the new season has started.",
@@ -3381,7 +3380,9 @@
       "programme": "Programme this season",
       "programmeValue": "{{percentage}}% · {{covered}} of {{total}}",
       "joined": "New this week",
-      "joinedError": "Couldn't load the new members."
+      "joinedError": "Couldn't load the new members.",
+      "sendWeek": "Next week's programme",
+      "sendWeekValue": "Send it to the group"
     },
     "birthdays": {
       "title": "Birthdays",
@@ -3557,5 +3558,16 @@
       "pos": "Card",
       "other": "Other"
     }
+  },
+  "weekMessage": {
+    "heading": "The week's plan",
+    "closed": "closed",
+    "closedUntil": "Closed until {{date}}",
+    "send": "Send the week to the group",
+    "sendAria": "Send the week of {{date}} to the group",
+    "copy": "Copy the text",
+    "whatsapp": "Open WhatsApp",
+    "copied": "Week copied: paste it in the group.",
+    "copyFailed": "It couldn't be copied: use «Open WhatsApp»."
   }
 }

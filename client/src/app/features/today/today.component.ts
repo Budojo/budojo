@@ -46,6 +46,7 @@ import { LessonSheetComponent } from '../lessons/lesson-sheet/lesson-sheet.compo
 import { OnboardingChecklistComponent } from '../onboarding/onboarding-checklist.component';
 import { Birthday, upcomingBirthdays } from './today-birthdays';
 import {
+  isSundayAfternoon,
   isoDay,
   joinedSince,
   nextClassAfter,
@@ -383,6 +384,15 @@ export class TodayComponent implements OnInit {
     return j.state !== 'ready' || j.value.length > 0;
   });
   /**
+   * "Il programma della settimana prossima · Mandalo al gruppo" (#1940): on
+   * Sunday afternoon, the evening the week's message goes out, a line to the
+   * timetable where it is sent. Only with a timetable, which is the message.
+   */
+  protected readonly sendWeekShown = computed<boolean>(
+    () => this.hasTimetable() && isSundayAfternoon(this.now()),
+  );
+
+  /**
    * The card is drawn only with a line in it: no heading over nothing (#1755).
    * The joiners' failure is said inside a card that has other lines, but is
    * not a card on its own.
@@ -390,6 +400,7 @@ export class TodayComponent implements OnInit {
   protected readonly weekShown = computed<boolean>(() => {
     const j = this.joined();
     return (
+      this.sendWeekShown() ||
       this.presences() !== null ||
       this.notYetPaid() !== null ||
       (this.coverage()?.totals.in_scope ?? 0) > 0 ||
