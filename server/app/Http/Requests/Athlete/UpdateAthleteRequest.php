@@ -9,12 +9,14 @@ use App\Enums\AthleteStatus;
 use App\Enums\Belt;
 use App\Enums\BillingPeriod;
 use App\Http\Requests\Concerns\AuthorizesAcademyCapability;
+use App\Http\Requests\Concerns\NormalisesFiscalCode;
 use App\Http\Requests\Concerns\ResolvesRankLadder;
 use App\Http\Requests\Concerns\ValidatesAddress;
 use App\Http\Requests\Concerns\ValidatesPhonePair;
 use App\Models\Athlete;
 use App\Rules\BeltInLadder;
 use App\Rules\StripesWithinGrade;
+use App\Support\AthleteFieldRules;
 use App\Support\OperatorDay;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
@@ -24,6 +26,7 @@ use Illuminate\Validation\Rule;
 class UpdateAthleteRequest extends FormRequest
 {
     use AuthorizesAcademyCapability;
+    use NormalisesFiscalCode;
     use ValidatesAddress;
     use ValidatesPhonePair;
     use ResolvesRankLadder;
@@ -96,6 +99,9 @@ class UpdateAthleteRequest extends FormRequest
             'facebook' => ['sometimes', 'nullable', 'url', 'max:255'],
             'instagram' => ['sometimes', 'nullable', 'url', 'max:255'],
             'date_of_birth' => ['sometimes', 'nullable', 'date', OperatorDay::before()],
+            // The code, checked against the date and sex this edit sends or,
+            // when it sends only the code, the ones already stored (#1934).
+            ...AthleteFieldRules::federationDetails($academyId, $athlete?->id, $athlete?->date_of_birth, $athlete?->sex),
             'belt' => ['sometimes', Rule::enum(Belt::class), new BeltInLadder($this->rankLadder())],
             // Global ceiling across every ladder (#1800), then the grade's own
             // cap — for the belt in the request or, when an edit sends only
@@ -125,10 +131,11 @@ class UpdateAthleteRequest extends FormRequest
         $this->validatePhonePairWithLibphonenumber($validator);
     }
 
-    /** The phone is stored as its national significant number (#1867). */
+    /** The phone as its national significant number (#1867), the code in capitals (#1934). */
     protected function prepareForValidation(): void
     {
         $this->normalisePhonePair();
+        $this->normaliseFiscalCode();
     }
 
     /**

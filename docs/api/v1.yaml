@@ -4825,6 +4825,10 @@ paths:
         - Dates as `gg/mm/aaaa`, `gg-mm-aa`, ISO, with or without a time.
         - A phone in one column, split into the stored pair. A number with no
           prefix takes the academy's own dial code.
+        - A federation register's columns (#1934): `Codice fiscale` / `C.F.`,
+          `Sesso` (`M` / `maschio` / `F` / `femmina`) and `Luogo di nascita`.
+          A valid code fills an empty date of birth and sex; two rows of one
+          file with the same code make the second `invalid`.
 
         **Defaults:** `status` is `active` and `joined_at` is today when the
         column is absent; `stripes` is `0`. `belt`, `first_name` and
@@ -8612,6 +8616,14 @@ components:
       description: Enrollment status for an athlete
       enum: [active, inactive]
 
+    Sex:
+      type: string
+      description: |
+        The sex as the athlete's document and codice fiscale record it (#1934):
+        `m` or `f`. A registry field for the federation card and the
+        competition categories, not a gender-identity one.
+      enum: [m, f]
+
     AtRiskAthletes:
       type: object
       description: Who is drifting, against their own attendance (#1728).
@@ -10528,6 +10540,27 @@ components:
           format: date
           nullable: true
           description: Must be strictly before today
+        fiscal_code:
+          type: string
+          nullable: true
+          description: |
+            Italian codice fiscale (#1934). Stored in capitals with no spaces,
+            however typed. Refused (422 on `fiscal_code`) when its shape, check
+            character or date is wrong, when it disagrees with the
+            `date_of_birth` or `sex` in the same payload (the message names what
+            the code says), or when another live athlete of the academy has it.
+            Omocodic codes and codes of athletes born abroad (`Z…`) are accepted.
+          example: RSSMRA80A01H501U
+        sex:
+          allOf:
+            - $ref: '#/components/schemas/Sex'
+          nullable: true
+        birth_place:
+          type: string
+          maxLength: 100
+          nullable: true
+          description: A comune, or a country for an athlete born abroad (#1934). Free text.
+          example: Roma
         belt:
           $ref: '#/components/schemas/Belt'
         stripes:
@@ -10638,6 +10671,23 @@ components:
           type: string
           format: date
           nullable: true
+        fiscal_code:
+          type: string
+          nullable: true
+          description: |
+            Italian codice fiscale (#1934), same rules as on create. Sent on its
+            own, it is checked against the `date_of_birth` and `sex` already
+            stored; sent with either, against the values sent.
+          example: RSSMRA80A01H501U
+        sex:
+          allOf:
+            - $ref: '#/components/schemas/Sex'
+          nullable: true
+        birth_place:
+          type: string
+          maxLength: 100
+          nullable: true
+          example: Roma
         belt:
           $ref: '#/components/schemas/Belt'
         stripes:
@@ -10783,6 +10833,9 @@ components:
         - facebook
         - instagram
         - date_of_birth
+        - fiscal_code
+        - sex
+        - birth_place
         - belt
         - stripes
         - status
@@ -10843,6 +10896,20 @@ components:
           type: string
           format: date
           nullable: true
+        fiscal_code:
+          type: string
+          nullable: true
+          description: Italian codice fiscale (#1934), in capitals with no spaces.
+          example: RSSMRA80A01H501U
+        sex:
+          allOf:
+            - $ref: '#/components/schemas/Sex'
+          nullable: true
+        birth_place:
+          type: string
+          nullable: true
+          description: A comune, or a country for an athlete born abroad (#1934).
+          example: Roma
         belt:
           $ref: '#/components/schemas/Belt'
         stripes:
