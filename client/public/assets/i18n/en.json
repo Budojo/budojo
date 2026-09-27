@@ -2474,7 +2474,10 @@
           "fromStripes": "From stripes",
           "toStripes": "To stripes",
           "confirm": "Add promotion",
-          "error": "Couldn't add this promotion. Try again."
+          "error": "Couldn't add this promotion. Try again.",
+          "completeOffer": "{{belt}} is already in the history: it's the row written when you added the athlete. Complete that row with this date instead of adding a second one.",
+          "completeConfirm": "Complete that row",
+          "addAnyway": "Add a second one anyway"
         },
         "toast": {
           "updatedSummary": "Date updated",
@@ -2511,7 +2514,8 @@
           "showAria": "Show the {{total}} steps with no date",
           "before": "Before {{date}} the history isn't recorded.",
           "restored": "{{step}}: back among the steps to date",
-          "undoAria": "Undo: {{step}}"
+          "undoAria": "Undo: {{step}}",
+          "fromBeltLabel": "Belt before"
         }
       },
       "attendance": {
@@ -3020,6 +3024,16 @@
       "loading": "Loading revenue trend…",
       "errored": "Couldn't load revenue trend.",
       "empty": "Nothing collected in the last 12 months.",
+      "summary": {
+        "expectedLabel": "Expected this month",
+        "collectedLabel": "Collected",
+        "rateLabel": "Collected of expected",
+        "outstandingOne": "{{count}} athlete owes {{amount}}",
+        "outstandingOther": "{{count}} athletes owe {{amount}}",
+        "hint": "This month so far. Expected is one month's fee for everyone who pays, whatever their plan. Collected includes carnets sold this month, so it can pass 100% while someone still owes.",
+        "loading": "Loading this month's money…",
+        "errored": "This month's summary couldn't be loaded."
+      },
       "arrears": {
         "title": "Behind on fees",
         "hint": "Months before this one that no payment covers, counted from when you started recording fees here. Amounts are at today's fee. Someone who left and came back also counts the months they were away.",

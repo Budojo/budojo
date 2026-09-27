@@ -492,7 +492,7 @@
          not asked; the date is the one question, bounded to the days that
          fit between the step's neighbours. -->
     <div class="promotions__fill-context" data-cy="gap-fill-context">
-      <ng-container *ngTemplateOutlet="gapMove; context: { $implicit: gap }" />
+      <ng-container *ngTemplateOutlet="gapMove; context: { $implicit: fillingShown() ?? gap }" />
     </div>
     <form [formGroup]="createForm" class="promotions__create-form">
       <label class="promotions__dialog-label" for="promotion-fill-date">
@@ -509,6 +509,24 @@
         appendTo="body"
         data-cy="gap-fill-date"
       />
+      @if (fillFromBeltOptions().length > 1) {
+        <!-- A history that opens on this row (#1974): no known row says which
+             belt came before, so the owner says it — the ladder's own choices,
+             one suggested. With a single choice the step above already names
+             it, and a one-option picker would only be noise. -->
+        <label class="promotions__dialog-label" for="promotion-fill-from-belt">
+          {{ 'athletes.detail.promotions.gap.fromBeltLabel' | translate }}
+        </label>
+        <p-select
+          inputId="promotion-fill-from-belt"
+          [options]="fillFromBeltOptions()"
+          formControlName="from_belt"
+          optionLabel="label"
+          optionValue="value"
+          appendTo="body"
+          data-cy="gap-fill-from-belt"
+        />
+      }
     </form>
     @if (fillWindowIso(); as window) {
       <p class="promotions__fill-hint" data-cy="gap-fill-window">
@@ -637,6 +655,20 @@
     </form>
   }
 
+  @if (completionOffer(); as offer) {
+    <!-- The belt an opening row stands for, typed in by hand (#1974): offer to
+         complete that row rather than write a second one. Adding it anyway
+         stays possible — a register transcribed row by row (#1771). -->
+    <p-message
+      severity="info"
+      [text]="
+        'athletes.detail.promotions.createDialog.completeOffer'
+          | translate: { belt: beltLabel(offer.belt) }
+      "
+      data-cy="promotion-create-complete-offer"
+    />
+  }
+
   @if (createError(); as error) {
     <p-message severity="error" [text]="error" data-cy="promotion-create-error" />
   }
@@ -649,11 +681,28 @@
       (onClick)="createDialogOpen.set(false)"
       data-cy="promotion-create-cancel"
     />
-    <p-button
-      [label]="'athletes.detail.promotions.createDialog.confirm' | translate"
-      [loading]="creating()"
-      (onClick)="confirmCreate()"
-      data-cy="promotion-create-confirm"
-    />
+    @if (completionOffer()) {
+      <p-button
+        [label]="'athletes.detail.promotions.createDialog.addAnyway' | translate"
+        severity="secondary"
+        [text]="true"
+        [disabled]="creating()"
+        (onClick)="addAnyway()"
+        data-cy="promotion-create-add-anyway"
+      />
+      <p-button
+        [label]="'athletes.detail.promotions.createDialog.completeConfirm' | translate"
+        [loading]="creating()"
+        (onClick)="confirmCompletion()"
+        data-cy="promotion-create-complete"
+      />
+    } @else {
+      <p-button
+        [label]="'athletes.detail.promotions.createDialog.confirm' | translate"
+        [loading]="creating()"
+        (onClick)="confirmCreate()"
+        data-cy="promotion-create-confirm"
+      />
+    }
   </ng-template>
 </p-dialog>

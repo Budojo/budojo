@@ -1232,6 +1232,66 @@ const PROMOTION_GAPS_OPENING = [
   },
 ];
 
+/**
+ * An athlete whose history opens on the opening row (#1974): imported as
+ * blue, stripes given live since. The server's own reply
+ * (`AthletePromotionGapsTest`): the one step is the blue belt that row stands
+ * for, with no lower bound and white as the only belt before it.
+ */
+const PROMOTIONS_OPENING_ONLY = [
+  {
+    id: 17,
+    kind: 'stripe',
+    from_belt: null,
+    to_belt: null,
+    from_stripes: 1,
+    to_stripes: 2,
+    belt_at_event: 'blue',
+    is_opening: false,
+    recorded_at: '2026-06-01T00:00:00+00:00',
+    recorded_by: { id: 1, full_name: 'Matteo Bonanno' },
+  },
+  {
+    id: 16,
+    kind: 'stripe',
+    from_belt: null,
+    to_belt: null,
+    from_stripes: 0,
+    to_stripes: 1,
+    belt_at_event: 'blue',
+    is_opening: false,
+    recorded_at: '2026-03-01T00:00:00+00:00',
+    recorded_by: { id: 1, full_name: 'Matteo Bonanno' },
+  },
+  {
+    id: 15,
+    kind: 'belt',
+    from_belt: null,
+    to_belt: 'blue',
+    from_stripes: null,
+    to_stripes: null,
+    belt_at_event: 'blue',
+    is_opening: true,
+    recorded_at: '2026-01-10T00:00:00+00:00',
+    recorded_by: { id: 1, full_name: 'Matteo Bonanno' },
+  },
+];
+
+const PROMOTION_GAPS_OPENING_ONLY = [
+  {
+    key: 'belt:blue:0',
+    kind: 'belt',
+    belt: 'blue',
+    from_belt: 'white',
+    from_stripes: null,
+    to_stripes: null,
+    after: null,
+    before: { promotion_id: 15, recorded_at: '2026-01-10' },
+    completes_promotion_id: 15,
+    from_belt_options: ['white'],
+  },
+];
+
 // ── Coverage ─────────────────────────────────────────────────────────────
 
 const ATHLETE_COVERAGE = {
@@ -2091,6 +2151,24 @@ function seed(): void {
   cy.intercept('GET', '/api/v1/stats/payments/monthly*', {
     statusCode: 200,
     body: { data: MONTHLY_PAYMENTS },
+  });
+  // This month in four tiles (#1759). Collected is the chart's own September
+  // bucket, the agreement the tiles exist to show.
+  cy.intercept('GET', '/api/v1/stats/payments/summary*', {
+    statusCode: 200,
+    body: {
+      data: {
+        year: 2026,
+        month: 9,
+        currency: 'EUR',
+        expected_cents: 70_000,
+        collected_cents: MONTHLY_PAYMENTS[MONTHLY_PAYMENTS.length - 1].amount_cents,
+        outstanding_count: 1,
+        outstanding_cents: 7000,
+        collection_rate: 0.9,
+        estimated: false,
+      },
+    },
   });
   // Who is behind (#1760): one long debt, one short, so both plurals show.
   cy.intercept('GET', '/api/v1/stats/payments/arrears', {
@@ -3038,6 +3116,44 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       dialogOpen('[data-cy="promotion-create-dialog"]');
     },
   });
+  // A history that opens on the opening row (#1974): the row still asks for
+  // its real date, and the dialog has no lower bound.
+  const openingOnlyStubs = (): void => {
+    cy.intercept('GET', '/api/v1/athletes/*/promotions*', {
+      statusCode: 200,
+      body: {
+        ...page(PROMOTIONS_OPENING_ONLY),
+        progression: {
+          belt: 'blue',
+          stripes: 2,
+          belt_since: '2026-01-10',
+          days_at_belt: 259,
+          months_at_belt: 8,
+          sessions_at_belt: 64,
+          stripe_since: '2026-06-01',
+          days_since_stripe: 117,
+          sessions_since_stripe: 23,
+        },
+        gaps: PROMOTION_GAPS_OPENING_ONLY,
+        history_starts_at: '2026-01-10',
+      },
+    });
+  };
+  screen('22-athlete-promotions-opening-only', '/dashboard/athletes/1/promotions', DETAIL_READY, {
+    stubs: openingOnlyStubs,
+  });
+  screen(
+    '22-athlete-promotions-opening-only-fill',
+    '/dashboard/athletes/1/promotions',
+    DETAIL_READY,
+    {
+      stubs: openingOnlyStubs,
+      act: () => {
+        press('[data-cy="gap-add-date-belt:blue:0"]');
+        dialogOpen('[data-cy="promotion-create-dialog"]');
+      },
+    },
+  );
   screen('22-athlete-promotions-dialog', '/dashboard/athletes/1/promotions', DETAIL_READY, {
     act: () => {
       press('[data-cy="promotions-add"]');

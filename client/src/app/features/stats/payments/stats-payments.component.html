@@ -1,4 +1,9 @@
 <section class="stats-payments" data-cy="stats-payments">
+  <!-- This month in four figures, first on the page (#1759). Before the
+       chart's header, not after it: "Monthly revenue · last 12 months" is the
+       chart's title, and between the two it read as the tiles' own. -->
+  <app-payments-summary />
+
   <header class="stats-payments__header">
     <h2 class="stats-payments__title">{{ 'stats.payments.monthlyTitle' | translate }}</h2>
     <p class="stats-payments__hint">{{ 'stats.payments.monthlyHint' | translate }}</p>

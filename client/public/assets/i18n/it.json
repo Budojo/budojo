@@ -2474,7 +2474,10 @@
           "fromStripes": "Da gradi",
           "toStripes": "A gradi",
           "confirm": "Aggiungi promozione",
-          "error": "Impossibile aggiungere questa promozione. Riprova."
+          "error": "Impossibile aggiungere questa promozione. Riprova.",
+          "completeOffer": "{{belt}} è già nella storia: è la riga creata quando hai inserito l'atleta. Completa quella riga con questa data, invece di aggiungerne una seconda.",
+          "completeConfirm": "Completa quella riga",
+          "addAnyway": "Aggiungine comunque una seconda"
         },
         "toast": {
           "updatedSummary": "Data aggiornata",
@@ -2511,7 +2514,8 @@
           "showAria": "Mostra i {{total}} passaggi senza data",
           "before": "Prima del {{date}} la storia non è registrata.",
           "restored": "{{step}}: di nuovo tra i passaggi da datare",
-          "undoAria": "Annulla: {{step}}"
+          "undoAria": "Annulla: {{step}}",
+          "fromBeltLabel": "Cintura di prima"
         }
       },
       "attendance": {
@@ -3020,6 +3024,16 @@
       "loading": "Caricamento incassi…",
       "errored": "Impossibile caricare il trend.",
       "empty": "Nessun incasso negli ultimi 12 mesi.",
+      "summary": {
+        "expectedLabel": "Atteso questo mese",
+        "collectedLabel": "Incassato",
+        "rateLabel": "Incassato sull'atteso",
+        "outstandingOne": "{{count}} atleta deve {{amount}}",
+        "outstandingOther": "{{count}} atleti devono {{amount}}",
+        "hint": "Il mese in corso, fino a oggi. L'atteso è una quota mensile per ogni atleta che paga, qualunque sia il suo abbonamento. Gli incassi comprendono i carnet venduti questo mese: possono superare il 100% mentre qualcuno deve ancora pagare.",
+        "loading": "Carico i conti del mese…",
+        "errored": "Non riesco a caricare il riepilogo del mese."
+      },
       "arrears": {
         "title": "Arretrati",
         "hint": "I mesi prima di questo che nessun pagamento copre, contati da quando registri le quote qui. Gli importi sono alla quota di oggi. Chi è andato via ed è tornato conta anche i mesi in cui non c'era.",
