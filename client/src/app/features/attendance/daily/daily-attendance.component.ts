@@ -520,6 +520,8 @@ export class DailyAttendanceComponent implements OnInit {
    * clobber the freshly-selected date's state.
    */
   protected loadDay(): void {
+    // Same as a chip: an Undo from the day on screen must not reach the next.
+    this.messageService.clear();
     this.loading.set(true);
     const epoch = ++this.loadEpoch;
     const attendanceEpoch = ++this.attendanceEpoch;
@@ -836,6 +838,9 @@ export class DailyAttendanceComponent implements OnInit {
     if (id === this.selectedClassId() || this.anyInflight() || this.loading()) {
       return;
     }
+    // An Undo on screen belongs to the room it was made in: pressed after
+    // the switch it would untick people in this one (#1930).
+    this.messageService.clear();
     this.selectedClassId.set(id);
     this.loadAttendanceOnly();
     this.loadLesson();
@@ -1065,6 +1070,7 @@ export class DailyAttendanceComponent implements OnInit {
     if (offer === null || classId === null || this.loading() || this.anyInflight()) return;
 
     const ids = [...offer.athleteIds];
+    const roomKey = this.roomKey();
     for (const id of ids) {
       this.optimisticAdd(id, -1);
       this.markInflight(id, true);
@@ -1077,8 +1083,8 @@ export class DailyAttendanceComponent implements OnInit {
           const created = records.filter((r) => ids.includes(r.athlete_id));
           for (const r of created) this.optimisticAdd(r.athlete_id, r.id);
           for (const id of ids) this.markInflight(id, false);
-          this.toastUndo(this.carriedMessage(created.length, offer.time), () =>
-            this.takeBack(created),
+          this.toastUndo(this.carriedMessage(created, offer.time), () =>
+            this.takeBack(created, roomKey),
           );
         },
         error: () => {
@@ -1091,31 +1097,60 @@ export class DailyAttendanceComponent implements OnInit {
       });
   }
 
-  /** "7 segnati come alle 19:00", and the carnet note where it applies. */
-  private carriedMessage(count: number, time: string): string {
+  /**
+   * "7 segnati come alle 19:00", and the carnet note where it applies: when
+   * entries count per lesson and someone carried holds a carnet. Asked of the
+   * people, not of the academy's price — an academy can stop selling carnets
+   * while holders still have entries left. Someone the loaded list does not
+   * show (a search or a belt narrowed it) cannot be ruled out, so for them
+   * the academy still selling carnets is the best answer there is.
+   */
+  private carriedMessage(records: readonly AttendanceRecord[], time: string): string {
+    const count = records.length;
     const key =
       count === 1 ? 'attendance.daily.carryOver.doneOne' : 'attendance.daily.carryOver.doneOther';
     const done = this.translate.instant(key, { count, time });
     const academy = this.academyService.academy();
-    const sellsCarnets = (academy?.carnet_price_cents ?? null) !== null;
     const perLesson = (academy?.carnet_entry_unit ?? 'lesson') === 'lesson';
-    return sellsCarnets && perLesson
+    return perLesson && this.anyHolder(records.map((r) => r.athlete_id))
       ? `${done} ${this.translate.instant('attendance.daily.carryOver.carnetNote')}`
       : done;
   }
 
-  /** The Undo: every presence the button wrote, deleted, as one gesture. */
-  private takeBack(records: readonly AttendanceRecord[]): void {
-    for (const r of records) {
-      this.optimisticRemove(r.athlete_id);
-      this.markInflight(r.athlete_id, true);
+  private anyHolder(athleteIds: readonly number[]): boolean {
+    const listed = new Map(this.athletes().map((a) => [a.id, a]));
+    const sellsCarnets = (this.academyService.academy()?.carnet_price_cents ?? null) !== null;
+    return athleteIds.some((id) => {
+      const athlete = listed.get(id);
+      return athlete === undefined ? sellsCarnets : (athlete.active_carnet ?? null) !== null;
+    });
+  }
+
+  /** Which room is on screen: the day and the class. */
+  private roomKey(): string {
+    return `${this.selectedDateIso()}|${this.selectedClassId() ?? ''}`;
+  }
+
+  /**
+   * The Undo: every presence the button wrote, deleted, as one gesture. The
+   * deletes are right wherever the owner is now; the ticks on screen move
+   * only if the screen still shows the room they were written in — the same
+   * athletes can be really present in the class on screen now.
+   */
+  private takeBack(records: readonly AttendanceRecord[], roomKey: string): void {
+    const sameRoom = roomKey === this.roomKey();
+    if (sameRoom) {
+      for (const r of records) {
+        this.optimisticRemove(r.athlete_id);
+        this.markInflight(r.athlete_id, true);
+      }
     }
     forkJoin(records.map((r) => this.attendanceService.delete(r.id))).subscribe({
       next: () => {
-        for (const r of records) this.markInflight(r.athlete_id, false);
+        if (sameRoom) for (const r of records) this.markInflight(r.athlete_id, false);
       },
       error: () => {
-        for (const r of records) this.markInflight(r.athlete_id, false);
+        if (sameRoom) for (const r of records) this.markInflight(r.athlete_id, false);
         // Some went, some did not: the server is the only honest answer.
         this.loadAttendanceOnly();
         this.toastError(this.translate.instant('attendance.daily.carryOver.undoError'));

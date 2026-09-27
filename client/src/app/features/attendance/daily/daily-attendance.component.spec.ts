@@ -1214,50 +1214,146 @@ describe('DailyAttendanceComponent', () => {
       expect(component['anyInflight']()).toBe(false);
     });
 
-    it('says a carnet pays for this lesson too, when the academy counts entries per lesson', () => {
-      const { fixture, httpMock } = setup();
-      TestBed.inject(AcademyService).academy.set({
-        ...ACADEMY_BASE,
+    /** Brings the one athlete from 17:00 over; returns the toast summary. */
+    function carryOneAndReadToast(
+      harness: Harness,
+      athlete: Athlete,
+      academy: Record<string, unknown>,
+    ): string {
+      const { fixture, httpMock } = harness;
+      TestBed.inject(AcademyService).academy.set({ ...ACADEMY_BASE, ...academy });
+      const add = vi.spyOn(fixture.debugElement.injector.get(MessageService), 'add');
+      fixture.detectChanges();
+      flushToCarryOver(httpMock, [athlete]).flush({
+        data: [{ id: 7, athlete_id: athlete.id, lesson_id: 3, attended_on: '2026-09-14' }],
+      });
+      fixture.detectChanges();
+
+      carryButton(fixture)!.click();
+      httpMock
+        .expectOne((r) => r.url === '/api/v1/attendance' && r.method === 'POST')
+        .flush({
+          data: [{ id: 20, athlete_id: athlete.id, lesson_id: 9, attended_on: '2026-09-14' }],
+        });
+      return String(add.mock.calls.at(-1)![0].summary);
+    }
+
+    const HOLDER = makeAthlete({
+      id: 1,
+      active_carnet: { id: 4, code: 'A7K2', remaining_entries: 3, expires_at: '2027-01-10' },
+    });
+
+    it('says a carnet pays for this lesson too, when a holder is among those carried', () => {
+      // The academy no longer sells carnets, but this athlete still has one.
+      const summary = carryOneAndReadToast(setup(), HOLDER, {
+        carnet_price_cents: null,
+        carnet_entry_unit: 'lesson',
+      });
+
+      expect(summary).toContain('carnet');
+    });
+
+    it('says nothing about carnets when nobody carried holds one, whatever the academy sells', () => {
+      const summary = carryOneAndReadToast(setup(), makeAthlete({ id: 1, active_carnet: null }), {
         carnet_price_cents: 7000,
         carnet_entries: 10,
         carnet_entry_unit: 'lesson',
       });
-      const add = vi.spyOn(fixture.debugElement.injector.get(MessageService), 'add');
-      fixture.detectChanges();
-      flushToCarryOver(httpMock).flush({
-        data: [{ id: 7, athlete_id: 1, lesson_id: 3, attended_on: '2026-09-14' }],
-      });
-      fixture.detectChanges();
 
-      carryButton(fixture)!.click();
-      httpMock
-        .expectOne((r) => r.url === '/api/v1/attendance' && r.method === 'POST')
-        .flush({ data: [{ id: 20, athlete_id: 1, lesson_id: 9, attended_on: '2026-09-14' }] });
-
-      expect(add.mock.calls.at(-1)![0].summary).toContain('carnet');
+      expect(summary).not.toContain('carnet');
     });
 
     it('says nothing about carnets when an entry counts per day', () => {
-      const { fixture, httpMock } = setup();
-      TestBed.inject(AcademyService).academy.set({
-        ...ACADEMY_BASE,
+      const summary = carryOneAndReadToast(setup(), HOLDER, {
         carnet_price_cents: 7000,
         carnet_entries: 10,
         carnet_entry_unit: 'day',
       });
+
+      expect(summary).not.toContain('carnet');
+    });
+
+    // ── An Undo never reaches into another room (#1930) ──────────────────────
+
+    it('an undo pressed after moving to another class never unticks anyone there', () => {
+      const { fixture, component, httpMock } = setup();
       const add = vi.spyOn(fixture.debugElement.injector.get(MessageService), 'add');
       fixture.detectChanges();
       flushToCarryOver(httpMock).flush({
-        data: [{ id: 7, athlete_id: 1, lesson_id: 3, attended_on: '2026-09-14' }],
+        data: [
+          { id: 7, athlete_id: 1, lesson_id: 3, attended_on: '2026-09-14' },
+          { id: 8, athlete_id: 2, lesson_id: 3, attended_on: '2026-09-14' },
+        ],
       });
       fixture.detectChanges();
-
       carryButton(fixture)!.click();
       httpMock
         .expectOne((r) => r.url === '/api/v1/attendance' && r.method === 'POST')
-        .flush({ data: [{ id: 20, athlete_id: 1, lesson_id: 9, attended_on: '2026-09-14' }] });
+        .flush({
+          data: [
+            { id: 20, athlete_id: 1, lesson_id: 9, attended_on: '2026-09-14' },
+            { id: 21, athlete_id: 2, lesson_id: 9, attended_on: '2026-09-14' },
+          ],
+        });
+      const undo = (add.mock.calls.at(-1)![0].data as { undo: () => void }).undo;
 
-      expect(add.mock.calls.at(-1)![0].summary).not.toContain('carnet');
+      // Over to 17:00, where the same two really were present.
+      component['selectClass'](KIDS.id);
+      httpMock
+        .expectOne(
+          (r) => r.url === '/api/v1/attendance' && r.params.get('academy_class_id') === '1',
+        )
+        .flush({
+          data: [
+            { id: 7, athlete_id: 1, lesson_id: 3, attended_on: '2026-09-14' },
+            { id: 8, athlete_id: 2, lesson_id: 3, attended_on: '2026-09-14' },
+          ],
+        });
+
+      undo();
+
+      // The presences the button wrote in 19:00 still go…
+      httpMock.expectOne('/api/v1/attendance/20').flush(null);
+      httpMock.expectOne('/api/v1/attendance/21').flush(null);
+      // …and 17:00, the room on screen, is left exactly as it is.
+      expect(component['isPresent'](1)).toBe(true);
+      expect(component['isPresent'](2)).toBe(true);
+    });
+
+    it('takes the undo off the screen when the class changes', () => {
+      const { fixture, component, httpMock } = setup();
+      const messages = fixture.debugElement.injector.get(MessageService);
+      fixture.detectChanges();
+      flushInit(httpMock, { athletes: [makeAthlete({ id: 1 })], classes: [KIDS, FUNDAMENTALS] });
+      flushCarryOver(httpMock, KIDS.id);
+      component['togglePresent'](makeAthlete({ id: 1 }));
+      httpMock
+        .expectOne((r) => r.url === '/api/v1/attendance' && r.method === 'POST')
+        .flush({ data: [{ id: 9, athlete_id: 1, lesson_id: 5, attended_on: '2026-09-14' }] });
+      const clear = vi.spyOn(messages, 'clear');
+
+      component['selectClass'](KIDS.id);
+
+      expect(clear).toHaveBeenCalled();
+      httpMock
+        .expectOne((r) => r.url === '/api/v1/attendance' && r.method === 'GET')
+        .flush({ data: [] });
+    });
+
+    it('takes the undo off the screen when the day changes', () => {
+      const { fixture, component, httpMock } = setup();
+      const messages = fixture.debugElement.injector.get(MessageService);
+      fixture.detectChanges();
+      flushInit(httpMock, { classes: [KIDS, FUNDAMENTALS] });
+      flushCarryOver(httpMock, KIDS.id);
+      const clear = vi.spyOn(messages, 'clear');
+
+      component['onDateChanged'](new Date(2026, 8, 13));
+
+      expect(clear).toHaveBeenCalled();
+      httpMock
+        .match(() => true)
+        .forEach((r) => r.flush(r.request.url.includes('athletes') ? emptyPage() : { data: [] }));
     });
   });
 });

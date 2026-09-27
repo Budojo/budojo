@@ -139,7 +139,11 @@ describe('Check-in by class', () => {
 
     cy.visitAuthenticated('/dashboard/attendance');
     cy.wait('@classes');
-    cy.wait('@attendance');
+    cy.wait('@attendance').its('request.url').should('include', 'academy_class_id=2');
+    // 19:00 came back empty, so the page also read 17:00, to offer bringing
+    // that room over (#1930). The same URL the chip tap will send: consume it
+    // here, or the wait after the tap would be satisfied by this one.
+    cy.wait('@attendance').its('request.url').should('include', 'academy_class_id=1');
 
     cy.get('[data-cy="attendance-row-1"]').click();
     cy.wait('@mark');
@@ -147,6 +151,8 @@ describe('Check-in by class', () => {
 
     cy.get('[data-cy="attendance-class-1"]').click();
     cy.wait('@attendance').its('request.url').should('include', 'academy_class_id=1');
+    // Three reads: 19:00, the earlier class, and the tap on 17:00.
+    cy.get('@attendance.all').should('have.length', 3);
     // The roster was not re-read: only the records move with the class.
     cy.get('@athletes.all').should('have.length', 1);
     cy.get('[data-cy="attendance-class-1"]').should('have.attr', 'aria-checked', 'true');
