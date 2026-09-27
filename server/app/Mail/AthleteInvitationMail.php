@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Mail;
 
+use App\Support\OperatorDay;
+use Carbon\CarbonImmutable;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
@@ -65,9 +67,25 @@ class AthleteInvitationMail extends Mailable implements ShouldQueue
                 'ownerName' => $this->ownerName,
                 'inviteUrl' => $this->resolvedInviteUrl(),
                 'expiresAt' => $this->expiresAt,
-                'expiryDays' => max(1, $this->expiresAt->diffInDays(now()->startOfDay())),
+                'expiryDays' => $this->expiryDays(),
             ],
         );
+    }
+
+    /**
+     * Whole days of the owner's calendar until the link expires (#1973):
+     * the expiry instant read as the operator's day, counted from the
+     * operator's today. Carbon 3's `diffInDays` is signed, so the order of
+     * the two dates matters — the old `expiresAt->diffInDays(today)` was
+     * negative for every future date and `max(1, …)` turned it into 1.
+     */
+    private function expiryDays(): int
+    {
+        $expiresOn = CarbonImmutable::parse(
+            $this->expiresAt->copy()->setTimezone(OperatorDay::timezone())->toDateString(),
+        );
+
+        return max(1, (int) OperatorDay::today()->diffInDays($expiresOn));
     }
 
     private function resolvedInviteUrl(): string
