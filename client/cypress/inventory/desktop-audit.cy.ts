@@ -513,6 +513,25 @@ function identityOf(id: number) {
   };
 }
 
+/**
+ * The identity plus the phone (#1931): what the lists that offer a WhatsApp
+ * reminder carry — the expiring documents and the athletes missing a
+ * certificate. Read from `ATHLETES` too, so a number is the same everywhere.
+ */
+function contactableOf(id: number) {
+  // Typed at the read: `athlete()`'s inferred type does not carry `id` (the
+  // same gap `identityOf` above trips over), and the phone pair is all this
+  // needs from the row.
+  const a = ATHLETES.find((x) => (x as { id?: number }).id === id) as
+    { phone_country_code: string | null; phone_national_number: string | null } | undefined;
+  if (!a) throw new Error(`no roster athlete ${id}`);
+  return {
+    ...identityOf(id),
+    phone_country_code: a.phone_country_code,
+    phone_national_number: a.phone_national_number,
+  };
+}
+
 // Not seen lately (#1729): three roster athletes, one per tier, with the
 // numbers the endpoint would send for them. Taken FROM the roster fixture so
 // the section and the table never disagree about a person.
@@ -781,7 +800,7 @@ const EXPIRING = {
   data: [
     {
       ...DOCUMENTS_ONE[0],
-      athlete: identityOf(1),
+      athlete: contactableOf(1),
     },
     {
       ...document({
@@ -792,7 +811,7 @@ const EXPIRING = {
         issued_at: '2025-09-01',
         expires_at: '2026-09-10',
       }),
-      athlete: identityOf(4),
+      athlete: contactableOf(4),
     },
     {
       ...document({
@@ -803,7 +822,7 @@ const EXPIRING = {
         issued_at: '2025-10-01',
         expires_at: '2026-10-01',
       }),
-      athlete: identityOf(7),
+      athlete: contactableOf(7),
     },
     // One of the academy's own papers (#1743): no athlete, so no identity and
     // no spine. Here so the card's inset is shot beside the athletes' (#1851).
@@ -818,7 +837,7 @@ const EXPIRING = {
       expires_at: '2026-10-12',
     }),
   ],
-  missing_medical_certificate: [identityOf(2), identityOf(8)],
+  missing_medical_certificate: [contactableOf(2), contactableOf(8)],
 };
 
 // ── Attendance, payments, promotions, carnets ────────────────────────────
@@ -2943,6 +2962,30 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
     act: () => {
       press('[data-cy="athletes-alerts"]');
       cy.get('[data-cy="athletes-alerts-panel"]').should('be.visible');
+    },
+  });
+  // The "Non pagato" list (#1931): the roster narrowed to who owes this
+  // month, each row with the WhatsApp reminder already written. The filter
+  // goes to the API as `?paid=no`, so the intercept keys on it.
+  screen('20-athletes-unpaid', '/dashboard/athletes?paid=no', ROSTER_READY, {
+    stubs: () => {
+      cy.intercept(
+        { method: 'GET', pathname: '/api/v1/athletes', query: { paid: 'no' } },
+        {
+          statusCode: 200,
+          body: page(
+            // What the server's `?paid=no` returns: active, owing, never the
+            // owner's own row, never someone a carnet covers.
+            ATHLETES.filter(
+              (a) =>
+                a.paid_current_month === false &&
+                a.status === 'active' &&
+                !a.is_self &&
+                a.payment_coverage !== 'carnet',
+            ),
+          ),
+        },
+      );
     },
   });
   // The empty roster's own first-run state. The getting-started checklist is

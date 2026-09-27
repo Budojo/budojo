@@ -70,6 +70,9 @@ import {
 } from '../../../shared/utils/athlete-sort';
 import { localeFor } from '../../../shared/utils/locale';
 import { relativeDay } from '../../../shared/utils/relative-day';
+import { ContactActionsComponent } from '../../../shared/components/contact-actions/contact-actions.component';
+import { localIso } from '../../../shared/utils/class-occurrences';
+import { unpaidReminder } from '../../../shared/utils/reminder-message';
 import { LocaleDatePipe } from '../../../shared/pipes/locale-date.pipe';
 import { CarnetService } from '../../../core/services/carnet.service';
 import { CONFIRM_REJECT_BUTTON } from '../../../shared/utils/confirm-buttons';
@@ -116,6 +119,7 @@ interface SelectOption<T extends string> {
     IconButtonComponent,
     SortHeaderComponent,
     BeltSortButtonComponent,
+    ContactActionsComponent,
   ],
   providers: [ConfirmationService, MessageService],
   templateUrl: './athletes-list.component.html',
@@ -223,6 +227,35 @@ export class AthletesListComponent implements OnInit {
       // The same exclusion as the server's `expectedToPay`, which leaves
       // them out of `?paid=no`.
       athlete.fee_override_cents === 0
+    );
+  }
+
+  /**
+   * The WhatsApp reminder for a row (#1931), or null when none is offered.
+   *
+   * Only while the "Non pagato" filter is on: that list is the one chased,
+   * and the everyday roster stays quiet. The server's `?paid=no` already
+   * leaves out carnet holders and anyone not expected to pay; the same
+   * `paymentNotExpected` is asked here too, so a row never offers a reminder
+   * the chip beside it contradicts. The amount is what one payment of their
+   * period costs — a quarterly payer is asked for the quarter.
+   */
+  reminderFor(athlete: Athlete): string | null {
+    const fee = athlete.monthly_fee_cents ?? 0;
+    if (this.selectedPaid() !== 'no' || this.paymentNotExpected(athlete) || fee <= 0) {
+      return null;
+    }
+
+    return unpaidReminder(
+      (key, params) => this.translate.instant(key, params) as string,
+      this.languageService.currentLang(),
+      {
+        firstName: athlete.first_name,
+        month: localIso(new Date()).slice(0, 7),
+        monthlyFeeCents: fee,
+        billingPeriodMonths: athlete.billing_period_months ?? 1,
+        academy: this.academyService.academy()?.name ?? '',
+      },
     );
   }
 

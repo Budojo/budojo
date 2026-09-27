@@ -2760,3 +2760,134 @@ describe('AthletesListComponent — not seen lately (#1729)', () => {
     expect(peopledRoot.querySelector('[data-cy="not-seen-empty-no-attendance"]')).not.toBeNull();
   });
 });
+
+describe('AthletesListComponent — the reminder on WhatsApp (#1931)', () => {
+  function makeAthlete(over: Partial<Athlete> = {}): Athlete {
+    return {
+      id: 42,
+      first_name: 'Andrea',
+      last_name: 'Gallo',
+      email: null,
+      phone_country_code: '+39',
+      phone_national_number: '3331234567',
+      address: null,
+      date_of_birth: null,
+      belt: 'white',
+      stripes: 0,
+      status: 'active',
+      joined_at: '2026-01-01',
+      created_at: '2026-01-01T00:00:00Z',
+      monthly_fee_cents: 7000,
+      billing_period_months: 1,
+      paid_current_month: false,
+      payment_coverage: 'none',
+      ...over,
+    } as Athlete;
+  }
+
+  beforeEach(() => {
+    // The month in the message is the owner's current one.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 8, 20, 10, 0, 0));
+    TestBed.configureTestingModule({
+      imports: [AthletesListComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        { provide: AthleteService, useClass: FakeAthleteService },
+        { provide: PaymentService, useClass: FakePaymentService },
+        ...provideI18nTesting(),
+      ],
+    });
+    TestBed.inject(AcademyService).academy.set({
+      ...ACADEMY_BASE,
+      name: 'Budojo BJJ Torino',
+      monthly_fee_cents: 7000,
+    } as Academy);
+  });
+
+  afterEach(() => vi.useRealTimers());
+
+  async function render(rows: Athlete[], paid: 'no' | null): Promise<HTMLElement> {
+    if (paid !== null) {
+      await TestBed.inject(Router).navigate([], { queryParams: { paid } });
+    }
+    const athleteService = TestBed.inject(AthleteService) as unknown as FakeAthleteService;
+    athleteService.list.mockReturnValue(
+      of({
+        data: rows,
+        meta: { total: rows.length, current_page: 1, per_page: 20, last_page: 1 },
+      }),
+    );
+    const fixture = TestBed.createComponent(AthletesListComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  function messageOf(link: Element | null): string {
+    const href = link?.getAttribute('href') ?? '';
+    return decodeURIComponent(href.split('?text=')[1] ?? '');
+  }
+
+  it('offers each unpaid row the reminder, with the month and what they owe', async () => {
+    const root = await render([makeAthlete()], 'no');
+
+    const link = root.querySelector('[data-cy="athlete-reminder-42-whatsapp"]');
+    expect(link?.getAttribute('href')).toContain('https://wa.me/393331234567?text=');
+    expect(messageOf(link)).toContain('Andrea');
+    expect(messageOf(link)).toContain('September 2026');
+    expect(messageOf(link)).toContain('€70.00');
+    expect(messageOf(link)).toContain('Budojo BJJ Torino');
+  });
+
+  it('asks a quarterly payer for the quarter', async () => {
+    const root = await render([makeAthlete({ billing_period_months: 3 })], 'no');
+
+    expect(messageOf(root.querySelector('[data-cy="athlete-reminder-42-whatsapp"]'))).toContain(
+      '€210.00',
+    );
+  });
+
+  it('offers it on the phone card too', async () => {
+    const root = await render([makeAthlete()], 'no');
+
+    const card = root.querySelector('[data-cy="athlete-card-reminder-42-whatsapp"]');
+    const row = root.querySelector('[data-cy="athlete-reminder-42-whatsapp"]');
+    expect(card).not.toBeNull();
+    expect(messageOf(card)).toBe(messageOf(row));
+  });
+
+  it('keeps the everyday roster quiet: no reminder without the unpaid filter', async () => {
+    const root = await render([makeAthlete()], null);
+
+    expect(root.querySelector('[data-cy^="athlete-reminder-"]')).toBeNull();
+    expect(root.querySelector('[data-cy^="athlete-card-reminder-"]')).toBeNull();
+  });
+
+  it("never offers one on the owner's own row, nor to someone who trains free", async () => {
+    const root = await render(
+      [
+        makeAthlete({ id: 1, is_self: true }),
+        makeAthlete({ id: 2, monthly_fee_cents: 0, fee_override_cents: 0 }),
+      ],
+      'no',
+    );
+
+    expect(root.querySelector('[data-cy="athlete-reminder-1-whatsapp"]')).toBeNull();
+    expect(root.querySelector('[data-cy="athlete-reminder-2-whatsapp"]')).toBeNull();
+  });
+
+  it('shows the disabled control, and says why, when there is no number', async () => {
+    const root = await render(
+      [makeAthlete({ phone_country_code: null, phone_national_number: null })],
+      'no',
+    );
+
+    expect(
+      root.querySelector('[data-cy="athlete-reminder-42-none"]')?.getAttribute('aria-label'),
+    ).toBe('No phone number on file');
+  });
+});

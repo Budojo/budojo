@@ -2978,7 +2978,17 @@
       "whatsapp": "WhatsApp",
       "callAria": "Chiama {{name}}",
       "whatsappAria": "Scrivi a {{name}} su WhatsApp",
-      "noPhone": "Nessun numero in archivio"
+      "noPhone": "Nessun numero in archivio",
+      "reminder": "Manda il promemoria su WhatsApp",
+      "reminderAria": "Manda il promemoria a {{name}} su WhatsApp"
+    },
+    "reminder": {
+      "unpaid": "Ciao {{name}}, ti ricordo la quota di {{month}} ({{amount}}). Grazie! — {{academy}}",
+      "certificateExpires": "Ciao {{name}}, il tuo certificato medico scade il {{date}}. Quando hai quello nuovo portamelo in palestra. — {{academy}}",
+      "certificateExpired": "Ciao {{name}}, il tuo certificato medico è scaduto il {{date}}. Quando hai quello nuovo portamelo in palestra. — {{academy}}",
+      "certificateMissing": "Ciao {{name}}, non ho ancora il tuo certificato medico. Quando ce l'hai portamelo in palestra. — {{academy}}",
+      "documentExpires": "Ciao {{name}}, un tuo documento in palestra ({{document}}) scade il {{date}}. Quando hai quello nuovo portamelo. — {{academy}}",
+      "documentExpired": "Ciao {{name}}, un tuo documento in palestra ({{document}}) è scaduto il {{date}}. Quando hai quello nuovo portamelo. — {{academy}}"
     }
   },
   "stats": {

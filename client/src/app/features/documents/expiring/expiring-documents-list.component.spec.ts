@@ -6,12 +6,18 @@ import {
   AthleteMissingMedicalCertificate,
   ExpiringDocument,
 } from '../../../core/services/document.service';
-import { AthleteIdentity } from '../../../core/services/athlete.service';
+import { ContactableAthlete } from '../../../core/services/athlete.service';
+import { AcademyService } from '../../../core/services/academy.service';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 import { ExpiringDocumentsListComponent } from './expiring-documents-list.component';
 
-/** A person as the server sends them on this page (#1851). */
-function person(id: number, first: string, last: string): AthleteIdentity {
+/** A person as the server sends them on this page (#1851), with the phone (#1931). */
+function person(
+  id: number,
+  first: string,
+  last: string,
+  phone: { cc: string | null; nn: string | null } = { cc: '+39', nn: '3331234567' },
+): ContactableAthlete {
   return {
     id,
     first_name: first,
@@ -21,7 +27,15 @@ function person(id: number, first: string, last: string): AthleteIdentity {
     date_of_birth: null,
     photo_url: null,
     user_avatar_url: null,
+    phone_country_code: phone.cc,
+    phone_national_number: phone.nn,
   };
+}
+
+/** The text a WhatsApp link carries, decoded. */
+function messageOf(link: Element | null): string {
+  const href = link?.getAttribute('href') ?? '';
+  return decodeURIComponent(href.split('?text=')[1] ?? '');
 }
 
 function makeExpiring(overrides: Partial<ExpiringDocument> = {}): ExpiringDocument {
@@ -289,6 +303,97 @@ describe('ExpiringDocumentsListComponent', () => {
       const header = (fixture.nativeElement as HTMLElement).textContent ?? '';
       expect(header).toContain('2');
       expect(fixture.componentInstance.count()).toBe(2);
+    });
+  });
+
+  describe('the reminder on WhatsApp (#1931)', () => {
+    beforeEach(() => {
+      // "Runs out" or "ran out" is read against the owner's today.
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date(2026, 3, 20, 10, 0, 0));
+      TestBed.inject(AcademyService).academy.set({
+        name: 'Budojo BJJ Torino',
+      } as never);
+    });
+
+    afterEach(() => vi.useRealTimers());
+
+    it('offers every expiring row a reminder that says when the certificate runs out', () => {
+      const fixture = mount();
+      flushHealth([makeExpiring({ id: 1, athlete_id: 42, expires_at: '2026-05-10' })]);
+      fixture.detectChanges();
+
+      const el: HTMLElement = fixture.nativeElement;
+      const desktop = el.querySelector('[data-cy="expiring-contact-1-whatsapp"]');
+      const card = el.querySelector('[data-cy="expiring-card-contact-1-whatsapp"]');
+
+      expect(desktop?.getAttribute('href')).toContain('https://wa.me/393331234567?text=');
+      expect(messageOf(desktop)).toContain('Mario');
+      expect(messageOf(desktop)).toContain('medical certificate runs out on 10 May 2026');
+      expect(messageOf(desktop)).toContain('Budojo BJJ Torino');
+      // The same reminder on the phone's card.
+      expect(messageOf(card)).toBe(messageOf(desktop));
+    });
+
+    it('says a certificate has run out when its date is past', () => {
+      const fixture = mount();
+      flushHealth([makeExpiring({ id: 3, expires_at: '2026-04-16' })]);
+      fixture.detectChanges();
+
+      const link = (fixture.nativeElement as HTMLElement).querySelector(
+        '[data-cy="expiring-contact-3-whatsapp"]',
+      );
+      expect(messageOf(link)).toContain('ran out on 16 April 2026');
+    });
+
+    it('never calls another paper a certificate', () => {
+      const fixture = mount();
+      flushHealth([makeExpiring({ id: 4, type: 'id_card', expires_at: '2026-05-10' })]);
+      fixture.detectChanges();
+
+      const message = messageOf(
+        (fixture.nativeElement as HTMLElement).querySelector(
+          '[data-cy="expiring-contact-4-whatsapp"]',
+        ),
+      );
+      expect(message).toContain('ID card');
+      expect(message).not.toContain('medical certificate');
+    });
+
+    it('asks someone with no certificate at all for one', () => {
+      const fixture = mount();
+      flushHealth([], [person(11, 'Giulia', 'Rossi')]);
+      fixture.detectChanges();
+
+      const el: HTMLElement = fixture.nativeElement;
+      const link = el.querySelector('[data-cy="missing-cert-contact-11-whatsapp"]');
+      expect(messageOf(link)).toContain("Giulia, I don't have your medical certificate yet");
+      // Beside the row's link, never inside it: an anchor in an anchor is
+      // invalid, and a tap on WhatsApp must not also open the athlete.
+      expect(
+        el.querySelector('[data-cy="missing-cert-row-11"] a[href^="https://wa.me"]'),
+      ).toBeNull();
+    });
+
+    it('shows the disabled control, and says why, for someone with no number', () => {
+      const fixture = mount();
+      flushHealth([], [person(12, 'Luca', 'Verdi', { cc: null, nn: null })]);
+      fixture.detectChanges();
+
+      const none = (fixture.nativeElement as HTMLElement).querySelector(
+        '[data-cy="missing-cert-contact-12-none"]',
+      );
+      expect(none?.getAttribute('aria-label')).toBe('No phone number on file');
+    });
+
+    it("offers nothing on the academy's own papers, which belong to no one", () => {
+      const fixture = mount();
+      flushHealth([makeExpiring({ id: 9, athlete_id: null, athlete: null })]);
+      fixture.detectChanges();
+
+      expect(
+        (fixture.nativeElement as HTMLElement).querySelector('[data-cy^="expiring-contact-9"]'),
+      ).toBeNull();
     });
   });
 });

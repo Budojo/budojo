@@ -9,8 +9,11 @@
     [href]="l.whatsapp"
     target="_blank"
     rel="noopener noreferrer"
-    [attr.aria-label]="'shared.contact.whatsappAria' | translate: { name: name() }"
-    [pTooltip]="'shared.contact.whatsapp' | translate"
+    [attr.aria-label]="
+      (isReminder() ? 'shared.contact.reminderAria' : 'shared.contact.whatsappAria')
+        | translate: { name: name() }
+    "
+    [pTooltip]="(isReminder() ? 'shared.contact.reminder' : 'shared.contact.whatsapp') | translate"
     tooltipPosition="top"
     [attr.data-cy]="cy('whatsapp')"
     (click)="$event.stopPropagation()"
