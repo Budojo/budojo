@@ -61,6 +61,13 @@
     color: var(--p-text-muted-color);
   }
 
+  // A codice fiscale reads as the document writes it: in capitals (#1934).
+  // Display only — the value is normalised on the wire.
+  &__fiscal-code {
+    text-transform: uppercase;
+    font-variant-numeric: tabular-nums;
+  }
+
   &__row {
     display: grid;
     grid-template-columns: 1fr 1fr;

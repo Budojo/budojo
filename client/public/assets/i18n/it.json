@@ -2637,7 +2637,10 @@
         "addressCity": "Città",
         "addressProvince": "Provincia",
         "feeTier": "Fascia di quota",
-        "feeOverride": "Quota personale"
+        "feeOverride": "Quota personale",
+        "fiscalCode": "Codice fiscale",
+        "sex": "Sesso (come sul documento)",
+        "birthPlace": "Luogo di nascita"
       },
       "placeholder": {
         "phoneCountryCode": "Prefisso",
@@ -2650,7 +2653,8 @@
           "line2": "Scala B, interno 4",
           "zip": "00100",
           "city": "Roma"
-        }
+        },
+        "birthPlace": "Comune, o Paese se nato all'estero"
       },
       "aria": {
         "phoneCountryCode": "Prefisso telefonico",
@@ -2693,7 +2697,8 @@
         "feeTier": "Quale quota mensile paga. Lascia vuoto per la quota standard dell'accademia.",
         "feeOverride": "Solo per questo atleta: sostituisce la fascia e la quota dell'accademia. Metti 0 se si allena gratis.",
         "feeOverrideFree": "Si allena gratis: non deve niente e non compare tra chi non ha pagato.",
-        "kidsBeltsHidden": "Le cinture dei bambini sono nascoste: attivale in Accademia → Modifica."
+        "kidsBeltsHidden": "Le cinture dei bambini sono nascoste: attivale in Accademia → Modifica.",
+        "fiscalCode": "Se è valido, compila la data di nascita e il sesso quando sono vuoti."
       },
       "button": {
         "cancel": "Annulla",
@@ -2745,7 +2750,11 @@
         "gym": "In palestra",
         "contact": "Contatti"
       },
-      "feeTierStandard": "Quota standard dell'accademia"
+      "feeTierStandard": "Quota standard dell'accademia",
+      "sexOption": {
+        "m": "Maschio",
+        "f": "Femmina"
+      }
     },
     "photo": {
       "title": "Foto",
@@ -2796,7 +2805,10 @@
         "joined_at": "Iscritto il",
         "email": "Email",
         "phone": "Telefono",
-        "date_of_birth": "Data di nascita"
+        "date_of_birth": "Data di nascita",
+        "fiscal_code": "Codice fiscale",
+        "sex": "Sesso",
+        "birth_place": "Luogo di nascita"
       },
       "table": {
         "row": "Riga",
