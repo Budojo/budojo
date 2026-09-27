@@ -156,6 +156,23 @@ final class RankLadder
         return null;
     }
 
+    /**
+     * Where this belt sits in the order people climb the ladder, from zero;
+     * null for a colour the art does not award. Rank order sorts a roster,
+     * this orders a life: BJJ's grey is ranked below white but climbed after
+     * it (#1966).
+     */
+    public function climbPosition(Belt $belt): ?int
+    {
+        foreach ($this->climbingOrder() as $position => $grade) {
+            if ($grade->belt === $belt) {
+                return $position;
+            }
+        }
+
+        return null;
+    }
+
     /** Whether this belt is a children's step (#1651). False for a colour this art does not award. */
     public function isKidsGrade(Belt $belt): bool
     {

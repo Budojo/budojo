@@ -11,6 +11,7 @@ use App\Models\AthletePayment;
 use App\Notifications\AthletePaymentMarkedPaidNotification;
 use App\Support\NotificationCategory;
 use App\Support\NotificationPreferences;
+use App\Support\OperatorDay;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -50,8 +51,9 @@ class RecordAthletePaymentAction
      * other observers.
      *
      * `$paidAt` is the day the money arrived (#1761), stored as the start of
-     * that day; null records the moment of the call, as every row before
-     * #1761 did. It is the transaction's date, **never** the
+     * that day; null means today — the owner's today (#1963), stored the
+     * same way. Rows from before #1761 carry the moment they were recorded
+     * instead. It is the transaction's date, **never** the
      * month the revenue belongs to — `(year, month)` and the period decide
      * that, and the chart buckets by them. Like `$method`, it goes in the
      * *values* of `createOrFirst`, not the keys: a re-post of the same month
@@ -70,7 +72,7 @@ class RecordAthletePaymentAction
         $values = [
             'period_months' => $period,
             'amount_cents' => $amountCents,
-            'paid_at' => $paidAt?->startOfDay() ?? now(),
+            'paid_at' => $paidAt?->startOfDay() ?? OperatorDay::today(),
             'payment_method' => $method,
         ];
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Athlete;
 
+use App\Support\OperatorDay;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -23,19 +24,18 @@ class ListAthletesRequest extends FormRequest
 
     /**
      * `from` (#1754): the caller's own calendar day, which the birthday window
-     * starts from. The server runs on UTC, and near midnight the owner's day
-     * is a day away from it — a window built from the server's day can drop
-     * a birthday on the owner's seventh day, and a client can only remove
-     * rows from an answer, never add them. So the caller says which day it
-     * is, within a day either way of the server's: no time zone is further
-     * than that, and no wider bound turns the filter into a query of any
-     * window at all.
+     * starts from. Without it the window starts from the owner's day
+     * (`OperatorDay`, #1963), which the server no longer mistakes for UTC's —
+     * but the browser's day is still the better answer for someone reading
+     * from another timezone, so the caller may say which day it is, within a
+     * day either way of the owner's: no time zone is further than that, and
+     * no wider bound turns the filter into a query of any window at all.
      *
      * @return array<string, mixed>
      */
     public function rules(): array
     {
-        $today = CarbonImmutable::today();
+        $today = OperatorDay::today();
 
         return [
             'from' => [
@@ -47,12 +47,12 @@ class ListAthletesRequest extends FormRequest
         ];
     }
 
-    /** The day a birthday window starts from: the caller's, or the server's. */
+    /** The day a birthday window starts from: the caller's, or the owner's. */
     public function birthdayFrom(): CarbonImmutable
     {
         $value = $this->validated('from');
         $from = \is_string($value) ? CarbonImmutable::createFromFormat('!Y-m-d', $value) : null;
 
-        return $from instanceof CarbonImmutable ? $from : CarbonImmutable::today();
+        return $from instanceof CarbonImmutable ? $from : OperatorDay::today();
     }
 }

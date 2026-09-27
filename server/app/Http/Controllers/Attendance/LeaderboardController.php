@@ -10,6 +10,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\AthleteIdentityResource;
 use App\Models\Academy;
 use App\Models\User;
+use App\Support\OperatorDay;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -107,7 +108,7 @@ class LeaderboardController extends Controller
     {
         if ($raw === null || $raw === '') {
             // Default to current month.
-            return CarbonImmutable::now()->startOfMonth();
+            return OperatorDay::today()->startOfMonth();
         }
         if (! \is_string($raw)) {
             return null;

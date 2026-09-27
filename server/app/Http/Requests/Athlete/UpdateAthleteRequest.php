@@ -15,6 +15,7 @@ use App\Http\Requests\Concerns\ValidatesPhonePair;
 use App\Models\Athlete;
 use App\Rules\BeltInLadder;
 use App\Rules\StripesWithinGrade;
+use App\Support\OperatorDay;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -94,7 +95,7 @@ class UpdateAthleteRequest extends FormRequest
             'website' => ['sometimes', 'nullable', 'url', 'max:255'],
             'facebook' => ['sometimes', 'nullable', 'url', 'max:255'],
             'instagram' => ['sometimes', 'nullable', 'url', 'max:255'],
-            'date_of_birth' => ['sometimes', 'nullable', 'date', 'before:today'],
+            'date_of_birth' => ['sometimes', 'nullable', 'date', OperatorDay::before()],
             'belt' => ['sometimes', Rule::enum(Belt::class), new BeltInLadder($this->rankLadder())],
             // Global ceiling across every ladder (#1800), then the grade's own
             // cap — for the belt in the request or, when an edit sends only

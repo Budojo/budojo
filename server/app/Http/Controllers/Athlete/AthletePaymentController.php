@@ -15,6 +15,7 @@ use App\Http\Resources\AthletePaymentResource;
 use App\Models\Athlete;
 use App\Models\User;
 use App\Support\MonthlyFee;
+use App\Support\OperatorDay;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -38,7 +39,7 @@ class AthletePaymentController extends Controller
             return response()->json(['message' => 'Forbidden.'], 403);
         }
 
-        $year = $request->integer('year', (int) now()->year);
+        $year = $request->integer('year', (int) OperatorDay::today()->year);
 
         return AthletePaymentResource::collection(
             $this->listAction->execute($athlete, $year),

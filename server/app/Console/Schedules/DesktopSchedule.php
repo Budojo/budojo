@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Schedules;
 
+use App\Support\OperatorDay;
 use Illuminate\Console\Scheduling\Schedule;
 
 /**
@@ -38,7 +39,8 @@ use Illuminate\Console\Scheduling\Schedule;
  * window eagerly, with whatever timezone the event has at that moment —
  * after it, the window is UTC and 09:00 Rome is 07:00 or 08:00 by season.
  *
- * Timezone stays Europe/Rome for parity with the web schedule.
+ * The timezone is the operator's (`OperatorDay`, #1963), the same one the
+ * web schedule and every "today" in a date rule read.
  */
 final class DesktopSchedule implements ScheduleDefinition
 {
@@ -70,13 +72,13 @@ final class DesktopSchedule implements ScheduleDefinition
 
         $schedule->command('budojo:send-medical-cert-expiry-reminders')
             ->everyFiveMinutes()
-            ->timezone('Europe/Rome')
+            ->timezone(OperatorDay::timezone())
             ->between('09:00', '23:59')
             ->withoutOverlapping(60);
 
         $schedule->command('budojo:send-athlete-missed-streak-pushes')
             ->everyFiveMinutes()
-            ->timezone('Europe/Rome')
+            ->timezone(OperatorDay::timezone())
             ->between('09:30', '23:59')
             ->withoutOverlapping(60);
 
@@ -85,7 +87,7 @@ final class DesktopSchedule implements ScheduleDefinition
         // same window, same cadence.
         $schedule->command('budojo:send-academy-document-expiry-reminders')
             ->everyFiveMinutes()
-            ->timezone('Europe/Rome')
+            ->timezone(OperatorDay::timezone())
             ->between('09:00', '23:59')
             ->withoutOverlapping(60);
 
@@ -93,9 +95,9 @@ final class DesktopSchedule implements ScheduleDefinition
         // so the digest still goes out if the app is opened at 15:00 that day.
         $schedule->command('budojo:send-unpaid-athletes-digest')
             ->everyFiveMinutes()
-            ->timezone('Europe/Rome')
+            ->timezone(OperatorDay::timezone())
             ->between('09:00', '23:59')
-            ->when(fn (): bool => now('Europe/Rome')->day === 16)
+            ->when(fn (): bool => now(OperatorDay::timezone())->day === 16)
             ->withoutOverlapping(60);
     }
 }

@@ -7,6 +7,7 @@ use App\Models\Academy;
 use App\Models\Athlete;
 use App\Models\AttendanceRecord;
 use App\Models\User;
+use App\Support\OperatorDay;
 use Carbon\Carbon;
 
 /**
@@ -43,11 +44,11 @@ it('returns athletes from the same academy who have an attendance row for today'
 
     // Two peers marked today.
     AttendanceRecord::factory()->for($peerA)->create([
-        'attended_on' => Carbon::today()->toDateString(),
+        'attended_on' => OperatorDay::today()->toDateString(),
         'source' => AttendanceSource::Self,
     ]);
     AttendanceRecord::factory()->for($peerB)->create([
-        'attended_on' => Carbon::today()->toDateString(),
+        'attended_on' => OperatorDay::today()->toDateString(),
         'source' => AttendanceSource::Instructor,
     ]);
 
@@ -65,7 +66,7 @@ it('excludes athletes from OTHER academies', function (): void {
     [, $otherPeer] = authedPeerAthlete($otherAcademy);
 
     AttendanceRecord::factory()->for($otherPeer)->create([
-        'attended_on' => Carbon::today()->toDateString(),
+        'attended_on' => OperatorDay::today()->toDateString(),
         'source' => AttendanceSource::Self,
     ]);
 
@@ -82,7 +83,7 @@ it('excludes athletes who opted out via attendance_peer_visible = false', functi
     $peerUser->update(['attendance_peer_visible' => false]);
 
     AttendanceRecord::factory()->for($peerAthlete)->create([
-        'attended_on' => Carbon::today()->toDateString(),
+        'attended_on' => OperatorDay::today()->toDateString(),
         'source' => AttendanceSource::Self,
     ]);
 
@@ -98,7 +99,7 @@ it('does NOT leak full last_name — only the initial', function (): void {
     [, $peer] = authedPeerAthlete($this->academy);
     $peer->update(['first_name' => 'Mario', 'last_name' => 'Rossi']);
     AttendanceRecord::factory()->for($peer)->create([
-        'attended_on' => Carbon::today()->toDateString(),
+        'attended_on' => OperatorDay::today()->toDateString(),
         'source' => AttendanceSource::Self,
     ]);
 
@@ -143,7 +144,7 @@ it('caps the preview at 8 athletes', function (): void {
     for ($i = 0; $i < 10; $i++) {
         [, $peer] = authedPeerAthlete($this->academy);
         AttendanceRecord::factory()->for($peer)->create([
-            'attended_on' => Carbon::today()->toDateString(),
+            'attended_on' => OperatorDay::today()->toDateString(),
             'source' => AttendanceSource::Self,
         ]);
     }

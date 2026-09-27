@@ -7,7 +7,7 @@ namespace App\Http\Controllers\Stats;
 use App\Actions\Stats\PaymentsArrearsAction;
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use Carbon\CarbonImmutable;
+use App\Support\OperatorDay;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -29,6 +29,6 @@ class PaymentsArrearsController extends Controller
             return response()->json(['message' => 'Forbidden.'], 403);
         }
 
-        return response()->json(['data' => $this->arrears->execute($academy, CarbonImmutable::today())]);
+        return response()->json(['data' => $this->arrears->execute($academy, OperatorDay::today())]);
     }
 }

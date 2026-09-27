@@ -7,6 +7,7 @@ namespace App\Actions\Academy;
 use App\Exceptions\PendingScheduleAlreadyExistsException;
 use App\Models\Academy;
 use App\Models\AcademySchedule;
+use App\Support\OperatorDay;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -55,7 +56,7 @@ class ScheduleAcademyChangeAction
             Academy::query()->whereKey($academy->id)->lockForUpdate()->first();
 
             $hasPending = $academy->schedules()
-                ->where('effective_from', '>', Carbon::today()->toDateString())
+                ->where('effective_from', '>', OperatorDay::today()->toDateString())
                 ->exists();
             if ($hasPending) {
                 throw new PendingScheduleAlreadyExistsException(

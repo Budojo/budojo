@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Models\Athlete;
 use App\Models\Carnet;
 use App\Models\CarnetEntry;
+use App\Support\OperatorDay;
 
 // helpers live in tests/Pest.php
 
@@ -70,7 +71,7 @@ it('counts sessions already on the register when the carnet is dated to cover th
 it('refuses a validity date in the future', function (): void {
     $this->actingAs($this->user)
         ->postJson("/api/v1/athletes/{$this->athlete->id}/carnets", [
-            'valid_from' => now()->addDay()->toDateString(),
+            'valid_from' => OperatorDay::today()->addDay()->toDateString(),
         ])
         ->assertUnprocessable()
         ->assertJsonValidationErrors(['valid_from']);

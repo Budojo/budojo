@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions\Attendance;
 
 use App\Models\Academy;
+use App\Support\OperatorDay;
 use App\Support\ScheduledDays;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
@@ -47,7 +48,7 @@ class GetMonthlyAttendanceSummaryAction
     {
         $start = $month->startOfMonth()->toDateString();
         $end = $month->endOfMonth()->toDateString();
-        $today = CarbonImmutable::today();
+        $today = OperatorDay::today();
 
         $rows = DB::table('attendance_records')
             ->join('athletes', 'athletes.id', '=', 'attendance_records.athlete_id')

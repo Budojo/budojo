@@ -6,7 +6,11 @@ import { ConfirmationService, MessageService } from 'primeng/api';
 import { of, throwError } from 'rxjs';
 import { provideI18nTesting } from '../../../../../test-utils/i18n-test';
 import { LanguageService } from '../../../../core/services/language.service';
-import { type AthletePromotion, AthleteService } from '../../../../core/services/athlete.service';
+import {
+  type AthletePromotion,
+  AthleteService,
+  type PromotionGap,
+} from '../../../../core/services/athlete.service';
 import { PromotionsListComponent } from './promotions-list.component';
 import { useLadder } from '../../../../../test-utils/ladder-test';
 
@@ -44,6 +48,9 @@ class FakeAthleteService {
     } as AthletePromotion),
   );
   readonly deletePromotion = vi.fn(() => of(undefined));
+  readonly completeOpeningPromotion = vi.fn(() => of({} as AthletePromotion));
+  readonly skipPromotionStep = vi.fn(() => of(undefined));
+  readonly unskipPromotionStep = vi.fn(() => of(undefined));
 }
 
 function setup(opts: { athleteId?: string } = {}): {
@@ -95,6 +102,29 @@ function makePromotion(over: Partial<AthletePromotion> = {}): AthletePromotion {
 
 describe('PromotionsListComponent (#799)', () => {
   afterEach(() => TestBed.resetTestingModule());
+
+  describe("the picker's last day (#1963)", () => {
+    const tz = process.env['TZ'];
+
+    afterEach(() => {
+      vi.useRealTimers();
+      process.env['TZ'] = tz;
+    });
+
+    it("ends on the owner's today, not UTC's", () => {
+      // 00:30 on the 11th in Rome is still the 10th in UTC. The server now
+      // accepts the owner's day, so the picker must offer it — capped at
+      // UTC's day it refused tonight's promotion for two hours after midnight.
+      process.env['TZ'] = 'Europe/Rome';
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date('2026-10-10T22:30:00Z'));
+
+      const { component } = setup();
+      const maxDate = (component as unknown as { maxDate: Date }).maxDate;
+
+      expect([maxDate.getFullYear(), maxDate.getMonth(), maxDate.getDate()]).toEqual([2026, 9, 11]);
+    });
+  });
 
   it('reads a stripe row the way its grade counts — dan, not stripes (#1801)', () => {
     const { fixture, el, svc } = setup();
@@ -699,5 +729,546 @@ describe('PromotionsListComponent — time at the belt (#1772)', () => {
 
     expect(strip).toContain('No belt recorded yet');
     expect(strip).not.toContain('On this belt since');
+  });
+});
+
+describe('PromotionsListComponent — missing steps (#1966)', () => {
+  // The day the server's payloads below were captured on, pinned: a window
+  // that runs "up to today" must not move with the machine's clock.
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-26T12:00:00Z'));
+  });
+
+  afterEach(() => {
+    TestBed.resetTestingModule();
+    vi.useRealTimers();
+  });
+
+  /*
+   * Every payload below is the server's own output for GET /promotions
+   * (#1970, `PromotionGaps`), captured from the endpoint with the rows of
+   * `AthletePromotionGapsTest`. Only the row ids are renamed — 15 for
+   * Jacopo's opening row, 12 for his "white 2 → 3" — so a spec never
+   * describes a shape the server does not send.
+   */
+
+  /** The opening row "→ blue", dated the day Jacopo was entered. */
+  const opening = makePromotion({
+    id: 15,
+    kind: 'belt',
+    from_belt: null,
+    to_belt: 'blue',
+    from_stripes: null,
+    to_stripes: null,
+    belt_at_event: 'blue',
+    is_opening: true,
+    recorded_at: '2026-09-20T10:00:00+00:00',
+  });
+  const whiteThree = makePromotion({
+    id: 12,
+    kind: 'stripe',
+    from_belt: null,
+    to_belt: null,
+    from_stripes: 2,
+    to_stripes: 3,
+    belt_at_event: 'white',
+    is_opening: false,
+    recorded_at: '2024-03-12T00:00:00+00:00',
+  });
+  const fourthStripe: PromotionGap = {
+    key: 'stripe:white:4',
+    kind: 'stripe',
+    belt: 'white',
+    from_belt: null,
+    from_stripes: 3,
+    to_stripes: 4,
+    after: { promotion_id: 12, recorded_at: '2024-03-12' },
+    before: { promotion_id: 15, recorded_at: '2026-09-20' },
+    completes_promotion_id: null,
+  };
+  const blueBelt: PromotionGap = {
+    key: 'belt:blue:0',
+    kind: 'belt',
+    belt: 'blue',
+    from_belt: 'white',
+    from_stripes: null,
+    to_stripes: null,
+    after: { promotion_id: 12, recorded_at: '2024-03-12' },
+    // The opening row itself: the blue belt came no later than his entry.
+    before: { promotion_id: 15, recorded_at: '2026-09-20' },
+    completes_promotion_id: 15,
+  };
+  const jacopoProgression = {
+    belt: 'blue' as const,
+    stripes: 2,
+    belt_since: '2026-09-20',
+    days_at_belt: 6,
+    months_at_belt: 0,
+    sessions_at_belt: 0,
+    stripe_since: null,
+    days_since_stripe: null,
+    sessions_since_stripe: null,
+  };
+
+  function page(data: AthletePromotion[], gaps: PromotionGap[]) {
+    return of({
+      data,
+      meta: { current_page: 1, per_page: 20, total: data.length, last_page: 1 },
+      progression: jacopoProgression,
+      gaps,
+      history_starts_at: '2024-03-12',
+    });
+  }
+
+  function jacopo(gaps: PromotionGap[] = [fourthStripe, blueBelt]) {
+    const ctx = setup({ athleteId: '7' });
+    useLadder('bjj');
+    ctx.svc.promotions.mockReturnValue(page([opening, whiteThree], gaps));
+    ctx.fixture.detectChanges();
+    return ctx;
+  }
+
+  interface Internals {
+    confirmCreate: () => void;
+    createForm: { patchValue: (v: Record<string, unknown>) => void };
+    createDialogTitle: () => string;
+    fillWindow: () => { min: Date | null; max: Date } | null;
+  }
+
+  function click(el: HTMLElement, cy: string): void {
+    (el.querySelector(`[data-cy="${cy}"] button`) as HTMLButtonElement).click();
+  }
+
+  it('draws the missing stripe in place, between the rows it sits between', () => {
+    const { el } = jacopo();
+    const cys = Array.from(el.querySelectorAll('[data-cy="promotions-list"] > li')).map((li) =>
+      li.getAttribute('data-cy'),
+    );
+
+    expect(cys).toEqual(['promotion-15', 'promotion-gap-stripe:white:4', 'promotion-12']);
+    const ghost = el.querySelector('[data-cy="promotion-gap-stripe:white:4"]');
+    expect(ghost?.textContent).toContain('When?');
+    expect(ghost?.querySelector('[data-cy="belt-stripe-missing"]')).not.toBeNull();
+  });
+
+  it('asks the opening row for its real date instead of drawing a second blue row', () => {
+    const { el } = jacopo();
+    const row = el.querySelector('[data-cy="promotion-15"]');
+
+    expect(row?.textContent).toContain('When?');
+    expect(row?.textContent).toContain('In Budojo since');
+    // The belt before it comes from the history: white, not "first belt".
+    expect(row?.textContent).toContain('White');
+    expect(el.querySelector('[data-cy="promotion-gap-belt:blue:0"]')).toBeNull();
+  });
+
+  it('says "on this belt since" is the day of entry while the opening row stands', () => {
+    const { el } = jacopo();
+    expect(el.querySelector('[data-cy="promotions-entry-day"]')).not.toBeNull();
+  });
+
+  it('says the history before the first known point is not recorded, in one line', () => {
+    const { el } = jacopo();
+    expect(el.querySelector('[data-cy="promotions-history-before"]')?.textContent).toContain(
+      "the history isn't recorded",
+    );
+  });
+
+  it('fills a missing stripe with the date alone, bounded to the days between its neighbours', () => {
+    const { el, fixture, component, svc } = jacopo();
+    click(el, 'gap-add-date-stripe:white:4');
+    fixture.detectChanges();
+    const c = component as unknown as Internals;
+
+    expect(c.createDialogTitle()).toBe('When did they get stripe 4?');
+    const window = c.fillWindow();
+    // `(after, before]`: the day after the white-three row, up to the
+    // opening row it sits under.
+    expect(window?.min).toEqual(new Date(2024, 2, 13));
+    expect(window?.max).toEqual(new Date(2026, 8, 20));
+
+    c.createForm.patchValue({ recorded_at: new Date(2024, 8, 20) });
+    c.confirmCreate();
+
+    expect(svc.createPromotion).toHaveBeenCalledWith(7, {
+      kind: 'stripe',
+      recorded_at: '2024-09-20',
+      from_stripes: 3,
+      to_stripes: 4,
+      belt_at_event: 'white',
+    });
+    expect(svc.completeOpeningPromotion).not.toHaveBeenCalled();
+  });
+
+  it('completes the opening row — a PATCH with the belt before — never a second row', () => {
+    const { el, fixture, component, svc } = jacopo();
+    click(el, 'gap-add-date-belt:blue:0');
+    fixture.detectChanges();
+    const c = component as unknown as Internals;
+
+    expect(c.createDialogTitle()).toBe('When did they get the Blue belt?');
+
+    c.createForm.patchValue({ recorded_at: new Date(2025, 0, 10) });
+    c.confirmCreate();
+
+    expect(svc.completeOpeningPromotion).toHaveBeenCalledWith(7, 15, {
+      recorded_at: '2025-01-10',
+      from_belt: 'white',
+    });
+    expect(svc.createPromotion).not.toHaveBeenCalled();
+  });
+
+  it("bounds the opening row's step as the server does: after its older row, up to his entry", () => {
+    // The server's `before` for this step is the opening row itself: he was
+    // blue by the day he was entered, so the window ends there, inclusive
+    // (`PromotionGaps::inWindow`) — not today, six days later.
+    const { el, fixture, component } = jacopo();
+    click(el, 'gap-add-date-belt:blue:0');
+    fixture.detectChanges();
+    const c = component as unknown as Internals;
+
+    expect(c.fillWindow()?.min).toEqual(new Date(2024, 2, 13));
+    expect(c.fillWindow()?.max).toEqual(new Date(2026, 8, 20));
+  });
+
+  it('never offers "Saltato" on the step an opening row stands for', () => {
+    // The server ignores a skip there: the belt is one they hold.
+    const { el, component, svc } = jacopo();
+
+    expect(el.querySelector('[data-cy="gap-skip-belt:blue:0"]')).toBeNull();
+    (component as unknown as { skip: (gap: PromotionGap) => void }).skip(blueBelt);
+    expect(svc.skipPromotionStep).not.toHaveBeenCalled();
+  });
+
+  it('draws the blue stripes above the completed row, once the blue belt is dated', () => {
+    // The server's reply after PATCH 15 → white → blue on 10 Jan 2025.
+    const completed = makePromotion({
+      ...opening,
+      from_belt: 'white',
+      is_opening: false,
+      recorded_at: '2025-01-10T00:00:00+00:00',
+    });
+    const blueStripe = (n: number): PromotionGap => ({
+      key: `stripe:blue:${n}`,
+      kind: 'stripe',
+      belt: 'blue',
+      from_belt: null,
+      from_stripes: n - 1,
+      to_stripes: n,
+      after: { promotion_id: 15, recorded_at: '2025-01-10' },
+      before: null,
+      completes_promotion_id: null,
+    });
+    const ctx = setup({ athleteId: '7' });
+    useLadder('bjj');
+    ctx.svc.promotions.mockReturnValue(
+      page(
+        [completed, whiteThree],
+        [
+          { ...fourthStripe, before: { promotion_id: 15, recorded_at: '2025-01-10' } },
+          blueStripe(1),
+          blueStripe(2),
+        ],
+      ),
+    );
+    ctx.fixture.detectChanges();
+
+    const cys = Array.from(ctx.el.querySelectorAll('[data-cy="promotions-list"] > li')).map((li) =>
+      li.getAttribute('data-cy'),
+    );
+    expect(cys).toEqual([
+      'promotion-gap-stripe:blue:2',
+      'promotion-gap-stripe:blue:1',
+      'promotion-15',
+      'promotion-gap-stripe:white:4',
+      'promotion-12',
+    ]);
+    // A dated belt row: no "Quando?" on it any more.
+    expect(ctx.el.querySelector('[data-cy="promotion-15"]')?.textContent).not.toContain('When?');
+  });
+
+  it('turns a skipped step into a line with its own undo, in place, and says so', async () => {
+    const { el, fixture, svc } = jacopo();
+    const announced = (): string =>
+      el.querySelector('[data-cy="promotions-announce"]')?.textContent?.trim() ?? '';
+
+    click(el, 'gap-skip-stripe:white:4');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(svc.skipPromotionStep).toHaveBeenCalledWith(7, 'white', 4);
+    // The ghost row is gone; a line stands in its place with the undo on it.
+    expect(el.querySelector('[data-cy="promotion-gap-stripe:white:4"]')).toBeNull();
+    const line = el.querySelector('[data-cy="promotion-skipped-stripe:white:4"]');
+    expect(line?.textContent).toContain('White, stripe 4: marked as skipped');
+    const cys = Array.from(el.querySelectorAll('[data-cy="promotions-list"] > li')).map((li) =>
+      li.getAttribute('data-cy'),
+    );
+    expect(cys).toEqual(['promotion-15', 'promotion-skipped-stripe:white:4', 'promotion-12']);
+    // Said out loud, from a region that was on the page before the change.
+    expect(announced()).toBe('White, stripe 4: marked as skipped');
+    // The keyboard is on the one control that can take it back.
+    const undo = el.querySelector<HTMLButtonElement>(
+      '[data-cy="gap-unskip-stripe:white:4"] button',
+    );
+    expect(document.activeElement).toBe(undo);
+
+    undo!.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(svc.unskipPromotionStep).toHaveBeenCalledWith(7, 'white', 4);
+    expect(el.querySelector('[data-cy="promotion-skipped-stripe:white:4"]')).toBeNull();
+    expect(el.querySelector('[data-cy="promotion-gap-stripe:white:4"]')).not.toBeNull();
+    expect(announced()).toBe('White, stripe 4: back among the steps to date');
+    expect(document.activeElement).toBe(
+      el.querySelector('[data-cy="gap-add-date-stripe:white:4"] button'),
+    );
+  });
+
+  it('keeps same-day rows and their missing steps in replay order', () => {
+    // The server's reply (#1970, `PromotionOrder`): blue with four stripes,
+    // white → blue on 10 Jan 2024, blue 3 → 4 on 1 Jun 2025, and blue 2 → 3
+    // filled on that same day. Same-day rows come in exactly the reverse of
+    // the replay order, and the two steps still missing sit under 2 → 3.
+    const whiteToBlue = makePromotion({
+      id: 8,
+      kind: 'belt',
+      from_belt: 'white',
+      to_belt: 'blue',
+      from_stripes: null,
+      to_stripes: null,
+      belt_at_event: 'blue',
+      is_opening: false,
+      recorded_at: '2024-01-10T00:00:00+00:00',
+    });
+    const blueStripeRow = (id: number, from: number, to: number) =>
+      makePromotion({
+        id,
+        kind: 'stripe',
+        from_belt: null,
+        to_belt: null,
+        from_stripes: from,
+        to_stripes: to,
+        belt_at_event: 'blue',
+        is_opening: false,
+        recorded_at: '2025-06-01T00:00:00+00:00',
+      });
+    const missing = (n: number): PromotionGap => ({
+      key: `stripe:blue:${n}`,
+      kind: 'stripe',
+      belt: 'blue',
+      from_belt: null,
+      from_stripes: n - 1,
+      to_stripes: n,
+      after: { promotion_id: 8, recorded_at: '2024-01-10' },
+      before: { promotion_id: 20, recorded_at: '2025-06-01' },
+      completes_promotion_id: null,
+    });
+    const { el, fixture, svc } = setup({ athleteId: '7' });
+    useLadder('bjj');
+    svc.promotions.mockReturnValue(
+      of({
+        data: [blueStripeRow(9, 3, 4), blueStripeRow(20, 2, 3), whiteToBlue],
+        meta: { current_page: 1, per_page: 20, total: 3, last_page: 1 },
+        gaps: [missing(1), missing(2)],
+        history_starts_at: '2024-01-10',
+      }),
+    );
+    fixture.detectChanges();
+
+    const cys = Array.from(el.querySelectorAll('[data-cy="promotions-list"] > li')).map((li) =>
+      li.getAttribute('data-cy'),
+    );
+    // 3 → 4, 2 → 3, ghost 1 → 2, ghost 0 → 1, white → blue.
+    expect(cys).toEqual([
+      'promotion-9',
+      'promotion-20',
+      'promotion-gap-stripe:blue:2',
+      'promotion-gap-stripe:blue:1',
+      'promotion-8',
+    ]);
+  });
+
+  it('keys a poom → dan skip by the degree it carries, not by 0', () => {
+    // Taekwondo, the server's reply: a 2nd poom on record, black with the
+    // 2nd dan today (stored 1) — the poom → dan step never written down.
+    const secondPoom = makePromotion({
+      id: 7,
+      kind: 'stripe',
+      from_belt: null,
+      to_belt: null,
+      from_stripes: 0,
+      to_stripes: 1,
+      belt_at_event: 'black-and-red',
+      is_opening: false,
+      recorded_at: '2022-05-01T10:00:00+00:00',
+    });
+    const poomToDan: PromotionGap = {
+      key: 'belt:black:1',
+      kind: 'belt',
+      belt: 'black',
+      from_belt: 'black-and-red',
+      from_stripes: null,
+      to_stripes: null,
+      after: { promotion_id: 7, recorded_at: '2022-05-01' },
+      before: null,
+      completes_promotion_id: null,
+    };
+    const { el, fixture, svc } = setup({ athleteId: '7' });
+    useLadder('taekwondo');
+    svc.promotions.mockReturnValue(
+      of({
+        data: [secondPoom],
+        meta: { current_page: 1, per_page: 20, total: 1, last_page: 1 },
+        gaps: [poomToDan],
+        history_starts_at: '2022-05-01',
+      }),
+    );
+    fixture.detectChanges();
+
+    click(el, 'gap-skip-belt:black:1');
+    expect(svc.skipPromotionStep).toHaveBeenCalledWith(7, 'black', 1);
+    fixture.detectChanges();
+
+    click(el, 'gap-unskip-belt:black:1');
+    expect(svc.unskipPromotionStep).toHaveBeenCalledWith(7, 'black', 1);
+  });
+
+  it('keeps the skipped line when the skip fails, and says why', async () => {
+    const { el, fixture, svc } = jacopo();
+    svc.skipPromotionStep.mockReturnValue(throwError(() => new Error('boom')));
+    const add = vi.spyOn(fixture.componentRef.injector.get(MessageService), 'add');
+
+    click(el, 'gap-skip-stripe:white:4');
+    fixture.detectChanges();
+
+    // Nothing was skipped: the ghost row stays, and the error is a toast.
+    expect(el.querySelector('[data-cy="promotion-gap-stripe:white:4"]')).not.toBeNull();
+    expect(el.querySelector('[data-cy="promotion-skipped-stripe:white:4"]')).toBeNull();
+    expect(add).toHaveBeenCalledWith(expect.objectContaining({ severity: 'error' }));
+  });
+
+  it('puts the keyboard on the row a fill wrote, not on <body> after the reload', async () => {
+    const { el, fixture, component, svc } = jacopo();
+    click(el, 'gap-add-date-stripe:white:4');
+    fixture.detectChanges();
+    // The server's replies: the POST's row, then the timeline, where the blue
+    // step now starts after the stripe just written, not after row 12.
+    const written = makePromotion({
+      id: 20,
+      kind: 'stripe',
+      from_belt: null,
+      to_belt: null,
+      from_stripes: 3,
+      to_stripes: 4,
+      belt_at_event: 'white',
+      is_opening: false,
+      recorded_at: '2024-09-20T00:00:00+00:00',
+    });
+    svc.createPromotion.mockReturnValue(of(written));
+    svc.promotions.mockReturnValue(
+      page(
+        [opening, written, whiteThree],
+        [{ ...blueBelt, after: { promotion_id: 20, recorded_at: '2024-09-20' } }],
+      ),
+    );
+
+    const c = component as unknown as Internals;
+    c.createForm.patchValue({ recorded_at: new Date(2024, 8, 20) });
+    c.confirmCreate();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(document.activeElement).toBe(el.querySelector('[data-cy="promotion-edit-20"] button'));
+  });
+
+  it('folds more than two missing steps in a row, and opens them on "show"', () => {
+    // The server's reply for a blue belt with four stripes, a white → blue
+    // and a blue 3 → 4 on record: three stripes missing between them.
+    const blue = makePromotion({
+      id: 8,
+      kind: 'belt',
+      from_belt: 'white',
+      to_belt: 'blue',
+      from_stripes: null,
+      to_stripes: null,
+      belt_at_event: 'blue',
+      is_opening: false,
+      recorded_at: '2024-01-10T00:00:00+00:00',
+    });
+    const fourth = makePromotion({
+      id: 9,
+      kind: 'stripe',
+      from_belt: null,
+      to_belt: null,
+      from_stripes: 3,
+      to_stripes: 4,
+      belt_at_event: 'blue',
+      is_opening: false,
+      recorded_at: '2025-06-01T00:00:00+00:00',
+    });
+    const stripe = (n: number): PromotionGap => ({
+      key: `stripe:blue:${n}`,
+      kind: 'stripe',
+      belt: 'blue',
+      from_belt: null,
+      from_stripes: n - 1,
+      to_stripes: n,
+      after: { promotion_id: 8, recorded_at: '2024-01-10' },
+      before: { promotion_id: 9, recorded_at: '2025-06-01' },
+      completes_promotion_id: null,
+    });
+    const { el, fixture, svc } = setup({ athleteId: '7' });
+    useLadder('bjj');
+    svc.promotions.mockReturnValue(
+      of({
+        data: [fourth, blue],
+        meta: { current_page: 1, per_page: 20, total: 2, last_page: 1 },
+        gaps: [stripe(1), stripe(2), stripe(3)],
+        history_starts_at: '2024-01-10',
+      }),
+    );
+    fixture.detectChanges();
+
+    expect(el.querySelectorAll('[data-cy^="promotion-gap-stripe"]').length).toBe(0);
+    expect(el.querySelector('[data-cy="promotion-gap-run"]')?.textContent).toContain(
+      '3 steps with no date',
+    );
+
+    click(el, 'gap-run-show');
+    fixture.detectChanges();
+    expect(el.querySelectorAll('[data-cy^="promotion-gap-stripe"]').length).toBe(3);
+  });
+
+  it('draws the tab exactly as before when nothing is missing', () => {
+    const ctx = setup();
+    useLadder('bjj');
+    ctx.svc.promotions.mockReturnValue(
+      of({
+        data: [
+          makePromotion({ id: 2, kind: 'belt', from_belt: 'white', to_belt: 'blue' }),
+          makePromotion({
+            id: 1,
+            kind: 'belt',
+            from_belt: null,
+            to_belt: 'white',
+            is_opening: true,
+            recorded_at: '2023-01-10T00:00:00Z',
+          }),
+        ],
+        meta: { current_page: 1, per_page: 20, total: 2, last_page: 1 },
+        gaps: [],
+        history_starts_at: '2023-01-10',
+      }),
+    );
+    ctx.fixture.detectChanges();
+
+    expect(ctx.el.querySelectorAll('[data-cy="promotions-list"] > li').length).toBe(2);
+    expect(ctx.el.querySelector('[data-cy^="promotion-gap"]')).toBeNull();
+    // Opening on the ladder's first belt: the history starts where the athlete did.
+    expect(ctx.el.querySelector('[data-cy="promotions-history-before"]')).toBeNull();
+    expect(ctx.el.querySelector('[data-cy="promotions-entry-day"]')).toBeNull();
   });
 });

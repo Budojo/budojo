@@ -8,6 +8,7 @@ use App\Enums\TrainingMode;
 use App\Models\Academy;
 use App\Models\Lesson;
 use App\Models\SyllabusTopic;
+use App\Support\OperatorDay;
 use App\Support\Season;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
@@ -44,10 +45,10 @@ class SyllabusCalendarAction
      */
     public function execute(Academy $academy, int $seasonsBack = 0, ?TrainingMode $kind = null): array
     {
-        $reference = CarbonImmutable::now()->subYears($seasonsBack);
+        $reference = OperatorDay::today()->subYears($seasonsBack);
         $start = Season::startFor($academy, $reference);
         $end = Season::endFor($academy, $reference);
-        $today = CarbonImmutable::today()->toDateString();
+        $today = OperatorDay::today()->toDateString();
 
         $positions = $this->positions($academy);
         $positionOf = $this->positionOfEachCountedTopic($academy, $positions, $kind);

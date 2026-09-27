@@ -12,6 +12,7 @@ use App\Http\Requests\Concerns\ValidatesPromotionChainConsistency;
 use App\Models\Athlete;
 use App\Rules\BeltInLadder;
 use App\Rules\StripesWithinGrade;
+use App\Support\OperatorDay;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -60,7 +61,7 @@ class StoreAthletePromotionRequest extends FormRequest
             // Date-only, matching PR 1's edit endpoint and the timeline's
             // own display precision. A promotion can't be recorded ahead
             // of today even when it is being entered late.
-            'recorded_at' => ['required', 'date_format:Y-m-d', 'before_or_equal:today'],
+            'recorded_at' => ['required', 'date_format:Y-m-d', OperatorDay::notAfterToday()],
             'from_belt' => ['nullable', 'prohibited_unless:kind,belt', Rule::enum(Belt::class), $inLadder],
             'to_belt' => ['required_if:kind,belt', 'prohibited_unless:kind,belt', Rule::enum(Belt::class), $inLadder],
             'from_stripes' => ['required_if:kind,stripe', 'prohibited_unless:kind,stripe', 'integer', 'min:0', 'max:10', $withinGrade],

@@ -7,6 +7,7 @@ namespace App\Actions\Stats;
 use App\Enums\TrainingMode;
 use App\Models\Academy;
 use App\Models\SyllabusTopic;
+use App\Support\OperatorDay;
 use App\Support\Season;
 use App\Support\TopicAttendance;
 use Carbon\CarbonImmutable;
@@ -53,7 +54,7 @@ class SyllabusCoverageAction
      */
     public function execute(Academy $academy, int $seasonsBack = 0, ?TrainingMode $kind = null): array
     {
-        $reference = CarbonImmutable::now()->subYears($seasonsBack);
+        $reference = OperatorDay::today()->subYears($seasonsBack);
         $start = Season::startFor($academy, $reference);
         $end = Season::endFor($academy, $reference);
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
+use App\Support\OperatorDay;
 use App\Enums\DocumentType;
 use App\Models\Academy;
 use App\Models\Athlete;
@@ -40,7 +41,7 @@ class DocumentFactory extends Factory
     public function expired(): static
     {
         return $this->state([
-            'expires_at' => now()->subDays($this->faker->numberBetween(1, 365))->toDateString(),
+            'expires_at' => OperatorDay::today()->subDays($this->faker->numberBetween(1, 365))->toDateString(),
         ]);
     }
 
@@ -48,7 +49,7 @@ class DocumentFactory extends Factory
     public function expiringIn(int $days): static
     {
         return $this->state(fn () => [
-            'expires_at' => now()->addDays($days)->toDateString(),
+            'expires_at' => OperatorDay::today()->addDays($days)->toDateString(),
         ]);
     }
 
@@ -71,7 +72,7 @@ class DocumentFactory extends Factory
     public function valid(): static
     {
         return $this->state([
-            'expires_at' => now()->addDays($this->faker->numberBetween(61, 365))->toDateString(),
+            'expires_at' => OperatorDay::today()->addDays($this->faker->numberBetween(61, 365))->toDateString(),
         ]);
     }
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
+use App\Support\OperatorDay;
 use App\Models\Athlete;
 use App\Models\Carnet;
 use App\Support\CarnetCode;
@@ -33,9 +34,9 @@ class CarnetFactory extends Factory
             'athlete_id' => Athlete::factory(),
             'total_entries' => 10,
             'price_cents' => 7000,
-            'purchased_at' => CarbonImmutable::today()->toDateString(),
-            'valid_from' => CarbonImmutable::today()->toDateString(),
-            'expires_at' => self::expiryFor(CarbonImmutable::today()),
+            'purchased_at' => OperatorDay::today()->toDateString(),
+            'valid_from' => OperatorDay::today()->toDateString(),
+            'expires_at' => self::expiryFor(OperatorDay::today()),
         ];
     }
 

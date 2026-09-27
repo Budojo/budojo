@@ -6,7 +6,7 @@ namespace App\Http\Resources;
 
 use App\Models\Carnet;
 use App\Support\CarnetAvailability;
-use Carbon\CarbonImmutable;
+use App\Support\OperatorDay;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -38,7 +38,7 @@ class CarnetResource extends JsonResource
             // Spendable *today* — the read-side view. Consumption asks the
             // same question of the attended date instead, which is why the
             // predicate lives in one place rather than being inlined here.
-            'is_active' => CarnetAvailability::isActiveOn($carnet, CarbonImmutable::today()),
+            'is_active' => CarnetAvailability::isActiveOn($carnet, OperatorDay::today()),
         ];
     }
 }

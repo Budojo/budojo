@@ -6,6 +6,7 @@ namespace App\Actions\Promotion;
 
 use App\Models\Athlete;
 use App\Models\AthletePromotion;
+use App\Support\OperatorDay;
 use Carbon\CarbonImmutable;
 
 /**
@@ -32,9 +33,11 @@ use Carbon\CarbonImmutable;
  * created on two stripes opens with a belt row only, #1771), and word a dan
  * or a poom as such.
  *
- * **Whole days.** `recorded_at` is a datetime on a date-only surface: a row
- * written live carries a time of day, so the belt given at 18:42 must not
- * exclude that evening's own session.
+ * **Whole days.** `recorded_at` is a datetime on a date-only surface. Rows
+ * written before #1963 carry a time of day; since then live rows are the
+ * owner's day at midnight, ordered by id. Either way the comparison is on
+ * dates, so the belt given at 18:42 does not exclude that evening's own
+ * session.
  *
  * **Sessions are days, not rows (#1765).** Since the timetable an athlete in
  * the gi class and the no-gi one has two rows for that evening, so the count
@@ -58,7 +61,7 @@ class GetAthleteProgressionAction
      */
     public function execute(Athlete $athlete): array
     {
-        $today = CarbonImmutable::today();
+        $today = OperatorDay::today();
 
         $beltSince = $this->dayOf($this->latest($athlete, 'belt'));
         $stripeSince = $beltSince === null ? null : $this->dayOf($this->latestStripeGiven($athlete));

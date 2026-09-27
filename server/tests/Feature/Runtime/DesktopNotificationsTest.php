@@ -13,6 +13,7 @@ use App\Notifications\OwnerMedicalCertExpiringDigestNotification;
 use App\Notifications\OwnerUnpaidAthletesDigestNotification;
 use App\Support\NotificationCategory;
 use App\Support\NotificationPreferences;
+use App\Support\OperatorDay;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Mail;
@@ -33,7 +34,7 @@ function ownerWithExpiringCert(): Academy
     Document::factory()->create([
         'athlete_id' => $athlete->id,
         'type' => DocumentType::MedicalCertificate,
-        'expires_at' => Carbon::today()->addDays(7)->toDateString(),
+        'expires_at' => OperatorDay::today()->addDays(7)->toDateString(),
     ]);
 
     return $academy;

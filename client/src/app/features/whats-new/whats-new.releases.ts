@@ -60,6 +60,50 @@ export function localised(value: Localised, lang: string): string {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.71.0',
+    date: '2026-09-27',
+    headline: {
+      en: 'The missing steps, and midnight: an athlete’s promotion history now shows the steps it is missing, each filled with one date, and after midnight "today" is your today.',
+      it: 'I passaggi che mancano, e la mezzanotte: la storia delle promozioni di un atleta ora mostra i passaggi mancanti, ognuno da completare con una data, e dopo mezzanotte «oggi» è il tuo oggi.',
+    },
+    sections: [
+      {
+        heading: { en: 'Promotions: the missing steps', it: 'Promozioni: i passaggi che mancano' },
+        bullets: [
+          {
+            en: 'Dashed rows are the steps not recorded. A blue belt with only "White 2 → 3 stripes" on record shows a "When?" row with "White 3 → 4 stripes" in its place, and the missing stripe drawn empty on the belt.',
+            it: 'Le righe tratteggiate sono i passaggi non registrati. Un blu con solo «Bianca 2 → 3 gradi» registrato mostra al suo posto una riga «Quando?» con «Bianca 3 → 4 gradi», e la striscia mancante disegnata vuota sulla cintura.',
+          },
+          {
+            en: '"Add the date" opens the dialog already filled in: pick the day, and only the days that fit between the steps before and after can be picked. "Skipped" is for a step that never happened, with Undo right where the row was.',
+            it: '«Aggiungi la data» apre la finestra già compilata: scegli il giorno, e si possono scegliere solo i giorni tra il passaggio prima e quello dopo. «Saltato» è per un passaggio che non c’è mai stato, con «Annulla» proprio dove era la riga.',
+          },
+          {
+            en: 'The row written when you added the athlete carries the day you entered them, and now says so. When the history shows the belt before it, "Add the date" on that row corrects it, never a second one, so "On this belt since…" becomes true. An athlete whose history starts with that row is not covered yet: correct its date with the pencil, not with "Add a past promotion", which would add a second one.',
+            it: 'La riga creata quando hai inserito l’atleta porta il giorno dell’inserimento, e ora lo dice. Quando la storia mostra la cintura di prima, «Aggiungi la data» su quella riga la corregge, mai una seconda, così «Su questa cintura dal…» torna vero. Un atleta la cui storia comincia da quella riga non è ancora coperto: correggi la data con la matita, non con «Aggiungi una promozione passata», che ne aggiungerebbe una seconda.',
+          },
+          {
+            en: 'It works for every art: judo, karate and taekwondo dan and poom follow their own ladder.',
+            it: 'Funziona per ogni arte: i dan e i poom di judo, karate e taekwondo seguono la loro scala.',
+          },
+        ],
+      },
+      {
+        heading: { en: 'After midnight', it: 'Dopo mezzanotte' },
+        bullets: [
+          {
+            en: 'Today’s date is accepted after midnight too. Between midnight and 2 am Budojo used to refuse it (attendance, carnets, payments, promotions), because for it the day had not turned yet.',
+            it: 'La data di oggi viene accettata anche dopo mezzanotte. Tra mezzanotte e le due Budojo la rifiutava (presenze, carnet, pagamenti, promozioni), perché per lui il giorno non era ancora cambiato.',
+          },
+          {
+            en: 'What you record after midnight gets the right date: a payment without a date, a carnet sold (which used to read inactive until 2 am), a belt given. The weekly summary, the season and expiring certificates count by your day too.',
+            it: 'Quello che registri dopo mezzanotte ha la data giusta: un pagamento senza data, un carnet venduto (che prima risultava non attivo fino alle due), una cintura data. Anche il riepilogo della settimana, la stagione e i certificati in scadenza contano sul tuo giorno.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.70.0',
     date: '2026-09-26',
     headline: {

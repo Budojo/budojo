@@ -8,6 +8,7 @@ use App\Actions\Document\ResolveCertificateStatusAction;
 use App\Enums\AthleteStatus;
 use App\Enums\CertificateStatus;
 use App\Models\Academy;
+use App\Support\OperatorDay;
 use Carbon\CarbonImmutable;
 
 /**
@@ -39,7 +40,7 @@ class CertificateComplianceAction
      */
     public function execute(Academy $academy): array
     {
-        $today = CarbonImmutable::today();
+        $today = OperatorDay::today();
         $counts = array_fill_keys(array_map(static fn (CertificateStatus $s): string => $s->value, CertificateStatus::cases()), 0);
 
         $expiries = $academy->athletes()

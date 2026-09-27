@@ -9,6 +9,7 @@ use App\Models\Academy;
 use App\Models\AcademyClass;
 use App\Models\Lesson;
 use App\Models\SyllabusTopic;
+use App\Support\OperatorDay;
 use App\Support\Season;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
@@ -57,7 +58,7 @@ class SuggestLessonTopicsAction
      */
     public function execute(Academy $academy, AcademyClass $class, int $limit = 3): array
     {
-        $reference = CarbonImmutable::now();
+        $reference = OperatorDay::today();
         $start = Season::startFor($academy, $reference);
         $end = Season::endFor($academy, $reference);
 
@@ -184,7 +185,7 @@ class SuggestLessonTopicsAction
      */
     private function taughtInSeason(Academy $academy, CarbonImmutable $start, CarbonImmutable $end): array
     {
-        $today = CarbonImmutable::today()->toDateString();
+        $today = OperatorDay::today()->toDateString();
         $until = $end->toDateString() < $today ? $end->toDateString() : $today;
 
         $rows = DB::table('lesson_topic')

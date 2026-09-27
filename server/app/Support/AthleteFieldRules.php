@@ -82,7 +82,7 @@ final class AthleteFieldRules
             'website' => ['nullable', 'url', 'max:255'],
             'facebook' => ['nullable', 'url', 'max:255'],
             'instagram' => ['nullable', 'url', 'max:255'],
-            'date_of_birth' => ['nullable', 'date', 'before:today'],
+            'date_of_birth' => ['nullable', 'date', OperatorDay::before()],
             'belt' => ['required', Rule::enum(Belt::class), new BeltInLadder($ladder)],
             // Global ceiling across every ladder (#1800) — taekwondo's black
             // counts 1st-9th dan as 0-8 — and the cap of the row's own grade,

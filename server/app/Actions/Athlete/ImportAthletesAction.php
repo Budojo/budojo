@@ -19,6 +19,7 @@ use App\Support\Import\StripesText;
 use App\Support\MartialArt\MartialArtProfile;
 use App\Support\MartialArt\RankLadder;
 use App\Support\NameFold;
+use App\Support\OperatorDay;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
@@ -193,7 +194,7 @@ final class ImportAthletesAction
             'belt' => BeltText::parse($cell('belt'))?->value,
             'stripes' => 0, // read against the belt, in `read()`
             'status' => $this->statusFor($cell('status')),
-            'joined_at' => DateText::parse($cell('joined_at'))?->toDateString() ?? now()->toDateString(),
+            'joined_at' => DateText::parse($cell('joined_at'))?->toDateString() ?? OperatorDay::today()->toDateString(),
         ];
 
         // Optional fields are only sent when the sheet actually carries them.

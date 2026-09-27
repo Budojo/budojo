@@ -10,7 +10,7 @@ use App\Models\Achievement;
 use App\Models\Athlete;
 use App\Models\AttendanceRecord;
 use App\Models\User;
-use Carbon\CarbonImmutable;
+use App\Support\OperatorDay;
 
 /**
  * Achievement rules + observers (#961). Tests cover:
@@ -103,7 +103,7 @@ it('does NOT unlock 100_sessions before the threshold is crossed', function (): 
 
 it('unlocks 30_day_streak when the athlete has 30 consecutive days of attendance', function (): void {
     $athlete = makeAthleteWithUser($this->academy);
-    $today = CarbonImmutable::today();
+    $today = OperatorDay::today();
     for ($i = 0; $i < 30; $i++) {
         AttendanceRecord::factory()->for($athlete)->create([
             'attended_on' => $today->subDays($i)->toDateString(),
@@ -122,7 +122,7 @@ it('unlocks 30_day_streak when the athlete has 30 consecutive days of attendance
 
 it('does NOT unlock 30_day_streak with a one-day gap', function (): void {
     $athlete = makeAthleteWithUser($this->academy);
-    $today = CarbonImmutable::today();
+    $today = OperatorDay::today();
     for ($i = 0; $i < 30; $i++) {
         if ($i === 15) {
             continue;
@@ -143,7 +143,7 @@ it('does NOT unlock 30_day_streak with a one-day gap', function (): void {
 });
 
 it('unlocks 1_year_at_academy on the exact anniversary day', function (): void {
-    $today = CarbonImmutable::today();
+    $today = OperatorDay::today();
     $athlete = makeAthleteWithUser($this->academy, $today->subYear()->toDateString());
 
     app(EvaluateAchievementsAction::class)->execute($athlete);
@@ -160,7 +160,7 @@ it('does NOT unlock 1_year_at_academy on a non-anniversary day', function (): vo
     // Joined 360 days ago — not yet at the 1-year anniversary.
     $athlete = makeAthleteWithUser(
         $this->academy,
-        CarbonImmutable::today()->subDays(360)->toDateString(),
+        OperatorDay::today()->subDays(360)->toDateString(),
     );
 
     app(EvaluateAchievementsAction::class)->execute($athlete);

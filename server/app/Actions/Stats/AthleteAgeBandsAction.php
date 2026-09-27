@@ -9,7 +9,7 @@ use App\Models\Academy;
 use App\Support\MartialArt\AgeDivision;
 use App\Support\MartialArt\FederationAge;
 use App\Support\MartialArt\MartialArtProfile;
-use Carbon\CarbonImmutable;
+use App\Support\OperatorDay;
 
 /**
  * Aggregates the academy's active athletes into its federation's age
@@ -49,7 +49,7 @@ class AthleteAgeBandsAction
      */
     public function execute(Academy $academy): array
     {
-        $today = CarbonImmutable::now();
+        $today = OperatorDay::today();
         $divisions = MartialArtProfile::for($academy->martial_art)->ageDivisions();
 
         // Initialise every band at count 0 so empty bands stay in the

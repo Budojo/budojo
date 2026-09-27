@@ -10,6 +10,7 @@ use App\Models\Athlete;
 use App\Models\Lesson;
 use App\Models\SyllabusTopic;
 use App\Support\MartialArt\MartialArtProfile;
+use App\Support\OperatorDay;
 use App\Support\Season;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
@@ -60,7 +61,7 @@ class AthleteSyllabusCoverageAction
      */
     public function execute(Athlete $athlete, int $seasonsBack = 0): array
     {
-        $reference = CarbonImmutable::now()->subYears($seasonsBack);
+        $reference = OperatorDay::today()->subYears($seasonsBack);
         $academy = $athlete->academy;
         // `athletes.academy_id` is non-null, so the relation is only nullable
         // at the type level. Asserted rather than guarded, because a dangling
@@ -74,7 +75,7 @@ class AthleteSyllabusCoverageAction
         // nobody misses what happened before they walked in.
         $joined = CarbonImmutable::parse($athlete->joined_at->toDateString());
         $from = $joined->greaterThan($start) ? $joined : $start;
-        $today = CarbonImmutable::today();
+        $today = OperatorDay::today();
         $to = $today->lessThan($end) ? $today : $end;
 
         $label = Season::labelFor($academy, $reference);

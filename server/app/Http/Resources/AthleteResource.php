@@ -12,6 +12,7 @@ use App\Support\BillingFloor;
 use App\Support\CarnetAvailability;
 use App\Support\MonthCoverage;
 use App\Support\MonthlyFee;
+use App\Support\OperatorDay;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -26,8 +27,8 @@ class AthleteResource extends JsonResource
         /** @var Athlete $athlete */
         $athlete = $this->resource;
 
-        $year = (int) now()->year;
-        $month = (int) now()->month;
+        $year = (int) OperatorDay::today()->year;
+        $month = (int) OperatorDay::today()->month;
         $target = AthletePayment::monthIndex($year, $month);
 
         // Two paths so we don't pull every payment row into memory just to
@@ -58,7 +59,7 @@ class AthleteResource extends JsonResource
         // validity-window slice, single-row endpoints query on demand. Either
         // way the balance half of "is it spendable" is applied in memory by
         // `CarnetAvailability`, which is the one place that rule lives.
-        $today = CarbonImmutable::today();
+        $today = OperatorDay::today();
         $activeCarnet = ($athlete->relationLoaded('carnets')
             ? $athlete->carnets
             : $athlete->carnets()->validOn($today)->get())

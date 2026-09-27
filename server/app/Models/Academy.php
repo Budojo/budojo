@@ -9,6 +9,8 @@ use App\Enums\CarnetEntryUnit;
 use App\Enums\MartialArt;
 use App\Observers\AcademyObserver;
 use App\Observers\Audit\AcademyAuditObserver;
+use App\Support\OperatorDay;
+use Carbon\CarbonInterface;
 use Database\Factories\AcademyFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
@@ -260,7 +262,7 @@ class Academy extends Model implements HasAddress
      * covers the date (post-backfill that means the date is before
      * the academy's birthday — practically never).
      */
-    public function scheduleForDate(Carbon $date): ?AcademySchedule
+    public function scheduleForDate(CarbonInterface $date): ?AcademySchedule
     {
         return $this->schedules()
             ->where('effective_from', '<=', $date->toDateString())
@@ -271,7 +273,7 @@ class Academy extends Model implements HasAddress
     /** Schedule in effect right now — convenience for today's lookup. */
     public function currentSchedule(): ?AcademySchedule
     {
-        return $this->scheduleForDate(Carbon::today());
+        return $this->scheduleForDate(OperatorDay::today());
     }
 
     /**
@@ -283,7 +285,7 @@ class Academy extends Model implements HasAddress
     public function nextSchedule(): ?AcademySchedule
     {
         return $this->schedules()
-            ->where('effective_from', '>', Carbon::today()->toDateString())
+            ->where('effective_from', '>', OperatorDay::today()->toDateString())
             ->orderBy('effective_from')
             ->first();
     }

@@ -6,7 +6,7 @@ namespace App\Http\Requests\Stats;
 
 use App\Authorization\Capability;
 use App\Http\Requests\Concerns\AuthorizesAcademyCapability;
-use Carbon\CarbonImmutable;
+use App\Support\OperatorDay;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
@@ -36,12 +36,12 @@ class PaymentsSummaryRequest extends FormRequest
 
     public function year(): int
     {
-        return $this->has('year') ? $this->integer('year') : CarbonImmutable::today()->year;
+        return $this->has('year') ? $this->integer('year') : OperatorDay::today()->year;
     }
 
     public function month(): int
     {
-        return $this->has('month') ? $this->integer('month') : CarbonImmutable::today()->month;
+        return $this->has('month') ? $this->integer('month') : OperatorDay::today()->month;
     }
 
     /** The same JSON 403 envelope as every other `/stats/*` request. */

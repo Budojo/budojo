@@ -8,9 +8,9 @@ use App\Models\Academy;
 use App\Notifications\AthletePaymentOverdueNotification;
 use App\Support\NotificationCategory;
 use App\Support\NotificationPreferences;
+use App\Support\OperatorDay;
 use Carbon\CarbonInterface;
 use Illuminate\Console\Command;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -47,11 +47,9 @@ class SendAthletePaymentOverduePushes extends Command
 
     public function handle(): int
     {
-        // The scheduler runs at 09:00 Europe/Rome — anchor the date in
-        // the same timezone so the year/month below match operator
-        // intent regardless of `config('app.timezone')` drift. Copilot #731.
-        $tz = config('app.timezone');
-        $today = Carbon::today(\is_string($tz) ? $tz : null);
+        // The owner's day (#1963), not UTC's: this comment used to say so
+        // while the code read `app.timezone`, which is UTC.
+        $today = OperatorDay::today();
         $year = (int) $today->year;
         $month = (int) $today->month;
         $hasFailures = false;

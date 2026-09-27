@@ -6,6 +6,7 @@ use App\Enums\Belt;
 use App\Models\Academy;
 use App\Models\Athlete;
 use App\Models\AthletePromotion;
+use App\Support\OperatorDay;
 
 /**
  * Feature tests for `PATCH /api/v1/athletes/{athlete}/promotions/{promotion}`
@@ -148,7 +149,7 @@ it('refuses a recorded_at in the future — a promotion cannot happen ahead of t
 
     $this->actingAs($this->owner)
         ->patchJson("/api/v1/athletes/{$this->athlete->id}/promotions/{$promotion->id}", [
-            'recorded_at' => now()->addDay()->toDateString(),
+            'recorded_at' => OperatorDay::today()->addDay()->toDateString(),
         ])
         ->assertUnprocessable()
         ->assertJsonValidationErrors(['recorded_at']);

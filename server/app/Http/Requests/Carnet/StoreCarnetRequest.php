@@ -8,6 +8,7 @@ use App\Authorization\Capability;
 use App\Enums\PaymentMethod;
 use App\Http\Requests\Concerns\AuthorizesAcademyCapability;
 use App\Models\Athlete;
+use App\Support\OperatorDay;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Validation\Rule;
@@ -51,12 +52,12 @@ class StoreCarnetRequest extends FormRequest
             // one of two different days and a zoned datetime could land on the
             // neighbouring date. The OpenAPI declares `format: date`; this is
             // the rule that actually holds us to it.
-            'purchased_at' => ['sometimes', 'nullable', 'date_format:Y-m-d', 'before_or_equal:today'],
+            'purchased_at' => ['sometimes', 'nullable', 'date_format:Y-m-d', OperatorDay::notAfterToday()],
             // Where the carnet starts covering sessions (#1380). Defaults to
             // the sale. May be back-dated to claim sessions already recorded;
             // a future start is refused for the same reason a future sale is —
             // validity runs from a day that has happened.
-            'valid_from' => ['sometimes', 'nullable', 'date_format:Y-m-d', 'before_or_equal:today'],
+            'valid_from' => ['sometimes', 'nullable', 'date_format:Y-m-d', OperatorDay::notAfterToday()],
             // How it was paid (#1761). Optional forever: null is "not recorded".
             'payment_method' => ['sometimes', 'nullable', Rule::enum(PaymentMethod::class)],
         ];

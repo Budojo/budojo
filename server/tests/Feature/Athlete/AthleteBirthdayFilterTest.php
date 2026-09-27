@@ -109,16 +109,18 @@ it('marks a 29 February birthday on 28 February in a year without one', function
     expect(birthdayIds($this, 'birthday=week'))->toEqualCanonicalizing([$leapling->id, $twentyEighth->id]);
 });
 
-it("builds the window from the caller's own day, a day ahead of the server's", function (): void {
+it("builds the window from the owner's day, a day ahead of the server's", function (): void {
     // The server runs on UTC. At 01:30 in Rome on 25 September it is still
     // the 24th here, and a week built from the 24th ends on 30 September: a
     // birthday on 1 October, the owner's seventh day, would never come back.
+    // The default is the owner's day now (#1963), and `from` still wins.
     $seventhLocalDay = birthdayAthleteBornOn($this, '1992-10-01');
     $yesterdayForTheOwner = birthdayAthleteBornOn($this, '1992-09-24');
     $this->travelTo('2026-09-24 23:30');
 
-    expect(birthdayIds($this, 'birthday=week'))->toBe([$yesterdayForTheOwner->id])
-        ->and(birthdayIds($this, 'birthday=week&from=2026-09-25'))->toBe([$seventhLocalDay->id]);
+    expect(birthdayIds($this, 'birthday=week'))->toBe([$seventhLocalDay->id])
+        ->and(birthdayIds($this, 'birthday=week&from=2026-09-25'))->toBe([$seventhLocalDay->id])
+        ->and(birthdayIds($this, 'birthday=week&from=2026-09-24'))->toBe([$yesterdayForTheOwner->id]);
 });
 
 it('takes a day behind the server too, west of it', function (): void {

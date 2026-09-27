@@ -2,11 +2,16 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  ElementRef,
+  Injector,
   OnInit,
+  afterNextRender,
   computed,
   inject,
+  runInInjectionContext,
   signal,
 } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
@@ -29,6 +34,7 @@ import {
   type AthletePromotionCreatePayload,
   AthleteService,
   Belt,
+  type PromotionGap,
 } from '../../../../core/services/athlete.service';
 import { BeltLadderService } from '../../../../core/services/belt-ladder.service';
 import { LanguageService } from '../../../../core/services/language.service';
@@ -36,10 +42,18 @@ import { datePickerFormatFor } from '../../../../shared/utils/locale';
 import { BeltBadgeComponent } from '../../../../shared/components/belt-badge/belt-badge.component';
 import { ConfirmDestructiveButtonComponent } from '../../../../shared/components/confirm-destructive-button/confirm-destructive-button.component';
 import { LocaleDatePipe } from '../../../../shared/pipes/locale-date.pipe';
+import { composeTimeline, type TimelineEntry } from './promotion-timeline';
 
 interface SelectOption<T> {
   readonly label: string;
   readonly value: T;
+}
+
+/** The dates a missing step can be given and still sit where it belongs (#1966). */
+interface GapWindow {
+  /** The first day that fits, or null when nothing recorded comes before it. */
+  readonly min: Date | null;
+  readonly max: Date;
 }
 
 /**
@@ -69,6 +83,10 @@ interface SelectOption<T> {
  * the specific reason is surfaced inline rather than a generic
  * failure. Each row also carries a delete, for one entered by
  * mistake.
+ *
+ * **Missing steps (#1966).** Where the history must have a step no row
+ * records, the timeline draws it in place as a ghost row that asks one
+ * thing — when — and fills the backfill dialog with everything else.
  */
 /** The time-at-belt strip's second line (#1772). */
 interface StripeLine {
@@ -82,6 +100,7 @@ interface StripeLine {
   standalone: true,
   imports: [
     LocaleDatePipe,
+    NgTemplateOutlet,
     TranslatePipe,
     ReactiveFormsModule,
     ButtonModule,
@@ -111,6 +130,8 @@ export class PromotionsListComponent implements OnInit {
   private readonly translate = inject(TranslateService);
   private readonly beltLadder = inject(BeltLadderService);
   private readonly languageService = inject(LanguageService);
+  private readonly injector = inject(Injector);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   /**
    * The date format for every picker on this component (#1498).
@@ -131,21 +152,41 @@ export class PromotionsListComponent implements OnInit {
   protected readonly currentPage = signal(1);
   protected readonly lastPage = signal(1);
 
+  /** The steps no row records, across the whole history (#1966). */
+  protected readonly gaps = signal<readonly PromotionGap[]>([]);
+  protected readonly historyStartsAt = signal<string | null>(null);
+  /** The keys of the steps in folded runs the owner has opened. */
+  private readonly openRuns = signal<ReadonlySet<string>>(new Set());
+  /** The step whose "Saltato" is on its way to the server. */
+  protected readonly skippingKey = signal<string | null>(null);
+  /** Steps skipped during this visit, drawn in place with their undo until a reload. */
+  private readonly skipped = signal<ReadonlySet<string>>(new Set());
+  /** What the status region last said — a skip or its undo. */
+  protected readonly announcement = signal('');
+
+  /** The page's rows with the missing steps between them (#1966). */
+  protected readonly entries = computed<TimelineEntry[]>(() =>
+    composeTimeline(this.promotions(), this.gaps(), this.openRuns()),
+  );
+
+  /**
+   * The step the create dialog is filling in, when it was opened from a
+   * missing step rather than from "add a past promotion" (#1966). The dialog
+   * then asks one thing, the date, and knows everything else.
+   */
+  protected readonly filling = signal<PromotionGap | null>(null);
+
   protected readonly editDialogOpen = signal(false);
   protected readonly saving = signal(false);
   protected readonly editing = signal<AthletePromotion | null>(null);
   /**
-   * A promotion can't be recorded ahead of today — same rule the server
-   * enforces (`before_or_equal:today`, evaluated in the app's UTC
-   * timezone). Built via `utcCalendarDayAsLocalMidnight` rather than a
-   * bare `new Date()` so the picker's upper bound matches what the
-   * server will actually accept: a bare `new Date()` reads the
-   * BROWSER's local calendar day, which runs up to a day ahead of
-   * UTC's for any timezone east of Greenwich (Italy included) during
-   * the first hours of the local day — the picker would let the owner
-   * choose a date the server then rejects as "in the future".
+   * A promotion can't be recorded ahead of today — the owner's today, which
+   * is what the server judges it by since #1963 (`OperatorDay`), and what the
+   * browser's own calendar day is. It used to be capped at UTC's day, to match
+   * a server that still judged in UTC; that refused tonight's promotion for
+   * two hours after midnight in Rome.
    */
-  protected readonly maxDate = utcCalendarDayAsLocalMidnight(new Date());
+  protected readonly maxDate = startOfLocalDay(new Date());
   protected readonly editForm = this.fb.group({
     recorded_at: this.fb.control<Date | null>(null),
   });
@@ -283,7 +324,7 @@ export class PromotionsListComponent implements OnInit {
     }
   }
 
-  protected load(page: number): void {
+  protected load(page: number, afterLoad?: () => void): void {
     this.loading.set(true);
     this.loadError.set(false);
     this.athleteService
@@ -293,9 +334,14 @@ export class PromotionsListComponent implements OnInit {
         next: (resp) => {
           this.promotions.set(resp.data);
           this.progression.set(resp.progression ?? null);
+          this.gaps.set(resp.gaps ?? []);
+          this.historyStartsAt.set(resp.history_starts_at ?? null);
+          // A skipped step is no longer in the reply: its line ends here.
+          this.skipped.set(new Set());
           this.currentPage.set(resp.meta.current_page);
           this.lastPage.set(resp.meta.last_page);
           this.loading.set(false);
+          afterLoad?.();
         },
         error: () => {
           this.loadError.set(true);
@@ -366,6 +412,7 @@ export class PromotionsListComponent implements OnInit {
   }
 
   protected openCreateDialog(): void {
+    this.filling.set(null);
     this.createForm.reset({
       kind: 'belt',
       recorded_at: null,
@@ -385,6 +432,12 @@ export class PromotionsListComponent implements OnInit {
     if (v.recorded_at === null) return;
 
     const recordedAt = toIsoDate(v.recorded_at);
+    const gap = this.filling();
+    if (gap !== null) {
+      this.saveFilled(gap, recordedAt);
+      return;
+    }
+
     let payload: AthletePromotionCreatePayload;
     if (v.kind === 'belt') {
       if (v.to_belt === null) return;
@@ -440,6 +493,339 @@ export class PromotionsListComponent implements OnInit {
       });
   }
 
+  /**
+   * "Aggiungi la data" on a missing step (#1966): the create dialog, with
+   * everything but the date already known and the date bounded to the days
+   * that fit between the step's neighbours — so the chain validator has
+   * nothing left to refuse.
+   */
+  protected openFillDialog(gap: PromotionGap): void {
+    this.filling.set(gap);
+    this.createForm.reset({
+      kind: gap.kind,
+      recorded_at: null,
+      from_belt: null,
+      to_belt: null,
+      belt_at_event: null,
+      from_stripes: null,
+      to_stripes: null,
+    });
+    this.createError.set(null);
+    this.createDialogOpen.set(true);
+  }
+
+  /** The bounds of the date picker while filling a step. */
+  protected readonly fillWindow = computed<GapWindow | null>(() => {
+    const gap = this.filling();
+    return gap === null ? null : this.windowOf(gap);
+  });
+
+  /** The window as the hint writes it: ISO days, for the locale date pipe. */
+  protected readonly fillWindowIso = computed<{ from: string | null; to: string } | null>(() => {
+    const window = this.fillWindow();
+    return window === null
+      ? null
+      : {
+          from: window.min === null ? null : toIsoDate(window.min),
+          to: toIsoDate(window.max),
+        };
+  });
+
+  /**
+   * The server's window, `(after, before]`, and up to today with no `before`
+   * (`PromotionGaps::inWindow`). One rule for every step: for the one an
+   * opening row stands for, the server's `before` is that row itself, so the
+   * window ends on the day the athlete was entered — they held the belt by
+   * then — and the picker opens on it.
+   */
+  private windowOf(gap: PromotionGap): GapWindow {
+    const before = gap.before === null ? null : dayOf(gap.before.recorded_at);
+    return {
+      min: gap.after === null ? null : nextDay(dayOf(gap.after.recorded_at)),
+      max: before === null || before > this.maxDate ? this.maxDate : before,
+    };
+  }
+
+  /**
+   * Writes the step. A step an opening row stands for completes that row —
+   * the belt before it and its real date — instead of adding a second one.
+   */
+  private saveFilled(gap: PromotionGap, recordedAt: string): void {
+    const request =
+      gap.completes_promotion_id !== null && gap.from_belt !== null
+        ? this.athleteService.completeOpeningPromotion(this.athleteId, gap.completes_promotion_id, {
+            recorded_at: recordedAt,
+            from_belt: gap.from_belt,
+          })
+        : this.athleteService.createPromotion(this.athleteId, payloadFor(gap, recordedAt));
+
+    // Where the step sat, for when the row it became is not on this page.
+    const index = this.entryIndexOf(gap);
+    this.creating.set(true);
+    this.createError.set(null);
+    request.pipe(finalize(() => this.creating.set(false))).subscribe({
+      next: (row) => {
+        this.createDialogOpen.set(false);
+        this.filling.set(null);
+        // The reload's skeleton takes the trigger away: put the keyboard on
+        // the row the fill wrote, so it does not fall to <body>.
+        this.load(this.currentPage(), () => this.focusEntry(row?.id ?? null, index));
+        this.messageService.add({
+          severity: 'success',
+          summary: this.translate.instant('athletes.detail.promotions.toast.createdSummary'),
+          detail: this.translate.instant('athletes.detail.promotions.toast.createdDetail'),
+          life: 3000,
+        });
+      },
+      error: (err: { status?: number; error?: { errors?: Record<string, string[]> } }) => {
+        const firstError =
+          err.status === 422 && err.error?.errors
+            ? Object.values(err.error.errors)[0]?.[0]
+            : undefined;
+        this.createError.set(
+          firstError ?? this.translate.instant('athletes.detail.promotions.createDialog.error'),
+        );
+      },
+    });
+  }
+
+  /**
+   * "Saltato" (#1966): the step never happened — a BJJ white belt can go from
+   * three stripes to blue. Remembered on the server so it stops asking.
+   *
+   * The undo sits in place, not in a toast: the ghost row becomes a line
+   * saying the step was skipped, with its own "Annulla", for the rest of the
+   * visit. A toast closes on its own after five seconds and sits elsewhere in
+   * the page, so a keyboard could not reach its undo in time; the line keeps
+   * it where the step was, and focus goes straight to it. Nothing reloads —
+   * a skip changes no other step — and the always-present status region says
+   * what happened.
+   */
+  protected skip(gap: PromotionGap): void {
+    // A step an opening row stands for is a belt they hold: it is completed,
+    // never skipped, and the server ignores a skip there.
+    if (this.skippingKey() !== null || !canSkip(gap)) return;
+    this.skippingKey.set(gap.key);
+    this.athleteService
+      .skipPromotionStep(this.athleteId, gap.belt, stepStripes(gap))
+      .pipe(finalize(() => this.skippingKey.set(null)))
+      .subscribe({
+        next: () => {
+          this.skipped.update((keys) => new Set([...keys, gap.key]));
+          this.announcement.set(
+            this.translate.instant('athletes.detail.promotions.gap.skipped', {
+              step: this.stepLabel(gap),
+            }),
+          );
+          this.focusAfterRender(unskipSelector(gap));
+        },
+        error: () => {
+          this.messageService.add({
+            severity: 'error',
+            summary: this.translate.instant('athletes.detail.promotions.toast.errorSummary'),
+            detail: this.translate.instant('athletes.detail.promotions.gap.skipError'),
+            life: 4000,
+          });
+        },
+      });
+  }
+
+  /** "Annulla" on a skipped line: the ghost row comes back, and focus to its "Aggiungi la data". */
+  protected unskip(gap: PromotionGap): void {
+    this.athleteService.unskipPromotionStep(this.athleteId, gap.belt, stepStripes(gap)).subscribe({
+      next: () => {
+        this.skipped.update((keys) => new Set([...keys].filter((key) => key !== gap.key)));
+        this.announcement.set(
+          this.translate.instant('athletes.detail.promotions.gap.restored', {
+            step: this.stepLabel(gap),
+          }),
+        );
+        this.focusAfterRender(addDateSelector(gap));
+      },
+      error: () => {
+        this.messageService.add({
+          severity: 'error',
+          summary: this.translate.instant('athletes.detail.promotions.toast.errorSummary'),
+          detail: this.translate.instant('athletes.detail.promotions.gap.undoError'),
+          life: 4000,
+        });
+      },
+    });
+  }
+
+  /** Focus an element in this tab once the reload has drawn it. */
+  private focusAfterRender(selector: string): void {
+    runInInjectionContext(this.injector, () =>
+      afterNextRender(() => {
+        this.host.nativeElement.querySelector<HTMLElement>(selector)?.focus();
+      }),
+    );
+  }
+
+  /**
+   * After a reload that took the focused control away: the row `rowId` when
+   * it is on the page, otherwise the entry now at `index` (the one that took
+   * the old one's place, or the last), otherwise the list itself.
+   */
+  private focusEntry(rowId: number | null, index: number): void {
+    runInInjectionContext(this.injector, () =>
+      afterNextRender(() => {
+        const list = this.host.nativeElement.querySelector<HTMLElement>(
+          '[data-cy="promotions-list"]',
+        );
+        if (list === null) return;
+        const byId =
+          rowId === null ? null : list.querySelector<HTMLElement>(`[data-cy="promotion-${rowId}"]`);
+        const entries = Array.from(list.children) as HTMLElement[];
+        const entry = byId ?? entries[Math.min(Math.max(index, 0), entries.length - 1)];
+        (entry?.querySelector<HTMLElement>('button') ?? list).focus();
+      }),
+    );
+  }
+
+  /** Where a step sits in the list as drawn now. */
+  private entryIndexOf(gap: PromotionGap): number {
+    return this.entries().findIndex(
+      (e) =>
+        (e.kind === 'gap' && e.gap.key === gap.key) ||
+        (e.kind === 'row' && e.completing?.key === gap.key),
+    );
+  }
+
+  /** "Mostra" on a folded run: its steps stay open, whatever gets filled next. */
+  protected openRun(gaps: readonly PromotionGap[]): void {
+    this.openRuns.update((open) => new Set([...open, ...gaps.map((gap) => gap.key)]));
+  }
+
+  /** Skipped during this visit: drawn as a line with its undo, not as a ghost. */
+  protected isSkipped(gap: PromotionGap): boolean {
+    return this.skipped().has(gap.key);
+  }
+
+  /** "Bianca, 4° grado" / "Nera, 3° dan" / "cintura Blu" — a step named in words. */
+  protected stepLabel(gap: PromotionGap): string {
+    this.languageService.currentLang();
+    const belt = this.beltLadder.label(gap.belt);
+    if (gap.kind === 'belt') {
+      return this.translate.instant('athletes.detail.promotions.gap.stepBelt', { belt });
+    }
+    const to = gap.to_stripes ?? 0;
+    return this.beltLadder.countsStripes(gap.belt)
+      ? this.translate.instant('athletes.detail.promotions.gap.stepStripe', { belt, n: to })
+      : this.translate.instant('athletes.detail.promotions.gap.stepGrade', {
+          belt,
+          grade: this.beltLadder.stripesLabel(gap.belt, to),
+        });
+  }
+
+  /** The fill dialog's question: "Quando ha preso il 4° grado?". */
+  protected fillTitle(gap: PromotionGap): string {
+    this.languageService.currentLang();
+    if (gap.kind === 'belt') {
+      return this.translate.instant('athletes.detail.promotions.gap.titleBelt', {
+        belt: this.beltLadder.label(gap.belt),
+      });
+    }
+    const to = gap.to_stripes ?? 0;
+    return this.beltLadder.countsStripes(gap.belt)
+      ? this.translate.instant('athletes.detail.promotions.gap.titleStripe', { n: to })
+      : this.translate.instant('athletes.detail.promotions.gap.titleGrade', {
+          grade: this.beltLadder.stripesLabel(gap.belt, to),
+        });
+  }
+
+  /** A count on a belt, as its grade reads it: "3", or "3° dan". */
+  protected countOn(belt: Belt, stripes: number | null): string {
+    this.languageService.currentLang();
+    if (stripes === null) return '';
+    return this.beltLadder.countsStripes(belt)
+      ? String(stripes)
+      : this.beltLadder.stripesLabel(belt, stripes);
+  }
+
+  /** Whether a belt's count is stripes (tiles on the badge, and the "gradi" noun). */
+  protected countsStripesOn(belt: Belt): boolean {
+    return this.beltLadder.countsStripes(belt);
+  }
+
+  /** The create dialog asks the step's question when it is filling one. */
+  protected readonly createDialogTitle = computed<string>(() => {
+    this.languageService.currentLang();
+    const gap = this.filling();
+    return gap === null
+      ? this.translate.instant('athletes.detail.promotions.createDialog.title')
+      : this.fillTitle(gap);
+  });
+
+  protected trackEntry(entry: TimelineEntry): string {
+    switch (entry.kind) {
+      case 'row':
+        return `row-${entry.row.id}`;
+      case 'gap':
+        return `gap-${entry.gap.key}`;
+      case 'collapsed':
+        return `run-${entry.runKey}`;
+    }
+  }
+
+  protected canSkip(gap: PromotionGap): boolean {
+    return canSkip(gap);
+  }
+
+  /** "Saltato" agrees with what was skipped: a grade, or a belt. */
+  protected skipLabelKey(gap: PromotionGap): string {
+    return gap.kind === 'belt'
+      ? 'athletes.detail.promotions.gap.skipBelt'
+      : 'athletes.detail.promotions.gap.skip';
+  }
+
+  /**
+   * A folded run's one line: "Viola 1 → 4" when every step is a stripe on the
+   * same belt, otherwise just the count.
+   */
+  protected runSummary(
+    gaps: readonly PromotionGap[],
+  ): { belt: Belt; from: number | null; to: number | null } | null {
+    const newest = gaps[0];
+    const oldest = gaps[gaps.length - 1];
+    const sameBelt = gaps.every((g) => g.kind === 'stripe' && g.belt === newest.belt);
+    return sameBelt
+      ? { belt: newest.belt, from: oldest.from_stripes, to: newest.to_stripes }
+      : null;
+  }
+
+  /**
+   * "Su questa cintura dal…" counts from the opening row's date — the day
+   * the athlete was entered — when that row is the latest belt row (#1966).
+   * Said, so the number is not taken for the promotion's. Only on the first
+   * page, where the latest belt row is; and not for someone entered on the
+   * ladder's first belt, whose entry day is when they started.
+   */
+  protected readonly beltSinceIsEntryDay = computed<boolean>(() => {
+    if (this.currentPage() !== 1) return false;
+    const latestBelt = this.promotions().find((p) => p.kind === 'belt');
+    return latestBelt?.is_opening === true && latestBelt.to_belt !== this.beltLadder.startingBelt();
+  });
+
+  /**
+   * "Prima del … la storia non è registrata" under the oldest row (#1966):
+   * the one line that stands for everything before the first known point,
+   * instead of a ghost for each of those steps. Not for a history that opens
+   * on the ladder's first belt — that one starts where the athlete did.
+   */
+  protected readonly historyUnrecordedBefore = computed<string | null>(() => {
+    const startsAt = this.historyStartsAt();
+    if (startsAt === null || this.currentPage() !== this.lastPage()) return null;
+    const rows = this.promotions();
+    const oldest = rows[rows.length - 1];
+    if (oldest === undefined) return null;
+    const opensAtTheStart =
+      oldest.kind === 'belt' &&
+      oldest.from_belt === null &&
+      oldest.to_belt === this.beltLadder.startingBelt();
+    return opensAtTheStart ? null : startsAt;
+  });
+
   protected deletePromotion(promotion: AthletePromotion): void {
     this.deletingId.set(promotion.id);
     this.athleteService
@@ -467,11 +853,64 @@ export class PromotionsListComponent implements OnInit {
   }
 }
 
+/** Whether "Saltato" applies: not to the step an opening row stands for. */
+function canSkip(gap: PromotionGap): boolean {
+  return gap.completes_promotion_id === null;
+}
+
+/** The "Annulla" a skipped step's line carries, where focus goes after the skip. */
+function unskipSelector(gap: PromotionGap): string {
+  return `[data-cy="gap-unskip-${gap.key}"] button`;
+}
+
+/** Where focus returns when a skipped step is brought back. */
+function addDateSelector(gap: PromotionGap): string {
+  return `[data-cy="gap-add-date-${gap.key}"] button`;
+}
+
+/**
+ * A skip is keyed by the state the step leads to, which the contract puts in
+ * the key's last segment (`<kind>:<belt>:<stripes after>`). Read from there,
+ * not worked out: a belt step does not always start at 0 — taekwondo's 2nd
+ * poom leads to the black belt's 2nd dan, `belt:black:1`.
+ */
+function stepStripes(gap: PromotionGap): number {
+  const last = Number(gap.key.split(':').pop());
+  return Number.isInteger(last) ? last : (gap.to_stripes ?? 0);
+}
+
+/** The create payload for a missing step: everything is known but the date. */
+function payloadFor(gap: PromotionGap, recordedAt: string): AthletePromotionCreatePayload {
+  return gap.kind === 'belt'
+    ? { kind: 'belt', recorded_at: recordedAt, from_belt: gap.from_belt, to_belt: gap.belt }
+    : {
+        kind: 'stripe',
+        recorded_at: recordedAt,
+        from_stripes: gap.from_stripes ?? 0,
+        to_stripes: gap.to_stripes ?? 0,
+        belt_at_event: gap.belt,
+      };
+}
+
+/** A server day (`YYYY-MM-DD` or an instant) as the local midnight a date picker reads. */
+function dayOf(iso: string): Date {
+  return utcCalendarDayAsLocalMidnight(new Date(iso));
+}
+
+function nextDay(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1);
+}
+
 function toIsoDate(date: Date): string {
   const year = date.getFullYear();
   const month = `${date.getMonth() + 1}`.padStart(2, '0');
   const day = `${date.getDate()}`.padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+/** Midnight of `instant`'s own local calendar day. */
+function startOfLocalDay(instant: Date): Date {
+  return new Date(instant.getFullYear(), instant.getMonth(), instant.getDate());
 }
 
 /**

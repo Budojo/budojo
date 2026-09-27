@@ -10,8 +10,8 @@ use App\Models\NotificationLog;
 use App\Notifications\OwnerAcademyDocumentExpiringNotification;
 use App\Support\NotificationCategory;
 use App\Support\NotificationPreferences;
+use App\Support\OperatorDay;
 use Illuminate\Console\Command;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -44,7 +44,7 @@ class SendAcademyDocumentExpiryReminders extends Command
 
     public function handle(): int
     {
-        $today = Carbon::today();
+        $today = OperatorDay::today();
         $triggerDates = array_map(
             fn (int $offset): string => $today->copy()->addDays($offset)->toDateString(),
             self::TRIGGER_OFFSETS,

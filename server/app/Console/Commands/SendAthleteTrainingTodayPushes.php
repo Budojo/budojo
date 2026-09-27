@@ -9,6 +9,8 @@ use App\Models\AttendanceRecord;
 use App\Notifications\AthleteTrainingTodayNotification;
 use App\Support\NotificationCategory;
 use App\Support\NotificationPreferences;
+use App\Support\OperatorDay;
+use Carbon\CarbonInterface;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
@@ -47,7 +49,7 @@ class SendAthleteTrainingTodayPushes extends Command
 
     public function handle(): int
     {
-        $today = Carbon::today();
+        $today = OperatorDay::today();
         $dayOfWeek = (int) $today->dayOfWeek; // 0=Sun..6=Sat (Carbon default)
 
         $hasFailures = false;
@@ -70,7 +72,7 @@ class SendAthleteTrainingTodayPushes extends Command
         return $hasFailures ? Command::FAILURE : Command::SUCCESS;
     }
 
-    private function processAcademy(Academy $academy, int $dayOfWeek, Carbon $today): void
+    private function processAcademy(Academy $academy, int $dayOfWeek, CarbonInterface $today): void
     {
         /** @var list<int>|null $trainingDays */
         $trainingDays = $academy->training_days;
@@ -119,7 +121,7 @@ class SendAthleteTrainingTodayPushes extends Command
         }
     }
 
-    private function alreadyNotifiedToday(\App\Models\User $user, Carbon $today): bool
+    private function alreadyNotifiedToday(\App\Models\User $user, CarbonInterface $today): bool
     {
         return $user->notifications()
             ->where('data->kind', 'athlete_training_today')

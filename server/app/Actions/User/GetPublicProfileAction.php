@@ -86,6 +86,7 @@ class GetPublicProfileAction
                 // had just been promoted from white.
                 ->where(fn ($q) => $q->where('kind', 'stripe')->orWhereNotNull('from_belt'))
                 ->orderByDesc('recorded_at')
+                ->orderByDesc('id')
                 ->limit(50)
                 ->get()
                 ->map(fn (AthletePromotion $p): array => [

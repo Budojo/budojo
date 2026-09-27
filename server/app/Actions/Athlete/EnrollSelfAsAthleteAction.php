@@ -11,6 +11,7 @@ use App\Models\Academy;
 use App\Models\Athlete;
 use App\Models\User;
 use App\Support\MartialArt\MartialArtProfile;
+use App\Support\OperatorDay;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -111,7 +112,7 @@ class EnrollSelfAsAthleteAction
                 'belt' => MartialArtProfile::for($academy->martial_art)->ladder()->startingBelt(),
                 'stripes' => 0,
                 'status' => AthleteStatus::Active,
-                'joined_at' => now()->toDateString(),
+                'joined_at' => OperatorDay::today()->toDateString(),
             ]);
             // The owner's own timeline opens like anyone else's (#1771),
             // recorded by the owner themselves.

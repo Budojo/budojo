@@ -8,6 +8,7 @@ use App\Models\Academy;
 use App\Models\Athlete;
 use App\Models\AthletePayment;
 use App\Models\User;
+use App\Support\OperatorDay;
 use Laravel\Sanctum\Sanctum;
 
 it('enrolls the caller as a self-row in their active academy on POST /me/athlete', function (): void {
@@ -181,8 +182,8 @@ it('excludes self-rows from the unpaid-this-month digest source list', function 
     // The owner-as-athlete (self-row).
     Athlete::factory()->for($academy)->selfFor($owner)->create();
 
-    $year = (int) now()->year;
-    $month = (int) now()->month;
+    $year = (int) OperatorDay::today()->year;
+    $month = (int) OperatorDay::today()->month;
 
     $reflection = new ReflectionClass(\App\Console\Commands\SendUnpaidAthletesDigest::class);
     $method = $reflection->getMethod('unpaidActiveAthletesFor');
@@ -276,8 +277,8 @@ it('owner-as-athlete paid_current_month uses the same payment ledger as a regula
     /** @var Athlete $self */
     $selfRow = Athlete::factory()->for($academy)->selfFor($owner)->create();
     AthletePayment::factory()->for($selfRow)->create([
-        'year' => (int) now()->year,
-        'month' => (int) now()->month,
+        'year' => (int) OperatorDay::today()->year,
+        'month' => (int) OperatorDay::today()->month,
     ]);
 
     $response = $this->getJson('/api/v1/athletes');

@@ -22,6 +22,22 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | The operator's timezone (#1963)
+    |--------------------------------------------------------------------------
+    |
+    | Where the owner lives, and so which calendar day "today" is for them.
+    | Storage stays UTC (`app.timezone`); this only decides the day. Read it
+    | through `App\Support\OperatorDay`, never as a literal: a second copy of
+    | it is how "today" was UTC's for every date rule while the scheduler ran
+    | in Rome. One key for the install, not one per academy — a single owner
+    | on one desktop — until a second timezone is a real need.
+    |
+    */
+
+    'operator_timezone' => 'Europe/Rome',
+
+    /*
+    |--------------------------------------------------------------------------
     | Desktop driver profile
     |--------------------------------------------------------------------------
     |

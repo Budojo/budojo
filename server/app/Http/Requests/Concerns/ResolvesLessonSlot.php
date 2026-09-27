@@ -7,6 +7,7 @@ namespace App\Http\Requests\Concerns;
 use App\Models\AcademyClass;
 use App\Models\Lesson;
 use App\Models\User;
+use App\Support\OperatorDay;
 use Carbon\CarbonImmutable;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -88,7 +89,7 @@ trait ResolvesLessonSlot
             }
 
             $heldOn = $this->heldOn();
-            if ($heldOn->lessThan(CarbonImmutable::today())) {
+            if ($heldOn->lessThan(OperatorDay::today())) {
                 return;
             }
 

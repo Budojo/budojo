@@ -6,7 +6,7 @@ namespace App\Actions\Lesson;
 
 use App\Models\Academy;
 use App\Models\SyllabusTopic;
-use Carbon\CarbonImmutable;
+use App\Support\OperatorDay;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -40,7 +40,7 @@ class RecentLessonTopicsAction
             ->join('lessons', 'lessons.id', '=', 'lesson_topic.lesson_id')
             ->join('syllabus_topics', 'syllabus_topics.id', '=', 'lesson_topic.syllabus_topic_id')
             ->where('lessons.academy_id', $academy->id)
-            ->where('lessons.held_on', '<=', CarbonImmutable::today()->toDateString())
+            ->where('lessons.held_on', '<=', OperatorDay::today()->toDateString())
             ->whereNull('syllabus_topics.deleted_at')
             ->groupBy('lesson_topic.syllabus_topic_id')
             ->orderByRaw('MAX(lessons.held_on) DESC')

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Actions\Stats;
 
 use App\Models\Academy;
-use Carbon\CarbonImmutable;
+use App\Support\OperatorDay;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -28,7 +28,7 @@ class DailyAttendanceStatsAction
      */
     public function execute(Academy $academy, int $months): array
     {
-        $today = CarbonImmutable::now()->startOfDay();
+        $today = OperatorDay::today();
         // +1 day so a 3-month window ending today is exactly 3 calendar
         // months back to today, inclusive of both endpoints.
         $start = $today->subMonths($months)->addDay();

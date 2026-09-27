@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Models\Athlete;
 use App\Models\AttendanceRecord;
+use App\Support\OperatorDay;
 use Carbon\Carbon;
 use Laravel\Sanctum\Sanctum;
 
@@ -225,7 +226,8 @@ it('lists athletes present on a given date for the authenticated academy', funct
 it('defaults GET /attendance to today when no date is provided', function (): void {
     $user = userWithAcademy();
     $mario = Athlete::factory()->for($user->academy)->create();
-    AttendanceRecord::factory()->for($mario)->on(now()->toDateString())->create();
+    // The owner's today (#1963), which UTC's is not between 22:00 and 24:00.
+    AttendanceRecord::factory()->for($mario)->on(OperatorDay::today()->toDateString())->create();
 
     Sanctum::actingAs($user);
 

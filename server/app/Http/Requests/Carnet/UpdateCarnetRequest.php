@@ -7,6 +7,7 @@ namespace App\Http\Requests\Carnet;
 use App\Authorization\Capability;
 use App\Http\Requests\Concerns\AuthorizesAcademyCapability;
 use App\Models\Athlete;
+use App\Support\OperatorDay;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
@@ -37,7 +38,7 @@ class UpdateCarnetRequest extends FormRequest
         return [
             // The only editable field. Price, size and code are snapshots of
             // the sale and stay untouchable; the expiry is derived, not given.
-            'valid_from' => ['required', 'date_format:Y-m-d', 'before_or_equal:today'],
+            'valid_from' => ['required', 'date_format:Y-m-d', OperatorDay::notAfterToday()],
         ];
     }
 
