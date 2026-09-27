@@ -56,6 +56,16 @@ use Carbon\CarbonImmutable;
  * as the row records the belt and not the count — whether it opens the
  * history or was imported after older rows were transcribed.
  *
+ * **One exception: a starting row that opens the history (#1974)** — the
+ * most common imported athlete, entered on a belt with nothing typed in
+ * before it. Its date is the day of entry and its belt step is still the one
+ * thing missing, but no row says which belt the athlete came from: the step
+ * is offered with the belts the ladder allows before it
+ * (`from_belt_options`, one suggested), no lower bound, and the row's own day
+ * as the latest. Not for the ladder's first belt — nobody comes before white
+ * — and not for a starting row the history sets back (a belt entered by
+ * mistake).
+ *
  * **A window, or nothing.** A step goes after the row the walk left from and
  * no later than the next row after it (today, when there is none), never
  * counting the stripe reset a live promotion writes beside its belt row. A
@@ -78,6 +88,7 @@ use Carbon\CarbonImmutable;
  *     after: Neighbour|null,
  *     before: Neighbour|null,
  *     completes_promotion_id: int|null,
+ *     from_belt_options: list<string>|null,
  * }
  * @phpstan-type Step array{kind: 'belt'|'stripe', belt: Belt, stripes: int, from_belt: Belt, from_stripes: int}
  * @phpstan-type State array{belt: Belt, stripes: int}
@@ -127,9 +138,12 @@ final class PromotionGaps
 
         $this->rows = $this->withoutUndone(array_values(array_filter($sorted, static fn (PromotionRecord $row): bool => ! $row->isReset())));
         $found = $this->rows === [] ? [] : $this->replay($currentBelt, $currentStripes);
+        $gaps = $this->gaps($found, $skipped);
+        $opening = $this->openingStep($currentBelt);
 
         return [
-            'gaps' => $this->gaps($found, $skipped),
+            // Oldest first: the step before the first row leads.
+            'gaps' => $opening === null ? $gaps : [$opening, ...$gaps],
             'history_starts_at' => $sorted[0]->day(),
         ];
     }
@@ -555,10 +569,122 @@ final class PromotionGaps
                 'after' => self::neighbour($after),
                 'before' => self::neighbour($before),
                 'completes_promotion_id' => $completes?->id,
+                // A known row before it says which belt: nothing to choose.
+                'from_belt_options' => null,
             ];
         }
 
         return $gaps;
+    }
+
+    /**
+     * The belt step a starting row stands for when it opens the history
+     * (#1974). Nothing before it says which belt the athlete came from, so
+     * the owner chooses among the belts the ladder allows before it; the one
+     * whose next step leads into it is suggested.
+     *
+     * @return Gap|null
+     */
+    private function openingStep(Belt $currentBelt): ?array
+    {
+        $first = $this->rows[0] ?? null;
+        if ($first === null || ! $first->isOpening() || $this->setBack($first, $currentBelt)) {
+            return null;
+        }
+
+        $belt = $first->belt();
+        $options = $this->beltsBefore($belt, $first->recordedAt);
+        if ($options === []) {
+            return null;
+        }
+
+        [$suggested, $stripes] = $this->steppingInto($belt, $options, $first->recordedAt);
+
+        return [
+            'key' => "belt:{$belt->value}:{$stripes}",
+            'kind' => 'belt',
+            'belt' => $belt->value,
+            'from_belt' => $suggested->value,
+            'from_stripes' => null,
+            'to_stripes' => null,
+            // Nothing is known before it.
+            'after' => null,
+            // They held the belt the day they were entered.
+            'before' => self::neighbour($first),
+            'completes_promotion_id' => $first->id,
+            'from_belt_options' => array_map(static fn (Belt $option): string => $option->value, $options),
+        ];
+    }
+
+    /**
+     * Whether the history puts the athlete below the starting row's belt
+     * afterwards — a belt entered by mistake and corrected, a row recorded on
+     * a lower belt, or an athlete below it today: then the history contradicts
+     * it, and a guess at the day they reached it would be worse than none.
+     */
+    private function setBack(PromotionRecord $first, Belt $currentBelt): bool
+    {
+        $held = $this->ladder->climbPosition($first->belt());
+        if ($held === null) {
+            return true;
+        }
+
+        $below = fn (Belt $belt): bool => ($this->ladder->climbPosition($belt) ?? $held) < $held;
+        if ($below($currentBelt)) {
+            return true;
+        }
+
+        foreach (\array_slice($this->rows, 1) as $row) {
+            if ($below($row->belt())) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * The belts an athlete can hold before this one, in the order people
+     * climb them: the kids' grades only when they were the athlete's to climb.
+     *
+     * @return list<Belt>
+     */
+    private function beltsBefore(Belt $belt, CarbonImmutable $on): array
+    {
+        $there = $this->ladder->climbPosition($belt);
+        if ($there === null) {
+            return [];
+        }
+
+        $before = array_values(array_filter(
+            $this->ladder->belts(),
+            fn (Belt $candidate): bool => ($this->ladder->climbPosition($candidate) ?? $there) < $there
+                && (! $this->ladder->isKidsGrade($candidate) || ($this->kidsEligible)($candidate, $on)),
+        ));
+        usort($before, fn (Belt $a, Belt $b): int => $this->ladder->climbPosition($a) <=> $this->ladder->climbPosition($b));
+
+        return $before;
+    }
+
+    /**
+     * Of the belts before this one, the highest whose next belt step leads
+     * into it — the one to suggest — and the count that step lands on (a
+     * poom's number carried into the dan). The highest of them when none does.
+     *
+     * @param non-empty-list<Belt> $options
+     *
+     * @return array{Belt, int}
+     */
+    private function steppingInto(Belt $belt, array $options, CarbonImmutable $on): array
+    {
+        foreach (array_reverse($options) as $candidate) {
+            $next = $this->next($this->leaving($candidate, $on), $on);
+            if ($next !== null && $next['kind'] === 'belt' && $next['belt'] === $belt) {
+                return [$candidate, $next['stripes']];
+            }
+        }
+
+        return [$options[\count($options) - 1], 0];
     }
 
     /**

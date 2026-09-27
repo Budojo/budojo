@@ -89,8 +89,10 @@ class UpdateAthletePromotionRequest extends FormRequest
      * outside it, the belt would land after rows that came on that belt, and
      * the history would then offer the same belt again. Inside it, the gap's
      * own `from_belt` is consistent by construction; any other goes through
-     * the belt chain. With no gap — the row that opens the history — the
-     * belt chain decides alone.
+     * the belt chain. For a row that opens the history (#1974) the gap lists
+     * the belts the ladder allows before it, and only those are taken. With
+     * no gap at all — a history that contradicts the row — the belt chain
+     * decides alone.
      */
     private function validateCompletingAStartingRow(Validator $validator): void
     {
@@ -118,6 +120,15 @@ class UpdateAthletePromotionRequest extends FormRequest
         $gap = $this->gapCompleting($athlete, $promotion);
         if ($gap !== null && ! PromotionGaps::inWindow($gap, $recordedAt->toDateString(), OperatorDay::today())) {
             $validator->errors()->add('recorded_at', self::windowMessage($gap));
+
+            return;
+        }
+
+        // A row that opens the history (#1974): the belt before it is the
+        // owner's to choose, among the ones the ladder allows before it.
+        $options = $gap['from_belt_options'] ?? null;
+        if ($options !== null && ! \in_array($fromBelt, $options, true)) {
+            $validator->errors()->add('from_belt', 'Not a belt that comes before ' . $toBelt . ' on this ladder.');
 
             return;
         }

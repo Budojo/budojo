@@ -6503,7 +6503,9 @@ paths:
         date outside it is a 422 on `recorded_at`), and its own
         `from_belt` needs no further check; any other `from_belt`, or a row
         with no such gap, must fit the belt rows around it (the row itself
-        excluded).
+        excluded). A gap with `from_belt_options` (a starting row that opens
+        the history, #1974) accepts only one of them: another belt is a 422
+        on `from_belt`.
 
         403 when the promotion does not belong to the athlete in the path.
       operationId: athletePromotionUpdateRecordedAt
@@ -11328,7 +11330,15 @@ components:
         in it is not reported.
         `completes_promotion_id` names the starting row this belt step
         completes (PATCH it, don't POST); it cannot be skipped.
-      required: [key, kind, belt, from_belt, from_stripes, to_stripes, after, before, completes_promotion_id]
+        A starting row that **opens** the history (#1974) is completed too:
+        its step has `after: null` (nothing is known before it), `before` the
+        row itself, and `from_belt_options` — the belts the academy's ladder
+        allows before it, in climbing order, kids' grades only when they were
+        the athlete's to climb. `from_belt` is the suggested one, the belt
+        whose next step leads into it; the owner may send any of the options.
+        Not reported for the ladder's first belt, nor for a starting row the
+        history later puts the athlete below.
+      required: [key, kind, belt, from_belt, from_stripes, to_stripes, after, before, completes_promotion_id, from_belt_options]
       properties:
         key: { type: string, example: 'stripe:white:4' }
         kind: { type: string, enum: [belt, stripe] }
@@ -11349,6 +11359,14 @@ components:
             - $ref: '#/components/schemas/PromotionGapNeighbour'
           nullable: true
         completes_promotion_id: { type: integer, format: int64, nullable: true }
+        from_belt_options:
+          type: array
+          nullable: true
+          items: { $ref: '#/components/schemas/Belt' }
+          description: >-
+            Only on the step of a starting row that opens the history (#1974):
+            the belts the owner may choose as the one before it. Null
+            everywhere else, where a known row says which belt it was.
 
     PromotionGapNeighbour:
       type: object
