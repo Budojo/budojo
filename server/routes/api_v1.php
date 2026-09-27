@@ -697,6 +697,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::get('payments/summary', [StatsController::class, 'paymentsSummary']);
             // Who is behind, since when, and by how much (#1760).
             Route::get('payments/arrears', \App\Http\Controllers\Stats\PaymentsArrearsController::class);
+            // A season of payments as a CSV for the accountant (#1762).
+            Route::get('payments/export', [StatsController::class, 'paymentsExport']);
             Route::get('athletes/age-bands', [StatsController::class, 'ageBands']);
             // Athletes a medical certificate covers, not rows (#1732).
             Route::get('documents/compliance', [StatsController::class, 'documentsCompliance']);
