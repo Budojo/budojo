@@ -1,7 +1,27 @@
 <section class="stats-payments" data-cy="stats-payments">
   <header class="stats-payments__header">
-    <h2 class="stats-payments__title">{{ 'stats.payments.monthlyTitle' | translate }}</h2>
-    <p class="stats-payments__hint">{{ 'stats.payments.monthlyHint' | translate }}</p>
+    <div class="stats-payments__heading">
+      <h2 class="stats-payments__title">{{ 'stats.payments.monthlyTitle' | translate }}</h2>
+      <p class="stats-payments__hint">{{ 'stats.payments.monthlyHint' | translate }}</p>
+    </div>
+    <!-- The accountant's file (#1762): the current season on the button, the
+         one before in the menu — in September that is the finished season. -->
+    @if (exportSeasons()[0]; as current) {
+      <p-splitbutton
+        [label]="
+          (exporting() ? 'stats.payments.export.inProgress' : 'stats.payments.export.button')
+            | translate: { label: current.label }
+        "
+        [icon]="exporting() ? 'pi pi-spin pi-spinner' : 'pi pi-download'"
+        [model]="seasonItems()"
+        [disabled]="exporting()"
+        severity="secondary"
+        [outlined]="true"
+        [menuButtonProps]="{ ariaLabel: 'stats.payments.export.otherSeasons' | translate }"
+        (onClick)="exportSeason(current)"
+        data-cy="stats-payments-export"
+      />
+    }
   </header>
 
   @if (errored()) {

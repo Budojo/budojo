@@ -4,6 +4,8 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { StatsPaymentsComponent } from './stats-payments.component';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 import { LanguageService } from '../../../core/services/language.service';
+import { MessageService } from 'primeng/api';
+import { type Academy, AcademyService } from '../../../core/services/academy.service';
 
 interface ChartOptions {
   readonly maintainAspectRatio?: boolean;
@@ -20,7 +22,12 @@ describe('StatsPaymentsComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [StatsPaymentsComponent],
-      providers: [provideHttpClient(), provideHttpClientTesting(), ...provideI18nTesting()],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        ...provideI18nTesting(),
+        MessageService,
+      ],
     }).compileComponents();
     fixture = TestBed.createComponent(StatsPaymentsComponent);
     http = TestBed.inject(HttpTestingController);
@@ -150,5 +157,132 @@ describe('StatsPaymentsComponent', () => {
     http.expectOne('/api/v1/stats/payments/monthly?months=12').error(new ProgressEvent('error'));
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('[data-cy="stats-payments-error"]')).toBeTruthy();
+  });
+  describe("the accountant's file (#1762)", () => {
+    const EXPORT = '/api/v1/stats/payments/export';
+    let appended: HTMLAnchorElement[];
+
+    /** The season the academy is in, as the server reports it for today. */
+    function inSeason(start: string, label: string): void {
+      TestBed.inject(AcademyService).academy.set({
+        season_start: start,
+        season_label: label,
+      } as Academy);
+    }
+
+    function renderPage(): void {
+      fixture.detectChanges();
+      http.expectOne('/api/v1/stats/payments/monthly?months=12').flush({ data: [] });
+      fixture.detectChanges();
+    }
+
+    const exportHost = (): HTMLElement | null =>
+      (fixture.nativeElement as HTMLElement).querySelector('[data-cy="stats-payments-export"]');
+
+    let originalMatchMedia: typeof window.matchMedia;
+
+    beforeEach(() => {
+      // jsdom has neither object URLs, which the download helper needs, nor
+      // `matchMedia`, which the split button's menu reads on init.
+      URL.createObjectURL = vi.fn(() => 'blob:fake');
+      URL.revokeObjectURL = vi.fn();
+      originalMatchMedia = window.matchMedia;
+      window.matchMedia = vi.fn((q: string) => ({
+        matches: false,
+        media: q,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+        onchange: null,
+      })) as unknown as typeof window.matchMedia;
+      vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+
+      // Keep the download anchor out of the page; everything else (the
+      // menu's overlay) is appended as usual.
+      appended = [];
+      const append = document.body.appendChild.bind(document.body);
+      vi.spyOn(document.body, 'appendChild').mockImplementation(<T extends Node>(node: T): T => {
+        if (node instanceof HTMLAnchorElement && node.download) {
+          appended.push(node);
+          return node;
+        }
+        return append(node);
+      });
+      const remove = document.body.removeChild.bind(document.body);
+      vi.spyOn(document.body, 'removeChild').mockImplementation(<T extends Node>(node: T): T =>
+        node instanceof HTMLAnchorElement && node.download ? node : remove(node),
+      );
+    });
+
+    afterEach(() => {
+      window.matchMedia = originalMatchMedia;
+      vi.restoreAllMocks();
+    });
+
+    it('downloads the current season as a file named after it', () => {
+      inSeason('2026-09-01', '2026/27');
+      renderPage();
+
+      exportHost()!.querySelector<HTMLButtonElement>('button')!.click();
+
+      // A blob, through HttpClient: a bare link would carry no Bearer token.
+      const req = http.expectOne((r) => r.url === EXPORT && r.params.get('season') === '2026');
+      expect(req.request.responseType).toBe('blob');
+      req.flush(new Blob(['csv'], { type: 'text/csv' }));
+
+      expect(appended.map((a) => a.download)).toEqual(['budojo-payments-2026-27.csv']);
+    });
+
+    it('offers the season before too — in September the one the accountant wants', () => {
+      inSeason('2026-09-01', '2026/27');
+      renderPage();
+
+      const items = (
+        fixture.componentInstance as unknown as {
+          seasonItems(): { label: string; command(): void }[];
+        }
+      ).seasonItems();
+      expect(items.map((i) => i.label)).toEqual(['Season 2026/27', 'Season 2025/26']);
+
+      items[1].command();
+      http
+        .expectOne((r) => r.url === EXPORT && r.params.get('season') === '2025')
+        .flush(new Blob(['csv']));
+
+      expect(appended.map((a) => a.download)).toEqual(['budojo-payments-2025-26.csv']);
+    });
+
+    it('names a calendar-year season by its year alone', () => {
+      inSeason('2026-01-01', '2026');
+      renderPage();
+
+      const items = (
+        fixture.componentInstance as unknown as { seasonItems(): { label: string }[] }
+      ).seasonItems();
+
+      expect(items.map((i) => i.label)).toEqual(['Season 2026', 'Season 2025']);
+    });
+
+    it('says so when the file could not be made', () => {
+      inSeason('2026-09-01', '2026/27');
+      renderPage();
+      const toast = vi.spyOn(TestBed.inject(MessageService), 'add');
+
+      exportHost()!.querySelector<HTMLButtonElement>('button')!.click();
+      http
+        .expectOne((r) => r.url === EXPORT)
+        .flush(new Blob(['boom']), { status: 500, statusText: 'Server Error' });
+
+      expect(toast).toHaveBeenCalledWith(expect.objectContaining({ severity: 'error' }));
+      expect(appended).toEqual([]);
+    });
+
+    it('offers nothing before the academy has said which season it is in', () => {
+      renderPage();
+
+      expect(exportHost()).toBeNull();
+    });
   });
 });

@@ -3021,6 +3021,14 @@
         "loading": "Loading who is behind…",
         "errored": "Couldn't load who is behind.",
         "retry": "Try again"
+      },
+      "export": {
+        "button": "Export season {{label}}",
+        "season": "Season {{label}}",
+        "otherSeasons": "Other seasons",
+        "inProgress": "Preparing {{label}}…",
+        "errorSummary": "Export failed",
+        "errorDetail": "The file wasn't created. Try again."
       }
     },
     "athletes": {

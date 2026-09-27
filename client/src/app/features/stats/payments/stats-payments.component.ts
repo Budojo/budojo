@@ -1,14 +1,37 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { TranslatePipe } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { finalize } from 'rxjs';
+import { MenuItem, MessageService } from 'primeng/api';
 import { ChartModule } from 'primeng/chart';
 import { SkeletonModule } from 'primeng/skeleton';
+import { SplitButtonModule } from 'primeng/splitbutton';
+import { AcademyService } from '../../../core/services/academy.service';
+import { triggerBrowserDownload } from '../../../shared/utils/download';
 import { MonthlyPaymentsBucket, StatsService } from '../../../core/services/stats.service';
 import { LanguageService } from '../../../core/services/language.service';
 import { localeFor } from '../../../shared/utils/locale';
 import { ErrorStateComponent } from '../../../shared/components/error-state/error-state.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { PaymentsArrearsComponent } from './arrears/payments-arrears.component';
+
+/** A season the accountant's file can be asked for: the year it starts in, and its name. */
+interface ExportSeason {
+  readonly startYear: number;
+  readonly label: string;
+}
+
+/**
+ * The season before `current`, named the way the server names seasons:
+ * `2025/26` for one that crosses new year, `2025` for a calendar-year academy.
+ */
+function previousSeason(current: ExportSeason): ExportSeason {
+  const startYear = current.startYear - 1;
+  const label = current.label.includes('/')
+    ? `${startYear}/${String(startYear + 1).slice(-2)}`
+    : String(startYear);
+  return { startYear, label };
+}
 
 @Component({
   selector: 'app-stats-payments',
@@ -17,6 +40,7 @@ import { PaymentsArrearsComponent } from './arrears/payments-arrears.component';
   imports: [
     ChartModule,
     SkeletonModule,
+    SplitButtonModule,
     TranslatePipe,
     ErrorStateComponent,
     EmptyStateComponent,
@@ -28,6 +52,9 @@ import { PaymentsArrearsComponent } from './arrears/payments-arrears.component';
 export class StatsPaymentsComponent {
   private readonly stats = inject(StatsService);
   private readonly languageService = inject(LanguageService);
+  private readonly academyService = inject(AcademyService);
+  private readonly translate = inject(TranslateService);
+  private readonly messages = inject(MessageService);
 
   protected readonly loading = signal(true);
   protected readonly errored = signal(false);
@@ -109,6 +136,61 @@ export class StatsPaymentsComponent {
       },
     };
   });
+
+  /**
+   * The seasons the accountant's file can be asked for (#1762): the one the
+   * academy is in, as the server reports it for today, and the one before —
+   * in September the current season has barely begun, and the finished one
+   * is the file the accountant is asking for. Nothing until the academy has
+   * said which season it is in.
+   */
+  protected readonly exportSeasons = computed<readonly ExportSeason[]>(() => {
+    const academy = this.academyService.academy();
+    if (!academy?.season_start || !academy.season_label) return [];
+
+    const current = {
+      startYear: Number(academy.season_start.slice(0, 4)),
+      label: academy.season_label,
+    };
+    return [current, previousSeason(current)];
+  });
+
+  /** One menu entry per season, in the language on screen. */
+  protected readonly seasonItems = computed<MenuItem[]>(() => {
+    this.languageService.currentLang();
+    return this.exportSeasons().map((season) => ({
+      label: this.translate.instant('stats.payments.export.season', { label: season.label }),
+      command: () => this.exportSeason(season),
+    }));
+  });
+
+  protected readonly exporting = signal(false);
+
+  /**
+   * Download one season as the accountant's CSV. The file is named after the
+   * season here rather than read from the response: it is the same name the
+   * server sends, and reading `Content-Disposition` off a blob would need the
+   * header exposed for nothing.
+   */
+  protected exportSeason(season: ExportSeason): void {
+    if (this.exporting()) return;
+
+    this.exporting.set(true);
+    this.stats
+      .paymentsExport(season.startYear)
+      .pipe(finalize(() => this.exporting.set(false)))
+      .subscribe({
+        next: (blob) =>
+          triggerBrowserDownload(blob, `budojo-payments-${season.label.replace('/', '-')}.csv`),
+        error: () =>
+          this.messages.add({
+            severity: 'error',
+            summary: this.translate.instant('stats.payments.export.errorSummary'),
+            detail: this.translate.instant('stats.payments.export.errorDetail'),
+            life: 5000,
+          }),
+      });
+  }
 
   constructor() {
     this.stats

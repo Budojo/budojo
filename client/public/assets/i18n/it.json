@@ -3021,6 +3021,14 @@
         "loading": "Caricamento arretrati…",
         "errored": "Impossibile caricare gli arretrati.",
         "retry": "Riprova"
+      },
+      "export": {
+        "button": "Esporta la stagione {{label}}",
+        "season": "Stagione {{label}}",
+        "otherSeasons": "Altre stagioni",
+        "inProgress": "Preparo la stagione {{label}}…",
+        "errorSummary": "Esportazione non riuscita",
+        "errorDetail": "Il file non è stato creato. Riprova."
       }
     },
     "athletes": {

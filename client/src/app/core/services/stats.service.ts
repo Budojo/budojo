@@ -362,6 +362,20 @@ export class StatsService {
       .pipe(map((r) => r.data));
   }
 
+  /**
+   * A season of payments as a CSV for the accountant (#1762). A Blob through
+   * `HttpClient`, never a bare link: the auth interceptor attaches the Bearer
+   * token only to requests that go through it.
+   */
+  paymentsExport(seasonStartYear: number): Observable<Blob> {
+    const params = new HttpParams().set('season', seasonStartYear);
+
+    return this.http.get(`${environment.apiBase}/api/v1/stats/payments/export`, {
+      params,
+      responseType: 'blob',
+    });
+  }
+
   paymentsMonthly(months = 12): Observable<readonly MonthlyPaymentsBucket[]> {
     return this.http
       .get<{
