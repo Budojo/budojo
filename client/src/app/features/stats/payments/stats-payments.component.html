@@ -4,6 +4,9 @@
     <p class="stats-payments__hint">{{ 'stats.payments.monthlyHint' | translate }}</p>
   </header>
 
+  <!-- This month in four figures, above the bars they summarise (#1759). -->
+  <app-payments-summary />
+
   @if (errored()) {
     <app-error-state
       [title]="'stats.payments.errored' | translate"

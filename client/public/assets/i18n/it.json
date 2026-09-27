@@ -3009,6 +3009,16 @@
       "loading": "Caricamento incassi…",
       "errored": "Impossibile caricare il trend.",
       "empty": "Nessun incasso negli ultimi 12 mesi.",
+      "summary": {
+        "expectedLabel": "Atteso questo mese",
+        "collectedLabel": "Incassato",
+        "rateLabel": "Incassato sull'atteso",
+        "outstandingOne": "{{count}} atleta deve {{amount}}",
+        "outstandingOther": "{{count}} atleti devono {{amount}}",
+        "hint": "Il mese in corso, fino a oggi. L'atteso è una quota mensile per ogni atleta che paga, qualunque sia il suo abbonamento.",
+        "loading": "Carico i conti del mese…",
+        "errored": "Non riesco a caricare il riepilogo del mese."
+      },
       "arrears": {
         "title": "Arretrati",
         "hint": "I mesi prima di questo che nessun pagamento copre, contati da quando registri le quote qui. Gli importi sono alla quota di oggi. Chi è andato via ed è tornato conta anche i mesi in cui non c'era.",

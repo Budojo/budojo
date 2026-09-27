@@ -1,0 +1,38 @@
+@if (show()) {
+  <section class="summary" data-cy="summary">
+    @if (errored()) {
+      <p class="summary__error" data-cy="summary-error">
+        {{ 'stats.payments.summary.errored' | translate }}
+      </p>
+    } @else if (loading()) {
+      <p-skeleton
+        height="4.5rem"
+        data-cy="summary-loading"
+        [attr.aria-label]="'stats.payments.summary.loading' | translate"
+      />
+    } @else if (view(); as v) {
+      <ul class="summary__tiles">
+        <li class="summary__tile" data-cy="summary-expected">
+          <span class="summary__label">{{
+            'stats.payments.summary.expectedLabel' | translate
+          }}</span>
+          <span class="summary__value">{{ v.expected }}</span>
+        </li>
+        <li class="summary__tile" data-cy="summary-collected">
+          <span class="summary__label">{{
+            'stats.payments.summary.collectedLabel' | translate
+          }}</span>
+          <span class="summary__value">{{ v.collected }}</span>
+        </li>
+        <li class="summary__tile" data-cy="summary-rate">
+          <span class="summary__label">{{ 'stats.payments.summary.rateLabel' | translate }}</span>
+          <span class="summary__value">{{ v.rate }}</span>
+        </li>
+        <li class="summary__tile summary__tile--owing" data-cy="summary-outstanding">
+          <span class="summary__sentence">{{ v.outstanding }}</span>
+        </li>
+      </ul>
+      <p class="summary__hint">{{ 'stats.payments.summary.hint' | translate }}</p>
+    }
+  </section>
+}
