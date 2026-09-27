@@ -11,6 +11,7 @@ import { SkeletonModule } from 'primeng/skeleton';
 import { ArrearsRow, StatsService } from '../../../../core/services/stats.service';
 import { LanguageService } from '../../../../core/services/language.service';
 import { localeFor } from '../../../../shared/utils/locale';
+import { formatCents } from '../../../../shared/utils/money';
 import { AthleteIdentityComponent } from '../../../../shared/components/athlete-identity/athlete-identity.component';
 import { ErrorStateComponent } from '../../../../shared/components/error-state/error-state.component';
 
@@ -90,8 +91,7 @@ export class PaymentsArrearsComponent {
   }
 
   protected money(cents: number): string {
-    const locale = localeFor(this.languageService.currentLang());
-    return (cents / 100).toLocaleString(locale, { style: 'currency', currency: 'EUR' });
+    return formatCents(cents, 'EUR', this.languageService.currentLang());
   }
 
   /**

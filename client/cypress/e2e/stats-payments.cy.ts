@@ -54,6 +54,41 @@ describe('Stats — payments monthly revenue tab', () => {
     cy.get('[data-cy="stats-payments-chart"]').should('be.visible');
   });
 
+  it('sums up this month above the chart, and the tile agrees with the bar (#1759)', () => {
+    // Only an academy that charges a fee gets the tiles.
+    cy.intercept('GET', '/api/v1/academy', {
+      statusCode: 200,
+      body: { data: { ...MOCK_ACADEMY, monthly_fee_cents: 7000 } },
+    });
+    const current = MOCK_MONTHLY_PAYMENTS[MOCK_MONTHLY_PAYMENTS.length - 1];
+    cy.intercept('GET', '**/stats/payments/summary*', {
+      statusCode: 200,
+      body: {
+        data: {
+          year: 2025,
+          month: 12,
+          currency: 'EUR',
+          expected_cents: 28000,
+          // The chart's own bucket for the month: the tile and the bar sit
+          // two centimetres apart and must say the same thing.
+          collected_cents: current.amount_cents,
+          outstanding_count: 1,
+          outstanding_cents: 7000,
+          collection_rate: 0.75,
+          estimated: false,
+        },
+      },
+    }).as('paymentsSummary');
+
+    cy.visitAuthenticated('/dashboard/stats/payments');
+    cy.wait('@paymentsSummary');
+
+    cy.get('[data-cy="summary-expected"]').should('contain.text', '€280.00');
+    cy.get('[data-cy="summary-collected"]').should('contain.text', '€210.00');
+    cy.get('[data-cy="summary-rate"]').should('contain.text', '75%');
+    cy.get('[data-cy="summary-outstanding"]').should('contain.text', '1 athlete owes €70.00');
+  });
+
   it('lists who is behind under the chart, each opening their payments (#1760)', () => {
     cy.visitAuthenticated('/dashboard/stats/payments');
     cy.wait('@paymentsArrears');
