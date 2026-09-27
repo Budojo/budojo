@@ -231,7 +231,7 @@ describe('SeasonMapComponent (#1858)', () => {
 
     // The ✕ and the title live in the dialog's header, outside the body.
     const dialog = document.createElement('div');
-    dialog.className = 'p-dialog';
+    dialog.className = 'p-dialog season-map-sheet';
     const close = document.createElement('button');
     dialog.appendChild(close);
     document.body.appendChild(dialog);

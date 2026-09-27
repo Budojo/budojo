@@ -527,7 +527,7 @@ export class SeasonMapComponent {
 
   /** The panel is up: move focus onto its title, as a dialog must. */
   protected focusTitle(): void {
-    document.querySelector<HTMLElement>('.p-dialog .season-map__pop-title')?.focus();
+    document.querySelector<HTMLElement>('.season-map-sheet .season-map__pop-title')?.focus();
   }
 
   /**
@@ -537,8 +537,10 @@ export class SeasonMapComponent {
    */
   protected restoreFocus(): void {
     const active = document.activeElement;
-    // Anywhere in the sheet — its header holds the title and the close button.
-    const insidePanel = active instanceof HTMLElement && active.closest('.p-dialog') !== null;
+    // Anywhere in this sheet (its header holds the title and the close button),
+    // never another dialog opening as this one closes.
+    const insidePanel =
+      active instanceof HTMLElement && active.closest('.season-map-sheet') !== null;
     if (active === null || active === document.body || insidePanel) this.lastTrigger?.focus();
   }
 
