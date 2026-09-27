@@ -3015,7 +3015,7 @@
         "rateLabel": "Collected of expected",
         "outstandingOne": "{{count}} athlete owes {{amount}}",
         "outstandingOther": "{{count}} athletes owe {{amount}}",
-        "hint": "This month so far. Expected is one month's fee for everyone who pays, whatever their plan.",
+        "hint": "This month so far. Expected is one month's fee for everyone who pays, whatever their plan. Collected includes carnets sold this month, so it can pass 100% while someone still owes.",
         "loading": "Loading this month's money…",
         "errored": "This month's summary couldn't be loaded."
       },

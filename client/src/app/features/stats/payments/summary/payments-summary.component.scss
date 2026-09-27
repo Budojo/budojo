@@ -4,8 +4,8 @@
   gap: 0.5rem;
 
   // Four figures read side by side: two by two on a phone, one row from
-  // tablet up. Tonal tiles, not cards — they sit inside the stats tab, and a
-  // card on a card is how a screen loses its focal point.
+  // tablet up. The loading state draws the same grid, so nothing below
+  // jumps when the figures arrive.
   &__tiles {
     list-style: none;
     margin: 0;
@@ -15,6 +15,9 @@
     gap: 0.5rem;
   }
 
+  // The same surface as `.stats-card` on the overview tab: content ground and
+  // a hairline. A surface-100 fill on the surface-50 page measured ~1.04:1 —
+  // four tiles nobody could see.
   &__tile {
     display: flex;
     flex-direction: column;
@@ -22,7 +25,8 @@
     gap: 0.5rem;
     padding: 1rem;
     border-radius: var(--p-border-radius-md);
-    background: var(--p-surface-100);
+    background: var(--p-content-background);
+    border: 1px solid var(--p-content-border-color);
     min-width: 0;
   }
 
@@ -33,7 +37,8 @@
   }
 
   // Data is ink, never accent (#1852): an amount is a fact, not an action.
-  &__value {
+  // Named `__number` / `__total` so `accent-means-action.spec.ts` guards them.
+  &__number {
     font-size: 1.5rem;
     font-weight: 600;
     line-height: 1.2;
@@ -42,12 +47,18 @@
   }
 
   // The fourth tile is a sentence, not a figure: who owes, and how much.
-  &__sentence {
+  &__total {
     font-size: 1rem;
     font-weight: 600;
     line-height: 1.4;
     color: var(--p-text-color);
     font-variant-numeric: tabular-nums;
+  }
+
+  &__skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
   }
 
   &__hint,

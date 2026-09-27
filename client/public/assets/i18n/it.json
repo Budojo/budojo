@@ -3015,7 +3015,7 @@
         "rateLabel": "Incassato sull'atteso",
         "outstandingOne": "{{count}} atleta deve {{amount}}",
         "outstandingOther": "{{count}} atleti devono {{amount}}",
-        "hint": "Il mese in corso, fino a oggi. L'atteso è una quota mensile per ogni atleta che paga, qualunque sia il suo abbonamento.",
+        "hint": "Il mese in corso, fino a oggi. L'atteso è una quota mensile per ogni atleta che paga, qualunque sia il suo abbonamento. Gli incassi comprendono i carnet venduti questo mese: possono superare il 100% mentre qualcuno deve ancora pagare.",
         "loading": "Carico i conti del mese…",
         "errored": "Non riesco a caricare il riepilogo del mese."
       },

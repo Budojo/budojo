@@ -80,6 +80,29 @@ describe('PaymentsSummaryComponent', () => {
     expect(text('summary-outstanding')).toContain('7 athletes owe €490.00');
   });
 
+  it('loads in the shape of the result, so the chart below does not jump', () => {
+    render(CHARGING);
+
+    const loading = (fixture.nativeElement as HTMLElement).querySelector(
+      '[data-cy="summary-loading"]',
+    );
+    // Four tiles on the same grid, then the hint line — not one short bar.
+    expect(loading?.querySelectorAll('.summary__tiles .summary__tile').length).toBe(4);
+    expect(loading?.querySelectorAll(':scope > p-skeleton').length).toBe(1);
+
+    http.expectOne(URL).flush({ data: summary() });
+  });
+
+  it('prints the figures in the classes the accent guard watches', () => {
+    // `accent-means-action.spec.ts` keeps `__number` / `__total` in ink; a
+    // figure under another name would escape it.
+    render(CHARGING, summary());
+    const root = fixture.nativeElement as HTMLElement;
+
+    expect(root.querySelectorAll('.summary__number').length).toBe(3);
+    expect(root.querySelectorAll('.summary__total').length).toBe(1);
+  });
+
   it('reads the rate from the payload rather than dividing the two figures itself', () => {
     // Were the component to compute collected / expected it would print 100%.
     render(CHARGING, summary({ expected_cents: 5000, collected_cents: 5000 }));
