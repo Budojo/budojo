@@ -429,9 +429,12 @@ describe('a missing promotion step (#1966)', () => {
     completes_promotion_id: null,
   });
 
-  function timeline(rows: unknown[], gaps: unknown[]) {
+  function timeline(rows: unknown[], gaps: unknown[], skipped: unknown[] = []) {
     const response = promotionsPage(rows);
-    return { ...response, body: { ...response.body, gaps, history_starts_at: '2026-09-01' } };
+    return {
+      ...response,
+      body: { ...response.body, gaps, skipped, history_starts_at: '2026-09-01' },
+    };
   }
 
   beforeEach(() => {
@@ -528,6 +531,47 @@ describe('a missing promotion step (#1966)', () => {
     cy.get('[data-cy="gap-unskip-stripe:blue:1"]').click();
     cy.wait('@unskip');
     cy.get('[data-cy="promotion-gap-stripe:blue:1"]').should('be.visible');
+    cy.focused().should('contain.text', 'Add the date');
+  });
+
+  it('lists the steps skipped on an earlier visit, and restores one (#1989)', () => {
+    cy.intercept(
+      'GET',
+      '/api/v1/athletes/1/promotions*',
+      timeline(
+        [blueBelt],
+        [blueStripe(2)],
+        [{ key: 'stripe:blue:1', kind: 'stripe', belt: 'blue', stripes: 1 }],
+      ),
+    ).as('promotions');
+    cy.intercept('DELETE', '/api/v1/athletes/1/promotion-skips/blue/1', { statusCode: 204 }).as(
+      'unskip',
+    );
+
+    cy.visitAuthenticated('/dashboard/athletes/1/promotions');
+    cy.wait(['@academy', '@athlete', '@promotions']);
+
+    // One quiet line under the timeline, folded until asked.
+    cy.get('[data-cy="promotions-skipped"]').should('contain.text', '1 step marked as skipped');
+    cy.get('[data-cy="promotions-skipped-list"]').should('not.exist');
+    cy.get('[data-cy="promotions-skipped-toggle"]').click();
+    cy.get('[data-cy="promotions-skipped-list"]').should('contain.text', 'Blue, stripe 1');
+
+    // As the server answers once the skip is gone: the step is missing again.
+    cy.intercept(
+      'GET',
+      '/api/v1/athletes/1/promotions*',
+      timeline([blueBelt], [blueStripe(1), blueStripe(2)]),
+    ).as('reload');
+    cy.get('[data-cy="skipped-restore-stripe:blue:1"]').click();
+    cy.wait('@unskip');
+    cy.wait('@reload');
+    cy.get('[data-cy="promotion-gap-stripe:blue:1"]').should('be.visible');
+    cy.get('[data-cy="promotions-skipped"]').should('not.exist');
+    cy.get('[data-cy="promotions-announce"]').should(
+      'contain.text',
+      'Blue, stripe 1: back among the steps to date',
+    );
     cy.focused().should('contain.text', 'Add the date');
   });
 });

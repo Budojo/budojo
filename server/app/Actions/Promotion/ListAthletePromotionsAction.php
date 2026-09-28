@@ -35,10 +35,14 @@ class ListAthletePromotionsAction
      */
     public function execute(Athlete $athlete, int $page): LengthAwarePaginator
     {
-        $rows = $athlete->promotions()->with('recordedBy:id,first_name,last_name')->get()->keyBy('id');
+        // The athlete rides along on every row: the resource reads their day
+        // of entry to tell a starting row that is still its placeholder (#1990).
+        $rows = $athlete->promotions()->chaperone()->with('recordedBy:id,first_name,last_name')->get()->keyBy('id');
         $ladder = MartialArtProfile::for($athlete->academy->martial_art ?? MartialArt::Bjj)->ladder();
 
-        $records = array_values($rows->map(PromotionRecord::of(...))->all());
+        // A closure, not `PromotionRecord::of(...)`: `map` passes the key too,
+        // which would land in its second parameter.
+        $records = array_values($rows->map(static fn (AthletePromotion $row): PromotionRecord => PromotionRecord::of($row))->all());
         $newestFirst = array_reverse(new PromotionOrder($ladder)->chronological($records));
         $ordered = [];
         foreach ($newestFirst as $record) {

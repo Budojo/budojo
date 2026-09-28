@@ -35,6 +35,7 @@ import {
   AthleteService,
   Belt,
   type PromotionGap,
+  type PromotionSkippedStep,
 } from '../../../../core/services/athlete.service';
 import { BeltLadderService } from '../../../../core/services/belt-ladder.service';
 import { LanguageService } from '../../../../core/services/language.service';
@@ -55,6 +56,11 @@ interface GapWindow {
   readonly min: Date | null;
   readonly max: Date;
 }
+
+/** The "Mostra" / "Nascondi" of the list of skipped steps (#1989). */
+const SKIPPED_TOGGLE = '[data-cy="promotions-skipped-toggle"]';
+/** The timeline itself, focusable from script only. */
+const TIMELINE = '[data-cy="promotions-list"]';
 
 /**
  * Owner-facing timeline of an athlete's belt + stripe promotion
@@ -161,6 +167,12 @@ export class PromotionsListComponent implements OnInit {
   protected readonly skippingKey = signal<string | null>(null);
   /** Steps skipped during this visit, drawn in place with their undo until a reload. */
   private readonly skipped = signal<ReadonlySet<string>>(new Set());
+  /** Every step marked as skipped, as the server lists them (#1989). */
+  protected readonly skippedSteps = signal<readonly PromotionSkippedStep[]>([]);
+  /** Whether the list of skipped steps is open. Folded until asked. */
+  protected readonly skippedOpen = signal(false);
+  /** The skipped step whose "Ripristina" is on its way to the server. */
+  protected readonly restoringKey = signal<string | null>(null);
   /** What the status region last said — a skip or its undo. */
   protected readonly announcement = signal('');
 
@@ -377,8 +389,10 @@ export class PromotionsListComponent implements OnInit {
           this.progression.set(resp.progression ?? null);
           this.gaps.set(resp.gaps ?? []);
           this.historyStartsAt.set(resp.history_starts_at ?? null);
-          // A skipped step is no longer in the reply: its line ends here.
+          // A skipped step is no longer in the reply: its line ends here,
+          // and it is listed with the others under the timeline.
           this.skipped.set(new Set());
+          this.skippedSteps.set(resp.skipped ?? []);
           this.currentPage.set(resp.meta.current_page);
           this.lastPage.set(resp.meta.last_page);
           this.loading.set(false);
@@ -749,11 +763,56 @@ export class PromotionsListComponent implements OnInit {
     });
   }
 
-  /** Focus an element in this tab once the reload has drawn it. */
-  private focusAfterRender(selector: string): void {
+  /**
+   * "Ripristina" in the list of skipped steps (#1989): the skip is deleted
+   * and the timeline reloads, so the step is back where it belongs, as a
+   * ghost row to date. Focus follows it there when it is drawn on this page,
+   * and stays with the list otherwise.
+   */
+  protected restore(step: PromotionSkippedStep): void {
+    if (this.restoringKey() !== null) return;
+    this.restoringKey.set(step.key);
+    this.athleteService
+      .unskipPromotionStep(this.athleteId, step.belt, step.stripes)
+      .pipe(finalize(() => this.restoringKey.set(null)))
+      .subscribe({
+        next: () => {
+          this.announcement.set(
+            this.translate.instant('athletes.detail.promotions.gap.restored', {
+              step: this.skippedLabel(step),
+            }),
+          );
+          // Its ghost row when it is drawn here; otherwise the list it left,
+          // and once that is gone too, the timeline — never <body>.
+          this.load(this.currentPage(), () =>
+            this.focusAfterRender(addDateSelector(step), SKIPPED_TOGGLE, TIMELINE),
+          );
+        },
+        error: () => {
+          this.messageService.add({
+            severity: 'error',
+            summary: this.translate.instant('athletes.detail.promotions.toast.errorSummary'),
+            detail: this.translate.instant('athletes.detail.promotions.gap.undoError'),
+            life: 4000,
+          });
+        },
+      });
+  }
+
+  /**
+   * Focus an element in this tab once the reload has drawn it: the first of
+   * `selectors`, in the order given, that is on the page.
+   */
+  private focusAfterRender(...selectors: string[]): void {
     runInInjectionContext(this.injector, () =>
       afterNextRender(() => {
-        this.host.nativeElement.querySelector<HTMLElement>(selector)?.focus();
+        for (const selector of selectors) {
+          const target = this.host.nativeElement.querySelector<HTMLElement>(selector);
+          if (target !== null) {
+            target.focus();
+            return;
+          }
+        }
       }),
     );
   }
@@ -800,17 +859,25 @@ export class PromotionsListComponent implements OnInit {
 
   /** "Bianca, 4° grado" / "Nera, 3° dan" / "cintura Blu" — a step named in words. */
   protected stepLabel(gap: PromotionGap): string {
+    return this.stepName(gap.kind, gap.belt, gap.to_stripes ?? 0);
+  }
+
+  /** A skipped step, named the way its ghost row was (#1989). */
+  protected skippedLabel(step: PromotionSkippedStep): string {
+    return this.stepName(step.kind, step.belt, step.stripes);
+  }
+
+  private stepName(kind: 'belt' | 'stripe', belt: Belt, to: number): string {
     this.languageService.currentLang();
-    const belt = this.beltLadder.label(gap.belt);
-    if (gap.kind === 'belt') {
-      return this.translate.instant('athletes.detail.promotions.gap.stepBelt', { belt });
+    const label = this.beltLadder.label(belt);
+    if (kind === 'belt') {
+      return this.translate.instant('athletes.detail.promotions.gap.stepBelt', { belt: label });
     }
-    const to = gap.to_stripes ?? 0;
-    return this.beltLadder.countsStripes(gap.belt)
-      ? this.translate.instant('athletes.detail.promotions.gap.stepStripe', { belt, n: to })
+    return this.beltLadder.countsStripes(belt)
+      ? this.translate.instant('athletes.detail.promotions.gap.stepStripe', { belt: label, n: to })
       : this.translate.instant('athletes.detail.promotions.gap.stepGrade', {
-          belt,
-          grade: this.beltLadder.stripesLabel(gap.belt, to),
+          belt: label,
+          grade: this.beltLadder.stripesLabel(belt, to),
         });
   }
 
@@ -893,14 +960,20 @@ export class PromotionsListComponent implements OnInit {
   /**
    * "Su questa cintura dal…" counts from the opening row's date — the day
    * the athlete was entered — when that row is the latest belt row (#1966).
-   * Said, so the number is not taken for the promotion's. Only on the first
-   * page, where the latest belt row is; and not for someone entered on the
-   * ladder's first belt, whose entry day is when they started.
+   * Said, so the number is not taken for the promotion's. Only while the row
+   * still sits on that day: once the owner has moved it or completed it, its
+   * date is the real start (#1990) — the server's rule, the one the gaps
+   * follow too. Only on the first page, where the latest belt row is; and not
+   * for someone entered on the ladder's first belt, whose entry day is when
+   * they started.
    */
   protected readonly beltSinceIsEntryDay = computed<boolean>(() => {
     if (this.currentPage() !== 1) return false;
     const latestBelt = this.promotions().find((p) => p.kind === 'belt');
-    return latestBelt?.is_opening === true && latestBelt.to_belt !== this.beltLadder.startingBelt();
+    return (
+      latestBelt?.is_entry_placeholder === true &&
+      latestBelt.to_belt !== this.beltLadder.startingBelt()
+    );
   });
 
   /**
@@ -960,8 +1033,8 @@ function unskipSelector(gap: PromotionGap): string {
 }
 
 /** Where focus returns when a skipped step is brought back. */
-function addDateSelector(gap: PromotionGap): string {
-  return `[data-cy="gap-add-date-${gap.key}"] button`;
+function addDateSelector(step: Pick<PromotionGap, 'key'>): string {
+  return `[data-cy="gap-add-date-${step.key}"] button`;
 }
 
 /**
