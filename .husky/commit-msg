@@ -7,6 +7,16 @@
 [ "${HUSKY:-1}" = "0" ] && exit 0
 set -e
 
+# No AI attribution, ever (CLAUDE.md). Plain shell on purpose: it needs
+# nothing installed, so it also holds in an agent's worktree, where
+# `core.hooksPath` runs this hook but commitlint below is skipped for lack of
+# a root node_modules (#2024). The same pattern as CI's «📝 Commits & PR body»
+# job, which catches anything that got past this.
+if grep -iqE 'co-authored-by:.*(claude|anthropic)|claude-session:|generated with \[?claude' "$1"; then
+  printf '\n  ⛔ This commit message carries AI attribution. Reword it: CLAUDE.md forbids it.\n\n'
+  exit 1
+fi
+
 # Same graceful skip as `pre-commit`: on a checkout that hasn't run
 # `npm install` at the root, `npx --no-install` fails hard and makes every
 # commit impossible with an opaque npm error. Warn instead — the message
