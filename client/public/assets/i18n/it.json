@@ -3199,7 +3199,6 @@
         },
         "error": "Impossibile caricare le settimane.",
         "share": {
-          "heading": "Programma della settimana",
           "ready": "Il programma della settimana del {{date}}, da mandare al gruppo.",
           "none": "Nessuna lezione pianificata per questa settimana né per la prossima, quindi non c'è un programma da mandare.",
           "nextSeason": "La settimana che viene entra nella nuova stagione, che questa mappa non mostra ancora. Il suo programma si manda da qui quando la nuova stagione è iniziata.",
@@ -3406,7 +3405,9 @@
       "programme": "Programma della stagione",
       "programmeValue": "{{percentage}}% · {{covered}} di {{total}}",
       "joined": "Nuovi questa settimana",
-      "joinedError": "Non riesco a caricare i nuovi iscritti."
+      "joinedError": "Non riesco a caricare i nuovi iscritti.",
+      "sendWeek": "Il programma della settimana prossima",
+      "sendWeekValue": "Mandalo al gruppo"
     },
     "birthdays": {
       "title": "Compleanni",
@@ -3582,5 +3583,21 @@
       "pos": "Carta",
       "other": "Altro"
     }
+  },
+  "weekMessage": {
+    "heading": "Programma della settimana",
+    "closed": "chiuso",
+    "closedUntil": "Chiuso fino al {{date}}",
+    "send": "Manda la settimana al gruppo",
+    "sendAria": "Manda al gruppo la settimana del {{date}}",
+    "ready": "La settimana del {{date}}",
+    "loading": "Carico la settimana…",
+    "none": "Niente in orario questa settimana né la prossima.",
+    "failed": "Il programma non si è caricato.",
+    "retry": "Riprova",
+    "copy": "Copia il testo",
+    "whatsapp": "Apri WhatsApp",
+    "copied": "Settimana copiata: incollala nel gruppo.",
+    "copyFailed": "Non è stato possibile copiarla: usa «Apri WhatsApp»."
   }
 }

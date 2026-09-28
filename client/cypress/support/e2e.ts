@@ -56,6 +56,28 @@ beforeEach(() => {
   });
 });
 
+// Default `GET /api/v1/stats/syllabus/calendar` mock (#1940) — the timetable
+// header's "send the week" button reads the calendar on init, so every spec
+// that opens the timetable would otherwise trip the offline takeover in CI.
+// An empty season: nothing planned, which is also the button's quiet state
+// when the academy has no classes. Specs that need lessons (the season map,
+// lesson topics, the send-the-week case) register their own, which wins.
+beforeEach(() => {
+  cy.intercept('GET', '/api/v1/stats/syllabus/calendar*', {
+    statusCode: 200,
+    body: {
+      data: {
+        season: { start: '2026-09-01', end: '2027-08-31', label: '2026/27' },
+        kind: null,
+        today: '2026-09-14',
+        weeks: [],
+        positions: [],
+        lessons: [],
+      },
+    },
+  });
+});
+
 beforeEach(() => {
   cy.intercept('GET', '/api/v1/auth/me*', {
     statusCode: 200,
