@@ -33,6 +33,23 @@ class FakeAthleteService {
   // Asked only when the roster comes back empty on a query nobody narrowed
   // (#1666). Zero by default: a fake academy with no rows is a new one.
   readonly countInactive = vi.fn(() => of(0));
+  // Echoes the change back as the server would (#2011): the row is replaced
+  // by what comes back, so the fake has to carry the new fee.
+  readonly update = vi.fn(
+    (id: number, payload: { fee_override_cents?: number | null }): Observable<Athlete> =>
+      of({
+        id,
+        status: 'active',
+        first_name: 'Giulia',
+        last_name: 'Ferraro',
+        // What `AthleteResource` really sends on an update: the counts the
+        // roster loads with `withCount` come back null, not absent.
+        attendance_month_count: null,
+        attendance_total_count: null,
+        monthly_fee_cents: payload.fee_override_cents === 0 ? 0 : 9500,
+        ...payload,
+      } as unknown as Athlete),
+  );
 }
 
 class FakePaymentService {
@@ -1687,6 +1704,104 @@ describe('AthletesListComponent — what is paying for the month (#1402)', () =>
     // own warning about the sessions it covers.
     cmp['openPaymentMenu'](event, makeAthlete({ id: 7, payment_coverage: 'carnet' }) as never);
     expect(cmp['paymentMenuItems']().map((i) => i.label)).not.toContain('Undo the payment');
+  });
+
+  describe('someone who trains free (#2011)', () => {
+    function menuFor(athlete: Athlete): string[] {
+      const cmp = render([athlete]).componentInstance;
+      const event = new MouseEvent('click');
+      Object.defineProperty(event, 'currentTarget', { value: document.createElement('button') });
+      cmp['openPaymentMenu'](event, athlete as never);
+      return cmp['paymentMenuItems']().map((i) => i.label ?? '');
+    }
+
+    function accepting(fixture: ComponentFixture<AthletesListComponent>): void {
+      const confirm = fixture.componentRef.injector.get(ConfirmationService);
+      confirm.confirm = vi.fn((cfg: { accept: () => void }) => {
+        cfg.accept();
+        return confirm;
+      }) as never;
+    }
+
+    it('offers «trains free» to anyone the chip asks to pay', () => {
+      // "Lei è la mia compagna, non la faccio pagare": the state existed as a
+      // personal fee of 0, three screens away from where the owner looks.
+      expect(menuFor(makeAthlete({ id: 20, payment_coverage: 'none' }))).toContain('Trains free');
+      expect(menuFor(makeAthlete({ id: 21, payment_coverage: 'monthly' }))).toContain(
+        'Trains free',
+      );
+    });
+
+    it('saves a personal fee of 0 on accept, and the row says Free', () => {
+      const giulia = makeAthlete({
+        id: 22,
+        first_name: 'Giulia',
+        payment_coverage: 'none',
+        attendance_month_count: 5,
+        attendance_total_count: 40,
+      });
+      const fixture = render([giulia]);
+      accepting(fixture);
+      const update = TestBed.inject(AthleteService).update as unknown as Mock;
+      const toast = vi.spyOn(fixture.componentRef.injector.get(MessageService), 'add');
+
+      const event = new MouseEvent('click');
+      Object.defineProperty(event, 'currentTarget', { value: document.createElement('button') });
+      fixture.componentInstance['confirmTrainsFree'](event, giulia, true);
+      fixture.detectChanges();
+
+      expect(update).toHaveBeenCalledWith(22, { fee_override_cents: 0 });
+      expect(chip(fixture, 22)).toBe('Free');
+      // The update's null counts must not wipe what the roster loaded.
+      const row = fixture.componentInstance.athletes().find((a) => a.id === 22);
+      expect(row?.attendance_month_count).toBe(5);
+      expect(row?.attendance_total_count).toBe(40);
+      expect(toast).toHaveBeenCalledWith(expect.objectContaining({ severity: 'success' }));
+    });
+
+    it('shows a free athlete as Free, where the em-dash hid them, with the way back', () => {
+      const free = makeAthlete({ id: 23, fee_override_cents: 0, monthly_fee_cents: 0 });
+
+      expect(chip(render([free]), 23)).toBe('Free');
+      // Nothing to mark paid, no carnet to sell to someone who pays nothing,
+      // and no second way in: the menu is the way back out.
+      expect(menuFor(free)).toEqual(['Back to paying', 'Open payments']);
+    });
+
+    it('clears the personal fee on «back to paying»', () => {
+      const free = makeAthlete({ id: 24, fee_override_cents: 0, monthly_fee_cents: 0 });
+      const fixture = render([free]);
+      accepting(fixture);
+      const update = TestBed.inject(AthleteService).update as unknown as Mock;
+
+      const event = new MouseEvent('click');
+      Object.defineProperty(event, 'currentTarget', { value: document.createElement('button') });
+      fixture.componentInstance['confirmTrainsFree'](event, free, false);
+
+      expect(update).toHaveBeenCalledWith(24, { fee_override_cents: null });
+    });
+
+    it('keeps the em-dash for the owner and an inactive athlete, whatever their fee', () => {
+      // Free is a choice about someone who trains; these two were never asked.
+      const fixture = render([
+        makeAthlete({ id: 25, fee_override_cents: 0, is_self: true }),
+        makeAthlete({ id: 26, fee_override_cents: 0, status: 'inactive' }),
+      ]);
+
+      expect(chip(fixture, 25)).toBe('');
+      expect(chip(fixture, 26)).toBe('');
+    });
+
+    it('says Free on the phone card too', () => {
+      const fixture = render([
+        makeAthlete({ id: 27, fee_override_cents: 0, monthly_fee_cents: 0 }),
+      ]);
+      const card = (fixture.nativeElement as HTMLElement).querySelector(
+        '[data-cy="athlete-card-coverage-27"]',
+      );
+
+      expect(card?.textContent?.trim()).toBe('Free');
+    });
   });
 
   it('does not offer a carnet in an academy that sells none', () => {

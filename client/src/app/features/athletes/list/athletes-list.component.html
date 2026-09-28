@@ -698,7 +698,10 @@
             }
             @if (hasMonthlyFee()) {
               <td>
-                @if (paymentNotExpected(athlete)) {
+                <!-- Someone who trains free owes nothing too, but by the
+                     owner's choice, and gets a «Gratis» chip whose menu is
+                     the way back (#2011). -->
+                @if (paymentNotExpected(athlete) && !trainsFree(athlete)) {
                   <!-- Em-dash placeholder for rows where current-month
                      payment is not expected:
                      - Owner-as-athlete (#750) — no payment ledger
@@ -974,7 +977,7 @@
                   of its own, which is one fewer thing competing for a 375px
                   row.
                 -->
-                @if (hasMonthlyFee() && !paymentNotExpected(athlete)) {
+                @if (hasMonthlyFee() && (!paymentNotExpected(athlete) || trainsFree(athlete))) {
                   <button
                     type="button"
                     class="athlete-coverage"

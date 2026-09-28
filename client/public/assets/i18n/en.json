@@ -2176,7 +2176,10 @@
         "markedUnpaidDetail": "{{name}} — {{month}}/{{year}}",
         "carnetSoldSummary": "Carnet sold",
         "carnetSoldDetail": "{{name}}'s carnet starts today.",
-        "carnetSoldError": "The carnet could not be sold."
+        "carnetSoldError": "The carnet could not be sold.",
+        "trainsFree": "{{name}} trains free",
+        "backToPaying": "{{name}} is back to paying",
+        "feeChangeFailed": "Couldn't change {{name}}'s fee. Try again."
       },
       "confirm": {
         "deleteMessage": "Delete {{name}}? Their documents will be permanently deleted and cannot be restored — only the athlete row itself can be undone.",
@@ -2188,7 +2191,11 @@
         "markPaidPeriodMessage": "Mark {{name}} paid? The payment covers: {{period}}",
         "markUnpaidPeriodMessage": "Mark {{name}} unpaid? The payment covered: {{period}}",
         "sellCarnetMessage": "Sell {{name}} a carnet — {{price}} for {{entries}} entries?",
-        "sellCarnetAccept": "Sell"
+        "sellCarnetAccept": "Sell",
+        "trainFreeMessage": "{{name}} trains free? They owe nothing and stay off the unpaid list.",
+        "trainFreeAccept": "Trains free",
+        "backToPayingMessage": "{{name}} goes back to paying the regular fee. A personal amount is set from their record.",
+        "backToPayingAccept": "Back to paying"
       },
       "restoreConfirm": {
         "message": "Restore {{name}}?",
@@ -2209,13 +2216,16 @@
         "annual": "Annual",
         "carnet": "Carnet · {{count}}",
         "none": "Unpaid",
-        "aria": "{{name}}'s payment: {{coverage}}. Open the actions."
+        "aria": "{{name}}'s payment: {{coverage}}. Open the actions.",
+        "free": "Free"
       },
       "payMenu": {
         "markPaid": "Mark paid",
         "undoPaid": "Undo the payment",
         "sellCarnet": "Sell a carnet",
-        "openPayments": "Open payments"
+        "openPayments": "Open payments",
+        "trainFree": "Trains free",
+        "backToPaying": "Back to paying"
       },
       "importButton": "Import",
       "showTrashed": "Show deleted athletes",
