@@ -135,6 +135,45 @@ describe('Athlete create form', () => {
       .and('contain.text', 'Email already taken');
   });
 
+  it('shows a codice fiscale error under its field, not in the banner (#2006)', () => {
+    cy.intercept('POST', '/api/v1/athletes', {
+      statusCode: 422,
+      body: {
+        message: 'Validation failed',
+        errors: { fiscal_code: ['The codice fiscale says the sex is M, not F.'] },
+      },
+    }).as('createFail');
+
+    cy.visitAuthenticated('/dashboard/athletes/new');
+    cy.wait('@academy');
+
+    cy.get('input[id="first_name"]').type('Mario');
+    cy.get('input[id="last_name"]').type('Rossi');
+    // A code that reads well (the form lets it through), which the server
+    // then finds at odds with the rest of the record.
+    cy.get('input[id="fiscal_code"]').type('RSSMRA90C15H501O');
+    cy.contains('button', 'Create athlete').click();
+
+    cy.wait('@createFail');
+    cy.get('#fiscal_code-error').should('be.visible').and('contain.text', 'the sex is M, not F');
+    cy.focused().should('have.attr', 'id', 'fiscal_code');
+    cy.get('.p-message').should('not.exist');
+
+    // Editing the code clears the server's word on it.
+    cy.get('input[id="fiscal_code"]').type('{backspace}O');
+    cy.get('#fiscal_code-error').should('not.exist');
+  });
+
+  it('flags a mistyped codice fiscale on leaving the field (#2006)', () => {
+    cy.visitAuthenticated('/dashboard/athletes/new');
+    cy.wait('@academy');
+
+    cy.get('input[id="fiscal_code"]').type('RSSMRA90C15H501A').blur();
+    cy.get('#fiscal_code-error')
+      .should('be.visible')
+      .and('contain.text', 'The codice fiscale is not valid');
+  });
+
   it('cancel returns to the athletes list without submitting', () => {
     cy.visitAuthenticated('/dashboard/athletes/new');
     cy.wait('@academy');

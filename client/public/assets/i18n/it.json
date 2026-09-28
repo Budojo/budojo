@@ -2709,6 +2709,9 @@
         "address": {
           "postalCode": "Il CAP deve essere di 5 cifre.",
           "incomplete": "Compila tutti i campi obbligatori dell'indirizzo, oppure lasciali tutti vuoti per non assegnarne nessuno."
+        },
+        "fiscalCode": {
+          "invalid": "Il codice fiscale non è valido: controllalo sul documento."
         }
       },
       "hint": {

@@ -1,3 +1,4 @@
+import type { AbstractControl, ValidationErrors } from '@angular/forms';
 import type { Sex } from '../../core/services/athlete.service';
 
 /**
@@ -59,4 +60,18 @@ function checkCharacter(first15: string): string {
 /** Undo omocodia: L→0 … V→9. */
 function digits(chars: string): string {
   return [...chars].map((c) => (OMOCODIA.includes(c) ? String(OMOCODIA.indexOf(c)) : c)).join('');
+}
+
+/**
+ * A form validator for the code (#2006): empty is fine, anything else must read
+ * as a codice fiscale (shape, check character, a real date). The same checks
+ * the server makes before it compares the code with the athlete, so the owner
+ * hears about a mistyped character when leaving the field, not after saving.
+ */
+export function fiscalCodeValidator(
+  control: AbstractControl<string | null>,
+): ValidationErrors | null {
+  const code = normaliseFiscalCode(control.value ?? '');
+  if (code === '') return null;
+  return readFiscalCode(code, new Date()) === null ? { fiscalCode: true } : null;
 }

@@ -2709,6 +2709,9 @@
         "address": {
           "postalCode": "ZIP must be exactly 5 digits.",
           "incomplete": "Fill every required address field, or clear them all to leave the athlete without an address."
+        },
+        "fiscalCode": {
+          "invalid": "The codice fiscale is not valid: check it against the document."
         }
       },
       "hint": {

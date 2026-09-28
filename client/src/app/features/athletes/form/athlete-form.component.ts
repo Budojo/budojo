@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DOCUMENT,
   DestroyRef,
   OnInit,
   computed,
@@ -48,7 +49,11 @@ import {
 import { FeeTier, FeeTierService } from '../../../core/services/fee-tier.service';
 import { LanguageService } from '../../../core/services/language.service';
 import { localeFor, datePickerFormatFor } from '../../../shared/utils/locale';
-import { normaliseFiscalCode, readFiscalCode } from '../../../shared/utils/fiscal-code';
+import {
+  fiscalCodeValidator,
+  normaliseFiscalCode,
+  readFiscalCode,
+} from '../../../shared/utils/fiscal-code';
 import { BudojoFormFieldComponent } from '../../../shared/components/budojo-form-field/budojo-form-field.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { ConfirmDestructiveButtonComponent } from '../../../shared/components/confirm-destructive-button/confirm-destructive-button.component';
@@ -196,6 +201,7 @@ export class AthleteFormComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly messageService = inject(MessageService);
   private readonly translate = inject(TranslateService);
+  private readonly document = inject(DOCUMENT);
   private readonly beltLadder = inject(BeltLadderService);
   private readonly languageService = inject(LanguageService);
 
@@ -215,6 +221,14 @@ export class AthleteFormComponent implements OnInit {
   readonly loading = signal(false);
   readonly submitting = signal(false);
   readonly error = signal<string | null>(null);
+
+  /**
+   * The server's word on the codice fiscale (#2006), shown under the field and
+   * already in the owner's language. It used to be the banner's first line, in
+   * English, at the bottom of the form, away from the field it was about.
+   * Cleared as soon as the code is edited.
+   */
+  protected readonly fiscalCodeServerError = signal<string | null>(null);
   readonly today = new Date();
 
   /** True while a stored athlete is patched in: no pre-fill from its code (#1934). */
@@ -384,7 +398,10 @@ export class AthleteFormComponent implements OnInit {
     // What a federation card asks for (#1934). The server is the one that
     // checks the code; the form only reads it to pre-fill an empty date of
     // birth and sex (see ngOnInit).
-    fiscal_code: this.fb.nonNullable.control<string>('', Validators.maxLength(20)),
+    fiscal_code: this.fb.nonNullable.control<string>('', [
+      Validators.maxLength(20),
+      fiscalCodeValidator,
+    ]),
     sex: this.fb.control<Sex | null>(null),
     birth_place: this.fb.nonNullable.control<string>('', Validators.maxLength(100)),
     belt: this.fb.nonNullable.control<Belt>(this.beltLadder.startingBelt(), Validators.required),
@@ -489,7 +506,10 @@ export class AthleteFormComponent implements OnInit {
     // server's to name on save, not the form's to hide.
     this.form.controls.fiscal_code.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((code) => this.prefillFromFiscalCode(code));
+      .subscribe((code) => {
+        this.fiscalCodeServerError.set(null);
+        this.prefillFromFiscalCode(code);
+      });
 
     // The phone pair validators are mutually dependent — when one control's
     // value flips between empty/non-empty, the OTHER control's validity needs
@@ -721,6 +741,9 @@ export class AthleteFormComponent implements OnInit {
   // inline error — the canonical pattern from the login/register
   // migrations (#1045/#1049). Returns a translation KEY (the template
   // pipes it through `| translate`) or null when the field is clean.
+  private readonly fiscalCodeEvents = toSignal(this.form.controls.fiscal_code.events, {
+    initialValue: null,
+  });
   private readonly firstNameEvents = toSignal(this.form.controls.first_name.events, {
     initialValue: null,
   });
@@ -761,6 +784,15 @@ export class AthleteFormComponent implements OnInit {
     if (!c.touched || c.valid) return null;
     if (c.errors?.['required']) return 'athletes.form.validation.lastName.required';
     if (c.errors?.['maxlength']) return 'athletes.form.validation.maxLength100';
+    return null;
+  });
+  /** The form's own check of the code, on leaving the field (#2006). */
+  readonly fiscalCodeError = computed<string | null>(() => {
+    void this.fiscalCodeEvents();
+    const c = this.form.controls.fiscal_code;
+    if (!c.touched || c.valid) return null;
+    if (c.errors?.['fiscalCode']) return 'athletes.form.validation.fiscalCode.invalid';
+    if (c.errors?.['maxlength']) return 'athletes.form.validation.fiscalCode.invalid';
     return null;
   });
   readonly emailError = computed<string | null>(() => {
@@ -1029,10 +1061,23 @@ export class AthleteFormComponent implements OnInit {
     error?: { message?: string; errors?: Record<string, string[]> };
   }): void {
     if (err.status === 422 && err.error?.errors) {
-      const firstError = Object.values(err.error.errors)[0]?.[0];
-      this.error.set(
-        firstError ?? err.error.message ?? this.translate.instant('athletes.form.validationFailed'),
-      );
+      // The codice fiscale's error belongs under its field (#2006), in the
+      // owner's language as the server now writes it. The banner keeps any
+      // other field's first error, and stays empty when the code was the only one.
+      const { fiscal_code: fiscalCode, ...others } = err.error.errors;
+      const fiscalCodeMessage = fiscalCode?.[0] ?? null;
+      this.fiscalCodeServerError.set(fiscalCodeMessage);
+      const firstOther = Object.values(others)[0]?.[0];
+      if (firstOther !== undefined) {
+        this.error.set(firstOther);
+      } else if (fiscalCodeMessage === null) {
+        this.error.set(
+          err.error.message ?? this.translate.instant('athletes.form.validationFailed'),
+        );
+      }
+      if (fiscalCodeMessage !== null) {
+        this.document.getElementById('fiscal_code')?.focus();
+      }
       return;
     }
     this.error.set(err.error?.message ?? this.translate.instant('athletes.form.serverError'));

@@ -350,3 +350,73 @@ it('refuses a row whose code is wrong, with a reason', function (): void {
     expect($response->json('data.rows.0.status'))->toBe('invalid')
         ->and($response->json('data.rows.0.errors.fiscal_code'))->not->toBeEmpty();
 });
+
+// ─── In the owner's language (#2006) ─────────────────────────────────────────
+
+it('says what the code says in the owner\'s language', function (): void {
+    $this->user->update(['locale' => 'it']);
+
+    $date = storeWithFiscalCode($this, ['fiscal_code' => 'RSSMRA90C15H501O', 'date_of_birth' => '1990-03-16'])
+        ->assertUnprocessable()
+        ->json('errors.fiscal_code.0');
+    $sex = storeWithFiscalCode($this, ['fiscal_code' => 'RSSMRA90C15H501O', 'sex' => 'f'])
+        ->assertUnprocessable()
+        ->json('errors.fiscal_code.0');
+    $invalid = storeWithFiscalCode($this, ['fiscal_code' => 'RSSMRA90C15H501A'])
+        ->assertUnprocessable()
+        ->json('errors.fiscal_code.0');
+
+    expect($date)->toBe('Il codice fiscale dice che la data di nascita è il 15/03/1990.')
+        ->and($sex)->toBe('Il codice fiscale dice che il sesso è M, non F.')
+        ->and($invalid)->toBe('Il codice fiscale non è valido: controllalo sul documento.');
+});
+
+it('checks a code sent on its own against the stored date in the owner\'s language', function (): void {
+    $this->user->update(['locale' => 'it']);
+    $athlete = Athlete::factory()->for($this->academy)->create(['date_of_birth' => '1991-01-01']);
+
+    $message = $this->actingAs($this->user)->putJson("/api/v1/athletes/{$athlete->id}", ['fiscal_code' => 'RSSMRA90C15H501O'])
+        ->assertUnprocessable()
+        ->json('errors.fiscal_code.0');
+
+    expect($message)->toBe('Il codice fiscale dice che la data di nascita è il 15/03/1990.');
+});
+
+it('says a code is taken in the owner\'s language, on a create and on an edit', function (): void {
+    $this->user->update(['locale' => 'it']);
+    Athlete::factory()->for($this->academy)->create(['fiscal_code' => 'RSSMRA90C15H501O']);
+    $other = Athlete::factory()->for($this->academy)->create(['date_of_birth' => '1990-03-15', 'sex' => 'm']);
+
+    $create = storeWithFiscalCode($this, ['fiscal_code' => 'RSSMRA90C15H501O'])
+        ->assertUnprocessable()
+        ->json('errors.fiscal_code.0');
+    $edit = $this->actingAs($this->user)->putJson("/api/v1/athletes/{$other->id}", ['fiscal_code' => 'RSSMRA90C15H501O'])
+        ->assertUnprocessable()
+        ->json('errors.fiscal_code.0');
+
+    expect($create)->toBe('Un altro atleta di questa accademia ha già questo codice fiscale.')
+        ->and($edit)->toBe($create);
+});
+
+it('reports an import in the importer\'s language', function (): void {
+    $this->user->update(['locale' => 'it']);
+
+    $response = $this->actingAs($this->user)
+        ->post('/api/v1/athletes/import', ['file' => federationCsv([
+            ['Mario', 'Rossi', 'bianca', 'RSSMRA90C15H501O', '', '', ''],
+            ['Marco', 'Russo', 'bianca', 'RSSMRA90C15H501O', '', '', ''],
+            ['Luca', 'Neri', 'bianca', 'BNCGLI15H52F205N', 'M', '', ''],
+        ])])
+        ->assertOk();
+
+    expect($response->json('data.rows.1.errors.fiscal_code.0'))->toBe('La riga 2 di questo file ha lo stesso codice fiscale.')
+        ->and($response->json('data.rows.2.errors.fiscal_code.0'))->toBe('Il codice fiscale dice che il sesso è F, non M.');
+});
+
+it('keeps English for an owner who never chose a language', function (): void {
+    $message = storeWithFiscalCode($this, ['fiscal_code' => 'RSSMRA90C15H501A'])
+        ->assertUnprocessable()
+        ->json('errors.fiscal_code.0');
+
+    expect($message)->toBe('The codice fiscale is not valid: check it against the document.');
+});
