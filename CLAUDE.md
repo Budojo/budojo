@@ -8,7 +8,7 @@
 
 The hosted stack (DigitalOcean / Forge / Cloudflare) was decommissioned in #1230; `docs/desktop/` is how it runs today. **Docker is the development environment only** — the shipped app bundles its own runtime.
 
-🐧 **Development happens on Linux** (#1299). The repo was written on Windows and both platforms are supported, but Linux is the base you should assume. The difference that matters: **a Linux bind mount is the host's real filesystem**, so anything a container creates under `server/` or `client/` lands on the host owned by whoever created it, and a `chown` inside the container really re-owns your file. Docker Desktop's 9p share fabricated ownership and swallowed `chown(2)`, which is why this was invisible for so long. The Dockerfiles remap their service user to the host's uid to keep it that way — full explanation, the not-1000 case and the SELinux verdict in [`docs/development/linux-dev.md`](./docs/development/linux-dev.md). Shipping the desktop app **for** Linux is separate and not done yet (#1300).
+🐧 **Development happens on Linux** (#1299). **A Linux bind mount is the host's real filesystem:** anything a container creates under `server/` or `client/` lands on the host owned by whoever created it. The Dockerfiles remap their service user to your uid to keep that right. Details, the not-1000 case and SELinux are in [`docs/development/linux-dev.md`](./docs/development/linux-dev.md). Shipping the desktop app **for** Linux is separate and not done yet (#1300).
 
 ⚠️ **The dev containers are configured by `server/.env` alone.** `docker-compose.yml` deliberately has **no `env_file`** for the `api` service: Compose would turn it into real environment variables, and Laravel's `env()` resolves `$_SERVER` before `$_ENV`, so those silently override both `server/.env` and `phpunit.xml`. Re-adding it once blanked VAPID keys and pointed `RefreshDatabase` at the development database. Never add it back — see `.claude/gotchas.md` § Docker dev-env.
 
@@ -16,24 +16,16 @@ Tech versions live in `server/composer.json`, `client/package.json`, `desktop/pa
 
 ## How this file is organized
 
-The repo uses a **hierarchical `CLAUDE.md`** layout. Claude Code loads the nearest `CLAUDE.md` and every ancestor up to the root.
+This file holds the cross-cutting rules. Claude Code also loads the nearest nested file when you work under it:
+- **`server/CLAUDE.md`:** the Uncle Bob canon, PHPStan, PEST.
+- **`client/CLAUDE.md`:** the UX canon, Vitest, Cypress.
+- **`desktop/CLAUDE.md`:** Electron boundaries and packaging.
 
-| File                                     | Loaded when             | Scope                                                                                                                       |
-| ---------------------------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `CLAUDE.md` (this file)                  | Always                  | Cross-cutting behavioural rules — principles, TDD, git/PR/release discipline, documentation discipline                       |
-| [`server/CLAUDE.md`](./server/CLAUDE.md) | Working under `server/` | Laravel patterns + **Uncle Bob canon**, PHPStan/CS-Fixer/PEST conventions                                                   |
-| [`client/CLAUDE.md`](./client/CLAUDE.md) | Working under `client/` | Angular patterns + **UX canon** (MD3 / Don't Make Me Think / Norman / Laws of UX), Vitest/Cypress conventions               |
-| [`desktop/CLAUDE.md`](./desktop/CLAUDE.md) | Working under `desktop/` | Electron main/preload boundaries, the pure-engine + IO-adapter split, PHP supervision rules, packaging                     |
+**Runbooks** (the *how*) live in [`docs/development/`](./docs/development/README.md): linux-dev, git-flow, release-flow, pr-labels, visual-verification.
 
-**Procedural runbooks** (the _how_, not the _what_) live under [`docs/development/`](./docs/development/README.md):
-
-- [`linux-dev.md`](./docs/development/linux-dev.md) — the Linux development base: setup, bind-mount ownership, SELinux, Cypress, what is still Windows-only
-- [`git-flow.md`](./docs/development/git-flow.md) — branch model, naming, commit format, daily/hotfix flow
-- [`release-flow.md`](./docs/development/release-flow.md) — semantic-release cadence, `## Auto-closes` block, auto-sweep, post-release sweep
-- [`pr-labels.md`](./docs/development/pr-labels.md) — type/status labels, PR checklist, PR body conventions
-- [`visual-verification.md`](./docs/development/visual-verification.md) — mandatory in-browser smoke before push for visible UI changes; local screenshot recipe
-
-If a rule here and a rule in a sub-file conflict, **the sub-file wins** for that scope. If a rule here and a runbook conflict, **the runbook is the implementation detail** — fix whichever drifted.
+Where rules conflict:
+- a sub-file wins for its own scope;
+- a runbook is the implementation detail: fix whichever drifted.
 
 ---
 
@@ -73,7 +65,7 @@ Full details in [`docs/development/git-flow.md`](./docs/development/git-flow.md)
 - **GitFlow**: `main` ← `develop` ← `feat|fix|chore|…/<issue-number>-<description>`. No direct commits to `main` or `develop`, ever — the `pre-commit` / `pre-push` hooks refuse both. They need `npm ci` **at the repo root** to be wired (`git config core.hooksPath` should print `.husky/_`); without it they silently don't run at all.
 - **Conventional commits**, lower-case subject, enforced by commitlint.
 - **Squash merge** into `develop`. **Merge commit** (no squash) from `develop` into `main`.
-- **Merge `develop` into the feature branch** when it falls behind — no rebase. Squash on merge collapses the history anyway.
+- **Merge `develop` into the feature branch only when the PR conflicts (`DIRTY`)**, never rebase. A branch that is merely *behind* merges as it is: the rulesets' required checks are not strict, and updating it just re-runs CI (#2020). Use [`wait-pr.sh`](./.claude/scripts/wait-pr.sh) to wait on a PR.
 - **Always include the issue number** in the branch name — it's the traceability link.
 - **`Closes #N`** in every PR body (not `Refs #N` — Refs leaves the issue open).
 
@@ -116,7 +108,7 @@ Full checklist + labels + body conventions in [`docs/development/pr-labels.md`](
    ./.claude/scripts/board-set.sh <PR-N> in-progress
    ./.claude/scripts/board-set.sh <ISSUE-N> in-progress
    ```
-6. **No AI attribution — ever** — no "Generated with Claude Code", "Co-Authored-By: Claude", or any Anthropic / AI text anywhere.
+6. **No AI attribution, ever:** no "Generated with Claude Code", "Co-Authored-By: Claude", or any Anthropic or AI text anywhere. CI's «📝 Commits & PR body» job fails a PR that carries one in a commit or the body, and it also runs commitlint on the PR's commits and title, including ones made where the hooks don't run (#2020).
 
 ### Review
 
@@ -147,23 +139,7 @@ The automated post-push reviewer was retired in #1234 — it cost a paid API key
 
 ## Documentation discipline
 
-The repo ships its own domain documentation in `docs/` — it is **source of truth**, not decoration:
-
-```
-docs/
-├── README.md              # index — every directory below is listed there too
-├── entities/*.md          # one file per persisted entity (user, academy, athlete, …)
-├── api/v1.yaml            # OpenAPI 3.0 contract for /api/v1
-├── desktop/*.md           # the desktop build (M11) — architecture, install, backup-restore
-├── specs/*.md             # milestone PRDs
-├── development/*.md       # procedural runbooks (linux, git, release, labels, visual verification)
-├── design/*.md            # design system, UX audits, screenshot harnesses, brand kit
-├── changelog/user-facing/ # one file per release, written on the release branch
-├── adr/*.md               # architectural decision records
-├── legal/*.md             # privacy, terms, DPA template, sub-processors
-├── marketing/, mobile/, operations/
-└── infra/*.md             # branch rulesets; the hosted stack lives under infra/archive/
-```
+The repo ships its own domain documentation in `docs/`, indexed in [`docs/README.md`](./docs/README.md). It is the **source of truth**, not decoration. The two that move with code: `docs/entities/*.md` (one per persisted entity) and `docs/api/v1.yaml` (the OpenAPI contract).
 
 ### When a doc update is REQUIRED in the same PR
 
@@ -183,26 +159,6 @@ Pure internal refactor, formatting, dependency bumps, test-only additions, CI tw
 
 - **Spectral** lints `docs/api/v1.yaml` in CI (`🔬 OpenAPI Lint` job) — malformed YAML, missing `operationId`, ghost `$ref`, summary-less operations block merge.
 - **A PR where code and docs disagree is not done.** Nothing automated enforces this any more — it is on you.
-
----
-
-## Server (Laravel 13) — backend rules
-
-See [`server/CLAUDE.md`](./server/CLAUDE.md) for:
-
-- **Uncle Bob canon** (Clean Code / Architecture / Agile / Coder) — the shared vocabulary for judging backend code, with SOLID expanded and the Active Record caveat
-- Server structure conventions (Actions, Controllers, FormRequests, Resources, Observers)
-- PHPStan level 9, PHP CS Fixer, PEST 5 conventions
-- API conventions (Sanctum, JSON envelope, academy scoping)
-
-## Client (Angular 21 + PrimeNG 21) — frontend rules
-
-See [`client/CLAUDE.md`](./client/CLAUDE.md) for:
-
-- **Design canon** (Material Design 3 / Don't Make Me Think / Norman / Laws of UX) — the shared vocabulary for judging UI decisions
-- Client structure conventions (standalone components, OnPush, functional guards/interceptors, signals)
-- PrimeNG 21 with the Material preset — theme, components, layout
-- Vitest 4 (unit) and Cypress 15 (E2E) conventions
 
 ---
 

@@ -91,11 +91,9 @@ The primary form factor is the phone: instructor moves around the mat with devic
 - **Safe area**: honour `env(safe-area-inset-*)` on any pinned UI (topbar, bottom nav) when iOS notches become relevant.
 - **Gesture interactions** (swipe-to-delete, pull-to-refresh) are NOT default — added only where the business flow genuinely benefits.
 
-### PWA + service worker
+### Updates and the service worker
 
-The SPA is installable as a PWA. `ngsw-worker.js` is generated at build time from `client/ngsw-config.json` — **don't** register a new SW or bypass the Angular builder.
-
-**Auto-update on new SW version (#305).** `AppUpdateService` (`client/src/app/core/services/app-update.service.ts`) wires `SwUpdate.versionUpdates` to `activateUpdate()` + `document.location.reload()` on `VERSION_READY`, plus a 1-hour periodic `checkForUpdate()`. Without this the prefetch cache leaves returning users on the old bundle until manual hard-refresh.
+**The shipped app is the desktop build, and it has no service worker** (#1224). Electron owns updates, and a worker caching the shell across installer upgrades would bring back the stuck-on-old-bundle failure `VersionCheckService` exists to catch. The PWA wiring (`ngsw-config.json`, `AppUpdateService`) only serves the web build, which is no longer deployed (#1230). Don't add a second cache layer.
 
 ### i18n — ngx-translate (#273)
 
