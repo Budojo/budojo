@@ -2464,7 +2464,7 @@
         "deleteConfirm": "Delete",
         "createDialog": {
           "title": "Add a past promotion",
-          "body": "For a promotion that happened before Budojo existed. It must line up with any promotions already recorded around it.",
+          "body": "For a promotion that happened before Budojo existed. Leave out what you don't know: the steps missing around it show up in the history, to date later.",
           "kindLabel": "Type",
           "kindBelt": "Belt",
           "kindStripe": "Stripe",
@@ -2476,6 +2476,7 @@
           "fromStripes": "From stripes",
           "toStripes": "To stripes",
           "confirm": "Add promotion",
+          "confirmConflict": "Add it anyway",
           "error": "Couldn't add this promotion. Try again.",
           "completeOffer": "{{belt}} is already in the history: it's the row written when you added the athlete. Complete that row with this date instead of adding a second one.",
           "completeConfirm": "Complete that row",

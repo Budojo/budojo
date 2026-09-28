@@ -199,6 +199,23 @@
     grid-template-columns: 1fr 1fr;
     gap: 1rem;
   }
+
+  // The server's word on a save, under the field it concerns (#1991): ink,
+  // not a banner. A contradiction the owner may confirm reads as a warning.
+  &__field-message {
+    display: block;
+    margin-top: 0.5rem;
+    font-size: 0.8125rem;
+    color: var(--budojo-danger-ink);
+
+    &--warn {
+      color: var(--budojo-warning-ink);
+    }
+  }
+
+  &__form-message {
+    margin-bottom: 0;
+  }
 }
 
 // The promotion dialogs' controls fill their column (#1495).

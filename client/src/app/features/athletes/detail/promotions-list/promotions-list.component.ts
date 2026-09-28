@@ -35,6 +35,7 @@ import {
   AthleteService,
   Belt,
   type PromotionGap,
+  type PromotionSaveError,
   type PromotionSkippedStep,
 } from '../../../../core/services/athlete.service';
 import { BeltLadderService } from '../../../../core/services/belt-ladder.service';
@@ -207,7 +208,12 @@ export class PromotionsListComponent implements OnInit {
 
   protected readonly createDialogOpen = signal(false);
   protected readonly creating = signal(false);
+  /** A save's failure that belongs to no field the dialog shows, below the form. */
   protected readonly createError = signal<string | null>(null);
+  /** The server's messages for the fields the dialog shows, under each (#1991). */
+  protected readonly createFieldErrors = signal<Readonly<Record<string, string>>>({});
+  /** The last save would have the athlete go backwards: the owner may confirm it (#1991). */
+  protected readonly createConflict = signal(false);
   protected readonly createForm = this.fb.group({
     kind: this.fb.control<'belt' | 'stripe'>('belt', { nonNullable: true }),
     recorded_at: this.fb.control<Date | null>(null),
@@ -357,10 +363,36 @@ export class PromotionsListComponent implements OnInit {
       .subscribe(() => {
         this.createForm.patchValue({ from_stripes: null, to_stripes: null });
       });
-    // The offer answers the row as typed: any change asks again on confirm.
-    this.createForm.valueChanges
+    // «Da cintura» starts on the belt the rows say was held that day (#1991):
+    // «Cintura di partenza» after a promotion already recorded is a
+    // contradiction, and the default must never be one. Only until the
+    // owner picks a belt themselves.
+    this.createForm.controls.recorded_at.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => this.completionOffer.set(null));
+      .subscribe((day) => {
+        const fromBelt = this.createForm.controls.from_belt;
+        if (day === null || this.filling() !== null || fromBelt.dirty) return;
+        fromBelt.setValue(this.beltHeldOn(day));
+      });
+    // The offer and the server's answer are about the row as typed: any
+    // change asks again on confirm.
+    this.createForm.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      this.completionOffer.set(null);
+      this.clearSaveErrors();
+    });
+  }
+
+  /**
+   * The belt the loaded rows say was held on a day: the latest belt row on
+   * or before it (a row of that same day counts as before, as the server
+   * reads it). Null before anything recorded — a starting belt then.
+   */
+  private beltHeldOn(day: Date): Belt | null {
+    const iso = toIsoDate(day);
+    const row = this.promotions().find(
+      (p) => p.kind === 'belt' && p.recorded_at.slice(0, 10) <= iso,
+    );
+    return row?.to_belt ?? null;
   }
 
   /** A belt in the owner's words, for sentences that name one. */
@@ -477,7 +509,7 @@ export class PromotionsListComponent implements OnInit {
       from_stripes: null,
       to_stripes: null,
     });
-    this.createError.set(null);
+    this.clearSaveErrors();
     this.completionOffer.set(null);
     this.createDialogOpen.set(true);
   }
@@ -566,9 +598,30 @@ export class PromotionsListComponent implements OnInit {
     return options !== null && picked !== null && options.includes(picked) ? picked : gap.from_belt;
   }
 
+  /**
+   * «Aggiungi comunque» (#1991): the owner read the contradiction and saves
+   * the row as typed. The warning is dropped on any change to the form, so
+   * the row sent is the one it was about. A step being filled goes the
+   * fill's way, so it ends as a fill does: the keyboard on the row written.
+   */
+  protected confirmConflict(): void {
+    const v = this.createForm.getRawValue();
+    if (v.recorded_at === null || this.creating()) return;
+    const recordedAt = toIsoDate(v.recorded_at);
+    const gap = this.filling();
+    if (gap !== null) {
+      this.saveFilled(gap, recordedAt, this.chosenFromBelt(gap, v.from_belt), true);
+      return;
+    }
+
+    const payload = createPayload(v, recordedAt);
+    if (payload === null) return;
+    this.postCreate({ ...payload, confirm_conflict: true });
+  }
+
   private postCreate(payload: AthletePromotionCreatePayload): void {
     this.creating.set(true);
-    this.createError.set(null);
+    this.clearSaveErrors();
     this.athleteService
       .createPromotion(this.athleteId, payload)
       .pipe(finalize(() => this.creating.set(false)))
@@ -586,20 +639,58 @@ export class PromotionsListComponent implements OnInit {
             life: 3000,
           });
         },
-        error: (err: { status?: number; error?: { errors?: Record<string, string[]> } }) => {
-          // A chain-consistency conflict (422) names the exact row it
-          // disagrees with — surfacing that beats a generic failure for
-          // the one flow where the owner needs to know precisely what
-          // to fix (docs/entities/athlete-promotion.md).
-          const firstError =
-            err.status === 422 && err.error?.errors
-              ? Object.values(err.error.errors)[0]?.[0]
-              : undefined;
-          this.createError.set(
-            firstError ?? this.translate.instant('athletes.detail.promotions.createDialog.error'),
-          );
-        },
+        error: (err: PromotionSaveError) => this.showSaveError(err),
       });
+  }
+
+  /**
+   * A save the server turned down (#1991). Its messages are in the owner's
+   * language already, and each goes under the field it concerns — a
+   * contradiction as a warning the owner may confirm, anything else as an
+   * error. What concerns no field the dialog shows goes below the form, and
+   * a failure with no answer says so in our words. Never a banner.
+   */
+  private showSaveError(err: PromotionSaveError): void {
+    const shown = this.shownFields();
+    const underFields: Record<string, string> = {};
+    const elsewhere: string[] = [];
+    if (err.status === 422) {
+      for (const [field, messages] of Object.entries(err.error?.errors ?? {})) {
+        const message = messages[0];
+        if (message === undefined) continue;
+        if (shown.includes(field)) underFields[field] = message;
+        else elsewhere.push(message);
+      }
+    }
+
+    const said = Object.keys(underFields).length > 0 || elsewhere.length > 0;
+    this.createFieldErrors.set(underFields);
+    this.createConflict.set(err.status === 422 && err.error?.code === 'chain_conflict');
+    this.createError.set(
+      elsewhere[0] ??
+        (said ? null : this.translate.instant('athletes.detail.promotions.createDialog.error')),
+    );
+  }
+
+  private clearSaveErrors(): void {
+    this.createError.set(null);
+    this.createFieldErrors.set({});
+    this.createConflict.set(false);
+  }
+
+  /** The fields the dialog draws right now, in the server's names. */
+  private shownFields(): readonly string[] {
+    if (this.filling() !== null) {
+      return this.fillFromBeltOptions().length > 1 ? ['recorded_at', 'from_belt'] : ['recorded_at'];
+    }
+    return this.createForm.controls.kind.value === 'belt'
+      ? ['recorded_at', 'from_belt', 'to_belt']
+      : ['recorded_at', 'belt_at_event', 'from_stripes', 'to_stripes'];
+  }
+
+  /** The server's message for one field, drawn under it (#1991). */
+  protected messageFor(field: string): string | null {
+    return this.createFieldErrors()[field] ?? null;
   }
 
   /**
@@ -620,7 +711,7 @@ export class PromotionsListComponent implements OnInit {
       from_stripes: null,
       to_stripes: null,
     });
-    this.createError.set(null);
+    this.clearSaveErrors();
     this.createDialogOpen.set(true);
   }
 
@@ -659,20 +750,31 @@ export class PromotionsListComponent implements OnInit {
   /**
    * Writes the step. A step an opening row stands for completes that row —
    * the belt before it and its real date — instead of adding a second one.
+   * `confirmed` when the owner read a contradiction and adds it anyway
+   * (#1991): the history changed under the page, and the step is no gap.
    */
-  private saveFilled(gap: PromotionGap, recordedAt: string, fromBelt: Belt | null): void {
+  private saveFilled(
+    gap: PromotionGap,
+    recordedAt: string,
+    fromBelt: Belt | null,
+    confirmed = false,
+  ): void {
+    const step = payloadFor(gap, recordedAt);
     const request =
       gap.completes_promotion_id !== null && fromBelt !== null
         ? this.athleteService.completeOpeningPromotion(this.athleteId, gap.completes_promotion_id, {
             recorded_at: recordedAt,
             from_belt: fromBelt,
           })
-        : this.athleteService.createPromotion(this.athleteId, payloadFor(gap, recordedAt));
+        : this.athleteService.createPromotion(
+            this.athleteId,
+            confirmed ? { ...step, confirm_conflict: true } : step,
+          );
 
     // Where the step sat, for when the row it became is not on this page.
     const index = this.entryIndexOf(gap);
     this.creating.set(true);
-    this.createError.set(null);
+    this.clearSaveErrors();
     request.pipe(finalize(() => this.creating.set(false))).subscribe({
       next: (row) => {
         this.createDialogOpen.set(false);
@@ -687,15 +789,7 @@ export class PromotionsListComponent implements OnInit {
           life: 3000,
         });
       },
-      error: (err: { status?: number; error?: { errors?: Record<string, string[]> } }) => {
-        const firstError =
-          err.status === 422 && err.error?.errors
-            ? Object.values(err.error.errors)[0]?.[0]
-            : undefined;
-        this.createError.set(
-          firstError ?? this.translate.instant('athletes.detail.promotions.createDialog.error'),
-        );
-      },
+      error: (err: PromotionSaveError) => this.showSaveError(err),
     });
   }
 

@@ -956,7 +956,7 @@ export interface PromotionCandidate {
  * enforces the split; this type just keeps the caller from mixing them
  * up by construction.
  */
-export type AthletePromotionCreatePayload =
+export type AthletePromotionCreatePayload = (
   | {
       readonly kind: 'belt';
       readonly recorded_at: string;
@@ -969,7 +969,29 @@ export type AthletePromotionCreatePayload =
       readonly from_stripes: number;
       readonly to_stripes: number;
       readonly belt_at_event: Belt;
-    };
+    }
+) & {
+  /**
+   * The owner read the `chain_conflict` warning and saves the row as typed
+   * anyway (#1991).
+   */
+  readonly confirm_conflict?: true;
+};
+
+/**
+ * A 422 from the promotion history (#1991): the field messages, already in
+ * the owner's language, and `code: 'chain_conflict'` when the row would have
+ * the athlete go backwards next to one already recorded — which the owner
+ * may confirm. Wire shape: `PromotionChainConflict` in docs/api/v1.yaml.
+ */
+export interface PromotionSaveError {
+  readonly status?: number;
+  readonly error?: {
+    readonly message?: string;
+    readonly code?: string;
+    readonly errors?: Readonly<Record<string, readonly string[]>>;
+  } | null;
+}
 
 /**
  * State discriminator returned from `POST /athletes/{id}/email` (#476).
