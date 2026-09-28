@@ -93,8 +93,9 @@ export function weekStart(date: Date): Date {
 }
 
 /**
- * Sunday from 14:00, the owner's own clock (#1940): when the week's message is
- * sent to the group. Earlier, this week still has its Sunday ahead.
+ * Sunday from 14:00, the owner's own clock (#1940): the afternoon the week's
+ * message goes out to the group. Whether this week is over by then is the
+ * timetable's to say, not the hour's: a Sunday class can still be ahead.
  */
 export function isSundayAfternoon(date: Date): boolean {
   return date.getDay() === 0 && date.getHours() >= 14;

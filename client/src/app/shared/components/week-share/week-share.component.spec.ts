@@ -52,8 +52,18 @@ function setup(classes: readonly AcademyClass[]) {
   return { fixture, httpMock: TestBed.inject(HttpTestingController) };
 }
 
-function items(fixture: { componentInstance: WeekShareComponent }): MenuItem[] {
-  return (fixture.componentInstance as unknown as { items(): MenuItem[] }).items();
+/** The menu is one group: its label says which week goes out, or why none does. */
+function menu(fixture: { componentInstance: WeekShareComponent }): MenuItem {
+  const [group] = (fixture.componentInstance as unknown as { items(): MenuItem[] }).items();
+  return group;
+}
+
+function actions(fixture: { componentInstance: WeekShareComponent }): MenuItem[] {
+  return menu(fixture).items ?? [];
+}
+
+function sharedText(whatsapp: MenuItem): string {
+  return decodeURIComponent(whatsapp.url!.split('text=')[1]);
 }
 
 describe('WeekShareComponent (#1940)', () => {
@@ -71,16 +81,21 @@ describe('WeekShareComponent (#1940)', () => {
 
   it('offers the week, and the WhatsApp text is the text it copies', async () => {
     const { fixture, httpMock } = setup([MONDAY, FRIDAY]);
+    // Drawn while the programme loads: a button that turns up late moves the
+    // page's primary action under the pointer.
+    expect(fixture.nativeElement.querySelector('[data-cy="week-share"]')).not.toBeNull();
+    expect(menu(fixture).label).toBe('Loading the week…');
+
     httpMock.expectOne((r) => r.url === URL).flush({ data: calendar() });
     fixture.detectChanges();
 
     const button = fixture.nativeElement.querySelector(
       '[data-cy="week-share"]',
     ) as HTMLButtonElement;
-    expect(button).not.toBeNull();
     expect(button.getAttribute('aria-haspopup')).toBe('menu');
+    expect(menu(fixture).label).toBe('The week of 12 Oct');
 
-    const [copy, whatsapp] = items(fixture);
+    const [copy, whatsapp] = actions(fixture);
     const text = "The week's plan\nFri 16 · Open mat";
     expect(whatsapp.url).toBe(`https://wa.me/?text=${encodeURIComponent(text)}`);
     expect(whatsapp.target).toBe('_blank');
@@ -108,25 +123,58 @@ describe('WeekShareComponent (#1940)', () => {
     httpMock.expectOne((r) => r.url === URL).flush({ data: calendar() });
     fixture.detectChanges();
 
-    const whatsapp = items(fixture)[1];
-    expect(decodeURIComponent(whatsapp.url!.split('text=')[1])).toBe(
-      "The week's plan\nFri 16 · closed — Festa",
+    expect(sharedText(actions(fixture)[1])).toBe("The week's plan\nFri 16 · closed — Festa");
+  });
+
+  it('sends the restart week, though it runs into the season the programme does not hold yet', () => {
+    // Sunday 29 August 2027, evening; the season ends on Tuesday the 31st.
+    vi.setSystemTime(new Date(2027, 7, 29, 21, 30));
+    const { fixture, httpMock } = setup([MONDAY, FRIDAY]);
+    httpMock
+      .expectOne((r) => r.url === URL)
+      .flush({
+        data: calendar({
+          season: { start: '2026-09-01', end: '2027-08-31', label: '2026/27' },
+          today: '2027-08-29',
+        }),
+      });
+    fixture.detectChanges();
+
+    expect(menu(fixture).label).toBe('The week of 30 Aug');
+    expect(sharedText(actions(fixture)[1])).toBe(
+      "The week's plan\nMon 30 · 19:00 Fundamentals\nFri 3 · Open mat",
     );
   });
 
-  it('draws nothing while there is no week to send', () => {
+  it('says why when there is no week to send, and sends nothing', () => {
     const { fixture, httpMock } = setup([]);
     httpMock.expectOne((r) => r.url === URL).flush({ data: calendar() });
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.querySelector('[data-cy="week-share"]')).toBeNull();
+    // Still drawn: an action that vanishes teaches nobody that it exists.
+    expect(fixture.nativeElement.querySelector('[data-cy="week-share"]')).not.toBeNull();
+    expect(menu(fixture).label).toBe('Nothing on the timetable this week or the next.');
+    const [copy, whatsapp] = actions(fixture);
+    expect(copy.disabled).toBe(true);
+    expect(whatsapp.disabled).toBe(true);
+    expect(whatsapp.url).toBeUndefined();
   });
 
-  it('draws nothing when the calendar cannot be read', () => {
+  it('says the programme did not load, and tries again from the menu', () => {
     const { fixture, httpMock } = setup([MONDAY, FRIDAY]);
     httpMock.expectOne((r) => r.url === URL).flush('', { status: 500, statusText: 'Server Error' });
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.querySelector('[data-cy="week-share"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-cy="week-share"]')).not.toBeNull();
+    expect(menu(fixture).label).toBe("The programme didn't load.");
+    const [retry] = actions(fixture);
+    expect(retry.label).toBe('Try again');
+
+    retry.command?.({});
+    expect(menu(fixture).label).toBe('Loading the week…');
+    httpMock.expectOne((r) => r.url === URL).flush({ data: calendar() });
+    fixture.detectChanges();
+
+    expect(menu(fixture).label).toBe('The week of 12 Oct');
   });
 });

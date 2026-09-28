@@ -6,6 +6,7 @@ import {
   WeekSchedule,
   clockOf,
   publishedWeek,
+  timetableWeek,
   weekMessageText,
 } from './week-message';
 
@@ -464,6 +465,38 @@ describe('the week as the timetable has it (#1940)', () => {
     expect(text?.split('\n')).toEqual(['Programma della settimana', 'Chiuso fino al 2026-11-02']);
   });
 
+  it('prints a closure over every class day left as one line, though it ends before Sunday', () => {
+    // A Monday-to-Friday academy shut Monday to Friday: one line, not five.
+    const text = weekMessageText(calendar([]), '2026-10-12', MORNING, LABELS, {
+      classes: [1, 2, 3, 4, 5].map((weekday) => klass({ id: weekday, weekday })),
+      closures: [closure({ starts_on: '2026-10-12', ends_on: '2026-10-16', label: 'Ponte' })],
+    });
+
+    expect(text?.split('\n')).toEqual([
+      'Programma della settimana',
+      'Chiuso fino al 2026-10-16 — Ponte',
+    ]);
+  });
+
+  it('keeps day lines for a closure that leaves a class day of the week open', () => {
+    // Shut Monday to Wednesday; Friday runs.
+    const text = weekMessageText(calendar([]), '2026-10-12', MORNING, LABELS, {
+      classes: [
+        klass({ id: 7, weekday: 1 }),
+        klass({ id: 9, weekday: 3 }),
+        klass({ id: 10, weekday: 5 }),
+      ],
+      closures: [closure({ starts_on: '2026-10-12', ends_on: '2026-10-14', label: 'Ponte' })],
+    });
+
+    expect(text?.split('\n')).toEqual([
+      'Programma della settimana',
+      'Lun 12 · chiuso — Ponte',
+      'Mer 14 · chiuso — Ponte',
+      'Ven 16 · 19:00 Fondamentali',
+    ]);
+  });
+
   it('keeps a single day off as a day line, even on the last class day of the week', () => {
     // Wednesday morning: only Friday's class is left, and Friday is a holiday.
     const text = weekMessageText(calendar([], '2026-10-14'), '2026-10-12', MORNING, LABELS, {
@@ -559,6 +592,47 @@ describe('which week the message is for, with the timetable (#1940)', () => {
     expect(
       publishedWeek(calendar([], '2026-10-14'), MORNING, { classes: [], closures: [] }),
     ).toEqual({ kind: 'none' });
+  });
+});
+
+describe('which week the timetable sends (#1940)', () => {
+  /** Sunday 30 August 2026, evening: the season ends tomorrow, the restart week crosses it. */
+  function lastSunday(lessons: CalendarLesson[] = []): SyllabusCalendar {
+    return {
+      ...calendar(lessons, '2026-08-30'),
+      season: { start: '2025-09-01', end: '2026-08-31', label: '2025/26' },
+    };
+  }
+
+  it('is next week on Sunday evening, though that week opens the new season', () => {
+    expect(timetableWeek(lastSunday(), '21:30', TIMETABLE)).toBe('2026-08-31');
+  });
+
+  it('is this week while a class is still ahead, though the week runs past the season', () => {
+    const lastMonday = { ...lastSunday(), today: '2026-08-31' };
+
+    expect(timetableWeek(lastMonday, MORNING, TIMETABLE)).toBe('2026-08-31');
+  });
+
+  it('is null with nothing on this week or the next', () => {
+    expect(timetableWeek(lastSunday(), '21:30', { classes: [], closures: [] })).toBeNull();
+  });
+
+  it("prints the new season's days without topics: the map holds only this season's", () => {
+    const calendar = lastSunday([
+      // On the season's last day, in the payload with its plan.
+      lesson({ id: 2, academy_class_id: 7, held_on: '2026-08-31', topics: [KNEE_SHIELD] }),
+    ]);
+
+    expect(
+      weekMessageText(calendar, '2026-08-31', '21:30', LABELS, TIMETABLE)?.split('\n'),
+    ).toEqual([
+      'Programma della settimana',
+      'Lun 31 · 19:00 Fondamentali · Half guard: Knee shield',
+      'Lun 31 · 20:30 Avanzati',
+      'Mer 2 · Open mat',
+      'Ven 4 · 19:00 Fondamentali',
+    ]);
   });
 });
 

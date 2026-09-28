@@ -67,13 +67,38 @@ export function publishedWeek(
   now: string,
   schedule: WeekSchedule | null = null,
 ): PublishedWeek {
-  const thisWeek = mondayOf(calendar.today);
-
-  for (const week of [thisWeek, addDays(thisWeek, 7)]) {
+  for (const week of weeksAhead(calendar)) {
     if (addDays(week, 6) > calendar.season.end) return { kind: 'nextSeason' };
     if (weekLines(calendar, week, now, schedule).length > 0) return { kind: 'week', week };
   }
   return { kind: 'none' };
+}
+
+/**
+ * The week the timetable sends (#1940), by the same rule — this week while
+ * it has something ahead, else the next — but across the end of the season.
+ * The map stops there because the message it sends is the plan, and the next
+ * season's plan is not in its payload; the timetable's message is the classes
+ * and the closed days, which do not end with a season. A season ends on a
+ * month's last day, so its restart week usually crosses it: on that Sunday
+ * evening, "we restart Monday at 19:00" is the one message the group needs.
+ * The new season's days go out without topics. Null with nothing on either
+ * week.
+ */
+export function timetableWeek(
+  calendar: SyllabusCalendar,
+  now: string,
+  schedule: WeekSchedule,
+): string | null {
+  return (
+    weeksAhead(calendar).find((week) => weekLines(calendar, week, now, schedule).length > 0) ?? null
+  );
+}
+
+/** This week and the next, Mondays: never further out than "the week's plan". */
+function weeksAhead(calendar: SyllabusCalendar): string[] {
+  const thisWeek = mondayOf(calendar.today);
+  return [thisWeek, addDays(thisWeek, 7)];
 }
 
 /**
@@ -107,11 +132,7 @@ function weekLines(
   labels: WeekMessageLabels | null = null,
 ): string[] {
   if (schedule !== null) {
-    const shut = closureUntil(
-      schedule,
-      classDaysAhead(schedule, week, calendar.today, now),
-      addDays(week, 6),
-    );
+    const shut = closureUntil(schedule, classDaysAhead(schedule, week, calendar.today, now));
     if (shut !== null) {
       return labels === null ? [shut.lastDay] : [closedWeekLine(shut, labels)];
     }
@@ -263,20 +284,22 @@ function classDaysAhead(
 }
 
 /**
- * One closure covering every class day left in the week and running to its
- * end or past it — the holidays, the summer break: then the message is one
- * line, not a "chiuso" per day. A single day off inside the week stays a day
- * line: "Ven 16 · chiuso — Festa" says more than "chiuso fino al 16".
- * Null when any of those days is open, or when none is left.
+ * One closure covering every class day left in the week — the holidays, the
+ * summer break, a Monday-to-Friday bridge on a Monday-to-Friday timetable:
+ * then the message is one line, not a "chiuso" per day. Measured against the
+ * last class day, not Sunday: a closure ending on Friday shuts a week with no
+ * weekend classes all the same. A single class day left stays a day line:
+ * "Ven 16 · chiuso — Festa" says more than "chiuso fino al 16". Null when any
+ * of those days is open.
  */
 function closureUntil(
   schedule: WeekSchedule,
   days: readonly string[],
-  weekEnd: string,
 ): { lastDay: string; label: string | null } | null {
-  if (days.length === 0) return null;
+  if (days.length < 2) return null;
   const first = days[0];
-  const covering = schedule.closures.find((c) => c.starts_on <= first && weekEnd <= c.ends_on);
+  const last = days[days.length - 1];
+  const covering = schedule.closures.find((c) => c.starts_on <= first && last <= c.ends_on);
   return covering === undefined ? null : { lastDay: covering.ends_on, label: covering.label };
 }
 
