@@ -721,3 +721,29 @@ it('admits the completion of a starting row that opens the history up to its own
         ->and(PromotionGaps::inWindow($gaps[0], '2026-09-21', $today))->toBeFalse()
         ->and(PromotionGaps::admits($gaps, $complete, '2019-05-01', $today))->toBeTrue();
 });
+
+// ── A contradiction the owner confirmed (#1991) ──────────────────────────────
+
+it('offers nothing across a stripe contradiction the owner saved anyway', function (): void {
+    // Three white stripes on 18 Nov 2025, then «1 → 2» on 1 Dec: backwards,
+    // saved with `confirm_conflict`. No walk goes from 3 back to 1, so the
+    // interval between them offers nothing, and nothing is offered twice.
+    $result = gapsOf([
+        stripeRow(1, Belt::White, 2, 3, '2025-11-18'),
+        stripeRow(2, Belt::White, 1, 2, '2025-12-01'),
+    ], Belt::White, 2);
+
+    expect(keysOf($result))->toBe([]);
+});
+
+it('offers nothing across a belt contradiction the owner saved anyway, and carries on after it', function (): void {
+    // Purple in 2020, then «white → blue» in 2021: backwards. The interval
+    // between them is not walked; the stripe after the later row still is.
+    $result = gapsOf([
+        beltRow(1, Belt::Blue, Belt::Purple, '2020-01-01'),
+        beltRow(2, Belt::White, Belt::Blue, '2021-01-01'),
+    ], Belt::Blue, 1);
+
+    expect(keysOf($result))->toBe(['stripe:blue:1'])
+        ->and($result['gaps'][0]['after'])->toBe(['promotion_id' => 2, 'recorded_at' => '2021-01-01']);
+});

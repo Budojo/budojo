@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enums\AppLocale;
 use App\Enums\Belt;
 use App\Models\Academy;
 use App\Models\Athlete;
@@ -19,9 +20,11 @@ use App\Support\OperatorDay;
  *   1. A backfill never touches Athlete::belt / Athlete::stripes — it
  *      writes straight to the AthletePromotion row, so it cannot fire
  *      AthleteObserver and cannot drag the athlete's CURRENT belt around.
- *   2. Ordering: a backfill that contradicts its same-kind neighbours in
- *      the timeline is REFUSED (422), not silently allowed or merely
- *      warned about.
+ *   2. Ordering: a backfill that leaves a gap with its neighbours is saved
+ *      as typed, and the gap shows as ghost rows (#1991). One that has the
+ *      athlete go backwards next to a row already recorded is a 422
+ *      `chain_conflict` naming that row, in the owner's language — which
+ *      the owner may confirm with `confirm_conflict` and save anyway.
  *   3. recorded_by_user_id is always the authenticated caller — the
  *      person transcribing the register now, never a guess at who
  *      recorded the real-world event.
@@ -120,8 +123,8 @@ it('treats a same-day row as the earlier neighbour even when it carries a real t
         ->assertCreated();
 });
 
-it('refuses a backfill whose from_belt disagrees with the previous belt promotion', function (): void {
-    AthletePromotion::factory()->create([
+it('warns about a belt backfill that starts below the belt held before it, naming that row', function (): void {
+    $blue = AthletePromotion::factory()->create([
         'athlete_id' => $this->athlete->id,
         'kind' => 'belt',
         'from_belt' => 'white',
@@ -142,12 +145,66 @@ it('refuses a backfill whose from_belt disagrees with the previous belt promotio
             'recorded_at' => '2019-06-01',
         ])
         ->assertUnprocessable()
-        ->assertJsonValidationErrors(['from_belt']);
+        ->assertJsonPath('code', 'chain_conflict')
+        ->assertJsonPath('conflicts', [[
+            'field' => 'from_belt',
+            'promotion_id' => $blue->id,
+            'recorded_at' => '2019-01-01',
+            'belt' => 'blue',
+            'stripes' => null,
+        ]])
+        ->assertJsonPath('errors.from_belt.0', 'On 1 January 2019 they were already on a higher belt: this would put them on a lower one.');
 
     expect(AthletePromotion::count())->toBe(1);
 });
 
-it('refuses a backfill whose to_belt disagrees with the next belt promotion', function (): void {
+it('saves a belt backfill that leaves a gap with the rows around it (#1991)', function (): void {
+    AthletePromotion::factory()->create([
+        'athlete_id' => $this->athlete->id,
+        'kind' => 'belt',
+        'from_belt' => 'white',
+        'to_belt' => 'blue',
+        'belt_at_event' => 'blue',
+        'recorded_at' => '2019-01-01',
+        'recorded_by_user_id' => $this->owner->id,
+    ]);
+
+    // Blue → purple never written down: purple → brown still saves.
+    $this->actingAs($this->owner)
+        ->postJson("/api/v1/athletes/{$this->athlete->id}/promotions", [
+            'kind' => 'belt',
+            'from_belt' => 'purple',
+            'to_belt' => 'brown',
+            'recorded_at' => '2023-06-01',
+        ])
+        ->assertCreated();
+});
+
+it('saves a contradiction once the owner confirms it', function (): void {
+    AthletePromotion::factory()->create([
+        'athlete_id' => $this->athlete->id,
+        'kind' => 'belt',
+        'from_belt' => 'white',
+        'to_belt' => 'blue',
+        'belt_at_event' => 'blue',
+        'recorded_at' => '2019-01-01',
+        'recorded_by_user_id' => $this->owner->id,
+    ]);
+
+    $this->actingAs($this->owner)
+        ->postJson("/api/v1/athletes/{$this->athlete->id}/promotions", [
+            'kind' => 'belt',
+            'from_belt' => 'white',
+            'to_belt' => 'purple',
+            'recorded_at' => '2019-06-01',
+            'confirm_conflict' => true,
+        ])
+        ->assertCreated();
+
+    expect(AthletePromotion::count())->toBe(2);
+});
+
+it('warns about a belt backfill that ends above the belt the next row starts from', function (): void {
     AthletePromotion::factory()->create([
         'athlete_id' => $this->athlete->id,
         'kind' => 'belt',
@@ -162,11 +219,12 @@ it('refuses a backfill whose to_belt disagrees with the next belt promotion', fu
         ->postJson("/api/v1/athletes/{$this->athlete->id}/promotions", [
             'kind' => 'belt',
             'from_belt' => 'blue',
-            // Should be 'purple' to hand off to the 2021 row above.
+            // Black before a purple → brown in 2021: backwards.
             'to_belt' => 'black',
             'recorded_at' => '2020-01-01',
         ])
         ->assertUnprocessable()
+        ->assertJsonPath('code', 'chain_conflict')
         ->assertJsonValidationErrors(['to_belt']);
 });
 
@@ -196,19 +254,8 @@ it('checks against the NEAREST future belt promotion, not the farthest one', fun
         'recorded_by_user_id' => $this->owner->id,
     ]);
 
-    // Hands off correctly to the NEAR row (purple) — must be refused if
-    // checked against the far row instead.
-    $this->actingAs($this->owner)
-        ->postJson("/api/v1/athletes/{$this->athlete->id}/promotions", [
-            'kind' => 'belt',
-            'from_belt' => 'blue',
-            'to_belt' => 'purple',
-            'recorded_at' => '2020-01-01',
-        ])
-        ->assertCreated();
-
-    // Hands off correctly to the FAR row (brown) instead — must be
-    // refused if checked against the near row (purple).
+    // Hands off correctly to the FAR row (brown) — fine against it, but
+    // above the NEAR row's purple, so it must be warned about.
     $this->actingAs($this->owner)
         ->postJson("/api/v1/athletes/{$this->athlete->id}/promotions", [
             'kind' => 'belt',
@@ -252,7 +299,7 @@ it('accepts a backfill that correctly bridges an existing gap', function (): voi
     expect(AthletePromotion::count())->toBe(3);
 });
 
-it('refuses a stripe backfill whose from_stripes disagrees with the previous stripe promotion', function (): void {
+it('warns about a stripe backfill that overlaps the count held before it', function (): void {
     AthletePromotion::factory()->create([
         'athlete_id' => $this->athlete->id,
         'kind' => 'stripe',
@@ -272,10 +319,69 @@ it('refuses a stripe backfill whose from_stripes disagrees with the previous str
             'recorded_at' => '2019-06-01',
         ])
         ->assertUnprocessable()
-        ->assertJsonValidationErrors(['from_stripes']);
+        ->assertJsonPath('code', 'chain_conflict')
+        ->assertJsonPath('errors.from_stripes.0', 'On 1 January 2019 they already had 1 stripe: this would start them from 0.');
 });
 
-it('refuses a stripe backfill whose to_stripes disagrees with the next stripe promotion', function (): void {
+it('saves a stripe backfill that leaves a gap before the next row, as the owner typed it (#1991)', function (): void {
+    // The owner's report: «Bianca 1 → 2» on 19 March 2025, under a row of
+    // 18 November 2025 that starts at 3. The third stripe is simply not
+    // written down yet — a gap, which the timeline offers to date.
+    AthletePromotion::factory()->create([
+        'athlete_id' => $this->athlete->id,
+        'kind' => 'stripe',
+        'from_stripes' => 3,
+        'to_stripes' => 4,
+        'belt_at_event' => 'white',
+        'recorded_at' => '2025-11-18',
+        'recorded_by_user_id' => $this->owner->id,
+    ]);
+
+    $this->actingAs($this->owner)
+        ->postJson("/api/v1/athletes/{$this->athlete->id}/promotions", [
+            'kind' => 'stripe',
+            'from_stripes' => 1,
+            'to_stripes' => 2,
+            'belt_at_event' => 'white',
+            'recorded_at' => '2025-03-19',
+        ])
+        ->assertCreated();
+});
+
+it('warns in the owner\'s language when a stripe backfill goes backwards (#1991)', function (): void {
+    $this->owner->update(['locale' => AppLocale::It]);
+    $third = AthletePromotion::factory()->create([
+        'athlete_id' => $this->athlete->id,
+        'kind' => 'stripe',
+        'from_stripes' => 2,
+        'to_stripes' => 3,
+        'belt_at_event' => 'white',
+        'recorded_at' => '2025-11-18',
+        'recorded_by_user_id' => $this->owner->id,
+    ]);
+
+    $this->actingAs($this->owner)
+        ->postJson("/api/v1/athletes/{$this->athlete->id}/promotions", [
+            'kind' => 'stripe',
+            'from_stripes' => 1,
+            'to_stripes' => 2,
+            'belt_at_event' => 'white',
+            'recorded_at' => '2025-12-01',
+        ])
+        ->assertUnprocessable()
+        ->assertJsonPath('code', 'chain_conflict')
+        ->assertJsonPath('message', 'Il 18 novembre 2025 aveva già 3 gradi: qui arriveresti a 2.')
+        ->assertJsonPath('errors.to_stripes.0', 'Il 18 novembre 2025 aveva già 3 gradi: qui arriveresti a 2.')
+        ->assertJsonPath('conflicts.0', [
+            'field' => 'to_stripes',
+            'promotion_id' => $third->id,
+            'recorded_at' => '2025-11-18',
+            'belt' => 'white',
+            'stripes' => 3,
+        ]);
+});
+
+it('warns about a stripe backfill that ends above the count the next row starts from', function (): void {
     AthletePromotion::factory()->create([
         'athlete_id' => $this->athlete->id,
         'kind' => 'stripe',
@@ -289,14 +395,54 @@ it('refuses a stripe backfill whose to_stripes disagrees with the next stripe pr
     $this->actingAs($this->owner)
         ->postJson("/api/v1/athletes/{$this->athlete->id}/promotions", [
             'kind' => 'stripe',
-            'from_stripes' => 0,
-            // Should be 2 to hand off to the 2021 row above.
-            'to_stripes' => 1,
+            'from_stripes' => 1,
+            'to_stripes' => 3,
             'belt_at_event' => 'blue',
             'recorded_at' => '2020-01-01',
         ])
         ->assertUnprocessable()
-        ->assertJsonValidationErrors(['to_stripes']);
+        ->assertJsonPath('code', 'chain_conflict')
+        ->assertJsonPath('errors.to_stripes.0', 'On 1 January 2021 they still had 2 stripes: this would take them to 3.');
+});
+
+it('warns about a stripe on a belt the belt rows say the athlete had not reached yet', function (): void {
+    AthletePromotion::factory()->create([
+        'athlete_id' => $this->athlete->id,
+        'kind' => 'belt',
+        'from_belt' => 'white',
+        'to_belt' => 'blue',
+        'belt_at_event' => 'blue',
+        'recorded_at' => '2024-01-10',
+        'recorded_by_user_id' => $this->owner->id,
+    ]);
+
+    $this->actingAs($this->owner)
+        ->postJson("/api/v1/athletes/{$this->athlete->id}/promotions", [
+            'kind' => 'stripe',
+            'from_stripes' => 0,
+            'to_stripes' => 1,
+            'belt_at_event' => 'blue',
+            'recorded_at' => '2023-06-01',
+        ])
+        ->assertUnprocessable()
+        ->assertJsonPath('code', 'chain_conflict')
+        ->assertJsonPath('errors.belt_at_event.0', 'On 10 January 2024 they were still on a lower belt: this would put them on a higher one.');
+});
+
+it('does not call a plain validation error a conflict, and says it in the owner\'s language', function (): void {
+    $this->owner->update(['locale' => AppLocale::It]);
+
+    $response = $this->actingAs($this->owner)
+        ->postJson("/api/v1/athletes/{$this->athlete->id}/promotions", [
+            'kind' => 'belt',
+            'from_belt' => 'blue',
+            'to_belt' => 'blue',
+            'recorded_at' => '2019-01-01',
+        ])
+        ->assertUnprocessable()
+        ->assertJsonPath('errors.to_belt.0', 'La nuova cintura deve essere diversa da quella di prima.');
+
+    expect($response->json())->not->toHaveKey('code');
 });
 
 it('accepts a stripe backfill that correctly bridges an existing gap, checking the NEAREST neighbours', function (): void {

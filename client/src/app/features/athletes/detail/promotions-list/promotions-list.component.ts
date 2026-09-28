@@ -35,6 +35,7 @@ import {
   AthleteService,
   Belt,
   type PromotionGap,
+  type PromotionSaveError,
 } from '../../../../core/services/athlete.service';
 import { BeltLadderService } from '../../../../core/services/belt-ladder.service';
 import { LanguageService } from '../../../../core/services/language.service';
@@ -195,7 +196,12 @@ export class PromotionsListComponent implements OnInit {
 
   protected readonly createDialogOpen = signal(false);
   protected readonly creating = signal(false);
+  /** A save's failure that belongs to no field the dialog shows, below the form. */
   protected readonly createError = signal<string | null>(null);
+  /** The server's messages for the fields the dialog shows, under each (#1991). */
+  protected readonly createFieldErrors = signal<Readonly<Record<string, string>>>({});
+  /** The last save would have the athlete go backwards: the owner may confirm it (#1991). */
+  protected readonly createConflict = signal(false);
   protected readonly createForm = this.fb.group({
     kind: this.fb.control<'belt' | 'stripe'>('belt', { nonNullable: true }),
     recorded_at: this.fb.control<Date | null>(null),
@@ -345,10 +351,12 @@ export class PromotionsListComponent implements OnInit {
       .subscribe(() => {
         this.createForm.patchValue({ from_stripes: null, to_stripes: null });
       });
-    // The offer answers the row as typed: any change asks again on confirm.
-    this.createForm.valueChanges
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => this.completionOffer.set(null));
+    // The offer and the server's answer are about the row as typed: any
+    // change asks again on confirm.
+    this.createForm.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      this.completionOffer.set(null);
+      this.clearSaveErrors();
+    });
   }
 
   /** A belt in the owner's words, for sentences that name one. */
@@ -463,7 +471,7 @@ export class PromotionsListComponent implements OnInit {
       from_stripes: null,
       to_stripes: null,
     });
-    this.createError.set(null);
+    this.clearSaveErrors();
     this.completionOffer.set(null);
     this.createDialogOpen.set(true);
   }
@@ -552,9 +560,26 @@ export class PromotionsListComponent implements OnInit {
     return options !== null && picked !== null && options.includes(picked) ? picked : gap.from_belt;
   }
 
+  /**
+   * «Aggiungi comunque» (#1991): the owner read the contradiction and saves
+   * the row as typed. The warning is dropped on any change to the form, so
+   * the row sent is the one it was about. A step being filled asks only the
+   * date, so the step itself is what is sent.
+   */
+  protected confirmConflict(): void {
+    const v = this.createForm.getRawValue();
+    if (v.recorded_at === null || this.creating()) return;
+    const recordedAt = toIsoDate(v.recorded_at);
+    const gap = this.filling();
+    const payload = gap !== null ? payloadFor(gap, recordedAt) : createPayload(v, recordedAt);
+    if (payload === null) return;
+
+    this.postCreate({ ...payload, confirm_conflict: true });
+  }
+
   private postCreate(payload: AthletePromotionCreatePayload): void {
     this.creating.set(true);
-    this.createError.set(null);
+    this.clearSaveErrors();
     this.athleteService
       .createPromotion(this.athleteId, payload)
       .pipe(finalize(() => this.creating.set(false)))
@@ -572,20 +597,58 @@ export class PromotionsListComponent implements OnInit {
             life: 3000,
           });
         },
-        error: (err: { status?: number; error?: { errors?: Record<string, string[]> } }) => {
-          // A chain-consistency conflict (422) names the exact row it
-          // disagrees with — surfacing that beats a generic failure for
-          // the one flow where the owner needs to know precisely what
-          // to fix (docs/entities/athlete-promotion.md).
-          const firstError =
-            err.status === 422 && err.error?.errors
-              ? Object.values(err.error.errors)[0]?.[0]
-              : undefined;
-          this.createError.set(
-            firstError ?? this.translate.instant('athletes.detail.promotions.createDialog.error'),
-          );
-        },
+        error: (err: PromotionSaveError) => this.showSaveError(err),
       });
+  }
+
+  /**
+   * A save the server turned down (#1991). Its messages are in the owner's
+   * language already, and each goes under the field it concerns — a
+   * contradiction as a warning the owner may confirm, anything else as an
+   * error. What concerns no field the dialog shows goes below the form, and
+   * a failure with no answer says so in our words. Never a banner.
+   */
+  private showSaveError(err: PromotionSaveError): void {
+    const shown = this.shownFields();
+    const underFields: Record<string, string> = {};
+    const elsewhere: string[] = [];
+    if (err.status === 422) {
+      for (const [field, messages] of Object.entries(err.error?.errors ?? {})) {
+        const message = messages[0];
+        if (message === undefined) continue;
+        if (shown.includes(field)) underFields[field] = message;
+        else elsewhere.push(message);
+      }
+    }
+
+    const said = Object.keys(underFields).length > 0 || elsewhere.length > 0;
+    this.createFieldErrors.set(underFields);
+    this.createConflict.set(err.status === 422 && err.error?.code === 'chain_conflict');
+    this.createError.set(
+      elsewhere[0] ??
+        (said ? null : this.translate.instant('athletes.detail.promotions.createDialog.error')),
+    );
+  }
+
+  private clearSaveErrors(): void {
+    this.createError.set(null);
+    this.createFieldErrors.set({});
+    this.createConflict.set(false);
+  }
+
+  /** The fields the dialog draws right now, in the server's names. */
+  private shownFields(): readonly string[] {
+    if (this.filling() !== null) {
+      return this.fillFromBeltOptions().length > 1 ? ['recorded_at', 'from_belt'] : ['recorded_at'];
+    }
+    return this.createForm.controls.kind.value === 'belt'
+      ? ['recorded_at', 'from_belt', 'to_belt']
+      : ['recorded_at', 'belt_at_event', 'from_stripes', 'to_stripes'];
+  }
+
+  /** The server's message for one field, drawn under it (#1991). */
+  protected messageFor(field: string): string | null {
+    return this.createFieldErrors()[field] ?? null;
   }
 
   /**
@@ -606,7 +669,7 @@ export class PromotionsListComponent implements OnInit {
       from_stripes: null,
       to_stripes: null,
     });
-    this.createError.set(null);
+    this.clearSaveErrors();
     this.createDialogOpen.set(true);
   }
 
@@ -658,7 +721,7 @@ export class PromotionsListComponent implements OnInit {
     // Where the step sat, for when the row it became is not on this page.
     const index = this.entryIndexOf(gap);
     this.creating.set(true);
-    this.createError.set(null);
+    this.clearSaveErrors();
     request.pipe(finalize(() => this.creating.set(false))).subscribe({
       next: (row) => {
         this.createDialogOpen.set(false);
@@ -673,15 +736,7 @@ export class PromotionsListComponent implements OnInit {
           life: 3000,
         });
       },
-      error: (err: { status?: number; error?: { errors?: Record<string, string[]> } }) => {
-        const firstError =
-          err.status === 422 && err.error?.errors
-            ? Object.values(err.error.errors)[0]?.[0]
-            : undefined;
-        this.createError.set(
-          firstError ?? this.translate.instant('athletes.detail.promotions.createDialog.error'),
-        );
-      },
+      error: (err: PromotionSaveError) => this.showSaveError(err),
     });
   }
 

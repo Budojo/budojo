@@ -41,6 +41,21 @@
   </div>
 </ng-template>
 
+<!-- The server's word on a save, under the field it concerns (#1991): a
+     contradiction as a warning the owner may confirm, anything else as an
+     error. Already in the owner's language. -->
+<ng-template #fieldMessage let-field>
+  @if (messageFor(field); as message) {
+    <small
+      class="promotions__field-message"
+      [class.promotions__field-message--warn]="createConflict()"
+      role="alert"
+      [attr.data-cy]="'promotion-create-message-' + field"
+      >{{ message }}</small
+    >
+  }
+</ng-template>
+
 <section class="promotions">
   <div class="promotions__header">
     <p-button
@@ -509,6 +524,7 @@
         appendTo="body"
         data-cy="gap-fill-date"
       />
+      <ng-container *ngTemplateOutlet="fieldMessage; context: { $implicit: 'recorded_at' }" />
       @if (fillFromBeltOptions().length > 1) {
         <!-- A history that opens on this row (#1974): no known row says which
              belt came before, so the owner says it — the ladder's own choices,
@@ -526,6 +542,7 @@
           appendTo="body"
           data-cy="gap-fill-from-belt"
         />
+        <ng-container *ngTemplateOutlet="fieldMessage; context: { $implicit: 'from_belt' }" />
       }
     </form>
     @if (fillWindowIso(); as window) {
@@ -578,6 +595,7 @@
         appendTo="body"
         data-cy="promotion-create-date"
       />
+      <ng-container *ngTemplateOutlet="fieldMessage; context: { $implicit: 'recorded_at' }" />
 
       @if (createForm.controls.kind.value === 'belt') {
         <label class="promotions__dialog-label" for="promotion-create-from-belt">
@@ -592,6 +610,7 @@
           appendTo="body"
           data-cy="promotion-create-from-belt"
         />
+        <ng-container *ngTemplateOutlet="fieldMessage; context: { $implicit: 'from_belt' }" />
 
         <label class="promotions__dialog-label" for="promotion-create-to-belt">
           {{ 'athletes.detail.promotions.createDialog.toBelt' | translate }}
@@ -605,6 +624,7 @@
           appendTo="body"
           data-cy="promotion-create-to-belt"
         />
+        <ng-container *ngTemplateOutlet="fieldMessage; context: { $implicit: 'to_belt' }" />
       } @else {
         <label class="promotions__dialog-label" for="promotion-create-belt-at-event">
           {{ 'athletes.detail.promotions.createDialog.beltAtEvent' | translate }}
@@ -618,6 +638,7 @@
           appendTo="body"
           data-cy="promotion-create-belt-at-event"
         />
+        <ng-container *ngTemplateOutlet="fieldMessage; context: { $implicit: 'belt_at_event' }" />
 
         <div class="promotions__create-stripes">
           <div>
@@ -634,6 +655,9 @@
               appendTo="body"
               data-cy="promotion-create-from-stripes"
             />
+            <ng-container
+              *ngTemplateOutlet="fieldMessage; context: { $implicit: 'from_stripes' }"
+            />
           </div>
           <div>
             <label class="promotions__dialog-label" for="promotion-create-to-stripes">
@@ -649,6 +673,7 @@
               appendTo="body"
               data-cy="promotion-create-to-stripes"
             />
+            <ng-container *ngTemplateOutlet="fieldMessage; context: { $implicit: 'to_stripes' }" />
           </div>
         </div>
       }
@@ -670,7 +695,15 @@
   }
 
   @if (createError(); as error) {
-    <p-message severity="error" [text]="error" data-cy="promotion-create-error" />
+    <!-- What concerns no field shown here, inline below the form: never a
+         banner across the dialog (#1991). -->
+    <p
+      class="promotions__field-message promotions__form-message"
+      role="alert"
+      data-cy="promotion-create-error"
+    >
+      {{ error }}
+    </p>
   }
 
   <ng-template pTemplate="footer">
@@ -695,6 +728,16 @@
         [loading]="creating()"
         (onClick)="confirmCompletion()"
         data-cy="promotion-create-complete"
+      />
+    } @else if (createConflict()) {
+      <!-- The row would have the athlete go backwards: the owner decides
+           (#1991). Changing the row drops the warning and brings back the
+           usual confirm. -->
+      <p-button
+        [label]="'athletes.detail.promotions.createDialog.confirmConflict' | translate"
+        [loading]="creating()"
+        (onClick)="confirmConflict()"
+        data-cy="promotion-create-confirm-conflict"
       />
     } @else {
       <p-button

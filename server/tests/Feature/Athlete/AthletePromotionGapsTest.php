@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enums\AppLocale;
 use App\Enums\Belt;
 use App\Enums\MartialArt;
 use App\Models\Academy;
@@ -115,11 +116,6 @@ it('offers the blue stripes only once the blue belt is dated, and never a second
     stripeRowOn($jacopo, $this->owner, Belt::White, 2, 3, '2024-03-12 00:00:00');
     $opening = beltRowOn($jacopo, $this->owner, null, Belt::Blue, '2026-09-20 10:00:00');
 
-    // Not a gap yet, so the chain check still decides — and refuses it.
-    $this->actingAs($this->owner)->postJson("/api/v1/athletes/{$jacopo->id}/promotions", [
-        'kind' => 'stripe', 'recorded_at' => '2024-05-01', 'belt_at_event' => 'blue', 'from_stripes' => 0, 'to_stripes' => 1,
-    ])->assertUnprocessable();
-
     $this->actingAs($this->owner)
         ->patchJson("/api/v1/athletes/{$jacopo->id}/promotions/{$opening->id}", ['recorded_at' => '2025-01-10', 'from_belt' => 'white'])
         ->assertOk();
@@ -133,6 +129,26 @@ it('offers the blue stripes only once the blue belt is dated, and never a second
 
     expect(gapKeys($this, $jacopo))->toBe(['stripe:white:4', 'stripe:blue:2'])
         ->and($jacopo->promotions()->where('kind', 'belt')->where('to_belt', 'blue')->count())->toBe(1);
+});
+
+it('saves a blue stripe typed before the blue belt is dated, and the belt step closes before it (#1991)', function (): void {
+    // Not one of the gaps: before #1991 the chain check refused it. It is
+    // no contradiction — the blue belt came some day between the white
+    // stripe and this one — so it saves as typed, and the step the starting
+    // row stands for now has to fall before it.
+    $jacopo = gapsAthlete($this->academy, Belt::Blue, 1);
+    $white = stripeRowOn($jacopo, $this->owner, Belt::White, 2, 3, '2024-03-12 00:00:00');
+    $opening = beltRowOn($jacopo, $this->owner, null, Belt::Blue, '2026-09-20 10:00:00');
+
+    $created = $this->actingAs($this->owner)->postJson("/api/v1/athletes/{$jacopo->id}/promotions", [
+        'kind' => 'stripe', 'recorded_at' => '2024-05-01', 'belt_at_event' => 'blue', 'from_stripes' => 0, 'to_stripes' => 1,
+    ])->assertCreated();
+
+    $gaps = $this->actingAs($this->owner)->getJson("/api/v1/athletes/{$jacopo->id}/promotions")->assertOk()->json('gaps');
+    expect(array_column($gaps, 'key'))->toBe(['stripe:white:4', 'belt:blue:0'])
+        ->and($gaps[1]['completes_promotion_id'])->toBe($opening->id)
+        ->and($gaps[1]['after'])->toBe(['promotion_id' => $white->id, 'recorded_at' => '2024-03-12'])
+        ->and($gaps[1]['before'])->toBe(['promotion_id' => $created->json('data.id'), 'recorded_at' => '2024-05-01']);
 });
 
 it('completes a starting row only inside its window when a gap stands for it', function (): void {
@@ -463,14 +479,15 @@ it('fills a gap on any day of its window, both edges included where the window s
     expect(gapKeys($this, $athlete))->toBe([]);
 })->with(['2025-12-21', '2026-03-15', '2026-06-15']);
 
-it('still refuses a backfill that is no gap and contradicts the rows around it', function (array $payload): void {
+it('still warns about a backfill that is no gap and contradicts the rows around it', function (array $payload): void {
     $athlete = gapsAthlete($this->academy, Belt::Blue, 4);
     beltRowOn($athlete, $this->owner, Belt::White, Belt::Blue, '2024-01-10 00:00:00');
     stripeRowOn($athlete, $this->owner, Belt::Blue, 3, 4, '2025-06-01 00:00:00');
 
     $this->actingAs($this->owner)
         ->postJson("/api/v1/athletes/{$athlete->id}/promotions", ['kind' => 'stripe', 'belt_at_event' => 'blue', ...$payload])
-        ->assertUnprocessable();
+        ->assertUnprocessable()
+        ->assertJsonPath('code', 'chain_conflict');
 })->with([
     'a stripe the next row already holds' => [['recorded_at' => '2024-06-01', 'from_stripes' => 3, 'to_stripes' => 4]],
     'a gap, dated outside its window' => [['recorded_at' => '2023-06-01', 'from_stripes' => 0, 'to_stripes' => 1]],
@@ -536,6 +553,17 @@ it('completes it no later than the day the athlete was entered, however far back
     'the day of entry' => ['2026-01-10', true],
     'the day after' => ['2026-01-11', false],
 ]);
+
+it("says the completion's window in the owner's language (#1991)", function (): void {
+    $this->owner->update(['locale' => AppLocale::It]);
+    $athlete = gapsAthlete($this->academy, Belt::Blue, 0);
+    $opening = beltRowOn($athlete, $this->owner, null, Belt::Blue, '2026-01-10 00:00:00');
+
+    $this->actingAs($this->owner)
+        ->patchJson("/api/v1/athletes/{$athlete->id}/promotions/{$opening->id}", ['recorded_at' => '2026-01-11', 'from_belt' => 'white'])
+        ->assertUnprocessable()
+        ->assertJsonPath('errors.recorded_at.0', 'Non può essere oltre il 10 gennaio 2026.');
+});
 
 it('lets the owner choose any belt the ladder allows before, and refuses one it does not', function (): void {
     $this->academy->update(['martial_art' => MartialArt::Judo]);

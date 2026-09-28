@@ -477,37 +477,131 @@ describe('PromotionsListComponent (#799)', () => {
       });
     });
 
-    it('surfaces a chain-consistency 422 inline rather than a generic toast', () => {
-      const { fixture, component, svc } = setup();
-      svc.promotions.mockReturnValue(
-        of({ data: [], meta: { current_page: 1, per_page: 20, total: 0, last_page: 1 } }),
-      );
-      svc.createPromotion.mockReturnValue(
-        throwError(() => ({
-          status: 422,
-          error: {
-            errors: { from_belt: ["Doesn't match the belt after the previous promotion."] },
-          },
-        })),
-      );
-      fixture.detectChanges();
+    describe("the server's answer, under the field it concerns (#1991)", () => {
+      const conflictMessage = 'Il 18 novembre 2025 aveva già 3 gradi: qui arriveresti a 2.';
+      const conflict = {
+        status: 422,
+        error: {
+          message: conflictMessage,
+          code: 'chain_conflict',
+          errors: { to_stripes: [conflictMessage] },
+          conflicts: [
+            {
+              field: 'to_stripes',
+              promotion_id: 12,
+              recorded_at: '2025-11-18',
+              belt: 'white',
+              stripes: 3,
+            },
+          ],
+        },
+      };
 
-      const c = component as unknown as {
+      interface Dialog {
         openCreateDialog: () => void;
         confirmCreate: () => void;
         createForm: { patchValue: (v: Record<string, unknown>) => void };
-        createError: () => string | null;
-      };
-      c.openCreateDialog();
-      c.createForm.patchValue({
-        kind: 'belt',
-        recorded_at: new Date(2019, 2, 15),
-        from_belt: 'white',
-        to_belt: 'blue',
-      });
-      c.confirmCreate();
+      }
 
-      expect(c.createError()).toBe("Doesn't match the belt after the previous promotion.");
+      function typed(fail: unknown) {
+        const ctx = setup({ athleteId: '7' });
+        useLadder('bjj');
+        ctx.svc.promotions.mockReturnValue(
+          of({ data: [], meta: { current_page: 1, per_page: 20, total: 0, last_page: 1 } }),
+        );
+        ctx.svc.createPromotion.mockReturnValueOnce(throwError(() => fail));
+        ctx.fixture.detectChanges();
+        const c = ctx.component as unknown as Dialog;
+        c.openCreateDialog();
+        c.createForm.patchValue({
+          kind: 'stripe',
+          recorded_at: new Date(2025, 11, 1),
+          belt_at_event: 'white',
+        });
+        c.createForm.patchValue({ from_stripes: '1', to_stripes: '2' });
+        c.confirmCreate();
+        ctx.fixture.detectChanges();
+        return { ...ctx, c };
+      }
+
+      const message = (el: HTMLElement, field: string) =>
+        el.querySelector(`[data-cy="promotion-create-message-${field}"]`);
+
+      it('warns about a contradiction under its field, and offers to add it anyway', () => {
+        const { el, fixture, svc } = typed(conflict);
+
+        expect(message(el, 'to_stripes')?.textContent?.trim()).toBe(conflictMessage);
+        expect(message(el, 'to_stripes')?.classList).toContain('promotions__field-message--warn');
+        // No banner: the one message sits where the owner looks.
+        expect(el.querySelector('[data-cy="promotion-create-error"]')).toBeNull();
+        expect(el.querySelector('[data-cy="promotion-create-confirm"]')).toBeNull();
+
+        (
+          el.querySelector(
+            '[data-cy="promotion-create-confirm-conflict"] button',
+          ) as HTMLButtonElement
+        ).click();
+        fixture.detectChanges();
+
+        expect(svc.createPromotion).toHaveBeenLastCalledWith(7, {
+          kind: 'stripe',
+          recorded_at: '2025-12-01',
+          belt_at_event: 'white',
+          from_stripes: 1,
+          to_stripes: 2,
+          confirm_conflict: true,
+        });
+      });
+
+      it('drops the warning as soon as the owner changes the row', () => {
+        const { el, fixture, c } = typed(conflict);
+
+        c.createForm.patchValue({ to_stripes: '3' });
+        fixture.detectChanges();
+
+        expect(message(el, 'to_stripes')).toBeNull();
+        expect(el.querySelector('[data-cy="promotion-create-confirm-conflict"]')).toBeNull();
+        expect(el.querySelector('[data-cy="promotion-create-confirm"]')).not.toBeNull();
+      });
+
+      it("says any other 422 under its field, in the server's words, with nothing to confirm", () => {
+        const { el } = typed({
+          status: 422,
+          error: {
+            message: 'Il nuovo numero di gradi deve essere diverso da quello di prima.',
+            errors: {
+              to_stripes: ['Il nuovo numero di gradi deve essere diverso da quello di prima.'],
+            },
+          },
+        });
+
+        expect(message(el, 'to_stripes')?.textContent?.trim()).toBe(
+          'Il nuovo numero di gradi deve essere diverso da quello di prima.',
+        );
+        expect(message(el, 'to_stripes')?.classList).not.toContain(
+          'promotions__field-message--warn',
+        );
+        expect(el.querySelector('[data-cy="promotion-create-confirm-conflict"]')).toBeNull();
+      });
+
+      it('says a message for a field the dialog does not show below the form', () => {
+        const { el } = typed({
+          status: 422,
+          error: { errors: { to_belt: ['Not a stripe field.'] } },
+        });
+
+        expect(el.querySelector('[data-cy="promotion-create-error"]')?.textContent?.trim()).toBe(
+          'Not a stripe field.',
+        );
+      });
+
+      it('says a failure with no answer below the form, in our words', () => {
+        const { el } = typed({ status: 0 });
+
+        expect(el.querySelector('[data-cy="promotion-create-error"]')?.textContent?.trim()).toBe(
+          "Couldn't add this promotion. Try again.",
+        );
+      });
     });
 
     it('cancel closes the create dialog without calling the service', () => {
@@ -873,6 +967,37 @@ describe('PromotionsListComponent — missing steps (#1966)', () => {
     expect(el.querySelector('[data-cy="promotions-history-before"]')?.textContent).toContain(
       "the history isn't recorded",
     );
+  });
+
+  it('adds a filled step anyway, as the step, when the history changed under it (#1991)', () => {
+    // Another window added a row since this page loaded: the step is no gap
+    // any more, and the server calls it a contradiction. The dialog asks
+    // only the date, so «Aggiungi comunque» must resend the step itself.
+    const { el, fixture, component, svc } = jacopo();
+    const warning = 'On 1 June 2024 they already had 4 stripes: this would take them to 4.';
+    svc.createPromotion.mockReturnValueOnce(
+      throwError(() => ({
+        status: 422,
+        error: { message: warning, code: 'chain_conflict', errors: { recorded_at: [warning] } },
+      })),
+    );
+    click(el, 'gap-add-date-stripe:white:4');
+    fixture.detectChanges();
+    const c = component as unknown as Internals;
+    c.createForm.patchValue({ recorded_at: new Date(2024, 8, 20) });
+    c.confirmCreate();
+    fixture.detectChanges();
+
+    click(el, 'promotion-create-confirm-conflict');
+
+    expect(svc.createPromotion).toHaveBeenLastCalledWith(7, {
+      kind: 'stripe',
+      recorded_at: '2024-09-20',
+      from_stripes: 3,
+      to_stripes: 4,
+      belt_at_event: 'white',
+      confirm_conflict: true,
+    });
   });
 
   it('fills a missing stripe with the date alone, bounded to the days between its neighbours', () => {

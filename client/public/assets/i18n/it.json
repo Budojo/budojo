@@ -2462,7 +2462,7 @@
         "deleteConfirm": "Elimina",
         "createDialog": {
           "title": "Aggiungi una promozione passata",
-          "body": "Per una promozione avvenuta prima che Budojo esistesse. Deve essere coerente con le promozioni già registrate intorno ad essa.",
+          "body": "Per una promozione avvenuta prima che Budojo esistesse. Lascia fuori quello che non sai: i passaggi che mancano intorno compaiono nella storia, da datare dopo.",
           "kindLabel": "Tipo",
           "kindBelt": "Cintura",
           "kindStripe": "Grado",
@@ -2474,6 +2474,7 @@
           "fromStripes": "Da gradi",
           "toStripes": "A gradi",
           "confirm": "Aggiungi promozione",
+          "confirmConflict": "Aggiungi comunque",
           "error": "Impossibile aggiungere questa promozione. Riprova.",
           "completeOffer": "{{belt}} è già nella storia: è la riga creata quando hai inserito l'atleta. Completa quella riga con questa data, invece di aggiungerne una seconda.",
           "completeConfirm": "Completa quella riga",

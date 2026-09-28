@@ -274,21 +274,35 @@ describe('Athlete promotion history (#1431)', () => {
       });
     });
 
-    it('surfaces a chain-consistency conflict inline and keeps the dialog open', () => {
+    it('warns about a contradiction under its field, and adds it anyway on confirm (#1991)', () => {
       cy.intercept('GET', '/api/v1/athletes/1/promotions*', promotionsPage([promotion()])).as(
         'promotions',
       );
-      cy.intercept('POST', '/api/v1/athletes/1/promotions', {
-        statusCode: 422,
-        body: {
-          message: 'The given data was invalid.',
-          errors: {
-            from_belt: [
-              "Doesn't match the belt after the previous promotion on 2019-01-01 (white).",
+      const warning =
+        'On 1 January 2019 they were already on a higher belt: this would put them on a lower one.';
+      cy.intercept('POST', '/api/v1/athletes/1/promotions', (req) => {
+        if (req.body.confirm_conflict === true) {
+          req.reply({ statusCode: 201, body: { data: promotion({ id: 30, kind: 'belt' }) } });
+          return;
+        }
+        req.reply({
+          statusCode: 422,
+          body: {
+            message: warning,
+            code: 'chain_conflict',
+            errors: { from_belt: [warning] },
+            conflicts: [
+              {
+                field: 'from_belt',
+                promotion_id: 3,
+                recorded_at: '2019-01-01',
+                belt: 'blue',
+                stripes: null,
+              },
             ],
           },
-        },
-      }).as('createFails');
+        });
+      }).as('create');
 
       cy.visitAuthenticated('/dashboard/athletes/1/promotions');
       cy.wait(['@academy', '@athlete', '@promotions']);
@@ -301,15 +315,22 @@ describe('Athlete promotion history (#1431)', () => {
       cy.get('[data-cy="promotion-create-to-belt"]').click();
       cy.get('.p-select-option').contains('Purple').click();
       cy.get('[data-cy="promotion-create-confirm"]').click();
-      cy.wait('@createFails');
+      cy.wait('@create').its('request.body').should('not.have.property', 'confirm_conflict');
 
-      cy.get('[data-cy="promotion-create-error"]').should(
-        'contain.text',
-        "Doesn't match the belt after the previous promotion",
-      );
-      // The specific reason is worth seeing, so the dialog stays open with
-      // the owner's input intact rather than being dismissed.
+      // Under the field it concerns, not a banner, and the dialog stays open
+      // with the owner's input intact.
+      cy.get('[data-cy="promotion-create-message-from_belt"]').should('have.text', warning);
+      cy.get('[data-cy="promotion-create-error"]').should('not.exist');
       cy.get('[data-cy="promotion-create-dialog"]').should('be.visible');
+
+      cy.get('[data-cy="promotion-create-confirm-conflict"]').click();
+      cy.wait('@create').its('request.body').should('deep.include', {
+        kind: 'belt',
+        from_belt: 'white',
+        to_belt: 'purple',
+        confirm_conflict: true,
+      });
+      cy.get('[data-cy="promotion-create-dialog"]').should('not.be.visible');
     });
 
     it('cancel closes the dialog without calling the server', () => {
