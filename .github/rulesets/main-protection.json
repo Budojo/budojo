@@ -35,7 +35,8 @@
           { "context": "🔍 Angular Lint (ESLint)" },
           { "context": "✨ Angular Format (Prettier)" },
           { "context": "🎭 Cypress E2E" },
-          { "context": "🔬 OpenAPI Lint (Spectral)" }
+          { "context": "🔬 OpenAPI Lint (Spectral)" },
+          { "context": "📝 Commits & PR body" }
         ]
       }
     }
