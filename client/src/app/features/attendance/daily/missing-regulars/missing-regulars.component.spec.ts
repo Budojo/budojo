@@ -15,6 +15,7 @@ function regular(over: Partial<ClassRegular> & { id: number }): ClassRegular {
     user_avatar_url: null,
     phone_country_code: '+39',
     phone_national_number: '3471234567',
+    is_self: false,
     attended: 4,
     last_attended_on: null,
     ...over,
@@ -125,6 +126,22 @@ describe('MissingRegularsComponent (#1730)', () => {
 
     expect(root.querySelector('[data-cy="missing-contact-5-none"]')).not.toBeNull();
     expect(root.querySelector('[data-cy="missing-contact-5-call"]')).toBeNull();
+  });
+
+  it('never offers the owner a way to reach themselves', () => {
+    // The owner trains too (#748) and can be a regular of their own class. A
+    // call or WhatsApp button pointing at their own number is a dead end; the
+    // row stays, so they can still tick themselves in.
+    const { fixture, root } = render(
+      regulars([regular({ id: 1, is_self: true }), regular({ id: 2 })]),
+    );
+
+    open(fixture);
+
+    expect(root.querySelector('[data-cy="missing-regular-1"]')).not.toBeNull();
+    expect(root.querySelector('[data-cy="missing-present-1"]')).not.toBeNull();
+    expect(root.querySelector('[data-cy^="missing-contact-1-"]')).toBeNull();
+    expect(root.querySelector('[data-cy="missing-contact-2-whatsapp"]')).not.toBeNull();
   });
 
   it('drops a regular the moment they are ticked, with nothing asked of the server', () => {

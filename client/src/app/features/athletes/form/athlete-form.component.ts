@@ -25,6 +25,7 @@ import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
 import { SelectModule } from 'primeng/select';
+import { SelectButtonModule } from 'primeng/selectbutton';
 import { ToastModule } from 'primeng/toast';
 import { ConfirmPopupModule } from 'primeng/confirmpopup';
 import { ConfirmationService, MessageService } from 'primeng/api';
@@ -35,6 +36,7 @@ import {
   AthleteStatus,
   AthleteUpdatePayload,
   Belt,
+  Sex,
 } from '../../../core/services/athlete.service';
 import { BeltLadderService } from '../../../core/services/belt-ladder.service';
 import {
@@ -46,6 +48,7 @@ import {
 import { FeeTier, FeeTierService } from '../../../core/services/fee-tier.service';
 import { LanguageService } from '../../../core/services/language.service';
 import { localeFor, datePickerFormatFor } from '../../../shared/utils/locale';
+import { normaliseFiscalCode, readFiscalCode } from '../../../shared/utils/fiscal-code';
 import { BudojoFormFieldComponent } from '../../../shared/components/budojo-form-field/budojo-form-field.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { ConfirmDestructiveButtonComponent } from '../../../shared/components/confirm-destructive-button/confirm-destructive-button.component';
@@ -173,6 +176,7 @@ const urlIfPresent: ValidatorFn = (control: AbstractControl) => {
     InputTextModule,
     MessageModule,
     SelectModule,
+    SelectButtonModule,
     ToastModule,
     ConfirmPopupModule,
     PageHeaderComponent,
@@ -212,6 +216,9 @@ export class AthleteFormComponent implements OnInit {
   readonly submitting = signal(false);
   readonly error = signal<string | null>(null);
   readonly today = new Date();
+
+  /** True while a stored athlete is patched in: no pre-fill from its code (#1934). */
+  private loadingStoredAthlete = false;
   private readonly athleteId = signal<number | null>(null);
 
   readonly mode = computed<'create' | 'edit'>(() =>
@@ -321,6 +328,15 @@ export class AthleteFormComponent implements OnInit {
     }));
   });
 
+  /** The sex as the document records it (#1934), optional: none selected is a value. */
+  readonly sexOptions = computed<SelectOption<Sex>[]>(() => {
+    this.languageService.currentLang();
+    return [
+      { label: this.translate.instant('athletes.form.sexOption.m'), value: 'm' },
+      { label: this.translate.instant('athletes.form.sexOption.f'), value: 'f' },
+    ];
+  });
+
   /**
    * Curated country code list (#75). Italy-first because that's the
    * primary market; the rest covers the typical European + transatlantic
@@ -365,6 +381,12 @@ export class AthleteFormComponent implements OnInit {
     instagram: ['', [Validators.maxLength(255), urlIfPresent]],
     // date_of_birth is the only field that can genuinely be null
     date_of_birth: this.fb.control<Date | null>(null),
+    // What a federation card asks for (#1934). The server is the one that
+    // checks the code; the form only reads it to pre-fill an empty date of
+    // birth and sex (see ngOnInit).
+    fiscal_code: this.fb.nonNullable.control<string>('', Validators.maxLength(20)),
+    sex: this.fb.control<Sex | null>(null),
+    birth_place: this.fb.nonNullable.control<string>('', Validators.maxLength(100)),
     belt: this.fb.nonNullable.control<Belt>(this.beltLadder.startingBelt(), Validators.required),
     stripes: this.fb.nonNullable.control<string>('0', Validators.required),
     status: this.fb.nonNullable.control<AthleteStatus>('active', Validators.required),
@@ -461,6 +483,13 @@ export class AthleteFormComponent implements OnInit {
         next: (tiers) => this.feeTiers.set(tiers),
         error: () => undefined,
       });
+
+    // A valid codice fiscale fills an EMPTY date of birth and sex (#1934), and
+    // never overwrites one: a date already there that disagrees is the
+    // server's to name on save, not the form's to hide.
+    this.form.controls.fiscal_code.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((code) => this.prefillFromFiscalCode(code));
 
     // The phone pair validators are mutually dependent — when one control's
     // value flips between empty/non-empty, the OTHER control's validity needs
@@ -862,6 +891,7 @@ export class AthleteFormComponent implements OnInit {
         next: (athlete) => {
           this.loadedAthlete.set(athlete);
           const joinedAt = fromDateString(athlete.joined_at);
+          this.loadingStoredAthlete = true;
           this.form.patchValue({
             first_name: athlete.first_name,
             last_name: athlete.last_name,
@@ -872,6 +902,9 @@ export class AthleteFormComponent implements OnInit {
             facebook: athlete.facebook ?? '',
             instagram: athlete.instagram ?? '',
             date_of_birth: fromDateString(athlete.date_of_birth),
+            fiscal_code: athlete.fiscal_code ?? '',
+            sex: athlete.sex ?? null,
+            birth_place: athlete.birth_place ?? '',
             belt: athlete.belt,
             stripes: String(athlete.stripes),
             status: athlete.status,
@@ -889,11 +922,27 @@ export class AthleteFormComponent implements OnInit {
               country: athlete.address?.country ?? 'IT',
             },
           });
+          this.loadingStoredAthlete = false;
         },
         error: () => {
           this.error.set(this.translate.instant('athletes.form.loadError'));
         },
       });
+  }
+
+  /**
+   * Fill the date of birth and sex the owner left empty from a valid code.
+   * Not while the stored athlete is being loaded: that is showing a record,
+   * and it would change it before anyone touched a field.
+   */
+  private prefillFromFiscalCode(code: string): void {
+    if (this.loadingStoredAthlete) return;
+    const reading = readFiscalCode(code, new Date());
+    if (reading === null) return;
+
+    const { date_of_birth, sex } = this.form.controls;
+    if (date_of_birth.value === null) date_of_birth.setValue(reading.dateOfBirth);
+    if (sex.value === null) sex.setValue(reading.sex);
   }
 
   private stripEmailForUpdate(payload: AthletePayload): AthleteUpdatePayload {
@@ -926,6 +975,9 @@ export class AthleteFormComponent implements OnInit {
       facebook,
       instagram,
       date_of_birth: toDateString(v.date_of_birth),
+      fiscal_code: normaliseFiscalCode(v.fiscal_code) || null,
+      sex: v.sex,
+      birth_place: v.birth_place.trim() || null,
       belt: v.belt,
       stripes: Number(v.stripes),
       status: v.status,

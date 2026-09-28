@@ -11,10 +11,12 @@ use App\Models\Academy;
 use App\Models\Athlete;
 use App\Models\User;
 use App\Support\AthleteFieldRules;
+use App\Support\FiscalCode;
 use App\Support\Import\AthleteCsv;
 use App\Support\Import\BeltText;
 use App\Support\Import\DateText;
 use App\Support\Import\PhoneText;
+use App\Support\Import\SexText;
 use App\Support\Import\StripesText;
 use App\Support\MartialArt\MartialArtProfile;
 use App\Support\MartialArt\RankLadder;
@@ -78,16 +80,19 @@ final class ImportAthletesAction
         // assembled from two registers usually does.
         $seen = $this->existingPeople($academy);
         $ladder = MartialArtProfile::for($academy->martial_art)->ladder();
+        // Codes earlier rows of THIS file would write (#1934). The validator
+        // only sees the roster, so two rows sharing a code would both pass it.
+        $codes = [];
 
         foreach ($csv->rows as $row) {
             ['values' => $values, 'errors' => $errors] = $this->read($csv->keyed($row['cells']), $map, $academy, $ladder);
 
-            if ($errors !== []) {
-                $rows[] = ['row' => $row['number'], 'status' => 'invalid', 'values' => $values, 'errors' => $errors];
-
-                continue;
-            }
-
+            // Someone already accounted for is skipped before anything the row
+            // says is judged (#1934): their email and their codice fiscale are
+            // on the roster because THEY are, and the unique rules would
+            // otherwise turn a re-imported register red instead of amber. A
+            // skipped row writes nothing, so what else is wrong with it can
+            // wait for the day it is not a duplicate.
             $person = $this->identityOf($values);
             if ($this->alreadyPresent($person, $seen)) {
                 $rows[] = ['row' => $row['number'], 'status' => 'duplicate', 'values' => $values, 'errors' => []];
@@ -95,7 +100,22 @@ final class ImportAthletesAction
                 continue;
             }
 
+            // Past the identity check, a shared code is two different people.
+            $code = $values['fiscal_code'] ?? null;
+            if ($errors === [] && \is_string($code) && isset($codes[$code])) {
+                $errors['fiscal_code'] = ["Row {$codes[$code]} of this file has the same codice fiscale."];
+            }
+
+            if ($errors !== []) {
+                $rows[] = ['row' => $row['number'], 'status' => 'invalid', 'values' => $values, 'errors' => $errors];
+
+                continue;
+            }
+
             $seen[] = $person;
+            if (\is_string($code)) {
+                $codes[$code] = $row['number'];
+            }
             $rows[] = ['row' => $row['number'], 'status' => 'ok', 'values' => $values, 'errors' => []];
         }
 
@@ -213,6 +233,46 @@ final class ImportAthletesAction
         $phone = PhoneText::parse($cell('phone'), $academy->phone_country_code);
         if ($phone !== null) {
             $values += $phone;
+        }
+
+        return $this->withFederationDetails($values, $cell);
+    }
+
+    /**
+     * The codice fiscale, the sex and the place of birth (#1934). A code
+     * that reads also fills the date of birth and the sex the sheet left
+     * empty — a federation register often carries the code and nothing else —
+     * and a code that disagrees with a date or sex the sheet does carry is
+     * the validator's to refuse, with the reason.
+     *
+     * @param array<string, mixed>    $values
+     * @param \Closure(string): string $cell
+     *
+     * @return array<string, mixed>
+     */
+    private function withFederationDetails(array $values, \Closure $cell): array
+    {
+        $sex = $cell('sex');
+        if ($sex !== '') {
+            // As written when unreadable, so the row says why it was refused.
+            $values['sex'] = SexText::parse($sex)->value ?? $sex;
+        }
+
+        $birthPlace = $cell('birth_place');
+        if ($birthPlace !== '') {
+            $values['birth_place'] = $birthPlace;
+        }
+
+        $code = FiscalCode::normalise($cell('fiscal_code'));
+        if ($code === '') {
+            return $values;
+        }
+        $values['fiscal_code'] = $code;
+
+        $parsed = FiscalCode::parse($code);
+        if ($parsed !== null) {
+            $values['date_of_birth'] ??= $parsed->birthDate(OperatorDay::today())->toDateString();
+            $values['sex'] ??= $parsed->sex->value;
         }
 
         return $values;

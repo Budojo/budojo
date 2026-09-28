@@ -6,6 +6,7 @@ namespace App\Http\Requests\Athlete;
 
 use App\Authorization\Capability;
 use App\Http\Requests\Concerns\AuthorizesAcademyCapability;
+use App\Http\Requests\Concerns\NormalisesFiscalCode;
 use App\Http\Requests\Concerns\ResolvesRankLadder;
 use App\Http\Requests\Concerns\ValidatesAddress;
 use App\Http\Requests\Concerns\ValidatesPhonePair;
@@ -17,6 +18,7 @@ use Illuminate\Http\Exceptions\HttpResponseException;
 class StoreAthleteRequest extends FormRequest
 {
     use AuthorizesAcademyCapability;
+    use NormalisesFiscalCode;
     use ValidatesAddress;
     use ValidatesPhonePair;
     use ResolvesRankLadder;
@@ -52,10 +54,11 @@ class StoreAthleteRequest extends FormRequest
         $this->validatePhonePairWithLibphonenumber($validator);
     }
 
-    /** The phone is stored as its national significant number (#1867). */
+    /** The phone as its national significant number (#1867), the code in capitals (#1934). */
     protected function prepareForValidation(): void
     {
         $this->normalisePhonePair();
+        $this->normaliseFiscalCode();
     }
 
     /**

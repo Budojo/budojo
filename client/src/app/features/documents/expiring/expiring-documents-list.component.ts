@@ -27,7 +27,15 @@ import {
   expiryCountdownKey,
   ExpiryStatusBadgeComponent,
 } from '../../../shared/components/expiry-status-badge/expiry-status-badge.component';
+import { AcademyService } from '../../../core/services/academy.service';
 import { LanguageService } from '../../../core/services/language.service';
+import { ContactActionsComponent } from '../../../shared/components/contact-actions/contact-actions.component';
+import { localIso } from '../../../shared/utils/class-occurrences';
+import {
+  documentReminder,
+  missingCertificateReminder,
+  Translator,
+} from '../../../shared/utils/reminder-message';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { ErrorStateComponent } from '../../../shared/components/error-state/error-state.component';
 import { AthleteIdentityComponent } from '../../../shared/components/athlete-identity/athlete-identity.component';
@@ -62,6 +70,7 @@ import { LocaleDatePipe } from '../../../shared/pipes/locale-date.pipe';
     ErrorStateComponent,
     EmptyStateComponent,
     AthleteIdentityComponent,
+    ContactActionsComponent,
   ],
   providers: [MessageService],
   templateUrl: './expiring-documents-list.component.html',
@@ -73,6 +82,7 @@ export class ExpiringDocumentsListComponent implements OnInit {
   private readonly messageService = inject(MessageService);
   private readonly translate = inject(TranslateService);
   private readonly language = inject(LanguageService);
+  private readonly academyService = inject(AcademyService);
 
   readonly documents = signal<ExpiringDocument[]>([]);
   readonly missingCerts = signal<readonly AthleteMissingMedicalCertificate[]>([]);
@@ -134,6 +144,41 @@ export class ExpiringDocumentsListComponent implements OnInit {
 
   typeKeyFor(doc: ExpiringDocument): string {
     return this.typeKeys[doc.type];
+  }
+
+  private readonly t: Translator = (key, params) => this.translate.instant(key, params) as string;
+
+  /**
+   * The reminder a row's WhatsApp opens with (#1931): when the paper runs
+   * out, or ran out, in the app's language, signed with the academy's name.
+   * Null on the academy's own papers, which belong to no one to message.
+   */
+  protected documentMessage(doc: ExpiringDocument): string | null {
+    const person = doc.athlete;
+    if (person === null || person === undefined || doc.expires_at === null) return null;
+
+    const lang = this.language.currentLang();
+    return documentReminder(this.t, lang, {
+      firstName: person.first_name,
+      type: doc.type,
+      typeLabel: this.translate.instant(this.typeKeyFor(doc)) as string,
+      expiresAt: doc.expires_at,
+      today: localIso(new Date()),
+      academy: this.academyName(),
+    });
+  }
+
+  /** For someone the academy has no medical certificate for at all. */
+  protected missingMessage(athlete: AthleteMissingMedicalCertificate): string {
+    this.language.currentLang(); // re-word on a language toggle
+    return missingCertificateReminder(this.t, {
+      firstName: athlete.first_name,
+      academy: this.academyName(),
+    });
+  }
+
+  private academyName(): string {
+    return this.academyService.academy()?.name ?? '';
   }
 
   /**

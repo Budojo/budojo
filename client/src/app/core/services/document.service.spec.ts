@@ -150,6 +150,8 @@ describe('DocumentService', () => {
           date_of_birth: null,
           photo_url: null,
           user_avatar_url: null,
+          phone_country_code: '+39',
+          phone_national_number: '3331234567',
         },
       };
       httpMock.expectOne((r) => r.url === '/api/v1/documents/expiring').flush({ data: [expanded] });

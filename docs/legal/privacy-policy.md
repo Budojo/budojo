@@ -26,7 +26,7 @@ Budojo raccoglie e tratta esclusivamente i dati strettamente necessari al funzio
 | **Dati identificativi e di contatto** | Nome, cognome, email | Forniti dall'utente al momento della registrazione |
 | **Credenziali di autenticazione** | Hash della password (bcrypt), token Sanctum opachi | Generati dal sistema |
 | **Dati dell'academy** | Nome palestra, indirizzo, recapiti telefonici e link ai contatti | Forniti dall'utente al primo setup |
-| **Dati degli atleti** | Nome, cognome, data di nascita, cintura, status di tesseramento, recapiti dei tutori (per i minori) | Inseriti dall'academy in qualità di titolare del trattamento |
+| **Dati degli atleti** | Nome, cognome, data e luogo di nascita, codice fiscale, sesso come risulta dal documento, cintura, status di tesseramento, recapiti dei tutori (per i minori) | Inseriti dall'academy in qualità di titolare del trattamento |
 | **Dati di presenza** | Date di check-in degli atleti agli allenamenti | Generati durante l'uso quotidiano del Servizio |
 | **Documenti caricati** | Certificati medici, tesseramenti, documenti d'identità | Caricati dall'academy o dall'atleta su richiesta dell'academy |
 | **Metadati tecnici** | Indirizzo IP, user-agent, timestamp di richiesta — limitatamente a finalità di sicurezza e diagnostica errori | Generati dall'infrastruttura |

@@ -73,3 +73,18 @@ export function phoneLabel(
 export function whatsappShareLink(text: string): string {
   return `https://wa.me/?text=${encodeURIComponent(text)}`;
 }
+
+/**
+ * That person's chat, with the message already written (#1931) — the
+ * reminder Marco used to type by hand eight times a month. Same
+ * all-or-nothing rule as `contactLinks`: a half pair is `null`, never a
+ * link to nobody.
+ */
+export function whatsappMessageLink(
+  countryCode: string | null | undefined,
+  nationalNumber: string | null | undefined,
+  text: string,
+): string | null {
+  const { whatsapp } = contactLinks(countryCode, nationalNumber);
+  return whatsapp === null ? null : `${whatsapp}?text=${encodeURIComponent(text)}`;
+}

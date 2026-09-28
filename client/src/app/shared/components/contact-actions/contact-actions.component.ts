@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { TranslatePipe } from '@ngx-translate/core';
 import { Tooltip } from 'primeng/tooltip';
-import { contactLinks } from '../../utils/contact-links';
+import { contactLinks, whatsappMessageLink } from '../../utils/contact-links';
 
 /**
  * Message or call an athlete, from any list that names them (#1727).
@@ -36,10 +36,25 @@ export class ContactActionsComponent {
   readonly name = input.required<string>();
   /** Prefix for the three `data-cy` hooks: `<prefix>-whatsapp`, `-call`, `-none`. */
   readonly dataCy = input<string | null>(null);
+  /**
+   * A reminder already written (#1931): when set, WhatsApp opens the chat
+   * with it, and the control says it sends the reminder rather than just
+   * opening a chat. The call is unchanged.
+   */
+  readonly message = input<string | null>(null);
 
-  protected readonly links = computed(() =>
-    contactLinks(this.countryCode(), this.nationalNumber()),
-  );
+  protected readonly links = computed(() => {
+    const links = contactLinks(this.countryCode(), this.nationalNumber());
+    const message = this.message();
+    if (message === null || links.whatsapp === null) return links;
+
+    return {
+      ...links,
+      whatsapp: whatsappMessageLink(this.countryCode(), this.nationalNumber(), message),
+    };
+  });
+
+  protected readonly isReminder = computed(() => this.message() !== null);
 
   protected cy(suffix: string): string | null {
     const prefix = this.dataCy();
