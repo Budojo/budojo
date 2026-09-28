@@ -877,6 +877,7 @@ function regularOf(id: number, attended: number, last_attended_on: string) {
     ...identityOf(id),
     phone_country_code: a.phone_country_code ?? null,
     phone_national_number: a.phone_national_number ?? null,
+    is_self: (a as { is_self?: boolean }).is_self === true,
     attended,
     last_attended_on,
   };
