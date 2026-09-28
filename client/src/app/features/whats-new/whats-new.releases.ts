@@ -122,8 +122,8 @@ export const RELEASES: readonly Release[] = [
         heading: { en: 'Classes', it: 'Lezioni' },
         bullets: [
           {
-            en: '"Send the week to the group", in Timetable: copy the text or open WhatsApp. One line for every class still ahead, with its time and topics where planned. A closed day shows once, and a closure over the whole week is one line. The week you restart after a break can be sent too.',
-            it: '«Manda la settimana al gruppo», in Orario: copi il testo o apri WhatsApp. Una riga per ogni lezione ancora da fare, con orario e argomenti dove ci sono. Un giorno chiuso compare una volta sola, e una chiusura che prende tutta la settimana è una riga sola. Anche la settimana in cui si riparte dopo la pausa si può mandare.',
+            en: '"Send the week to the group", in Timetable: copy the text or open WhatsApp. One line for every class still ahead, with its time and topics where planned. A closed day shows once, and a closure over every class still ahead is one line. The week you restart after a break can be sent too.',
+            it: '«Manda la settimana al gruppo», in Orario: copi il testo o apri WhatsApp. Una riga per ogni lezione ancora da fare, con orario e argomenti dove ci sono. Un giorno chiuso compare una volta sola, e una chiusura che copre tutte le lezioni ancora da fare è una riga sola. Anche la settimana in cui si riparte dopo la pausa si può mandare.',
           },
           {
             en: 'On Sunday afternoon, Today reminds you to send next week’s programme and takes you to the timetable.',
@@ -147,8 +147,8 @@ export const RELEASES: readonly Release[] = [
             it: 'I passaggi segnati «Saltato» si ripristinano: sotto la storia, «N passaggi segnati come saltati · Mostra», ognuno con «Ripristina».',
           },
           {
-            en: 'Past promotions are saved as you write them: a jump from the rows around them is no longer refused. Only when a row contradicts the recorded history (it goes back a grade, puts a stripe on a belt not reached yet, or is a starting belt after a promotion) does Budojo say so, under the field, and you can still save it with "Add it anyway". "From belt" starts on the belt the athlete held that day.',
-            it: 'Le promozioni passate si salvano come le scrivi: un salto rispetto alle righe vicine non viene più rifiutato. Solo se una riga contraddice la storia già registrata (torna indietro di grado, mette una striscia su una cintura che non aveva ancora, o è una cintura di partenza dopo una promozione) Budojo te lo dice, sotto il campo, e puoi salvarla lo stesso con «Aggiungi comunque». «Da cintura» parte dalla cintura che l’atleta aveva quel giorno.',
+            en: 'Past promotions are saved as you write them: a jump from the rows around them is no longer refused. Only when a row contradicts the recorded history (it goes back a grade, puts a stripe on a belt not reached yet, or is a starting belt after a promotion) does Budojo say so, under the field, and you can still save it with "Add it anyway". "From belt" suggests the belt the athlete held that day, and you can change it.',
+            it: 'Le promozioni passate si salvano come le scrivi: un salto rispetto alle righe vicine non viene più rifiutato. Solo se una riga contraddice la storia già registrata (torna indietro di grado, mette una striscia su una cintura che non aveva ancora, o è una cintura di partenza dopo una promozione) Budojo te lo dice, sotto il campo, e puoi salvarla lo stesso con «Aggiungi comunque». «Da cintura» ti propone la cintura che l’atleta aveva quel giorno, e puoi cambiarla.',
           },
           {
             en: 'A missing step shows up once: in some histories with rows out of order, the same stripe to complete showed up twice, or a stripe already recorded inside a multi-stripe jump came back.',
