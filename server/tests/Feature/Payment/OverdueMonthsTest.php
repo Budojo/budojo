@@ -121,5 +121,7 @@ it('only sends the months of the year asked for', function (): void {
     $marco = overdueAthlete($this);
 
     // The season crosses new year: the table asks for each calendar year.
-    expect(overdueMonthsOf($this, $marco, 2025))->toBe([]);
+    // 2025 is before the floor, and 2027 has not come yet.
+    expect(overdueMonthsOf($this, $marco, 2025))->toBe([])
+        ->and(overdueMonthsOf($this, $marco, 2027))->toBe([]);
 });

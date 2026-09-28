@@ -82,21 +82,15 @@ function validationToastKey(fields: Record<string, unknown>): string {
 
 /**
  * Per-athlete payments tab on the detail page (#182 Surface 2).
- * Renders a 12-row table of the current calendar year, one row per
- * month, showing whether a payment row exists. Inline "Mark paid" /
- * "Undo payment" buttons let the coach record back-payments and undo
- * mistakes — the same write path as the athletes-list inline toggle
- * (Surface 1), differs only in that here every month is reachable,
- * not just "this month".
+ * Renders a 12-row table of one season (#1709), one row per month, showing
+ * whether a payment covers it. Inline "Mark paid" / "Undo payment" buttons
+ * let the coach record back-payments and undo mistakes — the same write path
+ * as the athletes-list inline toggle (Surface 1), differs only in that here
+ * every month is reachable, not just "this month".
  *
- * **Why current year only.** A coach sometimes wants to see "did
- * Mario pay all 12 months in 2026?" — the year-by-year table
- * answers that. Multi-year navigation (a year selector) is a
- * v2 feature; today the page lists only `getUTCFullYear()`.
- *
- * UTC alignment with Surface 1: same `getUTCFullYear()` /
- * `getUTCMonth()` arithmetic so the badge state and the persisted
- * row stay in sync across the day/month boundary.
+ * It opens on the season in progress and steps back to the one the athlete
+ * joined in (#1636). Until the academy says which season that is, it reads
+ * the owner's local year and month, not UTC's (#1654).
  *
  * **Every month is markable, including ones that have not arrived.**
  * #1636 disabled them on the reasoning that there is nothing to mark paid
