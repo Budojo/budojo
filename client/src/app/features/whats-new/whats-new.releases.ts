@@ -60,6 +60,51 @@ export function localised(value: Localised, lang: string): string {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.74.0',
+    date: '2026-09-28',
+    headline: {
+      en: 'Who trains free, and a dark theme you can read: mark someone as training free from their payment menu, and hovered menus and options read again in the dark theme.',
+      it: 'Chi si allena gratis, e il tema scuro che si legge: segni chi non paga dal menu del pagamento, e nel tema scuro menu e liste si leggono di nuovo.',
+    },
+    sections: [
+      {
+        heading: { en: 'Payments', it: 'Pagamenti' },
+        bullets: [
+          {
+            en: "\"Trains free\", in each athlete's payment menu on the list: for your partner, a coach's child, anyone you don't charge. It asks once; then they owe nothing and stay off the unpaid list. Before, it took setting a personal fee of 0 in their record.",
+            it: '«Si allena gratis», nel menu del pagamento di ogni atleta nella lista: per la tua compagna, il figlio di un istruttore, chi non fai pagare. Te lo chiede una volta, poi non deve niente e non compare tra chi non ha pagato. Prima si faceva solo dalla scheda dell’atleta, mettendo 0 nella quota personale.',
+          },
+          {
+            en: 'Their row says "Free", not a dash like an inactive athlete\'s. From its menu, "Back to paying" puts them back on the regular fee; a personal amount goes back in from their record.',
+            it: 'La sua riga dice «Gratis», invece di un trattino uguale a quello di un atleta non in attività. Dal suo menu, «Torna a pagare» lo rimette alla quota normale; una quota personale la rimetti dalla sua scheda.',
+          },
+        ],
+      },
+      {
+        heading: { en: 'Dark theme', it: 'Tema scuro' },
+        bullets: [
+          {
+            en: 'Menus and lists read when you hover them: the highlighted item was white on white, in the payment menu and in every dropdown (belt, status, tier...). It now has a dark ground like the rest.',
+            it: 'I menu e le liste si leggono quando ci passi sopra: la voce evidenziata era bianca su bianco, nel menu del pagamento come in ogni menu a tendina (cintura, stato, fascia...). Ora ha lo sfondo scuro come il resto.',
+          },
+          {
+            en: "The chosen option in toggle buttons (Male / Female, Gi / No-gi), a number field's + and − and the field icons (a dropdown's arrow, the calendar) show clearly too.",
+            it: 'Anche la scelta evidenziata nei pulsanti a scelta (Maschio / Femmina, Gi / No-gi), i pulsanti + e − dei campi numerici e le icone dei campi (la freccia di un menu, il calendario) si vedono bene.',
+          },
+        ],
+      },
+      {
+        heading: { en: 'Classes', it: 'Lezioni' },
+        bullets: [
+          {
+            en: 'The topics sheet keeps what you type: start searching while it was opening and the letters went to "Cancel", and Enter closed it. The cursor now goes to the title, or stays where you put it, and goes back to the button you opened it from when it closes.',
+            it: 'La scheda degli argomenti non perde quello che scrivi: se cominciavi a cercare mentre si stava aprendo, le lettere andavano su «Annulla» e Invio chiudeva la scheda. Ora il cursore va sul titolo, oppure resta dove l’hai messo tu, e alla chiusura torna al pulsante da cui l’avevi aperta.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.73.0',
     date: '2026-09-28',
     headline: {
