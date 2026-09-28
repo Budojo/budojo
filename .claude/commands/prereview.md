@@ -5,7 +5,7 @@ argument-hint: '[--base <branch>]'
 
 # /prereview
 
-Run a reviewer-style pre-review on the current branch's diff. Since the automated post-push reviewer was retired (#1234), this is the only independent review pass a change gets before it lands — run it on anything non-trivial.
+Run a reviewer-style pre-review on the current branch's diff, before the push. It is the pre-push half of review: once the PR is open, [`/review-pr <N>`](./review-pr.md) runs the `pr-reviewer` agent, which posts its findings on the PR as threads (#2015). Run both on anything non-trivial.
 
 ## Steps
 

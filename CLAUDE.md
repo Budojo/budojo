@@ -97,7 +97,7 @@ Run only the gates your diff touches — a docs-only change does not need PEST �
 
 **Before `git push`, also scan [`.claude/gotchas.md`](.claude/gotchas.md)** — a living checklist of mistakes we've made before. Its header carries a routing table: **read only the groups your diff touches**, not the whole file. 30-second read vs. a 5-minute debugging round-trip. When a mistake of this kind bites again, add a `→` entry to the right group in the **same PR** that fixes it.
 
-**Run `/prereview` before pushing.** A fresh sub-agent reads the diff vs `develop` and surfaces up to 5 actionable issues — ~30 s against a CI round-trip, and since the automated reviewer was retired (#1234) it is the only independent pass a change gets.
+**Run `/prereview` before pushing, and `/review-pr <N>` once the PR is open.** A fresh sub-agent reads the diff vs `develop` and surfaces up to 5 actionable issues — ~30 s against a CI round-trip; the second pass posts them on the PR as threads that block the merge until answered (#2015).
 
 It is not optional on a non-trivial diff, because the things it finds are the things the gates cannot see. On one afternoon it caught: a tooltip that could never open because its host had `pointer-events: none`, a payment chip that had been unclickable on the phone since #1402, a sheet Reset that silently cleared a filter it did not show, and two tests passing for the wrong reason. Lint, unit tests and screenshots were all green for every one of them. Skip it only for a typo.
 
@@ -120,10 +120,12 @@ Full checklist + labels + body conventions in [`docs/development/pr-labels.md`](
 
 ### Review
 
-The automated post-push reviewer was retired in #1234 — it cost a paid API key per PR and this is a single-developer project. What replaces it:
+The automated post-push reviewer was retired in #1234 — it cost a paid API key per PR and this is a single-developer project. What replaces it is two passes, both on the owner's plan:
 
-- Run `/prereview` on anything non-trivial **before** pushing. It is now the only independent pass a change gets.
-- Merge once CI is green **and every review thread is resolved**. The paid reviewer is gone, but Copilot's code review still posts threads on PRs, and the `develop` and `main` rulesets require them resolved: a PR with every check green and one open thread reads `BLOCKED`. Read them — they have been real — fix or answer, then resolve.
+- **`/prereview` before the push.** A fresh sub-agent reads the branch's diff and reports up to 5 issues in the session.
+- **[`/review-pr <N>`](./.claude/commands/review-pr.md) after the PR is open, and after every fix round** (#2015). The [`pr-reviewer`](./.claude/agents/pr-reviewer.md) agent posts its verified findings on the PR as inline review threads, and on the next round resolves the ones the new commits fix. Sonnet by default; `--deep` (Opus) for an engine, money, security or migration diff.
+- Merge once CI is green **and every review thread is resolved**. The `develop` and `main` rulesets require it: a PR with every check green and one open thread reads `BLOCKED`. Read the threads — they have been real — fix or answer, then resolve.
+- Copilot's code review is optional. Its quota ran out once (Sep 2026) and the owner would rather not depend on it; when it posts, its threads are read like any other.
 - The PR body still matters: it is the record of why a change looks the way it does.
 
 ---
