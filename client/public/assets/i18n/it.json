@@ -2649,7 +2649,7 @@
         "feeTier": "Fascia di quota",
         "feeOverride": "Quota personale",
         "fiscalCode": "Codice fiscale",
-        "sex": "Sesso (come sul documento)",
+        "sex": "Sesso",
         "birthPlace": "Luogo di nascita"
       },
       "placeholder": {
@@ -2663,8 +2663,7 @@
           "line2": "Scala B, interno 4",
           "zip": "00100",
           "city": "Roma"
-        },
-        "birthPlace": "Comune, o Paese se nato all'estero"
+        }
       },
       "aria": {
         "phoneCountryCode": "Prefisso telefonico",
@@ -2708,7 +2707,9 @@
         "feeOverride": "Solo per questo atleta: sostituisce la fascia e la quota dell'accademia. Metti 0 se si allena gratis.",
         "feeOverrideFree": "Si allena gratis: non deve niente e non compare tra chi non ha pagato.",
         "kidsBeltsHidden": "Le cinture dei bambini sono nascoste: attivale in Accademia → Modifica.",
-        "fiscalCode": "Se è valido, compila la data di nascita e il sesso quando sono vuoti."
+        "fiscalCode": "Se è valido, compila la data di nascita e il sesso quando sono vuoti.",
+        "sex": "Come sul documento",
+        "birthPlace": "Il comune, o il Paese se è nato all'estero"
       },
       "button": {
         "cancel": "Annulla",

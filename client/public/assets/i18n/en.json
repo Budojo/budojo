@@ -2649,7 +2649,7 @@
         "feeTier": "Fee tier",
         "feeOverride": "Personal fee",
         "fiscalCode": "Codice fiscale",
-        "sex": "Sex (as on the ID document)",
+        "sex": "Sex",
         "birthPlace": "Place of birth"
       },
       "placeholder": {
@@ -2663,8 +2663,7 @@
           "line2": "Apt B, unit 4",
           "zip": "00100",
           "city": "Rome"
-        },
-        "birthPlace": "Town, or country if born abroad"
+        }
       },
       "aria": {
         "phoneCountryCode": "Phone country code",
@@ -2708,7 +2707,9 @@
         "feeOverride": "Only for this athlete: it replaces the tier and the academy's fee. Enter 0 if they train free.",
         "feeOverrideFree": "Trains free: nothing is due, and they won't appear among those who haven't paid.",
         "kidsBeltsHidden": "Kids' belts are hidden: turn them on in Academy → Edit.",
-        "fiscalCode": "When it is valid, it fills in an empty date of birth and sex."
+        "fiscalCode": "When it is valid, it fills in an empty date of birth and sex.",
+        "sex": "As on the ID document",
+        "birthPlace": "The town, or the country if born abroad"
       },
       "button": {
         "cancel": "Cancel",
