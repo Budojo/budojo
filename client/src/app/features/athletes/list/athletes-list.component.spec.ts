@@ -42,8 +42,13 @@ class FakeAthleteService {
         status: 'active',
         first_name: 'Giulia',
         last_name: 'Ferraro',
+        // What `AthleteResource` really sends on an update: the counts the
+        // roster loads with `withCount` come back null, not absent.
+        attendance_month_count: null,
+        attendance_total_count: null,
+        monthly_fee_cents: payload.fee_override_cents === 0 ? 0 : 9500,
         ...payload,
-      } as Athlete),
+      } as unknown as Athlete),
   );
 }
 
@@ -1728,7 +1733,13 @@ describe('AthletesListComponent — what is paying for the month (#1402)', () =>
     });
 
     it('saves a personal fee of 0 on accept, and the row says Free', () => {
-      const giulia = makeAthlete({ id: 22, first_name: 'Giulia', payment_coverage: 'none' });
+      const giulia = makeAthlete({
+        id: 22,
+        first_name: 'Giulia',
+        payment_coverage: 'none',
+        attendance_month_count: 5,
+        attendance_total_count: 40,
+      });
       const fixture = render([giulia]);
       accepting(fixture);
       const update = TestBed.inject(AthleteService).update as unknown as Mock;
@@ -1741,6 +1752,10 @@ describe('AthletesListComponent — what is paying for the month (#1402)', () =>
 
       expect(update).toHaveBeenCalledWith(22, { fee_override_cents: 0 });
       expect(chip(fixture, 22)).toBe('Free');
+      // The update's null counts must not wipe what the roster loaded.
+      const row = fixture.componentInstance.athletes().find((a) => a.id === 22);
+      expect(row?.attendance_month_count).toBe(5);
+      expect(row?.attendance_total_count).toBe(40);
       expect(toast).toHaveBeenCalledWith(expect.objectContaining({ severity: 'success' }));
     });
 

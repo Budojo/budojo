@@ -1638,10 +1638,20 @@ export class AthletesListComponent implements OnInit {
 
     this.athleteService.update(athlete.id, { fee_override_cents: free ? 0 : null }).subscribe({
       next: (updated) => {
-        // The server's row, not a patched copy: going back to paying resolves
-        // a fee from the tier or the academy, which only the server knows.
+        // The fee the server resolved, not a guess: going back to paying
+        // lands on the tier's or the academy's, which only the server knows.
+        // Only these two: an update response carries the counts the roster
+        // loads with `withCount` as null, and spreading it wiped them.
         this.athletes.update((rows) =>
-          rows.map((a) => (a.id === athlete.id ? { ...a, ...updated } : a)),
+          rows.map((a) =>
+            a.id === athlete.id
+              ? {
+                  ...a,
+                  fee_override_cents: updated.fee_override_cents,
+                  monthly_fee_cents: updated.monthly_fee_cents,
+                }
+              : a,
+          ),
         );
         // A personal fee above zero replaced by 0 moves the academy's count of
         // them (#1757), which the cached academy only learns from the server.
