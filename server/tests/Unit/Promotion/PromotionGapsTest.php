@@ -368,6 +368,9 @@ function fillEveryGap(array $records, Belt $belt, int $stripes, MartialArt $art,
         if ($gaps === []) {
             return $records;
         }
+        // A step is offered once: the page tracks and skips it by its key.
+        $keys = array_column($gaps, 'key');
+        expect($keys)->toBe(array_values(array_unique($keys)), 'a step offered twice');
 
         $gap = $lastFirst ? $gaps[count($gaps) - 1] : $gaps[0];
         $floor = CarbonImmutable::parse($gap['after']['recorded_at'] ?? '2000-01-01')->addDay();
@@ -382,8 +385,10 @@ function fillEveryGap(array $records, Belt $belt, int $stripes, MartialArt $art,
 
         if ($gap['kind'] === 'stripe') {
             foreach ($records as $record) {
+                // A row records every count it covers: 0 → 2 holds the first stripe too.
                 $recorded = $record->kind === 'stripe' && ! $record->isReset()
-                    && $record->beltAtEvent->value === $gap['belt'] && $record->toStripes === $gap['to_stripes'];
+                    && $record->beltAtEvent->value === $gap['belt']
+                    && $gap['to_stripes'] > ($record->fromStripes ?? 0) && $gap['to_stripes'] <= ($record->toStripes ?? 0);
                 expect($recorded)->toBeFalse("{$gap['key']} is already recorded");
             }
         }
@@ -438,6 +443,9 @@ it('can never be led into a second row on a belt, whatever the order and the dat
     'a dated starting belt confirmed below the belt held (#1990, #1991)' => [[beltRow(1, Belt::White, Belt::Blue, '2019-01-01'), datedStart(2, Belt::White, '2020-06-01')], Belt::Blue, 1, MartialArt::Bjj],
     'a dated start, then a belt contradiction confirmed (#1990, #1991)' => [[datedStart(1, Belt::White, '2015-02-03'), beltRow(2, Belt::Blue, Belt::Purple, '2018-01-01'), beltRow(3, Belt::White, Belt::Blue, '2019-01-01')], Belt::Blue, 1, MartialArt::Bjj],
     'a dated start, then a stripe contradiction confirmed (#1990, #1991)' => [[datedStart(1, Belt::White, '2015-02-03'), stripeRow(2, Belt::White, 2, 3, '2016-01-01'), stripeRow(3, Belt::White, 1, 2, '2016-06-01')], Belt::White, 2, MartialArt::Bjj],
+    'the same step on both sides of a confirmed contradiction (#1991)' => [[beltRow(1, Belt::White, Belt::Blue, '2019-01-01'), stripeRow(2, Belt::Blue, 2, 3, '2020-01-01'), stripeRow(3, Belt::Blue, 0, 1, '2021-01-01')], Belt::Blue, 3, MartialArt::Bjj],
+    'a confirmed jump of two stripes before its belt (#1991)' => [[beltRow(1, Belt::White, Belt::Blue, '2024-01-10'), stripeRow(2, Belt::Blue, 0, 2, '2023-06-01'), stripeRow(3, Belt::Blue, 3, 4, '2025-06-01')], Belt::Blue, 4, MartialArt::Bjj],
+    'a judoka\'s dan jump confirmed before the black belt (#1991)' => [[beltRow(1, Belt::Brown, Belt::Black, '2020-01-10'), stripeRow(2, Belt::Black, 0, 2, '2019-06-01'), stripeRow(3, Belt::Black, 3, 4, '2024-06-01')], Belt::Black, 4, MartialArt::Judo],
     'a stripe dated before its belt, confirmed (#1991)' => [[beltRow(1, Belt::White, Belt::Blue, '2024-01-10'), stripeRow(2, Belt::Blue, 0, 1, '2023-06-01'), stripeRow(3, Belt::Blue, 3, 4, '2025-06-01')], Belt::Blue, 4, MartialArt::Bjj],
 ]);
 
@@ -748,7 +756,7 @@ it('admits the completion of a starting row that opens the history up to its own
 it('offers nothing across a stripe contradiction the owner saved anyway', function (): void {
     // Three white stripes on 18 Nov 2025, then «1 → 2» on 1 Dec: backwards,
     // saved with `confirm_conflict`. No walk goes from 3 back to 1, so the
-    // interval between them offers nothing, and nothing is offered twice.
+    // interval between them offers nothing.
     $result = gapsOf([
         stripeRow(1, Belt::White, 2, 3, '2025-11-18'),
         stripeRow(2, Belt::White, 1, 2, '2025-12-01'),
@@ -770,6 +778,63 @@ it('never offers a stripe the history already records, even across a contradicti
 
     expect(keysOf($result))->toBe(['stripe:blue:2', 'stripe:blue:3'])
         ->and($result['gaps'][0]['after'])->toBe(['promotion_id' => 1, 'recorded_at' => '2024-01-10']);
+});
+
+it('offers a step once, in its oldest window, when a contradiction puts it on two walks (#1991)', function (): void {
+    // Blue 2 → 3 in 2020, then «0 → 1» confirmed in 2021: the second stripe
+    // is missing before 2020 and, walked again from 1 to today's 3, after
+    // 2021 too (the first is on record). The page tracks and skips a step by
+    // its key: it is offered once, where the history reaches it first, and
+    // skipped once.
+    $history = [
+        beltRow(1, Belt::White, Belt::Blue, '2019-01-01'),
+        stripeRow(2, Belt::Blue, 2, 3, '2020-01-01'),
+        stripeRow(3, Belt::Blue, 0, 1, '2021-01-01'),
+    ];
+    $result = gapsOf($history, Belt::Blue, 3);
+
+    expect(keysOf($result))->toBe(['stripe:blue:2'])
+        ->and($result['gaps'][0]['after'])->toBe(['promotion_id' => 1, 'recorded_at' => '2019-01-01'])
+        ->and($result['gaps'][0]['before'])->toBe(['promotion_id' => 2, 'recorded_at' => '2020-01-01'])
+        ->and(gapsOf($history, Belt::Blue, 3, skipped: ['blue:2'])['skipped'])->toBe([
+            ['key' => 'stripe:blue:2', 'kind' => 'stripe', 'belt' => 'blue', 'stripes' => 2],
+        ]);
+});
+
+it('counts every stripe a row jumps as recorded, not only the one it lands on (#1991)', function (): void {
+    // «Blue 0 → 2» typed before the promotion to blue, and confirmed: it
+    // covers the first stripe as much as the second, so only the third is
+    // missing before 3 → 4.
+    $result = gapsOf([
+        beltRow(1, Belt::White, Belt::Blue, '2024-01-10'),
+        stripeRow(2, Belt::Blue, 0, 2, '2023-06-01'),
+        stripeRow(3, Belt::Blue, 3, 4, '2025-06-01'),
+    ], Belt::Blue, 4);
+
+    expect(keysOf($result))->toBe(['stripe:blue:3']);
+});
+
+it('still offers the stripes a consistent jump leaves between its neighbours', function (): void {
+    // A normal 1 → 3 is no contradiction: nothing between it and the rows
+    // around it is on record, and the steps missing around it are offered.
+    $result = gapsOf([
+        beltRow(1, Belt::White, Belt::Blue, '2019-01-01'),
+        stripeRow(2, Belt::Blue, 1, 3, '2021-01-01'),
+    ], Belt::Blue, 4);
+
+    expect(keysOf($result))->toBe(['stripe:blue:1', 'stripe:blue:4']);
+});
+
+it('counts every dan a judoka\'s row jumps as recorded, as for stripes (#1991)', function (): void {
+    // Judo dan rows are stripe rows on black: «0 → 2» confirmed before the
+    // promotion to black covers the first two, so only the third is missing.
+    $result = gapsOf([
+        beltRow(1, Belt::Brown, Belt::Black, '2020-01-10'),
+        stripeRow(2, Belt::Black, 0, 2, '2019-06-01'),
+        stripeRow(3, Belt::Black, 3, 4, '2024-06-01'),
+    ], Belt::Black, 4, MartialArt::Judo);
+
+    expect(keysOf($result))->toBe(['stripe:black:3']);
 });
 
 it('offers nothing across a belt contradiction the owner saved anyway, and carries on after it', function (): void {
