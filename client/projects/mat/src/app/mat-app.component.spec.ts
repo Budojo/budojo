@@ -79,6 +79,65 @@ describe('MatAppComponent (the #2027 spike screen)', () => {
     expect(text(fixture, 'mat-count')).toBe('1');
   });
 
+  it('says the server test runs only in the app, in a browser', async () => {
+    const fixture = await render();
+
+    expect(text(fixture, 'mat-server-unavailable')).toBe('Only available in the app on the phone.');
+  });
+
+  describe('inside the app (#2044)', () => {
+    const holder = globalThis as { Capacitor?: unknown };
+
+    afterEach(() => {
+      delete holder.Capacitor;
+      vi.unstubAllGlobals();
+    });
+
+    it('starts the server, then shows the cold start and the measurements', async () => {
+      holder.Capacitor = {
+        Plugins: {
+          PhpServer: {
+            start: async () => ({
+              port: 41234,
+              totalMs: 1800,
+              unpackMs: 900,
+              migrateMs: 400,
+              serverMs: 500,
+              extracted: true,
+              seeded: true,
+              demoEmail: 'admin@example.it',
+              demoPassword: 'x',
+            }),
+          },
+        },
+      };
+      vi.stubGlobal('fetch', async (input: string) => {
+        const body = input.endsWith('/auth/login')
+          ? { token: 't' }
+          : input.endsWith('/athletes')
+            ? { data: [{ id: 1 }], meta: { total: 40 } }
+            : { status: 'ok' };
+        return new Response(JSON.stringify(body), { status: 200 });
+      });
+      const fixture = await render();
+
+      (
+        fixture.nativeElement.querySelector(
+          '[data-cy="mat-server-run"] button',
+        ) as HTMLButtonElement
+      ).click();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      const results = text(fixture, 'mat-server-results');
+      expect(results).toContain('1800 ms');
+      expect(results).toContain('Athletes in the database');
+      expect(results).toContain('40');
+    });
+  });
+
   it('draws the sample row with the belt spine, and says it is a sample', async () => {
     const fixture = await render();
     const host = fixture.nativeElement as HTMLElement;

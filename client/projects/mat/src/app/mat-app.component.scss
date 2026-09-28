@@ -89,3 +89,36 @@
   color: var(--p-text-muted-color);
   font-size: 0.8125rem;
 }
+
+// #2044: the server measurements, label above value.
+.mat__results {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
+  margin: 0;
+
+  dt {
+    font-size: 0.8125rem;
+    color: var(--p-text-muted-color);
+  }
+
+  dd {
+    margin: 0 0 0.5rem;
+    font-size: 1.0625rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.mat__detail {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 400;
+  color: var(--p-text-muted-color);
+}
+
+.mat__error {
+  margin: 0;
+  color: var(--budojo-danger-ink);
+  overflow-wrap: anywhere;
+}

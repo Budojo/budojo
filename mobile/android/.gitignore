@@ -99,3 +99,9 @@ app/src/main/assets/public
 app/src/main/assets/capacitor.config.json
 app/src/main/assets/capacitor.plugins.json
 app/src/main/res/xml/config.xml
+
+# Built in CI (#2044): the static PHP and the server bundle
+app/src/main/jniLibs
+app/src/main/assets/budojo-server.zip
+app/src/main/assets/demo.sqlite
+app/src/main/assets/spike.json

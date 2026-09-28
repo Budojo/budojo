@@ -37,6 +37,58 @@
     />
   </section>
 
+  <section class="mat__section" aria-labelledby="mat-server">
+    <h2 id="mat-server" class="mat__heading">{{ 'mat.spike.server.heading' | translate }}</h2>
+    @if (serverAvailable) {
+      <p class="mat__note">{{ 'mat.spike.server.help' | translate }}</p>
+      <p-button
+        data-cy="mat-server-run"
+        [label]="
+          (serverState() === 'running' ? 'mat.spike.server.running' : 'mat.spike.server.run')
+            | translate
+        "
+        [loading]="serverState() === 'running'"
+        size="large"
+        [fluid]="true"
+        (onClick)="runServerSpike()"
+      />
+      @if (serverStart(); as start) {
+        <dl class="mat__results" data-cy="mat-server-results">
+          <dt>{{ 'mat.spike.server.coldStart' | translate }}</dt>
+          <dd>
+            {{ start.alreadyRunning ? '—' : start.totalMs + ' ms' }}
+            @if (!start.alreadyRunning) {
+              <span class="mat__detail">
+                {{
+                  'mat.spike.server.coldStartDetail'
+                    | translate
+                      : { unpack: start.unpackMs, migrate: start.migrateMs, server: start.serverMs }
+                }}
+              </span>
+            }
+          </dd>
+          @if (benchmark(); as result) {
+            <dt>{{ 'mat.spike.server.login' | translate }}</dt>
+            <dd>{{ result.loginMs }} ms</dd>
+            <dt>{{ 'mat.spike.server.roster' | translate }}</dt>
+            <dd>p50 {{ result.roster.p50 }} ms · p95 {{ result.roster.p95 }} ms</dd>
+            <dt>{{ 'mat.spike.server.mark' | translate }}</dt>
+            <dd>p50 {{ result.mark.p50 }} ms · p95 {{ result.mark.p95 }} ms</dd>
+            <dt>{{ 'mat.spike.server.athletes' | translate }}</dt>
+            <dd>{{ result.athletes }}</dd>
+          }
+        </dl>
+      }
+      @if (serverError(); as message) {
+        <p class="mat__error" role="alert">{{ message }}</p>
+      }
+    } @else {
+      <p class="mat__note" data-cy="mat-server-unavailable">
+        {{ 'mat.spike.server.onlyOnPhone' | translate }}
+      </p>
+    }
+  </section>
+
   <footer class="mat__foot">
     <span data-cy="mat-build">{{ 'mat.spike.build' | translate: { build: build } }}</span>
     <p-button [label]="otherLanguage()" [text]="true" (onClick)="toggleLanguage()" />

@@ -3632,7 +3632,20 @@
       "savedAt": "Last saved: {{when}}",
       "neverSaved": "Nothing saved yet.",
       "increment": "+1",
-      "build": "Build {{build}}"
+      "build": "Build {{build}}",
+      "server": {
+        "heading": "Budojo on the phone",
+        "help": "Starts Budojo's server inside the phone, with a demo academy, and measures how fast it is. Try it in airplane mode too.",
+        "run": "Start and measure",
+        "running": "Measuring…",
+        "onlyOnPhone": "Only available in the app on the phone.",
+        "coldStart": "Cold start",
+        "coldStartDetail": "unpack {{unpack}} ms · migrations {{migrate}} ms · server {{server}} ms",
+        "login": "Log in",
+        "roster": "Athlete list, 20 times",
+        "mark": "Mark a presence, 10 times",
+        "athletes": "Athletes in the database"
+      }
     }
   }
 }
