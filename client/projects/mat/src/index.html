@@ -6,6 +6,32 @@
     <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="color-scheme" content="light dark" />
+    <!--
+      Pre-paint theme (#2043 review): the same script as the desktop SPA's
+      `src/index.html`, which explains it in full. `ThemeService.bootstrap()`
+      runs after Angular boots, so without this a phone in dark mode opens on
+      the light background for a frame. It decides only the class and the
+      `color-scheme`; the service stays the source of truth, which is why it is
+      copied rather than rewritten. Change both together.
+    -->
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem('budojoTheme');
+          var dark =
+            stored === 'dark' ||
+            (stored !== 'light' &&
+              window.matchMedia &&
+              window.matchMedia('(prefers-color-scheme: dark)').matches);
+          if (dark) {
+            document.documentElement.classList.add('dark');
+            document.documentElement.style.colorScheme = 'dark';
+          }
+        } catch (e) {
+          /* no theme is better than no app */
+        }
+      })();
+    </script>
   </head>
   <body>
     <app-root></app-root>

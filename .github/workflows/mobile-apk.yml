@@ -4,14 +4,22 @@ name: Mobile APK
 # client's `mat` application builds, goes through Capacitor and comes out
 # signed with the release key. Attaching it to a release is #2040; until then
 # the APK is a workflow artifact the owner sideloads to test on a phone.
+#
+# It runs on every client change, not only the mat app's: the mat app imports
+# the SPA's shared components, services, theme and translations, so a change
+# anywhere under client/ can break it (#2043 review).
 on:
   pull_request:
     paths:
       - 'mobile/**'
-      - 'client/projects/mat/**'
-      - 'client/src/app/core/config/**'
+      - 'client/**'
       - '.github/workflows/mobile-apk.yml'
   workflow_dispatch:
+
+# Read-only token, as in pr-checks.yml: this job decodes the release key, so it
+# gets nothing it does not need.
+permissions:
+  contents: read
 
 concurrency:
   group: mobile-apk-${{ github.ref }}
