@@ -257,7 +257,7 @@ describe('Syllabus coverage', () => {
       .and('contain.text', 'Closed guard');
   });
 
-  it('moves the popover to the second week opened, not only its content', () => {
+  it('opens a second week in the same sheet after the first is closed', () => {
     stub();
 
     cy.visitAuthenticated('/dashboard/stats/syllabus');
@@ -265,17 +265,24 @@ describe('Syllabus coverage', () => {
 
     cy.get('[data-cy="season-map-cell-1-2026-10-05"]').click();
     cy.get('[data-cy="season-map-popover"]').should('contain.text', 'Advanced');
+    cy.focused().type('{esc}');
+    cy.get('[data-cy="season-map-popover"]').should('not.exist');
 
     cy.get('[data-cy="season-map-cell-1-2026-10-19"]').click();
     cy.get('[data-cy="season-map-popover"]').should('contain.text', 'Planned');
+  });
 
-    // PrimeNG's show() leaves an open popover where it was; it must follow.
-    cy.get('[data-cy="season-map-cell-1-2026-10-19"]').then(($cell) => {
-      const cell = $cell[0].getBoundingClientRect();
-      cy.get('.p-popover').should(($pop) => {
-        const pop = $pop[0].getBoundingClientRect();
-        expect(Math.abs(pop.left - cell.left)).to.be.lessThan(32);
-      });
+  it('keeps the whole sheet inside the window, even from a row low on the page (#1992)', () => {
+    stub();
+
+    cy.visitAuthenticated('/dashboard/stats/syllabus');
+    cy.wait('@calendar');
+
+    cy.get('[data-cy="season-map-position-1"]').click();
+    cy.get('.p-dialog').should(($dialog) => {
+      const box = $dialog[0].getBoundingClientRect();
+      expect(box.top).to.be.at.least(0);
+      expect(box.bottom).to.be.at.most(Cypress.config('viewportHeight'));
     });
   });
 
@@ -286,19 +293,19 @@ describe('Syllabus coverage', () => {
     cy.wait('@calendar');
 
     cy.get('[data-cy="season-map-position-1"]').focus().type('{enter}');
+    cy.get('.p-dialog .season-map__pop-title').should('contain.text', 'Closed guard, this season');
     cy.get('[data-cy="season-map-popover"]')
-      .should('contain.text', 'Closed guard, this season')
-      .and('contain.text', 'Week of')
+      .should('contain.text', 'Week of')
       .and('contain.text', 'Armbar')
       .and('contain.text', 'Planned');
-    cy.focused().should('have.id', 'season-map-pop-title');
+    cy.focused().should('have.class', 'season-map__pop-title');
 
     // Escape hands focus back to the name that opened it.
     cy.focused().type('{esc}');
     cy.focused().should('have.attr', 'data-cy', 'season-map-position-1');
   });
 
-  it("opens a position's season as a bottom sheet on a phone, with a fingertip-sized name", () => {
+  it("opens a position's season as the same sheet on a phone, with a fingertip-sized name", () => {
     cy.viewport(VIEWPORT_IPHONE_SE.width, VIEWPORT_IPHONE_SE.height);
     stub();
 
@@ -306,15 +313,18 @@ describe('Syllabus coverage', () => {
     cy.wait('@calendar');
 
     cy.get('[data-cy="season-map-position-1"]').click();
-    cy.get('.p-drawer [data-cy="season-map-popover"]')
-      .should('be.visible')
-      .and('contain.text', 'Closed guard, this season');
-    cy.focused().should('have.id', 'season-map-drawer-title');
-    // A modal dialog with a name, not PrimeNG's nameless `complementary`.
-    cy.get('.p-drawer')
-      .should('have.attr', 'role', 'dialog')
-      .and('have.attr', 'aria-modal', 'true')
-      .and('have.attr', 'aria-labelledby', 'season-map-drawer-title');
+    cy.get('.p-dialog [data-cy="season-map-popover"]').should('be.visible');
+    cy.get('.p-dialog .season-map__pop-title').should('contain.text', 'Closed guard, this season');
+    cy.focused().should('have.class', 'season-map__pop-title');
+    // A modal dialog named by its title: the id it points at is the title's.
+    cy.get('.p-dialog .season-map__pop-title')
+      .invoke('attr', 'id')
+      .then((id) => {
+        cy.get('.p-dialog')
+          .should('have.attr', 'role', 'dialog')
+          .and('have.attr', 'aria-modal', 'true')
+          .and('have.attr', 'aria-labelledby', id);
+      });
     cy.screenshot('season-map-sheet-375', { capture: 'viewport', overwrite: true });
   });
 

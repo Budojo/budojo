@@ -202,36 +202,45 @@ describe('SeasonMapComponent (#1858)', () => {
     expect(panel?.groups[0].lessons.map((l) => l.id)).toEqual([40, 41]);
   });
 
-  it('opens a bottom sheet instead of the popover in a narrow window', () => {
-    // Defined, writable and deleted afterwards — never assigned. The test
-    // environment has no matchMedia at all, and a leftover property (even an
-    // `undefined` one) leaks into every spec file that shares the worker
-    // (see web-push.service.spec.ts and theme.service.spec.ts).
-    Object.defineProperty(window, 'matchMedia', {
-      value: (query: string) => ({
-        matches: false,
-        media: query,
-        addEventListener: () => undefined,
-        removeEventListener: () => undefined,
-      }),
-      configurable: true,
-      writable: true,
-    });
+  it('opens the panel as one sheet at any width, never a popover that can be cut off (#1992)', () => {
+    const { fixture, component, httpMock } = setup();
+    flush(httpMock);
+    fixture.detectChanges();
+
+    (
+      fixture.nativeElement.querySelector('[data-cy="season-map-position-1"]') as HTMLButtonElement
+    ).click();
+    fixture.detectChanges();
+
+    expect(component['panelOpen']()).toBe(true);
+    // No popover left in the template: the dialog is the only form.
+    expect(fixture.nativeElement.querySelector('p-popover')).toBeNull();
+    expect(fixture.nativeElement.querySelector('p-drawer')).toBeNull();
+  });
+
+  it('hands focus back to the control that opened the sheet, when closed from its header (#1992)', () => {
+    const { fixture, component, httpMock } = setup();
+    flush(httpMock);
+    fixture.detectChanges();
+
+    const trigger = fixture.nativeElement.querySelector(
+      '[data-cy="season-map-position-1"]',
+    ) as HTMLButtonElement;
+    trigger.click();
+    fixture.detectChanges();
+
+    // The ✕ and the title live in the dialog's header, outside the body.
+    const dialog = document.createElement('div');
+    dialog.className = 'p-dialog season-map-sheet';
+    const close = document.createElement('button');
+    dialog.appendChild(close);
+    document.body.appendChild(dialog);
     try {
-      const { fixture, component, httpMock } = setup();
-      flush(httpMock);
-      fixture.detectChanges();
-
-      (
-        fixture.nativeElement.querySelector(
-          '[data-cy="season-map-position-1"]',
-        ) as HTMLButtonElement
-      ).click();
-      fixture.detectChanges();
-
-      expect(component['drawerOpen']()).toBe(true);
+      close.focus();
+      component['restoreFocus']();
+      expect(document.activeElement).toBe(trigger);
     } finally {
-      delete (window as unknown as { matchMedia?: unknown }).matchMedia;
+      dialog.remove();
     }
   });
 
@@ -712,24 +721,24 @@ describe("SeasonMapComponent — a position's techniques", () => {
     const { component } = withTechniques();
     const asked: number[] = [];
     component.planTechnique.subscribe((id) => asked.push(id));
-    component['drawerOpen'].set(true);
+    component['panelOpen'].set(true);
 
     component['planTopic'](31);
 
     expect(asked).toEqual([31]);
     // A sheet on top of the panel would be one dialog too many.
-    expect(component['drawerOpen']()).toBe(false);
+    expect(component['panelOpen']()).toBe(false);
   });
 
   it('closes the panel and asks the host who has seen a technique', () => {
     const { component } = withTechniques();
     const asked: number[] = [];
     component.openTechnique.subscribe((id) => asked.push(id));
-    component['drawerOpen'].set(true);
+    component['panelOpen'].set(true);
 
     component['openTopic'](11);
 
     expect(asked).toEqual([11]);
-    expect(component['drawerOpen']()).toBe(false);
+    expect(component['panelOpen']()).toBe(false);
   });
 });
