@@ -5,7 +5,7 @@
 Two repository rulesets on `github.com/Budojo/budojo` that together:
 
 - Forbid direct commits to `main` and `develop` — everything goes through a pull request
-- Require all 8 CI jobs to be green before merge
+- Require all 9 CI jobs to be green before merge (`main` also requires «Whats-new pin matches expected release», 10 in all)
 - Do **not** require the PR branch to be up to date with its base. A branch behind develop merges as it is, and only a conflict (`DIRTY`) needs develop merged in. This is the live setting, checked 28 Sep 2026; these files said `true` until #2020.
 - Keep history linear (no merge-commit ziggurats)
 
@@ -29,7 +29,7 @@ Both rulesets target a single branch each and carry identical rules with one del
 All other rules are identical:
 
 - `pull_request` required, with `dismiss_stale_reviews_on_push: true`, `required_review_thread_resolution: true`, `required_approving_review_count: 0` (single-dev repo — GitHub forbids self-approval, so the count stays at 0 until there are collaborators who can approve)
-- `required_status_checks` with `strict_required_status_checks_policy: false` (see above) and all 8 contexts listed:
+- `required_status_checks` with `strict_required_status_checks_policy: false` (see above) and all 9 contexts listed:
   - `🔬 PHPStan (level 9)`
   - `🧪 PEST Tests`
   - `🎨 PHP CS Fixer (dry-run)`
@@ -38,6 +38,7 @@ All other rules are identical:
   - `✨ Angular Format (Prettier)`
   - `🎭 Cypress E2E`
   - `🔬 OpenAPI Lint (Spectral)`
+  - `📝 Commits & PR body` (since #2021: commitlint on a develop PR's commits and title, and no AI attribution in any PR's commits or body)
 - `required_linear_history`
 - `non_fast_forward` (no force-push)
 - `deletion` forbidden (branch cannot be deleted)
@@ -118,10 +119,16 @@ Every change to the ruleset enforcement is logged in the repo's audit log. Don't
 
 Preferred alternative: open a PR anyway, mark it `hotfix`, and merge as soon as CI passes — the PR path is almost always fast enough and leaves a better paper trail.
 
-## Relationship with legacy branch protection
+## Legacy branch protection: removed
 
-`gh api repos/Budojo/budojo/branches/{main,develop}/protection` still returns branch-protection rules from before rulesets were introduced. They overlap with the ruleset but are **less strict** (their `required_status_checks.contexts: []` meant no CI was actually required — the gap this PR closes). The two systems coexist and the **most restrictive wins**. Checked on 28 Sep 2026:
-- **`develop`:** its legacy protection still says `strict: true`, but with **zero required contexts**, and GitHub applies «up to date» only when at least one status check is required. So it doesn't hold back a branch that is merely behind.
-- **`main`:** its legacy protection is `strict: false`.
+**Before 28 Sep 2026:** the rulesets coexisted with the branch-protection rules from before them, and the most restrictive of the two won.
+- **`develop`'s legacy protection** added nothing: its `strict: true` had no required context to apply to.
+- **`main`'s legacy protection held the one check the ruleset did not:** «Whats-new pin matches expected release».
 
-**Follow-up**: after a few merges confirm the new rulesets behave correctly, remove the legacy branch protection to avoid two overlapping sources of truth. Do it in its own tiny PR with a link to this doc so the decision trail is clear.
+**The owner's cleanup (#2022):**
+1. That check was added to `main-protection`, and only there: the job runs only on PRs into `main`, so on `develop` it would never report and would block every PR.
+2. Both legacy rules were deleted.
+
+The rulesets are now the only source of truth: `gh api repos/Budojo/budojo/branches/{main,develop}/protection` answers «Branch not protected». Required checks:
+- **`develop`:** 9 contexts.
+- **`main`:** the same 9 plus the whats-new pin.
