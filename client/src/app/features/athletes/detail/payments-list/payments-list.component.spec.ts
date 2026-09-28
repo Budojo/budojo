@@ -5,21 +5,31 @@ import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import type { Mock } from 'vitest';
+import { TranslateService } from '@ngx-translate/core';
 import { provideI18nTesting } from '../../../../../test-utils/i18n-test';
 import { AcademyService } from '../../../../core/services/academy.service';
 import { AthleteService } from '../../../../core/services/athlete.service';
-import { AthletePayment, PaymentService } from '../../../../core/services/payment.service';
+import {
+  AthletePayment,
+  AthletePaymentYear,
+  PaymentService,
+} from '../../../../core/services/payment.service';
 import { PaymentsListComponent } from './payments-list.component';
 
 /** Per-year payment fixtures, keyed the way the endpoint is. */
 const PAYMENTS_BY_YEAR = new Map<number, AthletePayment[]>();
+/** The months the server calls late, per year, as `YYYY-MM` (#1654). */
+const OVERDUE_BY_YEAR = new Map<number, string[]>();
 
 class FakePaymentService {
   // Honours the year it is asked for. A fake that ignores it returns the SAME
-  // array for both calls of a season, so `pages.flat()` merges a payload with
-  // its own duplicate and dropping half the fetch passes the suite (#1709).
+  // array for both calls of a season, so the merge joins a payload with its
+  // own duplicate and dropping half the fetch passes the suite (#1709).
   readonly list = vi.fn((_athleteId: number, year: number) =>
-    of(PAYMENTS_BY_YEAR.get(year) ?? ([] as AthletePayment[])),
+    of<AthletePaymentYear>({
+      payments: PAYMENTS_BY_YEAR.get(year) ?? [],
+      overdueMonths: OVERDUE_BY_YEAR.get(year) ?? [],
+    }),
   );
   readonly markPaid = vi.fn(() =>
     of({
@@ -77,7 +87,9 @@ function setup(
     /** The resolved floor as the server sends it, `YYYY-MM-01` (#1742). */
     billingFloor?: string | null;
     /** Override the academy's season — the table is built on it (#1709). */
-    academy?: { season_start_month: number; season_start: string };
+    academy?: { season_start_month: number; season_start?: string };
+    /** The months the server calls late, `YYYY-MM` (#1654). None unless said. */
+    overdueMonths?: string[];
   } = {},
 ) {
   TestBed.configureTestingModule({
@@ -137,6 +149,11 @@ function setup(
     const bucket = PAYMENTS_BY_YEAR.get(p.year) ?? [];
     bucket.push(p);
     PAYMENTS_BY_YEAR.set(p.year, bucket);
+  }
+  OVERDUE_BY_YEAR.clear();
+  for (const key of opts.overdueMonths ?? []) {
+    const year = Number(key.slice(0, 4));
+    OVERDUE_BY_YEAR.set(year, [...(OVERDUE_BY_YEAR.get(year) ?? []), key]);
   }
 
   const fixture = TestBed.createComponent(PaymentsListComponent);
@@ -427,9 +444,15 @@ describe('PaymentsListComponent — billing periods (#1382)', () => {
   it('marks every month of the period paid, not only the one it started in', () => {
     const { fixture } = setup({ payments: [quarterlyFrom(2)] });
 
-    for (const month of [2, 3, 4]) {
+    // The month it started in carries the badge; the months it covers say
+    // they are part of it (#1654), and none of them is unpaid.
+    expect(fixture.nativeElement.querySelector('[data-cy="payment-row-2"]').textContent).toContain(
+      'Paid',
+    );
+    for (const month of [3, 4]) {
       const row = fixture.nativeElement.querySelector(`[data-cy="payment-row-${month}"]`);
-      expect(row.textContent, `month ${month}`).toContain('Paid');
+      expect(row.textContent, `month ${month}`).toContain('Part of the February payment');
+      expect(row.textContent, `month ${month}`).not.toContain('Unpaid');
     }
     expect(fixture.nativeElement.querySelector('[data-cy="payment-row-5"]').textContent).toContain(
       'Unpaid',
@@ -540,12 +563,12 @@ describe('PaymentsListComponent — billing periods (#1382)', () => {
     const { fixture } = setup({ payments: [payment] });
 
     // December's own row is in THIS table now; January and February
-    // are what this year sees of it.
+    // are what this year sees of it — part of December's payment (#1654).
     for (const month of [1, 2]) {
       expect(
         fixture.nativeElement.querySelector(`[data-cy="payment-row-${month}"]`).textContent,
         `month ${month}`,
-      ).toContain('Paid');
+      ).toContain('Part of the December payment');
     }
     expect(fixture.nativeElement.querySelector('[data-cy="payment-row-3"]').textContent).toContain(
       'Unpaid',
@@ -1110,25 +1133,181 @@ describe('PaymentsListComponent — when the money arrived, and how (#1761)', ()
   });
 });
 
-describe("PaymentsListComponent — the owner's month, not UTC's (#1968)", () => {
-  const tz = process.env['TZ'];
+describe('PaymentsListComponent — a ledger that reads at a glance (#1654)', () => {
+  // February 2027, inside the fixture academy's 2026/27 season: September to
+  // January are behind us, February is this month, March onwards are ahead.
+  beforeEach(() => vi.setSystemTime(new Date(2027, 1, 15, 12)));
+  afterEach(() => vi.useRealTimers());
 
-  afterEach(() => {
-    vi.useRealTimers();
-    process.env['TZ'] = tz;
-    TestBed.resetTestingModule();
+  const row = (fixture: ReturnType<typeof setup>['fixture'], month: number): HTMLElement =>
+    fixture.nativeElement.querySelector(`[data-cy="payment-row-${month}"]`) as HTMLElement;
+
+  function quarterly(year: number, month: number): AthletePayment {
+    return {
+      id: 7,
+      athlete_id: 42,
+      year,
+      month,
+      period_months: 3,
+      amount_cents: 16500,
+      paid_at: `${year}-${`${month}`.padStart(2, '0')}-05T10:00:00Z`,
+    };
+  }
+
+  describe('an unpaid month in the past is late, not merely unpaid (PAY-6)', () => {
+    it('calls late exactly the months the server says are late', () => {
+      const { fixture } = setup({ overdueMonths: ['2026-09', '2027-01'] });
+
+      // January is two weeks late; the owner chasing money needs that word.
+      expect(row(fixture, 1).textContent).toContain('Overdue');
+      expect(row(fixture, 9).textContent).toContain('Overdue');
+      // October is past and unpaid, but the server did not call it late —
+      // a carnet may have paid for it. The ledger does not second-guess.
+      expect(row(fixture, 10).textContent).toContain('Unpaid');
+      expect(row(fixture, 10).textContent).not.toContain('Overdue');
+      // February is this month: due, not late.
+      expect(row(fixture, 2).textContent).toContain('Unpaid');
+      expect(row(fixture, 2).textContent).not.toContain('Overdue');
+    });
+
+    // The rows the old browser-side rule accused: none of them owes anything,
+    // and nothing on this page could tell — a carnet and a status are not in
+    // the payments it loads. The server knows; here it says nothing is late.
+    it.each([
+      ['no fee applies', { fee: null }],
+      [
+        'a tier priced at nothing',
+        { feeTier: { id: 3, label: 'Kids', amount_cents: 0, lessons_per_week: 2 } },
+      ],
+      ['a carnet holder', {}],
+      ['an inactive athlete', {}],
+    ] as const)('calls nothing late for %s when the server says nothing is', (_case, opts) => {
+      const { fixture } = setup({ ...opts, overdueMonths: [] });
+
+      expect(fixture.nativeElement.textContent).not.toContain('Overdue');
+    });
+
+    it('says the same on the phone card', () => {
+      const { fixture } = setup({ overdueMonths: ['2027-01'] });
+      const card = fixture.nativeElement.querySelector('[data-cy="payment-card-1"]') as HTMLElement;
+
+      expect(card.textContent).toContain('Overdue');
+    });
   });
 
-  it('starts the new season at midnight in Rome, not two hours later', () => {
-    // 00:30 on 1 September in Rome is still August in UTC, and still last
-    // season. Before the academy answers, the season is derived from the
-    // month — the owner's, as the server reads it.
-    process.env['TZ'] = 'Europe/Rome';
-    vi.useFakeTimers({ toFake: ['Date'] });
-    vi.setSystemTime(new Date('2026-08-31T22:30:00Z'));
+  describe('the controls say what they do (PAY-5)', () => {
+    it('labels the mark and the undo instead of a bare tick and cross', () => {
+      const paid: AthletePayment = {
+        id: 1,
+        athlete_id: 42,
+        year: 2027,
+        month: 1,
+        amount_cents: 9500,
+        paid_at: '2027-01-15T00:00:00+00:00',
+      };
+      const { fixture } = setup({ payments: [paid] });
+      const el: HTMLElement = fixture.nativeElement;
 
-    const { component } = setup({ academy: { season_start_month: 9, season_start: '' } });
+      const mark = el.querySelector('[data-cy="payment-mark-2"]') as HTMLElement;
+      const undo = el.querySelector('[data-cy="payment-unmark-1"]') as HTMLElement;
+      expect(mark.textContent?.trim()).toBe('Mark paid');
+      expect(undo.textContent?.trim()).toBe('Undo payment');
+      // A visible label, not an icon standing in for one.
+      expect(mark.querySelector('.p-button-icon-only')).toBeNull();
+      expect(undo.querySelector('.p-button-icon-only')).toBeNull();
+    });
+  });
 
-    expect(component['currentSeasonYear']()).toBe(2026);
+  describe('one payment reads as one payment (PAY-2)', () => {
+    it('keeps the date, the amount and the undo on the month the period started', () => {
+      const { fixture } = setup({ payments: [quarterly(2026, 10)] });
+
+      expect(row(fixture, 10).textContent).toContain('165');
+      expect(row(fixture, 10).textContent).toContain('5 October 2026');
+      expect(fixture.nativeElement.querySelector('[data-cy="payment-unmark-10"]')).not.toBeNull();
+    });
+
+    it('greys the months it also covers instead of repeating the payment on them', () => {
+      const { fixture } = setup({ payments: [quarterly(2026, 10)] });
+
+      for (const month of [11, 12]) {
+        const r = row(fixture, month);
+        expect(r.classList.contains('payments-list__row--continued'), `month ${month}`).toBe(true);
+        // What the row is, once — not "Paid · — · 5 October" a second time.
+        expect(r.textContent, `month ${month}`).toContain('Part of the October payment');
+        expect(r.textContent, `month ${month}`).not.toContain('5 October 2026');
+        expect(r.querySelector('p-tag'), `month ${month}`).toBeNull();
+        expect(
+          fixture.nativeElement.querySelector(`[data-cy="payment-unmark-${month}"]`),
+          `month ${month}`,
+        ).toBeNull();
+      }
+    });
+
+    it('keeps the undo on a covered month when the month it started in is not in this table', () => {
+      // July's quarter reaches into September: July is last season's table,
+      // so September is the only place this season can undo it from.
+      const { fixture } = setup({ payments: [quarterly(2026, 7)] });
+
+      expect(fixture.nativeElement.querySelector('[data-cy="payment-unmark-9"]')).not.toBeNull();
+    });
+
+    it('gives a period from last season one undo, on the first month this table shows', () => {
+      // A July half-year covers September to December here: four rows, one
+      // payment, so one undo — not four buttons that each remove all of it.
+      const halfYear: AthletePayment = { ...quarterly(2026, 7), period_months: 6 };
+      const { fixture } = setup({ payments: [halfYear] });
+      const el: HTMLElement = fixture.nativeElement;
+
+      expect(el.querySelector('[data-cy="payment-unmark-9"]')).not.toBeNull();
+      expect(el.querySelector('[data-cy="payment-card-unmark-9"]')).not.toBeNull();
+      for (const month of [10, 11, 12]) {
+        expect(
+          el.querySelector(`[data-cy="payment-unmark-${month}"]`),
+          `month ${month}`,
+        ).toBeNull();
+        expect(
+          el.querySelector(`[data-cy="payment-card-unmark-${month}"]`),
+          `month ${month}`,
+        ).toBeNull();
+      }
+    });
+  });
+
+  describe('one clock for the whole tab', () => {
+    const tz = process.env['TZ'];
+    afterEach(() => {
+      process.env['TZ'] = tz;
+    });
+
+    it("opens on the season the owner's calendar is in, not UTC's", () => {
+      // 00:30 on 1 September in Rome is still 31 August in UTC. Until the
+      // academy says which season it is, the tab works it out — from the
+      // owner's day, as the server does, or it opens on the season just ended.
+      process.env['TZ'] = 'Europe/Rome';
+      vi.setSystemTime(new Date('2026-08-31T22:30:00Z'));
+
+      const { component } = setup({ academy: { season_start_month: 9, season_start: undefined } });
+
+      expect(component['seasonYear']()).toBe(2026);
+    });
+  });
+
+  describe('a period inside a sentence (PAY-7)', () => {
+    it('writes the Italian period in lower case, as the middle of a sentence', () => {
+      const { fixture, component } = setup({ billingPeriodMonths: 3 });
+      TestBed.inject(TranslateService).use('it');
+      const confirmation = fixture.componentRef.injector.get(ConfirmationService);
+      const spy = vi.spyOn(confirmation, 'confirm').mockImplementation(() => confirmation);
+      const event = new MouseEvent('click');
+      Object.defineProperty(event, 'currentTarget', { value: document.createElement('button') });
+
+      const march = component['monthRows']().find((r: { month: number }) => r.month === 3)!;
+      component.confirmToggleRow(event, march);
+
+      const message = spy.mock.calls[0][0].message as string;
+      expect(message).toContain('copre: da marzo a maggio 2027');
+      expect(message).not.toContain('Da ');
+    });
   });
 });

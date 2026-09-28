@@ -46,6 +46,11 @@ import { AcademyService } from '../../../../core/services/academy.service';
 /** The keyed popup that asks for the date and the method (#1761). */
 const MARK_PAID_CONFIRM_KEY = 'mark-paid';
 
+/** A month as the server's `overdue_months` writes it: `2026-03` (#1654). */
+function monthKey(year: number, month: number): string {
+  return `${year}-${`${month}`.padStart(2, '0')}`;
+}
+
 /**
  * What a 422 on marking a month paid means, by the field the server blamed —
  * first match wins.
@@ -77,21 +82,15 @@ function validationToastKey(fields: Record<string, unknown>): string {
 
 /**
  * Per-athlete payments tab on the detail page (#182 Surface 2).
- * Renders a 12-row table of the current calendar year, one row per
- * month, showing whether a payment row exists. Inline "Mark paid" /
- * "Unmark paid" buttons let the coach record back-payments and undo
- * mistakes — the same write path as the athletes-list inline toggle
- * (Surface 1), differs only in that here every month is reachable,
- * not just "this month".
+ * Renders a 12-row table of one season (#1709), one row per month, showing
+ * whether a payment covers it. Inline "Mark paid" / "Undo payment" buttons
+ * let the coach record back-payments and undo mistakes — the same write path
+ * as the athletes-list inline toggle (Surface 1), differs only in that here
+ * every month is reachable, not just "this month".
  *
- * **Why current year only.** A coach sometimes wants to see "did
- * Mario pay all 12 months in 2026?" — the year-by-year table
- * answers that. Multi-year navigation (a year selector) is a
- * v2 feature; today the page lists only `getUTCFullYear()`.
- *
- * UTC alignment with Surface 1: same `getUTCFullYear()` /
- * `getUTCMonth()` arithmetic so the badge state and the persisted
- * row stay in sync across the day/month boundary.
+ * It opens on the season in progress and steps back to the one the athlete
+ * joined in (#1636). Until the academy says which season that is, it reads
+ * the owner's local year and month, not UTC's (#1654).
  *
  * **Every month is markable, including ones that have not arrived.**
  * #1636 disabled them on the reasoning that there is nothing to mark paid
@@ -149,8 +148,23 @@ interface MonthRow {
    * would treble the year's takings on a table people read as a ledger.
    */
   readonly coveredByEarlierPeriod: boolean;
+  /**
+   * Whether this row carries the undo (#1654, PAY-2). One payment, one
+   * control: on the month its period started, where its amount and date sit,
+   * not on every month it also covers, where a ✕ on each row read as three
+   * payments to undo. A period that started before this table's first month
+   * has its undo on that first month instead: a July half-year on a September
+   * season is undone from September, once, not from each of Sep–Dec.
+   */
+  readonly undoHere: boolean;
   /** How long the covering period is, for the row's "Feb-Apr" caption. */
   readonly periodMonths: number;
+  /**
+   * Late, not merely unpaid (#1654, PAY-6): the server listed this month in
+   * `overdue_months`, by the arrears list's rule (#1760). The browser does not
+   * decide it — it cannot see a carnet, a free tier or an inactive status.
+   */
+  readonly overdue: boolean;
 }
 
 @Component({
@@ -214,14 +228,16 @@ export class PaymentsListComponent implements OnInit {
   protected readonly athleteName = signal<string>('');
   protected readonly loading = signal<boolean>(true);
   protected readonly payments = signal<readonly AthletePayment[]>([]);
+  /** The loaded season's late months, `YYYY-MM`, as the server listed them (#1654). */
+  private readonly overdueMonths = signal<ReadonlySet<string>>(new Set());
 
-  // Current UTC year/month — fixed at component construction so the
-  // table doesn't tick over while the user has it open. A page reload
-  // pulls fresh values; the cost of staleness for a tab visit is
-  // bounded by the user's session.
-  private readonly nowUtc = new Date();
-  private readonly currentYear = this.nowUtc.getFullYear(); // the owner's month (#1968)
-  private readonly currentMonth = this.nowUtc.getMonth() + 1;
+  // The owner's year and month, fixed at component construction so the table
+  // doesn't tick over while it is open. Their calendar, not UTC's (#1654): at
+  // 00:30 on 1 September in Rome UTC is still in August, and a UTC clock
+  // opened the tab on the season that had just ended.
+  private readonly now = new Date();
+  private readonly currentYear = this.now.getFullYear();
+  private readonly currentMonth = this.now.getMonth() + 1;
 
   /**
    * The year on screen (#1636, PAY-1).
@@ -472,6 +488,7 @@ export class PaymentsListComponent implements OnInit {
     const fee = this.hasMonthlyFee();
     const free = this.trainsFree();
     const floorMonth = this.billingFloorMonth();
+    const overdueMonths = this.overdueMonths();
     const first = this.seasonYear() * 12 + (this.seasonStartMonth() - 1);
 
     return Array.from({ length: 12 }, (_, slot) => {
@@ -480,6 +497,12 @@ export class PaymentsListComponent implements OnInit {
       const month = (absolute % 12) + 1;
       const payment = byAbsolute.get(absolute) ?? null;
       const beforeBillingFloor = floorMonth !== null && absolute < floorMonth;
+      // Why an unpaid month is not a debt, when it is not (#1742, #1757).
+      const notOwedReason = beforeBillingFloor
+        ? 'athletes.detail.payments.beforeBillingFloor'
+        : free
+          ? 'athletes.detail.payments.trainsFree'
+          : null;
       // Read-only when no monthly fee is configured at all — there's nothing
       // to record. While the fee is still unknown the buttons stay live: a
       // click that really has no fee behind it gets the server's 422 and its
@@ -489,17 +512,21 @@ export class PaymentsListComponent implements OnInit {
       // No cap at today: an athlete who pays October in September has to be
       // recordable in October's row, which is the only row that means it
       // (#1711). The server has always allowed it.
+      //
+      // Per ROW, not per table: the earliest season straddles the server's
+      // `min:2020`, so its first months are outside what the server will
+      // accept while the rest of the same table is inside it. Flooring the
+      // whole season either hides months that are recordable or offers
+      // buttons that 422 (#1709).
+      const canEdit = fee && year >= PaymentsListComponent.EARLIEST_YEAR;
+      const coveredByEarlierPeriod =
+        payment !== null && !(payment.year === year && payment.month === month);
       return {
         month,
         year,
         labelKey: MONTH_KEYS[month - 1],
         payment,
-        // Per ROW, not per table: the earliest season straddles the server's
-        // `min:2020`, so its first months are outside what the server will
-        // accept while the rest of the same table is inside it. Flooring the
-        // whole season either hides months that are recordable or offers
-        // buttons that 422 (#1709).
-        canEdit: fee && year >= PaymentsListComponent.EARLIEST_YEAR,
+        canEdit,
         // Below the floor this month has no answer, so the table gives none
         // (#1742). Deliberately NOT folded into `canEdit`: the two floors
         // mean different things. `EARLIEST_YEAR` mirrors the server's
@@ -507,14 +534,11 @@ export class PaymentsListComponent implements OnInit {
         // about knowledge, and the owner transcribing a paper register must
         // still be able to record against it.
         beforeBillingFloor,
-        notOwedReason: beforeBillingFloor
-          ? 'athletes.detail.payments.beforeBillingFloor'
-          : free
-            ? 'athletes.detail.payments.trainsFree'
-            : null,
-        coveredByEarlierPeriod:
-          payment !== null && !(payment.year === year && payment.month === month),
+        notOwedReason,
+        coveredByEarlierPeriod,
+        undoHere: canEdit && payment !== null && (!coveredByEarlierPeriod || absolute === first),
         periodMonths: payment?.period_months ?? 1,
+        overdue: payment === null && overdueMonths.has(monthKey(year, month)),
       };
     });
   });
@@ -675,15 +699,15 @@ export class PaymentsListComponent implements OnInit {
     const years = this.seasonStartMonth() === 1 ? [forYear] : [forYear, forYear + 1];
     forkJoin(years.map((y) => this.paymentService.list(athleteId, y)))
       .pipe(
-        map((pages) => pages.flat()),
         finalize(() => {
           if (epoch === this.loadEpoch) this.loading.set(false);
         }),
       )
       .subscribe({
-        next: (payments) => {
+        next: (pages) => {
           if (epoch !== this.loadEpoch) return;
-          this.payments.set(payments);
+          this.payments.set(pages.flatMap((page) => page.payments));
+          this.overdueMonths.set(new Set(pages.flatMap((page) => page.overdueMonths)));
           this.loadedYear.set(forYear);
         },
         // On error we deliberately KEEP the previous `payments` value

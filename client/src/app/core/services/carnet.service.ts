@@ -47,6 +47,12 @@ export interface CarnetEntry {
   readonly carnet_id: number;
   readonly attendance_record_id: number;
   readonly used_on: string;
+  /**
+   * The class this entry paid for, as the lesson recorded its name that day
+   * (#1654). Null for a presence with no lesson — a self-mark, or one from
+   * before the timetable — and absent on a payload older than the field.
+   */
+  readonly lesson_name?: string | null;
 }
 
 interface CarnetResponse {

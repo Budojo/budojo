@@ -3588,7 +3588,9 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
     clock: false,
     act: () => {
       press('[data-cy="season-map-position-1"]');
-      cy.get('[data-cy="season-map-popover"]', { timeout: 4000 }).should('be.visible');
+      // The sheet scrolls a long season inside itself, so its body is taller
+      // than what shows; the title is what must be on screen (#1992).
+      cy.get('.p-dialog .season-map__pop-title', { timeout: 4000 }).should('be.visible');
     },
   });
   // An empty week still to come, opened to plan it (#1859): the classes of
