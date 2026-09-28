@@ -1290,8 +1290,21 @@ export class AthletesListComponent implements OnInit {
     return athlete.payment_coverage ?? (athlete.paid_current_month ? 'monthly' : 'none');
   }
 
-  /** "Mensile", "Trimestrale", "Carnet · 8", "Non pagato". */
+  /**
+   * Someone the owner has chosen not to charge (#2011): a personal fee of 0
+   * (#1757) on an athlete who trains. The owner's own row and an inactive
+   * athlete owe nothing for other reasons, and keep the em-dash.
+   */
+  protected trainsFree(athlete: Athlete): boolean {
+    return (
+      athlete.fee_override_cents === 0 && athlete.status === 'active' && athlete.is_self !== true
+    );
+  }
+
+  /** "Mensile", "Trimestrale", "Carnet · 8", "Non pagato", "Gratis". */
   protected coverageLabel(athlete: Athlete): string {
+    if (this.trainsFree(athlete)) return this.translate.instant('athletes.list.coverage.free');
+
     const coverage = this.coverageOf(athlete);
 
     if (coverage === 'carnet') {
@@ -1318,6 +1331,8 @@ export class AthletesListComponent implements OnInit {
    * and the test a future chip has to pass to join it.
    */
   protected coverageIcon(athlete: Athlete): string {
+    if (this.trainsFree(athlete)) return 'pi pi-gift';
+
     const coverage = this.coverageOf(athlete);
 
     if (coverage === 'none') return 'pi pi-times-circle';
@@ -1330,6 +1345,8 @@ export class AthletesListComponent implements OnInit {
    * that gets warning tone. Everything else is settled and reads as settled.
    */
   protected coverageSeverity(athlete: Athlete): 'success' | 'warn' | 'secondary' {
+    if (this.trainsFree(athlete)) return 'secondary';
+
     const coverage = this.coverageOf(athlete);
 
     if (coverage === 'none') return 'warn';
@@ -1345,6 +1362,27 @@ export class AthletesListComponent implements OnInit {
    * ignore half of it.
    */
   protected openPaymentMenu(event: MouseEvent, athlete: Athlete): void {
+    const openPayments: MenuItem = {
+      label: this.translate.instant('athletes.list.payMenu.openPayments'),
+      icon: 'pi pi-wallet',
+      command: () => this.goToTab(athlete, 'payments'),
+    };
+
+    // Nothing to mark paid, and no carnet to sell to someone who pays
+    // nothing: the chip's menu is the way back out of free (#2011).
+    if (this.trainsFree(athlete)) {
+      this.paymentMenuItems.set([
+        {
+          label: this.translate.instant('athletes.list.payMenu.backToPaying'),
+          icon: 'pi pi-money-bill',
+          command: () => this.confirmTrainsFree(event, athlete, false),
+        },
+        openPayments,
+      ]);
+      this.paymentMenu?.toggle(event);
+      return;
+    }
+
     const coverage = this.coverageOf(athlete);
     const items: MenuItem[] = [];
 
@@ -1373,11 +1411,15 @@ export class AthletesListComponent implements OnInit {
       });
     }
 
+    // The owner's partner, a coach's child (#2011): the state existed as a
+    // personal fee of 0, three screens away in the athlete's record.
     items.push({
-      label: this.translate.instant('athletes.list.payMenu.openPayments'),
-      icon: 'pi pi-wallet',
-      command: () => this.goToTab(athlete, 'payments'),
+      label: this.translate.instant('athletes.list.payMenu.trainFree'),
+      icon: 'pi pi-gift',
+      command: () => this.confirmTrainsFree(event, athlete, true),
     });
+
+    items.push(openPayments);
 
     this.paymentMenuItems.set(items);
     this.paymentMenu?.toggle(event);
@@ -1560,6 +1602,77 @@ export class AthletesListComponent implements OnInit {
     if (athlete.user_handle) {
       void this.router.navigate(['/dashboard/u', athlete.user_handle]);
     }
+  }
+
+  /**
+   * Train free, or go back to paying (#2011), from the chip.
+   *
+   * Confirmed like marking paid: it changes what the athlete owes from this
+   * month on, and a mis-tap on a phone should not quietly drop someone off the
+   * unpaid list. Going back clears the personal fee rather than guessing the
+   * amount they paid before; a personal one is set again from their record.
+   */
+  protected confirmTrainsFree(event: MouseEvent, athlete: Athlete, free: boolean): void {
+    const name = `${athlete.first_name} ${athlete.last_name}`;
+
+    this.confirmationService.confirm({
+      target: event.currentTarget as EventTarget,
+      message: this.translate.instant(
+        free
+          ? 'athletes.list.confirm.trainFreeMessage'
+          : 'athletes.list.confirm.backToPayingMessage',
+        { name },
+      ),
+      acceptLabel: this.translate.instant(
+        free ? 'athletes.list.confirm.trainFreeAccept' : 'athletes.list.confirm.backToPayingAccept',
+      ),
+      rejectLabel: this.translate.instant('common.cancel'),
+      rejectButtonProps: CONFIRM_REJECT_BUTTON,
+      accept: () => this.applyTrainsFree(athlete, free),
+    });
+  }
+
+  private applyTrainsFree(athlete: Athlete, free: boolean): void {
+    const name = `${athlete.first_name} ${athlete.last_name}`;
+    const before = athlete.fee_override_cents;
+
+    this.athleteService.update(athlete.id, { fee_override_cents: free ? 0 : null }).subscribe({
+      next: (updated) => {
+        // The fee the server resolved, not a guess: going back to paying
+        // lands on the tier's or the academy's, which only the server knows.
+        // Only these two: an update response carries the counts the roster
+        // loads with `withCount` as null, and spreading it wiped them.
+        this.athletes.update((rows) =>
+          rows.map((a) =>
+            a.id === athlete.id
+              ? {
+                  ...a,
+                  fee_override_cents: updated.fee_override_cents,
+                  monthly_fee_cents: updated.monthly_fee_cents,
+                }
+              : a,
+          ),
+        );
+        // A personal fee above zero replaced by 0 moves the academy's count of
+        // them (#1757), which the cached academy only learns from the server.
+        this.academyService.refreshForPersonalFee(before, updated.fee_override_cents);
+        this.messageService.add({
+          severity: 'success',
+          summary: this.translate.instant(
+            free ? 'athletes.list.toast.trainsFree' : 'athletes.list.toast.backToPaying',
+            { name },
+          ),
+          life: 3000,
+        });
+      },
+      error: () => {
+        this.messageService.add({
+          severity: 'error',
+          summary: this.translate.instant('athletes.list.toast.feeChangeFailed', { name }),
+          life: 5000,
+        });
+      },
+    });
   }
 
   /**

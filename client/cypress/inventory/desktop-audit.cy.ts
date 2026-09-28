@@ -2985,6 +2985,30 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
   // The "Non pagato" list (#1931): the roster narrowed to who owes this
   // month, each row with the WhatsApp reminder already written. The filter
   // goes to the API as `?paid=no`, so the intercept keys on it.
+  // «Si allena gratis» from the chip, and the «Gratis» chip that undoes it
+  // (#2011): the owner's partner, a coach's child.
+  screen('20-athletes-pay-menu', '/dashboard/athletes', ROSTER_READY, {
+    act: () => {
+      press('[data-cy="athlete-coverage-1"]');
+      cy.get('.p-menu-overlay .p-menu-list', { timeout: 4000 }).should('be.visible');
+    },
+  });
+  screen('20-athletes-trains-free', '/dashboard/athletes', ROSTER_READY, {
+    stubs: () => {
+      cy.intercept('GET', '/api/v1/athletes*', {
+        statusCode: 200,
+        body: page(
+          ATHLETES.map((a) =>
+            a.id === 1 ? { ...a, fee_override_cents: 0, monthly_fee_cents: 0 } : a,
+          ),
+        ),
+      });
+    },
+    act: () => {
+      press('[data-cy="athlete-coverage-1"]');
+      cy.get('.p-menu-overlay .p-menu-list', { timeout: 4000 }).should('be.visible');
+    },
+  });
   screen('20-athletes-unpaid', '/dashboard/athletes?paid=no', ROSTER_READY, {
     stubs: () => {
       cy.intercept(
@@ -3086,6 +3110,42 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
     },
   });
   screen('21-athlete-new', '/dashboard/athletes/new', '[data-cy="athlete-form"]');
+  // The dark theme's interactive states (#2010). The ramp is inverted there,
+  // so a preset token pointing at `surface.800` for "dark" lands light; a
+  // keyboard focus paints the same ground a hover does, and is the one a
+  // screenshot can hold.
+  screen('20-athletes-pay-menu-dark', '/dashboard/athletes', ROSTER_READY, {
+    theme: 'dark',
+    act: () => {
+      press('[data-cy^="athlete-coverage-"]');
+      cy.get('.p-menu-overlay .p-menu-list', { timeout: 4000 }).should('be.visible');
+      cy.get('.p-menu-overlay .p-menu-list').focus().type('{downarrow}{downarrow}');
+      cy.get('.p-menu-overlay .p-menu-item.p-focus').should('exist');
+    },
+  });
+  screen('21-athlete-new-select-dark', '/dashboard/athletes/new', '[data-cy="athlete-form"]', {
+    theme: 'dark',
+    act: () => {
+      press('#belt');
+      cy.get('.p-select-overlay .p-select-option', { timeout: 4000 }).should('be.visible');
+      cy.focused().type('{downarrow}{downarrow}');
+      cy.get('.p-select-overlay .p-select-option.p-focus').should('exist');
+    },
+  });
+  screen(
+    '21-athlete-new-selectbutton-dark',
+    '/dashboard/athletes/new',
+    '[data-cy="athlete-form"]',
+    {
+      theme: 'dark',
+      act: () => {
+        cy.get('[data-cy="athlete-sex"]')
+          .contains('button, [role="radio"], .p-togglebutton', /Maschio|Male/)
+          .click({ force: true });
+        cy.get('[data-cy="athlete-sex"]').scrollIntoView({ offset: { top: -240, left: 0 } });
+      },
+    },
+  );
   screen('21-athlete-import', '/dashboard/athletes/import', '[data-cy="import-back"]');
   screen('21-athlete-ready', '/dashboard/athletes/ready', '[data-cy="ready-list"]');
 

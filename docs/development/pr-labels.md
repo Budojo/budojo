@@ -51,7 +51,8 @@ Rules:
 3. **Assignee** — always assign `m-bonanno` (`gh pr edit <N> --add-assignee m-bonanno`).
 4. **Labels** — apply the type label at creation (table above).
 5. **Project board** — add the PR, set both the issue and the PR item to `In Progress` via `./.claude/scripts/board-set.sh <N> in-progress`.
-6. **No AI attribution — ever** — do NOT add "Generated with Claude Code", "Co-Authored-By: Claude", or any Anthropic / AI text anywhere: PR bodies, commit messages, code comments, docs.
+6. **No AI attribution — ever** — do NOT add "Generated with Claude Code", "Co-Authored-By: Claude", or any Anthropic / AI text anywhere: PR bodies, commit messages, code comments, docs, review comments.
+7. **Review** — run [`/review-pr <N>`](../../.claude/commands/review-pr.md) once the PR is open and again after each fix round (#2015). Its findings land as review threads; merge only when every thread is resolved, by a fix or a reasoned reply.
 
 ## PR body file convention
 

@@ -186,10 +186,49 @@ export class LessonSheetComponent {
       const heldOn = this.heldOn();
       this.academyClassId();
       untracked(() => {
+        // Whatever had the keyboard before the sheet did (#2001), to hand it
+        // back on close. Not a second opening's: moving to another class or
+        // week re-runs this with the keyboard already inside the sheet.
+        const active = document.activeElement;
+        if (active instanceof HTMLElement && active.closest('.lesson-sheet') === null) {
+          this.opener = active;
+        }
         this.slot.set(heldOn);
         this.load();
       });
     });
+  }
+
+  /**
+   * Where the keyboard lands once the sheet is open (#2001).
+   *
+   * Not PrimeNG's focus-on-show: that runs when the opening animation ends,
+   * while the programme is usually still loading, and with nothing in the
+   * body to take it, it picked the footer's «Annulla». Keys typed into the
+   * search in that moment went to a button, and Enter closed the sheet. The
+   * title takes it instead, and only if the owner has not already put the
+   * keyboard somewhere inside the sheet: a click into the search wins.
+   */
+  protected settleFocus(): void {
+    const sheet = document.querySelector('.lesson-sheet');
+    if (sheet === null || sheet.contains(document.activeElement)) return;
+    sheet.querySelector<HTMLElement>('.sheet-head__title')?.focus();
+  }
+
+  /** The element that had the keyboard when the sheet opened. */
+  private opener: HTMLElement | null = null;
+
+  /**
+   * The sheet closed. When it took the keyboard with it (Escape, the close
+   * button, Save), hand it back to what opened it rather than to `<body>` at
+   * the top of the page; when the owner clicked somewhere else, leave it there.
+   */
+  protected restoreFocus(): void {
+    const active = document.activeElement;
+    const inside = active instanceof HTMLElement && active.closest('.lesson-sheet') !== null;
+    if ((active === null || active === document.body || inside) && this.opener?.isConnected) {
+      this.opener.focus();
+    }
   }
 
   /** Something picked or typed that Save would send. */

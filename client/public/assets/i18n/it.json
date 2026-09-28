@@ -2176,7 +2176,10 @@
         "markedUnpaidDetail": "{{name}} — {{month}}/{{year}}",
         "carnetSoldSummary": "Carnet venduto",
         "carnetSoldDetail": "Il carnet di {{name}} parte da oggi.",
-        "carnetSoldError": "Non è stato possibile vendere il carnet."
+        "carnetSoldError": "Non è stato possibile vendere il carnet.",
+        "trainsFree": "{{name}} si allena gratis",
+        "backToPaying": "{{name}} torna a pagare",
+        "feeChangeFailed": "Non sono riuscito a cambiare la quota di {{name}}. Riprova."
       },
       "confirm": {
         "deleteMessage": "Eliminare {{name}}? I suoi documenti saranno cancellati definitivamente e non potranno essere ripristinati — solo la riga atleta può essere annullata.",
@@ -2188,7 +2191,11 @@
         "markPaidPeriodMessage": "Segnare {{name}} come pagato? Il pagamento copre: {{period}}",
         "markUnpaidPeriodMessage": "Segnare {{name}} come non pagato? Il pagamento copriva: {{period}}",
         "sellCarnetMessage": "Vendere un carnet da {{price}} per {{entries}} ingressi a {{name}}?",
-        "sellCarnetAccept": "Vendi"
+        "sellCarnetAccept": "Vendi",
+        "trainFreeMessage": "{{name}} si allena gratis? Non deve niente e non compare tra chi non ha pagato.",
+        "trainFreeAccept": "Si allena gratis",
+        "backToPayingMessage": "{{name}} torna a pagare la quota normale. Una quota personale la metti dalla sua scheda.",
+        "backToPayingAccept": "Torna a pagare"
       },
       "restoreConfirm": {
         "message": "Ripristinare {{name}}?",
@@ -2209,13 +2216,16 @@
         "annual": "Annuale",
         "carnet": "Carnet · {{count}}",
         "none": "Non pagato",
-        "aria": "Pagamento di {{name}}: {{coverage}}. Apri le azioni."
+        "aria": "Pagamento di {{name}}: {{coverage}}. Apri le azioni.",
+        "free": "Gratis"
       },
       "payMenu": {
         "markPaid": "Segna pagato",
         "undoPaid": "Annulla pagamento",
         "sellCarnet": "Vendi un carnet",
-        "openPayments": "Apri i pagamenti"
+        "openPayments": "Apri i pagamenti",
+        "trainFree": "Si allena gratis",
+        "backToPaying": "Torna a pagare"
       },
       "importButton": "Importa",
       "showTrashed": "Mostra atleti cancellati",

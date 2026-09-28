@@ -1,9 +1,11 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { TranslateService } from '@ngx-translate/core';
 import { MessageService } from 'primeng/api';
+import { Dialog } from 'primeng/dialog';
 import {
   Lesson,
   LessonSuggestion,
@@ -123,6 +125,77 @@ function flushOpen(
 
 describe('LessonSheetComponent (#1564)', () => {
   afterEach(() => TestBed.inject(HttpTestingController).verify());
+
+  describe('where the keyboard lands when it opens (#2001)', () => {
+    // PrimeNG's own focus-on-show ran at the end of the opening animation,
+    // while the programme was still loading: with nothing in the body to
+    // take it, it chose the footer, and «Annulla» had the keyboard. Anything
+    // typed into the search in that moment went to a button, and Enter
+    // closed the sheet. It was also the lesson-topics flake in CI.
+    it('does not let the dialog hand the keyboard to «Annulla»', () => {
+      const { fixture, httpMock } = setup();
+      flushOpen(httpMock);
+      fixture.detectChanges();
+
+      const dialog = fixture.debugElement.query(By.directive(Dialog)).componentInstance as Dialog;
+      expect(dialog.focusOnShow).toBe(false);
+    });
+
+    it('puts the keyboard on the sheet title, where no key goes astray', () => {
+      const { fixture, component, httpMock } = setup();
+      flushOpen(httpMock);
+      fixture.detectChanges();
+      (document.activeElement as HTMLElement | null)?.blur();
+
+      component['settleFocus']();
+
+      expect(document.activeElement?.classList.contains('sheet-head__title')).toBe(true);
+    });
+
+    it('settles the keyboard when the dialog says it has opened', () => {
+      // The wiring, not just its two ends: `(onShow)` has to reach settleFocus.
+      const { fixture, httpMock } = setup();
+      flushOpen(httpMock);
+      fixture.detectChanges();
+      (document.activeElement as HTMLElement | null)?.blur();
+
+      const dialog = fixture.debugElement.query(By.directive(Dialog)).componentInstance as Dialog;
+      dialog.onShow.emit({});
+
+      expect(document.activeElement?.classList.contains('sheet-head__title')).toBe(true);
+    });
+
+    it('hands the keyboard back to what opened it when it closes', () => {
+      // The button that opened the sheet had the keyboard before it; closing
+      // must not leave the owner on <body>, at the top of the page.
+      const opener = document.createElement('button');
+      document.body.appendChild(opener);
+      opener.focus();
+
+      const { fixture, component, httpMock } = setup();
+      flushOpen(httpMock);
+      fixture.detectChanges();
+      component['settleFocus']();
+
+      const dialog = fixture.debugElement.query(By.directive(Dialog)).componentInstance as Dialog;
+      dialog.onHide.emit({});
+
+      expect(document.activeElement).toBe(opener);
+      opener.remove();
+    });
+
+    it('leaves the keyboard where the owner already put it', () => {
+      const { fixture, component, httpMock } = setup();
+      flushOpen(httpMock);
+      fixture.detectChanges();
+      const search = document.querySelector<HTMLInputElement>('[data-cy="lesson-sheet-search"]');
+      search?.focus();
+
+      component['settleFocus']();
+
+      expect(document.activeElement).toBe(search);
+    });
+  });
 
   it('reads the slot, the programme and what was taught lately, all at once', () => {
     const { fixture, httpMock } = setup();
