@@ -10,6 +10,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ConfirmationService, MessageService } from 'primeng/api';
+import { WeekShareComponent } from '../../../shared/components/week-share/week-share.component';
 import { ButtonModule } from 'primeng/button';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogModule } from 'primeng/dialog';
@@ -96,6 +97,7 @@ interface Day {
     TrainingDaysPickerComponent,
     LessonSheetComponent,
     AcademyClosuresComponent,
+    WeekShareComponent,
   ],
   providers: [ConfirmationService, MessageService],
   templateUrl: './timetable.component.html',

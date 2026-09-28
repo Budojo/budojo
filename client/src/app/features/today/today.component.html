@@ -201,6 +201,19 @@
         </h2>
 
         <ul class="today-rows">
+          @if (sendWeekShown()) {
+            <li>
+              <a
+                class="today-row today-row--link"
+                routerLink="/dashboard/academy/timetable"
+                data-cy="today-week-send"
+              >
+                <span class="today-row__label">{{ 'today.week.sendWeek' | translate }}</span>
+                <span class="today-row__value">{{ 'today.week.sendWeekValue' | translate }}</span>
+                <i class="pi pi-angle-right today-row__chevron" aria-hidden="true"></i>
+              </a>
+            </li>
+          }
           @if (presences() !== null) {
             <li class="today-row" data-cy="today-week-presences">
               <span class="today-row__label">{{ 'today.week.presences' | translate }}</span>

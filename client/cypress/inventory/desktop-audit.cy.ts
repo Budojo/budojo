@@ -2884,6 +2884,15 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       cy.get('[data-cy="timetable-form"]').should('be.visible');
     },
   });
+  // The week's message from the timetable (#1940): the header's secondary
+  // action, opened on its two ways to send. Monday 18:30 on the frozen clock,
+  // so this week's classes are still ahead.
+  screen('11-timetable-week-share', '/dashboard/academy/timetable', '[data-cy="week-share"]', {
+    act: () => {
+      press('[data-cy="week-share"]');
+      cy.get('.p-menu').should('be.visible');
+    },
+  });
 
   // ── 12. Programme ──────────────────────────────────────────────────────
   screen('12-syllabus', '/dashboard/academy/syllabus', '[data-cy="syllabus-tree"]', {

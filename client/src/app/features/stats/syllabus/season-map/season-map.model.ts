@@ -5,7 +5,7 @@ import {
   CoveragePosition,
   SyllabusCalendar,
 } from '../../../../core/services/stats.service';
-import { admitsTopic, occurrencesOf } from '../../../../shared/utils/class-occurrences';
+import { admitsTopic, mondayOf, occurrencesOf } from '../../../../shared/utils/class-occurrences';
 
 /**
  * How a week reads on a position's row (#1858).
@@ -50,16 +50,6 @@ export interface MapRow {
 export interface CellLesson extends CalendarLesson {
   /** What the lesson did on this position: the position itself, or its techniques. */
   readonly topicNames: readonly string[];
-}
-
-/** The Monday of the ISO week holding `iso` (a `Y-m-d` string). */
-export function mondayOf(iso: string): string {
-  const [y, m, d] = iso.split('-').map(Number);
-  const day = new Date(Date.UTC(y, m - 1, d));
-  // getUTCDay: 0 = Sunday. ISO weeks start on Monday.
-  const back = (day.getUTCDay() + 6) % 7;
-  day.setUTCDate(day.getUTCDate() - back);
-  return day.toISOString().slice(0, 10);
 }
 
 /**

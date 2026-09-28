@@ -417,8 +417,9 @@ describe('Syllabus coverage', () => {
       cy.stub(win.navigator.clipboard, 'writeText').resolves().as('copy');
     });
 
-    // Nothing is left this week (today is Wednesday 14): the plan is next week's.
-    const plan = "The week's plan\nMon 19 · Fundamentals · Closed guard";
+    // Nothing is left this week (today is Wednesday 14): the plan is next week's,
+    // each lesson with its time (#1940).
+    const plan = "The week's plan\nMon 19 · 19:00 Fundamentals · Closed guard";
     cy.get('[data-cy="season-map-share-text"]').should('contain.text', '19 Oct');
     cy.get('[data-cy="season-map-share-whatsapp"]')
       .should('have.attr', 'href', `https://wa.me/?text=${encodeURIComponent(plan)}`)
