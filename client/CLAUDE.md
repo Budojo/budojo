@@ -69,27 +69,28 @@ A page wrapper inside the shell declares `max-width: var(--budojo-page-content-m
 
 Public routes outside the dashboard shell (`/privacy`, `/sub-processors`) keep their padding in `_legal-page.scss` and consume `--budojo-container-prose` directly because the shell can't reach them and their own padding is already included in `max-width` via border-box. See `docs/design/DESIGN_SYSTEM.md` § 1.7.
 
-### Mobile-first is the default
+### Desktop first, still usable on a phone
 
-> **🔭 Active porting (May 2026 onwards):** the SPA is being audited screen-by-screen against this canon. Roadmap: [`docs/design/mobile-ux-audit.md`](../docs/design/mobile-ux-audit.md) with 🟢 / 🟡 / 🔴 / ⚪ status per finding. **Every new feature PR is mobile-friendly on day one** — not retrofitted in a follow-up.
+**The product is the Windows desktop app** (M11): the owner at the academy's PC, in a window. Design and verify there first, at the widths the [`desktop-audit`](./cypress/inventory/desktop-audit.cy.ts) harness shoots, 1280 and 960 ([`docs/design/ux-audit-v2.61.md`](../docs/design/ux-audit-v2.61.md)). **Every screen must still be usable on a phone:**
+- one column;
+- no sideways page scroll;
+- 48px targets.
 
-The primary form factor is the phone: instructor moves around the mat with device in hand. Desktop is **secondary**. Every component, screen, and layout decision starts mobile and scales **up**.
+A window can be made narrow, and the phone is where a screen goes next. That was the owner's call on 28 Sep 2026; it replaces the old "phone first, desktop secondary" (#2020).
 
 | Token | Pixel | Meaning |
 |-------|-------|---------|
-| — | < 768px | Mobile (default). Topbar + bottom tab bar + ➕ create-sheet (#1107), single-column, full-bleed cards. |
-| `768px` | tablet / small desktop | The desktop social rail (#1107) replaces the bottom bar, multi-column grids can emerge. |
-| `1024px` | desktop | Full two-column dashboard, wider dialogs, more horizontal nav. |
+| — | < 768px | Narrow: topbar, bottom tab bar and ➕ create-sheet (#1107), one column, full-bleed cards. |
+| `768px` | tablet / small desktop | The social rail (#1107) replaces the bottom bar; multi-column grids can start. |
+| `1024px` | desktop | The full two-column dashboard, wider dialogs. |
 | `1440px` | wide desktop | Max-width content, no further scaling. |
 
 **Rules:**
 
-- **Base styles are mobile.** Write the mobile layout first; `@media (min-width: <token>)` to scale up. Never `@media (max-width: …)` down.
-- **Dialogs** (`p-dialog`) use `[breakpoints]="{ '768px': '92vw' }"` so they never overflow.
-- **Tables** (`p-table`) either wrap in a scrollable container (horizontal scroll with visual cue) or collapse to a card layout below 768 px.
-- **`100dvh` over `100vh`** for full-height layouts (iOS Safari dynamic viewport). Fall back to `100vh` as progressive enhancement.
-- **Safe area**: honour `env(safe-area-inset-*)` on any pinned UI (topbar, bottom nav) when iOS notches become relevant.
-- **Gesture interactions** (swipe-to-delete, pull-to-refresh) are NOT default — added only where the business flow genuinely benefits.
+- **Write the CSS narrow-first**, and scale up with `@media (min-width: <token>)`, never `max-width` down. That's how the code base is written, and it keeps the phone-width layout the one that can't break. It is an authoring rule, not a priority: the design effort starts at the desktop widths.
+- **Dialogs** (`p-dialog`) use `[breakpoints]="{ '768px': '92vw' }"` so they never overflow a narrow window.
+- **Tables** (`p-table`) either sit in a scrollable container (with a visible cue) or collapse to cards below 768 px.
+- **Gestures** (swipe-to-delete, pull-to-refresh) are never the default: add one only where the flow genuinely benefits.
 
 ### Updates and the service worker
 
@@ -265,5 +266,5 @@ Multi-viewport specs catch layout breaks mechanically, but the rendered result o
 - **State via signals**, not `BehaviorSubject` where a `signal()` works.
 - **Reactive Forms, not template-driven**, for anything beyond a two-field filter.
 - **Run `./.claude/scripts/test-client.sh` before every push.** All four (prettier, lint, stylelint, vitest) must be clean. Cypress runs in CI.
-- **Visually verify EVERY visible change before push.** Gates verify code, not the rendered result. Anything the user sees — template, SCSS, icon, copy, colour, layout, shared-component adoption, responsive — gets a real-browser smoke at desktop + mobile (no "trivial" exception). See [`docs/development/visual-verification.md`](../docs/development/visual-verification.md) for the screenshot recipe. Skip only when the environment genuinely can't render it — then say so explicitly.
+- **Visually verify EVERY visible change before push.** Gates verify code, not the rendered result. Anything the user sees — template, SCSS, icon, copy, colour, layout, shared-component adoption, responsive — gets a real-browser smoke at the desktop widths, 1280 and 960, plus a phone-width check that the layout still holds (no "trivial" exception). See [`docs/development/visual-verification.md`](../docs/development/visual-verification.md) for the screenshot recipe. Skip only when the environment genuinely can't render it — then say so explicitly.
 - **Keep `docs/api/v1.yaml` in sync** if you change how the SPA consumes the API (e.g. new query param). See root `CLAUDE.md` § Documentation discipline.
