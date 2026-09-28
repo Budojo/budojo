@@ -111,12 +111,19 @@ describe('MatAppComponent (the #2027 spike screen)', () => {
           },
         },
       };
-      vi.stubGlobal('fetch', async (input: string) => {
+      vi.stubGlobal('fetch', async (input: string, init?: RequestInit) => {
+        if (init?.method === 'DELETE') {
+          return new Response(null, { status: 204 });
+        }
         const body = input.endsWith('/auth/login')
           ? { token: 't' }
           : input.endsWith('/athletes')
             ? { data: [{ id: 1 }], meta: { total: 40 } }
-            : { status: 'ok' };
+            : input.includes('/attendance?')
+              ? { data: [] }
+              : input.endsWith('/attendance')
+                ? { data: [{ id: 5 }] }
+                : { status: 'ok' };
         return new Response(JSON.stringify(body), { status: 200 });
       });
       const fixture = await render();

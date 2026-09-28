@@ -85,8 +85,9 @@ async function json(response: Response, what: string): Promise<Record<string, un
 }
 
 /**
- * Health, login, the roster twenty times and a check-in ten times: the reads
- * and the write the mat does most, against the demo academy.
+ * Health, login, the roster twenty times and ten check-ins of ten different
+ * athletes: the read and the write the mat does most, against the demo
+ * academy. The check-ins are undone afterwards, untimed.
  */
 export async function runBenchmark(
   start: PhpServerStart,
@@ -114,7 +115,7 @@ export async function runBenchmark(
   const authorised = { ...headers, Authorization: `Bearer ${String(login['token'])}` };
 
   const rosterSamples: number[] = [];
-  let firstAthleteId = 0;
+  let rosterIds: number[] = [];
   let athletes = 0;
   for (let run = 0; run < ROSTER_RUNS; run++) {
     const [page, ms] = await timed(async () =>
@@ -123,20 +124,43 @@ export async function runBenchmark(
     rosterSamples.push(ms);
     const data = page['data'] as { id: number }[];
     const meta = page['meta'] as { total?: number } | undefined;
-    firstAthleteId = data[0]?.id ?? 0;
+    rosterIds = data.map((athlete) => athlete.id);
     athletes = meta?.total ?? data.length;
   }
 
+  // Every timed mark is a real insert (#2050 review): the Action is idempotent,
+  // so marking someone already present would measure the short path. Take
+  // athletes not yet in today's register, time the mark, then remove the row
+  // untimed so a second run finds the same state.
+  const date = localDate();
+  const today = await json(
+    await fetcher(`${base}/attendance?date=${date}`, { headers: authorised }),
+    'attendance list',
+  );
+  const present = new Set((today['data'] as { athlete_id: number }[]).map((row) => row.athlete_id));
   const markSamples: number[] = [];
-  const body = JSON.stringify({ date: localDate(), athlete_ids: [firstAthleteId] });
-  for (let run = 0; run < MARK_RUNS; run++) {
-    const [, ms] = await timed(async () =>
+  for (const athleteId of rosterIds.filter((id) => !present.has(id)).slice(0, MARK_RUNS)) {
+    const [marked, ms] = await timed(async () =>
       json(
-        await fetcher(`${base}/attendance`, { method: 'POST', headers: authorised, body }),
+        await fetcher(`${base}/attendance`, {
+          method: 'POST',
+          headers: authorised,
+          body: JSON.stringify({ date, athlete_ids: [athleteId] }),
+        }),
         'attendance',
       ),
     );
     markSamples.push(ms);
+    const created = (marked['data'] as { id: number }[])[0];
+    if (created !== undefined) {
+      const undo = await fetcher(`${base}/attendance/${created.id}`, {
+        method: 'DELETE',
+        headers: authorised,
+      });
+      if (!undo.ok) {
+        throw new Error(`undo attendance: HTTP ${undo.status}`);
+      }
+    }
   }
 
   return {

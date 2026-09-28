@@ -59,8 +59,13 @@ public class PhpServerPlugin extends Plugin {
 
     @Override
     protected void handleOnDestroy() {
+        stopServer();
+    }
+
+    private void stopServer() {
         if (server != null) {
             server.destroy();
+            server = null;
         }
     }
 
@@ -72,9 +77,13 @@ public class PhpServerPlugin extends Plugin {
         out.put("demoPassword", spike.getString("demoPassword"));
 
         if (server != null && server.isAlive()) {
-            out.put("port", port);
-            out.put("alreadyRunning", true);
-            return out;
+            if (isHealthy(port)) {
+                out.put("port", port);
+                out.put("alreadyRunning", true);
+                return out;
+            }
+            // Alive but not answering: never report it as running (#2050 review).
+            stopServer();
         }
 
         long t0 = System.nanoTime();
@@ -131,7 +140,14 @@ public class PhpServerPlugin extends Plugin {
         builder.redirectErrorStream(true);
         builder.redirectOutput(new File(files, "php-server.log"));
         server = builder.start();
-        waitForHealth(port, 20_000);
+        try {
+            waitForHealth(port, 20_000);
+        } catch (Exception e) {
+            // A process that never answered is not left behind for a retry to
+            // mistake for a running server (#2050 review).
+            stopServer();
+            throw e;
+        }
         long tReady = System.nanoTime();
 
         out.put("port", port);
@@ -190,6 +206,17 @@ public class PhpServerPlugin extends Plugin {
             throw new IOException("php " + String.join(" ", args) + " exited " + process.exitValue() + ": " + tail(output, 600));
         }
         return output;
+    }
+
+    private static boolean isHealthy(int port) {
+        try {
+            HttpURLConnection connection = (HttpURLConnection) new URL("http://127.0.0.1:" + port + "/api/v1/health").openConnection();
+            connection.setConnectTimeout(500);
+            connection.setReadTimeout(1000);
+            return connection.getResponseCode() == 200;
+        } catch (IOException e) {
+            return false;
+        }
     }
 
     private static void waitForHealth(int port, long timeoutMs) throws Exception {

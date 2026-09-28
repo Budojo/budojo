@@ -19,38 +19,43 @@ describe('php-spike (#2044)', () => {
     expect(localDate(new Date(2026, 8, 30, 23, 30))).toBe('2026-09-30');
   });
 
-  it('logs in, reads the roster and marks a presence the planned number of times', async () => {
+  it('times ten real check-ins of athletes not yet present, and undoes each', async () => {
     const calls: string[] = [];
     const fetcher = async (input: string, init?: RequestInit): Promise<Response> => {
-      calls.push(
-        `${init?.method ?? 'GET'} ${input.replace(/^http:\/\/127\.0\.0\.1:\d+\/api\/v1/, '')}`,
-      );
-      const body = input.endsWith('/auth/login')
+      const path = input.replace(/^http:\/\/127\.0\.0\.1:\d+\/api\/v1/, '');
+      const method = init?.method ?? 'GET';
+      calls.push(`${method} ${path.replace(/\?.*$/, '')}`);
+      if (method === 'DELETE') {
+        return new Response(null, { status: 204 });
+      }
+      const ids = Array.from({ length: 20 }, (_, index) => ({ id: index + 1 }));
+      const body = path.endsWith('/auth/login')
         ? { token: 'demo-token' }
-        : input.endsWith('/athletes')
-          ? { data: [{ id: 7 }], meta: { total: 40 } }
-          : { status: 'ok', data: [] };
+        : path === '/athletes'
+          ? { data: ids, meta: { total: 40 } }
+          : path.startsWith('/attendance?')
+            ? { data: [{ athlete_id: 1 }, { athlete_id: 2 }] }
+            : path === '/attendance'
+              ? { data: [{ id: 900 + JSON.parse(String(init?.body)).athlete_ids[0] }] }
+              : { status: 'ok' };
       return new Response(JSON.stringify(body), { status: 200 });
     };
-    const start: PhpServerStart = {
+    const start = {
       port: 41234,
-      totalMs: 0,
-      unpackMs: 0,
-      migrateMs: 0,
-      serverMs: 0,
-      extracted: false,
-      seeded: false,
       demoEmail: 'admin@example.it',
       demoPassword: 'x',
-    };
+    } as PhpServerStart;
 
     const result = await runBenchmark(start, fetcher);
 
     expect(result.athletes).toBe(40);
     expect(calls.filter((c) => c === 'GET /athletes')).toHaveLength(ROSTER_RUNS);
     expect(calls.filter((c) => c === 'POST /attendance')).toHaveLength(MARK_RUNS);
-    expect(calls[0]).toBe('GET /health');
-    expect(calls[1]).toBe('POST /auth/login');
+    // Athletes 1 and 2 are already present: the marks start from 3, each undone.
+    expect(calls).toContain('DELETE /attendance/903');
+    expect(calls).not.toContain('DELETE /attendance/901');
+    expect(calls.filter((c) => c.startsWith('DELETE'))).toHaveLength(MARK_RUNS);
+    expect(calls.slice(0, 2)).toEqual(['GET /health', 'POST /auth/login']);
   });
 
   it('stops with the step that failed', async () => {
