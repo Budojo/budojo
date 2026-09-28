@@ -134,6 +134,7 @@
               class="athlete-form__field--short"
               [label]="'athletes.form.label.sex' | translate"
               [optionalLabel]="'athletes.form.optional' | translate"
+              [hint]="'athletes.form.hint.sex' | translate"
             >
               <p-selectbutton
                 [options]="sexOptions()"
@@ -149,6 +150,7 @@
               class="athlete-form__field--medium"
               [label]="'athletes.form.label.birthPlace' | translate"
               [optionalLabel]="'athletes.form.optional' | translate"
+              [hint]="'athletes.form.hint.birthPlace' | translate"
               controlId="birth_place"
             >
               <input
@@ -158,7 +160,6 @@
                 formControlName="birth_place"
                 autocomplete="off"
                 maxlength="100"
-                [placeholder]="'athletes.form.placeholder.birthPlace' | translate"
               />
             </app-budojo-form-field>
           </div>
