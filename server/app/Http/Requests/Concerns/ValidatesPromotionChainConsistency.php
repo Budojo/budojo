@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests\Concerns;
 
 use App\Actions\Promotion\GetPromotionGapsAction;
+use App\Enums\Belt;
 use App\Models\Athlete;
 use App\Models\AthletePromotion;
 use App\Support\OperatorDay;
@@ -15,41 +16,50 @@ use Illuminate\Contracts\Validation\Validator;
 /**
  * Cross-field rule for backfilling promotion history (#1431 PR 2 of 2).
  *
- * The issue's own open question: what happens when a backfilled promotion
- * contradicts the athlete's existing history around it — a 2019 blue-belt
- * row inserted after an existing black-belt row, say. The product decision
- * (recorded explicitly, not assumed): REFUSE, with a specific error naming
- * the row it disagrees with. Silently allowing it would let the timeline
- * contradict itself; a soft warning would let an owner click through a
- * contradiction without noticing.
+ * **A row is saved as typed (#1991).** #1431 refused any backfill that did
+ * not meet its neighbours exactly. That forced a paper register to be typed
+ * in order, and a gap is no contradiction: the ghost rows (#1966) exist to
+ * fill it. So a row that leaves a gap saves — «Bianca 1 → 2» in March, under
+ * a row of November that starts at 3.
  *
- * **Scope, deliberately narrow**: each kind (`belt`, `stripe`) is checked
- * against its OWN same-kind neighbours only — a stripe row is never
- * cross-checked against belt rows, even though a real belt promotion
- * resets stripes to 0. Modelling that interaction would mean either
- * auto-inserting a companion stripe-reset row on every belt backfill (not
- * what the owner asked for) or rejecting historically-accurate stripe
- * entries whenever an unrelated belt row happens to sit between them.
- * Neither is what "add a past promotion" should feel like for someone
- * transcribing an incomplete paper register.
+ * **Only going backwards warns.** A row that has the athlete go back next to
+ * a row already recorded is a contradiction:
+ * - a stripe count below the one held before it, or above the one the next
+ *   row starts from, on the same belt;
+ * - a belt below the one held before it, or above the one the next row
+ *   starts from — for a belt row, and for the belt a stripe row is on,
+ *   against the stripe and the belt rows around it;
+ * - a starting belt (no `from_belt`) after a belt row already recorded: it
+ *   says nothing came before it, and would open the history a second time.
  *
- * A row with NO same-kind predecessor (or successor) is unconstrained on
- * that side — that is the legitimate "earliest/latest known event of this
- * kind" case, most commonly an athlete who joined already holding a belt
- * or stripe count Budojo never generated a row for.
+ * It is a 422 naming the row, in the owner's language, and the owner still
+ * decides: the store request answers it as `chain_conflict`, and
+ * `confirm_conflict` saves it anyway. The gap finder walks no interval that
+ * goes backwards, so an accepted contradiction offers nothing in between.
+ *
+ * Belts compare in the order the academy's ladder climbs them. A belt the
+ * ladder does not place is never a contradiction: never a guess.
+ *
+ * A later belt row with no `from_belt` is a starting point (#1771): it says
+ * which belt was held that day and nothing about how, so it constrains
+ * nothing before it. A stripe row that raises nothing (a reset) is no step,
+ * as for the gap finder, and constrains nothing either.
  *
  * **A row that fills a gap exactly is consistent by construction (#1966).**
  * The gaps are the steps the ladder walks through between the rows that
- * exist, so one of them, dated inside its window, cannot contradict its
- * neighbours — even where this narrower check would say otherwise: the
- * first stripe on a new belt after the old belt's stripes, or the middle of
- * three missing stripes filled before its neighbours. Anything else is
- * checked exactly as before.
+ * exist, so one of them, dated inside its window, is never checked.
  *
  * @phpstan-import-type Gap from PromotionGaps
+ *
+ * @phpstan-type Conflict array{field: string, promotion_id: int, recorded_at: string, belt: string, stripes: int|null}
  */
 trait ValidatesPromotionChainConsistency
 {
+    use SpeaksTheOwnersLanguage;
+
+    /** @var list<Conflict> the rows this one would contradict (#1991) */
+    private array $chainConflicts = [];
+
     protected function validatePromotionChainConsistency(Validator $validator): void
     {
         $kind = $this->input('kind');
@@ -67,6 +77,11 @@ trait ValidatesPromotionChainConsistency
             return; // the shape rule on `recorded_at` already failed separately
         }
 
+        // The owner has read the warning and saves the row as typed (#1991).
+        if ($this->boolean('confirm_conflict')) {
+            return;
+        }
+
         $fields = $this->only(['kind', 'from_belt', 'to_belt', 'from_stripes', 'to_stripes', 'belt_at_event']);
         if ($this->fillsAGap($athlete, $fields, $recordedAt)) {
             return;
@@ -75,6 +90,12 @@ trait ValidatesPromotionChainConsistency
         $kind === 'belt'
             ? $this->validateBeltChain($validator, $athlete, $recordedAt, $this->input('from_belt'), $this->input('to_belt'))
             : $this->validateStripeChain($validator, $athlete, $recordedAt);
+    }
+
+    /** @return list<Conflict> */
+    protected function chainConflicts(): array
+    {
+        return $this->chainConflicts;
     }
 
     /**
@@ -109,55 +130,137 @@ trait ValidatesPromotionChainConsistency
         mixed $toBelt,
         ?int $editing = null,
     ): void {
+        $from = \is_string($fromBelt) ? Belt::tryFrom($fromBelt) : null;
+        $to = \is_string($toBelt) ? Belt::tryFrom($toBelt) : null;
+        if ($to === null) {
+            return; // the shape rules already failed
+        }
+
         $previous = $this->neighbour($athlete, 'belt', $recordedAt, earlier: true, editing: $editing);
-        if ($previous !== null && $fromBelt !== $previous->to_belt?->value) {
-            $validator->errors()->add(
-                'from_belt',
-                "Doesn't match the belt after the previous promotion on {$previous->recorded_at->toDateString()} ({$previous->to_belt?->value}).",
-            );
+        if ($previous?->to_belt !== null) {
+            if ($from === null) {
+                // A starting belt says nothing came before it, and a promotion
+                // did: whatever belt it reaches, that is a second opening row.
+                $this->beltConflict($validator, 'from_belt', $previous, $previous->to_belt, 'chain.starting_belt_after');
+            } elseif ($this->below($from, $previous->to_belt)) {
+                $this->beltConflict($validator, 'from_belt', $previous, $previous->to_belt, 'chain.belt_before');
+            }
         }
 
         $next = $this->neighbour($athlete, 'belt', $recordedAt, earlier: false, editing: $editing);
-        // A later row with no `from_belt` is a starting point — every timeline
-        // opens with one (#1771). It says which belt was held that day and
-        // nothing about how, so it constrains nothing before it: a paper
-        // register entered oldest-first ends below it until the last row is
-        // in, and an incomplete one (blue in 2019, the promotion to purple
-        // never written down) may never reach it at all.
-        if ($next !== null && $next->from_belt !== null && $toBelt !== $next->from_belt->value) {
-            $validator->errors()->add(
-                'to_belt',
-                "Doesn't match the belt before the next promotion on {$next->recorded_at->toDateString()} ({$next->from_belt->value}).",
-            );
+        if ($next?->from_belt !== null && $this->below($next->from_belt, $to)) {
+            $this->beltConflict($validator, 'to_belt', $next, $next->from_belt, 'chain.belt_after');
         }
     }
 
     private function validateStripeChain(Validator $validator, Athlete $athlete, CarbonInterface $recordedAt): void
     {
-        // `is_numeric` narrows `mixed` before the cast (PHPStan level 9);
-        // a non-numeric value already fails the shape rule separately, so
-        // falling back to null here just skips this cross-check rather
-        // than duplicating that error.
-        $fromStripesRaw = $this->input('from_stripes');
-        $fromStripes = is_numeric($fromStripesRaw) ? (int) $fromStripesRaw : null;
-        $toStripesRaw = $this->input('to_stripes');
-        $toStripes = is_numeric($toStripesRaw) ? (int) $toStripesRaw : null;
+        // `is_numeric` narrows `mixed` before the cast (PHPStan level 9); a
+        // value that fails the shape rules never reaches this check.
+        $beltRaw = $this->input('belt_at_event');
+        $belt = \is_string($beltRaw) ? Belt::tryFrom($beltRaw) : null;
+        $fromRaw = $this->input('from_stripes');
+        $toRaw = $this->input('to_stripes');
+        if ($belt === null || ! is_numeric($fromRaw) || ! is_numeric($toRaw)) {
+            return;
+        }
 
+        $this->validateStripesAgainstStripes($validator, $athlete, $recordedAt, $belt, (int) $fromRaw, (int) $toRaw);
+        $this->validateStripesAgainstBelts($validator, $athlete, $recordedAt, $belt);
+    }
+
+    private function validateStripesAgainstStripes(Validator $validator, Athlete $athlete, CarbonInterface $recordedAt, Belt $belt, int $from, int $to): void
+    {
         $previous = $this->neighbour($athlete, 'stripe', $recordedAt, earlier: true);
-        if ($previous !== null && $fromStripes !== $previous->to_stripes) {
-            $validator->errors()->add(
-                'from_stripes',
-                "Doesn't match the stripe count after the previous promotion on {$previous->recorded_at->toDateString()} ({$previous->to_stripes}).",
-            );
+        if ($previous !== null) {
+            $held = $previous->to_stripes ?? 0;
+            if ($previous->belt_at_event === $belt && $from < $held) {
+                $to <= $held
+                    ? $this->stripeConflict($validator, 'to_stripes', $previous, $held, 'chain.stripes_before_to', ['to' => (string) $to])
+                    : $this->stripeConflict($validator, 'from_stripes', $previous, $held, 'chain.stripes_before_from', ['from' => (string) $from]);
+            } elseif ($this->below($belt, $previous->belt_at_event)) {
+                $this->beltConflict($validator, 'belt_at_event', $previous, $previous->belt_at_event, 'chain.belt_before');
+            }
         }
 
         $next = $this->neighbour($athlete, 'stripe', $recordedAt, earlier: false);
-        if ($next !== null && $toStripes !== $next->from_stripes) {
-            $validator->errors()->add(
-                'to_stripes',
-                "Doesn't match the stripe count before the next promotion on {$next->recorded_at->toDateString()} ({$next->from_stripes}).",
-            );
+        if ($next !== null) {
+            $held = $next->from_stripes ?? 0;
+            if ($next->belt_at_event === $belt && $to > $held) {
+                $this->stripeConflict($validator, 'to_stripes', $next, $held, 'chain.stripes_after', ['to' => (string) $to]);
+            } elseif ($this->below($next->belt_at_event, $belt)) {
+                $this->beltConflict($validator, 'belt_at_event', $next, $next->belt_at_event, 'chain.belt_after');
+            }
         }
+    }
+
+    /** The belt a stripe is on, against the belt the belt rows say was held then. */
+    private function validateStripesAgainstBelts(Validator $validator, Athlete $athlete, CarbonInterface $recordedAt, Belt $belt): void
+    {
+        $previous = $this->neighbour($athlete, 'belt', $recordedAt, earlier: true);
+        if ($previous?->to_belt !== null && $this->below($belt, $previous->to_belt)) {
+            $this->beltConflict($validator, 'belt_at_event', $previous, $previous->to_belt, 'chain.belt_before');
+        }
+
+        $next = $this->neighbour($athlete, 'belt', $recordedAt, earlier: false);
+        if ($next?->from_belt !== null && $this->below($next->from_belt, $belt)) {
+            $this->beltConflict($validator, 'belt_at_event', $next, $next->from_belt, 'chain.belt_after');
+        }
+    }
+
+    /** Whether one belt comes before another on the academy's ladder; never for a belt it does not place. */
+    private function below(Belt $belt, Belt $than): bool
+    {
+        $ladder = $this->rankLadder();
+        $here = $ladder->climbPosition($belt);
+        $there = $ladder->climbPosition($than);
+
+        return $here !== null && $there !== null && $here < $there;
+    }
+
+    /**
+     * @param array<string, string> $replace
+     */
+    private function stripeConflict(Validator $validator, string $field, AthletePromotion $row, int $held, string $key, array $replace): void
+    {
+        $message = $this->promotionChoice($key, $held, [
+            'date' => $this->ownerDate($row->recorded_at),
+            'held' => (string) $held,
+            ...$replace,
+        ]);
+        $this->conflict($validator, $message, [
+            'field' => $field,
+            'promotion_id' => $row->id,
+            'recorded_at' => $row->recorded_at->toDateString(),
+            'belt' => $row->belt_at_event->value,
+            'stripes' => $held,
+        ]);
+    }
+
+    private function beltConflict(Validator $validator, string $field, AthletePromotion $row, Belt $belt, string $key): void
+    {
+        $this->conflict($validator, $this->promotionLine($key, ['date' => $this->ownerDate($row->recorded_at)]), [
+            'field' => $field,
+            'promotion_id' => $row->id,
+            'recorded_at' => $row->recorded_at->toDateString(),
+            'belt' => $belt->value,
+            'stripes' => null,
+        ]);
+    }
+
+    /**
+     * One warning per field: the nearest row it contradicts says enough.
+     *
+     * @param Conflict $conflict
+     */
+    private function conflict(Validator $validator, string $message, array $conflict): void
+    {
+        if (\in_array($conflict['field'], array_column($this->chainConflicts, 'field'), true)) {
+            return;
+        }
+
+        $this->chainConflicts[] = $conflict;
+        $validator->errors()->add($conflict['field'], $message);
     }
 
     /**
@@ -171,6 +274,9 @@ trait ValidatesPromotionChainConsistency
      * written before it carry the time of day they were saved, and a live
      * one from later that day must still share its day with a backfill,
      * not compare as "after" it.
+     *
+     * A stripe row that raises nothing — the reset a live promotion writes
+     * beside its belt row — is no step, and is never a neighbour.
      */
     private function neighbour(Athlete $athlete, string $kind, CarbonInterface $recordedAt, bool $earlier, ?int $editing = null): ?AthletePromotion
     {
@@ -182,6 +288,7 @@ trait ValidatesPromotionChainConsistency
         // inherited DESC pair alone would always decide the row, handing
         // back the FARTHEST future row instead of the nearest one.
         $query = $athlete->promotions()->reorder()->where('kind', $kind)
+            ->when($kind === 'stripe', static fn ($q) => $q->whereColumn('to_stripes', '>', 'from_stripes'))
             ->when($editing !== null, static fn ($q) => $q->whereKeyNot($editing));
         $day = $recordedAt->toDateString();
 

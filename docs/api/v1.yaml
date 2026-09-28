@@ -6479,14 +6479,38 @@ paths:
         fanout. `recorded_by_user_id` on the created row is always the
         caller, never a guess at who recorded the real-world event.
 
-        A backfill that contradicts an existing same-kind neighbour in the
-        athlete's timeline (its `from_*` doesn't match the nearest earlier
-        row's `to_*`, or its `to_*` doesn't match the nearest later row's
-        `from_*`) is refused with a 422 naming the row it disagrees with.
-        A row with no same-kind neighbour on one side is unconstrained on
-        that side — the athlete's earliest or latest known event of that
-        kind. Belt and stripe chains are checked independently; a stripe
-        row is never cross-checked against belt rows.
+        **Saved as typed (#1991).** This changes the #1431 rule, which
+        refused any backfill that did not meet its neighbours exactly. A row
+        that leaves a gap with the rows around it now saves, and the gap
+        shows in `gaps` to be dated. For example, stripes 1 → 2 under a
+        later row that starts at 3.
+
+        Only a **contradiction** is answered with a 422: a row that has
+        the athlete go backwards next to a row already recorded. That means:
+        - a stripe count below the one held before it, or above the one the
+          next stripe row starts from, on the same belt;
+        - a belt below the one held before it, or above the one the next
+          belt row starts from. This applies to a belt row, and to the belt
+          a stripe row is on, checked against the stripe and belt rows
+          around it;
+        - a starting belt (`from_belt: null`) after a belt row already
+          recorded, whatever belt it reaches. It says nothing came before
+          it, so it would open the history a second time.
+
+        Belts compare in the order the academy's ladder climbs them. A
+        stripe row that raises nothing (a reset) is no neighbour. A row with
+        no neighbour on one side is unconstrained on that side.
+
+        The 422 carries `code: chain_conflict` and the rows it disagrees
+        with (`PromotionChainConflict`). Its messages are in the caller's
+        language (`users.locale`), one per field, from the nearest row. The
+        owner still decides: the same body with `confirm_conflict: true`
+        saves it. The gap finder walks no interval that goes backwards, so
+        an accepted contradiction offers nothing in between.
+
+        Every other 422 on this endpoint is the usual `ValidationErrorBody`.
+        The messages written for it (a transition that changes nothing) are
+        in the caller's language too.
 
         A later belt row with no `from_belt` is a starting point — every
         timeline opens with one (#1771) — and constrains nothing before it:
@@ -6532,7 +6556,16 @@ paths:
               schema: { $ref: '#/components/schemas/ErrorMessage' }
               example: { message: Forbidden. }
         '422':
-          $ref: '#/components/responses/ValidationError'
+          description: |
+            Validation failed. A contradiction with the rows around it is a
+            `PromotionChainConflict`, which `confirm_conflict: true`
+            overrides. Anything else is the usual `ValidationErrorBody`.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/PromotionChainConflict'
+                  - $ref: '#/components/schemas/ValidationErrorBody'
 
   /athletes/{athlete}/promotions/{promotion}:
     patch:
@@ -6563,6 +6596,12 @@ paths:
         the history, #1974) accepts any one of them inside its window, with
         no further check (nothing precedes the row, and its own belt does not
         change); another belt is a 422 on `from_belt`.
+
+        "Must fit" means what it means for a backfill (#1991): a gap with
+        the belt rows around it is fine, and going backwards is a 422 on
+        `from_belt` or `to_belt`. This endpoint takes no
+        `confirm_conflict`. The messages are in the caller's language
+        (`users.locale`).
 
         403 when the promotion does not belong to the athlete in the path.
       operationId: athletePromotionUpdateRecordedAt
@@ -11680,6 +11719,46 @@ components:
           description: |
             `kind=stripe` only — the belt this stripe happened on. Not
             accepted for `kind=belt`; the server derives it as `to_belt`.
+        confirm_conflict:
+          type: boolean
+          description: |
+            The owner read a `chain_conflict` warning and saves the row as
+            typed anyway (#1991). The contradiction check is skipped. The
+            shape rules are not.
+
+    PromotionChainConflict:
+      type: object
+      description: |
+        A backfill that would have the athlete go backwards next to a row
+        already recorded (#1991). `errors` holds one message per field, in
+        the caller's language, from the nearest row it contradicts.
+        `message` is the first of them. `conflicts` names each of those
+        rows: its id and date, and the value it holds there. That value is
+        the belt and count held after an earlier row, or before a later
+        one. `stripes` is null when the contradiction is about the belt.
+        Resend the same body with `confirm_conflict: true` to save it anyway.
+      required: [message, code, errors, conflicts]
+      properties:
+        message: { type: string, example: 'Il 18 novembre 2025 aveva già 3 gradi: qui arriveresti a 2.' }
+        code: { type: string, enum: [chain_conflict] }
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items: { type: string }
+        conflicts:
+          type: array
+          items:
+            type: object
+            required: [field, promotion_id, recorded_at, belt, stripes]
+            properties:
+              field:
+                type: string
+                enum: [from_belt, to_belt, belt_at_event, from_stripes, to_stripes]
+              promotion_id: { type: integer, format: int64 }
+              recorded_at: { type: string, format: date }
+              belt: { $ref: '#/components/schemas/Belt' }
+              stripes: { type: integer, minimum: 0, maximum: 10, nullable: true }
 
     AthleteEnvelope:
       type: object

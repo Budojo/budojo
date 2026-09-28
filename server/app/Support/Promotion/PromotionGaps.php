@@ -33,6 +33,14 @@ use Carbon\CarbonImmutable;
  * reports nothing. So does a walk that would step into a belt the history
  * already has a row for, or has already been offered: a belt is reached
  * once, and a second row for it is the one thing a ghost must never lead to.
+ * A stripe on record is never offered again either — every count a row
+ * covers, the middle of a jump included. Only a contradiction in the history
+ * puts one on a walk, confirmed since #1991 or saved unchecked before it (a
+ * blue stripe dated before the promotion to blue: stripe rows were never
+ * checked against belt rows); the walk offers the rest of its steps. Such a
+ * history can also put one step on two walks: it is reported once, in the
+ * oldest window with a day left, since the page tracks and skips a step by
+ * its key.
  *
  * **Corrections are not promotions.** A belt set by mistake and set back
  * cancels out — the shortest round trip b1 → b2, b2 → b1 between two
@@ -120,6 +128,9 @@ final class PromotionGaps
 
     /** @var array<string, true> belts reached by a row, or already offered */
     private array $reached = [];
+
+    /** @var array<string, true> the stripes a row records, as `belt:stripes` */
+    private array $recordedStripes = [];
 
     /**
      * @param \Closure(Belt, CarbonImmutable): bool $kidsEligible whether the kids'
@@ -230,8 +241,14 @@ final class PromotionGaps
         $first = $this->rows[0];
         $this->placeholders = [];
         $this->reached = [];
+        $this->recordedStripes = [];
         foreach ($this->rows as $row) {
             if ($row->kind !== 'belt') {
+                // Every count it covers: «0 → 2» holds the first stripe too.
+                for ($count = ($row->fromStripes ?? 0) + 1; $count <= $row->stripes(); $count++) {
+                    $this->recordedStripes["{$row->beltAtEvent->value}:{$count}"] = true;
+                }
+
                 continue;
             }
             if ($row !== $first && $row->isPlaceholder()) {
@@ -550,8 +567,8 @@ final class PromotionGaps
     /**
      * The steps of one walk the page may offer: all of them, or none if one
      * would lead into a belt the history already has (a contradiction, never
-     * a guess); and nothing after a starting row's belt step, whose day is not
-     * known yet.
+     * a guess); never a stripe a row already records; and nothing after a
+     * starting row's belt step, whose day is not known yet.
      *
      * @param list<Step> $steps
      *
@@ -563,7 +580,11 @@ final class PromotionGaps
         $reached = [];
         foreach ($steps as $step) {
             if ($step['kind'] !== 'belt') {
-                $found[] = ['step' => $step, 'after' => $after, 'completes' => null];
+                // On record already — only a contradiction in the history
+                // puts one on a walk: never offer it a second time.
+                if (! isset($this->recordedStripes["{$step['belt']->value}:{$step['stripes']}"])) {
+                    $found[] = ['step' => $step, 'after' => $after, 'completes' => null];
+                }
 
                 continue;
             }
@@ -600,6 +621,7 @@ final class PromotionGaps
     {
         $gaps = [];
         $skippedSteps = [];
+        $emitted = [];
         foreach ($found as ['step' => $step, 'after' => $after, 'completes' => $completes]) {
             $before = $this->bound($after, $completes);
             if (($before?->day() ?? $this->today->toDateString()) <= $after->day()) {
@@ -607,6 +629,14 @@ final class PromotionGaps
             }
 
             $key = "{$step['kind']}:{$step['belt']->value}:{$step['stripes']}";
+            // A contradiction in the history can put one step on two walks:
+            // the page tracks and skips a step by its key, so it is reported
+            // once, in the oldest window that has a day left.
+            if (isset($emitted[$key])) {
+                continue;
+            }
+            $emitted[$key] = true;
+
             // A starting row is completed, not skipped: it is a belt they hold.
             if ($completes === null && \in_array("{$step['belt']->value}:{$step['stripes']}", $skipped, true)) {
                 $skippedSteps[] = ['key' => $key, 'kind' => $step['kind'], 'belt' => $step['belt']->value, 'stripes' => $step['stripes']];

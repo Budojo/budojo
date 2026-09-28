@@ -376,6 +376,18 @@ jobs:
           browser: chrome
           spec: ${{ steps.specs.outputs.spec }}
 
+      # A spec that fails here and passes locally (#2001) can only be read
+      # from the frame it failed on: Cypress takes one per failed test, and
+      # without this step it dies with the runner.
+      - name: Upload failure screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-screenshots-shard-${{ matrix.shard }}
+          path: client/cypress/screenshots
+          if-no-files-found: ignore
+          retention-days: 14
+
   cypress-e2e:
     # Aggregator — preserves the `🎭 Cypress E2E` required-status-check
     # name so the develop / main rulesets don't need editing. Passes when

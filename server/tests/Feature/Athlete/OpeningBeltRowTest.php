@@ -201,13 +201,17 @@ it('takes an incomplete register that never reaches the starting belt', function
     backfill($this, $athlete, 'white', 'blue', '2019-05-10')->assertCreated();
 });
 
-it('still refuses a backfill that contradicts the promotion before it', function (): void {
+it('saves a backfill that leaves a gap after the promotion before it, and warns about one that goes back (#1991)', function (): void {
     $athlete = startedAt($this, Belt::Purple);
     backfill($this, $athlete, 'white', 'blue', '2019-05-10')->assertCreated();
 
-    // The row before 2020 ends at blue, so 2020 cannot start at purple.
-    backfill($this, $athlete, 'purple', 'brown', '2020-01-10')
+    // Blue → purple is not written down yet: a gap, not a contradiction.
+    backfill($this, $athlete, 'purple', 'brown', '2020-01-10')->assertCreated();
+
+    // The row before June 2020 ends at brown, so starting at white goes back.
+    backfill($this, $athlete, 'white', 'blue', '2020-06-10')
         ->assertUnprocessable()
+        ->assertJsonPath('code', 'chain_conflict')
         ->assertJsonValidationErrors('from_belt');
 });
 

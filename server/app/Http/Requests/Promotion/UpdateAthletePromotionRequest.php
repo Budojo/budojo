@@ -14,6 +14,7 @@ use App\Models\AthletePromotion;
 use App\Rules\BeltInLadder;
 use App\Support\OperatorDay;
 use App\Support\Promotion\PromotionGaps;
+use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -104,7 +105,7 @@ class UpdateAthletePromotionRequest extends FormRequest
         }
 
         if ($promotion->kind !== 'belt' || $promotion->from_belt !== null) {
-            $validator->errors()->add('from_belt', 'Only a starting belt row can be given the belt it came from.');
+            $validator->errors()->add('from_belt', $this->promotionLine('only_starting_row'));
 
             return;
         }
@@ -112,14 +113,14 @@ class UpdateAthletePromotionRequest extends FormRequest
         $fromBelt = $this->input('from_belt');
         $toBelt = $promotion->to_belt?->value;
         if ($fromBelt === $toBelt) {
-            $validator->errors()->add('from_belt', 'The belt it came from must differ from the belt it reached.');
+            $validator->errors()->add('from_belt', $this->promotionLine('from_is_to'));
 
             return;
         }
 
         $gap = $this->gapCompleting($athlete, $promotion);
         if ($gap !== null && ! PromotionGaps::inWindow($gap, $recordedAt->toDateString(), OperatorDay::today())) {
-            $validator->errors()->add('recorded_at', self::windowMessage($gap));
+            $validator->errors()->add('recorded_at', $this->windowMessage($gap));
 
             return;
         }
@@ -132,7 +133,7 @@ class UpdateAthletePromotionRequest extends FormRequest
         $options = $gap['from_belt_options'] ?? null;
         if ($options !== null) {
             if (! \in_array($fromBelt, $options, true)) {
-                $validator->errors()->add('from_belt', 'Not a belt that comes before ' . $toBelt . ' on this ladder.');
+                $validator->errors()->add('from_belt', $this->promotionLine('not_before'));
             }
 
             return;
@@ -158,16 +159,17 @@ class UpdateAthletePromotionRequest extends FormRequest
     }
 
     /** @param Gap $gap */
-    private static function windowMessage(array $gap): string
+    private function windowMessage(array $gap): string
     {
         $after = $gap['after']['recorded_at'] ?? null;
         $before = $gap['before']['recorded_at'] ?? null;
+        $day = fn (string $date): string => $this->ownerDate(CarbonImmutable::parse($date));
 
         return match (true) {
-            $after !== null && $before !== null => "Must be after {$after} and no later than {$before}.",
-            $after !== null => "Must be after {$after}.",
-            $before !== null => "Must be no later than {$before}.",
-            default => 'Must not be in the future.',
+            $after !== null && $before !== null => $this->promotionLine('window.between', ['after' => $day($after), 'before' => $day($before)]),
+            $after !== null => $this->promotionLine('window.after', ['after' => $day($after)]),
+            $before !== null => $this->promotionLine('window.before', ['before' => $day($before)]),
+            default => $this->promotionLine('window.future'),
         };
     }
 }
