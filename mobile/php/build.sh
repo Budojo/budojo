@@ -31,9 +31,9 @@ tar xzf spc.tar.gz
 
 # Prove the patch is in the source that was compiled: a PHP whose server still
 # calls accept() dies on a phone at the first connection.
-grep -q 'accept4(server->server_sock' source/php-src/sapi/cli/php_cli_server.c \
+grep -q 'accept4(server->server_sock, sa, &socklen, SOCK_CLOEXEC)' source/php-src/sapi/cli/php_cli_server.c \
   || { echo "the accept4 patch is not in php_cli_server.c" >&2; exit 1; }
-grep -q 'accept4(srvsock' source/php-src/main/network.c \
+grep -q 'accept4(srvsock, (struct sockaddr\*)&sa, &sl, SOCK_CLOEXEC)' source/php-src/main/network.c \
   || { echo "the accept4 patch is not in network.c" >&2; exit 1; }
 # For the record: what the binary links. musl's accept may still come in with a
 # library that never calls it at run time.

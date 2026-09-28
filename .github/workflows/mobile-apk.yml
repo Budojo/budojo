@@ -46,6 +46,26 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
         run: docker run --rm -v "$PWD:/work" -w /work alpine:3.21 sh mobile/php/build.sh /work/mobile/php/out
 
+      # Android's app seccomp policy kills a process that calls accept (it allows
+      # accept4). Reproduce that here, so a PHP that would die on a phone at its
+      # first connection never reaches an APK: the binary must serve a page
+      # under a policy that kills on accept. Runs on cached builds too.
+      - name: Serve a page under a seccomp policy that kills on accept, as Android does
+        run: |
+          cat > "$RUNNER_TEMP/no-accept.json" <<'JSON'
+          {"defaultAction": "SCMP_ACT_ALLOW", "architectures": ["SCMP_ARCH_AARCH64"],
+           "syscalls": [{"names": ["accept"], "action": "SCMP_ACT_KILL_PROCESS"}]}
+          JSON
+          docker run --rm --security-opt seccomp="$RUNNER_TEMP/no-accept.json" \
+            -v "$PWD/mobile/php/out:/php:ro" alpine:3.21 sh -c '
+              mkdir -p /srv && printf "<?php echo \"pong\";" > /srv/ping.php
+              /php/php -S 127.0.0.1:8080 -t /srv > /tmp/server.log 2>&1 &
+              sleep 1
+              answer=$(wget -qO- http://127.0.0.1:8080/ping.php || true)
+              cat /tmp/server.log
+              [ "$answer" = "pong" ] || { echo "::error::PHP did not serve under the no-accept policy (got: $answer)"; exit 1; }
+              echo "served under the no-accept policy: $answer"'
+
       - uses: actions/upload-artifact@v4
         with:
           name: php-android-arm64

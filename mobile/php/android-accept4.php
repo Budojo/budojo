@@ -12,9 +12,15 @@ declare(strict_types=1);
  * connection. Found on a real phone with 0.0.8's probes: PHP alone ran,
  * Laravel answered 200 in-process, and the server died on its first client.
  *
- * PHP 8.4 calls accept() in two places, and both become accept4(..., 0), which
- * is exactly accept. A link-time --wrap was tried first and did not reach the
- * CLI's link. Editing the source is what can be checked.
+ * PHP 8.4 calls accept() in two places, and both become accept4(...,
+ * SOCK_CLOEXEC). The flag is not decoration: musl's accept4() with flags 0
+ * calls accept(), which is how 0.0.10 still died on the phone with this patch
+ * applied. SOCK_CLOEXEC forces the real accept4 syscall, and a client socket
+ * that no child process inherits is what PHP wants anyway. A link-time --wrap
+ * was tried before this and did not reach the CLI's link.
+ *
+ * CI proves it on every build: the binary serves a page under a seccomp
+ * policy that kills any process calling accept (.github/workflows/mobile-apk.yml).
  */
 
 if (patch_point() !== 'before-php-configure') {
@@ -24,11 +30,11 @@ if (patch_point() !== 'before-php-configure') {
 $edits = [
     'sapi/cli/php_cli_server.c' => [
         'client_sock = accept(server->server_sock, sa, &socklen);',
-        'client_sock = accept4(server->server_sock, sa, &socklen, 0);',
+        'client_sock = accept4(server->server_sock, sa, &socklen, SOCK_CLOEXEC);',
     ],
     'main/network.c' => [
         'clisock = accept(srvsock, (struct sockaddr*)&sa, &sl);',
-        'clisock = accept4(srvsock, (struct sockaddr*)&sa, &sl, 0);',
+        'clisock = accept4(srvsock, (struct sockaddr*)&sa, &sl, SOCK_CLOEXEC);',
     ],
 ];
 
