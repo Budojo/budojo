@@ -40,7 +40,7 @@ jobs:
         id: cache
         with:
           path: mobile/php/out
-          key: php-android-${{ hashFiles('mobile/php/recipe.env', 'mobile/php/build.sh') }}
+          key: php-android-${{ hashFiles('mobile/php/recipe.env', 'mobile/php/build.sh', 'mobile/php/*.c') }}
 
       - name: Build PHP from source in Alpine
         if: steps.cache.outputs.cache-hit != 'true'
