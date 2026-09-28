@@ -8731,6 +8731,7 @@ components:
                 stripes,
                 phone_country_code,
                 phone_national_number,
+                is_self,
                 attended,
                 last_attended_on,
               ]
@@ -8745,6 +8746,7 @@ components:
               user_avatar_url: { type: string, nullable: true }
               phone_country_code: { type: string, nullable: true, example: '+39' }
               phone_national_number: { type: string, nullable: true }
+              is_self: { type: boolean, description: "The owner's own athlete row (#748)." }
               attended:
                 type: integer
                 minimum: 3
@@ -11635,14 +11637,16 @@ components:
         whose rows offer WhatsApp and a call: the certificates to chase
         (`/documents/expiring`). Both keys are always present and null when
         no number is on file, so the client can draw a disabled control that
-        says why. `ContactableAthleteResource` on the server.
+        says why. `is_self` marks the owner's own row (#748), which gets no
+        reminder. `ContactableAthleteResource` on the server.
       allOf:
         - $ref: '#/components/schemas/AthleteSummary'
         - type: object
-          required: [phone_country_code, phone_national_number]
+          required: [phone_country_code, phone_national_number, is_self]
           properties:
             phone_country_code: { type: string, nullable: true, example: '+39' }
             phone_national_number: { type: string, nullable: true, example: '3331234567' }
+            is_self: { type: boolean, description: "The owner's own athlete row (#748).", example: false }
 
     ExpiringDocument:
       description: |

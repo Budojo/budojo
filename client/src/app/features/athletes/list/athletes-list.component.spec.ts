@@ -2810,6 +2810,13 @@ describe('AthletesListComponent — the reminder on WhatsApp (#1931)', () => {
   afterEach(() => vi.useRealTimers());
 
   async function render(rows: Athlete[], paid: 'no' | null): Promise<HTMLElement> {
+    return (await mount(rows, paid)).nativeElement as HTMLElement;
+  }
+
+  async function mount(
+    rows: Athlete[],
+    paid: 'no' | null,
+  ): Promise<ComponentFixture<AthletesListComponent>> {
     if (paid !== null) {
       await TestBed.inject(Router).navigate([], { queryParams: { paid } });
     }
@@ -2824,7 +2831,23 @@ describe('AthletesListComponent — the reminder on WhatsApp (#1931)', () => {
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
-    return fixture.nativeElement as HTMLElement;
+    return fixture;
+  }
+
+  /** Marks the first row paid the way the owner does: the chip, then "Yes". */
+  function markPaid(fixture: ComponentFixture<AthletesListComponent>): Mock {
+    const confirmService = fixture.componentRef.injector.get(ConfirmationService);
+    const confirm = vi.fn((cfg: { accept: () => void; message?: string }) => {
+      cfg.accept();
+      return confirmService;
+    });
+    confirmService.confirm = confirm as never;
+    const event = new MouseEvent('click');
+    Object.defineProperty(event, 'currentTarget', { value: document.createElement('button') });
+
+    fixture.componentInstance.confirmTogglePaid(event, fixture.componentInstance.athletes()[0]);
+    fixture.detectChanges();
+    return confirm;
   }
 
   function messageOf(link: Element | null): string {
@@ -2888,6 +2911,56 @@ describe('AthletesListComponent — the reminder on WhatsApp (#1931)', () => {
 
     expect(
       root.querySelector('[data-cy="athlete-reminder-42-none"]')?.getAttribute('aria-label'),
-    ).toBe('No phone number on file');
+    ).toBe('No phone number on file for Andrea Gallo');
+  });
+
+  it('takes the reminder back once the row is marked paid', async () => {
+    // Marking paid flips the row in place, and the row stays on the unpaid
+    // list until the next load. A reminder beside a green chip would ask
+    // someone for money they have just handed over.
+    const fixture = await mount([makeAthlete()], 'no');
+
+    markPaid(fixture);
+
+    const root = fixture.nativeElement as HTMLElement;
+    expect(fixture.componentInstance.athletes()[0].paid_current_month).toBe(true);
+    expect(root.querySelector('[data-cy="athlete-reminder-42-whatsapp"]')).toBeNull();
+    expect(root.querySelector('[data-cy="athlete-card-reminder-42-whatsapp"]')).toBeNull();
+  });
+
+  describe("the owner's month, not UTC's (#1968)", () => {
+    const tz = process.env['TZ'];
+
+    // 00:30 on 1 October in Rome is still 30 September in UTC. The server
+    // reads `paid_current_month` and `?paid=no` in the owner's month, so the
+    // column, the reminder and the payment the chip records must too.
+    beforeEach(() => {
+      process.env['TZ'] = 'Europe/Rome';
+      vi.setSystemTime(new Date('2026-09-30T22:30:00Z'));
+    });
+
+    afterEach(() => {
+      process.env['TZ'] = tz;
+    });
+
+    it('names the same month in the column and in the reminder', async () => {
+      const fixture = await mount([makeAthlete()], 'no');
+      const root = fixture.nativeElement as HTMLElement;
+
+      expect(fixture.componentInstance.currentMonthLong()).toBe('October 2026');
+      expect(messageOf(root.querySelector('[data-cy="athlete-reminder-42-whatsapp"]'))).toContain(
+        'October 2026',
+      );
+    });
+
+    it('records the payment against that month', async () => {
+      const fixture = await mount([makeAthlete()], 'no');
+      const paymentSpy = TestBed.inject(PaymentService).markPaid as unknown as Mock;
+
+      const confirm = markPaid(fixture);
+
+      expect(paymentSpy).toHaveBeenCalledWith(42, 2026, 10);
+      expect(confirm.mock.calls[0][0].message).toContain('October 2026');
+    });
   });
 });

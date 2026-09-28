@@ -63,7 +63,9 @@ describe('ContactActionsComponent (#1727)', () => {
     expect(root.querySelector('a')).toBeNull();
     const none = root.querySelector('[data-cy="athlete-contact-7-none"]');
     expect(none?.getAttribute('aria-disabled')).toBe('true');
-    expect(none?.getAttribute('aria-label')).toBe('No phone number on file');
+    // A screen reader walking a list hears whose number is missing; the
+    // tooltip, read beside the row, stays short.
+    expect(none?.getAttribute('aria-label')).toBe('No phone number on file for Giulia Ferraro');
 
     const tooltip = fixture.debugElement
       .query(By.css('[data-cy="athlete-contact-7-none"]'))

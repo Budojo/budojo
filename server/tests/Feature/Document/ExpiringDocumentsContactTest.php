@@ -74,6 +74,27 @@ it('keeps the phone off an athlete\'s own documents list', function (): void {
     expect(json_encode($response->json()))->not->toContain('3331234567');
 });
 
+it('says which row is the owner\'s own, so they are not offered a reminder to themselves', function (): void {
+    // The owner trains and carries a certificate like anyone else (#748), and
+    // lands on both lists the same way. The client needs to know the row is
+    // theirs to keep the reminder off it.
+    $user = userWithAcademy();
+    $owner = Athlete::factory()->for($user->academy)->selfFor($user)->create();
+    Document::factory()->for($owner)->state(['type' => DocumentType::IdCard])->expiringIn(4)->create();
+    $member = Athlete::factory()->for($user->academy)->create();
+
+    $response = $this->actingAs($user)->getJson('/api/v1/documents/expiring')->assertOk();
+
+    expect($response->json('data.0.athlete.is_self'))->toBeTrue();
+
+    /** @var list<array{id: int, is_self: bool}> $missing */
+    $missing = $response->json('missing_medical_certificate');
+    expect(collect($missing)->pluck('is_self', 'id')->all())->toEqual([
+        $owner->id => true,
+        $member->id => false,
+    ]);
+});
+
 it('leaves the academy\'s own papers without an athlete', function (): void {
     $user = userWithAcademy();
     Document::factory()->create([

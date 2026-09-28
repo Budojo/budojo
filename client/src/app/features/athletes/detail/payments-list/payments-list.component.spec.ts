@@ -1109,3 +1109,26 @@ describe('PaymentsListComponent — when the money arrived, and how (#1761)', ()
     expect(root.querySelector('[data-cy="payment-method-2"]')).toBeNull();
   });
 });
+
+describe("PaymentsListComponent — the owner's month, not UTC's (#1968)", () => {
+  const tz = process.env['TZ'];
+
+  afterEach(() => {
+    vi.useRealTimers();
+    process.env['TZ'] = tz;
+    TestBed.resetTestingModule();
+  });
+
+  it('starts the new season at midnight in Rome, not two hours later', () => {
+    // 00:30 on 1 September in Rome is still August in UTC, and still last
+    // season. Before the academy answers, the season is derived from the
+    // month — the owner's, as the server reads it.
+    process.env['TZ'] = 'Europe/Rome';
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-08-31T22:30:00Z'));
+
+    const { component } = setup({ academy: { season_start_month: 9, season_start: '' } });
+
+    expect(component['currentSeasonYear']()).toBe(2026);
+  });
+});

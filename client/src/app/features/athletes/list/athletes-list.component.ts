@@ -239,10 +239,19 @@ export class AthletesListComponent implements OnInit {
    * `paymentNotExpected` is asked here too, so a row never offers a reminder
    * the chip beside it contradicts. The amount is what one payment of their
    * period costs — a quarterly payer is asked for the quarter.
+   *
+   * Marking a row paid flips it in place and leaves it on the list until the
+   * next load, so the row's own flag is asked too: a reminder beside a green
+   * chip would ask for money just handed over.
    */
   reminderFor(athlete: Athlete): string | null {
     const fee = athlete.monthly_fee_cents ?? 0;
-    if (this.selectedPaid() !== 'no' || this.paymentNotExpected(athlete) || fee <= 0) {
+    if (
+      this.selectedPaid() !== 'no' ||
+      athlete.paid_current_month === true ||
+      this.paymentNotExpected(athlete) ||
+      fee <= 0
+    ) {
       return null;
     }
 
@@ -251,7 +260,8 @@ export class AthletesListComponent implements OnInit {
       this.languageService.currentLang(),
       {
         firstName: athlete.first_name,
-        month: localIso(new Date()).slice(0, 7),
+        // The month the column names — the same `_now`, never a second clock.
+        month: localIso(this._now).slice(0, 7),
         monthlyFeeCents: fee,
         billingPeriodMonths: athlete.billing_period_months ?? 1,
         academy: this.academyService.academy()?.name ?? '',
@@ -262,10 +272,14 @@ export class AthletesListComponent implements OnInit {
   /**
    * Current-month labels for the "Paid" column (#282). BOTH labels are
    * derived from a single `Date` instance (`_now`) so they can never
-   * disagree across a UTC month boundary — Copilot caught this on #289:
+   * disagree across a month boundary — Copilot caught this on #289:
    * two separate `new Date()` calls during initialization could legally
-   * straddle midnight UTC and produce a header reading "Paid · Apr"
+   * straddle midnight and produce a header reading "Paid · Apr"
    * with a tooltip reading "May 2026 — Unpaid".
+   *
+   * The month is the owner's, in local time: the server reads
+   * `paid_current_month` and `?paid=no` in the operator's month (#1968), so a
+   * UTC label would name last month for the first hours of every new one.
    *
    * Derived once per component instance for the date itself; the locale
    * is read from `LanguageService.currentLang()` so toggling EN ↔ IT
@@ -288,11 +302,7 @@ export class AthletesListComponent implements OnInit {
   );
 
   readonly currentMonthLong = computed<string>(() =>
-    this._now.toLocaleString(this.locale(), {
-      month: 'long',
-      year: 'numeric',
-      timeZone: 'UTC',
-    }),
+    this._now.toLocaleString(this.locale(), { month: 'long', year: 'numeric' }),
   );
 
   /**
@@ -1547,22 +1557,14 @@ export class AthletesListComponent implements OnInit {
    * an oncall should not regret.
    */
   confirmTogglePaid(event: MouseEvent, athlete: Athlete): void {
-    // Use UTC year/month/label to align with the server's
-    // `paid_current_month` derivation. The server runs in app
-    // timezone (UTC); around month boundaries (e.g. 23:30 Italy
-    // local on April 30 is May 1 UTC), local-clock arithmetic
-    // would write a different (year, month) than the server reads
-    // back, so the badge would show a confused state on the next
-    // page load. UTC on both ends keeps the round-trip honest
-    // (#259 Copilot review).
+    // The owner's month, which is the one the server reads
+    // `paid_current_month` in (#1968): writing UTC's would record the
+    // previous month for the first hours of every new one, and the chip
+    // would still say unpaid on the next load.
     const now = new Date();
-    const year = now.getUTCFullYear();
-    const month = now.getUTCMonth() + 1;
-    const monthLabel = now.toLocaleString(this.locale(), {
-      month: 'long',
-      year: 'numeric',
-      timeZone: 'UTC',
-    });
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+    const monthLabel = now.toLocaleString(this.locale(), { month: 'long', year: 'numeric' });
 
     const fullName = `${athlete.first_name} ${athlete.last_name}`;
     const willMarkPaid = !athlete.paid_current_month;

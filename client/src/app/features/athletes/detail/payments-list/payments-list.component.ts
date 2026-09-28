@@ -220,8 +220,8 @@ export class PaymentsListComponent implements OnInit {
   // pulls fresh values; the cost of staleness for a tab visit is
   // bounded by the user's session.
   private readonly nowUtc = new Date();
-  private readonly currentYear = this.nowUtc.getUTCFullYear();
-  private readonly currentMonth = this.nowUtc.getUTCMonth() + 1;
+  private readonly currentYear = this.nowUtc.getFullYear(); // the owner's month (#1968)
+  private readonly currentMonth = this.nowUtc.getMonth() + 1;
 
   /**
    * The year on screen (#1636, PAY-1).

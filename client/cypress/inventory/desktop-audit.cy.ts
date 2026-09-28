@@ -520,15 +520,21 @@ function identityOf(id: number) {
  */
 function contactableOf(id: number) {
   // Typed at the read: `athlete()`'s inferred type does not carry `id` (the
-  // same gap `identityOf` above trips over), and the phone pair is all this
-  // needs from the row.
+  // same gap `identityOf` above trips over), and the phone pair and the
+  // owner's marker are all this needs from the row.
   const a = ATHLETES.find((x) => (x as { id?: number }).id === id) as
-    { phone_country_code: string | null; phone_national_number: string | null } | undefined;
+    | {
+        phone_country_code: string | null;
+        phone_national_number: string | null;
+        is_self?: boolean;
+      }
+    | undefined;
   if (!a) throw new Error(`no roster athlete ${id}`);
   return {
     ...identityOf(id),
     phone_country_code: a.phone_country_code,
     phone_national_number: a.phone_national_number,
+    is_self: a.is_self === true,
   };
 }
 

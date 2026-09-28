@@ -264,10 +264,11 @@ export type AthleteIdentity = Pick<
 /**
  * The identity plus the stored phone pair (#1931), for the lists whose rows
  * offer WhatsApp and a call. `ContactableAthleteResource` on the server:
- * both keys always present, null when no number is on file.
+ * both keys always present, null when no number is on file. `is_self` marks
+ * the owner's own row, which gets no reminder.
  */
 export type ContactableAthlete = AthleteIdentity &
-  Pick<Athlete, 'phone_country_code' | 'phone_national_number'>;
+  Pick<Athlete, 'phone_country_code' | 'phone_national_number' | 'is_self'>;
 
 /** The shapes `payment_coverage` takes. Mirrors `App\Enums\PaymentCoverage`. */
 export type PaymentCoverage =

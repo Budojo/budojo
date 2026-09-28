@@ -383,7 +383,31 @@ describe('ExpiringDocumentsListComponent', () => {
       const none = (fixture.nativeElement as HTMLElement).querySelector(
         '[data-cy="missing-cert-contact-12-none"]',
       );
-      expect(none?.getAttribute('aria-label')).toBe('No phone number on file');
+      expect(none?.getAttribute('aria-label')).toBe('No phone number on file for Luca Verdi');
+    });
+
+    it('never offers the owner a reminder about their own paper', () => {
+      // The owner can train and carry a certificate like anyone else, and
+      // lands on this list the same way. Messaging themselves is a dead end.
+      const fixture = mount();
+      flushHealth(
+        [
+          makeExpiring({
+            id: 5,
+            athlete_id: 1,
+            athlete: { ...person(1, 'Owner', 'Self'), is_self: true },
+          }),
+        ],
+        [{ ...person(2, 'Owner', 'Self'), is_self: true }],
+      );
+      fixture.detectChanges();
+
+      const el: HTMLElement = fixture.nativeElement;
+      expect(el.querySelector('[data-cy^="expiring-contact-5"]')).toBeNull();
+      expect(el.querySelector('[data-cy^="expiring-card-contact-5"]')).toBeNull();
+      expect(el.querySelector('[data-cy^="missing-cert-contact-2"]')).toBeNull();
+      // The row itself stays: the paper still needs renewing.
+      expect(el.querySelector('[data-cy="missing-cert-row-2"]')).not.toBeNull();
     });
 
     it("offers nothing on the academy's own papers, which belong to no one", () => {

@@ -18,6 +18,9 @@ use Illuminate\Http\Resources\Json\JsonResource;
  *
  * Both keys are always present, null when there is no number on file: the
  * client reads the pair and draws a disabled control that says why.
+ *
+ * `is_self` rides along because the owner can be on these lists too (#748):
+ * their own row gets no reminder, since there is no one to send it to.
  */
 class ContactableAthleteResource extends JsonResource
 {
@@ -33,6 +36,7 @@ class ContactableAthleteResource extends JsonResource
             ...new AthleteIdentityResource($athlete)->toArray($request),
             'phone_country_code' => $athlete->phone_country_code,
             'phone_national_number' => $athlete->phone_national_number,
+            'is_self' => $athlete->is_self,
         ];
     }
 }
