@@ -60,6 +60,33 @@ export function localised(value: Localised, lang: string): string {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.74.1',
+    date: '2026-09-28',
+    headline: {
+      en: 'The codice fiscale speaks your language: its errors show in the language you use, right under the field, and a wrong character shows as soon as you leave it.',
+      it: 'Il codice fiscale ti parla nella tua lingua: i suoi errori compaiono nella lingua che usi, proprio sotto il campo, e un carattere sbagliato si vede già quando esci dal campo.',
+    },
+    sections: [
+      {
+        heading: { en: 'Athletes', it: 'Atleti' },
+        bullets: [
+          {
+            en: "The codice fiscale's errors are in your language, under the field: they used to show in English at the bottom of the form, away from the field. They now read in the language you use, right under the codice fiscale, and the cursor goes there by itself.",
+            it: 'Gli errori del codice fiscale sono nella tua lingua, sotto il campo: comparivano in inglese, in fondo al modulo, lontano dal campo. Ora leggi «Il codice fiscale dice che il sesso è M, non F.» proprio sotto il codice fiscale, e il cursore ci va da solo.',
+          },
+          {
+            en: "A wrong character shows at once: when you leave the field, the form checks the code's shape and its check character itself, without waiting for you to save.",
+            it: 'Un carattere sbagliato si vede subito: quando esci dal campo, il modulo controlla da solo la forma del codice e il carattere di controllo, senza aspettare il salvataggio.',
+          },
+          {
+            en: '"Codice fiscale already used" and the file import speak your language too: a code another athlete already has, or a row of the file with the same code as another, is said in the language you use.',
+            it: "Anche «codice fiscale già usato» e l'importazione da file parlano la tua lingua: un codice che un altro atleta ha già, o una riga del file con lo stesso codice di un'altra, te lo dicono in italiano.",
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.74.0',
     date: '2026-09-28',
     headline: {
