@@ -12,11 +12,24 @@ Set the project-board status for an issue or PR in budojo's Project #2.
 
 ```bash
 ./.claude/scripts/board-set.sh 287 in-progress
-./.claude/scripts/board-set.sh 274 done
+./.claude/scripts/board-set.sh 274 done   # rare — the board's workflows set Done on merge and close (#2020)
 ./.claude/scripts/board-set.sh 281 todo   # rare — issues default to Todo on creation
 ```
 
 Encapsulates the 3-step GraphQL pipeline (lookup node id, add to project, set Status field) and the hardcoded `PVT_*` IDs. The IDs live ONLY in this script — anything else referencing them is drift.
+
+### `wait-pr.sh`
+
+Wait for a PR's checks to finish, then print its merge state and the failing jobs.
+
+```bash
+./.claude/scripts/wait-pr.sh 2014            # wait on whatever head the PR has
+./.claude/scripts/wait-pr.sh 2014 e7806ccd   # wait for the head you just pushed
+```
+
+- **Returns at once on `DIRTY`**, the one state CI can't fix: merge develop into the branch.
+- **`BEHIND` is not a reason to wait or to update.** The rulesets' required checks are not strict (`strict_required_status_checks_policy: false`), so a branch behind develop merges as it is. Every `update-branch` after a sibling merged used to cost a full CI round (#2020).
+- **Run it in the background** (`run_in_background`): a PR takes about 5 minutes.
 
 ### `test-client.sh` / `test-server.sh` / `test-desktop.sh`
 

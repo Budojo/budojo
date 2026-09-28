@@ -32,6 +32,8 @@ git show origin/<headRefName>:<path>
 
 **Never check out a branch, and never modify a file.** The working tree may hold someone else's work in progress.
 
+**Read the issue the PR closes** (`Closes #N` in the body): `gh issue view <N> --json title,body`. It holds what was asked and why. Check the PR does that: every point the issue asks for is either done or named in the PR's *Out of scope*. A silently dropped point is a finding. So is a change the issue never asked for that alters behaviour the owner relies on.
+
 ## 2. Read the canon for what the diff touches
 
 Read what applies:
@@ -49,6 +51,14 @@ Look for:
 - **Wrong assumptions:** a comment, docstring or name that says something the code doesn't do.
 - **Missing tests** for a non-obvious branch, or a test that passes for the wrong reason: a fake that doesn't return the real shape, an assertion that can't fail.
 - **Security and scoping:** academy scoping, authorization, validation at the trust boundary, personal data in logs or exports.
+- **Keyboard and screen-reader access**, on any template or dialog the diff touches:
+  - where the keyboard lands when a dialog, sheet or menu opens. It must not land on a destructive or dismissing button (#2001), nor stay behind the overlay.
+  - that closing hands the keyboard back to what opened it;
+  - an icon-only control carries a label;
+  - a disabled control still says why;
+  - a state change a sighted owner sees (a chip, a toast, a count) is reachable by a screen reader too.
+
+  PrimeNG's `p-dialog` focuses its first focusable element on show, which is the footer while the body is still loading.
 - **Convention drift** from a rule the canon above states explicitly.
 
 Skip style (prettier, lint, stylelint and cs-fixer gate it), taste, and anything you can't trace to a concrete input and a wrong output.

@@ -104,7 +104,7 @@ Separately from the semantic-release dev changelog, the SPA ships a **user-facin
 
 **New entries ship both languages** (#1347). `headline`, every `heading` and every `bullet` accept either a bare string (English) or `{ en, it }`. The 86 historical entries are bare strings and stay that way; anything added from v2.44.0 onwards carries both, because an Italian-speaking owner otherwise reads Italian chrome around English notes. The markdown source under `docs/changelog/user-facing/` stays English — it is a repo record, not a rendered surface.
 
-**Discipline:** every `develop → main` release PR adds the markdown file AND prepends the array entry in the same commit history. The vitest spec pinning the version order in the array (`renders all four backfilled releases`) fails when one is missing — that's the regression-catching trip-wire, by design.
+**Discipline:** every `develop → main` release PR adds the markdown file AND prepends the array entry in the same commit history. The release PR's CI job «Whats-new pin matches expected release» fails when the head entry is not the version semantic-release will tag, and the vitest spec fails when an entry is out of newest-first order. Neither needs a number bumped by hand (#2020).
 
 `whats-new.component.spec.ts` carries **four** of them, and they are in two different tests. Three sit together — the latest-version assertion, `cards.length`, and the head of the `versions` array — and the fourth is the remaining count in the *"Show N more releases"* button, which #1464 introduced when the page stopped rendering the whole history at once. It is `cards.length - 10`. It was missed on v2.54.0, the first release after #1464 shipped, precisely because it lives in its own test and every checklist said "three".
 
