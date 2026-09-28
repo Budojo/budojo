@@ -2197,7 +2197,8 @@
       "restoreToast": {
         "successSummary": "Atleta ripristinato",
         "errorSummary": "Impossibile ripristinare",
-        "errorDetail": "Qualcosa è andato storto. Riprova tra un momento."
+        "errorDetail": "Qualcosa è andato storto. Riprova tra un momento.",
+        "fiscalCodeTaken": "{{name}}, già in elenco, ha lo stesso codice fiscale. Se è la stessa persona, tieni quella; altrimenti correggi prima il codice di {{name}}."
       },
       "showInactive": "Mostra anche i non attivi",
       "hideInactive": "Mostra solo gli attivi",

@@ -4930,7 +4930,11 @@ paths:
                                 `duplicate` means an athlete of that name is
                                 already on the roster, or appeared earlier in
                                 this same file. A known date of birth on both
-                                sides that differs makes them two people.
+                                sides that differs makes them two people. It
+                                is decided before the row is validated
+                                (#1934), so a re-imported athlete whose email
+                                or codice fiscale the roster already has is
+                                `duplicate`, not `invalid`.
                             values:
                               type: object
                               description: The parsed athlete, as it would be created.
@@ -8001,6 +8005,36 @@ paths:
           description: Caller lacks AthletesRestore capability.
         '404':
           description: Athlete not deleted (or unknown id).
+        '422':
+          description: |
+            A live athlete of the same academy now holds this athlete's
+            codice fiscale (#1934) — deleted, re-created, and the old row
+            asked back. Restoring would leave two live rows with one code,
+            neither of which could be saved again. `errors.fiscal_code` is
+            the key the SPA translates; `holder` is the athlete it names.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message, errors, holder]
+                properties:
+                  message:
+                    type: string
+                    example: Mario Rossi, on the roster, already has this codice fiscale.
+                  errors:
+                    type: object
+                    required: [fiscal_code]
+                    properties:
+                      fiscal_code:
+                        type: array
+                        items: { type: string, enum: [fiscal_code_taken] }
+                  holder:
+                    type: object
+                    required: [id, first_name, last_name]
+                    properties:
+                      id: { type: integer, format: int64 }
+                      first_name: { type: string }
+                      last_name: { type: string }
 
   /me/academy:
     get:

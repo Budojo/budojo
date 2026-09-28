@@ -46,6 +46,16 @@ export type AthleteStatus = 'active' | 'inactive';
 export type Sex = 'm' | 'f';
 
 /**
+ * The body of a 422 on `POST /athletes/{id}/restore` (#1934): a live athlete
+ * has taken this one's codice fiscale since the delete. `holder` is who.
+ */
+export interface AthleteRestoreRefusal {
+  message: string;
+  errors: { fiscal_code: ['fiscal_code_taken'] };
+  holder: { id: number; first_name: string; last_name: string };
+}
+
+/**
  * Filter token for the athletes-list `?status=` query (#700). Extends
  * `AthleteStatus` with the special-cased `'trashed'` value that the
  * server resolves into a `->onlyTrashed()` query scope (the restore
@@ -615,6 +625,11 @@ export class AthleteService {
       .pipe(map((res) => res.data));
   }
 
+  /**
+   * `POST /api/v1/athletes/{id}/restore`. Refused with a 422 carrying an
+   * `AthleteRestoreRefusal` when a live athlete has taken this one's codice
+   * fiscale since the delete (#1934).
+   */
   restore(id: number): Observable<Athlete> {
     return this.http
       .post<AthleteResponse>(`${this.base}/${id}/restore`, {})

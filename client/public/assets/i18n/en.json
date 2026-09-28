@@ -2197,7 +2197,8 @@
       "restoreToast": {
         "successSummary": "Athlete restored",
         "errorSummary": "Could not restore",
-        "errorDetail": "Something went wrong. Try again in a moment."
+        "errorDetail": "Something went wrong. Try again in a moment.",
+        "fiscalCodeTaken": "{{name}}, on the roster, already has this codice fiscale. If it is the same person, keep that one; if not, correct the code on {{name}} first."
       },
       "showInactive": "Also show the non-active",
       "hideInactive": "Show only the active",

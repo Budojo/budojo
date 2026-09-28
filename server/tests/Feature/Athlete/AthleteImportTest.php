@@ -115,6 +115,22 @@ it('does not import the same roster twice', function (): void {
         ->and(Athlete::query()->count())->toBe(1);
 });
 
+it('recognises a re-imported athlete whose email the roster already has (#1934)', function (): void {
+    // The unique-email rule used to run before the duplicate check, so the
+    // second run of a file carrying emails came back red on every row that
+    // had one, instead of amber.
+    $file = fn (): UploadedFile => UploadedFile::fake()->createWithContent(
+        'atleti.csv',
+        "Nome;Cognome;Cintura;Email\nMarco;Rossi;blu;marco@example.test\n",
+    );
+
+    importRoster($this, $file(), ['validate_only' => false])->assertOk();
+    $second = importRoster($this, $file(), ['validate_only' => false])->assertOk();
+
+    expect($second->json('data.rows.0.status'))->toBe('duplicate')
+        ->and(Athlete::query()->count())->toBe(1);
+});
+
 it('does not import the same person twice from within one file', function (): void {
     // A sheet assembled from two registers. Without this the file imports its
     // own duplicate and nothing ever says so.

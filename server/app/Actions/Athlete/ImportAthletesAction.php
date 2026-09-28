@@ -87,6 +87,20 @@ final class ImportAthletesAction
         foreach ($csv->rows as $row) {
             ['values' => $values, 'errors' => $errors] = $this->read($csv->keyed($row['cells']), $map, $academy, $ladder);
 
+            // Someone already accounted for is skipped before anything the row
+            // says is judged (#1934): their email and their codice fiscale are
+            // on the roster because THEY are, and the unique rules would
+            // otherwise turn a re-imported register red instead of amber. A
+            // skipped row writes nothing, so what else is wrong with it can
+            // wait for the day it is not a duplicate.
+            $person = $this->identityOf($values);
+            if ($this->alreadyPresent($person, $seen)) {
+                $rows[] = ['row' => $row['number'], 'status' => 'duplicate', 'values' => $values, 'errors' => []];
+
+                continue;
+            }
+
+            // Past the identity check, a shared code is two different people.
             $code = $values['fiscal_code'] ?? null;
             if ($errors === [] && \is_string($code) && isset($codes[$code])) {
                 $errors['fiscal_code'] = ["Row {$codes[$code]} of this file has the same codice fiscale."];
@@ -94,13 +108,6 @@ final class ImportAthletesAction
 
             if ($errors !== []) {
                 $rows[] = ['row' => $row['number'], 'status' => 'invalid', 'values' => $values, 'errors' => $errors];
-
-                continue;
-            }
-
-            $person = $this->identityOf($values);
-            if ($this->alreadyPresent($person, $seen)) {
-                $rows[] = ['row' => $row['number'], 'status' => 'duplicate', 'values' => $values, 'errors' => []];
 
                 continue;
             }

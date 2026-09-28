@@ -159,6 +159,40 @@ it('lets an athlete keep their own code on an edit', function (): void {
     ])->assertOk();
 });
 
+it('refuses to restore an athlete whose code a live athlete has taken since', function (): void {
+    // Deleted, re-created by hand, then the old row restored: two live rows
+    // with one code, and neither could be saved again — the form always sends
+    // the code, and each would fail the unique rule against the other.
+    $old = Athlete::factory()->for($this->academy)->create(['fiscal_code' => 'RSSMRA90C15H501O']);
+    $old->delete();
+    $holder = Athlete::factory()->for($this->academy)->create([
+        'first_name' => 'Mario',
+        'last_name' => 'Rossi',
+        'fiscal_code' => 'RSSMRA90C15H501O',
+    ]);
+
+    $this->actingAs($this->user)->postJson("/api/v1/athletes/{$old->id}/restore")
+        ->assertUnprocessable()
+        ->assertJsonPath('errors.fiscal_code.0', 'fiscal_code_taken')
+        ->assertJsonPath('holder.id', $holder->id)
+        ->assertJsonPath('holder.first_name', 'Mario')
+        ->assertJsonPath('holder.last_name', 'Rossi')
+        ->assertJsonPath('message', 'Mario Rossi, on the roster, already has this codice fiscale.');
+
+    expect($old->fresh()?->trashed())->toBeTrue();
+});
+
+it('restores an athlete whose code only a trashed athlete or another academy holds', function (): void {
+    $old = Athlete::factory()->for($this->academy)->create(['fiscal_code' => 'RSSMRA90C15H501O']);
+    $old->delete();
+    Athlete::factory()->for($this->academy)->create(['fiscal_code' => 'RSSMRA90C15H501O'])->delete();
+    Athlete::factory()->for(Academy::factory())->create(['fiscal_code' => 'RSSMRA90C15H501O']);
+
+    $this->actingAs($this->user)->postJson("/api/v1/athletes/{$old->id}/restore")->assertOk();
+
+    expect($old->fresh()?->trashed())->toBeFalse();
+});
+
 // ─── Where it goes ───────────────────────────────────────────────────────────
 
 it('masks the code in the audit log', function (): void {
@@ -250,6 +284,60 @@ it('refuses a second row of the same file with the same code', function (): void
     expect($response->json('data.rows.0.status'))->toBe('ok')
         ->and($response->json('data.rows.1.status'))->toBe('invalid')
         ->and($response->json('data.rows.1.errors.fiscal_code.0'))->toContain('Row 2');
+});
+
+it('counts one person listed twice with their code as a duplicate, not an error', function (): void {
+    // A file assembled from two registers: the same athlete, the same code.
+    // That is the duplicate the import already skips, not a clash.
+    $response = $this->actingAs($this->user)
+        ->post('/api/v1/athletes/import', ['file' => federationCsv([
+            ['Mario', 'Rossi', 'bianca', 'RSSMRA90C15H501O', '', '', ''],
+            ['mario', 'ROSSI', 'bianca', 'RSSMRA90C15H501O', 'M', '', '15/03/1990'],
+        ])])
+        ->assertOk();
+
+    expect($response->json('data.rows.0.status'))->toBe('ok')
+        ->and($response->json('data.rows.1.status'))->toBe('duplicate')
+        ->and($response->json('data.rows.1.errors'))->toBe([]);
+});
+
+it('counts a re-import of someone on the roster as a duplicate, not an error', function (): void {
+    // Re-importing this year's federation register: everyone on it is already
+    // on the roster with the same code. The unique rule must not turn every
+    // row red before the duplicate check has a chance to recognise them.
+    Athlete::factory()->for($this->academy)->create([
+        'first_name' => 'Mario',
+        'last_name' => 'Rossi',
+        'date_of_birth' => '1990-03-15',
+        'fiscal_code' => 'RSSMRA90C15H501O',
+    ]);
+
+    $response = $this->actingAs($this->user)
+        ->post('/api/v1/athletes/import', ['file' => federationCsv([
+            ['Mario', 'Rossi', 'bianca', 'RSSMRA90C15H501O', 'M', 'Roma', ''],
+        ]), 'validate_only' => false])
+        ->assertOk();
+
+    expect($response->json('data.rows.0.status'))->toBe('duplicate')
+        ->and($response->json('data.imported'))->toBe(0)
+        ->and(Athlete::query()->count())->toBe(1);
+});
+
+it('refuses a code the roster holds for someone else', function (): void {
+    Athlete::factory()->for($this->academy)->create([
+        'first_name' => 'Luigi',
+        'last_name' => 'Verdi',
+        'fiscal_code' => 'RSSMRA90C15H501O',
+    ]);
+
+    $response = $this->actingAs($this->user)
+        ->post('/api/v1/athletes/import', ['file' => federationCsv([
+            ['Mario', 'Rossi', 'bianca', 'RSSMRA90C15H501O', '', '', ''],
+        ])])
+        ->assertOk();
+
+    expect($response->json('data.rows.0.status'))->toBe('invalid')
+        ->and($response->json('data.rows.0.errors.fiscal_code'))->not->toBeEmpty();
 });
 
 it('refuses a row whose code is wrong, with a reason', function (): void {
