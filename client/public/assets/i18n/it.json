@@ -2709,6 +2709,9 @@
         "address": {
           "postalCode": "Il CAP deve essere di 5 cifre.",
           "incomplete": "Compila tutti i campi obbligatori dell'indirizzo, oppure lasciali tutti vuoti per non assegnarne nessuno."
+        },
+        "fiscalCode": {
+          "invalid": "Il codice fiscale non è valido: controllalo sul documento."
         }
       },
       "hint": {
@@ -3618,5 +3621,35 @@
     "whatsapp": "Apri WhatsApp",
     "copied": "Settimana copiata: incollala nel gruppo.",
     "copyFailed": "Non è stato possibile copiarla: usa «Apri WhatsApp»."
+  },
+  "mat": {
+    "spike": {
+      "eyebrow": "Anteprima tecnica",
+      "title": "Budojo sul tatami",
+      "lede": "Questa è la prova dell'app per il telefono: per ora nessun dato vero e nessun collegamento.",
+      "identityHeading": "Come appare un atleta",
+      "sampleNote": "Riga di esempio, con la cintura sul bordo come sul PC.",
+      "storageHeading": "Prova di memoria",
+      "storageHelp": "Tocca +1 qualche volta, poi installa la versione successiva sopra questa: il numero deve restare.",
+      "countLabel": "Salvato sul telefono",
+      "savedAt": "Ultimo salvataggio: {{when}}",
+      "neverSaved": "Niente salvato finora.",
+      "increment": "+1",
+      "build": "Versione {{build}}",
+      "server": {
+        "heading": "Budojo sul telefono",
+        "help": "Avvia il server di Budojo dentro il telefono, con un'accademia di prova, e misura quanto è veloce. Prova anche in modalità aereo.",
+        "run": "Avvia e misura",
+        "running": "Misuro…",
+        "onlyOnPhone": "Disponibile solo nell'app sul telefono.",
+        "coldStart": "Avvio a freddo",
+        "coldStartDetail": "estrazione {{unpack}} ms · migrazioni {{migrate}} ms · server {{server}} ms",
+        "login": "Accesso",
+        "roster": "Elenco atleti, 20 volte",
+        "mark": "Segna una presenza, 10 volte",
+        "athletes": "Atleti nel database",
+        "firstRequest": "Prima richiesta (compila il framework)"
+      }
+    }
   }
 }

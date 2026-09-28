@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Rules;
 
+use App\Enums\AppLocale;
 use App\Enums\Sex;
 use App\Support\FiscalCode;
 use App\Support\OperatorDay;
@@ -23,6 +24,10 @@ use Illuminate\Contracts\Validation\ValidationRule;
  *
  * One rule for every door a code comes in by — create, edit and the CSV
  * import — the way `StripesWithinGrade` is.
+ *
+ * It speaks the owner's language (#2006): the caller passes `users.locale`,
+ * and the lines live in `lang/{en,it}/athletes.php`. They used to be English
+ * whatever the owner read, in the form's banner.
  */
 final class ItalianFiscalCode implements DataAwareRule, ValidationRule
 {
@@ -32,6 +37,7 @@ final class ItalianFiscalCode implements DataAwareRule, ValidationRule
     public function __construct(
         private readonly ?CarbonInterface $storedBirthDate = null,
         private readonly ?Sex $storedSex = null,
+        private readonly AppLocale $locale = AppLocale::En,
     ) {
     }
 
@@ -47,7 +53,7 @@ final class ItalianFiscalCode implements DataAwareRule, ValidationRule
     {
         $code = \is_string($value) ? FiscalCode::parse($value) : null;
         if ($code === null) {
-            $fail('The codice fiscale is not valid: check it against the document.');
+            $fail($this->line('invalid'));
 
             return;
         }
@@ -55,12 +61,12 @@ final class ItalianFiscalCode implements DataAwareRule, ValidationRule
         $encoded = $code->birthDate(OperatorDay::today());
         $birthDate = $this->birthDate();
         if ($birthDate !== null && $birthDate !== $encoded->toDateString()) {
-            $fail("The codice fiscale says the date of birth is {$encoded->format('d/m/Y')}.");
+            $fail($this->line('birth_date', ['date' => $encoded->format('d/m/Y')]));
         }
 
         $sex = $this->sex();
         if ($sex !== null && $sex !== $code->sex) {
-            $fail("The codice fiscale says the sex is {$this->letter($code->sex)}, not {$this->letter($sex)}.");
+            $fail($this->line('sex', ['encoded' => $this->letter($code->sex), 'given' => $this->letter($sex)]));
         }
     }
 
@@ -85,6 +91,14 @@ final class ItalianFiscalCode implements DataAwareRule, ValidationRule
         }
 
         return $this->storedSex;
+    }
+
+    /** @param array<string, string> $replace */
+    private function line(string $key, array $replace = []): string
+    {
+        $line = __("athletes.fiscal_code.{$key}", $replace, $this->locale->value);
+
+        return \is_string($line) ? $line : $key;
     }
 
     private function letter(Sex $sex): string

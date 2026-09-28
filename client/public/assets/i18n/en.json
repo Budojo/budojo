@@ -2709,6 +2709,9 @@
         "address": {
           "postalCode": "ZIP must be exactly 5 digits.",
           "incomplete": "Fill every required address field, or clear them all to leave the athlete without an address."
+        },
+        "fiscalCode": {
+          "invalid": "The codice fiscale is not valid: check it against the document."
         }
       },
       "hint": {
@@ -3618,5 +3621,35 @@
     "whatsapp": "Open WhatsApp",
     "copied": "Week copied: paste it in the group.",
     "copyFailed": "It couldn't be copied: use «Open WhatsApp»."
+  },
+  "mat": {
+    "spike": {
+      "eyebrow": "Technical preview",
+      "title": "Budojo on the mat",
+      "lede": "This is the trial run of the phone app: no real data and no connection, for now.",
+      "identityHeading": "How an athlete looks",
+      "sampleNote": "A sample row, with the belt down the edge as on the PC.",
+      "storageHeading": "Storage check",
+      "storageHelp": "Tap +1 a few times, then install the next build over this one: the number must stay.",
+      "countLabel": "Saved on the phone",
+      "savedAt": "Last saved: {{when}}",
+      "neverSaved": "Nothing saved yet.",
+      "increment": "+1",
+      "build": "Build {{build}}",
+      "server": {
+        "heading": "Budojo on the phone",
+        "help": "Starts Budojo's server inside the phone, with a demo academy, and measures how fast it is. Try it in airplane mode too.",
+        "run": "Start and measure",
+        "running": "Measuring…",
+        "onlyOnPhone": "Only available in the app on the phone.",
+        "coldStart": "Cold start",
+        "coldStartDetail": "unpack {{unpack}} ms · migrations {{migrate}} ms · server {{server}} ms",
+        "login": "Log in",
+        "roster": "Athlete list, 20 times",
+        "mark": "Mark a presence, 10 times",
+        "athletes": "Athletes in the database",
+        "firstRequest": "First request (compiles the framework)"
+      }
+    }
   }
 }

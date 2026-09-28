@@ -11,6 +11,7 @@ use App\Enums\BillingPeriod;
 use App\Http\Requests\Concerns\AuthorizesAcademyCapability;
 use App\Http\Requests\Concerns\NormalisesFiscalCode;
 use App\Http\Requests\Concerns\ResolvesRankLadder;
+use App\Http\Requests\Concerns\SpeaksTheOwnersLanguage;
 use App\Http\Requests\Concerns\ValidatesAddress;
 use App\Http\Requests\Concerns\ValidatesPhonePair;
 use App\Models\Athlete;
@@ -30,6 +31,7 @@ class UpdateAthleteRequest extends FormRequest
     use ValidatesAddress;
     use ValidatesPhonePair;
     use ResolvesRankLadder;
+    use SpeaksTheOwnersLanguage;
 
     public function authorize(): bool
     {
@@ -101,7 +103,7 @@ class UpdateAthleteRequest extends FormRequest
             'date_of_birth' => ['sometimes', 'nullable', 'date', OperatorDay::before()],
             // The code, checked against the date and sex this edit sends or,
             // when it sends only the code, the ones already stored (#1934).
-            ...AthleteFieldRules::federationDetails($academyId, $athlete?->id, $athlete?->date_of_birth, $athlete?->sex),
+            ...AthleteFieldRules::federationDetails($academyId, $athlete?->id, $athlete?->date_of_birth, $athlete?->sex, $this->ownersLocale()),
             'belt' => ['sometimes', Rule::enum(Belt::class), new BeltInLadder($this->rankLadder())],
             // Global ceiling across every ladder (#1800), then the grade's own
             // cap — for the belt in the request or, when an edit sends only
@@ -129,6 +131,16 @@ class UpdateAthleteRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $this->validatePhonePairWithLibphonenumber($validator);
+    }
+
+    /**
+     * The codice fiscale's "already taken", in the owner's language (#2006).
+     *
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return AthleteFieldRules::messages($this->ownersLocale());
     }
 
     /** The phone as its national significant number (#1867), the code in capitals (#1934). */

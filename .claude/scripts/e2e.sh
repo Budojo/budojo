@@ -68,9 +68,28 @@ echo "── prettier (cypress) ──"
 docker compose exec -T --user "$(id -u)" client sh -lc 'npx prettier --write cypress' \
   2>/dev/null | grep -v unchanged || true
 
+# The API is stopped for the run, as it is absent in CI (#2020). With it up, a
+# call a spec forgot to stub reaches the real server, gets a 401, and the
+# auth interceptor logs the app out mid-test: local failures CI never has.
+# The screenshot harness has always done this; now the specs do too.
+api_was_up=""
+restore_api() {
+  if [[ -n "$api_was_up" ]]; then
+    docker compose -f "$ROOT/docker-compose.yml" start api >/dev/null || true
+  fi
+}
+# Before the stop, not after: under `set -e` a failing stop would exit before
+# the trap existed and leave the API down.
+trap restore_api EXIT
+if docker compose -f "$ROOT/docker-compose.yml" ps --status running --services 2>/dev/null | grep -qx api; then
+  api_was_up=1
+  echo "── stopping the api for the run (CI has no backend) ──"
+  docker compose -f "$ROOT/docker-compose.yml" stop api >/dev/null
+fi
+
 echo "── cypress ──"
 # shellcheck disable=SC2086
-exec docker run --rm --network host \
+docker run --rm --network host \
   --user "$(id -u):$(id -g)" \
   -v "$CLIENT":/e2e -w /e2e \
   -e "CYPRESS_PAGE=${CYPRESS_PAGE:-}" \

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions\Athlete;
 
 use App\Actions\Address\AddressIntent;
+use App\Enums\AppLocale;
 use App\Enums\AthleteStatus;
 use App\Enums\Belt;
 use App\Models\Academy;
@@ -80,12 +81,14 @@ final class ImportAthletesAction
         // assembled from two registers usually does.
         $seen = $this->existingPeople($academy);
         $ladder = MartialArtProfile::for($academy->martial_art)->ladder();
+        // The report speaks the importer's language (#2006).
+        $locale = $importer->locale ?? AppLocale::En;
         // Codes earlier rows of THIS file would write (#1934). The validator
         // only sees the roster, so two rows sharing a code would both pass it.
         $codes = [];
 
         foreach ($csv->rows as $row) {
-            ['values' => $values, 'errors' => $errors] = $this->read($csv->keyed($row['cells']), $map, $academy, $ladder);
+            ['values' => $values, 'errors' => $errors] = $this->read($csv->keyed($row['cells']), $map, $academy, $ladder, $locale);
 
             // Someone already accounted for is skipped before anything the row
             // says is judged (#1934): their email and their codice fiscale are
@@ -103,7 +106,8 @@ final class ImportAthletesAction
             // Past the identity check, a shared code is two different people.
             $code = $values['fiscal_code'] ?? null;
             if ($errors === [] && \is_string($code) && isset($codes[$code])) {
-                $errors['fiscal_code'] = ["Row {$codes[$code]} of this file has the same codice fiscale."];
+                $same = __('athletes.fiscal_code.same_in_file', ['row' => (string) $codes[$code]], $locale->value);
+                $errors['fiscal_code'] = [\is_string($same) ? $same : 'athletes.fiscal_code.same_in_file'];
             }
 
             if ($errors !== []) {
@@ -166,7 +170,7 @@ final class ImportAthletesAction
      *
      * @return array{values: array<string, mixed>, errors: array<string, list<string>>}
      */
-    private function read(array $cells, array $map, Academy $academy, RankLadder $ladder): array
+    private function read(array $cells, array $map, Academy $academy, RankLadder $ladder, AppLocale $locale): array
     {
         $values = $this->valuesFor($cells, $map, $academy);
 
@@ -174,7 +178,7 @@ final class ImportAthletesAction
         $grade = StripesText::parse($this->cell($cells, $map, 'stripes'), $belt === null ? null : $ladder->gradeOf($belt));
         $values['stripes'] = $grade->stripes;
 
-        $errors = $this->errorsFor($values, $academy->id, $ladder);
+        $errors = $this->errorsFor($values, $academy->id, $ladder, $locale);
         if ($grade->refusal !== null) {
             $errors['stripes'] = [$grade->refusal];
         }
@@ -306,9 +310,10 @@ final class ImportAthletesAction
      *
      * @return array<string, list<string>>
      */
-    private function errorsFor(array $values, int $academyId, RankLadder $ladder): array
+    private function errorsFor(array $values, int $academyId, RankLadder $ladder, AppLocale $locale): array
     {
-        $validator = Validator::make($values, AthleteFieldRules::for($academyId, $ladder));
+        // In the importer's language (#2006): the report lists these per row.
+        $validator = Validator::make($values, AthleteFieldRules::for($academyId, $ladder, $locale), AthleteFieldRules::messages($locale));
 
         /** @var array<string, list<string>> $errors */
         $errors = $validator->errors()->toArray();

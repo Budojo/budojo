@@ -1,0 +1,15 @@
+{
+  "name": "budojo-mobile",
+  "private": true,
+  "description": "The mat app (M12, #2026): the client's `mat` application in a Capacitor shell for Android.",
+  "scripts": {
+    "sync": "cap sync android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/core": "^8.5.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.2"
+  }
+}

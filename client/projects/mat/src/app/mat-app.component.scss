@@ -1,0 +1,126 @@
+// The spike's screen (#2027): one column, the phone's width, the desktop's tokens.
+:host {
+  display: block;
+  min-height: 100dvh;
+  background: var(--p-surface-50);
+  color: var(--p-text-color);
+}
+
+.mat {
+  display: grid;
+  gap: 2rem;
+  max-width: 30rem;
+  margin: 0 auto;
+  padding: calc(env(safe-area-inset-top, 0px) + 1.5rem) 1rem
+    calc(env(safe-area-inset-bottom, 0px) + 1.5rem);
+}
+
+.mat__eyebrow {
+  margin: 0 0 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--p-text-muted-color);
+}
+
+.mat__title {
+  margin: 0;
+  font-size: 2rem;
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: -0.024em;
+}
+
+.mat__lede,
+.mat__note {
+  margin: 0;
+  color: var(--p-text-muted-color);
+}
+
+.mat__section {
+  display: grid;
+  gap: 1rem;
+}
+
+.mat__heading {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.018em;
+}
+
+// The identity's spine is positioned against its row (DESIGN_SYSTEM § 1.8).
+.mat__row {
+  position: relative;
+  min-height: 3.5rem;
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  background: var(--p-content-background);
+  border-radius: var(--p-border-radius-md);
+  overflow: hidden;
+}
+
+.mat__count {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+}
+
+.mat__count-label {
+  font-size: 0.8125rem;
+  color: var(--p-text-muted-color);
+}
+
+.mat__count-value {
+  font-size: 2.5rem;
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: -0.024em;
+  font-variant-numeric: tabular-nums;
+}
+
+.mat__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  color: var(--p-text-muted-color);
+  font-size: 0.8125rem;
+}
+
+// #2044: the server measurements, label above value.
+.mat__results {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
+  margin: 0;
+
+  dt {
+    font-size: 0.8125rem;
+    color: var(--p-text-muted-color);
+  }
+
+  dd {
+    margin: 0 0 0.5rem;
+    font-size: 1.0625rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.mat__detail {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 400;
+  color: var(--p-text-muted-color);
+}
+
+.mat__error {
+  margin: 0;
+  color: var(--budojo-danger-ink);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  font-size: 0.8125rem;
+}

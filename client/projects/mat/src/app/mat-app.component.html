@@ -1,0 +1,104 @@
+<main class="mat">
+  <header class="mat__head">
+    <p class="mat__eyebrow">{{ 'mat.spike.eyebrow' | translate }}</p>
+    <h1 class="mat__title">{{ 'mat.spike.title' | translate }}</h1>
+    <p class="mat__lede">{{ 'mat.spike.lede' | translate }}</p>
+  </header>
+
+  <section class="mat__section" aria-labelledby="mat-identity">
+    <h2 id="mat-identity" class="mat__heading">{{ 'mat.spike.identityHeading' | translate }}</h2>
+    <div class="mat__row">
+      <app-athlete-identity [athlete]="sample" />
+    </div>
+    <p class="mat__note">{{ 'mat.spike.sampleNote' | translate }}</p>
+  </section>
+
+  <section class="mat__section" aria-labelledby="mat-storage">
+    <h2 id="mat-storage" class="mat__heading">{{ 'mat.spike.storageHeading' | translate }}</h2>
+    <p class="mat__note">{{ 'mat.spike.storageHelp' | translate }}</p>
+    <p class="mat__count" aria-live="polite">
+      <span class="mat__count-label">{{ 'mat.spike.countLabel' | translate }}</span>
+      <span class="mat__count-value" data-cy="mat-count">{{ count() }}</span>
+    </p>
+    <p class="mat__note" data-cy="mat-saved-at">
+      @if (savedAtLabel(); as when) {
+        {{ 'mat.spike.savedAt' | translate: { when: when } }}
+      } @else {
+        {{ 'mat.spike.neverSaved' | translate }}
+      }
+    </p>
+    <p-button
+      data-cy="mat-increment"
+      [label]="'mat.spike.increment' | translate"
+      [disabled]="!loaded()"
+      size="large"
+      [fluid]="true"
+      (onClick)="increment()"
+    />
+  </section>
+
+  <section class="mat__section" aria-labelledby="mat-server">
+    <h2 id="mat-server" class="mat__heading">{{ 'mat.spike.server.heading' | translate }}</h2>
+    @if (serverAvailable) {
+      <p class="mat__note">{{ 'mat.spike.server.help' | translate }}</p>
+      <p-button
+        data-cy="mat-server-run"
+        [label]="
+          (serverState() === 'running' ? 'mat.spike.server.running' : 'mat.spike.server.run')
+            | translate
+        "
+        [loading]="serverState() === 'running'"
+        size="large"
+        [fluid]="true"
+        (onClick)="runServerSpike()"
+      />
+      @if (serverStart(); as start) {
+        <dl class="mat__results" data-cy="mat-server-results">
+          <dt>{{ 'mat.spike.server.coldStart' | translate }}</dt>
+          <dd>
+            {{ start.alreadyRunning ? '—' : start.totalMs + ' ms' }}
+            @if (!start.alreadyRunning) {
+              <span class="mat__detail">
+                {{
+                  'mat.spike.server.coldStartDetail'
+                    | translate
+                      : { unpack: start.unpackMs, migrate: start.migrateMs, server: start.serverMs }
+                }}
+              </span>
+            }
+          </dd>
+          @if (start.firstRequestMs !== undefined) {
+            <dt>{{ 'mat.spike.server.firstRequest' | translate }}</dt>
+            <dd>{{ start.firstRequestMs }} ms</dd>
+          }
+          @if (start.opcache) {
+            <dt>OPcache</dt>
+            <dd>{{ start.opcache }}</dd>
+          }
+          @if (benchmark(); as result) {
+            <dt>{{ 'mat.spike.server.login' | translate }}</dt>
+            <dd>{{ result.loginMs }} ms</dd>
+            <dt>{{ 'mat.spike.server.roster' | translate }}</dt>
+            <dd>p50 {{ result.roster.p50 }} ms · p95 {{ result.roster.p95 }} ms</dd>
+            <dt>{{ 'mat.spike.server.mark' | translate }}</dt>
+            <dd>p50 {{ result.mark.p50 }} ms · p95 {{ result.mark.p95 }} ms</dd>
+            <dt>{{ 'mat.spike.server.athletes' | translate }}</dt>
+            <dd>{{ result.athletes }}</dd>
+          }
+        </dl>
+      }
+      @if (serverError(); as message) {
+        <p class="mat__error" role="alert">{{ message }}</p>
+      }
+    } @else {
+      <p class="mat__note" data-cy="mat-server-unavailable">
+        {{ 'mat.spike.server.onlyOnPhone' | translate }}
+      </p>
+    }
+  </section>
+
+  <footer class="mat__foot">
+    <span data-cy="mat-build">{{ 'mat.spike.build' | translate: { build: build } }}</span>
+    <p-button [label]="otherLanguage()" [text]="true" (onClick)="toggleLanguage()" />
+  </footer>
+</main>

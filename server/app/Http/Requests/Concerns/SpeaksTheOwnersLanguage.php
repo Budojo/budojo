@@ -10,9 +10,10 @@ use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 
 /**
- * The promotion history's own messages (#1991), in the language the caller
- * reads (`users.locale`, #1912) — from `lang/{en,it}/promotions.php`, never
- * raw English. A message Laravel writes for a shape rule stays as it is.
+ * Messages in the language the caller reads (`users.locale`, #1912), never
+ * raw English: the promotion history's own (#1991, `lang/{en,it}/promotions.php`)
+ * and, through `ownersLocale()`, the athlete record's (#2006). A message
+ * Laravel writes for a shape rule stays as it is.
  */
 trait SpeaksTheOwnersLanguage
 {
@@ -43,11 +44,16 @@ trait SpeaksTheOwnersLanguage
     }
 
     /** English for a caller who never chose a language, as the SPA defaults. */
-    private function ownerLocale(): string
+    protected function ownersLocale(): AppLocale
     {
         $user = $this->user();
         $locale = $user instanceof User ? $user->locale : null;
 
-        return ($locale ?? AppLocale::En)->value;
+        return $locale ?? AppLocale::En;
+    }
+
+    private function ownerLocale(): string
+    {
+        return $this->ownersLocale()->value;
     }
 }

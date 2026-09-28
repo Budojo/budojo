@@ -171,7 +171,7 @@ Status lifecycle. The board's `Status` field has **exactly three options** — `
 
 The two items therefore sit in different columns for the length of a release train, and that is the intended reading: the PR is done, the feature is not shipped. Keeping a separate `Merged` column would say the same thing with one more option to maintain on a shared board — worth revisiting only if someone wants "merged but unreleased" visible as its own column rather than inferred from the issue beside it.
 
-Use `./.claude/scripts/board-set.sh <N> <status>` to set the status — it encapsulates the 3-step GraphQL pipeline (lookup node id, add to project, set field). Acceptable status values: `todo`, `in-progress`, `done`.
+**`Done` is automatic** since #2020: the board's own workflows «Pull request merged» and «Item closed» set it. A merged PR moves at the merge; an issue moves when the release PR closes it. What's left by hand is adding the items and `In Progress`, with `./.claude/scripts/board-set.sh <N> in-progress`. The script encapsulates the 3-step GraphQL pipeline (lookup node id, add to project, set field) and still accepts `todo` and `done` for the rare correction.
 
 ## Markdown gotcha: never write `Project #N`
 

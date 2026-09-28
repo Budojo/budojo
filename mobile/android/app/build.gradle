@@ -1,0 +1,84 @@
+apply plugin: 'com.android.application'
+
+// The version comes from CI (#2027): `-PbudojoVersionCode=<n> -PbudojoVersionName=<x.y.z>`.
+// The code must only ever grow, or Android refuses to install the update over the app.
+def budojoVersionCode = (project.findProperty('budojoVersionCode') ?: '1') as Integer
+def budojoVersionName = project.findProperty('budojoVersionName') ?: '0.0.0-dev'
+
+android {
+    namespace = "it.budojo.mobile"
+    compileSdk = rootProject.ext.compileSdkVersion
+    defaultConfig {
+        applicationId "it.budojo.mobile"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode budojoVersionCode
+        versionName budojoVersionName
+        // Only arm64 phones: the PHP binary is built for arm64 alone (#2044).
+        ndk {
+            abiFilters 'arm64-v8a'
+        }
+        aaptOptions {
+             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+    signingConfigs {
+        // The release key never enters the repo (#2027). CI decodes it from the
+        // BUDOJO_ANDROID_KEYSTORE_* secrets into a temp file; the owner keeps the
+        // other copy. There is deliberately no fallback to a debug key: an APK
+        // signed with any other key can never install over the app on a phone.
+        release {
+            def keystore = System.getenv('BUDOJO_ANDROID_KEYSTORE')
+            if (keystore) {
+                storeFile file(keystore)
+                storeType 'pkcs12'
+                storePassword System.getenv('BUDOJO_ANDROID_KEYSTORE_PASSWORD')
+                keyAlias 'budojo'
+                keyPassword System.getenv('BUDOJO_ANDROID_KEYSTORE_PASSWORD')
+            }
+        }
+    }
+    // The PHP binary ships as libphp.so and must be extracted to the native
+    // library directory, the one place Android lets an app execute a file
+    // (#2044). Modern packaging would leave it inside the APK.
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
+        }
+    }
+    buildTypes {
+        release {
+            signingConfig signingConfigs.release
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+repositories {
+    flatDir{
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation project(':capacitor-android')
+    implementation project(':capacitor-cordova-android-plugins')
+}
+
+apply from: 'capacitor.build.gradle'
+
+try {
+    def servicesJSON = file('google-services.json')
+    if (servicesJSON.text) {
+        apply plugin: 'com.google.gms.google-services'
+    }
+} catch(Exception e) {
+    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+}

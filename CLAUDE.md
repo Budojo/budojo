@@ -8,7 +8,7 @@
 
 The hosted stack (DigitalOcean / Forge / Cloudflare) was decommissioned in #1230; `docs/desktop/` is how it runs today. **Docker is the development environment only** — the shipped app bundles its own runtime.
 
-🐧 **Development happens on Linux** (#1299). The repo was written on Windows and both platforms are supported, but Linux is the base you should assume. The difference that matters: **a Linux bind mount is the host's real filesystem**, so anything a container creates under `server/` or `client/` lands on the host owned by whoever created it, and a `chown` inside the container really re-owns your file. Docker Desktop's 9p share fabricated ownership and swallowed `chown(2)`, which is why this was invisible for so long. The Dockerfiles remap their service user to the host's uid to keep it that way — full explanation, the not-1000 case and the SELinux verdict in [`docs/development/linux-dev.md`](./docs/development/linux-dev.md). Shipping the desktop app **for** Linux is separate and not done yet (#1300).
+🐧 **Development happens on Linux** (#1299). **A Linux bind mount is the host's real filesystem:** anything a container creates under `server/` or `client/` lands on the host owned by whoever created it. The Dockerfiles remap their service user to your uid to keep that right. Details, the not-1000 case and SELinux are in [`docs/development/linux-dev.md`](./docs/development/linux-dev.md). Shipping the desktop app **for** Linux is separate and not done yet (#1300).
 
 ⚠️ **The dev containers are configured by `server/.env` alone.** `docker-compose.yml` deliberately has **no `env_file`** for the `api` service: Compose would turn it into real environment variables, and Laravel's `env()` resolves `$_SERVER` before `$_ENV`, so those silently override both `server/.env` and `phpunit.xml`. Re-adding it once blanked VAPID keys and pointed `RefreshDatabase` at the development database. Never add it back — see `.claude/gotchas.md` § Docker dev-env.
 
@@ -16,24 +16,17 @@ Tech versions live in `server/composer.json`, `client/package.json`, `desktop/pa
 
 ## How this file is organized
 
-The repo uses a **hierarchical `CLAUDE.md`** layout. Claude Code loads the nearest `CLAUDE.md` and every ancestor up to the root.
+This file holds the cross-cutting rules. Claude Code also loads the nearest nested file when you work under it:
+- **`server/CLAUDE.md`:** the Uncle Bob canon, PHPStan, PEST.
+- **`client/CLAUDE.md`:** the UX canon, Vitest, Cypress.
+- **`desktop/CLAUDE.md`:** Electron boundaries and packaging.
+- **`mobile/CLAUDE.md`:** the mat app's Android shell (M12). Its screens are `client/projects/mat`.
 
-| File                                     | Loaded when             | Scope                                                                                                                       |
-| ---------------------------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `CLAUDE.md` (this file)                  | Always                  | Cross-cutting behavioural rules — principles, TDD, git/PR/release discipline, documentation discipline                       |
-| [`server/CLAUDE.md`](./server/CLAUDE.md) | Working under `server/` | Laravel patterns + **Uncle Bob canon**, PHPStan/CS-Fixer/PEST conventions                                                   |
-| [`client/CLAUDE.md`](./client/CLAUDE.md) | Working under `client/` | Angular patterns + **UX canon** (MD3 / Don't Make Me Think / Norman / Laws of UX), Vitest/Cypress conventions               |
-| [`desktop/CLAUDE.md`](./desktop/CLAUDE.md) | Working under `desktop/` | Electron main/preload boundaries, the pure-engine + IO-adapter split, PHP supervision rules, packaging                     |
+**Runbooks** (the *how*) live in [`docs/development/`](./docs/development/README.md): linux-dev, git-flow, release-flow, pr-labels, visual-verification.
 
-**Procedural runbooks** (the _how_, not the _what_) live under [`docs/development/`](./docs/development/README.md):
-
-- [`linux-dev.md`](./docs/development/linux-dev.md) — the Linux development base: setup, bind-mount ownership, SELinux, Cypress, what is still Windows-only
-- [`git-flow.md`](./docs/development/git-flow.md) — branch model, naming, commit format, daily/hotfix flow
-- [`release-flow.md`](./docs/development/release-flow.md) — semantic-release cadence, `## Auto-closes` block, auto-sweep, post-release sweep
-- [`pr-labels.md`](./docs/development/pr-labels.md) — type/status labels, PR checklist, PR body conventions
-- [`visual-verification.md`](./docs/development/visual-verification.md) — mandatory in-browser smoke before push for visible UI changes; local screenshot recipe
-
-If a rule here and a rule in a sub-file conflict, **the sub-file wins** for that scope. If a rule here and a runbook conflict, **the runbook is the implementation detail** — fix whichever drifted.
+Where rules conflict:
+- a sub-file wins for its own scope;
+- a runbook is the implementation detail: fix whichever drifted.
 
 ---
 
@@ -73,7 +66,7 @@ Full details in [`docs/development/git-flow.md`](./docs/development/git-flow.md)
 - **GitFlow**: `main` ← `develop` ← `feat|fix|chore|…/<issue-number>-<description>`. No direct commits to `main` or `develop`, ever — the `pre-commit` / `pre-push` hooks refuse both. They need `npm ci` **at the repo root** to be wired (`git config core.hooksPath` should print `.husky/_`); without it they silently don't run at all.
 - **Conventional commits**, lower-case subject, enforced by commitlint.
 - **Squash merge** into `develop`. **Merge commit** (no squash) from `develop` into `main`.
-- **Merge `develop` into the feature branch** when it falls behind — no rebase. Squash on merge collapses the history anyway.
+- **Merge `develop` into the feature branch only when the PR conflicts (`DIRTY`)**, never rebase. A branch that is merely *behind* merges as it is: the rulesets' required checks are not strict, and updating it just re-runs CI (#2020). Use [`wait-pr.sh`](./.claude/scripts/wait-pr.sh) to wait on a PR.
 - **Always include the issue number** in the branch name — it's the traceability link.
 - **`Closes #N`** in every PR body (not `Refs #N` — Refs leaves the issue open).
 
@@ -97,9 +90,13 @@ Run only the gates your diff touches — a docs-only change does not need PEST �
 
 **Before `git push`, also scan [`.claude/gotchas.md`](.claude/gotchas.md)** — a living checklist of mistakes we've made before. Its header carries a routing table: **read only the groups your diff touches**, not the whole file. 30-second read vs. a 5-minute debugging round-trip. When a mistake of this kind bites again, add a `→` entry to the right group in the **same PR** that fixes it.
 
-**Run `/prereview` before pushing, and `/review-pr <N>` once the PR is open.** A fresh sub-agent reads the diff vs `develop` and surfaces up to 5 actionable issues — ~30 s against a CI round-trip; the second pass posts them on the PR as threads that block the merge until answered (#2015).
+**Once the PR is open, run [`/review-pr <N>`](./.claude/commands/review-pr.md)**, and again after each fix round. It is the one required review (the owner's call, 28 Sep 2026, #2020). It is not optional on a non-trivial diff, because what it finds is what the gates cannot see:
+- a tooltip that could never open;
+- a chip unclickable on the phone;
+- a Reset that cleared a filter it did not show;
+- tests passing for the wrong reason.
 
-It is not optional on a non-trivial diff, because the things it finds are the things the gates cannot see. On one afternoon it caught: a tooltip that could never open because its host had `pointer-events: none`, a payment chip that had been unclickable on the phone since #1402, a sheet Reset that silently cleared a filter it did not show, and two tests passing for the wrong reason. Lint, unit tests and screenshots were all green for every one of them. Skip it only for a typo.
+Lint, unit tests and screenshots were green for every one of them. Skip it only for a typo. `/prereview` before the push is optional: use it on a large diff where an early read saves a CI round.
 
 ---
 
@@ -111,19 +108,24 @@ Full checklist + labels + body conventions in [`docs/development/pr-labels.md`](
 2. **Body** — fill the `What / Why / How / Notes / Out of scope / References / Test plan` template (English). Write the body to a **per-PR file** under `.claude/pr-bodies/<branch-or-pr>.md` and use `--body-file` (never `--body "..."` or a heredoc).
 3. **Assignee** — `m-bonanno` on every PR.
 4. **Labels** — one type label at creation (per branch prefix). `🟢 ready to merge` is applied and removed by CI (#1460) — never by hand.
-5. **Board** — add the PR and the issue to the [`org-level project number 2`](https://github.com/orgs/Budojo/projects/2) and set both to `In Progress`:
+5. **Board** — add the PR and the issue to the [`org-level project number 2`](https://github.com/orgs/Budojo/projects/2) and set both to `In Progress`. `Done` needs nothing: the board's workflows set it at the merge (PR) and the close (issue).
    ```bash
    ./.claude/scripts/board-set.sh <PR-N> in-progress
    ./.claude/scripts/board-set.sh <ISSUE-N> in-progress
    ```
-6. **No AI attribution — ever** — no "Generated with Claude Code", "Co-Authored-By: Claude", or any Anthropic / AI text anywhere.
+6. **No AI attribution, ever:** no "Generated with Claude Code", "Co-Authored-By: Claude", or any Anthropic or AI text anywhere. CI's «📝 Commits & PR body» job fails a PR that carries one in a commit or the body, and it also runs commitlint on the PR's commits and title, including ones made where the hooks don't run (#2020).
 
 ### Review
 
-The automated post-push reviewer was retired in #1234 — it cost a paid API key per PR and this is a single-developer project. What replaces it is two passes, both on the owner's plan:
+The automated post-push reviewer was retired in #1234 — it cost a paid API key per PR and this is a single-developer project. What replaces it runs on the owner's plan:
 
-- **`/prereview` before the push.** A fresh sub-agent reads the branch's diff and reports up to 5 issues in the session.
-- **[`/review-pr <N>`](./.claude/commands/review-pr.md) after the PR is open, and after every fix round** (#2015). The [`pr-reviewer`](./.claude/agents/pr-reviewer.md) agent posts its verified findings on the PR as inline review threads, and on the next round resolves the ones the new commits fix. Sonnet by default; `--deep` (Opus) for an engine, money, security or migration diff.
+- **[`/review-pr <N>`](./.claude/commands/review-pr.md): the one required review**, run when the PR opens and after every fix round (#2015, #2020). The [`pr-reviewer`](./.claude/agents/pr-reviewer.md) agent:
+  - checks the PR against the issue it closes and the canon for what it touches;
+  - posts its verified findings as inline review threads;
+  - on the next round, resolves the ones the new commits fix.
+
+  Sonnet by default; `--deep` (Opus) for an engine, money, security or migration diff.
+- **`/prereview`** is optional: a pre-push read of a large diff, reported in the session only.
 - Merge once CI is green **and every review thread is resolved**. The `develop` and `main` rulesets require it: a PR with every check green and one open thread reads `BLOCKED`. Read the threads — they have been real — fix or answer, then resolve.
 - Copilot's code review is optional. Its quota ran out once (Sep 2026) and the owner would rather not depend on it; when it posts, its threads are read like any other.
 - The PR body still matters: it is the record of why a change looks the way it does.
@@ -147,23 +149,7 @@ The automated post-push reviewer was retired in #1234 — it cost a paid API key
 
 ## Documentation discipline
 
-The repo ships its own domain documentation in `docs/` — it is **source of truth**, not decoration:
-
-```
-docs/
-├── README.md              # index — every directory below is listed there too
-├── entities/*.md          # one file per persisted entity (user, academy, athlete, …)
-├── api/v1.yaml            # OpenAPI 3.0 contract for /api/v1
-├── desktop/*.md           # the desktop build (M11) — architecture, install, backup-restore
-├── specs/*.md             # milestone PRDs
-├── development/*.md       # procedural runbooks (linux, git, release, labels, visual verification)
-├── design/*.md            # design system, UX audits, screenshot harnesses, brand kit
-├── changelog/user-facing/ # one file per release, written on the release branch
-├── adr/*.md               # architectural decision records
-├── legal/*.md             # privacy, terms, DPA template, sub-processors
-├── marketing/, mobile/, operations/
-└── infra/*.md             # branch rulesets; the hosted stack lives under infra/archive/
-```
+The repo ships its own domain documentation in `docs/`, indexed in [`docs/README.md`](./docs/README.md). It is the **source of truth**, not decoration. The two that move with code: `docs/entities/*.md` (one per persisted entity) and `docs/api/v1.yaml` (the OpenAPI contract).
 
 ### When a doc update is REQUIRED in the same PR
 
@@ -186,32 +172,12 @@ Pure internal refactor, formatting, dependency bumps, test-only additions, CI tw
 
 ---
 
-## Server (Laravel 13) — backend rules
-
-See [`server/CLAUDE.md`](./server/CLAUDE.md) for:
-
-- **Uncle Bob canon** (Clean Code / Architecture / Agile / Coder) — the shared vocabulary for judging backend code, with SOLID expanded and the Active Record caveat
-- Server structure conventions (Actions, Controllers, FormRequests, Resources, Observers)
-- PHPStan level 9, PHP CS Fixer, PEST 5 conventions
-- API conventions (Sanctum, JSON envelope, academy scoping)
-
-## Client (Angular 21 + PrimeNG 21) — frontend rules
-
-See [`client/CLAUDE.md`](./client/CLAUDE.md) for:
-
-- **Design canon** (Material Design 3 / Don't Make Me Think / Norman / Laws of UX) — the shared vocabulary for judging UI decisions
-- Client structure conventions (standalone components, OnPush, functional guards/interceptors, signals)
-- PrimeNG 21 with the Material preset — theme, components, layout
-- Vitest 4 (unit) and Cypress 15 (E2E) conventions
-
----
-
 ## What Claude Should Always Do
 
 Everything above is a rule; this list is only the part that is **not** stated
 anywhere else, so it has somewhere to live. The git, PR, release and
 documentation sections above own the rest — branch model, conventional
-commits, squash-vs-merge, `/prereview`, doc lock-step — and repeating them
+commits, squash-vs-merge, `/review-pr`, doc lock-step — and repeating them
 here just gave two places to drift apart.
 
 1. **Always suggest the branch name** (including the issue number) before starting any work.

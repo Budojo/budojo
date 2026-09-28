@@ -478,6 +478,86 @@ describe('AthleteFormComponent', () => {
       flushFeeTiers(httpMock);
       httpMock.verify();
     });
+
+    describe('the codice fiscale speaks under its own field (#2006)', () => {
+      function submitAndFail(errors: Record<string, string[]>) {
+        const fixture = TestBed.createComponent(AthleteFormComponent);
+        fixture.detectChanges();
+        const cmp = fixture.componentInstance;
+        const httpMock = TestBed.inject(HttpTestingController);
+        cmp.form.patchValue({
+          first_name: 'Mario',
+          last_name: 'Rossi',
+          joined_at: new Date(2026, 3, 23),
+        });
+        cmp.submit();
+        httpMock
+          .expectOne('/api/v1/athletes')
+          .flush(
+            { message: 'Validation failed', errors },
+            { status: 422, statusText: 'Unprocessable Entity' },
+          );
+        flushFeeTiers(httpMock);
+        fixture.detectChanges();
+        return { fixture, cmp, httpMock };
+      }
+
+      const fieldError = (fixture: { nativeElement: HTMLElement }) =>
+        fixture.nativeElement.querySelector('#fiscal_code-error')?.textContent?.trim() ?? null;
+
+      it("shows the server's message under the field, not in the banner, and moves focus there", () => {
+        const { fixture, cmp, httpMock } = submitAndFail({
+          fiscal_code: ['Il codice fiscale dice che il sesso è M, non F.'],
+        });
+
+        expect(fieldError(fixture)).toBe('Il codice fiscale dice che il sesso è M, non F.');
+        expect(cmp.error()).toBeNull();
+        expect(document.activeElement?.id).toBe('fiscal_code');
+        httpMock.verify();
+      });
+
+      it("keeps another field's error in the banner", () => {
+        const { fixture, cmp, httpMock } = submitAndFail({
+          fiscal_code: ['Un altro atleta di questa accademia ha già questo codice fiscale.'],
+          email: ['The email has already been taken.'],
+        });
+
+        expect(fieldError(fixture)).toBe(
+          'Un altro atleta di questa accademia ha già questo codice fiscale.',
+        );
+        expect(cmp.error()).toBe('The email has already been taken.');
+        httpMock.verify();
+      });
+
+      it("clears the server's message as soon as the code is edited", () => {
+        const { fixture, cmp, httpMock } = submitAndFail({
+          fiscal_code: ['Il codice fiscale dice che il sesso è M, non F.'],
+        });
+
+        cmp.form.controls.fiscal_code.setValue('BNCGLI15H52F205N');
+        fixture.detectChanges();
+
+        expect(fieldError(fixture)).toBeNull();
+        httpMock.verify();
+      });
+
+      it('flags a mistyped code when leaving the field, before saving', () => {
+        const fixture = TestBed.createComponent(AthleteFormComponent);
+        fixture.detectChanges();
+        const cmp = fixture.componentInstance;
+        const control = cmp.form.controls.fiscal_code;
+
+        control.setValue('RSSMRA90C15H501A');
+        control.markAsTouched();
+        fixture.detectChanges();
+
+        expect(fieldError(fixture)).toBe(
+          'The codice fiscale is not valid: check it against the document.',
+        );
+        expect(cmp.form.valid).toBe(false);
+        flushFeeTiers(TestBed.inject(HttpTestingController));
+      });
+    });
   });
 
   describe('edit mode (:id route param)', () => {

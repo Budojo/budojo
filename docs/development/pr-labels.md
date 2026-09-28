@@ -50,9 +50,9 @@ Rules:
 2. **Description** — filled template (What / Why / How / optional Notes / optional Out of scope / References / Test plan) in English. The default `.github/PULL_REQUEST_TEMPLATE.md` auto-populates this skeleton on UI-opened PRs.
 3. **Assignee** — always assign `m-bonanno` (`gh pr edit <N> --add-assignee m-bonanno`).
 4. **Labels** — apply the type label at creation (table above).
-5. **Project board** — add the PR, set both the issue and the PR item to `In Progress` via `./.claude/scripts/board-set.sh <N> in-progress`.
+5. **Project board** — add the PR, set both the issue and the PR item to `In Progress` via `./.claude/scripts/board-set.sh <N> in-progress`. `Done` is set by the board's own workflows on merge and close.
 6. **No AI attribution — ever** — do NOT add "Generated with Claude Code", "Co-Authored-By: Claude", or any Anthropic / AI text anywhere: PR bodies, commit messages, code comments, docs, review comments.
-7. **Review** — run [`/review-pr <N>`](../../.claude/commands/review-pr.md) once the PR is open and again after each fix round (#2015). Its findings land as review threads; merge only when every thread is resolved, by a fix or a reasoned reply.
+7. **Review** — run [`/review-pr <N>`](../../.claude/commands/review-pr.md), the one required review, once the PR is open and again after each fix round (#2015, #2020). Its findings land as review threads; merge only when every thread is resolved, by a fix or a reasoned reply.
 
 ## PR body file convention
 

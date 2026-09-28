@@ -1,0 +1,186 @@
+name: Mobile APK
+
+# The mat app as a signed Android APK (#2027, M12 #2026). It proves that the
+# client's `mat` application builds, goes through Capacitor and comes out
+# signed with the release key. Attaching it to a release is #2040; until then
+# the APK is a workflow artifact the owner sideloads to test on a phone.
+#
+# It runs on every client change, not only the mat app's: the mat app imports
+# the SPA's shared components, services, theme and translations, so a change
+# anywhere under client/ can break it (#2043 review).
+on:
+  pull_request:
+    paths:
+      - 'mobile/**'
+      - 'client/**'
+      - '.github/workflows/mobile-apk.yml'
+  workflow_dispatch:
+
+# Read-only token, as in pr-checks.yml: this job decodes the release key, so it
+# gets nothing it does not need.
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # PHP for the phone, from source (#2044): static-php-cli inside Alpine on an
+  # arm64 runner, so the binary is musl and fully static. Cached under the
+  # recipe's hash, so it rebuilds only when mobile/php/ changes.
+  php:
+    name: 🐘 PHP for Android (arm64)
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/cache@v4
+        id: cache
+        with:
+          path: mobile/php/out
+          key: php-android-${{ hashFiles('mobile/php/recipe.env', 'mobile/php/build.sh', 'mobile/php/*.php') }}
+
+      - name: Build PHP from source in Alpine
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: docker run --rm -v "$PWD:/work" -w /work alpine:3.21 sh mobile/php/build.sh /work/mobile/php/out
+
+      # Android's app seccomp policy kills a process that calls accept (it allows
+      # accept4). Reproduce that here, so a PHP that would die on a phone at its
+      # first connection never reaches an APK: the binary must serve a page
+      # under a policy that kills on accept. Runs on cached builds too.
+      - name: Serve a page under a seccomp policy that kills on accept, as Android does
+        run: |
+          cat > "$RUNNER_TEMP/no-accept.json" <<'JSON'
+          {"defaultAction": "SCMP_ACT_ALLOW", "architectures": ["SCMP_ARCH_AARCH64"],
+           "syscalls": [{"names": ["accept"], "action": "SCMP_ACT_KILL_PROCESS"}]}
+          JSON
+          docker run --rm --security-opt seccomp="$RUNNER_TEMP/no-accept.json" \
+            -v "$PWD/mobile/php/out:/php:ro" alpine:3.21 sh -c '
+              mkdir -p /srv && printf "<?php echo \"pong\";" > /srv/ping.php
+              /php/php -S 127.0.0.1:8080 -t /srv > /tmp/server.log 2>&1 &
+              sleep 1
+              answer=$(wget -qO- http://127.0.0.1:8080/ping.php || true)
+              cat /tmp/server.log
+              [ "$answer" = "pong" ] || { echo "::error::PHP did not serve under the no-accept policy (got: $answer)"; exit 1; }
+              echo "served under the no-accept policy: $answer"'
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: php-android-arm64
+          path: mobile/php/out/php
+          retention-days: 7
+
+  apk:
+    name: 📱 Android APK
+    needs: php
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # The run number only ever grows, so each build installs over the last.
+      # A release will derive the code from its semver instead (#2040).
+      VERSION_CODE: ${{ github.run_number }}
+      VERSION_NAME: 0.0.${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            client/package-lock.json
+            mobile/package-lock.json
+
+      - name: Install the client
+        working-directory: client
+        run: npm ci
+
+      - name: Stamp the build number into the app
+        working-directory: client
+        run: echo "export const MAT_BUILD = '${VERSION_NAME}';" > projects/mat/src/build-info.ts
+
+      - name: Build the mat app
+        working-directory: client
+        run: npx ng build mat
+
+      - name: Install Capacitor
+        working-directory: mobile
+        run: npm ci
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: php-android-arm64
+          path: ${{ runner.temp }}/php
+
+      # The one place Android lets an app execute a file is its native library
+      # directory, so the binary travels as a library (#2044).
+      - name: Put PHP where Android can execute it
+        run: |
+          mkdir -p mobile/android/app/src/main/jniLibs/arm64-v8a
+          install -m 0755 "$RUNNER_TEMP/php/php" mobile/android/app/src/main/jniLibs/arm64-v8a/libphp.so
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: fileinfo, pdo, pdo_sqlite, mbstring, bcmath, gd, zip, intl, sodium
+          tools: composer:v2
+
+      - name: Pack the server and a demo academy
+        run: ./mobile/php/bundle-server.sh mobile/android/app/src/main/assets
+
+      - name: Copy the web build into the Android project
+        working-directory: mobile
+        run: npx cap sync android
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      # No key, no APK. A build signed with anything else could never be
+      # installed over the app already on a phone, so it is refused, not faked.
+      - name: Decode the release key
+        env:
+          KEYSTORE_B64: ${{ secrets.BUDOJO_ANDROID_KEYSTORE_B64 }}
+        run: |
+          if [ -z "$KEYSTORE_B64" ]; then
+            echo "::error::BUDOJO_ANDROID_KEYSTORE_B64 is not set: refusing to build an APK that could never update the installed app"
+            exit 1
+          fi
+          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/budojo-release.p12"
+          echo "BUDOJO_ANDROID_KEYSTORE=$RUNNER_TEMP/budojo-release.p12" >> "$GITHUB_ENV"
+
+      - name: Build the signed APK
+        working-directory: mobile/android
+        env:
+          BUDOJO_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.BUDOJO_ANDROID_KEYSTORE_PASSWORD }}
+        run: ./gradlew assembleRelease --no-daemon -PbudojoVersionCode="$VERSION_CODE" -PbudojoVersionName="$VERSION_NAME"
+
+      # The certificate is pinned: a secret replaced by mistake would sign an
+      # APK that installs on a fresh phone and never updates an existing one.
+      - name: Check the APK carries the Budojo release key
+        working-directory: mobile/android
+        run: |
+          APK=app/build/outputs/apk/release/app-release.apk
+          if [ ! -f "$APK" ]; then
+            echo "::error::no signed app-release.apk was produced"
+            ls app/build/outputs/apk/release || true
+            exit 1
+          fi
+          APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+          "$APKSIGNER" verify --print-certs "$APK" | tee "$RUNNER_TEMP/certs.txt"
+          if ! grep -qi 'SHA-256 digest: 9b2b6953dccdb46ed7c5ddbdf4b03a3f42f62dfe5adebf9b1ab34f582fe25c5e' "$RUNNER_TEMP/certs.txt"; then
+            echo "::error::the APK is not signed with the Budojo release key"
+            exit 1
+          fi
+          cp "$APK" "$RUNNER_TEMP/Budojo-Android-${VERSION_NAME}.apk"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Budojo-Android-${{ env.VERSION_NAME }}
+          path: ${{ runner.temp }}/Budojo-Android-${{ env.VERSION_NAME }}.apk
+          retention-days: 14

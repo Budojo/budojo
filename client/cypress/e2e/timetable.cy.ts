@@ -335,6 +335,11 @@ describe('Weekly timetable', () => {
     cy.get('.p-menu').should('contain', "The programme didn't load.");
     cy.get('.p-menu').contains('Try again').click();
     cy.wait('@calendar');
+    // The item's click closes the popup with a leave animation. Clicking the
+    // button again before it ends raced PrimeNG's reopen, and the menu never
+    // came back: a CI flake with the frame to prove it (#2020). A person waits
+    // for the programme to load; so does the test.
+    cy.get('.p-menu').should('not.exist');
 
     cy.get('[data-cy="week-share"]').click();
     cy.get('.p-menu').should('contain', 'The week of 14').and('contain', 'Open WhatsApp');
