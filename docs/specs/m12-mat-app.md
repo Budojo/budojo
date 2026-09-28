@@ -89,12 +89,12 @@ A JSON document, gzipped, then encrypted. It is built by an Action on the PC and
 
 | Carries | Never carries |
 |---|---|
-| The academy's name, martial art, timezone, belt ladder | Codice fiscale, address, email, phone number |
+| The academy's name, martial art and belt ladder; the operator's timezone (`budojo.operator_timezone`, which `OperatorDay` reads), so the phone's "today" is the PC's | Codice fiscale, address, email, phone number, social links |
 | The timetable: classes with weekday, times, mode | Documents and medical certificates, or their dates |
-| Active athletes: id, name, belt and stripes, `is_self`, age (for the age chip) | Date of birth, notes on the athlete, emergency contacts, guardians |
+| Active athletes: id, name, belt and stripes, `is_self`, age (for the age chip) | Date and place of birth, sex, photo |
 | Per athlete: the fee as resolved today and the billing period, trains free, whether this month is covered, the overdue months, a spendable carnet and its balance | Payment history beyond the overdue months |
 | Per class: its regulars today (`GetClassRegularsAction`) | Stats, the audit log |
-| Lessons from 7 days back to 14 days ahead: date, class, planned or taught topics, notes | |
+| Lessons from 7 days back to 14 days ahead: date, class, planned or taught topics; **notes only on today's lessons** | Notes of any other evening |
 | The in-season programme: positions and techniques, mode, from-belt | |
 | Per device: the last change applied (`applied_through`), and each change parked as a conflict | |
 
@@ -104,7 +104,9 @@ A JSON document, gzipped, then encrypted. It is built by an Action on the PC and
 - every 5 minutes while the app is open, but only when the content hash has changed;
 - when the app closes, with a short timeout.
 
-It keeps the three newest. **A test walks the snapshot JSON and fails on any field from the right-hand column**, so a later change to the Action cannot quietly widen it. **Budget:** under 100 KB gzipped for 80 athletes.
+It keeps the three newest. **A test walks the snapshot JSON and fails on any field from the right-hand column**, so a later change to the Action cannot quietly widen it.
+
+**The evening's notes are the one free text the snapshot carries, and free text can name a person.** `SetLessonNotesAction`'s own example is "Marco's first day back". So they travel only for today's lessons, the ones the phone can edit, and every earlier evening's notes stay on the PC. The guard test allows `notes` on a lesson dated today and nowhere else. **Budget:** under 100 KB gzipped for 80 athletes.
 
 ### 6.3 The journal (phone → PC)
 
@@ -118,7 +120,7 @@ Each push is **one immutable file** holding one or more changes. The phone write
   "type": "payment.record",
   "at": "2026-09-30T21:04:11+02:00",
   "base_snapshot": 42,
-  "data": { "athlete_id": 17, "year": 2026, "month": 9, "period_months": 1, "method": "cash", "paid_at": "2026-09-30" }
+  "data": { "athlete_id": 17, "year": 2026, "month": 9, "period_months": 1, "amount_cents": 6000, "method": "cash", "paid_at": "2026-09-30" }
 }
 ```
 
@@ -126,13 +128,14 @@ Each push is **one immutable file** holding one or more changes. The phone write
 |---|---|---|---|---|
 | `attendance.mark` | athlete, class, date | `MarkAttendanceAction` (with the class) | already present → `duplicate` | athlete or class no longer exists |
 | `attendance.unmark` | athlete, class, date | `DeleteAttendanceAction` on the row that key finds | no such row → `duplicate` | — |
-| `payment.record` | athlete, year, month, period, method, paid on | `RecordAthletePaymentAction` | the same period already recorded → `duplicate` | an overlapping period (the Action's 422), no fee applies, athlete gone |
+| `payment.record` | athlete, year, month, period, **the amount shown**, method, paid on | `RecordAthletePaymentAction` | the same period already recorded → `duplicate` | an overlapping period (the Action's 422), no fee applies, athlete gone, **the fee changed since the phone showed it** |
 | `payment.void` | athlete, year, month | `DeleteAthletePaymentAction` | nothing covers the month → `duplicate` | — |
 | `lesson.topic.add` / `.remove` | class, date, topic | `SetLessonTopicsAction`, read-modify-write on the PC | already in / already out → `duplicate` | topic deleted, or outside the class's mode |
 | `lesson.notes.set` | class, date, text | `SetLessonNotesAction` | same text → `duplicate` | the PC changed the notes after `base_snapshot` |
 
 **Rules that hold for every type:**
-- **The date is the business date on the phone, in the academy's timezone, and it travels inside the change.** It is never resolved at apply time, because the PC may apply Tuesday's check-in on Thursday. `at` only orders one device's changes.
+- **The date is the business date on the phone, in the operator's timezone the snapshot carries, and it travels inside the change.** It is never resolved at apply time, because the PC may apply Tuesday's check-in on Thursday. `at` only orders one device's changes.
+- **The amount travels inside the payment.** It is what the phone showed and what was handed over. The PC checks it against `MonthlyFee::forAthlete()` × the period at apply time: equal, and it is passed to `RecordAthletePaymentAction` as `amountCents`; different (the fee changed while the phone was offline), and the change is a conflict the owner decides. The PC never quietly re-prices money that has already changed hands.
 - **Topics are added and removed, never set as a list.** "Add the armbar" commutes with the plan the PC edited in the meantime; "the list is now X" would erase it.
 - **The actor is the owner.** The audit entry says it came from the phone and names the device.
 
