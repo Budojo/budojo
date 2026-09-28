@@ -3618,5 +3618,21 @@
     "whatsapp": "Open WhatsApp",
     "copied": "Week copied: paste it in the group.",
     "copyFailed": "It couldn't be copied: use «Open WhatsApp»."
+  },
+  "mat": {
+    "spike": {
+      "eyebrow": "Technical preview",
+      "title": "Budojo on the mat",
+      "lede": "This is the trial run of the phone app: no real data and no connection, for now.",
+      "identityHeading": "How an athlete looks",
+      "sampleNote": "A sample row, with the belt down the edge as on the PC.",
+      "storageHeading": "Storage check",
+      "storageHelp": "Tap +1 a few times, then install the next build over this one: the number must stay.",
+      "countLabel": "Saved on the phone",
+      "savedAt": "Last saved: {{when}}",
+      "neverSaved": "Nothing saved yet.",
+      "increment": "+1",
+      "build": "Build {{build}}"
+    }
   }
 }

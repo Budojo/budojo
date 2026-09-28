@@ -42,7 +42,7 @@ prettier_fix() {
   # brace-group below promotes ONLY the no-match case (exit 1) to
   # success; any other non-zero exit still propagates, so a misbehaving
   # grep keeps failing the gate.
-  run_in_client "npx prettier --write 'src/**/*.{ts,html,scss}' cypress 2>&1 | { grep -v unchanged || [ \$? -eq 1 ]; } | tail -10"
+  run_in_client "npx prettier --write '{src,projects}/**/*.{ts,html,scss}' cypress 2>&1 | { grep -v unchanged || [ \$? -eq 1 ]; } | tail -10"
 }
 
 lint() {
@@ -55,7 +55,7 @@ lint() {
 # an @extend without a placeholder reached CI on #1873.
 scss() {
   echo "── stylelint (errors only) ──"
-  run_in_client "npx stylelint 'src/**/*.scss' --quiet 2>&1 | tail -15"
+  run_in_client "npx stylelint '{src,projects}/**/*.scss' --quiet 2>&1 | tail -15"
 }
 
 vitest() {

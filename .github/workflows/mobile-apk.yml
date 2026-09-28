@@ -1,0 +1,118 @@
+name: Mobile APK
+
+# The mat app as a signed Android APK (#2027, M12 #2026). It proves that the
+# client's `mat` application builds, goes through Capacitor and comes out
+# signed with the release key. Attaching it to a release is #2040; until then
+# the APK is a workflow artifact the owner sideloads to test on a phone.
+#
+# It runs on every client change, not only the mat app's: the mat app imports
+# the SPA's shared components, services, theme and translations, so a change
+# anywhere under client/ can break it (#2043 review).
+on:
+  pull_request:
+    paths:
+      - 'mobile/**'
+      - 'client/**'
+      - '.github/workflows/mobile-apk.yml'
+  workflow_dispatch:
+
+# Read-only token, as in pr-checks.yml: this job decodes the release key, so it
+# gets nothing it does not need.
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    name: 📱 Android APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # The run number only ever grows, so each build installs over the last.
+      # A release will derive the code from its semver instead (#2040).
+      VERSION_CODE: ${{ github.run_number }}
+      VERSION_NAME: 0.0.${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            client/package-lock.json
+            mobile/package-lock.json
+
+      - name: Install the client
+        working-directory: client
+        run: npm ci
+
+      - name: Stamp the build number into the app
+        working-directory: client
+        run: echo "export const MAT_BUILD = '${VERSION_NAME}';" > projects/mat/src/build-info.ts
+
+      - name: Build the mat app
+        working-directory: client
+        run: npx ng build mat
+
+      - name: Install Capacitor
+        working-directory: mobile
+        run: npm ci
+
+      - name: Copy the web build into the Android project
+        working-directory: mobile
+        run: npx cap sync android
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      # No key, no APK. A build signed with anything else could never be
+      # installed over the app already on a phone, so it is refused, not faked.
+      - name: Decode the release key
+        env:
+          KEYSTORE_B64: ${{ secrets.BUDOJO_ANDROID_KEYSTORE_B64 }}
+        run: |
+          if [ -z "$KEYSTORE_B64" ]; then
+            echo "::error::BUDOJO_ANDROID_KEYSTORE_B64 is not set: refusing to build an APK that could never update the installed app"
+            exit 1
+          fi
+          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/budojo-release.p12"
+          echo "BUDOJO_ANDROID_KEYSTORE=$RUNNER_TEMP/budojo-release.p12" >> "$GITHUB_ENV"
+
+      - name: Build the signed APK
+        working-directory: mobile/android
+        env:
+          BUDOJO_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.BUDOJO_ANDROID_KEYSTORE_PASSWORD }}
+        run: ./gradlew assembleRelease --no-daemon -PbudojoVersionCode="$VERSION_CODE" -PbudojoVersionName="$VERSION_NAME"
+
+      # The certificate is pinned: a secret replaced by mistake would sign an
+      # APK that installs on a fresh phone and never updates an existing one.
+      - name: Check the APK carries the Budojo release key
+        working-directory: mobile/android
+        run: |
+          APK=app/build/outputs/apk/release/app-release.apk
+          if [ ! -f "$APK" ]; then
+            echo "::error::no signed app-release.apk was produced"
+            ls app/build/outputs/apk/release || true
+            exit 1
+          fi
+          APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+          "$APKSIGNER" verify --print-certs "$APK" | tee "$RUNNER_TEMP/certs.txt"
+          if ! grep -qi 'SHA-256 digest: 9b2b6953dccdb46ed7c5ddbdf4b03a3f42f62dfe5adebf9b1ab34f582fe25c5e' "$RUNNER_TEMP/certs.txt"; then
+            echo "::error::the APK is not signed with the Budojo release key"
+            exit 1
+          fi
+          cp "$APK" "$RUNNER_TEMP/Budojo-Android-${VERSION_NAME}.apk"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Budojo-Android-${{ env.VERSION_NAME }}
+          path: ${{ runner.temp }}/Budojo-Android-${{ env.VERSION_NAME }}.apk
+          retention-days: 14
