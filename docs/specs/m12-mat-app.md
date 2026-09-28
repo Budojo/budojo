@@ -115,9 +115,13 @@ The owner described git, and the design is git.
 - **The journal records API writes, not rows**: the route, its parameters and the body, plus the ids the write created. For an update, it also records the values it saw before.
 - **Replaying it runs the same Actions** with the same validation (#2031):
   - Ids the diverged side created (a new athlete) get new ids on the base, and the replay maps the old ones to them for every later change that names them.
-  - A change that is already true is skipped. The Actions are idempotent: a presence marked twice, the same month paid.
+  - A change that is already true, **exactly**, is skipped: a presence marked twice. For money, "the same month" is not enough. `RecordAthletePaymentAction` hands back the row it finds for the month (`createOrFirst` on athlete, year and month), so the replay compares the period, the amount, the method and the date, and anything that differs is a conflict (§ 2: always ask).
   - A change the rules refuse, or one whose field was changed on the base since, is a **conflict** and waits for the owner (§ 6.4).
-- **Documents travel apart from the database:** one encrypted file per document, named by its content hash, uploaded once. The phone downloads one when it is opened (view only), and on Wi-Fi ahead of time.
+- **Files travel apart from the database:** documents and athletes' photos, one encrypted file each, named by its content hash, uploaded once. The phone downloads one when it is opened (documents are view only there), and on Wi-Fi ahead of time.
+- **A fast-forward is a restore, and does what lies outside the database too.** Swapping in a newer database runs no Observer, so the device then reconciles:
+  - files no row names any more are deleted, as `DeleteDocumentAction` deletes them on the device where the athlete or document was removed. That rule is GDPR, not tidiness;
+  - missing files are fetched when needed;
+  - the application cache is cleared. The desktop's cache is on files (`CACHE_STORE=file`), and would otherwise answer from the old database, for example the attendance summaries.
 - **The keys travel once, at pairing.** Encrypted fields and documents need the same `APP_KEY` and `DOCUMENT_ENCRYPTION_KEY` on both devices, and the recovery code (#1254) already carries both. The sync key goes with them.
 
 **When a device syncs:**
@@ -210,7 +214,7 @@ Tapping it opens the detail:
 
 ### 6.3 Notifications
 
-- **The reminders are the PC's own:** the scheduler's lists of fees, certificates, birthdays and missed streaks (#1226). The phone does not invent new ones.
+- **The reminders are the scheduler's own** (#1226): the unpaid-fees digest, medical certificates and academy documents expiring, and the missed streak. **Birthdays are new.** Nothing reminds of them today; only the roster filter and Oggi's list read `BirthdayWindow`. The phone adds one reminder, from that same window.
 - **With the app closed, Android runs nothing.** So each time the app opens or syncs, it works out the reminders due in the next days and **schedules them with Android** as local notifications. They arrive on time with the app closed.
 - **A reminder about something that has changed since** (the fee got paid on the PC) is dropped at the next sync.
 - **The full text shows on the lock screen,** as the owner chose (*"Marco R. deve settembre, 60 €"*): the notification channel is public. It can become a setting later.
