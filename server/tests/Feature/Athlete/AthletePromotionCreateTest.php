@@ -180,6 +180,73 @@ it('saves a belt backfill that leaves a gap with the rows around it (#1991)', fu
         ->assertCreated();
 });
 
+it('warns about a starting belt typed after a promotion already recorded, and saves it once confirmed', function (): void {
+    // «Cintura di partenza» is the dialog's own default for «Da cintura». It
+    // says nothing came before — but a promotion did. Compared by the belt
+    // it reaches alone, it saved silently whenever that belt was high enough,
+    // and wrote a second row shaped like the one every timeline opens with.
+    $blue = AthletePromotion::factory()->create([
+        'athlete_id' => $this->athlete->id,
+        'kind' => 'belt',
+        'from_belt' => 'white',
+        'to_belt' => 'blue',
+        'belt_at_event' => 'blue',
+        'recorded_at' => '2019-01-01',
+        'recorded_by_user_id' => $this->owner->id,
+    ]);
+    $firstBelt = ['kind' => 'belt', 'from_belt' => null, 'to_belt' => 'purple', 'recorded_at' => '2020-06-01'];
+
+    $this->actingAs($this->owner)
+        ->postJson("/api/v1/athletes/{$this->athlete->id}/promotions", $firstBelt)
+        ->assertUnprocessable()
+        ->assertJsonPath('code', 'chain_conflict')
+        ->assertJsonPath('conflicts', [[
+            'field' => 'from_belt',
+            'promotion_id' => $blue->id,
+            'recorded_at' => '2019-01-01',
+            'belt' => 'blue',
+            'stripes' => null,
+        ]])
+        ->assertJsonPath('errors.from_belt.0', "A promotion is already recorded on 1 January 2019: this can't be the starting belt.");
+    expect(AthletePromotion::count())->toBe(1);
+
+    $this->actingAs($this->owner)
+        ->postJson("/api/v1/athletes/{$this->athlete->id}/promotions", [...$firstBelt, 'confirm_conflict' => true])
+        ->assertCreated();
+    expect(AthletePromotion::count())->toBe(2);
+});
+
+it('takes a starting belt with nothing recorded before it as it is', function (): void {
+    AthletePromotion::factory()->create([
+        'athlete_id' => $this->athlete->id,
+        'kind' => 'belt',
+        'from_belt' => 'white',
+        'to_belt' => 'blue',
+        'belt_at_event' => 'blue',
+        'recorded_at' => '2019-01-01',
+        'recorded_by_user_id' => $this->owner->id,
+    ]);
+
+    $this->actingAs($this->owner)
+        ->postJson("/api/v1/athletes/{$this->athlete->id}/promotions", [
+            'kind' => 'belt', 'from_belt' => null, 'to_belt' => 'white', 'recorded_at' => '2017-03-01',
+        ])
+        ->assertCreated();
+});
+
+it('falls back to English for an owner who never chose a language', function (): void {
+    $this->owner->forceFill(['locale' => null])->saveQuietly();
+    $owner = $this->owner->fresh();
+    expect($owner?->locale)->toBeNull();
+
+    $this->actingAs($owner)
+        ->postJson("/api/v1/athletes/{$this->athlete->id}/promotions", [
+            'kind' => 'belt', 'from_belt' => 'blue', 'to_belt' => 'blue', 'recorded_at' => '2019-01-01',
+        ])
+        ->assertUnprocessable()
+        ->assertJsonPath('errors.to_belt.0', 'The new belt must differ from the previous one.');
+});
+
 it('saves a contradiction once the owner confirms it', function (): void {
     AthletePromotion::factory()->create([
         'athlete_id' => $this->athlete->id,

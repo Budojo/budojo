@@ -6475,7 +6475,10 @@ paths:
         - a belt below the one held before it, or above the one the next
           belt row starts from. This applies to a belt row, and to the belt
           a stripe row is on, checked against the stripe and belt rows
-          around it.
+          around it;
+        - a starting belt (`from_belt: null`) after a belt row already
+          recorded, whatever belt it reaches. It says nothing came before
+          it, so it would open the history a second time.
 
         Belts compare in the order the academy's ladder climbs them. A
         stripe row that raises nothing (a reset) is no neighbour. A row with

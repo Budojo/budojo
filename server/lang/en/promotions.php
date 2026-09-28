@@ -16,6 +16,7 @@ return [
         'stripes_after' => 'On :date they still had :held stripe: this would take them to :to.|On :date they still had :held stripes: this would take them to :to.',
         'belt_before' => 'On :date they were already on a higher belt: this would put them on a lower one.',
         'belt_after' => 'On :date they were still on a lower belt: this would put them on a higher one.',
+        'starting_belt_after' => "A promotion is already recorded on :date: this can't be the starting belt.",
     ],
     'same_belt' => 'The new belt must differ from the previous one.',
     'same_stripes' => 'The new stripe count must differ from the previous one.',

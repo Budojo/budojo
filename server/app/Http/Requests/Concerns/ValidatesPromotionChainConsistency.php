@@ -28,7 +28,9 @@ use Illuminate\Contracts\Validation\Validator;
  *   row starts from, on the same belt;
  * - a belt below the one held before it, or above the one the next row
  *   starts from — for a belt row, and for the belt a stripe row is on,
- *   against the stripe and the belt rows around it.
+ *   against the stripe and the belt rows around it;
+ * - a starting belt (no `from_belt`) after a belt row already recorded: it
+ *   says nothing came before it, and would open the history a second time.
  *
  * It is a 422 naming the row, in the owner's language, and the owner still
  * decides: the store request answers it as `chain_conflict`, and
@@ -134,10 +136,15 @@ trait ValidatesPromotionChainConsistency
             return; // the shape rules already failed
         }
 
-        // A first belt says only what was held that day: that is where it starts.
         $previous = $this->neighbour($athlete, 'belt', $recordedAt, earlier: true, editing: $editing);
-        if ($previous?->to_belt !== null && $this->below($from ?? $to, $previous->to_belt)) {
-            $this->beltConflict($validator, $from === null ? 'to_belt' : 'from_belt', $previous, $previous->to_belt, 'chain.belt_before');
+        if ($previous?->to_belt !== null) {
+            if ($from === null) {
+                // A starting belt says nothing came before it, and a promotion
+                // did: whatever belt it reaches, that is a second opening row.
+                $this->beltConflict($validator, 'from_belt', $previous, $previous->to_belt, 'chain.starting_belt_after');
+            } elseif ($this->below($from, $previous->to_belt)) {
+                $this->beltConflict($validator, 'from_belt', $previous, $previous->to_belt, 'chain.belt_before');
+            }
         }
 
         $next = $this->neighbour($athlete, 'belt', $recordedAt, earlier: false, editing: $editing);

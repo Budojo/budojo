@@ -446,6 +446,79 @@ describe('PromotionsListComponent (#799)', () => {
       expect(svc.promotions).toHaveBeenCalledWith(7, 1);
     });
 
+    describe('«Da cintura» starts on the belt held that day (#1991)', () => {
+      interface Dialog {
+        openCreateDialog: () => void;
+        createForm: {
+          patchValue: (v: Record<string, unknown>) => void;
+          controls: {
+            from_belt: {
+              value: string | null;
+              markAsDirty: () => void;
+              setValue: (v: string) => void;
+            };
+          };
+        };
+      }
+
+      function withHistory(): Dialog {
+        const { fixture, component, svc } = setup({ athleteId: '7' });
+        useLadder('bjj');
+        svc.promotions.mockReturnValue(
+          of({
+            data: [
+              makePromotion({
+                id: 3,
+                from_belt: 'blue',
+                to_belt: 'purple',
+                recorded_at: '2022-05-01T00:00:00+00:00',
+              }),
+              makePromotion({
+                id: 2,
+                from_belt: 'white',
+                to_belt: 'blue',
+                recorded_at: '2019-01-10T00:00:00+00:00',
+              }),
+            ],
+            meta: { current_page: 1, per_page: 20, total: 2, last_page: 1 },
+          }),
+        );
+        fixture.detectChanges();
+        const c = component as unknown as Dialog;
+        c.openCreateDialog();
+        return c;
+      }
+
+      it('picks the belt the rows say was held on the chosen day', () => {
+        const c = withHistory();
+
+        c.createForm.patchValue({ recorded_at: new Date(2020, 5, 1) });
+        expect(c.createForm.controls.from_belt.value).toBe('blue');
+
+        // The day of a promotion already counts as after it, as the server reads it.
+        c.createForm.patchValue({ recorded_at: new Date(2022, 4, 1) });
+        expect(c.createForm.controls.from_belt.value).toBe('purple');
+      });
+
+      it('keeps «Cintura di partenza» before anything recorded', () => {
+        const c = withHistory();
+
+        c.createForm.patchValue({ recorded_at: new Date(2017, 2, 1) });
+
+        expect(c.createForm.controls.from_belt.value).toBeNull();
+      });
+
+      it('never overrides a belt the owner chose', () => {
+        const c = withHistory();
+        c.createForm.controls.from_belt.setValue('white');
+        c.createForm.controls.from_belt.markAsDirty();
+
+        c.createForm.patchValue({ recorded_at: new Date(2020, 5, 1) });
+
+        expect(c.createForm.controls.from_belt.value).toBe('white');
+      });
+    });
+
     it('submits a stripe payload with the composed belt_at_event + from/to stripes', () => {
       const { fixture, component, svc } = setup({ athleteId: '7' });
       svc.promotions.mockReturnValue(
@@ -969,10 +1042,11 @@ describe('PromotionsListComponent — missing steps (#1966)', () => {
     );
   });
 
-  it('adds a filled step anyway, as the step, when the history changed under it (#1991)', () => {
+  it('adds a filled step anyway, as the step, when the history changed under it (#1991)', async () => {
     // Another window added a row since this page loaded: the step is no gap
     // any more, and the server calls it a contradiction. The dialog asks
-    // only the date, so «Aggiungi comunque» must resend the step itself.
+    // only the date, so «Aggiungi comunque» must resend the step itself —
+    // and end the way a fill does: the dialog closed, the keyboard on the row.
     const { el, fixture, component, svc } = jacopo();
     const warning = 'On 1 June 2024 they already had 4 stripes: this would take them to 4.';
     svc.createPromotion.mockReturnValueOnce(
@@ -988,7 +1062,23 @@ describe('PromotionsListComponent — missing steps (#1966)', () => {
     c.confirmCreate();
     fixture.detectChanges();
 
+    const written = makePromotion({
+      id: 20,
+      kind: 'stripe',
+      from_belt: null,
+      to_belt: null,
+      from_stripes: 3,
+      to_stripes: 4,
+      belt_at_event: 'white',
+      is_opening: false,
+      recorded_at: '2024-09-20T00:00:00+00:00',
+    });
+    svc.createPromotion.mockReturnValue(of(written));
+    svc.promotions.mockReturnValue(page([opening, written, whiteThree], [blueBelt]));
+
     click(el, 'promotion-create-confirm-conflict');
+    fixture.detectChanges();
+    await fixture.whenStable();
 
     expect(svc.createPromotion).toHaveBeenLastCalledWith(7, {
       kind: 'stripe',
@@ -998,6 +1088,8 @@ describe('PromotionsListComponent — missing steps (#1966)', () => {
       belt_at_event: 'white',
       confirm_conflict: true,
     });
+    expect((component as unknown as { filling: () => unknown }).filling()).toBeNull();
+    expect(document.activeElement).toBe(el.querySelector('[data-cy="promotion-edit-20"] button'));
   });
 
   it('fills a missing stripe with the date alone, bounded to the days between its neighbours', () => {

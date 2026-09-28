@@ -418,6 +418,8 @@ it('can never be led into a second row on a belt, whatever the order and the dat
     'imported on blue, nothing before (#1974)' => [[beltRow(15, null, Belt::Blue, '2026-09-20')], Belt::Blue, 0, MartialArt::Bjj],
     'imported on blue, stripes given live after (#1974)' => [[beltRow(15, null, Belt::Blue, '2026-01-10'), stripeRow(16, Belt::Blue, 0, 1, '2026-03-01'), stripeRow(17, Belt::Blue, 1, 2, '2026-06-01')], Belt::Blue, 2, MartialArt::Bjj],
     'imported on black in judo, nothing before (#1974)' => [[beltRow(9, null, Belt::Black, '2026-09-01')], Belt::Black, 1, MartialArt::Judo],
+    'a starting belt confirmed after a promotion (#1991)' => [[beltRow(1, Belt::White, Belt::Blue, '2019-01-01'), beltRow(2, null, Belt::Purple, '2020-06-01')], Belt::Purple, 1, MartialArt::Bjj],
+    'a starting belt confirmed on the belt already held (#1991)' => [[beltRow(1, Belt::White, Belt::Blue, '2019-01-01'), beltRow(2, null, Belt::Blue, '2020-06-01')], Belt::Blue, 2, MartialArt::Bjj],
 ]);
 
 /** @return list<PromotionRecord> */

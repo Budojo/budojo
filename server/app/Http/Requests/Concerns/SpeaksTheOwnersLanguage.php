@@ -42,11 +42,12 @@ trait SpeaksTheOwnersLanguage
         return $localised instanceof CarbonInterface ? $localised->translatedFormat('j F Y') : $day->format('Y-m-d');
     }
 
+    /** English for a caller who never chose a language, as the SPA defaults. */
     private function ownerLocale(): string
     {
         $user = $this->user();
+        $locale = $user instanceof User ? $user->locale : null;
 
-        // `??` reads the null side as missing, not as an error.
-        return ($user instanceof User ? $user->locale : null)->value ?? AppLocale::En->value;
+        return ($locale ?? AppLocale::En)->value;
     }
 }

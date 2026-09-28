@@ -17,6 +17,7 @@ return [
         'stripes_after' => 'Il :date aveva ancora :held grado: qui arriveresti a :to.|Il :date aveva ancora :held gradi: qui arriveresti a :to.',
         'belt_before' => 'Il :date era già a una cintura più alta: qui tornerebbe a una più bassa.',
         'belt_after' => 'Il :date era ancora a una cintura più bassa: qui sarebbe già a una più alta.',
+        'starting_belt_after' => 'Il :date c\'è già una promozione: questa non può essere la cintura di partenza.',
     ],
     'same_belt' => 'La nuova cintura deve essere diversa da quella di prima.',
     'same_stripes' => 'Il nuovo numero di gradi deve essere diverso da quello di prima.',
