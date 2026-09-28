@@ -42,6 +42,19 @@ export type Belt =
 
 export type AthleteStatus = 'active' | 'inactive';
 
+/** The sex as the document records it (#1934). Mirrors `App\Enums\Sex`. */
+export type Sex = 'm' | 'f';
+
+/**
+ * The body of a 422 on `POST /athletes/{id}/restore` (#1934): a live athlete
+ * has taken this one's codice fiscale since the delete. `holder` is who.
+ */
+export interface AthleteRestoreRefusal {
+  message: string;
+  errors: { fiscal_code: ['fiscal_code_taken'] };
+  holder: { id: number; first_name: string; last_name: string };
+}
+
 /**
  * Filter token for the athletes-list `?status=` query (#700). Extends
  * `AthleteStatus` with the special-cased `'trashed'` value that the
@@ -77,6 +90,14 @@ export interface Athlete {
   facebook?: string | null;
   instagram?: string | null;
   date_of_birth: string | null;
+  /**
+   * What a federation card asks for (#1934): the codice fiscale in capitals,
+   * the sex as the document records it, the place of birth. Optional here
+   * for fixture-compat; the wire always carries them.
+   */
+  fiscal_code?: string | null;
+  sex?: Sex | null;
+  birth_place?: string | null;
   belt: Belt;
   stripes: number;
   status: AthleteStatus;
@@ -369,6 +390,10 @@ export interface AthletePayload {
   facebook?: string | null;
   instagram?: string | null;
   date_of_birth?: string | null;
+  /** Codice fiscale, sex and place of birth (#1934); `null` clears each. */
+  fiscal_code?: string | null;
+  sex?: Sex | null;
+  birth_place?: string | null;
   belt: Belt;
   stripes: number;
   status: AthleteStatus;
@@ -609,6 +634,11 @@ export class AthleteService {
       .pipe(map((res) => res.data));
   }
 
+  /**
+   * `POST /api/v1/athletes/{id}/restore`. Refused with a 422 carrying an
+   * `AthleteRestoreRefusal` when a live athlete has taken this one's codice
+   * fiscale since the delete (#1934).
+   */
   restore(id: number): Observable<Athlete> {
     return this.http
       .post<AthleteResponse>(`${this.base}/${id}/restore`, {})

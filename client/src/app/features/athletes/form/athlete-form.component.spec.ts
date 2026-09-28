@@ -221,6 +221,9 @@ describe('AthleteFormComponent', () => {
         facebook: '',
         instagram: '',
         date_of_birth: null,
+        fiscal_code: '',
+        sex: null,
+        birth_place: '',
         belt: 'white',
         stripes: '0',
         status: 'active',
@@ -251,6 +254,9 @@ describe('AthleteFormComponent', () => {
         facebook: null,
         instagram: null,
         date_of_birth: null,
+        fiscal_code: null,
+        sex: null,
+        birth_place: null,
         belt: 'white',
         stripes: 0,
         status: 'active',
@@ -353,6 +359,9 @@ describe('AthleteFormComponent', () => {
         facebook: '',
         instagram: '',
         date_of_birth: null,
+        fiscal_code: '',
+        sex: null,
+        birth_place: '',
         belt: 'white',
         stripes: '0',
         status: 'active',
@@ -370,6 +379,78 @@ describe('AthleteFormComponent', () => {
       req.flush({
         data: makeAthlete({ phone_country_code: '+39', phone_national_number: '3331234567' }),
       });
+      flushFeeTiers(httpMock);
+      httpMock.verify();
+    });
+
+    // ── #1934 — what a federation card asks for ─────────────────────────────
+    it('renders the three federation fields in the identity section', () => {
+      const fixture = TestBed.createComponent(AthleteFormComponent);
+      fixture.detectChanges();
+      const el = fixture.nativeElement as HTMLElement;
+
+      expect(el.querySelector('input#fiscal_code')).not.toBeNull();
+      expect(el.querySelector('[data-cy="athlete-sex"]')).not.toBeNull();
+      expect(el.querySelector('input#birth_place')).not.toBeNull();
+    });
+
+    it('pre-fills an empty date of birth and sex from a valid code', () => {
+      const fixture = TestBed.createComponent(AthleteFormComponent);
+      fixture.detectChanges();
+      const cmp = fixture.componentInstance;
+
+      // A girl born 12/06/2015 in Milan (synthetic, from the algorithm).
+      cmp.form.controls.fiscal_code.setValue('bncgli15h52f205n');
+
+      expect(cmp.form.controls.date_of_birth.value).toEqual(new Date(2015, 5, 12));
+      expect(cmp.form.controls.sex.value).toBe('f');
+    });
+
+    it('never overwrites a date of birth or sex already there', () => {
+      const fixture = TestBed.createComponent(AthleteFormComponent);
+      fixture.detectChanges();
+      const cmp = fixture.componentInstance;
+      cmp.form.patchValue({ date_of_birth: new Date(2015, 5, 13), sex: 'm' });
+
+      cmp.form.controls.fiscal_code.setValue('BNCGLI15H52F205N');
+
+      // The server names the disagreement on save; the form does not hide it.
+      expect(cmp.form.controls.date_of_birth.value).toEqual(new Date(2015, 5, 13));
+      expect(cmp.form.controls.sex.value).toBe('m');
+    });
+
+    it('fills nothing from a code that is not valid', () => {
+      const fixture = TestBed.createComponent(AthleteFormComponent);
+      fixture.detectChanges();
+      const cmp = fixture.componentInstance;
+
+      cmp.form.controls.fiscal_code.setValue('BNCGLI15H52F205A');
+
+      expect(cmp.form.controls.date_of_birth.value).toBeNull();
+      expect(cmp.form.controls.sex.value).toBeNull();
+    });
+
+    it('sends the code in capitals, the sex and the place of birth', () => {
+      const fixture = TestBed.createComponent(AthleteFormComponent);
+      fixture.detectChanges();
+      const cmp = fixture.componentInstance;
+      const httpMock = TestBed.inject(HttpTestingController);
+
+      cmp.form.patchValue({
+        first_name: 'Giulia',
+        last_name: 'Bianchi',
+        fiscal_code: ' bncgli15h52f205n ',
+        birth_place: ' Milano ',
+        joined_at: new Date(2026, 3, 23),
+      });
+      cmp.submit();
+
+      const req = httpMock.expectOne('/api/v1/athletes');
+      expect(req.request.body.fiscal_code).toBe('BNCGLI15H52F205N');
+      expect(req.request.body.sex).toBe('f');
+      expect(req.request.body.date_of_birth).toBe('2015-06-12');
+      expect(req.request.body.birth_place).toBe('Milano');
+      req.flush({ data: makeAthlete({ id: 7 }) });
       flushFeeTiers(httpMock);
       httpMock.verify();
     });
@@ -419,6 +500,30 @@ describe('AthleteFormComponent', () => {
       expect(cmp.form.controls.belt.value).toBe('purple');
       expect(cmp.form.controls.stripes.value).toBe('3');
       expect(cmp.form.controls.email.value).toBe('mario@example.com');
+      flushFeeTiers(httpMock);
+      httpMock.verify();
+    });
+
+    it("loads the athlete's codice fiscale, sex and place of birth (#1934)", () => {
+      const athlete = makeAthlete({
+        id: 42,
+        date_of_birth: '1990-03-15',
+        fiscal_code: 'RSSMRA90C15H501O',
+        sex: 'm',
+        birth_place: 'Roma',
+      });
+      const fixture = TestBed.createComponent(AthleteFormComponent);
+      const httpMock = TestBed.inject(HttpTestingController);
+      fixture.detectChanges();
+
+      httpMock.expectOne('/api/v1/athletes/42').flush({ data: athlete });
+
+      const cmp = fixture.componentInstance;
+      expect(cmp.form.controls.fiscal_code.value).toBe('RSSMRA90C15H501O');
+      expect(cmp.form.controls.sex.value).toBe('m');
+      expect(cmp.form.controls.birth_place.value).toBe('Roma');
+      // Loading a code that agrees must not touch the date it already has.
+      expect(cmp.form.controls.date_of_birth.value).toEqual(new Date(1990, 2, 15));
       flushFeeTiers(httpMock);
       httpMock.verify();
     });

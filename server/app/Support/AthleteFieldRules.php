@@ -7,9 +7,12 @@ namespace App\Support;
 use App\Enums\AthleteStatus;
 use App\Enums\Belt;
 use App\Enums\BillingPeriod;
+use App\Enums\Sex;
 use App\Rules\BeltInLadder;
+use App\Rules\ItalianFiscalCode;
 use App\Rules\StripesWithinGrade;
 use App\Support\MartialArt\RankLadder;
+use Carbon\CarbonInterface;
 use Illuminate\Validation\Rule;
 
 /**
@@ -83,6 +86,7 @@ final class AthleteFieldRules
             'facebook' => ['nullable', 'url', 'max:255'],
             'instagram' => ['nullable', 'url', 'max:255'],
             'date_of_birth' => ['nullable', 'date', OperatorDay::before()],
+            ...self::federationDetails($academyId),
             'belt' => ['required', Rule::enum(Belt::class), new BeltInLadder($ladder)],
             // Global ceiling across every ladder (#1800) — taekwondo's black
             // counts 1st-9th dan as 0-8 — and the cap of the row's own grade,
@@ -103,6 +107,39 @@ final class AthleteFieldRules
             // This athlete's own monthly fee, in cents (#1757): null for
             // none, 0 for training free.
             'fee_override_cents' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:1000000'],
+        ];
+    }
+
+    /**
+     * The details a federation card asks for (#1934): the codice fiscale —
+     * well formed, agreeing with the date of birth and sex, one per live
+     * athlete of the academy (the same `whereNull('deleted_at')` scope as
+     * `email`) — the sex as the document records it, and the place of birth.
+     *
+     * Shared with the edit request, which passes the athlete's own id to
+     * ignore and the date and sex already stored, so a code sent on its own
+     * is still checked against them.
+     *
+     * @return array<string, mixed>
+     */
+    public static function federationDetails(
+        ?int $academyId,
+        ?int $ignoreAthleteId = null,
+        ?CarbonInterface $storedBirthDate = null,
+        ?Sex $storedSex = null,
+    ): array {
+        return [
+            'fiscal_code' => [
+                'nullable',
+                'string',
+                new ItalianFiscalCode($storedBirthDate, $storedSex),
+                Rule::unique('athletes', 'fiscal_code')
+                    ->where('academy_id', $academyId)
+                    ->ignore($ignoreAthleteId)
+                    ->whereNull('deleted_at'),
+            ],
+            'sex' => ['nullable', Rule::enum(Sex::class)],
+            'birth_place' => ['nullable', 'string', 'max:100'],
         ];
     }
 }
