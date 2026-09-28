@@ -89,9 +89,13 @@ Run only the gates your diff touches — a docs-only change does not need PEST �
 
 **Before `git push`, also scan [`.claude/gotchas.md`](.claude/gotchas.md)** — a living checklist of mistakes we've made before. Its header carries a routing table: **read only the groups your diff touches**, not the whole file. 30-second read vs. a 5-minute debugging round-trip. When a mistake of this kind bites again, add a `→` entry to the right group in the **same PR** that fixes it.
 
-**Run `/prereview` before pushing, and `/review-pr <N>` once the PR is open.** A fresh sub-agent reads the diff vs `develop` and surfaces up to 5 actionable issues — ~30 s against a CI round-trip; the second pass posts them on the PR as threads that block the merge until answered (#2015).
+**Once the PR is open, run [`/review-pr <N>`](./.claude/commands/review-pr.md)**, and again after each fix round. It is the one required review (the owner's call, 28 Sep 2026, #2020). It is not optional on a non-trivial diff, because what it finds is what the gates cannot see:
+- a tooltip that could never open;
+- a chip unclickable on the phone;
+- a Reset that cleared a filter it did not show;
+- tests passing for the wrong reason.
 
-It is not optional on a non-trivial diff, because the things it finds are the things the gates cannot see. On one afternoon it caught: a tooltip that could never open because its host had `pointer-events: none`, a payment chip that had been unclickable on the phone since #1402, a sheet Reset that silently cleared a filter it did not show, and two tests passing for the wrong reason. Lint, unit tests and screenshots were all green for every one of them. Skip it only for a typo.
+Lint, unit tests and screenshots were green for every one of them. Skip it only for a typo. `/prereview` before the push is optional: use it on a large diff where an early read saves a CI round.
 
 ---
 
@@ -112,10 +116,15 @@ Full checklist + labels + body conventions in [`docs/development/pr-labels.md`](
 
 ### Review
 
-The automated post-push reviewer was retired in #1234 — it cost a paid API key per PR and this is a single-developer project. What replaces it is two passes, both on the owner's plan:
+The automated post-push reviewer was retired in #1234 — it cost a paid API key per PR and this is a single-developer project. What replaces it runs on the owner's plan:
 
-- **`/prereview` before the push.** A fresh sub-agent reads the branch's diff and reports up to 5 issues in the session.
-- **[`/review-pr <N>`](./.claude/commands/review-pr.md) after the PR is open, and after every fix round** (#2015). The [`pr-reviewer`](./.claude/agents/pr-reviewer.md) agent posts its verified findings on the PR as inline review threads, and on the next round resolves the ones the new commits fix. Sonnet by default; `--deep` (Opus) for an engine, money, security or migration diff.
+- **[`/review-pr <N>`](./.claude/commands/review-pr.md): the one required review**, run when the PR opens and after every fix round (#2015, #2020). The [`pr-reviewer`](./.claude/agents/pr-reviewer.md) agent:
+  - checks the PR against the issue it closes and the canon for what it touches;
+  - posts its verified findings as inline review threads;
+  - on the next round, resolves the ones the new commits fix.
+
+  Sonnet by default; `--deep` (Opus) for an engine, money, security or migration diff.
+- **`/prereview`** is optional: a pre-push read of a large diff, reported in the session only.
 - Merge once CI is green **and every review thread is resolved**. The `develop` and `main` rulesets require it: a PR with every check green and one open thread reads `BLOCKED`. Read the threads — they have been real — fix or answer, then resolve.
 - Copilot's code review is optional. Its quota ran out once (Sep 2026) and the owner would rather not depend on it; when it posts, its threads are read like any other.
 - The PR body still matters: it is the record of why a change looks the way it does.
@@ -167,7 +176,7 @@ Pure internal refactor, formatting, dependency bumps, test-only additions, CI tw
 Everything above is a rule; this list is only the part that is **not** stated
 anywhere else, so it has somewhere to live. The git, PR, release and
 documentation sections above own the rest — branch model, conventional
-commits, squash-vs-merge, `/prereview`, doc lock-step — and repeating them
+commits, squash-vs-merge, `/review-pr`, doc lock-step — and repeating them
 here just gave two places to drift apart.
 
 1. **Always suggest the branch name** (including the issue number) before starting any work.
