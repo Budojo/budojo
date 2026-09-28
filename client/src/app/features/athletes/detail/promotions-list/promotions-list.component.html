@@ -418,6 +418,63 @@
       </p>
     }
 
+    @if (skippedSteps().length > 0) {
+      <!-- The steps the owner said never happened (#1989): one quiet line,
+           folded, so a skip can always be taken back. -->
+      <div class="promotions__skipped" data-cy="promotions-skipped">
+        <p class="promotions__history-before">
+          <span>{{
+            (skippedSteps().length === 1
+              ? 'athletes.detail.promotions.skippedList.countOne'
+              : 'athletes.detail.promotions.skippedList.countOther'
+            ) | translate: { count: skippedSteps().length }
+          }}</span>
+          <button
+            pButton
+            type="button"
+            severity="secondary"
+            [text]="true"
+            [attr.aria-expanded]="skippedOpen()"
+            aria-controls="promotions-skipped-list"
+            (click)="skippedOpen.set(!skippedOpen())"
+            data-cy="promotions-skipped-toggle"
+          >
+            <span pButtonLabel>{{
+              (skippedOpen()
+                ? 'athletes.detail.promotions.skippedList.hide'
+                : 'athletes.detail.promotions.gap.show'
+              ) | translate
+            }}</span>
+          </button>
+        </p>
+        @if (skippedOpen()) {
+          <ul
+            id="promotions-skipped-list"
+            class="promotions__skipped-list"
+            data-cy="promotions-skipped-list"
+          >
+            @for (step of skippedSteps(); track step.key) {
+              <li class="promotions__skipped-item">
+                <span class="promotions__skipped-text">{{ skippedLabel(step) }}</span>
+                <p-button
+                  [label]="'athletes.detail.promotions.skippedList.restore' | translate"
+                  severity="secondary"
+                  [text]="true"
+                  [ariaLabel]="
+                    'athletes.detail.promotions.skippedList.restoreAria'
+                      | translate: { step: skippedLabel(step) }
+                  "
+                  [loading]="restoringKey() === step.key"
+                  (onClick)="restore(step)"
+                  [attr.data-cy]="'skipped-restore-' + step.key"
+                />
+              </li>
+            }
+          </ul>
+        }
+      </div>
+    }
+
     @if (lastPage() > 1) {
       <nav class="promotions__pager" data-cy="promotions-pager">
         <p-button

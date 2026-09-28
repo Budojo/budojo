@@ -10,6 +10,7 @@ import {
   type AthletePromotion,
   AthleteService,
   type PromotionGap,
+  type PromotionSkippedStep,
 } from '../../../../core/services/athlete.service';
 import { PromotionsListComponent } from './promotions-list.component';
 import { useLadder } from '../../../../../test-utils/ladder-test';
@@ -930,6 +931,7 @@ describe('PromotionsListComponent — missing steps (#1966)', () => {
     to_stripes: null,
     belt_at_event: 'blue',
     is_opening: true,
+    is_entry_placeholder: true,
     recorded_at: '2026-09-20T10:00:00+00:00',
   });
   const whiteThree = makePromotion({
@@ -978,12 +980,17 @@ describe('PromotionsListComponent — missing steps (#1966)', () => {
     sessions_since_stripe: null,
   };
 
-  function page(data: AthletePromotion[], gaps: PromotionGap[]) {
+  function page(
+    data: AthletePromotion[],
+    gaps: PromotionGap[],
+    skipped: PromotionSkippedStep[] = [],
+  ) {
     return of({
       data,
       meta: { current_page: 1, per_page: 20, total: data.length, last_page: 1 },
       progression: jacopoProgression,
       gaps,
+      skipped,
       history_starts_at: '2024-03-12',
     });
   }
@@ -1033,6 +1040,19 @@ describe('PromotionsListComponent — missing steps (#1966)', () => {
   it('says "on this belt since" is the day of entry while the opening row stands', () => {
     const { el } = jacopo();
     expect(el.querySelector('[data-cy="promotions-entry-day"]')).not.toBeNull();
+  });
+
+  it('says nothing about the day of entry once the owner has dated the starting row (#1990)', () => {
+    const ctx = setup({ athleteId: '7' });
+    useLadder('bjj');
+    // Moved with the pencil to the day he really started on blue: the row
+    // is still a starting row, but its date is the promotion's now.
+    ctx.svc.promotions.mockReturnValue(
+      page([{ ...opening, is_entry_placeholder: false }, whiteThree], [fourthStripe]),
+    );
+    ctx.fixture.detectChanges();
+
+    expect(ctx.el.querySelector('[data-cy="promotions-entry-day"]')).toBeNull();
   });
 
   it('says the history before the first known point is not recorded, in one line', () => {
@@ -1242,6 +1262,143 @@ describe('PromotionsListComponent — missing steps (#1966)', () => {
     expect(document.activeElement).toBe(
       el.querySelector('[data-cy="gap-add-date-stripe:white:4"] button'),
     );
+  });
+
+  describe('the steps marked as skipped (#1989)', () => {
+    const skippedFourth: PromotionSkippedStep = {
+      key: 'stripe:white:4',
+      kind: 'stripe',
+      belt: 'white',
+      stripes: 4,
+    };
+    const skippedPurple: PromotionSkippedStep = {
+      key: 'belt:purple:0',
+      kind: 'belt',
+      belt: 'purple',
+      stripes: 0,
+    };
+
+    function openSkipped(el: HTMLElement): void {
+      (el.querySelector('[data-cy="promotions-skipped-toggle"]') as HTMLButtonElement).click();
+    }
+
+    function withSkipped(skipped: PromotionSkippedStep[]) {
+      const ctx = setup({ athleteId: '7' });
+      useLadder('bjj');
+      ctx.svc.promotions.mockReturnValue(page([opening, whiteThree], [blueBelt], skipped));
+      ctx.fixture.detectChanges();
+      return ctx;
+    }
+
+    it('says how many there are in one quiet line under the timeline, folded', () => {
+      const { el } = withSkipped([skippedFourth]);
+      const line = el.querySelector('[data-cy="promotions-skipped"]');
+
+      expect(line?.textContent).toContain('1 step marked as skipped');
+      expect(el.querySelector('[data-cy="promotions-skipped-list"]')).toBeNull();
+      const toggle = el.querySelector('[data-cy="promotions-skipped-toggle"]');
+      expect(toggle?.textContent).toContain('Show');
+      expect(toggle?.getAttribute('aria-expanded')).toBe('false');
+    });
+
+    it('counts them in the plural, and names each one once opened', () => {
+      const { el, fixture } = withSkipped([skippedFourth, skippedPurple]);
+      expect(el.querySelector('[data-cy="promotions-skipped"]')?.textContent).toContain(
+        '2 steps marked as skipped',
+      );
+
+      openSkipped(el);
+      fixture.detectChanges();
+
+      const items = Array.from(el.querySelectorAll('[data-cy="promotions-skipped-list"] > li')).map(
+        (li) => [
+          li.querySelector('.promotions__skipped-text')?.textContent?.trim(),
+          li.querySelector('button')?.textContent?.trim(),
+        ],
+      );
+      expect(items).toEqual([
+        ['White, stripe 4', 'Restore'],
+        ['Purple belt', 'Restore'],
+      ]);
+      const toggle = el.querySelector('[data-cy="promotions-skipped-toggle"]');
+      expect(toggle?.textContent).toContain('Hide');
+      expect(toggle?.getAttribute('aria-expanded')).toBe('true');
+      expect(
+        el
+          .querySelector('[data-cy="skipped-restore-stripe:white:4"] button')
+          ?.getAttribute('aria-label'),
+      ).toBe('Restore: White, stripe 4');
+    });
+
+    it('brings one back: deletes the skip, reloads, and says so', async () => {
+      const { el, fixture, svc } = withSkipped([skippedFourth]);
+      openSkipped(el);
+      fixture.detectChanges();
+      svc.promotions.mockClear();
+      svc.promotions.mockReturnValue(page([opening, whiteThree], [fourthStripe, blueBelt]));
+
+      click(el, 'skipped-restore-stripe:white:4');
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(svc.unskipPromotionStep).toHaveBeenCalledWith(7, 'white', 4);
+      expect(svc.promotions).toHaveBeenCalledWith(7, 1);
+      expect(el.querySelector('[data-cy="promotion-gap-stripe:white:4"]')).not.toBeNull();
+      expect(el.querySelector('[data-cy="promotions-skipped"]')).toBeNull();
+      expect(el.querySelector('[data-cy="promotions-announce"]')?.textContent?.trim()).toBe(
+        'White, stripe 4: back among the steps to date',
+      );
+      // The keyboard follows the step back to its ghost row.
+      expect(document.activeElement).toBe(
+        el.querySelector('[data-cy="gap-add-date-stripe:white:4"] button'),
+      );
+    });
+
+    it('puts the keyboard on the timeline when the step comes back folded and the list is gone', async () => {
+      const { el, fixture, svc } = withSkipped([skippedFourth]);
+      openSkipped(el);
+      fixture.detectChanges();
+      // Three missing steps in a row are drawn folded: no "Aggiungi la data"
+      // to land on, and no list left either.
+      const run = (n: number): PromotionGap => ({
+        ...fourthStripe,
+        key: `stripe:white:${n}`,
+        from_stripes: n - 1,
+        to_stripes: n,
+      });
+      svc.promotions.mockReturnValue(page([opening, whiteThree], [run(2), run(3), run(4)]));
+
+      click(el, 'skipped-restore-stripe:white:4');
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(el.querySelector('[data-cy="gap-add-date-stripe:white:4"]')).toBeNull();
+      expect(document.activeElement).toBe(el.querySelector('[data-cy="promotions-list"]'));
+    });
+
+    it('keeps the step in the list when bringing it back fails, and says why', () => {
+      const { el, fixture, svc } = withSkipped([skippedFourth]);
+      const add = vi.spyOn(fixture.componentRef.injector.get(MessageService), 'add');
+      svc.unskipPromotionStep.mockReturnValue(throwError(() => new Error('boom')));
+      openSkipped(el);
+      fixture.detectChanges();
+
+      click(el, 'skipped-restore-stripe:white:4');
+      fixture.detectChanges();
+
+      expect(add).toHaveBeenCalledWith(
+        expect.objectContaining({
+          severity: 'error',
+          detail: "It couldn't be brought back. Try again.",
+        }),
+      );
+      expect(el.querySelector('[data-cy="skipped-restore-stripe:white:4"]')).not.toBeNull();
+    });
+
+    it('draws nothing when no step is marked as skipped', () => {
+      const { el } = withSkipped([]);
+      expect(el.querySelector('[data-cy="promotions-skipped"]')).toBeNull();
+    });
   });
 
   it('keeps same-day rows and their missing steps in replay order', () => {

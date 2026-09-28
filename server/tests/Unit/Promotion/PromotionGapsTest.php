@@ -24,6 +24,15 @@ function beltRow(int $id, ?Belt $from, Belt $to, string $at): PromotionRecord
     return new PromotionRecord($id, 'belt', $from, $to, null, null, $to, CarbonImmutable::parse($at));
 }
 
+/**
+ * A starting row the owner has dated (#1990): moved with the pencil off the
+ * day the athlete was entered, so it is the real start, not the placeholder.
+ */
+function datedStart(int $id, Belt $to, string $at): PromotionRecord
+{
+    return new PromotionRecord($id, 'belt', null, $to, null, null, $to, CarbonImmutable::parse($at), entryPlaceholder: false);
+}
+
 function ladderFor(MartialArt $art): RankLadder
 {
     return MartialArtProfile::for($art)->ladder();
@@ -33,7 +42,7 @@ function ladderFor(MartialArt $art): RankLadder
  * @param list<PromotionRecord> $records
  * @param list<string>          $skipped
  *
- * @return array{gaps: list<array<string, mixed>>, history_starts_at: string|null}
+ * @return array{gaps: list<array<string, mixed>>, skipped: list<array<string, mixed>>, history_starts_at: string|null}
  */
 function gapsOf(array $records, Belt $belt, int $stripes, MartialArt $art = MartialArt::Bjj, ?Closure $kids = null, array $skipped = []): array
 {
@@ -420,6 +429,16 @@ it('can never be led into a second row on a belt, whatever the order and the dat
     'imported on black in judo, nothing before (#1974)' => [[beltRow(9, null, Belt::Black, '2026-09-01')], Belt::Black, 1, MartialArt::Judo],
     'a starting belt confirmed after a promotion (#1991)' => [[beltRow(1, Belt::White, Belt::Blue, '2019-01-01'), beltRow(2, null, Belt::Purple, '2020-06-01')], Belt::Purple, 1, MartialArt::Bjj],
     'a starting belt confirmed on the belt already held (#1991)' => [[beltRow(1, Belt::White, Belt::Blue, '2019-01-01'), beltRow(2, null, Belt::Blue, '2020-06-01')], Belt::Blue, 2, MartialArt::Bjj],
+    'a starting row dated on the first belt (#1990)' => [[datedStart(1, Belt::White, '2015-02-03'), beltRow(2, Belt::White, Belt::Blue, '2016-10-22')], Belt::Blue, 2, MartialArt::Bjj],
+    'a starting row dated on a mid belt (#1990)' => [[stripeRow(12, Belt::White, 2, 3, '2024-03-12'), datedStart(15, Belt::Blue, '2025-01-10')], Belt::Blue, 2, MartialArt::Bjj],
+    'a judoka whose starting row on black is dated (#1990)' => [[datedStart(9, Belt::Black, '2020-03-01')], Belt::Black, 2, MartialArt::Judo],
+    // Both at once: a starting row typed with its own day is a dated start
+    // (#1990), and it only saves after a promotion once confirmed (#1991).
+    'a dated starting belt confirmed after a promotion (#1990, #1991)' => [[beltRow(1, Belt::White, Belt::Blue, '2019-01-01'), datedStart(2, Belt::Purple, '2020-06-01')], Belt::Purple, 1, MartialArt::Bjj],
+    'a dated starting belt confirmed below the belt held (#1990, #1991)' => [[beltRow(1, Belt::White, Belt::Blue, '2019-01-01'), datedStart(2, Belt::White, '2020-06-01')], Belt::Blue, 1, MartialArt::Bjj],
+    'a dated start, then a belt contradiction confirmed (#1990, #1991)' => [[datedStart(1, Belt::White, '2015-02-03'), beltRow(2, Belt::Blue, Belt::Purple, '2018-01-01'), beltRow(3, Belt::White, Belt::Blue, '2019-01-01')], Belt::Blue, 1, MartialArt::Bjj],
+    'a dated start, then a stripe contradiction confirmed (#1990, #1991)' => [[datedStart(1, Belt::White, '2015-02-03'), stripeRow(2, Belt::White, 2, 3, '2016-01-01'), stripeRow(3, Belt::White, 1, 2, '2016-06-01')], Belt::White, 2, MartialArt::Bjj],
+    'a stripe dated before its belt, confirmed (#1991)' => [[beltRow(1, Belt::White, Belt::Blue, '2024-01-10'), stripeRow(2, Belt::Blue, 0, 1, '2023-06-01'), stripeRow(3, Belt::Blue, 3, 4, '2025-06-01')], Belt::Blue, 4, MartialArt::Bjj],
 ]);
 
 /** @return list<PromotionRecord> */
@@ -591,7 +610,7 @@ it("leaves a starting row's belt unoffered when the step before it took its whol
 });
 
 it('has no history, and no gaps, without a single row', function (): void {
-    expect(gapsOf([], Belt::Blue, 2))->toBe(['gaps' => [], 'history_starts_at' => null]);
+    expect(gapsOf([], Belt::Blue, 2))->toBe(['gaps' => [], 'skipped' => [], 'history_starts_at' => null]);
 });
 
 it('admits a row that fills a gap exactly, inside its window', function (): void {
@@ -738,6 +757,21 @@ it('offers nothing across a stripe contradiction the owner saved anyway', functi
     expect(keysOf($result))->toBe([]);
 });
 
+it('never offers a stripe the history already records, even across a contradiction the owner saved (#1991)', function (): void {
+    // A blue stripe typed before the promotion to blue, and confirmed: the
+    // walk from the promotion to the next stripe passes blue 1 again. It is
+    // on record, so only the stripes nobody wrote down are offered — never a
+    // second «blue 0 → 1».
+    $result = gapsOf([
+        beltRow(1, Belt::White, Belt::Blue, '2024-01-10'),
+        stripeRow(2, Belt::Blue, 0, 1, '2023-06-01'),
+        stripeRow(3, Belt::Blue, 3, 4, '2025-06-01'),
+    ], Belt::Blue, 4);
+
+    expect(keysOf($result))->toBe(['stripe:blue:2', 'stripe:blue:3'])
+        ->and($result['gaps'][0]['after'])->toBe(['promotion_id' => 1, 'recorded_at' => '2024-01-10']);
+});
+
 it('offers nothing across a belt contradiction the owner saved anyway, and carries on after it', function (): void {
     // Purple in 2020, then «white → blue» in 2021: backwards. The interval
     // between them is not walked; the stripe after the later row still is.
@@ -748,4 +782,73 @@ it('offers nothing across a belt contradiction the owner saved anyway, and carri
 
     expect(keysOf($result))->toBe(['stripe:blue:1'])
         ->and($result['gaps'][0]['after'])->toBe(['promotion_id' => 2, 'recorded_at' => '2021-01-01']);
+});
+
+// ── A starting row the owner has dated is the real start (#1990) ──────────
+
+it('offers the stripes after a starting row the owner dated on the first belt', function (): void {
+    // "Cintura di partenza → Bianca" moved to 3 Feb 2015, then white → blue in
+    // 2016: he started from nothing on white, so the four white stripes are
+    // missing between the two.
+    $result = gapsOf([
+        datedStart(1, Belt::White, '2015-02-03'),
+        beltRow(2, Belt::White, Belt::Blue, '2016-10-22'),
+    ], Belt::Blue, 0);
+
+    expect(keysOf($result))->toBe(['stripe:white:1', 'stripe:white:2', 'stripe:white:3', 'stripe:white:4'])
+        ->and($result['gaps'][0]['after'])->toBe(['promotion_id' => 1, 'recorded_at' => '2015-02-03'])
+        ->and($result['gaps'][3]['before'])->toBe(['promotion_id' => 2, 'recorded_at' => '2016-10-22']);
+});
+
+it('offers the stripes after a dated starting row on a mid belt, and nothing to complete', function (): void {
+    $result = gapsOf([datedStart(15, Belt::Blue, '2019-05-01')], Belt::Blue, 2);
+
+    expect(keysOf($result))->toBe(['stripe:blue:1', 'stripe:blue:2'])
+        ->and(array_column($result['gaps'], 'completes_promotion_id'))->toBe([null, null])
+        ->and($result['gaps'][0]['after'])->toBe(['promotion_id' => 15, 'recorded_at' => '2019-05-01']);
+});
+
+it('reads a dated starting row after older rows as the belt step itself', function (): void {
+    // The white stripe before it is still missing; the blue step is the row,
+    // with its date; the blue stripe after it is missing.
+    $result = gapsOf([
+        stripeRow(12, Belt::White, 2, 3, '2024-03-12'),
+        datedStart(15, Belt::Blue, '2025-01-10'),
+    ], Belt::Blue, 1);
+
+    expect(keysOf($result))->toBe(['stripe:white:4', 'stripe:blue:1'])
+        ->and(array_column($result['gaps'], 'completes_promotion_id'))->toBe([null, null])
+        ->and($result['gaps'][0]['before'])->toBe(['promotion_id' => 15, 'recorded_at' => '2025-01-10'])
+        ->and($result['gaps'][1]['after'])->toBe(['promotion_id' => 15, 'recorded_at' => '2025-01-10']);
+});
+
+it('still holds the stripes of a starting row left on the day of entry', function (): void {
+    // The placeholder: entered on blue with two stripes, nothing dated yet.
+    $result = gapsOf([beltRow(15, null, Belt::Blue, '2026-09-20')], Belt::Blue, 2);
+
+    expect(keysOf($result))->toBe(['belt:blue:0']);
+});
+
+// ── The skipped steps are listed, to be brought back (#1989) ──────────────
+
+it('lists the steps the owner skipped, in history order, apart from the gaps', function (): void {
+    $result = gapsOf([
+        beltRow(1, Belt::White, Belt::Blue, '2024-01-01'),
+    ], Belt::Blue, 3, skipped: ['blue:1', 'blue:3']);
+
+    expect(keysOf($result))->toBe(['stripe:blue:2'])
+        ->and($result['skipped'])->toBe([
+            ['key' => 'stripe:blue:1', 'kind' => 'stripe', 'belt' => 'blue', 'stripes' => 1],
+            ['key' => 'stripe:blue:3', 'kind' => 'stripe', 'belt' => 'blue', 'stripes' => 3],
+        ]);
+});
+
+it('lists no skip that names a step the history no longer misses', function (): void {
+    // blue:1 was skipped, then recorded after all: nothing to bring back.
+    $result = gapsOf([
+        beltRow(1, Belt::White, Belt::Blue, '2024-01-01'),
+        stripeRow(2, Belt::Blue, 0, 1, '2024-06-01'),
+    ], Belt::Blue, 1, skipped: ['blue:1']);
+
+    expect($result['skipped'])->toBe([]);
 });

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Resources;
 
 use App\Models\AthletePromotion;
+use App\Support\Promotion\EntryPlaceholder;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -52,6 +53,9 @@ class AthletePromotionResource extends JsonResource
             // with (#1771), dated the day the athlete was entered — which
             // the ghost rows (#1966) offer to complete with the real day.
             'is_opening' => $promotion->kind === 'belt' && $promotion->from_belt === null,
+            // A starting row still on that day (#1990): its date is only when
+            // the athlete was entered. Moved or completed, it is the real start.
+            'is_entry_placeholder' => EntryPlaceholder::is($promotion, $promotion->athlete),
             'recorded_at' => $promotion->recorded_at->toIso8601String(),
             'recorded_by' => $recordedBy !== null ? [
                 'id' => $recordedBy->id,

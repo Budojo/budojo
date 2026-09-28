@@ -6397,11 +6397,21 @@ paths:
         - before the first row;
         - for an interval the ladder cannot walk;
         - into a belt the history already has a row for;
-        - for the stripes held on a starting row's belt;
+        - for the stripes held on a starting row's belt, while the row is
+          still the placeholder dated the day the athlete was entered
+          (`is_entry_placeholder`);
         - for a step with no day left in its window;
         - after a starting row's belt step, until it is completed;
         - for a step the owner skipped
-          (`POST /athletes/{athlete}/promotion-skips`).
+          (`POST /athletes/{athlete}/promotion-skips`) — listed apart in
+          `skipped` instead, oldest first, so it can be brought back
+          (#1989).
+
+        **A starting row the owner has dated is the real start (#1990).**
+        Moved off the day of entry (`PATCH` with a new date) or completed,
+        it says the athlete arrived on that belt that day with no stripes:
+        the stripes after it are missing like any others, and there is
+        nothing left to complete.
 
         A gap is filled with the existing backfill (`POST` below) carrying
         exactly its fields and a date in its window
@@ -6428,7 +6438,7 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [data, meta, progression, gaps, history_starts_at]
+                required: [data, meta, progression, gaps, skipped, history_starts_at]
                 properties:
                   data:
                     type: array
@@ -6438,6 +6448,13 @@ paths:
                   gaps:
                     type: array
                     items: { $ref: '#/components/schemas/PromotionGap' }
+                  skipped:
+                    type: array
+                    description: >-
+                      The steps the owner marked as skipped that the history
+                      would otherwise report as gaps, oldest first (#1989).
+                      Undo one with `DELETE …/promotion-skips/{belt}/{stripes}`.
+                    items: { $ref: '#/components/schemas/PromotionSkippedStep' }
                   history_starts_at:
                     type: string
                     format: date
@@ -6668,8 +6685,9 @@ paths:
         "Saltato" on a ghost row: the step leading to `belt` + `stripes` is
         not missing, it was never taken — a BJJ white belt promoted to blue
         from three stripes. The matching gap stops being reported in
-        `GET /athletes/{athlete}/promotions`. Idempotent: a second call
-        returns 201 without a second row.
+        `GET /athletes/{athlete}/promotions`, which lists it under
+        `skipped` instead (#1989). Idempotent: a second call returns 201
+        without a second row.
       operationId: athletePromotionSkipCreate
       parameters:
         - name: athlete
@@ -8962,13 +8980,22 @@ components:
         belt-badge context on stripe rows without joining back to the
         (possibly belt-changed-since) athlete. `recorded_by` is
         nullable as a defensive guard against hard-deleted User rows.
-      required: [id, kind, from_belt, to_belt, from_stripes, to_stripes, belt_at_event, is_opening, recorded_at, recorded_by]
+      required: [id, kind, from_belt, to_belt, from_stripes, to_stripes, belt_at_event, is_opening, is_entry_placeholder, recorded_at, recorded_by]
       properties:
         id: { type: integer, format: int64 }
         kind: { type: string, enum: [belt, stripe] }
         is_opening:
           type: boolean
           description: A starting row — `kind = belt` with no `from_belt` (#1966).
+        is_entry_placeholder:
+          type: boolean
+          description: |
+            A starting row still dated the day the athlete was entered
+            (#1990) — the athlete's `created_at`, read as its UTC day or the
+            owner's. Its date says only when the athlete was entered, and
+            the stripes on its belt are taken as held before the record.
+            False on every other row, and on a starting row the owner has
+            moved to another day or completed: that one is the real start.
         from_belt:
           allOf:
             - $ref: '#/components/schemas/Belt'
@@ -11630,6 +11657,21 @@ components:
       properties:
         promotion_id: { type: integer, format: int64 }
         recorded_at: { type: string, format: date }
+
+    PromotionSkippedStep:
+      type: object
+      description: |
+        A step the owner said never happened, where the history would
+        otherwise report it as a gap (#1989). `key` is the key the gap
+        has; `belt` + `stripes` are what the skip is stored by — the grade
+        the step leads to — and what `DELETE …/promotion-skips` takes. A
+        skip for a step the history no longer misses is not listed.
+      required: [key, kind, belt, stripes]
+      properties:
+        key: { type: string, example: 'stripe:white:4' }
+        kind: { type: string, enum: [belt, stripe] }
+        belt: { $ref: '#/components/schemas/Belt' }
+        stripes: { type: integer, minimum: 0, maximum: 10 }
 
     PromotionSkipRequest:
       type: object

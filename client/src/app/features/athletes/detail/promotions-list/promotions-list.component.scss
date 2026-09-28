@@ -288,6 +288,29 @@
   font-size: 0.875rem;
 }
 
+// Every step marked as skipped (#1989), under the "Prima del …" line and in
+// its voice: muted, dashed on the left, nothing louder than a text button.
+.promotions__skipped-list {
+  margin: 0;
+  padding: 0 0 0 1rem;
+  border-left: 2px dashed var(--p-surface-400);
+  list-style: none;
+}
+
+.promotions__skipped-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+// 48 px: the floor for anything you are meant to press (canon § Fitts) —
+// the toggle and every "Ripristina".
+:host ::ng-deep .promotions__skipped .p-button {
+  min-height: 3rem;
+}
+
 // The status region for a skip and its undo: read, never seen. Always in the
 // DOM so a screen reader is listening before the text changes.
 .promotions__announce {

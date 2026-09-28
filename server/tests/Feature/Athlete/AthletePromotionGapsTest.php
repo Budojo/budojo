@@ -67,6 +67,17 @@ function beltRowOn(Athlete $athlete, User $by, ?Belt $from, Belt $to, string $at
     ]);
 }
 
+/**
+ * The starting row written the day the athlete was entered (#1771) — still the
+ * placeholder for the real start (#1990), because it sits on that day.
+ */
+function startingRowOn(Athlete $athlete, User $by, Belt $belt, string $at): AthletePromotion
+{
+    $athlete->forceFill(['created_at' => $at])->saveQuietly();
+
+    return beltRowOn($athlete, $by, null, $belt, $at);
+}
+
 /** @return list<string> */
 function gapKeys(object $test, Athlete $athlete): array
 {
@@ -79,7 +90,7 @@ function gapKeys(object $test, Athlete $athlete): array
 it("reads Jacopo's missing steps beside his timeline, and marks his starting row", function (): void {
     $jacopo = gapsAthlete($this->academy, Belt::Blue, 0);
     $third = stripeRowOn($jacopo, $this->owner, Belt::White, 2, 3, '2024-03-12 00:00:00');
-    $opening = beltRowOn($jacopo, $this->owner, null, Belt::Blue, '2026-09-20 10:00:00');
+    $opening = startingRowOn($jacopo, $this->owner, Belt::Blue, '2026-09-20 10:00:00');
 
     $response = $this->actingAs($this->owner)
         ->getJson("/api/v1/athletes/{$jacopo->id}/promotions")
@@ -95,14 +106,42 @@ it("reads Jacopo's missing steps beside his timeline, and marks his starting row
         ->and($response->json('gaps.1.before'))->toBe(['promotion_id' => $opening->id, 'recorded_at' => '2026-09-20']);
 
     $isOpening = array_column($response->json('data'), 'is_opening', 'id');
+    $isPlaceholder = array_column($response->json('data'), 'is_entry_placeholder', 'id');
     expect($isOpening[$opening->id])->toBeTrue()
-        ->and($isOpening[$third->id])->toBeFalse();
+        ->and($isOpening[$third->id])->toBeFalse()
+        ->and($isPlaceholder[$opening->id])->toBeTrue()
+        ->and($isPlaceholder[$third->id])->toBeFalse();
+});
+
+it('reads a starting row the owner moved off the day of entry as the real start, with the stripes after it (#1990)', function (): void {
+    // Entered today on white, the blue of 2016 transcribed since: while the
+    // starting row only says "entered today", the white stripes are history
+    // before the record.
+    $athlete = gapsAthlete($this->academy, Belt::Blue, 0);
+    $opening = startingRowOn($athlete, $this->owner, Belt::White, '2026-09-26 00:00:00');
+    $blue = beltRowOn($athlete, $this->owner, Belt::White, Belt::Blue, '2016-10-22 00:00:00');
+    $timeline = "/api/v1/athletes/{$athlete->id}/promotions";
+
+    $before = $this->actingAs($this->owner)->getJson($timeline)->assertOk();
+    expect($before->json('gaps'))->toBe([])
+        ->and(array_column($before->json('data'), 'is_entry_placeholder', 'id')[$opening->id])->toBeTrue();
+
+    // The pencil: he started on white on 3 February 2015, with no stripes.
+    $this->actingAs($this->owner)->patchJson("{$timeline}/{$opening->id}", ['recorded_at' => '2015-02-03'])->assertOk()
+        ->assertJsonPath('data.is_entry_placeholder', false);
+
+    $after = $this->actingAs($this->owner)->getJson($timeline)->assertOk();
+    $gaps = $after->json('gaps');
+    expect(array_column($gaps, 'key'))->toBe(['stripe:white:1', 'stripe:white:2', 'stripe:white:3', 'stripe:white:4'])
+        ->and($gaps[0]['after'])->toBe(['promotion_id' => $opening->id, 'recorded_at' => '2015-02-03'])
+        ->and($gaps[3]['before'])->toBe(['promotion_id' => $blue->id, 'recorded_at' => '2016-10-22'])
+        ->and(array_column($after->json('data'), 'is_entry_placeholder', 'id')[$opening->id])->toBeFalse();
 });
 
 it('reads the same two steps for Jacopo entered on blue with two stripes', function (): void {
     $jacopo = gapsAthlete($this->academy, Belt::Blue, 2);
     stripeRowOn($jacopo, $this->owner, Belt::White, 2, 3, '2024-03-12 00:00:00');
-    $opening = beltRowOn($jacopo, $this->owner, null, Belt::Blue, '2026-09-20 10:00:00');
+    $opening = startingRowOn($jacopo, $this->owner, Belt::Blue, '2026-09-20 10:00:00');
 
     $gaps = $this->actingAs($this->owner)->getJson("/api/v1/athletes/{$jacopo->id}/promotions")->assertOk()->json('gaps');
 
@@ -114,7 +153,7 @@ it('reads the same two steps for Jacopo entered on blue with two stripes', funct
 it('offers the blue stripes only once the blue belt is dated, and never a second blue', function (): void {
     $jacopo = gapsAthlete($this->academy, Belt::Blue, 2);
     stripeRowOn($jacopo, $this->owner, Belt::White, 2, 3, '2024-03-12 00:00:00');
-    $opening = beltRowOn($jacopo, $this->owner, null, Belt::Blue, '2026-09-20 10:00:00');
+    $opening = startingRowOn($jacopo, $this->owner, Belt::Blue, '2026-09-20 10:00:00');
 
     $this->actingAs($this->owner)
         ->patchJson("/api/v1/athletes/{$jacopo->id}/promotions/{$opening->id}", ['recorded_at' => '2025-01-10', 'from_belt' => 'white'])
@@ -138,7 +177,7 @@ it('saves a blue stripe typed before the blue belt is dated, and the belt step c
     // row stands for now has to fall before it.
     $jacopo = gapsAthlete($this->academy, Belt::Blue, 1);
     $white = stripeRowOn($jacopo, $this->owner, Belt::White, 2, 3, '2024-03-12 00:00:00');
-    $opening = beltRowOn($jacopo, $this->owner, null, Belt::Blue, '2026-09-20 10:00:00');
+    $opening = startingRowOn($jacopo, $this->owner, Belt::Blue, '2026-09-20 10:00:00');
 
     $created = $this->actingAs($this->owner)->postJson("/api/v1/athletes/{$jacopo->id}/promotions", [
         'kind' => 'stripe', 'recorded_at' => '2024-05-01', 'belt_at_event' => 'blue', 'from_stripes' => 0, 'to_stripes' => 1,
@@ -152,16 +191,19 @@ it('saves a blue stripe typed before the blue belt is dated, and the belt step c
 });
 
 it('completes a starting row only inside its window when a gap stands for it', function (): void {
-    // Opened on white in 2015, imported on blue in 2026, a blue stripe from
-    // 2020 backfilled since: the blue belt came before that stripe.
+    // A first belt of white typed in for 2015, imported on blue in 2026, a
+    // blue stripe from 2020 backfilled since: the blue belt came before that
+    // stripe. White dated 2015 is a real start (#1990), so its stripes are
+    // missing too.
     $athlete = gapsAthlete($this->academy, Belt::Blue, 1);
     beltRowOn($athlete, $this->owner, null, Belt::White, '2015-01-01 00:00:00');
-    $opening = beltRowOn($athlete, $this->owner, null, Belt::Blue, '2026-01-10 00:00:00');
+    $opening = startingRowOn($athlete, $this->owner, Belt::Blue, '2026-01-10 00:00:00');
     $stripe = stripeRowOn($athlete, $this->owner, Belt::Blue, 0, 1, '2020-05-01 00:00:00');
+    $whiteStripes = ['stripe:white:1', 'stripe:white:2', 'stripe:white:3', 'stripe:white:4'];
 
     $gaps = $this->actingAs($this->owner)->getJson("/api/v1/athletes/{$athlete->id}/promotions")->assertOk()->json('gaps');
-    expect(array_column($gaps, 'key'))->toBe(['belt:blue:0'])
-        ->and($gaps[0]['before'])->toBe(['promotion_id' => $stripe->id, 'recorded_at' => '2020-05-01']);
+    expect(array_column($gaps, 'key'))->toBe([...$whiteStripes, 'belt:blue:0'])
+        ->and($gaps[4]['before'])->toBe(['promotion_id' => $stripe->id, 'recorded_at' => '2020-05-01']);
 
     $patch = "/api/v1/athletes/{$athlete->id}/promotions/{$opening->id}";
     $this->actingAs($this->owner)
@@ -170,7 +212,7 @@ it('completes a starting row only inside its window when a gap stands for it', f
         ->assertJsonValidationErrors('recorded_at');
     $this->actingAs($this->owner)->patchJson($patch, ['recorded_at' => '2019-01-01', 'from_belt' => 'white'])->assertOk();
 
-    expect(gapKeys($this, $athlete))->toBe([])
+    expect(gapKeys($this, $athlete))->toBe($whiteStripes)
         ->and($athlete->promotions()->where('kind', 'belt')->where('to_belt', 'blue')->count())->toBe(1);
 });
 
@@ -292,7 +334,7 @@ it('reads the gaps over the whole history, whatever the page', function (): void
         // so the page boundary falls between the two rows the gaps hang off.
         stripeRowOn($athlete, $this->owner, Belt::White, 3, 3, sprintf('2024-04-%02d 00:00:00', $day));
     }
-    beltRowOn($athlete, $this->owner, null, Belt::Blue, '2026-09-20 10:00:00');
+    startingRowOn($athlete, $this->owner, Belt::Blue, '2026-09-20 10:00:00');
 
     $second = $this->actingAs($this->owner)
         ->getJson("/api/v1/athletes/{$athlete->id}/promotions?page=2")
@@ -320,19 +362,24 @@ it("walks a child's kids' grades by the child's age", function (): void {
 it('hides a skipped step for good, and the undo brings it back', function (): void {
     $jacopo = gapsAthlete($this->academy, Belt::Blue, 0);
     stripeRowOn($jacopo, $this->owner, Belt::White, 2, 3, '2024-03-12 00:00:00');
-    beltRowOn($jacopo, $this->owner, null, Belt::Blue, '2026-09-20 10:00:00');
+    startingRowOn($jacopo, $this->owner, Belt::Blue, '2026-09-20 10:00:00');
     $skips = "/api/v1/athletes/{$jacopo->id}/promotion-skips";
 
     $this->actingAs($this->owner)->postJson($skips, ['belt' => 'white', 'stripes' => 4])->assertCreated();
     // Idempotent: a second tap is not a second row, nor an error.
     $this->actingAs($this->owner)->postJson($skips, ['belt' => 'white', 'stripes' => 4])->assertCreated();
 
-    expect(gapKeys($this, $jacopo))->toBe(['belt:blue:0'])
+    $skipped = $this->actingAs($this->owner)->getJson("/api/v1/athletes/{$jacopo->id}/promotions")->assertOk();
+    expect(array_column($skipped->json('gaps'), 'key'))->toBe(['belt:blue:0'])
+        // Listed apart, so the owner can bring it back (#1989).
+        ->and($skipped->json('skipped'))->toBe([['key' => 'stripe:white:4', 'kind' => 'stripe', 'belt' => 'white', 'stripes' => 4]])
         ->and($jacopo->promotionSkips()->count())->toBe(1);
 
     $this->actingAs($this->owner)->deleteJson("{$skips}/white/4")->assertNoContent();
 
-    expect(gapKeys($this, $jacopo))->toBe(['stripe:white:4', 'belt:blue:0']);
+    $restored = $this->actingAs($this->owner)->getJson("/api/v1/athletes/{$jacopo->id}/promotions")->assertOk();
+    expect(array_column($restored->json('gaps'), 'key'))->toBe(['stripe:white:4', 'belt:blue:0'])
+        ->and($restored->json('skipped'))->toBe([]);
 });
 
 it("refuses a skip the academy's ladder does not have", function (array $payload): void {
@@ -361,7 +408,7 @@ it("keeps another academy's athletes out of skips", function (): void {
 it('completes a starting row on its own day at the latest: the athlete held the belt when entered', function (): void {
     $jacopo = gapsAthlete($this->academy, Belt::Blue, 0);
     stripeRowOn($jacopo, $this->owner, Belt::White, 2, 3, '2024-03-12 00:00:00');
-    $opening = beltRowOn($jacopo, $this->owner, null, Belt::Blue, '2026-09-20 00:00:00');
+    $opening = startingRowOn($jacopo, $this->owner, Belt::Blue, '2026-09-20 00:00:00');
     $patch = "/api/v1/athletes/{$jacopo->id}/promotions/{$opening->id}";
 
     $this->actingAs($this->owner)
@@ -376,7 +423,7 @@ it('completes a starting row on its own day at the latest: the athlete held the 
 it('completes a starting row with its first belt and real date, instead of adding a second', function (): void {
     $jacopo = gapsAthlete($this->academy, Belt::Blue, 0);
     stripeRowOn($jacopo, $this->owner, Belt::White, 2, 3, '2024-03-12 00:00:00');
-    $opening = beltRowOn($jacopo, $this->owner, null, Belt::Blue, '2026-09-20 10:00:00');
+    $opening = startingRowOn($jacopo, $this->owner, Belt::Blue, '2026-09-20 10:00:00');
 
     $response = $this->actingAs($this->owner)
         ->patchJson("/api/v1/athletes/{$jacopo->id}/promotions/{$opening->id}", [
@@ -412,7 +459,7 @@ it('refuses a first belt on a row that already has one', function (): void {
 
 it("refuses a first belt that is the row's own belt, or one on a stripe row", function (): void {
     $athlete = gapsAthlete($this->academy, Belt::Blue, 1);
-    $opening = beltRowOn($athlete, $this->owner, null, Belt::Blue, '2025-01-10 00:00:00');
+    $opening = startingRowOn($athlete, $this->owner, Belt::Blue, '2025-01-10 00:00:00');
     $stripe = stripeRowOn($athlete, $this->owner, Belt::Blue, 0, 1, '2025-06-10 00:00:00');
 
     $this->actingAs($this->owner)
@@ -498,7 +545,7 @@ it('still warns about a backfill that is no gap and contradicts the rows around 
 it('asks for the real date and the belt before, when the history opens on the starting row', function (): void {
     // The most common imported athlete: entered as blue, stripes given live since.
     $athlete = gapsAthlete($this->academy, Belt::Blue, 2);
-    $opening = beltRowOn($athlete, $this->owner, null, Belt::Blue, '2026-01-10 00:00:00');
+    $opening = startingRowOn($athlete, $this->owner, Belt::Blue, '2026-01-10 00:00:00');
     stripeRowOn($athlete, $this->owner, Belt::Blue, 0, 1, '2026-03-01 00:00:00');
     stripeRowOn($athlete, $this->owner, Belt::Blue, 1, 2, '2026-06-01 00:00:00');
 
@@ -520,7 +567,7 @@ it('asks for the real date and the belt before, when the history opens on the st
 
 it('completes a starting row that opens the history, and "since" counts from the real day', function (): void {
     $athlete = gapsAthlete($this->academy, Belt::Blue, 0);
-    $opening = beltRowOn($athlete, $this->owner, null, Belt::Blue, '2026-01-10 00:00:00');
+    $opening = startingRowOn($athlete, $this->owner, Belt::Blue, '2026-01-10 00:00:00');
 
     $response = $this->actingAs($this->owner)
         ->patchJson("/api/v1/athletes/{$athlete->id}/promotions/{$opening->id}", [
@@ -542,7 +589,7 @@ it('completes a starting row that opens the history, and "since" counts from the
 
 it('completes it no later than the day the athlete was entered, however far back', function (string $on, bool $accepted): void {
     $athlete = gapsAthlete($this->academy, Belt::Blue, 0);
-    $opening = beltRowOn($athlete, $this->owner, null, Belt::Blue, '2026-01-10 00:00:00');
+    $opening = startingRowOn($athlete, $this->owner, Belt::Blue, '2026-01-10 00:00:00');
 
     $response = $this->actingAs($this->owner)
         ->patchJson("/api/v1/athletes/{$athlete->id}/promotions/{$opening->id}", ['recorded_at' => $on, 'from_belt' => 'white']);
@@ -557,7 +604,7 @@ it('completes it no later than the day the athlete was entered, however far back
 it("says the completion's window in the owner's language (#1991)", function (): void {
     $this->owner->update(['locale' => AppLocale::It]);
     $athlete = gapsAthlete($this->academy, Belt::Blue, 0);
-    $opening = beltRowOn($athlete, $this->owner, null, Belt::Blue, '2026-01-10 00:00:00');
+    $opening = startingRowOn($athlete, $this->owner, Belt::Blue, '2026-01-10 00:00:00');
 
     $this->actingAs($this->owner)
         ->patchJson("/api/v1/athletes/{$athlete->id}/promotions/{$opening->id}", ['recorded_at' => '2026-01-11', 'from_belt' => 'white'])
@@ -568,7 +615,7 @@ it("says the completion's window in the owner's language (#1991)", function (): 
 it('lets the owner choose any belt the ladder allows before, and refuses one it does not', function (): void {
     $this->academy->update(['martial_art' => MartialArt::Judo]);
     $judoka = gapsAthlete($this->academy, Belt::Black, 0);
-    $opening = beltRowOn($judoka, $this->owner, null, Belt::Black, '2026-01-10 00:00:00');
+    $opening = startingRowOn($judoka, $this->owner, Belt::Black, '2026-01-10 00:00:00');
     $patch = "/api/v1/athletes/{$judoka->id}/promotions/{$opening->id}";
 
     $gap = $this->actingAs($this->owner)->getJson("/api/v1/athletes/{$judoka->id}/promotions")->assertOk()->json('gaps.0');
@@ -579,7 +626,7 @@ it('lets the owner choose any belt the ladder allows before, and refuses one it 
     $this->actingAs($this->owner)->patchJson($patch, ['recorded_at' => '2020-01-01', 'from_belt' => 'blue'])->assertOk();
 
     $other = gapsAthlete($this->academy, Belt::Blue, 0);
-    $below = beltRowOn($other, $this->owner, null, Belt::Blue, '2026-01-10 00:00:00');
+    $below = startingRowOn($other, $this->owner, Belt::Blue, '2026-01-10 00:00:00');
     $this->actingAs($this->owner)
         ->patchJson("/api/v1/athletes/{$other->id}/promotions/{$below->id}", ['recorded_at' => '2020-01-01', 'from_belt' => 'brown'])
         ->assertUnprocessable()
@@ -591,7 +638,7 @@ it('offers an imported adult with no date of birth only the adult belts before',
     // about each candidate, the kids' rule offered grey to green and
     // preselected green — "Verde → Blu" recorded for an adult.
     $athlete = Athlete::factory()->for($this->academy)->create(['belt' => Belt::Blue, 'stripes' => 0, 'date_of_birth' => null]);
-    beltRowOn($athlete, $this->owner, null, Belt::Blue, '2026-01-10 00:00:00');
+    startingRowOn($athlete, $this->owner, Belt::Blue, '2026-01-10 00:00:00');
 
     $gap = $this->actingAs($this->owner)->getJson("/api/v1/athletes/{$athlete->id}/promotions")->assertOk()->json('gaps.0');
 
@@ -606,7 +653,7 @@ it('admits every belt it lists before a row that opens the history, anywhere in 
     $judoka = gapsAthlete($this->academy, Belt::Blue, 0);
     // Orange on entry, then green → blue with the step out of orange never
     // recorded: the next belt row starts on green, not on the row's orange.
-    $opening = beltRowOn($judoka, $this->owner, null, Belt::Orange, '2024-01-10 00:00:00');
+    $opening = startingRowOn($judoka, $this->owner, Belt::Orange, '2024-01-10 00:00:00');
     beltRowOn($judoka, $this->owner, Belt::Green, Belt::Blue, '2025-06-01 00:00:00');
 
     $gap = $this->actingAs($this->owner)->getJson("/api/v1/athletes/{$judoka->id}/promotions")->assertOk()->json('gaps.0');
@@ -626,7 +673,7 @@ it('admits every belt it lists before a row that opens the history, anywhere in 
 
 it('offers nothing to complete on a history that opens on the first belt of the ladder', function (): void {
     $athlete = gapsAthlete($this->academy, Belt::White, 1);
-    beltRowOn($athlete, $this->owner, null, Belt::White, '2026-01-10 00:00:00');
+    startingRowOn($athlete, $this->owner, Belt::White, '2026-01-10 00:00:00');
 
     expect(gapKeys($this, $athlete))->toBe([]);
 });

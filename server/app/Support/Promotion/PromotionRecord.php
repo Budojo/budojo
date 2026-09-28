@@ -27,10 +27,17 @@ final readonly class PromotionRecord
         public ?int $toStripes,
         public Belt $beltAtEvent,
         public CarbonImmutable $recordedAt,
+        // A starting row still on the day the athlete was entered (#1990) —
+        // see EntryPlaceholder. Only read for a starting row.
+        public bool $entryPlaceholder = true,
     ) {
     }
 
-    public static function of(AthletePromotion $promotion): self
+    /**
+     * @param bool $entryPlaceholder whether a starting row is still on the day the
+     *                               athlete was entered ({@see EntryPlaceholder::is()})
+     */
+    public static function of(AthletePromotion $promotion, bool $entryPlaceholder = true): self
     {
         return new self(
             $promotion->id,
@@ -41,6 +48,7 @@ final readonly class PromotionRecord
             $promotion->to_stripes,
             $promotion->belt_at_event,
             CarbonImmutable::make($promotion->recorded_at) ?? OperatorDay::today(),
+            $entryPlaceholder,
         );
     }
 
@@ -51,6 +59,17 @@ final readonly class PromotionRecord
     public function isOpening(): bool
     {
         return $this->kind === 'belt' && $this->fromBelt === null;
+    }
+
+    /**
+     * A starting row that is still the placeholder written when the athlete
+     * was entered (#1990): its belt is known, its day and the count on it are
+     * not. Once the owner dates it — the pencil, or completing it (#1974) — it
+     * is the real start instead: they arrived on that belt that day, with none.
+     */
+    public function isPlaceholder(): bool
+    {
+        return $this->isOpening() && $this->entryPlaceholder;
     }
 
     /**

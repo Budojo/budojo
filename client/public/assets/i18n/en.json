@@ -2519,6 +2519,13 @@
           "restored": "{{step}}: back among the steps to date",
           "undoAria": "Undo: {{step}}",
           "fromBeltLabel": "Belt before"
+        },
+        "skippedList": {
+          "countOne": "1 step marked as skipped",
+          "countOther": "{{count}} steps marked as skipped",
+          "hide": "Hide",
+          "restore": "Restore",
+          "restoreAria": "Restore: {{step}}"
         }
       },
       "attendance": {
