@@ -537,9 +537,12 @@ describe('SeasonMapComponent — the week plan for the group (#1863)', () => {
     Reflect.deleteProperty(navigator, 'clipboard');
   });
 
-  // The default calendar's today is Wednesday 14 October, with nothing left
-  // planned that week: the plan is next week's, Monday 19.
-  const NEXT_WEEK_TEXT = "The week's plan\nMon 19 · Fundamentals · Closed guard";
+  // The default calendar's today is Wednesday 14 October. With only the
+  // Monday class on the timetable, this week's is behind it: the message is
+  // next week's, Monday 19 — every class with its time (#1940), and what is
+  // planned for it.
+  const NEXT_WEEK_TEXT = "The week's plan\nMon 19 · 19:00 Fundamentals · Closed guard";
+  const MONDAY_ONLY = [CLASSES[0]];
 
   function stubClipboard(writeText: () => Promise<void>) {
     const spy = vi.fn(writeText);
@@ -560,7 +563,7 @@ describe('SeasonMapComponent — the week plan for the group (#1863)', () => {
   }
 
   it('offers the plan of the week ahead, and a WhatsApp link that carries it', () => {
-    const { fixture, httpMock } = setup();
+    const { fixture, httpMock } = setup(MONDAY_ONLY);
     flush(httpMock);
     fixture.detectChanges();
 
@@ -577,7 +580,7 @@ describe('SeasonMapComponent — the week plan for the group (#1863)', () => {
   });
 
   it('copies the plan and says so', async () => {
-    const { fixture, httpMock } = setup();
+    const { fixture, httpMock } = setup(MONDAY_ONLY);
     const messages = TestBed.inject(MessageService);
     const toast = vi.spyOn(messages, 'add');
     const writeText = stubClipboard(() => Promise.resolve());
@@ -597,7 +600,7 @@ describe('SeasonMapComponent — the week plan for the group (#1863)', () => {
   });
 
   it('points at WhatsApp when the clipboard refuses', async () => {
-    const { fixture, httpMock } = setup();
+    const { fixture, httpMock } = setup(MONDAY_ONLY);
     const toast = vi.spyOn(TestBed.inject(MessageService), 'add');
     stubClipboard(() => Promise.reject(new Error('denied')));
     flush(httpMock);
@@ -612,7 +615,9 @@ describe('SeasonMapComponent — the week plan for the group (#1863)', () => {
   });
 
   it('says in words why there is nothing to send, with both actions off', () => {
-    const { fixture, httpMock } = setup();
+    // No timetable and nothing planned: a class on the timetable is always
+    // something to announce (#1940), so only this has nothing to send.
+    const { fixture, httpMock } = setup([]);
     flush(
       httpMock,
       calendar({

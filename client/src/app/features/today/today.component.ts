@@ -31,6 +31,7 @@ import {
 import {
   DailyAttendancePoint,
   StatsService,
+  SyllabusCalendar,
   SyllabusCoverage,
 } from '../../core/services/stats.service';
 import { TrainingModesService } from '../../core/services/training-modes.service';
@@ -40,12 +41,15 @@ import { PageHeaderComponent } from '../../shared/components/page-header/page-he
 import { LocaleDatePipe } from '../../shared/pipes/locale-date.pipe';
 import { academyChargesAFee } from '../../shared/utils/academy-fee';
 import { driveErrorKey, folderErrorKey } from '../../shared/utils/backup-errors';
+import { mondayOf } from '../../shared/utils/class-occurrences';
 import { localeFor } from '../../shared/utils/locale';
 import { monthKey } from '../../shared/utils/months';
+import { clockOf, timetableWeek } from '../../shared/utils/week-message';
 import { LessonSheetComponent } from '../lessons/lesson-sheet/lesson-sheet.component';
 import { OnboardingChecklistComponent } from '../onboarding/onboarding-checklist.component';
 import { Birthday, upcomingBirthdays } from './today-birthdays';
 import {
+  isSundayAfternoon,
   isoDay,
   joinedSince,
   nextClassAfter,
@@ -382,6 +386,31 @@ export class TodayComponent implements OnInit {
     const j = this.joined();
     return j.state !== 'ready' || j.value.length > 0;
   });
+  /** The programme, read on Sundays only: the line below is its one use here. */
+  private readonly calendar = signal<SyllabusCalendar | null>(null);
+  /**
+   * "Il programma della settimana prossima · Mandalo al gruppo" (#1940): on
+   * Sunday afternoon, the evening the week's message goes out, a line to the
+   * timetable where it is sent — once the button there sends next week's.
+   * Worked out as the button works it out, from the same programme, timetable
+   * and closed days: while Sunday's 18:00 open mat is still ahead the button
+   * sends this week's, and "next week" would name the wrong one; without the
+   * programme, the button can only say it did not load, and the line would
+   * lead there.
+   */
+  protected readonly sendWeekShown = computed<boolean>(() => {
+    const c = this.classes();
+    const calendar = this.calendar();
+    if (c.state !== 'ready' || c.value.length === 0 || calendar === null) return false;
+    if (!isSundayAfternoon(this.now())) return false;
+
+    const week = timetableWeek(calendar, clockOf(this.now()), {
+      classes: c.value,
+      closures: this.academyService.academy()?.closures ?? [],
+    });
+    return week !== null && week > mondayOf(calendar.today);
+  });
+
   /**
    * The card is drawn only with a line in it: no heading over nothing (#1755).
    * The joiners' failure is said inside a card that has other lines, but is
@@ -390,6 +419,7 @@ export class TodayComponent implements OnInit {
   protected readonly weekShown = computed<boolean>(() => {
     const j = this.joined();
     return (
+      this.sendWeekShown() ||
       this.presences() !== null ||
       this.notYetPaid() !== null ||
       (this.coverage()?.totals.in_scope ?? 0) > 0 ||
@@ -546,6 +576,7 @@ export class TodayComponent implements OnInit {
     this.unpaid.set(null);
     this.presences.set(null);
     this.coverage.set(null);
+    this.calendar.set(null);
     this.joined.set(LOADING);
     this.rosterSize.set(null);
     this.birthdays.set([]);
@@ -761,6 +792,18 @@ export class TodayComponent implements OnInit {
         // Stats are an owner capability; a reader without it sees the rest.
         error: () => undefined,
       });
+    // Any time on Sunday, not only the afternoon: a page opened in the morning
+    // is only re-read on another day, and it may well stay open till evening.
+    if (this.now().getDay() === 0) {
+      this.statsService
+        .syllabusCalendar()
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: this.current((calendar: SyllabusCalendar) => this.calendar.set(calendar)),
+          // No programme, no line: the timetable's button would have nothing to send.
+          error: () => undefined,
+        });
+    }
     // Newest joiners first: the first page holds this week's, and a week
     // with more than a page of new members is a problem nobody has had.
     this.athleteService
