@@ -8,6 +8,7 @@ use App\Authorization\Capability;
 use App\Http\Requests\Concerns\AuthorizesAcademyCapability;
 use App\Http\Requests\Concerns\NormalisesFiscalCode;
 use App\Http\Requests\Concerns\ResolvesRankLadder;
+use App\Http\Requests\Concerns\SpeaksTheOwnersLanguage;
 use App\Http\Requests\Concerns\ValidatesAddress;
 use App\Http\Requests\Concerns\ValidatesPhonePair;
 use App\Support\AthleteFieldRules;
@@ -22,6 +23,7 @@ class StoreAthleteRequest extends FormRequest
     use ValidatesAddress;
     use ValidatesPhonePair;
     use ResolvesRankLadder;
+    use SpeaksTheOwnersLanguage;
 
     public function authorize(): bool
     {
@@ -44,7 +46,7 @@ class StoreAthleteRequest extends FormRequest
             // One definition of "a valid athlete", shared with the CSV import
             // (#1346) so a rule added here cannot silently skip the path that
             // creates sixty records at once.
-            ...AthleteFieldRules::for($academyId, $this->rankLadder()),
+            ...AthleteFieldRules::for($academyId, $this->rankLadder(), $this->ownersLocale()),
             ...$this->addressRules(),
         ];
     }
@@ -52,6 +54,16 @@ class StoreAthleteRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $this->validatePhonePairWithLibphonenumber($validator);
+    }
+
+    /**
+     * The codice fiscale's "already taken", in the owner's language (#2006).
+     *
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return AthleteFieldRules::messages($this->ownersLocale());
     }
 
     /** The phone as its national significant number (#1867), the code in capitals (#1934). */

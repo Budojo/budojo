@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { normaliseFiscalCode, readFiscalCode } from './fiscal-code';
+import { FormControl } from '@angular/forms';
+import { fiscalCodeValidator, normaliseFiscalCode, readFiscalCode } from './fiscal-code';
 
 /**
  * The client's reading of a codice fiscale (#1934), for pre-filling the form.
@@ -37,5 +38,27 @@ describe('readFiscalCode', () => {
   it('reads a code typed in lower case or with spaces', () => {
     expect(normaliseFiscalCode(' rssmra 90c15 h501o ')).toBe('RSSMRA90C15H501O');
     expect(readFiscalCode('rssmra90c15h501o', today)?.sex).toBe('m');
+  });
+});
+
+describe('fiscalCodeValidator (#2006)', () => {
+  const check = (value: string | null) =>
+    fiscalCodeValidator(new FormControl<string | null>(value));
+
+  it('lets an empty code through: every detail is optional', () => {
+    expect(check('')).toBeNull();
+    expect(check(null)).toBeNull();
+    expect(check('   ')).toBeNull();
+  });
+
+  it('accepts a valid code, however it was typed, and an omocodic one', () => {
+    expect(check('RSSMRA90C15H501O')).toBeNull();
+    expect(check(' rssmra 90c15 h501o ')).toBeNull();
+    expect(check('RSSMRA90C15H50MG')).toBeNull();
+  });
+
+  it('refuses a code whose check character does not match, as the server does', () => {
+    expect(check('RSSMRA90C15H501A')).toEqual({ fiscalCode: true });
+    expect(check('NOTACODE')).toEqual({ fiscalCode: true });
   });
 });

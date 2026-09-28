@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Support;
 
+use App\Enums\AppLocale;
 use App\Enums\AthleteStatus;
 use App\Enums\Belt;
 use App\Enums\BillingPeriod;
@@ -49,7 +50,7 @@ final class AthleteFieldRules
      *
      * @return array<string, mixed>
      */
-    public static function for(?int $academyId, RankLadder $ladder): array
+    public static function for(?int $academyId, RankLadder $ladder, AppLocale $locale = AppLocale::En): array
     {
         return [
             'first_name' => ['required', 'string', 'max:100'],
@@ -86,7 +87,7 @@ final class AthleteFieldRules
             'facebook' => ['nullable', 'url', 'max:255'],
             'instagram' => ['nullable', 'url', 'max:255'],
             'date_of_birth' => ['nullable', 'date', OperatorDay::before()],
-            ...self::federationDetails($academyId),
+            ...self::federationDetails($academyId, locale: $locale),
             'belt' => ['required', Rule::enum(Belt::class), new BeltInLadder($ladder)],
             // Global ceiling across every ladder (#1800) — taekwondo's black
             // counts 1st-9th dan as 0-8 — and the cap of the row's own grade,
@@ -127,12 +128,13 @@ final class AthleteFieldRules
         ?int $ignoreAthleteId = null,
         ?CarbonInterface $storedBirthDate = null,
         ?Sex $storedSex = null,
+        AppLocale $locale = AppLocale::En,
     ): array {
         return [
             'fiscal_code' => [
                 'nullable',
                 'string',
-                new ItalianFiscalCode($storedBirthDate, $storedSex),
+                new ItalianFiscalCode($storedBirthDate, $storedSex, $locale),
                 Rule::unique('athletes', 'fiscal_code')
                     ->where('academy_id', $academyId)
                     ->ignore($ignoreAthleteId)
@@ -141,5 +143,19 @@ final class AthleteFieldRules
             'sex' => ['nullable', Rule::enum(Sex::class)],
             'birth_place' => ['nullable', 'string', 'max:100'],
         ];
+    }
+
+    /**
+     * The messages the rules above cannot carry themselves, in the owner's
+     * language (#2006): Laravel's own "has already been taken" was the last
+     * English line on the codice fiscale.
+     *
+     * @return array<string, string>
+     */
+    public static function messages(AppLocale $locale): array
+    {
+        $taken = __('athletes.fiscal_code.taken', [], $locale->value);
+
+        return ['fiscal_code.unique' => \is_string($taken) ? $taken : 'athletes.fiscal_code.taken'];
     }
 }

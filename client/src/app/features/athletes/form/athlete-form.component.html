@@ -115,6 +115,10 @@
               [optionalLabel]="'athletes.form.optional' | translate"
               [hint]="'athletes.form.hint.fiscalCode' | translate"
               controlId="fiscal_code"
+              [error]="
+                fiscalCodeServerError() ??
+                (fiscalCodeError() ? (fiscalCodeError()! | translate) : null)
+              "
             >
               <input
                 pInputText
@@ -126,6 +130,12 @@
                 spellcheck="false"
                 maxlength="20"
                 class="athlete-form__fiscal-code"
+                [attr.aria-invalid]="fiscalCodeServerError() || fiscalCodeError() ? true : null"
+                [attr.aria-describedby]="
+                  fiscalCodeServerError() || fiscalCodeError()
+                    ? 'fiscal_code-error'
+                    : 'fiscal_code-hint'
+                "
               />
             </app-budojo-form-field>
             <!-- No controlId: a button group has no single input for the
