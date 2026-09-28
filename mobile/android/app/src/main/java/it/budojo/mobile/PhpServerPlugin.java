@@ -162,13 +162,20 @@ public class PhpServerPlugin extends Plugin {
         builder.redirectErrorStream(true);
         builder.redirectOutput(new File(files, "php-server.log"));
         server = builder.start();
+        long firstRequestMs;
         try {
-            waitForHealth(port, 20_000);
+            firstRequestMs = waitForHealth(server, port, 90_000);
         } catch (Exception e) {
             // A process that never answered is not left behind for a retry to
-            // mistake for a running server (#2050 review).
+            // mistake for a running server (#2050 review). What it said goes into
+            // the error: on a phone, the error is the only log anyone reads.
+            String alive = server.isAlive() ? "still running" : "exited " + server.exitValue();
             stopServer();
-            throw e;
+            throw new IOException(e.getMessage() + " (server " + alive + ", migrate "
+                    + ms(tMigrate0, tMigrated) + " ms)"
+                    + "\n--- php-server.log\n" + tailOf(new File(files, "php-server.log"), 500)
+                    + "\n--- php-error.log\n" + tailOf(new File(files, "php-error.log"), 300)
+                    + "\n--- laravel.log\n" + tailOf(new File(storage, "logs/laravel.log"), 500), e);
         }
         long tReady = System.nanoTime();
 
@@ -178,6 +185,7 @@ public class PhpServerPlugin extends Plugin {
         out.put("unpackMs", ms(t0, tExtracted));
         out.put("migrateMs", ms(tMigrate0, tMigrated));
         out.put("serverMs", ms(tMigrated, tReady));
+        out.put("firstRequestMs", firstRequestMs);
         out.put("totalMs", ms(t0, tReady));
         out.put("migrateOutput", tail(migrate, 400));
         out.put("opcache", opcacheOff ? "off" : "file-cache");
@@ -242,22 +250,43 @@ public class PhpServerPlugin extends Plugin {
         }
     }
 
-    private static void waitForHealth(int port, long timeoutMs) throws Exception {
+    /**
+     * Waits for the server's first answer, and returns how long that one request
+     * took. The first request compiles the framework, which on a phone can take
+     * seconds. So the read timeout is long and a request is never abandoned for
+     * a second one: with one worker, abandoned requests queue up behind each
+     * other and nobody ever gets an answer (0.0.6 on a real phone). Only
+     * connecting is retried, while the process is still binding its port.
+     */
+    private static long waitForHealth(Process process, int port, long timeoutMs) throws Exception {
         long deadline = System.currentTimeMillis() + timeoutMs;
         while (System.currentTimeMillis() < deadline) {
+            if (!process.isAlive()) {
+                throw new IOException("the server exited before answering");
+            }
+            long started = System.nanoTime();
             try {
                 HttpURLConnection connection = (HttpURLConnection) new URL("http://127.0.0.1:" + port + "/api/v1/health").openConnection();
                 connection.setConnectTimeout(500);
-                connection.setReadTimeout(2000);
-                if (connection.getResponseCode() == 200) {
-                    return;
+                connection.setReadTimeout((int) Math.max(1000, deadline - System.currentTimeMillis()));
+                int status = connection.getResponseCode();
+                if (status == 200) {
+                    return ms(started, System.nanoTime());
                 }
-            } catch (IOException ignored) {
-                // Not listening yet.
+                throw new IOException("/api/v1/health answered " + status);
+            } catch (java.net.ConnectException notListeningYet) {
+                Thread.sleep(100);
             }
-            Thread.sleep(50);
         }
         throw new IOException("the server did not answer /api/v1/health within " + timeoutMs + " ms");
+    }
+
+    private static String tailOf(File file, int max) {
+        try {
+            return file.exists() ? tail(readFile(file), max) : "(none)";
+        } catch (IOException e) {
+            return "(unreadable: " + e.getMessage() + ")";
+        }
     }
 
     private static int freePort() throws IOException {

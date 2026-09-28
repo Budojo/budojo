@@ -3644,7 +3644,8 @@
         "login": "Log in",
         "roster": "Athlete list, 20 times",
         "mark": "Mark a presence, 10 times",
-        "athletes": "Athletes in the database"
+        "athletes": "Athletes in the database",
+        "firstRequest": "First request (compiles the framework)"
       }
     }
   }

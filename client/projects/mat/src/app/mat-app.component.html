@@ -67,6 +67,10 @@
               </span>
             }
           </dd>
+          @if (start.firstRequestMs !== undefined) {
+            <dt>{{ 'mat.spike.server.firstRequest' | translate }}</dt>
+            <dd>{{ start.firstRequestMs }} ms</dd>
+          }
           @if (start.opcache) {
             <dt>OPcache</dt>
             <dd>{{ start.opcache }}</dd>

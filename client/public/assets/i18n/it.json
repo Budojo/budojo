@@ -3644,7 +3644,8 @@
         "login": "Accesso",
         "roster": "Elenco atleti, 20 volte",
         "mark": "Segna una presenza, 10 volte",
-        "athletes": "Atleti nel database"
+        "athletes": "Atleti nel database",
+        "firstRequest": "Prima richiesta (compila il framework)"
       }
     }
   }

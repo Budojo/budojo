@@ -16,6 +16,8 @@ export interface PhpServerStart {
   unpackMs: number;
   migrateMs: number;
   serverMs: number;
+  /** The first request, which compiles the framework. */
+  firstRequestMs?: number;
   extracted: boolean;
   seeded: boolean;
   alreadyRunning?: boolean;
