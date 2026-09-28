@@ -5,11 +5,15 @@
   [draggable]="false"
   [breakpoints]="{ '768px': '96vw' }"
   [style]="{ width: '36rem' }"
+  [focusOnShow]="false"
+  styleClass="lesson-sheet"
+  (onShow)="settleFocus()"
+  (onHide)="restoreFocus()"
   data-cy="lesson-sheet"
 >
-  <ng-template pTemplate="header">
+  <ng-template pTemplate="header" let-labelledBy="ariaLabelledBy">
     <div class="sheet-head">
-      <span class="sheet-head__title">{{
+      <span class="sheet-head__title" [id]="labelledBy" tabindex="-1">{{
         className() || ('lessons.sheet.title' | translate)
       }}</span>
       <span class="sheet-head__meta">
