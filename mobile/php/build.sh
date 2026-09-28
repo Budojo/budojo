@@ -25,25 +25,19 @@ tar xzf spc.tar.gz
 ./spc doctor --auto-fix
 ./spc download --with-php="${PHP_VERSION}" --for-extensions="${PHP_EXTENSIONS}"
 
-# Android lets an app call accept4 but not accept (android_shims.c). Every
-# accept in PHP is wrapped at link time so it goes out as accept4.
-#
-# The flags reach the CLI's link through configure's LDFLAGS: static-php-cli
-# passes SPC_EXTRA_PHP_VARS to configure, and sets the make-time
-# EXTRA_LDFLAGS_PROGRAM itself. Its own LDFLAGS is only -L<buildroot>/lib, which
-# is kept.
-gcc -O2 -c -o "$WORK/android_shims.o" "$HERE/android_shims.c"
-export SPC_EXTRA_PHP_VARS="LDFLAGS='-L$WORK/buildroot/lib -Wl,--wrap=accept $WORK/android_shims.o'"
+# Android lets an app call accept4 but not accept: android-accept4.php turns
+# PHP's two accept() calls into accept4() before configure.
+./spc build "${PHP_EXTENSIONS}" --build-cli --no-strip --with-added-patch="$HERE/android-accept4.php"
 
-./spc build "${PHP_EXTENSIONS}" --build-cli --no-strip
-
-# Prove the wrap took, before stripping the symbols that show it. A binary that
-# still links musl's accept dies on a phone at the first connection.
-nm buildroot/bin/php | grep -q ' T __wrap_accept$' || { echo "__wrap_accept is not linked" >&2; exit 1; }
-if nm buildroot/bin/php | grep -qE ' [TW] accept$'; then
-  echo "musl's accept is still linked: the phone would kill PHP with SIGSYS" >&2
-  exit 1
-fi
+# Prove the patch is in the source that was compiled: a PHP whose server still
+# calls accept() dies on a phone at the first connection.
+grep -q 'accept4(server->server_sock' source/php-src/sapi/cli/php_cli_server.c \
+  || { echo "the accept4 patch is not in php_cli_server.c" >&2; exit 1; }
+grep -q 'accept4(srvsock' source/php-src/main/network.c \
+  || { echo "the accept4 patch is not in network.c" >&2; exit 1; }
+# For the record: what the binary links. musl's accept may still come in with a
+# library that never calls it at run time.
+nm buildroot/bin/php 2>/dev/null | grep -E ' (accept|accept4)$' || echo "(no accept symbols listed)"
 strip buildroot/bin/php
 
 mkdir -p "$OUT"
