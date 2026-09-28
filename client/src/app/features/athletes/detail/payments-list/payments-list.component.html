@@ -134,7 +134,11 @@
          the desktop row, so business logic is shared. -->
     <ul class="payments-list__mobile-list" data-cy="payments-mobile-list">
       @for (row of monthRows(); track row.month) {
-        <li class="payment-card" [attr.data-cy]="'payment-card-' + row.month">
+        <li
+          class="payment-card"
+          [class.payment-card--continued]="row.coveredByEarlierPeriod"
+          [attr.data-cy]="'payment-card-' + row.month"
+        >
           <header class="payment-card__header">
             <span class="payment-card__month">
               {{ row.labelKey | translate }}
@@ -142,96 +146,110 @@
                 <span class="payment-card__period">{{ caption }}</span>
               }
             </span>
-            @if (row.payment) {
-              <p-tag
-                [value]="'shared.paidBadge.paid' | translate"
-                severity="success"
-                [rounded]="true"
-              />
-            } @else if (row.notOwedReason; as reason) {
-              <!--
-                Before this academy kept its fees here, or before the athlete
-                joined (#1742), or an athlete who trains free (#1757). A missing record says nothing about this month,
-                so the row says nothing — an em-dash, the same neutral mark a
-                no-fee athlete already gets, rather than an amber accusation
-                about money handled in cash years ago.
+            <!-- A month another month's period covers (#1654, PAY-2) gets no
+                 second "Pagato" badge: its caption above says what it is. -->
+            @if (!row.coveredByEarlierPeriod) {
+              @if (row.payment) {
+                <p-tag
+                  [value]="'shared.paidBadge.paid' | translate"
+                  severity="success"
+                  [rounded]="true"
+                />
+              } @else if (row.notOwedReason; as reason) {
+                <!--
+                  Before this academy kept its fees here, or before the athlete
+                  joined (#1742), or an athlete who trains free (#1757). A missing record says nothing about this month,
+                  so the row says nothing — an em-dash, the same neutral mark a
+                  no-fee athlete already gets, rather than an amber accusation
+                  about money handled in cash years ago.
 
-                `role="img"` + `aria-label`, and focusable: a bare span carries
-                the generic role and most screen readers drop its label, and a
-                tooltip alone is mouse-only — which on the phone, the primary
-                form factor, is nobody. The reason has to be reachable without
-                a pointer.
-              -->
-              <span
-                class="payment-card__dash"
-                role="img"
-                tabindex="0"
-                [pTooltip]="reason | translate"
-                tooltipPosition="left"
-                [attr.aria-label]="reason | translate"
-                >&mdash;</span
-              >
-            } @else {
-              <p-tag
-                [value]="'shared.paidBadge.unpaid' | translate"
-                severity="warn"
-                [rounded]="true"
-              />
+                  `role="img"` + `aria-label`, and focusable: a bare span carries
+                  the generic role and most screen readers drop its label, and a
+                  tooltip alone is mouse-only — which on the phone, the primary
+                  form factor, is nobody. The reason has to be reachable without
+                  a pointer.
+                -->
+                <span
+                  class="payment-card__dash"
+                  role="img"
+                  tabindex="0"
+                  [pTooltip]="reason | translate"
+                  tooltipPosition="left"
+                  [attr.aria-label]="reason | translate"
+                  >&mdash;</span
+                >
+              } @else if (row.overdue) {
+                <!-- A past month still owed (#1654, PAY-6): the one word an
+                     owner chasing money needs, in the same warning tone. -->
+                <p-tag
+                  [value]="'athletes.detail.payments.overdue' | translate"
+                  severity="warn"
+                  icon="pi pi-clock"
+                  [rounded]="true"
+                />
+              } @else {
+                <p-tag
+                  [value]="'shared.paidBadge.unpaid' | translate"
+                  severity="warn"
+                  [rounded]="true"
+                />
+              }
             }
           </header>
-          <div class="payment-card__meta">
-            @if (row.payment) {
-              @if (row.coveredByEarlierPeriod) {
-                <span class="payment-card__dash" aria-hidden="true">—</span>
-              } @else {
-                <span class="payment-card__amount">{{
-                  formatAmount(row.payment.amount_cents)
-                }}</span>
-              }
-              <span class="payment-card__sep" aria-hidden="true">·</span>
-              <time class="payment-card__paid-at" [attr.datetime]="row.payment.paid_at">
-                {{ formatPaidAt(row.payment.paid_at) }}
-              </time>
-              @if (methodLabel(row.payment); as method) {
-                <span class="payment-card__sep" aria-hidden="true">·</span>
-                <span class="payment-card__method">{{ method }}</span>
-              }
-            } @else {
-              <!-- Two dashes (one for amount + one for paid-on date)
-                   mirror the paid layout '{amount} · {date}' so the
-                   row keeps the same visual grid in both states. -->
-              <span class="payment-card__dash" aria-hidden="true">—</span>
-              <span class="payment-card__sep" aria-hidden="true">·</span>
-              <span class="payment-card__dash" aria-hidden="true">—</span>
-            }
-            @if (row.canEdit) {
-              <div class="payment-card__actions">
+          <!-- A covered month's amount and date sit on the month its period
+               started, where the one payment is: its card is just the month
+               and its caption, unless it is where this season undoes it. -->
+          @if (!row.coveredByEarlierPeriod || row.undoHere) {
+            <div class="payment-card__meta">
+              @if (!row.coveredByEarlierPeriod) {
                 @if (row.payment) {
+                  <span class="payment-card__amount">{{
+                    formatAmount(row.payment.amount_cents)
+                  }}</span>
+                  <span class="payment-card__sep" aria-hidden="true">·</span>
+                  <time class="payment-card__paid-at" [attr.datetime]="row.payment.paid_at">
+                    {{ formatPaidAt(row.payment.paid_at) }}
+                  </time>
+                  @if (methodLabel(row.payment); as method) {
+                    <span class="payment-card__sep" aria-hidden="true">·</span>
+                    <span class="payment-card__method">{{ method }}</span>
+                  }
+                } @else {
+                  <!-- Two dashes (one for amount + one for paid-on date)
+                     mirror the paid layout '{amount} · {date}' so the
+                     row keeps the same visual grid in both states. -->
+                  <span class="payment-card__dash" aria-hidden="true">—</span>
+                  <span class="payment-card__sep" aria-hidden="true">·</span>
+                  <span class="payment-card__dash" aria-hidden="true">—</span>
+                }
+              }
+              <!-- Labelled controls (#1654, PAY-5): a bare ✕ is the app's
+                 "close", and a bare ✓ said nothing about money. -->
+              @if (row.undoHere) {
+                <div class="payment-card__actions">
                   <p-button
                     type="button"
-                    icon="pi pi-times"
+                    [label]="'athletes.detail.payments.button.unmarkPaid' | translate"
                     severity="secondary"
                     [text]="true"
-                    size="small"
                     (onClick)="confirmToggleRow($event, row)"
-                    [ariaLabel]="'athletes.detail.payments.button.unmarkPaid' | translate"
                     [attr.data-cy]="'payment-card-unmark-' + row.month"
                   />
-                } @else {
+                </div>
+              } @else if (row.canEdit && !row.payment) {
+                <div class="payment-card__actions">
                   <p-button
                     type="button"
-                    icon="pi pi-check"
+                    [label]="'athletes.detail.payments.button.markPaid' | translate"
                     severity="primary"
                     [text]="true"
-                    size="small"
                     (onClick)="confirmToggleRow($event, row)"
-                    [ariaLabel]="'athletes.detail.payments.button.markPaid' | translate"
                     [attr.data-cy]="'payment-card-mark-' + row.month"
                   />
-                }
-              </div>
-            }
-          </div>
+                </div>
+              }
+            </div>
+          }
         </li>
       }
     </ul>
@@ -265,23 +283,39 @@
           </tr>
         </ng-template>
         <ng-template #body let-row>
-          <tr [attr.data-cy]="'payment-row-' + row.month">
+          <!--
+            A month a period started elsewhere is greyed (#1654, PAY-2): it
+            says once what it is — part of that payment — instead of a second
+            "Pagato · — · 5 ottobre" line that reads as missing data.
+          -->
+          <tr
+            [attr.data-cy]="'payment-row-' + row.month"
+            [class.payments-list__row--continued]="row.coveredByEarlierPeriod"
+          >
             <td>
               {{ row.labelKey | translate }}
               <!--
                 The range that ties this row to the payment behind it (#1382).
-                It sits under the month rather than in "Paid on", which holds
-                a date: March's dash in the amount column only makes sense
-                once you can see it belongs to January's €165.
+                On the month the period started it says what else it buys;
+                a covered month says the same thing in its status cell.
               -->
-              @if (periodCaption(row); as caption) {
-                <span class="payments-list__period" [attr.data-cy]="'payment-period-' + row.month">
-                  {{ caption }}
-                </span>
+              @if (!row.coveredByEarlierPeriod) {
+                @if (periodCaption(row); as caption) {
+                  <span
+                    class="payments-list__period"
+                    [attr.data-cy]="'payment-period-' + row.month"
+                  >
+                    {{ caption }}
+                  </span>
+                }
               }
             </td>
             <td>
-              @if (row.payment) {
+              @if (row.coveredByEarlierPeriod) {
+                <span class="payments-list__covered" [attr.data-cy]="'payment-period-' + row.month">
+                  {{ periodCaption(row) }}
+                </span>
+              } @else if (row.payment) {
                 <p-tag
                   [value]="'shared.paidBadge.paid' | translate"
                   severity="success"
@@ -298,6 +332,14 @@
                   [attr.aria-label]="reason | translate"
                   >&mdash;</span
                 >
+              } @else if (row.overdue) {
+                <!-- A past month still owed (#1654, PAY-6). -->
+                <p-tag
+                  [value]="'athletes.detail.payments.overdue' | translate"
+                  severity="warn"
+                  icon="pi pi-clock"
+                  [rounded]="true"
+                />
               } @else {
                 <p-tag
                   [value]="'shared.paidBadge.unpaid' | translate"
@@ -311,64 +353,64 @@
                 The amount sits on the month the period started, not on every
                 month it covers (#1382): repeating €165 across a quarterly's
                 three rows would treble the year's takings on a table people
-                read as a ledger.
+                read as a ledger. A covered month leaves it blank rather than
+                dashed: a dash reads as a value missing, and nothing is.
               -->
-              @if (row.payment && !row.coveredByEarlierPeriod) {
-                {{ formatAmount(row.payment.amount_cents) }}
-              } @else {
-                <span class="payments-list__dash">—</span>
+              @if (!row.coveredByEarlierPeriod) {
+                @if (row.payment) {
+                  {{ formatAmount(row.payment.amount_cents) }}
+                } @else {
+                  <span class="payments-list__dash">—</span>
+                }
               }
             </td>
             <td>
-              <!-- When the money actually changed hands. Every month a period
-                   covers shares the one date, because there was one payment. -->
-              @if (row.payment) {
-                <time [attr.datetime]="row.payment.paid_at">{{
-                  formatPaidAt(row.payment.paid_at)
-                }}</time>
-                <!-- How it came in (#1761), when the owner said. -->
-                @if (methodLabel(row.payment); as method) {
-                  <span
-                    class="payments-list__method"
-                    [attr.data-cy]="'payment-method-' + row.month"
-                  >
-                    {{ method }}
-                  </span>
+              <!-- When the money actually changed hands: on the month the
+                   period started, where the one payment is. -->
+              @if (!row.coveredByEarlierPeriod) {
+                @if (row.payment) {
+                  <time [attr.datetime]="row.payment.paid_at">{{
+                    formatPaidAt(row.payment.paid_at)
+                  }}</time>
+                  <!-- How it came in (#1761), when the owner said. -->
+                  @if (methodLabel(row.payment); as method) {
+                    <span
+                      class="payments-list__method"
+                      [attr.data-cy]="'payment-method-' + row.month"
+                    >
+                      {{ method }}
+                    </span>
+                  }
+                } @else {
+                  <span class="payments-list__dash">—</span>
                 }
-              } @else {
-                <span class="payments-list__dash">—</span>
               }
             </td>
             <td class="payments-list__actions">
-              @if (row.canEdit) {
-                @if (row.payment) {
-                  <p-button
-                    type="button"
-                    icon="pi pi-times"
-                    severity="secondary"
-                    [text]="true"
-                    size="small"
-                    (onClick)="confirmToggleRow($event, row)"
-                    [ariaLabel]="'athletes.detail.payments.button.unmarkPaid' | translate"
-                    [pTooltip]="'athletes.detail.payments.button.unmarkPaid' | translate"
-                    tooltipPosition="left"
-                    [attr.data-cy]="'payment-unmark-' + row.month"
-                  />
-                } @else {
-                  <p-button
-                    type="button"
-                    icon="pi pi-check"
-                    severity="primary"
-                    [text]="true"
-                    size="small"
-                    (onClick)="confirmToggleRow($event, row)"
-                    [ariaLabel]="'athletes.detail.payments.button.markPaid' | translate"
-                    [pTooltip]="'athletes.detail.payments.button.markPaid' | translate"
-                    tooltipPosition="left"
-                    [attr.data-cy]="'payment-mark-' + row.month"
-                  />
-                }
-              } @else {
+              <!--
+                Labelled controls (#1654, PAY-5): a bare ✕ is the app's
+                "close" and a bare ✓ said nothing about money. One undo per
+                payment, on the month it started — see `MonthRow.undoHere`.
+              -->
+              @if (row.undoHere) {
+                <p-button
+                  type="button"
+                  [label]="'athletes.detail.payments.button.unmarkPaid' | translate"
+                  severity="secondary"
+                  [text]="true"
+                  (onClick)="confirmToggleRow($event, row)"
+                  [attr.data-cy]="'payment-unmark-' + row.month"
+                />
+              } @else if (row.canEdit && !row.payment) {
+                <p-button
+                  type="button"
+                  [label]="'athletes.detail.payments.button.markPaid' | translate"
+                  severity="primary"
+                  [text]="true"
+                  (onClick)="confirmToggleRow($event, row)"
+                  [attr.data-cy]="'payment-mark-' + row.month"
+                />
+              } @else if (!row.coveredByEarlierPeriod) {
                 <span class="payments-list__dash" aria-hidden="true">—</span>
               }
             </td>

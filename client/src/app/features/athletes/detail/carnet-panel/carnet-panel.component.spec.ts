@@ -330,6 +330,54 @@ describe('CarnetPanelComponent', () => {
   });
 });
 
+describe('CarnetPanelComponent — the card and its register read at a glance (#1654)', () => {
+  it('leads with what is left, and keeps the code as a caption under it (PAY-3)', () => {
+    const { fixture } = setup();
+    const card = fixture.nativeElement.querySelector(
+      '[data-cy="carnet-balance-card"]',
+    ) as HTMLElement;
+    const balance = card.querySelector('.carnets__balance') as HTMLElement;
+    const code = card.querySelector('[data-cy="carnet-code"]') as HTMLElement;
+
+    // "7 / 10 entries" is the question the owner opens the card with; the
+    // code is how a paper stub is matched, a detail beneath it.
+    expect(balance.compareDocumentPosition(code) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(code.classList.contains('carnets__code')).toBe(true);
+    expect(code.textContent).toContain('A7K2');
+  });
+
+  it('names the class each entry paid for, and just the day when there was none', () => {
+    const { fixture, component, service } = setup();
+    service.entries = vi.fn(() =>
+      of([
+        {
+          id: 2,
+          carnet_id: 1,
+          attendance_record_id: 12,
+          used_on: '2026-09-11',
+          lesson_name: 'Avanzati',
+        },
+        {
+          id: 1,
+          carnet_id: 1,
+          attendance_record_id: 11,
+          used_on: '2026-09-04',
+          lesson_name: null,
+        },
+      ] as CarnetEntry[]),
+    );
+
+    (component as unknown as { loadEntries: () => void }).loadEntries();
+    fixture.detectChanges();
+
+    const rows = Array.from(
+      fixture.nativeElement.querySelectorAll('[data-cy="carnet-register-list"] li'),
+    ).map((li) => (li as HTMLElement).textContent?.replace(/\s+/g, ' ').trim());
+    expect(rows[0]).toContain('Avanzati');
+    expect(rows[1]).not.toContain('·');
+  });
+});
+
 describe('CarnetPanelComponent — what the carnet cost (#1383)', () => {
   it('names the amount next to the sale date, formatted as money', () => {
     // The alpha tester asked how a carnet payment gets recorded. The answer

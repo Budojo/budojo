@@ -2333,8 +2333,9 @@
         },
         "button": {
           "markPaid": "Mark paid",
-          "unmarkPaid": "Unmark paid"
+          "unmarkPaid": "Undo payment"
         },
+        "overdue": "Overdue",
         "feeTierHintOne": "{{label}} tier · {{amount}} a month for {{count}} lesson a week.",
         "feeTierHintOther": "{{label}} tier · {{amount}} a month for {{count}} lessons a week.",
         "periodRange": "{{from}} to {{to}} {{year}}",
