@@ -9,6 +9,7 @@ use App\Actions\Athlete\CreateAthleteAction;
 use App\Actions\Athlete\ResolveRosterDenominatorsAction;
 use App\Actions\Athlete\RestoreAthleteAction;
 use App\Actions\Athlete\UpdateAthleteAction;
+use App\Exceptions\FiscalCodeTakenException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Athlete\ListAthletesRequest;
 use App\Http\Requests\Athlete\StoreAthleteRequest;
@@ -445,7 +446,21 @@ class AthleteController extends Controller
             return response()->json(['message' => 'Athlete is not deleted.'], 404);
         }
 
-        $fresh = $this->restoreAthlete->execute($athlete);
+        try {
+            $fresh = $this->restoreAthlete->execute($athlete);
+        } catch (FiscalCodeTakenException $e) {
+            // `fiscal_code_taken` is the key the SPA translates; `holder` is
+            // who it names (#1934). `message` is the English fallback.
+            return response()->json([
+                'message' => $e->getMessage(),
+                'errors' => ['fiscal_code' => ['fiscal_code_taken']],
+                'holder' => [
+                    'id' => $e->holder->id,
+                    'first_name' => $e->holder->first_name,
+                    'last_name' => $e->holder->last_name,
+                ],
+            ], 422);
+        }
 
         return response()->json(['data' => new AthleteResource($fresh)]);
     }

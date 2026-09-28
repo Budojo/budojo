@@ -85,6 +85,11 @@ class AthleteResource extends JsonResource
             'facebook' => $athlete->facebook,
             'instagram' => $athlete->instagram,
             'date_of_birth' => $athlete->date_of_birth?->toDateString(),
+            // What a federation card asks for (#1934). Sex is the document's
+            // `m` / `f`, not a gender field.
+            'fiscal_code' => $athlete->fiscal_code,
+            'sex' => $athlete->sex?->value,
+            'birth_place' => $athlete->birth_place,
             'belt' => $athlete->belt->value,
             'stripes' => $athlete->stripes,
             'status' => $athlete->status->value,

@@ -9,6 +9,7 @@ import {
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -41,6 +42,7 @@ import {
   AthleteStatus,
   Belt,
   AthleteService,
+  type AthleteRestoreRefusal,
   type PaymentCoverage,
 } from '../../../core/services/athlete.service';
 import { PaymentService } from '../../../core/services/payment.service';
@@ -600,15 +602,33 @@ export class AthletesListComponent implements OnInit {
           life: 2500,
         });
       },
-      error: () => {
+      error: (err: unknown) => {
+        const holder = this.fiscalCodeHolder(err);
         this.messageService.add({
           severity: 'error',
           summary: this.translate.instant('athletes.list.restoreToast.errorSummary'),
-          detail: this.translate.instant('athletes.list.restoreToast.errorDetail'),
-          life: 4000,
+          detail:
+            holder === null
+              ? this.translate.instant('athletes.list.restoreToast.errorDetail')
+              : this.translate.instant('athletes.list.restoreToast.fiscalCodeTaken', {
+                  name: holder,
+                }),
+          // The refusal is a sentence to act on, not a blip: time to read it.
+          life: holder === null ? 4000 : 8000,
         });
       },
     });
+  }
+
+  /**
+   * Who holds the codice fiscale, when that is why the restore was refused
+   * (#1934) — the one refusal the server names. Null for any other failure.
+   */
+  private fiscalCodeHolder(err: unknown): string | null {
+    if (!(err instanceof HttpErrorResponse) || err.status !== 422) return null;
+    const body = err.error as Partial<AthleteRestoreRefusal> | null;
+    if (body?.errors?.fiscal_code?.[0] !== 'fiscal_code_taken' || !body.holder) return null;
+    return `${body.holder.first_name} ${body.holder.last_name}`.trim();
   }
 
   onPaidChange(paid: AthletePaidFilter | ''): void {

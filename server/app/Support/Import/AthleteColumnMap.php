@@ -33,6 +33,9 @@ final class AthleteColumnMap
         'email',
         'phone',
         'date_of_birth',
+        'fiscal_code',
+        'sex',
+        'birth_place',
     ];
     /**
      * Header name (normalised) → athlete field.
@@ -92,6 +95,26 @@ final class AthleteColumnMap
         'data nascita' => 'date_of_birth',
         'nascita' => 'date_of_birth',
         'compleanno' => 'date_of_birth',
+
+        // What a federation register carries (#1934). `c f` is `C.F.` after
+        // normalising the dots.
+        'codice fiscale' => 'fiscal_code',
+        'cod fiscale' => 'fiscal_code',
+        'cf' => 'fiscal_code',
+        'c f' => 'fiscal_code',
+        'fiscal code' => 'fiscal_code',
+        'tax code' => 'fiscal_code',
+
+        'sesso' => 'sex',
+        'sex' => 'sex',
+
+        'luogo di nascita' => 'birth_place',
+        'comune di nascita' => 'birth_place',
+        'luogo nascita' => 'birth_place',
+        'nato a' => 'birth_place',
+        'place of birth' => 'birth_place',
+        'birthplace' => 'birth_place',
+        'birth place' => 'birth_place',
 
         'joined' => 'joined_at',
         'joined at' => 'joined_at',

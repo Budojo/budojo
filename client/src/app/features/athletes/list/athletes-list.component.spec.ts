@@ -1,9 +1,9 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideHttpClient } from '@angular/common/http';
+import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Router, provideRouter } from '@angular/router';
-import { Subject, of, throwError } from 'rxjs';
+import { Observable, Subject, of, throwError } from 'rxjs';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { By } from '@angular/platform-browser';
 import { Tooltip } from 'primeng/tooltip';
@@ -29,6 +29,7 @@ class FakeAthleteService {
     }),
   );
   readonly delete = vi.fn(() => of(void 0));
+  readonly restore = vi.fn((): Observable<Athlete> => of({ id: 7 } as Athlete));
   // Asked only when the roster comes back empty on a query nobody narrowed
   // (#1666). Zero by default: a fake academy with no rows is a new one.
   readonly countInactive = vi.fn(() => of(0));
@@ -2758,6 +2759,80 @@ describe('AthletesListComponent — not seen lately (#1729)', () => {
 
     const peopledRoot = peopled.fixture.nativeElement as HTMLElement;
     expect(peopledRoot.querySelector('[data-cy="not-seen-empty-no-attendance"]')).not.toBeNull();
+  });
+});
+
+describe('AthletesListComponent — a restore the roster refuses (#1934)', () => {
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [AthletesListComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        { provide: AthleteService, useClass: FakeAthleteService },
+        { provide: PaymentService, useClass: FakePaymentService },
+        ...provideI18nTesting(),
+      ],
+    });
+  });
+
+  /** Confirm a restore of a trashed Mario Rossi that the server answers with `error`. */
+  function restoreRefusedWith(error: HttpErrorResponse) {
+    const fixture = TestBed.createComponent(AthletesListComponent);
+    const component = fixture.componentInstance;
+    fixture.detectChanges();
+    const trashed = { id: 7, first_name: 'Mario', last_name: 'Rossi' } as Athlete;
+    component.athletes.set([trashed]);
+
+    const athleteService = TestBed.inject(AthleteService) as unknown as FakeAthleteService;
+    athleteService.restore.mockReturnValue(throwError(() => error));
+    const confirmService = fixture.componentRef.injector.get(ConfirmationService);
+    confirmService.confirm = vi.fn((cfg: { accept: () => void }) => {
+      cfg.accept();
+      return confirmService;
+    }) as never;
+    const messageSpy = vi.spyOn(fixture.componentRef.injector.get(MessageService), 'add');
+
+    const event = new MouseEvent('click');
+    Object.defineProperty(event, 'currentTarget', { value: document.createElement('button') });
+    component.confirmRestore(event, trashed);
+
+    return { component, messageSpy };
+  }
+
+  it('names the athlete who holds the codice fiscale now, and keeps the row in the picker', () => {
+    const { component, messageSpy } = restoreRefusedWith(
+      new HttpErrorResponse({
+        status: 422,
+        error: {
+          message: 'Mario Rossi, on the roster, already has this codice fiscale.',
+          errors: { fiscal_code: ['fiscal_code_taken'] },
+          holder: { id: 9, first_name: 'Mario', last_name: 'Rossi' },
+        },
+      }),
+    );
+
+    expect(messageSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        severity: 'error',
+        summary: 'Could not restore',
+        detail:
+          'Mario Rossi, on the roster, already has this codice fiscale. If it is the same person, keep that one; if not, correct the code on Mario Rossi first.',
+      }),
+    );
+    expect(component.athletes().map((a) => a.id)).toEqual([7]);
+  });
+
+  it('keeps the plain reason for any other failure', () => {
+    const { messageSpy } = restoreRefusedWith(new HttpErrorResponse({ status: 500 }));
+
+    expect(messageSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        severity: 'error',
+        detail: 'Something went wrong. Try again in a moment.',
+      }),
+    );
   });
 });
 
