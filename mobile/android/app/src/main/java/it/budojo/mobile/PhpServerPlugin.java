@@ -106,10 +106,21 @@ public class PhpServerPlugin extends Plugin {
         }
         long tExtracted = System.nanoTime();
 
+        // The demo academy is replaced whenever the bundle is: each build seeds its
+        // own, with its own APP_KEY and demo login, so an older copy would refuse
+        // the new login (0.0.11 on a real phone: "login: HTTP 401" against the
+        // database 0.0.3 had copied). Within one build it stays, so a second run
+        // after a force-stop measures the same data. #2034 replaces the demo with
+        // the phone's own first-run bootstrap.
         File database = new File(files, "budojo.sqlite");
+        File databaseMarker = new File(files, "budojo.sqlite.bundle-id");
         boolean seeded = false;
-        if (!database.exists()) {
+        if (!database.exists() || !databaseMarker.exists() || !readFile(databaseMarker).equals(bundleId)) {
+            for (String suffix : new String[] {"", "-wal", "-shm"}) {
+                new File(files, "budojo.sqlite" + suffix).delete();
+            }
             copyAsset("demo.sqlite", database);
+            writeFile(databaseMarker, bundleId);
             seeded = true;
         }
         File storage = new File(files, "storage");
