@@ -22,9 +22,11 @@ use Carbon\CarbonImmutable;
  * Where a row starts:
  * - a stripe row, on its belt at its `from_stripes`;
  * - a belt row, on its `from_belt` once the ladder's next step leaves it;
- * - a starting row (#1771) that is not the first, just before the belt step
- *   into its belt — the one step it stands for, reported to be **completed**
- *   (`completes_promotion_id`) rather than added as a second row.
+ * - a starting row (#1771) that is not the first and is still dated the day
+ *   of entry, just before the belt step into its belt — the one step it
+ *   stands for, reported to be **completed** (`completes_promotion_id`)
+ *   rather than added as a second row. A dated one is the belt step itself,
+ *   and starts on its belt at no stripes (#1990).
  *
  * **Never a guess.** An interval the ladder cannot walk — rows that
  * contradict each other, a kids' grade an adult's ladder never passes —
