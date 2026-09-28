@@ -125,7 +125,9 @@ describe('WhatsNewComponent (#254)', () => {
     // version we've shipped; when we ship a new version and forget
     // to prepend instead of append, this fails.
     const firstRelease = root.querySelector('.whats-new__release');
-    expect(firstRelease?.querySelector('.whats-new__version')?.textContent?.trim()).toBe('v2.74.0');
+    expect(firstRelease?.querySelector('.whats-new__version')?.textContent?.trim()).toBe(
+      RELEASES[0].version,
+    );
   });
 
   it('opens on ten releases, with the rest a press away (#1464)', () => {
@@ -138,7 +140,7 @@ describe('WhatsNewComponent (#254)', () => {
 
     const more = root.querySelector('[data-cy="whats-new-more"]') as HTMLButtonElement;
     expect(more).not.toBeNull();
-    expect(more.textContent).toContain('113');
+    expect(more.textContent).toContain(String(RELEASES.length - 10));
 
     more.click();
     fixture.detectChanges();
@@ -161,7 +163,7 @@ describe('WhatsNewComponent (#254)', () => {
     expect(root.querySelector('[data-cy="whats-new-more"]')).toBeNull();
 
     const cards = fixture.nativeElement.querySelectorAll('.whats-new__release');
-    expect(cards.length).toBe(123);
+    expect(cards.length).toBe(RELEASES.length);
 
     // Pin every version in the order we ship them so a refactor that
     // accidentally reverses the array (e.g. a sort that reads ids
@@ -169,131 +171,24 @@ describe('WhatsNewComponent (#254)', () => {
     const versions = Array.from(cards).map((el) =>
       (el as HTMLElement).querySelector('.whats-new__version')?.textContent?.trim(),
     );
-    expect(versions).toEqual([
-      'v2.74.0',
-      'v2.73.0',
-      'v2.72.0',
-      'v2.71.0',
-      'v2.70.0',
-      'v2.69.0',
-      'v2.68.0',
-      'v2.67.0',
-      'v2.66.0',
-      'v2.65.0',
-      'v2.64.0',
-      'v2.63.1',
-      'v2.63.0',
-      'v2.62.0',
-      'v2.61.2',
-      'v2.61.1',
-      'v2.61.0',
-      'v2.60.1',
-      'v2.60.0',
-      'v2.59.0',
-      'v2.58.0',
-      'v2.57.1',
-      'v2.57.0',
-      'v2.56.0',
-      'v2.55.1',
-      'v2.55.0',
-      'v2.54.0',
-      'v2.53.0',
-      'v2.52.0',
-      'v2.51.0',
-      'v2.50.0',
-      'v2.49.0',
-      'v2.48.0',
-      'v2.47.0',
-      'v2.46.0',
-      'v2.45.0',
-      'v2.44.0',
-      'v2.43.0',
-      'v2.42.2',
-      'v2.42.1',
-      'v2.42.0',
-      'v2.41.0',
-      'v2.40.1',
-      'v2.40.0',
-      'v2.39.3',
-      'v2.39.2',
-      'v2.39.1',
-      'v2.39.0',
-      'v2.38.1',
-      'v2.38.0',
-      'v2.37.0',
-      'v2.36.0',
-      'v2.35.0',
-      'v2.34.0',
-      'v2.33.0',
-      'v2.32.2',
-      'v2.32.1',
-      'v2.32.0',
-      'v2.31.1',
-      'v2.31.0',
-      'v2.30.0',
-      'v2.29.0',
-      'v2.28.1',
-      'v2.28.0',
-      'v2.27.0',
-      'v2.26.1',
-      'v2.26.0',
-      'v2.25.1',
-      'v2.25.0',
-      'v2.24.0',
-      'v2.23.0',
-      'v2.22.1',
-      'v2.22.0',
-      'v2.21.0',
-      'v2.20.0',
-      'v2.19.0',
-      'v2.18.4',
-      'v2.18.3',
-      'v2.18.2',
-      'v2.18.1',
-      'v2.18.0',
-      'v2.17.0',
-      'v2.16.0',
-      'v2.15.0',
-      'v2.14.0',
-      'v2.13.0',
-      'v2.12.0',
-      'v2.11.0',
-      'v2.10.1',
-      'v2.10.0',
-      'v2.9.0',
-      'v2.8.0',
-      'v2.7.0',
-      'v2.6.1',
-      'v2.6.0',
-      'v2.5.0',
-      'v2.4.0',
-      'v2.3.2',
-      'v2.3.1',
-      'v2.3.0',
-      'v2.2.0',
-      'v2.1.0',
-      'v2.0.0',
-      'v1.19.0',
-      'v1.18.0',
-      'v1.17.0',
-      'v1.16.0',
-      'v1.15.0',
-      'v1.14.3',
-      'v1.14.2',
-      'v1.14.1',
-      'v1.14.0',
-      'v1.13.0',
-      'v1.12.0',
-      'v1.11.0',
-      'v1.10.0',
-      'v1.9.0',
-      'v1.8.0',
-      'v1.7.0',
-      'v1.6.0',
-      'v1.5.0',
-      'v1.4.0',
-      'v1.3.0',
-    ]);
+    expect(versions).toEqual(RELEASES.map((r) => r.version));
+  });
+
+  it('keeps its releases newest-first, so a release appended at the bottom fails', () => {
+    // The pins this replaces were bumped by hand on every release (#2020).
+    // The release PR's own CI job checks the head entry is the version
+    // semantic-release will tag; this checks everything below it is older.
+    const semver = (v: string): number[] => v.replace(/^v/, '').split('.').map(Number);
+    const newer = (a: string, b: string): boolean => {
+      const [x, y] = [semver(a), semver(b)];
+      for (let i = 0; i < 3; i++) if (x[i] !== y[i]) return x[i] > y[i];
+      return false;
+    };
+    const outOfOrder = RELEASES.slice(1).filter(
+      (release, i) => !newer(RELEASES[i].version, release.version),
+    );
+
+    expect(outOfOrder.map((r) => r.version)).toEqual([]);
   });
 
   it('the v1.6.0 card carries the four advertised sections', () => {
