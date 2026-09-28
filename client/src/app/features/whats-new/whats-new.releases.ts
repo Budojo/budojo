@@ -60,6 +60,110 @@ export function localised(value: Localised, lang: string): string {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.73.0',
+    date: '2026-09-28',
+    headline: {
+      en: 'WhatsApp reminders, the codice fiscale, and the week to the group from the timetable: a reminder already written for an unpaid fee or a certificate, the three details a federation card asks for, the week sent from where it is planned, and promotions written the way you remember them.',
+      it: 'Promemoria su WhatsApp, il codice fiscale, e la settimana al gruppo dall’Orario: il promemoria già scritto per una quota o un certificato, i tre dati che chiede la tessera della federazione, la settimana mandata da dove la pianifichi, e le promozioni scritte come le ricordi.',
+    },
+    sections: [
+      {
+        heading: { en: 'Payments', it: 'Pagamenti' },
+        bullets: [
+          {
+            en: 'The fee reminder on WhatsApp: with the "Unpaid" filter on, every athlete has a WhatsApp button that opens the chat with the message ready: name, month and amount, signed with the academy’s name. A quarterly payer is asked for the quarter. A row marked paid loses its reminder at once.',
+            it: 'Il promemoria della quota su WhatsApp: con il filtro «Non pagato» acceso, ogni atleta ha il tasto WhatsApp che apre la chat con il messaggio pronto: nome, mese e importo, firmato con il nome dell’accademia. Per chi paga a trimestre chiede il trimestre. Una riga segnata pagata perde il promemoria subito.',
+          },
+          {
+            en: 'The payment history reads at a glance: a payment that covers several months is one row, and the months after it say "Part of the September payment". The buttons say "Mark paid" and "Undo payment" instead of ✓ and ✕.',
+            it: 'Lo storico dei pagamenti si legge a colpo d’occhio: un pagamento che copre più mesi è una riga sola, e i mesi dopo dicono «Incluso nel pagamento di settembre». I tasti dicono «Segna pagato» e «Annulla pagamento» invece di ✓ e ✕.',
+          },
+          {
+            en: '"Overdue", with a clock, on the months in arrears: the same ones as the arrears list. Every other unpaid month, this one included, stays "Unpaid".',
+            it: '«In ritardo», con l’orologio, sui mesi arretrati: gli stessi della lista Arretrati. Gli altri mesi non pagati, questo compreso, restano «Non pagato».',
+          },
+          {
+            en: 'The carnet card leads with the entries left ("7 / 10 entries"), and its register says which class each entry paid for.',
+            it: 'La scheda del carnet parte dagli ingressi rimasti («7 / 10 ingressi»), e il registro dice a quale lezione è servito ogni ingresso.',
+          },
+        ],
+      },
+      {
+        heading: { en: 'Documents', it: 'Documenti' },
+        bullets: [
+          {
+            en: 'The certificate reminder on WhatsApp, in Document status: for a certificate about to run out, one that has run out, or one you don’t have yet. Other papers are called by their type, never "certificate".',
+            it: 'Il promemoria del certificato su WhatsApp, in Stato documenti: per un certificato che scade, che è scaduto o che non hai ancora. Gli altri documenti sono chiamati con il loro tipo, mai «certificato».',
+          },
+          {
+            en: 'No reminders to yourself: your own athlete row has no button, neither here nor among the regulars at check-in.',
+            it: 'Niente promemoria a te stesso: la tua riga da atleta non ha il tasto, né qui né tra «Chi viene di solito» al check-in.',
+          },
+        ],
+      },
+      {
+        heading: { en: 'Athletes', it: 'Atleti' },
+        bullets: [
+          {
+            en: 'Codice fiscale, sex and place of birth, under the date of birth, all optional: what a federation card asks for. A valid code fills in an empty date of birth and sex. A code that doesn’t add up (a wrong last letter, or a date of birth or sex other than the ones written) is refused.',
+            it: 'Codice fiscale, sesso e luogo di nascita, sotto la data di nascita, tutti facoltativi: è quello che chiede la tessera della federazione. Un codice valido compila la data di nascita e il sesso se sono vuoti. Un codice che non torna (la lettera finale sbagliata, o una data di nascita o un sesso diversi da quelli scritti) viene rifiutato.',
+          },
+          {
+            en: 'Two athletes can’t share a code. Restoring a deleted athlete whose code another athlete now holds is refused, and Budojo says whose it is.',
+            it: 'Due atleti non possono avere lo stesso codice. Se ripristini un atleta eliminato il cui codice è già di un altro, Budojo te lo dice e ti dice di chi è.',
+          },
+          {
+            en: 'Importing a sheet, the "Codice fiscale", "CF", "Sesso", "Luogo di nascita" and "Comune di nascita" columns are recognised on their own. Someone already on the roster comes out "Already on the roster", not an error, even when the sheet carries their code or email.',
+            it: 'Importando un foglio, le colonne «Codice fiscale», «CF», «Sesso», «Luogo di nascita» e «Comune di nascita» sono riconosciute da sole. Chi è già in elenco risulta «già in lista», non un errore, anche quando il foglio porta il suo codice o la sua email.',
+          },
+        ],
+      },
+      {
+        heading: { en: 'Classes', it: 'Lezioni' },
+        bullets: [
+          {
+            en: '"Send the week to the group", in Timetable: copy the text or open WhatsApp. One line for every class still ahead, with its time and topics where planned. A closed day shows once, and a closure over the whole week is one line. The week you restart after a break can be sent too.',
+            it: '«Manda la settimana al gruppo», in Orario: copi il testo o apri WhatsApp. Una riga per ogni lezione ancora da fare, con orario e argomenti dove ci sono. Un giorno chiuso compare una volta sola, e una chiusura che prende tutta la settimana è una riga sola. Anche la settimana in cui si riparte dopo la pausa si può mandare.',
+          },
+          {
+            en: 'On Sunday afternoon, Today reminds you to send next week’s programme and takes you to the timetable.',
+            it: 'La domenica pomeriggio, in Oggi, una riga ti ricorda di mandare il programma della settimana prossima e ti porta all’Orario.',
+          },
+          {
+            en: 'Stats → Programme sends the same message as the timetable.',
+            it: 'Statistiche → Programma manda lo stesso messaggio dell’Orario.',
+          },
+        ],
+      },
+      {
+        heading: { en: 'Promotions', it: 'Promozioni' },
+        bullets: [
+          {
+            en: 'A starting belt with a real date is the real start: move the "Starting belt → White" row to the day they began, and the stripes missing between it and the next promotion show up as rows to complete.',
+            it: 'La cintura di partenza con una data vera è l’inizio vero: se sposti la riga «Cintura di partenza → Bianca» al giorno in cui ha cominciato, le strisce che mancano tra quella e la promozione dopo compaiono come righe da completare.',
+          },
+          {
+            en: 'Steps marked "Skipped" can be restored: under the history, "N steps marked as skipped · Show", each with "Restore".',
+            it: 'I passaggi segnati «Saltato» si ripristinano: sotto la storia, «N passaggi segnati come saltati · Mostra», ognuno con «Ripristina».',
+          },
+          {
+            en: 'Past promotions are saved as you write them: a jump from the rows around them is no longer refused. Only when a row goes backwards from one already recorded does Budojo say so, under the field, and you can still save it with "Add anyway". "From belt" starts on the belt the athlete held that day.',
+            it: 'Le promozioni passate si salvano come le scrivi: un salto rispetto alle righe vicine non viene più rifiutato. Solo se una riga torna indietro rispetto a una già registrata Budojo te lo dice, sotto il campo, e puoi salvarla lo stesso con «Aggiungi comunque». «Da cintura» parte dalla cintura che l’atleta aveva quel giorno.',
+          },
+        ],
+      },
+      {
+        heading: { en: 'Stats', it: 'Statistiche' },
+        bullets: [
+          {
+            en: 'A position’s season opens in a window that never leaves the screen, with its list of classes scrolling inside it.',
+            it: 'La stagione di una posizione si apre in una finestra che non esce mai dallo schermo, con la lista delle lezioni che scorre al suo interno.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.72.0',
     date: '2026-09-27',
     headline: {
