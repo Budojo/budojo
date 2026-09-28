@@ -68,6 +68,20 @@
                     <i class="pi pi-arrow-right" aria-hidden="true"></i>
                   </span>
                 </a>
+                <!-- The reminder (#1931), beside the link and never inside
+                     it: an anchor in an anchor is invalid, and a tap meant for
+                     WhatsApp must not also open the athlete. Never on the
+                     owner's own row: there is no one to send it to. -->
+                @if (!a.is_self) {
+                  <app-contact-actions
+                    class="missing-cert-row__contact"
+                    [countryCode]="a.phone_country_code"
+                    [nationalNumber]="a.phone_national_number"
+                    [name]="a.first_name + ' ' + a.last_name"
+                    [message]="missingMessage(a)"
+                    [dataCy]="'missing-cert-contact-' + a.id"
+                  />
+                }
               </li>
             }
           </ul>
@@ -118,6 +132,16 @@
                       [stretchLink]="true"
                       [attr.data-cy]="'expiring-card-athlete-' + doc.id"
                     />
+                    @if (!person.is_self) {
+                      <app-contact-actions
+                        class="expiring-card__contact"
+                        [countryCode]="person.phone_country_code"
+                        [nationalNumber]="person.phone_national_number"
+                        [name]="person.first_name + ' ' + person.last_name"
+                        [message]="documentMessage(doc)"
+                        [dataCy]="'expiring-card-contact-' + doc.id"
+                      />
+                    }
                   }
                   <p-button
                     class="expiring-card__download"
@@ -159,7 +183,7 @@
                   <th>{{ 'documents.expiringList.table.type' | translate }}</th>
                   <th>{{ 'documents.expiringList.table.expires' | translate }}</th>
                   <th>{{ 'documents.expiringList.table.status' | translate }}</th>
-                  <th style="width: 4rem"></th>
+                  <th class="expiring-page__actions-col"></th>
                 </tr>
               </ng-template>
 
@@ -196,7 +220,18 @@
                   <td>
                     <app-expiry-status-badge [expiresAt]="doc.expires_at" [type]="doc.type" />
                   </td>
-                  <td>
+                  <td class="expiring-page__actions">
+                    @if (doc.athlete; as person) {
+                      @if (!person.is_self) {
+                        <app-contact-actions
+                          [countryCode]="person.phone_country_code"
+                          [nationalNumber]="person.phone_national_number"
+                          [name]="person.first_name + ' ' + person.last_name"
+                          [message]="documentMessage(doc)"
+                          [dataCy]="'expiring-contact-' + doc.id"
+                        />
+                      }
+                    }
                     <p-button
                       icon="pi pi-download"
                       severity="secondary"

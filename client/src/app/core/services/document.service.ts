@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Observable, catchError, map, of, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import type { AthleteIdentity } from './athlete.service';
+import type { ContactableAthlete } from './athlete.service';
 
 export type DocumentType = 'id_card' | 'medical_certificate' | 'insurance' | 'other';
 
@@ -71,17 +71,19 @@ export interface ExpiringDocument extends Document {
    * `doc.athlete.first_name` compile and then throw on the first academy
    * document, blanking the whole expiring page. With this, the compiler
    * enforces the guard instead of the guard being a defensive habit.
+   *
+   * With the phone pair (#1931), so the row can offer the reminder.
    */
-  athlete?: AthleteIdentity | null;
+  athlete?: ContactableAthlete | null;
 }
 
 /**
  * Athlete summary used in the `missing_medical_certificate` array of
  * the `/documents/expiring` envelope (#881). Active athletes with no
  * live (non-trashed) medical certificate row — same risk surface as
- * an expired one.
+ * an expired one. With the phone pair (#1931), for the reminder.
  */
-export type AthleteMissingMedicalCertificate = AthleteIdentity;
+export type AthleteMissingMedicalCertificate = ContactableAthlete;
 
 /**
  * Composite envelope returned by `GET /api/v1/documents/expiring`.

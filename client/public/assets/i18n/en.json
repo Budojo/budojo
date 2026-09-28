@@ -2979,7 +2979,18 @@
       "whatsapp": "WhatsApp",
       "callAria": "Call {{name}}",
       "whatsappAria": "Message {{name}} on WhatsApp",
-      "noPhone": "No phone number on file"
+      "noPhone": "No phone number on file",
+      "noPhoneAria": "No phone number on file for {{name}}",
+      "reminder": "Send the reminder on WhatsApp",
+      "reminderAria": "Send {{name}} the reminder on WhatsApp"
+    },
+    "reminder": {
+      "unpaid": "Hi {{name}}, a reminder about the fee for {{month}} ({{amount}}). Thank you! — {{academy}}",
+      "certificateExpires": "Hi {{name}}, your medical certificate runs out on {{date}}. When you have the new one, bring it to the gym. — {{academy}}",
+      "certificateExpired": "Hi {{name}}, your medical certificate ran out on {{date}}. When you have the new one, bring it to the gym. — {{academy}}",
+      "certificateMissing": "Hi {{name}}, I don't have your medical certificate yet. When you have it, bring it to the gym. — {{academy}}",
+      "documentExpires": "Hi {{name}}, one of your documents at the gym ({{document}}) runs out on {{date}}. When you have the new one, bring it along. — {{academy}}",
+      "documentExpired": "Hi {{name}}, one of your documents at the gym ({{document}}) ran out on {{date}}. When you have the new one, bring it along. — {{academy}}"
     }
   },
   "stats": {

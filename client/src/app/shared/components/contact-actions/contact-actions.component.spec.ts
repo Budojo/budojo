@@ -63,11 +63,62 @@ describe('ContactActionsComponent (#1727)', () => {
     expect(root.querySelector('a')).toBeNull();
     const none = root.querySelector('[data-cy="athlete-contact-7-none"]');
     expect(none?.getAttribute('aria-disabled')).toBe('true');
-    expect(none?.getAttribute('aria-label')).toBe('No phone number on file');
+    // A screen reader walking a list hears whose number is missing; the
+    // tooltip, read beside the row, stays short.
+    expect(none?.getAttribute('aria-label')).toBe('No phone number on file for Giulia Ferraro');
 
     const tooltip = fixture.debugElement
       .query(By.css('[data-cy="athlete-contact-7-none"]'))
       .injector.get(Tooltip);
     expect(tooltip.content).toBe('No phone number on file');
+  });
+
+  describe('with a reminder to send (#1931)', () => {
+    function renderWithMessage(message: string | null) {
+      const fixture = render('+39', '3331234567');
+      fixture.componentRef.setInput('message', message);
+      fixture.detectChanges();
+      return fixture;
+    }
+
+    it('opens the chat with the reminder already written', () => {
+      const root = renderWithMessage('Ciao Andrea, ti ricordo la quota')
+        .nativeElement as HTMLElement;
+
+      const whatsapp = root.querySelector('[data-cy="athlete-contact-7-whatsapp"]');
+      expect(whatsapp?.getAttribute('href')).toBe(
+        'https://wa.me/393331234567?text=' + encodeURIComponent('Ciao Andrea, ti ricordo la quota'),
+      );
+    });
+
+    it('says it sends the reminder, naming the person, so the press is not a surprise', () => {
+      const fixture = renderWithMessage('Ciao');
+      const root = fixture.nativeElement as HTMLElement;
+
+      const whatsapp = root.querySelector('[data-cy="athlete-contact-7-whatsapp"]');
+      expect(whatsapp?.getAttribute('aria-label')).toBe(
+        'Send Giulia Ferraro the reminder on WhatsApp',
+      );
+      const tooltip = fixture.debugElement
+        .query(By.css('[data-cy="athlete-contact-7-whatsapp"]'))
+        .injector.get(Tooltip);
+      expect(tooltip.content).toBe('Send the reminder on WhatsApp');
+    });
+
+    it('leaves the call as it is', () => {
+      const root = renderWithMessage('Ciao').nativeElement as HTMLElement;
+
+      expect(root.querySelector('[data-cy="athlete-contact-7-call"]')?.getAttribute('href')).toBe(
+        'tel:+393331234567',
+      );
+    });
+
+    it('is a plain chat again without a message', () => {
+      const root = renderWithMessage(null).nativeElement as HTMLElement;
+
+      expect(
+        root.querySelector('[data-cy="athlete-contact-7-whatsapp"]')?.getAttribute('href'),
+      ).toBe('https://wa.me/393331234567');
+    });
   });
 });
