@@ -21,6 +21,16 @@ import { join } from 'node:path';
 
 const APP = join(process.cwd(), 'src/app');
 
+/**
+ * The select-buttons whose empty state is a real answer, by `data-cy`, each
+ * with the reason. They must say `[allowEmpty]="true"` out loud, so the
+ * choice reads as made rather than as PrimeNG's default left in place.
+ */
+const MAY_BE_EMPTY: Record<string, string> = {
+  'athlete-sex':
+    'optional on the athlete (#1934): a nullable control, and "not recorded" is what an owner who never filled it in actually has',
+};
+
 function templates(): string[] {
   const out: string[] = [];
   const walk = (dir: string): void => {
@@ -55,10 +65,23 @@ describe('select-button allowEmpty (#1675)', () => {
     expect(buttons.length).toBeGreaterThanOrEqual(6);
   });
 
+  const optedOut = (attrs: string): boolean => {
+    const cy = /data-cy="([^"]+)"/.exec(attrs)?.[1];
+    return cy !== undefined && cy in MAY_BE_EMPTY;
+  };
+
   it('never lets a repeat tap clear a closed choice', () => {
     const unguarded = buttons
-      .filter(({ attrs }) => !/\[allowEmpty\]="false"/.test(attrs))
+      .filter(({ attrs }) => !optedOut(attrs) && !/\[allowEmpty\]="false"/.test(attrs))
       .map(({ file, line }) => `${file}:${line}`);
     expect(unguarded).toEqual([]);
+  });
+
+  it('lets an optional choice be emptied only when it says so', () => {
+    // An opt-out that no template carries any more is a stale exemption, and
+    // one that relies on the default is a choice nobody can see was made.
+    const optional = buttons.filter(({ attrs }) => optedOut(attrs));
+    expect(optional.length).toBe(Object.keys(MAY_BE_EMPTY).length);
+    for (const { attrs } of optional) expect(attrs).toMatch(/\[allowEmpty\]="true"/);
   });
 });

@@ -2197,7 +2197,8 @@
       "restoreToast": {
         "successSummary": "Atleta ripristinato",
         "errorSummary": "Impossibile ripristinare",
-        "errorDetail": "Qualcosa è andato storto. Riprova tra un momento."
+        "errorDetail": "Qualcosa è andato storto. Riprova tra un momento.",
+        "fiscalCodeTaken": "{{name}}, già in elenco, ha lo stesso codice fiscale. Se è la stessa persona, tieni quella; altrimenti correggi prima il codice di {{name}}."
       },
       "showInactive": "Mostra anche i non attivi",
       "hideInactive": "Mostra solo gli attivi",
@@ -2333,11 +2334,12 @@
         },
         "button": {
           "markPaid": "Segna pagato",
-          "unmarkPaid": "Annulla pagato"
+          "unmarkPaid": "Annulla pagamento"
         },
+        "overdue": "In ritardo",
         "feeTierHintOne": "Fascia {{label}} · {{amount}} al mese per {{count}} lezione a settimana.",
         "feeTierHintOther": "Fascia {{label}} · {{amount}} al mese per {{count}} lezioni a settimana.",
-        "periodRange": "Da {{from}} a {{to}} {{year}}",
+        "periodRange": "da {{from}} a {{to}} {{year}}",
         "prevYear": "Anno precedente",
         "nextYear": "Anno successivo",
         "periodHint": "{{period}} · {{amount}} a periodo",
@@ -2644,7 +2646,10 @@
         "addressCity": "Città",
         "addressProvince": "Provincia",
         "feeTier": "Fascia di quota",
-        "feeOverride": "Quota personale"
+        "feeOverride": "Quota personale",
+        "fiscalCode": "Codice fiscale",
+        "sex": "Sesso (come sul documento)",
+        "birthPlace": "Luogo di nascita"
       },
       "placeholder": {
         "phoneCountryCode": "Prefisso",
@@ -2657,7 +2662,8 @@
           "line2": "Scala B, interno 4",
           "zip": "00100",
           "city": "Roma"
-        }
+        },
+        "birthPlace": "Comune, o Paese se nato all'estero"
       },
       "aria": {
         "phoneCountryCode": "Prefisso telefonico",
@@ -2700,7 +2706,8 @@
         "feeTier": "Quale quota mensile paga. Lascia vuoto per la quota standard dell'accademia.",
         "feeOverride": "Solo per questo atleta: sostituisce la fascia e la quota dell'accademia. Metti 0 se si allena gratis.",
         "feeOverrideFree": "Si allena gratis: non deve niente e non compare tra chi non ha pagato.",
-        "kidsBeltsHidden": "Le cinture dei bambini sono nascoste: attivale in Accademia → Modifica."
+        "kidsBeltsHidden": "Le cinture dei bambini sono nascoste: attivale in Accademia → Modifica.",
+        "fiscalCode": "Se è valido, compila la data di nascita e il sesso quando sono vuoti."
       },
       "button": {
         "cancel": "Annulla",
@@ -2752,7 +2759,11 @@
         "gym": "In palestra",
         "contact": "Contatti"
       },
-      "feeTierStandard": "Quota standard dell'accademia"
+      "feeTierStandard": "Quota standard dell'accademia",
+      "sexOption": {
+        "m": "Maschio",
+        "f": "Femmina"
+      }
     },
     "photo": {
       "title": "Foto",
@@ -2803,7 +2814,10 @@
         "joined_at": "Iscritto il",
         "email": "Email",
         "phone": "Telefono",
-        "date_of_birth": "Data di nascita"
+        "date_of_birth": "Data di nascita",
+        "fiscal_code": "Codice fiscale",
+        "sex": "Sesso",
+        "birth_place": "Luogo di nascita"
       },
       "table": {
         "row": "Riga",
@@ -2985,7 +2999,18 @@
       "whatsapp": "WhatsApp",
       "callAria": "Chiama {{name}}",
       "whatsappAria": "Scrivi a {{name}} su WhatsApp",
-      "noPhone": "Nessun numero in archivio"
+      "noPhone": "Nessun numero in archivio",
+      "noPhoneAria": "Nessun numero in archivio per {{name}}",
+      "reminder": "Manda il promemoria su WhatsApp",
+      "reminderAria": "Manda il promemoria a {{name}} su WhatsApp"
+    },
+    "reminder": {
+      "unpaid": "Ciao {{name}}, ti ricordo la quota di {{month}} ({{amount}}). Grazie! — {{academy}}",
+      "certificateExpires": "Ciao {{name}}, il tuo certificato medico scade il {{date}}. Quando hai quello nuovo portamelo in palestra. — {{academy}}",
+      "certificateExpired": "Ciao {{name}}, il tuo certificato medico è scaduto il {{date}}. Quando hai quello nuovo portamelo in palestra. — {{academy}}",
+      "certificateMissing": "Ciao {{name}}, non ho ancora il tuo certificato medico. Quando ce l'hai portamelo in palestra. — {{academy}}",
+      "documentExpires": "Ciao {{name}}, un tuo documento in palestra ({{document}}) scade il {{date}}. Quando hai quello nuovo portamelo. — {{academy}}",
+      "documentExpired": "Ciao {{name}}, un tuo documento in palestra ({{document}}) è scaduto il {{date}}. Quando hai quello nuovo portamelo. — {{academy}}"
     }
   },
   "stats": {

@@ -77,6 +77,7 @@ function regular(a: ReturnType<typeof athlete>, attended: number) {
     user_avatar_url: null,
     phone_country_code: a.phone_country_code,
     phone_national_number: a.phone_national_number,
+    is_self: false,
     attended,
     last_attended_on: '2026-09-10',
   };

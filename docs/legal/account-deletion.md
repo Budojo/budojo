@@ -41,7 +41,7 @@ After the grace window elapses, the hourly `budojo:purge-expired-pending-deletio
 
 **Athletes** — every athlete belonging to the deleted user's academy, including any soft-deleted athletes
 
-- Anagrafica: first name, last name, date of birth, gender, belt and stripe state, federation registration status, guardian contacts
+- Anagrafica: first name, last name, date and place of birth, codice fiscale, sex as the document records it, belt and stripe state, federation registration status, guardian contacts
 - Profile photos, every uploaded document (medical certificates, federation cards, ID scans)
 - Attendance history, payment history, belt promotion history
 

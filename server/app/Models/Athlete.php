@@ -8,6 +8,7 @@ use App\Contracts\HasAddress;
 use App\Enums\AthleteStatus;
 use App\Enums\Belt;
 use App\Enums\DocumentType;
+use App\Enums\Sex;
 use App\Observers\AthleteObserver;
 use App\Observers\Audit\AthleteAuditObserver;
 use App\Observers\ForgetsAttendanceSummaries;
@@ -43,6 +44,9 @@ use Illuminate\Support\Facades\Storage;
  * @property string|null             $facebook               Full Facebook profile URL.
  * @property string|null             $instagram              Full Instagram profile URL.
  * @property \Carbon\Carbon|null     $date_of_birth
+ * @property string|null             $fiscal_code            Codice fiscale (#1934), capitals and no spaces. One per live athlete per academy.
+ * @property Sex|null                $sex                    As the document records it (#1934); a registry field, not a gender one.
+ * @property string|null             $birth_place            A comune, or a country for an athlete born abroad (#1934).
  * @property Belt                    $belt
  * @property int                     $stripes
  * @property AthleteStatus           $status
@@ -57,7 +61,7 @@ use Illuminate\Support\Facades\Storage;
  * @property-read int|null           $attendance_total_count Same, for the current SEASON (#1484) — the academy's training year, floored per row at this athlete's `joined_at`. It was an all-time count until then.
  * @property-read string|null        $last_attended_on       The latest live presence (#1726), selected as a `withMax` alias on the roster index and on show. Null when they never trained; the resource omits the key where the query did not ask.
  */
-#[Fillable(['academy_id', 'fee_tier_id', 'fee_override_cents', 'billing_period_months', 'user_id', 'is_self', 'first_name', 'last_name', 'email', 'phone_country_code', 'phone_national_number', 'website', 'facebook', 'instagram', 'date_of_birth', 'belt', 'stripes', 'status', 'joined_at'])]
+#[Fillable(['academy_id', 'fee_tier_id', 'fee_override_cents', 'billing_period_months', 'user_id', 'is_self', 'first_name', 'last_name', 'email', 'phone_country_code', 'phone_national_number', 'website', 'facebook', 'instagram', 'date_of_birth', 'fiscal_code', 'sex', 'birth_place', 'belt', 'stripes', 'status', 'joined_at'])]
 #[ObservedBy([AthleteObserver::class, AthleteAuditObserver::class, ForgetsAttendanceSummaries::class])]
 class Athlete extends Model implements HasAddress
 {
@@ -320,6 +324,23 @@ class Athlete extends Model implements HasAddress
     }
 
     /**
+     * Athletes a missed month is a debt for (#1760): active, expected to pay,
+     * and at a fee above zero. The arrears list, the payments summary and the
+     * ledger's «In ritardo» (#1654) all ask it, so a month is late on all
+     * three or on none.
+     *
+     * @param  Builder<$this>  $query
+     * @return Builder<$this>
+     */
+    public function scopeCanFallBehind(Builder $query): Builder
+    {
+        return $query
+            ->where('status', AthleteStatus::Active)
+            ->expectedToPay()
+            ->chargedMoreThanNothing();
+    }
+
+    /**
      * Athletes whose birthday falls on one of the month-days (`03-14`) —
      * the roster's `?birthday=` (#1754), with `BirthdayWindow` building the
      * days. A null `date_of_birth` formats to null and matches nothing.
@@ -419,6 +440,7 @@ class Athlete extends Model implements HasAddress
             'belt' => Belt::class,
             'status' => AthleteStatus::class,
             'date_of_birth' => 'date',
+            'sex' => Sex::class,
             'joined_at' => 'date',
             'status_changed_at' => 'date',
             'stripes' => 'integer',

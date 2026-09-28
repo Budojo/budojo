@@ -74,6 +74,20 @@ interface AthletePaymentResponse {
 
 interface AthletePaymentListResponse {
   data: AthletePayment[];
+  /** Absent from `/me/payments`, which does not answer it. */
+  overdue_months?: string[];
+}
+
+/**
+ * One calendar year of an athlete's ledger (#1654): the payments touching it,
+ * and the months the server calls late by the arrears list's rule (#1760).
+ * The browser never works "late" out itself — it cannot see a carnet, a free
+ * tier or an inactive status, and it accused all three.
+ */
+export interface AthletePaymentYear {
+  readonly payments: AthletePayment[];
+  /** `YYYY-MM`, oldest first. */
+  readonly overdueMonths: readonly string[];
 }
 
 @Injectable({ providedIn: 'root' })
@@ -107,12 +121,15 @@ export class PaymentService {
    * Months without a row are absent from the response — the absence
    * IS the unpaid state. Cross-academy returns 403; the auth
    * interceptor handles that uniformly.
+   *
+   * A response that does not list late months reads as none late: "late" is
+   * an accusation, and without the server's word the ledger says "unpaid".
    */
-  list(athleteId: number, year: number): Observable<AthletePayment[]> {
+  list(athleteId: number, year: number): Observable<AthletePaymentYear> {
     const params = new HttpParams().set('year', year.toString());
     return this.http
       .get<AthletePaymentListResponse>(`${this.base}/${athleteId}/payments`, { params })
-      .pipe(map((res) => res.data));
+      .pipe(map((res) => ({ payments: res.data, overdueMonths: res.overdue_months ?? [] })));
   }
 
   /**

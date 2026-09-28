@@ -2197,7 +2197,8 @@
       "restoreToast": {
         "successSummary": "Athlete restored",
         "errorSummary": "Could not restore",
-        "errorDetail": "Something went wrong. Try again in a moment."
+        "errorDetail": "Something went wrong. Try again in a moment.",
+        "fiscalCodeTaken": "{{name}}, on the roster, already has this codice fiscale. If it is the same person, keep that one; if not, correct the code on {{name}} first."
       },
       "showInactive": "Also show the non-active",
       "hideInactive": "Show only the active",
@@ -2333,8 +2334,9 @@
         },
         "button": {
           "markPaid": "Mark paid",
-          "unmarkPaid": "Unmark paid"
+          "unmarkPaid": "Undo payment"
         },
+        "overdue": "Overdue",
         "feeTierHintOne": "{{label}} tier · {{amount}} a month for {{count}} lesson a week.",
         "feeTierHintOther": "{{label}} tier · {{amount}} a month for {{count}} lessons a week.",
         "periodRange": "{{from}} to {{to}} {{year}}",
@@ -2644,7 +2646,10 @@
         "addressCity": "City",
         "addressProvince": "Province",
         "feeTier": "Fee tier",
-        "feeOverride": "Personal fee"
+        "feeOverride": "Personal fee",
+        "fiscalCode": "Codice fiscale",
+        "sex": "Sex (as on the ID document)",
+        "birthPlace": "Place of birth"
       },
       "placeholder": {
         "phoneCountryCode": "Code",
@@ -2657,7 +2662,8 @@
           "line2": "Apt B, unit 4",
           "zip": "00100",
           "city": "Rome"
-        }
+        },
+        "birthPlace": "Town, or country if born abroad"
       },
       "aria": {
         "phoneCountryCode": "Phone country code",
@@ -2700,7 +2706,8 @@
         "feeTier": "Which monthly fee they pay. Leave empty for the academy's standard fee.",
         "feeOverride": "Only for this athlete: it replaces the tier and the academy's fee. Enter 0 if they train free.",
         "feeOverrideFree": "Trains free: nothing is due, and they won't appear among those who haven't paid.",
-        "kidsBeltsHidden": "Kids' belts are hidden: turn them on in Academy → Edit."
+        "kidsBeltsHidden": "Kids' belts are hidden: turn them on in Academy → Edit.",
+        "fiscalCode": "When it is valid, it fills in an empty date of birth and sex."
       },
       "button": {
         "cancel": "Cancel",
@@ -2752,7 +2759,11 @@
         "gym": "At the gym",
         "contact": "Contact"
       },
-      "feeTierStandard": "The academy's standard fee"
+      "feeTierStandard": "The academy's standard fee",
+      "sexOption": {
+        "m": "Male",
+        "f": "Female"
+      }
     },
     "photo": {
       "title": "Photo",
@@ -2803,7 +2814,10 @@
         "joined_at": "Joined on",
         "email": "Email",
         "phone": "Phone",
-        "date_of_birth": "Date of birth"
+        "date_of_birth": "Date of birth",
+        "fiscal_code": "Codice fiscale",
+        "sex": "Sex",
+        "birth_place": "Place of birth"
       },
       "table": {
         "row": "Row",
@@ -2985,7 +2999,18 @@
       "whatsapp": "WhatsApp",
       "callAria": "Call {{name}}",
       "whatsappAria": "Message {{name}} on WhatsApp",
-      "noPhone": "No phone number on file"
+      "noPhone": "No phone number on file",
+      "noPhoneAria": "No phone number on file for {{name}}",
+      "reminder": "Send the reminder on WhatsApp",
+      "reminderAria": "Send {{name}} the reminder on WhatsApp"
+    },
+    "reminder": {
+      "unpaid": "Hi {{name}}, a reminder about the fee for {{month}} ({{amount}}). Thank you! — {{academy}}",
+      "certificateExpires": "Hi {{name}}, your medical certificate runs out on {{date}}. When you have the new one, bring it to the gym. — {{academy}}",
+      "certificateExpired": "Hi {{name}}, your medical certificate ran out on {{date}}. When you have the new one, bring it to the gym. — {{academy}}",
+      "certificateMissing": "Hi {{name}}, I don't have your medical certificate yet. When you have it, bring it to the gym. — {{academy}}",
+      "documentExpires": "Hi {{name}}, one of your documents at the gym ({{document}}) runs out on {{date}}. When you have the new one, bring it along. — {{academy}}",
+      "documentExpired": "Hi {{name}}, one of your documents at the gym ({{document}}) ran out on {{date}}. When you have the new one, bring it along. — {{academy}}"
     }
   },
   "stats": {

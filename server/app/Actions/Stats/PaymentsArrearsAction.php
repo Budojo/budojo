@@ -4,13 +4,11 @@ declare(strict_types=1);
 
 namespace App\Actions\Stats;
 
-use App\Enums\AthleteStatus;
 use App\Models\Academy;
 use App\Models\Athlete;
-use App\Models\AthletePayment;
 use App\Support\AthleteIdentity;
-use App\Support\BillingFloor;
 use App\Support\MonthlyFee;
+use App\Support\UnpaidMonths;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Collection;
 
@@ -34,6 +32,9 @@ use Illuminate\Database\Eloquent\Collection;
  *   and the athlete's joining month. Without it an athlete who joined in 2019
  *   reads eighty months behind on an install from this spring.
  *
+ * The last two are `UnpaidMonths`, which the ledger's «In ritardo» asks too
+ * (#1654): a month late here is late there.
+ *
  * **The amount is an estimate**, at the athlete's fee today: nothing records
  * what the fee was in March. The page says so.
  */
@@ -44,16 +45,11 @@ final class PaymentsArrearsAction
      */
     public function execute(Academy $academy, CarbonInterface $today): array
     {
-        $lastMonth = AthletePayment::monthIndex($today->year, $today->month) - 1;
-        $floors = $this->floorsOf($this->population($academy), $academy, $lastMonth);
-        if ($floors === []) {
-            return [];
-        }
-
-        $unpaid = $this->unpaidMonths($floors, $lastMonth);
+        $population = $this->population($academy);
+        $unpaid = UnpaidMonths::of($population, $academy, $today);
 
         $rows = [];
-        foreach ($floors as ['athlete' => $athlete]) {
+        foreach ($population as $athlete) {
             $months = $unpaid[$athlete->id] ?? [];
             $fee = MonthlyFee::forAthlete($athlete);
             if ($months === [] || $fee === null) {
@@ -63,7 +59,7 @@ final class PaymentsArrearsAction
             $rows[] = [
                 'athlete' => AthleteIdentity::of($athlete),
                 'months_behind' => \count($months),
-                'first_unpaid' => self::format(min($months)),
+                'first_unpaid' => UnpaidMonths::format(min($months)),
                 'owed_cents' => \count($months) * $fee,
             ];
         }
@@ -83,72 +79,11 @@ final class PaymentsArrearsAction
     private function population(Academy $academy): Collection
     {
         return $academy->athletes()
-            ->where('status', AthleteStatus::Active)
-            ->expectedToPay()
-            ->chargedMoreThanNothing()
+            ->canFallBehind()
             ->with(['feeTier', 'user'])
             ->orderBy('last_name_sort')
             ->orderBy('first_name_sort')
             ->get()
             ->each(fn (Athlete $athlete) => $athlete->setRelation('academy', $academy));
-    }
-
-    /**
-     * Each athlete's first billable month, for those who have one before the
-     * current month.
-     *
-     * @param  Collection<int, Athlete>  $athletes
-     * @return array<int, array{athlete: Athlete, floor: int}>
-     */
-    private function floorsOf(Collection $athletes, Academy $academy, int $lastMonth): array
-    {
-        $floors = [];
-        foreach ($athletes as $athlete) {
-            $floor = BillingFloor::monthIndexFor($academy, $athlete);
-            if ($floor !== null && $floor <= $lastMonth) {
-                $floors[$athlete->id] = ['athlete' => $athlete, 'floor' => $floor];
-            }
-        }
-
-        return $floors;
-    }
-
-    /**
-     * The months nothing paid for, per athlete, each from that athlete's own
-     * floor. One query per month over the whole population: a season is a
-     * dozen queries, where one per athlete per month would be hundreds.
-     *
-     * @param  array<int, array{athlete: Athlete, floor: int}>  $floors
-     * @return array<int, list<int>>
-     */
-    private function unpaidMonths(array $floors, int $lastMonth): array
-    {
-        $unpaid = [];
-        $ids = array_keys($floors);
-        $from = min($lastMonth, ...array_column($floors, 'floor'));
-
-        for ($index = $from; $index <= $lastMonth; $index++) {
-            [$year, $month] = [intdiv($index, 12), $index % 12 + 1];
-
-            /** @var list<int> $owing */
-            $owing = Athlete::query()
-                ->whereIn('id', $ids)
-                ->whereNot(fn ($q) => $q->paidDuring($year, $month))
-                ->pluck('id')
-                ->all();
-
-            foreach ($owing as $id) {
-                if ($floors[$id]['floor'] <= $index) {
-                    $unpaid[$id][] = $index;
-                }
-            }
-        }
-
-        return $unpaid;
-    }
-
-    private static function format(int $index): string
-    {
-        return \sprintf('%04d-%02d', intdiv($index, 12), $index % 12 + 1);
     }
 }

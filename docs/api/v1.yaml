@@ -4825,6 +4825,10 @@ paths:
         - Dates as `gg/mm/aaaa`, `gg-mm-aa`, ISO, with or without a time.
         - A phone in one column, split into the stored pair. A number with no
           prefix takes the academy's own dial code.
+        - A federation register's columns (#1934): `Codice fiscale` / `C.F.`,
+          `Sesso` (`M` / `maschio` / `F` / `femmina`) and `Luogo di nascita`.
+          A valid code fills an empty date of birth and sex; two rows of one
+          file with the same code make the second `invalid`.
 
         **Defaults:** `status` is `active` and `joined_at` is today when the
         column is absent; `stripes` is `0`. `belt`, `first_name` and
@@ -4926,7 +4930,11 @@ paths:
                                 `duplicate` means an athlete of that name is
                                 already on the roster, or appeared earlier in
                                 this same file. A known date of birth on both
-                                sides that differs makes them two people.
+                                sides that differs makes them two people. It
+                                is decided before the row's errors are judged
+                                (#1934), so a re-imported athlete whose email
+                                or codice fiscale the roster already has is
+                                `duplicate`, not `invalid`.
                             values:
                               type: object
                               description: The parsed athlete, as it would be created.
@@ -5297,7 +5305,10 @@ paths:
         expired documents are included. Documents with `expires_at = null`
         are excluded. Each item inlines the `athlete`'s identity
         (`AthleteSummary`: name, belt, stripes, date of birth, photo, #1851),
-        for deep-linking and for drawing the row with the belt.
+        for deep-linking and for drawing the row with the belt, plus the
+        athlete's phone pair (#1931), so the row can offer the reminder on
+        WhatsApp. The phone rides only on this list, never on an athlete's
+        own documents.
 
         A medical certificate that a later one has replaced is also excluded:
         when an athlete has more than one live `medical_certificate` row, only
@@ -5346,12 +5357,12 @@ paths:
                 properties:
                   data:
                     type: array
-                    items: { $ref: '#/components/schemas/Document' }
+                    items: { $ref: '#/components/schemas/ExpiringDocument' }
                     description: Documents whose `expires_at` is in the past OR within `days`. Ordered by `expires_at` ascending.
                   missing_medical_certificate:
                     type: array
-                    description: Active athletes with no live medical-certificate row, each with their identity (#1851).
-                    items: { $ref: '#/components/schemas/AthleteSummary' }
+                    description: Active athletes with no live medical-certificate row, each with their identity (#1851) and phone pair (#1931).
+                    items: { $ref: '#/components/schemas/ContactableAthleteSummary' }
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
@@ -5471,7 +5482,14 @@ paths:
         without the row behind them. The client spreads each payment across
         the cells it covers, reading `year`, `month` and `period_months`.
 
-        Defaults to the current calendar year when `?year` is omitted.
+        `overdue_months` (#1654) lists the months of the year the athlete is
+        late on, by the arrears list's rule (#1760): active, expected to pay at
+        a fee above zero, from their billing floor up to **last** month, with
+        nothing — no covering payment, no carnet spendable on some day of it —
+        paying for the month. The ledger draws «In ritardo» on exactly these
+        and nowhere else.
+
+        Defaults to the operator's current year when `?year` is omitted.
         Cross-academy access returns 403.
       operationId: athletePaymentList
       parameters:
@@ -5490,12 +5508,19 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [data]
+                required: [data, overdue_months]
                 properties:
                   data:
                     type: array
                     items:
                       $ref: '#/components/schemas/AthletePayment'
+                  overdue_months:
+                    type: array
+                    description: The year's months the athlete is late on, oldest first. Empty for anyone who cannot fall behind.
+                    items:
+                      type: string
+                      pattern: '^\d{4}-\d{2}$'
+                      example: '2026-07'
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
@@ -8015,6 +8040,36 @@ paths:
           description: Caller lacks AthletesRestore capability.
         '404':
           description: Athlete not deleted (or unknown id).
+        '422':
+          description: |
+            A live athlete of the same academy now holds this athlete's
+            codice fiscale (#1934) — deleted, re-created, and the old row
+            asked back. Restoring would leave two live rows with one code,
+            neither of which could be saved again. `errors.fiscal_code` is
+            the key the SPA translates; `holder` is the athlete it names.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message, errors, holder]
+                properties:
+                  message:
+                    type: string
+                    example: Mario Rossi, on the roster, already has this codice fiscale.
+                  errors:
+                    type: object
+                    required: [fiscal_code]
+                    properties:
+                      fiscal_code:
+                        type: array
+                        items: { type: string, enum: [fiscal_code_taken] }
+                  holder:
+                    type: object
+                    required: [id, first_name, last_name]
+                    properties:
+                      id: { type: integer, format: int64 }
+                      first_name: { type: string }
+                      last_name: { type: string }
 
   /me/academy:
     get:
@@ -8630,6 +8685,14 @@ components:
       description: Enrollment status for an athlete
       enum: [active, inactive]
 
+    Sex:
+      type: string
+      description: |
+        The sex as the athlete's document and codice fiscale record it (#1934):
+        `m` or `f`. A registry field for the federation card and the
+        competition categories, not a gender-identity one.
+      enum: [m, f]
+
     AtRiskAthletes:
       type: object
       description: Who is drifting, against their own attendance (#1728).
@@ -8746,6 +8809,7 @@ components:
                 stripes,
                 phone_country_code,
                 phone_national_number,
+                is_self,
                 attended,
                 last_attended_on,
               ]
@@ -8760,6 +8824,7 @@ components:
               user_avatar_url: { type: string, nullable: true }
               phone_country_code: { type: string, nullable: true, example: '+39' }
               phone_national_number: { type: string, nullable: true }
+              is_self: { type: boolean, description: "The owner's own athlete row (#748)." }
               attended:
                 type: integer
                 minimum: 3
@@ -10555,6 +10620,27 @@ components:
           format: date
           nullable: true
           description: Must be strictly before today
+        fiscal_code:
+          type: string
+          nullable: true
+          description: |
+            Italian codice fiscale (#1934). Stored in capitals with no spaces,
+            however typed. Refused (422 on `fiscal_code`) when its shape, check
+            character or date is wrong, when it disagrees with the
+            `date_of_birth` or `sex` in the same payload (the message names what
+            the code says), or when another live athlete of the academy has it.
+            Omocodic codes and codes of athletes born abroad (`Z…`) are accepted.
+          example: RSSMRA80A01H501U
+        sex:
+          allOf:
+            - $ref: '#/components/schemas/Sex'
+          nullable: true
+        birth_place:
+          type: string
+          maxLength: 100
+          nullable: true
+          description: A comune, or a country for an athlete born abroad (#1934). Free text.
+          example: Roma
         belt:
           $ref: '#/components/schemas/Belt'
         stripes:
@@ -10665,6 +10751,23 @@ components:
           type: string
           format: date
           nullable: true
+        fiscal_code:
+          type: string
+          nullable: true
+          description: |
+            Italian codice fiscale (#1934), same rules as on create. Sent on its
+            own, it is checked against the `date_of_birth` and `sex` already
+            stored; sent with either, against the values sent.
+          example: RSSMRA80A01H501U
+        sex:
+          allOf:
+            - $ref: '#/components/schemas/Sex'
+          nullable: true
+        birth_place:
+          type: string
+          maxLength: 100
+          nullable: true
+          example: Roma
         belt:
           $ref: '#/components/schemas/Belt'
         stripes:
@@ -10810,6 +10913,9 @@ components:
         - facebook
         - instagram
         - date_of_birth
+        - fiscal_code
+        - sex
+        - birth_place
         - belt
         - stripes
         - status
@@ -10870,6 +10976,20 @@ components:
           type: string
           format: date
           nullable: true
+        fiscal_code:
+          type: string
+          nullable: true
+          description: Italian codice fiscale (#1934), in capitals with no spaces.
+          example: RSSMRA80A01H501U
+        sex:
+          allOf:
+            - $ref: '#/components/schemas/Sex'
+          nullable: true
+        birth_place:
+          type: string
+          nullable: true
+          description: A comune, or a country for an athlete born abroad (#1934).
+          example: Roma
         belt:
           $ref: '#/components/schemas/Belt'
         stripes:
@@ -11378,6 +11498,14 @@ components:
           type: string
           format: date
           description: Copy of the attendance record's `attended_on`
+        lesson_name:
+          type: string
+          nullable: true
+          description: |
+            The class this entry paid for, as the lesson recorded its name that
+            day (#1654), so a class renamed or deleted since still reads as it
+            was. Null for a presence with no lesson: a self-mark, or one
+            recorded before the timetable (#1562).
 
     CarnetCreateRequest:
       type: object
@@ -11667,6 +11795,37 @@ components:
           type: string
           nullable: true
           description: The linked user's avatar; null when there is no linked user or no avatar.
+
+    ContactableAthleteSummary:
+      description: |
+        An `AthleteSummary` plus the stored phone pair (#1931), for the lists
+        whose rows offer WhatsApp and a call: the certificates to chase
+        (`/documents/expiring`). Both keys are always present and null when
+        no number is on file, so the client can draw a disabled control that
+        says why. `is_self` marks the owner's own row (#748), which gets no
+        reminder. `ContactableAthleteResource` on the server.
+      allOf:
+        - $ref: '#/components/schemas/AthleteSummary'
+        - type: object
+          required: [phone_country_code, phone_national_number, is_self]
+          properties:
+            phone_country_code: { type: string, nullable: true, example: '+39' }
+            phone_national_number: { type: string, nullable: true, example: '3331234567' }
+            is_self: { type: boolean, description: "The owner's own athlete row (#748).", example: false }
+
+    ExpiringDocument:
+      description: |
+        A `Document` on the list of papers to chase (#1931): the same row,
+        with the athlete carrying the phone pair. Null `athlete` on the
+        academy's own papers (#1743).
+      allOf:
+        - $ref: '#/components/schemas/Document'
+        - type: object
+          properties:
+            athlete:
+              allOf:
+                - $ref: '#/components/schemas/ContactableAthleteSummary'
+              nullable: true
 
     Document:
       type: object
