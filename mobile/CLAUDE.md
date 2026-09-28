@@ -23,6 +23,14 @@ cd mobile && npm ci && npx cap sync android
 
 The dev machine has no Android SDK. The APK is built in CI, where the runner has one.
 
+## PHP on the phone (#2044, spike)
+
+The phone runs Budojo's own server, as the desktop does with `php.exe`:
+- **`php/recipe.env` + `php/build.sh`:** a static PHP 8.4 for arm64, built from source by static-php-cli inside Alpine on CI's arm64 runner. It is cached under the recipe's hash. The extensions mirror the desktop's.
+- **The binary travels as `jniLibs/arm64-v8a/libphp.so`,** because the native library directory is the one place Android lets an app execute a file. `useLegacyPackaging` extracts it there.
+- **`php/bundle-server.sh`** packs the server with its production vendor, as `release.yml` does, into the APK's assets. For the spike it adds a seeded demo academy and its throwaway login.
+- **`PhpServerPlugin.java`** unpacks the bundle, runs the migrations, starts `php -S 127.0.0.1:<port>` with the framework's router, and times each step. Cleartext is allowed to `127.0.0.1` only (`network_security_config.xml`).
+
 ## Rules
 
 - **Only the release key signs.** `android/app/build.gradle` reads it from `BUDOJO_ANDROID_KEYSTORE` / `BUDOJO_ANDROID_KEYSTORE_PASSWORD` (alias `budojo`, PKCS12), and CI checks the certificate's SHA-256 before uploading. There is no debug-key fallback on purpose: an APK signed with another key never installs over the app, and uninstalling loses the changes a phone has not sent yet. The owner holds the other copy of the key.

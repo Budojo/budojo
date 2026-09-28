@@ -78,11 +78,37 @@ The phone runs **the same application as the PC**, with the same screens and the
 
 **Why not a separate phone app (v1's approach).** "Most actions" would mean rebuilding most screens and re-expressing most rules for the phone, and the two copies of each rule would drift. One application answers the request, and the phone gets every feature the PC gains from then on.
 
-**The open question is PHP on Android** (§ 9, spike #2044).
-- **The first choice mirrors the desktop:** a static PHP binary for arm64, shipped inside the APK and supervised by the app as the desktop supervises `php.exe`.
-- **The fallback** is PHP compiled to WebAssembly inside the WebView.
+**PHP on Android: settled by spike #2044 (28 Sep 2026). Native PHP works.** The WebAssembly fallback is not needed.
 
-The spike picks one, with numbers, before anything is built on it.
+**How it runs:**
+- a static PHP 8.4 for arm64, built from source in CI (`mobile/php/`);
+- shipped inside the APK as `libphp.so`;
+- started by the app on `127.0.0.1` with the framework's router, as the desktop runs `php.exe`.
+
+**Measured on the owner's phone,** a real APK with a seeded demo academy (40 athletes, about 4,500 presences, 378 payments):
+
+| | |
+|---|---|
+| Cold start after an install (unpacking the server, 1.2–1.5 s, happens once per update) | 2.0–2.2 s |
+| Migrations at start | 0.3–0.5 s |
+| The server ready | 0.27 s |
+| The first request, which compiles the framework into OPcache's file cache | 156–170 ms |
+| The athlete list, 20 times | p50 73–87 ms · p95 98–110 ms |
+| A real check-in (a new row each time), 10 times | p50 86 ms · p95 86 ms |
+| Logging in (bcrypt, deliberately slow; once per device, not per use) | 0.7–0.8 s |
+| APK size | 26 MB |
+
+**Three Android differences the spike had to meet,** each found on the phone and each now enforced by CI:
+1. **W^X.** An app executes files only from its native library directory, so the binary travels as a library, with `useLegacyPackaging`.
+2. **OPcache's shared-memory lock is refused** (*Cannot create lock - Permission denied*), so OPcache runs file-cache-only.
+3. **The seccomp policy kills a process that calls `accept`,** and allows only `accept4`: exit 159, SIGSYS. PHP's two `accept()` calls are patched to `accept4(…, SOCK_CLOEXEC)`. The flag matters, because musl's `accept4` with flags 0 falls back to `accept`. CI serves a page from every build under a seccomp policy that kills on `accept`.
+
+**Not measured yet:**
+- battery over hours;
+- RAM;
+- a warm start after a force-stop (estimated at about 0.8 s: migrations plus the server).
+
+**Before the real runtime (#2034), one comparison: #2051.** [NativePHP for Mobile](https://nativephp.com/mobile) (MIT, free since v3) maintains exactly this, and calls PHP in-process with **no web server**. That sidesteps difference 3 by design, and the spike's probe showed in-process Laravel works on the owner's phone (200). #2051 decides between NativePHP, our shell, and our shell calling PHP in-process, against Budojo's needs: the Angular SPA, Drive, the lock, notifications, our key.
 
 ### 5.2 Sync: git for the database
 
@@ -253,14 +279,15 @@ Sizes: **S** is a day or less, **M** a few days, **L** a week or more. The **fir
 | Issue | Phase | What | Size | Needs |
 |---|---|---|---|---|
 | [#2027](https://github.com/Budojo/budojo/issues/2027) ✅ | 0 · Prove | The APK: the Capacitor shell, the release key, the CI build, storage that survives an update. Done 28 Sep. | M | — |
-| [#2044](https://github.com/Budojo/budojo/issues/2044) | | **Laravel on Android:** Budojo's API running offline on the phone with SQLite. Native PHP first, WebAssembly as the fallback. | M | #2027 |
+| [#2044](https://github.com/Budojo/budojo/issues/2044) ✅ | | **Laravel on Android:** Budojo's API running offline on the phone with SQLite. Native PHP works (§ 5.1). Done 28 Sep. | M | #2027 |
+| [#2051](https://github.com/Budojo/budojo/issues/2051) | | NativePHP Mobile against our own shell, before the runtime | S | #2044 |
 | [#2028](https://github.com/Budojo/budojo/issues/2028) | | Drive from the phone, shared with the desktop's OAuth client | M | #2027 |
 | [#2029](https://github.com/Budojo/budojo/issues/2029) | 1 · Sync | The protocol v2: versions, journal, documents, envelope, `SyncRemote` | M | #2028 |
 | [#2030](https://github.com/Budojo/budojo/issues/2030) | | Versions: export, fast-forward, retention (server) | M | #2029 |
 | [#2031](https://github.com/Budojo/budojo/issues/2031) | | The journal and the rebase, with conflicts (server). `--deep` review. | L | #2029 |
 | [#2032](https://github.com/Budojo/budojo/issues/2032) | | The sync engine on the desktop | L | #2030, #2031 |
 | [#2033](https://github.com/Budojo/budojo/issues/2033) | | Pairing, both ways, with the keys | M | #2032 |
-| [#2034](https://github.com/Budojo/budojo/issues/2034) | 2 · Budojo on the phone | The phone runtime: the SPA + Laravel in the shell, the `mobile` profile, offline. It retires `projects/mat`. | L | #2044 |
+| [#2034](https://github.com/Budojo/budojo/issues/2034) | 2 · Budojo on the phone | The phone runtime: the SPA + Laravel in the shell, the `mobile` profile, offline. It retires `projects/mat`. | L | #2051 |
 | [#2046](https://github.com/Budojo/budojo/issues/2046) | | The sync engine on the phone, the sync state, the fingerprint lock | M | #2034, #2032 |
 | [#2035](https://github.com/Budojo/budojo/issues/2035) | | Home by the clock, and the phone check-in | M | #2034 |
 | [#2036](https://github.com/Budojo/budojo/issues/2036) | | «Da chiedere», the payment sheet, Soldi | M | #2034 |
@@ -282,7 +309,7 @@ Sizes: **S** is a day or less, **M** a few days, **L** a week or more. The **fir
 
 | Risk | Likelihood | Mitigation |
 |---|---|---|
-| **PHP does not run well on Android:** boot time, memory, APK size, battery | Medium | #2044 comes first, with numbers. A static arm64 binary mirrors the desktop, and WebAssembly is the fallback. If both fail, the fallback is v1's design: a phone subset with typed changes, which M12 can still ship. |
+| **PHP does not run well on Android:** boot time, memory, APK size, battery | ~~Medium~~ **Settled** | #2044 measured it on the owner's phone (§ 5.1): sub-100 ms requests, a 26 MB APK. Battery and RAM are still to measure. **Keeping PHP-on-Android working** (three quirks so far) is the remaining cost, and #2051 weighs NativePHP taking it over. |
 | **The rebase maps an id wrongly, or replays a change twice** | Medium | The Actions are idempotent, each rebase keeps a mapping table, and the harness (§ 8) and a `--deep` review cover it. Every version is kept, so a bad rebase can be undone by going back one version. |
 | **A long offline stretch piles up conflicts** | Low for one owner | Conflicts wait without blocking, the pill counts them, and the owner decides them on one screen. |
 | **`drive.file` does not carry between the two OAuth clients** | Medium | #2028 checks it before anything is built on it; the fallback is `appDataFolder`. |

@@ -26,8 +26,55 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # PHP for the phone, from source (#2044): static-php-cli inside Alpine on an
+  # arm64 runner, so the binary is musl and fully static. Cached under the
+  # recipe's hash, so it rebuilds only when mobile/php/ changes.
+  php:
+    name: 🐘 PHP for Android (arm64)
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/cache@v4
+        id: cache
+        with:
+          path: mobile/php/out
+          key: php-android-${{ hashFiles('mobile/php/recipe.env', 'mobile/php/build.sh', 'mobile/php/*.php') }}
+
+      - name: Build PHP from source in Alpine
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: docker run --rm -v "$PWD:/work" -w /work alpine:3.21 sh mobile/php/build.sh /work/mobile/php/out
+
+      # Android's app seccomp policy kills a process that calls accept (it allows
+      # accept4). Reproduce that here, so a PHP that would die on a phone at its
+      # first connection never reaches an APK: the binary must serve a page
+      # under a policy that kills on accept. Runs on cached builds too.
+      - name: Serve a page under a seccomp policy that kills on accept, as Android does
+        run: |
+          cat > "$RUNNER_TEMP/no-accept.json" <<'JSON'
+          {"defaultAction": "SCMP_ACT_ALLOW", "architectures": ["SCMP_ARCH_AARCH64"],
+           "syscalls": [{"names": ["accept"], "action": "SCMP_ACT_KILL_PROCESS"}]}
+          JSON
+          docker run --rm --security-opt seccomp="$RUNNER_TEMP/no-accept.json" \
+            -v "$PWD/mobile/php/out:/php:ro" alpine:3.21 sh -c '
+              mkdir -p /srv && printf "<?php echo \"pong\";" > /srv/ping.php
+              /php/php -S 127.0.0.1:8080 -t /srv > /tmp/server.log 2>&1 &
+              sleep 1
+              answer=$(wget -qO- http://127.0.0.1:8080/ping.php || true)
+              cat /tmp/server.log
+              [ "$answer" = "pong" ] || { echo "::error::PHP did not serve under the no-accept policy (got: $answer)"; exit 1; }
+              echo "served under the no-accept policy: $answer"'
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: php-android-arm64
+          path: mobile/php/out/php
+          retention-days: 7
+
   apk:
     name: 📱 Android APK
+    needs: php
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -61,6 +108,27 @@ jobs:
       - name: Install Capacitor
         working-directory: mobile
         run: npm ci
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: php-android-arm64
+          path: ${{ runner.temp }}/php
+
+      # The one place Android lets an app execute a file is its native library
+      # directory, so the binary travels as a library (#2044).
+      - name: Put PHP where Android can execute it
+        run: |
+          mkdir -p mobile/android/app/src/main/jniLibs/arm64-v8a
+          install -m 0755 "$RUNNER_TEMP/php/php" mobile/android/app/src/main/jniLibs/arm64-v8a/libphp.so
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: fileinfo, pdo, pdo_sqlite, mbstring, bcmath, gd, zip, intl, sodium
+          tools: composer:v2
+
+      - name: Pack the server and a demo academy
+        run: ./mobile/php/bundle-server.sh mobile/android/app/src/main/assets
 
       - name: Copy the web build into the Android project
         working-directory: mobile

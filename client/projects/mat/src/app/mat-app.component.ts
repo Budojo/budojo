@@ -14,6 +14,7 @@ import { LanguageService } from '../../../../src/app/core/services/language.serv
 import { ThemeService } from '../../../../src/app/core/services/theme.service';
 import { MAT_BUILD } from '../build-info';
 import { KEY_VALUE_STORE } from './key-value-store';
+import { BenchmarkResult, phpServerPlugin, PhpServerStart, runBenchmark } from './php-spike';
 
 /** What the durability check keeps: how many taps, and when the last one was saved. */
 interface SavedCount {
@@ -49,6 +50,13 @@ export class MatAppComponent implements OnInit {
   protected readonly count = signal(0);
   protected readonly savedAt = signal<string | null>(null);
   protected readonly loaded = signal(false);
+
+  /** #2044: Budojo's server on the phone, started and measured from here. */
+  protected readonly serverAvailable = phpServerPlugin() !== null;
+  protected readonly serverState = signal<'idle' | 'running' | 'done' | 'error'>('idle');
+  protected readonly serverStart = signal<PhpServerStart | null>(null);
+  protected readonly benchmark = signal<BenchmarkResult | null>(null);
+  protected readonly serverError = signal<string | null>(null);
 
   /** A sample row, plainly marked as one on screen. No age chip: the snapshot will carry no date of birth. */
   protected readonly sample: AthleteIdentity = {
@@ -92,6 +100,25 @@ export class MatAppComponent implements OnInit {
     await this.store.set(COUNT_KEY, next);
     this.count.set(next.count);
     this.savedAt.set(next.savedAt);
+  }
+
+  protected async runServerSpike(): Promise<void> {
+    const plugin = phpServerPlugin();
+    if (plugin === null || this.serverState() === 'running') {
+      return;
+    }
+    this.serverState.set('running');
+    this.serverError.set(null);
+    this.benchmark.set(null);
+    try {
+      const start = await plugin.start();
+      this.serverStart.set(start);
+      this.benchmark.set(await runBenchmark(start));
+      this.serverState.set('done');
+    } catch (error) {
+      this.serverError.set(error instanceof Error ? error.message : String(error));
+      this.serverState.set('error');
+    }
   }
 
   protected toggleLanguage(): void {
