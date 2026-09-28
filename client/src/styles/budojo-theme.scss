@@ -508,6 +508,32 @@
   --p-form-field-color: var(--p-surface-900);
   --p-form-field-placeholder-color: var(--p-surface-500);
 
+  // Interactive states (#2010). The preset's dark scheme paints a hovered or
+  // focused menu item and option with `surface.800`, and an active one with
+  // `surface.700`. That is dark on its own ramp and light on this inverted
+  // one: every `p-menu` and `p-select` read white text on a pale ground at
+  // 1.13:1. One step up from the overlay, as `surface.100` is in light.
+  --p-navigation-item-focus-background: var(--p-surface-200);
+  --p-navigation-item-active-background: var(--p-surface-300);
+  --p-list-option-focus-background: var(--p-surface-200);
+  // `p-selectbutton` is built from toggle buttons: the same trap for its
+  // hover (`surface.800`) and its chosen option (`surface.700`).
+  --p-togglebutton-hover-background: var(--p-form-field-hover-background);
+  --p-togglebutton-checked-background: var(--p-surface-400);
+  // The same ramp, the other way: a field's icons (a select's chevron, the
+  // calendar, an addon's `@`) and a number field's ± take `surface.200–400`,
+  // a mid grey on the preset's ramp and near-black on this one, 1.6–1.9:1 on
+  // the field. The ± also hovered on `surface.800`, a pale block.
+  --p-form-field-icon-color: var(--p-surface-600);
+  // A disabled field's value still has to be readable, as light's `surface.500`
+  // leaves it; `surface.400` here was 1.68:1.
+  --p-form-field-disabled-color: var(--p-surface-500);
+  --p-inputnumber-button-color: var(--p-surface-600);
+  --p-inputnumber-button-hover-color: var(--p-surface-800);
+  --p-inputnumber-button-active-color: var(--p-surface-900);
+  --p-inputnumber-button-hover-background: var(--p-form-field-hover-background);
+  --p-inputnumber-button-active-background: var(--p-surface-300);
+
   --budojo-elevation-surface: 0 0 0 1px var(--p-content-border-color);
   --budojo-elevation-floating: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.5);
 }
