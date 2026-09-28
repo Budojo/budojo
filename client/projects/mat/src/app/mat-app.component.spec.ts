@@ -103,6 +103,8 @@ describe('MatAppComponent (the #2027 spike screen)', () => {
               unpackMs: 900,
               migrateMs: 400,
               serverMs: 500,
+              firstRequestMs: 160,
+              opcache: 'file-cache',
               extracted: true,
               seeded: true,
               demoEmail: 'admin@example.it',
@@ -140,6 +142,9 @@ describe('MatAppComponent (the #2027 spike screen)', () => {
 
       const results = text(fixture, 'mat-server-results');
       expect(results).toContain('1800 ms');
+      expect(results).toContain('First request');
+      expect(results).toContain('160 ms');
+      expect(results).toContain('file-cache');
       expect(results).toContain('Athletes in the database');
       expect(results).toContain('40');
     });

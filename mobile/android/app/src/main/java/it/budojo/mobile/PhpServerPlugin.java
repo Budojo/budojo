@@ -88,6 +88,9 @@ public class PhpServerPlugin extends Plugin {
         }
 
         long t0 = System.nanoTime();
+        // Per run, not per plugin: a later start must not report an earlier
+        // run's fallback (#2050 review).
+        opcacheOff = false;
         File files = context.getFilesDir();
         File php = new File(context.getApplicationInfo().nativeLibraryDir, "libphp.so");
         if (!php.canExecute()) {
