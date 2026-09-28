@@ -8,6 +8,7 @@
   [focusOnShow]="false"
   styleClass="lesson-sheet"
   (onShow)="settleFocus()"
+  (onHide)="restoreFocus()"
   data-cy="lesson-sheet"
 >
   <ng-template pTemplate="header" let-labelledBy="ariaLabelledBy">

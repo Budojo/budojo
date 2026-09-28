@@ -186,6 +186,13 @@ export class LessonSheetComponent {
       const heldOn = this.heldOn();
       this.academyClassId();
       untracked(() => {
+        // Whatever had the keyboard before the sheet did (#2001), to hand it
+        // back on close. Not a second opening's: moving to another class or
+        // week re-runs this with the keyboard already inside the sheet.
+        const active = document.activeElement;
+        if (active instanceof HTMLElement && active.closest('.lesson-sheet') === null) {
+          this.opener = active;
+        }
         this.slot.set(heldOn);
         this.load();
       });
@@ -206,6 +213,22 @@ export class LessonSheetComponent {
     const sheet = document.querySelector('.lesson-sheet');
     if (sheet === null || sheet.contains(document.activeElement)) return;
     sheet.querySelector<HTMLElement>('.sheet-head__title')?.focus();
+  }
+
+  /** The element that had the keyboard when the sheet opened. */
+  private opener: HTMLElement | null = null;
+
+  /**
+   * The sheet closed. When it took the keyboard with it (Escape, the close
+   * button, Save), hand it back to what opened it rather than to `<body>` at
+   * the top of the page; when the owner clicked somewhere else, leave it there.
+   */
+  protected restoreFocus(): void {
+    const active = document.activeElement;
+    const inside = active instanceof HTMLElement && active.closest('.lesson-sheet') !== null;
+    if ((active === null || active === document.body || inside) && this.opener?.isConnected) {
+      this.opener.focus();
+    }
   }
 
   /** Something picked or typed that Save would send. */

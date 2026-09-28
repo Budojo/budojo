@@ -152,6 +152,38 @@ describe('LessonSheetComponent (#1564)', () => {
       expect(document.activeElement?.classList.contains('sheet-head__title')).toBe(true);
     });
 
+    it('settles the keyboard when the dialog says it has opened', () => {
+      // The wiring, not just its two ends: `(onShow)` has to reach settleFocus.
+      const { fixture, httpMock } = setup();
+      flushOpen(httpMock);
+      fixture.detectChanges();
+      (document.activeElement as HTMLElement | null)?.blur();
+
+      const dialog = fixture.debugElement.query(By.directive(Dialog)).componentInstance as Dialog;
+      dialog.onShow.emit({});
+
+      expect(document.activeElement?.classList.contains('sheet-head__title')).toBe(true);
+    });
+
+    it('hands the keyboard back to what opened it when it closes', () => {
+      // The button that opened the sheet had the keyboard before it; closing
+      // must not leave the owner on <body>, at the top of the page.
+      const opener = document.createElement('button');
+      document.body.appendChild(opener);
+      opener.focus();
+
+      const { fixture, component, httpMock } = setup();
+      flushOpen(httpMock);
+      fixture.detectChanges();
+      component['settleFocus']();
+
+      const dialog = fixture.debugElement.query(By.directive(Dialog)).componentInstance as Dialog;
+      dialog.onHide.emit({});
+
+      expect(document.activeElement).toBe(opener);
+      opener.remove();
+    });
+
     it('leaves the keyboard where the owner already put it', () => {
       const { fixture, component, httpMock } = setup();
       flushOpen(httpMock);
