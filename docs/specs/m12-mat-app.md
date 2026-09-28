@@ -1,315 +1,330 @@
-# M12 — Budojo on the mat (PRD)
+# M12 — Budojo on the phone (PRD)
 
-> Status: Proposed · Owner: m-bonanno · Epic [#2026](https://github.com/Budojo/budojo/issues/2026) · Milestone M12
+> Status: Proposed, **v2** · Owner: m-bonanno · Epic [#2026](https://github.com/Budojo/budojo/issues/2026) · Milestone M12
+> **v2 (28 Sep 2026) replaces v1 the same day.** v1 gave the phone six kinds of change and a read-only snapshot. The owner then asked for **most actions** on the phone, and for the phone to **work without a PC**. That is a different product: v1's approach would have rebuilt every screen and every rule a second time. [§ Deltas from spec](#deltas-from-spec) records what changed and what stayed.
 > This milestone replaces M9 (TWA) and M10 (Capacitor), which wrapped the hosted PWA. #1230 decommissioned that PWA, so there is nothing left for them to wrap.
 
 ## 1. Problem
 
-The owner runs the academy from the desktop app. Three things happen **on the mat, not at the PC**:
-- **who came:** the check-in;
-- **who paid:** a fee handed over in cash, at the edge of the mat;
-- **what was taught:** tonight's techniques, and a note on the evening.
+The owner runs the academy from the desktop app. The day at the gym happens on the mat, not at the PC:
+- who came;
+- who paid, in cash;
+- the new person trying a class, whose details go in on the spot;
+- the stripe given at the end of class.
 
-Today these wait in memory, on paper or in a note to self until someone types them in at the PC. Some never get there, and every number Budojo works out reads those rows:
-- the attendance rates divide by the days the academy was *scheduled* to train, so an evening that is never registered counts against everyone (#1769);
+Today these wait in memory or on paper until someone types them in at the PC, and some never get there. Every number Budojo works out reads those rows:
+- the attendance rates divide by the scheduled days, so an evening that is never registered counts against everyone (#1769);
 - the arrears (#1760) read the payments;
-- the coverage (#1590), the suggestions (#1566) and tonight's room (#1860) read which lessons were held and who was in them.
+- the promotion history reads the promotions.
 
-The owner's request (28 Sep 2026, in short): *mark attendance and payments from the phone at training; the save goes to Google Drive; at home the Windows app pulls the updates, a bit like git. Attendance, payments and techniques from the phone; documents and planning the programme from the computer.*
+**The owner's request, 28 Sep 2026, in two steps:**
+1. *"Mark attendance and payments from the phone at training; the save goes to Google Drive; at home the Windows app pulls the updates, a bit like git."*
+2. Then: *"Let's take it for granted that most actions can be done from the phone, not only the ones I listed."*
 
-A karate instructor we are talking to asked about a tablet at the gym, which is the same need.
+**Two more users are in view.** The owner, when the PC is not around (broken, a trip). And instructors with no PC at all: a karate instructor we are talking to asked about a tablet.
 
-## 2. The job
+## 2. Decisions the owner took (28 Sep 2026)
 
-JTBD, best guess from the owner's own words and `academy-profile` (small academy, adults, gi and no-gi). Not interviewed.
+Asked in four rounds, answered by the owner. They are requirements, not proposals.
 
-| | |
-|---|---|
-| **Situation** | Standing at the edge of the mat, 2 minutes before or after class. Phone in one hand. Noisy, often poor signal (basement gyms), sometimes sweaty hands. |
-| **Functional** | Record who is on the mat. Take a fee handed over in cash. Confirm what was taught tonight. |
-| **Emotional** | Leave the gym knowing nothing needs typing in again. Trust that nothing got lost on the way. |
-| **Social** | Ask for the fee at the right moment, when the athlete is standing there, discreetly and without sounding like a debt collector. Look organised in front of the students. |
-| **Today's workaround** | Memory, paper, a WhatsApp note to self, the PC hours later. |
-| **Biggest pain** | The double entry, and what gets forgotten between the gym and the PC. Above all the cash: a payment remembered wrongly is a person asked twice for money they already paid. |
+| Question | Answer | What it means for the build |
+|---|---|---|
+| Who uses the phone app? | **The owner only.** Friends like Fede get their own academy (§ 12). | One Google account, no roles on the phone. |
+| Can the phone work without the PC? | **Yes, for both cases:** the owner without their PC, and instructors with no PC | The phone is a **full Budojo**, not a satellite: it can create an academy, and every screen works on it. The PC becomes optional. |
+| Which devices? | **PC + phone** | Two copies. The design allows more; M12 tests two. |
+| Signal at the gym? | **Poor or patchy** | Offline is the normal case at the gym. The two copies *will* diverge sometimes, so reconciling them is core, not an edge case. |
+| PC and phone on the same day? | **Same day, different times** | Divergence happens when the phone works offline after the PC changed something that afternoon. |
+| Two changes to the same thing? | **Always ask me** | No silent last-writer-wins. A conflict stops and asks, on whichever device finds it. |
+| Documents on the phone? | **View only** | Files sync so they can be opened; uploading stays on the PC for now (§ 11). |
+| Reminders? | **Real phone notifications**, with the **full text on the lock screen** | The phone schedules them with Android, so they arrive with the app closed. The owner accepted the visibility. |
+| Protection? | **Fingerprint to open** | A biometric lock on opening, and on returning after a few minutes away. |
+| Home screen? | **Depends on the time** | Around a lesson it opens that lesson's check-in; otherwise Oggi. |
+| First version? | **Check-in and payments, athlete records, promotions and grades** | Techniques and the lesson's notes come after (§ 8). |
+| Updates? | **Notify me, I install** | A notice and one tap; Android asks for the confirmation. |
+| Backup for a phone-only user? | **Strongly recommended** | They can start without Drive, and Budojo keeps reminding them until it is connected. |
+| Other instructors? | **Free, to a few friends** | Google's free *limited distribution* developer account (up to 20 devices); their Gmail is added by hand as a Google test user. |
+| Anything public? | **Nothing online**, the same day | The Google project stays in Testing, so each device signs in again every 7 days. No website, no hosted pages. |
 
 ## 3. Goals
 
-1. **Check in a class of 15 on the phone in under 60 seconds**, with no signal.
-2. **Record a cash payment in two taps** from the check-in: the chip, then the confirm button.
-3. **When the PC opens after training, everything from the evening is there within a minute**, with no action, and a line says what arrived.
-4. **No change is ever lost silently.** Each change from the phone is either applied, or shown on the PC as a decision to make.
-5. **Nothing on Google Drive is readable without the pairing key.**
+1. **Everything in the first version works on the phone, offline:** the check-in, a payment, adding or editing an athlete, giving a promotion. No step waits for the network.
+2. **Check in a class of 15 in under 60 seconds** on the phone. **Record a payment in two taps** from the check-in.
+3. **Nothing is ever lost, and nothing is overwritten silently.** When both copies changed, every change is either applied or put to the owner as a question.
+4. **When one device opens after the other worked, it is up to date within a minute,** and a line says what arrived.
+5. **A phone with no PC is a complete Budojo:** it creates its academy, and backs up to Drive once connected.
+6. **Nothing on Google Drive is readable without the academy's keys.**
 
 ## 4. Non-goals (M12)
 
 1. **iOS, and a Play Store listing.** The APK is sideloaded.
-2. **A phone without a PC.** That means the whole app on the phone, so Laravel on Android (php-wasm, experimental). The phone is the PC's field notebook.
-3. **Editing anything else from the phone:** athletes, documents, the programme, the timetable, the price list. The stats are not shown either.
-4. **Real-time sync, and two people working at once.** Two phones marking the same class stay correct, because every change is idempotent, but nothing is designed around it.
-5. **Assistants signed in with their own Google account.** M12 assumes one account, the owner's, on the PC and the phone.
-6. **Background sync with the app closed.** It is P1 (§ 11). M12 syncs while the app is open and whenever it comes back to the foreground.
+2. **Several people working on one academy:** assistants, and roles on the phone. One owner, and their own devices.
+3. **Real-time sync.** Copies meet when they can: at start, after a change, and on returning online.
+4. **Uploading documents from the phone.** It is view only; a photographed certificate is in § 11.
+5. **Athlete self check-in, and a shared tablet at the door.**
+6. **Techniques and the lesson's notes, phone-first,** in the *first* version. They are the next step (#2037). Until then the PC's lesson sheet works at phone width.
 
-## 5. Decisions
+## 5. How it works
 
-| Question | Choice | Why |
-|---|---|---|
-| **What syncs** | **Changes one way, a read-only snapshot the other.** Never the database file. | A synced database file loses data in two ways. Whoever saves last erases the other side's day. And a SQLite file moved by a sync client ends up as conflict copies or corrupt: `docs/desktop/backup-restore.md` explains why a live WAL file can't just be copied. Git doesn't copy one repository over another either: it sends commits. |
-| **Source of truth** | **The PC** | It holds every rule: overlapping periods, carnets, arrears, regulars, lesson adoption. The phone proposes a change; the PC applies it through the same Action a click on the PC runs. |
-| **What the phone writes** | **Six kinds of change** (§ 6.3) | The three jobs the owner named. A seventh needs this PRD amended. |
-| **Transport** | **Google Drive, the owner's account, scope `drive.file`** | The phone at the gym and the PC at home are never on the same network. It reuses #1301's OAuth: loopback, PKCE, `drive.file`, refresh token in the OS keychain. |
-| **Where on Drive** | **A visible folder, `Budojo/sync/`**, beside #1301's backups. If spike #2028 shows `drive.file` cannot cross from the desktop client to the Android client, the fallback is the hidden `appDataFolder` (`drive.appdata`, also non-sensitive). | Visible matches #1301's reasoning. For sync the contents are ciphertext either way, so the fallback costs nothing the owner uses. |
-| **Privacy** | **Every file encrypted on the device (AES-256-GCM). The key is created on the PC and handed to the phone by QR at pairing.** | Budojo is local-first (#1218), and Google carries the files without being able to read them. On top of that, the snapshot carries only what the mat needs (§ 6.2). |
-| **Phone tech** | **Capacitor around a second Angular application in the client workspace** (`client/projects/mat`), with the native project in a top-level `mobile/`, beside `desktop/` | It reuses the theme, i18n, PrimeNG and `<app-athlete-identity>`. The screens are designed for the mat instead of the desktop pages squeezed down. Capacitor was already the plan in M10. |
-| **Phone storage** | **IndexedDB**, confirmed durable by spike #2027 | A few hundred KB of data. Capacitor keeps it in the app's private storage, which only uninstalling or "clear data" removes. |
-| **Distribution** | **`Budojo-Android-X.Y.Z.apk` on every GitHub release**, beside `Budojo-Setup-X.Y.Z.exe` | Sideloaded, no store. The PC shows a QR that points at it. |
-| **Package name** | **`it.budojo.mobile`** | It matches `it.budojo.desktop`. It can never change once installed or registered, and "mobile" also fits a tablet. |
+### 5.1 The same Budojo on both devices
 
-## 6. How it works
+The phone runs **the same application as the PC**, with the same screens and the same rules:
+- the Angular SPA, which is already written to work at phone width (`client/CLAUDE.md` § Desktop first, still usable on a phone);
+- the Laravel API and its Actions;
+- a SQLite database.
 
-### 6.1 The picture
+**How it differs from the desktop:**
+- The shell is Capacitor instead of Electron, and the runtime profile is `mobile` instead of `desktop`. The same mechanism (`RuntimeProfile` + capabilities, `docs/desktop/architecture.md`) turns off what the phone does not have.
+- A few screens get a phone-first version where the mat asks for one: the check-in, the payment sheet, the home screen by time of day.
 
-```
- PC: the source of truth             Google Drive: Budojo/sync/            Phone at the gym
- Laravel + SQLite + every rule       (only encrypted files)                snapshot + journal, offline
- ─ publishes a snapshot ──────────▶  snapshot/<seq>.bjs ───────────────▶  pulls it on open
- ─ applies the phone's changes ◀───  journal/<device>/<ulid>.bjs ◀───────  pushes after each change
- ─ writes an ack ─────────────────▶  acks/<device>.bjs ─────────────────▶  "✓ on the PC"
-                                     devices/<device>.bjs  ◀─────────────  written once, at pairing
-```
+**Why not a separate phone app (v1's approach).** "Most actions" would mean rebuilding most screens and re-expressing most rules for the phone, and the two copies of each rule would drift. One application answers the request, and the phone gets every feature the PC gains from then on.
 
-**Every file is written once and never rewritten**, except the ack and the device record, which only their owner writes. Nothing is ever edited by both sides, so Drive never has a conflict to resolve: a new snapshot is a new file, and a push is a new file in the phone's own folder.
+**The open question is PHP on Android** (§ 9, spike #2044).
+- **The first choice mirrors the desktop:** a static PHP binary for arm64, shipped inside the APK and supervised by the app as the desktop supervises `php.exe`.
+- **The fallback** is PHP compiled to WebAssembly inside the WebView.
 
-**The transport is an interface** (`SyncRemote`) with two adapters:
-- `DriveRemote` for production;
-- `FolderRemote`, a local directory, for the tests and for the Linux dev environment, where a phone and a PC can be simulated with no Google account.
+The spike picks one, with numbers, before anything is built on it.
 
-### 6.2 The snapshot (PC → phone)
+### 5.2 Sync: git for the database
 
-A JSON document, gzipped, then encrypted. It is built by an Action on the PC and carries only what the mat needs.
+The owner described git, and the design is git.
 
-| Carries | Never carries |
+| Git | Budojo |
 |---|---|
-| The academy's name, martial art and belt ladder; the operator's timezone (`budojo.operator_timezone`, which `OperatorDay` reads), so the phone's "today" is the PC's | Codice fiscale, address, email, phone number, social links |
-| The timetable: classes with weekday, times, mode | Documents and medical certificates, or their dates |
-| Active athletes: id, name, belt and stripes, `is_self`, age (for the age chip) | Date and place of birth, sex, photo |
-| Per athlete: the fee as resolved today and the billing period, trains free, whether this month is covered, the overdue months, a spendable carnet and its balance | Payment history beyond the overdue months |
-| Per class: its regulars today (`GetClassRegularsAction`) | Stats, the audit log |
-| Lessons from 7 days back to 14 days ahead: date, class, planned or taught topics; **notes only on today's lessons** | Notes of any other evening |
-| The in-season programme: positions and techniques, mode, from-belt | |
-| Per device: the last change applied (`applied_through`), and each change parked as a conflict | |
+| a commit | a **version**: the whole database, published to Drive as one encrypted file, numbered, never rewritten |
+| the commit's diff | the **journal**: every change the device made since the version it started from, recorded as it happened |
+| `pull` | there is a newer version on Drive and nothing done locally: the device swaps in the newer database (**fast-forward**) |
+| `push` | there are local changes and nothing newer on Drive: the device publishes its database as the next version |
+| `rebase` | **both sides changed**: the device takes the newer version and **replays its own journal on top**, through the real Actions |
+| a merge conflict | a replayed change the rules refuse, or that meets a different change to the same thing: **it stops and asks the owner** |
 
-**When the PC publishes a snapshot:**
-- when the app starts;
-- after it applies the phone's changes;
-- every 5 minutes while the app is open, but only when the content hash has changed;
-- when the app closes, with a short timeout.
-
-It keeps the three newest. **A test walks the snapshot JSON and fails on any field from the right-hand column**, so a later change to the Action cannot quietly widen it.
-
-**The evening's notes are the one free text the snapshot carries, and free text can name a person.** `SetLessonNotesAction`'s own example is "Marco's first day back". So they travel only for today's lessons, the ones the phone can edit, and every earlier evening's notes stay on the PC. The guard test allows `notes` on a lesson dated today and nowhere else. **Budget:** under 100 KB gzipped for 80 athletes.
-
-### 6.3 The journal (phone → PC)
-
-Each push is **one immutable file** holding one or more changes. The phone writes only in its own folder. A change:
-
-```json
-{
-  "op_id": "01J9ZQ3K7M2V8XH0B6T4N5R1CD",
-  "v": 1,
-  "device": "d_7f3a…",
-  "type": "payment.record",
-  "at": "2026-09-30T21:04:11+02:00",
-  "base_snapshot": 42,
-  "data": { "athlete_id": 17, "year": 2026, "month": 9, "period_months": 1, "amount_cents": 6000, "method": "cash", "paid_at": "2026-09-30" }
-}
+```
+ PC                              Google Drive: Budojo/sync/                  Phone
+ Budojo + SQLite                 versions/000041-pc.bjs                      Budojo + SQLite
+   │ push v42 ─────────────────▶ versions/000042-pc.bjs      ──── pull ───▶  (at home, online)
+   │                                                                          … at the gym, offline:
+   │                                                                          check-ins, payments
+   │ (afternoon: edits → v43) ─▶ versions/000043-pc.bjs                       its base is v42 …
+   │                             versions/000044-phone.bjs   ◀── rebase ───  replays its journal on v43,
+   │ ◀── pull (v44) ─────────────                                            asks on conflicts, pushes v44
+   │ "Dal telefono: 14 presenze, 2 pagamenti"
 ```
 
-| Type | Data | The PC applies it through | Already true | Conflict |
-|---|---|---|---|---|
-| `attendance.mark` | athlete, class, date | `MarkAttendanceAction` (with the class) | already present → `duplicate` | athlete or class no longer exists |
-| `attendance.unmark` | athlete, class, date | `DeleteAttendanceAction` on the row that key finds | no such row → `duplicate` | — |
-| `payment.record` | athlete, year, month, period, **the amount shown**, method, paid on | `RecordAthletePaymentAction` | the same period already recorded → `duplicate` | an overlapping period (the Action's 422), no fee applies, athlete gone, **the fee changed since the phone showed it** |
-| `payment.void` | athlete, year, month | `DeleteAthletePaymentAction` | nothing covers the month → `duplicate` | — |
-| `lesson.topic.add` / `.remove` | class, date, topic | `SetLessonTopicsAction`, read-modify-write on the PC | already in / already out → `duplicate` | topic deleted, or outside the class's mode |
-| `lesson.notes.set` | class, date, text | `SetLessonNotesAction` | same text → `duplicate` | the PC changed the notes after `base_snapshot` |
+**The rules that make it safe:**
+- **A version is written once, under a new name.** Two devices never write the same file, so Drive never has to pick a winner.
+- **A device pushes only on top of the latest version it can see.** If there is a newer one, it rebases first, so no push can erase the other side's work.
+- **The journal records API writes, not rows**: the route, its parameters and the body, plus the ids the write created. For an update, it also records the values it saw before.
+- **Replaying it runs the same Actions** with the same validation (#2031):
+  - Ids the diverged side created (a new athlete) get new ids on the base, and the replay maps the old ones to them for every later change that names them.
+  - A change that is already true is skipped. The Actions are idempotent: a presence marked twice, the same month paid.
+  - A change the rules refuse, or one whose field was changed on the base since, is a **conflict** and waits for the owner (§ 6.4).
+- **Documents travel apart from the database:** one encrypted file per document, named by its content hash, uploaded once. The phone downloads one when it is opened (view only), and on Wi-Fi ahead of time.
+- **The keys travel once, at pairing.** Encrypted fields and documents need the same `APP_KEY` and `DOCUMENT_ENCRYPTION_KEY` on both devices, and the recovery code (#1254) already carries both. The sync key goes with them.
 
-**Rules that hold for every type:**
-- **The date is the business date on the phone, in the operator's timezone the snapshot carries, and it travels inside the change.** It is never resolved at apply time, because the PC may apply Tuesday's check-in on Thursday. `at` only orders one device's changes.
-- **The amount travels inside the payment.** It is what the phone showed and what was handed over. The PC checks it against `MonthlyFee::forAthlete()` × the period at apply time: equal, and it is passed to `RecordAthletePaymentAction` as `amountCents`; different (the fee changed while the phone was offline), and the change is a conflict the owner decides. The PC never quietly re-prices money that has already changed hands.
-- **Topics are added and removed, never set as a list.** "Add the armbar" commutes with the plan the PC edited in the meantime; "the list is now X" would erase it.
-- **The actor is the owner.** The audit entry says it came from the phone and names the device.
+**When a device syncs:**
+- on opening, and on coming back to the foreground: pull, or rebase;
+- a few seconds after a change: push;
+- on regaining the network;
+- on the PC, also every few minutes while the app is open, and on closing.
 
-### 6.4 Applying on the PC
+Nothing waits for the sync, and its state is always on screen (§ 6.2).
 
-A table, `mat_ops`, is the PC's inbox. It holds:
-- `op_id` (the primary key);
-- `device`, `type`, `payload`;
-- `status`: `applied`, `duplicate`, `conflict`, `discarded` or `failed`;
-- `reason`, `received_at`, `applied_at`, `resolved_at`.
+**Retention:** the latest versions, plus one a day for two weeks, **the same policy as the backups** (#1228, #1330). A version on Drive *is* a backup. For a phone-only user this is the Drive backup of § 2, with nothing else to build.
 
-- **Idempotent by `op_id`.** A change seen twice is applied once. That covers an ack that got lost, and two PCs applying the same journal.
-- **One device's changes are applied in `at` order;** devices are independent.
-- **A conflict is parked, never dropped.** The PC shows it (§ 7.2), and the owner discards it, or fixes the data and retries.
-- **A restore from backup is safe.** Restoring rolls back `mat_ops` with the rest of the database, and the journal files stay on Drive for 30 days after their ack. The next sync applies them again, idempotently.
-- **Where the code lives:**
-  - The domain half is in Laravel: `ApplyMatOpAction` and `BuildMatSnapshotAction`, run by the artisan commands `budojo:mat-apply` and `budojo:mat-snapshot`.
-  - The transport and the crypto are in the Electron main process, which runs those commands through `php-exec` as it already does for the scheduler.
-  - The browser never touches a file on Drive.
+### 5.3 Transport and keys
 
-### 6.5 What the phone shows before the PC has seen it
+- **Google Drive, the owner's account, scope `drive.file`.** The PC reuses #1301's OAuth; the phone uses Android's authorization client with the "Budojo Android" OAuth client (#2028). **The project stays in Testing** (§ 2): every 7 days a device signs in to Google again, in one tap from the sync state, and meanwhile keeps working offline with its versions waiting.
+- **Every file is encrypted on the device:** AES-256-GCM with a random IV, and **the file's path as associated data**, so a file cannot be swapped for another and still decrypt. The key is the academy's sync key, which never leaves the devices except inside the pairing code.
+- **Where on Drive:** a visible folder, `Budojo/sync/`. If #2028 finds that `drive.file` does not carry between the two OAuth clients, the fallback is the hidden `appDataFolder` (`drive.appdata`).
+- **The transport is an interface,** `SyncRemote`: `DriveRemote` in production, and `FolderRemote` (a local directory) for the tests and the Linux dev environment, where two copies sync with no Google account.
 
-The phone shows **the snapshot plus its own changes the PC has not applied yet**: those with an `op_id` after the device's `applied_through`. A check-in reads as done the moment it is tapped, and a payment turns the chip green at once. When the next snapshot includes them, the local layer empties. A change the PC parked as a conflict shows on the phone as *"1 change to look at on the PC"*. **The phone never resolves a conflict itself.**
+### 5.4 Pairing, both ways
 
-### 6.6 Versions
+The device that has the academy shows a **pairing code**: a QR, plus the same code as words to type on a PC with no camera. It carries:
+- the recovery code (the app keys);
+- the sync key;
+- the Drive folder;
+- the protocol version.
 
-- **The protocol has a version.** The snapshot carries `protocol` and `min_mobile_version`.
-- **The phone never refuses a tap.** If the PC has moved to a newer protocol, the phone keeps recording and holds its journal, and asks for the update before it sends anything.
-- **The PC reads the current and the previous version of each change type**, so the phone and the PC can be updated a day apart.
+**The new device:**
+1. reads the code;
+2. signs in to Google with the same account;
+3. pulls the latest version.
 
-### 6.7 Security
+**Either side can start it:** the PC can add the phone (the owner's case today), and a phone-only academy can later add a PC.
 
-- **The key.** 256 bits, created on the PC at pairing. It is stored:
-  - on the PC in the token vault (DPAPI), like the Drive refresh token;
-  - on the phone in storage backed by the Android Keystore.
+**Unpairing a lost phone:** the other device rotates the sync key and publishes under it, so the lost phone can read nothing new and its pushes stop being accepted. The app keys cannot rotate without re-encrypting the documents; the fingerprint lock (§ 6.1) is what protects the lost phone's local copy.
 
-  AES-256-GCM, with a random 96-bit IV per file and **the file's path as associated data**, so a file cannot be swapped for another and still decrypt.
-- **Pairing.** The QR carries the folder, the key, the academy's name and the protocol. A phone that pairs while the PC's dialog is open is accepted on the spot, because the owner is standing there. A device record that shows up later waits for an explicit accept on the PC. **A photo of the QR is enough to read, not to write.**
-- **Unpairing (a lost phone).** The PC rotates the key, publishes under the new one and refuses any change from the unpaired device. The other devices pair again.
-- **Google.** `drive.file` only: Budojo sees the files it created and nothing else in the account. The file names are sequence numbers and ULIDs, which say nothing.
-- **The APK signing key.** It is created once, and stored in the repo secrets and in the owner's password manager. If it is lost, no update installs over the old app, and the only way out is to uninstall, which loses any change not yet sent.
+### 5.5 Versions of the app
 
-## 7. UX
+- **Each version on Drive names the schema it was written with.** A device never opens a newer database than its code knows: it asks for the update first, as a backup restore already refuses a newer archive.
+- **A device can pull an older database:** the boot migrations bring it forward, as they do for a restored backup.
+- **The update notice** reads the latest GitHub release, and one tap downloads the APK. Android asks for the confirmation (§ 2).
 
-### 7.1 The mat app
+## 6. UX
 
-**Principles**, from the canon (`client/CLAUDE.md`, `DESIGN_SYSTEM.md`) applied to the mat:
-- **One hand.** Actions sit in the lower half of the screen, and rows are at least 56 px (above the 48 px floor): the phone is held at arm's length, standing up.
-- **Offline first.** No spinner ever stands between a tap and its result. The network is the sync's problem, never the check-in's.
-- **The clock picks the lesson.** It opens on the class running now, or the next one today. Switching class is one tap in the header.
-- **Nothing moves under the thumb.** A row does not jump when it is marked; the counter and a filter say who is in.
-- **The state is always visible.** A pill in the header shows the sync state, and an unsent change is never hidden.
-- **The belt spine on every person** (`<app-athlete-identity>`); state goes in a chip, never in the spine.
-- **The rest of the canon:** haptic feedback on a mark, the theme follows the system, it/en with parity, screen-reader labels ("Luca Bianchi, blue belt, present, September to ask").
+### 6.1 The phone
 
-**Screens.** Three destinations in a bottom bar: **Stasera**, **Soldi**, **Stato**.
+**Principles**, from the canon (`client/CLAUDE.md`, `DESIGN_SYSTEM.md`) applied to a hand at the edge of the mat:
+- **One hand.** Actions sit in the lower half of the screen, rows are at least 56 px, and **there is no hover state**: a tap is not a hover, and hover sticks on touch (#2034's first finding).
+- **Offline first.** No spinner stands between a tap and its result. The network is the sync's problem, never the screen's.
+- **Nothing moves under the thumb.** Rows do not jump; a counter says who is in.
+- **The belt spine on every person** (`<app-athlete-identity>`). State goes in a chip, never in the spine.
 
-1. **Stasera: check-in.**
-   - **Header:** the class and its time, the counter (*"14 sul tatami"*) and the sync pill.
-   - **List:** a search field on top; then *Chi viene di solito* (tonight's regulars from the snapshot); then everyone else A–Z.
-   - **A tap** marks the athlete present, and a second tap undoes it.
-   - **The chip on the right** shows the payment state: covered, *Gratis*, a carnet with its balance, or the month due.
-   - **The signature, «Da chiedere».** When an athlete who owes is **marked present**, the chip turns into *Da chiedere · settembre*. The check-in knows who is standing in front of you and owes, which is the one moment the fee is easy to ask for. Nobody else sees it: it is on the owner's phone, not on a board.
-   - **A segment switches to Tecniche** (screen 3), because both are about tonight's lesson.
-2. **The payment sheet**, a bottom sheet opened from the chip:
-   - the athlete's identity, then the unpaid months, oldest first, with the one the chip named selected;
-   - **the amount is the fee × the period, read-only.** Budojo snapshots the fee and does not model a different price (`athlete-payment.md`);
-   - the method, with *Contanti* preselected because this is the mat;
-   - one primary button, *Registra 60 € · contanti*, then an undo toast.
-3. **Tecniche.**
-   - Tonight's plan from the PC, as a checklist.
-   - *Aggiungi* opens the programme, searchable, grouped by position and filtered to the class's mode, as the suggestions are.
-   - A field for the evening's notes.
-   - **Nothing is planned here:** the programme is the PC's job.
-4. **Soldi.** *Chi deve ancora pagare* this month: tonight's people first (*"sono qui stasera"*), then the rest, with *"anche agosto"* on anyone behind. Each row opens the payment sheet.
-5. **Stato.**
-   - When the PC last received a change (*"Tutto arrivato sul PC · 21:47"*), and how fresh the data is (*"Dati del PC di lunedì alle 18:02"*).
-   - The unsent changes, in words (*"Presente: Luca B., BJJ Gi, mar 19:30"*), and a *Invia ora* button.
-   - Errors in plain language, each with its fix (*"Google ti ha scollegato: accedi di nuovo"*).
-   - The paired PC, and the app version.
-6. **Collega (first run), three steps:**
-   1. On the PC: *Dati e backup → Telefono → Collega un telefono*.
-   2. Scan the QR.
-   3. Sign in to Google with the same account as the PC.
+**What opens, by the clock.** From 15 minutes before a lesson to 30 minutes after it ends, the app opens on **that lesson's check-in**. Otherwise it opens on **Oggi**, the PC's own home screen. Each is one tap from the other.
 
-   Then the first download, and the app opens on Stasera.
+**The fingerprint:**
+- on opening, and on returning after 5 minutes in the background;
+- the phone's own PIN is the fallback, through Android's biometric prompt;
+- on a phone with no biometrics, the screen lock.
 
-**On a tablet (≥ 768 px):** the list on the left and the sheet on the right, for an instructor who leaves a tablet at the edge of the mat.
+**The mat screens, where the phone gets its own version:**
+- **Check-in:**
+  - the class is picked by the clock;
+  - *Chi viene di solito* (the class's regulars) first, then everyone;
+  - a tap marks the athlete present, and a second tap undoes it.
+- **«Da chiedere».** Once someone who owes is marked present, their payment chip says *Da chiedere · settembre*. The check-in knows who is standing in front of you and owes: the one moment the fee is easy to ask for. It shows only on the owner's phone.
+- **The payment sheet,** opened from the chip:
+  - the months due, oldest first;
+  - the amount is the fee × the period, read-only;
+  - *Contanti* preselected;
+  - one button: *Registra 60 € · contanti*.
+- **A new athlete in three fields:** first name, last name, belt. The rest waits for later. It is the trial class that walks in.
+- **A promotion from the athlete's row:** belt and stripes, dated today.
 
-### 7.2 The PC
+**Everything else is the PC's screen at phone width,** which the canon already requires to work. The first version checks each flow it ships on a real phone (#2045).
 
-1. **Dati e backup → Telefono**, next to the existing Drive connection:
-   - connect Google (the #1301 connection, shared);
-   - *Collega un telefono* opens the QR dialog, with a second QR to download the app;
-   - the paired devices: name, last contact, unsent count, *Scollega*.
-2. **The state in the shell:** a small indicator beside the title bar, reading *Telefono aggiornato*, *3 novità* or *Drive non raggiungibile*.
-3. **The homecoming («il rientro»).** When changes arrive, a card on Oggi says *"Dal telefono, martedì sera: 14 presenze in BJJ Gi, 2 pagamenti (120 €), 3 tecniche"*. It links to the log. This is the moment the owner was describing: back home, and everything is already there.
-4. **Dal telefono**, the log:
-   - the arrivals, grouped by evening and lesson, each linking to the athlete or the lesson;
-   - **Da decidere** on top: each conflict in a sentence (*"Pagamento di settembre per Marco R.: sul PC c'è già un trimestrale da agosto"*), with *Scarta* or *Riprova* (after fixing the data by hand).
+### 6.2 The sync state, on both devices
+
+A pill in the shell:
+- ✓ *Allineato · 21:47*
+- ↑ *3 da inviare · senza rete*
+- ⚠ *1 da decidere*
+- *Google ti ha scollegato: tocca per riconnettere*
+
+Tapping it opens the detail:
+- the last version on each side;
+- the unsent changes, **in words**;
+- *Sincronizza ora*.
+
+**The homecoming («il rientro»).** When a device pulls the other's work, a card on Oggi says *"Dal telefono, martedì sera: 14 presenze in BJJ Gi, 2 pagamenti (120 €), 1 nuovo atleta"*. It reads the version's journal, so the owner sees what arrived without looking for it.
+
+### 6.3 Notifications
+
+- **The reminders are the PC's own:** the scheduler's lists of fees, certificates, birthdays and missed streaks (#1226). The phone does not invent new ones.
+- **With the app closed, Android runs nothing.** So each time the app opens or syncs, it works out the reminders due in the next days and **schedules them with Android** as local notifications. They arrive on time with the app closed.
+- **A reminder about something that has changed since** (the fee got paid on the PC) is dropped at the next sync.
+- **The full text shows on the lock screen,** as the owner chose (*"Marco R. deve settembre, 60 €"*): the notification channel is public. It can become a setting later.
+
+### 6.4 «Da decidere»: conflicts
+
+A conflict is a question, asked on whichever device found it. **It is never resolved silently** (§ 2).
+
+- **One sentence per conflict, with both sides:** *"Pagamento di settembre per Marco R.: dal telefono 60 € in contanti il 30/9; sul PC c'è già un trimestrale da agosto."*
+- **The choice:** *Tieni quello del telefono* · *Tieni quello del PC* · *Apri l'atleta*, to fix it by hand, then *Fatto*.
+- **Until it is decided, the device keeps working.** The other changes of the same rebase are already applied; only the question waits, and the sync pill counts it.
+- **What is never a conflict:**
+  - a change that is already true (the same presence twice), which is skipped;
+  - two changes to different things, which both apply.
+
+### 6.5 The phone-only academy
+
+- **First launch:** *"Hai già Budojo sul PC?"*
+  - **Yes:** pair (§ 5.4).
+  - **No:** create the academy on the phone, with the PC's own onboarding.
+- **Then:** *"Salva su Google Drive"*, strongly recommended. Until it is connected, a line on Oggi at every launch says the data lives only on this phone. It is not a modal: it states the fact and blocks nothing.
+
+## 7. Security and privacy
+
+- **What the phone holds:** the whole database, as the PC does: athletes, payments, codice fiscale, document metadata. Documents are downloaded when they are opened.
+- **How it is protected:** the fingerprint (§ 6.1), and Android's app-private storage.
+- **No Android backup** (`allowBackup="false"`, already set in #2027). The copy that survives a lost phone is the versions on Drive, encrypted.
+- **Google** sees only ciphertext, under names that mean nothing: sequence numbers and content hashes.
+- **The APK signing key** was created in #2027. It is held in the repo secrets and in the owner's password manager; if it is lost, no update installs over the app.
+- **The lock-screen text** shows names and amounts, the owner's choice (§ 6.3). It is recorded here because it is the one place the phone shows data without the fingerprint.
 
 ## 8. Plan (sub-issues of #2026)
 
-Sizes: **S** is a day or less, **M** a few days, **L** a week or more.
+Sizes: **S** is a day or less, **M** a few days, **L** a week or more. The **first version** (§ 2) is Phases 0–4; techniques follow it.
 
 | Issue | Phase | What | Size | Needs |
 |---|---|---|---|---|
-| [#2027](https://github.com/Budojo/budojo/issues/2027) | Prove the risky parts | The Angular mat app as a signed APK built in CI; storage that survives an update | M | — |
-| [#2028](https://github.com/Budojo/budojo/issues/2028) | | Drive from a sideloaded APK, shared with the desktop client (decides § 5 "Where on Drive") | M | the owner's Google project, #2027's key |
-| [#2029](https://github.com/Budojo/budojo/issues/2029) | The sync channel | The protocol, v1: layout, envelope, change and snapshot schemas, `SyncRemote` + `FolderRemote` | M | #2028's verdict |
-| [#2030](https://github.com/Budojo/budojo/issues/2030) | | The snapshot, on the server | M | #2029 |
-| [#2031](https://github.com/Budojo/budojo/issues/2031) | | Applying the phone's changes, on the server (`mat_ops`) | L | #2029 |
-| [#2032](https://github.com/Budojo/budojo/issues/2032) | | The desktop sync engine | L | #2029, #2030, #2031 |
-| [#2033](https://github.com/Budojo/budojo/issues/2033) | | Pairing a phone, on the desktop | M | #2032 |
-| [#2034](https://github.com/Budojo/budojo/issues/2034) | The mat app | Pairing, first sync, local store, journal, the Stato tab | L | #2029, #2027 |
-| [#2035](https://github.com/Budojo/budojo/issues/2035) | | Stasera: check-in | M | #2034 |
-| [#2036](https://github.com/Budojo/budojo/issues/2036) | | The payment sheet and Soldi | M | #2034 |
-| [#2037](https://github.com/Budojo/budojo/issues/2037) | | Tecniche and the evening's notes | M | #2034 |
-| [#2038](https://github.com/Budojo/budojo/issues/2038) | The PC side | Dal telefono: the log and the decisions | M | #2031 |
-| [#2039](https://github.com/Budojo/budojo/issues/2039) | | The homecoming: the state in the shell and the card on Oggi | S | #2032 |
-| [#2040](https://github.com/Budojo/budojo/issues/2040) | Ship | The APK on every release, and its smoke test in `/release` | M | #2027 |
-| [#2041](https://github.com/Budojo/budojo/issues/2041) | | Updates, the install guide, developer verification | S | #2040 |
+| [#2027](https://github.com/Budojo/budojo/issues/2027) ✅ | 0 · Prove | The APK: the Capacitor shell, the release key, the CI build, storage that survives an update. Done 28 Sep. | M | — |
+| [#2044](https://github.com/Budojo/budojo/issues/2044) | | **Laravel on Android:** Budojo's API running offline on the phone with SQLite. Native PHP first, WebAssembly as the fallback. | M | #2027 |
+| [#2028](https://github.com/Budojo/budojo/issues/2028) | | Drive from the phone, shared with the desktop's OAuth client | M | #2027 |
+| [#2029](https://github.com/Budojo/budojo/issues/2029) | 1 · Sync | The protocol v2: versions, journal, documents, envelope, `SyncRemote` | M | #2028 |
+| [#2030](https://github.com/Budojo/budojo/issues/2030) | | Versions: export, fast-forward, retention (server) | M | #2029 |
+| [#2031](https://github.com/Budojo/budojo/issues/2031) | | The journal and the rebase, with conflicts (server). `--deep` review. | L | #2029 |
+| [#2032](https://github.com/Budojo/budojo/issues/2032) | | The sync engine on the desktop | L | #2030, #2031 |
+| [#2033](https://github.com/Budojo/budojo/issues/2033) | | Pairing, both ways, with the keys | M | #2032 |
+| [#2034](https://github.com/Budojo/budojo/issues/2034) | 2 · Budojo on the phone | The phone runtime: the SPA + Laravel in the shell, the `mobile` profile, offline. It retires `projects/mat`. | L | #2044 |
+| [#2046](https://github.com/Budojo/budojo/issues/2046) | | The sync engine on the phone, the sync state, the fingerprint lock | M | #2034, #2032 |
+| [#2035](https://github.com/Budojo/budojo/issues/2035) | | Home by the clock, and the phone check-in | M | #2034 |
+| [#2036](https://github.com/Budojo/budojo/issues/2036) | | «Da chiedere», the payment sheet, Soldi | M | #2034 |
+| [#2045](https://github.com/Budojo/budojo/issues/2045) | | Athletes and promotions on the phone: the new athlete in three fields, the promotion from the row, every flow checked on a phone | M | #2034 |
+| [#2047](https://github.com/Budojo/budojo/issues/2047) | | Notifications scheduled with Android | M | #2034 |
+| [#2048](https://github.com/Budojo/budojo/issues/2048) | | The phone-only academy: onboarding on the phone, the Drive nudge | S | #2046 |
+| [#2038](https://github.com/Budojo/budojo/issues/2038) | 3 · Both sides | «Da decidere»: the conflicts screen, on both devices | M | #2031 |
+| [#2039](https://github.com/Budojo/budojo/issues/2039) | | The homecoming card and the sync pill | S | #2032 |
+| [#2040](https://github.com/Budojo/budojo/issues/2040) | 4 · Ship | The APK on every release, and its smoke test in `/release` | M | #2034 |
+| [#2041](https://github.com/Budojo/budojo/issues/2041) | | The update notice, the install guide, developer verification | S | #2040 |
+| [#2037](https://github.com/Budojo/budojo/issues/2037) | After the first version | Techniques and the lesson's notes, phone-first | M | #2034 |
 
 **Testing.** The five layers apply as everywhere. On top of them:
-- **The crypto** is pinned by known-answer vectors, run in both Node's crypto and WebCrypto.
-- **The mat app's E2E** runs at phone width against a `FolderRemote`.
-- **Every PR that touches the transport** reports a real-process harness against a real Drive folder in its body, as M11 did ("13/13 harness").
+- **The rebase is pinned by a harness:** two SQLite copies diverge through the real API, the journal is replayed, and the result is compared with the same changes applied in order. Every conflict kind has a fixture.
+- **The crypto is pinned by known-answer vectors,** run in Node's crypto and in WebCrypto.
+- **Every PR that touches the transport or the phone runtime** reports a real-process harness in its body: a real Drive folder, a real phone. That is how M11 accepted every surface.
 
 ## 9. Risks
 
 | Risk | Likelihood | Mitigation |
 |---|---|---|
-| `drive.file` access does not carry from the desktop's OAuth client to the Android one | Medium | #2028 checks it before anything is built on it. The fallback is `appDataFolder`, which belongs to the Cloud project rather than to one client; #2028 checks that too. |
-| Refresh tokens expire after 7 days | Certain in Testing | Publish the consent screen to Production. `drive.file` is non-sensitive, which keeps the app out of Google's sensitive-scope review (#1301). |
-| Android developer verification | Certain, global in 2027 | Register `it.budojo.mobile` and the signing key before it reaches Italy. The free limited-distribution account covers up to 20 devices. |
-| A phone without Google Play services (some Huawei) | Low | Not supported; the install guide says so. |
-| A phone lost or wiped with changes not sent | Low | Push on every change while online, and keep the unsent count always on screen. Background sync is P1. |
-| The signing key is lost | Low, severe | Kept in the repo secrets **and** the password manager. The release flow checks that the key is present. |
-| The PC's rules refuse a change (overlap, athlete gone) | Low | Parked in *Da decidere*, never dropped. |
-| The phone's clock is wrong | Low | The business date travels in the change, and `at` only orders one device's changes. |
-| The phone grows into the whole app | High | § 4, and six change types. A seventh amends this PRD. |
+| **PHP does not run well on Android:** boot time, memory, APK size, battery | Medium | #2044 comes first, with numbers. A static arm64 binary mirrors the desktop, and WebAssembly is the fallback. If both fail, the fallback is v1's design: a phone subset with typed changes, which M12 can still ship. |
+| **The rebase maps an id wrongly, or replays a change twice** | Medium | The Actions are idempotent, each rebase keeps a mapping table, and the harness (§ 8) and a `--deep` review cover it. Every version is kept, so a bad rebase can be undone by going back one version. |
+| **A long offline stretch piles up conflicts** | Low for one owner | Conflicts wait without blocking, the pill counts them, and the owner decides them on one screen. |
+| **`drive.file` does not carry between the two OAuth clients** | Medium | #2028 checks it before anything is built on it; the fallback is `appDataFolder`. |
+| **The weekly Google sign-in in Testing** | Certain (the owner's choice) | One tap from the sync pill, and work continues offline meanwhile. |
+| **Android developer verification** (global in 2027) | Certain | The free limited-distribution account (up to 20 devices), registered before enforcement reaches Italy. |
+| **A phone lost with changes not yet pushed** | Low | Push a few seconds after each change whenever online, and keep the unsent count always visible. |
+| **A phone-only user never connects Drive** | Medium | The line on Oggi at every launch (§ 6.5). The data is theirs, and the nudge is honest about the risk. |
+| **The APK signing key is lost** | Low, severe | Kept in the repo secrets **and** the password manager (#2027). |
 
 ## 10. Success metrics
 
-- **Adoption:** the share of held lessons whose check-in came from the phone. Target 80% after four weeks.
-- **Speed:** the median time from a lesson's end to its payments showing on the PC.
-- **Lost changes: zero.** Every `op_id` in a journal file has a `mat_ops` row within a day of the PC opening.
-- **Conflicts:** under 2% of changes.
+- **Adoption:** the share of held lessons checked in from the phone. Target: 80% after four weeks.
+- **Lost changes: zero.** Every journal entry ends applied, skipped as already true, or decided by the owner.
+- **Conflicts:** under 2% of the changes replayed, and none resolved without the owner.
 - **The owner** no longer does evening data entry at the PC. Asked after four weeks.
+- **A phone-only academy** (Fede's, if he adopts it) runs for a month with no PC.
 
-## 11. Later (not M12)
+## 11. Later (not M12's first version)
 
 | Idea | What it would take |
 |---|---|
-| Sell a carnet at the mat | A seventh change type over `SellCarnetAction` |
-| Add a trial athlete | A change that **creates** a row: an id made on the phone, mapped on the PC, and every later change naming it |
-| Give a stripe at the end of class | A change over the promotion Actions, which carry the promotion history's own rules |
-| Warn at check-in about an expired medical certificate | A single flag in the snapshot, after a note in `docs/legal/dpia-medical-certificates.md` |
-| Background sync with the app closed | Android WorkManager through a Capacitor plugin |
-| Assistants on their own Google account | Sharing the folder, which `drive.file` does not allow without the Picker |
-| A tablet at the door for athletes to check themselves in | The `self` source already exists (#960) |
-| iOS | Capacitor supports it; the Apple distribution costs are the question |
-| The phone without a PC | Laravel in php-wasm, a spike of its own |
+| Photograph a document on the phone | Uploading from the phone (the camera plugin), for phone-only academies first |
+| Techniques and the evening's notes, phone-first | #2037, right after the first version |
+| Assistants with their own phone and account | Roles on the phone, and a Drive folder shared across accounts, which `drive.file` does not allow without the Picker |
+| A tablet at the door for self check-in | The `self` source already exists (#960); a locked-down mode on top of it |
+| iOS | Capacitor supports it; PHP on iOS and Apple's distribution costs are the question |
+| A lock-screen setting for the notification text | A preference over the channel's visibility (§ 6.3) |
 
 ## 12. Owner prerequisites
 
-1. **A Google Cloud project for Budojo:**
-   - enable the Drive API;
-   - OAuth consent screen: External, scope `drive.file`, **published to Production**;
-   - a **Desktop app** client, whose id and secret go into the `BUDOJO_GOOGLE_CLIENT_ID` / `_SECRET` repo secrets. This also unblocks #1301;
-   - an **Android** client for `it.budojo.mobile`, with the SHA-1 of the signing key (#2027 produces it).
-2. **Android developer verification:** a free limited-distribution account (up to 20 devices, no ID) or the $25 full one (ID). Register the package and the key before enforcement reaches Italy in 2027.
-3. **The signing key and its passwords in the password manager.**
+1. ✅ **A Google Cloud project,** done 28 Sep 2026:
+   - `Budojo`, in Testing, scope `drive.file`, with the owner as test user;
+   - a Desktop client, whose id and secret are repo secrets;
+   - an Android client for `it.budojo.mobile`, with the release key's SHA-1.
+2. **Android developer verification:** the free limited-distribution account (up to 20 devices, no ID). Register the package and the key before enforcement reaches Italy in 2027.
+3. ✅ **The signing key** (created in #2027): into the password manager, with an offline copy.
+4. **For each friend's academy:** add their Gmail as a test user in the Google project.
 
 ## Deltas from spec
 
-None yet. This section records what the implementation changed, as the other PRDs do.
+- **28 Sep 2026: v1 → v2, the same day.** The owner widened the phone from three jobs to most actions, and asked that it work without a PC. v1's plan, a phone subset with six typed changes and a snapshot, would have rebuilt each screen and re-expressed each rule for the phone.
+  - **What changed:** the phone runs the whole Budojo, and the sync exchanges whole database versions, plus a journal that is replayed on divergence (§ 5.2).
+  - **What stayed:**
+    - the transport (Drive, `drive.file`) and the encryption;
+    - pairing by QR;
+    - the check-in and payment designs, «Da chiedere» included;
+    - the homecoming card;
+    - the APK and its key (#2027);
+    - the principle that no change is lost or overwritten silently.
