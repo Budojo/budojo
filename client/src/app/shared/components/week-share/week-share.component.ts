@@ -64,7 +64,21 @@ import { weekMessageLabels } from '../../utils/week-message-labels';
       [ariaLabel]="heading()"
       [style]="{ 'max-width': '20rem' }"
       appendTo="body"
-    />
+    >
+      <!-- PrimeNG's own label has no icon: this one carries the spinner
+           while the programme loads, so waiting never reads as "nothing". -->
+      <ng-template #submenuheader let-group>
+        @if (group.icon) {
+          <i [class]="group.icon + ' week-share__heading-icon'" aria-hidden="true"></i>
+        }
+        <span>{{ group.label }}</span>
+      </ng-template>
+    </p-menu>
+  `,
+  styles: `
+    .week-share__heading-icon {
+      margin-inline-end: 0.5rem;
+    }
   `,
 })
 export class WeekShareComponent {
@@ -158,6 +172,8 @@ export class WeekShareComponent {
     return [
       {
         label,
+        // Loading spins and keeps both actions disabled; nothing to send only disables them.
+        ...(this.calendar() === 'loading' ? { icon: 'pi pi-spinner pi-spin' } : {}),
         items: [
           {
             label: this.translate.instant('weekMessage.copy'),

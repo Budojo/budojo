@@ -110,6 +110,26 @@ describe('WeekShareComponent (#1940)', () => {
     expect(toast).toHaveBeenCalledWith(expect.objectContaining({ severity: 'success' }));
   });
 
+  it('spins while the programme loads, the ways to send disabled till it answers', () => {
+    const { fixture, httpMock } = setup([MONDAY, FRIDAY]);
+    expect(menu(fixture).icon).toBe('pi pi-spinner pi-spin');
+    expect(actions(fixture).every((item) => item.disabled)).toBe(true);
+
+    // Drawn by the menu's own heading, where the week will be, hidden from readers.
+    (fixture.nativeElement.querySelector('[data-cy="week-share"]') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    const spinner = document.body.querySelector('.p-menu-submenu-label .pi-spinner');
+    expect(spinner).not.toBeNull();
+    expect(spinner?.getAttribute('aria-hidden')).toBe('true');
+    expect(spinner?.parentElement?.textContent).toContain('Loading the week…');
+
+    httpMock.expectOne((r) => r.url === URL).flush({ data: calendar() });
+    fixture.detectChanges();
+
+    expect(menu(fixture).icon).toBeUndefined();
+    expect(document.body.querySelector('.p-menu-submenu-label .pi-spinner')).toBeNull();
+  });
+
   it('says a closed day, with the academy’s own label', () => {
     const { fixture, httpMock } = setup([MONDAY, FRIDAY]);
     TestBed.inject(AcademyService).academy.set({
