@@ -4931,7 +4931,7 @@ paths:
                                 already on the roster, or appeared earlier in
                                 this same file. A known date of birth on both
                                 sides that differs makes them two people. It
-                                is decided before the row is validated
+                                is decided before the row's errors are judged
                                 (#1934), so a re-imported athlete whose email
                                 or codice fiscale the roster already has is
                                 `duplicate`, not `invalid`.
