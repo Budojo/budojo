@@ -3086,6 +3086,42 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
     },
   });
   screen('21-athlete-new', '/dashboard/athletes/new', '[data-cy="athlete-form"]');
+  // The dark theme's interactive states (#2010). The ramp is inverted there,
+  // so a preset token pointing at `surface.800` for "dark" lands light; a
+  // keyboard focus paints the same ground a hover does, and is the one a
+  // screenshot can hold.
+  screen('20-athletes-pay-menu-dark', '/dashboard/athletes', ROSTER_READY, {
+    theme: 'dark',
+    act: () => {
+      press('[data-cy^="athlete-coverage-"]');
+      cy.get('.p-menu-overlay .p-menu-list', { timeout: 4000 }).should('be.visible');
+      cy.get('.p-menu-overlay .p-menu-list').focus().type('{downarrow}{downarrow}');
+      cy.get('.p-menu-overlay .p-menu-item.p-focus').should('exist');
+    },
+  });
+  screen('21-athlete-new-select-dark', '/dashboard/athletes/new', '[data-cy="athlete-form"]', {
+    theme: 'dark',
+    act: () => {
+      press('#belt');
+      cy.get('.p-select-overlay .p-select-option', { timeout: 4000 }).should('be.visible');
+      cy.focused().type('{downarrow}{downarrow}');
+      cy.get('.p-select-overlay .p-select-option.p-focus').should('exist');
+    },
+  });
+  screen(
+    '21-athlete-new-selectbutton-dark',
+    '/dashboard/athletes/new',
+    '[data-cy="athlete-form"]',
+    {
+      theme: 'dark',
+      act: () => {
+        cy.get('[data-cy="athlete-sex"]')
+          .contains('button, [role="radio"], .p-togglebutton', /Maschio|Male/)
+          .click({ force: true });
+        cy.get('[data-cy="athlete-sex"]').scrollIntoView({ offset: { top: -240, left: 0 } });
+      },
+    },
+  );
   screen('21-athlete-import', '/dashboard/athletes/import', '[data-cy="import-back"]');
   screen('21-athlete-ready', '/dashboard/athletes/ready', '[data-cy="ready-list"]');
 
