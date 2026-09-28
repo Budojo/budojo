@@ -7,10 +7,12 @@ namespace App\Actions\Promotion;
 use App\Enums\Belt;
 use App\Enums\MartialArt;
 use App\Models\Athlete;
+use App\Models\AthletePromotion;
 use App\Models\AthletePromotionSkip;
 use App\Support\MartialArt\KidsEligibility;
 use App\Support\MartialArt\MartialArtProfile;
 use App\Support\OperatorDay;
+use App\Support\Promotion\EntryPlaceholder;
 use App\Support\Promotion\PromotionGaps;
 use App\Support\Promotion\PromotionRecord;
 use Carbon\CarbonImmutable;
@@ -21,14 +23,16 @@ use Carbon\CarbonImmutable;
  *
  * Read against the athlete's academy's ladder, with the kids' rule "Chi
  * promuovere?" uses ({@see KidsEligibility}) asked about the belt and the day
- * of each stretch, and minus the steps the owner said never happened.
+ * of each stretch, and minus the steps the owner said never happened — which
+ * are listed apart, to be brought back (#1989).
  *
  * @phpstan-import-type Gap from PromotionGaps
+ * @phpstan-import-type Skipped from PromotionGaps
  */
 class GetPromotionGapsAction
 {
     /**
-     * @return array{gaps: list<Gap>, history_starts_at: string|null}
+     * @return array{gaps: list<Gap>, skipped: list<Skipped>, history_starts_at: string|null}
      */
     public function execute(Athlete $athlete): array
     {
@@ -46,7 +50,9 @@ class GetPromotionGapsAction
         );
 
         return $finder->find(
-            array_values($athlete->promotions()->reorder()->get()->map(PromotionRecord::of(...))->all()),
+            array_values($athlete->promotions()->reorder()->get()
+                ->map(static fn (AthletePromotion $promotion): PromotionRecord => PromotionRecord::of($promotion, EntryPlaceholder::is($promotion, $athlete)))
+                ->all()),
             $athlete->belt,
             $athlete->stripes,
             $this->skipped($athlete),

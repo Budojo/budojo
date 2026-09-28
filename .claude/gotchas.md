@@ -212,6 +212,7 @@ Format: `→` separates the symptom from the action.
 
 - → **`CarbonImmutable::createFromFormat('Y-m', '2026-02')` fills the missing day from today.** On the 29th, 30th or 31st that is a February day that does not exist, and it rolls into March: the month summary opened the wrong month on the last days of a long one (#1767). → Parse a month with **`'!Y-m'`** (the `!` zeroes every unparsed field, so the day is the 1st), as `LeaderboardController` already did.
 - → **One observer registered on several models receives every hook from all of them.** `ForgetsAttendanceSummaries` typed `deleted(AcademyClosure|AcademySchedule|AttendanceRecord)`; registering it on `Athlete` too made deleting an athlete a `TypeError` (#1769, caught before merge). → When an observer class is added to another model's `#[ObservedBy]`, widen **every** handler's union to include it, `deleted` and `restored` as much as the one you meant.
+- → **`$collection->map(Foo::of(...))` passes the key as a second argument.** Harmless while `of()` takes one parameter; give it an optional second one and every call site starts filling it with the row's key, silently coerced, because Illuminate has no `strict_types`. `PromotionRecord::of()` gained `bool $entryPlaceholder` in #1990 and two `map(PromotionRecord::of(...))` calls would have passed each row's id as `true`. → Before adding a parameter to a method used as a first-class callable, grep for `Name::method(...)` and turn every `map` / `each` / `filter` site into an explicit closure.
 
 ### PEST — helpers and fixtures
 

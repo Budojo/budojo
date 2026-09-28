@@ -787,6 +787,13 @@ export interface AthletePromotion {
    * Optional so a server before #1966 reads as false.
    */
   readonly is_opening?: boolean;
+  /**
+   * A starting row still dated the day the athlete was entered (#1990): its
+   * date says only that. Once the owner moves it or completes it, it is the
+   * real start, and this is false. Optional so a server before #1990 reads
+   * as false.
+   */
+  readonly is_entry_placeholder?: boolean;
 }
 
 /** A recorded row on one side of a missing step (#1966). */
@@ -823,6 +830,20 @@ export interface PromotionGap {
   readonly from_belt_options?: readonly Belt[] | null;
 }
 
+/**
+ * A step the owner said never happened, where the history would otherwise
+ * offer it (#1989) — listed apart so it can be brought back. Wire shape:
+ * `PromotionSkippedStep` in docs/api/v1.yaml.
+ */
+export interface PromotionSkippedStep {
+  /** The same key the step has as a gap. */
+  readonly key: string;
+  readonly kind: 'belt' | 'stripe';
+  readonly belt: Belt;
+  /** The count the step leads to — what the skip is keyed by. */
+  readonly stripes: number;
+}
+
 export interface AthletePromotionPage {
   readonly data: readonly AthletePromotion[];
   readonly meta: {
@@ -838,6 +859,11 @@ export interface AthletePromotionPage {
    * just this page's. Optional so a server before #1966 reads as none.
    */
   readonly gaps?: readonly PromotionGap[];
+  /**
+   * The steps marked as skipped, oldest first (#1989). Optional so a server
+   * before #1989 reads as none.
+   */
+  readonly skipped?: readonly PromotionSkippedStep[];
   /** The earliest row's date; null with no rows (#1966). */
   readonly history_starts_at?: string | null;
 }

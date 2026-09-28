@@ -2516,6 +2516,13 @@
           "restored": "{{step}}: di nuovo tra i passaggi da datare",
           "undoAria": "Annulla: {{step}}",
           "fromBeltLabel": "Cintura di prima"
+        },
+        "skippedList": {
+          "countOne": "1 passaggio segnato come saltato",
+          "countOther": "{{count}} passaggi segnati come saltati",
+          "hide": "Nascondi",
+          "restore": "Ripristina",
+          "restoreAria": "Ripristina: {{step}}"
         }
       },
       "attendance": {
