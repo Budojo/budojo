@@ -78,7 +78,15 @@ function flushAcademy(httpMock: HttpTestingController, classesCount: number): vo
 }
 
 describe('TimetableComponent (#1562)', () => {
-  afterEach(() => TestBed.inject(HttpTestingController).verify());
+  afterEach(() => {
+    // The header's week message (#1940) reads the calendar once; its own spec
+    // covers it. Answered here so every other request stays verified.
+    const http = TestBed.inject(HttpTestingController);
+    http
+      .match((r) => r.url === '/api/v1/stats/syllabus/calendar')
+      .forEach((req) => req.flush('', { status: 500, statusText: 'Server Error' }));
+    http.verify();
+  });
 
   it('draws all seven days, Monday first, with each class under its day', () => {
     const { fixture, httpMock } = setup();
@@ -322,7 +330,15 @@ describe('TimetableComponent (#1562)', () => {
 });
 
 describe('TimetableComponent — training modes (#1803)', () => {
-  afterEach(() => TestBed.inject(HttpTestingController).verify());
+  afterEach(() => {
+    // The header's week message (#1940) reads the calendar once; its own spec
+    // covers it. Answered here so every other request stays verified.
+    const http = TestBed.inject(HttpTestingController);
+    http
+      .match((r) => r.url === '/api/v1/stats/syllabus/calendar')
+      .forEach((req) => req.flush('', { status: 500, statusText: 'Server Error' }));
+    http.verify();
+  });
 
   it("offers a judo class the art's own modes, and starts it on the middle", () => {
     const { fixture, component, httpMock } = setup('judo');

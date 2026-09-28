@@ -14,14 +14,19 @@
       job is one too many.
     -->
     @if (!loading() && classes().length > 0) {
-      <p-button
-        pageHeaderCta
-        [label]="'academy.timetable.add' | translate"
-        icon="pi pi-plus"
-        size="small"
-        (onClick)="startAdding()"
-        data-cy="timetable-add"
-      />
+      <!-- One container for the slot: an @if with two roots projects neither.
+           The week's message (#1940) is secondary, beside the page's one
+           primary action. -->
+      <ng-container pageHeaderCta>
+        <app-week-share [classes]="classes()" />
+        <p-button
+          [label]="'academy.timetable.add' | translate"
+          icon="pi pi-plus"
+          size="small"
+          (onClick)="startAdding()"
+          data-cy="timetable-add"
+        />
+      </ng-container>
     }
   </app-page-header>
 
