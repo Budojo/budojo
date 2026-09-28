@@ -782,6 +782,17 @@
                   data-cy="restore-btn"
                 />
               } @else {
+                <!-- The reminder (#1931), only on the "Non pagato" list: the
+                     one Marco chases, and the everyday roster stays quiet. -->
+                @if (reminderFor(athlete); as message) {
+                  <app-contact-actions
+                    [countryCode]="athlete.phone_country_code"
+                    [nationalNumber]="athlete.phone_national_number"
+                    [name]="athlete.first_name + ' ' + athlete.last_name"
+                    [message]="message"
+                    [dataCy]="'athlete-reminder-' + athlete.id"
+                  />
+                }
                 @if (publicProfileHandle(athlete); as handle) {
                   <a
                     class="athletes-page__public-profile-link"
@@ -1052,6 +1063,19 @@
                   </div>
                 }
               </div>
+              <!-- The reminder (#1931) on its own line, under the badges: at
+                   375px the header has no room for two 48px targets beside
+                   the name, and the row is the "Non pagato" list only. -->
+              @if (reminderFor(athlete); as message) {
+                <app-contact-actions
+                  class="athlete-card__reminder"
+                  [countryCode]="athlete.phone_country_code"
+                  [nationalNumber]="athlete.phone_national_number"
+                  [name]="athlete.first_name + ' ' + athlete.last_name"
+                  [message]="message"
+                  [dataCy]="'athlete-card-reminder-' + athlete.id"
+                />
+              }
             </li>
           }
         </ul>

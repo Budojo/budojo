@@ -91,6 +91,8 @@ export interface AttendanceListOptions {
 export interface ClassRegular extends AthleteIdentity {
   readonly phone_country_code: string | null;
   readonly phone_national_number: string | null;
+  /** The owner's own athlete row (#748): no way to reach them is offered. */
+  readonly is_self: boolean;
   /** Occurrences attended, out of `meta.occurrences`. */
   readonly attended: number;
   /** Their latest presence before the day asked about, in any class. */
