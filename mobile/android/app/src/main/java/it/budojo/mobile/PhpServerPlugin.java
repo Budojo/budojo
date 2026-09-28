@@ -171,11 +171,12 @@ public class PhpServerPlugin extends Plugin {
             // the error: on a phone, the error is the only log anyone reads.
             String alive = server.isAlive() ? "still running" : "exited " + server.exitValue();
             stopServer();
-            throw new IOException(e.getMessage() + " (server " + alive + ", migrate "
-                    + ms(tMigrate0, tMigrated) + " ms)"
+            throw new IOException(e.getClass().getSimpleName() + ": " + e.getMessage() + " (server " + alive
+                    + ", migrate " + ms(tMigrate0, tMigrated) + " ms)"
                     + "\n--- php-server.log\n" + tailOf(new File(files, "php-server.log"), 500)
                     + "\n--- php-error.log\n" + tailOf(new File(files, "php-error.log"), 300)
-                    + "\n--- laravel.log\n" + tailOf(new File(storage, "logs/laravel.log"), 500), e);
+                    + "\n--- laravel.log\n" + tailOf(new File(storage, "logs/laravel.log"), 500)
+                    + "\n=== probes\n" + probes(php, ini, serverDir, env, tmp), e);
         }
         long tReady = System.nanoTime();
 
@@ -260,6 +261,7 @@ public class PhpServerPlugin extends Plugin {
      */
     private static long waitForHealth(Process process, int port, long timeoutMs) throws Exception {
         long deadline = System.currentTimeMillis() + timeoutMs;
+        int resets = 0;
         while (System.currentTimeMillis() < deadline) {
             if (!process.isAlive()) {
                 throw new IOException("the server exited before answering");
@@ -276,9 +278,88 @@ public class PhpServerPlugin extends Plugin {
                 throw new IOException("/api/v1/health answered " + status);
             } catch (java.net.ConnectException notListeningYet) {
                 Thread.sleep(100);
+            } catch (java.net.SocketException reset) {
+                // 0.0.7 on a real phone: "Connection reset" with the server up and
+                // nothing in its log. Retried until the deadline, so a reset on the
+                // first request alone does not fail the run.
+                resets++;
+                if (resets >= 5) {
+                    throw new IOException(resets + " connection resets, last: " + reset.getMessage());
+                }
+                Thread.sleep(500);
             }
         }
         throw new IOException("the server did not answer /api/v1/health within " + timeoutMs + " ms");
+    }
+
+    /**
+     * Three independent checks, run only when the server fails, so one screenshot
+     * says where it breaks (#2044):
+     * <ol>
+     *   <li>PHP alone, on the command line;</li>
+     *   <li>PHP's built-in server with a one-line page, no Laravel, read over a raw socket;</li>
+     *   <li>Laravel handling a request in-process, no server at all.</li>
+     * </ol>
+     */
+    private String probes(File php, File ini, File serverDir, Map<String, String> env, File tmp) {
+        StringBuilder report = new StringBuilder();
+        report.append("1 cli: ").append(probe(() -> tail(runToEnd(php, ini, serverDir, env, "-r",
+                "echo 'ok ', PHP_VERSION, ' ', php_uname('m'), ' ', php_sapi_name();"), 200))).append('\n');
+        report.append("2 raw server: ").append(probe(() -> rawServerProbe(php, ini, env, tmp))).append('\n');
+        report.append("3 laravel in-process: ").append(probe(() -> {
+            File script = new File(tmp, "probe.php");
+            String root = serverDir.getAbsolutePath();
+            writeFile(script, "<?php\n"
+                    + "require '" + root + "/vendor/autoload.php';\n"
+                    + "$app = require '" + root + "/bootstrap/app.php';\n"
+                    + "$kernel = $app->make(Illuminate\\Contracts\\Http\\Kernel::class);\n"
+                    + "$response = $kernel->handle(Illuminate\\Http\\Request::create('/api/v1/health', 'GET'));\n"
+                    + "echo $response->getStatusCode(), ' ', substr((string) $response->getContent(), 0, 120);\n");
+            return tail(runToEnd(php, ini, serverDir, env, script.getAbsolutePath()), 300);
+        })).append('\n');
+        return report.toString();
+    }
+
+    private interface Probe {
+        String run() throws Exception;
+    }
+
+    private static String probe(Probe probe) {
+        try {
+            return probe.run().trim();
+        } catch (Exception e) {
+            return "FAILED " + e.getClass().getSimpleName() + ": " + tail(String.valueOf(e.getMessage()), 300);
+        }
+    }
+
+    /** PHP's server with a one-line page, asked over a raw socket so any bytes it sends are shown. */
+    private static String rawServerProbe(File php, File ini, Map<String, String> env, File tmp) throws Exception {
+        File docroot = new File(tmp, "ping");
+        writeFile(new File(docroot, "ping.php"), "<?php echo 'pong';");
+        File log = new File(tmp, "ping-server.log");
+        int pingPort = freePort();
+        ProcessBuilder builder = new ProcessBuilder(php.getAbsolutePath(), "-c", ini.getAbsolutePath(),
+                "-S", "127.0.0.1:" + pingPort, "-t", docroot.getAbsolutePath());
+        builder.environment().clear();
+        builder.environment().putAll(env);
+        builder.redirectErrorStream(true);
+        builder.redirectOutput(log);
+        Process ping = builder.start();
+        try {
+            Thread.sleep(1500);
+            String answer;
+            try (java.net.Socket socket = new java.net.Socket("127.0.0.1", pingPort)) {
+                socket.setSoTimeout(10_000);
+                socket.getOutputStream().write("GET /ping.php HTTP/1.0\r\nHost: 127.0.0.1\r\n\r\n".getBytes(StandardCharsets.UTF_8));
+                socket.getOutputStream().flush();
+                answer = tail(readAll(socket.getInputStream()), 200);
+            } catch (IOException e) {
+                answer = "socket " + e.getClass().getSimpleName() + ": " + e.getMessage();
+            }
+            return answer.replace("\r", "") + " | alive=" + ping.isAlive() + " | log: " + tailOf(log, 300);
+        } finally {
+            ping.destroy();
+        }
     }
 
     private static String tailOf(File file, int max) {
