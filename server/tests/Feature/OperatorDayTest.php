@@ -181,6 +181,24 @@ it('opens a new athlete\'s timeline on the operator\'s day', function (): void {
         ->assertJsonPath('progression.belt_since', '2026-10-11');
 });
 
+it('reads a starting row written after the UTC midnight as the entry placeholder, not a dated start (#1990)', function (): void {
+    // 22:30 UTC is already tomorrow in Rome: the row is dated the operator's
+    // day, a day after the UTC day of `created_at`. Read by the UTC day alone
+    // it would look moved off the day of entry, and the two stripes Marco
+    // brought would come back as missing steps.
+    $id = $this->actingAs($this->user)
+        ->postJson('/api/v1/athletes', ['first_name' => 'Marco', 'last_name' => 'Neri', 'belt' => 'blue', 'stripes' => 2, 'status' => 'active', 'joined_at' => '2026-10-11'])
+        ->assertCreated()
+        ->json('data.id');
+
+    $timeline = $this->actingAs($this->user)
+        ->getJson("/api/v1/athletes/{$id}/promotions")
+        ->assertOk()
+        ->assertJsonPath('data.0.is_entry_placeholder', true);
+
+    expect(array_column($timeline->json('gaps'), 'kind'))->not->toContain('stripe');
+});
+
 it('refuses a birth date of the operator\'s today', function (): void {
     $this->actingAs($this->user)
         ->putJson("/api/v1/athletes/{$this->athlete->id}", ['date_of_birth' => '2026-10-11'])

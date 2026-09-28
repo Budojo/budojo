@@ -4825,6 +4825,10 @@ paths:
         - Dates as `gg/mm/aaaa`, `gg-mm-aa`, ISO, with or without a time.
         - A phone in one column, split into the stored pair. A number with no
           prefix takes the academy's own dial code.
+        - A federation register's columns (#1934): `Codice fiscale` / `C.F.`,
+          `Sesso` (`M` / `maschio` / `F` / `femmina`) and `Luogo di nascita`.
+          A valid code fills an empty date of birth and sex; two rows of one
+          file with the same code make the second `invalid`.
 
         **Defaults:** `status` is `active` and `joined_at` is today when the
         column is absent; `stripes` is `0`. `belt`, `first_name` and
@@ -4926,7 +4930,11 @@ paths:
                                 `duplicate` means an athlete of that name is
                                 already on the roster, or appeared earlier in
                                 this same file. A known date of birth on both
-                                sides that differs makes them two people.
+                                sides that differs makes them two people. It
+                                is decided before the row's errors are judged
+                                (#1934), so a re-imported athlete whose email
+                                or codice fiscale the roster already has is
+                                `duplicate`, not `invalid`.
                             values:
                               type: object
                               description: The parsed athlete, as it would be created.
@@ -5297,7 +5305,10 @@ paths:
         expired documents are included. Documents with `expires_at = null`
         are excluded. Each item inlines the `athlete`'s identity
         (`AthleteSummary`: name, belt, stripes, date of birth, photo, #1851),
-        for deep-linking and for drawing the row with the belt.
+        for deep-linking and for drawing the row with the belt, plus the
+        athlete's phone pair (#1931), so the row can offer the reminder on
+        WhatsApp. The phone rides only on this list, never on an athlete's
+        own documents.
 
         A medical certificate that a later one has replaced is also excluded:
         when an athlete has more than one live `medical_certificate` row, only
@@ -5346,12 +5357,12 @@ paths:
                 properties:
                   data:
                     type: array
-                    items: { $ref: '#/components/schemas/Document' }
+                    items: { $ref: '#/components/schemas/ExpiringDocument' }
                     description: Documents whose `expires_at` is in the past OR within `days`. Ordered by `expires_at` ascending.
                   missing_medical_certificate:
                     type: array
-                    description: Active athletes with no live medical-certificate row, each with their identity (#1851).
-                    items: { $ref: '#/components/schemas/AthleteSummary' }
+                    description: Active athletes with no live medical-certificate row, each with their identity (#1851) and phone pair (#1931).
+                    items: { $ref: '#/components/schemas/ContactableAthleteSummary' }
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
@@ -5471,7 +5482,14 @@ paths:
         without the row behind them. The client spreads each payment across
         the cells it covers, reading `year`, `month` and `period_months`.
 
-        Defaults to the current calendar year when `?year` is omitted.
+        `overdue_months` (#1654) lists the months of the year the athlete is
+        late on, by the arrears list's rule (#1760): active, expected to pay at
+        a fee above zero, from their billing floor up to **last** month, with
+        nothing — no covering payment, no carnet spendable on some day of it —
+        paying for the month. The ledger draws «In ritardo» on exactly these
+        and nowhere else.
+
+        Defaults to the operator's current year when `?year` is omitted.
         Cross-academy access returns 403.
       operationId: athletePaymentList
       parameters:
@@ -5490,12 +5508,19 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [data]
+                required: [data, overdue_months]
                 properties:
                   data:
                     type: array
                     items:
                       $ref: '#/components/schemas/AthletePayment'
+                  overdue_months:
+                    type: array
+                    description: The year's months the athlete is late on, oldest first. Empty for anyone who cannot fall behind.
+                    items:
+                      type: string
+                      pattern: '^\d{4}-\d{2}$'
+                      example: '2026-07'
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
@@ -6372,11 +6397,21 @@ paths:
         - before the first row;
         - for an interval the ladder cannot walk;
         - into a belt the history already has a row for;
-        - for the stripes held on a starting row's belt;
+        - for the stripes held on a starting row's belt, while the row is
+          still the placeholder dated the day the athlete was entered
+          (`is_entry_placeholder`);
         - for a step with no day left in its window;
         - after a starting row's belt step, until it is completed;
         - for a step the owner skipped
-          (`POST /athletes/{athlete}/promotion-skips`).
+          (`POST /athletes/{athlete}/promotion-skips`) — listed apart in
+          `skipped` instead, oldest first, so it can be brought back
+          (#1989).
+
+        **A starting row the owner has dated is the real start (#1990).**
+        Moved off the day of entry (`PATCH` with a new date) or completed,
+        it says the athlete arrived on that belt that day with no stripes:
+        the stripes after it are missing like any others, and there is
+        nothing left to complete.
 
         A gap is filled with the existing backfill (`POST` below) carrying
         exactly its fields and a date in its window
@@ -6403,7 +6438,7 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [data, meta, progression, gaps, history_starts_at]
+                required: [data, meta, progression, gaps, skipped, history_starts_at]
                 properties:
                   data:
                     type: array
@@ -6413,6 +6448,13 @@ paths:
                   gaps:
                     type: array
                     items: { $ref: '#/components/schemas/PromotionGap' }
+                  skipped:
+                    type: array
+                    description: >-
+                      The steps the owner marked as skipped that the history
+                      would otherwise report as gaps, oldest first (#1989).
+                      Undo one with `DELETE …/promotion-skips/{belt}/{stripes}`.
+                    items: { $ref: '#/components/schemas/PromotionSkippedStep' }
                   history_starts_at:
                     type: string
                     format: date
@@ -6437,14 +6479,38 @@ paths:
         fanout. `recorded_by_user_id` on the created row is always the
         caller, never a guess at who recorded the real-world event.
 
-        A backfill that contradicts an existing same-kind neighbour in the
-        athlete's timeline (its `from_*` doesn't match the nearest earlier
-        row's `to_*`, or its `to_*` doesn't match the nearest later row's
-        `from_*`) is refused with a 422 naming the row it disagrees with.
-        A row with no same-kind neighbour on one side is unconstrained on
-        that side — the athlete's earliest or latest known event of that
-        kind. Belt and stripe chains are checked independently; a stripe
-        row is never cross-checked against belt rows.
+        **Saved as typed (#1991).** This changes the #1431 rule, which
+        refused any backfill that did not meet its neighbours exactly. A row
+        that leaves a gap with the rows around it now saves, and the gap
+        shows in `gaps` to be dated. For example, stripes 1 → 2 under a
+        later row that starts at 3.
+
+        Only a **contradiction** is answered with a 422: a row that has
+        the athlete go backwards next to a row already recorded. That means:
+        - a stripe count below the one held before it, or above the one the
+          next stripe row starts from, on the same belt;
+        - a belt below the one held before it, or above the one the next
+          belt row starts from. This applies to a belt row, and to the belt
+          a stripe row is on, checked against the stripe and belt rows
+          around it;
+        - a starting belt (`from_belt: null`) after a belt row already
+          recorded, whatever belt it reaches. It says nothing came before
+          it, so it would open the history a second time.
+
+        Belts compare in the order the academy's ladder climbs them. A
+        stripe row that raises nothing (a reset) is no neighbour. A row with
+        no neighbour on one side is unconstrained on that side.
+
+        The 422 carries `code: chain_conflict` and the rows it disagrees
+        with (`PromotionChainConflict`). Its messages are in the caller's
+        language (`users.locale`), one per field, from the nearest row. The
+        owner still decides: the same body with `confirm_conflict: true`
+        saves it. The gap finder walks no interval that goes backwards, so
+        an accepted contradiction offers nothing in between.
+
+        Every other 422 on this endpoint is the usual `ValidationErrorBody`.
+        The messages written for it (a transition that changes nothing) are
+        in the caller's language too.
 
         A later belt row with no `from_belt` is a starting point — every
         timeline opens with one (#1771) — and constrains nothing before it:
@@ -6490,7 +6556,16 @@ paths:
               schema: { $ref: '#/components/schemas/ErrorMessage' }
               example: { message: Forbidden. }
         '422':
-          $ref: '#/components/responses/ValidationError'
+          description: |
+            Validation failed. A contradiction with the rows around it is a
+            `PromotionChainConflict`, which `confirm_conflict: true`
+            overrides. Anything else is the usual `ValidationErrorBody`.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/PromotionChainConflict'
+                  - $ref: '#/components/schemas/ValidationErrorBody'
 
   /athletes/{athlete}/promotions/{promotion}:
     patch:
@@ -6521,6 +6596,12 @@ paths:
         the history, #1974) accepts any one of them inside its window, with
         no further check (nothing precedes the row, and its own belt does not
         change); another belt is a 422 on `from_belt`.
+
+        "Must fit" means what it means for a backfill (#1991): a gap with
+        the belt rows around it is fine, and going backwards is a 422 on
+        `from_belt` or `to_belt`. This endpoint takes no
+        `confirm_conflict`. The messages are in the caller's language
+        (`users.locale`).
 
         403 when the promotion does not belong to the athlete in the path.
       operationId: athletePromotionUpdateRecordedAt
@@ -6604,8 +6685,9 @@ paths:
         "Saltato" on a ghost row: the step leading to `belt` + `stripes` is
         not missing, it was never taken — a BJJ white belt promoted to blue
         from three stripes. The matching gap stops being reported in
-        `GET /athletes/{athlete}/promotions`. Idempotent: a second call
-        returns 201 without a second row.
+        `GET /athletes/{athlete}/promotions`, which lists it under
+        `skipped` instead (#1989). Idempotent: a second call returns 201
+        without a second row.
       operationId: athletePromotionSkipCreate
       parameters:
         - name: athlete
@@ -7997,6 +8079,36 @@ paths:
           description: Caller lacks AthletesRestore capability.
         '404':
           description: Athlete not deleted (or unknown id).
+        '422':
+          description: |
+            A live athlete of the same academy now holds this athlete's
+            codice fiscale (#1934) — deleted, re-created, and the old row
+            asked back. Restoring would leave two live rows with one code,
+            neither of which could be saved again. `errors.fiscal_code` is
+            the key the SPA translates; `holder` is the athlete it names.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message, errors, holder]
+                properties:
+                  message:
+                    type: string
+                    example: Mario Rossi, on the roster, already has this codice fiscale.
+                  errors:
+                    type: object
+                    required: [fiscal_code]
+                    properties:
+                      fiscal_code:
+                        type: array
+                        items: { type: string, enum: [fiscal_code_taken] }
+                  holder:
+                    type: object
+                    required: [id, first_name, last_name]
+                    properties:
+                      id: { type: integer, format: int64 }
+                      first_name: { type: string }
+                      last_name: { type: string }
 
   /me/academy:
     get:
@@ -8612,6 +8724,14 @@ components:
       description: Enrollment status for an athlete
       enum: [active, inactive]
 
+    Sex:
+      type: string
+      description: |
+        The sex as the athlete's document and codice fiscale record it (#1934):
+        `m` or `f`. A registry field for the federation card and the
+        competition categories, not a gender-identity one.
+      enum: [m, f]
+
     AtRiskAthletes:
       type: object
       description: Who is drifting, against their own attendance (#1728).
@@ -8728,6 +8848,7 @@ components:
                 stripes,
                 phone_country_code,
                 phone_national_number,
+                is_self,
                 attended,
                 last_attended_on,
               ]
@@ -8742,6 +8863,7 @@ components:
               user_avatar_url: { type: string, nullable: true }
               phone_country_code: { type: string, nullable: true, example: '+39' }
               phone_national_number: { type: string, nullable: true }
+              is_self: { type: boolean, description: "The owner's own athlete row (#748)." }
               attended:
                 type: integer
                 minimum: 3
@@ -8858,13 +8980,22 @@ components:
         belt-badge context on stripe rows without joining back to the
         (possibly belt-changed-since) athlete. `recorded_by` is
         nullable as a defensive guard against hard-deleted User rows.
-      required: [id, kind, from_belt, to_belt, from_stripes, to_stripes, belt_at_event, is_opening, recorded_at, recorded_by]
+      required: [id, kind, from_belt, to_belt, from_stripes, to_stripes, belt_at_event, is_opening, is_entry_placeholder, recorded_at, recorded_by]
       properties:
         id: { type: integer, format: int64 }
         kind: { type: string, enum: [belt, stripe] }
         is_opening:
           type: boolean
           description: A starting row — `kind = belt` with no `from_belt` (#1966).
+        is_entry_placeholder:
+          type: boolean
+          description: |
+            A starting row still dated the day the athlete was entered
+            (#1990) — the athlete's `created_at`, read as its UTC day or the
+            owner's. Its date says only when the athlete was entered, and
+            the stripes on its belt are taken as held before the record.
+            False on every other row, and on a starting row the owner has
+            moved to another day or completed: that one is the real start.
         from_belt:
           allOf:
             - $ref: '#/components/schemas/Belt'
@@ -10528,6 +10659,27 @@ components:
           format: date
           nullable: true
           description: Must be strictly before today
+        fiscal_code:
+          type: string
+          nullable: true
+          description: |
+            Italian codice fiscale (#1934). Stored in capitals with no spaces,
+            however typed. Refused (422 on `fiscal_code`) when its shape, check
+            character or date is wrong, when it disagrees with the
+            `date_of_birth` or `sex` in the same payload (the message names what
+            the code says), or when another live athlete of the academy has it.
+            Omocodic codes and codes of athletes born abroad (`Z…`) are accepted.
+          example: RSSMRA80A01H501U
+        sex:
+          allOf:
+            - $ref: '#/components/schemas/Sex'
+          nullable: true
+        birth_place:
+          type: string
+          maxLength: 100
+          nullable: true
+          description: A comune, or a country for an athlete born abroad (#1934). Free text.
+          example: Roma
         belt:
           $ref: '#/components/schemas/Belt'
         stripes:
@@ -10638,6 +10790,23 @@ components:
           type: string
           format: date
           nullable: true
+        fiscal_code:
+          type: string
+          nullable: true
+          description: |
+            Italian codice fiscale (#1934), same rules as on create. Sent on its
+            own, it is checked against the `date_of_birth` and `sex` already
+            stored; sent with either, against the values sent.
+          example: RSSMRA80A01H501U
+        sex:
+          allOf:
+            - $ref: '#/components/schemas/Sex'
+          nullable: true
+        birth_place:
+          type: string
+          maxLength: 100
+          nullable: true
+          example: Roma
         belt:
           $ref: '#/components/schemas/Belt'
         stripes:
@@ -10783,6 +10952,9 @@ components:
         - facebook
         - instagram
         - date_of_birth
+        - fiscal_code
+        - sex
+        - birth_place
         - belt
         - stripes
         - status
@@ -10843,6 +11015,20 @@ components:
           type: string
           format: date
           nullable: true
+        fiscal_code:
+          type: string
+          nullable: true
+          description: Italian codice fiscale (#1934), in capitals with no spaces.
+          example: RSSMRA80A01H501U
+        sex:
+          allOf:
+            - $ref: '#/components/schemas/Sex'
+          nullable: true
+        birth_place:
+          type: string
+          nullable: true
+          description: A comune, or a country for an athlete born abroad (#1934).
+          example: Roma
         belt:
           $ref: '#/components/schemas/Belt'
         stripes:
@@ -11351,6 +11537,14 @@ components:
           type: string
           format: date
           description: Copy of the attendance record's `attended_on`
+        lesson_name:
+          type: string
+          nullable: true
+          description: |
+            The class this entry paid for, as the lesson recorded its name that
+            day (#1654), so a class renamed or deleted since still reads as it
+            was. Null for a presence with no lesson: a self-mark, or one
+            recorded before the timetable (#1562).
 
     CarnetCreateRequest:
       type: object
@@ -11464,6 +11658,21 @@ components:
         promotion_id: { type: integer, format: int64 }
         recorded_at: { type: string, format: date }
 
+    PromotionSkippedStep:
+      type: object
+      description: |
+        A step the owner said never happened, where the history would
+        otherwise report it as a gap (#1989). `key` is the key the gap
+        has; `belt` + `stripes` are what the skip is stored by — the grade
+        the step leads to — and what `DELETE …/promotion-skips` takes. A
+        skip for a step the history no longer misses is not listed.
+      required: [key, kind, belt, stripes]
+      properties:
+        key: { type: string, example: 'stripe:white:4' }
+        kind: { type: string, enum: [belt, stripe] }
+        belt: { $ref: '#/components/schemas/Belt' }
+        stripes: { type: integer, minimum: 0, maximum: 10 }
+
     PromotionSkipRequest:
       type: object
       required: [belt, stripes]
@@ -11510,6 +11719,46 @@ components:
           description: |
             `kind=stripe` only — the belt this stripe happened on. Not
             accepted for `kind=belt`; the server derives it as `to_belt`.
+        confirm_conflict:
+          type: boolean
+          description: |
+            The owner read a `chain_conflict` warning and saves the row as
+            typed anyway (#1991). The contradiction check is skipped. The
+            shape rules are not.
+
+    PromotionChainConflict:
+      type: object
+      description: |
+        A backfill that would have the athlete go backwards next to a row
+        already recorded (#1991). `errors` holds one message per field, in
+        the caller's language, from the nearest row it contradicts.
+        `message` is the first of them. `conflicts` names each of those
+        rows: its id and date, and the value it holds there. That value is
+        the belt and count held after an earlier row, or before a later
+        one. `stripes` is null when the contradiction is about the belt.
+        Resend the same body with `confirm_conflict: true` to save it anyway.
+      required: [message, code, errors, conflicts]
+      properties:
+        message: { type: string, example: 'Il 18 novembre 2025 aveva già 3 gradi: qui arriveresti a 2.' }
+        code: { type: string, enum: [chain_conflict] }
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items: { type: string }
+        conflicts:
+          type: array
+          items:
+            type: object
+            required: [field, promotion_id, recorded_at, belt, stripes]
+            properties:
+              field:
+                type: string
+                enum: [from_belt, to_belt, belt_at_event, from_stripes, to_stripes]
+              promotion_id: { type: integer, format: int64 }
+              recorded_at: { type: string, format: date }
+              belt: { $ref: '#/components/schemas/Belt' }
+              stripes: { type: integer, minimum: 0, maximum: 10, nullable: true }
 
     AthleteEnvelope:
       type: object
@@ -11625,6 +11874,37 @@ components:
           type: string
           nullable: true
           description: The linked user's avatar; null when there is no linked user or no avatar.
+
+    ContactableAthleteSummary:
+      description: |
+        An `AthleteSummary` plus the stored phone pair (#1931), for the lists
+        whose rows offer WhatsApp and a call: the certificates to chase
+        (`/documents/expiring`). Both keys are always present and null when
+        no number is on file, so the client can draw a disabled control that
+        says why. `is_self` marks the owner's own row (#748), which gets no
+        reminder. `ContactableAthleteResource` on the server.
+      allOf:
+        - $ref: '#/components/schemas/AthleteSummary'
+        - type: object
+          required: [phone_country_code, phone_national_number, is_self]
+          properties:
+            phone_country_code: { type: string, nullable: true, example: '+39' }
+            phone_national_number: { type: string, nullable: true, example: '3331234567' }
+            is_self: { type: boolean, description: "The owner's own athlete row (#748).", example: false }
+
+    ExpiringDocument:
+      description: |
+        A `Document` on the list of papers to chase (#1931): the same row,
+        with the athlete carrying the phone pair. Null `athlete` on the
+        academy's own papers (#1743).
+      allOf:
+        - $ref: '#/components/schemas/Document'
+        - type: object
+          properties:
+            athlete:
+              allOf:
+                - $ref: '#/components/schemas/ContactableAthleteSummary'
+              nullable: true
 
     Document:
       type: object

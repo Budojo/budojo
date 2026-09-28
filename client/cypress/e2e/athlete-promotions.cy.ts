@@ -274,21 +274,35 @@ describe('Athlete promotion history (#1431)', () => {
       });
     });
 
-    it('surfaces a chain-consistency conflict inline and keeps the dialog open', () => {
+    it('warns about a contradiction under its field, and adds it anyway on confirm (#1991)', () => {
       cy.intercept('GET', '/api/v1/athletes/1/promotions*', promotionsPage([promotion()])).as(
         'promotions',
       );
-      cy.intercept('POST', '/api/v1/athletes/1/promotions', {
-        statusCode: 422,
-        body: {
-          message: 'The given data was invalid.',
-          errors: {
-            from_belt: [
-              "Doesn't match the belt after the previous promotion on 2019-01-01 (white).",
+      const warning =
+        'On 1 January 2019 they were already on a higher belt: this would put them on a lower one.';
+      cy.intercept('POST', '/api/v1/athletes/1/promotions', (req) => {
+        if (req.body.confirm_conflict === true) {
+          req.reply({ statusCode: 201, body: { data: promotion({ id: 30, kind: 'belt' }) } });
+          return;
+        }
+        req.reply({
+          statusCode: 422,
+          body: {
+            message: warning,
+            code: 'chain_conflict',
+            errors: { from_belt: [warning] },
+            conflicts: [
+              {
+                field: 'from_belt',
+                promotion_id: 3,
+                recorded_at: '2019-01-01',
+                belt: 'blue',
+                stripes: null,
+              },
             ],
           },
-        },
-      }).as('createFails');
+        });
+      }).as('create');
 
       cy.visitAuthenticated('/dashboard/athletes/1/promotions');
       cy.wait(['@academy', '@athlete', '@promotions']);
@@ -301,15 +315,22 @@ describe('Athlete promotion history (#1431)', () => {
       cy.get('[data-cy="promotion-create-to-belt"]').click();
       cy.get('.p-select-option').contains('Purple').click();
       cy.get('[data-cy="promotion-create-confirm"]').click();
-      cy.wait('@createFails');
+      cy.wait('@create').its('request.body').should('not.have.property', 'confirm_conflict');
 
-      cy.get('[data-cy="promotion-create-error"]').should(
-        'contain.text',
-        "Doesn't match the belt after the previous promotion",
-      );
-      // The specific reason is worth seeing, so the dialog stays open with
-      // the owner's input intact rather than being dismissed.
+      // Under the field it concerns, not a banner, and the dialog stays open
+      // with the owner's input intact.
+      cy.get('[data-cy="promotion-create-message-from_belt"]').should('have.text', warning);
+      cy.get('[data-cy="promotion-create-error"]').should('not.exist');
       cy.get('[data-cy="promotion-create-dialog"]').should('be.visible');
+
+      cy.get('[data-cy="promotion-create-confirm-conflict"]').click();
+      cy.wait('@create').its('request.body').should('deep.include', {
+        kind: 'belt',
+        from_belt: 'white',
+        to_belt: 'purple',
+        confirm_conflict: true,
+      });
+      cy.get('[data-cy="promotion-create-dialog"]').should('not.be.visible');
     });
 
     it('cancel closes the dialog without calling the server', () => {
@@ -429,9 +450,12 @@ describe('a missing promotion step (#1966)', () => {
     completes_promotion_id: null,
   });
 
-  function timeline(rows: unknown[], gaps: unknown[]) {
+  function timeline(rows: unknown[], gaps: unknown[], skipped: unknown[] = []) {
     const response = promotionsPage(rows);
-    return { ...response, body: { ...response.body, gaps, history_starts_at: '2026-09-01' } };
+    return {
+      ...response,
+      body: { ...response.body, gaps, skipped, history_starts_at: '2026-09-01' },
+    };
   }
 
   beforeEach(() => {
@@ -528,6 +552,47 @@ describe('a missing promotion step (#1966)', () => {
     cy.get('[data-cy="gap-unskip-stripe:blue:1"]').click();
     cy.wait('@unskip');
     cy.get('[data-cy="promotion-gap-stripe:blue:1"]').should('be.visible');
+    cy.focused().should('contain.text', 'Add the date');
+  });
+
+  it('lists the steps skipped on an earlier visit, and restores one (#1989)', () => {
+    cy.intercept(
+      'GET',
+      '/api/v1/athletes/1/promotions*',
+      timeline(
+        [blueBelt],
+        [blueStripe(2)],
+        [{ key: 'stripe:blue:1', kind: 'stripe', belt: 'blue', stripes: 1 }],
+      ),
+    ).as('promotions');
+    cy.intercept('DELETE', '/api/v1/athletes/1/promotion-skips/blue/1', { statusCode: 204 }).as(
+      'unskip',
+    );
+
+    cy.visitAuthenticated('/dashboard/athletes/1/promotions');
+    cy.wait(['@academy', '@athlete', '@promotions']);
+
+    // One quiet line under the timeline, folded until asked.
+    cy.get('[data-cy="promotions-skipped"]').should('contain.text', '1 step marked as skipped');
+    cy.get('[data-cy="promotions-skipped-list"]').should('not.exist');
+    cy.get('[data-cy="promotions-skipped-toggle"]').click();
+    cy.get('[data-cy="promotions-skipped-list"]').should('contain.text', 'Blue, stripe 1');
+
+    // As the server answers once the skip is gone: the step is missing again.
+    cy.intercept(
+      'GET',
+      '/api/v1/athletes/1/promotions*',
+      timeline([blueBelt], [blueStripe(1), blueStripe(2)]),
+    ).as('reload');
+    cy.get('[data-cy="skipped-restore-stripe:blue:1"]').click();
+    cy.wait('@unskip');
+    cy.wait('@reload');
+    cy.get('[data-cy="promotion-gap-stripe:blue:1"]').should('be.visible');
+    cy.get('[data-cy="promotions-skipped"]').should('not.exist');
+    cy.get('[data-cy="promotions-announce"]').should(
+      'contain.text',
+      'Blue, stripe 1: back among the steps to date',
+    );
     cy.focused().should('contain.text', 'Add the date');
   });
 });

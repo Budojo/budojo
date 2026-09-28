@@ -22,15 +22,25 @@ use Carbon\CarbonImmutable;
  * Where a row starts:
  * - a stripe row, on its belt at its `from_stripes`;
  * - a belt row, on its `from_belt` once the ladder's next step leaves it;
- * - a starting row (#1771) that is not the first, just before the belt step
- *   into its belt — the one step it stands for, reported to be **completed**
- *   (`completes_promotion_id`) rather than added as a second row.
+ * - a starting row (#1771) that is not the first and is still dated the day
+ *   of entry, just before the belt step into its belt — the one step it
+ *   stands for, reported to be **completed** (`completes_promotion_id`)
+ *   rather than added as a second row. A dated one is the belt step itself,
+ *   and starts on its belt at no stripes (#1990).
  *
  * **Never a guess.** An interval the ladder cannot walk — rows that
  * contradict each other, a kids' grade an adult's ladder never passes —
  * reports nothing. So does a walk that would step into a belt the history
  * already has a row for, or has already been offered: a belt is reached
  * once, and a second row for it is the one thing a ghost must never lead to.
+ * A stripe on record is never offered again either — every count a row
+ * covers, the middle of a jump included. Only a contradiction in the history
+ * puts one on a walk, confirmed since #1991 or saved unchecked before it (a
+ * blue stripe dated before the promotion to blue: stripe rows were never
+ * checked against belt rows); the walk offers the rest of its steps. Such a
+ * history can also put one step on two walks: it is reported once, in the
+ * oldest window with a day left, since the page tracks and skips a step by
+ * its key.
  *
  * **Corrections are not promotions.** A belt set by mistake and set back
  * cancels out — the shortest round trip b1 → b2, b2 → b1 between two
@@ -52,9 +62,17 @@ use Carbon\CarbonImmutable;
  * belt row with a date.
  *
  * **Nothing before the record.** Nothing is reported before the first row,
- * and the stripes on the belt of a starting row are taken as held on arrival,
- * as the row records the belt and not the count — whether it opens the
- * history or was imported after older rows were transcribed.
+ * and the stripes on the belt of a starting row still on the day of entry are
+ * taken as held on arrival, as the row records the belt and not the count —
+ * whether it opens the history or was imported after older rows were
+ * transcribed.
+ *
+ * **A starting row the owner has dated is the real start (#1990).** Moved off
+ * the day of entry — the pencil, or completing it ({@see EntryPlaceholder}) —
+ * it says the athlete arrived on that belt that day with no stripes: the ones
+ * after it are missing like any others, and there is nothing left to
+ * complete, the row is the belt step with its date. White in 2015, blue in
+ * 2016: the four white stripes between them are offered.
  *
  * **One exception: a starting row that opens the history (#1974)** — the
  * most common imported athlete, entered on a belt with nothing typed in
@@ -95,6 +113,7 @@ use Carbon\CarbonImmutable;
  * @phpstan-type Next array{kind: 'belt'|'stripe', belt: Belt, stripes: int}|null
  * @phpstan-type Target array{type: 'state'|'leaving'|'entering', belt: Belt, stripes: int}
  * @phpstan-type Found array{step: Step, after: PromotionRecord, completes: PromotionRecord|null}
+ * @phpstan-type Skipped array{key: string, kind: 'belt'|'stripe', belt: string, stripes: int}
  */
 final class PromotionGaps
 {
@@ -109,6 +128,9 @@ final class PromotionGaps
 
     /** @var array<string, true> belts reached by a row, or already offered */
     private array $reached = [];
+
+    /** @var array<string, true> the stripes a row records, as `belt:stripes` */
+    private array $recordedStripes = [];
 
     /**
      * @param \Closure(Belt, CarbonImmutable): bool $kidsEligible whether the kids'
@@ -127,23 +149,26 @@ final class PromotionGaps
      * @param list<PromotionRecord> $records in any order
      * @param list<string>          $skipped the states the owner said were never reached, as `belt:stripes`
      *
-     * @return array{gaps: list<Gap>, history_starts_at: string|null}
+     * @return array{gaps: list<Gap>, skipped: list<Skipped>, history_starts_at: string|null}
      */
     public function find(array $records, Belt $currentBelt, int $currentStripes, array $skipped): array
     {
         $sorted = new PromotionOrder($this->ladder)->chronological($records);
         if ($sorted === []) {
-            return ['gaps' => [], 'history_starts_at' => null];
+            return ['gaps' => [], 'skipped' => [], 'history_starts_at' => null];
         }
 
         $this->rows = $this->withoutUndone(array_values(array_filter($sorted, static fn (PromotionRecord $row): bool => ! $row->isReset())));
         $found = $this->rows === [] ? [] : $this->replay($currentBelt, $currentStripes);
-        $gaps = $this->gaps($found, $skipped);
+        [$gaps, $skippedSteps] = $this->gaps($found, $skipped);
         $opening = $this->openingStep($currentBelt);
 
         return [
             // Oldest first: the step before the first row leads.
             'gaps' => $opening === null ? $gaps : [$opening, ...$gaps],
+            // The steps the owner said never happened, where they would
+            // otherwise be offered (#1989): listed apart, to be brought back.
+            'skipped' => $skippedSteps,
             'history_starts_at' => $sorted[0]->day(),
         ];
     }
@@ -216,11 +241,17 @@ final class PromotionGaps
         $first = $this->rows[0];
         $this->placeholders = [];
         $this->reached = [];
+        $this->recordedStripes = [];
         foreach ($this->rows as $row) {
             if ($row->kind !== 'belt') {
+                // Every count it covers: «0 → 2» holds the first stripe too.
+                for ($count = ($row->fromStripes ?? 0) + 1; $count <= $row->stripes(); $count++) {
+                    $this->recordedStripes["{$row->beltAtEvent->value}:{$count}"] = true;
+                }
+
                 continue;
             }
-            if ($row !== $first && $row->isOpening()) {
+            if ($row !== $first && $row->isPlaceholder()) {
                 $this->placeholders[$row->belt()->value] ??= $row;
             } else {
                 $this->reached[$row->belt()->value] = true;
@@ -228,7 +259,7 @@ final class PromotionGaps
         }
 
         $state = ['belt' => $first->belt(), 'stripes' => $first->stripes()];
-        $enteredOn = $first->isOpening() ? $first->belt() : null;
+        $enteredOn = $first->isPlaceholder() ? $first->belt() : null;
         $anchor = $first;
         $found = [];
 
@@ -364,9 +395,9 @@ final class PromotionGaps
     }
 
     /**
-     * A starting row after the first: the athlete arrived on its belt. Its
-     * belt step is offered to be completed, the steps before it as usual; the
-     * stripes on the belt are held on arrival.
+     * A starting row after the first: the athlete arrived on its belt. Still
+     * on the day of entry, its belt step is offered to be completed, the steps
+     * before it as usual, and the stripes on the belt are held on arrival.
      *
      * @param State $state
      *
@@ -374,6 +405,10 @@ final class PromotionGaps
      */
     private function arrival(PromotionRecord $row, array $state, ?Belt $enteredOn, PromotionRecord $anchor): array
     {
+        if (! $row->isPlaceholder()) {
+            return $this->datedStart($row, $state, $enteredOn, $anchor);
+        }
+
         $belt = $row->belt();
         $here = $this->ladder->climbPosition($state['belt']);
         $there = $this->ladder->climbPosition($belt);
@@ -395,6 +430,35 @@ final class PromotionGaps
         $step = [...$next, 'from_belt' => $walk['at']['belt'], 'from_stripes' => $walk['at']['stripes']];
 
         return [$this->offered([...$walk['steps'], $step], $anchor), ['belt' => $belt, 'stripes' => $next['stripes']], $belt];
+    }
+
+    /**
+     * A starting row after the first that the owner has dated (#1990): the
+     * row is the belt step itself, on its day. The steps before it are
+     * missing as usual; the athlete arrives on the belt with no stripes — or
+     * with the number a poom carries into its dan — and the count is known.
+     *
+     * @param State $state
+     *
+     * @return array{0: list<Found>, 1: State, 2: Belt|null}
+     */
+    private function datedStart(PromotionRecord $row, array $state, ?Belt $enteredOn, PromotionRecord $anchor): array
+    {
+        $belt = $row->belt();
+        $here = $this->ladder->climbPosition($state['belt']);
+        $there = $this->ladder->climbPosition($belt);
+        if ($here === null || $there === null || $here >= $there) {
+            // Already on it, or past it: the rows before say more than this one.
+            return [[], $state, $enteredOn];
+        }
+
+        $walk = $this->walk($state, $enteredOn, ['type' => 'entering', 'belt' => $belt, 'stripes' => 0], $row->recordedAt);
+        $next = $walk === null ? null : $this->next($walk['at'], $row->recordedAt);
+        if ($walk === null || $next === null) {
+            return [[], ['belt' => $belt, 'stripes' => 0], null];
+        }
+
+        return [$this->offered($walk['steps'], $anchor), ['belt' => $belt, 'stripes' => $next['stripes']], null];
     }
 
     /**
@@ -503,8 +567,8 @@ final class PromotionGaps
     /**
      * The steps of one walk the page may offer: all of them, or none if one
      * would lead into a belt the history already has (a contradiction, never
-     * a guess); and nothing after a starting row's belt step, whose day is not
-     * known yet.
+     * a guess); never a stripe a row already records; and nothing after a
+     * starting row's belt step, whose day is not known yet.
      *
      * @param list<Step> $steps
      *
@@ -516,7 +580,11 @@ final class PromotionGaps
         $reached = [];
         foreach ($steps as $step) {
             if ($step['kind'] !== 'belt') {
-                $found[] = ['step' => $step, 'after' => $after, 'completes' => null];
+                // On record already — only a contradiction in the history
+                // puts one on a walk: never offer it a second time.
+                if (! isset($this->recordedStripes["{$step['belt']->value}:{$step['stripes']}"])) {
+                    $found[] = ['step' => $step, 'after' => $after, 'completes' => null];
+                }
 
                 continue;
             }
@@ -540,27 +608,44 @@ final class PromotionGaps
     }
 
     /**
+     * The steps as the page reads them: the gaps to fill and, apart, the ones
+     * the owner skipped (#1989). A step with no day left in its window is
+     * neither.
+     *
      * @param list<Found>  $found
      * @param list<string> $skipped
      *
-     * @return list<Gap>
+     * @return array{0: list<Gap>, 1: list<Skipped>}
      */
     private function gaps(array $found, array $skipped): array
     {
         $gaps = [];
+        $skippedSteps = [];
+        $emitted = [];
         foreach ($found as ['step' => $step, 'after' => $after, 'completes' => $completes]) {
-            // A starting row is completed, not skipped: it is a belt they hold.
-            if ($completes === null && \in_array("{$step['belt']->value}:{$step['stripes']}", $skipped, true)) {
-                continue;
-            }
-
             $before = $this->bound($after, $completes);
             if (($before?->day() ?? $this->today->toDateString()) <= $after->day()) {
                 continue;
             }
 
+            $key = "{$step['kind']}:{$step['belt']->value}:{$step['stripes']}";
+            // A contradiction in the history can put one step on two walks:
+            // the page tracks and skips a step by its key, so it is reported
+            // once, in the oldest window that has a day left.
+            if (isset($emitted[$key])) {
+                continue;
+            }
+            $emitted[$key] = true;
+
+            // A starting row is completed, not skipped: it is a belt they hold.
+            if ($completes === null && \in_array("{$step['belt']->value}:{$step['stripes']}", $skipped, true)) {
+                $skippedSteps[] = ['key' => $key, 'kind' => $step['kind'], 'belt' => $step['belt']->value, 'stripes' => $step['stripes']];
+
+                continue;
+            }
+
             $gaps[] = [
-                'key' => "{$step['kind']}:{$step['belt']->value}:{$step['stripes']}",
+                'key' => $key,
                 'kind' => $step['kind'],
                 'belt' => $step['belt']->value,
                 'from_belt' => $step['kind'] === 'belt' ? $step['from_belt']->value : null,
@@ -574,7 +659,7 @@ final class PromotionGaps
             ];
         }
 
-        return $gaps;
+        return [$gaps, $skippedSteps];
     }
 
     /**
@@ -588,7 +673,8 @@ final class PromotionGaps
     private function openingStep(Belt $currentBelt): ?array
     {
         $first = $this->rows[0] ?? null;
-        if ($first === null || ! $first->isOpening() || $this->setBack($first, $currentBelt)) {
+        // A starting row the owner dated is the start itself: nothing to complete.
+        if ($first === null || ! $first->isPlaceholder() || $this->setBack($first, $currentBelt)) {
             return null;
         }
 

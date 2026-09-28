@@ -35,6 +35,8 @@ import {
   AthleteService,
   Belt,
   type PromotionGap,
+  type PromotionSaveError,
+  type PromotionSkippedStep,
 } from '../../../../core/services/athlete.service';
 import { BeltLadderService } from '../../../../core/services/belt-ladder.service';
 import { LanguageService } from '../../../../core/services/language.service';
@@ -55,6 +57,11 @@ interface GapWindow {
   readonly min: Date | null;
   readonly max: Date;
 }
+
+/** The "Mostra" / "Nascondi" of the list of skipped steps (#1989). */
+const SKIPPED_TOGGLE = '[data-cy="promotions-skipped-toggle"]';
+/** The timeline itself, focusable from script only. */
+const TIMELINE = '[data-cy="promotions-list"]';
 
 /**
  * Owner-facing timeline of an athlete's belt + stripe promotion
@@ -161,6 +168,12 @@ export class PromotionsListComponent implements OnInit {
   protected readonly skippingKey = signal<string | null>(null);
   /** Steps skipped during this visit, drawn in place with their undo until a reload. */
   private readonly skipped = signal<ReadonlySet<string>>(new Set());
+  /** Every step marked as skipped, as the server lists them (#1989). */
+  protected readonly skippedSteps = signal<readonly PromotionSkippedStep[]>([]);
+  /** Whether the list of skipped steps is open. Folded until asked. */
+  protected readonly skippedOpen = signal(false);
+  /** The skipped step whose "Ripristina" is on its way to the server. */
+  protected readonly restoringKey = signal<string | null>(null);
   /** What the status region last said — a skip or its undo. */
   protected readonly announcement = signal('');
 
@@ -195,7 +208,12 @@ export class PromotionsListComponent implements OnInit {
 
   protected readonly createDialogOpen = signal(false);
   protected readonly creating = signal(false);
+  /** A save's failure that belongs to no field the dialog shows, below the form. */
   protected readonly createError = signal<string | null>(null);
+  /** The server's messages for the fields the dialog shows, under each (#1991). */
+  protected readonly createFieldErrors = signal<Readonly<Record<string, string>>>({});
+  /** The last save would have the athlete go backwards: the owner may confirm it (#1991). */
+  protected readonly createConflict = signal(false);
   protected readonly createForm = this.fb.group({
     kind: this.fb.control<'belt' | 'stripe'>('belt', { nonNullable: true }),
     recorded_at: this.fb.control<Date | null>(null),
@@ -345,10 +363,36 @@ export class PromotionsListComponent implements OnInit {
       .subscribe(() => {
         this.createForm.patchValue({ from_stripes: null, to_stripes: null });
       });
-    // The offer answers the row as typed: any change asks again on confirm.
-    this.createForm.valueChanges
+    // «Da cintura» starts on the belt the rows say was held that day (#1991):
+    // «Cintura di partenza» after a promotion already recorded is a
+    // contradiction, and the default must never be one. Only until the
+    // owner picks a belt themselves.
+    this.createForm.controls.recorded_at.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => this.completionOffer.set(null));
+      .subscribe((day) => {
+        const fromBelt = this.createForm.controls.from_belt;
+        if (day === null || this.filling() !== null || fromBelt.dirty) return;
+        fromBelt.setValue(this.beltHeldOn(day));
+      });
+    // The offer and the server's answer are about the row as typed: any
+    // change asks again on confirm.
+    this.createForm.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      this.completionOffer.set(null);
+      this.clearSaveErrors();
+    });
+  }
+
+  /**
+   * The belt the loaded rows say was held on a day: the latest belt row on
+   * or before it (a row of that same day counts as before, as the server
+   * reads it). Null before anything recorded — a starting belt then.
+   */
+  private beltHeldOn(day: Date): Belt | null {
+    const iso = toIsoDate(day);
+    const row = this.promotions().find(
+      (p) => p.kind === 'belt' && p.recorded_at.slice(0, 10) <= iso,
+    );
+    return row?.to_belt ?? null;
   }
 
   /** A belt in the owner's words, for sentences that name one. */
@@ -377,8 +421,10 @@ export class PromotionsListComponent implements OnInit {
           this.progression.set(resp.progression ?? null);
           this.gaps.set(resp.gaps ?? []);
           this.historyStartsAt.set(resp.history_starts_at ?? null);
-          // A skipped step is no longer in the reply: its line ends here.
+          // A skipped step is no longer in the reply: its line ends here,
+          // and it is listed with the others under the timeline.
           this.skipped.set(new Set());
+          this.skippedSteps.set(resp.skipped ?? []);
           this.currentPage.set(resp.meta.current_page);
           this.lastPage.set(resp.meta.last_page);
           this.loading.set(false);
@@ -463,7 +509,7 @@ export class PromotionsListComponent implements OnInit {
       from_stripes: null,
       to_stripes: null,
     });
-    this.createError.set(null);
+    this.clearSaveErrors();
     this.completionOffer.set(null);
     this.createDialogOpen.set(true);
   }
@@ -552,9 +598,30 @@ export class PromotionsListComponent implements OnInit {
     return options !== null && picked !== null && options.includes(picked) ? picked : gap.from_belt;
   }
 
+  /**
+   * «Aggiungi comunque» (#1991): the owner read the contradiction and saves
+   * the row as typed. The warning is dropped on any change to the form, so
+   * the row sent is the one it was about. A step being filled goes the
+   * fill's way, so it ends as a fill does: the keyboard on the row written.
+   */
+  protected confirmConflict(): void {
+    const v = this.createForm.getRawValue();
+    if (v.recorded_at === null || this.creating()) return;
+    const recordedAt = toIsoDate(v.recorded_at);
+    const gap = this.filling();
+    if (gap !== null) {
+      this.saveFilled(gap, recordedAt, this.chosenFromBelt(gap, v.from_belt), true);
+      return;
+    }
+
+    const payload = createPayload(v, recordedAt);
+    if (payload === null) return;
+    this.postCreate({ ...payload, confirm_conflict: true });
+  }
+
   private postCreate(payload: AthletePromotionCreatePayload): void {
     this.creating.set(true);
-    this.createError.set(null);
+    this.clearSaveErrors();
     this.athleteService
       .createPromotion(this.athleteId, payload)
       .pipe(finalize(() => this.creating.set(false)))
@@ -572,20 +639,58 @@ export class PromotionsListComponent implements OnInit {
             life: 3000,
           });
         },
-        error: (err: { status?: number; error?: { errors?: Record<string, string[]> } }) => {
-          // A chain-consistency conflict (422) names the exact row it
-          // disagrees with — surfacing that beats a generic failure for
-          // the one flow where the owner needs to know precisely what
-          // to fix (docs/entities/athlete-promotion.md).
-          const firstError =
-            err.status === 422 && err.error?.errors
-              ? Object.values(err.error.errors)[0]?.[0]
-              : undefined;
-          this.createError.set(
-            firstError ?? this.translate.instant('athletes.detail.promotions.createDialog.error'),
-          );
-        },
+        error: (err: PromotionSaveError) => this.showSaveError(err),
       });
+  }
+
+  /**
+   * A save the server turned down (#1991). Its messages are in the owner's
+   * language already, and each goes under the field it concerns — a
+   * contradiction as a warning the owner may confirm, anything else as an
+   * error. What concerns no field the dialog shows goes below the form, and
+   * a failure with no answer says so in our words. Never a banner.
+   */
+  private showSaveError(err: PromotionSaveError): void {
+    const shown = this.shownFields();
+    const underFields: Record<string, string> = {};
+    const elsewhere: string[] = [];
+    if (err.status === 422) {
+      for (const [field, messages] of Object.entries(err.error?.errors ?? {})) {
+        const message = messages[0];
+        if (message === undefined) continue;
+        if (shown.includes(field)) underFields[field] = message;
+        else elsewhere.push(message);
+      }
+    }
+
+    const said = Object.keys(underFields).length > 0 || elsewhere.length > 0;
+    this.createFieldErrors.set(underFields);
+    this.createConflict.set(err.status === 422 && err.error?.code === 'chain_conflict');
+    this.createError.set(
+      elsewhere[0] ??
+        (said ? null : this.translate.instant('athletes.detail.promotions.createDialog.error')),
+    );
+  }
+
+  private clearSaveErrors(): void {
+    this.createError.set(null);
+    this.createFieldErrors.set({});
+    this.createConflict.set(false);
+  }
+
+  /** The fields the dialog draws right now, in the server's names. */
+  private shownFields(): readonly string[] {
+    if (this.filling() !== null) {
+      return this.fillFromBeltOptions().length > 1 ? ['recorded_at', 'from_belt'] : ['recorded_at'];
+    }
+    return this.createForm.controls.kind.value === 'belt'
+      ? ['recorded_at', 'from_belt', 'to_belt']
+      : ['recorded_at', 'belt_at_event', 'from_stripes', 'to_stripes'];
+  }
+
+  /** The server's message for one field, drawn under it (#1991). */
+  protected messageFor(field: string): string | null {
+    return this.createFieldErrors()[field] ?? null;
   }
 
   /**
@@ -606,7 +711,7 @@ export class PromotionsListComponent implements OnInit {
       from_stripes: null,
       to_stripes: null,
     });
-    this.createError.set(null);
+    this.clearSaveErrors();
     this.createDialogOpen.set(true);
   }
 
@@ -645,20 +750,31 @@ export class PromotionsListComponent implements OnInit {
   /**
    * Writes the step. A step an opening row stands for completes that row —
    * the belt before it and its real date — instead of adding a second one.
+   * `confirmed` when the owner read a contradiction and adds it anyway
+   * (#1991): the history changed under the page, and the step is no gap.
    */
-  private saveFilled(gap: PromotionGap, recordedAt: string, fromBelt: Belt | null): void {
+  private saveFilled(
+    gap: PromotionGap,
+    recordedAt: string,
+    fromBelt: Belt | null,
+    confirmed = false,
+  ): void {
+    const step = payloadFor(gap, recordedAt);
     const request =
       gap.completes_promotion_id !== null && fromBelt !== null
         ? this.athleteService.completeOpeningPromotion(this.athleteId, gap.completes_promotion_id, {
             recorded_at: recordedAt,
             from_belt: fromBelt,
           })
-        : this.athleteService.createPromotion(this.athleteId, payloadFor(gap, recordedAt));
+        : this.athleteService.createPromotion(
+            this.athleteId,
+            confirmed ? { ...step, confirm_conflict: true } : step,
+          );
 
     // Where the step sat, for when the row it became is not on this page.
     const index = this.entryIndexOf(gap);
     this.creating.set(true);
-    this.createError.set(null);
+    this.clearSaveErrors();
     request.pipe(finalize(() => this.creating.set(false))).subscribe({
       next: (row) => {
         this.createDialogOpen.set(false);
@@ -673,15 +789,7 @@ export class PromotionsListComponent implements OnInit {
           life: 3000,
         });
       },
-      error: (err: { status?: number; error?: { errors?: Record<string, string[]> } }) => {
-        const firstError =
-          err.status === 422 && err.error?.errors
-            ? Object.values(err.error.errors)[0]?.[0]
-            : undefined;
-        this.createError.set(
-          firstError ?? this.translate.instant('athletes.detail.promotions.createDialog.error'),
-        );
-      },
+      error: (err: PromotionSaveError) => this.showSaveError(err),
     });
   }
 
@@ -749,11 +857,56 @@ export class PromotionsListComponent implements OnInit {
     });
   }
 
-  /** Focus an element in this tab once the reload has drawn it. */
-  private focusAfterRender(selector: string): void {
+  /**
+   * "Ripristina" in the list of skipped steps (#1989): the skip is deleted
+   * and the timeline reloads, so the step is back where it belongs, as a
+   * ghost row to date. Focus follows it there when it is drawn on this page,
+   * and stays with the list otherwise.
+   */
+  protected restore(step: PromotionSkippedStep): void {
+    if (this.restoringKey() !== null) return;
+    this.restoringKey.set(step.key);
+    this.athleteService
+      .unskipPromotionStep(this.athleteId, step.belt, step.stripes)
+      .pipe(finalize(() => this.restoringKey.set(null)))
+      .subscribe({
+        next: () => {
+          this.announcement.set(
+            this.translate.instant('athletes.detail.promotions.gap.restored', {
+              step: this.skippedLabel(step),
+            }),
+          );
+          // Its ghost row when it is drawn here; otherwise the list it left,
+          // and once that is gone too, the timeline — never <body>.
+          this.load(this.currentPage(), () =>
+            this.focusAfterRender(addDateSelector(step), SKIPPED_TOGGLE, TIMELINE),
+          );
+        },
+        error: () => {
+          this.messageService.add({
+            severity: 'error',
+            summary: this.translate.instant('athletes.detail.promotions.toast.errorSummary'),
+            detail: this.translate.instant('athletes.detail.promotions.gap.undoError'),
+            life: 4000,
+          });
+        },
+      });
+  }
+
+  /**
+   * Focus an element in this tab once the reload has drawn it: the first of
+   * `selectors`, in the order given, that is on the page.
+   */
+  private focusAfterRender(...selectors: string[]): void {
     runInInjectionContext(this.injector, () =>
       afterNextRender(() => {
-        this.host.nativeElement.querySelector<HTMLElement>(selector)?.focus();
+        for (const selector of selectors) {
+          const target = this.host.nativeElement.querySelector<HTMLElement>(selector);
+          if (target !== null) {
+            target.focus();
+            return;
+          }
+        }
       }),
     );
   }
@@ -800,17 +953,25 @@ export class PromotionsListComponent implements OnInit {
 
   /** "Bianca, 4° grado" / "Nera, 3° dan" / "cintura Blu" — a step named in words. */
   protected stepLabel(gap: PromotionGap): string {
+    return this.stepName(gap.kind, gap.belt, gap.to_stripes ?? 0);
+  }
+
+  /** A skipped step, named the way its ghost row was (#1989). */
+  protected skippedLabel(step: PromotionSkippedStep): string {
+    return this.stepName(step.kind, step.belt, step.stripes);
+  }
+
+  private stepName(kind: 'belt' | 'stripe', belt: Belt, to: number): string {
     this.languageService.currentLang();
-    const belt = this.beltLadder.label(gap.belt);
-    if (gap.kind === 'belt') {
-      return this.translate.instant('athletes.detail.promotions.gap.stepBelt', { belt });
+    const label = this.beltLadder.label(belt);
+    if (kind === 'belt') {
+      return this.translate.instant('athletes.detail.promotions.gap.stepBelt', { belt: label });
     }
-    const to = gap.to_stripes ?? 0;
-    return this.beltLadder.countsStripes(gap.belt)
-      ? this.translate.instant('athletes.detail.promotions.gap.stepStripe', { belt, n: to })
+    return this.beltLadder.countsStripes(belt)
+      ? this.translate.instant('athletes.detail.promotions.gap.stepStripe', { belt: label, n: to })
       : this.translate.instant('athletes.detail.promotions.gap.stepGrade', {
-          belt,
-          grade: this.beltLadder.stripesLabel(gap.belt, to),
+          belt: label,
+          grade: this.beltLadder.stripesLabel(belt, to),
         });
   }
 
@@ -893,14 +1054,20 @@ export class PromotionsListComponent implements OnInit {
   /**
    * "Su questa cintura dal…" counts from the opening row's date — the day
    * the athlete was entered — when that row is the latest belt row (#1966).
-   * Said, so the number is not taken for the promotion's. Only on the first
-   * page, where the latest belt row is; and not for someone entered on the
-   * ladder's first belt, whose entry day is when they started.
+   * Said, so the number is not taken for the promotion's. Only while the row
+   * still sits on that day: once the owner has moved it or completed it, its
+   * date is the real start (#1990) — the server's rule, the one the gaps
+   * follow too. Only on the first page, where the latest belt row is; and not
+   * for someone entered on the ladder's first belt, whose entry day is when
+   * they started.
    */
   protected readonly beltSinceIsEntryDay = computed<boolean>(() => {
     if (this.currentPage() !== 1) return false;
     const latestBelt = this.promotions().find((p) => p.kind === 'belt');
-    return latestBelt?.is_opening === true && latestBelt.to_belt !== this.beltLadder.startingBelt();
+    return (
+      latestBelt?.is_entry_placeholder === true &&
+      latestBelt.to_belt !== this.beltLadder.startingBelt()
+    );
   });
 
   /**
@@ -960,8 +1127,8 @@ function unskipSelector(gap: PromotionGap): string {
 }
 
 /** Where focus returns when a skipped step is brought back. */
-function addDateSelector(gap: PromotionGap): string {
-  return `[data-cy="gap-add-date-${gap.key}"] button`;
+function addDateSelector(step: Pick<PromotionGap, 'key'>): string {
+  return `[data-cy="gap-add-date-${step.key}"] button`;
 }
 
 /**

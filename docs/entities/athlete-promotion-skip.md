@@ -29,6 +29,7 @@ A step the owner said an athlete never took (#1966). The Promozioni tab draws th
 - **Idempotent both ways.** A second skip returns 201 without a second row; deleting a skip that is not there returns 204. What matters is the state the owner ends in, not how many times they tapped.
 - **Owner-side only**, gated by `athletes_create_update` in the athlete's academy — the same capability as writing promotion history.
 - **Not personal data beyond the athlete it belongs to.** It cascades with the athlete, and so with an academy purge.
+- **Listed, so it can be taken back (#1989).** `GET /athletes/{athlete}/promotions` returns `skipped` beside `gaps`: every step a skip hides, oldest first, as `{key, kind, belt, stripes}`. The Promozioni tab shows them under the timeline as one folded line («N passaggi segnati come saltati · Mostra»), each with «Ripristina», which deletes the skip. Before that, the only undo was the line left in place during the visit that skipped the step. A skip for a step the history no longer misses (it was recorded since, or falls outside every walk) hides nothing and is not listed.
 
 ## Related endpoints
 

@@ -42,6 +42,19 @@ export type Belt =
 
 export type AthleteStatus = 'active' | 'inactive';
 
+/** The sex as the document records it (#1934). Mirrors `App\Enums\Sex`. */
+export type Sex = 'm' | 'f';
+
+/**
+ * The body of a 422 on `POST /athletes/{id}/restore` (#1934): a live athlete
+ * has taken this one's codice fiscale since the delete. `holder` is who.
+ */
+export interface AthleteRestoreRefusal {
+  message: string;
+  errors: { fiscal_code: ['fiscal_code_taken'] };
+  holder: { id: number; first_name: string; last_name: string };
+}
+
 /**
  * Filter token for the athletes-list `?status=` query (#700). Extends
  * `AthleteStatus` with the special-cased `'trashed'` value that the
@@ -77,6 +90,14 @@ export interface Athlete {
   facebook?: string | null;
   instagram?: string | null;
   date_of_birth: string | null;
+  /**
+   * What a federation card asks for (#1934): the codice fiscale in capitals,
+   * the sex as the document records it, the place of birth. Optional here
+   * for fixture-compat; the wire always carries them.
+   */
+  fiscal_code?: string | null;
+  sex?: Sex | null;
+  birth_place?: string | null;
   belt: Belt;
   stripes: number;
   status: AthleteStatus;
@@ -261,6 +282,15 @@ export type AthleteIdentity = Pick<
   | 'user_avatar_url'
 >;
 
+/**
+ * The identity plus the stored phone pair (#1931), for the lists whose rows
+ * offer WhatsApp and a call. `ContactableAthleteResource` on the server:
+ * both keys always present, null when no number is on file. `is_self` marks
+ * the owner's own row, which gets no reminder.
+ */
+export type ContactableAthlete = AthleteIdentity &
+  Pick<Athlete, 'phone_country_code' | 'phone_national_number' | 'is_self'>;
+
 /** The shapes `payment_coverage` takes. Mirrors `App\Enums\PaymentCoverage`. */
 export type PaymentCoverage =
   'monthly' | 'quarterly' | 'half_yearly' | 'annual' | 'carnet' | 'none';
@@ -360,6 +390,10 @@ export interface AthletePayload {
   facebook?: string | null;
   instagram?: string | null;
   date_of_birth?: string | null;
+  /** Codice fiscale, sex and place of birth (#1934); `null` clears each. */
+  fiscal_code?: string | null;
+  sex?: Sex | null;
+  birth_place?: string | null;
   belt: Belt;
   stripes: number;
   status: AthleteStatus;
@@ -600,6 +634,11 @@ export class AthleteService {
       .pipe(map((res) => res.data));
   }
 
+  /**
+   * `POST /api/v1/athletes/{id}/restore`. Refused with a 422 carrying an
+   * `AthleteRestoreRefusal` when a live athlete has taken this one's codice
+   * fiscale since the delete (#1934).
+   */
   restore(id: number): Observable<Athlete> {
     return this.http
       .post<AthleteResponse>(`${this.base}/${id}/restore`, {})
@@ -787,6 +826,13 @@ export interface AthletePromotion {
    * Optional so a server before #1966 reads as false.
    */
   readonly is_opening?: boolean;
+  /**
+   * A starting row still dated the day the athlete was entered (#1990): its
+   * date says only that. Once the owner moves it or completes it, it is the
+   * real start, and this is false. Optional so a server before #1990 reads
+   * as false.
+   */
+  readonly is_entry_placeholder?: boolean;
 }
 
 /** A recorded row on one side of a missing step (#1966). */
@@ -823,6 +869,20 @@ export interface PromotionGap {
   readonly from_belt_options?: readonly Belt[] | null;
 }
 
+/**
+ * A step the owner said never happened, where the history would otherwise
+ * offer it (#1989) — listed apart so it can be brought back. Wire shape:
+ * `PromotionSkippedStep` in docs/api/v1.yaml.
+ */
+export interface PromotionSkippedStep {
+  /** The same key the step has as a gap. */
+  readonly key: string;
+  readonly kind: 'belt' | 'stripe';
+  readonly belt: Belt;
+  /** The count the step leads to — what the skip is keyed by. */
+  readonly stripes: number;
+}
+
 export interface AthletePromotionPage {
   readonly data: readonly AthletePromotion[];
   readonly meta: {
@@ -838,6 +898,11 @@ export interface AthletePromotionPage {
    * just this page's. Optional so a server before #1966 reads as none.
    */
   readonly gaps?: readonly PromotionGap[];
+  /**
+   * The steps marked as skipped, oldest first (#1989). Optional so a server
+   * before #1989 reads as none.
+   */
+  readonly skipped?: readonly PromotionSkippedStep[];
   /** The earliest row's date; null with no rows (#1966). */
   readonly history_starts_at?: string | null;
 }
@@ -891,7 +956,7 @@ export interface PromotionCandidate {
  * enforces the split; this type just keeps the caller from mixing them
  * up by construction.
  */
-export type AthletePromotionCreatePayload =
+export type AthletePromotionCreatePayload = (
   | {
       readonly kind: 'belt';
       readonly recorded_at: string;
@@ -904,7 +969,29 @@ export type AthletePromotionCreatePayload =
       readonly from_stripes: number;
       readonly to_stripes: number;
       readonly belt_at_event: Belt;
-    };
+    }
+) & {
+  /**
+   * The owner read the `chain_conflict` warning and saves the row as typed
+   * anyway (#1991).
+   */
+  readonly confirm_conflict?: true;
+};
+
+/**
+ * A 422 from the promotion history (#1991): the field messages, already in
+ * the owner's language, and `code: 'chain_conflict'` when the row would have
+ * the athlete go backwards next to one already recorded — which the owner
+ * may confirm. Wire shape: `PromotionChainConflict` in docs/api/v1.yaml.
+ */
+export interface PromotionSaveError {
+  readonly status?: number;
+  readonly error?: {
+    readonly message?: string;
+    readonly code?: string;
+    readonly errors?: Readonly<Record<string, readonly string[]>>;
+  } | null;
+}
 
 /**
  * State discriminator returned from `POST /athletes/{id}/email` (#476).

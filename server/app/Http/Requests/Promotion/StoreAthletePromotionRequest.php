@@ -67,6 +67,8 @@ class StoreAthletePromotionRequest extends FormRequest
             'from_stripes' => ['required_if:kind,stripe', 'prohibited_unless:kind,stripe', 'integer', 'min:0', 'max:10', $withinGrade],
             'to_stripes' => ['required_if:kind,stripe', 'prohibited_unless:kind,stripe', 'integer', 'min:0', 'max:10', $withinGrade],
             'belt_at_event' => ['required_if:kind,stripe', 'prohibited_unless:kind,stripe', Rule::enum(Belt::class), $inLadder],
+            // The owner read the contradiction and saves the row as typed (#1991).
+            'confirm_conflict' => ['sometimes', 'boolean'],
         ];
     }
 
@@ -84,6 +86,29 @@ class StoreAthletePromotionRequest extends FormRequest
         });
     }
 
+    /**
+     * A contradiction is answered as one (#1991): `code: chain_conflict`
+     * and the rows it disagrees with, beside the usual `errors`, so the
+     * dialog can say it under the field and offer to save it anyway. Any
+     * other failure is the usual 422.
+     */
+    protected function failedValidation(Validator $validator): void
+    {
+        $conflicts = $this->chainConflicts();
+        if ($conflicts === []) {
+            parent::failedValidation($validator);
+
+            return;
+        }
+
+        throw new HttpResponseException(response()->json([
+            'message' => $validator->errors()->first(),
+            'code' => 'chain_conflict',
+            'errors' => $validator->errors()->toArray(),
+            'conflicts' => $conflicts,
+        ], 422));
+    }
+
     protected function failedAuthorization(): void
     {
         throw new HttpResponseException(
@@ -99,13 +124,13 @@ class StoreAthletePromotionRequest extends FormRequest
     private function validateNoOpTransition(Validator $validator): void
     {
         if ($this->input('kind') === 'belt' && $this->input('from_belt') === $this->input('to_belt')) {
-            $validator->errors()->add('to_belt', 'The new belt must differ from the previous one.');
+            $validator->errors()->add('to_belt', $this->promotionLine('same_belt'));
         }
 
         if ($this->input('kind') === 'stripe'
             && $this->has(['from_stripes', 'to_stripes'])
             && $this->input('from_stripes') === $this->input('to_stripes')) {
-            $validator->errors()->add('to_stripes', 'The new stripe count must differ from the previous one.');
+            $validator->errors()->add('to_stripes', $this->promotionLine('same_stripes'));
         }
     }
 }

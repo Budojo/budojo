@@ -1276,4 +1276,53 @@ describe('TodayComponent', () => {
       expect(root.querySelector('[data-cy="today-week-programme"]')).not.toBeNull();
     });
   });
+
+  describe("next week's message, from Sunday afternoon (#1940)", () => {
+    const OPEN_MAT = cls({ id: 2, weekday: 0, name: 'Open mat', starts_at: '18:00' });
+    const MONDAY = cls({ id: 1, weekday: 1, starts_at: '19:00' });
+    const CALENDAR = {
+      season: { start: '2026-09-01', end: '2027-08-31', label: '2026/27' },
+      kind: null,
+      today: '2026-10-04',
+      weeks: [],
+      positions: [],
+      lessons: [],
+    };
+
+    /** Sunday 4 October 2026, at the given time; the programme answers or fails. */
+    function renderAt(hours: number, minutes: number, calendar: unknown = CALENDAR): HTMLElement {
+      vi.setSystemTime(new Date(2026, 9, 4, hours, minutes));
+      const http = setup();
+      const fixture = TestBed.createComponent(TodayComponent);
+      fixture.detectChanges();
+      flushAll(http, { classes: [OPEN_MAT, MONDAY] });
+      const req = http.expectOne((r) => r.url.endsWith('/stats/syllabus/calendar'));
+      if (calendar === 'error') {
+        req.flush({ message: 'boom' }, { status: 500, statusText: 'Server Error' });
+      } else {
+        req.flush({ data: calendar });
+      }
+      fixture.detectChanges();
+      http.verify();
+      return fixture.nativeElement as HTMLElement;
+    }
+
+    it("points to the timetable once this week is over, when its button sends next week's", () => {
+      const root = renderAt(19, 30);
+
+      expect(text(root, 'today-week-send')).toContain("Next week's programme");
+    });
+
+    it("is not there while Sunday's class is still ahead: the button sends this week's", () => {
+      expect(renderAt(15, 0).querySelector('[data-cy="today-week-send"]')).toBeNull();
+    });
+
+    it('is not there without the programme: the button could only say it did not load', () => {
+      expect(renderAt(19, 30, 'error').querySelector('[data-cy="today-week-send"]')).toBeNull();
+    });
+
+    it('is not there on Sunday morning', () => {
+      expect(renderAt(10, 0).querySelector('[data-cy="today-week-send"]')).toBeNull();
+    });
+  });
 });

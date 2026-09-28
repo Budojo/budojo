@@ -202,36 +202,45 @@ describe('SeasonMapComponent (#1858)', () => {
     expect(panel?.groups[0].lessons.map((l) => l.id)).toEqual([40, 41]);
   });
 
-  it('opens a bottom sheet instead of the popover in a narrow window', () => {
-    // Defined, writable and deleted afterwards — never assigned. The test
-    // environment has no matchMedia at all, and a leftover property (even an
-    // `undefined` one) leaks into every spec file that shares the worker
-    // (see web-push.service.spec.ts and theme.service.spec.ts).
-    Object.defineProperty(window, 'matchMedia', {
-      value: (query: string) => ({
-        matches: false,
-        media: query,
-        addEventListener: () => undefined,
-        removeEventListener: () => undefined,
-      }),
-      configurable: true,
-      writable: true,
-    });
+  it('opens the panel as one sheet at any width, never a popover that can be cut off (#1992)', () => {
+    const { fixture, component, httpMock } = setup();
+    flush(httpMock);
+    fixture.detectChanges();
+
+    (
+      fixture.nativeElement.querySelector('[data-cy="season-map-position-1"]') as HTMLButtonElement
+    ).click();
+    fixture.detectChanges();
+
+    expect(component['panelOpen']()).toBe(true);
+    // No popover left in the template: the dialog is the only form.
+    expect(fixture.nativeElement.querySelector('p-popover')).toBeNull();
+    expect(fixture.nativeElement.querySelector('p-drawer')).toBeNull();
+  });
+
+  it('hands focus back to the control that opened the sheet, when closed from its header (#1992)', () => {
+    const { fixture, component, httpMock } = setup();
+    flush(httpMock);
+    fixture.detectChanges();
+
+    const trigger = fixture.nativeElement.querySelector(
+      '[data-cy="season-map-position-1"]',
+    ) as HTMLButtonElement;
+    trigger.click();
+    fixture.detectChanges();
+
+    // The ✕ and the title live in the dialog's header, outside the body.
+    const dialog = document.createElement('div');
+    dialog.className = 'p-dialog season-map-sheet';
+    const close = document.createElement('button');
+    dialog.appendChild(close);
+    document.body.appendChild(dialog);
     try {
-      const { fixture, component, httpMock } = setup();
-      flush(httpMock);
-      fixture.detectChanges();
-
-      (
-        fixture.nativeElement.querySelector(
-          '[data-cy="season-map-position-1"]',
-        ) as HTMLButtonElement
-      ).click();
-      fixture.detectChanges();
-
-      expect(component['drawerOpen']()).toBe(true);
+      close.focus();
+      component['restoreFocus']();
+      expect(document.activeElement).toBe(trigger);
     } finally {
-      delete (window as unknown as { matchMedia?: unknown }).matchMedia;
+      dialog.remove();
     }
   });
 
@@ -528,9 +537,12 @@ describe('SeasonMapComponent — the week plan for the group (#1863)', () => {
     Reflect.deleteProperty(navigator, 'clipboard');
   });
 
-  // The default calendar's today is Wednesday 14 October, with nothing left
-  // planned that week: the plan is next week's, Monday 19.
-  const NEXT_WEEK_TEXT = "The week's plan\nMon 19 · Fundamentals · Closed guard";
+  // The default calendar's today is Wednesday 14 October. With only the
+  // Monday class on the timetable, this week's is behind it: the message is
+  // next week's, Monday 19 — every class with its time (#1940), and what is
+  // planned for it.
+  const NEXT_WEEK_TEXT = "The week's plan\nMon 19 · 19:00 Fundamentals · Closed guard";
+  const MONDAY_ONLY = [CLASSES[0]];
 
   function stubClipboard(writeText: () => Promise<void>) {
     const spy = vi.fn(writeText);
@@ -551,7 +563,7 @@ describe('SeasonMapComponent — the week plan for the group (#1863)', () => {
   }
 
   it('offers the plan of the week ahead, and a WhatsApp link that carries it', () => {
-    const { fixture, httpMock } = setup();
+    const { fixture, httpMock } = setup(MONDAY_ONLY);
     flush(httpMock);
     fixture.detectChanges();
 
@@ -568,7 +580,7 @@ describe('SeasonMapComponent — the week plan for the group (#1863)', () => {
   });
 
   it('copies the plan and says so', async () => {
-    const { fixture, httpMock } = setup();
+    const { fixture, httpMock } = setup(MONDAY_ONLY);
     const messages = TestBed.inject(MessageService);
     const toast = vi.spyOn(messages, 'add');
     const writeText = stubClipboard(() => Promise.resolve());
@@ -588,7 +600,7 @@ describe('SeasonMapComponent — the week plan for the group (#1863)', () => {
   });
 
   it('points at WhatsApp when the clipboard refuses', async () => {
-    const { fixture, httpMock } = setup();
+    const { fixture, httpMock } = setup(MONDAY_ONLY);
     const toast = vi.spyOn(TestBed.inject(MessageService), 'add');
     stubClipboard(() => Promise.reject(new Error('denied')));
     flush(httpMock);
@@ -603,7 +615,9 @@ describe('SeasonMapComponent — the week plan for the group (#1863)', () => {
   });
 
   it('says in words why there is nothing to send, with both actions off', () => {
-    const { fixture, httpMock } = setup();
+    // No timetable and nothing planned: a class on the timetable is always
+    // something to announce (#1940), so only this has nothing to send.
+    const { fixture, httpMock } = setup([]);
     flush(
       httpMock,
       calendar({
@@ -712,24 +726,24 @@ describe("SeasonMapComponent — a position's techniques", () => {
     const { component } = withTechniques();
     const asked: number[] = [];
     component.planTechnique.subscribe((id) => asked.push(id));
-    component['drawerOpen'].set(true);
+    component['panelOpen'].set(true);
 
     component['planTopic'](31);
 
     expect(asked).toEqual([31]);
     // A sheet on top of the panel would be one dialog too many.
-    expect(component['drawerOpen']()).toBe(false);
+    expect(component['panelOpen']()).toBe(false);
   });
 
   it('closes the panel and asks the host who has seen a technique', () => {
     const { component } = withTechniques();
     const asked: number[] = [];
     component.openTechnique.subscribe((id) => asked.push(id));
-    component['drawerOpen'].set(true);
+    component['panelOpen'].set(true);
 
     component['openTopic'](11);
 
     expect(asked).toEqual([11]);
-    expect(component['drawerOpen']()).toBe(false);
+    expect(component['panelOpen']()).toBe(false);
   });
 });

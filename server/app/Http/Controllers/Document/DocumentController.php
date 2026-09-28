@@ -8,8 +8,9 @@ use App\Actions\Document\DeleteDocumentAction;
 use App\Actions\Document\GetExpiringDocumentsAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Document\UpdateDocumentRequest;
-use App\Http\Resources\AthleteIdentityResource;
+use App\Http\Resources\ContactableAthleteResource;
 use App\Http\Resources\DocumentResource;
+use App\Http\Resources\ExpiringDocumentResource;
 use App\Models\Document;
 use App\Models\User;
 use App\Support\DocumentEncryption;
@@ -57,9 +58,10 @@ class DocumentController extends Controller
         $missing = $this->expiringAction->missingMedicalCertificate($academy);
 
         return response()->json([
-            'data' => DocumentResource::collection($documents)->resolve(),
-            // The whole identity, so the row carries the belt (#1851).
-            'missing_medical_certificate' => AthleteIdentityResource::collection($missing)->resolve($request),
+            // The whole identity, so the row carries the belt (#1851), and the
+            // phone, so the row can offer the reminder on WhatsApp (#1931).
+            'data' => ExpiringDocumentResource::collection($documents)->resolve($request),
+            'missing_medical_certificate' => ContactableAthleteResource::collection($missing)->resolve($request),
         ]);
     }
 

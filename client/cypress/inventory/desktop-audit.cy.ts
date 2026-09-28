@@ -513,6 +513,31 @@ function identityOf(id: number) {
   };
 }
 
+/**
+ * The identity plus the phone (#1931): what the lists that offer a WhatsApp
+ * reminder carry — the expiring documents and the athletes missing a
+ * certificate. Read from `ATHLETES` too, so a number is the same everywhere.
+ */
+function contactableOf(id: number) {
+  // Typed at the read: `athlete()`'s inferred type does not carry `id` (the
+  // same gap `identityOf` above trips over), and the phone pair and the
+  // owner's marker are all this needs from the row.
+  const a = ATHLETES.find((x) => (x as { id?: number }).id === id) as
+    | {
+        phone_country_code: string | null;
+        phone_national_number: string | null;
+        is_self?: boolean;
+      }
+    | undefined;
+  if (!a) throw new Error(`no roster athlete ${id}`);
+  return {
+    ...identityOf(id),
+    phone_country_code: a.phone_country_code,
+    phone_national_number: a.phone_national_number,
+    is_self: a.is_self === true,
+  };
+}
+
 // Not seen lately (#1729): three roster athletes, one per tier, with the
 // numbers the endpoint would send for them. Taken FROM the roster fixture so
 // the section and the table never disagree about a person.
@@ -781,7 +806,7 @@ const EXPIRING = {
   data: [
     {
       ...DOCUMENTS_ONE[0],
-      athlete: identityOf(1),
+      athlete: contactableOf(1),
     },
     {
       ...document({
@@ -792,7 +817,7 @@ const EXPIRING = {
         issued_at: '2025-09-01',
         expires_at: '2026-09-10',
       }),
-      athlete: identityOf(4),
+      athlete: contactableOf(4),
     },
     {
       ...document({
@@ -803,7 +828,7 @@ const EXPIRING = {
         issued_at: '2025-10-01',
         expires_at: '2026-10-01',
       }),
-      athlete: identityOf(7),
+      athlete: contactableOf(7),
     },
     // One of the academy's own papers (#1743): no athlete, so no identity and
     // no spine. Here so the card's inset is shot beside the athletes' (#1851).
@@ -818,7 +843,7 @@ const EXPIRING = {
       expires_at: '2026-10-12',
     }),
   ],
-  missing_medical_certificate: [identityOf(2), identityOf(8)],
+  missing_medical_certificate: [contactableOf(2), contactableOf(8)],
 };
 
 // ── Attendance, payments, promotions, carnets ────────────────────────────
@@ -852,6 +877,7 @@ function regularOf(id: number, attended: number, last_attended_on: string) {
     ...identityOf(id),
     phone_country_code: a.phone_country_code ?? null,
     phone_national_number: a.phone_national_number ?? null,
+    is_self: (a as { is_self?: boolean }).is_self === true,
     attended,
     last_attended_on,
   };
@@ -1190,6 +1216,7 @@ const PROMOTIONS_OPENING = [
     to_stripes: null,
     belt_at_event: 'blue',
     is_opening: true,
+    is_entry_placeholder: true,
     recorded_at: '2026-09-02T10:00:00+00:00',
     recorded_by: { id: 1, full_name: 'Matteo Bonanno' },
   },
@@ -1272,6 +1299,7 @@ const PROMOTIONS_OPENING_ONLY = [
     to_stripes: null,
     belt_at_event: 'blue',
     is_opening: true,
+    is_entry_placeholder: true,
     recorded_at: '2026-01-10T00:00:00+00:00',
     recorded_by: { id: 1, full_name: 'Matteo Bonanno' },
   },
@@ -2856,6 +2884,15 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
       cy.get('[data-cy="timetable-form"]').should('be.visible');
     },
   });
+  // The week's message from the timetable (#1940): the header's secondary
+  // action, opened on its two ways to send. Monday 18:30 on the frozen clock,
+  // so this week's classes are still ahead.
+  screen('11-timetable-week-share', '/dashboard/academy/timetable', '[data-cy="week-share"]', {
+    act: () => {
+      press('[data-cy="week-share"]');
+      cy.get('.p-menu').should('be.visible');
+    },
+  });
 
   // ── 12. Programme ──────────────────────────────────────────────────────
   screen('12-syllabus', '/dashboard/academy/syllabus', '[data-cy="syllabus-tree"]', {
@@ -2943,6 +2980,30 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
     act: () => {
       press('[data-cy="athletes-alerts"]');
       cy.get('[data-cy="athletes-alerts-panel"]').should('be.visible');
+    },
+  });
+  // The "Non pagato" list (#1931): the roster narrowed to who owes this
+  // month, each row with the WhatsApp reminder already written. The filter
+  // goes to the API as `?paid=no`, so the intercept keys on it.
+  screen('20-athletes-unpaid', '/dashboard/athletes?paid=no', ROSTER_READY, {
+    stubs: () => {
+      cy.intercept(
+        { method: 'GET', pathname: '/api/v1/athletes', query: { paid: 'no' } },
+        {
+          statusCode: 200,
+          body: page(
+            // What the server's `?paid=no` returns: active, owing, never the
+            // owner's own row, never someone a carnet covers.
+            ATHLETES.filter(
+              (a) =>
+                a.paid_current_month === false &&
+                a.status === 'active' &&
+                !a.is_self &&
+                a.payment_coverage !== 'carnet',
+            ),
+          ),
+        },
+      );
     },
   });
   // The empty roster's own first-run state. The getting-started checklist is
@@ -3538,7 +3599,9 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
     clock: false,
     act: () => {
       press('[data-cy="season-map-position-1"]');
-      cy.get('[data-cy="season-map-popover"]', { timeout: 4000 }).should('be.visible');
+      // The sheet scrolls a long season inside itself, so its body is taller
+      // than what shows; the title is what must be on screen (#1992).
+      cy.get('.p-dialog .season-map__pop-title', { timeout: 4000 }).should('be.visible');
     },
   });
   // An empty week still to come, opened to plan it (#1859): the classes of

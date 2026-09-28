@@ -56,6 +56,41 @@ beforeEach(() => {
   });
 });
 
+// Default `GET /api/v1/academy/documents` mock (#1781) — the academy page
+// lists the academy's own papers on init. Unmocked, the call fails through the
+// dead proxy and the page raises "Could not load documents", a toast that lands
+// over the header's Edit button whenever it beats the spec's click. That race
+// was the academy.cy.ts flake the failure screenshots caught (#2001). No papers
+// is the state of a new academy; a spec that needs some registers its own.
+beforeEach(() => {
+  cy.intercept('GET', '/api/v1/academy/documents*', {
+    statusCode: 200,
+    body: { data: [] },
+  });
+});
+
+// Default `GET /api/v1/stats/syllabus/calendar` mock (#1940) — the timetable
+// header's "send the week" button reads the calendar on init, so every spec
+// that opens the timetable would otherwise trip the offline takeover in CI.
+// An empty season: nothing planned, which is also the button's quiet state
+// when the academy has no classes. Specs that need lessons (the season map,
+// lesson topics, the send-the-week case) register their own, which wins.
+beforeEach(() => {
+  cy.intercept('GET', '/api/v1/stats/syllabus/calendar*', {
+    statusCode: 200,
+    body: {
+      data: {
+        season: { start: '2026-09-01', end: '2027-08-31', label: '2026/27' },
+        kind: null,
+        today: '2026-09-14',
+        weeks: [],
+        positions: [],
+        lessons: [],
+      },
+    },
+  });
+});
+
 beforeEach(() => {
   cy.intercept('GET', '/api/v1/auth/me*', {
     statusCode: 200,

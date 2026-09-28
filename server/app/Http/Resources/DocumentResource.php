@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
+use App\Models\Athlete;
 use App\Models\Document;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -47,8 +48,19 @@ class DocumentResource extends JsonResource
                     return null;
                 }
 
-                return new AthleteIdentityResource($athlete)->toArray($request);
+                return $this->athleteOf($athlete, $request);
             }),
         ];
+    }
+
+    /**
+     * How the owning athlete is drawn on the row. {@see ExpiringDocumentResource}
+     * adds the phone for the list that offers a reminder (#1931).
+     *
+     * @return array<string, mixed>
+     */
+    protected function athleteOf(Athlete $athlete, Request $request): array
+    {
+        return new AthleteIdentityResource($athlete)->toArray($request);
     }
 }

@@ -23,8 +23,11 @@
         [class.carnets__card--warn]="lowBalance() || expiringSoon()"
         data-cy="carnet-balance-card"
       >
-        <p class="carnets__code" data-cy="carnet-code">{{ active.code }}</p>
-
+        <!--
+          What is left leads (#1654, PAY-3): "3 / 10 entries" is the question
+          the owner opens the card with. The code is how a paper stub is
+          matched, so it follows as a caption rather than headlining at 28px.
+        -->
         <p class="carnets__balance">
           <span class="carnets__remaining" data-cy="carnet-remaining">{{
             active.remaining_entries
@@ -32,6 +35,7 @@
           <span class="carnets__total">/ {{ active.total_entries }}</span>
           <span class="carnets__unit">{{ 'athletes.detail.carnets.entriesWord' | translate }}</span>
         </p>
+        <p class="carnets__code" data-cy="carnet-code">{{ active.code }}</p>
         @if (entryCoversDay()) {
           <p class="carnets__entry-unit" data-cy="carnet-entry-unit">
             {{ 'athletes.detail.carnets.entryCoversDay' | translate }}
@@ -112,7 +116,14 @@
             } @else {
               <ul class="carnets__register" data-cy="carnet-register-list">
                 @for (entry of entries(); track entry.id) {
-                  <li class="carnets__register-row">{{ formatDate(entry.used_on) }}</li>
+                  <!-- The day, and the class it paid for when there was one (#1654). -->
+                  <li class="carnets__register-row">
+                    {{ formatDate(entry.used_on) }}
+                    @if (entry.lesson_name) {
+                      <span class="carnets__register-sep" aria-hidden="true">·</span>
+                      <span class="carnets__register-lesson">{{ entry.lesson_name }}</span>
+                    }
+                  </li>
                 }
               </ul>
             }

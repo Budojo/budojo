@@ -7,12 +7,12 @@ import { AcademyClass } from '../../../../core/services/academy-class.service';
 import {
   buildRows,
   cellLessons,
-  mondayOf,
   monthOfWeek,
   monthStarts,
   planOptions,
   positionSeason,
 } from './season-map.model';
+import { mondayOf } from '../../../../shared/utils/class-occurrences';
 
 function position(id: number, name: string, covered = 1, inScope = 4): CoveragePosition {
   return { id, name, kind: 'both', in_scope: inScope, covered, thin: 0, missing: 0, worked: 0 };

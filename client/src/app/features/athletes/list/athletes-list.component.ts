@@ -9,6 +9,7 @@ import {
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -41,6 +42,7 @@ import {
   AthleteStatus,
   Belt,
   AthleteService,
+  type AthleteRestoreRefusal,
   type PaymentCoverage,
 } from '../../../core/services/athlete.service';
 import { PaymentService } from '../../../core/services/payment.service';
@@ -70,6 +72,9 @@ import {
 } from '../../../shared/utils/athlete-sort';
 import { localeFor } from '../../../shared/utils/locale';
 import { relativeDay } from '../../../shared/utils/relative-day';
+import { ContactActionsComponent } from '../../../shared/components/contact-actions/contact-actions.component';
+import { localIso } from '../../../shared/utils/class-occurrences';
+import { unpaidReminder } from '../../../shared/utils/reminder-message';
 import { LocaleDatePipe } from '../../../shared/pipes/locale-date.pipe';
 import { CarnetService } from '../../../core/services/carnet.service';
 import { CONFIRM_REJECT_BUTTON } from '../../../shared/utils/confirm-buttons';
@@ -116,6 +121,7 @@ interface SelectOption<T extends string> {
     IconButtonComponent,
     SortHeaderComponent,
     BeltSortButtonComponent,
+    ContactActionsComponent,
   ],
   providers: [ConfirmationService, MessageService],
   templateUrl: './athletes-list.component.html',
@@ -227,12 +233,55 @@ export class AthletesListComponent implements OnInit {
   }
 
   /**
+   * The WhatsApp reminder for a row (#1931), or null when none is offered.
+   *
+   * Only while the "Non pagato" filter is on: that list is the one chased,
+   * and the everyday roster stays quiet. The server's `?paid=no` already
+   * leaves out carnet holders and anyone not expected to pay; the same
+   * `paymentNotExpected` is asked here too, so a row never offers a reminder
+   * the chip beside it contradicts. The amount is what one payment of their
+   * period costs — a quarterly payer is asked for the quarter.
+   *
+   * Marking a row paid flips it in place and leaves it on the list until the
+   * next load, so the row's own flag is asked too: a reminder beside a green
+   * chip would ask for money just handed over.
+   */
+  reminderFor(athlete: Athlete): string | null {
+    const fee = athlete.monthly_fee_cents ?? 0;
+    if (
+      this.selectedPaid() !== 'no' ||
+      athlete.paid_current_month === true ||
+      this.paymentNotExpected(athlete) ||
+      fee <= 0
+    ) {
+      return null;
+    }
+
+    return unpaidReminder(
+      (key, params) => this.translate.instant(key, params) as string,
+      this.languageService.currentLang(),
+      {
+        firstName: athlete.first_name,
+        // The month the column names — the same `_now`, never a second clock.
+        month: localIso(this._now).slice(0, 7),
+        monthlyFeeCents: fee,
+        billingPeriodMonths: athlete.billing_period_months ?? 1,
+        academy: this.academyService.academy()?.name ?? '',
+      },
+    );
+  }
+
+  /**
    * Current-month labels for the "Paid" column (#282). BOTH labels are
    * derived from a single `Date` instance (`_now`) so they can never
-   * disagree across a UTC month boundary — Copilot caught this on #289:
+   * disagree across a month boundary — Copilot caught this on #289:
    * two separate `new Date()` calls during initialization could legally
-   * straddle midnight UTC and produce a header reading "Paid · Apr"
+   * straddle midnight and produce a header reading "Paid · Apr"
    * with a tooltip reading "May 2026 — Unpaid".
+   *
+   * The month is the owner's, in local time: the server reads
+   * `paid_current_month` and `?paid=no` in the operator's month (#1968), so a
+   * UTC label would name last month for the first hours of every new one.
    *
    * Derived once per component instance for the date itself; the locale
    * is read from `LanguageService.currentLang()` so toggling EN ↔ IT
@@ -255,11 +304,7 @@ export class AthletesListComponent implements OnInit {
   );
 
   readonly currentMonthLong = computed<string>(() =>
-    this._now.toLocaleString(this.locale(), {
-      month: 'long',
-      year: 'numeric',
-      timeZone: 'UTC',
-    }),
+    this._now.toLocaleString(this.locale(), { month: 'long', year: 'numeric' }),
   );
 
   /**
@@ -557,15 +602,33 @@ export class AthletesListComponent implements OnInit {
           life: 2500,
         });
       },
-      error: () => {
+      error: (err: unknown) => {
+        const holder = this.fiscalCodeHolder(err);
         this.messageService.add({
           severity: 'error',
           summary: this.translate.instant('athletes.list.restoreToast.errorSummary'),
-          detail: this.translate.instant('athletes.list.restoreToast.errorDetail'),
-          life: 4000,
+          detail:
+            holder === null
+              ? this.translate.instant('athletes.list.restoreToast.errorDetail')
+              : this.translate.instant('athletes.list.restoreToast.fiscalCodeTaken', {
+                  name: holder,
+                }),
+          // The refusal is a sentence to act on, not a blip: time to read it.
+          life: holder === null ? 4000 : 8000,
         });
       },
     });
+  }
+
+  /**
+   * Who holds the codice fiscale, when that is why the restore was refused
+   * (#1934) — the one refusal the server names. Null for any other failure.
+   */
+  private fiscalCodeHolder(err: unknown): string | null {
+    if (!(err instanceof HttpErrorResponse) || err.status !== 422) return null;
+    const body = err.error as Partial<AthleteRestoreRefusal> | null;
+    if (body?.errors?.fiscal_code?.[0] !== 'fiscal_code_taken' || !body.holder) return null;
+    return `${body.holder.first_name} ${body.holder.last_name}`.trim();
   }
 
   onPaidChange(paid: AthletePaidFilter | ''): void {
@@ -1514,22 +1577,14 @@ export class AthletesListComponent implements OnInit {
    * an oncall should not regret.
    */
   confirmTogglePaid(event: MouseEvent, athlete: Athlete): void {
-    // Use UTC year/month/label to align with the server's
-    // `paid_current_month` derivation. The server runs in app
-    // timezone (UTC); around month boundaries (e.g. 23:30 Italy
-    // local on April 30 is May 1 UTC), local-clock arithmetic
-    // would write a different (year, month) than the server reads
-    // back, so the badge would show a confused state on the next
-    // page load. UTC on both ends keeps the round-trip honest
-    // (#259 Copilot review).
+    // The owner's month, which is the one the server reads
+    // `paid_current_month` in (#1968): writing UTC's would record the
+    // previous month for the first hours of every new one, and the chip
+    // would still say unpaid on the next load.
     const now = new Date();
-    const year = now.getUTCFullYear();
-    const month = now.getUTCMonth() + 1;
-    const monthLabel = now.toLocaleString(this.locale(), {
-      month: 'long',
-      year: 'numeric',
-      timeZone: 'UTC',
-    });
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+    const monthLabel = now.toLocaleString(this.locale(), { month: 'long', year: 'numeric' });
 
     const fullName = `${athlete.first_name} ${athlete.last_name}`;
     const willMarkPaid = !athlete.paid_current_month;

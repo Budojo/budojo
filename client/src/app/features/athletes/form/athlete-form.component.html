@@ -106,6 +106,63 @@
               />
             </app-budojo-form-field>
           </div>
+          <!-- What a federation card asks for (#1934). All optional: a BJJ
+               academy abroad has no use for them. -->
+          <div class="athlete-form__row">
+            <app-budojo-form-field
+              class="athlete-form__field--medium"
+              [label]="'athletes.form.label.fiscalCode' | translate"
+              [optionalLabel]="'athletes.form.optional' | translate"
+              [hint]="'athletes.form.hint.fiscalCode' | translate"
+              controlId="fiscal_code"
+            >
+              <input
+                pInputText
+                id="fiscal_code"
+                type="text"
+                formControlName="fiscal_code"
+                autocomplete="off"
+                autocapitalize="characters"
+                spellcheck="false"
+                maxlength="20"
+                class="athlete-form__fiscal-code"
+              />
+            </app-budojo-form-field>
+            <!-- No controlId: a button group has no single input for the
+                 label's `for`, so the group names itself. -->
+            <app-budojo-form-field
+              class="athlete-form__field--short"
+              [label]="'athletes.form.label.sex' | translate"
+              [optionalLabel]="'athletes.form.optional' | translate"
+              [hint]="'athletes.form.hint.sex' | translate"
+            >
+              <p-selectbutton
+                [options]="sexOptions()"
+                formControlName="sex"
+                optionLabel="label"
+                optionValue="value"
+                [allowEmpty]="true"
+                [attr.aria-label]="'athletes.form.label.sex' | translate"
+                data-cy="athlete-sex"
+              />
+            </app-budojo-form-field>
+            <app-budojo-form-field
+              class="athlete-form__field--medium"
+              [label]="'athletes.form.label.birthPlace' | translate"
+              [optionalLabel]="'athletes.form.optional' | translate"
+              [hint]="'athletes.form.hint.birthPlace' | translate"
+              controlId="birth_place"
+            >
+              <input
+                pInputText
+                id="birth_place"
+                type="text"
+                formControlName="birth_place"
+                autocomplete="off"
+                maxlength="100"
+              />
+            </app-budojo-form-field>
+          </div>
         </section>
 
         <section class="athlete-form__section">

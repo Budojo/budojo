@@ -10,6 +10,7 @@ import {
   type AthletePromotion,
   AthleteService,
   type PromotionGap,
+  type PromotionSkippedStep,
 } from '../../../../core/services/athlete.service';
 import { PromotionsListComponent } from './promotions-list.component';
 import { useLadder } from '../../../../../test-utils/ladder-test';
@@ -446,6 +447,79 @@ describe('PromotionsListComponent (#799)', () => {
       expect(svc.promotions).toHaveBeenCalledWith(7, 1);
     });
 
+    describe('«Da cintura» starts on the belt held that day (#1991)', () => {
+      interface Dialog {
+        openCreateDialog: () => void;
+        createForm: {
+          patchValue: (v: Record<string, unknown>) => void;
+          controls: {
+            from_belt: {
+              value: string | null;
+              markAsDirty: () => void;
+              setValue: (v: string) => void;
+            };
+          };
+        };
+      }
+
+      function withHistory(): Dialog {
+        const { fixture, component, svc } = setup({ athleteId: '7' });
+        useLadder('bjj');
+        svc.promotions.mockReturnValue(
+          of({
+            data: [
+              makePromotion({
+                id: 3,
+                from_belt: 'blue',
+                to_belt: 'purple',
+                recorded_at: '2022-05-01T00:00:00+00:00',
+              }),
+              makePromotion({
+                id: 2,
+                from_belt: 'white',
+                to_belt: 'blue',
+                recorded_at: '2019-01-10T00:00:00+00:00',
+              }),
+            ],
+            meta: { current_page: 1, per_page: 20, total: 2, last_page: 1 },
+          }),
+        );
+        fixture.detectChanges();
+        const c = component as unknown as Dialog;
+        c.openCreateDialog();
+        return c;
+      }
+
+      it('picks the belt the rows say was held on the chosen day', () => {
+        const c = withHistory();
+
+        c.createForm.patchValue({ recorded_at: new Date(2020, 5, 1) });
+        expect(c.createForm.controls.from_belt.value).toBe('blue');
+
+        // The day of a promotion already counts as after it, as the server reads it.
+        c.createForm.patchValue({ recorded_at: new Date(2022, 4, 1) });
+        expect(c.createForm.controls.from_belt.value).toBe('purple');
+      });
+
+      it('keeps «Cintura di partenza» before anything recorded', () => {
+        const c = withHistory();
+
+        c.createForm.patchValue({ recorded_at: new Date(2017, 2, 1) });
+
+        expect(c.createForm.controls.from_belt.value).toBeNull();
+      });
+
+      it('never overrides a belt the owner chose', () => {
+        const c = withHistory();
+        c.createForm.controls.from_belt.setValue('white');
+        c.createForm.controls.from_belt.markAsDirty();
+
+        c.createForm.patchValue({ recorded_at: new Date(2020, 5, 1) });
+
+        expect(c.createForm.controls.from_belt.value).toBe('white');
+      });
+    });
+
     it('submits a stripe payload with the composed belt_at_event + from/to stripes', () => {
       const { fixture, component, svc } = setup({ athleteId: '7' });
       svc.promotions.mockReturnValue(
@@ -477,37 +551,131 @@ describe('PromotionsListComponent (#799)', () => {
       });
     });
 
-    it('surfaces a chain-consistency 422 inline rather than a generic toast', () => {
-      const { fixture, component, svc } = setup();
-      svc.promotions.mockReturnValue(
-        of({ data: [], meta: { current_page: 1, per_page: 20, total: 0, last_page: 1 } }),
-      );
-      svc.createPromotion.mockReturnValue(
-        throwError(() => ({
-          status: 422,
-          error: {
-            errors: { from_belt: ["Doesn't match the belt after the previous promotion."] },
-          },
-        })),
-      );
-      fixture.detectChanges();
+    describe("the server's answer, under the field it concerns (#1991)", () => {
+      const conflictMessage = 'Il 18 novembre 2025 aveva già 3 gradi: qui arriveresti a 2.';
+      const conflict = {
+        status: 422,
+        error: {
+          message: conflictMessage,
+          code: 'chain_conflict',
+          errors: { to_stripes: [conflictMessage] },
+          conflicts: [
+            {
+              field: 'to_stripes',
+              promotion_id: 12,
+              recorded_at: '2025-11-18',
+              belt: 'white',
+              stripes: 3,
+            },
+          ],
+        },
+      };
 
-      const c = component as unknown as {
+      interface Dialog {
         openCreateDialog: () => void;
         confirmCreate: () => void;
         createForm: { patchValue: (v: Record<string, unknown>) => void };
-        createError: () => string | null;
-      };
-      c.openCreateDialog();
-      c.createForm.patchValue({
-        kind: 'belt',
-        recorded_at: new Date(2019, 2, 15),
-        from_belt: 'white',
-        to_belt: 'blue',
-      });
-      c.confirmCreate();
+      }
 
-      expect(c.createError()).toBe("Doesn't match the belt after the previous promotion.");
+      function typed(fail: unknown) {
+        const ctx = setup({ athleteId: '7' });
+        useLadder('bjj');
+        ctx.svc.promotions.mockReturnValue(
+          of({ data: [], meta: { current_page: 1, per_page: 20, total: 0, last_page: 1 } }),
+        );
+        ctx.svc.createPromotion.mockReturnValueOnce(throwError(() => fail));
+        ctx.fixture.detectChanges();
+        const c = ctx.component as unknown as Dialog;
+        c.openCreateDialog();
+        c.createForm.patchValue({
+          kind: 'stripe',
+          recorded_at: new Date(2025, 11, 1),
+          belt_at_event: 'white',
+        });
+        c.createForm.patchValue({ from_stripes: '1', to_stripes: '2' });
+        c.confirmCreate();
+        ctx.fixture.detectChanges();
+        return { ...ctx, c };
+      }
+
+      const message = (el: HTMLElement, field: string) =>
+        el.querySelector(`[data-cy="promotion-create-message-${field}"]`);
+
+      it('warns about a contradiction under its field, and offers to add it anyway', () => {
+        const { el, fixture, svc } = typed(conflict);
+
+        expect(message(el, 'to_stripes')?.textContent?.trim()).toBe(conflictMessage);
+        expect(message(el, 'to_stripes')?.classList).toContain('promotions__field-message--warn');
+        // No banner: the one message sits where the owner looks.
+        expect(el.querySelector('[data-cy="promotion-create-error"]')).toBeNull();
+        expect(el.querySelector('[data-cy="promotion-create-confirm"]')).toBeNull();
+
+        (
+          el.querySelector(
+            '[data-cy="promotion-create-confirm-conflict"] button',
+          ) as HTMLButtonElement
+        ).click();
+        fixture.detectChanges();
+
+        expect(svc.createPromotion).toHaveBeenLastCalledWith(7, {
+          kind: 'stripe',
+          recorded_at: '2025-12-01',
+          belt_at_event: 'white',
+          from_stripes: 1,
+          to_stripes: 2,
+          confirm_conflict: true,
+        });
+      });
+
+      it('drops the warning as soon as the owner changes the row', () => {
+        const { el, fixture, c } = typed(conflict);
+
+        c.createForm.patchValue({ to_stripes: '3' });
+        fixture.detectChanges();
+
+        expect(message(el, 'to_stripes')).toBeNull();
+        expect(el.querySelector('[data-cy="promotion-create-confirm-conflict"]')).toBeNull();
+        expect(el.querySelector('[data-cy="promotion-create-confirm"]')).not.toBeNull();
+      });
+
+      it("says any other 422 under its field, in the server's words, with nothing to confirm", () => {
+        const { el } = typed({
+          status: 422,
+          error: {
+            message: 'Il nuovo numero di gradi deve essere diverso da quello di prima.',
+            errors: {
+              to_stripes: ['Il nuovo numero di gradi deve essere diverso da quello di prima.'],
+            },
+          },
+        });
+
+        expect(message(el, 'to_stripes')?.textContent?.trim()).toBe(
+          'Il nuovo numero di gradi deve essere diverso da quello di prima.',
+        );
+        expect(message(el, 'to_stripes')?.classList).not.toContain(
+          'promotions__field-message--warn',
+        );
+        expect(el.querySelector('[data-cy="promotion-create-confirm-conflict"]')).toBeNull();
+      });
+
+      it('says a message for a field the dialog does not show below the form', () => {
+        const { el } = typed({
+          status: 422,
+          error: { errors: { to_belt: ['Not a stripe field.'] } },
+        });
+
+        expect(el.querySelector('[data-cy="promotion-create-error"]')?.textContent?.trim()).toBe(
+          'Not a stripe field.',
+        );
+      });
+
+      it('says a failure with no answer below the form, in our words', () => {
+        const { el } = typed({ status: 0 });
+
+        expect(el.querySelector('[data-cy="promotion-create-error"]')?.textContent?.trim()).toBe(
+          "Couldn't add this promotion. Try again.",
+        );
+      });
     });
 
     it('cancel closes the create dialog without calling the service', () => {
@@ -763,6 +931,7 @@ describe('PromotionsListComponent — missing steps (#1966)', () => {
     to_stripes: null,
     belt_at_event: 'blue',
     is_opening: true,
+    is_entry_placeholder: true,
     recorded_at: '2026-09-20T10:00:00+00:00',
   });
   const whiteThree = makePromotion({
@@ -811,12 +980,17 @@ describe('PromotionsListComponent — missing steps (#1966)', () => {
     sessions_since_stripe: null,
   };
 
-  function page(data: AthletePromotion[], gaps: PromotionGap[]) {
+  function page(
+    data: AthletePromotion[],
+    gaps: PromotionGap[],
+    skipped: PromotionSkippedStep[] = [],
+  ) {
     return of({
       data,
       meta: { current_page: 1, per_page: 20, total: data.length, last_page: 1 },
       progression: jacopoProgression,
       gaps,
+      skipped,
       history_starts_at: '2024-03-12',
     });
   }
@@ -868,11 +1042,74 @@ describe('PromotionsListComponent — missing steps (#1966)', () => {
     expect(el.querySelector('[data-cy="promotions-entry-day"]')).not.toBeNull();
   });
 
+  it('says nothing about the day of entry once the owner has dated the starting row (#1990)', () => {
+    const ctx = setup({ athleteId: '7' });
+    useLadder('bjj');
+    // Moved with the pencil to the day he really started on blue: the row
+    // is still a starting row, but its date is the promotion's now.
+    ctx.svc.promotions.mockReturnValue(
+      page([{ ...opening, is_entry_placeholder: false }, whiteThree], [fourthStripe]),
+    );
+    ctx.fixture.detectChanges();
+
+    expect(ctx.el.querySelector('[data-cy="promotions-entry-day"]')).toBeNull();
+  });
+
   it('says the history before the first known point is not recorded, in one line', () => {
     const { el } = jacopo();
     expect(el.querySelector('[data-cy="promotions-history-before"]')?.textContent).toContain(
       "the history isn't recorded",
     );
+  });
+
+  it('adds a filled step anyway, as the step, when the history changed under it (#1991)', async () => {
+    // Another window added a row since this page loaded: the step is no gap
+    // any more, and the server calls it a contradiction. The dialog asks
+    // only the date, so «Aggiungi comunque» must resend the step itself —
+    // and end the way a fill does: the dialog closed, the keyboard on the row.
+    const { el, fixture, component, svc } = jacopo();
+    const warning = 'On 1 June 2024 they already had 4 stripes: this would take them to 4.';
+    svc.createPromotion.mockReturnValueOnce(
+      throwError(() => ({
+        status: 422,
+        error: { message: warning, code: 'chain_conflict', errors: { recorded_at: [warning] } },
+      })),
+    );
+    click(el, 'gap-add-date-stripe:white:4');
+    fixture.detectChanges();
+    const c = component as unknown as Internals;
+    c.createForm.patchValue({ recorded_at: new Date(2024, 8, 20) });
+    c.confirmCreate();
+    fixture.detectChanges();
+
+    const written = makePromotion({
+      id: 20,
+      kind: 'stripe',
+      from_belt: null,
+      to_belt: null,
+      from_stripes: 3,
+      to_stripes: 4,
+      belt_at_event: 'white',
+      is_opening: false,
+      recorded_at: '2024-09-20T00:00:00+00:00',
+    });
+    svc.createPromotion.mockReturnValue(of(written));
+    svc.promotions.mockReturnValue(page([opening, written, whiteThree], [blueBelt]));
+
+    click(el, 'promotion-create-confirm-conflict');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(svc.createPromotion).toHaveBeenLastCalledWith(7, {
+      kind: 'stripe',
+      recorded_at: '2024-09-20',
+      from_stripes: 3,
+      to_stripes: 4,
+      belt_at_event: 'white',
+      confirm_conflict: true,
+    });
+    expect((component as unknown as { filling: () => unknown }).filling()).toBeNull();
+    expect(document.activeElement).toBe(el.querySelector('[data-cy="promotion-edit-20"] button'));
   });
 
   it('fills a missing stripe with the date alone, bounded to the days between its neighbours', () => {
@@ -1025,6 +1262,143 @@ describe('PromotionsListComponent — missing steps (#1966)', () => {
     expect(document.activeElement).toBe(
       el.querySelector('[data-cy="gap-add-date-stripe:white:4"] button'),
     );
+  });
+
+  describe('the steps marked as skipped (#1989)', () => {
+    const skippedFourth: PromotionSkippedStep = {
+      key: 'stripe:white:4',
+      kind: 'stripe',
+      belt: 'white',
+      stripes: 4,
+    };
+    const skippedPurple: PromotionSkippedStep = {
+      key: 'belt:purple:0',
+      kind: 'belt',
+      belt: 'purple',
+      stripes: 0,
+    };
+
+    function openSkipped(el: HTMLElement): void {
+      (el.querySelector('[data-cy="promotions-skipped-toggle"]') as HTMLButtonElement).click();
+    }
+
+    function withSkipped(skipped: PromotionSkippedStep[]) {
+      const ctx = setup({ athleteId: '7' });
+      useLadder('bjj');
+      ctx.svc.promotions.mockReturnValue(page([opening, whiteThree], [blueBelt], skipped));
+      ctx.fixture.detectChanges();
+      return ctx;
+    }
+
+    it('says how many there are in one quiet line under the timeline, folded', () => {
+      const { el } = withSkipped([skippedFourth]);
+      const line = el.querySelector('[data-cy="promotions-skipped"]');
+
+      expect(line?.textContent).toContain('1 step marked as skipped');
+      expect(el.querySelector('[data-cy="promotions-skipped-list"]')).toBeNull();
+      const toggle = el.querySelector('[data-cy="promotions-skipped-toggle"]');
+      expect(toggle?.textContent).toContain('Show');
+      expect(toggle?.getAttribute('aria-expanded')).toBe('false');
+    });
+
+    it('counts them in the plural, and names each one once opened', () => {
+      const { el, fixture } = withSkipped([skippedFourth, skippedPurple]);
+      expect(el.querySelector('[data-cy="promotions-skipped"]')?.textContent).toContain(
+        '2 steps marked as skipped',
+      );
+
+      openSkipped(el);
+      fixture.detectChanges();
+
+      const items = Array.from(el.querySelectorAll('[data-cy="promotions-skipped-list"] > li')).map(
+        (li) => [
+          li.querySelector('.promotions__skipped-text')?.textContent?.trim(),
+          li.querySelector('button')?.textContent?.trim(),
+        ],
+      );
+      expect(items).toEqual([
+        ['White, stripe 4', 'Restore'],
+        ['Purple belt', 'Restore'],
+      ]);
+      const toggle = el.querySelector('[data-cy="promotions-skipped-toggle"]');
+      expect(toggle?.textContent).toContain('Hide');
+      expect(toggle?.getAttribute('aria-expanded')).toBe('true');
+      expect(
+        el
+          .querySelector('[data-cy="skipped-restore-stripe:white:4"] button')
+          ?.getAttribute('aria-label'),
+      ).toBe('Restore: White, stripe 4');
+    });
+
+    it('brings one back: deletes the skip, reloads, and says so', async () => {
+      const { el, fixture, svc } = withSkipped([skippedFourth]);
+      openSkipped(el);
+      fixture.detectChanges();
+      svc.promotions.mockClear();
+      svc.promotions.mockReturnValue(page([opening, whiteThree], [fourthStripe, blueBelt]));
+
+      click(el, 'skipped-restore-stripe:white:4');
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(svc.unskipPromotionStep).toHaveBeenCalledWith(7, 'white', 4);
+      expect(svc.promotions).toHaveBeenCalledWith(7, 1);
+      expect(el.querySelector('[data-cy="promotion-gap-stripe:white:4"]')).not.toBeNull();
+      expect(el.querySelector('[data-cy="promotions-skipped"]')).toBeNull();
+      expect(el.querySelector('[data-cy="promotions-announce"]')?.textContent?.trim()).toBe(
+        'White, stripe 4: back among the steps to date',
+      );
+      // The keyboard follows the step back to its ghost row.
+      expect(document.activeElement).toBe(
+        el.querySelector('[data-cy="gap-add-date-stripe:white:4"] button'),
+      );
+    });
+
+    it('puts the keyboard on the timeline when the step comes back folded and the list is gone', async () => {
+      const { el, fixture, svc } = withSkipped([skippedFourth]);
+      openSkipped(el);
+      fixture.detectChanges();
+      // Three missing steps in a row are drawn folded: no "Aggiungi la data"
+      // to land on, and no list left either.
+      const run = (n: number): PromotionGap => ({
+        ...fourthStripe,
+        key: `stripe:white:${n}`,
+        from_stripes: n - 1,
+        to_stripes: n,
+      });
+      svc.promotions.mockReturnValue(page([opening, whiteThree], [run(2), run(3), run(4)]));
+
+      click(el, 'skipped-restore-stripe:white:4');
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(el.querySelector('[data-cy="gap-add-date-stripe:white:4"]')).toBeNull();
+      expect(document.activeElement).toBe(el.querySelector('[data-cy="promotions-list"]'));
+    });
+
+    it('keeps the step in the list when bringing it back fails, and says why', () => {
+      const { el, fixture, svc } = withSkipped([skippedFourth]);
+      const add = vi.spyOn(fixture.componentRef.injector.get(MessageService), 'add');
+      svc.unskipPromotionStep.mockReturnValue(throwError(() => new Error('boom')));
+      openSkipped(el);
+      fixture.detectChanges();
+
+      click(el, 'skipped-restore-stripe:white:4');
+      fixture.detectChanges();
+
+      expect(add).toHaveBeenCalledWith(
+        expect.objectContaining({
+          severity: 'error',
+          detail: "It couldn't be brought back. Try again.",
+        }),
+      );
+      expect(el.querySelector('[data-cy="skipped-restore-stripe:white:4"]')).not.toBeNull();
+    });
+
+    it('draws nothing when no step is marked as skipped', () => {
+      const { el } = withSkipped([]);
+      expect(el.querySelector('[data-cy="promotions-skipped"]')).toBeNull();
+    });
   });
 
   it('keeps same-day rows and their missing steps in replay order', () => {

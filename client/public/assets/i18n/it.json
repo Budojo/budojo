@@ -2197,7 +2197,8 @@
       "restoreToast": {
         "successSummary": "Atleta ripristinato",
         "errorSummary": "Impossibile ripristinare",
-        "errorDetail": "Qualcosa è andato storto. Riprova tra un momento."
+        "errorDetail": "Qualcosa è andato storto. Riprova tra un momento.",
+        "fiscalCodeTaken": "{{name}}, già in elenco, ha lo stesso codice fiscale. Se è la stessa persona, tieni quella; altrimenti correggi prima il codice di {{name}}."
       },
       "showInactive": "Mostra anche i non attivi",
       "hideInactive": "Mostra solo gli attivi",
@@ -2333,11 +2334,12 @@
         },
         "button": {
           "markPaid": "Segna pagato",
-          "unmarkPaid": "Annulla pagato"
+          "unmarkPaid": "Annulla pagamento"
         },
+        "overdue": "In ritardo",
         "feeTierHintOne": "Fascia {{label}} · {{amount}} al mese per {{count}} lezione a settimana.",
         "feeTierHintOther": "Fascia {{label}} · {{amount}} al mese per {{count}} lezioni a settimana.",
-        "periodRange": "Da {{from}} a {{to}} {{year}}",
+        "periodRange": "da {{from}} a {{to}} {{year}}",
         "prevYear": "Anno precedente",
         "nextYear": "Anno successivo",
         "periodHint": "{{period}} · {{amount}} a periodo",
@@ -2462,7 +2464,7 @@
         "deleteConfirm": "Elimina",
         "createDialog": {
           "title": "Aggiungi una promozione passata",
-          "body": "Per una promozione avvenuta prima che Budojo esistesse. Deve essere coerente con le promozioni già registrate intorno ad essa.",
+          "body": "Per una promozione avvenuta prima che Budojo esistesse. Lascia fuori quello che non sai: i passaggi che mancano intorno compaiono nella storia, da datare dopo.",
           "kindLabel": "Tipo",
           "kindBelt": "Cintura",
           "kindStripe": "Grado",
@@ -2474,6 +2476,7 @@
           "fromStripes": "Da gradi",
           "toStripes": "A gradi",
           "confirm": "Aggiungi promozione",
+          "confirmConflict": "Aggiungi comunque",
           "error": "Impossibile aggiungere questa promozione. Riprova.",
           "completeOffer": "{{belt}} è già nella storia: è la riga creata quando hai inserito l'atleta. Completa quella riga con questa data, invece di aggiungerne una seconda.",
           "completeConfirm": "Completa quella riga",
@@ -2516,6 +2519,13 @@
           "restored": "{{step}}: di nuovo tra i passaggi da datare",
           "undoAria": "Annulla: {{step}}",
           "fromBeltLabel": "Cintura di prima"
+        },
+        "skippedList": {
+          "countOne": "1 passaggio segnato come saltato",
+          "countOther": "{{count}} passaggi segnati come saltati",
+          "hide": "Nascondi",
+          "restore": "Ripristina",
+          "restoreAria": "Ripristina: {{step}}"
         }
       },
       "attendance": {
@@ -2637,7 +2647,10 @@
         "addressCity": "Città",
         "addressProvince": "Provincia",
         "feeTier": "Fascia di quota",
-        "feeOverride": "Quota personale"
+        "feeOverride": "Quota personale",
+        "fiscalCode": "Codice fiscale",
+        "sex": "Sesso",
+        "birthPlace": "Luogo di nascita"
       },
       "placeholder": {
         "phoneCountryCode": "Prefisso",
@@ -2693,7 +2706,10 @@
         "feeTier": "Quale quota mensile paga. Lascia vuoto per la quota standard dell'accademia.",
         "feeOverride": "Solo per questo atleta: sostituisce la fascia e la quota dell'accademia. Metti 0 se si allena gratis.",
         "feeOverrideFree": "Si allena gratis: non deve niente e non compare tra chi non ha pagato.",
-        "kidsBeltsHidden": "Le cinture dei bambini sono nascoste: attivale in Accademia → Modifica."
+        "kidsBeltsHidden": "Le cinture dei bambini sono nascoste: attivale in Accademia → Modifica.",
+        "fiscalCode": "Se è valido, compila la data di nascita e il sesso quando sono vuoti.",
+        "sex": "Come sul documento",
+        "birthPlace": "Il comune, o il Paese se è nato all'estero"
       },
       "button": {
         "cancel": "Annulla",
@@ -2745,7 +2761,11 @@
         "gym": "In palestra",
         "contact": "Contatti"
       },
-      "feeTierStandard": "Quota standard dell'accademia"
+      "feeTierStandard": "Quota standard dell'accademia",
+      "sexOption": {
+        "m": "Maschio",
+        "f": "Femmina"
+      }
     },
     "photo": {
       "title": "Foto",
@@ -2796,7 +2816,10 @@
         "joined_at": "Iscritto il",
         "email": "Email",
         "phone": "Telefono",
-        "date_of_birth": "Data di nascita"
+        "date_of_birth": "Data di nascita",
+        "fiscal_code": "Codice fiscale",
+        "sex": "Sesso",
+        "birth_place": "Luogo di nascita"
       },
       "table": {
         "row": "Riga",
@@ -2978,7 +3001,18 @@
       "whatsapp": "WhatsApp",
       "callAria": "Chiama {{name}}",
       "whatsappAria": "Scrivi a {{name}} su WhatsApp",
-      "noPhone": "Nessun numero in archivio"
+      "noPhone": "Nessun numero in archivio",
+      "noPhoneAria": "Nessun numero in archivio per {{name}}",
+      "reminder": "Manda il promemoria su WhatsApp",
+      "reminderAria": "Manda il promemoria a {{name}} su WhatsApp"
+    },
+    "reminder": {
+      "unpaid": "Ciao {{name}}, ti ricordo la quota di {{month}} ({{amount}}). Grazie! — {{academy}}",
+      "certificateExpires": "Ciao {{name}}, il tuo certificato medico scade il {{date}}. Quando hai quello nuovo portamelo in palestra. — {{academy}}",
+      "certificateExpired": "Ciao {{name}}, il tuo certificato medico è scaduto il {{date}}. Quando hai quello nuovo portamelo in palestra. — {{academy}}",
+      "certificateMissing": "Ciao {{name}}, non ho ancora il tuo certificato medico. Quando ce l'hai portamelo in palestra. — {{academy}}",
+      "documentExpires": "Ciao {{name}}, un tuo documento in palestra ({{document}}) scade il {{date}}. Quando hai quello nuovo portamelo. — {{academy}}",
+      "documentExpired": "Ciao {{name}}, un tuo documento in palestra ({{document}}) è scaduto il {{date}}. Quando hai quello nuovo portamelo. — {{academy}}"
     }
   },
   "stats": {
@@ -3174,7 +3208,6 @@
         },
         "error": "Impossibile caricare le settimane.",
         "share": {
-          "heading": "Programma della settimana",
           "ready": "Il programma della settimana del {{date}}, da mandare al gruppo.",
           "none": "Nessuna lezione pianificata per questa settimana né per la prossima, quindi non c'è un programma da mandare.",
           "nextSeason": "La settimana che viene entra nella nuova stagione, che questa mappa non mostra ancora. Il suo programma si manda da qui quando la nuova stagione è iniziata.",
@@ -3381,7 +3414,9 @@
       "programme": "Programma della stagione",
       "programmeValue": "{{percentage}}% · {{covered}} di {{total}}",
       "joined": "Nuovi questa settimana",
-      "joinedError": "Non riesco a caricare i nuovi iscritti."
+      "joinedError": "Non riesco a caricare i nuovi iscritti.",
+      "sendWeek": "Il programma della settimana prossima",
+      "sendWeekValue": "Mandalo al gruppo"
     },
     "birthdays": {
       "title": "Compleanni",
@@ -3557,5 +3592,21 @@
       "pos": "Carta",
       "other": "Altro"
     }
+  },
+  "weekMessage": {
+    "heading": "Programma della settimana",
+    "closed": "chiuso",
+    "closedUntil": "Chiuso fino al {{date}}",
+    "send": "Manda la settimana al gruppo",
+    "sendAria": "Manda al gruppo la settimana del {{date}}",
+    "ready": "La settimana del {{date}}",
+    "loading": "Carico la settimana…",
+    "none": "Niente in orario questa settimana né la prossima.",
+    "failed": "Il programma non si è caricato.",
+    "retry": "Riprova",
+    "copy": "Copia il testo",
+    "whatsapp": "Apri WhatsApp",
+    "copied": "Settimana copiata: incollala nel gruppo.",
+    "copyFailed": "Non è stato possibile copiarla: usa «Apri WhatsApp»."
   }
 }

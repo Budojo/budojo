@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Athlete;
 
+use App\Exceptions\FiscalCodeTakenException;
 use App\Models\Athlete;
 
 /**
@@ -28,13 +29,38 @@ use App\Models\Athlete;
  * the row AND wipes the file from disk (M3 PRD GDPR policy). The
  * delete confirm UI surfaces a prominent warning about this; the
  * restored athlete starts with an empty documents tab.
+ *
+ * **What refuses a restore**: a codice fiscale that a live athlete of the
+ * same academy has taken since (#1934). The unique rule keeps two live rows
+ * from sharing one, and a restore goes around every validator.
  */
 class RestoreAthleteAction
 {
+    /**
+     * @throws FiscalCodeTakenException
+     */
     public function execute(Athlete $athlete): Athlete
     {
+        $holder = $this->liveHolderOfCode($athlete);
+        if ($holder !== null) {
+            throw new FiscalCodeTakenException($holder);
+        }
+
         $athlete->restore();
 
         return $athlete->fresh() ?? $athlete;
+    }
+
+    private function liveHolderOfCode(Athlete $athlete): ?Athlete
+    {
+        if ($athlete->fiscal_code === null) {
+            return null;
+        }
+
+        return Athlete::query()
+            ->where('academy_id', $athlete->academy_id)
+            ->where('fiscal_code', $athlete->fiscal_code)
+            ->whereKeyNot($athlete->id)
+            ->first();
     }
 }
