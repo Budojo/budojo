@@ -122,7 +122,11 @@ public class PhpServerPlugin extends Plugin {
                 + "sys_temp_dir=" + tmp.getAbsolutePath() + "\n"
                 + "upload_tmp_dir=" + tmp.getAbsolutePath() + "\n"
                 + "session.save_path=" + tmp.getAbsolutePath() + "\n"
-                + "opcache.enable=1\nopcache.enable_cli=1\n");
+                // OPcache takes its lock in /tmp by default, and Android has no
+                // /tmp: "Cannot create lock - Permission denied" on the first run
+                // on a real phone (0.0.4). The app's cache directory is writable.
+                + "opcache.enable=1\nopcache.enable_cli=1\n"
+                + "opcache.lockfile_path=" + tmp.getAbsolutePath() + "\n");
 
         Map<String, String> env = environment(spike, database, storage, tmp, files);
 
