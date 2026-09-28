@@ -1,0 +1,10 @@
+/* The mat app (#2027): a second application in this workspace, packaged for Android by `mobile/`. */
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "../../out-tsc/mat",
+    "types": []
+  },
+  "include": ["src/**/*.ts", "../../src/budojo-bridge.d.ts"],
+  "exclude": ["src/**/*.spec.ts"]
+}

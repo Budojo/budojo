@@ -1,0 +1,10 @@
+{
+  "appId": "it.budojo.mobile",
+  "appName": "Budojo",
+  "webDir": "../client/dist/mat/browser",
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false
+  }
+}
