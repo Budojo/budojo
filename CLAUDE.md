@@ -107,7 +107,7 @@ Full checklist + labels + body conventions in [`docs/development/pr-labels.md`](
 2. **Body** — fill the `What / Why / How / Notes / Out of scope / References / Test plan` template (English). Write the body to a **per-PR file** under `.claude/pr-bodies/<branch-or-pr>.md` and use `--body-file` (never `--body "..."` or a heredoc).
 3. **Assignee** — `m-bonanno` on every PR.
 4. **Labels** — one type label at creation (per branch prefix). `🟢 ready to merge` is applied and removed by CI (#1460) — never by hand.
-5. **Board** — add the PR and the issue to the [`org-level project number 2`](https://github.com/orgs/Budojo/projects/2) and set both to `In Progress`:
+5. **Board** — add the PR and the issue to the [`org-level project number 2`](https://github.com/orgs/Budojo/projects/2) and set both to `In Progress`. `Done` needs nothing: the board's workflows set it at the merge (PR) and the close (issue).
    ```bash
    ./.claude/scripts/board-set.sh <PR-N> in-progress
    ./.claude/scripts/board-set.sh <ISSUE-N> in-progress

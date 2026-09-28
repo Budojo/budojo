@@ -12,7 +12,7 @@ Set the project-board status for an issue or PR in budojo's Project #2.
 
 ```bash
 ./.claude/scripts/board-set.sh 287 in-progress
-./.claude/scripts/board-set.sh 274 done
+./.claude/scripts/board-set.sh 274 done   # rare — the board's workflows set Done on merge and close (#2020)
 ./.claude/scripts/board-set.sh 281 todo   # rare — issues default to Todo on creation
 ```
 
