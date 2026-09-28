@@ -67,6 +67,62 @@ jobs:
               - 'desktop/**'
               - '.github/workflows/pr-checks.yml'
 
+  # ── Commits and the PR body ───────────────────────────────────────
+  # Two rules the hooks only enforce where they run (#2020): commits made in
+  # an agent's worktree skip them (no root node_modules there), and nothing
+  # read the PR body at all. Conventional commits are checked on the PR's
+  # own commits and its title (which becomes the squash subject), on PRs into
+  # develop only: a release PR carries every squash message since the last
+  # release, already checked on the way in. No AI attribution is checked
+  # everywhere, in the commits and the body: CLAUDE.md forbids it outright.
+  commits:
+    name: "📝 Commits & PR body"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: No AI attribution in the commits or the PR body
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+          BODY: ${{ github.event.pull_request.body }}
+        run: |
+          pattern='co-authored-by:.*(claude|anthropic)|claude-session:|generated with \[?claude'
+          found=0
+          if git log --format='%H%n%B' "$BASE..$HEAD" | grep -inE "$pattern"; then
+            echo "::error::A commit on this PR carries AI attribution. Reword it: CLAUDE.md forbids it."
+            found=1
+          fi
+          if printf '%s' "$BODY" | grep -inE "$pattern"; then
+            echo "::error::The PR body carries AI attribution. Edit it out: CLAUDE.md forbids it."
+            found=1
+          fi
+          exit "$found"
+
+      - uses: actions/setup-node@v4
+        if: github.event.pull_request.base.ref == 'develop'
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install commitlint
+        if: github.event.pull_request.base.ref == 'develop'
+        env:
+          HUSKY: "0"
+        run: npm ci --ignore-scripts
+
+      - name: Conventional commits (the PR's commits and its title)
+        if: github.event.pull_request.base.ref == 'develop'
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          npx --no-install commitlint --from "$BASE" --to "$HEAD" --verbose
+          printf '%s\n' "$TITLE" | npx --no-install commitlint --verbose
+
   phpstan:
     name: "🔬 PHPStan (level 9)"
     runs-on: ubuntu-latest
