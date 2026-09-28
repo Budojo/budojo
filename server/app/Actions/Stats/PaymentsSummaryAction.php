@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Actions\Stats;
 
-use App\Enums\AthleteStatus;
 use App\Models\Academy;
 use App\Models\Athlete;
 use App\Models\AthletePayment;
@@ -24,9 +23,10 @@ use Illuminate\Support\Collection;
  * composed from a rule that already exists rather than written again:
  *
  * - **Population** — active, not the owner training in their own academy, and
- *   charged a fee above zero: `Athlete::scopeExpectedToPay` (the roster's
- *   chip is not a dash) and `scopeChargedMoreThanNothing` (the fee resolves
- *   above zero, #1757). An athlete who trains free is on neither side of the
+ *   charged a fee above zero: `Athlete::scopeCanFallBehind`, the arrears
+ *   list's population — `scopeExpectedToPay` (the roster's chip is not a
+ *   dash) and `scopeChargedMoreThanNothing` (the fee resolves above zero,
+ *   #1757). An athlete who trains free is on neither side of the
  *   rate; a trashed athlete is out through the model's soft delete. And only
  *   from their `BillingFloor` on (#1742): nobody owes a month before they
  *   joined, or before the academy kept its fees in Budojo.
@@ -139,9 +139,7 @@ class PaymentsSummaryAction
     {
         return Athlete::query()
             ->where('academy_id', $academy->id)
-            ->where('status', AthleteStatus::Active)
-            ->expectedToPay()
-            ->chargedMoreThanNothing();
+            ->canFallBehind();
     }
 
     /** @param Collection<int, Athlete> $athletes */

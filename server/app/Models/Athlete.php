@@ -320,6 +320,23 @@ class Athlete extends Model implements HasAddress
     }
 
     /**
+     * Athletes a missed month is a debt for (#1760): active, expected to pay,
+     * and at a fee above zero. The arrears list, the payments summary and the
+     * ledger's «In ritardo» (#1654) all ask it, so a month is late on all
+     * three or on none.
+     *
+     * @param  Builder<$this>  $query
+     * @return Builder<$this>
+     */
+    public function scopeCanFallBehind(Builder $query): Builder
+    {
+        return $query
+            ->where('status', AthleteStatus::Active)
+            ->expectedToPay()
+            ->chargedMoreThanNothing();
+    }
+
+    /**
      * Athletes whose birthday falls on one of the month-days (`03-14`) —
      * the roster's `?birthday=` (#1754), with `BirthdayWindow` building the
      * days. A null `date_of_birth` formats to null and matches nothing.
