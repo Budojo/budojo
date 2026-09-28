@@ -65,9 +65,10 @@ const QUARTERLY_FEB = {
 
 describe('A payment that covers a quarter', () => {
   beforeEach(() => {
-    // Early in the fixture's season, so every month after September is ahead
-    // and an unpaid one reads "Unpaid", never "Overdue" (#1654) — whatever
-    // the real calendar says the day CI runs this.
+    // Inside the fixture's season, whatever the real calendar says the day CI
+    // runs this: the tab derives its season from the clock until the academy
+    // answers. "Overdue" is the server's word (#1654), and these stubs name
+    // no late month, so an unpaid one reads "Unpaid".
     cy.clock(new Date(SEASON, 8, 20, 12).getTime(), ['Date']);
     cy.intercept('GET', '/api/v1/academy', ACADEMY_OK).as('academy');
     cy.intercept('GET', '/api/v1/athletes/42', {

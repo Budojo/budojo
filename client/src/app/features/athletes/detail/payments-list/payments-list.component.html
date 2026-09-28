@@ -199,7 +199,7 @@
           <!-- A covered month's amount and date sit on the month its period
                started, where the one payment is: its card is just the month
                and its caption, unless it is where this season undoes it. -->
-          @if (!row.coveredByEarlierPeriod || undoesHere(row)) {
+          @if (!row.coveredByEarlierPeriod || row.undoHere) {
             <div class="payment-card__meta">
               @if (!row.coveredByEarlierPeriod) {
                 @if (row.payment) {
@@ -225,7 +225,7 @@
               }
               <!-- Labelled controls (#1654, PAY-5): a bare ✕ is the app's
                  "close", and a bare ✓ said nothing about money. -->
-              @if (undoesHere(row)) {
+              @if (row.undoHere) {
                 <div class="payment-card__actions">
                   <p-button
                     type="button"
@@ -390,9 +390,9 @@
               <!--
                 Labelled controls (#1654, PAY-5): a bare ✕ is the app's
                 "close" and a bare ✓ said nothing about money. One undo per
-                payment, on the month it started — see `undoesHere`.
+                payment, on the month it started — see `MonthRow.undoHere`.
               -->
-              @if (undoesHere(row)) {
+              @if (row.undoHere) {
                 <p-button
                   type="button"
                   [label]="'athletes.detail.payments.button.unmarkPaid' | translate"

@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Athlete;
 
 use App\Actions\Payment\DeleteAthletePaymentAction;
 use App\Actions\Payment\ListAthletePaymentsAction;
+use App\Actions\Payment\ListOverdueMonthsAction;
 use App\Actions\Payment\RecordAthletePaymentAction;
 use App\Enums\BillingPeriod;
 use App\Enums\PaymentMethod;
@@ -26,6 +27,7 @@ class AthletePaymentController extends Controller
     public function __construct(
         private readonly RecordAthletePaymentAction $recordAction,
         private readonly ListAthletePaymentsAction $listAction,
+        private readonly ListOverdueMonthsAction $overdueAction,
         private readonly DeleteAthletePaymentAction $deleteAction,
     ) {
     }
@@ -39,11 +41,13 @@ class AthletePaymentController extends Controller
             return response()->json(['message' => 'Forbidden.'], 403);
         }
 
-        $year = $request->integer('year', (int) OperatorDay::today()->year);
+        $today = OperatorDay::today();
+        $year = $request->integer('year', $today->year);
 
-        return AthletePaymentResource::collection(
-            $this->listAction->execute($athlete, $year),
-        );
+        // The months the ledger may call «In ritardo» (#1654), by the arrears
+        // list's rule rather than the browser's guess.
+        return AthletePaymentResource::collection($this->listAction->execute($athlete, $year))
+            ->additional(['overdue_months' => $this->overdueAction->execute($athlete, $year, $today)]);
     }
 
     public function store(StoreAthletePaymentRequest $request, Athlete $athlete): JsonResponse

@@ -5471,7 +5471,14 @@ paths:
         without the row behind them. The client spreads each payment across
         the cells it covers, reading `year`, `month` and `period_months`.
 
-        Defaults to the current calendar year when `?year` is omitted.
+        `overdue_months` (#1654) lists the months of the year the athlete is
+        late on, by the arrears list's rule (#1760): active, expected to pay at
+        a fee above zero, from their billing floor up to **last** month, with
+        nothing — no covering payment, no carnet spendable on some day of it —
+        paying for the month. The ledger draws «In ritardo» on exactly these
+        and nowhere else.
+
+        Defaults to the operator's current year when `?year` is omitted.
         Cross-academy access returns 403.
       operationId: athletePaymentList
       parameters:
@@ -5490,12 +5497,19 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [data]
+                required: [data, overdue_months]
                 properties:
                   data:
                     type: array
                     items:
                       $ref: '#/components/schemas/AthletePayment'
+                  overdue_months:
+                    type: array
+                    description: The year's months the athlete is late on, oldest first. Empty for anyone who cannot fall behind.
+                    items:
+                      type: string
+                      pattern: '^\d{4}-\d{2}$'
+                      example: '2026-07'
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':

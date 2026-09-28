@@ -46,6 +46,11 @@ import { AcademyService } from '../../../../core/services/academy.service';
 /** The keyed popup that asks for the date and the method (#1761). */
 const MARK_PAID_CONFIRM_KEY = 'mark-paid';
 
+/** A month as the server's `overdue_months` writes it: `2026-03` (#1654). */
+function monthKey(year: number, month: number): string {
+  return `${year}-${`${month}`.padStart(2, '0')}`;
+}
+
 /**
  * What a 422 on marking a month paid means, by the field the server blamed —
  * first match wins.
@@ -150,18 +155,20 @@ interface MonthRow {
    */
   readonly coveredByEarlierPeriod: boolean;
   /**
-   * A covered month whose period started in a month this table does not show
-   * (#1654): a July quarter reaching into a September season. Its own row is
-   * then the only place this season can undo the payment from, so it keeps
-   * the control the other covered months give up.
+   * Whether this row carries the undo (#1654, PAY-2). One payment, one
+   * control: on the month its period started, where its amount and date sit,
+   * not on every month it also covers, where a ✕ on each row read as three
+   * payments to undo. A period that started before this table's first month
+   * has its undo on that first month instead: a July half-year on a September
+   * season is undone from September, once, not from each of Sep–Dec.
    */
-  readonly periodStartsOffTable: boolean;
+  readonly undoHere: boolean;
   /** How long the covering period is, for the row's "Feb-Apr" caption. */
   readonly periodMonths: number;
   /**
-   * Unpaid, owed, and before the owner's current month (#1654, PAY-6): late,
-   * not merely unpaid. This month stays "Non pagato" — it is due, not late —
-   * and a month ahead is neither.
+   * Late, not merely unpaid (#1654, PAY-6): the server listed this month in
+   * `overdue_months`, by the arrears list's rule (#1760). The browser does not
+   * decide it — it cannot see a carnet, a free tier or an inactive status.
    */
   readonly overdue: boolean;
 }
@@ -227,21 +234,16 @@ export class PaymentsListComponent implements OnInit {
   protected readonly athleteName = signal<string>('');
   protected readonly loading = signal<boolean>(true);
   protected readonly payments = signal<readonly AthletePayment[]>([]);
+  /** The loaded season's late months, `YYYY-MM`, as the server listed them (#1654). */
+  private readonly overdueMonths = signal<ReadonlySet<string>>(new Set());
 
-  // Current UTC year/month — fixed at component construction so the
-  // table doesn't tick over while the user has it open. A page reload
-  // pulls fresh values; the cost of staleness for a tab visit is
-  // bounded by the user's session.
-  private readonly nowUtc = new Date();
-  private readonly currentYear = this.nowUtc.getUTCFullYear();
-  private readonly currentMonth = this.nowUtc.getUTCMonth() + 1;
-  /**
-   * The owner's current month, as an absolute month index, for "late" (#1654).
-   * Their calendar, not UTC's: on the evening of the 31st in Rome the month
-   * has already turned for the owner, and an unpaid month does not become
-   * late at 01:00 on the 1st for them just because UTC is an hour behind.
-   */
-  private readonly ownerMonthIndex = this.nowUtc.getFullYear() * 12 + this.nowUtc.getMonth();
+  // The owner's year and month, fixed at component construction so the table
+  // doesn't tick over while it is open. Their calendar, not UTC's (#1654): at
+  // 00:30 on 1 September in Rome UTC is still in August, and a UTC clock
+  // opened the tab on the season that had just ended.
+  private readonly now = new Date();
+  private readonly currentYear = this.now.getFullYear();
+  private readonly currentMonth = this.now.getMonth() + 1;
 
   /**
    * The year on screen (#1636, PAY-1).
@@ -492,6 +494,7 @@ export class PaymentsListComponent implements OnInit {
     const fee = this.hasMonthlyFee();
     const free = this.trainsFree();
     const floorMonth = this.billingFloorMonth();
+    const overdueMonths = this.overdueMonths();
     const first = this.seasonYear() * 12 + (this.seasonStartMonth() - 1);
 
     return Array.from({ length: 12 }, (_, slot) => {
@@ -515,17 +518,21 @@ export class PaymentsListComponent implements OnInit {
       // No cap at today: an athlete who pays October in September has to be
       // recordable in October's row, which is the only row that means it
       // (#1711). The server has always allowed it.
+      //
+      // Per ROW, not per table: the earliest season straddles the server's
+      // `min:2020`, so its first months are outside what the server will
+      // accept while the rest of the same table is inside it. Flooring the
+      // whole season either hides months that are recordable or offers
+      // buttons that 422 (#1709).
+      const canEdit = fee && year >= PaymentsListComponent.EARLIEST_YEAR;
+      const coveredByEarlierPeriod =
+        payment !== null && !(payment.year === year && payment.month === month);
       return {
         month,
         year,
         labelKey: MONTH_KEYS[month - 1],
         payment,
-        // Per ROW, not per table: the earliest season straddles the server's
-        // `min:2020`, so its first months are outside what the server will
-        // accept while the rest of the same table is inside it. Flooring the
-        // whole season either hides months that are recordable or offers
-        // buttons that 422 (#1709).
-        canEdit: fee && year >= PaymentsListComponent.EARLIEST_YEAR,
+        canEdit,
         // Below the floor this month has no answer, so the table gives none
         // (#1742). Deliberately NOT folded into `canEdit`: the two floors
         // mean different things. `EARLIEST_YEAR` mirrors the server's
@@ -534,11 +541,10 @@ export class PaymentsListComponent implements OnInit {
         // still be able to record against it.
         beforeBillingFloor,
         notOwedReason,
-        coveredByEarlierPeriod:
-          payment !== null && !(payment.year === year && payment.month === month),
-        periodStartsOffTable: payment !== null && payment.year * 12 + (payment.month - 1) < first,
+        coveredByEarlierPeriod,
+        undoHere: canEdit && payment !== null && (!coveredByEarlierPeriod || absolute === first),
         periodMonths: payment?.period_months ?? 1,
-        overdue: payment === null && notOwedReason === null && absolute < this.ownerMonthIndex,
+        overdue: payment === null && overdueMonths.has(monthKey(year, month)),
       };
     });
   });
@@ -699,15 +705,15 @@ export class PaymentsListComponent implements OnInit {
     const years = this.seasonStartMonth() === 1 ? [forYear] : [forYear, forYear + 1];
     forkJoin(years.map((y) => this.paymentService.list(athleteId, y)))
       .pipe(
-        map((pages) => pages.flat()),
         finalize(() => {
           if (epoch === this.loadEpoch) this.loading.set(false);
         }),
       )
       .subscribe({
-        next: (payments) => {
+        next: (pages) => {
           if (epoch !== this.loadEpoch) return;
-          this.payments.set(payments);
+          this.payments.set(pages.flatMap((page) => page.payments));
+          this.overdueMonths.set(new Set(pages.flatMap((page) => page.overdueMonths)));
           this.loadedYear.set(forYear);
         },
         // On error we deliberately KEEP the previous `payments` value
@@ -854,22 +860,6 @@ export class PaymentsListComponent implements OnInit {
         amount: this.formatAmount(tier.amount_cents),
         count: tier.lessons_per_week,
       },
-    );
-  }
-
-  /**
-   * Whether this row carries the undo (#1654, PAY-2). One payment, one
-   * control: on the month its period started, which is where its amount and
-   * date sit — not repeated on every month it also covers, where a ✕ on each
-   * row read as three payments to undo. The exception is a period that
-   * started in a month this table does not show: then a covered row is the
-   * only place this season can undo it from.
-   */
-  protected undoesHere(row: MonthRow): boolean {
-    return (
-      row.canEdit &&
-      row.payment !== null &&
-      (!row.coveredByEarlierPeriod || row.periodStartsOffTable)
     );
   }
 
