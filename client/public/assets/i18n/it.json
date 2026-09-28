@@ -2334,11 +2334,12 @@
         },
         "button": {
           "markPaid": "Segna pagato",
-          "unmarkPaid": "Annulla pagato"
+          "unmarkPaid": "Annulla pagamento"
         },
+        "overdue": "In ritardo",
         "feeTierHintOne": "Fascia {{label}} · {{amount}} al mese per {{count}} lezione a settimana.",
         "feeTierHintOther": "Fascia {{label}} · {{amount}} al mese per {{count}} lezioni a settimana.",
-        "periodRange": "Da {{from}} a {{to}} {{year}}",
+        "periodRange": "da {{from}} a {{to}} {{year}}",
         "prevYear": "Anno precedente",
         "nextYear": "Anno successivo",
         "periodHint": "{{period}} · {{amount}} a periodo",

@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { PaymentService, AthletePayment } from './payment.service';
+import { PaymentService, AthletePayment, AthletePaymentYear } from './payment.service';
 import { environment } from '../../../environments/environment';
 
 describe('PaymentService (#182)', () => {
@@ -19,7 +19,7 @@ describe('PaymentService (#182)', () => {
 
   afterEach(() => httpMock.verify());
 
-  it('list GETs /athletes/{id}/payments?year=YYYY and unwraps the data array (#182 Surface 2)', () => {
+  it('list GETs /athletes/{id}/payments?year=YYYY with the payments and the late months (#182, #1654)', () => {
     const expected: AthletePayment[] = [
       {
         id: 1,
@@ -38,12 +38,21 @@ describe('PaymentService (#182)', () => {
         paid_at: '2026-02-12T10:00:00Z',
       },
     ];
-    let actual: AthletePayment[] | null = null;
-    service.list(42, 2026).subscribe((rows) => (actual = rows));
+    let actual: AthletePaymentYear | null = null;
+    service.list(42, 2026).subscribe((page) => (actual = page));
     const req = httpMock.expectOne(`${base}/42/payments?year=2026`);
     expect(req.request.method).toBe('GET');
-    req.flush({ data: expected });
-    expect(actual).toEqual(expected);
+    req.flush({ data: expected, overdue_months: ['2026-03'] });
+    expect(actual).toEqual({ payments: expected, overdueMonths: ['2026-03'] });
+  });
+
+  it('list reads a response without overdue_months as nothing late (#1654)', () => {
+    // «In ritardo» is an accusation: when the server has not said a month is
+    // late, the ledger says "unpaid" and no more.
+    let actual: AthletePaymentYear | null = null;
+    service.list(42, 2026).subscribe((page) => (actual = page));
+    httpMock.expectOne(`${base}/42/payments?year=2026`).flush({ data: [] });
+    expect(actual).toEqual({ payments: [], overdueMonths: [] });
   });
 
   it('markPaid POSTs {year, month} to /athletes/{id}/payments and unwraps data', () => {

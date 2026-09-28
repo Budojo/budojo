@@ -47,13 +47,15 @@
   align-self: flex-start;
 }
 
+// A caption under the balance (#1654, PAY-3): how a paper stub is matched,
+// not what the owner opened the card to read. Monospace keeps `0` and `O`
+// apart, which is the one thing a code has to get right.
 .carnets__code {
   margin: 0;
   font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
-  font-size: 1.5rem;
-  font-weight: 600;
+  font-size: 0.875rem;
   letter-spacing: 0.08em;
-  color: var(--p-text-color);
+  color: var(--p-text-muted-color);
 }
 
 .carnets__balance {
@@ -132,6 +134,11 @@
 .carnets__history-row {
   font-size: 0.875rem;
   color: var(--p-text-color);
+}
+
+.carnets__register-sep,
+.carnets__register-lesson {
+  color: var(--p-text-muted-color);
 }
 
 .carnets__history-row {
