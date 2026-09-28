@@ -67,6 +67,10 @@
               </span>
             }
           </dd>
+          @if (start.opcache) {
+            <dt>OPcache</dt>
+            <dd>{{ start.opcache }}</dd>
+          }
           @if (benchmark(); as result) {
             <dt>{{ 'mat.spike.server.login' | translate }}</dt>
             <dd>{{ result.loginMs }} ms</dd>

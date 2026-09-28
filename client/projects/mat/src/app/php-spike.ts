@@ -19,6 +19,8 @@ export interface PhpServerStart {
   extracted: boolean;
   seeded: boolean;
   alreadyRunning?: boolean;
+  /** How PHP compiled the server: OPcache's file cache, or no cache at all. */
+  opcache?: 'file-cache' | 'off';
   demoEmail: string;
   demoPassword: string;
 }

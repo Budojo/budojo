@@ -45,6 +45,7 @@ public class PhpServerPlugin extends Plugin {
 
     private Process server;
     private int port;
+    private boolean opcacheOff;
 
     @PluginMethod
     public void start(PluginCall call) {
@@ -116,22 +117,39 @@ public class PhpServerPlugin extends Plugin {
             new File(storage, dir).mkdirs();
         }
         File tmp = context.getCacheDir();
+        File opcacheDir = new File(tmp, "opcache");
+        opcacheDir.mkdirs();
         File ini = new File(files, "php.ini");
         writeFile(ini, "memory_limit=256M\n"
                 + "error_log=" + new File(files, "php-error.log").getAbsolutePath() + "\n"
                 + "sys_temp_dir=" + tmp.getAbsolutePath() + "\n"
                 + "upload_tmp_dir=" + tmp.getAbsolutePath() + "\n"
                 + "session.save_path=" + tmp.getAbsolutePath() + "\n"
-                // OPcache takes its lock in /tmp by default, and Android has no
-                // /tmp: "Cannot create lock - Permission denied" on the first run
-                // on a real phone (0.0.4). The app's cache directory is writable.
+                // OPcache in file-cache-only mode: no shared memory, so no lock.
+                // On a real phone (0.0.4, 0.0.5) the shared-memory lock failed with
+                // "Cannot create lock - Permission denied (13)": fcntl on the lock
+                // file is refused, whichever directory it lives in. The file cache
+                // still keeps compiled scripts, on disk.
                 + "opcache.enable=1\nopcache.enable_cli=1\n"
+                + "opcache.file_cache=" + opcacheDir.getAbsolutePath() + "\n"
+                + "opcache.file_cache_only=1\n"
                 + "opcache.lockfile_path=" + tmp.getAbsolutePath() + "\n");
 
         Map<String, String> env = environment(spike, database, storage, tmp, files);
 
         long tMigrate0 = System.nanoTime();
-        String migrate = runToEnd(php, ini, serverDir, env, "artisan", "migrate", "--force", "--no-interaction");
+        String migrate;
+        try {
+            migrate = runToEnd(php, ini, serverDir, env, "artisan", "migrate", "--force", "--no-interaction");
+        } catch (IOException e) {
+            if (!String.valueOf(e.getMessage()).contains("Cannot create lock")) {
+                throw e;
+            }
+            // The spike wants numbers either way: without OPcache, and it says so.
+            opcacheOff = true;
+            writeFile(ini, readFile(ini) + "\nopcache.enable=0\nopcache.enable_cli=0\n");
+            migrate = runToEnd(php, ini, serverDir, env, "artisan", "migrate", "--force", "--no-interaction");
+        }
         long tMigrated = System.nanoTime();
 
         port = freePort();
@@ -162,6 +180,7 @@ public class PhpServerPlugin extends Plugin {
         out.put("serverMs", ms(tMigrated, tReady));
         out.put("totalMs", ms(t0, tReady));
         out.put("migrateOutput", tail(migrate, 400));
+        out.put("opcache", opcacheOff ? "off" : "file-cache");
         return out;
     }
 
