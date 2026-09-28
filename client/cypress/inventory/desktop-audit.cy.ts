@@ -2985,6 +2985,30 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
   // The "Non pagato" list (#1931): the roster narrowed to who owes this
   // month, each row with the WhatsApp reminder already written. The filter
   // goes to the API as `?paid=no`, so the intercept keys on it.
+  // «Si allena gratis» from the chip, and the «Gratis» chip that undoes it
+  // (#2011): the owner's partner, a coach's child.
+  screen('20-athletes-pay-menu', '/dashboard/athletes', ROSTER_READY, {
+    act: () => {
+      press('[data-cy="athlete-coverage-1"]');
+      cy.get('.p-menu-overlay .p-menu-list', { timeout: 4000 }).should('be.visible');
+    },
+  });
+  screen('20-athletes-trains-free', '/dashboard/athletes', ROSTER_READY, {
+    stubs: () => {
+      cy.intercept('GET', '/api/v1/athletes*', {
+        statusCode: 200,
+        body: page(
+          ATHLETES.map((a) =>
+            a.id === 1 ? { ...a, fee_override_cents: 0, monthly_fee_cents: 0 } : a,
+          ),
+        ),
+      });
+    },
+    act: () => {
+      press('[data-cy="athlete-coverage-1"]');
+      cy.get('.p-menu-overlay .p-menu-list', { timeout: 4000 }).should('be.visible');
+    },
+  });
   screen('20-athletes-unpaid', '/dashboard/athletes?paid=no', ROSTER_READY, {
     stubs: () => {
       cy.intercept(
