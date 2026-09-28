@@ -597,6 +597,14 @@ $athletes-mobile-breakpoint: 768px;
     z-index: 2;
   }
 
+  // The reminder (#1931) lifts over the stretched name link too, or a tap
+  // meant for WhatsApp would open the athlete instead.
+  &__reminder {
+    position: relative;
+    z-index: 2;
+    align-self: flex-start;
+  }
+
   // Social links sit on a higher z-index than the stretched name link
   // so tapping a Facebook/Instagram icon opens the social URL instead
   // of navigating into the athlete detail.

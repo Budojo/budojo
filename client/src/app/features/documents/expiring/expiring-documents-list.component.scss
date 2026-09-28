@@ -127,11 +127,22 @@ $expiring-mobile-breakpoint: 768px;
 }
 
 .missing-cert-row {
+  // The link and the reminder side by side (#1931): the reminder sits
+  // beside the row's link, never inside it.
+  display: flex;
+  align-items: center;
   background: var(--p-content-background);
   border: 1px solid var(--p-content-border-color);
   border-radius: 12px;
 
+  &__contact {
+    flex-shrink: 0;
+    padding-right: 0.5rem;
+  }
+
   &__link {
+    flex: 1;
+    min-width: 0;
     // The containing block for the belt spine (#1851).
     position: relative;
     display: flex;
@@ -236,8 +247,10 @@ $expiring-mobile-breakpoint: 768px;
 
   // Above the name's stretched overlay (#1851): a positioned `::after` paints
   // over unpositioned siblings, so without this the card's own download
-  // control would open the athlete instead.
-  &__download {
+  // control — and the reminder beside it (#1931) — would open the athlete
+  // instead.
+  &__download,
+  &__contact {
     position: relative;
     z-index: 2;
   }
@@ -270,6 +283,17 @@ $expiring-mobile-breakpoint: 768px;
 .expiring-page__athlete-cell {
   position: relative;
   min-width: 12rem;
+}
+
+// The row's actions: the reminder (#1931) and the download, on one line.
+// Sized to hold them (two 48px contact targets and the download) instead of
+// the fixed inline width the column carried when it held the download alone.
+.expiring-page__actions-col {
+  width: 10rem;
+}
+
+.expiring-page__actions {
+  white-space: nowrap;
 }
 
 // The words beside the date — "tra 16 giorni", "scaduto da 4 giorni" — read

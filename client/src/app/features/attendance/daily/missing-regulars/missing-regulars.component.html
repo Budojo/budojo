@@ -45,13 +45,16 @@
                   <span>{{ 'attendance.daily.missing.lastSeen' | translate: { when } }}</span>
                 }
               </p>
-              <app-contact-actions
-                class="missing__actions"
-                [countryCode]="row.regular.phone_country_code"
-                [nationalNumber]="row.regular.phone_national_number"
-                [name]="row.name"
-                [dataCy]="'missing-contact-' + row.regular.id"
-              />
+              <!-- Never on the owner's own row (#748): no one to call. -->
+              @if (!row.regular.is_self) {
+                <app-contact-actions
+                  class="missing__actions"
+                  [countryCode]="row.regular.phone_country_code"
+                  [nationalNumber]="row.regular.phone_national_number"
+                  [name]="row.name"
+                  [dataCy]="'missing-contact-' + row.regular.id"
+                />
+              }
               <!-- They walked in (#1930): tick them here, not by searching above. -->
               <p-button
                 #presentButton
