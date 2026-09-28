@@ -192,6 +192,22 @@ export class LessonSheetComponent {
     });
   }
 
+  /**
+   * Where the keyboard lands once the sheet is open (#2001).
+   *
+   * Not PrimeNG's focus-on-show: that runs when the opening animation ends,
+   * while the programme is usually still loading, and with nothing in the
+   * body to take it, it picked the footer's «Annulla». Keys typed into the
+   * search in that moment went to a button, and Enter closed the sheet. The
+   * title takes it instead, and only if the owner has not already put the
+   * keyboard somewhere inside the sheet: a click into the search wins.
+   */
+  protected settleFocus(): void {
+    const sheet = document.querySelector('.lesson-sheet');
+    if (sheet === null || sheet.contains(document.activeElement)) return;
+    sheet.querySelector<HTMLElement>('.sheet-head__title')?.focus();
+  }
+
   /** Something picked or typed that Save would send. */
   protected readonly dirty = computed<boolean>(() => {
     const opened = this.openedWith();
