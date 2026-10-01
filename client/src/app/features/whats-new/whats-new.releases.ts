@@ -75,8 +75,8 @@ export const RELEASES: readonly Release[] = [
             it: 'Backup su Google Drive: in Dati e backup, premi «Collega Google Drive» e scegli il tuo account Google. Ogni backup viene copiato anche nella cartella Budojo del tuo Drive, a ogni backup automatico e quando premi «Copia adesso». Se questo computer si rompe, o lo cambi, i backup sono ancora lì. Per ripristinarne uno che è solo su Drive, scaricalo e usa «Ripristina da un file».',
           },
           {
-            en: 'Every 7 days Google asks to connect the account again. When it does, the card tells you ("Google revoked the connection"), and pressing "Connect Google Drive" again is all it takes. Meanwhile your backups keep being saved on this computer.',
-            it: "Ogni 7 giorni Google chiede di ricollegare l'account. Quando succede, la scheda te lo dice («Google ha revocato il collegamento»), e basta premere di nuovo «Collega Google Drive». Intanto i backup continuano a essere salvati su questo computer.",
+            en: 'Every 7 days Google asks to connect the account again. When it does, the card tells you ("Google revoked the connection") and shows "Reconnect Google Drive": one tap, and copying resumes. Meanwhile your backups keep being saved on this computer.',
+            it: "Ogni 7 giorni Google chiede di ricollegare l'account. Quando succede, la scheda te lo dice («Google ha revocato il collegamento») e ti mostra «Ricollega Google Drive»: un tocco, e la copia riprende. Intanto i backup continuano a essere salvati su questo computer.",
           },
           {
             en: 'No more doubled backups: the first copy could upload the same backups twice, if it started while another was running. Copies now run one at a time, and the next one removes the doubles already there.',
