@@ -70,6 +70,15 @@ u32 big-endian: manifest length | manifest, UTF-8 JSON | u32: journal length | j
 
 A reader checks every field it knows and ignores any it does not, so a later app can add one. **Changing what a field means is a new protocol number.** The manifest must name the version and the parent its path names. A writer checks the manifest and the journal with the readers' rules before it packs them.
 
+### The database side (#2030)
+
+The app packs and seals versions. The server only hands it the database and takes one back (owner-only, the `sync` capability):
+- **`GET /api/v1/sync/export`:** the database as one SQLite file, taken with `VACUUM INTO`. `X-Budojo-Schema` names its newest migration, which the manifest records as `schema`.
+- **`PUT /api/v1/sync/stage`:** another device's database, for a fast-forward or after a rebase.
+  - **Checked before anything is written:** a SQLite file, undamaged, with Budojo's migrations, no newer than this code (`422` `newer` or `unreadable`).
+  - **Written beside the live database** as `<database>.staged`.
+  - **The shell swaps it in at its next start**, then runs `budojo:sync-reconcile`: it clears the cache, and deletes the files no row names, by the rules the deleting Actions follow.
+
 ## A journal entry
 
 The journal is a JSON list of the writes that made this version from its parent, **in ULID order**. It records API writes, not rows: the rebase replays them through the same Actions (PRD § 5.2).
