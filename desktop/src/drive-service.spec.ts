@@ -155,6 +155,45 @@ describe('sync', () => {
     expect(state.current).toMatchObject({ linked: true, account: 'other@example.it', folderId: 'folder-2' });
   });
 
+  // #2060 review, second round: the generation check and the state write were
+  // two steps, so a stale write already under way could land after a relink's.
+  it('lands state writes in order, so a stale write never lands after a relink', async () => {
+    let releaseWrite: () => void = () => undefined;
+    let held = true;
+    const { io, state } = fakeIO({
+      localArchives: vi.fn(async () => [archive('budojo-backup-20260816-120000.zip')]),
+      upload: vi.fn(async () => {
+        throw Object.assign(new Error('network'), { code: 'upload_failed' });
+      }),
+      accountEmail: vi.fn(async () => 'other@example.it'),
+      ensureFolder: vi.fn(async () => 'folder-2'),
+    });
+    const write = io.writeState;
+    io.writeState = vi.fn(async (next: DriveState) => {
+      if (held) {
+        held = false;
+        await new Promise<void>((resolve) => {
+          releaseWrite = resolve;
+        });
+      }
+      await write(next);
+    });
+    const service = new DriveSyncService(io);
+
+    const stale = service.sync();
+    await vi.waitFor(() => expect(io.writeState).toHaveBeenCalledTimes(1));
+    const relink = (async () => {
+      await service.unlink();
+      await service.link();
+    })();
+    // Let the relink get as far as it can while the stale write is held.
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    releaseWrite();
+    await Promise.all([stale, relink]);
+
+    expect(state.current).toMatchObject({ linked: true, account: 'other@example.it', folderId: 'folder-2' });
+  });
+
   it('runs again once the previous sync has finished', async () => {
     const { io } = fakeIO();
     const service = new DriveSyncService(io);
