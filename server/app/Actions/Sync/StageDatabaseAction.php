@@ -14,9 +14,9 @@ use App\Support\Sync\SyncDatabase;
  * The checks are a restore's, and a little more, because a staged file becomes
  * the whole academy:
  * - a SQLite file, undamaged;
- * - **Budojo's history:** it has run Budojo's own migrations, and only
- *   migrations this code carries. One dated after this code's newest is from a
- *   later Budojo (`newer`, PRD § 5.5); any other unknown one is not Budojo's.
+ * - **Budojo's history:** it has run Budojo's own migrations (another app's
+ *   database has not), and only migrations this code carries: one it lacks is
+ *   from a later Budojo (`newer`, PRD § 5.5).
  *
  * An older database is fine: the boot migrations bring it forward, as they do a
  * restored backup.
@@ -82,14 +82,12 @@ final class StageDatabaseAction
             throw StageRefused::unreadable('This is not a Budojo database.');
         }
 
-        $known = SyncDatabase::codeMigrations();
-        $newestKnown = (string) end($known);
-        foreach (array_diff($applied, $known) as $unknown) {
-            if (strcmp($unknown, $newestKnown) > 0) {
-                throw StageRefused::newer($unknown);
-            }
-
-            throw StageRefused::unreadable("The database has run a migration Budojo never had ({$unknown}).");
+        // A Budojo database that has run a migration this code lacks is from a
+        // later Budojo, whatever the migration's date: a branch can ship one
+        // dated before a migration already out. Update first.
+        $unknown = array_values(array_diff($applied, SyncDatabase::codeMigrations()));
+        if ($unknown !== []) {
+            throw StageRefused::newer($unknown[0]);
         }
     }
 

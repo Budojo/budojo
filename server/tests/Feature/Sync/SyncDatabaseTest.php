@@ -159,13 +159,13 @@ describe('PUT /api/v1/sync/stage', function (): void {
         expect(file_exists("{$this->live}.staged"))->toBeFalse();
     });
 
-    it('refuses a database that ran a migration Budojo never had', function (): void {
-        $foreign = [...syncTestHistory(15), '2026_05_05_999999_not_ours'];
+    it('takes a migration it lacks, whatever its date, for a later Budojo: update first', function (): void {
+        $later = [...syncTestHistory(15), '2026_05_05_999999_from_a_later_branch'];
 
         $this->actingAs(userWithAcademy())
-            ->call('PUT', '/api/v1/sync/stage', content: syncTestIncoming($this->dir, $foreign))
+            ->call('PUT', '/api/v1/sync/stage', content: syncTestIncoming($this->dir, $later))
             ->assertStatus(422)
-            ->assertJsonPath('code', 'unreadable');
+            ->assertJsonPath('code', 'newer');
     });
 
     it('refuses another Laravel app’s database, which never ran Budojo’s own migrations', function (): void {

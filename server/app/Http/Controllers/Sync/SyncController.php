@@ -28,9 +28,10 @@ class SyncController extends Controller
         $snapshot = $export->execute();
 
         // The snapshot is the whole academy: it must not outlive the request.
-        // Sending deletes it, a HEAD request included; a download the client
-        // drops halfway stops the script before that, so the end of the
-        // request deletes it too.
+        // Sending deletes it, a HEAD request and a download the client drops
+        // halfway included (Symfony ignores the abort and deletes in a
+        // `finally`). The end of the request deletes it too, should anything
+        // fail between here and the send.
         register_shutdown_function(static fn () => @unlink($snapshot->path));
 
         return response()
