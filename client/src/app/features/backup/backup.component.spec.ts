@@ -454,20 +454,41 @@ describe('BackupComponent', () => {
     // short of disconnecting first.
     for (const code of ['invalid_grant', 'unauthorized']) {
       it(`offers to reconnect in one tap when Google has withdrawn the access (${code})`, async () => {
-        const link = vi.fn(async () => ({ ok: true, account: 'gym@example.it' }));
-        const { fixture } = setup({}, {}, { ...linked({ lastError: code }), link });
+        // A drive whose error is gone once it is linked again, as the desktop's is.
+        let lastError: string | null = code;
+        const link = vi.fn(async () => {
+          lastError = null;
+          return { ok: true, account: 'gym@example.it' };
+        });
+        const state = vi.fn(async () => ({
+          configured: true,
+          linked: true,
+          account: 'gym@example.it',
+          lastSyncAt: '2026-08-16T12:00:00Z',
+          lastError,
+        }));
+        const { fixture } = setup({}, {}, { available: true, state, link });
         await settle(fixture);
 
-        const reconnect = fixture.nativeElement.querySelector(
-          '[data-cy="drive-reconnect"] button',
-        ) as HTMLButtonElement | null;
-        expect(reconnect?.textContent).toContain('Reconnect Google Drive');
+        const button = () =>
+          fixture.nativeElement.querySelector(
+            '.backup-page__drive-actions p-button button',
+          ) as HTMLButtonElement;
+        expect(fixture.nativeElement.querySelector('[data-cy="drive-reconnect"]')).not.toBeNull();
         expect(fixture.nativeElement.querySelector('[data-cy="drive-sync-now"]')).toBeNull();
+        expect(button().textContent).toContain('Reconnect Google Drive');
 
-        reconnect?.click();
+        const pressed = button();
+        pressed.focus();
+        pressed.click();
         await settle(fixture);
 
         expect(link).toHaveBeenCalledTimes(1);
+        expect(fixture.nativeElement.querySelector('[data-cy="drive-reconnect"]')).toBeNull();
+        expect(fixture.nativeElement.querySelector('[data-cy="drive-sync-now"]')).not.toBeNull();
+        // The same button, now "copy now": the focus is where the owner left it.
+        expect(button()).toBe(pressed);
+        expect(document.activeElement).toBe(pressed);
       });
     }
 
