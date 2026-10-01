@@ -307,7 +307,7 @@ Sizes: **S** is a day or less, **M** a few days, **L** a week or more. The **fir
 | [#2027](https://github.com/Budojo/budojo/issues/2027) ✅ | 0 · Prove | The APK: the Capacitor shell, the release key, the CI build, storage that survives an update. Done 28 Sep. | M | — |
 | [#2044](https://github.com/Budojo/budojo/issues/2044) ✅ | | **Laravel on Android:** Budojo's API running offline on the phone with SQLite. Native PHP works (§ 5.1). Done 28 Sep. | M | #2027 |
 | [#2051](https://github.com/Budojo/budojo/issues/2051) ✅ | | NativePHP Mobile against our own shell, before the runtime. Our shell stays (§ 5.1). Done 1 Oct. | S | #2044 |
-| [#2028](https://github.com/Budojo/budojo/issues/2028) | | Drive from the phone, shared with the desktop's OAuth client. **It is shared** (§ 5.3), proven 1 Oct; the reboot and 7-day checks are still open. | M | #2027 |
+| [#2028](https://github.com/Budojo/budojo/issues/2028) | | Drive from the phone, shared with the desktop's OAuth client. **It is shared** (§ 5.3), proven 1 Oct. Three checks are still open: the PC removing the phone's file, a reboot, and the 7-day expiry. | M | #2027 |
 | [#2029](https://github.com/Budojo/budojo/issues/2029) | 1 · Sync | The protocol v2: versions, journal, documents, envelope, `SyncRemote` | M | #2028 |
 | [#2030](https://github.com/Budojo/budojo/issues/2030) | | Versions: export, fast-forward, retention (server) | M | #2029 |
 | [#2031](https://github.com/Budojo/budojo/issues/2031) | | The journal and the rebase, with conflicts (server). `--deep` review. | L | #2029 |
