@@ -124,11 +124,16 @@ The journal is a JSON list of the writes that made this version from its parent,
   - No clock is involved, so an upload that lands days late cannot beat it.
   - **Every device has a file before it pushes or pulls a version.**
     - The device that creates the folder writes its report together with `keys.bjs`, before version 1.
-    - A new device writes its report (`base` null, `holds` empty) at pairing, before its first pull.
+    - A new device writes its report (`base` null, `holds` empty) at pairing, after opening `keys.bjs` and before its first pull. A code from before an unpairing then fails at `keys.bjs` and leaves nothing behind.
     - A file that does not open or parse counts as holding nothing.
 
     So a device that exists is never mistaken for no device.
   - **Unpairing deletes the device's file** together with rotating the key (#2033). Left behind, it would hold nothing forever, and nobody could clear a journal again.
+  - **A sync the unpaired device had under way** can still write its report, or a version, sealed under the old key. So after unpairing, the remaining device:
+    - deletes any `devices/` or `versions/` file that fails to open as «wrong key or path»;
+    - never pulls a version it cannot open.
+
+    A file that opens but is corrupt still counts as holding nothing.
   - **With no other device's file** in `devices/`, a device clears the entries already in a version the folder lists. A device that pairs later starts from the latest version.
 
 ## The pairing code
