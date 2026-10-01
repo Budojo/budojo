@@ -190,13 +190,20 @@
           </p>
         }
         <div class="backup-page__drive-actions">
+          <!--
+            One button that changes, not two that swap (#2064): after a
+            reconnect it stays where the owner's focus is, as "copy now".
+          -->
           <p-button
-            [label]="'backup.drive.syncNow' | translate"
-            icon="pi pi-cloud-upload"
-            severity="secondary"
-            [loading]="syncing()"
-            (onClick)="syncDriveNow()"
-            data-cy="drive-sync-now"
+            [label]="
+              (driveNeedsReconnect() ? 'backup.drive.reconnect' : 'backup.drive.syncNow')
+                | translate
+            "
+            [icon]="driveNeedsReconnect() ? 'pi pi-google' : 'pi pi-cloud-upload'"
+            [severity]="driveNeedsReconnect() ? 'primary' : 'secondary'"
+            [loading]="driveNeedsReconnect() ? linking() : syncing()"
+            (onClick)="driveNeedsReconnect() ? connectDrive() : syncDriveNow()"
+            [attr.data-cy]="driveNeedsReconnect() ? 'drive-reconnect' : 'drive-sync-now'"
           />
           <app-confirm-destructive-button
             icon="pi pi-times"

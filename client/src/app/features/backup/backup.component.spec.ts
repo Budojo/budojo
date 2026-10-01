@@ -449,6 +449,57 @@ describe('BackupComponent', () => {
       expect(fixture.nativeElement.querySelector('[data-cy="drive-error"]')).not.toBeNull();
     });
 
+    // #2064: Google withdraws the access every 7 days while the project is in
+    // Testing. The card said "reconnect the account" and offered no way to,
+    // short of disconnecting first.
+    for (const code of ['invalid_grant', 'unauthorized']) {
+      it(`offers to reconnect in one tap when Google has withdrawn the access (${code})`, async () => {
+        // A drive whose error is gone once it is linked again, as the desktop's is.
+        let lastError: string | null = code;
+        const link = vi.fn(async () => {
+          lastError = null;
+          return { ok: true, account: 'gym@example.it' };
+        });
+        const state = vi.fn(async () => ({
+          configured: true,
+          linked: true,
+          account: 'gym@example.it',
+          lastSyncAt: '2026-08-16T12:00:00Z',
+          lastError,
+        }));
+        const { fixture } = setup({}, {}, { available: true, state, link });
+        await settle(fixture);
+
+        const button = () =>
+          fixture.nativeElement.querySelector(
+            '.backup-page__drive-actions p-button button',
+          ) as HTMLButtonElement;
+        expect(fixture.nativeElement.querySelector('[data-cy="drive-reconnect"]')).not.toBeNull();
+        expect(fixture.nativeElement.querySelector('[data-cy="drive-sync-now"]')).toBeNull();
+        expect(button().textContent).toContain('Reconnect Google Drive');
+
+        const pressed = button();
+        pressed.focus();
+        pressed.click();
+        await settle(fixture);
+
+        expect(link).toHaveBeenCalledTimes(1);
+        expect(fixture.nativeElement.querySelector('[data-cy="drive-reconnect"]')).toBeNull();
+        expect(fixture.nativeElement.querySelector('[data-cy="drive-sync-now"]')).not.toBeNull();
+        // The same button, now "copy now": the focus is where the owner left it.
+        expect(button()).toBe(pressed);
+        expect(document.activeElement).toBe(pressed);
+      });
+    }
+
+    it('keeps "copy now" for an error a new link would not fix', async () => {
+      const { fixture } = setup({}, {}, linked({ lastError: 'network' }));
+      await settle(fixture);
+
+      expect(fixture.nativeElement.querySelector('[data-cy="drive-sync-now"]')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('[data-cy="drive-reconnect"]')).toBeNull();
+    });
+
     it('still shows the last successful copy time while an error is displayed', async () => {
       // "It is broken" and "the newest copy up there is from Tuesday" are
       // different facts, and the second is the one that matters.

@@ -118,6 +118,15 @@ export class BackupComponent {
   protected readonly linking = signal(false);
 
   /**
+   * Google has withdrawn Budojo's access (#2064): every 7 days while the
+   * project is in Testing, or when the owner revokes it. Copying would only
+   * fail the same way, so the card's action becomes reconnecting, in place.
+   */
+  protected readonly driveNeedsReconnect = computed(() =>
+    ['invalid_grant', 'unauthorized'].includes(this.driveState().lastError ?? ''),
+  );
+
+  /**
    * Backup folder (#1320). The answer to "a backup on this disk does not
    * survive this disk" that needs no account and no API: point at a folder the
    * owner's cloud client already syncs, or a NAS, or a USB stick.
