@@ -1,5 +1,5 @@
 import { buffer } from './bytes';
-import { assertLayoutPath, RemoteError, RemoteFile, RemoteFolder, SyncRemote } from './remote';
+import { assertLayoutPath, Listing, RemoteError, RemoteFolder, SyncRemote } from './remote';
 
 /**
  * The sync folder on Google Drive, reached from the page (PRD § 5.3, § 5.6). On
@@ -40,21 +40,25 @@ export class DriveRemote implements SyncRemote {
   /** Folder ids by their path in the tree above: `Budojo`, `Budojo/sync`, `Budojo/sync/versions`. */
   private readonly folders = new Map<string, string>();
 
+  /** Drive's clock at its latest answer: the `Date` header, which every Google API response carries. */
+  private lastNow = Number.NaN;
+
   constructor(
     private readonly token: () => Promise<string>,
     private readonly fetcher: Fetcher = webFetch(),
   ) {}
 
-  async list(folder: RemoteFolder): Promise<RemoteFile[]> {
+  async list(folder: RemoteFolder): Promise<Listing> {
     const parent = await this.folder([ROOT, SYNC, folder], false);
     if (parent === null) {
-      return [];
+      return { files: [], now: this.lastNow };
     }
-    return (await this.children(parent)).map((file) => ({
+    const files = (await this.children(parent)).map((file) => ({
       path: `${folder}/${file.name}`,
       size: Number(file.size ?? 0),
       created: Date.parse(file.createdTime),
     }));
+    return { files, now: this.lastNow };
   }
 
   async read(path: string): Promise<Uint8Array | null> {
@@ -246,6 +250,10 @@ export class DriveRemote implements SyncRemote {
       });
     } catch (error) {
       throw new RemoteError('offline', error instanceof Error ? error.message : String(error));
+    }
+    const date = Date.parse(response.headers?.get('date') ?? '');
+    if (!Number.isNaN(date)) {
+      this.lastNow = date;
     }
     if (response.status === 404 && notFoundIsNull) {
       return null;

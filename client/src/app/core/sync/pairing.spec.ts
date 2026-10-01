@@ -1,6 +1,6 @@
 import { toHex } from './bytes';
 import { newSyncKey } from './envelope';
-import { parseAppKeys, serializeAppKeys } from './keys';
+import { newFolderId, parseAppKeys, serializeAppKeys } from './keys';
 import {
   CODE_CHARACTERS,
   decodePairingCode,
@@ -79,6 +79,7 @@ describe('the pairing code (#2029)', () => {
 
 describe('keys.bjs (#2029)', () => {
   const keys = {
+    folder: newFolderId(),
     APP_KEY: 'base64:' + 'A'.repeat(44),
     DOCUMENT_ENCRYPTION_KEY: 'B'.repeat(44),
   };
@@ -98,6 +99,10 @@ describe('keys.bjs (#2029)', () => {
     expect(parseAppKeys({ v: 1, ...keys, DOCUMENT_ENCRYPTION_KEY: 'short' })).toEqual({
       ok: false,
       reason: 'DOCUMENT_ENCRYPTION_KEY is too short',
+    });
+    expect(parseAppKeys({ v: 1, ...keys, folder: 'abc' })).toEqual({
+      ok: false,
+      reason: 'the folder id is not 32 hex characters',
     });
     expect(parseAppKeys({ v: 2, ...keys })).toEqual({
       ok: false,

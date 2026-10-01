@@ -60,6 +60,8 @@ A reader checks every field it knows and ignores any it does not, so a later app
 
 The journal is a JSON list of the writes that made this version from its parent, **in ULID order**. It records API writes, not rows: the rebase replays them through the same Actions (PRD § 5.2).
 
+**The replay is idempotent, by entry id (#2031).** Every database records the ids of the journal entries it holds: the device's own writes as it makes them, and every entry a replay applies. A replay skips any entry whose id is already recorded. That is what lets a device replay whenever it cannot tell whether its writes are in the latest version: nothing is ever applied twice.
+
 | Field | | Example |
 |---|---|---|
 | `id` | a ULID | `01K6F3Q8Z4M7X2N5P9R1T3V6W8` |
@@ -74,7 +76,10 @@ The journal is a JSON list of the writes that made this version from its parent,
 
 ## `keys.bjs`
 
-`{ "v": 1, "APP_KEY": "base64:…", "DOCUMENT_ENCRYPTION_KEY": "…" }`. It has the desktop keychain's shape and checks (`desktop/src/bootstrap.ts`), the same pair the recovery code (#1254) carries.
+`{ "v": 1, "folder": "<32 hex>", "APP_KEY": "base64:…", "DOCUMENT_ENCRYPTION_KEY": "…" }`.
+
+- **The key fields** have the desktop keychain's shape and checks (`desktop/src/bootstrap.ts`), the same pair the recovery code (#1254) carries.
+- **`folder`** is random, made once by the device that creates the sync folder. A device keeps the one it joined at pairing. **Before it syncs, it checks that the folder it reaches says the same,** and asks the owner if it does not: that is another account's folder for the same academy, after a sign-in to the wrong Google account.
 
 ## The pairing code
 
@@ -89,32 +94,31 @@ protocol (1 byte) | sync key (32 bytes) | first 2 bytes of SHA-256 over the firs
 
 ## Deciding
 
-**The rule: a device never drops a write of its own silently.** Its journal holds three kinds of write:
-- **unpushed:** made since its base, in no version yet;
-- **pushed, unconfirmed:** in a version it pushed that has not settled;
-- **confirmed:** in a version that has settled.
+**The rule: a device never drops a write of its own silently.**
 
-**The line** is the latest version and its ancestors, followed through the parents in the names.
+**The latest version** is the highest number. Between two of the same number, it is the one Drive created first.
 
-**A version has settled** when it is on the line and Drive created it at least **10 minutes** ago, on Drive's clock (the listing's `Date` header).
-- **Why 10 minutes:** Drive's listing can lag behind a new file by seconds. A twin that could beat the version was created before it, so after ten minutes it is listed, and no device builds next to the version any more.
-- **A device keeps a pushed write** until that version has settled, however long it is away. A race lost while it was offline can then still be replayed after the losing version is pruned.
+**What a device keeps:** its journal holds its own writes:
+- **unpushed:** in no version yet;
+- **unconfirmed:** in a version it pushed, but not yet found in a settled latest version.
 
-**Whether a version is on the line:**
-- **yes** when the walk down the parents meets it, or meets a version naming it as parent (the version itself may be pruned);
-- **no** when the walk passes its number without meeting it;
-- **unknown** when a pruned parent stops the walk above it.
+It clears a write only when the write is in the latest version **and that version has settled**: Drive created it at least **10 minutes** before, on Drive's clock (the listing's time, from the `Date` header).
+- **Why 10 minutes:** Drive's listing can lag behind a new file by seconds. A twin that could take the version's number was created before it, so after ten minutes it is listed, and nothing will take the version's place.
+- **Why keeping a write longer costs nothing:** the replay skips writes already in the database.
+
+**Every listing** gives the files and Drive's clock. A device never uses its own clock to settle anything, and an unknown clock settles nothing.
 
 | Situation | Do |
 |---|---|
+| The folder's `keys.bjs` names another folder than the one this device joined | **ask the owner** (checked before deciding) |
+| Its own unconfirmed push is not in the listing, within 10 minutes of landing | **wait**: the listing lags; look again |
+| … still not listed after 10 minutes | rebase onto the latest, or push again if the folder is empty |
 | No base, empty folder | nothing, or push version 1 if the device holds an academy |
 | No base, the folder has versions | fast-forward; **ask the owner** if the device holds an academy of its own |
 | The folder is empty | push base + 1 on top of the base: nothing there to lose |
-| The folder's latest is behind the base, or behind this device's unconfirmed push | **ask the owner:** versions deleted, or another account's folder |
-| An unconfirmed push of its own is off the line, or unknown | **rebase**, never a fast-forward |
-| The base is on the line, and is the latest | nothing, or push base + 1 if there are unpushed writes |
-| The base is on the line, the latest is newer | fast-forward, or rebase if there are unpushed writes |
-| **Its own settled base** is provably off the line | **ask the owner:** a settled version never leaves its line, so this is another folder |
-| Another device's base is off the line, or any base is unknown (a long absence) | fast-forward, or rebase if there are unpushed writes |
+| The latest is behind the base | **ask the owner:** versions were deleted on Drive |
+| The latest is the base | nothing, or push base + 1 if there are unpushed writes |
+| The latest is newer, and the device has writes to carry (unpushed or unconfirmed) | **rebase**: pull it and replay into it every write it lacks, then push if any were |
+| The latest is newer, nothing to carry | fast-forward |
 
-**When the line is unknown and a push is unconfirmed,** the rebase may replay writes that are already there. The replay finds them already true, or the owner sees a duplicate. **A duplicate shows; a lost write does not.**
+**A device holding writes of its own never fast-forwards.** At worst it rebases and finds nothing to replay.

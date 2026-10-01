@@ -29,7 +29,20 @@ class FakeDrive {
     return file;
   }
 
+  /** Drive's clock, sent as the `Date` header on every answer, as Google's APIs do. */
+  serverNow = Date.UTC(2026, 9, 1, 18, 0, 0);
+
   readonly fetch = async (url: string, init: RequestInit = {}): Promise<Response> => {
+    const response = await this.answer(url, init);
+    const headers = new Headers(response.headers);
+    headers.set('Date', new Date(this.serverNow).toUTCString());
+    return new Response(response.status === 204 ? null : await response.arrayBuffer(), {
+      status: response.status,
+      headers,
+    });
+  };
+
+  private readonly answer = async (url: string, init: RequestInit = {}): Promise<Response> => {
     const method = init.method ?? 'GET';
     const headers = new Headers(init.headers);
     this.calls.push({ method, url, token: headers.get('Authorization') });
@@ -117,7 +130,7 @@ function contract(name: string, make: () => SyncRemote): void {
       await remote.write('versions/000001-pc4f2a.root.bjs', utf8('v1'));
       await remote.write('keys.bjs', utf8('k'));
 
-      expect(await remote.list('versions')).toEqual([
+      expect((await remote.list('versions')).files).toEqual([
         { path: 'versions/000001-pc4f2a.root.bjs', size: 2, created: expect.any(Number) },
       ]);
       expect(toHex((await remote.read('versions/000001-pc4f2a.root.bjs')) as Uint8Array)).toBe(
@@ -125,7 +138,7 @@ function contract(name: string, make: () => SyncRemote): void {
       );
 
       await remote.remove('versions/000001-pc4f2a.root.bjs');
-      expect(await remote.list('versions')).toEqual([]);
+      expect((await remote.list('versions')).files).toEqual([]);
       expect(await remote.read('versions/000001-pc4f2a.root.bjs')).toBeNull();
     });
 
@@ -135,7 +148,7 @@ function contract(name: string, make: () => SyncRemote): void {
       await remote.write('devices/pc4f2a.bjs', utf8('first'));
       await remote.write('devices/pc4f2a.bjs', utf8('second'));
 
-      expect(await remote.list('devices')).toEqual([
+      expect((await remote.list('devices')).files).toEqual([
         { path: 'devices/pc4f2a.bjs', size: 6, created: expect.any(Number) },
       ]);
       expect(toHex((await remote.read('devices/pc4f2a.bjs')) as Uint8Array)).toBe(
@@ -146,7 +159,7 @@ function contract(name: string, make: () => SyncRemote): void {
     it('lists nothing, and reads null, before anything was written', async () => {
       const remote = make();
 
-      expect(await remote.list('files')).toEqual([]);
+      expect((await remote.list('files')).files).toEqual([]);
       expect(await remote.read('keys.bjs')).toBeNull();
       await expect(remote.remove('keys.bjs')).resolves.toBeUndefined();
     });
@@ -212,7 +225,7 @@ describe('DriveRemote on Google Drive (#2029)', () => {
 
     expect(drive.files.filter((file) => file.name === 'sync').length).toBeGreaterThan(1);
     expect(await pc.read('devices/phone9c1e.bjs')).not.toBeNull();
-    expect(await pc.list('files')).toHaveLength(1);
+    expect((await pc.list('files')).files).toHaveLength(1);
   });
 
   it('calls a listing cut off halfway "offline" too, the first call of every sync', async () => {
@@ -234,12 +247,25 @@ describe('DriveRemote on Google Drive (#2029)', () => {
     await expect(remote.list('versions')).rejects.toMatchObject({ reason: 'offline' });
   });
 
+  it('reports Drive’s clock with the listing, from the Date header', async () => {
+    const drive = new FakeDrive();
+    const remote = new DriveRemote(async () => 'tok', drive.fetch);
+    await remote.write('versions/000001-pc4f2a.root.bjs', utf8('v1'));
+    drive.serverNow = Date.UTC(2026, 9, 1, 18, 30, 0);
+
+    const listing = await remote.list('versions');
+
+    expect(listing.now).toBe(drive.serverNow);
+  });
+
   it('gives each file Drive’s creation time', async () => {
     const drive = new FakeDrive();
     const remote = new DriveRemote(async () => 'tok', drive.fetch);
     await remote.write('versions/000001-pc4f2a.root.bjs', utf8('v1'));
 
-    const [listed] = await remote.list('versions');
+    const {
+      files: [listed],
+    } = await remote.list('versions');
 
     const file = drive.files.find((candidate) => candidate.name === '000001-pc4f2a.root.bjs');
     expect(listed.created).toBe((file?.createdTime ?? 0) * 1000);

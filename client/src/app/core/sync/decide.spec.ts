@@ -3,7 +3,6 @@ import {
   Decision,
   latestVersion,
   LocalState,
-  onLine,
   SeenVersion,
   settled,
   SETTLE_MS,
@@ -13,11 +12,15 @@ import { VersionRef } from './layout';
 
 /**
  * Every row of the decision table (#2029, PRD § 5.2), each named as the owner
- * would meet it. The races and the pruned folders come from the two reviews of
- * #2061: each is a way a write could have been dropped without anyone knowing.
+ * would meet it. The races, the lagging listings and the pruned folders come
+ * from the three reviews of #2061: each was a way a write could have been
+ * dropped without anyone knowing. The replay is idempotent by entry id (#2031),
+ * so a rebase that finds nothing to carry costs nothing; what must never happen
+ * is a fast-forward over writes the latest version lacks.
  */
 const PC = 'pc4f2a';
 const PHONE = 'phone9c1e';
+const NOW = 10_000_000;
 const ref = (seq: number, device = PC): VersionRef => ({ seq, device });
 /** A version on top of `parent` (the PC's previous one by default), created at `seq` seconds unless told otherwise. */
 const v = (
@@ -29,9 +32,24 @@ const v = (
 const local = (
   base: VersionRef | null,
   flags: Partial<Omit<LocalState, 'base'>> = {},
-): LocalState => ({ device: PC, base, unpushed: false, unconfirmed: null, ...flags });
+): LocalState => ({
+  base,
+  unpushed: false,
+  unconfirmed: null,
+  ...flags,
+});
+const pushed = (version: VersionRef, pushedAt = 1_000): LocalState['unconfirmed'] => ({
+  version,
+  pushedAt,
+});
 
-const rows: { name: string; local: LocalState; folder: SeenVersion[]; expected: Decision }[] = [
+const rows: {
+  name: string;
+  local: LocalState;
+  folder: SeenVersion[];
+  now?: number;
+  expected: Decision;
+}[] = [
   {
     name: 'a device with nothing, and an empty folder: nothing to do',
     local: local(null),
@@ -69,7 +87,13 @@ const rows: { name: string; local: LocalState; folder: SeenVersion[]; expected: 
     expected: { kind: 'push', seq: 43, parent: ref(42) },
   },
   {
-    name: 'behind, nothing done: fast-forward',
+    name: 'its own push is the latest: nothing to do while it settles',
+    local: local(ref(44), { unconfirmed: pushed(ref(44)) }),
+    folder: [v(43), v(44)],
+    expected: { kind: 'nothing' },
+  },
+  {
+    name: 'behind, nothing of its own to carry: fast-forward',
     local: local(ref(42)),
     folder: [v(42), v(43, PHONE, ref(42))],
     expected: { kind: 'fast-forward', to: ref(43, PHONE) },
@@ -81,32 +105,26 @@ const rows: { name: string; local: LocalState; folder: SeenVersion[]; expected: 
     expected: { kind: 'rebase', onto: ref(43, PHONE) },
   },
   {
-    name: 'its own push, since built on by the other device: on the line, so a fast-forward',
-    local: local(ref(44), { unconfirmed: ref(44) }),
+    name: 'behind its own unconfirmed push: rebase, which finds the writes already there and only adopts it',
+    local: local(ref(44), { unconfirmed: pushed(ref(44)) }),
     folder: [v(44), v(45, PHONE, ref(44))],
-    expected: { kind: 'fast-forward', to: ref(45, PHONE) },
+    expected: { kind: 'rebase', onto: ref(45, PHONE) },
   },
   {
-    name: 'its own push, already pruned but named as a parent: still on the line',
-    local: local(ref(44), { unconfirmed: ref(44) }),
-    folder: [v(45, PHONE, ref(44)), v(46, PHONE, ref(45, PHONE))],
-    expected: { kind: 'fast-forward', to: ref(46, PHONE) },
-  },
-  {
-    name: 'its twin reached Drive first: rebase onto it, even with nothing new',
-    local: local(ref(44), { unconfirmed: ref(44) }),
+    name: 'its twin reached Drive first: rebase onto it',
+    local: local(ref(44), { unconfirmed: pushed(ref(44)) }),
     folder: [v(43), v(44, PHONE, ref(43), 44_000), v(44, PC, ref(43), 44_500)],
     expected: { kind: 'rebase', onto: ref(44, PHONE) },
   },
   {
-    name: 'it reached Drive first, whatever its device id: the twin rebases, it does nothing',
-    local: { device: PHONE, base: ref(44, PHONE), unpushed: false, unconfirmed: ref(44, PHONE) },
+    name: 'it reached Drive first, whatever its device id: it does nothing, the twin rebases',
+    local: local(ref(44, PHONE), { unconfirmed: pushed(ref(44, PHONE)) }),
     folder: [v(43), v(44, PC, ref(43), 44_500), v(44, PHONE, ref(43), 44_000)],
     expected: { kind: 'nothing' },
   },
   {
-    name: 'it saw itself on the line, then the other device built on its own twin: rebase, never a fast-forward',
-    local: local(ref(44), { unconfirmed: ref(44) }),
+    name: 'the other device built on its own twin: rebase, never a fast-forward',
+    local: local(ref(44), { unconfirmed: pushed(ref(44)) }),
     folder: [
       v(43),
       v(44, PC, ref(43), 44_000),
@@ -116,45 +134,42 @@ const rows: { name: string; local: LocalState; folder: SeenVersion[]; expected: 
     expected: { kind: 'rebase', onto: ref(45, PHONE) },
   },
   {
-    name: 'its push never landed, and others pushed above: rebase',
-    local: local(ref(44), { unconfirmed: ref(44) }),
-    folder: [v(43), v(44, PHONE, ref(43)), v(45, PHONE, ref(44, PHONE))],
-    expected: { kind: 'rebase', onto: ref(45, PHONE) },
+    name: 'its push pruned while it was away, seven versions on: still a rebase, never a fast-forward',
+    local: local(ref(44), { unconfirmed: pushed(ref(44)), unpushed: false }),
+    folder: [v(51, PHONE, ref(50, PHONE)), v(52, PHONE, ref(51, PHONE))],
+    now: NOW,
+    expected: { kind: 'rebase', onto: ref(52, PHONE) },
   },
   {
-    name: 'lost a race while offline, and both twins have since been pruned: still a rebase',
-    local: local(ref(44), { unconfirmed: ref(44) }),
-    folder: [v(45, PHONE, ref(44, PHONE)), v(46, PHONE, ref(45, PHONE))],
-    expected: { kind: 'rebase', onto: ref(46, PHONE) },
+    name: 'its push is not listed yet, a moment after it landed: wait, do not ask',
+    local: local(ref(44), { unconfirmed: pushed(ref(44), NOW - 5_000) }),
+    folder: [v(42), v(43)],
+    now: NOW,
+    expected: { kind: 'wait' },
   },
   {
-    name: 'back after weeks, its own settled base pruned since: a fast-forward, nobody is asked',
+    name: 'its push is still not listed after the settle time: carry its writes onto what is there',
+    local: local(ref(44), { unconfirmed: pushed(ref(44), NOW - SETTLE_MS) }),
+    folder: [v(42), v(43)],
+    now: NOW,
+    expected: { kind: 'rebase', onto: ref(43) },
+  },
+  {
+    name: 'back after weeks, all its writes long confirmed: a fast-forward, nobody is asked',
     local: local(ref(30)),
     folder: [v(44), v(45)],
     expected: { kind: 'fast-forward', to: ref(45) },
   },
   {
-    name: 'it had pulled another device’s losing twin, and has nothing of its own: fast-forward to the line',
+    name: 'it had pulled another device’s losing twin, and has nothing of its own: fast-forward',
     local: local(ref(44, PHONE)),
     folder: [v(44, PC, ref(43), 44_000), v(44, PHONE, ref(43), 44_500), v(45)],
     expected: { kind: 'fast-forward', to: ref(45) },
   },
   {
-    name: 'its own settled version is provably off this line: another folder, so the owner chooses',
-    local: { device: PHONE, base: ref(45, PHONE), unpushed: false, unconfirmed: null },
-    folder: [v(44), v(45), v(46)],
-    expected: { kind: 'ask', latest: ref(46) },
-  },
-  {
-    name: 'the folder is behind this device: the owner chooses, nobody pushes over it',
-    local: { device: PHONE, base: ref(45, PHONE), unpushed: false, unconfirmed: null },
+    name: 'the folder is behind this device: versions were deleted, so the owner chooses',
+    local: local(ref(45, PHONE)),
     folder: [v(43)],
-    expected: { kind: 'ask', latest: ref(43) },
-  },
-  {
-    name: 'the folder is behind its own unconfirmed push: the owner chooses',
-    local: local(ref(44), { unconfirmed: ref(44) }),
-    folder: [v(42), v(43)],
     expected: { kind: 'ask', latest: ref(43) },
   },
   {
@@ -168,51 +183,28 @@ const rows: { name: string; local: LocalState; folder: SeenVersion[]; expected: 
 describe('decide (#2029)', () => {
   for (const row of rows) {
     it(row.name, () => {
-      expect(decide(row.local, row.folder)).toEqual(row.expected);
+      expect(decide(row.local, row.folder, row.now ?? NOW)).toEqual(row.expected);
     });
   }
+
+  it('never fast-forwards while it holds writes of its own, whatever the folder', () => {
+    const folders = rows.map((row) => row.folder).filter((folder) => folder.length > 0);
+    for (const folder of folders) {
+      for (const flags of [{ unpushed: true }, { unconfirmed: pushed(ref(44)) }]) {
+        expect(decide(local(ref(44), flags), folder, NOW).kind).not.toBe('fast-forward');
+      }
+    }
+  });
 });
 
 describe('settled', () => {
-  const folder = [v(43), v(44, PC, ref(43), 1_000)];
-
-  it('is a version on the line that Drive created ten minutes ago or more', () => {
-    expect(settled(ref(44), folder, 1_000 + SETTLE_MS)).toBe(true);
+  it('is a version Drive created ten minutes ago or more, on Drive’s clock', () => {
+    expect(settled(v(44, PC, ref(43), 1_000), 1_000 + SETTLE_MS)).toBe(true);
+    expect(settled(v(44, PC, ref(43), 1_000), 1_000 + SETTLE_MS - 1)).toBe(false);
   });
 
-  it('is not one created a moment ago, however alone it looks: its twin may not be listed yet', () => {
-    expect(settled(ref(44), folder, 1_000 + 60_000)).toBe(false);
-  });
-
-  it('is not one off the line, however old', () => {
-    const lost = [v(43), v(44, PHONE, ref(43), 500), v(44, PC, ref(43), 1_000)];
-
-    expect(settled(ref(44), lost, 1_000 + SETTLE_MS * 10)).toBe(false);
-  });
-
-  it('judges a pruned version by the one naming it as parent, which is younger', () => {
-    const pruned = [v(45, PHONE, ref(44), 2_000)];
-
-    expect(settled(ref(44), pruned, 2_000 + SETTLE_MS - 1)).toBe(false);
-    expect(settled(ref(44), pruned, 2_000 + SETTLE_MS)).toBe(true);
-  });
-});
-
-describe('onLine', () => {
-  it('follows the parents down from the latest', () => {
-    expect(onLine(ref(42), [v(42), v(43), v(44)])).toBe('yes');
-  });
-
-  it('says no once the walk passes the base’s number without meeting it', () => {
-    expect(onLine(ref(43, PHONE), [v(42), v(43), v(44)])).toBe('no');
-  });
-
-  it('says unknown when a pruned parent stops the walk above the base', () => {
-    expect(onLine(ref(30), [v(44), v(45)])).toBe('unknown');
-  });
-
-  it('says no for an empty folder', () => {
-    expect(onLine(ref(1), [])).toBe('no');
+  it('never settles anything when Drive’s clock is unknown', () => {
+    expect(settled(v(44, PC, ref(43), 1_000), Number.NaN)).toBe(false);
   });
 });
 

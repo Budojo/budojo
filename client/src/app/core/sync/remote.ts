@@ -18,9 +18,20 @@ export interface RemoteFile {
   created: number;
 }
 
+/** A folder's files, and the store's own clock when it listed them. */
+export interface Listing {
+  files: RemoteFile[];
+  /**
+   * The store's time at the listing, in milliseconds: Drive's `Date` header.
+   * `decide` compares it with creation times on the same clock, so a device
+   * whose own clock is wrong cannot settle a version early.
+   */
+  now: number;
+}
+
 export interface SyncRemote {
   /** Every file in one folder of the layout. An empty or missing folder lists nothing. */
-  list(folder: RemoteFolder): Promise<RemoteFile[]>;
+  list(folder: RemoteFolder): Promise<Listing>;
   /** The file's bytes, or null when there is no such file. */
   read(path: string): Promise<Uint8Array | null>;
   /**
@@ -71,10 +82,11 @@ export class MemoryRemote implements SyncRemote {
 
   constructor(private readonly clock: () => number = () => ++this.tick) {}
 
-  async list(folder: RemoteFolder): Promise<RemoteFile[]> {
-    return [...this.files.entries()]
+  async list(folder: RemoteFolder): Promise<Listing> {
+    const files = [...this.files.entries()]
       .filter(([path]) => folderOf(path) === folder)
       .map(([path, file]) => ({ path, size: file.bytes.length, created: file.created }));
+    return { files, now: this.clock() };
   }
 
   async read(path: string): Promise<Uint8Array | null> {
