@@ -14,6 +14,8 @@ export type RemoteFolder = 'versions' | 'files' | 'devices';
 export interface RemoteFile {
   path: string;
   size: number;
+  /** When the store created the file, on its own clock, in milliseconds (`decide.ts` orders twins by it). */
+  created: number;
 }
 
 export interface SyncRemote {
@@ -59,24 +61,32 @@ export function assertLayoutPath(path: string): void {
   }
 }
 
-/** The tests' remote: a map, with copies on the way in and out, as a real store would. */
+/**
+ * The tests' remote: a map, with copies on the way in and out, as a real store
+ * would. Its clock is a counter unless a test hands it one.
+ */
 export class MemoryRemote implements SyncRemote {
-  readonly files = new Map<string, Uint8Array>();
+  readonly files = new Map<string, { bytes: Uint8Array; created: number }>();
+  private tick = 0;
+
+  constructor(private readonly clock: () => number = () => ++this.tick) {}
 
   async list(folder: RemoteFolder): Promise<RemoteFile[]> {
     return [...this.files.entries()]
       .filter(([path]) => folderOf(path) === folder)
-      .map(([path, bytes]) => ({ path, size: bytes.length }));
+      .map(([path, file]) => ({ path, size: file.bytes.length, created: file.created }));
   }
 
   async read(path: string): Promise<Uint8Array | null> {
-    const bytes = this.files.get(path);
-    return bytes === undefined ? null : new Uint8Array(bytes);
+    const file = this.files.get(path);
+    return file === undefined ? null : new Uint8Array(file.bytes);
   }
 
   async write(path: string, bytes: Uint8Array): Promise<void> {
     assertLayoutPath(path);
-    this.files.set(path, new Uint8Array(bytes));
+    // Replacing a file keeps its creation time, as Drive's update does.
+    const created = this.files.get(path)?.created ?? this.clock();
+    this.files.set(path, { bytes: new Uint8Array(bytes), created });
   }
 
   async remove(path: string): Promise<void> {

@@ -102,6 +102,7 @@ class FakeDrive {
         id: file.id,
         name: file.name,
         size: String(file.bytes.length),
+        createdTime: new Date(file.createdTime * 1000).toISOString(),
       })),
     });
   };
@@ -117,7 +118,7 @@ function contract(name: string, make: () => SyncRemote): void {
       await remote.write('keys.bjs', utf8('k'));
 
       expect(await remote.list('versions')).toEqual([
-        { path: 'versions/000001-pc4f2a.root.bjs', size: 2 },
+        { path: 'versions/000001-pc4f2a.root.bjs', size: 2, created: expect.any(Number) },
       ]);
       expect(toHex((await remote.read('versions/000001-pc4f2a.root.bjs')) as Uint8Array)).toBe(
         toHex(utf8('v1')),
@@ -134,7 +135,9 @@ function contract(name: string, make: () => SyncRemote): void {
       await remote.write('devices/pc4f2a.bjs', utf8('first'));
       await remote.write('devices/pc4f2a.bjs', utf8('second'));
 
-      expect(await remote.list('devices')).toEqual([{ path: 'devices/pc4f2a.bjs', size: 6 }]);
+      expect(await remote.list('devices')).toEqual([
+        { path: 'devices/pc4f2a.bjs', size: 6, created: expect.any(Number) },
+      ]);
       expect(toHex((await remote.read('devices/pc4f2a.bjs')) as Uint8Array)).toBe(
         toHex(utf8('second')),
       );
@@ -210,6 +213,36 @@ describe('DriveRemote on Google Drive (#2029)', () => {
     expect(drive.files.filter((file) => file.name === 'sync').length).toBeGreaterThan(1);
     expect(await pc.read('devices/phone9c1e.bjs')).not.toBeNull();
     expect(await pc.list('files')).toHaveLength(1);
+  });
+
+  it('calls a listing cut off halfway "offline" too, the first call of every sync', async () => {
+    const drive = new FakeDrive();
+    drive.add('Budojo', null, true);
+    const remote = new DriveRemote(
+      async () => 'tok',
+      async (url, init) => {
+        const response = await drive.fetch(url, init);
+        return {
+          ok: response.ok,
+          status: response.status,
+          headers: response.headers,
+          json: () => Promise.reject(new TypeError('network error')),
+        } as unknown as Response;
+      },
+    );
+
+    await expect(remote.list('versions')).rejects.toMatchObject({ reason: 'offline' });
+  });
+
+  it('gives each file Drive’s creation time', async () => {
+    const drive = new FakeDrive();
+    const remote = new DriveRemote(async () => 'tok', drive.fetch);
+    await remote.write('versions/000001-pc4f2a.root.bjs', utf8('v1'));
+
+    const [listed] = await remote.list('versions');
+
+    const file = drive.files.find((candidate) => candidate.name === '000001-pc4f2a.root.bjs');
+    expect(listed.created).toBe((file?.createdTime ?? 0) * 1000);
   });
 
   it('calls a download cut off halfway "offline"', async () => {

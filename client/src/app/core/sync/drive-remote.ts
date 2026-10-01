@@ -17,6 +17,13 @@ import { assertLayoutPath, RemoteError, RemoteFile, RemoteFolder, SyncRemote } f
 
 export type Fetcher = (input: string, init?: RequestInit) => Promise<Response>;
 
+interface DriveFile {
+  id: string;
+  name: string;
+  size?: string;
+  createdTime: string;
+}
+
 const API = 'https://www.googleapis.com/drive/v3/files';
 const UPLOAD = 'https://www.googleapis.com/upload/drive/v3/files';
 const FOLDER_MIME = 'application/vnd.google-apps.folder';
@@ -46,6 +53,7 @@ export class DriveRemote implements SyncRemote {
     return (await this.children(parent)).map((file) => ({
       path: `${folder}/${file.name}`,
       size: Number(file.size ?? 0),
+      created: Date.parse(file.createdTime),
     }));
   }
 
@@ -164,8 +172,7 @@ export class DriveRemote implements SyncRemote {
       orderBy: 'createdTime',
       pageSize: '1',
     });
-    const response = (await this.call(`${API}?${params.toString()}`)) as Response;
-    const body = (await response.json()) as { files?: { id: string }[] };
+    const body = await this.json<{ files?: { id: string }[] }>(`${API}?${params.toString()}`);
     return body.files?.[0]?.id ?? null;
   }
 
@@ -187,32 +194,39 @@ export class DriveRemote implements SyncRemote {
       fields: 'files(id)',
       pageSize: '1',
     });
-    const response = (await this.call(`${API}?${params.toString()}`)) as Response;
-    const body = (await response.json()) as { files?: { id: string }[] };
+    const body = await this.json<{ files?: { id: string }[] }>(`${API}?${params.toString()}`);
     return body.files?.[0]?.id ?? null;
   }
 
-  private async children(parent: string): Promise<{ id: string; name: string; size?: string }[]> {
-    const files: { id: string; name: string; size?: string }[] = [];
+  private async children(parent: string): Promise<DriveFile[]> {
+    const files: DriveFile[] = [];
     let pageToken: string | undefined;
     do {
       const params = new URLSearchParams({
         q: `'${parent}' in parents and trashed=false`,
-        fields: 'nextPageToken,files(id,name,size)',
+        fields: 'nextPageToken,files(id,name,size,createdTime)',
         pageSize: '1000',
       });
       if (pageToken !== undefined) {
         params.set('pageToken', pageToken);
       }
-      const response = (await this.call(`${API}?${params.toString()}`)) as Response;
-      const page = (await response.json()) as {
-        nextPageToken?: string;
-        files?: { id: string; name: string; size?: string }[];
-      };
+      const page = await this.json<{ nextPageToken?: string; files?: DriveFile[] }>(
+        `${API}?${params.toString()}`,
+      );
       files.push(...(page.files ?? []));
       pageToken = page.nextPageToken;
     } while (pageToken !== undefined);
     return files;
+  }
+
+  /** A call whose answer is JSON. A body cut off halfway is the network's fault: offline. */
+  private async json<T>(url: string): Promise<T> {
+    const response = (await this.call(url)) as Response;
+    try {
+      return (await response.json()) as T;
+    } catch (error) {
+      throw new RemoteError('offline', error instanceof Error ? error.message : String(error));
+    }
   }
 
   /** One authorised call. With `notFoundIsNull`, a 404 answers null instead of throwing. */

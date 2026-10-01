@@ -1,35 +1,37 @@
-import { decide, Decision, latestVersion, LocalState, onLine } from './decide';
-import { ListedVersion, VersionRef } from './layout';
+import {
+  decide,
+  Decision,
+  latestVersion,
+  LocalState,
+  onLine,
+  SeenVersion,
+  settled,
+  SETTLE_MS,
+  versionsIn,
+} from './decide';
+import { VersionRef } from './layout';
 
 /**
  * Every row of the decision table (#2029, PRD § 5.2), each named as the owner
- * would meet it. The races and the pruned folders come from the review of
+ * would meet it. The races and the pruned folders come from the two reviews of
  * #2061: each is a way a write could have been dropped without anyone knowing.
  */
 const PC = 'pc4f2a';
 const PHONE = 'phone9c1e';
 const ref = (seq: number, device = PC): VersionRef => ({ seq, device });
-/** A version on top of `parent`; by default the PC's previous one. */
+/** A version on top of `parent` (the PC's previous one by default), created at `seq` seconds unless told otherwise. */
 const v = (
   seq: number,
   device = PC,
   parent: VersionRef | null = seq > 1 ? ref(seq - 1) : null,
-): ListedVersion => ({
-  seq,
-  device,
-  parent,
-});
+  created = seq * 1000,
+): SeenVersion => ({ seq, device, parent, created });
 const local = (
   base: VersionRef | null,
   flags: Partial<Omit<LocalState, 'base'>> = {},
-): LocalState => ({
-  base,
-  unpushed: false,
-  pushedUnconfirmed: false,
-  ...flags,
-});
+): LocalState => ({ device: PC, base, unpushed: false, unconfirmed: null, ...flags });
 
-const rows: { name: string; local: LocalState; folder: ListedVersion[]; expected: Decision }[] = [
+const rows: { name: string; local: LocalState; folder: SeenVersion[]; expected: Decision }[] = [
   {
     name: 'a device with nothing, and an empty folder: nothing to do',
     local: local(null),
@@ -80,56 +82,79 @@ const rows: { name: string; local: LocalState; folder: ListedVersion[]; expected
   },
   {
     name: 'its own push, since built on by the other device: on the line, so a fast-forward',
-    local: local(ref(44, PHONE), { pushedUnconfirmed: true }),
-    folder: [v(44, PHONE, ref(43)), v(45, PC, ref(44, PHONE))],
-    expected: { kind: 'fast-forward', to: ref(45) },
+    local: local(ref(44), { unconfirmed: ref(44) }),
+    folder: [v(44), v(45, PHONE, ref(44))],
+    expected: { kind: 'fast-forward', to: ref(45, PHONE) },
   },
   {
     name: 'its own push, already pruned but named as a parent: still on the line',
-    local: local(ref(44, PHONE), { pushedUnconfirmed: true }),
-    folder: [v(45, PC, ref(44, PHONE)), v(46)],
-    expected: { kind: 'fast-forward', to: ref(46) },
+    local: local(ref(44), { unconfirmed: ref(44) }),
+    folder: [v(45, PHONE, ref(44)), v(46, PHONE, ref(45, PHONE))],
+    expected: { kind: 'fast-forward', to: ref(46, PHONE) },
   },
   {
-    name: 'lost the race for its number: rebase, even with nothing new',
-    local: local(ref(44, PHONE), { pushedUnconfirmed: true }),
-    folder: [v(43), v(44), v(44, PHONE, ref(43))],
-    expected: { kind: 'rebase', onto: ref(44) },
+    name: 'its twin reached Drive first: rebase onto it, even with nothing new',
+    local: local(ref(44), { unconfirmed: ref(44) }),
+    folder: [v(43), v(44, PHONE, ref(43), 44_000), v(44, PC, ref(43), 44_500)],
+    expected: { kind: 'rebase', onto: ref(44, PHONE) },
   },
   {
-    name: 'won the tie, but the other device built on its own twin first: rebase, never a fast-forward',
-    local: local(ref(44), { pushedUnconfirmed: true }),
-    folder: [v(43), v(44), v(44, PHONE, ref(43)), v(45, PHONE, ref(44, PHONE))],
+    name: 'it reached Drive first, whatever its device id: the twin rebases, it does nothing',
+    local: { device: PHONE, base: ref(44, PHONE), unpushed: false, unconfirmed: ref(44, PHONE) },
+    folder: [v(43), v(44, PC, ref(43), 44_500), v(44, PHONE, ref(43), 44_000)],
+    expected: { kind: 'nothing' },
+  },
+  {
+    name: 'it saw itself on the line, then the other device built on its own twin: rebase, never a fast-forward',
+    local: local(ref(44), { unconfirmed: ref(44) }),
+    folder: [
+      v(43),
+      v(44, PC, ref(43), 44_000),
+      v(44, PHONE, ref(43), 44_500),
+      v(45, PHONE, ref(44, PHONE)),
+    ],
     expected: { kind: 'rebase', onto: ref(45, PHONE) },
   },
   {
     name: 'its push never landed, and others pushed above: rebase',
-    local: local(ref(44), { pushedUnconfirmed: true }),
+    local: local(ref(44), { unconfirmed: ref(44) }),
     folder: [v(43), v(44, PHONE, ref(43)), v(45, PHONE, ref(44, PHONE))],
     expected: { kind: 'rebase', onto: ref(45, PHONE) },
   },
   {
     name: 'lost a race while offline, and both twins have since been pruned: still a rebase',
-    local: local(ref(44, PHONE), { pushedUnconfirmed: true }),
-    folder: [v(45, PC, ref(44)), v(46)],
-    expected: { kind: 'rebase', onto: ref(46) },
+    local: local(ref(44), { unconfirmed: ref(44) }),
+    folder: [v(45, PHONE, ref(44, PHONE)), v(46, PHONE, ref(45, PHONE))],
+    expected: { kind: 'rebase', onto: ref(46, PHONE) },
   },
   {
-    name: 'a base too old to trace, with nothing of its own unconfirmed: fast-forward',
+    name: 'back after weeks, its own settled base pruned since: a fast-forward, nobody is asked',
     local: local(ref(30)),
     folder: [v(44), v(45)],
     expected: { kind: 'fast-forward', to: ref(45) },
   },
   {
-    name: 'it had pulled the losing twin, and has nothing of its own: fast-forward to the line',
+    name: 'it had pulled another device’s losing twin, and has nothing of its own: fast-forward to the line',
     local: local(ref(44, PHONE)),
-    folder: [v(44), v(44, PHONE, ref(43)), v(45)],
+    folder: [v(44, PC, ref(43), 44_000), v(44, PHONE, ref(43), 44_500), v(45)],
     expected: { kind: 'fast-forward', to: ref(45) },
   },
   {
-    name: 'the folder is behind this device, on another line: the owner chooses, nobody pushes over it',
-    local: local(ref(45, PHONE)),
+    name: 'its own settled version is provably off this line: another folder, so the owner chooses',
+    local: { device: PHONE, base: ref(45, PHONE), unpushed: false, unconfirmed: null },
+    folder: [v(44), v(45), v(46)],
+    expected: { kind: 'ask', latest: ref(46) },
+  },
+  {
+    name: 'the folder is behind this device: the owner chooses, nobody pushes over it',
+    local: { device: PHONE, base: ref(45, PHONE), unpushed: false, unconfirmed: null },
     folder: [v(43)],
+    expected: { kind: 'ask', latest: ref(43) },
+  },
+  {
+    name: 'the folder is behind its own unconfirmed push: the owner chooses',
+    local: local(ref(44), { unconfirmed: ref(44) }),
+    folder: [v(42), v(43)],
     expected: { kind: 'ask', latest: ref(43) },
   },
   {
@@ -146,6 +171,31 @@ describe('decide (#2029)', () => {
       expect(decide(row.local, row.folder)).toEqual(row.expected);
     });
   }
+});
+
+describe('settled', () => {
+  const folder = [v(43), v(44, PC, ref(43), 1_000)];
+
+  it('is a version on the line that Drive created ten minutes ago or more', () => {
+    expect(settled(ref(44), folder, 1_000 + SETTLE_MS)).toBe(true);
+  });
+
+  it('is not one created a moment ago, however alone it looks: its twin may not be listed yet', () => {
+    expect(settled(ref(44), folder, 1_000 + 60_000)).toBe(false);
+  });
+
+  it('is not one off the line, however old', () => {
+    const lost = [v(43), v(44, PHONE, ref(43), 500), v(44, PC, ref(43), 1_000)];
+
+    expect(settled(ref(44), lost, 1_000 + SETTLE_MS * 10)).toBe(false);
+  });
+
+  it('judges a pruned version by the one naming it as parent, which is younger', () => {
+    const pruned = [v(45, PHONE, ref(44), 2_000)];
+
+    expect(settled(ref(44), pruned, 2_000 + SETTLE_MS - 1)).toBe(false);
+    expect(settled(ref(44), pruned, 2_000 + SETTLE_MS)).toBe(true);
+  });
 });
 
 describe('onLine', () => {
@@ -171,14 +221,32 @@ describe('latestVersion', () => {
     expect(latestVersion([v(2), v(9), v(4)])).toEqual(v(9));
   });
 
-  it('breaks a tie the same way on every device: the lower device id', () => {
-    const twins = [v(44, PHONE, ref(43)), v(44)];
+  it('gives a number to the twin that reached Drive first, whatever its device id', () => {
+    const twins = [v(44, PC, ref(43), 44_500), v(44, PHONE, ref(43), 44_000)];
 
-    expect(latestVersion(twins)).toEqual(v(44));
-    expect(latestVersion([...twins].reverse())).toEqual(v(44));
+    expect(latestVersion(twins)?.device).toBe(PHONE);
+    expect(latestVersion([...twins].reverse())?.device).toBe(PHONE);
+  });
+
+  it('breaks a tie in the same millisecond by the lower device id, the same on every device', () => {
+    const twins = [v(44, PHONE, ref(43), 44_000), v(44, PC, ref(43), 44_000)];
+
+    expect(latestVersion(twins)?.device).toBe(PC);
+    expect(latestVersion([...twins].reverse())?.device).toBe(PC);
   });
 
   it('is null for an empty folder', () => {
     expect(latestVersion([])).toBeNull();
+  });
+});
+
+describe('versionsIn', () => {
+  it('reads the versions out of a listing, with their creation times, and skips anything else', () => {
+    expect(
+      versionsIn([
+        { path: 'versions/000002-pc4f2a.000001-pc4f2a.bjs', size: 10, created: 2_000 },
+        { path: 'versions/notes.txt', size: 1, created: 3_000 },
+      ]),
+    ).toEqual([v(2, PC, ref(1), 2_000)]);
   });
 });

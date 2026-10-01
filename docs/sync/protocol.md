@@ -19,7 +19,7 @@ Budojo/                                          the folder the PC creates for i
 - **Device id:** a kind (2–8 lowercase letters) and 4 random characters, `pc4f2a`, `phone9c1e`. It is made once at pairing.
 - **Sequence numbers** are six digits, from `000001`.
 - **A version's name carries its parent**, so the history can be read from the listing, with no database downloaded. The name is the associated data too, so the parent cannot be changed.
-- **Two devices can push the same number at once.** The names still differ, so both files exist. The latest version is the highest number, and between two of the same number, the lower device id.
+- **Two devices can push the same number at once.** The names still differ, so both files exist. **The latest version** is the highest number. Between two of the same number, it is the one Drive created first (its `createdTime`, on Drive's clock), so a twin that lands later never takes the number. The lower device id breaks a tie in the same millisecond.
 - **Nothing outside this layout** is ever written. A remote refuses any other path, folder by folder: a numbered version with its parent, a SHA-256, a device id.
 
 ## The envelope: every file
@@ -29,7 +29,7 @@ Budojo/                                          the folder the PC creates for i
 ```
 
 - **Key:** the academy's 32-byte sync key.
-- **Associated data:** the file's path in the folder, UTF-8, for example `versions/000042-pc4f2a.bjs`. A file moved or renamed does not open.
+- **Associated data:** the file's path in the folder, UTF-8, for example `versions/000042-pc4f2a.000041-pc4f2a.bjs`. A file moved or renamed does not open.
 - **Failures:** «not an envelope» (no `BJS2`, or too short), «wrong key or path» (the GCM tag fails: GCM cannot tell which), «corrupt» (it decrypts but does not gunzip or parse).
 - **Known-answer vectors:** `client/src/app/core/sync/vectors/envelope-vectors.json`, made with Node's crypto and zlib (`make-envelope-vectors.mjs`). The WebCrypto implementation reproduces them byte for byte.
 
@@ -91,27 +91,30 @@ protocol (1 byte) | sync key (32 bytes) | first 2 bytes of SHA-256 over the firs
 
 **The rule: a device never drops a write of its own silently.** Its journal holds three kinds of write:
 - **unpushed:** made since its base, in no version yet;
-- **pushed, unconfirmed:** in a version it pushed, which it has not yet seen on the line;
-- **confirmed:** in a version on the line.
+- **pushed, unconfirmed:** in a version it pushed that has not settled;
+- **confirmed:** in a version that has settled.
 
-**The line** is the latest version and its ancestors, followed through the parents in the names. A device keeps a pushed write until it sees its version on the line, however long it is away. Only then does it clear the write. That way a race lost while the device was offline can still be replayed after the losing version is pruned.
+**The line** is the latest version and its ancestors, followed through the parents in the names.
 
-**Whether the base is on the line:**
-- **yes** when the walk down the parents meets it, or meets a version naming it as parent (the base itself may be pruned);
-- **no** when the walk passes the base's number without meeting it;
+**A version has settled** when it is on the line and Drive created it at least **10 minutes** ago, on Drive's clock (the listing's `Date` header).
+- **Why 10 minutes:** Drive's listing can lag behind a new file by seconds. A twin that could beat the version was created before it, so after ten minutes it is listed, and no device builds next to the version any more.
+- **A device keeps a pushed write** until that version has settled, however long it is away. A race lost while it was offline can then still be replayed after the losing version is pruned.
+
+**Whether a version is on the line:**
+- **yes** when the walk down the parents meets it, or meets a version naming it as parent (the version itself may be pruned);
+- **no** when the walk passes its number without meeting it;
 - **unknown** when a pruned parent stops the walk above it.
 
-| Base | The folder | This device's writes | Do |
-|---|---|---|---|
-| none | empty | none | nothing |
-| none | empty | unpushed | push version 1 |
-| none | has versions | none | fast-forward to the latest |
-| none | has versions | unpushed | **ask the owner:** an academy of its own meets another |
-| B | empty | any | push B + 1 on top of B: nothing there to lose |
-| B, on the line | latest is B | none / unpushed | nothing / push B + 1 |
-| B, on the line | latest is newer | none / unpushed | fast-forward / rebase |
-| B, off the line | latest is older than B | any | **ask the owner:** versions deleted, or another account's folder |
-| B, off the line or unknown | latest is newer or the same number | pushed, unconfirmed | **rebase**, never a fast-forward |
-| B, off the line or unknown | latest is newer or the same number | none / unpushed | fast-forward / rebase |
+| Situation | Do |
+|---|---|
+| No base, empty folder | nothing, or push version 1 if the device holds an academy |
+| No base, the folder has versions | fast-forward; **ask the owner** if the device holds an academy of its own |
+| The folder is empty | push base + 1 on top of the base: nothing there to lose |
+| The folder's latest is behind the base, or behind this device's unconfirmed push | **ask the owner:** versions deleted, or another account's folder |
+| An unconfirmed push of its own is off the line, or unknown | **rebase**, never a fast-forward |
+| The base is on the line, and is the latest | nothing, or push base + 1 if there are unpushed writes |
+| The base is on the line, the latest is newer | fast-forward, or rebase if there are unpushed writes |
+| **Its own settled base** is provably off the line | **ask the owner:** a settled version never leaves its line, so this is another folder |
+| Another device's base is off the line, or any base is unknown (a long absence) | fast-forward, or rebase if there are unpushed writes |
 
-**When the line is unknown and writes are unconfirmed,** the rebase may replay writes that are already there. The replay finds them already true, or the owner sees a duplicate. **A duplicate shows; a lost write does not.**
+**When the line is unknown and a push is unconfirmed,** the rebase may replay writes that are already there. The replay finds them already true, or the owner sees a duplicate. **A duplicate shows; a lost write does not.**

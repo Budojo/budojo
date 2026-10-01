@@ -156,7 +156,7 @@ The owner described git, and the design is git.
 **The rules that make it safe:**
 - **A version is written once, under a new name.** Two devices never write the same file, so Drive never has to pick a winner.
 - **A device pushes only on top of the latest version it can see.** If there is a newer one, it rebases first, so no push can erase the other side's work.
-- **A version's name carries its parent,** so the history can be read from the folder's listing alone. When two devices push at once, a device whose version ended up off the line replays its writes: it keeps them until it has seen its version on the line, however long it is away (#2029, `docs/sync/protocol.md`).
+- **A version's name carries its parent,** so the history can be read from the folder's listing alone. When two devices push at once, the version Drive created first keeps the number. A device whose version ended up off the line replays its writes: it keeps them until its version has settled on the line, however long it is away (#2029, `docs/sync/protocol.md`).
 - **The journal records API writes, not rows**: the route, its parameters and the body, plus the ids the write created. For an update, it also records the values it saw before.
 - **Replaying it runs the same Actions** with the same validation (#2031):
   - Ids the diverged side created (a new athlete) get new ids on the base, and the replay maps the old ones to them for every later change that names them.
