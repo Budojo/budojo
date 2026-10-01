@@ -15,6 +15,9 @@ final class SyncDatabase
     /** The first sixteen bytes of every SQLite 3 file. */
     public const string HEADER = "SQLite format 3\0";
 
+    /** A migration only a Budojo database has run: another Laravel app's database lacks it. */
+    public const string BUDOJO_MIGRATION = '2026_04_22_084344_create_academies_table';
+
     public static function path(): string
     {
         $configured = config('budojo.sync.database');
@@ -32,30 +35,19 @@ final class SyncDatabase
         return self::path() . '.staged';
     }
 
-    public static function open(string $path, bool $readOnly = false): \PDO
+    /**
+     * The live database, read and written as it is, never created: a wrong
+     * path fails rather than making an empty database the export would send.
+     */
+    public static function openExisting(string $path): \PDO
     {
-        $options = [\PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION];
-        if ($readOnly) {
-            $options[\PDO::SQLITE_ATTR_OPEN_FLAGS] = \PDO::SQLITE_OPEN_READONLY;
-        }
-
-        return new \PDO("sqlite:{$path}", null, null, $options);
+        return self::connect($path, \PDO::SQLITE_OPEN_READWRITE);
     }
 
-    /**
-     * The newest migration a database file has run: the schema it was written
-     * with (PRD § 5.5). Null for a file with no migrations, which is not a
-     * Budojo database.
-     */
-    public static function schemaOf(string $path): ?string
+    /** A database to check: nothing it does can change it. */
+    public static function openReadOnly(string $path): \PDO
     {
-        try {
-            $newest = self::scalar(self::open($path, readOnly: true), 'select max(migration) from migrations');
-        } catch (\PDOException) {
-            return null;
-        }
-
-        return \is_string($newest) && $newest !== '' ? $newest : null;
+        return self::connect($path, \PDO::SQLITE_OPEN_READONLY);
     }
 
     /** The first column of the first row a query returns. */
@@ -67,16 +59,52 @@ final class SyncDatabase
     }
 
     /**
-     * The newest migration this code carries. A database newer than this is
-     * from a later Budojo, whose columns this code does not know.
+     * The migrations a database file has run, in order. Null when it has no
+     * migrations table, which is not a Laravel database at all.
+     *
+     * @return list<string>|null
      */
-    public static function codeSchema(): string
+    public static function appliedMigrations(string $path): ?array
+    {
+        try {
+            $statement = self::openReadOnly($path)->query('select migration from migrations order by migration');
+            $names = $statement === false ? [] : $statement->fetchAll(\PDO::FETCH_COLUMN);
+        } catch (\PDOException) {
+            return null;
+        }
+
+        return array_values(array_filter($names, \is_string(...)));
+    }
+
+    /** The newest migration a database has run: the schema it was written with (PRD § 5.5). */
+    public static function schemaOf(string $path): ?string
+    {
+        $applied = self::appliedMigrations($path);
+
+        return $applied === null || $applied === [] ? null : end($applied);
+    }
+
+    /**
+     * The migrations this code carries, in order. A database that has run one
+     * not among them is from a later Budojo, or is not Budojo's.
+     *
+     * @return list<string>
+     */
+    public static function codeMigrations(): array
     {
         /** @var array<string, string> $files */
         $files = app('migrator')->getMigrationFiles(database_path('migrations'));
         $names = array_keys($files);
         sort($names);
 
-        return (string) end($names);
+        return $names;
+    }
+
+    private static function connect(string $path, int $mode): \PDO
+    {
+        return new \PDO("sqlite:{$path}", null, null, [
+            \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
+            \PDO::SQLITE_ATTR_OPEN_FLAGS => $mode,
+        ]);
     }
 }

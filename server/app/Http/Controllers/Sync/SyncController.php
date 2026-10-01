@@ -9,7 +9,7 @@ use App\Actions\Sync\StageDatabaseAction;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 /**
  * The database side of the sync (#2030, PRD § 5.2). The app packs and seals
@@ -23,21 +23,22 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class SyncController extends Controller
 {
-    public function export(ExportDatabaseAction $export): StreamedResponse
+    public function export(ExportDatabaseAction $export): BinaryFileResponse
     {
         $snapshot = $export->execute();
 
-        return response()->streamDownload(
-            function () use ($snapshot): void {
-                try {
-                    readfile($snapshot->path);
-                } finally {
-                    @unlink($snapshot->path);
-                }
-            },
-            'budojo.sqlite',
-            ['Content-Type' => 'application/octet-stream', 'X-Budojo-Schema' => $snapshot->schema],
-        );
+        // The snapshot is the whole academy: it must not outlive the request.
+        // Sending deletes it, a HEAD request included; a download the client
+        // drops halfway stops the script before that, so the end of the
+        // request deletes it too.
+        register_shutdown_function(static fn () => @unlink($snapshot->path));
+
+        return response()
+            ->download($snapshot->path, 'budojo.sqlite', [
+                'Content-Type' => 'application/octet-stream',
+                'X-Budojo-Schema' => $snapshot->schema,
+            ])
+            ->deleteFileAfterSend();
     }
 
     public function stage(Request $request, StageDatabaseAction $stage): Response

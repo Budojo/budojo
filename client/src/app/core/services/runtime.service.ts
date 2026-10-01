@@ -16,6 +16,7 @@ export type Capability =
   // The sync between the owner's own devices (#2030): a device capability.
   | 'sync';
 
+/** Every capability this client knows: what a `/runtime` answer may hold. */
 export const ALL_CAPABILITIES: readonly Capability[] = [
   'community',
   'athlete_accounts',
@@ -25,6 +26,15 @@ export const ALL_CAPABILITIES: readonly Capability[] = [
   'sync',
 ];
 
+/**
+ * The web profile's: every multi-user capability, and not the device sync,
+ * which only a device with a database of its own offers. The default until
+ * `/runtime` answers.
+ */
+export const WEB_CAPABILITIES: readonly Capability[] = ALL_CAPABILITIES.filter(
+  (capability) => capability !== 'sync',
+);
+
 interface RuntimeResponse {
   data: { profile: 'web' | 'desktop'; capabilities: Capability[] };
 }
@@ -32,7 +42,7 @@ interface RuntimeResponse {
 /**
  * The runtime capability list, loaded once at boot and exposed as signals.
  *
- * Why the default is *everything*: the hosted web app has every capability,
+ * Why the default is the web's *everything*: the hosted web app has every multi-user capability,
  * the whole existing Cypress suite runs without this endpoint mocked, and a
  * momentary failure to load must never hide surfaces on the web. Only a
  * successful response narrows the set — and on a runtime that lacks a
@@ -47,7 +57,7 @@ interface RuntimeResponse {
 export class RuntimeService {
   private readonly http = inject(HttpClient);
 
-  private readonly capabilitiesSignal = signal<readonly Capability[]>(ALL_CAPABILITIES);
+  private readonly capabilitiesSignal = signal<readonly Capability[]>(WEB_CAPABILITIES);
   private readonly profileSignal = signal<'web' | 'desktop'>('web');
   private readonly loadedSignal = signal<boolean>(false);
   private loading: Promise<void> | null = null;

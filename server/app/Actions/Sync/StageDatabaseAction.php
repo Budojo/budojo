@@ -11,9 +11,15 @@ use App\Support\Sync\SyncDatabase;
  * at its next start (#2030, PRD § 5.2). Nothing is staged until the file has
  * passed every check, so a bad download can never become the next database.
  *
- * The checks are a restore's: a SQLite file, undamaged, with Budojo's
- * migrations, and **no newer than this code** (PRD § 5.5). An older one is
- * fine: the boot migrations bring it forward, as they do a restored backup.
+ * The checks are a restore's, and a little more, because a staged file becomes
+ * the whole academy:
+ * - a SQLite file, undamaged;
+ * - **Budojo's history:** it has run Budojo's own migrations, and only
+ *   migrations this code carries. One dated after this code's newest is from a
+ *   later Budojo (`newer`, PRD § 5.5); any other unknown one is not Budojo's.
+ *
+ * An older database is fine: the boot migrations bring it forward, as they do a
+ * restored backup.
  */
 final class StageDatabaseAction
 {
@@ -26,42 +32,73 @@ final class StageDatabaseAction
         }
 
         try {
-            // Streamed to disk, never held whole in memory: a database is megabytes.
-            $target = fopen($incoming, 'wb');
-            if ($target === false || stream_copy_to_stream($body, $target) === false) {
-                throw new \RuntimeException('could not receive the incoming database');
-            }
-            fclose($target);
-
+            $this->receive($body, $incoming);
+            $this->check($incoming);
             $this->stage($incoming);
         } finally {
             @unlink($incoming);
         }
     }
 
-    private function stage(string $incoming): void
+    /**
+     * Streamed to disk, never held whole in memory: a database is megabytes.
+     *
+     * @param resource $body
+     */
+    private function receive($body, string $incoming): void
+    {
+        $target = fopen($incoming, 'wb');
+        if ($target === false) {
+            throw new \RuntimeException('could not open a file for the incoming database');
+        }
+
+        try {
+            if (stream_copy_to_stream($body, $target) === false) {
+                throw new \RuntimeException('could not receive the incoming database');
+            }
+        } finally {
+            // Closed before anything deletes it: Windows cannot delete an open file.
+            fclose($target);
+        }
+    }
+
+    private function check(string $incoming): void
     {
         if (file_get_contents($incoming, false, null, 0, \strlen(SyncDatabase::HEADER)) !== SyncDatabase::HEADER) {
             throw StageRefused::unreadable('This is not a SQLite database.');
         }
 
         try {
-            $check = SyncDatabase::scalar(SyncDatabase::open($incoming, readOnly: true), 'PRAGMA quick_check');
+            $integrity = SyncDatabase::scalar(SyncDatabase::openReadOnly($incoming), 'PRAGMA quick_check');
         } catch (\PDOException) {
-            $check = false;
+            $integrity = false;
         }
-        if ($check !== 'ok') {
+        if ($integrity !== 'ok') {
             throw StageRefused::unreadable('The database is damaged.');
         }
 
-        $schema = SyncDatabase::schemaOf($incoming)
-            ?? throw StageRefused::unreadable('This is not a Budojo database: it has no migrations.');
-        if (strcmp($schema, SyncDatabase::codeSchema()) > 0) {
-            throw StageRefused::newer($schema);
+        $applied = SyncDatabase::appliedMigrations($incoming);
+        if ($applied === null || ! \in_array(SyncDatabase::BUDOJO_MIGRATION, $applied, true)) {
+            throw StageRefused::unreadable('This is not a Budojo database.');
         }
 
-        // Copied beside the live file, then renamed: a rename within one
-        // directory is atomic, so the shell never finds half a staged file.
+        $known = SyncDatabase::codeMigrations();
+        $newestKnown = (string) end($known);
+        foreach (array_diff($applied, $known) as $unknown) {
+            if (strcmp($unknown, $newestKnown) > 0) {
+                throw StageRefused::newer($unknown);
+            }
+
+            throw StageRefused::unreadable("The database has run a migration Budojo never had ({$unknown}).");
+        }
+    }
+
+    /**
+     * Copied beside the live file, then renamed: a rename within one directory
+     * is atomic, so the shell never finds half a staged file.
+     */
+    private function stage(string $incoming): void
+    {
         $staged = SyncDatabase::stagedPath();
         $part = "{$staged}.part";
         if (! copy($incoming, $part) || ! rename($part, $staged)) {

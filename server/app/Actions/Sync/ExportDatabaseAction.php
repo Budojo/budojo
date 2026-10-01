@@ -22,7 +22,7 @@ final class ExportDatabaseAction
         }
 
         try {
-            $pdo = SyncDatabase::open(SyncDatabase::path());
+            $pdo = SyncDatabase::openExisting(SyncDatabase::path());
             $pdo->exec('VACUUM INTO ' . $pdo->quote($snapshot));
             $schema = SyncDatabase::schemaOf($snapshot)
                 ?? throw new \RuntimeException('the database has no migrations');

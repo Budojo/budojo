@@ -7336,14 +7336,16 @@ paths:
         rebase. **Nothing is staged until the file passes every check**:
         - a SQLite file;
         - undamaged (`PRAGMA quick_check`);
-        - with Budojo's migrations;
+        - **Budojo's history:** it has run Budojo's own migrations, and only
+          migrations this code carries;
         - **no newer than this code**, refused as a restore refuses a newer
           archive (PRD § 5.5).
 
         An older one is fine: the boot migrations bring it forward. It is
         written beside the live database (`<database>.staged`), replacing one
         never swapped in. **The shell swaps it in at its next start**, then
-        runs `budojo:sync-reconcile` (cache, files no row names).
+        runs `budojo:sync-reconcile` (cache, files no row names), after the
+        replay when the sync is a rebase.
       tags: [sync]
       requestBody:
         required: true
@@ -7359,6 +7361,8 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorMessage' }
         '404': { description: The runtime profile has no `sync` capability. }
+        '413':
+          description: The database is larger than PHP's `post_max_size`, which each shell sets above any academy's database.
         '422':
           description: |
             Not staged. `code` is `newer` (update Budojo first) or `unreadable`
