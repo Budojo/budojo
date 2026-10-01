@@ -191,30 +191,50 @@ Nothing waits for the sync, and its state is always on screen (§ 6.2).
   **So per-file access belongs to the Cloud project, not to the client that created the file.** The fallback to `appDataFolder` is not needed. Two caveats for whoever builds on it:
   - **The folder search** finds only folders the project created. The owner's Drive also held a `Budojo` folder made by Drive for desktop (the folder copy, #1320), invisible to the API. So the PC created a second `Budojo`, which Drive for desktop shows as `Budojo (1)`.
   - **A probe that runs before the PC has connected** finds nothing. The phone's first run that day did exactly that, 30 seconds before the PC created the folder. The sync must tell "the PC has not connected yet" apart from "nothing is there".
-- **The transport is an interface,** `SyncRemote`: `DriveRemote` in production, and `FolderRemote` (a local directory) for the tests and the Linux dev environment, where two copies sync with no Google account.
+- **The transport is an interface,** `SyncRemote`, with three implementations:
+  - `DriveRemote` on the phone, which makes the Drive calls from the WebView;
+  - on the PC, the main process's Drive calls, reached over the bridge (§ 5.6, #2032);
+  - `MemoryRemote` for the tests, where two copies sync with no Google account.
 
 ### 5.4 Pairing, both ways
 
-The device that has the academy shows a **pairing code**: a QR, plus the same code as words to type on a PC with no camera. It carries:
-- the recovery code (the app keys);
-- the sync key;
-- the Drive folder;
-- the protocol version.
+The device that has the academy shows a **pairing code**: a QR, plus the same code as 56 characters in fourteen groups of four, to type on a PC with no camera. **It carries only the sync key and the protocol version** (#2029):
+- **The app keys** (`APP_KEY`, `DOCUMENT_ENCRYPTION_KEY`, what the recovery code #1254 carries) **travel on Drive,** sealed under the sync key in `keys.bjs`.
+- **The folder** is found by name, because `drive.file` lets every client of the project see it (§ 5.3).
+
+**This is as safe as putting everything in the code:** whoever holds the code can read everything either way, and Drive alone opens nothing. **But the code a person types drops from about 150 characters to 56.**
 
 **The new device:**
 1. reads the code;
 2. signs in to Google with the same account;
-3. pulls the latest version.
+3. opens `keys.bjs`, then pulls the latest version.
 
 **Either side can start it:** the PC can add the phone (the owner's case today), and a phone-only academy can later add a PC.
 
-**Unpairing a lost phone:** the other device rotates the sync key and publishes under it, so the lost phone can read nothing new and its pushes stop being accepted. The app keys cannot rotate without re-encrypting the documents; the fingerprint lock (§ 6.1) is what protects the lost phone's local copy.
+**Unpairing a lost phone:** the other device rotates the sync key, seals `keys.bjs` again and publishes under the new key, so the lost phone can read nothing new and its pushes stop being accepted. The app keys cannot rotate without re-encrypting the documents; the fingerprint lock (§ 6.1) is what protects the lost phone's local copy.
 
 ### 5.5 Versions of the app
 
 - **Each version on Drive names the schema it was written with.** A device never opens a newer database than its code knows: it asks for the update first, as a backup restore already refuses a newer archive.
 - **A device can pull an older database:** the boot migrations bring it forward, as they do for a restored backup.
 - **The update notice** reads the latest GitHub release, and one tap downloads the APK. Android asks for the confirmation (§ 2).
+
+### 5.6 Where the sync runs: in the app, on both devices
+
+**The engine and the protocol are TypeScript in `client/`,** so the same code decides, encrypts and replays on the PC and on the phone (#2029). Each shell supplies only what it alone can do, behind one interface:
+
+| | PC (Electron) | Phone (Capacitor) |
+|---|---|---|
+| **Drive calls** | the main process, which holds the refresh token (#1301), over the bridge | the WebView, with the token from `DriveAuthPlugin` (#2028) |
+| **Exporting a version and swapping the database in** | the PHP supervisor | `PhpServerPlugin` |
+| **Where the sync key is kept** | the OS keychain, beside the app keys (`secrets.bin`) | Android's keystore |
+
+**Why:**
+- **One implementation** of the code where a bug costs data, instead of one per shell.
+- **`client/` is the only code both builds can see:** the client container mounts `client/` alone, and the desktop compiles `desktop/src` alone.
+- **WebCrypto and `CompressionStream` are the same Chromium** in Electron's renderer and Android's WebView.
+
+**What it costs:** the PC syncs while its window is open. On closing, the main process asks the page to push first, with a time limit.
 
 ## 6. UX
 
@@ -386,4 +406,5 @@ Sizes: **S** is a day or less, **M** a few days, **L** a week or more. The **fir
     - the homecoming card;
     - the APK and its key (#2027);
     - the principle that no change is lost or overwritten silently.
+- **1 Oct 2026: the sync runs in the app on both devices (§ 5.6), and the pairing code carries only the sync key (§ 5.4)** (#2029). v2 had the protocol imported by the desktop's main process and by the phone's shell. But no code both builds can see lives outside `client/`, and keeping two copies of the envelope and the replay in step is where data would be lost.
 - **1 Oct 2026: our shell stays (#2051).** NativePHP for Mobile was weighed against it before the runtime (#2034) was built on it, and lost on cost (€0, § 2), on fit with the Angular SPA and the server, and on where its PHP binary comes from (§ 5.1). PHP called in-process from our shell is the way out, kept for a reason we do not have yet.
