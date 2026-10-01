@@ -108,7 +108,24 @@ The phone runs **the same application as the PC**, with the same screens and the
 - RAM;
 - a warm start after a force-stop (estimated at about 0.8 s: migrations plus the server).
 
-**Before the real runtime (#2034), one comparison: #2051.** [NativePHP for Mobile](https://nativephp.com/mobile) (MIT, free since v3) maintains exactly this, and calls PHP in-process with **no web server**. That sidesteps difference 3 by design, and the spike's probe showed in-process Laravel works on the owner's phone (200). #2051 decides between NativePHP, our shell, and our shell calling PHP in-process, against Budojo's needs: the Angular SPA, Drive, the lock, notifications, our key.
+**Our shell stays: decided by #2051 (1 Oct 2026),** against [NativePHP for Mobile](https://nativephp.com/mobile). NativePHP maintains PHP-on-Android for a living, and calls PHP in-process with no web server, so difference 3 cannot happen to it. It was weighed against what Budojo needs, from its source (v4.5.2) and its price list:
+
+| Need | Our shell | NativePHP |
+|---|---|---|
+| **The Angular SPA** over REST | `fetch` to `127.0.0.1` | Works on a side path. A script wraps `fetch` and XHR and hands every request body to Kotlin in base64, and a URL containing `/js/`, `/images/` or `/fonts/` is served as a file. Its first-class UI is Blade, Livewire and its own native components. |
+| **The fingerprint lock, notifications** (§ 2: €0) | Free Capacitor plugins, local notifications among the official ones | Biometrics is **$49, proprietary**; local notifications come only in paid bundles. €0 means writing both ourselves. |
+| **Drive's authorization** (#2028) | Our own plugin | Our own plugin |
+| **Our key, a sideloaded APK** | Done (#2027) | Possible: `native:package --keystore` builds locally |
+| **The server codebase** | Unchanged | `nativephp/mobile` and its dependencies in `server/`, and Laravel **kept alive between requests** with a reset its own code calls "not Octane". Sanctum's guard keeps the first request's user (`RequestGuard::user()` caches it, and `setRequest` does not clear it), so a logout would not take effect until a restart. Every piece of long-lived state in the server would need an audit. |
+| **The PHP binary** | Built from source in CI, pinned, tested under seccomp | Downloaded prebuilt from `bin.nativephp.com`, built in a repository that is not public |
+| **Who keeps PHP-on-Android working** | Us: three quirks, each written down (`mobile/CLAUDE.md`) and pinned by CI | Them. This is its real advantage. |
+| **The pace of change** | Ours | v3 in Feb 2026, v4.5.2 by Sep 2026: two majors in seven months |
+
+**The verdict rests on what the source and the price list say, not on a measurement,** so no prototype was built. The one number NativePHP could win is the time per request, because it boots Laravel once. That would not change the verdict: p95 is already 110 ms, well inside the 400 ms in which a tap feels immediate.
+
+**PHP called in-process from our own shell: not now, and kept as the way out.** It is what NativePHP's JNI bridge and its body-passing script are, a large piece of work for a problem we have already solved. **Revisit it if Android stops a server process in a way CI cannot reproduce:** a new seccomp rule, for instance, or the phantom process killer (Android 12+) killing it every time the app goes to the background.
+
+**What #2034 takes from this:** when the app comes back to the foreground, it checks the server and restarts it if Android killed it in the background.
 
 ### 5.2 Sync: git for the database
 
@@ -280,7 +297,7 @@ Sizes: **S** is a day or less, **M** a few days, **L** a week or more. The **fir
 |---|---|---|---|---|
 | [#2027](https://github.com/Budojo/budojo/issues/2027) ✅ | 0 · Prove | The APK: the Capacitor shell, the release key, the CI build, storage that survives an update. Done 28 Sep. | M | — |
 | [#2044](https://github.com/Budojo/budojo/issues/2044) ✅ | | **Laravel on Android:** Budojo's API running offline on the phone with SQLite. Native PHP works (§ 5.1). Done 28 Sep. | M | #2027 |
-| [#2051](https://github.com/Budojo/budojo/issues/2051) | | NativePHP Mobile against our own shell, before the runtime | S | #2044 |
+| [#2051](https://github.com/Budojo/budojo/issues/2051) ✅ | | NativePHP Mobile against our own shell, before the runtime. Our shell stays (§ 5.1). Done 1 Oct. | S | #2044 |
 | [#2028](https://github.com/Budojo/budojo/issues/2028) | | Drive from the phone, shared with the desktop's OAuth client | M | #2027 |
 | [#2029](https://github.com/Budojo/budojo/issues/2029) | 1 · Sync | The protocol v2: versions, journal, documents, envelope, `SyncRemote` | M | #2028 |
 | [#2030](https://github.com/Budojo/budojo/issues/2030) | | Versions: export, fast-forward, retention (server) | M | #2029 |
@@ -309,7 +326,7 @@ Sizes: **S** is a day or less, **M** a few days, **L** a week or more. The **fir
 
 | Risk | Likelihood | Mitigation |
 |---|---|---|
-| **PHP does not run well on Android:** boot time, memory, APK size, battery | ~~Medium~~ **Settled** | #2044 measured it on the owner's phone (§ 5.1): sub-100 ms requests, a 26 MB APK. Battery and RAM are still to measure. **Keeping PHP-on-Android working** (three quirks so far) is the remaining cost, and #2051 weighs NativePHP taking it over. |
+| **PHP does not run well on Android:** boot time, memory, APK size, battery | ~~Medium~~ **Settled** | #2044 measured it on the owner's phone (§ 5.1): sub-100 ms requests, a 26 MB APK. Battery and RAM are still to measure. **Keeping PHP-on-Android working** (three quirks so far) is the remaining cost. #2051 weighed handing it to NativePHP and kept it, with in-process PHP as the way out (§ 5.1). |
 | **The rebase maps an id wrongly, or replays a change twice** | Medium | The Actions are idempotent, each rebase keeps a mapping table, and the harness (§ 8) and a `--deep` review cover it. Every version is kept, so a bad rebase can be undone by going back one version. |
 | **A long offline stretch piles up conflicts** | Low for one owner | Conflicts wait without blocking, the pill counts them, and the owner decides them on one screen. |
 | **`drive.file` does not carry between the two OAuth clients** | Medium | #2028 checks it before anything is built on it; the fallback is `appDataFolder`. |
@@ -359,3 +376,4 @@ Sizes: **S** is a day or less, **M** a few days, **L** a week or more. The **fir
     - the homecoming card;
     - the APK and its key (#2027);
     - the principle that no change is lost or overwritten silently.
+- **1 Oct 2026: our shell stays (#2051).** NativePHP for Mobile was weighed against it before the runtime (#2034) was built on it, and lost on cost (€0), on fit with the Angular SPA and the server, and on where its PHP binary comes from (§ 5.1). PHP called in-process from our shell is the way out, kept for a reason we do not have yet.
