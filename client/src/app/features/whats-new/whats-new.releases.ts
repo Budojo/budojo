@@ -60,6 +60,37 @@ export function localised(value: Localised, lang: string): string {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.75.0',
+    date: '2026-10-01',
+    headline: {
+      en: 'Your backups go to Google Drive too: connect your Google account from Data & backup, and every backup is copied to your Drive as well, off this computer.',
+      it: 'I backup vanno anche su Google Drive: collega il tuo account Google da Dati e backup, e ogni backup viene copiato anche nel tuo Drive, fuori da questo computer.',
+    },
+    sections: [
+      {
+        heading: { en: 'Data & backup', it: 'Dati e backup' },
+        bullets: [
+          {
+            en: 'Google Drive backup: in Data & backup, press "Connect Google Drive" and choose your Google account. Every backup is then also copied to the Budojo folder on your Drive, at each automatic backup and when you press "Copy now". If this computer breaks, or you change it, your backups are still there.',
+            it: 'Backup su Google Drive: in Dati e backup, premi «Collega Google Drive» e scegli il tuo account Google. Ogni backup va anche nella cartella Budojo del tuo Drive, a ogni backup automatico e quando premi «Copia adesso». Se questo computer si rompe, o lo cambi, i backup sono ancora lì.',
+          },
+          {
+            en: 'To restore a backup that is only on Drive, on a new computer for instance, download it and use "Restore from a file". Keep your recovery code at hand: without it, the athletes\' documents do not open.',
+            it: 'Per ripristinare un backup che è solo su Drive, per esempio su un computer nuovo, scaricalo e usa «Ripristina da un file». Tieni pronto il codice di recupero: senza, i documenti degli atleti non si aprono.',
+          },
+          {
+            en: 'Every 7 days Google asks to connect the account again. When it does, the card tells you ("Google revoked the connection") and shows "Reconnect Google Drive": one tap, and copying resumes. Meanwhile your backups keep being saved on this computer.',
+            it: "Ogni 7 giorni Google chiede di ricollegare l'account. Quando succede, la scheda te lo dice («Google ha revocato il collegamento») e ti mostra «Ricollega Google Drive»: un tocco, e la copia riprende. Intanto i backup continuano a essere salvati su questo computer.",
+          },
+          {
+            en: 'No more doubled backups: the first copy could upload the same backups twice, if it started while another was running. Copies now run one at a time, and the next one removes the doubles already there.',
+            it: 'Niente più backup doppi: la prima copia poteva caricare due volte gli stessi backup, se partiva mentre ne girava già una. Ora le copie vanno una alla volta, e la prossima toglie i doppioni già presenti.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.74.1',
     date: '2026-09-28',
     headline: {
