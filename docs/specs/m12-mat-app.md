@@ -182,7 +182,15 @@ Nothing waits for the sync, and its state is always on screen (§ 6.2).
 
 - **Google Drive, the owner's account, scope `drive.file`.** The PC reuses #1301's OAuth; the phone uses Android's authorization client with the "Budojo Android" OAuth client (#2028). **The project stays in Testing** (§ 2): every 7 days a device signs in to Google again, in one tap from the sync state, and meanwhile keeps working offline with its versions waiting.
 - **Every file is encrypted on the device:** AES-256-GCM with a random IV, and **the file's path as associated data**, so a file cannot be swapped for another and still decrypt. The key is the academy's sync key, which never leaves the devices except inside the pairing code.
-- **Where on Drive:** a visible folder, `Budojo/sync/`. If #2028 finds that `drive.file` does not carry between the two OAuth clients, the fallback is the hidden `appDataFolder` (`drive.appdata`).
+- **Where on Drive:** a visible folder, `Budojo/sync/`, inside the folder the PC already creates for its backups.
+- **`drive.file` carries between the two OAuth clients: settled by #2028, on the owner's phone, 1 Oct 2026.** Google's documentation does not say either way, and a web search said the opposite. The test:
+  - **Connecting the phone:** the PC connected first, with v2.74.1. Then the phone showed Google's consent screen, which named Budojo and only the files it uses, and connected.
+  - **What the phone saw:** the `Budojo` folder **the desktop client created**, and its 31 archives. It read the newest one's first bytes (a zip).
+  - **What the phone wrote:** a file into that folder, which it then read back.
+
+  **So per-file access belongs to the Cloud project, not to the client that created the file.** The fallback to `appDataFolder` is not needed. Two caveats for whoever builds on it:
+  - **The folder search** finds only folders the project created. The owner's Drive also held a `Budojo` folder made by Drive for desktop (the folder copy, #1320), invisible to the API. So the PC created a second `Budojo`, which Drive for desktop shows as `Budojo (1)`.
+  - **A probe that runs before the PC has connected** finds nothing. The phone's first run that day did exactly that, 30 seconds before the PC created the folder. The sync must tell "the PC has not connected yet" apart from "nothing is there".
 - **The transport is an interface,** `SyncRemote`: `DriveRemote` in production, and `FolderRemote` (a local directory) for the tests and the Linux dev environment, where two copies sync with no Google account.
 
 ### 5.4 Pairing, both ways
@@ -299,7 +307,7 @@ Sizes: **S** is a day or less, **M** a few days, **L** a week or more. The **fir
 | [#2027](https://github.com/Budojo/budojo/issues/2027) ✅ | 0 · Prove | The APK: the Capacitor shell, the release key, the CI build, storage that survives an update. Done 28 Sep. | M | — |
 | [#2044](https://github.com/Budojo/budojo/issues/2044) ✅ | | **Laravel on Android:** Budojo's API running offline on the phone with SQLite. Native PHP works (§ 5.1). Done 28 Sep. | M | #2027 |
 | [#2051](https://github.com/Budojo/budojo/issues/2051) ✅ | | NativePHP Mobile against our own shell, before the runtime. Our shell stays (§ 5.1). Done 1 Oct. | S | #2044 |
-| [#2028](https://github.com/Budojo/budojo/issues/2028) | | Drive from the phone, shared with the desktop's OAuth client | M | #2027 |
+| [#2028](https://github.com/Budojo/budojo/issues/2028) | | Drive from the phone, shared with the desktop's OAuth client. **It is shared** (§ 5.3), proven 1 Oct; the reboot and 7-day checks are still open. | M | #2027 |
 | [#2029](https://github.com/Budojo/budojo/issues/2029) | 1 · Sync | The protocol v2: versions, journal, documents, envelope, `SyncRemote` | M | #2028 |
 | [#2030](https://github.com/Budojo/budojo/issues/2030) | | Versions: export, fast-forward, retention (server) | M | #2029 |
 | [#2031](https://github.com/Budojo/budojo/issues/2031) | | The journal and the rebase, with conflicts (server). `--deep` review. | L | #2029 |
@@ -331,7 +339,7 @@ Sizes: **S** is a day or less, **M** a few days, **L** a week or more. The **fir
 | **PHP costs too much memory or battery** | Low, **not measured** | #2034 measures both on the owner's phone: the memory of the app and its PHP process, and the battery over an evening of lessons. |
 | **The rebase maps an id wrongly, or replays a change twice** | Medium | The Actions are idempotent, each rebase keeps a mapping table, and the harness (§ 8) and a `--deep` review cover it. Every version is kept, so a bad rebase can be undone by going back one version. |
 | **A long offline stretch piles up conflicts** | Low for one owner | Conflicts wait without blocking, the pill counts them, and the owner decides them on one screen. |
-| **`drive.file` does not carry between the two OAuth clients** | Medium | #2028 checks it before anything is built on it; the fallback is `appDataFolder`. |
+| **`drive.file` does not carry between the two OAuth clients** | ~~Medium~~ **Settled** | #2028 showed it does, on the owner's phone (§ 5.3): the phone read and wrote in the folder the PC's client created. |
 | **The weekly Google sign-in in Testing** | Certain (the owner's choice) | One tap from the sync pill, and work continues offline meanwhile. |
 | **Android developer verification** (global in 2027) | Certain | The free limited-distribution account (up to 20 devices), registered before enforcement reaches Italy. |
 | **A phone lost with changes not yet pushed** | Low | Push a few seconds after each change whenever online, and keep the unsent count always visible. |
