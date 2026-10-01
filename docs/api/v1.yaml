@@ -42,8 +42,9 @@ tags:
       browser push service are **capabilities**; where the profile lacks one,
       its routes answer **404** (never 403 — a surface the runtime does not
       have does not advertise itself). Capabilities: `community`,
-      `athlete_accounts`, `web_push`, `email`, `password_breach_check`.
-      The desktop profile has none; the web profile has all.
+      `athlete_accounts`, `web_push`, `email`, `password_breach_check`,
+      `sync`. The web profile has every one but `sync`; the desktop has
+      `sync` alone, the sync between the owner's own devices (#2030).
   - name: auth
     description: Registration, login, and Sanctum token issuance
   - name: academy
@@ -107,6 +108,12 @@ tags:
       identity card — avatar, first name, current belt, joined date,
       promotions timeline. Three privacy gates (unknown handle,
       opted-out target, cross-academy viewer) all collapse to 404.
+  - name: sync
+    description: |
+      The database side of the sync between the owner's own devices (M12,
+      #2030, `docs/sync/protocol.md`). The app packs, seals and publishes
+      versions itself; the server hands it the database and takes one back.
+      Owner-only, and a `sync` capability: 404 on the web profile.
   - name: engagement
     description: |
       Social-engagement endpoints introduced with the v2.30.0 train
@@ -7290,6 +7297,87 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ValidationErrorBody' }
 
+  /sync/export:
+    get:
+      operationId: syncExport
+      summary: A snapshot of the database, for a version
+      description: |
+        The database as one SQLite file (#2030), taken with `VACUUM INTO`, the
+        backups' method: a consistent copy while the app keeps writing. **The
+        body is the file, not the JSON envelope.** The app packs it into a
+        version with its manifest and journal, seals it, and publishes it
+        (`docs/sync/protocol.md` § A version).
+      tags: [sync]
+      responses:
+        '200':
+          description: The database file
+          headers:
+            X-Budojo-Schema:
+              schema: { type: string }
+              description: The newest migration the database has run, which the version's manifest records as its schema (PRD § 5.5).
+              example: 2026_09_28_120000_add_payment_method_to_athlete_payments
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+        '401': { description: Unauthenticated }
+        '403':
+          description: Forbidden — the user is not an owner.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorMessage' }
+        '404': { description: The runtime profile has no `sync` capability. }
+
+  /sync/stage:
+    put:
+      operationId: syncStage
+      summary: Stage another device's database, for the shell to swap in
+      description: |
+        Another device's database (#2030), for a fast-forward or after a
+        rebase. **Nothing is staged until the file passes every check**:
+        - a SQLite file;
+        - undamaged (`PRAGMA quick_check`);
+        - **Budojo's history:** it has run Budojo's own migrations, and only
+          migrations this code carries;
+        - **no newer than this code**, refused as a restore refuses a newer
+          archive (PRD § 5.5).
+
+        An older one is fine: the boot migrations bring it forward. It is
+        written beside the live database (`<database>.staged`), replacing one
+        never swapped in. **The shell swaps it in at its next start**, then
+        runs `budojo:sync-reconcile` (cache, files no row names), after the
+        replay when the sync is a rebase.
+      tags: [sync]
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema: { type: string, format: binary }
+      responses:
+        '204': { description: Staged }
+        '401': { description: Unauthenticated }
+        '403':
+          description: Forbidden — the user is not an owner.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorMessage' }
+        '404': { description: The runtime profile has no `sync` capability. }
+        '413':
+          description: The database is larger than PHP's `post_max_size`, which each shell sets above any academy's database.
+        '422':
+          description: |
+            Not staged. `code` is `newer` (update Budojo first) or `unreadable`
+            (not a SQLite file, damaged, or not a Budojo database), the same
+            two a restore uses.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [code, message]
+                properties:
+                  code: { type: string, enum: [newer, unreadable] }
+                  message: { type: string }
+              example: { code: newer, message: 'The database is from a newer Budojo (schema 2027_01_10_090000_add_x). Update Budojo first.' }
+
   /stats/payments/summary:
     get:
       operationId: statsPaymentsSummary
@@ -8644,7 +8732,7 @@ components:
           description: What this profile offers. Routes behind an absent capability answer 404.
           items:
             type: string
-            enum: [community, athlete_accounts, web_push, email, password_breach_check]
+            enum: [community, athlete_accounts, web_push, email, password_breach_check, sync]
           example: [community, athlete_accounts, web_push, email, password_breach_check]
 
     # ── Enums ─────────────────────────────────────────────────────────────

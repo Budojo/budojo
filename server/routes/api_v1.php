@@ -673,10 +673,22 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('/support', [\App\Http\Controllers\Support\SupportTicketController::class, 'store'])
         ->middleware(['capability:email', 'throttle:5,1']);
 
+    // The database side of the sync between the owner's devices (#2030, PRD
+    // § 5.2). The capability first: on the web profile the routes do not
+    // exist for anyone (404), owner or not. Then owner-only: staging
+    // replaces the whole academy at the shell's next start.
+    Route::prefix('sync')
+        ->middleware(['capability:sync', 'role:owner'])
+        ->group(function (): void {
+            Route::get('export', [\App\Http\Controllers\Sync\SyncController::class, 'export'])->name('sync.export');
+            Route::put('stage', [\App\Http\Controllers\Sync\SyncController::class, 'stage'])->name('sync.stage');
+        });
+
     // Owner-only search + stats (#774). The Cmd/Ctrl-K palette and the
     // /dashboard/stats charts both surface academy-wide PII (athlete
     // names + counts by belt + payment totals); athletes have no business
     // there, so the role gate is enforced server-side too.
+
     Route::middleware('role:owner')->group(function (): void {
         // Global search (#426) — backs the Cmd/Ctrl-K command palette in
         // the SPA. Single invokable controller; academy-scoped; capped at

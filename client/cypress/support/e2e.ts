@@ -29,9 +29,8 @@ beforeEach(() => {
     body: {
       data: {
         profile: 'web',
-        // `ALL_CAPABILITIES` from `runtime.service.ts`, which is also the
-        // app's optimistic web default — so this changes nothing a spec was
-        // relying on.
+        // `WEB_CAPABILITIES` from `runtime.service.ts`, the app's optimistic
+        // web default — so this changes nothing a spec was relying on.
         capabilities: [
           'community',
           'athlete_accounts',
