@@ -3626,7 +3626,7 @@
     "spike": {
       "eyebrow": "Technical preview",
       "title": "Budojo on the mat",
-      "lede": "This is the trial run of the phone app: no real data and no connection, for now.",
+      "lede": "This is the trial run of the phone app: no real data, for now.",
       "identityHeading": "How an athlete looks",
       "sampleNote": "A sample row, with the belt down the edge as on the PC.",
       "storageHeading": "Storage check",
@@ -3649,6 +3649,39 @@
         "mark": "Mark a presence, 10 times",
         "athletes": "Athletes in the database",
         "firstRequest": "First request (compiles the framework)"
+      },
+      "drive": {
+        "heading": "Google Drive",
+        "help": "First, on the PC: Data & backup → Google Drive backup → Connect Google Drive, then Copy now. Then here: connect, and run the test.",
+        "playServices": "Google Play services",
+        "link": "Connection",
+        "checking": "Checking…",
+        "linkedSilently": "Connected without asking ({{ms}} ms)",
+        "linkedConsent": "Connected, after Google's consent ({{ms}} ms)",
+        "needsConsent": "Not connected yet",
+        "linkFailed": "Could not connect",
+        "connect": "Connect Google Drive",
+        "run": "Test Drive",
+        "running": "Testing…",
+        "account": "Account",
+        "folder": "The PC's Budojo folder",
+        "folderFound": "Found",
+        "folderMissing": "Not found",
+        "folderMissingHelp": "The PC creates the folder on its first copy. If the PC has not copied yet: connect Google Drive there, press Copy now, then test again. If the PC already shows copies on Google Drive, this is the answer the test looks for: the phone cannot see the PC's files. Send a screenshot.",
+        "pcArchives": "The PC's backups",
+        "newestRead": "The newest, read from here",
+        "isZip": "It is a zip: read",
+        "notZip": "Not a zip",
+        "phoneFile": "The phone's test file",
+        "phoneFileState": {
+          "written": "Written now",
+          "still-there": "Still there",
+          "gone-and-rewritten": "It had gone: written again"
+        },
+        "readBack": "Read back",
+        "yes": "Yes",
+        "no": "No",
+        "nextOnPc": "Now on the PC: press Copy now, then Show all under the list, and look at the last row. Either a backup dated 1 January 2000 is there, or the PC has deleted it: both mean the PC saw the phone's file. Then test again here."
       }
     }
   }

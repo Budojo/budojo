@@ -9,6 +9,7 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         // Plugins that live in the app itself are registered before the bridge starts.
         registerPlugin(PhpServerPlugin.class);
+        registerPlugin(DriveAuthPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }
