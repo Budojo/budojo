@@ -66,7 +66,12 @@ The journal is a JSON list of the writes that made this version from its parent,
 - every entry a replay finds already true;
 - every entry a replay turns into a conflict.
 
-A replay skips any entry whose id is already recorded. That is what lets a device replay whenever it cannot tell whether its writes are in the latest version: nothing is applied twice, and a conflict the owner has answered is never raised again.
+**With each id, the database also records the ids that entry created there.** A replay skips any entry whose id is already recorded, and still takes its recorded ids into the id map. That is what lets a device replay whenever it cannot tell whether its writes are in the latest version:
+- nothing is applied twice;
+- a conflict the owner has answered is never raised again;
+- a later entry that names a row a skipped entry created still finds it.
+
+**A device's entry ids only grow.** The server gives a new entry an id above the newest that device has recorded, inside the write's transaction. A ULID taken from the clock alone can go backwards when the clock steps back, and `devices/` depends on this order (#2031).
 
 **The entries a device keeps speak its current database's ids.** A rebase gives the device's new rows new ids on the base: an athlete created as 57 can become 103. Its journal entries are rewritten through that same id map, the `created` ids and every parameter and `*_id` field. A second replay then starts from 103, not from a 57 the base never had.
 
@@ -101,7 +106,8 @@ A replay skips any entry whose id is already recorded. That is what lets a devic
 - **It is the only ground on which a write leaves a journal.** A device clears its entries up to the oldest of what every other device reports holding of them.
   - From then on every database holds them, so every version built from then on does too.
   - No clock is involved, so an upload that lands days late cannot beat it.
-  - With no other device reporting, a device clears the entries already in a version the folder lists. A device that pairs later starts from the latest version.
+  - **Every device has a file.** A new device writes its report (`base` null, `holds` empty) before its first pull, at pairing. A file that does not open or parse counts as holding nothing. So a device that exists is never mistaken for no device.
+  - **With no other device's file** in `devices/`, a device clears the entries already in a version the folder lists. A device that pairs later starts from the latest version.
 
 ## The pairing code
 

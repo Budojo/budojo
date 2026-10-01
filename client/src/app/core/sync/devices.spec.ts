@@ -3,6 +3,7 @@ import {
   DeviceReport,
   parseDeviceReport,
   serializeDeviceReport,
+  unreadableReport,
 } from './devices';
 
 /**
@@ -43,6 +44,16 @@ describe('confirmedThrough (#2029)', () => {
     ];
 
     expect(confirmedThrough(PC, reports)).toBeNull();
+  });
+
+  it('is nothing while a newly paired device has written its first, empty report', () => {
+    const reports = [report(PC, {}), { ...report(PHONE, {}), base: null }];
+
+    expect(confirmedThrough(PC, reports)).toBeNull();
+  });
+
+  it('is nothing while another device’s report cannot be read', () => {
+    expect(confirmedThrough(PC, [report(PC, {}), unreadableReport(PHONE)])).toBeNull();
   });
 
   it('is everything when no other device reports: nobody to race, and a new one starts from the latest', () => {

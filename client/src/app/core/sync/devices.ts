@@ -68,11 +68,23 @@ export function parseDeviceReport(value: unknown): Parsed<DeviceReport> {
 }
 
 /**
+ * The report of a device whose file is in the folder but does not open or
+ * parse: it counts as holding nothing, so it never lets anyone clear a write.
+ */
+export function unreadableReport(device: string): DeviceReport {
+  return { device, base: null, holds: {}, at: '1970-01-01T00:00:00Z' };
+}
+
+/**
  * Up to which of its own entries `self` may clear: the newest entry that every
  * other device's report says it holds. Its entries up to that one, inclusive,
  * may leave the journal.
  *
- * - `everything` when no other device reports at all: there is nobody to race,
+ * `reports` is one per file in `devices/`, an unreadable one included as
+ * `unreadableReport`. Pairing writes the new device's report before its first
+ * pull (PRD § 5.4), so a device that exists always has a file.
+ *
+ * - `everything` when no other device has a file: there is nobody to race,
  *   and a device that pairs later starts from the latest version.
  * - `null` when some other device holds none of them yet: nothing may go.
  */

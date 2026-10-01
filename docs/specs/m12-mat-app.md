@@ -211,7 +211,8 @@ The device that has the academy shows a **pairing code**: a QR, plus the same co
 **The new device:**
 1. reads the code;
 2. signs in to Google with the same account;
-3. opens `keys.bjs`, then pulls the latest version.
+3. writes its own `devices/` report, empty, so no other device clears a write it does not hold yet (#2029);
+4. opens `keys.bjs`, then pulls the latest version.
 
 **Either side can start it:** the PC can add the phone (the owner's case today), and a phone-only academy can later add a PC.
 
