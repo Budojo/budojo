@@ -9,7 +9,8 @@ How two devices of one academy share their data through the owner's Google Drive
 **Protocol 2 is for an academy's two devices: the PC and the phone** (M12, PRD § 2). Six rounds of review (#2061) found no input that loses a write between two devices. That holds as long as:
 - the rules below are kept;
 - the engines treat a push whose answer was lost as unconfirmed;
-- Drive's listing lags by less than the 10 minutes a device waits for its own push.
+- Drive's listing lags by less than the 10 minutes a device waits for its own push;
+- **a database changes only through its own writes, a fast-forward or a rebase.** A device's report says what its database holds, and a database put back in time breaks that silently. The desktop's Restore (Data & backup) on a paired PC does exactly that, so #2032 refuses it there, or treats the result as an academy of its own, which asks the owner.
 
 **A third device**, the tablet at the door (PRD § 11), is not covered. It can adopt the version that will lose a same-number race before it sees the winner. Then:
 - its kept entries can name another device's rows by numbers that mean someone else on the winning line;
@@ -106,7 +107,9 @@ The journal is a JSON list of the writes that made this version from its parent,
 
 - **The key fields** have the desktop keychain's shape and checks (`desktop/src/bootstrap.ts`), the same pair the recovery code (#1254) carries.
 - **`folder`** is random, made once by the device that creates the sync folder. A device keeps the one it joined at pairing.
-- **Before it syncs, a device checks that the folder it reaches says the same.** It asks the owner when the folder names another one, or has no `keys.bjs` at all. That is another account's folder for the same academy, after a sign-in to the wrong Google account, or a folder someone emptied.
+- **Before it syncs, a device checks that the folder it reaches says the same.**
+  - **Another folder id, or no `keys.bjs`:** it asks the owner. That is another account's folder for the same academy, after a sign-in to the wrong Google account, or a folder someone emptied.
+  - **A `keys.bjs` that does not open under this device's key:** the device was unpaired, and the key rotated. It stops and writes nothing, so its deleted report stays deleted.
 
 ## `devices/<id>.bjs`
 
@@ -151,7 +154,7 @@ protocol (1 byte) | sync key (32 bytes) | first 2 bytes of SHA-256 over the firs
 
 **While it keeps any, it never fast-forwards:** it rebases, and the idempotent replay finds what is already there.
 
-**A push whose answer was lost is unconfirmed, never unpushed.** The upload may have landed, so the device treats its writes as pushed in that version: it waits for the version to appear, then rebases if it does not.
+**A push whose answer was lost is unconfirmed, never unpushed.** The upload may have landed, so the device treats its writes as pushed in that version. It waits for the version to appear, then rebases if it does not. **The 10 minutes count from the first listing after the failure,** not from the decision, so a long upload does not eat into the wait.
 
 | Situation | Do |
 |---|---|

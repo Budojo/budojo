@@ -31,7 +31,7 @@ Asked in four rounds, answered by the owner. They are requirements, not proposal
 |---|---|---|
 | Who uses the phone app? | **The owner only.** Friends like Fede get their own academy (§ 12). | One Google account, no roles on the phone. |
 | Can the phone work without the PC? | **Yes, for both cases:** the owner without their PC, and instructors with no PC | The phone is a **full Budojo**, not a satellite: it can create an academy, and every screen works on it. The PC becomes optional. |
-| Which devices? | **PC + phone** | Two copies. The design allows more; M12 tests two. |
+| Which devices? | **PC + phone** | Two copies. The sync protocol is built and proven for two (#2029, `docs/sync/protocol.md` § Scope); a third device needs it to grow first (§ 11). |
 | Signal at the gym? | **Poor or patchy** | Offline is the normal case at the gym. The two copies *will* diverge sometimes, so reconciling them is core, not an edge case. |
 | PC and phone on the same day? | **Same day, different times** | Divergence happens when the phone works offline after the PC changed something that afternoon. |
 | Two changes to the same thing? | **Always ask me** | No silent last-writer-wins. A conflict stops and asks, on whichever device finds it. |
@@ -216,7 +216,7 @@ The device that has the academy shows a **pairing code**: a QR, plus the same co
 
 **Either side can start it:** the PC can add the phone (the owner's case today), and a phone-only academy can later add a PC.
 
-**Unpairing a lost phone:** the other device rotates the sync key, seals `keys.bjs` again and publishes under the new key, so the lost phone can read nothing new and its pushes stop being accepted. The app keys cannot rotate without re-encrypting the documents; the fingerprint lock (§ 6.1) is what protects the lost phone's local copy.
+**Unpairing a lost phone:** the other device rotates the sync key, seals `keys.bjs` again, deletes the phone's `devices/` report, and publishes under the new key. The lost phone can read nothing new, and its pushes stop being accepted. Its report would otherwise count as holding nothing, and no journal could ever be cleared again. The app keys cannot rotate without re-encrypting the documents; the fingerprint lock (§ 6.1) is what protects the lost phone's local copy.
 
 ### 5.5 Versions of the app
 
