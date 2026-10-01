@@ -44,6 +44,7 @@ Asked in four rounds, answered by the owner. They are requirements, not proposal
 | Backup for a phone-only user? | **Strongly recommended** | They can start without Drive, and Budojo keeps reminding them until it is connected. |
 | Other instructors? | **Free, to a few friends** | Google's free *limited distribution* developer account (up to 20 devices); their Gmail is added by hand as a Google test user. |
 | Anything public? | **Nothing online**, the same day | The Google project stays in Testing, so each device signs in again every 7 days. No website, no hosted pages. |
+| Anything to pay for? | **Nothing**, as with the desktop («è fattibile senza pagare roba online come era prima?») | **€0:** no paid service, licence or plugin. What a free one does not cover, we write ourselves. |
 
 ## 3. Goals
 
@@ -376,4 +377,4 @@ Sizes: **S** is a day or less, **M** a few days, **L** a week or more. The **fir
     - the homecoming card;
     - the APK and its key (#2027);
     - the principle that no change is lost or overwritten silently.
-- **1 Oct 2026: our shell stays (#2051).** NativePHP for Mobile was weighed against it before the runtime (#2034) was built on it, and lost on cost (€0), on fit with the Angular SPA and the server, and on where its PHP binary comes from (§ 5.1). PHP called in-process from our shell is the way out, kept for a reason we do not have yet.
+- **1 Oct 2026: our shell stays (#2051).** NativePHP for Mobile was weighed against it before the runtime (#2034) was built on it, and lost on cost (€0, § 2), on fit with the Angular SPA and the server, and on where its PHP binary comes from (§ 5.1). PHP called in-process from our shell is the way out, kept for a reason we do not have yet.
