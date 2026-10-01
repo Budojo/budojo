@@ -107,6 +107,38 @@ describe('sync', () => {
     expect(order).toContain('delete');
   });
 
+  // #2059: the launch-time backup task and «Copia adesso» both ran sync(), both
+  // listed an empty folder, and both uploaded every archive.
+  it('joins a sync already running instead of starting a second one', async () => {
+    let release: () => void = () => undefined;
+    const uploading = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const { io } = fakeIO({
+      localArchives: vi.fn(async () => [archive('budojo-backup-20260816-120000.zip')]),
+      upload: vi.fn(() => uploading),
+    });
+    const service = new DriveSyncService(io);
+
+    const first = service.sync();
+    const second = service.sync();
+    release();
+
+    expect(await second).toEqual(await first);
+    expect(io.upload).toHaveBeenCalledTimes(1);
+    expect(io.listRemote).toHaveBeenCalledTimes(1);
+  });
+
+  it('runs again once the previous sync has finished', async () => {
+    const { io } = fakeIO();
+    const service = new DriveSyncService(io);
+
+    await service.sync();
+    await service.sync();
+
+    expect(io.listRemote).toHaveBeenCalledTimes(2);
+  });
+
   it('records a success even when there was nothing to upload', async () => {
     const { io, state } = fakeIO();
 

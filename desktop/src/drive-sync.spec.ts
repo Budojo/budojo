@@ -120,6 +120,21 @@ describe('planSync — duplicates and post-upload retention', () => {
     expect(plan.toDelete).toEqual(['truncated']);
   });
 
+  // #2059: two syncs that overlapped both uploaded every archive, so the owner's
+  // account held 14 names twice, every copy the right size. Keeping both made
+  // the doubling permanent until retention aged the name out.
+  it('keeps one of two right-sized copies and deletes the other', () => {
+    const name = 'budojo-backup-20260816-120000.zip';
+    const plan = planSync(
+      [local(name, 5_000)],
+      [remote(name, 'first', 5_000), remote(name, 'second', 5_000)],
+      REMOTE_RETENTION,
+    );
+
+    expect(plan.toUpload).toEqual([]);
+    expect(plan.toDelete).toEqual(['second']);
+  });
+
   it('re-uploads only when NO remote copy matches the local size', () => {
     const name = 'budojo-backup-20260816-120000.zip';
     const plan = planSync([local(name, 5_000)], [remote(name, 'a', 12), remote(name, 'b', 99)], REMOTE_RETENTION);

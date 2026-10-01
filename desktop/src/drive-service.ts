@@ -58,6 +58,9 @@ function errorCode(error: unknown): string {
 }
 
 export class DriveSyncService {
+  /** The sync in progress, if any. Two at once both upload everything (#2059). */
+  private running: Promise<SyncResult> | null = null;
+
   constructor(private readonly io: DriveSyncIO) {}
 
   async state(): Promise<DriveState> {
@@ -130,8 +133,22 @@ export class DriveSyncService {
   /**
    * Never throws. The caller is a 6-hourly timer in the main process, and an
    * unhandled rejection there is a worse outcome than a stale cloud copy.
+   *
+   * **One at a time (#2059).** The timer's first tick lands a minute after
+   * launch, which is exactly when a new user connects Drive and presses «Copia
+   * adesso». Two syncs both list the folder before either uploads, and both
+   * upload every archive. A call that arrives while one runs gets that one's
+   * result instead.
    */
-  async sync(): Promise<SyncResult> {
+  sync(): Promise<SyncResult> {
+    this.running ??= this.runSync().finally(() => {
+      this.running = null;
+    });
+
+    return this.running;
+  }
+
+  private async runSync(): Promise<SyncResult> {
     // EVERYTHING is inside the try, including the state read and the failure
     // write. Both touch the disk, and an ENOSPC or EPERM on drive-sync.json
     // would otherwise escape: the 6-hourly caller is guarded, but the IPC

@@ -88,12 +88,14 @@ export function planSync(
 
     // A copy of the right size already exists: nothing to upload. Any OTHER
     // copy of that name is a truncated or interrupted upload — a backup that is
-    // the wrong size is not a backup — so it goes.
+    // the wrong size is not a backup — so it goes. So does a second right-sized
+    // copy: one is the backup, the rest only double the account (#2059).
     if (good.length > 0) {
-      for (const stale of copies.filter((file) => file.size !== entry.sizeBytes)) {
-        toDelete.push(stale.id);
+      const kept = good.slice(0, 1);
+      for (const extra of [...good.slice(1), ...copies.filter((file) => file.size !== entry.sizeBytes)]) {
+        toDelete.push(extra.id);
       }
-      byName.set(entry.name, good);
+      byName.set(entry.name, kept);
       continue;
     }
 
