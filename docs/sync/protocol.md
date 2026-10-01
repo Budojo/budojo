@@ -60,7 +60,15 @@ A reader checks every field it knows and ignores any it does not, so a later app
 
 The journal is a JSON list of the writes that made this version from its parent, **in ULID order**. It records API writes, not rows: the rebase replays them through the same Actions (PRD § 5.2).
 
-**The replay is idempotent, by entry id (#2031).** Every database records the ids of the journal entries it holds: the device's own writes as it makes them, and every entry a replay applies. A replay skips any entry whose id is already recorded. That is what lets a device replay whenever it cannot tell whether its writes are in the latest version: nothing is ever applied twice.
+**The replay is idempotent, by entry id (#2031).** Every database records the id of every journal entry it has dealt with, **in the same transaction as the write or the outcome it stands for:**
+- the device's own writes, as it makes them;
+- every entry a replay applies;
+- every entry a replay finds already true;
+- every entry a replay turns into a conflict.
+
+A replay skips any entry whose id is already recorded. That is what lets a device replay whenever it cannot tell whether its writes are in the latest version: nothing is applied twice, and a conflict the owner has answered is never raised again.
+
+**The entries a device keeps speak its current database's ids.** A rebase gives the device's new rows new ids on the base: an athlete created as 57 can become 103. Its journal entries are rewritten through that same id map, the `created` ids and every parameter and `*_id` field. A second replay then starts from 103, not from a 57 the base never had.
 
 | Field | | Example |
 |---|---|---|
@@ -79,7 +87,21 @@ The journal is a JSON list of the writes that made this version from its parent,
 `{ "v": 1, "folder": "<32 hex>", "APP_KEY": "base64:…", "DOCUMENT_ENCRYPTION_KEY": "…" }`.
 
 - **The key fields** have the desktop keychain's shape and checks (`desktop/src/bootstrap.ts`), the same pair the recovery code (#1254) carries.
-- **`folder`** is random, made once by the device that creates the sync folder. A device keeps the one it joined at pairing. **Before it syncs, it checks that the folder it reaches says the same,** and asks the owner if it does not: that is another account's folder for the same academy, after a sign-in to the wrong Google account.
+- **`folder`** is random, made once by the device that creates the sync folder. A device keeps the one it joined at pairing.
+- **Before it syncs, a device checks that the folder it reaches says the same.** It asks the owner when the folder names another one, or has no `keys.bjs` at all. That is another account's folder for the same academy, after a sign-in to the wrong Google account, or a folder someone emptied.
+
+## `devices/<id>.bjs`
+
+`{ "v": 1, "device": "pc4f2a", "base": { "seq": 44, "device": "pc4f2a" }, "holds": { "pc4f2a": "<ULID>", "phone9c1e": "<ULID>" }, "at": "<UTC>" }`. Each device writes its own file after every sync.
+
+**`holds`** is, for each device, the newest of that device's journal entries this device's database holds.
+- **Why one value per device is enough:**
+  - a device's entry ids are ULIDs that only grow;
+  - a database always holds a prefix of each device's entries, because they reach it in order (its own writes, a fast-forward, a replay).
+- **It is the only ground on which a write leaves a journal.** A device clears its entries up to the oldest of what every other device reports holding of them.
+  - From then on every database holds them, so every version built from then on does too.
+  - No clock is involved, so an upload that lands days late cannot beat it.
+  - With no other device reporting, a device clears the entries already in a version the folder lists. A device that pairs later starts from the latest version.
 
 ## The pairing code
 
@@ -96,23 +118,20 @@ protocol (1 byte) | sync key (32 bytes) | first 2 bytes of SHA-256 over the firs
 
 **The rule: a device never drops a write of its own silently.**
 
-**The latest version** is the highest number. Between two of the same number, it is the one Drive created first.
+**The latest version** is the highest number. Between two of the same number, it is the one Drive created first, on Drive's clock. Every listing gives Drive's clock, from the `Date` header.
 
 **What a device keeps:** its journal holds its own writes:
 - **unpushed:** in no version yet;
-- **unconfirmed:** in a version it pushed, but not yet found in a settled latest version.
+- **pushed, unconfirmed:** in a version it pushed, but not yet held by every other device (`devices/`).
 
-It clears a write only when the write is in the latest version **and that version has settled**: Drive created it at least **10 minutes** before, on Drive's clock (the listing's time, from the `Date` header).
-- **Why 10 minutes:** Drive's listing can lag behind a new file by seconds. A twin that could take the version's number was created before it, so after ten minutes it is listed, and nothing will take the version's place.
-- **Why keeping a write longer costs nothing:** the replay skips writes already in the database.
-
-**Every listing** gives the files and Drive's clock. A device never uses its own clock to settle anything, and an unknown clock settles nothing.
+**While it keeps any, it never fast-forwards:** it rebases, and the idempotent replay finds what is already there.
 
 | Situation | Do |
 |---|---|
-| The folder's `keys.bjs` names another folder than the one this device joined | **ask the owner** (checked before deciding) |
-| Its own unconfirmed push is not in the listing, within 10 minutes of landing | **wait**: the listing lags; look again |
-| … still not listed after 10 minutes | rebase onto the latest, or push again if the folder is empty |
+| The folder's `keys.bjs` names another folder, or is missing | **ask the owner** (checked before deciding) |
+| Its own latest push is not listed, and the folder has also lost the version it was made on | **ask the owner** |
+| … not listed, within 10 minutes of landing | **wait**: the listing lags; look again |
+| … still not listed after that | rebase onto the latest, or push again if the folder is empty |
 | No base, empty folder | nothing, or push version 1 if the device holds an academy |
 | No base, the folder has versions | fast-forward; **ask the owner** if the device holds an academy of its own |
 | The folder is empty | push base + 1 on top of the base: nothing there to lose |
@@ -120,5 +139,3 @@ It clears a write only when the write is in the latest version **and that versio
 | The latest is the base | nothing, or push base + 1 if there are unpushed writes |
 | The latest is newer, and the device has writes to carry (unpushed or unconfirmed) | **rebase**: pull it and replay into it every write it lacks, then push if any were |
 | The latest is newer, nothing to carry | fast-forward |
-
-**A device holding writes of its own never fast-forwards.** At worst it rebases and finds nothing to replay.

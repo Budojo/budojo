@@ -157,7 +157,7 @@ The owner described git, and the design is git.
 - **A version is written once, under a new name.** Two devices never write the same file, so Drive never has to pick a winner.
 - **A device pushes only on top of the latest version it can see.** If there is a newer one, it rebases first, so no push can erase the other side's work.
 - **A version's name carries its parent,** so the history can be read from the folder's listing alone. When two devices push at once, the version Drive created first keeps the number.
-- **A device keeps each write until the write is in a settled latest version,** however long the device is away.
+- **A device keeps each write until every other device reports holding it** (`devices/`), however long it is away. Until then it never fast-forwards.
 - **The replay is idempotent by entry id:** every database records the journal entries it holds. So a device that cannot tell whether its writes are there replays them, and nothing is applied twice (#2029, #2031, `docs/sync/protocol.md`).
 - **The journal records API writes, not rows**: the route, its parameters and the body, plus the ids the write created. For an update, it also records the values it saw before.
 - **Replaying it runs the same Actions** with the same validation (#2031):

@@ -6,13 +6,12 @@ import { RemoteFile } from './remote';
  *
  * **The rule it serves: a device never drops a write of its own silently.**
  * Two facts make that cheap to keep:
- * - **A replay is idempotent.** Every database records the ids of the journal
- *   entries it holds, and the replay skips the ones already there (#2031). So
- *   when a device cannot tell whether its writes are in the latest version, it
- *   replays them, and nothing is duplicated.
- * - **A device keeps its writes until they are in a settled version.** After
- *   pulling, it finds its entries in the database it pulled; it clears them only
- *   when that version has settled (`settled`).
+ * - **A replay is idempotent.** Every database records the id of every journal
+ *   entry it has dealt with, and a replay skips those (#2031). So when a device
+ *   cannot tell whether its writes are in the latest version, it replays them,
+ *   and nothing is applied twice.
+ * - **A device keeps its writes until every other device holds them**
+ *   (`devices.ts`). Until then it never fast-forwards.
  *
  * So there is no need to trace the history: the choice is only whether there is
  * anything to pull, and whether this device has writes the pull must carry.
@@ -25,11 +24,11 @@ export interface SeenVersion extends ListedVersion {
 }
 
 /**
- * How long a version takes to settle. Drive's listing can lag behind a new file
- * by seconds, so for a moment a twin created just before a version, or the
- * version itself, can be missing from a listing. Ten minutes is far beyond that.
+ * How long a device waits for its own push to appear in the folder's listing,
+ * which can lag behind a new file by seconds. Only liveness rides on it: after
+ * it, the device rebases, which is safe either way.
  */
-export const SETTLE_MS = 10 * 60_000;
+export const LISTING_LAG_MS = 10 * 60_000;
 
 export interface LocalState {
   /** The version the local database came from or was published as. Null if it never synced. */
@@ -37,11 +36,11 @@ export interface LocalState {
   /** The journal holds writes made since `base`, in no version yet. */
   unpushed: boolean;
   /**
-   * This device's latest push whose writes it has not yet found in a settled
-   * version, and when the push landed, on Drive's clock. Null when the journal
-   * holds nothing pushed.
+   * This device's latest push while its journal still holds pushed writes (not
+   * yet held by every other device): the version, the one it was pushed on, and
+   * when it landed, on Drive's clock. Null when the journal holds nothing pushed.
    */
-  unconfirmed: { version: VersionRef; pushedAt: number } | null;
+  unconfirmed: { version: VersionRef; parent: VersionRef | null; pushedAt: number } | null;
 }
 
 export type Decision =
@@ -85,15 +84,6 @@ export function latestVersion<T extends SeenVersion>(versions: readonly T[]): T 
   return latest;
 }
 
-/**
- * Whether a version has settled: Drive created it at least `SETTLE_MS` before
- * `now`, Drive's clock as the listing reports it. Writes found in a settled
- * latest version can leave the journal: nothing will take its place.
- */
-export function settled(version: SeenVersion, now: number): boolean {
-  return now - version.created >= SETTLE_MS;
-}
-
 export function decide(local: LocalState, versions: readonly SeenVersion[], now: number): Decision {
   const latest = latestVersion(versions);
   const { base, unpushed, unconfirmed } = local;
@@ -104,12 +94,19 @@ export function decide(local: LocalState, versions: readonly SeenVersion[], now:
     unconfirmed !== null &&
     !versions.some((version) => sameVersion(version, unconfirmed.version))
   ) {
-    // Its own push is not in the listing. Within the settle time that is the
-    // listing's lag: look again. After it, the push is gone (deleted, or never
-    // stored), and its writes are carried by a rebase onto what is there.
-    if (now - unconfirmed.pushedAt < SETTLE_MS) {
+    // Its own push is not in the listing.
+    const { parent } = unconfirmed;
+    if (head !== null && parent !== null && head.seq < parent.seq) {
+      // The folder has lost the version the push was made on too: more than
+      // this push is gone, and the owner chooses, as for any folder behind.
+      return { kind: 'ask', latest: head };
+    }
+    if (now - unconfirmed.pushedAt < LISTING_LAG_MS) {
+      // Within the lag, that is the listing being slow: look again.
       return { kind: 'wait' };
     }
+    // After it, the push is gone. A rebase carries its writes onto what is
+    // there; an empty folder has nothing to lose, so publish again.
     return head === null
       ? { kind: 'push', seq: unconfirmed.version.seq + 1, parent: base }
       : { kind: 'rebase', onto: head };

@@ -2,10 +2,9 @@ import {
   decide,
   Decision,
   latestVersion,
+  LISTING_LAG_MS,
   LocalState,
   SeenVersion,
-  settled,
-  SETTLE_MS,
   versionsIn,
 } from './decide';
 import { VersionRef } from './layout';
@@ -13,10 +12,10 @@ import { VersionRef } from './layout';
 /**
  * Every row of the decision table (#2029, PRD § 5.2), each named as the owner
  * would meet it. The races, the lagging listings and the pruned folders come
- * from the three reviews of #2061: each was a way a write could have been
- * dropped without anyone knowing. The replay is idempotent by entry id (#2031),
- * so a rebase that finds nothing to carry costs nothing; what must never happen
- * is a fast-forward over writes the latest version lacks.
+ * from the reviews of #2061: each was a way a write could have been dropped
+ * without anyone knowing. The replay is idempotent by entry id (#2031), so a
+ * rebase that finds nothing to carry costs nothing; what must never happen is a
+ * fast-forward over writes the latest version lacks.
  */
 const PC = 'pc4f2a';
 const PHONE = 'phone9c1e';
@@ -38,10 +37,12 @@ const local = (
   unconfirmed: null,
   ...flags,
 });
-const pushed = (version: VersionRef, pushedAt = 1_000): LocalState['unconfirmed'] => ({
-  version,
-  pushedAt,
-});
+/** Its own push of `version`, made on the version before it unless told otherwise. */
+const pushed = (
+  version: VersionRef,
+  pushedAt = 1_000,
+  parent: VersionRef | null = ref(version.seq - 1),
+): LocalState['unconfirmed'] => ({ version, parent, pushedAt });
 
 const rows: {
   name: string;
@@ -148,14 +149,28 @@ const rows: {
     expected: { kind: 'wait' },
   },
   {
-    name: 'its push is still not listed after the settle time: carry its writes onto what is there',
-    local: local(ref(44), { unconfirmed: pushed(ref(44), NOW - SETTLE_MS) }),
+    name: 'its push is still not listed after the lag: carry its writes onto what is there',
+    local: local(ref(44), { unconfirmed: pushed(ref(44), NOW - LISTING_LAG_MS) }),
     folder: [v(42), v(43)],
     now: NOW,
     expected: { kind: 'rebase', onto: ref(43) },
   },
   {
-    name: 'back after weeks, all its writes long confirmed: a fast-forward, nobody is asked',
+    name: 'its push is gone, and so is the version it was made on: the owner chooses, nothing is rebased away',
+    local: local(ref(44), { unconfirmed: pushed(ref(44), NOW - LISTING_LAG_MS) }),
+    folder: [v(42)],
+    now: NOW,
+    expected: { kind: 'ask', latest: ref(42) },
+  },
+  {
+    name: 'its push is not listed and the folder looks empty: wait out the lag before publishing again',
+    local: local(ref(1), { unconfirmed: pushed(ref(1), NOW - 5_000, null) }),
+    folder: [],
+    now: NOW,
+    expected: { kind: 'wait' },
+  },
+  {
+    name: 'back after weeks, all its writes held by every device: a fast-forward, nobody is asked',
     local: local(ref(30)),
     folder: [v(44), v(45)],
     expected: { kind: 'fast-forward', to: ref(45) },
@@ -194,17 +209,6 @@ describe('decide (#2029)', () => {
         expect(decide(local(ref(44), flags), folder, NOW).kind).not.toBe('fast-forward');
       }
     }
-  });
-});
-
-describe('settled', () => {
-  it('is a version Drive created ten minutes ago or more, on Drive’s clock', () => {
-    expect(settled(v(44, PC, ref(43), 1_000), 1_000 + SETTLE_MS)).toBe(true);
-    expect(settled(v(44, PC, ref(43), 1_000), 1_000 + SETTLE_MS - 1)).toBe(false);
-  });
-
-  it('never settles anything when Drive’s clock is unknown', () => {
-    expect(settled(v(44, PC, ref(43), 1_000), Number.NaN)).toBe(false);
   });
 });
 

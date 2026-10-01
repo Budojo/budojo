@@ -22,9 +22,9 @@ export interface RemoteFile {
 export interface Listing {
   files: RemoteFile[];
   /**
-   * The store's time at the listing, in milliseconds: Drive's `Date` header.
-   * `decide` compares it with creation times on the same clock, so a device
-   * whose own clock is wrong cannot settle a version early.
+   * The store's time at the listing, in milliseconds: Drive's `Date` header,
+   * NaN when it gave none. Creation times are on the same clock, so a device
+   * whose own clock is wrong cannot misjudge how long ago its push landed.
    */
   now: number;
 }
