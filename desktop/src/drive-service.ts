@@ -58,6 +58,23 @@ function errorCode(error: unknown): string {
 }
 
 export class DriveSyncService {
+  /** The sync in progress, if any. Two at once both upload everything (#2059). */
+  private running: Promise<SyncResult> | null = null;
+
+  /**
+   * Bumped by every link and unlink. A sync started under an older link is
+   * stale: a later call must not join it, and its result must not be written
+   * over the new link's state.
+   */
+  private generation = 0;
+
+  /**
+   * State writes, one after another. Each runs its generation check when its
+   * turn comes, and a relink bumps the generation in the same turn as its own
+   * write, so a stale result either lands before the relink or not at all.
+   */
+  private writes: Promise<void> = Promise.resolve();
+
   constructor(private readonly io: DriveSyncIO) {}
 
   async state(): Promise<DriveState> {
@@ -95,11 +112,14 @@ export class DriveSyncService {
       // Written only once everything resolved: a half-written link would show a
       // connected UI that cannot actually upload.
       await this.io.writeTokens(tokens);
-      await this.io.writeState({
-        ...unlinkedState(),
-        linked: true,
-        account,
-        folderId,
+      await this.serially(async () => {
+        await this.io.writeState({
+          ...unlinkedState(),
+          linked: true,
+          account,
+          folderId,
+        });
+        this.forgetRunningSync();
       });
 
       this.io.log(`link: connected ${account ?? 'unknown account'}`);
@@ -123,15 +143,51 @@ export class DriveSyncService {
     }
 
     await this.io.clearTokens();
-    await this.io.writeState(unlinkedState());
+    await this.serially(async () => {
+      await this.io.writeState(unlinkedState());
+      this.forgetRunningSync();
+    });
     this.io.log('unlink: disconnected');
   }
 
   /**
    * Never throws. The caller is a 6-hourly timer in the main process, and an
    * unhandled rejection there is a worse outcome than a stale cloud copy.
+   *
+   * **One at a time (#2059).** The timer's first tick lands a minute after
+   * launch, which is exactly when a new user connects Drive and presses «Copia
+   * adesso». Two syncs both list the folder before either uploads, and both
+   * upload every archive. A call that arrives while one runs gets that one's
+   * result instead.
    */
-  async sync(): Promise<SyncResult> {
+  sync(): Promise<SyncResult> {
+    if (this.running === null) {
+      const run = this.runSync(this.generation).finally(() => {
+        // A relink may already have replaced it: clear only this run.
+        if (this.running === run) {
+          this.running = null;
+        }
+      });
+      this.running = run;
+    }
+
+    return this.running;
+  }
+
+  /** Runs `work` after every state write queued before it. A failure does not stop the queue. */
+  private serially(work: () => Promise<void>): Promise<void> {
+    const turn = this.writes.then(work);
+    this.writes = turn.catch(() => undefined);
+    return turn;
+  }
+
+  /** The link changed: the next sync starts fresh, and the running one is stale. */
+  private forgetRunningSync(): void {
+    this.generation++;
+    this.running = null;
+  }
+
+  private async runSync(generation: number): Promise<SyncResult> {
     // EVERYTHING is inside the try, including the state read and the failure
     // write. Both touch the disk, and an ENOSPC or EPERM on drive-sync.json
     // would otherwise escape: the 6-hourly caller is guarded, but the IPC
@@ -168,7 +224,14 @@ export class DriveSyncService {
         this.io.log(`sync: pruned remote ${fileId}`);
       }
 
-      await this.io.writeState(recordSuccess(state, { at: this.io.now(), uploaded: plan.toUpload.length }));
+      const succeeded = state;
+      await this.serially(async () => {
+        if (generation !== this.generation) {
+          this.io.log('sync: the link changed while it ran, result not recorded');
+          return;
+        }
+        await this.io.writeState(recordSuccess(succeeded, { at: this.io.now(), uploaded: plan.toUpload.length }));
+      });
 
       return { ran: true, uploaded: plan.toUpload.length, deleted: plan.toDelete.length };
     } catch (error) {
@@ -178,9 +241,12 @@ export class DriveSyncService {
       // against, and a second disk error here must not become the thing that
       // throws.
       if (state !== null) {
-        await this.io
-          .writeState(recordFailure(state, { at: this.io.now(), error: code }))
-          .catch(() => undefined);
+        const failed = state;
+        await this.serially(async () => {
+          if (generation === this.generation) {
+            await this.io.writeState(recordFailure(failed, { at: this.io.now(), error: code }));
+          }
+        }).catch(() => undefined);
       }
 
       this.io.log(`sync: failed (${code})`);
