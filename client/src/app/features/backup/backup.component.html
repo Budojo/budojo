@@ -190,14 +190,24 @@
           </p>
         }
         <div class="backup-page__drive-actions">
-          <p-button
-            [label]="'backup.drive.syncNow' | translate"
-            icon="pi pi-cloud-upload"
-            severity="secondary"
-            [loading]="syncing()"
-            (onClick)="syncDriveNow()"
-            data-cy="drive-sync-now"
-          />
+          @if (driveNeedsReconnect()) {
+            <p-button
+              [label]="'backup.drive.reconnect' | translate"
+              icon="pi pi-google"
+              [loading]="linking()"
+              (onClick)="connectDrive()"
+              data-cy="drive-reconnect"
+            />
+          } @else {
+            <p-button
+              [label]="'backup.drive.syncNow' | translate"
+              icon="pi pi-cloud-upload"
+              severity="secondary"
+              [loading]="syncing()"
+              (onClick)="syncDriveNow()"
+              data-cy="drive-sync-now"
+            />
+          }
           <app-confirm-destructive-button
             icon="pi pi-times"
             [label]="'backup.drive.disconnect' | translate"

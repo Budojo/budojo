@@ -3512,6 +3512,7 @@
       "title": "Backup su Google Drive",
       "why": "I backup salvati su questo computer non sopravvivono a questo computer. Collega un account Google e ogni backup viene copiato lì automaticamente.",
       "connect": "Collega Google Drive",
+      "reconnect": "Ricollega Google Drive",
       "connectedTo": "Backup su {{account}}",
       "connected": "Google Drive collegato",
       "connectFailed": "Impossibile collegare Google Drive",
