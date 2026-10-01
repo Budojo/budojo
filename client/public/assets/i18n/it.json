@@ -3626,7 +3626,7 @@
     "spike": {
       "eyebrow": "Anteprima tecnica",
       "title": "Budojo sul tatami",
-      "lede": "Questa è la prova dell'app per il telefono: per ora nessun dato vero e nessun collegamento.",
+      "lede": "Questa è la prova dell'app per il telefono: per ora nessun dato vero.",
       "identityHeading": "Come appare un atleta",
       "sampleNote": "Riga di esempio, con la cintura sul bordo come sul PC.",
       "storageHeading": "Prova di memoria",
@@ -3649,6 +3649,39 @@
         "mark": "Segna una presenza, 10 volte",
         "athletes": "Atleti nel database",
         "firstRequest": "Prima richiesta (compila il framework)"
+      },
+      "drive": {
+        "heading": "Google Drive",
+        "help": "Prima, sul PC: Dati e backup → Backup su Google Drive → Collega Google Drive, poi Copia adesso. Poi qui: collega e fai la prova.",
+        "playServices": "Google Play services",
+        "link": "Collegamento",
+        "checking": "Controllo…",
+        "linkedSilently": "Collegato senza chiedere ({{ms}} ms)",
+        "linkedConsent": "Collegato, dopo il consenso di Google ({{ms}} ms)",
+        "needsConsent": "Non ancora collegato",
+        "linkFailed": "Collegamento non riuscito",
+        "connect": "Collega Google Drive",
+        "run": "Prova Drive",
+        "running": "Provo…",
+        "account": "Account",
+        "folder": "La cartella Budojo del PC",
+        "folderFound": "Trovata",
+        "folderMissing": "Non trovata",
+        "folderMissingHelp": "Il PC crea la cartella alla prima copia. Sul PC collega Google Drive e premi Copia adesso, poi rifai la prova.",
+        "pcArchives": "I backup del PC",
+        "newestRead": "Il più recente, letto da qui",
+        "isZip": "È uno zip: letto",
+        "notZip": "Non è uno zip",
+        "phoneFile": "Il file di prova del telefono",
+        "phoneFileState": {
+          "written": "Scritto adesso",
+          "still-there": "Ancora lì",
+          "gone-and-rewritten": "Era sparito: riscritto"
+        },
+        "readBack": "Riletto",
+        "yes": "Sì",
+        "no": "No",
+        "nextOnPc": "Ora sul PC: premi Copia adesso. O nella lista compare un backup del 1° gennaio 2000, o il PC lo cancella: in tutti e due i casi il PC ha visto il file del telefono. Poi rifai la prova qui."
       }
     }
   }
