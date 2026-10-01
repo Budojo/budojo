@@ -71,8 +71,12 @@ export const RELEASES: readonly Release[] = [
         heading: { en: 'Data & backup', it: 'Dati e backup' },
         bullets: [
           {
-            en: 'Google Drive backup: in Data & backup, press "Connect Google Drive" and choose your Google account. Every backup is then also copied to the Budojo folder on your Drive, at each automatic backup and when you press "Copy now". If this computer breaks, or you change it, your backups are still there. To restore one that is only on Drive, download it and use "Restore from a file".',
-            it: 'Backup su Google Drive: in Dati e backup, premi «Collega Google Drive» e scegli il tuo account Google. Ogni backup viene copiato anche nella cartella Budojo del tuo Drive, a ogni backup automatico e quando premi «Copia adesso». Se questo computer si rompe, o lo cambi, i backup sono ancora lì. Per ripristinarne uno che è solo su Drive, scaricalo e usa «Ripristina da un file».',
+            en: 'Google Drive backup: in Data & backup, press "Connect Google Drive" and choose your Google account. Every backup is then also copied to the Budojo folder on your Drive, at each automatic backup and when you press "Copy now". If this computer breaks, or you change it, your backups are still there.',
+            it: 'Backup su Google Drive: in Dati e backup, premi «Collega Google Drive» e scegli il tuo account Google. Ogni backup va anche nella cartella Budojo del tuo Drive, a ogni backup automatico e quando premi «Copia adesso». Se questo computer si rompe, o lo cambi, i backup sono ancora lì.',
+          },
+          {
+            en: "To restore a backup that is only on Drive, on a new computer for instance, download it and use \"Restore from a file\". Keep your recovery code at hand: without it, the athletes' documents do not open.",
+            it: 'Per ripristinare un backup che è solo su Drive, per esempio su un computer nuovo, scaricalo e usa «Ripristina da un file». Tieni pronto il codice di recupero: senza, i documenti degli atleti non si aprono.',
           },
           {
             en: 'Every 7 days Google asks to connect the account again. When it does, the card tells you ("Google revoked the connection") and shows "Reconnect Google Drive": one tap, and copying resumes. Meanwhile your backups keep being saved on this computer.',
