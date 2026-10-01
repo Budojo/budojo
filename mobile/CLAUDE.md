@@ -31,6 +31,32 @@ The phone runs Budojo's own server, as the desktop does with `php.exe`:
 - **`php/bundle-server.sh`** packs the server with its production vendor, as `release.yml` does, into the APK's assets. For the spike it adds a seeded demo academy and its throwaway login.
 - **`PhpServerPlugin.java`** unpacks the bundle, runs the migrations, starts `php -S 127.0.0.1:<port>` with the framework's router, and times each step. Cleartext is allowed to `127.0.0.1` only (`network_security_config.xml`).
 
+### What the phone taught (#2044), and must not be undone
+
+Three things a PHP that runs on Linux does and Android refuses. Each one was found on a real phone, and each is now fixed where the build can check it. **Do not remove any of them because a desktop or Docker test still passes: none of those tests are Android.**
+1. **An app executes files only from its native library directory (W^X).** The binary ships as `libphp.so` with `useLegacyPackaging`. Moving it to assets, or to modern packaging, gives *Permission denied* at exec.
+2. **OPcache's shared-memory lock is refused** (*Cannot create lock - Permission denied (13)*). OPcache runs `file_cache_only` in the plugin's `php.ini`, with a fallback to no cache that the spike screen reports.
+3. **The seccomp policy kills a process that calls `accept`,** and allows only `accept4`: exit 159, SIGSYS, at the server's first connection. `php/android-accept4.php` patches PHP's two `accept()` calls to `accept4(…, SOCK_CLOEXEC)`. **The flag is required:** musl's `accept4` with flags 0 falls back to `accept`. `build.sh` greps the patched source, and CI serves a page from every build under a Docker seccomp policy that kills on `accept`. A new PHP version that moves those calls fails the patch script loudly, which is the point.
+
+**This shell is ours on purpose.** #2051 compared it with NativePHP for Mobile and kept it (PRD § 5.1):
+- NativePHP's fingerprint and notification plugins are paid;
+- its PHP binary is prebuilt in a repository that is not public;
+- it keeps Laravel alive between requests, which this server was never audited for.
+
+Calling PHP in-process from this shell is the way out if Android ever stops the server process in a way CI cannot reproduce.
+
+## Google Drive on the phone (#2028, spike)
+
+**`DriveAuthPlugin.java`** wraps Google's `AuthorizationClient` (`play-services-auth`), scope `drive.file`, and only hands out access tokens:
+- **`authorize({ interactive: false })` never shows anything.** It rejects with `NEEDS_CONSENT` when Google wants the owner's consent; the page then offers the button that calls it with `true`.
+- **Nothing is stored by the app.** Google Play services keeps the grant, and `clearToken` drops a cached token that Drive refused with 401.
+- **Google recognises the app by package name and signing certificate.** No client id is in the app, so an APK signed with another key gets `DEVELOPER_ERROR` (10). That is one more reason the release key is the only key.
+- **It needs Google Play services,** and `status()` reports whether they are there.
+
+**The Drive calls are made by the page** (`client/projects/mat/src/app/drive-spike.ts`), through the WebView's own `fetch`, which Capacitor keeps as `window.CapacitorWebFetch`. **The trade-off, for #2029:**
+- The WebView's `fetch` is one path for every call, with the browser's semantics. It depends on googleapis.com allowing the WebView's origin (CORS), which Google's APIs do.
+- The patched `fetch` takes two paths. A GET goes through Capacitor's local proxy, which hands the bytes back as they came. Any other method goes through native HTTP, whose answer reads as text unless it is JSON (`HttpRequestHandler.readData`), so a binary answer to a POST would arrive damaged.
+
 ## Rules
 
 - **Only the release key signs.** `android/app/build.gradle` reads it from `BUDOJO_ANDROID_KEYSTORE` / `BUDOJO_ANDROID_KEYSTORE_PASSWORD` (alias `budojo`, PKCS12), and CI checks the certificate's SHA-256 before uploading. There is no debug-key fallback on purpose: an APK signed with another key never installs over the app, and uninstalling loses the changes a phone has not sent yet. The owner holds the other copy of the key.

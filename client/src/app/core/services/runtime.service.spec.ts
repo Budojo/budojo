@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { ALL_CAPABILITIES, RuntimeService } from './runtime.service';
+import { RuntimeService, WEB_CAPABILITIES } from './runtime.service';
 
 /**
  * Runtime capability list (#1229). The default is "everything" so the hosted
@@ -22,10 +22,21 @@ describe('RuntimeService', () => {
 
   afterEach(() => http.verify());
 
-  it('assumes every capability before anything is loaded', () => {
-    expect(service.capabilities()).toEqual(ALL_CAPABILITIES);
+  it('assumes every web capability before anything is loaded, and not the device sync', () => {
+    expect(service.capabilities()).toEqual(WEB_CAPABILITIES);
     expect(service.has()('community')).toBe(true);
+    expect(service.has()('sync')).toBe(false);
     expect(service.profile()).toBe('web');
+  });
+
+  it('keeps the sync only when a device reports it', async () => {
+    const loading = service.load();
+    http
+      .expectOne('/api/v1/runtime')
+      .flush({ data: { profile: 'desktop', capabilities: ['sync'] } });
+    await loading;
+
+    expect(service.has()('sync')).toBe(true);
   });
 
   it('narrows to what the API reports', async () => {
@@ -57,7 +68,7 @@ describe('RuntimeService', () => {
     http.expectOne('/api/v1/runtime').flush('nope', { status: 500, statusText: 'Server Error' });
     await expect(pending).resolves.toBeUndefined();
 
-    expect(service.capabilities()).toEqual(ALL_CAPABILITIES);
+    expect(service.capabilities()).toEqual(WEB_CAPABILITIES);
   });
 
   it('keeps the web default when the response is not the runtime shape', async () => {
@@ -68,7 +79,7 @@ describe('RuntimeService', () => {
     http.expectOne('/api/v1/runtime').flush({ data: [] });
     await pending;
 
-    expect(service.capabilities()).toEqual(ALL_CAPABILITIES);
+    expect(service.capabilities()).toEqual(WEB_CAPABILITIES);
     expect(service.profile()).toBe('web');
   });
 

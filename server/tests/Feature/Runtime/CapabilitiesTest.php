@@ -6,22 +6,28 @@ use App\Enums\Capability;
 use App\Support\Capabilities;
 
 /**
- * The capability set per runtime profile (#1229). Web has everything; the
- * desktop — one process, one machine, no mail transport, no push service —
- * has none of the surfaces that assume a second human, an inbox or a push
- * endpoint. The code behind each stays in place; flipping the profile
+ * The capability set per runtime profile (#1229). Web has every multi-user
+ * capability; the desktop — one process, one machine, no mail transport, no
+ * push service — has none of the surfaces that assume a second human, an inbox
+ * or a push endpoint. The code behind each stays in place; flipping the profile
  * restores it.
+ *
+ * The one capability the other way round is the sync between the owner's own
+ * devices (#2030): a device has a database to hand over, the hosted web never
+ * did.
  */
-it('gives the web profile every capability', function (): void {
+it('gives the web profile every multi-user capability, and not the device sync', function (): void {
     config()->set('budojo.runtime', 'web');
 
-    expect(Capabilities::all())->toEqualCanonicalizing(Capability::cases());
+    expect(Capabilities::all())->toEqualCanonicalizing(
+        array_values(array_filter(Capability::cases(), fn (Capability $capability) => $capability !== Capability::Sync)),
+    )->and(Capabilities::has(Capability::Sync))->toBeFalse();
 });
 
-it('gives the desktop profile none of the multi-user capabilities', function (): void {
+it('gives the desktop profile the sync, and none of the multi-user capabilities', function (): void {
     config()->set('budojo.runtime', 'desktop');
 
-    expect(Capabilities::all())->toBe([])
+    expect(Capabilities::all())->toBe([Capability::Sync])
         ->and(Capabilities::has(Capability::Community))->toBeFalse()
         ->and(Capabilities::has(Capability::AthleteAccounts))->toBeFalse()
         ->and(Capabilities::has(Capability::WebPush))->toBeFalse()
@@ -46,14 +52,14 @@ it('exposes the profile and its capabilities on a public endpoint', function ():
     $this->getJson('/api/v1/runtime')
         ->assertOk()
         ->assertJsonPath('data.profile', 'web')
-        ->assertJsonCount(count(Capability::cases()), 'data.capabilities')
+        ->assertJsonCount(count(Capability::cases()) - 1, 'data.capabilities')
         ->assertJsonFragment(['community']);
 });
 
-it('reports an empty capability list on the desktop endpoint', function (): void {
+it('reports only the sync on the desktop endpoint', function (): void {
     config()->set('budojo.runtime', 'desktop');
 
     $this->getJson('/api/v1/runtime')
         ->assertOk()
-        ->assertExactJson(['data' => ['profile' => 'desktop', 'capabilities' => []]]);
+        ->assertExactJson(['data' => ['profile' => 'desktop', 'capabilities' => ['sync']]]);
 });

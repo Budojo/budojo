@@ -55,7 +55,10 @@ return [
         'X-Budojo-Version',
     ],
 
-    'exposed_headers' => [],
+    // Response headers the SPA reads across origins (the desktop serves it
+    // from app://bundle, the API on 127.0.0.1): the schema of an exported
+    // database version (#2030).
+    'exposed_headers' => ['X-Budojo-Schema'],
 
     'max_age' => 0,
 

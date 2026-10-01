@@ -97,6 +97,133 @@
     }
   </section>
 
+  <section class="mat__section" aria-labelledby="mat-drive">
+    <h2 id="mat-drive" class="mat__heading">{{ 'mat.spike.drive.heading' | translate }}</h2>
+    @if (driveAvailable) {
+      <p class="mat__note">{{ 'mat.spike.drive.help' | translate }}</p>
+      <dl class="mat__results" data-cy="mat-drive-link">
+        <dt>{{ 'mat.spike.drive.playServices' | translate }}</dt>
+        <dd>{{ playServices() ?? '…' }}</dd>
+        <dt>{{ 'mat.spike.drive.link' | translate }}</dt>
+        <dd>
+          @switch (driveLink()) {
+            @case ('connected') {
+              {{
+                (driveLinkConsented()
+                  ? 'mat.spike.drive.linkedConsent'
+                  : 'mat.spike.drive.linkedSilently'
+                ) | translate: { ms: driveLinkMs() }
+              }}
+            }
+            @case ('needs-consent') {
+              {{ 'mat.spike.drive.needsConsent' | translate }}
+            }
+            @case ('error') {
+              {{ 'mat.spike.drive.linkFailed' | translate }}
+            }
+            @default {
+              {{ 'mat.spike.drive.checking' | translate }}
+            }
+          }
+        </dd>
+      </dl>
+      @if (driveLink() === 'connected') {
+        <p-button
+          data-cy="mat-drive-run"
+          [label]="
+            (driveState() === 'running' ? 'mat.spike.drive.running' : 'mat.spike.drive.run')
+              | translate
+          "
+          [loading]="driveState() === 'running'"
+          size="large"
+          [fluid]="true"
+          (onClick)="runDriveSpike()"
+        />
+      } @else if (driveLink() !== 'checking') {
+        <p-button
+          data-cy="mat-drive-connect"
+          [label]="'mat.spike.drive.connect' | translate"
+          [loading]="driveLinking()"
+          size="large"
+          [fluid]="true"
+          (onClick)="linkDrive(true)"
+        />
+      }
+      @if (driveProbe(); as probe) {
+        <dl class="mat__results" data-cy="mat-drive-results">
+          <dt>{{ 'mat.spike.drive.account' | translate }}</dt>
+          <dd>{{ probe.account ?? '—' }}</dd>
+          <dt>{{ 'mat.spike.drive.folder' | translate }}</dt>
+          <dd>
+            {{
+              (probe.folder === 'found'
+                ? 'mat.spike.drive.folderFound'
+                : 'mat.spike.drive.folderMissing'
+              ) | translate
+            }}
+          </dd>
+          @if (probe.folder === 'found') {
+            <dt>{{ 'mat.spike.drive.pcArchives' | translate }}</dt>
+            <dd>
+              {{ probe.pcArchives.length }}
+              @if (probe.pcArchives[0]; as newest) {
+                <span class="mat__detail">
+                  {{ newest.name }} · {{ (newest.size / 1048576).toFixed(1) }} MB
+                </span>
+              }
+            </dd>
+            <dt>{{ 'mat.spike.drive.newestRead' | translate }}</dt>
+            <dd>
+              @switch (probe.newestRead) {
+                @case ('zip') {
+                  {{ 'mat.spike.drive.isZip' | translate }}
+                }
+                @case ('not-zip') {
+                  {{ 'mat.spike.drive.notZip' | translate }}
+                }
+                @default {
+                  —
+                }
+              }
+            </dd>
+            <dt>{{ 'mat.spike.drive.phoneFile' | translate }}</dt>
+            <dd>
+              @switch (probe.phoneFile) {
+                @case ('written') {
+                  {{ 'mat.spike.drive.phoneFileState.written' | translate }}
+                }
+                @case ('gone-and-rewritten') {
+                  {{ 'mat.spike.drive.phoneFileState.gone-and-rewritten' | translate }}
+                }
+                @default {
+                  {{ 'mat.spike.drive.phoneFileState.still-there' | translate }}
+                }
+              }
+            </dd>
+            <dt>{{ 'mat.spike.drive.readBack' | translate }}</dt>
+            <dd>
+              {{ (probe.readBack ? 'mat.spike.drive.yes' : 'mat.spike.drive.no') | translate }}
+            </dd>
+          }
+        </dl>
+        @if (probe.folder === 'missing') {
+          <p class="mat__note">{{ 'mat.spike.drive.folderMissingHelp' | translate }}</p>
+        } @else if (probe.phoneFile !== 'still-there') {
+          <p class="mat__note" data-cy="mat-drive-next">
+            {{ 'mat.spike.drive.nextOnPc' | translate }}
+          </p>
+        }
+      }
+      @if (driveError(); as message) {
+        <p class="mat__error" role="alert">{{ message }}</p>
+      }
+    } @else {
+      <p class="mat__note" data-cy="mat-drive-unavailable">
+        {{ 'mat.spike.server.onlyOnPhone' | translate }}
+      </p>
+    }
+  </section>
+
   <footer class="mat__foot">
     <span data-cy="mat-build">{{ 'mat.spike.build' | translate: { build: build } }}</span>
     <p-button [label]="otherLanguage()" [text]="true" (onClick)="toggleLanguage()" />

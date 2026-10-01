@@ -107,6 +107,103 @@ describe('sync', () => {
     expect(order).toContain('delete');
   });
 
+  // #2059: the launch-time backup task and «Copia adesso» both ran sync(), both
+  // listed an empty folder, and both uploaded every archive.
+  it('joins a sync already running instead of starting a second one', async () => {
+    let release: () => void = () => undefined;
+    const uploading = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const { io } = fakeIO({
+      localArchives: vi.fn(async () => [archive('budojo-backup-20260816-120000.zip')]),
+      upload: vi.fn(() => uploading),
+    });
+    const service = new DriveSyncService(io);
+
+    const first = service.sync();
+    const second = service.sync();
+    release();
+
+    expect(await second).toEqual(await first);
+    expect(io.upload).toHaveBeenCalledTimes(1);
+    expect(io.listRemote).toHaveBeenCalledTimes(1);
+  });
+
+  // #2060 review: a sync joined across a relink would report the old account's
+  // result for the new one, and then write the old account back over it.
+  it('starts fresh after a relink, and the stale sync leaves the new link alone', async () => {
+    let release: () => void = () => undefined;
+    const uploading = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const { io, state } = fakeIO({
+      localArchives: vi.fn(async () => [archive('budojo-backup-20260816-120000.zip')]),
+      upload: vi.fn(() => uploading),
+      accountEmail: vi.fn(async () => 'other@example.it'),
+      ensureFolder: vi.fn(async () => 'folder-2'),
+    });
+    const service = new DriveSyncService(io);
+
+    const stale = service.sync();
+    await service.unlink();
+    await service.link();
+    const fresh = service.sync();
+    release();
+    await Promise.all([stale, fresh]);
+
+    expect(io.listRemote).toHaveBeenCalledWith(expect.anything(), 'folder-2');
+    expect(state.current).toMatchObject({ linked: true, account: 'other@example.it', folderId: 'folder-2' });
+  });
+
+  // #2060 review, second round: the generation check and the state write were
+  // two steps, so a stale write already under way could land after a relink's.
+  it('lands state writes in order, so a stale write never lands after a relink', async () => {
+    let releaseWrite: () => void = () => undefined;
+    let held = true;
+    const { io, state } = fakeIO({
+      localArchives: vi.fn(async () => [archive('budojo-backup-20260816-120000.zip')]),
+      upload: vi.fn(async () => {
+        throw Object.assign(new Error('network'), { code: 'upload_failed' });
+      }),
+      accountEmail: vi.fn(async () => 'other@example.it'),
+      ensureFolder: vi.fn(async () => 'folder-2'),
+    });
+    const write = io.writeState;
+    io.writeState = vi.fn(async (next: DriveState) => {
+      if (held) {
+        held = false;
+        await new Promise<void>((resolve) => {
+          releaseWrite = resolve;
+        });
+      }
+      await write(next);
+    });
+    const service = new DriveSyncService(io);
+
+    const stale = service.sync();
+    await vi.waitFor(() => expect(io.writeState).toHaveBeenCalledTimes(1));
+    const relink = (async () => {
+      await service.unlink();
+      await service.link();
+    })();
+    // Let the relink get as far as it can while the stale write is held.
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    releaseWrite();
+    await Promise.all([stale, relink]);
+
+    expect(state.current).toMatchObject({ linked: true, account: 'other@example.it', folderId: 'folder-2' });
+  });
+
+  it('runs again once the previous sync has finished', async () => {
+    const { io } = fakeIO();
+    const service = new DriveSyncService(io);
+
+    await service.sync();
+    await service.sync();
+
+    expect(io.listRemote).toHaveBeenCalledTimes(2);
+  });
+
   it('records a success even when there was nothing to upload', async () => {
     const { io, state } = fakeIO();
 

@@ -90,7 +90,24 @@ return [
             'email',
             'password_breach_check',
         ],
-        'desktop' => [],
+        'desktop' => [
+            'sync',
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Sync between the owner's devices (#2030)
+    |--------------------------------------------------------------------------
+    |
+    | `database` is the SQLite file a version is exported from and staged
+    | beside. Unset, it is the default connection's. The tests point it at a
+    | file of their own: their connection is in memory and inside a
+    | transaction, where `VACUUM INTO` cannot run.
+    |
+    */
+    'sync' => [
+        'database' => env('BUDOJO_SYNC_DATABASE'),
     ],
 
 ];
