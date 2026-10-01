@@ -327,7 +327,8 @@ Sizes: **S** is a day or less, **M** a few days, **L** a week or more. The **fir
 
 | Risk | Likelihood | Mitigation |
 |---|---|---|
-| **PHP does not run well on Android:** boot time, memory, APK size, battery | ~~Medium~~ **Settled** | #2044 measured it on the owner's phone (§ 5.1): sub-100 ms requests, a 26 MB APK. Battery and RAM are still to measure. **Keeping PHP-on-Android working** (three quirks so far) is the remaining cost. #2051 weighed handing it to NativePHP and kept it, with in-process PHP as the way out (§ 5.1). |
+| **PHP does not run well on Android:** boot time, APK size, speed | ~~Medium~~ **Settled** | #2044 measured it on the owner's phone (§ 5.1): sub-100 ms requests, a 26 MB APK. **Keeping PHP-on-Android working** (three quirks so far) is the remaining cost. #2051 weighed handing it to NativePHP and kept it, with in-process PHP as the way out (§ 5.1). |
+| **PHP costs too much memory or battery** | Low, **not measured** | #2034 measures both on the owner's phone: the memory of the app and its PHP process, and the battery over an evening of lessons. |
 | **The rebase maps an id wrongly, or replays a change twice** | Medium | The Actions are idempotent, each rebase keeps a mapping table, and the harness (§ 8) and a `--deep` review cover it. Every version is kept, so a bad rebase can be undone by going back one version. |
 | **A long offline stretch piles up conflicts** | Low for one owner | Conflicts wait without blocking, the pill counts them, and the owner decides them on one screen. |
 | **`drive.file` does not carry between the two OAuth clients** | Medium | #2028 checks it before anything is built on it; the fallback is `appDataFolder`. |
