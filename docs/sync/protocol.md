@@ -4,6 +4,19 @@ How two devices of one academy share their data through the owner's Google Drive
 
 **The protocol runs in the app on both devices** (PRD § 5.6). The PC's main process and the phone's shell only supply Drive, the database file and the key store.
 
+## Scope: two devices
+
+**Protocol 2 is for an academy's two devices: the PC and the phone** (M12, PRD § 2). Six rounds of review (#2061) found no input that loses a write between two devices. That holds as long as:
+- the rules below are kept;
+- the engines treat a push whose answer was lost as unconfirmed;
+- Drive's listing lags by less than the 10 minutes a device waits for its own push.
+
+**A third device**, the tablet at the door (PRD § 11), is not covered. It can adopt the version that will lose a same-number race before it sees the winner. Then:
+- its kept entries can name another device's rows by numbers that mean someone else on the winning line;
+- a report it wrote can claim entries its database later drops.
+
+A third device needs the protocol to map rows across every device's entries, and reports that cannot go back, before it is allowed. A device refuses to pair when the folder already has two.
+
 ## The folder
 
 ```
@@ -73,7 +86,7 @@ The journal is a JSON list of the writes that made this version from its parent,
 
 **A device's entry ids only grow.** The server gives a new entry an id above the newest that device has recorded, inside the write's transaction. A ULID taken from the clock alone can go backwards when the clock steps back, and `devices/` depends on this order (#2031).
 
-**The entries a device keeps speak its current database's ids.** A rebase gives the device's new rows new ids on the base: an athlete created as 57 can become 103. Its journal entries are rewritten through that same id map, the `created` ids and every parameter and `*_id` field. A second replay then starts from 103, not from a 57 the base never had.
+**The entries a device keeps speak its current database's ids.** A rebase gives the device's new rows new ids on the base: an athlete created as 57 can become 103. Its journal entries are rewritten through that same id map: the `created` ids, every parameter, and every `*_id` and `*_ids` field. A second replay then starts from 103, not from a 57 the base never had.
 
 | Field | | Example |
 |---|---|---|
@@ -106,7 +119,13 @@ The journal is a JSON list of the writes that made this version from its parent,
 - **It is the only ground on which a write leaves a journal.** A device clears its entries up to the oldest of what every other device reports holding of them.
   - From then on every database holds them, so every version built from then on does too.
   - No clock is involved, so an upload that lands days late cannot beat it.
-  - **Every device has a file.** A new device writes its report (`base` null, `holds` empty) before its first pull, at pairing. A file that does not open or parse counts as holding nothing. So a device that exists is never mistaken for no device.
+  - **Every device has a file before it pushes or pulls a version.**
+    - The device that creates the folder writes its report together with `keys.bjs`, before version 1.
+    - A new device writes its report (`base` null, `holds` empty) at pairing, before its first pull.
+    - A file that does not open or parse counts as holding nothing.
+
+    So a device that exists is never mistaken for no device.
+  - **Unpairing deletes the device's file** together with rotating the key (#2033). Left behind, it would hold nothing forever, and nobody could clear a journal again.
   - **With no other device's file** in `devices/`, a device clears the entries already in a version the folder lists. A device that pairs later starts from the latest version.
 
 ## The pairing code
@@ -131,6 +150,8 @@ protocol (1 byte) | sync key (32 bytes) | first 2 bytes of SHA-256 over the firs
 - **pushed, unconfirmed:** in a version it pushed, but not yet held by every other device (`devices/`).
 
 **While it keeps any, it never fast-forwards:** it rebases, and the idempotent replay finds what is already there.
+
+**A push whose answer was lost is unconfirmed, never unpushed.** The upload may have landed, so the device treats its writes as pushed in that version: it waits for the version to appear, then rebases if it does not.
 
 | Situation | Do |
 |---|---|

@@ -386,7 +386,7 @@ Sizes: **S** is a day or less, **M** a few days, **L** a week or more. The **fir
 | Photograph a document on the phone | Uploading from the phone (the camera plugin), for phone-only academies first |
 | Techniques and the evening's notes, phone-first | #2037, right after the first version |
 | Assistants with their own phone and account | Roles on the phone, and a Drive folder shared across accounts, which `drive.file` does not allow without the Picker |
-| A tablet at the door for self check-in | The `self` source already exists (#960); a locked-down mode on top of it |
+| A tablet at the door for self check-in | The `self` source already exists (#960); a locked-down mode on top of it. **The sync protocol must grow first:** protocol 2 is for two devices, and a third needs rows mapped across every device's entries and reports that cannot go back (`docs/sync/protocol.md` § Scope). |
 | iOS | Capacitor supports it; PHP on iOS and Apple's distribution costs are the question |
 | A lock-screen setting for the notification text | A preference over the channel's visibility (§ 6.3) |
 

@@ -81,8 +81,9 @@ export function unreadableReport(device: string): DeviceReport {
  * may leave the journal.
  *
  * `reports` is one per file in `devices/`, an unreadable one included as
- * `unreadableReport`. Pairing writes the new device's report before its first
- * pull (PRD § 5.4), so a device that exists always has a file.
+ * `unreadableReport`. Every device writes its report before it pushes or pulls
+ * a version: the device that creates the folder alongside `keys.bjs`, a new one
+ * at pairing (PRD § 5.4). So a device that exists always has a file.
  *
  * - `everything` when no other device has a file: there is nobody to race,
  *   and a device that pairs later starts from the latest version.
