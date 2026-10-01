@@ -75,7 +75,7 @@ export const RELEASES: readonly Release[] = [
             it: 'Backup su Google Drive: in Dati e backup, premi «Collega Google Drive» e scegli il tuo account Google. Ogni backup va anche nella cartella Budojo del tuo Drive, a ogni backup automatico e quando premi «Copia adesso». Se questo computer si rompe, o lo cambi, i backup sono ancora lì.',
           },
           {
-            en: "To restore a backup that is only on Drive, on a new computer for instance, download it and use \"Restore from a file\". Keep your recovery code at hand: without it, the athletes' documents do not open.",
+            en: 'To restore a backup that is only on Drive, on a new computer for instance, download it and use "Restore from a file". Keep your recovery code at hand: without it, the athletes\' documents do not open.',
             it: 'Per ripristinare un backup che è solo su Drive, per esempio su un computer nuovo, scaricalo e usa «Ripristina da un file». Tieni pronto il codice di recupero: senza, i documenti degli atleti non si aprono.',
           },
           {
