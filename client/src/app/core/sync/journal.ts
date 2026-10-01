@@ -33,7 +33,12 @@ export const JOURNAL_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE'] as const;
 export type JournalMethod = (typeof JOURNAL_METHODS)[number];
 
 const ULID = /^[0-7][0-9A-HJKMNP-TV-Z]{25}$/;
-const ROUTE = /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/;
+/**
+ * A Laravel route name: dotted segments of lowercase letters, digits, `_` and
+ * `-`, as `Route::apiResource('fee-tiers', …)` names `fee-tiers.store`. #2031
+ * gives the write routes their names; this is the shape they must have.
+ */
+const ROUTE = /^[a-z][a-z0-9_-]*(\.[a-z][a-z0-9_-]*)+$/;
 const KEYS: (keyof JournalEntry)[] = [
   'id',
   'device',

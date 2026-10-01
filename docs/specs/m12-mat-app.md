@@ -156,6 +156,7 @@ The owner described git, and the design is git.
 **The rules that make it safe:**
 - **A version is written once, under a new name.** Two devices never write the same file, so Drive never has to pick a winner.
 - **A device pushes only on top of the latest version it can see.** If there is a newer one, it rebases first, so no push can erase the other side's work.
+- **A version's name carries its parent,** so the history can be read from the folder's listing alone. When two devices push at once, a device whose version ended up off the line replays its writes: it keeps them until it has seen its version on the line, however long it is away (#2029, `docs/sync/protocol.md`).
 - **The journal records API writes, not rows**: the route, its parameters and the body, plus the ids the write created. For an update, it also records the values it saw before.
 - **Replaying it runs the same Actions** with the same validation (#2031):
   - Ids the diverged side created (a new athlete) get new ids on the base, and the replay maps the old ones to them for every later change that names them.
@@ -166,7 +167,7 @@ The owner described git, and the design is git.
   - files no row names any more are deleted, as `DeleteDocumentAction` deletes them on the device where the athlete or document was removed. That rule is GDPR, not tidiness;
   - missing files are fetched when needed;
   - the application cache is cleared. The desktop's cache is on files (`CACHE_STORE=file`), and would otherwise answer from the old database, for example the attendance summaries.
-- **The keys travel once, at pairing.** Encrypted fields and documents need the same `APP_KEY` and `DOCUMENT_ENCRYPTION_KEY` on both devices, and the recovery code (#1254) already carries both. The sync key goes with them.
+- **The keys travel once, at pairing.** Encrypted fields and documents need the same `APP_KEY` and `DOCUMENT_ENCRYPTION_KEY` on both devices: the pairing code carries the sync key, and the new device opens the app keys from `keys.bjs` with it (§ 5.4).
 
 **When a device syncs:**
 - on opening, and on coming back to the foreground: pull, or rebase;
@@ -194,7 +195,8 @@ Nothing waits for the sync, and its state is always on screen (§ 6.2).
 - **The transport is an interface,** `SyncRemote`, with three implementations:
   - `DriveRemote` on the phone, which makes the Drive calls from the WebView;
   - on the PC, the main process's Drive calls, reached over the bridge (§ 5.6, #2032);
-  - `MemoryRemote` for the tests, where two copies sync with no Google account.
+  - `MemoryRemote` for the tests, where two copies sync with no Google account;
+  - **for development,** the PC's bridge remote can point at a local folder instead of Drive (`FolderRemote`, #2032), so two running copies sync on Linux with no Google account.
 
 ### 5.4 Pairing, both ways
 

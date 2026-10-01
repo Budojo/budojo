@@ -1,3 +1,5 @@
+import { isLayoutPath } from './layout';
+
 /**
  * Where the sync folder lives (PRD § 5.3, #2029). The engine sees only this:
  * `DriveRemote` on the phone, the PC's main process over the bridge (#2032),
@@ -41,20 +43,18 @@ export class RemoteError extends Error {
   }
 }
 
-const TOP_LEVEL = new Set(['keys.bjs']);
-
 export function folderOf(path: string): RemoteFolder | null {
   const folder = path.split('/')[0];
   return folder === 'versions' || folder === 'files' || folder === 'devices' ? folder : null;
 }
 
-/** Throws on a path outside the layout: a remote never writes anywhere else. */
+/**
+ * Throws on a path the protocol does not define: a remote never writes anywhere
+ * else. Each folder's own rule applies (`layout.ts`): a numbered version with
+ * its parent, a SHA-256, a device id.
+ */
 export function assertLayoutPath(path: string): void {
-  const parts = path.split('/');
-  const valid =
-    (parts.length === 1 && TOP_LEVEL.has(path)) ||
-    (parts.length === 2 && folderOf(path) !== null && /^[0-9a-z-]+\.bjs$/.test(parts[1]));
-  if (!valid) {
+  if (!isLayoutPath(path)) {
     throw new Error(`"${path}" is not a path in the sync folder`);
   }
 }

@@ -30,7 +30,7 @@ const payment: JournalEntry = {
 const manifest: Omit<VersionManifest, 'journalSha256'> = {
   protocol: PROTOCOL,
   seq: 44,
-  parent: 43,
+  parent: { seq: 43, device: 'pc4f2a' },
   device: 'phone9c1e',
   schema: '2026_09_28_120000_add_payment_method_to_athlete_payments',
   app: '2.75.0',
@@ -53,6 +53,7 @@ describe('journal entries (#2029)', () => {
     ['a local time, not UTC', { ...checkIn, at: '2026-10-01T20:32:05+02:00' }, 'UTC'],
     ['a read', { ...checkIn, method: 'GET' }, 'not a write'],
     ['a URL for a route', { ...checkIn, route: '/api/v1/attendance' }, 'route name'],
+    ['a time on a day that does not exist', { ...checkIn, at: '2026-02-30T18:00:00Z' }, 'UTC'],
     [
       'a parameter that is an object',
       { ...checkIn, params: { athlete: { id: 57 } } },
@@ -74,6 +75,10 @@ describe('journal entries (#2029)', () => {
       expect(parsed.ok ? '' : parsed.reason).toContain(reason);
     });
   }
+
+  it('takes a route name with a hyphen, as Laravel names fee-tiers.store', () => {
+    expect(parseJournalEntry({ ...checkIn, route: 'fee-tiers.store' }).ok).toBe(true);
+  });
 
   it('refuses a journal out of order, naming the entry', () => {
     expect(parseJournal([payment, checkIn])).toEqual({
@@ -107,7 +112,14 @@ describe('manifests (#2029)', () => {
   const malformed: [string, Record<string, unknown>, string][] = [
     ['another protocol', { ...complete, protocol: 3 }, 'protocol 3'],
     ['a sequence number of 0', { ...complete, seq: 0 }, 'sequence'],
-    ['a parent after itself', { ...complete, parent: 44 }, 'parent'],
+    ['a parent after itself', { ...complete, parent: { seq: 44, device: 'pc4f2a' } }, 'parent'],
+    ['a parent that is only a number', { ...complete, parent: 43 }, 'parent'],
+    [
+      'a date that does not exist',
+      { ...complete, createdAt: '2026-02-31T10:00:00Z' },
+      'creation time',
+    ],
+    ['the hour 24', { ...complete, createdAt: '2026-01-01T24:00:00Z' }, 'creation time'],
     ['a schema that is not a migration', { ...complete, schema: 'latest' }, 'schema'],
     ['an app version that is not one', { ...complete, app: 'v2' }, 'app version'],
     ['a digest that is not SHA-256', { ...complete, journalSha256: 'abc' }, 'digest'],
@@ -129,7 +141,7 @@ describe('manifests (#2029)', () => {
 
 describe('a version file (#2029)', () => {
   const database = utf8('SQLite format 3\u0000 … the whole academy');
-  const ref = { seq: 44, device: 'phone9c1e' };
+  const ref = { seq: 44, device: 'phone9c1e', parent: { seq: 43, device: 'pc4f2a' } };
 
   it('packs and unpacks the manifest, the journal and the database', async () => {
     const bytes = await packVersion(manifest, [checkIn, payment], database);
@@ -154,10 +166,19 @@ describe('a version file (#2029)', () => {
   it('refuses a file whose manifest names another version', async () => {
     const bytes = await packVersion(manifest, [], database);
 
-    expect(await unpackVersion(bytes, { seq: 45, device: 'phone9c1e' })).toEqual({
+    expect(await unpackVersion(bytes, { ...ref, seq: 45 })).toEqual({
       ok: false,
       reason: 'the manifest names another version than its file',
     });
+    expect(
+      await unpackVersion(bytes, { ...ref, parent: { seq: 43, device: 'phone9c1e' } }),
+    ).toEqual({ ok: false, reason: 'the manifest names another version than its file' });
+  });
+
+  it('refuses to pack a journal it could not read back', async () => {
+    await expect(packVersion(manifest, [payment, checkIn], database)).rejects.toThrow(
+      'journal: entry 2: out of order',
+    );
   });
 
   it('refuses a journal that does not match its digest', async () => {

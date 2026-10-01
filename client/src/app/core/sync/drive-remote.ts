@@ -55,7 +55,15 @@ export class DriveRemote implements SyncRemote {
       return null;
     }
     const response = await this.call(`${API}/${found.id}?alt=media`, {}, true);
-    return response === null ? null : new Uint8Array(await response.arrayBuffer());
+    if (response === null) {
+      return null;
+    }
+    try {
+      return new Uint8Array(await response.arrayBuffer());
+    } catch (error) {
+      // The headers arrived and the body did not: the gym's connection, mid-download.
+      throw new RemoteError('offline', error instanceof Error ? error.message : String(error));
+    }
   }
 
   async write(path: string, bytes: Uint8Array): Promise<void> {
@@ -126,7 +134,14 @@ export class DriveRemote implements SyncRemote {
           if (!create) {
             return null;
           }
-          id = await this.createFolder(chain[depth - 1], parent);
+          await this.createFolder(chain[depth - 1], parent);
+          // Look again rather than trust the folder just made: if another
+          // device made one at the same moment, both settle on the older, and
+          // the newer stays empty.
+          id = await this.findFolder(chain[depth - 1], parent);
+          if (id === null) {
+            throw new RemoteError('unavailable', `the folder ${key} vanished as it was made`);
+          }
         }
         this.folders.set(key, id);
       }
@@ -142,7 +157,7 @@ export class DriveRemote implements SyncRemote {
       'trashed=false',
       ...(parent === null ? [] : [`'${parent}' in parents`]),
     ].join(' and ');
-    // The oldest wins: if two devices ever created one at once, both settle on the same.
+    // The oldest wins, on every device and every look (`folder` looks again after creating).
     const params = new URLSearchParams({
       q: query,
       fields: 'files(id)',
@@ -154,8 +169,8 @@ export class DriveRemote implements SyncRemote {
     return body.files?.[0]?.id ?? null;
   }
 
-  private async createFolder(name: string, parent: string | null): Promise<string> {
-    const response = (await this.call(`${API}?fields=id`, {
+  private async createFolder(name: string, parent: string | null): Promise<void> {
+    await this.call(`${API}?fields=id`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json; charset=UTF-8' },
       body: JSON.stringify({
@@ -163,8 +178,7 @@ export class DriveRemote implements SyncRemote {
         mimeType: FOLDER_MIME,
         ...(parent === null ? {} : { parents: [parent] }),
       }),
-    })) as Response;
-    return ((await response.json()) as { id: string }).id;
+    });
   }
 
   private async child(parent: string, name: string): Promise<string | null> {

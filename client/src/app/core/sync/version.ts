@@ -1,6 +1,6 @@
 import { concat, fromUtf8, sha256Hex, utf8 } from './bytes';
 import { JournalEntry, parseJournal } from './journal';
-import { isDeviceId, isSeq, VersionRef } from './layout';
+import { isDeviceId, isSeq, isVersionRef, ListedVersion, sameVersion, VersionRef } from './layout';
 import { isRecord, isSha256, isUtcTimestamp, ok, Parsed, refuse } from './parse';
 
 /**
@@ -20,8 +20,8 @@ export const PROTOCOL = 2;
 export interface VersionManifest {
   protocol: typeof PROTOCOL;
   seq: number;
-  /** The version this one was made on top of; null for an academy's first. */
-  parent: number | null;
+  /** The version this one was made on top of, as its file name also says; null for an academy's first. */
+  parent: VersionRef | null;
   device: string;
   /** The newest migration the database has run (PRD § 5.5): a device never opens a newer one. */
   schema: string;
@@ -57,7 +57,7 @@ export function parseManifest(value: unknown): Parsed<VersionManifest> {
     return refuse('the sequence number is not a version number');
   }
   const parent = value['parent'];
-  if (parent !== null && !(isSeq(parent) && parent < value['seq'])) {
+  if (parent !== null && !(isVersionRef(parent) && parent.seq < value['seq'])) {
     return refuse('the parent is not an earlier version');
   }
   if (!isDeviceId(value['device'])) {
@@ -79,7 +79,7 @@ export function parseManifest(value: unknown): Parsed<VersionManifest> {
   return ok({
     protocol: PROTOCOL,
     seq: value['seq'],
-    parent,
+    parent: parent === null ? null : { seq: parent.seq, device: parent.device },
     device: value['device'],
     schema: value['schema'],
     app: value['app'],
@@ -95,8 +95,9 @@ function u32(length: number): Uint8Array {
 }
 
 /**
- * The file's plaintext, with the journal digest filled in. The manifest is
- * checked first, so a device cannot publish a version it could not read back.
+ * The file's plaintext, with the journal digest filled in. The manifest and the
+ * journal are checked first, with the readers' own rules, so a device cannot
+ * publish a version it, or any other, could not read back.
  */
 export async function packVersion(
   manifest: Omit<VersionManifest, 'journalSha256'>,
@@ -104,6 +105,10 @@ export async function packVersion(
   database: Uint8Array,
 ): Promise<Uint8Array> {
   const journalBytes = utf8(JSON.stringify(journal));
+  const journalChecked = parseJournal(JSON.parse(JSON.stringify(journal)) as unknown);
+  if (!journalChecked.ok) {
+    throw new Error(`refusing to pack a version: journal: ${journalChecked.reason}`);
+  }
   const complete = { ...manifest, journalSha256: await sha256Hex(journalBytes) };
   const checked = parseManifest(complete);
   if (!checked.ok) {
@@ -126,7 +131,7 @@ export async function packVersion(
  */
 export async function unpackVersion(
   bytes: Uint8Array,
-  expected: VersionRef,
+  expected: ListedVersion,
 ): Promise<Parsed<Version>> {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const section = (offset: number): Uint8Array | null => {
@@ -154,7 +159,10 @@ export async function unpackVersion(
   if (!manifest.ok) {
     return refuse(`manifest: ${manifest.reason}`);
   }
-  if (manifest.value.seq !== expected.seq || manifest.value.device !== expected.device) {
+  const { parent } = manifest.value;
+  const sameParent =
+    parent === null ? expected.parent === null : sameVersion(parent, expected.parent);
+  if (!sameVersion(manifest.value, expected) || !sameParent) {
     return refuse('the manifest names another version than its file');
   }
 
