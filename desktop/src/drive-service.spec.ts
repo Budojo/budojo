@@ -129,6 +129,32 @@ describe('sync', () => {
     expect(io.listRemote).toHaveBeenCalledTimes(1);
   });
 
+  // #2060 review: a sync joined across a relink would report the old account's
+  // result for the new one, and then write the old account back over it.
+  it('starts fresh after a relink, and the stale sync leaves the new link alone', async () => {
+    let release: () => void = () => undefined;
+    const uploading = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const { io, state } = fakeIO({
+      localArchives: vi.fn(async () => [archive('budojo-backup-20260816-120000.zip')]),
+      upload: vi.fn(() => uploading),
+      accountEmail: vi.fn(async () => 'other@example.it'),
+      ensureFolder: vi.fn(async () => 'folder-2'),
+    });
+    const service = new DriveSyncService(io);
+
+    const stale = service.sync();
+    await service.unlink();
+    await service.link();
+    const fresh = service.sync();
+    release();
+    await Promise.all([stale, fresh]);
+
+    expect(io.listRemote).toHaveBeenCalledWith(expect.anything(), 'folder-2');
+    expect(state.current).toMatchObject({ linked: true, account: 'other@example.it', folderId: 'folder-2' });
+  });
+
   it('runs again once the previous sync has finished', async () => {
     const { io } = fakeIO();
     const service = new DriveSyncService(io);
