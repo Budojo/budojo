@@ -31,7 +31,7 @@ Asked in four rounds, answered by the owner. They are requirements, not proposal
 |---|---|---|
 | Who uses the phone app? | **The owner only.** Friends like Fede get their own academy (§ 12). | One Google account, no roles on the phone. |
 | Can the phone work without the PC? | **Yes, for both cases:** the owner without their PC, and instructors with no PC | The phone is a **full Budojo**, not a satellite: it can create an academy, and every screen works on it. The PC becomes optional. |
-| Which devices? | **PC + phone** | Two copies. The design allows more; M12 tests two. |
+| Which devices? | **PC + phone** | Two copies. The sync protocol is built and proven for two (#2029, `docs/sync/protocol.md` § Scope); a third device needs it to grow first (§ 11). |
 | Signal at the gym? | **Poor or patchy** | Offline is the normal case at the gym. The two copies *will* diverge sometimes, so reconciling them is core, not an edge case. |
 | PC and phone on the same day? | **Same day, different times** | Divergence happens when the phone works offline after the PC changed something that afternoon. |
 | Two changes to the same thing? | **Always ask me** | No silent last-writer-wins. A conflict stops and asks, on whichever device finds it. |
@@ -156,6 +156,9 @@ The owner described git, and the design is git.
 **The rules that make it safe:**
 - **A version is written once, under a new name.** Two devices never write the same file, so Drive never has to pick a winner.
 - **A device pushes only on top of the latest version it can see.** If there is a newer one, it rebases first, so no push can erase the other side's work.
+- **A version's name carries its parent,** so the history can be read from the folder's listing alone. When two devices push at once, the version Drive created first keeps the number.
+- **A device keeps each write until every other device reports holding it** (`devices/`), however long it is away. Until then it never fast-forwards.
+- **The replay is idempotent by entry id:** every database records the journal entries it holds. So a device that cannot tell whether its writes are there replays them, and nothing is applied twice (#2029, #2031, `docs/sync/protocol.md`).
 - **The journal records API writes, not rows**: the route, its parameters and the body, plus the ids the write created. For an update, it also records the values it saw before.
 - **Replaying it runs the same Actions** with the same validation (#2031):
   - Ids the diverged side created (a new athlete) get new ids on the base, and the replay maps the old ones to them for every later change that names them.
@@ -166,7 +169,7 @@ The owner described git, and the design is git.
   - files no row names any more are deleted, as `DeleteDocumentAction` deletes them on the device where the athlete or document was removed. That rule is GDPR, not tidiness;
   - missing files are fetched when needed;
   - the application cache is cleared. The desktop's cache is on files (`CACHE_STORE=file`), and would otherwise answer from the old database, for example the attendance summaries.
-- **The keys travel once, at pairing.** Encrypted fields and documents need the same `APP_KEY` and `DOCUMENT_ENCRYPTION_KEY` on both devices, and the recovery code (#1254) already carries both. The sync key goes with them.
+- **The keys travel once, at pairing.** Encrypted fields and documents need the same `APP_KEY` and `DOCUMENT_ENCRYPTION_KEY` on both devices: the pairing code carries the sync key, and the new device opens the app keys from `keys.bjs` with it (§ 5.4).
 
 **When a device syncs:**
 - on opening, and on coming back to the foreground: pull, or rebase;
@@ -191,30 +194,53 @@ Nothing waits for the sync, and its state is always on screen (§ 6.2).
   **So per-file access belongs to the Cloud project, not to the client that created the file.** The fallback to `appDataFolder` is not needed. Two caveats for whoever builds on it:
   - **The folder search** finds only folders the project created. The owner's Drive also held a `Budojo` folder made by Drive for desktop (the folder copy, #1320), invisible to the API. So the PC created a second `Budojo`, which Drive for desktop shows as `Budojo (1)`.
   - **A probe that runs before the PC has connected** finds nothing. The phone's first run that day did exactly that, 30 seconds before the PC created the folder. The sync must tell "the PC has not connected yet" apart from "nothing is there".
-- **The transport is an interface,** `SyncRemote`: `DriveRemote` in production, and `FolderRemote` (a local directory) for the tests and the Linux dev environment, where two copies sync with no Google account.
+- **The transport is an interface,** `SyncRemote`, with three implementations:
+  - `DriveRemote` on the phone, which makes the Drive calls from the WebView;
+  - on the PC, the main process's Drive calls, reached over the bridge (§ 5.6, #2032);
+  - `MemoryRemote` for the tests, where two copies sync with no Google account;
+  - **for development,** the PC's bridge remote can point at a local folder instead of Drive (`FolderRemote`, #2032), so two running copies sync on Linux with no Google account.
 
 ### 5.4 Pairing, both ways
 
-The device that has the academy shows a **pairing code**: a QR, plus the same code as words to type on a PC with no camera. It carries:
-- the recovery code (the app keys);
-- the sync key;
-- the Drive folder;
-- the protocol version.
+The device that has the academy shows a **pairing code**: a QR, plus the same code as 56 characters in fourteen groups of four, to type on a PC with no camera. **It carries only the sync key and the protocol version** (#2029):
+- **The app keys** (`APP_KEY`, `DOCUMENT_ENCRYPTION_KEY`, what the recovery code #1254 carries) **travel on Drive,** sealed under the sync key in `keys.bjs`.
+- **The folder** is found by name, because `drive.file` lets every client of the project see it (§ 5.3).
+
+**This is as safe as putting everything in the code:** whoever holds the code can read everything either way, and Drive alone opens nothing. **But the code a person types drops from about 150 characters to 56.**
 
 **The new device:**
 1. reads the code;
 2. signs in to Google with the same account;
-3. pulls the latest version.
+3. opens `keys.bjs`: a code from before an unpairing fails here, and leaves nothing behind;
+4. writes its own `devices/` report, empty, so no other device clears a write it does not hold yet (#2029);
+5. pulls the latest version.
 
 **Either side can start it:** the PC can add the phone (the owner's case today), and a phone-only academy can later add a PC.
 
-**Unpairing a lost phone:** the other device rotates the sync key and publishes under it, so the lost phone can read nothing new and its pushes stop being accepted. The app keys cannot rotate without re-encrypting the documents; the fingerprint lock (§ 6.1) is what protects the lost phone's local copy.
+**Unpairing a lost phone:** the other device rotates the sync key, seals `keys.bjs` again, deletes the phone's `devices/` report, and publishes under the new key. The lost phone can read nothing new, and its pushes stop being accepted. Its report would otherwise count as holding nothing, and no journal could ever be cleared again. The app keys cannot rotate without re-encrypting the documents; the fingerprint lock (§ 6.1) is what protects the lost phone's local copy.
 
 ### 5.5 Versions of the app
 
 - **Each version on Drive names the schema it was written with.** A device never opens a newer database than its code knows: it asks for the update first, as a backup restore already refuses a newer archive.
 - **A device can pull an older database:** the boot migrations bring it forward, as they do for a restored backup.
 - **The update notice** reads the latest GitHub release, and one tap downloads the APK. Android asks for the confirmation (§ 2).
+
+### 5.6 Where the sync runs: in the app, on both devices
+
+**The engine and the protocol are TypeScript in `client/`,** so the same code decides, encrypts and replays on the PC and on the phone (#2029). Each shell supplies only what it alone can do, behind one interface:
+
+| | PC (Electron) | Phone (Capacitor) |
+|---|---|---|
+| **Drive calls** | the main process, which holds the refresh token (#1301), over the bridge | the WebView, with the token from `DriveAuthPlugin` (#2028) |
+| **Exporting a version and swapping the database in** | the PHP supervisor | `PhpServerPlugin` |
+| **Where the sync key is kept** | the OS keychain, beside the app keys (`secrets.bin`) | Android's keystore |
+
+**Why:**
+- **One implementation** of the code where a bug costs data, instead of one per shell.
+- **`client/` is the only code both builds can see:** the client container mounts `client/` alone, and the desktop compiles `desktop/src` alone.
+- **WebCrypto and `CompressionStream` are the same Chromium** in Electron's renderer and Android's WebView.
+
+**What it costs:** the PC syncs while its window is open. On closing, the main process asks the page to push first, with a time limit.
 
 ## 6. UX
 
@@ -361,7 +387,7 @@ Sizes: **S** is a day or less, **M** a few days, **L** a week or more. The **fir
 | Photograph a document on the phone | Uploading from the phone (the camera plugin), for phone-only academies first |
 | Techniques and the evening's notes, phone-first | #2037, right after the first version |
 | Assistants with their own phone and account | Roles on the phone, and a Drive folder shared across accounts, which `drive.file` does not allow without the Picker |
-| A tablet at the door for self check-in | The `self` source already exists (#960); a locked-down mode on top of it |
+| A tablet at the door for self check-in | The `self` source already exists (#960); a locked-down mode on top of it. **The sync protocol must grow first:** protocol 2 is for two devices, and a third needs rows mapped across every device's entries and reports that cannot go back (`docs/sync/protocol.md` § Scope). |
 | iOS | Capacitor supports it; PHP on iOS and Apple's distribution costs are the question |
 | A lock-screen setting for the notification text | A preference over the channel's visibility (§ 6.3) |
 
@@ -386,4 +412,5 @@ Sizes: **S** is a day or less, **M** a few days, **L** a week or more. The **fir
     - the homecoming card;
     - the APK and its key (#2027);
     - the principle that no change is lost or overwritten silently.
+- **1 Oct 2026: the sync runs in the app on both devices (§ 5.6), and the pairing code carries only the sync key (§ 5.4)** (#2029). v2 had the protocol imported by the desktop's main process and by the phone's shell. But no code both builds can see lives outside `client/`, and keeping two copies of the envelope and the replay in step is where data would be lost.
 - **1 Oct 2026: our shell stays (#2051).** NativePHP for Mobile was weighed against it before the runtime (#2034) was built on it, and lost on cost (€0, § 2), on fit with the Angular SPA and the server, and on where its PHP binary comes from (§ 5.1). PHP called in-process from our shell is the way out, kept for a reason we do not have yet.
