@@ -53,7 +53,9 @@ Calling PHP in-process from this shell is the way out if Android ever stops the 
 - **Google recognises the app by package name and signing certificate.** No client id is in the app, so an APK signed with another key gets `DEVELOPER_ERROR` (10). That is one more reason the release key is the only key.
 - **It needs Google Play services,** and `status()` reports whether they are there.
 
-**The Drive calls are made by the page** (`client/projects/mat/src/app/drive-spike.ts`), through the WebView's own `fetch`, which Capacitor keeps as `window.CapacitorWebFetch`. Capacitor's native HTTP reads every answer that is not JSON as text, and a file's bytes must stay bytes.
+**The Drive calls are made by the page** (`client/projects/mat/src/app/drive-spike.ts`), through the WebView's own `fetch`, which Capacitor keeps as `window.CapacitorWebFetch`. **The trade-off, for #2029:**
+- The WebView's `fetch` is one path for every call, with the browser's semantics. It depends on googleapis.com allowing the WebView's origin (CORS), which Google's APIs do.
+- The patched `fetch` takes two paths. A GET goes through Capacitor's local proxy, which hands the bytes back as they came. Any other method goes through native HTTP, whose answer reads as text unless it is JSON (`HttpRequestHandler.readData`), so a binary answer to a POST would arrive damaged.
 
 ## Rules
 

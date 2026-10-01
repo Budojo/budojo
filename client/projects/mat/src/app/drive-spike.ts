@@ -9,9 +9,10 @@
  *
  * The native half is `DriveAuthPlugin` (mobile/android): it only hands out
  * access tokens. The Drive calls are made here, through the WebView's own
- * `fetch`. Capacitor's native HTTP, which carries the calls to the local
- * server, reads every non-JSON answer as text, and the archive's first bytes
- * must arrive as bytes.
+ * `fetch`: one path for every call, at the price of depending on Google's CORS.
+ * Capacitor's patched `fetch` would split them, GETs through its local proxy
+ * and the rest through native HTTP, which reads a non-JSON answer as text
+ * (mobile/CLAUDE.md § Google Drive).
  */
 
 export interface DriveAuthorization {

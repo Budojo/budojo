@@ -3667,7 +3667,7 @@
         "folder": "La cartella Budojo del PC",
         "folderFound": "Trovata",
         "folderMissing": "Non trovata",
-        "folderMissingHelp": "Il PC crea la cartella alla prima copia. Sul PC collega Google Drive e premi Copia adesso, poi rifai la prova.",
+        "folderMissingHelp": "Il PC crea la cartella alla prima copia. Se il PC non ha ancora copiato: lì collega Google Drive, premi Copia adesso, poi rifai la prova. Se il PC mostra già copie su Google Drive, è proprio la risposta che la prova cerca: il telefono non vede i file del PC. Manda uno screenshot.",
         "pcArchives": "I backup del PC",
         "newestRead": "Il più recente, letto da qui",
         "isZip": "È uno zip: letto",
@@ -3681,7 +3681,7 @@
         "readBack": "Riletto",
         "yes": "Sì",
         "no": "No",
-        "nextOnPc": "Ora sul PC: premi Copia adesso. O nella lista compare un backup del 1° gennaio 2000, o il PC lo cancella: in tutti e due i casi il PC ha visto il file del telefono. Poi rifai la prova qui."
+        "nextOnPc": "Ora sul PC: premi Copia adesso, poi Mostra tutti sotto la lista, e guarda l'ultima riga. O c'è un backup del 1° gennaio 2000, o il PC l'ha cancellato: in tutti e due i casi il PC ha visto il file del telefono. Poi rifai la prova qui."
       }
     }
   }

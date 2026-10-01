@@ -73,6 +73,8 @@ export class MatAppComponent implements OnInit {
   );
   protected readonly driveLinkMs = signal<number | null>(null);
   protected readonly driveLinkConsented = signal(false);
+  /** A call to Google is in flight: a second tap would only get `BUSY` back. */
+  protected readonly driveLinking = signal(false);
   protected readonly driveState = signal<'idle' | 'running' | 'done' | 'error'>('idle');
   protected readonly driveProbe = signal<DriveProbe | null>(null);
   protected readonly driveError = signal<string | null>(null);
@@ -145,9 +147,10 @@ export class MatAppComponent implements OnInit {
   /** Asks Google for a token: silently at launch, with the consent screen when the owner taps. */
   protected async linkDrive(interactive: boolean): Promise<void> {
     const plugin = driveAuthPlugin();
-    if (plugin === null) {
+    if (plugin === null || this.driveLinking()) {
       return;
     }
+    this.driveLinking.set(true);
     this.driveError.set(null);
     try {
       if (this.playServices() === null) {
@@ -165,6 +168,8 @@ export class MatAppComponent implements OnInit {
       }
       this.driveError.set(error instanceof Error ? error.message : String(error));
       this.driveLink.set('error');
+    } finally {
+      this.driveLinking.set(false);
     }
   }
 

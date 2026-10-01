@@ -3667,7 +3667,7 @@
         "folder": "The PC's Budojo folder",
         "folderFound": "Found",
         "folderMissing": "Not found",
-        "folderMissingHelp": "The PC creates the folder on its first copy. On the PC, connect Google Drive and press Copy now, then test again.",
+        "folderMissingHelp": "The PC creates the folder on its first copy. If the PC has not copied yet: connect Google Drive there, press Copy now, then test again. If the PC already shows copies on Google Drive, this is the answer the test looks for: the phone cannot see the PC's files. Send a screenshot.",
         "pcArchives": "The PC's backups",
         "newestRead": "The newest, read from here",
         "isZip": "It is a zip: read",
@@ -3681,7 +3681,7 @@
         "readBack": "Read back",
         "yes": "Yes",
         "no": "No",
-        "nextOnPc": "Now on the PC: press Copy now. Either a backup dated 1 January 2000 shows in its list, or the PC deletes it: both mean the PC saw the phone's file. Then test again here."
+        "nextOnPc": "Now on the PC: press Copy now, then Show all under the list, and look at the last row. Either a backup dated 1 January 2000 is there, or the PC has deleted it: both mean the PC saw the phone's file. Then test again here."
       }
     }
   }

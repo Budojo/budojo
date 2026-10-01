@@ -143,6 +143,7 @@
         <p-button
           data-cy="mat-drive-connect"
           [label]="'mat.spike.drive.connect' | translate"
+          [loading]="driveLinking()"
           size="large"
           [fluid]="true"
           (onClick)="linkDrive(true)"
