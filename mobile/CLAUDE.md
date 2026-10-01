@@ -38,6 +38,13 @@ Three things a PHP that runs on Linux does and Android refuses. Each one was fou
 2. **OPcache's shared-memory lock is refused** (*Cannot create lock - Permission denied (13)*). OPcache runs `file_cache_only` in the plugin's `php.ini`, with a fallback to no cache that the spike screen reports.
 3. **The seccomp policy kills a process that calls `accept`,** and allows only `accept4`: exit 159, SIGSYS, at the server's first connection. `php/android-accept4.php` patches PHP's two `accept()` calls to `accept4(…, SOCK_CLOEXEC)`. **The flag is required:** musl's `accept4` with flags 0 falls back to `accept`. `build.sh` greps the patched source, and CI serves a page from every build under a Docker seccomp policy that kills on `accept`. A new PHP version that moves those calls fails the patch script loudly, which is the point.
 
+**This shell is ours on purpose.** #2051 compared it with NativePHP for Mobile and kept it (PRD § 5.1):
+- NativePHP's fingerprint and notification plugins are paid;
+- its PHP binary is prebuilt in a repository that is not public;
+- it keeps Laravel alive between requests, which this server was never audited for.
+
+Calling PHP in-process from this shell is the way out if Android ever stops the server process in a way CI cannot reproduce.
+
 ## Rules
 
 - **Only the release key signs.** `android/app/build.gradle` reads it from `BUDOJO_ANDROID_KEYSTORE` / `BUDOJO_ANDROID_KEYSTORE_PASSWORD` (alias `budojo`, PKCS12), and CI checks the certificate's SHA-256 before uploading. There is no debug-key fallback on purpose: an APK signed with another key never installs over the app, and uninstalling loses the changes a phone has not sent yet. The owner holds the other copy of the key.
