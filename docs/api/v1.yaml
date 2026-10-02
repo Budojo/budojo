@@ -116,6 +116,14 @@ tags:
       #2030, `docs/sync/protocol.md`). The app packs, seals and publishes
       versions itself; the server hands it the database and takes one back.
       Owner-only, and a `sync` capability: 404 on the web profile.
+  - name: device
+    description: |
+      What only the app's own page may ask of its server on a local device
+      (#2079, PRD § 5.4): the owner's session with no password, and bringing
+      in a backup the PC took. Signed out, since the door comes before any
+      session. The page sends the secret its shell made at launch in
+      `X-Budojo-Shell`. Without it, or on the web profile, every route is 404:
+      on `127.0.0.1` any other app on the phone reaches the server too.
   - name: engagement
     description: |
       Social-engagement endpoints introduced with the v2.30.0 train
@@ -7394,6 +7402,130 @@ paths:
                   message: { type: string }
               example: { code: newer, message: 'The database is from a newer Budojo (schema 2027_01_10_090000_add_x). Update Budojo first.' }
 
+  /device/session:
+    post:
+      operationId: deviceSession
+      summary: The owner's session, for the shell's own page
+      description: |
+        The door signs in with Google, then asks for the owner's token with
+        the shell's secret: no Budojo password on a local device (#2079, PRD
+        § 5.4). The same answer as a login. A local device has one owner;
+        this is the first owner by id.
+      tags: [device]
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/ShellSecret'
+      responses:
+        '200':
+          description: The owner's token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '404':
+          description: |
+            No `sync` capability, no shell secret, or the wrong one; or, with
+            `code` `no_owner`, nobody has set up or restored Budojo on this
+            device yet.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: string, enum: [no_owner] }
+                  message: { type: string }
+
+  /device/backup/inspect:
+    post:
+      operationId: deviceBackupInspect
+      summary: The academy a PC backup holds, and the one this device holds
+      description: |
+        A backup the PC took (`budojo-backup-*.zip`, #1301), brought from
+        Drive by the page (#2079). The door names both academies before
+        anything is replaced, and the owner chooses. **Nothing is written.**
+        The archive passes the restore's checks first: a zip, a manifest of
+        format 1, and a database `PUT /sync/stage` would take.
+      tags: [device]
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/ShellSecret'
+      requestBody:
+        required: true
+        content:
+          application/zip:
+            schema: { type: string, format: binary }
+      responses:
+        '200':
+          description: Both academies
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [backup, here]
+                    properties:
+                      backup:
+                        type: object
+                        required: [taken_at, app_version, academy]
+                        properties:
+                          taken_at: { type: string, description: 'When the PC took it: the manifest''s `createdAt`.' }
+                          app_version: { type: string }
+                          academy:
+                            type: object
+                            nullable: true
+                            allOf: [{ $ref: '#/components/schemas/AcademySummary' }]
+                      here:
+                        type: object
+                        nullable: true
+                        description: This device's own academy; null when it holds none.
+                        allOf: [{ $ref: '#/components/schemas/AcademySummary' }]
+              example:
+                data:
+                  backup:
+                    taken_at: '2026-10-01T16:51:32.000Z'
+                    app_version: 2.74.1
+                    academy: { name: Kaizen, athletes: 42, belts: { white: 20, blue: 12, purple: 6, brown: 3, black: 1 } }
+                  here: { name: Prova, athletes: 2, belts: { white: 2 } }
+        '404': { description: 'No `sync` capability, no shell secret, or the wrong one.' }
+        '413':
+          description: The archive is larger than PHP's `post_max_size`.
+        '422':
+          $ref: '#/components/responses/BackupRefused'
+
+  /device/backup/restore:
+    post:
+      operationId: deviceBackupRestore
+      summary: Stage a PC backup, for the shell to swap in at its next start
+      description: |
+        The same checks as `inspect`, then the backup is staged (#2079):
+        - its database beside the live one (`<database>.staged`), as a
+          version is (`PUT /sync/stage`);
+        - its academy's files, `storage/app/…` and nothing else of the PC's
+          `storage/`, beside `storage/app` (`app.staged`).
+
+        **The files go first, and the database commits:** the shell swaps a
+        staged `app.staged` only beside a staged database, and deletes one
+        left alone. A name that would climb out of the folder is refused.
+      tags: [device]
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/ShellSecret'
+      requestBody:
+        required: true
+        content:
+          application/zip:
+            schema: { type: string, format: binary }
+      responses:
+        '204': { description: Staged }
+        '404': { description: 'No `sync` capability, no shell secret, or the wrong one.' }
+        '413':
+          description: The archive is larger than PHP's `post_max_size`.
+        '422':
+          $ref: '#/components/responses/BackupRefused'
+
   /sync/files:
     get:
       operationId: syncFilesIndex
@@ -8729,7 +8861,31 @@ components:
         format: int64
         minimum: 1
 
+    ShellSecret:
+      name: X-Budojo-Shell
+      in: header
+      required: true
+      description: The secret the shell made at launch and handed to its own page alone (#2079).
+      schema:
+        type: string
+
   responses:
+    BackupRefused:
+      description: |
+        Not a backup this Budojo takes; nothing is staged. `code` is `newer`
+        (update Budojo first) or `unreadable` (not a zip, no manifest, a format
+        this code does not know, no database, a damaged one, or a file named
+        outside the academy's folder), the codes a restore on the PC uses.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [code, message]
+            properties:
+              code: { type: string, enum: [newer, unreadable] }
+              message: { type: string }
+          example: { code: unreadable, message: This file is not a Budojo backup. }
+
     Unauthenticated:
       description: Missing or invalid Bearer token
       content:
@@ -8913,6 +9069,20 @@ components:
             $ref: '#/components/schemas/ValidationErrorBody'
 
   schemas:
+    AcademySummary:
+      type: object
+      description: |
+        What the door names an academy by (#2079), the shape of a version
+        manifest's `academy` (`docs/sync/protocol.md`): its active athletes,
+        and how many hold each belt, most first.
+      required: [name, athletes, belts]
+      properties:
+        name: { type: string }
+        athletes: { type: integer, minimum: 0 }
+        belts:
+          type: object
+          additionalProperties: { type: integer, minimum: 1 }
+
 
     SyncJournalEntry:
       type: object

@@ -120,6 +120,25 @@ return [
         // travels between devices. Unset until the device is paired, and
         // until then nothing is journaled.
         'device' => env('BUDOJO_DEVICE_ID'),
+        // Where the academy's files are (`storage/app`), and a restore stages
+        // its own beside them (#2079). Unset, Laravel's; the tests point it at
+        // a folder of their own.
+        'storage' => env('BUDOJO_SYNC_STORAGE'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | The shell (#2079)
+    |--------------------------------------------------------------------------
+    |
+    | A secret the desktop's and the phone's shell make at each launch and
+    | hand to their own page alone. It lets that page, and nothing else on
+    | `127.0.0.1`, open the owner's session and replace the academy
+    | (`RequireShell`). Unset, as on the web, nothing passes.
+    |
+    */
+    'shell' => [
+        'secret' => env('BUDOJO_SHELL_SECRET'),
     ],
 
 ];

@@ -133,6 +133,22 @@ Route::post('/me/deletion-request/cancel/{token}', [\App\Http\Controllers\User\A
     ->middleware('throttle:10,1')
     ->name('me.deletion-request.cancel');
 
+// What only the app's own page may ask of its server on a local device
+// (#2079, PRD § 5.4): the owner's session with no password, and bringing in
+// a backup the PC took. Signed out by design, since the door comes before any
+// session. The capability first (404 on the web), then the shell's secret
+// (404 without it): on `127.0.0.1` every other app on the phone can reach the
+// server, and none of them has the secret.
+Route::prefix('device')
+    ->middleware(['capability:sync', 'shell'])
+    ->group(function (): void {
+        Route::post('session', \App\Http\Controllers\Device\DeviceSessionController::class)->name('device.session');
+        Route::post('backup/inspect', [\App\Http\Controllers\Device\DeviceBackupController::class, 'inspect'])
+            ->name('device.backup.inspect');
+        Route::post('backup/restore', [\App\Http\Controllers\Device\DeviceBackupController::class, 'restore'])
+            ->name('device.backup.restore');
+    });
+
 // Authenticated routes
 Route::middleware('auth:sanctum')->group(function (): void {
     // Currently authenticated user. Used by the SPA on bootstrap to hydrate
