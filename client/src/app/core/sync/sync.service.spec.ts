@@ -201,6 +201,35 @@ describe('SyncService', () => {
     expect(sync.state()).toEqual({ kind: 'off' });
   });
 
+  it('starts nothing after sign-out even when a round still running then fails', async () => {
+    vi.useFakeTimers();
+    let rounds = 0;
+    let fail: (error: Error) => void = () => undefined;
+    const blocked: SyncRemote = {
+      list: () => new Promise((_, reject) => (fail = reject)),
+      read: () => new Promise((_, reject) => (fail = reject)),
+      write: async () => undefined,
+      remove: async () => undefined,
+    };
+    const sync = setUp({
+      remote: blocked,
+      identity: async () => {
+        rounds++;
+        return identity();
+      },
+    });
+    sync.start();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(rounds).toBe(1);
+
+    // The owner signs out while the round waits for Drive; then the round fails.
+    sync.stop();
+    fail(new RemoteError('offline', 'no network'));
+    await vi.advanceTimersByTimeAsync(10 * 60_000);
+
+    expect(rounds).toBe(1);
+  });
+
   it('writes nothing to another academy’s folder', async () => {
     await remote.write(FOLDER_PATH, await sealFolder(key, 'f'.repeat(32)));
     const sync = setUp();
