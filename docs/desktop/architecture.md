@@ -48,6 +48,8 @@ Everything the renderer needs beyond HTTP is on `window.__BUDOJO__` (typed in `c
 |---|---|---|
 | `apiBase` | read (sync, via `additionalArguments`) | `http://127.0.0.1:<port>` of the supervised API; `''` on the web. Read during Angular bootstrap, before the first request. |
 | `platform` | read | `process.platform` of the host. |
+| `shellSecret` | read (sync, once) | The launch's shell secret ([#2032](https://github.com/Budojo/budojo/issues/2032)): `POST /device/session` opens the owner's session with it, with no password, after the sync swapped the phone's database in. Made per launch, handed to PHP as `BUDOJO_SHELL_SECRET`, written nowhere. |
+| `sync.{identity,driveFetch,swapIn}` | renderer → main (async) | The sync between the owner's devices ([#2032](https://github.com/Budojo/budojo/issues/2032)), § Sync below. |
 | `onNavigate(cb)` | main → renderer | A clicked native toast asks the SPA to route somewhere ([#1225](https://github.com/Budojo/budojo/issues/1225)). In-app paths only; the renderer still owns routing. |
 | `token.{get,set,clear}` | renderer ↔ main (sync) | The Sanctum bearer token, held encrypted in the OS keychain by the main process ([#1227](https://github.com/Budojo/budojo/issues/1227)). `get()` is synchronous so the HTTP interceptor can read it inline. |
 | `backup.{list,run,restore,restoreFromFile}` | renderer → main (async) | Local backup & restore ([#1228](https://github.com/Budojo/budojo/issues/1228)). `restoreFromFile` takes no argument: the main process opens the system file dialog and restores what it returns ([#1909](https://github.com/Budojo/budojo/issues/1909)). See [`backup-restore.md`](./backup-restore.md). |
@@ -109,6 +111,8 @@ Everything that persists lives under Electron's **`userData`** directory (`%APPD
 | `backup-folder.json` | Which folder backups are copied into and how that last went (#1320). Holds no secret. |
 | `bootstrap.json` | First-run state marker. |
 | `budojo.sqlite.previous`, `storage.previous`, `*.restoring`, `*.kept-<timestamp>` | Only ever present around a restore ([#1909](https://github.com/Budojo/budojo/issues/1909)): the live files step aside as `.previous`, the staged copies are `.restoring`, and a leftover `.previous` is set aside as `.kept-*`, never deleted. A crash mid-swap is put back together by the bootstrap before anything else reads the folder ([#1919](https://github.com/Budojo/budojo/issues/1919), [`backup-restore.md`](./backup-restore.md)). |
+| `sync-device.json` | This PC's id in the sync folder (`pc` + 4 characters) and its database's epoch ([#2032](https://github.com/Budojo/budojo/issues/2032)). Made once, when the PC connects the phone; apart from `drive-sync.json`, so disconnecting Drive does not make the PC another device. Holds no secret. |
+| `budojo.sqlite.staged`, `budojo.sqlite.reconcile`, `storage/app.staged`, `storage/app.previous` | Only ever present around a sync's swap ([#2032](https://github.com/Budojo/budojo/issues/2032)), § Sync below. |
 | `theme.json` | Which theme was painted last run ([#1793](https://github.com/Budojo/budojo/issues/1793)). The window's `backgroundColor` and native title-bar overlay are chosen **before** any renderer exists, and the main process cannot read the renderer's localStorage — without a remembered answer, every launch on a dark theme opens with a white flash. Holds no secret and describes this screen, not the owner's data, so it is deliberately not restored from a backup. |
 | `php.ini`, `php-server.pid` | Generated PHP config + supervisor pid. |
 | `notifications-ledger.json` | Once-only ledger so a native reminder fires at most once. |
@@ -138,6 +142,18 @@ On first run the bootstrap generates two 32-byte random keys — `APP_KEY` (Lara
 If a database already exists but `secrets.bin` is gone, the bootstrap **refuses to generate new keys over existing data** and fails loudly — new keys would render every encrypted column and document permanently unreadable while looking like they'd been "reset". This behaviour is the crux of the disaster-recovery story; read [`backup-restore.md`](./backup-restore.md) before trusting a backup with a fresh machine.
 
 Because a backup never carries `secrets.bin` and the keychain binds it to one Windows user, the keys can be exported as a portable **recovery code** (#1254) and re-imported on another machine — the only way a fresh-machine restore can decrypt the documents. See [`backup-restore.md` § Recovery keys](./backup-restore.md#recovery-keys).
+
+## Sync with the phone
+
+The academy's two devices meet in the owner's Google Drive ([M12](../specs/m12-mat-app.md), [#2032](https://github.com/Budojo/budojo/issues/2032), [`docs/sync/protocol.md`](../sync/protocol.md)). **The engine runs in the page** (PRD § 5.6), the same TypeScript as on the phone (`client/src/app/core/sync/`). The main process supplies only what it alone has, over `window.__BUDOJO__.sync`:
+
+- **Who this PC is.** `identity()` answers once the PC connected the phone (Dati e backup → «Collega il telefono», #2033): the device id from `sync-device.json`, and the sync key and folder id read from the account's keys file. Null until then, and null while the running server does not journal under the id: **the server journals the academy's writes only once it was started with `BUDOJO_DEVICE_ID`**, so joining restarts it.
+- **Drive.** `driveFetch()` makes the page's call to Drive's files API with the main process's own token (`sync-bridge.ts`, `DriveSyncService.fetchForSync`). The token never reaches the page; a request that names another host or path is refused before any token is read. A token Google no longer gives answers 401, which the page shows as «Ricollega Google».
+- **The swap.** `swapIn()` stops every PHP process of ours and runs the bootstrap again: the staged database is swapped in (`sync-swap.ts`, the phone's `StagedSwap` in TypeScript, resumable at every step), the migrations run, then `budojo:sync-reconcile` while `budojo.sqlite.reconcile` is there. **The server comes back on the same port**: the window was given its address at creation, and a reload keeps it. A Restore uses the same rule, and lost it before #2032.
+- **After a swap the page opens the owner's session again** through the shell's secret (`/device/session`). The database swapped in is the phone's, which holds none of this PC's sessions. While the sync swaps, the page's requests wait (`WriteGate`); one sent with the token from before is sent once more with the new one (`authInterceptor`).
+- **A Restore (Data & backup) moves the database's epoch on,** and the page forgets what it remembered of the database before (`ledger-store.ts`): the protocol meets the restored database as an academy of its own, which asks (protocol § Scope). A Restore is refused while a database the sync staged waits to be swapped in.
+
+The PC made the academy's keys, so **it publishes its gym as version 1** into an empty folder; the phone, which joined with them, waits for it. The state is the pill at the foot of the side rail, as in the phone's topbar (PRD § 6.2). Its log is `logs/sync.log`.
 
 ## Scheduling
 
