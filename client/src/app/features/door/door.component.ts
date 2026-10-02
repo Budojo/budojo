@@ -315,8 +315,10 @@ function rememberRestored(name: string | null): void {
  */
 function detailOf(error: unknown): string {
   if (error instanceof HttpErrorResponse) {
+    // A refusal's own words; anything else keeps the address and the status,
+    // since the phone's server hides its errors' text (`APP_DEBUG=false`).
     const message = (error.error as { message?: unknown } | null)?.message;
-    return typeof message === 'string' ? message : error.message;
+    return error.status === 422 && typeof message === 'string' ? message : error.message;
   }
   return error instanceof Error ? error.message : String(error);
 }

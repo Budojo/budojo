@@ -16,12 +16,22 @@ final class SyncDatabase
     public const string HEADER = "SQLite format 3\0";
 
     /**
-     * Names Budojo's own history retired: a database that ran a migration
-     * under one of them is not from a later Budojo. #443 renamed
-     * `…120000_create_support_tickets_table` to `…120001_…`, so a database
-     * that ran it before the rename (May 2026) keeps the old row for good.
+     * Migration names a Budojo database can hold that no later Budojo stands
+     * behind: the only two ever added to the repository and gone since
+     * (#2083, every ref and PR head searched). A database that ran one is not
+     * "newer", and its schema serves this code:
+     * - `…120000_create_support_tickets_table`: #443 renamed it to `…120001…`
+     *   on 5 May, within one beta, byte for byte;
+     * - `…create_licenses_table`: the unmerged licensing branch (#1297). A
+     *   build of it adds one table of its own, which this code never reads.
+     *
+     * The owner's PC refused every backup as newer on its first try (#2079).
+     * Until the phone names the row on screen, which one it holds is a guess.
      */
-    public const array RETIRED_MIGRATIONS = ['2026_05_05_120000_create_support_tickets_table'];
+    public const array STRAY_MIGRATIONS = [
+        '2026_05_05_120000_create_support_tickets_table',
+        '2026_08_16_090000_create_licenses_table',
+    ];
 
     /** A migration only a Budojo database has run: another Laravel app's database lacks it. */
     public const string BUDOJO_MIGRATION = '2026_04_22_084344_create_academies_table';

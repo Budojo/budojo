@@ -270,6 +270,24 @@ describe('when the door cannot go on', () => {
   });
 });
 
+describe('what the door shows when something else fails', () => {
+  it('keeps the address and the status of a server error, which the phone hides the text of', async () => {
+    const crashed = new HttpErrorResponse({
+      status: 500,
+      statusText: 'Internal Server Error',
+      url: 'http://127.0.0.1:41234/api/v1/device/backup/inspect',
+      error: { message: 'Server Error' },
+    });
+    const { component, render, cy } = setup({ inspect: () => throwError(() => crashed) });
+
+    await component.signInWithGoogle();
+    render();
+
+    expect(cy('door-failed')?.textContent).toContain('/api/v1/device/backup/inspect');
+    expect(cy('door-failed')?.textContent).toContain('500');
+  });
+});
+
 describe('continuing without Google', () => {
   it('goes straight in on a phone that has an owner: no password on a local device', async () => {
     const { component, auth, router } = setup();

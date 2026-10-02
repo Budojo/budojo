@@ -43,7 +43,7 @@ final class IncomingDatabase
         // A Budojo database that has run a migration this code lacks is from a
         // later Budojo, whatever the migration's date: a branch can ship one
         // dated before a migration already out. Update first.
-        $unknown = array_values(array_diff($applied, SyncDatabase::codeMigrations(), SyncDatabase::RETIRED_MIGRATIONS));
+        $unknown = array_values(array_diff($applied, SyncDatabase::codeMigrations(), SyncDatabase::STRAY_MIGRATIONS));
         if ($unknown !== []) {
             throw StageRefused::newer($unknown[0]);
         }
