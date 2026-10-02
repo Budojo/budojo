@@ -60,6 +60,15 @@ describe('the PC’s sync platform', () => {
     expect(platform.publishesFirst).toBe(true);
   });
 
+  it('says Google wants the owner again when the main process cannot read the keys for that', async () => {
+    const platform = desktopSyncPlatform(
+      stubBridge({ sync: { identity: async () => ({ unauthorized: true as const }) } }),
+      async () => undefined,
+    );
+
+    await expect(platform.identity()).rejects.toMatchObject({ reason: 'unauthorized' });
+  });
+
   it('swaps through the main process, then opens the owner’s session on the database it brought', async () => {
     const steps: string[] = [];
     const swapIn = vi.fn(async () => {

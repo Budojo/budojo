@@ -43,7 +43,7 @@ describe('planStagedSwap (#2032)', () => {
     expect(plan(new Map([[db, 'mine']]))).toEqual([]);
   });
 
-  it('swaps the staged database in, its own aside as .previous with its WAL, and asks for the reconcile', () => {
+  it('swaps the staged database in, its own aside as .sync-previous with its WAL, and asks for the reconcile', () => {
     const disk: Disk = new Map([
       [db, 'mine'],
       [`${db}-wal`, 'my writes'],
@@ -55,8 +55,8 @@ describe('planStagedSwap (#2032)', () => {
 
     expect(Object.fromEntries(disk)).toEqual({
       [db]: 'theirs',
-      [`${db}.previous`]: 'mine',
-      [`${db}.previous-wal`]: 'my writes',
+      [`${db}.sync-previous`]: 'mine',
+      [`${db}.sync-previous-wal`]: 'my writes',
       [reconcileMarker(db)]: 'marker',
     });
   });
@@ -72,7 +72,7 @@ describe('planStagedSwap (#2032)', () => {
     apply(disk, plan(disk));
 
     expect(disk.get(files)).toBe('their files');
-    expect(disk.get(`${files}.previous`)).toBe('my files');
+    expect(disk.get(`${files}.sync-previous`)).toBe('my files');
     expect(disk.get(db)).toBe('theirs');
   });
 
@@ -87,18 +87,31 @@ describe('planStagedSwap (#2032)', () => {
     expect(Object.fromEntries(disk)).toEqual({ [db]: 'mine' });
   });
 
-  it('drops an older .previous only once a live database takes its place', () => {
+  it('leaves the Restore’s .previous alone: the owner’s data it set aside', () => {
     const disk: Disk = new Map([
       [db, 'mine'],
-      [`${db}.previous`, 'older'],
-      [`${db}.previous-wal`, 'older writes'],
+      [`${db}.previous`, 'what a Restore set aside'],
       [`${db}.staged`, 'theirs'],
     ]);
 
     apply(disk, plan(disk));
 
-    expect(disk.get(`${db}.previous`)).toBe('mine');
-    expect(disk.has(`${db}.previous-wal`)).toBe(false);
+    expect(disk.get(`${db}.previous`)).toBe('what a Restore set aside');
+    expect(disk.get(`${db}.sync-previous`)).toBe('mine');
+  });
+
+  it('drops an older copy of its own only once a live database takes its place', () => {
+    const disk: Disk = new Map([
+      [db, 'mine'],
+      [`${db}.sync-previous`, 'older'],
+      [`${db}.sync-previous-wal`, 'older writes'],
+      [`${db}.staged`, 'theirs'],
+    ]);
+
+    apply(disk, plan(disk));
+
+    expect(disk.get(`${db}.sync-previous`)).toBe('mine');
+    expect(disk.has(`${db}.sync-previous-wal`)).toBe(false);
   });
 
   it('never leaves a rollback journal beside the database it swapped in', () => {
@@ -111,7 +124,7 @@ describe('planStagedSwap (#2032)', () => {
     apply(disk, plan(disk));
 
     expect(disk.has(`${db}-journal`)).toBe(false);
-    expect(disk.get(`${db}.previous-journal`)).toBe('hot journal');
+    expect(disk.get(`${db}.sync-previous-journal`)).toBe('hot journal');
   });
 
   it('finishes the swap whatever step a start died at', () => {
@@ -120,7 +133,7 @@ describe('planStagedSwap (#2032)', () => {
         [db, 'mine'],
         [`${db}-wal`, 'my writes'],
         [`${db}-shm`, 'index'],
-        [`${db}.previous`, 'older'],
+        [`${db}.sync-previous`, 'older'],
         [files, 'my files'],
         [`${files}.staged`, 'their files'],
         [`${db}.staged`, 'theirs'],

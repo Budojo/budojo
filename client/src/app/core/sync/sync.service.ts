@@ -219,7 +219,11 @@ export class SyncService {
       this.stateSignal.set({ kind: 'off' });
       return;
     }
-    const owner: LedgerOwner = { device: identity.device, epoch: identity.epoch };
+    const owner: LedgerOwner = {
+      device: identity.device,
+      folder: identity.folder,
+      epoch: identity.epoch,
+    };
     const { device } = identity;
     if (this.stateSignal().kind !== 'synced') {
       this.stateSignal.set({ kind: 'syncing' });

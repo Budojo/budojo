@@ -16,9 +16,15 @@ import { isVersionRef } from './layout';
  */
 const KEY = 'budojoSyncLedger';
 
-/** Whose ledger: the device, and the epoch of its database (0 where nothing moves it). */
+/**
+ * Whose ledger: the device, the folder it syncs with, and the epoch of its
+ * database (0 where nothing moves it). The folder, because the PC's id
+ * outlives a Drive link: joined again to another account's keys, it starts
+ * that folder with nothing remembered.
+ */
 export interface LedgerOwner {
   device: string;
+  folder?: string;
   epoch?: number;
 }
 
@@ -28,8 +34,14 @@ export function loadLedger(owner: LedgerOwner, storage: Storage = localStorage):
     if (raw === null) {
       return EMPTY_LEDGER;
     }
-    const saved = JSON.parse(raw) as { device?: unknown; epoch?: unknown; ledger?: unknown };
+    const saved = JSON.parse(raw) as {
+      device?: unknown;
+      folder?: unknown;
+      epoch?: unknown;
+      ledger?: unknown;
+    };
     return saved.device === owner.device &&
+      (saved.folder ?? null) === (owner.folder ?? null) &&
       (saved.epoch ?? 0) === (owner.epoch ?? 0) &&
       isLedger(saved.ledger)
       ? saved.ledger
@@ -44,7 +56,15 @@ export function saveLedger(
   ledger: SyncLedger,
   storage: Storage = localStorage,
 ): void {
-  storage.setItem(KEY, JSON.stringify({ device: owner.device, epoch: owner.epoch ?? 0, ledger }));
+  storage.setItem(
+    KEY,
+    JSON.stringify({
+      device: owner.device,
+      folder: owner.folder ?? null,
+      epoch: owner.epoch ?? 0,
+      ledger,
+    }),
+  );
 }
 
 export function forgetLedger(storage: Storage = localStorage): void {

@@ -23,10 +23,11 @@ const SYNC = /\/api\/v1\/(sync|device)\//;
  * - **told to the sync** once the server took one, so it pushes a few
  *   seconds later (PRD § 5.2).
  *
- * **Reads wait too while the sync swaps** (#2032), uncounted: on the PC the
- * server is down during the restart, and a read that found it down would show
- * the offline page; one sent before the owner's session was open again would
- * carry a token the new database never had.
+ * **Reads wait too while the sync swaps** (#2032), and a hold waits for those
+ * already sent: on the PC the server goes down for the restart, and a read
+ * that found it down would show the offline page; one sent before the owner's
+ * session was open again would carry a token the new database never had.
+ * Only writes tell the sync to push.
  */
 @Injectable({ providedIn: 'root' })
 export class WriteGate {
@@ -58,11 +59,7 @@ export class WriteGate {
    * ends. The check and the count are one step, so a hold that starts later
    * always waits for it.
    */
-  pass<T>(
-    send: () => Observable<T>,
-    succeeded: (value: T) => boolean,
-    counted = true,
-  ): Observable<T> {
+  pass<T>(send: () => Observable<T>, succeeded: (value: T) => boolean): Observable<T> {
     return new Observable<T>((subscriber) => {
       let closed = false;
       let admitted = false;
@@ -76,10 +73,8 @@ export class WriteGate {
           void this.held.then(go);
           return;
         }
-        if (counted) {
-          this.inFlight++;
-          admitted = true;
-        }
+        this.inFlight++;
+        admitted = true;
         inner = send().subscribe({
           next: (value) => {
             ok ||= succeeded(value);
@@ -131,6 +126,5 @@ export const writeGateInterceptor: HttpInterceptorFn = (req, next) => {
   return inject(WriteGate).pass<HttpEvent<unknown>>(
     () => next(req),
     (event) => write && event instanceof HttpResponse,
-    write,
   );
 };

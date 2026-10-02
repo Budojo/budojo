@@ -10,11 +10,15 @@
  *   `budojo:sync-reconcile` after the migrations while the marker is there,
  *   and removes it only once the reconcile succeeded.
  * - **Staged files come in with it:** `storage/app` steps aside as
- *   `app.previous`. Files staged with no database beside them are a restore
- *   cut short, and are removed: the staged database is what commits one.
- * - **The live database steps aside as `.previous`,** with its WAL, which can
- *   hold writes the main file does not have yet. An older `.previous` goes
+ *   `app.sync-previous`. Files staged with no database beside them are a
+ *   restore cut short, and are removed: the staged database is what commits
+ *   one.
+ * - **The live database steps aside as `.sync-previous`,** with its WAL,
+ *   which can hold writes the main file does not have yet. An older one goes
  *   only once there is a live database to take its place.
+ * - **`.sync-previous`, not the phone's `.previous`:** on the PC `.previous`
+ *   is the Restore's (`planRecovery`, #1909), the owner's data a Restore set
+ *   aside, which is never deleted. The sync's own copy goes at its next swap.
  *
  * Each step is skipped when a start that died halfway already took it, so the
  * next start finishes the swap. `exists` is injected, so the plan is tested
@@ -50,7 +54,7 @@ export function planStagedSwap(layout: SwapLayout, exists: (file: string) => boo
   const steps: SwapStep[] = [{ kind: 'mark', path: reconcileMarker(db) }];
 
   if (exists(stagedFiles)) {
-    const previousFiles = `${files}.previous`;
+    const previousFiles = `${files}.sync-previous`;
     if (exists(files)) {
       if (exists(previousFiles)) {
         steps.push({ kind: 'remove', path: previousFiles });
@@ -60,7 +64,7 @@ export function planStagedSwap(layout: SwapLayout, exists: (file: string) => boo
     steps.push({ kind: 'rename', from: stagedFiles, to: files });
   }
 
-  const previous = `${db}.previous`;
+  const previous = `${db}.sync-previous`;
   if (exists(db)) {
     for (const suffix of ['', '-wal', '-shm', '-journal']) {
       if (exists(previous + suffix)) {
