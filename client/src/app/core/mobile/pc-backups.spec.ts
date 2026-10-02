@@ -14,6 +14,8 @@ function drive(
     email?: string;
     keys?: unknown;
     keyFiles?: number;
+    /** The key files one per page, each page but the last with a token to the next. */
+    keyPages?: boolean;
   } = {},
 ): { fetcher: Fetcher; urls: string[] } {
   const urls: string[] = [];
@@ -24,9 +26,15 @@ function drive(
     }
     if (url.includes('spaces=appDataFolder')) {
       const count = answers.keyFiles ?? (answers.keys === undefined ? 0 : 1);
-      return Response.json({
-        files: Array.from({ length: count }, (_, i) => ({ id: `keys-${i + 1}` })),
-      });
+      const ids = Array.from({ length: count }, (_, i) => ({ id: `keys-${i + 1}` }));
+      if (answers.keyPages) {
+        const page = Number(new URL(url).searchParams.get('pageToken') ?? 0);
+        return Response.json({
+          files: [ids[page]],
+          ...(page + 1 < ids.length ? { nextPageToken: String(page + 1) } : {}),
+        });
+      }
+      return Response.json({ files: ids });
     }
     if (url.includes('/files/keys-1?alt=media')) {
       return Response.json(answers.keys);
@@ -147,6 +155,14 @@ describe("the PC's backups on Drive (#2079)", () => {
       const { fetcher, urls } = drive({ keys, keyFiles: 2 });
 
       await expect(new PcBackups(token, fetcher).academyKeys()).rejects.toThrow('twice');
+      expect(urls.some((url) => url.includes('alt=media'))).toBe(false);
+    });
+
+    it('follows the pages: a second key file on the next page is still refused', async () => {
+      const { fetcher, urls } = drive({ keys, keyFiles: 2, keyPages: true });
+
+      await expect(new PcBackups(token, fetcher).academyKeys()).rejects.toThrow('twice');
+      expect(urls.filter((url) => url.includes('spaces=appDataFolder'))).toHaveLength(2);
       expect(urls.some((url) => url.includes('alt=media'))).toBe(false);
     });
 

@@ -80,25 +80,34 @@ export class PcBackups {
    * adopted.
    */
   async academyKeys(): Promise<AcademyKeys | null> {
-    const params = new URLSearchParams({
-      spaces: 'appDataFolder',
-      q: `name='${KEYS_FILE}' and trashed=false`,
-      fields: 'files(id)',
-      // Two, to tell one from more: Drive allows two files of one name, and a
-      // reader must not pick one, as the desktop refuses to (drive-io.ts).
-      pageSize: '2',
-    });
-    const found = await this.json<{ files?: { id: string }[] }>(
-      `${API}/files?${params.toString()}`,
-    );
-    const files = found.files ?? [];
-    if (files.length > 1) {
+    // Drive allows two files of one name, and a reader must not pick one, as
+    // the desktop refuses to (drive-io.ts). `pageSize` is only a ceiling, so
+    // the pages are followed until a second file or the end.
+    const ids: string[] = [];
+    let pageToken: string | undefined;
+    do {
+      const params = new URLSearchParams({
+        spaces: 'appDataFolder',
+        q: `name='${KEYS_FILE}' and trashed=false`,
+        fields: 'nextPageToken,files(id)',
+        pageSize: '2',
+      });
+      if (pageToken !== undefined) {
+        params.set('pageToken', pageToken);
+      }
+      const page = await this.json<{ nextPageToken?: string; files?: { id: string }[] }>(
+        `${API}/files?${params.toString()}`,
+      );
+      ids.push(...(page.files ?? []).map((file) => file.id));
+      pageToken = page.nextPageToken;
+    } while (pageToken !== undefined && ids.length < 2);
+    if (ids.length > 1) {
       throw new RemoteError(
         'unavailable',
         `the Google account holds ${KEYS_FILE} twice: neither is taken`,
       );
     }
-    const id = files[0]?.id;
+    const id = ids[0];
     if (id === undefined) {
       return null;
     }

@@ -403,26 +403,35 @@ export async function revoke(refreshToken: string): Promise<void> {
 
 /**
  * The files of a name in the account's hidden application data (#2033). All
- * of them: Drive allows two of one name, and a reader must not pick one.
+ * of them: Drive allows two of one name, and a reader must not pick one. Paged
+ * to the end, since `pageSize` is only a ceiling: a page may hold fewer.
  */
 export async function findAppDataFiles(tokens: DriveTokens, name: string): Promise<string[]> {
-  const params = new URLSearchParams({
-    spaces: 'appDataFolder',
-    q: `name='${name}' and trashed=false`,
-    fields: 'files(id)',
-    pageSize: '10',
-  });
-  const response = await fetch(`https://www.googleapis.com/drive/v3/files?${params.toString()}`, {
-    headers: auth(tokens),
-  });
+  const ids: string[] = [];
+  let pageToken: string | undefined;
 
-  if (!response.ok) {
-    throw await toDriveError(response);
-  }
+  do {
+    const params = new URLSearchParams({
+      spaces: 'appDataFolder',
+      q: `name='${name}' and trashed=false`,
+      fields: 'nextPageToken, files(id)',
+      pageSize: '10',
+    });
+    if (pageToken !== undefined) {
+      params.set('pageToken', pageToken);
+    }
 
-  const body = (await response.json()) as { files?: { id: string }[] };
+    const response = await fetch(`${DRIVE_FILES}?${params.toString()}`, { headers: auth(tokens) });
+    if (!response.ok) {
+      throw await toDriveError(response);
+    }
 
-  return (body.files ?? []).map((file) => file.id);
+    const body = (await response.json()) as { nextPageToken?: string; files?: { id: string }[] };
+    ids.push(...(body.files ?? []).map((file) => file.id));
+    pageToken = body.nextPageToken;
+  } while (pageToken !== undefined);
+
+  return ids;
 }
 
 export async function readAppDataFile(tokens: DriveTokens, id: string): Promise<string> {
