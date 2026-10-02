@@ -475,4 +475,24 @@ describe('what the round reads and fetches (#2086 review)', () => {
     expect(await outcome(pc, remote, key)).toEqual({ kind: 'nothing' });
     expect(await pc.journal()).toEqual([]);
   });
+
+  it('waits for a push that carried no entry while Drive has not listed it: no second version over it', async () => {
+    const { remote, key } = await folder();
+    const pc = new Device('pc4f2a', 'Eagles BJJ');
+    await sync(pc, remote, key);
+
+    // Version 1 holds the academy and no entry; the listing lags behind it.
+    expect(
+      await outcome(
+        pc,
+        lagging(remote, (path) => path.includes('000001-pc4f2a')),
+        key,
+      ),
+    ).toEqual({
+      kind: 'wait',
+    });
+    expect([...remote.files.keys()].filter((path) => path.startsWith('versions/'))).toEqual([
+      'versions/000001-pc4f2a.root.bjs',
+    ]);
+  });
 });

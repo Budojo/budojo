@@ -87,6 +87,13 @@ export const EMPTY_LEDGER: SyncLedger = {
   unconfirmed: null,
 };
 
+/**
+ * Everything one round needs. **What the caller owes it:**
+ * - rounds on one device never overlap: one at a time;
+ * - a staged database is always swapped in at the next start, as the phone's
+ *   `StagedSwap` does: a fast-forward saves its base once staged, before the
+ *   swap, and relies on it.
+ */
 export interface SyncContext {
   device: string;
   /** The app version that writes a version (PRD § 5.5). */
@@ -155,8 +162,14 @@ export async function syncOnce(context: SyncContext): Promise<SyncRound> {
     {
       base: ledger.base,
       unpushed: ledger.base === null ? holdsAcademy : unpushed.length > 0,
+      // Its push counts until every entry of it is cleared, **and** until it is
+      // listed: a push that carried none (version 1, or one on an empty
+      // folder) is still waited for, so a twin of the same number that lands
+      // later never takes its place unseen.
       unconfirmed:
-        unconfirmed !== null && kept.length > unpushed.length
+        unconfirmed !== null &&
+        (kept.length > unpushed.length ||
+          !versions.some((version) => sameVersion(version, unconfirmed.version)))
           ? { ...unconfirmed, pushedAt: unconfirmed.pushedAt ?? now }
           : null,
     },
@@ -167,7 +180,14 @@ export async function syncOnce(context: SyncContext): Promise<SyncRound> {
   let outcome: SyncOutcome;
   switch (decision.kind) {
     case 'push':
-      ledger = await push(context, ledger, decision.seq, decision.parent, unpushed, kept);
+      ledger = await push(
+        context,
+        ledger,
+        decision.seq,
+        decision.parent,
+        unpushedSince(kept, ledger),
+        kept,
+      );
       outcome = { kind: 'pushed', version: { seq: decision.seq, device: context.device } };
       break;
     case 'fast-forward': {
