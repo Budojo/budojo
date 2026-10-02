@@ -156,12 +156,20 @@ export class DoorComponent {
       this.archive = found.archive;
       this.archiveName = found.name;
       this.found.set(found.inspection);
+      const restored = restoredFrom();
       if (found.inspection.here === null) {
         await this.useDrive();
-      } else {
-        // Brought back from Drive before: the PC has a newer backup. Else, a
-        // gym of the phone's own beside the one on Drive.
-        this.step.set(restoredFrom() === null ? 'choose' : 'update');
+      } else if (restored === null) {
+        // A gym of the phone's own beside the one on Drive.
+        this.step.set('choose');
+      } else if (found.name > restored) {
+        // Brought back from Drive before, and the PC has taken a newer backup
+        // since: the archive's name carries when, and sorts by it.
+        this.step.set('update');
+      } else if (!(await this.enteredAsTheOwner())) {
+        // Nothing newer opens on Drive (the newest may not): the phone's own
+        // copy is the latest there is, and is never offered an older one.
+        this.step.set('choose');
       }
     } catch (error) {
       this.fail(error);

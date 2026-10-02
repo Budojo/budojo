@@ -336,6 +336,26 @@ describe('signing in again on a phone the door brought the gym to (PRD § 5.4)',
     expect(localStorage.getItem('budojoRestoredBackup')).toBe('budojo-backup-20261001-165132.zip');
   });
 
+  it("never offers an older backup as newer: when the newest does not open, the phone's own goes in", async () => {
+    localStorage.setItem('budojoRestoredBackup', 'budojo-backup-20261001-165132.zip');
+    const inspect = vi
+      .fn()
+      .mockReturnValueOnce(throwError(() => unreadable()))
+      .mockReturnValueOnce(of({ data: inspection(KAIZEN) }));
+    const { component, device, router } = setup({
+      backups: [
+        { id: 'new', name: 'budojo-backup-20261002-120000.zip' },
+        { id: 'marked', name: 'budojo-backup-20261001-165132.zip' },
+      ],
+      inspect,
+    });
+
+    await component.signInWithGoogle();
+
+    expect(device.restore).not.toHaveBeenCalled();
+    expect(router.navigateByUrl).toHaveBeenCalledWith('/dashboard');
+  });
+
   it('restores as on a new phone when the remembered phone has no owner any more', async () => {
     localStorage.setItem('budojoRestoredBackup', 'budojo-backup-20261001-165132.zip');
     const noOwner = new HttpErrorResponse({ status: 404, error: { code: 'no_owner' } });
