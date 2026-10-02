@@ -28,7 +28,8 @@ export interface SeenVersion extends ListedVersion {
  * which can lag behind a new file by seconds. Only liveness rides on it: after
  * it, the device treats the push as gone, and carries its writes onto what is
  * there, or publishes them again on an empty folder, or asks when the push was
- * a first version, or made on a line, and another academy's is there now.
+ * a first version, or when the version it was made on and the latest come
+ * from two different first versions: another device's academy.
  */
 export const LISTING_LAG_MS = 10 * 60_000;
 
@@ -109,10 +110,10 @@ export function decide(local: LocalState, versions: readonly SeenVersion[], now:
       return { kind: 'wait' };
     }
     // After it, the push is gone. An empty folder has nothing to lose, so
-    // publish again. A push that never landed, made as a first version or on
-    // a line another academy's now outruns, meets that academy: the owner
-    // chooses, as with no base (§ 6.5). Otherwise a rebase carries its writes
-    // onto what is there.
+    // publish again. A first version that never landed, or a push made on a
+    // version whose first version is not the latest's, meets another academy:
+    // the owner chooses, as with no base (§ 6.5). Otherwise a rebase carries
+    // its writes onto what is there.
     if (head === null) {
       return { kind: 'push', seq: unconfirmed.version.seq + 1, parent: base };
     }
