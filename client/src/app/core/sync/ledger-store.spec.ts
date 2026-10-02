@@ -1,5 +1,5 @@
 import { EMPTY_LEDGER, SyncLedger } from './engine';
-import { forgetLedger, loadLedger, saveLedger } from './ledger-store';
+import { forgetLedger, loadLedger, saveLedger, savedOwner } from './ledger-store';
 
 /** The device's memory between rounds and launches (#2046). */
 describe('the ledger store', () => {
@@ -40,6 +40,12 @@ describe('the ledger store', () => {
     saveLedger({ device: 'pc4f2a', folder: 'a'.repeat(32) }, ledger);
     expect(loadLedger({ device: 'pc4f2a', folder: 'a'.repeat(32) })).toEqual(ledger);
     expect(loadLedger({ device: 'pc4f2a', folder: 'b'.repeat(32) })).toEqual(EMPTY_LEDGER);
+  });
+
+  it('says whose ledger it holds, for a device that cannot read who it is offline', () => {
+    expect(savedOwner()).toBeNull();
+    saveLedger({ device: 'pc4f2a', folder: 'a'.repeat(32), epoch: 2 }, ledger);
+    expect(savedOwner()).toEqual({ device: 'pc4f2a', folder: 'a'.repeat(32), epoch: 2 });
   });
 
   it('starts empty on a damaged ledger rather than trusting it', () => {

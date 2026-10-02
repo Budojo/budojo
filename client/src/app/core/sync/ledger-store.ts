@@ -67,6 +67,31 @@ export function saveLedger(
   );
 }
 
+/**
+ * Whose ledger the storage holds, whatever identity asks: what a device
+ * opened with no network counts its waiting writes against, before it could
+ * read who it is.
+ */
+export function savedOwner(storage: Storage = localStorage): LedgerOwner | null {
+  try {
+    const raw = storage.getItem(KEY);
+    if (raw === null) {
+      return null;
+    }
+    const saved = JSON.parse(raw) as { device?: unknown; folder?: unknown; epoch?: unknown };
+    if (typeof saved.device !== 'string') {
+      return null;
+    }
+    return {
+      device: saved.device,
+      ...(typeof saved.folder === 'string' ? { folder: saved.folder } : {}),
+      ...(typeof saved.epoch === 'number' ? { epoch: saved.epoch } : {}),
+    };
+  } catch {
+    return null;
+  }
+}
+
 export function forgetLedger(storage: Storage = localStorage): void {
   storage.removeItem(KEY);
 }
