@@ -93,8 +93,24 @@ describe('GET /api/v1/sync/files', function (): void {
         $this->actingAs($owner)->getJson('/api/v1/sync/files')
             ->assertOk()
             ->assertExactJson(['data' => [
-                ['sha256' => hash('sha256', 'a photo'), 'size' => 7, 'present' => true],
+                ['sha256' => hash('sha256', 'a photo'), 'size' => 7, 'present' => true, 'complete' => true],
             ]]);
+    });
+
+    it('says a content is incomplete while one row naming it still lacks its file', function (): void {
+        // The phone held this PDF for athlete A; the PC uploaded the same PDF
+        // for athlete B. The content is here, but B's copy is not.
+        $owner = userWithAcademy();
+        Storage::disk('local')->put('documents/a.pdf', 'the same pdf');
+        foreach (['documents/a.pdf', 'documents/b.pdf'] as $path) {
+            $athlete = Athlete::factory()->for($owner->academy)->create();
+            Document::factory()->for($athlete)->create(['file_path' => $path, 'file_sha256' => hash('sha256', 'the same pdf')]);
+        }
+
+        $this->actingAs($owner)->getJson('/api/v1/sync/files')
+            ->assertOk()
+            ->assertJsonPath('data.0.present', true)
+            ->assertJsonPath('data.0.complete', false);
     });
 
     it('marks a content missing when its file is not on this device', function (): void {
@@ -105,6 +121,7 @@ describe('GET /api/v1/sync/files', function (): void {
         $this->actingAs($owner)->getJson('/api/v1/sync/files')
             ->assertOk()
             ->assertJsonPath('data.0.present', false)
+            ->assertJsonPath('data.0.complete', false)
             ->assertJsonPath('data.0.size', null);
     });
 

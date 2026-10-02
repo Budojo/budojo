@@ -22,9 +22,11 @@ describe('HttpSyncFiles', () => {
 
   it('lists the contents the database names', async () => {
     const listing = files.list();
-    http.expectOne('/api/v1/sync/files').flush({ data: [{ sha256: SHA, size: 7, present: true }] });
+    http
+      .expectOne('/api/v1/sync/files')
+      .flush({ data: [{ sha256: SHA, size: 7, present: true, complete: true }] });
 
-    expect(await listing).toEqual([{ sha256: SHA, size: 7, present: true }]);
+    expect(await listing).toEqual([{ sha256: SHA, size: 7, present: true, complete: true }]);
   });
 
   it('reads a content as bytes', async () => {

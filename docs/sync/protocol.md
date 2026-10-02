@@ -87,11 +87,12 @@ Documents, athletes' photos, avatars and the academy's logo travel apart from th
 - **Every row naming a file records the SHA-256 of its bytes** (`file_sha256`, `photo_sha256`, `avatar_sha256`, `logo_sha256`), as stored: an encrypted certificate is hashed and sent encrypted, under the academy's document key both devices share.
 - **A file is matched by its content, never by its path.** Photos are named by the athlete's id, and ids diverge between two devices: this device's `athletes/photos/57.jpg` is not the other device's athlete 57.
 - **The server says which contents its database names** (owner-only, `sync`):
-  - `GET /api/v1/sync/files` lists each one once, with whether this device holds it (a file at the row's path with that content);
+  - `GET /api/v1/sync/files` lists each one once, with whether this device holds it at one of its paths (`present`, a file there with that content) and at every one (`complete`);
   - `GET /api/v1/sync/files/{sha256}` gives its bytes;
   - `PUT /api/v1/sync/files/{sha256}` writes it at every path a row names for it, after checking the bytes hash to it (`422` `mismatch`, `404` `unknown`).
 - **Push** (`client/src/app/core/sync/files.ts`): before a version goes up, the device seals and sends every content it holds that `files/` lacks. A content is never sent twice: its name is its bytes.
-- **Pull:** after a version is in, the device fetches every content it lacks. One the folder does not have yet (the other device's push has not landed, or Drive's listing lags), one that does not open, or one whose bytes are not its name, is left for the next sync. Until then that document cannot be opened on this device.
+- **Pull:** the device completes every content it lacks somewhere: from its own copy when it holds the content at another path (the same PDF for a second athlete), from the folder otherwise. One the folder does not have yet (the other device's push has not landed, or Drive's listing lags), one that does not open, or one whose bytes are not its name, is left for the next sync. Until then that document cannot be opened on this device.
+- **The pull runs once the database is final:** after a fast-forward's swap, after a rebase's replay, **never between the swap and the replay**, the reconcile's rule. Until the replay, a path may hold a file this device uploaded offline (its athlete 57's photo, where the swapped-in database has another athlete 57); writing there first would destroy the only copy before the replay gives it its own row.
 - **Not yet here:** deleting from `files/` what no kept version names, which belongs with the retention of versions.
 
 ## A journal entry

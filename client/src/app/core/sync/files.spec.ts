@@ -14,6 +14,8 @@ import { MemoryRemote } from './remote';
 class FakeServer implements SyncFilesApi {
   readonly held = new Map<string, Uint8Array>();
   readonly written: string[] = [];
+  /** Contents held at one of their paths but not at every one. */
+  readonly incomplete = new Set<string>();
 
   constructor(readonly named: string[]) {}
 
@@ -22,6 +24,7 @@ class FakeServer implements SyncFilesApi {
       sha256,
       size: this.held.get(sha256)?.length ?? null,
       present: this.held.has(sha256),
+      complete: this.held.has(sha256) && !this.incomplete.has(sha256),
     }));
   }
 
@@ -35,6 +38,7 @@ class FakeServer implements SyncFilesApi {
     if ((await sha256Hex(bytes)) !== sha256) throw new Error('mismatch');
     this.written.push(sha256);
     this.held.set(sha256, bytes);
+    this.incomplete.delete(sha256);
   }
 }
 
@@ -114,6 +118,19 @@ describe('files by content (#2030)', () => {
 
     expect(await pullFiles(phone, remote, key)).toEqual({ fetched: 0, missing: [real.sha] });
     expect(phone.written).toEqual([]);
+  });
+
+  it('completes a content held for one row but not yet for another, from this device', async () => {
+    // The same PDF for two athletes: the phone holds one copy, the PC's
+    // version names a second. Nothing to fetch; the server copies it over.
+    const pdf = await content('the same pdf');
+    const phone = new FakeServer([pdf.sha]);
+    phone.held.set(pdf.sha, pdf.bytes);
+    phone.incomplete.add(pdf.sha);
+
+    expect(await pullFiles(phone, remote, key)).toEqual({ fetched: 1, missing: [] });
+    expect(phone.written).toEqual([pdf.sha]);
+    expect(remote.files.size).toBe(0);
   });
 
   it('does not fetch what this device already holds', async () => {

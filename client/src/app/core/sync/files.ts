@@ -19,7 +19,10 @@ export interface ServerFile {
   sha256: string;
   /** Bytes, when this device holds it. */
   size: number | null;
+  /** Held at one of its paths: this device can send it. */
   present: boolean;
+  /** Held at every path naming it: nothing left to write here. */
+  complete: boolean;
 }
 
 /** The device's server: `GET`/`PUT /api/v1/sync/files[/{sha256}]`. */
@@ -53,10 +56,16 @@ export async function pushFiles(
 }
 
 /**
- * Fetches every content this device lacks. One the folder does not have yet
- * (the other device's push has not landed, or Drive's listing lags) is left
- * for the next sync, as is one that does not open or is not the content its
- * name says: the server is never handed bytes it would refuse.
+ * Completes every content this device lacks somewhere. One it already holds
+ * at another path (the same PDF for a second athlete) is copied from here;
+ * the rest come from the folder. One the folder does not have yet (the other
+ * device's push has not landed, or Drive's listing lags) is left for the next
+ * sync, as is one that does not open or is not the content its name says:
+ * the server is never handed bytes it would refuse.
+ *
+ * Runs once the database is final: after a fast-forward's swap, after a
+ * rebase's replay. Between the swap and the replay a path may still hold a
+ * file this device uploaded offline, which only the replay moves to its row.
  */
 export async function pullFiles(
   api: SyncFilesApi,
@@ -66,10 +75,12 @@ export async function pullFiles(
   let fetched = 0;
   const missing: string[] = [];
   for (const file of await api.list()) {
-    if (file.present) {
+    if (file.complete) {
       continue;
     }
-    const bytes = await fetchContent(remote, key, file.sha256);
+    const bytes = file.present
+      ? await api.read(file.sha256)
+      : await fetchContent(remote, key, file.sha256);
     if (bytes === null) {
       missing.push(file.sha256);
       continue;
