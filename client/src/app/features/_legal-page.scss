@@ -1,3 +1,4 @@
+@use '../shared/styles/safe-area' as sa;
 // Shared layout for public legal pages — `/sub-processors` (#225),
 // `/privacy` (#219), and the future `/legal/dpa` (#220). The shape
 // (header, eyebrow, title, sections, table, footer) is identical
@@ -21,6 +22,8 @@
   max-width: var(--budojo-container-prose);
   margin: 0 auto;
   padding: 1.5rem 1rem 4rem;
+  @include sa.clear-top(1.5rem);
+  @include sa.status-bar-strip;
   display: flex;
   flex-direction: column;
   gap: 2rem;
@@ -28,6 +31,7 @@
 
   @media (min-width: 768px) {
     padding: 3rem 2rem 6rem;
+    @include sa.clear-top(3rem);
   }
 
   &__header {
