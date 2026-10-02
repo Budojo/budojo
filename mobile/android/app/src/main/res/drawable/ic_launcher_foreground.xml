@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Budojo's glyph (client/public/logo-glyph.svg, locked geometry) as the adaptive
+  icon's foreground (#2034): white on the accent background, at half the
+  108dp canvas like the PWA's maskable icon, well inside the 66dp safe zone.
+  Also the themed (monochrome) icon of Android 13+.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:scaleX="0.84375"
+        android:scaleY="0.84375"
+        android:translateX="27"
+        android:translateY="27">
+        <path
+            android:pathData="M14,10 L32,38 L32,54"
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="5"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+        <path
+            android:pathData="M50,10 L32,38"
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="5"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+        <path
+            android:pathData="M16,40 L48,40"
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="6"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+        <path
+            android:pathData="M29,38 L29,44 L35,44 L35,38"
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="4"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+    </group>
+</vector>

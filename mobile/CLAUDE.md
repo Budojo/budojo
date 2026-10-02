@@ -8,6 +8,7 @@ The phone app of M12 ([PRD](../docs/specs/m12-mat-app.md), epic #2026). **The sc
 |---|---|
 | `capacitor.config.json` | App id **`it.budojo.mobile`** (permanent: it can never change once a phone has it), name, and `webDir` pointing at `../client/dist/client/browser`. **`allowMixedContent` is on** because the page (`https://localhost`) shows images, athletes' photos and avatars, straight from the server on `http://127.0.0.1`; cleartext is still allowed to that address only. |
 | `android/` | The Gradle project Capacitor generated. Committed, as Capacitor intends; `cap sync` copies the web build into it (the copy is gitignored). |
+| `android/app/src/main/res/` | The launcher icon and the launch screen draw the brand kit's glyph (`docs/design/brand-kit/`) as vectors: white on the accent for the adaptive and themed icon, the accent on the brand surface for the launch screen. The `mipmap-*/ic_launcher*.png` are only for Android 7, rendered from `icon-square-accent.svg`. |
 | `package.json` | Capacitor and its CLI, nothing else |
 
 ## Building
