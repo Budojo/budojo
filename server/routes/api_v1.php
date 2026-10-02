@@ -11,7 +11,8 @@ Route::get('/health', fn () => response()->json(['status' => 'ok']));
 // Runtime profile + capability list (#1229). Public: the SPA reads it before
 // login, because the register / landing pages already differ by runtime.
 Route::get('/runtime', \App\Http\Controllers\Runtime\RuntimeController::class);
-Route::post('/auth/register', \App\Http\Controllers\Auth\RegisterController::class);
+Route::post('/auth/register', \App\Http\Controllers\Auth\RegisterController::class)
+    ->name('auth.register');
 
 // Login is rate-limited to 5 attempts / minute / IP via Laravel's standard
 // throttle middleware (#414). Without a limiter the password field is
@@ -23,7 +24,8 @@ Route::post('/auth/register', \App\Http\Controllers\Auth\RegisterController::cla
 // idiomatic avoids the email-keyed trade-off where an attacker can lock
 // out a known account by spamming its email from a botnet.
 Route::post('/auth/login', \App\Http\Controllers\Auth\LoginController::class)
-    ->middleware('throttle:5,1');
+    ->middleware('throttle:5,1')
+    ->name('auth.login');
 
 // Password reset (M5 PR-A). Both endpoints are public — a logged-out
 // user is the whole point of the flow.
@@ -39,8 +41,10 @@ Route::post('/auth/login', \App\Http\Controllers\Auth\LoginController::class)
 // expiry (60 minutes) caps replay attempts. A flood of bad tokens
 // just produces 422s without state mutation.
 Route::post('/auth/forgot-password', [\App\Http\Controllers\Auth\PasswordResetController::class, 'request'])
-    ->middleware('throttle:password-reset-request');
-Route::post('/auth/reset-password', [\App\Http\Controllers\Auth\PasswordResetController::class, 'reset']);
+    ->middleware('throttle:password-reset-request')
+    ->name('auth.forgot-password');
+Route::post('/auth/reset-password', [\App\Http\Controllers\Auth\PasswordResetController::class, 'reset'])
+    ->name('auth.reset-password');
 
 // One-click unsubscribe (#417). Public on purpose — the signed URL
 // IS the auth (validated by the `signed` middleware). Two entry
@@ -60,7 +64,8 @@ Route::get('/unsubscribe/{userId}/{category}', [\App\Http\Controllers\Auth\Unsub
     ->name('unsubscribe');
 Route::post('/unsubscribe/{userId}/{category}', [\App\Http\Controllers\Auth\UnsubscribeController::class, 'post'])
     ->where('userId', '[0-9]+')
-    ->middleware('signed');
+    ->middleware('signed')
+    ->name('unsubscribe.store');
 
 // Email verification — signed-link callback. Public on purpose: the signed
 // URL is the auth (the user clicks from their inbox, often on a different
@@ -92,7 +97,8 @@ Route::get('/athlete-invite/{token}/preview', [\App\Http\Controllers\Auth\Athlet
     ->middleware(['capability:athlete_accounts', 'throttle:30,1']);
 Route::post('/athlete-invite/{token}/accept', [\App\Http\Controllers\Auth\AthleteInvitationAcceptController::class, 'accept'])
     ->where('token', '[A-Za-z0-9]{64}')
-    ->middleware(['capability:athlete_accounts', 'throttle:5,1']);
+    ->middleware(['capability:athlete_accounts', 'throttle:5,1'])
+    ->name('athlete-invite.accept');
 
 // Email-change verification (#476) — public endpoint, the click in
 // the verification mail IS the auth. The 64-char token format is
@@ -102,7 +108,8 @@ Route::post('/athlete-invite/{token}/accept', [\App\Http\Controllers\Auth\Athlet
 // stable string body — same shape on unknown / consumed / expired
 // tokens (no signal leak between the three).
 Route::post('/email-change/{token}/verify', [\App\Http\Controllers\Auth\EmailVerificationController::class, 'verifyChange'])
-    ->where('token', '[A-Za-z0-9]{64}');
+    ->where('token', '[A-Za-z0-9]{64}')
+    ->name('email-change.verify');
 
 // Account-deletion cancel by token (#545) — public endpoint, the click
 // on the "Cancel deletion" CTA in the request-confirmation email IS
@@ -123,7 +130,8 @@ Route::post('/me/deletion-request/cancel/{token}', [\App\Http\Controllers\User\A
     // tokens would still spam the DB lookup. Mirrors the
     // /athlete-invite/{token}/accept throttle (5/min); we sit a notch
     // higher to absorb a legitimate user's dev-tools refresh loop.
-    ->middleware('throttle:10,1');
+    ->middleware('throttle:10,1')
+    ->name('me.deletion-request.cancel');
 
 // Authenticated routes
 Route::middleware('auth:sanctum')->group(function (): void {
@@ -132,14 +140,16 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('/auth/me', \App\Http\Controllers\Auth\MeController::class);
     // Revokes the token that made the request (#1227). Sign-out used to be
     // client-side only, leaving the row valid until found under Active sessions.
-    Route::post('/auth/logout', \App\Http\Controllers\Auth\LogoutController::class);
+    Route::post('/auth/logout', \App\Http\Controllers\Auth\LogoutController::class)
+        ->name('auth.logout');
 
     // Self-edit on the authenticated user's profile (#463). Currently
     // scoped to `name` only — the email-change flow has its own
     // dedicated POST /me/email-change endpoint immediately below
     // because it needs a pending-email-changes schema + signed-link
     // verification + banner UX.
-    Route::patch('/me', [\App\Http\Controllers\User\ProfileController::class, 'update']);
+    Route::patch('/me', [\App\Http\Controllers\User\ProfileController::class, 'update'])
+        ->name('me.update');
 
     // Email-change-with-verification (#476). The owner / athlete user
     // requests an email change here; the live `users.email` is NOT
@@ -153,8 +163,10 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // Throttle 5/hour PER USER — see `email-change-request` limiter
     // in `AppServiceProvider::boot()`.
     Route::post('/me/email-change', [\App\Http\Controllers\User\EmailChangeController::class, 'requestChange'])
-        ->middleware('throttle:email-change-request');
-    Route::delete('/me/email-change', [\App\Http\Controllers\User\EmailChangeController::class, 'cancel']);
+        ->middleware('throttle:email-change-request')
+        ->name('me.email-change.store');
+    Route::delete('/me/email-change', [\App\Http\Controllers\User\EmailChangeController::class, 'cancel'])
+        ->name('me.email-change.destroy');
 
     // In-app password change (#409). Throttled to 5 requests per minute
     // (Laravel's default IP-based key) — same shape as `/auth/login` and
@@ -164,7 +176,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // request is preserved; every other token on the user is revoked
     // inside the Action (defence-in-depth without yanking the active tab).
     Route::post('/me/password', \App\Http\Controllers\Auth\ChangePasswordController::class)
-        ->middleware('throttle:5,1');
+        ->middleware('throttle:5,1')
+        ->name('me.password.update');
 
     // GDPR Art. 20 (data portability) — export every byte we hold about
     // the user. JSON by default; `?format=zip` returns the JSON plus
@@ -188,8 +201,10 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // the instructor the manual roll-call (#960). DELETE reverts the
     // athlete's own self-mark; instructor-marked rows stay (only the
     // instructor can revert their own marks).
-    Route::post('/me/attendance/today', [\App\Http\Controllers\Me\MyAttendanceController::class, 'markToday']);
-    Route::delete('/me/attendance/today', [\App\Http\Controllers\Me\MyAttendanceController::class, 'unmarkToday']);
+    Route::post('/me/attendance/today', [\App\Http\Controllers\Me\MyAttendanceController::class, 'markToday'])
+        ->name('me.attendance.today.store');
+    Route::delete('/me/attendance/today', [\App\Http\Controllers\Me\MyAttendanceController::class, 'unmarkToday'])
+        ->name('me.attendance.today.destroy');
     // "Chi viene stasera?" peer preview (#958). Surfaces same-academy
     // athletes whose attendance row exists for today, capped at 8 and
     // opt-out-respected. The Athlete relation hook is the gate (404
@@ -230,8 +245,10 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // `routes/console.php`) hard-deletes the user via PurgeAccountAction.
     // Lightly throttled to defeat brute-force on the password re-auth gate.
     Route::post('/me/deletion-request', [\App\Http\Controllers\User\AccountDeletionController::class, 'store'])
-        ->middleware('throttle:5,1');
-    Route::delete('/me/deletion-request', [\App\Http\Controllers\User\AccountDeletionController::class, 'destroy']);
+        ->middleware('throttle:5,1')
+        ->name('me.deletion-request.store');
+    Route::delete('/me/deletion-request', [\App\Http\Controllers\User\AccountDeletionController::class, 'destroy'])
+        ->name('me.deletion-request.destroy');
 
     // Two-factor authentication (#412). TOTP enrolment + backup
     // codes + disable-with-password. The login flow at
@@ -252,13 +269,17 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // fresh tokens.
     Route::get('/me/two-factor', [\App\Http\Controllers\User\TwoFactorController::class, 'show']);
     Route::post('/me/two-factor/enrol', [\App\Http\Controllers\User\TwoFactorController::class, 'enrol'])
-        ->middleware('throttle:5,1');
+        ->middleware('throttle:5,1')
+        ->name('me.two-factor.enrol');
     Route::post('/me/two-factor/confirm', [\App\Http\Controllers\User\TwoFactorController::class, 'confirm'])
-        ->middleware('throttle:5,1');
+        ->middleware('throttle:5,1')
+        ->name('me.two-factor.confirm');
     Route::post('/me/two-factor/recovery-codes/regenerate', [\App\Http\Controllers\User\TwoFactorController::class, 'regenerateRecoveryCodes'])
-        ->middleware('throttle:5,1');
+        ->middleware('throttle:5,1')
+        ->name('me.two-factor.recovery-codes.regenerate');
     Route::delete('/me/two-factor', [\App\Http\Controllers\User\TwoFactorController::class, 'destroy'])
-        ->middleware('throttle:5,1');
+        ->middleware('throttle:5,1')
+        ->name('me.two-factor.destroy');
 
     // Active sessions list with per-token revoke (#413). Surfaces every
     // Sanctum personal-access-token tied to the user; backs the
@@ -272,11 +293,13 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // password-reset, email-verification, account-deletion-*) are
     // NOT toggleable.
     Route::get('/me/notification-preferences', [\App\Http\Controllers\User\NotificationPreferencesController::class, 'show']);
-    Route::patch('/me/notification-preferences', [\App\Http\Controllers\User\NotificationPreferencesController::class, 'update']);
+    Route::patch('/me/notification-preferences', [\App\Http\Controllers\User\NotificationPreferencesController::class, 'update'])
+        ->name('me.notification-preferences.update');
 
     // The app's language (#1912): the server writes the owner's notifications
     // itself, in the inbox and in the Windows notification, so it is told.
-    Route::patch('/me/locale', [\App\Http\Controllers\Me\LocaleController::class, 'update']);
+    Route::patch('/me/locale', [\App\Http\Controllers\Me\LocaleController::class, 'update'])
+        ->name('me.locale.update');
 
     // In-app notification inbox (#418). Bell-icon dropdown on the
     // dashboard topbar; per-user state in the standard Laravel
@@ -289,23 +312,31 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // until that follow-up lands.
     Route::get('/me/notifications', [\App\Http\Controllers\User\NotificationInboxController::class, 'index']);
     Route::post('/me/notifications/{id}/read', [\App\Http\Controllers\User\NotificationInboxController::class, 'markAsRead'])
-        ->where('id', '[A-Za-z0-9\-]{36}');
-    Route::post('/me/notifications/read-all', [\App\Http\Controllers\User\NotificationInboxController::class, 'markAllAsRead']);
+        ->where('id', '[A-Za-z0-9\-]{36}')
+        ->name('me.notifications.read');
+    Route::post('/me/notifications/read-all', [\App\Http\Controllers\User\NotificationInboxController::class, 'markAllAsRead'])
+        ->name('me.notifications.read-all');
     // Archive (#1914): out of "Da vedere", kept under "Archiviate".
-    Route::post('/me/notifications/archive-read', [\App\Http\Controllers\User\NotificationInboxController::class, 'archiveRead']);
-    Route::post('/me/notifications/unarchive', [\App\Http\Controllers\User\NotificationInboxController::class, 'unarchiveMany']);
+    Route::post('/me/notifications/archive-read', [\App\Http\Controllers\User\NotificationInboxController::class, 'archiveRead'])
+        ->name('me.notifications.archive-read');
+    Route::post('/me/notifications/unarchive', [\App\Http\Controllers\User\NotificationInboxController::class, 'unarchiveMany'])
+        ->name('me.notifications.unarchive-many');
     Route::post('/me/notifications/{id}/archive', [\App\Http\Controllers\User\NotificationInboxController::class, 'archive'])
-        ->where('id', '[A-Za-z0-9\-]{36}');
+        ->where('id', '[A-Za-z0-9\-]{36}')
+        ->name('me.notifications.archive');
     Route::post('/me/notifications/{id}/unarchive', [\App\Http\Controllers\User\NotificationInboxController::class, 'unarchive'])
-        ->where('id', '[A-Za-z0-9\-]{36}');
+        ->where('id', '[A-Za-z0-9\-]{36}')
+        ->name('me.notifications.unarchive');
 
     // First-run onboarding state (#424). The SPA reads `show` once on
     // dashboard mount to decide whether to render the guided tour /
     // "Getting started" checklist; `complete-step` is fired per
     // ticked checklist item, `dismiss` permanently retires the tour.
     Route::get('/me/onboarding', [\App\Http\Controllers\User\OnboardingController::class, 'show']);
-    Route::post('/me/onboarding/steps', [\App\Http\Controllers\User\OnboardingController::class, 'completeStep']);
-    Route::post('/me/onboarding/dismiss', [\App\Http\Controllers\User\OnboardingController::class, 'dismiss']);
+    Route::post('/me/onboarding/steps', [\App\Http\Controllers\User\OnboardingController::class, 'completeStep'])
+        ->name('me.onboarding.steps.store');
+    Route::post('/me/onboarding/dismiss', [\App\Http\Controllers\User\OnboardingController::class, 'dismiss'])
+        ->name('me.onboarding.dismiss');
 
     // Login history audit log (#430). Surfaces the last 50 login
     // attempts (success + failure) on the authenticated user so a
@@ -317,8 +348,10 @@ Route::middleware('auth:sanctum')->group(function (): void {
 
     Route::get('/me/sessions', [\App\Http\Controllers\User\SessionController::class, 'index']);
     Route::delete('/me/sessions/{id}', [\App\Http\Controllers\User\SessionController::class, 'destroy'])
-        ->where('id', '[0-9]+');
-    Route::delete('/me/sessions', [\App\Http\Controllers\User\SessionController::class, 'destroyOthers']);
+        ->where('id', '[0-9]+')
+        ->name('me.sessions.destroy');
+    Route::delete('/me/sessions', [\App\Http\Controllers\User\SessionController::class, 'destroyOthers'])
+        ->name('me.sessions.destroy-others');
 
     // Active academy switching (#427 / #718). GET returns the
     // currently-selected academy + the user's role + the capabilities
@@ -327,7 +360,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // membership yet. PATCH switches to the academy_id in the body;
     // FormRequest validates the user has an active membership there.
     Route::get('/me/active-academy', [\App\Http\Controllers\Me\ActiveAcademyController::class, 'show']);
-    Route::patch('/me/active-academy', [\App\Http\Controllers\Me\ActiveAcademyController::class, 'update']);
+    Route::patch('/me/active-academy', [\App\Http\Controllers\Me\ActiveAcademyController::class, 'update'])
+        ->name('me.active-academy.update');
 
     // Owner-as-athlete self-enroll / self-leave (#748). Adds the caller
     // to the roster of their active academy as an athlete with
@@ -335,8 +369,10 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // idempotent. Excluded from the regular athlete-delete flow by
     // a guard in `AthleteController::destroy` — the only way to leave
     // is this DELETE.
-    Route::post('/me/athlete', [\App\Http\Controllers\Me\MyAthleteController::class, 'store']);
-    Route::delete('/me/athlete', [\App\Http\Controllers\Me\MyAthleteController::class, 'destroy']);
+    Route::post('/me/athlete', [\App\Http\Controllers\Me\MyAthleteController::class, 'store'])
+        ->name('me.athlete.store');
+    Route::delete('/me/athlete', [\App\Http\Controllers\Me\MyAthleteController::class, 'destroy'])
+        ->name('me.athlete.destroy');
     // Read-only "am I self-enrolled?" lookup (#761). Backs the SPA's
     // owner-as-athlete toggle initial state — replaces the previous
     // first-page-scan over `/athletes` which silently mis-detected
@@ -364,13 +400,16 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::middleware('capability:web_push')->group(function (): void {
         Route::get('/me/push-subscriptions', [\App\Http\Controllers\User\PushSubscriptionController::class, 'index']);
         Route::post('/me/push-subscriptions', [\App\Http\Controllers\User\PushSubscriptionController::class, 'store'])
-            ->middleware('throttle:30,1');
+            ->middleware('throttle:30,1')
+            ->name('me.push-subscriptions.store');
         // Per-user cap on the self-triggered test push (#1011) — without
         // it, a script could spam the vendor fanout at our expense.
         Route::post('/me/push-subscriptions/test', [\App\Http\Controllers\User\PushSubscriptionController::class, 'test'])
-            ->middleware('throttle:5,1');
+            ->middleware('throttle:5,1')
+            ->name('me.push-subscriptions.test');
         Route::delete('/me/push-subscriptions/{id}', [\App\Http\Controllers\User\PushSubscriptionController::class, 'destroy'])
-            ->where('id', '[0-9]+');
+            ->where('id', '[0-9]+')
+            ->name('me.push-subscriptions.destroy');
     });
 
     // API tokens (#431). Long-lived, user-named, abilities-scoped
@@ -384,9 +423,11 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // a permanent credential until revoked). 10/min is generous for
     // a human integrator wiring up 2-3 scripts in one sitting.
     Route::post('/me/api-tokens', [\App\Http\Controllers\User\ApiTokenController::class, 'store'])
-        ->middleware('throttle:10,1');
+        ->middleware('throttle:10,1')
+        ->name('me.api-tokens.store');
     Route::delete('/me/api-tokens/{id}', [\App\Http\Controllers\User\ApiTokenController::class, 'destroy'])
-        ->where('id', '[0-9]+');
+        ->where('id', '[0-9]+')
+        ->name('me.api-tokens.destroy');
 
     // Avatar — multipart upload + delete (#411). Mirrors the
     // /academy/logo precedent: stores the original bytes (no
@@ -401,14 +442,17 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // from a buggy client retry loop. DELETE stays unthrottled (it
     // only frees space; no spam risk).
     Route::post('/me/avatar', [\App\Http\Controllers\User\AvatarController::class, 'upload'])
-        ->middleware('throttle:10,1');
-    Route::delete('/me/avatar', [\App\Http\Controllers\User\AvatarController::class, 'delete']);
+        ->middleware('throttle:10,1')
+        ->name('me.avatar.upload');
+    Route::delete('/me/avatar', [\App\Http\Controllers\User\AvatarController::class, 'delete'])
+        ->name('me.avatar.destroy');
 
     // Resend verification email — auth required, rate-limited via
     // `email-verification-resend` (one request per minute per user;
     // see AppServiceProvider::boot()).
     Route::post('/email/verification-notification', [\App\Http\Controllers\Auth\EmailVerificationController::class, 'resend'])
-        ->middleware('throttle:email-verification-resend');
+        ->middleware('throttle:email-verification-resend')
+        ->name('email.verification-notification');
 
 
     // ──────────────────────────────────────────────────────────────────────
@@ -425,11 +469,15 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // isOwner() + academy linkage as part of the M9 community flow.
     // ──────────────────────────────────────────────────────────────────────
     Route::middleware('role:owner')->group(function (): void {
-        Route::post('/academy', [\App\Http\Controllers\Academy\AcademyController::class, 'store']);
+        Route::post('/academy', [\App\Http\Controllers\Academy\AcademyController::class, 'store'])
+            ->name('academy.store');
         Route::get('/academy', [\App\Http\Controllers\Academy\AcademyController::class, 'show']);
-        Route::patch('/academy', [\App\Http\Controllers\Academy\AcademyController::class, 'update']);
-        Route::post('/academy/logo', [\App\Http\Controllers\Academy\AcademyController::class, 'uploadLogo']);
-        Route::delete('/academy/logo', [\App\Http\Controllers\Academy\AcademyController::class, 'deleteLogo']);
+        Route::patch('/academy', [\App\Http\Controllers\Academy\AcademyController::class, 'update'])
+            ->name('academy.update');
+        Route::post('/academy/logo', [\App\Http\Controllers\Academy\AcademyController::class, 'uploadLogo'])
+            ->name('academy.logo.upload');
+        Route::delete('/academy/logo', [\App\Http\Controllers\Academy\AcademyController::class, 'deleteLogo'])
+            ->name('academy.logo.destroy');
 
         // The academy's own papers (#1743) — same table, same badge, same
         // reminder as an athlete's. No route parameter: the subject is the
@@ -439,7 +487,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::get('/academy/documents', [\App\Http\Controllers\Academy\AcademyDocumentController::class, 'index']);
         // Uploads are absent on the phone, where documents are view only (#2034).
         Route::post('/academy/documents', [\App\Http\Controllers\Academy\AcademyDocumentController::class, 'store'])
-            ->middleware('capability:document_upload');
+            ->middleware('capability:document_upload')
+            ->name('academy.documents.store');
 
         // Schedule history (#1094). POST schedules a future
         // training_days change effective on a calendar date (`> today`,
@@ -449,8 +498,10 @@ Route::middleware('auth:sanctum')->group(function (): void {
         // Reads of the history are folded into the `GET /academy`
         // resource (`current_schedule`, `next_schedule`, `schedules`),
         // there's no dedicated index endpoint.
-        Route::post('/academy/schedules', [\App\Http\Controllers\Academy\AcademyScheduleController::class, 'store']);
-        Route::delete('/academy/schedules/{schedule}', [\App\Http\Controllers\Academy\AcademyScheduleController::class, 'destroy']);
+        Route::post('/academy/schedules', [\App\Http\Controllers\Academy\AcademyScheduleController::class, 'store'])
+            ->name('academy.schedules.store');
+        Route::delete('/academy/schedules/{schedule}', [\App\Http\Controllers\Academy\AcademyScheduleController::class, 'destroy'])
+            ->name('academy.schedules.destroy');
 
         // Owner reads — no email-verification gate; owners can browse the roster before verifying their email.
         Route::apiResource('athletes', \App\Http\Controllers\Athlete\AthleteController::class)
@@ -473,14 +524,16 @@ Route::middleware('auth:sanctum')->group(function (): void {
             // default) to get the preview, once without to write. The dry run
             // is the default on purpose — a missing flag must never be the one
             // that creates sixty athletes.
-            Route::post('/athletes/import', \App\Http\Controllers\Athlete\AthleteImportController::class);
+            Route::post('/athletes/import', \App\Http\Controllers\Athlete\AthleteImportController::class)
+                ->name('athletes.import');
 
             // Athlete restore (#700). Brings a soft-deleted athlete back into
             // the active roster. `->withTrashed()` lets the route-model binding
             // resolve a soft-deleted id; without it the binding would 404
             // before the controller could even check ownership.
             Route::post('/athletes/{athlete}/restore', [\App\Http\Controllers\Athlete\AthleteController::class, 'restore'])
-                ->withTrashed();
+                ->withTrashed()
+                ->name('athletes.restore');
 
             // Athlete invitations — owner-side (#445, M7 PR-B). The owner of
             // an academy invites a roster athlete to log into the SPA. The
@@ -495,10 +548,13 @@ Route::middleware('auth:sanctum')->group(function (): void {
             // with one user and no mail transport has nobody to invite.
             Route::middleware('capability:athlete_accounts')->group(function (): void {
                 Route::post('/athletes/{athlete}/invite', [\App\Http\Controllers\Athlete\AthleteInvitationController::class, 'store'])
-                    ->middleware('throttle:5,1');
+                    ->middleware('throttle:5,1')
+                    ->name('athletes.invite.store');
                 Route::post('/athletes/{athlete}/invite/resend', [\App\Http\Controllers\Athlete\AthleteInvitationController::class, 'resend'])
-                    ->middleware('throttle:5,1');
-                Route::delete('/athletes/{athlete}/invitations/{invitation}', [\App\Http\Controllers\Athlete\AthleteInvitationController::class, 'destroy']);
+                    ->middleware('throttle:5,1')
+                    ->name('athletes.invite.resend');
+                Route::delete('/athletes/{athlete}/invitations/{invitation}', [\App\Http\Controllers\Athlete\AthleteInvitationController::class, 'destroy'])
+                    ->name('athletes.invitations.destroy');
             });
 
             // Athlete email change (#476). State-aware on the action side:
@@ -517,7 +573,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
             // hit the same ceiling as the same owner spamming their own
             // address change, since the mail-vendor cost class is the same.
             Route::post('/athletes/{athlete}/email', [\App\Http\Controllers\Athlete\AthleteEmailController::class, 'update'])
-                ->middleware('throttle:email-change-request');
+                ->middleware('throttle:email-change-request')
+                ->name('athletes.email.update');
         });
 
         // Documents — read access stays open (browsing + downloading); writes are
@@ -528,8 +585,10 @@ Route::middleware('auth:sanctum')->group(function (): void {
         // buggy client retry loop is what fills the public disk. DELETE stays
         // unthrottled: it only frees space.
         Route::post('/athletes/{athlete}/photo', [\App\Http\Controllers\Athlete\AthletePhotoController::class, 'upload'])
-            ->middleware('throttle:10,1');
-        Route::delete('/athletes/{athlete}/photo', [\App\Http\Controllers\Athlete\AthletePhotoController::class, 'destroy']);
+            ->middleware('throttle:10,1')
+            ->name('athletes.photo.upload');
+        Route::delete('/athletes/{athlete}/photo', [\App\Http\Controllers\Athlete\AthletePhotoController::class, 'destroy'])
+            ->name('athletes.photo.destroy');
 
         Route::get('/athletes/{athlete}/documents', [\App\Http\Controllers\Athlete\AthleteDocumentController::class, 'index']);
         // Promotion history — owner reads belt + stripe events for a
@@ -540,16 +599,21 @@ Route::middleware('auth:sanctum')->group(function (): void {
         // entered late without touching the belt/stripe transition it
         // describes. 403 when the promotion doesn't belong to the
         // athlete in the path, same double-check as carnets below.
-        Route::patch('/athletes/{athlete}/promotions/{promotion}', [\App\Http\Controllers\Athlete\AthletePromotionController::class, 'update']);
+        Route::patch('/athletes/{athlete}/promotions/{promotion}', [\App\Http\Controllers\Athlete\AthletePromotionController::class, 'update'])
+            ->name('athletes.promotions.update');
         // Backfilling historical rows + undoing a mistaken one (#1431 PR 2
         // of 2) — transcribing a paper register from before Budojo existed.
-        Route::post('/athletes/{athlete}/promotions', [\App\Http\Controllers\Athlete\AthletePromotionController::class, 'store']);
-        Route::delete('/athletes/{athlete}/promotions/{promotion}', [\App\Http\Controllers\Athlete\AthletePromotionController::class, 'destroy']);
+        Route::post('/athletes/{athlete}/promotions', [\App\Http\Controllers\Athlete\AthletePromotionController::class, 'store'])
+            ->name('athletes.promotions.store');
+        Route::delete('/athletes/{athlete}/promotions/{promotion}', [\App\Http\Controllers\Athlete\AthletePromotionController::class, 'destroy'])
+            ->name('athletes.promotions.destroy');
         // "Saltato" on a ghost row, and its undo (#1966): a step this athlete
         // never took, so the timeline stops offering it as missing.
-        Route::post('/athletes/{athlete}/promotion-skips', [\App\Http\Controllers\Athlete\AthletePromotionSkipController::class, 'store']);
+        Route::post('/athletes/{athlete}/promotion-skips', [\App\Http\Controllers\Athlete\AthletePromotionSkipController::class, 'store'])
+            ->name('athletes.promotion-skips.store');
         Route::delete('/athletes/{athlete}/promotion-skips/{belt}/{stripes}', [\App\Http\Controllers\Athlete\AthletePromotionSkipController::class, 'destroy'])
-            ->whereNumber('stripes');
+            ->whereNumber('stripes')
+            ->name('athletes.promotion-skips.destroy');
         // Who may be ready for their next step (#1841) — facts, no score.
         Route::get('/promotions/candidates', \App\Http\Controllers\Promotion\PromotionCandidatesController::class);
         // Documents — flat routes for operations that target a single document.
@@ -564,63 +628,85 @@ Route::middleware('auth:sanctum')->group(function (): void {
         // Document writes — gated on `verified.api`.
         Route::middleware('verified.api')->group(function (): void {
             Route::post('/athletes/{athlete}/documents', [\App\Http\Controllers\Athlete\AthleteDocumentController::class, 'store'])
-                ->middleware('capability:document_upload');
-            Route::put('/documents/{document}', [\App\Http\Controllers\Document\DocumentController::class, 'update']);
-            Route::delete('/documents/{document}', [\App\Http\Controllers\Document\DocumentController::class, 'destroy']);
+                ->middleware('capability:document_upload')
+                ->name('athletes.documents.store');
+            Route::put('/documents/{document}', [\App\Http\Controllers\Document\DocumentController::class, 'update'])
+                ->name('documents.update');
+            Route::delete('/documents/{document}', [\App\Http\Controllers\Document\DocumentController::class, 'destroy'])
+                ->name('documents.destroy');
         });
 
         // Payments — M5 (#104). Nested under athlete; the academy's monthly fee
         // is set via PATCH /academy. `paid_current_month` lives on the athlete
         // resource so the list page can render the badge without an extra hop.
         Route::get('/athletes/{athlete}/payments', [\App\Http\Controllers\Athlete\AthletePaymentController::class, 'index']);
-        Route::post('/athletes/{athlete}/payments', [\App\Http\Controllers\Athlete\AthletePaymentController::class, 'store']);
+        Route::post('/athletes/{athlete}/payments', [\App\Http\Controllers\Athlete\AthletePaymentController::class, 'store'])
+            ->name('athletes.payments.store');
         Route::delete('/athletes/{athlete}/payments/{year}/{month}', [\App\Http\Controllers\Athlete\AthletePaymentController::class, 'destroy'])
-            ->whereNumber(['year', 'month']);
+            ->whereNumber(['year', 'month'])
+            ->name('athletes.payments.destroy');
 
         // Monthly price list (#1381). An academy that charges one flat fee
         // keeps using `academies.monthly_fee_cents` and never touches these.
         Route::get('/academy/fee-tiers', [\App\Http\Controllers\Academy\FeeTierController::class, 'index']);
-        Route::post('/academy/fee-tiers', [\App\Http\Controllers\Academy\FeeTierController::class, 'store']);
-        Route::patch('/academy/fee-tiers/{tier}', [\App\Http\Controllers\Academy\FeeTierController::class, 'update']);
-        Route::delete('/academy/fee-tiers/{tier}', [\App\Http\Controllers\Academy\FeeTierController::class, 'destroy']);
+        Route::post('/academy/fee-tiers', [\App\Http\Controllers\Academy\FeeTierController::class, 'store'])
+            ->name('academy.fee-tiers.store');
+        Route::patch('/academy/fee-tiers/{tier}', [\App\Http\Controllers\Academy\FeeTierController::class, 'update'])
+            ->name('academy.fee-tiers.update');
+        Route::delete('/academy/fee-tiers/{tier}', [\App\Http\Controllers\Academy\FeeTierController::class, 'destroy'])
+            ->name('academy.fee-tiers.destroy');
 
         // The weekly timetable (#1562): named classes with a day and a time.
         // Optional — an academy that never opens it keeps checking people in
         // by the day, exactly as before. The check-in reads this list to
         // offer today's classes and sends `academy_class_id` with each mark.
         Route::get('/academy/classes', [\App\Http\Controllers\Academy\AcademyClassController::class, 'index']);
-        Route::post('/academy/classes', [\App\Http\Controllers\Academy\AcademyClassController::class, 'store']);
-        Route::patch('/academy/classes/{academyClass}', [\App\Http\Controllers\Academy\AcademyClassController::class, 'update']);
-        Route::delete('/academy/classes/{academyClass}', [\App\Http\Controllers\Academy\AcademyClassController::class, 'destroy']);
+        Route::post('/academy/classes', [\App\Http\Controllers\Academy\AcademyClassController::class, 'store'])
+            ->name('academy.classes.store');
+        Route::patch('/academy/classes/{academyClass}', [\App\Http\Controllers\Academy\AcademyClassController::class, 'update'])
+            ->name('academy.classes.update');
+        Route::delete('/academy/classes/{academyClass}', [\App\Http\Controllers\Academy\AcademyClassController::class, 'destroy'])
+            ->name('academy.classes.destroy');
 
         // The days the academy is shut (#1766): taken out of every scheduled
         // day, so August stops counting as sessions everyone missed.
         Route::get('/academy/closures', [\App\Http\Controllers\Academy\AcademyClosureController::class, 'index']);
-        Route::post('/academy/closures', [\App\Http\Controllers\Academy\AcademyClosureController::class, 'store']);
-        Route::patch('/academy/closures/{closure}', [\App\Http\Controllers\Academy\AcademyClosureController::class, 'update']);
-        Route::delete('/academy/closures/{closure}', [\App\Http\Controllers\Academy\AcademyClosureController::class, 'destroy']);
+        Route::post('/academy/closures', [\App\Http\Controllers\Academy\AcademyClosureController::class, 'store'])
+            ->name('academy.closures.store');
+        Route::patch('/academy/closures/{closure}', [\App\Http\Controllers\Academy\AcademyClosureController::class, 'update'])
+            ->name('academy.closures.update');
+        Route::delete('/academy/closures/{closure}', [\App\Http\Controllers\Academy\AcademyClosureController::class, 'destroy'])
+            ->name('academy.closures.destroy');
 
         // The programme (#1563): positions and the techniques under them,
         // per academy, with the shipped BJJ starter one POST away.
         Route::get('/academy/syllabus', [\App\Http\Controllers\Academy\SyllabusTopicController::class, 'index']);
-        Route::post('/academy/syllabus', [\App\Http\Controllers\Academy\SyllabusTopicController::class, 'store']);
-        Route::post('/academy/syllabus/seed', [\App\Http\Controllers\Academy\SyllabusTopicController::class, 'seed']);
-        Route::patch('/academy/syllabus/{syllabusTopic}', [\App\Http\Controllers\Academy\SyllabusTopicController::class, 'update']);
+        Route::post('/academy/syllabus', [\App\Http\Controllers\Academy\SyllabusTopicController::class, 'store'])
+            ->name('academy.syllabus.store');
+        Route::post('/academy/syllabus/seed', [\App\Http\Controllers\Academy\SyllabusTopicController::class, 'seed'])
+            ->name('academy.syllabus.seed');
+        Route::patch('/academy/syllabus/{syllabusTopic}', [\App\Http\Controllers\Academy\SyllabusTopicController::class, 'update'])
+            ->name('academy.syllabus.update');
         // One place up or down among its siblings (#1661).
-        Route::post('/academy/syllabus/{syllabusTopic}/move', [\App\Http\Controllers\Academy\SyllabusTopicController::class, 'move']);
-        Route::delete('/academy/syllabus/{syllabusTopic}', [\App\Http\Controllers\Academy\SyllabusTopicController::class, 'destroy']);
+        Route::post('/academy/syllabus/{syllabusTopic}/move', [\App\Http\Controllers\Academy\SyllabusTopicController::class, 'move'])
+            ->name('academy.syllabus.move');
+        Route::delete('/academy/syllabus/{syllabusTopic}', [\App\Http\Controllers\Academy\SyllabusTopicController::class, 'destroy'])
+            ->name('academy.syllabus.destroy');
 
         // Entry carnets — #1364. The pre-paid alternative to the monthly fee:
         // price + pack size are configured per academy via PATCH /academy and
         // snapshotted onto each carnet at sale. Consumption (one entry per
         // attended day) lands with the attendance hook in PR 2.
         Route::get('/athletes/{athlete}/carnets', [\App\Http\Controllers\Athlete\CarnetController::class, 'index']);
-        Route::post('/athletes/{athlete}/carnets', [\App\Http\Controllers\Athlete\CarnetController::class, 'store']);
+        Route::post('/athletes/{athlete}/carnets', [\App\Http\Controllers\Athlete\CarnetController::class, 'store'])
+            ->name('athletes.carnets.store');
         Route::get('/athletes/{athlete}/carnets/{carnet}/entries', [\App\Http\Controllers\Athlete\CarnetController::class, 'entries']);
         // Re-dating the validity window (#1380) and undoing a mis-sale. The
         // expiry follows `valid_from`, so a PATCH here moves both ends.
-        Route::patch('/athletes/{athlete}/carnets/{carnet}', [\App\Http\Controllers\Athlete\CarnetController::class, 'update']);
-        Route::delete('/athletes/{athlete}/carnets/{carnet}', [\App\Http\Controllers\Athlete\CarnetController::class, 'destroy']);
+        Route::patch('/athletes/{athlete}/carnets/{carnet}', [\App\Http\Controllers\Athlete\CarnetController::class, 'update'])
+            ->name('athletes.carnets.update');
+        Route::delete('/athletes/{athlete}/carnets/{carnet}', [\App\Http\Controllers\Athlete\CarnetController::class, 'destroy'])
+            ->name('athletes.carnets.destroy');
 
         // Attendance — M4. `/attendance/summary` must come BEFORE `/attendance/{id}`
         // or Laravel binds "summary" as an attendance-record id and returns 404.
@@ -639,12 +725,16 @@ Route::middleware('auth:sanctum')->group(function (): void {
         // The notes of the last evening that taught a topic (#1862).
         Route::get('/lessons/last-notes', [\App\Http\Controllers\Lesson\LessonController::class, 'lastNotes']);
         Route::get('/lessons', [\App\Http\Controllers\Lesson\LessonController::class, 'show']);
-        Route::put('/lessons/topics', [\App\Http\Controllers\Lesson\LessonController::class, 'setTopics']);
-        Route::put('/lessons/notes', [\App\Http\Controllers\Lesson\LessonController::class, 'setNotes']);
+        Route::put('/lessons/topics', [\App\Http\Controllers\Lesson\LessonController::class, 'setTopics'])
+            ->name('lessons.topics.update');
+        Route::put('/lessons/notes', [\App\Http\Controllers\Lesson\LessonController::class, 'setNotes'])
+            ->name('lessons.notes.update');
 
         Route::get('/attendance', [\App\Http\Controllers\Attendance\AttendanceController::class, 'index']);
-        Route::post('/attendance', [\App\Http\Controllers\Attendance\AttendanceController::class, 'store']);
-        Route::delete('/attendance/{attendance}', [\App\Http\Controllers\Attendance\AttendanceController::class, 'destroy']);
+        Route::post('/attendance', [\App\Http\Controllers\Attendance\AttendanceController::class, 'store'])
+            ->name('attendance.store');
+        Route::delete('/attendance/{attendance}', [\App\Http\Controllers\Attendance\AttendanceController::class, 'destroy'])
+            ->name('attendance.destroy');
         // Per-athlete attendance summary (#893). Must come BEFORE the more
         // general /athletes/{athlete}/attendance route or "summary" would
         // bind as a record id.
@@ -674,7 +764,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // on a build that cannot send mail this endpoint does not exist, and 403
     // would say it does and that you may not use it.
     Route::post('/support', [\App\Http\Controllers\Support\SupportTicketController::class, 'store'])
-        ->middleware(['capability:email', 'throttle:5,1']);
+        ->middleware(['capability:email', 'throttle:5,1'])
+        ->name('support.store');
 
     // The database side of the sync between the owner's devices (#2030, PRD
     // § 5.2). The capability first: on the web profile the routes do not
@@ -749,7 +840,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
         // PR-B server (#612): athletes + owners read the same paginated
         // feed; DELETE is owner-only via the FormRequest authorize() gate.
         Route::get('feed', [\App\Http\Controllers\Community\CommunityFeedController::class, 'index']);
-        Route::delete('posts/{post}', [\App\Http\Controllers\Community\CommunityFeedController::class, 'destroy']);
+        Route::delete('posts/{post}', [\App\Http\Controllers\Community\CommunityFeedController::class, 'destroy'])
+            ->name('community.posts.destroy');
 
         // PR-C server (#603): toggle the caller's emoji reaction on a
         // post. Same-emoji toggles off; different emoji swaps in place.
@@ -759,7 +851,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::post(
             'posts/{post}/reactions',
             [\App\Http\Controllers\Community\CommunityReactionsController::class, 'toggle'],
-        )->middleware('throttle:community-react');
+        )->middleware('throttle:community-react')
+            ->name('community.posts.reactions.toggle');
 
         // Post-v2.9.0 (#655): list every reaction on a post with the
         // reactor's identity flair. The SPA opens a bottom-sheet /
@@ -788,11 +881,13 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::post(
             'posts/{post}/comments',
             [\App\Http\Controllers\Community\CommunityCommentsController::class, 'store'],
-        )->middleware('throttle:community-comment-create');
+        )->middleware('throttle:community-comment-create')
+            ->name('community.posts.comments.store');
         Route::delete(
             'comments/{comment}',
             [\App\Http\Controllers\Community\CommunityCommentsController::class, 'destroy'],
-        );
+        )
+            ->name('community.comments.destroy');
 
         // PR-E server (#605): RSVP toggle on event-type posts.
         // Same-response toggles off, different-response swaps in
@@ -801,7 +896,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::post(
             'posts/{post}/rsvp',
             [\App\Http\Controllers\Community\CommunityRsvpController::class, 'toggle'],
-        )->middleware('throttle:community-rsvp');
+        )->middleware('throttle:community-rsvp')
+            ->name('community.posts.rsvp.toggle');
 
         // Owner-facing event creation. Unblocks PR-F slice 2's
         // community_event_new notification trigger and adds genuine
@@ -811,7 +907,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::post(
             'events',
             [\App\Http\Controllers\Community\CommunityEventsController::class, 'store'],
-        );
+        )
+            ->name('community.events.store');
 
         // Athlete- or owner-shared external technique video (#1154). The
         // server resolves the preview (allowlisted provider: Instagram /
@@ -820,6 +917,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::post(
             'videos',
             [\App\Http\Controllers\Community\CommunitySharedVideosController::class, 'store'],
-        )->middleware('throttle:20,1');
+        )->middleware('throttle:20,1')
+            ->name('community.videos.store');
     });
 });
