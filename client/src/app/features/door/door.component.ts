@@ -199,15 +199,24 @@ export class DoorComponent {
     if (archive === null || server === null) {
       return;
     }
+    // A phone with a gym of its own keeps its own keys until the backup is
+    // staged: a restore that fails or is cut short must leave that gym under
+    // the keys it was made with. One with none takes them first, so a phone
+    // killed in between never starts the PC's gym under the wrong ones. Either
+    // way one restart swaps the backup in under the PC's keys, and a crash in
+    // between is mended by the next «Accedi con Google» (the straight-in path).
+    const ownGym = this.found()?.here != null;
     this.step.set('restoring');
     try {
-      // The keys before the backup is staged: a phone killed in between must
-      // never start the PC's gym under its own keys. Then one restart swaps
-      // the backup in under them.
-      await this.takeTheKeys();
+      if (!ownGym) {
+        await this.takeTheKeys();
+      }
       await firstValueFrom(this.device.restore(archive));
       // Staged is as good as in: the next start swaps it, restart or not.
       rememberRestored(this.archiveName);
+      if (ownGym) {
+        await this.takeTheKeys();
+      }
       await restartPhoneServer(server);
       await this.enter();
       this.sayWhenCertificatesWait();

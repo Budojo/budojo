@@ -567,4 +567,41 @@ describe("the academy's keys from the Google account (#2033)", () => {
       }),
     ]);
   });
+
+  it("keeps a gym of the phone's own under its keys until the backup is staged", async () => {
+    const order: string[] = [];
+    const { component, server, device } = setup({ inspect: () => of({ data: inspection(PROVA) }) });
+    server.adoptKeys.mockImplementation(async () => {
+      order.push('keys');
+      return { changed: true };
+    });
+    device.restore.mockImplementation(() => {
+      order.push('stage');
+      return of(undefined);
+    });
+    server.restart.mockImplementation(async () => {
+      order.push('restart');
+      return { port: 1, shellSecret: 's' };
+    });
+    await component.signInWithGoogle();
+
+    await component.useDrive();
+
+    expect(order).toEqual(['stage', 'keys', 'restart']);
+  });
+
+  it("leaves a gym of the phone's own under its keys when the restore fails", async () => {
+    const { component, server, device } = setup({ inspect: () => of({ data: inspection(PROVA) }) });
+    device.restore.mockReturnValue(
+      throwError(
+        () => new HttpErrorResponse({ status: 422, error: { code: 'unreadable', message: 'no' } }),
+      ),
+    );
+    await component.signInWithGoogle();
+
+    await component.useDrive();
+
+    expect(server.adoptKeys).not.toHaveBeenCalled();
+    expect(server.restart).not.toHaveBeenCalled();
+  });
 });

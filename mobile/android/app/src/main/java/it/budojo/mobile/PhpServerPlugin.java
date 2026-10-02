@@ -101,9 +101,10 @@ public class PhpServerPlugin extends Plugin {
     public void adoptKeys(PluginCall call) {
         String appKey = call.getString("APP_KEY");
         String documentKey = call.getString("DOCUMENT_ENCRYPTION_KEY");
-        // 32 bytes of padded base64 each, as the readers check them
-        // (core/sync/keys.ts, desktop/src/sync-keys.ts): never a key that would
-        // stop Laravel at the next start.
+        // 32 bytes of padded base64 each, as both devices make them
+        // (desktop/src/bootstrap.ts, generateSecrets; secrets() here): never a
+        // key that would stop Laravel at the next start. Stricter than the keys
+        // file's readers, which take any long enough key.
         if (appKey == null || !appKey.matches("base64:[A-Za-z0-9+/]{43}=")
                 || documentKey == null || !documentKey.matches("[A-Za-z0-9+/]{43}=")) {
             call.reject("not an academy's keys", "INVALID_KEYS");
