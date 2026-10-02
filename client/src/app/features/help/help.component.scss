@@ -114,9 +114,10 @@
     gap: 1rem;
     // `scroll-margin-top` lets `anchorScrolling: 'enabled'` land the
     // category heading at a comfortable distance from the viewport
-    // top (rather than glued to the very edge). Matches the entry
-    // anchor below.
-    scroll-margin-top: 1.5rem;
+    // top (rather than glued to the very edge), below the status bar's
+    // strip on the phone and the title bar on the desktop (#2034).
+    // Matches the entry anchor below.
+    scroll-margin-top: calc(var(--budojo-safe-top, 0px) + 1.5rem);
   }
 
   &__category-heading {
@@ -143,7 +144,7 @@
     // Anchor offset — same rationale as `__category`. The `:target`
     // pseudo-selector gives the deep-linked entry a faint flash so
     // the user sees what they landed on (Norman § feedback).
-    scroll-margin-top: 1.5rem;
+    scroll-margin-top: calc(var(--budojo-safe-top, 0px) + 1.5rem);
 
     &:target {
       border-color: var(--p-primary-color);

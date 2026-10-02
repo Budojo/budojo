@@ -21,6 +21,9 @@ const PAGES = [
   '/offline',
   '/error',
   '/unsubscribed',
+  '/account-deletion',
+  '/account-deletion/it',
+  '/account/deletion-cancel',
   '/no-such-page',
 ];
 
@@ -47,15 +50,33 @@ describe('pages outside the dashboard, below the status bar (#2034)', () => {
           win.localStorage.setItem('budojoLang', 'en');
         },
       });
-      cy.get('body').should('be.visible');
-      // Let lazy routes and translations land before measuring.
-      cy.wait(800);
-      cy.document().then((doc) => {
+      // Retried until the lazy route and its translations have drawn text:
+      // a page that stays inside the inset fails at the timeout.
+      cy.document().should((doc) => {
         const boxes = textBoxes(doc);
         expect(boxes.length, 'the page drew some text').to.be.greaterThan(0);
         const top = Math.min(...boxes.map((box) => box.top));
         expect(top, 'the highest text').to.be.at.least(INSET);
       });
+    });
+  });
+});
+
+describe('a help deep link, below the status bar (#2034)', () => {
+  it('lands the targeted entry below the inset, not behind it', () => {
+    cy.viewport(375, 800);
+    cy.visit('/help#unpaid-badge', {
+      onBeforeLoad(win) {
+        win.document.documentElement.style.setProperty('--budojo-safe-top', `${INSET}px`);
+        win.localStorage.setItem('budojoLang', 'en');
+      },
+    });
+    // Retried until the anchor scroll has run: the entry starts far below
+    // the fold, so it reads as scrolled only once it is near the top.
+    cy.get('[data-cy="help-entry-unpaid-badge"]').should(($entry) => {
+      const top = $entry[0].getBoundingClientRect().top;
+      expect(top, 'the entry was scrolled to').to.be.lessThan(200);
+      expect(top, 'the entry starts below the inset').to.be.at.least(INSET);
     });
   });
 });
