@@ -18,7 +18,6 @@ const LOOK: Record<SyncState['kind'], { icon: string; attention: boolean }> = {
   'another-folder': { icon: 'pi-exclamation-triangle', attention: true },
   unpaired: { icon: 'pi-exclamation-triangle', attention: true },
   full: { icon: 'pi-exclamation-triangle', attention: true },
-  'needs-rebase': { icon: 'pi-exclamation-circle', attention: true },
   failed: { icon: 'pi-exclamation-triangle', attention: true },
 };
 
@@ -54,7 +53,6 @@ export class SyncPillComponent {
       case 'synced':
         return this.time(state.at);
       case 'pending':
-      case 'needs-rebase':
         return state.count > 0 ? String(state.count) : '';
       default:
         return '';
@@ -73,8 +71,6 @@ export class SyncPillComponent {
           state.count === 1 ? 'sync.state.pendingOne' : 'sync.state.pendingOther',
           { count: state.count },
         );
-      case 'needs-rebase':
-        return this.translate.instant('sync.state.needsRebase');
       default:
         return this.translate.instant(`sync.state.${KEYS[state.kind]}`);
     }
@@ -87,11 +83,6 @@ export class SyncPillComponent {
     switch (state.kind) {
       case 'pending':
         return this.translate.instant(state.offline ? 'sync.hint.offline' : 'sync.hint.pending');
-      case 'needs-rebase':
-        return this.translate.instant(
-          state.count === 1 ? 'sync.hint.needsRebaseOne' : 'sync.hint.needsRebaseOther',
-          { count: state.count },
-        );
       case 'failed':
         return state.reason;
       case 'waiting-first':
@@ -157,6 +148,5 @@ const KEYS: Record<SyncState['kind'], string> = {
   'another-folder': 'anotherFolder',
   unpaired: 'unpaired',
   full: 'full',
-  'needs-rebase': 'needsRebase',
   failed: 'failed',
 };

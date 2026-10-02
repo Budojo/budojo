@@ -152,18 +152,21 @@ describe('the sync engine (#2046)', () => {
     expect(remote.files.has(devicePath('phone9c1e'))).toBe(true);
   });
 
-  it('never fast-forwards over writes of its own: both changed, so it needs the replay', async () => {
+  it('never fast-forwards over writes of its own: both changed, so it replays them on the other version', async () => {
     const { remote, key, pc, phone } = await twoDevices();
     pc.write('Luca on 2 Oct');
     await sync(pc, remote, key);
     phone.write('Giulia on 2 Oct');
+    phone.under.length = 0;
 
     expect(await outcome(phone, remote, key)).toEqual({
-      kind: 'needs-rebase',
+      kind: 'rebased',
       onto: { seq: 2, device: 'pc4f2a' },
+      pushed: { seq: 3, device: 'phone9c1e' },
     });
-    expect(phone.db.rows).toEqual(['Giulia on 2 Oct']);
-    expect(await phone.journal()).toHaveLength(1);
+    expect(phone.under).toEqual(['stage rebase held', 'swap held']);
+    expect(phone.db.rows).toEqual(['Luca on 2 Oct', 'Giulia on 2 Oct']);
+    expect([...remote.files.keys()]).toContain('versions/000003-phone9c1e.000002-pc4f2a.bjs');
   });
 
   it("waits for its own push while Drive's listing has not caught up", async () => {
@@ -205,9 +208,11 @@ describe('a write the round must not lose (#2086 review)', () => {
     expect(phone.db.rows).toEqual(['Giulia on 2 Oct']);
     expect(await phone.journal()).toHaveLength(1);
     expect(await outcome(phone, remote, key)).toEqual({
-      kind: 'needs-rebase',
+      kind: 'rebased',
       onto: { seq: 2, device: 'pc4f2a' },
+      pushed: { seq: 3, device: 'phone9c1e' },
     });
+    expect(phone.db.rows).toEqual(['Luca on 2 Oct', 'Giulia on 2 Oct']);
   });
 
   it("stages and swaps only while the page's writes are held", async () => {
@@ -482,5 +487,125 @@ describe('what the round reads and fetches (#2086 review)', () => {
     expect([...remote.files.keys()].filter((path) => path.startsWith('versions/'))).toEqual([
       'versions/000001-pc4f2a.root.bjs',
     ]);
+  });
+});
+
+describe('the rebase (#2031 step 3)', () => {
+  it('brings both devices to the same academy: the PC pulls what the phone replayed, and the phone clears its journal', async () => {
+    const { remote, key, pc, phone } = await twoDevices();
+    pc.write('Luca on 2 Oct');
+    await sync(pc, remote, key);
+    phone.write('Giulia on 2 Oct');
+    await sync(phone, remote, key);
+
+    // The PC still keeps its own entry, so it rebases too, never
+    // fast-forwards: its replay finds the entry in the phone's version.
+    expect(await outcome(pc, remote, key)).toEqual({
+      kind: 'rebased',
+      onto: { seq: 3, device: 'phone9c1e' },
+      pushed: null,
+    });
+    expect(pc.db.rows).toEqual(['Luca on 2 Oct', 'Giulia on 2 Oct']);
+
+    expect(await outcome(phone, remote, key)).toEqual({ kind: 'nothing' });
+    expect(await phone.journal()).toEqual([]);
+  });
+
+  it('keeps and pushes a presence both devices marked: already true there, so it is applied once', async () => {
+    const { remote, key, pc, phone } = await twoDevices();
+    pc.write('Luca on 2 Oct');
+    await sync(pc, remote, key);
+    phone.write('Luca on 2 Oct');
+    const [mine] = await phone.journal();
+
+    expect(await outcome(phone, remote, key)).toEqual({
+      kind: 'rebased',
+      onto: { seq: 2, device: 'pc4f2a' },
+      pushed: { seq: 3, device: 'phone9c1e' },
+    });
+    expect(phone.replayed).toEqual({ [mine.id]: 'already' });
+    expect(phone.db.rows).toEqual(['Luca on 2 Oct']);
+    // Pushed, so the PC holds it once it pulls, and the phone may clear it.
+    await sync(pc, remote, key);
+    expect((await pc.holds())['phone9c1e']).toBe(mine.id);
+    await sync(phone, remote, key);
+    expect(await phone.journal()).toEqual([]);
+  });
+
+  it('pushes nothing when the version holds every write it carries already', async () => {
+    const { remote, key, pc, phone } = await twoDevices();
+    phone.write('Giulia on 2 Oct');
+    await sync(phone, remote, key);
+    await sync(pc, remote, key);
+    pc.write('Luca on 2 Oct');
+    await sync(pc, remote, key);
+    // The phone still keeps its entry: it has not seen the PC's report yet.
+    const [mine] = await phone.journal();
+
+    expect(await outcome(phone, remote, key)).toEqual({
+      kind: 'rebased',
+      onto: { seq: 3, device: 'pc4f2a' },
+      pushed: null,
+    });
+    expect(phone.replayed).toEqual({ [mine.id]: 'skipped' });
+    expect(phone.db.rows).toEqual(['Giulia on 2 Oct', 'Luca on 2 Oct']);
+    expect(await phone.journal()).toEqual([]);
+    expect(await outcome(phone, remote, key)).toEqual({ kind: 'nothing' });
+  });
+
+  it('pushes what the replay kept at its next round when the phone is killed after the swap', async () => {
+    const { remote, key, pc, phone } = await twoDevices();
+    pc.write('Luca on 2 Oct');
+    await sync(pc, remote, key);
+    phone.write('Giulia on 2 Oct');
+
+    await expect(
+      sync(phone, remote, key, undefined, async () => {
+        phone.swapIn();
+        throw new Error('killed during the restart');
+      }),
+    ).rejects.toThrow('killed');
+    expect(phone.ledger.base).toEqual({ seq: 2, device: 'pc4f2a' });
+    expect(phone.db.rows).toEqual(['Luca on 2 Oct', 'Giulia on 2 Oct']);
+
+    expect(await outcome(phone, remote, key)).toEqual({
+      kind: 'pushed',
+      version: { seq: 3, device: 'phone9c1e' },
+    });
+    expect(await outcome(pc, remote, key)).toEqual({
+      kind: 'rebased',
+      onto: { seq: 3, device: 'phone9c1e' },
+      pushed: null,
+    });
+    expect(pc.db.rows).toEqual(['Luca on 2 Oct', 'Giulia on 2 Oct']);
+  });
+
+  it('settles two pushes of one number: the one Drive listed second rebases onto the first, and both converge', async () => {
+    const { remote, key, pc, phone } = await twoDevices();
+    pc.write('Luca on 2 Oct');
+    phone.write('Giulia on 2 Oct');
+    await sync(pc, remote, key);
+    // The phone does not see the PC's version yet, and pushes its own 2.
+    await sync(
+      phone,
+      lagging(remote, (path) => path.includes('000002-pc4f2a')),
+      key,
+    );
+
+    expect(await outcome(phone, remote, key)).toEqual({
+      kind: 'rebased',
+      onto: { seq: 2, device: 'pc4f2a' },
+      pushed: { seq: 3, device: 'phone9c1e' },
+    });
+    // The PC's own write is in the phone's version: its replay skips it.
+    expect(await outcome(pc, remote, key)).toEqual({
+      kind: 'rebased',
+      onto: { seq: 3, device: 'phone9c1e' },
+      pushed: null,
+    });
+    expect(pc.db.rows).toEqual(['Luca on 2 Oct', 'Giulia on 2 Oct']);
+    expect(phone.db.rows).toEqual(['Luca on 2 Oct', 'Giulia on 2 Oct']);
+    expect(await outcome(phone, remote, key)).toEqual({ kind: 'nothing' });
+    expect(await outcome(pc, remote, key)).toEqual({ kind: 'nothing' });
   });
 });

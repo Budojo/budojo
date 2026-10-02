@@ -71,8 +71,6 @@ export type SyncState =
   | { kind: 'unpaired' }
   /** Two other devices already sync with the folder: a third is refused (protocol § Scope). */
   | { kind: 'full' }
-  /** Both devices changed things: the replay that carries them (#2031) is not there yet. */
-  | { kind: 'needs-rebase'; count: number }
   | { kind: 'failed'; reason: string };
 
 /** A few seconds after a write, the push: a burst of taps makes one version (PRD § 5.2). */
@@ -278,14 +276,12 @@ export class SyncService {
       });
       switch (outcome.kind) {
         case 'pulled':
+        case 'rebased':
           // The page holds what it read from the database it had.
           this.reload();
           return;
         case 'ask':
           this.stateSignal.set({ kind: 'ask', latest: outcome.latest });
-          return;
-        case 'needs-rebase':
-          this.stateSignal.set({ kind: 'needs-rebase', count: await this.pending(owner) });
           return;
         case 'wait': {
           // Its push is not listed yet: what it carried is not on Drive for
