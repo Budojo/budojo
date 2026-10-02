@@ -250,7 +250,12 @@ describe('Athlete documents page', () => {
       body: { data: doc({ id: 778, original_name: 'id.pdf', type: 'id_card' }) },
     }).as('uploadDoc');
 
-    cy.visitAuthenticated('/dashboard/athletes/42/documents');
+    // A status bar, as the phone has: Cypress has no safe-area inset.
+    cy.visitAuthenticated('/dashboard/athletes/42/documents', undefined, {
+      onBeforeLoad(win) {
+        win.document.documentElement.style.setProperty('--budojo-safe-top', '40px');
+      },
+    });
     cy.wait(['@academy', '@getAthlete', '@getDocs']);
     cy.get('[data-cy="add-document-btn"] button').click();
     cy.get('[data-cy="doc-type"]').click();
@@ -272,9 +277,12 @@ describe('Athlete documents page', () => {
       .closest('.p-toast')
       .then(($toast) => {
         const box = $toast[0].getBoundingClientRect();
+        const topbar = Cypress.$('.topbar')[0].getBoundingClientRect();
         expect(box.left, 'left edge').to.be.at.least(0);
         expect(box.right, 'right edge').to.be.at.most(375);
-        expect(box.top, 'top').to.be.at.least(16);
+        // Below the status bar and the app's top bar, not over the bell.
+        expect(box.top, 'top').to.be.at.least(40 + 56 + 16);
+        expect(box.top, 'below the top bar').to.be.at.least(topbar.bottom);
       });
   });
 

@@ -185,6 +185,48 @@ describe('Daily attendance check-in', () => {
     cy.get('[data-cy="attendance-row-1"]').should('have.attr', 'aria-pressed', 'false');
   });
 
+  // A bottom toast clears the phone's tab bar and gesture bar (#2034): it used
+  // to sit 20 px from the edge, over the tabs.
+  it('shows its undo toast above the tab bar on a phone', () => {
+    cy.viewport(375, 800);
+    cy.intercept('POST', '/api/v1/attendance', (req) => {
+      req.reply({
+        statusCode: 201,
+        body: {
+          data: [
+            {
+              id: 778,
+              athlete_id: req.body.athlete_ids[0],
+              attended_on: req.body.date,
+              notes: null,
+              created_at: null,
+              deleted_at: null,
+            },
+          ],
+        },
+      });
+    }).as('mark');
+
+    cy.visitAuthenticated('/dashboard/attendance', undefined, {
+      onBeforeLoad(win) {
+        win.document.documentElement.style.setProperty('--budojo-safe-bottom', '24px');
+      },
+    });
+    cy.wait(['@academy', '@athletes', '@getDaily']);
+    cy.get('[data-cy="attendance-card-1"]').click();
+    cy.wait('@mark');
+
+    cy.get('[data-cy="attendance-undo"]')
+      .closest('.p-toast')
+      .then(($toast) => {
+        const box = $toast[0].getBoundingClientRect();
+        const tabs = Cypress.$('app-bottom-nav')[0].getBoundingClientRect();
+        expect(box.left, 'left edge').to.be.at.least(0);
+        expect(box.right, 'right edge').to.be.at.most(375);
+        expect(box.bottom, 'above the tab bar').to.be.at.most(tabs.top);
+      });
+  });
+
   it('checks three people in at the door, one name and Enter each (#1930)', () => {
     const bianchi = {
       ...ATHLETES_TWO.body.data[0],
