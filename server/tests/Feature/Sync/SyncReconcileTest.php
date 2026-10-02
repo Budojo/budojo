@@ -106,11 +106,20 @@ it('keeps only this device\'s journal: the swapped-in database brought the other
         ->and(\Illuminate\Support\Facades\DB::table('sync_entries')->count())->toBe(2);
 });
 
-it('sweeps the uploads the dropped journal rows named', function (): void {
+it('sweeps the uploads no kept entry names, and keeps those this device\'s entries still need', function (): void {
+    // After a rebase the device's unconfirmed entries still need their
+    // uploads: a sweep that emptied the folder would lose them.
     config()->set('budojo.sync.device', 'phone9c1e');
+    $mine = str_repeat('b', 64);
+    \Illuminate\Support\Facades\DB::table('sync_journal')->insert([
+        'id' => '01K6F3Q8Z4M7X2N5P9R1T3V6WA', 'device' => 'phone9c1e', 'at' => '2026-10-02T10:00:00.000000Z', 'method' => 'POST',
+        'route' => 'athletes.photo.upload', 'params' => '{"athlete":1}', 'created' => '{}', 'before' => null,
+        'body' => json_encode(['photo' => ['$file' => ['sha256' => $mine, 'name' => 'p.png', 'type' => 'image/png']]]),
+    ]);
+    \Illuminate\Support\Facades\Storage::disk('local')->put("sync/journal/{$mine}", 'my photo');
     \Illuminate\Support\Facades\Storage::disk('local')->put('sync/journal/' . str_repeat('a', 64), 'a stray upload');
 
     $this->artisan('budojo:sync-reconcile')->assertSuccessful();
 
-    expect(\Illuminate\Support\Facades\Storage::disk('local')->allFiles('sync/journal'))->toBe([]);
+    expect(\Illuminate\Support\Facades\Storage::disk('local')->allFiles('sync/journal'))->toBe(["sync/journal/{$mine}"]);
 });

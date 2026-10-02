@@ -30,8 +30,8 @@ final class KeepOwnJournalAction
         }
 
         $dropped = $others->delete();
-        // And the uploads no kept entry names any more, own or not: a
-        // refused write or a failed recording can leave one behind too.
+        // And the uploads no kept entry names any more: the dropped rows'
+        // and, rarely, one kept just before a commit that failed.
         $this->uploads->sweep();
 
         return $dropped;
