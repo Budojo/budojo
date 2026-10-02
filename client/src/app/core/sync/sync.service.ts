@@ -64,7 +64,12 @@ export type SyncState =
   | { kind: 'waiting-first' }
   | { kind: 'reconnect' }
   /** Two academies, or a folder behind this device: the owner chooses (§ 6.4, § 6.5). */
-  | { kind: 'ask'; latest: VersionRef }
+  | {
+      kind: 'ask';
+      latest: VersionRef;
+      /** The latest is this device's own: after a Restore, it is not «the other device's». */
+      mine: boolean;
+    }
   /** `folder.bjs` names another folder, or is missing from one that holds versions. */
   | { kind: 'another-folder' }
   /** The sync key rotated: this device was unpaired. */
@@ -162,16 +167,17 @@ export class SyncService {
    * the folder carries on with. After any round already running, and only on
    * the folder the owner was asked about (`resolveAsk`).
    */
-  async resolve(choice: AskChoice): Promise<void> {
-    const state = this.stateSignal();
-    if (state.kind !== 'ask') {
-      return;
-    }
+  async resolve(choice: AskChoice, seen: VersionRef): Promise<void> {
     while (this.running !== null) {
       await this.running;
     }
+    // Looked at after the wait: a round meanwhile may have answered the
+    // question, or the owner signed out.
+    if (this.stateSignal().kind !== 'ask') {
+      return;
+    }
     this.cancelTimer();
-    return this.run({ choice, seen: state.latest });
+    await this.run({ choice, seen });
   }
 
   /** «Ricollega Google», then a round. */
@@ -245,7 +251,9 @@ export class SyncService {
     };
     this.lastOwner = owner;
     const { device } = identity;
-    if (this.stateSignal().kind !== 'synced') {
+    // A choice on screen stays there while a round looks again in the
+    // background: the round says when it is no longer the question.
+    if (this.stateSignal().kind !== 'synced' && this.stateSignal().kind !== 'ask') {
       this.stateSignal.set({ kind: 'syncing' });
     }
     // Once the swap ran, the server serves another database, whatever the
@@ -295,13 +303,22 @@ export class SyncService {
         resolution === undefined
           ? await syncOnce(context)
           : await resolveAsk(context, resolution.choice, resolution.seen);
+      if (resolution !== undefined && outcome.kind === 'nothing') {
+        // The folder emptied before the owner confirmed: nothing was chosen,
+        // and the round after says what to do now.
+        this.again = true;
+      }
       switch (outcome.kind) {
         case 'pulled':
           // The page holds what it read from the database it had.
           this.reload();
           return;
         case 'ask':
-          this.stateSignal.set({ kind: 'ask', latest: outcome.latest });
+          this.stateSignal.set({
+            kind: 'ask',
+            latest: outcome.latest,
+            mine: outcome.latest.device === device,
+          });
           return;
         case 'needs-rebase':
           this.stateSignal.set({ kind: 'needs-rebase', count: await this.pending(owner) });

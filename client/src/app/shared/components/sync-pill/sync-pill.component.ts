@@ -1,9 +1,20 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  afterNextRender,
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  ElementRef,
+  inject,
+  Injector,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ButtonModule } from 'primeng/button';
 import { PopoverModule } from 'primeng/popover';
 import { LanguageService } from '../../../core/services/language.service';
 import { AskChoice } from '../../../core/sync/engine';
+import { VersionRef } from '../../../core/sync/layout';
 import { SyncService, SyncState } from '../../../core/sync/sync.service';
 import { localeFor } from '../../utils/locale';
 
@@ -44,16 +55,41 @@ export class SyncPillComponent {
 
   protected readonly state = this.sync.state;
   protected readonly busy = signal(false);
-  /** The owner's pick when the sync asked, until they confirm it. */
-  protected readonly confirming = signal<AskChoice | null>(null);
+  private readonly injector = inject(Injector);
+  private readonly consequence = viewChild<ElementRef<HTMLElement>>('consequence');
 
-  /** «Usa quella del PC», or of the phone: whichever device published the folder's latest. */
+  /**
+   * The owner's pick when the sync asked, until they confirm it, with the
+   * version it was made on: a confirm never applies to one they did not see.
+   */
+  protected readonly confirming = signal<{ choice: AskChoice; seen: VersionRef } | null>(null);
+
+  /**
+   * «Usa la palestra del PC», or of the phone: whichever device published the
+   * folder's latest. «…su Drive» when that is this device itself, as after a
+   * Restore, where «del PC» would name both choices.
+   */
   protected readonly useFolderKey = computed(() => {
     const state = this.state();
-    return state.kind === 'ask' && state.latest.device.startsWith('phone')
+    if (state.kind !== 'ask' || state.mine) {
+      return 'sync.ask.useFolderDrive';
+    }
+    return state.latest.device.startsWith('phone')
       ? 'sync.ask.useFolderPhone'
       : 'sync.ask.useFolderPc';
   });
+
+  /** The pick, then the focus on what it replaces: a screen reader hears that before «Conferma». */
+  protected pick(choice: AskChoice): void {
+    const state = this.state();
+    if (state.kind !== 'ask') {
+      return;
+    }
+    this.confirming.set({ choice, seen: state.latest });
+    afterNextRender(() => this.consequence()?.nativeElement.focus(), {
+      injector: this.injector,
+    });
+  }
 
   protected readonly icon = computed(() => LOOK[this.state().kind].icon);
   protected readonly attention = computed(() => LOOK[this.state().kind].attention);
@@ -148,13 +184,13 @@ export class SyncPillComponent {
     }
   }
 
-  async resolve(choice: AskChoice): Promise<void> {
+  async resolve(pick: { choice: AskChoice; seen: VersionRef }): Promise<void> {
     if (this.busy()) {
       return;
     }
     this.busy.set(true);
     try {
-      await this.sync.resolve(choice);
+      await this.sync.resolve(pick.choice, pick.seen);
     } catch {
       // The pill shows the state the attempt left behind.
     } finally {

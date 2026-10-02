@@ -242,9 +242,12 @@ export type AskChoice = 'folder' | 'device';
  * - **`folder`:** this device takes the folder's latest version, as a
  *   fast-forward. What its database held goes, its journal with it: the owner
  *   chose so, knowing.
- * - **`device`:** this device publishes what it holds on top of the folder's
- *   latest, with every entry its journal keeps. The other device then pulls
- *   it, or carries its own writes onto it.
+ * - **`device`:** this device publishes what it holds as a **first version of
+ *   its own** (a new root), numbered above every version there, with every
+ *   entry its journal keeps. Never on top of the folder's latest: the other
+ *   device would then carry its own writes onto it, which is a merge. Meeting a
+ *   line that is not its own, the other device asks in its turn, and its
+ *   writes are never replayed into a gym they were not made in.
  *
  * **Only on the folder the owner was asked about.** If the latest moved since
  * (`seen`), nothing is done, and the round asks again on what is there now.
@@ -286,7 +289,7 @@ export async function resolveAsk(
     }
   } else {
     const seq = Math.max(latest.seq, ledger.base?.seq ?? 0) + 1;
-    ledger = await push(context, ledger, seq, head, kept, kept);
+    ledger = await push(context, ledger, seq, null, kept, kept);
     outcome = { kind: 'pushed', version: { seq, device: context.device } };
   }
   return finishRound(context, ledger, outcome);

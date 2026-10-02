@@ -57,7 +57,7 @@ describe('SyncPillComponent', () => {
     const { pill, fixture, state } = setup({ kind: 'reconnect' });
     expect(pill()?.classList).toContain('sync-pill--attention');
 
-    state.set({ kind: 'ask', latest: { seq: 1, device: 'pc4f2a' } });
+    state.set({ kind: 'ask', latest: { seq: 1, device: 'pc4f2a' }, mine: false });
     fixture.detectChanges();
     expect(pill()?.classList).toContain('sync-pill--attention');
     expect(pill()?.getAttribute('aria-label')).toBe(
@@ -99,10 +99,17 @@ describe('SyncPillComponent', () => {
       await fixture.whenStable();
     }
     const find = (cy: string) => document.querySelector<HTMLElement>(`[data-cy="${cy}"]`);
-    const press = (cy: string) => find(cy)?.querySelector('button')?.click();
+    const press = (cy: string) => {
+      const el = find(cy);
+      (el?.tagName === 'BUTTON' ? el : el?.querySelector('button'))?.click();
+    };
 
     it('offers the PC’s gym or the one here, and says what a pick replaces before it is done', async () => {
-      const { fixture, sync } = setup({ kind: 'ask', latest: { seq: 1, device: 'pc4f2a' } });
+      const { fixture, sync } = setup({
+        kind: 'ask',
+        latest: { seq: 1, device: 'pc4f2a' },
+        mine: false,
+      });
       await openDetail(fixture);
 
       expect(find('sync-ask-folder')?.textContent).toContain("Use the PC's gym");
@@ -114,23 +121,74 @@ describe('SyncPillComponent', () => {
 
       press('sync-ask-confirm');
       await fixture.whenStable();
-      expect(sync.resolve).toHaveBeenCalledWith('folder');
+      expect(sync.resolve).toHaveBeenCalledWith('folder', { seq: 1, device: 'pc4f2a' });
+    });
+
+    it('says «the one on Drive» when the latest is this device’s own, as after a Restore', async () => {
+      const { fixture } = setup({
+        kind: 'ask',
+        latest: { seq: 4, device: 'pc4f2a' },
+        mine: true,
+      });
+      await openDetail(fixture);
+
+      expect(find('sync-ask-folder')?.textContent).toContain('Use the one on Drive');
+    });
+
+    it('puts the focus on what a pick replaces, which describes «Confirm»', async () => {
+      const { fixture } = setup({ kind: 'ask', latest: { seq: 1, device: 'pc4f2a' }, mine: false });
+      await openDetail(fixture);
+
+      press('sync-ask-device');
+      fixture.detectChanges();
+      await new Promise((resolve) => setTimeout(resolve));
+
+      expect(document.activeElement).toBe(find('sync-ask-consequence'));
+      expect(find('sync-ask-confirm')?.getAttribute('aria-describedby')).toBe(
+        'sync-ask-consequence',
+      );
+    });
+
+    it('confirms on the version the owner saw when picking, not one that came after', async () => {
+      const { fixture, sync, state } = setup({
+        kind: 'ask',
+        latest: { seq: 1, device: 'pc4f2a' },
+        mine: false,
+      });
+      await openDetail(fixture);
+      press('sync-ask-folder');
+      fixture.detectChanges();
+
+      state.set({ kind: 'ask', latest: { seq: 2, device: 'pc4f2a' }, mine: false });
+      fixture.detectChanges();
+      press('sync-ask-confirm');
+      await fixture.whenStable();
+
+      expect(sync.resolve).toHaveBeenCalledWith('folder', { seq: 1, device: 'pc4f2a' });
     });
 
     it('names the phone when the phone published the gym on Drive', async () => {
-      const { fixture } = setup({ kind: 'ask', latest: { seq: 2, device: 'phone9c1e' } });
+      const { fixture } = setup({
+        kind: 'ask',
+        latest: { seq: 2, device: 'phone9c1e' },
+        mine: false,
+      });
       await openDetail(fixture);
 
       expect(find('sync-ask-folder')?.textContent).toContain("Use the phone's gym");
     });
 
     it('goes back without doing anything on «Cancel»', async () => {
-      const { fixture, sync } = setup({ kind: 'ask', latest: { seq: 1, device: 'pc4f2a' } });
+      const { fixture, sync } = setup({
+        kind: 'ask',
+        latest: { seq: 1, device: 'pc4f2a' },
+        mine: false,
+      });
       await openDetail(fixture);
 
       press('sync-ask-device');
       fixture.detectChanges();
-      expect(find('sync-ask-consequence')?.textContent).toContain('the other device takes it');
+      expect(find('sync-ask-consequence')?.textContent).toContain('asks you which one to keep');
       press('sync-ask-cancel');
       fixture.detectChanges();
 

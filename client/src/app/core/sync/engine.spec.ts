@@ -536,18 +536,28 @@ describe('the owner’s choice when a round asks (#2033, PRD § 6.5)', () => {
     expect(await outcome(phone, remote, key)).toEqual({ kind: 'nothing' });
   });
 
-  it('keeps this device’s academy: published on top of the folder’s, and the other device pulls it', async () => {
+  it('keeps this device’s academy as a line of its own: the other device asks in its turn, never merges', async () => {
     const { remote, key, pc, phone } = await twoAcademies();
+    // The PC wrote meanwhile: its write must never be replayed into the phone's gym.
+    pc.write('Giulia on 3 Oct');
+    await sync(pc, remote, key);
 
-    const round = await resolve(phone, remote, key, 'device', { seq: 1, device: 'pc4f2a' });
+    const round = await resolve(phone, remote, key, 'device', { seq: 2, device: 'pc4f2a' });
 
-    expect(round.outcome).toEqual({ kind: 'pushed', version: { seq: 2, device: 'phone9c1e' } });
+    expect(round.outcome).toEqual({ kind: 'pushed', version: { seq: 3, device: 'phone9c1e' } });
+    expect([...remote.files.keys()]).toContain('versions/000003-phone9c1e.root.bjs');
     expect(await outcome(pc, remote, key)).toEqual({
-      kind: 'pulled',
-      version: { seq: 2, device: 'phone9c1e' },
+      kind: 'ask',
+      latest: { seq: 3, device: 'phone9c1e' },
     });
+    expect(pc.db.academy).toBe('Eagles BJJ');
+
+    // The owner takes the phone's on the PC too: it pulls, its own gym gives way.
+    const taken = await resolve(pc, remote, key, 'folder', { seq: 3, device: 'phone9c1e' });
+    expect(taken.outcome).toEqual({ kind: 'pulled', version: { seq: 3, device: 'phone9c1e' } });
     expect(pc.db.academy).toBe('Eagles BJJ, from a backup');
-    expect(pc.db.rows).toEqual(['Luca on 2 Oct, before the phone joined the sync']);
+    expect(await outcome(pc, remote, key)).toEqual({ kind: 'nothing' });
+    expect(await outcome(phone, remote, key)).toEqual({ kind: 'nothing' });
   });
 
   it('does nothing when the folder moved since the owner was asked, and asks again on what is there', async () => {

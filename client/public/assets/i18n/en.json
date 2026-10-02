@@ -3720,9 +3720,10 @@
     "ask": {
       "useFolderPc": "Use the PC's gym",
       "useFolderPhone": "Use the phone's gym",
+      "useFolderDrive": "Use the one on Drive",
       "keepHere": "Keep the one here",
       "consequenceFolder": "This device takes the gym on Drive. What it holds now is replaced.",
-      "consequenceDevice": "The gym here goes to Drive, and the other device takes it. What is on Drive now is replaced.",
+      "consequenceDevice": "The gym here goes to Drive. The other device finds it and asks you which one to keep.",
       "confirm": "Confirm",
       "cancel": "Cancel"
     }

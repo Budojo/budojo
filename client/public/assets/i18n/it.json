@@ -3720,9 +3720,10 @@
     "ask": {
       "useFolderPc": "Usa la palestra del PC",
       "useFolderPhone": "Usa la palestra del telefono",
+      "useFolderDrive": "Usa quella su Drive",
       "keepHere": "Tieni quella di qui",
       "consequenceFolder": "Questo dispositivo prende la palestra su Drive. Quello che c'è qui ora viene sostituito.",
-      "consequenceDevice": "La palestra di qui va su Drive e l'altro dispositivo la prende. Quella che c'è ora su Drive viene sostituita.",
+      "consequenceDevice": "La palestra di qui va su Drive. L'altro dispositivo la trova e ti chiede quale tenere.",
       "confirm": "Conferma",
       "cancel": "Annulla"
     }

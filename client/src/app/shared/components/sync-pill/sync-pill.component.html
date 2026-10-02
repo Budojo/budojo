@@ -27,21 +27,34 @@
           Never merged (PRD § 2): one academy or the other. The owner picks,
           reads what it replaces, and confirms.
         -->
-        @if (confirming(); as choice) {
-          <p class="sync-detail__consequence" data-cy="sync-ask-consequence">
+        @if (confirming(); as pick) {
+          <p
+            #consequence
+            id="sync-ask-consequence"
+            class="sync-detail__consequence"
+            tabindex="-1"
+            data-cy="sync-ask-consequence"
+          >
             {{
-              (choice === 'folder' ? 'sync.ask.consequenceFolder' : 'sync.ask.consequenceDevice')
-                | translate
+              (pick.choice === 'folder'
+                ? 'sync.ask.consequenceFolder'
+                : 'sync.ask.consequenceDevice'
+              ) | translate
             }}
           </p>
-          <p-button
-            [label]="'sync.ask.confirm' | translate"
-            [loading]="busy()"
-            [autofocus]="true"
+          <!-- A native button: «Conferma» is described by what it replaces. -->
+          <button
+            pButton
+            type="button"
             [fluid]="true"
-            (onClick)="resolve(choice)"
+            [loading]="busy()"
+            [disabled]="busy()"
+            aria-describedby="sync-ask-consequence"
+            (click)="resolve(pick)"
             data-cy="sync-ask-confirm"
-          />
+          >
+            <span pButtonLabel>{{ 'sync.ask.confirm' | translate }}</span>
+          </button>
           <p-button
             [label]="'sync.ask.cancel' | translate"
             [text]="true"
@@ -55,14 +68,14 @@
             [label]="useFolderKey() | translate"
             [autofocus]="true"
             [fluid]="true"
-            (onClick)="confirming.set('folder')"
+            (onClick)="pick('folder')"
             data-cy="sync-ask-folder"
           />
           <p-button
             [label]="'sync.ask.keepHere' | translate"
             [outlined]="true"
             [fluid]="true"
-            (onClick)="confirming.set('device')"
+            (onClick)="pick('device')"
             data-cy="sync-ask-device"
           />
         }

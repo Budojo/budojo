@@ -142,7 +142,11 @@ describe('SyncService', () => {
 
     await sync.syncNow();
 
-    expect(sync.state()).toEqual({ kind: 'ask', latest: { seq: 1, device: 'pc4f2a' } });
+    expect(sync.state()).toEqual({
+      kind: 'ask',
+      latest: { seq: 1, device: 'pc4f2a' },
+      mine: false,
+    });
     expect(phone.db.academy).toBe('Eagles BJJ, restored from a backup');
     expect(reload).not.toHaveBeenCalled();
   });
@@ -154,7 +158,7 @@ describe('SyncService', () => {
     await sync.syncNow();
     expect(sync.state().kind).toBe('ask');
 
-    await sync.resolve('folder');
+    await sync.resolve('folder', { seq: 1, device: 'pc4f2a' });
 
     expect(phone.db.academy).toBe('Eagles BJJ');
     expect(reload).toHaveBeenCalledTimes(1);
@@ -199,7 +203,7 @@ describe('SyncService', () => {
   it('does nothing with a choice when nothing was asked', async () => {
     await pcPublishes();
     const sync = setUp();
-    await sync.resolve('device');
+    await sync.resolve('device', { seq: 1, device: 'pc4f2a' });
 
     expect(remote.files.has('versions/000002-phone9c1e.000001-pc4f2a.bjs')).toBe(false);
   });
