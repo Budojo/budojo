@@ -3682,6 +3682,10 @@
     "keysWait": {
       "title": "I certificati medici si apriranno dopo",
       "detail": "Sul PC: Dati e backup → Google Drive → «Collega il telefono». Poi esci e rientra con Google qui."
+    },
+    "keysUnread": {
+      "title": "Le chiavi della palestra non si leggono",
+      "detail": "I certificati medici non si apriranno finché non si leggono. Motivo: {{reason}}"
     }
   }
 }

@@ -127,6 +127,7 @@
                   styleClass="submit-btn"
                   [label]="'door.update.useDrive' | translate"
                   [outlined]="true"
+                  [disabled]="entering()"
                   (onClick)="useDrive()"
                   data-cy="door-use-drive"
                 />

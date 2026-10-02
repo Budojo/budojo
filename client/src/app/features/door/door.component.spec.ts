@@ -436,10 +436,25 @@ describe('a step that replaces the button that had focus', () => {
 });
 
 describe("the academy's keys from the Google account (#2033)", () => {
-  it("takes the PC's keys with the restore, in the one restart that swaps it in", async () => {
-    const { component, server, toasts } = setup();
+  it("takes the PC's keys before the backup is staged, then one restart swaps both in", async () => {
+    const order: string[] = [];
+    const { component, server, device, toasts } = setup();
+    server.adoptKeys.mockImplementation(async () => {
+      order.push('keys');
+      return { changed: true };
+    });
+    device.restore.mockImplementation(() => {
+      order.push('stage');
+      return of(undefined);
+    });
+    server.restart.mockImplementation(async () => {
+      order.push('restart');
+      return { port: 1, shellSecret: 's' };
+    });
 
     await component.signInWithGoogle();
+
+    expect(order).toEqual(['keys', 'stage', 'restart']);
 
     expect(server.adoptKeys).toHaveBeenCalledWith({
       APP_KEY: PC_KEYS.APP_KEY,
@@ -500,5 +515,56 @@ describe("the academy's keys from the Google account (#2033)", () => {
     await component.keepHere();
 
     expect(server.adoptKeys).not.toHaveBeenCalled();
+  });
+
+  it("takes them when the owner goes in on the phone's copy of the gym, the update step's default", async () => {
+    localStorage.setItem('budojoRestoredBackup', 'budojo-backup-20260930-100000.zip');
+    const { component, server, device } = setup({
+      inspect: () => of({ data: inspection(KAIZEN) }),
+    });
+    await component.signInWithGoogle();
+
+    await component.keepHere();
+
+    expect(server.adoptKeys).toHaveBeenCalled();
+    expect(server.restart).toHaveBeenCalledTimes(1);
+    expect(device.restore).not.toHaveBeenCalled();
+  });
+
+  it('stays busy through the restart: a second tap starts nothing', async () => {
+    localStorage.setItem('budojoRestoredBackup', 'budojo-backup-20260930-100000.zip');
+    let release: () => void = () => undefined;
+    const { component, server, device } = setup({
+      inspect: () => of({ data: inspection(KAIZEN) }),
+    });
+    server.restart.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          release = () => resolve({ port: 1, shellSecret: 's' });
+        }),
+    );
+    await component.signInWithGoogle();
+
+    const first = component.keepHere();
+    await vi.waitFor(() => expect(server.restart).toHaveBeenCalled());
+    await component.keepHere();
+    release();
+    await first;
+
+    expect(device.session).toHaveBeenCalledTimes(1);
+  });
+
+  it('tells keys it could not read from keys not there, with the reason', async () => {
+    const { component, toasts, reader } = setup();
+    reader.academyKeys.mockRejectedValue(new Error('forbidden: appDataFolder'));
+
+    await component.signInWithGoogle();
+
+    expect(toasts).toEqual([
+      expect.objectContaining({
+        severity: 'warn',
+        detail: expect.stringContaining('forbidden: appDataFolder'),
+      }),
+    ]);
   });
 });

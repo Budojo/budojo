@@ -108,6 +108,8 @@ export class DoorComponent {
   private lastToken: string | null = null;
   /** The academy's keys the PC put with the Google account (#2033); null until it connects the phone. */
   private keys: AcademyKeys | null = null;
+  /** Why the keys could not be read, when they were there to read; null otherwise. */
+  private keysProblem: string | null = null;
 
   constructor() {
     // The button that had focus is gone once the step changes: focus moves to
@@ -147,8 +149,13 @@ export class DoorComponent {
     try {
       this.account.set(await backups.account());
       // Best effort: without them the gym still comes back, and only its
-      // medical certificates wait for the PC's «Collega il telefono».
-      this.keys = await backups.academyKeys().catch(() => null);
+      // medical certificates wait. "None there" and "could not read them" are
+      // told apart: the second must not send the owner to the PC for nothing.
+      this.keysProblem = null;
+      this.keys = await backups.academyKeys().catch((error: unknown) => {
+        this.keysProblem = error instanceof Error ? error.message : String(error);
+        return null;
+      });
       const newest = (await backups.newestFirst()).slice(0, TRIES);
       if (
         newest.length > 0 &&
@@ -194,11 +201,14 @@ export class DoorComponent {
     }
     this.step.set('restoring');
     try {
-      await firstValueFrom(this.device.restore(archive));
-      // One restart swaps the backup in and starts under the PC's keys.
+      // The keys before the backup is staged: a phone killed in between must
+      // never start the PC's gym under its own keys. Then one restart swaps
+      // the backup in under them.
       await this.takeTheKeys();
-      await restartPhoneServer(server);
+      await firstValueFrom(this.device.restore(archive));
+      // Staged is as good as in: the next start swaps it, restart or not.
       rememberRestored(this.archiveName);
+      await restartPhoneServer(server);
       await this.enter();
       this.sayWhenCertificatesWait();
     } catch (error) {
@@ -207,22 +217,35 @@ export class DoorComponent {
   }
 
   async keepHere(): Promise<void> {
+    // Busy from the first tap, through a restart for new keys: a second tap,
+    // here or on «Aggiorna dal PC», waits for it.
+    if (this.entering()) {
+      return;
+    }
+    this.entering.set(true);
+    const update = this.step() === 'update';
     try {
       // The phone's copy of the gym on Drive takes its keys; a gym of the
       // phone's own never does: they would not open what it encrypted.
-      if (this.step() === 'update') {
+      if (update) {
         await this.restartIfKeysChanged();
       }
       await this.enter();
-      if (this.step() === 'update') {
+      if (update) {
         this.sayWhenCertificatesWait();
       }
     } catch (error) {
       this.fail(error);
+    } finally {
+      this.entering.set(false);
     }
   }
 
   async continueWithoutGoogle(): Promise<void> {
+    if (this.entering()) {
+      return;
+    }
+    this.entering.set(true);
     try {
       await this.enter();
     } catch (error) {
@@ -231,6 +254,8 @@ export class DoorComponent {
         return;
       }
       this.fail(error);
+    } finally {
+      this.entering.set(false);
     }
   }
 
@@ -288,25 +313,20 @@ export class DoorComponent {
     if (this.keys !== null) {
       return;
     }
+    const unread = this.keysProblem !== null;
     this.messages.add({
-      severity: 'info',
-      summary: this.translate.instant('door.keysWait.title'),
-      detail: this.translate.instant('door.keysWait.detail'),
+      severity: unread ? 'warn' : 'info',
+      summary: this.translate.instant(unread ? 'door.keysUnread.title' : 'door.keysWait.title'),
+      detail: unread
+        ? this.translate.instant('door.keysUnread.detail', { reason: this.keysProblem })
+        : this.translate.instant('door.keysWait.detail'),
       life: 12000,
     });
   }
 
   private async enter(): Promise<void> {
-    if (this.entering()) {
-      return;
-    }
-    this.entering.set(true);
-    try {
-      this.auth.adoptSession(await firstValueFrom(this.device.session()));
-      await this.router.navigateByUrl('/dashboard');
-    } finally {
-      this.entering.set(false);
-    }
+    this.auth.adoptSession(await firstValueFrom(this.device.session()));
+    await this.router.navigateByUrl('/dashboard');
   }
 
   /**

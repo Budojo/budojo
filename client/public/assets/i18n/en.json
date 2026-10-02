@@ -3682,6 +3682,10 @@
     "keysWait": {
       "title": "The medical certificates will open later",
       "detail": "On the PC: Data & backup → Google Drive → «Connect the phone». Then sign out and back in with Google here."
+    },
+    "keysUnread": {
+      "title": "The gym's keys do not read",
+      "detail": "The medical certificates will not open until they do. Reason: {{reason}}"
     }
   }
 }
