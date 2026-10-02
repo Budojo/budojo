@@ -148,6 +148,15 @@ Also worth knowing:
 - **The bulk data restores anywhere without the keys.** Athletes, attendance, payments and belts are plain relational data — a backup alone recovers them on any machine. Only the encrypted documents need the keys.
 - Medical certificates are, in the worst case, re-collectable from the athletes — the backup and the recovery code are not your only path to them.
 
+### The keys with the Google account: for the phone (#2033)
+
+**Data & backup → Google Drive → Collega il telefono** puts the academy's keys in the Google account's hidden application data, where only Budojo reads them. The phone's «Accedi con Google» then brings the gym back and opens its medical certificates, with no recovery code to type.
+- **It is the owner's choice,** and Google asks for it in a second consent. The backups never need it.
+- **Whoever gets into the Google account can open the gym,** certificates included: that is the owner's decision (PRD § 5.4). Keep Google's 2-step verification on.
+- **Written once and never overwritten.** If the account already holds another academy's keys, the PC says so and leaves them as they are.
+
+The recovery code above is still the way back on a new **computer**.
+
 ## Quick recovery checklist
 
 1. Install Budojo on the new machine and let it finish first-run setup.

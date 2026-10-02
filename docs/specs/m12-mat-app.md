@@ -213,8 +213,10 @@ Nothing waits for the sync, and its state is always on screen (§ 6.2).
 6. **Logout** returns to the door. The data stays on the device; signing in again goes straight in.
 
 **The keys live with the Google account, unsealed:** `keys.json` holds the sync key itself, the app keys (`APP_KEY`, `DOCUMENT_ENCRYPTION_KEY`, what the recovery code #1254 carries) and the folder id. Nothing seals it: the account is the lock, which is the decision. A new device reads it after sign-in, and with the sync key opens everything else.
-- **Preferred: Drive's `appDataFolder`** (scope `drive.appdata`): hidden from the Drive UI and from Drive for desktop's copy, and unreadable by other apps. A spike first checks that the project's two OAuth clients share it, as #2028 checked `drive.file`.
-- **Fallback:** `keys.json` in the visible `Budojo/sync/` folder.
+- **In Drive's `appDataFolder`** (scope `drive.appdata`, decided 2 Oct 2026 in #2033): hidden from the Drive UI and from Drive for desktop's copy, and unreadable by other apps, including any assistant or service the owner connects to their Drive with a broad scope. The visible folder was the fallback, and was not taken: it would put the certificates' key beside the encrypted certificates in the backups.
+- **The PC writes it on the owner's choice:** **Collega il telefono** in Dati e backup asks Google for `drive.appdata`, in a second consent. The backup link never depends on that scope, so a refusal changes nothing that already works.
+- **The two OAuth clients share it:** the phone reading what the PC wrote is the check, on the owner's phone (#2033), as #2028 checked `drive.file`. Should it fail, the fallback is the visible folder.
+- Format and rules: `docs/sync/protocol.md` § The keys.
 - **Versions, reports and files stay sealed under the sync key** (§ 5.3). With the keys in `appDataFolder`, the visible folder alone, as Drive for desktop copies it to a PC or as a shared link would expose it, still opens nothing.
 
 **No Budojo password on a local device.** After Google, the app asks its own server for the owner's token with a secret only the shell holds; an open endpoint on `127.0.0.1` would let any other app on the phone in.

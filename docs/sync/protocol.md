@@ -23,14 +23,15 @@ A third device needs the protocol to map rows across every device's entries, and
 ```
 Budojo/                                          the folder the PC creates for its backups (#1301)
   sync/
-    keys.bjs                                     the app keys, sealed under the sync key
+    folder.bjs                                   the folder's id, sealed under the sync key
     versions/000001-pc4f2a.root.bjs              the academy's first version
     versions/000045-phone9c1e.000044-pc4f2a.bjs  version 45 by the phone, on top of 44 by the PC
     files/<sha256>.bjs                           a document or photo, named by its content
     devices/pc4f2a.bjs                           what one device last saw and sent
 ```
 
-- **Device id:** a kind (2–8 lowercase letters) and 4 random characters, `pc4f2a`, `phone9c1e`. It is made once at pairing.
+- **The keys are not in the folder:** they live in the account's hidden application data (§ The keys).
+- **Device id:** a kind (2–8 lowercase letters) and 4 random characters, `pc4f2a`, `phone9c1e`. It is made once, when the device joins (§ Joining).
 - **Sequence numbers** are six digits, from `000001`.
 - **A version's name carries its parent**, so the history can be read from the listing, with no database downloaded. The name is the associated data too, so the parent cannot be changed.
 - **Two devices can push the same number at once.** The names still differ, so both files exist. **The latest version** is the highest number. Between two of the same number, it is the one Drive created first (its `createdTime`, on Drive's clock), so a twin that lands later never takes the number. The lower device id breaks a tie in the same millisecond.
@@ -133,15 +134,21 @@ The journal is a JSON list of the writes that made this version from its parent,
 | `created` | the ids the write created, by table | `{ "attendance_records": [912] }` |
 | `before` | for an update or a delete, what the rows held before, by table and id; else `null` | `{ "athletes": { "57": { "first_name": "Luca" } } }` |
 
-## `keys.bjs`
+## The keys (`budojo-keys.json`)
 
-`{ "v": 1, "folder": "<32 hex>", "APP_KEY": "base64:…", "DOCUMENT_ENCRYPTION_KEY": "…" }`.
+**In the Google account's hidden application data** (Drive's `appDataFolder`, scope `drive.appdata`), not in the folder: Budojo's own OAuth clients read it, and nothing else does. It is not in the Drive UI, and Drive for desktop does not copy it to a disk. **Nothing seals it: the Google account is the key** (PRD § 5.4, the owner's decision of 2 Oct 2026, #2033).
 
-- **The key fields** have the desktop keychain's shape and checks (`desktop/src/bootstrap.ts`), the same pair the recovery code (#1254) carries.
-- **`folder`** is random, made once by the device that creates the sync folder. A device keeps the one it joined at pairing.
-- **Before it syncs, a device checks that the folder it reaches says the same.**
-  - **Another folder id, or no `keys.bjs`:** it asks the owner. That is another account's folder for the same academy, after a sign-in to the wrong Google account, or a folder someone emptied.
-  - **A `keys.bjs` that does not open under this device's key:** the device was unpaired, and the key rotated. It stops and writes nothing, so its deleted report stays deleted.
+`{ "v": 1, "folder": "<32 hex>", "syncKey": "<base64, 32 bytes>", "APP_KEY": "base64:…", "DOCUMENT_ENCRYPTION_KEY": "…", "createdAt": "<UTC>" }`. Written by `desktop/src/sync-keys.ts`, read by `client/src/app/core/sync/keys.ts`.
+- **The two app keys** have the desktop keychain's shape and checks (`desktop/src/bootstrap.ts`), the pair the recovery code (#1254) carries. A device that brings the academy in adopts them, and opens what the other device encrypted: the medical certificates first.
+- **`syncKey`** seals every file in the folder (§ The envelope).
+- **`folder`** is random, made with the file. `sync/folder.bjs`, sealed under the sync key, carries the same id.
+- **Written once, by the first device that has an academy:**
+  - the PC writes it when the owner chooses **Collega il telefono** (Dati e backup), with its own two keys: a second consent, for `drive.appdata`, which the backups never need;
+  - a phone-only academy writes its own when it connects Google (#2046).
+- **Never overwritten.** A device that finds another academy's keys stops and says so: replacing them would leave that academy's documents and versions unreadable.
+- **Before it syncs, a device checks `sync/folder.bjs`:**
+  - **missing, or another id:** it asks the owner. It is another academy's folder, or one someone emptied;
+  - **does not open under the sync key:** the key rotated after an unpairing. It stops and writes nothing, so its deleted report stays deleted.
 
 ## `devices/<id>.bjs`
 
@@ -155,12 +162,12 @@ The journal is a JSON list of the writes that made this version from its parent,
   - From then on every database holds them, so every version built from then on does too.
   - No clock is involved, so an upload that lands days late cannot beat it.
   - **Every device has a file before it pushes or pulls a version.**
-    - The device that creates the folder writes its report together with `keys.bjs`, before version 1.
-    - A new device writes its report (`base` null, `holds` empty) at pairing, after opening `keys.bjs` and before its first pull. A code from before an unpairing then fails at `keys.bjs` and leaves nothing behind.
+    - The device that creates the folder writes its report together with `folder.bjs`, before version 1.
+    - A new device writes its report (`base` null, `holds` empty) when it joins, after opening `folder.bjs` and before its first pull. A device unpaired since then fails at `folder.bjs`, and leaves nothing behind.
     - A file that does not open or parse counts as holding nothing.
 
     So a device that exists is never mistaken for no device.
-  - **Unpairing deletes the device's file** together with rotating the key (#2033). Left behind, it would hold nothing forever, and nobody could clear a journal again. **The order matters** (PRD § 5.4): the remaining device first fetches every file it lacks under the old key, then publishes a fresh version, its files, its report and the new key, and only then deletes everything under the old key and the unpaired device's report.
+  - **Unpairing deletes the device's file** together with rotating the sync key (#2033), written to the keys file last. Left behind, it would hold nothing forever, and nobody could clear a journal again. **The order matters** (PRD § 5.4): the remaining device first fetches every file it lacks under the old key, then publishes a fresh version, its files, its report and the new key, and only then deletes everything under the old key and the unpaired device's report.
   - **A sync the unpaired device had under way** can still write its report, or a version, sealed under the old key. So after unpairing, the remaining device:
     - deletes any `devices/` or `versions/` file that fails to open as «wrong key or path»;
     - never pulls a version it cannot open.
@@ -168,18 +175,15 @@ The journal is a JSON list of the writes that made this version from its parent,
     A file that opens but is corrupt still counts as holding nothing.
   - **With no other device's file** in `devices/`, a device clears the entries already in a version the folder lists. A device that pairs later starts from the latest version.
 
-## The pairing code
+## Joining
 
-> **To be replaced (#2033, the owner's decision of 2 Oct 2026):** "Accedi con Google" is the door, and the keys live with the Google account (PRD § 5.4). This section and `keys.bjs` change with #2033's implementation, after the `appDataFolder` spike; until then they describe what `pairing.ts` and `keys.ts` do today.
+There is no pairing code (#2033). **A device joins at its first «Accedi con Google» that finds the keys** (§ The keys):
+1. It reads the keys file and adopts the app keys.
+2. It makes its device id.
+3. It checks `sync/folder.bjs`.
+4. It writes its `devices/` report, and only then pulls.
 
-```
-protocol (1 byte) | sync key (32 bytes) | first 2 bytes of SHA-256 over the first 33
-```
-
-**Spelled in Crockford's base32:** 56 characters in 14 groups of four.
-- **Reading it back** ignores case, spaces and dashes. It also takes `O` as 0, and `I` or `L` as 1.
-- **A mistyped character fails the check** and is refused. It is never turned into a wrong key.
-- **The QR carries** `BUDOJO-PAIR:` and the 56 characters.
+**A third device is refused** (§ Scope).
 
 ## Deciding
 
@@ -197,7 +201,7 @@ protocol (1 byte) | sync key (32 bytes) | first 2 bytes of SHA-256 over the firs
 
 | Situation | Do |
 |---|---|
-| The folder's `keys.bjs` names another folder, or is missing | **ask the owner** (checked before deciding) |
+| `sync/folder.bjs` is missing or names another folder | **ask the owner** (checked before deciding) |
 | Its own latest push is not listed, and the folder has also lost the version it was made on | **ask the owner** |
 | … not listed, within 10 minutes of landing | **wait**: the listing lags; look again |
 | … still not listed after that | rebase onto the latest, or push again if the folder is empty |

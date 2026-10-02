@@ -3572,6 +3572,17 @@
         "EROFS": "The backup folder is read-only. Choose a different one.",
         "unknown": "Could not copy to the backup folder ({{code}}). Backups are still being saved on this computer."
       }
+    },
+    "phone": {
+      "title": "Budojo on the phone",
+      "why": "Bring the gym to the phone: Budojo puts the gym's keys in a hidden area of your Google Drive that only Budojo reads. On the phone, «Sign in with Google» is enough, and the medical certificates open too.",
+      "twoStep": "Whoever gets into your Google account can open the gym, certificates included: keep 2-step verification on.",
+      "connect": "Connect the phone",
+      "ready": "Ready for the phone",
+      "readySince": "Ready for the phone since",
+      "howTo": "On the phone, open Budojo and tap «Sign in with Google».",
+      "keysDiffer": "This Google account already holds another gym's keys: they are left as they are.",
+      "failed": "It did not work"
     }
   },
   "desktopTitlebar": {

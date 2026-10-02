@@ -550,6 +550,7 @@ async function startRuntime(): Promise<{
             ),
             backupService,
             openExternal: (url) => shell.openExternal(url),
+            localSecrets: async () => parseSecrets(safeStorage.decryptString(await readFile(layout.secretsFile))),
             log: (line) => backupLog.write(`${new Date().toISOString()} ${line}`),
           }),
         );
@@ -701,6 +702,14 @@ function registerDriveBridge(driveOf: () => DriveSyncService | null): void {
     const service = driveOf();
 
     return service === null ? { ok: false, error: 'not_configured' } : service.link();
+  });
+
+  // Bringing the gym to the phone (#2033): a second consent, then the keys.
+  // Never rejects: the renderer's button waits on it.
+  ipcMain.handle('budojo:drive:connect-phone', async () => {
+    const service = driveOf();
+
+    return service === null ? { ok: false, error: 'not_configured' } : service.connectPhone();
   });
 
   ipcMain.handle('budojo:drive:unlink', async () => {

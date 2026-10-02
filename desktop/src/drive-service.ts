@@ -1,4 +1,5 @@
 import type { BackupEntry } from './backup.js';
+import type { Secrets } from './bootstrap.js';
 import type { DriveTokens } from './drive-io.js';
 import {
   recordFailure,
@@ -7,6 +8,7 @@ import {
   type DriveState,
 } from './drive-state.js';
 import { mergeArchiveViews, planSync, REMOTE_RETENTION, type ArchiveView, type RemoteArchive } from './drive-sync.js';
+import { holdsTheseSecrets, newAcademyKeys, parseAcademyKeys } from './sync-keys.js';
 
 /**
  * Orchestrates the Drive backup sync (#1301): link, sync, unlink.
@@ -31,6 +33,13 @@ export interface DriveSyncIO {
   clearTokens: () => Promise<void>;
 
   authorize: () => Promise<DriveTokens>;
+  /** The same consent, with the account's hidden application data as well (#2033). */
+  authorizeWithAppData: () => Promise<DriveTokens>;
+  /** This PC's keys, from the OS keychain (#1254). */
+  localSecrets: () => Promise<Secrets>;
+  findKeys: (tokens: DriveTokens) => Promise<string | null>;
+  readKeys: (tokens: DriveTokens, id: string) => Promise<string>;
+  writeKeys: (tokens: DriveTokens, text: string) => Promise<void>;
   ensureFresh: (tokens: DriveTokens) => Promise<DriveTokens>;
   accountEmail: (tokens: DriveTokens) => Promise<string | null>;
   ensureFolder: (tokens: DriveTokens) => Promise<string>;
@@ -49,6 +58,15 @@ export type SyncResult =
   | { ran: true; uploaded: number; deleted: number; error?: string };
 
 export type LinkResult = { ok: true; account: string | null } | { ok: false; error: string };
+
+/**
+ * Bringing the gym to the phone (#2033). `published`: this PC wrote the keys;
+ * `already`: they were on the account and are this PC's. `keys_differ`: the
+ * account holds another academy's keys, which are never overwritten.
+ */
+export type PhoneResult =
+  | { ok: true; keys: 'published' | 'already' }
+  | { ok: false; error: string };
 
 /** Pulls the code off whatever was thrown, without assuming it is a DriveError. */
 function errorCode(error: unknown): string {
@@ -252,6 +270,52 @@ export class DriveSyncService {
       this.io.log(`sync: failed (${code})`);
 
       return { ran: true, uploaded: 0, deleted: 0, error: code };
+    }
+  }
+
+  /**
+   * Brings the gym to the phone (#2033, PRD § 5.4): asks Google for the
+   * account's hidden application data, then makes sure the academy's keys are
+   * there, for a phone to read after «Accedi con Google».
+   *
+   * - **None there:** this PC writes them, with its own two keys.
+   * - **This PC's there:** nothing to write.
+   * - **Another academy's there** (a phone set up on its own, a second PC):
+   *   never overwritten. Its documents and its sync would stop opening.
+   */
+  async connectPhone(): Promise<PhoneResult> {
+    try {
+      const state = await this.io.readState();
+      if (!state.linked) {
+        return { ok: false, error: 'not_linked' };
+      }
+      const tokens = await this.io.authorizeWithAppData();
+      await this.io.writeTokens(tokens);
+      const secrets = await this.io.localSecrets();
+      const existing = await this.io.findKeys(tokens);
+      let outcome: 'published' | 'already';
+      if (existing === null) {
+        await this.io.writeKeys(tokens, JSON.stringify(newAcademyKeys(secrets, new Date(this.io.now()))));
+        outcome = 'published';
+      } else if (holdsTheseSecrets(parseAcademyKeys(await this.io.readKeys(tokens, existing)), secrets)) {
+        outcome = 'already';
+      } else {
+        this.io.log("phone: the account holds another academy's keys, left as they are");
+
+        return { ok: false, error: 'keys_differ' };
+      }
+      const at = new Date(this.io.now()).toISOString();
+      await this.serially(async () => {
+        await this.io.writeState({ ...(await this.io.readState()), keysPublishedAt: at });
+      });
+      this.io.log(`phone: keys ${outcome}`);
+
+      return { ok: true, keys: outcome };
+    } catch (error) {
+      const code = errorCode(error);
+      this.io.log(`phone: failed (${code})`);
+
+      return { ok: false, error: code };
     }
   }
 

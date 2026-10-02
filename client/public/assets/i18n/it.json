@@ -3572,6 +3572,17 @@
         "EROFS": "La cartella dei backup è di sola lettura. Scegline un'altra.",
         "unknown": "Impossibile copiare nella cartella dei backup ({{code}}). I backup continuano a essere salvati su questo computer."
       }
+    },
+    "phone": {
+      "title": "Budojo sul telefono",
+      "why": "Porta la palestra sul telefono: Budojo mette le chiavi della palestra in un'area nascosta del tuo Google Drive, che solo Budojo legge. Sul telefono basterà «Accedi con Google», e si apriranno anche i certificati medici.",
+      "twoStep": "Chi entra nel tuo account Google può aprire la palestra, certificati compresi: tieni attiva la verifica in due passaggi.",
+      "connect": "Collega il telefono",
+      "ready": "Pronta per il telefono",
+      "readySince": "Pronta per il telefono dal",
+      "howTo": "Sul telefono apri Budojo e tocca «Accedi con Google».",
+      "keysDiffer": "Su questo account Google ci sono già le chiavi di un'altra palestra: non le sostituisco.",
+      "failed": "Non è andata"
     }
   },
   "desktopTitlebar": {

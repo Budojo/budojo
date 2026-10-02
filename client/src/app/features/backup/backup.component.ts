@@ -116,6 +116,7 @@ export class BackupComponent {
   protected readonly driveState = signal<DriveLinkStateView>({ configured: false, linked: false });
   protected readonly driveArchives = signal<DriveArchiveView[]>([]);
   protected readonly linking = signal(false);
+  protected readonly connectingPhone = signal(false);
 
   /**
    * Google has withdrawn Budojo's access (#2064): every 7 days while the
@@ -271,6 +272,35 @@ export class BackupComponent {
       ),
       detail: result.ok ? (result.account ?? undefined) : result.error,
       life: result.ok ? 4000 : 8000,
+    });
+
+    await this.refresh();
+  }
+
+  /**
+   * Brings the gym to the phone (#2033): Google asks once more, for the hidden
+   * data, and the academy's keys go there for the phone's «Accedi con Google».
+   */
+  protected async connectPhone(): Promise<void> {
+    this.connectingPhone.set(true);
+    const result = await this.drive.connectPhone();
+    this.connectingPhone.set(false);
+
+    this.messages.add({
+      severity: result.ok ? 'success' : 'error',
+      summary: this.translate.instant(
+        result.ok
+          ? 'backup.phone.ready'
+          : result.error === 'keys_differ'
+            ? 'backup.phone.keysDiffer'
+            : 'backup.phone.failed',
+      ),
+      detail: result.ok
+        ? this.translate.instant('backup.phone.howTo')
+        : result.error === 'keys_differ'
+          ? undefined
+          : result.error,
+      life: result.ok ? 6000 : 10000,
     });
 
     await this.refresh();

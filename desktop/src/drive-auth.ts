@@ -29,6 +29,15 @@ import { createHash, randomBytes } from 'node:crypto';
  */
 export const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
 
+/**
+ * The account's hidden application data, where the academy's keys live for the
+ * phone to read after «Accedi con Google» (#2033, PRD § 5.4). Visible to no
+ * other app and not in the Drive UI, unlike the `Budojo` folder. Asked for
+ * only when the owner chooses to bring the gym to the phone: the backup link
+ * never depends on it.
+ */
+export const APPDATA_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
+
 const AUTHORIZE_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth';
 
 /**
@@ -69,13 +78,15 @@ export function buildAuthorizeUrl(input: {
   redirectUri: string;
   challenge: string;
   state: string;
+  /** The keys' hidden folder as well as the backups' (#2033). */
+  withAppData?: boolean;
 }): string {
   const url = new URL(AUTHORIZE_ENDPOINT);
 
   url.searchParams.set('client_id', input.clientId);
   url.searchParams.set('redirect_uri', input.redirectUri);
   url.searchParams.set('response_type', 'code');
-  url.searchParams.set('scope', DRIVE_SCOPE);
+  url.searchParams.set('scope', input.withAppData === true ? `${DRIVE_SCOPE} ${APPDATA_SCOPE}` : DRIVE_SCOPE);
   url.searchParams.set('code_challenge', input.challenge);
   url.searchParams.set('code_challenge_method', 'S256');
   url.searchParams.set('state', input.state);

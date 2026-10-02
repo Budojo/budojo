@@ -98,6 +98,7 @@ async function toDriveError(response: Response): Promise<DriveError> {
 export async function authorize(
   config: DriveClientConfig,
   openBrowser: (url: string) => void | Promise<void>,
+  withAppData = false,
 ): Promise<DriveTokens> {
   const pkce = createPkcePair();
   const state = randomBytes(16).toString('hex');
@@ -152,7 +153,9 @@ export async function authorize(
       redirectUri = `http://127.0.0.1:${port}/callback`;
 
       void Promise.resolve(
-        openBrowser(buildAuthorizeUrl({ clientId: config.clientId, redirectUri, challenge: pkce.challenge, state })),
+        openBrowser(
+          buildAuthorizeUrl({ clientId: config.clientId, redirectUri, challenge: pkce.challenge, state, withAppData }),
+        ),
       ).catch((error: unknown) => {
         clearTimeout(timer);
         server.close();
@@ -387,6 +390,63 @@ export async function revoke(refreshToken: string): Promise<void> {
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({ token: refreshToken }),
   }).catch(() => undefined);
+}
+
+/** A file in the account's hidden application data (#2033), by name. */
+export async function findAppDataFile(tokens: DriveTokens, name: string): Promise<string | null> {
+  const params = new URLSearchParams({
+    spaces: 'appDataFolder',
+    q: `name='${name}' and trashed=false`,
+    fields: 'files(id)',
+    pageSize: '1',
+  });
+  const response = await fetch(`https://www.googleapis.com/drive/v3/files?${params.toString()}`, {
+    headers: auth(tokens),
+  });
+
+  if (!response.ok) {
+    throw await toDriveError(response);
+  }
+
+  const body = (await response.json()) as { files?: { id: string }[] };
+
+  return body.files?.[0]?.id ?? null;
+}
+
+export async function readAppDataFile(tokens: DriveTokens, id: string): Promise<string> {
+  const response = await fetch(`https://www.googleapis.com/drive/v3/files/${id}?alt=media`, { headers: auth(tokens) });
+
+  if (!response.ok) {
+    throw await toDriveError(response);
+  }
+
+  return response.text();
+}
+
+/** Written once, by name, into the hidden application data: a multipart upload, as it is small. */
+export async function createAppDataFile(tokens: DriveTokens, name: string, text: string): Promise<void> {
+  const boundary = `budojo-${randomBytes(8).toString('hex')}`;
+  const body = [
+    `--${boundary}`,
+    'Content-Type: application/json; charset=UTF-8',
+    '',
+    JSON.stringify({ name, parents: ['appDataFolder'] }),
+    `--${boundary}`,
+    'Content-Type: application/json',
+    '',
+    text,
+    `--${boundary}--`,
+    '',
+  ].join('\r\n');
+  const response = await fetch(`${DRIVE_UPLOAD}?uploadType=multipart&fields=id`, {
+    method: 'POST',
+    headers: { ...auth(tokens), 'Content-Type': `multipart/related; boundary=${boundary}` },
+    body,
+  });
+
+  if (!response.ok) {
+    throw await toDriveError(response);
+  }
 }
 
 export { DRIVE_SCOPE };

@@ -610,6 +610,60 @@ describe('BackupComponent', () => {
       expect(text).toContain('http_403');
     });
 
+    describe('the gym on the phone (#2033)', () => {
+      it('offers to bring it there, and says what that means for the Google account', async () => {
+        const { fixture } = setup({}, {}, linked());
+        await settle(fixture);
+
+        const block =
+          fixture.nativeElement.querySelector('[data-cy="drive-phone"]')?.textContent ?? '';
+        expect(
+          fixture.nativeElement.querySelector('[data-cy="drive-connect-phone"]'),
+        ).not.toBeNull();
+        expect(block).toContain('hidden area');
+        expect(block).toContain('2-step verification');
+      });
+
+      it('says since when the phone can open it, and offers it no more', async () => {
+        const { fixture } = setup({}, {}, linked({ keysPublishedAt: '2026-10-02T18:00:00Z' }));
+        await settle(fixture);
+
+        expect(fixture.nativeElement.querySelector('[data-cy="drive-phone-ready"]')).not.toBeNull();
+        expect(fixture.nativeElement.querySelector('[data-cy="drive-connect-phone"]')).toBeNull();
+      });
+
+      it('connects the phone through the bridge and says what to do on it', async () => {
+        const connectPhone = vi.fn(async () => ({ ok: true, keys: 'published' as const }));
+        const { fixture, added } = setup({}, {}, { ...linked(), connectPhone });
+        await settle(fixture);
+
+        await (
+          fixture.componentInstance as unknown as { connectPhone(): Promise<void> }
+        ).connectPhone();
+
+        expect(connectPhone).toHaveBeenCalled();
+        expect(added.at(-1)).toMatchObject({
+          severity: 'success',
+          detail: expect.stringContaining('Sign in with Google'),
+        });
+      });
+
+      it("says when the account already holds another gym's keys, which are left alone", async () => {
+        const connectPhone = vi.fn(async () => ({ ok: false, error: 'keys_differ' }));
+        const { fixture, added } = setup({}, {}, { ...linked(), connectPhone });
+        await settle(fixture);
+
+        await (
+          fixture.componentInstance as unknown as { connectPhone(): Promise<void> }
+        ).connectPhone();
+
+        expect(added.at(-1)).toMatchObject({
+          severity: 'error',
+          summary: expect.stringContaining('another gym'),
+        });
+      });
+    });
+
     it('disconnects through the bridge', async () => {
       const { fixture, drive } = setup({}, {}, linked());
       await settle(fixture);

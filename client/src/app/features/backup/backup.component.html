@@ -216,6 +216,28 @@
             dataCy="drive-disconnect"
           />
         </div>
+
+        <!-- The gym on the phone (#2033): the keys with the Google account, on the owner's choice. -->
+        <div class="backup-page__phone" data-cy="drive-phone">
+          <h3 class="backup-page__subheading">{{ 'backup.phone.title' | translate }}</h3>
+          @if (driveState().keysPublishedAt; as publishedAt) {
+            <p class="backup-page__muted" data-cy="drive-phone-ready">
+              {{ 'backup.phone.readySince' | translate }} {{ publishedAt | localeDate }}
+            </p>
+            <p class="backup-page__muted">{{ 'backup.phone.howTo' | translate }}</p>
+          } @else {
+            <p class="backup-page__muted">{{ 'backup.phone.why' | translate }}</p>
+            <p class="backup-page__muted">{{ 'backup.phone.twoStep' | translate }}</p>
+            <p-button
+              [label]="'backup.phone.connect' | translate"
+              icon="pi pi-mobile"
+              severity="secondary"
+              [loading]="connectingPhone()"
+              (onClick)="connectPhone()"
+              data-cy="drive-connect-phone"
+            />
+          }
+        </div>
       } @else {
         <p class="backup-page__muted">{{ 'backup.drive.why' | translate }}</p>
         <p-button

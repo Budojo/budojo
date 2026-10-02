@@ -1,9 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import type { BackupEntry } from './backup.js';
+import { generateSecrets } from './bootstrap.js';
 import { DriveSyncService, type DriveSyncIO } from './drive-service.js';
 import { emptyState, type DriveState } from './drive-state.js';
 import type { RemoteArchive } from './drive-sync.js';
+import { newAcademyKeys, parseAcademyKeys } from './sync-keys.js';
 
 /**
  * The orchestration (#1301): link, sync, unlink. The IO is injected, so what is
@@ -22,6 +24,8 @@ const archive = (name: string, sizeBytes = 100): BackupEntry => ({
   sizeBytes,
 });
 
+const SECRETS = generateSecrets();
+
 function fakeIO(overrides: Partial<DriveSyncIO> = {}) {
   const state: { current: DriveState } = { current: { ...emptyState(), linked: true, account: 'gym@example.it', folderId: 'folder-1' } };
   const remote: RemoteArchive[] = [];
@@ -35,6 +39,11 @@ function fakeIO(overrides: Partial<DriveSyncIO> = {}) {
     writeTokens: vi.fn(async () => undefined),
     clearTokens: vi.fn(async () => undefined),
     authorize: vi.fn(async () => ({ accessToken: 'at', refreshToken: 'rt', expiresAt: Date.now() + 3_600_000 })),
+    authorizeWithAppData: vi.fn(async () => ({ accessToken: 'at2', refreshToken: 'rt2', expiresAt: Date.now() + 3_600_000 })),
+    localSecrets: vi.fn(async () => SECRETS),
+    findKeys: vi.fn(async () => null),
+    readKeys: vi.fn(async () => ''),
+    writeKeys: vi.fn(async () => undefined),
     ensureFresh: vi.fn(async (t) => t),
     accountEmail: vi.fn(async () => 'gym@example.it'),
     ensureFolder: vi.fn(async () => 'folder-1'),
@@ -382,3 +391,61 @@ describe('unlink', () => {
     expect(io.upload).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * Bringing the gym to the phone (#2033): a second consent, for the account's
+ * hidden application data, then the academy's keys there for the phone.
+ */
+describe('connectPhone', () => {
+  it('asks Google for the hidden data, keeps the new tokens, and writes this PC\'s keys when none are there', async () => {
+    const { io, state } = fakeIO();
+
+    const result = await new DriveSyncService(io).connectPhone();
+
+    expect(result).toEqual({ ok: true, keys: 'published' });
+    expect(io.writeTokens).toHaveBeenCalledWith(expect.objectContaining({ refreshToken: 'rt2' }));
+    const written = parseAcademyKeys(vi.mocked(io.writeKeys).mock.calls[0]?.[1] ?? '');
+    expect(written).toMatchObject({ APP_KEY: SECRETS.APP_KEY, DOCUMENT_ENCRYPTION_KEY: SECRETS.DOCUMENT_ENCRYPTION_KEY });
+    expect(state.current.keysPublishedAt).toBe(new Date(1_700_000_000_000).toISOString());
+  });
+
+  it('writes nothing when this PC\'s keys are already there', async () => {
+    const mine = JSON.stringify(newAcademyKeys(SECRETS, new Date()));
+    const { io } = fakeIO({ findKeys: vi.fn(async () => 'keys-1'), readKeys: vi.fn(async () => mine) });
+
+    const result = await new DriveSyncService(io).connectPhone();
+
+    expect(result).toEqual({ ok: true, keys: 'already' });
+    expect(io.writeKeys).not.toHaveBeenCalled();
+  });
+
+  it('never overwrites another academy\'s keys: its documents and its sync would stop opening', async () => {
+    const theirs = JSON.stringify(newAcademyKeys(generateSecrets(), new Date()));
+    const { io, state } = fakeIO({ findKeys: vi.fn(async () => 'keys-1'), readKeys: vi.fn(async () => theirs) });
+
+    const result = await new DriveSyncService(io).connectPhone();
+
+    expect(result).toEqual({ ok: false, error: 'keys_differ' });
+    expect(io.writeKeys).not.toHaveBeenCalled();
+    expect(state.current.keysPublishedAt).toBeNull();
+  });
+
+  it('asks nothing of Google while Drive is not linked', async () => {
+    const { io } = fakeIO({ readState: vi.fn(async () => emptyState()) });
+
+    expect(await new DriveSyncService(io).connectPhone()).toEqual({ ok: false, error: 'not_linked' });
+    expect(io.authorizeWithAppData).not.toHaveBeenCalled();
+  });
+
+  it('answers with the reason when the consent fails, and never throws', async () => {
+    const { io } = fakeIO({
+      authorizeWithAppData: vi.fn(async () => {
+        throw Object.assign(new Error('closed'), { code: 'consent_timeout' });
+      }),
+    });
+
+    expect(await new DriveSyncService(io).connectPhone()).toEqual({ ok: false, error: 'consent_timeout' });
+    expect(io.writeKeys).not.toHaveBeenCalled();
+  });
+});
+
