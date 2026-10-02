@@ -75,6 +75,10 @@ export const RELEASES: readonly Release[] = [
             it: "«Collega il telefono»: in Dati e backup, sotto Google Drive, c'è un nuovo riquadro, «Budojo sul telefono». Premi «Collega il telefono»: Google chiede di nuovo il permesso, e le chiavi della palestra vanno in un'area nascosta del tuo Google Drive, che solo Budojo legge. Sul telefono, «Accedi con Google» ritrova la palestra dall'ultimo backup del PC e apre anche i certificati medici.",
           },
           {
+            en: 'On the phone documents are for viewing only: a new certificate is added from the PC, as always.',
+            it: 'Sul telefono i documenti si guardano e basta: un certificato nuovo si aggiunge dal PC, come sempre.',
+          },
+          {
             en: 'Choose the same Google account as the backups and leave both boxes ticked: with another account, or a permission left out, Budojo saves nothing and tells you. The backups carry on as before.',
             it: 'Scegli lo stesso account Google dei backup e lascia spuntate entrambe le voci: se scegli un altro account, o togli un permesso, Budojo non salva niente e te lo dice. I backup continuano come prima.',
           },
