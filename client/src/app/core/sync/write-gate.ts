@@ -22,6 +22,12 @@ const SYNC = /\/api\/v1\/(sync|device)\//;
  *   replaced. A hold waits for the writes already sent to finish first;
  * - **told to the sync** once the server took one, so it pushes a few
  *   seconds later (PRD § 5.2).
+ *
+ * **Reads wait too while the sync swaps** (#2032), and a hold waits for those
+ * already sent: on the PC the server goes down for the restart, and a read
+ * that found it down would show the offline page; one sent before the owner's
+ * session was open again would carry a token the new database never had.
+ * Only writes tell the sync to push.
  */
 @Injectable({ providedIn: 'root' })
 export class WriteGate {
@@ -108,13 +114,17 @@ export class WriteGate {
   }
 }
 
-/** Every write to the academy's API goes through the gate; reads and the sync's own requests do not. */
+/**
+ * Every request to the academy's API goes through the gate, the sync's own
+ * aside: writes counted, so a hold waits for them, and reads only held.
+ */
 export const writeGateInterceptor: HttpInterceptorFn = (req, next) => {
-  if (READS.has(req.method) || !API.test(req.url) || SYNC.test(req.url)) {
+  if (!API.test(req.url) || SYNC.test(req.url)) {
     return next(req);
   }
+  const write = !READS.has(req.method);
   return inject(WriteGate).pass<HttpEvent<unknown>>(
     () => next(req),
-    (event) => event instanceof HttpResponse,
+    (event) => write && event instanceof HttpResponse,
   );
 };

@@ -88,6 +88,8 @@ interface BudojoBridge {
   readonly apiBase: string;
   /** Node's `process.platform` of the host. */
   readonly platform: string;
+  /** The launch's shell secret (#2032): opens the owner's session after the sync swapped a database in. */
+  readonly shellSecret: string;
   /**
    * The running app version, painted in the desktop title bar (#1401).
    * A development run reports `0.0.0`, which is shown as-is: it says "not a
@@ -165,6 +167,33 @@ interface BudojoBridge {
       error?: string;
       reason?: string;
     }>;
+  };
+  /**
+   * The sync between the owner's devices (#2032). The engine runs in the page
+   * (PRD § 5.6); the main process says who this PC is, makes the page's Drive
+   * calls with its own token, and swaps a staged database in by a restart.
+   */
+  readonly sync: {
+    /**
+     * Null until the PC connected the phone and its server journals;
+     * `unauthorized` when Google let go of the PC (weekly while in Testing);
+     * `offline` when the keys could not be read for want of a network.
+     */
+    identity(): Promise<
+      | { device: string; folder: string; syncKey: string; epoch: number }
+      | { unauthorized: true }
+      | { offline: true }
+      | null
+    >;
+    /** One call to Drive's files API: the main process puts its token on it. */
+    driveFetch(request: {
+      url: string;
+      method: string;
+      headers: Record<string, string>;
+      body?: string | Uint8Array;
+    }): Promise<{ status: number; headers: Record<string, string>; body: Uint8Array }>;
+    /** Resolves once the server serves the swapped-in database. */
+    swapIn(): Promise<void>;
   };
   /**
    * Native window chrome (#1793).

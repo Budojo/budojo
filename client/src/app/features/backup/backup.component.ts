@@ -38,6 +38,7 @@ import {
   type DriveArchiveView,
   type DriveLinkStateView,
 } from '../../core/services/drive-sync.service';
+import { SyncService } from '../../core/sync/sync.service';
 import { LocaleDatePipe } from '../../shared/pipes/locale-date.pipe';
 import { driveErrorKey, folderErrorKey } from '../../shared/utils/backup-errors';
 import { prefersReducedMotion } from '../../shared/utils/prefers-reduced-motion';
@@ -108,6 +109,7 @@ export class BackupComponent {
   private readonly backup = inject(DesktopBackupService);
   private readonly keys = inject(DesktopKeysService);
   private readonly drive = inject(DriveSyncService);
+  private readonly sync = inject(SyncService);
   private readonly folder = inject(BackupFolderService);
   private readonly messages = inject(MessageService);
   private readonly translate = inject(TranslateService);
@@ -293,6 +295,11 @@ export class BackupComponent {
     this.connectingPhone.set(true);
     const result = await this.drive.connectPhone();
     this.connectingPhone.set(false);
+    if (result.ok) {
+      // The PC joined the sync with the keys it published (#2032): it puts the
+      // gym on Drive now, for the phone to find, rather than at the next look.
+      void this.sync.syncNow();
+    }
 
     const refusal = PHONE_REFUSALS[result.error ?? ''];
     this.messages.add({

@@ -9,6 +9,7 @@ import {
 import { DesktopKeysService } from '../../core/services/desktop-keys.service';
 import { DriveSyncService } from '../../core/services/drive-sync.service';
 import { BackupFolderService } from '../../core/services/backup-folder.service';
+import { SyncService } from '../../core/sync/sync.service';
 import { provideI18nTesting } from '../../../test-utils/i18n-test';
 import { LanguageService } from '../../core/services/language.service';
 
@@ -23,6 +24,12 @@ import { LanguageService } from '../../core/services/language.service';
  * dependency production does not have proves the spec works, not the component.
  */
 describe('BackupComponent', () => {
+  /** The sync (#2032): only whether the page asks for a round. */
+  let sync: { syncNow: ReturnType<typeof vi.fn> };
+  beforeEach(() => {
+    sync = { syncNow: vi.fn(async () => undefined) };
+  });
+
   const archives: BackupArchiveView[] = [
     {
       name: 'budojo-backup-20260815-090000.zip',
@@ -94,6 +101,7 @@ describe('BackupComponent', () => {
         { provide: DesktopKeysService, useValue: keys },
         { provide: DriveSyncService, useValue: drive },
         { provide: BackupFolderService, useValue: folder },
+        { provide: SyncService, useValue: sync },
       ],
     });
     // Spy on add() so the assertions read the toasts without stubbing the
@@ -646,6 +654,8 @@ describe('BackupComponent', () => {
           severity: 'success',
           detail: expect.stringContaining('Sign in with Google'),
         });
+        // The PC puts the gym on Drive at once, for the phone to find (#2032).
+        expect(sync.syncNow).toHaveBeenCalledTimes(1);
       });
 
       it('names the account to pick when the consent was for another one', async () => {

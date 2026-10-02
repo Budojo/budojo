@@ -1,15 +1,19 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, Notification, type OpenDialogOptions, protocol, safeStorage, shell } from 'electron';
+import { randomBytes } from 'node:crypto';
 import { createWriteStream, existsSync, readFileSync } from 'node:fs';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { dataLayout, parseSecrets, runBootstrap, serializeSecrets, type Secrets } from './bootstrap.js';
+import { dataLayout, parseSecrets, runBootstrap, serializeSecrets, type BootstrapOptions, type DataLayout, type Secrets } from './bootstrap.js';
 import { BackupService, RETENTION, type RestoreCheck, type RestoreRefusal } from './backup.js';
 import { createBackupIO } from './backup-io.js';
 import { createFolderCopyIO } from './folder-copy-io.js';
 import { FolderCopyService } from './folder-copy-service.js';
 import { createDriveSyncIO, driveClientConfig, DriveSyncService } from './drive-wiring.js';
+import { parseState as parseDriveState } from './drive-state.js';
+import { parseDriveRequest } from './sync-bridge.js';
+import { newPcDeviceId, parseDeviceFile, serializeDeviceFile, type SyncDevice } from './sync-device.js';
 import { formatConsoleMessage, isWorthLogging, redactSecrets } from './renderer-log.js';
 import { DesktopNotifier, EMPTY_LEDGER, parseListOutput, type DeliveryLedger, type PendingNotification } from './desktop-notifier.js';
 import { buildPhpEnv, buildPhpIni, resolveDesktopPaths } from './php-runtime.js';
@@ -57,6 +61,29 @@ import electronUpdater from 'electron-updater';
  */
 
 const DEV = process.env['ELECTRON_DEV'] === '1';
+
+/**
+ * What lets this app's page, and nothing else on `127.0.0.1`, open the owner's
+ * session with no password (#2032, the server's `RequireShell`, #2079): made
+ * once per launch, handed to PHP as `BUDOJO_SHELL_SECRET` and to the page
+ * through the preload, and written nowhere. The sync needs it after every
+ * pull: the database it swaps in is the phone's, which holds none of this PC's
+ * sessions.
+ */
+const SHELL_SECRET = randomBytes(32).toString('hex');
+
+/**
+ * One stop of the server at a time (#2032): a Restore and the sync's swap
+ * both stop PHP, move databases and start it again. Serialised, neither can
+ * start the server under the other's renames.
+ */
+let serverWork: Promise<unknown> = Promise.resolve();
+function withServerStopped<T>(work: () => Promise<T>): Promise<T> {
+  const turn = serverWork.then(work, work);
+  serverWork = turn.catch(() => undefined);
+
+  return turn;
+}
 const DEV_URL = 'http://localhost:4200';
 
 /** Origin the packaged renderer is served from. */
@@ -363,6 +390,7 @@ async function startRuntime(): Promise<{
   folderCopy: FolderCopyService;
   /** null when the build carries no OAuth client, i.e. the feature is unavailable. */
   driveService: DriveSyncService | null;
+  sync: DesktopSync;
   apiBase: string;
 }> {
   const paths = resolveDesktopPaths({
@@ -394,6 +422,23 @@ async function startRuntime(): Promise<{
   // One env builder for artisan runs and the server, so bootstrap and runtime
   // can never disagree on a driver, a path or a key. The port is irrelevant to
   // artisan and unknown until the server binds.
+  // The sync between the owner's devices (#2032): this PC's id, made once it
+  // has connected the phone. From the start that has it, every PHP process of
+  // ours journals the academy's writes under it (#2031). A PC that connected
+  // the phone before this code shipped gets its id at this start.
+  const read = await readSyncDevice(layout);
+  const syncState: { file: SyncDevice | null; running: string | null } = {
+    file: read === 'unreadable' ? null : read,
+    running: null,
+  };
+  // An id that cannot be read is never replaced: a new one would leave the
+  // old one's report in the folder, holding nothing for ever (protocol §
+  // `devices/`). The PC then syncs not at all until the file is put right.
+  const deviceUnreadable = read === 'unreadable';
+  if (syncState.file === null && !deviceUnreadable && (await keysPublished(layout))) {
+    syncState.file = await makeSyncDevice(layout);
+  }
+
   const envWith = (secrets: Secrets, port: number): Record<string, string> =>
     buildPhpEnv(
       {
@@ -404,7 +449,11 @@ async function startRuntime(): Promise<{
         // Exported as PHPRC so the subprocesses Laravel's scheduler spawns
         // load the same ini we pass with `-c` — without it they load none.
         iniPath: layout.iniPath,
-        extra: { ...secrets },
+        extra: {
+          ...secrets,
+          BUDOJO_SHELL_SECRET: SHELL_SECRET,
+          ...(syncState.file === null ? {} : { BUDOJO_DEVICE_ID: syncState.file.device }),
+        },
       },
       process.env,
     );
@@ -415,17 +464,19 @@ async function startRuntime(): Promise<{
   const bootstrapLog = createWriteStream(path.join(layout.logsDir, 'bootstrap.log'), { flags: 'a' });
   let boot;
 
+  const bootstrapOptions = (log: (line: string) => void): BootstrapOptions => ({
+    layout,
+    secretStore: safeStorage,
+    phpBinary: paths.phpBinary,
+    serverRoot: paths.serverRoot,
+    iniContent,
+    envFor: (secrets) => envWith(secrets, 0),
+    appVersion: app.getVersion(),
+    log,
+  });
+
   try {
-    boot = await runBootstrap({
-      layout,
-      secretStore: safeStorage,
-      phpBinary: paths.phpBinary,
-      serverRoot: paths.serverRoot,
-      iniContent,
-      envFor: (secrets) => envWith(secrets, 0),
-      appVersion: app.getVersion(),
-      log: (line) => bootstrapLog.write(`${new Date().toISOString()} ${line}\n`),
-    });
+    boot = await runBootstrap(bootstrapOptions((line) => bootstrapLog.write(`${new Date().toISOString()} ${line}\n`)));
   } finally {
     bootstrapLog.end();
   }
@@ -449,6 +500,7 @@ async function startRuntime(): Promise<{
   });
 
   const { port } = await supervisor.start();
+  syncState.running = syncState.file?.device ?? null;
 
   // The desktop's cron (#1226): `schedule:run` every minute while the app is
   // open, once shortly after boot. What each run does is decided server-side
@@ -588,6 +640,109 @@ async function startRuntime(): Promise<{
   });
   backupPoll.start();
 
+  /**
+   * Ends the app with the reason, as a failed start does, when going on would
+   * be wrong: a server serving the old database while the page counts the new
+   * one as in, or no server at all. The next start finishes what was staged.
+   */
+  let gaveUp = false;
+  const giveUp = (what: string, error: unknown): never => {
+    if (gaveUp) {
+      throw error;
+    }
+    gaveUp = true;
+    const reason = error instanceof Error ? error.message : String(error);
+    syncLog.write(`${new Date().toISOString()} ${what}: ${reason}`);
+    dialog.showErrorBox(
+      'Budojo has to start again',
+      `${what}.\n\n${reason}\n\nOpen Budojo again: it finishes as it starts.\n\nLog: ${path.join(layout.logsDir, 'sync.log')}`,
+    );
+    app.exit(1);
+    throw error;
+  };
+  /** A swap began and did not end: the staged database or its reconcile still waits. */
+  const swapPending = (): boolean =>
+    existsSync(`${layout.databasePath}.staged`) || existsSync(`${layout.databasePath}.reconcile`);
+
+  /**
+   * Stops every PHP process of ours, runs `work`, and starts the server again
+   * on its port: the page keeps the address its window was given. The
+   * scheduler and the notification poll open the database on their own, and
+   * a backup's VACUUM reads it: each lets go first, and no backup starts
+   * until the server is back (`BackupService.holding`).
+   */
+  const restartServer = (work: () => Promise<void>): Promise<void> =>
+    withServerStopped(async () => {
+      const held = [scheduler, notifierPoll, backupPoll];
+      await Promise.all(held.map((task) => task.pause()));
+      try {
+        await backupService.holding(async () => {
+          const port = supervisor.port ?? undefined;
+          await supervisor.stop();
+          let failure: unknown = null;
+          try {
+            await work();
+          } catch (error) {
+            failure = error;
+          }
+          // The page already counts the staged version as in: the old
+          // database must not be served, nor one not yet reconciled.
+          if (failure !== null && swapPending()) {
+            giveUp('Budojo could not bring in the changes from the other device', failure);
+          }
+          try {
+            await supervisor.start(port);
+          } catch (error) {
+            giveUp('Budojo\'s server did not come back', error);
+          }
+          syncState.running = syncState.file?.device ?? null;
+          if (failure !== null) {
+            throw failure;
+          }
+        });
+      } catch (error) {
+        // A backup that would not end: the server was never stopped, and the
+        // staged database still waits for its swap.
+        if (swapPending()) {
+          giveUp('Budojo could not bring in the changes from the other device', error);
+        }
+        throw error;
+      } finally {
+        for (const task of held) {
+          task.resume();
+        }
+      }
+    });
+
+  const syncLog = new RotatingLog(path.join(layout.logsDir, 'sync.log'));
+  syncLog.open();
+  const sync: DesktopSync = {
+    running: () => syncState.running,
+    epoch: () => syncState.file?.epoch ?? 0,
+    join: async () => {
+      if (deviceUnreadable) {
+        throw new Error(`${layout.syncDeviceFile} does not read: no new id is made over it`);
+      }
+      syncState.file ??= await makeSyncDevice(layout);
+      if (syncState.running !== syncState.file.device) {
+        syncLog.write(`${new Date().toISOString()} joined as ${syncState.file.device}: restarting the server to journal`);
+        await restartServer(async () => undefined);
+      }
+    },
+    // The staged database in, with what a start does: the swap, the
+    // migrations, the reconcile (bootstrap.ts).
+    swapIn: () =>
+      restartServer(async () => {
+        await runBootstrap(bootstrapOptions((line) => syncLog.write(`${new Date().toISOString()} ${line}`)));
+      }),
+    restored: async () => {
+      if (syncState.file !== null) {
+        syncState.file = { ...syncState.file, epoch: syncState.file.epoch + 1 };
+        await writeDeviceFile(layout, syncState.file);
+      }
+    },
+  };
+
   return {
     supervisor,
     scheduler,
@@ -596,8 +751,69 @@ async function startRuntime(): Promise<{
     backupPoll,
     folderCopy,
     driveService,
+    sync,
     apiBase: `http://127.0.0.1:${port}`,
   };
+}
+
+/**
+ * The sync between the owner's devices, as the page sees it from the PC
+ * (#2032): who this PC is while its server journals, and the two things only
+ * the main process can do.
+ */
+interface DesktopSync {
+  /** The id the running server journals under; null before the PC joined. */
+  running(): string | null;
+  /** Moved on by every restore: the page forgets what it knew of the database before. */
+  epoch(): number;
+  /** Makes the id when there is none, and restarts the server so it journals. */
+  join(): Promise<void>;
+  /** Swaps the staged database in: a restart, with the bootstrap's swap, migrations and reconcile. */
+  swapIn(): Promise<void>;
+  /** A restore put the database back in time (Data & backup). */
+  restored(): Promise<void>;
+}
+
+/** None only when there is no file: one that is there and does not read is not "none". */
+async function readSyncDevice(layout: DataLayout): Promise<SyncDevice | null | 'unreadable'> {
+  let raw: string;
+  try {
+    raw = await readFile(layout.syncDeviceFile, 'utf8');
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code === 'ENOENT' ? null : 'unreadable';
+  }
+
+  return parseDeviceFile(raw) ?? 'unreadable';
+}
+
+async function makeSyncDevice(layout: DataLayout): Promise<SyncDevice> {
+  const made: SyncDevice = { device: newPcDeviceId(), epoch: 0 };
+  await writeDeviceFile(layout, made);
+
+  return made;
+}
+
+/** Written beside, then renamed over: a write cut short never leaves a torn file. */
+async function writeDeviceFile(layout: DataLayout, sync: SyncDevice): Promise<void> {
+  const part = `${layout.syncDeviceFile}.part`;
+  await writeFile(part, serializeDeviceFile(sync), 'utf8');
+  await rename(part, layout.syncDeviceFile);
+}
+
+/** A call that never reached Google: `fetch` failing, or the socket's own codes. */
+function isNetworkFailure(error: unknown): boolean {
+  const text = `${error instanceof Error ? error.message : String(error)} ${String((error as { cause?: { code?: unknown } } | null)?.cause?.code ?? '')}`;
+
+  return error instanceof TypeError || /fetch failed|ENOTFOUND|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|ENETUNREACH/i.test(text);
+}
+
+/** Whether this PC connected the phone (#2033): Drive's state says when it found the keys its own. */
+async function keysPublished(layout: DataLayout): Promise<boolean> {
+  try {
+    return parseDriveState(await readFile(layout.driveStateFile, 'utf8')).keysPublishedAt !== null;
+  } catch {
+    return false;
+  }
 }
 
 async function readLedger(file: string): Promise<DeliveryLedger> {
@@ -672,6 +888,10 @@ function registerTokenVault(): void {
     vault.clear();
     event.returnValue = true;
   });
+  // Read once by the preload, synchronously: the page puts it on a header.
+  ipcMain.on('budojo:shell:secret', (event) => {
+    event.returnValue = SHELL_SECRET;
+  });
 }
 
 /**
@@ -686,7 +906,7 @@ function registerTokenVault(): void {
  * unavailable — the renderer asks for the state on load, and a rejected
  * invoke there would break the whole Backup page rather than hiding one card.
  */
-function registerDriveBridge(driveOf: () => DriveSyncService | null): void {
+function registerDriveBridge(driveOf: () => DriveSyncService | null, syncOf: () => DesktopSync | null): void {
   ipcMain.handle('budojo:drive:state', async () => {
     const service = driveOf();
     if (service === null) {
@@ -708,8 +928,18 @@ function registerDriveBridge(driveOf: () => DriveSyncService | null): void {
   // Never rejects: the renderer's button waits on it.
   ipcMain.handle('budojo:drive:connect-phone', async () => {
     const service = driveOf();
+    if (service === null) {
+      return { ok: false, error: 'not_configured' };
+    }
+    const result = await service.connectPhone();
+    if (result.ok) {
+      // The PC joins the sync with the keys it published (#2032): its id, and
+      // a server that journals under it. A failure here is not the phone's:
+      // the keys are on the account, and the next start joins.
+      await syncOf()?.join().catch(() => undefined);
+    }
 
-    return service === null ? { ok: false, error: 'not_configured' } : service.connectPhone();
+    return result;
   });
 
   ipcMain.handle('budojo:drive:unlink', async () => {
@@ -733,6 +963,61 @@ function registerDriveBridge(driveOf: () => DriveSyncService | null): void {
       deleted: 0,
       error: error instanceof Error ? error.message : 'unknown',
     }));
+  });
+}
+
+/**
+ * The sync between the owner's devices (#2032). The engine runs in the page;
+ * this is what only the main process has:
+ * - **who this PC is,** while its server journals, with the academy's sync
+ *   key and folder id read from the account (#2033);
+ * - **Drive,** with this process's token, which never reaches the page
+ *   (`sync-bridge.ts` checks every request goes to Drive's files API);
+ * - **the swap** of a staged database, by a restart.
+ */
+function registerSyncBridge(syncOf: () => DesktopSync | null, driveOf: () => DriveSyncService | null): void {
+  ipcMain.handle('budojo:sync:identity', async () => {
+    const sync = syncOf();
+    const drive = driveOf();
+    const device = sync?.running() ?? null;
+    if (sync === null || drive === null || device === null) {
+      return null;
+    }
+    let keys;
+    try {
+      keys = await drive.keysForSync();
+    } catch (error) {
+      // Google let go of the PC (weekly while the app is in Testing): said as
+      // the Drive calls say it, so the page offers «Ricollega Google».
+      if ((error as { code?: unknown } | null)?.code === 'invalid_grant') {
+        return { unauthorized: true };
+      }
+      // No network: the page counts what waits, as on the phone.
+      if (isNetworkFailure(error)) {
+        return { offline: true };
+      }
+      throw error;
+    }
+
+    return keys === null ? null : { device, folder: keys.folder, syncKey: keys.syncKey, epoch: sync.epoch() };
+  });
+
+  ipcMain.handle('budojo:sync:drive-fetch', async (_event, raw: unknown) => {
+    const drive = driveOf();
+    const request = parseDriveRequest(raw);
+    if (drive === null || request === null) {
+      return { status: 400, headers: {}, body: new Uint8Array() };
+    }
+
+    return drive.fetchForSync(request);
+  });
+
+  ipcMain.handle('budojo:sync:swap-in', async () => {
+    const sync = syncOf();
+    if (sync === null) {
+      throw new Error('Budojo is not ready to swap a database in yet.');
+    }
+    await sync.swapIn();
   });
 }
 
@@ -813,6 +1098,8 @@ function registerBackupBridge(
   folderOf: () => FolderCopyService | null,
   /** The other PHP processes that open the database on their own: the scheduler and the notification poll. */
   otherPhpOf: () => PeriodicTask[],
+  syncOf: () => DesktopSync | null,
+  databasePath: string,
 ): void {
   ipcMain.handle('budojo:backup:list', async () => (await backupOf()?.list()) ?? []);
 
@@ -850,7 +1137,10 @@ function registerBackupBridge(
     // Before PHP is stopped, not after: a refused restore still restarts the
     // server on its way out, and doing that under a restore that is still
     // swapping is the one thing the swap must never overlap.
-    if (restoring || service.busy) {
+    // A database the sync staged and has not swapped in yet (#2032): the
+    // restore waits for the sync, rather than have the next start swap that
+    // database over the one it brings back.
+    if (restoring || service.busy || existsSync(`${databasePath}.staged`)) {
       return busyAnswer;
     }
     restoring = true;
@@ -861,20 +1151,38 @@ function registerBackupBridge(
     // database being swapped out. They hold their ticks until the restore is
     // over, after any run already in flight has finished.
     const held = otherPhpOf();
-    let check: RestoreCheck;
+    let check: RestoreCheck = { ok: false, code: 'busy', reason: busyAnswer.reason };
     try {
-      await Promise.all(held.map((task) => task.pause()));
-      await supervisor.stop();
-      try {
-        check = await run(service);
-      } catch (error) {
-        // An answer, never a rejection: a rejected invoke leaves the page's
-        // button spinning with nothing said. `failed`, not `unreadable`: the
-        // archive passed its checks, and what broke is the swap itself.
-        check = { ok: false, code: 'failed', reason: error instanceof Error ? error.message : String(error) };
-      } finally {
-        await supervisor.start();
-      }
+      // After the sync's swap, never under it (#2032): one stop at a time.
+      await withServerStopped(async () => {
+        await Promise.all(held.map((task) => task.pause()));
+        // The same port after: the window keeps the address it was given.
+        const port = supervisor.port ?? undefined;
+        await supervisor.stop();
+        try {
+          // Looked at again with PHP stopped, when no stage can land any
+          // more: one that landed since the first look waits for its swap.
+          if (existsSync(`${databasePath}.staged`)) {
+            return;
+          }
+          check = await run(service);
+        } catch (error) {
+          // An answer, never a rejection: a rejected invoke leaves the page's
+          // button spinning with nothing said. `failed`, not `unreadable`: the
+          // archive passed its checks, and what broke is the swap itself.
+          check = { ok: false, code: 'failed', reason: error instanceof Error ? error.message : String(error) };
+        } finally {
+          // No server is worse than an error box: the page would sit on its
+          // offline screen with nothing said.
+          await supervisor.start(port).catch((error: unknown) => {
+            dialog.showErrorBox(
+              'Budojo has to start again',
+              `Budojo's server did not come back after the restore.\n\n${error instanceof Error ? error.message : String(error)}\n\nOpen Budojo again.`,
+            );
+            app.exit(1);
+          });
+        }
+      });
     } finally {
       for (const task of held) {
         task.resume();
@@ -883,6 +1191,9 @@ function registerBackupBridge(
     }
 
     if (check.ok) {
+      // The database went back in time outside the sync (#2032, protocol §
+      // Scope): the page forgets what it knew of the one before.
+      await syncOf()?.restored().catch(() => undefined);
       // The renderer is holding data that no longer exists; reload it onto the
       // restored database.
       for (const window of BrowserWindow.getAllWindows()) {
@@ -1189,6 +1500,7 @@ if (!gotTheLock) {
   let notifierPoll: PeriodicTask | null = null;
   let backupService: BackupService | null = null;
   let driveService: DriveSyncService | null = null;
+  let sync: DesktopSync | null = null;
   let folderCopy: FolderCopyService | null = null;
   let backupPoll: PeriodicTask | null = null;
   let updatePoll: PeriodicTask | null = null;
@@ -1242,14 +1554,18 @@ if (!gotTheLock) {
       backupService = runtime.backupService;
       backupPoll = runtime.backupPoll;
       driveService = runtime.driveService;
+      sync = runtime.sync;
       folderCopy = runtime.folderCopy;
       registerBackupBridge(
         () => supervisor,
         () => backupService,
         () => folderCopy,
         () => [scheduler, notifierPoll].filter((task): task is PeriodicTask => task !== null),
+        () => sync,
+        dataLayout(app.getPath('userData')).databasePath,
       );
-      registerDriveBridge(() => driveService);
+      registerDriveBridge(() => driveService, () => sync);
+      registerSyncBridge(() => sync, () => driveService);
       registerFolderBridge(() => folderCopy);
       apiBase = runtime.apiBase;
     } catch (error) {

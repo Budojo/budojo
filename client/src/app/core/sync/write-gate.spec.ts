@@ -60,20 +60,47 @@ describe('WriteGate', () => {
     expect(steps).toEqual(['work']);
   });
 
-  it('lets reads and the sync’s own requests through while the writes are held', async () => {
+  it('lets the sync’s own requests through while it holds, and holds the page’s reads too (#2032)', async () => {
     let release = (): void => undefined;
     const held = gate.hold(() => new Promise<void>((resolve) => (release = resolve)));
     await settle();
 
     const read = firstValueFrom(client.get('/api/v1/athletes'));
     const stage = firstValueFrom(client.put('/api/v1/sync/stage', null));
-    http.expectOne('/api/v1/athletes').flush({ data: [] });
+    const session = firstValueFrom(client.post('/api/v1/device/session', {}));
+    await settle();
     http.expectOne('/api/v1/sync/stage').flush(null);
-    await read;
+    http.expectOne('/api/v1/device/session').flush({ token: 't' });
+    http.expectNone('/api/v1/athletes');
     await stage;
+    await session;
 
     release();
     await held;
+    await settle();
+    http.expectOne('/api/v1/athletes').flush({ data: [] });
+    await read;
+  });
+
+  it('waits for a read already sent before it holds, and a read never tells the sync to push', async () => {
+    let landed = 0;
+    gate.written$.subscribe(() => landed++);
+    const read = firstValueFrom(client.get('/api/v1/athletes'));
+    const pending = http.expectOne('/api/v1/athletes');
+
+    const steps: string[] = [];
+    const held = gate.hold(async () => {
+      steps.push('swap');
+    });
+    await settle();
+    // The server is not stopped under a read still on its way.
+    expect(steps).toEqual([]);
+
+    pending.flush({ data: [] });
+    await read;
+    await held;
+    expect(steps).toEqual(['swap']);
+    expect(landed).toBe(0);
   });
 
   it('lets the session through while it holds: the swap opens it again inside the hold (#2046)', async () => {

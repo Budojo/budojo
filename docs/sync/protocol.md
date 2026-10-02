@@ -188,7 +188,7 @@ There is no pairing code (#2033). **A device joins at its first «Accedi con Goo
 
 **Where a device keeps what it joined with** (#2046):
 - **The phone:** the device id, the folder id and the sync key in `sync.json`, beside the app keys in its private files, which neither Android's backup nor a transfer to a new phone copies. What it remembers between rounds (the `SyncLedger`) is in the page's storage, named by the device id.
-- **The PC:** #2032.
+- **The PC:** the device id in `sync-device.json` under its data, apart from Drive's link, with the database's epoch, which a Restore moves on. The sync key and folder id are read from the account's keys file, which the PC wrote (`docs/desktop/architecture.md` § Sync with the phone).
 
 **A database replaced outside the sync** (the door's restore, the desktop's Restore) forgets the ledger: an academy with no base asks before it meets the folder's (§ Scope).
 

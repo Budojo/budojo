@@ -90,7 +90,17 @@ export class PhpSupervisor {
     return this.file.filePath;
   }
 
-  async start(): Promise<{ port: number }> {
+  /**
+   * Starts the server. With `preferredPort` it binds that one and no other:
+   * the page was handed the server's address when its window was made, and a
+   * reload keeps it, so a restart under the page (a restore, the sync's swap,
+   * #2032) comes back where it was or fails. A server on another port would
+   * answer nobody, while the page went on calling the old one.
+   */
+  async start(preferredPort?: number): Promise<{ port: number }> {
+    // A start after `stop()`: the crash watch is on again. Left set, a php.exe
+    // that died after a restore or a sync's swap was never restarted.
+    this.stopping = false;
     await mkdir(this.config.logDir, { recursive: true });
     await mkdir(path.dirname(this.config.iniPath), { recursive: true });
     this.file.open();
@@ -103,7 +113,7 @@ export class PhpSupervisor {
     let lastError: Error | null = null;
 
     for (let attempt = 1; attempt <= 3; attempt++) {
-      const port = await pickFreePort();
+      const port = preferredPort ?? (await pickFreePort());
 
       try {
         await this.spawnAndAwaitReadiness(port, attempt);
@@ -117,6 +127,10 @@ export class PhpSupervisor {
           break;
         }
         this.log(`[supervisor] port ${port} was taken between pick and bind, retrying`);
+        if (preferredPort !== undefined) {
+          // The process before may still hold it for a moment.
+          await new Promise((resolve) => setTimeout(resolve, 500));
+        }
       }
     }
 
