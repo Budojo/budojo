@@ -60,20 +60,39 @@ describe('WriteGate', () => {
     expect(steps).toEqual(['work']);
   });
 
-  it('lets reads and the sync’s own requests through while the writes are held', async () => {
+  it('lets the sync’s own requests through while it holds, and holds the page’s reads too (#2032)', async () => {
     let release = (): void => undefined;
     const held = gate.hold(() => new Promise<void>((resolve) => (release = resolve)));
     await settle();
 
     const read = firstValueFrom(client.get('/api/v1/athletes'));
     const stage = firstValueFrom(client.put('/api/v1/sync/stage', null));
-    http.expectOne('/api/v1/athletes').flush({ data: [] });
+    const session = firstValueFrom(client.post('/api/v1/device/session', {}));
+    await settle();
     http.expectOne('/api/v1/sync/stage').flush(null);
-    await read;
+    http.expectOne('/api/v1/device/session').flush({ token: 't' });
+    http.expectNone('/api/v1/athletes');
     await stage;
+    await session;
 
     release();
     await held;
+    await settle();
+    http.expectOne('/api/v1/athletes').flush({ data: [] });
+    await read;
+  });
+
+  it('never waits for a read before a hold, and a read never tells the sync to push', async () => {
+    let landed = 0;
+    gate.written$.subscribe(() => landed++);
+    const read = firstValueFrom(client.get('/api/v1/athletes'));
+    const pending = http.expectOne('/api/v1/athletes');
+
+    await gate.hold(async () => undefined);
+    pending.flush({ data: [] });
+    await read;
+
+    expect(landed).toBe(0);
   });
 
   it('tells the sync about a write the server took, and not about one it refused', async () => {

@@ -50,25 +50,33 @@ describe('the PC’s sync platform', () => {
 
   it('hands over the identity the main process gives, once the PC joined', async () => {
     const identity = { device: 'pc4f2a', folder: 'a'.repeat(32), syncKey: 'k', epoch: 2 };
-    const platform = desktopSyncPlatform(stubBridge({ sync: { identity: async () => identity } }));
+    const platform = desktopSyncPlatform(
+      stubBridge({ sync: { identity: async () => identity } }),
+      async () => undefined,
+    );
 
     expect(await platform.identity()).toEqual(identity);
     // The PC made the keys: it publishes its gym into an empty folder.
     expect(platform.publishesFirst).toBe(true);
   });
 
-  it('swaps through the main process, which restarts the server', async () => {
-    const swapIn = vi.fn(async () => undefined);
-    const platform = desktopSyncPlatform(stubBridge({ sync: { swapIn } }));
+  it('swaps through the main process, then opens the owner’s session on the database it brought', async () => {
+    const steps: string[] = [];
+    const swapIn = vi.fn(async () => {
+      steps.push('restart');
+    });
+    const platform = desktopSyncPlatform(stubBridge({ sync: { swapIn } }), async () => {
+      steps.push('session');
+    });
 
     await platform.shell.swapIn();
 
-    expect(swapIn).toHaveBeenCalledTimes(1);
+    expect(steps).toEqual(['restart', 'session']);
   });
 
   it('reconnects Google through the Drive link’s own consent, and says when it did not', async () => {
     const link = vi.fn(async () => ({ ok: false, error: 'access_denied' }));
-    const platform = desktopSyncPlatform(stubBridge({ drive: { link } }));
+    const platform = desktopSyncPlatform(stubBridge({ drive: { link } }), async () => undefined);
 
     await expect(platform.reconnect()).rejects.toThrow('access_denied');
     expect(link).toHaveBeenCalledTimes(1);

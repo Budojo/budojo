@@ -1,4 +1,7 @@
-import { Provider } from '@angular/core';
+import { inject, Provider } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
+import { DeviceService } from '../mobile/device.service';
+import { AuthService } from '../services/auth.service';
 import { DriveRemote, Fetcher } from '../sync/drive-remote';
 import { SYNC_PLATFORM, SyncPlatform } from '../sync/sync.service';
 
@@ -35,17 +38,27 @@ export function bridgeFetcher(bridge: DesktopSyncBridge): Fetcher {
  *   and its server journals;
  * - **Drive** through the main process;
  * - **the swap** by the main process's restart, with the bootstrap's
- *   migrations and reconcile.
+ *   migrations and reconcile. The database swapped in is the phone's, which
+ *   holds none of this PC's sessions: the owner's comes back through the
+ *   shell's secret (`/device/session`) before the round goes on.
  *
  * The PC made the academy's keys, so it publishes its academy into an empty
  * folder (`publishesFirst`). «Ricollega Google» is the Drive link's own consent
  * (`drive.link`), which asks for both scopes once the keys are published.
  */
-export function desktopSyncPlatform(bridge: BudojoBridge): SyncPlatform {
+export function desktopSyncPlatform(
+  bridge: BudojoBridge,
+  reopenSession: () => Promise<void>,
+): SyncPlatform {
   return {
     identity: () => bridge.sync.identity(),
     remote: new DriveRemote(async () => 'held-by-the-main-process', bridgeFetcher(bridge.sync)),
-    shell: { swapIn: () => bridge.sync.swapIn() },
+    shell: {
+      swapIn: async () => {
+        await bridge.sync.swapIn();
+        await reopenSession();
+      },
+    },
     publishesFirst: true,
     reconnect: async () => {
       const linked = await bridge.drive.link();
@@ -62,7 +75,13 @@ export function provideDesktopSync(): Provider {
     provide: SYNC_PLATFORM,
     useFactory: (): SyncPlatform | null => {
       const bridge = typeof window === 'undefined' ? undefined : window.__BUDOJO__;
-      return bridge?.sync === undefined ? null : desktopSyncPlatform(bridge);
+      const device = inject(DeviceService);
+      const auth = inject(AuthService);
+      return bridge?.sync === undefined
+        ? null
+        : desktopSyncPlatform(bridge, async () => {
+            auth.adoptSession(await firstValueFrom(device.session()));
+          });
     },
   };
 }

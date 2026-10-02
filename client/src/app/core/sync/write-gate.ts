@@ -22,6 +22,11 @@ const SYNC = /\/api\/v1\/(sync|device)\//;
  *   replaced. A hold waits for the writes already sent to finish first;
  * - **told to the sync** once the server took one, so it pushes a few
  *   seconds later (PRD § 5.2).
+ *
+ * **Reads wait too while the sync swaps** (#2032), uncounted: on the PC the
+ * server is down during the restart, and a read that found it down would show
+ * the offline page; one sent before the owner's session was open again would
+ * carry a token the new database never had.
  */
 @Injectable({ providedIn: 'root' })
 export class WriteGate {
@@ -53,7 +58,11 @@ export class WriteGate {
    * ends. The check and the count are one step, so a hold that starts later
    * always waits for it.
    */
-  pass<T>(send: () => Observable<T>, succeeded: (value: T) => boolean): Observable<T> {
+  pass<T>(
+    send: () => Observable<T>,
+    succeeded: (value: T) => boolean,
+    counted = true,
+  ): Observable<T> {
     return new Observable<T>((subscriber) => {
       let closed = false;
       let admitted = false;
@@ -67,8 +76,10 @@ export class WriteGate {
           void this.held.then(go);
           return;
         }
-        this.inFlight++;
-        admitted = true;
+        if (counted) {
+          this.inFlight++;
+          admitted = true;
+        }
         inner = send().subscribe({
           next: (value) => {
             ok ||= succeeded(value);
@@ -108,13 +119,18 @@ export class WriteGate {
   }
 }
 
-/** Every write to the academy's API goes through the gate; reads and the sync's own requests do not. */
+/**
+ * Every request to the academy's API goes through the gate, the sync's own
+ * aside: writes counted, so a hold waits for them, and reads only held.
+ */
 export const writeGateInterceptor: HttpInterceptorFn = (req, next) => {
-  if (READS.has(req.method) || !API.test(req.url) || SYNC.test(req.url)) {
+  if (!API.test(req.url) || SYNC.test(req.url)) {
     return next(req);
   }
+  const write = !READS.has(req.method);
   return inject(WriteGate).pass<HttpEvent<unknown>>(
     () => next(req),
-    (event) => event instanceof HttpResponse,
+    (event) => write && event instanceof HttpResponse,
+    write,
   );
 };

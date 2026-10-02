@@ -88,6 +88,8 @@ interface BudojoBridge {
   readonly apiBase: string;
   /** Node's `process.platform` of the host. */
   readonly platform: string;
+  /** The launch's shell secret (#2032): opens the owner's session after the sync swapped a database in. */
+  readonly shellSecret: string;
   /**
    * The running app version, painted in the desktop title bar (#1401).
    * A development run reports `0.0.0`, which is shown as-is: it says "not a

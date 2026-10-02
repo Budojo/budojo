@@ -22,6 +22,12 @@ const TOKEN_SET = 'budojo:token:set';
 const TOKEN_CLEAR = 'budojo:token:clear';
 const UPDATE_STATUS_CHANNEL = 'budojo:update:status';
 
+function readShellSecret(): string {
+  const value: unknown = ipcRenderer.sendSync('budojo:shell:secret');
+
+  return typeof value === 'string' ? value : '';
+}
+
 function readApiBase(): string {
   const flag = process.argv.find((argument) => argument.startsWith(API_BASE_FLAG));
 
@@ -32,6 +38,12 @@ function readApiBase(): string {
 
 contextBridge.exposeInMainWorld('__BUDOJO__', {
   apiBase: readApiBase(),
+  /**
+   * The launch's shell secret (#2032): the page opens the owner's session with
+   * it, with no password, after the sync swapped a database in. Read once,
+   * synchronously, as the token is: the page puts it on a header inline.
+   */
+  shellSecret: readShellSecret(),
   platform: process.platform,
   /**
    * The running app version, for the title bar (#1401). A promise rather than

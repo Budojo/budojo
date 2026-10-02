@@ -1,4 +1,5 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, Notification, type OpenDialogOptions, protocol, safeStorage, shell } from 'electron';
+import { randomBytes } from 'node:crypto';
 import { createWriteStream, existsSync, readFileSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -60,6 +61,16 @@ import electronUpdater from 'electron-updater';
  */
 
 const DEV = process.env['ELECTRON_DEV'] === '1';
+
+/**
+ * What lets this app's page, and nothing else on `127.0.0.1`, open the owner's
+ * session with no password (#2032, the server's `RequireShell`, #2079): made
+ * once per launch, handed to PHP as `BUDOJO_SHELL_SECRET` and to the page
+ * through the preload, and written nowhere. The sync needs it after every
+ * pull: the database it swaps in is the phone's, which holds none of this PC's
+ * sessions.
+ */
+const SHELL_SECRET = randomBytes(32).toString('hex');
 const DEV_URL = 'http://localhost:4200';
 
 /** Origin the packaged renderer is served from. */
@@ -422,6 +433,7 @@ async function startRuntime(): Promise<{
         iniPath: layout.iniPath,
         extra: {
           ...secrets,
+          BUDOJO_SHELL_SECRET: SHELL_SECRET,
           ...(syncState.file === null ? {} : { BUDOJO_DEVICE_ID: syncState.file.device }),
         },
       },
@@ -790,6 +802,10 @@ function registerTokenVault(): void {
   ipcMain.on('budojo:token:clear', (event) => {
     vault.clear();
     event.returnValue = true;
+  });
+  // Read once by the preload, synchronously: the page puts it on a header.
+  ipcMain.on('budojo:shell:secret', (event) => {
+    event.returnValue = SHELL_SECRET;
   });
 }
 

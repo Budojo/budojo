@@ -18,10 +18,11 @@ export interface BackupInspection {
 }
 
 /**
- * What only this app's page may ask of its own server on the phone (#2079):
- * the owner's session with no password, and bringing a PC backup in. Every
- * call carries the secret the shell made at launch (`X-Budojo-Shell`); every
- * other app on the phone reaches `127.0.0.1` too, and none of them has it.
+ * What only this app's page may ask of its own server on a local device: the
+ * owner's session with no password, and bringing a PC backup in (#2079, the
+ * phone; the PC opens the session after a sync, #2032). Every call carries the
+ * secret the shell made at launch (`X-Budojo-Shell`); every other app on the
+ * device reaches `127.0.0.1` too, and none of them has it.
  *
  * A backup goes as a `File`: Capacitor's native HTTP sends a `File` body as
  * its bytes, where a typed array would be decoded as text and damaged.
@@ -48,6 +49,8 @@ export class DeviceService {
   }
 
   private headers(): HttpHeaders {
-    return new HttpHeaders({ 'X-Budojo-Shell': window.__BUDOJO_MOBILE__?.shellSecret ?? '' });
+    // The phone's shell, or the PC's (#2032): each makes its own at launch.
+    const secret = window.__BUDOJO_MOBILE__?.shellSecret ?? window.__BUDOJO__?.shellSecret ?? '';
+    return new HttpHeaders({ 'X-Budojo-Shell': secret });
   }
 }
