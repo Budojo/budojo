@@ -26,7 +26,10 @@ export interface SeenVersion extends ListedVersion {
 /**
  * How long a device waits for its own push to appear in the folder's listing,
  * which can lag behind a new file by seconds. Only liveness rides on it: after
- * it, the device rebases, which is safe either way.
+ * it, the device treats the push as gone, and carries its writes onto what is
+ * there, or publishes them again on an empty folder, or asks when the push was
+ * a first version, or when the version it was made on and the latest come
+ * from two different first versions: another device's academy.
  */
 export const LISTING_LAG_MS = 10 * 60_000;
 
@@ -37,8 +40,9 @@ export interface LocalState {
   unpushed: boolean;
   /**
    * This device's latest push while its journal still holds pushed writes (not
-   * yet held by every other device): the version, the one it was pushed on, and
-   * when it landed, on Drive's clock. Null when the journal holds nothing pushed.
+   * yet held by every other device), **or while the folder has not listed it
+   * yet**, even with no write in it (a first version): the version, the one it
+   * was pushed on, and when it landed, on Drive's clock. Null otherwise.
    */
   unconfirmed: { version: VersionRef; parent: VersionRef | null; pushedAt: number } | null;
 }
@@ -105,10 +109,16 @@ export function decide(local: LocalState, versions: readonly SeenVersion[], now:
       // Within the lag, that is the listing being slow: look again.
       return { kind: 'wait' };
     }
-    // After it, the push is gone. A rebase carries its writes onto what is
-    // there; an empty folder has nothing to lose, so publish again.
-    return head === null
-      ? { kind: 'push', seq: unconfirmed.version.seq + 1, parent: base }
+    // After it, the push is gone. An empty folder has nothing to lose, so
+    // publish again. A first version that never landed, or a push made on a
+    // version whose first version is not the latest's, meets another academy:
+    // the owner chooses, as with no base (§ 6.5). Otherwise a rebase carries
+    // its writes onto what is there.
+    if (head === null) {
+      return { kind: 'push', seq: unconfirmed.version.seq + 1, parent: base };
+    }
+    return parent === null || onAnotherLine(parent, head, versions)
+      ? { kind: 'ask', latest: head }
       : { kind: 'rebase', onto: head };
   }
 
@@ -124,6 +134,13 @@ export function decide(local: LocalState, versions: readonly SeenVersion[], now:
   if (head === null) {
     // An empty folder holds nothing to lose: publish again, so the data is backed up.
     return { kind: 'push', seq: base.seq + 1, parent: base };
+  }
+
+  if (!sameVersion(head, base) && onAnotherLine(base, head, versions)) {
+    // Both devices published a first version at once, each its own academy,
+    // and the latest is on the other's line. Pulling it would drop this
+    // academy whole, pushing over it the other: the owner chooses (§ 6.5).
+    return { kind: 'ask', latest: head };
   }
 
   if (head.seq < base.seq) {
@@ -143,4 +160,34 @@ export function decide(local: LocalState, versions: readonly SeenVersion[], now:
   return unpushed || unconfirmed !== null
     ? { kind: 'rebase', onto: head }
     : { kind: 'fast-forward', to: head };
+}
+
+/**
+ * Whether `head` comes from another first version than `base`: two academies
+ * in one folder. Told only when the listing still holds both lines down to
+ * their first versions, which is when such a race happens; a line whose
+ * history the retention pruned is never mistaken for another academy.
+ */
+function onAnotherLine(
+  base: VersionRef,
+  head: VersionRef,
+  versions: readonly SeenVersion[],
+): boolean {
+  const baseRoot = rootOf(base, versions);
+  const headRoot = rootOf(head, versions);
+  return baseRoot !== null && headRoot !== null && !sameVersion(baseRoot, headRoot);
+}
+
+/** The first version of the line `version` is on, followed through the listing; null when a link is not listed. */
+function rootOf(version: VersionRef, versions: readonly SeenVersion[]): VersionRef | null {
+  let current = versions.find((listed) => sameVersion(listed, version));
+  // A listing names each version once, so a line is never longer than it.
+  for (let step = 0; current !== undefined && step < versions.length; step++) {
+    const parent = current.parent;
+    if (parent === null) {
+      return { seq: current.seq, device: current.device };
+    }
+    current = versions.find((listed) => sameVersion(listed, parent));
+  }
+  return null;
 }
