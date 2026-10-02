@@ -1,7 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, Notification, type OpenDialogOptions, protocol, safeStorage, shell } from 'electron';
 import { randomBytes } from 'node:crypto';
 import { createWriteStream, existsSync, readFileSync } from 'node:fs';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -71,6 +71,19 @@ const DEV = process.env['ELECTRON_DEV'] === '1';
  * sessions.
  */
 const SHELL_SECRET = randomBytes(32).toString('hex');
+
+/**
+ * One stop of the server at a time (#2032): a Restore and the sync's swap
+ * both stop PHP, move databases and start it again. Serialised, neither can
+ * start the server under the other's renames.
+ */
+let serverWork: Promise<unknown> = Promise.resolve();
+function withServerStopped<T>(work: () => Promise<T>): Promise<T> {
+  const turn = serverWork.then(work, work);
+  serverWork = turn.catch(() => undefined);
+
+  return turn;
+}
 const DEV_URL = 'http://localhost:4200';
 
 /** Origin the packaged renderer is served from. */
@@ -413,11 +426,16 @@ async function startRuntime(): Promise<{
   // has connected the phone. From the start that has it, every PHP process of
   // ours journals the academy's writes under it (#2031). A PC that connected
   // the phone before this code shipped gets its id at this start.
+  const read = await readSyncDevice(layout);
   const syncState: { file: SyncDevice | null; running: string | null } = {
-    file: await readSyncDevice(layout),
+    file: read === 'unreadable' ? null : read,
     running: null,
   };
-  if (syncState.file === null && (await keysPublished(layout))) {
+  // An id that cannot be read is never replaced: a new one would leave the
+  // old one's report in the folder, holding nothing for ever (protocol §
+  // `devices/`). The PC then syncs not at all until the file is put right.
+  const deviceUnreadable = read === 'unreadable';
+  if (syncState.file === null && !deviceUnreadable && (await keysPublished(layout))) {
     syncState.file = await makeSyncDevice(layout);
   }
 
@@ -628,27 +646,47 @@ async function startRuntime(): Promise<{
    * scheduler and the notification poll open the database on their own, and
    * a backup's VACUUM holds it: each lets go first.
    */
-  const restartServer = async (work: () => Promise<void>): Promise<void> => {
-    const held = [scheduler, notifierPoll];
-    await Promise.all(held.map((task) => task.pause()));
-    try {
-      for (let waited = 0; backupService.busy && waited < 120_000; waited += 500) {
-        await new Promise((resolve) => setTimeout(resolve, 500));
-      }
-      const port = supervisor.port ?? undefined;
-      await supervisor.stop();
+  const restartServer = (work: () => Promise<void>): Promise<void> =>
+    withServerStopped(async () => {
+      const held = [scheduler, notifierPoll, backupPoll];
+      await Promise.all(held.map((task) => task.pause()));
       try {
-        await work();
+        // A backup asked by hand runs outside the poll: its VACUUM holds the
+        // database, which the swap renames. Waited for, never swapped under.
+        for (let waited = 0; backupService.busy; waited += 500) {
+          if (waited >= 120_000) {
+            throw new Error('a backup is still running: the swap waits for the next round');
+          }
+          await new Promise((resolve) => setTimeout(resolve, 500));
+        }
+        const port = supervisor.port ?? undefined;
+        await supervisor.stop();
+        try {
+          await work();
+        } catch (error) {
+          // The staged database still waiting means the swap stopped before it
+          // came in, and the page already counts it as in: serving the old
+          // database now would publish it over the other device's work. Ended
+          // as a failed start is, so the next start finishes the swap.
+          if (existsSync(`${layout.databasePath}.staged`)) {
+            syncLog.write(`${new Date().toISOString()} swap failed with the database still staged: ${String(error)}`);
+            dialog.showErrorBox(
+              'Budojo could not bring in the phone\'s changes',
+              `${error instanceof Error ? error.message : String(error)}\n\nOpen Budojo again: it finishes bringing them in as it starts.\n\nLog: ${path.join(layout.logsDir, 'sync.log')}`,
+            );
+            app.exit(1);
+          }
+          throw error;
+        } finally {
+          await supervisor.start(port);
+          syncState.running = syncState.file?.device ?? null;
+        }
       } finally {
-        await supervisor.start(port);
-        syncState.running = syncState.file?.device ?? null;
+        for (const task of held) {
+          task.resume();
+        }
       }
-    } finally {
-      for (const task of held) {
-        task.resume();
-      }
-    }
-  };
+    });
 
   const syncLog = new RotatingLog(path.join(layout.logsDir, 'sync.log'));
   syncLog.open();
@@ -656,6 +694,9 @@ async function startRuntime(): Promise<{
     running: () => syncState.running,
     epoch: () => syncState.file?.epoch ?? 0,
     join: async () => {
+      if (deviceUnreadable) {
+        throw new Error(`${layout.syncDeviceFile} does not read: no new id is made over it`);
+      }
       syncState.file ??= await makeSyncDevice(layout);
       if (syncState.running !== syncState.file.device) {
         syncLog.write(`${new Date().toISOString()} joined as ${syncState.file.device}: restarting the server to journal`);
@@ -671,7 +712,7 @@ async function startRuntime(): Promise<{
     restored: async () => {
       if (syncState.file !== null) {
         syncState.file = { ...syncState.file, epoch: syncState.file.epoch + 1 };
-        await writeFile(layout.syncDeviceFile, serializeDeviceFile(syncState.file), 'utf8');
+        await writeDeviceFile(layout, syncState.file);
       }
     },
   };
@@ -707,19 +748,30 @@ interface DesktopSync {
   restored(): Promise<void>;
 }
 
-async function readSyncDevice(layout: DataLayout): Promise<SyncDevice | null> {
+/** None only when there is no file: one that is there and does not read is not "none". */
+async function readSyncDevice(layout: DataLayout): Promise<SyncDevice | null | 'unreadable'> {
+  let raw: string;
   try {
-    return parseDeviceFile(await readFile(layout.syncDeviceFile, 'utf8'));
-  } catch {
-    return null;
+    raw = await readFile(layout.syncDeviceFile, 'utf8');
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code === 'ENOENT' ? null : 'unreadable';
   }
+
+  return parseDeviceFile(raw) ?? 'unreadable';
 }
 
 async function makeSyncDevice(layout: DataLayout): Promise<SyncDevice> {
   const made: SyncDevice = { device: newPcDeviceId(), epoch: 0 };
-  await writeFile(layout.syncDeviceFile, serializeDeviceFile(made), 'utf8');
+  await writeDeviceFile(layout, made);
 
   return made;
+}
+
+/** Written beside, then renamed over: a write cut short never leaves a torn file. */
+async function writeDeviceFile(layout: DataLayout, sync: SyncDevice): Promise<void> {
+  const part = `${layout.syncDeviceFile}.part`;
+  await writeFile(part, serializeDeviceFile(sync), 'utf8');
+  await rename(part, layout.syncDeviceFile);
 }
 
 /** Whether this PC connected the phone (#2033): Drive's state says when it found the keys its own. */
@@ -898,7 +950,17 @@ function registerSyncBridge(syncOf: () => DesktopSync | null, driveOf: () => Dri
     if (sync === null || drive === null || device === null) {
       return null;
     }
-    const keys = await drive.keysForSync();
+    let keys;
+    try {
+      keys = await drive.keysForSync();
+    } catch (error) {
+      // Google let go of the PC (weekly while the app is in Testing): said as
+      // the Drive calls say it, so the page offers «Ricollega Google».
+      if ((error as { code?: unknown } | null)?.code === 'invalid_grant') {
+        return { unauthorized: true };
+      }
+      throw error;
+    }
 
     return keys === null ? null : { device, folder: keys.folder, syncKey: keys.syncKey, epoch: sync.epoch() };
   });
@@ -1052,22 +1114,30 @@ function registerBackupBridge(
     // database being swapped out. They hold their ticks until the restore is
     // over, after any run already in flight has finished.
     const held = otherPhpOf();
-    let check: RestoreCheck;
+    let check: RestoreCheck = { ok: false, code: 'busy', reason: busyAnswer.reason };
     try {
-      await Promise.all(held.map((task) => task.pause()));
-      // The same port after: the window keeps the address it was given.
-      const port = supervisor.port ?? undefined;
-      await supervisor.stop();
-      try {
-        check = await run(service);
-      } catch (error) {
-        // An answer, never a rejection: a rejected invoke leaves the page's
-        // button spinning with nothing said. `failed`, not `unreadable`: the
-        // archive passed its checks, and what broke is the swap itself.
-        check = { ok: false, code: 'failed', reason: error instanceof Error ? error.message : String(error) };
-      } finally {
-        await supervisor.start(port);
-      }
+      // After the sync's swap, never under it (#2032): one stop at a time.
+      await withServerStopped(async () => {
+        await Promise.all(held.map((task) => task.pause()));
+        // The same port after: the window keeps the address it was given.
+        const port = supervisor.port ?? undefined;
+        await supervisor.stop();
+        try {
+          // Looked at again with PHP stopped, when no stage can land any
+          // more: one that landed since the first look waits for its swap.
+          if (existsSync(`${databasePath}.staged`)) {
+            return;
+          }
+          check = await run(service);
+        } catch (error) {
+          // An answer, never a rejection: a rejected invoke leaves the page's
+          // button spinning with nothing said. `failed`, not `unreadable`: the
+          // archive passed its checks, and what broke is the swap itself.
+          check = { ok: false, code: 'failed', reason: error instanceof Error ? error.message : String(error) };
+        } finally {
+          await supervisor.start(port);
+        }
+      });
     } finally {
       for (const task of held) {
         task.resume();

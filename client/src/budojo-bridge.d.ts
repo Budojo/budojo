@@ -174,8 +174,15 @@ interface BudojoBridge {
    * calls with its own token, and swaps a staged database in by a restart.
    */
   readonly sync: {
-    /** Null until the PC connected the phone and its server journals. */
-    identity(): Promise<{ device: string; folder: string; syncKey: string; epoch: number } | null>;
+    /**
+     * Null until the PC connected the phone and its server journals;
+     * `unauthorized` when Google let go of the PC (weekly while in Testing).
+     */
+    identity(): Promise<
+      | { device: string; folder: string; syncKey: string; epoch: number }
+      | { unauthorized: true }
+      | null
+    >;
     /** One call to Drive's files API: the main process puts its token on it. */
     driveFetch(request: {
       url: string;

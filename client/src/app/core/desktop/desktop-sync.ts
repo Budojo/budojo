@@ -3,6 +3,7 @@ import { firstValueFrom } from 'rxjs';
 import { DeviceService } from '../mobile/device.service';
 import { AuthService } from '../services/auth.service';
 import { DriveRemote, Fetcher } from '../sync/drive-remote';
+import { RemoteError } from '../sync/remote';
 import { SYNC_PLATFORM, SyncPlatform } from '../sync/sync.service';
 
 /** The preload's sync bridge (`desktop/src/preload.cts`, #2032). */
@@ -51,7 +52,13 @@ export function desktopSyncPlatform(
   reopenSession: () => Promise<void>,
 ): SyncPlatform {
   return {
-    identity: () => bridge.sync.identity(),
+    identity: async () => {
+      const identity = await bridge.sync.identity();
+      if (identity !== null && 'unauthorized' in identity) {
+        throw new RemoteError('unauthorized', 'Google wants the owner to sign in again');
+      }
+      return identity;
+    },
     remote: new DriveRemote(async () => 'held-by-the-main-process', bridgeFetcher(bridge.sync)),
     shell: {
       swapIn: async () => {

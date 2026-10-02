@@ -21,6 +21,22 @@ describe('the sync’s Drive bridge', () => {
     expect(isSyncDriveUrl('not a url')).toBe(false);
   });
 
+  it('refuses the hidden application data, where the keys file holds the app keys', () => {
+    expect(
+      isSyncDriveUrl("https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name%3D'budojo-keys.json'"),
+    ).toBe(false);
+    expect(isSyncDriveUrl('https://www.googleapis.com/drive/v3/files?spaces=drive,appDataFolder')).toBe(false);
+    expect(isSyncDriveUrl('https://www.googleapis.com/drive/v3/files?spaces=drive&spaces=appDataFolder')).toBe(false);
+    expect(isSyncDriveUrl('https://www.googleapis.com/drive/v3/files?spaces=drive')).toBe(true);
+  });
+
+  it('refuses a file’s sub-resources: sharing a file is not the sync’s to do', () => {
+    expect(isSyncDriveUrl('https://www.googleapis.com/drive/v3/files/abc/permissions')).toBe(false);
+    expect(isSyncDriveUrl('https://www.googleapis.com/drive/v3/files/abc/revisions/1')).toBe(false);
+    expect(isSyncDriveUrl('https://www.googleapis.com/drive/v3/files/abc')).toBe(true);
+    expect(isSyncDriveUrl('https://www.googleapis.com/upload/drive/v3/files/abc?uploadType=resumable')).toBe(true);
+  });
+
   it('drops the page’s own authorization: the main process puts its token on', () => {
     expect(forwardedHeaders({ Authorization: 'Bearer page', 'Content-Type': 'application/json' })).toEqual({
       'Content-Type': 'application/json',

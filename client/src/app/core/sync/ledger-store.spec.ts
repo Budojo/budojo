@@ -36,6 +36,12 @@ describe('the ledger store', () => {
     expect(loadLedger({ device: 'pc4f2a', epoch: 3 })).toEqual(EMPTY_LEDGER);
   });
 
+  it('starts another folder with nothing remembered: the PC joined again to other keys', () => {
+    saveLedger({ device: 'pc4f2a', folder: 'a'.repeat(32) }, ledger);
+    expect(loadLedger({ device: 'pc4f2a', folder: 'a'.repeat(32) })).toEqual(ledger);
+    expect(loadLedger({ device: 'pc4f2a', folder: 'b'.repeat(32) })).toEqual(EMPTY_LEDGER);
+  });
+
   it('starts empty on a damaged ledger rather than trusting it', () => {
     localStorage.setItem('budojoSyncLedger', '{"device":"phone9c1e","ledger":{"base":7}}');
     expect(loadLedger({ device: 'phone9c1e' })).toEqual(EMPTY_LEDGER);

@@ -82,16 +82,24 @@ describe('WriteGate', () => {
     await read;
   });
 
-  it('never waits for a read before a hold, and a read never tells the sync to push', async () => {
+  it('waits for a read already sent before it holds, and a read never tells the sync to push', async () => {
     let landed = 0;
     gate.written$.subscribe(() => landed++);
     const read = firstValueFrom(client.get('/api/v1/athletes'));
     const pending = http.expectOne('/api/v1/athletes');
 
-    await gate.hold(async () => undefined);
+    const steps: string[] = [];
+    const held = gate.hold(async () => {
+      steps.push('swap');
+    });
+    await settle();
+    // The server is not stopped under a read still on its way.
+    expect(steps).toEqual([]);
+
     pending.flush({ data: [] });
     await read;
-
+    await held;
+    expect(steps).toEqual(['swap']);
     expect(landed).toBe(0);
   });
 

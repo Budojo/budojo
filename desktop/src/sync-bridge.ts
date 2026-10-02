@@ -5,8 +5,16 @@
  * checks where it goes, puts its own token on it, and answers with the status,
  * the headers the engine reads and the body.
  *
- * **Only Drive's own API, over https.** The token reaches nothing else, and a
- * request that names another host or path is refused before any token is read.
+ * **Only what `DriveRemote` asks, over https** (`client/.../drive-remote.ts`):
+ * the files API and its uploads, a file by its id, in the visible space. The
+ * token reaches nothing else, and anything else is refused before any token is
+ * read:
+ * - **another host, or another API;**
+ * - **a file's sub-resources** (`/permissions`, `/revisions`, …): sharing a
+ *   file is not the sync's to do;
+ * - **the account's hidden application data** (`spaces=appDataFolder`), where
+ *   the keys file holds this PC's `APP_KEY` and `DOCUMENT_ENCRYPTION_KEY`. The
+ *   page gets the sync key and the folder id from `identity()`, and no more.
  */
 
 export interface DriveRequest {
@@ -27,7 +35,8 @@ export interface DriveAnswer {
 export const ANSWER_HEADERS = ['date', 'location', 'content-type'] as const;
 
 const HOST = 'www.googleapis.com';
-const PATHS = ['/drive/v3/files', '/upload/drive/v3/files'];
+/** The files collection, or one file by its id: nothing deeper. */
+const PATH = /^\/(upload\/)?drive\/v3\/files(\/[A-Za-z0-9_-]+)?$/;
 
 export function isSyncDriveUrl(url: string): boolean {
   let parsed: URL;
@@ -37,12 +46,15 @@ export function isSyncDriveUrl(url: string): boolean {
     return false;
   }
 
+  const spaces = parsed.searchParams.getAll('spaces');
+
   return (
     parsed.protocol === 'https:' &&
     parsed.host === HOST &&
     parsed.username === '' &&
     parsed.password === '' &&
-    PATHS.some((prefix) => parsed.pathname === prefix || parsed.pathname.startsWith(`${prefix}/`))
+    PATH.test(parsed.pathname) &&
+    spaces.every((space) => space === 'drive')
   );
 }
 
