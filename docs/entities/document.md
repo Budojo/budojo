@@ -18,6 +18,7 @@ Documents are the first entity in the system that owns **physical files on disk*
 | `academy_id` | bigint unsigned | nullable, FK `academies.id`, **cascade on delete**, indexed | The academy this document belongs to directly (#1743) — the DAE certificate, the liability policy, the affiliation, the lease. Null when it belongs to a person |
 | `type` | string | not null | Cast to `App\Enums\DocumentType` backed enum (`id_card` / `medical_certificate` / `insurance` / `other`) |
 | `file_path` | string | not null | Path on the `local` disk, relative to `storage/app/private/`. Server-generated, never client-supplied. |
+| `file_sha256` | char(64) | nullable | SHA-256 of the file (the ciphertext for an encrypted certificate)'s bytes as stored, for the sync between the owner's devices (#2030): the receiving device matches the file by this content, never by the path. Null with no file, or for a file missing on disk when the hashes were first filled in. |
 | `original_name` | string | not null | The filename the client uploaded (e.g. `certificate_2026.pdf`). Surfaced in `Content-Disposition` on download. |
 | `mime_type` | string | not null | MIME type at upload time. Used in the download `Content-Type` header. |
 | `size_bytes` | unsignedBigInteger | not null | File size in bytes at upload time |

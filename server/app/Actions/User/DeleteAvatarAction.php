@@ -19,7 +19,7 @@ class DeleteAvatarAction
         }
 
         Storage::disk('public')->delete($path);
-        $user->forceFill(['avatar_path' => null])->save();
+        $user->forceFill(['avatar_path' => null, 'avatar_sha256' => null])->save();
 
         return $user->refresh();
     }

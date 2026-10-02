@@ -13,6 +13,7 @@ use App\Notifications\OwnerAthleteDocUploadedNotification;
 use App\Support\DocumentEncryption;
 use App\Support\NotificationCategory;
 use App\Support\NotificationPreferences;
+use App\Support\Sync\ContentHash;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -95,6 +96,8 @@ class UploadDocumentAction
             $document = $owner->documents()->create([
                 'type' => $type,
                 'file_path' => $path,
+                // The content the sync matches this row's file by (#2030).
+                'file_sha256' => ContentHash::of('local', $path),
                 'original_name' => $file->getClientOriginalName(),
                 'mime_type' => $file->getMimeType() ?: 'application/octet-stream',
                 'size_bytes' => $file->getSize() ?: 0,

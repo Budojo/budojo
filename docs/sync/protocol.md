@@ -81,6 +81,19 @@ The app packs and seals versions. The server only hands it the database and take
   - **After a rebase, the reconcile runs after the replay, never between the swap and the replay.** A document uploaded offline has its file on this device but no row in the swapped-in database until the replay recreates it; reconciling first would delete the only copy.
   - **The body is bound by PHP's `post_max_size`** (Laravel checks it for every method, `413` above it). Each shell sets it above any academy's database (#2032, #2034).
 
+### The files side (#2030)
+
+Documents, athletes' photos, avatars and the academy's logo travel apart from the database, one file each, `files/<sha256>.bjs`, sealed like every file with its path as associated data.
+- **Every row naming a file records the SHA-256 of its bytes** (`file_sha256`, `photo_sha256`, `avatar_sha256`, `logo_sha256`), as stored: an encrypted certificate is hashed and sent encrypted, under the academy's document key both devices share.
+- **A file is matched by its content, never by its path.** Photos are named by the athlete's id, and ids diverge between two devices: this device's `athletes/photos/57.jpg` is not the other device's athlete 57.
+- **The server says which contents its database names** (owner-only, `sync`):
+  - `GET /api/v1/sync/files` lists each one once, with whether this device holds it (a file at the row's path with that content);
+  - `GET /api/v1/sync/files/{sha256}` gives its bytes;
+  - `PUT /api/v1/sync/files/{sha256}` writes it at every path a row names for it, after checking the bytes hash to it (`422` `mismatch`, `404` `unknown`).
+- **Push** (`client/src/app/core/sync/files.ts`): before a version goes up, the device seals and sends every content it holds that `files/` lacks. A content is never sent twice: its name is its bytes.
+- **Pull:** after a version is in, the device fetches every content it lacks. One the folder does not have yet (the other device's push has not landed, or Drive's listing lags), one that does not open, or one whose bytes are not its name, is left for the next sync. Until then that document cannot be opened on this device.
+- **Not yet here:** deleting from `files/` what no kept version names, which belongs with the retention of versions.
+
 ## A journal entry
 
 The journal is a JSON list of the writes that made this version from its parent, **in ULID order**. It records API writes, not rows: the rebase replays them through the same Actions (PRD § 5.2).

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions\Academy;
 
 use App\Models\Academy;
+use App\Support\Sync\ContentHash;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
@@ -43,7 +44,8 @@ class UploadAcademyLogoAction
 
         $previousPath = $academy->logo_path;
 
-        $academy->forceFill(['logo_path' => $path])->save();
+        // After the SVG scrub, so it is the content actually stored (#2030).
+        $academy->forceFill(['logo_path' => $path, 'logo_sha256' => ContentHash::of('public', $path)])->save();
 
         if ($previousPath !== null && $previousPath !== $path) {
             Storage::disk('public')->delete($previousPath);

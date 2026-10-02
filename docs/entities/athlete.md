@@ -34,6 +34,7 @@ An `Athlete` represents a student enrolled at an `Academy`. This is the core ros
 | `joined_at` | date | not null | When the athlete first enrolled |
 | `status_changed_at` | date | nullable | When `status` last changed (#1741). Null means it never has since the row was created — the right answer for an athlete active since import, not a missing value |
 | `photo_path` | string(255) | nullable | Relative path on the `public` disk of the athlete's photo (#1357). Null until the first `POST /athletes/{id}/photo`. The wire layer emits `photo_url` (full URL, with a cache-buster) via `AthleteResource`, never the raw path. Independent of `user_id`: an athlete needs no account to have a face, which matters because `athlete_accounts` is absent from the desktop runtime. |
+| `photo_sha256` | char(64) | nullable | SHA-256 of the photo's bytes as stored, for the sync between the owner's devices (#2030): the receiving device matches the file by this content, never by the path. Null with no file, or for a file missing on disk when the hashes were first filled in. |
 | `created_at` | timestamp | nullable | |
 | `updated_at` | timestamp | nullable | |
 | `deleted_at` | timestamp | nullable, **SoftDeletes** | Set when the athlete is "removed" via the API; the row remains in the DB |

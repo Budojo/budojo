@@ -17,7 +17,7 @@ class DeleteAcademyLogoAction
         }
 
         Storage::disk('public')->delete($path);
-        $academy->forceFill(['logo_path' => null])->save();
+        $academy->forceFill(['logo_path' => null, 'logo_sha256' => null])->save();
 
         return $academy->refresh();
     }
