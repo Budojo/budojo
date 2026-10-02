@@ -67,6 +67,7 @@ u32 big-endian: manifest length | manifest, UTF-8 JSON | u32: journal length | j
 | `app` | the app version that wrote it |
 | `journalSha256` | SHA-256 of the journal's bytes as stored |
 | `createdAt` | UTC, ISO 8601 |
+| `academy` | optional, from #2033: what the door shows before a restore, `{ "name": "Kaizen", "athletes": 42, "belts": { "white": 20, "blue": 12 } }` (active athletes, by belt) |
 
 A reader checks every field it knows and ignores any it does not, so a later app can add one. **Changing what a field means is a new protocol number.** The manifest must name the version and the parent its path names. A writer checks the manifest and the journal with the readers' rules before it packs them.
 

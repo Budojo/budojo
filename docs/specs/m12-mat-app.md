@@ -205,23 +205,29 @@ Nothing waits for the sync, and its state is always on screen (§ 6.2).
 **The owner's decision, 2 Oct 2026** (#2033): on the phone and on the PC, Budojo opens on one action, **Accedi con Google**. If the gym is on that account's Drive, it comes back by itself; if not, the device can start one, and the other device finds it the same way. **The Google account is the key:** whoever controls it opens the gym's data, medical certificates included. The owner was offered "Google plus a one-time code per new device" and preferred no code to keep or lose. This replaces the pairing code (a QR and 56 characters) and "Drive alone opens nothing".
 
 **The flow, the same on both devices:**
-1. **The door:** the logo, one line, **Accedi con Google**. No email and password form.
+1. **The door:** the logo, one line, **Accedi con Google**. No email and password form. A quieter **Continua senza Google** keeps the phone-only path (§ 6.5): the academy lives on this device only, and Oggi says so until Google is connected; connecting later publishes it, or asks which to keep if Drive already holds one.
 2. **Looking:** "Cerco la tua palestra su Google Drive…", with the account shown and "cambia".
 3. **Found:** the academy's name, a strip of the roster's belt colours, "42 atleti · aggiornata ieri alle 21:40 dal PC". The restore starts by itself, with its progress, and Today opens when it is done (the protocol's "no base, the folder has versions": fast-forward).
 4. **Not found:** "Nessuna palestra su mario@gmail.com. Se l'hai creata sul PC, aprilo e collega Google Drive (Dati e backup)." **Crea una nuova palestra** runs the setup, creates the folder and pushes version 1; **Usa un altro account**.
 5. **Edges:** offline at first launch ("Serve internet la prima volta"); a newer schema on Drive (update first, § 5.5); **a device that already holds an academy of its own while Drive has one: both are named, with their athletes, and the owner chooses. Never merged.**
 6. **Logout** returns to the door. The data stays on the device; signing in again goes straight in.
 
-**The keys live with the Google account:** the sync key and the app keys (`APP_KEY`, `DOCUMENT_ENCRYPTION_KEY`, what the recovery code #1254 carries).
+**The keys live with the Google account, unsealed:** `keys.json` holds the sync key itself, the app keys (`APP_KEY`, `DOCUMENT_ENCRYPTION_KEY`, what the recovery code #1254 carries) and the folder id. Nothing seals it: the account is the lock, which is the decision. A new device reads it after sign-in, and with the sync key opens everything else.
 - **Preferred: Drive's `appDataFolder`** (scope `drive.appdata`): hidden from the Drive UI and from Drive for desktop's copy, and unreadable by other apps. A spike first checks that the project's two OAuth clients share it, as #2028 checked `drive.file`.
 - **Fallback:** `keys.json` in the visible `Budojo/sync/` folder.
-- **The files stay sealed under the sync key** either way (§ 5.3).
+- **Versions, reports and files stay sealed under the sync key** (§ 5.3). With the keys in `appDataFolder`, the visible folder alone, as Drive for desktop copies it to a PC or as a shared link would expose it, still opens nothing.
 
 **No Budojo password on a local device.** After Google, the app asks its own server for the owner's token with a secret only the shell holds; an open endpoint on `127.0.0.1` would let any other app on the phone in.
 
 **Two devices, as before:** a new device writes its `devices/` report, empty, before its first pull (#2029); a third gets "Budojo è già su due dispositivi".
 
-**A lost phone:** revoke its Google session (Google account → Security → your devices), then *Scollega* on the other device deletes its `devices/` report and rotates the sync key, so a phone that is signed out cannot come back. **Keep Google's 2-step verification on.** The fingerprint lock (§ 6.1) still guards the phone's local copy.
+**A lost phone:** revoke its Google session (Google account → Security → your devices), then *Scollega* on the other device. It rotates the sync key, so a phone that is signed out cannot read what comes after:
+1. it fetches every file it does not hold yet, under the old key;
+2. under the new key it pushes a fresh version, its whole database, re-uploads every file as `files/<sha256>.bjs`, and writes its own `devices/` report;
+3. it writes the new key to `keys.json`;
+4. only then it deletes every version, report and file under the old key, and the lost phone's report.
+
+Versions from before the rotation are not kept: the PC's backups on Drive (#1301) hold the history. **Keep Google's 2-step verification on.** The fingerprint lock (§ 6.1) still guards the phone's local copy.
 
 ### 5.5 Versions of the app
 
@@ -314,10 +320,8 @@ A conflict is a question, asked on whichever device found it. **It is never reso
 
 ### 6.5 The phone-only academy
 
-- **First launch:** *"Hai già Budojo sul PC?"*
-  - **Yes:** pair (§ 5.4).
-  - **No:** create the academy on the phone, with the PC's own onboarding.
-- **Then:** *"Salva su Google Drive"*, strongly recommended. Until it is connected, a line on Oggi at every launch says the data lives only on this phone. It is not a modal: it states the fact and blocks nothing.
+- **First launch:** the door (§ 5.4). **Accedi con Google** finds the academy the PC put on Drive, or creates one there; **Continua senza Google** creates it on the phone only, with the PC's own onboarding.
+- **Without Google:** a line on Oggi at every launch says the data lives only on this phone, and offers *Collega Google*. It is not a modal: it states the fact and blocks nothing.
 
 ## 7. Security and privacy
 
