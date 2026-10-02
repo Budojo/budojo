@@ -23,15 +23,26 @@ final class InspectBackupAction
     public function execute($body): array
     {
         $archive = BackupArchive::receive($body);
-        $database = SyncDatabase::openReadOnly($archive->database());
 
         return [
             'backup' => [
                 'taken_at' => $archive->manifest['createdAt'],
                 'app_version' => $archive->manifest['appVersion'],
-                'academy' => AcademySummary::of($database),
+                'academy' => self::academyIn($archive->database()),
             ],
             'here' => AcademySummary::of(DB::connection()->getPdo()),
         ];
+    }
+
+    /**
+     * Read through a connection that is closed when this returns, before the
+     * archive deletes the file: Windows cannot delete an open one, and a copy
+     * of the academy would stay in the temporary folder.
+     *
+     * @return array{name: string, athletes: int, belts: array<string, int>}|null
+     */
+    private static function academyIn(string $database): ?array
+    {
+        return AcademySummary::of(SyncDatabase::openReadOnly($database));
     }
 }

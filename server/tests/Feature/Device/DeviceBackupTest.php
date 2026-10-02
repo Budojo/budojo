@@ -224,18 +224,51 @@ describe('what is refused, and stages nothing', function (): void {
         backupTestRefused($this, backupTestArchive($this->dir, $entries), 'newer');
     });
 
-    it('a file named outside the academy\'s folder, which is never written', function (): void {
+    it('a file named outside the academy\'s folder, which is never written: inspect refuses it too', function (): void {
         $entries = backupTestEntries($this->dir);
-        $entries['storage/app/../../escaped.txt'] = 'out of bounds';
+        // From `app.staged.part`, one level up is this test's own folder.
+        $entries['storage/app/../escaped.txt'] = 'out of bounds';
 
-        backupTestSend($this, 'restore', backupTestArchive($this->dir, $entries))
-            ->assertUnprocessable()
-            ->assertJsonPath('code', 'unreadable');
+        backupTestRefused($this, backupTestArchive($this->dir, $entries), 'unreadable');
 
-        expect(file_exists("{$this->dir}/escaped.txt"))->toBeFalse()
-            ->and(file_exists("{$this->live}.staged"))->toBeFalse()
-            ->and(is_dir("{$this->storage}.staged"))->toBeFalse()
-            ->and(is_dir("{$this->storage}.staged.part"))->toBeFalse();
+        expect(file_exists("{$this->dir}/escaped.txt"))->toBeFalse();
+    });
+});
+
+describe('a stage refused after a restore was staged', function (): void {
+    beforeEach(function (): void {
+        $this->restored = backupTestEntries($this->dir);
+        backupTestSend($this, 'restore', backupTestArchive($this->dir, $this->restored))->assertNoContent();
+    });
+
+    it('leaves that restore whole when a second restore is refused', function (): void {
+        $newer = backupTestEntries($this->dir, [...SyncDatabase::codeMigrations(), '2099_01_01_000000_from_the_future']);
+
+        backupTestSend($this, 'restore', backupTestArchive($this->dir, $newer))->assertUnprocessable();
+
+        expect(file_get_contents("{$this->live}.staged"))->toBe($this->restored['budojo.sqlite'])
+            ->and(file_get_contents("{$this->storage}.staged/public/athletes/photos/1.jpg"))->toBe('the photo');
+    });
+
+    it('leaves that restore whole when a version is refused', function (): void {
+        $this->actingAs(userWithAcademy())
+            ->call('PUT', '/api/v1/sync/stage', [], [], [], ['CONTENT_TYPE' => 'application/octet-stream'], 'not a database')
+            ->assertUnprocessable();
+
+        expect(file_get_contents("{$this->live}.staged"))->toBe($this->restored['budojo.sqlite'])
+            ->and(is_dir("{$this->storage}.staged"))->toBeTrue();
+    });
+
+    it('replaces that restore, database and files, when a version is staged', function (): void {
+        $version = "{$this->dir}/version.sqlite";
+        backupTestDatabase($version, SyncDatabase::codeMigrations(), 'Versione');
+
+        $this->actingAs(userWithAcademy())
+            ->call('PUT', '/api/v1/sync/stage', [], [], [], ['CONTENT_TYPE' => 'application/octet-stream'], (string) file_get_contents($version))
+            ->assertNoContent();
+
+        expect(file_get_contents("{$this->live}.staged"))->toBe(file_get_contents($version))
+            ->and(is_dir("{$this->storage}.staged"))->toBeFalse();
     });
 });
 

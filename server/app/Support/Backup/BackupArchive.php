@@ -48,7 +48,15 @@ final class BackupArchive
     public static function receive($body): self
     {
         $path = self::temporaryFile();
-        IncomingFile::receive($body, $path);
+
+        try {
+            IncomingFile::receive($body, $path);
+        } catch (\Throwable $e) {
+            // Cut short, a full disk most likely: half an academy is not left behind.
+            @unlink($path);
+
+            throw $e;
+        }
         $zip = new \ZipArchive();
         if ($zip->open($path, \ZipArchive::RDONLY) !== true) {
             @unlink($path);
@@ -56,11 +64,13 @@ final class BackupArchive
             throw StageRefused::unreadable('This file is not a Budojo backup.');
         }
         $manifest = self::manifestOf($zip);
-        if ($manifest === null) {
+        if ($manifest === null || ! self::namesAreSafe($zip)) {
             $zip->close();
             @unlink($path);
 
-            throw StageRefused::unreadable('This file is not a Budojo backup.');
+            throw $manifest === null
+                ? StageRefused::unreadable('This file is not a Budojo backup.')
+                : StageRefused::unreadable('The backup names a file outside the academy\'s folder.');
         }
 
         return new self($zip, $manifest, $path);
@@ -126,6 +136,19 @@ final class BackupArchive
         } finally {
             fclose($stream);
         }
+    }
+
+    /** Every one of the academy's files is named inside its folder: checked before anything is chosen or written. */
+    private static function namesAreSafe(\ZipArchive $zip): bool
+    {
+        for ($i = 0; $i < $zip->numFiles; $i++) {
+            $name = (string) $zip->getNameIndex($i);
+            if (str_starts_with($name, self::FILES) && ! str_ends_with($name, '/') && ! self::isSafe(substr($name, \strlen(self::FILES)))) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /** A relative path with no `..`, no empty or absolute segment, and forward slashes only. */
