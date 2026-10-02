@@ -648,7 +648,22 @@ describe('BackupComponent', () => {
         });
       });
 
-      it("says when the account already holds another gym's keys, which are left alone", async () => {
+      it('names the account to pick when the consent was for another one', async () => {
+        const connectPhone = vi.fn(async () => ({ ok: false, error: 'other_account' }));
+        const { fixture, added } = setup({}, {}, { ...linked(), connectPhone });
+        await settle(fixture);
+
+        await (
+          fixture.componentInstance as unknown as { connectPhone(): Promise<void> }
+        ).connectPhone();
+
+        expect(added.at(-1)).toMatchObject({
+          severity: 'error',
+          summary: expect.stringContaining('gym@example.it'),
+        });
+      });
+
+      it('says when the account holds other keys, which are left alone, and the way through', async () => {
         const connectPhone = vi.fn(async () => ({ ok: false, error: 'keys_differ' }));
         const { fixture, added } = setup({}, {}, { ...linked(), connectPhone });
         await settle(fixture);
@@ -659,7 +674,7 @@ describe('BackupComponent', () => {
 
         expect(added.at(-1)).toMatchObject({
           severity: 'error',
-          summary: expect.stringContaining('another gym'),
+          summary: expect.stringContaining('import the recovery code below first'),
         });
       });
     });

@@ -134,7 +134,7 @@ export function createDriveSyncIO(input: {
     authorize: () => drive.authorize(config, openExternal),
     authorizeWithAppData: () => drive.authorize(config, openExternal, true),
     localSecrets,
-    findKeys: (tokens) => drive.findAppDataFile(tokens, KEYS_FILE),
+    findKeys: (tokens) => drive.findAppDataFiles(tokens, KEYS_FILE),
     readKeys: (tokens, id) => drive.readAppDataFile(tokens, id),
     writeKeys: (tokens, text) => drive.createAppDataFile(tokens, KEYS_FILE, text),
     ensureFresh: (tokens) => drive.ensureFresh(config, tokens),

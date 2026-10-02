@@ -130,7 +130,7 @@ export function decide(local: LocalState, versions: readonly SeenVersion[], now:
     // The folder is behind what this device has: versions deleted on Drive.
     // Pushing would bury the folder's versions, pulling would drop this
     // device's: the owner chooses. (Another account's folder is caught before
-    // this, by the folder id in `keys.bjs`.)
+    // this, by the folder id in `folder.bjs`.)
     return { kind: 'ask', latest: head };
   }
 

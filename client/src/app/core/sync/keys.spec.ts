@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { parseAcademyKeys } from './keys';
+import vectors from './vectors/keys-vectors.json';
 
 /**
  * The academy's keys as the PC writes them to the Google account (#2033), and
@@ -47,4 +48,18 @@ describe('the academy keys on the Google account (#2033)', () => {
   it('refuses what is not an object', () => {
     expect(parseAcademyKeys('keys').ok).toBe(false);
   });
+});
+
+/** The vectors the PC's writer runs too (`desktop/src/sync-keys.spec.ts`). */
+describe('the shared keys vectors (#2033)', () => {
+  it.each(vectors.valid.map((keys, i) => [i, keys] as const))('reads valid file %i', (_i, keys) => {
+    expect(parseAcademyKeys(keys).ok).toBe(true);
+  });
+
+  it.each(vectors.invalid.map(({ why, keys }) => [why, keys] as const))(
+    'refuses %s',
+    (_why, keys) => {
+      expect(parseAcademyKeys(keys).ok).toBe(false);
+    },
+  );
 });

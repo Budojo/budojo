@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+
 import { describe, expect, it } from 'vitest';
 
 import { generateSecrets } from './bootstrap.js';
@@ -40,3 +42,23 @@ describe('the academy keys', () => {
     expect(holdsTheseSecrets(keys, generateSecrets())).toBe(false);
   });
 });
+
+/**
+ * The vectors both readers run (#2033): the client's `keys.spec.ts` reads the
+ * same file, so a check one side makes and the other does not fails here or
+ * there.
+ */
+describe('the shared keys vectors', () => {
+  const vectors = JSON.parse(
+    readFileSync(new URL('../../client/src/app/core/sync/vectors/keys-vectors.json', import.meta.url), 'utf8'),
+  ) as { valid: unknown[]; invalid: { why: string; keys: unknown }[] };
+
+  it.each(vectors.valid.map((keys, i) => [i, keys] as const))('reads valid file %i', (_i, keys) => {
+    expect(() => parseAcademyKeys(JSON.stringify(keys))).not.toThrow();
+  });
+
+  it.each(vectors.invalid.map(({ why, keys }) => [why, keys] as const))('refuses %s', (_why, keys) => {
+    expect(() => parseAcademyKeys(JSON.stringify(keys))).toThrow();
+  });
+});
+

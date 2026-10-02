@@ -91,10 +91,10 @@ describe('the sync envelope', () => {
   it('refuses something that is not an envelope at all', async () => {
     const key = await importSyncKey(newSyncKey());
 
-    await expect(open(key, 'keys.bjs', utf8('PK\u0003\u0004 a zip'))).rejects.toMatchObject({
+    await expect(open(key, 'folder.bjs', utf8('PK\u0003\u0004 a zip'))).rejects.toMatchObject({
       reason: 'not-an-envelope',
     });
-    await expect(open(key, 'keys.bjs', new Uint8Array())).rejects.toMatchObject({
+    await expect(open(key, 'folder.bjs', new Uint8Array())).rejects.toMatchObject({
       reason: 'not-an-envelope',
     });
   });
@@ -103,7 +103,7 @@ describe('the sync envelope', () => {
     const key = await importSyncKey(newSyncKey());
 
     await expect(
-      openJson(key, 'keys.bjs', await seal(key, 'keys.bjs', utf8('{not json'))),
+      openJson(key, 'folder.bjs', await seal(key, 'folder.bjs', utf8('{not json'))),
     ).rejects.toMatchObject({ reason: 'corrupt' });
   });
 
