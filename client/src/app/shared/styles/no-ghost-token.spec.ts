@@ -1,4 +1,6 @@
+import Material from '@primeuix/themes/material';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { join } from 'node:path';
 
 /**
@@ -66,8 +68,19 @@ const FRAMEWORK_PROVIDED = [
   /^--p-(primary|highlight|content|overlay|list|navigation)-[a-z-]+$/,
 ];
 
+/**
+ * And the component tokens of the installed preset, by their real names, not
+ * by a pattern: `_touch-hover-tokens.scss` (#2034) points hover tokens at the
+ * resting ones PrimeNG defines at runtime. A typo is still not in this set.
+ */
+const PRESET_COMPONENT_TOKENS = new Set<string>(
+  createRequire(join(process.cwd(), 'package.json'))('./scripts/touch-hover-tokens.cjs').variables(
+    Material.components,
+  ),
+);
+
 const isFrameworkProvided = (token: string): boolean =>
-  FRAMEWORK_PROVIDED.some((pattern) => pattern.test(token));
+  PRESET_COMPONENT_TOKENS.has(token) || FRAMEWORK_PROVIDED.some((pattern) => pattern.test(token));
 
 /**
  * Comments are not code. `belt-badge.component.scss` explains its hardcoded

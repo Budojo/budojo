@@ -12,10 +12,12 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { AuthService } from '../../../core/services/auth.service';
 import { RuntimeService } from '../../../core/services/runtime.service';
 import { BudojoFormFieldComponent } from '../../../shared/components/budojo-form-field/budojo-form-field.component';
+import { BrandGlyphComponent } from '../../../shared/components/brand-glyph/brand-glyph.component';
 
 @Component({
   selector: 'app-login',
   imports: [
+    BrandGlyphComponent,
     ReactiveFormsModule,
     RouterLink,
     ButtonModule,

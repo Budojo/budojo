@@ -94,5 +94,6 @@ docker run --rm --network host \
   -v "$CLIENT":/e2e -w /e2e \
   -e "CYPRESS_PAGE=${CYPRESS_PAGE:-}" \
   -e "CYPRESS_RUNTIME=${CYPRESS_RUNTIME:-}" \
+  -e "CYPRESS_THEME=${CYPRESS_THEME:-}" \
   "$CYPRESS_IMAGE" \
   $spec_arg --config video=false,trashAssetsBeforeRuns=false --browser electron
