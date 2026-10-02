@@ -141,7 +141,7 @@ The journal is a JSON list of the writes that made this version from its parent,
 `{ "v": 1, "folder": "<32 hex>", "syncKey": "<base64, 32 bytes>", "APP_KEY": "base64:…", "DOCUMENT_ENCRYPTION_KEY": "…", "createdAt": "<UTC>" }`. Written by `desktop/src/sync-keys.ts`, read by `client/src/app/core/sync/keys.ts`.
 - **The two app keys** have the desktop keychain's shape and checks (`desktop/src/bootstrap.ts`), the pair the recovery code (#1254) carries. A device that brings the academy in adopts them, and opens what the other device encrypted: the medical certificates first.
 - **`syncKey`** seals every file in the folder (§ The envelope).
-- **`folder`** is random, made with the file. `sync/folder.bjs`, sealed under the sync key, carries the same id.
+- **`folder`** is random, made with the file. `sync/folder.bjs`, sealed under the sync key, carries the same id: `{ "v": 1, "folder": "<32 hex>" }` (`client/src/app/core/sync/folder.ts`). The first device to sync into a folder that holds nothing writes it; both devices writing it at once write the same id.
 - **Written once, by the first device that has an academy:**
   - the PC writes it when the owner chooses **Collega il telefono** (Dati e backup), with its own two keys: a second consent, for `drive.appdata`, which the backups never need;
   - a phone-only academy writes its own when it connects Google (#2046).
@@ -179,9 +179,17 @@ The journal is a JSON list of the writes that made this version from its parent,
 
 There is no pairing code (#2033). **A device joins at its first «Accedi con Google» that finds the keys** (§ The keys):
 1. It reads the keys file and adopts the app keys.
-2. It makes its device id.
+2. It makes its device id. From then on its server journals its writes under it (#2031).
 3. It checks `sync/folder.bjs`.
 4. It writes its `devices/` report, and only then pulls.
+
+**A device that joined never publishes into a folder with no version.** It waits for the device that made the keys, which publishes the academy as version 1 (#2046). Otherwise a phone holding a backup it restored would publish it as version 1, and the PC, with the newer academy, would then meet it as another academy and ask.
+
+**Where a device keeps what it joined with** (#2046):
+- **The phone:** the device id, the folder id and the sync key in `sync.json`, beside the app keys in its private files, which neither Android's backup nor a transfer to a new phone copies. What it remembers between rounds (the `SyncLedger`) is in the page's storage, named by the device id.
+- **The PC:** #2032.
+
+**A database replaced outside the sync** (the door's restore, the desktop's Restore) forgets the ledger: an academy with no base asks before it meets the folder's (§ Scope).
 
 **A third device is refused** (§ Scope).
 
