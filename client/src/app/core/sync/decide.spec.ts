@@ -170,6 +170,13 @@ const rows: {
     expected: { kind: 'wait' },
   },
   {
+    name: 'its first version never landed, and another device published an academy meanwhile: the owner chooses',
+    local: local(ref(1), { unconfirmed: pushed(ref(1), NOW - LISTING_LAG_MS, null) }),
+    folder: [v(1, PHONE, null)],
+    now: NOW,
+    expected: { kind: 'ask', latest: ref(1, PHONE) },
+  },
+  {
     name: 'back after weeks, all its writes held by every device: a fast-forward, nobody is asked',
     local: local(ref(30)),
     folder: [v(44), v(45)],
