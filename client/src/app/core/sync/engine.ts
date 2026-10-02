@@ -226,16 +226,28 @@ async function readReports(context: SyncContext): Promise<DeviceReport[]> {
     if (device === undefined) {
       continue;
     }
-    const sealed = await remote.read(file.path);
-    let parsed: ReturnType<typeof parseDeviceReport> | null = null;
-    try {
-      parsed = sealed === null ? null : parseDeviceReport(await openJson(key, file.path, sealed));
-    } catch {
-      parsed = null;
-    }
-    reports.push(parsed !== null && parsed.ok ? parsed.value : unreadableReport(device));
+    reports.push(
+      (await openReport(key, file.path, await remote.read(file.path))) ?? unreadableReport(device),
+    );
   }
   return reports;
+}
+
+/** A report that does not open or parse counts as holding nothing (`devices.ts`). */
+async function openReport(
+  key: CryptoKey,
+  path: string,
+  sealed: Uint8Array | null,
+): Promise<DeviceReport | null> {
+  if (sealed === null) {
+    return null;
+  }
+  try {
+    const parsed = parseDeviceReport(await openJson(key, path, sealed));
+    return parsed.ok ? parsed.value : null;
+  } catch {
+    return null;
+  }
 }
 
 async function writeReport(context: SyncContext, ledger: SyncLedger): Promise<void> {
