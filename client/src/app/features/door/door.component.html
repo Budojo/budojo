@@ -175,7 +175,7 @@
         @case ('failed') {
           <div class="door__outcome" data-cy="door-failed">
             <p-message severity="error" [text]="'door.failed.' + failure() | translate" />
-            @if (failure() === 'other') {
+            @if (failure() !== 'offline' && failure() !== 'unauthorized') {
               <p class="door__detail">{{ failureDetail() }}</p>
             }
             <div class="door__actions">

@@ -168,6 +168,16 @@ describe('PUT /api/v1/sync/stage', function (): void {
             ->assertJsonPath('code', 'newer');
     });
 
+    it('takes a database that ran a migration under the name Budojo\'s history retired: it is not from a later Budojo', function (): void {
+        // The owner's PC (2 Oct 2026): every backup read as «newer», for a
+        // row #443's rename left behind.
+        $older = [...syncTestHistory(), '2026_05_05_120000_create_support_tickets_table'];
+
+        $this->actingAs(userWithAcademy())
+            ->call('PUT', '/api/v1/sync/stage', content: syncTestIncoming($this->dir, $older))
+            ->assertNoContent();
+    });
+
     it('refuses another Laravel app’s database, which never ran Budojo’s own migrations', function (): void {
         $laravel = ['0001_01_01_000000_create_users_table'];
 

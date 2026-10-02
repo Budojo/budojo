@@ -256,7 +256,7 @@ describe('when the door cannot go on', () => {
   it('asks for an update when the backup is from a newer Budojo', async () => {
     const newer = new HttpErrorResponse({
       status: 422,
-      error: { code: 'newer', message: 'update' },
+      error: { code: 'newer', message: 'The database is from a newer Budojo (schema 2099_x).' },
     });
     const { component, render, cy, device } = setup({ inspect: () => throwError(() => newer) });
 
@@ -264,6 +264,8 @@ describe('when the door cannot go on', () => {
     render();
 
     expect(cy('door-failed')?.textContent).toContain('Update the app');
+    // The server's own words, which name what is unknown: the screen is the only log.
+    expect(cy('door-failed')?.textContent).toContain('schema 2099_x');
     expect(device.restore).not.toHaveBeenCalled();
   });
 });

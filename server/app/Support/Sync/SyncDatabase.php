@@ -15,6 +15,14 @@ final class SyncDatabase
     /** The first sixteen bytes of every SQLite 3 file. */
     public const string HEADER = "SQLite format 3\0";
 
+    /**
+     * Names Budojo's own history retired: a database that ran a migration
+     * under one of them is not from a later Budojo. #443 renamed
+     * `…120000_create_support_tickets_table` to `…120001_…`, so a database
+     * that ran it before the rename (May 2026) keeps the old row for good.
+     */
+    public const array RETIRED_MIGRATIONS = ['2026_05_05_120000_create_support_tickets_table'];
+
     /** A migration only a Budojo database has run: another Laravel app's database lacks it. */
     public const string BUDOJO_MIGRATION = '2026_04_22_084344_create_academies_table';
 
