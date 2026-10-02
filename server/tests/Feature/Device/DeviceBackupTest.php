@@ -96,7 +96,7 @@ function backupTestSend(mixed $test, string $action, string $bytes, ?string $sec
 beforeEach(function (): void {
     config()->set('budojo.runtime', 'mobile');
     config()->set('budojo.shell.secret', 'shell-secret-for-the-tests');
-    $this->dir = sys_get_temp_dir() . '/budojo-backup-' . bin2hex(random_bytes(6));
+    $this->dir = sys_get_temp_dir() . '/budojo-device-test-' . bin2hex(random_bytes(6));
     mkdir($this->dir);
     $this->live = "{$this->dir}/budojo.sqlite";
     backupTestDatabase($this->live, SyncDatabase::codeMigrations(), 'Prova');
@@ -248,6 +248,17 @@ describe('a stage refused after a restore was staged', function (): void {
 
         expect(file_get_contents("{$this->live}.staged"))->toBe($this->restored['budojo.sqlite'])
             ->and(file_get_contents("{$this->storage}.staged/public/athletes/photos/1.jpg"))->toBe('the photo');
+    });
+
+    it('takes that restore\'s database out first when a second restore fails halfway: never a database beside other files, or none', function (): void {
+        // A plain file where the second restore builds its files: making the
+        // folder fails after what was staged has been cleared.
+        file_put_contents("{$this->storage}.staged.part", 'in the way');
+
+        backupTestSend($this, 'restore', backupTestArchive($this->dir, backupTestEntries($this->dir)))->assertServerError();
+
+        expect(file_exists("{$this->live}.staged"))->toBeFalse()
+            ->and(is_dir("{$this->storage}.staged"))->toBeFalse();
     });
 
     it('leaves that restore whole when a version is refused', function (): void {
