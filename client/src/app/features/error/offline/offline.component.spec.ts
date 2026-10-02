@@ -25,7 +25,16 @@ function makeDocumentProxy(reload: () => void): Document {
 }
 
 describe('OfflineComponent', () => {
-  function setup(initialOnline = false, profile: 'web' | 'desktop' = 'web') {
+  afterEach(() => {
+    delete (globalThis as { Capacitor?: unknown }).Capacitor;
+  });
+
+  function setup(initialOnline = false, profile: 'web' | 'desktop' | 'phone' = 'web') {
+    if (profile === 'phone') {
+      (globalThis as { Capacitor?: unknown }).Capacitor = {
+        Plugins: { PhpServer: { start: vi.fn() } },
+      };
+    }
     const reload = vi.fn();
     const isOnlineSignal = signal(initialOnline);
     const fakeService = {
@@ -74,6 +83,22 @@ describe('OfflineComponent', () => {
     expect(message.toLowerCase()).not.toContain('check your connection');
     expect(message.toLowerCase()).not.toContain('network');
     expect(root.querySelector('[data-cy="offline-retry"]')).not.toBeNull();
+  });
+
+  // The phone's API is a local process too (#2034): the same diagnosis, on
+  // this phone rather than this computer. The shell is detected from its
+  // plugin, synchronously, for the same reason as the desktop's bridge.
+  it('on the phone, blames Budojo on this phone, not the network', () => {
+    const { fixture } = setup(false, 'phone');
+    const root: HTMLElement = fixture.nativeElement;
+
+    expect(root.querySelector('.offline__title')?.textContent?.trim()).toBe(
+      "Budojo isn't responding",
+    );
+    const message = root.querySelector('.offline__message')?.textContent ?? '';
+    expect(message).toContain('on this phone');
+    expect(message.toLowerCase()).not.toContain('check your connection');
+    expect(message.toLowerCase()).not.toContain('computer');
   });
 
   it('on the web, keeps talking about the network', () => {

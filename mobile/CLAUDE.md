@@ -34,10 +34,14 @@ The phone runs Budojo's own server, as the desktop does with `php.exe`:
   - unpacks the bundle when the APK carries a new one;
   - swaps in a database the sync staged (`<db>.staged`, #2030), dropping the old `-wal` and `-shm`;
   - makes the phone's `APP_KEY` and document key on its first start (`secrets.json` in the app's private files, never backed up);
-  - runs the migrations, and `budojo:sync-reconcile` after a swap;
+  - runs the migrations, and `budojo:sync-reconcile` after a swap. A `<db>.reconcile` file, written before the rename, keeps it pending until it succeeds, so a start that dies halfway never skips it. **This is the fast-forward path, the only one that stages a database today.** After a rebase the reconcile must wait for the replay (`docs/sync/protocol.md`): #2031 makes the stage say which it is, and the shell then leaves the reconcile to the app;
   - starts `php -S 127.0.0.1:<port>` with the framework's router, `BUDOJO_RUNTIME=mobile`.
 - **The page starts it before Angular boots** (`client/src/app/core/mobile/phone-server.ts`) and shows any failure in full on the screen, the only log anyone can send from a phone.
-- **Android kills an app's child processes in the background** (the phantom process killer, Android 12+). The plugin restarts the server when the app comes back to the foreground, on the same port when it is free. A request that finds nobody listening starts it again and is repeated once, at the server's new address if it moved.
+- **Android kills an app's child processes in the background** (the phantom process killer, Android 12+). Three things bring it back, in `phone-server.ts` and the plugin:
+  - **Back in the foreground,** the plugin restarts the server, on the same port when it is free, and the page holds its requests, writes included, until it answers.
+  - **Every request goes to the server's current address,** because services keep the one they were built with.
+  - **A request that finds nobody listening** starts the server again. A read is then repeated once. A write is not, because no answer cannot tell "never got it" from "saved it and died": it fails with its own error, and the next tap finds the server running.
+  - The interceptor sits last in the chain, after the error handling, so a retry that works never shows the offline page.
 - **The app's requests reach its server through Capacitor's native HTTP** (`CapacitorHttp`), which needs no CORS. Its non-GET answers read as text unless they are JSON (see Drive below), which every API answer to a non-GET is. A binary request body, the sync's `PUT /sync/stage`, is proven on a phone by #2046 before the phone relies on it.
 
 ### What the phone taught (#2044), and must not be undone
@@ -70,5 +74,5 @@ Calling PHP in-process from this shell is the way out if Android ever stops the 
 
 - **Only the release key signs.** `android/app/build.gradle` reads it from `BUDOJO_ANDROID_KEYSTORE` / `BUDOJO_ANDROID_KEYSTORE_PASSWORD` (alias `budojo`, PKCS12), and CI checks the certificate's SHA-256 before uploading. There is no debug-key fallback on purpose: an APK signed with another key never installs over the app, and uninstalling loses the changes a phone has not sent yet. The owner holds the other copy of the key.
 - **`versionCode` only grows.** It comes from `-PbudojoVersionCode`: the run number for a CI build today, the release's semver from #2040.
-- **No Android backup** (`allowBackup="false"`). The app will hold the sync key and a snapshot of the roster (PRD § 6.7); a new phone pairs again instead.
+- **No Android backup and no transfer to a new phone.** `allowBackup="false"` covers Android up to 11. On 12+ it does not stop the device-to-device transfer, so `res/xml/data_extraction_rules.xml` excludes everything from both. The app holds this phone's keys (`secrets.json`), its database and, later, the sync key (PRD § 6.7); a new phone pairs again instead.
 - **Test on a real phone.** The unit tests live with the screens, in the client's suite. What only a phone can prove (install, update over, storage that survives both, the server coming back after Android killed it) is checked on one, with the count in the PR, as M11 did for the desktop.

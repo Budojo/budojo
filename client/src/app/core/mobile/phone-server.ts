@@ -64,31 +64,78 @@ export async function bootPhoneServer(
   }
 }
 
+/** The server's address, whichever port a request was built with. */
+const LOCAL_SERVER = /^http:\/\/127\.0\.0\.1:\d+/;
+
+/** Requests that change nothing, so sending one twice is harmless. */
+const READS = new Set(['GET', 'HEAD', 'OPTIONS']);
+
+/** While the server is being started again after the app came back: settles once it answers. */
+let returning: Promise<unknown> | null = null;
+
+function ensureRunning(plugin: PhpServerPlugin): void {
+  const ready = plugin.start().then(publish, () => undefined);
+  returning = ready;
+  void ready.then(() => {
+    if (returning === ready) {
+      returning = null;
+    }
+  });
+}
+
 /**
  * Android can kill the server while the app sits in the background (the
- * phantom process killer, Android 12+). The app itself lives on, so its next
- * request finds nobody listening. This starts the server again and repeats the
- * request once: the owner sees a slower answer, not an error. The server comes
- * back on the same port unless another app took it meanwhile, so the request
- * goes wherever it is now. A request that fails the second time, or whose
- * server will not start again, fails with its own error.
+ * phantom process killer, Android 12+). When the app comes back, this starts
+ * it again and holds the page's requests, writes included, until it answers:
+ * the owner's first tap waits a moment instead of failing. Returns the way to
+ * stop listening.
+ */
+export function holdRequestsOnReturn(plugin: PhpServerPlugin, doc: Document): () => void {
+  const onVisibility = (): void => {
+    if (doc.visibilityState === 'visible') {
+      ensureRunning(plugin);
+    }
+  };
+  doc.addEventListener('visibilitychange', onVisibility);
+  return () => doc.removeEventListener('visibilitychange', onVisibility);
+}
+
+/**
+ * The page's side of the server's restarts. Every request to the server goes
+ * to its current address, because services keep the one they were built with
+ * and the server may have moved to another port meanwhile.
+ *
+ * A request that finds nobody listening starts the server again. A read is
+ * then repeated once: the owner sees a slower answer, not an error. A write
+ * is not, because "no answer" cannot tell a server that never got it from one
+ * that saved it and died before answering; it fails with its own error, and
+ * the next tap finds the server running.
  */
 export const phoneServerInterceptor: HttpInterceptorFn = (req, next) => {
-  const apiBase = window.__BUDOJO_MOBILE__?.apiBase;
-  if (apiBase === undefined || !req.url.startsWith(apiBase)) {
+  if (window.__BUDOJO_MOBILE__ === undefined || !LOCAL_SERVER.test(req.url)) {
     return next(req);
   }
-  return next(req).pipe(
+  const send = () => {
+    const apiBase = window.__BUDOJO_MOBILE__?.apiBase ?? '';
+    return next(req.clone({ url: req.url.replace(LOCAL_SERVER, apiBase) }));
+  };
+  const sent = returning === null ? send() : from(returning).pipe(switchMap(send));
+  return sent.pipe(
     catchError((error: unknown) => {
       const plugin = phpServerPlugin();
       if (!(error instanceof HttpErrorResponse) || error.status !== 0 || plugin === null) {
         return throwError(() => error);
       }
+      if (!READS.has(req.method)) {
+        ensureRunning(plugin);
+        return throwError(() => error);
+      }
       return from(plugin.start()).pipe(
         catchError(() => throwError(() => error)),
-        switchMap((start) =>
-          next(req.clone({ url: publish(start) + req.url.slice(apiBase.length) })),
-        ),
+        switchMap((start) => {
+          publish(start);
+          return send();
+        }),
       );
     }),
   );

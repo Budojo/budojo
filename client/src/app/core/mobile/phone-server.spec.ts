@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { firstValueFrom } from 'rxjs';
 import {
   bootPhoneServer,
+  holdRequestsOnReturn,
   phoneServerInterceptor,
   PhpServerPlugin,
   phpServerPlugin,
@@ -92,7 +93,7 @@ describe('the phone server (#2034)', () => {
 
     afterEach(() => backend.verify());
 
-    it('starts it again and repeats the request once, so the screen shows no error', async () => {
+    it('starts it again and repeats a read once, so the screen shows no error', async () => {
       const answer = firstValueFrom(http.get('http://127.0.0.1:41234/api/v1/athletes'));
       backend
         .expectOne('http://127.0.0.1:41234/api/v1/athletes')
@@ -124,6 +125,72 @@ describe('the phone server (#2034)', () => {
         .error(new ProgressEvent('error'), { status: 0 });
 
       await expect(answer).rejects.toMatchObject({ status: 0 });
+    });
+
+    it('sends a request built with an old address to where the server is now', async () => {
+      // Services keep the address they were built with; the server may have moved since.
+      window.__BUDOJO_MOBILE__ = { apiBase: 'http://127.0.0.1:41999' };
+      const answer = firstValueFrom(http.get('http://127.0.0.1:41234/api/v1/athletes'));
+      backend.expectOne('http://127.0.0.1:41999/api/v1/athletes').flush({ data: [] });
+
+      expect(await answer).toEqual({ data: [] });
+    });
+
+    it('never repeats a write: one that got no answer may have been saved', async () => {
+      const answer = firstValueFrom(http.post('http://127.0.0.1:41234/api/v1/athletes', {}));
+      backend
+        .expectOne('http://127.0.0.1:41234/api/v1/athletes')
+        .error(new ProgressEvent('error'), { status: 0 });
+
+      await expect(answer).rejects.toMatchObject({ status: 0 });
+      // The server is started again all the same, so the owner's next tap works.
+      expect(start).toHaveBeenCalledTimes(1);
+      backend.expectNone('http://127.0.0.1:41234/api/v1/athletes');
+    });
+
+    describe('back in the foreground', () => {
+      let release: () => void;
+      let stop: () => void;
+
+      beforeEach(() => {
+        start.mockImplementation(
+          () =>
+            new Promise((resolve) => {
+              release = () => resolve({ port: 41234 });
+            }),
+        );
+        stop = holdRequestsOnReturn({ start } as PhpServerPlugin, document);
+      });
+
+      afterEach(() => {
+        stop();
+        release();
+      });
+
+      it('holds every request, writes too, until the server answers again', async () => {
+        Object.defineProperty(document, 'visibilityState', {
+          value: 'visible',
+          configurable: true,
+        });
+        document.dispatchEvent(new Event('visibilitychange'));
+
+        const answer = firstValueFrom(http.post('http://127.0.0.1:41234/api/v1/attendance', {}));
+        await Promise.resolve();
+        backend.expectNone('http://127.0.0.1:41234/api/v1/attendance');
+
+        release();
+        await vi.waitFor(() =>
+          backend.expectOne('http://127.0.0.1:41234/api/v1/attendance').flush({}),
+        );
+        expect(await answer).toEqual({});
+      });
+
+      it('does not wait for anything when the app goes to the background', () => {
+        Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true });
+        document.dispatchEvent(new Event('visibilitychange'));
+
+        expect(start).not.toHaveBeenCalled();
+      });
     });
 
     it('lets a real error from the server through, untouched', async () => {

@@ -723,6 +723,10 @@
     "desktop": {
       "title": "Budojo isn't responding",
       "message": "Budojo's own service on this computer didn't answer. Try again; if it keeps happening, close and reopen Budojo. Your internet connection has nothing to do with it."
+    },
+    "phone": {
+      "title": "Budojo isn't responding",
+      "message": "Budojo's own service on this phone didn't answer. Try again; if it keeps happening, close and reopen Budojo. Your internet connection has nothing to do with it."
     }
   },
   "support": {

@@ -723,6 +723,10 @@
     "desktop": {
       "title": "Budojo non risponde",
       "message": "Il servizio di Budojo su questo computer non ha risposto. Riprova; se continua, chiudi e riapri Budojo. La connessione a internet non c'entra."
+    },
+    "phone": {
+      "title": "Budojo non risponde",
+      "message": "Il servizio di Budojo su questo telefono non ha risposto. Riprova; se continua, chiudi e riapri Budojo. La connessione a internet non c'entra."
     }
   },
   "support": {

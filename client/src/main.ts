@@ -1,7 +1,11 @@
 import { bootstrapApplication } from '@angular/platform-browser';
 import { appConfig } from './app/app.config';
 import { App } from './app/app';
-import { bootPhoneServer, phpServerPlugin } from './app/core/mobile/phone-server';
+import {
+  bootPhoneServer,
+  holdRequestsOnReturn,
+  phpServerPlugin,
+} from './app/core/mobile/phone-server';
 import { setupStaleChunkRecovery } from './app/shared/utils/stale-chunk-recovery';
 import { environment } from './environments/environment';
 
@@ -23,6 +27,7 @@ async function boot(): Promise<void> {
     if (!(await bootPhoneServer(plugin, screen))) {
       return;
     }
+    holdRequestsOnReturn(plugin, document);
   }
 
   await bootstrapApplication(App, appConfig);

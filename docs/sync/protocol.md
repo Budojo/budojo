@@ -77,7 +77,7 @@ The app packs and seals versions. The server only hands it the database and take
 - **`PUT /api/v1/sync/stage`:** another device's database, for a fast-forward or after a rebase.
   - **Checked before anything is written:** a SQLite file, undamaged, with Budojo's migrations, no newer than this code (`422` `newer` or `unreadable`).
   - **Written beside the live database** as `<database>.staged`.
-  - **The shell swaps it in at its next start**, then runs `budojo:sync-reconcile`: it clears the cache, and deletes the files no row names, by the rules the deleting Actions follow.
+  - **The shell swaps it in at its next start**, then runs `budojo:sync-reconcile`: it clears the cache, and deletes the files no row names, by the rules the deleting Actions follow. A `<database>.reconcile` file, written before the swap and removed once the reconcile succeeds, keeps a start that dies halfway from skipping it (the phone, #2034).
   - **After a rebase, the reconcile runs after the replay, never between the swap and the replay.** A document uploaded offline has its file on this device but no row in the swapped-in database until the replay recreates it; reconciling first would delete the only copy.
   - **The body is bound by PHP's `post_max_size`** (Laravel checks it for every method, `413` above it). Each shell sets it above any academy's database (#2032, #2034).
 

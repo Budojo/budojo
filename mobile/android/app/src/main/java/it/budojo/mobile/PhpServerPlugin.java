@@ -127,7 +127,8 @@ public class PhpServerPlugin extends Plugin {
 
         File database = new File(files, "budojo.sqlite");
         forgetTheSpikesDemo(files);
-        boolean swapped = swapInStaged(database);
+        File reconcilePending = new File(database.getPath() + ".reconcile");
+        boolean swapped = swapInStaged(database, reconcilePending);
         if (!database.exists()) {
             // A first start: an empty database, which the migrations below fill.
             database.createNewFile();
@@ -173,10 +174,15 @@ public class PhpServerPlugin extends Plugin {
             writeFile(ini, readFile(ini) + "\nopcache.enable=0\nopcache.enable_cli=0\n");
             migrate = runToEnd(php, ini, serverDir, env, "artisan", "migrate", "--force", "--no-interaction");
         }
-        if (swapped) {
+        boolean reconciled = false;
+        if (reconcilePending.exists()) {
             // A database swapped in ran no Observer: the cache and the files no
-            // row names are reconciled before the app serves (#2030).
+            // row names are reconciled before the app serves (#2030). The marker
+            // outlives a failed or killed start, so the reconcile is never
+            // skipped; it goes only once the reconcile succeeded.
             runToEnd(php, ini, serverDir, env, "artisan", "budojo:sync-reconcile", "--no-interaction");
+            reconcilePending.delete();
+            reconciled = true;
         }
         long tMigrated = System.nanoTime();
 
@@ -213,6 +219,7 @@ public class PhpServerPlugin extends Plugin {
         out.put("port", port);
         out.put("extracted", extracted);
         out.put("swapped", swapped);
+        out.put("reconciled", reconciled);
         out.put("unpackMs", ms(t0, tExtracted));
         out.put("migrateMs", ms(tMigrate0, tMigrated));
         out.put("serverMs", ms(tMigrated, tReady));
@@ -293,12 +300,19 @@ public class PhpServerPlugin extends Plugin {
      * A database the sync staged beside the live one (#2030), swapped in before
      * PHP starts: the live file's WAL and shared memory go with it, or SQLite
      * would replay the old database's last writes onto the new one.
+     *
+     * The reconcile it needs is written down first, as a file, so that it
+     * survives a start that dies after the rename. That is the fast-forward
+     * path, the only one that stages a database today. A rebase must reconcile
+     * only after its replay (docs/sync/protocol.md); #2031 makes its stage say
+     * so, and this then leaves the reconcile to the app.
      */
-    private static boolean swapInStaged(File database) throws IOException {
+    private static boolean swapInStaged(File database, File reconcilePending) throws IOException {
         File staged = new File(database.getPath() + ".staged");
         if (!staged.exists()) {
             return false;
         }
+        writeFile(reconcilePending, "");
         for (String suffix : new String[] {"-wal", "-shm"}) {
             new File(database.getPath() + suffix).delete();
         }
