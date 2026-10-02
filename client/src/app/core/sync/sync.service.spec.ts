@@ -106,7 +106,7 @@ describe('SyncService', () => {
 
     expect(phone.db.academy).toBe('Eagles BJJ');
     expect(reload).toHaveBeenCalledTimes(1);
-    expect(loadLedger(phone.id).base).toEqual({ seq: 1, device: 'pc4f2a' });
+    expect(loadLedger({ device: phone.id }).base).toEqual({ seq: 1, device: 'pc4f2a' });
   });
 
   it('pushes what the owner marked on the phone, and says it is aligned', async () => {

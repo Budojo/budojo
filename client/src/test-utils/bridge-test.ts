@@ -37,6 +37,7 @@ interface BridgeOverrides {
   keys?: Partial<Bridge['keys']>;
   update?: Partial<Bridge['update']>;
   theme?: Partial<Bridge['theme']>;
+  sync?: Partial<Bridge['sync']>;
 }
 
 export function stubBridge(overrides: BridgeOverrides = {}): Bridge {
@@ -80,6 +81,11 @@ export function stubBridge(overrides: BridgeOverrides = {}): Bridge {
     theme: {
       apply: async () => ({ ok: true }),
     },
+    sync: {
+      identity: async () => null,
+      driveFetch: async () => ({ status: 503, headers: {}, body: new Uint8Array() }),
+      swapIn: async () => undefined,
+    },
   };
 
   return {
@@ -92,5 +98,6 @@ export function stubBridge(overrides: BridgeOverrides = {}): Bridge {
     keys: { ...base.keys, ...overrides.keys },
     update: { ...base.update, ...overrides.update },
     theme: { ...base.theme, ...overrides.theme },
+    sync: { ...base.sync, ...overrides.sync },
   };
 }

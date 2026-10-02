@@ -7,7 +7,7 @@ import { importSyncKey } from './envelope';
 import { checkFolder } from './folder';
 import { HttpSyncServer } from './http-sync-server';
 import { VersionRef } from './layout';
-import { loadLedger, saveLedger } from './ledger-store';
+import { LedgerOwner, loadLedger, saveLedger } from './ledger-store';
 import { RemoteError, SyncRemote } from './remote';
 import { appVersionOf } from './version';
 import { WriteGate } from './write-gate';
@@ -19,6 +19,8 @@ export interface SyncIdentity {
   folder: string;
   /** 32 bytes, base64. */
   syncKey: string;
+  /** Moved on when the database is put back in time outside the sync (the PC's Restore): see `ledger-store.ts`. */
+  epoch?: number;
 }
 
 /** What each shell supplies (PRD § 5.6): the engine and its timing are the same on both. */
@@ -184,11 +186,20 @@ export class SyncService {
 
   private async round(): Promise<void> {
     const platform = this.platform;
-    const identity = platform === null ? null : await platform.identity();
+    let identity: SyncIdentity | null;
+    try {
+      identity = platform === null ? null : await platform.identity();
+    } catch (error) {
+      // On the PC the identity reads the keys from the account: no network,
+      // or Google letting go, is said as for any round.
+      await this.failed(error, null);
+      return;
+    }
     if (platform === null || identity === null) {
       this.stateSignal.set({ kind: 'off' });
       return;
     }
+    const owner: LedgerOwner = { device: identity.device, epoch: identity.epoch };
     const { device } = identity;
     if (this.stateSignal().kind !== 'synced') {
       this.stateSignal.set({ kind: 'syncing' });
@@ -200,7 +211,7 @@ export class SyncService {
         this.stateSignal.set({ kind: folder === 'another' ? 'another-folder' : 'unpaired' });
         return;
       }
-      let ledger = loadLedger(device);
+      let ledger = loadLedger(owner);
       if (ledger.base === null && !platform.publishesFirst) {
         const listing = await platform.remote.list('versions');
         if (versionsIn(listing.files).length === 0) {
@@ -218,7 +229,7 @@ export class SyncService {
         ledger,
         saveLedger: (next: SyncLedger) => {
           ledger = next;
-          saveLedger(device, next);
+          saveLedger(owner, next);
         },
         holdWrites: (work) => this.gate.hold(work),
         now: () => Date.now(),
@@ -232,7 +243,7 @@ export class SyncService {
           this.stateSignal.set({ kind: 'ask', latest: outcome.latest });
           return;
         case 'needs-rebase':
-          this.stateSignal.set({ kind: 'needs-rebase', count: await this.pending(device) });
+          this.stateSignal.set({ kind: 'needs-rebase', count: await this.pending(owner) });
           return;
         case 'wait':
           this.schedule(WAIT_RETRY_MS);
@@ -244,11 +255,11 @@ export class SyncService {
           this.stateSignal.set({ kind: 'synced', at: Date.now() });
       }
     } catch (error) {
-      await this.failed(error, device);
+      await this.failed(error, owner);
     }
   }
 
-  private async failed(error: unknown, device: string): Promise<void> {
+  private async failed(error: unknown, owner: LedgerOwner | null): Promise<void> {
     if (error instanceof RemoteError && error.reason === 'unauthorized') {
       this.stateSignal.set({ kind: 'reconnect' });
       return;
@@ -256,7 +267,7 @@ export class SyncService {
     const offline =
       (error instanceof RemoteError && error.reason === 'offline') ||
       (error instanceof HttpErrorResponse && error.status === 0);
-    const count = await this.pending(device);
+    const count = owner === null ? 0 : await this.pending(owner);
     if (offline || count > 0) {
       this.stateSignal.set({ kind: 'pending', count, offline });
     } else {
@@ -270,9 +281,9 @@ export class SyncService {
   }
 
   /** The writes in no version yet; 0 when even that cannot be told. */
-  private async pending(device: string): Promise<number> {
+  private async pending(owner: LedgerOwner): Promise<number> {
     try {
-      const pushedThrough = loadLedger(device).pushedThrough;
+      const pushedThrough = loadLedger(owner).pushedThrough;
       return (await this.server.journal()).filter(
         (entry) => pushedThrough === null || entry.id > pushedThrough,
       ).length;

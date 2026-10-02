@@ -52,6 +52,7 @@ function fakeIO(overrides: Partial<DriveSyncIO> = {}) {
     readKeys: vi.fn(async () => ''),
     writeKeys: vi.fn(async () => undefined),
     ensureFresh: vi.fn(async (t) => t),
+    fetchDrive: vi.fn(async () => ({ status: 200, headers: {}, body: new Uint8Array() })),
     accountEmail: vi.fn(async () => 'gym@example.it'),
     ensureFolder: vi.fn(async () => 'folder-1'),
     listRemote: vi.fn(async () => remote),
@@ -572,3 +573,55 @@ describe('connectPhone', () => {
   });
 });
 
+describe('the sync’s keys and Drive calls (#2032)', () => {
+  const KEYS = JSON.stringify({
+    v: 1,
+    folder: '0123456789abcdef0123456789abcdef',
+    syncKey: Buffer.alloc(32, 7).toString('base64'),
+    createdAt: '2026-10-02T18:00:00.000Z',
+    ...SECRETS,
+  });
+
+  it('reads the keys only once this PC connected the phone', async () => {
+    const { io, state } = fakeIO({ findKeys: vi.fn(async () => ['keys-1']), readKeys: vi.fn(async () => KEYS) });
+    const service = new DriveSyncService(io);
+
+    expect(await service.keysForSync()).toBeNull();
+    expect(io.findKeys).not.toHaveBeenCalled();
+
+    state.current = { ...state.current, keysPublishedAt: '2026-10-02T18:00:00.000Z' };
+    expect((await service.keysForSync())?.folder).toBe('0123456789abcdef0123456789abcdef');
+  });
+
+  it('picks no keys from an account that holds two files of them', async () => {
+    const { io, state } = fakeIO({ findKeys: vi.fn(async () => ['keys-1', 'keys-2']) });
+    state.current = { ...state.current, keysPublishedAt: '2026-10-02T18:00:00.000Z' };
+
+    await expect(new DriveSyncService(io).keysForSync()).rejects.toMatchObject({ code: 'keys_ambiguous' });
+    expect(io.readKeys).not.toHaveBeenCalled();
+  });
+
+  it('makes the page’s call with its own fresh token', async () => {
+    const fresh = { accessToken: 'fresh', refreshToken: 'rt', expiresAt: Date.now() + 3_600_000 };
+    const { io } = fakeIO({ ensureFresh: vi.fn(async () => fresh) });
+    const request = { url: 'https://www.googleapis.com/drive/v3/files', method: 'GET', headers: {} };
+
+    await new DriveSyncService(io).fetchForSync(request);
+
+    expect(io.fetchDrive).toHaveBeenCalledWith(fresh, request);
+    expect(io.writeTokens).toHaveBeenCalledWith(fresh);
+  });
+
+  it('answers 401 when Google no longer gives a token: the page asks the owner to reconnect', async () => {
+    const { io } = fakeIO({ readTokens: vi.fn(async () => null) });
+
+    const answer = await new DriveSyncService(io).fetchForSync({
+      url: 'https://www.googleapis.com/drive/v3/files',
+      method: 'GET',
+      headers: {},
+    });
+
+    expect(answer.status).toBe(401);
+    expect(io.fetchDrive).not.toHaveBeenCalled();
+  });
+});

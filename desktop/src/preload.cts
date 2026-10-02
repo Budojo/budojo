@@ -90,6 +90,16 @@ contextBridge.exposeInMainWorld('__BUDOJO__', {
     connectPhone: () => ipcRenderer.invoke('budojo:drive:connect-phone'),
     sync: () => ipcRenderer.invoke('budojo:drive:sync'),
   },
+  /**
+   * The sync between the owner's devices (#2032): the engine runs in the page,
+   * and asks the main process who this PC is, to make its Drive calls with a
+   * token the page never holds, and to swap a staged database in.
+   */
+  sync: {
+    identity: () => ipcRenderer.invoke('budojo:sync:identity'),
+    driveFetch: (request: unknown) => ipcRenderer.invoke('budojo:sync:drive-fetch', request),
+    swapIn: () => ipcRenderer.invoke('budojo:sync:swap-in'),
+  },
   // Backup folder (#1320). The owner picks any folder — a synced one, a NAS, a
   // USB stick — and every backup is copied there. No account, no API.
   folder: {

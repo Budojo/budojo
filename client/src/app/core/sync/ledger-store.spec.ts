@@ -17,29 +17,35 @@ describe('the ledger store', () => {
   beforeEach(() => localStorage.clear());
 
   it('keeps a ledger across launches', () => {
-    saveLedger('phone9c1e', ledger);
-    expect(loadLedger('phone9c1e')).toEqual(ledger);
+    saveLedger({ device: 'phone9c1e' }, ledger);
+    expect(loadLedger({ device: 'phone9c1e' })).toEqual(ledger);
   });
 
   it('starts empty with nothing saved', () => {
-    expect(loadLedger('phone9c1e')).toEqual(EMPTY_LEDGER);
+    expect(loadLedger({ device: 'phone9c1e' })).toEqual(EMPTY_LEDGER);
   });
 
   it('never hands one device’s ledger to another identity', () => {
-    saveLedger('phone9c1e', ledger);
-    expect(loadLedger('phone7k2m')).toEqual(EMPTY_LEDGER);
+    saveLedger({ device: 'phone9c1e' }, ledger);
+    expect(loadLedger({ device: 'phone7k2m' })).toEqual(EMPTY_LEDGER);
+  });
+
+  it('forgets the ledger of a database the PC restored: its epoch moved on (#2032)', () => {
+    saveLedger({ device: 'pc4f2a', epoch: 2 }, ledger);
+    expect(loadLedger({ device: 'pc4f2a', epoch: 2 })).toEqual(ledger);
+    expect(loadLedger({ device: 'pc4f2a', epoch: 3 })).toEqual(EMPTY_LEDGER);
   });
 
   it('starts empty on a damaged ledger rather than trusting it', () => {
     localStorage.setItem('budojoSyncLedger', '{"device":"phone9c1e","ledger":{"base":7}}');
-    expect(loadLedger('phone9c1e')).toEqual(EMPTY_LEDGER);
+    expect(loadLedger({ device: 'phone9c1e' })).toEqual(EMPTY_LEDGER);
     localStorage.setItem('budojoSyncLedger', 'not json');
-    expect(loadLedger('phone9c1e')).toEqual(EMPTY_LEDGER);
+    expect(loadLedger({ device: 'phone9c1e' })).toEqual(EMPTY_LEDGER);
   });
 
   it('forgets it when the database is replaced outside the sync', () => {
-    saveLedger('phone9c1e', ledger);
+    saveLedger({ device: 'phone9c1e' }, ledger);
     forgetLedger();
-    expect(loadLedger('phone9c1e')).toEqual(EMPTY_LEDGER);
+    expect(loadLedger({ device: 'phone9c1e' })).toEqual(EMPTY_LEDGER);
   });
 });

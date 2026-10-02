@@ -138,6 +138,7 @@ export function createDriveSyncIO(input: {
     readKeys: (tokens, id) => drive.readAppDataFile(tokens, id),
     writeKeys: (tokens, text) => drive.createAppDataFile(tokens, KEYS_FILE, text),
     ensureFresh: (tokens) => drive.ensureFresh(config, tokens),
+    fetchDrive: (tokens, request) => drive.fetchDrive(tokens, request),
     accountEmail: (tokens) => drive.accountEmail(tokens),
     ensureFolder: (tokens) => drive.ensureFolder(tokens),
     listRemote: (tokens, folderId) => drive.listArchives(tokens, folderId),

@@ -32,6 +32,8 @@
   already uses puts them.
 -->
 <div class="rail__foot">
+  <!-- What the shell puts beside the account: the sync state (#2032). -->
+  <ng-content select="[railFoot]" />
   @for (item of secondary(); track item.routerLink) {
     <a
       class="rail__item"
