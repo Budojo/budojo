@@ -177,6 +177,15 @@ const rows: {
     expected: { kind: 'ask', latest: ref(1, PHONE) },
   },
   {
+    name: 'its push on its own first version never landed, and another academy’s line is there: the owner chooses',
+    local: local(ref(1), {
+      unconfirmed: pushed(ref(2), NOW - LISTING_LAG_MS, ref(1)),
+    }),
+    folder: [v(1, PHONE, null, 1_000), v(1, PC, null, 2_000)],
+    now: NOW,
+    expected: { kind: 'ask', latest: ref(1, PHONE) },
+  },
+  {
     name: 'both first versions landed, its own second: two academies, the owner chooses',
     local: local(ref(1)),
     folder: [v(1, PHONE, null, 1_000), v(1, PC, null, 2_000)],
