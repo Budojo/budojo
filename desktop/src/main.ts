@@ -646,41 +646,73 @@ async function startRuntime(): Promise<{
    * scheduler and the notification poll open the database on their own, and
    * a backup's VACUUM holds it: each lets go first.
    */
+  /**
+   * Ends the app with the reason, as a failed start does, when going on would
+   * be wrong: a server serving the old database while the page counts the new
+   * one as in, or no server at all. The next start finishes what was staged.
+   */
+  let gaveUp = false;
+  const giveUp = (what: string, error: unknown): never => {
+    if (gaveUp) {
+      throw error;
+    }
+    gaveUp = true;
+    const reason = error instanceof Error ? error.message : String(error);
+    syncLog.write(`${new Date().toISOString()} ${what}: ${reason}`);
+    dialog.showErrorBox(
+      'Budojo has to start again',
+      `${what}.\n\n${reason}\n\nOpen Budojo again: it finishes as it starts.\n\nLog: ${path.join(layout.logsDir, 'sync.log')}`,
+    );
+    app.exit(1);
+    throw error;
+  };
+  /** A swap began and did not end: the staged database or its reconcile still waits. */
+  const swapPending = (): boolean =>
+    existsSync(`${layout.databasePath}.staged`) || existsSync(`${layout.databasePath}.reconcile`);
+
+  /**
+   * Stops every PHP process of ours, runs `work`, and starts the server again
+   * on its port: the page keeps the address its window was given. The
+   * scheduler and the notification poll open the database on their own, and
+   * a backup's VACUUM reads it: each lets go first, and no backup starts
+   * until the server is back (`BackupService.holding`).
+   */
   const restartServer = (work: () => Promise<void>): Promise<void> =>
     withServerStopped(async () => {
       const held = [scheduler, notifierPoll, backupPoll];
       await Promise.all(held.map((task) => task.pause()));
       try {
-        // A backup asked by hand runs outside the poll: its VACUUM holds the
-        // database, which the swap renames. Waited for, never swapped under.
-        for (let waited = 0; backupService.busy; waited += 500) {
-          if (waited >= 120_000) {
-            throw new Error('a backup is still running: the swap waits for the next round');
+        await backupService.holding(async () => {
+          const port = supervisor.port ?? undefined;
+          await supervisor.stop();
+          let failure: unknown = null;
+          try {
+            await work();
+          } catch (error) {
+            failure = error;
           }
-          await new Promise((resolve) => setTimeout(resolve, 500));
-        }
-        const port = supervisor.port ?? undefined;
-        await supervisor.stop();
-        try {
-          await work();
-        } catch (error) {
-          // The staged database still waiting means the swap stopped before it
-          // came in, and the page already counts it as in: serving the old
-          // database now would publish it over the other device's work. Ended
-          // as a failed start is, so the next start finishes the swap.
-          if (existsSync(`${layout.databasePath}.staged`)) {
-            syncLog.write(`${new Date().toISOString()} swap failed with the database still staged: ${String(error)}`);
-            dialog.showErrorBox(
-              'Budojo could not bring in the phone\'s changes',
-              `${error instanceof Error ? error.message : String(error)}\n\nOpen Budojo again: it finishes bringing them in as it starts.\n\nLog: ${path.join(layout.logsDir, 'sync.log')}`,
-            );
-            app.exit(1);
+          // The page already counts the staged version as in: the old
+          // database must not be served, nor one not yet reconciled.
+          if (failure !== null && swapPending()) {
+            giveUp('Budojo could not bring in the changes from the other device', failure);
           }
-          throw error;
-        } finally {
-          await supervisor.start(port);
+          try {
+            await supervisor.start(port);
+          } catch (error) {
+            giveUp('Budojo\'s server did not come back', error);
+          }
           syncState.running = syncState.file?.device ?? null;
+          if (failure !== null) {
+            throw failure;
+          }
+        });
+      } catch (error) {
+        // A backup that would not end: the server was never stopped, and the
+        // staged database still waits for its swap.
+        if (swapPending()) {
+          giveUp('Budojo could not bring in the changes from the other device', error);
         }
+        throw error;
       } finally {
         for (const task of held) {
           task.resume();
@@ -772,6 +804,13 @@ async function writeDeviceFile(layout: DataLayout, sync: SyncDevice): Promise<vo
   const part = `${layout.syncDeviceFile}.part`;
   await writeFile(part, serializeDeviceFile(sync), 'utf8');
   await rename(part, layout.syncDeviceFile);
+}
+
+/** A call that never reached Google: `fetch` failing, or the socket's own codes. */
+function isNetworkFailure(error: unknown): boolean {
+  const text = `${error instanceof Error ? error.message : String(error)} ${String((error as { cause?: { code?: unknown } } | null)?.cause?.code ?? '')}`;
+
+  return error instanceof TypeError || /fetch failed|ENOTFOUND|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|ENETUNREACH/i.test(text);
 }
 
 /** Whether this PC connected the phone (#2033): Drive's state says when it found the keys its own. */
@@ -959,6 +998,10 @@ function registerSyncBridge(syncOf: () => DesktopSync | null, driveOf: () => Dri
       if ((error as { code?: unknown } | null)?.code === 'invalid_grant') {
         return { unauthorized: true };
       }
+      // No network: the page counts what waits, as on the phone.
+      if (isNetworkFailure(error)) {
+        return { offline: true };
+      }
       throw error;
     }
 
@@ -1135,7 +1178,15 @@ function registerBackupBridge(
           // archive passed its checks, and what broke is the swap itself.
           check = { ok: false, code: 'failed', reason: error instanceof Error ? error.message : String(error) };
         } finally {
-          await supervisor.start(port);
+          // No server is worse than an error box: the page would sit on its
+          // offline screen with nothing said.
+          await supervisor.start(port).catch((error: unknown) => {
+            dialog.showErrorBox(
+              'Budojo has to start again',
+              `Budojo's server did not come back after the restore.\n\n${error instanceof Error ? error.message : String(error)}\n\nOpen Budojo again.`,
+            );
+            app.exit(1);
+          });
         }
       });
     } finally {

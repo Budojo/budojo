@@ -176,11 +176,13 @@ interface BudojoBridge {
   readonly sync: {
     /**
      * Null until the PC connected the phone and its server journals;
-     * `unauthorized` when Google let go of the PC (weekly while in Testing).
+     * `unauthorized` when Google let go of the PC (weekly while in Testing);
+     * `offline` when the keys could not be read for want of a network.
      */
     identity(): Promise<
       | { device: string; folder: string; syncKey: string; epoch: number }
       | { unauthorized: true }
+      | { offline: true }
       | null
     >;
     /** One call to Drive's files API: the main process puts its token on it. */

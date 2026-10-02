@@ -107,6 +107,8 @@ export class SyncService {
   private running: Promise<void> | null = null;
   private again = false;
   private key: { raw: string; key: CryptoKey } | null = null;
+  /** Whose ledger the last round used: an identity that cannot be read offline still counts what waits. */
+  private lastOwner: LedgerOwner | null = null;
 
   constructor() {
     inject(DestroyRef).onDestroy(() => this.stop());
@@ -229,7 +231,7 @@ export class SyncService {
     } catch (error) {
       // On the PC the identity reads the keys from the account: no network,
       // or Google letting go, is said as for any round.
-      await this.failed(error, null);
+      await this.failed(error, this.lastOwner);
       return;
     }
     if (platform === null || identity === null) {
@@ -241,6 +243,7 @@ export class SyncService {
       folder: identity.folder,
       epoch: identity.epoch,
     };
+    this.lastOwner = owner;
     const { device } = identity;
     if (this.stateSignal().kind !== 'synced') {
       this.stateSignal.set({ kind: 'syncing' });

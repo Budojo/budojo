@@ -57,6 +57,9 @@ export function desktopSyncPlatform(
       if (identity !== null && 'unauthorized' in identity) {
         throw new RemoteError('unauthorized', 'Google wants the owner to sign in again');
       }
+      if (identity !== null && 'offline' in identity) {
+        throw new RemoteError('offline', 'no network to read the academy’s keys');
+      }
       return identity;
     },
     remote: new DriveRemote(async () => 'held-by-the-main-process', bridgeFetcher(bridge.sync)),
