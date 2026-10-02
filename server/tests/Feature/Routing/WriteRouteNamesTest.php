@@ -40,7 +40,9 @@ function writeRouteNames(): array
 
 it('names every write route, in the journal\'s shape', function (): void {
     foreach (writeRouteNames() as $route => $name) {
-        expect($name)->toMatch('/^[a-z0-9_-]+(\.[a-z0-9_-]+)+$/', "{$route} has no journal-shaped name");
+        // The client's own check on a journal entry (`core/sync/journal.ts`):
+        // dotted segments, each starting with a letter.
+        expect($name)->toMatch('/^[a-z][a-z0-9_-]*(\.[a-z][a-z0-9_-]*)+$/', "{$route} has no journal-shaped name");
     }
 });
 
