@@ -13,6 +13,7 @@ function drive(
     files?: { id: string; name: string }[];
     email?: string;
     keys?: unknown;
+    keyFiles?: number;
   } = {},
 ): { fetcher: Fetcher; urls: string[] } {
   const urls: string[] = [];
@@ -22,7 +23,10 @@ function drive(
       return Response.json({ user: { emailAddress: answers.email ?? 'mario@gmail.com' } });
     }
     if (url.includes('spaces=appDataFolder')) {
-      return Response.json({ files: answers.keys === undefined ? [] : [{ id: 'keys-1' }] });
+      const count = answers.keyFiles ?? (answers.keys === undefined ? 0 : 1);
+      return Response.json({
+        files: Array.from({ length: count }, (_, i) => ({ id: `keys-${i + 1}` })),
+      });
     }
     if (url.includes('/files/keys-1?alt=media')) {
       return Response.json(answers.keys);
@@ -137,6 +141,13 @@ describe("the PC's backups on Drive (#2079)", () => {
       const { fetcher } = drive();
 
       expect(await new PcBackups(token, fetcher).academyKeys()).toBeNull();
+    });
+
+    it('takes neither when the account holds the keys twice, as the PC refuses to', async () => {
+      const { fetcher, urls } = drive({ keys, keyFiles: 2 });
+
+      await expect(new PcBackups(token, fetcher).academyKeys()).rejects.toThrow('twice');
+      expect(urls.some((url) => url.includes('alt=media'))).toBe(false);
     });
 
     it('refuses keys that do not read, rather than adopt half of them', async () => {

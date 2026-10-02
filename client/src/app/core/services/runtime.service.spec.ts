@@ -44,6 +44,30 @@ describe('RuntimeService', () => {
     expect(service.hasConfirmed()('community')).toBe(false);
   });
 
+  // The default it keeps holds the upload: on the phone that would be a
+  // button whose submit gets a 404.
+  it('confirms nothing when the request fails, or answers with no runtime', async () => {
+    const failing = service.load();
+    http
+      .expectOne('/api/v1/runtime')
+      .flush({ message: 'down' }, { status: 500, statusText: 'Server Error' });
+    await failing;
+    expect(service.loaded()).toBe(true);
+    expect(service.hasConfirmed()('document_upload')).toBe(false);
+
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    });
+    const fresh = TestBed.inject(RuntimeService);
+    const freshHttp = TestBed.inject(HttpTestingController);
+    const malformed = fresh.load();
+    freshHttp.expectOne('/api/v1/runtime').flush('<!doctype html>');
+    await malformed;
+    expect(fresh.hasConfirmed()('document_upload')).toBe(false);
+    freshHttp.verify();
+  });
+
   it('keeps the sync only when a device reports it', async () => {
     const loading = service.load();
     http

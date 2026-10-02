@@ -65,6 +65,8 @@ export class RuntimeService {
   private readonly capabilitiesSignal = signal<readonly Capability[]>(WEB_CAPABILITIES);
   private readonly profileSignal = signal<RuntimeProfile>('web');
   private readonly loadedSignal = signal<boolean>(false);
+  /** The server answered with a runtime that parsed: not merely a request that ended. */
+  private readonly confirmedSignal = signal<boolean>(false);
   private loading: Promise<void> | null = null;
 
   readonly capabilities = this.capabilitiesSignal.asReadonly();
@@ -87,12 +89,14 @@ export class RuntimeService {
   /**
    * True only once the server has said the runtime offers the capability.
    * For a surface some runtimes lack, which must not paint on the optimistic
-   * web default and then vanish: the phone's document upload (#2034).
+   * web default and then vanish: the phone's document upload (#2034). A
+   * request that failed, or answered with no runtime, confirms nothing: the
+   * web default it keeps would offer the phone an upload it has not got.
    */
   readonly hasConfirmed = computed(() => {
-    const loaded = this.loadedSignal();
+    const confirmed = this.confirmedSignal();
     const has = this.has();
-    return (capability: Capability): boolean => loaded && has(capability);
+    return (capability: Capability): boolean => confirmed && has(capability);
   });
 
   /**
@@ -114,6 +118,7 @@ export class RuntimeService {
         }
         this.profileSignal.set(parsed.profile);
         this.capabilitiesSignal.set(parsed.capabilities);
+        this.confirmedSignal.set(true);
       })
       .catch(() => undefined)
       .finally(() => this.loadedSignal.set(true));

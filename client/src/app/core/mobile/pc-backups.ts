@@ -84,12 +84,21 @@ export class PcBackups {
       spaces: 'appDataFolder',
       q: `name='${KEYS_FILE}' and trashed=false`,
       fields: 'files(id)',
-      pageSize: '1',
+      // Two, to tell one from more: Drive allows two files of one name, and a
+      // reader must not pick one, as the desktop refuses to (drive-io.ts).
+      pageSize: '2',
     });
     const found = await this.json<{ files?: { id: string }[] }>(
       `${API}/files?${params.toString()}`,
     );
-    const id = found.files?.[0]?.id;
+    const files = found.files ?? [];
+    if (files.length > 1) {
+      throw new RemoteError(
+        'unavailable',
+        `the Google account holds ${KEYS_FILE} twice: neither is taken`,
+      );
+    }
+    const id = files[0]?.id;
     if (id === undefined) {
       return null;
     }
