@@ -14,6 +14,7 @@ import {
 } from '../../core/services/athlete-invite.service';
 import { AuthService } from '../../core/services/auth.service';
 import { NotificationOnboardingService } from '../../core/services/notification-onboarding.service';
+import { BrandGlyphComponent } from '../../shared/components/brand-glyph/brand-glyph.component';
 
 /**
  * Public athlete-invite landing page (#445, M7 PR-C). Reached at
@@ -38,6 +39,7 @@ type State = 'loading' | 'invalid' | 'ready' | 'submitting' | 'error';
   selector: 'app-athlete-invite',
   standalone: true,
   imports: [
+    BrandGlyphComponent,
     ReactiveFormsModule,
     RouterLink,
     ButtonModule,

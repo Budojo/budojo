@@ -19,6 +19,7 @@ import { TrainingDaysPickerComponent } from '../../../shared/components/training
 import { MartialArtPickerComponent } from '../../../shared/components/martial-art-picker/martial-art-picker.component';
 import { BudojoFormFieldComponent } from '../../../shared/components/budojo-form-field/budojo-form-field.component';
 import { RuntimeService } from '../../../core/services/runtime.service';
+import { BrandGlyphComponent } from '../../../shared/components/brand-glyph/brand-glyph.component';
 
 const noWhitespace: ValidatorFn = (control: AbstractControl) =>
   control.value?.trim() ? null : { whitespace: true };
@@ -27,6 +28,7 @@ const noWhitespace: ValidatorFn = (control: AbstractControl) =>
   selector: 'app-setup',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    BrandGlyphComponent,
     ReactiveFormsModule,
     ButtonModule,
     InputTextModule,

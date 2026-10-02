@@ -7,6 +7,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
 import { finalize } from 'rxjs';
 import { AuthService } from '../../../core/services/auth.service';
+import { BrandGlyphComponent } from '../../../shared/components/brand-glyph/brand-glyph.component';
 
 /**
  * `/auth/forgot-password` (M5 PR-A). Single email field; on submit calls
@@ -23,6 +24,7 @@ import { AuthService } from '../../../core/services/auth.service';
   selector: 'app-forgot-password',
   standalone: true,
   imports: [
+    BrandGlyphComponent,
     ReactiveFormsModule,
     RouterLink,
     ButtonModule,

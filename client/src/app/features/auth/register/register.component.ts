@@ -14,10 +14,12 @@ import { NotificationOnboardingService } from '../../../core/services/notificati
 import { RuntimeService } from '../../../core/services/runtime.service';
 import { BudojoFormFieldComponent } from '../../../shared/components/budojo-form-field/budojo-form-field.component';
 import { PasswordStrengthMeterComponent } from '../../../shared/components/password-strength-meter/password-strength-meter.component';
+import { BrandGlyphComponent } from '../../../shared/components/brand-glyph/brand-glyph.component';
 
 @Component({
   selector: 'app-register',
   imports: [
+    BrandGlyphComponent,
     ReactiveFormsModule,
     RouterLink,
     ButtonModule,

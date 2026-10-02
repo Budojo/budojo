@@ -26,6 +26,16 @@ const RUNTIME_CAPABILITIES: Record<string, string[]> = {
   mobile: ['sync'],
 };
 const runtime = String(Cypress.env('RUNTIME') ?? '');
+/** `make shot THEME=dark`: the theme to shoot in. Unset, the system's (light here). */
+const theme = String(Cypress.env('THEME') ?? '');
+if (theme !== '' && theme !== 'dark' && theme !== 'light') {
+  throw new Error(`Unknown THEME "${theme}": use dark or light.`);
+}
+const visitOptions = {
+  onBeforeLoad(win: Window): void {
+    if (theme !== '') win.localStorage.setItem('budojoTheme', theme);
+  },
+};
 if (runtime !== '' && !(runtime in RUNTIME_CAPABILITIES)) {
   // A typo would otherwise shoot the web nav under a name that says otherwise.
   throw new Error(
@@ -83,6 +93,7 @@ function stubShell(): void {
 }
 const slug =
   (runtime ? `${runtime}-` : '') +
+    (theme ? `${theme}-` : '') +
     String(route)
       .replace(/[^a-z0-9]+/gi, '-')
       .replace(/^-|-$/g, '') || 'page';
@@ -106,7 +117,7 @@ describe(`shot ${route}`, () => {
   it('desktop 1280', () => {
     cy.viewport(1280, 800);
     stubShell();
-    cy.visitAuthenticated(route);
+    cy.visitAuthenticated(route, undefined, visitOptions);
     // Give the page its data before the shutter — a screenshot of a skeleton
     // is a screenshot of nothing.
     cy.get('body').should('be.visible');
@@ -118,7 +129,7 @@ describe(`shot ${route}`, () => {
   it('mobile 375', () => {
     cy.viewport(375, 800);
     stubShell();
-    cy.visitAuthenticated(route);
+    cy.visitAuthenticated(route, undefined, visitOptions);
     cy.get('body').should('be.visible');
     cy.wait(1200);
     noBuildOverlay();
