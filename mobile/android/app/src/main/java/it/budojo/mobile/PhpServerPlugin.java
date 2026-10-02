@@ -90,6 +90,50 @@ public class PhpServerPlugin extends Plugin {
     }
 
     /**
+     * Takes the academy's two app keys the PC put with the Google account
+     * (#2033), so this phone opens what the PC encrypted: the medical
+     * certificates its restored backup holds. Checked as the desktop's keychain
+     * checks them; the phone's own pair is kept beside as
+     * {@code secrets.previous.json}. Takes effect at the server's next start,
+     * which the page asks for. Answers whether anything changed.
+     */
+    @PluginMethod
+    public void adoptKeys(PluginCall call) {
+        String appKey = call.getString("APP_KEY");
+        String documentKey = call.getString("DOCUMENT_ENCRYPTION_KEY");
+        if (appKey == null || !appKey.startsWith("base64:") || appKey.length() < 40
+                || documentKey == null || documentKey.length() < 40) {
+            call.reject("not an academy's keys", "INVALID_KEYS");
+            return;
+        }
+        try {
+            File files = getContext().getFilesDir();
+            JSONObject current = secrets(files);
+            JSObject out = new JSObject();
+            if (appKey.equals(current.getString("APP_KEY"))
+                    && documentKey.equals(current.getString("DOCUMENT_ENCRYPTION_KEY"))) {
+                out.put("changed", false);
+                call.resolve(out);
+                return;
+            }
+            JSONObject adopted = new JSONObject();
+            adopted.put("v", 1);
+            adopted.put("APP_KEY", appKey);
+            adopted.put("DOCUMENT_ENCRYPTION_KEY", documentKey);
+            writeFile(new File(files, "secrets.previous.json"), current.toString());
+            File part = new File(files, "secrets.json.part");
+            writeFile(part, adopted.toString());
+            if (!part.renameTo(new File(files, "secrets.json"))) {
+                throw new IOException("could not write the adopted keys");
+            }
+            out.put("changed", true);
+            call.resolve(out);
+        } catch (Exception e) {
+            call.reject(e.getClass().getSimpleName() + ": " + e.getMessage(), e);
+        }
+    }
+
+    /**
      * Back from the background: if Android killed the server meanwhile, start it
      * again now, before the page's next request has to wait for it.
      */

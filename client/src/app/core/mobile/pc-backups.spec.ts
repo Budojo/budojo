@@ -12,6 +12,7 @@ function drive(
     folders?: { id: string }[];
     files?: { id: string; name: string }[];
     email?: string;
+    keys?: unknown;
   } = {},
 ): { fetcher: Fetcher; urls: string[] } {
   const urls: string[] = [];
@@ -19,6 +20,12 @@ function drive(
     urls.push(url);
     if (url.includes('/about')) {
       return Response.json({ user: { emailAddress: answers.email ?? 'mario@gmail.com' } });
+    }
+    if (url.includes('spaces=appDataFolder')) {
+      return Response.json({ files: answers.keys === undefined ? [] : [{ id: 'keys-1' }] });
+    }
+    if (url.includes('/files/keys-1?alt=media')) {
+      return Response.json(answers.keys);
     }
     if (url.includes('alt=media')) {
       return new Response(new Uint8Array([80, 75, 3, 4]));
@@ -104,6 +111,38 @@ describe("the PC's backups on Drive (#2079)", () => {
     await expect(new PcBackups(token, offline).account()).rejects.toBeInstanceOf(RemoteError);
     await expect(new PcBackups(token, offline).account()).rejects.toMatchObject({
       reason: 'offline',
+    });
+  });
+
+  describe("the academy's keys (#2033)", () => {
+    const keys = {
+      v: 1,
+      folder: '0123456789abcdef0123456789abcdef',
+      syncKey: btoa('k'.repeat(32)),
+      APP_KEY: `base64:${btoa('a'.repeat(32))}`,
+      DOCUMENT_ENCRYPTION_KEY: btoa('d'.repeat(32)),
+      createdAt: '2026-10-02T18:00:00.000Z',
+    };
+
+    it("reads them from the account's hidden application data", async () => {
+      const { fetcher, urls } = drive({ keys });
+
+      const found = await new PcBackups(token, fetcher).academyKeys();
+
+      expect(found?.APP_KEY).toBe(keys.APP_KEY);
+      expect(new URL(urls[0]).searchParams.get('spaces')).toBe('appDataFolder');
+    });
+
+    it('finds none while the PC has not connected the phone', async () => {
+      const { fetcher } = drive();
+
+      expect(await new PcBackups(token, fetcher).academyKeys()).toBeNull();
+    });
+
+    it('refuses keys that do not read, rather than adopt half of them', async () => {
+      const { fetcher } = drive({ keys: { ...keys, syncKey: 'short' } });
+
+      await expect(new PcBackups(token, fetcher).academyKeys()).rejects.toBeInstanceOf(RemoteError);
     });
   });
 });

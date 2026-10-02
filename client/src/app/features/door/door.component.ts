@@ -12,7 +12,8 @@ import {
   viewChild,
 } from '@angular/core';
 import { Router } from '@angular/router';
-import { TranslatePipe } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { MessageService } from 'primeng/api';
 import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { MessageModule } from 'primeng/message';
@@ -25,6 +26,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { Belt } from '../../core/services/athlete.service';
 import { LanguageService } from '../../core/services/language.service';
 import { buffer } from '../../core/sync/bytes';
+import { AcademyKeys } from '../../core/sync/keys';
 import { RemoteError } from '../../core/sync/remote';
 import { BrandGlyphComponent } from '../../shared/components/brand-glyph/brand-glyph.component';
 import { beltColourVar, beltPaint } from '../../shared/utils/belt-palette';
@@ -72,6 +74,8 @@ export class DoorComponent {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly language = inject(LanguageService);
+  private readonly messages = inject(MessageService);
+  private readonly translate = inject(TranslateService);
 
   private readonly injector = inject(Injector);
   private readonly stepRegion = viewChild<ElementRef<HTMLElement>>('stepRegion');
@@ -102,6 +106,8 @@ export class DoorComponent {
   private archiveName: string | null = null;
   /** The token Drive was last asked with, dropped when Drive refuses it. */
   private lastToken: string | null = null;
+  /** The academy's keys the PC put with the Google account (#2033); null until it connects the phone. */
+  private keys: AcademyKeys | null = null;
 
   constructor() {
     // The button that had focus is gone once the step changes: focus moves to
@@ -140,6 +146,9 @@ export class DoorComponent {
     this.step.set('looking');
     try {
       this.account.set(await backups.account());
+      // Best effort: without them the gym still comes back, and only its
+      // medical certificates wait for the PC's «Collega il telefono».
+      this.keys = await backups.academyKeys().catch(() => null);
       const newest = (await backups.newestFirst()).slice(0, TRIES);
       if (
         newest.length > 0 &&
@@ -186,9 +195,12 @@ export class DoorComponent {
     this.step.set('restoring');
     try {
       await firstValueFrom(this.device.restore(archive));
+      // One restart swaps the backup in and starts under the PC's keys.
+      await this.takeTheKeys();
       await restartPhoneServer(server);
       rememberRestored(this.archiveName);
       await this.enter();
+      this.sayWhenCertificatesWait();
     } catch (error) {
       this.fail(error);
     }
@@ -196,7 +208,15 @@ export class DoorComponent {
 
   async keepHere(): Promise<void> {
     try {
+      // The phone's copy of the gym on Drive takes its keys; a gym of the
+      // phone's own never does: they would not open what it encrypted.
+      if (this.step() === 'update') {
+        await this.restartIfKeysChanged();
+      }
       await this.enter();
+      if (this.step() === 'update') {
+        this.sayWhenCertificatesWait();
+      }
     } catch (error) {
       this.fail(error);
     }
@@ -225,10 +245,16 @@ export class DoorComponent {
     }));
   }
 
-  /** The phone's own owner, when it has one; false on a phone nobody has set up. */
+  /**
+   * The phone's own owner, when it has one; false on a phone nobody has set
+   * up. Called only for the phone's copy of the gym on Drive, which takes the
+   * academy's keys first.
+   */
   private async enteredAsTheOwner(): Promise<boolean> {
     try {
+      await this.restartIfKeysChanged();
       await this.enter();
+      this.sayWhenCertificatesWait();
       return true;
     } catch (error) {
       if (error instanceof HttpErrorResponse && error.status === 404) {
@@ -236,6 +262,38 @@ export class DoorComponent {
       }
       throw error;
     }
+  }
+
+  /** Whether the phone took keys it did not have. */
+  private async takeTheKeys(): Promise<boolean> {
+    const keys = this.keys;
+    if (keys === null || this.server === null) {
+      return false;
+    }
+    const { changed } = await this.server.adoptKeys({
+      APP_KEY: keys.APP_KEY,
+      DOCUMENT_ENCRYPTION_KEY: keys.DOCUMENT_ENCRYPTION_KEY,
+    });
+    return changed;
+  }
+
+  private async restartIfKeysChanged(): Promise<void> {
+    if ((await this.takeTheKeys()) && this.server !== null) {
+      await restartPhoneServer(this.server);
+    }
+  }
+
+  /** Until the PC connects the phone, the certificates do not open here: said once, with where to do it. */
+  private sayWhenCertificatesWait(): void {
+    if (this.keys !== null) {
+      return;
+    }
+    this.messages.add({
+      severity: 'info',
+      summary: this.translate.instant('door.keysWait.title'),
+      detail: this.translate.instant('door.keysWait.detail'),
+      life: 12000,
+    });
   }
 
   private async enter(): Promise<void> {

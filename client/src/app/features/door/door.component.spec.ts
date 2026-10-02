@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideRouter, Router } from '@angular/router';
+import { MessageService } from 'primeng/api';
 import { Observable, of, throwError } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 import { provideI18nTesting } from '../../../test-utils/i18n-test';
@@ -32,7 +33,17 @@ function unreadable(): HttpErrorResponse {
   return new HttpErrorResponse({ status: 422, error: { code: 'unreadable', message: 'no' } });
 }
 
+const PC_KEYS = {
+  folder: '0123456789abcdef0123456789abcdef',
+  syncKey: btoa('k'.repeat(32)),
+  APP_KEY: `base64:${btoa('a'.repeat(32))}`,
+  DOCUMENT_ENCRYPTION_KEY: btoa('d'.repeat(32)),
+  createdAt: '2026-10-02T18:00:00.000Z',
+};
+
 interface Setup {
+  keys?: typeof PC_KEYS | null;
+  keysChanged?: boolean;
   backups?: PcBackup[];
   inspect?: DeviceService['inspect'];
   session?: DeviceService['session'];
@@ -49,6 +60,7 @@ function setup(options: Setup = {}) {
     ),
     newestFirst: vi.fn(async () => backups),
     download: vi.fn(async (backup: PcBackup) => new TextEncoder().encode(`zip of ${backup.id}`)),
+    academyKeys: vi.fn(async () => (options.keys === undefined ? PC_KEYS : options.keys)),
   };
   const device = {
     inspect: vi.fn(options.inspect ?? (() => of({ data: inspection() }))),
@@ -58,6 +70,7 @@ function setup(options: Setup = {}) {
   const server = {
     start: vi.fn(),
     restart: vi.fn(async () => ({ port: 50001, shellSecret: 's' })),
+    adoptKeys: vi.fn(async () => ({ changed: options.keysChanged ?? true })),
   };
   const drive = {
     authorize: vi.fn(options.authorize ?? (async () => ({ accessToken: 'google-token' }))),
@@ -72,6 +85,7 @@ function setup(options: Setup = {}) {
       ]),
       provideAnimationsAsync(),
       ...provideI18nTesting(),
+      MessageService,
       { provide: DeviceService, useValue: device },
       { provide: PHP_SERVER, useValue: server },
       { provide: DRIVE_AUTH, useValue: drive },
@@ -88,13 +102,15 @@ function setup(options: Setup = {}) {
   vi.spyOn(auth, 'adoptSession');
   const router = TestBed.inject(Router);
   vi.spyOn(router, 'navigateByUrl');
+  const toasts: unknown[] = [];
+  vi.spyOn(TestBed.inject(MessageService), 'add').mockImplementation((m) => toasts.push(m));
   const fixture = TestBed.createComponent(DoorComponent);
   fixture.detectChanges();
   const component = fixture.componentInstance;
   const el = fixture.nativeElement as HTMLElement;
   const render = () => fixture.detectChanges();
   const cy = (name: string) => el.querySelector(`[data-cy="${name}"]`);
-  return { component, el, render, cy, reader, device, server, drive, auth, router };
+  return { component, el, render, cy, reader, device, server, drive, auth, router, toasts };
 }
 
 afterEach(() => {
@@ -416,5 +432,73 @@ describe('a step that replaces the button that had focus', () => {
     await new Promise((resolve) => setTimeout(resolve));
 
     expect(document.activeElement).toBe(el.querySelector('.door__step'));
+  });
+});
+
+describe("the academy's keys from the Google account (#2033)", () => {
+  it("takes the PC's keys with the restore, in the one restart that swaps it in", async () => {
+    const { component, server, toasts } = setup();
+
+    await component.signInWithGoogle();
+
+    expect(server.adoptKeys).toHaveBeenCalledWith({
+      APP_KEY: PC_KEYS.APP_KEY,
+      DOCUMENT_ENCRYPTION_KEY: PC_KEYS.DOCUMENT_ENCRYPTION_KEY,
+    });
+    expect(server.restart).toHaveBeenCalledTimes(1);
+    expect(toasts).toEqual([]);
+  });
+
+  it('says where to connect the phone on the PC while the keys are not there', async () => {
+    const { component, server, toasts } = setup({ keys: null });
+
+    await component.signInWithGoogle();
+
+    expect(server.adoptKeys).not.toHaveBeenCalled();
+    expect(toasts).toEqual([
+      expect.objectContaining({
+        severity: 'info',
+        detail: expect.stringContaining('Connect the phone'),
+      }),
+    ]);
+  });
+
+  it('takes them when signing in again, restarting before going in', async () => {
+    localStorage.setItem('budojoRestoredBackup', 'budojo-backup-20261001-165132.zip');
+    const order: string[] = [];
+    const { component, server, device } = setup();
+    server.restart.mockImplementation(async () => {
+      order.push('restart');
+      return { port: 1, shellSecret: 's' };
+    });
+    device.session.mockImplementation(() => {
+      order.push('session');
+      return of(SESSION);
+    });
+
+    await component.signInWithGoogle();
+
+    expect(server.adoptKeys).toHaveBeenCalled();
+    expect(order).toEqual(['restart', 'session']);
+    expect(device.restore).not.toHaveBeenCalled();
+  });
+
+  it('does not restart for keys the phone already has', async () => {
+    localStorage.setItem('budojoRestoredBackup', 'budojo-backup-20261001-165132.zip');
+    const { component, server } = setup({ keysChanged: false });
+
+    await component.signInWithGoogle();
+
+    expect(server.adoptKeys).toHaveBeenCalled();
+    expect(server.restart).not.toHaveBeenCalled();
+  });
+
+  it("never gives them to a gym of the phone's own, which they would not open", async () => {
+    const { component, server } = setup({ inspect: () => of({ data: inspection(PROVA) }) });
+    await component.signInWithGoogle();
+
+    await component.keepHere();
+
+    expect(server.adoptKeys).not.toHaveBeenCalled();
   });
 });

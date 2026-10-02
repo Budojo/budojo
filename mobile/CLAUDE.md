@@ -40,6 +40,7 @@ The phone runs Budojo's own server, as the desktop does with `php.exe`:
   - starts `php -S 127.0.0.1:<port>` with the framework's router, `BUDOJO_RUNTIME=mobile`;
   - hands PHP and the page a **shell secret**, made at each launch and never written (`BUDOJO_SHELL_SECRET`, in every start's answer). Only the page that holds it opens the owner's session and brings a backup in (`/api/v1/device`, #2079): every other app on the phone reaches `127.0.0.1` too.
 - **`restart()`** stops the server and starts it again, so a backup the door just staged is swapped in now (#2079).
+- **`adoptKeys()`** takes the academy's two app keys the PC put with the Google account (#2033) into `secrets.json`, keeping the phone's own pair as `secrets.previous.json`. They take effect at the next start. The door calls it for the phone's copy of the gym on Drive, never for a gym of the phone's own.
 - **The page starts it before Angular boots** (`client/src/app/core/mobile/phone-server.ts`) and shows any failure in full on the screen, the only log anyone can send from a phone.
 - **Android kills an app's child processes in the background** (the phantom process killer, Android 12+). Three things bring it back, in `phone-server.ts` and the plugin:
   - **Back in the foreground,** the plugin restarts the server, on the same port when it is free, and the page holds its requests, writes included, until it answers.
@@ -64,7 +65,7 @@ Calling PHP in-process from this shell is the way out if Android ever stops the 
 
 ## Google Drive on the phone (#2028)
 
-**`DriveAuthPlugin.java`** wraps Google's `AuthorizationClient` (`play-services-auth`), scope `drive.file`, and only hands out access tokens:
+**`DriveAuthPlugin.java`** wraps Google's `AuthorizationClient` (`play-services-auth`), scopes `drive.file` and `drive.appdata` (the academy's keys, #2033), and only hands out access tokens:
 - **`authorize({ interactive: false })` never shows anything.** It rejects with `NEEDS_CONSENT` when Google wants the owner's consent; the page then offers the button that calls it with `true`.
 - **Nothing is stored by the app.** Google Play services keeps the grant, and `clearToken` drops a cached token that Drive refused with 401.
 - **Google recognises the app by package name and signing certificate.** No client id is in the app, so an APK signed with another key gets `DEVELOPER_ERROR` (10). That is one more reason the release key is the only key.

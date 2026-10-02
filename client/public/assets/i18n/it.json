@@ -3675,6 +3675,10 @@
       "enter": "Entra con i dati del telefono",
       "useDrive": "Aggiorna dal PC",
       "hint": "Aggiornare sostituisce quello che hai cambiato sul telefono dall'ultima volta."
+    },
+    "keysWait": {
+      "title": "I certificati medici si apriranno dopo",
+      "detail": "Sul PC: Dati e backup → Google Drive → «Collega il telefono». Poi esci e rientra con Google qui."
     }
   }
 }

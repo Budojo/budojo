@@ -1,3 +1,4 @@
+import { AcademyKeys, KEYS_FILE, parseAcademyKeys } from '../sync/keys';
 import { RemoteError } from '../sync/remote';
 
 /**
@@ -70,6 +71,33 @@ export class PcBackups {
       // The headers arrived and the body did not: the connection, mid-download.
       throw new RemoteError('offline', error instanceof Error ? error.message : String(error));
     }
+  }
+
+  /**
+   * The academy's keys the PC put in the account's hidden application data
+   * (#2033, `docs/sync/protocol.md` § The keys); null while the PC has not
+   * connected the phone. A file that does not parse is refused, never half
+   * adopted.
+   */
+  async academyKeys(): Promise<AcademyKeys | null> {
+    const params = new URLSearchParams({
+      spaces: 'appDataFolder',
+      q: `name='${KEYS_FILE}' and trashed=false`,
+      fields: 'files(id)',
+      pageSize: '1',
+    });
+    const found = await this.json<{ files?: { id: string }[] }>(
+      `${API}/files?${params.toString()}`,
+    );
+    const id = found.files?.[0]?.id;
+    if (id === undefined) {
+      return null;
+    }
+    const parsed = parseAcademyKeys(await this.json<unknown>(`${API}/files/${id}?alt=media`));
+    if (!parsed.ok) {
+      throw new RemoteError('unavailable', `the academy's keys do not read: ${parsed.reason}`);
+    }
+    return parsed.value;
   }
 
   /** The oldest `Budojo` folder, as `DriveRemote` settles on it. */
