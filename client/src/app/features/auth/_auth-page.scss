@@ -1,3 +1,4 @@
+@use '../../shared/styles/safe-area' as sa;
 // Shared styles for all auth pages (login, register) and the academy
 // setup page (which @use's this partial). Pre-#90 this file ran a custom
 // purple palette with raw hex everywhere; #90 brings it back onto the
@@ -19,21 +20,10 @@
   // air at all (#1622, AUTH-6). Same `max()` shape the dashboard and athlete
   // shells already use for `--budojo-safe-top`; on the web the token is
   // `env(safe-area-inset-top, 0px)` and this stays 2 rem.
-  padding: max(2rem, calc(var(--budojo-safe-top, 0px) + 1rem)) 2rem 2rem;
-
-  // The phone draws the page edge to edge under a transparent status bar
-  // (#2034), and a page taller than the screen scrolled its text under the
-  // clock. A strip the status bar's height, in the page's own colour, keeps
-  // it clear. Zero high wherever there is no status bar inset; the desktop's
-  // title bar has its own strip (`styles.scss`).
-  &::before {
-    content: '';
-    position: fixed;
-    inset: 0 0 auto 0;
-    z-index: 1;
-    height: env(safe-area-inset-top, 0px);
-    background: var(--p-surface-50);
-  }
+  padding: 2rem;
+  @include sa.clear-top(2rem);
+  // A page taller than the screen scrolled its text under the phone's clock (#2034).
+  @include sa.status-bar-strip;
 }
 
 .auth-card {

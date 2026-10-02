@@ -1,3 +1,4 @@
+@use '../../shared/styles/safe-area' as sa;
 // The app's first screen (#330, rewritten in #1497).
 //
 // It was a marketing page — hero, problem list, feature grid, trust columns,
@@ -15,6 +16,8 @@
   // as a page that had failed to finish loading.
   padding-inline: clamp(1rem, 5vw, 4rem);
   padding-block: clamp(1.5rem, 4vw, 3rem);
+  @include sa.clear-top(clamp(1.5rem, 4vw, 3rem));
+  @include sa.status-bar-strip;
   max-width: 48rem;
   margin: 0 auto;
   min-height: 100dvh;
