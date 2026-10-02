@@ -70,6 +70,19 @@ it('writes payment.deleted with the pre-deletion snapshot', function (): void {
     expect($entry->before)->toBeArray();
 });
 
+// Undoing a paid month through the API deleted the rows with one query, so
+// the observer never heard of it and the activity log had no trace (#2031).
+it('writes payment.deleted when the owner undoes a paid month', function (): void {
+    $user = userWithAcademy();
+    $mario = Athlete::factory()->for($user->academy)->create();
+    AthletePayment::factory()->for($mario)->create(['year' => 2026, 'month' => 5]);
+    AuditEntry::query()->delete();
+
+    $this->actingAs($user)->deleteJson("/api/v1/athletes/{$mario->id}/payments/2026/5")->assertSuccessful();
+
+    expect(AuditEntry::query()->pluck('action')->all())->toBe(['payment.deleted']);
+});
+
 // ─── CarnetAuditObserver ────────────────────────────────────────────
 
 it('writes carnet.created with the "Mario Rossi — A7K2" label', function (): void {

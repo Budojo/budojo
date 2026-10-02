@@ -785,6 +785,10 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::put('files/{sha256}', [\App\Http\Controllers\Sync\SyncFilesController::class, 'store'])
                 ->where('sha256', '[0-9a-f]{64}')
                 ->name('sync.files.store');
+            // The journal of this device's writes (#2031).
+            Route::get('journal', [\App\Http\Controllers\Sync\JournalController::class, 'index'])->name('sync.journal.index');
+            Route::delete('journal', [\App\Http\Controllers\Sync\JournalController::class, 'destroy'])->name('sync.journal.destroy');
+            Route::get('holds', [\App\Http\Controllers\Sync\JournalController::class, 'holds'])->name('sync.holds');
         });
 
     // Owner-only search + stats (#774). The Cmd/Ctrl-K palette and the

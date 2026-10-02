@@ -6,10 +6,13 @@ namespace App\Providers;
 
 use App\Services\PwnedPasswordsClient;
 use App\Support\DesktopDriverGuard;
+use App\Support\Sync\Journal\JournalRecorder;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Auth\CanResetPassword;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
@@ -19,6 +22,10 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        // What one journaled write did (#2031): one per process, armed only
+        // while the journal middleware runs a request.
+        $this->app->singleton(JournalRecorder::class);
+
         // PwnedPasswordsClient (#415). Singleton so the per-prefix
         // bucket cache layer is owned by a single instance for the
         // process lifetime. The cache itself (`Cache::*`) is already
@@ -56,6 +63,13 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // The journal's view of a write (#2031): the rows it created, and the
+        // values the rows it changed or deleted held before.
+        $recorder = $this->app->make(JournalRecorder::class);
+        Event::listen('eloquent.created: *', static fn (string $event, array $data) => $data[0] instanceof Model ? $recorder->created($data[0]) : null);
+        Event::listen('eloquent.updating: *', static fn (string $event, array $data) => $data[0] instanceof Model ? $recorder->updating($data[0]) : null);
+        Event::listen('eloquent.deleting: *', static fn (string $event, array $data) => $data[0] instanceof Model ? $recorder->deleting($data[0]) : null);
+
         // A desktop instance running the wrong drivers fails silently, not
         // loudly (#1220) — a queued reminder is written and never picked up
         // because there is no worker. Refuse to boot instead.

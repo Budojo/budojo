@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Actions\Sync\KeepOwnJournalAction;
 use App\Actions\Sync\ReconcileFilesAction;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
@@ -17,7 +18,8 @@ use Illuminate\Support\Facades\Cache;
  *
  * - the cache is cleared: on the desktop it is on files (`CACHE_STORE=file`),
  *   and would answer from the old database, the attendance summaries first;
- * - the files no row names any more are deleted (`ReconcileFilesAction`).
+ * - the files no row names any more are deleted (`ReconcileFilesAction`);
+ * - the journal keeps only this device's entries (`KeepOwnJournalAction`, #2031).
  */
 class SyncReconcile extends Command
 {
@@ -25,12 +27,14 @@ class SyncReconcile extends Command
 
     protected $description = 'After a sync swapped the database: clear the cache, delete the files no row names (#2030)';
 
-    public function handle(ReconcileFilesAction $reconcile): int
+    public function handle(ReconcileFilesAction $reconcile, KeepOwnJournalAction $keepOwnJournal): int
     {
         Cache::flush();
         $deleted = $reconcile->execute();
+        $device = config('budojo.sync.device');
+        $forgotten = $keepOwnJournal->execute(\is_string($device) ? $device : null);
 
-        $this->info("Cache cleared; {$deleted} file(s) no row names deleted.");
+        $this->info("Cache cleared; {$deleted} file(s) no row names deleted; {$forgotten} other device journal entr(ies) dropped.");
 
         return self::SUCCESS;
     }
