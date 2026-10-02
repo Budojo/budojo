@@ -11,7 +11,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 PAGE="${1:-/dashboard/athletes}"
 
-CYPRESS_PAGE="$PAGE" "$ROOT/.claude/scripts/e2e.sh" _shot
+CYPRESS_PAGE="$PAGE" CYPRESS_RUNTIME="${RUNTIME:-}" "$ROOT/.claude/scripts/e2e.sh" _shot
 
 echo
 echo "── shots ──"

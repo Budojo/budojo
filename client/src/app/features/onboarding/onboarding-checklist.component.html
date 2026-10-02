@@ -6,7 +6,9 @@
           {{ 'onboarding.checklist.title' | translate }}
         </h2>
         <p class="onboarding-checklist__subtitle">
-          {{ 'onboarding.checklist.subtitle' | translate: { progress: progress(), total: total } }}
+          {{
+            'onboarding.checklist.subtitle' | translate: { progress: progress(), total: total() }
+          }}
         </p>
       </div>
       <p-button
@@ -24,7 +26,7 @@
     <p-confirmpopup />
 
     <ul class="onboarding-checklist__list">
-      @for (step of steps; track step) {
+      @for (step of steps(); track step) {
         <li
           class="onboarding-checklist__item"
           [class.onboarding-checklist__item--done]="isCompleted(step)"

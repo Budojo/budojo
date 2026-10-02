@@ -198,3 +198,31 @@ it('does not tick either from another academy\'s data', function (): void {
     expect($steps)->not->toContain(OnboardingStep::SET_TIMETABLE)
         ->and($steps)->not->toContain(OnboardingStep::WRITE_SYLLABUS);
 });
+
+it('offers no upload step on the phone, where documents are view only (#2034)', function (): void {
+    config()->set('budojo.runtime', 'mobile');
+
+    $this->actingAs(userWithAcademy())
+        ->getJson('/api/v1/me/onboarding')
+        ->assertOk()
+        ->assertJsonPath('data.available_steps', [
+            'add_athlete',
+            'set_timetable',
+            'write_syllabus',
+            'log_attendance',
+            'mark_payment',
+            'view_stats',
+        ]);
+});
+
+it('never reports the upload step done on the phone, so the steps it does list can all be done', function (): void {
+    config()->set('budojo.runtime', 'mobile');
+    $user = userWithAcademy();
+    $athlete = Athlete::factory()->for($user->academy)->create();
+    \App\Models\Document::factory()->for($athlete)->create();
+
+    $this->actingAs($user)
+        ->getJson('/api/v1/me/onboarding')
+        ->assertOk()
+        ->assertJsonPath('data.completed_steps', ['add_athlete']);
+});

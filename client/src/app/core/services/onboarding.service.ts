@@ -28,10 +28,18 @@ export const ONBOARDING_STEPS = [
 
 export type OnboardingStep = (typeof ONBOARDING_STEPS)[number];
 
+/** The steps this client knows how to show, in the server's order. */
+function knownSteps(steps: readonly string[]): readonly OnboardingStep[] {
+  return steps.filter((step): step is OnboardingStep =>
+    (ONBOARDING_STEPS as readonly string[]).includes(step),
+  );
+}
+
 interface OnboardingState {
   readonly dismissed_at: string | null;
   readonly completed_steps: readonly OnboardingStep[];
-  readonly available_steps: readonly OnboardingStep[];
+  /** Names this client may not know yet, so they are filtered on arrival. */
+  readonly available_steps: readonly string[];
 }
 
 interface ShowResponse {
@@ -65,10 +73,16 @@ export class OnboardingService {
 
   private readonly _dismissedAt = signal<string | null>(null);
   private readonly _completedSteps = signal<readonly OnboardingStep[]>([]);
+  private readonly _availableSteps = signal<readonly OnboardingStep[]>(ONBOARDING_STEPS);
   private readonly _loaded = signal<boolean>(false);
 
   readonly dismissedAt = this._dismissedAt.asReadonly();
   readonly completedSteps = this._completedSteps.asReadonly();
+  /**
+   * The steps this runtime offers, from the server: every one but the upload
+   * on the phone, where documents are view only (#2034).
+   */
+  readonly availableSteps = this._availableSteps.asReadonly();
   readonly loaded = this._loaded.asReadonly();
 
   /**
@@ -92,7 +106,7 @@ export class OnboardingService {
       return false;
     }
     const completed = new Set<string>(this._completedSteps());
-    return ONBOARDING_STEPS.some((s) => !completed.has(s));
+    return this._availableSteps().some((s) => !completed.has(s));
   });
 
   /**
@@ -103,14 +117,18 @@ export class OnboardingService {
    */
   readonly checklistVisible = this.tourActive;
 
-  /** Number of steps the user has ticked off (0-5). */
-  readonly progress = computed(() => this._completedSteps().length);
+  /** How many of the offered steps are done. */
+  readonly progress = computed(() => {
+    const offered = new Set<string>(this._availableSteps());
+    return this._completedSteps().filter((step) => offered.has(step)).length;
+  });
 
   load(): Observable<OnboardingState> {
     return this.http.get<ShowResponse>(this.base).pipe(
       tap((r) => {
         this._dismissedAt.set(r.data.dismissed_at);
         this._completedSteps.set(r.data.completed_steps);
+        this._availableSteps.set(knownSteps(r.data.available_steps));
         this._loaded.set(true);
       }),
       map((r) => r.data),

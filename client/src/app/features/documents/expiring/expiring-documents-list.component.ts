@@ -28,6 +28,7 @@ import {
   ExpiryStatusBadgeComponent,
 } from '../../../shared/components/expiry-status-badge/expiry-status-badge.component';
 import { AcademyService } from '../../../core/services/academy.service';
+import { RuntimeService } from '../../../core/services/runtime.service';
 import { LanguageService } from '../../../core/services/language.service';
 import { ContactActionsComponent } from '../../../shared/components/contact-actions/contact-actions.component';
 import { localIso } from '../../../shared/utils/class-occurrences';
@@ -83,6 +84,10 @@ export class ExpiringDocumentsListComponent implements OnInit {
   private readonly translate = inject(TranslateService);
   private readonly language = inject(LanguageService);
   private readonly academyService = inject(AcademyService);
+  private readonly runtime = inject(RuntimeService);
+
+  /** "Upload" only where a document can be uploaded: not on the phone (#2034). */
+  protected readonly canUpload = computed(() => this.runtime.hasConfirmed()('document_upload'));
 
   readonly documents = signal<ExpiringDocument[]>([]);
   readonly missingCerts = signal<readonly AthleteMissingMedicalCertificate[]>([]);

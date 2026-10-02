@@ -109,4 +109,43 @@ describe('OnboardingService (#424)', () => {
     expect(service.tourActive()).toBe(true);
     expect(service.progress()).toBe(1);
   });
+
+  // The phone offers no upload step (#2034): the server leaves it out of
+  // `available_steps`, and the checklist is done once every step it does
+  // offer is done.
+  describe('where the runtime offers fewer steps', () => {
+    const PHONE_STEPS = ONBOARDING_STEPS.filter((step) => step !== 'upload_document');
+
+    it('offers only those steps', () => {
+      service.load().subscribe();
+      httpMock.expectOne('/api/v1/me/onboarding').flush({
+        data: { dismissed_at: null, completed_steps: [], available_steps: PHONE_STEPS },
+      });
+
+      expect(service.availableSteps()).toEqual(PHONE_STEPS);
+    });
+
+    it('is finished once every offered step is done', () => {
+      service.load().subscribe();
+      httpMock.expectOne('/api/v1/me/onboarding').flush({
+        data: { dismissed_at: null, completed_steps: PHONE_STEPS, available_steps: PHONE_STEPS },
+      });
+
+      expect(service.tourActive()).toBe(false);
+      expect(service.progress()).toBe(PHONE_STEPS.length);
+    });
+
+    it('ignores a step name it does not know', () => {
+      service.load().subscribe();
+      httpMock.expectOne('/api/v1/me/onboarding').flush({
+        data: {
+          dismissed_at: null,
+          completed_steps: [],
+          available_steps: ['add_athlete', 'teleport'],
+        },
+      });
+
+      expect(service.availableSteps()).toEqual(['add_athlete']);
+    });
+  });
 });

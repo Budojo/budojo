@@ -13,6 +13,8 @@ export type Capability =
   | 'web_push'
   | 'email'
   | 'password_breach_check'
+  // Uploading a document: absent on the phone, where documents are view only (#2034).
+  | 'document_upload'
   // The sync between the owner's own devices (#2030): a device capability.
   | 'sync';
 
@@ -23,6 +25,7 @@ export const ALL_CAPABILITIES: readonly Capability[] = [
   'web_push',
   'email',
   'password_breach_check',
+  'document_upload',
   'sync',
 ];
 
@@ -79,6 +82,17 @@ export class RuntimeService {
   readonly has = computed(() => {
     const current = new Set(this.capabilitiesSignal());
     return (capability: Capability): boolean => current.has(capability);
+  });
+
+  /**
+   * True only once the server has said the runtime offers the capability.
+   * For a surface some runtimes lack, which must not paint on the optimistic
+   * web default and then vanish: the phone's document upload (#2034).
+   */
+  readonly hasConfirmed = computed(() => {
+    const loaded = this.loadedSignal();
+    const has = this.has();
+    return (capability: Capability): boolean => loaded && has(capability);
   });
 
   /**

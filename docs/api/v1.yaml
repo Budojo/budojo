@@ -43,9 +43,10 @@ tags:
       its routes answer **404** (never 403 — a surface the runtime does not
       have does not advertise itself). Capabilities: `community`,
       `athlete_accounts`, `web_push`, `email`, `password_breach_check`,
-      `sync`. The web profile has every one but `sync`; the desktop and the
-      phone have `sync` alone, the sync between the owner's own devices
-      (#2030).
+      `document_upload`, `sync`. The web profile has every one but `sync`.
+      The desktop has `document_upload` and `sync`, the sync between the
+      owner's own devices (#2030). The phone has `sync` alone: its documents
+      are view only (#2034).
   - name: auth
     description: Registration, login, and Sanctum token issuance
   - name: academy
@@ -1424,6 +1425,12 @@ paths:
                         type: array
                         items:
                           type: string
+                        description: |
+                          The steps this runtime offers, in catalogue order.
+                          On the phone there is no `upload_document`, since
+                          documents are view only there (#2034).
+                          `completed_steps` never holds a step this list does
+                          not.
                         example:
                           [
                             'add_athlete',
@@ -5207,6 +5214,9 @@ paths:
         root — only via `GET /documents/{id}/download`. Server-side validates
         size (max 10 MB) and MIME type (`application/pdf`, `image/jpeg`,
         `image/png`); client pre-validation is advisory only.
+
+        Behind the `document_upload` capability: on the phone, where documents
+        are view only (#2034), the route answers 404.
       operationId: athleteDocumentUpload
       requestBody:
         required: true
@@ -5281,6 +5291,9 @@ paths:
         path encrypts, and an academy does not have a medical fitness
         certificate — a person does. Academy documents are therefore never
         encrypted.
+
+        Behind the `document_upload` capability: on the phone, where documents
+        are view only (#2034), the route answers 404.
       operationId: academyDocumentUpload
       requestBody:
         required: true
@@ -5299,6 +5312,8 @@ paths:
           $ref: '#/components/responses/Unauthenticated'
         '403':
           description: No active academy, or the caller lacks the documents capability
+        '404':
+          description: The runtime has no document upload (the phone)
         '422':
           $ref: '#/components/responses/ValidationError'
 
@@ -8733,8 +8748,8 @@ components:
           description: What this profile offers. Routes behind an absent capability answer 404.
           items:
             type: string
-            enum: [community, athlete_accounts, web_push, email, password_breach_check, sync]
-          example: [community, athlete_accounts, web_push, email, password_breach_check]
+            enum: [community, athlete_accounts, web_push, email, password_breach_check, document_upload, sync]
+          example: [community, athlete_accounts, web_push, email, password_breach_check, document_upload]
 
     # ── Enums ─────────────────────────────────────────────────────────────
 

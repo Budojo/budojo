@@ -34,6 +34,12 @@ enum Capability: string
     case PasswordBreachCheck = 'password_breach_check';
 
     /**
+     * Uploading a document, an athlete's or the academy's. The phone has
+     * documents view only (#2034, PRD § 2): uploading stays on the PC for now.
+     */
+    case DocumentUpload = 'document_upload';
+
+    /**
      * Syncing one academy between the owner's own devices (M12, #2029): the
      * database exported as a version, and a newer one staged for the shell to
      * swap in. A device feature: the hosted web never had a database of its

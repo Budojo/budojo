@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Support;
 
+use App\Enums\Capability;
+
 /**
  * Catalog of onboarding-checklist step keys (#424).
  *
@@ -55,5 +57,19 @@ final class OnboardingStep
             self::UPLOAD_DOCUMENT,
             self::VIEW_STATS,
         ];
+    }
+
+    /**
+     * The steps this runtime can offer: all of them but the document upload
+     * where there is none, the phone's view-only documents (#2034).
+     *
+     * @return list<string>
+     */
+    public static function available(): array
+    {
+        return array_values(array_filter(
+            self::all(),
+            fn (string $step): bool => $step !== self::UPLOAD_DOCUMENT || Capabilities::has(Capability::DocumentUpload),
+        ));
     }
 }

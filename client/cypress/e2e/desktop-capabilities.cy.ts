@@ -11,14 +11,21 @@ import { stubToday } from '../support/today';
  */
 const DESKTOP_RUNTIME = {
   statusCode: 200,
-  body: { data: { profile: 'desktop', capabilities: [] } },
+  body: { data: { profile: 'desktop', capabilities: ['document_upload', 'sync'] } },
 };
 const WEB_RUNTIME = {
   statusCode: 200,
   body: {
     data: {
       profile: 'web',
-      capabilities: ['community', 'athlete_accounts', 'web_push', 'email', 'password_breach_check'],
+      capabilities: [
+        'community',
+        'athlete_accounts',
+        'web_push',
+        'email',
+        'password_breach_check',
+        'document_upload',
+      ],
     },
   },
 };

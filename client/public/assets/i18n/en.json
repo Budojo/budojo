@@ -2411,7 +2411,8 @@
         "empty": {
           "withCancelled": "No documents yet — active or cancelled.",
           "default": "No documents yet.",
-          "hint": "Use <strong>Add document</strong> above to upload the first one."
+          "hint": "Use <strong>Add document</strong> above to upload the first one.",
+          "hintViewOnly": "Documents are added from Budojo on the PC; here you can open them."
         },
         "activeCountOne": "{{count}} active",
         "activeCountOther": "{{count}} active",
