@@ -67,6 +67,7 @@ u32 big-endian: manifest length | manifest, UTF-8 JSON | u32: journal length | j
 | `app` | the app version that wrote it |
 | `journalSha256` | SHA-256 of the journal's bytes as stored |
 | `createdAt` | UTC, ISO 8601 |
+| `academy` | optional, from #2033: what the door shows before a restore, `{ "name": "Kaizen", "athletes": 42, "belts": { "white": 20, "blue": 12 } }` (active athletes, by belt) |
 
 A reader checks every field it knows and ignores any it does not, so a later app can add one. **Changing what a field means is a new protocol number.** The manifest must name the version and the parent its path names. A writer checks the manifest and the journal with the readers' rules before it packs them.
 
@@ -158,7 +159,7 @@ The journal is a JSON list of the writes that made this version from its parent,
     - A file that does not open or parse counts as holding nothing.
 
     So a device that exists is never mistaken for no device.
-  - **Unpairing deletes the device's file** together with rotating the key (#2033). Left behind, it would hold nothing forever, and nobody could clear a journal again.
+  - **Unpairing deletes the device's file** together with rotating the key (#2033). Left behind, it would hold nothing forever, and nobody could clear a journal again. **The order matters** (PRD § 5.4): the remaining device first fetches every file it lacks under the old key, then publishes a fresh version, its files, its report and the new key, and only then deletes everything under the old key and the unpaired device's report.
   - **A sync the unpaired device had under way** can still write its report, or a version, sealed under the old key. So after unpairing, the remaining device:
     - deletes any `devices/` or `versions/` file that fails to open as «wrong key or path»;
     - never pulls a version it cannot open.
@@ -167,6 +168,8 @@ The journal is a JSON list of the writes that made this version from its parent,
   - **With no other device's file** in `devices/`, a device clears the entries already in a version the folder lists. A device that pairs later starts from the latest version.
 
 ## The pairing code
+
+> **To be replaced (#2033, the owner's decision of 2 Oct 2026):** "Accedi con Google" is the door, and the keys live with the Google account (PRD § 5.4). This section and `keys.bjs` change with #2033's implementation, after the `appDataFolder` spike; until then they describe what `pairing.ts` and `keys.ts` do today.
 
 ```
 protocol (1 byte) | sync key (32 bytes) | first 2 bytes of SHA-256 over the first 33

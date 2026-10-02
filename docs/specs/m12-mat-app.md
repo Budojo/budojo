@@ -169,7 +169,7 @@ The owner described git, and the design is git.
   - files no row names any more are deleted, as `DeleteDocumentAction` deletes them on the device where the athlete or document was removed. That rule is GDPR, not tidiness;
   - missing files are fetched when needed;
   - the application cache is cleared. The desktop's cache is on files (`CACHE_STORE=file`), and would otherwise answer from the old database, for example the attendance summaries.
-- **The keys travel once, at pairing.** Encrypted fields and documents need the same `APP_KEY` and `DOCUMENT_ENCRYPTION_KEY` on both devices: the pairing code carries the sync key, and the new device opens the app keys from `keys.bjs` with it (§ 5.4).
+- **The keys live with the Google account (§ 5.4).** Encrypted fields and documents need the same `APP_KEY` and `DOCUMENT_ENCRYPTION_KEY` on both devices: a new device reads them, with the sync key, after Google sign-in.
 
 **When a device syncs:**
 - on opening, and on coming back to the foreground: pull, or rebase;
@@ -184,7 +184,7 @@ Nothing waits for the sync, and its state is always on screen (§ 6.2).
 ### 5.3 Transport and keys
 
 - **Google Drive, the owner's account, scope `drive.file`.** The PC reuses #1301's OAuth; the phone uses Android's authorization client with the "Budojo Android" OAuth client (#2028). **The project stays in Testing** (§ 2): every 7 days a device signs in to Google again, in one tap from the sync state, and meanwhile keeps working offline with its versions waiting.
-- **Every file is encrypted on the device:** AES-256-GCM with a random IV, and **the file's path as associated data**, so a file cannot be swapped for another and still decrypt. The key is the academy's sync key, which never leaves the devices except inside the pairing code.
+- **Every file is encrypted on the device:** AES-256-GCM with a random IV, and **the file's path as associated data**, so a file cannot be swapped for another and still decrypt. The key is the academy's sync key, which lives with the owner's Google account (§ 5.4).
 - **Where on Drive:** a visible folder, `Budojo/sync/`, inside the folder the PC already creates for its backups.
 - **`drive.file` carries between the two OAuth clients: settled by #2028, on the owner's phone, 1 Oct 2026.** Google's documentation does not say either way, and a web search said the opposite. The test:
   - **Connecting the phone:** the PC connected first, with v2.74.1. Then the phone showed Google's consent screen, which named Budojo and only the files it uses, and connected.
@@ -200,24 +200,34 @@ Nothing waits for the sync, and its state is always on screen (§ 6.2).
   - `MemoryRemote` for the tests, where two copies sync with no Google account;
   - **for development,** the PC's bridge remote can point at a local folder instead of Drive (`FolderRemote`, #2032), so two running copies sync on Linux with no Google account.
 
-### 5.4 Pairing, both ways
+### 5.4 «Accedi con Google» is the door, and the gym comes back by itself
 
-The device that has the academy shows a **pairing code**: a QR, plus the same code as 56 characters in fourteen groups of four, to type on a PC with no camera. **It carries only the sync key and the protocol version** (#2029):
-- **The app keys** (`APP_KEY`, `DOCUMENT_ENCRYPTION_KEY`, what the recovery code #1254 carries) **travel on Drive,** sealed under the sync key in `keys.bjs`.
-- **The folder** is found by name, because `drive.file` lets every client of the project see it (§ 5.3).
+**The owner's decision, 2 Oct 2026** (#2033): on the phone and on the PC, Budojo opens on one action, **Accedi con Google**. If the gym is on that account's Drive, it comes back by itself; if not, the device can start one, and the other device finds it the same way. **The Google account is the key:** whoever controls it opens the gym's data, medical certificates included. The owner was offered "Google plus a one-time code per new device" and preferred no code to keep or lose. This replaces the pairing code (a QR and 56 characters) and "Drive alone opens nothing".
 
-**This is as safe as putting everything in the code:** whoever holds the code can read everything either way, and Drive alone opens nothing. **But the code a person types drops from about 150 characters to 56.**
+**The flow, the same on both devices:**
+1. **The door:** the logo, one line, **Accedi con Google**. No email and password form. A quieter **Continua senza Google** keeps the phone-only path (§ 6.5): the academy lives on this device only, and Oggi says so until Google is connected; connecting later publishes it, or asks which to keep if Drive already holds one.
+2. **Looking:** "Cerco la tua palestra su Google Drive…", with the account shown and "cambia".
+3. **Found:** the academy's name, a strip of the roster's belt colours, "42 atleti · aggiornata ieri alle 21:40 dal PC". The restore starts by itself, with its progress, and Today opens when it is done (the protocol's "no base, the folder has versions": fast-forward).
+4. **Not found:** "Nessuna palestra su mario@gmail.com. Se l'hai creata sul PC, aprilo e collega Google Drive (Dati e backup)." **Crea una nuova palestra** runs the setup, creates the folder and pushes version 1; **Usa un altro account**.
+5. **Edges:** offline at first launch ("Serve internet la prima volta"); a newer schema on Drive (update first, § 5.5); **a device that already holds an academy of its own while Drive has one: both are named, with their athletes, and the owner chooses. Never merged.**
+6. **Logout** returns to the door. The data stays on the device; signing in again goes straight in.
 
-**The new device:**
-1. reads the code;
-2. signs in to Google with the same account;
-3. opens `keys.bjs`: a code from before an unpairing fails here, and leaves nothing behind;
-4. writes its own `devices/` report, empty, so no other device clears a write it does not hold yet (#2029);
-5. pulls the latest version.
+**The keys live with the Google account, unsealed:** `keys.json` holds the sync key itself, the app keys (`APP_KEY`, `DOCUMENT_ENCRYPTION_KEY`, what the recovery code #1254 carries) and the folder id. Nothing seals it: the account is the lock, which is the decision. A new device reads it after sign-in, and with the sync key opens everything else.
+- **Preferred: Drive's `appDataFolder`** (scope `drive.appdata`): hidden from the Drive UI and from Drive for desktop's copy, and unreadable by other apps. A spike first checks that the project's two OAuth clients share it, as #2028 checked `drive.file`.
+- **Fallback:** `keys.json` in the visible `Budojo/sync/` folder.
+- **Versions, reports and files stay sealed under the sync key** (§ 5.3). With the keys in `appDataFolder`, the visible folder alone, as Drive for desktop copies it to a PC or as a shared link would expose it, still opens nothing.
 
-**Either side can start it:** the PC can add the phone (the owner's case today), and a phone-only academy can later add a PC.
+**No Budojo password on a local device.** After Google, the app asks its own server for the owner's token with a secret only the shell holds; an open endpoint on `127.0.0.1` would let any other app on the phone in.
 
-**Unpairing a lost phone:** the other device rotates the sync key, seals `keys.bjs` again, deletes the phone's `devices/` report, and publishes under the new key. The lost phone can read nothing new, and its pushes stop being accepted. Its report would otherwise count as holding nothing, and no journal could ever be cleared again. The app keys cannot rotate without re-encrypting the documents; the fingerprint lock (§ 6.1) is what protects the lost phone's local copy.
+**Two devices, as before:** a new device writes its `devices/` report, empty, before its first pull (#2029); a third gets "Budojo è già su due dispositivi".
+
+**A lost phone:** revoke its Google session (Google account → Security → your devices), then *Scollega* on the other device. It rotates the sync key, so a phone that is signed out cannot read what comes after:
+1. it fetches every file it does not hold yet, under the old key;
+2. under the new key it pushes a fresh version, its whole database, re-uploads every file as `files/<sha256>.bjs`, and writes its own `devices/` report;
+3. it writes the new key to `keys.json`;
+4. only then it deletes every version, report and file under the old key, and the lost phone's report.
+
+Versions from before the rotation are not kept: the PC's backups on Drive (#1301) hold the history. **Keep Google's 2-step verification on.** The fingerprint lock (§ 6.1) still guards the phone's local copy.
 
 ### 5.5 Versions of the app
 
@@ -310,17 +320,15 @@ A conflict is a question, asked on whichever device found it. **It is never reso
 
 ### 6.5 The phone-only academy
 
-- **First launch:** *"Hai già Budojo sul PC?"*
-  - **Yes:** pair (§ 5.4).
-  - **No:** create the academy on the phone, with the PC's own onboarding.
-- **Then:** *"Salva su Google Drive"*, strongly recommended. Until it is connected, a line on Oggi at every launch says the data lives only on this phone. It is not a modal: it states the fact and blocks nothing.
+- **First launch:** the door (§ 5.4). **Accedi con Google** finds the academy the PC put on Drive, or creates one there; **Continua senza Google** creates it on the phone only, with the PC's own onboarding.
+- **Without Google:** a line on Oggi at every launch says the data lives only on this phone, and offers *Collega Google*. It is not a modal: it states the fact and blocks nothing.
 
 ## 7. Security and privacy
 
 - **What the phone holds:** the whole database, as the PC does: athletes, payments, codice fiscale, document metadata. Documents are downloaded when they are opened.
 - **How it is protected:** the fingerprint (§ 6.1), and Android's app-private storage.
 - **No Android backup** (`allowBackup="false"`, already set in #2027). The copy that survives a lost phone is the versions on Drive, encrypted.
-- **Google** sees only ciphertext, under names that mean nothing: sequence numbers and content hashes.
+- **Google** holds the keys (`keys.json`, unsealed, § 5.4: the owner's decision), so the Google account is the lock on the academy's data. The versions and files beside it are ciphertext, under names that mean nothing (sequence numbers and content hashes), so the visible folder alone, as Drive for desktop copies it or a shared link would expose it, opens nothing while the keys sit in `appDataFolder`.
 - **The APK signing key** was created in #2027. It is held in the repo secrets and in the owner's password manager; if it is lost, no update installs over the app.
 - **The lock-screen text** shows names and amounts, the owner's choice (§ 6.3). It is recorded here because it is the one place the phone shows data without the fingerprint.
 
@@ -338,7 +346,7 @@ Sizes: **S** is a day or less, **M** a few days, **L** a week or more. The **fir
 | [#2030](https://github.com/Budojo/budojo/issues/2030) | | Versions: export, fast-forward, retention (server) | M | #2029 |
 | [#2031](https://github.com/Budojo/budojo/issues/2031) | | The journal and the rebase, with conflicts (server). `--deep` review. | L | #2029 |
 | [#2032](https://github.com/Budojo/budojo/issues/2032) | | The sync engine on the desktop | L | #2030, #2031 |
-| [#2033](https://github.com/Budojo/budojo/issues/2033) | | Pairing, both ways, with the keys | M | #2032 |
+| [#2033](https://github.com/Budojo/budojo/issues/2033) | | «Accedi con Google» is the door; the gym comes back by itself | M | #2032, #2046 |
 | [#2034](https://github.com/Budojo/budojo/issues/2034) | 2 · Budojo on the phone | The phone runtime: the SPA + Laravel in the shell, the `mobile` profile, offline. It retires `projects/mat`. | L | #2051 |
 | [#2046](https://github.com/Budojo/budojo/issues/2046) | | The sync engine on the phone, the sync state, the fingerprint lock | M | #2034, #2032 |
 | [#2035](https://github.com/Budojo/budojo/issues/2035) | | Home by the clock, and the phone check-in | M | #2034 |
@@ -414,3 +422,4 @@ Sizes: **S** is a day or less, **M** a few days, **L** a week or more. The **fir
     - the principle that no change is lost or overwritten silently.
 - **1 Oct 2026: the sync runs in the app on both devices (§ 5.6), and the pairing code carries only the sync key (§ 5.4)** (#2029). v2 had the protocol imported by the desktop's main process and by the phone's shell. But no code both builds can see lives outside `client/`, and keeping two copies of the envelope and the replay in step is where data would be lost.
 - **1 Oct 2026: our shell stays (#2051).** NativePHP for Mobile was weighed against it before the runtime (#2034) was built on it, and lost on cost (€0, § 2), on fit with the Angular SPA and the server, and on where its PHP binary comes from (§ 5.1). PHP called in-process from our shell is the way out, kept for a reason we do not have yet.
+- **2 Oct 2026: Google is the key (§ 5.4, #2033).** The owner asked that opening the app, or logging out, lead to "Accedi con Google" and the gym coming back by itself, on the phone and on the PC. Offered the trade-off, they chose the Google account as the only lock over a one-time code per new device. The pairing code and "Drive alone opens nothing" are gone; the keys live with the account (`appDataFolder`, after a spike, or the sync folder).
