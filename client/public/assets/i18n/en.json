@@ -3581,8 +3581,11 @@
       "ready": "Ready for the phone",
       "readySince": "Ready for the phone since",
       "howTo": "On the phone, open Budojo and tap «Sign in with Google».",
-      "keysDiffer": "This Google account already holds another gym's keys: they are left as they are.",
-      "failed": "It did not work"
+      "keysDiffer": "This Google account holds keys other than this PC's, and they are left as they are. If it is the same gym on a new or reinstalled PC, import the recovery code below first, then try again.",
+      "failed": "It did not work",
+      "otherAccount": "You picked another Google account: pick {{account}}, the one the backups go to.",
+      "scopesMissing": "Google did not grant both permissions: try again and leave both boxes ticked.",
+      "keysAmbiguous": "This Google account holds two keys files: none is picked at random."
     }
   },
   "desktopTitlebar": {

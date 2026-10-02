@@ -38,6 +38,8 @@ export interface DriveTokens {
   accessToken: string;
   refreshToken: string;
   expiresAt: number | null;
+  /** The scopes Google granted, space-separated, as its token answer gives them (#2033). */
+  scope?: string;
 }
 
 export interface DriveClientConfig {
@@ -190,7 +192,12 @@ async function exchangeCode(
     throw await toDriveError(response);
   }
 
-  const body = (await response.json()) as { access_token: string; refresh_token?: string; expires_in?: number };
+  const body = (await response.json()) as {
+    access_token: string;
+    refresh_token?: string;
+    expires_in?: number;
+    scope?: string;
+  };
 
   if (typeof body.refresh_token !== 'string') {
     // Without it the link dies at the first expiry. Better to fail the connect
@@ -202,6 +209,7 @@ async function exchangeCode(
     accessToken: body.access_token,
     refreshToken: body.refresh_token,
     expiresAt: typeof body.expires_in === 'number' ? Date.now() + body.expires_in * 1000 : null,
+    ...(typeof body.scope === 'string' ? { scope: body.scope } : {}),
   };
 }
 
@@ -221,13 +229,14 @@ export async function refresh(config: DriveClientConfig, refreshToken: string): 
     throw await toDriveError(response);
   }
 
-  const body = (await response.json()) as { access_token: string; expires_in?: number };
+  const body = (await response.json()) as { access_token: string; expires_in?: number; scope?: string };
 
   return {
     accessToken: body.access_token,
     // A refresh response carries no new refresh token; the original stays valid.
     refreshToken,
     expiresAt: typeof body.expires_in === 'number' ? Date.now() + body.expires_in * 1000 : null,
+    ...(typeof body.scope === 'string' ? { scope: body.scope } : {}),
   };
 }
 
@@ -392,13 +401,16 @@ export async function revoke(refreshToken: string): Promise<void> {
   }).catch(() => undefined);
 }
 
-/** A file in the account's hidden application data (#2033), by name. */
-export async function findAppDataFile(tokens: DriveTokens, name: string): Promise<string | null> {
+/**
+ * The files of a name in the account's hidden application data (#2033). All
+ * of them: Drive allows two of one name, and a reader must not pick one.
+ */
+export async function findAppDataFiles(tokens: DriveTokens, name: string): Promise<string[]> {
   const params = new URLSearchParams({
     spaces: 'appDataFolder',
     q: `name='${name}' and trashed=false`,
     fields: 'files(id)',
-    pageSize: '1',
+    pageSize: '10',
   });
   const response = await fetch(`https://www.googleapis.com/drive/v3/files?${params.toString()}`, {
     headers: auth(tokens),
@@ -410,7 +422,7 @@ export async function findAppDataFile(tokens: DriveTokens, name: string): Promis
 
   const body = (await response.json()) as { files?: { id: string }[] };
 
-  return body.files?.[0]?.id ?? null;
+  return (body.files ?? []).map((file) => file.id);
 }
 
 export async function readAppDataFile(tokens: DriveTokens, id: string): Promise<string> {

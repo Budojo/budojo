@@ -10,7 +10,7 @@ import { assertLayoutPath, Listing, RemoteError, RemoteFolder, SyncRemote } from
  * ```
  * Budojo/            the folder the PC creates for its backups (#1301)
  *   sync/
- *     keys.bjs
+ *     folder.bjs
  *     versions/  files/  devices/
  * ```
  */

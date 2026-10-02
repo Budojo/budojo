@@ -35,7 +35,7 @@ docs/
 │   ├── install.md                     # install, first run, SmartScreen, upgrades
 │   └── backup-restore.md              # backup + the disaster-recovery runbook (the encryption-key caveat)
 ├── sync/                              # the phone and the PC sharing one academy (M12)
-│   └── protocol.md                    # the sync protocol v2: folder, envelope, version, journal, pairing (#2029)
+│   └── protocol.md                    # the sync protocol v2: folder, envelope, version, journal, keys and joining (#2029, #2033)
 ├── specs/                             # milestone PRDs
 │   ├── m3-documents.md                # M3 — Documents & Deadlines
 │   └── m4-attendance.md               # M4 — Attendance (with `Deltas from spec`)

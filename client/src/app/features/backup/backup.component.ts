@@ -42,6 +42,14 @@ import { LocaleDatePipe } from '../../shared/pipes/locale-date.pipe';
 import { driveErrorKey, folderErrorKey } from '../../shared/utils/backup-errors';
 import { prefersReducedMotion } from '../../shared/utils/prefers-reduced-motion';
 
+/** What each refusal of «Collega il telefono» says (#2033); another code is shown as it is. */
+const PHONE_REFUSALS: Record<string, string> = {
+  keys_differ: 'backup.phone.keysDiffer',
+  other_account: 'backup.phone.otherAccount',
+  scopes_missing: 'backup.phone.scopesMissing',
+  keys_ambiguous: 'backup.phone.keysAmbiguous',
+};
+
 /** How many archives the list shows before "Mostra tutti" (#1910). */
 const LIST_LIMIT = 5;
 
@@ -286,21 +294,19 @@ export class BackupComponent {
     const result = await this.drive.connectPhone();
     this.connectingPhone.set(false);
 
+    const refusal = PHONE_REFUSALS[result.error ?? ''];
     this.messages.add({
       severity: result.ok ? 'success' : 'error',
       summary: this.translate.instant(
-        result.ok
-          ? 'backup.phone.ready'
-          : result.error === 'keys_differ'
-            ? 'backup.phone.keysDiffer'
-            : 'backup.phone.failed',
+        result.ok ? 'backup.phone.ready' : (refusal ?? 'backup.phone.failed'),
+        { account: this.driveState().account ?? '' },
       ),
       detail: result.ok
         ? this.translate.instant('backup.phone.howTo')
-        : result.error === 'keys_differ'
-          ? undefined
-          : result.error,
-      life: result.ok ? 6000 : 10000,
+        : refusal === undefined
+          ? result.error
+          : undefined,
+      life: result.ok ? 6000 : 12000,
     });
 
     await this.refresh();

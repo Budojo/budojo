@@ -3581,8 +3581,11 @@
       "ready": "Pronta per il telefono",
       "readySince": "Pronta per il telefono dal",
       "howTo": "Sul telefono apri Budojo e tocca «Accedi con Google».",
-      "keysDiffer": "Su questo account Google ci sono già le chiavi di un'altra palestra: non le sostituisco.",
-      "failed": "Non è andata"
+      "keysDiffer": "Su questo account Google ci sono chiavi diverse da quelle di questo PC, e restano come sono. Se è la stessa palestra su un PC nuovo o reinstallato, importa prima qui sotto il codice di recupero, poi riprova.",
+      "failed": "Non è andata",
+      "otherAccount": "Hai scelto un altro account Google: scegli {{account}}, quello dei backup.",
+      "scopesMissing": "Google non ha dato tutti e due i permessi: riprova e lascia spuntate entrambe le voci.",
+      "keysAmbiguous": "Su questo account Google ci sono due file di chiavi: non ne scelgo uno a caso."
     }
   },
   "desktopTitlebar": {

@@ -5,7 +5,7 @@ import { isLayoutPath } from './layout';
  * `DriveRemote` on the phone, the PC's main process over the bridge (#2032),
  * and `MemoryRemote` in the tests, where two devices sync with no Google account.
  *
- * Paths are the layout's (`layout.ts`): `keys.bjs`, `versions/…`, `files/…`,
+ * Paths are the layout's (`layout.ts`): `folder.bjs`, `versions/…`, `files/…`,
  * `devices/…`. A remote stores bytes; it never sees a key or a plaintext.
  */
 
@@ -36,7 +36,7 @@ export interface SyncRemote {
   read(path: string): Promise<Uint8Array | null>;
   /**
    * Writes the file, replacing one of the same path. Versions and documents are
-   * never written twice by design (new names), so only `keys.bjs` and a
+   * never written twice by design (new names), so only `folder.bjs` and a
    * device's own `devices/` file are ever replaced.
    */
   write(path: string, bytes: Uint8Array): Promise<void>;

@@ -30,6 +30,8 @@ export const KEYS_FILE = 'budojo-keys.json';
 
 const VERSION = 1;
 const FOLDER = /^[0-9a-f]{32}$/;
+/** 32 bytes of standard, padded base64, and nothing else: `atob` would take spaces too. */
+const KEY_32 = /^[A-Za-z0-9+/]{43}=$/;
 
 export function parseAcademyKeys(value: unknown): Parsed<AcademyKeys> {
   if (!isRecord(value)) {
@@ -43,7 +45,7 @@ export function parseAcademyKeys(value: unknown): Parsed<AcademyKeys> {
     return refuse('the folder id is not 32 hex characters');
   }
   const syncKey = value['syncKey'];
-  if (typeof syncKey !== 'string' || decodedLength(syncKey) !== 32) {
+  if (typeof syncKey !== 'string' || !KEY_32.test(syncKey)) {
     return refuse('the sync key is not 32 bytes of base64');
   }
   const appKey = value['APP_KEY'];
@@ -61,12 +63,4 @@ export function parseAcademyKeys(value: unknown): Parsed<AcademyKeys> {
     return refuse('the keys say not when they were made');
   }
   return ok({ folder, syncKey, APP_KEY: appKey, DOCUMENT_ENCRYPTION_KEY: documentKey, createdAt });
-}
-
-function decodedLength(base64: string): number {
-  try {
-    return atob(base64).length;
-  } catch {
-    return -1;
-  }
 }

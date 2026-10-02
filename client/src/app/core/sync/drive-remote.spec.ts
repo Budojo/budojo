@@ -128,7 +128,7 @@ function contract(name: string, make: () => SyncRemote): void {
       const remote = make();
 
       await remote.write('versions/000001-pc4f2a.root.bjs', utf8('v1'));
-      await remote.write('keys.bjs', utf8('k'));
+      await remote.write('folder.bjs', utf8('k'));
 
       expect((await remote.list('versions')).files).toEqual([
         { path: 'versions/000001-pc4f2a.root.bjs', size: 2, created: expect.any(Number) },
@@ -160,8 +160,8 @@ function contract(name: string, make: () => SyncRemote): void {
       const remote = make();
 
       expect((await remote.list('files')).files).toEqual([]);
-      expect(await remote.read('keys.bjs')).toBeNull();
-      await expect(remote.remove('keys.bjs')).resolves.toBeUndefined();
+      expect(await remote.read('folder.bjs')).toBeNull();
+      await expect(remote.remove('folder.bjs')).resolves.toBeUndefined();
     });
 
     it('refuses to write outside the layout', async () => {
@@ -195,7 +195,7 @@ describe('DriveRemote on Google Drive (#2029)', () => {
     const remote = new DriveRemote(async () => 'tok', drive.fetch);
 
     await remote.list('versions');
-    await remote.read('keys.bjs');
+    await remote.read('folder.bjs');
 
     expect(drive.files).toEqual([]);
   });
@@ -206,7 +206,7 @@ describe('DriveRemote on Google Drive (#2029)', () => {
     drive.add('Budojo', null, true);
     const remote = new DriveRemote(async () => 'tok', drive.fetch);
 
-    await remote.write('keys.bjs', utf8('k'));
+    await remote.write('folder.bjs', utf8('k'));
 
     expect(drive.files.find((file) => file.name === 'sync')?.parent).toBe(older.id);
   });
@@ -218,7 +218,7 @@ describe('DriveRemote on Google Drive (#2029)', () => {
     const phone = new DriveRemote(async () => 'tok', drive.fetch);
 
     await Promise.all([
-      pc.write('keys.bjs', utf8('k')),
+      pc.write('folder.bjs', utf8('k')),
       phone.write('devices/phone9c1e.bjs', utf8('d')),
     ]);
     await phone.write(`files/${'ef'.repeat(32)}.bjs`, utf8('f'));
@@ -286,16 +286,16 @@ describe('DriveRemote on Google Drive (#2029)', () => {
         return drive.fetch(url, init);
       },
     );
-    await remote.write('keys.bjs', utf8('k'));
+    await remote.write('folder.bjs', utf8('k'));
 
-    await expect(remote.read('keys.bjs')).rejects.toMatchObject({ reason: 'offline' });
+    await expect(remote.read('folder.bjs')).rejects.toMatchObject({ reason: 'offline' });
   });
 
   it('sends the token on every call, and uploads through a resumable session', async () => {
     const drive = new FakeDrive();
     const remote = new DriveRemote(async () => 'tok', drive.fetch);
 
-    await remote.write('keys.bjs', utf8('k'));
+    await remote.write('folder.bjs', utf8('k'));
 
     expect(drive.calls.every((call) => call.token === 'Bearer tok')).toBe(true);
     expect(drive.calls.some((call) => call.url.includes('uploadType=resumable'))).toBe(true);

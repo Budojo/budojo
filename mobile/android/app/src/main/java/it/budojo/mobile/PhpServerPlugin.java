@@ -347,8 +347,8 @@ public class PhpServerPlugin extends Plugin {
     /**
      * This phone's keys, made on its first start and kept in the app's private
      * files, as the desktop keeps its own (#1223). The same shape as the
-     * desktop's keychain record, so pairing (#2033) can replace them with the
-     * academy's from {@code keys.bjs}. They never leave the phone: the manifest
+     * desktop's keychain record, so the door can replace them with the
+     * academy's from the Google account (#2033). They never leave the phone: the manifest
      * turns off the backup ({@code allowBackup="false"}, up to Android 11) and,
      * on Android 12+, the transfer to a new phone, which ignores that flag
      * ({@code res/xml/data_extraction_rules.xml}). Both are needed.

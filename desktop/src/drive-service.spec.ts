@@ -2,9 +2,11 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { BackupEntry } from './backup.js';
 import { generateSecrets } from './bootstrap.js';
+import type { DriveTokens } from './drive-io.js';
 import { DriveSyncService, type DriveSyncIO } from './drive-service.js';
 import { emptyState, type DriveState } from './drive-state.js';
 import type { RemoteArchive } from './drive-sync.js';
+import { APPDATA_SCOPE, DRIVE_SCOPE } from './drive-auth.js';
 import { newAcademyKeys, parseAcademyKeys } from './sync-keys.js';
 
 /**
@@ -39,9 +41,14 @@ function fakeIO(overrides: Partial<DriveSyncIO> = {}) {
     writeTokens: vi.fn(async () => undefined),
     clearTokens: vi.fn(async () => undefined),
     authorize: vi.fn(async () => ({ accessToken: 'at', refreshToken: 'rt', expiresAt: Date.now() + 3_600_000 })),
-    authorizeWithAppData: vi.fn(async () => ({ accessToken: 'at2', refreshToken: 'rt2', expiresAt: Date.now() + 3_600_000 })),
+    authorizeWithAppData: vi.fn(async () => ({
+      accessToken: 'at2',
+      refreshToken: 'rt2',
+      expiresAt: Date.now() + 3_600_000,
+      scope: `${DRIVE_SCOPE} ${APPDATA_SCOPE}`,
+    })),
     localSecrets: vi.fn(async () => SECRETS),
-    findKeys: vi.fn(async () => null),
+    findKeys: vi.fn(async (): Promise<string[]> => []),
     readKeys: vi.fn(async () => ''),
     writeKeys: vi.fn(async () => undefined),
     ensureFresh: vi.fn(async (t) => t),
@@ -411,7 +418,7 @@ describe('connectPhone', () => {
 
   it('writes nothing when this PC\'s keys are already there', async () => {
     const mine = JSON.stringify(newAcademyKeys(SECRETS, new Date()));
-    const { io } = fakeIO({ findKeys: vi.fn(async () => 'keys-1'), readKeys: vi.fn(async () => mine) });
+    const { io } = fakeIO({ findKeys: vi.fn(async () => ['keys-1']), readKeys: vi.fn(async () => mine) });
 
     const result = await new DriveSyncService(io).connectPhone();
 
@@ -419,9 +426,9 @@ describe('connectPhone', () => {
     expect(io.writeKeys).not.toHaveBeenCalled();
   });
 
-  it('never overwrites another academy\'s keys: its documents and its sync would stop opening', async () => {
+  it('never overwrites other keys: their documents and their sync would stop opening', async () => {
     const theirs = JSON.stringify(newAcademyKeys(generateSecrets(), new Date()));
-    const { io, state } = fakeIO({ findKeys: vi.fn(async () => 'keys-1'), readKeys: vi.fn(async () => theirs) });
+    const { io, state } = fakeIO({ findKeys: vi.fn(async () => ['keys-1']), readKeys: vi.fn(async () => theirs) });
 
     const result = await new DriveSyncService(io).connectPhone();
 
@@ -446,6 +453,110 @@ describe('connectPhone', () => {
 
     expect(await new DriveSyncService(io).connectPhone()).toEqual({ ok: false, error: 'consent_timeout' });
     expect(io.writeKeys).not.toHaveBeenCalled();
+  });
+
+  it('saves nothing when the consent did not grant both scopes: the backups keep working', async () => {
+    const { io } = fakeIO({
+      authorizeWithAppData: vi.fn(async () => ({ accessToken: 'at2', refreshToken: 'rt2', expiresAt: null, scope: APPDATA_SCOPE })),
+    });
+
+    expect(await new DriveSyncService(io).connectPhone()).toEqual({ ok: false, error: 'scopes_missing' });
+    expect(io.writeTokens).not.toHaveBeenCalled();
+    expect(io.writeKeys).not.toHaveBeenCalled();
+  });
+
+  it('saves nothing for another Google account, and lets go of its grant', async () => {
+    const { io } = fakeIO({ accountEmail: vi.fn(async () => 'someone@else.it') });
+
+    expect(await new DriveSyncService(io).connectPhone()).toEqual({ ok: false, error: 'other_account' });
+    expect(io.writeTokens).not.toHaveBeenCalled();
+    expect(io.writeKeys).not.toHaveBeenCalled();
+    expect(io.revoke).toHaveBeenCalledWith('rt2');
+  });
+
+  it('picks no keys when the account holds two files of them', async () => {
+    const { io } = fakeIO({ findKeys: vi.fn(async () => ['keys-1', 'keys-2']) });
+
+    expect(await new DriveSyncService(io).connectPhone()).toEqual({ ok: false, error: 'keys_ambiguous' });
+    expect(io.writeKeys).not.toHaveBeenCalled();
+  });
+
+  it('runs once for two calls at once: never two keys files', async () => {
+    let consent: () => void = () => undefined;
+    const { io } = fakeIO({
+      authorizeWithAppData: vi.fn(
+        () =>
+          new Promise<DriveTokens>((resolve) => {
+            consent = () =>
+              resolve({ accessToken: 'at2', refreshToken: 'rt2', expiresAt: null, scope: `${DRIVE_SCOPE} ${APPDATA_SCOPE}` });
+          }),
+      ),
+    });
+    const service = new DriveSyncService(io);
+
+    const first = service.connectPhone();
+    const second = service.connectPhone();
+    await vi.waitFor(() => expect(io.authorizeWithAppData).toHaveBeenCalled());
+    consent();
+
+    expect(await first).toEqual({ ok: true, keys: 'published' });
+    expect(await second).toEqual({ ok: true, keys: 'published' });
+    expect(io.authorizeWithAppData).toHaveBeenCalledTimes(1);
+    expect(io.writeKeys).toHaveBeenCalledTimes(1);
+  });
+
+  it('writes nothing when Drive was disconnected while Google asked', async () => {
+    let consent: () => void = () => undefined;
+    const { io } = fakeIO({
+      authorizeWithAppData: vi.fn(
+        () =>
+          new Promise<DriveTokens>((resolve) => {
+            consent = () =>
+              resolve({ accessToken: 'at2', refreshToken: 'rt2', expiresAt: null, scope: `${DRIVE_SCOPE} ${APPDATA_SCOPE}` });
+          }),
+      ),
+    });
+    const service = new DriveSyncService(io);
+
+    const connecting = service.connectPhone();
+    await vi.waitFor(() => expect(io.authorizeWithAppData).toHaveBeenCalled());
+    await service.unlink();
+    consent();
+
+    expect(await connecting).toEqual({ ok: false, error: 'link_changed' });
+    expect(io.writeKeys).not.toHaveBeenCalled();
+  });
+
+  it('keeps the date through a backup sync that finished after it', async () => {
+    const { io, state } = fakeIO();
+    const service = new DriveSyncService(io);
+
+    await service.connectPhone();
+    await service.sync();
+
+    expect(state.current.keysPublishedAt).toBe(new Date(1_700_000_000_000).toISOString());
+  });
+
+  it('keeps the date through a reconnect to the same account, and asks for both scopes then', async () => {
+    const { io, state } = fakeIO();
+    const service = new DriveSyncService(io);
+    await service.connectPhone();
+
+    await service.link();
+
+    expect(state.current.keysPublishedAt).not.toBeNull();
+    expect(io.authorizeWithAppData).toHaveBeenCalledTimes(2);
+  });
+
+  it('forgets the date when the reconnect is to another account', async () => {
+    const { io, state } = fakeIO();
+    const service = new DriveSyncService(io);
+    await service.connectPhone();
+    vi.mocked(io.accountEmail).mockResolvedValue('other@example.it');
+
+    await service.link();
+
+    expect(state.current.keysPublishedAt).toBeNull();
   });
 });
 

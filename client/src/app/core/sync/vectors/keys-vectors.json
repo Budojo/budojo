@@ -1,0 +1,167 @@
+{
+  "_about": "The academy's keys file (#2033, docs/sync/protocol.md \u00a7 The keys): what both readers must agree on. desktop/src/sync-keys.spec.ts and client/src/app/core/sync/keys.spec.ts run their parser over every entry.",
+  "valid": [
+    {
+      "v": 1,
+      "folder": "0123456789abcdef0123456789abcdef",
+      "syncKey": "a2tra2tra2tra2tra2tra2tra2tra2tra2tra2tra2s=",
+      "APP_KEY": "base64:YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=",
+      "DOCUMENT_ENCRYPTION_KEY": "ZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGQ=",
+      "createdAt": "2026-10-02T18:00:00.000Z"
+    },
+    {
+      "v": 1,
+      "folder": "0123456789abcdef0123456789abcdef",
+      "syncKey": "a2tra2tra2tra2tra2tra2tra2tra2tra2tra2tra2s=",
+      "APP_KEY": "base64:YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=",
+      "DOCUMENT_ENCRYPTION_KEY": "ZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGQ=",
+      "createdAt": "2026-10-02T18:00:00Z"
+    },
+    {
+      "v": 1,
+      "folder": "0123456789abcdef0123456789abcdef",
+      "syncKey": "a2tra2tra2tra2tra2tra2tra2tra2tra2tra2tra2s=",
+      "APP_KEY": "base64:YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=",
+      "DOCUMENT_ENCRYPTION_KEY": "ZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGQ=",
+      "createdAt": "2026-10-02T18:00:00.123456Z"
+    }
+  ],
+  "invalid": [
+    {
+      "why": "another version",
+      "keys": {
+        "v": 2,
+        "folder": "0123456789abcdef0123456789abcdef",
+        "syncKey": "a2tra2tra2tra2tra2tra2tra2tra2tra2tra2tra2s=",
+        "APP_KEY": "base64:YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=",
+        "DOCUMENT_ENCRYPTION_KEY": "ZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGQ=",
+        "createdAt": "2026-10-02T18:00:00.000Z"
+      }
+    },
+    {
+      "why": "no folder id",
+      "keys": {
+        "v": 1,
+        "folder": "x",
+        "syncKey": "a2tra2tra2tra2tra2tra2tra2tra2tra2tra2tra2s=",
+        "APP_KEY": "base64:YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=",
+        "DOCUMENT_ENCRYPTION_KEY": "ZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGQ=",
+        "createdAt": "2026-10-02T18:00:00.000Z"
+      }
+    },
+    {
+      "why": "a folder id in capitals",
+      "keys": {
+        "v": 1,
+        "folder": "0123456789ABCDEF0123456789ABCDEF",
+        "syncKey": "a2tra2tra2tra2tra2tra2tra2tra2tra2tra2tra2s=",
+        "APP_KEY": "base64:YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=",
+        "DOCUMENT_ENCRYPTION_KEY": "ZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGQ=",
+        "createdAt": "2026-10-02T18:00:00.000Z"
+      }
+    },
+    {
+      "why": "a short sync key",
+      "keys": {
+        "v": 1,
+        "folder": "0123456789abcdef0123456789abcdef",
+        "syncKey": "c2hvcnQ=",
+        "APP_KEY": "base64:YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=",
+        "DOCUMENT_ENCRYPTION_KEY": "ZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGQ=",
+        "createdAt": "2026-10-02T18:00:00.000Z"
+      }
+    },
+    {
+      "why": "a sync key with a character base64 does not have",
+      "keys": {
+        "v": 1,
+        "folder": "0123456789abcdef0123456789abcdef",
+        "syncKey": "a2tra2tra2*tra2tra2tra2tra2tra2tra2tra2tra2s=",
+        "APP_KEY": "base64:YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=",
+        "DOCUMENT_ENCRYPTION_KEY": "ZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGQ=",
+        "createdAt": "2026-10-02T18:00:00.000Z"
+      }
+    },
+    {
+      "why": "a sync key with a space in it",
+      "keys": {
+        "v": 1,
+        "folder": "0123456789abcdef0123456789abcdef",
+        "syncKey": "a2tra2tra2 tra2tra2tra2tra2tra2tra2tra2tra2s=",
+        "APP_KEY": "base64:YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=",
+        "DOCUMENT_ENCRYPTION_KEY": "ZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGQ=",
+        "createdAt": "2026-10-02T18:00:00.000Z"
+      }
+    },
+    {
+      "why": "a sync key without its padding",
+      "keys": {
+        "v": 1,
+        "folder": "0123456789abcdef0123456789abcdef",
+        "syncKey": "a2tra2tra2tra2tra2tra2tra2tra2tra2tra2tra2s",
+        "APP_KEY": "base64:YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=",
+        "DOCUMENT_ENCRYPTION_KEY": "ZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGQ=",
+        "createdAt": "2026-10-02T18:00:00.000Z"
+      }
+    },
+    {
+      "why": "an APP_KEY without its prefix",
+      "keys": {
+        "v": 1,
+        "folder": "0123456789abcdef0123456789abcdef",
+        "syncKey": "a2tra2tra2tra2tra2tra2tra2tra2tra2tra2tra2s=",
+        "APP_KEY": "YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=",
+        "DOCUMENT_ENCRYPTION_KEY": "ZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGQ=",
+        "createdAt": "2026-10-02T18:00:00.000Z"
+      }
+    },
+    {
+      "why": "a short document key",
+      "keys": {
+        "v": 1,
+        "folder": "0123456789abcdef0123456789abcdef",
+        "syncKey": "a2tra2tra2tra2tra2tra2tra2tra2tra2tra2tra2s=",
+        "APP_KEY": "base64:YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=",
+        "DOCUMENT_ENCRYPTION_KEY": "short",
+        "createdAt": "2026-10-02T18:00:00.000Z"
+      }
+    },
+    {
+      "why": "no time",
+      "keys": {
+        "v": 1,
+        "folder": "0123456789abcdef0123456789abcdef",
+        "syncKey": "a2tra2tra2tra2tra2tra2tra2tra2tra2tra2tra2s=",
+        "APP_KEY": "base64:YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=",
+        "DOCUMENT_ENCRYPTION_KEY": "ZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGQ=",
+        "createdAt": "yesterday"
+      }
+    },
+    {
+      "why": "a day that does not exist",
+      "keys": {
+        "v": 1,
+        "folder": "0123456789abcdef0123456789abcdef",
+        "syncKey": "a2tra2tra2tra2tra2tra2tra2tra2tra2tra2tra2s=",
+        "APP_KEY": "base64:YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=",
+        "DOCUMENT_ENCRYPTION_KEY": "ZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGQ=",
+        "createdAt": "2026-02-31T18:00:00Z"
+      }
+    },
+    {
+      "why": "a time without its zone",
+      "keys": {
+        "v": 1,
+        "folder": "0123456789abcdef0123456789abcdef",
+        "syncKey": "a2tra2tra2tra2tra2tra2tra2tra2tra2tra2tra2s=",
+        "APP_KEY": "base64:YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=",
+        "DOCUMENT_ENCRYPTION_KEY": "ZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGQ=",
+        "createdAt": "2026-10-02T18:00:00"
+      }
+    },
+    {
+      "why": "not an object",
+      "keys": "keys"
+    }
+  ]
+}
