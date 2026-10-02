@@ -153,7 +153,7 @@ Also worth knowing:
 **Data & backup → Google Drive → Collega il telefono** puts the academy's keys in the Google account's hidden application data, where only Budojo reads them. The phone's «Accedi con Google» then brings the gym back and opens its medical certificates, with no recovery code to type.
 - **It is the owner's choice,** and Google asks for it in a second consent. The backups never need it.
 - **Whoever gets into the Google account can open the gym,** certificates included: that is the owner's decision (PRD § 5.4). Keep Google's 2-step verification on.
-- **Written once and never overwritten.** If the account already holds another academy's keys, the PC says so and leaves them as they are.
+- **Written once and never overwritten.** If the account already holds keys other than this PC's, the PC says so and leaves them as they are. It is usually the same gym on a new or reinstalled PC: restore the keys from the recovery code first (above), then **Collega il telefono** finds them already there.
 
 The recovery code above is still the way back on a new **computer**.
 
