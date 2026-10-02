@@ -143,6 +143,27 @@ describe('SyncService', () => {
     expect(reload).not.toHaveBeenCalled();
   });
 
+  it('takes the PC’s gym when the owner chooses it, and loads the page again', async () => {
+    await pcPublishes();
+    phone = new MemoryDevice('phone9c1e', 'Eagles BJJ, restored from a backup');
+    const sync = setUp();
+    await sync.syncNow();
+    expect(sync.state().kind).toBe('ask');
+
+    await sync.resolve('folder');
+
+    expect(phone.db.academy).toBe('Eagles BJJ');
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it('does nothing with a choice when nothing was asked', async () => {
+    await pcPublishes();
+    const sync = setUp();
+    await sync.resolve('device');
+
+    expect(remote.files.has('versions/000002-phone9c1e.000001-pc4f2a.bjs')).toBe(false);
+  });
+
   it('writes nothing to another academy’s folder', async () => {
     await remote.write(FOLDER_PATH, await sealFolder(key, 'f'.repeat(32)));
     const sync = setUp();

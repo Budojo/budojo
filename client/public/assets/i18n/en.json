@@ -3714,6 +3714,15 @@
       "unpaired": "Sign out, then sign in with Google to connect it again.",
       "needsRebaseOne": "1 change from the phone is waiting, safe here: combining it with the PC's comes with the next update.",
       "needsRebaseOther": "{{count}} changes from the phone are waiting, safe here: combining them with the PC's comes with the next update."
+    },
+    "ask": {
+      "useFolderPc": "Use the PC's gym",
+      "useFolderPhone": "Use the phone's gym",
+      "keepHere": "Keep the one here",
+      "consequenceFolder": "This device takes the gym on Drive. What it holds now is replaced.",
+      "consequenceDevice": "The gym here goes to Drive, and the other device takes it. What is on Drive now is replaced.",
+      "confirm": "Confirm",
+      "cancel": "Cancel"
     }
   }
 }

@@ -14,6 +14,7 @@ describe('SyncPillComponent', () => {
       state: state.asReadonly(),
       syncNow: vi.fn(async () => undefined),
       reconnect: vi.fn(async () => undefined),
+      resolve: vi.fn(async () => undefined),
     };
     TestBed.configureTestingModule({
       imports: [SyncPillComponent],
@@ -87,5 +88,55 @@ describe('SyncPillComponent', () => {
     const detail = document.querySelector('[data-cy="sync-detail"]');
     expect(detail?.textContent).toContain('The sync did not go through');
     expect(detail?.textContent).toContain('Drive said 500');
+  });
+
+  describe('when the sync asks: two gyms, never merged (#2033)', () => {
+    async function openDetail(fixture: ReturnType<typeof setup>['fixture']) {
+      (fixture.nativeElement as HTMLElement)
+        .querySelector<HTMLButtonElement>('[data-cy="sync-pill"]')
+        ?.click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+    }
+    const find = (cy: string) => document.querySelector<HTMLElement>(`[data-cy="${cy}"]`);
+    const press = (cy: string) => find(cy)?.querySelector('button')?.click();
+
+    it('offers the PC’s gym or the one here, and says what a pick replaces before it is done', async () => {
+      const { fixture, sync } = setup({ kind: 'ask', latest: { seq: 1, device: 'pc4f2a' } });
+      await openDetail(fixture);
+
+      expect(find('sync-ask-folder')?.textContent).toContain("Use the PC's gym");
+      press('sync-ask-folder');
+      fixture.detectChanges();
+
+      expect(find('sync-ask-consequence')?.textContent).toContain('What it holds now is replaced');
+      expect(sync.resolve).not.toHaveBeenCalled();
+
+      press('sync-ask-confirm');
+      await fixture.whenStable();
+      expect(sync.resolve).toHaveBeenCalledWith('folder');
+    });
+
+    it('names the phone when the phone published the gym on Drive', async () => {
+      const { fixture } = setup({ kind: 'ask', latest: { seq: 2, device: 'phone9c1e' } });
+      await openDetail(fixture);
+
+      expect(find('sync-ask-folder')?.textContent).toContain("Use the phone's gym");
+    });
+
+    it('goes back without doing anything on «Cancel»', async () => {
+      const { fixture, sync } = setup({ kind: 'ask', latest: { seq: 1, device: 'pc4f2a' } });
+      await openDetail(fixture);
+
+      press('sync-ask-device');
+      fixture.detectChanges();
+      expect(find('sync-ask-consequence')?.textContent).toContain('the other device takes it');
+      press('sync-ask-cancel');
+      fixture.detectChanges();
+
+      expect(find('sync-ask-consequence')).toBeNull();
+      expect(find('sync-ask-folder')).not.toBeNull();
+      expect(sync.resolve).not.toHaveBeenCalled();
+    });
   });
 });

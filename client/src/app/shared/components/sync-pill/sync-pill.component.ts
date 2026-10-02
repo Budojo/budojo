@@ -3,6 +3,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ButtonModule } from 'primeng/button';
 import { PopoverModule } from 'primeng/popover';
 import { LanguageService } from '../../../core/services/language.service';
+import { AskChoice } from '../../../core/sync/engine';
 import { SyncService, SyncState } from '../../../core/sync/sync.service';
 import { localeFor } from '../../utils/locale';
 
@@ -42,6 +43,16 @@ export class SyncPillComponent {
 
   protected readonly state = this.sync.state;
   protected readonly busy = signal(false);
+  /** The owner's pick when the sync asked, until they confirm it. */
+  protected readonly confirming = signal<AskChoice | null>(null);
+
+  /** «Usa quella del PC», or of the phone: whichever device published the folder's latest. */
+  protected readonly useFolderKey = computed(() => {
+    const state = this.state();
+    return state.kind === 'ask' && state.latest.device.startsWith('phone')
+      ? 'sync.ask.useFolderPhone'
+      : 'sync.ask.useFolderPc';
+  });
 
   protected readonly icon = computed(() => LOOK[this.state().kind].icon);
   protected readonly attention = computed(() => LOOK[this.state().kind].attention);
@@ -119,6 +130,21 @@ export class SyncPillComponent {
       // The pill shows the state the attempt left behind.
     } finally {
       this.busy.set(false);
+    }
+  }
+
+  async resolve(choice: AskChoice): Promise<void> {
+    if (this.busy()) {
+      return;
+    }
+    this.busy.set(true);
+    try {
+      await this.sync.resolve(choice);
+    } catch {
+      // The pill shows the state the attempt left behind.
+    } finally {
+      this.busy.set(false);
+      this.confirming.set(null);
     }
   }
 

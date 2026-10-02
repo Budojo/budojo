@@ -16,21 +16,67 @@
   </button>
 
   <!-- The detail takes the focus, and gives it back to the pill when it closes. -->
-  <p-popover #detail (onHide)="pillButton.focus()">
+  <p-popover #detail (onHide)="pillButton.focus(); confirming.set(null)">
     <div class="sync-detail" data-cy="sync-detail">
       <p class="sync-detail__title">{{ sentence() }}</p>
       @if (hint(); as text) {
         <p class="sync-detail__hint">{{ text }}</p>
       }
-      <p-button
-        [label]="(state().kind === 'reconnect' ? 'sync.reconnect' : 'sync.now') | translate"
-        [icon]="state().kind === 'reconnect' ? 'pi pi-link' : 'pi pi-sync'"
-        [loading]="busy()"
-        [autofocus]="true"
-        [fluid]="true"
-        (onClick)="act()"
-        data-cy="sync-detail-action"
-      />
+      @if (state().kind === 'ask') {
+        <!--
+          Never merged (PRD § 2): one academy or the other. The owner picks,
+          reads what it replaces, and confirms.
+        -->
+        @if (confirming(); as choice) {
+          <p class="sync-detail__consequence" data-cy="sync-ask-consequence">
+            {{
+              (choice === 'folder' ? 'sync.ask.consequenceFolder' : 'sync.ask.consequenceDevice')
+                | translate
+            }}
+          </p>
+          <p-button
+            [label]="'sync.ask.confirm' | translate"
+            [loading]="busy()"
+            [autofocus]="true"
+            [fluid]="true"
+            (onClick)="resolve(choice)"
+            data-cy="sync-ask-confirm"
+          />
+          <p-button
+            [label]="'sync.ask.cancel' | translate"
+            [text]="true"
+            [fluid]="true"
+            [disabled]="busy()"
+            (onClick)="confirming.set(null)"
+            data-cy="sync-ask-cancel"
+          />
+        } @else {
+          <p-button
+            [label]="useFolderKey() | translate"
+            [autofocus]="true"
+            [fluid]="true"
+            (onClick)="confirming.set('folder')"
+            data-cy="sync-ask-folder"
+          />
+          <p-button
+            [label]="'sync.ask.keepHere' | translate"
+            [outlined]="true"
+            [fluid]="true"
+            (onClick)="confirming.set('device')"
+            data-cy="sync-ask-device"
+          />
+        }
+      } @else {
+        <p-button
+          [label]="(state().kind === 'reconnect' ? 'sync.reconnect' : 'sync.now') | translate"
+          [icon]="state().kind === 'reconnect' ? 'pi pi-link' : 'pi pi-sync'"
+          [loading]="busy()"
+          [autofocus]="true"
+          [fluid]="true"
+          (onClick)="act()"
+          data-cy="sync-detail-action"
+        />
+      }
     </div>
   </p-popover>
 }

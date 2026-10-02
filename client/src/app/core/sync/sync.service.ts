@@ -2,7 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { DestroyRef, Injectable, InjectionToken, inject, signal } from '@angular/core';
 import { VERSION } from '../../../environments/version';
 import { versionsIn } from './decide';
-import { SyncLedger, SyncShell, syncOnce } from './engine';
+import { AskChoice, resolveAsk, SyncContext, SyncLedger, SyncShell, syncOnce } from './engine';
 import { importSyncKey } from './envelope';
 import { checkFolder } from './folder';
 import { HttpSyncServer } from './http-sync-server';
@@ -138,6 +138,23 @@ export class SyncService {
     return this.run();
   }
 
+  /**
+   * The owner's answer when the sync asked (PRD § 5.4, § 6.5): whose academy
+   * the folder carries on with. After any round already running, and only on
+   * the folder the owner was asked about (`resolveAsk`).
+   */
+  async resolve(choice: AskChoice): Promise<void> {
+    const state = this.stateSignal();
+    if (state.kind !== 'ask') {
+      return;
+    }
+    while (this.running !== null) {
+      await this.running;
+    }
+    this.cancelTimer();
+    return this.run({ choice, seen: state.latest });
+  }
+
   /** «Ricollega Google», then a round. */
   async reconnect(): Promise<void> {
     if (this.platform === null) {
@@ -169,12 +186,12 @@ export class SyncService {
     }
   }
 
-  private run(): Promise<void> {
+  private run(resolution?: { choice: AskChoice; seen: VersionRef }): Promise<void> {
     if (this.running !== null) {
       this.again = true;
       return this.running;
     }
-    this.running = this.round().finally(() => {
+    this.running = this.round(resolution).finally(() => {
       this.running = null;
       if (this.again) {
         this.again = false;
@@ -184,7 +201,7 @@ export class SyncService {
     return this.running;
   }
 
-  private async round(): Promise<void> {
+  private async round(resolution?: { choice: AskChoice; seen: VersionRef }): Promise<void> {
     const platform = this.platform;
     let identity: SyncIdentity | null;
     try {
@@ -219,7 +236,7 @@ export class SyncService {
           return;
         }
       }
-      const { outcome } = await syncOnce({
+      const context: SyncContext = {
         device,
         app: appVersionOf(VERSION.tag),
         key,
@@ -233,7 +250,11 @@ export class SyncService {
         },
         holdWrites: (work) => this.gate.hold(work),
         now: () => Date.now(),
-      });
+      };
+      const { outcome } =
+        resolution === undefined
+          ? await syncOnce(context)
+          : await resolveAsk(context, resolution.choice, resolution.seen);
       switch (outcome.kind) {
         case 'pulled':
           // The page holds what it read from the database it had.
