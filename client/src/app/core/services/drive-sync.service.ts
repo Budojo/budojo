@@ -47,6 +47,11 @@ export class DriveSyncService {
     await this.bridge?.unlink();
   }
 
+  /** Brings the gym to the phone (#2033): never rejects, as the bridge does not. */
+  async connectPhone(): Promise<{ ok: boolean; keys?: 'published' | 'already'; error?: string }> {
+    return (await this.bridge?.connectPhone()) ?? { ok: false, error: 'not_available' };
+  }
+
   /** Runs a sync now. The automatic one already follows every backup. */
   async syncNow(): Promise<{ ran: boolean; uploaded?: number; error?: string; reason?: string }> {
     return (await this.bridge?.sync()) ?? { ran: false, reason: 'not_available' };

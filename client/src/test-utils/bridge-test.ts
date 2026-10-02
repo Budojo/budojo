@@ -57,6 +57,7 @@ export function stubBridge(overrides: BridgeOverrides = {}): Bridge {
       archives: async () => [],
       link: async () => ({ ok: false, error: 'not_available' }),
       unlink: async () => ({ ok: true }),
+      connectPhone: async () => ({ ok: false, error: 'not_available' }),
       sync: async () => ({ ran: false, reason: 'not_available' }),
     },
     folder: {

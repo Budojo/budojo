@@ -1,11 +1,12 @@
 import { readFile, writeFile } from 'node:fs/promises';
 
 import type { BackupService } from './backup.js';
-import type { DataLayout } from './bootstrap.js';
+import type { DataLayout, Secrets } from './bootstrap.js';
 import * as drive from './drive-io.js';
 import type { DriveClientConfig, DriveTokens } from './drive-io.js';
 import { DriveSyncService, type DriveSyncIO } from './drive-service.js';
 import { parseState, serialiseState, type DriveState } from './drive-state.js';
+import { KEYS_FILE } from './sync-keys.js';
 import type { TokenVault } from './token-vault.js';
 
 /**
@@ -86,9 +87,11 @@ export function createDriveSyncIO(input: {
   vault: TokenVault;
   backupService: BackupService;
   openExternal: (url: string) => Promise<void>;
+  /** This PC's keys from the OS keychain, for the phone (#2033). */
+  localSecrets: () => Promise<Secrets>;
   log: (line: string) => void;
 }): DriveSyncIO {
-  const { config, layout, vault, backupService, openExternal, log } = input;
+  const { config, layout, vault, backupService, openExternal, localSecrets, log } = input;
 
   const readTokens = async (): Promise<DriveTokens | null> => {
     const raw = vault.get();
@@ -129,6 +132,11 @@ export function createDriveSyncIO(input: {
     },
 
     authorize: () => drive.authorize(config, openExternal),
+    authorizeWithAppData: () => drive.authorize(config, openExternal, true),
+    localSecrets,
+    findKeys: (tokens) => drive.findAppDataFiles(tokens, KEYS_FILE),
+    readKeys: (tokens, id) => drive.readAppDataFile(tokens, id),
+    writeKeys: (tokens, text) => drive.createAppDataFile(tokens, KEYS_FILE, text),
     ensureFresh: (tokens) => drive.ensureFresh(config, tokens),
     accountEmail: (tokens) => drive.accountEmail(tokens),
     ensureFolder: (tokens) => drive.ensureFolder(tokens),

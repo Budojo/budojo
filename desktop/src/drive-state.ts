@@ -30,6 +30,11 @@ export interface DriveState {
   lastError: string | null;
   lastErrorAt: string | null;
   consecutiveFailures: number;
+  /**
+   * When the academy's keys were last found on the account, written by this
+   * PC or already there and its own (#2033): the phone can open the gym.
+   */
+  keysPublishedAt: string | null;
 }
 
 export function emptyState(): DriveState {
@@ -42,6 +47,7 @@ export function emptyState(): DriveState {
     lastError: null,
     lastErrorAt: null,
     consecutiveFailures: 0,
+    keysPublishedAt: null,
   };
 }
 
@@ -92,6 +98,7 @@ export function parseState(raw: string | null): DriveState {
       typeof candidate.consecutiveFailures === 'number' && Number.isFinite(candidate.consecutiveFailures)
         ? candidate.consecutiveFailures
         : 0,
+    keysPublishedAt: typeof candidate.keysPublishedAt === 'string' ? candidate.keysPublishedAt : null,
   };
 }
 

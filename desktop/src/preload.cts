@@ -87,6 +87,7 @@ contextBridge.exposeInMainWorld('__BUDOJO__', {
     archives: () => ipcRenderer.invoke('budojo:drive:archives'),
     link: () => ipcRenderer.invoke('budojo:drive:link'),
     unlink: () => ipcRenderer.invoke('budojo:drive:unlink'),
+    connectPhone: () => ipcRenderer.invoke('budojo:drive:connect-phone'),
     sync: () => ipcRenderer.invoke('budojo:drive:sync'),
   },
   // Backup folder (#1320). The owner picks any folder — a synced one, a NAS, a

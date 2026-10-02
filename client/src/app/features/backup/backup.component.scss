@@ -111,6 +111,29 @@
     margin-top: 1rem;
   }
 
+  // The gym on the phone (#2033): a part of the Drive card, set apart by a
+  // hairline rather than a card of its own.
+  &__phone {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--p-content-border-color);
+
+    p {
+      margin: 0;
+    }
+  }
+
+  &__subheading {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--p-text-color);
+  }
+
   &__drive-account {
     font-weight: 500;
     margin-bottom: 0.5rem;

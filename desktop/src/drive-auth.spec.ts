@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  APPDATA_SCOPE,
   buildAuthorizeUrl,
   createPkcePair,
   needsRefresh,
@@ -67,6 +68,14 @@ describe('buildAuthorizeUrl', () => {
     challenge: 'CHALLENGE',
     state: 'STATE',
   };
+
+  it('asks for the hidden application data too, only when bringing the gym to the phone (#2033)', () => {
+    const url = new URL(buildAuthorizeUrl({ ...base, withAppData: true }));
+
+    expect(url.searchParams.get('scope')).toBe(`${DRIVE_SCOPE} ${APPDATA_SCOPE}`);
+    expect(APPDATA_SCOPE).toBe('https://www.googleapis.com/auth/drive.appdata');
+    expect(new URL(buildAuthorizeUrl(base)).searchParams.get('scope')).toBe(DRIVE_SCOPE);
+  });
 
   it('asks only for the narrow drive.file scope', () => {
     const url = new URL(buildAuthorizeUrl(base));
