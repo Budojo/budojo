@@ -3710,7 +3710,7 @@
       "offline": "Senza rete: partono appena torna.",
       "waitingFirst": "Il PC non ha ancora messo la palestra su Drive: aggiorna Budojo sul PC e aprilo.",
       "reconnect": "Finché Budojo è in prova, Google lo chiede ogni settimana. Intanto non si perde niente.",
-      "ask": "Il telefono e Drive hanno due palestre diverse. Niente viene sovrascritto finché non scegli.",
+      "ask": "Questo dispositivo e Drive hanno due palestre diverse. Niente viene sovrascritto finché non scegli.",
       "anotherFolder": "Il telefono non ci scrive niente. Esci e accedi con l'account Google della palestra.",
       "unpaired": "Esci, poi accedi con Google per collegarlo di nuovo.",
       "needsRebaseOne": "1 modifica del telefono aspetta, al sicuro qui: unirla a quelle del PC arriva con il prossimo aggiornamento.",
