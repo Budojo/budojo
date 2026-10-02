@@ -1,6 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, finalize, map, tap } from 'rxjs';
+import { Observable, map, tap } from 'rxjs';
 import { AcademyService } from './academy.service';
 import { TokenStorageService } from './token-storage.service';
 import { environment } from '../../../environments/environment';
@@ -185,14 +185,29 @@ export class AuthService {
     this.storeToken(token);
   }
 
+  /**
+   * A session the server opened by another way than a password: the phone's
+   * door (#2079). The same answer as a login, and the same state after it.
+   */
+  adoptSession(res: AuthResponse): void {
+    this.storeToken(res.token);
+    this.user.set(res.data);
+  }
+
   logout(): void {
-    // Revoke the token on the server (#1227) — a stored desktop credential
-    // must not stay valid after sign-out — then clear locally regardless of
-    // the result: the user asked to leave, and a network blip must not trap
-    // them signed in. finalize() runs on success and error alike.
+    // Cleared here at once, then revoked on the server (#1227): a stored
+    // desktop credential must not stay valid after sign-out, and the token
+    // goes with the request since it is no longer stored. Clearing first is
+    // what the caller's navigation needs: on the phone the sign-in is the
+    // door (#2079), whose guard sends a session still standing straight back
+    // into the app. A network blip must not trap anyone signed in either.
+    const token = this.getToken();
+    this.clearSession();
+    if (token === null) {
+      return;
+    }
     this.http
-      .post(`${this.base}/logout`, {})
-      .pipe(finalize(() => this.clearSession()))
+      .post(`${this.base}/logout`, {}, { headers: { Authorization: `Bearer ${token}` } })
       .subscribe({ error: () => undefined });
   }
 

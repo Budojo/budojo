@@ -13,11 +13,18 @@ import { catchError, from, switchMap, throwError } from 'rxjs';
 
 export interface PhpServerStart {
   port: number;
+  /**
+   * What lets this page, and nothing else on the phone, open the owner's
+   * session and bring a backup in (#2079). Made by the shell at each launch.
+   */
+  shellSecret?: string;
 }
 
 export interface PhpServerPlugin {
   /** Starts the server, or answers at once when it is already running. Never two at a time. */
   start(): Promise<PhpServerStart>;
+  /** Stops and starts it, so a database just staged is swapped in now (#2079). */
+  restart(): Promise<PhpServerStart>;
 }
 
 /** The plugin when the page runs inside the Android app; null anywhere else. */
@@ -29,7 +36,7 @@ export function phpServerPlugin(): PhpServerPlugin | null {
 /** Tells the app where its server is, and returns that address. */
 function publish(start: PhpServerStart): string {
   const apiBase = `http://127.0.0.1:${start.port}`;
-  window.__BUDOJO_MOBILE__ = { apiBase };
+  window.__BUDOJO_MOBILE__ = { apiBase, shellSecret: start.shellSecret };
   return apiBase;
 }
 
@@ -81,6 +88,22 @@ function ensureRunning(plugin: PhpServerPlugin): void {
       returning = null;
     }
   });
+}
+
+/**
+ * Restarts the server so that what the page just staged is swapped in (#2079),
+ * holding every request meanwhile, as a return from the background does.
+ */
+export async function restartPhoneServer(plugin: PhpServerPlugin): Promise<void> {
+  const ready = plugin.restart().then(publish);
+  returning = ready;
+  try {
+    await ready;
+  } finally {
+    if (returning === ready) {
+      returning = null;
+    }
+  }
 }
 
 /**

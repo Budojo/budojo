@@ -49,10 +49,39 @@ public class PhpServerPlugin extends Plugin {
     private int port;
     private boolean opcacheOff;
 
+    /**
+     * What lets this app's page, and nothing else on {@code 127.0.0.1}, open
+     * the owner's session and bring a backup in (#2079, the server's
+     * {@code RequireShell}). Made once per launch of the app, handed to PHP as
+     * {@code BUDOJO_SHELL_SECRET} and to the page in every start's answer; it
+     * is never written anywhere. Every other app on the phone can reach the
+     * server's port, and none of them can read this process's memory.
+     */
+    private final String shellSecret = randomHex(32);
+
     @PluginMethod
     public void start(PluginCall call) {
         new Thread(() -> {
             try {
+                call.resolve(startServer());
+            } catch (Exception e) {
+                call.reject(e.getClass().getSimpleName() + ": " + e.getMessage(), e);
+            }
+        }).start();
+    }
+
+    /**
+     * Stops the server and starts it again, so that a database the page just
+     * staged (a backup it brought back, #2079) is swapped in now rather than at
+     * the app's next launch. The answer is {@code start()}'s.
+     */
+    @PluginMethod
+    public void restart(PluginCall call) {
+        new Thread(() -> {
+            try {
+                synchronized (this) {
+                    stopServerAndWait();
+                }
                 call.resolve(startServer());
             } catch (Exception e) {
                 call.reject(e.getClass().getSimpleName() + ": " + e.getMessage(), e);
@@ -89,13 +118,27 @@ public class PhpServerPlugin extends Plugin {
         }
     }
 
+    /** Stopped, and gone: the swap renames the database it may still hold open. */
+    private void stopServerAndWait() throws InterruptedException {
+        Process stopping = server;
+        stopServer();
+        if (stopping != null && !stopping.waitFor(5, TimeUnit.SECONDS)) {
+            stopping.destroyForcibly();
+            stopping.waitFor(5, TimeUnit.SECONDS);
+        }
+    }
+
     private synchronized JSObject startServer() throws Exception {
         Context context = getContext();
         JSObject out = new JSObject();
 
         if (server != null && server.isAlive()) {
-            if (isHealthy(port)) {
+            // A server busy with one long request, a restore (#2079), answers
+            // nothing else meanwhile: it has one worker. It is waited for, as
+            // its first start is, before it is taken for hung and killed.
+            if (isHealthy(port) || answersWithin(server, port, 60_000)) {
                 out.put("port", port);
+                out.put("shellSecret", shellSecret);
                 out.put("alreadyRunning", true);
                 return out;
             }
@@ -128,12 +171,12 @@ public class PhpServerPlugin extends Plugin {
         File database = new File(files, "budojo.sqlite");
         forgetTheSpikesDemo(files);
         File reconcilePending = new File(database.getPath() + ".reconcile");
-        boolean swapped = swapInStaged(database, reconcilePending);
+        File storage = new File(files, "storage");
+        boolean swapped = StagedSwap.swapIn(database, new File(storage, "app"), reconcilePending);
         if (!database.exists()) {
             // A first start: an empty database, which the migrations below fill.
             database.createNewFile();
         }
-        File storage = new File(files, "storage");
         for (String dir : new String[] {"app/private", "app/public", "framework/cache/data", "framework/sessions", "framework/views", "logs"}) {
             new File(storage, dir).mkdirs();
         }
@@ -217,6 +260,7 @@ public class PhpServerPlugin extends Plugin {
         long tReady = System.nanoTime();
 
         out.put("port", port);
+        out.put("shellSecret", shellSecret);
         out.put("extracted", extracted);
         out.put("swapped", swapped);
         out.put("reconciled", reconciled);
@@ -237,6 +281,7 @@ public class PhpServerPlugin extends Plugin {
         env.put("TMPDIR", tmp.getAbsolutePath());
         env.put("PHP_INI_SCAN_DIR", "");
         env.put("BUDOJO_RUNTIME", "mobile");
+        env.put("BUDOJO_SHELL_SECRET", shellSecret);
         env.put("APP_NAME", "Budojo");
         env.put("APP_ENV", "production");
         env.put("APP_DEBUG", "false");
@@ -298,30 +343,14 @@ public class PhpServerPlugin extends Plugin {
         demoMarker.delete();
     }
 
-    /**
-     * A database the sync staged beside the live one (#2030), swapped in before
-     * PHP starts: the live file's WAL and shared memory go with it, or SQLite
-     * would replay the old database's last writes onto the new one.
-     *
-     * The reconcile it needs is written down first, as a file, so that it
-     * survives a start that dies after the rename. That is the fast-forward
-     * path, the only one that stages a database today. A rebase must reconcile
-     * only after its replay (docs/sync/protocol.md); #2031 makes its stage say
-     * so, and this then leaves the reconcile to the app.
-     */
-    private static boolean swapInStaged(File database, File reconcilePending) throws IOException {
-        File staged = new File(database.getPath() + ".staged");
-        if (!staged.exists()) {
-            return false;
+    private static String randomHex(int bytes) {
+        byte[] raw = new byte[bytes];
+        new java.security.SecureRandom().nextBytes(raw);
+        StringBuilder hex = new StringBuilder(bytes * 2);
+        for (byte b : raw) {
+            hex.append(String.format("%02x", b));
         }
-        writeFile(reconcilePending, "");
-        for (String suffix : new String[] {"-wal", "-shm"}) {
-            new File(database.getPath() + suffix).delete();
-        }
-        if (!staged.renameTo(database)) {
-            throw new IOException("could not swap in the staged database");
-        }
-        return true;
+        return hex.toString();
     }
 
     private String runToEnd(File php, File ini, File cwd, Map<String, String> env, String... args) throws Exception {
@@ -345,6 +374,15 @@ public class PhpServerPlugin extends Plugin {
             throw new IOException("php " + String.join(" ", args) + " exited " + process.exitValue() + ": " + tail(output, 600));
         }
         return output;
+    }
+
+    private static boolean answersWithin(Process process, int port, long timeoutMs) {
+        try {
+            waitForHealth(process, port, timeoutMs);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     private static boolean isHealthy(int port) {

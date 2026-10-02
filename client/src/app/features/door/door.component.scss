@@ -1,0 +1,127 @@
+@use '../auth/auth-page';
+
+// The door (#2079) is an auth card: the same page, glyph and width as the
+// sign-in it replaces on the phone. What is its own is the academy, named by
+// the colours of the belts its athletes hold.
+
+.door {
+  // The step holds focus only to be read; it draws no ring of its own.
+  &__step {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+
+    &:focus {
+      outline: none;
+    }
+  }
+
+  &__actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  &__status {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+    text-align: center;
+    color: var(--p-text-color);
+
+    p {
+      margin: 0;
+    }
+
+    .pi {
+      margin-right: 0.5rem;
+      color: var(--p-primary-color);
+    }
+  }
+
+  &__account,
+  &__meta,
+  &__hint,
+  &__detail {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--p-text-muted-color);
+  }
+
+  &__hint {
+    text-align: center;
+  }
+
+  &__detail {
+    overflow-wrap: anywhere;
+  }
+
+  &__choice,
+  &__outcome {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+
+    h2 {
+      margin: 0;
+      font-size: 1.125rem;
+      font-weight: 600;
+      text-align: center;
+      color: var(--p-text-color);
+    }
+
+    > p {
+      margin: 0;
+      text-align: center;
+      color: var(--p-text-muted-color);
+    }
+  }
+
+  &__lead {
+    font-weight: 500;
+  }
+
+  &__academy {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1rem;
+    border: 1px solid var(--p-content-border-color);
+    border-radius: var(--p-border-radius-md);
+  }
+
+  &__where {
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--p-text-muted-color);
+  }
+
+  &__name {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--p-text-color);
+  }
+
+  // The roster at a glance: one band per belt, as wide as its athletes. Each
+  // band carries its own hairline, so a white belt reads as a belt on a white
+  // card, not as an empty bar.
+  &__belts {
+    display: flex;
+    height: 0.5rem;
+    overflow: hidden;
+    border-radius: 999px;
+
+    &:empty {
+      display: none;
+    }
+
+    span {
+      min-width: 0.25rem;
+      box-shadow: inset 0 0 0 1px var(--p-content-border-color);
+    }
+  }
+}

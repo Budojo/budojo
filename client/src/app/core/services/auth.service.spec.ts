@@ -114,7 +114,12 @@ describe('AuthService', () => {
       expect(svc.isLoggedIn()).toBe(true);
 
       svc.logout();
-      http.expectOne('/api/v1/auth/logout').flush(null, { status: 204, statusText: 'No Content' });
+
+      // Signed out before the server answers: the caller navigates at once.
+      expect(svc.isLoggedIn()).toBe(false);
+      const revoke = http.expectOne('/api/v1/auth/logout');
+      expect(revoke.request.headers.get('Authorization')).toMatch(/^Bearer /);
+      revoke.flush(null, { status: 204, statusText: 'No Content' });
 
       expect(localStorage.getItem(TOKEN_KEY)).toBeNull();
       expect(svc.isLoggedIn()).toBe(false);

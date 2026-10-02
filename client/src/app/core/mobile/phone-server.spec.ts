@@ -8,6 +8,7 @@ import {
   phoneServerInterceptor,
   PhpServerPlugin,
   phpServerPlugin,
+  restartPhoneServer,
 } from './phone-server';
 
 /**
@@ -28,24 +29,61 @@ describe('the phone server (#2034)', () => {
   });
 
   it('starts the server, then publishes its address for the app', async () => {
-    const plugin: PhpServerPlugin = { start: vi.fn(async () => ({ port: 41234 })) };
+    const plugin = {
+      start: vi.fn(async () => ({ port: 41234, shellSecret: 'from-the-shell' })),
+    } as unknown as PhpServerPlugin;
     const screen = document.createElement('app-root');
     document.body.append(screen);
 
     const started = await bootPhoneServer(plugin, screen);
 
     expect(started).toBe(true);
-    expect(window.__BUDOJO_MOBILE__).toEqual({ apiBase: 'http://127.0.0.1:41234' });
+    expect(window.__BUDOJO_MOBILE__).toEqual({
+      apiBase: 'http://127.0.0.1:41234',
+      shellSecret: 'from-the-shell',
+    });
+  });
+
+  it('restarts the server to swap in what was staged, holding requests until it answers (#2079)', async () => {
+    let release: () => void = () => undefined;
+    const plugin = {
+      restart: vi.fn(
+        () =>
+          new Promise((resolve) => {
+            release = () => resolve({ port: 50001, shellSecret: 'same-launch' });
+          }),
+      ),
+    } as unknown as PhpServerPlugin;
+    window.__BUDOJO_MOBILE__ = { apiBase: 'http://127.0.0.1:41234', shellSecret: 'same-launch' };
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(withInterceptors([phoneServerInterceptor])),
+        provideHttpClientTesting(),
+      ],
+    });
+    const http = TestBed.inject(HttpClient);
+    const httpMock = TestBed.inject(HttpTestingController);
+
+    const restarting = restartPhoneServer(plugin);
+    const answer = firstValueFrom(http.get('http://127.0.0.1:41234/api/v1/academy'));
+    httpMock.expectNone(() => true);
+    release();
+    await restarting;
+    await Promise.resolve();
+    httpMock.expectOne('http://127.0.0.1:50001/api/v1/academy').flush({ data: null });
+
+    await expect(answer).resolves.toEqual({ data: null });
+    expect(window.__BUDOJO_MOBILE__?.apiBase).toBe('http://127.0.0.1:50001');
   });
 
   it('shows that it is starting while the server boots', async () => {
     let release: () => void = () => undefined;
-    const plugin: PhpServerPlugin = {
+    const plugin = {
       start: () =>
         new Promise((resolve) => {
           release = () => resolve({ port: 1 });
         }),
-    };
+    } as unknown as PhpServerPlugin;
     const screen = document.createElement('app-root');
 
     const booting = bootPhoneServer(plugin, screen);
@@ -56,11 +94,11 @@ describe('the phone server (#2034)', () => {
   });
 
   it('shows what went wrong on screen when the server does not start: the screen is the only log', async () => {
-    const plugin: PhpServerPlugin = {
+    const plugin = {
       start: vi.fn(async () => {
         throw new Error('IOException: libphp.so is missing\n--- php-server.log\nnothing');
       }),
-    };
+    } as unknown as PhpServerPlugin;
     const screen = document.createElement('app-root');
 
     const started = await bootPhoneServer(plugin, screen);
@@ -159,7 +197,7 @@ describe('the phone server (#2034)', () => {
               release = () => resolve({ port: 41234 });
             }),
         );
-        stop = holdRequestsOnReturn({ start } as PhpServerPlugin, document);
+        stop = holdRequestsOnReturn({ start } as unknown as PhpServerPlugin, document);
       });
 
       afterEach(() => {
