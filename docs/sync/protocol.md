@@ -141,13 +141,14 @@ The journal is a JSON list of the writes that made this version from its parent,
 `{ "v": 1, "folder": "<32 hex>", "syncKey": "<base64, 32 bytes>", "APP_KEY": "base64:…", "DOCUMENT_ENCRYPTION_KEY": "…", "createdAt": "<UTC>" }`. Written by `desktop/src/sync-keys.ts`, read by `client/src/app/core/sync/keys.ts`.
 - **The two app keys** have the desktop keychain's shape and checks (`desktop/src/bootstrap.ts`), the pair the recovery code (#1254) carries. A device that brings the academy in adopts them, and opens what the other device encrypted: the medical certificates first.
 - **`syncKey`** seals every file in the folder (§ The envelope).
-- **`folder`** is random, made with the file. `sync/folder.bjs`, sealed under the sync key, carries the same id.
+- **`folder`** is random, made with the file. `sync/folder.bjs`, sealed under the sync key, carries the same id: `{ "v": 1, "folder": "<32 hex>" }` (`client/src/app/core/sync/folder.ts`). The first device to sync into a folder that holds nothing writes it; both devices writing it at once write the same id.
 - **Written once, by the first device that has an academy:**
   - the PC writes it when the owner chooses **Collega il telefono** (Dati e backup), with its own two keys: a second consent, for `drive.appdata`, which the backups never need;
   - a phone-only academy writes its own when it connects Google (#2046).
 - **Never overwritten.** A device that finds another academy's keys stops and says so: replacing them would leave that academy's documents and versions unreadable.
 - **Before it syncs, a device checks `sync/folder.bjs`:**
-  - **missing, or another id:** it asks the owner. It is another academy's folder, or one someone emptied;
+  - **another id, or missing from a folder that holds versions or reports:** it asks the owner. It is another academy's folder, or one someone emptied of its id;
+  - **missing from a folder that holds nothing:** a new folder. The device writes it, then syncs;
   - **does not open under the sync key:** the key rotated after an unpairing. It stops and writes nothing, so its deleted report stays deleted.
 
 ## `devices/<id>.bjs`
@@ -179,9 +180,17 @@ The journal is a JSON list of the writes that made this version from its parent,
 
 There is no pairing code (#2033). **A device joins at its first «Accedi con Google» that finds the keys** (§ The keys):
 1. It reads the keys file and adopts the app keys.
-2. It makes its device id.
+2. It makes its device id. From then on its server journals its writes under it (#2031).
 3. It checks `sync/folder.bjs`.
 4. It writes its `devices/` report, and only then pulls.
+
+**A device that joined never publishes into a folder with no version.** It waits for the device that made the keys, which publishes the academy as version 1 (#2046). Otherwise a phone holding a backup it restored would publish it as version 1, and the PC, with the newer academy, would then meet it as another academy and ask.
+
+**Where a device keeps what it joined with** (#2046):
+- **The phone:** the device id, the folder id and the sync key in `sync.json`, beside the app keys in its private files, which neither Android's backup nor a transfer to a new phone copies. What it remembers between rounds (the `SyncLedger`) is in the page's storage, named by the device id.
+- **The PC:** #2032.
+
+**A database replaced outside the sync** (the door's restore, the desktop's Restore) forgets the ledger: an academy with no base asks before it meets the folder's (§ Scope).
 
 **A third device is refused** (§ Scope).
 
@@ -201,11 +210,12 @@ There is no pairing code (#2033). **A device joins at its first «Accedi con Goo
 
 | Situation | Do |
 |---|---|
-| `sync/folder.bjs` is missing or names another folder | **ask the owner** (checked before deciding) |
+| `sync/folder.bjs` names another folder, or is missing beside versions or reports | **ask the owner** (checked before deciding) |
+| `sync/folder.bjs` is missing from a folder that holds nothing | write it: a new folder |
 | Its own latest push is not listed, and the folder has also lost the version it was made on | **ask the owner** |
 | … not listed, within 10 minutes of landing | **wait**: the listing lags; look again |
 | … still not listed after that | rebase onto the latest, or push again if the folder is empty; **ask the owner** if it was a first version, or if the version it was made on and the latest come from two different first versions (another device's academy) |
-| No base, empty folder | nothing, or push version 1 if the device holds an academy |
+| No base, empty folder | nothing, or push version 1 if the device holds an academy and made the keys (a device that joined waits, § Joining) |
 | No base, the folder has versions | fast-forward; **ask the owner** if the device holds an academy of its own |
 | The folder is empty | push base + 1 on top of the base: nothing there to lose |
 | The base and the latest come from two different first versions: both devices published their own academy at once | **ask the owner** (the device whose line is the latest does nothing). Told only while the listing holds both lines down to their first versions |

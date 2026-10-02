@@ -32,6 +32,8 @@
     <!-- In-app notification center (#418). Bell + unread badge + dropdown.
          Kept in the owner topbar on mobile — the bottom bar carries no
          Notifications tab — and sits LEFT of the avatar chip. -->
+    <!-- The sync state (#2046, PRD § 6.2): nothing where there is no sync. -->
+    <app-sync-pill />
     <app-notification-bell />
     <a
       routerLink="/dashboard/profile"

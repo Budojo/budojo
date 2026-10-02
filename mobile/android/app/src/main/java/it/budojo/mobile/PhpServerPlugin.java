@@ -47,6 +47,12 @@ public class PhpServerPlugin extends Plugin {
 
     private Process server;
     private int port;
+    /**
+     * The device id the running server journals under, null while it runs
+     * without one (#2046). The page syncs only under it: a write made before
+     * the server had the id is in no journal, and a sync would never carry it.
+     */
+    private volatile String journalingDevice;
     private boolean opcacheOff;
 
     /**
@@ -90,17 +96,24 @@ public class PhpServerPlugin extends Plugin {
     }
 
     /**
-     * Takes the academy's two app keys the PC put with the Google account
-     * (#2033), so this phone opens what the PC encrypted: the medical
-     * certificates its restored backup holds. Checked as the desktop's keychain
-     * checks them; the phone's own pair is kept beside as
-     * {@code secrets.previous.json}. Takes effect at the server's next start,
-     * which the page asks for. Answers whether anything changed.
+     * Takes the academy's keys the PC put with the Google account (#2033):
+     * - **the two app keys,** so this phone opens what the PC encrypted: the
+     *   medical certificates its restored backup holds. Checked as the
+     *   desktop's keychain checks them; the phone's own pair is kept beside as
+     *   {@code secrets.previous.json};
+     * - **the sync key and the folder id,** when the page passes them: the
+     *   phone joins the academy's sync (#2046, protocol § Joining), and makes
+     *   its device id, once.
+     *
+     * Takes effect at the server's next start, which the page asks for.
+     * Answers whether anything changed.
      */
     @PluginMethod
     public void adoptKeys(PluginCall call) {
         String appKey = call.getString("APP_KEY");
         String documentKey = call.getString("DOCUMENT_ENCRYPTION_KEY");
+        String syncKey = call.getString("syncKey");
+        String folder = call.getString("folder");
         // 32 bytes of padded base64 each, as both devices make them
         // (desktop/src/bootstrap.ts, generateSecrets; secrets() here): never a
         // key that would stop Laravel at the next start. Stricter than the keys
@@ -110,32 +123,106 @@ public class PhpServerPlugin extends Plugin {
             call.reject("not an academy's keys", "INVALID_KEYS");
             return;
         }
+        // Both or neither, with the keys file's shapes (client/src/app/core/sync/keys.ts).
+        if ((syncKey == null) != (folder == null)
+                || (syncKey != null && (!syncKey.matches("[A-Za-z0-9+/]{43}=") || !folder.matches("[0-9a-f]{32}")))) {
+            call.reject("not an academy's sync key and folder", "INVALID_KEYS");
+            return;
+        }
         try {
             File files = getContext().getFilesDir();
             JSONObject current = secrets(files);
+            boolean changed = false;
+            if (!appKey.equals(current.getString("APP_KEY"))
+                    || !documentKey.equals(current.getString("DOCUMENT_ENCRYPTION_KEY"))) {
+                JSONObject adopted = new JSONObject();
+                adopted.put("v", 1);
+                adopted.put("APP_KEY", appKey);
+                adopted.put("DOCUMENT_ENCRYPTION_KEY", documentKey);
+                writeFileSynced(new File(files, "secrets.previous.json"), current.toString());
+                replaceSynced(files, "secrets.json", adopted.toString());
+                changed = true;
+            }
+            if (syncKey != null) {
+                changed |= joinSync(files, syncKey, folder);
+            }
             JSObject out = new JSObject();
-            if (appKey.equals(current.getString("APP_KEY"))
-                    && documentKey.equals(current.getString("DOCUMENT_ENCRYPTION_KEY"))) {
-                out.put("changed", false);
-                call.resolve(out);
-                return;
-            }
-            JSONObject adopted = new JSONObject();
-            adopted.put("v", 1);
-            adopted.put("APP_KEY", appKey);
-            adopted.put("DOCUMENT_ENCRYPTION_KEY", documentKey);
-            writeFileSynced(new File(files, "secrets.previous.json"), current.toString());
-            File part = new File(files, "secrets.json.part");
-            // On the disk before the rename: a crash right after must not leave an
-            // empty secrets.json, which would stop every start that follows.
-            writeFileSynced(part, adopted.toString());
-            if (!part.renameTo(new File(files, "secrets.json"))) {
-                throw new IOException("could not write the adopted keys");
-            }
-            out.put("changed", true);
+            out.put("changed", changed);
             call.resolve(out);
         } catch (Exception e) {
             call.reject(e.getClass().getSimpleName() + ": " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * This phone's place in the academy's sync, or an empty answer before it
+     * joined: its device id, the folder id and the sync key (#2046). Empty too
+     * until the running server journals under that id: the door restarts it
+     * once the phone joined.
+     */
+    @PluginMethod
+    public void syncIdentity(PluginCall call) {
+        try {
+            JSONObject sync = syncFile(getContext().getFilesDir());
+            JSObject out = new JSObject();
+            if (sync != null && sync.getString("device").equals(journalingDevice)) {
+                out.put("device", sync.getString("device"));
+                out.put("folder", sync.getString("folder"));
+                out.put("syncKey", sync.getString("syncKey"));
+            }
+            call.resolve(out);
+        } catch (Exception e) {
+            call.reject(e.getClass().getSimpleName() + ": " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Keeps the sync key and the folder id in {@code sync.json}, beside the
+     * app keys and under the same guard ({@code secrets()}), and makes this
+     * phone's device id the first time: a kind and four random characters
+     * (protocol § The folder). The id is kept for good, so a phone that joins
+     * again is still the same device. True when anything changed: the server
+     * journals its writes under the id from its next start.
+     */
+    private static boolean joinSync(File files, String syncKey, String folder) throws Exception {
+        JSONObject current = syncFile(files);
+        if (current != null && syncKey.equals(current.getString("syncKey"))
+                && folder.equals(current.getString("folder"))) {
+            return false;
+        }
+        JSONObject sync = new JSONObject();
+        sync.put("v", 1);
+        sync.put("device", current != null ? current.getString("device") : newDeviceId());
+        sync.put("folder", folder);
+        sync.put("syncKey", syncKey);
+        replaceSynced(files, "sync.json", sync.toString());
+        return true;
+    }
+
+    private static JSONObject syncFile(File files) throws Exception {
+        File file = new File(files, "sync.json");
+        return file.exists() ? new JSONObject(readFile(file)) : null;
+    }
+
+    private static String newDeviceId() {
+        String alphabet = "0123456789abcdefghijklmnopqrstuvwxyz";
+        java.security.SecureRandom random = new java.security.SecureRandom();
+        StringBuilder id = new StringBuilder("phone");
+        for (int i = 0; i < 4; i++) {
+            id.append(alphabet.charAt(random.nextInt(alphabet.length())));
+        }
+        return id.toString();
+    }
+
+    /**
+     * On the disk before the rename: a crash right after must not leave an
+     * empty file, which would stop every start that follows.
+     */
+    private static void replaceSynced(File files, String name, String text) throws IOException {
+        File part = new File(files, name + ".part");
+        writeFileSynced(part, text);
+        if (!part.renameTo(new File(files, name))) {
+            throw new IOException("could not write " + name);
         }
     }
 
@@ -252,7 +339,7 @@ public class PhpServerPlugin extends Plugin {
                 + "opcache.file_cache_only=1\n"
                 + "opcache.lockfile_path=" + tmp.getAbsolutePath() + "\n");
 
-        Map<String, String> env = environment(secrets(files), database, storage, tmp, files);
+        Map<String, String> env = environment(secrets(files), syncFile(files), database, storage, tmp, files);
 
         long tMigrate0 = System.nanoTime();
         String migrate;
@@ -309,6 +396,7 @@ public class PhpServerPlugin extends Plugin {
         }
         long tReady = System.nanoTime();
 
+        journalingDevice = env.get("BUDOJO_DEVICE_ID");
         out.put("port", port);
         out.put("shellSecret", shellSecret);
         out.put("extracted", extracted);
@@ -325,7 +413,7 @@ public class PhpServerPlugin extends Plugin {
     }
 
     /** The desktop's environment (desktop/src/php-runtime.ts), with the phone's paths. */
-    private Map<String, String> environment(JSONObject secrets, File database, File storage, File tmp, File home) throws Exception {
+    private Map<String, String> environment(JSONObject secrets, JSONObject sync, File database, File storage, File tmp, File home) throws Exception {
         Map<String, String> env = new HashMap<>();
         env.put("HOME", home.getAbsolutePath());
         env.put("TMPDIR", tmp.getAbsolutePath());
@@ -347,6 +435,10 @@ public class PhpServerPlugin extends Plugin {
         env.put("MAIL_MAILER", "log");
         env.put("LOG_CHANNEL", "single");
         env.put("LARAVEL_STORAGE_PATH", storage.getAbsolutePath());
+        if (sync != null) {
+            // From the phone's joining on, its writes are journaled for the sync (#2031).
+            env.put("BUDOJO_DEVICE_ID", sync.getString("device"));
+        }
         return env;
     }
 

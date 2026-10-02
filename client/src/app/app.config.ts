@@ -15,6 +15,7 @@ import { routes } from './app.routes';
 import { httpInterceptors } from './core/interceptors/http-interceptors';
 import { environment } from '../environments/environment';
 import { provideBudojoTheme, provideBudojoTranslations } from './core/config/shared-ui-providers';
+import { providePhoneSync } from './core/mobile/phone-sync';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -67,5 +68,7 @@ export const appConfig: ApplicationConfig = {
       registrationStrategy: 'registerWhenStable:30000',
     }),
     provideBudojoTranslations(),
+    // The sync between the owner's devices (#2046): the phone's shell supplies it.
+    ...(environment.runtime === 'mobile' ? [providePhoneSync()] : []),
   ],
 };

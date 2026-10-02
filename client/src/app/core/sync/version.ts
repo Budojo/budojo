@@ -42,6 +42,20 @@ const MIGRATION = /^\d{4}_\d{2}_\d{2}_\d{6}_[a-z0-9_]+$/;
 const APP_VERSION = /^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/;
 
 /**
+ * The app version a build names itself by (`VERSION.tag`, `git describe`), as
+ * a version's header takes it: without the `v`, and a build with no tag behind
+ * it (`dev`, a bare SHA) as `0.0.0-<it>`. Only the schema decides what a
+ * device may open (PRD § 5.5); the app version says who wrote it.
+ */
+export function appVersionOf(tag: string): string {
+  const bare = tag.replace(/^v/, '');
+  if (APP_VERSION.test(bare)) {
+    return bare;
+  }
+  return `0.0.0-${bare.replace(/[^0-9A-Za-z.-]/g, '-') || 'unknown'}`;
+}
+
+/**
  * Strict on every field it knows, and silent about any it does not: a later app
  * may add a field to protocol 2, and an older one must still read the rest.
  * Anything that changes what a field means is a new protocol number instead.

@@ -2,7 +2,7 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { buffer } from './bytes';
+import { binaryBody } from './bytes';
 import { ServerFile, SyncFilesApi } from './files';
 
 /** `SyncFilesApi` over this device's own server (`/api/v1/sync/files`, #2030). */
@@ -30,7 +30,7 @@ export class HttpSyncFiles implements SyncFilesApi {
 
   async write(sha256: string, bytes: Uint8Array): Promise<void> {
     await firstValueFrom(
-      this.http.put(this.url(`/${sha256}`), buffer(bytes).buffer, {
+      this.http.put(this.url(`/${sha256}`), binaryBody(bytes), {
         headers: new HttpHeaders({ 'Content-Type': 'application/octet-stream' }),
       }),
     );

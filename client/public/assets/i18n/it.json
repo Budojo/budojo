@@ -3687,5 +3687,35 @@
       "title": "Le chiavi della palestra non si leggono",
       "detail": "I certificati medici non si apriranno finché non si leggono. Motivo: {{reason}}"
     }
+  },
+  "sync": {
+    "now": "Sincronizza ora",
+    "reconnect": "Ricollega Google",
+    "state": {
+      "syncing": "Sincronizzo con Google Drive…",
+      "synced": "Allineato alle {{time}}",
+      "pendingOne": "{{count}} da inviare",
+      "pendingOther": "{{count}} da inviare",
+      "waitingFirst": "In attesa del PC",
+      "reconnect": "Google ti ha scollegato: tocca per riconnettere",
+      "ask": "Da decidere: su Drive c'è un'altra copia della palestra",
+      "anotherFolder": "La cartella su Drive è di un'altra palestra",
+      "unpaired": "Questo telefono è stato scollegato dalla palestra",
+      "needsRebase": "Modifiche sia qui sia sul PC",
+      "failed": "La sincronizzazione non è riuscita",
+      "full": "Budojo è già su due dispositivi"
+    },
+    "hint": {
+      "pending": "Partono al prossimo tentativo, da sole.",
+      "offline": "Senza rete: partono appena torna.",
+      "waitingFirst": "Il PC non ha ancora messo la palestra su Drive: aggiorna Budojo sul PC e aprilo.",
+      "reconnect": "Finché Budojo è in prova, Google lo chiede ogni settimana. Intanto non si perde niente.",
+      "ask": "Il telefono e Drive hanno due palestre diverse. Niente viene sovrascritto finché non scegli.",
+      "anotherFolder": "Il telefono non ci scrive niente. Esci e accedi con l'account Google della palestra.",
+      "unpaired": "Esci, poi accedi con Google per collegarlo di nuovo.",
+      "needsRebaseOne": "1 modifica del telefono aspetta, al sicuro qui: unirla a quelle del PC arriva con il prossimo aggiornamento.",
+      "needsRebaseOther": "{{count}} modifiche del telefono aspettano, al sicuro qui: unirle a quelle del PC arriva con il prossimo aggiornamento.",
+      "full": "Questo dispositivo non si unisce: la sincronizzazione regge due dispositivi, il PC e un telefono."
+    }
   }
 }

@@ -327,6 +327,26 @@ describe('continuing without Google', () => {
 });
 
 describe('signing in again on a phone the door brought the gym to (PRD § 5.4)', () => {
+  it('forgets what the sync knew of the database it replaces: a backup is no version (#2046)', async () => {
+    localStorage.setItem(
+      'budojoSyncLedger',
+      JSON.stringify({
+        device: 'phone9c1e',
+        ledger: {
+          base: { seq: 4, device: 'pc4f2a' },
+          pushedThrough: null,
+          listedThrough: null,
+          unconfirmed: null,
+        },
+      }),
+    );
+    const { component } = setup();
+
+    await component.signInWithGoogle();
+
+    expect(localStorage.getItem('budojoSyncLedger')).toBeNull();
+  });
+
   it('remembers which backup it brought back', async () => {
     const { component } = setup();
 
@@ -456,9 +476,12 @@ describe("the academy's keys from the Google account (#2033)", () => {
 
     expect(order).toEqual(['keys', 'stage', 'restart']);
 
+    // With the sync key and the folder the phone joins the academy's sync (#2046).
     expect(server.adoptKeys).toHaveBeenCalledWith({
       APP_KEY: PC_KEYS.APP_KEY,
       DOCUMENT_ENCRYPTION_KEY: PC_KEYS.DOCUMENT_ENCRYPTION_KEY,
+      syncKey: PC_KEYS.syncKey,
+      folder: PC_KEYS.folder,
     });
     expect(server.restart).toHaveBeenCalledTimes(1);
     expect(toasts).toEqual([]);
