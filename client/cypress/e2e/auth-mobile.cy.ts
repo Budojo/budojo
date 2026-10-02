@@ -32,6 +32,23 @@ MOBILE_VIEWPORTS.forEach(({ name, width, height }) => {
       cy.visit('/auth/register');
     });
 
+    // One rhythm between the fields (#2034): the form stacked them flush, a
+    // label against the input above it, the consents against the password.
+    it('leaves room between one field and the next', () => {
+      cy.get('form')
+        .children()
+        .then(($fields) => {
+          const boxes = [...$fields]
+            .map((field) => field.getBoundingClientRect())
+            .filter((box) => box.height > 0);
+          for (let i = 1; i < boxes.length; i++) {
+            expect(boxes[i].top - boxes[i - 1].bottom, `gap before field ${i + 1}`).to.be.at.least(
+              16,
+            );
+          }
+        });
+    });
+
     it('renders the register form without horizontal overflow', () => {
       cy.get('input[id="first_name"]').should('be.visible');
       cy.get('input[id="last_name"]').should('be.visible');

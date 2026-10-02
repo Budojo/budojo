@@ -80,6 +80,16 @@
   }
 }
 
+// One rhythm between the fields, on every card that uses this partial
+// (#2034). The forms had none, so each label sat flush against the input
+// above it, and the consents against the password; the setup page had
+// fixed it for itself (#1802), and the rule now lives here for all of them.
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
 .field {
   display: flex;
   flex-direction: column;
