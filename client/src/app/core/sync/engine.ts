@@ -51,6 +51,11 @@ export interface SyncServer {
 
 /** What only the shell can do: swap a staged database in, by restarting the server. */
 export interface SyncShell {
+  /**
+   * Resolves only once the server serves the swapped-in database, so that
+   * writes released after it land there (the phone's `restart()` waits for
+   * the migrations, the reconcile and `/health`).
+   */
   swapIn(): Promise<void>;
 }
 
@@ -58,8 +63,14 @@ export interface SyncShell {
 export interface SyncLedger {
   /** The version its database came from or was published as; null before its first sync. */
   base: VersionRef | null;
-  /** The newest of its own entries in a version it pushed; null before its first push. */
+  /** The newest of its own entries in a version it pushed, landed or not yet seen; null before its first push. */
   pushedThrough: string | null;
+  /**
+   * The newest of its own entries in a version **the folder has listed**: the
+   * most the journal may ever be cleared through (protocol § `devices/`). A
+   * push still in flight raises `pushedThrough` alone.
+   */
+  listedThrough: string | null;
   /**
    * Its latest push, while the journal still keeps entries of it (`decide.ts`).
    * Saved **before** the upload: a push whose answer was lost may have landed,
@@ -69,7 +80,12 @@ export interface SyncLedger {
   unconfirmed: { version: VersionRef; parent: VersionRef | null; pushedAt: number | null } | null;
 }
 
-export const EMPTY_LEDGER: SyncLedger = { base: null, pushedThrough: null, unconfirmed: null };
+export const EMPTY_LEDGER: SyncLedger = {
+  base: null,
+  pushedThrough: null,
+  listedThrough: null,
+  unconfirmed: null,
+};
 
 export interface SyncContext {
   device: string;
@@ -86,7 +102,9 @@ export interface SyncContext {
    * Runs `work` with this device's own writes held, and lets them through
    * after: the app's page is the only writer to its server. A fast-forward
    * checks the journal and swaps the database in under it, so no write lands
-   * on the database about to be replaced.
+   * on the database about to be replaced. **It waits for the writes already
+   * sent to finish before it runs `work`:** one that committed after the check
+   * would be swapped away after the page showed it saved.
    */
   holdWrites<T>(work: () => Promise<T>): Promise<T>;
   /** This device's clock, for what it writes down: never for the lag, which runs on Drive's. */
@@ -164,7 +182,25 @@ export async function syncOnce(context: SyncContext): Promise<SyncRound> {
       break;
     }
     case 'rebase':
-      outcome = { kind: 'needs-rebase', onto: decision.onto };
+      if (sameVersion(decision.onto, ledger.base)) {
+        // Onto its own base: its push never showed up in the lag's time, and
+        // nothing newer came. Its database is the base and its writes, so it
+        // publishes them again on top (protocol § Deciding: "push again").
+        ledger = await push(
+          context,
+          ledger,
+          decision.onto.seq + 1,
+          decision.onto,
+          unpushedSince(kept, ledger),
+          kept,
+        );
+        outcome = {
+          kind: 'pushed',
+          version: { seq: decision.onto.seq + 1, device: context.device },
+        };
+      } else {
+        outcome = { kind: 'needs-rebase', onto: decision.onto };
+      }
       break;
     case 'ask':
       outcome = { kind: 'ask', latest: decision.latest };
@@ -212,13 +248,22 @@ function settlePush(
   const onBase =
     (ledger.base === null && unconfirmed.parent === null) ||
     sameVersion(ledger.base, unconfirmed.parent);
-  if (onBase && versions.some((version) => sameVersion(version, unconfirmed.version))) {
-    next = { ...next, base: unconfirmed.version };
+  if (versions.some((version) => sameVersion(version, unconfirmed.version))) {
+    // Listed: its entries are in a version the folder holds.
+    next = { ...next, listedThrough: next.pushedThrough };
+    if (onBase) {
+      next = { ...next, base: unconfirmed.version };
+    }
   }
   if (next !== ledger) {
     context.saveLedger(next);
   }
   return next;
+}
+
+/** The kept entries in no version the folder lists: what a push publishes again after one never landed. */
+function unpushedSince(kept: JournalEntry[], ledger: SyncLedger): JournalEntry[] {
+  return kept.filter((entry) => ledger.listedThrough === null || entry.id > ledger.listedThrough);
 }
 
 async function push(
@@ -252,7 +297,7 @@ async function push(
   // From here the version may land whatever the answer: kept as pushed and
   // unconfirmed before the upload, so a lost answer never makes it unpushed.
   const pending: SyncLedger = {
-    base: ledger.base,
+    ...ledger,
     pushedThrough: kept.length > 0 ? kept[kept.length - 1].id : ledger.pushedThrough,
     unconfirmed: { version, parent, pushedAt: null },
   };
@@ -291,15 +336,16 @@ async function fastForward(
       return null;
     }
     await server.stage(database);
-    await shell.swapIn();
-    // Saved the moment the database is the version: a round cut short after
-    // this must not take this version for one it has yet to pull.
+    // Saved once staged, before the swap: from here the next start swaps the
+    // staged database in whatever happens, so a device killed during the
+    // restart wakes up as this version, and knows it.
     const next: SyncLedger = {
       ...ledger,
       base: { seq: listed.seq, device: listed.device },
       unconfirmed: null,
     };
     context.saveLedger(next);
+    await shell.swapIn();
     return next;
   });
 }
@@ -359,8 +405,9 @@ async function clearConfirmed(
   ledger: SyncLedger,
   reports: DeviceReport[],
 ): Promise<void> {
-  const pushedThrough = ledger.pushedThrough;
-  if (pushedThrough === null) {
+  // Only entries in a version the folder lists, whatever the reports say.
+  const listedThrough = ledger.listedThrough;
+  if (listedThrough === null) {
     return;
   }
   const confirmed = confirmedThrough(context.device, reports);
@@ -368,9 +415,9 @@ async function clearConfirmed(
     return;
   }
   const through =
-    confirmed === 'everything' || confirmed > pushedThrough ? pushedThrough : confirmed;
+    confirmed === 'everything' || confirmed > listedThrough ? listedThrough : confirmed;
   await context.server.clearJournal(through);
-  if (through === pushedThrough && ledger.unconfirmed !== null) {
+  if (through === ledger.pushedThrough && ledger.unconfirmed !== null) {
     context.saveLedger({ ...ledger, unconfirmed: null });
   }
 }

@@ -39,6 +39,10 @@ class Device implements SyncServer {
   db: Database;
   private staged: Uint8Array | null = null;
   ledger: SyncLedger = EMPTY_LEDGER;
+  /** True while the page's writes are held: the stage and the swap must happen inside. */
+  holding = false;
+  /** What happened while the writes were held, and what outside. */
+  readonly under: string[] = [];
   /** The bytes this device holds, by SHA-256. */
   readonly held = new Map<string, Uint8Array>();
   readonly files: SyncFilesApi = {
@@ -96,11 +100,13 @@ class Device implements SyncServer {
   }
 
   async stage(database: Uint8Array) {
+    this.under.push(`stage ${this.holding ? 'held' : 'open'}`);
     this.staged = database;
   }
 
   /** The shell's swap, then the reconcile: the journal keeps only this device's rows. */
   swapIn(): void {
+    this.under.push(`swap ${this.holding ? 'held' : 'open'}`);
     if (this.staged !== null) {
       this.db = JSON.parse(fromUtf8(this.staged)) as Database;
       this.db.journal = this.db.journal.filter((entry) => entry.device === this.id);
@@ -135,7 +141,15 @@ function sync(
   device: Device,
   remote: SyncRemote,
   key: CryptoKey,
-  holdWrites = <T>(work: () => Promise<T>) => work(),
+  holdWrites = async <T>(work: () => Promise<T>): Promise<T> => {
+    device.holding = true;
+    try {
+      return await work();
+    } finally {
+      device.holding = false;
+    }
+  },
+  swapIn: () => Promise<void> = async () => device.swapIn(),
 ) {
   const context: SyncContext = {
     device: device.id,
@@ -143,7 +157,7 @@ function sync(
     key,
     remote,
     server: device,
-    shell: { swapIn: async () => device.swapIn() },
+    shell: { swapIn },
     ledger: device.ledger,
     saveLedger: (ledger) => {
       device.ledger = ledger;
@@ -315,21 +329,30 @@ describe('a write the round must not lose (#2086 review)', () => {
     });
   });
 
-  it('swaps under held writes: what the page sends during the swap waits for it', async () => {
+  it("stages and swaps only while the page's writes are held", async () => {
     const { remote, key, pc, phone } = await twoDevices();
     pc.write('Luca on 2 Oct');
     await sync(pc, remote, key);
-    const held: string[] = [];
+    phone.under.length = 0;
 
-    await sync(phone, remote, key, async (work) => {
-      held.push('hold');
-      const result = await work();
-      held.push('release');
-      return result;
-    });
+    await sync(phone, remote, key);
 
-    expect(held).toEqual(['hold', 'release']);
+    expect(phone.under).toEqual(['stage held', 'swap held']);
     expect(phone.db.rows).toEqual(['Luca on 2 Oct']);
+  });
+
+  it('knows its new base once staged: a phone killed during the restart wakes up as that version', async () => {
+    const { remote, key, pc, phone } = await twoDevices();
+    pc.write('Luca on 2 Oct');
+    await sync(pc, remote, key);
+
+    await expect(
+      sync(phone, remote, key, undefined, async () => {
+        throw new Error('killed during the restart');
+      }),
+    ).rejects.toThrow('killed');
+
+    expect(phone.ledger.base).toEqual({ seq: 2, device: 'pc4f2a' });
   });
 
   it('takes a push whose answer was lost as pushed: once listed, it is the base, and nothing is sent twice', async () => {
@@ -420,5 +443,36 @@ describe('what the round reads and fetches (#2086 review)', () => {
       missingFiles: 0,
     });
     expect(phone.held.has(sha)).toBe(true);
+  });
+
+  it('clears no entry of a push that never reached Drive, and publishes it again after the lag', async () => {
+    let now = 1_000_000;
+    const { remote, key } = await folder(() => now);
+    const pc = new Device('pc4f2a', 'Eagles BJJ');
+    await sync(pc, remote, key);
+    pc.write('Luca on 2 Oct');
+    const unreachable: SyncRemote = {
+      list: (dir) => remote.list(dir),
+      read: (path) => remote.read(path),
+      write: async (path, bytes) => {
+        if (path.startsWith('versions/')) {
+          throw new Error('no network');
+        }
+        await remote.write(path, bytes);
+      },
+      remove: (path) => remote.remove(path),
+    };
+
+    await expect(sync(pc, unreachable, key)).rejects.toThrow('no network');
+    expect(await outcome(pc, remote, key)).toEqual({ kind: 'wait' });
+    expect(await pc.journal()).toHaveLength(1);
+
+    now += 11 * MINUTE;
+    expect(await outcome(pc, remote, key)).toEqual({
+      kind: 'pushed',
+      version: { seq: 2, device: 'pc4f2a' },
+    });
+    expect(await outcome(pc, remote, key)).toEqual({ kind: 'nothing' });
+    expect(await pc.journal()).toEqual([]);
   });
 });
