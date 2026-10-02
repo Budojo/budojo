@@ -205,7 +205,10 @@ describe('SyncService', () => {
     const sync = setUp();
     await sync.resolve('device', { seq: 1, device: 'pc4f2a' });
 
-    expect(remote.files.has('versions/000002-phone9c1e.000001-pc4f2a.bjs')).toBe(false);
+    // No version of any kind: a root as much as one on top.
+    expect([...remote.files.keys()].filter((path) => path.startsWith('versions/'))).toEqual([
+      'versions/000001-pc4f2a.root.bjs',
+    ]);
   });
 
   it('stops when the owner signs out: no round is started after', async () => {
@@ -256,6 +259,52 @@ describe('SyncService', () => {
     await vi.advanceTimersByTimeAsync(10 * 60_000);
 
     expect(rounds).toBe(1);
+  });
+
+  it('runs a round of its own after a choice the folder no longer needs: it emptied before the confirm', async () => {
+    await pcPublishes();
+    phone = new MemoryDevice('phone9c1e', 'Eagles BJJ, restored from a backup');
+    const sync = setUp();
+    await sync.syncNow();
+    expect(sync.state().kind).toBe('ask');
+    for (const path of [...remote.files.keys()].filter((p) => p.startsWith('versions/'))) {
+      remote.files.delete(path);
+    }
+
+    await sync.resolve('folder', { seq: 1, device: 'pc4f2a' });
+    await vi.waitFor(() => expect(sync.state()).toEqual({ kind: 'waiting-first' }));
+    expect(phone.db.academy).toBe('Eagles BJJ, restored from a backup');
+  });
+
+  it('keeps the question on screen while a round looks again in the background', async () => {
+    await pcPublishes();
+    phone = new MemoryDevice('phone9c1e', 'Eagles BJJ, restored from a backup');
+    let block = false;
+    let release: () => void = () => undefined;
+    const slow: SyncRemote = {
+      list: async (folder) => {
+        if (block) {
+          await new Promise<void>((resolve) => (release = resolve));
+        }
+        return remote.list(folder);
+      },
+      read: (path) => remote.read(path),
+      write: (path, bytes) => remote.write(path, bytes),
+      remove: (path) => remote.remove(path),
+    };
+    const sync = setUp({ remote: slow });
+    await sync.syncNow();
+    expect(sync.state().kind).toBe('ask');
+
+    block = true;
+    const looking = sync.syncNow();
+    await new Promise((resolve) => setTimeout(resolve));
+    expect(sync.state().kind).toBe('ask');
+
+    block = false;
+    release();
+    await looking;
+    expect(sync.state().kind).toBe('ask');
   });
 
   it('writes nothing to another academy’s folder', async () => {
