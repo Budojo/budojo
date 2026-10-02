@@ -2,11 +2,15 @@
 
 declare(strict_types=1);
 
+use App\Actions\Attendance\MarkAttendanceAction;
 use App\Actions\Sync\ReplayJournalAction;
 use App\Models\Athlete;
 use App\Support\Sync\RebasePending;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
+use Mockery\MockInterface;
 
 /**
  * The rebase (#2031 step 3, PRD § 5.2): the phone's kept writes, replayed on
@@ -99,6 +103,30 @@ describe('the phone’s writes on the PC’s database', function (): void {
             ->toBe(['athlete' => $marco->id]);
     });
 
+    it('turns a write that fails here into a conflict, undone, and never stops the replay', function (): void {
+        $entries = onThePhone(function (): void {
+            $this->actingAs($this->owner)
+                ->postJson('/api/v1/attendance', ['date' => '2026-10-01', 'athlete_ids' => [$this->luca]])
+                ->assertCreated();
+            replayAthlete($this, 'Marco');
+        });
+        // The check-in's Action writes a row, then fails: the controller is
+        // made again, so it takes the failing one.
+        $this->mock(MarkAttendanceAction::class, fn (MockInterface $mock) => $mock
+            ->shouldReceive('execute')
+            ->andReturnUsing(function (): never {
+                DB::table('attendance_records')->insert(['athlete_id' => $this->luca, 'attended_on' => '2026-10-02', 'created_at' => now(), 'updated_at' => now()]);
+
+                throw new RuntimeException('disk full');
+            }));
+        Route::getRoutes()->getByName('attendance.store')?->flushController();
+
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'conflict', $entries[1]['id'] => 'applied'])
+            ->and(DB::table('sync_conflicts')->where('entry_id', $entries[0]['id'])->value('reason'))->toBe('failed')
+            ->and(DB::table('attendance_records')->where('athlete_id', $this->luca)->count())->toBe(0)
+            ->and(Athlete::query()->where('first_name', 'Marco')->exists())->toBeTrue();
+    });
+
     it('finds a presence marked on both devices already true, and marks it once', function (): void {
         $entries = onThePhone(fn () => $this->actingAs($this->owner)
             ->postJson('/api/v1/attendance', ['date' => '2026-10-01', 'athlete_ids' => [$this->luca]]));
@@ -118,6 +146,20 @@ describe('the phone’s writes on the PC’s database', function (): void {
         $conflict = DB::table('sync_conflicts')->where('entry_id', $entries[0]['id'])->sole();
         expect($conflict->reason)->toBe('changed')
             ->and(json_decode((string) $conflict->detail, true))->toMatchArray(['field' => 'first_name', 'saw' => 'Luca', 'here' => 'Luke']);
+    });
+
+    it('never overwrites a photo the PC changed since: an upload names no column, so it is about every one it changed', function (): void {
+        $entries = onThePhone(fn () => $this->actingAs($this->owner)
+            ->post("/api/v1/athletes/{$this->luca}/photo", ['photo' => UploadedFile::fake()->image('phone.png', 20, 20)])
+            ->assertOk());
+        $this->actingAs($this->owner)
+            ->post("/api/v1/athletes/{$this->luca}/photo", ['photo' => UploadedFile::fake()->image('pc.png', 30, 30)])
+            ->assertOk();
+        $pcPhoto = Athlete::query()->findOrFail($this->luca)->photo_sha256;
+
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'conflict'])
+            ->and(DB::table('sync_conflicts')->where('entry_id', $entries[0]['id'])->value('reason'))->toBe('changed')
+            ->and(Athlete::query()->findOrFail($this->luca)->photo_sha256)->toBe($pcPhoto);
     });
 
     it('applies an edit the PC made the same way already, without a conflict', function (): void {
@@ -213,6 +255,23 @@ describe('the rebase across the swap (#2031 step 3)', function (): void {
             ->and(DB::table('sync_entries')->where('id', $entries[0]['id'])->value('outcome'))->toBe('applied')
             ->and(file_exists(RebasePending::path()))->toBeFalse()
             ->and(Athlete::query()->find($giulia))->not->toBeNull();
+    });
+
+    it('keeps a photo uploaded offline through the swap: the replay gives it its row before anything is swept', function (): void {
+        $entries = onThePhone(function (): void {
+            $this->actingAs($this->owner)
+                ->post("/api/v1/athletes/{$this->luca}/photo", ['photo' => UploadedFile::fake()->image('luca.png', 20, 20)])
+                ->assertOk();
+            RebasePending::setAside('phone9c1e');
+        });
+        config()->set('budojo.sync.device', 'phone9c1e');
+
+        $this->artisan('budojo:sync-reconcile')->assertSuccessful();
+
+        $path = Athlete::query()->findOrFail($this->luca)->photo_path;
+        expect(DB::table('sync_entries')->where('id', $entries[0]['id'])->value('outcome'))->toBe('applied')
+            ->and($path)->not->toBeNull()
+            ->and(Storage::disk('public')->exists((string) $path))->toBeTrue();
     });
 
     it('never replays a rebase set aside for an earlier stage: every stage clears it', function (): void {

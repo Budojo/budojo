@@ -22,7 +22,7 @@ return new class extends Migration
             $table->string('entry_id', 26)->primary();
             $table->string('device', 16);
             $table->string('route', 120);
-            // refused | changed | gone | unknown-route
+            // refused | changed | gone | differs | failed | unknown-route
             $table->string('reason', 16);
             // Why, as the replay found it: the message, or the field and both values.
             $table->text('detail');

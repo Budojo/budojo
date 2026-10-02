@@ -34,8 +34,10 @@ use Illuminate\Support\Facades\Route as Routes;
  * - **already:** what it would do is already true, exactly: a presence marked
  *   on both devices, the same field set to the same value;
  * - **conflict:** the rules refuse it here, or a field it changes was changed
- *   here since it was written, or its row is gone. Written to `sync_conflicts`
- *   with both sides, for the owner (PRD § 6.4), and never dropped.
+ *   here since it was written, or its row is gone, or it fails. Written to
+ *   `sync_conflicts` with both sides, for the owner (PRD § 6.4), and never
+ *   dropped. **A replay never stops on an entry:** the shell runs it before
+ *   the app serves, so one that did would stop every start.
  *
  * Every entry dealt with here is kept in this database's journal again,
  * through the id map, so the device pushes it with its next version.
@@ -100,7 +102,27 @@ final class ReplayJournalAction
             return $this->record($device, $entry, $params, $body, $before, $seen['outcome'], [], $seen['conflict']);
         }
 
-        [$status, $answer, $created] = $this->dispatch($route, $entry['method'], $params, $body, $owner);
+        // A savepoint around the write: what a refused or failed one did is
+        // undone before its conflict is recorded.
+        DB::beginTransaction();
+
+        try {
+            [$status, $answer, $created] = $this->dispatch($route, $entry['method'], $params, $body, $owner);
+        } catch (\Throwable $e) {
+            // A route that takes other parameters now, say: never a replay
+            // that throws, which would stop every start of the app.
+            DB::rollBack();
+
+            return $this->record($device, $entry, $params, $body, $before, 'conflict', [], [
+                'reason' => 'failed',
+                'message' => $e->getMessage(),
+            ]);
+        }
+        if ($status >= 200 && $status < 300) {
+            DB::commit();
+        } else {
+            DB::rollBack();
+        }
         if ($status >= 200 && $status < 300) {
             $map->learn($entry['created'], $created);
             if ($created === [] && $entry['created'] !== []) {
@@ -122,19 +144,21 @@ final class ReplayJournalAction
 
             return $this->record($device, $entry, $params, $body, $before, 'applied', $created, null);
         }
-        if (\in_array($status, [403, 404, 409, 422], true)) {
-            return $this->record($device, $entry, $params, $body, $before, 'conflict', [], [
-                'reason' => $status === 404 ? 'gone' : 'refused',
-                'status' => $status,
-                'message' => \is_array($answer) ? ($answer['message'] ?? null) : null,
-                'errors' => \is_array($answer) ? ($answer['errors'] ?? null) : null,
-            ]);
-        }
 
-        // A server error is not the owner's to decide: the replay stops here,
-        // this entry's transaction rolls back, and the next start replays from
-        // this entry on.
-        throw new \RuntimeException("replaying {$entry['route']} ({$entry['id']}) answered {$status}");
+        // The rules refuse it here, or its row is gone. Anything else, a
+        // server error first, is the owner's too: the shell replays before
+        // the app serves, so a replay that stopped on it would stop every
+        // start of the app.
+        return $this->record($device, $entry, $params, $body, $before, 'conflict', [], [
+            'reason' => match ($status) {
+                404 => 'gone',
+                403, 409, 422 => 'refused',
+                default => 'failed',
+            },
+            'status' => $status,
+            'message' => \is_array($answer) ? ($answer['message'] ?? null) : null,
+            'errors' => \is_array($answer) ? ($answer['errors'] ?? null) : null,
+        ]);
     }
 
     /**
@@ -143,6 +167,13 @@ final class ReplayJournalAction
      * touched on the way (a carnet's count, a lesson's attendance): those are
      * derived again by the replay, and two check-ins on one carnet are not a
      * conflict. Null when it can be replayed.
+     *
+     * **An update is about the fields its body sets by name;** the others
+     * moved with them (a name's search form) and are derived again. One that
+     * sets none of them by name (a photo: `photo` sets `photo_path` and
+     * `photo_sha256`), or has no body, is about every field it changed: it is
+     * replayed when they are as it saw them, and a conflict when one moved.
+     * It is never "already true", which only a field set by name can tell.
      *
      * @param  array<string, array<string, array<string, mixed>>>|null  $before
      * @param  array<string, mixed>|null  $body
@@ -153,6 +184,7 @@ final class ReplayJournalAction
         if ($before === null) {
             return null;
         }
+        $byName = $method !== 'DELETE' && \is_array($body) && self::namesAny($before, $body);
         $allThere = true;
         $allAsWanted = true;
         foreach ($before as $table => $rows) {
@@ -168,9 +200,7 @@ final class ReplayJournalAction
                     if (\in_array($field, self::CLOCK, true) || ! \array_key_exists($field, $now)) {
                         continue;
                     }
-                    // An update is about the fields it sets: the others moved
-                    // with them (a name's search form) and are derived again.
-                    if ($method !== 'DELETE' && (! \is_array($body) || ! \array_key_exists($field, $body))) {
+                    if ($byName && ! \array_key_exists($field, $body)) {
                         continue;
                     }
                     if (self::same($now[$field], $saw)) {
@@ -179,7 +209,7 @@ final class ReplayJournalAction
                         continue;
                     }
                     // Changed here since: unless it is already what the entry sets.
-                    if ($method !== 'DELETE' && \is_array($body) && self::same($now[$field], $body[$field])) {
+                    if ($byName && self::same($now[$field], $body[$field])) {
                         continue;
                     }
 
@@ -202,7 +232,28 @@ final class ReplayJournalAction
                 : ['outcome' => 'conflict', 'conflict' => ['reason' => 'gone']];
         }
 
-        return $method !== 'DELETE' && $allAsWanted ? ['outcome' => 'already', 'conflict' => null] : null;
+        return $byName && $allAsWanted ? ['outcome' => 'already', 'conflict' => null] : null;
+    }
+
+    /**
+     * Whether the body sets any field `before` recorded, by its name.
+     *
+     * @param  array<string, array<string, array<string, mixed>>>  $before
+     * @param  array<string, mixed>  $body
+     */
+    private static function namesAny(array $before, array $body): bool
+    {
+        foreach ($before as $rows) {
+            foreach ($rows as $fields) {
+                foreach (array_keys($fields) as $field) {
+                    if (! \in_array($field, self::CLOCK, true) && \array_key_exists($field, $body)) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
     }
 
     /**
