@@ -313,6 +313,26 @@ describe('SyncService', () => {
     expect(failing.state()).toEqual({ kind: 'pending', count: 2, offline: false });
   });
 
+  it('still counts what waits when the identity itself cannot be read for want of a network', async () => {
+    await pcPublishes();
+    let online = true;
+    const sync = setUp({
+      identity: async () => {
+        if (!online) {
+          throw new RemoteError('offline', 'no network to read the keys');
+        }
+        return identity();
+      },
+    });
+    await sync.syncNow();
+    phone.write('Luca on 2 Oct');
+    online = false;
+
+    await sync.syncNow();
+
+    expect(sync.state()).toEqual({ kind: 'pending', count: 1, offline: true });
+  });
+
   it('syncs on opening, and a few seconds after a write, not at once', async () => {
     vi.useFakeTimers();
     let rounds = 0;

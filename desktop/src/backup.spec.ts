@@ -299,6 +299,46 @@ describe('BackupService', () => {
     });
   }
 
+  describe('holding, for the sync’s swap (#2032)', () => {
+    it('waits for a backup already running, then refuses new ones until the swap is done', async () => {
+      let finishVacuum = (): void => undefined;
+      const io = fakeIO({ vacuumInto: vi.fn(() => new Promise<void>((resolve) => (finishVacuum = resolve))) });
+      const backups = service(io);
+      const running = backups.backup();
+      const steps: string[] = [];
+      let tick = (): void => undefined;
+      const sleep = () => new Promise<void>((resolve) => (tick = resolve));
+
+      const swap = backups.holding(
+        async () => {
+          steps.push('swap');
+          await expect(backups.backup()).rejects.toThrow('already running');
+        },
+        120_000,
+        sleep,
+      );
+      await Promise.resolve();
+      expect(steps).toEqual([]);
+
+      finishVacuum();
+      await running;
+      tick();
+      await swap;
+      expect(steps).toEqual(['swap']);
+      expect(backups.busy).toBe(false);
+    });
+
+    it('gives up waiting for a backup that does not end, and swaps nothing', async () => {
+      const io = fakeIO({ vacuumInto: vi.fn(() => new Promise<void>(() => undefined)) });
+      const backups = service(io);
+      void backups.backup();
+      const work = vi.fn(async () => undefined);
+
+      await expect(backups.holding(work, 1_000, async () => undefined)).rejects.toThrow('already running');
+      expect(work).not.toHaveBeenCalled();
+    });
+  });
+
   it('vacuums, copies storage, writes the manifest, zips, then cleans up staging', async () => {
     const io = fakeIO();
     const path = await service(io).backup();

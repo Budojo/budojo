@@ -69,6 +69,15 @@ describe('the PC’s sync platform', () => {
     await expect(platform.identity()).rejects.toMatchObject({ reason: 'unauthorized' });
   });
 
+  it('says there is no network when the main process could not read the keys for want of one', async () => {
+    const platform = desktopSyncPlatform(
+      stubBridge({ sync: { identity: async () => ({ offline: true as const }) } }),
+      async () => undefined,
+    );
+
+    await expect(platform.identity()).rejects.toMatchObject({ reason: 'offline' });
+  });
+
   it('swaps through the main process, then opens the owner’s session on the database it brought', async () => {
     const steps: string[] = [];
     const swapIn = vi.fn(async () => {

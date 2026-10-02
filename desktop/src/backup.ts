@@ -255,7 +255,7 @@ export class BackupService {
    * reads `busy` before it stops PHP, so a refused restore never restarts the
    * server under one that is still swapping.
    */
-  private operation: 'backup' | 'restore' | null = null;
+  private operation: 'backup' | 'restore' | 'swap' | null = null;
 
   constructor(private readonly options: BackupServiceOptions) {
     this.now = options.now ?? (() => new Date());
@@ -263,6 +263,30 @@ export class BackupService {
 
   get busy(): boolean {
     return this.operation !== null;
+  }
+
+  /**
+   * Runs `work` with no backup or restore under way, and none starting until
+   * it is done (#2032): the sync's swap renames the database a backup reads.
+   * Waits for one already running, up to `waitMs`, then refuses as busy.
+   */
+  async holding<T>(
+    work: () => Promise<T>,
+    waitMs = 120_000,
+    sleep: (ms: number) => Promise<void> = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+  ): Promise<T> {
+    for (let waited = 0; this.operation !== null; waited += 500) {
+      if (waited >= waitMs) {
+        throw new Error(BUSY);
+      }
+      await sleep(500);
+    }
+    this.operation = 'swap';
+    try {
+      return await work();
+    } finally {
+      this.operation = null;
+    }
   }
 
   /** Creates one archive, prunes to retention, returns the archive path. */
