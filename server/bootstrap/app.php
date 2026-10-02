@@ -30,6 +30,7 @@ return Application::configure(basePath: dirname(__DIR__))
             // (#1229). Not 403: a surface the runtime does not have should
             // not advertise itself.
             'capability' => \App\Http\Middleware\RequireCapability::class,
+            'shell' => \App\Http\Middleware\RequireShell::class,
         ]);
 
         // Defense-in-depth security headers (#1017). The production
