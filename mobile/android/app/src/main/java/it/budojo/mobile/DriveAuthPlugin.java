@@ -22,7 +22,7 @@ import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.common.api.CommonStatusCodes;
 import com.google.android.gms.common.api.Scope;
-import java.util.Collections;
+import java.util.Arrays;
 
 /**
  * Google Drive from the phone (#2028, the spike): the phone's counterpart of the
@@ -42,6 +42,13 @@ import java.util.Collections;
 public class DriveAuthPlugin extends Plugin {
 
     static final String DRIVE_FILE = "https://www.googleapis.com/auth/drive.file";
+
+    /**
+     * The account's hidden application data, where the PC puts the academy's
+     * keys (#2033). Asked with {@code drive.file}: Google shows the consent
+     * once more to a phone granted only the first.
+     */
+    static final String DRIVE_APPDATA = "https://www.googleapis.com/auth/drive.appdata";
 
     private ActivityResultLauncher<IntentSenderRequest> consentLauncher;
     private PluginCall consentCall;
@@ -77,7 +84,7 @@ public class DriveAuthPlugin extends Plugin {
         boolean interactive = Boolean.TRUE.equals(call.getBoolean("interactive", false));
         long started = SystemClock.elapsedRealtime();
         AuthorizationRequest request = AuthorizationRequest.builder()
-            .setRequestedScopes(Collections.singletonList(new Scope(DRIVE_FILE)))
+            .setRequestedScopes(Arrays.asList(new Scope(DRIVE_FILE), new Scope(DRIVE_APPDATA)))
             .build();
 
         Identity.getAuthorizationClient(getActivity())

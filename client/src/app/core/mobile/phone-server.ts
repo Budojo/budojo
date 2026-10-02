@@ -25,6 +25,14 @@ export interface PhpServerPlugin {
   start(): Promise<PhpServerStart>;
   /** Stops and starts it, so a database just staged is swapped in now (#2079). */
   restart(): Promise<PhpServerStart>;
+  /**
+   * Takes the academy's two app keys from the Google account (#2033), for the
+   * server's next start. Whether they differed from the phone's own.
+   */
+  adoptKeys(keys: {
+    APP_KEY: string;
+    DOCUMENT_ENCRYPTION_KEY: string;
+  }): Promise<{ changed: boolean }>;
 }
 
 /** The plugin when the page runs inside the Android app; null anywhere else. */

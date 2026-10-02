@@ -90,6 +90,56 @@ public class PhpServerPlugin extends Plugin {
     }
 
     /**
+     * Takes the academy's two app keys the PC put with the Google account
+     * (#2033), so this phone opens what the PC encrypted: the medical
+     * certificates its restored backup holds. Checked as the desktop's keychain
+     * checks them; the phone's own pair is kept beside as
+     * {@code secrets.previous.json}. Takes effect at the server's next start,
+     * which the page asks for. Answers whether anything changed.
+     */
+    @PluginMethod
+    public void adoptKeys(PluginCall call) {
+        String appKey = call.getString("APP_KEY");
+        String documentKey = call.getString("DOCUMENT_ENCRYPTION_KEY");
+        // 32 bytes of padded base64 each, as both devices make them
+        // (desktop/src/bootstrap.ts, generateSecrets; secrets() here): never a
+        // key that would stop Laravel at the next start. Stricter than the keys
+        // file's readers, which take any long enough key.
+        if (appKey == null || !appKey.matches("base64:[A-Za-z0-9+/]{43}=")
+                || documentKey == null || !documentKey.matches("[A-Za-z0-9+/]{43}=")) {
+            call.reject("not an academy's keys", "INVALID_KEYS");
+            return;
+        }
+        try {
+            File files = getContext().getFilesDir();
+            JSONObject current = secrets(files);
+            JSObject out = new JSObject();
+            if (appKey.equals(current.getString("APP_KEY"))
+                    && documentKey.equals(current.getString("DOCUMENT_ENCRYPTION_KEY"))) {
+                out.put("changed", false);
+                call.resolve(out);
+                return;
+            }
+            JSONObject adopted = new JSONObject();
+            adopted.put("v", 1);
+            adopted.put("APP_KEY", appKey);
+            adopted.put("DOCUMENT_ENCRYPTION_KEY", documentKey);
+            writeFileSynced(new File(files, "secrets.previous.json"), current.toString());
+            File part = new File(files, "secrets.json.part");
+            // On the disk before the rename: a crash right after must not leave an
+            // empty secrets.json, which would stop every start that follows.
+            writeFileSynced(part, adopted.toString());
+            if (!part.renameTo(new File(files, "secrets.json"))) {
+                throw new IOException("could not write the adopted keys");
+            }
+            out.put("changed", true);
+            call.resolve(out);
+        } catch (Exception e) {
+            call.reject(e.getClass().getSimpleName() + ": " + e.getMessage(), e);
+        }
+    }
+
+    /**
      * Back from the background: if Android killed the server meanwhile, start it
      * again now, before the page's next request has to wait for it.
      */
@@ -578,6 +628,13 @@ public class PhpServerPlugin extends Plugin {
     private static String readFile(File file) throws IOException {
         try (InputStream in = new FileInputStream(file)) {
             return readAll(in).trim();
+        }
+    }
+
+    private static void writeFileSynced(File file, String text) throws IOException {
+        try (FileOutputStream out = new FileOutputStream(file)) {
+            out.write(text.getBytes(StandardCharsets.UTF_8));
+            out.getFD().sync();
         }
     }
 

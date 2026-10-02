@@ -3678,6 +3678,14 @@
       "enter": "Go in with the phone's data",
       "useDrive": "Update from the PC",
       "hint": "Updating replaces what you changed on the phone since last time."
+    },
+    "keysWait": {
+      "title": "The medical certificates will open later",
+      "detail": "On the PC: Data & backup → Google Drive → «Connect the phone». Then sign out and back in with Google here."
+    },
+    "keysUnread": {
+      "title": "The gym's keys do not read",
+      "detail": "The medical certificates will not open until they do. Reason: {{reason}}"
     }
   }
 }
