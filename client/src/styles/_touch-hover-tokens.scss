@@ -14,6 +14,7 @@
     --p-autocomplete-dropdown-hover-background: var(--p-autocomplete-dropdown-background);
     --p-autocomplete-dropdown-hover-border-color: var(--p-autocomplete-dropdown-border-color);
     --p-autocomplete-dropdown-hover-color: var(--p-autocomplete-dropdown-color);
+    --p-autocomplete-filled-hover-background: var(--p-autocomplete-filled-background);
     --p-autocomplete-hover-border-color: var(--p-autocomplete-border-color);
     --p-breadcrumb-item-hover-color: var(--p-breadcrumb-item-color);
     --p-breadcrumb-item-icon-hover-color: var(--p-breadcrumb-item-icon-color);
@@ -61,14 +62,19 @@
     --p-button-warn-hover-border-color: var(--p-button-warn-border-color);
     --p-button-warn-hover-color: var(--p-button-warn-color);
     --p-carousel-indicator-hover-background: var(--p-carousel-indicator-background);
+    --p-cascadeselect-filled-hover-background: var(--p-cascadeselect-filled-background);
     --p-cascadeselect-hover-border-color: var(--p-cascadeselect-border-color);
+    --p-checkbox-checked-hover-background: var(--p-checkbox-checked-background);
+    --p-checkbox-checked-hover-border-color: var(--p-checkbox-checked-border-color);
     --p-checkbox-hover-border-color: var(--p-checkbox-border-color);
+    --p-checkbox-icon-checked-hover-color: var(--p-checkbox-icon-checked-color);
     --p-datatable-header-cell-hover-background: var(--p-datatable-header-cell-background);
     --p-datatable-header-cell-hover-color: var(--p-datatable-header-cell-color);
     --p-datatable-row-hover-background: var(--p-datatable-row-background);
     --p-datatable-row-hover-color: var(--p-datatable-row-color);
     --p-datatable-row-toggle-button-hover-background: transparent;
     --p-datatable-row-toggle-button-hover-color: var(--p-datatable-row-toggle-button-color);
+    --p-datatable-row-toggle-button-selected-hover-background: transparent;
     --p-datatable-sort-icon-hover-color: var(--p-datatable-sort-icon-color);
     --p-datepicker-date-hover-background: transparent;
     --p-datepicker-date-hover-color: var(--p-datepicker-date-color);
@@ -103,6 +109,7 @@
     --p-inputnumber-button-hover-background: var(--p-inputnumber-button-background);
     --p-inputnumber-button-hover-border-color: var(--p-inputnumber-button-border-color);
     --p-inputnumber-button-hover-color: var(--p-inputnumber-button-color);
+    --p-inputtext-filled-hover-background: var(--p-inputtext-filled-background);
     --p-inputtext-hover-border-color: var(--p-inputtext-border-color);
     --p-megamenu-mobile-button-hover-background: transparent;
     --p-megamenu-mobile-button-hover-color: var(--p-megamenu-mobile-button-color);
@@ -114,6 +121,7 @@
     --p-message-secondary-close-button-hover-background: transparent;
     --p-message-success-close-button-hover-background: transparent;
     --p-message-warn-close-button-hover-background: transparent;
+    --p-multiselect-filled-hover-background: var(--p-multiselect-filled-background);
     --p-multiselect-hover-border-color: var(--p-multiselect-border-color);
     --p-organizationchart-node-hover-background: var(--p-organizationchart-node-background);
     --p-organizationchart-node-hover-color: var(--p-organizationchart-node-color);
@@ -125,8 +133,12 @@
     );
     --p-paginator-nav-button-hover-background: var(--p-paginator-nav-button-background);
     --p-paginator-nav-button-hover-color: var(--p-paginator-nav-button-color);
+    --p-radiobutton-checked-hover-background: var(--p-radiobutton-checked-background);
+    --p-radiobutton-checked-hover-border-color: var(--p-radiobutton-checked-border-color);
     --p-radiobutton-hover-border-color: var(--p-radiobutton-border-color);
+    --p-radiobutton-icon-checked-hover-color: var(--p-radiobutton-icon-checked-color);
     --p-rating-icon-hover-color: var(--p-rating-icon-color);
+    --p-select-filled-hover-background: var(--p-select-filled-background);
     --p-select-hover-border-color: var(--p-select-border-color);
     --p-slider-handle-content-hover-background: var(--p-slider-handle-content-background);
     --p-slider-handle-hover-background: var(--p-slider-handle-background);
@@ -140,6 +152,7 @@
     --p-tabs-tab-hover-color: var(--p-tabs-tab-color);
     --p-tabview-nav-button-hover-color: var(--p-tabview-nav-button-color);
     --p-tabview-tab-hover-color: var(--p-tabview-tab-color);
+    --p-textarea-filled-hover-background: var(--p-textarea-filled-background);
     --p-textarea-hover-border-color: var(--p-textarea-border-color);
     --p-toast-contrast-close-button-hover-background: transparent;
     --p-toast-error-close-button-hover-background: transparent;
@@ -150,6 +163,12 @@
     --p-togglebutton-hover-background: var(--p-togglebutton-background);
     --p-togglebutton-hover-color: var(--p-togglebutton-color);
     --p-togglebutton-icon-hover-color: var(--p-togglebutton-icon-color);
+    --p-toggleswitch-checked-hover-background: var(--p-toggleswitch-checked-background);
+    --p-toggleswitch-checked-hover-border-color: var(--p-toggleswitch-checked-border-color);
+    --p-toggleswitch-handle-checked-hover-background: var(
+      --p-toggleswitch-handle-checked-background
+    );
+    --p-toggleswitch-handle-checked-hover-color: var(--p-toggleswitch-handle-checked-color);
     --p-toggleswitch-handle-hover-background: var(--p-toggleswitch-handle-background);
     --p-toggleswitch-handle-hover-color: var(--p-toggleswitch-handle-color);
     --p-toggleswitch-hover-background: var(--p-toggleswitch-background);
@@ -159,11 +178,14 @@
     --p-tree-node-icon-hover-color: var(--p-tree-node-icon-color);
     --p-tree-node-toggle-button-hover-background: transparent;
     --p-tree-node-toggle-button-hover-color: var(--p-tree-node-toggle-button-color);
+    --p-tree-node-toggle-button-selected-hover-background: transparent;
+    --p-treeselect-filled-hover-background: var(--p-treeselect-filled-background);
     --p-treeselect-hover-border-color: var(--p-treeselect-border-color);
     --p-treetable-header-cell-hover-background: var(--p-treetable-header-cell-background);
     --p-treetable-header-cell-hover-color: var(--p-treetable-header-cell-color);
     --p-treetable-node-toggle-button-hover-background: transparent;
     --p-treetable-node-toggle-button-hover-color: var(--p-treetable-node-toggle-button-color);
+    --p-treetable-node-toggle-button-selected-hover-background: transparent;
     --p-treetable-row-hover-background: var(--p-treetable-row-background);
     --p-treetable-row-hover-color: var(--p-treetable-row-color);
     --p-treetable-sort-icon-hover-color: var(--p-treetable-sort-icon-color);

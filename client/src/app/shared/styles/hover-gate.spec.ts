@@ -74,6 +74,22 @@ describe('hover on a touch screen', () => {
       expect(partial).toBe(await render(preset.components));
     });
 
+    it('cover every hover token of the preset, whatever state it qualifies', async () => {
+      // `checkedHoverBackground`, `selectedHoverColor` and `filledHoverBackground`
+      // are hover tokens too: an earlier match on a leading `hover` skipped 26.
+      const { analyse } = require('./scripts/touch-hover-tokens.cjs');
+      const preset = (await import('@primeuix/themes/material')).default;
+
+      // The few with no resting token to fall back on, and not a background
+      // (which is transparent at rest). Pinned, so a new one is a decision.
+      expect(analyse(preset.components).unmatched).toEqual([
+        '--p-datatable-row-toggle-button-selected-hover-color',
+        '--p-inplace-display-hover-color',
+        '--p-tree-node-toggle-button-selected-hover-color',
+        '--p-treetable-node-toggle-button-selected-hover-color',
+      ]);
+    });
+
     it('give a text button its resting, transparent background', () => {
       const partial = readFileSync(
         join(process.cwd(), 'src/styles/_touch-hover-tokens.scss'),
@@ -83,6 +99,9 @@ describe('hover on a touch screen', () => {
       expect(partial).toContain('--p-button-text-primary-hover-background: transparent;');
       expect(partial).toContain(
         '--p-button-primary-hover-background: var(--p-button-primary-background);',
+      );
+      expect(partial).toContain(
+        '--p-checkbox-checked-hover-background: var(--p-checkbox-checked-background);',
       );
     });
   });

@@ -42,22 +42,38 @@ function tokens(components) {
   return found;
 }
 
-/** `[hover variable, resting value]` pairs, sorted. */
-function pairs(components) {
+/**
+ * A hover token's resting key: `hoverBackground` → `background`,
+ * `activeHoverColor` → `activeColor`, `checkedHoverBorderColor` →
+ * `checkedBorderColor`. Null for a key that names no hover state.
+ */
+function restingKey(key) {
+  const match = /^(.*?)[hH]over([A-Z].*)$/.exec(key);
+  if (match === null) return null;
+  const [, state, rest] = match;
+  return state === '' ? rest.replace(/^./, (c) => c.toLowerCase()) : state + rest;
+}
+
+/** `[hover variable, resting value]` pairs, sorted; and the hover tokens left without one. */
+function analyse(components) {
   const all = tokens(components);
   const out = new Map();
+  const unmatched = [];
   for (const [name, path] of all) {
-    const key = path[path.length - 1];
-    if (!/^(active)?[hH]over/.test(key)) continue;
-    const restingKey = key
-      .replace(/^(active)?[hH]over/, '$1')
-      .replace(/^./, (c) => c.toLowerCase());
-    const resting = variable([...path.slice(0, -1), restingKey]);
-    if (all.has(resting)) out.set(name, `var(${resting})`);
-    else if (/background$/i.test(key)) out.set(name, 'transparent');
+    const resting = restingKey(path[path.length - 1]);
+    if (resting === null) continue;
+    const restingName = variable([...path.slice(0, -1), resting]);
+    if (all.has(restingName)) out.set(name, `var(${restingName})`);
+    else if (/background$/i.test(resting)) out.set(name, 'transparent');
+    else unmatched.push(name);
   }
-  return [...out.entries()].sort(([a], [b]) => a.localeCompare(b));
+  return {
+    pairs: [...out.entries()].sort(([x], [y]) => x.localeCompare(y)),
+    unmatched: [...new Set(unmatched)].sort(),
+  };
 }
+
+const pairs = (components) => analyse(components).pairs;
 
 /** The partial, formatted as Prettier formats the rest of `src/` (it runs over it). */
 async function render(components) {
@@ -83,7 +99,7 @@ function variables(components) {
   return [...tokens(components).keys()];
 }
 
-module.exports = { render, pairs, variables };
+module.exports = { render, pairs, variables, analyse };
 
 if (require.main === module) {
   const preset = require('@primeuix/themes/material').default;
