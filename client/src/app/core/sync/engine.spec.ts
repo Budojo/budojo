@@ -1,16 +1,20 @@
 import { describe, expect, it } from 'vitest';
-import { fromUtf8, utf8 } from './bytes';
+import { fromUtf8, sha256Hex, utf8 } from './bytes';
 import { EMPTY_LEDGER, SyncContext, SyncLedger, syncOnce, SyncServer } from './engine';
-import { importSyncKey, newSyncKey } from './envelope';
+import { importSyncKey, newSyncKey, seal } from './envelope';
 import { ServerFile, SyncFilesApi } from './files';
 import { JournalEntry } from './journal';
+import { devicePath, filePath } from './layout';
 import { MemoryRemote, SyncRemote } from './remote';
 
 /**
  * The sync engine (#2046, PRD § 5.2): two devices of one academy, a PC and a
- * phone, each with its own server, meeting in one folder. The folder is in
- * memory; the servers keep their database as a small JSON the engine only
- * ever carries as bytes, as it carries SQLite.
+ * phone, each with its own server, meeting in one folder in memory.
+ *
+ * Each server keeps its database as a small JSON the engine only carries as
+ * bytes, as it carries SQLite, and **its journal is inside it**, as
+ * `sync_journal` is: a swap replaces it, and after the swap a device keeps
+ * only its own rows (the reconcile).
  */
 
 interface Database {
@@ -18,13 +22,11 @@ interface Database {
   rows: string[];
   /** Per device, the newest of its entries this database holds: what `/sync/holds` answers. */
   dealt: Record<string, string>;
+  /** `sync_journal`: the kept entries. */
+  journal: JournalEntry[];
+  /** The contents its rows name, by SHA-256. */
+  names: string[];
 }
-
-const NO_FILES: SyncFilesApi = {
-  list: async (): Promise<ServerFile[]> => [],
-  read: async () => new Uint8Array(),
-  write: async () => undefined,
-};
 
 let counter = 0;
 /** A ULID that only grows, as a device's entry ids do. */
@@ -35,16 +37,29 @@ function nextId(): string {
 
 class Device implements SyncServer {
   db: Database;
-  kept: JournalEntry[] = [];
   private staged: Uint8Array | null = null;
   ledger: SyncLedger = EMPTY_LEDGER;
-  readonly files = NO_FILES;
+  /** The bytes this device holds, by SHA-256. */
+  readonly held = new Map<string, Uint8Array>();
+  readonly files: SyncFilesApi = {
+    list: async (): Promise<ServerFile[]> =>
+      this.db.names.map((sha256) => ({
+        sha256,
+        size: this.held.get(sha256)?.length ?? null,
+        present: this.held.has(sha256),
+        complete: this.held.has(sha256),
+      })),
+    read: async (sha256) => this.held.get(sha256) as Uint8Array,
+    write: async (sha256, bytes) => {
+      this.held.set(sha256, bytes);
+    },
+  };
 
   constructor(
     readonly id: string,
     academy: string | null,
   ) {
-    this.db = { academy, rows: [], dealt: {} };
+    this.db = { academy, rows: [], dealt: {}, journal: [], names: [] };
   }
 
   /** A write through the device's API: a row, and its journal entry in the same transaction. */
@@ -52,7 +67,7 @@ class Device implements SyncServer {
     const id = nextId();
     this.db.rows.push(row);
     this.db.dealt[this.id] = id;
-    this.kept.push({
+    this.db.journal.push({
       id,
       device: this.id,
       at: '2026-10-02T18:00:00.000000Z',
@@ -63,6 +78,14 @@ class Device implements SyncServer {
       created: {},
       before: null,
     });
+  }
+
+  async photo(text: string): Promise<string> {
+    const bytes = utf8(text);
+    const sha = await sha256Hex(bytes);
+    this.db.names.push(sha);
+    this.held.set(sha, bytes);
+    return sha;
   }
 
   async exportDatabase() {
@@ -76,19 +99,21 @@ class Device implements SyncServer {
     this.staged = database;
   }
 
+  /** The shell's swap, then the reconcile: the journal keeps only this device's rows. */
   swapIn(): void {
     if (this.staged !== null) {
       this.db = JSON.parse(fromUtf8(this.staged)) as Database;
+      this.db.journal = this.db.journal.filter((entry) => entry.device === this.id);
       this.staged = null;
     }
   }
 
   async journal() {
-    return [...this.kept];
+    return this.db.journal.filter((entry) => entry.device === this.id);
   }
 
   async clearJournal(through: string) {
-    this.kept = this.kept.filter((entry) => entry.id > through);
+    this.db.journal = this.db.journal.filter((entry) => entry.id > through);
   }
 
   async holds() {
@@ -100,11 +125,18 @@ class Device implements SyncServer {
   }
 }
 
-async function folder(): Promise<{ remote: MemoryRemote; key: CryptoKey }> {
-  return { remote: new MemoryRemote(), key: await importSyncKey(newSyncKey()) };
+const MINUTE = 60_000;
+
+async function folder(clock?: () => number): Promise<{ remote: MemoryRemote; key: CryptoKey }> {
+  return { remote: new MemoryRemote(clock), key: await importSyncKey(newSyncKey()) };
 }
 
-function sync(device: Device, remote: SyncRemote, key: CryptoKey) {
+function sync(
+  device: Device,
+  remote: SyncRemote,
+  key: CryptoKey,
+  holdWrites = <T>(work: () => Promise<T>) => work(),
+) {
   const context: SyncContext = {
     device: device.id,
     app: '2.76.0',
@@ -116,9 +148,37 @@ function sync(device: Device, remote: SyncRemote, key: CryptoKey) {
     saveLedger: (ledger) => {
       device.ledger = ledger;
     },
+    holdWrites,
     now: () => Date.parse('2026-10-02T18:00:00Z'),
   };
   return syncOnce(context);
+}
+
+async function outcome(device: Device, remote: SyncRemote, key: CryptoKey) {
+  return (await sync(device, remote, key)).outcome;
+}
+
+/** A remote whose listing hides some files, as Drive's lags behind a new one. */
+function lagging(remote: MemoryRemote, hides: (path: string) => boolean): SyncRemote {
+  return {
+    list: async (dir) => {
+      const listing = await remote.list(dir);
+      return { ...listing, files: listing.files.filter((file) => !hides(file.path)) };
+    },
+    read: (path) => remote.read(path),
+    write: (path, bytes) => remote.write(path, bytes),
+    remove: (path) => remote.remove(path),
+  };
+}
+
+/** A PC with its academy at version 1, and a phone that pulled it. */
+async function twoDevices() {
+  const { remote, key } = await folder();
+  const pc = new Device('pc4f2a', 'Eagles BJJ');
+  await sync(pc, remote, key);
+  const phone = new Device('phone9c1e', null);
+  await sync(phone, remote, key);
+  return { remote, key, pc, phone };
 }
 
 describe('the sync engine (#2046)', () => {
@@ -126,7 +186,7 @@ describe('the sync engine (#2046)', () => {
     const { remote, key } = await folder();
     const pc = new Device('pc4f2a', 'Eagles BJJ');
 
-    expect(await sync(pc, remote, key)).toEqual({
+    expect(await outcome(pc, remote, key)).toEqual({
       kind: 'pushed',
       version: { seq: 1, device: 'pc4f2a' },
     });
@@ -145,29 +205,24 @@ describe('the sync engine (#2046)', () => {
     await sync(pc, remote, key);
     const phone = new Device('phone9c1e', null);
 
-    expect(await sync(phone, remote, key)).toEqual({
+    expect(await outcome(phone, remote, key)).toEqual({
       kind: 'pulled',
       version: { seq: 1, device: 'pc4f2a' },
-      missingFiles: 0,
     });
 
-    expect(phone.db).toEqual(pc.db);
+    expect(phone.db.rows).toEqual(pc.db.rows);
     expect(phone.ledger.base).toEqual({ seq: 1, device: 'pc4f2a' });
   });
 
   it('carries what the phone marks at the gym to the PC, which pulls it by itself', async () => {
-    const { remote, key } = await folder();
-    const pc = new Device('pc4f2a', 'Eagles BJJ');
-    await sync(pc, remote, key);
-    const phone = new Device('phone9c1e', null);
-    await sync(phone, remote, key);
+    const { remote, key, pc, phone } = await twoDevices();
 
     phone.write('Giulia on 2 Oct');
-    expect(await sync(phone, remote, key)).toEqual({
+    expect(await outcome(phone, remote, key)).toEqual({
       kind: 'pushed',
       version: { seq: 2, device: 'phone9c1e' },
     });
-    expect(await sync(pc, remote, key)).toMatchObject({
+    expect(await outcome(pc, remote, key)).toEqual({
       kind: 'pulled',
       version: { seq: 2, device: 'phone9c1e' },
     });
@@ -176,56 +231,135 @@ describe('the sync engine (#2046)', () => {
   });
 
   it("keeps the phone's write until the PC reports holding it, then clears it", async () => {
-    const { remote, key } = await folder();
-    const pc = new Device('pc4f2a', 'Eagles BJJ');
-    await sync(pc, remote, key);
-    const phone = new Device('phone9c1e', null);
-    await sync(phone, remote, key);
+    const { remote, key, pc, phone } = await twoDevices();
     phone.write('Giulia on 2 Oct');
 
     await sync(phone, remote, key);
-    expect(phone.kept).toHaveLength(1);
+    expect(await phone.journal()).toHaveLength(1);
 
     await sync(pc, remote, key);
-    expect(await sync(phone, remote, key)).toEqual({ kind: 'nothing' });
-    expect(phone.kept).toEqual([]);
+    expect(await outcome(phone, remote, key)).toEqual({ kind: 'nothing' });
+    expect(await phone.journal()).toEqual([]);
     expect(phone.ledger.unconfirmed).toBeNull();
   });
 
-  it('asks the owner when a phone with an academy of its own meets a folder with one: never merged', async () => {
+  it('asks the owner when a phone with an academy of its own meets a folder with one, and still reports', async () => {
     const { remote, key } = await folder();
     const pc = new Device('pc4f2a', 'Eagles BJJ');
     await sync(pc, remote, key);
     const phone = new Device('phone9c1e', 'Prova');
 
-    expect(await sync(phone, remote, key)).toEqual({
+    expect(await outcome(phone, remote, key)).toEqual({
       kind: 'ask',
       latest: { seq: 1, device: 'pc4f2a' },
     });
     expect(phone.db.academy).toBe('Prova');
+    expect(remote.files.has(devicePath('phone9c1e'))).toBe(true);
   });
 
   it('never fast-forwards over writes of its own: both changed, so it needs the replay', async () => {
-    const { remote, key } = await folder();
-    const pc = new Device('pc4f2a', 'Eagles BJJ');
-    await sync(pc, remote, key);
-    const phone = new Device('phone9c1e', null);
-    await sync(phone, remote, key);
-
+    const { remote, key, pc, phone } = await twoDevices();
     pc.write('Luca on 2 Oct');
     await sync(pc, remote, key);
     phone.write('Giulia on 2 Oct');
 
-    expect(await sync(phone, remote, key)).toEqual({
+    expect(await outcome(phone, remote, key)).toEqual({
       kind: 'needs-rebase',
       onto: { seq: 2, device: 'pc4f2a' },
     });
     expect(phone.db.rows).toEqual(['Giulia on 2 Oct']);
-    expect(phone.kept).toHaveLength(1);
+    expect(await phone.journal()).toHaveLength(1);
   });
 
   it("waits for its own push while Drive's listing has not caught up", async () => {
-    const { remote, key } = await folder();
+    const { remote, key, phone } = await twoDevices();
+    phone.write('Giulia on 2 Oct');
+    await sync(phone, remote, key);
+
+    expect(
+      await outcome(
+        phone,
+        lagging(remote, (path) => path.includes('phone9c1e.000001')),
+        key,
+      ),
+    ).toEqual({
+      kind: 'wait',
+    });
+  });
+});
+
+describe('a write the round must not lose (#2086 review)', () => {
+  it('swaps nothing when a check-in lands while the version downloads: the round decides again', async () => {
+    const { remote, key, pc, phone } = await twoDevices();
+    pc.write('Luca on 2 Oct');
+    await sync(pc, remote, key);
+    // The owner marks a presence while the phone is still reading the version.
+    const reading: SyncRemote = {
+      list: (dir) => remote.list(dir),
+      read: async (path) => {
+        if (path.startsWith('versions/')) {
+          phone.write('Giulia on 2 Oct');
+        }
+        return remote.read(path);
+      },
+      write: (path, bytes) => remote.write(path, bytes),
+      remove: (path) => remote.remove(path),
+    };
+
+    expect((await sync(phone, reading, key)).outcome).toEqual({ kind: 'retry' });
+    expect(phone.db.rows).toEqual(['Giulia on 2 Oct']);
+    expect(await phone.journal()).toHaveLength(1);
+    expect(await outcome(phone, remote, key)).toEqual({
+      kind: 'needs-rebase',
+      onto: { seq: 2, device: 'pc4f2a' },
+    });
+  });
+
+  it('swaps under held writes: what the page sends during the swap waits for it', async () => {
+    const { remote, key, pc, phone } = await twoDevices();
+    pc.write('Luca on 2 Oct');
+    await sync(pc, remote, key);
+    const held: string[] = [];
+
+    await sync(phone, remote, key, async (work) => {
+      held.push('hold');
+      const result = await work();
+      held.push('release');
+      return result;
+    });
+
+    expect(held).toEqual(['hold', 'release']);
+    expect(phone.db.rows).toEqual(['Luca on 2 Oct']);
+  });
+
+  it('takes a push whose answer was lost as pushed: once listed, it is the base, and nothing is sent twice', async () => {
+    const { remote, key, phone } = await twoDevices();
+    phone.write('Giulia on 2 Oct');
+    let writes = 0;
+    const lostAnswer: SyncRemote = {
+      list: (dir) => remote.list(dir),
+      read: (path) => remote.read(path),
+      write: async (path, bytes) => {
+        await remote.write(path, bytes);
+        if (path.startsWith('versions/')) {
+          writes++;
+          throw new Error('the connection dropped before the answer');
+        }
+      },
+      remove: (path) => remote.remove(path),
+    };
+
+    await expect(sync(phone, lostAnswer, key)).rejects.toThrow('dropped');
+    expect(phone.ledger.unconfirmed?.version).toEqual({ seq: 2, device: 'phone9c1e' });
+
+    expect(await outcome(phone, remote, key)).toEqual({ kind: 'nothing' });
+    expect(phone.ledger.base).toEqual({ seq: 2, device: 'phone9c1e' });
+    expect(writes).toBe(1);
+  });
+
+  it('counts the wait for its push from the first listing after it, not from before a long upload', async () => {
+    let now = 1_000_000;
+    const { remote, key } = await folder(() => now);
     const pc = new Device('pc4f2a', 'Eagles BJJ');
     await sync(pc, remote, key);
     const phone = new Device('phone9c1e', null);
@@ -233,19 +367,58 @@ describe('the sync engine (#2046)', () => {
     phone.write('Giulia on 2 Oct');
     await sync(phone, remote, key);
 
-    const lagging: SyncRemote = {
-      list: async (dir) => {
-        const listing = await remote.list(dir);
-        return {
-          ...listing,
-          files: listing.files.filter((file) => !file.path.includes('phone9c1e.000001')),
-        };
-      },
-      read: (path) => remote.read(path),
-      write: (path, bytes) => remote.write(path, bytes),
-      remove: (path) => remote.remove(path),
-    };
+    // Eleven minutes on, a listing that still lacks it: the first since the push.
+    now += 11 * MINUTE;
+    expect(
+      await outcome(
+        phone,
+        lagging(remote, (path) => path.includes('phone9c1e.000001')),
+        key,
+      ),
+    ).toEqual({
+      kind: 'wait',
+    });
+  });
+});
 
-    expect(await sync(phone, lagging, key)).toEqual({ kind: 'wait' });
+describe('what the round reads and fetches (#2086 review)', () => {
+  it('takes a report for the device its path names, or as holding nothing: never clears on a mislabelled one', async () => {
+    const { remote, key, pc, phone } = await twoDevices();
+    phone.write('Giulia on 2 Oct');
+    await sync(phone, remote, key);
+    await sync(pc, remote, key);
+    // The PC's file now speaks for another device.
+    const path = devicePath('pc4f2a');
+    const forged = {
+      v: 1,
+      device: 'tablet1a2b',
+      base: null,
+      holds: await pc.holds(),
+      at: '2026-10-02T18:00:00Z',
+    };
+    await remote.write(path, await seal(key, path, utf8(JSON.stringify(forged))));
+
+    await sync(phone, remote, key);
+
+    expect(await phone.journal()).toHaveLength(1);
+  });
+
+  it('fetches a file the folder did not have yet at a later round', async () => {
+    const { remote, key } = await folder();
+    const pc = new Device('pc4f2a', 'Eagles BJJ');
+    const sha = await pc.photo('a photo');
+    await sync(pc, remote, key);
+    const sealed = await remote.read(filePath(sha));
+    await remote.remove(filePath(sha));
+    const phone = new Device('phone9c1e', null);
+
+    expect((await sync(phone, remote, key)).missingFiles).toBe(1);
+
+    await remote.write(filePath(sha), sealed as Uint8Array);
+    expect(await sync(phone, remote, key)).toEqual({
+      outcome: { kind: 'nothing' },
+      missingFiles: 0,
+    });
+    expect(phone.held.has(sha)).toBe(true);
   });
 });

@@ -1,5 +1,5 @@
 import { utf8 } from './bytes';
-import { decide, Decision, latestVersion, SeenVersion, versionsIn } from './decide';
+import { decide, Decision, SeenVersion, versionsIn } from './decide';
 import {
   confirmedThrough,
   DeviceReport,
@@ -10,7 +10,7 @@ import {
 import { open, openJson, seal } from './envelope';
 import { pullFiles, pushFiles, SyncFilesApi } from './files';
 import { JournalEntry } from './journal';
-import { devicePath, ListedVersion, VersionRef, versionPath } from './layout';
+import { devicePath, ListedVersion, sameVersion, VersionRef, versionPath } from './layout';
 import { SyncRemote } from './remote';
 import { packVersion, PROTOCOL, unpackVersion } from './version';
 
@@ -60,8 +60,13 @@ export interface SyncLedger {
   base: VersionRef | null;
   /** The newest of its own entries in a version it pushed; null before its first push. */
   pushedThrough: string | null;
-  /** Its latest push, while the journal still keeps entries of it (`decide.ts`). */
-  unconfirmed: { version: VersionRef; parent: VersionRef | null; pushedAt: number } | null;
+  /**
+   * Its latest push, while the journal still keeps entries of it (`decide.ts`).
+   * Saved **before** the upload: a push whose answer was lost may have landed,
+   * and is unconfirmed, never unpushed. `pushedAt` is Drive's time at the
+   * first listing after it, null until then (protocol § Deciding).
+   */
+  unconfirmed: { version: VersionRef; parent: VersionRef | null; pushedAt: number | null } | null;
 }
 
 export const EMPTY_LEDGER: SyncLedger = { base: null, pushedThrough: null, unconfirmed: null };
@@ -75,44 +80,67 @@ export interface SyncContext {
   server: SyncServer;
   shell: SyncShell;
   ledger: SyncLedger;
-  /** Kept the moment it changes: a round that dies halfway must not forget a push that landed. */
+  /** Kept the moment it changes: a round that dies halfway must not forget a push that may have landed. */
   saveLedger(ledger: SyncLedger): void;
+  /**
+   * Runs `work` with this device's own writes held, and lets them through
+   * after: the app's page is the only writer to its server. A fast-forward
+   * checks the journal and swaps the database in under it, so no write lands
+   * on the database about to be replaced.
+   */
+  holdWrites<T>(work: () => Promise<T>): Promise<T>;
+  /** This device's clock, for what it writes down: never for the lag, which runs on Drive's. */
   now(): number;
 }
 
 export type SyncOutcome =
   | { kind: 'nothing' }
   | { kind: 'pushed'; version: VersionRef }
-  | { kind: 'pulled'; version: VersionRef; missingFiles: number }
+  | { kind: 'pulled'; version: VersionRef }
   | { kind: 'wait' }
   | { kind: 'ask'; latest: VersionRef }
-  | { kind: 'needs-rebase'; onto: VersionRef };
+  | { kind: 'needs-rebase'; onto: VersionRef }
+  /** A write landed while the round was deciding: nothing was swapped, and the next round decides again. */
+  | { kind: 'retry' };
 
-export async function syncOnce(context: SyncContext): Promise<SyncOutcome> {
+/** Every completed round says this too: the files this device still lacks after it. */
+export interface SyncRound {
+  outcome: SyncOutcome;
+  missingFiles: number;
+}
+
+export async function syncOnce(context: SyncContext): Promise<SyncRound> {
   const { server, remote } = context;
-  let ledger = context.ledger;
+  const listing = await remote.list('versions');
+  if (Number.isNaN(listing.now)) {
+    // The lag rule runs on Drive's clock alone: a device whose own clock is
+    // wrong would rebase a push Drive has not listed yet, or wait for ever.
+    throw new Error('Drive gave no time with its listing: the round is left for the next');
+  }
+  const now = listing.now;
+  const versions = versionsIn(listing.files);
+  let ledger = settlePush(context, versions, now);
+
   const kept = await server.journal();
-  const unpushedEntries = kept.filter(
+  const unpushed = kept.filter(
     (entry) => ledger.pushedThrough === null || entry.id > ledger.pushedThrough,
   );
   const holdsAcademy = ledger.base === null ? await server.holdsAcademy() : false;
-  const listing = await remote.list('versions');
-  const versions = versionsIn(listing.files);
-  const now = Number.isNaN(listing.now) ? context.now() : listing.now;
 
   // Every device has a report in the folder before it pushes or pulls a version.
-  const reports = await readReports(context);
-  if (!reports.some((report) => report.device === context.device)) {
+  if (!(await readReports(context)).some((report) => report.device === context.device)) {
     await writeReport(context, ledger);
   }
 
+  const unconfirmed = ledger.unconfirmed;
   const decision: Decision = decide(
     {
       base: ledger.base,
-      unpushed: ledger.base === null ? holdsAcademy : unpushedEntries.length > 0,
-      unconfirmed: kept.some((entry) => !unpushedEntries.includes(entry))
-        ? ledger.unconfirmed
-        : null,
+      unpushed: ledger.base === null ? holdsAcademy : unpushed.length > 0,
+      unconfirmed:
+        unconfirmed !== null && kept.length > unpushed.length
+          ? { ...unconfirmed, pushedAt: unconfirmed.pushedAt ?? now }
+          : null,
     },
     versions,
     now,
@@ -121,40 +149,76 @@ export async function syncOnce(context: SyncContext): Promise<SyncOutcome> {
   let outcome: SyncOutcome;
   switch (decision.kind) {
     case 'push':
-      ledger = await push(
-        context,
-        ledger,
-        decision.seq,
-        decision.parent,
-        unpushedEntries,
-        kept,
-        now,
-      );
+      ledger = await push(context, ledger, decision.seq, decision.parent, unpushed, kept);
       outcome = { kind: 'pushed', version: { seq: decision.seq, device: context.device } };
       break;
     case 'fast-forward': {
-      const listed = versions.find(
-        (version) => version.seq === decision.to.seq && version.device === decision.to.device,
-      );
-      const pulled = await fastForward(context, listed ?? (latestVersion(versions) as SeenVersion));
-      ledger = { ...ledger, base: decision.to, unconfirmed: null };
-      context.saveLedger(ledger);
-      outcome = { kind: 'pulled', version: decision.to, missingFiles: pulled.missing };
+      const listed = versions.find((version) => sameVersion(version, decision.to)) as SeenVersion;
+      const pulled = await fastForward(context, ledger, listed, kept);
+      if (pulled === null) {
+        outcome = { kind: 'retry' };
+      } else {
+        ledger = pulled;
+        outcome = { kind: 'pulled', version: decision.to };
+      }
       break;
     }
     case 'rebase':
-      return { kind: 'needs-rebase', onto: decision.onto };
+      outcome = { kind: 'needs-rebase', onto: decision.onto };
+      break;
     case 'ask':
-      return { kind: 'ask', latest: decision.latest };
+      outcome = { kind: 'ask', latest: decision.latest };
+      break;
     case 'wait':
-      return { kind: 'wait' };
+      outcome = { kind: 'wait' };
+      break;
     default:
       outcome = { kind: 'nothing' };
   }
 
+  // After every round, whatever it decided (protocol § `devices/`).
   await writeReport(context, ledger);
   await clearConfirmed(context, ledger, await readReports(context));
-  return outcome;
+  // The files the database names and this device lacks, once the database is
+  // final: after a fast-forward's swap, and at every later round for those
+  // the folder did not have yet (`files.ts`).
+  const missingFiles =
+    ledger.base === null || outcome.kind === 'retry'
+      ? 0
+      : (await pullFiles(server.files, remote, context.key)).missing.length;
+  return { outcome, missingFiles };
+}
+
+/**
+ * A push's answer may be lost after the version landed. Its time starts at the
+ * first listing after it; and listed on top of this device's base, it is the
+ * device's base: the database was exported as that version, and every write
+ * since is an entry the journal keeps as unpushed.
+ */
+function settlePush(
+  context: SyncContext,
+  versions: readonly SeenVersion[],
+  now: number,
+): SyncLedger {
+  const ledger = context.ledger;
+  const unconfirmed = ledger.unconfirmed;
+  if (unconfirmed === null) {
+    return ledger;
+  }
+  let next: SyncLedger = ledger;
+  if (unconfirmed.pushedAt === null) {
+    next = { ...next, unconfirmed: { ...unconfirmed, pushedAt: now } };
+  }
+  const onBase =
+    (ledger.base === null && unconfirmed.parent === null) ||
+    sameVersion(ledger.base, unconfirmed.parent);
+  if (onBase && versions.some((version) => sameVersion(version, unconfirmed.version))) {
+    next = { ...next, base: unconfirmed.version };
+  }
+  if (next !== ledger) {
+    context.saveLedger(next);
+  }
+  return next;
 }
 
 async function push(
@@ -164,12 +228,11 @@ async function push(
   parent: VersionRef | null,
   unpushed: JournalEntry[],
   kept: JournalEntry[],
-  now: number,
 ): Promise<SyncLedger> {
   const { server, remote, key } = context;
   const { database, schema } = await server.exportDatabase();
-  const listed: ListedVersion = { seq, device: context.device, parent };
-  const path = versionPath(listed);
+  const version: VersionRef = { seq, device: context.device };
+  const path = versionPath({ ...version, parent });
   const plaintext = await packVersion(
     {
       protocol: PROTOCOL,
@@ -178,7 +241,7 @@ async function push(
       device: context.device,
       schema,
       app: context.app,
-      createdAt: new Date(now).toISOString(),
+      createdAt: new Date(context.now()).toISOString(),
     },
     unpushed,
     database,
@@ -186,21 +249,31 @@ async function push(
   // The files a version names go up before it: a device that pulls it then
   // finds every one of them, or waits for the rest at its next sync.
   await pushFiles(server.files, remote, key);
-  await remote.write(path, await seal(key, path, plaintext));
-  const newest = kept.length > 0 ? kept[kept.length - 1].id : ledger.pushedThrough;
-  const next: SyncLedger = {
-    base: { seq, device: context.device },
-    pushedThrough: newest,
-    unconfirmed: { version: { seq, device: context.device }, parent, pushedAt: now },
+  // From here the version may land whatever the answer: kept as pushed and
+  // unconfirmed before the upload, so a lost answer never makes it unpushed.
+  const pending: SyncLedger = {
+    base: ledger.base,
+    pushedThrough: kept.length > 0 ? kept[kept.length - 1].id : ledger.pushedThrough,
+    unconfirmed: { version, parent, pushedAt: null },
   };
-  context.saveLedger(next);
-  return next;
+  context.saveLedger(pending);
+  await remote.write(path, await seal(key, path, plaintext));
+  const landed: SyncLedger = { ...pending, base: version };
+  context.saveLedger(landed);
+  return landed;
 }
 
+/**
+ * Pulls the version and swaps it in, with this device's writes held from the
+ * last look at its journal to the swap: a write that landed since the round
+ * decided means there is now something to carry, so nothing is swapped (null).
+ */
 async function fastForward(
   context: SyncContext,
+  ledger: SyncLedger,
   listed: ListedVersion,
-): Promise<{ missing: number }> {
+  kept: JournalEntry[],
+): Promise<SyncLedger | null> {
   const { server, remote, key, shell } = context;
   const path = versionPath(listed);
   const sealed = await remote.read(path);
@@ -211,11 +284,24 @@ async function fastForward(
   if (!unpacked.ok) {
     throw new Error(`the version ${path} does not read: ${unpacked.reason}`);
   }
-  await server.stage(unpacked.value.database);
-  await shell.swapIn();
-  // Once the database is final: after the swap (`files.ts`).
-  const files = await pullFiles(server.files, remote, key);
-  return { missing: files.missing.length };
+  const database = unpacked.value.database;
+  return context.holdWrites(async () => {
+    const known = new Set(kept.map((entry) => entry.id));
+    if ((await server.journal()).some((entry) => !known.has(entry.id))) {
+      return null;
+    }
+    await server.stage(database);
+    await shell.swapIn();
+    // Saved the moment the database is the version: a round cut short after
+    // this must not take this version for one it has yet to pull.
+    const next: SyncLedger = {
+      ...ledger,
+      base: { seq: listed.seq, device: listed.device },
+      unconfirmed: null,
+    };
+    context.saveLedger(next);
+    return next;
+  });
 }
 
 async function readReports(context: SyncContext): Promise<DeviceReport[]> {
@@ -226,9 +312,9 @@ async function readReports(context: SyncContext): Promise<DeviceReport[]> {
     if (device === undefined) {
       continue;
     }
-    reports.push(
-      (await openReport(key, file.path, await remote.read(file.path))) ?? unreadableReport(device),
-    );
+    const report = await openReport(key, file.path, await remote.read(file.path));
+    // A report speaks for the device its path names, or counts as holding nothing.
+    reports.push(report !== null && report.device === device ? report : unreadableReport(device));
   }
   return reports;
 }
