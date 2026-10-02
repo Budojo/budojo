@@ -60,6 +60,50 @@ export function localised(value: Localised, lang: string): string {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.76.0',
+    date: '2026-10-02',
+    headline: {
+      en: 'Your gym on the phone too: connect the phone from Data & backup, and on the phone "Sign in with Google" brings the gym back, medical certificates included.',
+      it: 'La palestra anche sul telefono: collega il telefono da Dati e backup, e sul telefono basterà «Accedi con Google» per ritrovare la palestra, certificati medici compresi.',
+    },
+    sections: [
+      {
+        heading: { en: 'Budojo on the phone', it: 'Budojo sul telefono' },
+        bullets: [
+          {
+            en: '"Connect the phone": in Data & backup, under Google Drive, there is a new box, "Budojo on the phone". Press "Connect the phone": Google asks for permission once more, and the gym\'s keys go to a hidden area of your Google Drive that only Budojo reads. On the phone, "Sign in with Google" finds the gym from the PC\'s latest backup and opens the medical certificates too.',
+            it: "«Collega il telefono»: in Dati e backup, sotto Google Drive, c'è un nuovo riquadro, «Budojo sul telefono». Premi «Collega il telefono»: Google chiede di nuovo il permesso, e le chiavi della palestra vanno in un'area nascosta del tuo Google Drive, che solo Budojo legge. Sul telefono, «Accedi con Google» ritrova la palestra dall'ultimo backup del PC e apre anche i certificati medici.",
+          },
+          {
+            en: 'Choose the same Google account as the backups and leave both boxes ticked: with another account, or a permission left out, Budojo saves nothing and tells you. The backups carry on as before.',
+            it: 'Scegli lo stesso account Google dei backup e lascia spuntate entrambe le voci: se scegli un altro account, o togli un permesso, Budojo non salva niente e te lo dice. I backup continuano come prima.',
+          },
+          {
+            en: "Whoever gets into your Google account can open the gym, certificates included: keep Google's 2-step verification on.",
+            it: 'Chi entra nel tuo account Google può aprire la palestra, certificati compresi: tieni attiva la verifica in due passaggi di Google.',
+          },
+          {
+            en: "For now, changes made on the phone do not go back to the PC: the phone starts from the PC's latest backup. Syncing the two comes with the next updates.",
+            it: "Per ora le modifiche fatte sul telefono non tornano sul PC: il telefono parte dall'ultimo backup del PC. La sincronizzazione tra i due arriva con i prossimi aggiornamenti.",
+          },
+        ],
+      },
+      {
+        heading: { en: 'Small fixes', it: 'Piccole correzioni' },
+        bullets: [
+          {
+            en: 'More room between one field and the next on the sign-in and sign-up screens.',
+            it: "Più spazio tra un campo e l'altro nelle schermate di accesso e di registrazione.",
+          },
+          {
+            en: 'Help: opening a question from a link no longer puts its title under the bar at the top.',
+            it: 'Aiuto: aprendo una domanda da un link, il titolo non finisce più sotto la barra in alto.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.75.0',
     date: '2026-10-01',
     headline: {
