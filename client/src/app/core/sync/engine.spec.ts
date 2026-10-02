@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { utf8 } from './bytes';
-import { SyncContext, syncOnce } from './engine';
+import { AskChoice, resolveAsk, SyncContext, syncOnce } from './engine';
 import { importSyncKey, newSyncKey, seal } from './envelope';
 import { devicePath, filePath } from './layout';
 import { MemoryRemote, SyncRemote } from './remote';
@@ -47,6 +47,31 @@ function sync(
     now: () => Date.parse('2026-10-02T18:00:00Z'),
   };
   return syncOnce(context);
+}
+
+/** The owner's answer to `ask`, on the device that asked. */
+function resolve(
+  device: Device,
+  remote: SyncRemote,
+  key: CryptoKey,
+  choice: AskChoice,
+  seen: { seq: number; device: string },
+) {
+  const context: SyncContext = {
+    device: device.id,
+    app: '2.77.0',
+    key,
+    remote,
+    server: device,
+    shell: { swapIn: async () => device.swapIn() },
+    ledger: device.ledger,
+    saveLedger: (ledger) => {
+      device.ledger = ledger;
+    },
+    holdWrites: async (work) => work(),
+    now: () => Date.parse('2026-10-03T09:00:00Z'),
+  };
+  return resolveAsk(context, choice, seen);
 }
 
 async function outcome(device: Device, remote: SyncRemote, key: CryptoKey) {
@@ -487,6 +512,68 @@ describe('what the round reads and fetches (#2086 review)', () => {
     expect([...remote.files.keys()].filter((path) => path.startsWith('versions/'))).toEqual([
       'versions/000001-pc4f2a.root.bjs',
     ]);
+  });
+});
+
+describe('the owner’s choice when a round asks (#2033, PRD § 6.5)', () => {
+  /** The PC publishes its academy; a phone that restored a backup of its own meets it and asks. */
+  async function twoAcademies() {
+    const { remote, key } = await folder();
+    const pc = new Device('pc4f2a', 'Eagles BJJ');
+    await sync(pc, remote, key);
+    const phone = new Device('phone9c1e', 'Eagles BJJ, from a backup');
+    phone.write('Luca on 2 Oct, before the phone joined the sync');
+    expect(await outcome(phone, remote, key)).toEqual({
+      kind: 'ask',
+      latest: { seq: 1, device: 'pc4f2a' },
+    });
+    return { remote, key, pc, phone };
+  }
+
+  it('takes the folder’s academy: the phone becomes the PC’s, and the next round has nothing to do', async () => {
+    const { remote, key, phone } = await twoAcademies();
+
+    const round = await resolve(phone, remote, key, 'folder', { seq: 1, device: 'pc4f2a' });
+
+    expect(round.outcome).toEqual({ kind: 'pulled', version: { seq: 1, device: 'pc4f2a' } });
+    expect(phone.db.academy).toBe('Eagles BJJ');
+    expect(await phone.journal()).toEqual([]);
+    expect(await outcome(phone, remote, key)).toEqual({ kind: 'nothing' });
+  });
+
+  it('keeps this device’s academy as a line of its own: the other device asks in its turn, never merges', async () => {
+    const { remote, key, pc, phone } = await twoAcademies();
+    // The PC wrote meanwhile: its write must never be replayed into the phone's gym.
+    pc.write('Giulia on 3 Oct');
+    await sync(pc, remote, key);
+
+    const round = await resolve(phone, remote, key, 'device', { seq: 2, device: 'pc4f2a' });
+
+    expect(round.outcome).toEqual({ kind: 'pushed', version: { seq: 3, device: 'phone9c1e' } });
+    expect([...remote.files.keys()]).toContain('versions/000003-phone9c1e.root.bjs');
+    expect(await outcome(pc, remote, key)).toEqual({
+      kind: 'ask',
+      latest: { seq: 3, device: 'phone9c1e' },
+    });
+    expect(pc.db.academy).toBe('Eagles BJJ');
+
+    // The owner takes the phone's on the PC too: it pulls, its own gym gives way.
+    const taken = await resolve(pc, remote, key, 'folder', { seq: 3, device: 'phone9c1e' });
+    expect(taken.outcome).toEqual({ kind: 'pulled', version: { seq: 3, device: 'phone9c1e' } });
+    expect(pc.db.academy).toBe('Eagles BJJ, from a backup');
+    expect(await outcome(pc, remote, key)).toEqual({ kind: 'nothing' });
+    expect(await outcome(phone, remote, key)).toEqual({ kind: 'nothing' });
+  });
+
+  it('does nothing when the folder moved since the owner was asked, and asks again on what is there', async () => {
+    const { remote, key, pc, phone } = await twoAcademies();
+    pc.write('Giulia on 3 Oct');
+    await sync(pc, remote, key);
+
+    const round = await resolve(phone, remote, key, 'folder', { seq: 1, device: 'pc4f2a' });
+
+    expect(round.outcome).toEqual({ kind: 'ask', latest: { seq: 2, device: 'pc4f2a' } });
+    expect(phone.db.academy).toBe('Eagles BJJ, from a backup');
   });
 });
 

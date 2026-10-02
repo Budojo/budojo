@@ -3709,10 +3709,20 @@
       "offline": "No network: they go as soon as it is back.",
       "waitingFirst": "The PC has not put the gym on Drive yet: update Budojo on the PC and open it.",
       "reconnect": "Google asks again every week while Budojo is being tested. Nothing is lost meanwhile.",
-      "ask": "The phone and Drive hold two different gyms. Nothing is overwritten until you choose.",
+      "ask": "This device and Drive hold two different gyms. Nothing is overwritten until you choose.",
       "anotherFolder": "The phone writes nothing there. Sign out and sign in with the gym's Google account.",
       "unpaired": "Sign out, then sign in with Google to connect it again.",
       "full": "This device does not join: the sync holds two devices, the PC and one phone."
+    },
+    "ask": {
+      "useFolderPc": "Use the PC's gym",
+      "useFolderPhone": "Use the phone's gym",
+      "useFolderDrive": "Use the one on Drive",
+      "keepHere": "Keep the one here",
+      "consequenceFolder": "This device takes the gym on Drive. What it holds now is replaced.",
+      "consequenceDevice": "The gym here goes to Drive. The other device finds it and asks you which one to keep.",
+      "confirm": "Confirm",
+      "cancel": "Cancel"
     }
   }
 }

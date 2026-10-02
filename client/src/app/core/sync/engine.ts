@@ -1,5 +1,5 @@
 import { utf8 } from './bytes';
-import { decide, Decision, SeenVersion, versionsIn } from './decide';
+import { decide, Decision, latestVersion, SeenVersion, versionsIn } from './decide';
 import {
   confirmedThrough,
   DeviceReport,
@@ -163,10 +163,7 @@ export async function syncOnce(context: SyncContext): Promise<SyncRound> {
   );
   const holdsAcademy = ledger.base === null ? await server.holdsAcademy() : false;
 
-  // Every device has a report in the folder before it pushes or pulls a version.
-  if (!(await readReports(context)).some((report) => report.device === context.device)) {
-    await writeReport(context, ledger);
-  }
+  await reportBeforeAnyVersion(context, ledger);
 
   const unconfirmed = ledger.unconfirmed;
   const decision: Decision = decide(
@@ -248,7 +245,85 @@ export async function syncOnce(context: SyncContext): Promise<SyncRound> {
       outcome = { kind: 'nothing' };
   }
 
-  // After every round, whatever it decided (protocol § `devices/`).
+  return finishRound(context, ledger, outcome);
+}
+
+/** The owner's answer when a round asked (PRD § 5.4, § 6.5): whose academy the folder carries on with. */
+export type AskChoice = 'folder' | 'device';
+
+/**
+ * Carries out the owner's answer to `ask`: two academies, or a folder behind
+ * this device. **Never merged** (§ 2):
+ * - **`folder`:** this device takes the folder's latest version, as a
+ *   fast-forward. What its database held goes, its journal with it: the owner
+ *   chose so, knowing.
+ * - **`device`:** this device publishes what it holds as a **first version of
+ *   its own** (a new root), numbered above every version there, with every
+ *   entry its journal keeps. Never on top of the folder's latest: the other
+ *   device would then carry its own writes onto it, which is a merge. Meeting a
+ *   line that is not its own, the other device asks in its turn, and its
+ *   writes are never replayed into a gym they were not made in.
+ *
+ * **Only on the folder the owner was asked about.** If the latest moved since
+ * (`seen`), nothing is done, and the round asks again on what is there now.
+ */
+export async function resolveAsk(
+  context: SyncContext,
+  choice: AskChoice,
+  seen: VersionRef,
+): Promise<SyncRound> {
+  const { server, remote } = context;
+  const listing = await remote.list('versions');
+  if (Number.isNaN(listing.now)) {
+    throw new Error('Drive gave no time with its listing: the round is left for the next');
+  }
+  const latest = latestVersion(versionsIn(listing.files));
+  if (latest === null) {
+    return { outcome: { kind: 'nothing' }, missingFiles: 0 };
+  }
+  if (!sameVersion(latest, seen)) {
+    return {
+      outcome: { kind: 'ask', latest: { seq: latest.seq, device: latest.device } },
+      missingFiles: 0,
+    };
+  }
+  const head: VersionRef = { seq: latest.seq, device: latest.device };
+  let ledger = context.ledger;
+  await reportBeforeAnyVersion(context, ledger);
+  const kept = await server.journal();
+
+  let outcome: SyncOutcome;
+  if (choice === 'folder') {
+    // What this device remembered describes the database it gives up.
+    const pulled = await fastForward(context, EMPTY_LEDGER, latest, kept);
+    if (pulled === null) {
+      outcome = { kind: 'retry' };
+    } else {
+      ledger = pulled;
+      outcome = { kind: 'pulled', version: head };
+    }
+  } else {
+    const seq = Math.max(latest.seq, ledger.base?.seq ?? 0) + 1;
+    ledger = await push(context, ledger, seq, null, kept, kept);
+    outcome = { kind: 'pushed', version: { seq, device: context.device } };
+  }
+  return finishRound(context, ledger, outcome);
+}
+
+/** Every device has a report in the folder before it pushes or pulls a version (protocol § `devices/`). */
+async function reportBeforeAnyVersion(context: SyncContext, ledger: SyncLedger): Promise<void> {
+  if (!(await readReports(context)).some((report) => report.device === context.device)) {
+    await writeReport(context, ledger);
+  }
+}
+
+/** What every round does last, whatever it decided. */
+async function finishRound(
+  context: SyncContext,
+  ledger: SyncLedger,
+  outcome: SyncOutcome,
+): Promise<SyncRound> {
+  // Its report, after every round (protocol § `devices/`).
   await writeReport(context, ledger);
   await clearConfirmed(context, ledger, await readReports(context));
   // The files the database names and this device lacks, once the database is
@@ -257,7 +332,7 @@ export async function syncOnce(context: SyncContext): Promise<SyncRound> {
   const missingFiles =
     ledger.base === null || outcome.kind === 'retry'
       ? 0
-      : (await pullFiles(server.files, remote, context.key)).missing.length;
+      : (await pullFiles(context.server.files, context.remote, context.key)).missing.length;
   return { outcome, missingFiles };
 }
 
