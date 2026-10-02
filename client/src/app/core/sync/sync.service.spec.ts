@@ -333,6 +333,24 @@ describe('SyncService', () => {
     expect(sync.state()).toEqual({ kind: 'pending', count: 1, offline: true });
   });
 
+  it('counts what waits even when the app opened with no network to read who it is', async () => {
+    await pcPublishes();
+    const online = setUp();
+    await online.syncNow();
+    phone.write('Luca on 2 Oct');
+    // The app opens again, offline from the start.
+    TestBed.resetTestingModule();
+    const offline = setUp({
+      identity: async () => {
+        throw new RemoteError('offline', 'no network to read the keys');
+      },
+    });
+
+    await offline.syncNow();
+
+    expect(offline.state()).toEqual({ kind: 'pending', count: 1, offline: true });
+  });
+
   it('syncs on opening, and a few seconds after a write, not at once', async () => {
     vi.useFakeTimers();
     let rounds = 0;

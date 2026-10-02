@@ -7,7 +7,7 @@ import { importSyncKey } from './envelope';
 import { checkFolder, hasRoomFor } from './folder';
 import { HttpSyncServer } from './http-sync-server';
 import { VersionRef } from './layout';
-import { LedgerOwner, loadLedger, saveLedger } from './ledger-store';
+import { LedgerOwner, loadLedger, saveLedger, savedOwner } from './ledger-store';
 import { RemoteError, SyncRemote } from './remote';
 import { appVersionOf } from './version';
 import { WriteGate } from './write-gate';
@@ -214,7 +214,9 @@ export class SyncService {
     } catch (error) {
       // On the PC the identity reads the keys from the account: no network,
       // or Google letting go, is said as for any round.
-      await this.failed(error, this.lastOwner);
+      // An app opened with no network has no owner from this launch yet:
+      // the one its ledger was saved under.
+      await this.failed(error, this.lastOwner ?? savedOwner());
       return;
     }
     if (platform === null || identity === null) {

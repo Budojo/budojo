@@ -641,12 +641,6 @@ async function startRuntime(): Promise<{
   backupPoll.start();
 
   /**
-   * Stops every PHP process of ours, runs `work`, and starts the server again
-   * on its port: the page keeps the address its window was given. The
-   * scheduler and the notification poll open the database on their own, and
-   * a backup's VACUUM holds it: each lets go first.
-   */
-  /**
    * Ends the app with the reason, as a failed start does, when going on would
    * be wrong: a server serving the old database while the page counts the new
    * one as in, or no server at all. The next start finishes what was staged.
