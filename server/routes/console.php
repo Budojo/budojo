@@ -12,5 +12,5 @@ use Illuminate\Console\Scheduling\Schedule;
 // of the day, so its cadence is different — see DesktopSchedule. This file
 // only chooses; the definitions live in App\Console\Schedules where a test
 // can register them into a fresh Schedule and look.
-$definition = Runtime::isDesktop() ? new DesktopSchedule() : new WebSchedule();
+$definition = Runtime::isLocal() ? new DesktopSchedule() : new WebSchedule();
 $definition->register(app(Schedule::class));

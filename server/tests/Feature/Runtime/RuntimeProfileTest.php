@@ -16,16 +16,21 @@ it('defaults to the web profile', function (): void {
     config()->set('budojo.runtime', 'web');
 
     expect(Runtime::profile())->toBe(RuntimeProfile::Web)
-        ->and(Runtime::isWeb())->toBeTrue()
-        ->and(Runtime::isDesktop())->toBeFalse();
+        ->and(Runtime::isLocal())->toBeFalse();
 });
 
 it('reports the desktop profile when configured', function (): void {
     config()->set('budojo.runtime', 'desktop');
 
     expect(Runtime::profile())->toBe(RuntimeProfile::Desktop)
-        ->and(Runtime::isDesktop())->toBeTrue()
-        ->and(Runtime::isWeb())->toBeFalse();
+        ->and(Runtime::isLocal())->toBeTrue();
+});
+
+it('reports the mobile profile, a local device like the desktop (#2034)', function (): void {
+    config()->set('budojo.runtime', 'mobile');
+
+    expect(Runtime::profile())->toBe(RuntimeProfile::Mobile)
+        ->and(Runtime::isLocal())->toBeTrue();
 });
 
 it('falls back to web when the configured profile is unknown', function (): void {

@@ -14,6 +14,7 @@ import { MessageService } from 'primeng/api';
 import { routes } from './app.routes';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
 import { errorInterceptor } from './core/interceptors/error.interceptor';
+import { phoneServerInterceptor } from './core/mobile/phone-server';
 import { versionInterceptor } from './core/interceptors/version.interceptor';
 import { environment } from '../environments/environment';
 import { provideBudojoTheme, provideBudojoTranslations } from './core/config/shared-ui-providers';
@@ -50,7 +51,15 @@ export const appConfig: ApplicationConfig = {
     // so it must sit downstream of any request mutation. Order matters:
     // if a 5xx ever bounces us via an auth refresh in the future, that
     // retry must run before the global error redirect.
-    provideHttpClient(withInterceptors([versionInterceptor, authInterceptor, errorInterceptor])),
+    provideHttpClient(
+      withInterceptors([
+        versionInterceptor,
+        authInterceptor,
+        // Only on the phone (#2034): its own server may need starting again.
+        ...(environment.runtime === 'mobile' ? [phoneServerInterceptor] : []),
+        errorInterceptor,
+      ]),
+    ),
     provideAnimationsAsync(),
     // App-level MessageService so shared components (the email verification
     // pillola, the verify-error landing) fire toasts into the single
@@ -69,7 +78,7 @@ export const appConfig: ApplicationConfig = {
     // exactly the stuck-on-old-bundle failure VersionCheckService exists to
     // detect (#548). Electron owns the update story there; one cache layer.
     provideServiceWorker('ngsw-worker.js', {
-      enabled: !isDevMode() && environment.runtime !== 'desktop',
+      enabled: !isDevMode() && environment.runtime === 'web',
       registrationStrategy: 'registerWhenStable:30000',
     }),
     provideBudojoTranslations(),

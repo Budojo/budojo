@@ -1,3 +1,4 @@
+import type { RuntimeProfile } from '../../core/services/runtime.service';
 import { VERSION } from '../../../environments/version';
 
 /**
@@ -27,10 +28,7 @@ export const SUPPORT_EMAIL = 'matteobonanno1990@gmail.com';
  * header: attaching what someone can see is a different thing from attaching
  * what they cannot.
  */
-export function supportMailtoHref(
-  profile: 'web' | 'desktop',
-  platform = navigator.userAgent,
-): string {
+export function supportMailtoHref(profile: RuntimeProfile, platform = navigator.userAgent): string {
   const subject = `Budojo — ${VERSION.tag}`;
   // CRLF, not LF. RFC 6068 §5 specifies `%0D%0A` for a mailto body, and
   // Outlook — the likely default client on the Windows-only shipped build —

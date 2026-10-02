@@ -28,13 +28,13 @@ final class Runtime
         return RuntimeProfile::tryFrom($configured) ?? RuntimeProfile::Web;
     }
 
-    public static function isDesktop(): bool
+    /**
+     * One owner's own device, the desktop or the phone (#2034): one process,
+     * no worker, no second user. What the two share is decided here; what
+     * either offers is its capability set.
+     */
+    public static function isLocal(): bool
     {
-        return self::profile() === RuntimeProfile::Desktop;
-    }
-
-    public static function isWeb(): bool
-    {
-        return self::profile() === RuntimeProfile::Web;
+        return self::profile() !== RuntimeProfile::Web;
     }
 }

@@ -37,14 +37,15 @@ tags:
     description: |
       Which runtime profile this API runs as and what it can offer (#1229).
 
-      The same code base serves the hosted web app and the single-user
-      desktop app (M11). Surfaces that assume a second human, an inbox or a
+      The same code base serves the hosted web app, the single-user
+      desktop app (M11) and the same app on the owner's phone (M12). Surfaces that assume a second human, an inbox or a
       browser push service are **capabilities**; where the profile lacks one,
       its routes answer **404** (never 403 — a surface the runtime does not
       have does not advertise itself). Capabilities: `community`,
       `athlete_accounts`, `web_push`, `email`, `password_breach_check`,
-      `sync`. The web profile has every one but `sync`; the desktop has
-      `sync` alone, the sync between the owner's own devices (#2030).
+      `sync`. The web profile has every one but `sync`; the desktop and the
+      phone have `sync` alone, the sync between the owner's own devices
+      (#2030).
   - name: auth
     description: Registration, login, and Sanctum token issuance
   - name: academy
@@ -8725,7 +8726,7 @@ components:
       properties:
         profile:
           type: string
-          enum: [web, desktop]
+          enum: [web, desktop, mobile]
           description: The runtime profile the API is running as (BUDOJO_RUNTIME).
         capabilities:
           type: array
