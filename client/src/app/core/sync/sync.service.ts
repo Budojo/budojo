@@ -7,7 +7,7 @@ import { importSyncKey } from './envelope';
 import { checkFolder, hasRoomFor } from './folder';
 import { HttpSyncServer } from './http-sync-server';
 import { VersionRef } from './layout';
-import { loadLedger, saveLedger } from './ledger-store';
+import { LedgerOwner, loadLedger, saveLedger, savedOwner } from './ledger-store';
 import { RemoteError, SyncRemote } from './remote';
 import { appVersionOf } from './version';
 import { WriteGate } from './write-gate';
@@ -19,6 +19,8 @@ export interface SyncIdentity {
   folder: string;
   /** 32 bytes, base64. */
   syncKey: string;
+  /** Moved on when the database is put back in time outside the sync (the PC's Restore): see `ledger-store.ts`. */
+  epoch?: number;
 }
 
 /** What each shell supplies (PRD § 5.6): the engine and its timing are the same on both. */
@@ -105,6 +107,8 @@ export class SyncService {
   private running: Promise<void> | null = null;
   private again = false;
   private key: { raw: string; key: CryptoKey } | null = null;
+  /** Whose ledger the last round used: an identity that cannot be read offline still counts what waits. */
+  private lastOwner: LedgerOwner | null = null;
 
   constructor() {
     inject(DestroyRef).onDestroy(() => this.stop());
@@ -204,11 +208,27 @@ export class SyncService {
 
   private async round(): Promise<void> {
     const platform = this.platform;
-    const identity = platform === null ? null : await platform.identity();
+    let identity: SyncIdentity | null;
+    try {
+      identity = platform === null ? null : await platform.identity();
+    } catch (error) {
+      // On the PC the identity reads the keys from the account: no network,
+      // or Google letting go, is said as for any round.
+      // An app opened with no network has no owner from this launch yet:
+      // the one its ledger was saved under.
+      await this.failed(error, this.lastOwner ?? savedOwner());
+      return;
+    }
     if (platform === null || identity === null) {
       this.stateSignal.set({ kind: 'off' });
       return;
     }
+    const owner: LedgerOwner = {
+      device: identity.device,
+      folder: identity.folder,
+      epoch: identity.epoch,
+    };
+    this.lastOwner = owner;
     const { device } = identity;
     if (this.stateSignal().kind !== 'synced') {
       this.stateSignal.set({ kind: 'syncing' });
@@ -233,7 +253,7 @@ export class SyncService {
         this.stateSignal.set({ kind: 'full' });
         return;
       }
-      let ledger = loadLedger(device);
+      let ledger = loadLedger(owner);
       if (ledger.base === null && !platform.publishesFirst) {
         const listing = await platform.remote.list('versions');
         if (versionsIn(listing.files).length === 0) {
@@ -251,7 +271,7 @@ export class SyncService {
         ledger,
         saveLedger: (next: SyncLedger) => {
           ledger = next;
-          saveLedger(device, next);
+          saveLedger(owner, next);
         },
         holdWrites: (work) => this.gate.hold(work),
         now: () => Date.now(),
@@ -265,12 +285,12 @@ export class SyncService {
           this.stateSignal.set({ kind: 'ask', latest: outcome.latest });
           return;
         case 'needs-rebase':
-          this.stateSignal.set({ kind: 'needs-rebase', count: await this.pending(device) });
+          this.stateSignal.set({ kind: 'needs-rebase', count: await this.pending(owner) });
           return;
         case 'wait': {
           // Its push is not listed yet: what it carried is not on Drive for
           // sure, so it still counts as to send.
-          const count = await this.pending(device);
+          const count = await this.pending(owner);
           this.stateSignal.set(
             count > 0 ? { kind: 'pending', count, offline: false } : { kind: 'syncing' },
           );
@@ -284,14 +304,14 @@ export class SyncService {
           this.stateSignal.set({ kind: 'synced', at: Date.now() });
       }
     } catch (error) {
-      await this.failed(error, device);
+      await this.failed(error, owner);
       if (swapped) {
         this.reload();
       }
     }
   }
 
-  private async failed(error: unknown, device: string): Promise<void> {
+  private async failed(error: unknown, owner: LedgerOwner | null): Promise<void> {
     if (error instanceof RemoteError && error.reason === 'unauthorized') {
       this.stateSignal.set({ kind: 'reconnect' });
       return;
@@ -299,7 +319,7 @@ export class SyncService {
     const offline =
       (error instanceof RemoteError && error.reason === 'offline') ||
       (error instanceof HttpErrorResponse && error.status === 0);
-    const count = await this.pending(device);
+    const count = owner === null ? 0 : await this.pending(owner);
     if (offline || count > 0) {
       this.stateSignal.set({ kind: 'pending', count, offline });
     } else {
@@ -317,9 +337,9 @@ export class SyncService {
    * halfway counts them as sent (`pushedThrough`) before Drive has them.
    * 0 when even that cannot be told.
    */
-  private async pending(device: string): Promise<number> {
+  private async pending(owner: LedgerOwner): Promise<number> {
     try {
-      const listedThrough = loadLedger(device).listedThrough;
+      const listedThrough = loadLedger(owner).listedThrough;
       return (await this.server.journal()).filter(
         (entry) => listedThrough === null || entry.id > listedThrough,
       ).length;

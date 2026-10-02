@@ -9,7 +9,8 @@ import {
 } from './drive-state.js';
 import { mergeArchiveViews, planSync, REMOTE_RETENTION, type ArchiveView, type RemoteArchive } from './drive-sync.js';
 import { APPDATA_SCOPE, DRIVE_SCOPE } from './drive-auth.js';
-import { holdsTheseSecrets, newAcademyKeys, parseAcademyKeys } from './sync-keys.js';
+import type { DriveAnswer, DriveRequest } from './sync-bridge.js';
+import { holdsTheseSecrets, newAcademyKeys, parseAcademyKeys, type AcademyKeys } from './sync-keys.js';
 
 /**
  * Orchestrates the Drive backup sync (#1301): link, sync, unlink.
@@ -43,6 +44,8 @@ export interface DriveSyncIO {
   readKeys: (tokens: DriveTokens, id: string) => Promise<string>;
   writeKeys: (tokens: DriveTokens, text: string) => Promise<void>;
   ensureFresh: (tokens: DriveTokens) => Promise<DriveTokens>;
+  /** One call to Drive's API, with these tokens, for the page's sync engine (#2032). */
+  fetchDrive: (tokens: DriveTokens, request: DriveRequest) => Promise<DriveAnswer>;
   accountEmail: (tokens: DriveTokens) => Promise<string | null>;
   ensureFolder: (tokens: DriveTokens) => Promise<string>;
   listRemote: (tokens: DriveTokens, folderId: string) => Promise<RemoteArchive[]>;
@@ -379,6 +382,47 @@ export class DriveSyncService {
     this.io.log('phone: the account holds other keys, left as they are');
 
     return 'keys_differ';
+  }
+
+  /**
+   * The academy's keys on the account, for the sync (#2032): null while Drive
+   * is not linked or this PC has not connected the phone, which is when they
+   * were found and are this PC's. Two keys files are refused, as everywhere
+   * (#2033): neither is picked.
+   */
+  async keysForSync(): Promise<AcademyKeys | null> {
+    const state = await this.io.readState();
+    if (!state.linked || state.keysPublishedAt === null) {
+      return null;
+    }
+    const tokens = await this.authenticated();
+    const found = await this.io.findKeys(tokens);
+    if (found.length > 1) {
+      throw Object.assign(new Error('the account holds two keys files'), { code: 'keys_ambiguous' });
+    }
+    const [only] = found;
+
+    return only === undefined ? null : parseAcademyKeys(await this.io.readKeys(tokens, only));
+  }
+
+  /**
+   * One call to Drive's API for the page's sync engine (#2032), with this
+   * process's token: the page never holds one. A token Google no longer gives
+   * answers 401, which the engine shows as «Ricollega Google»; any other
+   * failure is thrown, which it reads as no network.
+   */
+  async fetchForSync(request: DriveRequest): Promise<DriveAnswer> {
+    let tokens: DriveTokens;
+    try {
+      tokens = await this.authenticated();
+    } catch (error) {
+      if (errorCode(error) === 'invalid_grant') {
+        return { status: 401, headers: {}, body: new Uint8Array() };
+      }
+      throw error;
+    }
+
+    return this.io.fetchDrive(tokens, request);
   }
 
   /** Reads the tokens and refreshes them if they are near expiry. */

@@ -1,10 +1,11 @@
 import { randomBytes as nodeRandomBytes } from 'node:crypto';
-import { existsSync, renameSync, rmSync } from 'node:fs';
+import { existsSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { retryWhileBusy } from './fs-retry.js';
 import { runPhp as execPhp } from './php-exec.js';
+import { planStagedSwap, reconcileMarker, type SwapStep } from './sync-swap.js';
 
 /**
  * First-run bootstrap (#1223, M11 #1218): everything Forge used to do at deploy
@@ -56,6 +57,8 @@ export interface DataLayout {
    * from a backup: it describes this machine's screen, not the owner's data.
    */
   themeFile: string;
+  /** This PC's id in the academy's sync, and its database's epoch (#2032, `sync-device.ts`). */
+  syncDeviceFile: string;
 }
 
 /**
@@ -83,6 +86,7 @@ export function dataLayout(userDataDir: string): DataLayout {
     driveStateFile: path.join(root, 'drive-sync.json'),
     backupFolderStateFile: path.join(root, 'backup-folder.json'),
     themeFile: path.join(root, 'theme.json'),
+    syncDeviceFile: path.join(root, 'sync-device.json'),
   };
 }
 
@@ -354,6 +358,8 @@ export async function runBootstrap(options: BootstrapOptions): Promise<Bootstrap
   // create an empty `storage/` over the one an interrupted restore set aside,
   // and an empty database would be first-run setup over the owner's (#1919).
   await recoverInterruptedRestore(layout, log);
+  // What the sync staged (#2032), swapped in before anything opens the database.
+  await swapInStaged(layout, log);
   await Promise.all(
     [layout.logsDir, layout.backupsDir, layout.tempDir, ...storageSubdirs(layout.storageDir)].map((dir) =>
       mkdir(dir, { recursive: true }),
@@ -435,6 +441,24 @@ export async function runBootstrap(options: BootstrapOptions): Promise<Bootstrap
     log('[bootstrap] schema up to date');
   }
 
+  // --- the sync's reconcile ---------------------------------------------------
+  // A database the sync swapped in ran no Observer: its cache, and the files
+  // no row names any more, are reconciled before the app serves (#2030). The
+  // marker goes only once the reconcile succeeded, so a start that dies here
+  // reconciles at the next.
+  const marker = reconcileMarker(layout.databasePath);
+  if (existsSync(marker)) {
+    const result = await artisan(options, env, ['budojo:sync-reconcile', '--no-interaction', '--no-ansi']);
+    if (result.code !== 0) {
+      throw new Error(
+        `Reconciling the database the sync brought in failed (exit ${result.code ?? 'null'}).` +
+          `\n\n${result.output.trim().split(/\r?\n/).slice(-15).join('\n')}`,
+      );
+    }
+    rmSync(marker, { force: true });
+    log('[bootstrap] reconciled the database the sync swapped in');
+  }
+
   // --- state -----------------------------------------------------------------
   const previous = firstRun ? null : await readState(layout.stateFile);
   const stamp = now().toISOString();
@@ -494,6 +518,42 @@ export async function recoverInterruptedRestore(
 }
 
 const RECOVERY_RETRY = { attempts: 10, delayMs: 100 };
+
+/**
+ * Carries out {@link planStagedSwap} on the real files (#2032). The renames
+ * retry while the antivirus holds a file for a moment, as the restore's do; a
+ * rename that still fails stops the boot with the error, and the next boot
+ * picks the swap up where this one stopped.
+ */
+export async function swapInStaged(
+  layout: Pick<DataLayout, 'databasePath' | 'storageDir'>,
+  log: (line: string) => void,
+): Promise<SwapStep[]> {
+  const steps = planStagedSwap(
+    { databasePath: layout.databasePath, filesDir: path.join(layout.storageDir, 'app') },
+    existsSync,
+  );
+  if (steps.length === 0) {
+    return steps;
+  }
+  log('[bootstrap] swapping in what the sync staged');
+  for (const step of steps) {
+    if (step.kind === 'mark') {
+      writeFileSync(step.path, '');
+    } else if (step.kind === 'rename') {
+      await retryWhileBusy(() => renameSync(step.from, step.to), RECOVERY_RETRY);
+      log(`[bootstrap]   ${path.basename(step.from)} -> ${path.basename(step.to)}`);
+    } else {
+      await retryWhileBusy(
+        () => rmSync(step.path, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }),
+        RECOVERY_RETRY,
+      );
+      log(`[bootstrap]   removed ${path.basename(step.path)}`);
+    }
+  }
+
+  return steps;
+}
 
 async function readState(file: string): Promise<BootstrapState | null> {
   try {
