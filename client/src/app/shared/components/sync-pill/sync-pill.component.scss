@@ -61,4 +61,10 @@
     color: var(--p-text-muted-color);
     font-size: 0.875rem;
   }
+
+  // What the owner's pick replaces: read before confirming, so not muted.
+  &__consequence {
+    margin: 0 0 0.5rem;
+    font-size: 0.875rem;
+  }
 }

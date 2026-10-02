@@ -208,6 +208,10 @@ There is no pairing code (#2033). **A device joins at its first «Accedi con Goo
 
 **A push whose answer was lost is unconfirmed, never unpushed.** The upload may have landed, so the device treats its writes as pushed in that version. It waits for the version to appear, then rebases if it does not. **The 10 minutes count from the first listing after the failure,** not from the decision, so a long upload does not eat into the wait.
 
+**Asking the owner** (#2033, PRD § 5.4, § 6.5) offers two answers, never a merge, each carried out only on the folder the owner was asked about: if the latest version moved since, nothing is done and the device asks again (`resolveAsk`, `engine.ts`).
+- **The folder's:** the device fast-forwards to the latest version. What its database held goes, its journal with it.
+- **This device's:** the device publishes what it holds as a first version of its own (a new root, numbered above every version there), with every entry its journal keeps. Never on top of the latest version: the other device would then carry its own writes onto it, which is a merge. Meeting a line that is not its own, the other device asks in its turn.
+
 | Situation | Do |
 |---|---|
 | `sync/folder.bjs` names another folder, or is missing beside versions or reports | **ask the owner** (checked before deciding) |
