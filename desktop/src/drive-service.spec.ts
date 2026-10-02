@@ -527,12 +527,24 @@ describe('connectPhone', () => {
     expect(io.writeKeys).not.toHaveBeenCalled();
   });
 
-  it('keeps the date through a backup sync that finished after it', async () => {
-    const { io, state } = fakeIO();
+  it('keeps the date through a backup sync that was running while it connected', async () => {
+    let listed: () => void = () => undefined;
+    const { io, state } = fakeIO({
+      // The sync reads its state, then waits on Drive's listing.
+      listRemote: vi.fn(
+        () =>
+          new Promise<RemoteArchive[]>((resolve) => {
+            listed = () => resolve([]);
+          }),
+      ),
+    });
     const service = new DriveSyncService(io);
 
+    const syncing = service.sync();
+    await vi.waitFor(() => expect(io.listRemote).toHaveBeenCalled());
     await service.connectPhone();
-    await service.sync();
+    listed();
+    await syncing;
 
     expect(state.current.keysPublishedAt).toBe(new Date(1_700_000_000_000).toISOString());
   });

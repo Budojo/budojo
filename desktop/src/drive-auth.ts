@@ -17,9 +17,11 @@ import { createHash, randomBytes } from 'node:crypto';
  *     user's disk, so anything compiled into it is public. PKCE makes the
  *     authorization code useless without the verifier, which never leaves this
  *     process.
- *   * **`drive.file` only.** It grants access exclusively to files this app
- *     created — not the user's Drive. It is also classed non-sensitive, which
- *     keeps the app out of Google's sensitive-scope verification review.
+ *   * **`drive.file` for the backups.** It grants access exclusively to files
+ *     this app created — not the user's Drive. It is also classed
+ *     non-sensitive, which keeps the app out of Google's sensitive-scope
+ *     verification review. `drive.appdata`, non-sensitive too, joins it once
+ *     the owner brings the gym to the phone (#2033).
  */
 
 /**
@@ -32,9 +34,10 @@ export const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
 /**
  * The account's hidden application data, where the academy's keys live for the
  * phone to read after «Accedi con Google» (#2033, PRD § 5.4). Visible to no
- * other app and not in the Drive UI, unlike the `Budojo` folder. Asked for
- * only when the owner chooses to bring the gym to the phone: the backup link
- * never depends on it.
+ * other app and not in the Drive UI, unlike the `Budojo` folder. First asked
+ * for when the owner chooses «Collega il telefono»; from then on a reconnect
+ * asks for it too, so the PC keeps reaching the keys. The backups never
+ * depend on it.
  */
 export const APPDATA_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
 
