@@ -27,6 +27,7 @@ import { Belt } from '../../core/services/athlete.service';
 import { LanguageService } from '../../core/services/language.service';
 import { buffer } from '../../core/sync/bytes';
 import { AcademyKeys } from '../../core/sync/keys';
+import { forgetLedger } from '../../core/sync/ledger-store';
 import { RemoteError } from '../../core/sync/remote';
 import { BrandGlyphComponent } from '../../shared/components/brand-glyph/brand-glyph.component';
 import { beltColourVar, beltPaint } from '../../shared/utils/belt-palette';
@@ -214,6 +215,9 @@ export class DoorComponent {
       await firstValueFrom(this.device.restore(archive));
       // Staged is as good as in: the next start swaps it, restart or not.
       rememberRestored(this.archiveName);
+      // A backup is no version: the sync meets it as an academy of its own,
+      // and asks before it is pulled over or pushed (protocol § Scope).
+      forgetLedger();
       if (ownGym) {
         await this.takeTheKeys();
       }
@@ -304,9 +308,13 @@ export class DoorComponent {
     if (keys === null || this.server === null) {
       return false;
     }
+    // With the sync key and the folder id the phone joins the academy's sync
+    // (#2046, protocol § Joining).
     const { changed } = await this.server.adoptKeys({
       APP_KEY: keys.APP_KEY,
       DOCUMENT_ENCRYPTION_KEY: keys.DOCUMENT_ENCRYPTION_KEY,
+      syncKey: keys.syncKey,
+      folder: keys.folder,
     });
     return changed;
   }

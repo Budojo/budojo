@@ -1,6 +1,13 @@
 import { concat, toHex, utf8 } from './bytes';
 import { JournalEntry, parseJournal, parseJournalEntry } from './journal';
-import { packVersion, parseManifest, PROTOCOL, unpackVersion, VersionManifest } from './version';
+import {
+  appVersionOf,
+  packVersion,
+  parseManifest,
+  PROTOCOL,
+  unpackVersion,
+  VersionManifest,
+} from './version';
 
 /** A check-in and a payment from the phone at the gym: what a journal holds. */
 const checkIn: JournalEntry = {
@@ -212,5 +219,19 @@ describe('a version file (#2029)', () => {
     const unpacked = await unpackVersion(junk, ref);
 
     expect(unpacked).toEqual({ ok: false, reason: 'manifest: a manifest is an object' });
+  });
+});
+
+describe('appVersionOf (#2046)', () => {
+  it('takes what `git describe` names a build, without the v', () => {
+    expect(appVersionOf('v2.76.0')).toBe('2.76.0');
+    expect(appVersionOf('v2.77.0-beta.3')).toBe('2.77.0-beta.3');
+    expect(appVersionOf('v2.76.0-3-gabc1234')).toBe('2.76.0-3-gabc1234');
+  });
+
+  it('names a build with no tag behind it as 0.0.0, which a version header still takes', () => {
+    expect(appVersionOf('dev')).toBe('0.0.0-dev');
+    expect(appVersionOf('abc1234')).toBe('0.0.0-abc1234');
+    expect(appVersionOf('')).toBe('0.0.0-unknown');
   });
 });

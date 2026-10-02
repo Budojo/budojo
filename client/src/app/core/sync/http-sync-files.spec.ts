@@ -43,7 +43,11 @@ describe('HttpSyncFiles', () => {
     const request = http.expectOne(`/api/v1/sync/files/${SHA}`);
     expect(request.request.method).toBe('PUT');
     expect(request.request.headers.get('Content-Type')).toBe('application/octet-stream');
-    expect(fromUtf8(new Uint8Array(request.request.body as ArrayBuffer))).toBe('a photo');
+    // A File: the phone's native HTTP garbles any other binary body (`binaryBody`).
+    expect(request.request.body).toBeInstanceOf(File);
+    expect(fromUtf8(new Uint8Array(await (request.request.body as File).arrayBuffer()))).toBe(
+      'a photo',
+    );
     request.flush(null, { status: 204, statusText: 'No Content' });
 
     await write;

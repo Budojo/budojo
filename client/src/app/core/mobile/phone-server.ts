@@ -26,13 +26,19 @@ export interface PhpServerPlugin {
   /** Stops and starts it, so a database just staged is swapped in now (#2079). */
   restart(): Promise<PhpServerStart>;
   /**
-   * Takes the academy's two app keys from the Google account (#2033), for the
-   * server's next start. Whether they differed from the phone's own.
+   * Takes the academy's keys from the Google account (#2033), for the
+   * server's next start: the two app keys, and with the sync key and the
+   * folder id the phone joins the academy's sync and makes its device id, once
+   * (#2046). Whether anything changed.
    */
   adoptKeys(keys: {
     APP_KEY: string;
     DOCUMENT_ENCRYPTION_KEY: string;
+    syncKey?: string;
+    folder?: string;
   }): Promise<{ changed: boolean }>;
+  /** The phone's place in the academy's sync; empty until it joined (#2046). */
+  syncIdentity(): Promise<{ device?: string; folder?: string; syncKey?: string }>;
 }
 
 /** The plugin when the page runs inside the Android app; null anywhere else. */

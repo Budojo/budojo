@@ -1,0 +1,33 @@
+@if (state().kind !== 'off') {
+  <button
+    type="button"
+    class="sync-pill"
+    [class.sync-pill--attention]="attention()"
+    [attr.aria-label]="sentence()"
+    aria-haspopup="dialog"
+    (click)="detail.toggle($event)"
+    data-cy="sync-pill"
+  >
+    <i class="pi {{ icon() }}" aria-hidden="true"></i>
+    @if (short(); as text) {
+      <span class="sync-pill__label" aria-hidden="true">{{ text }}</span>
+    }
+  </button>
+
+  <p-popover #detail>
+    <div class="sync-detail" data-cy="sync-detail">
+      <p class="sync-detail__title">{{ sentence() }}</p>
+      @if (hint(); as text) {
+        <p class="sync-detail__hint">{{ text }}</p>
+      }
+      <p-button
+        [label]="(state().kind === 'reconnect' ? 'sync.reconnect' : 'sync.now') | translate"
+        [icon]="state().kind === 'reconnect' ? 'pi pi-link' : 'pi pi-sync'"
+        [loading]="busy() || state().kind === 'syncing'"
+        [fluid]="true"
+        (onClick)="act()"
+        data-cy="sync-detail-action"
+      />
+    </div>
+  </p-popover>
+}

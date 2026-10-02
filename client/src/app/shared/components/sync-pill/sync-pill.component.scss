@@ -1,0 +1,64 @@
+// The sync state in the topbar (#2046, PRD § 6.2). Quiet while all is well:
+// the chrome's own ink, an icon and the time. Orange only when the owner has
+// something to do, so the colour means one thing.
+.sync-pill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  // 40px painted, 48px pressable, as the bell beside it (#1786).
+  height: 2.5rem;
+  padding: 0 1rem;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: currentColor;
+  font: inherit;
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: background var(--budojo-motion-fast, 160ms) ease;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: -0.25rem 0;
+  }
+
+  &:focus-visible {
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  @media (hover: hover) {
+    &:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+  }
+
+  i {
+    font-size: 1rem;
+  }
+
+  &--attention {
+    background: var(--budojo-warning-soft);
+    color: var(--budojo-warning-ink);
+  }
+}
+
+.sync-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 18rem;
+
+  &__title {
+    margin: 0;
+    font-weight: 600;
+  }
+
+  &__hint {
+    margin: 0 0 0.5rem;
+    color: var(--p-text-muted-color);
+    font-size: 0.875rem;
+  }
+}

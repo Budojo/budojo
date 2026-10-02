@@ -1,6 +1,7 @@
 import { HttpInterceptorFn } from '@angular/common/http';
 import { ClientRuntime } from '../../../environments/runtime';
 import { phoneServerInterceptor } from '../mobile/phone-server';
+import { writeGateInterceptor } from '../sync/write-gate';
 import { authInterceptor } from './auth.interceptor';
 import { errorInterceptor } from './error.interceptor';
 import { versionInterceptor } from './version.interceptor';
@@ -13,6 +14,8 @@ import { versionInterceptor } from './version.interceptor';
  *   handling inspects the *answer*, so it sits downstream of any change to the
  *   request. If a 5xx ever bounces us through an auth refresh, that retry must
  *   run before the global error redirect.
+ * - On the devices, the write gate (#2046) sits below the error handling: a
+ *   write the sync held is sent later, not failed.
  * - On the phone, the server restart goes last, nearest the server (#2034):
  *   a retry that works must never reach the error handling, which would show
  *   the offline page for a request that in the end succeeded.
@@ -22,6 +25,7 @@ export function httpInterceptors(runtime: ClientRuntime): HttpInterceptorFn[] {
     versionInterceptor,
     authInterceptor,
     errorInterceptor,
+    ...(runtime === 'web' ? [] : [writeGateInterceptor]),
     ...(runtime === 'mobile' ? [phoneServerInterceptor] : []),
   ];
 }

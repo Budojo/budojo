@@ -3687,5 +3687,33 @@
       "title": "The gym's keys do not read",
       "detail": "The medical certificates will not open until they do. Reason: {{reason}}"
     }
+  },
+  "sync": {
+    "now": "Sync now",
+    "reconnect": "Reconnect Google",
+    "state": {
+      "syncing": "Syncing with Google Drive…",
+      "synced": "In sync at {{time}}",
+      "pendingOne": "{{count}} to send",
+      "pendingOther": "{{count}} to send",
+      "waitingFirst": "Waiting for the PC",
+      "reconnect": "Google signed you out: tap to reconnect",
+      "ask": "To decide: Drive holds another copy of the gym",
+      "anotherFolder": "The Drive folder belongs to another gym",
+      "unpaired": "This phone was disconnected from the gym",
+      "needsRebase": "Changes both here and on the PC",
+      "failed": "The sync did not go through"
+    },
+    "hint": {
+      "pending": "They go at the next try, by themselves.",
+      "offline": "No network: they go as soon as it is back.",
+      "waitingFirst": "The PC has not put the gym on Drive yet: update Budojo on the PC and open it.",
+      "reconnect": "Google asks again every week while Budojo is being tested. Nothing is lost meanwhile.",
+      "ask": "The phone and Drive hold two different gyms. Nothing is overwritten until you choose.",
+      "anotherFolder": "The phone writes nothing there. Sign out and sign in with the gym's Google account.",
+      "unpaired": "Sign out, then sign in with Google to connect it again.",
+      "needsRebaseOne": "1 change from the phone is waiting, safe here: combining it with the PC's comes with the next update.",
+      "needsRebaseOther": "{{count}} changes from the phone are waiting, safe here: combining them with the PC's comes with the next update."
+    }
   }
 }
