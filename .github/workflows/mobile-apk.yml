@@ -42,9 +42,15 @@ jobs:
           path: mobile/php/out
           key: php-android-${{ hashFiles('mobile/php/recipe.env', 'mobile/php/build.sh', 'mobile/php/*.php') }}
 
+      # The cache is reachable from develop and from a PR into it; a PR
+      # stacked on another branch rebuilds (#2081). static-php-cli then asks
+      # GitHub's API for every source's releases, and anonymously a shared
+      # runner's address runs out of calls (403). The run's own token lifts it.
       - name: Build PHP from source in Alpine
         if: steps.cache.outputs.cache-hit != 'true'
-        run: docker run --rm -v "$PWD:/work" -w /work alpine:3.21 sh mobile/php/build.sh /work/mobile/php/out
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: docker run --rm -e GITHUB_TOKEN -v "$PWD:/work" -w /work alpine:3.21 sh mobile/php/build.sh /work/mobile/php/out
 
       # Android's app seccomp policy kills a process that calls accept (it allows
       # accept4). Reproduce that here, so a PHP that would die on a phone at its
