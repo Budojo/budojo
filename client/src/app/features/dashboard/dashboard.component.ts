@@ -102,8 +102,10 @@ export class DashboardComponent implements OnInit {
     this.webPushHandler.initialize(this.destroyRef);
 
     // The sync between the owner's devices (#2046): on a device that has
-    // one, from the moment the owner is in. A no-op anywhere else.
+    // one, from the moment the owner is in, until they sign out. A no-op
+    // anywhere else.
     this.sync.start();
+    this.destroyRef.onDestroy(() => this.sync.stop());
   }
 
   /**

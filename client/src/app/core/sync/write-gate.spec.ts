@@ -76,6 +76,19 @@ describe('WriteGate', () => {
     await held;
   });
 
+  it('lets the session through while it holds: the swap opens it again inside the hold (#2046)', async () => {
+    let release = (): void => undefined;
+    const held = gate.hold(() => new Promise<void>((resolve) => (release = resolve)));
+    await settle();
+
+    const session = firstValueFrom(client.post('/api/v1/device/session', {}));
+    http.expectOne('/api/v1/device/session').flush({ token: 't' });
+    await session;
+
+    release();
+    await held;
+  });
+
   it('tells the sync about a write the server took, and not about one it refused', async () => {
     let landed = 0;
     gate.written$.subscribe(() => landed++);

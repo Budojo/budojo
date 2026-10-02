@@ -3702,7 +3702,8 @@
       "anotherFolder": "The Drive folder belongs to another gym",
       "unpaired": "This phone was disconnected from the gym",
       "needsRebase": "Changes both here and on the PC",
-      "failed": "The sync did not go through"
+      "failed": "The sync did not go through",
+      "full": "Budojo is already on two devices"
     },
     "hint": {
       "pending": "They go at the next try, by themselves.",
@@ -3713,7 +3714,8 @@
       "anotherFolder": "The phone writes nothing there. Sign out and sign in with the gym's Google account.",
       "unpaired": "Sign out, then sign in with Google to connect it again.",
       "needsRebaseOne": "1 change from the phone is waiting, safe here: combining it with the PC's comes with the next update.",
-      "needsRebaseOther": "{{count}} changes from the phone are waiting, safe here: combining them with the PC's comes with the next update."
+      "needsRebaseOther": "{{count}} changes from the phone are waiting, safe here: combining them with the PC's comes with the next update.",
+      "full": "This device does not join: the sync holds two devices, the PC and one phone."
     }
   }
 }

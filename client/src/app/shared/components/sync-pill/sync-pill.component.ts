@@ -17,6 +17,7 @@ const LOOK: Record<SyncState['kind'], { icon: string; attention: boolean }> = {
   ask: { icon: 'pi-question-circle', attention: true },
   'another-folder': { icon: 'pi-exclamation-triangle', attention: true },
   unpaired: { icon: 'pi-exclamation-triangle', attention: true },
+  full: { icon: 'pi-exclamation-triangle', attention: true },
   'needs-rebase': { icon: 'pi-exclamation-circle', attention: true },
   failed: { icon: 'pi-exclamation-triangle', attention: true },
 };
@@ -97,12 +98,26 @@ export class SyncPillComponent {
       case 'ask':
       case 'another-folder':
       case 'unpaired':
+      case 'full':
       case 'reconnect':
         return this.translate.instant(`sync.hint.${KEYS[state.kind]}`);
       default:
         return '';
     }
   });
+
+  /**
+   * Back to the pill when the detail closes with the focus in it (Escape, the
+   * pill's own toggle), where it would fall to the page. A tap on a field
+   * elsewhere closes it too, and that field keeps the focus: on the phone,
+   * taking it back would drop the keyboard.
+   */
+  protected returnFocus(pill: HTMLElement): void {
+    const active = document.activeElement;
+    if (active === null || active === document.body || active.closest('.sync-detail') !== null) {
+      pill.focus();
+    }
+  }
 
   async act(): Promise<void> {
     if (this.busy()) {
@@ -141,6 +156,7 @@ const KEYS: Record<SyncState['kind'], string> = {
   ask: 'ask',
   'another-folder': 'anotherFolder',
   unpaired: 'unpaired',
+  full: 'full',
   'needs-rebase': 'needsRebase',
   failed: 'failed',
 };
