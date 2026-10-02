@@ -322,6 +322,9 @@
   // live in different layers); the two MUST stay in sync. If you
   // change one, change the other.
   --budojo-topbar-height: 3.5rem;
+  // The mobile bottom tab bar's height, the same pact with
+  // dashboard.component.scss's `$bottom-nav-height`: change both or neither.
+  --budojo-bottom-nav-height: 3.5rem;
 
   // ───── Derived page-wrapper inner widths (#261) ──────────────────
   // What page wrappers actually consume — the outer container token
@@ -728,6 +731,51 @@
   border-radius: var(--p-border-radius-lg);
   box-shadow: var(--budojo-elevation-floating);
   background: color-mix(in srgb, var(--p-content-background) 92%, transparent);
+}
+
+// Where a toast sits (#2034). PrimeNG pins it 20 px from the window's edge
+// with inline styles, which put it under the phone's status bar (the app
+// draws edge to edge) and under the desktop's title bar; hence `!important`,
+// the only way past an inline style. `--budojo-safe-top` is the status bar's
+// inset on the phone and the title bar's height on the desktop.
+.p-toast.p-toast-top-right,
+.p-toast.p-toast-top-left,
+.p-toast.p-toast-top-center {
+  top: calc(var(--budojo-safe-top, 0px) + 1rem) !important;
+}
+.p-toast.p-toast-bottom-right,
+.p-toast.p-toast-bottom-left,
+.p-toast.p-toast-bottom-center {
+  bottom: calc(var(--budojo-safe-bottom, 0px) + 1rem) !important;
+}
+// On a narrow window the app has a top bar and a bottom tab bar, both below
+// the toast's layer: a toast clears them rather than covering the bell or the
+// tabs while it shows. And a toast is 25 rem wide, more than a phone: it spans
+// the width between two 1 rem gutters instead of running off the left edge.
+@media (max-width: 767px) {
+  .p-toast.p-toast-top-right,
+  .p-toast.p-toast-top-left,
+  .p-toast.p-toast-top-center {
+    top: calc(var(--budojo-safe-top, 0px) + var(--budojo-topbar-height) + 1rem) !important;
+  }
+  .p-toast.p-toast-bottom-right,
+  .p-toast.p-toast-bottom-left,
+  .p-toast.p-toast-bottom-center {
+    bottom: calc(
+      var(--budojo-safe-bottom, 0px) + var(--budojo-bottom-nav-height) + 1rem
+    ) !important;
+  }
+  .p-toast.p-toast-top-right,
+  .p-toast.p-toast-top-left,
+  .p-toast.p-toast-top-center,
+  .p-toast.p-toast-bottom-right,
+  .p-toast.p-toast-bottom-left,
+  .p-toast.p-toast-bottom-center {
+    left: 1rem !important;
+    right: 1rem !important;
+    width: auto;
+    transform: none;
+  }
 }
 
 // Skeleton — subtle iOS shimmer

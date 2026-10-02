@@ -236,6 +236,56 @@ describe('Athlete documents page', () => {
     cy.contains('Document uploaded').should('be.visible');
   });
 
+  // The toast clears the top bar and stays inside a phone's width (#2034):
+  // PrimeNG pins it 20 px from the edge and 25 rem wide, which put it under
+  // the phone's status bar and off its left edge.
+  it('shows its toast inside a phone-width window, clear of the top', () => {
+    cy.viewport(375, 800);
+    cy.intercept('GET', '/api/v1/athletes/42/documents*', {
+      statusCode: 200,
+      body: { data: [], meta: { current_page: 1, last_page: 1, total: 0, per_page: 50 } },
+    }).as('getDocs');
+    cy.intercept('POST', '/api/v1/athletes/42/documents', {
+      statusCode: 201,
+      body: { data: doc({ id: 778, original_name: 'id.pdf', type: 'id_card' }) },
+    }).as('uploadDoc');
+
+    // A status bar, as the phone has: Cypress has no safe-area inset.
+    cy.visitAuthenticated('/dashboard/athletes/42/documents', undefined, {
+      onBeforeLoad(win) {
+        win.document.documentElement.style.setProperty('--budojo-safe-top', '40px');
+      },
+    });
+    cy.wait(['@academy', '@getAthlete', '@getDocs']);
+    cy.get('[data-cy="add-document-btn"] button').click();
+    cy.get('[data-cy="doc-type"]').click();
+    cy.contains('li', 'ID card').click();
+    cy.get('[data-cy="doc-file"] input[type="file"]').selectFile(
+      {
+        contents: Cypress.Buffer.from('%PDF-1.4 stub'),
+        fileName: 'id.pdf',
+        mimeType: 'application/pdf',
+      },
+      { force: true },
+    );
+    cy.get('[data-cy="upload-submit"] button').click();
+    cy.wait('@uploadDoc');
+
+    // The toast's own box, not its message's: the message animates in from a
+    // smaller scale, so measuring it mid-animation hides an overflow.
+    cy.contains('.p-toast-message', 'Document uploaded')
+      .closest('.p-toast')
+      .then(($toast) => {
+        const box = $toast[0].getBoundingClientRect();
+        const topbar = Cypress.$('.topbar')[0].getBoundingClientRect();
+        expect(box.left, 'left edge').to.be.at.least(0);
+        expect(box.right, 'right edge').to.be.at.most(375);
+        // Below the status bar and the app's top bar, not over the bell.
+        expect(box.top, 'top').to.be.at.least(40 + 56 + 16);
+        expect(box.top, 'below the top bar').to.be.at.least(topbar.bottom);
+      });
+  });
+
   it('keeps the dialog open and surfaces a 422 error banner on server validation failure', () => {
     cy.intercept('GET', '/api/v1/athletes/42/documents*', {
       statusCode: 200,

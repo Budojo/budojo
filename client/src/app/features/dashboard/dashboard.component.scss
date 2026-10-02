@@ -6,6 +6,7 @@
 
 $sidebar-breakpoint: 768px;
 $topbar-height: 3.5rem;
+// Mirrors `--budojo-bottom-nav-height` in budojo-theme.scss (#2034): change both.
 $bottom-nav-height: 3.5rem;
 
 .layout {
