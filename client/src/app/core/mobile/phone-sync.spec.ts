@@ -24,6 +24,7 @@ describe('the phone’s sync platform', () => {
     const platform = phoneSyncPlatform(
       server({}),
       drive(async () => ({ accessToken: 't' })),
+      async () => undefined,
     );
 
     expect(await platform.identity()).toBeNull();
@@ -35,6 +36,7 @@ describe('the phone’s sync platform', () => {
     const platform = phoneSyncPlatform(
       server(identity),
       drive(async () => ({ accessToken: 't' })),
+      async () => undefined,
     );
 
     expect(await platform.identity()).toEqual(identity);
@@ -46,6 +48,7 @@ describe('the phone’s sync platform', () => {
       drive(async () => {
         throw Object.assign(new Error('consent'), { code: 'NEEDS_CONSENT' });
       }),
+      async () => undefined,
     );
 
     await expect(platform.remote.list('versions')).rejects.toMatchObject({
@@ -57,7 +60,7 @@ describe('the phone’s sync platform', () => {
     const google = drive(async () => ({ accessToken: 'cached' }));
     const fetcher = vi.fn(async () => new Response('{}', { status: 401 }));
     vi.stubGlobal('CapacitorWebFetch', fetcher);
-    const platform = phoneSyncPlatform(server({}), google);
+    const platform = phoneSyncPlatform(server({}), google, async () => undefined);
     await platform.remote.list('versions').catch(() => undefined);
 
     await platform.reconnect();
@@ -65,6 +68,26 @@ describe('the phone’s sync platform', () => {
     expect(google.clearToken).toHaveBeenCalledWith({ token: 'cached' });
     expect(google.authorize).toHaveBeenLastCalledWith({ interactive: true });
     vi.unstubAllGlobals();
+  });
+
+  it('swaps in by a restart, then opens the owner’s session again on the database it brought', async () => {
+    const steps: string[] = [];
+    const php = server({});
+    (php.restart as ReturnType<typeof vi.fn>).mockImplementation(async () => {
+      steps.push('restart');
+      return { port: 8000 };
+    });
+    const platform = phoneSyncPlatform(
+      php,
+      drive(async () => ({ accessToken: 't' })),
+      async () => {
+        steps.push('session');
+      },
+    );
+
+    await platform.shell.swapIn();
+
+    expect(steps).toEqual(['restart', 'session']);
   });
 
   describe('freshTokenOnce', () => {

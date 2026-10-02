@@ -195,6 +195,34 @@ describe('SyncService', () => {
     expect(offlineSync.state()).toEqual({ kind: 'pending', count: 2, offline: true });
   });
 
+  it('still counts as to send what a failed upload carried: Drive may not have it', async () => {
+    await pcPublishes();
+    const sync = setUp();
+    await sync.syncNow();
+    phone.write('Luca on 2 Oct');
+    phone.write('Giulia on 2 Oct');
+    const failingUploads: SyncRemote = {
+      list: (folder) => remote.list(folder),
+      read: (path) => remote.read(path),
+      write: async (path, bytes) => {
+        if (path.startsWith('versions/')) {
+          throw new RemoteError('offline', 'the connection dropped mid-upload');
+        }
+        await remote.write(path, bytes);
+      },
+      remove: (path) => remote.remove(path),
+    };
+    TestBed.resetTestingModule();
+    const failing = setUp({ remote: failingUploads });
+
+    await failing.syncNow();
+    expect(failing.state()).toEqual({ kind: 'pending', count: 2, offline: true });
+
+    // The next round waits for the push to show up, and says the same.
+    await failing.syncNow();
+    expect(failing.state()).toEqual({ kind: 'pending', count: 2, offline: false });
+  });
+
   it('syncs on opening, and a few seconds after a write, not at once', async () => {
     vi.useFakeTimers();
     let rounds = 0;

@@ -22,8 +22,9 @@ interface Harness {
   logoutSpy: ReturnType<typeof vi.fn>;
 }
 
-function setup(token: string | null = 'fake-token'): Harness {
+function setup(token: string | null | (() => string | null) = 'fake-token'): Harness {
   const logoutSpy = vi.fn();
+  const getToken = typeof token === 'function' ? token : () => token;
   TestBed.configureTestingModule({
     providers: [
       provideHttpClient(withInterceptors([authInterceptor as HttpInterceptorFn])),
@@ -31,7 +32,7 @@ function setup(token: string | null = 'fake-token'): Harness {
       provideRouter([]),
       {
         provide: AuthService,
-        useValue: { getToken: () => token, logout: logoutSpy },
+        useValue: { getToken, logout: logoutSpy },
       },
     ],
   });
@@ -107,6 +108,27 @@ describe('authInterceptor', () => {
 
     expect(logoutSpy).toHaveBeenCalled();
     expect(navigateSpy).toHaveBeenCalledWith('/auth/login');
+  });
+
+  it('sends once more with the new token when the session was opened again meanwhile (#2046)', () => {
+    // The sync swapped another device's database in, which holds none of this
+    // device's sessions, and opened the owner's session again on it.
+    let current = 'before-the-swap';
+    const { http, mock, logoutSpy } = setup(() => current);
+    let answer: unknown;
+
+    http.get('/api/v1/athletes').subscribe({ next: (body) => (answer = body) });
+    const first = mock.expectOne('/api/v1/athletes');
+    expect(first.request.headers.get('Authorization')).toBe('Bearer before-the-swap');
+    current = 'after-the-swap';
+    first.flush(null, { status: 401, statusText: 'Unauthorized' });
+
+    const again = mock.expectOne('/api/v1/athletes');
+    expect(again.request.headers.get('Authorization')).toBe('Bearer after-the-swap');
+    again.flush({ data: [] });
+
+    expect(answer).toEqual({ data: [] });
+    expect(logoutSpy).not.toHaveBeenCalled();
   });
 
   it('on 401 without a token does NOT log out (legitimate pre-auth response)', () => {

@@ -147,7 +147,8 @@ The journal is a JSON list of the writes that made this version from its parent,
   - a phone-only academy writes its own when it connects Google (#2046).
 - **Never overwritten.** A device that finds another academy's keys stops and says so: replacing them would leave that academy's documents and versions unreadable.
 - **Before it syncs, a device checks `sync/folder.bjs`:**
-  - **missing, or another id:** it asks the owner. It is another academy's folder, or one someone emptied;
+  - **another id, or missing from a folder that holds versions or reports:** it asks the owner. It is another academy's folder, or one someone emptied of its id;
+  - **missing from a folder that holds nothing:** a new folder. The device writes it, then syncs;
   - **does not open under the sync key:** the key rotated after an unpairing. It stops and writes nothing, so its deleted report stays deleted.
 
 ## `devices/<id>.bjs`
@@ -209,7 +210,8 @@ There is no pairing code (#2033). **A device joins at its first «Accedi con Goo
 
 | Situation | Do |
 |---|---|
-| `sync/folder.bjs` is missing or names another folder | **ask the owner** (checked before deciding) |
+| `sync/folder.bjs` names another folder, or is missing beside versions or reports | **ask the owner** (checked before deciding) |
+| `sync/folder.bjs` is missing from a folder that holds nothing | write it: a new folder |
 | Its own latest push is not listed, and the folder has also lost the version it was made on | **ask the owner** |
 | … not listed, within 10 minutes of landing | **wait**: the listing lags; look again |
 | … still not listed after that | rebase onto the latest, or push again if the folder is empty; **ask the owner** if it was a first version, or if the version it was made on and the latest come from two different first versions (another device's academy) |
