@@ -2,13 +2,13 @@ import { HttpResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { syncOnce } from './engine';
+import { EMPTY_LEDGER, syncOnce } from './engine';
 import { importSyncKey, newSyncKey, seal } from './envelope';
 import { sealFolder } from './folder';
 import { HttpSyncServer } from './http-sync-server';
 import { utf8 } from './bytes';
 import { devicePath, FOLDER_PATH } from './layout';
-import { loadLedger } from './ledger-store';
+import { loadLedger, saveLedger } from './ledger-store';
 import { MemoryRemote, RemoteError, SyncRemote } from './remote';
 import {
   PAGE_RELOAD,
@@ -265,15 +265,27 @@ describe('SyncService', () => {
     await pcPublishes();
     phone = new MemoryDevice('phone9c1e', 'Eagles BJJ, restored from a backup');
     const sync = setUp();
-    await sync.syncNow();
-    expect(sync.state().kind).toBe('ask');
+    // Started: the round after a choice is scheduled, as on the phone.
+    sync.start();
+    await vi.waitFor(() => expect(sync.state().kind).toBe('ask'));
+    // A phone that synced before (a folder behind it, say): with no base, the
+    // round would stop at «In attesa del PC» before the choice is even read.
+    saveLedger(
+      { device: phone.id, folder: FOLDER },
+      { ...EMPTY_LEDGER, base: { seq: 1, device: 'pc4f2a' } },
+    );
     for (const path of [...remote.files.keys()].filter((p) => p.startsWith('versions/'))) {
       remote.files.delete(path);
     }
 
     await sync.resolve('folder', { seq: 1, device: 'pc4f2a' });
-    await vi.waitFor(() => expect(sync.state()).toEqual({ kind: 'waiting-first' }));
+    // The round after finds the folder empty and publishes again: nothing
+    // was given up to the choice.
+    await vi.waitFor(() =>
+      expect([...remote.files.keys()]).toContain('versions/000002-phone9c1e.000001-pc4f2a.bjs'),
+    );
     expect(phone.db.academy).toBe('Eagles BJJ, restored from a backup');
+    sync.stop();
   });
 
   it('keeps the question on screen while a round looks again in the background', async () => {
