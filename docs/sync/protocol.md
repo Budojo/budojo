@@ -200,7 +200,7 @@ protocol (1 byte) | sync key (32 bytes) | first 2 bytes of SHA-256 over the firs
 | The folder's `keys.bjs` names another folder, or is missing | **ask the owner** (checked before deciding) |
 | Its own latest push is not listed, and the folder has also lost the version it was made on | **ask the owner** |
 | … not listed, within 10 minutes of landing | **wait**: the listing lags; look again |
-| … still not listed after that | rebase onto the latest, or push again if the folder is empty; **ask the owner** if it was a first version, or made on a line, and another device's academy is there now |
+| … still not listed after that | rebase onto the latest, or push again if the folder is empty; **ask the owner** if it was a first version, or if the version it was made on and the latest come from two different first versions (another device's academy) |
 | No base, empty folder | nothing, or push version 1 if the device holds an academy |
 | No base, the folder has versions | fast-forward; **ask the owner** if the device holds an academy of its own |
 | The folder is empty | push base + 1 on top of the base: nothing there to lose |
