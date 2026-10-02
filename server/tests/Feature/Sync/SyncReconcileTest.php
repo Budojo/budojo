@@ -105,3 +105,12 @@ it('keeps only this device\'s journal: the swapped-in database brought the other
         // What the database dealt with stays, every device's.
         ->and(\Illuminate\Support\Facades\DB::table('sync_entries')->count())->toBe(2);
 });
+
+it('sweeps the uploads the dropped journal rows named', function (): void {
+    config()->set('budojo.sync.device', 'phone9c1e');
+    \Illuminate\Support\Facades\Storage::disk('local')->put('sync/journal/' . str_repeat('a', 64), 'a stray upload');
+
+    $this->artisan('budojo:sync-reconcile')->assertSuccessful();
+
+    expect(\Illuminate\Support\Facades\Storage::disk('local')->allFiles('sync/journal'))->toBe([]);
+});

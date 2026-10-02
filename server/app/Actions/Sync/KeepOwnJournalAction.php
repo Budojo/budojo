@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Sync;
 
+use App\Support\Sync\Journal\JournalUploads;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -13,9 +14,14 @@ use Illuminate\Support\Facades\DB;
  * next fast-forward, already cleared there. What the database dealt with
  * (`sync_entries`) stays, every device's: that is what keeps a replay from
  * applying anything twice. An unpaired device keeps no journal at all.
+ * The kept uploads no remaining entry names are swept with them.
  */
 final class KeepOwnJournalAction
 {
+    public function __construct(private readonly JournalUploads $uploads)
+    {
+    }
+
     public function execute(?string $device): int
     {
         $others = DB::table('sync_journal');
@@ -23,6 +29,11 @@ final class KeepOwnJournalAction
             $others->where('device', '!=', $device);
         }
 
-        return $others->delete();
+        $dropped = $others->delete();
+        // And the uploads no kept entry names any more, own or not: a
+        // refused write or a failed recording can leave one behind too.
+        $this->uploads->sweep();
+
+        return $dropped;
     }
 }

@@ -10,6 +10,7 @@ use App\Support\Capabilities;
 use App\Support\Sync\Journal\JournalBody;
 use App\Support\Sync\Journal\JournalRecorder;
 use App\Support\Sync\Journal\JournalRoutes;
+use App\Support\Sync\Journal\JournalUploads;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Route;
 use Illuminate\Support\Facades\DB;
@@ -29,6 +30,7 @@ final class RecordJournalEntry
     public function __construct(
         private readonly JournalRecorder $recorder,
         private readonly RecordJournalEntryAction $record,
+        private readonly JournalUploads $uploads,
     ) {
     }
 
@@ -57,10 +59,14 @@ final class RecordJournalEntry
                     $request->method(),
                     (string) $name,
                     self::params($route),
-                    $body,
+                    $body->value,
                     $this->recorder->createdIds(),
                     $this->recorder->before(),
                 );
+                // After the entry: an upload is kept only for a write that
+                // succeeded and was recorded. A failure in between leaves at
+                // most an unnamed file, which the next sweep deletes.
+                $body->keepUploads($this->uploads);
             }
             DB::commit();
         } catch (\Throwable $e) {

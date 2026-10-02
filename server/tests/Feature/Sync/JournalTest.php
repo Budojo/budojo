@@ -43,6 +43,12 @@ function journalAthlete(mixed $test, array $extra = []): \Illuminate\Testing\Tes
     ]);
 }
 
+/** A kept upload's bytes as a replay would read them, or null when none is kept. */
+function journalUpload(string $sha256): ?string
+{
+    return app(\App\Support\Sync\Journal\JournalUploads::class)->read($sha256);
+}
+
 /** @return list<array<string, mixed>> */
 function journalEntries(): array
 {
@@ -101,8 +107,8 @@ describe('a write on a paired device', function (): void {
 
         $body = json_decode((string) journalEntries()[1]['body'], true);
         $sha = hash('sha256', $bytes);
-        expect($body['photo'])->toBe(['$file' => ['sha256' => $sha, 'name' => 'p.png', 'type' => 'image/png']]);
-        Storage::disk('local')->assertExists("sync/journal/{$sha}");
+        expect($body['photo'])->toBe(['$file' => ['sha256' => $sha, 'name' => 'p.png', 'type' => 'image/png']])
+            ->and(journalUpload($sha))->toBe($bytes);
     });
 
     it('gets an id above every one this device has recorded, even when the clock steps back', function (): void {
@@ -156,15 +162,17 @@ describe('the journal over the API', function (): void {
 
     it('clears the entries every other device holds, and keeps the rest and their files', function (): void {
         $id = journalAthlete($this)->json('data.id');
-        $this->actingAs($this->owner)->post("/api/v1/athletes/{$id}/photo", ['photo' => UploadedFile::fake()->image('p.png', 20, 20)]);
-        journalAthlete($this, ['first_name' => 'Gianni']);
-        [$first, $photo, $third] = journalEntries();
-        $sha = json_decode((string) $photo['body'], true)['photo']['$file']['sha256'];
+        $this->actingAs($this->owner)->post("/api/v1/athletes/{$id}/photo", ['photo' => UploadedFile::fake()->image('old.png', 20, 20)]);
+        $this->actingAs($this->owner)->post("/api/v1/athletes/{$id}/photo", ['photo' => UploadedFile::fake()->image('new.png', 30, 30)]);
+        [$first, $old, $kept] = journalEntries();
+        $oldSha = json_decode((string) $old['body'], true)['photo']['$file']['sha256'];
+        $keptSha = json_decode((string) $kept['body'], true)['photo']['$file']['sha256'];
 
-        $this->actingAs($this->owner)->deleteJson('/api/v1/sync/journal?through=' . $photo['id'])->assertNoContent();
+        $this->actingAs($this->owner)->deleteJson('/api/v1/sync/journal?through=' . $old['id'])->assertNoContent();
 
-        expect(array_column(journalEntries(), 'id'))->toBe([$third['id']]);
-        Storage::disk('local')->assertMissing("sync/journal/{$sha}");
+        expect(array_column(journalEntries(), 'id'))->toBe([$kept['id']]);
+        expect(journalUpload($oldSha))->toBeNull()
+            ->and(journalUpload($keptSha))->not->toBeNull();
         // Clearing the journal forgets nothing the database dealt with.
         expect(DB::table('sync_entries')->count())->toBe(3);
     });
@@ -202,4 +210,62 @@ it('keeps an athlete created and the entry that created it together', function (
 
     expect(Athlete::query()->find($id))->not->toBeNull()
         ->and(DB::table('sync_entries')->count())->toBe(1);
+});
+
+describe('what the journal keeps on disk', function (): void {
+    it('keeps a medical certificate encrypted, never as a second plaintext copy', function (): void {
+        config()->set('documents.encryption_key', base64_encode(random_bytes(32)));
+        $id = journalAthlete($this)->json('data.id');
+        $pdf = UploadedFile::fake()->createWithContent('cert.pdf', '%PDF-1.4 a medical certificate');
+
+        $this->actingAs($this->owner)
+            ->post("/api/v1/athletes/{$id}/documents", ['type' => 'medical_certificate', 'file' => $pdf])
+            ->assertCreated();
+
+        $sha = hash('sha256', '%PDF-1.4 a medical certificate');
+        foreach (Storage::disk('local')->allFiles('sync/journal') as $path) {
+            expect((string) Storage::disk('local')->get($path))->not->toContain('a medical certificate');
+        }
+        expect(journalUpload($sha))->toBe('%PDF-1.4 a medical certificate');
+    });
+
+    it('keeps nothing for a write that was refused', function (): void {
+        $id = journalAthlete($this)->json('data.id');
+
+        $this->actingAs($this->owner)
+            ->post("/api/v1/athletes/{$id}/photo", ['photo' => UploadedFile::fake()->create('notes.txt', 10, 'text/plain')])
+            ->assertUnprocessable();
+
+        expect(Storage::disk('local')->allFiles('sync/journal'))->toBe([]);
+    });
+
+    it('rolls the write back when its entry cannot be recorded: never a row without its entry', function (): void {
+        \Illuminate\Support\Facades\Schema::drop('sync_journal');
+
+        journalAthlete($this)->assertServerError();
+
+        expect(Athlete::query()->count())->toBe(0)
+            ->and(DB::table('sync_entries')->count())->toBe(0);
+    });
+});
+
+it('journals an athlete\'s email change: on a device with no athlete accounts it is a plain field', function (): void {
+    $id = journalAthlete($this)->json('data.id');
+
+    $this->actingAs($this->owner)->postJson("/api/v1/athletes/{$id}/email", ['email' => 'luca@example.com'])->assertSuccessful();
+
+    expect(array_column(journalEntries(), 'route'))->toContain('athletes.email.update');
+});
+
+it('records the payments an undo deletes, so a replay can tell they changed', function (): void {
+    $this->owner->academy->forceFill(['monthly_fee_cents' => 5000])->save();
+    $id = journalAthlete($this)->json('data.id');
+    $this->actingAs($this->owner)->postJson("/api/v1/athletes/{$id}/payments", ['year' => 2026, 'month' => 9])->assertSuccessful();
+
+    $this->actingAs($this->owner)->deleteJson("/api/v1/athletes/{$id}/payments/2026/9")->assertSuccessful();
+
+    $undo = collect(journalEntries())->firstWhere('route', 'athletes.payments.destroy');
+    $before = json_decode((string) $undo['before'], true);
+    expect(array_values($before['athlete_payments'] ?? []))->toHaveCount(1)
+        ->and(array_values($before['athlete_payments'])[0])->toMatchArray(['year' => 2026, 'month' => 9, 'amount_cents' => 5000]);
 });

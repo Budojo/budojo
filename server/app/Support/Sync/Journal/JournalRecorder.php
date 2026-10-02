@@ -14,7 +14,14 @@ use Illuminate\Database\Eloquent\Model;
  *
  * Writes made with the query builder rather than a model are not seen. The
  * replay runs the same Actions, so it makes them again; only the id map and
- * the conflict check need what is recorded here.
+ * the conflict check need what is recorded here, and those are about a
+ * write's **target**: the athlete edited, the payment undone. The journaled
+ * Actions that write with queries do so for what follows from the target,
+ * which the replay derives again: the children of a programme topic, a
+ * lesson's topics, attendance adopted by a lesson, the training days read off
+ * the timetable, carnet entries, an address. A target written with a query
+ * would be a hole in `before`; the payment undo was one, and deletes its rows
+ * one model at a time since #2031.
  */
 final class JournalRecorder
 {

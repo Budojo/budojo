@@ -6,32 +6,46 @@ namespace App\Support\Sync\Journal;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * A journaled request's body (#2031). An uploaded file cannot sit in JSON,
- * and a replay must upload it again: so its bytes are kept on this device by
- * their content (`sync/journal/<sha256>` on the private disk) until the
- * entry is cleared, and the body names them:
- * `{ "$file": { "sha256": …, "name": "p.png", "type": "image/png" } }`.
+ * and a replay must upload it again: the body names it by its content,
+ * `{ "$file": { "sha256": …, "name": "p.png", "type": "image/png" } }`, and
+ * `JournalUploads` keeps its bytes. Nothing is kept until the write has
+ * succeeded: a refused upload leaves nothing on disk.
  */
 final class JournalBody
 {
-    public const string FOLDER = 'sync/journal';
+    /**
+     * @param  array<string, mixed>|null  $value
+     * @param  array<string, string>  $uploads  sha256 => bytes, to keep once the write succeeded
+     */
+    private function __construct(
+        public readonly ?array $value,
+        private readonly array $uploads,
+    ) {
+    }
 
-    /** @return array<string, mixed>|null */
-    public static function from(Request $request): ?array
+    public static function from(Request $request): self
     {
-        $body = self::keep($request->all());
+        $uploads = [];
+        $body = self::describe($request->all(), $uploads);
         if (! \is_array($body) || $body === []) {
-            return null;
+            return new self(null, $uploads);
         }
         $keyed = [];
         foreach ($body as $key => $value) {
             $keyed[(string) $key] = $value;
         }
 
-        return $keyed;
+        return new self($keyed, $uploads);
+    }
+
+    public function keepUploads(JournalUploads $store): void
+    {
+        foreach ($this->uploads as $sha256 => $bytes) {
+            $store->keep($sha256, $bytes);
+        }
     }
 
     /** @return list<string> the contents a body names */
@@ -48,32 +62,28 @@ final class JournalBody
         return array_merge([], ...array_map(self::files(...), array_values($body)));
     }
 
-    private static function keep(mixed $value): mixed
+    /** @param array<string, string> $uploads */
+    private static function describe(mixed $value, array &$uploads): mixed
     {
         if ($value instanceof UploadedFile) {
-            return ['$file' => self::store($value)];
+            $bytes = $value->get();
+            if (! \is_string($bytes)) {
+                throw new \RuntimeException('could not read an uploaded file to journal it');
+            }
+            $sha256 = hash('sha256', $bytes);
+            $uploads[$sha256] = $bytes;
+
+            return ['$file' => ['sha256' => $sha256, 'name' => $value->getClientOriginalName(), 'type' => (string) $value->getClientMimeType()]];
         }
         if (\is_array($value)) {
-            return array_map(self::keep(...), $value);
+            $described = [];
+            foreach ($value as $key => $item) {
+                $described[$key] = self::describe($item, $uploads);
+            }
+
+            return $described;
         }
 
         return $value;
-    }
-
-    /** @return array{sha256: string, name: string, type: string} */
-    private static function store(UploadedFile $file): array
-    {
-        $bytes = $file->get();
-        if (! \is_string($bytes)) {
-            throw new \RuntimeException('could not read an uploaded file to journal it');
-        }
-        $sha256 = hash('sha256', $bytes);
-        $disk = Storage::disk('local');
-        $path = self::FOLDER . "/{$sha256}";
-        if (! $disk->exists($path) && ! $disk->put($path, $bytes)) {
-            throw new \RuntimeException('could not keep an uploaded file for the journal');
-        }
-
-        return ['sha256' => $sha256, 'name' => $file->getClientOriginalName(), 'type' => (string) $file->getClientMimeType()];
     }
 }

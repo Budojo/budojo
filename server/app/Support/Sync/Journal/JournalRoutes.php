@@ -14,7 +14,9 @@ final class JournalRoutes
 {
     private const array JOURNALED = ['academy.', 'athletes.', 'attendance.', 'documents.', 'lessons.', 'me.athlete.', 'me.attendance.'];
 
-    private const array NEVER = ['athletes.invite.', 'athletes.invitations.', 'athletes.email.'];
+    // The athlete's email change stays: with no athlete accounts on a local
+    // device, it is a plain field the owner edits there.
+    private const array NEVER = ['athletes.invite.', 'athletes.invitations.'];
 
     public static function journals(?string $name): bool
     {

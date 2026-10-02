@@ -8,8 +8,8 @@ use App\Actions\Sync\ClearJournalAction;
 use App\Actions\Sync\ListJournalAction;
 use App\Actions\Sync\ReadHoldsAction;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Sync\ClearJournalRequest;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 
 /**
@@ -27,10 +27,9 @@ class JournalController extends Controller
         return response()->json(['data' => $list->execute(self::device())]);
     }
 
-    public function destroy(Request $request, ClearJournalAction $clear): Response
+    public function destroy(ClearJournalRequest $request, ClearJournalAction $clear): Response
     {
-        $validated = $request->validate(['through' => ['required', 'string', 'regex:/^[0-7][0-9A-HJKMNP-TV-Z]{25}$/']]);
-        $clear->execute(self::device(), (string) $validated['through']);
+        $clear->execute(self::device(), $request->through());
 
         return response()->noContent();
     }
