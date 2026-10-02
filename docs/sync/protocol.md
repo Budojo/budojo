@@ -120,7 +120,7 @@ The journal is a JSON list of the writes that made this version from its parent,
 | `device` | the device that made the write | `phone9c1e` |
 | `at` | UTC, up to microseconds | `2026-10-01T18:32:05.123456Z` |
 | `method` | `POST`, `PUT`, `PATCH` or `DELETE` | `POST` |
-| `route` | the Laravel route name: dotted segments of `a-z`, `0-9`, `_` and `-`. The server gives every write route one (#2031). | `attendance.store`, `fee-tiers.store` |
+| `route` | the Laravel route name: dotted segments of `a-z`, `0-9`, `_` and `-`. Every write route has one, pinned by `WriteRouteNamesTest`: a journal outlives the code that wrote it, so a rename is a decision (#2031). | `attendance.store`, `academy.fee-tiers.store` |
 | `params` | the route parameters, strings and numbers | `{ "athlete": 57 }` |
 | `body` | the request body, or `null` | `{ "date": "2026-10-01", "athlete_ids": [57] }` |
 | `created` | the ids the write created, by table | `{ "attendance_records": [912] }` |
