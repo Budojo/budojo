@@ -93,6 +93,12 @@ return [
         'desktop' => [
             'sync',
         ],
+        // The phone (#2034): the desktop's set for now. Document upload, which
+        // the phone does not have (PRD § 2: view only), becomes a capability
+        // of its own in a follow-up.
+        'mobile' => [
+            'sync',
+        ],
     ],
 
     /*

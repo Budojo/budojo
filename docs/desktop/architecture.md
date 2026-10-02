@@ -66,23 +66,24 @@ Everything the renderer needs beyond HTTP is on `window.__BUDOJO__` (typed in `c
 
 ## Runtime profile and capabilities
 
-The server knows which build it is running as through the **`RuntimeProfile`** enum (`web` | `desktop`, set by `BUDOJO_RUNTIME`). The difference between them is expressed as a **set of capabilities**, never an `if (isDesktop)` boolean — a boolean is how a build target quietly becomes a fork.
+The server knows which build it is running as through the **`RuntimeProfile`** enum (`web` | `desktop` | `mobile`, set by `BUDOJO_RUNTIME`). `mobile` is the same server inside the Android app (M12, #2034); `Runtime::isLocal()` is true for both local profiles. The difference between them is expressed as a **set of capabilities**, never an `if (isDesktop)` boolean — a boolean is how a build target quietly becomes a fork.
 
 `config/budojo.php` maps each profile to its capability set:
 
-| Capability | Web | Desktop | What it gates |
-|---|:---:|:---:|---|
-| `community` | ✅ | ❌ | Social feed / community surfaces |
-| `athlete_accounts` | ✅ | ❌ | Athlete self-service logins & invites |
-| `web_push` | ✅ | ❌ | Browser Web Push / VAPID notifications |
-| `email` | ✅ | ❌ | Outbound SMTP (reminders, invites) |
-| `password_breach_check` | ✅ | ❌ | HaveIBeenPwned lookups on password entry |
+| Capability | Web | Desktop | Mobile | What it gates |
+|---|:---:|:---:|:---:|---|
+| `community` | ✅ | ❌ | ❌ | Social feed / community surfaces |
+| `athlete_accounts` | ✅ | ❌ | ❌ | Athlete self-service logins & invites |
+| `web_push` | ✅ | ❌ | ❌ | Browser Web Push / VAPID notifications |
+| `email` | ✅ | ❌ | ❌ | Outbound SMTP (reminders, invites) |
+| `password_breach_check` | ✅ | ❌ | ❌ | HaveIBeenPwned lookups on password entry |
+| `sync` | ❌ | ✅ | ✅ | The sync between the owner's own devices through Google Drive (M12, #2030) |
 
-**Desktop enables none of them** (`'desktop' => []`). It is a single-user local tool: one owner, one machine, no second user to invite, no browser push service to reach, no mail transport, and — because the bundled PHP ships without a CA bundle — no outbound HTTPS. A route behind an absent capability answers **404**, so the multi-user surfaces are not merely hidden in the UI, they don't exist on the wire. Nothing is deleted: flipping the config back on restores the hosted behaviour.
+**Desktop and the phone enable only `sync`** (`'desktop' => ['sync']`, `'mobile' => ['sync']`). Each is a single-user local tool: one owner, one machine, no second user to invite, no browser push service to reach, no mail transport, and — because the bundled PHP ships without a CA bundle — no outbound HTTPS. A route behind an absent capability answers **404**, so the multi-user surfaces are not merely hidden in the UI, they don't exist on the wire. Nothing is deleted: flipping the config back on restores the hosted behaviour.
 
 ## Drivers
 
-The desktop process is one process on one machine, so it **must** run with these drivers (`config/budojo.php` → `desktop_drivers`, enforced at boot by `DesktopDriverGuard`):
+The desktop process is one process on one machine, and so is the phone's, so both **must** run with these drivers (`config/budojo.php` → `desktop_drivers`, enforced at boot by `DesktopDriverGuard`):
 
 | Setting | Value | Why |
 |---|---|---|

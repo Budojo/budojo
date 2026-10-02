@@ -37,6 +37,15 @@ it('marks a desktop sign-in token as desktop, so the shell\'s credential is dist
     expect(PersonalAccessToken::query()->firstOrFail()->kind)->toBe(TokenKind::Desktop->value);
 });
 
+it('marks a phone sign-in token as a device credential too, as on the desktop (#2034)', function (): void {
+    config()->set('budojo.runtime', 'mobile');
+    User::factory()->create(['email' => 'mat@example.test', 'password' => Hash::make('Password1!')]);
+
+    signIn('mat@example.test');
+
+    expect(PersonalAccessToken::query()->firstOrFail()->kind)->toBe(TokenKind::Desktop->value);
+});
+
 it('marks a registration token the same way', function (): void {
     config()->set('budojo.runtime', 'desktop');
 

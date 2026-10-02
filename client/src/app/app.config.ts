@@ -12,9 +12,7 @@ import { provideServiceWorker } from '@angular/service-worker';
 import { MessageService } from 'primeng/api';
 
 import { routes } from './app.routes';
-import { authInterceptor } from './core/interceptors/auth.interceptor';
-import { errorInterceptor } from './core/interceptors/error.interceptor';
-import { versionInterceptor } from './core/interceptors/version.interceptor';
+import { httpInterceptors } from './core/interceptors/http-interceptors';
 import { environment } from '../environments/environment';
 import { provideBudojoTheme, provideBudojoTranslations } from './core/config/shared-ui-providers';
 
@@ -45,12 +43,8 @@ export const appConfig: ApplicationConfig = {
       // every existing route, which is out of scope for this PR.
       withInMemoryScrolling({ anchorScrolling: 'enabled' }),
     ),
-    // Auth interceptor first — it adds the bearer token to outgoing
-    // requests. Error interceptor second — it inspects the *response*,
-    // so it must sit downstream of any request mutation. Order matters:
-    // if a 5xx ever bounces us via an auth refresh in the future, that
-    // retry must run before the global error redirect.
-    provideHttpClient(withInterceptors([versionInterceptor, authInterceptor, errorInterceptor])),
+    // The order is the behaviour; see httpInterceptors.
+    provideHttpClient(withInterceptors(httpInterceptors(environment.runtime))),
     provideAnimationsAsync(),
     // App-level MessageService so shared components (the email verification
     // pillola, the verify-error landing) fire toasts into the single
@@ -69,7 +63,7 @@ export const appConfig: ApplicationConfig = {
     // exactly the stuck-on-old-bundle failure VersionCheckService exists to
     // detect (#548). Electron owns the update story there; one cache layer.
     provideServiceWorker('ngsw-worker.js', {
-      enabled: !isDevMode() && environment.runtime !== 'desktop',
+      enabled: !isDevMode() && environment.runtime === 'web',
       registrationStrategy: 'registerWhenStable:30000',
     }),
     provideBudojoTranslations(),

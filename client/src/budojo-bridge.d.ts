@@ -218,4 +218,6 @@ interface BudojoBridge {
 
 interface Window {
   readonly __BUDOJO__?: BudojoBridge;
+  /** The phone's server, published by `main.ts` once `PhpServerPlugin` has started it (#2034). */
+  __BUDOJO_MOBILE__?: { readonly apiBase: string };
 }

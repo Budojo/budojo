@@ -26,7 +26,7 @@ import java.util.zip.ZipInputStream;
 import org.json.JSONObject;
 
 /**
- * Budojo's server on the phone (#2044, the spike): the phone's counterpart of the
+ * Budojo's server on the phone (#2044, #2034): the phone's counterpart of the
  * desktop's php-supervisor.
  *
  * The PHP binary is static (built from source in CI, mobile/php/) and ships as
@@ -35,10 +35,12 @@ import org.json.JSONObject;
  * and is extracted there at install time ({@code useLegacyPackaging}).
  *
  * {@code start()} unpacks the server bundle when the APK carries a new one,
- * copies the demo database on first run, runs the migrations, starts
- * {@code php -S 127.0.0.1:<port>} with the framework's router (as the desktop
- * does), and waits for {@code /api/v1/health}. Each step is timed, because the
- * numbers are what this spike is for.
+ * swaps in a database the sync staged, makes this phone's keys on its first
+ * start, runs the migrations, starts {@code php -S 127.0.0.1:<port>} with the
+ * framework's router (as the desktop does), and waits for
+ * {@code /api/v1/health}. The page calls it before Angular boots, and again if
+ * a request finds the server gone: Android kills an app's child processes in
+ * the background (the phantom process killer, Android 12+).
  */
 @CapacitorPlugin(name = "PhpServer")
 public class PhpServerPlugin extends Plugin {
@@ -58,6 +60,23 @@ public class PhpServerPlugin extends Plugin {
         }).start();
     }
 
+    /**
+     * Back from the background: if Android killed the server meanwhile, start it
+     * again now, before the page's next request has to wait for it.
+     */
+    @Override
+    protected void handleOnResume() {
+        if (server != null && !server.isAlive()) {
+            new Thread(() -> {
+                try {
+                    startServer();
+                } catch (Exception ignored) {
+                    // The page's next request starts it again and shows the error.
+                }
+            }).start();
+        }
+    }
+
     @Override
     protected void handleOnDestroy() {
         stopServer();
@@ -73,9 +92,6 @@ public class PhpServerPlugin extends Plugin {
     private synchronized JSObject startServer() throws Exception {
         Context context = getContext();
         JSObject out = new JSObject();
-        JSONObject spike = new JSONObject(readAsset("spike.json"));
-        out.put("demoEmail", spike.getString("demoEmail"));
-        out.put("demoPassword", spike.getString("demoPassword"));
 
         if (server != null && server.isAlive()) {
             if (isHealthy(port)) {
@@ -99,7 +115,7 @@ public class PhpServerPlugin extends Plugin {
 
         File serverDir = new File(files, "server");
         File marker = new File(serverDir, ".bundle-id");
-        String bundleId = spike.getString("bundleId");
+        String bundleId = new JSONObject(readAsset("bundle.json")).getString("bundleId");
         boolean extracted = false;
         if (!marker.exists() || !readFile(marker).equals(bundleId)) {
             deleteRecursive(serverDir);
@@ -109,22 +125,13 @@ public class PhpServerPlugin extends Plugin {
         }
         long tExtracted = System.nanoTime();
 
-        // The demo academy is replaced whenever the bundle is: each build seeds its
-        // own, with its own APP_KEY and demo login, so an older copy would refuse
-        // the new login (0.0.11 on a real phone: "login: HTTP 401" against the
-        // database 0.0.3 had copied). Within one build it stays, so a second run
-        // after a force-stop measures the same data. #2034 replaces the demo with
-        // the phone's own first-run bootstrap.
         File database = new File(files, "budojo.sqlite");
-        File databaseMarker = new File(files, "budojo.sqlite.bundle-id");
-        boolean seeded = false;
-        if (!database.exists() || !databaseMarker.exists() || !readFile(databaseMarker).equals(bundleId)) {
-            for (String suffix : new String[] {"", "-wal", "-shm"}) {
-                new File(files, "budojo.sqlite" + suffix).delete();
-            }
-            copyAsset("demo.sqlite", database);
-            writeFile(databaseMarker, bundleId);
-            seeded = true;
+        forgetTheSpikesDemo(files);
+        File reconcilePending = new File(database.getPath() + ".reconcile");
+        boolean swapped = swapInStaged(database, reconcilePending);
+        if (!database.exists()) {
+            // A first start: an empty database, which the migrations below fill.
+            database.createNewFile();
         }
         File storage = new File(files, "storage");
         for (String dir : new String[] {"app/private", "app/public", "framework/cache/data", "framework/sessions", "framework/views", "logs"}) {
@@ -135,6 +142,9 @@ public class PhpServerPlugin extends Plugin {
         opcacheDir.mkdirs();
         File ini = new File(files, "php.ini");
         writeFile(ini, "memory_limit=256M\n"
+                // A database staged by the sync is one request body (#2030).
+                + "post_max_size=256M\n"
+                + "upload_max_filesize=32M\n"
                 + "error_log=" + new File(files, "php-error.log").getAbsolutePath() + "\n"
                 + "sys_temp_dir=" + tmp.getAbsolutePath() + "\n"
                 + "upload_tmp_dir=" + tmp.getAbsolutePath() + "\n"
@@ -149,7 +159,7 @@ public class PhpServerPlugin extends Plugin {
                 + "opcache.file_cache_only=1\n"
                 + "opcache.lockfile_path=" + tmp.getAbsolutePath() + "\n");
 
-        Map<String, String> env = environment(spike, database, storage, tmp, files);
+        Map<String, String> env = environment(secrets(files), database, storage, tmp, files);
 
         long tMigrate0 = System.nanoTime();
         String migrate;
@@ -159,14 +169,26 @@ public class PhpServerPlugin extends Plugin {
             if (!String.valueOf(e.getMessage()).contains("Cannot create lock")) {
                 throw e;
             }
-            // The spike wants numbers either way: without OPcache, and it says so.
+            // Without OPcache rather than not at all; the start's answer says so.
             opcacheOff = true;
             writeFile(ini, readFile(ini) + "\nopcache.enable=0\nopcache.enable_cli=0\n");
             migrate = runToEnd(php, ini, serverDir, env, "artisan", "migrate", "--force", "--no-interaction");
         }
+        boolean reconciled = false;
+        if (reconcilePending.exists()) {
+            // A database swapped in ran no Observer: the cache and the files no
+            // row names are reconciled before the app serves (#2030). The marker
+            // outlives a failed or killed start, so the reconcile is never
+            // skipped; it goes only once the reconcile succeeded.
+            runToEnd(php, ini, serverDir, env, "artisan", "budojo:sync-reconcile", "--no-interaction");
+            reconcilePending.delete();
+            reconciled = true;
+        }
         long tMigrated = System.nanoTime();
 
-        port = freePort();
+        // The same port as before when it is free, so a page that already knows
+        // the address finds the server again after Android killed it.
+        port = port > 0 && isFree(port) ? port : freePort();
         env.put("APP_URL", "http://127.0.0.1:" + port);
         File router = new File(serverDir, "vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php");
         ProcessBuilder builder = new ProcessBuilder(php.getAbsolutePath(), "-c", ini.getAbsolutePath(), "-S", "127.0.0.1:" + port, router.getAbsolutePath());
@@ -196,7 +218,8 @@ public class PhpServerPlugin extends Plugin {
 
         out.put("port", port);
         out.put("extracted", extracted);
-        out.put("seeded", seeded);
+        out.put("swapped", swapped);
+        out.put("reconciled", reconciled);
         out.put("unpackMs", ms(t0, tExtracted));
         out.put("migrateMs", ms(tMigrate0, tMigrated));
         out.put("serverMs", ms(tMigrated, tReady));
@@ -208,16 +231,17 @@ public class PhpServerPlugin extends Plugin {
     }
 
     /** The desktop's environment (desktop/src/php-runtime.ts), with the phone's paths. */
-    private Map<String, String> environment(JSONObject spike, File database, File storage, File tmp, File home) throws Exception {
+    private Map<String, String> environment(JSONObject secrets, File database, File storage, File tmp, File home) throws Exception {
         Map<String, String> env = new HashMap<>();
         env.put("HOME", home.getAbsolutePath());
         env.put("TMPDIR", tmp.getAbsolutePath());
         env.put("PHP_INI_SCAN_DIR", "");
-        env.put("BUDOJO_RUNTIME", "desktop");
+        env.put("BUDOJO_RUNTIME", "mobile");
         env.put("APP_NAME", "Budojo");
         env.put("APP_ENV", "production");
         env.put("APP_DEBUG", "false");
-        env.put("APP_KEY", spike.getString("appKey"));
+        env.put("APP_KEY", secrets.getString("APP_KEY"));
+        env.put("DOCUMENT_ENCRYPTION_KEY", secrets.getString("DOCUMENT_ENCRYPTION_KEY"));
         env.put("DB_CONNECTION", "sqlite");
         env.put("DB_DATABASE", database.getAbsolutePath());
         env.put("QUEUE_CONNECTION", "sync");
@@ -229,6 +253,75 @@ public class PhpServerPlugin extends Plugin {
         env.put("LOG_CHANNEL", "single");
         env.put("LARAVEL_STORAGE_PATH", storage.getAbsolutePath());
         return env;
+    }
+
+    /**
+     * This phone's keys, made on its first start and kept in the app's private
+     * files, as the desktop keeps its own (#1223). The same shape as the
+     * desktop's keychain record, so pairing (#2033) can replace them with the
+     * academy's from {@code keys.bjs}. They never leave the phone: the manifest
+     * turns off the backup ({@code allowBackup="false"}, up to Android 11) and,
+     * on Android 12+, the transfer to a new phone, which ignores that flag
+     * ({@code res/xml/data_extraction_rules.xml}). Both are needed.
+     */
+    private static JSONObject secrets(File files) throws Exception {
+        File file = new File(files, "secrets.json");
+        if (file.exists()) {
+            return new JSONObject(readFile(file));
+        }
+        java.security.SecureRandom random = new java.security.SecureRandom();
+        byte[] appKey = new byte[32];
+        byte[] documentKey = new byte[32];
+        random.nextBytes(appKey);
+        random.nextBytes(documentKey);
+        JSONObject secrets = new JSONObject();
+        secrets.put("v", 1);
+        secrets.put("APP_KEY", "base64:" + android.util.Base64.encodeToString(appKey, android.util.Base64.NO_WRAP));
+        secrets.put("DOCUMENT_ENCRYPTION_KEY", android.util.Base64.encodeToString(documentKey, android.util.Base64.NO_WRAP));
+        writeFile(file, secrets.toString());
+        return secrets;
+    }
+
+    /**
+     * The test builds of #2044 seeded a demo academy and marked its database
+     * with the bundle it came with. That database is not the owner's: the
+     * first real start drops it, once, and begins with an empty one.
+     */
+    private static void forgetTheSpikesDemo(File files) {
+        File demoMarker = new File(files, "budojo.sqlite.bundle-id");
+        if (!demoMarker.exists()) {
+            return;
+        }
+        for (String suffix : new String[] {"", "-wal", "-shm"}) {
+            new File(files, "budojo.sqlite" + suffix).delete();
+        }
+        demoMarker.delete();
+    }
+
+    /**
+     * A database the sync staged beside the live one (#2030), swapped in before
+     * PHP starts: the live file's WAL and shared memory go with it, or SQLite
+     * would replay the old database's last writes onto the new one.
+     *
+     * The reconcile it needs is written down first, as a file, so that it
+     * survives a start that dies after the rename. That is the fast-forward
+     * path, the only one that stages a database today. A rebase must reconcile
+     * only after its replay (docs/sync/protocol.md); #2031 makes its stage say
+     * so, and this then leaves the reconcile to the app.
+     */
+    private static boolean swapInStaged(File database, File reconcilePending) throws IOException {
+        File staged = new File(database.getPath() + ".staged");
+        if (!staged.exists()) {
+            return false;
+        }
+        writeFile(reconcilePending, "");
+        for (String suffix : new String[] {"-wal", "-shm"}) {
+            new File(database.getPath() + suffix).delete();
+        }
+        if (!staged.renameTo(database)) {
+            throw new IOException("could not swap in the staged database");
+        }
+        return true;
     }
 
     private String runToEnd(File php, File ini, File cwd, Map<String, String> env, String... args) throws Exception {
@@ -384,6 +477,14 @@ public class PhpServerPlugin extends Plugin {
         }
     }
 
+    private static boolean isFree(int candidate) {
+        try (ServerSocket socket = new ServerSocket(candidate, 1, java.net.InetAddress.getByName("127.0.0.1"))) {
+            return true;
+        } catch (IOException e) {
+            return false;
+        }
+    }
+
     private static int freePort() throws IOException {
         try (ServerSocket socket = new ServerSocket(0)) {
             return socket.getLocalPort();
@@ -393,12 +494,6 @@ public class PhpServerPlugin extends Plugin {
     private String readAsset(String name) throws IOException {
         try (InputStream in = getContext().getAssets().open(name)) {
             return readAll(in);
-        }
-    }
-
-    private void copyAsset(String name, File target) throws IOException {
-        try (InputStream in = getContext().getAssets().open(name); OutputStream out = new FileOutputStream(target)) {
-            copy(in, out);
         }
     }
 

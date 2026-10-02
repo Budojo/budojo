@@ -20,7 +20,7 @@ This file holds the cross-cutting rules. Claude Code also loads the nearest nest
 - **`server/CLAUDE.md`:** the Uncle Bob canon, PHPStan, PEST.
 - **`client/CLAUDE.md`:** the UX canon, Vitest, Cypress.
 - **`desktop/CLAUDE.md`:** Electron boundaries and packaging.
-- **`mobile/CLAUDE.md`:** the mat app's Android shell (M12). Its screens are `client/projects/mat`.
+- **`mobile/CLAUDE.md`:** the Android shell that runs Budojo on the phone (M12). Its screens are the SPA's `mobile` build.
 
 **Runbooks** (the *how*) live in [`docs/development/`](./docs/development/README.md): linux-dev, git-flow, release-flow, pr-labels, visual-verification.
 

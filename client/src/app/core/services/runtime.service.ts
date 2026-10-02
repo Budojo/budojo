@@ -35,8 +35,10 @@ export const WEB_CAPABILITIES: readonly Capability[] = ALL_CAPABILITIES.filter(
   (capability) => capability !== 'sync',
 );
 
+export type RuntimeProfile = 'web' | 'desktop' | 'mobile';
+
 interface RuntimeResponse {
-  data: { profile: 'web' | 'desktop'; capabilities: Capability[] };
+  data: { profile: RuntimeProfile; capabilities: Capability[] };
 }
 
 /**
@@ -58,7 +60,7 @@ export class RuntimeService {
   private readonly http = inject(HttpClient);
 
   private readonly capabilitiesSignal = signal<readonly Capability[]>(WEB_CAPABILITIES);
-  private readonly profileSignal = signal<'web' | 'desktop'>('web');
+  private readonly profileSignal = signal<RuntimeProfile>('web');
   private readonly loadedSignal = signal<boolean>(false);
   private loading: Promise<void> | null = null;
 
@@ -108,7 +110,7 @@ export class RuntimeService {
 
 function parseRuntime(
   response: unknown,
-): { profile: 'web' | 'desktop'; capabilities: Capability[] } | null {
+): { profile: RuntimeProfile; capabilities: Capability[] } | null {
   if (typeof response !== 'object' || response === null) {
     return null;
   }
@@ -117,7 +119,10 @@ function parseRuntime(
     return null;
   }
   const { profile, capabilities } = data as { profile?: unknown; capabilities?: unknown };
-  if ((profile !== 'web' && profile !== 'desktop') || !Array.isArray(capabilities)) {
+  if (
+    (profile !== 'web' && profile !== 'desktop' && profile !== 'mobile') ||
+    !Array.isArray(capabilities)
+  ) {
     return null;
   }
   const known = new Set<string>(ALL_CAPABILITIES);

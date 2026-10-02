@@ -25,7 +25,7 @@ final class DesktopDriverGuard
 {
     public static function assert(): void
     {
-        if (! Runtime::isDesktop()) {
+        if (! Runtime::isLocal()) {
             return;
         }
 

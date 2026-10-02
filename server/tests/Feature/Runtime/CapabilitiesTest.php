@@ -35,6 +35,12 @@ it('gives the desktop profile the sync, and none of the multi-user capabilities'
         ->and(Capabilities::has(Capability::PasswordBreachCheck))->toBeFalse();
 });
 
+it('gives the phone the sync, and none of the multi-user capabilities (#2034)', function (): void {
+    config()->set('budojo.runtime', 'mobile');
+
+    expect(Capabilities::all())->toBe([Capability::Sync]);
+});
+
 it('ignores unknown names in the config map rather than crashing boot', function (): void {
     // A typo in config must degrade to "that capability is absent", never to
     // a 500 on every request.
