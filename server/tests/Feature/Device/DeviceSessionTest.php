@@ -66,6 +66,12 @@ describe('who may ask', function (): void {
         deviceSession($this, '')->assertNotFound();
     });
 
+    it('is nobody when the secret is empty, as `BUDOJO_SHELL_SECRET=` makes it: an empty header would match', function (): void {
+        config()->set('budojo.shell.secret', '');
+
+        deviceSession($this, '')->assertNotFound();
+    });
+
     it('is nobody on the web, where there is no shell', function (): void {
         config()->set('budojo.runtime', 'web');
 

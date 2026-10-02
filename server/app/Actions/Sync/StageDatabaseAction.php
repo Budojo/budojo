@@ -6,8 +6,8 @@ namespace App\Actions\Sync;
 
 use App\Support\Sync\IncomingDatabase;
 use App\Support\Sync\IncomingFile;
+use App\Support\Sync\Staged;
 use App\Support\Sync\SyncDatabase;
-use App\Support\Sync\SyncStorage;
 
 /**
  * Puts another device's database beside the live one, for the shell to swap in
@@ -27,27 +27,24 @@ final class StageDatabaseAction
 
         try {
             IncomingFile::receive($body, $incoming);
-            // A version carries no files: a storage an abandoned restore
-            // staged must not come in beside it (#2079).
-            SyncStorage::discardStaged();
-            $this->stageFile($incoming);
+            IncomingDatabase::check($incoming);
+            // Only once it passed: a refused version leaves whatever was
+            // staged as it was. A version carries no files, so the files an
+            // earlier restore staged go with its database (#2079).
+            Staged::clear();
+            $this->stageChecked($incoming);
         } finally {
             @unlink($incoming);
         }
     }
 
-    /** A database already on disk, checked, then staged. */
-    public function stageFile(string $incoming): void
-    {
-        IncomingDatabase::check($incoming);
-        $this->stage($incoming);
-    }
-
     /**
-     * Copied beside the live file, then renamed: a rename within one directory
-     * is atomic, so the shell never finds half a staged file.
+     * A database that has passed `IncomingDatabase::check`, copied beside the
+     * live file, then renamed: a rename within one directory is atomic, so the
+     * shell never finds half a staged file. It is the last thing a stage
+     * writes, since a staged database is what commits one.
      */
-    private function stage(string $incoming): void
+    public function stageChecked(string $incoming): void
     {
         $staged = SyncDatabase::stagedPath();
         $part = "{$staged}.part";
