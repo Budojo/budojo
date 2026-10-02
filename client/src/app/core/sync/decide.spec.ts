@@ -177,6 +177,30 @@ const rows: {
     expected: { kind: 'ask', latest: ref(1, PHONE) },
   },
   {
+    name: 'both first versions landed, its own second: two academies, the owner chooses',
+    local: local(ref(1)),
+    folder: [v(1, PHONE, null, 1_000), v(1, PC, null, 2_000)],
+    expected: { kind: 'ask', latest: ref(1, PHONE) },
+  },
+  {
+    name: 'both first versions landed, its own first: the other device asks, this one does nothing',
+    local: local(ref(1, PHONE)),
+    folder: [v(1, PHONE, null, 1_000), v(1, PC, null, 2_000)],
+    expected: { kind: 'nothing' },
+  },
+  {
+    name: 'its first version lost the race and the other line went on: still two academies',
+    local: local(ref(1)),
+    folder: [v(1, PHONE, null, 1_000), v(1, PC, null, 2_000), v(2, PHONE, ref(1, PHONE))],
+    expected: { kind: 'ask', latest: ref(2, PHONE) },
+  },
+  {
+    name: 'one line down to its first version: a newer version on it is pulled, nobody is asked',
+    local: local(ref(1)),
+    folder: [v(1, PC, null), v(2, PHONE, ref(1))],
+    expected: { kind: 'fast-forward', to: ref(2, PHONE) },
+  },
+  {
     name: 'back after weeks, all its writes held by every device: a fast-forward, nobody is asked',
     local: local(ref(30)),
     folder: [v(44), v(45)],

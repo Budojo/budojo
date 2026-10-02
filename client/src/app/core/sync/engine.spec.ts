@@ -508,6 +508,38 @@ describe('what the round reads and fetches (#2086 review)', () => {
     expect(pc.db.academy).toBe('Eagles BJJ');
   });
 
+  it('asks, and keeps its academy, when its version 1 lands after another academy’s', async () => {
+    let now = 1_000_000;
+    const { remote, key } = await folder(() => now);
+    const pc = new Device('pc4f2a', 'Eagles BJJ');
+    const phone = new Device('phone9c1e', 'Tigers BJJ');
+    // The phone publishes its own academy while the PC's upload is under way.
+    const slow: SyncRemote = {
+      list: (dir) => remote.list(dir),
+      read: (path) => remote.read(path),
+      write: async (path, bytes) => {
+        if (path.startsWith('versions/')) {
+          await sync(phone, remote, key);
+          now += 1_000;
+        }
+        await remote.write(path, bytes);
+      },
+      remove: (path) => remote.remove(path),
+    };
+    expect(await outcome(pc, slow, key)).toEqual({
+      kind: 'pushed',
+      version: { seq: 1, device: 'pc4f2a' },
+    });
+
+    expect(await outcome(pc, remote, key)).toEqual({
+      kind: 'ask',
+      latest: { seq: 1, device: 'phone9c1e' },
+    });
+    expect(pc.db.academy).toBe('Eagles BJJ');
+    expect(await outcome(phone, remote, key)).toEqual({ kind: 'nothing' });
+    expect(phone.db.academy).toBe('Tigers BJJ');
+  });
+
   it('waits for a push that carried no entry while Drive has not listed it: no second version over it', async () => {
     const { remote, key } = await folder();
     const pc = new Device('pc4f2a', 'Eagles BJJ');

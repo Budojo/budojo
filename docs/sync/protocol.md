@@ -200,10 +200,11 @@ protocol (1 byte) | sync key (32 bytes) | first 2 bytes of SHA-256 over the firs
 | The folder's `keys.bjs` names another folder, or is missing | **ask the owner** (checked before deciding) |
 | Its own latest push is not listed, and the folder has also lost the version it was made on | **ask the owner** |
 | … not listed, within 10 minutes of landing | **wait**: the listing lags; look again |
-| … still not listed after that | rebase onto the latest, or push again if the folder is empty |
+| … still not listed after that | rebase onto the latest, or push again if the folder is empty; **ask the owner** if it was a first version and another device's academy is there now |
 | No base, empty folder | nothing, or push version 1 if the device holds an academy |
 | No base, the folder has versions | fast-forward; **ask the owner** if the device holds an academy of its own |
 | The folder is empty | push base + 1 on top of the base: nothing there to lose |
+| The base and the latest come from two different first versions: both devices published their own academy at once | **ask the owner** (the device whose line is the latest does nothing). Told only while the listing holds both lines down to their first versions |
 | The latest is behind the base | **ask the owner:** versions were deleted on Drive |
 | The latest is the base | nothing, or push base + 1 if there are unpushed writes |
 | The latest is newer, and the device has writes to carry (unpushed or unconfirmed) | **rebase**: pull it and replay into it every write it lacks, then push if any were |
