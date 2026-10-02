@@ -71,10 +71,6 @@ public class PhpServerPlugin extends Plugin {
     }
 
     /**
-     * Back from the background: if Android killed the server meanwhile, start it
-     * again now, before the page's next request has to wait for it.
-     */
-    /**
      * Stops the server and starts it again, so that a database the page just
      * staged (a backup it brought back, #2079) is swapped in now rather than at
      * the app's next launch. The answer is {@code start()}'s.
@@ -93,6 +89,10 @@ public class PhpServerPlugin extends Plugin {
         }).start();
     }
 
+    /**
+     * Back from the background: if Android killed the server meanwhile, start it
+     * again now, before the page's next request has to wait for it.
+     */
     @Override
     protected void handleOnResume() {
         if (server != null && !server.isAlive()) {
@@ -133,7 +133,10 @@ public class PhpServerPlugin extends Plugin {
         JSObject out = new JSObject();
 
         if (server != null && server.isAlive()) {
-            if (isHealthy(port)) {
+            // A server busy with one long request, a restore (#2079), answers
+            // nothing else meanwhile: it has one worker. It is waited for, as
+            // its first start is, before it is taken for hung and killed.
+            if (isHealthy(port) || answersWithin(server, port, 60_000)) {
                 out.put("port", port);
                 out.put("shellSecret", shellSecret);
                 out.put("alreadyRunning", true);
@@ -371,6 +374,15 @@ public class PhpServerPlugin extends Plugin {
             throw new IOException("php " + String.join(" ", args) + " exited " + process.exitValue() + ": " + tail(output, 600));
         }
         return output;
+    }
+
+    private static boolean answersWithin(Process process, int port, long timeoutMs) {
+        try {
+            waitForHealth(process, port, timeoutMs);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     private static boolean isHealthy(int port) {

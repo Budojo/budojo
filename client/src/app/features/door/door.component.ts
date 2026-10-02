@@ -1,5 +1,16 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  afterNextRender,
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  ElementRef,
+  inject,
+  Injector,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { firstValueFrom } from 'rxjs';
@@ -20,11 +31,19 @@ import { beltColourVar, beltPaint } from '../../shared/utils/belt-palette';
 import { localeFor } from '../../shared/utils/locale';
 
 type DoorStep =
-  'start' | 'connecting' | 'looking' | 'choose' | 'restoring' | 'not-found' | 'failed';
+  'start' | 'connecting' | 'looking' | 'choose' | 'update' | 'restoring' | 'not-found' | 'failed';
 type DoorFailure = 'offline' | 'newer' | 'unauthorized' | 'unreadable' | 'other';
 
 /** How many of the newest backups the door tries before it says none opens. */
 const TRIES = 3;
+
+/**
+ * The backup this phone was last brought back from: its file name, which
+ * carries when the PC took it. Kept on the phone, so that signing in again
+ * after a sign-out goes straight in (PRD § 5.4) instead of offering to
+ * replace what the phone recorded since.
+ */
+const RESTORED_KEY = 'budojoRestoredBackup';
 
 /**
  * The phone's door (#2079, PRD § 5.4): **Accedi con Google**, and the gym
@@ -54,6 +73,9 @@ export class DoorComponent {
   private readonly router = inject(Router);
   private readonly language = inject(LanguageService);
 
+  private readonly injector = inject(Injector);
+  private readonly stepRegion = viewChild<ElementRef<HTMLElement>>('stepRegion');
+
   protected readonly step = signal<DoorStep>('start');
   protected readonly account = signal<string | null>(null);
   protected readonly found = signal<BackupInspection | null>(null);
@@ -77,6 +99,20 @@ export class DoorComponent {
 
   /** The archive the door found, kept between "found" and the owner's choice. */
   private archive: File | null = null;
+  private archiveName: string | null = null;
+  /** The token Drive was last asked with, dropped when Drive refuses it. */
+  private lastToken: string | null = null;
+
+  constructor() {
+    // The button that had focus is gone once the step changes: focus moves to
+    // the step, which a screen reader then reads (WCAG 2.4.3).
+    effect(() => {
+      if (this.step() === 'start') {
+        return;
+      }
+      afterNextRender(() => this.stepRegion()?.nativeElement.focus(), { injector: this.injector });
+    });
+  }
 
   async signInWithGoogle(): Promise<void> {
     const drive = this.drive;
@@ -97,26 +133,35 @@ export class DoorComponent {
       return;
     }
 
-    const backups = this.backupsWith(
-      async () => (await drive.authorize({ interactive: false })).accessToken,
-    );
+    const backups = this.backupsWith(async () => {
+      this.lastToken = (await drive.authorize({ interactive: false })).accessToken;
+      return this.lastToken;
+    });
     this.step.set('looking');
     try {
       this.account.set(await backups.account());
-      const found = await this.firstThatOpens(
-        backups,
-        (await backups.newestFirst()).slice(0, TRIES),
-      );
+      const newest = (await backups.newestFirst()).slice(0, TRIES);
+      if (
+        newest.length > 0 &&
+        newest[0].name === restoredFrom() &&
+        (await this.enteredAsTheOwner())
+      ) {
+        return;
+      }
+      const found = await this.firstThatOpens(backups, newest);
       if (found === null || found.inspection.backup.academy === null) {
         this.step.set('not-found');
         return;
       }
       this.archive = found.archive;
+      this.archiveName = found.name;
       this.found.set(found.inspection);
       if (found.inspection.here === null) {
         await this.useDrive();
       } else {
-        this.step.set('choose');
+        // Brought back from Drive before: the PC has a newer backup. Else, a
+        // gym of the phone's own beside the one on Drive.
+        this.step.set(restoredFrom() === null ? 'choose' : 'update');
       }
     } catch (error) {
       this.fail(error);
@@ -134,6 +179,7 @@ export class DoorComponent {
     try {
       await firstValueFrom(this.device.restore(archive));
       await restartPhoneServer(server);
+      rememberRestored(this.archiveName);
       await this.enter();
     } catch (error) {
       this.fail(error);
@@ -171,6 +217,19 @@ export class DoorComponent {
     }));
   }
 
+  /** The phone's own owner, when it has one; false on a phone nobody has set up. */
+  private async enteredAsTheOwner(): Promise<boolean> {
+    try {
+      await this.enter();
+      return true;
+    } catch (error) {
+      if (error instanceof HttpErrorResponse && error.status === 404) {
+        return false;
+      }
+      throw error;
+    }
+  }
+
   private async enter(): Promise<void> {
     if (this.entering()) {
       return;
@@ -191,13 +250,13 @@ export class DoorComponent {
   private async firstThatOpens(
     backups: PcBackups,
     candidates: PcBackup[],
-  ): Promise<{ archive: File; inspection: BackupInspection } | null> {
+  ): Promise<{ archive: File; name: string; inspection: BackupInspection } | null> {
     for (const candidate of candidates) {
       const bytes = await backups.download(candidate);
       const archive = new File([buffer(bytes)], candidate.name, { type: 'application/zip' });
       try {
         const answer = await firstValueFrom(this.device.inspect(archive));
-        return { archive, inspection: answer.data };
+        return { archive, name: candidate.name, inspection: answer.data };
       } catch (error) {
         if (!(error instanceof HttpErrorResponse) || refusal(error) !== 'unreadable') {
           throw error;
@@ -208,9 +267,36 @@ export class DoorComponent {
   }
 
   private fail(error: unknown): void {
+    if (
+      error instanceof RemoteError &&
+      error.reason === 'unauthorized' &&
+      this.lastToken !== null
+    ) {
+      // Google cached a token Drive refused: «Riprova» must ask for a new one.
+      void this.drive?.clearToken({ token: this.lastToken }).catch(() => undefined);
+      this.lastToken = null;
+    }
     this.failure.set(failureOf(error));
     this.failureDetail.set(error instanceof Error ? error.message : String(error));
     this.step.set('failed');
+  }
+}
+
+function restoredFrom(): string | null {
+  try {
+    return localStorage.getItem(RESTORED_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function rememberRestored(name: string | null): void {
+  try {
+    if (name !== null) {
+      localStorage.setItem(RESTORED_KEY, name);
+    }
+  } catch {
+    // A phone that cannot keep it asks again at the next sign-in: never worse.
   }
 }
 

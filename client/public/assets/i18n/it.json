@@ -3650,15 +3650,20 @@
     },
     "notFound": {
       "title": "Nessuna palestra su {{email}}",
-      "body": "Se l'hai creata sul PC, aprilo e collega Google Drive da Dati e backup. Poi riprova.",
-      "create": "Crea una nuova palestra"
+      "body": "Se l'hai creata sul PC, aprilo e collega Google Drive da Dati e backup. Poi riprova."
     },
     "failed": {
       "offline": "Serve internet per cercare la palestra su Google Drive.",
       "unauthorized": "Google non ha dato l'accesso a Drive. Riprova.",
       "newer": "Il backup viene da una versione più nuova di Budojo. Aggiorna l'app, poi riprova.",
       "unreadable": "Il backup su Drive non si apre. Fai un nuovo backup dal PC, poi riprova.",
-      "other": "Qualcosa non è andato."
+      "other": "Qualcosa è andato storto."
+    },
+    "update": {
+      "lead": "Sul PC c'è un backup di {{name}} più recente di quello sul telefono.",
+      "enter": "Entra con i dati del telefono",
+      "useDrive": "Aggiorna dal PC",
+      "hint": "Aggiornare sostituisce quello che hai cambiato sul telefono dall'ultima volta."
     }
   }
 }

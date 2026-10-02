@@ -5,6 +5,17 @@
 // the colours of the belts its athletes hold.
 
 .door {
+  // The step holds focus only to be read; it draws no ring of its own.
+  &__step {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+
+    &:focus {
+      outline: none;
+    }
+  }
+
   &__actions {
     display: flex;
     flex-direction: column;

@@ -3650,8 +3650,7 @@
     },
     "notFound": {
       "title": "No gym on {{email}}",
-      "body": "If you set it up on the PC, open it and connect Google Drive under Data & backup. Then try again.",
-      "create": "Create a new gym"
+      "body": "If you set it up on the PC, open it and connect Google Drive under Data & backup. Then try again."
     },
     "failed": {
       "offline": "Looking for the gym on Google Drive needs the internet.",
@@ -3659,6 +3658,12 @@
       "newer": "The backup comes from a newer Budojo. Update the app, then try again.",
       "unreadable": "The backup on Drive doesn't open. Take a new backup on the PC, then try again.",
       "other": "Something went wrong."
+    },
+    "update": {
+      "lead": "The PC has a newer backup of {{name}} than the one on this phone.",
+      "enter": "Go in with the phone's data",
+      "useDrive": "Update from the PC",
+      "hint": "Updating replaces what you changed on the phone since last time."
     }
   }
 }

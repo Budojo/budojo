@@ -37,13 +37,16 @@ interface Setup {
   inspect?: DeviceService['inspect'];
   session?: DeviceService['session'];
   authorize?: () => Promise<{ accessToken: string }>;
-  account?: () => Promise<string | null>;
+  account?: (token: () => Promise<string>) => Promise<string | null>;
 }
 
 function setup(options: Setup = {}) {
   const backups = options.backups ?? [{ id: 'b2', name: 'budojo-backup-20261001-165132.zip' }];
   const reader = {
-    account: vi.fn(options.account ?? (async () => 'mario@gmail.com')),
+    token: async (): Promise<string> => '',
+    account: vi.fn(async () =>
+      (options.account ?? (async (token) => (await token()) && 'mario@gmail.com'))(reader.token),
+    ),
     newestFirst: vi.fn(async () => backups),
     download: vi.fn(async (backup: PcBackup) => new TextEncoder().encode(`zip of ${backup.id}`)),
   };
@@ -58,7 +61,7 @@ function setup(options: Setup = {}) {
   };
   const drive = {
     authorize: vi.fn(options.authorize ?? (async () => ({ accessToken: 'google-token' }))),
-    clearToken: vi.fn(),
+    clearToken: vi.fn(async () => undefined),
   };
   TestBed.configureTestingModule({
     imports: [DoorComponent],
@@ -72,7 +75,13 @@ function setup(options: Setup = {}) {
       { provide: DeviceService, useValue: device },
       { provide: PHP_SERVER, useValue: server },
       { provide: DRIVE_AUTH, useValue: drive },
-      { provide: PC_BACKUPS, useValue: () => reader },
+      {
+        provide: PC_BACKUPS,
+        useValue: (token: () => Promise<string>) => {
+          reader.token = token;
+          return reader;
+        },
+      },
     ],
   });
   const auth = TestBed.inject(AuthService);
@@ -90,6 +99,7 @@ function setup(options: Setup = {}) {
 
 afterEach(() => {
   delete (window as { __BUDOJO_MOBILE__?: unknown }).__BUDOJO_MOBILE__;
+  localStorage.removeItem('budojoRestoredBackup');
 });
 
 describe('the door on a phone that holds no academy', () => {
@@ -159,7 +169,7 @@ describe('the door on a phone that holds no academy', () => {
 
     expect(cy('door-not-found')?.textContent).toContain('mario@gmail.com');
     expect(cy('door-retry')).not.toBeNull();
-    expect(cy('door-create')).not.toBeNull();
+    expect(cy('door-not-found-without-google')?.textContent).toContain('Continue without Google');
     expect(device.restore).not.toHaveBeenCalled();
   });
 });
@@ -277,5 +287,94 @@ describe('continuing without Google', () => {
     await component.continueWithoutGoogle();
 
     expect(router.navigateByUrl).toHaveBeenCalledWith('/auth/register');
+  });
+});
+
+describe('signing in again on a phone the door brought the gym to (PRD § 5.4)', () => {
+  it('remembers which backup it brought back', async () => {
+    const { component } = setup();
+
+    await component.signInWithGoogle();
+
+    expect(localStorage.getItem('budojoRestoredBackup')).toBe('budojo-backup-20261001-165132.zip');
+  });
+
+  it('goes straight in when Drive has nothing newer: what the phone recorded since is kept', async () => {
+    localStorage.setItem('budojoRestoredBackup', 'budojo-backup-20261001-165132.zip');
+    const { component, reader, device, router } = setup();
+
+    await component.signInWithGoogle();
+
+    expect(reader.download).not.toHaveBeenCalled();
+    expect(device.restore).not.toHaveBeenCalled();
+    expect(router.navigateByUrl).toHaveBeenCalledWith('/dashboard');
+  });
+
+  it("offers the PC's newer backup, and goes in on the phone's own by default", async () => {
+    localStorage.setItem('budojoRestoredBackup', 'budojo-backup-20260930-100000.zip');
+    const { component, render, cy, device, server } = setup({
+      inspect: () => of({ data: inspection(KAIZEN) }),
+    });
+
+    await component.signInWithGoogle();
+    render();
+
+    expect(cy('door-update')).not.toBeNull();
+    expect(cy('door-keep-here')?.querySelector('button')?.className).not.toContain('outlined');
+    expect(device.restore).not.toHaveBeenCalled();
+    expect(server.restart).not.toHaveBeenCalled();
+  });
+
+  it("brings the newer backup in only on the owner's word", async () => {
+    localStorage.setItem('budojoRestoredBackup', 'budojo-backup-20260930-100000.zip');
+    const { component, device } = setup({ inspect: () => of({ data: inspection(KAIZEN) }) });
+    await component.signInWithGoogle();
+
+    await component.useDrive();
+
+    expect(device.restore).toHaveBeenCalledTimes(1);
+    expect(localStorage.getItem('budojoRestoredBackup')).toBe('budojo-backup-20261001-165132.zip');
+  });
+
+  it('restores as on a new phone when the remembered phone has no owner any more', async () => {
+    localStorage.setItem('budojoRestoredBackup', 'budojo-backup-20261001-165132.zip');
+    const noOwner = new HttpErrorResponse({ status: 404, error: { code: 'no_owner' } });
+    const session = vi
+      .fn()
+      .mockReturnValueOnce(throwError(() => noOwner))
+      .mockReturnValueOnce(of(SESSION));
+    const { component, device } = setup({ session });
+
+    await component.signInWithGoogle();
+
+    expect(device.restore).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('a token Drive refuses', () => {
+  it('is dropped, so «Try again» asks Google for a new one', async () => {
+    const { component, drive } = setup({
+      authorize: async () => ({ accessToken: 'stale-token' }),
+      account: async (token) => {
+        await token();
+        throw new RemoteError('unauthorized', 'refused');
+      },
+    });
+
+    await component.signInWithGoogle();
+
+    expect(drive.clearToken).toHaveBeenCalledWith({ token: 'stale-token' });
+  });
+});
+
+describe('a step that replaces the button that had focus', () => {
+  it('takes the focus, so a screen reader reads it', async () => {
+    const { component, render, el } = setup({ inspect: () => of({ data: inspection(PROVA) }) });
+
+    await component.signInWithGoogle();
+    render();
+    await new Promise((resolve) => setTimeout(resolve));
+
+    expect(document.activeElement).toBe(el.querySelector('.door__step'));
   });
 });

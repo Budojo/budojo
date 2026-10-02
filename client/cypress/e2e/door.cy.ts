@@ -153,7 +153,23 @@ describe('the door on the phone (#2079)', () => {
     cy.get('@restart').should('not.have.been.called');
   });
 
-  it('is where signing out lands', () => {
+  it('is where signing out lands, signed out before the server answers', () => {
+    const stubs = visitTheDoor(null);
+    // The revoke answers late: the door must not wait for it, nor bounce back in.
+    cy.intercept('POST', '/api/v1/auth/logout', { statusCode: 204, delay: 2000 }).as('logout');
+    cy.visitAuthenticated('/dashboard/more', 'owner-token', {
+      onBeforeLoad: (win) => asThePhone(win, stubs),
+    });
+
+    cy.get('[data-cy="owner-more-signout"]').click();
+
+    cy.location('pathname').should('eq', '/');
+    cy.get('[data-cy="door-google"]').should('be.visible');
+    cy.wait('@logout').its('request.headers.authorization').should('eq', 'Bearer owner-token');
+    cy.location('pathname').should('eq', '/');
+  });
+
+  it('is where the sign-in page sends the phone', () => {
     visitTheDoor(null);
     cy.visit('/auth/login', {
       onBeforeLoad: (win) => asThePhone(win, { restart: cy.stub(), authorize: cy.stub() }),
