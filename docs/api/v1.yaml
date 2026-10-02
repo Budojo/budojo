@@ -7394,6 +7394,108 @@ paths:
                   message: { type: string }
               example: { code: newer, message: 'The database is from a newer Budojo (schema 2027_01_10_090000_add_x). Update Budojo first.' }
 
+  /sync/files:
+    get:
+      operationId: syncFilesIndex
+      summary: The file contents this database names, and which this device holds
+      description: |
+        The files side of the sync (#2030): documents, athletes' photos,
+        avatars and the academy's logo travel apart from the database, one
+        file each on Drive, named by its content (`files/<sha256>.bjs`).
+
+        Every row naming a file records the SHA-256 of its bytes. This lists
+        each content once (two athletes with the same picture share one), its
+        size here, and whether this device holds it: a file at the row's path
+        **with that content**. Ids differ between devices, so a photo at
+        `athletes/photos/57.jpg` that is another athlete's counts as absent.
+        The app sends the contents it holds and Drive lacks, and fetches the
+        ones it lacks.
+      tags: [sync]
+      responses:
+        '200':
+          description: Each content once, sorted by hash
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required: [sha256, size, present, complete]
+                      properties:
+                        sha256: { type: string, pattern: '^[0-9a-f]{64}$' }
+                        size: { type: integer, nullable: true, description: 'Bytes; null when not held here' }
+                        present: { type: boolean, description: 'Held at one of its paths: this device can send it' }
+                        complete:
+                          type: boolean
+                          description: |
+                            Held at every path naming it. False while one row
+                            still lacks its file, for instance the same PDF
+                            for a second athlete.
+        '401': { description: Unauthenticated }
+        '403': { description: Forbidden — the user is not an owner. }
+        '404': { description: The runtime profile has no `sync` capability. }
+
+  /sync/files/{sha256}:
+    parameters:
+      - name: sha256
+        in: path
+        required: true
+        description: The content's SHA-256, lowercase hex. Anything else is 404.
+        schema: { type: string, pattern: '^[0-9a-f]{64}$' }
+    get:
+      operationId: syncFilesShow
+      summary: The bytes of a content this device holds
+      description: |
+        For the app to seal and send to Drive (#2030). The bytes as stored:
+        an encrypted certificate stays encrypted, under the academy's
+        document key, which both devices share once paired.
+      tags: [sync]
+      responses:
+        '200':
+          description: The file
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+        '401': { description: Unauthenticated }
+        '403': { description: Forbidden — the user is not an owner. }
+        '404':
+          description: |
+            No `sync` capability; or `code` `unknown`, no row names the
+            content; or `missing`, this device does not hold it.
+    put:
+      operationId: syncFilesStore
+      summary: Another device's file, for every row naming its content
+      description: |
+        Written at every path a row names for the content, replacing what a
+        path held when it was not that content (another device's athlete 57
+        is not this one's). The bytes must hash to the content named.
+      tags: [sync]
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema: { type: string, format: binary }
+      responses:
+        '204': { description: Written }
+        '401': { description: Unauthenticated }
+        '403': { description: Forbidden — the user is not an owner. }
+        '404':
+          description: No `sync` capability; or `code` `unknown`, no row names the content.
+        '422':
+          description: '`code` `mismatch`: the bytes are not the content named. Nothing is written.'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [code, message]
+                properties:
+                  code: { type: string, enum: [mismatch] }
+                  message: { type: string }
+
   /stats/payments/summary:
     get:
       operationId: statsPaymentsSummary

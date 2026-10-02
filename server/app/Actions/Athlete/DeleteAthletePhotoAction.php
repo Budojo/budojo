@@ -25,7 +25,7 @@ class DeleteAthletePhotoAction
         }
 
         Storage::disk('public')->delete($path);
-        $athlete->forceFill(['photo_path' => null])->save();
+        $athlete->forceFill(['photo_path' => null, 'photo_sha256' => null])->save();
 
         return $athlete->refresh();
     }

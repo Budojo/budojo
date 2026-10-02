@@ -685,6 +685,15 @@ Route::middleware('auth:sanctum')->group(function (): void {
         ->group(function (): void {
             Route::get('export', [\App\Http\Controllers\Sync\SyncController::class, 'export'])->name('sync.export');
             Route::put('stage', [\App\Http\Controllers\Sync\SyncController::class, 'stage'])->name('sync.stage');
+            // Files by their content (#2030 part 2): never by path, which
+            // differs between devices for the same athlete.
+            Route::get('files', [\App\Http\Controllers\Sync\SyncFilesController::class, 'index'])->name('sync.files');
+            Route::get('files/{sha256}', [\App\Http\Controllers\Sync\SyncFilesController::class, 'show'])
+                ->where('sha256', '[0-9a-f]{64}')
+                ->name('sync.files.show');
+            Route::put('files/{sha256}', [\App\Http\Controllers\Sync\SyncFilesController::class, 'store'])
+                ->where('sha256', '[0-9a-f]{64}')
+                ->name('sync.files.store');
         });
 
     // Owner-only search + stats (#774). The Cmd/Ctrl-K palette and the
