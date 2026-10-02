@@ -3627,5 +3627,38 @@
     "whatsapp": "Open WhatsApp",
     "copied": "Week copied: paste it in the group.",
     "copyFailed": "It couldn't be copied: use «Open WhatsApp»."
+  },
+  "door": {
+    "tagline": "Your gym, on your phone too.",
+    "google": "Sign in with Google",
+    "withoutGoogle": "Continue without Google",
+    "connecting": "Confirm with Google…",
+    "looking": "Looking for your gym on Google Drive…",
+    "athletesOne": "{{count}} active athlete",
+    "athletesOther": "{{count}} active athletes",
+    "takenAt": "PC backup of {{when}}",
+    "restoring": "Bringing {{name}} to this phone…",
+    "oneWay": "For now, changes made on the phone don't go back to the PC.",
+    "retry": "Try again",
+    "choose": {
+      "lead": "This phone already holds a gym. Which one do you want to use?",
+      "onDrive": "On Google Drive",
+      "onPhone": "On this phone",
+      "useDrive": "Use {{name}} from Drive",
+      "useDriveHint": "It replaces the data on this phone.",
+      "keepHere": "Keep {{name}}"
+    },
+    "notFound": {
+      "title": "No gym on {{email}}",
+      "body": "If you set it up on the PC, open it and connect Google Drive under Data & backup. Then try again.",
+      "create": "Create a new gym"
+    },
+    "failed": {
+      "offline": "Looking for the gym on Google Drive needs the internet.",
+      "unauthorized": "Google didn't grant access to Drive. Try again.",
+      "newer": "The backup comes from a newer Budojo. Update the app, then try again.",
+      "unreadable": "The backup on Drive doesn't open. Take a new backup on the PC, then try again.",
+      "other": "Something went wrong."
+    }
   }
 }

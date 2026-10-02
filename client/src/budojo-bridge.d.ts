@@ -219,5 +219,9 @@ interface BudojoBridge {
 interface Window {
   readonly __BUDOJO__?: BudojoBridge;
   /** The phone's server, published by `main.ts` once `PhpServerPlugin` has started it (#2034). */
-  __BUDOJO_MOBILE__?: { readonly apiBase: string };
+  __BUDOJO_MOBILE__?: {
+    readonly apiBase: string;
+    /** The shell's secret for the `/device` routes (#2079); absent from a shell older than the door. */
+    readonly shellSecret?: string;
+  };
 }

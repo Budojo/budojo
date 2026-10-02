@@ -3627,5 +3627,38 @@
     "whatsapp": "Apri WhatsApp",
     "copied": "Settimana copiata: incollala nel gruppo.",
     "copyFailed": "Non è stato possibile copiarla: usa «Apri WhatsApp»."
+  },
+  "door": {
+    "tagline": "La tua palestra, anche sul telefono.",
+    "google": "Accedi con Google",
+    "withoutGoogle": "Continua senza Google",
+    "connecting": "Conferma con Google…",
+    "looking": "Cerco la tua palestra su Google Drive…",
+    "athletesOne": "{{count}} atleta attivo",
+    "athletesOther": "{{count}} atleti attivi",
+    "takenAt": "backup del PC del {{when}}",
+    "restoring": "Riporto {{name}} sul telefono…",
+    "oneWay": "Per ora le modifiche fatte sul telefono non tornano sul PC.",
+    "retry": "Riprova",
+    "choose": {
+      "lead": "Su questo telefono c'è già una palestra. Quale vuoi usare?",
+      "onDrive": "Su Google Drive",
+      "onPhone": "Su questo telefono",
+      "useDrive": "Usa {{name}} da Drive",
+      "useDriveHint": "Sostituisce i dati di questo telefono.",
+      "keepHere": "Tieni {{name}}"
+    },
+    "notFound": {
+      "title": "Nessuna palestra su {{email}}",
+      "body": "Se l'hai creata sul PC, aprilo e collega Google Drive da Dati e backup. Poi riprova.",
+      "create": "Crea una nuova palestra"
+    },
+    "failed": {
+      "offline": "Serve internet per cercare la palestra su Google Drive.",
+      "unauthorized": "Google non ha dato l'accesso a Drive. Riprova.",
+      "newer": "Il backup viene da una versione più nuova di Budojo. Aggiorna l'app, poi riprova.",
+      "unreadable": "Il backup su Drive non si apre. Fai un nuovo backup dal PC, poi riprova.",
+      "other": "Qualcosa non è andato."
+    }
   }
 }

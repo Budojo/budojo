@@ -185,6 +185,15 @@ export class AuthService {
     this.storeToken(token);
   }
 
+  /**
+   * A session the server opened by another way than a password: the phone's
+   * door (#2079). The same answer as a login, and the same state after it.
+   */
+  adoptSession(res: AuthResponse): void {
+    this.storeToken(res.token);
+    this.user.set(res.data);
+  }
+
   logout(): void {
     // Revoke the token on the server (#1227) — a stored desktop credential
     // must not stay valid after sign-out — then clear locally regardless of
