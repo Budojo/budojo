@@ -47,6 +47,12 @@ public class PhpServerPlugin extends Plugin {
 
     private Process server;
     private int port;
+    /**
+     * The device id the running server journals under, null while it runs
+     * without one (#2046). The page syncs only under it: a write made before
+     * the server had the id is in no journal, and a sync would never carry it.
+     */
+    private volatile String journalingDevice;
     private boolean opcacheOff;
 
     /**
@@ -150,14 +156,16 @@ public class PhpServerPlugin extends Plugin {
 
     /**
      * This phone's place in the academy's sync, or an empty answer before it
-     * joined: its device id, the folder id and the sync key (#2046).
+     * joined: its device id, the folder id and the sync key (#2046). Empty too
+     * until the running server journals under that id: the door restarts it
+     * once the phone joined.
      */
     @PluginMethod
     public void syncIdentity(PluginCall call) {
         try {
             JSONObject sync = syncFile(getContext().getFilesDir());
             JSObject out = new JSObject();
-            if (sync != null) {
+            if (sync != null && sync.getString("device").equals(journalingDevice)) {
                 out.put("device", sync.getString("device"));
                 out.put("folder", sync.getString("folder"));
                 out.put("syncKey", sync.getString("syncKey"));
@@ -388,6 +396,7 @@ public class PhpServerPlugin extends Plugin {
         }
         long tReady = System.nanoTime();
 
+        journalingDevice = env.get("BUDOJO_DEVICE_ID");
         out.put("port", port);
         out.put("shellSecret", shellSecret);
         out.put("extracted", extracted);

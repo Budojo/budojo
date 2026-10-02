@@ -1,5 +1,6 @@
 @if (state().kind !== 'off') {
   <button
+    #pillButton
     type="button"
     class="sync-pill"
     [class.sync-pill--attention]="attention()"
@@ -14,7 +15,8 @@
     }
   </button>
 
-  <p-popover #detail>
+  <!-- The detail takes the focus, and gives it back to the pill when it closes. -->
+  <p-popover #detail (onHide)="pillButton.focus()">
     <div class="sync-detail" data-cy="sync-detail">
       <p class="sync-detail__title">{{ sentence() }}</p>
       @if (hint(); as text) {
@@ -23,7 +25,8 @@
       <p-button
         [label]="(state().kind === 'reconnect' ? 'sync.reconnect' : 'sync.now') | translate"
         [icon]="state().kind === 'reconnect' ? 'pi pi-link' : 'pi pi-sync'"
-        [loading]="busy() || state().kind === 'syncing'"
+        [loading]="busy()"
+        [autofocus]="true"
         [fluid]="true"
         (onClick)="act()"
         data-cy="sync-detail-action"

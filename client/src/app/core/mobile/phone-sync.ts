@@ -1,7 +1,10 @@
 import { inject, Provider } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
+import { AuthService } from '../services/auth.service';
 import { DriveRemote } from '../sync/drive-remote';
 import { RemoteError, SyncRemote } from '../sync/remote';
 import { SYNC_PLATFORM, SyncPlatform } from '../sync/sync.service';
+import { DeviceService } from './device.service';
 import { DriveAuthPlugin } from './drive-auth';
 import { PhpServerPlugin, restartPhoneServer } from './phone-server';
 import { DRIVE_AUTH, PHP_SERVER } from './shell-plugins';
@@ -12,12 +15,19 @@ import { DRIVE_AUTH, PHP_SERVER } from './shell-plugins';
  *   once the door joined the phone (`adoptKeys`);
  * - **Drive** from the page, with `DriveAuthPlugin`'s token;
  * - **the swap** by restarting the server, which swaps a staged database in at
- *   every start.
+ *   every start. The database swapped in is another device's, and holds none
+ *   of this phone's sessions: the owner's comes back through the shell's
+ *   secret (`/device/session`, #2079), as at the door, before the round goes
+ *   on to its next call.
  *
  * The phone joins with the keys the PC made, so it never publishes into an
  * empty folder: the PC does (`publishesFirst`).
  */
-export function phoneSyncPlatform(server: PhpServerPlugin, drive: DriveAuthPlugin): SyncPlatform {
+export function phoneSyncPlatform(
+  server: PhpServerPlugin,
+  drive: DriveAuthPlugin,
+  reopenSession: () => Promise<void>,
+): SyncPlatform {
   let lastToken: string | null = null;
   const token = async (): Promise<string> => {
     try {
@@ -42,7 +52,9 @@ export function phoneSyncPlatform(server: PhpServerPlugin, drive: DriveAuthPlugi
       return device && folder && syncKey ? { device, folder, syncKey } : null;
     },
     remote: freshTokenOnce(new DriveRemote(token), dropToken),
-    shell: { swapIn: () => restartPhoneServer(server) },
+    shell: {
+      swapIn: () => restartPhoneServer(server, reopenSession),
+    },
     publishesFirst: false,
     reconnect: async () => {
       await dropToken();
@@ -82,7 +94,13 @@ export function providePhoneSync(): Provider {
     useFactory: (): SyncPlatform | null => {
       const server = inject(PHP_SERVER);
       const drive = inject(DRIVE_AUTH);
-      return server === null || drive === null ? null : phoneSyncPlatform(server, drive);
+      const device = inject(DeviceService);
+      const auth = inject(AuthService);
+      return server === null || drive === null
+        ? null
+        : phoneSyncPlatform(server, drive, async () => {
+            auth.adoptSession(await firstValueFrom(device.session()));
+          });
     },
   };
 }

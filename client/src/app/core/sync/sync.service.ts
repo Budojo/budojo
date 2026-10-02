@@ -234,9 +234,16 @@ export class SyncService {
         case 'needs-rebase':
           this.stateSignal.set({ kind: 'needs-rebase', count: await this.pending(device) });
           return;
-        case 'wait':
+        case 'wait': {
+          // Its push is not listed yet: what it carried is not on Drive for
+          // sure, so it still counts as to send.
+          const count = await this.pending(device);
+          this.stateSignal.set(
+            count > 0 ? { kind: 'pending', count, offline: false } : { kind: 'syncing' },
+          );
           this.schedule(WAIT_RETRY_MS);
           return;
+        }
         case 'retry':
           this.again = true;
           return;
@@ -269,12 +276,16 @@ export class SyncService {
     this.schedule(FAILURE_RETRY_MS);
   }
 
-  /** The writes in no version yet; 0 when even that cannot be told. */
+  /**
+   * The writes in no version the folder lists yet: a push whose upload failed
+   * halfway counts them as sent (`pushedThrough`) before Drive has them.
+   * 0 when even that cannot be told.
+   */
   private async pending(device: string): Promise<number> {
     try {
-      const pushedThrough = loadLedger(device).pushedThrough;
+      const listedThrough = loadLedger(device).listedThrough;
       return (await this.server.journal()).filter(
-        (entry) => pushedThrough === null || entry.id > pushedThrough,
+        (entry) => listedThrough === null || entry.id > listedThrough,
       ).length;
     } catch {
       return 0;

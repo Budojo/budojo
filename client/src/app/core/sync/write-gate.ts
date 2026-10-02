@@ -8,8 +8,12 @@ const READS = new Set(['GET', 'HEAD', 'OPTIONS']);
 /** The academy's API on this device's own server. */
 const API = /\/api\/v1\//;
 
-/** The sync's own requests, which run while the writes are held. */
-const SYNC = /\/api\/v1\/sync\//;
+/**
+ * The sync's own requests, which run while the writes are held: the server's
+ * sync API, and the session the swap opens again on the database it brought
+ * in (`/device/session`).
+ */
+const SYNC = /\/api\/v1\/(sync|device)\//;
 
 /**
  * The page's own writes to its server (#2046), the one writer it has:
