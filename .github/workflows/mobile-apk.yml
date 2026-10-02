@@ -190,3 +190,41 @@ jobs:
           name: Budojo-Android-${{ env.VERSION_NAME }}
           path: ${{ runner.temp }}/Budojo-Android-${{ env.VERSION_NAME }}.apk
           retention-days: 14
+
+  # The owner's ask (#2079): each APK meets a real Android before it meets
+  # them. An emulator shaped like a common phone (Android 14, a Galaxy
+  # A-class 1080x2340 screen) installs it, opens it, and photographs each
+  # screen it reaches. The photos are this run's artifact.
+  emulator:
+    name: 📱 On an Android emulator
+    needs: apk
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      VERSION_NAME: 0.0.${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: Budojo-Android-${{ env.VERSION_NAME }}
+          path: ${{ runner.temp }}/apk
+
+      - name: Let the runner use KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Boot a Galaxy A-class phone, Android 14
+        run: mobile/emulator/boot.sh
+
+      - name: Open the app and photograph each screen
+        run: mobile/emulator/smoke.sh "$RUNNER_TEMP/apk/Budojo-Android-${VERSION_NAME}.apk" "$RUNNER_TEMP/shots"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Budojo-Android-${{ env.VERSION_NAME }}-emulator
+          path: ${{ runner.temp }}/shots
+          retention-days: 14
