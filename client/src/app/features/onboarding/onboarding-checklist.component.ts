@@ -5,11 +5,7 @@ import { ConfirmationService, MessageService } from 'primeng/api';
 import { ConfirmPopupModule } from 'primeng/confirmpopup';
 import { TooltipModule } from 'primeng/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import {
-  ONBOARDING_STEPS,
-  OnboardingService,
-  OnboardingStep,
-} from '../../core/services/onboarding.service';
+import { OnboardingService, OnboardingStep } from '../../core/services/onboarding.service';
 import { CONFIRM_REJECT_BUTTON } from '../../shared/utils/confirm-buttons';
 
 /**
@@ -76,10 +72,10 @@ export class OnboardingChecklistComponent {
   private readonly messageService = inject(MessageService);
   private readonly translate = inject(TranslateService);
 
-  protected readonly steps = ONBOARDING_STEPS;
+  protected readonly steps = this.onboardingService.availableSteps;
   protected readonly visible = this.onboardingService.checklistVisible;
   protected readonly progress = this.onboardingService.progress;
-  protected readonly total = ONBOARDING_STEPS.length;
+  protected readonly total = computed(() => this.steps().length);
 
   protected readonly completedSet = computed(
     () => new Set<string>(this.onboardingService.completedSteps()),

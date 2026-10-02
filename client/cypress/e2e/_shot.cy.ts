@@ -26,6 +26,12 @@ const RUNTIME_CAPABILITIES: Record<string, string[]> = {
   mobile: ['sync'],
 };
 const runtime = String(Cypress.env('RUNTIME') ?? '');
+if (runtime !== '' && !(runtime in RUNTIME_CAPABILITIES)) {
+  // A typo would otherwise shoot the web nav under a name that says otherwise.
+  throw new Error(
+    `Unknown RUNTIME "${runtime}": use ${Object.keys(RUNTIME_CAPABILITIES).join(' or ')}.`,
+  );
+}
 
 /**
  * The shell's own calls, stubbed so the page renders at all.
@@ -42,7 +48,7 @@ const runtime = String(Cypress.env('RUNTIME') ?? '');
  */
 function stubShell(): void {
   cy.intercept('GET', '/api/v1/**', { statusCode: 200, body: { data: [] } });
-  if (runtime in RUNTIME_CAPABILITIES) {
+  if (runtime !== '') {
     cy.intercept('GET', '/api/v1/runtime', {
       statusCode: 200,
       body: { data: { profile: runtime, capabilities: RUNTIME_CAPABILITIES[runtime] } },

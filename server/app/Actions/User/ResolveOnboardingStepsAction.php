@@ -91,7 +91,7 @@ final class ResolveOnboardingStepsAction
         // key from the same list, and a response ordered by when a row
         // happened to be found would read as arbitrary.
         return array_values(array_filter(
-            OnboardingStep::all(),
+            OnboardingStep::available(),
             static fn (string $step): bool => isset($done[$step]),
         ));
     }

@@ -29,6 +29,21 @@ describe('RuntimeService', () => {
     expect(service.profile()).toBe('web');
   });
 
+  // A surface that only some runtimes lack (the phone's document upload,
+  // #2034) must not paint on the optimistic default and then vanish.
+  it('confirms a capability only once the server has answered', async () => {
+    expect(service.hasConfirmed()('document_upload')).toBe(false);
+
+    const loading = service.load();
+    http
+      .expectOne('/api/v1/runtime')
+      .flush({ data: { profile: 'desktop', capabilities: ['document_upload', 'sync'] } });
+    await loading;
+
+    expect(service.hasConfirmed()('document_upload')).toBe(true);
+    expect(service.hasConfirmed()('community')).toBe(false);
+  });
+
   it('keeps the sync only when a device reports it', async () => {
     const loading = service.load();
     http

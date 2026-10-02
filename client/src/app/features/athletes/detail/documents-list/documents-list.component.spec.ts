@@ -45,7 +45,7 @@ function setupTestBed(options: { canUpload?: boolean } = {}): HttpTestingControl
       {
         provide: RuntimeService,
         useValue: {
-          has: () => (capability: string) => capability !== 'document_upload' || canUpload,
+          hasConfirmed: () => (capability: string) => capability !== 'document_upload' || canUpload,
         },
       },
       ...provideI18nTesting(),
@@ -234,7 +234,7 @@ describe('DocumentsListComponent', () => {
   // the PC. The control is absent rather than disabled (Norman: no affordance
   // for an action the runtime does not have), and the empty state stops
   // pointing at it.
-  describe('where the runtime has no document upload (the phone)', () => {
+  describe('where the runtime has no document upload (the phone), or has not said yet', () => {
     function render(canUpload: boolean) {
       const httpMock = setupTestBed({ canUpload });
       const fixture = TestBed.createComponent(DocumentsListComponent);

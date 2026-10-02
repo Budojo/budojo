@@ -63,10 +63,12 @@
                   [attr.data-cy]="'missing-cert-row-' + a.id"
                 >
                   <app-athlete-identity class="missing-cert-row__identity" [athlete]="a" />
-                  <span class="missing-cert-row__cta">
-                    {{ 'documents.expiringList.missingCerts.action' | translate }}
-                    <i class="pi pi-arrow-right" aria-hidden="true"></i>
-                  </span>
+                  @if (canUpload()) {
+                    <span class="missing-cert-row__cta">
+                      {{ 'documents.expiringList.missingCerts.action' | translate }}
+                      <i class="pi pi-arrow-right" aria-hidden="true"></i>
+                    </span>
+                  }
                 </a>
                 <!-- The reminder (#1931), beside the link and never inside
                      it: an anchor in an anchor is invalid, and a tap meant for

@@ -41,6 +41,7 @@ function setupTestBed(profile: 'web' | 'desktop' = 'web') {
           profile: signal(profile),
           loaded: signal(true),
           has: signal(() => profile === 'web'),
+          hasConfirmed: signal(() => profile === 'web'),
         },
       },
     ],

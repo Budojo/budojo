@@ -88,7 +88,7 @@ export class DocumentsListComponent implements OnInit {
   private readonly runtime = inject(RuntimeService);
 
   /** Documents are view only on the phone (#2034, PRD § 2): uploading stays on the PC. */
-  protected readonly canUpload = computed(() => this.runtime.has()('document_upload'));
+  protected readonly canUpload = computed(() => this.runtime.hasConfirmed()('document_upload'));
 
   /** The empty state points at the upload where there is one, and at the PC where there is not. */
   protected readonly emptyHintKey = computed(() =>

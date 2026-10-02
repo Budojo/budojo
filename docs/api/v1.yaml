@@ -1425,6 +1425,12 @@ paths:
                         type: array
                         items:
                           type: string
+                        description: |
+                          The steps this runtime offers, in catalogue order.
+                          On the phone there is no `upload_document`, since
+                          documents are view only there (#2034).
+                          `completed_steps` never holds a step this list does
+                          not.
                         example:
                           [
                             'add_athlete',
@@ -8743,7 +8749,7 @@ components:
           items:
             type: string
             enum: [community, athlete_accounts, web_push, email, password_breach_check, document_upload, sync]
-          example: [community, athlete_accounts, web_push, email, password_breach_check]
+          example: [community, athlete_accounts, web_push, email, password_breach_check, document_upload]
 
     # ── Enums ─────────────────────────────────────────────────────────────
 

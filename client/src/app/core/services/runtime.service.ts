@@ -85,6 +85,17 @@ export class RuntimeService {
   });
 
   /**
+   * True only once the server has said the runtime offers the capability.
+   * For a surface some runtimes lack, which must not paint on the optimistic
+   * web default and then vanish: the phone's document upload (#2034).
+   */
+  readonly hasConfirmed = computed(() => {
+    const loaded = this.loadedSignal();
+    const has = this.has();
+    return (capability: Capability): boolean => loaded && has(capability);
+  });
+
+  /**
    * Fetches the list once; concurrent callers share the same promise. Never
    * rejects — a failure keeps the web default.
    */
