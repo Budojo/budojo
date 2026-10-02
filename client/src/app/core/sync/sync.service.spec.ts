@@ -3,10 +3,11 @@ import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { syncOnce } from './engine';
-import { importSyncKey, newSyncKey } from './envelope';
+import { importSyncKey, newSyncKey, seal } from './envelope';
 import { sealFolder } from './folder';
 import { HttpSyncServer } from './http-sync-server';
-import { FOLDER_PATH } from './layout';
+import { utf8 } from './bytes';
+import { devicePath, FOLDER_PATH } from './layout';
 import { loadLedger } from './ledger-store';
 import { MemoryRemote, RemoteError, SyncRemote } from './remote';
 import {
@@ -141,6 +142,63 @@ describe('SyncService', () => {
     expect(sync.state()).toEqual({ kind: 'ask', latest: { seq: 1, device: 'pc4f2a' } });
     expect(phone.db.academy).toBe('Eagles BJJ, restored from a backup');
     expect(reload).not.toHaveBeenCalled();
+  });
+
+  it('refuses to be a third device: two already sync with the folder', async () => {
+    await pcPublishes();
+    await remote.write(
+      devicePath('phone7k2m'),
+      await seal(key, devicePath('phone7k2m'), utf8('{}')),
+    );
+    const sync = setUp();
+
+    await sync.syncNow();
+
+    expect(sync.state()).toEqual({ kind: 'full' });
+    expect(remote.files.has(devicePath(phone.id))).toBe(false);
+  });
+
+  it('loads the page again after a swap even when the round then fails', async () => {
+    await pcPublishes();
+    const afterTheSwap: SyncRemote = {
+      list: (folder) => remote.list(folder),
+      read: (path) => remote.read(path),
+      write: async (path, bytes) => {
+        // The report after the pull: the gym's connection drops.
+        if (path.startsWith('devices/') && phone.db.academy !== null) {
+          throw new RemoteError('offline', 'the connection dropped after the swap');
+        }
+        await remote.write(path, bytes);
+      },
+      remove: (path) => remote.remove(path),
+    };
+    const sync = setUp({ remote: afterTheSwap });
+
+    await sync.syncNow();
+
+    expect(phone.db.academy).toBe('Eagles BJJ');
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it('stops when the owner signs out: no round is started after', async () => {
+    vi.useFakeTimers();
+    let rounds = 0;
+    const sync = setUp({
+      identity: async () => {
+        rounds++;
+        return null;
+      },
+    });
+    sync.start();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(rounds).toBe(1);
+
+    sync.stop();
+    window.dispatchEvent(new Event('online'));
+    await vi.advanceTimersByTimeAsync(10 * 60_000);
+
+    expect(rounds).toBe(1);
+    expect(sync.state()).toEqual({ kind: 'off' });
   });
 
   it('writes nothing to another academy’s folder', async () => {

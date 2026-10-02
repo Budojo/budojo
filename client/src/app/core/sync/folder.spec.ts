@@ -1,6 +1,6 @@
 import { utf8 } from './bytes';
 import { importSyncKey, newSyncKey, openJson, seal } from './envelope';
-import { checkFolder, sealFolder } from './folder';
+import { checkFolder, hasRoomFor, sealFolder } from './folder';
 import { devicePath, FOLDER_PATH } from './layout';
 import { MemoryRemote } from './remote';
 
@@ -51,5 +51,26 @@ describe('checkFolder', () => {
     await remote.write(FOLDER_PATH, await seal(key, FOLDER_PATH, utf8('not json')));
 
     expect(await checkFolder(remote, key, FOLDER)).toBe('another');
+  });
+});
+
+/** Two devices at most, the PC and the phone (protocol § Scope). */
+describe('hasRoomFor', () => {
+  it('lets a device in beside one other, and one already there whatever the count', async () => {
+    const remote = new MemoryRemote();
+    await remote.write(devicePath('pc4f2a'), utf8('a report'));
+    expect(await hasRoomFor(remote, 'phone9c1e')).toBe(true);
+
+    await remote.write(devicePath('phone9c1e'), utf8('a report'));
+    expect(await hasRoomFor(remote, 'phone9c1e')).toBe(true);
+    expect(await hasRoomFor(remote, 'pc4f2a')).toBe(true);
+  });
+
+  it('refuses a third device', async () => {
+    const remote = new MemoryRemote();
+    await remote.write(devicePath('pc4f2a'), utf8('a report'));
+    await remote.write(devicePath('phone9c1e'), utf8('a report that does not open'));
+
+    expect(await hasRoomFor(remote, 'phone7k2m')).toBe(false);
   });
 });

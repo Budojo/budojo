@@ -3702,7 +3702,8 @@
       "anotherFolder": "La cartella su Drive è di un'altra palestra",
       "unpaired": "Questo telefono è stato scollegato dalla palestra",
       "needsRebase": "Modifiche sia qui sia sul PC",
-      "failed": "La sincronizzazione non è riuscita"
+      "failed": "La sincronizzazione non è riuscita",
+      "full": "Budojo è già su due dispositivi"
     },
     "hint": {
       "pending": "Partono al prossimo tentativo, da sole.",
@@ -3713,7 +3714,8 @@
       "anotherFolder": "Il telefono non ci scrive niente. Esci e accedi con l'account Google della palestra.",
       "unpaired": "Esci, poi accedi con Google per collegarlo di nuovo.",
       "needsRebaseOne": "1 modifica del telefono aspetta, al sicuro qui: unirla a quelle del PC arriva con il prossimo aggiornamento.",
-      "needsRebaseOther": "{{count}} modifiche del telefono aspettano, al sicuro qui: unirle a quelle del PC arriva con il prossimo aggiornamento."
+      "needsRebaseOther": "{{count}} modifiche del telefono aspettano, al sicuro qui: unirle a quelle del PC arriva con il prossimo aggiornamento.",
+      "full": "Questo dispositivo non si unisce: la sincronizzazione regge due dispositivi, il PC e un telefono."
     }
   }
 }

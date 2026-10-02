@@ -4,7 +4,7 @@ import { VERSION } from '../../../environments/version';
 import { versionsIn } from './decide';
 import { SyncLedger, SyncShell, syncOnce } from './engine';
 import { importSyncKey } from './envelope';
-import { checkFolder } from './folder';
+import { checkFolder, hasRoomFor } from './folder';
 import { HttpSyncServer } from './http-sync-server';
 import { VersionRef } from './layout';
 import { LedgerOwner, loadLedger, saveLedger } from './ledger-store';
@@ -69,6 +69,8 @@ export type SyncState =
   | { kind: 'another-folder' }
   /** The sync key rotated: this device was unpaired. */
   | { kind: 'unpaired' }
+  /** Two other devices already sync with the folder: a third is refused (protocol § Scope). */
+  | { kind: 'full' }
   /** Both devices changed things: the replay that carries them (#2031) is not there yet. */
   | { kind: 'needs-rebase'; count: number }
   | { kind: 'failed'; reason: string };
@@ -94,24 +96,27 @@ export class SyncService {
   private readonly server = inject(HttpSyncServer);
   private readonly gate = inject(WriteGate);
   private readonly reload = inject(PAGE_RELOAD);
-  private readonly destroyRef = inject(DestroyRef);
 
   private readonly stateSignal = signal<SyncState>({ kind: 'off' });
   readonly state = this.stateSignal.asReadonly();
 
-  private started = false;
+  /** What `stop` undoes; null while stopped. */
+  private stopping: (() => void) | null = null;
   private timer: ReturnType<typeof setTimeout> | null = null;
   private dueAt = 0;
   private running: Promise<void> | null = null;
   private again = false;
   private key: { raw: string; key: CryptoKey } | null = null;
 
+  constructor() {
+    inject(DestroyRef).onDestroy(() => this.stop());
+  }
+
   /** Once the owner is signed in. Nothing happens on a runtime with no sync. */
   start(): void {
-    if (this.started || this.platform === null) {
+    if (this.stopping !== null || this.platform === null) {
       return;
     }
-    this.started = true;
     const written = this.gate.written$.subscribe(() => this.schedule(PUSH_DELAY_MS));
     const inFront = (): void => {
       if (document.visibilityState === 'visible') {
@@ -122,14 +127,26 @@ export class SyncService {
     document.addEventListener('visibilitychange', inFront);
     window.addEventListener('online', online);
     const looking = setInterval(inFront, LOOK_EVERY_MS);
-    this.destroyRef.onDestroy(() => {
+    this.stopping = () => {
       written.unsubscribe();
       document.removeEventListener('visibilitychange', inFront);
       window.removeEventListener('online', online);
       clearInterval(looking);
       this.cancelTimer();
-    });
+    };
     this.schedule(0);
+  }
+
+  /**
+   * When the owner signs out (the shell that started it goes): no round is
+   * started while the door may bring another database in, and the next
+   * sign-in starts again with a round of its own. A round already running
+   * finishes.
+   */
+  stop(): void {
+    this.stopping?.();
+    this.stopping = null;
+    this.stateSignal.set({ kind: 'off' });
   }
 
   /** «Sincronizza ora». */
@@ -148,6 +165,9 @@ export class SyncService {
   }
 
   private schedule(delayMs: number): void {
+    if (this.stopping === null) {
+      return;
+    }
     const due = Date.now() + delayMs;
     if (this.timer !== null) {
       if (this.dueAt <= due) {
@@ -204,11 +224,24 @@ export class SyncService {
     if (this.stateSignal().kind !== 'synced') {
       this.stateSignal.set({ kind: 'syncing' });
     }
+    // Once the swap ran, the server serves another database, whatever the
+    // round does next: the page loads again even if the round then fails.
+    let swapped = false;
+    const shell: SyncShell = {
+      swapIn: async () => {
+        await platform.shell.swapIn();
+        swapped = true;
+      },
+    };
     try {
       const key = await this.keyOf(identity.syncKey);
       const folder = await checkFolder(platform.remote, key, identity.folder);
       if (folder !== 'ours') {
         this.stateSignal.set({ kind: folder === 'another' ? 'another-folder' : 'unpaired' });
+        return;
+      }
+      if (!(await hasRoomFor(platform.remote, device))) {
+        this.stateSignal.set({ kind: 'full' });
         return;
       }
       let ledger = loadLedger(owner);
@@ -225,7 +258,7 @@ export class SyncService {
         key,
         remote: platform.remote,
         server: this.server,
-        shell: platform.shell,
+        shell,
         ledger,
         saveLedger: (next: SyncLedger) => {
           ledger = next;
@@ -263,6 +296,9 @@ export class SyncService {
       }
     } catch (error) {
       await this.failed(error, owner);
+      if (swapped) {
+        this.reload();
+      }
     }
   }
 
