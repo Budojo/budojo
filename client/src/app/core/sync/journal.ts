@@ -25,7 +25,10 @@ export interface JournalEntry {
   body: Record<string, unknown> | null;
   /** The ids the write created, by table: `{ athletes: [57] }`. Empty when it created none. */
   created: Record<string, number[]>;
-  /** For an update or a delete, the values it saw before, which is how the rebase spots a conflict. */
+  /**
+   * For an update or a delete, what the rows held before, by table and id:
+   * `{ athletes: { "57": { first_name: "Luca" } } }`. How the rebase spots a conflict.
+   */
   before: Record<string, unknown> | null;
 }
 

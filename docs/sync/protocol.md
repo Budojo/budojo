@@ -110,6 +110,11 @@ The journal is a JSON list of the writes that made this version from its parent,
 - a conflict the owner has answered is never raised again;
 - a later entry that names a row a skipped entry created still finds it.
 
+**Where the journal lives (#2031).** The server records it, on a paired device only: the shell gives the device id (`BUDOJO_DEVICE_ID`), never the database, which travels. Two tables ([`sync_entries`](../entities/sync-entry.md), [`sync_journal`](../entities/sync-journal-entry.md)):
+- **`sync_entries`**, what this database has dealt with, travels with it;
+- **`sync_journal`**, this device's kept entries, does not: after a swap the reconcile drops other devices' rows. A rebase carries the kept entries across the swap itself.
+- `GET /api/v1/sync/journal` gives the kept entries, `DELETE /api/v1/sync/journal?through=<id>` clears them up to what every other device holds, and `GET /api/v1/sync/holds` answers `holds`.
+
 **A device's entry ids only grow.** The server gives a new entry an id above the newest that device has recorded, inside the write's transaction. A ULID taken from the clock alone can go backwards when the clock steps back, and `devices/` depends on this order (#2031).
 
 **The entries a device keeps speak its current database's ids.** A rebase gives the device's new rows new ids on the base: an athlete created as 57 can become 103. Its journal entries are rewritten through that same id map: the `created` ids, every parameter, and every `*_id` and `*_ids` field. A second replay then starts from 103, not from a 57 the base never had.
@@ -122,9 +127,9 @@ The journal is a JSON list of the writes that made this version from its parent,
 | `method` | `POST`, `PUT`, `PATCH` or `DELETE` | `POST` |
 | `route` | the Laravel route name: dotted segments of `a-z`, `0-9`, `_` and `-`, each starting with a letter. Every write route has one, pinned by `WriteRouteNamesTest`: a journal outlives the code that wrote it, so a rename is a decision (#2031). | `attendance.store`, `academy.fee-tiers.store` |
 | `params` | the route parameters, strings and numbers | `{ "athlete": 57 }` |
-| `body` | the request body, or `null` | `{ "date": "2026-10-01", "athlete_ids": [57] }` |
+| `body` | the request body, or `null`. An uploaded file is `{ "$file": { "sha256", "name", "type" } }`; its bytes stay on the device until the entry is cleared | `{ "date": "2026-10-01", "athlete_ids": [57] }` |
 | `created` | the ids the write created, by table | `{ "attendance_records": [912] }` |
-| `before` | for an update or a delete, the values it saw before; else `null` | `{ "amount_cents": 4500 }` |
+| `before` | for an update or a delete, what the rows held before, by table and id; else `null` | `{ "athletes": { "57": { "first_name": "Luca" } } }` |
 
 ## `keys.bjs`
 

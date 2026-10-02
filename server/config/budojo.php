@@ -115,6 +115,11 @@ return [
     */
     'sync' => [
         'database' => env('BUDOJO_SYNC_DATABASE'),
+        // This device's id in the sync folder (#2031), given by the shell,
+        // which keeps it with the sync key: never the database, which
+        // travels between devices. Unset until the device is paired, and
+        // until then nothing is journaled.
+        'device' => env('BUDOJO_DEVICE_ID'),
     ],
 
 ];

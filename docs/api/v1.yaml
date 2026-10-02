@@ -7496,6 +7496,83 @@ paths:
                   code: { type: string, enum: [mismatch] }
                   message: { type: string }
 
+  /sync/journal:
+    get:
+      operationId: syncJournalIndex
+      summary: This device's kept writes, oldest first
+      description: |
+        The journal (#2031, `docs/sync/protocol.md` § A journal entry): this
+        device's own writes to the academy's data, recorded with the write in
+        one transaction, kept until every other device holds them. Empty on a
+        device that is not paired: nothing is journaled without the device id
+        the shell gives (`BUDOJO_DEVICE_ID`).
+      tags: [sync]
+      responses:
+        '200':
+          description: The kept entries
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/SyncJournalEntry' }
+        '401': { description: Unauthenticated }
+        '403': { description: Forbidden — the user is not an owner. }
+        '404': { description: The runtime profile has no `sync` capability. }
+    delete:
+      operationId: syncJournalClear
+      summary: Clear the kept writes every other device holds
+      description: |
+        Deletes this device's entries up to and including `through`, the
+        oldest of what every other device reports holding (`devices/`). What
+        this database dealt with stays recorded, so a later replay still skips
+        them. The uploads no kept entry names any more are deleted too.
+      tags: [sync]
+      parameters:
+        - name: through
+          in: query
+          required: true
+          description: An entry id, a ULID.
+          schema: { type: string, pattern: '^[0-7][0-9A-HJKMNP-TV-Z]{25}$' }
+      responses:
+        '204': { description: Cleared }
+        '401': { description: Unauthenticated }
+        '403': { description: Forbidden — the user is not an owner. }
+        '404': { description: The runtime profile has no `sync` capability. }
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /sync/holds:
+    get:
+      operationId: syncHolds
+      summary: For each device, the newest of its writes this database holds
+      description: |
+        `holds` for this device's report in `devices/` (#2031): per device,
+        the newest entry id this database has dealt with, its own writes and
+        every entry a replay applied, found already true or turned into a
+        conflict. Ids only grow per device, so holding the newest means
+        holding every one before it.
+      tags: [sync]
+      responses:
+        '200':
+          description: Device id → entry id
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    additionalProperties: { type: string }
+              example: { data: { pc4f2a: 01K6F3Q8Z4M7X2N5P9R1T3V6W8, phone9c1e: 01K6F3Q9A1B2C3D4E5F6G7H8J9 } }
+        '401': { description: Unauthenticated }
+        '403': { description: Forbidden — the user is not an owner. }
+        '404': { description: The runtime profile has no `sync` capability. }
+
   /stats/payments/summary:
     get:
       operationId: statsPaymentsSummary
@@ -8836,6 +8913,37 @@ components:
             $ref: '#/components/schemas/ValidationErrorBody'
 
   schemas:
+
+    SyncJournalEntry:
+      type: object
+      description: One write in the journal, in the shape `docs/sync/protocol.md` § A journal entry gives (#2031).
+      required: [id, device, at, method, route, params, body, created, before]
+      properties:
+        id: { type: string, description: A ULID; a device's only grow. }
+        device: { type: string, example: pc4f2a }
+        at: { type: string, description: 'UTC, to the microsecond', example: '2026-10-01T18:32:05.123456Z' }
+        method: { type: string, enum: [POST, PUT, PATCH, DELETE] }
+        route: { type: string, description: 'The route name; WriteRouteNamesTest pins every one', example: athletes.store }
+        params:
+          type: object
+          description: The route parameters, numbers as numbers.
+          additionalProperties: true
+        body:
+          type: object
+          nullable: true
+          description: |
+            The request body. An uploaded file is
+            `{ "$file": { "sha256", "name", "type" } }`.
+          additionalProperties: true
+        created:
+          type: object
+          description: The ids the write created, by table.
+          additionalProperties: { type: array, items: { type: integer } }
+        before:
+          type: object
+          nullable: true
+          description: What the rows it changed or deleted held before, by table and id.
+          additionalProperties: true
 
     Runtime:
       type: object

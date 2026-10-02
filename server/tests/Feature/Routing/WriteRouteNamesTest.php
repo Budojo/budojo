@@ -81,6 +81,7 @@ it('keeps every name as the journal knows it: a rename is a decision', function 
         'DELETE me/sessions' => 'me.sessions.destroy-others',
         'DELETE me/sessions/{id}' => 'me.sessions.destroy',
         'DELETE me/two-factor' => 'me.two-factor.destroy',
+        'DELETE sync/journal' => 'sync.journal.destroy',
         'PATCH academy' => 'academy.update',
         'PATCH academy/classes/{academyClass}' => 'academy.classes.update',
         'PATCH academy/closures/{closure}' => 'academy.closures.update',

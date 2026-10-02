@@ -41,6 +41,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // idempotently).
         $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
 
+        // The sync's journal (#2031): the academy's writes on a paired
+        // device, recorded in the same transaction as the write. Last in the
+        // API group, so the route and its bindings are resolved.
+        $middleware->api(append: \App\Http\Middleware\RecordJournalEntry::class);
+
         // Disable the framework default guest-redirect callback (#769).
         // `ApplicationBuilder` registers `redirectGuestsTo(fn () =>
         // route('login'))` by default. We have no `login` route in this

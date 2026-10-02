@@ -88,3 +88,20 @@ it('clears the cache, which would answer from the old database', function (): vo
 
     expect(Cache::has('attendance-summary:1'))->toBeFalse();
 });
+
+it('keeps only this device\'s journal: the swapped-in database brought the other device\'s (#2031)', function (): void {
+    config()->set('budojo.sync.device', 'phone9c1e');
+    foreach (['01K6F3Q8Z4M7X2N5P9R1T3V6W8' => 'pc4f2a', '01K6F3Q8Z4M7X2N5P9R1T3V6W9' => 'phone9c1e'] as $id => $device) {
+        \Illuminate\Support\Facades\DB::table('sync_journal')->insert([
+            'id' => $id, 'device' => $device, 'at' => '2026-10-02T10:00:00.000000Z', 'method' => 'POST',
+            'route' => 'athletes.store', 'params' => '{}', 'body' => null, 'created' => '{}', 'before' => null,
+        ]);
+        \Illuminate\Support\Facades\DB::table('sync_entries')->insert(['id' => $id, 'device' => $device, 'outcome' => 'own', 'created' => '{}']);
+    }
+
+    $this->artisan('budojo:sync-reconcile')->assertSuccessful();
+
+    expect(\Illuminate\Support\Facades\DB::table('sync_journal')->pluck('device')->all())->toBe(['phone9c1e'])
+        // What the database dealt with stays, every device's.
+        ->and(\Illuminate\Support\Facades\DB::table('sync_entries')->count())->toBe(2);
+});
