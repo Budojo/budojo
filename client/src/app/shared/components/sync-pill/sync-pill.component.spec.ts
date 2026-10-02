@@ -139,4 +139,24 @@ describe('SyncPillComponent', () => {
       expect(sync.resolve).not.toHaveBeenCalled();
     });
   });
+
+  it('gives the focus back to the pill when the detail closes from inside, but not from another field', () => {
+    const { fixture, pill } = setup({ kind: 'synced', at: Date.now() });
+    const component = fixture.componentInstance as unknown as {
+      returnFocus(pill: HTMLElement): void;
+    };
+    const search = document.createElement('input');
+    document.body.append(search);
+
+    // A tap on the athletes search closed it: the field keeps the focus.
+    search.focus();
+    component.returnFocus(pill() as HTMLElement);
+    expect(document.activeElement).toBe(search);
+
+    // Escape, or the pill's own toggle: the focus fell to the page.
+    search.blur();
+    component.returnFocus(pill() as HTMLElement);
+    expect(document.activeElement).toBe(pill());
+    search.remove();
+  });
 });

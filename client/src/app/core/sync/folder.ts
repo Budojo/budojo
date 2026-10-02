@@ -1,6 +1,6 @@
 import { utf8 } from './bytes';
 import { EnvelopeError, openJson, seal } from './envelope';
-import { FOLDER_PATH } from './layout';
+import { FOLDER_PATH, isDeviceId } from './layout';
 import { SyncRemote } from './remote';
 
 /**
@@ -8,8 +8,8 @@ import { SyncRemote } from './remote';
  * sync key, `{ "v": 1, "folder": "<32 hex>" }`. Before a round, a device checks
  * it against the id the keys file gave it (#2046):
  * - **the same id:** the academy's folder; sync;
- * - **missing, or another id:** another academy's folder, or one someone
- *   emptied: ask the owner, write nothing;
+ * - **another id, or missing beside versions or reports:** another academy's
+ *   folder, or one someone emptied of its id: ask the owner, write nothing;
  * - **does not open under the sync key:** the key rotated after this device was
  *   unpaired: stop, write nothing, so its deleted report stays deleted.
  *
@@ -51,4 +51,17 @@ export async function checkFolder(
 
 export function sealFolder(key: CryptoKey, folder: string): Promise<Uint8Array> {
   return seal(key, FOLDER_PATH, utf8(JSON.stringify({ v: 1, folder })));
+}
+
+/**
+ * Whether this device may sync with the folder: **two devices at most**, the
+ * PC and the phone (protocol § Scope). A device whose report is there is one
+ * of them; one that is not joins only beside fewer than two others. A report
+ * that does not open still names a device.
+ */
+export async function hasRoomFor(remote: SyncRemote, device: string): Promise<boolean> {
+  const devices = (await remote.list('devices')).files
+    .map((file) => /^devices\/([a-z0-9]+)\.bjs$/.exec(file.path)?.[1])
+    .filter((id): id is string => id !== undefined && isDeviceId(id));
+  return devices.includes(device) || devices.length < 2;
 }

@@ -16,7 +16,7 @@
   </button>
 
   <!-- The detail takes the focus, and gives it back to the pill when it closes. -->
-  <p-popover #detail (onHide)="pillButton.focus(); confirming.set(null)">
+  <p-popover #detail (onHide)="returnFocus(pillButton); confirming.set(null)">
     <div class="sync-detail" data-cy="sync-detail">
       <p class="sync-detail__title">{{ sentence() }}</p>
       @if (hint(); as text) {
