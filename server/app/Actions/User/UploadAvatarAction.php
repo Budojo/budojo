@@ -75,7 +75,7 @@ class UploadAvatarAction
         }
 
         $previousPath = $user->avatar_path;
-        $user->forceFill(['avatar_path' => $newPath])->save();
+        $user->forceFill(['avatar_path' => $newPath, 'avatar_sha256' => hash('sha256', $bytes)])->save();
 
         // Replace-discipline mirroring UploadAcademyLogoAction: when the new
         // path differs from the old one (different extension), unlink the

@@ -13,6 +13,9 @@ namespace App\Enums;
  *  - Desktop — one process on one machine, inside the Electron shell. There
  *    is no second user to invite, no browser push service to reach, and no
  *    queue worker to drain jobs.
+ *  - Mobile — the same, on the owner's phone, inside the Capacitor shell (M12,
+ *    #2034). A local device like the desktop (`Runtime::isLocal()`); what it
+ *    offers differs only by its capability set.
  *
  * Kept as an enum rather than a boolean because the difference is a *set of
  * capabilities*, not a flag. A boolean invites `if ($isDesktop)` to sprout at
@@ -22,4 +25,5 @@ enum RuntimeProfile: string
 {
     case Web = 'web';
     case Desktop = 'desktop';
+    case Mobile = 'mobile';
 }

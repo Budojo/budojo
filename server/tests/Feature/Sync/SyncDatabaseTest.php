@@ -168,6 +168,18 @@ describe('PUT /api/v1/sync/stage', function (): void {
             ->assertJsonPath('code', 'newer');
     });
 
+    it('takes a database holding a stray migration no later Budojo stands behind', function (string $stray): void {
+        // The owner's PC (2 Oct 2026): every backup read as «newer».
+        $older = [...syncTestHistory(), $stray];
+
+        $this->actingAs(userWithAcademy())
+            ->call('PUT', '/api/v1/sync/stage', content: syncTestIncoming($this->dir, $older))
+            ->assertNoContent();
+    })->with([
+        '#443\'s renamed support tickets' => ['2026_05_05_120000_create_support_tickets_table'],
+        'the unmerged licensing branch' => ['2026_08_16_090000_create_licenses_table'],
+    ]);
+
     it('refuses another Laravel app’s database, which never ran Budojo’s own migrations', function (): void {
         $laravel = ['0001_01_01_000000_create_users_table'];
 

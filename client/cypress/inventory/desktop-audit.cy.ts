@@ -1967,6 +1967,8 @@ interface BridgeOptions {
   archives?: typeof ARCHIVES;
   /** What `folder.state()` answers; defaults to a folder that copied last night. */
   folder?: typeof FOLDER_STATE;
+  /** What `drive.state()` answers; defaults to a build with no Google client. */
+  drive?: Record<string, unknown>;
 }
 
 /**
@@ -2005,10 +2007,11 @@ function installBridge(win: Cypress.AUTWindow, opts: BridgeOptions): void {
       open: ok({ ok: true }),
     },
     drive: {
-      state: ok({ configured: false, linked: false }),
+      state: ok(opts.drive ?? { configured: false, linked: false }),
       archives: () => Promise.resolve([]),
       link: ok({ ok: false }),
       unlink: ok({ ok: true }),
+      connectPhone: ok({ ok: true, keys: 'published' }),
       sync: ok({ ran: false, reason: 'unavailable' }),
     },
     keys: {
@@ -2038,7 +2041,7 @@ function seed(): void {
   // The shell.
   cy.intercept('GET', '/api/v1/runtime', {
     statusCode: 200,
-    body: { data: { profile: 'desktop', capabilities: [] } },
+    body: { data: { profile: 'desktop', capabilities: ['document_upload', 'sync'] } },
   });
   cy.intercept('GET', '/api/v1/auth/me*', { statusCode: 200, body: { data: ME } });
   cy.intercept('GET', '/api/v1/me', { statusCode: 200, body: { data: ME } });
@@ -2271,6 +2274,7 @@ interface ScreenOptions {
   archives?: typeof ARCHIVES;
   /** Where backups are copied, and how that last went. */
   folder?: typeof FOLDER_STATE;
+  drive?: Record<string, unknown>;
   /** The owner's theme choice, as the theme toggle stores it. Light when unset. */
   theme?: 'dark';
 }
@@ -2473,6 +2477,7 @@ function screen(slug: string, route: string, ready: string, opts: ScreenOptions 
             update: opts.update,
             archives: opts.archives,
             folder: opts.folder,
+            drive: opts.drive,
           });
           recordConsoleErrors(win);
         },
@@ -4576,6 +4581,27 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
   });
   // No archives yet: a fresh install's backup page.
   screen('53-backup-empty', '/dashboard/backup', '[data-cy="backup-empty"]', { archives: [] });
+  // The gym on the phone (#2033): Drive linked, keys not yet with the account.
+  screen('53-backup-drive-phone', '/dashboard/backup', '[data-cy="drive-phone"]', {
+    drive: {
+      configured: true,
+      linked: true,
+      account: 'eaglesbjj@gmail.com',
+      lastSyncAt: '2026-10-02T15:25:00Z',
+      lastError: null,
+      keysPublishedAt: null,
+    },
+  });
+  screen('53-backup-drive-phone-ready', '/dashboard/backup', '[data-cy="drive-phone-ready"]', {
+    drive: {
+      configured: true,
+      linked: true,
+      account: 'eaglesbjj@gmail.com',
+      lastSyncAt: '2026-10-02T15:25:00Z',
+      lastError: null,
+      keysPublishedAt: '2026-10-02T18:00:00Z',
+    },
+  });
   // A fortnight of history (#1910): the newest five, marked, and "Mostra tutti".
   screen('53-backup-many', '/dashboard/backup', '[data-cy="backup-list"]', {
     archives: Array.from({ length: 9 }, (_, i) => ({

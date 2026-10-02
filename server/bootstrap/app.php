@@ -30,6 +30,7 @@ return Application::configure(basePath: dirname(__DIR__))
             // (#1229). Not 403: a surface the runtime does not have should
             // not advertise itself.
             'capability' => \App\Http\Middleware\RequireCapability::class,
+            'shell' => \App\Http\Middleware\RequireShell::class,
         ]);
 
         // Defense-in-depth security headers (#1017). The production
@@ -40,6 +41,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // (each header is a single value, browsers apply
         // idempotently).
         $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
+
+        // The sync's journal (#2031): the academy's writes on a paired
+        // device, recorded in the same transaction as the write. Last in the
+        // API group, so the route and its bindings are resolved.
+        $middleware->api(append: \App\Http\Middleware\RecordJournalEntry::class);
 
         // Disable the framework default guest-redirect callback (#769).
         // `ApplicationBuilder` registers `redirectGuestsTo(fn () =>

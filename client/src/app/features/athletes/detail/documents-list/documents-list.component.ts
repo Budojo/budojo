@@ -28,6 +28,7 @@ import {
   DocumentType,
 } from '../../../../core/services/document.service';
 import { LanguageService } from '../../../../core/services/language.service';
+import { RuntimeService } from '../../../../core/services/runtime.service';
 import { formatIsoDate } from '../../../../shared/utils/locale';
 
 /**
@@ -84,6 +85,17 @@ export class DocumentsListComponent implements OnInit {
   private readonly translate = inject(TranslateService);
   private readonly languageService = inject(LanguageService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly runtime = inject(RuntimeService);
+
+  /** Documents are view only on the phone (#2034, PRD § 2): uploading stays on the PC. */
+  protected readonly canUpload = computed(() => this.runtime.hasConfirmed()('document_upload'));
+
+  /** The empty state points at the upload where there is one, and at the PC where there is not. */
+  protected readonly emptyHintKey = computed(() =>
+    this.canUpload()
+      ? 'athletes.detail.documents.empty.hint'
+      : 'athletes.detail.documents.empty.hintViewOnly',
+  );
 
   /**
    * Render the **academy's** own papers instead of an athlete's (#1743).

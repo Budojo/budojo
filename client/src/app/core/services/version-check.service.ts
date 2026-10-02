@@ -100,11 +100,11 @@ export class VersionCheckService {
    * shape of `AppUpdateService.start()`.
    */
   start(): void {
-    // Desktop (#1224): there is no /version.json to poll — the shell serves
-    // the bundle over app:// and a miss is a real 404 — and no service worker
-    // or cache to nuke. Electron owns updates. Guarded, not deleted: the
-    // service stays valid for the web build.
-    if (environment.runtime === 'desktop') {
+    // Desktop (#1224) and phone (#2034): there is no /version.json to poll —
+    // the shell serves the bundle itself and a miss is a real 404 — and no
+    // service worker or cache to nuke. The shell owns updates. Guarded, not
+    // deleted: the service stays valid for the web build.
+    if (environment.runtime !== 'web') {
       return;
     }
 

@@ -4,6 +4,7 @@ import { capabilityGuard } from './core/guards/capability.guard';
 import { desktopOnlyGuard } from './core/guards/desktop-only.guard';
 import { hasAcademyGuard } from './core/guards/has-academy.guard';
 import { noAcademyGuard } from './core/guards/no-academy.guard';
+import { phoneDoorMatch, signInIsTheDoor } from './core/guards/phone-door.guard';
 import { publicGuard } from './core/guards/public.guard';
 import { roleAthleteGuard, roleOwnerGuard } from './core/guards/role.guard';
 
@@ -18,6 +19,8 @@ export const routes: Routes = [
       },
       {
         path: 'login',
+        // On the phone the door is the sign-in (#2079).
+        canActivate: [signInIsTheDoor],
         loadComponent: () =>
           import('./features/auth/login/login.component').then((m) => m.LoginComponent),
       },
@@ -656,6 +659,15 @@ export const routes: Routes = [
   // It is a welcome now, and the desktop bypass is gone with the marketing —
   // a first launch has no password to type. `publicGuard` still short-
   // circuits anyone who IS signed in back to `/dashboard/athletes`.
+  // The phone opens on «Accedi con Google» (#2079, PRD § 5.4): the gym comes
+  // back from Drive by itself. Everywhere else, the welcome.
+  {
+    path: '',
+    pathMatch: 'full',
+    canMatch: [phoneDoorMatch],
+    canActivate: [publicGuard],
+    loadComponent: () => import('./features/door/door.component').then((m) => m.DoorComponent),
+  },
   {
     path: '',
     pathMatch: 'full',

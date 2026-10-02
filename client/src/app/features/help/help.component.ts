@@ -1,7 +1,10 @@
+import { ViewportScroller } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
+  ElementRef,
   inject,
   OnInit,
   signal,
@@ -138,6 +141,9 @@ export class HelpComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly translate = inject(TranslateService);
   private readonly language = inject(LanguageService);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly scroller = inject(ViewportScroller);
+  private readonly destroyRef = inject(DestroyRef);
 
   /** User-typed search query, lowercased on read for matching. */
   readonly query = signal('');
@@ -242,6 +248,22 @@ export class HelpComponent implements OnInit {
     if (initial) {
       this.query.set(initial);
     }
+    this.anchorBelowTheStatusBar();
+  }
+
+  /**
+   * The router scrolls to an anchor with `window.scrollTo` and an offset of
+   * its own, so the `scroll-margin-top` the entries declare never applied,
+   * and an anchored entry landed under the status bar's strip on the phone
+   * and the title bar on the desktop (#2034). It gets that margin as its
+   * offset, read from the CSS, which stays the one place it is set.
+   */
+  private anchorBelowTheStatusBar(): void {
+    this.scroller.setOffset(() => {
+      const entry = this.host.nativeElement.querySelector('.help-page__entry');
+      return [0, entry === null ? 0 : parseFloat(getComputedStyle(entry).scrollMarginTop) || 0];
+    });
+    this.destroyRef.onDestroy(() => this.scroller.setOffset([0, 0]));
   }
 
   protected onQueryInput(value: string): void {

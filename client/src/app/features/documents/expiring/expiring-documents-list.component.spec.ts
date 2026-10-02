@@ -6,6 +6,7 @@ import {
   AthleteMissingMedicalCertificate,
   ExpiringDocument,
 } from '../../../core/services/document.service';
+import { RuntimeService } from '../../../core/services/runtime.service';
 import { ContactableAthlete } from '../../../core/services/athlete.service';
 import { AcademyService } from '../../../core/services/academy.service';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
@@ -244,6 +245,43 @@ describe('ExpiringDocumentsListComponent', () => {
     // All-clear empty block must NOT render when either axis has rows.
     expect(el.querySelector('[data-cy="all-clear-empty"]')).toBeNull();
   });
+  // On the phone documents are view only (#2034): the row still opens the
+  // athlete, but does not promise an upload the phone cannot do.
+  describe('the call to upload a missing certificate', () => {
+    async function runtimeSays(capabilities: string[]): Promise<void> {
+      const runtime = TestBed.inject(RuntimeService);
+      const loading = runtime.load();
+      httpMock.expectOne('/api/v1/runtime').flush({
+        data: {
+          profile: capabilities.includes('document_upload') ? 'desktop' : 'mobile',
+          capabilities,
+        },
+      });
+      await loading;
+    }
+
+    function cta(): HTMLElement | null {
+      const fixture = mount();
+      flushHealth([], [person(11, 'Giulia', 'Rossi')]);
+      fixture.detectChanges();
+      return (fixture.nativeElement as HTMLElement).querySelector(
+        '[data-cy="missing-cert-row-11"] .missing-cert-row__cta',
+      );
+    }
+
+    it('is there where documents can be uploaded', async () => {
+      await runtimeSays(['document_upload', 'sync']);
+
+      expect(cta()?.textContent).toContain('Upload');
+    });
+
+    it('is not there on the phone, where they cannot', async () => {
+      await runtimeSays(['sync']);
+
+      expect(cta()).toBeNull();
+    });
+  });
+
   describe("the academy's own papers (#1743)", () => {
     // They arrive in the same list with `athlete_id: null` and no `athlete`
     // object. The page used to read `doc.athlete.first_name` unguarded, so a

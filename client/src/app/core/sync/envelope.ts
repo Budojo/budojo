@@ -100,7 +100,7 @@ export async function open(key: CryptoKey, path: string, sealed: Uint8Array): Pr
   }
 }
 
-/** For the small JSON files (manifests, `keys.bjs`): `open`, then UTF-8 and JSON. */
+/** For the small JSON files (manifests, `folder.bjs`, reports): `open`, then UTF-8 and JSON. */
 export async function openJson(key: CryptoKey, path: string, sealed: Uint8Array): Promise<unknown> {
   const bytes = await open(key, path, sealed);
   try {

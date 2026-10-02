@@ -52,3 +52,13 @@ it('is a no-op on the web profile', function (): void {
 
     DesktopDriverGuard::assert();
 })->throwsNoExceptions();
+
+it('holds the phone to the same drivers: one process, no worker (#2034)', function (): void {
+    config()->set('budojo.runtime', 'mobile');
+    config()->set('queue.default', 'database');
+    config()->set('cache.default', 'file');
+    config()->set('session.driver', 'file');
+
+    expect(fn () => DesktopDriverGuard::assert())
+        ->toThrow(RuntimeException::class, 'queue.default');
+});

@@ -37,14 +37,16 @@ tags:
     description: |
       Which runtime profile this API runs as and what it can offer (#1229).
 
-      The same code base serves the hosted web app and the single-user
-      desktop app (M11). Surfaces that assume a second human, an inbox or a
+      The same code base serves the hosted web app, the single-user
+      desktop app (M11) and the same app on the owner's phone (M12). Surfaces that assume a second human, an inbox or a
       browser push service are **capabilities**; where the profile lacks one,
       its routes answer **404** (never 403 — a surface the runtime does not
       have does not advertise itself). Capabilities: `community`,
       `athlete_accounts`, `web_push`, `email`, `password_breach_check`,
-      `sync`. The web profile has every one but `sync`; the desktop has
-      `sync` alone, the sync between the owner's own devices (#2030).
+      `document_upload`, `sync`. The web profile has every one but `sync`.
+      The desktop has `document_upload` and `sync`, the sync between the
+      owner's own devices (#2030). The phone has `sync` alone: its documents
+      are view only (#2034).
   - name: auth
     description: Registration, login, and Sanctum token issuance
   - name: academy
@@ -114,6 +116,14 @@ tags:
       #2030, `docs/sync/protocol.md`). The app packs, seals and publishes
       versions itself; the server hands it the database and takes one back.
       Owner-only, and a `sync` capability: 404 on the web profile.
+  - name: device
+    description: |
+      What only the app's own page may ask of its server on a local device
+      (#2079, PRD § 5.4): the owner's session with no password, and bringing
+      in a backup the PC took. Signed out, since the door comes before any
+      session. The page sends the secret its shell made at launch in
+      `X-Budojo-Shell`. Without it, or on the web profile, every route is 404:
+      on `127.0.0.1` any other app on the phone reaches the server too.
   - name: engagement
     description: |
       Social-engagement endpoints introduced with the v2.30.0 train
@@ -1423,6 +1433,12 @@ paths:
                         type: array
                         items:
                           type: string
+                        description: |
+                          The steps this runtime offers, in catalogue order.
+                          On the phone there is no `upload_document`, since
+                          documents are view only there (#2034).
+                          `completed_steps` never holds a step this list does
+                          not.
                         example:
                           [
                             'add_athlete',
@@ -5206,6 +5222,9 @@ paths:
         root — only via `GET /documents/{id}/download`. Server-side validates
         size (max 10 MB) and MIME type (`application/pdf`, `image/jpeg`,
         `image/png`); client pre-validation is advisory only.
+
+        Behind the `document_upload` capability: on the phone, where documents
+        are view only (#2034), the route answers 404.
       operationId: athleteDocumentUpload
       requestBody:
         required: true
@@ -5280,6 +5299,9 @@ paths:
         path encrypts, and an academy does not have a medical fitness
         certificate — a person does. Academy documents are therefore never
         encrypted.
+
+        Behind the `document_upload` capability: on the phone, where documents
+        are view only (#2034), the route answers 404.
       operationId: academyDocumentUpload
       requestBody:
         required: true
@@ -5298,6 +5320,8 @@ paths:
           $ref: '#/components/responses/Unauthenticated'
         '403':
           description: No active academy, or the caller lacks the documents capability
+        '404':
+          description: The runtime has no document upload (the phone)
         '422':
           $ref: '#/components/responses/ValidationError'
 
@@ -7378,6 +7402,309 @@ paths:
                   message: { type: string }
               example: { code: newer, message: 'The database is from a newer Budojo (schema 2027_01_10_090000_add_x). Update Budojo first.' }
 
+  /device/session:
+    post:
+      operationId: deviceSession
+      summary: The owner's session, for the shell's own page
+      description: |
+        The door signs in with Google, then asks for the owner's token with
+        the shell's secret: no Budojo password on a local device (#2079, PRD
+        § 5.4). The same answer as a login. A local device has one owner;
+        this is the first owner by id.
+      tags: [device]
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/ShellSecret'
+      responses:
+        '200':
+          description: The owner's token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '404':
+          description: |
+            No `sync` capability, no shell secret, or the wrong one; or, with
+            `code` `no_owner`, nobody has set up or restored Budojo on this
+            device yet.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: string, enum: [no_owner] }
+                  message: { type: string }
+
+  /device/backup/inspect:
+    post:
+      operationId: deviceBackupInspect
+      summary: The academy a PC backup holds, and the one this device holds
+      description: |
+        A backup the PC took (`budojo-backup-*.zip`, #1301), brought from
+        Drive by the page (#2079). The door names both academies before
+        anything is replaced, and the owner chooses. **Nothing is written.**
+        The archive passes the restore's checks first: a zip, a manifest of
+        format 1, and a database `PUT /sync/stage` would take.
+      tags: [device]
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/ShellSecret'
+      requestBody:
+        required: true
+        content:
+          application/zip:
+            schema: { type: string, format: binary }
+      responses:
+        '200':
+          description: Both academies
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [backup, here]
+                    properties:
+                      backup:
+                        type: object
+                        required: [taken_at, app_version, academy]
+                        properties:
+                          taken_at: { type: string, description: 'When the PC took it: the manifest''s `createdAt`.' }
+                          app_version: { type: string }
+                          academy:
+                            type: object
+                            nullable: true
+                            allOf: [{ $ref: '#/components/schemas/AcademySummary' }]
+                      here:
+                        type: object
+                        nullable: true
+                        description: This device's own academy; null when it holds none.
+                        allOf: [{ $ref: '#/components/schemas/AcademySummary' }]
+              example:
+                data:
+                  backup:
+                    taken_at: '2026-10-01T16:51:32.000Z'
+                    app_version: 2.74.1
+                    academy: { name: Kaizen, athletes: 42, belts: { white: 20, blue: 12, purple: 6, brown: 3, black: 1 } }
+                  here: { name: Prova, athletes: 2, belts: { white: 2 } }
+        '404': { description: 'No `sync` capability, no shell secret, or the wrong one.' }
+        '413':
+          description: The archive is larger than PHP's `post_max_size`.
+        '422':
+          $ref: '#/components/responses/BackupRefused'
+
+  /device/backup/restore:
+    post:
+      operationId: deviceBackupRestore
+      summary: Stage a PC backup, for the shell to swap in at its next start
+      description: |
+        The same checks as `inspect`, then the backup is staged (#2079):
+        - its database beside the live one (`<database>.staged`), as a
+          version is (`PUT /sync/stage`);
+        - its academy's files, `storage/app/…` and nothing else of the PC's
+          `storage/`, beside `storage/app` (`app.staged`).
+
+        **The files go first, and the database commits:** the shell swaps a
+        staged `app.staged` only beside a staged database, and deletes one
+        left alone. A name that would climb out of the folder is refused.
+      tags: [device]
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/ShellSecret'
+      requestBody:
+        required: true
+        content:
+          application/zip:
+            schema: { type: string, format: binary }
+      responses:
+        '204': { description: Staged }
+        '404': { description: 'No `sync` capability, no shell secret, or the wrong one.' }
+        '413':
+          description: The archive is larger than PHP's `post_max_size`.
+        '422':
+          $ref: '#/components/responses/BackupRefused'
+
+  /sync/files:
+    get:
+      operationId: syncFilesIndex
+      summary: The file contents this database names, and which this device holds
+      description: |
+        The files side of the sync (#2030): documents, athletes' photos,
+        avatars and the academy's logo travel apart from the database, one
+        file each on Drive, named by its content (`files/<sha256>.bjs`).
+
+        Every row naming a file records the SHA-256 of its bytes. This lists
+        each content once (two athletes with the same picture share one), its
+        size here, and whether this device holds it: a file at the row's path
+        **with that content**. Ids differ between devices, so a photo at
+        `athletes/photos/57.jpg` that is another athlete's counts as absent.
+        The app sends the contents it holds and Drive lacks, and fetches the
+        ones it lacks.
+      tags: [sync]
+      responses:
+        '200':
+          description: Each content once, sorted by hash
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required: [sha256, size, present, complete]
+                      properties:
+                        sha256: { type: string, pattern: '^[0-9a-f]{64}$' }
+                        size: { type: integer, nullable: true, description: 'Bytes; null when not held here' }
+                        present: { type: boolean, description: 'Held at one of its paths: this device can send it' }
+                        complete:
+                          type: boolean
+                          description: |
+                            Held at every path naming it. False while one row
+                            still lacks its file, for instance the same PDF
+                            for a second athlete.
+        '401': { description: Unauthenticated }
+        '403': { description: Forbidden — the user is not an owner. }
+        '404': { description: The runtime profile has no `sync` capability. }
+
+  /sync/files/{sha256}:
+    parameters:
+      - name: sha256
+        in: path
+        required: true
+        description: The content's SHA-256, lowercase hex. Anything else is 404.
+        schema: { type: string, pattern: '^[0-9a-f]{64}$' }
+    get:
+      operationId: syncFilesShow
+      summary: The bytes of a content this device holds
+      description: |
+        For the app to seal and send to Drive (#2030). The bytes as stored:
+        an encrypted certificate stays encrypted, under the academy's
+        document key, which both devices share once paired.
+      tags: [sync]
+      responses:
+        '200':
+          description: The file
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+        '401': { description: Unauthenticated }
+        '403': { description: Forbidden — the user is not an owner. }
+        '404':
+          description: |
+            No `sync` capability; or `code` `unknown`, no row names the
+            content; or `missing`, this device does not hold it.
+    put:
+      operationId: syncFilesStore
+      summary: Another device's file, for every row naming its content
+      description: |
+        Written at every path a row names for the content, replacing what a
+        path held when it was not that content (another device's athlete 57
+        is not this one's). The bytes must hash to the content named.
+      tags: [sync]
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema: { type: string, format: binary }
+      responses:
+        '204': { description: Written }
+        '401': { description: Unauthenticated }
+        '403': { description: Forbidden — the user is not an owner. }
+        '404':
+          description: No `sync` capability; or `code` `unknown`, no row names the content.
+        '422':
+          description: '`code` `mismatch`: the bytes are not the content named. Nothing is written.'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [code, message]
+                properties:
+                  code: { type: string, enum: [mismatch] }
+                  message: { type: string }
+
+  /sync/journal:
+    get:
+      operationId: syncJournalIndex
+      summary: This device's kept writes, oldest first
+      description: |
+        The journal (#2031, `docs/sync/protocol.md` § A journal entry): this
+        device's own writes to the academy's data, recorded with the write in
+        one transaction, kept until every other device holds them. Empty on a
+        device that is not paired: nothing is journaled without the device id
+        the shell gives (`BUDOJO_DEVICE_ID`).
+      tags: [sync]
+      responses:
+        '200':
+          description: The kept entries
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/SyncJournalEntry' }
+        '401': { description: Unauthenticated }
+        '403': { description: Forbidden — the user is not an owner. }
+        '404': { description: The runtime profile has no `sync` capability. }
+    delete:
+      operationId: syncJournalClear
+      summary: Clear the kept writes every other device holds
+      description: |
+        Deletes this device's entries up to and including `through`, the
+        oldest of what every other device reports holding (`devices/`). What
+        this database dealt with stays recorded, so a later replay still skips
+        them. The uploads no kept entry names any more are deleted too.
+      tags: [sync]
+      parameters:
+        - name: through
+          in: query
+          required: true
+          description: An entry id, a ULID.
+          schema: { type: string, pattern: '^[0-7][0-9A-HJKMNP-TV-Z]{25}$' }
+      responses:
+        '204': { description: Cleared }
+        '401': { description: Unauthenticated }
+        '403': { description: Forbidden — the user is not an owner. }
+        '404': { description: The runtime profile has no `sync` capability. }
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /sync/holds:
+    get:
+      operationId: syncHolds
+      summary: For each device, the newest of its writes this database holds
+      description: |
+        `holds` for this device's report in `devices/` (#2031): per device,
+        the newest entry id this database has dealt with, its own writes and
+        every entry a replay applied, found already true or turned into a
+        conflict. Ids only grow per device, so holding the newest means
+        holding every one before it.
+      tags: [sync]
+      responses:
+        '200':
+          description: Device id → entry id
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    additionalProperties: { type: string }
+              example: { data: { pc4f2a: 01K6F3Q8Z4M7X2N5P9R1T3V6W8, phone9c1e: 01K6F3Q9A1B2C3D4E5F6G7H8J9 } }
+        '401': { description: Unauthenticated }
+        '403': { description: Forbidden — the user is not an owner. }
+        '404': { description: The runtime profile has no `sync` capability. }
+
   /stats/payments/summary:
     get:
       operationId: statsPaymentsSummary
@@ -8534,7 +8861,31 @@ components:
         format: int64
         minimum: 1
 
+    ShellSecret:
+      name: X-Budojo-Shell
+      in: header
+      required: true
+      description: The secret the shell made at launch and handed to its own page alone (#2079).
+      schema:
+        type: string
+
   responses:
+    BackupRefused:
+      description: |
+        Not a backup this Budojo takes; nothing is staged. `code` is `newer`
+        (update Budojo first) or `unreadable` (not a zip, no manifest, a format
+        this code does not know, no database, a damaged one, or a file named
+        outside the academy's folder), the codes a restore on the PC uses.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [code, message]
+            properties:
+              code: { type: string, enum: [newer, unreadable] }
+              message: { type: string }
+          example: { code: unreadable, message: This file is not a Budojo backup. }
+
     Unauthenticated:
       description: Missing or invalid Bearer token
       content:
@@ -8718,6 +9069,51 @@ components:
             $ref: '#/components/schemas/ValidationErrorBody'
 
   schemas:
+    AcademySummary:
+      type: object
+      description: |
+        What the door names an academy by (#2079), the shape of a version
+        manifest's `academy` (`docs/sync/protocol.md`): its active athletes,
+        and how many hold each belt, most first.
+      required: [name, athletes, belts]
+      properties:
+        name: { type: string }
+        athletes: { type: integer, minimum: 0 }
+        belts:
+          type: object
+          additionalProperties: { type: integer, minimum: 1 }
+
+
+    SyncJournalEntry:
+      type: object
+      description: One write in the journal, in the shape `docs/sync/protocol.md` § A journal entry gives (#2031).
+      required: [id, device, at, method, route, params, body, created, before]
+      properties:
+        id: { type: string, description: A ULID; a device's only grow. }
+        device: { type: string, example: pc4f2a }
+        at: { type: string, description: 'UTC, to the microsecond', example: '2026-10-01T18:32:05.123456Z' }
+        method: { type: string, enum: [POST, PUT, PATCH, DELETE] }
+        route: { type: string, description: 'The route name; WriteRouteNamesTest pins every one', example: athletes.store }
+        params:
+          type: object
+          description: The route parameters, numbers as numbers.
+          additionalProperties: true
+        body:
+          type: object
+          nullable: true
+          description: |
+            The request body. An uploaded file is
+            `{ "$file": { "sha256", "name", "type" } }`.
+          additionalProperties: true
+        created:
+          type: object
+          description: The ids the write created, by table.
+          additionalProperties: { type: array, items: { type: integer } }
+        before:
+          type: object
+          nullable: true
+          description: What the rows it changed or deleted held before, by table and id.
+          additionalProperties: true
 
     Runtime:
       type: object
@@ -8725,15 +9121,15 @@ components:
       properties:
         profile:
           type: string
-          enum: [web, desktop]
+          enum: [web, desktop, mobile]
           description: The runtime profile the API is running as (BUDOJO_RUNTIME).
         capabilities:
           type: array
           description: What this profile offers. Routes behind an absent capability answer 404.
           items:
             type: string
-            enum: [community, athlete_accounts, web_push, email, password_breach_check, sync]
-          example: [community, athlete_accounts, web_push, email, password_breach_check]
+            enum: [community, athlete_accounts, web_push, email, password_breach_check, document_upload, sync]
+          example: [community, athlete_accounts, web_push, email, password_breach_check, document_upload]
 
     # ── Enums ─────────────────────────────────────────────────────────────
 

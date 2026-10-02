@@ -17,6 +17,33 @@
 const route = Cypress.env('PAGE') ?? '/dashboard/athletes';
 
 /**
+ * The runtime to shoot as (`make shot RUNTIME=mobile`): its real capability
+ * set, so a surface a runtime lacks is absent from the shot as it is from the
+ * app. Unset, the web default.
+ */
+const RUNTIME_CAPABILITIES: Record<string, string[]> = {
+  desktop: ['document_upload', 'sync'],
+  mobile: ['sync'],
+};
+const runtime = String(Cypress.env('RUNTIME') ?? '');
+/** `make shot THEME=dark`: the theme to shoot in. Unset, the system's (light here). */
+const theme = String(Cypress.env('THEME') ?? '');
+if (theme !== '' && theme !== 'dark' && theme !== 'light') {
+  throw new Error(`Unknown THEME "${theme}": use dark or light.`);
+}
+const visitOptions = {
+  onBeforeLoad(win: Window): void {
+    if (theme !== '') win.localStorage.setItem('budojoTheme', theme);
+  },
+};
+if (runtime !== '' && !(runtime in RUNTIME_CAPABILITIES)) {
+  // A typo would otherwise shoot the web nav under a name that says otherwise.
+  throw new Error(
+    `Unknown RUNTIME "${runtime}": use ${Object.keys(RUNTIME_CAPABILITIES).join(' or ')}.`,
+  );
+}
+
+/**
  * The shell's own calls, stubbed so the page renders at all.
  *
  * `visitAuthenticated` seeds a fake token, which the real dev backend
@@ -31,6 +58,12 @@ const route = Cypress.env('PAGE') ?? '/dashboard/athletes';
  */
 function stubShell(): void {
   cy.intercept('GET', '/api/v1/**', { statusCode: 200, body: { data: [] } });
+  if (runtime !== '') {
+    cy.intercept('GET', '/api/v1/runtime', {
+      statusCode: 200,
+      body: { data: { profile: runtime, capabilities: RUNTIME_CAPABILITIES[runtime] } },
+    });
+  }
   cy.intercept('GET', '/api/v1/me/onboarding', {
     statusCode: 200,
     body: {
@@ -59,9 +92,11 @@ function stubShell(): void {
   });
 }
 const slug =
-  String(route)
-    .replace(/[^a-z0-9]+/gi, '-')
-    .replace(/^-|-$/g, '') || 'page';
+  (runtime ? `${runtime}-` : '') +
+    (theme ? `${theme}-` : '') +
+    String(route)
+      .replace(/[^a-z0-9]+/gi, '-')
+      .replace(/^-|-$/g, '') || 'page';
 
 /**
  * Refuse to shoot through the dev server's compile-error overlay.
@@ -82,7 +117,7 @@ describe(`shot ${route}`, () => {
   it('desktop 1280', () => {
     cy.viewport(1280, 800);
     stubShell();
-    cy.visitAuthenticated(route);
+    cy.visitAuthenticated(route, undefined, visitOptions);
     // Give the page its data before the shutter — a screenshot of a skeleton
     // is a screenshot of nothing.
     cy.get('body').should('be.visible');
@@ -94,7 +129,7 @@ describe(`shot ${route}`, () => {
   it('mobile 375', () => {
     cy.viewport(375, 800);
     stubShell();
-    cy.visitAuthenticated(route);
+    cy.visitAuthenticated(route, undefined, visitOptions);
     cy.get('body').should('be.visible');
     cy.wait(1200);
     noBuildOverlay();

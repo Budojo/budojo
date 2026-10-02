@@ -723,6 +723,10 @@
     "desktop": {
       "title": "Budojo non risponde",
       "message": "Il servizio di Budojo su questo computer non ha risposto. Riprova; se continua, chiudi e riapri Budojo. La connessione a internet non c'entra."
+    },
+    "phone": {
+      "title": "Budojo non risponde",
+      "message": "Il servizio di Budojo su questo telefono non ha risposto. Riprova; se continua, chiudi e riapri Budojo. La connessione a internet non c'entra."
     }
   },
   "support": {
@@ -2407,7 +2411,8 @@
         "empty": {
           "withCancelled": "Nessun documento — attivo o cancellato.",
           "default": "Nessun documento.",
-          "hint": "Usa <strong>Aggiungi documento</strong> sopra per caricare il primo."
+          "hint": "Usa <strong>Aggiungi documento</strong> sopra per caricare il primo.",
+          "hintViewOnly": "I documenti si aggiungono da Budojo sul PC; qui puoi aprirli."
         },
         "activeCountOne": "{{count}} attivo",
         "activeCountOther": "{{count}} attivi",
@@ -3567,6 +3572,20 @@
         "EROFS": "La cartella dei backup è di sola lettura. Scegline un'altra.",
         "unknown": "Impossibile copiare nella cartella dei backup ({{code}}). I backup continuano a essere salvati su questo computer."
       }
+    },
+    "phone": {
+      "title": "Budojo sul telefono",
+      "why": "Porta la palestra sul telefono: Budojo mette le chiavi della palestra in un'area nascosta del tuo Google Drive, che solo Budojo legge. Sul telefono basterà «Accedi con Google», e si apriranno anche i certificati medici.",
+      "twoStep": "Chi entra nel tuo account Google può aprire la palestra, certificati compresi: tieni attiva la verifica in due passaggi.",
+      "connect": "Collega il telefono",
+      "ready": "Pronta per il telefono",
+      "readySince": "Pronta per il telefono dal",
+      "howTo": "Sul telefono apri Budojo e tocca «Accedi con Google».",
+      "keysDiffer": "Su questo account Google ci sono chiavi diverse da quelle di questo PC, e restano come sono. Se è la stessa palestra su un PC nuovo o reinstallato, importa prima qui sotto il codice di recupero, poi riprova.",
+      "failed": "Non è andata",
+      "otherAccount": "Hai scelto un altro account Google: scegli {{account}}, quello dei backup.",
+      "scopesMissing": "Google non ha dato tutti e due i permessi: riprova e lascia spuntate entrambe le voci.",
+      "keysAmbiguous": "Su questo account Google ci sono due file di chiavi: non ne scelgo uno a caso."
     }
   },
   "desktopTitlebar": {
@@ -3623,67 +3642,50 @@
     "copied": "Settimana copiata: incollala nel gruppo.",
     "copyFailed": "Non è stato possibile copiarla: usa «Apri WhatsApp»."
   },
-  "mat": {
-    "spike": {
-      "eyebrow": "Anteprima tecnica",
-      "title": "Budojo sul tatami",
-      "lede": "Questa è la prova dell'app per il telefono: per ora nessun dato vero.",
-      "identityHeading": "Come appare un atleta",
-      "sampleNote": "Riga di esempio, con la cintura sul bordo come sul PC.",
-      "storageHeading": "Prova di memoria",
-      "storageHelp": "Tocca +1 qualche volta, poi installa la versione successiva sopra questa: il numero deve restare.",
-      "countLabel": "Salvato sul telefono",
-      "savedAt": "Ultimo salvataggio: {{when}}",
-      "neverSaved": "Niente salvato finora.",
-      "increment": "+1",
-      "build": "Versione {{build}}",
-      "server": {
-        "heading": "Budojo sul telefono",
-        "help": "Avvia il server di Budojo dentro il telefono, con un'accademia di prova, e misura quanto è veloce. Prova anche in modalità aereo.",
-        "run": "Avvia e misura",
-        "running": "Misuro…",
-        "onlyOnPhone": "Disponibile solo nell'app sul telefono.",
-        "coldStart": "Avvio a freddo",
-        "coldStartDetail": "estrazione {{unpack}} ms · migrazioni {{migrate}} ms · server {{server}} ms",
-        "login": "Accesso",
-        "roster": "Elenco atleti, 20 volte",
-        "mark": "Segna una presenza, 10 volte",
-        "athletes": "Atleti nel database",
-        "firstRequest": "Prima richiesta (compila il framework)"
-      },
-      "drive": {
-        "heading": "Google Drive",
-        "help": "Prima, sul PC: Dati e backup → Backup su Google Drive → Collega Google Drive, poi Copia adesso. Poi qui: collega e fai la prova.",
-        "playServices": "Google Play services",
-        "link": "Collegamento",
-        "checking": "Controllo…",
-        "linkedSilently": "Collegato senza chiedere ({{ms}} ms)",
-        "linkedConsent": "Collegato, dopo il consenso di Google ({{ms}} ms)",
-        "needsConsent": "Non ancora collegato",
-        "linkFailed": "Collegamento non riuscito",
-        "connect": "Collega Google Drive",
-        "run": "Prova Drive",
-        "running": "Provo…",
-        "account": "Account",
-        "folder": "La cartella Budojo del PC",
-        "folderFound": "Trovata",
-        "folderMissing": "Non trovata",
-        "folderMissingHelp": "Il PC crea la cartella alla prima copia. Se il PC non ha ancora copiato: lì collega Google Drive, premi Copia adesso, poi rifai la prova. Se il PC mostra già copie su Google Drive, è proprio la risposta che la prova cerca: il telefono non vede i file del PC. Manda uno screenshot.",
-        "pcArchives": "I backup del PC",
-        "newestRead": "Il più recente, letto da qui",
-        "isZip": "È uno zip: letto",
-        "notZip": "Non è uno zip",
-        "phoneFile": "Il file di prova del telefono",
-        "phoneFileState": {
-          "written": "Scritto adesso",
-          "still-there": "Ancora lì",
-          "gone-and-rewritten": "Era sparito: riscritto"
-        },
-        "readBack": "Riletto",
-        "yes": "Sì",
-        "no": "No",
-        "nextOnPc": "Ora sul PC: premi Copia adesso, poi Mostra tutti sotto la lista, e guarda l'ultima riga. O c'è un backup del 1° gennaio 2000, o il PC l'ha cancellato: in tutti e due i casi il PC ha visto il file del telefono. Poi rifai la prova qui."
-      }
+  "door": {
+    "tagline": "La tua palestra, anche sul telefono.",
+    "google": "Accedi con Google",
+    "withoutGoogle": "Continua senza Google",
+    "connecting": "Conferma con Google…",
+    "looking": "Cerco la tua palestra su Google Drive…",
+    "athletesOne": "{{count}} atleta attivo",
+    "athletesOther": "{{count}} atleti attivi",
+    "takenAt": "backup del PC del {{when}}",
+    "restoring": "Riporto {{name}} sul telefono…",
+    "oneWay": "Per ora le modifiche fatte sul telefono non tornano sul PC.",
+    "retry": "Riprova",
+    "choose": {
+      "lead": "Su questo telefono c'è già una palestra. Quale vuoi usare?",
+      "onDrive": "Su Google Drive",
+      "onPhone": "Su questo telefono",
+      "useDrive": "Usa {{name}} da Drive",
+      "useDriveHint": "Sostituisce i dati di questo telefono.",
+      "keepHere": "Tieni {{name}}"
+    },
+    "notFound": {
+      "title": "Nessuna palestra su {{email}}",
+      "body": "Se l'hai creata sul PC, aprilo e collega Google Drive da Dati e backup. Poi riprova."
+    },
+    "failed": {
+      "offline": "Serve internet per cercare la palestra su Google Drive.",
+      "unauthorized": "Google non ha dato l'accesso a Drive. Riprova.",
+      "newer": "Il backup viene da una versione più nuova di Budojo. Aggiorna l'app, poi riprova.",
+      "unreadable": "Il backup su Drive non si apre. Fai un nuovo backup dal PC, poi riprova.",
+      "other": "Qualcosa è andato storto."
+    },
+    "update": {
+      "lead": "Sul PC c'è un backup di {{name}} più recente di quello sul telefono.",
+      "enter": "Entra con i dati del telefono",
+      "useDrive": "Aggiorna dal PC",
+      "hint": "Aggiornare sostituisce quello che hai cambiato sul telefono dall'ultima volta."
+    },
+    "keysWait": {
+      "title": "I certificati medici si apriranno dopo",
+      "detail": "Sul PC: Dati e backup → Google Drive → «Collega il telefono». Poi esci e rientra con Google qui."
+    },
+    "keysUnread": {
+      "title": "Le chiavi della palestra non si leggono",
+      "detail": "I certificati medici non si apriranno finché non si leggono. Motivo: {{reason}}"
     }
   }
 }

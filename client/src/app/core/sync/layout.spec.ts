@@ -70,13 +70,13 @@ describe('the sync folder layout (#2029)', () => {
 
   it('lets a remote write only the paths the protocol defines, folder by folder', () => {
     const accepted = [
-      'keys.bjs',
+      'folder.bjs',
       versionPath({ seq: 1, device: 'pc4f2a', parent: null }),
       `files/${'ab'.repeat(32)}.bjs`,
       'devices/phone9c1e.bjs',
     ];
     const refused = [
-      '../keys.bjs',
+      '../folder.bjs',
       'other/x.bjs',
       'versions/a/b.bjs',
       'versions/foo.bjs',

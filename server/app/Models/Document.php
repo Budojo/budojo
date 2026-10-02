@@ -38,6 +38,7 @@ use Illuminate\Database\Query\Builder as QueryBuilder;
     'academy_id',
     'type',
     'file_path',
+    'file_sha256',
     'original_name',
     'mime_type',
     'size_bytes',

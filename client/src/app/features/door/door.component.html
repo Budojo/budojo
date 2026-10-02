@@ -1,0 +1,203 @@
+<div class="auth-page">
+  <div class="auth-card door">
+    <div class="auth-header">
+      <app-brand-glyph class="logo-mark" aria-hidden="true" />
+      <h1>Budojo</h1>
+      <p>{{ 'door.tagline' | translate }}</p>
+    </div>
+
+    <!-- Focused at each step, so a screen reader reads what replaced the button. -->
+    <div class="door__step" #stepRegion tabindex="-1" aria-live="polite">
+      @switch (step()) {
+        @case ('start') {
+          <div class="door__actions">
+            <p-button
+              [label]="'door.google' | translate"
+              icon="pi pi-google"
+              styleClass="submit-btn"
+              (onClick)="signInWithGoogle()"
+              data-cy="door-google"
+            />
+            <p-button
+              styleClass="submit-btn"
+              [label]="'door.withoutGoogle' | translate"
+              [text]="true"
+              [loading]="entering()"
+              (onClick)="continueWithoutGoogle()"
+              data-cy="door-without-google"
+            />
+          </div>
+        }
+        @case ('connecting') {
+          <p class="door__status" role="status" data-cy="door-connecting">
+            <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+            {{ 'door.connecting' | translate }}
+          </p>
+        }
+        @case ('looking') {
+          <div class="door__status" role="status" data-cy="door-looking">
+            <p>
+              <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+              {{ 'door.looking' | translate }}
+            </p>
+            @if (account(); as email) {
+              <p class="door__account">{{ email }}</p>
+            }
+          </div>
+        }
+        @case ('choose') {
+          @if (found(); as found) {
+            <div class="door__choice" data-cy="door-choose">
+              <p class="door__lead">{{ 'door.choose.lead' | translate }}</p>
+              @if (found.backup.academy; as drive) {
+                <section class="door__academy" data-cy="door-academy-drive">
+                  <span class="door__where">{{ 'door.choose.onDrive' | translate }}</span>
+                  <span class="door__name">{{ drive.name }}</span>
+                  <span class="door__belts" aria-hidden="true">
+                    @for (belt of beltsOf(drive); track $index) {
+                      <span [style.flex-grow]="belt.count" [style.background]="belt.colour"></span>
+                    }
+                  </span>
+                  <span class="door__meta">
+                    {{ athletesKey(drive.athletes) | translate: { count: drive.athletes } }} ·
+                    {{ 'door.takenAt' | translate: { when: takenAt() } }}
+                  </span>
+                </section>
+              }
+              @if (found.here; as here) {
+                <section class="door__academy" data-cy="door-academy-here">
+                  <span class="door__where">{{ 'door.choose.onPhone' | translate }}</span>
+                  <span class="door__name">{{ here.name }}</span>
+                  <span class="door__belts" aria-hidden="true">
+                    @for (belt of beltsOf(here); track $index) {
+                      <span [style.flex-grow]="belt.count" [style.background]="belt.colour"></span>
+                    }
+                  </span>
+                  <span class="door__meta">{{
+                    athletesKey(here.athletes) | translate: { count: here.athletes }
+                  }}</span>
+                </section>
+              }
+              <div class="door__actions">
+                <p-button
+                  [label]="'door.choose.useDrive' | translate: { name: found.backup.academy?.name }"
+                  styleClass="submit-btn"
+                  (onClick)="useDrive()"
+                  data-cy="door-use-drive"
+                />
+                <p class="door__hint">{{ 'door.choose.useDriveHint' | translate }}</p>
+                <p-button
+                  styleClass="submit-btn"
+                  [label]="'door.choose.keepHere' | translate: { name: found.here?.name }"
+                  [outlined]="true"
+                  [loading]="entering()"
+                  (onClick)="keepHere()"
+                  data-cy="door-keep-here"
+                />
+              </div>
+            </div>
+          }
+        }
+        @case ('update') {
+          @if (found()?.backup?.academy; as drive) {
+            <div class="door__choice" data-cy="door-update">
+              <p class="door__lead">{{ 'door.update.lead' | translate: { name: drive.name } }}</p>
+              <section class="door__academy" data-cy="door-academy-drive">
+                <span class="door__where">{{ 'door.choose.onDrive' | translate }}</span>
+                <span class="door__name">{{ drive.name }}</span>
+                <span class="door__belts" aria-hidden="true">
+                  @for (belt of beltsOf(drive); track $index) {
+                    <span [style.flex-grow]="belt.count" [style.background]="belt.colour"></span>
+                  }
+                </span>
+                <span class="door__meta">
+                  {{ athletesKey(drive.athletes) | translate: { count: drive.athletes } }} ·
+                  {{ 'door.takenAt' | translate: { when: takenAt() } }}
+                </span>
+              </section>
+              <div class="door__actions">
+                <p-button
+                  styleClass="submit-btn"
+                  [label]="'door.update.enter' | translate"
+                  [loading]="entering()"
+                  (onClick)="keepHere()"
+                  data-cy="door-keep-here"
+                />
+                <p-button
+                  styleClass="submit-btn"
+                  [label]="'door.update.useDrive' | translate"
+                  [outlined]="true"
+                  [disabled]="entering()"
+                  (onClick)="useDrive()"
+                  data-cy="door-use-drive"
+                />
+                <p class="door__hint">{{ 'door.update.hint' | translate }}</p>
+              </div>
+            </div>
+          }
+        }
+        @case ('restoring') {
+          <div class="door__status" role="status" data-cy="door-restoring">
+            <p>
+              <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+              {{ 'door.restoring' | translate: { name: found()?.backup?.academy?.name } }}
+            </p>
+            @if (found()?.backup?.academy; as drive) {
+              <p class="door__meta">
+                {{ athletesKey(drive.athletes) | translate: { count: drive.athletes } }} ·
+                {{ 'door.takenAt' | translate: { when: takenAt() } }}
+              </p>
+            }
+            <p class="door__hint">{{ 'door.oneWay' | translate }}</p>
+          </div>
+        }
+        @case ('not-found') {
+          <div class="door__outcome" data-cy="door-not-found">
+            <h2>{{ 'door.notFound.title' | translate: { email: account() ?? '' } }}</h2>
+            <p>{{ 'door.notFound.body' | translate }}</p>
+            <div class="door__actions">
+              <p-button
+                [label]="'door.retry' | translate"
+                styleClass="submit-btn"
+                (onClick)="signInWithGoogle()"
+                data-cy="door-retry"
+              />
+              <p-button
+                styleClass="submit-btn"
+                [label]="'door.withoutGoogle' | translate"
+                [text]="true"
+                [loading]="entering()"
+                (onClick)="continueWithoutGoogle()"
+                data-cy="door-not-found-without-google"
+              />
+            </div>
+          </div>
+        }
+        @case ('failed') {
+          <div class="door__outcome" data-cy="door-failed">
+            <p-message severity="error" [text]="'door.failed.' + failure() | translate" />
+            @if (failure() !== 'offline' && failure() !== 'unauthorized') {
+              <p class="door__detail">{{ failureDetail() }}</p>
+            }
+            <div class="door__actions">
+              <p-button
+                [label]="'door.retry' | translate"
+                styleClass="submit-btn"
+                (onClick)="signInWithGoogle()"
+                data-cy="door-retry"
+              />
+              <p-button
+                styleClass="submit-btn"
+                [label]="'door.withoutGoogle' | translate"
+                [text]="true"
+                [loading]="entering()"
+                (onClick)="continueWithoutGoogle()"
+                data-cy="door-without-google"
+              />
+            </div>
+          </div>
+        }
+      }
+    </div>
+  </div>
+</div>

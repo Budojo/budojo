@@ -1,18 +1,18 @@
 name: Mobile APK
 
-# The mat app as a signed Android APK (#2027, M12 #2026). It proves that the
-# client's `mat` application builds, goes through Capacitor and comes out
-# signed with the release key. Attaching it to a release is #2040; until then
-# the APK is a workflow artifact the owner sideloads to test on a phone.
+# Budojo for the phone as a signed Android APK (#2027, #2034, M12 #2026): the
+# SPA's `mobile` build and Budojo's own server, packed by Capacitor and signed
+# with the release key. Attaching it to a release is #2040; until then the APK
+# is a workflow artifact the owner sideloads to test on a phone.
 #
-# It runs on every client change, not only the mat app's: the mat app imports
-# the SPA's shared components, services, theme and translations, so a change
-# anywhere under client/ can break it (#2043 review).
+# It runs on every client and server change: the phone runs the whole SPA and
+# the whole server, so a change anywhere in either can break it (#2043 review).
 on:
   pull_request:
     paths:
       - 'mobile/**'
       - 'client/**'
+      - 'server/**'
       - '.github/workflows/mobile-apk.yml'
   workflow_dispatch:
 
@@ -42,9 +42,15 @@ jobs:
           path: mobile/php/out
           key: php-android-${{ hashFiles('mobile/php/recipe.env', 'mobile/php/build.sh', 'mobile/php/*.php') }}
 
+      # The cache is reachable from develop and from a PR into it; a PR
+      # stacked on another branch rebuilds (#2081). static-php-cli then asks
+      # GitHub's API for every source's releases, and anonymously a shared
+      # runner's address runs out of calls (403). The run's own token lifts it.
       - name: Build PHP from source in Alpine
         if: steps.cache.outputs.cache-hit != 'true'
-        run: docker run --rm -v "$PWD:/work" -w /work alpine:3.21 sh mobile/php/build.sh /work/mobile/php/out
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: docker run --rm -e GITHUB_TOKEN -v "$PWD:/work" -w /work alpine:3.21 sh mobile/php/build.sh /work/mobile/php/out
 
       # Android's app seccomp policy kills a process that calls accept (it allows
       # accept4). Reproduce that here, so a PHP that would die on a phone at its
@@ -97,13 +103,13 @@ jobs:
         working-directory: client
         run: npm ci
 
-      - name: Stamp the build number into the app
+      # Budojo itself, in its phone configuration (#2034). The prebuild stamps
+      # BUDOJO_VERSION into the sidebar's version, as the desktop installer does.
+      - name: Build the app for the phone
         working-directory: client
-        run: echo "export const MAT_BUILD = '${VERSION_NAME}';" > projects/mat/src/build-info.ts
-
-      - name: Build the mat app
-        working-directory: client
-        run: npx ng build mat
+        env:
+          BUDOJO_VERSION: ${{ env.VERSION_NAME }}
+        run: npm run build -- --configuration mobile
 
       - name: Install Capacitor
         working-directory: mobile
@@ -127,7 +133,7 @@ jobs:
           extensions: fileinfo, pdo, pdo_sqlite, mbstring, bcmath, gd, zip, intl, sodium
           tools: composer:v2
 
-      - name: Pack the server and a demo academy
+      - name: Pack the server
         run: ./mobile/php/bundle-server.sh mobile/android/app/src/main/assets
 
       - name: Copy the web build into the Android project
@@ -183,4 +189,42 @@ jobs:
         with:
           name: Budojo-Android-${{ env.VERSION_NAME }}
           path: ${{ runner.temp }}/Budojo-Android-${{ env.VERSION_NAME }}.apk
+          retention-days: 14
+
+  # The owner's ask (#2079): each APK meets a real Android before it meets
+  # them. An emulator shaped like a common phone (Android 14, a Galaxy
+  # A-class 1080x2340 screen) installs it, opens it, and photographs each
+  # screen it reaches. The photos are this run's artifact.
+  emulator:
+    name: 📱 On an Android emulator
+    needs: apk
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      VERSION_NAME: 0.0.${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: Budojo-Android-${{ env.VERSION_NAME }}
+          path: ${{ runner.temp }}/apk
+
+      - name: Let the runner use KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Boot a Galaxy A-class phone, Android 14
+        run: mobile/emulator/boot.sh
+
+      - name: Open the app and photograph each screen
+        run: mobile/emulator/smoke.sh "$RUNNER_TEMP/apk/Budojo-Android-${VERSION_NAME}.apk" "$RUNNER_TEMP/shots"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Budojo-Android-${{ env.VERSION_NAME }}-emulator
+          path: ${{ runner.temp }}/shots
           retention-days: 14

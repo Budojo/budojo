@@ -16,6 +16,7 @@ import { PasswordModule } from 'primeng/password';
 import { finalize } from 'rxjs';
 import { AuthService } from '../../../core/services/auth.service';
 import { PasswordStrengthMeterComponent } from '../../../shared/components/password-strength-meter/password-strength-meter.component';
+import { BrandGlyphComponent } from '../../../shared/components/brand-glyph/brand-glyph.component';
 
 /**
  * `/auth/reset-password?token=…&email=…` (M5 PR-A). The `token` + `email`
@@ -40,6 +41,7 @@ import { PasswordStrengthMeterComponent } from '../../../shared/components/passw
   selector: 'app-reset-password',
   standalone: true,
   imports: [
+    BrandGlyphComponent,
     ReactiveFormsModule,
     RouterLink,
     ButtonModule,

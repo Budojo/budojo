@@ -7,6 +7,9 @@
  *  - desktop — inside the Electron shell over `app://`; the API base comes from
  *              the preload bridge at runtime, and there is no service worker,
  *              no `/version.json` endpoint and no browser push service.
+ *  - mobile  — inside the Capacitor shell on the owner's phone (M12, #2034);
+ *              the API base comes from `PhpServerPlugin` at start, and like
+ *              the desktop there is no service worker and no `/version.json`.
  *
  * Decided at build time via `fileReplacements` because everything it gates is
  * a build artefact (is `ngsw-worker.js` emitted?) or an endpoint that exists
@@ -14,4 +17,4 @@
  * from the server (#1229), not this flag — a build target that sprouts
  * `if (desktop)` in components is a fork.
  */
-export type ClientRuntime = 'web' | 'desktop';
+export type ClientRuntime = 'web' | 'desktop' | 'mobile';

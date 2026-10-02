@@ -723,6 +723,10 @@
     "desktop": {
       "title": "Budojo isn't responding",
       "message": "Budojo's own service on this computer didn't answer. Try again; if it keeps happening, close and reopen Budojo. Your internet connection has nothing to do with it."
+    },
+    "phone": {
+      "title": "Budojo isn't responding",
+      "message": "Budojo's own service on this phone didn't answer. Try again; if it keeps happening, close and reopen Budojo. Your internet connection has nothing to do with it."
     }
   },
   "support": {
@@ -2407,7 +2411,8 @@
         "empty": {
           "withCancelled": "No documents yet — active or cancelled.",
           "default": "No documents yet.",
-          "hint": "Use <strong>Add document</strong> above to upload the first one."
+          "hint": "Use <strong>Add document</strong> above to upload the first one.",
+          "hintViewOnly": "Documents are added from Budojo on the PC; here you can open them."
         },
         "activeCountOne": "{{count}} active",
         "activeCountOther": "{{count}} active",
@@ -3567,6 +3572,20 @@
         "EROFS": "The backup folder is read-only. Choose a different one.",
         "unknown": "Could not copy to the backup folder ({{code}}). Backups are still being saved on this computer."
       }
+    },
+    "phone": {
+      "title": "Budojo on the phone",
+      "why": "Bring the gym to the phone: Budojo puts the gym's keys in a hidden area of your Google Drive that only Budojo reads. On the phone, «Sign in with Google» is enough, and the medical certificates open too.",
+      "twoStep": "Whoever gets into your Google account can open the gym, certificates included: keep 2-step verification on.",
+      "connect": "Connect the phone",
+      "ready": "Ready for the phone",
+      "readySince": "Ready for the phone since",
+      "howTo": "On the phone, open Budojo and tap «Sign in with Google».",
+      "keysDiffer": "This Google account holds keys other than this PC's, and they are left as they are. If it is the same gym on a new or reinstalled PC, import the recovery code below first, then try again.",
+      "failed": "It did not work",
+      "otherAccount": "You picked another Google account: pick {{account}}, the one the backups go to.",
+      "scopesMissing": "Google did not grant both permissions: try again and leave both boxes ticked.",
+      "keysAmbiguous": "This Google account holds two keys files: none is picked at random."
     }
   },
   "desktopTitlebar": {
@@ -3623,67 +3642,50 @@
     "copied": "Week copied: paste it in the group.",
     "copyFailed": "It couldn't be copied: use «Open WhatsApp»."
   },
-  "mat": {
-    "spike": {
-      "eyebrow": "Technical preview",
-      "title": "Budojo on the mat",
-      "lede": "This is the trial run of the phone app: no real data, for now.",
-      "identityHeading": "How an athlete looks",
-      "sampleNote": "A sample row, with the belt down the edge as on the PC.",
-      "storageHeading": "Storage check",
-      "storageHelp": "Tap +1 a few times, then install the next build over this one: the number must stay.",
-      "countLabel": "Saved on the phone",
-      "savedAt": "Last saved: {{when}}",
-      "neverSaved": "Nothing saved yet.",
-      "increment": "+1",
-      "build": "Build {{build}}",
-      "server": {
-        "heading": "Budojo on the phone",
-        "help": "Starts Budojo's server inside the phone, with a demo academy, and measures how fast it is. Try it in airplane mode too.",
-        "run": "Start and measure",
-        "running": "Measuring…",
-        "onlyOnPhone": "Only available in the app on the phone.",
-        "coldStart": "Cold start",
-        "coldStartDetail": "unpack {{unpack}} ms · migrations {{migrate}} ms · server {{server}} ms",
-        "login": "Log in",
-        "roster": "Athlete list, 20 times",
-        "mark": "Mark a presence, 10 times",
-        "athletes": "Athletes in the database",
-        "firstRequest": "First request (compiles the framework)"
-      },
-      "drive": {
-        "heading": "Google Drive",
-        "help": "First, on the PC: Data & backup → Google Drive backup → Connect Google Drive, then Copy now. Then here: connect, and run the test.",
-        "playServices": "Google Play services",
-        "link": "Connection",
-        "checking": "Checking…",
-        "linkedSilently": "Connected without asking ({{ms}} ms)",
-        "linkedConsent": "Connected, after Google's consent ({{ms}} ms)",
-        "needsConsent": "Not connected yet",
-        "linkFailed": "Could not connect",
-        "connect": "Connect Google Drive",
-        "run": "Test Drive",
-        "running": "Testing…",
-        "account": "Account",
-        "folder": "The PC's Budojo folder",
-        "folderFound": "Found",
-        "folderMissing": "Not found",
-        "folderMissingHelp": "The PC creates the folder on its first copy. If the PC has not copied yet: connect Google Drive there, press Copy now, then test again. If the PC already shows copies on Google Drive, this is the answer the test looks for: the phone cannot see the PC's files. Send a screenshot.",
-        "pcArchives": "The PC's backups",
-        "newestRead": "The newest, read from here",
-        "isZip": "It is a zip: read",
-        "notZip": "Not a zip",
-        "phoneFile": "The phone's test file",
-        "phoneFileState": {
-          "written": "Written now",
-          "still-there": "Still there",
-          "gone-and-rewritten": "It had gone: written again"
-        },
-        "readBack": "Read back",
-        "yes": "Yes",
-        "no": "No",
-        "nextOnPc": "Now on the PC: press Copy now, then Show all under the list, and look at the last row. Either a backup dated 1 January 2000 is there, or the PC has deleted it: both mean the PC saw the phone's file. Then test again here."
-      }
+  "door": {
+    "tagline": "Your gym, on your phone too.",
+    "google": "Sign in with Google",
+    "withoutGoogle": "Continue without Google",
+    "connecting": "Confirm with Google…",
+    "looking": "Looking for your gym on Google Drive…",
+    "athletesOne": "{{count}} active athlete",
+    "athletesOther": "{{count}} active athletes",
+    "takenAt": "PC backup of {{when}}",
+    "restoring": "Bringing {{name}} to this phone…",
+    "oneWay": "For now, changes made on the phone don't go back to the PC.",
+    "retry": "Try again",
+    "choose": {
+      "lead": "This phone already holds a gym. Which one do you want to use?",
+      "onDrive": "On Google Drive",
+      "onPhone": "On this phone",
+      "useDrive": "Use {{name}} from Drive",
+      "useDriveHint": "It replaces the data on this phone.",
+      "keepHere": "Keep {{name}}"
+    },
+    "notFound": {
+      "title": "No gym on {{email}}",
+      "body": "If you set it up on the PC, open it and connect Google Drive under Data & backup. Then try again."
+    },
+    "failed": {
+      "offline": "Looking for the gym on Google Drive needs the internet.",
+      "unauthorized": "Google didn't grant access to Drive. Try again.",
+      "newer": "The backup comes from a newer Budojo. Update the app, then try again.",
+      "unreadable": "The backup on Drive doesn't open. Take a new backup on the PC, then try again.",
+      "other": "Something went wrong."
+    },
+    "update": {
+      "lead": "The PC has a newer backup of {{name}} than the one on this phone.",
+      "enter": "Go in with the phone's data",
+      "useDrive": "Update from the PC",
+      "hint": "Updating replaces what you changed on the phone since last time."
+    },
+    "keysWait": {
+      "title": "The medical certificates will open later",
+      "detail": "On the PC: Data & backup → Google Drive → «Connect the phone». Then sign out and back in with Google here."
+    },
+    "keysUnread": {
+      "title": "The gym's keys do not read",
+      "detail": "The medical certificates will not open until they do. Reason: {{reason}}"
     }
   }
 }

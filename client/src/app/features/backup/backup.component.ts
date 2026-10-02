@@ -42,6 +42,14 @@ import { LocaleDatePipe } from '../../shared/pipes/locale-date.pipe';
 import { driveErrorKey, folderErrorKey } from '../../shared/utils/backup-errors';
 import { prefersReducedMotion } from '../../shared/utils/prefers-reduced-motion';
 
+/** What each refusal of «Collega il telefono» says (#2033); another code is shown as it is. */
+const PHONE_REFUSALS: Record<string, string> = {
+  keys_differ: 'backup.phone.keysDiffer',
+  other_account: 'backup.phone.otherAccount',
+  scopes_missing: 'backup.phone.scopesMissing',
+  keys_ambiguous: 'backup.phone.keysAmbiguous',
+};
+
 /** How many archives the list shows before "Mostra tutti" (#1910). */
 const LIST_LIMIT = 5;
 
@@ -116,6 +124,7 @@ export class BackupComponent {
   protected readonly driveState = signal<DriveLinkStateView>({ configured: false, linked: false });
   protected readonly driveArchives = signal<DriveArchiveView[]>([]);
   protected readonly linking = signal(false);
+  protected readonly connectingPhone = signal(false);
 
   /**
    * Google has withdrawn Budojo's access (#2064): every 7 days while the
@@ -271,6 +280,33 @@ export class BackupComponent {
       ),
       detail: result.ok ? (result.account ?? undefined) : result.error,
       life: result.ok ? 4000 : 8000,
+    });
+
+    await this.refresh();
+  }
+
+  /**
+   * Brings the gym to the phone (#2033): Google asks once more, for the hidden
+   * data, and the academy's keys go there for the phone's «Accedi con Google».
+   */
+  protected async connectPhone(): Promise<void> {
+    this.connectingPhone.set(true);
+    const result = await this.drive.connectPhone();
+    this.connectingPhone.set(false);
+
+    const refusal = PHONE_REFUSALS[result.error ?? ''];
+    this.messages.add({
+      severity: result.ok ? 'success' : 'error',
+      summary: this.translate.instant(
+        result.ok ? 'backup.phone.ready' : (refusal ?? 'backup.phone.failed'),
+        { account: this.driveState().account ?? '' },
+      ),
+      detail: result.ok
+        ? this.translate.instant('backup.phone.howTo')
+        : refusal === undefined
+          ? result.error
+          : undefined,
+      life: result.ok ? 6000 : 12000,
     });
 
     await this.refresh();

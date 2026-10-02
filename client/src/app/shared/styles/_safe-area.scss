@@ -1,0 +1,29 @@
+// The top of the screen on the phone and the desktop (#2034).
+//
+// The phone draws the app edge to edge under a transparent status bar, and
+// the desktop draws its own title bar over the top 40 px.
+// `--budojo-safe-top` is either one: the status bar's inset on the phone,
+// the title bar's height on the desktop, zero in a browser. The dashboard
+// shell's top bar clears it itself; a page outside the shell does it with
+// these.
+
+// The page's own top padding, or enough to start below the bar, whichever
+// is more.
+@mixin clear-top($base) {
+  padding-top: max(#{$base}, calc(var(--budojo-safe-top, 0px) + 1rem));
+}
+
+// A strip the status bar's height, in the page's colour, so text that
+// scrolls up passes beneath the clock instead of through it. Zero high
+// wherever there is no status bar inset; the desktop's title bar has its
+// own strip (`styles.scss`).
+@mixin status-bar-strip($background: var(--p-surface-50)) {
+  &::before {
+    content: '';
+    position: fixed;
+    inset: 0 0 auto 0;
+    z-index: 1;
+    height: env(safe-area-inset-top, 0px);
+    background: $background;
+  }
+}

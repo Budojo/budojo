@@ -59,6 +59,8 @@ interface DriveLinkState {
   readonly lastError?: string | null;
   readonly lastErrorAt?: string | null;
   readonly consecutiveFailures?: number;
+  /** When the academy's keys were last found on the account for the phone (#2033). */
+  readonly keysPublishedAt?: string | null;
 }
 
 /**
@@ -142,9 +144,11 @@ interface BudojoBridge {
    * `configured: false` so the page can say the feature is unavailable rather
    * than offering a Connect button that opens a Google error page.
    *
-   * The recovery code is deliberately NOT part of this: archive and keys in the
-   * same Google account are one compromised login away from every medical
-   * certificate being readable (#1254).
+   * The recovery code is not part of the backups: an archive and its keys in
+   * the same folder would be one compromised login away from every medical
+   * certificate (#1254). `connectPhone` puts the keys with the Google account
+   * only on the owner's choice, in the hidden application data, which the
+   * owner decided on 2 Oct 2026 (PRD § 5.4: "Google is the key", #2033).
    */
   readonly drive: {
     state(): Promise<DriveLinkState>;
@@ -152,6 +156,8 @@ interface BudojoBridge {
     archives(): Promise<DriveArchive[]>;
     link(): Promise<{ ok: boolean; account?: string | null; error?: string }>;
     unlink(): Promise<{ ok: boolean }>;
+    /** Brings the gym to the phone: a second consent, then the academy's keys on the account (#2033). */
+    connectPhone(): Promise<{ ok: boolean; keys?: 'published' | 'already'; error?: string }>;
     sync(): Promise<{
       ran: boolean;
       uploaded?: number;
@@ -218,4 +224,10 @@ interface BudojoBridge {
 
 interface Window {
   readonly __BUDOJO__?: BudojoBridge;
+  /** The phone's server, published by `main.ts` once `PhpServerPlugin` has started it (#2034). */
+  __BUDOJO_MOBILE__?: {
+    readonly apiBase: string;
+    /** The shell's secret for the `/device` routes (#2079); absent from a shell older than the door. */
+    readonly shellSecret?: string;
+  };
 }

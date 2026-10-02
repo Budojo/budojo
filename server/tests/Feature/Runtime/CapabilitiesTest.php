@@ -24,15 +24,22 @@ it('gives the web profile every multi-user capability, and not the device sync',
     )->and(Capabilities::has(Capability::Sync))->toBeFalse();
 });
 
-it('gives the desktop profile the sync, and none of the multi-user capabilities', function (): void {
+it('gives the desktop profile the document upload and the sync, and none of the multi-user capabilities', function (): void {
     config()->set('budojo.runtime', 'desktop');
 
-    expect(Capabilities::all())->toBe([Capability::Sync])
+    expect(Capabilities::all())->toBe([Capability::DocumentUpload, Capability::Sync])
         ->and(Capabilities::has(Capability::Community))->toBeFalse()
         ->and(Capabilities::has(Capability::AthleteAccounts))->toBeFalse()
         ->and(Capabilities::has(Capability::WebPush))->toBeFalse()
         ->and(Capabilities::has(Capability::Email))->toBeFalse()
         ->and(Capabilities::has(Capability::PasswordBreachCheck))->toBeFalse();
+});
+
+it('gives the phone the sync alone: no multi-user capability, and documents view only (#2034)', function (): void {
+    config()->set('budojo.runtime', 'mobile');
+
+    expect(Capabilities::all())->toBe([Capability::Sync])
+        ->and(Capabilities::has(Capability::DocumentUpload))->toBeFalse();
 });
 
 it('ignores unknown names in the config map rather than crashing boot', function (): void {
@@ -56,10 +63,10 @@ it('exposes the profile and its capabilities on a public endpoint', function ():
         ->assertJsonFragment(['community']);
 });
 
-it('reports only the sync on the desktop endpoint', function (): void {
+it('reports the document upload and the sync on the desktop endpoint', function (): void {
     config()->set('budojo.runtime', 'desktop');
 
     $this->getJson('/api/v1/runtime')
         ->assertOk()
-        ->assertExactJson(['data' => ['profile' => 'desktop', 'capabilities' => ['sync']]]);
+        ->assertExactJson(['data' => ['profile' => 'desktop', 'capabilities' => ['document_upload', 'sync']]]);
 });

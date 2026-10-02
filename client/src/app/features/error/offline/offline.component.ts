@@ -4,6 +4,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { BrandGlyphComponent } from '../../../shared/components/brand-glyph/brand-glyph.component';
 import { OnlineStatusService } from '../../../core/services/online-status.service';
 import { DesktopBridgeService } from '../../../core/services/desktop-bridge.service';
+import { phpServerPlugin } from '../../../core/mobile/phone-server';
 
 /**
  * Offline landing page (#425).
@@ -54,6 +55,8 @@ export class OfflineComponent {
    * synchronously by the preload, before any renderer script runs.
    */
   protected readonly desktop = inject(DesktopBridgeService).isDesktop;
+  /** The phone's API is a local process too (#2034), detected the same way: from its shell. */
+  protected readonly phone = phpServerPlugin() !== null;
   private wasOffline = this.onlineStatus.isOffline();
 
   constructor() {

@@ -13,6 +13,8 @@ export type Capability =
   | 'web_push'
   | 'email'
   | 'password_breach_check'
+  // Uploading a document: absent on the phone, where documents are view only (#2034).
+  | 'document_upload'
   // The sync between the owner's own devices (#2030): a device capability.
   | 'sync';
 
@@ -23,6 +25,7 @@ export const ALL_CAPABILITIES: readonly Capability[] = [
   'web_push',
   'email',
   'password_breach_check',
+  'document_upload',
   'sync',
 ];
 
@@ -35,8 +38,10 @@ export const WEB_CAPABILITIES: readonly Capability[] = ALL_CAPABILITIES.filter(
   (capability) => capability !== 'sync',
 );
 
+export type RuntimeProfile = 'web' | 'desktop' | 'mobile';
+
 interface RuntimeResponse {
-  data: { profile: 'web' | 'desktop'; capabilities: Capability[] };
+  data: { profile: RuntimeProfile; capabilities: Capability[] };
 }
 
 /**
@@ -58,8 +63,10 @@ export class RuntimeService {
   private readonly http = inject(HttpClient);
 
   private readonly capabilitiesSignal = signal<readonly Capability[]>(WEB_CAPABILITIES);
-  private readonly profileSignal = signal<'web' | 'desktop'>('web');
+  private readonly profileSignal = signal<RuntimeProfile>('web');
   private readonly loadedSignal = signal<boolean>(false);
+  /** The server answered with a runtime that parsed: not merely a request that ended. */
+  private readonly confirmedSignal = signal<boolean>(false);
   private loading: Promise<void> | null = null;
 
   readonly capabilities = this.capabilitiesSignal.asReadonly();
@@ -77,6 +84,19 @@ export class RuntimeService {
   readonly has = computed(() => {
     const current = new Set(this.capabilitiesSignal());
     return (capability: Capability): boolean => current.has(capability);
+  });
+
+  /**
+   * True only once the server has said the runtime offers the capability.
+   * For a surface some runtimes lack, which must not paint on the optimistic
+   * web default and then vanish: the phone's document upload (#2034). A
+   * request that failed, or answered with no runtime, confirms nothing: the
+   * web default it keeps would offer the phone an upload it has not got.
+   */
+  readonly hasConfirmed = computed(() => {
+    const confirmed = this.confirmedSignal();
+    const has = this.has();
+    return (capability: Capability): boolean => confirmed && has(capability);
   });
 
   /**
@@ -98,6 +118,7 @@ export class RuntimeService {
         }
         this.profileSignal.set(parsed.profile);
         this.capabilitiesSignal.set(parsed.capabilities);
+        this.confirmedSignal.set(true);
       })
       .catch(() => undefined)
       .finally(() => this.loadedSignal.set(true));
@@ -108,7 +129,7 @@ export class RuntimeService {
 
 function parseRuntime(
   response: unknown,
-): { profile: 'web' | 'desktop'; capabilities: Capability[] } | null {
+): { profile: RuntimeProfile; capabilities: Capability[] } | null {
   if (typeof response !== 'object' || response === null) {
     return null;
   }
@@ -117,7 +138,10 @@ function parseRuntime(
     return null;
   }
   const { profile, capabilities } = data as { profile?: unknown; capabilities?: unknown };
-  if ((profile !== 'web' && profile !== 'desktop') || !Array.isArray(capabilities)) {
+  if (
+    (profile !== 'web' && profile !== 'desktop' && profile !== 'mobile') ||
+    !Array.isArray(capabilities)
+  ) {
     return null;
   }
   const known = new Set<string>(ALL_CAPABILITIES);

@@ -1,4 +1,5 @@
 import type { BackupEntry } from './backup.js';
+import type { Secrets } from './bootstrap.js';
 import type { DriveTokens } from './drive-io.js';
 import {
   recordFailure,
@@ -7,6 +8,8 @@ import {
   type DriveState,
 } from './drive-state.js';
 import { mergeArchiveViews, planSync, REMOTE_RETENTION, type ArchiveView, type RemoteArchive } from './drive-sync.js';
+import { APPDATA_SCOPE, DRIVE_SCOPE } from './drive-auth.js';
+import { holdsTheseSecrets, newAcademyKeys, parseAcademyKeys } from './sync-keys.js';
 
 /**
  * Orchestrates the Drive backup sync (#1301): link, sync, unlink.
@@ -31,6 +34,14 @@ export interface DriveSyncIO {
   clearTokens: () => Promise<void>;
 
   authorize: () => Promise<DriveTokens>;
+  /** The same consent, with the account's hidden application data as well (#2033). */
+  authorizeWithAppData: () => Promise<DriveTokens>;
+  /** This PC's keys, from the OS keychain (#1254). */
+  localSecrets: () => Promise<Secrets>;
+  /** Every keys file on the account: Drive allows two of one name. */
+  findKeys: (tokens: DriveTokens) => Promise<string[]>;
+  readKeys: (tokens: DriveTokens, id: string) => Promise<string>;
+  writeKeys: (tokens: DriveTokens, text: string) => Promise<void>;
   ensureFresh: (tokens: DriveTokens) => Promise<DriveTokens>;
   accountEmail: (tokens: DriveTokens) => Promise<string | null>;
   ensureFolder: (tokens: DriveTokens) => Promise<string>;
@@ -49,6 +60,20 @@ export type SyncResult =
   | { ran: true; uploaded: number; deleted: number; error?: string };
 
 export type LinkResult = { ok: true; account: string | null } | { ok: false; error: string };
+
+/**
+ * Bringing the gym to the phone (#2033). `published`: this PC wrote the keys;
+ * `already`: they were on the account and are this PC's. The refusals, each
+ * leaving the backup link as it was:
+ * - `keys_differ`: the account holds other keys, never overwritten;
+ * - `keys_ambiguous`: it holds two keys files, and none is picked;
+ * - `scopes_missing`: the consent did not grant both scopes;
+ * - `other_account`: the consent was for another Google account;
+ * - `link_changed`: Drive was disconnected or relinked meanwhile.
+ */
+export type PhoneResult =
+  | { ok: true; keys: 'published' | 'already' }
+  | { ok: false; error: string };
 
 /** Pulls the code off whatever was thrown, without assuming it is a DriveError. */
 function errorCode(error: unknown): string {
@@ -74,6 +99,9 @@ export class DriveSyncService {
    * write, so a stale result either lands before the relink or not at all.
    */
   private writes: Promise<void> = Promise.resolve();
+
+  /** The connection to the phone in progress, if any: two at once could write two keys files. */
+  private connecting: Promise<PhoneResult> | null = null;
 
   constructor(private readonly io: DriveSyncIO) {}
 
@@ -105,7 +133,10 @@ export class DriveSyncService {
 
   async link(): Promise<LinkResult> {
     try {
-      const tokens = await this.io.authorize();
+      // Once the keys are with the account, a reconnect (weekly while the app
+      // is in Testing) asks for their scope too, so the PC keeps reaching them.
+      const keysPublished = (await this.io.readState()).keysPublishedAt !== null;
+      const tokens = keysPublished ? await this.io.authorizeWithAppData() : await this.io.authorize();
       const account = await this.io.accountEmail(tokens);
       const folderId = await this.io.ensureFolder(tokens);
 
@@ -113,11 +144,14 @@ export class DriveSyncService {
       // connected UI that cannot actually upload.
       await this.io.writeTokens(tokens);
       await this.serially(async () => {
+        const before = await this.io.readState();
         await this.io.writeState({
           ...unlinkedState(),
           linked: true,
           account,
           folderId,
+          // The keys stay on the same account across a reconnect.
+          keysPublishedAt: before.account === account ? before.keysPublishedAt : null,
         });
         this.forgetRunningSync();
       });
@@ -224,13 +258,15 @@ export class DriveSyncService {
         this.io.log(`sync: pruned remote ${fileId}`);
       }
 
-      const succeeded = state;
       await this.serially(async () => {
         if (generation !== this.generation) {
           this.io.log('sync: the link changed while it ran, result not recorded');
           return;
         }
-        await this.io.writeState(recordSuccess(succeeded, { at: this.io.now(), uploaded: plan.toUpload.length }));
+        // On the state as it is now: a phone connected while this ran keeps its date.
+        await this.io.writeState(
+          recordSuccess(await this.io.readState(), { at: this.io.now(), uploaded: plan.toUpload.length }),
+        );
       });
 
       return { ran: true, uploaded: plan.toUpload.length, deleted: plan.toDelete.length };
@@ -241,10 +277,9 @@ export class DriveSyncService {
       // against, and a second disk error here must not become the thing that
       // throws.
       if (state !== null) {
-        const failed = state;
         await this.serially(async () => {
           if (generation === this.generation) {
-            await this.io.writeState(recordFailure(failed, { at: this.io.now(), error: code }));
+            await this.io.writeState(recordFailure(await this.io.readState(), { at: this.io.now(), error: code }));
           }
         }).catch(() => undefined);
       }
@@ -253,6 +288,97 @@ export class DriveSyncService {
 
       return { ran: true, uploaded: 0, deleted: 0, error: code };
     }
+  }
+
+  /**
+   * Brings the gym to the phone (#2033, PRD § 5.4): asks Google for the
+   * account's hidden application data, then makes sure the academy's keys are
+   * there, for a phone to read after «Accedi con Google».
+   *
+   * - **None there:** this PC writes them, with its own two keys.
+   * - **This PC's there:** nothing to write.
+   * - **Another academy's there** (a phone set up on its own, a second PC):
+   *   never overwritten. Its documents and its sync would stop opening.
+   */
+  connectPhone(): Promise<PhoneResult> {
+    if (this.connecting === null) {
+      this.connecting = this.runConnectPhone().finally(() => {
+        this.connecting = null;
+      });
+    }
+
+    return this.connecting;
+  }
+
+  private async runConnectPhone(): Promise<PhoneResult> {
+    const generation = this.generation;
+    try {
+      const state = await this.io.readState();
+      if (!state.linked) {
+        return { ok: false, error: 'not_linked' };
+      }
+      const tokens = await this.io.authorizeWithAppData();
+      // Each check before the tokens replace the working ones: a refusal leaves
+      // the backups exactly as they were.
+      const granted = (tokens.scope ?? '').split(' ');
+      if (!granted.includes(DRIVE_SCOPE) || !granted.includes(APPDATA_SCOPE)) {
+        this.io.log('phone: the consent did not grant both scopes');
+
+        return { ok: false, error: 'scopes_missing' };
+      }
+      const account = await this.io.accountEmail(tokens);
+      if (account === null || account !== state.account) {
+        this.io.log('phone: the consent was for another account');
+        await this.io.revoke(tokens.refreshToken).catch(() => undefined);
+
+        return { ok: false, error: 'other_account' };
+      }
+      if (generation !== this.generation) {
+        return { ok: false, error: 'link_changed' };
+      }
+      await this.io.writeTokens(tokens);
+      const outcome = await this.publishKeys(tokens);
+      if (outcome !== 'published' && outcome !== 'already') {
+        return { ok: false, error: outcome };
+      }
+      const at = new Date(this.io.now()).toISOString();
+      await this.serially(async () => {
+        if (generation === this.generation) {
+          await this.io.writeState({ ...(await this.io.readState()), keysPublishedAt: at });
+        }
+      });
+      this.io.log(`phone: keys ${outcome}`);
+
+      return { ok: true, keys: outcome };
+    } catch (error) {
+      const code = errorCode(error);
+      this.io.log(`phone: failed (${code})`);
+
+      return { ok: false, error: code };
+    }
+  }
+
+  /** Writes this PC's keys when the account has none; never over other keys, never beside a second file. */
+  private async publishKeys(tokens: DriveTokens): Promise<'published' | 'already' | 'keys_differ' | 'keys_ambiguous'> {
+    const secrets = await this.io.localSecrets();
+    const existing = await this.io.findKeys(tokens);
+    if (existing.length > 1) {
+      this.io.log('phone: the account holds two keys files, none is picked');
+
+      return 'keys_ambiguous';
+    }
+    const [only] = existing;
+    if (only === undefined) {
+      await this.io.writeKeys(tokens, JSON.stringify(newAcademyKeys(secrets, new Date(this.io.now()))));
+
+      return 'published';
+    }
+    if (holdsTheseSecrets(parseAcademyKeys(await this.io.readKeys(tokens, only)), secrets)) {
+      return 'already';
+    }
+    this.io.log('phone: the account holds other keys, left as they are');
+
+    return 'keys_differ';
   }
 
   /** Reads the tokens and refreshes them if they are near expiry. */

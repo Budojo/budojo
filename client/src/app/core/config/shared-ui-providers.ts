@@ -8,10 +8,8 @@ import EN_TRANSLATIONS from '../../../../public/assets/i18n/en.json';
 import IT_TRANSLATIONS from '../../../../public/assets/i18n/it.json';
 
 /*
- * The look and the language, shared by the two applications in this
- * workspace: the desktop SPA (`src/`) and the mat app (`projects/mat/`,
- * #2027). One definition, so the phone can never drift from the PC's theme or
- * translations.
+ * The look and the language the app boots with, on the PC and on the phone
+ * alike (#2034).
  */
 
 /**

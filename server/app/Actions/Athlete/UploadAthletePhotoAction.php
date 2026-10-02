@@ -66,7 +66,7 @@ class UploadAthletePhotoAction
         }
 
         $previousPath = $athlete->photo_path;
-        $athlete->forceFill(['photo_path' => $newPath])->save();
+        $athlete->forceFill(['photo_path' => $newPath, 'photo_sha256' => hash('sha256', $bytes)])->save();
 
         // Same-extension replace overwrites in place — `put()` is
         // last-write-wins on one key, so there is no orphan there.

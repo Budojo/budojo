@@ -51,7 +51,7 @@ class OnboardingController extends Controller
             'data' => [
                 'dismissed_at' => $user->onboarding_dismissed_at?->toIso8601String(),
                 'completed_steps' => $this->resolveSteps->execute($user),
-                'available_steps' => OnboardingStep::all(),
+                'available_steps' => OnboardingStep::available(),
             ],
         ]);
     }

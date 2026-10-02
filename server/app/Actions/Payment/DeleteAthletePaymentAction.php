@@ -41,10 +41,18 @@ class DeleteAthletePaymentAction
     public function execute(Athlete $athlete, int $year, int $month): bool
     {
         return DB::transaction(function () use ($athlete, $year, $month): bool {
-            $deleted = AthletePayment::query()
+            // One model at a time, not one query: the audit log's
+            // `payment.deleted` and the sync journal's `before` (#2031) both
+            // hear of each row through the model's events, and a query
+            // delete skips them.
+            $payments = AthletePayment::query()
                 ->where('athlete_id', $athlete->id)
                 ->covering($year, $month)
-                ->delete() > 0;
+                ->get();
+            foreach ($payments as $payment) {
+                $payment->delete();
+            }
+            $deleted = $payments->isNotEmpty();
 
             if ($deleted) {
                 $this->reconcileCarnets->execute([$athlete->id]);

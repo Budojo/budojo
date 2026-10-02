@@ -5,7 +5,7 @@
  *
  * ```
  * Budojo/sync/
- *   keys.bjs                                  the app keys, sealed under the sync key (§ 5.4)
+ *   folder.bjs                                the folder's id, sealed under the sync key (protocol § The keys)
  *   versions/000045-phone9c1e.000044-pc4f2a.bjs  version 45, made on top of 44-pc4f2a
  *   versions/000001-pc4f2a.root.bjs           an academy's first version
  *   files/<sha256>.bjs                        a document or photo, named by its content
@@ -18,7 +18,11 @@
  * (`decide.ts`). Being in the name, the parent is also bound by the envelope.
  */
 
-export const KEYS_PATH = 'keys.bjs';
+/**
+ * The folder's own id, sealed under the sync key (#2033): a device checks it
+ * opens and names the folder its keys name before it syncs.
+ */
+export const FOLDER_PATH = 'folder.bjs';
 
 /**
  * A device's id: a word for the kind of device and four random characters,
@@ -40,7 +44,7 @@ export function isDeviceId(value: unknown): value is string {
   return typeof value === 'string' && DEVICE.test(value);
 }
 
-/** A new id for this device, made once at pairing and kept. */
+/** A new id for this device, made once when it joins (protocol § Joining) and kept. */
 export function newDeviceId(kind: string): string {
   const suffix = Array.from(crypto.getRandomValues(new Uint8Array(4)), (byte) =>
     (byte % 36).toString(36),
@@ -129,7 +133,7 @@ export function devicePath(device: string): string {
 
 /** Whether a path is one the protocol defines: a remote reads and writes nothing else. */
 export function isLayoutPath(path: string): boolean {
-  if (path === KEYS_PATH || parseVersionPath(path) !== null || parseFilePath(path) !== null) {
+  if (path === FOLDER_PATH || parseVersionPath(path) !== null || parseFilePath(path) !== null) {
     return true;
   }
   const device = DEVICE_FILE.exec(path)?.[1];

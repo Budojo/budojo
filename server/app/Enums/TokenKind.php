@@ -28,7 +28,7 @@ enum TokenKind: string
     /** The kind a sign-in on this runtime produces. */
     public static function forSignIn(): self
     {
-        return Runtime::isDesktop() ? self::Desktop : self::Session;
+        return Runtime::isLocal() ? self::Desktop : self::Session;
     }
 
     /**

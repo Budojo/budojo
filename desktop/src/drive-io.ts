@@ -38,6 +38,8 @@ export interface DriveTokens {
   accessToken: string;
   refreshToken: string;
   expiresAt: number | null;
+  /** The scopes Google granted, space-separated, as its token answer gives them (#2033). */
+  scope?: string;
 }
 
 export interface DriveClientConfig {
@@ -98,6 +100,7 @@ async function toDriveError(response: Response): Promise<DriveError> {
 export async function authorize(
   config: DriveClientConfig,
   openBrowser: (url: string) => void | Promise<void>,
+  withAppData = false,
 ): Promise<DriveTokens> {
   const pkce = createPkcePair();
   const state = randomBytes(16).toString('hex');
@@ -152,7 +155,9 @@ export async function authorize(
       redirectUri = `http://127.0.0.1:${port}/callback`;
 
       void Promise.resolve(
-        openBrowser(buildAuthorizeUrl({ clientId: config.clientId, redirectUri, challenge: pkce.challenge, state })),
+        openBrowser(
+          buildAuthorizeUrl({ clientId: config.clientId, redirectUri, challenge: pkce.challenge, state, withAppData }),
+        ),
       ).catch((error: unknown) => {
         clearTimeout(timer);
         server.close();
@@ -187,7 +192,12 @@ async function exchangeCode(
     throw await toDriveError(response);
   }
 
-  const body = (await response.json()) as { access_token: string; refresh_token?: string; expires_in?: number };
+  const body = (await response.json()) as {
+    access_token: string;
+    refresh_token?: string;
+    expires_in?: number;
+    scope?: string;
+  };
 
   if (typeof body.refresh_token !== 'string') {
     // Without it the link dies at the first expiry. Better to fail the connect
@@ -199,6 +209,7 @@ async function exchangeCode(
     accessToken: body.access_token,
     refreshToken: body.refresh_token,
     expiresAt: typeof body.expires_in === 'number' ? Date.now() + body.expires_in * 1000 : null,
+    ...(typeof body.scope === 'string' ? { scope: body.scope } : {}),
   };
 }
 
@@ -218,13 +229,14 @@ export async function refresh(config: DriveClientConfig, refreshToken: string): 
     throw await toDriveError(response);
   }
 
-  const body = (await response.json()) as { access_token: string; expires_in?: number };
+  const body = (await response.json()) as { access_token: string; expires_in?: number; scope?: string };
 
   return {
     accessToken: body.access_token,
     // A refresh response carries no new refresh token; the original stays valid.
     refreshToken,
     expiresAt: typeof body.expires_in === 'number' ? Date.now() + body.expires_in * 1000 : null,
+    ...(typeof body.scope === 'string' ? { scope: body.scope } : {}),
   };
 }
 
@@ -387,6 +399,75 @@ export async function revoke(refreshToken: string): Promise<void> {
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({ token: refreshToken }),
   }).catch(() => undefined);
+}
+
+/**
+ * The files of a name in the account's hidden application data (#2033). All
+ * of them: Drive allows two of one name, and a reader must not pick one. Paged
+ * to the end, since `pageSize` is only a ceiling: a page may hold fewer.
+ */
+export async function findAppDataFiles(tokens: DriveTokens, name: string): Promise<string[]> {
+  const ids: string[] = [];
+  let pageToken: string | undefined;
+
+  do {
+    const params = new URLSearchParams({
+      spaces: 'appDataFolder',
+      q: `name='${name}' and trashed=false`,
+      fields: 'nextPageToken, files(id)',
+      pageSize: '10',
+    });
+    if (pageToken !== undefined) {
+      params.set('pageToken', pageToken);
+    }
+
+    const response = await fetch(`${DRIVE_FILES}?${params.toString()}`, { headers: auth(tokens) });
+    if (!response.ok) {
+      throw await toDriveError(response);
+    }
+
+    const body = (await response.json()) as { nextPageToken?: string; files?: { id: string }[] };
+    ids.push(...(body.files ?? []).map((file) => file.id));
+    pageToken = body.nextPageToken;
+  } while (pageToken !== undefined);
+
+  return ids;
+}
+
+export async function readAppDataFile(tokens: DriveTokens, id: string): Promise<string> {
+  const response = await fetch(`https://www.googleapis.com/drive/v3/files/${id}?alt=media`, { headers: auth(tokens) });
+
+  if (!response.ok) {
+    throw await toDriveError(response);
+  }
+
+  return response.text();
+}
+
+/** Written once, by name, into the hidden application data: a multipart upload, as it is small. */
+export async function createAppDataFile(tokens: DriveTokens, name: string, text: string): Promise<void> {
+  const boundary = `budojo-${randomBytes(8).toString('hex')}`;
+  const body = [
+    `--${boundary}`,
+    'Content-Type: application/json; charset=UTF-8',
+    '',
+    JSON.stringify({ name, parents: ['appDataFolder'] }),
+    `--${boundary}`,
+    'Content-Type: application/json',
+    '',
+    text,
+    `--${boundary}--`,
+    '',
+  ].join('\r\n');
+  const response = await fetch(`${DRIVE_UPLOAD}?uploadType=multipart&fields=id`, {
+    method: 'POST',
+    headers: { ...auth(tokens), 'Content-Type': `multipart/related; boundary=${boundary}` },
+    body,
+  });
+
+  if (!response.ok) {
+    throw await toDriveError(response);
+  }
 }
 
 export { DRIVE_SCOPE };
