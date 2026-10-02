@@ -6,6 +6,7 @@ namespace App\Actions\Sync;
 
 use App\Support\Sync\IncomingDatabase;
 use App\Support\Sync\IncomingFile;
+use App\Support\Sync\RebasePending;
 use App\Support\Sync\Staged;
 use App\Support\Sync\SyncDatabase;
 
@@ -17,8 +18,11 @@ use App\Support\Sync\SyncDatabase;
  */
 final class StageDatabaseAction
 {
-    /** @param resource $body the database's bytes, as they arrive */
-    public function execute($body): void
+    /**
+     * @param  resource  $body  the database's bytes, as they arrive
+     * @param  bool  $rebase  replay this device's kept writes on it after the swap (#2031 step 3)
+     */
+    public function execute($body, bool $rebase = false): void
     {
         $incoming = tempnam(sys_get_temp_dir(), 'budojo-stage-');
         if ($incoming === false) {
@@ -32,6 +36,15 @@ final class StageDatabaseAction
             // staged as it was. A version carries no files, so the files an
             // earlier restore staged go with its database (#2079).
             Staged::clear();
+            if ($rebase) {
+                // Before the database: a staged database is what commits a
+                // stage, so it never exists without the writes to replay on it.
+                $device = config('budojo.sync.device');
+                if (! \is_string($device) || $device === '') {
+                    throw new \RuntimeException('a rebase needs this device\'s id');
+                }
+                RebasePending::setAside($device);
+            }
             $this->stageChecked($incoming);
         } finally {
             @unlink($incoming);

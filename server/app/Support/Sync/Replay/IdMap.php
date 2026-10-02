@@ -41,7 +41,7 @@ final class IdMap
     public function learn(array $there, array $here): void
     {
         foreach ($there as $table => $ids) {
-            foreach (array_values($ids) as $i => $old) {
+            foreach ($ids as $i => $old) {
                 $new = $here[$table][$i] ?? null;
                 if ($new !== null) {
                     $this->ids[$table][(string) $old] = $new;
@@ -72,7 +72,7 @@ final class IdMap
     }
 
     /**
-     * @param  array<string, mixed>|null  $body
+     * @param  array<array-key, mixed>|null  $body
      * @return array<string, mixed>|null
      */
     public function body(?array $body): ?array
@@ -82,7 +82,7 @@ final class IdMap
         }
         $mapped = [];
         foreach ($body as $field => $value) {
-            $mapped[$field] = $this->value((string) $field, $value);
+            $mapped[(string) $field] = $this->value((string) $field, $value);
         }
 
         return $mapped;

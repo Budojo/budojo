@@ -48,7 +48,8 @@ class SyncController extends Controller
         if (! \is_resource($body)) {
             throw new \RuntimeException('could not read the incoming database');
         }
-        $stage->execute($body);
+        // `?rebase=1`: this device has writes to carry onto it (#2031 step 3).
+        $stage->execute($body, $request->boolean('rebase'));
 
         return response()->noContent();
     }

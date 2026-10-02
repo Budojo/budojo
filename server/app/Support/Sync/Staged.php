@@ -24,5 +24,7 @@ final class Staged
             }
         }
         SyncStorage::discardStaged();
+        // A rebase set aside for an earlier stage never replays on this one.
+        RebasePending::clear();
     }
 }

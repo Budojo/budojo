@@ -6,15 +6,17 @@ namespace App\Console\Commands;
 
 use App\Actions\Sync\KeepOwnJournalAction;
 use App\Actions\Sync\ReconcileFilesAction;
+use App\Actions\Sync\ReplayJournalAction;
+use App\Support\Sync\RebasePending;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
 
 /**
  * What a fast-forward needs outside the database (#2030, PRD § 5.2). The shell
  * runs it once, after it has swapped a staged database in and before the app
- * serves again. **After a rebase, only once the replay has run:** a document
- * uploaded offline has no row in the swapped-in database until the replay
- * recreates it, and this would delete the only copy of its file.
+ * serves again. **A rebase replays first** (#2031 step 3): a document uploaded
+ * offline has no row in the swapped-in database until the replay recreates it,
+ * and reconciling the files before would delete the only copy of its file.
  *
  * - the cache is cleared: on the desktop it is on files (`CACHE_STORE=file`),
  *   and would answer from the old database, the attendance summaries first;
@@ -27,14 +29,32 @@ class SyncReconcile extends Command
 
     protected $description = 'After a sync swapped the database: clear the cache, delete the files no row names (#2030)';
 
-    public function handle(ReconcileFilesAction $reconcile, KeepOwnJournalAction $keepOwnJournal): int
-    {
+    public function handle(
+        ReconcileFilesAction $reconcile,
+        KeepOwnJournalAction $keepOwnJournal,
+        ReplayJournalAction $replay,
+    ): int {
         Cache::flush();
-        $deleted = $reconcile->execute();
         $device = config('budojo.sync.device');
         $forgotten = $keepOwnJournal->execute(\is_string($device) ? $device : null);
 
-        $this->info("Cache cleared; {$deleted} file(s) no row names deleted; {$forgotten} other device journal entr(ies) dropped.");
+        // A rebase: this device's writes, set aside at the stage, replayed on
+        // the database swapped in, before any file is reconciled. The file
+        // goes only once every entry is dealt with; a replay that stops is
+        // taken up at the next start, and skips what it already did.
+        $pending = RebasePending::read();
+        $replayed = '';
+        if ($pending !== null) {
+            $outcomes = $replay->execute($pending['device'], $pending['entries']);
+            $counts = array_count_values($outcomes);
+            ksort($counts);
+            $replayed = ' Rebase: ' . json_encode($counts) . '.';
+            RebasePending::clear();
+        }
+
+        $deleted = $reconcile->execute();
+
+        $this->info("Cache cleared; {$deleted} file(s) no row names deleted; {$forgotten} other device journal entr(ies) dropped.{$replayed}");
 
         return self::SUCCESS;
     }
