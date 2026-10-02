@@ -24,6 +24,12 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // A database that ran this before #443 renamed it (as `…120000…`,
+        // byte for byte) already has the table: it is taken as it is (#2083).
+        if (Schema::hasTable('support_tickets')) {
+            return;
+        }
+
         Schema::create('support_tickets', function (Blueprint $table): void {
             $table->id();
 

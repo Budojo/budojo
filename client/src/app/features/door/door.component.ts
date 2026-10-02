@@ -285,7 +285,7 @@ export class DoorComponent {
       this.lastToken = null;
     }
     this.failure.set(failureOf(error));
-    this.failureDetail.set(error instanceof Error ? error.message : String(error));
+    this.failureDetail.set(detailOf(error));
     this.step.set('failed');
   }
 }
@@ -306,6 +306,21 @@ function rememberRestored(name: string | null): void {
   } catch {
     // A phone that cannot keep it asks again at the next sign-in: never worse.
   }
+}
+
+/**
+ * What went wrong, as the server or the network put it. On a phone the screen
+ * is the only log anyone can send: «newer» names the migration the backup has
+ * and this Budojo lacks (#2079, the owner's first try).
+ */
+function detailOf(error: unknown): string {
+  if (error instanceof HttpErrorResponse) {
+    // A refusal's own words; anything else keeps the address and the status,
+    // since the phone's server hides its errors' text (`APP_DEBUG=false`).
+    const message = (error.error as { message?: unknown } | null)?.message;
+    return error.status === 422 && typeof message === 'string' ? message : error.message;
+  }
+  return error instanceof Error ? error.message : String(error);
 }
 
 function refusal(error: HttpErrorResponse): string | null {
