@@ -37,8 +37,9 @@ export interface LocalState {
   unpushed: boolean;
   /**
    * This device's latest push while its journal still holds pushed writes (not
-   * yet held by every other device): the version, the one it was pushed on, and
-   * when it landed, on Drive's clock. Null when the journal holds nothing pushed.
+   * yet held by every other device), **or while the folder has not listed it
+   * yet**, even with no write in it (a first version): the version, the one it
+   * was pushed on, and when it landed, on Drive's clock. Null otherwise.
    */
   unconfirmed: { version: VersionRef; parent: VersionRef | null; pushedAt: number } | null;
 }
@@ -105,11 +106,15 @@ export function decide(local: LocalState, versions: readonly SeenVersion[], now:
       // Within the lag, that is the listing being slow: look again.
       return { kind: 'wait' };
     }
-    // After it, the push is gone. A rebase carries its writes onto what is
-    // there; an empty folder has nothing to lose, so publish again.
-    return head === null
-      ? { kind: 'push', seq: unconfirmed.version.seq + 1, parent: base }
-      : { kind: 'rebase', onto: head };
+    // After it, the push is gone. An empty folder has nothing to lose, so
+    // publish again. A first version that never landed meets a folder another
+    // device filled meanwhile: its academy against this one, so the owner
+    // chooses, as with no base (§ 6.5). Otherwise a rebase carries its writes
+    // onto what is there.
+    if (head === null) {
+      return { kind: 'push', seq: unconfirmed.version.seq + 1, parent: base };
+    }
+    return parent === null ? { kind: 'ask', latest: head } : { kind: 'rebase', onto: head };
   }
 
   if (base === null) {

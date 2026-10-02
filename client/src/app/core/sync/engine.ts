@@ -72,7 +72,8 @@ export interface SyncLedger {
    */
   listedThrough: string | null;
   /**
-   * Its latest push, while the journal still keeps entries of it (`decide.ts`).
+   * Its latest push, while the journal still keeps entries of it or the folder
+   * has not listed it yet (`decide.ts`).
    * Saved **before** the upload: a push whose answer was lost may have landed,
    * and is unconfirmed, never unpushed. `pushedAt` is Drive's time at the
    * first listing after it, null until then (protocol § Deciding).
