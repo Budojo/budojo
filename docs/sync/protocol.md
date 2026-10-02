@@ -154,7 +154,7 @@ The journal is a JSON list of the writes that made this version from its parent,
     - A file that does not open or parse counts as holding nothing.
 
     So a device that exists is never mistaken for no device.
-  - **Unpairing deletes the device's file** together with rotating the key (#2033). Left behind, it would hold nothing forever, and nobody could clear a journal again.
+  - **Unpairing deletes the device's file** together with rotating the key (#2033). Left behind, it would hold nothing forever, and nobody could clear a journal again. **The order matters** (PRD § 5.4): the remaining device first fetches every file it lacks under the old key, then publishes a fresh version, its files, its report and the new key, and only then deletes everything under the old key and the unpaired device's report.
   - **A sync the unpaired device had under way** can still write its report, or a version, sealed under the old key. So after unpairing, the remaining device:
     - deletes any `devices/` or `versions/` file that fails to open as «wrong key or path»;
     - never pulls a version it cannot open.

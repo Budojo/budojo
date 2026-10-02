@@ -328,7 +328,7 @@ A conflict is a question, asked on whichever device found it. **It is never reso
 - **What the phone holds:** the whole database, as the PC does: athletes, payments, codice fiscale, document metadata. Documents are downloaded when they are opened.
 - **How it is protected:** the fingerprint (§ 6.1), and Android's app-private storage.
 - **No Android backup** (`allowBackup="false"`, already set in #2027). The copy that survives a lost phone is the versions on Drive, encrypted.
-- **Google** sees only ciphertext, under names that mean nothing: sequence numbers and content hashes.
+- **Google** holds the keys (`keys.json`, unsealed, § 5.4: the owner's decision), so the Google account is the lock on the academy's data. The versions and files beside it are ciphertext, under names that mean nothing (sequence numbers and content hashes), so the visible folder alone, as Drive for desktop copies it or a shared link would expose it, opens nothing while the keys sit in `appDataFolder`.
 - **The APK signing key** was created in #2027. It is held in the repo secrets and in the owner's password manager; if it is lost, no update installs over the app.
 - **The lock-screen text** shows names and amounts, the owner's choice (§ 6.3). It is recorded here because it is the one place the phone shows data without the fingerprint.
 
