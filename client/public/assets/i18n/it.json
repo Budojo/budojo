@@ -2411,7 +2411,8 @@
         "empty": {
           "withCancelled": "Nessun documento — attivo o cancellato.",
           "default": "Nessun documento.",
-          "hint": "Usa <strong>Aggiungi documento</strong> sopra per caricare il primo."
+          "hint": "Usa <strong>Aggiungi documento</strong> sopra per caricare il primo.",
+          "hintViewOnly": "I documenti si aggiungono da Budojo sul PC; qui puoi aprirli."
         },
         "activeCountOne": "{{count}} attivo",
         "activeCountOther": "{{count}} attivi",

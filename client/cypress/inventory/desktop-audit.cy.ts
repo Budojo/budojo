@@ -2038,7 +2038,7 @@ function seed(): void {
   // The shell.
   cy.intercept('GET', '/api/v1/runtime', {
     statusCode: 200,
-    body: { data: { profile: 'desktop', capabilities: [] } },
+    body: { data: { profile: 'desktop', capabilities: ['document_upload'] } },
   });
   cy.intercept('GET', '/api/v1/auth/me*', { statusCode: 200, body: { data: ME } });
   cy.intercept('GET', '/api/v1/me', { statusCode: 200, body: { data: ME } });

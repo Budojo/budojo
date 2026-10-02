@@ -13,6 +13,8 @@ export type Capability =
   | 'web_push'
   | 'email'
   | 'password_breach_check'
+  // Uploading a document: absent on the phone, where documents are view only (#2034).
+  | 'document_upload'
   // The sync between the owner's own devices (#2030): a device capability.
   | 'sync';
 
@@ -23,6 +25,7 @@ export const ALL_CAPABILITIES: readonly Capability[] = [
   'web_push',
   'email',
   'password_breach_check',
+  'document_upload',
   'sync',
 ];
 

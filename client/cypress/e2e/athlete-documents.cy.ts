@@ -50,6 +50,28 @@ describe('Athlete documents page', () => {
     cy.intercept('GET', '/api/v1/documents/expiring*', { statusCode: 200, body: { data: [] } });
   });
 
+  // Documents are view only on the phone (#2034, PRD § 2): no upload, and an
+  // empty state that sends the owner to the PC instead of to a missing button.
+  it('on the phone, offers no upload and says documents are added on the PC', () => {
+    cy.intercept('GET', '/api/v1/runtime', {
+      statusCode: 200,
+      body: { data: { profile: 'mobile', capabilities: ['sync'] } },
+    }).as('runtime');
+    cy.intercept('GET', '/api/v1/athletes/42/documents*', {
+      statusCode: 200,
+      body: { data: [], meta: { current_page: 1, last_page: 1, total: 0, per_page: 50 } },
+    }).as('getDocs');
+    cy.viewport(375, 800);
+
+    cy.visitAuthenticated('/dashboard/athletes/42/documents');
+    cy.wait(['@runtime', '@getAthlete', '@getDocs']);
+
+    cy.get('[data-cy="documents-mobile-empty"]')
+      .should('contain', 'on the PC')
+      .and('not.contain', 'Add document');
+    cy.get('[data-cy="add-document-btn"]').should('not.exist');
+  });
+
   it('renders the athlete header and an empty documents table', () => {
     cy.intercept('GET', '/api/v1/athletes/42/documents*', {
       statusCode: 200,

@@ -37,6 +37,7 @@ beforeEach(() => {
           'web_push',
           'email',
           'password_breach_check',
+          'document_upload',
         ],
       },
     },

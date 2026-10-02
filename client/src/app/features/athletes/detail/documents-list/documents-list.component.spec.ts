@@ -7,6 +7,7 @@ import { ConfirmationService } from 'primeng/api';
 import { provideI18nTesting } from '../../../../../test-utils/i18n-test';
 import { DocumentsListComponent } from './documents-list.component';
 import { Document } from '../../../../core/services/document.service';
+import { RuntimeService } from '../../../../core/services/runtime.service';
 
 function makeDoc(overrides: Partial<Document> = {}): Document {
   return {
@@ -25,8 +26,9 @@ function makeDoc(overrides: Partial<Document> = {}): Document {
   };
 }
 
-function setupTestBed(): HttpTestingController {
+function setupTestBed(options: { canUpload?: boolean } = {}): HttpTestingController {
   const parentParamMap = convertToParamMap({ id: '42' });
+  const canUpload = options.canUpload ?? true;
   TestBed.configureTestingModule({
     imports: [DocumentsListComponent],
     providers: [
@@ -38,6 +40,12 @@ function setupTestBed(): HttpTestingController {
           // Component reads `this.route.parent?.paramMap` — mock it as a minimal stub.
           parent: { paramMap: of(parentParamMap) },
           snapshot: { paramMap: convertToParamMap({}) },
+        },
+      },
+      {
+        provide: RuntimeService,
+        useValue: {
+          has: () => (capability: string) => capability !== 'document_upload' || canUpload,
         },
       },
       ...provideI18nTesting(),
@@ -221,6 +229,48 @@ describe('DocumentsListComponent', () => {
   // assert the markup is in the DOM regardless of viewport (CSS handles
   // visibility) so the conditional branches (loading, empty, per-doc,
   // tombstone-gated actions) don't drift on a future refactor.
+
+  // Documents are view only on the phone (#2034, PRD § 2): uploading stays on
+  // the PC. The control is absent rather than disabled (Norman: no affordance
+  // for an action the runtime does not have), and the empty state stops
+  // pointing at it.
+  describe('where the runtime has no document upload (the phone)', () => {
+    function render(canUpload: boolean) {
+      const httpMock = setupTestBed({ canUpload });
+      const fixture = TestBed.createComponent(DocumentsListComponent);
+      fixture.detectChanges();
+      httpMock.expectOne((r) => r.url === '/api/v1/athletes/42/documents').flush({ data: [] });
+      fixture.detectChanges();
+      return fixture.nativeElement as HTMLElement;
+    }
+
+    it('offers no upload at all', () => {
+      const root = render(false);
+
+      expect(root.querySelector('[data-cy="add-document-btn"]')).toBeNull();
+      expect(root.querySelector('app-upload-document-dialog')).toBeNull();
+    });
+
+    it('says documents are added from the PC, instead of pointing at a button that is not there', () => {
+      const root = render(false);
+
+      const hint = root.querySelector(
+        '[data-cy="documents-mobile-empty"] .documents-list__empty-hint',
+      );
+      expect(hint?.textContent).toContain('on the PC');
+      expect(hint?.textContent).not.toContain('Add document');
+    });
+
+    it('keeps the upload where the runtime has it', () => {
+      const root = render(true);
+
+      expect(root.querySelector('[data-cy="add-document-btn"]')).not.toBeNull();
+      expect(
+        root.querySelector('[data-cy="documents-mobile-empty"] .documents-list__empty-hint')
+          ?.textContent,
+      ).toContain('Add document');
+    });
+  });
 
   describe('mobile card list', () => {
     it('renders one .document-card per loaded document with the type label and the filename', () => {

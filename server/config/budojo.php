@@ -89,13 +89,14 @@ return [
             'web_push',
             'email',
             'password_breach_check',
+            'document_upload',
         ],
         'desktop' => [
+            'document_upload',
             'sync',
         ],
-        // The phone (#2034): the desktop's set for now. Document upload, which
-        // the phone does not have (PRD § 2: view only), becomes a capability
-        // of its own in a follow-up.
+        // The phone (#2034): the desktop's set but the document upload, since
+        // documents are view only there (PRD § 2).
         'mobile' => [
             'sync',
         ],

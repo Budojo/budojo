@@ -17,6 +17,17 @@
 const route = Cypress.env('PAGE') ?? '/dashboard/athletes';
 
 /**
+ * The runtime to shoot as (`make shot RUNTIME=mobile`): its real capability
+ * set, so a surface a runtime lacks is absent from the shot as it is from the
+ * app. Unset, the web default.
+ */
+const RUNTIME_CAPABILITIES: Record<string, string[]> = {
+  desktop: ['document_upload', 'sync'],
+  mobile: ['sync'],
+};
+const runtime = String(Cypress.env('RUNTIME') ?? '');
+
+/**
  * The shell's own calls, stubbed so the page renders at all.
  *
  * `visitAuthenticated` seeds a fake token, which the real dev backend
@@ -31,6 +42,12 @@ const route = Cypress.env('PAGE') ?? '/dashboard/athletes';
  */
 function stubShell(): void {
   cy.intercept('GET', '/api/v1/**', { statusCode: 200, body: { data: [] } });
+  if (runtime in RUNTIME_CAPABILITIES) {
+    cy.intercept('GET', '/api/v1/runtime', {
+      statusCode: 200,
+      body: { data: { profile: runtime, capabilities: RUNTIME_CAPABILITIES[runtime] } },
+    });
+  }
   cy.intercept('GET', '/api/v1/me/onboarding', {
     statusCode: 200,
     body: {
@@ -59,9 +76,10 @@ function stubShell(): void {
   });
 }
 const slug =
-  String(route)
-    .replace(/[^a-z0-9]+/gi, '-')
-    .replace(/^-|-$/g, '') || 'page';
+  (runtime ? `${runtime}-` : '') +
+    String(route)
+      .replace(/[^a-z0-9]+/gi, '-')
+      .replace(/^-|-$/g, '') || 'page';
 
 /**
  * Refuse to shoot through the dev server's compile-error overlay.

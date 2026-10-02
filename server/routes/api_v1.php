@@ -437,7 +437,9 @@ Route::middleware('auth:sanctum')->group(function (): void {
         // `/documents/{id}` routes, which scope through
         // `Document::owningAcademyId()` for both kinds of owner.
         Route::get('/academy/documents', [\App\Http\Controllers\Academy\AcademyDocumentController::class, 'index']);
-        Route::post('/academy/documents', [\App\Http\Controllers\Academy\AcademyDocumentController::class, 'store']);
+        // Uploads are absent on the phone, where documents are view only (#2034).
+        Route::post('/academy/documents', [\App\Http\Controllers\Academy\AcademyDocumentController::class, 'store'])
+            ->middleware('capability:document_upload');
 
         // Schedule history (#1094). POST schedules a future
         // training_days change effective on a calendar date (`> today`,
@@ -561,7 +563,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
 
         // Document writes — gated on `verified.api`.
         Route::middleware('verified.api')->group(function (): void {
-            Route::post('/athletes/{athlete}/documents', [\App\Http\Controllers\Athlete\AthleteDocumentController::class, 'store']);
+            Route::post('/athletes/{athlete}/documents', [\App\Http\Controllers\Athlete\AthleteDocumentController::class, 'store'])
+                ->middleware('capability:document_upload');
             Route::put('/documents/{document}', [\App\Http\Controllers\Document\DocumentController::class, 'update']);
             Route::delete('/documents/{document}', [\App\Http\Controllers\Document\DocumentController::class, 'destroy']);
         });
