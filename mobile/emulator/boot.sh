@@ -10,13 +10,17 @@ set -euo pipefail
 
 IMAGE="system-images;android-34;google_apis;x86_64"
 AVD=galaxy-a
+# Said outright: avdmanager and the emulator otherwise disagree on where the
+# device lives (~/.android/avd or ~/.config/.android/avd, by tool version).
+export ANDROID_AVD_HOME="$HOME/.android/avd"
+mkdir -p "$ANDROID_AVD_HOME"
 SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
 AVDMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager"
 
 yes | "$SDKMANAGER" --licenses > /dev/null || true
 "$SDKMANAGER" --install "$IMAGE" emulator platform-tools > /dev/null
 echo no | "$AVDMANAGER" create avd --force -n "$AVD" -k "$IMAGE" > /dev/null
-cat >> "$HOME/.android/avd/$AVD.avd/config.ini" <<INI
+cat >> "$ANDROID_AVD_HOME/$AVD.avd/config.ini" <<INI
 hw.lcd.width=1080
 hw.lcd.height=2340
 hw.lcd.density=450
