@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Sync;
 
+use App\Actions\Sync\ShowHomecomingAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Sync\SeenHomecomingRequest;
 use App\Support\Sync\Homecoming;
@@ -20,9 +21,9 @@ use Illuminate\Http\Response;
  */
 class HomecomingController extends Controller
 {
-    public function show(): JsonResponse|Response
+    public function show(ShowHomecomingAction $show): JsonResponse|Response
     {
-        $arrived = Homecoming::read();
+        $arrived = $show->execute();
 
         return $arrived === null ? response()->noContent() : response()->json(['data' => $arrived]);
     }

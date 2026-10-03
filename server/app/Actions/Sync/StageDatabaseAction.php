@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Sync;
 
+use App\Support\Sync\Homecoming;
 use App\Support\Sync\HomecomingSince;
 use App\Support\Sync\IncomingDatabase;
 use App\Support\Sync\IncomingFile;
@@ -43,9 +44,12 @@ final class StageDatabaseAction
             // earlier restore staged go with its database (#2079).
             Staged::clear();
             // What this device held of the other's work, for the homecoming
-            // (#2039): the swap replaces the database that knows it.
+            // (#2039): the swap replaces the database that knows it. A whole
+            // academy arriving makes news of the one it replaces moot.
             if ($since !== null) {
                 HomecomingSince::remember($since);
+            } else {
+                Homecoming::forget();
             }
             if ($device !== null) {
                 // Before the database: a staged database is what commits a

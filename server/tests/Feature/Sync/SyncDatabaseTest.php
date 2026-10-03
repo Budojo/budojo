@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use App\Support\Sync\Homecoming;
 use App\Support\Sync\HomecomingSince;
 use App\Support\Sync\SyncDatabase;
 use Illuminate\Support\Facades\DB;
@@ -177,6 +178,21 @@ describe('PUT /api/v1/sync/stage', function (): void {
             ->assertNoContent();
 
         expect(HomecomingSince::read())->toBeNull();
+    });
+
+    it('forgets the homecoming when a whole academy arrives, and keeps it for the other device\'s work', function (): void {
+        $told = ['device' => 'phone9f8e7d6c', 'at' => '2026-10-01T19:00:00Z', 'through' => '01K6A000000000000000000004', 'created' => [], 'other' => 1];
+        Homecoming::keep($told);
+
+        $this->actingAs($owner = userWithAcademy())
+            ->call('PUT', '/api/v1/sync/stage?homecoming=1', content: syncTestIncoming($this->dir, syncTestHistory()))
+            ->assertNoContent();
+        expect(Homecoming::read())->toBe($told);
+
+        $this->actingAs($owner)
+            ->call('PUT', '/api/v1/sync/stage', content: syncTestIncoming($this->dir, syncTestHistory()))
+            ->assertNoContent();
+        expect(Homecoming::read())->toBeNull();
     });
 
     it('takes a database of the schema this app runs', function (): void {

@@ -7741,13 +7741,16 @@ paths:
         when it staged the version: every entry since the last pull,
         however many versions the folder went through.
 
-        **It counts what is still there:** the rows the entries created,
-        looked up in the database as it is now, so a presence recorded and
-        then removed is no presence. An entry that created none of the
-        counted rows (an edit, a deletion, a note) is one more change
-        (`other`); one the other device's own rebase found already true or
-        set aside changed nothing, and is left out. Two pulls before the
-        owner looks add up.
+        **It counts what is still there, when asked:** the rows the entries
+        created, looked up in the database as it is now, so a presence
+        recorded and then removed, in the same pull or a later one, is no
+        presence. Promotions are those given: a belt over another, or a
+        stripe added; never a timeline's opening row or the stripe reset
+        beside a belt. An entry that created none of the counted rows (an
+        edit, a deletion, a note) is one more change (`other`); one the
+        other device's own rebase found already true or set aside changed
+        nothing, and is left out. Two pulls before the owner looks add up.
+        A restore, or a whole academy arriving, forgets it.
 
         Kept beside the database, never in it: it is this device's news
         alone, and the database travels.
@@ -9297,7 +9300,7 @@ components:
           example: 1
         promotions:
           type: integer
-          description: Promotions still recorded.
+          description: Promotions given and still recorded, a belt over another or a stripe added.
           example: 0
         other:
           type: integer

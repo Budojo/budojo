@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Support\Sync\Homecoming;
 use App\Support\Sync\SyncDatabase;
 use Illuminate\Testing\TestResponse;
 
@@ -149,6 +150,14 @@ describe('restoring a backup', function (): void {
         backupTestSend($this, 'restore', backupTestArchive($this->dir, $entries))->assertNoContent();
 
         expect(file_get_contents("{$this->live}.staged"))->toBe($entries['budojo.sqlite']);
+    });
+
+    it('forgets the homecoming: it told of the database the restore replaces (#2039)', function (): void {
+        Homecoming::keep(['device' => 'pc4f2a', 'at' => '2026-10-01T19:00:00Z', 'through' => '01K6A000000000000000000004', 'created' => [], 'other' => 1]);
+
+        backupTestSend($this, 'restore', backupTestArchive($this->dir, backupTestEntries($this->dir)))->assertNoContent();
+
+        expect(Homecoming::read())->toBeNull();
     });
 
     it('stages the academy\'s files beside its own, and never the PC\'s logs or cache', function (): void {

@@ -6,20 +6,21 @@ namespace App\Support\Sync;
 
 /**
  * The homecoming («il rientro», PRD § 6.2, #2039): what the other device's
- * work brought, in counts, until the owner has seen it. Beside the live
- * database as `<database>.homecoming`, **never in it**: the database travels
- * to the other device, and this is this device's news alone.
+ * work brought, until the owner has seen it. Beside the live database as
+ * `<database>.homecoming`, **never in it**: the database travels to the
+ * other device, and this is this device's news alone.
  *
+ * **It keeps the facts, never the counts:** the rows the entries created, by
+ * table, and how many entries created none of them. The counts are taken
+ * when the card asks, against the database as it is then
+ * (`ShowHomecomingAction`), so a row a later pull removed is no longer told.
  * Two pulls before the owner looks add up (`RecordHomecomingAction`).
  *
  * @phpstan-type Arrived array{
  *     device: string,
  *     at: string,
  *     through: string,
- *     attendance: list<array{lesson: string|null, count: int}>,
- *     payments: array{count: int, amount_cents: int},
- *     athletes: int,
- *     promotions: int,
+ *     created: array<string, list<int>>,
  *     other: int,
  * }
  */
@@ -38,7 +39,7 @@ final class Homecoming
             return null;
         }
         $value = json_decode((string) file_get_contents($path), true);
-        if (! \is_array($value) || ! \is_string($value['through'] ?? null)) {
+        if (! \is_array($value) || ! \is_string($value['through'] ?? null) || ! \is_array($value['created'] ?? null)) {
             throw new \RuntimeException("the homecoming at {$path} does not read");
         }
 
@@ -56,7 +57,7 @@ final class Homecoming
     {
         $path = self::path();
         $part = "{$path}.part";
-        if (file_put_contents($part, json_encode($arrived, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE)) === false || ! rename($part, $path)) {
+        if (file_put_contents($part, json_encode([...$arrived, 'created' => (object) $arrived['created']], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE)) === false || ! rename($part, $path)) {
             @unlink($part);
 
             throw new \RuntimeException('could not keep the homecoming');
@@ -70,8 +71,18 @@ final class Homecoming
     public static function seen(string $through): void
     {
         $kept = self::read();
-        if ($kept !== null && $kept['through'] === $through && ! unlink(self::path())) {
-            throw new \RuntimeException('could not clear the homecoming the owner has seen');
+        if ($kept !== null && $kept['through'] === $through) {
+            self::forget();
+        }
+    }
+
+    /** No news to tell: the database it was about is being replaced whole (a restore, a whole academy arriving). */
+    public static function forget(): void
+    {
+        foreach ([self::path(), self::path() . '.part'] as $path) {
+            if (file_exists($path) && ! unlink($path)) {
+                throw new \RuntimeException("could not forget the homecoming at {$path}");
+            }
         }
     }
 }

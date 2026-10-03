@@ -127,41 +127,55 @@ describe('the reconcile after a pull', function (): void {
 
         $this->artisan('budojo:sync-reconcile')->assertSuccessful();
 
-        expect(Homecoming::read())->toMatchArray([
-            'through' => homecomingId(4),
-            'attendance' => [['lesson' => 'BJJ Gi', 'count' => 1]],
-            'other' => 1,
-        ]);
+        $this->actingAs(userWithAcademy())->getJson('/api/v1/sync/homecoming')
+            ->assertJsonPath('data.through', homecomingId(4))
+            ->assertJsonPath('data.attendance', [['lesson' => 'BJJ Gi', 'count' => 1]])
+            ->assertJsonPath('data.other', 1);
     });
 
-    it('adds a second pull to the one the owner has not seen yet', function (): void {
-        $presence = AttendanceRecord::factory()->create(['lesson_id' => Lesson::factory()->create(['name' => 'BJJ Gi'])->id]);
+    it('adds a second pull to the one the owner has not seen yet, counted as it is now', function (): void {
+        $gi = Lesson::factory()->create(['name' => 'BJJ Gi']);
+        $first = AttendanceRecord::factory()->count(2)->create(['lesson_id' => $gi->id]);
+        $removed = AttendanceRecord::factory()->create(['lesson_id' => $gi->id]);
+        $second = AttendanceRecord::factory()->create(['lesson_id' => $gi->id]);
         Homecoming::keep([
             'device' => 'phone9f8e7d6c',
             'at' => '2026-09-30T20:00:00Z',
             'through' => homecomingId(3),
-            'attendance' => [['lesson' => 'BJJ Gi', 'count' => 5], ['lesson' => 'No-gi', 'count' => 6]],
-            'payments' => ['count' => 1, 'amount_cents' => 6000],
-            'athletes' => 0,
-            'promotions' => 0,
+            'created' => ['attendance_records' => [...$first->modelKeys(), $removed->id]],
             'other' => 1,
         ]);
+        // The second pull removed a presence the first brought.
+        $removed->delete();
         HomecomingSince::remember(['phone9f8e7d6c' => homecomingId(3)]);
-        homecomingEntry(4, 'phone9f8e7d6c', 'attendance.store', ['attendance_records' => [$presence->id]]);
-        homecomingEntry(5, 'phone9f8e7d6c', 'athletes.update');
+        homecomingEntry(4, 'phone9f8e7d6c', 'attendance.store', ['attendance_records' => [$second->id]]);
+        homecomingEntry(5, 'phone9f8e7d6c', 'attendance.destroy');
 
         $this->artisan('budojo:sync-reconcile')->assertSuccessful();
 
-        expect(Homecoming::read())->toBe([
-            'device' => 'phone9f8e7d6c',
-            'at' => '2026-10-01T19:05:00Z',
-            'through' => homecomingId(5),
-            'attendance' => [['lesson' => 'BJJ Gi', 'count' => 6], ['lesson' => 'No-gi', 'count' => 6]],
-            'payments' => ['count' => 1, 'amount_cents' => 6000],
-            'athletes' => 0,
-            'promotions' => 0,
-            'other' => 2,
-        ]);
+        $this->actingAs(userWithAcademy())->getJson('/api/v1/sync/homecoming')
+            ->assertOk()
+            ->assertJsonPath('data.at', '2026-10-01T19:05:00Z')
+            ->assertJsonPath('data.through', homecomingId(5))
+            ->assertJsonPath('data.attendance', [['lesson' => 'BJJ Gi', 'count' => 3]])
+            ->assertJsonPath('data.other', 2)
+            ->assertJsonMissingPath('data.created');
+    });
+
+    it('counts only promotions given: never a timeline\'s opening row or the stripe reset beside a belt', function (): void {
+        $opening = AthletePromotion::factory()->create(['kind' => 'belt', 'from_belt' => null, 'to_belt' => 'white', 'from_stripes' => null, 'to_stripes' => null]);
+        $belt = AthletePromotion::factory()->create(['kind' => 'belt', 'from_belt' => 'blue', 'to_belt' => 'purple', 'from_stripes' => null, 'to_stripes' => null]);
+        $reset = AthletePromotion::factory()->create(['kind' => 'stripe', 'from_stripes' => 4, 'to_stripes' => 0]);
+        $stripe = AthletePromotion::factory()->create(['kind' => 'stripe', 'from_stripes' => 1, 'to_stripes' => 2]);
+        HomecomingSince::remember([]);
+        homecomingEntry(1, 'phone9f8e7d6c', 'athletes.store', ['athlete_promotions' => [$opening->id]]);
+        homecomingEntry(2, 'phone9f8e7d6c', 'athletes.update', ['athlete_promotions' => [$belt->id, $reset->id]]);
+        homecomingEntry(3, 'phone9f8e7d6c', 'athletes.promotions.store', ['athlete_promotions' => [$stripe->id]]);
+
+        $this->artisan('budojo:sync-reconcile')->assertSuccessful();
+
+        $this->actingAs(userWithAcademy())->getJson('/api/v1/sync/homecoming')
+            ->assertJsonPath('data.promotions', 2);
     });
 
     it('tells it once when a start that died after keeping it reconciles again', function (): void {
@@ -204,11 +218,8 @@ describe('GET and DELETE /api/v1/sync/homecoming', function (): void {
             'device' => 'phone9f8e7d6c',
             'at' => '2026-10-01T19:00:00Z',
             'through' => homecomingId(4),
-            'attendance' => [],
-            'payments' => ['count' => 0, 'amount_cents' => 0],
-            'athletes' => 1,
-            'promotions' => 0,
-            'other' => 0,
+            'created' => [],
+            'other' => 1,
         ];
     });
 
