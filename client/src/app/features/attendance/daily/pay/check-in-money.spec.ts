@@ -102,6 +102,21 @@ describe('CheckInMoney', () => {
     expect(owed).toEqual(['2025-12', '2026-08', '2026-09', '2026-10']);
   });
 
+  it('offers a quarterly payer one quarter for the months behind', () => {
+    const { money, http } = setup();
+    money.load();
+    behind(http, [{ id: 7, first: '2026-08' }]);
+
+    let owed: string[] = [];
+    money.owedFor(athlete({ billing_period_months: 3 })).subscribe((months) => (owed = months));
+    http
+      .expectOne((r) => r.url.endsWith('/athletes/7/payments'))
+      .flush({ data: [], overdue_months: ['2026-08', '2026-09'] });
+
+    // August to October settles all three: August, September and this month.
+    expect(owed).toEqual(['2026-08']);
+  });
+
   it('asks nothing for someone not behind', () => {
     const { money, http } = setup();
     money.load();

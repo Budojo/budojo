@@ -22,12 +22,18 @@ describe('PayChipComponent', () => {
   it('names the month owed, and asks once the athlete is present', () => {
     const away = render({ kind: 'due', month: '2026-09' });
     expect(away.root.textContent?.trim()).toBe('September');
+    expect(away.root.querySelector('button')?.getAttribute('aria-label')).toBe(
+      "Record Anna Bianchi's payment for September",
+    );
     TestBed.resetTestingModule();
 
     const here = render({ kind: 'due', month: '2026-09' }, true);
     const button = here.root.querySelector('button') as HTMLButtonElement;
     expect(button.textContent?.replace(/\s+/g, ' ').trim()).toBe('Ask September');
-    expect(button.getAttribute('aria-label')).toBe("Record Anna Bianchi's payment for September");
+    expect(button.getAttribute('aria-label')).toBe(
+      "Ask: record Anna Bianchi's payment for September",
+    );
+    expect(here.root.querySelector('[aria-live="polite"]')).not.toBeNull();
     button.click();
     expect(here.asked()).toBe(1);
   });

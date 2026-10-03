@@ -173,6 +173,9 @@ export class DailyAttendanceComponent implements OnInit {
   );
   /** The sheet's athlete and the chip's month; `null` while it is closed. */
   protected readonly paying = signal<{ athlete: Athlete; month: string } | null>(null);
+  /** Whose row opened the last sheet: the keyboard goes back there. */
+  private paidFrom: number | null = null;
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   /**
    * The date format for every picker on this component (#1498).
@@ -1428,7 +1431,27 @@ export class DailyAttendanceComponent implements OnInit {
   }
 
   protected openPay(athlete: Athlete, chip: PayChip): void {
-    if (chip.kind === 'due') this.paying.set({ athlete, month: chip.month });
+    if (chip.kind !== 'due') return;
+    this.paidFrom = athlete.id;
+    this.paying.set({ athlete, month: chip.month });
+  }
+
+  /**
+   * The sheet closed with the keyboard inside it (Escape, ✕, a payment):
+   * hand it back to the row rather than to `<body>` at the top of the page,
+   * as the lesson sheet does (#2001). The chip when it is still there; after
+   * a payment it may be a label, and the row's toggle takes it.
+   */
+  protected returnFocusFromPay(): void {
+    const id = this.paidFrom;
+    const active = document.activeElement;
+    const inside = active instanceof HTMLElement && active.closest('.pay-sheet-dialog') !== null;
+    if (id === null || (active !== null && active !== document.body && !inside)) return;
+    const root = this.host.nativeElement;
+    const target =
+      root.querySelector<HTMLElement>(`[data-cy="attendance-pay-${id}"] button`) ??
+      root.querySelector<HTMLElement>(`[data-cy="attendance-card-${id}"]`);
+    target?.focus();
   }
 
   protected closePay(): void {

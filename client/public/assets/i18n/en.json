@@ -2014,6 +2014,7 @@
         "chip": {
           "ask": "Ask",
           "dueAria": "Record {{name}}'s payment for {{month}}",
+          "askAria": "Ask: record {{name}}'s payment for {{month}}",
           "free": "Free",
           "carnet": "Carnet · {{left}}",
           "covered": "Paid"

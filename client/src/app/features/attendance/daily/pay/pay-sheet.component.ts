@@ -68,6 +68,8 @@ export class PaySheetComponent {
 
   readonly closed = output<void>();
   readonly recorded = output<PayRecorded>();
+  /** The sheet is gone from the screen: the host can take the keyboard back. */
+  readonly hidden = output<void>();
 
   /** The months owed; `null` while the server is asked. */
   protected readonly months = signal<readonly string[] | null>(null);

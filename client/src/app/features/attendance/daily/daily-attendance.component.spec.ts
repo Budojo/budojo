@@ -2288,6 +2288,27 @@ describe('DailyAttendanceComponent — the money at the mat (#2036)', () => {
       .flush(null, { status: 204, statusText: 'No Content' });
   });
 
+  it('hands the keyboard back to the chip when the sheet closes', () => {
+    const { fixture, component, httpMock } = open();
+    behind(httpMock);
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    document.body.appendChild(root);
+    const chipButton = root.querySelector('[data-cy="attendance-pay-1"] button') as HTMLElement;
+    chipButton.click();
+    fixture.detectChanges();
+    httpMock.expectOne((r) => r.url === '/api/v1/athletes/1/payments');
+
+    // Closed with the keyboard nowhere: the dialog took it away with it.
+    (document.activeElement as HTMLElement | null)?.blur();
+    component['closePay']();
+    fixture.detectChanges();
+    component['returnFocusFromPay']();
+
+    expect(document.activeElement).toBe(chipButton);
+    root.remove();
+  });
+
   it('shows no chip and asks for no arrears on the PC', () => {
     const { fixture, httpMock } = open('web');
 

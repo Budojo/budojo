@@ -160,6 +160,21 @@ describe('PaySheetComponent', () => {
     expect(recordButton().textContent).toContain('€180.00');
   });
 
+  it('offers a quarterly payer behind two months one quarter, not three', async () => {
+    const { fixture, http } = setup();
+    open(fixture, athlete({ billing_period_months: 3 }), '2026-08');
+    http
+      .expectOne((r) => r.url.endsWith('/athletes/7/payments'))
+      .flush({ data: [], overdue_months: ['2026-08', '2026-09'] });
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const months = Array.from(document.body.querySelectorAll('[data-cy^="pay-sheet-month-"]')).map(
+      (el) => el.textContent?.trim(),
+    );
+    expect(months).toEqual(['August – October']);
+  });
+
   it('says so when the payment does not go through, and keeps the sheet open', async () => {
     const { fixture, http, recorded } = setup();
     open(fixture, athlete(), '2026-08');

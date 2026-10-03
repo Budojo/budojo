@@ -562,4 +562,5 @@
   [month]="paying()?.month ?? null"
   (closed)="closePay()"
   (recorded)="onPaid($event)"
+  (hidden)="returnFocusFromPay()"
 />

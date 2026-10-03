@@ -7,7 +7,15 @@ import {
   PaymentService,
 } from '../../../../core/services/payment.service';
 import { StatsService } from '../../../../core/services/stats.service';
-import { PayChip, monthOf, monthsCovered, owedMonths, payChipOf, yearMonthOf } from './pay-chip';
+import {
+  PayChip,
+  monthOf,
+  monthsCovered,
+  owedMonths,
+  payChipOf,
+  periodStarts,
+  yearMonthOf,
+} from './pay-chip';
 
 /**
  * The money side of the phone's check-in (#2036): who owes what, and the
@@ -73,9 +81,10 @@ export class CheckInMoney {
   }
 
   /**
-   * Every month this athlete owes, oldest first, asked of the server per
-   * year: from the first month the arrears list names to this year. The
-   * answer replaces the arrears list's single month for them.
+   * The payments this athlete owes, oldest first, each as the month its
+   * period starts on. The months behind are asked of the server per year,
+   * from the first month the arrears list names to this year, and the answer
+   * replaces the arrears list's single month for them.
    */
   owedFor(athlete: Athlete): Observable<string[]> {
     const thisYear = yearMonthOf(this.thisMonth()).year;
@@ -88,7 +97,15 @@ export class CheckInMoney {
       map((perYear) => perYear.flat()),
       tap((months) => this.setBehind(athlete.id, months)),
       map((months) =>
-        owedMonths(athlete, months, this.thisMonth(), this.paidHere().get(athlete.id) ?? new Set()),
+        periodStarts(
+          owedMonths(
+            athlete,
+            months,
+            this.thisMonth(),
+            this.paidHere().get(athlete.id) ?? new Set(),
+          ),
+          this.periodOf(athlete),
+        ),
       ),
     );
   }

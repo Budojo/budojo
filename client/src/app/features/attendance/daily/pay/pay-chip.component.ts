@@ -24,13 +24,14 @@ import { PayChip, yearMonthOf } from './pay-chip';
           class="pay-chip pay-chip--due"
           [class.pay-chip--ask]="present()"
           [attr.aria-label]="
-            'attendance.daily.pay.chip.dueAria'
+            (present() ? 'attendance.daily.pay.chip.askAria' : 'attendance.daily.pay.chip.dueAria')
               | translate: { name: name(), month: (monthName() | translate) }
           "
           (click)="ask.emit()"
           data-cy="pay-chip-due"
         >
-          <span class="pay-chip__label">
+          <!-- Polite: the ask is announced when it appears, after the row's own state. -->
+          <span class="pay-chip__label" aria-live="polite">
             @if (present()) {
               <span class="pay-chip__ask">{{ 'attendance.daily.pay.chip.ask' | translate }}</span>
             }

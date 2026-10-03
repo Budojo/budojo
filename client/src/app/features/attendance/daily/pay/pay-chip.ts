@@ -71,6 +71,23 @@ export function owedMonths(
 }
 
 /**
+ * The payments that settle `owed`, one per period, as the months each starts
+ * on (#2036). A monthly payer's are the months themselves. A quarterly payer
+ * behind August and September owes one quarter, August to October, and not
+ * three overlapping ones: a month a period already covers starts no other.
+ */
+export function periodStarts(owed: readonly string[], period: number): string[] {
+  const starts: string[] = [];
+  let covered = new Set<string>();
+  for (const month of [...owed].sort()) {
+    if (covered.has(month)) continue;
+    starts.push(month);
+    covered = new Set(monthsCovered(month, period));
+  }
+  return starts;
+}
+
+/**
  * The chip for one athlete, or `null` when there is none to show: the
  * owner's own row, no fee that applies, a month their billing floor has not
  * reached, or a payload that does not say.

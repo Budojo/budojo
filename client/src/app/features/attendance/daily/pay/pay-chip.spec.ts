@@ -1,5 +1,12 @@
 import { Athlete } from '../../../../core/services/athlete.service';
-import { monthOf, monthsCovered, owedMonths, payChipOf, yearMonthOf } from './pay-chip';
+import {
+  monthOf,
+  monthsCovered,
+  owedMonths,
+  payChipOf,
+  periodStarts,
+  yearMonthOf,
+} from './pay-chip';
 
 const athlete = (over: Partial<Athlete> = {}): Athlete =>
   ({
@@ -58,6 +65,20 @@ describe('pay-chip', () => {
     it('reads paid_current_month when the payload has no coverage', () => {
       const old = athlete({ payment_coverage: undefined, paid_current_month: false });
       expect(owedMonths(old, [], '2026-10', NONE)).toEqual(['2026-10']);
+    });
+  });
+
+  describe('periodStarts', () => {
+    it('is the months themselves for a monthly payer', () => {
+      expect(periodStarts(['2026-08', '2026-09'], 1)).toEqual(['2026-08', '2026-09']);
+    });
+
+    it('owes a quarterly payer one quarter for two months behind, not three overlapping', () => {
+      expect(periodStarts(['2026-09', '2026-08', '2026-10'], 3)).toEqual(['2026-08']);
+    });
+
+    it('starts a second period on the first month the first leaves out', () => {
+      expect(periodStarts(['2026-02', '2026-03', '2026-06'], 3)).toEqual(['2026-02', '2026-06']);
     });
   });
 
