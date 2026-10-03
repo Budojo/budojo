@@ -54,8 +54,17 @@ final class ReplayJournalAction
     /** Fields a form sends together, each required with the others: kept or left out as one. */
     private const array GROUPS = [['phone_country_code', 'phone_national_number']];
 
-    /** Request fields that replace a row's set of related rows whole (`SetReplaced`): a lesson's topics. */
-    private const array SETS = ['topic_ids'];
+    /** Request fields that replace a row's set of related rows whole (`SetReplaced`): a lesson's topics, by the table they are in. */
+    private const array SETS = ['topic_ids' => 'syllabus_topics'];
+
+    /**
+     * Rows the API names by what they are, never by id: a lesson is its class
+     * on a day (`PUT /lessons/notes`, `/lessons/topics`). Made on each device,
+     * one lesson has two ids, and its id is never the way to find it here.
+     */
+    private const array NATURAL = [
+        'lessons' => ['academy_class_id' => 'academy_class_id', 'held_on' => 'held_on'],
+    ];
 
     /** A form's nested object, and the row it is: its table, and the morph that names its owner. */
     private const array NESTED = ['address' => ['table' => 'addresses', 'morph' => 'addressable']];
@@ -111,10 +120,17 @@ final class ReplayJournalAction
         $params = $map->params($entry['params'], $tables);
         $body = $map->body($entry['body']);
         $before = $map->before($entry['before']);
+        // A lesson is found here by its class and day, whatever id it has
+        // on either device, and never lost.
+        $natural = self::naturalRows($body);
+        $before = self::byNature($before, $natural);
 
         // It names a row an earlier entry made where it was written and that
         // has none here: sent on, it would reach whatever row has that id.
-        $lost = $map->lostIn();
+        $lost = array_values(array_filter(
+            $map->lostIn(),
+            static fn (array $hit): bool => ! \array_key_exists($hit['table'], $natural),
+        ));
         if ($lost !== []) {
             $map->learn($entry['created'], []);
 
@@ -162,7 +178,7 @@ final class ReplayJournalAction
                 'message' => $e->getMessage(),
             ]);
         }
-        if ($judged['outcome'] === 'conflict') {
+        if ($judged['outcome'] === 'conflict' || ($judged['undo'] ?? false)) {
             DB::rollBack();
             $created = [];
         } else {
@@ -183,7 +199,7 @@ final class ReplayJournalAction
      * @param  array<string, array<string, array<string, mixed>>>|null  $targets
      * @param  array<string, mixed>|null  $body
      * @param  array<string, mixed>|null  $probe  a field of its target that moved here, when the entry names none it changes
-     * @return array{outcome: string, conflict: array<string, mixed>|null}
+     * @return array{outcome: string, conflict: array<string, mixed>|null, undo?: bool}
      */
     private static function judge(array $entry, int $status, mixed $answer, array $created, ?array $touched, ?array $before, ?array $targets, ?array $body, ?array $probe): array
     {
@@ -201,7 +217,7 @@ final class ReplayJournalAction
             return ['outcome' => 'already', 'conflict' => null];
         }
         if ($status >= 200 && $status < 300) {
-            $set = self::setReplaced($before, $touched, $body);
+            $set = self::setReplaced($entry, $before, $touched, $body);
             if ($set !== null) {
                 return $set;
             }
@@ -255,30 +271,46 @@ final class ReplayJournalAction
 
     /**
      * A set the replay replaced here (a lesson's topics, #2102), against the
-     * one the entry replaced there, or none when it made the row: the same
-     * means the other device left it alone, and the entry's set applies;
-     * already the entry's set, it was true already; anything else, both
-     * devices tagged the lesson, and the owner chooses. Null when the replay
-     * replaced no set.
+     * one the entry replaced there, or none when it made the lesson. Counted
+     * only of the related rows this database still has (a topic removed from
+     * the programme here leaves both sides alike):
+     * - **already the entry's:** true already;
+     * - **the entry changed nothing** (it saved the set it saw): what is here
+     *   stays, undone in the savepoint;
+     * - **as the entry saw it:** the other device left it alone, the entry's
+     *   set applies;
+     * - **anything else:** both devices tagged the lesson; the owner chooses.
      *
+     * Null when the replay replaced no set, or when the entry recorded none
+     * and made no lesson: written before sets were recorded, it applies as
+     * it always did.
+     *
+     * @param  array{id: string, at: string, method: string, route: string, params: array<string, int|string>, body: array<string, mixed>|null, created: array<string, list<int|string>>, before: array<string, array<string, array<string, mixed>>>|null}  $entry
      * @param  array<string, array<string, array<string, mixed>>>|null  $before
      * @param  array<string, array<string, array<string, mixed>>>|null  $touched
      * @param  array<string, mixed>|null  $body
-     * @return array{outcome: string, conflict: array<string, mixed>|null}|null
+     * @return array{outcome: string, conflict: array<string, mixed>|null, undo?: bool}|null
      */
-    private static function setReplaced(?array $before, ?array $touched, ?array $body): ?array
+    private static function setReplaced(array $entry, ?array $before, ?array $touched, ?array $body): ?array
     {
         foreach ($touched ?? [] as $table => $rows) {
             foreach ($rows as $id => $fields) {
-                foreach (self::SETS as $field) {
+                foreach (self::SETS as $field => $related) {
                     if (! \array_key_exists($field, $fields) || ! \is_array($body) || ! \array_key_exists($field, $body)) {
                         continue;
                     }
-                    $here = self::setOf($fields[$field]);
-                    $mine = self::setOf($body[$field]);
-                    $saw = self::setOf($before[$table][$id][$field] ?? []);
+                    $recorded = $before[$table][$id][$field] ?? null;
+                    if ($recorded === null && ($entry['created'][$table] ?? []) === []) {
+                        return null;
+                    }
+                    $here = self::alive($related, $fields[$field]);
+                    $mine = self::alive($related, $body[$field]);
+                    $saw = self::alive($related, $recorded ?? []);
                     if ($here === $mine) {
                         return ['outcome' => 'already', 'conflict' => null];
+                    }
+                    if ($saw === $mine) {
+                        return ['outcome' => 'already', 'conflict' => null, 'undo' => true];
                     }
                     if ($here !== $saw) {
                         return ['outcome' => 'conflict', 'conflict' => [
@@ -297,6 +329,81 @@ final class ReplayJournalAction
         }
 
         return null;
+    }
+
+    /**
+     * A set of ids, sorted, each once, of the rows this database still has.
+     *
+     * @return list<int>
+     */
+    private static function alive(string $table, mixed $ids): array
+    {
+        $set = self::setOf($ids);
+        if ($set === []) {
+            return [];
+        }
+        $here = DB::table($table)->whereIn('id', $set)->whereNull('deleted_at')->pluck('id')
+            ->map(static fn (mixed $id): int => is_numeric($id) ? (int) $id : 0)
+            ->all();
+
+        return array_values(array_intersect($set, $here));
+    }
+
+    /**
+     * The rows here the body names by what they are (`NATURAL`), by table:
+     * the id of the lesson on that class and day, or null when there is none.
+     *
+     * @param  array<string, mixed>|null  $body
+     * @return array<string, string|null>
+     */
+    private static function naturalRows(?array $body): array
+    {
+        $rows = [];
+        foreach (self::NATURAL as $table => $key) {
+            $where = [];
+            foreach ($key as $field => $column) {
+                $value = $body[$field] ?? null;
+                if (! \is_int($value) && ! \is_string($value)) {
+                    continue 2;
+                }
+                $where[$column] = $value;
+            }
+            $query = DB::table($table);
+            foreach ($where as $column => $value) {
+                $query->where($column, 'like', \is_string($value) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $value) === 1 ? "{$value}%" : $value);
+            }
+            $id = $query->value('id');
+            $rows[$table] = \is_int($id) || \is_string($id) ? (string) $id : null;
+        }
+
+        return $rows;
+    }
+
+    /**
+     * `before` with each row of a natural table under the id it has here,
+     * or without it when this database has no such row yet.
+     *
+     * @param  array<string, array<string, array<string, mixed>>>|null  $before
+     * @param  array<string, string|null>  $natural
+     * @return array<string, array<string, array<string, mixed>>>|null
+     */
+    private static function byNature(?array $before, array $natural): ?array
+    {
+        if ($before === null) {
+            return null;
+        }
+        foreach ($natural as $table => $id) {
+            if (! isset($before[$table])) {
+                continue;
+            }
+            $rows = array_values($before[$table]);
+            unset($before[$table]);
+            if ($id !== null && \count($rows) === 1) {
+                $before[$table][$id] = $rows[0];
+            }
+        }
+
+        return $before === [] ? null : $before;
     }
 
     /** @return list<int> a set of ids, sorted, each once */

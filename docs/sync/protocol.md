@@ -245,7 +245,14 @@ There is no pairing code (#2033). **A device joins at its first «Accedi con Goo
   - A nested object (the address) is left out whole when the entry did not change it. When the entry did change it, a field moved here too is a conflict, and the fields it carried along take what this database holds;
 - **a write that names none of the fields it changes** (a photo removed) cannot say what it would make them. When one moved here, its replay tells: changing nothing, it was true already; changing the moved row, it is a conflict;
 - **a delete that names its row another way than by a model** (a month's payment, by year and month) must delete here the row it deleted there, field by field. One that names its row (an athlete) is compared on it alone: what it took along (his documents) is derived again;
-- **a set replaced whole through a pivot** (a lesson's topics, `PUT /lessons/topics`) is recorded in the entry's `before` as `topic_ids`, since a pivot fires no model event. Its replay compares the set it replaced here with the one the entry replaced there, or none when the entry made the lesson: the same, the entry's set applies; already the entry's, it is `already`; anything else, both devices tagged the lesson, and it is a `changed` conflict (#2102);
+- **a set replaced whole through a pivot** (a lesson's topics, `PUT /lessons/topics`) is recorded in the entry's `before` as `topic_ids`, since a pivot fires no model event. Its replay compares the set it replaced here with the one the entry replaced there, or none when the entry made the lesson. Both are counted only of the topics this database still has. The outcomes (#2102):
+  - already the entry's: `already`;
+  - the entry changed nothing (it saved the set it saw): what is here stays;
+  - as the entry saw it: the entry's set applies;
+  - anything else: both devices tagged the lesson, a `changed` conflict.
+
+  An entry written before sets were recorded applies as it always did;
+- **a lesson is found by its class and day,** never by its id: made on each device, one lesson has two ids, and the API names it by class and day alone;
 - **a row's own id is never compared,** and a reference made on each device (a check-in's `lesson_id`) only for whether it is set: two ids differ between devices for the same row, but one against none means the row joined a lesson or left it. The references a write names are rewritten through the id map and compared;
 - **money is never left to chance:** a payment's entry carries the amount, the period, the date and the method the row got, a method left out as none (`ResolvedFields`), and a payment the replay makes or finds otherwise is a `differs` conflict.
 

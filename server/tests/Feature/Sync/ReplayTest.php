@@ -652,6 +652,44 @@ describe('a lesson’s topics, tagged on two devices (#2102)', function (): void
             ->and(($this->topicsHere)())->toBe([$this->armbar]);
     });
 
+    it('finds by its class and day a lesson each device made, and tags it, never losing it', function (): void {
+        $giulia = replayAthlete($this, 'Giulia');
+        $entries = onThePhone(function (): void {
+            $this->actingAs($this->owner)->postJson('/api/v1/attendance', ['date' => '2026-10-01', 'athlete_ids' => [$this->luca], 'academy_class_id' => $this->class->id])->assertSuccessful();
+            ($this->tag)([$this->sweep]);
+        });
+        $this->actingAs($this->owner)->postJson('/api/v1/attendance', ['date' => '2026-10-01', 'athlete_ids' => [$giulia], 'academy_class_id' => $this->class->id])->assertSuccessful();
+
+        expect(array_values(replayOnThePc($entries)))->not->toContain('conflict')
+            ->and(($this->topicsHere)())->toBe([$this->sweep]);
+    });
+
+    it('counts only the topics still in the programme here: one removed on the PC is no conflict', function (): void {
+        ($this->tag)([$this->guard, $this->armbar]);
+        $entries = onThePhone(fn () => ($this->tag)([$this->guard, $this->sweep]));
+        SyllabusTopic::query()->findOrFail($this->armbar)->delete();
+
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'applied']);
+    });
+
+    it('applies as it always did a topics entry written before sets were recorded', function (): void {
+        ($this->tag)([$this->guard]);
+        $entries = onThePhone(fn () => ($this->tag)([$this->sweep]));
+        $entries[0]['before'] = null;
+
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'applied'])
+            ->and(($this->topicsHere)())->toBe([$this->sweep]);
+    });
+
+    it('keeps the PC’s tags when the phone saved the lesson’s topics unchanged', function (): void {
+        ($this->tag)([$this->guard]);
+        $entries = onThePhone(fn () => ($this->tag)([$this->guard]));
+        ($this->tag)([$this->armbar]);
+
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'already'])
+            ->and(($this->topicsHere)())->toBe([$this->armbar]);
+    });
+
     it('asks when each device made the lesson and tagged it otherwise', function (): void {
         $entries = onThePhone(fn () => ($this->tag)([$this->sweep]));
         ($this->tag)([$this->armbar]);
