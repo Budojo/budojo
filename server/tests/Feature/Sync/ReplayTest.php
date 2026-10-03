@@ -456,6 +456,38 @@ describe('what a replay never does silently (#2101 review)', function (): void {
             ->and(Athlete::query()->findOrFail($this->luca)->photo_sha256)->toBe($pcPhoto);
     });
 
+    it('keeps an address the PC cleared when the phone’s form carried it along', function (): void {
+        $roma = ['line1' => 'Via Roma 1', 'city' => 'Roma', 'postal_code' => '00100', 'province' => 'RM', 'country' => 'IT'];
+        $this->actingAs($this->owner)->patchJson("/api/v1/athletes/{$this->luca}", ['address' => $roma])->assertOk();
+        $entries = onThePhone(fn () => $this->actingAs($this->owner)->putJson("/api/v1/athletes/{$this->luca}", [
+            'first_name' => 'Lucas', 'last_name' => 'Bianchi', 'belt' => 'white', 'stripes' => 0, 'status' => 'active',
+            'joined_at' => '2026-09-01', 'address' => $roma,
+        ])->assertOk());
+        $this->actingAs($this->owner)->patchJson("/api/v1/athletes/{$this->luca}", ['address' => null])->assertOk();
+
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'applied'])
+            ->and(Athlete::query()->findOrFail($this->luca)->first_name)->toBe('Lucas')
+            ->and(DB::table('addresses')->where('addressable_type', Athlete::class)->where('addressable_id', $this->luca)->exists())->toBeFalse();
+    });
+
+    it('asks when the academy logo changed on both devices, never replacing the PC’s', function (): void {
+        $logo = fn (int $size) => $this->actingAs($this->owner)
+            ->post('/api/v1/academy/logo', ['logo' => UploadedFile::fake()->image('logo.png', $size, $size)])->assertSuccessful();
+        $academy = $this->owner->academy;
+
+        $uploaded = onThePhone(fn () => $logo(40));
+        $logo(48);
+        $pcLogo = $academy->fresh()->logo_sha256;
+        expect(replayOnThePc($uploaded)[end($uploaded)['id']])->toBe('conflict')
+            ->and($academy->fresh()->logo_sha256)->toBe($pcLogo);
+
+        $removed = onThePhone(fn () => $this->actingAs($this->owner)->deleteJson('/api/v1/academy/logo')->assertSuccessful());
+        $logo(56);
+        $pcLogo = $academy->fresh()->logo_sha256;
+        expect(replayOnThePc($removed)[end($removed)['id']])->toBe('conflict')
+            ->and($academy->fresh()->logo_sha256)->toBe($pcLogo);
+    });
+
     it('finds the academy logo removed on both devices no conflict', function (): void {
         $this->actingAs($this->owner)->post('/api/v1/academy/logo', ['logo' => UploadedFile::fake()->image('logo.png', 64, 64)])->assertSuccessful();
         $entries = onThePhone(fn () => $this->actingAs($this->owner)->deleteJson('/api/v1/academy/logo')->assertSuccessful());

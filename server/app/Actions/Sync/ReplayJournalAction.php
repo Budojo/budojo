@@ -121,7 +121,7 @@ final class ReplayJournalAction
             ]);
         }
 
-        $own = self::ownRow($route, $entry['method'], $params, $before, $owner);
+        $own = self::ownRow($route, $params, $before, $owner);
         $targets = self::targets($before, $params, $tables, $own);
         $seen = $this->compare($entry['method'], $targets, $body)
             ?? self::nestedChanged($before, $body);
@@ -370,7 +370,8 @@ final class ReplayJournalAction
                 ->where("{$nested['morph']}_id", $own['id'])
                 ->first();
             $here = $row === null ? null : (array) $row;
-            $changedThere = $here === null ? [] : ($before[$nested['table']][(string) $here['id']] ?? null);
+            // What it changed of the row here; null when it changed none of it, or there is none.
+            $changedThere = $here === null ? null : ($before[$nested['table']][(string) $here['id']] ?? null);
             if (($created[$nested['table']] ?? []) !== []) {
                 // It added one where there was none: one added here too,
                 // and another, is the same thing changed on both sides.
@@ -396,7 +397,7 @@ final class ReplayJournalAction
             // It changed some of its fields: the others it carried along take
             // what this database holds, as the form's own fields do. They are
             // required together, so they are sent, never left out.
-            if (\is_array($body[$key]) && $here !== null) {
+            if (\is_array($body[$key])) {
                 foreach ($body[$key] as $field => $sent) {
                     if (! \is_array($sent) && ! \array_key_exists($field, $changedThere) && \array_key_exists($field, $here) && ! self::same($here[$field], $sent)) {
                         $body[$key][$field] = $here[$field];
@@ -479,16 +480,16 @@ final class ReplayJournalAction
 
     /**
      * The row a write is about. A route that binds models names it by its
-     * last (`/athletes/{athlete}/promotions/{promotion}`). For a form that
-     * binds none: `PATCH /academy` names the owner's academy by the session;
-     * another way (`PUT /lessons/notes`, by date and class), it is the one
-     * row the write changed, when it changed one.
+     * last (`/athletes/{athlete}/promotions/{promotion}`). One that binds
+     * none: `PATCH /academy` names the owner's academy by the session;
+     * another way (`PUT /lessons/notes`, by date and class; the academy's
+     * logo), it is the one row the write changed, when it changed one.
      *
      * @param  array<string, int|string>  $params
      * @param  array<string, array<string, array<string, mixed>>>|null  $before
      * @return array{table: string, id: string, class: class-string<Model>|null}|null
      */
-    private static function ownRow(Route $route, string $method, array $params, ?array $before, User $owner): ?array
+    private static function ownRow(Route $route, array $params, ?array $before, User $owner): ?array
     {
         $models = self::paramModels($route);
         if ($models !== []) {
@@ -496,10 +497,6 @@ final class ReplayJournalAction
             $class = $models[$param];
 
             return ['table' => new $class()->getTable(), 'id' => (string) ($params[$param] ?? ''), 'class' => $class];
-        }
-        if ($method !== 'PUT' && $method !== 'PATCH') {
-            // Only a form is about a row it does not name.
-            return null;
         }
         if ($route->getName() === 'academy.update') {
             $academy = $owner->activeAcademyId();
@@ -527,8 +524,11 @@ final class ReplayJournalAction
      * moved with them (a name's search form) and are derived again. One that
      * sets none of them by name (a photo: `photo` sets `photo_path` and
      * `photo_sha256`), or has no body, is about every field it changed: it is
-     * replayed when they are as it saw them, and a conflict when one moved.
-     * It is never "already true", which only a field set by name can tell.
+     * replayed when they are as it saw them. When one moved, it cannot say
+     * what it would make them, so the answer is a probe: the replay runs in
+     * its savepoint, and `judge()` finds it already true when it changed no
+     * target, a conflict when it changed one. A delete of the row itself is
+     * a conflict at once.
      *
      * @param  array<string, array<string, array<string, mixed>>>|null  $before
      * @param  array<string, mixed>|null  $body
