@@ -43,9 +43,11 @@ it('is idempotent — POSTing the same {year, month} twice does not create a dup
         ->assertCreated()
         ->json('data.id');
 
+    // 200, not 201 (#2036): nothing was created, and a client that offers
+    // an undo for what it just recorded must not offer one for this row.
     $second = $this->actingAs($this->user)
         ->postJson("/api/v1/athletes/{$this->athlete->id}/payments", $body)
-        ->assertCreated()
+        ->assertOk()
         ->json('data.id');
 
     expect($second)->toBe($first);

@@ -2009,6 +2009,28 @@
       "register": {
         "regulars": "Abituali",
         "others": "Tutti gli altri"
+      },
+      "pay": {
+        "chip": {
+          "ask": "Da chiedere",
+          "dueAria": "Registra il pagamento di {{month}} per {{name}}",
+          "askAria": "Da chiedere: registra il pagamento di {{month}} per {{name}}",
+          "free": "Gratis",
+          "carnet": "Carnet · {{left}}",
+          "covered": "Pagato"
+        },
+        "sheet": {
+          "title": "Pagamento",
+          "months": "Mese da pagare",
+          "none": "Non deve niente: il pagamento è già registrato.",
+          "record": "Registra {{amount}} · {{method}}",
+          "error": "Pagamento non registrato. Riprova."
+        },
+        "toast": {
+          "recorded": "Pagamento di {{name}} registrato",
+          "already": "Il pagamento di {{name}} era già registrato",
+          "undoError": "Non sono riuscito ad annullare il pagamento."
+        }
       }
     },
     "summary": {

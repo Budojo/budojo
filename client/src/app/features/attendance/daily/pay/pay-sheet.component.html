@@ -1,0 +1,89 @@
+<p-dialog
+  [visible]="athlete() !== null"
+  (visibleChange)="onVisibleChange($event)"
+  (onHide)="hidden.emit()"
+  [modal]="true"
+  [draggable]="false"
+  [closable]="!saving()"
+  [closeOnEscape]="!saving()"
+  [dismissableMask]="!saving()"
+  [breakpoints]="{ '768px': '92vw' }"
+  [style]="{ width: '28rem' }"
+  styleClass="bottom-sheet pay-sheet-dialog"
+  [header]="'attendance.daily.pay.sheet.title' | translate"
+  data-cy="pay-sheet"
+>
+  @if (athlete(); as athlete) {
+    <div class="pay-sheet">
+      <!-- Who is paying, with the belt spine (#1855): the sheet is about one person. -->
+      <div class="pay-sheet__who">
+        <app-athlete-identity [athlete]="athlete" />
+      </div>
+
+      <fieldset class="pay-sheet__months">
+        <legend class="pay-sheet__label">
+          {{ 'attendance.daily.pay.sheet.months' | translate }}
+        </legend>
+        @if (months(); as months) {
+          @for (month of months; track month) {
+            <label
+              class="pay-sheet__month"
+              [class.pay-sheet__month--on]="month === picked()"
+              [attr.data-cy]="'pay-sheet-month-' + month"
+            >
+              <input
+                type="radio"
+                name="pay-sheet-month"
+                [value]="month"
+                [checked]="month === picked()"
+                (change)="pick(month)"
+              />
+              <span>{{ monthLabel(month) }}</span>
+            </label>
+          } @empty {
+            <p class="pay-sheet__none" data-cy="pay-sheet-none">
+              {{ 'attendance.daily.pay.sheet.none' | translate }}
+            </p>
+          }
+        } @else {
+          <div class="pay-sheet__loading" data-cy="pay-sheet-loading">
+            <p-skeleton height="3.5rem" />
+            <p-skeleton height="3.5rem" />
+          </div>
+        }
+      </fieldset>
+
+      <div class="pay-sheet__method">
+        <span id="pay-sheet-method-label" class="pay-sheet__label">{{
+          'payments.method.label' | translate
+        }}</span>
+        <p-selectbutton
+          [options]="methodOptions()"
+          [ngModel]="method()"
+          (ngModelChange)="method.set($event)"
+          optionLabel="label"
+          optionValue="value"
+          [allowEmpty]="false"
+          ariaLabelledBy="pay-sheet-method-label"
+          [fluid]="true"
+          data-cy="pay-sheet-method"
+        />
+      </div>
+
+      @if (failed()) {
+        <p class="pay-sheet__error" role="alert" data-cy="pay-sheet-error">
+          {{ 'attendance.daily.pay.sheet.error' | translate }}
+        </p>
+      }
+
+      <p-button
+        [fluid]="true"
+        [label]="recordLabel()"
+        [loading]="saving()"
+        [disabled]="picked() === null"
+        (onClick)="submit()"
+        data-cy="pay-sheet-record"
+      />
+    </div>
+  }
+</p-dialog>

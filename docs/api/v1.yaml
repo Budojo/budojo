@@ -5566,7 +5566,9 @@ paths:
         Records a payment covering `period_months` from `(year, month)`
         (#1382) — one row, one amount, one receipt, whatever its length.
         **Idempotent**: POSTing the same `(year, month, period_months)` twice
-        returns the existing row instead of creating a duplicate. Re-posting
+        returns the existing row instead of creating a duplicate, with **200**
+        rather than 201 (#2036): nothing was created, so a client that offers
+        to undo the payment it just recorded must not offer it. Re-posting
         the same start month with a *different* length is refused with a 422
         instead — the caller is asking for something else.
 
@@ -5599,8 +5601,18 @@ paths:
             schema:
               $ref: '#/components/schemas/AthletePaymentCreateRequest'
       responses:
+        '200':
+          description: The row already recorded, returned on an idempotent re-post
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/AthletePayment'
         '201':
-          description: Payment recorded (or returned existing row on idempotent retry)
+          description: Payment recorded
           content:
             application/json:
               schema:

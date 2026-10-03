@@ -2009,6 +2009,28 @@
       "register": {
         "regulars": "Regulars",
         "others": "Everyone else"
+      },
+      "pay": {
+        "chip": {
+          "ask": "Ask",
+          "dueAria": "Record {{name}}'s payment for {{month}}",
+          "askAria": "Ask: record {{name}}'s payment for {{month}}",
+          "free": "Free",
+          "carnet": "Carnet · {{left}}",
+          "covered": "Paid"
+        },
+        "sheet": {
+          "title": "Payment",
+          "months": "Month to pay",
+          "none": "Nothing owed: the payment is already recorded.",
+          "record": "Record {{amount}} · {{method}}",
+          "error": "The payment was not recorded. Try again."
+        },
+        "toast": {
+          "recorded": "{{name}}'s payment recorded",
+          "already": "{{name}}'s payment was already recorded",
+          "undoError": "Couldn't undo the payment."
+        }
       }
     },
     "summary": {

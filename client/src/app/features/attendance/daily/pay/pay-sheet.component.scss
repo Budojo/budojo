@@ -1,0 +1,83 @@
+.pay-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+
+  // The identity's spine draws against its row: this block is that row.
+  &__who {
+    position: relative;
+    min-height: 3rem;
+    display: flex;
+    align-items: center;
+  }
+
+  &__label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--p-text-muted-color);
+  }
+
+  &__months {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  // A month is a row a thumb can hit (#2035's 56px), the radio inside it.
+  &__month {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    min-height: 3.5rem;
+    padding: 0 1rem;
+    border: 1px solid var(--p-content-border-color);
+    border-radius: 12px;
+    cursor: pointer;
+    font-variant-numeric: tabular-nums;
+
+    input {
+      width: 1.25rem;
+      height: 1.25rem;
+      margin: 0;
+      accent-color: var(--p-primary-color);
+    }
+
+    &--on {
+      border-color: var(--p-primary-color);
+      background: color-mix(in srgb, var(--p-primary-color) 8%, transparent);
+    }
+
+    &:has(input:focus-visible) {
+      outline: 2px solid var(--p-primary-color);
+      outline-offset: 2px;
+    }
+  }
+
+  // Four methods on a 360px phone: the toggle's own padding would cut
+  // «Contanti» short, so it is narrowed through its tokens.
+  &__method {
+    --p-togglebutton-padding: 0.25rem;
+    --p-togglebutton-content-padding: 0.5rem 0.25rem;
+  }
+
+  &__loading {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  &__none,
+  &__error {
+    margin: 0;
+  }
+
+  &__error {
+    color: var(--budojo-danger-ink);
+  }
+}
