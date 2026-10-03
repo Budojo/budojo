@@ -82,12 +82,12 @@ Do not assume; check:
 
 ```bash
 gh run list --workflow=release.yml --branch main --limit 1     # then poll the run
-gh release view vX.Y.Z --json assets -q '.assets[].name'       # installers attached?
+gh release view vX.Y.Z --json assets -q '.assets[].name'       # Budojo-Setup-X.Y.Z.exe and Budojo-Android-X.Y.Z.apk?
 gh issue view <each-auto-closed-issue> --json state -q .state  # CLOSED?
 gh pr list --base develop --state all --limit 3                # sweep PR opened + merged?
 ```
 
-The run has three jobs: **Semantic Release**, **sweep**, **Desktop installer (Windows)**. A green tag with a failed installer job means the release shipped with nothing to download — fix forward and re-run the installer for the existing tag:
+The run has these jobs: **Semantic Release**, **sweep**, **Desktop installer (Windows)**, **Android APK** (PHP, the APK, the emulator) and **Attach the APK to the release** (#2040). A green tag with a failed installer or APK job means the release shipped without that download — fix forward and re-run both for the existing tag:
 
 ```bash
 gh workflow run release.yml --ref develop -f installer_tag=vX.Y.Z
@@ -114,6 +114,18 @@ Then confirm, from outside the app: a window titled `Budojo` exists, a `php.exe`
 **Read `<scratch>/userdata/storage/logs/laravel.log`** — not just the app's own `logs/`. That file is how the silently-failing scheduler was found: nothing in the UI or the desktop logs surfaces it, and `schedule:run` prints `... DONE` even for a command whose subprocess died. Its *absence* is the pass condition.
 
 > Timing note: the scheduled commands run **every five minutes inside a `09:00–23:59` Europe/Rome window**, while `logs/scheduler.log` timestamps are **UTC**. A late-night smoke test legitimately logs `No scheduled commands are ready to run` — that is the window being closed, not a fault. To actually observe a command fire, smoke-test inside the Rome window and look for `Running [...]` lines.
+
+**Then the APK (#2040).** The release run already opened it on the Android emulator. Look at that run's `Budojo-Android-X.Y.Z-emulator` photos before anything else. Then the phone check is the owner's, since the emulator has no Google account:
+
+```bash
+gh release download vX.Y.Z --pattern "Budojo-Android-X.Y.Z.apk" --dir <scratch>
+```
+
+Send it to the owner with what to check:
+- it installs **over** the app already on the phone (no uninstall: that would lose unsent changes);
+- after the update, the gym is the same, the pairing holds, and the pill says «Allineato».
+
+> **Trap:** an APK whose `versionCode` is lower than the installed one is refused as a downgrade. The code is the built commit's time in minutes since 2026, so a rebuild of an *older* tag (`installer_tag`) produces an APK that will not install over a newer test build. Rebuild only the release just cut.
 
 ### 7. Post-release sweep
 

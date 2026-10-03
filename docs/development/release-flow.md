@@ -9,6 +9,7 @@ Every squash merge to `develop` triggers a beta release:
 1. semantic-release reads conventional commits since the last tag.
 2. Determines the version bump: `fix:` → patch, `feat:` → minor, `BREAKING CHANGE:` footer → major.
 3. Creates tag `vX.Y.Z-beta.N` + a GitHub pre-release whose body **is** the rendered changelog.
+4. Builds the phone's APK for that tag, opens it on the Android emulator, and attaches `Budojo-Android-X.Y.Z-beta.N.apk` to the pre-release (#2040).
 
 ## Stable releases
 
@@ -16,6 +17,7 @@ Every merge commit from `develop` → `main` triggers a stable release:
 
 1. semantic-release reads conventional commits since the last stable tag.
 2. Creates tag `vX.Y.Z` + GitHub Release with the full changelog as the body.
+- Beside the Windows installer, the release carries **`Budojo-Android-X.Y.Z.apk`** (#2040), built from the tag and opened on the Android emulator before it is attached. Its `versionCode` is the commit's time in minutes since 2026, so it installs over the owner's earlier test APKs and the next one installs over it.
 
 There is **no `CHANGELOG.md`** in the repo — the GitHub Releases page is the source of truth. The `@semantic-release/changelog` + `@semantic-release/git` plugins were dropped after the develop branch ruleset rejected the bot's auto-commit (see `.claude/gotchas.md` § GitHub Actions).
 
