@@ -4,8 +4,10 @@ import {
   ElementRef,
   OnInit,
   computed,
+  effect,
   inject,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -60,6 +62,10 @@ import {
 } from '../../../shared/utils/athlete-sort';
 import { pickDefaultClass } from './class-pick';
 import { MissingRegularsComponent } from './missing-regulars/missing-regulars.component';
+import { CheckInMoney } from './pay/check-in-money';
+import { PayChip } from './pay/pay-chip';
+import { PayChipComponent } from './pay/pay-chip.component';
+import { PayRecorded, PaySheetComponent } from './pay/pay-sheet.component';
 
 interface SelectOption<T extends string> {
   label: string;
@@ -130,8 +136,10 @@ function toLocalDateString(d: Date): string {
     BeltSortButtonComponent,
     LessonSheetComponent,
     MissingRegularsComponent,
+    PayChipComponent,
+    PaySheetComponent,
   ],
-  providers: [MessageService],
+  providers: [MessageService, CheckInMoney],
   templateUrl: './daily-attendance.component.html',
   styleUrl: './daily-attendance.component.scss',
 })
@@ -153,6 +161,18 @@ export class DailyAttendanceComponent implements OnInit {
    * so the success toast, which would stack over the rows, stays on the PC.
    */
   protected readonly onThePhone = computed(() => this.runtime.profile() === 'mobile');
+
+  /**
+   * The money at the mat (#2036, PRD § 6.1): a chip on each phone row says
+   * what pays for the month, and a month owed opens the payment sheet. Only
+   * on the phone, and only today: the chip is about who is standing there.
+   */
+  protected readonly money = inject(CheckInMoney);
+  private readonly showsMoney = computed(
+    () => this.onThePhone() && this.selectedDateIso() === toLocalDateString(new Date()),
+  );
+  /** The sheet's athlete and the chip's month; `null` while it is closed. */
+  protected readonly paying = signal<{ athlete: Athlete; month: string } | null>(null);
 
   /**
    * The date format for every picker on this component (#1498).
@@ -463,6 +483,11 @@ export class DailyAttendanceComponent implements OnInit {
         takeUntilDestroyed(),
       )
       .subscribe((q) => this.applySearch(q));
+
+    // The runtime answers after the first render, so the phone is known late.
+    effect(() => {
+      if (this.onThePhone()) untracked(() => this.money.load());
+    });
   }
 
   // Clear any pending undo toast before the next add to avoid stacked Undo
@@ -1395,6 +1420,36 @@ export class DailyAttendanceComponent implements OnInit {
       next.delete(athleteId);
     }
     this.inflight.set(next);
+  }
+
+  /** The payment chip for one phone row, or `null` when it shows none. */
+  protected payChip(athlete: Athlete): PayChip | null {
+    return this.showsMoney() ? this.money.chipFor(athlete) : null;
+  }
+
+  protected openPay(athlete: Athlete, chip: PayChip): void {
+    if (chip.kind === 'due') this.paying.set({ athlete, month: chip.month });
+  }
+
+  protected closePay(): void {
+    this.paying.set(null);
+  }
+
+  /** Recorded: the sheet closes, the chip moves on, and the toast can take it back. */
+  protected onPaid({ athlete, payment }: PayRecorded): void {
+    this.paying.set(null);
+    navigator.vibrate?.(15);
+    this.toastUndo(
+      this.translate.instant('attendance.daily.pay.toast.recorded', {
+        name: `${athlete.first_name} ${athlete.last_name}`,
+      }),
+      () =>
+        this.money.undo(athlete, payment).subscribe({
+          next: () => this.messageService.clear(),
+          error: () =>
+            this.toastError(this.translate.instant('attendance.daily.pay.toast.undoError')),
+        }),
+    );
   }
 
   private toastUndo(summary: string, undo: () => void): void {

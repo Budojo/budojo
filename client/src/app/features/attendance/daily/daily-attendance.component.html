@@ -441,17 +441,25 @@
         }
         <ul class="attendance-cards">
           @for (athlete of section.athletes; track athlete.id) {
-            <li class="attendance-card-item">
+            <!--
+              The <li> is the card a thumb sees (#2036). The toggle is the
+              button inside, stretched over the whole card, and the payment
+              chip sits above the stretch: its own target, and never a button
+              inside a button.
+            -->
+            <li
+              class="attendance-card-item"
+              [class.attendance-card-item--present]="isPresent(athlete.id)"
+              [class.attendance-card-item--inflight]="isInflight(athlete.id)"
+            >
               <!-- Real <button> inside the <li> so the list preserves its
                    `listitem` semantics for screen readers (#677 Copilot
-                   review). The button fills the card and carries all the
-                   interaction state (aria-pressed mirrors visual state,
-                   aria-busy during the in-flight write). -->
+                   review). The button carries all the interaction state
+                   (aria-pressed mirrors visual state, aria-busy during the
+                   in-flight write). -->
               <button
                 type="button"
                 class="attendance-card"
-                [class.attendance-card--present]="isPresent(athlete.id)"
-                [class.attendance-card--inflight]="isInflight(athlete.id)"
                 [attr.aria-pressed]="isPresent(athlete.id)"
                 [attr.aria-busy]="isInflight(athlete.id)"
                 [disabled]="isInflight(athlete.id)"
@@ -459,7 +467,11 @@
                 [attr.data-cy]="'attendance-card-' + athlete.id"
               >
                 <!-- The roster's identity (#2035): the belt spine, the face, the name. -->
-                <app-athlete-identity class="attendance-card__main" [athlete]="athlete">
+                <app-athlete-identity
+                  class="attendance-card__main"
+                  [athlete]="athlete"
+                  [nameBeside]="true"
+                >
                   @if (isSelfMarked(athlete.id)) {
                     <span
                       class="attendance-self-badge"
@@ -469,16 +481,25 @@
                     </span>
                   }
                 </app-athlete-identity>
-                <span class="attendance-card__indicator" aria-hidden="true">
-                  @if (isPresent(athlete.id)) {
-                    <i
-                      class="pi pi-check-square attendance-indicator attendance-indicator--present"
-                    ></i>
-                  } @else {
-                    <i class="pi pi-stop attendance-indicator"></i>
-                  }
-                </span>
               </button>
+              @if (payChip(athlete); as chip) {
+                <app-pay-chip
+                  [chip]="chip"
+                  [present]="isPresent(athlete.id)"
+                  [name]="athlete.first_name + ' ' + athlete.last_name"
+                  (ask)="openPay(athlete, chip)"
+                  [attr.data-cy]="'attendance-pay-' + athlete.id"
+                />
+              }
+              <span class="attendance-card__indicator" aria-hidden="true">
+                @if (isPresent(athlete.id)) {
+                  <i
+                    class="pi pi-check-square attendance-indicator attendance-indicator--present"
+                  ></i>
+                } @else {
+                  <i class="pi pi-stop attendance-indicator"></i>
+                }
+              </span>
             </li>
           }
         </ul>
@@ -534,3 +555,11 @@
     (saved)="onLessonSaved($event)"
   />
 }
+
+<!-- The payment sheet (#2036), opened from a phone row's chip. -->
+<app-pay-sheet
+  [athlete]="paying()?.athlete ?? null"
+  [month]="paying()?.month ?? null"
+  (closed)="closePay()"
+  (recorded)="onPaid($event)"
+/>

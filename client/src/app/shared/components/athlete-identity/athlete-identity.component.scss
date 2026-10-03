@@ -33,6 +33,19 @@
   color: var(--p-surface-900);
 }
 
+// The name beside the face (#2036): the line does not wrap, the name's own
+// words do.
+:host(.athlete-identity--name-beside) {
+  .athlete-identity__body {
+    flex-wrap: nowrap;
+  }
+
+  .athlete-identity__name {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+}
+
 .athlete-identity__avatar {
   display: inline-flex;
   align-items: center;
