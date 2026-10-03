@@ -14,6 +14,13 @@ namespace App\Support\Sync\Replay;
  * Ids are per table. A route parameter names its table through the model the
  * route binds; a body field through `FIELDS`, which `IdMapTest` pins against
  * every id field the journaled requests accept.
+ *
+ * **An id it cannot pair is lost, never kept.** When an entry made fewer rows
+ * of a table here than where it was written (an import that skipped a
+ * duplicate, a create that became a conflict), the rows it made there have no
+ * row here. Kept as they are, their ids would name whatever row has them
+ * here: Anna's payment would land on Bruno. A later entry that names a lost
+ * id is a conflict instead (`lostIn`).
  */
 final class IdMap
 {
@@ -31,9 +38,17 @@ final class IdMap
     /** @var array<string, array<string, int|string>> table => id on the device that wrote => id here */
     private array $ids = [];
 
+    /** @var array<string, array<string, true>> table => ids made where it was written, with no row here */
+    private array $lost = [];
+
+    /** @var list<array{table: string, id: string}> the lost ids met since the last `lostIn` */
+    private array $met = [];
+
     /**
      * What an entry created where it was written, against what it created
-     * here: the same tables, in the same order.
+     * here. A table is paired in order only when both made as many rows of
+     * it; otherwise, and for every row it made there and none here, the ids
+     * are lost.
      *
      * @param  array<string, list<int|string>>  $there
      * @param  array<string, list<int|string>>  $here
@@ -41,10 +56,12 @@ final class IdMap
     public function learn(array $there, array $here): void
     {
         foreach ($there as $table => $ids) {
+            $made = $here[$table] ?? [];
             foreach ($ids as $i => $old) {
-                $new = $here[$table][$i] ?? null;
-                if ($new !== null) {
-                    $this->ids[$table][(string) $old] = $new;
+                if (\count($made) === \count($ids)) {
+                    $this->ids[$table][(string) $old] = $made[$i];
+                } else {
+                    $this->lost[$table][(string) $old] = true;
                 }
             }
         }
@@ -52,7 +69,25 @@ final class IdMap
 
     public function id(string $table, int|string $id): int|string
     {
+        if (isset($this->lost[$table][(string) $id])) {
+            $this->met[] = ['table' => $table, 'id' => (string) $id];
+        }
+
         return $this->ids[$table][(string) $id] ?? $id;
+    }
+
+    /**
+     * The lost ids an entry named, mapped since the last call: the rows it
+     * means have none here.
+     *
+     * @return list<array{table: string, id: string}>
+     */
+    public function lostIn(): array
+    {
+        $met = $this->met;
+        $this->met = [];
+
+        return $met;
     }
 
     /**

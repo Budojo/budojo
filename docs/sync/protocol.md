@@ -130,7 +130,7 @@ The journal is a JSON list of the writes that made this version from its parent,
 | `method` | `POST`, `PUT`, `PATCH` or `DELETE` | `POST` |
 | `route` | the Laravel route name: dotted segments of `a-z`, `0-9`, `_` and `-`, each starting with a letter. Every write route has one, pinned by `WriteRouteNamesTest`: a journal outlives the code that wrote it, so a rename is a decision (#2031). | `attendance.store`, `academy.fee-tiers.store` |
 | `params` | the route parameters, strings and numbers | `{ "athlete": 57 }` |
-| `body` | the request body, or `null`. An uploaded file is `{ "$file": { "sha256", "name", "type" } }`; its bytes stay on the device until the entry is cleared | `{ "date": "2026-10-01", "athlete_ids": [57] }` |
+| `body` | the request body, or `null`, with a payment's `amount_cents`, `period_months` and `paid_at` as the row got them (§ Rebase). An uploaded file is `{ "$file": { "sha256", "name", "type" } }`; its bytes stay on the device until the entry is cleared | `{ "date": "2026-10-01", "athlete_ids": [57] }` |
 | `created` | the ids the write created, by table | `{ "attendance_records": [912] }` |
 | `before` | for an update or a delete, what the rows held before, by table and id; else `null` | `{ "athletes": { "57": { "first_name": "Luca" } } }` |
 
@@ -236,19 +236,26 @@ There is no pairing code (#2033). **A device joins at its first «Accedi con Goo
 3. **The shell swaps it in.** Before the app serves, `budojo:sync-reconcile` replays the set-aside entries, **before it sweeps anything**. Until the replay gives an offline upload its row, no row names its file, and the journal's sweep or the files' reconcile would delete the only copy. The `.rebase` file goes only once every entry is dealt with: a start that dies halfway replays again, and skips what it already did.
 4. **It pushes what the replay kept**, as version + 1 on top of the one it pulled. When that version held every write already, there is nothing to push. A device killed before the push pushes at its next round: its ledger counts the kept entries as unpushed.
 
-**The replay runs each entry through the route, FormRequest and Action that made it,** as the owner, in order, its ids rewritten through the id map (§ A journal entry). Each entry ends in one state, recorded in [`sync_entries`](../entities/sync-entry.md) in the same transaction as what it did:
+**The replay runs each entry through the route, FormRequest and Action that made it,** as the owner, in order, its ids rewritten through the id map (§ A journal entry):
+- **on the clock of the moment it was written** (its `at`): a payment marked on the 3rd without a date is paid on the 3rd, and "not after today" is that day;
+- **an id the map cannot pair is lost, never kept.** An entry that made fewer rows of a table here than where it was written (an import that skipped a duplicate, a create that became a conflict) leaves those rows with no row here. A later entry that names one is a `gone` conflict: kept as it was, the id would name whatever row has it here;
+- **an update sends its whole form, and changed only what its `before` recorded.** A field it carried along as it saw it, which this database holds otherwise, was changed by the other device: that change stays, and the field is left out of the replayed body;
+- **a delete that names its row another way than by a model** (a month's payment, by year and month) must delete here the row it deleted there, field by field;
+- **money is never left to chance:** a payment's entry carries the amount, the period and the date the row got (`ResolvedFields`), and a payment the replay makes or finds otherwise is a `differs` conflict.
+
+Each entry ends in one state, recorded in [`sync_entries`](../entities/sync-entry.md) in the same transaction as what it did:
 
 | Outcome | When | Kept again for the next version |
 |---|---|---|
 | skipped | the database dealt with it already: the version carries it | no |
 | applied | | yes |
-| already | what it does is true already: a presence marked on both devices, a field set to the same value | yes, so the other device holds it |
+| already | what it does is true already: a presence marked on both devices, a field set to the same value, an athlete deleted on both | yes, so the other device holds it |
 | conflict | below | yes |
 
 **A conflict is never dropped.** The write waits for the owner in [`sync_conflicts`](../entities/sync-conflict.md), with both sides (PRD § 6.4; the owner's answer is #2038). What it changed is undone first: every write runs in a savepoint, rolled back when it does not apply.
 - **`refused`:** the rules refuse it here (403, 409, 422).
-- **`gone`:** its row is gone (404, or an update whose target was deleted here).
-- **`changed`:** a field it changes was changed here since it was written. An update is about the fields its body sets by name; the others moved with them and are derived again. One that sets none by name (a photo: `photo` sets `photo_path`) is about every field it changed.
-- **`differs`:** it created a row this database already has one of (the same month's payment), and that row differs in a field the entry sets. For money, the same month is not enough.
+- **`gone`:** its row is gone (404, or an update whose target was deleted here, softly too), or it names a row an earlier entry made there and none here.
+- **`changed`:** a field it changes was changed here since it was written, or a delete by year and month meets another row than the one it deleted. An update is about the fields its body sets by name; the others moved with them and are derived again. One that sets none by name (a photo: `photo` sets `photo_path`) is about every field it changed.
+- **`differs`:** the row it made or found here differs in a field the entry sets: the same month's payment made otherwise, or an amount the fee here works out otherwise. For money, the same month is not enough.
 - **`failed`:** anything else, a server error first. **A replay never stops on an entry:** the shell runs it before the app serves, so one that stopped would stop every start.
 - **`unknown-route`:** a route this Budojo no longer has.

@@ -6,6 +6,7 @@ use App\Actions\Attendance\MarkAttendanceAction;
 use App\Actions\Sync\ReplayJournalAction;
 use App\Models\Athlete;
 use App\Support\Sync\RebasePending;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
@@ -224,6 +225,121 @@ describe('the phone’s writes on the PC’s database', function (): void {
 
         expect(DB::table('sync_entries')->where('id', $entries[0]['id'])->value('outcome'))->toBe('applied')
             ->and(DB::table('sync_journal')->where('device', 'phone9c1e')->pluck('id')->all())->toBe([$entries[0]['id']]);
+    });
+});
+
+describe('what a replay never does silently (#2101 review)', function (): void {
+    it('keeps the PC’s change to a field the phone’s whole form only carried along', function (): void {
+        $entries = onThePhone(fn () => $this->actingAs($this->owner)->putJson("/api/v1/athletes/{$this->luca}", [
+            'first_name' => 'Lucas',
+            'last_name' => 'Bianchi',
+            'belt' => 'white',
+            'stripes' => 0,
+            'status' => 'active',
+            'joined_at' => '2026-09-01',
+        ])->assertOk());
+        $this->actingAs($this->owner)->patchJson("/api/v1/athletes/{$this->luca}", ['last_name' => 'Verdi'])->assertOk();
+
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'applied']);
+        $luca = Athlete::query()->findOrFail($this->luca);
+        expect($luca->first_name)->toBe('Lucas')
+            ->and($luca->last_name)->toBe('Verdi');
+    });
+
+    it('never deletes a month’s payment other than the one the phone deleted', function (): void {
+        // October, paid in cash before the two devices parted.
+        $this->actingAs($this->owner)->postJson("/api/v1/athletes/{$this->luca}/payments", ['year' => 2026, 'month' => 10, 'payment_method' => 'cash'])->assertCreated();
+        $entries = onThePhone(fn () => $this->actingAs($this->owner)
+            ->deleteJson("/api/v1/athletes/{$this->luca}/payments/2026/10")->assertSuccessful());
+        // The PC undid it too, and recorded October by POS.
+        $this->actingAs($this->owner)->deleteJson("/api/v1/athletes/{$this->luca}/payments/2026/10")->assertSuccessful();
+        $this->actingAs($this->owner)->postJson("/api/v1/athletes/{$this->luca}/payments", ['year' => 2026, 'month' => 10, 'payment_method' => 'pos'])->assertCreated();
+
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'conflict'])
+            ->and(DB::table('sync_conflicts')->where('entry_id', $entries[0]['id'])->value('reason'))->toBe('changed')
+            ->and(DB::table('athlete_payments')->where('athlete_id', $this->luca)->value('payment_method'))->toBe('pos');
+    });
+
+    it('still undoes a month’s payment the PC left as it was', function (): void {
+        $this->actingAs($this->owner)->postJson("/api/v1/athletes/{$this->luca}/payments", ['year' => 2026, 'month' => 10, 'payment_method' => 'cash'])->assertCreated();
+        $entries = onThePhone(fn () => $this->actingAs($this->owner)
+            ->deleteJson("/api/v1/athletes/{$this->luca}/payments/2026/10")->assertSuccessful());
+
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'applied'])
+            ->and(DB::table('athlete_payments')->where('athlete_id', $this->luca)->count())->toBe(0);
+    });
+
+    it('keeps a payment’s amount, period and date with its entry, and raises a conflict when the fee here would make it otherwise', function (): void {
+        $this->travelTo(CarbonImmutable::parse('2026-10-03 12:00:00', 'Europe/Rome'));
+        $entries = onThePhone(fn () => $this->actingAs($this->owner)
+            ->postJson("/api/v1/athletes/{$this->luca}/payments", ['year' => 2026, 'month' => 10, 'payment_method' => 'cash'])->assertCreated());
+        expect($entries[0]['body'])->toMatchArray(['amount_cents' => 9500, 'period_months' => 1, 'paid_at' => '2026-10-03']);
+        // The PC raised the fee meanwhile.
+        $this->owner->academy->update(['monthly_fee_cents' => 10000]);
+
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'conflict'])
+            ->and(json_decode((string) DB::table('sync_conflicts')->where('entry_id', $entries[0]['id'])->value('detail'), true))
+            ->toMatchArray(['reason' => 'differs', 'field' => 'amount_cents', 'mine' => 9500, 'here' => 10000])
+            ->and(DB::table('athlete_payments')->where('athlete_id', $this->luca)->count())->toBe(0);
+    });
+
+    it('runs on the clock of the moment it was written: a payment marked on the 3rd is paid on the 3rd', function (): void {
+        $this->travelTo(CarbonImmutable::parse('2026-10-03 18:00:00', 'Europe/Rome'));
+        $entries = onThePhone(fn () => $this->actingAs($this->owner)
+            ->postJson("/api/v1/athletes/{$this->luca}/payments", ['year' => 2026, 'month' => 10])->assertCreated());
+        // An entry journaled before it carried its own date.
+        unset($entries[0]['body']['paid_at']);
+        $this->travelTo(CarbonImmutable::parse('2026-10-05 10:00:00', 'Europe/Rome'));
+
+        replayOnThePc($entries);
+
+        expect((string) DB::table('athlete_payments')->where('athlete_id', $this->luca)->value('paid_at'))->toStartWith('2026-10-03')
+            ->and(now()->toDateString())->toBe('2026-10-05');
+    });
+
+    it('never moves a write onto another row when the replay made fewer rows than the phone', function (): void {
+        $giulia = replayAthlete($this, 'Giulia');
+        $entries = onThePhone(function () use ($giulia): void {
+            $this->actingAs($this->owner)->postJson('/api/v1/attendance', ['date' => '2026-10-01', 'athlete_ids' => [$this->luca, $giulia]])->assertCreated();
+            $lucas = DB::table('attendance_records')->where('athlete_id', $this->luca)->value('id');
+            $this->actingAs($this->owner)->deleteJson("/api/v1/attendance/{$lucas}")->assertSuccessful();
+        });
+        // The PC marked Luca already: the replay makes Giulia's record alone.
+        $this->actingAs($this->owner)->postJson('/api/v1/attendance', ['date' => '2026-10-01', 'athlete_ids' => [$this->luca]])->assertCreated();
+
+        $outcomes = replayOnThePc($entries);
+
+        expect($outcomes[$entries[1]['id']])->toBe('conflict')
+            ->and(DB::table('sync_conflicts')->where('entry_id', $entries[1]['id'])->value('reason'))->toBe('gone')
+            ->and(DB::table('attendance_records')->where('athlete_id', $giulia)->whereNull('deleted_at')->count())->toBe(1)
+            ->and(DB::table('attendance_records')->where('athlete_id', $this->luca)->whereNull('deleted_at')->count())->toBe(1);
+    });
+
+    it('never pays whoever has the id of an athlete the phone created and the PC refused', function (): void {
+        $entries = onThePhone(function (): void {
+            $marco = (int) $this->actingAs($this->owner)->postJson('/api/v1/athletes', [
+                'first_name' => 'Marco', 'last_name' => 'Rossi', 'email' => 'marco@example.test',
+                'belt' => 'white', 'stripes' => 0, 'status' => 'active', 'joined_at' => '2026-09-01',
+            ])->assertCreated()->json('data.id');
+            $this->actingAs($this->owner)->postJson("/api/v1/athletes/{$marco}/payments", ['year' => 2026, 'month' => 10, 'payment_method' => 'cash'])->assertCreated();
+        });
+        // On the PC that email is Mario's, who takes the id Marco had on the phone.
+        $mario = (int) $this->actingAs($this->owner)->postJson('/api/v1/athletes', [
+            'first_name' => 'Mario', 'last_name' => 'Rossi', 'email' => 'marco@example.test',
+            'belt' => 'white', 'stripes' => 0, 'status' => 'active', 'joined_at' => '2026-09-01',
+        ])->assertCreated()->json('data.id');
+
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'conflict', $entries[1]['id'] => 'conflict'])
+            ->and(DB::table('sync_conflicts')->where('entry_id', $entries[1]['id'])->value('reason'))->toBe('gone')
+            ->and(DB::table('athlete_payments')->where('athlete_id', $mario)->count())->toBe(0);
+    });
+
+    it('finds an athlete deleted on both devices already deleted, not a conflict', function (): void {
+        $entries = onThePhone(fn () => $this->actingAs($this->owner)->deleteJson("/api/v1/athletes/{$this->luca}")->assertSuccessful());
+        $this->actingAs($this->owner)->deleteJson("/api/v1/athletes/{$this->luca}")->assertSuccessful();
+
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'already'])
+            ->and(DB::table('sync_conflicts')->count())->toBe(0);
     });
 });
 

@@ -41,6 +41,20 @@ describe('IdMap', function (): void {
             ->toBe(['athletes' => ['103' => ['first_name' => 'Luca', 'fee_tier_id' => 5]]]);
     });
 
+    it('loses the ids it cannot pair, so an entry that names one is caught, never sent to another row', function (): void {
+        $map = new IdMap();
+        // An import of Anna (3) and Bruno (4) that made only Bruno here.
+        $map->learn(['athletes' => [3, 4]], ['athletes' => [9]]);
+        // A create that made nothing here: a conflict.
+        $map->learn(['academy_classes' => [5]], []);
+
+        expect($map->lostIn())->toBe([])
+            ->and($map->params(['athlete' => 3], ['athlete' => 'athletes']))->toBe(['athlete' => 3])
+            ->and($map->body(['academy_class_id' => 5, 'athlete_ids' => [1]]))->toBe(['academy_class_id' => 5, 'athlete_ids' => [1]])
+            ->and($map->lostIn())->toBe([['table' => 'athletes', 'id' => '3'], ['table' => 'academy_classes', 'id' => '5']])
+            ->and($map->lostIn())->toBe([]);
+    });
+
     it('names a table for every id field the journaled requests accept', function (): void {
         $fields = [];
         foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator(app_path('Http/Requests'))) as $file) {

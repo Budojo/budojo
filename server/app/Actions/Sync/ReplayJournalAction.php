@@ -8,7 +8,9 @@ use App\Enums\UserRole;
 use App\Models\User;
 use App\Support\Sync\Journal\JournalRecorder;
 use App\Support\Sync\Journal\JournalUploads;
+use App\Support\Sync\Journal\ResolvedFields;
 use App\Support\Sync\Replay\IdMap;
+use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Contracts\Routing\UrlRoutable;
 use Illuminate\Database\Eloquent\Model;
@@ -16,6 +18,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Routing\Route;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route as Routes;
@@ -88,6 +91,8 @@ final class ReplayJournalAction
         $route = Routes::getRoutes()->getByName($entry['route']);
         if (! $route instanceof Route) {
             // A route this version of Budojo no longer has: the owner decides.
+            $map->learn($entry['created'], []);
+
             return $this->record($device, $entry, $entry['params'], $entry['body'], $entry['before'], 'conflict', [], [
                 'reason' => 'unknown-route',
             ]);
@@ -97,59 +102,105 @@ final class ReplayJournalAction
         $body = $map->body($entry['body']);
         $before = $map->before($entry['before']);
 
-        $seen = $this->compare($entry['method'], self::targets($before, $params, $tables), $body);
-        if ($seen !== null) {
-            return $this->record($device, $entry, $params, $body, $before, $seen['outcome'], [], $seen['conflict']);
+        // It names a row an earlier entry made where it was written and that
+        // has none here: sent on, it would reach whatever row has that id.
+        $lost = $map->lostIn();
+        if ($lost !== []) {
+            $map->learn($entry['created'], []);
+
+            return $this->record($device, $entry, $params, $body, $before, 'conflict', [], [
+                'reason' => 'gone',
+                'lost' => $lost,
+            ]);
         }
 
-        // A savepoint around the write: what a refused or failed one did is
-        // undone before its conflict is recorded.
+        $targets = self::targets($before, $params, $tables);
+        $seen = $this->compare($entry['method'], $targets, $body);
+        if ($seen !== null) {
+            $map->learn($entry['created'], []);
+
+            return $this->record($device, $entry, $params, $body, $before, $seen['outcome'], [], $seen['conflict']);
+        }
+        $body = self::keepTheirs($entry['method'], $params, $tables, $before, $body);
+
+        // A savepoint around the write: what a write that does not apply did
+        // is undone before its conflict is recorded.
         DB::beginTransaction();
 
         try {
-            [$status, $answer, $created] = $this->dispatch($route, $entry['method'], $params, $body, $owner);
+            [$status, $answer, $created, $touched] = $this->dispatch($route, $entry['method'], $params, $body, $owner, $entry['at']);
+            $judged = self::judge($entry, $status, $answer, $created, $touched, $before, $targets, $body);
         } catch (\Throwable $e) {
             // A route that takes other parameters now, say: never a replay
             // that throws, which would stop every start of the app.
             DB::rollBack();
+            $map->learn($entry['created'], []);
 
             return $this->record($device, $entry, $params, $body, $before, 'conflict', [], [
                 'reason' => 'failed',
                 'message' => $e->getMessage(),
             ]);
         }
-        if ($status >= 200 && $status < 300) {
-            DB::commit();
-        } else {
+        if ($judged['outcome'] === 'conflict') {
             DB::rollBack();
+            $created = [];
+        } else {
+            DB::commit();
         }
+        $map->learn($entry['created'], $judged['outcome'] === 'applied' ? $created : []);
+
+        return $this->record($device, $entry, $params, $body, $before, $judged['outcome'], $judged['outcome'] === 'applied' ? $created : [], $judged['conflict']);
+    }
+
+    /**
+     * What a dispatched write comes to.
+     *
+     * @param  array{id: string, at: string, method: string, route: string, params: array<string, int|string>, body: array<string, mixed>|null, created: array<string, list<int|string>>, before: array<string, array<string, array<string, mixed>>>|null}  $entry
+     * @param  array<string, list<int|string>>  $created
+     * @param  array<string, array<string, array<string, mixed>>>|null  $touched  what the replay's own write saw before, by table and id
+     * @param  array<string, array<string, array<string, mixed>>>|null  $before
+     * @param  array<string, array<string, array<string, mixed>>>|null  $targets
+     * @param  array<string, mixed>|null  $body
+     * @return array{outcome: string, conflict: array<string, mixed>|null}
+     */
+    private static function judge(array $entry, int $status, mixed $answer, array $created, ?array $touched, ?array $before, ?array $targets, ?array $body): array
+    {
         if ($status >= 200 && $status < 300) {
-            $map->learn($entry['created'], $created);
-            if ($created === [] && $entry['created'] !== []) {
-                // It made rows where it was written and none here: the Action
-                // found them there already (`createOrFirst`). Already true only
-                // if exactly what it would have made: for money "the same
-                // month" is not enough (PRD § 5.2), so the row it found must
-                // match every field the entry sets.
+            if ($entry['method'] === 'DELETE') {
+                // A delete that names its row another way than by a model
+                // (a month's payment, by year and month) deleted a row here:
+                // it must be the one it deleted there.
+                $moved = self::deletedOtherwise($before, $targets, $touched);
+                if ($moved !== null) {
+                    return ['outcome' => 'conflict', 'conflict' => ['reason' => 'changed', ...$moved]];
+                }
+            }
+            $found = $created === [] && $entry['created'] !== [];
+            if ($found || ResolvedFields::of($entry['route']) !== []) {
+                // It made rows where it was written and none here: the
+                // Action found them here already (`createOrFirst`). Already
+                // true only if exactly what it would have made. And money is
+                // never left to chance (`ResolvedFields`): for a payment "the
+                // same month" is not enough (PRD § 5.2), so the row it found
+                // or made must match every field the entry sets.
                 $differs = self::differs($body, $answer);
                 if ($differs !== null) {
-                    return $this->record($device, $entry, $params, $body, $before, 'conflict', [], [
-                        'reason' => 'differs',
-                        ...$differs,
-                    ]);
+                    return ['outcome' => 'conflict', 'conflict' => ['reason' => 'differs', ...$differs]];
                 }
-
-                return $this->record($device, $entry, $params, $body, $before, 'already', [], null);
             }
 
-            return $this->record($device, $entry, $params, $body, $before, 'applied', $created, null);
+            return ['outcome' => $found ? 'already' : 'applied', 'conflict' => null];
+        }
+        if ($entry['method'] === 'DELETE' && $status === 404 && ! self::anyStillThere($before)) {
+            // Deleted here too: what the delete wants is true.
+            return ['outcome' => 'already', 'conflict' => null];
         }
 
         // The rules refuse it here, or its row is gone. Anything else, a
         // server error first, is the owner's too: the shell replays before
         // the app serves, so a replay that stopped on it would stop every
         // start of the app.
-        return $this->record($device, $entry, $params, $body, $before, 'conflict', [], [
+        return ['outcome' => 'conflict', 'conflict' => [
             'reason' => match ($status) {
                 404 => 'gone',
                 403, 409, 422 => 'refused',
@@ -158,7 +209,106 @@ final class ReplayJournalAction
             'status' => $status,
             'message' => \is_array($answer) ? ($answer['message'] ?? null) : null,
             'errors' => \is_array($answer) ? ($answer['errors'] ?? null) : null,
-        ]);
+        ]];
+    }
+
+    /**
+     * The rows a delete deleted where it was written, beyond its targets,
+     * against the ones its replay deleted here: the first that differs in a
+     * field, or in number. Null when they agree.
+     *
+     * @param  array<string, array<string, array<string, mixed>>>|null  $before
+     * @param  array<string, array<string, array<string, mixed>>>|null  $targets
+     * @param  array<string, array<string, array<string, mixed>>>|null  $touched
+     * @return array<string, mixed>|null
+     */
+    private static function deletedOtherwise(?array $before, ?array $targets, ?array $touched): ?array
+    {
+        foreach ($before ?? [] as $table => $rows) {
+            // Deleted rows only, recorded whole: a row an Action updated on
+            // the way (a carnet's count) is derived again, never compared.
+            $whole = static fn (array $row): bool => \array_key_exists('id', $row);
+            $there = array_values(array_filter(array_diff_key($rows, $targets[$table] ?? []), $whole));
+            $here = array_values(array_filter(array_diff_key($touched[$table] ?? [], $targets[$table] ?? []), $whole));
+            if ($there === []) {
+                continue;
+            }
+            if (\count($there) !== \count($here)) {
+                return ['table' => $table, 'rows' => \count($there), 'here' => \count($here)];
+            }
+            foreach ($there as $i => $saw) {
+                foreach ($saw as $field => $value) {
+                    if ($field === 'id' || $field === 'deleted_at' || \in_array($field, self::CLOCK, true) || ! \array_key_exists($field, $here[$i])) {
+                        continue;
+                    }
+                    if (! self::same($here[$i][$field], $value)) {
+                        return ['table' => $table, 'field' => (string) $field, 'saw' => $value, 'here' => $here[$i][$field]];
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Whether a row a delete saw is still here, not deleted.
+     *
+     * @param  array<string, array<string, array<string, mixed>>>|null  $before
+     */
+    private static function anyStillThere(?array $before): bool
+    {
+        foreach ($before ?? [] as $table => $rows) {
+            foreach (array_keys($rows) as $id) {
+                $row = DB::table($table)->where('id', $id)->first();
+                if ($row !== null && (((array) $row)['deleted_at'] ?? null) === null) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * An update sends its whole form (`PUT /athletes/{athlete}`, every
+     * field), but it changed only what its `before` recorded: every other
+     * field it sends as it saw it. **Where this database holds something else
+     * there, the other device changed it,** and that change stays: the field
+     * is left out of the replayed body. Two changes to different fields of
+     * one athlete are not a conflict, and both apply (PRD § 6.4).
+     *
+     * @param  array<string, int|string>  $params
+     * @param  array<string, string>  $tables
+     * @param  array<string, array<string, array<string, mixed>>>|null  $before
+     * @param  array<string, mixed>|null  $body
+     * @return array<string, mixed>|null
+     */
+    private static function keepTheirs(string $method, array $params, array $tables, ?array $before, ?array $body): ?array
+    {
+        if (($method !== 'PUT' && $method !== 'PATCH') || $body === null || $tables === []) {
+            return $body;
+        }
+        // The route's own row: its last model, as in `/athletes/{athlete}/promotions/{promotion}`.
+        $param = array_key_last($tables);
+        $table = $tables[$param];
+        $id = (string) ($params[$param] ?? '');
+        $row = DB::table($table)->where('id', $id)->first();
+        if ($row === null) {
+            return $body;
+        }
+        $now = (array) $row;
+        $changed = $before[$table][$id] ?? [];
+        foreach ($body as $field => $sent) {
+            if (\is_array($sent) || \array_key_exists($field, $changed) || ! \array_key_exists($field, $now)) {
+                continue;
+            }
+            if (! self::same($now[$field], $sent)) {
+                unset($body[$field]);
+            }
+        }
+
+        return $body;
     }
 
     /**
@@ -190,12 +340,13 @@ final class ReplayJournalAction
         foreach ($before as $table => $rows) {
             foreach ($rows as $id => $fields) {
                 $row = DB::table($table)->where('id', $id)->first();
-                if ($row === null) {
+                $now = $row === null ? null : (array) $row;
+                // A row deleted here since the entry saw it, softly too.
+                if ($now === null || (($now['deleted_at'] ?? null) !== null && ($fields['deleted_at'] ?? null) === null)) {
                     $allThere = false;
 
                     continue;
                 }
-                $now = (array) $row;
                 foreach ($fields as $field => $saw) {
                     if (\in_array($field, self::CLOCK, true) || ! \array_key_exists($field, $now)) {
                         continue;
@@ -264,9 +415,9 @@ final class ReplayJournalAction
      *
      * @param  array<string, int|string>  $params
      * @param  array<string, mixed>|null  $body
-     * @return array{0: int, 1: mixed, 2: array<string, list<int|string>>}
+     * @return array{0: int, 1: mixed, 2: array<string, list<int|string>>, 3: array<string, array<string, array<string, mixed>>>|null}
      */
-    private function dispatch(Route $route, string $method, array $params, ?array $body, User $owner): array
+    private function dispatch(Route $route, string $method, array $params, ?array $body, User $owner, string $at): array
     {
         $uri = route((string) $route->getName(), $params, false);
         $files = [];
@@ -290,12 +441,22 @@ final class ReplayJournalAction
             }
         });
         config()->set('budojo.sync.device', null);
+        // The clock of the moment it was written: a payment marked on the
+        // 3rd without a date is paid on the 3rd, whenever it is replayed, and
+        // "not after today" is the day it was made.
+        $previousNow = Carbon::getTestNow();
+        $previousImmutableNow = CarbonImmutable::getTestNow();
+        $then = CarbonImmutable::parse($at);
+        Carbon::setTestNow($then);
+        CarbonImmutable::setTestNow($then);
         $this->recorder->arm();
 
         try {
             $response = app(Kernel::class)->handle($request);
         } finally {
             $this->recorder->disarm();
+            Carbon::setTestNow($previousNow);
+            CarbonImmutable::setTestNow($previousImmutableNow);
             config()->set('budojo.sync.device', $device);
             app()->forgetInstance(ThrottleRequests::class);
             if ($previousRequest !== null) {
@@ -315,6 +476,7 @@ final class ReplayJournalAction
             $response->getStatusCode(),
             \is_string($content) ? json_decode($content, true) : null,
             $this->recorder->createdIds(),
+            $this->recorder->before(),
         ];
     }
 
@@ -464,10 +626,10 @@ final class ReplayJournalAction
         if ($a === $b) {
             return true;
         }
-        // A day against the moment an answer gives it (`2026-10-01` and
-        // `2026-10-01T00:00:00+00:00`): the same day.
+        // A day against the moment an answer or a row gives it (`2026-10-01`
+        // and `2026-10-01T00:00:00+00:00`, `2026-10-01 00:00:00`): the same day.
         foreach ([[$a, $b], [$b, $a]] as [$day, $moment]) {
-            if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $day) === 1 && str_starts_with($moment, $day . 'T')) {
+            if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $day) === 1 && (str_starts_with($moment, $day . 'T') || str_starts_with($moment, $day . ' '))) {
                 return true;
             }
         }

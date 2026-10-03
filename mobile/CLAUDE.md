@@ -33,10 +33,10 @@ The phone runs Budojo's own server, as the desktop does with `php.exe`:
 - **`PhpServerPlugin.java`** is the phone's php-supervisor. Its `start()`:
   - unpacks the bundle when the APK carries a new one;
   - swaps in a database the sync staged (`<db>.staged`, #2030), or a backup the door brought back with its files (`storage/app.staged`, #2079). `StagedSwap.java` does it, in plain `java.io` so a desktop JDK can put it through every state a start that died halfway leaves:
-    - the live database steps aside as `<db>.previous` **with its `-wal`**, which can hold writes the main file does not have yet: it is the copy to go back to, and where a rebase will read this device's own writes (#2031);
+    - the live database steps aside as `<db>.previous` **with its `-wal`**, which can hold writes the main file does not have yet: it is the copy to go back to. A rebase sets this device's own writes aside at the stage instead, as `<db>.rebase` (#2031);
     - staged files come in only beside a staged database, which commits a stage; files staged alone are an interrupted restore's, and are deleted;
   - makes the phone's `APP_KEY` and document key on its first start (`secrets.json` in the app's private files, never backed up);
-  - runs the migrations, and `budojo:sync-reconcile` after a swap. A `<db>.reconcile` file, written before the rename, keeps it pending until it succeeds, so a start that dies halfway never skips it. A fast-forward and a restore both stage a database today. After a rebase the reconcile must wait for the replay (`docs/sync/protocol.md`): #2031 makes that the server's command, which replays from `<db>.previous` first;
+  - runs the migrations, and `budojo:sync-reconcile` after a swap. A `<db>.reconcile` file, written before the rename, keeps it pending until it succeeds, so a start that dies halfway never skips it. A fast-forward and a restore both stage a database today. After a rebase the reconcile replays first: the server's command replays `<db>.rebase`, then sweeps (`docs/sync/protocol.md` § Rebase);
   - starts `php -S 127.0.0.1:<port>` with the framework's router, `BUDOJO_RUNTIME=mobile`;
   - hands PHP and the page a **shell secret**, made at each launch and never written (`BUDOJO_SHELL_SECRET`, in every start's answer). Only the page that holds it opens the owner's session and brings a backup in (`/api/v1/device`, #2079): every other app on the phone reaches `127.0.0.1` too.
 - **`restart()`** stops the server and starts it again, so a backup the door just staged is swapped in now (#2079).

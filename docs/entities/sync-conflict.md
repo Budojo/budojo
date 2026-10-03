@@ -31,9 +31,9 @@ No Eloquent model, as for `sync_entries`.
 | Value | When |
 |---|---|
 | `refused` | The rules refuse it here: 403, 409, 422. |
-| `gone` | Its row is gone: 404, or an update whose target was deleted here. |
-| `changed` | A field it changes was changed here since it was written. |
-| `differs` | It created a row this database already has one of (the same month's payment), and that row differs in a field the entry sets. |
+| `gone` | Its row is gone: 404, or an update whose target was deleted here, softly too. Or it names a row an earlier entry made there and none here (`detail.lost`). |
+| `changed` | A field it changes was changed here since it was written, or a delete by year and month meets another row than the one it deleted. |
+| `differs` | The row it made or found here differs in a field the entry sets: the same month's payment made otherwise, or an amount the fee here works out otherwise. |
 | `failed` | Anything else, a server error first. |
 | `unknown-route` | A route this Budojo no longer has. |
 
