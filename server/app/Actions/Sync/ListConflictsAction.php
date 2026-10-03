@@ -196,8 +196,8 @@ final class ListConflictsAction
      * it changed one, and left out when it never touched it and it moved here.
      *
      * **What it leaves out comes back as `fill`,** with this database's
-     * values: sent only when the form refuses for want of them, as a
-     * closure's dates (`ReplayJournalAction::refill`, #2113).
+     * values: sent only when the form refuses the trimmed body, as one that
+     * requires a closure's dates does (`ReplayJournalAction::refill`, #2113).
      *
      * Only a form (`PUT`, `PATCH`) is trimmed; any other write goes as it was.
      *

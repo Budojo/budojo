@@ -193,23 +193,19 @@ final class ReplayJournalAction
     }
 
     /**
-     * What a form refused for want of, when it is only fields the replay left
-     * out as the other device's (`keepTheirs`): a form that requires them on
-     * every save, as a closure's dates are (#2113). Sent with this database's
-     * values, they keep the other device's change; a refusal for anything
-     * else stands.
+     * A form that refused the body the replay trimmed (`keepTheirs`) gets it
+     * whole: the fields left out as the other device's, at this database's
+     * values. A form may require them on every save, as a closure's dates
+     * (#2113), or judge a field it was sent against one left out
+     * (`after_or_equal:starts_on`). Sent at the values here, they keep the
+     * other device's change, and whatever the form answers then stands.
      *
      * @param  array<string, mixed>  $left
-     * @return array<string, mixed> the fields to send again, none when the refusal stands
+     * @return array<string, mixed> the fields to send again, none when the answer stands
      */
-    public static function refill(int $status, mixed $answer, array $left): array
+    public static function refill(int $status, array $left): array
     {
-        $errors = \is_array($answer) && \is_array($answer['errors'] ?? null) ? array_map('strval', array_keys($answer['errors'])) : [];
-        if ($status !== 422 || $errors === [] || array_diff($errors, array_keys($left)) !== []) {
-            return [];
-        }
-
-        return array_intersect_key($left, array_flip($errors));
+        return $status === 422 ? $left : [];
     }
 
     /**
@@ -304,9 +300,9 @@ final class ReplayJournalAction
 
         try {
             [$status, $answer, $created, $touched] = $this->dispatch($route, $entry['method'], $params, $body, $owner, $entry['at']);
-            // Refused for want of what it left out: sent again whole, with
-            // the other device's values (a refusal writes nothing).
-            $refill = self::refill($status, $answer, $left);
+            // Refused trimmed: sent again whole, with the other device's
+            // values (a refusal writes nothing).
+            $refill = self::refill($status, $left);
             if ($refill !== []) {
                 $body = [...($body ?? []), ...$refill];
                 [$status, $answer, $created, $touched] = $this->dispatch($route, $entry['method'], $params, $body, $owner, $entry['at']);

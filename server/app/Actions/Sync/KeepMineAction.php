@@ -34,9 +34,9 @@ final class KeepMineAction
         DB::transaction(function () use ($retry, $entryId, $owner): void {
             foreach ([...$retry, ['method' => 'POST', 'url' => "/api/v1/sync/conflicts/{$entryId}/decision", 'body' => ['decision' => 'mine']]] as $request) {
                 [$status, $answer] = SubRequest::send($owner, $request['method'], $request['url'], $request['body']);
-                // Refused for want of what the form left out (#2113): sent
-                // again whole, with this database's values.
-                $refill = ReplayJournalAction::refill($status, $answer, $request['fill'] ?? []);
+                // Refused trimmed (#2113): sent again whole, with this
+                // database's values for what it left out.
+                $refill = ReplayJournalAction::refill($status, $request['fill'] ?? []);
                 if ($refill !== [] && \is_array($request['body'])) {
                     [$status, $answer] = SubRequest::send($owner, $request['method'], $request['url'], [...$request['body'], ...$refill]);
                 }

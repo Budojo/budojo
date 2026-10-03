@@ -9246,8 +9246,9 @@ components:
                 description: |
                   The fields the form was sent without, because the other
                   device changed them, with this database's values (#2113).
-                  `keep-mine` sends them only when the form refuses for want
-                  of exactly those, as a closure's dates on every save.
+                  `keep-mine` sends the form whole with them when the form
+                  refuses the trimmed body (a closure's dates, required on
+                  every save), and that answer stands.
                 example: { ends_on: '2026-12-27' }
     AcademySummary:
       type: object

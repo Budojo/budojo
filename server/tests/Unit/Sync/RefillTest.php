@@ -6,28 +6,20 @@ use App\Actions\Sync\ReplayJournalAction;
 
 /**
  * A form that requires a field on every save (#2113): what the replay left
- * out as the other device's goes again, at this database's value, only when
- * the form refused for want of exactly that.
+ * out as the other device's goes again, at this database's value, when the
+ * form refused the trimmed body; its second answer stands.
  */
 describe('refill', function (): void {
     $left = ['starts_on' => '2026-12-23', 'ends_on' => '2026-12-27'];
 
-    it('sends again the fields the form refused for want of', function () use ($left): void {
-        $answer = ['message' => 'The ends on field is required.', 'errors' => ['ends_on' => ['The ends on field is required.']]];
-
-        expect(ReplayJournalAction::refill(422, $answer, $left))->toBe(['ends_on' => '2026-12-27']);
+    it('sends the form whole again when it refused the trimmed body: what was left out, at its values here', function () use ($left): void {
+        expect(ReplayJournalAction::refill(422, $left))->toBe($left);
     });
 
-    it('lets a refusal for anything else stand', function () use ($left): void {
-        $answer = ['errors' => ['ends_on' => ['required'], 'label' => ['The label may not be greater than 80 characters.']]];
-
-        expect(ReplayJournalAction::refill(422, $answer, $left))->toBe([]);
-    });
-
-    it('sends nothing again for a write that went through, or was refused otherwise', function () use ($left): void {
-        expect(ReplayJournalAction::refill(200, ['data' => []], $left))->toBe([])
-            ->and(ReplayJournalAction::refill(403, ['message' => 'Forbidden'], $left))->toBe([])
-            ->and(ReplayJournalAction::refill(422, ['errors' => ['ends_on' => ['required']]], []))->toBe([]);
+    it('sends nothing again for a write that went through, was refused otherwise, or left nothing out', function () use ($left): void {
+        expect(ReplayJournalAction::refill(200, $left))->toBe([])
+            ->and(ReplayJournalAction::refill(403, $left))->toBe([])
+            ->and(ReplayJournalAction::refill(422, []))->toBe([]);
     });
 });
 
