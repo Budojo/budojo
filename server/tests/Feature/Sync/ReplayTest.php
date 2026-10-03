@@ -652,6 +652,26 @@ describe('a lesson’s topics, tagged on two devices (#2102)', function (): void
             ->and(($this->topicsHere)())->toBe([$this->armbar]);
     });
 
+    it('sends the class and day with the phone’s tags or notes for «Tieni la mia»', function (): void {
+        ($this->tag)([$this->guard]);
+        $entries = onThePhone(function (): void {
+            ($this->tag)([$this->sweep]);
+            $this->actingAs($this->owner)->putJson('/api/v1/lessons/notes', ['academy_class_id' => $this->class->id, 'held_on' => '2026-10-01', 'notes' => 'Guard passing'])->assertOk();
+        });
+        ($this->tag)([$this->armbar]);
+        $this->actingAs($this->owner)->putJson('/api/v1/lessons/notes', ['academy_class_id' => $this->class->id, 'held_on' => '2026-10-01', 'notes' => 'Armbar from guard'])->assertOk();
+        expect(array_values(replayOnThePc($entries)))->toBe(['conflict', 'conflict']);
+
+        foreach ($this->actingAs($this->owner)->getJson('/api/v1/sync/conflicts')->json('data') as $conflict) {
+            foreach ($conflict['retry'] as $request) {
+                $this->actingAs($this->owner)->json($request['method'], $request['url'], $request['body'])->assertOk();
+            }
+        }
+
+        expect(($this->topicsHere)())->toBe([$this->sweep])
+            ->and(DB::table('lessons')->where('held_on', 'like', '2026-10-01%')->value('notes'))->toBe('Guard passing');
+    });
+
     it('finds by its class and day a lesson each device made, and tags it, never losing it', function (): void {
         $giulia = replayAthlete($this, 'Giulia');
         $entries = onThePhone(function (): void {
@@ -730,6 +750,323 @@ describe('a lesson’s topics, tagged on two devices (#2102)', function (): void
 
         expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'conflict'])
             ->and(($this->topicsHere)())->toBe([$this->armbar]);
+    });
+});
+
+describe('«Da decidere»: the owner’s answers (#2031)', function (): void {
+    /** A `changed` conflict on Luca’s last name: Bianco on the phone, Verdi on the PC. */
+    function conflictOnLucasName(mixed $test): array
+    {
+        $entries = onThePhone(fn () => $test->actingAs($test->owner)->patchJson("/api/v1/athletes/{$test->luca}", ['last_name' => 'Bianco'])->assertOk());
+        $test->actingAs($test->owner)->patchJson("/api/v1/athletes/{$test->luca}", ['last_name' => 'Verdi'])->assertOk();
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'conflict']);
+
+        return $entries;
+    }
+
+    it('lists what waits, with whom it is about and the request that makes the phone’s write true', function (): void {
+        $entries = conflictOnLucasName($this);
+
+        $this->actingAs($this->owner)->getJson('/api/v1/sync/conflicts')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $entries[0]['id'])
+            ->assertJsonPath('data.0.device', 'phone9c1e')
+            ->assertJsonPath('data.0.reason', 'changed')
+            ->assertJsonPath('data.0.detail.field', 'last_name')
+            ->assertJsonPath('data.0.subject.athlete', ['id' => $this->luca, 'name' => 'Luca Verdi'])
+            ->assertJsonPath('data.0.retry', [['method' => 'PATCH', 'url' => "/api/v1/athletes/{$this->luca}", 'body' => ['last_name' => 'Bianco']]]);
+    });
+
+    it('keeps the phone’s write: the page sends the retry, then the answer, and nothing waits any more', function (): void {
+        $entries = conflictOnLucasName($this);
+        $retry = $this->actingAs($this->owner)->getJson('/api/v1/sync/conflicts')->json('data.0.retry.0');
+
+        $this->actingAs($this->owner)->json($retry['method'], $retry['url'], $retry['body'])->assertOk();
+        $this->actingAs($this->owner)->postJson("/api/v1/sync/conflicts/{$entries[0]['id']}/decision", ['decision' => 'mine'])->assertNoContent();
+
+        expect(Athlete::query()->findOrFail($this->luca)->last_name)->toBe('Bianco')
+            ->and(DB::table('sync_conflicts')->where('entry_id', $entries[0]['id'])->value('decision'))->toBe('mine');
+        $this->actingAs($this->owner)->getJson('/api/v1/sync/conflicts')->assertJsonCount(0, 'data');
+    });
+
+    it('undoes the month first when the phone paid it otherwise, and offers nothing when the fee would make another amount', function (): void {
+        $entries = onThePhone(fn () => $this->actingAs($this->owner)
+            ->postJson("/api/v1/athletes/{$this->luca}/payments", ['year' => 2026, 'month' => 10, 'payment_method' => 'cash'])->assertCreated());
+        $this->actingAs($this->owner)->postJson("/api/v1/athletes/{$this->luca}/payments", ['year' => 2026, 'month' => 10, 'payment_method' => 'pos'])->assertCreated();
+        replayOnThePc($entries);
+
+        $retry = $this->actingAs($this->owner)->getJson('/api/v1/sync/conflicts')->json('data.0.retry');
+        expect(array_column($retry, 'method'))->toBe(['DELETE', 'POST'])
+            ->and($retry[0]['url'])->toBe("/api/v1/athletes/{$this->luca}/payments/2026/10");
+        foreach ($retry as $request) {
+            $this->actingAs($this->owner)->json($request['method'], $request['url'], $request['body'] ?? [])->assertSuccessful();
+        }
+        expect(DB::table('athlete_payments')->where('athlete_id', $this->luca)->value('payment_method'))->toBe('cash');
+
+        $fee = onThePhone(fn () => $this->actingAs($this->owner)
+            ->postJson("/api/v1/athletes/{$this->luca}/payments", ['year' => 2026, 'month' => 11, 'payment_method' => 'cash'])->assertCreated());
+        $this->owner->academy->update(['monthly_fee_cents' => 10000]);
+        replayOnThePc([end($fee)]);
+        $amount = collect($this->actingAs($this->owner)->getJson('/api/v1/sync/conflicts')->json('data'))->firstWhere('detail.field', 'amount_cents');
+        expect($amount['retry'])->toBeNull();
+    });
+
+    it('asks about a month the PC paid within a quarter, and offers nothing for a write whose athlete is gone', function (): void {
+        $entries = onThePhone(fn () => $this->actingAs($this->owner)
+            ->postJson("/api/v1/athletes/{$this->luca}/payments", ['year' => 2026, 'month' => 9, 'payment_method' => 'cash'])->assertCreated());
+        $this->actingAs($this->owner)->postJson("/api/v1/athletes/{$this->luca}/payments", ['year' => 2026, 'month' => 8, 'period_months' => 3, 'payment_method' => 'pos'])->assertCreated();
+
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'conflict'])
+            ->and(DB::table('sync_conflicts')->where('entry_id', $entries[0]['id'])->value('reason'))->toBe('refused');
+
+        $gone = onThePhone(fn () => $this->actingAs($this->owner)->patchJson("/api/v1/athletes/{$this->luca}", ['first_name' => 'Lucas'])->assertOk());
+        $this->actingAs($this->owner)->deleteJson("/api/v1/athletes/{$this->luca}")->assertSuccessful();
+        replayOnThePc([end($gone)]);
+        $conflict = collect($this->actingAs($this->owner)->getJson('/api/v1/sync/conflicts')->json('data'))->firstWhere('reason', 'gone');
+        expect($conflict['retry'])->toBeNull();
+    });
+
+    it('sends again only the field the conflict is about: the PC’s other changes to the form stay', function (): void {
+        $entries = onThePhone(fn () => $this->actingAs($this->owner)->putJson("/api/v1/athletes/{$this->luca}", [
+            'first_name' => 'Luca', 'last_name' => 'Bianco', 'belt' => 'white', 'stripes' => 0, 'status' => 'active', 'joined_at' => '2026-09-01',
+        ])->assertOk());
+        $this->actingAs($this->owner)->patchJson("/api/v1/athletes/{$this->luca}", ['first_name' => 'Lucas', 'last_name' => 'Verdi'])->assertOk();
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'conflict']);
+
+        $retry = $this->actingAs($this->owner)->getJson('/api/v1/sync/conflicts')->json('data.0.retry.0');
+        // The PC's first name is out; what still holds here what the phone sent goes along.
+        expect($retry['body'])->not->toHaveKey('first_name')
+            ->and($retry['body'])->toMatchArray(['last_name' => 'Bianco', 'belt' => 'white']);
+        $this->actingAs($this->owner)->json($retry['method'], $retry['url'], $retry['body'])->assertOk();
+
+        $luca = Athlete::query()->findOrFail($this->luca);
+        expect($luca->first_name)->toBe('Lucas')->and($luca->last_name)->toBe('Bianco');
+    });
+
+    it('sends again every field the phone changed in that form, not only the one in conflict', function (): void {
+        $entries = onThePhone(fn () => $this->actingAs($this->owner)->patchJson("/api/v1/athletes/{$this->luca}", ['last_name' => 'Bianco', 'email' => 'luca@example.test'])->assertOk());
+        $this->actingAs($this->owner)->patchJson("/api/v1/athletes/{$this->luca}", ['first_name' => 'Lucas', 'last_name' => 'Verdi'])->assertOk();
+        replayOnThePc($entries);
+
+        $retry = $this->actingAs($this->owner)->getJson('/api/v1/sync/conflicts')->json('data.0.retry.0');
+        expect($retry['body'])->toEqualCanonicalizing(['last_name' => 'Bianco', 'email' => 'luca@example.test']);
+        $this->actingAs($this->owner)->json($retry['method'], $retry['url'], $retry['body'])->assertOk();
+        $luca = Athlete::query()->findOrFail($this->luca);
+        expect($luca->only(['first_name', 'last_name', 'email']))->toBe(['first_name' => 'Lucas', 'last_name' => 'Bianco', 'email' => 'luca@example.test']);
+    });
+
+    it('keeps the street the PC changed when «Tieni la mia» puts back the city the phone corrected', function (): void {
+        $roma = ['line1' => 'Via Roma 1', 'city' => 'Roma', 'postal_code' => '00100', 'province' => 'RM', 'country' => 'IT'];
+        $this->actingAs($this->owner)->patchJson("/api/v1/athletes/{$this->luca}", ['address' => $roma])->assertOk();
+        $entries = onThePhone(fn () => $this->actingAs($this->owner)->patchJson("/api/v1/athletes/{$this->luca}", ['address' => [...$roma, 'city' => 'Fiumicino']])->assertOk());
+        $this->actingAs($this->owner)->patchJson("/api/v1/athletes/{$this->luca}", ['address' => [...$roma, 'line1' => 'Via Appia 9', 'city' => 'Ostia']])->assertOk();
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'conflict']);
+
+        $retry = $this->actingAs($this->owner)->getJson('/api/v1/sync/conflicts')->json('data.0.retry.0');
+        $this->actingAs($this->owner)->json($retry['method'], $retry['url'], $retry['body'])->assertOk();
+        $address = DB::table('addresses')->where('addressable_type', Athlete::class)->where('addressable_id', $this->luca)->sole();
+        expect($address->line1)->toBe('Via Appia 9')->and($address->city)->toBe('Fiumicino');
+    });
+
+    it('clears the address again, and nothing else, when the phone had cleared it with its whole form', function (): void {
+        $roma = ['line1' => 'Via Roma 1', 'city' => 'Roma', 'postal_code' => '00100', 'province' => 'RM', 'country' => 'IT'];
+        $this->actingAs($this->owner)->patchJson("/api/v1/athletes/{$this->luca}", ['address' => $roma])->assertOk();
+        $entries = onThePhone(fn () => $this->actingAs($this->owner)->putJson("/api/v1/athletes/{$this->luca}", [
+            'first_name' => 'Luca', 'last_name' => 'Bianchi', 'belt' => 'white', 'stripes' => 0, 'status' => 'active', 'joined_at' => '2026-09-01', 'address' => null,
+        ])->assertOk());
+        $this->actingAs($this->owner)->patchJson("/api/v1/athletes/{$this->luca}", ['first_name' => 'Lucas', 'address' => [...$roma, 'city' => 'Ostia']])->assertOk();
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'conflict']);
+
+        $retry = $this->actingAs($this->owner)->getJson('/api/v1/sync/conflicts')->json('data.0.retry.0');
+        expect($retry['body'])->toHaveKey('address', null)
+            ->and($retry['body'])->not->toHaveKey('first_name');
+        $this->actingAs($this->owner)->json($retry['method'], $retry['url'], $retry['body'])->assertOk();
+        expect(Athlete::query()->findOrFail($this->luca)->first_name)->toBe('Lucas')
+            ->and(DB::table('addresses')->where('addressable_type', Athlete::class)->where('addressable_id', $this->luca)->exists())->toBeFalse();
+    });
+
+    it('sends the phone’s address whole when each device added one', function (): void {
+        $roma = ['line1' => 'Via Roma 1', 'city' => 'Roma', 'postal_code' => '00100', 'province' => 'RM', 'country' => 'IT'];
+        // The phone adds an address and renames him in one save; the PC does both otherwise.
+        $entries = onThePhone(fn () => $this->actingAs($this->owner)->patchJson("/api/v1/athletes/{$this->luca}", ['last_name' => 'Bianco', 'address' => $roma])->assertOk());
+        $this->actingAs($this->owner)->patchJson("/api/v1/athletes/{$this->luca}", ['last_name' => 'Verdi', 'address' => [...$roma, 'line1' => 'Via Milano 2', 'city' => 'Milano', 'postal_code' => '20100', 'province' => 'MI']])->assertOk();
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'conflict']);
+
+        $retry = $this->actingAs($this->owner)->getJson('/api/v1/sync/conflicts')->json('data.0.retry.0');
+        $this->actingAs($this->owner)->json($retry['method'], $retry['url'], $retry['body'])->assertOk();
+        expect(Athlete::query()->findOrFail($this->luca)->last_name)->toBe('Bianco')
+            ->and(DB::table('addresses')->where('addressable_type', Athlete::class)->where('addressable_id', $this->luca)->value('city'))->toBe('Roma');
+    });
+
+    it('sends back the last name and the city the phone changed in one save, whichever is in conflict', function (): void {
+        $roma = ['line1' => 'Via Roma 1', 'city' => 'Roma', 'postal_code' => '00100', 'province' => 'RM', 'country' => 'IT'];
+        $this->actingAs($this->owner)->patchJson("/api/v1/athletes/{$this->luca}", ['address' => $roma])->assertOk();
+        $entries = onThePhone(fn () => $this->actingAs($this->owner)
+            ->patchJson("/api/v1/athletes/{$this->luca}", ['last_name' => 'Bianco', 'address' => [...$roma, 'city' => 'Fiumicino']])->assertOk());
+        $this->actingAs($this->owner)->patchJson("/api/v1/athletes/{$this->luca}", ['last_name' => 'Verdi', 'address' => [...$roma, 'line1' => 'Via Appia 9']])->assertOk();
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'conflict']);
+
+        $retry = $this->actingAs($this->owner)->getJson('/api/v1/sync/conflicts')->json('data.0.retry.0');
+        $this->actingAs($this->owner)->json($retry['method'], $retry['url'], $retry['body'])->assertOk();
+        $address = DB::table('addresses')->where('addressable_type', Athlete::class)->where('addressable_id', $this->luca)->sole();
+        expect(Athlete::query()->findOrFail($this->luca)->last_name)->toBe('Bianco')
+            ->and($address->city)->toBe('Fiumicino')
+            ->and($address->line1)->toBe('Via Appia 9');
+    });
+
+    it('sends only the address a whole-form save added, never the form the PC changed meanwhile', function (): void {
+        $roma = ['line1' => 'Via Roma 1', 'city' => 'Roma', 'postal_code' => '00100', 'province' => 'RM', 'country' => 'IT'];
+        $entries = onThePhone(fn () => $this->actingAs($this->owner)->putJson("/api/v1/athletes/{$this->luca}", [
+            'first_name' => 'Luca', 'last_name' => 'Bianchi', 'belt' => 'white', 'stripes' => 0, 'status' => 'active', 'joined_at' => '2026-09-01', 'address' => $roma,
+        ])->assertOk());
+        expect($entries[0]['before'])->toBeNull();
+        $this->actingAs($this->owner)->patchJson("/api/v1/athletes/{$this->luca}", ['address' => [...$roma, 'city' => 'Milano', 'postal_code' => '20100', 'province' => 'MI']])->assertOk();
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'conflict']);
+        // While the question waits, the PC promotes and renames him.
+        $this->actingAs($this->owner)->patchJson("/api/v1/athletes/{$this->luca}", ['belt' => 'blue', 'last_name' => 'Verdi'])->assertOk();
+
+        $retry = $this->actingAs($this->owner)->getJson('/api/v1/sync/conflicts')->json('data.0.retry.0');
+        $this->actingAs($this->owner)->json($retry['method'], $retry['url'], $retry['body'])->assertOk();
+        $luca = Athlete::query()->findOrFail($this->luca);
+        expect([$luca->belt->value, $luca->last_name])->toBe(['blue', 'Verdi'])
+            ->and(DB::table('addresses')->where('addressable_type', Athlete::class)->where('addressable_id', $this->luca)->value('city'))->toBe('Roma');
+    });
+
+    it('sends a closure’s dates with the label the phone changed: the form requires them', function (): void {
+        $closure = (int) $this->actingAs($this->owner)->postJson('/api/v1/academy/closures', ['label' => 'Natale', 'starts_on' => '2026-12-24', 'ends_on' => '2026-12-26'])->assertCreated()->json('data.id');
+        $entries = onThePhone(fn () => $this->actingAs($this->owner)
+            ->patchJson("/api/v1/academy/closures/{$closure}", ['label' => 'Vacanze di Natale', 'starts_on' => '2026-12-24', 'ends_on' => '2026-12-26'])->assertOk());
+        $this->actingAs($this->owner)->patchJson("/api/v1/academy/closures/{$closure}", ['label' => 'Chiusura natalizia', 'starts_on' => '2026-12-24', 'ends_on' => '2026-12-26'])->assertOk();
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'conflict']);
+
+        $retry = $this->actingAs($this->owner)->getJson('/api/v1/sync/conflicts')->json('data.0.retry.0');
+        $this->actingAs($this->owner)->json($retry['method'], $retry['url'], $retry['body'])->assertOk();
+        expect(DB::table('academy_closures')->where('id', $closure)->value('label'))->toBe('Vacanze di Natale');
+    });
+
+    it('leaves the academy’s training days out of a retry when the phone did not change them', function (): void {
+        $this->actingAs($this->owner)->patchJson('/api/v1/academy', ['training_days' => [1, 3]])->assertOk();
+        $entries = onThePhone(fn () => $this->actingAs($this->owner)->patchJson('/api/v1/academy', ['name' => 'Kaizen Roma', 'training_days' => [1, 3]])->assertOk());
+        $this->actingAs($this->owner)->patchJson('/api/v1/academy', ['name' => 'Kaizen Prati', 'training_days' => [1, 3, 5]])->assertOk();
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'conflict']);
+
+        $retry = $this->actingAs($this->owner)->getJson('/api/v1/sync/conflicts')->json('data.0.retry.0');
+        expect($retry['body'])->not->toHaveKey('training_days');
+        $this->actingAs($this->owner)->json($retry['method'], $retry['url'], $retry['body'])->assertOk();
+        $academy = $this->owner->academy->fresh();
+        expect($academy->name)->toBe('Kaizen Roma')
+            ->and($academy->training_days)->toBe([1, 3, 5]);
+    });
+
+    it('sends the address a conflict recorded by v2.77.0 names, though it keeps no created', function (): void {
+        $roma = ['line1' => 'Via Roma 1', 'city' => 'Roma', 'postal_code' => '00100', 'province' => 'RM', 'country' => 'IT'];
+        $entries = onThePhone(fn () => $this->actingAs($this->owner)->patchJson("/api/v1/athletes/{$this->luca}", ['last_name' => 'Bianco', 'address' => $roma])->assertOk());
+        $this->actingAs($this->owner)->patchJson("/api/v1/athletes/{$this->luca}", ['address' => [...$roma, 'city' => 'Milano', 'postal_code' => '20100', 'province' => 'MI']])->assertOk();
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'conflict']);
+        // As v2.77.0 recorded it: no `created` in the entry.
+        $row = DB::table('sync_conflicts')->where('entry_id', $entries[0]['id'])->sole();
+        $entry = json_decode((string) $row->entry, true);
+        unset($entry['created']);
+        DB::table('sync_conflicts')->where('entry_id', $entries[0]['id'])->update(['entry' => json_encode($entry)]);
+
+        $retry = $this->actingAs($this->owner)->getJson('/api/v1/sync/conflicts')->json('data.0.retry.0');
+        $this->actingAs($this->owner)->json($retry['method'], $retry['url'], $retry['body'])->assertOk();
+        expect(DB::table('addresses')->where('addressable_type', Athlete::class)->where('addressable_id', $this->luca)->value('city'))->toBe('Roma');
+    });
+
+    it('offers no retry when the method and the amount both differ: the fee here makes another amount', function (): void {
+        $entries = onThePhone(fn () => $this->actingAs($this->owner)
+            ->postJson("/api/v1/athletes/{$this->luca}/payments", ['year' => 2026, 'month' => 10, 'payment_method' => 'cash'])->assertCreated());
+        $this->owner->academy->update(['monthly_fee_cents' => 10000]);
+        $this->actingAs($this->owner)->postJson("/api/v1/athletes/{$this->luca}/payments", ['year' => 2026, 'month' => 10, 'payment_method' => 'pos'])->assertCreated();
+        replayOnThePc($entries);
+
+        $this->actingAs($this->owner)->getJson('/api/v1/sync/conflicts')
+            ->assertJsonPath('data.0.detail.field', 'payment_method')
+            ->assertJsonPath('data.0.retry', null);
+    });
+
+    it('names no one for a write whose athlete has no row here, and offers no retry for one the rules refused', function (): void {
+        $entries = onThePhone(function (): void {
+            $marco = (int) $this->actingAs($this->owner)->postJson('/api/v1/athletes', [
+                'first_name' => 'Marco', 'last_name' => 'Rossi', 'email' => 'marco@example.test',
+                'belt' => 'white', 'stripes' => 0, 'status' => 'active', 'joined_at' => '2026-09-01',
+            ])->assertCreated()->json('data.id');
+            $this->actingAs($this->owner)->postJson("/api/v1/athletes/{$marco}/payments", ['year' => 2026, 'month' => 10, 'payment_method' => 'cash'])->assertCreated();
+        });
+        // On the PC that email is Mario's, who takes the id Marco had on the phone.
+        $this->actingAs($this->owner)->postJson('/api/v1/athletes', [
+            'first_name' => 'Mario', 'last_name' => 'Bianchi', 'email' => 'marco@example.test',
+            'belt' => 'white', 'stripes' => 0, 'status' => 'active', 'joined_at' => '2026-09-01',
+        ])->assertCreated();
+        replayOnThePc($entries);
+
+        $conflicts = collect($this->actingAs($this->owner)->getJson('/api/v1/sync/conflicts')->json('data'))->keyBy('id');
+        expect($conflicts[$entries[0]['id']]['reason'])->toBe('refused')
+            ->and($conflicts[$entries[0]['id']]['retry'])->toBeNull()
+            ->and($conflicts[$entries[1]['id']]['reason'])->toBe('gone')
+            ->and($conflicts[$entries[1]['id']]['subject'])->toBeNull();
+    });
+
+    it('lists every conflict though one names parameters its route no longer takes, with its time in UTC', function (): void {
+        $entries = conflictOnLucasName($this);
+        DB::table('sync_conflicts')->insert([
+            'entry_id' => '01K6F3Q8Z4M7X2N5P9R1T3V6W8', 'device' => 'phone9c1e', 'route' => 'athletes.update', 'reason' => 'failed',
+            'detail' => '{}', 'entry' => json_encode(['method' => 'PATCH', 'params' => [], 'body' => ['last_name' => 'X']]),
+        ]);
+
+        $conflicts = collect($this->actingAs($this->owner)->getJson('/api/v1/sync/conflicts')->assertOk()->json('data'))->keyBy('id');
+        expect($conflicts['01K6F3Q8Z4M7X2N5P9R1T3V6W8']['retry'])->toBeNull()
+            ->and($conflicts[$entries[0]['id']]['recorded_at'])->toMatch('/T\d{2}:\d{2}:\d{2}(\+00:00|Z)$/');
+    });
+
+    it('names the athlete of a check-in or a document the route names, and how many others a check-in names', function (): void {
+        $giulia = replayAthlete($this, 'Giulia');
+        // Giulia's presence first, so Luca's record has an id that is no athlete's.
+        $this->actingAs($this->owner)->postJson('/api/v1/attendance', ['date' => '2026-09-30', 'athlete_ids' => [$giulia]])->assertCreated();
+        $this->actingAs($this->owner)->postJson('/api/v1/attendance', ['date' => '2026-09-29', 'athlete_ids' => [$giulia]])->assertCreated();
+        $record = (int) $this->actingAs($this->owner)->postJson('/api/v1/attendance', ['date' => '2026-10-01', 'athlete_ids' => [$this->luca]])->json('data.0.id');
+        expect($record)->not->toBe($this->luca)->and($record)->not->toBe($giulia);
+        $conflict = fn (string $id, string $route, array $params, ?array $body) => DB::table('sync_conflicts')->insert([
+            'entry_id' => $id, 'device' => 'phone9c1e', 'route' => $route, 'reason' => 'failed', 'detail' => '{}',
+            'entry' => json_encode(['method' => 'POST', 'params' => $params, 'body' => $body]),
+        ]);
+        $conflict('01K6F3Q8Z4M7X2N5P9R1T3V6W1', 'attendance.destroy', ['attendance' => $record], null);
+        $conflict('01K6F3Q8Z4M7X2N5P9R1T3V6W2', 'attendance.store', [], ['date' => '2026-10-02', 'athlete_ids' => [$giulia, $this->luca]]);
+
+        $subjects = collect($this->actingAs($this->owner)->getJson('/api/v1/sync/conflicts')->json('data'))->pluck('subject', 'id');
+        expect($subjects['01K6F3Q8Z4M7X2N5P9R1T3V6W1']['athlete']['id'])->toBe($this->luca)
+            ->and($subjects['01K6F3Q8Z4M7X2N5P9R1T3V6W2'])->toBe(['athlete' => ['id' => $giulia, 'name' => 'Giulia Bianchi'], 'others' => 1]);
+    });
+
+    it('records each answer once, and takes one for a conflict this database does not hold', function (): void {
+        $entries = conflictOnLucasName($this);
+
+        $this->actingAs($this->owner)->postJson("/api/v1/sync/conflicts/{$entries[0]['id']}/decision", ['decision' => 'theirs'])->assertNoContent();
+        $this->actingAs($this->owner)->postJson("/api/v1/sync/conflicts/{$entries[0]['id']}/decision", ['decision' => 'mine'])->assertNoContent();
+        $this->actingAs($this->owner)->postJson('/api/v1/sync/conflicts/01K6F3Q8Z4M7X2N5P9R1T3V6W8/decision', ['decision' => 'theirs'])->assertNoContent();
+        $this->actingAs($this->owner)->postJson("/api/v1/sync/conflicts/{$entries[0]['id']}/decision", ['decision' => 'maybe'])->assertUnprocessable();
+
+        expect(DB::table('sync_conflicts')->where('entry_id', $entries[0]['id'])->value('decision'))->toBe('theirs');
+    });
+
+    it('journals the answer, so a rebase on the other device takes it there too', function (): void {
+        $entries = conflictOnLucasName($this);
+        // The PC answers: on a paired device the answer is an entry of its own.
+        $this->actingAs($this->owner)->postJson("/api/v1/sync/conflicts/{$entries[0]['id']}/decision", ['decision' => 'theirs'])->assertNoContent();
+        $answer = DB::table('sync_journal')->where('device', 'pc4f2a')->where('route', 'sync.conflicts.decide')->sole();
+        // On a database where the conflict still waits, and that has not dealt with the answer.
+        DB::table('sync_conflicts')->update(['decided_at' => null, 'decision' => null]);
+        DB::table('sync_entries')->where('id', $answer->id)->delete();
+        // The journal stays aside, as at a rebase's stage.
+        $kept = RebasePending::entriesOf('pc4f2a');
+        DB::table('sync_journal')->where('device', 'pc4f2a')->delete();
+
+        $outcomes = app(ReplayJournalAction::class)->execute('pc4f2a', $kept);
+
+        expect($outcomes[$answer->id])->toBe('applied')
+            ->and(DB::table('sync_conflicts')->where('entry_id', $entries[0]['id'])->value('decision'))->toBe('theirs');
     });
 });
 
