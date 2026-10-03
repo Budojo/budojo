@@ -121,10 +121,15 @@ final class ReplayJournalAction
             ]);
         }
 
-        $own = self::ownRow($route, $params, $before, $owner);
+        $own = self::ownRow($route, $entry['method'], $params, $before, $owner);
         $targets = self::targets($before, $params, $tables, $own);
         $seen = $this->compare($entry['method'], $targets, $body)
             ?? self::nestedChanged($before, $body);
+        $probe = null;
+        if ($seen !== null && $seen['outcome'] === 'probe') {
+            $probe = $seen['conflict'];
+            $seen = null;
+        }
         if ($seen === null) {
             $kept = self::keepTheirs($entry['method'], $own, $before, $body, $entry['created']);
             $body = $kept['body'];
@@ -142,7 +147,7 @@ final class ReplayJournalAction
 
         try {
             [$status, $answer, $created, $touched] = $this->dispatch($route, $entry['method'], $params, $body, $owner, $entry['at']);
-            $judged = self::judge($entry, $status, $answer, $created, $touched, $before, $targets, $body);
+            $judged = self::judge($entry, $status, $answer, $created, $touched, $before, $targets, $body, $probe);
         } catch (\Throwable $e) {
             // A route that takes other parameters now, say: never a replay
             // that throws, which would stop every start of the app.
@@ -174,10 +179,24 @@ final class ReplayJournalAction
      * @param  array<string, array<string, array<string, mixed>>>|null  $before
      * @param  array<string, array<string, array<string, mixed>>>|null  $targets
      * @param  array<string, mixed>|null  $body
+     * @param  array<string, mixed>|null  $probe  a field of its target that moved here, when the entry names none it changes
      * @return array{outcome: string, conflict: array<string, mixed>|null}
      */
-    private static function judge(array $entry, int $status, mixed $answer, array $created, ?array $touched, ?array $before, ?array $targets, ?array $body): array
+    private static function judge(array $entry, int $status, mixed $answer, array $created, ?array $touched, ?array $before, ?array $targets, ?array $body, ?array $probe): array
     {
+        if ($status >= 200 && $status < 300 && $probe !== null) {
+            // Its replay changed a target that moved here: the other device's
+            // change would be undone. It changed none: true already.
+            foreach ($targets ?? [] as $table => $rows) {
+                foreach (array_keys($rows) as $id) {
+                    if (isset($touched[$table][$id])) {
+                        return ['outcome' => 'conflict', 'conflict' => $probe];
+                    }
+                }
+            }
+
+            return ['outcome' => 'already', 'conflict' => null];
+        }
         if ($status >= 200 && $status < 300) {
             if ($entry['method'] === 'DELETE' && $targets === null) {
                 // A delete that names its row another way than by a model
@@ -343,16 +362,46 @@ final class ReplayJournalAction
             unset($body[$field]);
         }
         foreach (self::NESTED as $key => $nested) {
-            $mine = ($before[$nested['table']] ?? []) !== [] || ($created[$nested['table']] ?? []) !== [];
-            if (! \array_key_exists($key, $body) || $mine || $own['class'] === null) {
+            if (! \array_key_exists($key, $body) || $own['class'] === null) {
                 continue;
             }
-            $here = DB::table($nested['table'])
+            $row = DB::table($nested['table'])
                 ->where("{$nested['morph']}_type", $own['class'])
                 ->where("{$nested['morph']}_id", $own['id'])
                 ->first();
-            if (! self::sameNested($body[$key], $here === null ? null : (array) $here)) {
-                unset($body[$key]);
+            $here = $row === null ? null : (array) $row;
+            $changedThere = $here === null ? [] : ($before[$nested['table']][(string) $here['id']] ?? null);
+            if (($created[$nested['table']] ?? []) !== []) {
+                // It added one where there was none: one added here too,
+                // and another, is the same thing changed on both sides.
+                if ($here !== null && ! self::sameNested($body[$key], $here)) {
+                    return ['body' => $body, 'seen' => ['outcome' => 'conflict', 'conflict' => [
+                        'reason' => 'changed',
+                        'table' => $nested['table'],
+                        'id' => (string) $here['id'],
+                        'field' => $key,
+                    ]]];
+                }
+
+                continue;
+            }
+            if ($changedThere === null) {
+                if (($before[$nested['table']] ?? []) === [] && ! self::sameNested($body[$key], $here)) {
+                    // Carried along as it saw it, changed here: it stays.
+                    unset($body[$key]);
+                }
+
+                continue;
+            }
+            // It changed some of its fields: the others it carried along take
+            // what this database holds, as the form's own fields do. They are
+            // required together, so they are sent, never left out.
+            if (\is_array($body[$key]) && $here !== null) {
+                foreach ($body[$key] as $field => $sent) {
+                    if (! \is_array($sent) && ! \array_key_exists($field, $changedThere) && \array_key_exists($field, $here) && ! self::same($here[$field], $sent)) {
+                        $body[$key][$field] = $here[$field];
+                    }
+                }
             }
         }
 
@@ -383,8 +432,10 @@ final class ReplayJournalAction
                     return ['outcome' => 'conflict', 'conflict' => ['reason' => 'gone', 'table' => $nested['table'], 'id' => (string) $id]];
                 }
                 $now = (array) $row;
+                // Its owner, by the morph: an id the map does not rewrite.
+                $owner = ["{$nested['morph']}_id", "{$nested['morph']}_type"];
                 foreach ($saw as $field => $value) {
-                    if ($field === 'id' || \in_array($field, self::CLOCK, true) || ! \array_key_exists($field, $now) || self::same($now[$field], $value)) {
+                    if ($field === 'id' || \in_array($field, [...self::CLOCK, ...$owner], true) || ! \array_key_exists($field, $now) || self::same($now[$field], $value)) {
                         continue;
                     }
                     if ($sent !== null && \array_key_exists($field, $sent) && self::same($now[$field], $sent[$field])) {
@@ -427,17 +478,17 @@ final class ReplayJournalAction
     }
 
     /**
-     * The row an update is about. A route that binds models names it by its
-     * last (`/athletes/{athlete}/promotions/{promotion}`). `PATCH /academy`
-     * names the owner's academy by the session. Another way (`PUT
-     * /lessons/notes`, by date and class), it is the one row the write
-     * changed, when it changed one.
+     * The row a write is about. A route that binds models names it by its
+     * last (`/athletes/{athlete}/promotions/{promotion}`). For a form that
+     * binds none: `PATCH /academy` names the owner's academy by the session;
+     * another way (`PUT /lessons/notes`, by date and class), it is the one
+     * row the write changed, when it changed one.
      *
      * @param  array<string, int|string>  $params
      * @param  array<string, array<string, array<string, mixed>>>|null  $before
      * @return array{table: string, id: string, class: class-string<Model>|null}|null
      */
-    private static function ownRow(Route $route, array $params, ?array $before, User $owner): ?array
+    private static function ownRow(Route $route, string $method, array $params, ?array $before, User $owner): ?array
     {
         $models = self::paramModels($route);
         if ($models !== []) {
@@ -445,6 +496,10 @@ final class ReplayJournalAction
             $class = $models[$param];
 
             return ['table' => new $class()->getTable(), 'id' => (string) ($params[$param] ?? ''), 'class' => $class];
+        }
+        if ($method !== 'PUT' && $method !== 'PATCH') {
+            // Only a form is about a row it does not name.
+            return null;
         }
         if ($route->getName() === 'academy.update') {
             $academy = $owner->activeAcademyId();
@@ -487,6 +542,7 @@ final class ReplayJournalAction
         $byName = $method !== 'DELETE' && \is_array($body) && self::namesAny($before, $body);
         $allThere = true;
         $allAsWanted = true;
+        $probe = null;
         foreach ($before as $table => $rows) {
             foreach ($rows as $id => $fields) {
                 $row = DB::table($table)->where('id', $id)->first();
@@ -497,6 +553,9 @@ final class ReplayJournalAction
 
                     continue;
                 }
+                // A delete of the row itself recorded it whole; a delete of
+                // something on it (a photo) recorded the fields it changed.
+                $deletes = $method === 'DELETE' && \array_key_exists('id', $fields);
                 foreach ($fields as $field => $saw) {
                     if (\in_array($field, self::CLOCK, true) || ! \array_key_exists($field, $now)) {
                         continue;
@@ -513,15 +572,15 @@ final class ReplayJournalAction
                     if ($byName && self::same($now[$field], $body[$field])) {
                         continue;
                     }
-
-                    return ['outcome' => 'conflict', 'conflict' => [
-                        'reason' => 'changed',
-                        'table' => $table,
-                        'id' => $id,
-                        'field' => $field,
-                        'saw' => $saw,
-                        'here' => $now[$field],
-                    ]];
+                    $moved = ['reason' => 'changed', 'table' => $table, 'id' => $id, 'field' => $field, 'saw' => $saw, 'here' => $now[$field]];
+                    if ($byName || $deletes) {
+                        return ['outcome' => 'conflict', 'conflict' => $moved];
+                    }
+                    // A write that names none of the fields it changes (a
+                    // photo removed) cannot say what it would make them. Its
+                    // replay tells: if it changes nothing here, it was true
+                    // already; if it changes what moved, a conflict.
+                    $probe ??= $moved;
                 }
             }
         }
@@ -531,6 +590,9 @@ final class ReplayJournalAction
             return $method === 'DELETE'
                 ? ['outcome' => 'already', 'conflict' => null]
                 : ['outcome' => 'conflict', 'conflict' => ['reason' => 'gone']];
+        }
+        if ($probe !== null) {
+            return ['outcome' => 'probe', 'conflict' => $probe];
         }
 
         return $byName && $allAsWanted ? ['outcome' => 'already', 'conflict' => null] : null;

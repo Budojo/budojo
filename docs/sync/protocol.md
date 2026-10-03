@@ -240,9 +240,10 @@ There is no pairing code (#2033). **A device joins at its first «Accedi con Goo
 - **on the clock of the moment it was written** (its `at`): a payment marked on the 3rd without a date is paid on the 3rd, and "not after today" is that day;
 - **an id the map cannot pair is lost, never kept.** An entry that made fewer rows of a table here than where it was written (an import that skipped a duplicate, a create that became a conflict) leaves those rows with no row here. A later entry that names one is a `gone` conflict: kept as it was, the id would name whatever row has it here;
 - **an update sends its whole form, and changed only what its `before` recorded.** A field it carried along as it saw it, which this database holds otherwise, was changed by the other device: that change stays, and the field is left out of the replayed body.
-  - The row a form is about is the route's last model, the owner's academy for `PATCH /academy`, or else the one row the write changed.
+  - The row a form is about is the route's last model; for a form that binds none, the owner's academy for `PATCH /academy`, or else the one row the write changed.
   - Fields sent together (a phone number's two halves) are left out together, and changed on both sides they are a conflict.
-  - A nested object (the address) is left out whole when the entry did not change it. When the entry did change it, a field moved here too is a conflict;
+  - A nested object (the address) is left out whole when the entry did not change it. When the entry did change it, a field moved here too is a conflict, and the fields it carried along take what this database holds;
+- **a write that names none of the fields it changes** (a photo removed) cannot say what it would make them. When one moved here, its replay tells: changing nothing, it was true already; changing the moved row, it is a conflict;
 - **a delete that names its row another way than by a model** (a month's payment, by year and month) must delete here the row it deleted there, field by field. One that names its row (an athlete) is compared on it alone: what it took along (his documents) is derived again;
 - **money is never left to chance:** a payment's entry carries the amount, the period and the date the row got (`ResolvedFields`), and a payment the replay makes or finds otherwise is a `differs` conflict.
 

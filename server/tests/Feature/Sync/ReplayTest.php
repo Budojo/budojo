@@ -404,6 +404,76 @@ describe('what a replay never does silently (#2101 review)', function (): void {
             ->and($city())->toBeNull();
     });
 
+    it('clears an address the phone added and cleared, whatever ids its owner has here', function (): void {
+        $roma = ['line1' => 'Via Roma 1', 'city' => 'Roma', 'postal_code' => '00100', 'province' => 'RM', 'country' => 'IT'];
+        $entries = onThePhone(function () use ($roma): void {
+            $marco = (int) $this->actingAs($this->owner)->postJson('/api/v1/athletes', [
+                'first_name' => 'Marco', 'last_name' => 'Rossi', 'belt' => 'white', 'stripes' => 0, 'status' => 'active',
+                'joined_at' => '2026-09-01', 'address' => $roma,
+            ])->assertCreated()->json('data.id');
+            $this->actingAs($this->owner)->putJson("/api/v1/athletes/{$marco}", [
+                'first_name' => 'Marco', 'last_name' => 'Rossi', 'belt' => 'white', 'stripes' => 0, 'status' => 'active',
+                'joined_at' => '2026-09-01', 'address' => null,
+            ])->assertOk();
+        });
+        // The PC adds Giulia meanwhile: Marco gets another id here.
+        replayAthlete($this, 'Giulia');
+
+        expect(array_values(replayOnThePc($entries)))->toBe(['applied', 'applied']);
+        $marco = Athlete::query()->where('first_name', 'Marco')->sole();
+        expect(DB::table('addresses')->where('addressable_type', Athlete::class)->where('addressable_id', $marco->id)->exists())->toBeFalse();
+    });
+
+    it('keeps the street the PC changed when the phone corrects the city, its form carrying the rest along', function (): void {
+        $roma = ['line1' => 'Via Roma 1', 'city' => 'Roma', 'postal_code' => '00100', 'province' => 'RM', 'country' => 'IT'];
+        $this->actingAs($this->owner)->patchJson("/api/v1/athletes/{$this->luca}", ['address' => $roma])->assertOk();
+        $entries = onThePhone(fn () => $this->actingAs($this->owner)
+            ->patchJson("/api/v1/athletes/{$this->luca}", ['address' => [...$roma, 'city' => 'Fiumicino']])->assertOk());
+        $this->actingAs($this->owner)->patchJson("/api/v1/athletes/{$this->luca}", ['address' => [...$roma, 'line1' => 'Via Appia 9']])->assertOk();
+
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'applied']);
+        $address = DB::table('addresses')->where('addressable_type', Athlete::class)->where('addressable_id', $this->luca)->sole();
+        expect($address->city)->toBe('Fiumicino')
+            ->and($address->line1)->toBe('Via Appia 9');
+    });
+
+    it('finds a photo removed on both devices already removed, and asks when the PC put another one', function (): void {
+        $photo = fn (string $name, int $size) => $this->actingAs($this->owner)
+            ->post("/api/v1/athletes/{$this->luca}/photo", ['photo' => UploadedFile::fake()->image($name, $size, $size)])->assertOk();
+        $photo('luca.png', 20);
+        $removed = onThePhone(fn () => $this->actingAs($this->owner)->deleteJson("/api/v1/athletes/{$this->luca}/photo")->assertSuccessful());
+        $this->actingAs($this->owner)->deleteJson("/api/v1/athletes/{$this->luca}/photo")->assertSuccessful();
+
+        expect(replayOnThePc($removed))->toBe([$removed[0]['id'] => 'already']);
+
+        $photo('again.png', 24);
+        $again = onThePhone(fn () => $this->actingAs($this->owner)->deleteJson("/api/v1/athletes/{$this->luca}/photo")->assertSuccessful());
+        // Another picture: other bytes at the same path.
+        $photo('newer.png', 32);
+        $pcPhoto = Athlete::query()->findOrFail($this->luca)->photo_sha256;
+
+        expect(replayOnThePc($again)[end($again)['id']])->toBe('conflict')
+            ->and(Athlete::query()->findOrFail($this->luca)->photo_sha256)->toBe($pcPhoto);
+    });
+
+    it('finds the academy logo removed on both devices no conflict', function (): void {
+        $this->actingAs($this->owner)->post('/api/v1/academy/logo', ['logo' => UploadedFile::fake()->image('logo.png', 64, 64)])->assertSuccessful();
+        $entries = onThePhone(fn () => $this->actingAs($this->owner)->deleteJson('/api/v1/academy/logo')->assertSuccessful());
+        $this->actingAs($this->owner)->deleteJson('/api/v1/academy/logo')->assertSuccessful();
+
+        expect(replayOnThePc($entries)[$entries[0]['id']])->not->toBe('conflict');
+    });
+
+    it('finds the owner rejoining the roster on both devices no conflict', function (): void {
+        $this->actingAs($this->owner)->postJson('/api/v1/me/athlete')->assertSuccessful();
+        $this->actingAs($this->owner)->deleteJson('/api/v1/me/athlete')->assertSuccessful();
+        $entries = onThePhone(fn () => $this->actingAs($this->owner)->postJson('/api/v1/me/athlete')->assertSuccessful());
+        $this->actingAs($this->owner)->postJson('/api/v1/me/athlete')->assertSuccessful();
+
+        expect(replayOnThePc($entries)[$entries[0]['id']])->not->toBe('conflict')
+            ->and(DB::table('athletes')->where('user_id', $this->owner->id)->where('is_self', true)->whereNull('deleted_at')->count())->toBe(1);
+    });
+
     it('never asks about what an athlete’s delete took along: a document the PC deleted already', function (): void {
         config()->set('documents.encryption_key', base64_encode(random_bytes(32)));
         $document = (int) $this->actingAs($this->owner)
