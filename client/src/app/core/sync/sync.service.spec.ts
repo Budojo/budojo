@@ -138,6 +138,23 @@ describe('SyncService', () => {
     expect(sync.toDecide()).toBe(1);
   });
 
+  it('counts what waits even when Drive cannot be reached: it is in this device’s database', async () => {
+    phone.waiting = [{ id: '01K6F3Q8Z4M7X2N5P9R1T3V6W8' } as SyncConflict];
+    const offline: SyncRemote = {
+      list: async () => {
+        throw new RemoteError('offline', 'no network');
+      },
+      read: async () => null,
+      write: async () => undefined,
+      remove: async () => undefined,
+    };
+    const sync = setUp({ remote: offline });
+
+    await sync.syncNow();
+
+    expect(sync.toDecide()).toBe(1);
+  });
+
   it('waits for the PC when the folder holds no academy yet, and publishes nothing of its own', async () => {
     phone = new MemoryDevice('phone9c1e', 'Eagles BJJ');
     const sync = setUp();
