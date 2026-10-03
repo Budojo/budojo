@@ -296,7 +296,7 @@ export class SyncService {
           ledger = next;
           saveLedger(owner, next);
         },
-        holdWrites: (work) => this.gate.hold(work),
+        holdWrites: (work) => this.gate.hold(work, () => swapped),
         now: () => Date.now(),
       };
       const { outcome } =

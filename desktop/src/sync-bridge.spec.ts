@@ -62,4 +62,12 @@ describe('the sync’s Drive bridge', () => {
     expect(parseDriveRequest({ url: 'https://www.googleapis.com/drive/v3/files', method: 'GET', headers: { a: 1 } })).toBeNull();
     expect(parseDriveRequest(null)).toBeNull();
   });
+
+  it('refuses a delete, and a PUT anywhere but an upload’s session: the sync never removes a file (#2106)', () => {
+    const file = 'https://www.googleapis.com/drive/v3/files/backup123';
+    expect(parseDriveRequest({ url: file, method: 'DELETE', headers: {} })).toBeNull();
+    expect(parseDriveRequest({ url: file, method: 'PUT', headers: {} })).toBeNull();
+    expect(parseDriveRequest({ url: file, method: 'PATCH', headers: {} })).not.toBeNull();
+    expect(parseDriveRequest({ url: file, method: 'GET', headers: {} })).not.toBeNull();
+  });
 });

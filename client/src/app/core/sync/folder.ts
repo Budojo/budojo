@@ -55,13 +55,23 @@ export function sealFolder(key: CryptoKey, folder: string): Promise<Uint8Array> 
 
 /**
  * Whether this device may sync with the folder: **two devices at most**, the
- * PC and the phone (protocol § Scope). A device whose report is there is one
- * of them; one that is not joins only beside fewer than two others. A report
- * that does not open still names a device.
+ * PC and the phone (protocol § Scope). **They are the two whose reports
+ * reached Drive first**, on Drive's clock: two new devices that both found
+ * room at once both write a report, and the later one is refused from then
+ * on, its report there or not (#2106). One with no report joins only beside
+ * fewer than two others. A report that does not open still names a device.
  */
 export async function hasRoomFor(remote: SyncRemote, device: string): Promise<boolean> {
   const devices = (await remote.list('devices')).files
-    .map((file) => /^devices\/([a-z0-9]+)\.bjs$/.exec(file.path)?.[1])
-    .filter((id): id is string => id !== undefined && isDeviceId(id));
-  return devices.includes(device) || devices.length < 2;
+    .map((file) => ({
+      id: /^devices\/([a-z0-9]+)\.bjs$/.exec(file.path)?.[1],
+      created: file.created,
+    }))
+    .filter(
+      (report): report is { id: string; created: number } =>
+        report.id !== undefined && isDeviceId(report.id),
+    )
+    .sort((a, b) => a.created - b.created || a.id.localeCompare(b.id))
+    .map((report) => report.id);
+  return devices.includes(device) ? devices.indexOf(device) < 2 : devices.length < 2;
 }

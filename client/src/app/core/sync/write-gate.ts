@@ -1,4 +1,9 @@
-import { HttpEvent, HttpInterceptorFn, HttpResponse } from '@angular/common/http';
+import {
+  HttpErrorResponse,
+  HttpEvent,
+  HttpInterceptorFn,
+  HttpResponse,
+} from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, Subject, Subscription } from 'rxjs';
 
@@ -11,9 +16,10 @@ const API = /\/api\/v1\//;
 /**
  * The sync's own requests, which run while the writes are held: the server's
  * sync API, and the session the swap opens again on the database it brought
- * in (`/device/session`).
+ * in (`/device/session`). Nothing else of `/device/`: a restore the door
+ * starts while a round finishes waits like any write.
  */
-const SYNC = /\/api\/v1\/(sync|device)\//;
+const SYNC = /\/api\/v1\/(sync\/|device\/session$)/;
 
 /**
  * The page's own writes to its server (#2046), the one writer it has:
@@ -28,18 +34,26 @@ const SYNC = /\/api\/v1\/(sync|device)\//;
  * that found it down would show the offline page; one sent before the owner's
  * session was open again would carry a token the new database never had.
  * Only writes tell the sync to push.
+ *
+ * **Once a hold has replaced the database, no write goes through again**: the
+ * ones it held and every later one fail, until the page loads again, which
+ * the sync does next. They were made against the page's view of the database
+ * it had: after a rebase, athlete 4 there can be another athlete here.
  */
 @Injectable({ providedIn: 'root' })
 export class WriteGate {
   private inFlight = 0;
   private idleWaiters: (() => void)[] = [];
   private held: Promise<void> | null = null;
+  /** The database was replaced under a hold: writes fail until the page loads again. */
+  private replaced = false;
   private readonly landed = new Subject<void>();
 
   /** A write the server answered with success. */
   readonly written$ = this.landed.asObservable();
 
-  async hold<T>(work: () => Promise<T>): Promise<T> {
+  /** `replaced` says, once `work` is over, whether it swapped the database in. */
+  async hold<T>(work: () => Promise<T>, replaced: () => boolean = () => false): Promise<T> {
     if (this.held !== null) {
       throw new Error('the writes are held already: sync rounds never overlap');
     }
@@ -49,6 +63,7 @@ export class WriteGate {
       await this.idle();
       return await work();
     } finally {
+      this.replaced ||= replaced();
       this.held = null;
       release();
     }
@@ -59,7 +74,11 @@ export class WriteGate {
    * ends. The check and the count are one step, so a hold that starts later
    * always waits for it.
    */
-  pass<T>(send: () => Observable<T>, succeeded: (value: T) => boolean): Observable<T> {
+  pass<T>(
+    send: () => Observable<T>,
+    succeeded: (value: T) => boolean,
+    refused: (() => unknown) | null = null,
+  ): Observable<T> {
     return new Observable<T>((subscriber) => {
       let closed = false;
       let admitted = false;
@@ -71,6 +90,10 @@ export class WriteGate {
         }
         if (this.held !== null) {
           void this.held.then(go);
+          return;
+        }
+        if (this.replaced && refused !== null) {
+          subscriber.error(refused());
           return;
         }
         this.inFlight++;
@@ -126,5 +149,14 @@ export const writeGateInterceptor: HttpInterceptorFn = (req, next) => {
   return inject(WriteGate).pass<HttpEvent<unknown>>(
     () => next(req),
     (event) => write && event instanceof HttpResponse,
+    write
+      ? () =>
+          new HttpErrorResponse({
+            status: 409,
+            statusText: 'Conflict',
+            url: req.urlWithParams,
+            error: { message: 'The data on this device changed: the page loads again with it.' },
+          })
+      : null,
   );
 };

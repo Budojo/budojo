@@ -73,4 +73,18 @@ describe('hasRoomFor', () => {
 
     expect(await hasRoomFor(remote, 'phone7k2m')).toBe(false);
   });
+
+  it('refuses the later of two devices that joined at once, though its report is there (#2106)', async () => {
+    const remote = new MemoryRemote();
+    await remote.write(devicePath('pc4f2a'), utf8('a report'));
+    // Both found room beside the PC alone, and both wrote a report.
+    await remote.write(devicePath('phone9c1e'), utf8('a report'));
+    await remote.write(devicePath('phone7k2m'), utf8('a report'));
+    // A report written again keeps the time it reached Drive first.
+    await remote.write(devicePath('phone7k2m'), utf8('a later report'));
+
+    expect(await hasRoomFor(remote, 'pc4f2a')).toBe(true);
+    expect(await hasRoomFor(remote, 'phone9c1e')).toBe(true);
+    expect(await hasRoomFor(remote, 'phone7k2m')).toBe(false);
+  });
 });

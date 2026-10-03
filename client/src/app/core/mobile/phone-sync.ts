@@ -2,7 +2,7 @@ import { inject, Provider } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../services/auth.service';
 import { DriveRemote } from '../sync/drive-remote';
-import { RemoteError, SyncRemote } from '../sync/remote';
+import { followingFolder, RemoteError, SyncRemote } from '../sync/remote';
 import { SYNC_PLATFORM, SyncPlatform } from '../sync/sync.service';
 import { DeviceService } from './device.service';
 import { DriveAuthPlugin } from './drive-auth';
@@ -46,12 +46,15 @@ export function phoneSyncPlatform(
       lastToken = null;
     }
   };
+  const remote = followingFolder(() => freshTokenOnce(new DriveRemote(token), dropToken));
   return {
     identity: async () => {
       const { device, folder, syncKey } = await server.syncIdentity();
-      return device && folder && syncKey ? { device, folder, syncKey } : null;
+      const identity = device && folder && syncKey ? { device, folder, syncKey } : null;
+      remote.follow(identity?.folder ?? null);
+      return identity;
     },
-    remote: freshTokenOnce(new DriveRemote(token), dropToken),
+    remote: remote.remote,
     shell: {
       swapIn: () => restartPhoneServer(server, reopenSession),
     },
