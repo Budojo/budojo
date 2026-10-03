@@ -16,7 +16,7 @@ How two devices of one academy share their data through the owner's Google Drive
 - its kept entries can name another device's rows by numbers that mean someone else on the winning line;
 - a report it wrote can claim entries its database later drops.
 
-A third device needs the protocol to map rows across every device's entries, and reports that cannot go back, before it is allowed. A device refuses to pair when the folder already has two.
+A third device needs the protocol to map rows across every device's entries, and reports that cannot go back, before it is allowed. A device refuses to pair when the folder already has two. **The two are the devices whose reports reached Drive first**, on Drive's clock: when two new devices find room at once, both write a report, and the later one is refused from then on (#2106).
 
 ## The folder
 
@@ -130,7 +130,7 @@ The journal is a JSON list of the writes that made this version from its parent,
 | `method` | `POST`, `PUT`, `PATCH` or `DELETE` | `POST` |
 | `route` | the Laravel route name: dotted segments of `a-z`, `0-9`, `_` and `-`, each starting with a letter. Every write route has one, pinned by `WriteRouteNamesTest`: a journal outlives the code that wrote it, so a rename is a decision (#2031). | `attendance.store`, `academy.fee-tiers.store` |
 | `params` | the route parameters, strings and numbers | `{ "athlete": 57 }` |
-| `body` | the request body, or `null`, with a payment's `amount_cents`, `period_months` and `paid_at` as the row got them (§ Rebase). An uploaded file is `{ "$file": { "sha256", "name", "type" } }`; its bytes stay on the device until the entry is cleared | `{ "date": "2026-10-01", "athlete_ids": [57] }` |
+| `body` | the request body, or `null`, with a payment's `amount_cents`, `period_months`, `paid_at` and `payment_method` as the row got them, `null` included (§ Rebase). An uploaded file is `{ "$file": { "sha256", "name", "type" } }`; its bytes stay on the device until the entry is cleared | `{ "date": "2026-10-01", "athlete_ids": [57] }` |
 | `created` | the ids the write created, by table | `{ "attendance_records": [912] }` |
 | `before` | for an update or a delete, what the rows held before, by table and id; else `null` | `{ "athletes": { "57": { "first_name": "Luca" } } }` |
 
@@ -246,7 +246,7 @@ There is no pairing code (#2033). **A device joins at its first «Accedi con Goo
 - **a write that names none of the fields it changes** (a photo removed) cannot say what it would make them. When one moved here, its replay tells: changing nothing, it was true already; changing the moved row, it is a conflict;
 - **a delete that names its row another way than by a model** (a month's payment, by year and month) must delete here the row it deleted there, field by field. One that names its row (an athlete) is compared on it alone: what it took along (his documents) is derived again;
 - **a row's own id is never compared,** and a reference made on each device (a check-in's `lesson_id`) only for whether it is set: two ids differ between devices for the same row, but one against none means the row joined a lesson or left it. The references a write names are rewritten through the id map and compared;
-- **money is never left to chance:** a payment's entry carries the amount, the period and the date the row got (`ResolvedFields`), and a payment the replay makes or finds otherwise is a `differs` conflict.
+- **money is never left to chance:** a payment's entry carries the amount, the period, the date and the method the row got, a method left out as none (`ResolvedFields`), and a payment the replay makes or finds otherwise is a `differs` conflict.
 
 Each entry ends in one state, recorded in [`sync_entries`](../entities/sync-entry.md) in the same transaction as what it did:
 
