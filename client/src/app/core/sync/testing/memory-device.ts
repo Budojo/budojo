@@ -1,6 +1,7 @@
 import { fromUtf8, sha256Hex, utf8 } from '../bytes';
 import { EMPTY_LEDGER, SyncLedger, SyncServer } from '../engine';
 import { ServerFile, SyncFilesApi } from '../files';
+import { Homecoming } from '../homecoming';
 import { JournalEntry } from '../journal';
 
 /**
@@ -153,5 +154,18 @@ export class MemoryDevice implements SyncServer {
 
   async holdsAcademy() {
     return this.db.academy !== null;
+  }
+
+  /** What the other device's work brought, as the reconcile kept it (#2039). */
+  arrived: Homecoming | null = null;
+
+  async homecoming(): Promise<Homecoming | null> {
+    return this.arrived;
+  }
+
+  async seenHomecoming(through: string): Promise<void> {
+    if (this.arrived?.through === through) {
+      this.arrived = null;
+    }
   }
 }

@@ -3,7 +3,9 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use App\Support\Sync\HomecomingSince;
 use App\Support\Sync\SyncDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Testing\TestResponse;
 
 /**
@@ -154,6 +156,26 @@ describe('PUT /api/v1/sync/stage', function (): void {
             ->assertServerError();
 
         expect(file_get_contents("{$this->live}.staged"))->toBe($first);
+    });
+
+    it('keeps what this device held of the other device\'s work, for the homecoming (#2039)', function (): void {
+        DB::table('sync_entries')->insert(['id' => '01K6A000000000000000000007', 'device' => 'phone9f8e7d6c', 'outcome' => 'own', 'created' => '{}']);
+
+        $this->actingAs(userWithAcademy())
+            ->call('PUT', '/api/v1/sync/stage', content: syncTestIncoming($this->dir, syncTestHistory()))
+            ->assertNoContent();
+
+        expect(HomecomingSince::read())->toBe(['phone9f8e7d6c' => '01K6A000000000000000000007']);
+    });
+
+    it('keeps none on a device holding no academy, where the whole academy arrives', function (): void {
+        HomecomingSince::remember(['phone9f8e7d6c' => '01K6A000000000000000000003']);
+
+        $this->actingAs(User::factory()->create())
+            ->call('PUT', '/api/v1/sync/stage', content: syncTestIncoming($this->dir, syncTestHistory()))
+            ->assertNoContent();
+
+        expect(HomecomingSince::read())->toBeNull();
     });
 
     it('takes a database of the schema this app runs', function (): void {

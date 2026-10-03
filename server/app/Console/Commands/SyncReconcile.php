@@ -6,6 +6,7 @@ namespace App\Console\Commands;
 
 use App\Actions\Sync\KeepOwnJournalAction;
 use App\Actions\Sync\ReconcileFilesAction;
+use App\Actions\Sync\RecordHomecomingAction;
 use App\Actions\Sync\ReplayJournalAction;
 use App\Support\Sync\RebasePending;
 use Illuminate\Console\Command;
@@ -21,6 +22,8 @@ use Illuminate\Support\Facades\Cache;
  * - the cache is cleared: on the desktop it is on files (`CACHE_STORE=file`),
  *   and would answer from the old database, the attendance summaries first;
  * - a rebase's set-aside journal is replayed (`ReplayJournalAction`);
+ * - what the other device's journal brought is told on Oggi
+ *   (`RecordHomecomingAction`, #2039), while the journal still holds it;
  * - the journal keeps only this device's entries, and the kept uploads no
  *   entry names go (`KeepOwnJournalAction`, #2031);
  * - the files no row names any more are deleted (`ReconcileFilesAction`).
@@ -35,6 +38,7 @@ class SyncReconcile extends Command
         ReconcileFilesAction $reconcile,
         KeepOwnJournalAction $keepOwnJournal,
         ReplayJournalAction $replay,
+        RecordHomecomingAction $homecoming,
     ): int {
         Cache::flush();
 
@@ -56,7 +60,11 @@ class SyncReconcile extends Command
         }
 
         $device = config('budojo.sync.device');
-        $forgotten = $keepOwnJournal->execute(\is_string($device) ? $device : null);
+        $device = \is_string($device) ? $device : null;
+        // After the replay, so it counts what is still there; before the
+        // journal drops the other device's entries, which it reads.
+        $homecoming->execute($device);
+        $forgotten = $keepOwnJournal->execute($device);
         $deleted = $reconcile->execute();
 
         $this->info("Cache cleared; {$deleted} file(s) no row names deleted; {$forgotten} other device journal entr(ies) dropped.{$replayed}");

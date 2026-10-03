@@ -4,6 +4,7 @@ import { firstValueFrom, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { binaryBody } from './bytes';
 import { SyncServer } from './engine';
+import { Homecoming } from './homecoming';
 import { HttpSyncFiles } from './http-sync-files';
 import { JournalEntry } from './journal';
 
@@ -60,6 +61,20 @@ export class HttpSyncServer implements SyncServer {
         .get<{ data: Record<string, string> }>(this.url('/sync/holds'))
         .pipe(map((response) => response.data)),
     );
+  }
+
+  /** `GET /sync/homecoming` (#2039): what the other device's work brought, or null when nothing waits. */
+  homecoming(): Promise<Homecoming | null> {
+    return firstValueFrom(
+      this.http
+        .get<{ data: Homecoming } | null>(this.url('/sync/homecoming'))
+        .pipe(map((response) => response?.data ?? null)),
+    );
+  }
+
+  /** `DELETE /sync/homecoming?through=`: seen. One a later pull added to stays. */
+  async seenHomecoming(through: string): Promise<void> {
+    await firstValueFrom(this.http.delete(this.url('/sync/homecoming'), { params: { through } }));
   }
 
   async holdsAcademy(): Promise<boolean> {

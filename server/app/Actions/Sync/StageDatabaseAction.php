@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Actions\Sync;
 
+use App\Models\Academy;
+use App\Support\Sync\HomecomingSince;
 use App\Support\Sync\IncomingDatabase;
 use App\Support\Sync\IncomingFile;
 use App\Support\Sync\RebasePending;
@@ -18,6 +20,10 @@ use App\Support\Sync\SyncDatabase;
  */
 final class StageDatabaseAction
 {
+    public function __construct(private readonly ReadHoldsAction $holds)
+    {
+    }
+
     /**
      * @param  resource  $body  the database's bytes, as they arrive
      * @param  bool  $rebase  replay this device's kept writes on it after the swap (#2031 step 3)
@@ -39,6 +45,12 @@ final class StageDatabaseAction
             // staged as it was. A version carries no files, so the files an
             // earlier restore staged go with its database (#2079).
             Staged::clear();
+            // What this device held of the other's work, for the homecoming
+            // (#2039): the swap replaces the database that knows it. Not on
+            // a device holding no academy, where the whole academy arrives.
+            if (Academy::query()->exists()) {
+                HomecomingSince::remember($this->holds->execute());
+            }
             if ($device !== null) {
                 // Before the database: a staged database is what commits a
                 // stage, so it never exists without the writes to replay on it.

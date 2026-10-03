@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EMPTY_LEDGER, syncOnce } from './engine';
 import { importSyncKey, newSyncKey, seal } from './envelope';
 import { sealFolder } from './folder';
+import { Homecoming } from './homecoming';
 import { HttpSyncServer } from './http-sync-server';
 import { utf8 } from './bytes';
 import { devicePath, FOLDER_PATH } from './layout';
@@ -123,6 +124,32 @@ describe('SyncService', () => {
 
     expect(sync.state().kind).toBe('synced');
     expect([...remote.files.keys()]).toContain('versions/000002-phone9c1e.000001-pc4f2a.bjs');
+  });
+
+  it('reads what the last pull brought at the start of a round, offline too (#2039)', async () => {
+    phone.arrived = { through: '01K6F3Q9A1B2C3D4E5F6G7H8J9' } as Homecoming;
+    const sync = setUp({
+      identity: async () => {
+        throw new RemoteError('offline', 'no network');
+      },
+    });
+
+    await sync.syncNow();
+
+    expect(sync.homecoming()?.through).toBe('01K6F3Q9A1B2C3D4E5F6G7H8J9');
+  });
+
+  it('forgets the homecoming once shown, on its server too', async () => {
+    phone.arrived = { through: '01K6F3Q9A1B2C3D4E5F6G7H8J9' } as Homecoming;
+    const sync = setUp();
+    await sync.syncNow();
+    const arrived = sync.homecoming();
+
+    sync.seenHomecoming(arrived as Homecoming);
+    await Promise.resolve();
+
+    expect(sync.homecoming()).toBeNull();
+    expect(phone.arrived).toBeNull();
   });
 
   it('waits for the PC when the folder holds no academy yet, and publishes nothing of its own', async () => {
@@ -483,9 +510,9 @@ describe('SyncService', () => {
         (event) => event instanceof HttpResponse,
       )
       .subscribe();
-    vi.advanceTimersByTime(PUSH_DELAY_MS - 1);
+    await vi.advanceTimersByTimeAsync(PUSH_DELAY_MS - 1);
     expect(rounds).toBe(1);
-    vi.advanceTimersByTime(1);
+    await vi.advanceTimersByTimeAsync(1);
     expect(rounds).toBe(2);
   });
 

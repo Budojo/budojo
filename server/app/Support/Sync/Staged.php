@@ -24,7 +24,9 @@ final class Staged
             }
         }
         SyncStorage::discardStaged();
-        // A rebase set aside for an earlier stage never replays on this one.
+        // A rebase set aside for an earlier stage never replays on this one,
+        // and a homecoming never tells of a pull this stage replaced.
         RebasePending::clear();
+        HomecomingSince::clear();
     }
 }

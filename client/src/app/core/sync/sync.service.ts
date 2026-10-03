@@ -5,6 +5,7 @@ import { versionsIn } from './decide';
 import { AskChoice, resolveAsk, SyncContext, SyncLedger, SyncShell, syncOnce } from './engine';
 import { importSyncKey } from './envelope';
 import { checkFolder, hasRoomFor } from './folder';
+import { Homecoming } from './homecoming';
 import { HttpSyncServer } from './http-sync-server';
 import { VersionRef } from './layout';
 import { LedgerOwner, loadLedger, saveLedger, savedOwner } from './ledger-store';
@@ -102,6 +103,10 @@ export class SyncService {
 
   private readonly stateSignal = signal<SyncState>({ kind: 'off' });
   readonly state = this.stateSignal.asReadonly();
+
+  private readonly homecomingSignal = signal<Homecoming | null>(null);
+  /** What the other device's work brought (#2039), for the card on Oggi, until it is shown. */
+  readonly homecoming = this.homecomingSignal.asReadonly();
 
   /** What `stop` undoes; null while stopped. */
   private stopping: (() => void) | null = null;
@@ -229,6 +234,12 @@ export class SyncService {
 
   private async round(resolution?: { choice: AskChoice; seen: VersionRef }): Promise<void> {
     const platform = this.platform;
+    // What the last pull brought is beside this device's database: read
+    // before anything reaches Drive. A pull loads the page again, so the
+    // first round after it finds it.
+    if (platform !== null) {
+      await this.loadHomecoming();
+    }
     let identity: SyncIdentity | null;
     try {
       identity = platform === null ? null : await platform.identity();
@@ -345,6 +356,22 @@ export class SyncService {
       if (swapped) {
         this.reload();
       }
+    }
+  }
+
+  /** Shown on Oggi: seen, on the server too. One a later pull added to stays there. */
+  seenHomecoming(arrived: Homecoming): void {
+    this.homecomingSignal.set(null);
+    this.server.seenHomecoming(arrived.through).catch(() => {
+      // Seen again at the next start: the card says the same thing twice, nothing is lost.
+    });
+  }
+
+  private async loadHomecoming(): Promise<void> {
+    try {
+      this.homecomingSignal.set(await this.server.homecoming());
+    } catch {
+      // The card waits for the next round: Oggi never fails on it.
     }
   }
 

@@ -3456,6 +3456,26 @@
       "localOnlyDetailFolder": "If this disk breaks, the academy goes with it. Choose a folder for the backups.",
       "stale": "The last copy outside this computer is from {{date}}",
       "staleDetail": "Nothing has reached it for more than a week. Open the backup page to see why."
+    },
+    "homecoming": {
+      "fromPhone": "From the phone, {{when}}",
+      "fromPc": "From the PC, {{when}}",
+      "whenToday": "today at {{time}}",
+      "whenYesterday": "yesterday at {{time}}",
+      "whenDay": "{{day}} at {{time}}",
+      "presencesInOne": "{{count}} attendance in {{lesson}}",
+      "presencesInOther": "{{count}} attendances in {{lesson}}",
+      "presencesOne": "{{count}} attendance",
+      "presencesOther": "{{count}} attendances",
+      "paymentsOne": "{{count}} payment ({{amount}})",
+      "paymentsOther": "{{count}} payments ({{amount}})",
+      "athletesOne": "{{count}} new athlete",
+      "athletesOther": "{{count}} new athletes",
+      "promotionsOne": "{{count}} promotion",
+      "promotionsOther": "{{count}} promotions",
+      "otherOne": "{{count}} other change",
+      "otherOther": "{{count}} other changes",
+      "close": "Got it"
     }
   },
   "backup": {

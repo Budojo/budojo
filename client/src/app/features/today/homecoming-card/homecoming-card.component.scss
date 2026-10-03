@@ -1,0 +1,47 @@
+// The homecoming (#2039): news, not an alarm. Oggi's card surface and
+// hairline, the source in a line of ink, and what arrived beneath it as a
+// run of phrases that wraps.
+
+.homecoming {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin: 0 0 1rem;
+  padding: 1rem 1.5rem;
+  background: var(--p-content-background);
+  border: 1px solid var(--p-content-border-color);
+  border-radius: var(--p-border-radius-md);
+
+  &__icon {
+    padding-top: 0.25rem;
+    color: var(--p-text-muted-color);
+    font-size: 1.25rem;
+  }
+
+  &__body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 0;
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--p-text-color);
+  }
+
+  &__items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 1rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 0.875rem;
+    color: var(--p-text-color);
+    font-variant-numeric: tabular-nums;
+  }
+}

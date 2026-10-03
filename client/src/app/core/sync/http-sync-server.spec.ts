@@ -78,6 +78,24 @@ describe('HttpSyncServer', () => {
     await cleared;
   });
 
+  it('reads the homecoming, null when nothing waits, and says it was seen (#2039)', async () => {
+    const arrived = server.homecoming();
+    http.expectOne('/api/v1/sync/homecoming').flush({ data: { through: ULID, athletes: 1 } });
+    expect(await arrived).toEqual({ through: ULID, athletes: 1 });
+
+    const none = server.homecoming();
+    http
+      .expectOne('/api/v1/sync/homecoming')
+      .flush(null, { status: 204, statusText: 'No Content' });
+    expect(await none).toBeNull();
+
+    const seen = server.seenHomecoming(ULID);
+    const request = http.expectOne(`/api/v1/sync/homecoming?through=${ULID}`);
+    expect(request.request.method).toBe('DELETE');
+    request.flush(null, { status: 204, statusText: 'No Content' });
+    await seen;
+  });
+
   it('says whether the database holds an academy: 404 is none, anything else fails', async () => {
     const holds = server.holdsAcademy();
     http.expectOne('/api/v1/academy').flush({ data: { id: 1 } });
