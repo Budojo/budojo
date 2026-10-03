@@ -265,7 +265,7 @@ Each entry ends in one state, recorded in [`sync_entries`](../entities/sync-entr
 | already | what it does is true already: a presence marked on both devices, a field set to the same value, an athlete deleted on both | yes, so the other device holds it |
 | conflict | below | yes |
 
-**A conflict is never dropped.** The write waits for the owner in [`sync_conflicts`](../entities/sync-conflict.md), with both sides (PRD § 6.4; the owner's answer is #2038). What it changed is undone first: every write runs in a savepoint, rolled back when it does not apply.
+**A conflict is never dropped.** The write waits for the owner in [`sync_conflicts`](../entities/sync-conflict.md), with both sides (PRD § 6.4). The owner answers on the device that shows it (#2038): what is here stays, the set-aside write is sent again (`retry`), or they set it right themselves. **The answer is a journaled write of its own**, so it reaches the other device even through a rebase. What it changed is undone first: every write runs in a savepoint, rolled back when it does not apply.
 - **`refused`:** the rules refuse it here (403, 409, 422).
 - **`gone`:** its row is gone (404, or an update whose target was deleted here, softly too), or it names a row an earlier entry made there and none here.
 - **`changed`:** a field it changes was changed here since it was written, or a delete by year and month meets another row than the one it deleted. An update is about the fields its body sets by name; the others moved with them and are derived again. One that sets none by name (a photo: `photo` sets `photo_path`) is about every field it changed.

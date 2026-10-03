@@ -733,6 +733,110 @@ describe('a lesson’s topics, tagged on two devices (#2102)', function (): void
     });
 });
 
+describe('«Da decidere»: the owner’s answers (#2031)', function (): void {
+    /** A `changed` conflict on Luca’s last name: Bianco on the phone, Verdi on the PC. */
+    function conflictOnLucasName(mixed $test): array
+    {
+        $entries = onThePhone(fn () => $test->actingAs($test->owner)->patchJson("/api/v1/athletes/{$test->luca}", ['last_name' => 'Bianco'])->assertOk());
+        $test->actingAs($test->owner)->patchJson("/api/v1/athletes/{$test->luca}", ['last_name' => 'Verdi'])->assertOk();
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'conflict']);
+
+        return $entries;
+    }
+
+    it('lists what waits, with whom it is about and the request that makes the phone’s write true', function (): void {
+        $entries = conflictOnLucasName($this);
+
+        $this->actingAs($this->owner)->getJson('/api/v1/sync/conflicts')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $entries[0]['id'])
+            ->assertJsonPath('data.0.device', 'phone9c1e')
+            ->assertJsonPath('data.0.reason', 'changed')
+            ->assertJsonPath('data.0.detail.field', 'last_name')
+            ->assertJsonPath('data.0.subject.athlete', ['id' => $this->luca, 'name' => 'Luca Verdi'])
+            ->assertJsonPath('data.0.retry', [['method' => 'PATCH', 'url' => "/api/v1/athletes/{$this->luca}", 'body' => ['last_name' => 'Bianco']]]);
+    });
+
+    it('keeps the phone’s write: the page sends the retry, then the answer, and nothing waits any more', function (): void {
+        $entries = conflictOnLucasName($this);
+        $retry = $this->actingAs($this->owner)->getJson('/api/v1/sync/conflicts')->json('data.0.retry.0');
+
+        $this->actingAs($this->owner)->json($retry['method'], $retry['url'], $retry['body'])->assertOk();
+        $this->actingAs($this->owner)->postJson("/api/v1/sync/conflicts/{$entries[0]['id']}/decision", ['decision' => 'mine'])->assertNoContent();
+
+        expect(Athlete::query()->findOrFail($this->luca)->last_name)->toBe('Bianco')
+            ->and(DB::table('sync_conflicts')->where('entry_id', $entries[0]['id'])->value('decision'))->toBe('mine');
+        $this->actingAs($this->owner)->getJson('/api/v1/sync/conflicts')->assertJsonCount(0, 'data');
+    });
+
+    it('undoes the month first when the phone paid it otherwise, and offers nothing when the fee would make another amount', function (): void {
+        $entries = onThePhone(fn () => $this->actingAs($this->owner)
+            ->postJson("/api/v1/athletes/{$this->luca}/payments", ['year' => 2026, 'month' => 10, 'payment_method' => 'cash'])->assertCreated());
+        $this->actingAs($this->owner)->postJson("/api/v1/athletes/{$this->luca}/payments", ['year' => 2026, 'month' => 10, 'payment_method' => 'pos'])->assertCreated();
+        replayOnThePc($entries);
+
+        $retry = $this->actingAs($this->owner)->getJson('/api/v1/sync/conflicts')->json('data.0.retry');
+        expect(array_column($retry, 'method'))->toBe(['DELETE', 'POST'])
+            ->and($retry[0]['url'])->toBe("/api/v1/athletes/{$this->luca}/payments/2026/10");
+        foreach ($retry as $request) {
+            $this->actingAs($this->owner)->json($request['method'], $request['url'], $request['body'] ?? [])->assertSuccessful();
+        }
+        expect(DB::table('athlete_payments')->where('athlete_id', $this->luca)->value('payment_method'))->toBe('cash');
+
+        $fee = onThePhone(fn () => $this->actingAs($this->owner)
+            ->postJson("/api/v1/athletes/{$this->luca}/payments", ['year' => 2026, 'month' => 11, 'payment_method' => 'cash'])->assertCreated());
+        $this->owner->academy->update(['monthly_fee_cents' => 10000]);
+        replayOnThePc([end($fee)]);
+        $amount = collect($this->actingAs($this->owner)->getJson('/api/v1/sync/conflicts')->json('data'))->firstWhere('detail.field', 'amount_cents');
+        expect($amount['retry'])->toBeNull();
+    });
+
+    it('asks about a month the PC paid within a quarter, and offers nothing for a write whose athlete is gone', function (): void {
+        $entries = onThePhone(fn () => $this->actingAs($this->owner)
+            ->postJson("/api/v1/athletes/{$this->luca}/payments", ['year' => 2026, 'month' => 9, 'payment_method' => 'cash'])->assertCreated());
+        $this->actingAs($this->owner)->postJson("/api/v1/athletes/{$this->luca}/payments", ['year' => 2026, 'month' => 8, 'period_months' => 3, 'payment_method' => 'pos'])->assertCreated();
+
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'conflict'])
+            ->and(DB::table('sync_conflicts')->where('entry_id', $entries[0]['id'])->value('reason'))->toBe('refused');
+
+        $gone = onThePhone(fn () => $this->actingAs($this->owner)->patchJson("/api/v1/athletes/{$this->luca}", ['first_name' => 'Lucas'])->assertOk());
+        $this->actingAs($this->owner)->deleteJson("/api/v1/athletes/{$this->luca}")->assertSuccessful();
+        replayOnThePc([end($gone)]);
+        $conflict = collect($this->actingAs($this->owner)->getJson('/api/v1/sync/conflicts')->json('data'))->firstWhere('reason', 'gone');
+        expect($conflict['retry'])->toBeNull();
+    });
+
+    it('records each answer once, and takes one for a conflict this database does not hold', function (): void {
+        $entries = conflictOnLucasName($this);
+
+        $this->actingAs($this->owner)->postJson("/api/v1/sync/conflicts/{$entries[0]['id']}/decision", ['decision' => 'theirs'])->assertNoContent();
+        $this->actingAs($this->owner)->postJson("/api/v1/sync/conflicts/{$entries[0]['id']}/decision", ['decision' => 'mine'])->assertNoContent();
+        $this->actingAs($this->owner)->postJson('/api/v1/sync/conflicts/01K6F3Q8Z4M7X2N5P9R1T3V6W8/decision', ['decision' => 'theirs'])->assertNoContent();
+        $this->actingAs($this->owner)->postJson("/api/v1/sync/conflicts/{$entries[0]['id']}/decision", ['decision' => 'maybe'])->assertUnprocessable();
+
+        expect(DB::table('sync_conflicts')->where('entry_id', $entries[0]['id'])->value('decision'))->toBe('theirs');
+    });
+
+    it('journals the answer, so a rebase on the other device takes it there too', function (): void {
+        $entries = conflictOnLucasName($this);
+        // The PC answers: on a paired device the answer is an entry of its own.
+        $this->actingAs($this->owner)->postJson("/api/v1/sync/conflicts/{$entries[0]['id']}/decision", ['decision' => 'theirs'])->assertNoContent();
+        $answer = DB::table('sync_journal')->where('device', 'pc4f2a')->where('route', 'sync.conflicts.decide')->sole();
+        // On a database where the conflict still waits, and that has not dealt with the answer.
+        DB::table('sync_conflicts')->update(['decided_at' => null, 'decision' => null]);
+        DB::table('sync_entries')->where('id', $answer->id)->delete();
+        // The journal stays aside, as at a rebase's stage.
+        $kept = RebasePending::entriesOf('pc4f2a');
+        DB::table('sync_journal')->where('device', 'pc4f2a')->delete();
+
+        $outcomes = app(ReplayJournalAction::class)->execute('pc4f2a', $kept);
+
+        expect($outcomes[$answer->id])->toBe('applied')
+            ->and(DB::table('sync_conflicts')->where('entry_id', $entries[0]['id'])->value('decision'))->toBe('theirs');
+    });
+});
+
 describe('the rebase across the swap (#2031 step 3)', function (): void {
     beforeEach(function (): void {
         $this->dir = sys_get_temp_dir() . '/budojo-rebase-' . bin2hex(random_bytes(4));

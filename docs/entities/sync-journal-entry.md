@@ -4,7 +4,7 @@
 
 This device's own writes, kept in full until every other device holds them (#2031, [`docs/sync/protocol.md`](../sync/protocol.md) § A journal entry and § Deciding). A rebase replays them through the router onto another device's database; the app packs the ones a version lacks into its journal.
 
-Recorded by the `RecordJournalEntry` middleware, **on a paired device only** (`budojo.sync.device`, from the shell's `BUDOJO_DEVICE_ID`; never the database, which travels), for the academy's data writes (`JournalRoutes`): `academy.*`, `athletes.*`, `attendance.*`, `documents.*`, `lessons.*`, `me.athlete.*`, `me.attendance.*`. The account, the session, the sync itself and invitations are never journaled.
+Recorded by the `RecordJournalEntry` middleware, **on a paired device only** (`budojo.sync.device`, from the shell's `BUDOJO_DEVICE_ID`; never the database, which travels), for the academy's data writes (`JournalRoutes`): `academy.*`, `athletes.*`, `attendance.*`, `documents.*`, `lessons.*`, `me.athlete.*`, `me.attendance.*`, and the owner's answers to set-aside writes (`sync.conflicts.decide`). The account, the session, the sync itself and invitations are never journaled.
 
 No Eloquent model, as for `sync_entries`.
 

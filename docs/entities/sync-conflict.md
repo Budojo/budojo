@@ -37,6 +37,19 @@ No Eloquent model, as for `sync_entries`.
 | `failed` | Anything else, a server error first. |
 | `unknown-route` | A route this Budojo no longer has. |
 
+## The owner's answer (#2031, #2038)
+
+`GET /api/v1/sync/conflicts` lists those that wait (`decided_at` null), and `POST /api/v1/sync/conflicts/{entry}/decision` records the answer:
+- **`theirs`:** what is here stays;
+- **`mine`:** the page sent the conflict's `retry` first, the requests that make the set-aside write true here. A month paid otherwise is undone first. There is no `retry` for:
+  - a write whose row is gone here;
+  - an upload;
+  - a payment whose amount the fee here works out otherwise;
+  - a route this Budojo no longer has;
+- **`by-hand`:** the owner set it right themselves.
+
+**The answer is journaled** (`sync.conflicts.decide`): it reaches the other device's database even through a rebase that starts from a version that still asks. Recording it again, or for a conflict this database does not hold, changes nothing.
+
 ## Business rules
 
 - **What the write did is undone before the conflict is recorded:** every replayed write runs in a savepoint, rolled back when it does not apply.

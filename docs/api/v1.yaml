@@ -7716,6 +7716,75 @@ paths:
         '403': { description: Forbidden — the user is not an owner. }
         '404': { description: The runtime profile has no `sync` capability. }
 
+  /sync/conflicts:
+    get:
+      operationId: syncConflicts
+      summary: The writes a rebase set aside that wait for the owner
+      description: |
+        «Da decidere» (#2031, #2038, PRD § 6.4), oldest first, each one never
+        dropped (`docs/entities/sync-conflict.md`). With each, what the page
+        needs to ask:
+        - `subject.athlete`: the athlete the write is about, by name, when it
+          is about one;
+        - `retry`: the requests that make the set-aside write true here, in
+          this database's ids, sent in order for «Tieni la mia», or null when
+          there are none: its row is gone here, it is an upload, the fee here
+          would make another amount, or its route is gone. A month paid
+          otherwise is undone first, then paid as the entry paid it.
+      tags: [sync]
+      responses:
+        '200':
+          description: The conflicts that wait
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/SyncConflict' }
+        '401': { description: Unauthenticated }
+        '403': { description: Forbidden — the user is not an owner. }
+        '404': { description: The runtime profile has no `sync` capability. }
+
+  /sync/conflicts/{entry}/decision:
+    post:
+      operationId: syncConflictDecide
+      summary: Record the owner's answer to a set-aside write
+      description: |
+        - `theirs`: what is here stays;
+        - `mine`: the page sent the conflict's `retry` first;
+        - `by-hand`: the owner set it right.
+
+        It only records the answer, **and it is journaled**, so it reaches
+        the other device's database even through a rebase that starts from a
+        version that still asks. A conflict this database does not hold, or
+        one decided already, is left as it is: `204` either way.
+      tags: [sync]
+      parameters:
+        - name: entry
+          in: path
+          required: true
+          description: The set-aside journal entry's id (a ULID).
+          schema: { type: string, pattern: '^[0-7][0-9A-HJKMNP-TV-Z]{25}$' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision]
+              properties:
+                decision: { type: string, enum: [theirs, mine, by-hand] }
+      responses:
+        '204': { description: 'Recorded, or nothing to record' }
+        '401': { description: Unauthenticated }
+        '403': { description: Forbidden — the user is not an owner. }
+        '404': { description: The runtime profile has no `sync` capability. }
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
   /stats/payments/summary:
     get:
       operationId: statsPaymentsSummary
@@ -9080,6 +9149,46 @@ components:
             $ref: '#/components/schemas/ValidationErrorBody'
 
   schemas:
+    SyncConflict:
+      type: object
+      required: [id, device, route, reason, detail, entry, recorded_at, subject, retry]
+      properties:
+        id: { type: string, description: The set-aside journal entry's id. }
+        device: { type: string, description: 'The device that made the write: `pc4f2a`, `phone9c1e`.' }
+        route: { type: string, example: athletes.update }
+        reason: { type: string, enum: [refused, gone, changed, differs, failed, unknown-route] }
+        detail:
+          type: object
+          description: What the replay found, as `docs/entities/sync-conflict.md` describes.
+          example: { reason: changed, table: athletes, id: '57', field: last_name, saw: Bianchi, here: Verdi }
+        entry:
+          type: object
+          description: The write as replayed here, in this database's ids.
+          properties:
+            method: { type: string }
+            params: { type: object }
+            body: { type: object, nullable: true }
+            before: { type: object, nullable: true }
+        recorded_at: { type: string }
+        subject:
+          type: object
+          nullable: true
+          properties:
+            athlete:
+              type: object
+              properties:
+                id: { type: integer }
+                name: { type: string }
+        retry:
+          type: array
+          nullable: true
+          items:
+            type: object
+            required: [method, url, body]
+            properties:
+              method: { type: string }
+              url: { type: string, example: /api/v1/athletes/57 }
+              body: { nullable: true }
     AcademySummary:
       type: object
       description: |

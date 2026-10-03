@@ -805,6 +805,12 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::get('journal', [\App\Http\Controllers\Sync\JournalController::class, 'index'])->name('sync.journal.index');
             Route::delete('journal', [\App\Http\Controllers\Sync\JournalController::class, 'destroy'])->name('sync.journal.destroy');
             Route::get('holds', [\App\Http\Controllers\Sync\JournalController::class, 'holds'])->name('sync.holds');
+            // «Da decidere»: the writes a rebase set aside, and the owner's
+            // answer, journaled so it reaches the other device (#2031).
+            Route::get('conflicts', [\App\Http\Controllers\Sync\ConflictController::class, 'index'])->name('sync.conflicts.index');
+            Route::post('conflicts/{entry}/decision', [\App\Http\Controllers\Sync\ConflictController::class, 'decide'])
+                ->where('entry', '[0-7][0-9A-HJKMNP-TV-Z]{25}')
+                ->name('sync.conflicts.decide');
         });
 
     // Owner-only search + stats (#774). The Cmd/Ctrl-K palette and the
