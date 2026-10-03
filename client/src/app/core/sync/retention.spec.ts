@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { SeenVersion } from './decide';
 import { VersionRef } from './layout';
-import { versionsToPrune } from './retention';
+import { pruneBatch, versionsToPrune } from './retention';
 
 /** The versions the folder keeps (#2030): the newest densely, one a day going back. */
 describe('versionsToPrune', () => {
@@ -90,6 +90,53 @@ describe('versionsToPrune', () => {
 
       expect(gone.filter((version) => version.device === 'pc4f2a')).toHaveLength(13);
       expect(seqs(gone.filter((version) => version.device === 'phone9c1e'))).toEqual([15]);
+    });
+  });
+
+  describe('a push at a time (#2117 review)', () => {
+    // A left academy: 25 versions, one a day; the live one beside it, 40,
+    // the newest ten days; both devices on the live one.
+    const left: SeenVersion[] = Array.from({ length: 25 }, (_, i) => ({
+      seq: i + 1,
+      device: 'aaaa1111',
+      parent: i === 0 ? null : { seq: i, device: 'aaaa1111' },
+      created: START + i * DAY,
+    }));
+    const live: SeenVersion[] = Array.from({ length: 40 }, (_, i) => ({
+      seq: 26 + i,
+      device: 'bbbb2222',
+      parent: i === 0 ? null : { seq: 25 + i, device: 'bbbb2222' },
+      created: START + 30 * DAY + Math.floor(i / 4) * DAY + (i % 4) * 60_000,
+    }));
+    const onLive = [
+      { seq: 65, device: 'bbbb2222' },
+      { seq: 65, device: 'bbbb2222' },
+    ];
+
+    it('deletes a left academy’s first version only once nothing else of its line is listed', () => {
+      let folder = [...left, ...live];
+      const firstLeft = left[0];
+      for (let push = 0; push < 10; push++) {
+        const batch = pruneBatch(folder, onLive, 20);
+        if (batch.length === 0) break;
+        if (batch.includes(firstLeft)) {
+          expect(
+            seqs(
+              folder.filter((version) => version.device === 'aaaa1111' && version !== firstLeft),
+            ),
+          ).toEqual(
+            seqs(batch.filter((version) => version.device === 'aaaa1111' && version !== firstLeft)),
+          );
+        }
+        folder = folder.filter((version) => !batch.includes(version));
+      }
+
+      expect(folder.some((version) => version.device === 'aaaa1111')).toBe(false);
+      // The live line as the policy keeps it in one go: the newest ten, the
+      // newest of each day, and its first version.
+      expect(seqs(folder)).toEqual(
+        seqs(live.filter((version) => !versionsToPrune(live, onLive).includes(version))),
+      );
     });
   });
 });

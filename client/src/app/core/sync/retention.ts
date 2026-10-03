@@ -35,36 +35,74 @@ export function versionsToPrune(
   bases: readonly (VersionRef | null)[],
   policy: VersionRetention = VERSION_RETENTION,
 ): SeenVersion[] {
+  const { left, beyond } = plan(versions, bases, policy);
+  return [...left, ...beyond];
+}
+
+/** What goes: the left academies' lines, and the live line past the policy. */
+function plan(
+  versions: readonly SeenVersion[],
+  bases: readonly (VersionRef | null)[],
+  policy: VersionRetention,
+): { left: SeenVersion[]; beyond: SeenVersion[] } {
+  const nothing = { left: [], beyond: [] };
   const latest = latestVersion(versions);
   if (latest === null) {
-    return [];
+    return nothing;
   }
   const roots = versions.filter((version) => version.parent === null);
   if (roots.length <= 1) {
-    return beyondPolicy(versions, policy);
+    return { left: [], beyond: beyondPolicy(versions, policy) };
   }
   const walk = walkDown(latest, versions);
   const allOnIt =
     bases.length > 1 &&
     bases.every((base) => base !== null && walk.some((version) => sameVersion(version, base)));
   if (!allOnIt) {
-    return [];
+    return nothing;
   }
-  const left = roots.filter((root) => descends(latest, root, versions) === false);
-  if (roots.length - left.length !== 1) {
+  const leftRoots = roots.filter((root) => descends(latest, root, versions) === false);
+  if (roots.length - leftRoots.length !== 1) {
     // The latest's own first version is not told apart: nothing goes.
-    return [];
+    return nothing;
   }
-  const dead = versions.filter((version) =>
-    left.some((root) => descends(version, root, versions) === true),
+  const left = versions.filter((version) =>
+    leftRoots.some((root) => descends(version, root, versions) === true),
   );
-  return [
-    ...dead,
-    ...beyondPolicy(
-      versions.filter((version) => !dead.includes(version)),
+  return {
+    left,
+    beyond: beyondPolicy(
+      versions.filter((version) => !left.includes(version)),
       policy,
     ),
-  ];
+  };
+}
+
+/** How many versions one push deletes at most (#2117 review): each delete is a few calls to Drive. */
+export const PRUNED_PER_PUSH = 20;
+
+/**
+ * What one push deletes: `versionsToPrune`, a few at a time, so a folder that
+ * grew before the retention shipped is trimmed over the next pushes and
+ * never in one round that keeps the owner waiting on Drive.
+ *
+ * **A left academy goes first, from its newest down to its first version:**
+ * what remains of its line stays joined to its first version, so it is still
+ * told apart at the next push, and the live line stays whole meanwhile,
+ * since its walk down is what proves the other line left (#2117 review).
+ * Only then is the live line pruned, the oldest first.
+ */
+export function pruneBatch(
+  versions: readonly SeenVersion[],
+  bases: readonly (VersionRef | null)[],
+  limit = PRUNED_PER_PUSH,
+): SeenVersion[] {
+  const { left, beyond } = plan(versions, bases, VERSION_RETENTION);
+  const ordered =
+    left.length > 0
+      ? [...left].sort((a, b) => b.seq - a.seq)
+      : [...beyond].sort((a, b) => a.seq - b.seq);
+  return ordered.slice(0, Math.max(limit, 1));
 }
 
 /** `newest` and the versions under it, as far as the listing names them. */

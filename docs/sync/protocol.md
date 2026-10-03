@@ -79,7 +79,7 @@ Every version is the whole database, so the folder keeps them as the PC keeps it
 - **Never the newest,** which the other device may be reading.
 - **Never a first version.** With it, a device whose own line is pruned still tells another academy (§ Deciding).
 - **Two academies in the folder** (two first versions): nothing is deleted until every device (at least two) reports a base on the latest's line, as far as the listing shows it. Before that, the owner has a question to answer on the other line, and the lines are what tell the academies apart. Then the first versions the latest provably does not descend from are the academies the owner left: they go whole, with every version that descends from them, and the latest's line is pruned to the policy.
-- **At most twenty a push, the oldest first:** a folder that grew before the retention shipped is trimmed over the next pushes, never in one round that keeps the owner waiting on Drive.
+- **At most twenty a push:** a folder that grew before the retention shipped is trimmed over the next pushes, never in one round that keeps the owner waiting on Drive. **A left academy goes first, from its newest down to its first version,** so what remains of it stays joined to its first version and is still told apart, and the live line stays whole meanwhile, its walk down being the proof the other line left. Then the live line, the oldest first.
 - **Best effort:** a version it could not delete is tried again at the next push; the round already landed, and still counts.
 
 ### The database side (#2030)

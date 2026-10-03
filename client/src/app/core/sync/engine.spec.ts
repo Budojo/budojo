@@ -1,16 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { utf8 } from './bytes';
-import {
-  AskChoice,
-  EMPTY_LEDGER,
-  PRUNED_PER_PUSH,
-  resolveAsk,
-  SyncContext,
-  syncOnce,
-} from './engine';
+import { AskChoice, EMPTY_LEDGER, resolveAsk, SyncContext, syncOnce } from './engine';
 import { importSyncKey, newSyncKey, seal } from './envelope';
 import { devicePath, filePath } from './layout';
 import { MemoryRemote, SyncRemote } from './remote';
+import { PRUNED_PER_PUSH } from './retention';
 import { MemoryDevice as Device } from './testing/memory-device';
 
 /**

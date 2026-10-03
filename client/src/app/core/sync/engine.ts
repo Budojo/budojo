@@ -13,7 +13,7 @@ import { syncingDevices } from './folder';
 import { JournalEntry } from './journal';
 import { devicePath, ListedVersion, sameVersion, VersionRef, versionPath } from './layout';
 import { SyncRemote } from './remote';
-import { versionsToPrune } from './retention';
+import { pruneBatch } from './retention';
 import { packVersion, PROTOCOL, unpackVersion } from './version';
 
 /**
@@ -342,9 +342,6 @@ async function finishRound(
   return { outcome, missingFiles };
 }
 
-/** How many versions one push deletes at most (#2117 review): each delete is a few calls to Drive. */
-export const PRUNED_PER_PUSH = 20;
-
 /**
  * The folder's versions down to what it keeps (`retention.ts`, #2030), by
  * the device that just pushed, with the bases every device reported: the
@@ -357,11 +354,7 @@ async function pruneVersions(context: SyncContext, reports: DeviceReport[]): Pro
   try {
     const versions = versionsIn((await context.remote.list('versions')).files);
     const bases = reports.map((report) => report.base);
-    // The oldest first, and a few a push: a folder that grew before the
-    // retention shipped is trimmed over the next pushes, never in one round
-    // that keeps the owner waiting on Drive.
-    const prunable = versionsToPrune(versions, bases).sort((a, b) => a.seq - b.seq);
-    for (const version of prunable.slice(0, PRUNED_PER_PUSH)) {
+    for (const version of pruneBatch(versions, bases)) {
       await context.remote.remove(versionPath(version));
     }
   } catch {
