@@ -79,7 +79,7 @@ The app packs and seals versions. The server only hands it the database and take
 - **`PUT /api/v1/sync/stage`:** another device's database, for a fast-forward or after a rebase.
   - **Checked before anything is written:** a SQLite file, undamaged, with Budojo's migrations, no newer than this code (`422` `newer` or `unreadable`). A migration this code lacks makes a database newer, **except a stray name no later Budojo stands behind** (`SyncDatabase::STRAY_MIGRATIONS`, #2083): the only two ever added to the repository and gone since, #443's renamed support-tickets migration and the unmerged licensing branch's (#1297). A database keeps such a row for good. The owner's PC refused every backup as newer on its first try (#2079); the door now names the row it finds.
   - **Written beside the live database** as `<database>.staged`.
-  - **The shell swaps it in at its next start** (on the phone, `StagedSwap.java`, #2079). The live database steps aside as `<database>.previous` **with its `-wal`**, which can hold writes the main file does not have yet; it is the copy to go back to, and where the rebase (#2031) reads this device's own writes. Then it runs `budojo:sync-reconcile`: it clears the cache, and deletes the files no row names, by the rules the deleting Actions follow. A `<database>.reconcile` file, written before the swap and removed once the reconcile succeeds, keeps a start that dies halfway from skipping it (the phone, #2034).
+  - **The shell swaps it in at its next start** (on the phone, `StagedSwap.java`, #2079). The live database steps aside as `<database>.previous` **with its `-wal`**, which can hold writes the main file does not have yet; it is the copy to go back to. A rebase sets this device's own writes aside at the stage (§ Rebase). Then it runs `budojo:sync-reconcile`: it clears the cache, and deletes the files no row names, by the rules the deleting Actions follow. A `<database>.reconcile` file, written before the swap and removed once the reconcile succeeds, keeps a start that dies halfway from skipping it (the phone, #2034).
   - **After a rebase, the reconcile runs after the replay, never between the swap and the replay.** A document uploaded offline has its file on this device but no row in the swapped-in database until the replay recreates it; reconciling first would delete the only copy.
   - **A backup the PC took is staged the same way (#2079),** by `POST /api/v1/device/backup/restore`, which the door uses before the PC publishes versions. It also stages the academy's files, `storage/app/…` from the archive, as `storage/app.staged` beside `storage/app`. **The files go first, and the database commits:** the shell swaps `app.staged` in only beside a staged database, and deletes one it finds alone, which an interrupted restore leaves. A version's stage (`PUT /sync/stage`) clears any `app.staged` first: a version carries no files.
   - **The body is bound by PHP's `post_max_size`** (Laravel checks it for every method, `413` above it). Each shell sets it above any academy's database (#2032, #2034).
@@ -130,7 +130,7 @@ The journal is a JSON list of the writes that made this version from its parent,
 | `method` | `POST`, `PUT`, `PATCH` or `DELETE` | `POST` |
 | `route` | the Laravel route name: dotted segments of `a-z`, `0-9`, `_` and `-`, each starting with a letter. Every write route has one, pinned by `WriteRouteNamesTest`: a journal outlives the code that wrote it, so a rename is a decision (#2031). | `attendance.store`, `academy.fee-tiers.store` |
 | `params` | the route parameters, strings and numbers | `{ "athlete": 57 }` |
-| `body` | the request body, or `null`. An uploaded file is `{ "$file": { "sha256", "name", "type" } }`; its bytes stay on the device until the entry is cleared | `{ "date": "2026-10-01", "athlete_ids": [57] }` |
+| `body` | the request body, or `null`, with a payment's `amount_cents`, `period_months` and `paid_at` as the row got them (§ Rebase). An uploaded file is `{ "$file": { "sha256", "name", "type" } }`; its bytes stay on the device until the entry is cleared | `{ "date": "2026-10-01", "athlete_ids": [57] }` |
 | `created` | the ids the write created, by table | `{ "attendance_records": [912] }` |
 | `before` | for an update or a delete, what the rows held before, by table and id; else `null` | `{ "athletes": { "57": { "first_name": "Luca" } } }` |
 
@@ -227,3 +227,40 @@ There is no pairing code (#2033). **A device joins at its first «Accedi con Goo
 | The latest is the base | nothing, or push base + 1 if there are unpushed writes |
 | The latest is newer, and the device has writes to carry (unpushed or unconfirmed) | **rebase**: pull it and replay into it every write it lacks, then push if any were |
 | The latest is newer, nothing to carry | fast-forward |
+
+## Rebase (#2031)
+
+**A device carries its kept writes onto the other device's version, then publishes the result on top** (`client/src/app/core/sync/engine.ts`, the server's `ReplayJournalAction`):
+1. **It stages the version as a rebase** (`PUT /sync/stage?rebase=1`), with the page's writes held, as for a fast-forward. The server sets the device's kept journal aside first, beside the live database as `<database>.rebase`, then stages the database. **Every stage clears a `.rebase` left from before**, so a fast-forward or a restore never replays an older one.
+2. **It saves its ledger:** the version is its base, and nothing counts as pushed or listed. Every entry the replay keeps is in no version on this line yet.
+3. **The shell swaps it in.** Before the app serves, `budojo:sync-reconcile` replays the set-aside entries, **before it sweeps anything**. Until the replay gives an offline upload its row, no row names its file, and the journal's sweep or the files' reconcile would delete the only copy. The `.rebase` file goes only once every entry is dealt with: a start that dies halfway replays again, and skips what it already did.
+4. **It pushes what the replay kept**, as version + 1 on top of the one it pulled. When that version held every write already, there is nothing to push. A device killed before the push pushes at its next round: its ledger counts the kept entries as unpushed.
+
+**The replay runs each entry through the route, FormRequest and Action that made it,** as the owner, in order, its ids rewritten through the id map (§ A journal entry):
+- **on the clock of the moment it was written** (its `at`): a payment marked on the 3rd without a date is paid on the 3rd, and "not after today" is that day;
+- **an id the map cannot pair is lost, never kept.** An entry that made fewer rows of a table here than where it was written (an import that skipped a duplicate, a create that became a conflict) leaves those rows with no row here. A later entry that names one is a `gone` conflict: kept as it was, the id would name whatever row has it here;
+- **an update sends its whole form, and changed only what its `before` recorded.** A field it carried along as it saw it, which this database holds otherwise, was changed by the other device: that change stays, and the field is left out of the replayed body.
+  - The row a write is about is the route's last model; for one that binds none, the owner's academy for `PATCH /academy`, or else the one row the write changed (a lesson's notes, the academy's logo).
+  - Fields sent together (a phone number's two halves) are left out together, and changed on both sides they are a conflict.
+  - A nested object (the address) is left out whole when the entry did not change it. When the entry did change it, a field moved here too is a conflict, and the fields it carried along take what this database holds;
+- **a write that names none of the fields it changes** (a photo removed) cannot say what it would make them. When one moved here, its replay tells: changing nothing, it was true already; changing the moved row, it is a conflict;
+- **a delete that names its row another way than by a model** (a month's payment, by year and month) must delete here the row it deleted there, field by field. One that names its row (an athlete) is compared on it alone: what it took along (his documents) is derived again;
+- **a row's own id is never compared,** and a reference made on each device (a check-in's `lesson_id`) only for whether it is set: two ids differ between devices for the same row, but one against none means the row joined a lesson or left it. The references a write names are rewritten through the id map and compared;
+- **money is never left to chance:** a payment's entry carries the amount, the period and the date the row got (`ResolvedFields`), and a payment the replay makes or finds otherwise is a `differs` conflict.
+
+Each entry ends in one state, recorded in [`sync_entries`](../entities/sync-entry.md) in the same transaction as what it did:
+
+| Outcome | When | Kept again for the next version |
+|---|---|---|
+| skipped | the database dealt with it already: the version carries it | no |
+| applied | | yes |
+| already | what it does is true already: a presence marked on both devices, a field set to the same value, an athlete deleted on both | yes, so the other device holds it |
+| conflict | below | yes |
+
+**A conflict is never dropped.** The write waits for the owner in [`sync_conflicts`](../entities/sync-conflict.md), with both sides (PRD § 6.4; the owner's answer is #2038). What it changed is undone first: every write runs in a savepoint, rolled back when it does not apply.
+- **`refused`:** the rules refuse it here (403, 409, 422).
+- **`gone`:** its row is gone (404, or an update whose target was deleted here, softly too), or it names a row an earlier entry made there and none here.
+- **`changed`:** a field it changes was changed here since it was written, or a delete by year and month meets another row than the one it deleted. An update is about the fields its body sets by name; the others moved with them and are derived again. One that sets none by name (a photo: `photo` sets `photo_path`) is about every field it changed.
+- **`differs`:** the row it made or found here differs in a field the entry sets: the same month's payment made otherwise, or an amount the fee here works out otherwise. For money, the same month is not enough.
+- **`failed`:** anything else, a server error first. **A replay never stops on an entry:** the shell runs it before the app serves, so one that stopped would stop every start.
+- **`unknown-route`:** a route this Budojo no longer has.

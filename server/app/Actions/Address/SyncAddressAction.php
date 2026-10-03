@@ -34,11 +34,12 @@ class SyncAddressAction
     public function execute(HasAddress&Model $owner, ?array $payload): void
     {
         if ($payload === null) {
-            // `$owner->address()->delete()` issues a DELETE on the relation
-            // query (no need to hydrate the model first), and works even
-            // when the relation isn't loaded yet — `$owner->address?->delete()`
-            // would silently no-op on a fresh instance.
-            $owner->address()->delete();
+            // Through the relation's query, which works even when the
+            // relation isn't loaded yet (`$owner->address?->delete()` would
+            // silently no-op on a fresh instance), and then through the
+            // model: the sync's journal sees a clear only as a model's delete
+            // (#2031), and the replay keeps an address it never saw cleared.
+            $owner->address()->first()?->delete();
             $owner->unsetRelation('address');
 
             return;

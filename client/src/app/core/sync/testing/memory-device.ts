@@ -8,7 +8,10 @@ import { JournalEntry } from '../journal';
  * database as a small JSON the engine only carries as bytes, as it carries
  * SQLite, and **its journal is inside it**, as `sync_journal` is: a swap
  * replaces it, and after the swap a device keeps only its own rows (the
- * reconcile).
+ * reconcile). **A rebase replays** as the server's does (#2031 step 3): the
+ * kept entries, set aside at the stage, each skipped when the swapped-in
+ * database holds it, found already true when its row is there, applied
+ * otherwise; every one not skipped is kept again.
  */
 
 export interface Database {
@@ -32,6 +35,10 @@ function nextId(): string {
 export class MemoryDevice implements SyncServer {
   db: Database;
   private staged: Uint8Array | null = null;
+  /** The kept entries a rebase's stage set aside, for the replay after the swap. */
+  private setAside: JournalEntry[] | null = null;
+  /** What the last replay did, by entry id. */
+  replayed: Record<string, 'skipped' | 'applied' | 'already'> = {};
   ledger: SyncLedger = EMPTY_LEDGER;
   /** True while the page's writes are held: the stage and the swap must happen inside. */
   holding = false;
@@ -93,18 +100,42 @@ export class MemoryDevice implements SyncServer {
     };
   }
 
-  async stage(database: Uint8Array) {
-    this.under.push(`stage ${this.holding ? 'held' : 'open'}`);
+  async stage(database: Uint8Array, options?: { rebase: boolean }) {
+    this.under.push(`stage${options?.rebase ? ' rebase' : ''} ${this.holding ? 'held' : 'open'}`);
+    this.setAside = options?.rebase ? await this.journal() : null;
     this.staged = database;
   }
 
-  /** The shell's swap, then the reconcile: the journal keeps only this device's rows. */
+  /** The shell's swap, then the reconcile: a rebase's replay, and the journal keeps only this device's rows. */
   swapIn(): void {
     this.under.push(`swap ${this.holding ? 'held' : 'open'}`);
     if (this.staged !== null) {
       this.db = JSON.parse(fromUtf8(this.staged)) as Database;
       this.db.journal = this.db.journal.filter((entry) => entry.device === this.id);
       this.staged = null;
+    }
+    if (this.setAside !== null) {
+      this.replay(this.setAside);
+      this.setAside = null;
+    }
+  }
+
+  private replay(entries: JournalEntry[]): void {
+    this.replayed = {};
+    for (const entry of entries) {
+      const held = this.db.dealt[entry.device];
+      if (held !== undefined && held >= entry.id) {
+        this.replayed[entry.id] = 'skipped';
+        continue;
+      }
+      const row = (entry.body as { row: string }).row;
+      const already = this.db.rows.includes(row);
+      if (!already) {
+        this.db.rows.push(row);
+      }
+      this.replayed[entry.id] = already ? 'already' : 'applied';
+      this.db.dealt[entry.device] = entry.id;
+      this.db.journal.push(entry);
     }
   }
 

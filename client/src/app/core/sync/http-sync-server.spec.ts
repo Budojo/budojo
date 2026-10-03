@@ -53,6 +53,15 @@ describe('HttpSyncServer', () => {
     await staged;
   });
 
+  it('stages a rebase with the flag the server sets the kept journal aside on (#2031)', async () => {
+    const staged = server.stage(utf8('SQLite format 3'), { rebase: true });
+    const request = http.expectOne('/api/v1/sync/stage?rebase=1');
+    expect(request.request.method).toBe('PUT');
+    request.flush(null, { status: 204, statusText: 'No Content' });
+
+    await staged;
+  });
+
   it('reads the journal and the holds, and clears through an entry', async () => {
     const journal = server.journal();
     http.expectOne('/api/v1/sync/journal').flush({ data: [{ id: ULID }] });

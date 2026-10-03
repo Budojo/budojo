@@ -19,9 +19,9 @@ use Illuminate\Database\Eloquent\Model;
  * Actions that write with queries do so for what follows from the target,
  * which the replay derives again: the children of a programme topic, a
  * lesson's topics, attendance adopted by a lesson, the training days read off
- * the timetable, carnet entries, an address. A target written with a query
- * would be a hole in `before`; the payment undo was one, and deletes its rows
- * one model at a time since #2031.
+ * the timetable, carnet entries. A target written with a query would be a
+ * hole in `before`: the payment undo and the address's clear were two, and
+ * both delete one model at a time since #2031.
  */
 final class JournalRecorder
 {
