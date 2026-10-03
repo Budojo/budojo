@@ -230,7 +230,14 @@ const rows: {
   {
     name: 'its own first version, and the PC’s pruned line went on past it: it asks, never pulls it (#2117 review)',
     local: local(ref(14, PHONE)),
-    folder: [v(1, PC, null), v(12), v(13), v(14, PC, ref(13), 13_500), v(14, PHONE, null, 14_500), v(15)],
+    folder: [
+      v(1, PC, null),
+      v(12),
+      v(13),
+      v(14, PC, ref(13), 13_500),
+      v(14, PHONE, null, 14_500),
+      v(15),
+    ],
     expected: { kind: 'ask', latest: ref(15) },
   },
   {

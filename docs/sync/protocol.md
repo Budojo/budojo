@@ -77,8 +77,8 @@ A reader checks every field it knows and ignores any it does not, so a later app
 Every version is the whole database, so the folder keeps them as the PC keeps its backups (#1228, #1330): **the newest ten, and the newest of each of the fourteen most recent days** that hold one, on Drive's clock (`retention.ts`). The rest is deleted.
 - **By the device that just pushed,** at the end of that round, from a fresh listing and the bases every device reported (`devices/`). A pull deletes nothing, so the other device's round is never slowed by it. **Today that is the phone:** the PC's Drive bridge refuses every delete (#2106) until it can verify that a file is a version (#2120).
 - **Never the newest,** which the other device may be reading.
-- **Never a first version.** A first version above a device's base is how that device tells another academy, however much of either line is pruned (§ Deciding).
-- **Two academies in the folder** (two first versions): nothing is deleted while a device reports a base on a line other than the latest's, since the owner has a question to answer there and the lines are what tell the academies apart. Once every device (at least two) reports a base on the latest's line, the other lines are the academies the owner left, and go whole.
+- **Never a first version.** With it, a device whose own line is pruned still tells another academy (§ Deciding).
+- **Two academies in the folder** (two first versions): nothing is deleted until every device (at least two) reports a base on the latest's line, as far as the listing shows it. Before that, the owner has a question to answer on the other line, and the lines are what tell the academies apart. Then the first versions the latest provably does not descend from are the academies the owner left: they go whole, with every version that descends from them, and the latest's line is pruned to the policy.
 - **Best effort:** a version it could not delete is tried again at the next push; the round already landed, and still counts.
 
 ### The database side (#2030)
@@ -231,7 +231,7 @@ There is no pairing code (#2033). **A device joins at its first «Accedi con Goo
 | No base, empty folder | nothing, or push version 1 if the device holds an academy and made the keys (a device that joined waits, § Joining) |
 | No base, the folder has versions | fast-forward; **ask the owner** if the device holds an academy of its own |
 | The folder is empty | push base + 1 on top of the base: nothing there to lose |
-| The base and the latest come from two different first versions: both devices published their own academy at once, or the owner chose the other device's academy there | **ask the owner** (the device whose line is the latest does nothing). Told when the listing holds both lines down to their first versions, or, with the base's line pruned, when the latest's first version is above the base: a line's first version is its lowest |
+| The base and the latest come from two different first versions: both devices published their own academy at once, or the owner chose the other device's academy there | **ask the owner** (the device whose line is the latest does nothing). Told by what the listing proves, however much the retention pruned: both lines' first versions found and different; or one found, and the other end's walk down reaches its number or below without meeting it, since a line's numbers only fall towards its first version. Nothing proven: the same academy |
 | The latest is behind the base | **ask the owner:** versions were deleted on Drive |
 | The latest is the base | nothing, or push base + 1 if there are unpushed writes |
 | The latest is newer, and the device has writes to carry (unpushed or unconfirmed) | **rebase**: pull it and replay into it every write it lacks, then push if any were |

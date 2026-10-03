@@ -66,6 +66,25 @@ describe('versionsToPrune', () => {
       expect(versionsToPrune(folder, [ref(25, 'phone9c1e')])).toEqual([]);
     });
 
+    it('deletes the other line even when the latest’s was pruned while it was alone (#2117 review)', () => {
+      // The PC's line, 1 and 6-50 (2-5 pruned before the phone published its
+      // own first version at 14), the phone's first version beside it, and
+      // both devices back on the PC's 50.
+      const pcLine = line(50, 50).filter((version) => version.seq === 1 || version.seq >= 6);
+      const phoneFirst: SeenVersion = {
+        seq: 14,
+        device: 'phone9c1e',
+        parent: null,
+        created: START + 60_000 * 13 + 30_000,
+      };
+      const gone = versionsToPrune([...pcLine, phoneFirst], [ref(50), ref(50)]);
+
+      expect(gone).toContain(phoneFirst);
+      expect(seqs(gone.filter((version) => version.device === 'pc4f2a'))).toEqual(
+        Array.from({ length: 35 }, (_, i) => i + 6),
+      );
+    });
+
     it('deletes the line the owner left once both devices are on the latest’s, and prunes that one', () => {
       const gone = versionsToPrune(folder, [ref(25, 'phone9c1e'), ref(25, 'phone9c1e')]);
 

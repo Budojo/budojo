@@ -58,7 +58,13 @@ export function versionsToPrune(
   const dead = versions.filter((version) =>
     left.some((root) => descends(version, root, versions) === true),
   );
-  return [...dead, ...beyondPolicy(versions.filter((version) => !dead.includes(version)), policy)];
+  return [
+    ...dead,
+    ...beyondPolicy(
+      versions.filter((version) => !dead.includes(version)),
+      policy,
+    ),
+  ];
 }
 
 /** `newest` and the versions under it, as far as the listing names them. */
@@ -68,7 +74,8 @@ function walkDown(newest: SeenVersion, versions: readonly SeenVersion[]): SeenVe
   while (current !== undefined && walk.length <= versions.length) {
     walk.push(current);
     const parent: VersionRef | null = current.parent;
-    current = parent === null ? undefined : versions.find((version) => sameVersion(version, parent));
+    current =
+      parent === null ? undefined : versions.find((version) => sameVersion(version, parent));
   }
   return walk;
 }
