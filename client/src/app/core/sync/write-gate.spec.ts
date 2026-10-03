@@ -43,6 +43,50 @@ describe('WriteGate', () => {
     await write;
   });
 
+  it('fails the writes it held once the database was replaced, and every write after, while reads go on', async () => {
+    let release = (): void => undefined;
+    let swapped = false;
+    const held = gate.hold(
+      () => new Promise<void>((resolve) => (release = resolve)),
+      () => swapped,
+    );
+    await settle();
+
+    const queued = firstValueFrom(
+      client.post('/api/v1/athletes/4/payments', { year: 2026, month: 10 }),
+    );
+    await settle();
+    swapped = true;
+    release();
+    await held;
+
+    await expect(queued).rejects.toMatchObject({ status: 409 });
+    await expect(firstValueFrom(client.delete('/api/v1/attendance/7'))).rejects.toMatchObject({
+      status: 409,
+    });
+    http.expectNone('/api/v1/athletes/4/payments');
+    http.expectNone('/api/v1/attendance/7');
+    const read = firstValueFrom(client.get('/api/v1/athletes'));
+    http.expectOne('/api/v1/athletes').flush({ data: [] });
+    await read;
+  });
+
+  it('holds a restore the door starts while a round finishes: only the session passes', async () => {
+    let release = (): void => undefined;
+    const held = gate.hold(() => new Promise<void>((resolve) => (release = resolve)));
+    await settle();
+
+    const restore = firstValueFrom(client.post('/api/v1/device/backup/restore', {}));
+    await settle();
+    http.expectNone('/api/v1/device/backup/restore');
+
+    release();
+    await held;
+    await settle();
+    http.expectOne('/api/v1/device/backup/restore').flush({});
+    await restore;
+  });
+
   it('waits for a write already sent before the sync works', async () => {
     const write = firstValueFrom(client.post('/api/v1/attendance', { athlete_id: 1 }));
     const pending = http.expectOne('/api/v1/attendance');

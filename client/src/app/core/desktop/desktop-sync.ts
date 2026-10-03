@@ -3,7 +3,7 @@ import { firstValueFrom } from 'rxjs';
 import { DeviceService } from '../mobile/device.service';
 import { AuthService } from '../services/auth.service';
 import { DriveRemote, Fetcher } from '../sync/drive-remote';
-import { RemoteError } from '../sync/remote';
+import { followingFolder, RemoteError } from '../sync/remote';
 import { SYNC_PLATFORM, SyncPlatform } from '../sync/sync.service';
 
 /** The preload's sync bridge (`desktop/src/preload.cts`, #2032). */
@@ -51,6 +51,9 @@ export function desktopSyncPlatform(
   bridge: BudojoBridge,
   reopenSession: () => Promise<void>,
 ): SyncPlatform {
+  const drive = followingFolder(
+    () => new DriveRemote(async () => 'held-by-the-main-process', bridgeFetcher(bridge.sync)),
+  );
   return {
     identity: async () => {
       const identity = await bridge.sync.identity();
@@ -60,9 +63,10 @@ export function desktopSyncPlatform(
       if (identity !== null && 'offline' in identity) {
         throw new RemoteError('offline', 'no network to read the academy’s keys');
       }
+      drive.follow(identity?.folder ?? null);
       return identity;
     },
-    remote: new DriveRemote(async () => 'held-by-the-main-process', bridgeFetcher(bridge.sync)),
+    remote: drive.remote,
     shell: {
       swapIn: async () => {
         await bridge.sync.swapIn();

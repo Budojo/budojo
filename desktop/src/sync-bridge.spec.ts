@@ -62,4 +62,48 @@ describe('the sync’s Drive bridge', () => {
     expect(parseDriveRequest({ url: 'https://www.googleapis.com/drive/v3/files', method: 'GET', headers: { a: 1 } })).toBeNull();
     expect(parseDriveRequest(null)).toBeNull();
   });
+
+  it('refuses a delete, and a PUT anywhere but an upload’s session: the sync never removes a file (#2106)', () => {
+    const file = 'https://www.googleapis.com/drive/v3/files/backup123';
+    expect(parseDriveRequest({ url: file, method: 'DELETE', headers: {} })).toBeNull();
+    expect(parseDriveRequest({ url: file, method: 'PUT', headers: {} })).toBeNull();
+    expect(parseDriveRequest({ url: file, method: 'GET', headers: {} })).not.toBeNull();
+  });
+
+  it('passes only the headers the uploads need: never a method override (#2106)', () => {
+    expect(
+      forwardedHeaders({
+        'Content-Type': 'application/json',
+        'X-Upload-Content-Type': 'application/octet-stream',
+        'X-Upload-Content-Length': '12',
+        'X-HTTP-Method-Override': 'DELETE',
+        Authorization: 'Bearer page',
+      }),
+    ).toEqual({
+      'Content-Type': 'application/json',
+      'X-Upload-Content-Type': 'application/octet-stream',
+      'X-Upload-Content-Length': '12',
+    });
+  });
+
+  it('lets a POST only create: to the collection, never to a file by its id (#2106)', () => {
+    const post = (url: string) => parseDriveRequest({ url, method: 'POST', headers: {}, body: '{}' });
+    expect(post('https://www.googleapis.com/drive/v3/files')).not.toBeNull();
+    expect(post('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&fields=id')).not.toBeNull();
+    expect(post('https://www.googleapis.com/drive/v3/files/backup123')).toBeNull();
+    expect(post('https://www.googleapis.com/upload/drive/v3/files/backup123?uploadType=resumable')).toBeNull();
+  });
+
+  it('lets a PATCH only open an upload of new content: never trash, rename or move a file (#2106)', () => {
+    const upload = 'https://www.googleapis.com/upload/drive/v3/files/backup123?uploadType=resumable&fields=id';
+    expect(parseDriveRequest({ url: upload, method: 'PATCH', headers: {}, body: '{}' })).not.toBeNull();
+
+    const file = 'https://www.googleapis.com/drive/v3/files/backup123';
+    expect(parseDriveRequest({ url: file, method: 'PATCH', headers: {}, body: '{"trashed":true}' })).toBeNull();
+    expect(parseDriveRequest({ url: file, method: 'PATCH', headers: {}, body: '{}' })).toBeNull();
+    expect(parseDriveRequest({ url: upload, method: 'PATCH', headers: {}, body: '{"trashed":true}' })).toBeNull();
+    expect(
+      parseDriveRequest({ url: `${upload}&addParents=elsewhere&removeParents=backups`, method: 'PATCH', headers: {}, body: '{}' }),
+    ).toBeNull();
+  });
 });

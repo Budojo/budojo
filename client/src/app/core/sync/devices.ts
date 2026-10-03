@@ -80,8 +80,9 @@ export function unreadableReport(device: string): DeviceReport {
  * other device's report says it holds. Its entries up to that one, inclusive,
  * may leave the journal.
  *
- * `reports` is one per file in `devices/`, an unreadable one included as
- * `unreadableReport`. Every device writes its report before it pushes or pulls
+ * `reports` is one per file in `devices/` of the two devices that sync (the
+ * two earliest, `syncingDevices`; a refused third speaks for nobody), an
+ * unreadable one included as `unreadableReport`. Every device writes its report before it pushes or pulls
  * a version: the device that creates the folder alongside `folder.bjs`, a new
  * one when it joins (protocol § Joining). So a device that exists always has a file.
  *

@@ -9,6 +9,7 @@ import {
 } from './devices';
 import { open, openJson, seal } from './envelope';
 import { pullFiles, pushFiles, SyncFilesApi } from './files';
+import { syncingDevices } from './folder';
 import { JournalEntry } from './journal';
 import { devicePath, ListedVersion, sameVersion, VersionRef, versionPath } from './layout';
 import { SyncRemote } from './remote';
@@ -512,9 +513,12 @@ async function rebase(
 async function readReports(context: SyncContext): Promise<DeviceReport[]> {
   const { remote, key } = context;
   const reports: DeviceReport[] = [];
-  for (const file of (await remote.list('devices')).files) {
+  const files = (await remote.list('devices')).files;
+  // The two devices that sync: a refused third's report speaks for nobody.
+  const syncing = syncingDevices(files);
+  for (const file of files) {
     const device = /^devices\/([a-z0-9]+)\.bjs$/.exec(file.path)?.[1];
-    if (device === undefined) {
+    if (device === undefined || !syncing.includes(device)) {
       continue;
     }
     const report = await openReport(key, file.path, await remote.read(file.path));

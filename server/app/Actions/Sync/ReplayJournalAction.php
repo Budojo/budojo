@@ -654,9 +654,32 @@ final class ReplayJournalAction
      */
     private function dispatch(Route $route, string $method, array $params, ?array $body, User $owner, string $at): array
     {
+        // A kept upload is decrypted into a temporary file for the request:
+        // a medical certificate in the clear, removed whatever happens.
+        $temps = [];
+
+        try {
+            return $this->dispatchWith($route, $method, $params, $body, $owner, $at, $temps);
+        } finally {
+            foreach ($temps as $temp) {
+                if (file_exists($temp)) {
+                    unlink($temp);
+                }
+            }
+        }
+    }
+
+    /**
+     * @param  array<string, int|string>  $params
+     * @param  array<string, mixed>|null  $body
+     * @param  list<string>  $temps  the temporary files made, for `dispatch` to remove
+     * @return array{0: int, 1: mixed, 2: array<string, list<int|string>>, 3: array<string, array<string, array<string, mixed>>>|null}
+     */
+    private function dispatchWith(Route $route, string $method, array $params, ?array $body, User $owner, string $at, array &$temps): array
+    {
         $uri = route((string) $route->getName(), $params, false);
         $files = [];
-        $data = $this->unpackFiles($body ?? [], $files);
+        $data = $this->unpackFiles($body ?? [], $files, $temps);
         $server = ['HTTP_ACCEPT' => 'application/json'];
         if ($files === []) {
             $request = Request::create($uri, $method, [], [], [], $server + ['CONTENT_TYPE' => 'application/json'], (string) json_encode($data, JSON_THROW_ON_ERROR));
@@ -720,9 +743,10 @@ final class ReplayJournalAction
      *
      * @param  array<string, mixed>  $body
      * @param  array<string, mixed>  $files
+     * @param  list<string>  $temps  each temporary file, recorded as soon as it exists
      * @return array<string, mixed>
      */
-    private function unpackFiles(array $body, array &$files): array
+    private function unpackFiles(array $body, array &$files, array &$temps): array
     {
         $data = [];
         foreach ($body as $key => $value) {
@@ -733,6 +757,9 @@ final class ReplayJournalAction
                     throw new \RuntimeException("the upload {$file['sha256']} a journal entry names is not kept");
                 }
                 $path = tempnam(sys_get_temp_dir(), 'budojo-replay-');
+                if ($path !== false) {
+                    $temps[] = $path;
+                }
                 if ($path === false || file_put_contents($path, $bytes) === false) {
                     throw new \RuntimeException('no temporary file for a replayed upload');
                 }

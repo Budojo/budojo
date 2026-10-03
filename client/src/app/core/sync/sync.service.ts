@@ -256,13 +256,16 @@ export class SyncService {
     if (this.stateSignal().kind !== 'synced' && this.stateSignal().kind !== 'ask') {
       this.stateSignal.set({ kind: 'syncing' });
     }
-    // Once the swap ran, the server serves another database, whatever the
-    // round does next: the page loads again even if the round then fails.
+    // Once the swap starts, the server may serve another database, whatever
+    // the round does next: the page loads again even if the round then fails,
+    // and the writes held meanwhile never reach it (`WriteGate`). Marked
+    // before the swap, which can fail halfway: the PC restarted but the
+    // owner's session did not open again.
     let swapped = false;
     const shell: SyncShell = {
       swapIn: async () => {
-        await platform.shell.swapIn();
         swapped = true;
+        await platform.shell.swapIn();
       },
     };
     try {
@@ -296,7 +299,7 @@ export class SyncService {
           ledger = next;
           saveLedger(owner, next);
         },
-        holdWrites: (work) => this.gate.hold(work),
+        holdWrites: (work) => this.gate.hold(work, () => swapped),
         now: () => Date.now(),
       };
       const { outcome } =

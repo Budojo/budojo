@@ -142,6 +142,20 @@ describe('PUT /api/v1/sync/stage', function (): void {
             ->toBe('Luca Bianchi');
     });
 
+    it('refuses a rebase on a device with no id before it touches what is staged already', function (): void {
+        $first = syncTestIncoming($this->dir, syncTestHistory(15));
+        $this->actingAs($owner = userWithAcademy())
+            ->call('PUT', '/api/v1/sync/stage', content: $first, server: ['CONTENT_TYPE' => 'application/octet-stream'])
+            ->assertNoContent();
+        config()->set('budojo.sync.device', null);
+
+        $this->actingAs($owner)
+            ->call('PUT', '/api/v1/sync/stage?rebase=1', content: syncTestIncoming($this->dir, syncTestHistory()), server: ['CONTENT_TYPE' => 'application/octet-stream'])
+            ->assertServerError();
+
+        expect(file_get_contents("{$this->live}.staged"))->toBe($first);
+    });
+
     it('takes a database of the schema this app runs', function (): void {
         $this->actingAs(userWithAcademy())
             ->call('PUT', '/api/v1/sync/stage', content: syncTestIncoming($this->dir, syncTestHistory()))

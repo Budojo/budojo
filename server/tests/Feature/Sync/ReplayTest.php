@@ -285,6 +285,36 @@ describe('what a replay never does silently (#2101 review)', function (): void {
             ->and(DB::table('athlete_payments')->where('athlete_id', $this->luca)->count())->toBe(0);
     });
 
+    it('raises a conflict for a month paid with no method on the phone and in cash on the PC', function (): void {
+        $entries = onThePhone(fn () => $this->actingAs($this->owner)
+            ->postJson("/api/v1/athletes/{$this->luca}/payments", ['year' => 2026, 'month' => 10])->assertCreated());
+        expect($entries[0]['body'])->toHaveKey('payment_method', null);
+        $this->actingAs($this->owner)->postJson("/api/v1/athletes/{$this->luca}/payments", ['year' => 2026, 'month' => 10, 'payment_method' => 'cash'])->assertCreated();
+
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'conflict'])
+            ->and(json_decode((string) DB::table('sync_conflicts')->where('entry_id', $entries[0]['id'])->value('detail'), true))
+            ->toMatchArray(['field' => 'payment_method', 'mine' => null, 'here' => 'cash']);
+    });
+
+    it('keeps the day a payment sent with no date was paid, and replays it without a conflict', function (): void {
+        $this->travelTo(CarbonImmutable::parse('2026-10-03 12:00:00', 'Europe/Rome'));
+        $entries = onThePhone(fn () => $this->actingAs($this->owner)
+            ->postJson("/api/v1/athletes/{$this->luca}/payments", ['year' => 2026, 'month' => 10, 'paid_at' => null])->assertCreated());
+        expect($entries[0]['body']['paid_at'])->toBe('2026-10-03');
+
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'applied']);
+    });
+
+    it('leaves no decrypted upload behind once a photo is replayed', function (): void {
+        $entries = onThePhone(fn () => $this->actingAs($this->owner)
+            ->post("/api/v1/athletes/{$this->luca}/photo", ['photo' => UploadedFile::fake()->image('luca.png', 20, 20)])
+            ->assertOk());
+        $before = glob(sys_get_temp_dir() . '/budojo-replay-*') ?: [];
+
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'applied'])
+            ->and(array_values(array_diff(glob(sys_get_temp_dir() . '/budojo-replay-*') ?: [], $before)))->toBe([]);
+    });
+
     it('runs on the clock of the moment it was written: a payment marked on the 3rd is paid on the 3rd', function (): void {
         $this->travelTo(CarbonImmutable::parse('2026-10-03 18:00:00', 'Europe/Rome'));
         $entries = onThePhone(fn () => $this->actingAs($this->owner)

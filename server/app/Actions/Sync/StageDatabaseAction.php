@@ -30,19 +30,18 @@ final class StageDatabaseAction
         }
 
         try {
+            // A rebase replays this device's writes: refused with no device,
+            // before anything already staged is touched.
+            $device = $rebase ? self::rebasingDevice() : null;
             IncomingFile::receive($body, $incoming);
             IncomingDatabase::check($incoming);
             // Only once it passed: a refused version leaves whatever was
             // staged as it was. A version carries no files, so the files an
             // earlier restore staged go with its database (#2079).
             Staged::clear();
-            if ($rebase) {
+            if ($device !== null) {
                 // Before the database: a staged database is what commits a
                 // stage, so it never exists without the writes to replay on it.
-                $device = config('budojo.sync.device');
-                if (! \is_string($device) || $device === '') {
-                    throw new \RuntimeException('a rebase needs this device\'s id');
-                }
                 RebasePending::setAside($device);
             }
             $this->stageChecked($incoming);
@@ -66,5 +65,16 @@ final class StageDatabaseAction
 
             throw new \RuntimeException('could not stage the database beside the live one');
         }
+    }
+
+    /** The device whose writes a rebase sets aside. */
+    private static function rebasingDevice(): string
+    {
+        $device = config('budojo.sync.device');
+        if (! \is_string($device) || $device === '') {
+            throw new \RuntimeException('a rebase needs this device\'s id');
+        }
+
+        return $device;
     }
 }

@@ -577,6 +577,35 @@ describe('the owner’s choice when a round asks (#2033, PRD § 6.5)', () => {
   });
 });
 
+describe('a refused device (#2106)', () => {
+  it('never holds back clearing the journal: a third device’s report speaks for nobody', async () => {
+    const { remote, key, pc, phone } = await twoDevices();
+    // A third phone joined beside them in a race, and its report holds nothing.
+    await remote.write(
+      devicePath('phone7k2m'),
+      await seal(
+        key,
+        devicePath('phone7k2m'),
+        utf8(
+          JSON.stringify({
+            device: 'phone7k2m',
+            base: null,
+            holds: {},
+            at: '2026-10-02T18:00:00Z',
+          }),
+        ),
+      ),
+    );
+    pc.write('Luca on 2 Oct');
+    await sync(pc, remote, key);
+    await sync(phone, remote, key);
+
+    await sync(pc, remote, key);
+
+    expect(await pc.journal()).toEqual([]);
+  });
+});
+
 describe('the rebase (#2031 step 3)', () => {
   it('brings both devices to the same academy: the PC pulls what the phone replayed, and the phone clears its journal', async () => {
     const { remote, key, pc, phone } = await twoDevices();
