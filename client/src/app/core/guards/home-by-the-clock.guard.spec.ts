@@ -64,7 +64,6 @@ describe('homeByTheClockGuard', () => {
   }
 
   beforeEach(() => {
-    sessionStorage.clear();
     vi.useFakeTimers({ toFake: ['Date'] });
   });
   afterEach(() => vi.useRealTimers());
@@ -82,7 +81,6 @@ describe('homeByTheClockGuard', () => {
   it('stays on the check-in until 30 minutes after it ends, then Oggi', async () => {
     setUp();
     expect(await opensOn('2026-10-01T20:29:00')).toBe('/dashboard/attendance');
-    sessionStorage.clear();
     expect(await opensOn('2026-10-01T20:30:00')).toBe('oggi');
   });
 
@@ -90,22 +88,20 @@ describe('homeByTheClockGuard', () => {
     setUp();
     expect(await opensOn('2026-10-02T19:10:00')).toBe('oggi');
     TestBed.resetTestingModule();
-    sessionStorage.clear();
     setUp({ closed: true });
     expect(await opensOn('2026-10-01T19:10:00')).toBe('oggi');
   });
 
-  it('chooses once a session: a page loading again after a sync keeps the owner on Oggi', async () => {
+  it('only chooses the app’s first screen: a tap on Oggi later stays there', async () => {
     setUp();
-    expect(await opensOn('2026-10-01T19:10:00')).toBe('/dashboard/attendance');
-    expect(await opensOn('2026-10-01T19:11:00')).toBe('oggi');
+    (TestBed.inject(Router) as { navigated: boolean }).navigated = true;
+    expect(await opensOn('2026-10-01T19:10:00')).toBe('oggi');
   });
 
   it('never moves the PC, nor a phone whose classes do not read', async () => {
     setUp({ profile: 'desktop' });
     expect(await opensOn('2026-10-01T19:10:00')).toBe('oggi');
     TestBed.resetTestingModule();
-    sessionStorage.clear();
     setUp({ classes: 'fails' });
     expect(await opensOn('2026-10-01T19:10:00')).toBe('oggi');
   });

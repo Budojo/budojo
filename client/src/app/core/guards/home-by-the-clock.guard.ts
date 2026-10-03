@@ -7,18 +7,16 @@ import { AcademyClassService } from '../services/academy-class.service';
 import { AcademyService } from '../services/academy.service';
 import { RuntimeService } from '../services/runtime.service';
 
-/** Set once the phone has chosen its first screen in this session: a page loading again keeps the owner where they are. */
-const OPENED = 'budojo.homeByTheClock';
-
 /**
  * Home by the clock (#2035, PRD § 6.1): **the phone opens on the check-in** of
  * the class on the mat, from 15 minutes before it to 30 after it ends, and on
  * Oggi otherwise. Each is one tap from the other in the tab bar.
  *
- * Only when the app opens: a tap on Oggi later stays on Oggi, and so does the
- * page loading again after a sync, which keeps the session. Never on the PC,
- * where the owner sits down to more than the register, and never on a day
- * the academy is closed.
+ * Only on the app's first screen: a tap on Oggi later stays on Oggi. A page
+ * loading again after a sync is a first screen too, and during a class the
+ * check-in is where the owner is anyway; no storage is kept to tell it apart
+ * (`docs/legal/cookie-audit.md`). Never on the PC, where the owner sits down
+ * to more than the register, and never on a day the academy is closed.
  */
 export const homeByTheClockGuard: CanActivateFn = async () => {
   const runtime = inject(RuntimeService);
@@ -27,7 +25,7 @@ export const homeByTheClockGuard: CanActivateFn = async () => {
   const router = inject(Router);
 
   // Not the app's first screen: the owner chose Oggi, or a link led there.
-  if (router.navigated || alreadyOpened()) {
+  if (router.navigated) {
     return true;
   }
   await runtime.load();
@@ -43,16 +41,3 @@ export const homeByTheClockGuard: CanActivateFn = async () => {
     return true;
   }
 };
-
-/** Whether this session chose its first screen already, and marks it chosen. */
-function alreadyOpened(): boolean {
-  try {
-    if (sessionStorage.getItem(OPENED) !== null) {
-      return true;
-    }
-    sessionStorage.setItem(OPENED, '1');
-  } catch {
-    // No session storage: every opening asks the clock.
-  }
-  return false;
-}

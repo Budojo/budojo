@@ -995,14 +995,15 @@ export class DailyAttendanceComponent implements OnInit {
   });
 
   /**
-   * The phone's register shows once the class's regulars are known too, or
-   * known to be missing: drawn before, it would reorder under the coach's
-   * thumb when they arrived.
+   * The phone's register shows once the class's regulars have answered, or
+   * failed: drawn before, it would reorder under the coach's thumb when they
+   * arrived. Their answer is enough, even when the day's records failed and
+   * `regulars()` waits for them: the roster then shows as one list.
    */
   protected readonly registerReady = computed<boolean>(
     () =>
       !this.loading() &&
-      (this.selectedClassId() === null || this.regulars() !== null || this.regularsFailed()),
+      (this.selectedClassId() === null || this.regularsAnswer() !== null || this.regularsFailed()),
   );
 
   /**

@@ -1850,6 +1850,31 @@ describe('DailyAttendanceComponent — the phone’s register (#2035)', () => {
     expect(rows(fixture)).toHaveLength(4);
   });
 
+  it('shows the room as one list when the day’s records fail but the regulars answer', () => {
+    const harness = setup();
+    vi.spyOn(TestBed.inject(RuntimeService), 'profile').mockReturnValue('mobile');
+    harness.fixture.detectChanges();
+    harness.httpMock
+      .expectOne((r) => r.url === '/api/v1/athletes')
+      .flush({
+        data: ROOM,
+        links: { first: null, last: null, prev: null, next: null },
+        meta: { current_page: 1, from: 1, last_page: 1, path: '', per_page: 100, to: 4, total: 4 },
+      });
+    harness.httpMock.expectOne('/api/v1/academy/classes').flush({ data: [FUNDAMENTALS] });
+    harness.httpMock
+      .expectOne((r) => r.url === '/api/v1/attendance')
+      .flush({}, { status: 500, statusText: 'Server Error' });
+    answerRegulars(harness.httpMock);
+
+    expect(rows(harness.fixture)).toEqual([
+      'attendance-card-1',
+      'attendance-card-2',
+      'attendance-card-3',
+      'attendance-card-4',
+    ]);
+  });
+
   it('puts «Chi viene di solito» first, the most faithful on top, then everyone else', () => {
     const { fixture, httpMock } = open();
     answerRegulars(httpMock);
