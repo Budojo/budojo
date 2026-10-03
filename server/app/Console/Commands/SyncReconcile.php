@@ -6,10 +6,14 @@ namespace App\Console\Commands;
 
 use App\Actions\Sync\KeepOwnJournalAction;
 use App\Actions\Sync\ReconcileFilesAction;
+use App\Actions\Sync\RecordHomecomingAction;
 use App\Actions\Sync\ReplayJournalAction;
+use App\Support\Sync\Homecoming;
+use App\Support\Sync\HomecomingSince;
 use App\Support\Sync\RebasePending;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 /**
  * What a fast-forward needs outside the database (#2030, PRD § 5.2). The shell
@@ -21,6 +25,8 @@ use Illuminate\Support\Facades\Cache;
  * - the cache is cleared: on the desktop it is on files (`CACHE_STORE=file`),
  *   and would answer from the old database, the attendance summaries first;
  * - a rebase's set-aside journal is replayed (`ReplayJournalAction`);
+ * - what the other device's journal brought is told on Oggi
+ *   (`RecordHomecomingAction`, #2039), while the journal still holds it;
  * - the journal keeps only this device's entries, and the kept uploads no
  *   entry names go (`KeepOwnJournalAction`, #2031);
  * - the files no row names any more are deleted (`ReconcileFilesAction`).
@@ -35,6 +41,7 @@ class SyncReconcile extends Command
         ReconcileFilesAction $reconcile,
         KeepOwnJournalAction $keepOwnJournal,
         ReplayJournalAction $replay,
+        RecordHomecomingAction $homecoming,
     ): int {
         Cache::flush();
 
@@ -56,11 +63,41 @@ class SyncReconcile extends Command
         }
 
         $device = config('budojo.sync.device');
-        $forgotten = $keepOwnJournal->execute(\is_string($device) ? $device : null);
+        $device = \is_string($device) ? $device : null;
+        // After the replay, whose entries it reads with the outcomes they got;
+        // before the journal drops the other device's entries.
+        $told = $this->tellHomecoming($homecoming, $device);
+        $forgotten = $keepOwnJournal->execute($device);
         $deleted = $reconcile->execute();
 
-        $this->info("Cache cleared; {$deleted} file(s) no row names deleted; {$forgotten} other device journal entr(ies) dropped.{$replayed}");
+        $this->info("Cache cleared; {$deleted} file(s) no row names deleted; {$forgotten} other device journal entr(ies) dropped.{$replayed}{$told}");
 
         return self::SUCCESS;
+    }
+
+    /**
+     * The homecoming is news, and news never stops a start (#2039): the
+     * shell waits on this command before the app serves, and keeps running
+     * it until it succeeds. A homecoming that does not read (a file cut by a
+     * power loss), or a file Windows holds, is forgotten, and said.
+     */
+    private function tellHomecoming(RecordHomecomingAction $homecoming, ?string $device): string
+    {
+        try {
+            $homecoming->execute($device);
+
+            return '';
+        } catch (\Throwable $e) {
+            Log::warning('The homecoming was not told, and is forgotten', ['exception' => $e]);
+
+            try {
+                HomecomingSince::clear();
+                Homecoming::forget();
+            } catch (\Throwable) {
+                // Left for the next pull, which writes both again.
+            }
+
+            return ' Homecoming not told: ' . $e->getMessage() . '.';
+        }
     }
 }

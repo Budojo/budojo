@@ -1,0 +1,31 @@
+@if (shown() !== null && items().length > 0) {
+  <section class="homecoming" aria-labelledby="homecoming-title" data-cy="today-homecoming">
+    <i
+      class="homecoming__icon pi"
+      [class.pi-mobile]="fromPhone()"
+      [class.pi-desktop]="!fromPhone()"
+      aria-hidden="true"
+    ></i>
+    <div class="homecoming__body">
+      <h2 id="homecoming-title" class="homecoming__title" data-cy="today-homecoming-title">
+        {{ title() }}
+      </h2>
+      <ul class="homecoming__items">
+        @for (item of items(); track $index) {
+          <li class="homecoming__item">{{ item }}</li>
+        }
+      </ul>
+    </div>
+    <p-button
+      type="button"
+      severity="secondary"
+      [text]="true"
+      size="small"
+      icon="pi pi-times"
+      [pTooltip]="'today.homecoming.close' | translate"
+      [ariaLabel]="'today.homecoming.close' | translate"
+      (onClick)="close()"
+      data-cy="today-homecoming-close"
+    />
+  </section>
+}

@@ -17,9 +17,11 @@ const API = /\/api\/v1\//;
  * The sync's own requests, which run while the writes are held: the server's
  * sync API, and the session the swap opens again on the database it brought
  * in (`/device/session`). Nothing else of `/device/`: a restore the door
- * starts while a round finishes waits like any write.
+ * starts while a round finishes waits like any write. Nor the owner's
+ * answers to what a rebase set aside (`/sync/conflicts`): page writes,
+ * journaled, which a swap must never miss and the sync pushes like any.
  */
-const SYNC = /\/api\/v1\/(sync\/|device\/session$)/;
+const SYNC = /\/api\/v1\/(sync\/(?!conflicts)|device\/session$)/;
 
 /**
  * The page's own writes to its server (#2046), the one writer it has:

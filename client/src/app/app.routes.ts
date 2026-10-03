@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 import { capabilityGuard } from './core/guards/capability.guard';
 import { desktopOnlyGuard } from './core/guards/desktop-only.guard';
+import { homeByTheClockGuard } from './core/guards/home-by-the-clock.guard';
 import { hasAcademyGuard } from './core/guards/has-academy.guard';
 import { noAcademyGuard } from './core/guards/no-academy.guard';
 import { phoneDoorMatch, signInIsTheDoor } from './core/guards/phone-door.guard';
@@ -248,6 +249,8 @@ export const routes: Routes = [
         // what to teach, the week. It used to open on the roster, which
         // answers none of the questions the owner has at 18:30.
         path: 'today',
+        // On the phone, during a class, the app opens on its check-in (#2035).
+        canActivate: [homeByTheClockGuard],
         loadComponent: () =>
           import('./features/today/today.component').then((m) => m.TodayComponent),
       },
@@ -431,6 +434,13 @@ export const routes: Routes = [
         canActivate: [desktopOnlyGuard],
         loadComponent: () =>
           import('./features/backup/backup.component').then((m) => m.BackupComponent),
+      },
+      {
+        // «Da decidere» (#2038): what a rebase set aside, for the owner to
+        // answer. Reached from the sync pill, wherever the sync runs.
+        path: 'sync/decide',
+        loadComponent: () =>
+          import('./features/sync-decide/sync-decide.component').then((m) => m.SyncDecideComponent),
       },
       {
         path: 'whats-new',

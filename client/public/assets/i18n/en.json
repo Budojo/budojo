@@ -1981,8 +1981,8 @@
         "unmarkError": "Couldn't un-mark {{name}}. Try again."
       },
       "monthlySummary": "Monthly summary",
-      "presentCountOne": "{{count}} present",
-      "presentCountOther": "{{count}} present",
+      "presentCountOne": "{{count}} on the mat",
+      "presentCountOther": "{{count}} on the mat",
       "missing": {
         "title": "Who usually comes",
         "description": "At 3 of this class's last 4 sessions, and not checked in yet.",
@@ -2005,7 +2005,11 @@
         "edit": "Edit"
       },
       "closedToday": "The academy is closed today — you're looking at the {{date}} session.",
-      "closedTodayLabel": "The academy is closed today ({{label}}) — you're looking at the {{date}} session."
+      "closedTodayLabel": "The academy is closed today ({{label}}) — you're looking at the {{date}} session.",
+      "register": {
+        "regulars": "Regulars",
+        "others": "Everyone else"
+      }
     },
     "summary": {
       "daysOne": "{{count}} training day",
@@ -3456,6 +3460,26 @@
       "localOnlyDetailFolder": "If this disk breaks, the academy goes with it. Choose a folder for the backups.",
       "stale": "The last copy outside this computer is from {{date}}",
       "staleDetail": "Nothing has reached it for more than a week. Open the backup page to see why."
+    },
+    "homecoming": {
+      "fromPhone": "From the phone, {{when}}",
+      "fromPc": "From the PC, {{when}}",
+      "whenToday": "today at {{time}}",
+      "whenYesterday": "yesterday at {{time}}",
+      "whenDay": "{{day}} at {{time}}",
+      "presencesInOne": "{{count}} attendance in {{lesson}}",
+      "presencesInOther": "{{count}} attendances in {{lesson}}",
+      "presencesOne": "{{count}} attendance",
+      "presencesOther": "{{count}} attendances",
+      "paymentsOne": "{{count}} payment ({{amount}})",
+      "paymentsOther": "{{count}} payments ({{amount}})",
+      "athletesOne": "{{count}} new athlete",
+      "athletesOther": "{{count}} new athletes",
+      "promotionsOne": "{{count}} promotion",
+      "promotionsOther": "{{count}} promotions",
+      "otherOne": "{{count}} other change",
+      "otherOther": "{{count}} other changes",
+      "close": "Got it"
     }
   },
   "backup": {
@@ -3723,6 +3747,83 @@
       "consequenceDevice": "The gym here goes to Drive. The other device finds it and asks you which one to keep.",
       "confirm": "Confirm",
       "cancel": "Cancel"
+    },
+    "decide": {
+      "pillOne": "1 to decide",
+      "pillOther": "{{count}} to decide",
+      "pillHint": "The same thing changed on the PC and on the phone. Nothing is lost: you choose which to keep.",
+      "open": "Decide",
+      "title": "To decide",
+      "subtitle": "Things changed in two different ways on the PC and on the phone. Meanwhile the one that arrived first stays; the other is set aside, not lost.",
+      "emptyTitle": "Nothing to decide",
+      "emptyHint": "When the same thing changes on the PC and on the phone, you find it here.",
+      "device": {
+        "pc": "PC",
+        "phone": "phone"
+      },
+      "on": "On the {{device}}",
+      "keep": "Keep the {{device}}'s",
+      "byHand": "I fixed it myself",
+      "confirmMine": "The {{mine}}'s takes the place of the {{theirs}}'s.",
+      "noRetry": "The {{device}}'s cannot be put back from here: keep the other, or fix it by hand and mark it done.",
+      "othersOne": "and 1 more",
+      "othersOther": "and {{count}} more",
+      "decided": "Done.",
+      "retryFailed": "It did not go through: {{message}}",
+      "loadFailed": "The list did not load. Try again.",
+      "reason": {
+        "changed": "Changed on both",
+        "differs": "Recorded in two different ways",
+        "gone": "Gone on the other device",
+        "refused": "Not accepted here",
+        "failed": "Did not go through here",
+        "unknownRoute": "This version of Budojo does not know it"
+      },
+      "what": {
+        "athlete": "Athlete details",
+        "payment": "Payment for {{month}}",
+        "paymentAny": "Payment",
+        "attendance": "Attendance on {{date}}",
+        "attendanceAny": "Attendance",
+        "lessonTopics": "Topics of the lesson on {{date}}",
+        "lessonNotes": "Notes of the lesson on {{date}}",
+        "promotion": "Promotion",
+        "photo": "Photo",
+        "document": "Document",
+        "closure": "Gym closure",
+        "academy": "Gym details",
+        "other": "A change"
+      },
+      "field": {
+        "first_name": "First name",
+        "last_name": "Last name",
+        "email": "Email",
+        "phone_national_number": "Phone",
+        "payment_method": "Payment method",
+        "amount_cents": "Amount",
+        "paid_at": "Paid on",
+        "period_months": "Months",
+        "topic_ids": "Topics",
+        "notes": "Notes",
+        "label": "Name",
+        "starts_on": "From",
+        "ends_on": "To",
+        "belt": "Belt",
+        "stripes": "Stripes",
+        "name": "Name",
+        "monthly_fee_cents": "Monthly fee",
+        "address": "Address",
+        "line1": "Address",
+        "city": "City",
+        "postal_code": "Postcode",
+        "status": "Status",
+        "joined_at": "Joined on",
+        "date_of_birth": "Date of birth",
+        "photo_path": "Photo",
+        "photo_sha256": "Photo"
+      },
+      "topicsOne": "1 topic",
+      "topicsOther": "{{count}} topics"
     }
   }
 }

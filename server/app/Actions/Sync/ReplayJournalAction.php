@@ -48,14 +48,25 @@ use Illuminate\Support\Facades\Route as Routes;
  */
 final class ReplayJournalAction
 {
+    /** Fields a form sends together, each required with the others: kept or left out as one. */
+    public const array GROUPS = [['phone_country_code', 'phone_national_number']];
+
+    /**
+     * Rows the API names by what they are, never by id: a lesson is its class
+     * on a day (`PUT /lessons/notes`, `/lessons/topics`). Made on each device,
+     * one lesson has two ids, and its id is never the way to find it here.
+     */
+    public const array NATURAL = [
+        'lessons' => ['academy_class_id' => 'academy_class_id', 'held_on' => 'held_on'],
+    ];
+
+    /** A form's nested object, and the row it is: its table, and the morph that names its owner. */
+    public const array NESTED = ['address' => ['table' => 'addresses', 'morph' => 'addressable']];
     /** Columns an entry's `before` carries that say nothing about its meaning. */
     private const array CLOCK = ['created_at', 'updated_at'];
 
-    /** Fields a form sends together, each required with the others: kept or left out as one. */
-    private const array GROUPS = [['phone_country_code', 'phone_national_number']];
-
-    /** A form's nested object, and the row it is: its table, and the morph that names its owner. */
-    private const array NESTED = ['address' => ['table' => 'addresses', 'morph' => 'addressable']];
+    /** Request fields that replace a row's set of related rows whole (`SetReplaced`): a lesson's topics, by the table they are in. */
+    private const array SETS = ['topic_ids' => 'syllabus_topics'];
 
     public function __construct(
         private readonly JournalRecorder $recorder,
@@ -90,6 +101,139 @@ final class ReplayJournalAction
         return $outcomes;
     }
 
+    /** @return array<string, class-string<Model>> parameter => the model the route binds to it, in the route's order */
+    public static function paramModels(Route $route): array
+    {
+        $models = [];
+        foreach ($route->signatureParameters(['subClass' => UrlRoutable::class]) as $parameter) {
+            $type = $parameter->getType();
+            $class = $type instanceof \ReflectionNamedType ? $type->getName() : null;
+            if ($class !== null && is_subclass_of($class, Model::class)) {
+                $models[$parameter->getName()] = $class;
+            }
+        }
+
+        return $models;
+    }
+
+    /**
+     * A nested object as a form sent it, against its row here: the same when
+     * both are absent, or every field it sends that the row has agrees.
+     *
+     * @param  array<string, mixed>|null  $row
+     */
+    public static function sameNested(mixed $sent, ?array $row): bool
+    {
+        if (! \is_array($sent) || $row === null) {
+            return ! \is_array($sent) && $row === null;
+        }
+        foreach ($sent as $field => $value) {
+            if (! \is_array($value) && \array_key_exists($field, $row) && ! self::same($row[$field], $value)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * The row a write is about. A route that binds models names it by its
+     * last (`/athletes/{athlete}/promotions/{promotion}`). One that binds
+     * none: `PATCH /academy` names the owner's academy by the session;
+     * another way (`PUT /lessons/notes`, by date and class; the academy's
+     * logo), it is the one row the write changed, when it changed one.
+     *
+     * @param  array<string, int|string>  $params
+     * @param  array<string, array<string, array<string, mixed>>>|null  $before
+     * @return array{table: string, id: string, class: class-string<Model>|null}|null
+     */
+    public static function ownRow(Route $route, array $params, ?array $before, User $owner): ?array
+    {
+        $models = self::paramModels($route);
+        if ($models !== []) {
+            $param = (string) array_key_last($models);
+            $class = $models[$param];
+
+            return ['table' => new $class()->getTable(), 'id' => (string) ($params[$param] ?? ''), 'class' => $class];
+        }
+        if ($route->getName() === 'academy.update') {
+            $academy = $owner->activeAcademyId();
+
+            return $academy === null ? null : ['table' => 'academies', 'id' => (string) $academy, 'class' => Academy::class];
+        }
+        $rows = [];
+        foreach ($before ?? [] as $table => $byId) {
+            foreach (array_keys($byId) as $id) {
+                $rows[] = ['table' => (string) $table, 'id' => (string) $id, 'class' => null];
+            }
+        }
+
+        return \count($rows) === 1 ? $rows[0] : null;
+    }
+
+    public static function same(mixed $a, mixed $b): bool
+    {
+        if ($a === null || $b === null) {
+            return $a === $b;
+        }
+        $a = self::text($a);
+        $b = self::text($b);
+        if ($a === $b) {
+            return true;
+        }
+        // A day against the moment an answer or a row gives it (`2026-10-01`
+        // and `2026-10-01T00:00:00+00:00`, `2026-10-01 00:00:00`): the same day.
+        foreach ([[$a, $b], [$b, $a]] as [$day, $moment]) {
+            if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $day) === 1 && (str_starts_with($moment, $day . 'T') || str_starts_with($moment, $day . ' '))) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * A form that refused the body the replay trimmed (`keepTheirs`) gets it
+     * whole: the fields left out as the other device's, at this database's
+     * values. A form may require them on every save, as a closure's dates
+     * (#2113), or judge a field it was sent against one left out
+     * (`after_or_equal:starts_on`). Sent at the values here, they keep the
+     * other device's change, and whatever the form answers then stands.
+     *
+     * @param  array<string, mixed>  $left
+     * @return array<string, mixed> the fields to send again, none when the answer stands
+     */
+    public static function refill(int $status, array $left): array
+    {
+        return $status === 422 ? $left : [];
+    }
+
+    /**
+     * This database's value, in the shape the entry sent its own: a day as a
+     * day (a row holds `2026-12-27 00:00:00` where a form takes
+     * `2026-12-27`), a number as a number, a flag as a flag.
+     */
+    public static function asSent(mixed $here, mixed $sent): mixed
+    {
+        if ($here === null) {
+            return null;
+        }
+        if (\is_bool($sent)) {
+            return (bool) $here;
+        }
+        if (\is_int($sent) && is_numeric($here)) {
+            return (int) $here;
+        }
+        if (\is_float($sent) && is_numeric($here)) {
+            return (float) $here;
+        }
+        if (\is_string($sent) && \is_string($here) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $sent) === 1 && preg_match('/^(\d{4}-\d{2}-\d{2})[T ]/', $here, $day) === 1) {
+            return $day[1];
+        }
+
+        return $here;
+    }
+
     /**
      * @param  array{id: string, at: string, method: string, route: string, params: array<string, int|string>, body: array<string, mixed>|null, created: array<string, list<int|string>>, before: array<string, array<string, array<string, mixed>>>|null}  $entry
      */
@@ -108,10 +252,17 @@ final class ReplayJournalAction
         $params = $map->params($entry['params'], $tables);
         $body = $map->body($entry['body']);
         $before = $map->before($entry['before']);
+        // A lesson is found here by its class and day, whatever id it has
+        // on either device, and never lost.
+        $natural = self::naturalRows($body);
+        $before = self::byNature($before, $natural);
 
         // It names a row an earlier entry made where it was written and that
         // has none here: sent on, it would reach whatever row has that id.
-        $lost = $map->lostIn();
+        $lost = array_values(array_filter(
+            $map->lostIn(),
+            static fn (array $hit): bool => ! \array_key_exists($hit['table'], $natural),
+        ));
         if ($lost !== []) {
             $map->learn($entry['created'], []);
 
@@ -130,10 +281,12 @@ final class ReplayJournalAction
             $probe = $seen['conflict'];
             $seen = null;
         }
+        $left = [];
         if ($seen === null) {
             $kept = self::keepTheirs($entry['method'], $own, $before, $body, $entry['created']);
             $body = $kept['body'];
             $seen = $kept['seen'];
+            $left = $kept['left'];
         }
         if ($seen !== null) {
             $map->learn($entry['created'], []);
@@ -147,6 +300,13 @@ final class ReplayJournalAction
 
         try {
             [$status, $answer, $created, $touched] = $this->dispatch($route, $entry['method'], $params, $body, $owner, $entry['at']);
+            // Refused trimmed: sent again whole, with the other device's
+            // values (a refusal writes nothing).
+            $refill = self::refill($status, $left);
+            if ($refill !== []) {
+                $body = [...($body ?? []), ...$refill];
+                [$status, $answer, $created, $touched] = $this->dispatch($route, $entry['method'], $params, $body, $owner, $entry['at']);
+            }
             $judged = self::judge($entry, $status, $answer, $created, $touched, $before, $targets, $body, $probe);
         } catch (\Throwable $e) {
             // A route that takes other parameters now, say: never a replay
@@ -159,7 +319,7 @@ final class ReplayJournalAction
                 'message' => $e->getMessage(),
             ]);
         }
-        if ($judged['outcome'] === 'conflict') {
+        if ($judged['outcome'] === 'conflict' || ($judged['undo'] ?? false)) {
             DB::rollBack();
             $created = [];
         } else {
@@ -180,7 +340,7 @@ final class ReplayJournalAction
      * @param  array<string, array<string, array<string, mixed>>>|null  $targets
      * @param  array<string, mixed>|null  $body
      * @param  array<string, mixed>|null  $probe  a field of its target that moved here, when the entry names none it changes
-     * @return array{outcome: string, conflict: array<string, mixed>|null}
+     * @return array{outcome: string, conflict: array<string, mixed>|null, undo?: bool}
      */
     private static function judge(array $entry, int $status, mixed $answer, array $created, ?array $touched, ?array $before, ?array $targets, ?array $body, ?array $probe): array
     {
@@ -198,6 +358,10 @@ final class ReplayJournalAction
             return ['outcome' => 'already', 'conflict' => null];
         }
         if ($status >= 200 && $status < 300) {
+            $set = self::setReplaced($entry, $before, $touched, $body);
+            if ($set !== null) {
+                return $set;
+            }
             if ($entry['method'] === 'DELETE' && $targets === null) {
                 // A delete that names its row another way than by a model
                 // (a month's payment, by year and month) deleted a row here:
@@ -244,6 +408,155 @@ final class ReplayJournalAction
             'message' => \is_array($answer) ? ($answer['message'] ?? null) : null,
             'errors' => \is_array($answer) ? ($answer['errors'] ?? null) : null,
         ]];
+    }
+
+    /**
+     * A set the replay replaced here (a lesson's topics, #2102), against the
+     * one the entry replaced there, or none when it made the lesson. Counted
+     * only of the related rows this database still has (a topic removed from
+     * the programme here leaves both sides alike):
+     * - **already the entry's:** true already;
+     * - **the entry changed nothing** (it saved the set it saw): what is here
+     *   stays, undone in the savepoint;
+     * - **as the entry saw it:** the other device left it alone, the entry's
+     *   set applies;
+     * - **anything else:** both devices tagged the lesson; the owner chooses.
+     *
+     * Null when the replay replaced no set, or when the entry recorded none
+     * and made no lesson: written before sets were recorded, it applies as
+     * it always did.
+     *
+     * @param  array{id: string, at: string, method: string, route: string, params: array<string, int|string>, body: array<string, mixed>|null, created: array<string, list<int|string>>, before: array<string, array<string, array<string, mixed>>>|null}  $entry
+     * @param  array<string, array<string, array<string, mixed>>>|null  $before
+     * @param  array<string, array<string, array<string, mixed>>>|null  $touched
+     * @param  array<string, mixed>|null  $body
+     * @return array{outcome: string, conflict: array<string, mixed>|null, undo?: bool}|null
+     */
+    private static function setReplaced(array $entry, ?array $before, ?array $touched, ?array $body): ?array
+    {
+        foreach ($touched ?? [] as $table => $rows) {
+            foreach ($rows as $id => $fields) {
+                foreach (self::SETS as $field => $related) {
+                    if (! \array_key_exists($field, $fields) || ! \is_array($body) || ! \array_key_exists($field, $body)) {
+                        continue;
+                    }
+                    $recorded = $before[$table][$id][$field] ?? null;
+                    if ($recorded === null && ($entry['created'][$table] ?? []) === []) {
+                        return null;
+                    }
+                    $here = self::alive($related, $fields[$field]);
+                    $mine = self::alive($related, $body[$field]);
+                    $saw = self::alive($related, $recorded ?? []);
+                    if ($here === $mine) {
+                        return ['outcome' => 'already', 'conflict' => null];
+                    }
+                    if ($saw === $mine) {
+                        return ['outcome' => 'already', 'conflict' => null, 'undo' => true];
+                    }
+                    if ($here !== $saw) {
+                        return ['outcome' => 'conflict', 'conflict' => [
+                            'reason' => 'changed',
+                            'table' => $table,
+                            'id' => (string) $id,
+                            'field' => $field,
+                            'saw' => $saw,
+                            'here' => $here,
+                        ]];
+                    }
+
+                    return ['outcome' => 'applied', 'conflict' => null];
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * A set of ids, sorted, each once, of the rows this database still has.
+     *
+     * @return list<int>
+     */
+    private static function alive(string $table, mixed $ids): array
+    {
+        $set = self::setOf($ids);
+        if ($set === []) {
+            return [];
+        }
+        $here = DB::table($table)->whereIn('id', $set)->whereNull('deleted_at')->pluck('id')
+            ->map(static fn (mixed $id): int => is_numeric($id) ? (int) $id : 0)
+            ->all();
+
+        return array_values(array_intersect($set, $here));
+    }
+
+    /**
+     * The rows here the body names by what they are (`NATURAL`), by table:
+     * the id of the lesson on that class and day, or null when there is none.
+     *
+     * @param  array<string, mixed>|null  $body
+     * @return array<string, string|null>
+     */
+    private static function naturalRows(?array $body): array
+    {
+        $rows = [];
+        foreach (self::NATURAL as $table => $key) {
+            $where = [];
+            foreach ($key as $field => $column) {
+                $value = $body[$field] ?? null;
+                if (! \is_int($value) && ! \is_string($value)) {
+                    continue 2;
+                }
+                $where[$column] = $value;
+            }
+            $query = DB::table($table);
+            foreach ($where as $column => $value) {
+                $query->where($column, 'like', \is_string($value) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $value) === 1 ? "{$value}%" : $value);
+            }
+            $id = $query->value('id');
+            $rows[$table] = \is_int($id) || \is_string($id) ? (string) $id : null;
+        }
+
+        return $rows;
+    }
+
+    /**
+     * `before` with each row of a natural table under the id it has here,
+     * or without it when this database has no such row yet.
+     *
+     * @param  array<string, array<string, array<string, mixed>>>|null  $before
+     * @param  array<string, string|null>  $natural
+     * @return array<string, array<string, array<string, mixed>>>|null
+     */
+    private static function byNature(?array $before, array $natural): ?array
+    {
+        if ($before === null) {
+            return null;
+        }
+        foreach ($natural as $table => $id) {
+            if (! isset($before[$table])) {
+                continue;
+            }
+            $rows = array_values($before[$table]);
+            unset($before[$table]);
+            if ($id !== null && \count($rows) === 1) {
+                $before[$table][$id] = $rows[0];
+            }
+        }
+
+        return $before === [] ? null : $before;
+    }
+
+    /** @return list<int> a set of ids, sorted, each once */
+    private static function setOf(mixed $ids): array
+    {
+        $set = array_values(array_unique(array_map(
+            static fn (mixed $id): int => is_numeric($id) ? (int) $id : 0,
+            \is_array($ids) ? $ids : [],
+        )));
+        sort($set);
+
+        return $set;
     }
 
     /**
@@ -314,21 +627,23 @@ final class ReplayJournalAction
      *   left out together, and changed on both sides they are a conflict.
      * - **A nested object** (the address) is left out whole when the entry
      *   did not change it and the row here holds another, or none.
+     * - **What it leaves out comes back as `left`,** with this database's
+     *   values: a form may require it on every save (`refill`, #2113).
      *
      * @param  array{table: string, id: string, class: class-string<Model>|null}|null  $own
      * @param  array<string, array<string, array<string, mixed>>>|null  $before
      * @param  array<string, mixed>|null  $body
      * @param  array<string, list<int|string>>  $created  what the entry made where it was written
-     * @return array{body: array<string, mixed>|null, seen: array{outcome: string, conflict: array<string, mixed>|null}|null}
+     * @return array{body: array<string, mixed>|null, seen: array{outcome: string, conflict: array<string, mixed>|null}|null, left: array<string, mixed>}
      */
     private static function keepTheirs(string $method, ?array $own, ?array $before, ?array $body, array $created): array
     {
         if (($method !== 'PUT' && $method !== 'PATCH') || $body === null || $own === null) {
-            return ['body' => $body, 'seen' => null];
+            return ['body' => $body, 'seen' => null, 'left' => []];
         }
         $row = DB::table($own['table'])->where('id', $own['id'])->first();
         if ($row === null) {
-            return ['body' => $body, 'seen' => null];
+            return ['body' => $body, 'seen' => null, 'left' => []];
         }
         $now = (array) $row;
         $changed = $before[$own['table']][$own['id']] ?? [];
@@ -354,11 +669,13 @@ final class ReplayJournalAction
                     'field' => $moved[0],
                     'saw' => $body[$moved[0]],
                     'here' => $now[$moved[0]],
-                ]]];
+                ]], 'left' => []];
             }
             $theirs = [...$theirs, ...array_intersect($group, array_keys($body))];
         }
+        $left = [];
         foreach (array_unique($theirs) as $field) {
+            $left[$field] = self::asSent($now[$field] ?? null, $body[$field]);
             unset($body[$field]);
         }
         foreach (self::NESTED as $key => $nested) {
@@ -381,7 +698,7 @@ final class ReplayJournalAction
                         'table' => $nested['table'],
                         'id' => (string) $here['id'],
                         'field' => $key,
-                    ]]];
+                    ]], 'left' => []];
                 }
 
                 continue;
@@ -406,7 +723,7 @@ final class ReplayJournalAction
             }
         }
 
-        return ['body' => $body, 'seen' => null];
+        return ['body' => $body, 'seen' => null, 'left' => $left];
     }
 
     /**
@@ -459,61 +776,6 @@ final class ReplayJournalAction
     }
 
     /**
-     * A nested object as a form sent it, against its row here: the same when
-     * both are absent, or every field it sends that the row has agrees.
-     *
-     * @param  array<string, mixed>|null  $row
-     */
-    private static function sameNested(mixed $sent, ?array $row): bool
-    {
-        if (! \is_array($sent) || $row === null) {
-            return ! \is_array($sent) && $row === null;
-        }
-        foreach ($sent as $field => $value) {
-            if (! \is_array($value) && \array_key_exists($field, $row) && ! self::same($row[$field], $value)) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    /**
-     * The row a write is about. A route that binds models names it by its
-     * last (`/athletes/{athlete}/promotions/{promotion}`). One that binds
-     * none: `PATCH /academy` names the owner's academy by the session;
-     * another way (`PUT /lessons/notes`, by date and class; the academy's
-     * logo), it is the one row the write changed, when it changed one.
-     *
-     * @param  array<string, int|string>  $params
-     * @param  array<string, array<string, array<string, mixed>>>|null  $before
-     * @return array{table: string, id: string, class: class-string<Model>|null}|null
-     */
-    private static function ownRow(Route $route, array $params, ?array $before, User $owner): ?array
-    {
-        $models = self::paramModels($route);
-        if ($models !== []) {
-            $param = (string) array_key_last($models);
-            $class = $models[$param];
-
-            return ['table' => new $class()->getTable(), 'id' => (string) ($params[$param] ?? ''), 'class' => $class];
-        }
-        if ($route->getName() === 'academy.update') {
-            $academy = $owner->activeAcademyId();
-
-            return $academy === null ? null : ['table' => 'academies', 'id' => (string) $academy, 'class' => Academy::class];
-        }
-        $rows = [];
-        foreach ($before ?? [] as $table => $byId) {
-            foreach (array_keys($byId) as $id) {
-                $rows[] = ['table' => (string) $table, 'id' => (string) $id, 'class' => null];
-            }
-        }
-
-        return \count($rows) === 1 ? $rows[0] : null;
-    }
-
-    /**
      * What an update or a delete saw of **its target**, the rows its route
      * names, against what this database holds now. Never the rows its Action
      * touched on the way (a carnet's count, a lesson's attendance): those are
@@ -542,6 +804,9 @@ final class ReplayJournalAction
         $byName = $method !== 'DELETE' && \is_array($body) && self::namesAny($before, $body);
         $allThere = true;
         $allAsWanted = true;
+        // Already true only from a field it did compare: a set (`topic_ids`)
+        // is no column, and is told by the replay (`setReplaced`).
+        $compared = false;
         $probe = null;
         foreach ($before as $table => $rows) {
             foreach ($rows as $id => $fields) {
@@ -563,6 +828,7 @@ final class ReplayJournalAction
                     if ($byName && ! \array_key_exists($field, $body)) {
                         continue;
                     }
+                    $compared = true;
                     if (self::sameColumn((string) $field, $now[$field], $saw)) {
                         $allAsWanted = false;
 
@@ -595,7 +861,7 @@ final class ReplayJournalAction
             return ['outcome' => 'probe', 'conflict' => $probe];
         }
 
-        return $byName && $allAsWanted ? ['outcome' => 'already', 'conflict' => null] : null;
+        return $byName && $compared && $allAsWanted ? ['outcome' => 'already', 'conflict' => null] : null;
     }
 
     /** Whether a column is compared at all: never the clock, nor the row's own id, which differs between devices. */
@@ -810,7 +1076,9 @@ final class ReplayJournalAction
                 'route' => $entry['route'],
                 'reason' => self::text($conflict['reason'] ?? 'refused'),
                 'detail' => self::json($conflict),
-                'entry' => self::json(['method' => $entry['method'], 'params' => $params, 'body' => $body, 'before' => $before]),
+                // `created` as the device that wrote it made them: which tables a
+                // retry must add to (an address the entry added), never ids here.
+                'entry' => self::json(['method' => $entry['method'], 'params' => $params, 'body' => $body, 'before' => $before, 'created' => $entry['created'] === [] ? new \stdClass() : $entry['created']]),
             ]);
         }
 
@@ -871,42 +1139,6 @@ final class ReplayJournalAction
     private static function paramTables(Route $route): array
     {
         return array_map(static fn (string $class): string => new $class()->getTable(), self::paramModels($route));
-    }
-
-    /** @return array<string, class-string<Model>> parameter => the model the route binds to it, in the route's order */
-    private static function paramModels(Route $route): array
-    {
-        $models = [];
-        foreach ($route->signatureParameters(['subClass' => UrlRoutable::class]) as $parameter) {
-            $type = $parameter->getType();
-            $class = $type instanceof \ReflectionNamedType ? $type->getName() : null;
-            if ($class !== null && is_subclass_of($class, Model::class)) {
-                $models[$parameter->getName()] = $class;
-            }
-        }
-
-        return $models;
-    }
-
-    private static function same(mixed $a, mixed $b): bool
-    {
-        if ($a === null || $b === null) {
-            return $a === $b;
-        }
-        $a = self::text($a);
-        $b = self::text($b);
-        if ($a === $b) {
-            return true;
-        }
-        // A day against the moment an answer or a row gives it (`2026-10-01`
-        // and `2026-10-01T00:00:00+00:00`, `2026-10-01 00:00:00`): the same day.
-        foreach ([[$a, $b], [$b, $a]] as [$day, $moment]) {
-            if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $day) === 1 && (str_starts_with($moment, $day . 'T') || str_starts_with($moment, $day . ' '))) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     /** A value as the database holds it, for comparing: a flag as 0 or 1, anything else as text. */

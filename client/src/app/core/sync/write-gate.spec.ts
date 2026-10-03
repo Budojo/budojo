@@ -71,6 +71,26 @@ describe('WriteGate', () => {
     await read;
   });
 
+  it('holds the owner’s answers to a conflict like any write: a swap must never miss one (#2038)', async () => {
+    let release = (): void => undefined;
+    const held = gate.hold(() => new Promise<void>((resolve) => (release = resolve)));
+    await settle();
+
+    const answer = firstValueFrom(
+      client.post('/api/v1/sync/conflicts/01K6F3Q8Z4M7X2N5P9R1T3V6W8/decision', {
+        decision: 'theirs',
+      }),
+    );
+    await settle();
+    http.expectNone('/api/v1/sync/conflicts/01K6F3Q8Z4M7X2N5P9R1T3V6W8/decision');
+
+    release();
+    await held;
+    await settle();
+    http.expectOne('/api/v1/sync/conflicts/01K6F3Q8Z4M7X2N5P9R1T3V6W8/decision').flush(null);
+    await answer;
+  });
+
   it('holds a restore the door starts while a round finishes: only the session passes', async () => {
     let release = (): void => undefined;
     const held = gate.hold(() => new Promise<void>((resolve) => (release = resolve)));

@@ -1,6 +1,8 @@
 import { fromUtf8, sha256Hex, utf8 } from '../bytes';
-import { EMPTY_LEDGER, SyncLedger, SyncServer } from '../engine';
+import { SyncConflict } from '../conflicts';
+import { EMPTY_LEDGER, StageOptions, SyncLedger, SyncServer } from '../engine';
 import { ServerFile, SyncFilesApi } from '../files';
+import { Homecoming } from '../homecoming';
 import { JournalEntry } from '../journal';
 
 /**
@@ -100,7 +102,11 @@ export class MemoryDevice implements SyncServer {
     };
   }
 
-  async stage(database: Uint8Array, options?: { rebase: boolean }) {
+  /** What each stage said about the database it brought. */
+  readonly staging: StageOptions[] = [];
+
+  async stage(database: Uint8Array, options?: StageOptions) {
+    this.staging.push(options ?? {});
     this.under.push(`stage${options?.rebase ? ' rebase' : ''} ${this.holding ? 'held' : 'open'}`);
     this.setAside = options?.rebase ? await this.journal() : null;
     this.staged = database;
@@ -153,5 +159,25 @@ export class MemoryDevice implements SyncServer {
 
   async holdsAcademy() {
     return this.db.academy !== null;
+  }
+
+  /** The conflicts a rebase set aside here, as `GET /sync/conflicts` lists them. */
+  waiting: SyncConflict[] = [];
+
+  async conflicts() {
+    return this.waiting;
+  }
+
+  /** What the other device's work brought, as the reconcile kept it (#2039). */
+  arrived: Homecoming | null = null;
+
+  async homecoming(): Promise<Homecoming | null> {
+    return this.arrived;
+  }
+
+  async seenHomecoming(through: string): Promise<void> {
+    if (this.arrived?.through === through) {
+      this.arrived = null;
+    }
   }
 }

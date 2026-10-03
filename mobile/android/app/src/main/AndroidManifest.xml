@@ -48,4 +48,6 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- The check-in answers a tap with a short buzz (#2035): navigator.vibrate in the WebView needs it. -->
+    <uses-permission android:name="android.permission.VIBRATE" />
 </manifest>

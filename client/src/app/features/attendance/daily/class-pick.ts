@@ -51,12 +51,10 @@ export function pickDefaultClass(
 
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
 
-  const running = timed.find((c) => {
-    const start = minutesOf(c.starts_at);
-    const end = start + (c.duration_minutes ?? DEFAULT_DURATION_MINUTES);
-    return start <= nowMinutes && nowMinutes < end;
-  });
-  if (running) return running;
+  // The class on the mat, as the phone's home picks it (#2035): the coach
+  // the clock sent here lands on the room it was sent for.
+  const onTheMat = classOnTheMat(timed, now);
+  if (onTheMat) return onTheMat;
 
   let best = timed[0];
   let bestDistance = Math.abs(minutesOf(best.starts_at) - nowMinutes);
@@ -68,4 +66,40 @@ export function pickDefaultClass(
     }
   }
   return best;
+}
+
+/** From how long before a class the phone opens on its check-in (#2035, PRD § 6.1). */
+export const CHECK_IN_OPENS_BEFORE_MINUTES = 15;
+/** And until how long after it ends: the latecomers, and the coach's last ticks. */
+export const CHECK_IN_STAYS_AFTER_MINUTES = 30;
+
+/**
+ * The class on the mat now (#2035): today's, from 15 minutes before it starts
+ * to 30 minutes after it ends. The phone opens on its check-in then, and on
+ * Oggi otherwise; the check-in opens on the same one (`pickDefaultClass`).
+ * Two at once, the one running wins, then the one about to start (the people
+ * arriving are for it), then the one just ended. A class with no start time
+ * is never on the clock.
+ */
+export function classOnTheMat(classes: readonly AcademyClass[], now: Date): AcademyClass | null {
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const today = classes
+    .filter(
+      (c): c is AcademyClass & { starts_at: string } =>
+        c.weekday === now.getDay() && c.starts_at !== null,
+    )
+    .map((c) => {
+      const start = minutesOf(c.starts_at);
+      return { c, start, end: start + (c.duration_minutes ?? DEFAULT_DURATION_MINUTES) };
+    });
+  const running = today.find(({ start, end }) => start <= nowMinutes && nowMinutes < end);
+  const starting = today
+    .filter(
+      ({ start }) => start > nowMinutes && start - CHECK_IN_OPENS_BEFORE_MINUTES <= nowMinutes,
+    )
+    .sort((a, b) => a.start - b.start)[0];
+  const ended = today
+    .filter(({ end }) => end <= nowMinutes && nowMinutes < end + CHECK_IN_STAYS_AFTER_MINUTES)
+    .sort((a, b) => b.end - a.end)[0];
+  return (running ?? starting ?? ended)?.c ?? null;
 }

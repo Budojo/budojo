@@ -13,6 +13,7 @@ import { syncingDevices } from './folder';
 import { JournalEntry } from './journal';
 import { devicePath, ListedVersion, sameVersion, VersionRef, versionPath } from './layout';
 import { SyncRemote } from './remote';
+import { pruneBatch } from './retention';
 import { packVersion, PROTOCOL, unpackVersion } from './version';
 
 /**
@@ -38,12 +39,8 @@ import { packVersion, PROTOCOL, unpackVersion } from './version';
 export interface SyncServer {
   /** `GET /sync/export`: the database, and the newest migration it has run. */
   exportDatabase(): Promise<{ database: Uint8Array; schema: string }>;
-  /**
-   * `PUT /sync/stage`: another device's database, for the shell to swap in.
-   * With `rebase`, the server sets this device's kept journal aside first,
-   * and replays it on that database once swapped in.
-   */
-  stage(database: Uint8Array, options?: { rebase: boolean }): Promise<void>;
+  /** `PUT /sync/stage`: another device's database, for the shell to swap in. */
+  stage(database: Uint8Array, options?: StageOptions): Promise<void>;
   /** `GET /sync/journal`: this device's kept entries, oldest first. */
   journal(): Promise<JournalEntry[]>;
   /** `DELETE /sync/journal?through=`: clears up to what every other device holds. */
@@ -53,6 +50,18 @@ export interface SyncServer {
   /** Whether the database holds an academy: one never synced, holding one, is pushed as version 1. */
   holdsAcademy(): Promise<boolean>;
   files: SyncFilesApi;
+}
+
+/** What a stage says about the database it brings. */
+export interface StageOptions {
+  /** This device has writes to carry onto it: the server sets them aside, and replays them once swapped in. */
+  rebase?: boolean;
+  /**
+   * It brings the other device's work on this academy: the owner is told what
+   * arrived (#2039). Never when a whole academy arrives, at a first pull or
+   * by the owner's choice when asked.
+   */
+  homecoming?: boolean;
 }
 
 /** What only the shell can do: swap a staged database in, by restarting the server. */
@@ -326,7 +335,11 @@ async function finishRound(
 ): Promise<SyncRound> {
   // Its report, after every round (protocol § `devices/`).
   await writeReport(context, ledger);
-  await clearConfirmed(context, ledger, await readReports(context));
+  const reports = await readReports(context);
+  await clearConfirmed(context, ledger, reports);
+  if (outcome.kind === 'pushed' || (outcome.kind === 'rebased' && outcome.pushed !== null)) {
+    await pruneVersions(context, reports);
+  }
   // The files the database names and this device lacks, once the database is
   // final: after a fast-forward's swap, and at every later round for those
   // the folder did not have yet (`files.ts`).
@@ -335,6 +348,26 @@ async function finishRound(
       ? 0
       : (await pullFiles(context.server.files, context.remote, context.key)).missing.length;
   return { outcome, missingFiles };
+}
+
+/**
+ * The folder's versions down to what it keeps (`retention.ts`, #2030), by
+ * the device that just pushed, with the bases every device reported: the
+ * other device's round is never slowed by it. **Best effort:** a version it
+ * could not delete is tried again at the next push, and the round, which
+ * already landed, still counts. The PC's Drive bridge refuses every delete
+ * (#2106) until it can verify one is a version's (#2120), so today the phone prunes.
+ */
+async function pruneVersions(context: SyncContext, reports: DeviceReport[]): Promise<void> {
+  try {
+    const versions = versionsIn((await context.remote.list('versions')).files);
+    const bases = reports.map((report) => report.base);
+    for (const version of pruneBatch(versions, bases)) {
+      await context.remote.remove(versionPath(version));
+    }
+  } catch {
+    // Drive said no, or no network: the folder keeps a few more until the next push.
+  }
 }
 
 /**
@@ -453,7 +486,9 @@ async function fastForward(
     if ((await server.journal()).some((entry) => !known.has(entry.id))) {
       return null;
     }
-    await server.stage(database);
+    // With a base, it is this academy moving on; with none (a first pull,
+    // the owner's choice when asked), a whole academy arriving.
+    await server.stage(database, { homecoming: ledger.base !== null });
     // Saved once staged, before the swap: from here the next start swaps the
     // staged database in whatever happens, so a device killed during the
     // restart wakes up as this version, and knows it.
@@ -489,7 +524,7 @@ async function rebase(
   const database = await readVersion(context, listed);
   const onto: VersionRef = { seq: listed.seq, device: listed.device };
   const rebased = await context.holdWrites(async () => {
-    await server.stage(database, { rebase: true });
+    await server.stage(database, { rebase: true, homecoming: true });
     // Saved once staged, as a fast-forward's base is: the next start swaps
     // it in and replays whatever happens. Every entry the replay keeps is in
     // no version on this line, so none counts as pushed or listed: a device

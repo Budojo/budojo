@@ -4,7 +4,7 @@
 
 This device's own writes, kept in full until every other device holds them (#2031, [`docs/sync/protocol.md`](../sync/protocol.md) § A journal entry and § Deciding). A rebase replays them through the router onto another device's database; the app packs the ones a version lacks into its journal.
 
-Recorded by the `RecordJournalEntry` middleware, **on a paired device only** (`budojo.sync.device`, from the shell's `BUDOJO_DEVICE_ID`; never the database, which travels), for the academy's data writes (`JournalRoutes`): `academy.*`, `athletes.*`, `attendance.*`, `documents.*`, `lessons.*`, `me.athlete.*`, `me.attendance.*`. The account, the session, the sync itself and invitations are never journaled.
+Recorded by the `RecordJournalEntry` middleware, **on a paired device only** (`budojo.sync.device`, from the shell's `BUDOJO_DEVICE_ID`; never the database, which travels), for the academy's data writes (`JournalRoutes`): `academy.*`, `athletes.*`, `attendance.*`, `documents.*`, `lessons.*`, `me.athlete.*`, `me.attendance.*`, and the owner's answers to set-aside writes (`sync.conflicts.decide`). The account, the session, the sync itself and invitations are never journaled.
 
 No Eloquent model, as for `sync_entries`.
 
@@ -20,7 +20,7 @@ No Eloquent model, as for `sync_entries`.
 | `params` | text (JSON) | not null | The route parameters as the URL gave them, numbers as numbers: `{"athlete": 57}`. |
 | `body` | text (JSON) | nullable | The request body, with what the write worked out for itself where money rides on it: a payment's `amount_cents`, `period_months`, `paid_at` and `payment_method`, `null` included (`ResolvedFields`). An uploaded file is `{"$file": {"sha256": …, "name": "p.png", "type": "image/png"}}`, its bytes kept on the private disk, encrypted (see below). |
 | `created` | text (JSON) | not null | The ids the write created, by table, the rows of the Actions behind it included (an athlete's first belt is a promotion a later entry can name). |
-| `before` | text (JSON) | nullable | For a change or a delete, what the rows held before, by table and id: `{"athletes": {"57": {"first_name": "Luca"}}}`. A change records the fields it changed; a delete, the whole row as stored. |
+| `before` | text (JSON) | nullable | For a change or a delete, what the rows held before, by table and id: `{"athletes": {"57": {"first_name": "Luca"}}}`. A change records the fields it changed; a delete, the whole row as stored. A set replaced through a pivot is recorded as the request names it, sorted: `{"lessons": {"12": {"topic_ids": [3, 7]}}}` (`SetReplaced`, #2102). |
 
 ## Indexes
 

@@ -5,6 +5,7 @@ import { versionsIn } from './decide';
 import { AskChoice, resolveAsk, SyncContext, SyncLedger, SyncShell, syncOnce } from './engine';
 import { importSyncKey } from './envelope';
 import { checkFolder, hasRoomFor } from './folder';
+import { Homecoming } from './homecoming';
 import { HttpSyncServer } from './http-sync-server';
 import { VersionRef } from './layout';
 import { LedgerOwner, loadLedger, saveLedger, savedOwner } from './ledger-store';
@@ -102,6 +103,18 @@ export class SyncService {
 
   private readonly stateSignal = signal<SyncState>({ kind: 'off' });
   readonly state = this.stateSignal.asReadonly();
+
+  /**
+   * How many writes a rebase set aside wait for the owner (#2038): «N da
+   * decidere» on the pill, which leads to the screen that answers them.
+   * Read after every round, and again after every answer.
+   */
+  private readonly toDecideSignal = signal(0);
+  readonly toDecide = this.toDecideSignal.asReadonly();
+
+  private readonly homecomingSignal = signal<Homecoming | null>(null);
+  /** What the other device's work brought (#2039), for the card on Oggi, until it is shown. */
+  readonly homecoming = this.homecomingSignal.asReadonly();
 
   /** What `stop` undoes; null while stopped. */
   private stopping: (() => void) | null = null;
@@ -229,6 +242,13 @@ export class SyncService {
 
   private async round(resolution?: { choice: AskChoice; seen: VersionRef }): Promise<void> {
     const platform = this.platform;
+    // What waits for the owner, and what the last pull brought, are on this
+    // device: read before anything reaches Drive, the PC's identity included
+    // (its keys are in the account), so an owner offline still finds them. A
+    // pull loads the page again, so the first round after it finds the homecoming.
+    if (platform !== null) {
+      await Promise.all([this.countToDecide(), this.loadHomecoming()]);
+    }
     let identity: SyncIdentity | null;
     try {
       identity = platform === null ? null : await platform.identity();
@@ -306,6 +326,7 @@ export class SyncService {
         resolution === undefined
           ? await syncOnce(context)
           : await resolveAsk(context, resolution.choice, resolution.seen);
+      await this.countToDecide();
       if (resolution !== undefined && outcome.kind === 'nothing') {
         // The folder emptied before the owner confirmed: nothing was chosen,
         // and the round after says what to do now.
@@ -345,6 +366,44 @@ export class SyncService {
       if (swapped) {
         this.reload();
       }
+    }
+  }
+
+  /** The conflicts that wait, counted again: after a round, and after the owner answers one. */
+  async countToDecide(): Promise<void> {
+    // Two answers in a row ask twice: only the latest count is shown, so an
+    // earlier answer arriving late never puts back a number already gone.
+    const asked = ++this.countAsked;
+    try {
+      const count = (await this.server.conflicts()).length;
+      if (asked === this.countAsked) {
+        this.toDecideSignal.set(count);
+      }
+    } catch {
+      // The count waits for the next round: the pill never fails on it.
+    }
+  }
+
+  private countAsked = 0;
+
+  /** Seen on Oggi: forgotten, on the server too. One a later pull added to stays there. */
+  seenHomecoming(arrived: Homecoming): void {
+    this.seenThrough = arrived.through;
+    this.homecomingSignal.set(null);
+    this.server.seenHomecoming(arrived.through).catch(() => {
+      // Told again at the next start: the card says the same thing twice, nothing is lost.
+    });
+  }
+
+  /** The homecoming the owner saw: a round that reads it before the server forgot it does not bring it back. */
+  private seenThrough: string | null = null;
+
+  private async loadHomecoming(): Promise<void> {
+    try {
+      const arrived = await this.server.homecoming();
+      this.homecomingSignal.set(arrived?.through === this.seenThrough ? null : arrived);
+    } catch {
+      // The card waits for the next round: Oggi never fails on it.
     }
   }
 

@@ -6,6 +6,7 @@ namespace App\Actions\Device;
 
 use App\Actions\Sync\StageDatabaseAction;
 use App\Support\Backup\BackupArchive;
+use App\Support\Sync\Homecoming;
 use App\Support\Sync\Staged;
 use App\Support\Sync\SyncStorage;
 
@@ -45,6 +46,10 @@ final class RestoreBackupAction
                 throw new \RuntimeException('could not stage the files beside the live ones');
             }
             $this->stage->stageChecked($database);
+            // The homecoming told of the database the restore replaces
+            // (#2039): forgotten once the restore is staged, never before
+            // (a restore that fails keeps the live database and its news).
+            Homecoming::forget();
         } catch (\Throwable $e) {
             Staged::clear();
 

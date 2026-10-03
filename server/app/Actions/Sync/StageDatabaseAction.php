@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Actions\Sync;
 
+use App\Support\Sync\Homecoming;
+use App\Support\Sync\HomecomingSince;
 use App\Support\Sync\IncomingDatabase;
 use App\Support\Sync\IncomingFile;
 use App\Support\Sync\RebasePending;
@@ -21,8 +23,10 @@ final class StageDatabaseAction
     /**
      * @param  resource  $body  the database's bytes, as they arrive
      * @param  bool  $rebase  replay this device's kept writes on it after the swap (#2031 step 3)
+     * @param  array<string, string>|null  $since  what this device held of the other device's work, for the
+     *                                             homecoming (#2039); null when a whole academy arrives
      */
-    public function execute($body, bool $rebase = false): void
+    public function execute($body, bool $rebase = false, ?array $since = null): void
     {
         $incoming = tempnam(sys_get_temp_dir(), 'budojo-stage-');
         if ($incoming === false) {
@@ -39,12 +43,25 @@ final class StageDatabaseAction
             // staged as it was. A version carries no files, so the files an
             // earlier restore staged go with its database (#2079).
             Staged::clear();
+            // What this device held of the other's work, for the homecoming
+            // (#2039): the swap replaces the database that knows it.
+            if ($since !== null) {
+                HomecomingSince::remember($since);
+            }
             if ($device !== null) {
                 // Before the database: a staged database is what commits a
                 // stage, so it never exists without the writes to replay on it.
                 RebasePending::setAside($device);
             }
             $this->stageChecked($incoming);
+            if ($since === null) {
+                // A whole academy arriving makes news of the one it replaces
+                // moot: forgotten once it is staged, never before (a stage
+                // that fails keeps the live database and its news). Should
+                // the forget fail, the stage goes too: a database never
+                // opens beside news of the one it replaced.
+                self::forgetHomecomingOrUnstage();
+            }
         } finally {
             @unlink($incoming);
         }
@@ -64,6 +81,17 @@ final class StageDatabaseAction
             @unlink($part);
 
             throw new \RuntimeException('could not stage the database beside the live one');
+        }
+    }
+
+    private static function forgetHomecomingOrUnstage(): void
+    {
+        try {
+            Homecoming::forget();
+        } catch (\Throwable $e) {
+            Staged::clear();
+
+            throw $e;
         }
     }
 

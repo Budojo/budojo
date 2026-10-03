@@ -72,6 +72,16 @@ u32 big-endian: manifest length | manifest, UTF-8 JSON | u32: journal length | j
 
 A reader checks every field it knows and ignores any it does not, so a later app can add one. **Changing what a field means is a new protocol number.** The manifest must name the version and the parent its path names. A writer checks the manifest and the journal with the readers' rules before it packs them.
 
+### What the folder keeps (#2030)
+
+Every version is the whole database, so the folder keeps them as the PC keeps its backups (#1228, #1330): **the newest ten, and the newest of each of the fourteen most recent days** that hold one, on Drive's clock (`retention.ts`). The rest is deleted.
+- **By the device that just pushed,** at the end of that round, from a fresh listing and the bases every device reported (`devices/`). A pull deletes nothing, so the other device's round is never slowed by it. **Today that is the phone:** the PC's Drive bridge refuses every delete (#2106) until it can verify that a file is a version (#2120).
+- **Never the newest,** which the other device may be reading.
+- **Never a first version.** With it, a device whose own line is pruned still tells another academy (§ Deciding).
+- **Two academies in the folder** (two first versions): nothing is deleted until every device (at least two) reports a base on the latest's line, as far as the listing shows it. Before that, the owner has a question to answer on the other line, and the lines are what tell the academies apart. Then the first versions the latest provably does not descend from are the academies the owner left: they go whole, with every version that descends from them, and the latest's line is pruned to the policy.
+- **At most twenty a push:** a folder that grew before the retention shipped is trimmed over the next pushes, never in one round that keeps the owner waiting on Drive. **A left academy goes first, from its newest down to its first version,** so what remains of it stays joined to its first version and is still told apart, and the live line stays whole meanwhile, its walk down being the proof the other line left. Then the live line, the oldest first.
+- **Best effort:** a version it could not delete is tried again at the next push; the round already landed, and still counts.
+
 ### The database side (#2030)
 
 The app packs and seals versions. The server only hands it the database and takes one back (owner-only, the `sync` capability):
@@ -96,7 +106,7 @@ Documents, athletes' photos, avatars and the academy's logo travel apart from th
 - **Push** (`client/src/app/core/sync/files.ts`): before a version goes up, the device seals and sends every content it holds that `files/` lacks. A content is never sent twice: its name is its bytes.
 - **Pull:** the device completes every content it lacks somewhere: from its own copy when it holds the content at another path (the same PDF for a second athlete), from the folder otherwise. One the folder does not have yet (the other device's push has not landed, or Drive's listing lags), one that does not open, or one whose bytes are not its name, is left for the next sync. Until then that document cannot be opened on this device.
 - **The pull runs once the database is final:** after a fast-forward's swap, after a rebase's replay, **never between the swap and the replay**, the reconcile's rule. Until the replay, a path may hold a file this device uploaded offline (its athlete 57's photo, where the swapped-in database has another athlete 57); writing there first would destroy the only copy before the replay gives it its own row.
-- **Not yet here:** deleting from `files/` what no kept version names, which belongs with the retention of versions.
+- **Not yet here:** deleting from `files/` what no kept version names. It takes reading every kept version's database; the versions themselves are pruned (§ What the folder keeps).
 
 ## A journal entry
 
@@ -116,6 +126,7 @@ The journal is a JSON list of the writes that made this version from its parent,
 **Where the journal lives (#2031).** The server records it, on a paired device only: the shell gives the device id (`BUDOJO_DEVICE_ID`), never the database, which travels. Two tables ([`sync_entries`](../entities/sync-entry.md), [`sync_journal`](../entities/sync-journal-entry.md)):
 - **`sync_entries`**, what this database has dealt with, travels with it;
 - **`sync_journal`**, this device's kept entries, does not: after a swap the reconcile drops other devices' rows. A rebase carries the kept entries across the swap itself.
+- **Before it drops them, the reconcile reads them for the homecoming** (#2039, PRD § 6.2). The other device keeps every entry this device has not reported holding, so its database brings exactly what is new here, however many versions the folder went through. A stage with `?homecoming=1` (the other device's work on this academy; never a whole academy, at a first pull or by the owner's choice) kept this device's `holds` beside the database (`<database>.homecoming-since`), and the reconcile keeps the facts of the entries past them, the rows they created and how many created none, in `<database>.homecoming`: this device's news alone. `GET /api/v1/sync/homecoming` counts those rows as they are when the card on Oggi asks, so one a later pull removed is no longer told. An entry the other device's own rebase found already true or set aside changed nothing, and is left out, as is the owner's answer to a question (`sync.*`). A restore, or a whole academy arriving, forgets it.
 - `GET /api/v1/sync/journal` gives the kept entries, `DELETE /api/v1/sync/journal?through=<id>` clears them up to what every other device holds, and `GET /api/v1/sync/holds` answers `holds`.
 
 **A device's entry ids only grow.** The server gives a new entry an id above the newest that device has recorded, inside the write's transaction. A ULID taken from the clock alone can go backwards when the clock steps back, and `devices/` depends on this order (#2031).
@@ -222,7 +233,7 @@ There is no pairing code (#2033). **A device joins at its first «Accedi con Goo
 | No base, empty folder | nothing, or push version 1 if the device holds an academy and made the keys (a device that joined waits, § Joining) |
 | No base, the folder has versions | fast-forward; **ask the owner** if the device holds an academy of its own |
 | The folder is empty | push base + 1 on top of the base: nothing there to lose |
-| The base and the latest come from two different first versions: both devices published their own academy at once | **ask the owner** (the device whose line is the latest does nothing). Told only while the listing holds both lines down to their first versions |
+| The base and the latest come from two different first versions: both devices published their own academy at once, or the owner chose the other device's academy there | **ask the owner** (the device whose line is the latest does nothing). Told by what the listing proves, however much the retention pruned: both lines' first versions found and different; or one found, and the other end's walk down reaches its number or below without meeting it, since a line's numbers only fall towards its first version. Nothing proven: the same academy |
 | The latest is behind the base | **ask the owner:** versions were deleted on Drive |
 | The latest is the base | nothing, or push base + 1 if there are unpushed writes |
 | The latest is newer, and the device has writes to carry (unpushed or unconfirmed) | **rebase**: pull it and replay into it every write it lacks, then push if any were |
@@ -242,9 +253,18 @@ There is no pairing code (#2033). **A device joins at its first «Accedi con Goo
 - **an update sends its whole form, and changed only what its `before` recorded.** A field it carried along as it saw it, which this database holds otherwise, was changed by the other device: that change stays, and the field is left out of the replayed body.
   - The row a write is about is the route's last model; for one that binds none, the owner's academy for `PATCH /academy`, or else the one row the write changed (a lesson's notes, the academy's logo).
   - Fields sent together (a phone number's two halves) are left out together, and changed on both sides they are a conflict.
+  - **A form may refuse the trimmed body:** one that requires a field on every save (a closure's dates), or judges a field it was sent against one left out (`after_or_equal:starts_on`). On a 422 the request goes again whole, the fields left out at this database's values, in the shape the entry sent (a day as a day): that keeps the other device's change (#2113), and the form's second answer stands. `keep-mine` does the same with its retry's `fill`.
   - A nested object (the address) is left out whole when the entry did not change it. When the entry did change it, a field moved here too is a conflict, and the fields it carried along take what this database holds;
 - **a write that names none of the fields it changes** (a photo removed) cannot say what it would make them. When one moved here, its replay tells: changing nothing, it was true already; changing the moved row, it is a conflict;
 - **a delete that names its row another way than by a model** (a month's payment, by year and month) must delete here the row it deleted there, field by field. One that names its row (an athlete) is compared on it alone: what it took along (his documents) is derived again;
+- **a set replaced whole through a pivot** (a lesson's topics, `PUT /lessons/topics`) is recorded in the entry's `before` as `topic_ids`, since a pivot fires no model event. Its replay compares the set it replaced here with the one the entry replaced there, or none when the entry made the lesson. Both are counted only of the topics this database still has. The outcomes (#2102):
+  - already the entry's: `already`;
+  - the entry changed nothing (it saved the set it saw): what is here stays;
+  - as the entry saw it: the entry's set applies;
+  - anything else: both devices tagged the lesson, a `changed` conflict.
+
+  An entry written before sets were recorded applies as it always did;
+- **a lesson is found by its class and day,** never by its id: made on each device, one lesson has two ids, and the API names it by class and day alone;
 - **a row's own id is never compared,** and a reference made on each device (a check-in's `lesson_id`) only for whether it is set: two ids differ between devices for the same row, but one against none means the row joined a lesson or left it. The references a write names are rewritten through the id map and compared;
 - **money is never left to chance:** a payment's entry carries the amount, the period, the date and the method the row got, a method left out as none (`ResolvedFields`), and a payment the replay makes or finds otherwise is a `differs` conflict.
 
@@ -257,7 +277,7 @@ Each entry ends in one state, recorded in [`sync_entries`](../entities/sync-entr
 | already | what it does is true already: a presence marked on both devices, a field set to the same value, an athlete deleted on both | yes, so the other device holds it |
 | conflict | below | yes |
 
-**A conflict is never dropped.** The write waits for the owner in [`sync_conflicts`](../entities/sync-conflict.md), with both sides (PRD § 6.4; the owner's answer is #2038). What it changed is undone first: every write runs in a savepoint, rolled back when it does not apply.
+**A conflict is never dropped.** The write waits for the owner in [`sync_conflicts`](../entities/sync-conflict.md), with both sides (PRD § 6.4). The owner answers on the device that shows it (#2038): what is here stays, the set-aside write is sent again (`retry`), or they set it right themselves. **The answer is a journaled write of its own**, so it reaches the other device even through a rebase. What it changed is undone first: every write runs in a savepoint, rolled back when it does not apply.
 - **`refused`:** the rules refuse it here (403, 409, 422).
 - **`gone`:** its row is gone (404, or an update whose target was deleted here, softly too), or it names a row an earlier entry made there and none here.
 - **`changed`:** a field it changes was changed here since it was written, or a delete by year and month meets another row than the one it deleted. An update is about the fields its body sets by name; the others moved with them and are derived again. One that sets none by name (a photo: `photo` sets `photo_path`) is about every field it changed.

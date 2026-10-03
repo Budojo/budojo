@@ -1981,8 +1981,8 @@
         "unmarkError": "Impossibile rimuovere il segno per {{name}}. Riprova."
       },
       "monthlySummary": "Riepilogo del mese",
-      "presentCountOne": "{{count}} presente",
-      "presentCountOther": "{{count}} presenti",
+      "presentCountOne": "{{count}} sul tatami",
+      "presentCountOther": "{{count}} sul tatami",
       "missing": {
         "title": "Chi viene di solito",
         "description": "Presenti ad almeno 3 delle ultime 4 lezioni di questa classe, e non ancora segnati.",
@@ -2005,7 +2005,11 @@
         "edit": "Modifica"
       },
       "closedToday": "Oggi l'accademia è chiusa — stai vedendo la sessione di {{date}}.",
-      "closedTodayLabel": "Oggi l'accademia è chiusa ({{label}}) — stai vedendo la sessione di {{date}}."
+      "closedTodayLabel": "Oggi l'accademia è chiusa ({{label}}) — stai vedendo la sessione di {{date}}.",
+      "register": {
+        "regulars": "Abituali",
+        "others": "Tutti gli altri"
+      }
     },
     "summary": {
       "daysOne": "{{count}} giorno di allenamento",
@@ -3456,6 +3460,26 @@
       "localOnlyDetailFolder": "Se si rompe questo disco, si perde tutta l'accademia. Scegli una cartella per i backup.",
       "stale": "L'ultima copia fuori da questo computer è del {{date}}",
       "staleDetail": "Da più di una settimana non ne arriva una nuova. Apri il backup per capire perché."
+    },
+    "homecoming": {
+      "fromPhone": "Dal telefono, {{when}}",
+      "fromPc": "Dal PC, {{when}}",
+      "whenToday": "oggi alle {{time}}",
+      "whenYesterday": "ieri alle {{time}}",
+      "whenDay": "{{day}} alle {{time}}",
+      "presencesInOne": "{{count}} presenza in {{lesson}}",
+      "presencesInOther": "{{count}} presenze in {{lesson}}",
+      "presencesOne": "{{count}} presenza",
+      "presencesOther": "{{count}} presenze",
+      "paymentsOne": "{{count}} pagamento ({{amount}})",
+      "paymentsOther": "{{count}} pagamenti ({{amount}})",
+      "athletesOne": "{{count}} nuovo atleta",
+      "athletesOther": "{{count}} nuovi atleti",
+      "promotionsOne": "{{count}} promozione",
+      "promotionsOther": "{{count}} promozioni",
+      "otherOne": "{{count}} altra modifica",
+      "otherOther": "{{count}} altre modifiche",
+      "close": "Ho visto"
     }
   },
   "backup": {
@@ -3723,6 +3747,83 @@
       "consequenceDevice": "La palestra di qui va su Drive. L'altro dispositivo la trova e ti chiede quale tenere.",
       "confirm": "Conferma",
       "cancel": "Annulla"
+    },
+    "decide": {
+      "pillOne": "1 da decidere",
+      "pillOther": "{{count}} da decidere",
+      "pillHint": "La stessa cosa è cambiata sul PC e sul telefono. Niente è perso: scegli tu quale tenere.",
+      "open": "Decidi",
+      "title": "Da decidere",
+      "subtitle": "Cose cambiate in due modi diversi sul PC e sul telefono. Intanto resta quella arrivata prima; l'altra è messa da parte, non persa.",
+      "emptyTitle": "Niente da decidere",
+      "emptyHint": "Quando la stessa cosa cambia sul PC e sul telefono, la trovi qui.",
+      "device": {
+        "pc": "PC",
+        "phone": "telefono"
+      },
+      "on": "Sul {{device}}",
+      "keep": "Tieni quella del {{device}}",
+      "byHand": "L'ho sistemata io",
+      "confirmMine": "Quella del {{mine}} prende il posto di quella del {{theirs}}.",
+      "noRetry": "Quella del {{device}} non si può rimettere da qui: tieni l'altra, o sistemala a mano e segnala come fatta.",
+      "othersOne": "e un altro",
+      "othersOther": "e altri {{count}}",
+      "decided": "Fatto.",
+      "retryFailed": "Non è riuscito: {{message}}",
+      "loadFailed": "L'elenco non si è caricato. Riprova.",
+      "reason": {
+        "changed": "Cambiata su tutti e due",
+        "differs": "Registrata in due modi diversi",
+        "gone": "Sull'altro dispositivo non c'è più",
+        "refused": "Qui non è stata accettata",
+        "failed": "Qui non è riuscita",
+        "unknownRoute": "Questa versione di Budojo non la conosce"
+      },
+      "what": {
+        "athlete": "Scheda dell'atleta",
+        "payment": "Pagamento di {{month}}",
+        "paymentAny": "Pagamento",
+        "attendance": "Presenza del {{date}}",
+        "attendanceAny": "Presenza",
+        "lessonTopics": "Argomenti della lezione del {{date}}",
+        "lessonNotes": "Note della lezione del {{date}}",
+        "promotion": "Promozione",
+        "photo": "Foto",
+        "document": "Documento",
+        "closure": "Chiusura della palestra",
+        "academy": "Dati della palestra",
+        "other": "Una modifica"
+      },
+      "field": {
+        "first_name": "Nome",
+        "last_name": "Cognome",
+        "email": "Email",
+        "phone_national_number": "Telefono",
+        "payment_method": "Metodo di pagamento",
+        "amount_cents": "Importo",
+        "paid_at": "Pagato il",
+        "period_months": "Mesi",
+        "topic_ids": "Argomenti",
+        "notes": "Note",
+        "label": "Nome",
+        "starts_on": "Dal",
+        "ends_on": "Al",
+        "belt": "Cintura",
+        "stripes": "Gradi",
+        "name": "Nome",
+        "monthly_fee_cents": "Quota mensile",
+        "address": "Indirizzo",
+        "line1": "Indirizzo",
+        "city": "Città",
+        "postal_code": "CAP",
+        "status": "Stato",
+        "joined_at": "Iscritto dal",
+        "date_of_birth": "Data di nascita",
+        "photo_path": "Foto",
+        "photo_sha256": "Foto"
+      },
+      "topicsOne": "1 argomento",
+      "topicsOther": "{{count}} argomenti"
     }
   }
 }

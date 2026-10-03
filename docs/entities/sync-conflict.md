@@ -17,7 +17,7 @@ No Eloquent model, as for `sync_entries`.
 | `route` | string(120) | not null | The entry's route name. |
 | `reason` | string(16) | not null | Why, below. |
 | `detail` | text (JSON) | not null | What the replay found: the field and both values (`{"field": "first_name", "saw": "Luca", "here": "Luke"}`), or the status, message and validation errors. |
-| `entry` | text (JSON) | not null | The write as replayed here, in this database's ids: `method`, `params`, `body`, `before`. |
+| `entry` | text (JSON) | not null | The write as replayed here, in this database's ids: `method`, `params`, `body`, `before`; and `created`, what it made where it was written (by table, that device's ids). |
 | `recorded_at` | timestamp | default now | When the replay found it. |
 | `decided_at` | timestamp | nullable | When the owner answered (#2038). |
 | `decision` | string(16) | nullable | `theirs`, `mine` or `by-hand`, once answered (#2038). |
@@ -36,6 +36,23 @@ No Eloquent model, as for `sync_entries`.
 | `differs` | The row it made or found here differs in a field the entry sets: the same month's payment made otherwise, or an amount the fee here works out otherwise. |
 | `failed` | Anything else, a server error first. |
 | `unknown-route` | A route this Budojo no longer has. |
+
+## The owner's answer (#2031, #2038)
+
+`GET /api/v1/sync/conflicts` lists those that wait (`decided_at` null), and `POST /api/v1/sync/conflicts/{entry}/decision` records the answer:
+- **`theirs`:** what is here stays;
+- **`mine`:** the set-aside write made true here by the conflict's `retry`, the requests that make it so. `POST /api/v1/sync/conflicts/{entry}/keep-mine` runs them and records the answer in one transaction: a month undone and then refused leaves the other device's payment in place.
+  - **The form less what the other device changed and the write did not,** judged here when the list is read, as the replay judges a form. What the write changed goes; what still holds what it sent goes too, so a form that requires it is whole, except a list that is a column here (an academy's training days), which goes only when the write changed it; what the other device changed meanwhile stays out, with its change, and comes back as the retry's `fill`, at its value here: keep-mine sends the form whole with it when the form refuses the trimmed body (a closure's dates, required on every save, #2113), and that answer stands. The address goes as the write left it: whole when it added one, cleared, or its own changes over what is here.
+  - **A month paid otherwise** is undone first.
+  - **No `retry` for:**
+    - a write whose row is gone or has none here;
+    - one the rules here refused;
+    - an upload;
+    - a payment whose amount the fee here works out otherwise;
+    - a route, or parameters, this Budojo no longer has;
+- **`by-hand`:** the owner set it right themselves.
+
+**The answer is journaled** (`sync.conflicts.decide`): it reaches the other device's database even through a rebase that starts from a version that still asks. Recording it again, or for a conflict this database does not hold, changes nothing.
 
 ## Business rules
 

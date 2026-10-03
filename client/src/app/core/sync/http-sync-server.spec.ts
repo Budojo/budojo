@@ -62,6 +62,33 @@ describe('HttpSyncServer', () => {
     await staged;
   });
 
+  it('stages the other device’s work with the flag the homecoming is kept on (#2039)', async () => {
+    const staged = server.stage(utf8('SQLite format 3'), { rebase: true, homecoming: true });
+    http
+      .expectOne('/api/v1/sync/stage?rebase=1&homecoming=1')
+      .flush(null, { status: 204, statusText: 'No Content' });
+    await staged;
+  });
+
+  it('lists the conflicts, records an answer, and keeps the phone’s in one call (#2038)', async () => {
+    const listed = server.conflicts();
+    http.expectOne('/api/v1/sync/conflicts').flush({ data: [{ id: ULID }] });
+    expect(await listed).toEqual([{ id: ULID }]);
+
+    const decided = server.decide(ULID, 'theirs');
+    const answer = http.expectOne(`/api/v1/sync/conflicts/${ULID}/decision`);
+    expect(answer.request.method).toBe('POST');
+    expect(answer.request.body).toEqual({ decision: 'theirs' });
+    answer.flush(null, { status: 204, statusText: 'No Content' });
+    await decided;
+
+    const kept = server.keepMine(ULID);
+    const keep = http.expectOne(`/api/v1/sync/conflicts/${ULID}/keep-mine`);
+    expect(keep.request.method).toBe('POST');
+    keep.flush(null, { status: 204, statusText: 'No Content' });
+    await kept;
+  });
+
   it('reads the journal and the holds, and clears through an entry', async () => {
     const journal = server.journal();
     http.expectOne('/api/v1/sync/journal').flush({ data: [{ id: ULID }] });
@@ -76,6 +103,24 @@ describe('HttpSyncServer', () => {
     expect(request.request.method).toBe('DELETE');
     request.flush(null, { status: 204, statusText: 'No Content' });
     await cleared;
+  });
+
+  it('reads the homecoming, null when nothing waits, and says it was seen (#2039)', async () => {
+    const arrived = server.homecoming();
+    http.expectOne('/api/v1/sync/homecoming').flush({ data: { through: ULID, athletes: 1 } });
+    expect(await arrived).toEqual({ through: ULID, athletes: 1 });
+
+    const none = server.homecoming();
+    http
+      .expectOne('/api/v1/sync/homecoming')
+      .flush(null, { status: 204, statusText: 'No Content' });
+    expect(await none).toBeNull();
+
+    const seen = server.seenHomecoming(ULID);
+    const request = http.expectOne(`/api/v1/sync/homecoming?through=${ULID}`);
+    expect(request.request.method).toBe('DELETE');
+    request.flush(null, { status: 204, statusText: 'No Content' });
+    await seen;
   });
 
   it('says whether the database holds an academy: 404 is none, anything else fails', async () => {
