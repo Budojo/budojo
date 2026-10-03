@@ -73,7 +73,7 @@ jobs:
       # installers and releases nothing: semantic-release, and the tag
       # detection that feeds the sweep, are skipped (#2119 review).
       - name: Release
-        if: !github.event.inputs.installer_tag
+        if: ${{ !github.event.inputs.installer_tag }}
         env:
           # Defensive kill switch for husky hooks. Today semantic-release
           # only creates a tag + GitHub Release (no `git commit` in CI),
@@ -93,7 +93,7 @@ jobs:
 
       - name: Detect a newly-created tag at HEAD, beta or stable
         id: detect-new-tag
-        if: !github.event.inputs.installer_tag
+        if: ${{ !github.event.inputs.installer_tag }}
         run: |
           TAG="$(git tag --points-at HEAD | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+(-beta\.[0-9]+)?$' | head -1 || true)"
           echo "new_tag=$TAG" >> "$GITHUB_OUTPUT"
@@ -104,7 +104,7 @@ jobs:
         # (v*-beta.N) which we never sweep. The `if:` below skips
         # this step entirely on other branches; the sweep job's own
         # `if:` guard still short-circuits when the output is unset.
-        if: github.ref == 'refs/heads/main' && !github.event.inputs.installer_tag
+        if: ${{ github.ref == 'refs/heads/main' && !github.event.inputs.installer_tag }}
         run: |
           # semantic-release ran in the SAME checkout in the SAME job —
           # any tag it created is already in the local repo, no fetch
