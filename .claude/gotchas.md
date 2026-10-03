@@ -132,6 +132,7 @@ Format: `→` separates the symptom from the action.
 
 ## Tests — Cypress
 
+- → **`cy.clock(now, ['Date'])` stops RxJS's `debounceTime`** (#2122). The async scheduler measures the pause with `Date.now()`, so with the date frozen the pause never ends, and a debounced search never fires: the spec failed in CI, though it had passed locally. Follow a debounced action with `cy.tick(<pause + margin>)`, and wait for the page to be ready before typing.
 - **Local E2E logged out halfway, and CI never did.** With the `api` container up, a call a spec forgot to stub reaches the real server and gets a 401, and the auth interceptor sends the app to `/auth/login` mid-test. In CI there is no backend, so the same call just fails quietly. It cost hours blamed on "stale chunks" (#2020). → `make e2e` now stops the API for the run and starts it again after, as the screenshot harness always did. If you run Cypress another way, stop the API first.
 - **CI kept the frame; read it before re-running** (#2005). The artifact `cypress-screenshots-shard-N` on the failed run is the only record of what the page held. Three "flakes" this week were real causes, each visible in the frame:
   - a toast over the Edit button;

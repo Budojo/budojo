@@ -5,6 +5,7 @@ import { provideRouter } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import { AcademyClass } from '../../../core/services/academy-class.service';
 import { AcademyService } from '../../../core/services/academy.service';
+import { RuntimeService } from '../../../core/services/runtime.service';
 import { Athlete } from '../../../core/services/athlete.service';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 import { DailyAttendanceComponent } from './daily-attendance.component';
@@ -569,10 +570,10 @@ describe('DailyAttendanceComponent', () => {
     expect(component['presentCountLabel']()).toBeNull();
 
     component['togglePresent'](makeAthlete({ id: 1 }));
-    expect(component['presentCountLabel']()).toBe('1 present');
+    expect(component['presentCountLabel']()).toBe('1 on the mat');
 
     component['togglePresent'](makeAthlete({ id: 2, first_name: 'Luigi' }));
-    expect(component['presentCountLabel']()).toBe('2 present');
+    expect(component['presentCountLabel']()).toBe('2 on the mat');
 
     // ...and it follows a correction back down, because it reads the same map
     // every row reads.
@@ -582,7 +583,7 @@ describe('DailyAttendanceComponent', () => {
         req.flush({ data: [{ id: 99, athlete_id: 1, attended_on: '2026-04-24' }] }),
       );
     component['optimisticRemove'](2);
-    expect(component['presentCountLabel']()).toBe('1 present');
+    expect(component['presentCountLabel']()).toBe('1 on the mat');
   });
 
   it('opens on belt, highest rank first — the order the roster opens on', () => {
@@ -1773,6 +1774,190 @@ describe('DailyAttendanceComponent — who usually comes and is not here (#1730)
 
     expect(root.querySelector('[data-cy="missing-regulars-error"]')).toBeNull();
     expect(root.querySelector('[data-cy="missing-regulars-toggle"]')).not.toBeNull();
+  });
+});
+
+describe('DailyAttendanceComponent — the phone’s register (#2035)', () => {
+  // Monday at 18:30: the clock picks fundamentals at 19:00.
+  const FUNDAMENTALS: AcademyClass = {
+    id: 2,
+    name: 'Fundamentals',
+    weekday: 1,
+    starts_at: '19:00',
+    duration_minutes: 60,
+    kind: 'gi',
+  };
+  const ROOM = [
+    makeAthlete({ id: 1, first_name: 'Anna' }),
+    makeAthlete({ id: 2, first_name: 'Bruno' }),
+    makeAthlete({ id: 3, first_name: 'Carla' }),
+    makeAthlete({ id: 4, first_name: 'Dario' }),
+  ];
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 8, 14, 18, 30));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  /** The room, with Carla (5 of 6) and Anna (3 of 6) as the class's regulars. */
+  function open(profile: 'mobile' | 'web' = 'mobile') {
+    const harness = setup();
+    vi.spyOn(TestBed.inject(RuntimeService), 'profile').mockReturnValue(profile);
+    harness.fixture.detectChanges();
+    flushInit(harness.httpMock, { athletes: ROOM, classes: [FUNDAMENTALS] });
+    return harness;
+  }
+  function answerRegulars(httpMock: HttpTestingController) {
+    const regular = (id: number, attended: number) => ({
+      ...ROOM[id - 1],
+      phone_country_code: null,
+      phone_national_number: null,
+      is_self: false,
+      attended,
+      last_attended_on: '2026-09-07',
+    });
+    httpMock
+      .expectOne((r) => r.url === '/api/v1/attendance/regulars')
+      .flush({
+        data: [regular(1, 3), regular(3, 5)],
+        meta: { occurrences: 6, occurrence_dates: [] },
+      });
+  }
+  function rows(fixture: Harness['fixture']): string[] {
+    fixture.detectChanges();
+    const list = (fixture.nativeElement as HTMLElement).querySelector(
+      '[data-cy="attendance-mobile-list"]',
+    );
+    return Array.from(list?.querySelectorAll('[data-cy^="attendance-card-"]') ?? []).map(
+      (row) => row.getAttribute('data-cy') ?? '',
+    );
+  }
+
+  it('waits for the regulars: drawn before, the rows would move under the thumb', () => {
+    const { fixture, httpMock } = open();
+
+    expect(rows(fixture)).toEqual([]);
+    expect(
+      (fixture.nativeElement as HTMLElement).querySelector('[data-cy="attendance-mobile-loading"]'),
+    ).not.toBeNull();
+
+    answerRegulars(httpMock);
+    expect(rows(fixture)).toHaveLength(4);
+  });
+
+  it('shows the room as one list when the day’s records fail but the regulars answer', () => {
+    const harness = setup();
+    vi.spyOn(TestBed.inject(RuntimeService), 'profile').mockReturnValue('mobile');
+    harness.fixture.detectChanges();
+    harness.httpMock
+      .expectOne((r) => r.url === '/api/v1/athletes')
+      .flush({
+        data: ROOM,
+        links: { first: null, last: null, prev: null, next: null },
+        meta: { current_page: 1, from: 1, last_page: 1, path: '', per_page: 100, to: 4, total: 4 },
+      });
+    harness.httpMock.expectOne('/api/v1/academy/classes').flush({ data: [FUNDAMENTALS] });
+    harness.httpMock
+      .expectOne((r) => r.url === '/api/v1/attendance')
+      .flush({}, { status: 500, statusText: 'Server Error' });
+    answerRegulars(harness.httpMock);
+
+    expect(rows(harness.fixture)).toEqual([
+      'attendance-card-1',
+      'attendance-card-2',
+      'attendance-card-3',
+      'attendance-card-4',
+    ]);
+  });
+
+  it('puts «Chi viene di solito» first, the most faithful on top, then everyone else', () => {
+    const { fixture, httpMock } = open();
+    answerRegulars(httpMock);
+
+    expect(rows(fixture)).toEqual([
+      'attendance-card-3',
+      'attendance-card-1',
+      'attendance-card-2',
+      'attendance-card-4',
+    ]);
+    const root = fixture.nativeElement as HTMLElement;
+    expect(
+      root.querySelector('[data-cy="attendance-register-regulars"]')?.textContent?.trim(),
+    ).toBe('Regulars');
+    expect(root.querySelector('[data-cy="attendance-register-others"]')).not.toBeNull();
+  });
+
+  it('never moves a row when it is ticked, and a second tap unticks it', () => {
+    const { fixture, component, httpMock } = open();
+    answerRegulars(httpMock);
+    const before = rows(fixture);
+
+    component['togglePresent'](ROOM[3]);
+    httpMock
+      .expectOne((r) => r.url === '/api/v1/attendance' && r.method === 'POST')
+      .flush({ data: [{ id: 501, athlete_id: 4, lesson_id: 3, attended_on: '2026-09-14' }] });
+    expect(rows(fixture)).toEqual(before);
+
+    component['togglePresent'](ROOM[3]);
+    httpMock
+      .expectOne((r) => r.url === '/api/v1/attendance/501' && r.method === 'DELETE')
+      .flush(null, { status: 204, statusText: 'No Content' });
+    expect(rows(fixture)).toEqual(before);
+    expect(component['isPresent'](4)).toBe(false);
+  });
+
+  it('answers a tap with a buzz and no toast on the phone', () => {
+    const { fixture, component, httpMock } = open();
+    answerRegulars(httpMock);
+    const vibrate = vi.fn();
+    Object.defineProperty(navigator, 'vibrate', { value: vibrate, configurable: true });
+    const toast = vi.spyOn(fixture.debugElement.injector.get(MessageService), 'add');
+
+    component['togglePresent'](ROOM[1]);
+    httpMock
+      .expectOne((r) => r.url === '/api/v1/attendance' && r.method === 'POST')
+      .flush({ data: [{ id: 502, athlete_id: 2, lesson_id: 3, attended_on: '2026-09-14' }] });
+    fixture.detectChanges();
+
+    expect(vibrate).toHaveBeenCalledOnce();
+    expect(toast).not.toHaveBeenCalled();
+  });
+
+  it('keeps the toast and the single list on the PC', () => {
+    const { fixture, component, httpMock } = open('web');
+    answerRegulars(httpMock);
+    const toast = vi.spyOn(fixture.debugElement.injector.get(MessageService), 'add');
+
+    component['togglePresent'](ROOM[1]);
+    httpMock
+      .expectOne((r) => r.url === '/api/v1/attendance' && r.method === 'POST')
+      .flush({ data: [{ id: 502, athlete_id: 2, lesson_id: 3, attended_on: '2026-09-14' }] });
+    fixture.detectChanges();
+
+    expect(toast).toHaveBeenCalledOnce();
+  });
+
+  it('is one list while searching', () => {
+    const { fixture, component, httpMock } = open();
+    answerRegulars(httpMock);
+    component['searchTerm'].set('a');
+
+    expect(
+      (fixture.nativeElement as HTMLElement).querySelector(
+        '[data-cy="attendance-register-regulars"]',
+      ),
+    ).toBeNull();
+    expect(rows(fixture)).toEqual([
+      'attendance-card-1',
+      'attendance-card-2',
+      'attendance-card-3',
+      'attendance-card-4',
+    ]);
   });
 });
 

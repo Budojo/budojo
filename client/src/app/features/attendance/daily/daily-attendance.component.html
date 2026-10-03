@@ -401,10 +401,10 @@
        row, same aria semantics (role=button, aria-pressed, aria-busy)
        so screen readers + keyboard nav read identically. -->
   <div class="attendance__mobile-list" data-cy="attendance-mobile-list">
-    @if (loading()) {
+    @if (!registerReady()) {
       <div class="attendance__mobile-skeletons" data-cy="attendance-mobile-loading">
         @for (i of [1, 2, 3, 4, 5]; track i) {
-          <p-skeleton height="4.5rem" styleClass="mb-2" />
+          <p-skeleton height="3.5rem" styleClass="mb-2" />
         }
       </div>
     } @else if (athletes().length === 0) {
@@ -426,44 +426,63 @@
         }
       </div>
     } @else {
-      <ul class="attendance-cards">
-        @for (athlete of athletes(); track athlete.id) {
-          <li class="attendance-card-item">
-            <!-- Real <button> inside the <li> so the list preserves its
-                 `listitem` semantics for screen readers (#677 Copilot
-                 review). The button fills the card and carries all the
-                 interaction state (aria-pressed mirrors visual state,
-                 aria-busy during the in-flight write). -->
-            <button
-              type="button"
-              class="attendance-card"
-              [class.attendance-card--present]="isPresent(athlete.id)"
-              [class.attendance-card--inflight]="isInflight(athlete.id)"
-              [attr.aria-pressed]="isPresent(athlete.id)"
-              [attr.aria-busy]="isInflight(athlete.id)"
-              [disabled]="isInflight(athlete.id)"
-              (click)="togglePresent(athlete)"
-              [attr.data-cy]="'attendance-card-' + athlete.id"
-            >
-              <div class="attendance-card__main">
-                <span class="attendance-card__name"
-                  >{{ athlete.first_name }} {{ athlete.last_name }}</span
-                >
-                <app-belt-badge [belt]="athlete.belt" [stripes]="athlete.stripes" />
-              </div>
-              <span class="attendance-card__indicator" aria-hidden="true">
-                @if (isPresent(athlete.id)) {
-                  <i
-                    class="pi pi-check-square attendance-indicator attendance-indicator--present"
-                  ></i>
-                } @else {
-                  <i class="pi pi-stop attendance-indicator"></i>
-                }
-              </span>
-            </button>
-          </li>
+      <!--
+        «Chi viene di solito» first, then everyone (#2035): fixed when the
+        room loads, so a tap never moves a row.
+      -->
+      @for (section of registerSections(); track section.key) {
+        @if (section.label; as label) {
+          <h2
+            class="attendance__register-heading"
+            [attr.data-cy]="'attendance-register-' + section.key"
+          >
+            {{ label | translate }}
+          </h2>
         }
-      </ul>
+        <ul class="attendance-cards">
+          @for (athlete of section.athletes; track athlete.id) {
+            <li class="attendance-card-item">
+              <!-- Real <button> inside the <li> so the list preserves its
+                   `listitem` semantics for screen readers (#677 Copilot
+                   review). The button fills the card and carries all the
+                   interaction state (aria-pressed mirrors visual state,
+                   aria-busy during the in-flight write). -->
+              <button
+                type="button"
+                class="attendance-card"
+                [class.attendance-card--present]="isPresent(athlete.id)"
+                [class.attendance-card--inflight]="isInflight(athlete.id)"
+                [attr.aria-pressed]="isPresent(athlete.id)"
+                [attr.aria-busy]="isInflight(athlete.id)"
+                [disabled]="isInflight(athlete.id)"
+                (click)="togglePresent(athlete)"
+                [attr.data-cy]="'attendance-card-' + athlete.id"
+              >
+                <!-- The roster's identity (#2035): the belt spine, the face, the name. -->
+                <app-athlete-identity class="attendance-card__main" [athlete]="athlete">
+                  @if (isSelfMarked(athlete.id)) {
+                    <span
+                      class="attendance-self-badge"
+                      [attr.title]="'attendance.daily.selfBadge.title' | translate"
+                    >
+                      {{ 'attendance.daily.selfBadge.label' | translate }}
+                    </span>
+                  }
+                </app-athlete-identity>
+                <span class="attendance-card__indicator" aria-hidden="true">
+                  @if (isPresent(athlete.id)) {
+                    <i
+                      class="pi pi-check-square attendance-indicator attendance-indicator--present"
+                    ></i>
+                  } @else {
+                    <i class="pi pi-stop attendance-indicator"></i>
+                  }
+                </span>
+              </button>
+            </li>
+          }
+        </ul>
+      }
     }
   </div>
 

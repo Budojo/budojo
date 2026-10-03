@@ -1,5 +1,5 @@
 import { AcademyClass } from '../../../core/services/academy-class.service';
-import { pickDefaultClass } from './class-pick';
+import { classOnTheMat, pickDefaultClass } from './class-pick';
 
 function klass(overrides: Partial<AcademyClass> & { id: number }): AcademyClass {
   return {
@@ -74,5 +74,36 @@ describe('pickDefaultClass (#1562)', () => {
   it('never picks an untimed class over a timed one on the day itself', () => {
     const untimed = klass({ id: 7, starts_at: null });
     expect(pickDefaultClass([FUNDAMENTALS, untimed], MONDAY, at('12:00'))).toBe(FUNDAMENTALS);
+  });
+
+  describe('with the phone’s home (#2035)', () => {
+    // Thursday 1 October 2026: Gi 19:00–20:00, Advanced 21:00.
+    const gi = {
+      ...klass({ id: 7, name: 'Gi', starts_at: '19:00' }),
+      weekday: 4,
+      duration_minutes: 60,
+    };
+    const advanced = {
+      ...klass({ id: 8, name: 'Advanced', starts_at: '21:00' }),
+      weekday: 4,
+      duration_minutes: 60,
+    };
+    const at = (time: string) => new Date(`2026-10-01T${time}:00`);
+
+    it('opens on the class just ended, as the home did, not on the next one', () => {
+      expect(classOnTheMat([gi, advanced], at('20:20'))?.id).toBe(7);
+      expect(pickDefaultClass([gi, advanced], at('20:20'), at('20:20'))?.id).toBe(7);
+    });
+
+    it('opens on the class about to start over the one just ended', () => {
+      const late = { ...advanced, starts_at: '20:15' };
+      expect(classOnTheMat([gi, late], at('20:05'))?.id).toBe(8);
+      expect(pickDefaultClass([gi, late], at('20:05'), at('20:05'))?.id).toBe(8);
+    });
+
+    it('is nothing between the two windows, and the check-in falls back to the nearest', () => {
+      expect(classOnTheMat([gi, advanced], at('20:35'))).toBeNull();
+      expect(pickDefaultClass([gi, advanced], at('20:35'), at('20:35'))?.id).toBe(8);
+    });
   });
 });
