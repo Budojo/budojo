@@ -1981,8 +1981,8 @@
         "unmarkError": "Impossibile rimuovere il segno per {{name}}. Riprova."
       },
       "monthlySummary": "Riepilogo del mese",
-      "presentCountOne": "{{count}} presente",
-      "presentCountOther": "{{count}} presenti",
+      "presentCountOne": "{{count}} sul tatami",
+      "presentCountOther": "{{count}} sul tatami",
       "missing": {
         "title": "Chi viene di solito",
         "description": "Presenti ad almeno 3 delle ultime 4 lezioni di questa classe, e non ancora segnati.",
@@ -2005,7 +2005,11 @@
         "edit": "Modifica"
       },
       "closedToday": "Oggi l'accademia è chiusa — stai vedendo la sessione di {{date}}.",
-      "closedTodayLabel": "Oggi l'accademia è chiusa ({{label}}) — stai vedendo la sessione di {{date}}."
+      "closedTodayLabel": "Oggi l'accademia è chiusa ({{label}}) — stai vedendo la sessione di {{date}}.",
+      "register": {
+        "regulars": "Abituali",
+        "others": "Tutti gli altri"
+      }
     },
     "summary": {
       "daysOne": "{{count}} giorno di allenamento",

@@ -1981,8 +1981,8 @@
         "unmarkError": "Couldn't un-mark {{name}}. Try again."
       },
       "monthlySummary": "Monthly summary",
-      "presentCountOne": "{{count}} present",
-      "presentCountOther": "{{count}} present",
+      "presentCountOne": "{{count}} on the mat",
+      "presentCountOther": "{{count}} on the mat",
       "missing": {
         "title": "Who usually comes",
         "description": "At 3 of this class's last 4 sessions, and not checked in yet.",
@@ -2005,7 +2005,11 @@
         "edit": "Edit"
       },
       "closedToday": "The academy is closed today — you're looking at the {{date}} session.",
-      "closedTodayLabel": "The academy is closed today ({{label}}) — you're looking at the {{date}} session."
+      "closedTodayLabel": "The academy is closed today ({{label}}) — you're looking at the {{date}} session.",
+      "register": {
+        "regulars": "Regulars",
+        "others": "Everyone else"
+      }
     },
     "summary": {
       "daysOne": "{{count}} training day",

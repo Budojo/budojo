@@ -69,3 +69,28 @@ export function pickDefaultClass(
   }
   return best;
 }
+
+/** From how long before a class the phone opens on its check-in (#2035, PRD § 6.1). */
+export const CHECK_IN_OPENS_BEFORE_MINUTES = 15;
+/** And until how long after it ends: the latecomers, and the coach's last ticks. */
+export const CHECK_IN_STAYS_AFTER_MINUTES = 30;
+
+/**
+ * The class on the mat now (#2035): today's, from 15 minutes before it starts
+ * to 30 minutes after it ends. The phone opens on its check-in then, and on
+ * Oggi otherwise. A class with no start time is never on the clock.
+ */
+export function classOnTheMat(classes: readonly AcademyClass[], now: Date): AcademyClass | null {
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  return (
+    classes.find((c) => {
+      if (c.weekday !== now.getDay() || c.starts_at === null) return false;
+      const start = minutesOf(c.starts_at);
+      const end = start + (c.duration_minutes ?? DEFAULT_DURATION_MINUTES);
+      return (
+        start - CHECK_IN_OPENS_BEFORE_MINUTES <= nowMinutes &&
+        nowMinutes < end + CHECK_IN_STAYS_AFTER_MINUTES
+      );
+    }) ?? null
+  );
+}

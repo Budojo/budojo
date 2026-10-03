@@ -24,6 +24,7 @@ import { SkeletonModule } from 'primeng/skeleton';
 import { Toast } from 'primeng/toast';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { BeltLadderService } from '../../../core/services/belt-ladder.service';
+import { RuntimeService } from '../../../core/services/runtime.service';
 import { AcademyClosure, AcademyService } from '../../../core/services/academy.service';
 import { closureOn } from '../../../shared/utils/training-days';
 import { LanguageService } from '../../../core/services/language.service';
@@ -45,7 +46,6 @@ import {
 import { Lesson, LessonService, LessonTopic } from '../../../core/services/lesson.service';
 import { LessonSheetComponent } from '../../lessons/lesson-sheet/lesson-sheet.component';
 import { AthleteIdentityComponent } from '../../../shared/components/athlete-identity/athlete-identity.component';
-import { BeltBadgeComponent } from '../../../shared/components/belt-badge/belt-badge.component';
 import { FilterSheetComponent } from '../../../shared/components/filter-sheet/filter-sheet.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { SortHeaderComponent } from '../../../shared/components/sort-header/sort-header.component';
@@ -64,6 +64,13 @@ import { MissingRegularsComponent } from './missing-regulars/missing-regulars.co
 interface SelectOption<T extends string> {
   label: string;
   value: T | '';
+}
+
+/** One part of the phone's register (#2035), with its heading's key when it has one. */
+interface RegisterSection {
+  readonly key: 'all' | 'regulars' | 'others';
+  readonly label: string | null;
+  readonly athletes: readonly Athlete[];
 }
 
 /**
@@ -116,7 +123,6 @@ function toLocalDateString(d: Date): string {
     Toast,
     RouterLink,
     TranslatePipe,
-    BeltBadgeComponent,
     AthleteIdentityComponent,
     FilterSheetComponent,
     PageHeaderComponent,
@@ -139,6 +145,14 @@ export class DailyAttendanceComponent implements OnInit {
   private readonly beltLadder = inject(BeltLadderService);
   private readonly languageService = inject(LanguageService);
   private readonly academyClassService = inject(AcademyClassService);
+  private readonly runtime = inject(RuntimeService);
+
+  /**
+   * The phone (#2035): the register a coach taps through at the mat. A tap
+   * answers with a buzz and the row's own state, and a second tap undoes it,
+   * so the success toast, which would stack over the rows, stays on the PC.
+   */
+  protected readonly onThePhone = computed(() => this.runtime.profile() === 'mobile');
 
   /**
    * The date format for every picker on this component (#1498).
@@ -702,6 +716,10 @@ export class DailyAttendanceComponent implements OnInit {
     if (this.loading() || this.isInflight(athlete.id)) {
       return;
     }
+    if (this.onThePhone()) {
+      // A short buzz: the coach's eyes are on the mat, not the screen.
+      navigator.vibrate?.(15);
+    }
     const existingRecordId = this.presentMap().get(athlete.id);
     if (existingRecordId !== undefined && existingRecordId > 0) {
       this.unmark(athlete, existingRecordId);
@@ -739,7 +757,7 @@ export class DailyAttendanceComponent implements OnInit {
           const fresh = records.find((r) => r.athlete_id === athlete.id);
           if (fresh) {
             this.optimisticAdd(athlete.id, fresh.id);
-            if (!options.silent) {
+            if (!options.silent && !this.onThePhone()) {
               this.toastUndo(
                 this.translate.instant('attendance.daily.toast.markedPresent', {
                   name: `${athlete.first_name} ${athlete.last_name}`,
@@ -773,7 +791,7 @@ export class DailyAttendanceComponent implements OnInit {
 
     this.attendanceService.delete(recordId).subscribe({
       next: () => {
-        if (!options.silent) {
+        if (!options.silent && !this.onThePhone()) {
           this.toastUndo(
             this.translate.instant('attendance.daily.toast.unmarked', {
               name: `${athlete.first_name} ${athlete.last_name}`,
@@ -945,6 +963,47 @@ export class DailyAttendanceComponent implements OnInit {
     const answer = this.regularsAnswer();
     return answer !== null && answer.epoch === this.presentEpoch() ? answer.regulars : null;
   });
+
+  /**
+   * The phone's register in two parts (#2035): **«Chi viene di solito»**, the
+   * class's regulars, the most faithful first, then everyone else in the
+   * roster's order. Set when the room loads, so a tap never moves a row. One
+   * list while searching or filtering, or when the class has no regulars.
+   */
+  protected readonly registerSections = computed<readonly RegisterSection[]>(() => {
+    const athletes = this.athletes();
+    const regulars = this.regulars()?.data ?? [];
+    if (this.searchTerm() !== '' || this.selectedBelt() !== '' || regulars.length === 0) {
+      return [{ key: 'all', label: null, athletes }];
+    }
+    const byId = new Map(athletes.map((athlete) => [athlete.id, athlete]));
+    const first = [...regulars]
+      .sort((a, b) => b.attended - a.attended)
+      .flatMap((regular) => byId.get(regular.id) ?? []);
+    if (first.length === 0) {
+      return [{ key: 'all', label: null, athletes }];
+    }
+    const firstIds = new Set(first.map((athlete) => athlete.id));
+    return [
+      { key: 'regulars', label: 'attendance.daily.register.regulars', athletes: first },
+      {
+        key: 'others',
+        label: 'attendance.daily.register.others',
+        athletes: athletes.filter((athlete) => !firstIds.has(athlete.id)),
+      },
+    ];
+  });
+
+  /**
+   * The phone's register shows once the class's regulars are known too, or
+   * known to be missing: drawn before, it would reorder under the coach's
+   * thumb when they arrived.
+   */
+  protected readonly registerReady = computed<boolean>(
+    () =>
+      !this.loading() &&
+      (this.selectedClassId() === null || this.regulars() !== null || this.regularsFailed()),
+  );
 
   /**
    * Once per (day, class) — on the day's load and on a chip — never per
