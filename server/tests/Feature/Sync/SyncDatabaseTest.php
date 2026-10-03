@@ -195,6 +195,21 @@ describe('PUT /api/v1/sync/stage', function (): void {
         expect(Homecoming::read())->toBeNull();
     });
 
+    it('keeps the homecoming when a whole academy fails to stage: the live database stays, and its news (#2124 review)', function (): void {
+        $told = ['device' => 'phone9f8e7d6c', 'at' => '2026-10-01T19:00:00Z', 'through' => '01K6A000000000000000000004', 'created' => [], 'other' => 1];
+        Homecoming::keep($told);
+        // The copy beside the live file fails, as a full disk would: its
+        // path leads nowhere, past the clear that empties the slot first.
+        symlink("{$this->dir}/nowhere/budojo.sqlite", "{$this->live}.staged.part");
+
+        $this->actingAs(userWithAcademy())
+            ->call('PUT', '/api/v1/sync/stage', content: syncTestIncoming($this->dir, syncTestHistory()))
+            ->assertServerError();
+
+        expect(Homecoming::read())->toBe($told)
+            ->and(file_exists("{$this->live}.staged"))->toBeFalse();
+    });
+
     it('takes a database of the schema this app runs', function (): void {
         $this->actingAs(userWithAcademy())
             ->call('PUT', '/api/v1/sync/stage', content: syncTestIncoming($this->dir, syncTestHistory()))

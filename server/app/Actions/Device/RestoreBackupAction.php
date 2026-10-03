@@ -35,8 +35,6 @@ final class RestoreBackupAction
         $database = $archive->database();
 
         Staged::clear();
-        // The homecoming told of the database a restore replaces (#2039).
-        Homecoming::forget();
         $part = SyncStorage::stagedPath() . '.part';
 
         try {
@@ -48,6 +46,10 @@ final class RestoreBackupAction
                 throw new \RuntimeException('could not stage the files beside the live ones');
             }
             $this->stage->stageChecked($database);
+            // The homecoming told of the database the restore replaces
+            // (#2039): forgotten once the restore is staged, never before
+            // (a restore that fails keeps the live database and its news).
+            Homecoming::forget();
         } catch (\Throwable $e) {
             Staged::clear();
 
