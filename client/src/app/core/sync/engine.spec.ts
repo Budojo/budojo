@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { utf8 } from './bytes';
-import { AskChoice, EMPTY_LEDGER, resolveAsk, SyncContext, syncOnce } from './engine';
+import { AskChoice, EMPTY_LEDGER, PRUNED_PER_PUSH, resolveAsk, SyncContext, syncOnce } from './engine';
 import { importSyncKey, newSyncKey, seal } from './envelope';
 import { devicePath, filePath } from './layout';
 import { MemoryRemote, SyncRemote } from './remote';
@@ -683,6 +683,30 @@ describe('the versions the folder keeps (#2030)', () => {
     // The newest ten, and the first version of the line both are on.
     expect(versionsOf(remote)).toBe(11);
     expect(remote.files.has('versions/000001-pc4f2a.root.bjs')).toBe(false);
+  });
+
+  it('trims a folder that grew before the retention a few versions a push, the oldest first', async () => {
+    const { remote, key, pc } = await twoDevices();
+    const keepsAll: SyncRemote = {
+      list: (path) => remote.list(path),
+      read: (path) => remote.read(path),
+      write: (path, bytes) => remote.write(path, bytes),
+      remove: async (path) => {
+        if (!path.startsWith('versions/')) await remote.remove(path);
+      },
+    };
+    for (let night = 1; night <= 40; night++) {
+      pc.write(`Luca, night ${night}`);
+      await sync(pc, keepsAll, key);
+    }
+    expect(versionsOf(remote)).toBe(41);
+
+    pc.write('Luca, the night the retention shipped');
+    await sync(pc, remote, key);
+
+    expect(versionsOf(remote)).toBe(42 - PRUNED_PER_PUSH);
+    expect(remote.files.has('versions/000002-pc4f2a.000001-pc4f2a.bjs')).toBe(false);
+    expect(remote.files.has('versions/000030-pc4f2a.000029-pc4f2a.bjs')).toBe(true);
   });
 
   it('never fails a round on a version it could not delete: the next push tries again', async () => {
