@@ -11,6 +11,7 @@ use App\Support\Sync\Journal\JournalBody;
 use App\Support\Sync\Journal\JournalRecorder;
 use App\Support\Sync\Journal\JournalRoutes;
 use App\Support\Sync\Journal\JournalUploads;
+use App\Support\Sync\Journal\ResolvedFields;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Route;
 use Illuminate\Support\Facades\DB;
@@ -59,7 +60,7 @@ final class RecordJournalEntry
                     $request->method(),
                     (string) $name,
                     self::params($route),
-                    $body->value,
+                    ResolvedFields::into((string) $name, $body->value, $response),
                     $this->recorder->createdIds(),
                     $this->recorder->before(),
                 );

@@ -22,8 +22,9 @@ import { packVersion, PROTOCOL, unpackVersion } from './version';
  * 2. **Acts:**
  *    - **push:** files, then the version;
  *    - **fast-forward:** the version in, swapped by the shell, then the files;
- *    - **rebase:** not yet. The server's replay is #2031's step 3, and until
- *      then the round says so and changes nothing.
+ *    - **rebase:** the version in, staged with this device's kept writes set
+ *      aside; the server replays them on it as it starts again (#2031 step 3),
+ *      and the round pushes what the replay kept on top.
  * 3. **Reports** what this device holds (`devices/`), and clears from its
  *    journal what every other device reports holding.
  *
@@ -36,8 +37,12 @@ import { packVersion, PROTOCOL, unpackVersion } from './version';
 export interface SyncServer {
   /** `GET /sync/export`: the database, and the newest migration it has run. */
   exportDatabase(): Promise<{ database: Uint8Array; schema: string }>;
-  /** `PUT /sync/stage`: another device's database, for the shell to swap in. */
-  stage(database: Uint8Array): Promise<void>;
+  /**
+   * `PUT /sync/stage`: another device's database, for the shell to swap in.
+   * With `rebase`, the server sets this device's kept journal aside first,
+   * and replays it on that database once swapped in.
+   */
+  stage(database: Uint8Array, options?: { rebase: boolean }): Promise<void>;
   /** `GET /sync/journal`: this device's kept entries, oldest first. */
   journal(): Promise<JournalEntry[]>;
   /** `DELETE /sync/journal?through=`: clears up to what every other device holds. */
@@ -92,8 +97,9 @@ export const EMPTY_LEDGER: SyncLedger = {
  * Everything one round needs. **What the caller owes it:**
  * - rounds on one device never overlap: one at a time;
  * - a staged database is always swapped in at the next start, as the phone's
- *   `StagedSwap` does: a fast-forward saves its base once staged, before the
- *   swap, and relies on it.
+ *   `StagedSwap` does, and a rebase's set-aside journal replayed on it: a
+ *   fast-forward or a rebase saves its base once staged, before the swap, and
+ *   relies on it.
  */
 export interface SyncContext {
   device: string;
@@ -125,7 +131,11 @@ export type SyncOutcome =
   | { kind: 'pulled'; version: VersionRef }
   | { kind: 'wait' }
   | { kind: 'ask'; latest: VersionRef }
-  | { kind: 'needs-rebase'; onto: VersionRef }
+  /**
+   * Its writes replayed on the other device's version, and pushed on top of
+   * it (`pushed`); null when that version held every one of them already.
+   */
+  | { kind: 'rebased'; onto: VersionRef; pushed: VersionRef | null }
   /** A write landed while the round was deciding: nothing was swapped, and the next round decides again. */
   | { kind: 'retry' };
 
@@ -217,7 +227,12 @@ export async function syncOnce(context: SyncContext): Promise<SyncRound> {
           version: { seq: decision.onto.seq + 1, device: context.device },
         };
       } else {
-        outcome = { kind: 'needs-rebase', onto: decision.onto };
+        const listed = versions.find((version) =>
+          sameVersion(version, decision.onto),
+        ) as SeenVersion;
+        const rebased = await rebase(context, listed);
+        ledger = rebased.ledger;
+        outcome = { kind: 'rebased', onto: decision.onto, pushed: rebased.pushed };
       }
       break;
     case 'ask':
@@ -404,6 +419,21 @@ async function push(
   return landed;
 }
 
+/** The version's database, read, opened and checked. */
+async function readVersion(context: SyncContext, listed: ListedVersion): Promise<Uint8Array> {
+  const { remote, key } = context;
+  const path = versionPath(listed);
+  const sealed = await remote.read(path);
+  if (sealed === null) {
+    throw new Error(`the version ${path} went missing between the listing and the read`);
+  }
+  const unpacked = await unpackVersion(await open(key, path, sealed), listed);
+  if (!unpacked.ok) {
+    throw new Error(`the version ${path} does not read: ${unpacked.reason}`);
+  }
+  return unpacked.value.database;
+}
+
 /**
  * Pulls the version and swaps it in, with this device's writes held from the
  * last look at its journal to the swap: a write that landed since the round
@@ -415,17 +445,8 @@ async function fastForward(
   listed: ListedVersion,
   kept: JournalEntry[],
 ): Promise<SyncLedger | null> {
-  const { server, remote, key, shell } = context;
-  const path = versionPath(listed);
-  const sealed = await remote.read(path);
-  if (sealed === null) {
-    throw new Error(`the version ${path} went missing between the listing and the read`);
-  }
-  const unpacked = await unpackVersion(await open(key, path, sealed), listed);
-  if (!unpacked.ok) {
-    throw new Error(`the version ${path} does not read: ${unpacked.reason}`);
-  }
-  const database = unpacked.value.database;
+  const { server, shell } = context;
+  const database = await readVersion(context, listed);
   return context.holdWrites(async () => {
     const known = new Set(kept.map((entry) => entry.id));
     if ((await server.journal()).some((entry) => !known.has(entry.id))) {
@@ -444,6 +465,48 @@ async function fastForward(
     await shell.swapIn();
     return next;
   });
+}
+
+/**
+ * Carries this device's writes onto the other device's version (#2031 step 3,
+ * protocol § Rebase). The version is staged as a rebase: the server sets the
+ * kept journal aside with it, and replays it on that database as it starts
+ * again, before it serves. **Under the hold, as a fast-forward:** a write
+ * the page sends meanwhile lands before the journal is set aside, never on
+ * the database the swap replaces. No re-check is needed: a write that came
+ * since the round decided is set aside with the rest.
+ *
+ * Then the round pushes what the replay kept: every entry it applied, found
+ * already true, or turned into a conflict. One the version had dealt with
+ * already is not kept, and when every one was, there is nothing to push.
+ */
+async function rebase(
+  context: SyncContext,
+  listed: ListedVersion,
+): Promise<{ ledger: SyncLedger; pushed: VersionRef | null }> {
+  const { server, shell } = context;
+  const database = await readVersion(context, listed);
+  const onto: VersionRef = { seq: listed.seq, device: listed.device };
+  const rebased = await context.holdWrites(async () => {
+    await server.stage(database, { rebase: true });
+    // Saved once staged, as a fast-forward's base is: the next start swaps
+    // it in and replays whatever happens. Every entry the replay keeps is in
+    // no version on this line, so none counts as pushed or listed: a device
+    // killed before the push below pushes them at its next round.
+    const next: SyncLedger = { ...EMPTY_LEDGER, base: onto };
+    context.saveLedger(next);
+    await shell.swapIn();
+    return next;
+  });
+  const replayed = await server.journal();
+  if (replayed.length === 0) {
+    return { ledger: rebased, pushed: null };
+  }
+  const seq = onto.seq + 1;
+  return {
+    ledger: await push(context, rebased, seq, onto, replayed, replayed),
+    pushed: { seq, device: context.device },
+  };
 }
 
 async function readReports(context: SyncContext): Promise<DeviceReport[]> {
