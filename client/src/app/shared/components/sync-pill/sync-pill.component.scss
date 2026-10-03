@@ -51,6 +51,12 @@
   gap: 0.5rem;
   max-width: 18rem;
 
+  // On a phone the panel spans the page between its gutters (global
+  // `.sync-detail-popover`): the text takes that width.
+  @media (max-width: 767px) {
+    max-width: none;
+  }
+
   &__title {
     margin: 0;
     font-weight: 600;

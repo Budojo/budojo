@@ -812,3 +812,30 @@
 // (The notification bell popover mobile override was removed with the
 // #1129 refactor — the bell now navigates to a full-screen page, so
 // there's no popover to position.)
+
+// The sync pill's detail on a phone (the owner's feedback, 3 Oct 2026): the
+// popover anchored to the pill at the topbar's right slid against the left
+// edge with no gutter, and read as off-centre. Below 768px it spans the page
+// between the 1 rem gutters, under the topbar, with no arrow pointing at an
+// anchor it no longer lines up with — as the bell's popover did (#779).
+// Global, since PrimeNG appends the popover to the body; `!important` since
+// it sets the position inline at toggle time. Scoped to this one popover.
+@media (max-width: 767px) {
+  .p-popover.sync-detail-popover {
+    // Fixed, not the overlay's absolute: the page may have scrolled under
+    // the sticky topbar, and the panel belongs under the topbar, not at the
+    // document's top (#2121 review).
+    position: fixed !important;
+    left: 1rem !important;
+    right: 1rem !important;
+    width: auto !important;
+    max-width: none !important;
+    transform: none !important;
+    top: calc(var(--budojo-safe-top, 0px) + var(--budojo-topbar-height) + 0.5rem) !important;
+
+    &::before,
+    &::after {
+      display: none !important;
+    }
+  }
+}

@@ -141,10 +141,13 @@ describe('SyncPillComponent', () => {
       await openDetail(fixture);
 
       expect(find('sync-ask-folder')?.textContent).toContain("Use the PC's gym");
+      expect(find('sync-detail-hint')).not.toBeNull();
       press('sync-ask-folder');
       fixture.detectChanges();
 
       expect(find('sync-ask-consequence')?.textContent).toContain('What it holds now is replaced');
+      // The consequence says it all: the hint above it goes, so a phone shows less.
+      expect(find('sync-detail-hint')).toBeNull();
       expect(sync.resolve).not.toHaveBeenCalled();
 
       press('sync-ask-confirm');
