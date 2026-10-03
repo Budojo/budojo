@@ -488,6 +488,25 @@ describe('what a replay never does silently (#2101 review)', function (): void {
             ->and($academy->fresh()->logo_sha256)->toBe($pcLogo);
     });
 
+    it('undoes a row the phone made and removed, whatever id it has here', function (): void {
+        $giulia = replayAthlete($this, 'Giulia');
+        $entries = onThePhone(function (): void {
+            $this->actingAs($this->owner)->postJson('/api/v1/attendance', ['date' => '2026-10-01', 'athlete_ids' => [$this->luca]])->assertCreated();
+            $record = DB::table('attendance_records')->where('athlete_id', $this->luca)->value('id');
+            $this->actingAs($this->owner)->deleteJson("/api/v1/attendance/{$record}")->assertSuccessful();
+            $marco = replayAthlete($this, 'Marco');
+            $this->actingAs($this->owner)->deleteJson("/api/v1/athletes/{$marco}")->assertSuccessful();
+        });
+        // The PC checks Giulia in and adds Paolo meanwhile: Luca's record and
+        // Marco take other ids here.
+        $this->actingAs($this->owner)->postJson('/api/v1/attendance', ['date' => '2026-10-01', 'athlete_ids' => [$giulia]])->assertCreated();
+        replayAthlete($this, 'Paolo');
+
+        expect(array_count_values(replayOnThePc($entries)))->toBe(['applied' => 4])
+            ->and(DB::table('attendance_records')->where('athlete_id', $this->luca)->whereNull('deleted_at')->count())->toBe(0)
+            ->and(Athlete::query()->where('first_name', 'Marco')->exists())->toBeFalse();
+    });
+
     it('finds the academy logo removed on both devices no conflict', function (): void {
         $this->actingAs($this->owner)->post('/api/v1/academy/logo', ['logo' => UploadedFile::fake()->image('logo.png', 64, 64)])->assertSuccessful();
         $entries = onThePhone(fn () => $this->actingAs($this->owner)->deleteJson('/api/v1/academy/logo')->assertSuccessful());

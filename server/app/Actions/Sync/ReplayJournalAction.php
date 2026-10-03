@@ -271,7 +271,7 @@ final class ReplayJournalAction
             }
             foreach ($there as $i => $saw) {
                 foreach ($saw as $field => $value) {
-                    if ($field === 'id' || $field === 'deleted_at' || \in_array($field, self::CLOCK, true) || ! \array_key_exists($field, $here[$i])) {
+                    if ($field === 'deleted_at' || ! self::comparable((string) $field) || ! \array_key_exists($field, $here[$i])) {
                         continue;
                     }
                     if (! self::same($here[$i][$field], $value)) {
@@ -557,7 +557,7 @@ final class ReplayJournalAction
                 // something on it (a photo) recorded the fields it changed.
                 $deletes = $method === 'DELETE' && \array_key_exists('id', $fields);
                 foreach ($fields as $field => $saw) {
-                    if (\in_array($field, self::CLOCK, true) || ! \array_key_exists($field, $now)) {
+                    if (! self::comparable((string) $field) || ! \array_key_exists($field, $now)) {
                         continue;
                     }
                     if ($byName && ! \array_key_exists($field, $body)) {
@@ -596,6 +596,21 @@ final class ReplayJournalAction
         }
 
         return $byName && $allAsWanted ? ['outcome' => 'already', 'conflict' => null] : null;
+    }
+
+    /**
+     * Whether a column says the same on both devices. Not the clock, and not
+     * an id the map does not rewrite: the row's own, or a reference made from
+     * others (a check-in's `lesson_id`, its lesson made on each device). The
+     * references a write names are in `IdMap::FIELDS`, rewritten, and compared.
+     */
+    private static function comparable(string $field): bool
+    {
+        if (\in_array($field, self::CLOCK, true) || $field === 'id') {
+            return false;
+        }
+
+        return ! str_ends_with($field, '_id') || \array_key_exists($field, IdMap::FIELDS);
     }
 
     /**

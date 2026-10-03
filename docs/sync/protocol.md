@@ -245,6 +245,7 @@ There is no pairing code (#2033). **A device joins at its first «Accedi con Goo
   - A nested object (the address) is left out whole when the entry did not change it. When the entry did change it, a field moved here too is a conflict, and the fields it carried along take what this database holds;
 - **a write that names none of the fields it changes** (a photo removed) cannot say what it would make them. When one moved here, its replay tells: changing nothing, it was true already; changing the moved row, it is a conflict;
 - **a delete that names its row another way than by a model** (a month's payment, by year and month) must delete here the row it deleted there, field by field. One that names its row (an athlete) is compared on it alone: what it took along (his documents) is derived again;
+- **a row's own id, and a reference made on each device** (a check-in's `lesson_id`), are never compared: they differ between devices for the same row. The references a write names are rewritten through the id map and compared;
 - **money is never left to chance:** a payment's entry carries the amount, the period and the date the row got (`ResolvedFields`), and a payment the replay makes or finds otherwise is a `differs` conflict.
 
 Each entry ends in one state, recorded in [`sync_entries`](../entities/sync-entry.md) in the same transaction as what it did:
