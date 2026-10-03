@@ -945,6 +945,20 @@ describe('«Da decidere»: the owner’s answers (#2031)', function (): void {
         expect(DB::table('academy_closures')->where('id', $closure)->value('label'))->toBe('Vacanze di Natale');
     });
 
+    it('leaves the academy’s training days out of a retry when the phone did not change them', function (): void {
+        $this->actingAs($this->owner)->patchJson('/api/v1/academy', ['training_days' => [1, 3]])->assertOk();
+        $entries = onThePhone(fn () => $this->actingAs($this->owner)->patchJson('/api/v1/academy', ['name' => 'Kaizen Roma', 'training_days' => [1, 3]])->assertOk());
+        $this->actingAs($this->owner)->patchJson('/api/v1/academy', ['name' => 'Kaizen Prati', 'training_days' => [1, 3, 5]])->assertOk();
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'conflict']);
+
+        $retry = $this->actingAs($this->owner)->getJson('/api/v1/sync/conflicts')->json('data.0.retry.0');
+        expect($retry['body'])->not->toHaveKey('training_days');
+        $this->actingAs($this->owner)->json($retry['method'], $retry['url'], $retry['body'])->assertOk();
+        $academy = $this->owner->academy->fresh();
+        expect($academy->name)->toBe('Kaizen Roma')
+            ->and($academy->training_days)->toBe([1, 3, 5]);
+    });
+
     it('sends the address a conflict recorded by v2.77.0 names, though it keeps no created', function (): void {
         $roma = ['line1' => 'Via Roma 1', 'city' => 'Roma', 'postal_code' => '00100', 'province' => 'RM', 'country' => 'IT'];
         $entries = onThePhone(fn () => $this->actingAs($this->owner)->patchJson("/api/v1/athletes/{$this->luca}", ['last_name' => 'Bianco', 'address' => $roma])->assertOk());

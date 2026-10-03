@@ -180,7 +180,18 @@ final class ListConflictsAction
             if (isset(ReplayJournalAction::NESTED[$field])) {
                 continue;
             }
-            $moved = ! \is_array($value) && \array_key_exists($field, $here) && ! ReplayJournalAction::same($here[$field], $value);
+            if (\is_array($value)) {
+                // A list that is a column here (an academy's training days)
+                // goes only when the entry changed it: the request may derive
+                // it otherwise, and the same days can still be refused. One
+                // that is no column (a lesson's `topic_ids`) is the write.
+                if (! \array_key_exists($field, $here) || \in_array($field, $changed, true)) {
+                    $sent[$field] = $value;
+                }
+
+                continue;
+            }
+            $moved = \array_key_exists($field, $here) && ! ReplayJournalAction::same($here[$field], $value);
             if (\in_array($field, $changed, true) || ! $moved) {
                 $sent[$field] = $value;
             }
