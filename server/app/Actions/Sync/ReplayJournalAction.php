@@ -193,6 +193,52 @@ final class ReplayJournalAction
     }
 
     /**
+     * What a form refused for want of, when it is only fields the replay left
+     * out as the other device's (`keepTheirs`): a form that requires them on
+     * every save, as a closure's dates are (#2113). Sent with this database's
+     * values, they keep the other device's change; a refusal for anything
+     * else stands.
+     *
+     * @param  array<string, mixed>  $left
+     * @return array<string, mixed> the fields to send again, none when the refusal stands
+     */
+    public static function refill(int $status, mixed $answer, array $left): array
+    {
+        $errors = \is_array($answer) && \is_array($answer['errors'] ?? null) ? array_map('strval', array_keys($answer['errors'])) : [];
+        if ($status !== 422 || $errors === [] || array_diff($errors, array_keys($left)) !== []) {
+            return [];
+        }
+
+        return array_intersect_key($left, array_flip($errors));
+    }
+
+    /**
+     * This database's value, in the shape the entry sent its own: a day as a
+     * day (a row holds `2026-12-27 00:00:00` where a form takes
+     * `2026-12-27`), a number as a number, a flag as a flag.
+     */
+    public static function asSent(mixed $here, mixed $sent): mixed
+    {
+        if ($here === null) {
+            return null;
+        }
+        if (\is_bool($sent)) {
+            return (bool) $here;
+        }
+        if (\is_int($sent) && is_numeric($here)) {
+            return (int) $here;
+        }
+        if (\is_float($sent) && is_numeric($here)) {
+            return (float) $here;
+        }
+        if (\is_string($sent) && \is_string($here) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $sent) === 1 && preg_match('/^(\d{4}-\d{2}-\d{2})[T ]/', $here, $day) === 1) {
+            return $day[1];
+        }
+
+        return $here;
+    }
+
+    /**
      * @param  array{id: string, at: string, method: string, route: string, params: array<string, int|string>, body: array<string, mixed>|null, created: array<string, list<int|string>>, before: array<string, array<string, array<string, mixed>>>|null}  $entry
      */
     private function replay(string $device, array $entry, IdMap $map, User $owner): string
@@ -239,10 +285,12 @@ final class ReplayJournalAction
             $probe = $seen['conflict'];
             $seen = null;
         }
+        $left = [];
         if ($seen === null) {
             $kept = self::keepTheirs($entry['method'], $own, $before, $body, $entry['created']);
             $body = $kept['body'];
             $seen = $kept['seen'];
+            $left = $kept['left'];
         }
         if ($seen !== null) {
             $map->learn($entry['created'], []);
@@ -256,6 +304,13 @@ final class ReplayJournalAction
 
         try {
             [$status, $answer, $created, $touched] = $this->dispatch($route, $entry['method'], $params, $body, $owner, $entry['at']);
+            // Refused for want of what it left out: sent again whole, with
+            // the other device's values (a refusal writes nothing).
+            $refill = self::refill($status, $answer, $left);
+            if ($refill !== []) {
+                $body = [...($body ?? []), ...$refill];
+                [$status, $answer, $created, $touched] = $this->dispatch($route, $entry['method'], $params, $body, $owner, $entry['at']);
+            }
             $judged = self::judge($entry, $status, $answer, $created, $touched, $before, $targets, $body, $probe);
         } catch (\Throwable $e) {
             // A route that takes other parameters now, say: never a replay
@@ -576,21 +631,23 @@ final class ReplayJournalAction
      *   left out together, and changed on both sides they are a conflict.
      * - **A nested object** (the address) is left out whole when the entry
      *   did not change it and the row here holds another, or none.
+     * - **What it leaves out comes back as `left`,** with this database's
+     *   values: a form may require it on every save (`refill`, #2113).
      *
      * @param  array{table: string, id: string, class: class-string<Model>|null}|null  $own
      * @param  array<string, array<string, array<string, mixed>>>|null  $before
      * @param  array<string, mixed>|null  $body
      * @param  array<string, list<int|string>>  $created  what the entry made where it was written
-     * @return array{body: array<string, mixed>|null, seen: array{outcome: string, conflict: array<string, mixed>|null}|null}
+     * @return array{body: array<string, mixed>|null, seen: array{outcome: string, conflict: array<string, mixed>|null}|null, left: array<string, mixed>}
      */
     private static function keepTheirs(string $method, ?array $own, ?array $before, ?array $body, array $created): array
     {
         if (($method !== 'PUT' && $method !== 'PATCH') || $body === null || $own === null) {
-            return ['body' => $body, 'seen' => null];
+            return ['body' => $body, 'seen' => null, 'left' => []];
         }
         $row = DB::table($own['table'])->where('id', $own['id'])->first();
         if ($row === null) {
-            return ['body' => $body, 'seen' => null];
+            return ['body' => $body, 'seen' => null, 'left' => []];
         }
         $now = (array) $row;
         $changed = $before[$own['table']][$own['id']] ?? [];
@@ -616,11 +673,13 @@ final class ReplayJournalAction
                     'field' => $moved[0],
                     'saw' => $body[$moved[0]],
                     'here' => $now[$moved[0]],
-                ]]];
+                ]], 'left' => []];
             }
             $theirs = [...$theirs, ...array_intersect($group, array_keys($body))];
         }
+        $left = [];
         foreach (array_unique($theirs) as $field) {
+            $left[$field] = self::asSent($now[$field] ?? null, $body[$field]);
             unset($body[$field]);
         }
         foreach (self::NESTED as $key => $nested) {
@@ -643,7 +702,7 @@ final class ReplayJournalAction
                         'table' => $nested['table'],
                         'id' => (string) $here['id'],
                         'field' => $key,
-                    ]]];
+                    ]], 'left' => []];
                 }
 
                 continue;
@@ -668,7 +727,7 @@ final class ReplayJournalAction
             }
         }
 
-        return ['body' => $body, 'seen' => null];
+        return ['body' => $body, 'seen' => null, 'left' => $left];
     }
 
     /**

@@ -948,6 +948,30 @@ describe('«Da decidere»: the owner’s answers (#2031)', function (): void {
         expect(DB::table('academy_closures')->where('id', $closure)->value('label'))->toBe('Vacanze di Natale');
     });
 
+    it('applies the phone’s label on the dates the PC moved: the form requires them, sent as they are here (#2113)', function (): void {
+        $closure = (int) $this->actingAs($this->owner)->postJson('/api/v1/academy/closures', ['label' => 'Natale', 'starts_on' => '2026-12-24', 'ends_on' => '2026-12-26'])->assertCreated()->json('data.id');
+        $entries = onThePhone(fn () => $this->actingAs($this->owner)
+            ->patchJson("/api/v1/academy/closures/{$closure}", ['label' => 'Vacanze di Natale', 'starts_on' => '2026-12-24', 'ends_on' => '2026-12-26'])->assertOk());
+        $this->actingAs($this->owner)->patchJson("/api/v1/academy/closures/{$closure}", ['label' => 'Natale', 'starts_on' => '2026-12-23', 'ends_on' => '2026-12-27'])->assertOk();
+
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'applied'])
+            ->and((array) DB::table('academy_closures')->where('id', $closure)->first(['label', 'starts_on', 'ends_on']))
+            ->toBe(['label' => 'Vacanze di Natale', 'starts_on' => '2026-12-23', 'ends_on' => '2026-12-27']);
+    });
+
+    it('keeps the phone’s label on a date the PC moved too: keep-mine sends it as it is here (#2113)', function (): void {
+        $closure = (int) $this->actingAs($this->owner)->postJson('/api/v1/academy/closures', ['label' => 'Natale', 'starts_on' => '2026-12-24', 'ends_on' => '2026-12-26'])->assertCreated()->json('data.id');
+        $entries = onThePhone(fn () => $this->actingAs($this->owner)
+            ->patchJson("/api/v1/academy/closures/{$closure}", ['label' => 'Vacanze di Natale', 'starts_on' => '2026-12-24', 'ends_on' => '2026-12-26'])->assertOk());
+        $this->actingAs($this->owner)->patchJson("/api/v1/academy/closures/{$closure}", ['label' => 'Chiusura natalizia', 'starts_on' => '2026-12-24', 'ends_on' => '2026-12-27'])->assertOk();
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'conflict']);
+
+        $this->actingAs($this->owner)->postJson("/api/v1/sync/conflicts/{$entries[0]['id']}/keep-mine")->assertNoContent();
+
+        expect((array) DB::table('academy_closures')->where('id', $closure)->first(['label', 'starts_on', 'ends_on']))
+            ->toBe(['label' => 'Vacanze di Natale', 'starts_on' => '2026-12-24', 'ends_on' => '2026-12-27']);
+    });
+
     it('leaves the academy’s training days out of a retry when the phone did not change them', function (): void {
         $this->actingAs($this->owner)->patchJson('/api/v1/academy', ['training_days' => [1, 3]])->assertOk();
         $entries = onThePhone(fn () => $this->actingAs($this->owner)->patchJson('/api/v1/academy', ['name' => 'Kaizen Roma', 'training_days' => [1, 3]])->assertOk());
