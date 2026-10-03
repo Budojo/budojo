@@ -652,6 +652,26 @@ describe('a lesson’s topics, tagged on two devices (#2102)', function (): void
             ->and(($this->topicsHere)())->toBe([$this->armbar]);
     });
 
+    it('sends the class and day with the phone’s tags or notes for «Tieni la mia»', function (): void {
+        ($this->tag)([$this->guard]);
+        $entries = onThePhone(function (): void {
+            ($this->tag)([$this->sweep]);
+            $this->actingAs($this->owner)->putJson('/api/v1/lessons/notes', ['academy_class_id' => $this->class->id, 'held_on' => '2026-10-01', 'notes' => 'Guard passing'])->assertOk();
+        });
+        ($this->tag)([$this->armbar]);
+        $this->actingAs($this->owner)->putJson('/api/v1/lessons/notes', ['academy_class_id' => $this->class->id, 'held_on' => '2026-10-01', 'notes' => 'Armbar from guard'])->assertOk();
+        expect(array_values(replayOnThePc($entries)))->toBe(['conflict', 'conflict']);
+
+        foreach ($this->actingAs($this->owner)->getJson('/api/v1/sync/conflicts')->json('data') as $conflict) {
+            foreach ($conflict['retry'] as $request) {
+                $this->actingAs($this->owner)->json($request['method'], $request['url'], $request['body'])->assertOk();
+            }
+        }
+
+        expect(($this->topicsHere)())->toBe([$this->sweep])
+            ->and(DB::table('lessons')->where('held_on', 'like', '2026-10-01%')->value('notes'))->toBe('Guard passing');
+    });
+
     it('finds by its class and day a lesson each device made, and tags it, never losing it', function (): void {
         $giulia = replayAthlete($this, 'Giulia');
         $entries = onThePhone(function (): void {
@@ -820,6 +840,31 @@ describe('«Da decidere»: the owner’s answers (#2031)', function (): void {
 
         $luca = Athlete::query()->findOrFail($this->luca);
         expect($luca->first_name)->toBe('Lucas')->and($luca->last_name)->toBe('Bianco');
+    });
+
+    it('sends again every field the phone changed in that form, not only the one in conflict', function (): void {
+        $entries = onThePhone(fn () => $this->actingAs($this->owner)->patchJson("/api/v1/athletes/{$this->luca}", ['last_name' => 'Bianco', 'email' => 'luca@example.test'])->assertOk());
+        $this->actingAs($this->owner)->patchJson("/api/v1/athletes/{$this->luca}", ['first_name' => 'Lucas', 'last_name' => 'Verdi'])->assertOk();
+        replayOnThePc($entries);
+
+        $retry = $this->actingAs($this->owner)->getJson('/api/v1/sync/conflicts')->json('data.0.retry.0');
+        expect($retry['body'])->toEqualCanonicalizing(['last_name' => 'Bianco', 'email' => 'luca@example.test']);
+        $this->actingAs($this->owner)->json($retry['method'], $retry['url'], $retry['body'])->assertOk();
+        $luca = Athlete::query()->findOrFail($this->luca);
+        expect($luca->only(['first_name', 'last_name', 'email']))->toBe(['first_name' => 'Lucas', 'last_name' => 'Bianco', 'email' => 'luca@example.test']);
+    });
+
+    it('keeps the street the PC changed when «Tieni la mia» puts back the city the phone corrected', function (): void {
+        $roma = ['line1' => 'Via Roma 1', 'city' => 'Roma', 'postal_code' => '00100', 'province' => 'RM', 'country' => 'IT'];
+        $this->actingAs($this->owner)->patchJson("/api/v1/athletes/{$this->luca}", ['address' => $roma])->assertOk();
+        $entries = onThePhone(fn () => $this->actingAs($this->owner)->patchJson("/api/v1/athletes/{$this->luca}", ['address' => [...$roma, 'city' => 'Fiumicino']])->assertOk());
+        $this->actingAs($this->owner)->patchJson("/api/v1/athletes/{$this->luca}", ['address' => [...$roma, 'line1' => 'Via Appia 9', 'city' => 'Ostia']])->assertOk();
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'conflict']);
+
+        $retry = $this->actingAs($this->owner)->getJson('/api/v1/sync/conflicts')->json('data.0.retry.0');
+        $this->actingAs($this->owner)->json($retry['method'], $retry['url'], $retry['body'])->assertOk();
+        $address = DB::table('addresses')->where('addressable_type', Athlete::class)->where('addressable_id', $this->luca)->sole();
+        expect($address->line1)->toBe('Via Appia 9')->and($address->city)->toBe('Fiumicino');
     });
 
     it('offers no retry when the method and the amount both differ: the fee here makes another amount', function (): void {

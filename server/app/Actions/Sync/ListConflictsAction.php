@@ -12,6 +12,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Routing\Route;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route as Routes;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * The writes a rebase set aside that wait for the owner (#2031, PRD § 6.4),
@@ -82,9 +83,11 @@ final class ListConflictsAction
                 continue;
             }
             $table = new $class()->getTable();
-            $ids[] = $table === 'athletes'
-                ? (int) $value
-                : DB::table($table)->where('id', (int) $value)->value('athlete_id');
+            if ($table === 'athletes') {
+                $ids[] = (int) $value;
+            } elseif (Schema::hasColumn($table, 'athlete_id')) {
+                $ids[] = DB::table($table)->where('id', (int) $value)->value('athlete_id');
+            }
         }
         $ids = [...$ids, $body['athlete_id'] ?? null, ...(\is_array($body['athlete_ids'] ?? null) ? $body['athlete_ids'] : [])];
         $ids = array_values(array_unique(array_map('intval', array_filter($ids, 'is_numeric'))));
@@ -125,7 +128,7 @@ final class ListConflictsAction
                 return self::payAgain($params, \is_array($body) ? $body : [], $url);
             }
 
-            return [['method' => $method, 'url' => $url, 'body' => $reason === 'changed' ? self::only($route, $detail, $body) : $body]];
+            return [['method' => $method, 'url' => $url, 'body' => $reason === 'changed' ? self::only($detail, $entry, $body) : $body]];
         } catch (\Throwable) {
             // Parameters the route no longer takes: the page offers no retry.
             return null;
@@ -134,35 +137,49 @@ final class ListConflictsAction
 
     /**
      * What a `changed` conflict is about, out of the body it was sent with:
-     * the field, the fields required with it, and what names a lesson. The
-     * nested address goes whole, as the form requires it. A write that names
-     * none of its fields (a photo removed) goes as it was.
+     * every field the entry changed on that row (its `before`), the one the
+     * conflict names, the fields required with them, and what names a lesson
+     * (its class and day). The nested address goes whole, as the form
+     * requires: what the entry changed in it, and this database's values for
+     * the rest. A write that names none of its fields (a photo removed) goes
+     * as it was.
      *
      * @param  array<string, mixed>  $detail
+     * @param  array<string, mixed>  $entry
      */
-    private static function only(Route $route, array $detail, mixed $body): mixed
+    private static function only(array $detail, array $entry, mixed $body): mixed
     {
         $field = $detail['field'] ?? null;
-        if (! \is_array($body) || ! \is_string($field)) {
+        $table = \is_string($detail['table'] ?? null) ? $detail['table'] : null;
+        $id = $detail['id'] ?? null;
+        if (! \is_array($body) || ! \is_string($field) || $table === null || (! \is_int($id) && ! \is_string($id))) {
             return $body;
         }
+        $before = \is_array($entry['before'] ?? null) && \is_array($entry['before'][$table] ?? null) ? $entry['before'][$table] : [];
+        $row = $before[(string) $id] ?? null;
+        $changed = \is_array($row) ? array_keys($row) : [];
         foreach (ReplayJournalAction::NESTED as $key => $nested) {
-            if (($detail['table'] ?? null) === $nested['table'] && \array_key_exists($key, $body)) {
-                return [$key => $body[$key]];
+            if ($table === $nested['table'] && \is_array($body[$key] ?? null)) {
+                $here = (array) (DB::table($table)->where('id', $id)->first() ?? []);
+                $address = [];
+                foreach ($body[$key] as $name => $sent) {
+                    $address[$name] = \in_array($name, $changed, true) || ! \array_key_exists($name, $here) ? $sent : $here[$name];
+                }
+
+                return [$key => $address];
             }
         }
         if (! \array_key_exists($field, $body)) {
             return $body;
         }
-        $keep = [$field];
+        $keep = [$field, ...$changed];
         foreach (ReplayJournalAction::GROUPS as $group) {
-            if (\in_array($field, $group, true)) {
+            if (array_intersect($group, $keep) !== []) {
                 $keep = [...$keep, ...$group];
             }
         }
-        if (\in_array($route->getName(), ['lessons.topics', 'lessons.notes'], true)) {
-            $keep = [...$keep, ...array_keys(ReplayJournalAction::NATURAL['lessons'])];
-        }
+        // A lesson is named by its class and day: they go with what changed in it.
+        $keep = [...$keep, ...array_keys(ReplayJournalAction::NATURAL[$table] ?? [])];
 
         return array_intersect_key($body, array_flip($keep));
     }
