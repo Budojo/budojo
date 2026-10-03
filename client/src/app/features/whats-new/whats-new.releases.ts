@@ -95,8 +95,8 @@ export const RELEASES: readonly Release[] = [
             it: 'Quando le palestre sono due, scegli tu: se il telefono ha una palestra diversa da quella su Drive, per esempio un backup ripristinato prima, Budojo non sovrascrive niente e chiede: «Usa la palestra del PC» o «Tieni quella di qui». Prima di confermare ti dice cosa succede.',
           },
           {
-            en: 'Every week Google may ask for permission again: the state turns to "Reconnect Google", and nothing is lost meanwhile.',
-            it: 'Ogni settimana Google può chiedere di nuovo il permesso: lo stato diventa «Ricollega Google», e intanto non si perde niente.',
+            en: 'Every week Google may ask for permission again: the state tells you ("Google signed you out: tap to reconnect"), and the detail shows "Reconnect Google". Nothing is lost meanwhile.',
+            it: "Ogni settimana Google può chiedere di nuovo il permesso: lo stato te lo dice («Google ti ha scollegato: tocca per riconnettere»), e nel dettaglio c'è «Ricollega Google». Intanto non si perde niente.",
           },
           {
             en: 'Two devices: the PC and one phone. A third does not join, and Budojo tells you so.',
