@@ -20,7 +20,7 @@ No Eloquent model, as for `sync_entries`.
 | `params` | text (JSON) | not null | The route parameters as the URL gave them, numbers as numbers: `{"athlete": 57}`. |
 | `body` | text (JSON) | nullable | The request body, with what the write worked out for itself where money rides on it: a payment's `amount_cents`, `period_months`, `paid_at` and `payment_method`, `null` included (`ResolvedFields`). An uploaded file is `{"$file": {"sha256": …, "name": "p.png", "type": "image/png"}}`, its bytes kept on the private disk, encrypted (see below). |
 | `created` | text (JSON) | not null | The ids the write created, by table, the rows of the Actions behind it included (an athlete's first belt is a promotion a later entry can name). |
-| `before` | text (JSON) | nullable | For a change or a delete, what the rows held before, by table and id: `{"athletes": {"57": {"first_name": "Luca"}}}`. A change records the fields it changed; a delete, the whole row as stored. |
+| `before` | text (JSON) | nullable | For a change or a delete, what the rows held before, by table and id: `{"athletes": {"57": {"first_name": "Luca"}}}`. A change records the fields it changed; a delete, the whole row as stored. A set replaced through a pivot is recorded as the request names it, sorted: `{"lessons": {"12": {"topic_ids": [3, 7]}}}` (`SetReplaced`, #2102). |
 
 ## Indexes
 

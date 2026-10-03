@@ -7,6 +7,7 @@ use App\Actions\Sync\ReplayJournalAction;
 use App\Enums\TrainingMode;
 use App\Models\AcademyClass;
 use App\Models\Athlete;
+use App\Models\SyllabusTopic;
 use App\Support\Sync\RebasePending;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\UploadedFile;
@@ -602,6 +603,133 @@ describe('what a replay never does silently (#2101 review)', function (): void {
 
         expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'already'])
             ->and(DB::table('sync_conflicts')->count())->toBe(0);
+    });
+});
+
+describe('a lesson’s topics, tagged on two devices (#2102)', function (): void {
+    beforeEach(function (): void {
+        $this->class = AcademyClass::factory()->for($this->owner->academy)->create(['name' => 'Gi', 'weekday' => 4, 'starts_at' => '19:00', 'kind' => TrainingMode::Gi]);
+        [$this->guard, $this->sweep, $this->armbar] = SyllabusTopic::factory()->for($this->owner->academy)->count(3)->create()->modelKeys();
+        $this->tag = fn (array $topics) => $this->actingAs($this->owner)->putJson('/api/v1/lessons/topics', [
+            'academy_class_id' => $this->class->id,
+            'held_on' => '2026-10-01',
+            'topic_ids' => $topics,
+        ])->assertOk();
+        $this->topicsHere = fn (): array => DB::table('lesson_topic')->orderBy('syllabus_topic_id')->pluck('syllabus_topic_id')->map(fn ($id) => (int) $id)->all();
+    });
+
+    it('keeps what the replaced set was in the entry, so a replay can tell', function (): void {
+        ($this->tag)([$this->guard]);
+        $entries = onThePhone(fn () => ($this->tag)([$this->sweep]));
+
+        expect(array_values($entries[0]['before']['lessons'] ?? [])[0]['topic_ids'] ?? null)->toBe([$this->guard]);
+    });
+
+    it('applies the phone’s tags when the PC left the lesson alone', function (): void {
+        ($this->tag)([$this->guard]);
+        $entries = onThePhone(fn () => ($this->tag)([$this->sweep, $this->armbar]));
+
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'applied'])
+            ->and(($this->topicsHere)())->toBe([$this->sweep, $this->armbar]);
+    });
+
+    it('finds the same tags on both devices already true', function (): void {
+        ($this->tag)([$this->guard]);
+        $entries = onThePhone(fn () => ($this->tag)([$this->sweep]));
+        ($this->tag)([$this->sweep]);
+
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'already']);
+    });
+
+    it('asks when both devices re-tagged the lesson otherwise, and keeps the PC’s tags meanwhile', function (): void {
+        ($this->tag)([$this->guard]);
+        $entries = onThePhone(fn () => ($this->tag)([$this->sweep]));
+        ($this->tag)([$this->armbar]);
+
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'conflict'])
+            ->and(json_decode((string) DB::table('sync_conflicts')->where('entry_id', $entries[0]['id'])->value('detail'), true))
+            ->toMatchArray(['reason' => 'changed', 'field' => 'topic_ids', 'saw' => [$this->guard], 'here' => [$this->armbar]])
+            ->and(($this->topicsHere)())->toBe([$this->armbar]);
+    });
+
+    it('finds by its class and day a lesson each device made, and tags it, never losing it', function (): void {
+        $giulia = replayAthlete($this, 'Giulia');
+        $entries = onThePhone(function (): void {
+            $this->actingAs($this->owner)->postJson('/api/v1/attendance', ['date' => '2026-10-01', 'athlete_ids' => [$this->luca], 'academy_class_id' => $this->class->id])->assertSuccessful();
+            ($this->tag)([$this->sweep]);
+        });
+        $this->actingAs($this->owner)->postJson('/api/v1/attendance', ['date' => '2026-10-01', 'athlete_ids' => [$giulia], 'academy_class_id' => $this->class->id])->assertSuccessful();
+
+        expect(array_values(replayOnThePc($entries)))->not->toContain('conflict')
+            ->and(($this->topicsHere)())->toBe([$this->sweep]);
+    });
+
+    it('finds the lesson by its class and day when it has another id here', function (): void {
+        $giulia = replayAthlete($this, 'Giulia');
+        $entries = onThePhone(function (): void {
+            $this->actingAs($this->owner)->postJson('/api/v1/attendance', ['date' => '2026-10-01', 'athlete_ids' => [$this->luca], 'academy_class_id' => $this->class->id])->assertSuccessful();
+            ($this->tag)([$this->sweep]);
+        });
+        // The PC made the week before's lesson first: Thursday's takes another id here.
+        $this->actingAs($this->owner)->putJson('/api/v1/lessons/topics', ['academy_class_id' => $this->class->id, 'held_on' => '2026-09-24', 'topic_ids' => [$this->guard]])->assertOk();
+        $this->actingAs($this->owner)->postJson('/api/v1/attendance', ['date' => '2026-10-01', 'athlete_ids' => [$giulia], 'academy_class_id' => $this->class->id])->assertSuccessful();
+        // The check-in made the phone's lesson: its id there, against Thursday's here.
+        expect($entries[0]['created']['lessons'][0] ?? null)->not->toBeNull()
+            ->and(DB::table('lessons')->where('held_on', 'like', '2026-10-01%')->value('id'))->not->toBe($entries[0]['created']['lessons'][0]);
+
+        expect(array_values(replayOnThePc($entries)))->not->toContain('conflict');
+        $thursday = DB::table('lessons')->where('held_on', 'like', '2026-10-01%')->value('id');
+        expect(DB::table('lesson_topic')->where('lesson_id', $thursday)->pluck('syllabus_topic_id')->map(fn ($id) => (int) $id)->all())->toBe([$this->sweep]);
+    });
+
+    it('stays a conflict when the entry is replayed again: a lesson each device made keeps its recorded set', function (): void {
+        $entries = onThePhone(fn () => ($this->tag)([$this->sweep]));
+        expect(end($entries)['before'])->not->toBeNull();
+        ($this->tag)([$this->armbar]);
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'conflict']);
+
+        // A second rebase: the entry kept again, replayed on a database that has not dealt with it.
+        $kept = RebasePending::entriesOf('phone9c1e');
+        DB::table('sync_entries')->where('id', $entries[0]['id'])->delete();
+        DB::table('sync_conflicts')->where('entry_id', $entries[0]['id'])->delete();
+        DB::table('sync_journal')->where('id', $entries[0]['id'])->delete();
+
+        expect(replayOnThePc($kept))->toBe([$entries[0]['id'] => 'conflict'])
+            ->and(($this->topicsHere)())->toBe([$this->armbar]);
+    });
+
+    it('counts only the topics still in the programme here: one removed on the PC is no conflict', function (): void {
+        ($this->tag)([$this->guard, $this->armbar]);
+        $entries = onThePhone(fn () => ($this->tag)([$this->guard, $this->sweep]));
+        SyllabusTopic::query()->findOrFail($this->armbar)->delete();
+
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'applied']);
+    });
+
+    it('applies as it always did a topics entry written before sets were recorded', function (): void {
+        ($this->tag)([$this->guard]);
+        $entries = onThePhone(fn () => ($this->tag)([$this->sweep]));
+        $entries[0]['before'] = null;
+
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'applied'])
+            ->and(($this->topicsHere)())->toBe([$this->sweep]);
+    });
+
+    it('keeps the PC’s tags when the phone saved the lesson’s topics unchanged', function (): void {
+        ($this->tag)([$this->guard]);
+        $entries = onThePhone(fn () => ($this->tag)([$this->guard]));
+        ($this->tag)([$this->armbar]);
+
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'already'])
+            ->and(($this->topicsHere)())->toBe([$this->armbar]);
+    });
+
+    it('asks when each device made the lesson and tagged it otherwise', function (): void {
+        $entries = onThePhone(fn () => ($this->tag)([$this->sweep]));
+        ($this->tag)([$this->armbar]);
+
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'conflict'])
+            ->and(($this->topicsHere)())->toBe([$this->armbar]);
     });
 });
 
