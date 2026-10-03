@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions\Sync;
 
 use App\Enums\UserRole;
+use App\Models\Academy;
 use App\Models\User;
 use App\Support\Sync\Journal\JournalRecorder;
 use App\Support\Sync\Journal\JournalUploads;
@@ -49,6 +50,12 @@ final class ReplayJournalAction
 {
     /** Columns an entry's `before` carries that say nothing about its meaning. */
     private const array CLOCK = ['created_at', 'updated_at'];
+
+    /** Fields a form sends together, each required with the others: kept or left out as one. */
+    private const array GROUPS = [['phone_country_code', 'phone_national_number']];
+
+    /** A form's nested object, and the row it is: its table, and the morph that names its owner. */
+    private const array NESTED = ['address' => ['table' => 'addresses', 'morph' => 'addressable']];
 
     public function __construct(
         private readonly JournalRecorder $recorder,
@@ -114,14 +121,20 @@ final class ReplayJournalAction
             ]);
         }
 
-        $targets = self::targets($before, $params, $tables);
-        $seen = $this->compare($entry['method'], $targets, $body);
+        $own = self::ownRow($route, $params, $before, $owner);
+        $targets = self::targets($before, $params, $tables, $own);
+        $seen = $this->compare($entry['method'], $targets, $body)
+            ?? self::nestedChanged($before, $body);
+        if ($seen === null) {
+            $kept = self::keepTheirs($entry['method'], $own, $before, $body, $entry['created']);
+            $body = $kept['body'];
+            $seen = $kept['seen'];
+        }
         if ($seen !== null) {
             $map->learn($entry['created'], []);
 
             return $this->record($device, $entry, $params, $body, $before, $seen['outcome'], [], $seen['conflict']);
         }
-        $body = self::keepTheirs($entry['method'], $params, $tables, $before, $body);
 
         // A savepoint around the write: what a write that does not apply did
         // is undone before its conflict is recorded.
@@ -166,11 +179,13 @@ final class ReplayJournalAction
     private static function judge(array $entry, int $status, mixed $answer, array $created, ?array $touched, ?array $before, ?array $targets, ?array $body): array
     {
         if ($status >= 200 && $status < 300) {
-            if ($entry['method'] === 'DELETE') {
+            if ($entry['method'] === 'DELETE' && $targets === null) {
                 // A delete that names its row another way than by a model
                 // (a month's payment, by year and month) deleted a row here:
-                // it must be the one it deleted there.
-                $moved = self::deletedOtherwise($before, $targets, $touched);
+                // it must be the one it deleted there. One that names its row
+                // (an athlete) is compared on it; what it took along (his
+                // documents) is derived again.
+                $moved = self::deletedOtherwise($before, $touched);
                 if ($moved !== null) {
                     return ['outcome' => 'conflict', 'conflict' => ['reason' => 'changed', ...$moved]];
                 }
@@ -213,23 +228,22 @@ final class ReplayJournalAction
     }
 
     /**
-     * The rows a delete deleted where it was written, beyond its targets,
-     * against the ones its replay deleted here: the first that differs in a
-     * field, or in number. Null when they agree.
+     * The rows a delete deleted where it was written against the ones its
+     * replay deleted here: the first that differs in a field, or in number.
+     * Null when they agree.
      *
      * @param  array<string, array<string, array<string, mixed>>>|null  $before
-     * @param  array<string, array<string, array<string, mixed>>>|null  $targets
      * @param  array<string, array<string, array<string, mixed>>>|null  $touched
      * @return array<string, mixed>|null
      */
-    private static function deletedOtherwise(?array $before, ?array $targets, ?array $touched): ?array
+    private static function deletedOtherwise(?array $before, ?array $touched): ?array
     {
         foreach ($before ?? [] as $table => $rows) {
             // Deleted rows only, recorded whole: a row an Action updated on
             // the way (a carnet's count) is derived again, never compared.
             $whole = static fn (array $row): bool => \array_key_exists('id', $row);
-            $there = array_values(array_filter(array_diff_key($rows, $targets[$table] ?? []), $whole));
-            $here = array_values(array_filter(array_diff_key($touched[$table] ?? [], $targets[$table] ?? []), $whole));
+            $there = array_values(array_filter($rows, $whole));
+            $here = array_values(array_filter($touched[$table] ?? [], $whole));
             if ($there === []) {
                 continue;
             }
@@ -277,38 +291,174 @@ final class ReplayJournalAction
      * there, the other device changed it,** and that change stays: the field
      * is left out of the replayed body. Two changes to different fields of
      * one athlete are not a conflict, and both apply (PRD § 6.4).
+     * - **Fields a form sends together** (a phone number's two halves) are
+     *   left out together, and changed on both sides they are a conflict.
+     * - **A nested object** (the address) is left out whole when the entry
+     *   did not change it and the row here holds another, or none.
      *
-     * @param  array<string, int|string>  $params
-     * @param  array<string, string>  $tables
+     * @param  array{table: string, id: string, class: class-string<Model>|null}|null  $own
      * @param  array<string, array<string, array<string, mixed>>>|null  $before
      * @param  array<string, mixed>|null  $body
-     * @return array<string, mixed>|null
+     * @param  array<string, list<int|string>>  $created  what the entry made where it was written
+     * @return array{body: array<string, mixed>|null, seen: array{outcome: string, conflict: array<string, mixed>|null}|null}
      */
-    private static function keepTheirs(string $method, array $params, array $tables, ?array $before, ?array $body): ?array
+    private static function keepTheirs(string $method, ?array $own, ?array $before, ?array $body, array $created): array
     {
-        if (($method !== 'PUT' && $method !== 'PATCH') || $body === null || $tables === []) {
-            return $body;
+        if (($method !== 'PUT' && $method !== 'PATCH') || $body === null || $own === null) {
+            return ['body' => $body, 'seen' => null];
         }
-        // The route's own row: its last model, as in `/athletes/{athlete}/promotions/{promotion}`.
-        $param = array_key_last($tables);
-        $table = $tables[$param];
-        $id = (string) ($params[$param] ?? '');
-        $row = DB::table($table)->where('id', $id)->first();
+        $row = DB::table($own['table'])->where('id', $own['id'])->first();
         if ($row === null) {
-            return $body;
+            return ['body' => $body, 'seen' => null];
         }
         $now = (array) $row;
-        $changed = $before[$table][$id] ?? [];
+        $changed = $before[$own['table']][$own['id']] ?? [];
+        $theirs = [];
         foreach ($body as $field => $sent) {
-            if (\is_array($sent) || \array_key_exists($field, $changed) || ! \array_key_exists($field, $now)) {
+            if (isset(self::NESTED[$field]) || \is_array($sent) || \array_key_exists($field, $changed) || ! \array_key_exists($field, $now)) {
                 continue;
             }
             if (! self::same($now[$field], $sent)) {
-                unset($body[$field]);
+                $theirs[] = (string) $field;
+            }
+        }
+        foreach (self::GROUPS as $group) {
+            $moved = array_values(array_intersect($group, $theirs));
+            if ($moved === []) {
+                continue;
+            }
+            if (array_intersect($group, array_keys($changed)) !== []) {
+                return ['body' => $body, 'seen' => ['outcome' => 'conflict', 'conflict' => [
+                    'reason' => 'changed',
+                    'table' => $own['table'],
+                    'id' => $own['id'],
+                    'field' => $moved[0],
+                    'saw' => $body[$moved[0]],
+                    'here' => $now[$moved[0]],
+                ]]];
+            }
+            $theirs = [...$theirs, ...array_intersect($group, array_keys($body))];
+        }
+        foreach (array_unique($theirs) as $field) {
+            unset($body[$field]);
+        }
+        foreach (self::NESTED as $key => $nested) {
+            $mine = ($before[$nested['table']] ?? []) !== [] || ($created[$nested['table']] ?? []) !== [];
+            if (! \array_key_exists($key, $body) || $mine || $own['class'] === null) {
+                continue;
+            }
+            $here = DB::table($nested['table'])
+                ->where("{$nested['morph']}_type", $own['class'])
+                ->where("{$nested['morph']}_id", $own['id'])
+                ->first();
+            if (! self::sameNested($body[$key], $here === null ? null : (array) $here)) {
+                unset($body[$key]);
             }
         }
 
-        return $body;
+        return ['body' => $body, 'seen' => null];
+    }
+
+    /**
+     * A nested object the entry changed (the address), against the row here:
+     * a field it changed that moved here too, or the row gone here when the
+     * entry did not mean to clear it, is a conflict.
+     *
+     * @param  array<string, array<string, array<string, mixed>>>|null  $before
+     * @param  array<string, mixed>|null  $body
+     * @return array{outcome: string, conflict: array<string, mixed>|null}|null
+     */
+    private static function nestedChanged(?array $before, ?array $body): ?array
+    {
+        foreach (self::NESTED as $key => $nested) {
+            $sent = \is_array($body) && \is_array($body[$key] ?? null) ? $body[$key] : null;
+            foreach ($before[$nested['table']] ?? [] as $id => $saw) {
+                $row = DB::table($nested['table'])->where('id', $id)->first();
+                if ($row === null) {
+                    if ($sent === null) {
+                        // Cleared on both sides.
+                        continue;
+                    }
+
+                    return ['outcome' => 'conflict', 'conflict' => ['reason' => 'gone', 'table' => $nested['table'], 'id' => (string) $id]];
+                }
+                $now = (array) $row;
+                foreach ($saw as $field => $value) {
+                    if ($field === 'id' || \in_array($field, self::CLOCK, true) || ! \array_key_exists($field, $now) || self::same($now[$field], $value)) {
+                        continue;
+                    }
+                    if ($sent !== null && \array_key_exists($field, $sent) && self::same($now[$field], $sent[$field])) {
+                        continue;
+                    }
+
+                    return ['outcome' => 'conflict', 'conflict' => [
+                        'reason' => 'changed',
+                        'table' => $nested['table'],
+                        'id' => (string) $id,
+                        'field' => (string) $field,
+                        'saw' => $value,
+                        'here' => $now[$field],
+                    ]];
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * A nested object as a form sent it, against its row here: the same when
+     * both are absent, or every field it sends that the row has agrees.
+     *
+     * @param  array<string, mixed>|null  $row
+     */
+    private static function sameNested(mixed $sent, ?array $row): bool
+    {
+        if (! \is_array($sent) || $row === null) {
+            return ! \is_array($sent) && $row === null;
+        }
+        foreach ($sent as $field => $value) {
+            if (! \is_array($value) && \array_key_exists($field, $row) && ! self::same($row[$field], $value)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * The row an update is about. A route that binds models names it by its
+     * last (`/athletes/{athlete}/promotions/{promotion}`). `PATCH /academy`
+     * names the owner's academy by the session. Another way (`PUT
+     * /lessons/notes`, by date and class), it is the one row the write
+     * changed, when it changed one.
+     *
+     * @param  array<string, int|string>  $params
+     * @param  array<string, array<string, array<string, mixed>>>|null  $before
+     * @return array{table: string, id: string, class: class-string<Model>|null}|null
+     */
+    private static function ownRow(Route $route, array $params, ?array $before, User $owner): ?array
+    {
+        $models = self::paramModels($route);
+        if ($models !== []) {
+            $param = (string) array_key_last($models);
+            $class = $models[$param];
+
+            return ['table' => new $class()->getTable(), 'id' => (string) ($params[$param] ?? ''), 'class' => $class];
+        }
+        if ($route->getName() === 'academy.update') {
+            $academy = $owner->activeAcademyId();
+
+            return $academy === null ? null : ['table' => 'academies', 'id' => (string) $academy, 'class' => Academy::class];
+        }
+        $rows = [];
+        foreach ($before ?? [] as $table => $byId) {
+            foreach (array_keys($byId) as $id) {
+                $rows[] = ['table' => (string) $table, 'id' => (string) $id, 'class' => null];
+            }
+        }
+
+        return \count($rows) === 1 ? $rows[0] : null;
     }
 
     /**
@@ -578,14 +728,15 @@ final class ReplayJournalAction
     }
 
     /**
-     * The rows of `before` the route names through its parameters.
+     * The rows of `before` the route names through its parameters, and the row an update is about.
      *
      * @param  array<string, array<string, array<string, mixed>>>|null  $before
      * @param  array<string, int|string>  $params
      * @param  array<string, string>  $tables
+     * @param  array{table: string, id: string, class: class-string<Model>|null}|null  $own  the row an update is about (`ownRow`)
      * @return array<string, array<string, array<string, mixed>>>|null
      */
-    private static function targets(?array $before, array $params, array $tables): ?array
+    private static function targets(?array $before, array $params, array $tables, ?array $own): ?array
     {
         if ($before === null) {
             return null;
@@ -597,6 +748,9 @@ final class ReplayJournalAction
                 $targets[$table][$id] = $before[$table][$id];
             }
         }
+        if ($own !== null && isset($before[$own['table']][$own['id']])) {
+            $targets[$own['table']][$own['id']] = $before[$own['table']][$own['id']];
+        }
 
         return $targets === [] ? null : $targets;
     }
@@ -604,16 +758,22 @@ final class ReplayJournalAction
     /** @return array<string, string> parameter => the table of the model the route binds to it */
     private static function paramTables(Route $route): array
     {
-        $tables = [];
+        return array_map(static fn (string $class): string => new $class()->getTable(), self::paramModels($route));
+    }
+
+    /** @return array<string, class-string<Model>> parameter => the model the route binds to it, in the route's order */
+    private static function paramModels(Route $route): array
+    {
+        $models = [];
         foreach ($route->signatureParameters(['subClass' => UrlRoutable::class]) as $parameter) {
             $type = $parameter->getType();
             $class = $type instanceof \ReflectionNamedType ? $type->getName() : null;
             if ($class !== null && is_subclass_of($class, Model::class)) {
-                $tables[$parameter->getName()] = new $class()->getTable();
+                $models[$parameter->getName()] = $class;
             }
         }
 
-        return $tables;
+        return $models;
     }
 
     private static function same(mixed $a, mixed $b): bool

@@ -334,6 +334,88 @@ describe('what a replay never does silently (#2101 review)', function (): void {
             ->and(DB::table('athlete_payments')->where('athlete_id', $mario)->count())->toBe(0);
     });
 
+    it('keeps the fee the PC set when the phone saves the academy’s whole form, and asks when both renamed it', function (): void {
+        $academy = $this->owner->academy;
+        $form = fn (string $name): array => ['name' => $name, 'monthly_fee_cents' => 9500];
+        $entries = onThePhone(fn () => $this->actingAs($this->owner)->patchJson('/api/v1/academy', $form('Kaizen Roma'))->assertOk());
+        $this->actingAs($this->owner)->patchJson('/api/v1/academy', ['monthly_fee_cents' => 12000])->assertOk();
+
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'applied']);
+        expect($academy->fresh()->name)->toBe('Kaizen Roma')
+            ->and($academy->fresh()->monthly_fee_cents)->toBe(12000);
+
+        // Saved with nothing changed: the write recorded no row, and still
+        // the academy is the row its form is about.
+        $unchanged = onThePhone(fn () => $this->actingAs($this->owner)->patchJson('/api/v1/academy', ['name' => 'Kaizen Roma', 'monthly_fee_cents' => 12000])->assertOk());
+        expect(end($unchanged)['before'])->toBeNull();
+        $this->actingAs($this->owner)->patchJson('/api/v1/academy', ['monthly_fee_cents' => 13000])->assertOk();
+        replayOnThePc($unchanged);
+        expect($academy->fresh()->monthly_fee_cents)->toBe(13000);
+
+        $renamed = onThePhone(fn () => $this->actingAs($this->owner)->patchJson('/api/v1/academy', ['name' => 'Kaizen Trastevere', 'monthly_fee_cents' => 13000])->assertOk());
+        $this->actingAs($this->owner)->patchJson('/api/v1/academy', ['name' => 'Kaizen Prati'])->assertOk();
+
+        // The first entry is kept on the phone too: this database skips it.
+        $last = end($renamed)['id'];
+        expect(replayOnThePc($renamed)[$last])->toBe('conflict')
+            ->and($academy->fresh()->name)->toBe('Kaizen Prati');
+    });
+
+    it('keeps a phone number the PC changed whole, when the phone’s form carried both halves along', function (): void {
+        $this->actingAs($this->owner)->patchJson("/api/v1/athletes/{$this->luca}", ['phone_country_code' => '+39', 'phone_national_number' => '3331234567'])->assertOk();
+        $entries = onThePhone(fn () => $this->actingAs($this->owner)->putJson("/api/v1/athletes/{$this->luca}", [
+            'first_name' => 'Lucas', 'last_name' => 'Bianchi', 'belt' => 'white', 'stripes' => 0, 'status' => 'active',
+            'joined_at' => '2026-09-01', 'phone_country_code' => '+39', 'phone_national_number' => '3331234567',
+        ])->assertOk());
+        $this->actingAs($this->owner)->patchJson("/api/v1/athletes/{$this->luca}", ['phone_country_code' => '+39', 'phone_national_number' => '3479876543'])->assertOk();
+
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'applied']);
+        $luca = Athlete::query()->findOrFail($this->luca);
+        expect($luca->first_name)->toBe('Lucas')
+            ->and($luca->phone_national_number)->toBe('3479876543');
+    });
+
+    it('keeps the address the PC changed or added when the phone’s form carried its own along, and asks when both changed it', function (): void {
+        $roma = ['line1' => 'Via Roma 1', 'city' => 'Roma', 'postal_code' => '00100', 'province' => 'RM', 'country' => 'IT'];
+        $milano = ['line1' => 'Via Milano 2', 'city' => 'Milano', 'postal_code' => '20100', 'province' => 'MI', 'country' => 'IT'];
+        $this->actingAs($this->owner)->patchJson("/api/v1/athletes/{$this->luca}", ['address' => $roma])->assertOk();
+        $form = fn (string $name, ?array $address): array => ['first_name' => $name, 'last_name' => 'Bianchi', 'belt' => 'white', 'stripes' => 0, 'status' => 'active', 'joined_at' => '2026-09-01', 'address' => $address];
+        $city = fn (): ?string => DB::table('addresses')->where('addressable_type', Athlete::class)->where('addressable_id', $this->luca)->value('city');
+
+        // The phone renames Luca with his Roma address along; the PC moves him to Milano.
+        $entries = onThePhone(fn () => $this->actingAs($this->owner)->putJson("/api/v1/athletes/{$this->luca}", $form('Lucas', $roma))->assertOk());
+        $this->actingAs($this->owner)->patchJson("/api/v1/athletes/{$this->luca}", ['address' => $milano])->assertOk();
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'applied'])
+            ->and($city())->toBe('Milano');
+
+        // The phone moves him to Torino; the PC meanwhile to Napoli.
+        $torino = [...$milano, 'city' => 'Torino', 'postal_code' => '10100', 'province' => 'TO'];
+        $napoli = [...$milano, 'city' => 'Napoli', 'postal_code' => '80100', 'province' => 'NA'];
+        $moved = onThePhone(fn () => $this->actingAs($this->owner)->putJson("/api/v1/athletes/{$this->luca}", $form('Lucas', $torino))->assertOk());
+        $this->actingAs($this->owner)->patchJson("/api/v1/athletes/{$this->luca}", ['address' => $napoli])->assertOk();
+        $last = end($moved)['id'];
+        expect(replayOnThePc($moved)[$last])->toBe('conflict')
+            ->and($city())->toBe('Napoli');
+
+        // The phone clears it, and the PC left it alone: cleared.
+        $cleared = onThePhone(fn () => $this->actingAs($this->owner)->putJson("/api/v1/athletes/{$this->luca}", $form('Lucas', null))->assertOk());
+        $last = end($cleared)['id'];
+        expect(replayOnThePc($cleared)[$last])->toBe('applied')
+            ->and($city())->toBeNull();
+    });
+
+    it('never asks about what an athlete’s delete took along: a document the PC deleted already', function (): void {
+        config()->set('documents.encryption_key', base64_encode(random_bytes(32)));
+        $document = (int) $this->actingAs($this->owner)
+            ->post("/api/v1/athletes/{$this->luca}/documents", ['type' => 'id_card', 'file' => UploadedFile::fake()->createWithContent('id.pdf', '%PDF-1.4 an id card')])
+            ->assertCreated()->json('data.id');
+        $entries = onThePhone(fn () => $this->actingAs($this->owner)->deleteJson("/api/v1/athletes/{$this->luca}")->assertSuccessful());
+        $this->actingAs($this->owner)->deleteJson("/api/v1/documents/{$document}")->assertSuccessful();
+
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'applied'])
+            ->and(DB::table('sync_conflicts')->count())->toBe(0);
+    });
+
     it('finds an athlete deleted on both devices already deleted, not a conflict', function (): void {
         $entries = onThePhone(fn () => $this->actingAs($this->owner)->deleteJson("/api/v1/athletes/{$this->luca}")->assertSuccessful());
         $this->actingAs($this->owner)->deleteJson("/api/v1/athletes/{$this->luca}")->assertSuccessful();
