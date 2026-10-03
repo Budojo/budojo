@@ -87,8 +87,8 @@ export const RELEASES: readonly Release[] = [
             it: 'Se hai cambiato cose su tutti e due, si uniscono: le presenze segnate sul telefono e il pagamento registrato sul PC finiscono entrambi nella palestra.',
           },
           {
-            en: "If the same thing changed in two different ways, the PC's stays: the same field edited on both, the same month paid differently, a payment for an athlete deleted on the PC. The phone's change is set aside, not lost: choosing between the two comes with a later update.",
-            it: 'Se la stessa cosa è cambiata in due modi diversi, resta quella del PC: lo stesso campo modificato su tutti e due, lo stesso mese pagato in modo diverso, un pagamento per un atleta cancellato sul PC. La modifica del telefono viene messa da parte, non persa: scegliere tra le due arriva con un prossimo aggiornamento.',
+            en: 'If the same thing changed in two different ways, the one that reached Drive first stays: the same field edited on both, the same month paid differently, a payment for an athlete deleted on the other device. The other change is set aside, not lost: choosing between the two comes with a later update.',
+            it: "Se la stessa cosa è cambiata in due modi diversi, resta quella arrivata prima su Drive: lo stesso campo modificato su tutti e due, lo stesso mese pagato in modo diverso, un pagamento per un atleta cancellato sull'altro dispositivo. L'altra modifica viene messa da parte, non persa: scegliere tra le due arriva con un prossimo aggiornamento.",
           },
           {
             en: 'When there are two gyms, you choose: if the phone holds a gym other than the one on Drive, a backup restored earlier for instance, Budojo overwrites nothing and asks: "Use the PC\'s gym" or "Keep the one here". Before you confirm, it tells you what happens.',
