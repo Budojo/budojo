@@ -70,6 +70,30 @@ describe('the sync’s Drive bridge', () => {
     expect(parseDriveRequest({ url: file, method: 'GET', headers: {} })).not.toBeNull();
   });
 
+  it('passes only the headers the uploads need: never a method override (#2106)', () => {
+    expect(
+      forwardedHeaders({
+        'Content-Type': 'application/json',
+        'X-Upload-Content-Type': 'application/octet-stream',
+        'X-Upload-Content-Length': '12',
+        'X-HTTP-Method-Override': 'DELETE',
+        Authorization: 'Bearer page',
+      }),
+    ).toEqual({
+      'Content-Type': 'application/json',
+      'X-Upload-Content-Type': 'application/octet-stream',
+      'X-Upload-Content-Length': '12',
+    });
+  });
+
+  it('lets a POST only create: to the collection, never to a file by its id (#2106)', () => {
+    const post = (url: string) => parseDriveRequest({ url, method: 'POST', headers: {}, body: '{}' });
+    expect(post('https://www.googleapis.com/drive/v3/files')).not.toBeNull();
+    expect(post('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&fields=id')).not.toBeNull();
+    expect(post('https://www.googleapis.com/drive/v3/files/backup123')).toBeNull();
+    expect(post('https://www.googleapis.com/upload/drive/v3/files/backup123?uploadType=resumable')).toBeNull();
+  });
+
   it('lets a PATCH only open an upload of new content: never trash, rename or move a file (#2106)', () => {
     const upload = 'https://www.googleapis.com/upload/drive/v3/files/backup123?uploadType=resumable&fields=id';
     expect(parseDriveRequest({ url: upload, method: 'PATCH', headers: {}, body: '{}' })).not.toBeNull();

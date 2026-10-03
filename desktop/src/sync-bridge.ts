@@ -20,7 +20,8 @@
  *   none of those to a backup or any other file Budojo made. `PUT` goes only
  *   to an upload's session; `PATCH` only opens one for a file's new content,
  *   with no metadata (`{}`) and no parameter but the upload's own, never
- *   `trashed` or `addParents`.
+ *   `trashed` or `addParents`. A `POST` goes to the collection, never to a
+ *   file; and of the page's headers only the three the uploads need pass.
  */
 
 export interface DriveRequest {
@@ -68,10 +69,17 @@ export function isSyncDriveUrl(url: string): boolean {
   );
 }
 
-/** The page's headers, without any authorization of its own: the main process puts its token on. */
+/**
+ * The headers `DriveRemote` sets, and no other: not the page's own
+ * authorization (the main process puts its token on), and never one that
+ * changes what the request does, as `X-HTTP-Method-Override` would turn a
+ * `POST` into a `DELETE` (#2106).
+ */
+const FORWARDED = new Set(['content-type', 'x-upload-content-type', 'x-upload-content-length']);
+
 export function forwardedHeaders(headers: Record<string, string>): Record<string, string> {
   return Object.fromEntries(
-    Object.entries(headers).filter(([name]) => name.toLowerCase() !== 'authorization'),
+    Object.entries(headers).filter(([name]) => FORWARDED.has(name.toLowerCase())),
   );
 }
 
@@ -89,6 +97,10 @@ export function parseDriveRequest(value: unknown): DriveRequest | null {
   const address = new URL(url);
   const upload = address.pathname.startsWith('/upload/');
   if (!VERBS.has(verb) || (verb === 'PUT' && !upload)) {
+    return null;
+  }
+  // A POST creates: to the collection only, never to a file by its id.
+  if (verb === 'POST' && !/\/files$/.test(address.pathname)) {
     return null;
   }
   if (
