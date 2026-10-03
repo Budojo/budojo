@@ -7749,7 +7749,7 @@ paths:
         beside a belt. An entry that created none of the counted rows (an
         edit, a deletion, a note) is one more change (`other`); one the
         other device's own rebase found already true or set aside changed
-        nothing, and is left out. Two pulls before the owner looks add up.
+        nothing, and is left out, as is the owner's answer to a question. Two pulls before the owner looks add up.
         A restore, or a whole academy arriving, forgets it.
 
         Kept beside the database, never in it: it is this device's news
