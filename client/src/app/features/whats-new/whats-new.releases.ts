@@ -71,8 +71,8 @@ export const RELEASES: readonly Release[] = [
         heading: { en: 'To decide', it: 'Da decidere' },
         bullets: [
           {
-            en: 'When the same thing changed in two different ways, the change that arrived later is set aside and the state says so: "1 to decide". "Decide" opens a screen with one card per question: what it was, who it is about, why, and the two versions side by side.',
-            it: "Quando la stessa cosa è cambiata in due modi diversi, la modifica arrivata dopo viene messa da parte e lo stato lo dice: «1 da decidere». «Decidi» apre la schermata con una scheda per domanda: cos'era, di chi parla, perché, e le due versioni una accanto all'altra.",
+            en: 'When the same thing changed in two different ways, the change that arrived later is set aside and the state says so: "1 to decide". "Decide" opens a screen with one card per question: what it was, who it is about, why, and the two versions to compare.',
+            it: "Quando la stessa cosa è cambiata in due modi diversi, la modifica arrivata dopo viene messa da parte e lo stato lo dice: «1 da decidere». «Decidi» apre la schermata con una scheda per domanda: cos'era, di chi parla, perché, e le due versioni a confronto.",
           },
           {
             en: 'Three answers: "Keep the PC\'s", "Keep the phone\'s" (before you confirm, it tells you what it replaces) and "I fixed it myself", when you corrected it by hand.',
