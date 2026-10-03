@@ -16,11 +16,18 @@
   </button>
 
   <!-- The detail takes the focus, and gives it back to the pill when it closes. -->
-  <p-popover #detail (onHide)="returnFocus(pillButton); confirming.set(null)">
+  <p-popover
+    #detail
+    styleClass="sync-detail-popover"
+    (onHide)="returnFocus(pillButton); confirming.set(null)"
+  >
     <div class="sync-detail" data-cy="sync-detail">
       <p class="sync-detail__title">{{ sentence() }}</p>
+      <!-- Once a pick waits for its confirm, what it replaces says it all. -->
       @if (hint(); as text) {
-        <p class="sync-detail__hint">{{ text }}</p>
+        @if (confirming() === null) {
+          <p class="sync-detail__hint" data-cy="sync-detail-hint">{{ text }}</p>
+        }
       }
       @if (state().kind === 'ask') {
         <!--
