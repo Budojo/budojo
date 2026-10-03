@@ -673,7 +673,9 @@ describe('a lesson’s topics, tagged on two devices (#2102)', function (): void
         // The PC made the week before's lesson first: Thursday's takes another id here.
         $this->actingAs($this->owner)->putJson('/api/v1/lessons/topics', ['academy_class_id' => $this->class->id, 'held_on' => '2026-09-24', 'topic_ids' => [$this->guard]])->assertOk();
         $this->actingAs($this->owner)->postJson('/api/v1/attendance', ['date' => '2026-10-01', 'athlete_ids' => [$giulia], 'academy_class_id' => $this->class->id])->assertSuccessful();
-        expect(DB::table('lessons')->where('held_on', 'like', '2026-10-01%')->value('id'))->not->toBe(end($entries)['created']['lessons'][0] ?? null);
+        // The check-in made the phone's lesson: its id there, against Thursday's here.
+        expect($entries[0]['created']['lessons'][0] ?? null)->not->toBeNull()
+            ->and(DB::table('lessons')->where('held_on', 'like', '2026-10-01%')->value('id'))->not->toBe($entries[0]['created']['lessons'][0]);
 
         expect(array_values(replayOnThePc($entries)))->not->toContain('conflict');
         $thursday = DB::table('lessons')->where('held_on', 'like', '2026-10-01%')->value('id');
