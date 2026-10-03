@@ -86,7 +86,7 @@ final class RecordHomecomingAction
             foreach (self::COUNTED as $table) {
                 $rows = \is_array($created) && \is_array($created[$table] ?? null) ? $created[$table] : [];
                 if ($rows !== []) {
-                    $ids[$table] = [...$ids[$table], ...array_map(static fn (mixed $id): int => \is_numeric($id) ? (int) $id : 0, $rows)];
+                    $ids[$table] = [...$ids[$table], ...array_map(static fn (mixed $id): int => is_numeric($id) ? (int) $id : 0, $rows)];
                     $counted = true;
                 }
             }
