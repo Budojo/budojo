@@ -62,6 +62,25 @@ describe('HttpSyncServer', () => {
     await staged;
   });
 
+  it('lists the conflicts, records an answer, and keeps the phone’s in one call (#2038)', async () => {
+    const listed = server.conflicts();
+    http.expectOne('/api/v1/sync/conflicts').flush({ data: [{ id: ULID }] });
+    expect(await listed).toEqual([{ id: ULID }]);
+
+    const decided = server.decide(ULID, 'theirs');
+    const answer = http.expectOne(`/api/v1/sync/conflicts/${ULID}/decision`);
+    expect(answer.request.method).toBe('POST');
+    expect(answer.request.body).toEqual({ decision: 'theirs' });
+    answer.flush(null, { status: 204, statusText: 'No Content' });
+    await decided;
+
+    const kept = server.keepMine(ULID);
+    const keep = http.expectOne(`/api/v1/sync/conflicts/${ULID}/keep-mine`);
+    expect(keep.request.method).toBe('POST');
+    keep.flush(null, { status: 204, statusText: 'No Content' });
+    await kept;
+  });
+
   it('reads the journal and the holds, and clears through an entry', async () => {
     const journal = server.journal();
     http.expectOne('/api/v1/sync/journal').flush({ data: [{ id: ULID }] });

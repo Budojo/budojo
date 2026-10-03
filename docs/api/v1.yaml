@@ -7824,7 +7824,8 @@ paths:
       summary: Record the owner's answer to a set-aside write
       description: |
         - `theirs`: what is here stays;
-        - `mine`: the page sent the conflict's `retry` first;
+        - `mine`: the conflict's `retry` ran first, in the same transaction
+          (`POST /sync/conflicts/{entry}/keep-mine` sends both);
         - `by-hand`: the owner set it right.
 
         It only records the answer, **and it is journaled**, so it reaches
@@ -7854,6 +7855,35 @@ paths:
         '404': { description: The runtime profile has no `sync` capability. }
         '422':
           $ref: '#/components/responses/ValidationError'
+
+  /sync/conflicts/{entry}/keep-mine:
+    post:
+      operationId: syncConflictKeepMine
+      summary: «Tieni la mia» — make the set-aside write true here, and answer, all or nothing
+      description: |
+        Runs the conflict's `retry` and then records the answer `mine`, **in
+        one transaction**, through the API as the owner: every request is
+        journaled like any write of theirs, and the whole is rolled back when
+        one does not go through. A month paid otherwise is undone, then paid
+        again: a payment refused after the undo leaves the other device's
+        payment in place.
+      tags: [sync]
+      parameters:
+        - name: entry
+          in: path
+          required: true
+          description: The set-aside journal entry's id (a ULID).
+          schema: { type: string, pattern: '^[0-7][0-9A-HJKMNP-TV-Z]{25}$' }
+      responses:
+        '204': { description: 'Kept, and answered' }
+        '401': { description: Unauthenticated }
+        '403': { description: Forbidden — the user is not an owner. }
+        '404': { description: The runtime profile has no `sync` capability. }
+        '422':
+          description: Nothing kept. No `retry` would make it true here, or a request did not go through; `message` says which.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorMessage' }
 
   /stats/payments/summary:
     get:
@@ -9291,9 +9321,17 @@ components:
           properties:
             athlete:
               type: object
+              description: The athlete's identity, as every list of people gives it (`AthleteIdentity`), and the full name.
               properties:
                 id: { type: integer }
                 name: { type: string }
+                first_name: { type: string }
+                last_name: { type: string }
+                belt: { type: string }
+                stripes: { type: integer }
+                date_of_birth: { type: string, nullable: true }
+                photo_url: { type: string, nullable: true }
+                user_avatar_url: { type: string, nullable: true }
             others: { type: integer, description: How many other athletes the write names (a check-in of several). }
         retry:
           type: array

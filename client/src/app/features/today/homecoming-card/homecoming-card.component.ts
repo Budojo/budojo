@@ -11,6 +11,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ButtonModule } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
 import { LanguageService } from '../../../core/services/language.service';
+import { deviceKind } from '../../../core/sync/conflicts';
 import { Homecoming } from '../../../core/sync/homecoming';
 import { SyncService } from '../../../core/sync/sync.service';
 import { localeFor } from '../../../shared/utils/locale';
@@ -54,7 +55,10 @@ export class HomecomingCardComponent {
     });
   }
 
-  protected readonly fromPhone = computed(() => this.shown()?.device.startsWith('phone') ?? false);
+  protected readonly fromPhone = computed(() => {
+    const arrived = this.shown();
+    return arrived !== null && deviceKind(arrived.device) === 'phone';
+  });
 
   /** «Dal telefono, martedì alle 21:47»: the card's heading. */
   protected readonly title = computed(() => {

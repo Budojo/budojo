@@ -2,6 +2,7 @@ import { HttpResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { firstValueFrom, of } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { SyncConflict } from './conflicts';
 import { EMPTY_LEDGER, syncOnce } from './engine';
 import { importSyncKey, newSyncKey, seal } from './envelope';
 import { sealFolder } from './folder';
@@ -124,6 +125,65 @@ describe('SyncService', () => {
 
     expect(sync.state().kind).toBe('synced');
     expect([...remote.files.keys()]).toContain('versions/000002-phone9c1e.000001-pc4f2a.bjs');
+  });
+
+  it('counts the writes a rebase set aside after each round, for «N da decidere» (#2038)', async () => {
+    await pcPublishes();
+    const sync = setUp();
+    await sync.syncNow();
+    expect(sync.toDecide()).toBe(0);
+
+    phone.waiting = [{ id: '01K6F3Q8Z4M7X2N5P9R1T3V6W8' } as SyncConflict];
+    await sync.syncNow();
+
+    expect(sync.toDecide()).toBe(1);
+  });
+
+  it('counts what waits even when Drive cannot be reached: it is in this device’s database', async () => {
+    phone.waiting = [{ id: '01K6F3Q8Z4M7X2N5P9R1T3V6W8' } as SyncConflict];
+    const offline: SyncRemote = {
+      list: async () => {
+        throw new RemoteError('offline', 'no network');
+      },
+      read: async () => null,
+      write: async () => undefined,
+      remove: async () => undefined,
+    };
+    const sync = setUp({ remote: offline });
+
+    await sync.syncNow();
+
+    expect(sync.toDecide()).toBe(1);
+  });
+
+  it('counts them on the PC offline too, whose identity reads its keys from the account', async () => {
+    phone.waiting = [{ id: '01K6F3Q8Z4M7X2N5P9R1T3V6W8' } as SyncConflict];
+    const sync = setUp({
+      identity: async () => {
+        throw new RemoteError('offline', 'no network');
+      },
+    });
+
+    await sync.syncNow();
+
+    expect(sync.toDecide()).toBe(1);
+  });
+
+  it('shows the latest count when an earlier one answers late', async () => {
+    const sync = setUp();
+    let answerFirst: (conflicts: SyncConflict[]) => void = () => undefined;
+    const conflicts = vi
+      .spyOn(phone, 'conflicts')
+      .mockImplementationOnce(() => new Promise((resolve) => (answerFirst = resolve)))
+      .mockResolvedValueOnce([]);
+
+    const first = sync.countToDecide();
+    await sync.countToDecide();
+    answerFirst([{ id: '01K6F3Q8Z4M7X2N5P9R1T3V6W8' } as SyncConflict]);
+    await first;
+
+    expect(conflicts).toHaveBeenCalledTimes(2);
+    expect(sync.toDecide()).toBe(0);
   });
 
   it('reads what the last pull brought at the start of a round, offline too (#2039)', async () => {

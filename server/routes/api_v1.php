@@ -814,6 +814,9 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::post('conflicts/{entry}/decision', [\App\Http\Controllers\Sync\ConflictController::class, 'decide'])
                 ->where('entry', '[0-7][0-9A-HJKMNP-TV-Z]{25}')
                 ->name('sync.conflicts.decide');
+            Route::post('conflicts/{entry}/keep-mine', [\App\Http\Controllers\Sync\ConflictController::class, 'keepMine'])
+                ->where('entry', '[0-7][0-9A-HJKMNP-TV-Z]{25}')
+                ->name('sync.conflicts.keep-mine');
         });
 
     // Owner-only search + stats (#774). The Cmd/Ctrl-K palette and the

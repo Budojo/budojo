@@ -156,6 +156,7 @@ it('keeps every name as the journal knows it: a rename is a decision', function 
         'POST me/two-factor/recovery-codes/regenerate' => 'me.two-factor.recovery-codes.regenerate',
         'POST support' => 'support.store',
         'POST sync/conflicts/{entry}/decision' => 'sync.conflicts.decide',
+        'POST sync/conflicts/{entry}/keep-mine' => 'sync.conflicts.keep-mine',
         'POST unsubscribe/{userId}/{category}' => 'unsubscribe.store',
         'PUT athletes/{athlete}' => 'athletes.update',
         'PUT documents/{document}' => 'documents.update',

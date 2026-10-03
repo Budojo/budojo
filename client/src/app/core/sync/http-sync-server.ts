@@ -6,6 +6,7 @@ import { binaryBody } from './bytes';
 import { SyncServer } from './engine';
 import { Homecoming } from './homecoming';
 import { HttpSyncFiles } from './http-sync-files';
+import { ConflictDecision, SyncConflict } from './conflicts';
 import { JournalEntry } from './journal';
 
 /**
@@ -41,6 +42,30 @@ export class HttpSyncServer implements SyncServer {
         { headers: new HttpHeaders({ 'Content-Type': 'application/octet-stream' }) },
       ),
     );
+  }
+
+  /** `GET /sync/conflicts`: the writes a rebase set aside that wait for the owner (#2038). */
+  conflicts(): Promise<SyncConflict[]> {
+    return firstValueFrom(
+      this.http
+        .get<{ data: SyncConflict[] }>(this.url('/sync/conflicts'))
+        .pipe(map((response) => response.data)),
+    );
+  }
+
+  /** `POST /sync/conflicts/{entry}/decision`: the owner's answer, journaled like any write. */
+  async decide(entry: string, decision: ConflictDecision): Promise<void> {
+    await firstValueFrom(
+      this.http.post(this.url(`/sync/conflicts/${entry}/decision`), { decision }),
+    );
+  }
+
+  /**
+   * «Tieni la mia»: the set-aside write made true here and the answer, in one
+   * transaction on the server, journaled like any write of the owner's.
+   */
+  async keepMine(entry: string): Promise<void> {
+    await firstValueFrom(this.http.post(this.url(`/sync/conflicts/${entry}/keep-mine`), null));
   }
 
   journal(): Promise<JournalEntry[]> {

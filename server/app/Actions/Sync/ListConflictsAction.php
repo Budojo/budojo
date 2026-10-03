@@ -7,6 +7,7 @@ namespace App\Actions\Sync;
 use App\Enums\BillingPeriod;
 use App\Models\Athlete;
 use App\Models\User;
+use App\Support\AthleteIdentity;
 use App\Support\MonthlyFee;
 use App\Support\Sync\Journal\JournalBody;
 use Carbon\CarbonImmutable;
@@ -37,31 +38,72 @@ use Illuminate\Support\Facades\Schema;
  */
 final class ListConflictsAction
 {
+    /**
+     * The requests that keep the set-aside write for one conflict that still
+     * waits, or null: what `retry` lists for it (`KeepMineAction`).
+     *
+     * @return list<array{method: string, url: string, body: mixed}>|null
+     */
+    public function retryOf(string $entryId, User $owner): ?array
+    {
+        $row = DB::table('sync_conflicts')->where('entry_id', $entryId)->whereNull('decided_at')->first();
+        if ($row === null) {
+            return null;
+        }
+
+        return self::retryForRow($row, $owner);
+    }
+
     /** @return list<array<string, mixed>> */
     public function execute(User $owner): array
     {
         return array_values(DB::table('sync_conflicts')->whereNull('decided_at')->orderBy('recorded_at')->orderBy('entry_id')->get()
-            ->map(function (object $row) use ($owner): array {
-                $entry = self::decode($row->entry);
-                $detail = self::decode($row->detail);
-                $route = Routes::getRoutes()->getByName((string) $row->route);
-                $route = $route instanceof Route ? $route : null;
-                $reason = (string) $row->reason;
-                $lost = \is_array($detail['lost'] ?? null) && $detail['lost'] !== [];
-
-                return [
-                    'id' => (string) $row->entry_id,
-                    'device' => (string) $row->device,
-                    'route' => (string) $row->route,
-                    'reason' => $reason,
-                    'detail' => (object) $detail,
-                    'entry' => (object) $entry,
-                    'recorded_at' => CarbonImmutable::parse((string) $row->recorded_at, 'UTC')->toIso8601String(),
-                    'subject' => $route === null || $lost ? null : self::subject($route, $entry),
-                    'retry' => $route === null || $lost ? null : self::retry($route, $reason, $detail, $entry, $owner),
-                ];
-            })
+            ->map(fn (\stdClass $row): array => self::describe($row, $owner))
             ->all());
+    }
+
+    /** @return array<string, mixed> one conflict, as `execute` lists it */
+    private static function describe(\stdClass $row, User $owner): array
+    {
+        $entry = self::decode($row->entry);
+        $detail = self::decode($row->detail);
+        $route = self::routeOf($row, $detail);
+
+        return [
+            'id' => (string) $row->entry_id,
+            'device' => (string) $row->device,
+            'route' => (string) $row->route,
+            'reason' => (string) $row->reason,
+            'detail' => (object) $detail,
+            'entry' => (object) $entry,
+            'recorded_at' => CarbonImmutable::parse((string) $row->recorded_at, 'UTC')->toIso8601String(),
+            'subject' => $route === null ? null : self::subject($route, $entry),
+            'retry' => self::retryForRow($row, $owner),
+        ];
+    }
+
+    /** @return list<array{method: string, url: string, body: mixed}>|null */
+    private static function retryForRow(\stdClass $row, User $owner): ?array
+    {
+        $detail = self::decode($row->detail);
+        $route = self::routeOf($row, $detail);
+
+        return $route === null ? null : self::retry($route, (string) $row->reason, $detail, self::decode($row->entry), $owner);
+    }
+
+    /**
+     * The route a conflict names, or null when this Budojo has none by that
+     * name, or the conflict names rows that have none here (lost ids): its
+     * parameters are then no ids of this database.
+     *
+     * @param  array<string, mixed>  $detail
+     */
+    private static function routeOf(\stdClass $row, array $detail): ?Route
+    {
+        $route = Routes::getRoutes()->getByName((string) $row->route);
+        $lost = \is_array($detail['lost'] ?? null) && $detail['lost'] !== [];
+
+        return $route instanceof Route && ! $lost ? $route : null;
     }
 
     /**
@@ -69,7 +111,7 @@ final class ListConflictsAction
      * it is an athlete or has one (a document, a check-in), else the body's.
      *
      * @param  array<string, mixed>  $entry
-     * @return array{athlete: array{id: int, name: string}, others: int}|null
+     * @return array{athlete: array<string, mixed>, others: int}|null
      */
     private static function subject(Route $route, array $entry): ?array
     {
@@ -93,10 +135,11 @@ final class ListConflictsAction
         if ($ids === []) {
             return null;
         }
-        $athlete = DB::table('athletes')->where('id', $ids[0])->first(['id', 'first_name', 'last_name']);
+        $athlete = Athlete::query()->with('user')->find($ids[0]);
 
         return $athlete === null ? null : [
-            'athlete' => ['id' => (int) $athlete->id, 'name' => trim("{$athlete->first_name} {$athlete->last_name}")],
+            // As every list of people shows one (`AthleteIdentity`), with the belt.
+            'athlete' => [...AthleteIdentity::of($athlete), 'name' => trim("{$athlete->first_name} {$athlete->last_name}")],
             'others' => \count($ids) - 1,
         ];
     }
