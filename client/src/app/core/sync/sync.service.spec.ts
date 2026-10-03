@@ -1,6 +1,6 @@
 import { HttpResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { firstValueFrom, of } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EMPTY_LEDGER, syncOnce } from './engine';
 import { importSyncKey, newSyncKey, seal } from './envelope';
@@ -176,6 +176,32 @@ describe('SyncService', () => {
 
     expect(sync.state()).toEqual({ kind: 'full' });
     expect(remote.files.has(devicePath(phone.id))).toBe(false);
+  });
+
+  it('loads the page again, and refuses the held writes, when the swap itself fails halfway', async () => {
+    await pcPublishes();
+    // The server restarted on the new database, then the owner's session did not open again.
+    const sync = setUp({
+      shell: {
+        swapIn: async () => {
+          phone.swapIn();
+          throw new Error('the session did not open again');
+        },
+      },
+    });
+
+    await sync.syncNow();
+
+    expect(phone.db.academy).toBe('Eagles BJJ');
+    expect(reload).toHaveBeenCalledTimes(1);
+    const write = firstValueFrom(
+      TestBed.inject(WriteGate).pass(
+        () => of('sent'),
+        () => true,
+        () => new Error('refused'),
+      ),
+    );
+    await expect(write).rejects.toThrow('refused');
   });
 
   it('loads the page again after a swap even when the round then fails', async () => {
