@@ -30,6 +30,8 @@ import { monthsCovered, yearMonthOf } from './pay-chip';
 export interface PayRecorded {
   readonly athlete: Athlete;
   readonly payment: AthletePayment;
+  /** False when the server already held it: nothing for this screen to undo. */
+  readonly created: boolean;
 }
 
 /**
@@ -144,9 +146,9 @@ export class PaySheetComponent {
     this.saving.set(true);
     this.failed.set(false);
     this.money.record(athlete, month, this.method()).subscribe({
-      next: (payment) => {
+      next: ({ payment, created }) => {
         this.saving.set(false);
-        this.recorded.emit({ athlete, payment });
+        this.recorded.emit({ athlete, payment, created });
       },
       error: () => {
         this.saving.set(false);

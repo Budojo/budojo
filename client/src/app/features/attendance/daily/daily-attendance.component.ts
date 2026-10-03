@@ -1458,20 +1458,30 @@ export class DailyAttendanceComponent implements OnInit {
     this.paying.set(null);
   }
 
-  /** Recorded: the sheet closes, the chip moves on, and the toast can take it back. */
-  protected onPaid({ athlete, payment }: PayRecorded): void {
+  /**
+   * Recorded: the sheet closes, the chip moves on, and the toast can take it
+   * back. Not one the server already held (a payment from the PC, arrived in
+   * a sync): undoing that would delete a payment this screen never made.
+   */
+  protected onPaid({ athlete, payment, created }: PayRecorded): void {
     this.paying.set(null);
     navigator.vibrate?.(15);
-    this.toastUndo(
-      this.translate.instant('attendance.daily.pay.toast.recorded', {
-        name: `${athlete.first_name} ${athlete.last_name}`,
+    const name = `${athlete.first_name} ${athlete.last_name}`;
+    if (!created) {
+      this.messageService.clear();
+      this.messageService.add({
+        severity: 'info',
+        summary: this.translate.instant('attendance.daily.pay.toast.already', { name }),
+        life: 4000,
+      });
+      return;
+    }
+    this.toastUndo(this.translate.instant('attendance.daily.pay.toast.recorded', { name }), () =>
+      this.money.undo(athlete, payment).subscribe({
+        next: () => this.messageService.clear(),
+        error: () =>
+          this.toastError(this.translate.instant('attendance.daily.pay.toast.undoError')),
       }),
-      () =>
-        this.money.undo(athlete, payment).subscribe({
-          next: () => this.messageService.clear(),
-          error: () =>
-            this.toastError(this.translate.instant('attendance.daily.pay.toast.undoError')),
-        }),
     );
   }
 

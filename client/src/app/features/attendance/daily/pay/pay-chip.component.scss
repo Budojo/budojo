@@ -1,10 +1,12 @@
-// Above the register's stretched toggle (#2036): the chip is its own target,
-// and a tap on it never marks the athlete.
+// Above the register's stretched toggle (#2036). A month owed is its own
+// target, and a tap on it never marks the athlete; a quiet label lets the tap
+// through to the toggle under it, as the rest of the row does.
 :host {
   position: relative;
   z-index: 1;
   flex-shrink: 0;
   display: inline-flex;
+  pointer-events: none;
 }
 
 .pay-chip {
@@ -46,6 +48,7 @@
     border: 0;
     border-radius: 999px;
     cursor: pointer;
+    pointer-events: auto;
 
     .pay-chip__label {
       flex-direction: column;

@@ -2028,6 +2028,7 @@
         },
         "toast": {
           "recorded": "{{name}}'s payment recorded",
+          "already": "{{name}}'s payment was already recorded",
           "undoError": "Couldn't undo the payment."
         }
       }

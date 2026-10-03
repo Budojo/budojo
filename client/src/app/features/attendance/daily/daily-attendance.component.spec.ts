@@ -2277,7 +2277,7 @@ describe('DailyAttendanceComponent — the money at the mat (#2036)', () => {
       payment_method: 'cash' as const,
     };
 
-    component['onPaid']({ athlete: ANNA, payment });
+    component['onPaid']({ athlete: ANNA, payment, created: true });
     expect(component['paying']()).toBeNull();
     const message = toast.mock.calls[0][0];
     expect(message.summary).toBe("Anna Rossi's payment recorded");
@@ -2286,6 +2286,28 @@ describe('DailyAttendanceComponent — the money at the mat (#2036)', () => {
     httpMock
       .expectOne((r) => r.url === '/api/v1/athletes/1/payments/2026/8' && r.method === 'DELETE')
       .flush(null, { status: 204, statusText: 'No Content' });
+  });
+
+  it('offers no undo for a payment the server already held', () => {
+    const { fixture, component, httpMock } = open();
+    behind(httpMock);
+    const toast = vi.spyOn(fixture.debugElement.injector.get(MessageService), 'add');
+    const payment = {
+      id: 9,
+      athlete_id: 1,
+      year: 2026,
+      month: 8,
+      period_months: 1,
+      amount_cents: 6000,
+      paid_at: '2026-09-01',
+      payment_method: 'cash' as const,
+    };
+
+    component['onPaid']({ athlete: ANNA, payment, created: false });
+
+    const message = toast.mock.calls[0][0];
+    expect(message.summary).toBe("Anna Rossi's payment was already recorded");
+    expect(message.data).toBeUndefined();
   });
 
   it('hands the keyboard back to the chip when the sheet closes', () => {

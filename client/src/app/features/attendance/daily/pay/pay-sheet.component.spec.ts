@@ -139,10 +139,32 @@ describe('PaySheetComponent', () => {
       paid_at: '2026-10-03',
       payment_method: 'cash' as const,
     };
-    post.flush({ data: paid });
+    post.flush({ data: paid }, { status: 201, statusText: 'Created' });
 
     expect(recorded).toHaveLength(1);
     expect(recorded[0].payment).toEqual(paid);
+    expect(recorded[0].created).toBe(true);
+  });
+
+  it('cannot be dismissed while the payment is on its way', async () => {
+    const { fixture, http } = setup();
+    open(fixture, athlete(), '2026-08');
+    http
+      .expectOne((r) => r.url.endsWith('/athletes/7/payments'))
+      .flush({ data: [], overdue_months: ['2026-08'] });
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(document.body.querySelector('.p-dialog-close-button')).not.toBeNull();
+
+    recordButton().click();
+    fixture.detectChanges();
+    expect(document.body.querySelector('.p-dialog-close-button')).toBeNull();
+
+    http
+      .expectOne((r) => r.method === 'POST')
+      .flush({ message: 'x' }, { status: 500, statusText: 'x' });
+    fixture.detectChanges();
+    expect(document.body.querySelector('.p-dialog-close-button')).not.toBeNull();
   });
 
   it("names a quarterly payer's whole period and its price", async () => {

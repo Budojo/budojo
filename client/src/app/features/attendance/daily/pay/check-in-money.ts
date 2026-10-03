@@ -5,6 +5,7 @@ import {
   AthletePayment,
   PaymentMethod,
   PaymentService,
+  RecordedPayment,
 } from '../../../../core/services/payment.service';
 import { StatsService } from '../../../../core/services/stats.service';
 import {
@@ -110,13 +111,17 @@ export class CheckInMoney {
     );
   }
 
-  /** Record one payment for `month`, today, by `method`. */
-  record(athlete: Athlete, month: string, method: PaymentMethod): Observable<AthletePayment> {
+  /**
+   * Record one payment for `month`, today, by `method`. A row the server
+   * already held comes back with `created: false`: paid, but not this
+   * screen's to undo.
+   */
+  record(athlete: Athlete, month: string, method: PaymentMethod): Observable<RecordedPayment> {
     const { year, month: m } = yearMonthOf(month);
     return this.payments
-      .markPaid(athlete.id, year, m, this.periodOf(athlete), { method })
+      .record(athlete.id, year, m, this.periodOf(athlete), { method })
       .pipe(
-        tap((payment) =>
+        tap(({ payment }) =>
           this.markHere(athlete.id, monthsCovered(month, payment.period_months ?? 1), true),
         ),
       );

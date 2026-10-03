@@ -2028,6 +2028,7 @@
         },
         "toast": {
           "recorded": "Pagamento di {{name}} registrato",
+          "already": "Il pagamento di {{name}} era già registrato",
           "undoError": "Non sono riuscito ad annullare il pagamento."
         }
       }

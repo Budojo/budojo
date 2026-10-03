@@ -84,6 +84,12 @@ interface AthletePaymentListResponse {
  * The browser never works "late" out itself — it cannot see a carnet, a free
  * tier or an inactive status, and it accused all three.
  */
+/** A payment the server returned, and whether this call created it (#2036). */
+export interface RecordedPayment {
+  readonly payment: AthletePayment;
+  readonly created: boolean;
+}
+
 export interface AthletePaymentYear {
   readonly payments: AthletePayment[];
   /** `YYYY-MM`, oldest first. */
@@ -135,8 +141,7 @@ export class PaymentService {
   /**
    * Record (or re-confirm) a payment for the given (athlete, year, month).
    * Idempotent on the server — calling twice does not duplicate rows.
-   */
-  /**
+   *
    * `periodMonths` left out means "whatever this athlete is on" — the server
    * reads their `billing_period_months` (#1382). Passing it is for the case
    * where the owner is recording a one-off different from the usual.
@@ -148,6 +153,23 @@ export class PaymentService {
     periodMonths?: number,
     receipt: PaymentReceipt = {},
   ): Observable<AthletePayment> {
+    return this.record(athleteId, year, month, periodMonths, receipt).pipe(
+      map((recorded) => recorded.payment),
+    );
+  }
+
+  /**
+   * The same, saying whether this call created the row (#2036). The server
+   * answers 201 for a new row and 200 for the one already there, and only
+   * the first is a payment the caller may offer to undo.
+   */
+  record(
+    athleteId: number,
+    year: number,
+    month: number,
+    periodMonths?: number,
+    receipt: PaymentReceipt = {},
+  ): Observable<RecordedPayment> {
     // Only what was said goes on the wire: an absent field is the server's
     // default (today, not recorded), and sending null would say the same thing
     // less plainly.
@@ -156,8 +178,15 @@ export class PaymentService {
     if (receipt.paidAt !== undefined) body['paid_at'] = receipt.paidAt;
     if (receipt.method !== undefined) body['payment_method'] = receipt.method;
     return this.http
-      .post<AthletePaymentResponse>(`${this.base}/${athleteId}/payments`, body)
-      .pipe(map((res) => res.data));
+      .post<AthletePaymentResponse>(`${this.base}/${athleteId}/payments`, body, {
+        observe: 'response',
+      })
+      .pipe(
+        map((res) => ({
+          payment: (res.body as AthletePaymentResponse).data,
+          created: res.status === 201,
+        })),
+      );
   }
 
   /**

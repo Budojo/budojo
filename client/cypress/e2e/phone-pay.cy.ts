@@ -209,4 +209,50 @@ describe('The money at the mat (#2036)', () => {
     cy.wait('@pay').its('request.body.period_months').should('eq', 3);
     chip(2).should(reads('Paid'));
   });
+
+  it('lets a tap on a quiet chip through to the row', () => {
+    cy.intercept('POST', '/api/v1/attendance', {
+      statusCode: 201,
+      body: { data: [{ id: 503, athlete_id: 3, lesson_id: 3, attended_on: '2026-10-01' }] },
+    }).as('mark');
+
+    // A tap where the label sits, as a thumb lands: whatever is on top there
+    // takes it. The label lets it through to the row's toggle.
+    chip(3).then(($chip) => {
+      const box = $chip[0].getBoundingClientRect();
+      const x = box.left + box.width / 2;
+      const y = box.top + box.height / 2;
+      cy.document().then((doc) => {
+        expect(doc.elementFromPoint(x, y)?.closest('[data-cy="attendance-card-3"]')).to.exist;
+      });
+      cy.get('body').click(x, y);
+    });
+    cy.wait('@mark');
+    cy.get('[data-cy="attendance-card-3"]').should('have.attr', 'aria-pressed', 'true');
+  });
+
+  it('offers no undo for a payment the PC had already recorded', () => {
+    cy.intercept('POST', '/api/v1/athletes/1/payments', {
+      statusCode: 200,
+      body: {
+        data: {
+          id: 80,
+          athlete_id: 1,
+          year: 2026,
+          month: 9,
+          period_months: 1,
+          amount_cents: 6000,
+          paid_at: '2026-09-28',
+          payment_method: 'transfer',
+        },
+      },
+    }).as('pay');
+
+    chip(1).find('button').click();
+    cy.get('[data-cy="pay-sheet-record"] button').click();
+    cy.wait('@pay');
+    cy.contains("Anna Rossi's payment was already recorded").should('be.visible');
+    cy.get('[data-cy="attendance-undo"]').should('not.exist');
+    chip(1).should(reads('October'));
+  });
 });
