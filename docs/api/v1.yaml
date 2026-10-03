@@ -7731,8 +7731,9 @@ paths:
           this database's ids, sent in order for «Tieni la mia». A form goes
           less what the other device changed and the write did not, judged
           here now: what the write changed goes, what still holds what it
-          sent goes too (a form may require it), and what the other device
-          changed meanwhile stays out with its change. The address goes as
+          sent goes too (a form may require it) except a list that is a
+          column here (training days), and what the other device changed
+          meanwhile stays out with its change. The address goes as
           the write left it. A month paid otherwise is undone first, then
           paid as the entry paid it. Null when nothing
           would make it true: its row is gone or has none here, the rules

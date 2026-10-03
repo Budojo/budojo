@@ -140,7 +140,9 @@ final class ListConflictsAction
      * judged against this database now, as the replay judges a form
      * (`ReplayJournalAction::keepTheirs`). A field the entry changed goes
      * with its value; one that still holds here what it sent goes too, so a
-     * form that requires it on every save is whole; one the other device
+     * form that requires it on every save is whole, except a list that is a
+     * column here (an academy's training days), which goes only when the
+     * entry changed it; one the other device
      * changed meanwhile stays out, and keeps its change. Fields required
      * together go together, and a lesson's class and day always.
      *
