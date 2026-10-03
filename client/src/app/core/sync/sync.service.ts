@@ -103,6 +103,14 @@ export class SyncService {
   private readonly stateSignal = signal<SyncState>({ kind: 'off' });
   readonly state = this.stateSignal.asReadonly();
 
+  /**
+   * How many writes a rebase set aside wait for the owner (#2038): «N da
+   * decidere» on the pill, which leads to the screen that answers them.
+   * Read after every round, and again after every answer.
+   */
+  private readonly toDecideSignal = signal(0);
+  readonly toDecide = this.toDecideSignal.asReadonly();
+
   /** What `stop` undoes; null while stopped. */
   private stopping: (() => void) | null = null;
   private timer: ReturnType<typeof setTimeout> | null = null;
@@ -229,6 +237,12 @@ export class SyncService {
 
   private async round(resolution?: { choice: AskChoice; seen: VersionRef }): Promise<void> {
     const platform = this.platform;
+    // What waits for the owner is in this device's database: counted before
+    // anything reaches Drive, the PC's identity included (its keys are in the
+    // account), so an owner offline still finds the screen.
+    if (platform !== null) {
+      await this.countToDecide();
+    }
     let identity: SyncIdentity | null;
     try {
       identity = platform === null ? null : await platform.identity();
@@ -306,6 +320,7 @@ export class SyncService {
         resolution === undefined
           ? await syncOnce(context)
           : await resolveAsk(context, resolution.choice, resolution.seen);
+      await this.countToDecide();
       if (resolution !== undefined && outcome.kind === 'nothing') {
         // The folder emptied before the owner confirmed: nothing was chosen,
         // and the round after says what to do now.
@@ -347,6 +362,23 @@ export class SyncService {
       }
     }
   }
+
+  /** The conflicts that wait, counted again: after a round, and after the owner answers one. */
+  async countToDecide(): Promise<void> {
+    // Two answers in a row ask twice: only the latest count is shown, so an
+    // earlier answer arriving late never puts back a number already gone.
+    const asked = ++this.countAsked;
+    try {
+      const count = (await this.server.conflicts()).length;
+      if (asked === this.countAsked) {
+        this.toDecideSignal.set(count);
+      }
+    } catch {
+      // The count waits for the next round: the pill never fails on it.
+    }
+  }
+
+  private countAsked = 0;
 
   private async failed(error: unknown, owner: LedgerOwner | null): Promise<void> {
     if (error instanceof RemoteError && error.reason === 'unauthorized') {

@@ -80,11 +80,22 @@
           />
         }
       } @else {
+        @if (toDecide() > 0) {
+          <!-- A p-button for its autofocus: the popover moves the focus to it. -->
+          <p-button
+            [label]="'sync.decide.open' | translate"
+            [autofocus]="true"
+            [fluid]="true"
+            (onClick)="openDecide(detail)"
+            data-cy="sync-detail-decide"
+          />
+        }
         <p-button
           [label]="(state().kind === 'reconnect' ? 'sync.reconnect' : 'sync.now') | translate"
           [icon]="state().kind === 'reconnect' ? 'pi pi-link' : 'pi pi-sync'"
           [loading]="busy()"
-          [autofocus]="true"
+          [autofocus]="toDecide() === 0"
+          [text]="toDecide() > 0"
           [fluid]="true"
           (onClick)="act()"
           data-cy="sync-detail-action"

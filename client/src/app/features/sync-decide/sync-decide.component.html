@@ -1,0 +1,113 @@
+<section class="decide" data-cy="sync-decide">
+  <p-confirmpopup />
+
+  <app-page-header
+    [title]="'sync.decide.title' | translate"
+    [subtitle]="'sync.decide.subtitle' | translate"
+  />
+
+  <p class="decide__live" aria-live="polite">{{ announcement() }}</p>
+
+  @if (conflicts() === null) {
+    <div class="decide__list" aria-hidden="true">
+      @for (row of [1, 2]; track row) {
+        <p-skeleton height="9rem" borderRadius="16px" />
+      }
+    </div>
+  } @else if (loadFailed()) {
+    <app-empty-state
+      icon="pi pi-exclamation-triangle"
+      [title]="'sync.decide.loadFailed' | translate"
+      [ctaLabel]="'sync.now' | translate"
+      ctaIcon="pi pi-refresh"
+      (ctaClick)="load()"
+      data-cy="sync-decide-failed"
+    />
+  } @else if (views().length === 0) {
+    <app-empty-state
+      icon="pi pi-check-circle"
+      [title]="'sync.decide.emptyTitle' | translate"
+      [hint]="'sync.decide.emptyHint' | translate"
+      data-cy="sync-decide-empty"
+    />
+  } @else {
+    <ol class="decide__list">
+      @for (view of views(); track view.conflict.id) {
+        <li class="decide__item" data-cy="sync-decide-item">
+          <div class="decide__head">
+            @if (view.conflict.subject; as subject) {
+              <div class="decide__subject">
+                <app-athlete-identity [athlete]="subject.athlete" [linkToDetail]="true" />
+                @if (subject.others > 0) {
+                  <span class="decide__others">{{
+                    (subject.others === 1 ? 'sync.decide.othersOne' : 'sync.decide.othersOther')
+                      | translate: { count: subject.others }
+                  }}</span>
+                }
+              </div>
+            }
+            <h2 class="decide__what">{{ view.what }}</h2>
+            <p class="decide__reason">{{ view.reason }}</p>
+          </div>
+
+          @if (view.sides; as sides) {
+            <dl class="decide__sides" data-cy="sync-decide-sides">
+              <div class="decide__side">
+                <dt>
+                  {{ sides.field }} ·
+                  {{ 'sync.decide.on' | translate: { device: deviceLabel(view.mine) } }}
+                </dt>
+                <dd>{{ sides.mine }}</dd>
+              </div>
+              <div class="decide__side">
+                <dt>
+                  {{ sides.field }} ·
+                  {{ 'sync.decide.on' | translate: { device: deviceLabel(view.theirs) } }}
+                </dt>
+                <dd>{{ sides.theirs }}</dd>
+              </div>
+            </dl>
+          }
+
+          @if (view.conflict.retry === null) {
+            <p class="decide__note">
+              {{ 'sync.decide.noRetry' | translate: { device: deviceLabel(view.mine) } }}
+            </p>
+          }
+          @if (errors()[view.conflict.id]; as error) {
+            <p class="decide__error" role="alert">{{ error }}</p>
+          }
+
+          <div class="decide__actions">
+            <p-button
+              [label]="'sync.decide.keep' | translate: { device: deviceLabel(view.theirs) }"
+              [outlined]="true"
+              [loading]="isBusy(view.conflict.id, 'theirs')"
+              [disabled]="busy() !== null"
+              (onClick)="answer(view.conflict, 'theirs')"
+              data-cy="sync-decide-theirs"
+            />
+            @if (view.conflict.retry !== null) {
+              <p-button
+                [label]="'sync.decide.keep' | translate: { device: deviceLabel(view.mine) }"
+                [outlined]="true"
+                [loading]="isBusy(view.conflict.id, 'mine')"
+                [disabled]="busy() !== null"
+                (onClick)="keepMine($event, view)"
+                data-cy="sync-decide-mine"
+              />
+            }
+            <p-button
+              [label]="'sync.decide.byHand' | translate"
+              [text]="true"
+              [loading]="isBusy(view.conflict.id, 'by-hand')"
+              [disabled]="busy() !== null"
+              (onClick)="answer(view.conflict, 'by-hand')"
+              data-cy="sync-decide-by-hand"
+            />
+          </div>
+        </li>
+      }
+    </ol>
+  }
+</section>

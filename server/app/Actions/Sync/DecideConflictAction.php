@@ -9,8 +9,8 @@ use Illuminate\Support\Facades\DB;
 /**
  * The owner's answer to a set-aside write (#2031, PRD § 6.4):
  * - `theirs`: what is here stays;
- * - `mine`: the page sent the conflict's `retry` first, so the write is
- *   true here now;
+ * - `mine`: the conflict's `retry` ran first, in the same transaction
+ *   (`KeepMineAction`), so the write is true here now;
  * - `by-hand`: the owner set it right themselves.
  *
  * It only records the answer, and **it is journaled** (`sync.conflicts.`):
