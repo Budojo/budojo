@@ -75,11 +75,11 @@ A reader checks every field it knows and ignores any it does not, so a later app
 ### What the folder keeps (#2030)
 
 Every version is the whole database, so the folder keeps them as the PC keeps its backups (#1228, #1330): **the newest ten, and the newest of each of the fourteen most recent days** that hold one, on Drive's clock (`retention.ts`). The rest is deleted.
-- **By the device that just pushed,** at the end of that round, from a fresh listing. A pull deletes nothing, so the other device's round is never slowed by it.
+- **By the device that just pushed,** at the end of that round, from a fresh listing and the bases every device reported (`devices/`). A pull deletes nothing, so the other device's round is never slowed by it. **Today that is the phone:** the PC's Drive bridge refuses every delete (#2106) until it can verify that a file is a version (#2120).
 - **Never the newest,** which the other device may be reading.
-- **Nothing while two academies' first versions are listed:** the owner has a question to answer, and the two lines are what tell them apart (§ Deciding). Once the owner chose, one is left.
+- **Never a first version.** A first version above a device's base is how that device tells another academy, however much of either line is pruned (§ Deciding).
+- **Two academies in the folder** (two first versions): nothing is deleted while a device reports a base on a line other than the latest's, since the owner has a question to answer there and the lines are what tell the academies apart. Once every device (at least two) reports a base on the latest's line, the other lines are the academies the owner left, and go whole.
 - **Best effort:** a version it could not delete is tried again at the next push; the round already landed, and still counts.
-- **A line's first version goes like any other.** A device whose own line is pruned still tells another academy, by a first version above its base (§ Deciding).
 
 ### The database side (#2030)
 

@@ -327,9 +327,10 @@ async function finishRound(
 ): Promise<SyncRound> {
   // Its report, after every round (protocol § `devices/`).
   await writeReport(context, ledger);
-  await clearConfirmed(context, ledger, await readReports(context));
+  const reports = await readReports(context);
+  await clearConfirmed(context, ledger, reports);
   if (outcome.kind === 'pushed' || (outcome.kind === 'rebased' && outcome.pushed !== null)) {
-    await pruneVersions(context);
+    await pruneVersions(context, reports);
   }
   // The files the database names and this device lacks, once the database is
   // final: after a fast-forward's swap, and at every later round for those
@@ -343,14 +344,17 @@ async function finishRound(
 
 /**
  * The folder's versions down to what it keeps (`retention.ts`, #2030), by
- * the device that just pushed: the other device's round is never slowed
- * by it. **Best effort:** a version it could not delete is tried again at
- * the next push, and the round, which already landed, still counts.
+ * the device that just pushed, with the bases every device reported: the
+ * other device's round is never slowed by it. **Best effort:** a version it
+ * could not delete is tried again at the next push, and the round, which
+ * already landed, still counts. The PC's Drive bridge refuses every delete
+ * (#2106) until it can verify one is a version's (#2120), so today the phone prunes.
  */
-async function pruneVersions(context: SyncContext): Promise<void> {
+async function pruneVersions(context: SyncContext, reports: DeviceReport[]): Promise<void> {
   try {
     const versions = versionsIn((await context.remote.list('versions')).files);
-    for (const version of versionsToPrune(versions)) {
+    const bases = reports.map((report) => report.base);
+    for (const version of versionsToPrune(versions, bases)) {
       await context.remote.remove(versionPath(version));
     }
   } catch {

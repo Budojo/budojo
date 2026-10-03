@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { utf8 } from './bytes';
-import { AskChoice, resolveAsk, SyncContext, syncOnce } from './engine';
+import { AskChoice, EMPTY_LEDGER, resolveAsk, SyncContext, syncOnce } from './engine';
 import { importSyncKey, newSyncKey, seal } from './envelope';
 import { devicePath, filePath } from './layout';
 import { MemoryRemote, SyncRemote } from './remote';
@@ -581,7 +581,7 @@ describe('the versions the folder keeps (#2030)', () => {
   const versionsOf = (remote: MemoryRemote) =>
     [...remote.files.keys()].filter((path) => path.startsWith('versions/')).length;
 
-  it('keeps the newest ten after each push: every version is the whole database', async () => {
+  it('keeps the newest ten and the first version after each push: every version is the whole database', async () => {
     const { remote, key } = await folder();
     const pc = new Device('pc4f2a', 'Eagles BJJ');
     await sync(pc, remote, key);
@@ -590,9 +590,10 @@ describe('the versions the folder keeps (#2030)', () => {
       await sync(pc, remote, key);
     }
 
-    expect(versionsOf(remote)).toBe(10);
+    expect(versionsOf(remote)).toBe(11);
     expect(remote.files.has('versions/000013-pc4f2a.000012-pc4f2a.bjs')).toBe(true);
-    expect(remote.files.has('versions/000001-pc4f2a.root.bjs')).toBe(false);
+    expect(remote.files.has('versions/000002-pc4f2a.000001-pc4f2a.bjs')).toBe(false);
+    expect(remote.files.has('versions/000001-pc4f2a.root.bjs')).toBe(true);
   });
 
   it('prunes only after a push of its own: a pull deletes nothing', async () => {
@@ -615,6 +616,73 @@ describe('the versions the folder keeps (#2030)', () => {
 
     expect(await outcome(phone, remote, key)).toMatchObject({ kind: 'pulled' });
     expect(versionsOf(remote)).toBe(13);
+  });
+
+  it('asks, never rebases, when the phone chose its own academy and pushed ten more on it (#2117 review)', async () => {
+    const { remote, key } = await folder();
+    const pc = new Device('pc4f2a', 'Eagles BJJ');
+    await sync(pc, remote, key);
+    const phone = new Device('phone9c1e', null);
+    await sync(phone, remote, key);
+    for (let night = 1; night <= 12; night++) {
+      pc.write(`Luca, night ${night}`);
+      await sync(pc, remote, key);
+    }
+    await sync(phone, remote, key);
+    await sync(pc, remote, key);
+    // The phone restores a backup of another academy, and the owner keeps it there.
+    phone.ledger = EMPTY_LEDGER;
+    phone.db = {
+      academy: 'Eagles BJJ, from a backup',
+      rows: [],
+      dealt: {},
+      journal: [],
+      names: [],
+    };
+    const asked = (await sync(phone, remote, key)).outcome;
+    expect(asked.kind).toBe('ask');
+    await resolve(
+      phone,
+      remote,
+      key,
+      'device',
+      (asked as { latest: { seq: number; device: string } }).latest,
+    );
+    for (let night = 1; night <= 10; night++) {
+      phone.write(`Giulia, night ${night}`);
+      await sync(phone, remote, key);
+    }
+
+    pc.write('Marco, offline on the PC');
+    expect((await sync(pc, remote, key)).outcome.kind).toBe('ask');
+    expect(pc.db.academy).toBe('Eagles BJJ');
+  });
+
+  it('prunes again once both devices are on one academy: the line the owner left goes', async () => {
+    const { remote, key } = await folder();
+    const pc = new Device('pc4f2a', 'Eagles BJJ');
+    await sync(pc, remote, key);
+    const phone = new Device('phone9c1e', 'Eagles BJJ, from a backup');
+    phone.write('Luca');
+    const asked = (await sync(phone, remote, key)).outcome as {
+      latest: { seq: number; device: string };
+    };
+    await resolve(phone, remote, key, 'device', asked.latest);
+    const pcAsked = (await sync(pc, remote, key)).outcome as {
+      kind: string;
+      latest: { seq: number; device: string };
+    };
+    expect(pcAsked.kind).toBe('ask');
+    await resolve(pc, remote, key, 'folder', pcAsked.latest);
+    for (let night = 1; night <= 30; night++) {
+      phone.write(`Giulia, night ${night}`);
+      await sync(phone, remote, key);
+      await sync(pc, remote, key);
+    }
+
+    // The newest ten, and the first version of the line both are on.
+    expect(versionsOf(remote)).toBe(11);
+    expect(remote.files.has('versions/000001-pc4f2a.root.bjs')).toBe(false);
   });
 
   it('never fails a round on a version it could not delete: the next push tries again', async () => {
