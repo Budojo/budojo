@@ -274,7 +274,7 @@ final class ReplayJournalAction
                     if ($field === 'deleted_at' || ! self::comparable((string) $field) || ! \array_key_exists($field, $here[$i])) {
                         continue;
                     }
-                    if (! self::same($here[$i][$field], $value)) {
+                    if (! self::sameColumn((string) $field, $here[$i][$field], $value)) {
                         return ['table' => $table, 'field' => (string) $field, 'saw' => $value, 'here' => $here[$i][$field]];
                     }
                 }
@@ -563,7 +563,7 @@ final class ReplayJournalAction
                     if ($byName && ! \array_key_exists($field, $body)) {
                         continue;
                     }
-                    if (self::same($now[$field], $saw)) {
+                    if (self::sameColumn((string) $field, $now[$field], $saw)) {
                         $allAsWanted = false;
 
                         continue;
@@ -598,19 +598,27 @@ final class ReplayJournalAction
         return $byName && $allAsWanted ? ['outcome' => 'already', 'conflict' => null] : null;
     }
 
-    /**
-     * Whether a column says the same on both devices. Not the clock, and not
-     * an id the map does not rewrite: the row's own, or a reference made from
-     * others (a check-in's `lesson_id`, its lesson made on each device). The
-     * references a write names are in `IdMap::FIELDS`, rewritten, and compared.
-     */
+    /** Whether a column is compared at all: never the clock, nor the row's own id, which differs between devices. */
     private static function comparable(string $field): bool
     {
-        if (\in_array($field, self::CLOCK, true) || $field === 'id') {
-            return false;
+        return ! \in_array($field, self::CLOCK, true) && $field !== 'id';
+    }
+
+    /**
+     * A column here against what the entry saw. A reference the id map does
+     * not rewrite (a check-in's `lesson_id`, its lesson made on each device)
+     * holds another id on each device for the same row, so two ids agree.
+     * One against none does not: the row joined a lesson, or left it. The
+     * references a write names are in `IdMap::FIELDS`, rewritten, and
+     * compared as they are.
+     */
+    private static function sameColumn(string $field, mixed $here, mixed $saw): bool
+    {
+        if (str_ends_with($field, '_id') && ! \array_key_exists($field, IdMap::FIELDS) && $here !== null && $saw !== null) {
+            return true;
         }
 
-        return ! str_ends_with($field, '_id') || \array_key_exists($field, IdMap::FIELDS);
+        return self::same($here, $saw);
     }
 
     /**

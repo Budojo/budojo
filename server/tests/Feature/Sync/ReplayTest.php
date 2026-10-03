@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use App\Actions\Attendance\MarkAttendanceAction;
 use App\Actions\Sync\ReplayJournalAction;
+use App\Enums\TrainingMode;
+use App\Models\AcademyClass;
 use App\Models\Athlete;
 use App\Support\Sync\RebasePending;
 use Carbon\CarbonImmutable;
@@ -505,6 +507,33 @@ describe('what a replay never does silently (#2101 review)', function (): void {
         expect(array_count_values(replayOnThePc($entries)))->toBe(['applied' => 4])
             ->and(DB::table('attendance_records')->where('athlete_id', $this->luca)->whereNull('deleted_at')->count())->toBe(0)
             ->and(Athlete::query()->where('first_name', 'Marco')->exists())->toBeFalse();
+    });
+
+    it('asks when the phone removes a presence the PC put in a lesson meanwhile', function (): void {
+        $class = AcademyClass::factory()->for($this->owner->academy)->create(['name' => 'Gi', 'weekday' => 4, 'starts_at' => '19:00', 'kind' => TrainingMode::Gi]);
+        // Both devices: Luca present on 1 October, in no class.
+        $presence = (int) $this->actingAs($this->owner)->postJson('/api/v1/attendance', ['date' => '2026-10-01', 'athlete_ids' => [$this->luca]])->assertCreated()->json('data.0.id');
+        $entries = onThePhone(fn () => $this->actingAs($this->owner)->deleteJson("/api/v1/attendance/{$presence}")->assertSuccessful());
+        // The PC checks him into the class: his presence joins its lesson.
+        $this->actingAs($this->owner)->postJson('/api/v1/attendance', ['date' => '2026-10-01', 'athlete_ids' => [$this->luca], 'academy_class_id' => $class->id])->assertSuccessful();
+
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'conflict'])
+            ->and(DB::table('sync_conflicts')->where('entry_id', $entries[0]['id'])->value('reason'))->toBe('changed')
+            ->and(DB::table('attendance_records')->where('athlete_id', $this->luca)->whereNull('deleted_at')->whereNotNull('lesson_id')->count())->toBe(1);
+    });
+
+    it('undoes a check-in the phone made in its own lesson, while the PC checked someone into another class that day', function (): void {
+        $x = AcademyClass::factory()->for($this->owner->academy)->create(['name' => 'Gi', 'weekday' => 4, 'starts_at' => '19:00', 'kind' => TrainingMode::Gi]);
+        $y = AcademyClass::factory()->for($this->owner->academy)->create(['name' => 'No-gi', 'weekday' => 4, 'starts_at' => '20:30', 'kind' => TrainingMode::Gi]);
+        $giulia = replayAthlete($this, 'Giulia');
+        $entries = onThePhone(function () use ($x): void {
+            $presence = (int) $this->actingAs($this->owner)->postJson('/api/v1/attendance', ['date' => '2026-10-01', 'athlete_ids' => [$this->luca], 'academy_class_id' => $x->id])->assertCreated()->json('data.0.id');
+            $this->actingAs($this->owner)->deleteJson("/api/v1/attendance/{$presence}")->assertSuccessful();
+        });
+        $this->actingAs($this->owner)->postJson('/api/v1/attendance', ['date' => '2026-10-01', 'athlete_ids' => [$giulia], 'academy_class_id' => $y->id])->assertCreated();
+
+        expect(array_count_values(replayOnThePc($entries)))->toBe(['applied' => 2])
+            ->and(DB::table('attendance_records')->where('athlete_id', $this->luca)->whereNull('deleted_at')->count())->toBe(0);
     });
 
     it('finds the academy logo removed on both devices no conflict', function (): void {
