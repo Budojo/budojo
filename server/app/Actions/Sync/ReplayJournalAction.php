@@ -1000,7 +1000,9 @@ final class ReplayJournalAction
                 'route' => $entry['route'],
                 'reason' => self::text($conflict['reason'] ?? 'refused'),
                 'detail' => self::json($conflict),
-                'entry' => self::json(['method' => $entry['method'], 'params' => $params, 'body' => $body, 'before' => $before]),
+                // `created` as the device that wrote it made them: which tables a
+                // retry must add to (an address the entry added), never ids here.
+                'entry' => self::json(['method' => $entry['method'], 'params' => $params, 'body' => $body, 'before' => $before, 'created' => $entry['created'] === [] ? new \stdClass() : $entry['created']]),
             ]);
         }
 

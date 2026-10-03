@@ -22,9 +22,8 @@ use Illuminate\Support\Facades\Schema;
  * - **`retry`:** the requests that make the set-aside write true here, in
  *   this database's ids, for «Tieni la mia», or null when there are none.
  *
- * **A retry carries only what the conflict is about.** A field changed on
- * both devices is sent alone (with the fields it is required with, and what
- * names a lesson), never the whole form: the other device's changes to the
+ * **A retry carries what the set-aside write changed** (`whatItChanged`),
+ * never the whole form it was sent with: the other device's changes to the
  * rest stay. A month paid otherwise is undone first, then paid as the entry
  * paid it.
  *
@@ -128,7 +127,7 @@ final class ListConflictsAction
                 return self::payAgain($params, \is_array($body) ? $body : [], $url);
             }
 
-            return [['method' => $method, 'url' => $url, 'body' => $reason === 'changed' ? self::only($detail, $entry, $body) : $body]];
+            return [['method' => $method, 'url' => $url, 'body' => self::whatItChanged($entry, $body)]];
         } catch (\Throwable) {
             // Parameters the route no longer takes: the page offers no retry.
             return null;
@@ -136,52 +135,62 @@ final class ListConflictsAction
     }
 
     /**
-     * What a `changed` conflict is about, out of the body it was sent with:
-     * every field the entry changed on that row (its `before`), the one the
-     * conflict names, the fields required with them, and what names a lesson
-     * (its class and day). The nested address goes whole, as the form
-     * requires: what the entry changed in it, and this database's values for
-     * the rest. A write that names none of its fields (a photo removed) goes
-     * as it was.
+     * What the set-aside write changed, out of the whole form it was sent
+     * with: the fields its `before` records on the rows it changed, the
+     * fields required with them, a lesson's class and day. Every other field
+     * stays out, so the other device's changes to the rest of the form stay.
+     * **The nested address** goes as the entry left it: whole when it added
+     * one, `null` when it cleared one, its own changes over what is here when
+     * it changed one, and not at all when it never touched it. A write whose
+     * `before` records nothing (a photo removed) goes as it was.
      *
-     * @param  array<string, mixed>  $detail
      * @param  array<string, mixed>  $entry
      */
-    private static function only(array $detail, array $entry, mixed $body): mixed
+    private static function whatItChanged(array $entry, mixed $body): mixed
     {
-        $field = $detail['field'] ?? null;
-        $table = \is_string($detail['table'] ?? null) ? $detail['table'] : null;
-        $id = $detail['id'] ?? null;
-        if (! \is_array($body) || ! \is_string($field) || $table === null || (! \is_int($id) && ! \is_string($id))) {
+        $before = \is_array($entry['before'] ?? null) ? $entry['before'] : [];
+        $created = \is_array($entry['created'] ?? null) ? $entry['created'] : [];
+        if (! \is_array($body) || $before === []) {
             return $body;
         }
-        $before = \is_array($entry['before'] ?? null) && \is_array($entry['before'][$table] ?? null) ? $entry['before'][$table] : [];
-        $row = $before[(string) $id] ?? null;
-        $changed = \is_array($row) ? array_keys($row) : [];
-        foreach (ReplayJournalAction::NESTED as $key => $nested) {
-            if ($table === $nested['table'] && \is_array($body[$key] ?? null)) {
-                $here = (array) (DB::table($table)->where('id', $id)->first() ?? []);
-                $address = [];
-                foreach ($body[$key] as $name => $sent) {
-                    $address[$name] = \in_array($name, $changed, true) || ! \array_key_exists($name, $here) ? $sent : $here[$name];
-                }
-
-                return [$key => $address];
+        $nestedTables = array_column(ReplayJournalAction::NESTED, 'table');
+        $changed = [];
+        foreach ($before as $table => $rows) {
+            if (\in_array($table, $nestedTables, true) || ! \is_array($rows)) {
+                continue;
             }
+            foreach ($rows as $row) {
+                $changed = [...$changed, ...(\is_array($row) ? array_keys($row) : [])];
+            }
+            $changed = [...$changed, ...array_keys(ReplayJournalAction::NATURAL[$table] ?? [])];
         }
-        if (! \array_key_exists($field, $body)) {
-            return $body;
-        }
-        $keep = [$field, ...$changed];
         foreach (ReplayJournalAction::GROUPS as $group) {
-            if (array_intersect($group, $keep) !== []) {
-                $keep = [...$keep, ...$group];
+            if (array_intersect($group, $changed) !== []) {
+                $changed = [...$changed, ...$group];
             }
         }
-        // A lesson is named by its class and day: they go with what changed in it.
-        $keep = [...$keep, ...array_keys(ReplayJournalAction::NATURAL[$table] ?? [])];
+        $sent = array_intersect_key($body, array_flip($changed));
+        foreach (ReplayJournalAction::NESTED as $key => $nested) {
+            if (! \array_key_exists($key, $body)) {
+                continue;
+            }
+            $rows = \is_array($before[$nested['table']] ?? null) ? $before[$nested['table']] : [];
+            if (($created[$nested['table']] ?? []) !== [] || ($rows !== [] && ! \is_array($body[$key]))) {
+                // Added, or cleared: as the entry sent it.
+                $sent[$key] = $body[$key];
+            } elseif ($rows !== [] && \is_array($body[$key])) {
+                $id = (string) array_key_first($rows);
+                $mine = \is_array($rows[$id]) ? array_keys($rows[$id]) : [];
+                $here = (array) (DB::table($nested['table'])->where('id', $id)->first() ?? []);
+                $merged = [];
+                foreach ($body[$key] as $name => $value) {
+                    $merged[$name] = \in_array($name, $mine, true) || ! \array_key_exists($name, $here) ? $value : $here[$name];
+                }
+                $sent[$key] = $merged;
+            }
+        }
 
-        return array_intersect_key($body, array_flip($keep));
+        return $sent === [] ? $body : $sent;
     }
 
     /**

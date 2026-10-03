@@ -867,6 +867,51 @@ describe('«Da decidere»: the owner’s answers (#2031)', function (): void {
         expect($address->line1)->toBe('Via Appia 9')->and($address->city)->toBe('Fiumicino');
     });
 
+    it('clears the address again, and nothing else, when the phone had cleared it with its whole form', function (): void {
+        $roma = ['line1' => 'Via Roma 1', 'city' => 'Roma', 'postal_code' => '00100', 'province' => 'RM', 'country' => 'IT'];
+        $this->actingAs($this->owner)->patchJson("/api/v1/athletes/{$this->luca}", ['address' => $roma])->assertOk();
+        $entries = onThePhone(fn () => $this->actingAs($this->owner)->putJson("/api/v1/athletes/{$this->luca}", [
+            'first_name' => 'Luca', 'last_name' => 'Bianchi', 'belt' => 'white', 'stripes' => 0, 'status' => 'active', 'joined_at' => '2026-09-01', 'address' => null,
+        ])->assertOk());
+        $this->actingAs($this->owner)->patchJson("/api/v1/athletes/{$this->luca}", ['first_name' => 'Lucas', 'address' => [...$roma, 'city' => 'Ostia']])->assertOk();
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'conflict']);
+
+        $retry = $this->actingAs($this->owner)->getJson('/api/v1/sync/conflicts')->json('data.0.retry.0');
+        expect($retry['body'])->toBe(['address' => null]);
+        $this->actingAs($this->owner)->json($retry['method'], $retry['url'], $retry['body'])->assertOk();
+        expect(Athlete::query()->findOrFail($this->luca)->first_name)->toBe('Lucas')
+            ->and(DB::table('addresses')->where('addressable_type', Athlete::class)->where('addressable_id', $this->luca)->exists())->toBeFalse();
+    });
+
+    it('sends the phone’s address whole when each device added one', function (): void {
+        $roma = ['line1' => 'Via Roma 1', 'city' => 'Roma', 'postal_code' => '00100', 'province' => 'RM', 'country' => 'IT'];
+        // The phone adds an address and renames him in one save; the PC does both otherwise.
+        $entries = onThePhone(fn () => $this->actingAs($this->owner)->patchJson("/api/v1/athletes/{$this->luca}", ['last_name' => 'Bianco', 'address' => $roma])->assertOk());
+        $this->actingAs($this->owner)->patchJson("/api/v1/athletes/{$this->luca}", ['last_name' => 'Verdi', 'address' => [...$roma, 'line1' => 'Via Milano 2', 'city' => 'Milano', 'postal_code' => '20100', 'province' => 'MI']])->assertOk();
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'conflict']);
+
+        $retry = $this->actingAs($this->owner)->getJson('/api/v1/sync/conflicts')->json('data.0.retry.0');
+        $this->actingAs($this->owner)->json($retry['method'], $retry['url'], $retry['body'])->assertOk();
+        expect(Athlete::query()->findOrFail($this->luca)->last_name)->toBe('Bianco')
+            ->and(DB::table('addresses')->where('addressable_type', Athlete::class)->where('addressable_id', $this->luca)->value('city'))->toBe('Roma');
+    });
+
+    it('sends back the last name and the city the phone changed in one save, whichever is in conflict', function (): void {
+        $roma = ['line1' => 'Via Roma 1', 'city' => 'Roma', 'postal_code' => '00100', 'province' => 'RM', 'country' => 'IT'];
+        $this->actingAs($this->owner)->patchJson("/api/v1/athletes/{$this->luca}", ['address' => $roma])->assertOk();
+        $entries = onThePhone(fn () => $this->actingAs($this->owner)
+            ->patchJson("/api/v1/athletes/{$this->luca}", ['last_name' => 'Bianco', 'address' => [...$roma, 'city' => 'Fiumicino']])->assertOk());
+        $this->actingAs($this->owner)->patchJson("/api/v1/athletes/{$this->luca}", ['last_name' => 'Verdi', 'address' => [...$roma, 'line1' => 'Via Appia 9']])->assertOk();
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'conflict']);
+
+        $retry = $this->actingAs($this->owner)->getJson('/api/v1/sync/conflicts')->json('data.0.retry.0');
+        $this->actingAs($this->owner)->json($retry['method'], $retry['url'], $retry['body'])->assertOk();
+        $address = DB::table('addresses')->where('addressable_type', Athlete::class)->where('addressable_id', $this->luca)->sole();
+        expect(Athlete::query()->findOrFail($this->luca)->last_name)->toBe('Bianco')
+            ->and($address->city)->toBe('Fiumicino')
+            ->and($address->line1)->toBe('Via Appia 9');
+    });
+
     it('offers no retry when the method and the amount both differ: the fee here makes another amount', function (): void {
         $entries = onThePhone(fn () => $this->actingAs($this->owner)
             ->postJson("/api/v1/athletes/{$this->luca}/payments", ['year' => 2026, 'month' => 10, 'payment_method' => 'cash'])->assertCreated());

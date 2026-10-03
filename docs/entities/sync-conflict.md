@@ -17,7 +17,7 @@ No Eloquent model, as for `sync_entries`.
 | `route` | string(120) | not null | The entry's route name. |
 | `reason` | string(16) | not null | Why, below. |
 | `detail` | text (JSON) | not null | What the replay found: the field and both values (`{"field": "first_name", "saw": "Luca", "here": "Luke"}`), or the status, message and validation errors. |
-| `entry` | text (JSON) | not null | The write as replayed here, in this database's ids: `method`, `params`, `body`, `before`. |
+| `entry` | text (JSON) | not null | The write as replayed here, in this database's ids: `method`, `params`, `body`, `before`; and `created`, what it made where it was written (by table, that device's ids). |
 | `recorded_at` | timestamp | default now | When the replay found it. |
 | `decided_at` | timestamp | nullable | When the owner answered (#2038). |
 | `decision` | string(16) | nullable | `theirs`, `mine` or `by-hand`, once answered (#2038). |
@@ -42,7 +42,7 @@ No Eloquent model, as for `sync_entries`.
 `GET /api/v1/sync/conflicts` lists those that wait (`decided_at` null), and `POST /api/v1/sync/conflicts/{entry}/decision` records the answer:
 - **`theirs`:** what is here stays;
 - **`mine`:** the page sent the conflict's `retry` first, the requests that make the set-aside write true here.
-  - **Only what the conflict is about:** a field changed on both devices is sent alone, with the fields it is required with, so the other device's changes to the rest of the form stay.
+  - **What the write changed, never the whole form:** the fields its `before` records, the fields required with them, a lesson's class and day, and the address as the entry left it (whole when it added one, cleared, or its own changes over what is here). The other device's changes to the rest of the form stay.
   - **A month paid otherwise** is undone first.
   - **No `retry` for:**
     - a write whose row is gone or has none here;

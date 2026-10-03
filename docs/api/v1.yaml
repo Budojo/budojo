@@ -7728,9 +7728,11 @@ paths:
           rows its route names here (a check-in's, a document's), and how
           many others it names;
         - `retry`: the requests that make the set-aside write true here, in
-          this database's ids, sent in order for «Tieni la mia». A field
-          changed on both devices is sent alone, with the fields it is
-          required with, never the whole form. A month paid otherwise is
+          this database's ids, sent in order for «Tieni la mia». It carries
+          what the write changed, never the whole form it was sent with: the
+          fields its `before` records, the fields required with them, a
+          lesson's class and day, and the address as the entry left it. The
+          other device's changes to the rest stay. A month paid otherwise is
           undone first, then paid as the entry paid it. Null when nothing
           would make it true: its row is gone or has none here, the rules
           here refused it, an upload, a payment whose amount the fee here
@@ -9174,6 +9176,7 @@ components:
             params: { type: object }
             body: { type: object, nullable: true }
             before: { type: object, nullable: true }
+            created: { type: object, description: 'What the write made where it was written, by table (its ids there).' }
         recorded_at: { type: string, format: date-time, example: '2026-10-03T18:32:05+00:00' }
         subject:
           type: object
