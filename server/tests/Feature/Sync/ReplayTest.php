@@ -977,8 +977,11 @@ describe('«Da decidere»: the owner’s answers (#2031)', function (): void {
             ->patchJson("/api/v1/academy/closures/{$closure}", ['label' => 'Natale', 'starts_on' => '2026-12-24', 'ends_on' => '2026-12-25'])->assertOk());
         $this->actingAs($this->owner)->patchJson("/api/v1/academy/closures/{$closure}", ['label' => 'Natale', 'starts_on' => '2026-12-26', 'ends_on' => '2026-12-26'])->assertOk();
 
-        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'conflict'])
-            ->and(DB::table('sync_conflicts')->where('entry_id', $entries[0]['id'])->value('reason'))->toBe('refused')
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'conflict']);
+        $conflict = DB::table('sync_conflicts')->where('entry_id', $entries[0]['id'])->first(['reason', 'detail']);
+        // Refused for the end before the start the PC moved: the form judged it whole.
+        expect($conflict?->reason)->toBe('refused')
+            ->and(array_keys(json_decode((string) $conflict?->detail, true)['errors'] ?? []))->toBe(['ends_on'])
             ->and((array) DB::table('academy_closures')->where('id', $closure)->first(['starts_on', 'ends_on']))
             ->toBe(['starts_on' => '2026-12-26', 'ends_on' => '2026-12-26']);
     });
