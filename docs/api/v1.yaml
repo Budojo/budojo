@@ -7371,6 +7371,11 @@ paths:
         runs `budojo:sync-reconcile` (cache, files no row names), after the
         replay when the sync is a rebase. Every stage clears a rebase set
         aside before, so a fast-forward never replays an older one.
+
+        **With `homecoming`, it also keeps what this device held** of the
+        other device's work (`holds`, beside the database as
+        `<database>.homecoming-since`, #2039): the reconcile reads it to tell
+        the owner what arrived (`GET /sync/homecoming`).
       tags: [sync]
       parameters:
         - name: rebase
@@ -7381,6 +7386,15 @@ paths:
             first, beside the live database as `<database>.rebase`, and the
             reconcile replays it on the database swapped in, before it sweeps
             anything (`docs/sync/protocol.md` § Rebase).
+          schema: { type: integer, enum: [0, 1] }
+        - name: homecoming
+          in: query
+          required: false
+          description: |
+            `1` when the version brings the other device's work on this
+            academy (#2039): the owner is told what arrived. Never when a
+            whole academy arrives, at a first pull or by the owner's choice
+            when asked.
           schema: { type: integer, enum: [0, 1] }
       requestBody:
         required: true
@@ -7715,6 +7729,66 @@ paths:
         '401': { description: Unauthenticated }
         '403': { description: Forbidden — the user is not an owner. }
         '404': { description: The runtime profile has no `sync` capability. }
+
+  /sync/homecoming:
+    get:
+      operationId: syncHomecoming
+      summary: What the other device's work brought, for the card on Oggi
+      description: |
+        The homecoming («il rientro», PRD § 6.2, #2039). Once another
+        device's version is swapped in, the reconcile reads that device's
+        journal, which came with the database, from what this device held
+        when it staged the version: every entry since the last pull,
+        however many versions the folder went through.
+
+        **It counts what is still there, when asked:** the rows the entries
+        created, looked up in the database as it is now, so a presence
+        recorded and then removed, in the same pull or a later one, is no
+        presence. Promotions are those given: a belt over another, or a
+        stripe added; never a timeline's opening row or the stripe reset
+        beside a belt. An entry that created none of the counted rows (an
+        edit, a deletion, a note) is one more change (`other`); one the
+        other device's own rebase found already true or set aside changed
+        nothing, and is left out. Two pulls before the owner looks add up.
+        A restore, or a whole academy arriving, forgets it.
+
+        Kept beside the database, never in it: it is this device's news
+        alone, and the database travels.
+      tags: [sync]
+      responses:
+        '200':
+          description: What arrived, until the owner has seen it
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/SyncHomecoming' }
+        '204': { description: Nothing waits to be seen. }
+        '401': { description: Unauthenticated }
+        '403': { description: Forbidden — the user is not an owner. }
+        '404': { description: The runtime profile has no `sync` capability. }
+    delete:
+      operationId: syncHomecomingSeen
+      summary: The owner has seen the homecoming
+      description: |
+        Forgets the homecoming whose newest entry is `through`. One a later
+        pull added to (a newer `through`) stays, for the owner to see that
+        part too. `204` either way.
+      tags: [sync]
+      parameters:
+        - name: through
+          in: query
+          required: true
+          description: The `through` of the homecoming the owner saw.
+          schema: { type: string, pattern: '^[0-7][0-9A-HJKMNP-TV-Z]{25}$' }
+      responses:
+        '204': { description: 'Seen, or a newer one kept.' }
+        '401': { description: Unauthenticated }
+        '403': { description: Forbidden — the user is not an owner. }
+        '404': { description: The runtime profile has no `sync` capability. }
+        '422': { description: '`through` is not an entry id.' }
 
   /sync/conflicts:
     get:
@@ -9188,6 +9262,50 @@ components:
             $ref: '#/components/schemas/ValidationErrorBody'
 
   schemas:
+    SyncHomecoming:
+      type: object
+      description: What the other device's work brought since this device last held it (#2039).
+      required: [device, at, through, attendance, payments, athletes, promotions, other]
+      properties:
+        device:
+          type: string
+          description: The device whose work it is (`phone…` or `pc…`).
+          example: phone9c1e
+        at:
+          type: string
+          format: date-time
+          description: When that device made the newest of these writes, in UTC.
+        through:
+          type: string
+          description: The newest entry's id. `DELETE /sync/homecoming?through=` names it.
+          example: 01K6F3Q9A1B2C3D4E5F6G7H8J9
+        attendance:
+          type: array
+          description: The presences still recorded, by the lesson they were recorded into, the busiest first. `lesson` is null for a presence recorded without one.
+          items:
+            type: object
+            required: [lesson, count]
+            properties:
+              lesson: { type: string, nullable: true, example: BJJ Gi }
+              count: { type: integer, example: 14 }
+        payments:
+          type: object
+          required: [count, amount_cents]
+          properties:
+            count: { type: integer, example: 2 }
+            amount_cents: { type: integer, example: 12000 }
+        athletes:
+          type: integer
+          description: New athletes, still in the roster.
+          example: 1
+        promotions:
+          type: integer
+          description: Promotions given and still recorded, a belt over another or a stripe added.
+          example: 0
+        other:
+          type: integer
+          description: The other changes, one per write that created none of the rows above.
+          example: 3
     SyncConflict:
       type: object
       required: [id, device, route, reason, detail, entry, recorded_at, subject, retry]

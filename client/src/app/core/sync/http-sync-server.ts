@@ -3,7 +3,8 @@ import { Injectable, inject } from '@angular/core';
 import { firstValueFrom, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { binaryBody } from './bytes';
-import { SyncServer } from './engine';
+import { StageOptions, SyncServer } from './engine';
+import { Homecoming } from './homecoming';
 import { HttpSyncFiles } from './http-sync-files';
 import { ConflictDecision, SyncConflict } from './conflicts';
 import { JournalEntry } from './journal';
@@ -33,13 +34,19 @@ export class HttpSyncServer implements SyncServer {
     return { database: new Uint8Array(response.body), schema };
   }
 
-  async stage(database: Uint8Array, options?: { rebase: boolean }): Promise<void> {
+  async stage(database: Uint8Array, options?: StageOptions): Promise<void> {
+    const params: Record<string, string> = {};
+    if (options?.rebase) {
+      params['rebase'] = '1';
+    }
+    if (options?.homecoming) {
+      params['homecoming'] = '1';
+    }
     await firstValueFrom(
-      this.http.put(
-        this.url(options?.rebase ? '/sync/stage?rebase=1' : '/sync/stage'),
-        binaryBody(database),
-        { headers: new HttpHeaders({ 'Content-Type': 'application/octet-stream' }) },
-      ),
+      this.http.put(this.url('/sync/stage'), binaryBody(database), {
+        headers: new HttpHeaders({ 'Content-Type': 'application/octet-stream' }),
+        params,
+      }),
     );
   }
 
@@ -85,6 +92,20 @@ export class HttpSyncServer implements SyncServer {
         .get<{ data: Record<string, string> }>(this.url('/sync/holds'))
         .pipe(map((response) => response.data)),
     );
+  }
+
+  /** `GET /sync/homecoming` (#2039): what the other device's work brought, or null when nothing waits. */
+  homecoming(): Promise<Homecoming | null> {
+    return firstValueFrom(
+      this.http
+        .get<{ data: Homecoming } | null>(this.url('/sync/homecoming'))
+        .pipe(map((response) => response?.data ?? null)),
+    );
+  }
+
+  /** `DELETE /sync/homecoming?through=`: seen. One a later pull added to stays. */
+  async seenHomecoming(through: string): Promise<void> {
+    await firstValueFrom(this.http.delete(this.url('/sync/homecoming'), { params: { through } }));
   }
 
   async holdsAcademy(): Promise<boolean> {

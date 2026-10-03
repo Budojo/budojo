@@ -3456,6 +3456,26 @@
       "localOnlyDetailFolder": "Se si rompe questo disco, si perde tutta l'accademia. Scegli una cartella per i backup.",
       "stale": "L'ultima copia fuori da questo computer è del {{date}}",
       "staleDetail": "Da più di una settimana non ne arriva una nuova. Apri il backup per capire perché."
+    },
+    "homecoming": {
+      "fromPhone": "Dal telefono, {{when}}",
+      "fromPc": "Dal PC, {{when}}",
+      "whenToday": "oggi alle {{time}}",
+      "whenYesterday": "ieri alle {{time}}",
+      "whenDay": "{{day}} alle {{time}}",
+      "presencesInOne": "{{count}} presenza in {{lesson}}",
+      "presencesInOther": "{{count}} presenze in {{lesson}}",
+      "presencesOne": "{{count}} presenza",
+      "presencesOther": "{{count}} presenze",
+      "paymentsOne": "{{count}} pagamento ({{amount}})",
+      "paymentsOther": "{{count}} pagamenti ({{amount}})",
+      "athletesOne": "{{count}} nuovo atleta",
+      "athletesOther": "{{count}} nuovi atleti",
+      "promotionsOne": "{{count}} promozione",
+      "promotionsOther": "{{count}} promozioni",
+      "otherOne": "{{count}} altra modifica",
+      "otherOther": "{{count}} altre modifiche",
+      "close": "Ho visto"
     }
   },
   "backup": {

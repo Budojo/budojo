@@ -5,6 +5,7 @@ import { versionsIn } from './decide';
 import { AskChoice, resolveAsk, SyncContext, SyncLedger, SyncShell, syncOnce } from './engine';
 import { importSyncKey } from './envelope';
 import { checkFolder, hasRoomFor } from './folder';
+import { Homecoming } from './homecoming';
 import { HttpSyncServer } from './http-sync-server';
 import { VersionRef } from './layout';
 import { LedgerOwner, loadLedger, saveLedger, savedOwner } from './ledger-store';
@@ -110,6 +111,10 @@ export class SyncService {
    */
   private readonly toDecideSignal = signal(0);
   readonly toDecide = this.toDecideSignal.asReadonly();
+
+  private readonly homecomingSignal = signal<Homecoming | null>(null);
+  /** What the other device's work brought (#2039), for the card on Oggi, until it is shown. */
+  readonly homecoming = this.homecomingSignal.asReadonly();
 
   /** What `stop` undoes; null while stopped. */
   private stopping: (() => void) | null = null;
@@ -237,11 +242,12 @@ export class SyncService {
 
   private async round(resolution?: { choice: AskChoice; seen: VersionRef }): Promise<void> {
     const platform = this.platform;
-    // What waits for the owner is in this device's database: counted before
-    // anything reaches Drive, the PC's identity included (its keys are in the
-    // account), so an owner offline still finds the screen.
+    // What waits for the owner, and what the last pull brought, are on this
+    // device: read before anything reaches Drive, the PC's identity included
+    // (its keys are in the account), so an owner offline still finds them. A
+    // pull loads the page again, so the first round after it finds the homecoming.
     if (platform !== null) {
-      await this.countToDecide();
+      await Promise.all([this.countToDecide(), this.loadHomecoming()]);
     }
     let identity: SyncIdentity | null;
     try {
@@ -379,6 +385,27 @@ export class SyncService {
   }
 
   private countAsked = 0;
+
+  /** Seen on Oggi: forgotten, on the server too. One a later pull added to stays there. */
+  seenHomecoming(arrived: Homecoming): void {
+    this.seenThrough = arrived.through;
+    this.homecomingSignal.set(null);
+    this.server.seenHomecoming(arrived.through).catch(() => {
+      // Told again at the next start: the card says the same thing twice, nothing is lost.
+    });
+  }
+
+  /** The homecoming the owner saw: a round that reads it before the server forgot it does not bring it back. */
+  private seenThrough: string | null = null;
+
+  private async loadHomecoming(): Promise<void> {
+    try {
+      const arrived = await this.server.homecoming();
+      this.homecomingSignal.set(arrived?.through === this.seenThrough ? null : arrived);
+    } catch {
+      // The card waits for the next round: Oggi never fails on it.
+    }
+  }
 
   private async failed(error: unknown, owner: LedgerOwner | null): Promise<void> {
     if (error instanceof RemoteError && error.reason === 'unauthorized') {

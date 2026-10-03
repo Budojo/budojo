@@ -805,6 +805,9 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::get('journal', [\App\Http\Controllers\Sync\JournalController::class, 'index'])->name('sync.journal.index');
             Route::delete('journal', [\App\Http\Controllers\Sync\JournalController::class, 'destroy'])->name('sync.journal.destroy');
             Route::get('holds', [\App\Http\Controllers\Sync\JournalController::class, 'holds'])->name('sync.holds');
+            // The homecoming: what the other device's work brought, for Oggi (#2039).
+            Route::get('homecoming', [\App\Http\Controllers\Sync\HomecomingController::class, 'show'])->name('sync.homecoming.show');
+            Route::delete('homecoming', [\App\Http\Controllers\Sync\HomecomingController::class, 'seen'])->name('sync.homecoming.seen');
             // «Da decidere»: the writes a rebase set aside, and the owner's
             // answer, journaled so it reaches the other device (#2031).
             Route::get('conflicts', [\App\Http\Controllers\Sync\ConflictController::class, 'index'])->name('sync.conflicts.index');

@@ -6,6 +6,7 @@ namespace App\Actions\Device;
 
 use App\Actions\Sync\StageDatabaseAction;
 use App\Support\Backup\BackupArchive;
+use App\Support\Sync\Homecoming;
 use App\Support\Sync\Staged;
 use App\Support\Sync\SyncStorage;
 
@@ -34,6 +35,8 @@ final class RestoreBackupAction
         $database = $archive->database();
 
         Staged::clear();
+        // The homecoming told of the database a restore replaces (#2039).
+        Homecoming::forget();
         $part = SyncStorage::stagedPath() . '.part';
 
         try {

@@ -150,6 +150,18 @@ describe('the sync engine (#2046)', () => {
     expect(pc.db.rows).toEqual(['Giulia on 2 Oct']);
   });
 
+  it('tells the owner what arrived only for the other device’s work, never a whole academy (#2039)', async () => {
+    const { remote, key, pc, phone } = await twoDevices();
+    // twoDevices: the phone's first pull, a whole academy.
+    expect(phone.staging).toEqual([{ homecoming: false }]);
+
+    phone.write('Giulia on 2 Oct');
+    await sync(phone, remote, key);
+    await sync(pc, remote, key);
+
+    expect(pc.staging).toEqual([{ homecoming: true }]);
+  });
+
   it("keeps the phone's write until the PC reports holding it, then clears it", async () => {
     const { remote, key, pc, phone } = await twoDevices();
     phone.write('Giulia on 2 Oct');
@@ -537,6 +549,8 @@ describe('the owner’s choice when a round asks (#2033, PRD § 6.5)', () => {
 
     expect(round.outcome).toEqual({ kind: 'pulled', version: { seq: 1, device: 'pc4f2a' } });
     expect(phone.db.academy).toBe('Eagles BJJ');
+    // A whole academy replaced this one: no homecoming tells it as news.
+    expect(phone.staging).toEqual([{ homecoming: false }]);
     expect(await phone.journal()).toEqual([]);
     expect(await outcome(phone, remote, key)).toEqual({ kind: 'nothing' });
   });
@@ -622,6 +636,7 @@ describe('the rebase (#2031 step 3)', () => {
       pushed: null,
     });
     expect(pc.db.rows).toEqual(['Luca on 2 Oct', 'Giulia on 2 Oct']);
+    expect(pc.staging.at(-1)).toEqual({ rebase: true, homecoming: true });
 
     expect(await outcome(phone, remote, key)).toEqual({ kind: 'nothing' });
     expect(await phone.journal()).toEqual([]);

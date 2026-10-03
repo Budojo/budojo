@@ -47,6 +47,7 @@ import { monthKey } from '../../shared/utils/months';
 import { clockOf, timetableWeek } from '../../shared/utils/week-message';
 import { LessonSheetComponent } from '../lessons/lesson-sheet/lesson-sheet.component';
 import { OnboardingChecklistComponent } from '../onboarding/onboarding-checklist.component';
+import { HomecomingCardComponent } from './homecoming-card/homecoming-card.component';
 import { Birthday, upcomingBirthdays } from './today-birthdays';
 import {
   isSundayAfternoon,
@@ -128,6 +129,7 @@ interface DocumentsHealth {
     AthleteIdentityComponent,
     ButtonModule,
     ContactActionsComponent,
+    HomecomingCardComponent,
     LessonSheetComponent,
     LocaleDatePipe,
     OnboardingChecklistComponent,

@@ -6,6 +6,7 @@ import { SyncConflict } from './conflicts';
 import { EMPTY_LEDGER, syncOnce } from './engine';
 import { importSyncKey, newSyncKey, seal } from './envelope';
 import { sealFolder } from './folder';
+import { Homecoming } from './homecoming';
 import { HttpSyncServer } from './http-sync-server';
 import { utf8 } from './bytes';
 import { devicePath, FOLDER_PATH } from './layout';
@@ -183,6 +184,48 @@ describe('SyncService', () => {
 
     expect(conflicts).toHaveBeenCalledTimes(2);
     expect(sync.toDecide()).toBe(0);
+  });
+
+  it('reads what the last pull brought at the start of a round, offline too (#2039)', async () => {
+    phone.arrived = { through: '01K6F3Q9A1B2C3D4E5F6G7H8J9' } as Homecoming;
+    const sync = setUp({
+      identity: async () => {
+        throw new RemoteError('offline', 'no network');
+      },
+    });
+
+    await sync.syncNow();
+
+    expect(sync.homecoming()?.through).toBe('01K6F3Q9A1B2C3D4E5F6G7H8J9');
+  });
+
+  it('does not bring back a seen homecoming its server has not forgotten yet', async () => {
+    phone.arrived = { through: '01K6F3Q9A1B2C3D4E5F6G7H8J9' } as Homecoming;
+    vi.spyOn(phone, 'seenHomecoming').mockResolvedValue(undefined);
+    const sync = setUp();
+    await sync.syncNow();
+    sync.seenHomecoming(sync.homecoming() as Homecoming);
+
+    await sync.syncNow();
+    expect(sync.homecoming()).toBeNull();
+
+    // A later pull adds to it: a new one, shown.
+    phone.arrived = { through: '01K6F3Q9A1B2C3D4E5F6G7H8K0' } as Homecoming;
+    await sync.syncNow();
+    expect(sync.homecoming()?.through).toBe('01K6F3Q9A1B2C3D4E5F6G7H8K0');
+  });
+
+  it('forgets the homecoming once seen, on its server too', async () => {
+    phone.arrived = { through: '01K6F3Q9A1B2C3D4E5F6G7H8J9' } as Homecoming;
+    const sync = setUp();
+    await sync.syncNow();
+    const arrived = sync.homecoming();
+
+    sync.seenHomecoming(arrived as Homecoming);
+    await Promise.resolve();
+
+    expect(sync.homecoming()).toBeNull();
+    expect(phone.arrived).toBeNull();
   });
 
   it('waits for the PC when the folder holds no academy yet, and publishes nothing of its own', async () => {
