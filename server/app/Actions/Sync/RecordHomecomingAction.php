@@ -73,6 +73,10 @@ final class RecordHomecomingAction
     }
 
     /**
+     * An entry counts on the card by the rows it created that the card
+     * tells: a promotion only when given (`ShowHomecomingAction`), so one
+     * that lowered a stripe, and created nothing else, is one more change.
+     *
      * @param  list<\stdClass>  $entries
      * @return Arrived|null
      */
@@ -81,15 +85,16 @@ final class RecordHomecomingAction
         if ($entries === []) {
             return null;
         }
+        $made = array_map(static fn (\stdClass $entry): array => self::createdBy($entry), $entries);
+        $given = array_flip(ShowHomecomingAction::given(array_merge(...array_column($made, 'athlete_promotions'))));
         $created = array_fill_keys(ShowHomecomingAction::COUNTED, []);
         $other = 0;
-        foreach ($entries as $entry) {
-            $rows = json_decode((string) $entry->created, true);
+        foreach ($made as $rows) {
+            $rows['athlete_promotions'] = array_values(array_filter($rows['athlete_promotions'], static fn (int $id): bool => isset($given[$id])));
             $counted = false;
             foreach (ShowHomecomingAction::COUNTED as $table) {
-                $ids = \is_array($rows) && \is_array($rows[$table] ?? null) ? $rows[$table] : [];
-                if ($ids !== []) {
-                    $created[$table] = array_values([...$created[$table], ...array_map(static fn (mixed $id): int => is_numeric($id) ? (int) $id : 0, $ids)]);
+                if ($rows[$table] !== []) {
+                    $created[$table] = [...$created[$table], ...$rows[$table]];
                     $counted = true;
                 }
             }
@@ -104,6 +109,23 @@ final class RecordHomecomingAction
             'created' => $created,
             'other' => $other,
         ];
+    }
+
+    /**
+     * The ids an entry created, in each table the card counts.
+     *
+     * @return array<string, list<int>>
+     */
+    private static function createdBy(\stdClass $entry): array
+    {
+        $rows = json_decode((string) $entry->created, true);
+        $made = [];
+        foreach (ShowHomecomingAction::COUNTED as $table) {
+            $ids = \is_array($rows) && \is_array($rows[$table] ?? null) ? $rows[$table] : [];
+            $made[$table] = array_values(array_map(static fn (mixed $id): int => is_numeric($id) ? (int) $id : 0, $ids));
+        }
+
+        return $made;
     }
 
     /**

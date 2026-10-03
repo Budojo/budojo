@@ -133,6 +133,32 @@ describe('the reconcile after a pull', function (): void {
             ->assertJsonPath('data.other', 1);
     });
 
+    it('tells a stripe taken away as a change: it is no promotion given', function (): void {
+        $lowered = AthletePromotion::factory()->create(['kind' => 'stripe', 'from_stripes' => 3, 'to_stripes' => 2]);
+        HomecomingSince::remember([]);
+        homecomingEntry(1, 'phone9f8e7d6c', 'athletes.update', ['athlete_promotions' => [$lowered->id]]);
+
+        $this->artisan('budojo:sync-reconcile')->assertSuccessful();
+
+        $this->actingAs(userWithAcademy())->getJson('/api/v1/sync/homecoming')
+            ->assertJsonPath('data.promotions', 0)
+            ->assertJsonPath('data.other', 1);
+    });
+
+    it('never stops a start on a homecoming that does not read: forgotten, and the reconcile goes on', function (): void {
+        file_put_contents(Homecoming::path(), '');
+        HomecomingSince::remember([]);
+        homecomingEntry(1, 'phone9f8e7d6c', 'athletes.update');
+
+        $this->artisan('budojo:sync-reconcile')
+            ->expectsOutputToContain('Homecoming not told')
+            ->assertSuccessful();
+
+        expect(file_exists(Homecoming::path()))->toBeFalse()
+            ->and(file_exists(HomecomingSince::path()))->toBeFalse()
+            ->and(DB::table('sync_journal')->where('device', 'phone9f8e7d6c')->count())->toBe(0);
+    });
+
     it('adds a second pull to the one the owner has not seen yet, counted as it is now', function (): void {
         $gi = Lesson::factory()->create(['name' => 'BJJ Gi']);
         $first = AttendanceRecord::factory()->count(2)->create(['lesson_id' => $gi->id]);

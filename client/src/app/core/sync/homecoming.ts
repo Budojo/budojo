@@ -1,7 +1,8 @@
 /**
  * The homecoming («il rientro», PRD § 6.2, #2039): what the other device's
  * work brought, as `GET /sync/homecoming` answers it, for the card on Oggi.
- * Counted by the server from the rows still there (`RecordHomecomingAction`).
+ * Counted by the server when asked, from the rows still there
+ * (`ShowHomecomingAction`).
  */
 export interface Homecoming {
   /** The device whose work it is: `phone…` or `pc…`. */

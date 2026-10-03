@@ -50,6 +50,27 @@ final class ShowHomecomingAction
     }
 
     /**
+     * The promotions given among `$ids`: a belt over another, or a stripe
+     * added. A timeline's opening row, the stripe reset beside a belt, and a
+     * stripe taken away are none.
+     *
+     * @param  list<int>  $ids
+     * @return list<int>
+     */
+    public static function given(array $ids): array
+    {
+        /** @var list<int> */
+        return DB::table('athlete_promotions')->whereIn('id', $ids)
+            ->where(static fn ($query) => $query
+                ->where(static fn ($belt) => $belt->where('kind', 'belt')->whereNotNull('from_belt'))
+                ->orWhere(static fn ($stripe) => $stripe->where('kind', 'stripe')->whereColumn('to_stripes', '>', 'from_stripes')))
+            ->pluck('id')
+            ->map(static fn (mixed $id): int => is_numeric($id) ? (int) $id : 0)
+            ->values()
+            ->all();
+    }
+
+    /**
      * @param  list<int>  $ids
      * @return list<array{lesson: string|null, count: int}>
      */
@@ -86,10 +107,6 @@ final class ShowHomecomingAction
     /** @param  list<int>  $ids */
     private static function promotions(array $ids): int
     {
-        return DB::table('athlete_promotions')->whereIn('id', $ids)
-            ->where(static fn ($query) => $query
-                ->where(static fn ($belt) => $belt->where('kind', 'belt')->whereNotNull('from_belt'))
-                ->orWhere(static fn ($stripe) => $stripe->where('kind', 'stripe')->whereColumn('to_stripes', '>', 'from_stripes')))
-            ->count();
+        return \count(self::given($ids));
     }
 }
