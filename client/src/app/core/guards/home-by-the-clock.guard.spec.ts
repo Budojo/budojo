@@ -10,9 +10,22 @@ import { homeByTheClockGuard } from './home-by-the-clock.guard';
 /** Home by the clock (#2035): the phone opens on the check-in of the class on the mat. */
 describe('homeByTheClockGuard', () => {
   // Thursday 1 October 2026; the Gi class at 19:00 for an hour.
-  const GI: AcademyClass = { id: 7, name: 'Gi', weekday: 4, starts_at: '19:00', duration_minutes: 60, kind: 'gi' };
+  const GI: AcademyClass = {
+    id: 7,
+    name: 'Gi',
+    weekday: 4,
+    starts_at: '19:00',
+    duration_minutes: 60,
+    kind: 'gi',
+  };
 
-  function setUp(options: { profile?: RuntimeProfile; classes?: AcademyClass[] | 'fails'; closed?: boolean } = {}) {
+  function setUp(
+    options: {
+      profile?: RuntimeProfile;
+      classes?: AcademyClass[] | 'fails';
+      closed?: boolean;
+    } = {},
+  ) {
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
@@ -23,14 +36,19 @@ describe('homeByTheClockGuard', () => {
         {
           provide: AcademyClassService,
           useValue: {
-            list: () => (options.classes === 'fails' ? throwError(() => new Error('offline')) : of(options.classes ?? [GI])),
+            list: () =>
+              options.classes === 'fails'
+                ? throwError(() => new Error('offline'))
+                : of(options.classes ?? [GI]),
           },
         },
         {
           provide: AcademyService,
           useValue: {
             academy: () => ({
-              closures: options.closed ? [{ id: 1, starts_on: '2026-10-01', ends_on: '2026-10-01', label: null }] : [],
+              closures: options.closed
+                ? [{ id: 1, starts_on: '2026-10-01', ends_on: '2026-10-01', label: null }]
+                : [],
             }),
           },
         },

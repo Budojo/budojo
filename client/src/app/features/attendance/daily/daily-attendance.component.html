@@ -432,7 +432,10 @@
       -->
       @for (section of registerSections(); track section.key) {
         @if (section.label; as label) {
-          <h2 class="attendance__register-heading" [attr.data-cy]="'attendance-register-' + section.key">
+          <h2
+            class="attendance__register-heading"
+            [attr.data-cy]="'attendance-register-' + section.key"
+          >
             {{ label | translate }}
           </h2>
         }

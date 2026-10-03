@@ -1823,11 +1823,16 @@ describe('DailyAttendanceComponent — the phone’s register (#2035)', () => {
     });
     httpMock
       .expectOne((r) => r.url === '/api/v1/attendance/regulars')
-      .flush({ data: [regular(1, 3), regular(3, 5)], meta: { occurrences: 6, occurrence_dates: [] } });
+      .flush({
+        data: [regular(1, 3), regular(3, 5)],
+        meta: { occurrences: 6, occurrence_dates: [] },
+      });
   }
   function rows(fixture: Harness['fixture']): string[] {
     fixture.detectChanges();
-    const list = (fixture.nativeElement as HTMLElement).querySelector('[data-cy="attendance-mobile-list"]');
+    const list = (fixture.nativeElement as HTMLElement).querySelector(
+      '[data-cy="attendance-mobile-list"]',
+    );
     return Array.from(list?.querySelectorAll('[data-cy^="attendance-card-"]') ?? []).map(
       (row) => row.getAttribute('data-cy') ?? '',
     );
@@ -1856,9 +1861,9 @@ describe('DailyAttendanceComponent — the phone’s register (#2035)', () => {
       'attendance-card-4',
     ]);
     const root = fixture.nativeElement as HTMLElement;
-    expect(root.querySelector('[data-cy="attendance-register-regulars"]')?.textContent?.trim()).toBe(
-      'Regulars',
-    );
+    expect(
+      root.querySelector('[data-cy="attendance-register-regulars"]')?.textContent?.trim(),
+    ).toBe('Regulars');
     expect(root.querySelector('[data-cy="attendance-register-others"]')).not.toBeNull();
   });
 
@@ -1918,7 +1923,9 @@ describe('DailyAttendanceComponent — the phone’s register (#2035)', () => {
     component['searchTerm'].set('a');
 
     expect(
-      (fixture.nativeElement as HTMLElement).querySelector('[data-cy="attendance-register-regulars"]'),
+      (fixture.nativeElement as HTMLElement).querySelector(
+        '[data-cy="attendance-register-regulars"]',
+      ),
     ).toBeNull();
     expect(rows(fixture)).toEqual([
       'attendance-card-1',
