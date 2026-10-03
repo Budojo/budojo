@@ -81,15 +81,14 @@
         }
       } @else {
         @if (toDecide() > 0) {
-          <a
-            pButton
-            routerLink="/dashboard/sync/decide"
+          <!-- A p-button for its autofocus: the popover moves the focus to it. -->
+          <p-button
+            [label]="'sync.decide.open' | translate"
+            [autofocus]="true"
             [fluid]="true"
-            (click)="detail.hide()"
+            (onClick)="openDecide(detail)"
             data-cy="sync-detail-decide"
-          >
-            <span pButtonLabel>{{ 'sync.decide.open' | translate }}</span>
-          </a>
+          />
         }
         <p-button
           [label]="(state().kind === 'reconnect' ? 'sync.reconnect' : 'sync.now') | translate"

@@ -48,7 +48,7 @@ describe('SyncDecideComponent', () => {
     const server = {
       conflicts: vi.fn(async () => listed),
       decide: vi.fn(async () => undefined),
-      retry: vi.fn(async () => undefined),
+      keepMine: vi.fn(async () => undefined),
     };
     const sync = { countToDecide: vi.fn(async () => undefined) };
     TestBed.configureTestingModule({
@@ -94,32 +94,55 @@ describe('SyncDecideComponent', () => {
 
     await click('[data-cy="sync-decide-theirs"]');
 
-    expect(server.retry).not.toHaveBeenCalled();
+    expect(server.keepMine).not.toHaveBeenCalled();
     expect(server.decide).toHaveBeenCalledWith('01K6F3Q8Z4M7X2N5P9R1T3V6W8', 'theirs');
     expect(items()).toHaveLength(0);
     expect(sync.countToDecide).toHaveBeenCalled();
   });
 
-  it('keeps the phone’s after a confirm that says what it replaces: the retry first, then the answer', async () => {
-    const { fixture, server, click } = await setup([conflict()]);
+  it('keeps the phone’s after a confirm that says what it replaces: one call, all or nothing', async () => {
+    const { fixture, server, items, click } = await setup([conflict()]);
     const confirmation = fixture.debugElement.injector.get(ConfirmationService);
     const confirm = vi.spyOn(confirmation, 'confirm');
 
     await click('[data-cy="sync-decide-mine"]');
     const asked = confirm.mock.calls[0][0];
-    expect(asked.message).toBe('The phone’s takes the place of the PC’s.'.replace(/’/g, "'"));
+    expect(asked.message).toBe("The phone's takes the place of the PC's.");
     asked.accept?.();
     await fixture.whenStable();
+    fixture.detectChanges();
 
-    expect(server.retry).toHaveBeenCalledWith([
-      { method: 'PATCH', url: '/api/v1/athletes/57', body: { last_name: 'Bianco' } },
-    ]);
-    expect(server.decide).toHaveBeenCalledWith('01K6F3Q8Z4M7X2N5P9R1T3V6W8', 'mine');
+    expect(server.keepMine).toHaveBeenCalledWith('01K6F3Q8Z4M7X2N5P9R1T3V6W8');
+    expect(server.decide).not.toHaveBeenCalled();
+    expect(items()).toHaveLength(0);
+  });
+
+  it('spins the button that was pressed, and holds the others', async () => {
+    let finish = (): void => undefined;
+    const { fixture, server, el } = await setup([conflict()]);
+    server.decide.mockImplementationOnce(
+      () => new Promise<undefined>((resolve) => (finish = () => resolve(undefined))),
+    );
+
+    el.querySelector<HTMLElement>('[data-cy="sync-decide-by-hand"] button')?.click();
+    fixture.detectChanges();
+
+    const byHand = el.querySelector('[data-cy="sync-decide-by-hand"] button');
+    const theirs = el.querySelector('[data-cy="sync-decide-theirs"] button');
+    expect(
+      byHand?.querySelector('.p-button-loading-icon, [data-pc-section="loadingicon"]'),
+    ).not.toBeNull();
+    expect(
+      theirs?.querySelector('.p-button-loading-icon, [data-pc-section="loadingicon"]'),
+    ).toBeNull();
+    expect(theirs?.hasAttribute('disabled')).toBe(true);
+    finish();
+    await fixture.whenStable();
   });
 
   it('keeps the question and says why when the phone’s write does not go through', async () => {
     const { fixture, server, el, items } = await setup([conflict()]);
-    server.retry.mockRejectedValueOnce(
+    server.keepMine.mockRejectedValueOnce(
       new HttpErrorResponse({
         status: 422,
         error: { message: 'A payment already covers 2026-08.' },

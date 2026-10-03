@@ -359,12 +359,20 @@ export class SyncService {
 
   /** The conflicts that wait, counted again: after a round, and after the owner answers one. */
   async countToDecide(): Promise<void> {
+    // Two answers in a row ask twice: only the latest count is shown, so an
+    // earlier answer arriving late never puts back a number already gone.
+    const asked = ++this.countAsked;
     try {
-      this.toDecideSignal.set((await this.server.conflicts()).length);
+      const count = (await this.server.conflicts()).length;
+      if (asked === this.countAsked) {
+        this.toDecideSignal.set(count);
+      }
     } catch {
       // The count waits for the next round: the pill never fails on it.
     }
   }
+
+  private countAsked = 0;
 
   private async failed(error: unknown, owner: LedgerOwner | null): Promise<void> {
     if (error instanceof RemoteError && error.reason === 'unauthorized') {

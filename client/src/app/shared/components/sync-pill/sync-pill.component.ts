@@ -11,8 +11,8 @@ import {
 } from '@angular/core';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ButtonModule } from 'primeng/button';
-import { PopoverModule } from 'primeng/popover';
-import { RouterLink } from '@angular/router';
+import { Popover, PopoverModule } from 'primeng/popover';
+import { Router } from '@angular/router';
 import { LanguageService } from '../../../core/services/language.service';
 import { AskChoice } from '../../../core/sync/engine';
 import { VersionRef } from '../../../core/sync/layout';
@@ -47,12 +47,13 @@ const LOOK: Record<SyncState['kind'], { icon: string; attention: boolean }> = {
 @Component({
   selector: 'app-sync-pill',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonModule, PopoverModule, RouterLink, TranslatePipe],
+  imports: [ButtonModule, PopoverModule, TranslatePipe],
   templateUrl: './sync-pill.component.html',
   styleUrl: './sync-pill.component.scss',
 })
 export class SyncPillComponent {
   private readonly sync = inject(SyncService);
+  private readonly router = inject(Router);
   private readonly translate = inject(TranslateService);
   private readonly language = inject(LanguageService);
 
@@ -81,6 +82,12 @@ export class SyncPillComponent {
       ? 'sync.ask.useFolderPhone'
       : 'sync.ask.useFolderPc';
   });
+
+  /** «Decidi»: the screen that answers what waits, the detail closed behind. */
+  protected openDecide(detail: Popover): void {
+    detail.hide();
+    void this.router.navigateByUrl('/dashboard/sync/decide');
+  }
 
   /** The pick, then the focus on what it replaces: a screen reader hears that before «Conferma». */
   protected pick(choice: AskChoice): void {

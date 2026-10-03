@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Actions\Attendance\MarkAttendanceAction;
+use App\Actions\Payment\RecordAthletePaymentAction;
 use App\Actions\Sync\ReplayJournalAction;
 use App\Enums\TrainingMode;
 use App\Models\AcademyClass;
@@ -1041,6 +1042,42 @@ describe('«Da decidere»: the owner’s answers (#2031)', function (): void {
         expect($subjects['01K6F3Q8Z4M7X2N5P9R1T3V6W1']['athlete']['id'])->toBe($this->luca)
             ->and($subjects['01K6F3Q8Z4M7X2N5P9R1T3V6W2']['athlete'])->toMatchArray(['id' => $giulia, 'name' => 'Giulia Bianchi', 'first_name' => 'Giulia', 'belt' => 'white'])
             ->and($subjects['01K6F3Q8Z4M7X2N5P9R1T3V6W2']['others'])->toBe(1);
+    });
+
+    it('keeps the phone’s in one call: the write made true here and the answer, both journaled', function (): void {
+        $entries = conflictOnLucasName($this);
+
+        $this->actingAs($this->owner)->postJson("/api/v1/sync/conflicts/{$entries[0]['id']}/keep-mine")->assertNoContent();
+
+        expect(Athlete::query()->findOrFail($this->luca)->last_name)->toBe('Bianco')
+            ->and(DB::table('sync_conflicts')->where('entry_id', $entries[0]['id'])->value('decision'))->toBe('mine')
+            ->and(DB::table('sync_journal')->where('device', 'pc4f2a')->orderBy('id')->pluck('route')->slice(-2)->values()->all())
+            ->toBe(['athletes.update', 'sync.conflicts.decide']);
+    });
+
+    it('keeps nothing when the payment is refused after the month was undone: the PC’s payment stays', function (): void {
+        $entries = onThePhone(fn () => $this->actingAs($this->owner)
+            ->postJson("/api/v1/athletes/{$this->luca}/payments", ['year' => 2026, 'month' => 10, 'payment_method' => 'cash'])->assertCreated());
+        $this->actingAs($this->owner)->postJson("/api/v1/athletes/{$this->luca}/payments", ['year' => 2026, 'month' => 10, 'payment_method' => 'pos'])->assertCreated();
+        replayOnThePc($entries);
+        // The payment fails once the month is undone.
+        $this->mock(RecordAthletePaymentAction::class, fn (MockInterface $mock) => $mock
+            ->shouldReceive('execute')->andThrow(new RuntimeException('disk full')));
+        Route::getRoutes()->getByName('athletes.payments.store')?->flushController();
+
+        $this->actingAs($this->owner)->postJson("/api/v1/sync/conflicts/{$entries[0]['id']}/keep-mine")->assertUnprocessable();
+
+        expect(DB::table('athlete_payments')->where('athlete_id', $this->luca)->value('payment_method'))->toBe('pos')
+            ->and(DB::table('sync_conflicts')->where('entry_id', $entries[0]['id'])->value('decided_at'))->toBeNull();
+    });
+
+    it('refuses to keep a write nothing would make true here', function (): void {
+        $entries = onThePhone(fn () => $this->actingAs($this->owner)
+            ->postJson("/api/v1/athletes/{$this->luca}/payments", ['year' => 2026, 'month' => 9, 'payment_method' => 'cash'])->assertCreated());
+        $this->actingAs($this->owner)->postJson("/api/v1/athletes/{$this->luca}/payments", ['year' => 2026, 'month' => 8, 'period_months' => 3, 'payment_method' => 'pos'])->assertCreated();
+        replayOnThePc($entries);
+
+        $this->actingAs($this->owner)->postJson("/api/v1/sync/conflicts/{$entries[0]['id']}/keep-mine")->assertUnprocessable();
     });
 
     it('records each answer once, and takes one for a conflict this database does not hold', function (): void {

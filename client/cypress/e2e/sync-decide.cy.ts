@@ -90,13 +90,9 @@ describe('«Da decidere» (#2038)', () => {
     cy.get('[data-cy="sync-decide-item"]').should('have.length', 1);
   });
 
-  it('keeps the phone’s after a confirm: the retry goes through the API, then the answer', () => {
-    cy.intercept('PATCH', '/api/v1/athletes/57', {
-      statusCode: 200,
-      body: { data: { id: 57 } },
-    }).as('retry');
-    cy.intercept('POST', `/api/v1/sync/conflicts/${NAME.id}/decision`, { statusCode: 204 }).as(
-      'decide',
+  it('keeps the phone’s after a confirm: one call, the write and the answer together', () => {
+    cy.intercept('POST', `/api/v1/sync/conflicts/${NAME.id}/keep-mine`, { statusCode: 204 }).as(
+      'keep',
     );
     cy.visitAuthenticated('/dashboard/sync/decide');
     cy.wait('@list');
@@ -105,8 +101,7 @@ describe('«Da decidere» (#2038)', () => {
     cy.contains("The phone's takes the place of the PC's.");
     cy.get('.p-confirmpopup').contains('button', "Keep the phone's").click();
 
-    cy.wait('@retry').its('request.body').should('deep.equal', { last_name: 'Bianco' });
-    cy.wait('@decide').its('request.body').should('deep.equal', { decision: 'mine' });
+    cy.wait('@keep');
     cy.get('[data-cy="sync-decide-item"]').should('have.length', 1);
   });
 

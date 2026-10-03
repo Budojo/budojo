@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { describe, expect, it, vi } from 'vitest';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
@@ -93,8 +93,12 @@ describe('SyncPillComponent', () => {
     pill()?.click();
     fixture.detectChanges();
     await fixture.whenStable();
-    const decide = document.querySelector<HTMLAnchorElement>('[data-cy="sync-detail-decide"]');
-    expect(decide?.getAttribute('href')).toBe('/dashboard/sync/decide');
+    const router = TestBed.inject(Router);
+    const navigate = vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
+    const decide = document.querySelector<HTMLElement>('[data-cy="sync-detail-decide"] button');
+    expect(decide?.hasAttribute('autofocus')).toBe(true);
+    decide?.click();
+    expect(navigate).toHaveBeenCalledWith('/dashboard/sync/decide');
 
     // A lost link says more than what waits.
     state.set({ kind: 'reconnect' });

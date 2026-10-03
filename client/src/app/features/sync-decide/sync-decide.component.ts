@@ -101,8 +101,9 @@ interface ConflictView {
  * - what it was, and whom it is about (the athlete, with the belt);
  * - both sides, when it is about one field;
  * - **«Tieni quella del PC»**: what is here stays;
- * - **«Tieni quella del telefono»**: the set-aside write is sent again
- *   (`retry`), after a confirm that says what it replaces, when it can be;
+ * - **«Tieni quella del telefono»**: the set-aside write made true here,
+ *   after a confirm that says what it replaces, when it can be: the server
+ *   runs its `retry` and the answer as one transaction;
  * - **«L'ho sistemata io»**: the owner fixed it by hand.
  *
  * Every answer is a journaled write: it reaches the other device too.
@@ -132,8 +133,8 @@ export class SyncDecideComponent implements OnInit {
 
   protected readonly conflicts = signal<SyncConflict[] | null>(null);
   protected readonly loadFailed = signal(false);
-  /** The conflict an answer is being sent for. */
-  protected readonly busy = signal<string | null>(null);
+  /** The answer being sent, and for which conflict: its button spins, every other waits. */
+  protected readonly busy = signal<{ id: string; decision: ConflictDecision } | null>(null);
   /** Why the last «Tieni quella del …» did not go through, by conflict. */
   protected readonly errors = signal<Record<string, string>>({});
   /** What the screen reader hears after an answer. */
@@ -156,6 +157,11 @@ export class SyncDecideComponent implements OnInit {
       this.loadFailed.set(true);
       this.conflicts.set([]);
     }
+  }
+
+  protected isBusy(id: string, decision: ConflictDecision): boolean {
+    const busy = this.busy();
+    return busy !== null && busy.id === id && busy.decision === decision;
   }
 
   protected deviceLabel(kind: 'pc' | 'phone'): string {
@@ -183,15 +189,17 @@ export class SyncDecideComponent implements OnInit {
     if (this.busy() !== null) {
       return;
     }
-    this.busy.set(conflict.id);
+    this.busy.set({ id: conflict.id, decision });
     this.errors.update((all) =>
       Object.fromEntries(Object.entries(all).filter(([id]) => id !== conflict.id)),
     );
     try {
-      if (decision === 'mine' && conflict.retry !== null) {
-        await this.server.retry(conflict.retry);
+      if (decision === 'mine') {
+        // The write and the answer, all or nothing on the server.
+        await this.server.keepMine(conflict.id);
+      } else {
+        await this.server.decide(conflict.id, decision);
       }
-      await this.server.decide(conflict.id, decision);
       this.conflicts.update((all) => (all ?? []).filter((one) => one.id !== conflict.id));
       this.announcement.set(this.translate.instant('sync.decide.decided'));
       void this.sync.countToDecide();

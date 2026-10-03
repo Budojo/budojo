@@ -5,7 +5,7 @@ import { environment } from '../../../environments/environment';
 import { binaryBody } from './bytes';
 import { SyncServer } from './engine';
 import { HttpSyncFiles } from './http-sync-files';
-import { ConflictDecision, ConflictRequest, SyncConflict } from './conflicts';
+import { ConflictDecision, SyncConflict } from './conflicts';
 import { JournalEntry } from './journal';
 
 /**
@@ -60,18 +60,11 @@ export class HttpSyncServer implements SyncServer {
   }
 
   /**
-   * «Tieni la mia»: the requests that make a set-aside write true here, one
-   * after the other, through the page's own API: journaled and held like any
-   * write the owner makes.
+   * «Tieni la mia»: the set-aside write made true here and the answer, in one
+   * transaction on the server, journaled like any write of the owner's.
    */
-  async retry(requests: ConflictRequest[]): Promise<void> {
-    for (const request of requests) {
-      await firstValueFrom(
-        this.http.request(request.method, `${environment.apiBase}${request.url}`, {
-          body: request.body ?? undefined,
-        }),
-      );
-    }
+  async keepMine(entry: string): Promise<void> {
+    await firstValueFrom(this.http.post(this.url(`/sync/conflicts/${entry}/keep-mine`), null));
   }
 
   journal(): Promise<JournalEntry[]> {

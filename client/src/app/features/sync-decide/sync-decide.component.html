@@ -82,7 +82,7 @@
             <p-button
               [label]="'sync.decide.keep' | translate: { device: deviceLabel(view.theirs) }"
               [outlined]="true"
-              [loading]="busy() === view.conflict.id"
+              [loading]="isBusy(view.conflict.id, 'theirs')"
               [disabled]="busy() !== null"
               (onClick)="answer(view.conflict, 'theirs')"
               data-cy="sync-decide-theirs"
@@ -91,6 +91,7 @@
               <p-button
                 [label]="'sync.decide.keep' | translate: { device: deviceLabel(view.mine) }"
                 [outlined]="true"
+                [loading]="isBusy(view.conflict.id, 'mine')"
                 [disabled]="busy() !== null"
                 (onClick)="keepMine($event, view)"
                 data-cy="sync-decide-mine"
@@ -99,6 +100,7 @@
             <p-button
               [label]="'sync.decide.byHand' | translate"
               [text]="true"
+              [loading]="isBusy(view.conflict.id, 'by-hand')"
               [disabled]="busy() !== null"
               (onClick)="answer(view.conflict, 'by-hand')"
               data-cy="sync-decide-by-hand"
