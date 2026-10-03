@@ -38,12 +38,8 @@ import { packVersion, PROTOCOL, unpackVersion } from './version';
 export interface SyncServer {
   /** `GET /sync/export`: the database, and the newest migration it has run. */
   exportDatabase(): Promise<{ database: Uint8Array; schema: string }>;
-  /**
-   * `PUT /sync/stage`: another device's database, for the shell to swap in.
-   * With `rebase`, the server sets this device's kept journal aside first,
-   * and replays it on that database once swapped in.
-   */
-  stage(database: Uint8Array, options?: { rebase: boolean }): Promise<void>;
+  /** `PUT /sync/stage`: another device's database, for the shell to swap in. */
+  stage(database: Uint8Array, options?: StageOptions): Promise<void>;
   /** `GET /sync/journal`: this device's kept entries, oldest first. */
   journal(): Promise<JournalEntry[]>;
   /** `DELETE /sync/journal?through=`: clears up to what every other device holds. */
@@ -53,6 +49,18 @@ export interface SyncServer {
   /** Whether the database holds an academy: one never synced, holding one, is pushed as version 1. */
   holdsAcademy(): Promise<boolean>;
   files: SyncFilesApi;
+}
+
+/** What a stage says about the database it brings. */
+export interface StageOptions {
+  /** This device has writes to carry onto it: the server sets them aside, and replays them once swapped in. */
+  rebase?: boolean;
+  /**
+   * It brings the other device's work on this academy: the owner is told what
+   * arrived (#2039). Never when a whole academy arrives, at a first pull or
+   * by the owner's choice when asked.
+   */
+  homecoming?: boolean;
 }
 
 /** What only the shell can do: swap a staged database in, by restarting the server. */
@@ -453,7 +461,9 @@ async function fastForward(
     if ((await server.journal()).some((entry) => !known.has(entry.id))) {
       return null;
     }
-    await server.stage(database);
+    // With a base, it is this academy moving on; with none (a first pull,
+    // the owner's choice when asked), a whole academy arriving.
+    await server.stage(database, { homecoming: ledger.base !== null });
     // Saved once staged, before the swap: from here the next start swaps the
     // staged database in whatever happens, so a device killed during the
     // restart wakes up as this version, and knows it.
@@ -489,7 +499,7 @@ async function rebase(
   const database = await readVersion(context, listed);
   const onto: VersionRef = { seq: listed.seq, device: listed.device };
   const rebased = await context.holdWrites(async () => {
-    await server.stage(database, { rebase: true });
+    await server.stage(database, { rebase: true, homecoming: true });
     // Saved once staged, as a fast-forward's base is: the next start swaps
     // it in and replays whatever happens. Every entry the replay keeps is in
     // no version on this line, so none counts as pushed or listed: a device

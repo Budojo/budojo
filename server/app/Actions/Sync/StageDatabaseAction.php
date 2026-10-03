@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Actions\Sync;
 
-use App\Models\Academy;
 use App\Support\Sync\HomecomingSince;
 use App\Support\Sync\IncomingDatabase;
 use App\Support\Sync\IncomingFile;
@@ -20,15 +19,13 @@ use App\Support\Sync\SyncDatabase;
  */
 final class StageDatabaseAction
 {
-    public function __construct(private readonly ReadHoldsAction $holds)
-    {
-    }
-
     /**
      * @param  resource  $body  the database's bytes, as they arrive
      * @param  bool  $rebase  replay this device's kept writes on it after the swap (#2031 step 3)
+     * @param  array<string, string>|null  $since  what this device held of the other device's work, for the
+     *                                             homecoming (#2039); null when a whole academy arrives
      */
-    public function execute($body, bool $rebase = false): void
+    public function execute($body, bool $rebase = false, ?array $since = null): void
     {
         $incoming = tempnam(sys_get_temp_dir(), 'budojo-stage-');
         if ($incoming === false) {
@@ -46,10 +43,9 @@ final class StageDatabaseAction
             // earlier restore staged go with its database (#2079).
             Staged::clear();
             // What this device held of the other's work, for the homecoming
-            // (#2039): the swap replaces the database that knows it. Not on
-            // a device holding no academy, where the whole academy arrives.
-            if (Academy::query()->exists()) {
-                HomecomingSince::remember($this->holds->execute());
+            // (#2039): the swap replaces the database that knows it.
+            if ($since !== null) {
+                HomecomingSince::remember($since);
             }
             if ($device !== null) {
                 // Before the database: a staged database is what commits a

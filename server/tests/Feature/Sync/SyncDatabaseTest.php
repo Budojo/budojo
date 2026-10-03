@@ -162,16 +162,17 @@ describe('PUT /api/v1/sync/stage', function (): void {
         DB::table('sync_entries')->insert(['id' => '01K6A000000000000000000007', 'device' => 'phone9f8e7d6c', 'outcome' => 'own', 'created' => '{}']);
 
         $this->actingAs(userWithAcademy())
-            ->call('PUT', '/api/v1/sync/stage', content: syncTestIncoming($this->dir, syncTestHistory()))
+            ->call('PUT', '/api/v1/sync/stage?homecoming=1', content: syncTestIncoming($this->dir, syncTestHistory()))
             ->assertNoContent();
 
         expect(HomecomingSince::read())->toBe(['phone9f8e7d6c' => '01K6A000000000000000000007']);
     });
 
-    it('keeps none on a device holding no academy, where the whole academy arrives', function (): void {
+    it('keeps none when a whole academy arrives: a first pull, or the owner\'s choice', function (): void {
+        DB::table('sync_entries')->insert(['id' => '01K6A000000000000000000007', 'device' => 'phone9f8e7d6c', 'outcome' => 'own', 'created' => '{}']);
         HomecomingSince::remember(['phone9f8e7d6c' => '01K6A000000000000000000003']);
 
-        $this->actingAs(User::factory()->create())
+        $this->actingAs(userWithAcademy())
             ->call('PUT', '/api/v1/sync/stage', content: syncTestIncoming($this->dir, syncTestHistory()))
             ->assertNoContent();
 

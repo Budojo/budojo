@@ -109,22 +109,41 @@ describe('HomecomingCardComponent', () => {
     expect(card()?.querySelector('h2')?.textContent).toContain('6 Oct at 21:47');
   });
 
-  it('goes once opened: told as seen at once, and on screen until the owner closes it', () => {
+  it('stays until the owner closes it: shown is not seen, since each pull loads the page again', () => {
     const { fixture, card, sync, el } = setup(ARRIVED);
 
-    expect(sync.seenHomecoming).toHaveBeenCalledExactlyOnceWith(ARRIVED);
     expect(card()).not.toBeNull();
+    expect(sync.seenHomecoming).not.toHaveBeenCalled();
 
     el.querySelector<HTMLButtonElement>('[data-cy="today-homecoming-close"] button')?.click();
     fixture.detectChanges();
 
+    expect(sync.seenHomecoming).toHaveBeenCalledExactlyOnceWith(ARRIVED);
     expect(card()).toBeNull();
   });
 
-  it('shows nothing when nothing arrived', () => {
-    const { card, sync } = setup(null);
+  it('is seen when the owner leaves Oggi', () => {
+    const { fixture, sync } = setup(ARRIVED);
+
+    fixture.destroy();
+
+    expect(sync.seenHomecoming).toHaveBeenCalledExactlyOnceWith(ARRIVED);
+  });
+
+  it('takes in a later pull while it is on screen', () => {
+    const { fixture, homecoming, items } = setup(ARRIVED);
+
+    homecoming.set({ ...ARRIVED, through: '01K6F3Q9A1B2C3D4E5F6G7H8K0', athletes: 2 });
+    fixture.detectChanges();
+
+    expect(items()).toContain('2 new athletes');
+  });
+
+  it('shows nothing when nothing arrived, and leaving tells nothing', () => {
+    const { fixture, card, sync } = setup(null);
 
     expect(card()).toBeNull();
+    fixture.destroy();
     expect(sync.seenHomecoming).not.toHaveBeenCalled();
   });
 });

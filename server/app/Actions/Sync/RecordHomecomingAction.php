@@ -24,8 +24,8 @@ use Illuminate\Support\Facades\DB;
  * database as it is now; an entry that created none of them (an edit, a
  * deletion, a note) is one more change.
  *
- * Nothing is told after a stage that wrote no `since`: a restore, or the
- * first pull onto a device holding no academy, where everything arrived.
+ * Nothing is told after a stage that wrote no `since`: a restore, or a
+ * whole academy arriving (a first pull, the owner's choice when asked).
  *
  * @phpstan-import-type Arrived from Homecoming
  */
@@ -50,16 +50,23 @@ final class RecordHomecomingAction
     }
 
     /**
-     * The other device's entries this device did not hold, oldest first.
+     * The other device's entries this device did not hold, oldest first,
+     * less those its rebase found already true or set aside.
      *
      * @param  array<string, string>  $since
      * @return list<\stdClass>
      */
     private function entriesSince(array $since, ?string $device): array
     {
-        $query = DB::table('sync_journal')->orderBy('id');
+        // What the other device's own replay found already true or set aside
+        // changed nothing there: it is no news here.
+        $query = DB::table('sync_journal')
+            ->leftJoin('sync_entries', 'sync_entries.id', '=', 'sync_journal.id')
+            ->where(static fn ($query) => $query->whereNull('sync_entries.outcome')->orWhereNotIn('sync_entries.outcome', ['already', 'conflict']))
+            ->select('sync_journal.*')
+            ->orderBy('sync_journal.id');
         if ($device !== null && $device !== '') {
-            $query->where('device', '!=', $device);
+            $query->where('sync_journal.device', '!=', $device);
         }
 
         /** @var list<\stdClass> */

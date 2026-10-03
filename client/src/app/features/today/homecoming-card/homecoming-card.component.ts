@@ -1,18 +1,9 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  effect,
-  inject,
-  signal,
-  untracked,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject } from '@angular/core';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ButtonModule } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
 import { LanguageService } from '../../../core/services/language.service';
 import { deviceKind } from '../../../core/sync/conflicts';
-import { Homecoming } from '../../../core/sync/homecoming';
 import { SyncService } from '../../../core/sync/sync.service';
 import { localeFor } from '../../../shared/utils/locale';
 import { formatCents } from '../../../shared/utils/money';
@@ -25,9 +16,9 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  * what it brought. *"Dal telefono, martedì alle 21:47: 14 presenze in BJJ Gi,
  * 2 pagamenti (120,00 €), 1 nuovo atleta."*
  *
- * **It goes once opened:** shown, it is told to the server as seen, and stays
- * on screen until the owner closes it or leaves Oggi. Nothing shows where
- * there is no sync, or nothing arrived.
+ * **It goes once seen:** when the owner closes it, or leaves Oggi. Until
+ * then it stays, through the page loading again at each pull, and a later
+ * pull adds to it. Nothing shows where there is no sync, or nothing arrived.
  */
 @Component({
   selector: 'app-homecoming-card',
@@ -41,18 +32,12 @@ export class HomecomingCardComponent {
   private readonly translate = inject(TranslateService);
   private readonly language = inject(LanguageService);
 
-  protected readonly shown = signal<Homecoming | null>(null);
+  protected readonly shown = this.sync.homecoming;
 
   constructor() {
-    effect(() => {
-      const arrived = this.sync.homecoming();
-      if (arrived !== null) {
-        untracked(() => {
-          this.shown.set(arrived);
-          this.sync.seenHomecoming(arrived);
-        });
-      }
-    });
+    // Leaving Oggi is having seen it. A page that loads again (each pull
+    // does) runs no destroy: the card stays, and the next pull adds to it.
+    inject(DestroyRef).onDestroy(() => this.seen());
   }
 
   protected readonly fromPhone = computed(() => {
@@ -105,7 +90,14 @@ export class HomecomingCardComponent {
   });
 
   protected close(): void {
-    this.shown.set(null);
+    this.seen();
+  }
+
+  private seen(): void {
+    const arrived = this.shown();
+    if (arrived !== null) {
+      this.sync.seenHomecoming(arrived);
+    }
   }
 
   private counted(key: string, count: number, params: Record<string, string> = {}): string {

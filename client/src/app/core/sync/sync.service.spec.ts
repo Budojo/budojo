@@ -199,7 +199,23 @@ describe('SyncService', () => {
     expect(sync.homecoming()?.through).toBe('01K6F3Q9A1B2C3D4E5F6G7H8J9');
   });
 
-  it('forgets the homecoming once shown, on its server too', async () => {
+  it('does not bring back a seen homecoming its server has not forgotten yet', async () => {
+    phone.arrived = { through: '01K6F3Q9A1B2C3D4E5F6G7H8J9' } as Homecoming;
+    vi.spyOn(phone, 'seenHomecoming').mockResolvedValue(undefined);
+    const sync = setUp();
+    await sync.syncNow();
+    sync.seenHomecoming(sync.homecoming() as Homecoming);
+
+    await sync.syncNow();
+    expect(sync.homecoming()).toBeNull();
+
+    // A later pull adds to it: a new one, shown.
+    phone.arrived = { through: '01K6F3Q9A1B2C3D4E5F6G7H8K0' } as Homecoming;
+    await sync.syncNow();
+    expect(sync.homecoming()?.through).toBe('01K6F3Q9A1B2C3D4E5F6G7H8K0');
+  });
+
+  it('forgets the homecoming once seen, on its server too', async () => {
     phone.arrived = { through: '01K6F3Q9A1B2C3D4E5F6G7H8J9' } as Homecoming;
     const sync = setUp();
     await sync.syncNow();

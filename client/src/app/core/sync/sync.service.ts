@@ -386,17 +386,22 @@ export class SyncService {
 
   private countAsked = 0;
 
-  /** Shown on Oggi: seen, on the server too. One a later pull added to stays there. */
+  /** Seen on Oggi: forgotten, on the server too. One a later pull added to stays there. */
   seenHomecoming(arrived: Homecoming): void {
+    this.seenThrough = arrived.through;
     this.homecomingSignal.set(null);
     this.server.seenHomecoming(arrived.through).catch(() => {
-      // Seen again at the next start: the card says the same thing twice, nothing is lost.
+      // Told again at the next start: the card says the same thing twice, nothing is lost.
     });
   }
 
+  /** The homecoming the owner saw: a round that reads it before the server forgot it does not bring it back. */
+  private seenThrough: string | null = null;
+
   private async loadHomecoming(): Promise<void> {
     try {
-      this.homecomingSignal.set(await this.server.homecoming());
+      const arrived = await this.server.homecoming();
+      this.homecomingSignal.set(arrived?.through === this.seenThrough ? null : arrived);
     } catch {
       // The card waits for the next round: Oggi never fails on it.
     }

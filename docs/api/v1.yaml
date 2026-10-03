@@ -7372,11 +7372,10 @@ paths:
         replay when the sync is a rebase. Every stage clears a rebase set
         aside before, so a fast-forward never replays an older one.
 
-        **On a device holding an academy, it also keeps what this device
-        held** of the other device's work (`holds`, beside the database as
+        **With `homecoming`, it also keeps what this device held** of the
+        other device's work (`holds`, beside the database as
         `<database>.homecoming-since`, #2039): the reconcile reads it to tell
-        the owner what arrived (`GET /sync/homecoming`). Not on a device
-        holding none, where the whole academy arrives.
+        the owner what arrived (`GET /sync/homecoming`).
       tags: [sync]
       parameters:
         - name: rebase
@@ -7387,6 +7386,15 @@ paths:
             first, beside the live database as `<database>.rebase`, and the
             reconcile replays it on the database swapped in, before it sweeps
             anything (`docs/sync/protocol.md` § Rebase).
+          schema: { type: integer, enum: [0, 1] }
+        - name: homecoming
+          in: query
+          required: false
+          description: |
+            `1` when the version brings the other device's work on this
+            academy (#2039): the owner is told what arrived. Never when a
+            whole academy arrives, at a first pull or by the owner's choice
+            when asked.
           schema: { type: integer, enum: [0, 1] }
       requestBody:
         required: true
@@ -7737,7 +7745,9 @@ paths:
         looked up in the database as it is now, so a presence recorded and
         then removed is no presence. An entry that created none of the
         counted rows (an edit, a deletion, a note) is one more change
-        (`other`). Two pulls before the owner looks add up.
+        (`other`); one the other device's own rebase found already true or
+        set aside changed nothing, and is left out. Two pulls before the
+        owner looks add up.
 
         Kept beside the database, never in it: it is this device's news
         alone, and the database travels.

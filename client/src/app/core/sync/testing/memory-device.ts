@@ -1,6 +1,6 @@
 import { fromUtf8, sha256Hex, utf8 } from '../bytes';
 import { SyncConflict } from '../conflicts';
-import { EMPTY_LEDGER, SyncLedger, SyncServer } from '../engine';
+import { EMPTY_LEDGER, StageOptions, SyncLedger, SyncServer } from '../engine';
 import { ServerFile, SyncFilesApi } from '../files';
 import { Homecoming } from '../homecoming';
 import { JournalEntry } from '../journal';
@@ -102,7 +102,11 @@ export class MemoryDevice implements SyncServer {
     };
   }
 
-  async stage(database: Uint8Array, options?: { rebase: boolean }) {
+  /** What each stage said about the database it brought. */
+  readonly staging: StageOptions[] = [];
+
+  async stage(database: Uint8Array, options?: StageOptions) {
+    this.staging.push(options ?? {});
     this.under.push(`stage${options?.rebase ? ' rebase' : ''} ${this.holding ? 'held' : 'open'}`);
     this.setAside = options?.rebase ? await this.journal() : null;
     this.staged = database;

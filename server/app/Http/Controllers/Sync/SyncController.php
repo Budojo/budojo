@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Sync;
 
 use App\Actions\Sync\ExportDatabaseAction;
+use App\Actions\Sync\ReadHoldsAction;
 use App\Actions\Sync\StageDatabaseAction;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
@@ -42,14 +43,16 @@ class SyncController extends Controller
             ->deleteFileAfterSend();
     }
 
-    public function stage(Request $request, StageDatabaseAction $stage): Response
+    public function stage(Request $request, StageDatabaseAction $stage, ReadHoldsAction $holds): Response
     {
         $body = $request->getContent(true);
         if (! \is_resource($body)) {
             throw new \RuntimeException('could not read the incoming database');
         }
         // `?rebase=1`: this device has writes to carry onto it (#2031 step 3).
-        $stage->execute($body, $request->boolean('rebase'));
+        // `?homecoming=1`: it brings the other device's work on this academy,
+        // and the owner is told what arrived (#2039); never a whole academy.
+        $stage->execute($body, $request->boolean('rebase'), $request->boolean('homecoming') ? $holds->execute() : null);
 
         return response()->noContent();
     }

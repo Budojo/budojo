@@ -111,6 +111,29 @@ describe('the reconcile after a pull', function (): void {
             ->and(DB::table('sync_journal')->where('device', 'phone9f8e7d6c')->count())->toBe(0);
     });
 
+    it('leaves out what the other device\'s own replay found already true or set aside: nothing changed there', function (): void {
+        $presence = AttendanceRecord::factory()->create(['lesson_id' => Lesson::factory()->create(['name' => 'BJJ Gi'])->id]);
+        HomecomingSince::remember([]);
+        homecomingEntry(1, 'phone9f8e7d6c', 'attendance.store', ['attendance_records' => [$presence->id]]);
+        homecomingEntry(2, 'phone9f8e7d6c', 'attendance.store');
+        homecomingEntry(3, 'phone9f8e7d6c', 'athletes.update');
+        homecomingEntry(4, 'phone9f8e7d6c', 'athletes.update');
+        DB::table('sync_entries')->insert([
+            ['id' => homecomingId(1), 'device' => 'phone9f8e7d6c', 'outcome' => 'applied', 'created' => '{}'],
+            ['id' => homecomingId(2), 'device' => 'phone9f8e7d6c', 'outcome' => 'already', 'created' => '{}'],
+            ['id' => homecomingId(3), 'device' => 'phone9f8e7d6c', 'outcome' => 'conflict', 'created' => '{}'],
+            ['id' => homecomingId(4), 'device' => 'phone9f8e7d6c', 'outcome' => 'own', 'created' => '{}'],
+        ]);
+
+        $this->artisan('budojo:sync-reconcile')->assertSuccessful();
+
+        expect(Homecoming::read())->toMatchArray([
+            'through' => homecomingId(4),
+            'attendance' => [['lesson' => 'BJJ Gi', 'count' => 1]],
+            'other' => 1,
+        ]);
+    });
+
     it('adds a second pull to the one the owner has not seen yet', function (): void {
         $presence = AttendanceRecord::factory()->create(['lesson_id' => Lesson::factory()->create(['name' => 'BJJ Gi'])->id]);
         Homecoming::keep([
@@ -156,7 +179,7 @@ describe('the reconcile after a pull', function (): void {
             ->and($told['other'] ?? null)->toBe(1);
     });
 
-    it('tells nothing after a stage that kept no since: a restore, or a first pull', function (): void {
+    it('tells nothing after a stage that kept no since: a restore, or a whole academy arriving', function (): void {
         homecomingEntry(1, 'phone9f8e7d6c', 'athletes.update');
 
         $this->artisan('budojo:sync-reconcile')->assertSuccessful();

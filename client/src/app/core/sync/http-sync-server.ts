@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { firstValueFrom, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { binaryBody } from './bytes';
-import { SyncServer } from './engine';
+import { StageOptions, SyncServer } from './engine';
 import { Homecoming } from './homecoming';
 import { HttpSyncFiles } from './http-sync-files';
 import { ConflictDecision, SyncConflict } from './conflicts';
@@ -34,13 +34,19 @@ export class HttpSyncServer implements SyncServer {
     return { database: new Uint8Array(response.body), schema };
   }
 
-  async stage(database: Uint8Array, options?: { rebase: boolean }): Promise<void> {
+  async stage(database: Uint8Array, options?: StageOptions): Promise<void> {
+    const params: Record<string, string> = {};
+    if (options?.rebase) {
+      params['rebase'] = '1';
+    }
+    if (options?.homecoming) {
+      params['homecoming'] = '1';
+    }
     await firstValueFrom(
-      this.http.put(
-        this.url(options?.rebase ? '/sync/stage?rebase=1' : '/sync/stage'),
-        binaryBody(database),
-        { headers: new HttpHeaders({ 'Content-Type': 'application/octet-stream' }) },
-      ),
+      this.http.put(this.url('/sync/stage'), binaryBody(database), {
+        headers: new HttpHeaders({ 'Content-Type': 'application/octet-stream' }),
+        params,
+      }),
     );
   }
 
