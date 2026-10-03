@@ -48,26 +48,25 @@ use Illuminate\Support\Facades\Route as Routes;
  */
 final class ReplayJournalAction
 {
-    /** Columns an entry's `before` carries that say nothing about its meaning. */
-    private const array CLOCK = ['created_at', 'updated_at'];
-
     /** Fields a form sends together, each required with the others: kept or left out as one. */
-    private const array GROUPS = [['phone_country_code', 'phone_national_number']];
-
-    /** Request fields that replace a row's set of related rows whole (`SetReplaced`): a lesson's topics, by the table they are in. */
-    private const array SETS = ['topic_ids' => 'syllabus_topics'];
+    public const array GROUPS = [['phone_country_code', 'phone_national_number']];
 
     /**
      * Rows the API names by what they are, never by id: a lesson is its class
      * on a day (`PUT /lessons/notes`, `/lessons/topics`). Made on each device,
      * one lesson has two ids, and its id is never the way to find it here.
      */
-    private const array NATURAL = [
+    public const array NATURAL = [
         'lessons' => ['academy_class_id' => 'academy_class_id', 'held_on' => 'held_on'],
     ];
 
     /** A form's nested object, and the row it is: its table, and the morph that names its owner. */
-    private const array NESTED = ['address' => ['table' => 'addresses', 'morph' => 'addressable']];
+    public const array NESTED = ['address' => ['table' => 'addresses', 'morph' => 'addressable']];
+    /** Columns an entry's `before` carries that say nothing about its meaning. */
+    private const array CLOCK = ['created_at', 'updated_at'];
+
+    /** Request fields that replace a row's set of related rows whole (`SetReplaced`): a lesson's topics, by the table they are in. */
+    private const array SETS = ['topic_ids' => 'syllabus_topics'];
 
     public function __construct(
         private readonly JournalRecorder $recorder,
@@ -100,6 +99,21 @@ final class ReplayJournalAction
         }
 
         return $outcomes;
+    }
+
+    /** @return array<string, class-string<Model>> parameter => the model the route binds to it, in the route's order */
+    public static function paramModels(Route $route): array
+    {
+        $models = [];
+        foreach ($route->signatureParameters(['subClass' => UrlRoutable::class]) as $parameter) {
+            $type = $parameter->getType();
+            $class = $type instanceof \ReflectionNamedType ? $type->getName() : null;
+            if ($class !== null && is_subclass_of($class, Model::class)) {
+                $models[$parameter->getName()] = $class;
+            }
+        }
+
+        return $models;
     }
 
     /**
@@ -1047,21 +1061,6 @@ final class ReplayJournalAction
     private static function paramTables(Route $route): array
     {
         return array_map(static fn (string $class): string => new $class()->getTable(), self::paramModels($route));
-    }
-
-    /** @return array<string, class-string<Model>> parameter => the model the route binds to it, in the route's order */
-    private static function paramModels(Route $route): array
-    {
-        $models = [];
-        foreach ($route->signatureParameters(['subClass' => UrlRoutable::class]) as $parameter) {
-            $type = $parameter->getType();
-            $class = $type instanceof \ReflectionNamedType ? $type->getName() : null;
-            if ($class !== null && is_subclass_of($class, Model::class)) {
-                $models[$parameter->getName()] = $class;
-            }
-        }
-
-        return $models;
     }
 
     private static function same(mixed $a, mixed $b): bool

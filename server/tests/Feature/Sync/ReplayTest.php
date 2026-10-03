@@ -807,6 +807,86 @@ describe('«Da decidere»: the owner’s answers (#2031)', function (): void {
         expect($conflict['retry'])->toBeNull();
     });
 
+    it('sends again only the field the conflict is about: the PC’s other changes to the form stay', function (): void {
+        $entries = onThePhone(fn () => $this->actingAs($this->owner)->putJson("/api/v1/athletes/{$this->luca}", [
+            'first_name' => 'Luca', 'last_name' => 'Bianco', 'belt' => 'white', 'stripes' => 0, 'status' => 'active', 'joined_at' => '2026-09-01',
+        ])->assertOk());
+        $this->actingAs($this->owner)->patchJson("/api/v1/athletes/{$this->luca}", ['first_name' => 'Lucas', 'last_name' => 'Verdi'])->assertOk();
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'conflict']);
+
+        $retry = $this->actingAs($this->owner)->getJson('/api/v1/sync/conflicts')->json('data.0.retry.0');
+        expect($retry['body'])->toBe(['last_name' => 'Bianco']);
+        $this->actingAs($this->owner)->json($retry['method'], $retry['url'], $retry['body'])->assertOk();
+
+        $luca = Athlete::query()->findOrFail($this->luca);
+        expect($luca->first_name)->toBe('Lucas')->and($luca->last_name)->toBe('Bianco');
+    });
+
+    it('offers no retry when the method and the amount both differ: the fee here makes another amount', function (): void {
+        $entries = onThePhone(fn () => $this->actingAs($this->owner)
+            ->postJson("/api/v1/athletes/{$this->luca}/payments", ['year' => 2026, 'month' => 10, 'payment_method' => 'cash'])->assertCreated());
+        $this->owner->academy->update(['monthly_fee_cents' => 10000]);
+        $this->actingAs($this->owner)->postJson("/api/v1/athletes/{$this->luca}/payments", ['year' => 2026, 'month' => 10, 'payment_method' => 'pos'])->assertCreated();
+        replayOnThePc($entries);
+
+        $this->actingAs($this->owner)->getJson('/api/v1/sync/conflicts')
+            ->assertJsonPath('data.0.detail.field', 'payment_method')
+            ->assertJsonPath('data.0.retry', null);
+    });
+
+    it('names no one for a write whose athlete has no row here, and offers no retry for one the rules refused', function (): void {
+        $entries = onThePhone(function (): void {
+            $marco = (int) $this->actingAs($this->owner)->postJson('/api/v1/athletes', [
+                'first_name' => 'Marco', 'last_name' => 'Rossi', 'email' => 'marco@example.test',
+                'belt' => 'white', 'stripes' => 0, 'status' => 'active', 'joined_at' => '2026-09-01',
+            ])->assertCreated()->json('data.id');
+            $this->actingAs($this->owner)->postJson("/api/v1/athletes/{$marco}/payments", ['year' => 2026, 'month' => 10, 'payment_method' => 'cash'])->assertCreated();
+        });
+        // On the PC that email is Mario's, who takes the id Marco had on the phone.
+        $this->actingAs($this->owner)->postJson('/api/v1/athletes', [
+            'first_name' => 'Mario', 'last_name' => 'Bianchi', 'email' => 'marco@example.test',
+            'belt' => 'white', 'stripes' => 0, 'status' => 'active', 'joined_at' => '2026-09-01',
+        ])->assertCreated();
+        replayOnThePc($entries);
+
+        $conflicts = collect($this->actingAs($this->owner)->getJson('/api/v1/sync/conflicts')->json('data'))->keyBy('id');
+        expect($conflicts[$entries[0]['id']]['reason'])->toBe('refused')
+            ->and($conflicts[$entries[0]['id']]['retry'])->toBeNull()
+            ->and($conflicts[$entries[1]['id']]['reason'])->toBe('gone')
+            ->and($conflicts[$entries[1]['id']]['subject'])->toBeNull();
+    });
+
+    it('lists every conflict though one names parameters its route no longer takes, with its time in UTC', function (): void {
+        $entries = conflictOnLucasName($this);
+        DB::table('sync_conflicts')->insert([
+            'entry_id' => '01K6F3Q8Z4M7X2N5P9R1T3V6W8', 'device' => 'phone9c1e', 'route' => 'athletes.update', 'reason' => 'failed',
+            'detail' => '{}', 'entry' => json_encode(['method' => 'PATCH', 'params' => [], 'body' => ['last_name' => 'X']]),
+        ]);
+
+        $conflicts = collect($this->actingAs($this->owner)->getJson('/api/v1/sync/conflicts')->assertOk()->json('data'))->keyBy('id');
+        expect($conflicts['01K6F3Q8Z4M7X2N5P9R1T3V6W8']['retry'])->toBeNull()
+            ->and($conflicts[$entries[0]['id']]['recorded_at'])->toMatch('/T\d{2}:\d{2}:\d{2}(\+00:00|Z)$/');
+    });
+
+    it('names the athlete of a check-in or a document the route names, and how many others a check-in names', function (): void {
+        $giulia = replayAthlete($this, 'Giulia');
+        // Giulia's presence first, so Luca's record has an id that is no athlete's.
+        $this->actingAs($this->owner)->postJson('/api/v1/attendance', ['date' => '2026-09-30', 'athlete_ids' => [$giulia]])->assertCreated();
+        $this->actingAs($this->owner)->postJson('/api/v1/attendance', ['date' => '2026-09-29', 'athlete_ids' => [$giulia]])->assertCreated();
+        $record = (int) $this->actingAs($this->owner)->postJson('/api/v1/attendance', ['date' => '2026-10-01', 'athlete_ids' => [$this->luca]])->json('data.0.id');
+        expect($record)->not->toBe($this->luca)->and($record)->not->toBe($giulia);
+        $conflict = fn (string $id, string $route, array $params, ?array $body) => DB::table('sync_conflicts')->insert([
+            'entry_id' => $id, 'device' => 'phone9c1e', 'route' => $route, 'reason' => 'failed', 'detail' => '{}',
+            'entry' => json_encode(['method' => 'POST', 'params' => $params, 'body' => $body]),
+        ]);
+        $conflict('01K6F3Q8Z4M7X2N5P9R1T3V6W1', 'attendance.destroy', ['attendance' => $record], null);
+        $conflict('01K6F3Q8Z4M7X2N5P9R1T3V6W2', 'attendance.store', [], ['date' => '2026-10-02', 'athlete_ids' => [$giulia, $this->luca]]);
+
+        $subjects = collect($this->actingAs($this->owner)->getJson('/api/v1/sync/conflicts')->json('data'))->pluck('subject', 'id');
+        expect($subjects['01K6F3Q8Z4M7X2N5P9R1T3V6W1']['athlete']['id'])->toBe($this->luca)
+            ->and($subjects['01K6F3Q8Z4M7X2N5P9R1T3V6W2'])->toBe(['athlete' => ['id' => $giulia, 'name' => 'Giulia Bianchi'], 'others' => 1]);
+    });
+
     it('records each answer once, and takes one for a conflict this database does not hold', function (): void {
         $entries = conflictOnLucasName($this);
 

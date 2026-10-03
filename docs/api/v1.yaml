@@ -7724,13 +7724,18 @@ paths:
         «Da decidere» (#2031, #2038, PRD § 6.4), oldest first, each one never
         dropped (`docs/entities/sync-conflict.md`). With each, what the page
         needs to ask:
-        - `subject.athlete`: the athlete the write is about, by name, when it
-          is about one;
+        - `subject`: the athlete the write is about, by name, read from the
+          rows its route names here (a check-in's, a document's), and how
+          many others it names;
         - `retry`: the requests that make the set-aside write true here, in
-          this database's ids, sent in order for «Tieni la mia», or null when
-          there are none: its row is gone here, it is an upload, the fee here
-          would make another amount, or its route is gone. A month paid
-          otherwise is undone first, then paid as the entry paid it.
+          this database's ids, sent in order for «Tieni la mia». A field
+          changed on both devices is sent alone, with the fields it is
+          required with, never the whole form. A month paid otherwise is
+          undone first, then paid as the entry paid it. Null when nothing
+          would make it true: its row is gone or has none here, the rules
+          here refused it, an upload, a payment whose amount the fee here
+          works out otherwise, or a route or parameters this Budojo no
+          longer has.
       tags: [sync]
       responses:
         '200':
@@ -9169,7 +9174,7 @@ components:
             params: { type: object }
             body: { type: object, nullable: true }
             before: { type: object, nullable: true }
-        recorded_at: { type: string }
+        recorded_at: { type: string, format: date-time, example: '2026-10-03T18:32:05+00:00' }
         subject:
           type: object
           nullable: true
@@ -9179,6 +9184,7 @@ components:
               properties:
                 id: { type: integer }
                 name: { type: string }
+            others: { type: integer, description: How many other athletes the write names (a check-in of several). }
         retry:
           type: array
           nullable: true

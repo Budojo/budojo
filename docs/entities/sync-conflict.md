@@ -41,11 +41,15 @@ No Eloquent model, as for `sync_entries`.
 
 `GET /api/v1/sync/conflicts` lists those that wait (`decided_at` null), and `POST /api/v1/sync/conflicts/{entry}/decision` records the answer:
 - **`theirs`:** what is here stays;
-- **`mine`:** the page sent the conflict's `retry` first, the requests that make the set-aside write true here. A month paid otherwise is undone first. There is no `retry` for:
-  - a write whose row is gone here;
-  - an upload;
-  - a payment whose amount the fee here works out otherwise;
-  - a route this Budojo no longer has;
+- **`mine`:** the page sent the conflict's `retry` first, the requests that make the set-aside write true here.
+  - **Only what the conflict is about:** a field changed on both devices is sent alone, with the fields it is required with, so the other device's changes to the rest of the form stay.
+  - **A month paid otherwise** is undone first.
+  - **No `retry` for:**
+    - a write whose row is gone or has none here;
+    - one the rules here refused;
+    - an upload;
+    - a payment whose amount the fee here works out otherwise;
+    - a route, or parameters, this Budojo no longer has;
 - **`by-hand`:** the owner set it right themselves.
 
 **The answer is journaled** (`sync.conflicts.decide`): it reaches the other device's database even through a rebase that starts from a version that still asks. Recording it again, or for a conflict this database does not hold, changes nothing.
