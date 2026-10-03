@@ -143,7 +143,10 @@ describe('The phone’s register (#2035)', () => {
   });
 
   it('is one list while searching', () => {
+    cy.get('[data-cy="attendance-register-regulars"]').should('be.visible');
     cy.get('[data-cy="attendance-search-input"]').type('Car');
+    // The search waits out a pause measured on Date, which cy.clock froze: move it on.
+    cy.tick(300);
     cy.get('[data-cy="attendance-register-regulars"]').should('not.exist');
   });
 });
