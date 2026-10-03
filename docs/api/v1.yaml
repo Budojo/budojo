@@ -7807,7 +7807,9 @@ paths:
           here now: what the write changed goes, what still holds what it
           sent goes too (a form may require it) except a list that is a
           column here (training days), and what the other device changed
-          meanwhile stays out with its change. The address goes as
+          meanwhile stays out with its change, in `fill` with the value
+          here, for a form that requires it on every save (#2113). The
+          address goes as
           the write left it. A month paid otherwise is undone first, then
           paid as the entry paid it. Null when nothing
           would make it true: its row is gone or has none here, the rules
@@ -9356,6 +9358,16 @@ components:
               method: { type: string }
               url: { type: string, example: /api/v1/athletes/57 }
               body: { nullable: true }
+              fill:
+                type: object
+                additionalProperties: true
+                description: |
+                  The fields the form was sent without, because the other
+                  device changed them, with this database's values (#2113).
+                  `keep-mine` sends the form whole with them when the form
+                  refuses the trimmed body (a closure's dates, required on
+                  every save), and that answer stands.
+                example: { ends_on: '2026-12-27' }
     AcademySummary:
       type: object
       description: |

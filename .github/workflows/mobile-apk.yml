@@ -2,11 +2,15 @@ name: Mobile APK
 
 # Budojo for the phone as a signed Android APK (#2027, #2034, M12 #2026): the
 # SPA's `mobile` build and Budojo's own server, packed by Capacitor and signed
-# with the release key. Attaching it to a release is #2040; until then the APK
-# is a workflow artifact the owner sideloads to test on a phone.
+# with the release key.
 #
-# It runs on every client and server change: the phone runs the whole SPA and
-# the whole server, so a change anywhere in either can break it (#2043 review).
+# - **On a pull request** it is a workflow artifact the owner sideloads to test.
+#   It runs on every client and server change: the phone runs the whole SPA and
+#   the whole server, so a change anywhere in either can break it (#2043 review).
+# - **From release.yml** (`workflow_call` with a `tag`, #2040) it builds that tag
+#   as `Budojo-Android-X.Y.Z.apk` and opens it on the emulator; release.yml then
+#   attaches it to the release, beside the Windows installer: every beta on
+#   develop, every stable on main.
 on:
   pull_request:
     paths:
@@ -14,16 +18,31 @@ on:
       - 'client/**'
       - 'server/**'
       - '.github/workflows/mobile-apk.yml'
+  # By hand: a test build of the branch, or with a tag, that tag's APK as a
+  # release would build it (not attached).
   workflow_dispatch:
+    inputs:
+      tag:
+        description: A release tag to build (v2.78.0); blank builds the branch.
+        type: string
+        required: false
+        default: ''
+  workflow_call:
+    inputs:
+      tag:
+        description: The release tag to build and attach the APK to (v2.78.0, v2.78.0-beta.3).
+        type: string
+        required: true
 
-# Read-only token, as in pr-checks.yml: this job decodes the release key, so it
-# gets nothing it does not need.
+# Read-only token, as in pr-checks.yml: these jobs decode the release key, so
+# they get nothing they do not need. release.yml attaches the APK itself.
 permissions:
   contents: read
 
 concurrency:
-  group: mobile-apk-${{ github.ref }}
-  cancel-in-progress: true
+  # A release's APK is never cancelled by the next push: it is per tag.
+  group: mobile-apk-${{ inputs.tag || github.ref }}
+  cancel-in-progress: ${{ !inputs.tag }}
 
 jobs:
   # PHP for the phone, from source (#2044): static-php-cli inside Alpine on an
@@ -35,6 +54,8 @@ jobs:
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
 
       - uses: actions/cache@v4
         id: cache
@@ -83,13 +104,29 @@ jobs:
     needs: php
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    env:
-      # The run number only ever grows, so each build installs over the last.
-      # A release will derive the code from its semver instead (#2040).
-      VERSION_CODE: ${{ github.run_number }}
-      VERSION_NAME: 0.0.${{ github.run_number }}
+    outputs:
+      version_name: ${{ steps.version.outputs.name }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+
+      # The name is the tag's, or 0.0.<run> for a test build. **The code is the
+      # commit's time, in minutes since 2026:** one order for test builds,
+      # betas and releases, so any newer build installs over any older one.
+      # Android refuses a lower code, and a code from the semver would put a
+      # release above every test APK after it (#2040).
+      - name: Name the version
+        id: version
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          if [ -n "$TAG" ]; then NAME="${TAG#v}"; else NAME="0.0.${GITHUB_RUN_NUMBER}"; fi
+          CODE=$(( ( $(git log -1 --format=%ct) - 1767225600 ) / 60 ))
+          echo "VERSION_NAME=$NAME" >> "$GITHUB_ENV"
+          echo "VERSION_CODE=$CODE" >> "$GITHUB_ENV"
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "Version $NAME, code $CODE"
 
       - uses: actions/setup-node@v4
         with:
@@ -201,9 +238,11 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     env:
-      VERSION_NAME: 0.0.${{ github.run_number }}
+      VERSION_NAME: ${{ needs.apk.outputs.version_name }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
 
       - uses: actions/download-artifact@v4
         with:

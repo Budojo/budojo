@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
     inputs:
       installer_tag:
-        description: "Build + attach the Windows installers for an EXISTING tag (e.g. v2.41.0), skipping a new release. Blank = normal release run."
+        description: "Build + attach the installers (Windows, Android) for an EXISTING tag (e.g. v2.41.0), skipping a new release. Blank = normal release run."
         required: false
         default: ""
 
@@ -46,6 +46,9 @@ jobs:
       # publishable commits were found, or when the tag at HEAD is a
       # beta. The sweep job downstream conditions on a non-empty value.
       stable_tag: ${{ steps.detect-stable-tag.outputs.stable_tag }}
+      # Any tag semantic-release just pushed at HEAD, a beta on develop or a
+      # stable on main: the Android APK is built for each (#2040).
+      new_tag: ${{ steps.detect-new-tag.outputs.new_tag }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -66,7 +69,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # A by-hand run with `installer_tag` rebuilds an existing tag's
+      # installers and releases nothing: semantic-release, and the tag
+      # detection that feeds the sweep, are skipped (#2119 review).
       - name: Release
+        if: ${{ !github.event.inputs.installer_tag }}
         env:
           # Defensive kill switch for husky hooks. Today semantic-release
           # only creates a tag + GitHub Release (no `git commit` in CI),
@@ -84,13 +91,20 @@ jobs:
           GIT_COMMITTER_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
         run: npx semantic-release
 
+      - name: Detect a newly-created tag at HEAD, beta or stable
+        id: detect-new-tag
+        if: ${{ !github.event.inputs.installer_tag }}
+        run: |
+          TAG="$(git tag --points-at HEAD | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+(-beta\.[0-9]+)?$' | head -1 || true)"
+          echo "new_tag=$TAG" >> "$GITHUB_OUTPUT"
+
       - name: Detect newly-created stable tag at HEAD
         id: detect-stable-tag
         # Only meaningful on `main` — develop produces beta tags
         # (v*-beta.N) which we never sweep. The `if:` below skips
         # this step entirely on other branches; the sweep job's own
         # `if:` guard still short-circuits when the output is unset.
-        if: github.ref == 'refs/heads/main'
+        if: ${{ github.ref == 'refs/heads/main' && !github.event.inputs.installer_tag }}
         run: |
           # semantic-release ran in the SAME checkout in the SAME job —
           # any tag it created is already in the local repo, no fetch
@@ -351,6 +365,43 @@ jobs:
   # with Expand-Archive), and electron-builder's win targets need a Windows
   # host. A failure here shows red so a maintainer can re-run — the tag is
   # already published, so it never rolls anything back.
+  # The phone's APK (#2040), on every release: a beta on develop, a stable
+  # on main, or an existing tag on a manual re-run. The same workflow that
+  # builds a PR's test APK, called with the tag: it builds that tag, opens it
+  # on the emulator, and attaches `Budojo-Android-X.Y.Z.apk` to the release.
+  android-apk:
+    name: "📱 Android APK"
+    needs: release
+    if: |
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.installer_tag != '') ||
+      (github.event_name == 'push' && needs.release.outputs.new_tag != '')
+    uses: ./.github/workflows/mobile-apk.yml
+    with:
+      tag: ${{ github.event.inputs.installer_tag || needs.release.outputs.new_tag }}
+    secrets: inherit
+
+  # Once it has opened on the emulator (the called workflow fails otherwise),
+  # the APK goes on the release, under the name the owner looks for.
+  android-apk-attach:
+    name: "📎 Attach the APK to the release"
+    needs: [release, android-apk]
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ github.event.inputs.installer_tag || needs.release.outputs.new_tag }}
+    steps:
+      - name: Name the APK after the tag
+        run: echo "VERSION_NAME=${TAG#v}" >> "$GITHUB_ENV"
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: Budojo-Android-${{ env.VERSION_NAME }}
+          path: ${{ runner.temp }}/apk
+
+      - name: Attach it to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$TAG" "$RUNNER_TEMP/apk/Budojo-Android-${VERSION_NAME}.apk" --clobber --repo "$GITHUB_REPOSITORY"
+
   desktop-installer:
     name: "🪟 Desktop installer (Windows)"
     runs-on: windows-latest

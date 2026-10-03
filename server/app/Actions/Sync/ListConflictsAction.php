@@ -42,7 +42,7 @@ final class ListConflictsAction
      * The requests that keep the set-aside write for one conflict that still
      * waits, or null: what `retry` lists for it (`KeepMineAction`).
      *
-     * @return list<array{method: string, url: string, body: mixed}>|null
+     * @return list<array{method: string, url: string, body: mixed, fill?: array<string, mixed>}>|null
      */
     public function retryOf(string $entryId, User $owner): ?array
     {
@@ -82,7 +82,7 @@ final class ListConflictsAction
         ];
     }
 
-    /** @return list<array{method: string, url: string, body: mixed}>|null */
+    /** @return list<array{method: string, url: string, body: mixed, fill?: array<string, mixed>}>|null */
     private static function retryForRow(\stdClass $row, User $owner): ?array
     {
         $detail = self::decode($row->detail);
@@ -147,7 +147,7 @@ final class ListConflictsAction
     /**
      * @param  array<string, mixed>  $detail
      * @param  array<string, mixed>  $entry
-     * @return list<array{method: string, url: string, body: mixed}>|null
+     * @return list<array{method: string, url: string, body: mixed, fill?: array<string, mixed>}>|null
      */
     private static function retry(Route $route, string $reason, array $detail, array $entry, User $owner): ?array
     {
@@ -170,7 +170,9 @@ final class ListConflictsAction
                 return self::payAgain($params, \is_array($body) ? $body : [], $url);
             }
 
-            return [['method' => $method, 'url' => $url, 'body' => self::form($route, $params, $entry, $detail, $body, $owner)]];
+            $form = self::form($route, $params, $entry, $detail, $body, $owner);
+
+            return [['method' => $method, 'url' => $url, ...$form]];
         } catch (\Throwable) {
             // Parameters the route no longer takes: the page offers no retry.
             return null;
@@ -193,17 +195,22 @@ final class ListConflictsAction
      * one, `null` when it cleared one, its own changes over what is here when
      * it changed one, and left out when it never touched it and it moved here.
      *
+     * **What it leaves out comes back as `fill`,** with this database's
+     * values: sent only when the form refuses the trimmed body, as one that
+     * requires a closure's dates does (`ReplayJournalAction::refill`, #2113).
+     *
      * Only a form (`PUT`, `PATCH`) is trimmed; any other write goes as it was.
      *
      * @param  array<string, int|string>  $params
      * @param  array<string, mixed>  $entry
      * @param  array<string, mixed>  $detail
+     * @return array{body: mixed, fill?: array<string, mixed>}
      */
-    private static function form(Route $route, array $params, array $entry, array $detail, mixed $body, User $owner): mixed
+    private static function form(Route $route, array $params, array $entry, array $detail, mixed $body, User $owner): array
     {
         $method = $entry['method'] ?? null;
         if (! \is_array($body) || ($method !== 'PUT' && $method !== 'PATCH')) {
-            return $body;
+            return ['body' => $body];
         }
         /** @var array<string, array<string, array<string, mixed>>> $before */
         $before = \is_array($entry['before'] ?? null) ? $entry['before'] : [];
@@ -284,7 +291,14 @@ final class ListConflictsAction
             }
         }
 
-        return $sent;
+        $fill = [];
+        foreach (array_diff_key($body, $sent, ReplayJournalAction::NESTED) as $field => $value) {
+            if (! \is_array($value) && \array_key_exists($field, $here)) {
+                $fill[$field] = ReplayJournalAction::asSent($here[$field], $value);
+            }
+        }
+
+        return $fill === [] ? ['body' => $sent] : ['body' => $sent, 'fill' => $fill];
     }
 
     /**
