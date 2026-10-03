@@ -60,6 +60,66 @@ export function localised(value: Localised, lang: string): string {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.77.0',
+    date: '2026-10-03',
+    headline: {
+      en: 'The PC and the phone sync on their own: mark attendance on the phone and the PC finds it by itself, and the other way round, through your Google Drive.',
+      it: 'Il PC e il telefono si sincronizzano da soli: segni i presenti sul telefono e il PC li trova da solo, e viceversa, passando dal tuo Google Drive.',
+    },
+    sections: [
+      {
+        heading: { en: 'The PC and the phone, in sync', it: 'Il PC e il telefono, allineati' },
+        bullets: [
+          {
+            en: 'They sync on their own: when you open Budojo, when you come back to it, a few seconds after a change, every five minutes while it is open, and as soon as the network is back. Everything goes through your Google Drive, encrypted.',
+            it: 'Si sincronizzano da soli: quando apri Budojo, quando ci torni, pochi secondi dopo una modifica, ogni cinque minuti mentre è aperto e appena torna la rete. Passa tutto dal tuo Google Drive, cifrato.',
+          },
+          {
+            en: 'The state is always in view: on the PC at the foot of the side bar, on the phone at the top. "In sync at 18:32" when all is well, a number when changes are waiting to go, which they do on their own. Tap it for the details and "Sync now".',
+            it: 'Lo stato è sempre in vista: sul PC in fondo alla barra laterale, sul telefono in alto. «Allineato alle 18:32» quando è tutto a posto, un numero quando ci sono modifiche da inviare, che partono da sole. Toccalo per i dettagli e per «Sincronizza ora».',
+          },
+          {
+            en: 'Nothing is lost without a network: changes wait on the device and go as soon as the connection is back.',
+            it: 'Senza rete non si perde niente: le modifiche aspettano sul dispositivo e partono appena torna la connessione.',
+          },
+          {
+            en: 'If you changed things on both, they come together: attendance marked on the phone and a payment recorded on the PC both end up in the gym.',
+            it: 'Se hai cambiato cose su tutti e due, si uniscono: le presenze segnate sul telefono e il pagamento registrato sul PC finiscono entrambi nella palestra.',
+          },
+          {
+            en: 'If the same thing changed in two different ways, the one that reached Drive first stays: the same field edited on both, the same month paid differently, a payment for an athlete deleted on the other device. The other change is set aside, not lost: choosing between the two comes with a later update.',
+            it: "Se la stessa cosa è cambiata in due modi diversi, resta quella arrivata prima su Drive: lo stesso campo modificato su tutti e due, lo stesso mese pagato in modo diverso, un pagamento per un atleta cancellato sull'altro dispositivo. L'altra modifica viene messa da parte, non persa: scegliere tra le due arriva con un prossimo aggiornamento.",
+          },
+          {
+            en: 'When there are two gyms, you choose: if the phone holds a gym other than the one on Drive, a backup restored earlier for instance, Budojo overwrites nothing and asks: "Use the PC\'s gym" or "Keep the one here". Before you confirm, it tells you what happens.',
+            it: 'Quando le palestre sono due, scegli tu: se il telefono ha una palestra diversa da quella su Drive, per esempio un backup ripristinato prima, Budojo non sovrascrive niente e chiede: «Usa la palestra del PC» o «Tieni quella di qui». Prima di confermare ti dice cosa succede.',
+          },
+          {
+            en: 'Every week Google may ask for permission again: the state tells you ("Google signed you out: tap to reconnect"), and the detail shows "Reconnect Google". Nothing is lost meanwhile.',
+            it: "Ogni settimana Google può chiedere di nuovo il permesso: lo stato te lo dice («Google ti ha scollegato: tocca per riconnettere»), e nel dettaglio c'è «Ricollega Google». Intanto non si perde niente.",
+          },
+          {
+            en: 'Two devices: the PC and one phone. A third does not join, and Budojo tells you so.',
+            it: 'Due dispositivi: il PC e un telefono. Un terzo non si unisce, e Budojo te lo dice.',
+          },
+        ],
+      },
+      {
+        heading: { en: 'Getting started', it: 'Per cominciare' },
+        bullets: [
+          {
+            en: 'Update Budojo on the PC and open it. If you had already connected the phone, the gym goes to Drive on its own. Otherwise: Data & backup → Google Drive → "Connect the phone".',
+            it: 'Aggiorna Budojo sul PC e aprilo. Se avevi già collegato il telefono, la palestra va su Drive da sola. Altrimenti: Dati e backup → Google Drive → «Collega il telefono».',
+          },
+          {
+            en: 'On the phone, sign out and back in with "Sign in with Google". If it asks which gym to keep, choose "Use the PC\'s gym".',
+            it: 'Sul telefono esci e rientra con «Accedi con Google». Se chiede quale palestra tenere, scegli «Usa la palestra del PC».',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.76.0',
     date: '2026-10-02',
     headline: {
