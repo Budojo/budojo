@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Lesson;
 
+use App\Events\SetReplaced;
 use App\Models\AcademyClass;
 use App\Models\Lesson;
 use Carbon\CarbonImmutable;
@@ -46,6 +47,18 @@ class SetLessonTopicsAction
     {
         return DB::transaction(function () use ($class, $date, $topicIds): Lesson {
             $lesson = $this->materialiseLesson->execute($class, $date);
+            if (! $lesson->wasRecentlyCreated) {
+                // The set this replaces, for the sync's journal: a replay on
+                // the other device tells a lesson tagged on both from one
+                // tagged here (#2102). A lesson made by this write had none.
+                $before = array_values($lesson->topics()
+                    ->whereNull('syllabus_topics.deleted_at')
+                    ->pluck('syllabus_topics.id')
+                    ->map(static fn (mixed $id): int => is_numeric($id) ? (int) $id : 0)
+                    ->sort()
+                    ->all());
+                event(new SetReplaced($lesson, 'topic_ids', $before));
+            }
 
             $gone = $lesson->topics()
                 ->whereNotNull('syllabus_topics.deleted_at')

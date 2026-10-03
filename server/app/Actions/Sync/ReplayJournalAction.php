@@ -54,6 +54,9 @@ final class ReplayJournalAction
     /** Fields a form sends together, each required with the others: kept or left out as one. */
     private const array GROUPS = [['phone_country_code', 'phone_national_number']];
 
+    /** Request fields that replace a row's set of related rows whole (`SetReplaced`): a lesson's topics. */
+    private const array SETS = ['topic_ids'];
+
     /** A form's nested object, and the row it is: its table, and the morph that names its owner. */
     private const array NESTED = ['address' => ['table' => 'addresses', 'morph' => 'addressable']];
 
@@ -198,6 +201,10 @@ final class ReplayJournalAction
             return ['outcome' => 'already', 'conflict' => null];
         }
         if ($status >= 200 && $status < 300) {
+            $set = self::setReplaced($before, $touched, $body);
+            if ($set !== null) {
+                return $set;
+            }
             if ($entry['method'] === 'DELETE' && $targets === null) {
                 // A delete that names its row another way than by a model
                 // (a month's payment, by year and month) deleted a row here:
@@ -244,6 +251,64 @@ final class ReplayJournalAction
             'message' => \is_array($answer) ? ($answer['message'] ?? null) : null,
             'errors' => \is_array($answer) ? ($answer['errors'] ?? null) : null,
         ]];
+    }
+
+    /**
+     * A set the replay replaced here (a lesson's topics, #2102), against the
+     * one the entry replaced there, or none when it made the row: the same
+     * means the other device left it alone, and the entry's set applies;
+     * already the entry's set, it was true already; anything else, both
+     * devices tagged the lesson, and the owner chooses. Null when the replay
+     * replaced no set.
+     *
+     * @param  array<string, array<string, array<string, mixed>>>|null  $before
+     * @param  array<string, array<string, array<string, mixed>>>|null  $touched
+     * @param  array<string, mixed>|null  $body
+     * @return array{outcome: string, conflict: array<string, mixed>|null}|null
+     */
+    private static function setReplaced(?array $before, ?array $touched, ?array $body): ?array
+    {
+        foreach ($touched ?? [] as $table => $rows) {
+            foreach ($rows as $id => $fields) {
+                foreach (self::SETS as $field) {
+                    if (! \array_key_exists($field, $fields) || ! \is_array($body) || ! \array_key_exists($field, $body)) {
+                        continue;
+                    }
+                    $here = self::setOf($fields[$field]);
+                    $mine = self::setOf($body[$field]);
+                    $saw = self::setOf($before[$table][$id][$field] ?? []);
+                    if ($here === $mine) {
+                        return ['outcome' => 'already', 'conflict' => null];
+                    }
+                    if ($here !== $saw) {
+                        return ['outcome' => 'conflict', 'conflict' => [
+                            'reason' => 'changed',
+                            'table' => $table,
+                            'id' => (string) $id,
+                            'field' => $field,
+                            'saw' => $saw,
+                            'here' => $here,
+                        ]];
+                    }
+
+                    return ['outcome' => 'applied', 'conflict' => null];
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /** @return list<int> a set of ids, sorted, each once */
+    private static function setOf(mixed $ids): array
+    {
+        $set = array_values(array_unique(array_map(
+            static fn (mixed $id): int => is_numeric($id) ? (int) $id : 0,
+            \is_array($ids) ? $ids : [],
+        )));
+        sort($set);
+
+        return $set;
     }
 
     /**
@@ -542,6 +607,9 @@ final class ReplayJournalAction
         $byName = $method !== 'DELETE' && \is_array($body) && self::namesAny($before, $body);
         $allThere = true;
         $allAsWanted = true;
+        // Already true only from a field it did compare: a set (`topic_ids`)
+        // is no column, and is told by the replay (`setReplaced`).
+        $compared = false;
         $probe = null;
         foreach ($before as $table => $rows) {
             foreach ($rows as $id => $fields) {
@@ -563,6 +631,7 @@ final class ReplayJournalAction
                     if ($byName && ! \array_key_exists($field, $body)) {
                         continue;
                     }
+                    $compared = true;
                     if (self::sameColumn((string) $field, $now[$field], $saw)) {
                         $allAsWanted = false;
 
@@ -595,7 +664,7 @@ final class ReplayJournalAction
             return ['outcome' => 'probe', 'conflict' => $probe];
         }
 
-        return $byName && $allAsWanted ? ['outcome' => 'already', 'conflict' => null] : null;
+        return $byName && $compared && $allAsWanted ? ['outcome' => 'already', 'conflict' => null] : null;
     }
 
     /** Whether a column is compared at all: never the clock, nor the row's own id, which differs between devices. */

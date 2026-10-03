@@ -17,9 +17,11 @@ use Illuminate\Database\Eloquent\Model;
  * the conflict check need what is recorded here, and those are about a
  * write's **target**: the athlete edited, the payment undone. The journaled
  * Actions that write with queries do so for what follows from the target,
- * which the replay derives again: the children of a programme topic, a
- * lesson's topics, attendance adopted by a lesson, the training days read off
- * the timetable, carnet entries. A target written with a query would be a
+ * which the replay derives again: the children of a programme topic,
+ * attendance adopted by a lesson, the training days read off the timetable,
+ * carnet entries. A lesson's topics are a pivot's `sync()`, which fires no
+ * model event: the Action announces the set it replaced (`SetReplaced`), and
+ * it is recorded as a field of the lesson's `before` (#2102). A target written with a query would be a
  * hole in `before`: the payment undo and the address's clear were two, and
  * both delete one model at a time since #2031.
  */
@@ -66,6 +68,19 @@ final class JournalRecorder
         $fields = array_diff(array_keys($model->getDirty()), [$model->getUpdatedAtColumn()]);
         foreach ($fields as $field) {
             $this->before[$model->getTable()][$id][$field] ??= $model->getRawOriginal($field);
+        }
+    }
+
+    /**
+     * The set a write replaced through a pivot (`SetReplaced`), as a field of
+     * the row's `before`, named as the request names it: `topic_ids`.
+     *
+     * @param  list<int>  $ids
+     */
+    public function replaced(Model $model, string $field, array $ids): void
+    {
+        if ($this->watches($model)) {
+            $this->before[$model->getTable()][self::id($model)][$field] ??= $ids;
         }
     }
 

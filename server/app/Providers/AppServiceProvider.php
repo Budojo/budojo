@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Events\SetReplaced;
 use App\Services\PwnedPasswordsClient;
 use App\Support\DesktopDriverGuard;
 use App\Support\Sync\Journal\JournalRecorder;
@@ -69,6 +70,7 @@ class AppServiceProvider extends ServiceProvider
         Event::listen('eloquent.created: *', static fn (string $event, array $data) => $data[0] instanceof Model ? $recorder->created($data[0]) : null);
         Event::listen('eloquent.updating: *', static fn (string $event, array $data) => $data[0] instanceof Model ? $recorder->updating($data[0]) : null);
         Event::listen('eloquent.deleting: *', static fn (string $event, array $data) => $data[0] instanceof Model ? $recorder->deleting($data[0]) : null);
+        Event::listen(SetReplaced::class, static fn (SetReplaced $replaced) => $recorder->replaced($replaced->model, $replaced->field, $replaced->ids));
 
         // A desktop instance running the wrong drivers fails silently, not
         // loudly (#1220) — a queued reminder is written and never picked up
