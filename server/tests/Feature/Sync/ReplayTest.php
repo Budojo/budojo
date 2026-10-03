@@ -835,7 +835,9 @@ describe('«Da decidere»: the owner’s answers (#2031)', function (): void {
         expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'conflict']);
 
         $retry = $this->actingAs($this->owner)->getJson('/api/v1/sync/conflicts')->json('data.0.retry.0');
-        expect($retry['body'])->toBe(['last_name' => 'Bianco']);
+        // The PC's first name is out; what still holds here what the phone sent goes along.
+        expect($retry['body'])->not->toHaveKey('first_name')
+            ->and($retry['body'])->toMatchArray(['last_name' => 'Bianco', 'belt' => 'white']);
         $this->actingAs($this->owner)->json($retry['method'], $retry['url'], $retry['body'])->assertOk();
 
         $luca = Athlete::query()->findOrFail($this->luca);
@@ -877,7 +879,8 @@ describe('«Da decidere»: the owner’s answers (#2031)', function (): void {
         expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'conflict']);
 
         $retry = $this->actingAs($this->owner)->getJson('/api/v1/sync/conflicts')->json('data.0.retry.0');
-        expect($retry['body'])->toBe(['address' => null]);
+        expect($retry['body'])->toHaveKey('address', null)
+            ->and($retry['body'])->not->toHaveKey('first_name');
         $this->actingAs($this->owner)->json($retry['method'], $retry['url'], $retry['body'])->assertOk();
         expect(Athlete::query()->findOrFail($this->luca)->first_name)->toBe('Lucas')
             ->and(DB::table('addresses')->where('addressable_type', Athlete::class)->where('addressable_id', $this->luca)->exists())->toBeFalse();
@@ -910,6 +913,52 @@ describe('«Da decidere»: the owner’s answers (#2031)', function (): void {
         expect(Athlete::query()->findOrFail($this->luca)->last_name)->toBe('Bianco')
             ->and($address->city)->toBe('Fiumicino')
             ->and($address->line1)->toBe('Via Appia 9');
+    });
+
+    it('sends only the address a whole-form save added, never the form the PC changed meanwhile', function (): void {
+        $roma = ['line1' => 'Via Roma 1', 'city' => 'Roma', 'postal_code' => '00100', 'province' => 'RM', 'country' => 'IT'];
+        $entries = onThePhone(fn () => $this->actingAs($this->owner)->putJson("/api/v1/athletes/{$this->luca}", [
+            'first_name' => 'Luca', 'last_name' => 'Bianchi', 'belt' => 'white', 'stripes' => 0, 'status' => 'active', 'joined_at' => '2026-09-01', 'address' => $roma,
+        ])->assertOk());
+        expect($entries[0]['before'])->toBeNull();
+        $this->actingAs($this->owner)->patchJson("/api/v1/athletes/{$this->luca}", ['address' => [...$roma, 'city' => 'Milano', 'postal_code' => '20100', 'province' => 'MI']])->assertOk();
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'conflict']);
+        // While the question waits, the PC promotes and renames him.
+        $this->actingAs($this->owner)->patchJson("/api/v1/athletes/{$this->luca}", ['belt' => 'blue', 'last_name' => 'Verdi'])->assertOk();
+
+        $retry = $this->actingAs($this->owner)->getJson('/api/v1/sync/conflicts')->json('data.0.retry.0');
+        $this->actingAs($this->owner)->json($retry['method'], $retry['url'], $retry['body'])->assertOk();
+        $luca = Athlete::query()->findOrFail($this->luca);
+        expect([$luca->belt->value, $luca->last_name])->toBe(['blue', 'Verdi'])
+            ->and(DB::table('addresses')->where('addressable_type', Athlete::class)->where('addressable_id', $this->luca)->value('city'))->toBe('Roma');
+    });
+
+    it('sends a closure’s dates with the label the phone changed: the form requires them', function (): void {
+        $closure = (int) $this->actingAs($this->owner)->postJson('/api/v1/academy/closures', ['label' => 'Natale', 'starts_on' => '2026-12-24', 'ends_on' => '2026-12-26'])->assertCreated()->json('data.id');
+        $entries = onThePhone(fn () => $this->actingAs($this->owner)
+            ->patchJson("/api/v1/academy/closures/{$closure}", ['label' => 'Vacanze di Natale', 'starts_on' => '2026-12-24', 'ends_on' => '2026-12-26'])->assertOk());
+        $this->actingAs($this->owner)->patchJson("/api/v1/academy/closures/{$closure}", ['label' => 'Chiusura natalizia', 'starts_on' => '2026-12-24', 'ends_on' => '2026-12-26'])->assertOk();
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'conflict']);
+
+        $retry = $this->actingAs($this->owner)->getJson('/api/v1/sync/conflicts')->json('data.0.retry.0');
+        $this->actingAs($this->owner)->json($retry['method'], $retry['url'], $retry['body'])->assertOk();
+        expect(DB::table('academy_closures')->where('id', $closure)->value('label'))->toBe('Vacanze di Natale');
+    });
+
+    it('sends the address a conflict recorded by v2.77.0 names, though it keeps no created', function (): void {
+        $roma = ['line1' => 'Via Roma 1', 'city' => 'Roma', 'postal_code' => '00100', 'province' => 'RM', 'country' => 'IT'];
+        $entries = onThePhone(fn () => $this->actingAs($this->owner)->patchJson("/api/v1/athletes/{$this->luca}", ['last_name' => 'Bianco', 'address' => $roma])->assertOk());
+        $this->actingAs($this->owner)->patchJson("/api/v1/athletes/{$this->luca}", ['address' => [...$roma, 'city' => 'Milano', 'postal_code' => '20100', 'province' => 'MI']])->assertOk();
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'conflict']);
+        // As v2.77.0 recorded it: no `created` in the entry.
+        $row = DB::table('sync_conflicts')->where('entry_id', $entries[0]['id'])->sole();
+        $entry = json_decode((string) $row->entry, true);
+        unset($entry['created']);
+        DB::table('sync_conflicts')->where('entry_id', $entries[0]['id'])->update(['entry' => json_encode($entry)]);
+
+        $retry = $this->actingAs($this->owner)->getJson('/api/v1/sync/conflicts')->json('data.0.retry.0');
+        $this->actingAs($this->owner)->json($retry['method'], $retry['url'], $retry['body'])->assertOk();
+        expect(DB::table('addresses')->where('addressable_type', Athlete::class)->where('addressable_id', $this->luca)->value('city'))->toBe('Roma');
     });
 
     it('offers no retry when the method and the amount both differ: the fee here makes another amount', function (): void {

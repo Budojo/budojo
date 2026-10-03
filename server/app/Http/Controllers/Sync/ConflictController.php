@@ -8,7 +8,9 @@ use App\Actions\Sync\DecideConflictAction;
 use App\Actions\Sync\ListConflictsAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Sync\DecideConflictRequest;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 
 /**
@@ -19,9 +21,12 @@ use Illuminate\Http\Response;
  */
 class ConflictController extends Controller
 {
-    public function index(ListConflictsAction $list): JsonResponse
+    public function index(Request $request, ListConflictsAction $list): JsonResponse
     {
-        return response()->json(['data' => $list->execute()]);
+        /** @var User $owner the route's `role:owner` */
+        $owner = $request->user();
+
+        return response()->json(['data' => $list->execute($owner)]);
     }
 
     public function decide(DecideConflictRequest $request, string $entry, DecideConflictAction $decide): Response

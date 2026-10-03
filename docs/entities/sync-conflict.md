@@ -42,7 +42,7 @@ No Eloquent model, as for `sync_entries`.
 `GET /api/v1/sync/conflicts` lists those that wait (`decided_at` null), and `POST /api/v1/sync/conflicts/{entry}/decision` records the answer:
 - **`theirs`:** what is here stays;
 - **`mine`:** the page sent the conflict's `retry` first, the requests that make the set-aside write true here.
-  - **What the write changed, never the whole form:** the fields its `before` records, the fields required with them, a lesson's class and day, and the address as the entry left it (whole when it added one, cleared, or its own changes over what is here). The other device's changes to the rest of the form stay.
+  - **The form less what the other device changed and the write did not,** judged here when the list is read, as the replay judges a form. What the write changed goes; what still holds what it sent goes too, so a form that requires it is whole; what the other device changed meanwhile stays out, with its change. The address goes as the write left it: whole when it added one, cleared, or its own changes over what is here.
   - **A month paid otherwise** is undone first.
   - **No `retry` for:**
     - a write whose row is gone or has none here;

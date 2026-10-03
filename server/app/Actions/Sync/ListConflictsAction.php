@@ -6,6 +6,7 @@ namespace App\Actions\Sync;
 
 use App\Enums\BillingPeriod;
 use App\Models\Athlete;
+use App\Models\User;
 use App\Support\MonthlyFee;
 use App\Support\Sync\Journal\JournalBody;
 use Carbon\CarbonImmutable;
@@ -22,9 +23,8 @@ use Illuminate\Support\Facades\Schema;
  * - **`retry`:** the requests that make the set-aside write true here, in
  *   this database's ids, for «Tieni la mia», or null when there are none.
  *
- * **A retry carries what the set-aside write changed** (`whatItChanged`),
- * never the whole form it was sent with: the other device's changes to the
- * rest stay. A month paid otherwise is undone first, then paid as the entry
+ * **A retry sends the form less what the other device changed and the
+ * entry did not** (`form`): the other device's changes to the rest stay. A month paid otherwise is undone first, then paid as the entry
  * paid it.
  *
  * **No retry when nothing would make it true:**
@@ -38,10 +38,10 @@ use Illuminate\Support\Facades\Schema;
 final class ListConflictsAction
 {
     /** @return list<array<string, mixed>> */
-    public function execute(): array
+    public function execute(User $owner): array
     {
         return array_values(DB::table('sync_conflicts')->whereNull('decided_at')->orderBy('recorded_at')->orderBy('entry_id')->get()
-            ->map(function (object $row): array {
+            ->map(function (object $row) use ($owner): array {
                 $entry = self::decode($row->entry);
                 $detail = self::decode($row->detail);
                 $route = Routes::getRoutes()->getByName((string) $row->route);
@@ -58,7 +58,7 @@ final class ListConflictsAction
                     'entry' => (object) $entry,
                     'recorded_at' => CarbonImmutable::parse((string) $row->recorded_at, 'UTC')->toIso8601String(),
                     'subject' => $route === null || $lost ? null : self::subject($route, $entry),
-                    'retry' => $route === null || $lost ? null : self::retry($route, $reason, $detail, $entry),
+                    'retry' => $route === null || $lost ? null : self::retry($route, $reason, $detail, $entry, $owner),
                 ];
             })
             ->all());
@@ -106,7 +106,7 @@ final class ListConflictsAction
      * @param  array<string, mixed>  $entry
      * @return list<array{method: string, url: string, body: mixed}>|null
      */
-    private static function retry(Route $route, string $reason, array $detail, array $entry): ?array
+    private static function retry(Route $route, string $reason, array $detail, array $entry, User $owner): ?array
     {
         $name = (string) $route->getName();
         $method = \is_string($entry['method'] ?? null) ? $entry['method'] : null;
@@ -127,7 +127,7 @@ final class ListConflictsAction
                 return self::payAgain($params, \is_array($body) ? $body : [], $url);
             }
 
-            return [['method' => $method, 'url' => $url, 'body' => self::whatItChanged($entry, $body)]];
+            return [['method' => $method, 'url' => $url, 'body' => self::form($route, $params, $entry, $detail, $body, $owner)]];
         } catch (\Throwable) {
             // Parameters the route no longer takes: the page offers no retry.
             return null;
@@ -135,62 +135,100 @@ final class ListConflictsAction
     }
 
     /**
-     * What the set-aside write changed, out of the whole form it was sent
-     * with: the fields its `before` records on the rows it changed, the
-     * fields required with them, a lesson's class and day. Every other field
-     * stays out, so the other device's changes to the rest of the form stay.
+     * The form to send again for «Tieni la mia»: the one the set-aside write
+     * was sent with, **less what the other device changed and it did not**,
+     * judged against this database now, as the replay judges a form
+     * (`ReplayJournalAction::keepTheirs`). A field the entry changed goes
+     * with its value; one that still holds here what it sent goes too, so a
+     * form that requires it on every save is whole; one the other device
+     * changed meanwhile stays out, and keeps its change. Fields required
+     * together go together, and a lesson's class and day always.
+     *
      * **The nested address** goes as the entry left it: whole when it added
      * one, `null` when it cleared one, its own changes over what is here when
-     * it changed one, and not at all when it never touched it. A write whose
-     * `before` records nothing (a photo removed) goes as it was.
+     * it changed one, and left out when it never touched it and it moved here.
      *
+     * Only a form (`PUT`, `PATCH`) is trimmed; any other write goes as it was.
+     *
+     * @param  array<string, int|string>  $params
      * @param  array<string, mixed>  $entry
+     * @param  array<string, mixed>  $detail
      */
-    private static function whatItChanged(array $entry, mixed $body): mixed
+    private static function form(Route $route, array $params, array $entry, array $detail, mixed $body, User $owner): mixed
     {
-        $before = \is_array($entry['before'] ?? null) ? $entry['before'] : [];
-        $created = \is_array($entry['created'] ?? null) ? $entry['created'] : [];
-        if (! \is_array($body) || $before === []) {
+        $method = $entry['method'] ?? null;
+        if (! \is_array($body) || ($method !== 'PUT' && $method !== 'PATCH')) {
             return $body;
         }
+        /** @var array<string, array<string, array<string, mixed>>> $before */
+        $before = \is_array($entry['before'] ?? null) ? $entry['before'] : [];
+        $created = \is_array($entry['created'] ?? null) ? $entry['created'] : null;
+        $own = ReplayJournalAction::ownRow($route, $params, $before === [] ? null : $before, $owner);
+        $here = $own === null ? [] : (array) (DB::table($own['table'])->where('id', $own['id'])->first() ?? []);
         $nestedTables = array_column(ReplayJournalAction::NESTED, 'table');
         $changed = [];
         foreach ($before as $table => $rows) {
-            if (\in_array($table, $nestedTables, true) || ! \is_array($rows)) {
+            if (! \in_array($table, $nestedTables, true)) {
+                foreach ($rows as $row) {
+                    $changed = [...$changed, ...array_keys($row)];
+                }
+            }
+        }
+
+        $sent = [];
+        foreach ($body as $field => $value) {
+            if (isset(ReplayJournalAction::NESTED[$field])) {
                 continue;
             }
-            foreach ($rows as $row) {
-                $changed = [...$changed, ...(\is_array($row) ? array_keys($row) : [])];
+            $moved = ! \is_array($value) && \array_key_exists($field, $here) && ! ReplayJournalAction::same($here[$field], $value);
+            if (\in_array($field, $changed, true) || ! $moved) {
+                $sent[$field] = $value;
             }
-            $changed = [...$changed, ...array_keys(ReplayJournalAction::NATURAL[$table] ?? [])];
         }
         foreach (ReplayJournalAction::GROUPS as $group) {
+            $inBody = array_intersect($group, array_keys($body));
             if (array_intersect($group, $changed) !== []) {
-                $changed = [...$changed, ...$group];
+                $sent = [...$sent, ...array_intersect_key($body, array_flip($inBody))];
+            } elseif (array_diff($inBody, array_keys($sent)) !== []) {
+                $sent = array_diff_key($sent, array_flip($group));
             }
         }
-        $sent = array_intersect_key($body, array_flip($changed));
+        if ($own !== null) {
+            $sent = [...$sent, ...array_intersect_key($body, ReplayJournalAction::NATURAL[$own['table']] ?? [])];
+        }
+
         foreach (ReplayJournalAction::NESTED as $key => $nested) {
             if (! \array_key_exists($key, $body)) {
                 continue;
             }
-            $rows = \is_array($before[$nested['table']] ?? null) ? $before[$nested['table']] : [];
-            if (($created[$nested['table']] ?? []) !== [] || ($rows !== [] && ! \is_array($body[$key]))) {
-                // Added, or cleared: as the entry sent it.
+            $rows = $before[$nested['table']] ?? [];
+            // Recorded before conflicts kept `created`: an address the entry
+            // added is the one conflict that names the address itself.
+            $added = $created === null ? ($detail['field'] ?? null) === $key : ($created[$nested['table']] ?? []) !== [];
+            if ($added || ($rows !== [] && ! \is_array($body[$key]))) {
                 $sent[$key] = $body[$key];
-            } elseif ($rows !== [] && \is_array($body[$key])) {
-                $id = (string) array_key_first($rows);
-                $mine = \is_array($rows[$id]) ? array_keys($rows[$id]) : [];
-                $here = (array) (DB::table($nested['table'])->where('id', $id)->first() ?? []);
+
+                continue;
+            }
+            $row = $own === null ? null : DB::table($nested['table'])
+                ->where("{$nested['morph']}_type", $own['class'] ?? '')
+                ->where("{$nested['morph']}_id", $own['id'])
+                ->first();
+            $row = $row === null ? null : (array) $row;
+            if ($rows !== []) {
+                // Changed: as an array, since a cleared one went above.
+                $mine = array_keys((array) reset($rows));
                 $merged = [];
                 foreach ($body[$key] as $name => $value) {
-                    $merged[$name] = \in_array($name, $mine, true) || ! \array_key_exists($name, $here) ? $value : $here[$name];
+                    $merged[$name] = \in_array($name, $mine, true) || $row === null || ! \array_key_exists($name, $row) ? $value : $row[$name];
                 }
                 $sent[$key] = $merged;
+            } elseif (ReplayJournalAction::sameNested($body[$key], $row)) {
+                $sent[$key] = $body[$key];
             }
         }
 
-        return $sent === [] ? $body : $sent;
+        return $sent;
     }
 
     /**

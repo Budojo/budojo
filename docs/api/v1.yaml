@@ -7728,12 +7728,13 @@ paths:
           rows its route names here (a check-in's, a document's), and how
           many others it names;
         - `retry`: the requests that make the set-aside write true here, in
-          this database's ids, sent in order for «Tieni la mia». It carries
-          what the write changed, never the whole form it was sent with: the
-          fields its `before` records, the fields required with them, a
-          lesson's class and day, and the address as the entry left it. The
-          other device's changes to the rest stay. A month paid otherwise is
-          undone first, then paid as the entry paid it. Null when nothing
+          this database's ids, sent in order for «Tieni la mia». A form goes
+          less what the other device changed and the write did not, judged
+          here now: what the write changed goes, what still holds what it
+          sent goes too (a form may require it), and what the other device
+          changed meanwhile stays out with its change. The address goes as
+          the write left it. A month paid otherwise is undone first, then
+          paid as the entry paid it. Null when nothing
           would make it true: its row is gone or has none here, the rules
           here refused it, an upload, a payment whose amount the fee here
           works out otherwise, or a route or parameters this Budojo no

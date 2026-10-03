@@ -117,6 +117,82 @@ final class ReplayJournalAction
     }
 
     /**
+     * A nested object as a form sent it, against its row here: the same when
+     * both are absent, or every field it sends that the row has agrees.
+     *
+     * @param  array<string, mixed>|null  $row
+     */
+    public static function sameNested(mixed $sent, ?array $row): bool
+    {
+        if (! \is_array($sent) || $row === null) {
+            return ! \is_array($sent) && $row === null;
+        }
+        foreach ($sent as $field => $value) {
+            if (! \is_array($value) && \array_key_exists($field, $row) && ! self::same($row[$field], $value)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * The row a write is about. A route that binds models names it by its
+     * last (`/athletes/{athlete}/promotions/{promotion}`). One that binds
+     * none: `PATCH /academy` names the owner's academy by the session;
+     * another way (`PUT /lessons/notes`, by date and class; the academy's
+     * logo), it is the one row the write changed, when it changed one.
+     *
+     * @param  array<string, int|string>  $params
+     * @param  array<string, array<string, array<string, mixed>>>|null  $before
+     * @return array{table: string, id: string, class: class-string<Model>|null}|null
+     */
+    public static function ownRow(Route $route, array $params, ?array $before, User $owner): ?array
+    {
+        $models = self::paramModels($route);
+        if ($models !== []) {
+            $param = (string) array_key_last($models);
+            $class = $models[$param];
+
+            return ['table' => new $class()->getTable(), 'id' => (string) ($params[$param] ?? ''), 'class' => $class];
+        }
+        if ($route->getName() === 'academy.update') {
+            $academy = $owner->activeAcademyId();
+
+            return $academy === null ? null : ['table' => 'academies', 'id' => (string) $academy, 'class' => Academy::class];
+        }
+        $rows = [];
+        foreach ($before ?? [] as $table => $byId) {
+            foreach (array_keys($byId) as $id) {
+                $rows[] = ['table' => (string) $table, 'id' => (string) $id, 'class' => null];
+            }
+        }
+
+        return \count($rows) === 1 ? $rows[0] : null;
+    }
+
+    public static function same(mixed $a, mixed $b): bool
+    {
+        if ($a === null || $b === null) {
+            return $a === $b;
+        }
+        $a = self::text($a);
+        $b = self::text($b);
+        if ($a === $b) {
+            return true;
+        }
+        // A day against the moment an answer or a row gives it (`2026-10-01`
+        // and `2026-10-01T00:00:00+00:00`, `2026-10-01 00:00:00`): the same day.
+        foreach ([[$a, $b], [$b, $a]] as [$day, $moment]) {
+            if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $day) === 1 && (str_starts_with($moment, $day . 'T') || str_starts_with($moment, $day . ' '))) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * @param  array{id: string, at: string, method: string, route: string, params: array<string, int|string>, body: array<string, mixed>|null, created: array<string, list<int|string>>, before: array<string, array<string, array<string, mixed>>>|null}  $entry
      */
     private function replay(string $device, array $entry, IdMap $map, User $owner): string
@@ -645,61 +721,6 @@ final class ReplayJournalAction
     }
 
     /**
-     * A nested object as a form sent it, against its row here: the same when
-     * both are absent, or every field it sends that the row has agrees.
-     *
-     * @param  array<string, mixed>|null  $row
-     */
-    private static function sameNested(mixed $sent, ?array $row): bool
-    {
-        if (! \is_array($sent) || $row === null) {
-            return ! \is_array($sent) && $row === null;
-        }
-        foreach ($sent as $field => $value) {
-            if (! \is_array($value) && \array_key_exists($field, $row) && ! self::same($row[$field], $value)) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    /**
-     * The row a write is about. A route that binds models names it by its
-     * last (`/athletes/{athlete}/promotions/{promotion}`). One that binds
-     * none: `PATCH /academy` names the owner's academy by the session;
-     * another way (`PUT /lessons/notes`, by date and class; the academy's
-     * logo), it is the one row the write changed, when it changed one.
-     *
-     * @param  array<string, int|string>  $params
-     * @param  array<string, array<string, array<string, mixed>>>|null  $before
-     * @return array{table: string, id: string, class: class-string<Model>|null}|null
-     */
-    private static function ownRow(Route $route, array $params, ?array $before, User $owner): ?array
-    {
-        $models = self::paramModels($route);
-        if ($models !== []) {
-            $param = (string) array_key_last($models);
-            $class = $models[$param];
-
-            return ['table' => new $class()->getTable(), 'id' => (string) ($params[$param] ?? ''), 'class' => $class];
-        }
-        if ($route->getName() === 'academy.update') {
-            $academy = $owner->activeAcademyId();
-
-            return $academy === null ? null : ['table' => 'academies', 'id' => (string) $academy, 'class' => Academy::class];
-        }
-        $rows = [];
-        foreach ($before ?? [] as $table => $byId) {
-            foreach (array_keys($byId) as $id) {
-                $rows[] = ['table' => (string) $table, 'id' => (string) $id, 'class' => null];
-            }
-        }
-
-        return \count($rows) === 1 ? $rows[0] : null;
-    }
-
-    /**
      * What an update or a delete saw of **its target**, the rows its route
      * names, against what this database holds now. Never the rows its Action
      * touched on the way (a carnet's count, a lesson's attendance): those are
@@ -1063,27 +1084,6 @@ final class ReplayJournalAction
     private static function paramTables(Route $route): array
     {
         return array_map(static fn (string $class): string => new $class()->getTable(), self::paramModels($route));
-    }
-
-    private static function same(mixed $a, mixed $b): bool
-    {
-        if ($a === null || $b === null) {
-            return $a === $b;
-        }
-        $a = self::text($a);
-        $b = self::text($b);
-        if ($a === $b) {
-            return true;
-        }
-        // A day against the moment an answer or a row gives it (`2026-10-01`
-        // and `2026-10-01T00:00:00+00:00`, `2026-10-01 00:00:00`): the same day.
-        foreach ([[$a, $b], [$b, $a]] as [$day, $moment]) {
-            if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $day) === 1 && (str_starts_with($moment, $day . 'T') || str_starts_with($moment, $day . ' '))) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     /** A value as the database holds it, for comparing: a flag as 0 or 1, anything else as text. */
