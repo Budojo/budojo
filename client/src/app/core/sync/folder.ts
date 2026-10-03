@@ -1,7 +1,7 @@
 import { utf8 } from './bytes';
 import { EnvelopeError, openJson, seal } from './envelope';
 import { FOLDER_PATH, isDeviceId } from './layout';
-import { SyncRemote } from './remote';
+import { RemoteFile, SyncRemote } from './remote';
 
 /**
  * `sync/folder.bjs` (protocol § The keys): the folder's id, sealed under the
@@ -62,7 +62,22 @@ export function sealFolder(key: CryptoKey, folder: string): Promise<Uint8Array> 
  * fewer than two others. A report that does not open still names a device.
  */
 export async function hasRoomFor(remote: SyncRemote, device: string): Promise<boolean> {
-  const devices = (await remote.list('devices')).files
+  const devices = reportingDevices((await remote.list('devices')).files);
+  return devices.includes(device) ? devices.indexOf(device) < 2 : devices.length < 2;
+}
+
+/**
+ * The devices that sync with the folder: the two whose reports reached Drive
+ * first. A refused device's report stays in `devices/` and says nothing: it
+ * must never hold back clearing the journals of the two (#2106).
+ */
+export function syncingDevices(files: readonly RemoteFile[]): string[] {
+  return reportingDevices(files).slice(0, 2);
+}
+
+/** Every device with a report, in the order the reports reached Drive. */
+function reportingDevices(files: readonly RemoteFile[]): string[] {
+  return files
     .map((file) => ({
       id: /^devices\/([a-z0-9]+)\.bjs$/.exec(file.path)?.[1],
       created: file.created,
@@ -73,5 +88,4 @@ export async function hasRoomFor(remote: SyncRemote, device: string): Promise<bo
     )
     .sort((a, b) => a.created - b.created || a.id.localeCompare(b.id))
     .map((report) => report.id);
-  return devices.includes(device) ? devices.indexOf(device) < 2 : devices.length < 2;
 }

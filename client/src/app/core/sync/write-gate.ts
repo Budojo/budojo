@@ -151,12 +151,9 @@ export const writeGateInterceptor: HttpInterceptorFn = (req, next) => {
     (event) => write && event instanceof HttpResponse,
     write
       ? () =>
-          new HttpErrorResponse({
-            status: 409,
-            statusText: 'Conflict',
-            url: req.urlWithParams,
-            error: { message: 'The data on this device changed: the page loads again with it.' },
-          })
+          // No message of its own: each form says, in the owner's language,
+          // that the save did not go through, and the page loads again.
+          new HttpErrorResponse({ status: 409, statusText: 'Conflict', url: req.urlWithParams })
       : null,
   );
 };

@@ -16,7 +16,7 @@ How two devices of one academy share their data through the owner's Google Drive
 - its kept entries can name another device's rows by numbers that mean someone else on the winning line;
 - a report it wrote can claim entries its database later drops.
 
-A third device needs the protocol to map rows across every device's entries, and reports that cannot go back, before it is allowed. A device refuses to pair when the folder already has two. **The two are the devices whose reports reached Drive first**, on Drive's clock: when two new devices find room at once, both write a report, and the later one is refused from then on (#2106).
+A third device needs the protocol to map rows across every device's entries, and reports that cannot go back, before it is allowed. A device refuses to pair when the folder already has two. **The two are the devices whose reports reached Drive first**, on Drive's clock: when two new devices find room at once, both write a report, and the later one is refused from then on (#2106). Its report stays in `devices/` but speaks for nobody: clearing a journal reads only the reports of the two.
 
 ## The folder
 

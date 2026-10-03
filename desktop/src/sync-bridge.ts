@@ -15,9 +15,12 @@
  * - **the account's hidden application data** (`spaces=appDataFolder`), where
  *   the keys file holds this PC's `APP_KEY` and `DOCUMENT_ENCRYPTION_KEY`. The
  *   page gets the sync key and the folder id from `identity()`, and no more;
- * - **any verb the sync does not use** (#2106): it reads, creates and
- *   uploads, and never deletes, so the token cannot remove a backup or any
- *   other file Budojo made. `PUT` goes only to an upload's session.
+ * - **any change the sync does not make** (#2106): it reads, creates and
+ *   uploads, and never deletes, trashes or moves a file, so the token can do
+ *   none of those to a backup or any other file Budojo made. `PUT` goes only
+ *   to an upload's session; `PATCH` only opens one for a file's new content,
+ *   with no metadata (`{}`) and no parameter but the upload's own, never
+ *   `trashed` or `addParents`.
  */
 
 export interface DriveRequest {
@@ -40,6 +43,8 @@ export const ANSWER_HEADERS = ['date', 'location', 'content-type'] as const;
 const HOST = 'www.googleapis.com';
 /** What `DriveRemote` sends: never `DELETE`. */
 const VERBS = new Set(['GET', 'POST', 'PATCH', 'PUT']);
+/** The only parameters of the `PATCH` that opens an upload of a file's new content. */
+const UPLOAD_PARAMS = new Set(['uploadType', 'fields']);
 /** The files collection, or one file by its id: nothing deeper. */
 const PATH = /^\/(upload\/)?drive\/v3\/files(\/[A-Za-z0-9_-]+)?$/;
 
@@ -81,7 +86,17 @@ export function parseDriveRequest(value: unknown): DriveRequest | null {
     return null;
   }
   const verb = method.toUpperCase();
-  if (!VERBS.has(verb) || (verb === 'PUT' && !new URL(url).pathname.startsWith('/upload/'))) {
+  const address = new URL(url);
+  const upload = address.pathname.startsWith('/upload/');
+  if (!VERBS.has(verb) || (verb === 'PUT' && !upload)) {
+    return null;
+  }
+  if (
+    verb === 'PATCH' &&
+    (!upload ||
+      [...address.searchParams.keys()].some((name) => !UPLOAD_PARAMS.has(name)) ||
+      (body !== undefined && body !== '{}'))
+  ) {
     return null;
   }
   if (
