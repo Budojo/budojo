@@ -7763,7 +7763,8 @@ paths:
       summary: Record the owner's answer to a set-aside write
       description: |
         - `theirs`: what is here stays;
-        - `mine`: the page sent the conflict's `retry` first;
+        - `mine`: the conflict's `retry` ran first, in the same transaction
+          (`POST /sync/conflicts/{entry}/keep-mine` sends both);
         - `by-hand`: the owner set it right.
 
         It only records the answer, **and it is journaled**, so it reaches

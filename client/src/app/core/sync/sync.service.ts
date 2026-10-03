@@ -237,6 +237,12 @@ export class SyncService {
 
   private async round(resolution?: { choice: AskChoice; seen: VersionRef }): Promise<void> {
     const platform = this.platform;
+    // What waits for the owner is in this device's database: counted before
+    // anything reaches Drive, the PC's identity included (its keys are in the
+    // account), so an owner offline still finds the screen.
+    if (platform !== null) {
+      await this.countToDecide();
+    }
     let identity: SyncIdentity | null;
     try {
       identity = platform === null ? null : await platform.identity();
@@ -276,9 +282,6 @@ export class SyncService {
         await platform.shell.swapIn();
       },
     };
-    // What waits for the owner is in this device's database: counted before
-    // anything reaches Drive, so an owner offline still finds the screen.
-    await this.countToDecide();
     try {
       const key = await this.keyOf(identity.syncKey);
       const folder = await checkFolder(platform.remote, key, identity.folder);

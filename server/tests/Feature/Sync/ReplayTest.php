@@ -1060,15 +1060,18 @@ describe('«Da decidere»: the owner’s answers (#2031)', function (): void {
             ->postJson("/api/v1/athletes/{$this->luca}/payments", ['year' => 2026, 'month' => 10, 'payment_method' => 'cash'])->assertCreated());
         $this->actingAs($this->owner)->postJson("/api/v1/athletes/{$this->luca}/payments", ['year' => 2026, 'month' => 10, 'payment_method' => 'pos'])->assertCreated();
         replayOnThePc($entries);
-        // The payment fails once the month is undone.
+        // The payment fails once the month is undone: reached once, so the undo ran.
         $this->mock(RecordAthletePaymentAction::class, fn (MockInterface $mock) => $mock
-            ->shouldReceive('execute')->andThrow(new RuntimeException('disk full')));
+            ->shouldReceive('execute')->once()->andThrow(new RuntimeException('disk full')));
         Route::getRoutes()->getByName('athletes.payments.store')?->flushController();
+        $journal = DB::table('sync_journal')->pluck('route')->all();
 
         $this->actingAs($this->owner)->postJson("/api/v1/sync/conflicts/{$entries[0]['id']}/keep-mine")->assertUnprocessable();
 
+        // The undo's entry too: left in the journal, it would undo the month on the phone.
         expect(DB::table('athlete_payments')->where('athlete_id', $this->luca)->value('payment_method'))->toBe('pos')
-            ->and(DB::table('sync_conflicts')->where('entry_id', $entries[0]['id'])->value('decided_at'))->toBeNull();
+            ->and(DB::table('sync_conflicts')->where('entry_id', $entries[0]['id'])->value('decided_at'))->toBeNull()
+            ->and(DB::table('sync_journal')->pluck('route')->all())->toBe($journal);
     });
 
     it('refuses to keep a write nothing would make true here', function (): void {
