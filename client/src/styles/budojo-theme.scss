@@ -822,6 +822,10 @@
 // it sets the position inline at toggle time. Scoped to this one popover.
 @media (max-width: 767px) {
   .p-popover.sync-detail-popover {
+    // Fixed, not the overlay's absolute: the page may have scrolled under
+    // the sticky topbar, and the panel belongs under the topbar, not at the
+    // document's top (#2121 review).
+    position: fixed !important;
     left: 1rem !important;
     right: 1rem !important;
     width: auto !important;
