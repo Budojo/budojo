@@ -160,6 +160,18 @@ describe('restoring a backup', function (): void {
         expect(Homecoming::read())->toBeNull();
     });
 
+    it('keeps the homecoming when the restore fails to stage: the live database stays, and its news (#2124 review)', function (): void {
+        $told = ['device' => 'pc4f2a', 'at' => '2026-10-01T19:00:00Z', 'through' => '01K6A000000000000000000004', 'created' => [], 'other' => 1];
+        Homecoming::keep($told);
+        // The copy beside the live file fails, as a full disk would: its
+        // path leads nowhere, past the clear that empties the slot first.
+        symlink("{$this->dir}/nowhere/budojo.sqlite", "{$this->live}.staged.part");
+
+        backupTestSend($this, 'restore', backupTestArchive($this->dir, backupTestEntries($this->dir)))->assertServerError();
+
+        expect(Homecoming::read())->toBe($told);
+    });
+
     it('stages the academy\'s files beside its own, and never the PC\'s logs or cache', function (): void {
         backupTestSend($this, 'restore', backupTestArchive($this->dir, backupTestEntries($this->dir)))->assertNoContent();
 

@@ -18,7 +18,8 @@ use Illuminate\Support\Facades\DB;
  * every one since the last pull, however many versions the folder went
  * through. The reconcile runs it before the journal keeps only this device's
  * entries again. An entry the other device's own rebase found already true
- * or set aside changed nothing there, and is no news here.
+ * or set aside changed nothing there, and is no news here; nor is the owner's
+ * answer to a question, which changes no data.
  *
  * **It keeps the facts** (`Homecoming`): the rows the entries created, and
  * how many created none of the rows the card counts (an edit, a deletion, a
@@ -64,6 +65,10 @@ final class RecordHomecomingAction
         if ($device !== null && $device !== '') {
             $query->where('sync_journal.device', '!=', $device);
         }
+        // The owner's answers to a question (`sync.conflicts.decide`) are
+        // journaled so they reach this device; they change no data, so they
+        // are no news on the card (#2124 review).
+        $query->where('sync_journal.route', 'not like', 'sync.%');
 
         /** @var list<\stdClass> */
         return $query->get()

@@ -159,6 +159,15 @@ describe('the reconcile after a pull', function (): void {
             ->and(DB::table('sync_journal')->where('device', 'phone9f8e7d6c')->count())->toBe(0);
     });
 
+    it('tells nothing of the owner\'s answers to a question: they change no data (#2124 review)', function (): void {
+        HomecomingSince::remember([]);
+        homecomingEntry(1, 'phone9f8e7d6c', 'sync.conflicts.decide');
+
+        $this->artisan('budojo:sync-reconcile')->assertSuccessful();
+
+        expect(file_exists(Homecoming::path()))->toBeFalse();
+    });
+
     it('adds a second pull to the one the owner has not seen yet, counted as it is now', function (): void {
         $gi = Lesson::factory()->create(['name' => 'BJJ Gi']);
         $first = AttendanceRecord::factory()->count(2)->create(['lesson_id' => $gi->id]);

@@ -348,23 +348,6 @@ jobs:
             echo "::warning::gh pr merge --auto failed for PR #${PR}. Most common cause: repo-level 'Allow auto-merge' is disabled (Settings → General → Pull Requests). Falling back to manual merge."
           fi
 
-  # Build the Windows desktop installer (NSIS) and attach it
-  # to the GitHub Release that semantic-release just created for the stable
-  # tag. Lives in THIS workflow run — not a `push: tags` / `release:
-  # published` workflow — for the same reason as the sweep job above:
-  # semantic-release publishes the tag and Release via GITHUB_TOKEN, and
-  # GitHub's recursion guard means token-authored events never trigger a
-  # downstream workflow. Running as a job that `needs: release` sidesteps it.
-  #
-  # Also (re)buildable on demand for an existing tag via the
-  # `installer_tag` workflow_dispatch input — e.g. when a first run failed
-  # after the tag was already published. That path skips semantic-release
-  # and just builds + attaches for the tag given.
-  #
-  # Windows-only: the shipped runtime is a Windows php.exe (fetch:php extracts
-  # with Expand-Archive), and electron-builder's win targets need a Windows
-  # host. A failure here shows red so a maintainer can re-run — the tag is
-  # already published, so it never rolls anything back.
   # The phone's APK (#2040), on every release: a beta on develop, a stable
   # on main, or an existing tag on a manual re-run. The same workflow that
   # builds a PR's test APK, called with the tag: it builds that tag, opens it
@@ -402,6 +385,23 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: gh release upload "$TAG" "$RUNNER_TEMP/apk/Budojo-Android-${VERSION_NAME}.apk" --clobber --repo "$GITHUB_REPOSITORY"
 
+  # Build the Windows desktop installer (NSIS) and attach it
+  # to the GitHub Release that semantic-release just created for the stable
+  # tag. Lives in THIS workflow run — not a `push: tags` / `release:
+  # published` workflow — for the same reason as the sweep job above:
+  # semantic-release publishes the tag and Release via GITHUB_TOKEN, and
+  # GitHub's recursion guard means token-authored events never trigger a
+  # downstream workflow. Running as a job that `needs: release` sidesteps it.
+  #
+  # Also (re)buildable on demand for an existing tag via the
+  # `installer_tag` workflow_dispatch input — e.g. when a first run failed
+  # after the tag was already published. That path skips semantic-release
+  # and just builds + attaches for the tag given.
+  #
+  # Windows-only: the shipped runtime is a Windows php.exe (fetch:php extracts
+  # with Expand-Archive), and electron-builder's win targets need a Windows
+  # host. A failure here shows red so a maintainer can re-run — the tag is
+  # already published, so it never rolls anything back.
   desktop-installer:
     name: "🪟 Desktop installer (Windows)"
     runs-on: windows-latest

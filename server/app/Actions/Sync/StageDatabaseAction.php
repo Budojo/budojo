@@ -44,12 +44,9 @@ final class StageDatabaseAction
             // earlier restore staged go with its database (#2079).
             Staged::clear();
             // What this device held of the other's work, for the homecoming
-            // (#2039): the swap replaces the database that knows it. A whole
-            // academy arriving makes news of the one it replaces moot.
+            // (#2039): the swap replaces the database that knows it.
             if ($since !== null) {
                 HomecomingSince::remember($since);
-            } else {
-                Homecoming::forget();
             }
             if ($device !== null) {
                 // Before the database: a staged database is what commits a
@@ -57,6 +54,14 @@ final class StageDatabaseAction
                 RebasePending::setAside($device);
             }
             $this->stageChecked($incoming);
+            if ($since === null) {
+                // A whole academy arriving makes news of the one it replaces
+                // moot: forgotten once it is staged, never before (a stage
+                // that fails keeps the live database and its news). Should
+                // the forget fail, the stage goes too: a database never
+                // opens beside news of the one it replaced.
+                self::forgetHomecomingOrUnstage();
+            }
         } finally {
             @unlink($incoming);
         }
@@ -76,6 +81,17 @@ final class StageDatabaseAction
             @unlink($part);
 
             throw new \RuntimeException('could not stage the database beside the live one');
+        }
+    }
+
+    private static function forgetHomecomingOrUnstage(): void
+    {
+        try {
+            Homecoming::forget();
+        } catch (\Throwable $e) {
+            Staged::clear();
+
+            throw $e;
         }
     }
 
