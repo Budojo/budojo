@@ -164,9 +164,18 @@ export function decide(local: LocalState, versions: readonly SeenVersion[], now:
 
 /**
  * Whether `head` comes from another first version than `base`: two academies
- * in one folder. Told only when the listing still holds both lines down to
- * their first versions, which is when such a race happens; a line whose
- * history the retention pruned is never mistaken for another academy.
+ * in one folder. Told by what the listing proves, however much of either
+ * line the retention pruned (`retention.ts`):
+ * - **both lines listed down to their first versions,** as when both devices
+ *   publish at once: compared;
+ * - **one first version found:** whether the other end descends from it
+ *   (`descends`). A line's numbers only fall towards its first version, so a
+ *   walk that reaches that number, or below, without meeting it proves
+ *   another line; the academy the owner chose on the other device is
+ *   published above every version there (§ 6.5).
+ *
+ * When nothing proves it, it is the same academy: a line pruned on both
+ * sides is the only one the folder has had.
  */
 function onAnotherLine(
   base: VersionRef,
@@ -175,7 +184,54 @@ function onAnotherLine(
 ): boolean {
   const baseRoot = rootOf(base, versions);
   const headRoot = rootOf(head, versions);
-  return baseRoot !== null && headRoot !== null && !sameVersion(baseRoot, headRoot);
+  if (baseRoot !== null && headRoot !== null) {
+    return !sameVersion(baseRoot, headRoot);
+  }
+  for (const [end, root] of [
+    [head, baseRoot],
+    [base, headRoot],
+  ] as const) {
+    if (root !== null) {
+      const descendsFrom = descends(end, root, versions);
+      if (descendsFrom !== null) {
+        return !descendsFrom;
+      }
+    }
+  }
+  return false;
+}
+
+/**
+ * Whether `version` is on the line of the first version `root`, followed down
+ * through the listing: true when the walk meets it, false when it reaches its
+ * number or below without meeting it (a version is numbered above every one
+ * under it), or meets another first version; null when a link is not listed
+ * before either.
+ */
+export function descends(
+  version: VersionRef,
+  root: VersionRef,
+  versions: readonly SeenVersion[],
+): boolean | null {
+  let current: VersionRef = version;
+  // A listing names each version once, so a line is never longer than it.
+  for (let step = 0; step <= versions.length; step++) {
+    if (sameVersion(current, root)) {
+      return true;
+    }
+    if (current.seq <= root.seq) {
+      return false;
+    }
+    const listed = versions.find((candidate) => sameVersion(candidate, current));
+    if (listed === undefined) {
+      return null;
+    }
+    if (listed.parent === null) {
+      return false;
+    }
+    current = listed.parent;
+  }
+  return null;
 }
 
 /** The first version of the line `version` is on, followed through the listing; null when a link is not listed. */
