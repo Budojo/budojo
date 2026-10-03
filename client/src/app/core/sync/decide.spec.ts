@@ -222,6 +222,24 @@ const rows: {
     expected: { kind: 'ask', latest: ref(47, PHONE) },
   },
   {
+    name: 'its pruned line meets the phone’s first version at its own number, listed first: it asks (#2117 review)',
+    local: local(ref(14), { unpushed: true }),
+    folder: [v(1, PC, null), v(12), v(13), v(14, PHONE, null, 13_500), v(14, PC, ref(13), 14_500)],
+    expected: { kind: 'ask', latest: ref(14, PHONE) },
+  },
+  {
+    name: 'its own first version, and the PC’s pruned line went on past it: it asks, never pulls it (#2117 review)',
+    local: local(ref(14, PHONE)),
+    folder: [v(1, PC, null), v(12), v(13), v(14, PC, ref(13), 13_500), v(14, PHONE, null, 14_500), v(15)],
+    expected: { kind: 'ask', latest: ref(15) },
+  },
+  {
+    name: 'one line pruned on both sides of the base: the same academy, pulled',
+    local: local(ref(30)),
+    folder: [v(1, PC, null), v(38), v(39), v(40)],
+    expected: { kind: 'fast-forward', to: ref(40) },
+  },
+  {
     name: 'back after weeks, all its writes held by every device: a fast-forward, nobody is asked',
     local: local(ref(30)),
     folder: [v(44), v(45)],

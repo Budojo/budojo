@@ -1,4 +1,4 @@
-import { latestVersion, SeenVersion } from './decide';
+import { descends, latestVersion, SeenVersion } from './decide';
 import { sameVersion, VersionRef } from './layout';
 
 /**
@@ -21,14 +21,14 @@ export const VERSION_RETENTION: VersionRetention = { keepRecent: 10, keepDays: 1
  * devices report (`devices/`).
  * - **Never the newest:** `keepRecent` is floored at 1. A device that is
  *   pulling reads the newest, and a deleted one is gone for good.
- * - **Never a first version:** a first version above a device's base is how
- *   that device tells another academy, however much of either line is
- *   pruned (`decide.ts`).
- * - **Two academies in the folder** (two first versions): nothing goes while
- *   a device is on a line other than the latest's, since the owner still has
- *   a question to answer there and the lines are what tell the academies
- *   apart. Once both report a base on the latest's line, the other lines are
- *   the academies the owner left, and go whole.
+ * - **Never a first version:** with it, a device whose own line is pruned
+ *   still tells another academy (`decide.ts`, `descends`).
+ * - **Two academies in the folder** (two first versions): nothing goes until
+ *   every device (at least two) reports a base on the latest's line, as far
+ *   as the listing shows it: before that, the owner has a question to answer
+ *   on the other line, and the lines are what tell the academies apart. Then
+ *   the lines the latest does not descend from are the academies the owner
+ *   left, and go whole, and the latest's line is pruned to the policy.
  */
 export function versionsToPrune(
   versions: readonly SeenVersion[],
@@ -39,35 +39,38 @@ export function versionsToPrune(
   if (latest === null) {
     return [];
   }
-  let kept: readonly SeenVersion[] = versions;
-  if (versions.filter((version) => version.parent === null).length > 1) {
-    const line = lineOf(latest, versions);
-    const allOnIt =
-      line !== null &&
-      bases.length > 1 &&
-      bases.every((base) => base !== null && line.some((version) => sameVersion(version, base)));
-    if (!allOnIt) {
-      return [];
-    }
-    kept = line;
+  const roots = versions.filter((version) => version.parent === null);
+  if (roots.length <= 1) {
+    return beyondPolicy(versions, policy);
   }
-  const left = versions.filter((version) => !kept.includes(version));
-  return [...left, ...beyondPolicy(kept, policy)];
+  const walk = walkDown(latest, versions);
+  const allOnIt =
+    bases.length > 1 &&
+    bases.every((base) => base !== null && walk.some((version) => sameVersion(version, base)));
+  if (!allOnIt) {
+    return [];
+  }
+  const left = roots.filter((root) => descends(latest, root, versions) === false);
+  if (roots.length - left.length !== 1) {
+    // The latest's own first version is not told apart: nothing goes.
+    return [];
+  }
+  const dead = versions.filter((version) =>
+    left.some((root) => descends(version, root, versions) === true),
+  );
+  return [...dead, ...beyondPolicy(versions.filter((version) => !dead.includes(version)), policy)];
 }
 
-/** The newest and every version under it, down to its first; null when a link is not listed. */
-function lineOf(newest: SeenVersion, versions: readonly SeenVersion[]): SeenVersion[] | null {
-  const line: SeenVersion[] = [];
+/** `newest` and the versions under it, as far as the listing names them. */
+function walkDown(newest: SeenVersion, versions: readonly SeenVersion[]): SeenVersion[] {
+  const walk: SeenVersion[] = [];
   let current: SeenVersion | undefined = newest;
-  while (current !== undefined && line.length <= versions.length) {
-    line.push(current);
+  while (current !== undefined && walk.length <= versions.length) {
+    walk.push(current);
     const parent: VersionRef | null = current.parent;
-    if (parent === null) {
-      return line;
-    }
-    current = versions.find((version) => sameVersion(version, parent));
+    current = parent === null ? undefined : versions.find((version) => sameVersion(version, parent));
   }
-  return null;
+  return walk;
 }
 
 /** One line's versions past the policy: never its first, never the newest. */
