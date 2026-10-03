@@ -43,7 +43,7 @@ describe('HomecomingCardComponent', () => {
     const el = fixture.nativeElement as HTMLElement;
     const card = () => el.querySelector<HTMLElement>('[data-cy="today-homecoming"]');
     const items = () =>
-      [...el.querySelectorAll('.homecoming__item')].map((item) =>
+      [...el.querySelectorAll('[data-cy="today-homecoming-item"]')].map((item) =>
         item.textContent?.replace(/\u00a0/g, ' ').trim(),
       );
     return { fixture, homecoming, sync, el, card, items };
