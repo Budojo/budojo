@@ -12,11 +12,15 @@ import {
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ButtonModule } from 'primeng/button';
 import { PopoverModule } from 'primeng/popover';
+import { RouterLink } from '@angular/router';
 import { LanguageService } from '../../../core/services/language.service';
 import { AskChoice } from '../../../core/sync/engine';
 import { VersionRef } from '../../../core/sync/layout';
 import { SyncService, SyncState } from '../../../core/sync/sync.service';
 import { localeFor } from '../../utils/locale';
+
+/** The states quiet enough for «N da decidere» to show over them. */
+const DECIDABLE = new Set<SyncState['kind']>(['synced', 'pending', 'syncing']);
 
 /** What each state looks like, and whether the owner has something to do. */
 const LOOK: Record<SyncState['kind'], { icon: string; attention: boolean }> = {
@@ -43,7 +47,7 @@ const LOOK: Record<SyncState['kind'], { icon: string; attention: boolean }> = {
 @Component({
   selector: 'app-sync-pill',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonModule, PopoverModule, TranslatePipe],
+  imports: [ButtonModule, PopoverModule, RouterLink, TranslatePipe],
   templateUrl: './sync-pill.component.html',
   styleUrl: './sync-pill.component.scss',
 })
@@ -90,12 +94,27 @@ export class SyncPillComponent {
     });
   }
 
-  protected readonly icon = computed(() => LOOK[this.state().kind].icon);
-  protected readonly attention = computed(() => LOOK[this.state().kind].attention);
+  /**
+   * Writes a rebase set aside wait for the owner (#2038): «N da decidere».
+   * Over a quiet state only; a question, a lost link or a failure says more.
+   */
+  protected readonly toDecide = computed(() =>
+    DECIDABLE.has(this.state().kind) ? this.sync.toDecide() : 0,
+  );
+
+  protected readonly icon = computed(() =>
+    this.toDecide() > 0 ? 'pi-exclamation-circle' : LOOK[this.state().kind].icon,
+  );
+  protected readonly attention = computed(
+    () => this.toDecide() > 0 || LOOK[this.state().kind].attention,
+  );
 
   /** The few characters beside the icon: the time, or how many wait. */
   protected readonly short = computed(() => {
     const state = this.state();
+    if (this.toDecide() > 0) {
+      return String(this.toDecide());
+    }
     switch (state.kind) {
       case 'synced':
         return this.time(state.at);
@@ -110,6 +129,13 @@ export class SyncPillComponent {
   protected readonly sentence = computed(() => {
     this.language.currentLang();
     const state = this.state();
+    const toDecide = this.toDecide();
+    if (toDecide > 0) {
+      return this.translate.instant(
+        toDecide === 1 ? 'sync.decide.pillOne' : 'sync.decide.pillOther',
+        { count: toDecide },
+      );
+    }
     switch (state.kind) {
       case 'synced':
         return this.translate.instant('sync.state.synced', { time: this.time(state.at) });
@@ -127,6 +153,9 @@ export class SyncPillComponent {
   protected readonly hint = computed(() => {
     this.language.currentLang();
     const state = this.state();
+    if (this.toDecide() > 0) {
+      return this.translate.instant('sync.decide.pillHint');
+    }
     switch (state.kind) {
       case 'pending':
         return this.translate.instant(state.offline ? 'sync.hint.offline' : 'sync.hint.pending');

@@ -1,5 +1,6 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { describe, expect, it, vi } from 'vitest';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
@@ -8,10 +9,12 @@ import { SyncPillComponent } from './sync-pill.component';
 
 /** The sync state in the topbar (#2046, PRD § 6.2). */
 describe('SyncPillComponent', () => {
-  function setup(initial: SyncState) {
+  function setup(initial: SyncState, toDecideCount = 0) {
     const state = signal<SyncState>(initial);
+    const toDecide = signal(toDecideCount);
     const sync = {
       state: state.asReadonly(),
+      toDecide: toDecide.asReadonly(),
       syncNow: vi.fn(async () => undefined),
       reconnect: vi.fn(async () => undefined),
       resolve: vi.fn(async () => undefined),
@@ -21,6 +24,7 @@ describe('SyncPillComponent', () => {
       providers: [
         provideAnimationsAsync(),
         ...provideI18nTesting(),
+        provideRouter([]),
         { provide: SyncService, useValue: sync },
       ],
     });
@@ -28,7 +32,7 @@ describe('SyncPillComponent', () => {
     fixture.detectChanges();
     const el = fixture.nativeElement as HTMLElement;
     const pill = () => el.querySelector<HTMLButtonElement>('[data-cy="sync-pill"]');
-    return { fixture, state, sync, el, pill };
+    return { fixture, state, toDecide, sync, el, pill };
   }
 
   it('shows nothing where there is no sync', () => {
@@ -76,6 +80,26 @@ describe('SyncPillComponent', () => {
     fixture.detectChanges();
     await pill.act();
     expect(sync.reconnect).toHaveBeenCalledTimes(1);
+  });
+
+  it('counts what waits to be decided over a quiet state, and leads to the screen that answers it (#2038)', async () => {
+    const at = new Date(2026, 9, 2, 21, 47).getTime();
+    const { pill, fixture, state } = setup({ kind: 'synced', at }, 2);
+
+    expect(pill()?.textContent?.trim()).toBe('2');
+    expect(pill()?.getAttribute('aria-label')).toBe('2 to decide');
+    expect(pill()?.classList).toContain('sync-pill--attention');
+
+    pill()?.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const decide = document.querySelector<HTMLAnchorElement>('[data-cy="sync-detail-decide"]');
+    expect(decide?.getAttribute('href')).toBe('/dashboard/sync/decide');
+
+    // A lost link says more than what waits.
+    state.set({ kind: 'reconnect' });
+    fixture.detectChanges();
+    expect(pill()?.getAttribute('aria-label')).not.toContain('to decide');
   });
 
   it('opens the detail with the reason a sync failed, the one log a phone shows', async () => {

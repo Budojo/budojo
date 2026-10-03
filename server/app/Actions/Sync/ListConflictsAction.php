@@ -7,6 +7,7 @@ namespace App\Actions\Sync;
 use App\Enums\BillingPeriod;
 use App\Models\Athlete;
 use App\Models\User;
+use App\Support\AthleteIdentity;
 use App\Support\MonthlyFee;
 use App\Support\Sync\Journal\JournalBody;
 use Carbon\CarbonImmutable;
@@ -69,7 +70,7 @@ final class ListConflictsAction
      * it is an athlete or has one (a document, a check-in), else the body's.
      *
      * @param  array<string, mixed>  $entry
-     * @return array{athlete: array{id: int, name: string}, others: int}|null
+     * @return array{athlete: array<string, mixed>, others: int}|null
      */
     private static function subject(Route $route, array $entry): ?array
     {
@@ -93,10 +94,11 @@ final class ListConflictsAction
         if ($ids === []) {
             return null;
         }
-        $athlete = DB::table('athletes')->where('id', $ids[0])->first(['id', 'first_name', 'last_name']);
+        $athlete = Athlete::query()->with('user')->find($ids[0]);
 
         return $athlete === null ? null : [
-            'athlete' => ['id' => (int) $athlete->id, 'name' => trim("{$athlete->first_name} {$athlete->last_name}")],
+            // As every list of people shows one (`AthleteIdentity`), with the belt.
+            'athlete' => [...AthleteIdentity::of($athlete), 'name' => trim("{$athlete->first_name} {$athlete->last_name}")],
             'others' => \count($ids) - 1,
         ];
     }

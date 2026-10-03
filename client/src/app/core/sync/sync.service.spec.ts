@@ -2,6 +2,7 @@ import { HttpResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { firstValueFrom, of } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { SyncConflict } from './conflicts';
 import { EMPTY_LEDGER, syncOnce } from './engine';
 import { importSyncKey, newSyncKey, seal } from './envelope';
 import { sealFolder } from './folder';
@@ -123,6 +124,18 @@ describe('SyncService', () => {
 
     expect(sync.state().kind).toBe('synced');
     expect([...remote.files.keys()]).toContain('versions/000002-phone9c1e.000001-pc4f2a.bjs');
+  });
+
+  it('counts the writes a rebase set aside after each round, for «N da decidere» (#2038)', async () => {
+    await pcPublishes();
+    const sync = setUp();
+    await sync.syncNow();
+    expect(sync.toDecide()).toBe(0);
+
+    phone.waiting = [{ id: '01K6F3Q8Z4M7X2N5P9R1T3V6W8' } as SyncConflict];
+    await sync.syncNow();
+
+    expect(sync.toDecide()).toBe(1);
   });
 
   it('waits for the PC when the folder holds no academy yet, and publishes nothing of its own', async () => {

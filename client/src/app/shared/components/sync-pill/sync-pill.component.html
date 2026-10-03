@@ -80,11 +80,23 @@
           />
         }
       } @else {
+        @if (toDecide() > 0) {
+          <a
+            pButton
+            routerLink="/dashboard/sync/decide"
+            [fluid]="true"
+            (click)="detail.hide()"
+            data-cy="sync-detail-decide"
+          >
+            <span pButtonLabel>{{ 'sync.decide.open' | translate }}</span>
+          </a>
+        }
         <p-button
           [label]="(state().kind === 'reconnect' ? 'sync.reconnect' : 'sync.now') | translate"
           [icon]="state().kind === 'reconnect' ? 'pi pi-link' : 'pi pi-sync'"
           [loading]="busy()"
-          [autofocus]="true"
+          [autofocus]="toDecide() === 0"
+          [text]="toDecide() > 0"
           [fluid]="true"
           (onClick)="act()"
           data-cy="sync-detail-action"

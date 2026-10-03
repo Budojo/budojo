@@ -774,7 +774,9 @@ describe('«Da decidere»: the owner’s answers (#2031)', function (): void {
             ->assertJsonPath('data.0.device', 'phone9c1e')
             ->assertJsonPath('data.0.reason', 'changed')
             ->assertJsonPath('data.0.detail.field', 'last_name')
-            ->assertJsonPath('data.0.subject.athlete', ['id' => $this->luca, 'name' => 'Luca Verdi'])
+            ->assertJsonPath('data.0.subject.athlete.id', $this->luca)
+            ->assertJsonPath('data.0.subject.athlete.name', 'Luca Verdi')
+            ->assertJsonPath('data.0.subject.athlete.belt', 'white')
             ->assertJsonPath('data.0.retry', [['method' => 'PATCH', 'url' => "/api/v1/athletes/{$this->luca}", 'body' => ['last_name' => 'Bianco']]]);
     });
 
@@ -1037,7 +1039,8 @@ describe('«Da decidere»: the owner’s answers (#2031)', function (): void {
 
         $subjects = collect($this->actingAs($this->owner)->getJson('/api/v1/sync/conflicts')->json('data'))->pluck('subject', 'id');
         expect($subjects['01K6F3Q8Z4M7X2N5P9R1T3V6W1']['athlete']['id'])->toBe($this->luca)
-            ->and($subjects['01K6F3Q8Z4M7X2N5P9R1T3V6W2'])->toBe(['athlete' => ['id' => $giulia, 'name' => 'Giulia Bianchi'], 'others' => 1]);
+            ->and($subjects['01K6F3Q8Z4M7X2N5P9R1T3V6W2']['athlete'])->toMatchArray(['id' => $giulia, 'name' => 'Giulia Bianchi', 'first_name' => 'Giulia', 'belt' => 'white'])
+            ->and($subjects['01K6F3Q8Z4M7X2N5P9R1T3V6W2']['others'])->toBe(1);
     });
 
     it('records each answer once, and takes one for a conflict this database does not hold', function (): void {

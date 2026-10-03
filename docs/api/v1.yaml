@@ -9186,9 +9186,17 @@ components:
           properties:
             athlete:
               type: object
+              description: The athlete's identity, as every list of people gives it (`AthleteIdentity`), and the full name.
               properties:
                 id: { type: integer }
                 name: { type: string }
+                first_name: { type: string }
+                last_name: { type: string }
+                belt: { type: string }
+                stripes: { type: integer }
+                date_of_birth: { type: string, nullable: true }
+                photo_url: { type: string, nullable: true }
+                user_avatar_url: { type: string, nullable: true }
             others: { type: integer, description: How many other athletes the write names (a check-in of several). }
         retry:
           type: array

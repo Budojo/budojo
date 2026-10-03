@@ -62,6 +62,30 @@ describe('HttpSyncServer', () => {
     await staged;
   });
 
+  it('lists the conflicts, records an answer, and sends a retry through the page’s own API (#2038)', async () => {
+    const listed = server.conflicts();
+    http.expectOne('/api/v1/sync/conflicts').flush({ data: [{ id: ULID }] });
+    expect(await listed).toEqual([{ id: ULID }]);
+
+    const decided = server.decide(ULID, 'theirs');
+    const answer = http.expectOne(`/api/v1/sync/conflicts/${ULID}/decision`);
+    expect(answer.request.method).toBe('POST');
+    expect(answer.request.body).toEqual({ decision: 'theirs' });
+    answer.flush(null, { status: 204, statusText: 'No Content' });
+    await decided;
+
+    const retried = server.retry([
+      { method: 'DELETE', url: '/api/v1/athletes/57/payments/2026/10', body: null },
+      { method: 'POST', url: '/api/v1/athletes/57/payments', body: { year: 2026, month: 10 } },
+    ]);
+    http.expectOne({ method: 'DELETE', url: '/api/v1/athletes/57/payments/2026/10' }).flush(null);
+    await Promise.resolve();
+    const pay = http.expectOne({ method: 'POST', url: '/api/v1/athletes/57/payments' });
+    expect(pay.request.body).toEqual({ year: 2026, month: 10 });
+    pay.flush({ data: {} });
+    await retried;
+  });
+
   it('reads the journal and the holds, and clears through an entry', async () => {
     const journal = server.journal();
     http.expectOne('/api/v1/sync/journal').flush({ data: [{ id: ULID }] });

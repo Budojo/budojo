@@ -433,6 +433,13 @@ export const routes: Routes = [
           import('./features/backup/backup.component').then((m) => m.BackupComponent),
       },
       {
+        // «Da decidere» (#2038): what a rebase set aside, for the owner to
+        // answer. Reached from the sync pill, wherever the sync runs.
+        path: 'sync/decide',
+        loadComponent: () =>
+          import('./features/sync-decide/sync-decide.component').then((m) => m.SyncDecideComponent),
+      },
+      {
         path: 'whats-new',
         loadComponent: () =>
           import('./features/whats-new/whats-new.component').then((m) => m.WhatsNewComponent),

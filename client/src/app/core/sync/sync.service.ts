@@ -103,6 +103,14 @@ export class SyncService {
   private readonly stateSignal = signal<SyncState>({ kind: 'off' });
   readonly state = this.stateSignal.asReadonly();
 
+  /**
+   * How many writes a rebase set aside wait for the owner (#2038): «N da
+   * decidere» on the pill, which leads to the screen that answers them.
+   * Read after every round, and again after every answer.
+   */
+  private readonly toDecideSignal = signal(0);
+  readonly toDecide = this.toDecideSignal.asReadonly();
+
   /** What `stop` undoes; null while stopped. */
   private stopping: (() => void) | null = null;
   private timer: ReturnType<typeof setTimeout> | null = null;
@@ -306,6 +314,7 @@ export class SyncService {
         resolution === undefined
           ? await syncOnce(context)
           : await resolveAsk(context, resolution.choice, resolution.seen);
+      await this.countToDecide();
       if (resolution !== undefined && outcome.kind === 'nothing') {
         // The folder emptied before the owner confirmed: nothing was chosen,
         // and the round after says what to do now.
@@ -345,6 +354,15 @@ export class SyncService {
       if (swapped) {
         this.reload();
       }
+    }
+  }
+
+  /** The conflicts that wait, counted again: after a round, and after the owner answers one. */
+  async countToDecide(): Promise<void> {
+    try {
+      this.toDecideSignal.set((await this.server.conflicts()).length);
+    } catch {
+      // The count waits for the next round: the pill never fails on it.
     }
   }
 
