@@ -60,6 +60,93 @@ export function localised(value: Localised, lang: string): string {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.78.0',
+    date: '2026-10-03',
+    headline: {
+      en: 'When the same thing changed in two ways on the PC and the phone, you now choose which to keep. Oggi shows what arrived from the other device, and on the phone the check-in opens by itself when class is on.',
+      it: "Quando la stessa cosa è cambiata in due modi sul PC e sul telefono, ora scegli tu quale tenere. Su Oggi vedi cosa è arrivato dall'altro dispositivo, e sul telefono il check-in si apre da solo all'ora della lezione.",
+    },
+    sections: [
+      {
+        heading: { en: 'To decide', it: 'Da decidere' },
+        bullets: [
+          {
+            en: 'When the same thing changed in two different ways, the change that arrived later is set aside and the state says so: "1 to decide". "Decide" opens a screen with one card per question: what it was, who it is about, why, and the two versions side by side.',
+            it: "Quando la stessa cosa è cambiata in due modi diversi, la modifica arrivata dopo viene messa da parte e lo stato lo dice: «1 da decidere». «Decidi» apre la schermata con una scheda per domanda: cos'era, di chi parla, perché, e le due versioni una accanto all'altra.",
+          },
+          {
+            en: 'Three answers: "Keep the PC\'s", "Keep the phone\'s" (before you confirm, it tells you what it replaces) and "I fixed it myself", when you corrected it by hand.',
+            it: "Tre risposte: «Tieni quella del PC», «Tieni quella del telefono» (prima di confermare ti dice cosa sostituisce) e «L'ho sistemata io», quando l'hai corretta a mano.",
+          },
+          {
+            en: 'Your answer reaches the other device too: it does not ask you again.',
+            it: "La tua risposta arriva anche sull'altro dispositivo: non te la richiede.",
+          },
+          {
+            en: "Two changes to different fields of the same thing both apply: a closure's name changed on the phone and its dates moved on the PC, for instance. Before, one of them was set aside.",
+            it: 'Due modifiche a campi diversi della stessa cosa valgono entrambe: per esempio il nome di una chiusura cambiato sul telefono e le sue date spostate sul PC. Prima una delle due veniva messa da parte.',
+          },
+          {
+            en: "A lesson's topics tagged differently on the two devices are now a question for you, instead of the phone's winning.",
+            it: 'Gli argomenti di una lezione segnati in modo diverso sui due dispositivi ora sono una domanda per te, invece di vincere quelli del telefono.',
+          },
+        ],
+      },
+      {
+        heading: { en: 'Back from the other device', it: 'Il rientro' },
+        bullets: [
+          {
+            en: 'On Oggi, a card says what arrived from the other device: "From the phone, yesterday at 21:47: 14 attendances in BJJ Gi, 2 payments (€120.00), 1 new athlete". It counts what is still there: an attendance marked and then removed does not show.',
+            it: "Su Oggi, una scheda dice cosa è arrivato dall'altro dispositivo: «Dal telefono, ieri alle 21:47: 14 presenze in BJJ Gi, 2 pagamenti (120,00 €), 1 nuovo atleta». Conta quello che c'è ancora: una presenza segnata e poi tolta non compare.",
+          },
+          {
+            en: 'It stays until you close it or leave Oggi, and two arrivals before you see it add up.',
+            it: 'Resta finché la chiudi o lasci Oggi, e due arrivi prima che tu la veda si sommano.',
+          },
+        ],
+      },
+      {
+        heading: { en: 'The phone at the mat', it: 'Il telefono al tatami' },
+        bullets: [
+          {
+            en: 'When class is on, the phone opens on the check-in: from fifteen minutes before to half an hour after it ends. Otherwise on Oggi, as before. Each is one tap from the other.',
+            it: "All'ora della lezione il telefono si apre sul check-in: dal quarto d'ora prima alla mezz'ora dopo la fine. Altrimenti su Oggi, come prima. Uno è sempre a un tocco dall'altro.",
+          },
+          {
+            en: 'The regulars come first, those who usually come to that class, the most faithful on top; then everyone else.',
+            it: 'In testa gli «Abituali», chi viene di solito a quella lezione, i più assidui per primi; poi tutti gli altri.',
+          },
+          {
+            en: 'A tap marks, with a short buzz; a second tap unmarks. Rows never move while you mark. At the top: "14 on the mat".',
+            it: 'Un tocco segna, con una piccola vibrazione; un secondo tocco toglie. Le righe non si spostano mai mentre segni. In alto: «14 sul tatami».',
+          },
+          {
+            en: 'The sync panel on the phone is now centred and, when there is something to confirm, says only what happens.',
+            it: "Il pannello della sincronizzazione sul telefono ora è centrato e, quando c'è da confermare, dice solo cosa succede.",
+          },
+        ],
+      },
+      {
+        heading: { en: 'Google Drive', it: 'Google Drive' },
+        bullets: [
+          {
+            en: 'The folder on Drive keeps the last ten versions and one a day for two weeks, instead of all of them: every version is the whole gym. The phone does the clean-up; the PC will follow.',
+            it: 'La cartella su Drive tiene le ultime dieci versioni e una al giorno per due settimane, invece di tutte: ogni versione è la palestra intera. La pulizia la fa il telefono; il PC arriverà dopo.',
+          },
+        ],
+      },
+      {
+        heading: { en: 'The phone app', it: "L'app per il telefono" },
+        bullets: [
+          {
+            en: 'Every Budojo version has the phone app attached, next to the Windows installer. It installs over the one you have: do not uninstall it, you would lose the changes not sent yet.',
+            it: "Ogni versione di Budojo ha l'app per il telefono allegata, accanto all'installer per Windows. Si installa sopra quella che hai: non disinstallarla, perderesti le modifiche non ancora inviate.",
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.77.0',
     date: '2026-10-03',
     headline: {
