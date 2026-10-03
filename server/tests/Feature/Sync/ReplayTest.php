@@ -664,6 +664,38 @@ describe('a lesson’s topics, tagged on two devices (#2102)', function (): void
             ->and(($this->topicsHere)())->toBe([$this->sweep]);
     });
 
+    it('finds the lesson by its class and day when it has another id here', function (): void {
+        $giulia = replayAthlete($this, 'Giulia');
+        $entries = onThePhone(function (): void {
+            $this->actingAs($this->owner)->postJson('/api/v1/attendance', ['date' => '2026-10-01', 'athlete_ids' => [$this->luca], 'academy_class_id' => $this->class->id])->assertSuccessful();
+            ($this->tag)([$this->sweep]);
+        });
+        // The PC made the week before's lesson first: Thursday's takes another id here.
+        $this->actingAs($this->owner)->putJson('/api/v1/lessons/topics', ['academy_class_id' => $this->class->id, 'held_on' => '2026-09-24', 'topic_ids' => [$this->guard]])->assertOk();
+        $this->actingAs($this->owner)->postJson('/api/v1/attendance', ['date' => '2026-10-01', 'athlete_ids' => [$giulia], 'academy_class_id' => $this->class->id])->assertSuccessful();
+        expect(DB::table('lessons')->where('held_on', 'like', '2026-10-01%')->value('id'))->not->toBe(end($entries)['created']['lessons'][0] ?? null);
+
+        expect(array_values(replayOnThePc($entries)))->not->toContain('conflict');
+        $thursday = DB::table('lessons')->where('held_on', 'like', '2026-10-01%')->value('id');
+        expect(DB::table('lesson_topic')->where('lesson_id', $thursday)->pluck('syllabus_topic_id')->map(fn ($id) => (int) $id)->all())->toBe([$this->sweep]);
+    });
+
+    it('stays a conflict when the entry is replayed again: a lesson each device made keeps its recorded set', function (): void {
+        $entries = onThePhone(fn () => ($this->tag)([$this->sweep]));
+        expect(end($entries)['before'])->not->toBeNull();
+        ($this->tag)([$this->armbar]);
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'conflict']);
+
+        // A second rebase: the entry kept again, replayed on a database that has not dealt with it.
+        $kept = RebasePending::entriesOf('phone9c1e');
+        DB::table('sync_entries')->where('id', $entries[0]['id'])->delete();
+        DB::table('sync_conflicts')->where('entry_id', $entries[0]['id'])->delete();
+        DB::table('sync_journal')->where('id', $entries[0]['id'])->delete();
+
+        expect(replayOnThePc($kept))->toBe([$entries[0]['id'] => 'conflict'])
+            ->and(($this->topicsHere)())->toBe([$this->armbar]);
+    });
+
     it('counts only the topics still in the programme here: one removed on the PC is no conflict', function (): void {
         ($this->tag)([$this->guard, $this->armbar]);
         $entries = onThePhone(fn () => ($this->tag)([$this->guard, $this->sweep]));
