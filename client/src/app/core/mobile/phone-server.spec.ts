@@ -76,6 +76,40 @@ describe('the phone server (#2034)', () => {
     expect(window.__BUDOJO_MOBILE__?.apiBase).toBe('http://127.0.0.1:50001');
   });
 
+  it('holds requests until the session is open again on the swapped database, but not the session itself (#2046)', async () => {
+    const plugin = {
+      restart: vi.fn(async () => ({ port: 50001, shellSecret: 'same-launch' })),
+    } as unknown as PhpServerPlugin;
+    window.__BUDOJO_MOBILE__ = { apiBase: 'http://127.0.0.1:41234', shellSecret: 'same-launch' };
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(withInterceptors([phoneServerInterceptor])),
+        provideHttpClientTesting(),
+      ],
+    });
+    const http = TestBed.inject(HttpClient);
+    const httpMock = TestBed.inject(HttpTestingController);
+    let sessionOpened: () => void = () => undefined;
+
+    const restarting = restartPhoneServer(plugin, async () => {
+      const session = firstValueFrom(http.post('http://127.0.0.1:41234/api/v1/device/session', {}));
+      await new Promise<void>((resolve) => (sessionOpened = resolve));
+      await session;
+    });
+    const read = firstValueFrom(http.get('http://127.0.0.1:41234/api/v1/athletes'));
+    await new Promise((resolve) => setTimeout(resolve));
+
+    // The session goes at once; the read waits for it.
+    httpMock.expectOne('http://127.0.0.1:50001/api/v1/device/session').flush({ token: 't' });
+    httpMock.expectNone('http://127.0.0.1:50001/api/v1/athletes');
+    sessionOpened();
+    await restarting;
+    await new Promise((resolve) => setTimeout(resolve));
+    httpMock.expectOne('http://127.0.0.1:50001/api/v1/athletes').flush({ data: [] });
+
+    await expect(read).resolves.toEqual({ data: [] });
+  });
+
   it('shows that it is starting while the server boots', async () => {
     let release: () => void = () => undefined;
     const plugin = {

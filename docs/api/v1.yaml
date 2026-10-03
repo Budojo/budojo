@@ -7356,8 +7356,8 @@ paths:
       operationId: syncStage
       summary: Stage another device's database, for the shell to swap in
       description: |
-        Another device's database (#2030), for a fast-forward or after a
-        rebase. **Nothing is staged until the file passes every check**:
+        Another device's database (#2030), for a fast-forward or a rebase.
+        **Nothing is staged until the file passes every check**:
         - a SQLite file;
         - undamaged (`PRAGMA quick_check`);
         - **Budojo's history:** it has run Budojo's own migrations, and only
@@ -7369,8 +7369,19 @@ paths:
         written beside the live database (`<database>.staged`), replacing one
         never swapped in. **The shell swaps it in at its next start**, then
         runs `budojo:sync-reconcile` (cache, files no row names), after the
-        replay when the sync is a rebase.
+        replay when the sync is a rebase. Every stage clears a rebase set
+        aside before, so a fast-forward never replays an older one.
       tags: [sync]
+      parameters:
+        - name: rebase
+          in: query
+          required: false
+          description: |
+            `1` for a rebase (#2031): this device's kept journal is set aside
+            first, beside the live database as `<database>.rebase`, and the
+            reconcile replays it on the database swapped in, before it sweeps
+            anything (`docs/sync/protocol.md` § Rebase).
+          schema: { type: integer, enum: [0, 1] }
       requestBody:
         required: true
         content:

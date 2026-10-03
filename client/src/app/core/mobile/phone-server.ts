@@ -26,13 +26,19 @@ export interface PhpServerPlugin {
   /** Stops and starts it, so a database just staged is swapped in now (#2079). */
   restart(): Promise<PhpServerStart>;
   /**
-   * Takes the academy's two app keys from the Google account (#2033), for the
-   * server's next start. Whether they differed from the phone's own.
+   * Takes the academy's keys from the Google account (#2033), for the
+   * server's next start: the two app keys, and with the sync key and the
+   * folder id the phone joins the academy's sync and makes its device id, once
+   * (#2046). Whether anything changed.
    */
   adoptKeys(keys: {
     APP_KEY: string;
     DOCUMENT_ENCRYPTION_KEY: string;
+    syncKey?: string;
+    folder?: string;
   }): Promise<{ changed: boolean }>;
+  /** The phone's place in the academy's sync; empty until it joined (#2046). */
+  syncIdentity(): Promise<{ device?: string; folder?: string; syncKey?: string }>;
 }
 
 /** The plugin when the page runs inside the Android app; null anywhere else. */
@@ -82,6 +88,9 @@ export async function bootPhoneServer(
 /** The server's address, whichever port a request was built with. */
 const LOCAL_SERVER = /^http:\/\/127\.0\.0\.1:\d+/;
 
+/** The shell's own requests, which a restart's `after` is made of: never held. */
+const SHELL_ONLY = /\/api\/v1\/device\//;
+
 /** Requests that change nothing, so sending one twice is harmless. */
 const READS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
@@ -101,14 +110,31 @@ function ensureRunning(plugin: PhpServerPlugin): void {
 /**
  * Restarts the server so that what the page just staged is swapped in (#2079),
  * holding every request meanwhile, as a return from the background does.
+ *
+ * With `after`, the requests stay held until it is done too: the sync opens the
+ * owner's session again on the database it swapped in (#2046), and a request
+ * let go before that would carry a token the new database never had. The
+ * shell's own requests (`/device/*`) are never held: `after` is made of them.
  */
-export async function restartPhoneServer(plugin: PhpServerPlugin): Promise<void> {
-  const ready = plugin.restart().then(publish);
-  returning = ready;
+export async function restartPhoneServer(
+  plugin: PhpServerPlugin,
+  after: () => Promise<void> = async () => undefined,
+): Promise<void> {
+  const ready = plugin
+    .restart()
+    .then(publish)
+    .then(() => after());
+  // The held requests go once it settles, whichever way: a failure is the
+  // caller's to report, not every request's.
+  const settled = ready.then(
+    () => undefined,
+    () => undefined,
+  );
+  returning = settled;
   try {
     await ready;
   } finally {
-    if (returning === ready) {
+    if (returning === settled) {
       returning = null;
     }
   }
@@ -150,7 +176,8 @@ export const phoneServerInterceptor: HttpInterceptorFn = (req, next) => {
     const apiBase = window.__BUDOJO_MOBILE__?.apiBase ?? '';
     return next(req.clone({ url: req.url.replace(LOCAL_SERVER, apiBase) }));
   };
-  const sent = returning === null ? send() : from(returning).pipe(switchMap(send));
+  const sent =
+    returning === null || SHELL_ONLY.test(req.url) ? send() : from(returning).pipe(switchMap(send));
   return sent.pipe(
     catchError((error: unknown) => {
       const plugin = phpServerPlugin();

@@ -50,6 +50,17 @@ export function buffer(bytes: Uint8Array): Uint8Array<ArrayBuffer> {
   return new Uint8Array(bytes);
 }
 
+/**
+ * Raw bytes as a request body. A `File`, because on the phone Capacitor's
+ * native HTTP sends a File's bytes as they are, and turns any other binary
+ * body into something else: a `Uint8Array` goes through a `TextDecoder`, an
+ * `ArrayBuffer` through JSON (`native-bridge.js`, `convertBody`). Reads are
+ * safe: Capacitor proxies a GET through the WebView itself.
+ */
+export function binaryBody(bytes: Uint8Array): File {
+  return new File([buffer(bytes)], 'body', { type: 'application/octet-stream' });
+}
+
 export async function sha256Hex(bytes: Uint8Array): Promise<string> {
   return toHex(new Uint8Array(await crypto.subtle.digest('SHA-256', buffer(bytes))));
 }

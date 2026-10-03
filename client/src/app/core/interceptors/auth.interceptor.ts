@@ -1,7 +1,13 @@
-import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
+import {
+  HttpErrorResponse,
+  HttpEvent,
+  HttpHandlerFn,
+  HttpInterceptorFn,
+  HttpRequest,
+} from '@angular/common/http';
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { catchError, throwError } from 'rxjs';
+import { catchError, Observable, throwError } from 'rxjs';
 import { AuthService } from '../services/auth.service';
 
 /**
@@ -23,6 +29,12 @@ import { AuthService } from '../services/auth.service';
  *   already invalidated this session's row. Without this, the SPA would
  *   sit in a broken authenticated shell rendering 401-failing requests
  *   until a feature-specific error happened to surface the problem.
+ *
+ *   **Unless the session changed meanwhile** (#2046): the sync swaps another
+ *   device's database in, which holds none of this device's sessions, and
+ *   opens the owner's session again on it. A request sent with the token from
+ *   before is sent once more with the new one, rather than signing out a
+ *   session that is standing.
  *
  * Other 4xx/5xx errors propagate untouched — feature-level error handlers
  * are responsible for them.
@@ -51,6 +63,8 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
           // definition (it's their own data). Same `navigateByUrl` shape as
           // the 401-logout branch so the redirect doesn't double-await.
           void router.navigateByUrl('/dashboard/me/profile');
+        } else if (err.status === 401 && token !== null && replaced(auth.getToken(), token)) {
+          return resend(req, next, auth.getToken() as string);
         } else if (err.status === 401 && token !== null) {
           // The token was rejected by the server — most commonly because
           // it was revoked from another tab/device after a password
@@ -69,3 +83,20 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     }),
   );
 };
+
+/** A token stored since this request left: the session was opened again, not revoked. */
+function replaced(current: string | null, sent: string): boolean {
+  return current !== null && current !== sent;
+}
+
+/**
+ * Once, with the current token. Its answer goes back as it is: a session
+ * revoked after all is caught by the next request, which carries this token.
+ */
+function resend(
+  req: HttpRequest<unknown>,
+  next: HttpHandlerFn,
+  token: string,
+): Observable<HttpEvent<unknown>> {
+  return next(req.clone({ setHeaders: { Authorization: `Bearer ${token}` } }));
+}

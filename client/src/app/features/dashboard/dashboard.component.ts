@@ -34,6 +34,8 @@ import {
 import { UserAvatarComponent } from '../../shared/components/user-avatar/user-avatar.component';
 import { SearchPaletteComponent } from '../search/search-palette.component';
 import { NotificationBellComponent } from '../notifications/notification-bell.component';
+import { SyncPillComponent } from '../../shared/components/sync-pill/sync-pill.component';
+import { SyncService } from '../../core/sync/sync.service';
 import { VERSION } from '../../../environments/version';
 
 /**
@@ -61,6 +63,7 @@ import { VERSION } from '../../../environments/version';
     UserAvatarComponent,
     SearchPaletteComponent,
     NotificationBellComponent,
+    SyncPillComponent,
     TranslatePipe,
   ],
   templateUrl: './dashboard.component.html',
@@ -75,6 +78,7 @@ export class DashboardComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly webPushHandler = inject(WebPushHandlerService);
   private readonly inbox = inject(NotificationInboxService);
+  private readonly sync = inject(SyncService);
 
   /**
    * The cached user — drives the topbar avatar chip. Hydrated by
@@ -96,6 +100,12 @@ export class DashboardComponent implements OnInit {
     // Wire the Web Push event streams (#702). Only authenticated users
     // reach the dashboard shell, so this is the right scope.
     this.webPushHandler.initialize(this.destroyRef);
+
+    // The sync between the owner's devices (#2046): on a device that has
+    // one, from the moment the owner is in, until they sign out. A no-op
+    // anywhere else.
+    this.sync.start();
+    this.destroyRef.onDestroy(() => this.sync.stop());
   }
 
   /**

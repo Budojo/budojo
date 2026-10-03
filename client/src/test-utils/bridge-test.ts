@@ -28,6 +28,7 @@ type Bridge = NonNullable<Window['__BUDOJO__']>;
 interface BridgeOverrides {
   apiBase?: Bridge['apiBase'];
   platform?: Bridge['platform'];
+  shellSecret?: Bridge['shellSecret'];
   version?: Bridge['version'];
   onNavigate?: Bridge['onNavigate'];
   token?: Partial<Bridge['token']>;
@@ -37,12 +38,14 @@ interface BridgeOverrides {
   keys?: Partial<Bridge['keys']>;
   update?: Partial<Bridge['update']>;
   theme?: Partial<Bridge['theme']>;
+  sync?: Partial<Bridge['sync']>;
 }
 
 export function stubBridge(overrides: BridgeOverrides = {}): Bridge {
   const base: Bridge = {
     apiBase: '',
     platform: 'win32',
+    shellSecret: '',
     version: async () => '0.0.0',
     onNavigate: () => () => undefined,
     token: { get: () => null, set: () => undefined, clear: () => undefined },
@@ -80,6 +83,11 @@ export function stubBridge(overrides: BridgeOverrides = {}): Bridge {
     theme: {
       apply: async () => ({ ok: true }),
     },
+    sync: {
+      identity: async () => null,
+      driveFetch: async () => ({ status: 503, headers: {}, body: new Uint8Array() }),
+      swapIn: async () => undefined,
+    },
   };
 
   return {
@@ -92,5 +100,6 @@ export function stubBridge(overrides: BridgeOverrides = {}): Bridge {
     keys: { ...base.keys, ...overrides.keys },
     update: { ...base.update, ...overrides.update },
     theme: { ...base.theme, ...overrides.theme },
+    sync: { ...base.sync, ...overrides.sync },
   };
 }

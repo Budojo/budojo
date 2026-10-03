@@ -73,6 +73,35 @@ export function assertLayoutPath(path: string): void {
 }
 
 /**
+ * A remote that starts afresh when the sync folder changes: the owner joined
+ * another Google account's keys without the page loading again (the phone's
+ * door, the PC's Drive link). The folder ids a Drive remote looked up belong
+ * to the account it found them in, and would send the next round to folders
+ * the new token cannot reach (#2106).
+ */
+export function followingFolder(make: () => SyncRemote): {
+  remote: SyncRemote;
+  follow(folder: string | null): void;
+} {
+  let current = make();
+  let folder: string | null | undefined;
+  return {
+    follow: (next) => {
+      if (folder !== undefined && next !== folder) {
+        current = make();
+      }
+      folder = next;
+    },
+    remote: {
+      list: (dir) => current.list(dir),
+      read: (path) => current.read(path),
+      write: (path, bytes) => current.write(path, bytes),
+      remove: (path) => current.remove(path),
+    },
+  };
+}
+
+/**
  * The tests' remote: a map, with copies on the way in and out, as a real store
  * would. Its clock is a counter unless a test hands it one.
  */

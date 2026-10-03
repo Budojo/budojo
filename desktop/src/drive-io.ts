@@ -7,6 +7,7 @@ import { Readable } from 'node:stream';
 
 import { buildAuthorizeUrl, createPkcePair, DRIVE_SCOPE, needsRefresh, parseCallbackUrl } from './drive-auth.js';
 import type { RemoteArchive } from './drive-sync.js';
+import { ANSWER_HEADERS, forwardedHeaders, type DriveAnswer, type DriveRequest } from './sync-bridge.js';
 
 /**
  * The I/O half of the Drive backup sync (#1301). Sockets, HTTP and nothing
@@ -471,3 +472,25 @@ export async function createAppDataFile(tokens: DriveTokens, name: string, text:
 }
 
 export { DRIVE_SCOPE };
+
+/**
+ * One call to Drive's API for the page's sync engine (#2032), with this
+ * process's token on it. The request was checked to go to Drive's files API
+ * (`sync-bridge.ts`); the answer carries the headers the engine reads.
+ */
+export async function fetchDrive(tokens: DriveTokens, request: DriveRequest): Promise<DriveAnswer> {
+  const response = await fetch(request.url, {
+    method: request.method,
+    headers: { ...forwardedHeaders(request.headers), ...auth(tokens) },
+    ...(request.body === undefined ? {} : { body: request.body }),
+  });
+  const headers: Record<string, string> = {};
+  for (const name of ANSWER_HEADERS) {
+    const value = response.headers.get(name);
+    if (value !== null) {
+      headers[name] = value;
+    }
+  }
+
+  return { status: response.status, headers, body: new Uint8Array(await response.arrayBuffer()) };
+}

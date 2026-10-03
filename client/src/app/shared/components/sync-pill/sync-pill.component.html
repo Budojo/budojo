@@ -1,0 +1,95 @@
+@if (state().kind !== 'off') {
+  <button
+    #pillButton
+    type="button"
+    class="sync-pill"
+    [class.sync-pill--attention]="attention()"
+    [attr.aria-label]="sentence()"
+    aria-haspopup="dialog"
+    (click)="detail.toggle($event)"
+    data-cy="sync-pill"
+  >
+    <i class="pi {{ icon() }}" aria-hidden="true"></i>
+    @if (short(); as text) {
+      <span class="sync-pill__label" aria-hidden="true">{{ text }}</span>
+    }
+  </button>
+
+  <!-- The detail takes the focus, and gives it back to the pill when it closes. -->
+  <p-popover #detail (onHide)="returnFocus(pillButton); confirming.set(null)">
+    <div class="sync-detail" data-cy="sync-detail">
+      <p class="sync-detail__title">{{ sentence() }}</p>
+      @if (hint(); as text) {
+        <p class="sync-detail__hint">{{ text }}</p>
+      }
+      @if (state().kind === 'ask') {
+        <!--
+          Never merged (PRD § 2): one academy or the other. The owner picks,
+          reads what it replaces, and confirms.
+        -->
+        @if (confirming(); as pick) {
+          <p
+            #consequence
+            id="sync-ask-consequence"
+            class="sync-detail__consequence"
+            tabindex="-1"
+            data-cy="sync-ask-consequence"
+          >
+            {{
+              (pick.choice === 'folder'
+                ? 'sync.ask.consequenceFolder'
+                : 'sync.ask.consequenceDevice'
+              ) | translate
+            }}
+          </p>
+          <!-- A native button: «Conferma» is described by what it replaces. -->
+          <button
+            pButton
+            type="button"
+            [fluid]="true"
+            [loading]="busy()"
+            [disabled]="busy()"
+            aria-describedby="sync-ask-consequence"
+            (click)="resolve(pick)"
+            data-cy="sync-ask-confirm"
+          >
+            <span pButtonLabel>{{ 'sync.ask.confirm' | translate }}</span>
+          </button>
+          <p-button
+            [label]="'sync.ask.cancel' | translate"
+            [text]="true"
+            [fluid]="true"
+            [disabled]="busy()"
+            (onClick)="confirming.set(null)"
+            data-cy="sync-ask-cancel"
+          />
+        } @else {
+          <p-button
+            [label]="useFolderKey() | translate"
+            [autofocus]="true"
+            [fluid]="true"
+            (onClick)="pick('folder')"
+            data-cy="sync-ask-folder"
+          />
+          <p-button
+            [label]="'sync.ask.keepHere' | translate"
+            [outlined]="true"
+            [fluid]="true"
+            (onClick)="pick('device')"
+            data-cy="sync-ask-device"
+          />
+        }
+      } @else {
+        <p-button
+          [label]="(state().kind === 'reconnect' ? 'sync.reconnect' : 'sync.now') | translate"
+          [icon]="state().kind === 'reconnect' ? 'pi pi-link' : 'pi pi-sync'"
+          [loading]="busy()"
+          [autofocus]="true"
+          [fluid]="true"
+          (onClick)="act()"
+          data-cy="sync-detail-action"
+        />
+      }
+    </div>
+  </p-popover>
+}
