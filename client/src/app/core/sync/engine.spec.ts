@@ -577,6 +577,70 @@ describe('the owner’s choice when a round asks (#2033, PRD § 6.5)', () => {
   });
 });
 
+describe('the versions the folder keeps (#2030)', () => {
+  const versionsOf = (remote: MemoryRemote) =>
+    [...remote.files.keys()].filter((path) => path.startsWith('versions/')).length;
+
+  it('keeps the newest ten after each push: every version is the whole database', async () => {
+    const { remote, key } = await folder();
+    const pc = new Device('pc4f2a', 'Eagles BJJ');
+    await sync(pc, remote, key);
+    for (let night = 1; night <= 12; night++) {
+      pc.write(`Luca, night ${night}`);
+      await sync(pc, remote, key);
+    }
+
+    expect(versionsOf(remote)).toBe(10);
+    expect(remote.files.has('versions/000013-pc4f2a.000012-pc4f2a.bjs')).toBe(true);
+    expect(remote.files.has('versions/000001-pc4f2a.root.bjs')).toBe(false);
+  });
+
+  it('prunes only after a push of its own: a pull deletes nothing', async () => {
+    const { remote, key, pc, phone } = await twoDevices();
+    // The PC's pushes keep every version, as a PC of before #2030 does.
+    const keepsAll: SyncRemote = {
+      ...remote,
+      list: (path) => remote.list(path),
+      read: (path) => remote.read(path),
+      write: (path, bytes) => remote.write(path, bytes),
+      remove: async (path) => {
+        if (!path.startsWith('versions/')) await remote.remove(path);
+      },
+    };
+    for (let night = 1; night <= 12; night++) {
+      pc.write(`Luca, night ${night}`);
+      await sync(pc, keepsAll, key);
+    }
+    expect(versionsOf(remote)).toBe(13);
+
+    expect(await outcome(phone, remote, key)).toMatchObject({ kind: 'pulled' });
+    expect(versionsOf(remote)).toBe(13);
+  });
+
+  it('never fails a round on a version it could not delete: the next push tries again', async () => {
+    const { remote, key } = await folder();
+    const pc = new Device('pc4f2a', 'Eagles BJJ');
+    const stubborn: SyncRemote = {
+      list: (path) => remote.list(path),
+      read: (path) => remote.read(path),
+      write: (path, bytes) => remote.write(path, bytes),
+      remove: async (path) => {
+        if (path.startsWith('versions/')) {
+          throw new Error('Drive said no');
+        }
+        await remote.remove(path);
+      },
+    };
+    await sync(pc, stubborn, key);
+    for (let night = 1; night <= 11; night++) {
+      pc.write(`Luca, night ${night}`);
+      expect(await outcome(pc, stubborn, key)).toMatchObject({ kind: 'pushed' });
+    }
+
+    expect(versionsOf(remote)).toBe(12);
+  });
+});
+
 describe('a refused device (#2106)', () => {
   it('never holds back clearing the journal: a third device’s report speaks for nobody', async () => {
     const { remote, key, pc, phone } = await twoDevices();

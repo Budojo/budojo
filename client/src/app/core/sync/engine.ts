@@ -13,6 +13,7 @@ import { syncingDevices } from './folder';
 import { JournalEntry } from './journal';
 import { devicePath, ListedVersion, sameVersion, VersionRef, versionPath } from './layout';
 import { SyncRemote } from './remote';
+import { versionsToPrune } from './retention';
 import { packVersion, PROTOCOL, unpackVersion } from './version';
 
 /**
@@ -327,6 +328,9 @@ async function finishRound(
   // Its report, after every round (protocol § `devices/`).
   await writeReport(context, ledger);
   await clearConfirmed(context, ledger, await readReports(context));
+  if (outcome.kind === 'pushed' || (outcome.kind === 'rebased' && outcome.pushed !== null)) {
+    await pruneVersions(context);
+  }
   // The files the database names and this device lacks, once the database is
   // final: after a fast-forward's swap, and at every later round for those
   // the folder did not have yet (`files.ts`).
@@ -335,6 +339,23 @@ async function finishRound(
       ? 0
       : (await pullFiles(context.server.files, context.remote, context.key)).missing.length;
   return { outcome, missingFiles };
+}
+
+/**
+ * The folder's versions down to what it keeps (`retention.ts`, #2030), by
+ * the device that just pushed: the other device's round is never slowed
+ * by it. **Best effort:** a version it could not delete is tried again at
+ * the next push, and the round, which already landed, still counts.
+ */
+async function pruneVersions(context: SyncContext): Promise<void> {
+  try {
+    const versions = versionsIn((await context.remote.list('versions')).files);
+    for (const version of versionsToPrune(versions)) {
+      await context.remote.remove(versionPath(version));
+    }
+  } catch {
+    // Drive said no, or no network: the folder keeps a few more until the next push.
+  }
 }
 
 /**

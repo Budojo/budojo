@@ -164,18 +164,28 @@ export function decide(local: LocalState, versions: readonly SeenVersion[], now:
 
 /**
  * Whether `head` comes from another first version than `base`: two academies
- * in one folder. Told only when the listing still holds both lines down to
- * their first versions, which is when such a race happens; a line whose
- * history the retention pruned is never mistaken for another academy.
+ * in one folder.
+ * - **Both lines listed down to their first versions,** as when both devices
+ *   publish at once: told by comparing them.
+ * - **The base's line pruned** (`retention.ts`): a first version above the
+ *   base cannot be the base's own, since a line's first version is its
+ *   lowest. That is the academy the owner chose on the other device, which
+ *   publishes it above every version there (§ 6.5).
+ *
+ * A head whose line is pruned below its first version is never taken for
+ * another academy: nothing tells it apart.
  */
 function onAnotherLine(
   base: VersionRef,
   head: VersionRef,
   versions: readonly SeenVersion[],
 ): boolean {
-  const baseRoot = rootOf(base, versions);
   const headRoot = rootOf(head, versions);
-  return baseRoot !== null && headRoot !== null && !sameVersion(baseRoot, headRoot);
+  if (headRoot === null) {
+    return false;
+  }
+  const baseRoot = rootOf(base, versions);
+  return baseRoot === null ? headRoot.seq > base.seq : !sameVersion(baseRoot, headRoot);
 }
 
 /** The first version of the line `version` is on, followed through the listing; null when a link is not listed. */

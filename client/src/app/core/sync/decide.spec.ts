@@ -210,6 +210,18 @@ const rows: {
     expected: { kind: 'fast-forward', to: ref(2, PHONE) },
   },
   {
+    name: 'its own line pruned, and a first version above its base: the owner chose another academy there, so it asks (#2030)',
+    local: local(ref(30)),
+    folder: [v(44), v(45), v(46, PHONE, null)],
+    expected: { kind: 'ask', latest: ref(46, PHONE) },
+  },
+  {
+    name: 'its own line pruned, writes to carry, and another academy’s first version on top: it asks, never replays into it',
+    local: local(ref(30), { unpushed: true }),
+    folder: [v(44), v(45), v(46, PHONE, null), v(47, PHONE, ref(46, PHONE))],
+    expected: { kind: 'ask', latest: ref(47, PHONE) },
+  },
+  {
     name: 'back after weeks, all its writes held by every device: a fast-forward, nobody is asked',
     local: local(ref(30)),
     folder: [v(44), v(45)],

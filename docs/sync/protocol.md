@@ -72,6 +72,15 @@ u32 big-endian: manifest length | manifest, UTF-8 JSON | u32: journal length | j
 
 A reader checks every field it knows and ignores any it does not, so a later app can add one. **Changing what a field means is a new protocol number.** The manifest must name the version and the parent its path names. A writer checks the manifest and the journal with the readers' rules before it packs them.
 
+### What the folder keeps (#2030)
+
+Every version is the whole database, so the folder keeps them as the PC keeps its backups (#1228, #1330): **the newest ten, and the newest of each of the fourteen most recent days** that hold one, on Drive's clock (`retention.ts`). The rest is deleted.
+- **By the device that just pushed,** at the end of that round, from a fresh listing. A pull deletes nothing, so the other device's round is never slowed by it.
+- **Never the newest,** which the other device may be reading.
+- **Nothing while two academies' first versions are listed:** the owner has a question to answer, and the two lines are what tell them apart (§ Deciding). Once the owner chose, one is left.
+- **Best effort:** a version it could not delete is tried again at the next push; the round already landed, and still counts.
+- **A line's first version goes like any other.** A device whose own line is pruned still tells another academy, by a first version above its base (§ Deciding).
+
 ### The database side (#2030)
 
 The app packs and seals versions. The server only hands it the database and takes one back (owner-only, the `sync` capability):
@@ -96,7 +105,7 @@ Documents, athletes' photos, avatars and the academy's logo travel apart from th
 - **Push** (`client/src/app/core/sync/files.ts`): before a version goes up, the device seals and sends every content it holds that `files/` lacks. A content is never sent twice: its name is its bytes.
 - **Pull:** the device completes every content it lacks somewhere: from its own copy when it holds the content at another path (the same PDF for a second athlete), from the folder otherwise. One the folder does not have yet (the other device's push has not landed, or Drive's listing lags), one that does not open, or one whose bytes are not its name, is left for the next sync. Until then that document cannot be opened on this device.
 - **The pull runs once the database is final:** after a fast-forward's swap, after a rebase's replay, **never between the swap and the replay**, the reconcile's rule. Until the replay, a path may hold a file this device uploaded offline (its athlete 57's photo, where the swapped-in database has another athlete 57); writing there first would destroy the only copy before the replay gives it its own row.
-- **Not yet here:** deleting from `files/` what no kept version names, which belongs with the retention of versions.
+- **Not yet here:** deleting from `files/` what no kept version names. It takes reading every kept version's database; the versions themselves are pruned (§ What the folder keeps).
 
 ## A journal entry
 
@@ -222,7 +231,7 @@ There is no pairing code (#2033). **A device joins at its first «Accedi con Goo
 | No base, empty folder | nothing, or push version 1 if the device holds an academy and made the keys (a device that joined waits, § Joining) |
 | No base, the folder has versions | fast-forward; **ask the owner** if the device holds an academy of its own |
 | The folder is empty | push base + 1 on top of the base: nothing there to lose |
-| The base and the latest come from two different first versions: both devices published their own academy at once | **ask the owner** (the device whose line is the latest does nothing). Told only while the listing holds both lines down to their first versions |
+| The base and the latest come from two different first versions: both devices published their own academy at once, or the owner chose the other device's academy there | **ask the owner** (the device whose line is the latest does nothing). Told when the listing holds both lines down to their first versions, or, with the base's line pruned, when the latest's first version is above the base: a line's first version is its lowest |
 | The latest is behind the base | **ask the owner:** versions were deleted on Drive |
 | The latest is the base | nothing, or push base + 1 if there are unpushed writes |
 | The latest is newer, and the device has writes to carry (unpushed or unconfirmed) | **rebase**: pull it and replay into it every write it lacks, then push if any were |
