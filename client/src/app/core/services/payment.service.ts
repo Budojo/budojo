@@ -78,18 +78,18 @@ interface AthletePaymentListResponse {
   overdue_months?: string[];
 }
 
-/**
- * One calendar year of an athlete's ledger (#1654): the payments touching it,
- * and the months the server calls late by the arrears list's rule (#1760).
- * The browser never works "late" out itself — it cannot see a carnet, a free
- * tier or an inactive status, and it accused all three.
- */
 /** A payment the server returned, and whether this call created it (#2036). */
 export interface RecordedPayment {
   readonly payment: AthletePayment;
   readonly created: boolean;
 }
 
+/**
+ * One calendar year of an athlete's ledger (#1654): the payments touching it,
+ * and the months the server calls late by the arrears list's rule (#1760).
+ * The browser never works "late" out itself — it cannot see a carnet, a free
+ * tier or an inactive status, and it accused all three.
+ */
 export interface AthletePaymentYear {
   readonly payments: AthletePayment[];
   /** `YYYY-MM`, oldest first. */

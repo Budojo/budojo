@@ -1,6 +1,8 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DOCUMENT,
+  DestroyRef,
   computed,
   effect,
   inject,
@@ -97,6 +99,27 @@ export class PaySheetComponent {
       const athlete = this.athlete();
       const month = this.month();
       untracked(() => (athlete === null ? this.reset() : this.open(athlete, month)));
+    });
+
+    // While a payment is on its way the sheet stays. PrimeNG binds Escape and
+    // the mask once, when it opens, and never reads `closeOnEscape` or
+    // `dismissableMask` again (#2133 review), so both are stopped here, in the
+    // capture phase, before the dialog hears them. The ✕ hides on its own.
+    const document = inject(DOCUMENT);
+    const hold = (event: Event): void => {
+      if (!this.saving()) return;
+      const escape = event instanceof KeyboardEvent && event.key === 'Escape';
+      const mask =
+        event.type === 'mousedown' &&
+        event.target instanceof Element &&
+        event.target.querySelector(':scope > .pay-sheet-dialog') !== null;
+      if (escape || mask) event.stopPropagation();
+    };
+    document.addEventListener('keydown', hold, true);
+    document.addEventListener('mousedown', hold, true);
+    inject(DestroyRef).onDestroy(() => {
+      document.removeEventListener('keydown', hold, true);
+      document.removeEventListener('mousedown', hold, true);
     });
   }
 

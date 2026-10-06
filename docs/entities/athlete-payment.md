@@ -84,7 +84,7 @@ Four cases and no free text: the list stays short enough to pick from at the end
 ## Related endpoints
 
 - `GET /api/v1/athletes/{athlete}/payments?year=YYYY` — list payments for the year (default = current year), ordered by month asc
-- `POST /api/v1/athletes/{athlete}/payments` — record a payment (body: `{year, month, period_months?, paid_at?, payment_method?}`); returns 201 with the row (existing or new)
+- `POST /api/v1/athletes/{athlete}/payments` — record a payment (body: `{year, month, period_months?, paid_at?, payment_method?}`); returns the row: 201 when this call created it, 200 when it was already there (#2036)
 - `DELETE /api/v1/athletes/{athlete}/payments/{year}/{month}` — undo a paid month; 404 if no row exists, 204 on success
 - `GET /api/v1/stats/payments/export?season=YYYY` — the season's fees and carnets as a CSV for the accountant (#1762). A fee is dated by `paid_at` on the owner's day, so the file answers "what came in, and when" — not the months covered, which is the chart's question (see § Stats aggregation). The one CSV writer (`App\Support\Csv\CsvWriter`) and the format it keeps for an Italian Excel are described in `docs/api/v1.yaml` § `statsPaymentsExport`
 
