@@ -2210,6 +2210,7 @@ describe('DailyAttendanceComponent — the money at the mat (#2036)', () => {
             athlete: { id: 1, first_name: 'Anna', last_name: 'Rossi' },
             months_behind: 1,
             first_unpaid: '2026-08',
+            unpaid_months: ['2026-08'],
             owed_cents: 6000,
           },
         ],

@@ -8,6 +8,7 @@ import {
   RecordedPayment,
 } from '../../../../core/services/payment.service';
 import { StatsService } from '../../../../core/services/stats.service';
+import { MoneyRows, moneyRows } from './money-rows';
 import {
   PayChip,
   monthOf,
@@ -37,8 +38,8 @@ export class CheckInMoney {
   private readonly thisMonth = signal<string>(monthOf(new Date()));
 
   /**
-   * The months each athlete is behind, oldest first. The arrears list gives
-   * only the first; a sheet that opened replaces it with the whole list.
+   * The months each athlete is behind, oldest first, from the arrears list. A
+   * sheet that opened asks again for that athlete and replaces them.
    */
   private readonly behind = signal<ReadonlyMap<number, readonly string[]>>(new Map());
 
@@ -53,7 +54,7 @@ export class CheckInMoney {
     this.thisMonth.set(monthOf(new Date()));
     this.stats.paymentsArrears().subscribe({
       next: (rows) => {
-        this.behind.set(new Map(rows.map((row) => [row.athlete.id, [row.first_unpaid]])));
+        this.behind.set(new Map(rows.map((row) => [row.athlete.id, row.unpaid_months])));
         this.ready.set(true);
       },
       error: () => this.ready.set(true),
@@ -69,6 +70,16 @@ export class CheckInMoney {
       this.thisMonth(),
       this.paidHere().get(athlete.id) ?? new Set(),
     );
+  }
+
+  /**
+   * Who still has to pay among `athletes` (#2132), tonight's people first,
+   * or null before the arrears answered: «Soldi» lists whoever the chip
+   * would ask.
+   */
+  whoOwes(athletes: readonly Athlete[], presentToday: ReadonlySet<number>): MoneyRows | null {
+    if (!this.ready()) return null;
+    return moneyRows(athletes, this.behind(), this.thisMonth(), this.paidHere(), presentToday);
   }
 
   /** How many months one payment covers for this athlete (#1382). */

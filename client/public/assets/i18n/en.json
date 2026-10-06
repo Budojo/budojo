@@ -29,6 +29,7 @@
     "academy": "Academy",
     "athletes": "Athletes",
     "attendance": "Attendance",
+    "money": "Money",
     "activity": "Activity",
     "community": "Community",
     "myProfile": "My profile",
@@ -3670,6 +3671,22 @@
       "transfer": "Bank transfer",
       "pos": "Card",
       "other": "Other"
+    }
+  },
+  "money": {
+    "title": "Who still has to pay",
+    "tonight": "On the mat tonight",
+    "others": "Everyone else",
+    "also1": "also {{month}}",
+    "also2": "also {{first}} and {{second}}",
+    "alsoMany": "also {{first}} and {{count}} more months",
+    "rowAria": "{{name}}, {{months}}: record the payment",
+    "loading": "Loading who has to pay",
+    "error": "Couldn't load who has to pay",
+    "retry": "Try again",
+    "empty": {
+      "title": "Everyone is paid up",
+      "hint": "Nobody owes a month right now."
     }
   },
   "weekMessage": {

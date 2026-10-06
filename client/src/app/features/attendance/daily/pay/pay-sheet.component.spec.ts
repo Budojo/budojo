@@ -51,6 +51,7 @@ function setup() {
           athlete: { id: 7, first_name: 'Anna', last_name: 'Bianchi' },
           months_behind: 1,
           first_unpaid: '2026-08',
+          unpaid_months: ['2026-08'],
           owed_cents: 6000,
         },
       ],

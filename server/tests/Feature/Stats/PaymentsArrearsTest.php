@@ -78,6 +78,7 @@ it('counts the unpaid months from the academy\'s billing floor, never from 2019'
     expect($row)->not->toBeNull()
         ->and($row['months_behind'])->toBe(4)
         ->and($row['first_unpaid'])->toBe('2026-03')
+        ->and($row['unpaid_months'])->toBe(['2026-03', '2026-05', '2026-07', '2026-08'])
         ->and($row['owed_cents'])->toBe(22000)
         ->and($row['athlete']['first_name'])->toBe($marco->first_name)
         ->and($row['athlete'])->toHaveKey('belt');

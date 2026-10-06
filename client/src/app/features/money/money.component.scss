@@ -1,0 +1,125 @@
+// «Soldi» (#2132): one column of rows a thumb can hit, grouped by hairlines,
+// not cards. The page chrome comes from the shell (#261).
+.money {
+  max-width: var(--budojo-page-content-max);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+
+  &__group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  &__heading {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--p-text-muted-color);
+    margin: 0;
+  }
+
+  &__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+
+    > li + li {
+      border-top: 1px solid var(--p-content-border-color);
+    }
+  }
+
+  &__loading {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+}
+
+// The whole row is the button: 56px, the PRD's floor for a row on the mat.
+.money-row {
+  all: unset;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 3.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem;
+  border-radius: var(--p-border-radius-md);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--p-content-hover-background);
+  }
+
+  &:active {
+    background: color-mix(in srgb, var(--p-primary-color) 8%, transparent);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--p-primary-color);
+    outline-offset: 2px;
+  }
+
+  &__who {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__months {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    text-align: end;
+  }
+
+  &__lead {
+    font-weight: 600;
+    color: var(--budojo-warning-ink);
+  }
+
+  &__also {
+    font-size: 0.875rem;
+    color: var(--p-text-muted-color);
+  }
+
+  &__icon {
+    color: var(--p-text-muted-color);
+  }
+}
+
+.money-toast {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+
+  &__summary {
+    flex: 1;
+    font-weight: 500;
+  }
+
+  &__undo {
+    all: unset;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9375rem;
+    color: var(--p-primary-color);
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--p-border-radius-sm);
+
+    &:hover {
+      background: color-mix(in srgb, var(--p-primary-color) 8%, transparent);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--p-primary-color);
+      outline-offset: 2px;
+    }
+  }
+}
