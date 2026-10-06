@@ -358,8 +358,8 @@ async function finishRound(
  * the device that just pushed, with the bases every device reported: the
  * other device's round is never slowed by it. **Best effort:** a version it
  * could not delete is tried again at the next push, and the round, which
- * already landed, still counts. The PC's Drive bridge refuses every delete
- * (#2106) until it can verify one is a version's (#2120), so today the phone prunes.
+ * already landed, still counts. On the PC the main process forwards a delete
+ * only once it read the file to be a version in its sync folder (#2120).
  */
 async function pruneVersions(context: SyncContext, reports: DeviceReport[]): Promise<void> {
   try {

@@ -4,6 +4,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { provideRouter } from '@angular/router';
 import { provideI18nTesting } from '../../../../../test-utils/i18n-test';
 import type { ArrearsRow } from '../../../../core/services/stats.service';
+import { monthsCovered } from '../../../attendance/daily/pay/pay-chip';
 import { PaymentsArrearsComponent } from './payments-arrears.component';
 
 const URL = '/api/v1/stats/payments/arrears';
@@ -22,6 +23,7 @@ function row(id: number, months: number, since: string, owed: number): ArrearsRo
     },
     months_behind: months,
     first_unpaid: since,
+    unpaid_months: monthsCovered(since, months),
     owed_cents: owed,
   };
 }

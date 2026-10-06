@@ -9,7 +9,7 @@ import {
 } from './drive-state.js';
 import { mergeArchiveViews, planSync, REMOTE_RETENTION, type ArchiveView, type RemoteArchive } from './drive-sync.js';
 import { APPDATA_SCOPE, DRIVE_SCOPE } from './drive-auth.js';
-import type { DriveAnswer, DriveRequest } from './sync-bridge.js';
+import { checkDelete, deletedFileId, type DriveAnswer, type DriveItem, type DriveRequest } from './sync-bridge.js';
 import { holdsTheseSecrets, newAcademyKeys, parseAcademyKeys, type AcademyKeys } from './sync-keys.js';
 
 /**
@@ -46,6 +46,8 @@ export interface DriveSyncIO {
   ensureFresh: (tokens: DriveTokens) => Promise<DriveTokens>;
   /** One call to Drive's API, with these tokens, for the page's sync engine (#2032). */
   fetchDrive: (tokens: DriveTokens, request: DriveRequest) => Promise<DriveAnswer>;
+  /** A file's name, type and parents, to check a sync's delete (#2120); null when Drive has no such file. */
+  readItem: (tokens: DriveTokens, id: string) => Promise<DriveItem | null>;
   accountEmail: (tokens: DriveTokens) => Promise<string | null>;
   ensureFolder: (tokens: DriveTokens) => Promise<string>;
   listRemote: (tokens: DriveTokens, folderId: string) => Promise<RemoteArchive[]>;
@@ -77,6 +79,11 @@ export type LinkResult = { ok: true; account: string | null } | { ok: false; err
 export type PhoneResult =
   | { ok: true; keys: 'published' | 'already' }
   | { ok: false; error: string };
+
+/** An answer of the main process's own, with no body: Drive was not asked. */
+function answer(status: number): DriveAnswer {
+  return { status, headers: {}, body: new Uint8Array() };
+}
 
 /** Pulls the code off whatever was thrown, without assuming it is a DriveError. */
 function errorCode(error: unknown): string {
@@ -412,17 +419,67 @@ export class DriveSyncService {
    * failure is thrown, which it reads as no network.
    */
   async fetchForSync(request: DriveRequest): Promise<DriveAnswer> {
-    let tokens: DriveTokens;
+    if (request.method === 'DELETE') {
+      return this.deleteForSync(request);
+    }
+    const tokens = await this.tokensForSync();
+
+    return tokens === null ? answer(401) : this.io.fetchDrive(tokens, request);
+  }
+
+  /**
+   * A delete, which the sync sends to prune the folder's versions (#2120):
+   * forwarded only once the file is read to be a version in this PC's sync
+   * folder (`checkDelete`), and refused with a 403 otherwise. Drive not linked,
+   * or anything but one file by its id, is refused before the token is used.
+   * A file already gone (the other device pruned it first) answers 404, as
+   * Drive would.
+   */
+  private async deleteForSync(request: DriveRequest): Promise<DriveAnswer> {
+    const state = await this.io.readState();
+    const fileId = deletedFileId(request);
+    if (!state.linked || state.folderId === null || fileId === null) {
+      return this.refuseDelete(fileId);
+    }
+    const tokens = await this.tokensForSync();
+    if (tokens === null) {
+      return answer(401);
+    }
+    const chain: DriveItem[] = [];
+    let next = fileId;
+    for (;;) {
+      const item = await this.io.readItem(tokens, next);
+      if (item === null) {
+        return chain.length === 0 ? answer(404) : this.refuseDelete(fileId);
+      }
+      chain.push(item);
+      const check = checkDelete(chain, state.folderId);
+      if (check === true) {
+        return this.io.fetchDrive(tokens, request);
+      }
+      if (check === false) {
+        return this.refuseDelete(fileId);
+      }
+      next = check.read;
+    }
+  }
+
+  private refuseDelete(fileId: string | null): DriveAnswer {
+    this.io.log(`sync: refused to delete ${fileId ?? 'a request that names no file'}`);
+
+    return answer(403);
+  }
+
+  /** The tokens for the page's call, or null when Google no longer gives one: the page shows «Ricollega Google». */
+  private async tokensForSync(): Promise<DriveTokens | null> {
     try {
-      tokens = await this.authenticated();
+      return await this.authenticated();
     } catch (error) {
       if (errorCode(error) === 'invalid_grant') {
-        return { status: 401, headers: {}, body: new Uint8Array() };
+        return null;
       }
       throw error;
     }
-
-    return this.io.fetchDrive(tokens, request);
   }
 
   /** Reads the tokens and refreshes them if they are near expiry. */

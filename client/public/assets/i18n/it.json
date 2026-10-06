@@ -29,6 +29,7 @@
     "academy": "Accademia",
     "athletes": "Atleti",
     "attendance": "Presenze",
+    "money": "Soldi",
     "activity": "Attività",
     "community": "Community",
     "myProfile": "Il mio profilo",
@@ -2009,6 +2010,28 @@
       "register": {
         "regulars": "Abituali",
         "others": "Tutti gli altri"
+      },
+      "pay": {
+        "chip": {
+          "ask": "Da chiedere",
+          "dueAria": "Registra il pagamento di {{month}} per {{name}}",
+          "askAria": "Da chiedere: registra il pagamento di {{month}} per {{name}}",
+          "free": "Gratis",
+          "carnet": "Carnet · {{left}}",
+          "covered": "Pagato"
+        },
+        "sheet": {
+          "title": "Pagamento",
+          "months": "Mese da pagare",
+          "none": "Non deve niente: il pagamento è già registrato.",
+          "record": "Registra {{amount}} · {{method}}",
+          "error": "Pagamento non registrato. Riprova."
+        },
+        "toast": {
+          "recorded": "Pagamento di {{name}} registrato",
+          "already": "Il pagamento di {{name}} era già registrato",
+          "undoError": "Non sono riuscito ad annullare il pagamento."
+        }
       }
     },
     "summary": {
@@ -3648,6 +3671,22 @@
       "transfer": "Bonifico",
       "pos": "Carta",
       "other": "Altro"
+    }
+  },
+  "money": {
+    "title": "Chi deve ancora pagare",
+    "tonight": "Stasera sul tatami",
+    "others": "Gli altri",
+    "also1": "anche {{month}}",
+    "also2": "anche {{first}} e {{second}}",
+    "alsoMany": "anche {{first}} e altri {{count}} mesi",
+    "rowAria": "{{name}}, {{months}}: registra il pagamento",
+    "loading": "Carico chi deve pagare",
+    "error": "Non riesco a caricare chi deve pagare",
+    "retry": "Riprova",
+    "empty": {
+      "title": "Tutti in regola",
+      "hint": "Nessuno deve un mese, per ora."
     }
   },
   "weekMessage": {

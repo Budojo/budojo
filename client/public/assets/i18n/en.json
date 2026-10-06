@@ -29,6 +29,7 @@
     "academy": "Academy",
     "athletes": "Athletes",
     "attendance": "Attendance",
+    "money": "Money",
     "activity": "Activity",
     "community": "Community",
     "myProfile": "My profile",
@@ -2009,6 +2010,28 @@
       "register": {
         "regulars": "Regulars",
         "others": "Everyone else"
+      },
+      "pay": {
+        "chip": {
+          "ask": "Ask",
+          "dueAria": "Record {{name}}'s payment for {{month}}",
+          "askAria": "Ask: record {{name}}'s payment for {{month}}",
+          "free": "Free",
+          "carnet": "Carnet · {{left}}",
+          "covered": "Paid"
+        },
+        "sheet": {
+          "title": "Payment",
+          "months": "Month to pay",
+          "none": "Nothing owed: the payment is already recorded.",
+          "record": "Record {{amount}} · {{method}}",
+          "error": "The payment was not recorded. Try again."
+        },
+        "toast": {
+          "recorded": "{{name}}'s payment recorded",
+          "already": "{{name}}'s payment was already recorded",
+          "undoError": "Couldn't undo the payment."
+        }
       }
     },
     "summary": {
@@ -3648,6 +3671,22 @@
       "transfer": "Bank transfer",
       "pos": "Card",
       "other": "Other"
+    }
+  },
+  "money": {
+    "title": "Who still has to pay",
+    "tonight": "On the mat tonight",
+    "others": "Everyone else",
+    "also1": "also {{month}}",
+    "also2": "also {{first}} and {{second}}",
+    "alsoMany": "also {{first}} and {{count}} more months",
+    "rowAria": "{{name}}, {{months}}: record the payment",
+    "loading": "Loading who has to pay",
+    "error": "Couldn't load who has to pay",
+    "retry": "Try again",
+    "empty": {
+      "title": "Everyone is paid up",
+      "hint": "Nobody owes a month right now."
     }
   },
   "weekMessage": {

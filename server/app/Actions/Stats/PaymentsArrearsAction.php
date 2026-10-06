@@ -41,7 +41,7 @@ use Illuminate\Database\Eloquent\Collection;
 final class PaymentsArrearsAction
 {
     /**
-     * @return list<array{athlete: array<string, mixed>, months_behind: int, first_unpaid: string, owed_cents: int}>
+     * @return list<array{athlete: array<string, mixed>, months_behind: int, first_unpaid: string, unpaid_months: list<string>, owed_cents: int}>
      */
     public function execute(Academy $academy, CarbonInterface $today): array
     {
@@ -60,6 +60,9 @@ final class PaymentsArrearsAction
                 'athlete' => AthleteIdentity::of($athlete),
                 'months_behind' => \count($months),
                 'first_unpaid' => UnpaidMonths::format(min($months)),
+                // Each month by name, so the phone's «Soldi» can say «anche
+                // luglio e agosto» without asking for every athlete (#2132).
+                'unpaid_months' => array_map(UnpaidMonths::format(...), $months),
                 'owed_cents' => \count($months) * $fee,
             ];
         }

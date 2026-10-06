@@ -1,0 +1,98 @@
+// Above the register's stretched toggle (#2036). A month owed is its own
+// target, and a tap on it never marks the athlete; a quiet label lets the tap
+// through to the toggle under it, as the rest of the row does.
+:host {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  display: inline-flex;
+  pointer-events: none;
+}
+
+.pay-chip {
+  display: inline-flex;
+  align-items: center;
+
+  &__label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    height: 1.5rem;
+    padding: 0 0.5rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1;
+    white-space: nowrap;
+
+    i {
+      font-size: 0.75rem;
+    }
+  }
+
+  // Ink on the surface: the row's state, said and not shouted.
+  &--quiet &__label {
+    background: var(--p-content-hover-background);
+    color: var(--p-text-muted-color);
+  }
+
+  // A month owed. A button, 48px tall to the thumb (#1786), whose painted
+  // pill is the label inside it.
+  &--due {
+    appearance: none;
+    font: inherit;
+    margin: 0;
+    padding: 0;
+    min-height: 3rem;
+    background: none;
+    border: 0;
+    border-radius: 999px;
+    cursor: pointer;
+    pointer-events: auto;
+
+    .pay-chip__label {
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: center;
+      gap: 0;
+      height: auto;
+      min-height: 1.5rem;
+      // As wide as «Da chiedere», so the chip keeps its width when it shows.
+      min-width: 5.5rem;
+      padding: 0.25rem 0.5rem;
+      border-radius: 12px;
+      background: var(--budojo-warning-soft);
+      color: var(--budojo-warning-ink);
+    }
+
+    &:active .pay-chip__label {
+      filter: brightness(0.95);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--p-primary-color);
+      outline-offset: 2px;
+    }
+  }
+
+  &__month {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  // An eyebrow over the month (DESIGN_SYSTEM § casing): the ask, not a second chip.
+  &__ask {
+    font-size: 0.625rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  // Present and owing: the moment to ask, so the pill is filled.
+  &--ask .pay-chip__label {
+    background: var(--budojo-warning-ink);
+    color: var(--p-content-background);
+    font-weight: 600;
+  }
+}

@@ -282,6 +282,11 @@ Versions from before the rotation are not kept: the PC's backups on Drive (#1301
   - the amount is the fee × the period, read-only;
   - *Contanti* preselected;
   - one button: *Registra 60 € · contanti*.
+- **Soldi** (#2132), a tab of its own on the phone: *Chi deve ancora pagare*.
+  - whoever the check-in's chip would ask, so the two screens agree;
+  - tonight's people first, those marked present today;
+  - a row names this month and the months behind beside it: *ottobre · anche agosto*;
+  - a tap opens the same payment sheet; once nothing is owed the row leaves, and the toast's undo puts it back.
 - **A new athlete in three fields:** first name, last name, belt. The rest waits for later. It is the trial class that walks in.
 - **A promotion from the athlete's row:** belt and stripes, dated today.
 
@@ -352,7 +357,8 @@ Sizes: **S** is a day or less, **M** a few days, **L** a week or more. The **fir
 | [#2034](https://github.com/Budojo/budojo/issues/2034) | 2 · Budojo on the phone | The phone runtime: the SPA + Laravel in the shell, the `mobile` profile, offline. It retires `projects/mat`. | L | #2051 |
 | [#2046](https://github.com/Budojo/budojo/issues/2046) | | The sync engine on the phone, the sync state, the fingerprint lock | M | #2034, #2032 |
 | [#2035](https://github.com/Budojo/budojo/issues/2035) | | Home by the clock, and the phone check-in | M | #2034 |
-| [#2036](https://github.com/Budojo/budojo/issues/2036) | | «Da chiedere», the payment sheet, Soldi | M | #2034 |
+| [#2036](https://github.com/Budojo/budojo/issues/2036) | | «Da chiedere» and the payment sheet | M | #2034 |
+| [#2132](https://github.com/Budojo/budojo/issues/2132) | | Soldi: who still has to pay this month (split from #2036) | S | #2036 |
 | [#2045](https://github.com/Budojo/budojo/issues/2045) | | Athletes and promotions on the phone: the new athlete in three fields, the promotion from the row, every flow checked on a phone | M | #2034 |
 | [#2047](https://github.com/Budojo/budojo/issues/2047) | | Notifications scheduled with Android | M | #2034 |
 | [#2048](https://github.com/Budojo/budojo/issues/2048) | | The phone-only academy: onboarding on the phone, the Drive nudge | S | #2046 |

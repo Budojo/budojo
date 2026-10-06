@@ -19,6 +19,7 @@ import {
   SyncIdentity,
   SyncPlatform,
   SyncService,
+  SyncTestHook,
 } from './sync.service';
 import { MemoryDevice } from './testing/memory-device';
 import { WriteGate } from './write-gate';
@@ -618,5 +619,34 @@ describe('SyncService', () => {
     await sync.syncNow();
 
     expect(sync.state()).toEqual({ kind: 'off' });
+  });
+
+  describe('the Cypress hook (#2125)', () => {
+    const win = window as unknown as { Cypress?: unknown; budojoSync?: SyncTestHook };
+
+    afterEach(() => {
+      delete win.Cypress;
+      delete win.budojoSync;
+    });
+
+    it('is absent outside Cypress', () => {
+      TestBed.configureTestingModule({ providers: [{ provide: HttpSyncServer, useValue: phone }] });
+      TestBed.inject(SyncService);
+
+      expect(win.budojoSync).toBeUndefined();
+    });
+
+    it('sets what the pill and the card read, inside Cypress', () => {
+      win.Cypress = {};
+      TestBed.configureTestingModule({ providers: [{ provide: HttpSyncServer, useValue: phone }] });
+      const sync = TestBed.inject(SyncService);
+
+      win.budojoSync?.state({ kind: 'reconnect' });
+      win.budojoSync?.toDecide(2);
+
+      expect(sync.state()).toEqual({ kind: 'reconnect' });
+      expect(sync.toDecide()).toBe(2);
+      expect(sync.homecoming()).toBeNull();
+    });
   });
 });

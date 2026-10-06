@@ -4,8 +4,10 @@ import {
   ElementRef,
   OnInit,
   computed,
+  effect,
   inject,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -60,6 +62,10 @@ import {
 } from '../../../shared/utils/athlete-sort';
 import { pickDefaultClass } from './class-pick';
 import { MissingRegularsComponent } from './missing-regulars/missing-regulars.component';
+import { MatMoney } from './pay/mat-money';
+import { PayChip } from './pay/pay-chip';
+import { PayChipComponent } from './pay/pay-chip.component';
+import { PayRecorded, PaySheetComponent } from './pay/pay-sheet.component';
 
 interface SelectOption<T extends string> {
   label: string;
@@ -130,8 +136,10 @@ function toLocalDateString(d: Date): string {
     BeltSortButtonComponent,
     LessonSheetComponent,
     MissingRegularsComponent,
+    PayChipComponent,
+    PaySheetComponent,
   ],
-  providers: [MessageService],
+  providers: [MessageService, MatMoney],
   templateUrl: './daily-attendance.component.html',
   styleUrl: './daily-attendance.component.scss',
 })
@@ -153,6 +161,21 @@ export class DailyAttendanceComponent implements OnInit {
    * so the success toast, which would stack over the rows, stays on the PC.
    */
   protected readonly onThePhone = computed(() => this.runtime.profile() === 'mobile');
+
+  /**
+   * The money at the mat (#2036, PRD § 6.1): a chip on each phone row says
+   * what pays for the month, and a month owed opens the payment sheet. Only
+   * on the phone, and only today: the chip is about who is standing there.
+   */
+  protected readonly money = inject(MatMoney);
+  private readonly showsMoney = computed(
+    () => this.onThePhone() && this.selectedDateIso() === toLocalDateString(new Date()),
+  );
+  /** The sheet's athlete and the chip's month; `null` while it is closed. */
+  protected readonly paying = signal<{ athlete: Athlete; month: string } | null>(null);
+  /** Whose row opened the last sheet: the keyboard goes back there. */
+  private paidFrom: number | null = null;
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   /**
    * The date format for every picker on this component (#1498).
@@ -463,6 +486,11 @@ export class DailyAttendanceComponent implements OnInit {
         takeUntilDestroyed(),
       )
       .subscribe((q) => this.applySearch(q));
+
+    // The runtime answers after the first render, so the phone is known late.
+    effect(() => {
+      if (this.onThePhone()) untracked(() => this.money.load());
+    });
   }
 
   // Clear any pending undo toast before the next add to avoid stacked Undo
@@ -1395,6 +1423,66 @@ export class DailyAttendanceComponent implements OnInit {
       next.delete(athleteId);
     }
     this.inflight.set(next);
+  }
+
+  /** The payment chip for one phone row, or `null` when it shows none. */
+  protected payChip(athlete: Athlete): PayChip | null {
+    return this.showsMoney() ? this.money.chipFor(athlete) : null;
+  }
+
+  protected openPay(athlete: Athlete, chip: PayChip): void {
+    if (chip.kind !== 'due') return;
+    this.paidFrom = athlete.id;
+    this.paying.set({ athlete, month: chip.month });
+  }
+
+  /**
+   * The sheet closed with the keyboard inside it (Escape, ✕, a payment):
+   * hand it back to the row rather than to `<body>` at the top of the page,
+   * as the lesson sheet does (#2001). The chip when it is still there; after
+   * a payment it may be a label, and the row's toggle takes it.
+   */
+  protected returnFocusFromPay(): void {
+    const id = this.paidFrom;
+    const active = document.activeElement;
+    const inside = active instanceof HTMLElement && active.closest('.pay-sheet-dialog') !== null;
+    if (id === null || (active !== null && active !== document.body && !inside)) return;
+    const root = this.host.nativeElement;
+    const target =
+      root.querySelector<HTMLElement>(`[data-cy="attendance-pay-${id}"] button`) ??
+      root.querySelector<HTMLElement>(`[data-cy="attendance-card-${id}"]`);
+    target?.focus();
+  }
+
+  protected closePay(): void {
+    this.paying.set(null);
+  }
+
+  /**
+   * Recorded: the sheet closes, the chip moves on, and the toast can take it
+   * back. Not one the server already held (a payment from the PC, arrived in
+   * a sync): undoing that would delete a payment this screen never made.
+   */
+  protected onPaid({ athlete, payment, created }: PayRecorded): void {
+    this.paying.set(null);
+    navigator.vibrate?.(15);
+    const name = `${athlete.first_name} ${athlete.last_name}`;
+    if (!created) {
+      this.messageService.clear();
+      this.messageService.add({
+        severity: 'info',
+        summary: this.translate.instant('attendance.daily.pay.toast.already', { name }),
+        life: 4000,
+      });
+      return;
+    }
+    this.toastUndo(this.translate.instant('attendance.daily.pay.toast.recorded', { name }), () =>
+      this.money.undo(athlete, payment).subscribe({
+        next: () => this.messageService.clear(),
+        error: () =>
+          this.toastError(this.translate.instant('attendance.daily.pay.toast.undoError')),
+      }),
+    );
   }
 
   private toastUndo(summary: string, undo: () => void): void {

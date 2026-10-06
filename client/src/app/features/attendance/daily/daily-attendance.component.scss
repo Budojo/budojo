@@ -308,11 +308,16 @@
 
 .attendance-toast__undo {
   all: unset;
+  // A 48px target (Fitts): it takes back a presence or a payment (#2137).
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  min-height: 3rem;
   cursor: pointer;
   font-weight: 600;
   font-size: 0.9375rem;
   color: var(--p-primary-color);
-  padding: 0.25rem 0.5rem;
+  padding: 0 1rem;
   border-radius: var(--p-border-radius-sm);
 
   &:hover {
@@ -381,37 +386,23 @@ $attendance-mobile-breakpoint: 768px;
   gap: 0.5rem;
 }
 
-// <li> wrapper — keeps the implicit `listitem` ARIA role so screen
-// readers still announce list position / length. The interactive
-// surface is the <button.attendance-card> nested inside.
+// <li> — the card a thumb sees (#2036). It keeps the implicit `listitem` ARIA
+// role so screen readers still announce list position / length, and it holds
+// the row's two targets: the presence toggle, stretched over the whole card,
+// and the payment chip above it.
 .attendance-card-item {
-  display: block;
-}
-
-.attendance-card {
-  // Neutralise <button>'s default chrome (font, border, padding,
-  // colour) so it renders as a flat card.
-  appearance: none;
-  font: inherit;
-  color: inherit;
-  text-align: left;
-  width: 100%;
-  box-sizing: border-box;
-
   // The identity's belt spine is drawn against its row (#1855): the card is that row.
   position: relative;
   overflow: hidden;
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.5rem;
   // A thumb's row at the mat (#2035): 56px at the least.
   min-height: 3.5rem;
   padding: 0.5rem 1rem;
   background: var(--p-content-background);
   border: 1px solid var(--p-content-border-color);
   border-radius: 12px;
-  cursor: pointer;
-  user-select: none;
   // Animates the same two properties as the visual present-state delta
   // below (background + border-colour). The desktop row uses a softer
   // background-only transition because it has no border affordance; the
@@ -420,21 +411,6 @@ $attendance-mobile-breakpoint: 768px;
   transition:
     background var(--budojo-motion-fast) var(--budojo-motion-decelerate),
     border-color var(--budojo-motion-fast) var(--budojo-motion-decelerate);
-
-  // The roster's identity block, stretched across the row.
-  &__main {
-    flex: 1;
-    min-width: 0;
-  }
-
-  &__indicator {
-    flex-shrink: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 2.5rem;
-    height: 2.5rem;
-  }
 
   // Present state — soft tint pulls from the same color-mix the desktop
   // row uses, so the palette stays in sync if --p-primary-color ever
@@ -449,13 +425,59 @@ $attendance-mobile-breakpoint: 768px;
     pointer-events: none;
   }
 
-  &:active:not(.attendance-card--inflight) {
+  &:has(.attendance-card:active):not(.attendance-card-item--inflight) {
     background: color-mix(in srgb, var(--p-primary-color) 4%, var(--p-content-hover-background));
   }
 
-  &:focus-visible {
+  &:has(.attendance-card:focus-visible) {
     outline: 2px solid var(--p-primary-color);
     outline-offset: 2px;
+  }
+}
+
+// The presence toggle: no chrome of its own, the card is its surface.
+.attendance-card {
+  appearance: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  user-select: none;
+
+  // Stretched over the whole card, the check-mark included: a tap anywhere
+  // but the chip marks the athlete.
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+  }
+
+  // The card draws the ring, around everything the tap reaches.
+  &:focus-visible {
+    outline: none;
+  }
+
+  // The roster's identity block, stretched across the row.
+  &__main {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__indicator {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
   }
 }
 
