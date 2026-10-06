@@ -22,12 +22,14 @@ const MOCK_ARREARS = [
     athlete: identity(12, 'Marco', 'Rossi'),
     months_behind: 4,
     first_unpaid: '2026-03',
+    unpaid_months: ['2026-03', '2026-05', '2026-07', '2026-08'],
     owed_cents: 22000,
   },
   {
     athlete: identity(15, 'Giulia', 'Ferraro'),
     months_behind: 1,
     first_unpaid: '2026-08',
+    unpaid_months: ['2026-08'],
     owed_cents: 5500,
   },
 ];

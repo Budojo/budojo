@@ -80,6 +80,7 @@ function phoneAtClass(): void {
           athlete: { id: 1, first_name: 'Anna', last_name: 'Rossi' },
           months_behind: 1,
           first_unpaid: '2026-09',
+          unpaid_months: ['2026-09'],
           owed_cents: 6000,
         },
       ],

@@ -2219,6 +2219,7 @@ function seed(): void {
           },
           months_behind: 3,
           first_unpaid: '2026-06',
+          unpaid_months: ['2026-06', '2026-07', '2026-08'],
           owed_cents: 21000,
         },
         {
@@ -2234,6 +2235,7 @@ function seed(): void {
           },
           months_behind: 1,
           first_unpaid: '2026-08',
+          unpaid_months: ['2026-08'],
           owed_cents: 7000,
         },
       ],
