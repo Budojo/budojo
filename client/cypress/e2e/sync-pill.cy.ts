@@ -120,8 +120,11 @@ describe('The sync pill (#2046)', () => {
 
   it('shows nothing where there is no sync', () => {
     openToday();
-    hook().then((sync) => sync.state({ kind: 'off' }));
+    hook().then((sync) => sync.state({ kind: 'synced', at: Date.now() }));
+    pill().should('be.visible');
 
+    // From a shown pill, so the spec fails if `off` were to keep it.
+    hook().then((sync) => sync.state({ kind: 'off' }));
     cy.get('[data-cy="sync-pill"]').should('not.exist');
   });
 
@@ -211,8 +214,11 @@ describe('The homecoming card (#2039)', () => {
 
   it('shows nothing when nothing arrived', () => {
     openToday();
-    hook().then((sync) => sync.homecoming(null));
+    hook().then((sync) => sync.homecoming(ARRIVED));
+    cy.get('[data-cy="today-homecoming"]').should('be.visible');
 
+    // From a shown card, so the spec fails if `null` were to keep it.
+    hook().then((sync) => sync.homecoming(null));
     cy.get('[data-cy="today-homecoming"]').should('not.exist');
   });
 });
