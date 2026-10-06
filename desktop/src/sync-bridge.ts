@@ -16,12 +16,18 @@
  *   the keys file holds this PC's `APP_KEY` and `DOCUMENT_ENCRYPTION_KEY`. The
  *   page gets the sync key and the folder id from `identity()`, and no more;
  * - **any change the sync does not make** (#2106): it reads, creates and
- *   uploads, and never deletes, trashes or moves a file, so the token can do
- *   none of those to a backup or any other file Budojo made. `PUT` goes only
- *   to an upload's session; `PATCH` only opens one for a file's new content,
- *   with no metadata (`{}`) and no parameter but the upload's own, never
- *   `trashed` or `addParents`. A `POST` goes to the collection, never to a
- *   file; and of the page's headers only the three the uploads need pass.
+ *   uploads, and never trashes or moves a file, so the token can do neither
+ *   to a backup or any other file Budojo made. `PUT` goes only to an upload's
+ *   session; `PATCH` only opens one for a file's new content, with no
+ *   metadata (`{}`) and no parameter but the upload's own, never `trashed` or
+ *   `addParents`. A `POST` goes to the collection, never to a file; and of the
+ *   page's headers only the three the uploads need pass.
+ *
+ * **A delete is checked twice** (#2120). The device that pushes prunes the
+ * folder's versions (#2117), so a bare `DELETE` of one file by its id passes
+ * here. Then the main process, with its own token, reads the file and the
+ * folders above it (`checkDelete`), and answers 403 before any delete is sent
+ * for anything but a version of this PC's sync folder.
  */
 
 export interface DriveRequest {
@@ -42,8 +48,8 @@ export interface DriveAnswer {
 export const ANSWER_HEADERS = ['date', 'location', 'content-type'] as const;
 
 const HOST = 'www.googleapis.com';
-/** What `DriveRemote` sends: never `DELETE`. */
-const VERBS = new Set(['GET', 'POST', 'PATCH', 'PUT']);
+/** What `DriveRemote` sends. A `DELETE` is checked again before it is forwarded (#2120). */
+const VERBS = new Set(['GET', 'POST', 'PATCH', 'PUT', 'DELETE']);
 /** The only parameters of the `PATCH` that opens an upload of a file's new content. */
 const UPLOAD_PARAMS = new Set(['uploadType', 'fields']);
 /** The files collection, or one file by its id: nothing deeper. */
@@ -103,6 +109,9 @@ export function parseDriveRequest(value: unknown): DriveRequest | null {
   if (verb === 'POST' && !/\/files$/.test(address.pathname)) {
     return null;
   }
+  if (verb === 'DELETE' && (deletedFileId({ url, method: verb, headers: {} }) === null || body !== undefined)) {
+    return null;
+  }
   if (
     verb === 'PATCH' &&
     (!upload ||
@@ -128,4 +137,73 @@ export function parseDriveRequest(value: unknown): DriveRequest | null {
     headers: forwardedHeaders(headers as Record<string, string>),
     ...(body === undefined ? {} : { body }),
   };
+}
+
+/** One file by its id, in the visible files API (not an upload's), with no parameter. */
+const FILE_PATH = /^\/drive\/v3\/files\/([A-Za-z0-9_-]+)$/;
+
+/** The file a `DELETE` names, or null for any other request: one file by its id, bare. */
+export function deletedFileId(request: DriveRequest): string | null {
+  if (request.method !== 'DELETE' || request.body !== undefined || !isSyncDriveUrl(request.url)) {
+    return null;
+  }
+  const address = new URL(request.url);
+
+  return address.search === '' ? (FILE_PATH.exec(address.pathname)?.[1] ?? null) : null;
+}
+
+/** A file or folder on Drive, as the main process reads it to check a delete (#2120). */
+export interface DriveItem {
+  id: string;
+  name: string;
+  mimeType: string;
+  parents: string[];
+}
+
+const FOLDER = 'application/vnd.google-apps.folder';
+/** The folder the sync lives in, inside the `Budojo` folder (`docs/sync/protocol.md` § The folder). */
+const SYNC_FOLDER = 'sync';
+/** The sync folder's folders whose files the sync deletes, and the names those files have. */
+const PRUNED = new Map<string, RegExp>([['versions', /^\d{6}-[a-z0-9]+\.(root|\d{6}-[a-z0-9]+)\.bjs$/]]);
+
+function onlyParent(item: DriveItem): string | null {
+  return item.parents.length === 1 ? (item.parents[0] ?? null) : null;
+}
+
+/**
+ * Whether the main process forwards a sync's delete (#2120): a version's name,
+ * in a folder named `versions`, in a folder named `sync`, in the `Budojo`
+ * folder this PC linked (`folderId`, where its backups go). A backup, the
+ * keys, a report, a document, and a version's name anywhere else are refused.
+ *
+ * `chain` is the file and the folders above it, as far as they were read. The
+ * answer is the next folder to read, or the verdict: nothing past the first
+ * link that fails is read, so a backup's delete costs one read.
+ */
+export function checkDelete(chain: readonly DriveItem[], budojoFolder: string): { read: string } | boolean {
+  const [file, folder, sync] = chain;
+  if (file === undefined || chain.length > 3) {
+    return false;
+  }
+  const parent = onlyParent(file);
+  if (file.mimeType === FOLDER || parent === null || ![...PRUNED.values()].some((name) => name.test(file.name))) {
+    return false;
+  }
+  if (folder === undefined) {
+    return { read: parent };
+  }
+  const above = onlyParent(folder);
+  if (
+    folder.id !== parent ||
+    folder.mimeType !== FOLDER ||
+    PRUNED.get(folder.name)?.test(file.name) !== true ||
+    above === null
+  ) {
+    return false;
+  }
+  if (sync === undefined) {
+    return { read: above };
+  }
+
+  return sync.id === above && sync.mimeType === FOLDER && sync.name === SYNC_FOLDER && onlyParent(sync) === budojoFolder;
 }
