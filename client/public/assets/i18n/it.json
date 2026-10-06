@@ -2812,6 +2812,17 @@
         "f": "Femmina"
       }
     },
+    "promote": {
+      "title": "Promozione",
+      "now": "Ora",
+      "becomes": "Diventa",
+      "stripes": "Strisce",
+      "today": "Con la data di oggi, nello storico come una fatta dal PC.",
+      "submit": "Registra la promozione",
+      "error": "Non è stato possibile registrare la promozione. Riprova.",
+      "menu": "Promuovi",
+      "toast": "{{name}}: {{step}}"
+    },
     "photo": {
       "title": "Foto",
       "hint": "PNG, JPG o WebP, massimo 2 MB.",

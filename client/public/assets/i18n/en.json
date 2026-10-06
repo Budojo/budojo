@@ -2812,6 +2812,17 @@
         "f": "Female"
       }
     },
+    "promote": {
+      "title": "Promotion",
+      "now": "Now",
+      "becomes": "Becomes",
+      "stripes": "Stripes",
+      "today": "Dated today, in their history like one from the PC.",
+      "submit": "Record the promotion",
+      "error": "Couldn't record the promotion. Try again.",
+      "menu": "Promote",
+      "toast": "{{name}}: {{step}}"
+    },
     "photo": {
       "title": "Photo",
       "hint": "PNG, JPG or WebP, up to 2 MB.",

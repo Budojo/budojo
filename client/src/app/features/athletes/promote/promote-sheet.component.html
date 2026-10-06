@@ -1,0 +1,79 @@
+<p-dialog
+  [visible]="athlete() !== null"
+  (visibleChange)="onVisibleChange($event)"
+  (onHide)="hidden.emit()"
+  [modal]="true"
+  [draggable]="false"
+  [closable]="!saving()"
+  [dismissableMask]="true"
+  [breakpoints]="{ '768px': '100vw' }"
+  [style]="{ width: '28rem' }"
+  styleClass="bottom-sheet promote-dialog"
+  [header]="'athletes.promote.title' | translate"
+  data-cy="promote-sheet"
+>
+  @if (athlete(); as athlete) {
+    <div class="promote">
+      <!-- Who, with the belt spine (#1855): the sheet is about one person. -->
+      <div class="promote__who">
+        <app-athlete-identity [athlete]="athlete" />
+      </div>
+
+      <p class="promote__line" data-cy="promote-from">
+        <span class="promote__label">{{ 'athletes.promote.now' | translate }}</span>
+        {{ stepLabel({ belt: athlete.belt, stripes: athlete.stripes }) }}
+      </p>
+
+      <div class="promote__pickers">
+        <label class="promote__label" for="promote-belt">{{
+          'athletes.promote.becomes' | translate
+        }}</label>
+        <p-select
+          inputId="promote-belt"
+          [options]="beltOptions()"
+          [ngModel]="belt()"
+          (ngModelChange)="pickBelt($event)"
+          optionLabel="label"
+          optionValue="value"
+          appendTo="body"
+          [fluid]="true"
+          data-cy="promote-belt"
+        />
+        <p-select
+          [options]="stripeOptions()"
+          [ngModel]="'' + stripes()"
+          (ngModelChange)="pickStripes($event)"
+          optionLabel="label"
+          optionValue="value"
+          appendTo="body"
+          [fluid]="true"
+          [ariaLabel]="'athletes.promote.stripes' | translate"
+          data-cy="promote-stripes"
+        />
+      </div>
+
+      @if (target(); as target) {
+        <p class="promote__line promote__line--to" data-cy="promote-to">
+          <i class="pi pi-arrow-up" aria-hidden="true"></i>
+          {{ stepLabel(target) }}
+        </p>
+      }
+      <p class="promote__hint">{{ 'athletes.promote.today' | translate }}</p>
+
+      @if (failed()) {
+        <p class="promote__error" role="alert" data-cy="promote-error">
+          {{ 'athletes.promote.error' | translate }}
+        </p>
+      }
+
+      <p-button
+        [fluid]="true"
+        [label]="'athletes.promote.submit' | translate"
+        [loading]="saving()"
+        [disabled]="!isUp()"
+        (onClick)="submit()"
+        data-cy="promote-submit"
+      />
+    </div>
+  }
+</p-dialog>
