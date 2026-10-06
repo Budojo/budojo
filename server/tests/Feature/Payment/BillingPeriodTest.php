@@ -170,9 +170,12 @@ it('stays idempotent on an identical re-post', function (): void {
     $first = recordPayment($this, $this->athlete, [
         'year' => 2026, 'month' => 2, 'period_months' => 3,
     ]);
-    $second = recordPayment($this, $this->athlete, [
-        'year' => 2026, 'month' => 2, 'period_months' => 3,
-    ]);
+    $second = $this->actingAs($this->user)
+        ->postJson("/api/v1/athletes/{$this->athlete->id}/payments", [
+            'year' => 2026, 'month' => 2, 'period_months' => 3,
+        ])
+        ->assertOk()
+        ->json('data');
 
     // Re-posting the same period is the double-click case, not an overlap.
     expect($second['id'])->toBe($first['id'])
