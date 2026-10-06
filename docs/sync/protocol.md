@@ -102,11 +102,27 @@ Documents, athletes' photos, avatars and the academy's logo travel apart from th
 - **The server says which contents its database names** (owner-only, `sync`):
   - `GET /api/v1/sync/files` lists each one once, with whether this device holds it at one of its paths (`present`, a file there with that content) and at every one (`complete`);
   - `GET /api/v1/sync/files/{sha256}` gives its bytes;
-  - `PUT /api/v1/sync/files/{sha256}` writes it at every path a row names for it, after checking the bytes hash to it (`422` `mismatch`, `404` `unknown`).
+  - `PUT /api/v1/sync/files/{sha256}` writes it at every path a row names for it, after checking the bytes hash to it (`422` `mismatch`, `404` `unknown`);
+  - `POST /api/v1/sync/files/named` lists, by the same rules, what another database names: a kept version's (§ What `files/` keeps).
 - **Push** (`client/src/app/core/sync/files.ts`): before a version goes up, the device seals and sends every content it holds that `files/` lacks. A content is never sent twice: its name is its bytes.
 - **Pull:** the device completes every content it lacks somewhere: from its own copy when it holds the content at another path (the same PDF for a second athlete), from the folder otherwise. One the folder does not have yet (the other device's push has not landed, or Drive's listing lags), one that does not open, or one whose bytes are not its name, is left for the next sync. Until then that document cannot be opened on this device.
 - **The pull runs once the database is final:** after a fast-forward's swap, after a rebase's replay, **never between the swap and the replay**, the reconcile's rule. Until the replay, a path may hold a file this device uploaded offline (its athlete 57's photo, where the swapped-in database has another athlete 57); writing there first would destroy the only copy before the replay gives it its own row.
-- **Not yet here:** deleting from `files/` what no kept version names. It takes reading every kept version's database; the versions themselves are pruned (§ What the folder keeps).
+- **What no kept version names is deleted** (§ What `files/` keeps).
+
+### What `files/` keeps (#2118)
+
+A content stays while a version the folder keeps names it, and goes once none does: a document or photo deleted on a device, a medical certificate first, does not outlive the versions that named it.
+- **What a version names** is what `GET /api/v1/sync/files` would list for its database: documents (never a deleted one, whose file goes with it), athletes' photos (a deleted athlete's too, which a restore brings back), avatars, the academy's logo. The app cannot read a database, so it asks its own server, `POST /api/v1/sync/files/named` with the version's database. The server reads it from a temporary copy, by the same rules, and refuses one it cannot read for certain: a later Budojo's, one older than the content hashes, a damaged one.
+- **By the device that just pushed, at most once a day** (`engine.ts`, `pruneContents`): it takes reading every kept version, each a whole database. It reads none when nothing in `files/` could go, every content there being one its own database names or one sent within the day.
+- **A content of uncertain status stays:**
+  - one this device's own database names, whatever else;
+  - one sent within the last day, on Drive's clock: a device sends a version's contents before the version, so one on its way is named by none yet;
+  - every content, when a kept version does not open or unpack, when the server refuses its database, or when the newest version is not found. A version listed but gone at the read was pruned since, by the other device, and names nothing.
+- **Never a file that is not a content's:** only `files/<sha256>.bjs`.
+- **At most fifty a run,** the oldest first. **Best effort,** as for the versions: what could not be deleted is tried again at the next run.
+- **The first versions are never pruned** (§ What the folder keeps), so what they name stays as long as they do.
+- **On the PC, the main process checks the delete** as it checks a version's (#2120): a content's name, in a folder named `files`, in this PC's sync folder.
+- **One race is left to the next push:** a content deleted while the other device puts the same bytes back (the same PDF uploaded again) in a version not listed yet. That device sends it again at its next push, as it sends every content it holds that the folder lacks; until then the other device counts it missing.
 
 ## A journal entry
 

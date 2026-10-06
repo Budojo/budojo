@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { SeenVersion } from './decide';
 import { VersionRef } from './layout';
-import { pruneBatch, versionsToPrune } from './retention';
+import { RemoteFile } from './remote';
+import {
+  CONTENT_GRACE_MS,
+  contentsToPrune,
+  pruneBatch,
+  PRUNED_CONTENTS_PER_RUN,
+  versionsToPrune,
+} from './retention';
 
 /** The versions the folder keeps (#2030): the newest densely, one a day going back. */
 describe('versionsToPrune', () => {
@@ -138,5 +145,68 @@ describe('versionsToPrune', () => {
         seqs(live.filter((version) => !versionsToPrune(live, onLive).includes(version))),
       );
     });
+  });
+});
+
+/**
+ * What `files/` keeps (#2118): a content goes once no kept version names it,
+ * and a content of uncertain status stays.
+ */
+describe('contentsToPrune', () => {
+  const DAY = 24 * 60 * 60 * 1000;
+  const NOW = Date.parse('2026-10-06T18:00:00Z');
+  const sha = (n: number) => n.toString(16).padStart(64, '0');
+  const sent = (n: number, daysAgo: number): RemoteFile => ({
+    path: `files/${sha(n)}.bjs`,
+    size: 100,
+    created: NOW - daysAgo * DAY,
+  });
+
+  it('deletes what no kept version names, and keeps what one does', () => {
+    const listing = { files: [sent(1, 20), sent(2, 20), sent(3, 20)], now: NOW };
+
+    expect(contentsToPrune(new Set([sha(2)]), listing)).toEqual([
+      `files/${sha(1)}.bjs`,
+      `files/${sha(3)}.bjs`,
+    ]);
+  });
+
+  it('keeps a content sent within the last day: the version that names it may be on its way', () => {
+    const listing = { files: [sent(1, 0.5), sent(2, 1), sent(3, 2)], now: NOW };
+
+    expect(contentsToPrune(new Set(), listing)).toEqual([
+      `files/${sha(3)}.bjs`,
+      `files/${sha(2)}.bjs`,
+    ]);
+    expect(CONTENT_GRACE_MS).toBe(DAY);
+  });
+
+  it('keeps everything when Drive gave no time with its listing', () => {
+    expect(contentsToPrune(new Set(), { files: [sent(1, 20)], now: Number.NaN })).toEqual([]);
+  });
+
+  it('never deletes a file that is not a content’s', () => {
+    const listing = {
+      files: [
+        { path: 'files/notes.txt', size: 1, created: NOW - 20 * DAY },
+        { path: `files/${sha(0xabc).toUpperCase()}.bjs`, size: 1, created: NOW - 20 * DAY },
+        { path: `devices/${sha(1)}.bjs`, size: 1, created: NOW - 20 * DAY },
+        { path: `files/${sha(1)}.bjs.partial`, size: 1, created: NOW - 20 * DAY },
+      ],
+      now: NOW,
+    };
+
+    expect(contentsToPrune(new Set(), listing)).toEqual([]);
+  });
+
+  it('deletes a few a run, the oldest first', () => {
+    const files = Array.from({ length: PRUNED_CONTENTS_PER_RUN + 5 }, (_, i) =>
+      sent(i + 1, 30 - i / 10),
+    );
+    const gone = contentsToPrune(new Set(), { files: [...files].reverse(), now: NOW });
+
+    expect(gone).toHaveLength(PRUNED_CONTENTS_PER_RUN);
+    expect(gone[0]).toBe(`files/${sha(1)}.bjs`);
+    expect(gone).not.toContain(`files/${sha(PRUNED_CONTENTS_PER_RUN + 1)}.bjs`);
   });
 });

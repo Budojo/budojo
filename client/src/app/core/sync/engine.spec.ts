@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { utf8 } from './bytes';
 import { AskChoice, EMPTY_LEDGER, resolveAsk, SyncContext, syncOnce } from './engine';
 import { importSyncKey, newSyncKey, seal } from './envelope';
@@ -745,6 +745,260 @@ describe('the versions the folder keeps (#2030)', () => {
     }
 
     expect(versionsOf(remote)).toBe(12);
+  });
+});
+
+describe('what `files/` keeps (#2118)', () => {
+  const START = Date.parse('2026-10-01T09:00:00Z');
+  const HOUR = 60 * MINUTE;
+  const DAY = 24 * HOUR;
+  /** The folder's clock and the devices': one, moved by each test. */
+  let now = START;
+  const clock = () => now;
+
+  /** A round on a device whose clock reads `now`. */
+  function syncNow(device: Device, remote: SyncRemote, key: CryptoKey) {
+    return syncOnce({
+      device: device.id,
+      app: '2.79.0',
+      key,
+      remote,
+      server: device,
+      shell: { swapIn: async () => device.swapIn() },
+      ledger: device.ledger,
+      saveLedger: (ledger) => {
+        device.ledger = ledger;
+      },
+      holdWrites: async (work) => work(),
+      now: clock,
+    });
+  }
+
+  /** Version 1 with no photo, a photo in version 2, deleted in version 3. */
+  async function aPhotoDeleted(remote: SyncRemote, key: CryptoKey) {
+    now = START;
+    const pc = new Device('pc4f2a', 'Eagles BJJ');
+    await syncNow(pc, remote, key);
+    now += MINUTE;
+    const sha = await pc.photo('a medical certificate');
+    pc.write('certificate uploaded');
+    await syncNow(pc, remote, key);
+    now += MINUTE;
+    pc.removePhoto(sha);
+    await syncNow(pc, remote, key);
+    return { pc, sha };
+  }
+
+  /** Pushes until the versions that named it are pruned: the newest ten are all after them. */
+  async function pushTenMore(pc: Device, remote: SyncRemote, key: CryptoKey) {
+    for (let night = 1; night <= 11; night++) {
+      now += MINUTE;
+      pc.write(`Luca, night ${night}`);
+      await syncNow(pc, remote, key);
+    }
+  }
+
+  it('deletes a content once no kept version names it', async () => {
+    const { remote, key } = await folder(clock);
+    const { pc, sha } = await aPhotoDeleted(remote, key);
+    await pushTenMore(pc, remote, key);
+    expect(remote.files.has(filePath(sha))).toBe(true);
+
+    now += 2 * DAY;
+    pc.write('Luca, two days later');
+    await syncNow(pc, remote, key);
+
+    expect(remote.files.has(filePath(sha))).toBe(false);
+  });
+
+  it('keeps a content a kept version still names', async () => {
+    const { remote, key } = await folder(clock);
+    const { pc, sha } = await aPhotoDeleted(remote, key);
+
+    now += 2 * DAY;
+    pc.write('Luca, two days later');
+    await syncNow(pc, remote, key);
+
+    expect(remote.files.has(filePath(sha))).toBe(true);
+  });
+
+  it('keeps a content this device’s database names, whatever the versions say', async () => {
+    const { remote, key } = await folder(clock);
+    const { pc, sha } = await aPhotoDeleted(remote, key);
+    const kept = await pc.photo('a photo still on the roster');
+    await pushTenMore(pc, remote, key);
+    // As if no kept version named anything.
+    vi.spyOn(pc.files, 'named').mockResolvedValue([]);
+
+    now += 2 * DAY;
+    pc.write('Luca, two days later');
+    await syncNow(pc, remote, key);
+
+    expect(remote.files.has(filePath(sha))).toBe(false);
+    expect(remote.files.has(filePath(kept))).toBe(true);
+  });
+
+  it('keeps a content sent within the last day: the version that names it may be on its way', async () => {
+    const { remote, key } = await folder(clock);
+    const { pc } = await aPhotoDeleted(remote, key);
+    await pushTenMore(pc, remote, key);
+    now += 2 * DAY;
+    pc.write('Luca, two days later');
+    await syncNow(pc, remote, key);
+    now += 23 * HOUR;
+    const fresh = await pc.photo('a photo sent late at night');
+    pc.write('photo uploaded');
+    await syncNow(pc, remote, key);
+    expect(remote.files.has(filePath(fresh))).toBe(true);
+    pc.removePhoto(fresh);
+    vi.spyOn(pc.files, 'named').mockResolvedValue([]);
+
+    now += HOUR + MINUTE;
+    await syncNow(pc, remote, key);
+
+    expect(remote.files.has(filePath(fresh))).toBe(true);
+  });
+
+  it('deletes nothing when a kept version does not read: its contents are of uncertain status', async () => {
+    const { remote, key } = await folder(clock);
+    const { pc, sha } = await aPhotoDeleted(remote, key);
+    await pushTenMore(pc, remote, key);
+    const damaged: SyncRemote = {
+      list: (dir) => remote.list(dir),
+      read: async (path) =>
+        path === 'versions/000001-pc4f2a.root.bjs' ? utf8('damaged') : remote.read(path),
+      write: (path, bytes) => remote.write(path, bytes),
+      remove: (path) => remote.remove(path),
+    };
+
+    now += 2 * DAY;
+    pc.write('Luca, two days later');
+    expect((await syncNow(pc, damaged, key)).outcome.kind).toBe('pushed');
+
+    expect(remote.files.has(filePath(sha))).toBe(true);
+  });
+
+  it('deletes nothing when its server cannot read a kept version’s database', async () => {
+    const { remote, key } = await folder(clock);
+    const { pc, sha } = await aPhotoDeleted(remote, key);
+    await pushTenMore(pc, remote, key);
+    vi.spyOn(pc.files, 'named').mockRejectedValueOnce(new Error('422 newer'));
+
+    now += 2 * DAY;
+    pc.write('Luca, two days later');
+    await syncNow(pc, remote, key);
+
+    expect(remote.files.has(filePath(sha))).toBe(true);
+  });
+
+  it('deletes nothing when the newest version is not found, and skips one pruned since the listing', async () => {
+    const { remote, key } = await folder(clock);
+    const { pc, sha } = await aPhotoDeleted(remote, key);
+    await pushTenMore(pc, remote, key);
+    let missing = '';
+    const gone: SyncRemote = {
+      list: (dir) => remote.list(dir),
+      read: async (path) => (path === missing ? null : remote.read(path)),
+      write: (path, bytes) => remote.write(path, bytes),
+      remove: (path) => remote.remove(path),
+    };
+
+    now += 2 * DAY;
+    missing = 'versions/000015-pc4f2a.000014-pc4f2a.bjs';
+    pc.write('Luca, two days later');
+    await syncNow(pc, gone, key);
+    expect(remote.files.has(filePath(sha))).toBe(true);
+
+    now += 2 * DAY;
+    missing = 'versions/000010-pc4f2a.000009-pc4f2a.bjs';
+    pc.write('Luca, four days later');
+    await syncNow(pc, gone, key);
+    expect(remote.files.has(filePath(sha))).toBe(false);
+  });
+
+  it('deletes nothing when the folder lists no version: nothing is known to be named', async () => {
+    const { remote, key } = await folder(clock);
+    const { pc, sha } = await aPhotoDeleted(remote, key);
+    now += MINUTE;
+    await syncNow(pc, remote, key);
+    const blank: SyncRemote = {
+      list: async (dir) => (dir === 'versions' ? { files: [], now: clock() } : remote.list(dir)),
+      read: (path) => remote.read(path),
+      write: (path, bytes) => remote.write(path, bytes),
+      remove: (path) => remote.remove(path),
+    };
+
+    now += 2 * DAY;
+    pc.write('Luca, two days later');
+    expect((await syncNow(pc, blank, key)).outcome.kind).toBe('pushed');
+
+    expect(remote.files.has(filePath(sha))).toBe(true);
+  });
+
+  it('reads the kept versions at most once a day, and only when something could go', async () => {
+    const { remote, key } = await folder(clock);
+    const { pc } = await aPhotoDeleted(remote, key);
+    const named = vi.spyOn(pc.files, 'named');
+
+    now += 2 * DAY;
+    pc.write('Luca, two days later');
+    await syncNow(pc, remote, key);
+    const read = named.mock.calls.length;
+    expect(read).toBeGreaterThan(0);
+
+    now += HOUR;
+    pc.write('Luca, an hour later');
+    await syncNow(pc, remote, key);
+    expect(named.mock.calls.length).toBe(read);
+
+    now += DAY;
+    pc.write('Luca, the next day');
+    await syncNow(pc, remote, key);
+    expect(named.mock.calls.length).toBeGreaterThan(read);
+
+    // Nothing in `files/` that this device's database does not name: no version is read.
+    const quiet = new Device('pc7a3b', 'Kaizen');
+    const other = await folder(clock);
+    await syncNow(quiet, other.remote, other.key);
+    await quiet.photo('a logo');
+    now += 2 * DAY;
+    const untouched = vi.spyOn(quiet.files, 'named');
+    quiet.write('logo uploaded');
+    await syncNow(quiet, other.remote, other.key);
+    expect(untouched).not.toHaveBeenCalled();
+  });
+
+  it('deletes only after a push of its own: a pull deletes nothing', async () => {
+    const { remote, key } = await folder(clock);
+    const { pc, sha } = await aPhotoDeleted(remote, key);
+    await pushTenMore(pc, remote, key);
+    now += 2 * DAY;
+    const phone = new Device('phone9c1e', null);
+
+    expect((await syncNow(phone, remote, key)).outcome.kind).toBe('pulled');
+    expect(remote.files.has(filePath(sha))).toBe(true);
+  });
+
+  it('never fails a round on a content it could not delete', async () => {
+    const { remote, key } = await folder(clock);
+    const { pc, sha } = await aPhotoDeleted(remote, key);
+    await pushTenMore(pc, remote, key);
+    const refusing: SyncRemote = {
+      list: (dir) => remote.list(dir),
+      read: (path) => remote.read(path),
+      write: (path, bytes) => remote.write(path, bytes),
+      remove: async (path) => {
+        if (path.startsWith('files/')) {
+          throw new Error('Drive said no');
+        }
+        await remote.remove(path);
+      },
+    };
+
+    now += 2 * DAY;
+    pc.write('Luca, two days later');
+    expect((await syncNow(pc, refusing, key)).outcome.kind).toBe('pushed');
+    expect(remote.files.has(filePath(sha))).toBe(true);
   });
 });
 

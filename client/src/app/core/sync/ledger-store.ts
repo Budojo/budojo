@@ -103,10 +103,12 @@ function isLedger(value: unknown): value is SyncLedger {
   const ledger = value as Record<string, unknown>;
   const entryId = (id: unknown) => id === null || typeof id === 'string';
   const unconfirmed = ledger['unconfirmed'] as Record<string, unknown> | null | undefined;
+  const prunedAt = ledger['contentsPrunedAt'];
   return (
     (ledger['base'] === null || isVersionRef(ledger['base'])) &&
     entryId(ledger['pushedThrough']) &&
     entryId(ledger['listedThrough']) &&
+    (prunedAt === undefined || typeof prunedAt === 'number') &&
     (unconfirmed === null ||
       (typeof unconfirmed === 'object' &&
         unconfirmed !== undefined &&

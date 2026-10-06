@@ -60,6 +60,7 @@ export class MemoryDevice implements SyncServer {
     write: async (sha256, bytes) => {
       this.held.set(sha256, bytes);
     },
+    named: async (database) => (JSON.parse(fromUtf8(database)) as Database).names,
   };
 
   constructor(
@@ -93,6 +94,13 @@ export class MemoryDevice implements SyncServer {
     this.db.names.push(sha);
     this.held.set(sha, bytes);
     return sha;
+  }
+
+  /** A photo deleted: no row names it any more, and its file goes with it. */
+  removePhoto(sha: string): void {
+    this.db.names = this.db.names.filter((name) => name !== sha);
+    this.held.delete(sha);
+    this.write(`photo ${sha.slice(0, 8)} removed`);
   }
 
   async exportDatabase() {

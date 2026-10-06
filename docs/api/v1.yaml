@@ -7596,6 +7596,59 @@ paths:
         '403': { description: Forbidden — the user is not an owner. }
         '404': { description: The runtime profile has no `sync` capability. }
 
+  /sync/files/named:
+    post:
+      operationId: syncFilesNamed
+      summary: The file contents another database names
+      description: |
+        The contents a version's database names (#2118), by the rules of
+        `GET /sync/files`, read from the database in the body and never from
+        this device's own. The app asks it of every version the folder keeps,
+        and deletes from `files/` what none of them names
+        (`docs/sync/protocol.md` § What `files/` keeps). Nothing is written:
+        the database is read from a temporary copy, deleted before the answer.
+
+        **A database it cannot read for certain is refused**, and the app
+        then deletes nothing: the checks of `PUT /sync/stage`, and one older
+        than the content hashes, whose rows name no content.
+      tags: [sync]
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema: { type: string, format: binary }
+      responses:
+        '200':
+          description: Each content once, sorted by hash
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { type: string, pattern: '^[0-9a-f]{64}$' }
+        '401': { description: Unauthenticated }
+        '403': { description: Forbidden — the user is not an owner. }
+        '404': { description: The runtime profile has no `sync` capability. }
+        '413':
+          description: The database is larger than PHP's `post_max_size`, which each shell sets above any academy's database.
+        '422':
+          description: |
+            Not read. `code` is `newer` (a later Budojo, whose rows may name
+            files in a way this code does not know) or `unreadable` (not a
+            SQLite file, damaged, not a Budojo database, or older than the
+            content hashes).
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [code, message]
+                properties:
+                  code: { type: string, enum: [newer, unreadable] }
+                  message: { type: string }
+
   /sync/files/{sha256}:
     parameters:
       - name: sha256
