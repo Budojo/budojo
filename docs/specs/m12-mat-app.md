@@ -291,6 +291,9 @@ Versions from before the rotation are not kept: the PC's backups on Drive (#1301
   - from the check-in (#1939): a button beside the search, and *Aggiungi «Luca B» e segna presente* on a search that finds nobody; the person comes in marked present, and the toast links to the full record;
   - *Prova gratuita* is picked, beside *Si iscrive*: a trial gets a personal fee of zero, so the check-in never asks them for a month. Clearing that fee on the record makes them a member.
 - **A promotion from the athlete's row:** belt and stripes, dated today.
+  - the card's ⋮ on the roster offers *Promuovi* (not on the owner's own row);
+  - the next step on the academy's ladder is proposed: one more stripe while the belt has room, then the next belt (an adult skips the kids' grades); two pickers change it, and only a step up is recorded;
+  - it goes through the same update as the PC's form, whose observer writes the promotion to the history.
 
 **Everything else is the PC's screen at phone width,** which the canon already requires to work. The first version checks each flow it ships on a real phone (#2045).
 

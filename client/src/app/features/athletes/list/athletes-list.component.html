@@ -87,6 +87,13 @@
      here at the page root (not inside the *ngFor) so we ship one menu
      element regardless of athlete count. -->
 <p-menu #cardMenu [popup]="true" [model]="cardMenuItems()" appendTo="body" />
+<!-- The promotion from the card's ⋮ (#2045). -->
+<app-promote-sheet
+  [athlete]="promoting()"
+  (closed)="promoting.set(null)"
+  (promoted)="onPromoted($event)"
+  (hidden)="returnFocusFromPromote()"
+/>
 <!-- The payment cell's own popup (#1402). A second instance rather than a
      shared one: both are reachable on a phone, and sharing would make the
      second open steal the first's anchor. -->
