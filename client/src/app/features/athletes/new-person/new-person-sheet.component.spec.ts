@@ -116,6 +116,16 @@ describe('NewPersonSheetComponent', () => {
     expect(document.body.textContent).toContain('Last name is required');
   });
 
+  it('says a name is too long, rather than doing nothing', () => {
+    const { fixture, http } = setup();
+    open(fixture, `Luca ${'B'.repeat(101)}`);
+
+    submit().click();
+    fixture.detectChanges();
+    http.expectNone((r) => r.method === 'POST');
+    expect(document.body.textContent).toContain('Maximum 100 characters.');
+  });
+
   it('says so when the server refuses, and keeps the sheet', () => {
     const { fixture, http, created, closed } = setup();
     open(fixture, 'Luca Bianchi');

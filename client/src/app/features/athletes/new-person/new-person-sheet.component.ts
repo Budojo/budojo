@@ -102,11 +102,21 @@ export class NewPersonSheetComponent {
     holdDialogWhile(() => this.saving(), 'new-person-dialog');
   }
 
-  /** The required error for one name field, once Add was pressed. */
+  /** One name field's error, once Add was pressed: missing, or too long. */
   protected errorOf(field: 'first_name' | 'last_name'): string | null {
-    if (!this.tried() || !this.form.controls[field].hasError('required')) return null;
-    const key = field === 'first_name' ? 'firstName' : 'lastName';
-    return this.translate.instant(`athletes.form.validation.${key}.required`);
+    const control = this.form.controls[field];
+    if (!this.tried()) return null;
+    if (control.hasError('required')) {
+      return this.translate.instant(
+        field === 'first_name'
+          ? 'athletes.form.validation.firstName.required'
+          : 'athletes.form.validation.lastName.required',
+      );
+    }
+    if (control.hasError('maxlength')) {
+      return this.translate.instant('athletes.form.validation.maxLength100');
+    }
+    return null;
   }
 
   protected onVisibleChange(visible: boolean): void {

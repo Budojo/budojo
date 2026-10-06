@@ -67,13 +67,19 @@ function atClass(viewport: { width: number; height: number }, profile: 'mobile' 
 
 function addLuca(): void {
   cy.intercept('POST', '/api/v1/athletes', { statusCode: 201, body: { data: LUCA } }).as('create');
-  // From now on the search finds him.
-  cy.intercept('GET', '/api/v1/athletes*', { statusCode: 200, body: page([LUCA]) });
+  // From now on the search finds him: a white belt, so not under a blue filter.
+  cy.intercept('GET', '/api/v1/athletes*', (req) => {
+    const filtered = req.query['belt'] !== undefined && req.query['belt'] !== 'white';
+    req.reply({ statusCode: 200, body: page(filtered ? [] : [LUCA]) });
+  });
 }
 
 describe('Someone new at the door (#1939)', () => {
   it('is added from an empty search and marked present, on the PC', () => {
     atClass(VIEWPORT_LAPTOP, 'web');
+    // A belt filter left on must not hide the new white belt afterwards.
+    cy.get('[data-cy="attendance-belt-filter"]').click();
+    cy.get('.p-select-option').contains('Blue').click();
     // Enter applies the search at once: the frozen clock never ends its pause.
     cy.get('[data-cy="attendance-search-input"]').type('Luca Bianchi{enter}');
     cy.get('[data-cy="attendance-add-named"]:visible')

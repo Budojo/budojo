@@ -1469,6 +1469,8 @@ export class DailyAttendanceComponent implements OnInit {
     this.newPerson.set(null);
     this.addedId = athlete.id;
     const name = `${athlete.first_name} ${athlete.last_name}`;
+    // Alone on the list: a belt filter left on would hide them.
+    this.selectedBelt.set('');
     this.applySearch(name, () => this.focusAdded());
     this.mark(athlete, {
       silent: true,
