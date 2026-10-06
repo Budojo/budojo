@@ -605,8 +605,13 @@ async function rebase(
     // Saved once staged, as a fast-forward's base is: the next start swaps
     // it in and replays whatever happens. Every entry the replay keeps is in
     // no version on this line, so none counts as pushed or listed: a device
-    // killed before the push below pushes them at its next round.
-    const next: SyncLedger = { ...EMPTY_LEDGER, base: onto };
+    // killed before the push below pushes them at its next round. When it
+    // last pruned `files/` is the device's, not the database's, and stays.
+    const next: SyncLedger = {
+      ...EMPTY_LEDGER,
+      base: onto,
+      contentsPrunedAt: context.ledger.contentsPrunedAt,
+    };
     context.saveLedger(next);
     await shell.swapIn();
     return next;

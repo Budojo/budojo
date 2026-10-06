@@ -968,6 +968,29 @@ describe('what `files/` keeps (#2118)', () => {
     expect(untouched).not.toHaveBeenCalled();
   });
 
+  it('keeps to once a day through a rebase, which starts its ledger afresh (#2141 review)', async () => {
+    const { remote, key } = await folder(clock);
+    const { pc } = await aPhotoDeleted(remote, key);
+    now += 2 * DAY;
+    pc.write('Luca, two days later');
+    await syncNow(pc, remote, key);
+    const named = vi.spyOn(pc.files, 'named');
+    const phone = new Device('phone9c1e', null);
+    now += MINUTE;
+    await syncNow(phone, remote, key);
+    phone.write('Giulia, at the gym');
+    await syncNow(phone, remote, key);
+
+    now += MINUTE;
+    pc.write('Marco, on the PC meanwhile');
+    expect((await syncNow(pc, remote, key)).outcome).toMatchObject({
+      kind: 'rebased',
+      pushed: { device: 'pc4f2a' },
+    });
+
+    expect(named).not.toHaveBeenCalled();
+  });
+
   it('deletes only after a push of its own: a pull deletes nothing', async () => {
     const { remote, key } = await folder(clock);
     const { pc, sha } = await aPhotoDeleted(remote, key);
