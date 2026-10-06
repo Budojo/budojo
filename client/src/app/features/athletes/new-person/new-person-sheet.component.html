@@ -1,0 +1,101 @@
+<p-dialog
+  [visible]="name() !== null"
+  (visibleChange)="onVisibleChange($event)"
+  (onHide)="hidden.emit()"
+  [modal]="true"
+  [draggable]="false"
+  [closable]="!saving()"
+  [dismissableMask]="true"
+  [breakpoints]="{ '768px': '100vw' }"
+  [style]="{ width: '28rem' }"
+  styleClass="bottom-sheet new-person-dialog"
+  [header]="'athletes.newPerson.title' | translate"
+  data-cy="new-person-sheet"
+>
+  @if (name() !== null) {
+    <form class="new-person" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <app-budojo-form-field
+        [label]="'athletes.form.label.firstName' | translate"
+        [required]="true"
+        controlId="new-person-first"
+        [error]="errorOf('first_name')"
+      >
+        <input
+          pInputText
+          id="new-person-first"
+          [fluid]="true"
+          formControlName="first_name"
+          autocomplete="off"
+          autocapitalize="words"
+          enterkeyhint="next"
+          data-cy="new-person-first"
+        />
+      </app-budojo-form-field>
+
+      <app-budojo-form-field
+        [label]="'athletes.form.label.lastName' | translate"
+        [required]="true"
+        controlId="new-person-last"
+        [error]="errorOf('last_name')"
+      >
+        <input
+          pInputText
+          id="new-person-last"
+          [fluid]="true"
+          formControlName="last_name"
+          autocomplete="off"
+          autocapitalize="words"
+          enterkeyhint="done"
+          data-cy="new-person-last"
+        />
+      </app-budojo-form-field>
+
+      <app-budojo-form-field
+        [label]="'athletes.form.label.belt' | translate"
+        [required]="true"
+        controlId="new-person-belt"
+      >
+        <p-select
+          inputId="new-person-belt"
+          formControlName="belt"
+          [options]="beltOptions()"
+          optionLabel="label"
+          optionValue="value"
+          appendTo="body"
+          [fluid]="true"
+          data-cy="new-person-belt"
+        />
+      </app-budojo-form-field>
+
+      <div class="new-person__kind">
+        <p-selectbutton
+          formControlName="trial"
+          [options]="kindOptions()"
+          optionLabel="label"
+          optionValue="value"
+          [allowEmpty]="false"
+          [fluid]="true"
+          [ariaLabel]="'athletes.newPerson.kind' | translate"
+          data-cy="new-person-kind"
+        />
+        @if (form.controls.trial.value) {
+          <p class="new-person__hint">{{ 'athletes.newPerson.trialHint' | translate }}</p>
+        }
+      </div>
+
+      @if (failed()) {
+        <p class="new-person__error" role="alert" data-cy="new-person-error">
+          {{ 'athletes.newPerson.error' | translate }}
+        </p>
+      }
+
+      <p-button
+        type="submit"
+        [fluid]="true"
+        [label]="'athletes.newPerson.submit' | translate"
+        [loading]="saving()"
+        data-cy="new-person-submit"
+      />
+    </form>
+  }
+</p-dialog>

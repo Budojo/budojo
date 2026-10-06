@@ -2032,6 +2032,13 @@
           "already": "Il pagamento di {{name}} era già registrato",
           "undoError": "Non sono riuscito ad annullare il pagamento."
         }
+      },
+      "newPerson": {
+        "add": "Aggiungi una persona nuova",
+        "addNamed": "Aggiungi «{{name}}» e segna presente",
+        "added": "Nuova persona: {{name}}, presente",
+        "addedNotMarked": "Nuova persona: {{name}}. La presenza non è andata: spunta il nome nella lista",
+        "complete": "Completa la scheda"
       }
     },
     "summary": {
@@ -2811,6 +2818,15 @@
         "m": "Maschio",
         "f": "Femmina"
       }
+    },
+    "newPerson": {
+      "title": "Nuova persona",
+      "kind": "Come viene",
+      "trial": "Prova gratuita",
+      "member": "Si iscrive",
+      "trialHint": "Quota personale a zero: non paga finché non la togli dalla scheda.",
+      "submit": "Aggiungi e segna presente",
+      "error": "Non è stato possibile aggiungere questa persona. Riprova."
     },
     "promote": {
       "title": "Promozione",

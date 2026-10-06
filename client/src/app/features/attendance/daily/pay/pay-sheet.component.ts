@@ -1,8 +1,6 @@
 import {
   ChangeDetectionStrategy,
   Component,
-  DOCUMENT,
-  DestroyRef,
   computed,
   effect,
   inject,
@@ -22,6 +20,7 @@ import { LanguageService } from '../../../../core/services/language.service';
 import { AthletePayment, PaymentMethod } from '../../../../core/services/payment.service';
 import { AthleteIdentityComponent } from '../../../../shared/components/athlete-identity/athlete-identity.component';
 import { PAYMENT_METHOD_KEYS } from '../../../../shared/utils/i18n-enum-keys';
+import { holdDialogWhile } from '../../../../shared/utils/dialog-hold';
 import { formatCents } from '../../../../shared/utils/money';
 import { monthKey } from '../../../../shared/utils/months';
 import { paymentMethodOptions } from '../../../../shared/utils/payment-method-options';
@@ -102,26 +101,9 @@ export class PaySheetComponent {
       untracked(() => (athlete === null ? this.reset() : this.open(athlete, month)));
     });
 
-    // While a payment is on its way the sheet stays. PrimeNG binds Escape and
-    // the mask once, when it opens, and never reads `closeOnEscape` or
-    // `dismissableMask` again (#2133 review), so both are stopped here, in the
-    // capture phase, before the dialog hears them. The ✕ hides on its own.
-    const document = inject(DOCUMENT);
-    const hold = (event: Event): void => {
-      if (!this.saving()) return;
-      const escape = event instanceof KeyboardEvent && event.key === 'Escape';
-      const mask =
-        event.type === 'mousedown' &&
-        event.target instanceof Element &&
-        event.target.querySelector(':scope > .pay-sheet-dialog') !== null;
-      if (escape || mask) event.stopPropagation();
-    };
-    document.addEventListener('keydown', hold, true);
-    document.addEventListener('mousedown', hold, true);
-    inject(DestroyRef).onDestroy(() => {
-      document.removeEventListener('keydown', hold, true);
-      document.removeEventListener('mousedown', hold, true);
-    });
+    // While a payment is on its way the sheet stays: Escape and the mask
+    // are held (#2133 review). The ✕ hides on its own.
+    holdDialogWhile(() => this.saving(), 'pay-sheet-dialog');
   }
 
   /** The button's words: «Registra 60,00 € · contanti». */
