@@ -22,10 +22,12 @@
  *   metadata (`{}`) and no parameter but the upload's own, never `trashed` or
  *   `addParents`. A `POST` goes to the collection, never to a file; and of the
  *   page's headers only the three the uploads need pass.
- * - **a delete of anything but a version of this PC's sync folder** (#2120).
- *   The device that pushes prunes the folder's versions (#2117), so a `DELETE`
- *   of one file by its id passes here, and the main process reads where the
- *   file is before it forwards it (`checkDelete`).
+ *
+ * **A delete is checked twice** (#2120). The device that pushes prunes the
+ * folder's versions (#2117), so a bare `DELETE` of one file by its id passes
+ * here. Then the main process, with its own token, reads the file and the
+ * folders above it (`checkDelete`), and answers 403 before any delete is sent
+ * for anything but a version of this PC's sync folder.
  */
 
 export interface DriveRequest {

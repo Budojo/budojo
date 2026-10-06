@@ -474,11 +474,6 @@ export async function createAppDataFile(tokens: DriveTokens, name: string, text:
 export { DRIVE_SCOPE };
 
 /**
- * One call to Drive's API for the page's sync engine (#2032), with this
- * process's token on it. The request was checked to go to Drive's files API
- * (`sync-bridge.ts`); the answer carries the headers the engine reads.
- */
-/**
  * A file's name, type and parents, read before a sync's delete is forwarded
  * (#2120, `checkDelete`). Null when Drive has no such file; any other failure
  * is thrown, and the delete is not sent.
@@ -505,6 +500,11 @@ export async function readItem(tokens: DriveTokens, id: string): Promise<DriveIt
   };
 }
 
+/**
+ * One call to Drive's API for the page's sync engine (#2032), with this
+ * process's token on it. The request was checked to go to Drive's files API
+ * (`sync-bridge.ts`); the answer carries the headers the engine reads.
+ */
 export async function fetchDrive(tokens: DriveTokens, request: DriveRequest): Promise<DriveAnswer> {
   const response = await fetch(request.url, {
     method: request.method,
