@@ -9,7 +9,15 @@ import {
 } from './drive-state.js';
 import { mergeArchiveViews, planSync, REMOTE_RETENTION, type ArchiveView, type RemoteArchive } from './drive-sync.js';
 import { APPDATA_SCOPE, DRIVE_SCOPE } from './drive-auth.js';
-import { checkDelete, deletedFileId, type DriveAnswer, type DriveItem, type DriveRequest } from './sync-bridge.js';
+import {
+  checkDelete,
+  checkRewrite,
+  deletedFileId,
+  rewrittenFileId,
+  type DriveAnswer,
+  type DriveItem,
+  type DriveRequest,
+} from './sync-bridge.js';
 import { holdsTheseSecrets, newAcademyKeys, parseAcademyKeys, type AcademyKeys } from './sync-keys.js';
 
 /**
@@ -417,10 +425,18 @@ export class DriveSyncService {
    * process's token: the page never holds one. A token Google no longer gives
    * answers 401, which the engine shows as «Ricollega Google»; any other
    * failure is thrown, which it reads as no network.
+   *
+   * `device` is this PC's id while its server journals, null before it joined:
+   * the one report the sync rewrites is the one it names (#2139).
    */
-  async fetchForSync(request: DriveRequest): Promise<DriveAnswer> {
+  async fetchForSync(request: DriveRequest, device: string | null = null): Promise<DriveAnswer> {
     if (request.method === 'DELETE') {
-      return this.deleteForSync(request);
+      return this.forwardChecked(request, 'delete', deletedFileId(request), checkDelete);
+    }
+    if (request.method === 'PATCH') {
+      return this.forwardChecked(request, 'rewrite', device === null ? null : rewrittenFileId(request), (chain, folder) =>
+        checkRewrite(chain, folder, device ?? ''),
+      );
     }
     const tokens = await this.tokensForSync();
 
@@ -428,18 +444,23 @@ export class DriveSyncService {
   }
 
   /**
-   * A delete, which the sync sends to prune the folder's versions (#2120):
-   * forwarded only once the file is read to be a version in this PC's sync
-   * folder (`checkDelete`), and refused with a 403 otherwise. Drive not linked,
-   * or anything but one file by its id, is refused before the token is used.
-   * A file already gone (the other device pruned it first) answers 404, as
-   * Drive would.
+   * A delete, which the sync sends to prune the folder (#2120), or the upload
+   * of a file's new content, which it opens to rewrite its own report (#2139):
+   * forwarded only once the file is read to be one of those in this PC's sync
+   * folder (`checkDelete`, `checkRewrite`), and refused with a 403 otherwise.
+   * Drive not linked, a PC that never joined, or anything but one file by its
+   * id, is refused before the token is used. A file already gone (the other
+   * device pruned it first) answers 404, as Drive would.
    */
-  private async deleteForSync(request: DriveRequest): Promise<DriveAnswer> {
+  private async forwardChecked(
+    request: DriveRequest,
+    verb: 'delete' | 'rewrite',
+    fileId: string | null,
+    check: (chain: readonly DriveItem[], budojoFolder: string) => { read: string } | boolean,
+  ): Promise<DriveAnswer> {
     const state = await this.io.readState();
-    const fileId = deletedFileId(request);
     if (!state.linked || state.folderId === null || fileId === null) {
-      return this.refuseDelete(fileId);
+      return this.refuse(verb, fileId);
     }
     const tokens = await this.tokensForSync();
     if (tokens === null) {
@@ -450,22 +471,22 @@ export class DriveSyncService {
     for (;;) {
       const item = await this.io.readItem(tokens, next);
       if (item === null) {
-        return chain.length === 0 ? answer(404) : this.refuseDelete(fileId);
+        return chain.length === 0 ? answer(404) : this.refuse(verb, fileId);
       }
       chain.push(item);
-      const check = checkDelete(chain, state.folderId);
-      if (check === true) {
+      const verdict = check(chain, state.folderId);
+      if (verdict === true) {
         return this.io.fetchDrive(tokens, request);
       }
-      if (check === false) {
-        return this.refuseDelete(fileId);
+      if (verdict === false) {
+        return this.refuse(verb, fileId);
       }
-      next = check.read;
+      next = verdict.read;
     }
   }
 
-  private refuseDelete(fileId: string | null): DriveAnswer {
-    this.io.log(`sync: refused to delete ${fileId ?? 'a request that names no file'}`);
+  private refuse(verb: 'delete' | 'rewrite', fileId: string | null): DriveAnswer {
+    this.io.log(`sync: refused to ${verb} ${fileId ?? 'a request that names no file'}`);
 
     return answer(403);
   }

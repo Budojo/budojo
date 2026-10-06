@@ -1009,7 +1009,8 @@ function registerSyncBridge(syncOf: () => DesktopSync | null, driveOf: () => Dri
       return { status: 400, headers: {}, body: new Uint8Array() };
     }
 
-    return drive.fetchForSync(request);
+    // This PC's id: the one report the sync rewrites is the one it names (#2139).
+    return drive.fetchForSync(request, syncOf()?.running() ?? null);
   });
 
   ipcMain.handle('budojo:sync:swap-in', async () => {

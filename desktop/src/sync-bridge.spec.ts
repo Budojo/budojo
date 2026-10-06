@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
   checkDelete,
+  checkRewrite,
   deletedFileId,
   forwardedHeaders,
   isSyncDriveUrl,
   parseDriveRequest,
+  rewrittenFileId,
   type DriveItem,
 } from './sync-bridge.js';
 
@@ -131,6 +133,87 @@ describe('the sync’s Drive bridge', () => {
     expect(
       parseDriveRequest({ url: `${upload}&addParents=elsewhere&removeParents=backups`, method: 'PATCH', headers: {}, body: '{}' }),
     ).toBeNull();
+  });
+
+  it('takes a PATCH only to open a resumable upload of one file: what it rewrites is checked after (#2139)', () => {
+    const patch = (url: string) => parseDriveRequest({ url, method: 'patch', headers: {}, body: '{}' });
+    const upload = 'https://www.googleapis.com/upload/drive/v3/files/report123?uploadType=resumable&fields=id';
+    expect(patch(upload)).not.toBeNull();
+    expect(rewrittenFileId({ url: upload, method: 'PATCH', headers: {}, body: '{}' })).toBe('report123');
+    expect(rewrittenFileId({ url: upload, method: 'PATCH', headers: {} })).toBe('report123');
+
+    // A media upload replaces the content with its own body: `{}` over a backup.
+    expect(patch('https://www.googleapis.com/upload/drive/v3/files/backup123?uploadType=media')).toBeNull();
+    expect(patch('https://www.googleapis.com/upload/drive/v3/files/backup123?uploadType=multipart')).toBeNull();
+    expect(patch('https://www.googleapis.com/upload/drive/v3/files/backup123')).toBeNull();
+    expect(patch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable')).toBeNull();
+    expect(rewrittenFileId({ url: upload, method: 'POST', headers: {}, body: '{}' })).toBeNull();
+    expect(rewrittenFileId({ url: upload, method: 'PATCH', headers: {}, body: '{"trashed":true}' })).toBeNull();
+  });
+
+  it('takes a PUT only into an upload’s session: never content sent straight to a file (#2139)', () => {
+    const put = (url: string) => parseDriveRequest({ url, method: 'PUT', headers: {}, body: new Uint8Array([1]) });
+    expect(put('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&upload_id=s1')).not.toBeNull();
+    expect(put('https://www.googleapis.com/upload/drive/v3/files/report123?uploadType=resumable&upload_id=s1')).not.toBeNull();
+
+    expect(put('https://www.googleapis.com/upload/drive/v3/files/backup123?uploadType=media')).toBeNull();
+    expect(put('https://www.googleapis.com/upload/drive/v3/files/backup123')).toBeNull();
+    expect(put('https://www.googleapis.com/upload/drive/v3/files/backup123?upload_id=')).toBeNull();
+  });
+});
+
+/**
+ * The sync's rewrites (#2139): the one file the sync writes again in place is
+ * this PC's own report, after every round (`devices/<id>.bjs`). Versions and
+ * contents get new names, and `folder.bjs` is written only when there is none,
+ * so a `PATCH` is forwarded for that report alone. Read as a delete is.
+ */
+describe('the sync’s rewrites', () => {
+  const FOLDER = 'application/vnd.google-apps.folder';
+  const item = (id: string, name: string, parents: string[], mimeType = 'application/octet-stream'): DriveItem => ({
+    id,
+    name,
+    mimeType,
+    parents,
+  });
+  const budojo = 'budojo-1';
+  const sync = item('sync-1', 'sync', [budojo], FOLDER);
+  const devices = item('devices-1', 'devices', ['sync-1'], FOLDER);
+  const report = item('r-1', 'pc4f2a.bjs', ['devices-1']);
+
+  it('reads from the file up, and lets this PC rewrite its own report', () => {
+    expect(checkRewrite([report], budojo, 'pc4f2a')).toEqual({ read: 'devices-1' });
+    expect(checkRewrite([report, devices], budojo, 'pc4f2a')).toEqual({ read: 'sync-1' });
+    expect(checkRewrite([report, devices, sync], budojo, 'pc4f2a')).toBe(true);
+  });
+
+  it('refuses every other file at the first read: the other device’s report, a version, a content, the folder’s id', () => {
+    for (const name of [
+      'phone9c1e.bjs',
+      'pc4f2b.bjs',
+      'pc4f2a.bjs.part',
+      '000045-pc4f2a.000044-pc4f2a.bjs',
+      `${'a'.repeat(64)}.bjs`,
+      'folder.bjs',
+      'budojo-backup-20261006-120000.zip',
+    ]) {
+      expect(checkRewrite([item('x', name, ['devices-1'])], budojo, 'pc4f2a')).toBe(false);
+    }
+  });
+
+  it('refuses its report’s name anywhere but in `devices/` of this PC’s sync folder', () => {
+    expect(checkRewrite([item('r', 'pc4f2a.bjs', [budojo]), item(budojo, 'Budojo', ['root'], FOLDER)], budojo, 'pc4f2a')).toBe(
+      false,
+    );
+    const versions = item('versions-1', 'versions', ['sync-1'], FOLDER);
+    expect(checkRewrite([item('r', 'pc4f2a.bjs', ['versions-1']), versions], budojo, 'pc4f2a')).toBe(false);
+    expect(checkRewrite([report, devices, item('sync-1', 'sync', ['budojo-2'], FOLDER)], budojo, 'pc4f2a')).toBe(false);
+    expect(checkRewrite([report, item('devices-1', 'devices', ['sync-1'])], budojo, 'pc4f2a')).toBe(false);
+  });
+
+  it('rewrites nothing for an id that is not a device’s: a PC that never joined', () => {
+    expect(checkRewrite([item('r', '.bjs', ['devices-1']), devices, sync], budojo, '')).toBe(false);
+    expect(checkRewrite([item('r', 'x.bjs', ['devices-1']), devices, sync], budojo, 'x')).toBe(false);
   });
 });
 
