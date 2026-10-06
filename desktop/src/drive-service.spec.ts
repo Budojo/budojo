@@ -7,6 +7,7 @@ import { DriveSyncService, type DriveSyncIO } from './drive-service.js';
 import { emptyState, type DriveState } from './drive-state.js';
 import type { RemoteArchive } from './drive-sync.js';
 import { APPDATA_SCOPE, DRIVE_SCOPE } from './drive-auth.js';
+import type { DriveItem } from './sync-bridge.js';
 import { newAcademyKeys, parseAcademyKeys } from './sync-keys.js';
 
 /**
@@ -53,6 +54,7 @@ function fakeIO(overrides: Partial<DriveSyncIO> = {}) {
     writeKeys: vi.fn(async () => undefined),
     ensureFresh: vi.fn(async (t) => t),
     fetchDrive: vi.fn(async () => ({ status: 200, headers: {}, body: new Uint8Array() })),
+    readItem: vi.fn(async (): Promise<DriveItem | null> => null),
     accountEmail: vi.fn(async () => 'gym@example.it'),
     ensureFolder: vi.fn(async () => 'folder-1'),
     listRemote: vi.fn(async () => remote),
@@ -623,5 +625,129 @@ describe('the sync’s keys and Drive calls (#2032)', () => {
 
     expect(answer.status).toBe(401);
     expect(io.fetchDrive).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * The sync's deletes (#2120): the device that pushes prunes the folder's
+ * versions (#2117). The page asks, and the main process forwards a delete only
+ * for a version in this PC's sync folder: never a backup or any other file.
+ */
+describe('the sync’s deletes (#2120)', () => {
+  const FOLDER = 'application/vnd.google-apps.folder';
+  const VERSION = '000045-phone9c1e.000044-pc4f2a.bjs';
+  const item = (id: string, name: string, parent: string, mimeType = 'application/octet-stream'): DriveItem => ({
+    id,
+    name,
+    mimeType,
+    parents: [parent],
+  });
+  /** The owner's Drive: `folder-1` is the `Budojo` folder this PC linked, with its backups and the sync folder. */
+  const DRIVE: DriveItem[] = [
+    item('folder-1', 'Budojo', 'root', FOLDER),
+    item('backup-1', 'budojo-backup-20261006-120000.zip', 'folder-1', 'application/zip'),
+    item('stray-1', VERSION, 'folder-1'),
+    item('sync-1', 'sync', 'folder-1', FOLDER),
+    item('id-1', 'folder.bjs', 'sync-1'),
+    item('versions-1', 'versions', 'sync-1', FOLDER),
+    item('version-45', VERSION, 'versions-1'),
+    item('devices-1', 'devices', 'sync-1', FOLDER),
+    item('report-1', 'pc4f2a.bjs', 'devices-1'),
+    item('other-1', 'Altro', 'root', FOLDER),
+    item('doc-1', 'certificato.pdf', 'other-1', 'application/pdf'),
+    item('other-sync', 'sync', 'other-1', FOLDER),
+    item('other-versions', 'versions', 'other-sync', FOLDER),
+    item('other-version', VERSION, 'other-versions'),
+  ];
+  const deleteOf = (id: string, url = `https://www.googleapis.com/drive/v3/files/${id}`) => ({
+    url,
+    method: 'DELETE',
+    headers: {},
+  });
+
+  function onDrive(overrides: Partial<DriveSyncIO> = {}) {
+    const found = fakeIO({
+      readItem: vi.fn(async (_tokens: DriveTokens, id: string) => DRIVE.find((entry) => entry.id === id) ?? null),
+      ...overrides,
+    });
+
+    return { ...found, service: new DriveSyncService(found.io) };
+  }
+
+  it('forwards a version’s delete, in `versions/` of the sync folder of the `Budojo` folder this PC linked', async () => {
+    const { io, service } = onDrive();
+
+    const answer = await service.fetchForSync(deleteOf('version-45'));
+
+    expect(answer.status).toBe(200);
+    expect(io.fetchDrive).toHaveBeenCalledWith(expect.objectContaining({ accessToken: 'at' }), deleteOf('version-45'));
+  });
+
+  it.each([
+    ['a backup', 'backup-1'],
+    ['the folder’s id', 'id-1'],
+    ['a report', 'report-1'],
+    ['a document outside the sync folder', 'doc-1'],
+    ['a version’s name beside the backups', 'stray-1'],
+    ['a version’s name in another sync folder', 'other-version'],
+    ['the versions folder itself', 'versions-1'],
+    ['the `Budojo` folder', 'folder-1'],
+  ])('refuses %s with a 403, and never forwards it', async (_what, id) => {
+    const { io, service } = onDrive();
+
+    const answer = await service.fetchForSync(deleteOf(id));
+
+    expect(answer.status).toBe(403);
+    expect(io.fetchDrive).not.toHaveBeenCalled();
+    expect(io.log).toHaveBeenCalledWith(`sync: refused to delete ${id}`);
+  });
+
+  it('reads no further than the first link that fails: a backup is one read', async () => {
+    const { io, service } = onDrive();
+
+    await service.fetchForSync(deleteOf('backup-1'));
+
+    expect(io.readItem).toHaveBeenCalledTimes(1);
+  });
+
+  it('refuses before the token is used: Drive not linked, or a delete of anything but one bare file', async () => {
+    const unlinked = onDrive({ readState: vi.fn(async () => emptyState()) });
+    expect((await unlinked.service.fetchForSync(deleteOf('version-45'))).status).toBe(403);
+    expect(unlinked.io.readTokens).not.toHaveBeenCalled();
+
+    const { io, service } = onDrive();
+    const withParameter = deleteOf('version-45', 'https://www.googleapis.com/drive/v3/files/version-45?fields=id');
+    expect((await service.fetchForSync(withParameter)).status).toBe(403);
+    expect((await service.fetchForSync(deleteOf('', 'https://www.googleapis.com/drive/v3/files'))).status).toBe(403);
+    expect(io.readTokens).not.toHaveBeenCalled();
+    expect(io.readItem).not.toHaveBeenCalled();
+    expect(io.fetchDrive).not.toHaveBeenCalled();
+  });
+
+  it('answers 404 for a file already gone: the other device pruned it first', async () => {
+    const { io, service } = onDrive();
+
+    const answer = await service.fetchForSync(deleteOf('version-44'));
+
+    expect(answer.status).toBe(404);
+    expect(io.fetchDrive).not.toHaveBeenCalled();
+  });
+
+  it('refuses a version whose folder cannot be read', async () => {
+    const { io, service } = onDrive({
+      readItem: vi.fn(async (_tokens: DriveTokens, id: string) =>
+        id === 'version-45' ? (DRIVE.find((entry) => entry.id === id) ?? null) : null,
+      ),
+    });
+
+    expect((await service.fetchForSync(deleteOf('version-45'))).status).toBe(403);
+    expect(io.fetchDrive).not.toHaveBeenCalled();
+  });
+
+  it('answers 401 when Google no longer gives a token, and reads nothing', async () => {
+    const { io, service } = onDrive({ readTokens: vi.fn(async () => null) });
+
+    expect((await service.fetchForSync(deleteOf('version-45'))).status).toBe(401);
+    expect(io.readItem).not.toHaveBeenCalled();
   });
 });

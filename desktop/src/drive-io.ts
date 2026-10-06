@@ -7,7 +7,7 @@ import { Readable } from 'node:stream';
 
 import { buildAuthorizeUrl, createPkcePair, DRIVE_SCOPE, needsRefresh, parseCallbackUrl } from './drive-auth.js';
 import type { RemoteArchive } from './drive-sync.js';
-import { ANSWER_HEADERS, forwardedHeaders, type DriveAnswer, type DriveRequest } from './sync-bridge.js';
+import { ANSWER_HEADERS, forwardedHeaders, type DriveAnswer, type DriveItem, type DriveRequest } from './sync-bridge.js';
 
 /**
  * The I/O half of the Drive backup sync (#1301). Sockets, HTTP and nothing
@@ -478,6 +478,33 @@ export { DRIVE_SCOPE };
  * process's token on it. The request was checked to go to Drive's files API
  * (`sync-bridge.ts`); the answer carries the headers the engine reads.
  */
+/**
+ * A file's name, type and parents, read before a sync's delete is forwarded
+ * (#2120, `checkDelete`). Null when Drive has no such file; any other failure
+ * is thrown, and the delete is not sent.
+ */
+export async function readItem(tokens: DriveTokens, id: string): Promise<DriveItem | null> {
+  const response = await fetch(`${DRIVE_FILES}/${encodeURIComponent(id)}?fields=id,name,mimeType,parents`, {
+    headers: auth(tokens),
+  });
+
+  if (response.status === 404) {
+    return null;
+  }
+  if (!response.ok) {
+    throw await toDriveError(response);
+  }
+
+  const body = (await response.json()) as { id?: unknown; name?: unknown; mimeType?: unknown; parents?: unknown };
+
+  return {
+    id: typeof body.id === 'string' ? body.id : '',
+    name: typeof body.name === 'string' ? body.name : '',
+    mimeType: typeof body.mimeType === 'string' ? body.mimeType : '',
+    parents: Array.isArray(body.parents) ? body.parents.filter((parent) => typeof parent === 'string') : [],
+  };
+}
+
 export async function fetchDrive(tokens: DriveTokens, request: DriveRequest): Promise<DriveAnswer> {
   const response = await fetch(request.url, {
     method: request.method,
