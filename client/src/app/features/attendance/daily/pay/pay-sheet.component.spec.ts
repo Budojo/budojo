@@ -148,7 +148,7 @@ describe('PaySheetComponent', () => {
   });
 
   it('cannot be dismissed while the payment is on its way', async () => {
-    const { fixture, http } = setup();
+    const { fixture, http, closed } = setup();
     open(fixture, athlete(), '2026-08');
     http
       .expectOne((r) => r.url.endsWith('/athletes/7/payments'))
@@ -161,11 +161,23 @@ describe('PaySheetComponent', () => {
     fixture.detectChanges();
     expect(document.body.querySelector('.p-dialog-close-button')).toBeNull();
 
+    // PrimeNG reads Escape and the mask once, when the sheet opens: neither
+    // may close it now (#2133 review).
+    const escape = () =>
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    const mask = sheet()?.parentElement as HTMLElement;
+    escape();
+    mask.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    expect(closed()).toBe(0);
+
     http
       .expectOne((r) => r.method === 'POST')
       .flush({ message: 'x' }, { status: 500, statusText: 'x' });
     fixture.detectChanges();
     expect(document.body.querySelector('.p-dialog-close-button')).not.toBeNull();
+
+    escape();
+    expect(closed()).toBe(1);
   });
 
   it("names a quarterly payer's whole period and its price", async () => {
