@@ -46,7 +46,13 @@ describe('moneyRows', () => {
   });
 
   it("puts tonight's people first, in the roster's order", () => {
-    const rows = moneyRows([athlete(1), athlete(2), athlete(3)], new Map(), OCT, NONE, new Set([3]));
+    const rows = moneyRows(
+      [athlete(1), athlete(2), athlete(3)],
+      new Map(),
+      OCT,
+      NONE,
+      new Set([3]),
+    );
     expect(rows.tonight.map((row) => row.athlete.id)).toEqual([3]);
     expect(rows.others.map((row) => row.athlete.id)).toEqual([1, 2]);
   });
@@ -70,7 +76,13 @@ describe('moneyRows', () => {
     expect(halfway.others[0].lead).toBe('2026-08');
     expect(halfway.others[0].also).toEqual([]);
 
-    const done = moneyRows([athlete(1)], behind, OCT, new Map([[1, new Set([OCT, '2026-08'])]]), NOBODY);
+    const done = moneyRows(
+      [athlete(1)],
+      behind,
+      OCT,
+      new Map([[1, new Set([OCT, '2026-08'])]]),
+      NOBODY,
+    );
     expect(done.others).toEqual([]);
   });
 });

@@ -19,7 +19,7 @@ import { ErrorStateComponent } from '../../shared/components/error-state/error-s
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { monthKey } from '../../shared/utils/months';
-import { CheckInMoney } from '../attendance/daily/pay/check-in-money';
+import { MatMoney } from '../attendance/daily/pay/mat-money';
 import { MoneyRow } from '../attendance/daily/pay/money-rows';
 import { monthOf, yearMonthOf } from '../attendance/daily/pay/pay-chip';
 import { PayRecorded, PaySheetComponent } from '../attendance/daily/pay/pay-sheet.component';
@@ -50,7 +50,7 @@ const ROSTER_SIZE = 200;
     PageHeaderComponent,
     PaySheetComponent,
   ],
-  providers: [MessageService, CheckInMoney],
+  providers: [MessageService, MatMoney],
   templateUrl: './money.component.html',
   styleUrl: './money.component.scss',
 })
@@ -61,7 +61,7 @@ export class MoneyComponent implements OnInit {
   private readonly translate = inject(TranslateService);
   private readonly languageService = inject(LanguageService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
-  protected readonly money = inject(CheckInMoney);
+  protected readonly money = inject(MatMoney);
 
   /** The active roster; `null` until it answers. */
   private readonly roster = signal<readonly Athlete[] | null>(null);

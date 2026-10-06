@@ -3,7 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Athlete } from '../../../../core/services/athlete.service';
 import { AthletePayment } from '../../../../core/services/payment.service';
-import { CheckInMoney } from './check-in-money';
+import { MatMoney } from './mat-money';
 
 const ARREARS = '/api/v1/stats/payments/arrears';
 
@@ -38,10 +38,10 @@ const payment = (over: Partial<AthletePayment> = {}): AthletePayment => ({
 
 function setup() {
   TestBed.configureTestingModule({
-    providers: [provideHttpClient(), provideHttpClientTesting(), CheckInMoney],
+    providers: [provideHttpClient(), provideHttpClientTesting(), MatMoney],
   });
   return {
-    money: TestBed.inject(CheckInMoney),
+    money: TestBed.inject(MatMoney),
     http: TestBed.inject(HttpTestingController),
   };
 }
@@ -60,7 +60,7 @@ function behind(http: HttpTestingController, rows: { id: number; months: string[
     });
 }
 
-describe('CheckInMoney', () => {
+describe('MatMoney', () => {
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date(2026, 9, 3, 19, 0));

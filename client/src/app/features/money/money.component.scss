@@ -42,6 +42,8 @@
 // The whole row is the button: 56px, the PRD's floor for a row on the mat.
 .money-row {
   all: unset;
+  // The identity's belt spine is drawn against the row, not the page.
+  position: relative;
   box-sizing: border-box;
   width: 100%;
   min-height: 3.5rem;

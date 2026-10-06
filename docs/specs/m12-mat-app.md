@@ -282,6 +282,11 @@ Versions from before the rotation are not kept: the PC's backups on Drive (#1301
   - the amount is the fee × the period, read-only;
   - *Contanti* preselected;
   - one button: *Registra 60 € · contanti*.
+- **Soldi** (#2132), a tab of its own on the phone: *Chi deve ancora pagare*.
+  - whoever the check-in's chip would ask, so the two screens agree;
+  - tonight's people first, those marked present today;
+  - a row names this month and the months behind beside it: *ottobre · anche agosto*;
+  - a tap opens the same payment sheet; once nothing is owed the row leaves, and the toast's undo puts it back.
 - **A new athlete in three fields:** first name, last name, belt. The rest waits for later. It is the trial class that walks in.
 - **A promotion from the athlete's row:** belt and stripes, dated today.
 

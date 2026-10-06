@@ -5,7 +5,7 @@ import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideRouter } from '@angular/router';
 import { provideI18nTesting } from '../../../../../test-utils/i18n-test';
 import { Athlete } from '../../../../core/services/athlete.service';
-import { CheckInMoney } from './check-in-money';
+import { MatMoney } from './mat-money';
 import { PayRecorded, PaySheetComponent } from './pay-sheet.component';
 
 const athlete = (over: Partial<Athlete> = {}): Athlete =>
@@ -37,11 +37,11 @@ function setup() {
       provideNoopAnimations(),
       provideRouter([]),
       ...provideI18nTesting(),
-      CheckInMoney,
+      MatMoney,
     ],
   });
   const http = TestBed.inject(HttpTestingController);
-  const money = TestBed.inject(CheckInMoney);
+  const money = TestBed.inject(MatMoney);
   money.load();
   http
     .expectOne((r) => r.url.endsWith('/stats/payments/arrears'))

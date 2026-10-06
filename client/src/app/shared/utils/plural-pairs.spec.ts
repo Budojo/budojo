@@ -54,6 +54,8 @@ describe('plural pairs (#1646)', () => {
       'athletes.list.coverage.carnet',
       'documents.expiringList.countExpiring',
       'documents.expiringList.countMissing',
+      // Three months behind or more: «e altri 2 mesi» at the least, never one.
+      'money.alsoMany',
       'profile.sessions.revokeOthersToast.detail',
       'relativeDay.days',
       'relativeDay.weeks',

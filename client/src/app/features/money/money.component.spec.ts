@@ -145,7 +145,7 @@ describe('MoneyComponent', () => {
     expect(root.querySelector('[data-cy="money-error"]')).not.toBeNull();
   });
 
-  it("opens the payment sheet on a row, at the oldest month owed", () => {
+  it('opens the payment sheet on a row, at the oldest month owed', () => {
     const { fixture, http, root } = setup();
     answer(http, [ANNA], [{ id: 1, months: ['2026-08'] }], []);
     fixture.detectChanges();

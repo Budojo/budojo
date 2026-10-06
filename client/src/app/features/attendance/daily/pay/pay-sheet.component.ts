@@ -25,7 +25,7 @@ import { PAYMENT_METHOD_KEYS } from '../../../../shared/utils/i18n-enum-keys';
 import { formatCents } from '../../../../shared/utils/money';
 import { monthKey } from '../../../../shared/utils/months';
 import { paymentMethodOptions } from '../../../../shared/utils/payment-method-options';
-import { CheckInMoney } from './check-in-money';
+import { MatMoney } from './mat-money';
 import { monthsCovered, yearMonthOf } from './pay-chip';
 
 /** What the sheet hands back once a payment is recorded. */
@@ -61,7 +61,7 @@ export interface PayRecorded {
   styleUrl: './pay-sheet.component.scss',
 })
 export class PaySheetComponent {
-  private readonly money = inject(CheckInMoney);
+  private readonly money = inject(MatMoney);
   private readonly translate = inject(TranslateService);
   private readonly languageService = inject(LanguageService);
 

@@ -20,9 +20,9 @@ import {
 } from './pay-chip';
 
 /**
- * The money side of the phone's check-in (#2036): who owes what, and the
- * payments this screen records. Provided by the check-in, so it lives and
- * dies with the screen.
+ * The money at the mat (#2036, #2132): who owes what, and the payments a
+ * phone screen records, for the check-in's chips and for «Soldi». Each screen
+ * provides its own, so it lives and dies with the screen.
  *
  * Everything it knows comes from the phone's own server: the roster's
  * coverage, the arrears list (`GET /stats/payments/arrears`) and, once a
@@ -30,7 +30,7 @@ import {
  * beside them, because the roster's coverage was read before they existed.
  */
 @Injectable()
-export class CheckInMoney {
+export class MatMoney {
   private readonly stats = inject(StatsService);
   private readonly payments = inject(PaymentService);
 
