@@ -19,9 +19,9 @@ export interface MoneyRows {
 }
 
 /**
- * Who still has to pay, in the roster's order, split by who is on the mat
- * today. Someone is listed when the check-in's chip would ask them for a
- * month (`payChipOf`), so the two screens never disagree about who owes.
+ * Who still has to pay, in the order `athletes` comes in, split by who is on
+ * the mat today. Someone is listed when the check-in's chip would ask them
+ * for a month (`payChipOf`), so the two screens never disagree about who owes.
  */
 export function moneyRows(
   athletes: readonly Athlete[],

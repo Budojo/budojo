@@ -67,7 +67,9 @@ export class MoneyComponent implements OnInit {
   private readonly roster = signal<readonly Athlete[] | null>(null);
   /** Who is marked present today, in any class. */
   private readonly presentToday = signal<ReadonlySet<number>>(new Set());
-  protected readonly errored = signal<boolean>(false);
+  private readonly rosterFailed = signal<boolean>(false);
+  /** Either list failed: without the arrears «paid up» could be a lie. */
+  protected readonly errored = computed<boolean>(() => this.rosterFailed() || this.money.failed());
 
   protected readonly rows = computed(() => {
     const roster = this.roster();
@@ -104,12 +106,15 @@ export class MoneyComponent implements OnInit {
   }
 
   protected load(): void {
-    this.errored.set(false);
+    this.rosterFailed.set(false);
     this.roster.set(null);
-    this.athletes.list({ status: 'active', perPage: ROSTER_SIZE }).subscribe({
-      next: (page) => this.roster.set(page.data),
-      error: () => this.errored.set(true),
-    });
+    // By surname, as the PC's arrears list: a list to find a name in.
+    this.athletes
+      .list({ status: 'active', perPage: ROSTER_SIZE, sortBy: 'last_name', sortOrder: 'asc' })
+      .subscribe({
+        next: (page) => this.roster.set(page.data),
+        error: () => this.rosterFailed.set(true),
+      });
     // Without today's register the list is still right, only not split.
     this.attendance.getDaily(todayIso()).subscribe({
       next: (records) => this.presentToday.set(new Set(records.map((r) => r.athlete_id))),

@@ -106,13 +106,19 @@
     font-weight: 500;
   }
 
+  // The only way back from a payment: a 48px target (Fitts), the toast's
+  // text unchanged.
   &__undo {
     all: unset;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    min-height: 3rem;
     cursor: pointer;
     font-weight: 600;
     font-size: 0.9375rem;
     color: var(--p-primary-color);
-    padding: 0.25rem 0.5rem;
+    padding: 0 1rem;
     border-radius: var(--p-border-radius-sm);
 
     &:hover {

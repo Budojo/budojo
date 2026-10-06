@@ -84,6 +84,12 @@ describe('MatMoney', () => {
     money.load();
     http.expectOne((r) => r.url.endsWith(ARREARS)).flush('', { status: 500, statusText: 'x' });
     expect(money.chipFor(athlete())).toEqual({ kind: 'due', month: '2026-10' });
+    // «Soldi» cannot list who is behind without it, and has to say so.
+    expect(money.failed()).toBe(true);
+
+    money.load();
+    expect(money.failed()).toBe(false);
+    behind(http, []);
   });
 
   it('knows every month behind from the arrears list alone', () => {

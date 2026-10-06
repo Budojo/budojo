@@ -308,11 +308,16 @@
 
 .attendance-toast__undo {
   all: unset;
+  // A 48px target (Fitts): it takes back a presence or a payment (#2137).
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  min-height: 3rem;
   cursor: pointer;
   font-weight: 600;
   font-size: 0.9375rem;
   color: var(--p-primary-color);
-  padding: 0.25rem 0.5rem;
+  padding: 0 1rem;
   border-radius: var(--p-border-radius-sm);
 
   &:hover {

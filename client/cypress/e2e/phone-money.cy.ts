@@ -107,8 +107,12 @@ describe('Soldi on the phone (#2132)', () => {
     });
     row(3).should('not.exist');
 
+    // The shell scrolls `main`, not the document: measure both.
     cy.document().then((doc) => {
       expect(doc.documentElement.scrollWidth).to.be.at.most(doc.documentElement.clientWidth);
+    });
+    cy.get('main.main').should(($main) => {
+      expect($main[0].scrollWidth).to.be.at.most($main[0].clientWidth);
     });
   });
 
@@ -136,6 +140,9 @@ describe('Soldi on the phone (#2132)', () => {
     cy.wait('@pay');
 
     row(2).should('not.exist');
+    cy.get('[data-cy="money-undo"]').should(($undo) => {
+      expect($undo[0].getBoundingClientRect().height).to.be.at.least(48);
+    });
     cy.get('[data-cy="money-undo"]').click();
     cy.wait('@undo');
     row(2).should('be.visible');

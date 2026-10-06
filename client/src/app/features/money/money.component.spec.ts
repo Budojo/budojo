@@ -56,7 +56,12 @@ function answer(
   present: number[],
 ): void {
   http
-    .expectOne((r) => r.url.endsWith('/api/v1/athletes'))
+    .expectOne(
+      (r) =>
+        r.url.endsWith('/api/v1/athletes') &&
+        r.params.get('sort_by') === 'last_name' &&
+        r.params.get('sort_order') === 'asc',
+    )
     .flush({
       data: roster,
       links: { first: null, last: null, prev: null, next: null },
@@ -142,6 +147,25 @@ describe('MoneyComponent', () => {
     http.expectOne((r) => r.url.endsWith('/stats/payments/arrears')).flush({ data: [] });
     fixture.detectChanges();
 
+    expect(root.querySelector('[data-cy="money-error"]')).not.toBeNull();
+  });
+
+  it('offers a retry, never «paid up», when the arrears list does not load', () => {
+    const { fixture, http, root } = setup();
+    http
+      .expectOne((r) => r.url.endsWith('/api/v1/athletes'))
+      .flush({
+        data: [athlete(4, 'Dario', { payment_coverage: 'monthly' })],
+        links: { first: null, last: null, prev: null, next: null },
+        meta: { current_page: 1, from: 1, last_page: 1, path: '', per_page: 200, to: 1, total: 1 },
+      });
+    http.expectOne((r) => r.url.endsWith('/api/v1/attendance')).flush({ data: [] });
+    http
+      .expectOne((r) => r.url.endsWith('/stats/payments/arrears'))
+      .flush('', { status: 500, statusText: 'x' });
+    fixture.detectChanges();
+
+    expect(root.querySelector('[data-cy="money-empty"]')).toBeNull();
     expect(root.querySelector('[data-cy="money-error"]')).not.toBeNull();
   });
 
