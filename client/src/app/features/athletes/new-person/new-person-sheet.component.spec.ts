@@ -134,5 +134,10 @@ describe('NewPersonSheetComponent', () => {
     expect(created).toEqual([]);
     expect(document.body.querySelector('[data-cy="new-person-error"]')).not.toBeNull();
     expect(document.body.querySelector('.p-dialog')).not.toBeNull();
+
+    // And Escape closes it again once nothing is on its way: the hold above
+    // held, the dialog was listening.
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(closed()).toBe(1);
   });
 });

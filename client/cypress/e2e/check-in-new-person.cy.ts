@@ -103,6 +103,8 @@ describe('Someone new at the door (#1939)', () => {
       .should('deep.include', { athlete_ids: [31], academy_class_id: 7 });
 
     cy.get('[data-cy="attendance-row-31"]').should('have.attr', 'aria-pressed', 'true');
+    // The keyboard lands on their row, not back in the search.
+    cy.focused().should('have.attr', 'data-cy', 'attendance-row-31');
     cy.contains('New person: Luca Bianchi, marked present').should('be.visible');
     cy.get('[data-cy="attendance-complete-record"]')
       .should('have.attr', 'href', '/dashboard/athletes/31/edit')
@@ -124,6 +126,7 @@ describe('Someone new at the door (#1939)', () => {
     // Cancelling creates nobody.
     cy.get('body').type('{esc}');
     cy.get('.p-dialog').should('not.exist');
+    cy.focused().should('have.attr', 'data-cy', 'attendance-add-person');
   });
 
   it('keeps the person when the presence does not go through, and says so', () => {
