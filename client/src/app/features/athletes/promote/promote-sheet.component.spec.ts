@@ -108,6 +108,25 @@ describe('PromoteSheetComponent', () => {
     expect(text('promote-to')).toContain('Purple · 0');
   });
 
+  it("lists a proposed kids' grade even where the academy hides them", () => {
+    const { fixture, http } = setup();
+    useLadder('judo', { trains_kids: false });
+    open(fixture, http, anna({ belt: 'white-and-yellow', stripes: 0 }), {
+      kind: 'belt',
+      belt: 'yellow-and-orange',
+      stripes: 0,
+    });
+    const values = (
+      fixture.componentInstance as unknown as { beltOptions: () => { value: string }[] }
+    )
+      .beltOptions()
+      .map((option) => option.value);
+
+    expect(values).toContain('white-and-yellow');
+    expect(values).toContain('yellow-and-orange');
+    expect(values).not.toContain('orange-and-green');
+  });
+
   it('starts a picked belt with no stripes', () => {
     const { fixture, http } = setup();
     open(fixture, http, anna(), { kind: 'stripe', belt: 'blue', stripes: 3 });

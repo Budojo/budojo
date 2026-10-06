@@ -74,9 +74,22 @@ export class PromoteSheetComponent {
   protected readonly saving = signal<boolean>(false);
   protected readonly failed = signal<boolean>(false);
 
+  /**
+   * The ladder's belts, with the one held and the one proposed always on it:
+   * an academy without kids' classes hides those grades, but a child already
+   * on one is proposed the next (#2143 review).
+   */
   protected readonly beltOptions = computed(() => {
     this.languageService.currentLang();
-    return this.beltLadder.beltOptions(this.athlete()?.belt ?? null);
+    const options = this.beltLadder.beltOptions(this.athlete()?.belt ?? null);
+    const proposed = this.belt();
+    if (proposed === null || options.some((option) => option.value === proposed)) return options;
+    return this.beltLadder
+      .allBeltOptions()
+      .filter(
+        (option) =>
+          option.value === proposed || options.some((kept) => kept.value === option.value),
+      );
   });
 
   protected readonly stripeOptions = computed(() => {
