@@ -636,6 +636,7 @@ describe('the sync’s keys and Drive calls (#2032)', () => {
 describe('the sync’s deletes (#2120)', () => {
   const FOLDER = 'application/vnd.google-apps.folder';
   const VERSION = '000045-phone9c1e.000044-pc4f2a.bjs';
+  const CONTENT = `${'c'.repeat(64)}.bjs`;
   const item = (id: string, name: string, parent: string, mimeType = 'application/octet-stream'): DriveItem => ({
     id,
     name,
@@ -653,11 +654,15 @@ describe('the sync’s deletes (#2120)', () => {
     item('version-45', VERSION, 'versions-1'),
     item('devices-1', 'devices', 'sync-1', FOLDER),
     item('report-1', 'pc4f2a.bjs', 'devices-1'),
+    item('files-1', 'files', 'sync-1', FOLDER),
+    item('content-1', CONTENT, 'files-1'),
     item('other-1', 'Altro', 'root', FOLDER),
     item('doc-1', 'certificato.pdf', 'other-1', 'application/pdf'),
     item('other-sync', 'sync', 'other-1', FOLDER),
     item('other-versions', 'versions', 'other-sync', FOLDER),
     item('other-version', VERSION, 'other-versions'),
+    item('other-files', 'files', 'other-sync', FOLDER),
+    item('other-content', CONTENT, 'other-files'),
   ];
   const deleteOf = (id: string, url = `https://www.googleapis.com/drive/v3/files/${id}`) => ({
     url,
@@ -683,6 +688,13 @@ describe('the sync’s deletes (#2120)', () => {
     expect(io.fetchDrive).toHaveBeenCalledWith(expect.objectContaining({ accessToken: 'at' }), deleteOf('version-45'));
   });
 
+  it('forwards a content’s delete, in `files/` of that same sync folder (#2118)', async () => {
+    const { io, service } = onDrive();
+
+    expect((await service.fetchForSync(deleteOf('content-1'))).status).toBe(200);
+    expect(io.fetchDrive).toHaveBeenCalledWith(expect.objectContaining({ accessToken: 'at' }), deleteOf('content-1'));
+  });
+
   it.each([
     ['a backup', 'backup-1'],
     ['the folder’s id', 'id-1'],
@@ -690,7 +702,9 @@ describe('the sync’s deletes (#2120)', () => {
     ['a document outside the sync folder', 'doc-1'],
     ['a version’s name beside the backups', 'stray-1'],
     ['a version’s name in another sync folder', 'other-version'],
+    ['a content in another sync folder', 'other-content'],
     ['the versions folder itself', 'versions-1'],
+    ['the files folder itself', 'files-1'],
     ['the `Budojo` folder', 'folder-1'],
   ])('refuses %s with a 403, and never forwards it', async (_what, id) => {
     const { io, service } = onDrive();
