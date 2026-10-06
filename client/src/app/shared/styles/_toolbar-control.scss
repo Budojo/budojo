@@ -16,7 +16,8 @@
   justify-content: center;
   border: 1px solid transparent;
   border-radius: var(--budojo-radius-medium, 0.75rem);
-  background: var(--p-surface-100);
+  // The secondary button's fill (#2138): in dark `surface-100` is the card.
+  background: var(--budojo-button-secondary-background);
   // The TEXT colour of an available control, not of a disabled one (#1649).
   // Muted-on-grey is the app's disabled language, and wearing it made the
   // eye, the bin and the payment filter read as unavailable — the audit's
