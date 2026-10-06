@@ -8,6 +8,7 @@ import {
   RecordedPayment,
 } from '../../../../core/services/payment.service';
 import { StatsService } from '../../../../core/services/stats.service';
+import { MoneyRows, moneyRows } from './money-rows';
 import {
   PayChip,
   monthOf,
@@ -19,9 +20,9 @@ import {
 } from './pay-chip';
 
 /**
- * The money side of the phone's check-in (#2036): who owes what, and the
- * payments this screen records. Provided by the check-in, so it lives and
- * dies with the screen.
+ * The money at the mat (#2036, #2132): who owes what, and the payments a
+ * phone screen records, for the check-in's chips and for «Soldi». Each screen
+ * provides its own, so it lives and dies with the screen.
  *
  * Everything it knows comes from the phone's own server: the roster's
  * coverage, the arrears list (`GET /stats/payments/arrears`) and, once a
@@ -29,7 +30,7 @@ import {
  * beside them, because the roster's coverage was read before they existed.
  */
 @Injectable()
-export class CheckInMoney {
+export class MatMoney {
   private readonly stats = inject(StatsService);
   private readonly payments = inject(PaymentService);
 
@@ -37,8 +38,8 @@ export class CheckInMoney {
   private readonly thisMonth = signal<string>(monthOf(new Date()));
 
   /**
-   * The months each athlete is behind, oldest first. The arrears list gives
-   * only the first; a sheet that opened replaces it with the whole list.
+   * The months each athlete is behind, oldest first, from the arrears list. A
+   * sheet that opened asks again for that athlete and replaces them.
    */
   private readonly behind = signal<ReadonlyMap<number, readonly string[]>>(new Map());
 
@@ -48,15 +49,27 @@ export class CheckInMoney {
   /** True once the arrears list answered, or failed: chips wait for it. */
   readonly ready = signal<boolean>(false);
 
+  /**
+   * The arrears list did not answer. The check-in's chips still say this
+   * month's state; «Soldi» cannot say who is behind, and says so.
+   */
+  readonly failed = signal<boolean>(false);
+
   /** Ask the server who is behind. A failure leaves only this month's state. */
   load(): void {
     this.thisMonth.set(monthOf(new Date()));
+    // A retry waits too: the last answer's months are not this one's.
+    this.ready.set(false);
+    this.failed.set(false);
     this.stats.paymentsArrears().subscribe({
       next: (rows) => {
-        this.behind.set(new Map(rows.map((row) => [row.athlete.id, [row.first_unpaid]])));
+        this.behind.set(new Map(rows.map((row) => [row.athlete.id, row.unpaid_months])));
         this.ready.set(true);
       },
-      error: () => this.ready.set(true),
+      error: () => {
+        this.failed.set(true);
+        this.ready.set(true);
+      },
     });
   }
 
@@ -71,6 +84,16 @@ export class CheckInMoney {
     );
   }
 
+  /**
+   * Who still has to pay among `athletes` (#2132), tonight's people first,
+   * or null before the arrears answered: «Soldi» lists whoever the chip
+   * would ask.
+   */
+  whoOwes(athletes: readonly Athlete[], presentToday: ReadonlySet<number>): MoneyRows | null {
+    if (!this.ready()) return null;
+    return moneyRows(athletes, this.behind(), this.thisMonth(), this.paidHere(), presentToday);
+  }
+
   /** How many months one payment covers for this athlete (#1382). */
   periodOf(athlete: Athlete): number {
     return athlete.billing_period_months ?? 1;
@@ -83,9 +106,10 @@ export class CheckInMoney {
 
   /**
    * The payments this athlete owes, oldest first, each as the month its
-   * period starts on. The months behind are asked of the server per year,
-   * from the first month the arrears list names to this year, and the answer
-   * replaces the arrears list's single month for them.
+   * period starts on. The months behind are asked of the server again, per
+   * year from the first one the arrears list names: a payment made on the PC
+   * since the list was read must not be offered. The answer replaces what the
+   * list said for them.
    */
   owedFor(athlete: Athlete): Observable<string[]> {
     const thisYear = yearMonthOf(this.thisMonth()).year;

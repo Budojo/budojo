@@ -62,7 +62,7 @@ import {
 } from '../../../shared/utils/athlete-sort';
 import { pickDefaultClass } from './class-pick';
 import { MissingRegularsComponent } from './missing-regulars/missing-regulars.component';
-import { CheckInMoney } from './pay/check-in-money';
+import { MatMoney } from './pay/mat-money';
 import { PayChip } from './pay/pay-chip';
 import { PayChipComponent } from './pay/pay-chip.component';
 import { PayRecorded, PaySheetComponent } from './pay/pay-sheet.component';
@@ -139,7 +139,7 @@ function toLocalDateString(d: Date): string {
     PayChipComponent,
     PaySheetComponent,
   ],
-  providers: [MessageService, CheckInMoney],
+  providers: [MessageService, MatMoney],
   templateUrl: './daily-attendance.component.html',
   styleUrl: './daily-attendance.component.scss',
 })
@@ -167,7 +167,7 @@ export class DailyAttendanceComponent implements OnInit {
    * what pays for the month, and a month owed opens the payment sheet. Only
    * on the phone, and only today: the chip is about who is standing there.
    */
-  protected readonly money = inject(CheckInMoney);
+  protected readonly money = inject(MatMoney);
   private readonly showsMoney = computed(
     () => this.onThePhone() && this.selectedDateIso() === toLocalDateString(new Date()),
   );

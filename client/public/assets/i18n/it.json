@@ -29,6 +29,7 @@
     "academy": "Accademia",
     "athletes": "Atleti",
     "attendance": "Presenze",
+    "money": "Soldi",
     "activity": "Attività",
     "community": "Community",
     "myProfile": "Il mio profilo",
@@ -3670,6 +3671,22 @@
       "transfer": "Bonifico",
       "pos": "Carta",
       "other": "Altro"
+    }
+  },
+  "money": {
+    "title": "Chi deve ancora pagare",
+    "tonight": "Stasera sul tatami",
+    "others": "Gli altri",
+    "also1": "anche {{month}}",
+    "also2": "anche {{first}} e {{second}}",
+    "alsoMany": "anche {{first}} e altri {{count}} mesi",
+    "rowAria": "{{name}}, {{months}}: registra il pagamento",
+    "loading": "Carico chi deve pagare",
+    "error": "Non riesco a caricare chi deve pagare",
+    "retry": "Riprova",
+    "empty": {
+      "title": "Tutti in regola",
+      "hint": "Nessuno deve un mese, per ora."
     }
   },
   "weekMessage": {
