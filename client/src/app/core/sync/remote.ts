@@ -36,8 +36,9 @@ export interface SyncRemote {
   read(path: string): Promise<Uint8Array | null>;
   /**
    * Writes the file, replacing one of the same path. Versions and documents are
-   * never written twice by design (new names), so only `folder.bjs` and a
-   * device's own `devices/` file are ever replaced.
+   * never written twice by design (new names), and `folder.bjs` is written only
+   * when there is none, so a device's own `devices/` file is the only one ever
+   * replaced. The PC's main process forwards no other replacement (#2139).
    */
   write(path: string, bytes: Uint8Array): Promise<void>;
   /** Deletes the file. Deleting one that is not there is not an error. */
