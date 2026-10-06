@@ -385,6 +385,8 @@ async function pruneVersions(context: SyncContext, reports: DeviceReport[]): Pro
  *
  * The versions are read only when something could go. **Best effort,** as the
  * versions' pruning: a failure leaves the folder as it was until the next run.
+ * On the PC the main process forwards each delete only once it read the file
+ * to be a content in its sync folder's `files/` (#2120).
  */
 async function pruneContents(context: SyncContext, ledger: SyncLedger): Promise<void> {
   const now = context.now();
