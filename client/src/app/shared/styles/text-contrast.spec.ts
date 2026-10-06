@@ -123,6 +123,62 @@ const CASES: ReadonlyArray<{ token: string; on: readonly string[]; floor: number
   ]),
 ];
 
+/**
+ * A fill that marks something on a card has to differ from the card (#2138).
+ * In the dark ramp `--p-surface-100` IS `--p-content-background`, so a fill
+ * borrowed from the light theme vanishes into the card it sits on: the
+ * skeletons did (#1793), and the secondary buttons did after them, reading as
+ * plain words beside a link.
+ */
+const STEP = 1.05;
+
+describe('a fill on a card differs from the card, in both themes (#1793, #2138)', () => {
+  for (const mode of ['light', 'dark'] as const) {
+    for (const fill of [
+      'budojo-skeleton-background',
+      'budojo-button-secondary-background',
+      'budojo-button-secondary-hover-background',
+    ]) {
+      it(`${mode}: --${fill} is a step against the card`, () => {
+        const paint = resolve(fill, mode);
+        const card = resolve('p-content-background', mode);
+        expect(paint, `--${fill} did not resolve to a hex in ${mode}`).not.toBeNull();
+        expect(card).not.toBeNull();
+        // A step the eye sees, not one digit of hex: light's surface-100 on
+        // white is 1.09:1, the lightest step the design uses.
+        expect(contrast(paint as string, card as string)).toBeGreaterThanOrEqual(STEP);
+      });
+    }
+
+    it(`${mode}: the secondary hover is a step against its resting fill`, () => {
+      const resting = resolve('budojo-button-secondary-background', mode);
+      const hover = resolve('budojo-button-secondary-hover-background', mode);
+      expect(resting).not.toBeNull();
+      expect(hover).not.toBeNull();
+      expect(contrast(resting as string, hover as string)).toBeGreaterThanOrEqual(STEP);
+    });
+  }
+
+  it('the secondary button is painted with them, resting and hovered', () => {
+    // The tokens prove nothing if the variant stops reading them: a revert to
+    // `--p-surface-100` would leave every case above green.
+    const variants = readFileSync(join(process.cwd(), 'src/styles/budojo-variants.scss'), 'utf8');
+    const rule = /\.p-button-outlined,\s*\.p-button\.p-button-secondary[^{]*\{([\s\S]*?)\n\}/.exec(
+      variants,
+    );
+    expect(rule, 'the secondary variant rule was not found').not.toBeNull();
+    const body = (rule as RegExpExecArray)[1];
+    expect(body).toMatch(/^\s*background:\s*var\(--budojo-button-secondary-background\);/m);
+    expect(body).toMatch(
+      /&:hover[^{]*\{\s*background:\s*var\(--budojo-button-secondary-hover-background\);/,
+    );
+  });
+
+  it('the step catches a fill one digit away from the card', () => {
+    expect(contrast('#1c1c1f', '#1c1c1e')).toBeLessThan(STEP);
+  });
+});
+
 describe('semantic text tokens clear WCAG AA in both themes (#1786)', () => {
   for (const mode of ['light', 'dark'] as const) {
     for (const { token, on, floor } of CASES) {
