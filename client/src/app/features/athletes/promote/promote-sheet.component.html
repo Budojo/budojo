@@ -6,6 +6,8 @@
   [draggable]="false"
   [closable]="!saving()"
   [dismissableMask]="true"
+  [focusOnShow]="false"
+  (onShow)="settleFocus()"
   [breakpoints]="{ '768px': '100vw' }"
   [style]="{ width: '28rem' }"
   styleClass="bottom-sheet promote-dialog"
@@ -58,7 +60,14 @@
           {{ stepLabel(target) }}
         </p>
       }
-      <p class="promote__hint">{{ 'athletes.promote.today' | translate }}</p>
+      @if (!loading() && !changed()) {
+        <!-- Why Record is off: say it, rather than a dead button (#2143 review). -->
+        <p class="promote__hint" data-cy="promote-same">
+          {{ 'athletes.promote.same' | translate }}
+        </p>
+      } @else {
+        <p class="promote__hint">{{ 'athletes.promote.today' | translate }}</p>
+      }
 
       @if (failed()) {
         <p class="promote__error" role="alert" data-cy="promote-error">
@@ -70,7 +79,7 @@
         [fluid]="true"
         [label]="'athletes.promote.submit' | translate"
         [loading]="saving()"
-        [disabled]="!isUp()"
+        [disabled]="loading() || !changed()"
         (onClick)="submit()"
         data-cy="promote-submit"
       />

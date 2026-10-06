@@ -2837,7 +2837,8 @@
       "submit": "Registra la promozione",
       "error": "Non è stato possibile registrare la promozione. Riprova.",
       "menu": "Promuovi",
-      "toast": "{{name}}: {{step}}"
+      "toast": "{{name}}: {{step}}",
+      "same": "È il passo che ha già: scegli quello da registrare."
     },
     "photo": {
       "title": "Foto",

@@ -2837,7 +2837,8 @@
       "submit": "Record the promotion",
       "error": "Couldn't record the promotion. Try again.",
       "menu": "Promote",
-      "toast": "{{name}}: {{step}}"
+      "toast": "{{name}}: {{step}}",
+      "same": "That is the step they hold now: pick the one to record."
     },
     "photo": {
       "title": "Photo",

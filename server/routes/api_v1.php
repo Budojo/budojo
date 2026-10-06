@@ -611,6 +611,10 @@ Route::middleware('auth:sanctum')->group(function (): void {
         // specific athlete (post-v2.9.0). Same academy-scope gate as
         // documents; lives in the controller's first line.
         Route::get('/athletes/{athlete}/promotions', [\App\Http\Controllers\Athlete\AthletePromotionController::class, 'index']);
+        // The next step the phone's promotion sheet proposes (#2045): the
+        // same rule as «Chi promuovere?», for one athlete.
+        Route::get('/athletes/{athlete}/next-step', \App\Http\Controllers\Athlete\AthleteNextStepController::class)
+            ->name('athletes.next-step');
         // Editing recorded_at (#1431 PR 1 of 2) — corrects a promotion
         // entered late without touching the belt/stripe transition it
         // describes. 403 when the promotion doesn't belong to the

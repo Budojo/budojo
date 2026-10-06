@@ -41,8 +41,17 @@ function setup() {
   return { fixture, http: TestBed.inject(HttpTestingController), promoted };
 }
 
-function open(fixture: ReturnType<typeof setup>['fixture'], who: Athlete): void {
+function open(
+  fixture: ReturnType<typeof setup>['fixture'],
+  http: HttpTestingController,
+  who: Athlete,
+  next: { kind: 'stripe' | 'belt'; belt: string; stripes: number } | null,
+): void {
   fixture.componentRef.setInput('athlete', who);
+  fixture.detectChanges();
+  http
+    .expectOne((r) => r.method === 'GET' && r.url.endsWith(`/athletes/${who.id}/next-step`))
+    .flush({ data: next });
   fixture.detectChanges();
 }
 
@@ -60,36 +69,67 @@ describe('PromoteSheetComponent', () => {
     expect(document.body.querySelector('.p-dialog')).toBeNull();
   });
 
-  it('proposes the next stripe, and records it with one tap', () => {
+  it("proposes the server's next step, and records it with one tap", () => {
     const { fixture, http, promoted } = setup();
-    open(fixture, anna());
+    open(fixture, http, anna(), { kind: 'stripe', belt: 'blue', stripes: 3 });
 
     expect(text('promote-from')).toContain('Blue · 2');
     expect(text('promote-to')).toContain('Blue · 3');
     button().click();
 
-    const patch = http.expectOne((r) => r.method === 'PUT' && r.url.endsWith('/athletes/7'));
-    expect(patch.request.body).toEqual({ belt: 'blue', stripes: 3 });
-    patch.flush({ data: anna({ stripes: 3 }) });
+    const put = http.expectOne((r) => r.method === 'PUT' && r.url.endsWith('/athletes/7'));
+    expect(put.request.body).toEqual({ belt: 'blue', stripes: 3 });
+    put.flush({ data: anna({ stripes: 3 }) });
     expect(promoted.map((a) => a.stripes)).toEqual([3]);
   });
 
-  it('proposes the next belt once the stripes are full', () => {
-    const { fixture } = setup();
-    open(fixture, anna({ stripes: 4 }));
+  it('shows where the athlete is until the proposal answers', () => {
+    const { fixture, http } = setup();
+    fixture.componentRef.setInput('athlete', anna());
+    fixture.detectChanges();
+
+    expect(text('promote-to')).toContain('Blue · 2');
+    expect(button().disabled).toBe(true);
+    http.expectOne((r) => r.url.endsWith('/next-step')).flush({ data: null });
+  });
+
+  it('keeps a pick made before the proposal answers', () => {
+    const { fixture, http } = setup();
+    fixture.componentRef.setInput('athlete', anna());
+    fixture.detectChanges();
+    (fixture.componentInstance as unknown as { pickBelt: (belt: string) => void }).pickBelt(
+      'purple',
+    );
+    http
+      .expectOne((r) => r.url.endsWith('/next-step'))
+      .flush({ data: { kind: 'stripe', belt: 'blue', stripes: 3 } });
+    fixture.detectChanges();
+
     expect(text('promote-to')).toContain('Purple · 0');
   });
 
-  it('cannot record a step to where the athlete already is', () => {
-    const { fixture } = setup();
-    open(fixture, anna({ belt: 'red', stripes: 4 }));
-    // The top of the ladder: nothing proposed, nothing to record.
+  it('starts a picked belt with no stripes', () => {
+    const { fixture, http } = setup();
+    open(fixture, http, anna(), { kind: 'stripe', belt: 'blue', stripes: 3 });
+
+    (fixture.componentInstance as unknown as { pickBelt: (belt: string) => void }).pickBelt(
+      'purple',
+    );
+    fixture.detectChanges();
+    expect(text('promote-to')).toContain('Purple · 0');
+  });
+
+  it('says why there is nothing to record at the top of the ladder', () => {
+    const { fixture, http } = setup();
+    open(fixture, http, anna({ belt: 'red', stripes: 4 }), null);
+
     expect(button().disabled).toBe(true);
+    expect(text('promote-same')).toContain('pick the one to record');
   });
 
   it('says so when the server refuses, and keeps the sheet', () => {
     const { fixture, http, promoted } = setup();
-    open(fixture, anna());
+    open(fixture, http, anna(), { kind: 'stripe', belt: 'blue', stripes: 3 });
     button().click();
     http
       .expectOne((r) => r.method === 'PUT')

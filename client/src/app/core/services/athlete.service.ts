@@ -796,6 +796,16 @@ export class AthleteService {
    * athlete, longest since their last promotion first. Facts only; the server
    * sends no score, and the page adds none.
    */
+  /**
+   * One athlete's next step on the ladder (#2045), null at the top: the same
+   * rule as `promotionCandidates()`, for the phone's promotion sheet.
+   */
+  nextStep(athleteId: number): Observable<NextStep | null> {
+    return this.http
+      .get<{ data: NextStep | null }>(`${this.base}/${athleteId}/next-step`)
+      .pipe(map((res) => res.data));
+  }
+
   promotionCandidates(): Observable<PromotionCandidate[]> {
     return this.http
       .get<{

@@ -6411,6 +6411,47 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
 
+  /athletes/{athlete}/next-step:
+    get:
+      tags: [athletes]
+      summary: One athlete's next step on the academy's ladder (#2045)
+      description: |
+        What the phone's promotion sheet proposes: the same next step
+        `GET /promotions/candidates` gives this athlete, from the same rule
+        (`GetAthleteNextStepAction`). The next stripe (or dan, or poom) while
+        the grade has room, otherwise the next grade in the order people climb
+        the ladder; kids' grades only for a child. `data` is null at the top
+        of the ladder.
+
+        Academy-scoped: caller must own the athlete's academy or the response
+        is a canonical 403 envelope.
+      operationId: athleteNextStep
+      parameters:
+        - name: athlete
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        '200':
+          description: The next step, or null at the top of the ladder.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    nullable: true
+                    required: [kind, belt, stripes]
+                    properties:
+                      kind: { type: string, enum: [stripe, belt] }
+                      belt: { $ref: '#/components/schemas/Belt' }
+                      stripes: { type: integer, minimum: 0 }
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /athletes/{athlete}/promotions:
     get:
       tags: [athletes]

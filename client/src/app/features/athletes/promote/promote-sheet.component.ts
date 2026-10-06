@@ -1,11 +1,14 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  Injector,
+  afterNextRender,
   computed,
   effect,
   inject,
   input,
   output,
+  runInInjectionContext,
   signal,
   untracked,
 } from '@angular/core';
@@ -19,17 +22,23 @@ import { BeltLadderService } from '../../../core/services/belt-ladder.service';
 import { LanguageService } from '../../../core/services/language.service';
 import { AthleteIdentityComponent } from '../../../shared/components/athlete-identity/athlete-identity.component';
 import { holdDialogWhile } from '../../../shared/utils/dialog-hold';
-import { Step, nextStep } from './next-step';
+
+/** A belt and its stripes: where a promotion lands. */
+interface Step {
+  readonly belt: Belt;
+  readonly stripes: number;
+}
 
 /**
  * A promotion from the athlete's row (#2045, PRD § 6.1): belt and stripes,
  * dated today.
  *
- * The next step on the academy's ladder is proposed, so the usual stripe is
- * one tap; the two pickers change it. It goes through the same update as the
- * PC's form, whose observer writes the promotion to the athlete's history
- * (`AthleteObserver`), so a phone promotion and a PC one are the same row.
- * Only a step up is recorded here: a correction is the history's job.
+ * The next step on the academy's ladder is proposed, asked of the server so
+ * it is the one «Chi promuovere?» names (`GET /athletes/{id}/next-step`): the
+ * usual stripe is one tap, and the two pickers change it. It goes through the
+ * same update as the PC's form, whose observer writes the promotion to the
+ * athlete's history (`AthleteObserver`), so a phone promotion and a PC one
+ * are the same row.
  */
 @Component({
   selector: 'app-promote-sheet',
@@ -60,6 +69,8 @@ export class PromoteSheetComponent {
 
   protected readonly belt = signal<Belt | null>(null);
   protected readonly stripes = signal<number>(0);
+  /** The proposal is on its way: the pickers show where the athlete is. */
+  protected readonly loading = signal<boolean>(false);
   protected readonly saving = signal<boolean>(false);
   protected readonly failed = signal<boolean>(false);
 
@@ -85,16 +96,24 @@ export class PromoteSheetComponent {
     return belt === null ? null : { belt, stripes: this.stripes() };
   });
 
-  /** Only a step up: a higher belt, or more stripes on the same one. */
-  protected readonly isUp = computed<boolean>(() => {
+  /** Something to record: a step other than the one they hold. */
+  protected readonly changed = computed<boolean>(() => {
     const athlete = this.athlete();
     const target = this.target();
-    if (athlete === null || target === null) return false;
-    const from = this.beltLadder.rankOf(athlete.belt);
-    const to = this.beltLadder.rankOf(target.belt);
-    if (from === null || to === null) return false;
-    return to > from || (to === from && target.stripes > athlete.stripes);
+    return (
+      athlete !== null &&
+      target !== null &&
+      (target.belt !== athlete.belt || target.stripes !== athlete.stripes)
+    );
   });
+
+  /** Which opening an answer belongs to: a late one for a closed sheet is dropped. */
+  private opening = 0;
+  /** A pick by hand: a proposal that answers after it does not overwrite it. */
+  private picked = false;
+  /** Where `settleFocus` put the keyboard: moved again only if it is still there. */
+  private settled: Element | null = null;
+  private readonly injector = inject(Injector);
 
   constructor() {
     effect(() => {
@@ -105,14 +124,29 @@ export class PromoteSheetComponent {
     holdDialogWhile(() => this.saving(), 'promote-dialog');
   }
 
+  /** A new belt starts with no stripes, as it does on the mat. */
   protected pickBelt(belt: Belt): void {
+    this.picked = true;
     this.belt.set(belt);
-    // A belt with fewer stripes than were picked starts again from none.
-    if (this.stripes() > this.beltLadder.stripeCap(belt)) this.stripes.set(0);
+    this.stripes.set(0);
   }
 
   protected pickStripes(value: string): void {
+    this.picked = true;
     this.stripes.set(Number(value));
+  }
+
+  /**
+   * The keyboard starts on Record, the one thing the sheet is for: the
+   * dialog's own pick is the ✕, where Enter would close it (#2143 review).
+   */
+  protected settleFocus(): void {
+    const sheet = document.querySelector('.promote-dialog');
+    const record = sheet?.querySelector<HTMLButtonElement>('[data-cy="promote-submit"] button');
+    const target =
+      record && !record.disabled ? record : sheet?.querySelector<HTMLElement>('#promote-belt');
+    target?.focus();
+    this.settled = target ?? null;
   }
 
   protected onVisibleChange(visible: boolean): void {
@@ -122,7 +156,7 @@ export class PromoteSheetComponent {
   protected submit(): void {
     const athlete = this.athlete();
     const target = this.target();
-    if (athlete === null || target === null || !this.isUp() || this.saving()) return;
+    if (athlete === null || target === null || !this.changed() || this.saving()) return;
     this.saving.set(true);
     this.failed.set(false);
     this.athletes.update(athlete.id, { belt: target.belt, stripes: target.stripes }).subscribe({
@@ -139,12 +173,39 @@ export class PromoteSheetComponent {
 
   private open(athlete: Athlete): void {
     this.reset();
-    const next = nextStep(this.beltLadder.grades(), athlete.belt, athlete.stripes);
-    this.belt.set(next?.belt ?? athlete.belt);
-    this.stripes.set(next?.stripes ?? athlete.stripes);
+    this.belt.set(athlete.belt);
+    this.stripes.set(athlete.stripes);
+    this.loading.set(true);
+    const opening = this.opening;
+    // A failure proposes nothing: the pickers still record a step by hand.
+    this.athletes.nextStep(athlete.id).subscribe({
+      next: (next) => {
+        if (opening !== this.opening) return;
+        if (next !== null && !this.picked) {
+          this.belt.set(next.belt);
+          this.stripes.set(next.stripes);
+        }
+        this.loading.set(false);
+        // Record is on now: the keyboard moves to it, unless someone moved it.
+        runInInjectionContext(this.injector, () =>
+          afterNextRender(() => {
+            if (this.settled !== null && document.activeElement === this.settled) {
+              this.settleFocus();
+            }
+          }),
+        );
+      },
+      error: () => {
+        if (opening === this.opening) this.loading.set(false);
+      },
+    });
   }
 
   private reset(): void {
+    this.opening++;
+    this.picked = false;
+    this.settled = null;
+    this.loading.set(false);
     this.belt.set(null);
     this.stripes.set(0);
     this.saving.set(false);

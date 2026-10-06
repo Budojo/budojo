@@ -39,6 +39,11 @@ describe('A promotion from the row, on the phone (#2045)', () => {
       'athletes',
     );
     cy.intercept('GET', '/api/v1/documents/expiring*', { statusCode: 200, body: { data: [] } });
+    // The proposal is the server's (#2045): the rule «Chi promuovere?» uses.
+    cy.intercept('GET', '/api/v1/athletes/1/next-step', {
+      statusCode: 200,
+      body: { data: { kind: 'stripe', belt: 'blue', stripes: 3 } },
+    }).as('next');
     cy.visitAuthenticated('/dashboard/athletes');
     cy.wait(['@academy', '@athletes']);
   });
@@ -52,8 +57,11 @@ describe('A promotion from the row, on the phone (#2045)', () => {
     cy.get('[data-cy="athlete-card-menu-1"]').click();
     cy.get('.p-menu').contains('Promote').click();
 
+    cy.wait('@next');
     cy.get('[data-cy="promote-from"]').should('contain.text', 'Blue · 2');
     cy.get('[data-cy="promote-to"]').should('contain.text', 'Blue · 3');
+    // The keyboard starts on Record, not on the ✕ where Enter would close.
+    cy.focused().parents('[data-cy="promote-submit"]').should('exist');
     cy.document().then((doc) => {
       expect(doc.documentElement.scrollWidth).to.be.at.most(doc.documentElement.clientWidth);
     });
@@ -75,9 +83,7 @@ describe('A promotion from the row, on the phone (#2045)', () => {
     cy.get('.p-menu').contains('Promote').click();
     cy.get('[data-cy="promote-belt"]').click();
     cy.get('.p-select-option').contains('Purple').click();
-    // Two stripes picked on blue fit purple too; the coach sets them as given.
-    cy.get('[data-cy="promote-stripes"]').click();
-    cy.get('.p-select-option').contains(/^0$/).click();
+    // A new belt starts with no stripes.
     cy.get('[data-cy="promote-to"]').should('contain.text', 'Purple · 0');
     cy.get('[data-cy="promote-submit"] button').click();
 
