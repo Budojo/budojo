@@ -288,6 +288,8 @@ Versions from before the rotation are not kept: the PC's backups on Drive (#1301
   - a row names this month and the months behind beside it: *ottobre · anche agosto*;
   - a tap opens the same payment sheet; once nothing is owed the row leaves, and the toast's undo puts it back.
 - **A new athlete in three fields:** first name, last name, belt. The rest waits for later. It is the trial class that walks in.
+  - from the check-in (#1939): a button beside the search, and *Aggiungi «Luca B» e segna presente* on a search that finds nobody; the person comes in marked present, and the toast links to the full record;
+  - *Prova gratuita* is picked, beside *Si iscrive*: a trial gets a personal fee of zero, so the check-in never asks them for a month. Clearing that fee on the record makes them a member.
 - **A promotion from the athlete's row:** belt and stripes, dated today.
 
 **Everything else is the PC's screen at phone width,** which the canon already requires to work. The first version checks each flow it ships on a real phone (#2045).

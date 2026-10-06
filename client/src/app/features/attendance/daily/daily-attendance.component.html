@@ -17,6 +17,16 @@
           {{ 'attendance.daily.undo' | translate }}
         </button>
       }
+      @if (message.data?.record) {
+        <!-- Someone new was added in three fields: the rest is a tap away (#1939). -->
+        <a
+          class="attendance-toast__undo"
+          [routerLink]="message.data.record"
+          data-cy="attendance-complete-record"
+        >
+          {{ 'attendance.daily.newPerson.complete' | translate }}
+        </a>
+      }
     </div>
   </ng-template>
 </p-toast>
@@ -184,6 +194,18 @@
         data-cy="attendance-search-input"
       />
     </p-iconfield>
+    <!-- Someone new at the door (#1939): three fields, then marked present. -->
+    <button
+      type="button"
+      class="attendance__add-person"
+      [attr.aria-label]="'attendance.daily.newPerson.add' | translate"
+      [pTooltip]="'attendance.daily.newPerson.add' | translate"
+      tooltipPosition="bottom"
+      (click)="openNewPerson('')"
+      data-cy="attendance-add-person"
+    >
+      <i class="pi pi-user-plus" aria-hidden="true"></i>
+    </button>
     <!-- Desktop inline filter row (#711). Hidden below 768px. -->
     <div class="attendance__filters-inline" data-cy="attendance-filters-inline">
       <p-select
@@ -375,6 +397,16 @@
                 <i class="pi pi-users" aria-hidden="true"></i>
                 @if (searchTerm() || selectedBelt()) {
                   <p>{{ 'attendance.daily.empty.filtered' | translate }}</p>
+                  @if (searchTerm()) {
+                    <p-button
+                      icon="pi pi-user-plus"
+                      [label]="
+                        'attendance.daily.newPerson.addNamed' | translate: { name: searchTerm() }
+                      "
+                      (onClick)="openNewPerson(searchTerm())"
+                      data-cy="attendance-add-named"
+                    />
+                  }
                 } @else {
                   <!--
                     The instruction was plain text: "add one from the Athletes page"
@@ -412,6 +444,14 @@
         <i class="pi pi-users" aria-hidden="true"></i>
         @if (searchTerm() || selectedBelt()) {
           <p>{{ 'attendance.daily.empty.filtered' | translate }}</p>
+          @if (searchTerm()) {
+            <p-button
+              icon="pi pi-user-plus"
+              [label]="'attendance.daily.newPerson.addNamed' | translate: { name: searchTerm() }"
+              (onClick)="openNewPerson(searchTerm())"
+              data-cy="attendance-add-named"
+            />
+          }
         } @else {
           <!--
             The instruction was plain text: "add one from the Athletes page"
@@ -563,4 +603,11 @@
   (closed)="closePay()"
   (recorded)="onPaid($event)"
   (hidden)="returnFocusFromPay()"
+/>
+
+<app-new-person-sheet
+  [name]="newPerson()"
+  (closed)="newPerson.set(null)"
+  (created)="onPersonAdded($event)"
+  (hidden)="returnFocusFromNewPerson()"
 />

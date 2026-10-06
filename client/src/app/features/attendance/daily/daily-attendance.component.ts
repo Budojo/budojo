@@ -2,10 +2,13 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
+  Injector,
   OnInit,
+  afterNextRender,
   computed,
   effect,
   inject,
+  runInInjectionContext,
   signal,
   untracked,
   viewChild,
@@ -24,6 +27,7 @@ import { TableModule } from 'primeng/table';
 import { MessageService } from 'primeng/api';
 import { SkeletonModule } from 'primeng/skeleton';
 import { Toast } from 'primeng/toast';
+import { TooltipModule } from 'primeng/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { BeltLadderService } from '../../../core/services/belt-ladder.service';
 import { RuntimeService } from '../../../core/services/runtime.service';
@@ -62,6 +66,7 @@ import {
 } from '../../../shared/utils/athlete-sort';
 import { pickDefaultClass } from './class-pick';
 import { MissingRegularsComponent } from './missing-regulars/missing-regulars.component';
+import { NewPersonSheetComponent } from '../../athletes/new-person/new-person-sheet.component';
 import { MatMoney } from './pay/mat-money';
 import { PayChip } from './pay/pay-chip';
 import { PayChipComponent } from './pay/pay-chip.component';
@@ -138,6 +143,8 @@ function toLocalDateString(d: Date): string {
     MissingRegularsComponent,
     PayChipComponent,
     PaySheetComponent,
+    NewPersonSheetComponent,
+    TooltipModule,
   ],
   providers: [MessageService, MatMoney],
   templateUrl: './daily-attendance.component.html',
@@ -173,6 +180,13 @@ export class DailyAttendanceComponent implements OnInit {
   );
   /** The sheet's athlete and the chip's month; `null` while it is closed. */
   protected readonly paying = signal<{ athlete: Athlete; month: string } | null>(null);
+  /** What was typed for someone new (#1939); `null` keeps their sheet shut. */
+  protected readonly newPerson = signal<string | null>(null);
+  /** Who opened the sheet for someone new: the keyboard goes back there. */
+  private newPersonOpener: HTMLElement | null = null;
+  /** Set once someone was added: their row takes the keyboard when listed. */
+  private addedId: number | null = null;
+  private readonly injector = inject(Injector);
   /** Whose row opened the last sheet: the keyboard goes back there. */
   private paidFrom: number | null = null;
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
@@ -765,7 +779,10 @@ export class DailyAttendanceComponent implements OnInit {
    * an undo of a previous unmark (PRD § P0.3: "No new toast is emitted
    * for the undo itself").
    */
-  private mark(athlete: Markable, options: { silent?: boolean } = {}): void {
+  private mark(
+    athlete: Markable,
+    options: { silent?: boolean; settled?: (ok: boolean) => void } = {},
+  ): void {
     const date = toLocalDateString(this.selectedDate());
     this.optimisticAdd(athlete.id, -1);
     this.markInflight(athlete.id, true);
@@ -795,10 +812,15 @@ export class DailyAttendanceComponent implements OnInit {
             }
           }
           this.markInflight(athlete.id, false);
+          options.settled?.(true);
         },
         error: () => {
           this.optimisticRemove(athlete.id);
           this.markInflight(athlete.id, false);
+          if (options.settled) {
+            options.settled(false);
+            return;
+          }
           this.toastError(
             this.translate.instant('attendance.daily.toast.markError', {
               name: athlete.first_name,
@@ -1428,6 +1450,85 @@ export class DailyAttendanceComponent implements OnInit {
   /** The payment chip for one phone row, or `null` when it shows none. */
   protected payChip(athlete: Athlete): PayChip | null {
     return this.showsMoney() ? this.money.chipFor(athlete) : null;
+  }
+
+  /** Someone new at the door (#1939): their sheet, with what was typed. */
+  protected openNewPerson(typed: string): void {
+    const active = document.activeElement;
+    this.newPersonOpener = active instanceof HTMLElement ? active : null;
+    this.addedId = null;
+    this.newPerson.set(typed);
+  }
+
+  /**
+   * Added: the search shows them alone, marked present in the class on
+   * screen, and the toast links to the rest of their record. A mark that
+   * fails leaves them added, and the toast says which half went through.
+   */
+  protected onPersonAdded(athlete: Athlete): void {
+    this.newPerson.set(null);
+    this.addedId = athlete.id;
+    const name = `${athlete.first_name} ${athlete.last_name}`;
+    // Alone on the list: a belt filter left on would hide them.
+    this.selectedBelt.set('');
+    this.applySearch(name, () => this.focusAdded());
+    this.mark(athlete, {
+      silent: true,
+      settled: (ok) => {
+        this.messageService.clear();
+        this.messageService.add({
+          severity: ok ? 'success' : 'warn',
+          summary: this.translate.instant(
+            ok ? 'attendance.daily.newPerson.added' : 'attendance.daily.newPerson.addedNotMarked',
+            { name },
+          ),
+          data: { record: ['/dashboard/athletes', athlete.id, 'edit'] },
+          life: 6000,
+        });
+      },
+    });
+  }
+
+  /**
+   * Their sheet closed with the keyboard inside it. Cancelled: back to what
+   * opened it. Added: nothing yet, because the row is not listed until the
+   * search answers (`focusAdded`); the search box would raise the phone's
+   * keyboard over the register.
+   */
+  protected returnFocusFromNewPerson(): void {
+    if (this.addedId !== null || !this.keyboardFree()) return;
+    (this.newPersonOpener?.isConnected
+      ? this.newPersonOpener
+      : this.searchInput()?.nativeElement
+    )?.focus();
+  }
+
+  /** The new person's row, once the search lists it: the phone's card or the PC's row. */
+  private focusAdded(): void {
+    const id = this.addedId;
+    if (id === null) return;
+    runInInjectionContext(this.injector, () =>
+      afterNextRender(() => {
+        if (!this.keyboardFree()) return;
+        Array.from(
+          this.host.nativeElement.querySelectorAll<HTMLElement>(
+            `[data-cy="attendance-card-${id}"], [data-cy="attendance-row-${id}"]`,
+          ),
+        )
+          .find((el) => el.offsetParent !== null)
+          ?.focus();
+      }),
+    );
+  }
+
+  /** Nobody else has the keyboard: it is on the page, or in the sheet that went. */
+  private keyboardFree(): boolean {
+    const active = document.activeElement;
+    return (
+      active === null ||
+      active === document.body ||
+      (active instanceof HTMLElement && active.closest('.new-person-dialog') !== null)
+    );
   }
 
   protected openPay(athlete: Athlete, chip: PayChip): void {
