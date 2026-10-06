@@ -43,7 +43,7 @@ A drop-in override layer for the `@primeuix/themes/material` preset that deliver
 | `--budojo-chrome-hover` | `--p-surface-800` | `--p-surface-200` | Hover for controls inside it |
 | `--budojo-titlebar-background` | `#fafafa` | `#151517` | The Electron drag strip. Pinned to `titleBarOverlay.color` in `desktop/src/titlebar-theme.ts` by a spec — native paint cannot read CSS (#1793) |
 | `--budojo-skeleton-background` | `--p-surface-100` | `--p-surface-200` | A placeholder needs a step against the card it covers, and in dark `surface-100` **is** the card (#1793) |
-| `--budojo-button-secondary-background` | `--p-surface-100` | `--p-surface-200` | A secondary button's and a toolbar control's fill: the same step, for the same reason (#2138) |
+| `--budojo-button-secondary-background` | `--p-surface-100` | `--p-surface-200` | A secondary button's fill: the same step, for the same reason (#2138). Not the toolbar controls', which sit on the page and tint "on" over `surface-100` |
 | `--budojo-button-secondary-hover-background` | `--p-surface-200` | `--p-surface-300` | Its hover, one step further |
 | `--budojo-belt-edge` | `rgb(0 0 0 / 12%)` | `rgb(255 255 255 / 22%)` | Ground contact around a belt spine and a belt pill; the belt itself never moves (#1793, #1801) |
 

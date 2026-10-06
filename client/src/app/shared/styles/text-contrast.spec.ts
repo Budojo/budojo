@@ -159,6 +159,21 @@ describe('a fill on a card differs from the card, in both themes (#1793, #2138)'
     });
   }
 
+  it('the secondary button is painted with them, resting and hovered', () => {
+    // The tokens prove nothing if the variant stops reading them: a revert to
+    // `--p-surface-100` would leave every case above green.
+    const variants = readFileSync(join(process.cwd(), 'src/styles/budojo-variants.scss'), 'utf8');
+    const rule = /\.p-button-outlined,\s*\.p-button\.p-button-secondary[^{]*\{([\s\S]*?)\n\}/.exec(
+      variants,
+    );
+    expect(rule, 'the secondary variant rule was not found').not.toBeNull();
+    const body = (rule as RegExpExecArray)[1];
+    expect(body).toMatch(/^\s*background:\s*var\(--budojo-button-secondary-background\);/m);
+    expect(body).toMatch(
+      /&:hover[^{]*\{\s*background:\s*var\(--budojo-button-secondary-hover-background\);/,
+    );
+  });
+
   it('the step catches a fill one digit away from the card', () => {
     expect(contrast('#1c1c1f', '#1c1c1e')).toBeLessThan(STEP);
   });
