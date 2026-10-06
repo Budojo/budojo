@@ -123,6 +123,30 @@ const CASES: ReadonlyArray<{ token: string; on: readonly string[]; floor: number
   ]),
 ];
 
+/**
+ * A fill that marks something on a card has to differ from the card (#2138).
+ * In the dark ramp `--p-surface-100` IS `--p-content-background`, so a fill
+ * borrowed from the light theme vanishes into the card it sits on: the
+ * skeletons did (#1793), and the secondary buttons did after them, reading as
+ * plain words beside a link.
+ */
+describe('a fill on a card differs from the card, in both themes (#1793, #2138)', () => {
+  for (const mode of ['light', 'dark'] as const) {
+    for (const fill of [
+      'budojo-skeleton-background',
+      'budojo-button-secondary-background',
+      'budojo-button-secondary-hover-background',
+    ]) {
+      it(`${mode}: --${fill} is not the card's`, () => {
+        const paint = resolve(fill, mode);
+        const card = resolve('p-content-background', mode);
+        expect(paint, `--${fill} did not resolve to a hex in ${mode}`).not.toBeNull();
+        expect(paint).not.toBe(card);
+      });
+    }
+  }
+});
+
 describe('semantic text tokens clear WCAG AA in both themes (#1786)', () => {
   for (const mode of ['light', 'dark'] as const) {
     for (const { token, on, floor } of CASES) {

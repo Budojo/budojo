@@ -450,7 +450,7 @@ this section):
 Each spec: **what** (1–2 sentences of visual intent), **override keys**, **optional snippet**. No structure changes. All overrides use canonical PrimeNG CSS var names — verified against `@primeuix/themes/material` source.
 
 ### p-button
-Flat, filled, 12px radius. Primary = accent fill. Secondary = surface-100 fill + ink text. Ghost (`text` severity) = accent text, no bg. No elevation, ever. Press = opacity 0.88, no shrink.
+Flat, filled, 12px radius. Primary = accent fill. Secondary = `--budojo-button-secondary-background` fill + ink text: surface-100 in light, surface-200 in dark, where surface-100 is the card itself and the button vanished into it (#2138). Ghost (`text` severity) = accent text, no bg. No elevation, ever. Press = opacity 0.88, no shrink.
 
 ```
 --p-button-primary-background: var(--p-primary-color);
