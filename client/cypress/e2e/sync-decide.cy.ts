@@ -200,8 +200,13 @@ describe('«Da decidere» (#2038)', () => {
           items().eq(index).should('contain.text', reason);
         });
 
-        // Both sides only where there is a field to compare.
-        cy.get('[data-cy="sync-decide-sides"]').should('have.length', 2);
+        // Both sides only where there is a field to compare: changed and differs.
+        [0, 1].forEach((index) => {
+          items().eq(index).find('[data-cy="sync-decide-sides"]').should('have.length', 1);
+        });
+        [2, 3, 4, 5].forEach((index) => {
+          items().eq(index).find('[data-cy="sync-decide-sides"]').should('not.exist');
+        });
         // «Keep the phone's» only where a retry can make it true here.
         items().eq(0).find('[data-cy="sync-decide-mine"]').scrollIntoView().should('be.visible');
         [1, 2, 4].forEach((index) => {
@@ -217,8 +222,13 @@ describe('«Da decidere» (#2038)', () => {
         cy.get('[data-cy="sync-decide-theirs"]').each(($button) => {
           cy.wrap($button).scrollIntoView().should('be.visible');
         });
+        // The shell scrolls `main`, not the document, from 768px up: a wide
+        // card would scroll it sideways and leave the document's width alone.
         cy.document().then((doc) => {
           expect(doc.documentElement.scrollWidth).to.be.at.most(width);
+        });
+        cy.get('main.main').should(($main) => {
+          expect($main[0].scrollWidth).to.be.at.most($main[0].clientWidth);
         });
       });
     });
