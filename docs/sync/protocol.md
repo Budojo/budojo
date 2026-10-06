@@ -114,16 +114,17 @@ Documents, athletes' photos, avatars and the academy's logo travel apart from th
 
 A content stays while a version the folder keeps names it, and goes once none does: a document or photo deleted on a device, a medical certificate first, does not outlive the versions that named it.
 - **What a version names** is what `GET /api/v1/sync/files` would list for its database: documents (never a deleted one, whose file goes with it), athletes' photos (a deleted athlete's too, which a restore brings back), avatars, the academy's logo. The app cannot read a database, so it asks its own server, `POST /api/v1/sync/files/named` with the version's database. The server reads it from a temporary copy, by the same rules, and refuses one it cannot read for certain: a later Budojo's, one older than the content hashes, a damaged one.
-- **By the device that just pushed, at most once a day** (`engine.ts`, `pruneContents`): it takes reading every kept version, each a whole database. It reads none when nothing in `files/` could go, every content there being one its own database names or one sent within the day.
+- **By the device that just made a plain push, at most once a day** (`engine.ts`, `pruneContents`). Never right after a rebase: the database was just swapped in, and every save waits for the page's reload, which comes only once the round returns. The day's run then waits for the next plain push.
+- **Each version is read once.** Knowing what a version names takes reading it, a whole database; but a version never changes once written, so the device keeps what each one names, by its path and the time Drive created it (`named-store.ts`, beside the ledger). A run reads only the versions it has not seen, and forgets those no longer listed. It reads none at all when nothing in `files/` could go, every content there being one its own database names or one sent within the day.
 - **A content of uncertain status stays:**
   - one this device's own database names, whatever else;
-  - one sent within the last day, on Drive's clock: a device sends a version's contents before the version, so one on its way is named by none yet;
+  - one sent within the last day, on Drive's clock: a device sends a version's contents before the version, so one on its way is named by none yet. The listing that decides is taken once the versions are read, so a content sent again meanwhile counts as new;
   - every content, when a kept version does not open or unpack, when the server refuses its database, or when the newest version is not found. A version listed but gone at the read was pruned since, by the other device, and names nothing.
 - **Never a file that is not a content's:** only `files/<sha256>.bjs`.
 - **At most fifty a run,** the oldest first. **Best effort,** as for the versions: what could not be deleted is tried again at the next run.
 - **The first versions are never pruned** (§ What the folder keeps), so what they name stays as long as they do.
 - **On the PC, the main process checks the delete** as it checks a version's (#2120): a content's name, in a folder named `files`, in this PC's sync folder.
-- **One race is left to the next push:** a content deleted while the other device puts the same bytes back (the same PDF uploaded again) in a version not listed yet. That device sends it again at its next push, as it sends every content it holds that the folder lacks; until then the other device counts it missing.
+- **One race is left to the next push:** a content deleted while the other device puts the same bytes back (the same PDF uploaded again) in a version not listed yet, when that device found the file still there and sent nothing. It sends the content again at its next push, as it sends every content it holds that the folder lacks; until then the other device counts it missing.
 
 ## A journal entry
 

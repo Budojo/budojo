@@ -9,8 +9,9 @@ import { sealFolder } from './folder';
 import { Homecoming } from './homecoming';
 import { HttpSyncServer } from './http-sync-server';
 import { utf8 } from './bytes';
-import { devicePath, FOLDER_PATH } from './layout';
+import { devicePath, filePath, FOLDER_PATH } from './layout';
 import { loadLedger, saveLedger } from './ledger-store';
+import { loadNamed } from './named-store';
 import { MemoryRemote, RemoteError, SyncRemote } from './remote';
 import {
   PAGE_RELOAD,
@@ -114,6 +115,27 @@ describe('SyncService', () => {
       seq: 1,
       device: 'pc4f2a',
     });
+  });
+
+  it('keeps what each kept version names between runs, for the device and its folder (#2118)', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(Date.parse('2026-10-01T09:00:00Z'));
+    await pcPublishes();
+    // A photo deleted long ago, which no version names.
+    const orphan = filePath('ab'.repeat(32));
+    await remote.write(orphan, await seal(key, orphan, utf8('a photo deleted long ago')));
+    const sync = setUp();
+    await sync.syncNow();
+
+    vi.setSystemTime(Date.parse('2026-10-03T09:00:00Z'));
+    phone.write('Luca on 3 Oct');
+    await sync.syncNow();
+
+    expect(remote.files.has(orphan)).toBe(false);
+    expect([...loadNamed({ device: phone.id, folder: FOLDER }).keys()]).toEqual([
+      expect.stringMatching(/^versions\/000001-pc4f2a\.root\.bjs@/),
+      expect.stringMatching(/^versions\/000002-phone9c1e\.000001-pc4f2a\.bjs@/),
+    ]);
   });
 
   it('pushes what the owner marked on the phone, and says it is aligned', async () => {

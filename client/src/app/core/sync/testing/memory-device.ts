@@ -42,6 +42,8 @@ export class MemoryDevice implements SyncServer {
   /** What the last replay did, by entry id. */
   replayed: Record<string, 'skipped' | 'applied' | 'already'> = {};
   ledger: SyncLedger = EMPTY_LEDGER;
+  /** What the kept versions name, as the page keeps it between runs (#2118). */
+  knownVersions = new Map<string, string[]>();
   /** True while the page's writes are held: the stage and the swap must happen inside. */
   holding = false;
   /** What happened while the writes were held, and what outside. */

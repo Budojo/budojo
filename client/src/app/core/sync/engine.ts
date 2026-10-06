@@ -135,6 +135,26 @@ export interface SyncContext {
   holdWrites<T>(work: () => Promise<T>): Promise<T>;
   /** This device's clock, for what it writes down: never for the lag, which runs on Drive's. */
   now(): number;
+  /**
+   * What each kept version names, from earlier runs (#2118). A version never
+   * changes once written, so each is read once. Absent, a run reads them all.
+   */
+  namedVersions?: NamedVersions;
+}
+
+/**
+ * Kept on the device between runs: what each version names, by its path and
+ * the time Drive created it (`namedVersionKey`). A key no longer listed is
+ * dropped at each save.
+ */
+export interface NamedVersions {
+  load(): Map<string, string[]>;
+  save(named: Map<string, string[]>): void;
+}
+
+/** A version as it was written: a file Drive made again under the same path is read again. */
+export function namedVersionKey(version: SeenVersion): string {
+  return `${versionPath(version)}@${version.created}`;
 }
 
 export type SyncOutcome =
@@ -306,8 +326,10 @@ export async function resolveAsk(
 
   let outcome: SyncOutcome;
   if (choice === 'folder') {
-    // What this device remembered describes the database it gives up.
-    const pulled = await fastForward(context, EMPTY_LEDGER, latest, kept);
+    // What this device remembered describes the database it gives up; when it
+    // last pruned `files/` is the device's, and stays.
+    const afresh: SyncLedger = { ...EMPTY_LEDGER, contentsPrunedAt: ledger.contentsPrunedAt };
+    const pulled = await fastForward(context, afresh, latest, kept);
     if (pulled === null) {
       outcome = { kind: 'retry' };
     } else {
@@ -341,6 +363,10 @@ async function finishRound(
   const cleared = await clearConfirmed(context, ledger, reports);
   if (outcome.kind === 'pushed' || (outcome.kind === 'rebased' && outcome.pushed !== null)) {
     await pruneVersions(context, reports);
+  }
+  // After a plain push only: a rebase swapped the database in, and every save
+  // waits for the page's reload, which comes once the round returns.
+  if (outcome.kind === 'pushed') {
     await pruneContents(context, cleared);
   }
   // The files the database names and this device lacks, once the database is
@@ -375,18 +401,20 @@ async function pruneVersions(context: SyncContext, reports: DeviceReport[]): Pro
 
 /**
  * Deletes from `files/` the contents no kept version names (#2118, protocol §
- * What `files/` keeps), after a push of its own and at most once a day:
- * knowing what the kept versions name means reading each, a whole database.
+ * What `files/` keeps), after a plain push of its own and at most once a day.
  * **A content of uncertain status stays:**
  * - what this device's own database names stays, whatever else;
  * - a version that does not read, here or for its server (a later Budojo's),
  *   and nothing goes; so too when the newest is not found;
- * - a content sent within the last day stays (`contentsToPrune`).
+ * - a content sent within the last day stays (`contentsToPrune`), on a listing
+ *   taken once the versions are read, so one sent again meanwhile is new.
  *
- * The versions are read only when something could go. **Best effort,** as the
- * versions' pruning: a failure leaves the folder as it was until the next run.
- * On the PC the main process forwards each delete only once it read the file
- * to be a content in its sync folder's `files/` (#2120).
+ * Knowing what the kept versions name means reading each, a whole database,
+ * so it is done only when something could go, and each version is read once
+ * (`namedVersions`): it never changes. **Best effort,** as the versions'
+ * pruning: a failure leaves the folder as it was until the next run. On the
+ * PC the main process forwards each delete only once it read the file to be a
+ * content in its sync folder's `files/` (#2120).
  */
 async function pruneContents(context: SyncContext, ledger: SyncLedger): Promise<void> {
   const now = context.now();
@@ -396,14 +424,16 @@ async function pruneContents(context: SyncContext, ledger: SyncLedger): Promise<
   }
   // Before the run: one that fails waits a day too, rather than reading every version at every push.
   context.saveLedger({ ...ledger, contentsPrunedAt: now });
+  const ownContents = async () => (await context.server.files.list()).map((file) => file.sha256);
   try {
-    const own = new Set((await context.server.files.list()).map((file) => file.sha256));
-    const listing = await context.remote.list('files');
-    if (contentsToPrune(own, listing).length === 0) {
+    if (
+      contentsToPrune(new Set(await ownContents()), await context.remote.list('files')).length === 0
+    ) {
       return;
     }
     const named = await namedByKeptVersions(context);
-    for (const path of contentsToPrune(new Set([...own, ...named]), listing)) {
+    const keep = new Set([...named, ...(await ownContents())]);
+    for (const path of contentsToPrune(keep, await context.remote.list('files'))) {
       await context.remote.remove(path);
     }
   } catch {
@@ -411,28 +441,47 @@ async function pruneContents(context: SyncContext, ledger: SyncLedger): Promise<
   }
 }
 
-/** Every content a version the folder keeps names. Throws when it cannot tell for one. */
+/**
+ * Every content a version the folder keeps names. Throws when it cannot tell
+ * for one. Reads only the versions `namedVersions` does not know, and keeps
+ * what it read there, for the versions still listed.
+ */
 async function namedByKeptVersions(context: SyncContext): Promise<Set<string>> {
   const versions = versionsIn((await context.remote.list('versions')).files);
   const latest = latestVersion(versions);
   if (latest === null) {
     throw new Error('the folder lists no version: nothing is known to be named');
   }
-  const named = new Set<string>();
+  const known = context.namedVersions?.load() ?? new Map<string, string[]>();
+  const kept = new Map<string, string[]>();
   for (const version of versions) {
-    const database = await readDatabase(context, version);
-    if (database === null) {
-      // Pruned since the listing, by the other device: kept no more. Never the newest.
-      if (sameVersion(version, latest)) {
-        throw new Error(`the newest version ${versionPath(version)} went missing`);
-      }
-      continue;
-    }
-    for (const content of await context.server.files.named(database)) {
-      named.add(content);
+    const key = namedVersionKey(version);
+    const seen = known.get(key);
+    if (seen !== undefined) {
+      kept.set(key, seen);
     }
   }
-  return named;
+  try {
+    for (const version of versions) {
+      const key = namedVersionKey(version);
+      if (kept.has(key)) {
+        continue;
+      }
+      const database = await readDatabase(context, version);
+      if (database === null) {
+        // Pruned since the listing, by the other device: kept no more. Never the newest.
+        if (sameVersion(version, latest)) {
+          throw new Error(`the newest version ${versionPath(version)} went missing`);
+        }
+        continue;
+      }
+      kept.set(key, await context.server.files.named(database));
+    }
+  } finally {
+    // What it read is true for good, a run that stopped halfway included.
+    context.namedVersions?.save(kept);
+  }
+  return new Set([...kept.values()].flat());
 }
 
 /**
