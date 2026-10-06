@@ -108,7 +108,7 @@ export class MoneyComponent implements OnInit {
   protected load(): void {
     this.rosterFailed.set(false);
     this.roster.set(null);
-    // By surname, as the PC's arrears list: a list to find a name in.
+    // By surname: a list to find a name in.
     this.athletes
       .list({ status: 'active', perPage: ROSTER_SIZE, sortBy: 'last_name', sortOrder: 'asc' })
       .subscribe({

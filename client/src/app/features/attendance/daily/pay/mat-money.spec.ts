@@ -87,8 +87,10 @@ describe('MatMoney', () => {
     // «Soldi» cannot list who is behind without it, and has to say so.
     expect(money.failed()).toBe(true);
 
+    // A retry waits for the answer: no chip, and no list built on nothing.
     money.load();
     expect(money.failed()).toBe(false);
+    expect(money.chipFor(athlete())).toBeNull();
     behind(http, []);
   });
 

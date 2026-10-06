@@ -58,6 +58,8 @@ export class MatMoney {
   /** Ask the server who is behind. A failure leaves only this month's state. */
   load(): void {
     this.thisMonth.set(monthOf(new Date()));
+    // A retry waits too: the last answer's months are not this one's.
+    this.ready.set(false);
     this.failed.set(false);
     this.stats.paymentsArrears().subscribe({
       next: (rows) => {
