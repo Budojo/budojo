@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { DestroyRef, Injectable, InjectionToken, inject, signal } from '@angular/core';
+import { DestroyRef, Injectable, InjectionToken, inject, isDevMode, signal } from '@angular/core';
 import { VERSION } from '../../../environments/version';
 import { versionsIn } from './decide';
 import { AskChoice, resolveAsk, SyncContext, SyncLedger, SyncShell, syncOnce } from './engine';
@@ -79,6 +79,18 @@ export type SyncState =
   | { kind: 'full' }
   | { kind: 'failed'; reason: string };
 
+/**
+ * What a Cypress spec drives (#2125). The e2e app runs on the web, where there
+ * is no sync, so neither the pill nor the homecoming card would ever show.
+ * `window.budojoSync` sets what they read: only in a dev build, and only
+ * inside Cypress (`window.Cypress`), so a shipped build never has it.
+ */
+export interface SyncTestHook {
+  state(state: SyncState): void;
+  toDecide(count: number): void;
+  homecoming(arrived: Homecoming | null): void;
+}
+
 /** A few seconds after a write, the push: a burst of taps makes one version (PRD § 5.2). */
 export const PUSH_DELAY_MS = 5_000;
 /** While the app is in front, a look for the other device's work. */
@@ -128,6 +140,14 @@ export class SyncService {
 
   constructor() {
     inject(DestroyRef).onDestroy(() => this.stop());
+    if (isDevMode() && 'Cypress' in window) {
+      const hook: SyncTestHook = {
+        state: (state) => this.stateSignal.set(state),
+        toDecide: (count) => this.toDecideSignal.set(count),
+        homecoming: (arrived) => this.homecomingSignal.set(arrived),
+      };
+      Object.assign(window, { budojoSync: hook });
+    }
   }
 
   /** Once the owner is signed in. Nothing happens on a runtime with no sync. */
