@@ -1495,8 +1495,10 @@ export class DailyAttendanceComponent implements OnInit {
    */
   protected returnFocusFromNewPerson(): void {
     if (this.addedId !== null || !this.keyboardFree()) return;
-    (this.newPersonOpener?.isConnected ? this.newPersonOpener : this.searchInput()?.nativeElement)
-      ?.focus();
+    (this.newPersonOpener?.isConnected
+      ? this.newPersonOpener
+      : this.searchInput()?.nativeElement
+    )?.focus();
   }
 
   /** The new person's row, once the search lists it: the phone's card or the PC's row. */
