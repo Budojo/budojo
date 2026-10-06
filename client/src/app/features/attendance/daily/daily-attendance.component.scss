@@ -1,3 +1,5 @@
+@use '../../../shared/styles/toolbar-control' as tc;
+
 // Daily check-in — same visual chrome as athletes-list (#184) so the
 // instructor's muscle memory carries between the two pages. Mobile-first,
 // every spacing + color resolves to design-system tokens, touch targets
@@ -82,6 +84,12 @@
   input {
     width: 100%;
   }
+}
+
+// Someone new at the door (#1939): one of the row's toolbar controls.
+.attendance__add-person {
+  @include tc.toolbar-control;
+  @include tc.toolbar-control-square;
 }
 
 // `0 0 auto`, not `1 1 auto` (#1526): the search above already takes the row's

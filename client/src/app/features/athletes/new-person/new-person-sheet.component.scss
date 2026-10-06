@@ -1,0 +1,26 @@
+// Three fields and one button, one column, as the payment sheet (#2036).
+.new-person {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+
+  &__kind {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  &__hint,
+  &__error {
+    margin: 0;
+    font-size: 0.875rem;
+  }
+
+  &__hint {
+    color: var(--p-text-muted-color);
+  }
+
+  &__error {
+    color: var(--budojo-danger-ink);
+  }
+}

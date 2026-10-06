@@ -2032,6 +2032,13 @@
           "already": "{{name}}'s payment was already recorded",
           "undoError": "Couldn't undo the payment."
         }
+      },
+      "newPerson": {
+        "add": "Add someone new",
+        "addNamed": "Add «{{name}}» and mark present",
+        "added": "New person: {{name}}, marked present",
+        "addedNotMarked": "New person: {{name}}. The presence didn't go through: tick them in the list",
+        "complete": "Complete the record"
       }
     },
     "summary": {
@@ -2811,6 +2818,15 @@
         "m": "Male",
         "f": "Female"
       }
+    },
+    "newPerson": {
+      "title": "New person",
+      "kind": "How they come",
+      "trial": "Free trial",
+      "member": "Joins",
+      "trialHint": "Personal fee at zero: pays nothing until you clear it on their record.",
+      "submit": "Add and mark present",
+      "error": "Couldn't add this person. Try again."
     },
     "photo": {
       "title": "Photo",
