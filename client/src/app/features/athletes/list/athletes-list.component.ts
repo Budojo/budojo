@@ -85,6 +85,8 @@ interface SelectOption<T extends string> {
   value: T | '';
 }
 
+import { PromoteSheetComponent } from '../promote/promote-sheet.component';
+
 @Component({
   selector: 'app-athletes-list',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -122,6 +124,7 @@ interface SelectOption<T extends string> {
     SortHeaderComponent,
     BeltSortButtonComponent,
     ContactActionsComponent,
+    PromoteSheetComponent,
   ],
   providers: [ConfirmationService, MessageService],
   templateUrl: './athletes-list.component.html',
@@ -1270,6 +1273,11 @@ export class AthletesListComponent implements OnInit {
   @ViewChild('cardMenu') protected cardMenu?: Menu;
   protected readonly cardMenuItems = signal<MenuItem[]>([]);
 
+  /** Who the promotion sheet is open for (#2045); `null` keeps it shut. */
+  protected readonly promoting = signal<Athlete | null>(null);
+  /** The card's ⋮ that opened it: the keyboard goes back there. */
+  private promoteOpener: HTMLElement | null = null;
+
   /**
    * The payment cell's own popup (#1402). Separate instance from the card
    * menu: they can both be reachable on a phone at the same time, and sharing
@@ -1540,6 +1548,16 @@ export class AthletesListComponent implements OnInit {
       command: () => this.goToTab(athlete, 'promotions'),
     });
 
+    // A promotion from the row (#2045, PRD § 6.1): belt and stripes, today.
+    // Not for the owner's own row: their belt is theirs to change on the form.
+    if (!athlete.is_self) {
+      items.push({
+        label: this.translate.instant('athletes.promote.menu'),
+        icon: 'pi pi-arrow-up',
+        command: () => this.openPromote(event, athlete),
+      });
+    }
+
     if (this.publicProfileHandle(athlete) !== null) {
       items.push({
         label: this.translate.instant('athletes.list.tooltip.publicProfile'),
@@ -1556,6 +1574,43 @@ export class AthletesListComponent implements OnInit {
 
     this.cardMenuItems.set(items);
     this.cardMenu?.toggle(event);
+  }
+
+  private openPromote(event: Event, athlete: Athlete): void {
+    // The card's ⋮ that opened the menu: the click may have landed on its icon.
+    this.promoteOpener =
+      event.target instanceof Element ? event.target.closest<HTMLElement>('button') : null;
+    this.promoting.set(athlete);
+  }
+
+  /**
+   * Promoted: the card's belt moves at once, from the server's answer, and the
+   * toast names the new step. Only the belt and the stripes: an update's
+   * answer carries the counts the roster loads as null (see the fee above).
+   */
+  protected onPromoted(updated: Athlete): void {
+    this.promoting.set(null);
+    this.athletes.update((rows) =>
+      rows.map((a) =>
+        a.id === updated.id ? { ...a, belt: updated.belt, stripes: updated.stripes } : a,
+      ),
+    );
+    this.messageService.add({
+      severity: 'success',
+      summary: this.translate.instant('athletes.promote.toast', {
+        name: `${updated.first_name} ${updated.last_name}`,
+        step: `${this.beltLadder.label(updated.belt)} · ${this.beltLadder.stripesLabel(updated.belt, updated.stripes)}`,
+      }),
+      life: 4000,
+    });
+  }
+
+  /** The sheet went with the keyboard inside it: back to the card's ⋮. */
+  protected returnFocusFromPromote(): void {
+    const active = document.activeElement;
+    const inside = active instanceof HTMLElement && active.closest('.promote-dialog') !== null;
+    if (active !== null && active !== document.body && !inside) return;
+    if (this.promoteOpener?.isConnected) this.promoteOpener.focus();
   }
 
   private goToTab(

@@ -1,0 +1,58 @@
+// One person, where they are, where they go: one column, as the other
+// sheets (#2036).
+.promote {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+
+  // The identity's spine draws against its row: this block is that row, and
+  // the spine sits in its left padding, as in a list cell.
+  &__who {
+    position: relative;
+    padding-left: 1rem;
+    min-height: 3rem;
+    display: flex;
+    align-items: center;
+  }
+
+  &__label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--p-text-muted-color);
+  }
+
+  &__line {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+
+    &--to {
+      flex-direction: row;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 600;
+    }
+  }
+
+  &__pickers {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  &__hint,
+  &__error {
+    margin: 0;
+    font-size: 0.875rem;
+  }
+
+  &__hint {
+    color: var(--p-text-muted-color);
+  }
+
+  &__error {
+    color: var(--budojo-danger-ink);
+  }
+}
