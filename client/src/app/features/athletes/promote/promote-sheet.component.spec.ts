@@ -127,6 +127,34 @@ describe('PromoteSheetComponent', () => {
     expect(values).not.toContain('orange-and-green');
   });
 
+  it('gives back the next stripe on the belt they hold, after a detour', () => {
+    const { fixture, http } = setup();
+    open(fixture, http, anna(), { kind: 'stripe', belt: 'blue', stripes: 3 });
+    const sheet = fixture.componentInstance as unknown as { pickBelt: (belt: string) => void };
+
+    sheet.pickBelt('purple');
+    sheet.pickBelt('blue');
+    fixture.detectChanges();
+    expect(text('promote-to')).toContain('Blue · 3');
+  });
+
+  it("keeps the proposed kids' grade on the list after another pick", () => {
+    const { fixture, http } = setup();
+    useLadder('judo', { trains_kids: false });
+    open(fixture, http, anna({ belt: 'white-and-yellow', stripes: 0 }), {
+      kind: 'belt',
+      belt: 'yellow-and-orange',
+      stripes: 0,
+    });
+    const sheet = fixture.componentInstance as unknown as {
+      pickBelt: (belt: string) => void;
+      beltOptions: () => { value: string }[];
+    };
+    sheet.pickBelt('yellow');
+
+    expect(sheet.beltOptions().map((option) => option.value)).toContain('yellow-and-orange');
+  });
+
   it('starts a picked belt with no stripes', () => {
     const { fixture, http } = setup();
     open(fixture, http, anna(), { kind: 'stripe', belt: 'blue', stripes: 3 });

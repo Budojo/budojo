@@ -68,6 +68,8 @@ export class PromoteSheetComponent {
   readonly hidden = output<void>();
 
   protected readonly belt = signal<Belt | null>(null);
+  /** What the server proposed: kept on the belt list whatever is picked after. */
+  private readonly proposed = signal<Belt | null>(null);
   protected readonly stripes = signal<number>(0);
   /** The proposal is on its way: the pickers show where the athlete is. */
   protected readonly loading = signal<boolean>(false);
@@ -82,13 +84,15 @@ export class PromoteSheetComponent {
   protected readonly beltOptions = computed(() => {
     this.languageService.currentLang();
     const options = this.beltLadder.beltOptions(this.athlete()?.belt ?? null);
-    const proposed = this.belt();
-    if (proposed === null || options.some((option) => option.value === proposed)) return options;
+    const extra = [this.proposed(), this.belt()].filter(
+      (belt): belt is Belt => belt !== null && !options.some((option) => option.value === belt),
+    );
+    if (extra.length === 0) return options;
     return this.beltLadder
       .allBeltOptions()
       .filter(
         (option) =>
-          option.value === proposed || options.some((kept) => kept.value === option.value),
+          extra.includes(option.value) || options.some((kept) => kept.value === option.value),
       );
   });
 
@@ -137,11 +141,20 @@ export class PromoteSheetComponent {
     holdDialogWhile(() => this.saving(), 'promote-dialog');
   }
 
-  /** A new belt starts with no stripes, as it does on the mat. */
+  /**
+   * A new belt starts with no stripes, as it does on the mat. Back on the
+   * belt they hold, the next stripe on it: going there and back is not a
+   * reason to take their stripes away (#2143 review).
+   */
   protected pickBelt(belt: Belt): void {
     this.picked = true;
     this.belt.set(belt);
-    this.stripes.set(0);
+    const athlete = this.athlete();
+    if (athlete !== null && belt === athlete.belt) {
+      this.stripes.set(Math.min(athlete.stripes + 1, this.beltLadder.stripeCap(belt)));
+    } else {
+      this.stripes.set(0);
+    }
   }
 
   protected pickStripes(value: string): void {
@@ -194,6 +207,7 @@ export class PromoteSheetComponent {
     this.athletes.nextStep(athlete.id).subscribe({
       next: (next) => {
         if (opening !== this.opening) return;
+        this.proposed.set(next?.belt ?? null);
         if (next !== null && !this.picked) {
           this.belt.set(next.belt);
           this.stripes.set(next.stripes);
@@ -217,6 +231,7 @@ export class PromoteSheetComponent {
   private reset(): void {
     this.opening++;
     this.picked = false;
+    this.proposed.set(null);
     this.settled = null;
     this.loading.set(false);
     this.belt.set(null);

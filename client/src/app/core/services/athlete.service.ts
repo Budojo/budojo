@@ -792,11 +792,6 @@ export class AthleteService {
   }
 
   /**
-   * The athletes who may be ready for their next step (#1841): every active
-   * athlete, longest since their last promotion first. Facts only; the server
-   * sends no score, and the page adds none.
-   */
-  /**
    * One athlete's next step on the ladder (#2045), null at the top: the same
    * rule as `promotionCandidates()`, for the phone's promotion sheet.
    */
@@ -806,6 +801,11 @@ export class AthleteService {
       .pipe(map((res) => res.data));
   }
 
+  /**
+   * The athletes who may be ready for their next step (#1841): every active
+   * athlete, longest since their last promotion first. Facts only; the server
+   * sends no score, and the page adds none.
+   */
   promotionCandidates(): Observable<PromotionCandidate[]> {
     return this.http
       .get<{
