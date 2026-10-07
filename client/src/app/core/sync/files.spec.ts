@@ -17,10 +17,10 @@ class FakeServer implements SyncFilesApi {
   /** Contents held at one of their paths but not at every one. */
   readonly incomplete = new Set<string>();
 
-  constructor(readonly named: string[]) {}
+  constructor(readonly names: string[]) {}
 
   async list(): Promise<ServerFile[]> {
-    return this.named.map((sha256) => ({
+    return this.names.map((sha256) => ({
       sha256,
       size: this.held.get(sha256)?.length ?? null,
       present: this.held.has(sha256),
@@ -39,6 +39,10 @@ class FakeServer implements SyncFilesApi {
     this.written.push(sha256);
     this.held.set(sha256, bytes);
     this.incomplete.delete(sha256);
+  }
+
+  async named(): Promise<string[]> {
+    throw new Error('the files side never reads another database');
   }
 }
 

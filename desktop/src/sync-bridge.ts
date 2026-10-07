@@ -24,10 +24,11 @@
  *   page's headers only the three the uploads need pass.
  *
  * **A delete is checked twice** (#2120). The device that pushes prunes the
- * folder's versions (#2117), so a bare `DELETE` of one file by its id passes
- * here. Then the main process, with its own token, reads the file and the
- * folders above it (`checkDelete`), and answers 403 before any delete is sent
- * for anything but a version of this PC's sync folder.
+ * folder's versions (#2117) and its contents (#2118), so a bare `DELETE` of
+ * one file by its id passes here. Then the main process, with its own token,
+ * reads the file and the folders above it (`checkDelete`), and answers 403
+ * before any delete is sent for anything but a version or a content of this
+ * PC's sync folder.
  */
 
 export interface DriveRequest {
@@ -163,18 +164,25 @@ export interface DriveItem {
 const FOLDER = 'application/vnd.google-apps.folder';
 /** The folder the sync lives in, inside the `Budojo` folder (`docs/sync/protocol.md` § The folder). */
 const SYNC_FOLDER = 'sync';
-/** The sync folder's folders whose files the sync deletes, and the names those files have. */
-const PRUNED = new Map<string, RegExp>([['versions', /^\d{6}-[a-z0-9]+\.(root|\d{6}-[a-z0-9]+)\.bjs$/]]);
+/**
+ * The sync folder's folders whose files the sync deletes, and the names those
+ * files have: its versions (#2117), and the contents no kept version names (#2118).
+ */
+const PRUNED = new Map<string, RegExp>([
+  ['versions', /^\d{6}-[a-z0-9]+\.(root|\d{6}-[a-z0-9]+)\.bjs$/],
+  ['files', /^[0-9a-f]{64}\.bjs$/],
+]);
 
 function onlyParent(item: DriveItem): string | null {
   return item.parents.length === 1 ? (item.parents[0] ?? null) : null;
 }
 
 /**
- * Whether the main process forwards a sync's delete (#2120): a version's name,
- * in a folder named `versions`, in a folder named `sync`, in the `Budojo`
- * folder this PC linked (`folderId`, where its backups go). A backup, the
- * keys, a report, a document, and a version's name anywhere else are refused.
+ * Whether the main process forwards a sync's delete (#2120): a version's name
+ * in a folder named `versions`, or a content's in one named `files` (#2118), in
+ * a folder named `sync`, in the `Budojo` folder this PC linked (`folderId`,
+ * where its backups go). A backup, the keys, a report, a document, and either
+ * name anywhere else are refused.
  *
  * `chain` is the file and the folders above it, as far as they were read. The
  * answer is the next folder to read, or the verdict: nothing past the first

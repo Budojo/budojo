@@ -169,10 +169,31 @@ describe('the sync’s deletes', () => {
       '000045-PHONE.000044-pc4f2a.bjs',
       '45-phone9c1e.44-pc4f2a.bjs',
       '000045-phone9c1e.000044-pc4f2a.bjs.zip',
-      `${'a'.repeat(64)}.bjs`,
+      `${'A'.repeat(64)}.bjs`,
+      `${'a'.repeat(63)}.bjs`,
+      `${'a'.repeat(64)}.bjs.part`,
     ]) {
       expect(checkDelete([item('x', name, ['versions-1'])], budojo)).toBe(false);
     }
+  });
+
+  it('forwards a content in `files/` of this PC’s sync folder, which no kept version names (#2118)', () => {
+    const files = item('files-1', 'files', ['sync-1'], FOLDER);
+    const content = item('c-1', `${'a'.repeat(64)}.bjs`, ['files-1']);
+
+    expect(checkDelete([content], budojo)).toEqual({ read: 'files-1' });
+    expect(checkDelete([content, files], budojo)).toEqual({ read: 'sync-1' });
+    expect(checkDelete([content, files, sync], budojo)).toBe(true);
+  });
+
+  it('refuses a content’s name anywhere but in `files/` inside this PC’s sync folder (#2118)', () => {
+    const name = `${'a'.repeat(64)}.bjs`;
+    const files = item('files-1', 'files', ['sync-1'], FOLDER);
+    expect(checkDelete([item('c', name, ['versions-1']), versions], budojo)).toBe(false);
+    expect(checkDelete([item('c', name, [budojo]), item(budojo, 'Budojo', ['root'], FOLDER)], budojo)).toBe(false);
+    expect(checkDelete([item('c', name, ['files-1']), files, item('sync-1', 'sync', ['budojo-2'], FOLDER)], budojo)).toBe(
+      false,
+    );
   });
 
   it('refuses a version’s name anywhere but in `versions/` inside this PC’s sync folder', () => {
