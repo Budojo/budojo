@@ -3500,7 +3500,9 @@
     "system": {
       "lastCopy": "Ultima copia fuori da questo computer: {{when}}",
       "firstCopyPending": "La prima copia fuori da questo computer arriva con il prossimo backup",
-      "open": "Apri il backup"
+      "open": "Apri il backup",
+      "update": "È uscito Budojo {{version}}",
+      "download": "Scarica"
     },
     "backup": {
       "folderFailing": "La copia dei backup in {{where}} non riesce",
@@ -3793,7 +3795,8 @@
       "anotherFolder": "La cartella su Drive è di un'altra palestra",
       "unpaired": "Questo telefono è stato scollegato dalla palestra",
       "failed": "La sincronizzazione non è riuscita",
-      "full": "Budojo è già su due dispositivi"
+      "full": "Budojo è già su due dispositivi",
+      "update": "Aggiorna Budojo per sincronizzare"
     },
     "hint": {
       "pending": "Partono al prossimo tentativo, da sole.",
@@ -3803,7 +3806,8 @@
       "ask": "Questo dispositivo e Drive hanno due palestre diverse. Niente viene sovrascritto finché non scegli.",
       "anotherFolder": "Il telefono non ci scrive niente. Esci e accedi con l'account Google della palestra.",
       "unpaired": "Esci, poi accedi con Google per collegarlo di nuovo.",
-      "full": "Questo dispositivo non si unisce: la sincronizzazione regge due dispositivi, il PC e un telefono."
+      "full": "Questo dispositivo non si unisce: la sincronizzazione regge due dispositivi, il PC e un telefono.",
+      "update": "L'altro dispositivo usa un Budojo più nuovo. Quello che registri qui resta, e parte dopo l'aggiornamento."
     },
     "ask": {
       "useFolderPc": "Usa la palestra del PC",

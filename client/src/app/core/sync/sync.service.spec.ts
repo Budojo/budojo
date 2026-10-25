@@ -1,4 +1,4 @@
-import { HttpResponse } from '@angular/common/http';
+import { HttpErrorResponse, HttpResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { firstValueFrom, of } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -479,6 +479,51 @@ describe('SyncService', () => {
 
     expect(sync.state()).toEqual({ kind: 'another-folder' });
     expect([...remote.files.keys()]).toEqual([FOLDER_PATH]);
+  });
+
+  it('asks for the update, and stops pulling, when the other device runs a newer Budojo (#2041)', async () => {
+    await pcPublishes();
+    // The server refuses a database newer than its own migrations (StageRefused::newer).
+    const stage = vi.spyOn(phone, 'stage').mockRejectedValue(
+      new HttpErrorResponse({
+        status: 422,
+        error: {
+          code: 'newer',
+          message:
+            'The database is from a newer Budojo (schema 2026_11_01_000000_x). Update Budojo first.',
+        },
+      }),
+    );
+    const sync = setUp();
+
+    await sync.syncNow();
+    expect(sync.state()).toEqual({ kind: 'update' });
+    expect(reload).not.toHaveBeenCalled();
+
+    // Each round would fetch the whole database again only to be refused: until
+    // the app is updated, and so started again, none runs.
+    await sync.syncNow();
+    expect(stage).toHaveBeenCalledOnce();
+    expect(sync.state()).toEqual({ kind: 'update' });
+  });
+
+  it('says any other refusal of the stage as it is, and tries again later', async () => {
+    await pcPublishes();
+    const stage = vi
+      .spyOn(phone, 'stage')
+      .mockRejectedValue(
+        new HttpErrorResponse({
+          status: 422,
+          error: { code: 'unreadable', message: 'not a database' },
+        }),
+      );
+    const sync = setUp();
+
+    await sync.syncNow();
+    expect(sync.state().kind).toBe('failed');
+
+    await sync.syncNow();
+    expect(stage).toHaveBeenCalledTimes(2);
   });
 
   it('asks for Google again when it let go of the phone', async () => {

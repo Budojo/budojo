@@ -78,6 +78,12 @@ export type SyncState =
   | { kind: 'unpaired' }
   /** Two other devices already sync with the folder: a third is refused (protocol § Scope). */
   | { kind: 'full' }
+  /**
+   * The other device published a database newer than this app knows (PRD
+   * § 5.5): update Budojo. What is recorded here waits, journaled, and goes
+   * after the update (#2041).
+   */
+  | { kind: 'update' }
   | { kind: 'failed'; reason: string };
 
 /**
@@ -262,6 +268,12 @@ export class SyncService {
   }
 
   private async round(resolution?: { choice: AskChoice; seen: VersionRef }): Promise<void> {
+    // Every round would fetch the whole newer database again only to have it
+    // refused: none runs until the update starts the app again.
+    if (this.updateNeeded) {
+      this.stateSignal.set({ kind: 'update' });
+      return;
+    }
     const platform = this.platform;
     // What waits for the owner, and what the last pull brought, are on this
     // device: read before anything reaches Drive, the PC's identity included
@@ -411,6 +423,9 @@ export class SyncService {
 
   private countAsked = 0;
 
+  /** A newer database was refused: no round runs until the app is updated (#2041). */
+  private updateNeeded = false;
+
   /** Seen on Oggi: forgotten, on the server too. One a later pull added to stays there. */
   seenHomecoming(arrived: Homecoming): void {
     this.seenThrough = arrived.through;
@@ -435,6 +450,16 @@ export class SyncService {
   private async failed(error: unknown, owner: LedgerOwner | null): Promise<void> {
     if (error instanceof RemoteError && error.reason === 'unauthorized') {
       this.stateSignal.set({ kind: 'reconnect' });
+      return;
+    }
+    // The server refuses a database newer than its migrations (StageRefused::newer).
+    if (
+      error instanceof HttpErrorResponse &&
+      error.status === 422 &&
+      error.error?.code === 'newer'
+    ) {
+      this.updateNeeded = true;
+      this.stateSignal.set({ kind: 'update' });
       return;
     }
     const offline =

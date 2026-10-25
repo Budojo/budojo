@@ -37,6 +37,13 @@
       font-weight: 500;
     }
   }
+
+  // The download is the line's one action: the touch floor on the phone.
+  &__system-action {
+    display: inline-flex;
+    align-items: center;
+    min-height: 3rem;
+  }
 }
 
 .today-card {

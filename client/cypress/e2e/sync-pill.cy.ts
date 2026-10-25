@@ -96,6 +96,13 @@ describe('The sync pill (#2046)', () => {
       attention: true,
     },
     {
+      name: 'the other device runs a newer Budojo (#2041)',
+      state: { kind: 'update' },
+      says: 'Update Budojo to sync',
+      hint: 'goes once this one is updated',
+      attention: true,
+    },
+    {
       name: 'failed',
       state: { kind: 'failed', reason: 'Drive answered 500' },
       says: 'The sync did not go through',
