@@ -133,7 +133,8 @@ describe('Today, the first screen (#1643)', () => {
     cy.wait('@academy');
 
     cy.get('[data-cy="today-class-plan-1"] button').click();
-    cy.get('[data-cy="lesson-sheet"]').should('be.visible');
+    // The panel: the `p-dialog` host measures 0 x 0 (#2154).
+    cy.get('[data-cy="lesson-sheet"] [role="dialog"]').should('be.visible');
     cy.get('[data-cy="lesson-sheet"]').should('contain.text', 'Fondamentali');
     cy.get('body').type('{esc}');
 
