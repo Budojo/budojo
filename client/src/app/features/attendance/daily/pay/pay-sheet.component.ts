@@ -40,8 +40,9 @@ export interface PayRecorded {
  * a row of «Soldi» (#2132).
  *
  * The months owed, oldest first, with the host's month picked. The amount is
- * the athlete's fee times their period, as the server works it out, and is
- * not editable here: the PC's ledger is where a payment gets adjusted. Cash
+ * the athlete's fee times the picked payment's period (their own, or one
+ * month where a whole period would cross one paid, #2150), and is not
+ * editable here: the PC's ledger is where a payment gets adjusted. Cash
  * is picked, because cash is what changes hands at the mat. One button
  * records it, and the host offers the undo.
  */

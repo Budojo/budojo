@@ -177,6 +177,28 @@ describe('MatMoney', () => {
     ]);
   });
 
+  it("reads next year's ledger when a quarter from this month reaches into it (#2150)", () => {
+    vi.setSystemTime(new Date(2026, 10, 10, 19, 0)); // 10 November 2026
+    const { money, http } = setup();
+    money.load();
+    behind(http, []);
+
+    let owed: PayOption[] = [];
+    money.owedFor(athlete({ billing_period_months: 3 })).subscribe((months) => (owed = months));
+    http
+      .expectOne((r) => r.url.endsWith('/athletes/7/payments') && r.params.get('year') === '2026')
+      .flush({ data: [], overdue_months: [] });
+    // January to March 2027 is paid: a November quarter would cross it.
+    http
+      .expectOne((r) => r.url.endsWith('/athletes/7/payments') && r.params.get('year') === '2027')
+      .flush({
+        data: [payment({ year: 2027, month: 1, period_months: 3, amount_cents: 16500 })],
+        overdue_months: [],
+      });
+
+    expect(owed).toEqual([{ month: '2026-11', period: 1 }]);
+  });
+
   it("reads this year's ledger for someone not behind, and offers this month", () => {
     const { money, http } = setup();
     money.load();
