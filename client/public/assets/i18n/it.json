@@ -2828,6 +2828,18 @@
       "submit": "Aggiungi e segna presente",
       "error": "Non è stato possibile aggiungere questa persona. Riprova."
     },
+    "promote": {
+      "title": "Promozione",
+      "now": "Ora",
+      "becomes": "Diventa",
+      "stripes": "Gradi",
+      "today": "Con la data di oggi, nello storico come una fatta dal PC.",
+      "submit": "Registra la promozione",
+      "error": "Non è stato possibile registrare la promozione. Riprova.",
+      "menu": "Promuovi",
+      "toast": "{{name}}: {{step}}",
+      "same": "È il passo che ha già: scegli quello da registrare."
+    },
     "photo": {
       "title": "Foto",
       "hint": "PNG, JPG o WebP, massimo 2 MB.",

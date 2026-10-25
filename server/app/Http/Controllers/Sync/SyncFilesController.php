@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Sync;
 
 use App\Actions\Sync\FindSyncFileAction;
+use App\Actions\Sync\ListNamedContentsAction;
 use App\Actions\Sync\ListSyncFilesAction;
 use App\Actions\Sync\ReceiveSyncFileAction;
 use App\Http\Controllers\Controller;
@@ -22,6 +23,8 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
  * - `GET /api/v1/sync/files`: each content once, its size, and whether it is here.
  * - `GET /api/v1/sync/files/{sha256}`: its bytes.
  * - `PUT /api/v1/sync/files/{sha256}`: another device's bytes for it.
+ * - `POST /api/v1/sync/files/named`: the contents a version's database names,
+ *   for the app to delete from the folder what no kept version names (#2118).
  */
 class SyncFilesController extends Controller
 {
@@ -42,5 +45,15 @@ class SyncFilesController extends Controller
         $receive->execute($sha256, $request->getContent());
 
         return response()->noContent();
+    }
+
+    public function named(Request $request, ListNamedContentsAction $list): JsonResponse
+    {
+        $body = $request->getContent(true);
+        if (! \is_resource($body)) {
+            throw new \RuntimeException('could not read the incoming database');
+        }
+
+        return response()->json(['data' => $list->execute($body)]);
     }
 }

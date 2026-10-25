@@ -30,6 +30,12 @@ export interface SyncFilesApi {
   list(): Promise<ServerFile[]>;
   read(sha256: string): Promise<Uint8Array>;
   write(sha256: string, bytes: Uint8Array): Promise<void>;
+  /**
+   * `POST /api/v1/sync/files/named`: the contents another database names, a
+   * kept version's, by the rules of `list` (#2118). Throws on one the server
+   * cannot read for certain (a later Budojo's, a damaged one).
+   */
+  named(database: Uint8Array): Promise<string[]>;
 }
 
 /**

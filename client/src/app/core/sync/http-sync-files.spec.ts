@@ -52,4 +52,18 @@ describe('HttpSyncFiles', () => {
 
     await write;
   });
+
+  it('asks which contents a version’s database names, sending it as raw bytes (#2118)', async () => {
+    const named = files.named(utf8('a database'));
+    const request = http.expectOne('/api/v1/sync/files/named');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.headers.get('Content-Type')).toBe('application/octet-stream');
+    expect(request.request.body).toBeInstanceOf(File);
+    expect(fromUtf8(new Uint8Array(await (request.request.body as File).arrayBuffer()))).toBe(
+      'a database',
+    );
+    request.flush({ data: [SHA] });
+
+    expect(await named).toEqual([SHA]);
+  });
 });

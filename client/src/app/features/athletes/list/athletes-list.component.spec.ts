@@ -880,15 +880,39 @@ describe('AthletesListComponent', () => {
 
       const items = component.cardMenuItems();
       // No monthly_fee + no handle on the default makeAthlete fixture →
-      // 4 items: attendance, documents, promotions, edit. The conditional
-      // Payments + Public profile entries are exercised in the follow-up
-      // assertions below. Delete moved off this menu entirely (#1430) — the
-      // danger zone on the edit page is the only place it lives now.
-      expect(items).toHaveLength(4);
+      // 5 items: attendance, documents, promotions, promote (#2045), edit.
+      // The conditional Payments + Public profile entries are exercised in
+      // the follow-up assertions below. Delete moved off this menu entirely
+      // (#1430) — the danger zone on the edit page is the only place it lives.
+      expect(items).toHaveLength(5);
       const icons = items.map((it) => it.icon);
-      expect(icons).toEqual(['pi pi-calendar', 'pi pi-file', 'pi pi-trophy', 'pi pi-pencil']);
+      expect(icons).toEqual([
+        'pi pi-calendar',
+        'pi pi-file',
+        'pi pi-trophy',
+        'pi pi-arrow-up',
+        'pi pi-pencil',
+      ]);
       expect(icons).not.toContain('pi pi-trash');
       expect(component.cardMenu?.toggle).toHaveBeenCalledTimes(1);
+    });
+
+    it("openCardMenu offers no promotion on the owner's own row (#2045)", () => {
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      fixture.detectChanges();
+      const component = fixture.componentInstance as unknown as {
+        openCardMenu: (event: Event, athlete: Athlete) => void;
+        cardMenuItems: () => Array<{ icon?: string }>;
+        cardMenu?: { toggle: Mock };
+      };
+      component.cardMenu = { toggle: vi.fn() };
+
+      component.openCardMenu(
+        { stopPropagation: vi.fn() } as unknown as Event,
+        makeAthlete({ is_self: true }),
+      );
+
+      expect(component.cardMenuItems().map((it) => it.icon)).not.toContain('pi pi-arrow-up');
     });
 
     it('openCardMenu includes Public profile only when the athlete has a handle (#985)', () => {

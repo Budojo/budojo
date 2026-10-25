@@ -3,9 +3,11 @@
   flex-direction: column;
   gap: 1.5rem;
 
-  // The identity's spine draws against its row: this block is that row.
+  // The identity's spine draws against its row: this block is that row, and
+  // the spine sits in its left padding, as in a list cell.
   &__who {
     position: relative;
+    padding-left: 1rem;
     min-height: 3rem;
     display: flex;
     align-items: center;

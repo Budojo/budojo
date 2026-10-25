@@ -179,7 +179,7 @@ The owner described git, and the design is git.
 
 Nothing waits for the sync, and its state is always on screen (§ 6.2).
 
-**Retention:** the latest versions, plus one a day for two weeks, **the same policy as the backups** (#1228, #1330). A version on Drive *is* a backup. For a phone-only user this is the Drive backup of § 2, with nothing else to build.
+**Retention:** the latest versions, plus one a day for two weeks, **the same policy as the backups** (#1228, #1330). A version on Drive *is* a backup. For a phone-only user this is the Drive backup of § 2, with nothing else to build. A document or photo stays in `files/` while a kept version names it, and goes once none does (#2118): a deleted medical certificate does not outlive the versions that named it.
 
 ### 5.3 Transport and keys
 
@@ -291,6 +291,9 @@ Versions from before the rotation are not kept: the PC's backups on Drive (#1301
   - from the check-in (#1939): a button beside the search, and *Aggiungi «Luca B» e segna presente* on a search that finds nobody; the person comes in marked present, and the toast links to the full record;
   - *Prova gratuita* is picked, beside *Si iscrive*: a trial gets a personal fee of zero, so the check-in never asks them for a month. Clearing that fee on the record makes them a member.
 - **A promotion from the athlete's row:** belt and stripes, dated today.
+  - the card's ⋮ on the roster offers *Promuovi* (not on the owner's own row);
+  - the next step on the academy's ladder is proposed, asked of the server (`GET /athletes/{id}/next-step`) so it is the one «Chi promuovere?» names, kids' grades and climbing order included; two pickers change it, and a new belt starts with no stripes;
+  - it goes through the same update as the PC's form, whose observer writes the promotion to the history.
 
 **Everything else is the PC's screen at phone width,** which the canon already requires to work. The first version checks each flow it ships on a real phone (#2045).
 

@@ -9,6 +9,7 @@ import { Homecoming } from './homecoming';
 import { HttpSyncServer } from './http-sync-server';
 import { VersionRef } from './layout';
 import { LedgerOwner, loadLedger, saveLedger, savedOwner } from './ledger-store';
+import { loadNamed, saveNamed } from './named-store';
 import { RemoteError, SyncRemote } from './remote';
 import { appVersionOf } from './version';
 import { WriteGate } from './write-gate';
@@ -341,6 +342,10 @@ export class SyncService {
         },
         holdWrites: (work) => this.gate.hold(work, () => swapped),
         now: () => Date.now(),
+        namedVersions: {
+          load: () => loadNamed(owner),
+          save: (named) => saveNamed(owner, named),
+        },
       };
       const { outcome } =
         resolution === undefined
