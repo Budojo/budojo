@@ -109,12 +109,12 @@ export const RELEASES: readonly Release[] = [
             it: "Al check-in, chi viene per la prima volta lo aggiungi in tre campi: nome, cognome e cintura. C'è un pulsante accanto alla ricerca, e quando la ricerca non trova nessuno: «Aggiungi «Luca B» e segna presente».",
           },
           {
-            en: 'They come in marked present in the class on screen, and the message links to their record to complete it.',
-            it: 'È già segnata presente nella lezione che hai sullo schermo, e il messaggio porta alla sua scheda per completarla.',
+            en: 'Their presence is already marked in the class on screen, and the message links to their record to complete it.',
+            it: 'La presenza è già segnata nella lezione che hai sullo schermo, e il messaggio porta alla sua scheda per completarla.',
           },
           {
-            en: '"Free trial" is already picked: a personal fee of zero, so nobody asks them for a month. When they join, clear that fee on their record.',
-            it: '«Prova gratuita» è già scelta: quota personale a zero, così nessuno le chiede un mese. Quando si iscrive, togli quella quota dalla scheda.',
+            en: '"Free trial" is already picked: a personal fee of zero, so the check-in asks for no month. When they join, clear that fee on their record.',
+            it: '«Prova gratuita» è già scelta: quota personale a zero, così il check-in non chiede nessun mese. Quando si iscrive, togli quella quota dalla scheda.',
           },
         ],
       },
@@ -131,16 +131,16 @@ export const RELEASES: readonly Release[] = [
         heading: { en: 'Google Drive', it: 'Google Drive' },
         bullets: [
           {
-            en: 'The PC now tidies the Drive folder too: it keeps the last ten versions and one a day for two weeks, and touches only those.',
-            it: 'Anche il PC ora pulisce la cartella su Drive: tiene le ultime dieci versioni e una al giorno per due settimane, e tocca solo quelle.',
+            en: 'The PC now tidies the Drive folder too: it keeps the last ten versions and one a day for two weeks. Backups are left alone.',
+            it: 'Anche il PC ora pulisce la cartella su Drive: tiene le ultime dieci versioni e una al giorno per due settimane. I backup non li tocca.',
           },
           {
-            en: 'Documents and photos you deleted go from Drive too, once no kept version names them. A medical certificate you removed does not stay there for ever.',
-            it: 'I documenti e le foto cancellati spariscono anche da Drive, quando nessuna versione tenuta li nomina più. Un certificato medico tolto non resta lì per sempre.',
+            en: 'Documents and photos you deleted go from Drive too, a few days later, once no kept version names them. Those already there at the first sync stay, because the first version is never deleted.',
+            it: "I documenti e le foto cancellati spariscono anche da Drive, qualche giorno dopo, quando nessuna versione tenuta li nomina più. Restano quelli che c'erano già alla prima sincronizzazione, perché la prima versione non si cancella.",
           },
           {
-            en: 'The PC lets Budojo rewrite only its own sync files on Drive, never a backup or anything else.',
-            it: 'Il PC lascia riscrivere a Budojo solo i propri file di sincronizzazione su Drive, mai un backup o altro.',
+            en: 'On Drive the PC lets Budojo rewrite only its own sync status file: never a backup or anything else.',
+            it: 'Su Drive il PC lascia riscrivere a Budojo solo il proprio file di stato della sincronizzazione: mai un backup o altro.',
           },
         ],
       },
