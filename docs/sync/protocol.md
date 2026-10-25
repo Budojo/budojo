@@ -177,7 +177,7 @@ The journal is a JSON list of the writes that made this version from its parent,
 - **Never overwritten.** A device that finds another academy's keys stops and says so: replacing them would leave that academy's documents and versions unreadable.
 - **Before it syncs, a device checks `sync/folder.bjs`:**
   - **another id, or missing from a folder that holds versions or reports:** it asks the owner. It is another academy's folder, or one someone emptied of its id;
-  - **missing from a folder that holds nothing:** a new folder. The device writes it, then syncs;
+  - **missing from a folder that holds nothing:** a new folder. The device writes it, then syncs. When the other device's lands first, the PC's write that would replace it is refused (#2139): the device reads it again and judges it as if it had found it (the same id: ours);
   - **does not open under the sync key:** the key rotated after an unpairing. It stops and writes nothing, so its deleted report stays deleted.
 
 ## `devices/<id>.bjs`

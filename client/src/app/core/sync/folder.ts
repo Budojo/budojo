@@ -16,6 +16,9 @@ import { RemoteFile, SyncRemote } from './remote';
  * **A folder with nothing in it** is a new one: the first device to sync
  * writes `folder.bjs` (protocol § `devices/`: "together with its report,
  * before version 1"). Both devices writing it at once write the same id.
+ * When the other's lands between this device's look and its write, writing
+ * again would replace it, which the PC's main process refuses (#2139): the
+ * device then reads what is there, as if it had found it.
  */
 export type FolderCheck = 'ours' | 'another' | 'unpaired';
 
@@ -33,9 +36,26 @@ export async function checkFolder(
     if (versions.files.length > 0 || devices.files.length > 0) {
       return 'another';
     }
-    await remote.write(FOLDER_PATH, await sealFolder(key, folder));
+    try {
+      await remote.write(FOLDER_PATH, await sealFolder(key, folder));
+    } catch (error) {
+      const theirs = await remote.read(FOLDER_PATH);
+      if (theirs === null) {
+        throw error;
+      }
+      return judgeFolder(key, theirs, folder);
+    }
     return 'ours';
   }
+  return judgeFolder(key, sealed, folder);
+}
+
+/** What a `folder.bjs` found says of the folder this device's keys name. */
+async function judgeFolder(
+  key: CryptoKey,
+  sealed: Uint8Array,
+  folder: string,
+): Promise<FolderCheck> {
   let value: unknown;
   try {
     value = await openJson(key, FOLDER_PATH, sealed);
