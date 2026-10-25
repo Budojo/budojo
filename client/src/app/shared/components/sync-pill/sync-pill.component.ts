@@ -34,6 +34,7 @@ const LOOK: Record<SyncState['kind'], { icon: string; attention: boolean }> = {
   'another-folder': { icon: 'pi-exclamation-triangle', attention: true },
   unpaired: { icon: 'pi-exclamation-triangle', attention: true },
   full: { icon: 'pi-exclamation-triangle', attention: true },
+  update: { icon: 'pi-download', attention: true },
   failed: { icon: 'pi-exclamation-triangle', attention: true },
 };
 
@@ -173,6 +174,7 @@ export class SyncPillComponent {
       case 'another-folder':
       case 'unpaired':
       case 'full':
+      case 'update':
       case 'reconnect':
         return this.translate.instant(`sync.hint.${KEYS[state.kind]}`);
       default:
@@ -246,5 +248,6 @@ const KEYS: Record<SyncState['kind'], string> = {
   'another-folder': 'anotherFolder',
   unpaired: 'unpaired',
   full: 'full',
+  update: 'update',
   failed: 'failed',
 };

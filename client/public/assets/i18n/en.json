@@ -3500,7 +3500,9 @@
     "system": {
       "lastCopy": "Last copy off this computer: {{when}}",
       "firstCopyPending": "The first copy off this computer comes with the next backup",
-      "open": "Open backup"
+      "open": "Open backup",
+      "update": "Budojo {{version}} is out",
+      "download": "Download"
     },
     "backup": {
       "folderFailing": "Copying backups to {{where}} is failing",
@@ -3793,7 +3795,8 @@
       "anotherFolder": "The Drive folder belongs to another gym",
       "unpaired": "This phone was disconnected from the gym",
       "failed": "The sync did not go through",
-      "full": "Budojo is already on two devices"
+      "full": "Budojo is already on two devices",
+      "update": "Update Budojo to sync"
     },
     "hint": {
       "pending": "They go at the next try, by themselves.",
@@ -3803,7 +3806,8 @@
       "ask": "This device and Drive hold two different gyms. Nothing is overwritten until you choose.",
       "anotherFolder": "The phone writes nothing there. Sign out and sign in with the gym's Google account.",
       "unpaired": "Sign out, then sign in with Google to connect it again.",
-      "full": "This device does not join: the sync holds two devices, the PC and one phone."
+      "full": "This device does not join: the sync holds two devices, the PC and one phone.",
+      "update": "The other device runs a newer Budojo. What you record here stays, and goes once this one is updated."
     },
     "ask": {
       "useFolderPc": "Use the PC's gym",

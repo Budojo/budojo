@@ -78,6 +78,12 @@ export type SyncState =
   | { kind: 'unpaired' }
   /** Two other devices already sync with the folder: a third is refused (protocol § Scope). */
   | { kind: 'full' }
+  /**
+   * The other device published a database newer than this app knows (PRD
+   * § 5.5): update Budojo. What is recorded here waits, journaled, and goes
+   * after the update (#2041).
+   */
+  | { kind: 'update' }
   | { kind: 'failed'; reason: string };
 
 /**
@@ -185,6 +191,9 @@ export class SyncService {
   stop(): void {
     this.stopping?.();
     this.stopping = null;
+    // Signed out: the next owner, or another academy, may have an older
+    // database than the one refused. Its first round asks the server again.
+    this.refusedNewer = null;
     this.stateSignal.set({ kind: 'off' });
   }
 
@@ -283,6 +292,13 @@ export class SyncService {
     }
     if (platform === null || identity === null) {
       this.stateSignal.set({ kind: 'off' });
+      return;
+    }
+    // Every round would fetch the whole newer database again only to have it
+    // refused: none runs for that folder until the update starts the app
+    // again. Another folder, the door's choice, is asked as any other.
+    if (this.refusedNewer === identity.folder) {
+      this.stateSignal.set({ kind: 'update' });
       return;
     }
     const owner: LedgerOwner = {
@@ -411,6 +427,9 @@ export class SyncService {
 
   private countAsked = 0;
 
+  /** The folder whose newer database was refused: no round runs for it until the app is updated (#2041). */
+  private refusedNewer: string | null = null;
+
   /** Seen on Oggi: forgotten, on the server too. One a later pull added to stays there. */
   seenHomecoming(arrived: Homecoming): void {
     this.seenThrough = arrived.through;
@@ -435,6 +454,16 @@ export class SyncService {
   private async failed(error: unknown, owner: LedgerOwner | null): Promise<void> {
     if (error instanceof RemoteError && error.reason === 'unauthorized') {
       this.stateSignal.set({ kind: 'reconnect' });
+      return;
+    }
+    // The server refuses a database newer than its migrations (StageRefused::newer).
+    if (
+      error instanceof HttpErrorResponse &&
+      error.status === 422 &&
+      error.error?.code === 'newer'
+    ) {
+      this.refusedNewer = owner?.folder ?? null;
+      this.stateSignal.set({ kind: 'update' });
       return;
     }
     const offline =

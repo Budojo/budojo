@@ -418,7 +418,7 @@ Sizes: **S** is a day or less, **M** a few days, **L** a week or more. The **fir
    - `Budojo`, in Testing, scope `drive.file`, with the owner as test user;
    - a Desktop client, whose id and secret are repo secrets;
    - an Android client for `it.budojo.mobile`, with the release key's SHA-1.
-2. **Android developer verification:** the free limited-distribution account (up to 20 devices, no ID). Register the package and the key before enforcement reaches Italy in 2027.
+2. **Android developer verification:** the free limited-distribution account (up to 20 devices, no ID). Register the package and the key before enforcement reaches Italy in 2027. The steps, in the owner's language: [`docs/mobile/developer-verification.md`](../mobile/developer-verification.md) (#2041).
 3. ✅ **The signing key** (created in #2027): into the password manager, with an offline copy.
 4. **For each friend's academy:** add their Gmail as a test user in the Google project.
 

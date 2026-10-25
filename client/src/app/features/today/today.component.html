@@ -330,6 +330,19 @@
   </div>
 
   <!--
+    A newer Budojo for the phone (#2041): a quiet line, as the backup's is.
+    The link leaves the app: Android downloads the APK and asks to install it.
+  -->
+  @if (phoneUpdate.available(); as update) {
+    <p class="today__system" data-cy="today-update">
+      <span>{{ 'today.system.update' | translate: { version: update.version } }}</span>
+      <a class="today__system-action" [href]="update.url" data-cy="today-update-download">{{
+        'today.system.download' | translate
+      }}</a>
+    </p>
+  }
+
+  <!--
     Copies are landing (#1751): the only backup state that is a quiet line.
     A failing copy, or none set up, is an alert in "Da guardare" instead.
   -->
