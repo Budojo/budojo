@@ -35,12 +35,12 @@ The phone runs Budojo's own server, as the desktop does with `php.exe`:
   - swaps in a database the sync staged (`<db>.staged`, #2030), or a backup the door brought back with its files (`storage/app.staged`, #2079). `StagedSwap.java` does it, in plain `java.io` so a desktop JDK can put it through every state a start that died halfway leaves:
     - the live database steps aside as `<db>.previous` **with its `-wal`**, which can hold writes the main file does not have yet: it is the copy to go back to. A rebase sets this device's own writes aside at the stage instead, as `<db>.rebase` (#2031);
     - staged files come in only beside a staged database, which commits a stage; files staged alone are an interrupted restore's, and are deleted;
-  - makes the phone's `APP_KEY` and document key on its first start (`secrets.json` in the app's private files, never backed up);
+  - makes the phone's `APP_KEY` and document key on its first start (`secrets.json`, sealed by the Keystore as `secrets.json.sealed`, never backed up: see below);
   - runs the migrations, and `budojo:sync-reconcile` after a swap. A `<db>.reconcile` file, written before the rename, keeps it pending until it succeeds, so a start that dies halfway never skips it. A fast-forward and a restore both stage a database today. After a rebase the reconcile replays first: the server's command replays `<db>.rebase`, then sweeps (`docs/sync/protocol.md` § Rebase);
   - starts `php -S 127.0.0.1:<port>` with the framework's router, `BUDOJO_RUNTIME=mobile`;
   - hands PHP and the page a **shell secret**, made at each launch and never written (`BUDOJO_SHELL_SECRET`, in every start's answer). Only the page that holds it opens the owner's session and brings a backup in (`/api/v1/device`, #2079): every other app on the phone reaches `127.0.0.1` too.
 - **`restart()`** stops the server and starts it again, so a backup the door just staged is swapped in now (#2079).
-- **`adoptKeys()`** takes the academy's two app keys the PC put with the Google account (#2033) into `secrets.json`, keeping the phone's own pair as `secrets.previous.json`. They take effect at the next start. The door calls it for the phone's copy of the gym on Drive, never for a gym of the phone's own.
+- **`adoptKeys()`** takes the academy's two app keys the PC put with the Google account (#2033) into `secrets.json`, keeping the phone's own pair as `secrets.previous.json`, both sealed. They take effect at the next start. The door calls it for the phone's copy of the gym on Drive, never for a gym of the phone's own.
 - **The page starts it before Angular boots** (`client/src/app/core/mobile/phone-server.ts`) and shows any failure in full on the screen, the only log anyone can send from a phone.
 - **Android kills an app's child processes in the background** (the phantom process killer, Android 12+). Three things bring it back, in `phone-server.ts` and the plugin:
   - **Back in the foreground,** the plugin restarts the server, on the same port when it is free, and the page holds its requests, writes included, until it answers.
@@ -62,6 +62,17 @@ Three things a PHP that runs on Linux does and Android refuses. Each one was fou
 - it keeps Laravel alive between requests, which this server was never audited for.
 
 Calling PHP in-process from this shell is the way out if Android ever stops the server process in a way CI cannot reproduce.
+
+## The keys at rest (#2134)
+
+**`secrets.json`, `secrets.previous.json` and `sync.json` live only sealed,** as `<name>.sealed`:
+- **`KeystoreSealer.java`** seals with AES-256-GCM under a key the Android Keystore makes and keeps (`budojo-keys`, in the TEE). The key never enters the app's memory or files. A sealed file is a version byte, the IV, then the ciphertext with its tag. The file's name is bound in, so one sealed file cannot stand in for another.
+- **No fingerprint on that key:** the server starts before the page and its lock (#2159), and Android would invalidate a fingerprint-bound key whenever a finger is enrolled.
+- **`SealedStore.java`** holds the file states, in plain `java.io` so a desktop JDK can put it through every one, as `StagedSwap` is:
+  - an install from before #2134 is migrated at its first read: sealed, read back, and only then is the plain file deleted;
+  - a sealed file is written as `.part` and renamed into place;
+  - **a sealed file that does not open is never replaced nor deleted.** The read fails, the server does not start, and the screen says so. New keys over it would leave the academy's documents unreadable for good, and a Keystore that is only slow to wake must not cost them. Taking the keys back from the Google account in that case is #2162.
+- **The emulator job checks it:** it installs the last release, updates over it, and compares the keys the server runs with, from its environment as root, before and after. It also fails on any key file left in plain text.
 
 ## Google Drive on the phone (#2028)
 
@@ -101,6 +112,6 @@ Calling PHP in-process from this shell is the way out if Android ever stops the 
 - **Only the release key signs.** `android/app/build.gradle` reads it from `BUDOJO_ANDROID_KEYSTORE` / `BUDOJO_ANDROID_KEYSTORE_PASSWORD` (alias `budojo`, PKCS12), and CI checks the certificate's SHA-256 before uploading. There is no debug-key fallback on purpose: an APK signed with another key never installs over the app, and uninstalling loses the changes a phone has not sent yet. The owner holds the other copy of the key.
 - **`versionCode` only grows.** It comes from `-PbudojoVersionCode`: **the built commit's time, in minutes since 1 January 2026** (#2040). One order for every APK, a PR's test build, a beta and a release, so any newer build installs over any older one; a code from the semver would have put a release above every test APK built after it, and Android refuses a lower code. The version *name* is the tag's (`2.78.0`), or `0.0.<run>` for a test build.
 - **Every release carries the APK** (#2040): `release.yml` calls `mobile-apk.yml` with the tag on every beta and every stable, and attaches `Budojo-Android-X.Y.Z.apk` once it has opened on the emulator. `installer_tag` rebuilds one for an existing tag.
-- **No Android backup and no transfer to a new phone.** `allowBackup="false"` covers Android up to 11. On 12+ it does not stop the device-to-device transfer, so `res/xml/data_extraction_rules.xml` excludes everything from both. The app holds this phone's keys (`secrets.json`), its database and, later, the sync key (PRD § 6.7); a new phone pairs again instead.
+- **No Android backup and no transfer to a new phone.** `allowBackup="false"` covers Android up to 11. On 12+ it does not stop the device-to-device transfer, so `res/xml/data_extraction_rules.xml` excludes everything from both. The app holds this phone's keys (`secrets.json`), its database and the sync key (`sync.json`), the keys sealed by the Keystore (#2134); a new phone pairs again instead.
 - **Every APK meets an Android emulator first** (#2079): the `📱 On an Android emulator` job (`mobile/emulator/`) installs it on Android 14 with a Galaxy A-class screen, opens it, and keeps a photo of each screen it reaches. Look at them before an APK goes to the owner. It cannot sign in to Google: no account is on it. The emulator does not run on the dev PC (it segfaults under KVM there), so CI is where it runs.
 - **Test on a real phone.** The unit tests live with the screens, in the client's suite. What only a phone can prove (install, update over, storage that survives both, the server coming back after Android killed it) is checked on one, with the count in the PR, as M11 did for the desktop.

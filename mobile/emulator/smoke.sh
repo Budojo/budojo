@@ -4,7 +4,11 @@
 # sign-up. The first start unpacks the server and runs the migrations, under
 # ARM translation: minutes, not seconds.
 #
-#   smoke.sh <apk> <folder for the photos>
+#   smoke.sh <apk> <folder for the photos> [the previous release's apk]
+#
+# Given the previous release, it installs that first and updates over it, as
+# the owner's phone does, and checks the server keeps the same keys across the
+# update, sealed by the Keystore (#2134).
 #
 # Each step waits for words the screen must show (Android's accessibility
 # tree carries the WebView's text), photographs it, then taps on. A screen
@@ -13,8 +17,10 @@ set -uo pipefail
 
 APK="$1"
 SHOTS="$2"
+PREVIOUS="${3:-}"
 ADB="$ANDROID_HOME/platform-tools/adb"
 PACKAGE=it.budojo.mobile
+FILES="/data/data/$PACKAGE/files"
 mkdir -p "$SHOTS"
 
 shot() { "$ADB" exec-out screencap -p > "$SHOTS/$1.png"; }
@@ -50,6 +56,22 @@ tap() {
   "$ADB" shell input tap $(((x1 + x2) / 2)) $(((y1 + y2) / 2))
 }
 
+# The keys the running server was started with, as a short hash: never the
+# keys themselves in a log. Read from its environment, as root.
+server_keys() {
+  local pid keys
+  pid=$("$ADB" shell ps -A -o PID,ARGS | grep libphp.so | grep -- '-S 127.0.0.1' | grep -v -- ' -t ' | awk '{print $1}' | head -1)
+  [ -n "$pid" ] || return 1
+  keys=$("$ADB" shell cat "/proc/$pid/environ" | tr '\0' '\n' | grep -E '^(APP_KEY|DOCUMENT_ENCRYPTION_KEY)=.' | sort)
+  # Both, or no answer: the hash of nothing would match itself across the update.
+  [ "$(printf '%s\n' "$keys" | grep -c .)" = 2 ] || return 1
+  printf '%s' "$keys" | sha256sum | cut -c1-16
+}
+
+app_files() { "$ADB" shell ls "$FILES" | tr -d '\r'; }
+
+launch() { "$ADB" shell monkey -p "$PACKAGE" -c android.intent.category.LAUNCHER 1 > /dev/null; }
+
 fail() {
   echo "::error::$1"
   shot "zz-failed"
@@ -66,8 +88,23 @@ PIN=2159
 "$ADB" shell svc power stayon true
 "$ADB" shell locksettings set-pin "$PIN" > /dev/null || fail "the phone's PIN could not be set"
 
+# Root, to read the app's private files and its server's environment: the
+# emulator's Google APIs image allows it, as no owner's phone does.
+"$ADB" root > /dev/null
+"$ADB" wait-for-device
+
+if [ -n "$PREVIOUS" ]; then
+  "$ADB" install "$PREVIOUS" || fail "the previous release's APK did not install"
+  launch
+  # A release from before the lock (#2159) opens on the door; a later one on its prompt.
+  wait_for "Sign in with Google\|Unlock Budojo" 600 || fail "the previous release never opened"
+  shot "00-previous"
+  BEFORE=$(server_keys) || fail "the previous release runs no server"
+  app_files > "$SHOTS/files-previous.txt"
+fi
+
 "$ADB" install -r "$APK" || fail "the APK did not install"
-"$ADB" shell monkey -p "$PACKAGE" -c android.intent.category.LAUNCHER 1 > /dev/null
+launch
 sleep 10
 shot "00-starting"
 
@@ -102,6 +139,19 @@ fi
 
 wait_for "Sign in with Google" 120 || fail "the PIN did not open the door"
 shot "03-door"
+
+# The keys are sealed by the Keystore (#2134): none is left in plain text, and
+# an update keeps the ones the phone had.
+app_files > "$SHOTS/files.txt"
+grep -qx 'secrets.json.sealed' "$SHOTS/files.txt" || fail "no sealed keys in the app's files"
+if grep -qxE '(secrets|secrets\.previous|sync)\.json' "$SHOTS/files.txt"; then
+  fail "a key file is still in plain text"
+fi
+if [ -n "$PREVIOUS" ]; then
+  AFTER=$(server_keys) || fail "no server runs after the update"
+  [ "$BEFORE" = "$AFTER" ] || fail "the update changed the phone's keys ($BEFORE, then $AFTER)"
+  echo "the update kept the phone's keys ($AFTER), sealed"
+fi
 
 tap "Continue without Google" || fail "no «Continue without Google» on the door"
 wait_for "Open your academy account" 120 || fail "«Continue without Google» did not reach the sign-up"

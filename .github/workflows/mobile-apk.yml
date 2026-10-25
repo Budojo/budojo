@@ -258,8 +258,20 @@ jobs:
       - name: Boot a Galaxy A-class phone, Android 14
         run: mobile/emulator/boot.sh
 
+      # The version the owner's phone runs before this one: the emulator
+      # updates over it, and the update must keep the phone's keys (#2134).
+      - name: The last release's APK, to update from
+        id: previous
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          BUILDING: ${{ inputs.tag }}
+        run: echo "apk=$(mobile/emulator/previous-apk.sh "$RUNNER_TEMP/previous" "$BUILDING")" >> "$GITHUB_OUTPUT"
+
       - name: Open the app and photograph each screen
-        run: mobile/emulator/smoke.sh "$RUNNER_TEMP/apk/Budojo-Android-${VERSION_NAME}.apk" "$RUNNER_TEMP/shots"
+        env:
+          PREVIOUS_APK: ${{ steps.previous.outputs.apk }}
+        run: mobile/emulator/smoke.sh "$RUNNER_TEMP/apk/Budojo-Android-${VERSION_NAME}.apk" "$RUNNER_TEMP/shots" "$PREVIOUS_APK"
 
       - uses: actions/upload-artifact@v4
         if: always()
