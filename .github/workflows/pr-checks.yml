@@ -428,7 +428,9 @@ jobs:
           # proxy included). On `ubuntu-latest` each shard gets a clean,
           # fresh disk so the cold-start binds quickly; no inter-shard
           # contention (each shard is a fresh VM).
-          start: npm run start
+          # Without hot reload (#2152): CI edits nothing while Cypress runs, and
+          # a stray component reload failed a spec it never opened.
+          start: npm run start -- --no-hmr
           wait-on: "http://localhost:4200"
           # Generous timeout: covers `npm ci` warming + ng serve cold compile.
           wait-on-timeout: 180
