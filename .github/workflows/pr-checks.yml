@@ -418,7 +418,10 @@ jobs:
           printf '  %s\n' "${SHARD_SPECS[@]}"
 
       - name: Cypress run
-        uses: cypress-io/github-action@v6
+        # v7, not v6 (#2147): since the runner moved actions to Node 24, v6's
+        # wait-on gives up on the first refused connection, before `ng serve`
+        # listens. v7.4.4 retries it again.
+        uses: cypress-io/github-action@v7
         with:
           working-directory: client
           # Real `ng serve` — the exact environment the specs target (dev
