@@ -56,13 +56,13 @@ describe('the sync’s Drive bridge', () => {
     const bytes = new Uint8Array([1, 2]);
     expect(
       parseDriveRequest({
-        url: 'https://www.googleapis.com/upload/drive/v3/files?upload_id=1',
+        url: 'https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&upload_id=1',
         method: 'put',
         headers: { authorization: 'x', 'Content-Type': 'application/octet-stream' },
         body: bytes,
       }),
     ).toEqual({
-      url: 'https://www.googleapis.com/upload/drive/v3/files?upload_id=1',
+      url: 'https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&upload_id=1',
       method: 'PUT',
       headers: { 'Content-Type': 'application/octet-stream' },
       body: bytes,
@@ -159,6 +159,12 @@ describe('the sync’s Drive bridge', () => {
     expect(put('https://www.googleapis.com/upload/drive/v3/files/backup123?uploadType=media')).toBeNull();
     expect(put('https://www.googleapis.com/upload/drive/v3/files/backup123')).toBeNull();
     expect(put('https://www.googleapis.com/upload/drive/v3/files/backup123?upload_id=')).toBeNull();
+    // A session's address carries `uploadType=resumable`: a media upload with an id beside it is not one.
+    expect(put('https://www.googleapis.com/upload/drive/v3/files/backup123?uploadType=media&upload_id=x')).toBeNull();
+    expect(put('https://www.googleapis.com/upload/drive/v3/files/backup123?upload_id=x')).toBeNull();
+    expect(
+      put('https://www.googleapis.com/upload/drive/v3/files/backup123?uploadType=resumable&uploadType=media&upload_id=x'),
+    ).toBeNull();
   });
 });
 

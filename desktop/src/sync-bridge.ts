@@ -17,8 +17,8 @@
  *   page gets the sync key and the folder id from `identity()`, and no more;
  * - **any change the sync does not make** (#2106): it reads, creates and
  *   uploads, and never trashes or moves a file, so the token can do neither
- *   to a backup or any other file Budojo made. `PUT` goes only into an
- *   upload's session (`upload_id`, #2139); `PATCH` only opens a resumable one
+ *   to a backup or any other file Budojo made. `PUT` goes only into a
+ *   resumable upload's session (`upload_id`, #2139); `PATCH` only opens one
  *   for one file's new content, with no metadata (`{}`) and no parameter but
  *   the upload's own, never `trashed`, `addParents` or a `media` upload whose
  *   body would be the new content. A `POST` goes to the collection, never to
@@ -34,7 +34,9 @@
  * a delete removes it, and the one file the sync writes again in place is this
  * PC's own report (`devices/<id>.bjs`, after every round): a version or a
  * content gets a new name, and `folder.bjs` is written only when there is
- * none. The main process reads the file up the same way (`checkRewrite`) and
+ * none (when both devices write it at once, the PC's write that would replace
+ * the other's is refused here, and `checkFolder` reads the other's instead).
+ * The main process reads the file up the same way (`checkRewrite`) and
  * answers 403 before the upload opens for anything else, the other device's
  * report included.
  */
@@ -114,9 +116,15 @@ export function parseDriveRequest(value: unknown): DriveRequest | null {
   if (!VERBS.has(verb)) {
     return null;
   }
-  // Into a session only: its address names the file it was opened for, by a
-  // request that passed here (#2139). Never content sent straight to a file.
-  if (verb === 'PUT' && (!upload || (address.searchParams.get('upload_id') ?? '') === '')) {
+  // Into a resumable session only: its address names the file it was opened
+  // for, by a request that passed here (#2139). Never content sent straight
+  // to a file, as a media upload with an id beside it would be.
+  if (
+    verb === 'PUT' &&
+    (!upload ||
+      (address.searchParams.get('upload_id') ?? '') === '' ||
+      address.searchParams.getAll('uploadType').join() !== 'resumable')
+  ) {
     return null;
   }
   // A POST creates: to the collection only, never to a file by its id.

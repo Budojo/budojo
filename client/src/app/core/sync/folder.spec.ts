@@ -2,7 +2,7 @@ import { utf8 } from './bytes';
 import { importSyncKey, newSyncKey, openJson, seal } from './envelope';
 import { checkFolder, hasRoomFor, sealFolder } from './folder';
 import { devicePath, FOLDER_PATH } from './layout';
-import { MemoryRemote } from './remote';
+import { MemoryRemote, RemoteError, SyncRemote } from './remote';
 
 /** `sync/folder.bjs`, checked before every round (protocol § The keys, #2046). */
 describe('checkFolder', () => {
@@ -51,6 +51,78 @@ describe('checkFolder', () => {
     await remote.write(FOLDER_PATH, await seal(key, FOLDER_PATH, utf8('not json')));
 
     expect(await checkFolder(remote, key, FOLDER)).toBe('another');
+  });
+
+  /**
+   * Both devices' first round on an empty folder: each reads no `folder.bjs`,
+   * and the other's write lands between this one's read and its write. On the
+   * PC, writing it again is a replacement, which the main process refuses
+   * (#2139): the round then reads what the other wrote.
+   */
+  describe('when the other device writes it first', () => {
+    /** A folder where the other device's `folder.bjs` lands just after this one looks, and none is replaced. */
+    function race(remote: MemoryRemote, theirs: () => Promise<Uint8Array>): SyncRemote {
+      let landed = false;
+      return {
+        list: (dir) => remote.list(dir),
+        read: async (path) => {
+          const read = await remote.read(path);
+          if (path === FOLDER_PATH && !landed) {
+            landed = true;
+            await remote.write(FOLDER_PATH, await theirs());
+          }
+          return read;
+        },
+        write: async (path, bytes) => {
+          if ((await remote.read(path)) !== null) {
+            throw new RemoteError('unavailable', 'HTTP 403');
+          }
+          await remote.write(path, bytes);
+        },
+        remove: (path) => remote.remove(path),
+      };
+    }
+
+    it('takes it as its own when it opens to the same id: both write the same', async () => {
+      const remote = new MemoryRemote();
+      const key = await importSyncKey(newSyncKey());
+
+      expect(
+        await checkFolder(
+          race(remote, () => sealFolder(key, FOLDER)),
+          key,
+          FOLDER,
+        ),
+      ).toBe('ours');
+    });
+
+    it('still asks when it names another id', async () => {
+      const remote = new MemoryRemote();
+      const key = await importSyncKey(newSyncKey());
+
+      expect(
+        await checkFolder(
+          race(remote, () => sealFolder(key, 'b'.repeat(32))),
+          key,
+          FOLDER,
+        ),
+      ).toBe('another');
+    });
+
+    it('fails as before when the write failed with nothing there: the network, not a race', async () => {
+      const remote = new MemoryRemote();
+      const key = await importSyncKey(newSyncKey());
+      const offline: SyncRemote = {
+        list: (dir) => remote.list(dir),
+        read: (path) => remote.read(path),
+        write: async () => {
+          throw new RemoteError('offline', 'no network');
+        },
+        remove: (path) => remote.remove(path),
+      };
+
+      await expect(checkFolder(offline, key, FOLDER)).rejects.toThrow('no network');
+    });
   });
 });
 
