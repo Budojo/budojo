@@ -65,6 +65,8 @@ public class PhpServerPlugin extends Plugin {
      */
     private final String shellSecret = randomHex(32);
 
+    private static final KeystoreSealer SEALER = new KeystoreSealer();
+
     @PluginMethod
     public void start(PluginCall call) {
         new Thread(() -> {
@@ -130,8 +132,8 @@ public class PhpServerPlugin extends Plugin {
             return;
         }
         try {
-            File files = getContext().getFilesDir();
-            JSONObject current = secrets(files);
+            SealedStore keys = keys();
+            JSONObject current = secrets(keys);
             boolean changed = false;
             if (!appKey.equals(current.getString("APP_KEY"))
                     || !documentKey.equals(current.getString("DOCUMENT_ENCRYPTION_KEY"))) {
@@ -139,12 +141,12 @@ public class PhpServerPlugin extends Plugin {
                 adopted.put("v", 1);
                 adopted.put("APP_KEY", appKey);
                 adopted.put("DOCUMENT_ENCRYPTION_KEY", documentKey);
-                writeFileSynced(new File(files, "secrets.previous.json"), current.toString());
-                replaceSynced(files, "secrets.json", adopted.toString());
+                keys.write("secrets.previous.json", current.toString());
+                keys.write("secrets.json", adopted.toString());
                 changed = true;
             }
             if (syncKey != null) {
-                changed |= joinSync(files, syncKey, folder);
+                changed |= joinSync(keys, syncKey, folder);
             }
             JSObject out = new JSObject();
             out.put("changed", changed);
@@ -163,7 +165,7 @@ public class PhpServerPlugin extends Plugin {
     @PluginMethod
     public void syncIdentity(PluginCall call) {
         try {
-            JSONObject sync = syncFile(getContext().getFilesDir());
+            JSONObject sync = syncFile(keys());
             JSObject out = new JSObject();
             if (sync != null && sync.getString("device").equals(journalingDevice)) {
                 out.put("device", sync.getString("device"));
@@ -177,15 +179,15 @@ public class PhpServerPlugin extends Plugin {
     }
 
     /**
-     * Keeps the sync key and the folder id in {@code sync.json}, beside the
-     * app keys and under the same guard ({@code secrets()}), and makes this
+     * Keeps the sync key and the folder id in {@code sync.json}, sealed beside
+     * the app keys ({@link SealedStore}), and makes this
      * phone's device id the first time: a kind and four random characters
      * (protocol § The folder). The id is kept for good, so a phone that joins
      * again is still the same device. True when anything changed: the server
      * journals its writes under the id from its next start.
      */
-    private static boolean joinSync(File files, String syncKey, String folder) throws Exception {
-        JSONObject current = syncFile(files);
+    private static boolean joinSync(SealedStore keys, String syncKey, String folder) throws Exception {
+        JSONObject current = syncFile(keys);
         if (current != null && syncKey.equals(current.getString("syncKey"))
                 && folder.equals(current.getString("folder"))) {
             return false;
@@ -195,13 +197,18 @@ public class PhpServerPlugin extends Plugin {
         sync.put("device", current != null ? current.getString("device") : newDeviceId());
         sync.put("folder", folder);
         sync.put("syncKey", syncKey);
-        replaceSynced(files, "sync.json", sync.toString());
+        keys.write("sync.json", sync.toString());
         return true;
     }
 
-    private static JSONObject syncFile(File files) throws Exception {
-        File file = new File(files, "sync.json");
-        return file.exists() ? new JSONObject(readFile(file)) : null;
+    private static JSONObject syncFile(SealedStore keys) throws Exception {
+        String text = keys.read("sync.json");
+        return text != null ? new JSONObject(text) : null;
+    }
+
+    /** The phone's key files, sealed by the Android Keystore (#2134). */
+    private SealedStore keys() {
+        return new SealedStore(getContext().getFilesDir(), SEALER);
     }
 
     private static String newDeviceId() {
@@ -212,18 +219,6 @@ public class PhpServerPlugin extends Plugin {
             id.append(alphabet.charAt(random.nextInt(alphabet.length())));
         }
         return id.toString();
-    }
-
-    /**
-     * On the disk before the rename: a crash right after must not leave an
-     * empty file, which would stop every start that follows.
-     */
-    private static void replaceSynced(File files, String name, String text) throws IOException {
-        File part = new File(files, name + ".part");
-        writeFileSynced(part, text);
-        if (!part.renameTo(new File(files, name))) {
-            throw new IOException("could not write " + name);
-        }
     }
 
     /**
@@ -339,7 +334,10 @@ public class PhpServerPlugin extends Plugin {
                 + "opcache.file_cache_only=1\n"
                 + "opcache.lockfile_path=" + tmp.getAbsolutePath() + "\n");
 
-        Map<String, String> env = environment(secrets(files), syncFile(files), database, storage, tmp, files);
+        SealedStore keys = keys();
+        // Sealed too, if an install from before #2134 left it in plain text.
+        keys.read("secrets.previous.json");
+        Map<String, String> env = environment(secrets(keys), syncFile(keys), database, storage, tmp, files);
 
         long tMigrate0 = System.nanoTime();
         String migrate;
@@ -444,17 +442,18 @@ public class PhpServerPlugin extends Plugin {
 
     /**
      * This phone's keys, made on its first start and kept in the app's private
-     * files, as the desktop keeps its own (#1223). The same shape as the
-     * desktop's keychain record, so the door can replace them with the
-     * academy's from the Google account (#2033). They never leave the phone: the manifest
-     * turns off the backup ({@code allowBackup="false"}, up to Android 11) and,
-     * on Android 12+, the transfer to a new phone, which ignores that flag
+     * files, sealed by the Android Keystore (#2134), as the desktop keeps its
+     * own in the OS keychain (#1223). The same shape as the desktop's keychain
+     * record, so the door can replace them with the academy's from the Google
+     * account (#2033). They never leave the phone: the manifest turns off the
+     * backup ({@code allowBackup="false"}, up to Android 11) and, on Android
+     * 12+, the transfer to a new phone, which ignores that flag
      * ({@code res/xml/data_extraction_rules.xml}). Both are needed.
      */
-    private static JSONObject secrets(File files) throws Exception {
-        File file = new File(files, "secrets.json");
-        if (file.exists()) {
-            return new JSONObject(readFile(file));
+    private static JSONObject secrets(SealedStore keys) throws Exception {
+        String text = keys.read("secrets.json");
+        if (text != null) {
+            return new JSONObject(text);
         }
         java.security.SecureRandom random = new java.security.SecureRandom();
         byte[] appKey = new byte[32];
@@ -465,7 +464,7 @@ public class PhpServerPlugin extends Plugin {
         secrets.put("v", 1);
         secrets.put("APP_KEY", "base64:" + android.util.Base64.encodeToString(appKey, android.util.Base64.NO_WRAP));
         secrets.put("DOCUMENT_ENCRYPTION_KEY", android.util.Base64.encodeToString(documentKey, android.util.Base64.NO_WRAP));
-        writeFile(file, secrets.toString());
+        keys.write("secrets.json", secrets.toString());
         return secrets;
     }
 
@@ -720,13 +719,6 @@ public class PhpServerPlugin extends Plugin {
     private static String readFile(File file) throws IOException {
         try (InputStream in = new FileInputStream(file)) {
             return readAll(in).trim();
-        }
-    }
-
-    private static void writeFileSynced(File file, String text) throws IOException {
-        try (FileOutputStream out = new FileOutputStream(file)) {
-            out.write(text.getBytes(StandardCharsets.UTF_8));
-            out.getFD().sync();
         }
     }
 
