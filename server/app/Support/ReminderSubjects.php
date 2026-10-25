@@ -135,8 +135,9 @@ final class ReminderSubjects
      * leaves `monthly_fee_cents` null and would otherwise silently stop
      * getting its digest.
      *
-     * A carnet is judged spendable today, as the roster's chip judges it —
-     * a backfill for a past month still reads today's carnets.
+     * A carnet is judged spendable on `$today`, as the roster's chip judges
+     * it — a backfill for a past month still reads today's carnets. The
+     * phone's forecast asks about the day of the digest instead.
      *
      * @return Collection<int, Athlete>
      */

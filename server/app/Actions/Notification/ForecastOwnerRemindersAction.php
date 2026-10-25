@@ -51,7 +51,7 @@ final class ForecastOwnerRemindersAction
         $reminders = [
             ...$this->ifEnabled($owner, NotificationCategory::MEDICAL_CERT_EXPIRY_REMINDERS, fn (): array => $this->medicalCertificates($owner, $academy, $days)),
             ...$this->ifEnabled($owner, NotificationCategory::ACADEMY_DOCUMENT_EXPIRY_REMINDERS, fn (): array => $this->academyDocuments($owner, $academy, $days)),
-            ...$this->ifEnabled($owner, NotificationCategory::UNPAID_ATHLETES_DIGEST, fn (): array => $this->unpaid($owner, $academy, $days, $today)),
+            ...$this->ifEnabled($owner, NotificationCategory::UNPAID_ATHLETES_DIGEST, fn (): array => $this->unpaid($owner, $academy, $days)),
             ...$this->ifEnabled($owner, NotificationCategory::OWNER_ATHLETE_MISSED_STREAK, fn (): array => $this->missedStreaks($owner, $academy, $today)),
             ...$this->birthdays($owner, $academy, $days),
         ];
@@ -119,14 +119,16 @@ final class ForecastOwnerRemindersAction
      * @param  list<CarbonImmutable>  $days
      * @return list<UpcomingReminder>
      */
-    private function unpaid(User $owner, Academy $academy, array $days, CarbonImmutable $today): array
+    private function unpaid(User $owner, Academy $academy, array $days): array
     {
         $reminders = [];
         foreach ($days as $day) {
             if ($day->day !== 16) {
                 continue;
             }
-            $athletes = ReminderSubjects::owing($academy, $day->year, $day->month, $today);
+            // As the PC will judge it on the 16th: a carnet that lapses before
+            // it pays for nothing that day.
+            $athletes = ReminderSubjects::owing($academy, $day->year, $day->month, $day);
             if ($athletes->isNotEmpty()) {
                 $reminders[] = $this->remind(
                     $owner,
@@ -152,7 +154,7 @@ final class ForecastOwnerRemindersAction
         foreach (ReminderSubjects::missedTheStreak($academy, $streakDates) as $athlete) {
             $reminders[] = $this->remind(
                 $owner,
-                \sprintf('missed-streak:%d:%s', $athlete->id, $this->lastSession($athlete)),
+                \sprintf('missed-streak:%d:%s', $athlete->id, $this->lastSession($athlete, $today)),
                 self::at($today, '09:30'),
                 new OwnerAthleteMissedStreakNotification($athlete, ReminderSubjects::STREAK_LENGTH)->toDatabase($owner),
             );
@@ -161,10 +163,18 @@ final class ForecastOwnerRemindersAction
         return $reminders;
     }
 
-    /** The day the absence began: the athlete's last session, or the day they joined. */
-    private function lastSession(Athlete $athlete): string
+    /**
+     * The day the absence began: the athlete's last session before today, or
+     * the day they joined. Before today, as the streak reads: a check-in this
+     * evening ends the absence tomorrow, and must not tell of it again tonight
+     * under a new key.
+     */
+    private function lastSession(Athlete $athlete, CarbonImmutable $today): string
     {
-        $last = AttendanceRecord::query()->where('athlete_id', $athlete->id)->max('attended_on');
+        $last = AttendanceRecord::query()
+            ->where('athlete_id', $athlete->id)
+            ->where('attended_on', '<', $today->toDateString())
+            ->max('attended_on');
 
         return \is_string($last) ? substr($last, 0, 10) : $athlete->joined_at->toDateString();
     }
@@ -202,7 +212,8 @@ final class ForecastOwnerRemindersAction
 
         return [
             'kind' => NotificationText::BIRTHDAYS,
-            'link' => '/dashboard/athletes?birthday=today',
+            // Oggi names them; the roster has no birthday filter in its URL.
+            'link' => '/dashboard/today',
             'params' => [
                 'count' => $names->count(),
                 'names' => $names->take(3)->values()->all(),

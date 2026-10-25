@@ -4580,13 +4580,14 @@ paths:
           papers expiring a month, a week or on the day after `<day>`, at
           09:00;
         - `unpaid:<YYYY-MM>`: the athletes who owe the month, on the 16th at
-          09:00;
+          09:00, a carnet judged on that day as the PC will judge it;
         - `birthdays:<day>`: the active athletes born that day, at 09:00. New
           with the phone, no opt-out yet;
         - `missed-streak:<athlete>:<last session>`: an athlete who missed the
           last three scheduled sessions, today at 09:30. It cannot be told
-          ahead: only a check-in says whether they came. Keyed by the absence,
-          so it is told once for each.
+          ahead: only a check-in says whether they came. Keyed by the absence
+          (the last session before today), so it is told once for each, and a
+          check-in today does not tell it again.
 
         Each `key` names one occurrence: the phone keeps one notification per
         key, replaces it when its words change and cancels it when the key is

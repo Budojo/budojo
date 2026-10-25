@@ -157,13 +157,12 @@ export class TodayComponent implements OnInit {
   protected readonly reminders = inject(PhoneRemindersService);
 
   /**
-   * Android has not been asked about notifications yet (#2047, Android 13+).
-   * It asks once, so Oggi says why first, and Android asks on the tap.
+   * Android has not been asked about notifications yet (#2047, Android 13+):
+   * Oggi says why first, and Android asks on the tap. After a no, Android
+   * reports `prompt-with-rationale` and would ask once more, but Oggi does
+   * not offer again: the owner said no, and Android's settings turn them on.
    */
-  protected readonly offerReminders = computed(() => {
-    const permission = this.reminders.permission();
-    return permission === 'prompt' || permission === 'prompt-with-rationale';
-  });
+  protected readonly offerReminders = computed(() => this.reminders.permission() === 'prompt');
   private readonly statsService = inject(StatsService);
   private readonly trainingModes = inject(TrainingModesService);
   private readonly translate = inject(TranslateService);

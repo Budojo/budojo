@@ -12,69 +12,114 @@ export interface DueReminder {
   link: string;
 }
 
-/** What to tell Android, and the keys told so far, which the next refresh reads back. */
+/** A key handed to Android and not taken back: whether it has been shown, and when it last mattered. */
+export interface Told {
+  /** Seen in the tray, or gone from Android's records without a cancel of ours: swiped away or tapped. */
+  shown: boolean;
+  /** The last refresh that found it due or kept, in milliseconds. */
+  seen: number;
+}
+
+/** The keys told so far, which the page keeps across launches. */
+export type ToldLedger = Record<string, Told>;
+
+/** What to tell Android, and the ledger to keep once it is told. */
 export interface ReminderPlan {
   cancel: number[];
   schedule: LocalNotification[];
-  handed: string[];
+  told: ToldLedger;
 }
 
 /** The channel every reminder is posted to: public, so the whole text shows on the lock screen. */
 export const REMINDER_CHANNEL = 'reminders';
 
+/** A key off the list this long is forgotten: the forecast's own window. */
+const FORGET_AFTER_MS = 14 * 86_400_000;
+
 /**
- * The diff between the reminders handed to Android (`kept`, what the plugin
- * keeps of them) and the reminders due (#2047, PRD § 6.3). Each key is told
- * once:
+ * The diff between the reminders handed to Android and the reminders due
+ * (#2047, PRD § 6.3). Android keeps a record of each notification (`kept`)
+ * until it is swiped away, tapped or cancelled, and `delivered` is the tray,
+ * which a restart empties. Each key is told once:
  * - one still to come is left alone while its words and time stay the same,
  *   replaced when they change, and cancelled once it is no longer due: the
- *   fee got paid on the PC;
- * - one already shown is never taken back, nor shown again: not when it was
- *   swiped away (only `handed` remembers it then), nor when the next day dates
- *   the same missed streak to its own morning;
- * - one due before now that Android never had is shown at once. That is a
- *   phone opened late, or a certificate added after its reminder's hour, which
- *   the PC would also tell on its next round.
+ *   fee got paid on the PC. A cancelled one was never shown, so it is
+ *   forgotten, and may come back;
+ * - one shown is never taken back nor shown again, even when the next day
+ *   dates the same missed streak to its own morning. Shown means in the tray,
+ *   seen there by an earlier refresh, or gone from Android's records without
+ *   a cancel of ours;
+ * - one past its hour that was never seen shown is shown at once: Android
+ *   drops a one-off alarm whose hour passes with the phone off, and never
+ *   brings it back. A tray emptied by a restart before any refresh saw it
+ *   shows it twice, which costs less than a certificate missed. One that no
+ *   longer applies is cancelled instead: Android may still be about to
+ *   deliver it;
+ * - one due that Android never had is scheduled, or shown at once if its hour
+ *   has passed: a phone opened late, or a certificate added after its hour.
  *
- * `handed` keeps only the keys still due: a key names its own day, so the
- * ledger forgets each one when its day leaves the window.
+ * The ledger forgets a key a fortnight after it last mattered.
  */
 export function planReminders(
   due: readonly DueReminder[],
   kept: readonly PendingNotification[],
-  handed: readonly string[],
+  delivered: readonly number[],
+  told: ToldLedger,
   now: number,
 ): ReminderPlan {
-  const ours = new Map<string, { id: number; at: number; fingerprint: string | undefined }>();
+  const inTray = new Set(delivered);
+  const records = new Map<string, { id: number; at: number; fingerprint: string | undefined }>();
   for (const notification of kept) {
     const extra = notification.extra;
     if (typeof extra?.key === 'string' && typeof extra.at === 'number') {
-      ours.set(extra.key, { id: notification.id, at: extra.at, fingerprint: extra.fingerprint });
+      records.set(extra.key, { id: notification.id, at: extra.at, fingerprint: extra.fingerprint });
     }
   }
-  const told = new Set(handed);
-  const dueKeys = new Set(due.map((reminder) => reminder.key));
-  const plan: ReminderPlan = { cancel: [], schedule: [], handed: [] };
-
-  for (const [key, notification] of ours) {
-    if (notification.at > now && !dueKeys.has(key)) {
-      plan.cancel.push(notification.id);
+  const dueByKey = new Map(due.map((reminder) => [reminder.key, reminder]));
+  const plan: ReminderPlan = { cancel: [], schedule: [], told: {} };
+  for (const [key, entry] of Object.entries(told)) {
+    if (now - entry.seen < FORGET_AFTER_MS) {
+      plan.told[key] = entry;
     }
   }
 
-  for (const reminder of due) {
-    const at = Date.parse(reminder.at);
-    const fingerprint = fingerprintOf(reminder, at);
-    const scheduled = ours.get(reminder.key);
-    if (scheduled !== undefined && scheduled.at > now) {
-      if (scheduled.fingerprint !== fingerprint) {
-        plan.cancel.push(scheduled.id);
-        plan.schedule.push(notificationOf(reminder, at, fingerprint, now));
+  const tell = (reminder: DueReminder): void => {
+    plan.schedule.push(notificationOf(reminder, now));
+    plan.told[reminder.key] = { shown: false, seen: now };
+  };
+  const forget = (key: string, id: number): void => {
+    plan.cancel.push(id);
+    delete plan.told[key];
+  };
+
+  for (const key of new Set([...records.keys(), ...dueByKey.keys()])) {
+    const record = records.get(key);
+    const reminder = dueByKey.get(key);
+    const entry = plan.told[key];
+
+    if (record !== undefined && record.at > now) {
+      if (reminder === undefined) {
+        forget(key, record.id);
+      } else if (record.fingerprint !== fingerprintOf(reminder)) {
+        plan.cancel.push(record.id);
+        tell(reminder);
+      } else {
+        plan.told[key] = { shown: false, seen: now };
       }
-    } else if (scheduled === undefined && !told.has(reminder.key)) {
-      plan.schedule.push(notificationOf(reminder, at, fingerprint, now));
+    } else if (record !== undefined) {
+      if (inTray.has(record.id) || entry?.shown === true) {
+        plan.told[key] = { shown: true, seen: now };
+      } else if (reminder === undefined) {
+        forget(key, record.id);
+      } else {
+        plan.cancel.push(record.id);
+        tell(reminder);
+      }
+    } else if (entry !== undefined) {
+      plan.told[key] = { shown: true, seen: reminder === undefined ? entry.seen : now };
+    } else if (reminder !== undefined) {
+      tell(reminder);
     }
-    plan.handed.push(reminder.key);
   }
 
   return plan;
@@ -90,12 +135,8 @@ export function reminderId(key: string): number {
   return fnv1a(key) >>> 1;
 }
 
-function notificationOf(
-  reminder: DueReminder,
-  at: number,
-  fingerprint: string,
-  now: number,
-): LocalNotification {
+function notificationOf(reminder: DueReminder, now: number): LocalNotification {
+  const at = Date.parse(reminder.at);
   return {
     id: reminderId(reminder.key),
     title: reminder.title,
@@ -107,11 +148,12 @@ function notificationOf(
     // Past its time, it is shown at once; ahead of it, Android may wake the
     // phone for it, a little after the hour rather than exactly on it.
     ...(at > now ? { schedule: { at: new Date(at), allowWhileIdle: true } } : {}),
-    extra: { key: reminder.key, at, fingerprint, link: reminder.link },
+    extra: { key: reminder.key, at, fingerprint: fingerprintOf(reminder), link: reminder.link },
   };
 }
 
-function fingerprintOf(reminder: DueReminder, at: number): string {
+function fingerprintOf(reminder: DueReminder): string {
+  const at = Date.parse(reminder.at);
   return fnv1a([at, reminder.title, reminder.body, reminder.link].join('\n')).toString(36);
 }
 

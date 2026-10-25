@@ -12,9 +12,10 @@ import {
   PendingNotification,
   ReminderExtra,
 } from './local-notifications';
-import { DueReminder, reminderId } from './phone-reminders';
+import { DueReminder, reminderId, ToldLedger } from './phone-reminders';
 import { PhoneRemindersService, REMINDER_LEDGER } from './phone-reminders.service';
 import { LOCAL_NOTIFICATIONS } from './shell-plugins';
+import { SKIP_OFFLINE_REDIRECT } from '../http/skip-offline-redirect';
 
 /**
  * The phone's reminders (#2047): asked of the phone's server at every opening
@@ -42,7 +43,7 @@ describe('the phone reminders (#2047)', () => {
     cancel: ReturnType<typeof vi.fn<LocalNotificationsPlugin['cancel']>>;
     requestPermissions: ReturnType<typeof vi.fn<LocalNotificationsPlugin['requestPermissions']>>;
   };
-  let ledger: string[];
+  let ledger: ToldLedger;
   let syncState: ReturnType<typeof signal<SyncState>>;
 
   function remindersWith(shell: LocalNotificationsPlugin | null): {
@@ -59,7 +60,7 @@ describe('the phone reminders (#2047)', () => {
         { provide: SyncService, useValue: { state: syncState.asReadonly() } },
         {
           provide: REMINDER_LEDGER,
-          useValue: { read: () => ledger, write: (keys: string[]) => (ledger = keys) },
+          useValue: { read: () => ledger, write: (told: ToldLedger) => (ledger = told) },
         },
       ],
     });
@@ -82,7 +83,7 @@ describe('the phone reminders (#2047)', () => {
       channels: [],
       tap: null,
     };
-    ledger = [];
+    ledger = {};
     syncState = signal<SyncState>({ kind: 'off' });
     plugin = {
       checkPermissions: () => Promise.resolve({ display: android.permission }),
@@ -104,6 +105,7 @@ describe('the phone reminders (#2047)', () => {
         return Promise.resolve();
       }),
       getPending: () => Promise.resolve({ notifications: [...android.pending] }),
+      getDeliveredNotifications: () => Promise.resolve({ notifications: [] }),
       addListener: (_event, listener) => {
         android.tap = listener;
         return Promise.resolve({});
@@ -134,7 +136,7 @@ describe('the phone reminders (#2047)', () => {
     ]);
     expect(plugin.schedule).toHaveBeenCalledOnce();
     expect(android.pending.map((n) => n.extra?.key)).toEqual(['unpaid:2026-11']);
-    expect(ledger).toEqual(['unpaid:2026-11']);
+    expect(Object.keys(ledger)).toEqual(['unpaid:2026-11']);
   });
 
   it('cancels a reminder that a sync made untrue: the fee got paid on the PC', async () => {
@@ -199,7 +201,7 @@ describe('the phone reminders (#2047)', () => {
   });
 
   it('keeps what it had when the server does not answer', async () => {
-    ledger = ['unpaid:2026-11'];
+    ledger = { 'unpaid:2026-11': { shown: true, seen: Date.now() } };
     const { reminders, server } = remindersWith(plugin);
 
     const started = reminders.start();
@@ -209,6 +211,47 @@ describe('the phone reminders (#2047)', () => {
     await started;
 
     expect(plugin.schedule).not.toHaveBeenCalled();
-    expect(ledger).toEqual(['unpaid:2026-11']);
+    expect(ledger).toEqual({ 'unpaid:2026-11': { shown: true, seen: expect.any(Number) } });
+  });
+
+  it("schedules once the owner turns notifications on in Android's settings and comes back", async () => {
+    android.permission = 'denied';
+    const { reminders, server } = remindersWith(plugin);
+    await reminders.start();
+    server.expectNone(URL);
+
+    android.permission = 'granted';
+    Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true });
+    document.dispatchEvent(new Event('visibilitychange'));
+    await answer(server, [UNPAID]);
+
+    await vi.waitFor(() => expect(plugin.schedule).toHaveBeenCalledOnce());
+    expect(reminders.permission()).toBe('granted');
+  });
+
+  it('never sends the owner to the offline page for a refresh they did not ask for', async () => {
+    const { reminders, server } = remindersWith(plugin);
+
+    const started = reminders.start();
+    const request = await vi.waitFor(() => server.expectOne(URL));
+    expect(request.request.context.get(SKIP_OFFLINE_REDIRECT)).toBe(true);
+    request.flush({ data: [] });
+    await started;
+  });
+
+  it('leaves a reminder untold when Android refuses its replacement, so the next refresh tries again', async () => {
+    const { reminders, server } = remindersWith(plugin);
+    const started = reminders.start();
+    await answer(server, [UNPAID]);
+    await started;
+
+    plugin.schedule.mockRejectedValueOnce(new Error('refused'));
+    const changed = { ...UNPAID, body: 'Marco Bianchi, Luca Verdi' };
+    const again = reminders.refresh();
+    await answer(server, [changed]);
+    await again;
+
+    expect(android.pending).toEqual([]);
+    expect(ledger).toEqual({});
   });
 });

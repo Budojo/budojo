@@ -9,6 +9,7 @@ use App\Models\Academy;
 use App\Models\Athlete;
 use App\Models\AthletePayment;
 use App\Models\AttendanceRecord;
+use App\Models\Carnet;
 use App\Models\Document;
 use App\Models\User;
 use Illuminate\Support\Carbon;
@@ -170,6 +171,27 @@ it('reminds on the 16th of the athletes who still owe the month', function (): v
     ]);
 });
 
+it('judges a carnet on the 16th: one that lapses before it pays for nothing that day', function (): void {
+    $owner = remindersOwner();
+    $lapsing = remindersPresent(remindersAthlete($owner, 'Marco', 'Bianchi'));
+    Carnet::factory()->for($lapsing)->create([
+        'purchased_at' => '2026-04-11',
+        'valid_from' => '2026-04-11',
+        'expires_at' => '2026-05-10',
+    ]);
+    $covered = remindersPresent(remindersAthlete($owner, 'Luca', 'Verdi'));
+    Carnet::factory()->for($covered)->create([
+        'purchased_at' => '2026-04-11',
+        'valid_from' => '2026-04-11',
+        'expires_at' => '2026-07-10',
+    ]);
+
+    $reminders = upcomingReminders();
+
+    expect(array_column($reminders, 'key'))->toBe(['unpaid:2026-05'])
+        ->and($reminders[0]['body'])->toBe('Marco Bianchi');
+});
+
 it('has no unpaid reminder once everyone has paid', function (): void {
     $owner = remindersOwner();
     remindersPresent(remindersPaidUp(remindersAthlete($owner, 'Marco', 'Bianchi')));
@@ -201,7 +223,7 @@ it('reminds of a birthday on its morning, the active athletes only', function ()
             'at' => '2026-05-06T09:00:00+02:00',
             'title' => 'Un compleanno oggi',
             'body' => 'Giulia Verdi',
-            'link' => '/dashboard/athletes?birthday=today',
+            'link' => '/dashboard/today',
         ],
     ]);
 });
@@ -235,6 +257,20 @@ it('reminds this morning of an athlete who missed the last three sessions, keyed
             'body' => 'Ha saltato gli ultimi 3 allenamenti in programma.',
             'link' => "/dashboard/athletes/{$mario->id}",
         ]);
+});
+
+it('keeps the absence\'s key when the athlete checks in today', function (): void {
+    $owner = remindersOwner();
+    $mario = remindersPaidUp(remindersAthlete($owner, 'Mario', 'Neri'));
+    AttendanceRecord::factory()->create(['athlete_id' => $mario->id, 'attended_on' => '2026-04-24']);
+    $before = upcomingKeys();
+
+    // Tonight's session: the streak reads the sessions before today, so it
+    // still holds, and must not come back as another absence.
+    AttendanceRecord::factory()->create(['athlete_id' => $mario->id, 'attended_on' => '2026-05-04']);
+
+    expect(upcomingKeys())->toBe($before)
+        ->and($before)->toBe(["missed-streak:{$mario->id}:2026-04-24"]);
 });
 
 it('leaves out what the owner turned off', function (): void {

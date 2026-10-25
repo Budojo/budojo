@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpContext } from '@angular/common/http';
 import {
   DestroyRef,
   effect,
@@ -12,39 +12,55 @@ import { Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { SKIP_OFFLINE_REDIRECT } from '../http/skip-offline-redirect';
 import { SyncService } from '../sync/sync.service';
 import { NotificationPermission } from './local-notifications';
-import { DueReminder, planReminders, REMINDER_CHANNEL } from './phone-reminders';
+import { DueReminder, planReminders, REMINDER_CHANNEL, Told, ToldLedger } from './phone-reminders';
 import { LOCAL_NOTIFICATIONS } from './shell-plugins';
 
-/** The keys already handed to Android, kept by the page across launches. */
+/** The keys already told, kept by the page across launches (`planReminders`). */
 export interface ReminderLedger {
-  read(): string[];
-  write(keys: string[]): void;
+  read(): ToldLedger;
+  write(told: ToldLedger): void;
 }
 
-const LEDGER_KEY = 'budojo.reminders.handed';
+const LEDGER_KEY = 'budojo.reminders.told';
 
 export const REMINDER_LEDGER = new InjectionToken<ReminderLedger>('REMINDER_LEDGER', {
   providedIn: 'root',
   factory: () => ({
     read: () => {
       try {
-        const keys: unknown = JSON.parse(localStorage.getItem(LEDGER_KEY) ?? '[]');
-        return Array.isArray(keys) ? keys.filter((key) => typeof key === 'string') : [];
+        const told: unknown = JSON.parse(localStorage.getItem(LEDGER_KEY) ?? '{}');
+        return isLedger(told) ? told : {};
       } catch {
-        return [];
+        return {};
       }
     },
-    write: (keys) => {
+    write: (told) => {
       try {
-        localStorage.setItem(LEDGER_KEY, JSON.stringify(keys));
+        localStorage.setItem(LEDGER_KEY, JSON.stringify(told));
       } catch {
-        // Storage refused: a reminder past its hour may be shown once more.
+        // Storage refused: a reminder already shown may be shown once more.
       }
     },
   }),
 });
+
+function isLedger(value: unknown): value is ToldLedger {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    !Array.isArray(value) &&
+    Object.values(value).every(
+      (entry: unknown) =>
+        typeof entry === 'object' &&
+        entry !== null &&
+        typeof (entry as Told).shown === 'boolean' &&
+        typeof (entry as Told).seen === 'number',
+    )
+  );
+}
 
 /**
  * The owner's reminders as Android notifications (#2047, PRD § 6.3). Nothing
@@ -102,7 +118,6 @@ export class PhoneRemindersService {
           void this.router.navigateByUrl(link);
         }
       });
-      this.permission.set((await this.plugin.checkPermissions()).display);
     } catch {
       return;
     }
@@ -143,10 +158,16 @@ export class PhoneRemindersService {
 
   private async round(): Promise<void> {
     const plugin = this.plugin;
-    if (plugin === null || this.permission() !== 'granted') {
+    if (plugin === null) {
       return;
     }
     try {
+      // Asked every time: the owner may have turned notifications on, or
+      // off, in Android's settings since, and come back.
+      this.permission.set((await plugin.checkPermissions()).display);
+      if (this.permission() !== 'granted') {
+        return;
+      }
       await plugin.createChannel({
         id: REMINDER_CHANNEL,
         name: this.translate.instant('reminders.channel.name'),
@@ -155,17 +176,34 @@ export class PhoneRemindersService {
         visibility: 1,
       });
       const due = await firstValueFrom(
-        this.http.get<{ data: DueReminder[] }>(`${environment.apiBase}/api/v1/reminders/upcoming`),
+        this.http.get<{ data: DueReminder[] }>(`${environment.apiBase}/api/v1/reminders/upcoming`, {
+          // A refresh nobody asked for: a server not up yet is no reason to leave the page.
+          context: new HttpContext().set(SKIP_OFFLINE_REDIRECT, true),
+        }),
       );
       const kept = await plugin.getPending();
-      const plan = planReminders(due.data, kept.notifications, this.ledger.read(), Date.now());
+      const tray = await plugin.getDeliveredNotifications();
+      const plan = planReminders(
+        due.data,
+        kept.notifications,
+        tray.notifications.map((n) => n.id),
+        this.ledger.read(),
+        Date.now(),
+      );
       if (plan.cancel.length > 0) {
         await plugin.cancel({ notifications: plan.cancel.map((id) => ({ id })) });
       }
       if (plan.schedule.length > 0) {
+        // Cancelled first and told only once Android has them: a schedule
+        // that fails leaves these keys untold, and the next refresh tries again.
+        const told = { ...plan.told };
+        for (const notification of plan.schedule) {
+          delete told[notification.extra?.key ?? ''];
+        }
+        this.ledger.write(told);
         await plugin.schedule({ notifications: plan.schedule });
       }
-      this.ledger.write(plan.handed);
+      this.ledger.write(plan.told);
     } catch {
       // The server still starting, or Android refusing: the next opening or sync tries again.
     }

@@ -44,15 +44,17 @@ function openToday(permission: string, afterAsking = 'granted'): void {
     schedule: cy.stub().as('schedule').resolves({}),
     cancel: cy.stub().as('cancel').resolves(undefined),
     getPending: cy.stub().resolves({ notifications: [] }),
+    getDeliveredNotifications: cy.stub().resolves({ notifications: [] }),
     addListener: cy.stub().resolves({}),
   };
-  cy.visitAuthenticated('/dashboard/today', 'fake-token', {
-    onBeforeLoad: (win) =>
-      Object.assign(win, {
-        __BUDOJO_MOBILE__: { apiBase: '' },
-        Capacitor: { Plugins: { LocalNotifications: plugin } },
-      }),
-  });
+  // On every load, reloads included: the plugin is the phone's, and outlives the page.
+  cy.on('window:before:load', (win) =>
+    Object.assign(win, {
+      __BUDOJO_MOBILE__: { apiBase: '' },
+      Capacitor: { Plugins: { LocalNotifications: plugin } },
+    }),
+  );
+  cy.visitAuthenticated('/dashboard/today');
   cy.get('[data-cy="today"]').should('exist');
 }
 
@@ -103,10 +105,18 @@ describe('The reminders on the phone (#2047)', () => {
     cy.get('[data-cy="today-reminders"]').should('not.exist');
   });
 
-  it('offers nothing once the owner has said no: Android would not ask again', () => {
-    openToday('denied');
+  it('offers nothing again once the owner has said no', () => {
+    // What the plugin answers after a first «Non consentire»: Android would
+    // ask once more, but the owner has answered.
+    openToday('prompt', 'prompt-with-rationale');
+    cy.get('[data-cy="today-reminders-allow"] button').click();
 
-    cy.get('@check').should('have.been.called');
+    cy.get('@ask').should('have.been.calledOnce');
+    cy.get('[data-cy="today-reminders"]').should('not.exist');
+    cy.reload();
+    cy.get('[data-cy="today"]').should('exist');
+    // Asked on opening, after the answer, and again at the next opening.
+    cy.get('@check').should('have.been.calledThrice');
     cy.get('[data-cy="today-reminders"]').should('not.exist');
     cy.get('@schedule').should('not.have.been.called');
   });

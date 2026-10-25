@@ -55,8 +55,15 @@ export interface LocalNotificationsPlugin {
   createChannel(channel: NotificationChannel): Promise<void>;
   schedule(options: { notifications: LocalNotification[] }): Promise<unknown>;
   cancel(options: { notifications: { id: number }[] }): Promise<void>;
-  /** Every notification the plugin keeps: those still to come, and those shown and not yet swiped away. */
+  /**
+   * Every notification the plugin keeps a record of: those still to come, and
+   * those past their hour until they are swiped away, tapped or cancelled.
+   * A record past its hour is not proof of a notification shown: Android
+   * drops a one-off alarm whose hour passes with the phone off.
+   */
   getPending(): Promise<{ notifications: PendingNotification[] }>;
+  /** The tray: the notifications on show now. A restart empties it. */
+  getDeliveredNotifications(): Promise<{ notifications: { id: number }[] }>;
   addListener(
     event: 'localNotificationActionPerformed',
     listener: (action: { notification: { extra?: Partial<ReminderExtra> | null } }) => void,
