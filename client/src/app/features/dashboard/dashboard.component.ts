@@ -36,6 +36,7 @@ import { SearchPaletteComponent } from '../search/search-palette.component';
 import { NotificationBellComponent } from '../notifications/notification-bell.component';
 import { SyncPillComponent } from '../../shared/components/sync-pill/sync-pill.component';
 import { SyncService } from '../../core/sync/sync.service';
+import { PhoneRemindersService } from '../../core/mobile/phone-reminders.service';
 import { VERSION } from '../../../environments/version';
 
 /**
@@ -79,6 +80,7 @@ export class DashboardComponent implements OnInit {
   private readonly webPushHandler = inject(WebPushHandlerService);
   private readonly inbox = inject(NotificationInboxService);
   private readonly sync = inject(SyncService);
+  private readonly reminders = inject(PhoneRemindersService);
 
   /**
    * The cached user — drives the topbar avatar chip. Hydrated by
@@ -106,6 +108,8 @@ export class DashboardComponent implements OnInit {
     // anywhere else.
     this.sync.start();
     this.destroyRef.onDestroy(() => this.sync.stop());
+    // The reminders as Android notifications (#2047), from the same moment.
+    void this.reminders.start();
   }
 
   /**

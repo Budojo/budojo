@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!--
       No Android backup and no transfer to a new phone (#2027, #2034): the app
@@ -50,4 +51,13 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- The check-in answers a tap with a short buzz (#2035): navigator.vibrate in the WebView needs it. -->
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!--
+      The reminders (#2047) are Android's own notifications, scheduled ahead by
+      @capacitor/local-notifications, which brings POST_NOTIFICATIONS (asked on
+      Oggi, Android 13+) and the boot receiver that schedules them again after
+      a restart. Not exact alarms: a reminder due at nine may come a few
+      minutes later, and Android 14 denies them by default to any app that is
+      not an alarm clock or a calendar.
+    -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" tools:node="remove" />
 </manifest>

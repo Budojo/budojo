@@ -61,6 +61,7 @@ import {
   weekStart,
 } from './today.helpers';
 import { BackupHealth, backupHealth } from './today-backup';
+import { PhoneRemindersService } from '../../core/mobile/phone-reminders.service';
 import { PhoneUpdateService } from '../../core/mobile/phone-update.service';
 
 /** A block's own request: in flight, answered, or failed on its own. */
@@ -153,6 +154,16 @@ export class TodayComponent implements OnInit {
   private readonly lessonService = inject(LessonService);
   private readonly onboarding = inject(OnboardingService);
   protected readonly phoneUpdate = inject(PhoneUpdateService);
+  protected readonly reminders = inject(PhoneRemindersService);
+
+  /**
+   * Android has not been asked about notifications yet (#2047, Android 13+).
+   * It asks once, so Oggi says why first, and Android asks on the tap.
+   */
+  protected readonly offerReminders = computed(() => {
+    const permission = this.reminders.permission();
+    return permission === 'prompt' || permission === 'prompt-with-rationale';
+  });
   private readonly statsService = inject(StatsService);
   private readonly trainingModes = inject(TrainingModesService);
   private readonly translate = inject(TranslateService);

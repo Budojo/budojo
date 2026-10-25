@@ -9,7 +9,8 @@
 # Given the previous release, it installs that first and updates over it, as
 # the owner's phone does, and checks the server keeps the same keys across the
 # update, sealed by the Keystore (#2134). Then it installs the APK alone, on
-# an empty phone, and checks the keys it makes are sealed from the start.
+# an empty phone, and checks the keys it makes are sealed from the start, and
+# the permissions its reminders need (#2047).
 #
 # Each step waits for words the screen must show (Android's accessibility
 # tree carries the WebView's text), photographs it, then taps on. A screen
@@ -201,4 +202,14 @@ app_files > "$SHOTS/files-fresh.txt"
 grep -qx 'secrets.json.sealed' "$SHOTS/files-fresh.txt" || fail "a fresh install did not seal its keys"
 no_plain_keys "$SHOTS/files-fresh.txt"
 
-echo "the lock, the door and the sign-up showed on the emulator, updated and fresh; photos in $SHOTS"
+# The reminders (#2047) are Android's own notifications, scheduled ahead: the
+# APK asks to post them, brings them back after a restart, and asks for no
+# exact alarm, which Android 14 denies by default.
+"$ADB" shell dumpsys package "$PACKAGE" > "$SHOTS/package.txt"
+grep -q 'android.permission.POST_NOTIFICATIONS' "$SHOTS/package.txt" || fail "the APK does not ask to post notifications"
+grep -q 'LocalNotificationRestoreReceiver' "$SHOTS/package.txt" || fail "nothing schedules the reminders again after a restart"
+if grep -q 'android.permission.SCHEDULE_EXACT_ALARM' "$SHOTS/package.txt"; then
+  fail "the APK asks for exact alarms"
+fi
+
+echo "the lock, the door and the sign-up showed on the emulator, updated and fresh, and the reminders may post; photos in $SHOTS"

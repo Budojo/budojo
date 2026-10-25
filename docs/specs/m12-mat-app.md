@@ -318,6 +318,14 @@ Tapping it opens the detail:
 - **With the app closed, Android runs nothing.** So each time the app opens or syncs, it works out the reminders due in the next days and **schedules them with Android** as local notifications. They arrive on time with the app closed.
 - **A reminder about something that has changed since** (the fee got paid on the PC) is dropped at the next sync.
 - **The full text shows on the lock screen,** as the owner chose (*"Marco R. deve settembre, 60 €"*): the notification channel is public. It can become a setting later.
+- **How it is built (#2047):**
+  - the phone's server lists the reminders of the next **fourteen days** (`GET /reminders/upcoming`), each with the hour the PC's window opens: 09:00, and 09:30 for the missed streak;
+  - the page hands them to Android at every opening, every return to the screen and every sync. One still to come is replaced when its words change and cancelled when it is no longer due. One already shown is never taken back nor shown twice. One whose hour has passed and that Android never had (a phone opened late) is shown at once;
+  - **the missed streak cannot be told ahead:** only a check-in says whether the athlete came. It is today's reminder, told **once for each absence**, where the PC tells it again every fortnight;
+  - **birthdays have no opt-out yet;** the other four follow the owner's notification preferences;
+  - **not exact alarms:** a reminder due at nine may come a few minutes after it. Android 14 denies exact alarms by default to anything that is not an alarm clock or a calendar;
+  - **Android 13+ asks once:** Oggi says why in one sentence, and Android asks on the owner's tap;
+  - the plugin marks each notification private. A phone set to hide sensitive content on the lock screen hides it, as for any app; under Android's default the whole text shows.
 
 ### 6.4 «Da decidere»: conflicts
 

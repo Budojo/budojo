@@ -3502,7 +3502,9 @@
       "firstCopyPending": "La prima copia fuori da questo computer arriva con il prossimo backup",
       "open": "Apri il backup",
       "update": "È uscito Budojo {{version}}",
-      "download": "Scarica"
+      "download": "Scarica",
+      "reminders": "Budojo può ricordarti certificati, quote e compleanni anche ad app chiusa, con le notifiche del telefono.",
+      "allowReminders": "Attiva le notifiche"
     },
     "backup": {
       "folderFailing": "La copia dei backup in {{where}} non riesce",
@@ -3902,5 +3904,11 @@
     "body": "Usa l'impronta o il PIN del telefono per aprirlo.",
     "unlock": "Sblocca",
     "prompt": "Sblocca Budojo"
+  },
+  "reminders": {
+    "channel": {
+      "name": "Promemoria",
+      "description": "Certificati e documenti in scadenza, quote non pagate, assenze e compleanni"
+    }
   }
 }

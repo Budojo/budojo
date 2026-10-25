@@ -4566,6 +4566,51 @@ paths:
         '403':
           $ref: '#/components/responses/OwnerGateForbidden'
 
+  /reminders/upcoming:
+    get:
+      tags: [auth]
+      summary: The owner's reminders of the next fourteen days, for the phone to schedule
+      description: |
+        The reminders the PC sends on the day (#1226), worked out ahead
+        (#2047, PRD § 6.3) so the phone can hand them to Android: nothing runs
+        on a phone with the app closed. Same selections, opt-outs and
+        sentences as the PC, in the owner's language:
+
+        - `medical-certificates:<day>` and `academy-documents:<day>`: the
+          papers expiring a month, a week or on the day after `<day>`, at
+          09:00;
+        - `unpaid:<YYYY-MM>`: the athletes who owe the month, on the 16th at
+          09:00;
+        - `birthdays:<day>`: the active athletes born that day, at 09:00. New
+          with the phone, no opt-out yet;
+        - `missed-streak:<athlete>:<last session>`: an athlete who missed the
+          last three scheduled sessions, today at 09:30. It cannot be told
+          ahead: only a check-in says whether they came. Keyed by the absence,
+          so it is told once for each.
+
+        Each `key` names one occurrence: the phone keeps one notification per
+        key, replaces it when its words change and cancels it when the key is
+        no longer listed. A reminder of today stays listed after its hour, for
+        a phone opened late. Read-only; scoped to the caller's academy.
+      operationId: upcomingReminders
+      responses:
+        '200':
+          description: The reminders, by time then key.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/UpcomingReminder'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/OwnerGateForbidden'
+
   /athletes:
     get:
       tags: [athletes]
@@ -9376,6 +9421,31 @@ components:
             $ref: '#/components/schemas/ValidationErrorBody'
 
   schemas:
+    UpcomingReminder:
+      type: object
+      description: One reminder for the phone to schedule (#2047).
+      required: [key, at, title, body, link]
+      properties:
+        key:
+          type: string
+          description: The occurrence it names; stable across forecasts.
+          example: unpaid:2026-05
+        at:
+          type: string
+          format: date-time
+          description: When it is due, with the operator's offset.
+          example: '2026-05-16T09:00:00+02:00'
+        title:
+          type: string
+          example: Un atleta non ha ancora pagato la quota di maggio
+        body:
+          type: string
+          description: The names, or one line per document.
+          example: Marco Bianchi
+        link:
+          type: string
+          description: The page a tap opens, inside the app.
+          example: /dashboard/athletes?paid=no
     SyncHomecoming:
       type: object
       description: What the other device's work brought since this device last held it (#2039).

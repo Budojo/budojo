@@ -343,6 +343,22 @@
   }
 
   <!--
+    The reminders as Android notifications (#2047): one sentence on why, and
+    Android's own question only on the owner's tap.
+  -->
+  @if (offerReminders()) {
+    <p class="today__system" data-cy="today-reminders">
+      <span>{{ 'today.system.reminders' | translate }}</span>
+      <p-button
+        [text]="true"
+        [label]="'today.system.allowReminders' | translate"
+        (onClick)="reminders.ask()"
+        data-cy="today-reminders-allow"
+      />
+    </p>
+  }
+
+  <!--
     Copies are landing (#1751): the only backup state that is a quiet line.
     A failing copy, or none set up, is an alert in "Da guardare" instead.
   -->
