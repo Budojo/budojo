@@ -182,14 +182,8 @@ it('excludes self-rows from the unpaid-this-month digest source list', function 
     // The owner-as-athlete (self-row).
     Athlete::factory()->for($academy)->selfFor($owner)->create();
 
-    $year = (int) OperatorDay::today()->year;
-    $month = (int) OperatorDay::today()->month;
-
-    $reflection = new ReflectionClass(\App\Console\Commands\SendUnpaidAthletesDigest::class);
-    $method = $reflection->getMethod('unpaidActiveAthletesFor');
-    $method->setAccessible(true);
-    $instance = $reflection->newInstanceWithoutConstructor();
-    $rows = $method->invoke($instance, $academy, $year, $month);
+    $today = OperatorDay::today();
+    $rows = \App\Support\ReminderSubjects::owing($academy, $today->year, $today->month, $today);
 
     expect($rows)->toHaveCount(1);
     expect($rows->first()->is_self)->toBeFalse();

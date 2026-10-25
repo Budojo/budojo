@@ -13,9 +13,9 @@ use Carbon\CarbonInterface;
  * The owner's alerts and digests used to store a title and a body written in
  * English the moment they were created, so an Italian app showed English in
  * the inbox and in the Windows notification alike. They store their
- * parameters now (`params`), and both readers — `NotificationInboxController`
- * and `budojo:list-desktop-notifications` — ask this class for the words, in
- * the language the owner's app is set to.
+ * parameters now (`params`), and every reader — `NotificationInboxController`,
+ * `budojo:list-desktop-notifications` and the phone's forecast (#2047) — asks
+ * this class for the words, in the language the owner's app is set to.
  *
  * Anything it does not write — a kind the desktop never sends, or a row whose
  * parameters are not all there — falls back to the stored title and body,
@@ -23,6 +23,9 @@ use Carbon\CarbonInterface;
  */
 final class NotificationText
 {
+    /** The phone's birthday reminder (#2047): no row stores it, the forecast writes it. */
+    public const string BIRTHDAYS = 'owner_birthdays';
+
     /**
      * @param  array<array-key, mixed>  $data  The notification's `data` column.
      * @return array{title: string, body: string}
@@ -48,8 +51,9 @@ final class NotificationText
         return match ($kind) {
             'owner_athlete_missed_streak' => self::missedStreak($p, $locale),
             'unpaid_athletes_digest' => self::unpaidDigest($p, $locale),
-            'medical_cert_expiry_reminders' => self::medicalDigest($p, $locale),
+            'medical_cert_expiry_reminders' => self::namesDigest('notifications.medical_digest.title', $p, $locale),
             'academy_document_expiry_reminders' => self::academyDocuments($p, $locale),
+            self::BIRTHDAYS => self::namesDigest('notifications.birthdays.title', $p, $locale),
             default => null,
         };
     }
@@ -93,10 +97,13 @@ final class NotificationText
     }
 
     /**
+     * A digest that names whom it is about: the medical certificates, the
+     * birthdays.
+     *
      * @param  array<array-key, mixed>  $p
      * @return array{title: string, body: string}|null
      */
-    private static function medicalDigest(array $p, string $locale): ?array
+    private static function namesDigest(string $title, array $p, string $locale): ?array
     {
         $names = self::names($p, $locale);
         if (! \is_int($p['count'] ?? null) || $names === null) {
@@ -104,7 +111,7 @@ final class NotificationText
         }
 
         return [
-            'title' => self::choice('notifications.medical_digest.title', $p['count'], [], $locale),
+            'title' => self::choice($title, $p['count'], [], $locale),
             'body' => $names,
         ];
     }
