@@ -75,7 +75,7 @@ export const RELEASES: readonly Release[] = [
             it: 'Sul telefono ogni riga del check-in dice cosa paga il mese: il mese che deve («settembre»), «Gratis», «Carnet · 3» o «Pagato».',
           },
           {
-            en: 'Mark present someone who owes a month and the row says "Ask": the right moment to ask for it.',
+            en: 'When someone who owes a month is marked present, the row says "Ask": the right moment to ask for it.',
             it: 'Quando segni presente chi deve un mese, la riga dice «Da chiedere»: è il momento giusto per chiederlo.',
           },
           {
