@@ -75,6 +75,20 @@ export const VIEWPORT_MIN_WINDOW: Viewport = {
   height: 600,
 };
 
+/** Cypress's own default, the width the harness shoots first (#2125). */
+export const VIEWPORT_LAPTOP: Viewport = {
+  name: 'Laptop 1280',
+  width: 1280,
+  height: 720,
+};
+
+/** A current phone's width, the one M12 is built for (#2125). */
+export const VIEWPORT_PHONE: Viewport = {
+  name: 'Phone 390',
+  width: 390,
+  height: 844,
+};
+
 /** Both mobile devices — the high-yield smoke set. */
 export const MOBILE_VIEWPORTS: readonly Viewport[] = [VIEWPORT_IPHONE_SE, VIEWPORT_PIXEL_8_PRO];
 

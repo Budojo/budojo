@@ -169,6 +169,18 @@ export class DashboardComponent implements OnInit {
         routerLink: '/dashboard/attendance',
         dataCy: 'bottomnav-attendance',
       },
+      // «Soldi» (#2132): on the phone, where the money changes hands. There
+      // is room for it: the phone has no community tab.
+      ...(this.runtime.profile() === 'mobile'
+        ? [
+            {
+              icon: 'pi pi-wallet',
+              label: t('nav.money'),
+              routerLink: '/dashboard/money',
+              dataCy: 'bottomnav-money',
+            },
+          ]
+        : []),
       ...(has('community')
         ? [
             {

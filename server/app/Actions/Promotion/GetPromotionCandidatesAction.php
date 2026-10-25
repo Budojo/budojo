@@ -11,7 +11,6 @@ use App\Support\AthleteIdentity;
 use App\Support\MartialArt\KidsEligibility;
 use App\Support\MartialArt\MartialArtProfile;
 use App\Support\MartialArt\RankLadder;
-use App\Support\OperatorDay;
 
 /**
  * The athletes who may be ready for their next step (#1841), each with the
@@ -44,6 +43,7 @@ class GetPromotionCandidatesAction
 {
     public function __construct(
         private readonly GetAthleteProgressionAction $progression,
+        private readonly GetAthleteNextStepAction $nextStep,
     ) {
     }
 
@@ -104,11 +104,7 @@ class GetPromotionCandidatesAction
     {
         $p = $this->progression->execute($athlete);
         $sinceStripe = $p['stripe_since'] !== null;
-        $next = $profile->ladder()->nextStep(
-            $athlete->belt,
-            $athlete->stripes,
-            KidsEligibility::of($athlete, $profile, $trainsKids, $athlete->belt, OperatorDay::today()),
-        );
+        $next = $this->nextStep->of($athlete, $profile, $trainsKids);
 
         return [
             'athlete' => AthleteIdentity::of($athlete),
@@ -118,7 +114,7 @@ class GetPromotionCandidatesAction
             'last_promoted_on' => $sinceStripe ? $p['stripe_since'] : $p['belt_since'],
             'days_since_last_promotion' => $sinceStripe ? $p['days_since_stripe'] : $p['days_at_belt'],
             'sessions_since_last_promotion' => $sinceStripe ? $p['sessions_since_stripe'] : $p['sessions_at_belt'],
-            'next' => $next === null ? null : [...$next, 'belt' => $next['belt']->value],
+            'next' => $next,
         ];
     }
 }

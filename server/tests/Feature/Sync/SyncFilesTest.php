@@ -11,6 +11,8 @@ use App\Enums\DocumentType;
 use App\Models\Athlete;
 use App\Models\Document;
 use App\Models\User;
+use App\Support\Sync\SyncDatabase;
+use App\Support\Sync\SyncFiles;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -247,6 +249,140 @@ describe('PUT /api/v1/sync/files/{sha256}', function (): void {
     });
 });
 
+/**
+ * A version's database as another device sent it (#2118): Budojo's history,
+ * and the four tables whose rows name files, with the columns `SyncFiles` reads.
+ *
+ * @param  list<string>  $statements  the rows, as SQL
+ * @param  list<string>|null  $migrations  the history it has run; every migration this code carries by default
+ */
+function syncFilesVersionDatabase(array $statements, ?array $migrations = null, string $journal = 'delete'): string
+{
+    $path = tempnam(sys_get_temp_dir(), 'budojo-test-version-');
+    $pdo = new PDO("sqlite:{$path}");
+    $pdo->exec("pragma journal_mode = {$journal}");
+    $pdo->exec('create table migrations (id integer primary key, migration varchar, batch integer)');
+    $insert = $pdo->prepare('insert into migrations (migration, batch) values (?, 1)');
+    foreach ($migrations ?? SyncDatabase::codeMigrations() as $migration) {
+        $insert->execute([$migration]);
+    }
+    $pdo->exec('create table documents (id integer primary key, file_path varchar, file_sha256 varchar, deleted_at datetime)');
+    $pdo->exec('create table athletes (id integer primary key, photo_path varchar, photo_sha256 varchar, deleted_at datetime)');
+    $pdo->exec('create table users (id integer primary key, avatar_path varchar, avatar_sha256 varchar)');
+    $pdo->exec('create table academies (id integer primary key, logo_path varchar, logo_sha256 varchar)');
+    foreach ($statements as $statement) {
+        $pdo->exec($statement);
+    }
+    // Closed, the statement too, so a WAL database is written back into its file.
+    $insert = null;
+    $pdo = null;
+    $bytes = (string) file_get_contents($path);
+    unlink($path);
+
+    return $bytes;
+}
+
+describe('POST /api/v1/sync/files/named', function (): void {
+    it('lists each content a version’s database names, once, sorted', function (): void {
+        $database = syncFilesVersionDatabase([
+            "insert into documents (file_path, file_sha256) values ('documents/a.enc', '" . hash('sha256', 'a certificate') . "')",
+            "insert into documents (file_path, file_sha256) values ('documents/b.enc', '" . hash('sha256', 'a certificate') . "')",
+            "insert into athletes (photo_path, photo_sha256) values ('athletes/photos/1.jpg', '" . hash('sha256', 'a photo') . "')",
+            // A trashed athlete keeps its photo, as `GET /sync/files` lists it.
+            "insert into athletes (photo_path, photo_sha256, deleted_at) values ('athletes/photos/2.jpg', '" . hash('sha256', 'a trashed athlete') . "', '2026-10-01 10:00:00')",
+            "insert into users (avatar_path, avatar_sha256) values ('users/avatars/1.png', '" . hash('sha256', 'an avatar') . "')",
+            "insert into academies (logo_path, logo_sha256) values ('academy-logos/1/l.png', '" . hash('sha256', 'a logo') . "')",
+            'insert into athletes (photo_path, photo_sha256) values (null, null)',
+        ]);
+
+        $named = $this->actingAs(userWithAcademy())
+            ->call('POST', '/api/v1/sync/files/named', content: $database, server: ['CONTENT_TYPE' => 'application/octet-stream'])
+            ->assertOk()
+            ->json('data');
+
+        $expected = [
+            hash('sha256', 'a certificate'),
+            hash('sha256', 'a photo'),
+            hash('sha256', 'a trashed athlete'),
+            hash('sha256', 'an avatar'),
+            hash('sha256', 'a logo'),
+        ];
+        sort($expected);
+        expect($named)->toBe($expected);
+    });
+
+    it('names what `GET /sync/files` names: a trashed document’s content is not', function (): void {
+        $database = syncFilesVersionDatabase([
+            "insert into documents (file_path, file_sha256, deleted_at) values ('documents/a.enc', '" . hash('sha256', 'deleted') . "', '2026-10-01 10:00:00')",
+        ]);
+
+        $this->actingAs(userWithAcademy())
+            ->call('POST', '/api/v1/sync/files/named', content: $database)
+            ->assertOk()
+            ->assertExactJson(['data' => []]);
+    });
+
+    it('reads the database it is given, never this device’s own', function (): void {
+        $owner = userWithAcademy();
+        syncFilesAthleteWithPhoto($owner, 'this device’s photo');
+
+        $this->actingAs($owner)
+            ->call('POST', '/api/v1/sync/files/named', content: syncFilesVersionDatabase([]))
+            ->assertOk()
+            ->assertExactJson(['data' => []]);
+    });
+
+    it('refuses what it cannot read: not a database, a newer one, one older than the content hashes', function (): void {
+        $owner = userWithAcademy();
+        $history = SyncDatabase::codeMigrations();
+        $hashed = array_search(SyncFiles::HASHED_SINCE, $history, true);
+        expect($hashed)->toBeInt();
+
+        $this->actingAs($owner)
+            ->call('POST', '/api/v1/sync/files/named', content: "PK\x03\x04 a zip, not a database")
+            ->assertStatus(422)
+            ->assertJsonPath('code', 'unreadable');
+        $this->actingAs($owner)
+            ->call('POST', '/api/v1/sync/files/named', content: syncFilesVersionDatabase([], [...$history, '2099_01_01_000000_from_a_later_budojo']))
+            ->assertStatus(422)
+            ->assertJsonPath('code', 'newer');
+        $this->actingAs($owner)
+            ->call('POST', '/api/v1/sync/files/named', content: syncFilesVersionDatabase([], array_slice($history, 0, (int) $hashed)))
+            ->assertStatus(422)
+            ->assertJsonPath('code', 'unreadable');
+    });
+
+    it('leaves no copy of the database behind', function (): void {
+        $before = glob(sys_get_temp_dir() . '/budojo-named-*') ?: [];
+
+        $this->actingAs(userWithAcademy())
+            ->call('POST', '/api/v1/sync/files/named', content: syncFilesVersionDatabase([]))
+            ->assertOk();
+        $this->actingAs(userWithAcademy())
+            ->call('POST', '/api/v1/sync/files/named', content: 'not a database')
+            ->assertStatus(422);
+        // A database in WAL mode leaves `-wal` and `-shm` beside the copy, read only too.
+        $this->actingAs(userWithAcademy())
+            ->call('POST', '/api/v1/sync/files/named', content: syncFilesVersionDatabase([], journal: 'wal'))
+            ->assertOk();
+
+        expect(glob(sys_get_temp_dir() . '/budojo-named-*') ?: [])->toBe($before);
+    });
+
+    it('leaves the app’s own connection as it was', function (): void {
+        $owner = userWithAcademy();
+
+        $this->actingAs($owner)
+            ->call('POST', '/api/v1/sync/files/named', content: syncFilesVersionDatabase([
+                "insert into users (avatar_path, avatar_sha256) values ('users/avatars/9.png', '" . hash('sha256', 'theirs') . "')",
+            ]))
+            ->assertOk();
+
+        expect(User::query()->whereKey($owner->id)->exists())->toBeTrue()
+            ->and(DB::getDefaultConnection())->not->toBe('sync_named');
+    });
+});
+
 describe('the hashes of files stored before this', function (): void {
     it('are filled in from disk, and a missing file stays without one', function (): void {
         $owner = userWithAcademy();
@@ -277,5 +413,8 @@ describe('who may move files', function (): void {
 
     it('is the owner only', function (): void {
         $this->actingAs(User::factory()->athlete()->create())->getJson('/api/v1/sync/files')->assertForbidden();
+        $this->actingAs(User::factory()->athlete()->create())
+            ->call('POST', '/api/v1/sync/files/named', content: syncFilesVersionDatabase([]))
+            ->assertForbidden();
     });
 });

@@ -1,5 +1,6 @@
 import { descends, latestVersion, SeenVersion } from './decide';
-import { sameVersion, VersionRef } from './layout';
+import { parseFilePath, sameVersion, VersionRef } from './layout';
+import { Listing } from './remote';
 
 /**
  * How many versions the folder keeps (PRD § 5.2, #2030). Each is the whole
@@ -103,6 +104,50 @@ export function pruneBatch(
       ? [...left].sort((a, b) => b.seq - a.seq)
       : [...beyond].sort((a, b) => a.seq - b.seq);
   return ordered.slice(0, Math.max(limit, 1));
+}
+
+/**
+ * How long a content stays in `files/` once sent, whatever names it (#2118):
+ * a device sends a version's contents before the version, so one sent for a
+ * version still on its way is named by none yet.
+ */
+export const CONTENT_GRACE_MS = 24 * 60 * 60 * 1000;
+
+/** How many contents one run deletes at most: the rest go at the next. */
+export const PRUNED_CONTENTS_PER_RUN = 50;
+
+/**
+ * How often a device prunes `files/` (#2118): knowing what the kept versions
+ * name means reading each, a whole database, so it runs after a push at most
+ * once a day.
+ */
+export const CONTENTS_PRUNED_EVERY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * The contents to delete from `files/` (#2118): those `named` does not hold,
+ * sent at least `CONTENT_GRACE_MS` before the listing, on Drive's clock, the
+ * oldest first. `named` is what must stay: every content a kept version names,
+ * with what this device's own database names. The caller builds it only once
+ * it read every kept version; when it cannot, it deletes nothing.
+ * - **Never a file that is not a content's:** anything else in `files/` stays.
+ * - **Drive gave no time:** nothing, as no content's age is known (a NaN age
+ *   is never past the grace).
+ */
+export function contentsToPrune(
+  named: ReadonlySet<string>,
+  listing: Listing,
+  limit = PRUNED_CONTENTS_PER_RUN,
+): string[] {
+  return listing.files
+    .filter((file) => {
+      const content = parseFilePath(file.path);
+      return (
+        content !== null && !named.has(content) && listing.now - file.created >= CONTENT_GRACE_MS
+      );
+    })
+    .sort((a, b) => a.created - b.created)
+    .slice(0, Math.max(limit, 1))
+    .map((file) => file.path);
 }
 
 /** `newest` and the versions under it, as far as the listing names them. */

@@ -403,6 +403,13 @@ export const routes: Routes = [
           ),
       },
       {
+        // «Soldi» (#2132): who still has to pay. The phone's tab; the PC has
+        // the arrears list under Stats, and can open this at any width.
+        path: 'money',
+        loadComponent: () =>
+          import('./features/money/money.component').then((m) => m.MoneyComponent),
+      },
+      {
         path: 'profile',
         loadComponent: () =>
           import('./features/profile/profile.component').then((m) => m.ProfileComponent),

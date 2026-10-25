@@ -157,6 +157,7 @@ it('keeps every name as the journal knows it: a rename is a decision', function 
         'POST support' => 'support.store',
         'POST sync/conflicts/{entry}/decision' => 'sync.conflicts.decide',
         'POST sync/conflicts/{entry}/keep-mine' => 'sync.conflicts.keep-mine',
+        'POST sync/files/named' => 'sync.files.named',
         'POST unsubscribe/{userId}/{category}' => 'unsubscribe.store',
         'PUT athletes/{athlete}' => 'athletes.update',
         'PUT documents/{document}' => 'documents.update',

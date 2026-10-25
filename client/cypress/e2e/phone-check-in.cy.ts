@@ -63,6 +63,8 @@ function phoneAt(when: string): void {
     body: { data: [regular(0, 3), regular(2, 5)], meta: { occurrences: 6, occurrence_dates: [] } },
   });
   cy.intercept('GET', '/api/v1/lessons*', { statusCode: 200, body: { data: null } });
+  // The check-in's payment chips (#2036) ask who is behind.
+  cy.intercept('GET', '/api/v1/stats/payments/arrears', { statusCode: 200, body: { data: [] } });
   cy.visitAuthenticated('/dashboard');
 }
 

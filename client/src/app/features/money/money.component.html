@@ -1,0 +1,97 @@
+<!-- The undo rides on the toast, as at the check-in. -->
+<p-toast position="bottom-center">
+  <ng-template let-message pTemplate="message">
+    <div class="money-toast">
+      <span class="money-toast__summary">{{ message.summary }}</span>
+      @if (message.data?.undo) {
+        <button
+          type="button"
+          class="money-toast__undo"
+          (click)="message.data.undo()"
+          data-cy="money-undo"
+        >
+          {{ 'attendance.daily.undo' | translate }}
+        </button>
+      }
+    </div>
+  </ng-template>
+</p-toast>
+
+<section class="money" data-cy="money">
+  <app-page-header
+    [title]="'money.title' | translate"
+    [countLabel]="count() > 0 ? '' + count() : null"
+  />
+
+  @if (errored()) {
+    <app-error-state
+      [title]="'money.error' | translate"
+      [retryLabel]="'money.retry' | translate"
+      (retry)="load()"
+      dataCy="money-error"
+    />
+  } @else if (rows() !== null) {
+    @if (count() === 0) {
+      <app-empty-state
+        icon="pi pi-check-circle"
+        [title]="'money.empty.title' | translate"
+        [hint]="'money.empty.hint' | translate"
+        dataCy="money-empty"
+      />
+    }
+    @for (group of groups(); track group.key) {
+      @if (group.rows.length > 0) {
+        <section class="money__group" [attr.data-cy]="'money-group-' + group.key">
+          @if (split()) {
+            <h2 class="money__heading">{{ group.heading | translate }}</h2>
+          }
+          <ul class="money__list">
+            @for (row of group.rows; track row.athlete.id) {
+              <li>
+                <button
+                  type="button"
+                  class="money-row"
+                  [attr.aria-label]="rowAria(row)"
+                  (click)="openPay(row)"
+                  [attr.data-cy]="'money-row-' + row.athlete.id"
+                >
+                  <app-athlete-identity
+                    class="money-row__who"
+                    [athlete]="row.athlete"
+                    [nameBeside]="true"
+                  />
+                  <span class="money-row__months">
+                    <span class="money-row__lead">{{ monthName(row.lead) }}</span>
+                    @if (row.also.length > 0) {
+                      <span class="money-row__also">{{ alsoLabel(row) }}</span>
+                    }
+                  </span>
+                  <i class="pi pi-wallet money-row__icon" aria-hidden="true"></i>
+                </button>
+              </li>
+            }
+          </ul>
+        </section>
+      }
+    }
+  } @else {
+    <div
+      class="money__loading"
+      data-cy="money-loading"
+      role="status"
+      [attr.aria-label]="'money.loading' | translate"
+    >
+      <p-skeleton height="3.5rem" />
+      <p-skeleton height="3.5rem" />
+      <p-skeleton height="3.5rem" />
+    </div>
+  }
+</section>
+
+<app-pay-sheet
+  [athlete]="paying()?.athlete ?? null"
+  [month]="paying()?.month ?? null"
+  (closed)="closePay()"
+  (recorded)="onPaid($event)"
+  (hidden)="returnFocusFromPay()"
+/>

@@ -5566,7 +5566,9 @@ paths:
         Records a payment covering `period_months` from `(year, month)`
         (#1382) — one row, one amount, one receipt, whatever its length.
         **Idempotent**: POSTing the same `(year, month, period_months)` twice
-        returns the existing row instead of creating a duplicate. Re-posting
+        returns the existing row instead of creating a duplicate, with **200**
+        rather than 201 (#2036): nothing was created, so a client that offers
+        to undo the payment it just recorded must not offer it. Re-posting
         the same start month with a *different* length is refused with a 422
         instead — the caller is asking for something else.
 
@@ -5599,8 +5601,18 @@ paths:
             schema:
               $ref: '#/components/schemas/AthletePaymentCreateRequest'
       responses:
+        '200':
+          description: The row already recorded, returned on an idempotent re-post
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/AthletePayment'
         '201':
-          description: Payment recorded (or returned existing row on idempotent retry)
+          description: Payment recorded
           content:
             application/json:
               schema:
@@ -6399,6 +6411,47 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
 
+  /athletes/{athlete}/next-step:
+    get:
+      tags: [athletes]
+      summary: One athlete's next step on the academy's ladder (#2045)
+      description: |
+        What the phone's promotion sheet proposes: the same next step
+        `GET /promotions/candidates` gives this athlete, from the same rule
+        (`GetAthleteNextStepAction`). The next stripe (or dan, or poom) while
+        the grade has room, otherwise the next grade in the order people climb
+        the ladder; kids' grades only for a child. `data` is null at the top
+        of the ladder.
+
+        Academy-scoped: caller must own the athlete's academy or the response
+        is a canonical 403 envelope.
+      operationId: athleteNextStep
+      parameters:
+        - name: athlete
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        '200':
+          description: The next step, or null at the top of the ladder.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    nullable: true
+                    required: [kind, belt, stripes]
+                    properties:
+                      kind: { type: string, enum: [stripe, belt] }
+                      belt: { $ref: '#/components/schemas/Belt' }
+                      stripes: { type: integer, minimum: 0 }
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /athletes/{athlete}/promotions:
     get:
       tags: [athletes]
@@ -7214,7 +7267,7 @@ paths:
                     type: array
                     items:
                       type: object
-                      required: [athlete, months_behind, first_unpaid, owed_cents]
+                      required: [athlete, months_behind, first_unpaid, unpaid_months, owed_cents]
                       properties:
                         athlete:
                           type: object
@@ -7235,6 +7288,12 @@ paths:
                           type: string
                           pattern: '^\d{4}-\d{2}$'
                           description: The oldest unpaid month.
+                        unpaid_months:
+                          type: array
+                          description: Every unpaid month, oldest first (#2132). `months_behind` is its length.
+                          items:
+                            type: string
+                            pattern: '^\d{4}-\d{2}$'
                         owed_cents:
                           type: integer
                           minimum: 1
@@ -7595,6 +7654,59 @@ paths:
         '401': { description: Unauthenticated }
         '403': { description: Forbidden — the user is not an owner. }
         '404': { description: The runtime profile has no `sync` capability. }
+
+  /sync/files/named:
+    post:
+      operationId: syncFilesNamed
+      summary: The file contents another database names
+      description: |
+        The contents a version's database names (#2118), by the rules of
+        `GET /sync/files`, read from the database in the body and never from
+        this device's own. The app asks it of every version the folder keeps,
+        and deletes from `files/` what none of them names
+        (`docs/sync/protocol.md` § What `files/` keeps). Nothing is written:
+        the database is read from a temporary copy, deleted before the answer.
+
+        **A database it cannot read for certain is refused**, and the app
+        then deletes nothing: the checks of `PUT /sync/stage`, and one older
+        than the content hashes, whose rows name no content.
+      tags: [sync]
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema: { type: string, format: binary }
+      responses:
+        '200':
+          description: Each content once, sorted by hash
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { type: string, pattern: '^[0-9a-f]{64}$' }
+        '401': { description: Unauthenticated }
+        '403': { description: Forbidden — the user is not an owner. }
+        '404': { description: The runtime profile has no `sync` capability. }
+        '413':
+          description: The database is larger than PHP's `post_max_size`, which each shell sets above any academy's database.
+        '422':
+          description: |
+            Not read. `code` is `newer` (a later Budojo, whose rows may name
+            files in a way this code does not know) or `unreadable` (not a
+            SQLite file, damaged, not a Budojo database, or older than the
+            content hashes).
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [code, message]
+                properties:
+                  code: { type: string, enum: [newer, unreadable] }
+                  message: { type: string }
 
   /sync/files/{sha256}:
     parameters:

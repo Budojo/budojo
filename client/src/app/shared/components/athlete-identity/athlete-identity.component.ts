@@ -31,6 +31,7 @@ import { UserAvatarComponent } from '../user-avatar/user-avatar.component';
   imports: [RouterLink, Tooltip, AgeBadgeComponent, BeltBadgeComponent, UserAvatarComponent],
   templateUrl: './athlete-identity.component.html',
   styleUrl: './athlete-identity.component.scss',
+  host: { '[class.athlete-identity--name-beside]': 'nameBeside()' },
 })
 export class AthleteIdentityComponent {
   private readonly languageService = inject(LanguageService);
@@ -66,6 +67,14 @@ export class AthleteIdentityComponent {
    * supplies `position: relative`, as it already must for the spine.
    */
   readonly stretchLink = input<boolean>(false);
+
+  /**
+   * Keep the name beside the face (#2036): its words wrap among themselves
+   * instead of the whole name falling under the avatar. The phone's check-in
+   * row has a payment chip beside the identity, and a 360px phone left the
+   * name a line of its own under a lone avatar.
+   */
+  readonly nameBeside = input<boolean>(false);
 
   protected readonly detailLink = computed(() => {
     const tab = this.detailTab();

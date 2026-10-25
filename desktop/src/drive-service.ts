@@ -9,7 +9,15 @@ import {
 } from './drive-state.js';
 import { mergeArchiveViews, planSync, REMOTE_RETENTION, type ArchiveView, type RemoteArchive } from './drive-sync.js';
 import { APPDATA_SCOPE, DRIVE_SCOPE } from './drive-auth.js';
-import type { DriveAnswer, DriveRequest } from './sync-bridge.js';
+import {
+  checkDelete,
+  checkRewrite,
+  deletedFileId,
+  rewrittenFileId,
+  type DriveAnswer,
+  type DriveItem,
+  type DriveRequest,
+} from './sync-bridge.js';
 import { holdsTheseSecrets, newAcademyKeys, parseAcademyKeys, type AcademyKeys } from './sync-keys.js';
 
 /**
@@ -46,6 +54,8 @@ export interface DriveSyncIO {
   ensureFresh: (tokens: DriveTokens) => Promise<DriveTokens>;
   /** One call to Drive's API, with these tokens, for the page's sync engine (#2032). */
   fetchDrive: (tokens: DriveTokens, request: DriveRequest) => Promise<DriveAnswer>;
+  /** A file's name, type and parents, to check a sync's delete (#2120); null when Drive has no such file. */
+  readItem: (tokens: DriveTokens, id: string) => Promise<DriveItem | null>;
   accountEmail: (tokens: DriveTokens) => Promise<string | null>;
   ensureFolder: (tokens: DriveTokens) => Promise<string>;
   listRemote: (tokens: DriveTokens, folderId: string) => Promise<RemoteArchive[]>;
@@ -77,6 +87,11 @@ export type LinkResult = { ok: true; account: string | null } | { ok: false; err
 export type PhoneResult =
   | { ok: true; keys: 'published' | 'already' }
   | { ok: false; error: string };
+
+/** An answer of the main process's own, with no body: Drive was not asked. */
+function answer(status: number): DriveAnswer {
+  return { status, headers: {}, body: new Uint8Array() };
+}
 
 /** Pulls the code off whatever was thrown, without assuming it is a DriveError. */
 function errorCode(error: unknown): string {
@@ -410,19 +425,82 @@ export class DriveSyncService {
    * process's token: the page never holds one. A token Google no longer gives
    * answers 401, which the engine shows as «Ricollega Google»; any other
    * failure is thrown, which it reads as no network.
+   *
+   * `device` is this PC's id while its server journals, null before it joined:
+   * the one report the sync rewrites is the one it names (#2139).
    */
-  async fetchForSync(request: DriveRequest): Promise<DriveAnswer> {
-    let tokens: DriveTokens;
+  async fetchForSync(request: DriveRequest, device: string | null = null): Promise<DriveAnswer> {
+    if (request.method === 'DELETE') {
+      return this.forwardChecked(request, 'delete', deletedFileId(request), checkDelete);
+    }
+    if (request.method === 'PATCH') {
+      return this.forwardChecked(request, 'rewrite', device === null ? null : rewrittenFileId(request), (chain, folder) =>
+        checkRewrite(chain, folder, device ?? ''),
+      );
+    }
+    const tokens = await this.tokensForSync();
+
+    return tokens === null ? answer(401) : this.io.fetchDrive(tokens, request);
+  }
+
+  /**
+   * A delete, which the sync sends to prune the folder (#2120), or the upload
+   * of a file's new content, which it opens to rewrite its own report (#2139):
+   * forwarded only once the file is read to be one of those in this PC's sync
+   * folder (`checkDelete`, `checkRewrite`), and refused with a 403 otherwise.
+   * Drive not linked, a PC that never joined, or anything but one file by its
+   * id, is refused before the token is used. A file already gone (the other
+   * device pruned it first) answers 404, as Drive would.
+   */
+  private async forwardChecked(
+    request: DriveRequest,
+    verb: 'delete' | 'rewrite',
+    fileId: string | null,
+    check: (chain: readonly DriveItem[], budojoFolder: string) => { read: string } | boolean,
+  ): Promise<DriveAnswer> {
+    const state = await this.io.readState();
+    if (!state.linked || state.folderId === null || fileId === null) {
+      return this.refuse(verb, fileId);
+    }
+    const tokens = await this.tokensForSync();
+    if (tokens === null) {
+      return answer(401);
+    }
+    const chain: DriveItem[] = [];
+    let next = fileId;
+    for (;;) {
+      const item = await this.io.readItem(tokens, next);
+      if (item === null) {
+        return chain.length === 0 ? answer(404) : this.refuse(verb, fileId);
+      }
+      chain.push(item);
+      const verdict = check(chain, state.folderId);
+      if (verdict === true) {
+        return this.io.fetchDrive(tokens, request);
+      }
+      if (verdict === false) {
+        return this.refuse(verb, fileId);
+      }
+      next = verdict.read;
+    }
+  }
+
+  private refuse(verb: 'delete' | 'rewrite', fileId: string | null): DriveAnswer {
+    this.io.log(`sync: refused to ${verb} ${fileId ?? 'a request that names no file'}`);
+
+    return answer(403);
+  }
+
+  /** The tokens for the page's call, or null when Google no longer gives one: the page shows «Ricollega Google». */
+  private async tokensForSync(): Promise<DriveTokens | null> {
     try {
-      tokens = await this.authenticated();
+      return await this.authenticated();
     } catch (error) {
       if (errorCode(error) === 'invalid_grant') {
-        return { status: 401, headers: {}, body: new Uint8Array() };
+        return null;
       }
       throw error;
     }
-
-    return this.io.fetchDrive(tokens, request);
   }
 
   /** Reads the tokens and refreshes them if they are near expiry. */

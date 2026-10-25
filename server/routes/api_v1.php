@@ -611,6 +611,10 @@ Route::middleware('auth:sanctum')->group(function (): void {
         // specific athlete (post-v2.9.0). Same academy-scope gate as
         // documents; lives in the controller's first line.
         Route::get('/athletes/{athlete}/promotions', [\App\Http\Controllers\Athlete\AthletePromotionController::class, 'index']);
+        // The next step the phone's promotion sheet proposes (#2045): the
+        // same rule as «Chi promuovere?», for one athlete.
+        Route::get('/athletes/{athlete}/next-step', \App\Http\Controllers\Athlete\AthleteNextStepController::class)
+            ->name('athletes.next-step');
         // Editing recorded_at (#1431 PR 1 of 2) — corrects a promotion
         // entered late without touching the belt/stripe transition it
         // describes. 403 when the promotion doesn't belong to the
@@ -795,6 +799,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
             // Files by their content (#2030 part 2): never by path, which
             // differs between devices for the same athlete.
             Route::get('files', [\App\Http\Controllers\Sync\SyncFilesController::class, 'index'])->name('sync.files');
+            // What a version's database names, for pruning `files/` (#2118).
+            Route::post('files/named', [\App\Http\Controllers\Sync\SyncFilesController::class, 'named'])->name('sync.files.named');
             Route::get('files/{sha256}', [\App\Http\Controllers\Sync\SyncFilesController::class, 'show'])
                 ->where('sha256', '[0-9a-f]{64}')
                 ->name('sync.files.show');

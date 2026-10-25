@@ -97,6 +97,22 @@ describe('PaymentService (#182)', () => {
     bare.flush({ data: {} });
   });
 
+  it('record says whether this call created the row: 201 yes, 200 no (#2036)', () => {
+    const row = { id: 5, athlete_id: 42, year: 2026, month: 9, amount_cents: 6000, paid_at: '' };
+    const seen: boolean[] = [];
+
+    service.record(42, 2026, 9).subscribe((r) => seen.push(r.created));
+    httpMock
+      .expectOne(`${base}/42/payments`)
+      .flush({ data: row }, { status: 201, statusText: 'Created' });
+    service.record(42, 2026, 9).subscribe((r) => seen.push(r.created));
+    httpMock
+      .expectOne(`${base}/42/payments`)
+      .flush({ data: row }, { status: 200, statusText: 'OK' });
+
+    expect(seen).toEqual([true, false]);
+  });
+
   it('unmarkPaid DELETEs /athletes/{id}/payments/{year}/{month} and emits void on 204', () => {
     let completed = false;
     let nextCalled = false;

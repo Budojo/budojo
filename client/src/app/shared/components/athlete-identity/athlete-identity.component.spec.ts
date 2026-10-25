@@ -40,6 +40,7 @@ describe('AthleteIdentityComponent (#1458)', () => {
       detailTab: string | null;
       stretchLink: boolean;
       avatarHandle: string | null;
+      nameBeside: boolean;
     }>,
   ) {
     fixture = TestBed.createComponent(AthleteIdentityComponent);
@@ -55,6 +56,9 @@ describe('AthleteIdentityComponent (#1458)', () => {
     }
     if (inputs.avatarHandle !== undefined) {
       fixture.componentRef.setInput('avatarHandle', inputs.avatarHandle);
+    }
+    if (inputs.nameBeside !== undefined) {
+      fixture.componentRef.setInput('nameBeside', inputs.nameBeside);
     }
     fixture.detectChanges();
     return fixture;
@@ -155,5 +159,14 @@ describe('AthleteIdentityComponent (#1458)', () => {
     expect(el('[data-cy="athlete-name-link"]')?.classList).not.toContain(
       'athlete-identity__name--stretched',
     );
+  });
+
+  it('keeps the name beside the face only when the row asks (#2036)', () => {
+    const host = (): HTMLElement => fixture.nativeElement as HTMLElement;
+    render({ nameBeside: true });
+    expect(host().classList).toContain('athlete-identity--name-beside');
+
+    render({});
+    expect(host().classList).not.toContain('athlete-identity--name-beside');
   });
 });

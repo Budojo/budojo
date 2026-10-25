@@ -2219,6 +2219,7 @@ function seed(): void {
           },
           months_behind: 3,
           first_unpaid: '2026-06',
+          unpaid_months: ['2026-06', '2026-07', '2026-08'],
           owed_cents: 21000,
         },
         {
@@ -2234,6 +2235,7 @@ function seed(): void {
           },
           months_behind: 1,
           first_unpaid: '2026-08',
+          unpaid_months: ['2026-08'],
           owed_cents: 7000,
         },
       ],
@@ -3883,6 +3885,102 @@ describe('Desktop audit — every screen at 1280×860 and 960×600, in Italian',
   screen('52-whats-new', '/dashboard/whats-new', 'h1');
   screen('53-backup', '/dashboard/backup', '[data-cy="backup-list"]');
   screen('54-more', '/dashboard/more', '[data-cy="owner-more"]');
+
+  // «Da decidere» (#2038, #2125): one of each kind a rebase can set aside.
+  const SET_ASIDE = {
+    device: 'phone9c1e',
+    recorded_at: '2026-09-11T18:32:05+00:00',
+    subject: {
+      athlete: { ...ATHLETES[0], name: 'Giulia Ferraro' },
+      others: 0,
+    },
+  };
+  const DECIDE_CONFLICTS = [
+    {
+      ...SET_ASIDE,
+      id: '01K6F3Q8Z4M7X2N5P9R1T3V6W1',
+      route: 'athletes.update',
+      reason: 'changed',
+      detail: { reason: 'changed', field: 'last_name', saw: 'Ferraro', here: 'Ferrara' },
+      entry: {
+        method: 'PATCH',
+        params: { athlete: 1 },
+        body: { last_name: 'Ferrari' },
+        before: null,
+      },
+      retry: [{ method: 'PATCH', url: '/api/v1/athletes/1', body: { last_name: 'Ferrari' } }],
+    },
+    {
+      ...SET_ASIDE,
+      id: '01K6F3Q8Z4M7X2N5P9R1T3V6W2',
+      route: 'athletes.payments.store',
+      reason: 'differs',
+      detail: { reason: 'differs', field: 'payment_method', mine: 'cash', here: 'pos' },
+      entry: {
+        method: 'POST',
+        params: { athlete: 1 },
+        body: { year: 2026, month: 9, payment_method: 'cash' },
+        before: null,
+      },
+      retry: null,
+    },
+    {
+      ...SET_ASIDE,
+      id: '01K6F3Q8Z4M7X2N5P9R1T3V6W3',
+      route: 'athletes.promotions.store',
+      reason: 'refused',
+      detail: { reason: 'refused', message: 'The belt cannot go backwards.' },
+      entry: { method: 'POST', params: { athlete: 1 }, body: { belt: 'white' }, before: null },
+      retry: [{ method: 'POST', url: '/api/v1/athletes/1/promotions', body: { belt: 'white' } }],
+    },
+    {
+      ...SET_ASIDE,
+      id: '01K6F3Q8Z4M7X2N5P9R1T3V6W4',
+      route: 'athletes.update',
+      reason: 'gone',
+      detail: { reason: 'gone', message: null },
+      entry: { method: 'PATCH', params: { athlete: 1 }, body: { stripes: 3 }, before: null },
+      retry: null,
+    },
+    {
+      ...SET_ASIDE,
+      id: '01K6F3Q8Z4M7X2N5P9R1T3V6W5',
+      route: 'future.thing.store',
+      reason: 'unknown-route',
+      detail: { reason: 'unknown-route' },
+      entry: { method: 'POST', params: {}, body: null, before: null },
+      subject: null,
+      retry: null,
+    },
+    {
+      ...SET_ASIDE,
+      id: '01K6F3Q8Z4M7X2N5P9R1T3V6W6',
+      route: 'academy.update',
+      reason: 'failed',
+      detail: { reason: 'failed', message: 'Server error' },
+      entry: { method: 'PATCH', params: {}, body: { name: 'Eagles BJJ' }, before: null },
+      subject: null,
+      retry: [{ method: 'PATCH', url: '/api/v1/academy', body: { name: 'Eagles BJJ' } }],
+    },
+  ];
+  const decideStubs = (): void => {
+    cy.intercept('GET', '/api/v1/sync/conflicts', {
+      statusCode: 200,
+      body: { data: DECIDE_CONFLICTS },
+    });
+  };
+  screen('56-sync-decide', '/dashboard/sync/decide', '[data-cy="sync-decide-item"]', {
+    stubs: decideStubs,
+  });
+  screen('56-sync-decide-dark', '/dashboard/sync/decide', '[data-cy="sync-decide-item"]', {
+    stubs: decideStubs,
+    theme: 'dark',
+  });
+  screen('56-sync-decide-empty', '/dashboard/sync/decide', '[data-cy="sync-decide-empty"]', {
+    stubs: () => {
+      cy.intercept('GET', '/api/v1/sync/conflicts', { statusCode: 200, body: { data: [] } });
+    },
+  });
 
   // ── 55. Global chrome ──────────────────────────────────────────────────
   screen('55-search-palette', '/dashboard/athletes', ROSTER_READY, {

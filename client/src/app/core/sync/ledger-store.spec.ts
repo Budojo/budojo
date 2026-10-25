@@ -21,6 +21,20 @@ describe('the ledger store', () => {
     expect(loadLedger({ device: 'phone9c1e' })).toEqual(ledger);
   });
 
+  it('keeps when it last pruned `files/`, and refuses a ledger whose time is not a number (#2118)', () => {
+    saveLedger({ device: 'phone9c1e' }, { ...ledger, contentsPrunedAt: 1_759_000_000_000 });
+    expect(loadLedger({ device: 'phone9c1e' }).contentsPrunedAt).toBe(1_759_000_000_000);
+
+    localStorage.setItem(
+      'budojoSyncLedger',
+      JSON.stringify({
+        device: 'phone9c1e',
+        ledger: { ...ledger, contentsPrunedAt: 'yesterday' },
+      }),
+    );
+    expect(loadLedger({ device: 'phone9c1e' })).toEqual(EMPTY_LEDGER);
+  });
+
   it('starts empty with nothing saved', () => {
     expect(loadLedger({ device: 'phone9c1e' })).toEqual(EMPTY_LEDGER);
   });

@@ -35,4 +35,14 @@ export class HttpSyncFiles implements SyncFilesApi {
       }),
     );
   }
+
+  named(database: Uint8Array): Promise<string[]> {
+    return firstValueFrom(
+      this.http
+        .post<{ data: string[] }>(this.url('/named'), binaryBody(database), {
+          headers: new HttpHeaders({ 'Content-Type': 'application/octet-stream' }),
+        })
+        .pipe(map((response) => response.data)),
+    );
+  }
 }

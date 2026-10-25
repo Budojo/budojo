@@ -1164,6 +1164,11 @@ describe('DailyAttendanceComponent', () => {
         ],
       });
       fixture.detectChanges();
+      // A carried presence spends a carnet entry, and its undo gives it back (#2150).
+      const refresh = vi.spyOn(
+        component as unknown as { refreshCarnet: (id: number) => void },
+        'refreshCarnet',
+      );
 
       carryButton(fixture)!.click();
 
@@ -1186,6 +1191,7 @@ describe('DailyAttendanceComponent', () => {
 
       // The room is no longer empty: the offer goes.
       expect(carryButton(fixture)).toBeNull();
+      expect(refresh.mock.calls).toEqual([[1], [2]]);
       const toast = add.mock.calls.at(-1)![0];
       expect(toast.summary).toContain('2');
       expect(toast.summary).toContain('17:00');
@@ -1196,6 +1202,7 @@ describe('DailyAttendanceComponent', () => {
       httpMock.expectOne('/api/v1/attendance/20').flush(null);
       httpMock.expectOne('/api/v1/attendance/21').flush(null);
       expect(component['anyInflight']()).toBe(false);
+      expect(refresh.mock.calls).toEqual([[1], [2], [1], [2]]);
     });
 
     it('puts the room back as it was when the request fails', () => {
@@ -2162,5 +2169,270 @@ describe('DailyAttendanceComponent — type a name and press Enter (#1930)', () 
     expect(input.value).toBe('');
     expect(component['searchTerm']()).toBe('');
     roster(httpMock, null).flush(page([GALLO, GALLI]));
+  });
+});
+
+describe('DailyAttendanceComponent — the money at the mat (#2036)', () => {
+  // Monday 14 September 2026 at 18:30: fundamentals at 19:00.
+  const FUNDAMENTALS: AcademyClass = {
+    id: 2,
+    name: 'Fundamentals',
+    weekday: 1,
+    starts_at: '19:00',
+    duration_minutes: 60,
+    kind: 'gi',
+  };
+  const fee = { monthly_fee_cents: 6000, billing_period_months: 1, billing_floor: '2026-01-01' };
+  const ANNA = makeAthlete({ id: 1, first_name: 'Anna', ...fee, payment_coverage: 'none' });
+  const BRUNO = makeAthlete({ id: 2, first_name: 'Bruno', ...fee, payment_coverage: 'monthly' });
+  const CARLA = makeAthlete({ id: 3, first_name: 'Carla', ...fee, monthly_fee_cents: 0 });
+  const ROOM = [ANNA, BRUNO, CARLA];
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 8, 14, 18, 30));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  function open(profile: 'mobile' | 'web' = 'mobile') {
+    const harness = setup();
+    vi.spyOn(TestBed.inject(RuntimeService), 'profile').mockReturnValue(profile);
+    harness.fixture.detectChanges();
+    flushInit(harness.httpMock, { athletes: ROOM, classes: [FUNDAMENTALS] });
+    harness.httpMock
+      .expectOne((r) => r.url === '/api/v1/attendance/regulars')
+      .flush({ data: [], meta: { occurrences: 0, occurrence_dates: [] } });
+    return harness;
+  }
+  function behind(httpMock: HttpTestingController) {
+    httpMock
+      .expectOne((r) => r.url === '/api/v1/stats/payments/arrears')
+      .flush({
+        data: [
+          {
+            athlete: { id: 1, first_name: 'Anna', last_name: 'Rossi' },
+            months_behind: 1,
+            first_unpaid: '2026-08',
+            unpaid_months: ['2026-08'],
+            owed_cents: 6000,
+          },
+        ],
+      });
+  }
+  function chip(fixture: Harness['fixture'], id: number): string | null {
+    fixture.detectChanges();
+    const el = (fixture.nativeElement as HTMLElement).querySelector(
+      `[data-cy="attendance-pay-${id}"]`,
+    );
+    return el?.textContent?.replace(/\s+/g, ' ').trim() ?? null;
+  }
+
+  it('says on each phone row what pays for the month', () => {
+    const { fixture, httpMock } = open();
+    behind(httpMock);
+
+    expect(chip(fixture, 1)).toBe('August');
+    expect(chip(fixture, 2)).toBe('Paid');
+    expect(chip(fixture, 3)).toBe('Free');
+  });
+
+  it('asks for the month once the athlete who owes it is marked present', () => {
+    const { fixture, component, httpMock } = open();
+    behind(httpMock);
+
+    component['togglePresent'](ANNA);
+    httpMock
+      .expectOne((r) => r.url === '/api/v1/attendance' && r.method === 'POST')
+      .flush({ data: [{ id: 501, athlete_id: 1, lesson_id: 3, attended_on: '2026-09-14' }] });
+
+    expect(chip(fixture, 1)).toBe('Ask August');
+  });
+
+  it("reads a carnet holder's balance again after a check-in and its undo (#2150)", () => {
+    const carnet = (left: number) => ({
+      id: 40,
+      code: 'C-40',
+      remaining_entries: left,
+      expires_at: '2026-12-31',
+    });
+    const DARIO = makeAthlete({
+      id: 4,
+      first_name: 'Dario',
+      ...fee,
+      payment_coverage: 'carnet',
+      active_carnet: carnet(3),
+    });
+    const harness = setup();
+    vi.spyOn(TestBed.inject(RuntimeService), 'profile').mockReturnValue('mobile');
+    harness.fixture.detectChanges();
+    flushInit(harness.httpMock, { athletes: [DARIO], classes: [FUNDAMENTALS] });
+    harness.httpMock
+      .expectOne((r) => r.url === '/api/v1/attendance/regulars')
+      .flush({ data: [], meta: { occurrences: 0, occurrence_dates: [] } });
+    const { fixture, component, httpMock } = harness;
+    httpMock.expectOne((r) => r.url === '/api/v1/stats/payments/arrears').flush({ data: [] });
+    expect(chip(fixture, 4)).toBe('Carnet · 3');
+
+    component['togglePresent'](DARIO);
+    httpMock
+      .expectOne((r) => r.url === '/api/v1/attendance' && r.method === 'POST')
+      .flush({ data: [{ id: 601, athlete_id: 4, lesson_id: 3, attended_on: '2026-09-14' }] });
+    httpMock
+      .expectOne((r) => r.url === '/api/v1/athletes/4' && r.method === 'GET')
+      .flush({ data: { ...DARIO, active_carnet: carnet(2) } });
+    expect(chip(fixture, 4)).toBe('Carnet · 2');
+
+    component['togglePresent'](DARIO);
+    httpMock
+      .expectOne((r) => r.url === '/api/v1/attendance/601' && r.method === 'DELETE')
+      .flush(null, { status: 204, statusText: 'No Content' });
+    httpMock
+      .expectOne((r) => r.url === '/api/v1/athletes/4' && r.method === 'GET')
+      .flush({ data: { ...DARIO, active_carnet: carnet(3) } });
+    expect(chip(fixture, 4)).toBe('Carnet · 3');
+  });
+
+  it('reads the athlete again on the undo of the last entry, though the row shows no carnet', () => {
+    const carnet = { id: 40, code: 'C-40', remaining_entries: 1, expires_at: '2026-12-31' };
+    const DARIO = makeAthlete({
+      id: 4,
+      first_name: 'Dario',
+      ...fee,
+      payment_coverage: 'carnet',
+      active_carnet: carnet,
+    });
+    const harness = setup();
+    vi.spyOn(TestBed.inject(RuntimeService), 'profile').mockReturnValue('mobile');
+    harness.fixture.detectChanges();
+    flushInit(harness.httpMock, { athletes: [DARIO], classes: [FUNDAMENTALS] });
+    harness.httpMock
+      .expectOne((r) => r.url === '/api/v1/attendance/regulars')
+      .flush({ data: [], meta: { occurrences: 0, occurrence_dates: [] } });
+    const { fixture, component, httpMock } = harness;
+    httpMock.expectOne((r) => r.url === '/api/v1/stats/payments/arrears').flush({ data: [] });
+
+    component['togglePresent'](DARIO);
+    httpMock
+      .expectOne((r) => r.url === '/api/v1/attendance' && r.method === 'POST')
+      .flush({ data: [{ id: 602, athlete_id: 4, lesson_id: 3, attended_on: '2026-09-14' }] });
+    // The last entry spent: no carnet counts any more, and the month is owed.
+    httpMock
+      .expectOne((r) => r.url === '/api/v1/athletes/4')
+      .flush({ data: { ...DARIO, active_carnet: null, payment_coverage: 'none' } });
+    expect(chip(fixture, 4)).toContain('September');
+
+    component['togglePresent'](DARIO);
+    httpMock
+      .expectOne((r) => r.url === '/api/v1/attendance/602' && r.method === 'DELETE')
+      .flush(null, { status: 204, statusText: 'No Content' });
+    httpMock.expectOne((r) => r.url === '/api/v1/athletes/4').flush({ data: DARIO });
+    expect(chip(fixture, 4)).toBe('Carnet · 1');
+  });
+
+  it('opens the payment sheet from the chip, and a tap on it marks nobody', () => {
+    const { fixture, component, httpMock } = open();
+    behind(httpMock);
+    fixture.detectChanges();
+
+    const button = (fixture.nativeElement as HTMLElement).querySelector(
+      '[data-cy="attendance-pay-1"] button',
+    ) as HTMLButtonElement;
+    button.click();
+    fixture.detectChanges();
+
+    expect(component['paying']()).toEqual({ athlete: ANNA, month: '2026-08' });
+    expect(component['isPresent'](1)).toBe(false);
+    httpMock.expectNone((r) => r.url === '/api/v1/attendance' && r.method === 'POST');
+    // The sheet asks for Anna's months.
+    httpMock.expectOne((r) => r.url === '/api/v1/athletes/1/payments');
+  });
+
+  it('toasts a recorded payment, and its undo takes it back', () => {
+    const { fixture, component, httpMock } = open();
+    behind(httpMock);
+    const toast = vi.spyOn(fixture.debugElement.injector.get(MessageService), 'add');
+    const payment = {
+      id: 9,
+      athlete_id: 1,
+      year: 2026,
+      month: 8,
+      period_months: 1,
+      amount_cents: 6000,
+      paid_at: '2026-09-14',
+      payment_method: 'cash' as const,
+    };
+
+    component['onPaid']({ athlete: ANNA, payment, created: true });
+    expect(component['paying']()).toBeNull();
+    const message = toast.mock.calls[0][0];
+    expect(message.summary).toBe("Anna Rossi's payment recorded");
+
+    (message.data as { undo: () => void }).undo();
+    httpMock
+      .expectOne((r) => r.url === '/api/v1/athletes/1/payments/2026/8' && r.method === 'DELETE')
+      .flush(null, { status: 204, statusText: 'No Content' });
+  });
+
+  it('offers no undo for a payment the server already held', () => {
+    const { fixture, component, httpMock } = open();
+    behind(httpMock);
+    const toast = vi.spyOn(fixture.debugElement.injector.get(MessageService), 'add');
+    const payment = {
+      id: 9,
+      athlete_id: 1,
+      year: 2026,
+      month: 8,
+      period_months: 1,
+      amount_cents: 6000,
+      paid_at: '2026-09-01',
+      payment_method: 'cash' as const,
+    };
+
+    component['onPaid']({ athlete: ANNA, payment, created: false });
+
+    const message = toast.mock.calls[0][0];
+    expect(message.summary).toBe("Anna Rossi's payment was already recorded");
+    expect(message.data).toBeUndefined();
+  });
+
+  it('hands the keyboard back to the chip when the sheet closes', () => {
+    const { fixture, component, httpMock } = open();
+    behind(httpMock);
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    document.body.appendChild(root);
+    const chipButton = root.querySelector('[data-cy="attendance-pay-1"] button') as HTMLElement;
+    chipButton.click();
+    fixture.detectChanges();
+    httpMock.expectOne((r) => r.url === '/api/v1/athletes/1/payments');
+
+    // Closed with the keyboard nowhere: the dialog took it away with it.
+    (document.activeElement as HTMLElement | null)?.blur();
+    component['closePay']();
+    fixture.detectChanges();
+    component['returnFocusFromPay']();
+
+    expect(document.activeElement).toBe(chipButton);
+    root.remove();
+  });
+
+  it('shows no chip and asks for no arrears on the PC', () => {
+    const { fixture, httpMock } = open('web');
+
+    expect(chip(fixture, 1)).toBeNull();
+    httpMock.expectNone((r) => r.url === '/api/v1/stats/payments/arrears');
+  });
+
+  it('shows no chip on another day: the chip is about who is standing there', () => {
+    const { fixture, component, httpMock } = open();
+    behind(httpMock);
+    expect(chip(fixture, 1)).toBe('August');
+
+    component['selectedDate'].set(new Date(2026, 8, 7));
+    expect(chip(fixture, 1)).toBeNull();
   });
 });

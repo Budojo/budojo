@@ -16,6 +16,9 @@
   justify-content: center;
   border: 1px solid transparent;
   border-radius: var(--budojo-radius-medium, 0.75rem);
+  // `surface-100`, not the secondary button's step (#2138): a toolbar control
+  // sits on the page, where it is a step already, and its "on" state below is
+  // a translucent tint that only reads lighter than this fill.
   background: var(--p-surface-100);
   // The TEXT colour of an available control, not of a disabled one (#1649).
   // Muted-on-grey is the app's disabled language, and wearing it made the

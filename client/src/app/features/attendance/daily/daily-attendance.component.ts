@@ -2,10 +2,15 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
+  Injector,
   OnInit,
+  afterNextRender,
   computed,
+  effect,
   inject,
+  runInInjectionContext,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -22,6 +27,7 @@ import { TableModule } from 'primeng/table';
 import { MessageService } from 'primeng/api';
 import { SkeletonModule } from 'primeng/skeleton';
 import { Toast } from 'primeng/toast';
+import { TooltipModule } from 'primeng/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { BeltLadderService } from '../../../core/services/belt-ladder.service';
 import { RuntimeService } from '../../../core/services/runtime.service';
@@ -60,6 +66,11 @@ import {
 } from '../../../shared/utils/athlete-sort';
 import { pickDefaultClass } from './class-pick';
 import { MissingRegularsComponent } from './missing-regulars/missing-regulars.component';
+import { NewPersonSheetComponent } from '../../athletes/new-person/new-person-sheet.component';
+import { MatMoney } from './pay/mat-money';
+import { PayChip } from './pay/pay-chip';
+import { PayChipComponent } from './pay/pay-chip.component';
+import { PayRecorded, PaySheetComponent } from './pay/pay-sheet.component';
 
 interface SelectOption<T extends string> {
   label: string;
@@ -130,8 +141,12 @@ function toLocalDateString(d: Date): string {
     BeltSortButtonComponent,
     LessonSheetComponent,
     MissingRegularsComponent,
+    PayChipComponent,
+    PaySheetComponent,
+    NewPersonSheetComponent,
+    TooltipModule,
   ],
-  providers: [MessageService],
+  providers: [MessageService, MatMoney],
   templateUrl: './daily-attendance.component.html',
   styleUrl: './daily-attendance.component.scss',
 })
@@ -153,6 +168,30 @@ export class DailyAttendanceComponent implements OnInit {
    * so the success toast, which would stack over the rows, stays on the PC.
    */
   protected readonly onThePhone = computed(() => this.runtime.profile() === 'mobile');
+
+  /**
+   * The money at the mat (#2036, PRD § 6.1): a chip on each phone row says
+   * what pays for the month, and a month owed opens the payment sheet. Only
+   * on the phone, and only today: the chip is about who is standing there.
+   */
+  protected readonly money = inject(MatMoney);
+  private readonly showsMoney = computed(
+    () => this.onThePhone() && this.selectedDateIso() === toLocalDateString(new Date()),
+  );
+  /** The sheet's athlete and the chip's month; `null` while it is closed. */
+  protected readonly paying = signal<{ athlete: Athlete; month: string } | null>(null);
+  /** What was typed for someone new (#1939); `null` keeps their sheet shut. */
+  protected readonly newPerson = signal<string | null>(null);
+  /** Rows that held a carnet on this screen, though a spent one shows none now. */
+  private readonly carnetHolders = new Set<number>();
+  /** Who opened the sheet for someone new: the keyboard goes back there. */
+  private newPersonOpener: HTMLElement | null = null;
+  /** Set once someone was added: their row takes the keyboard when listed. */
+  private addedId: number | null = null;
+  private readonly injector = inject(Injector);
+  /** Whose row opened the last sheet: the keyboard goes back there. */
+  private paidFrom: number | null = null;
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   /**
    * The date format for every picker on this component (#1498).
@@ -463,6 +502,11 @@ export class DailyAttendanceComponent implements OnInit {
         takeUntilDestroyed(),
       )
       .subscribe((q) => this.applySearch(q));
+
+    // The runtime answers after the first render, so the phone is known late.
+    effect(() => {
+      if (this.onThePhone()) untracked(() => this.money.load());
+    });
   }
 
   // Clear any pending undo toast before the next add to avoid stacked Undo
@@ -737,7 +781,10 @@ export class DailyAttendanceComponent implements OnInit {
    * an undo of a previous unmark (PRD § P0.3: "No new toast is emitted
    * for the undo itself").
    */
-  private mark(athlete: Markable, options: { silent?: boolean } = {}): void {
+  private mark(
+    athlete: Markable,
+    options: { silent?: boolean; settled?: (ok: boolean) => void } = {},
+  ): void {
     const date = toLocalDateString(this.selectedDate());
     this.optimisticAdd(athlete.id, -1);
     this.markInflight(athlete.id, true);
@@ -767,10 +814,16 @@ export class DailyAttendanceComponent implements OnInit {
             }
           }
           this.markInflight(athlete.id, false);
+          this.refreshCarnet(athlete.id);
+          options.settled?.(true);
         },
         error: () => {
           this.optimisticRemove(athlete.id);
           this.markInflight(athlete.id, false);
+          if (options.settled) {
+            options.settled(false);
+            return;
+          }
           this.toastError(
             this.translate.instant('attendance.daily.toast.markError', {
               name: athlete.first_name,
@@ -800,6 +853,7 @@ export class DailyAttendanceComponent implements OnInit {
           );
         }
         this.markInflight(athlete.id, false);
+        this.refreshCarnet(athlete.id);
       },
       error: () => {
         this.optimisticAdd(athlete.id, recordId);
@@ -1143,6 +1197,7 @@ export class DailyAttendanceComponent implements OnInit {
           const created = records.filter((r) => ids.includes(r.athlete_id));
           for (const r of created) this.optimisticAdd(r.athlete_id, r.id);
           for (const id of ids) this.markInflight(id, false);
+          for (const r of created) this.refreshCarnet(r.athlete_id);
           this.toastUndo(this.carriedMessage(created, offer.time), () =>
             this.takeBack(created, roomKey),
           );
@@ -1215,6 +1270,7 @@ export class DailyAttendanceComponent implements OnInit {
     forkJoin(records.map((r) => this.attendanceService.delete(r.id))).subscribe({
       next: () => {
         if (sameRoom) for (const r of records) this.markInflight(r.athlete_id, false);
+        for (const r of records) this.refreshCarnet(r.athlete_id);
       },
       error: () => {
         if (sameRoom) for (const r of records) this.markInflight(r.athlete_id, false);
@@ -1395,6 +1451,181 @@ export class DailyAttendanceComponent implements OnInit {
       next.delete(athleteId);
     }
     this.inflight.set(next);
+  }
+
+  /**
+   * A presence spends a carnet entry on the server, and taking it back gives
+   * the entry back (`ReconcileCarnetEntriesAction`): the phone's chip reads
+   * the athlete again so «Carnet · 3» follows (#2150). Only where a chip shows
+   * and a carnet is in play: nobody else's row has a balance to move.
+   */
+  private refreshCarnet(athleteId: number): void {
+    if (!this.showsMoney()) return;
+    const athlete = this.athletes().find((a) => a.id === athleteId);
+    if (!athlete) return;
+    const holder =
+      athlete.active_carnet != null ||
+      athlete.payment_coverage === 'carnet' ||
+      // The last entry spent leaves no carnet on the row: its undo still
+      // gives one back, so the athlete is read again then too.
+      this.carnetHolders.has(athleteId);
+    if (!holder) return;
+    this.carnetHolders.add(athleteId);
+    // A failed read leaves the old balance: the next load corrects it.
+    this.athleteService.get(athleteId).subscribe({
+      next: (fresh) =>
+        this.athletes.update((rows) =>
+          rows.map((row) =>
+            row.id === athleteId
+              ? {
+                  ...row,
+                  active_carnet: fresh.active_carnet,
+                  payment_coverage: fresh.payment_coverage,
+                }
+              : row,
+          ),
+        ),
+      error: () => undefined,
+    });
+  }
+
+  /** The payment chip for one phone row, or `null` when it shows none. */
+  protected payChip(athlete: Athlete): PayChip | null {
+    return this.showsMoney() ? this.money.chipFor(athlete) : null;
+  }
+
+  /** Someone new at the door (#1939): their sheet, with what was typed. */
+  protected openNewPerson(typed: string): void {
+    const active = document.activeElement;
+    this.newPersonOpener = active instanceof HTMLElement ? active : null;
+    this.addedId = null;
+    this.newPerson.set(typed);
+  }
+
+  /**
+   * Added: the search shows them alone, marked present in the class on
+   * screen, and the toast links to the rest of their record. A mark that
+   * fails leaves them added, and the toast says which half went through.
+   */
+  protected onPersonAdded(athlete: Athlete): void {
+    this.newPerson.set(null);
+    this.addedId = athlete.id;
+    const name = `${athlete.first_name} ${athlete.last_name}`;
+    // Alone on the list: a belt filter left on would hide them.
+    this.selectedBelt.set('');
+    this.applySearch(name, () => this.focusAdded());
+    this.mark(athlete, {
+      silent: true,
+      settled: (ok) => {
+        this.messageService.clear();
+        this.messageService.add({
+          severity: ok ? 'success' : 'warn',
+          summary: this.translate.instant(
+            ok ? 'attendance.daily.newPerson.added' : 'attendance.daily.newPerson.addedNotMarked',
+            { name },
+          ),
+          data: { record: ['/dashboard/athletes', athlete.id, 'edit'] },
+          life: 6000,
+        });
+      },
+    });
+  }
+
+  /**
+   * Their sheet closed with the keyboard inside it. Cancelled: back to what
+   * opened it. Added: nothing yet, because the row is not listed until the
+   * search answers (`focusAdded`); the search box would raise the phone's
+   * keyboard over the register.
+   */
+  protected returnFocusFromNewPerson(): void {
+    if (this.addedId !== null || !this.keyboardFree()) return;
+    (this.newPersonOpener?.isConnected
+      ? this.newPersonOpener
+      : this.searchInput()?.nativeElement
+    )?.focus();
+  }
+
+  /** The new person's row, once the search lists it: the phone's card or the PC's row. */
+  private focusAdded(): void {
+    const id = this.addedId;
+    if (id === null) return;
+    runInInjectionContext(this.injector, () =>
+      afterNextRender(() => {
+        if (!this.keyboardFree()) return;
+        Array.from(
+          this.host.nativeElement.querySelectorAll<HTMLElement>(
+            `[data-cy="attendance-card-${id}"], [data-cy="attendance-row-${id}"]`,
+          ),
+        )
+          .find((el) => el.offsetParent !== null)
+          ?.focus();
+      }),
+    );
+  }
+
+  /** Nobody else has the keyboard: it is on the page, or in the sheet that went. */
+  private keyboardFree(): boolean {
+    const active = document.activeElement;
+    return (
+      active === null ||
+      active === document.body ||
+      (active instanceof HTMLElement && active.closest('.new-person-dialog') !== null)
+    );
+  }
+
+  protected openPay(athlete: Athlete, chip: PayChip): void {
+    if (chip.kind !== 'due') return;
+    this.paidFrom = athlete.id;
+    this.paying.set({ athlete, month: chip.month });
+  }
+
+  /**
+   * The sheet closed with the keyboard inside it (Escape, ✕, a payment):
+   * hand it back to the row rather than to `<body>` at the top of the page,
+   * as the lesson sheet does (#2001). The chip when it is still there; after
+   * a payment it may be a label, and the row's toggle takes it.
+   */
+  protected returnFocusFromPay(): void {
+    const id = this.paidFrom;
+    const active = document.activeElement;
+    const inside = active instanceof HTMLElement && active.closest('.pay-sheet-dialog') !== null;
+    if (id === null || (active !== null && active !== document.body && !inside)) return;
+    const root = this.host.nativeElement;
+    const target =
+      root.querySelector<HTMLElement>(`[data-cy="attendance-pay-${id}"] button`) ??
+      root.querySelector<HTMLElement>(`[data-cy="attendance-card-${id}"]`);
+    target?.focus();
+  }
+
+  protected closePay(): void {
+    this.paying.set(null);
+  }
+
+  /**
+   * Recorded: the sheet closes, the chip moves on, and the toast can take it
+   * back. Not one the server already held (a payment from the PC, arrived in
+   * a sync): undoing that would delete a payment this screen never made.
+   */
+  protected onPaid({ athlete, payment, created }: PayRecorded): void {
+    this.paying.set(null);
+    navigator.vibrate?.(15);
+    const name = `${athlete.first_name} ${athlete.last_name}`;
+    if (!created) {
+      this.messageService.clear();
+      this.messageService.add({
+        severity: 'info',
+        summary: this.translate.instant('attendance.daily.pay.toast.already', { name }),
+        life: 4000,
+      });
+      return;
+    }
+    this.toastUndo(this.translate.instant('attendance.daily.pay.toast.recorded', { name }), () =>
+      this.money.undo(athlete, payment).subscribe({
+        next: () => this.messageService.clear(),
+        error: () =>
+          this.toastError(this.translate.instant('attendance.daily.pay.toast.undoError')),
+      }),
+    );
   }
 
   private toastUndo(summary: string, undo: () => void): void {

@@ -13,6 +13,8 @@ export interface ArrearsRow {
   readonly athlete: AthleteIdentity;
   readonly months_behind: number;
   readonly first_unpaid: string; // 'YYYY-MM'
+  /** Every unpaid month, oldest first (#2132). */
+  readonly unpaid_months: readonly string[];
   readonly owed_cents: number;
 }
 

@@ -66,7 +66,7 @@ it('keeps the first date when the same month is posted twice', function (): void
     // (athlete, year, month), and the date lives in the values, not the key.
     $second = $this->actingAs($this->user)
         ->postJson($url, ['year' => 2026, 'month' => 9, 'paid_at' => '2026-10-07'])
-        ->assertCreated()
+        ->assertOk()
         ->assertJsonPath('data.paid_at', '2026-10-03T00:00:00+00:00')
         ->json('data.id');
 

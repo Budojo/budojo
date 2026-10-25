@@ -43,6 +43,8 @@ A drop-in override layer for the `@primeuix/themes/material` preset that deliver
 | `--budojo-chrome-hover` | `--p-surface-800` | `--p-surface-200` | Hover for controls inside it |
 | `--budojo-titlebar-background` | `#fafafa` | `#151517` | The Electron drag strip. Pinned to `titleBarOverlay.color` in `desktop/src/titlebar-theme.ts` by a spec — native paint cannot read CSS (#1793) |
 | `--budojo-skeleton-background` | `--p-surface-100` | `--p-surface-200` | A placeholder needs a step against the card it covers, and in dark `surface-100` **is** the card (#1793) |
+| `--budojo-button-secondary-background` | `--p-surface-100` | `--p-surface-200` | A secondary button's fill: the same step, for the same reason (#2138). Not the toolbar controls', which sit on the page and tint "on" over `surface-100` |
+| `--budojo-button-secondary-hover-background` | `--p-surface-200` | `--p-surface-300` | Its hover, one step further |
 | `--budojo-belt-edge` | `rgb(0 0 0 / 12%)` | `rgb(255 255 255 / 22%)` | Ground contact around a belt spine and a belt pill; the belt itself never moves (#1793, #1801) |
 
 **The accent means action (#1852).** Indigo is the one colour that tells the owner "you can press this" or "this one is on". It keeps that meaning only while nothing on a working screen competes with it. Sanctioned uses:
@@ -450,13 +452,13 @@ this section):
 Each spec: **what** (1–2 sentences of visual intent), **override keys**, **optional snippet**. No structure changes. All overrides use canonical PrimeNG CSS var names — verified against `@primeuix/themes/material` source.
 
 ### p-button
-Flat, filled, 12px radius. Primary = accent fill. Secondary = surface-100 fill + ink text. Ghost (`text` severity) = accent text, no bg. No elevation, ever. Press = opacity 0.88, no shrink.
+Flat, filled, 12px radius. Primary = accent fill. Secondary = `--budojo-button-secondary-background` fill + ink text: surface-100 in light, surface-200 in dark, where surface-100 is the card itself and the button vanished into it (#2138). Ghost (`text` severity) = accent text, no bg. No elevation, ever. Press = opacity 0.88, no shrink.
 
 ```
 --p-button-primary-background: var(--p-primary-color);
 --p-button-primary-hover-background: var(--p-primary-hover-color);
 --p-button-primary-active-background: var(--p-primary-active-color);
---p-button-secondary-background: var(--p-surface-100);
+--p-button-secondary-background: var(--budojo-button-secondary-background);
 --p-button-secondary-color: var(--p-text-color);
 --p-button-text-primary-color: var(--p-primary-color);
 --p-button-border-radius: 12px;

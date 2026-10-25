@@ -89,15 +89,16 @@
 
 // ---- secondary = filled neutral (no border) ----
 // PrimeNG hook: [outlined]="true" OR [severity]="secondary"
-// We collapse both into the same visual: filled surface-100, no border.
+// We collapse both into the same visual: a filled step against the card
+// (`--budojo-button-secondary-background`, #2138), no border.
 .p-button-outlined,
 .p-button.p-button-secondary:not(.p-button-text) {
-  background: var(--p-surface-100);
+  background: var(--budojo-button-secondary-background);
   color: var(--p-text-color);
   border: 1px solid transparent;
 
   &:hover:not(:disabled) {
-    background: var(--p-surface-200);
+    background: var(--budojo-button-secondary-hover-background);
   }
 }
 

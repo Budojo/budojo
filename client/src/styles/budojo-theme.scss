@@ -232,6 +232,12 @@
   // looked frozen rather than busy. A token, so each theme picks its own step.
   --budojo-skeleton-background: var(--p-surface-100);
 
+  // A secondary button's fill, a step against the card it sits on (#2138).
+  // The same trap as the skeleton: in dark `--p-surface-100` IS the card, and
+  // the button read as two words beside a link.
+  --budojo-button-secondary-background: var(--p-surface-100);
+  --budojo-button-secondary-hover-background: var(--p-surface-200);
+
   --budojo-motion-fast: 160ms;
   --budojo-motion-base: 240ms;
   --budojo-motion-slow: 360ms;
@@ -463,6 +469,8 @@
   // exactly the colour of the card it was loading on. Zero delta, no shimmer,
   // an app that reads as frozen.
   --budojo-skeleton-background: var(--p-surface-200);
+  --budojo-button-secondary-background: var(--p-surface-200);
+  --budojo-button-secondary-hover-background: var(--p-surface-300);
 
   // The sheet's top edge. A black drop shadow does nothing against a near-
   // black page — it measured 1.16:1, so on mobile the bottom sheet had no top

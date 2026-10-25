@@ -92,7 +92,13 @@ class AthletePaymentController extends Controller
             method: $request->enum('payment_method', PaymentMethod::class),
         );
 
-        return response()->json(['data' => new AthletePaymentResource($payment)], 201);
+        // 201 for a row this request made, 200 for the one already there
+        // (#2036): an idempotent re-post created nothing, and a client that
+        // offers to undo what it just recorded must not delete that row.
+        return response()->json(
+            ['data' => new AthletePaymentResource($payment)],
+            $payment->wasRecentlyCreated ? 201 : 200,
+        );
     }
 
     public function destroy(Request $request, Athlete $athlete, int $year, int $month): JsonResponse
