@@ -1,5 +1,6 @@
 import { MOCK_ACADEMY } from '../support/fixtures';
 import { MOBILE_VIEWPORTS } from '../support/viewports';
+import { expectNoSidewaysScroll } from '../support/no-sideways-scroll';
 
 // Mobile-viewport coverage for the Profile page (#240). The "Your data"
 // export card had a vertical-stacking regression on Pixel 8 Pro that
@@ -72,10 +73,7 @@ MOBILE_VIEWPORTS.forEach(({ name, width, height }) => {
       // breaks out of the viewport. text-overflow doesn't change
       // textContent, so the visibility check above isn't a guard
       // against a hidden overflow.
-      cy.document().then((doc) => {
-        const root = doc.documentElement;
-        expect(root.scrollWidth, 'documentElement.scrollWidth').to.be.lte(root.clientWidth);
-      });
+      expectNoSidewaysScroll();
     });
   });
 });

@@ -1,5 +1,6 @@
 import { MOCK_ACADEMY } from '../support/fixtures';
 import { MOBILE_VIEWPORTS } from '../support/viewports';
+import { expectNoSidewaysScroll } from '../support/no-sideways-scroll';
 
 // Mobile-viewport coverage for the daily Attendance page (#240). The
 // most "tap-heavy" page in the app — the instructor uses it on the
@@ -81,10 +82,7 @@ MOBILE_VIEWPORTS.forEach(({ name, width, height }) => {
       cy.get('[data-cy="attendance-mobile-list"]').should('be.visible');
       cy.get('[data-cy="attendance-card-1"]').should('be.visible').and('contain.text', 'Mario');
 
-      cy.document().then((doc) => {
-        const root = doc.documentElement;
-        expect(root.scrollWidth, 'documentElement.scrollWidth').to.be.lte(root.clientWidth);
-      });
+      expectNoSidewaysScroll();
     });
   });
 });
@@ -152,10 +150,7 @@ MOBILE_VIEWPORTS.forEach(({ name, width, height }) => {
       cy.get('[data-cy="missing-contact-3-whatsapp"]').should('be.visible');
       cy.get('[data-cy="missing-contact-3-call"]').should('be.visible');
 
-      cy.document().then((doc) => {
-        const root = doc.documentElement;
-        expect(root.scrollWidth, 'documentElement.scrollWidth').to.be.lte(root.clientWidth);
-      });
+      expectNoSidewaysScroll();
     });
   });
 });

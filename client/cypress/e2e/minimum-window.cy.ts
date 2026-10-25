@@ -1,5 +1,6 @@
 import { MOCK_ACADEMY } from '../support/fixtures';
 import { VIEWPORT_MIN_WINDOW } from '../support/viewports';
+import { expectNoSidewaysScroll } from '../support/no-sideways-scroll';
 
 /**
  * The desktop window can be 960 × 600 — `desktop/src/main.ts` says so
@@ -64,9 +65,7 @@ describe('At the smallest window the desktop can have (#1632)', () => {
       expect($input[0].getBoundingClientRect().width).to.be.greaterThan(240);
     });
 
-    cy.document().then((doc) => {
-      expect(doc.documentElement.scrollWidth).to.be.at.most(doc.documentElement.clientWidth);
-    });
+    expectNoSidewaysScroll();
   });
 
   it('keeps the check-in title on its own line, with the count under it', () => {
@@ -93,8 +92,6 @@ describe('At the smallest window the desktop can have (#1632)', () => {
       });
     });
 
-    cy.document().then((doc) => {
-      expect(doc.documentElement.scrollWidth).to.be.at.most(doc.documentElement.clientWidth);
-    });
+    expectNoSidewaysScroll();
   });
 });

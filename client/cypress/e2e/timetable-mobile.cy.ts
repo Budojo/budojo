@@ -1,4 +1,5 @@
 import { MOBILE_VIEWPORTS } from '../support/viewports';
+import { expectNoSidewaysScroll } from '../support/no-sideways-scroll';
 
 /**
  * The weekly timetable on a phone (#1562) — layout only. The business flow
@@ -60,9 +61,7 @@ describe('Weekly timetable — mobile layout', () => {
         });
 
         // The one assertion that means "nothing broke out of the viewport".
-        cy.document().then((doc) => {
-          expect(doc.documentElement.scrollWidth).to.be.lte(doc.documentElement.clientWidth);
-        });
+        expectNoSidewaysScroll();
       });
 
       it('keeps a class a thumb-sized target', () => {

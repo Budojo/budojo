@@ -1,5 +1,6 @@
 import { MOCK_ACADEMY } from '../support/fixtures';
 import { MOBILE_VIEWPORTS } from '../support/viewports';
+import { expectNoSidewaysScroll } from '../support/no-sideways-scroll';
 
 // Mobile-viewport smoke tests for the athletes list — the SPA's most
 // trafficked screen for the instructor on the mat (#240). Existing
@@ -88,10 +89,7 @@ MOBILE_VIEWPORTS.forEach(({ name, width, height }) => {
       // a non-wrapping label, etc.) and the user has to scroll sideways
       // to see it. That is the kind of mobile layout bug we want CI to
       // catch.
-      cy.document().then((doc) => {
-        const root = doc.documentElement;
-        expect(root.scrollWidth, 'document.scrollWidth').to.be.lte(root.clientWidth);
-      });
+      expectNoSidewaysScroll();
     });
 
     it('renders the athlete rows + the list shows both Mario and Luigi', () => {
@@ -122,10 +120,7 @@ MOBILE_VIEWPORTS.forEach(({ name, width, height }) => {
         .parents('.athlete-card__badges')
         .should('have.length', 1);
 
-      cy.document().then((doc) => {
-        const root = doc.documentElement;
-        expect(root.scrollWidth, 'document.scrollWidth').to.be.lte(root.clientWidth);
-      });
+      expectNoSidewaysScroll();
     });
 
     it('opens the payment menu instead of navigating when the chip is tapped (#1444)', () => {
@@ -154,10 +149,7 @@ MOBILE_VIEWPORTS.forEach(({ name, width, height }) => {
       cy.wait(['@academy', '@athletes']);
 
       cy.get('[data-cy="athlete-card-1"] [data-cy="belt-spine"]').should('be.visible');
-      cy.document().then((doc) => {
-        const root = doc.documentElement;
-        expect(root.scrollWidth, 'document.scrollWidth').to.be.lte(root.clientWidth);
-      });
+      expectNoSidewaysScroll();
     });
   });
 });

@@ -1,5 +1,6 @@
 import { MOCK_ACADEMY } from '../support/fixtures';
 import { VIEWPORT_PHONE } from '../support/viewports';
+import { expectNoSidewaysScroll } from '../support/no-sideways-scroll';
 
 /**
  * The fingerprint lock (#2159, PRD § 6.1): on opening, and on coming back
@@ -82,9 +83,7 @@ describe('The fingerprint lock (#2159)', () => {
     cy.get('[data-cy="app-lock"]').should('be.visible').and('contain.text', 'Budojo is locked');
     // The gym is under the cover, hidden from the eye and the keyboard alike.
     cy.get('[data-cy="athlete-card-menu-1"]').should('not.be.visible');
-    cy.document().then((doc) => {
-      expect(doc.documentElement.scrollWidth).to.be.at.most(doc.documentElement.clientWidth);
-    });
+    expectNoSidewaysScroll();
     // Disabled while the prompt is up; the keyboard starts on it once it closes.
     cy.get('[data-cy="app-lock-unlock"] button')
       .should('not.be.disabled')

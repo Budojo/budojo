@@ -1,6 +1,7 @@
 import { MOCK_ACADEMY } from '../support/fixtures';
 import { MOBILE_VIEWPORTS } from '../support/viewports';
 import { stubToday } from '../support/today';
+import { expectNoSidewaysScroll } from '../support/no-sideways-scroll';
 
 /**
  * "What's new" page (#254) — user-facing changelog accessible from
@@ -140,10 +141,9 @@ MOBILE_VIEWPORTS.forEach(({ name, width, height }) => {
       // uses — catches a release card or a long bullet that breaks
       // out of the viewport. Text-overflow doesn't change textContent
       // so this is the only honest check.
-      cy.document().then((doc) => {
-        const root = doc.documentElement;
-        expect(root.scrollWidth, 'documentElement.scrollWidth').to.be.lte(root.clientWidth);
-      });
+      // Inside the dashboard: its column is measured too, once the page is in it.
+      cy.get('.whats-new__title').should('be.visible');
+      expectNoSidewaysScroll();
     });
   });
 });

@@ -1,5 +1,6 @@
 import { MOCK_ACADEMY } from '../support/fixtures';
 import { MOBILE_VIEWPORTS } from '../support/viewports';
+import { expectNoSidewaysScroll } from '../support/no-sideways-scroll';
 
 // Mobile-viewport coverage for the athlete create/edit form (#240).
 // The form is field-heavy (name, email, phone, address, belt, status,
@@ -22,10 +23,7 @@ MOBILE_VIEWPORTS.forEach(({ name, width, height }) => {
     it('renders the form without horizontal overflow', () => {
       cy.get('[data-cy="athlete-form"]').should('be.visible');
 
-      cy.document().then((doc) => {
-        const root = doc.documentElement;
-        expect(root.scrollWidth, 'documentElement.scrollWidth').to.be.lte(root.clientWidth);
-      });
+      expectNoSidewaysScroll();
     });
 
     it('lets the width scale collapse to the phone column (#1485)', () => {

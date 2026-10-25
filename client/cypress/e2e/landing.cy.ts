@@ -1,3 +1,5 @@
+import { expectNoSidewaysScroll } from '../support/no-sideways-scroll';
+
 /**
  * The app's first screen at `/` (#330, rewritten in #1497).
  *
@@ -132,9 +134,6 @@ describe('First screen (#1497)', () => {
     cy.viewport(390, 844);
     cy.get('.landing__headline').should('be.visible');
 
-    cy.document().then((doc) => {
-      const root = doc.documentElement;
-      expect(root.scrollWidth, 'documentElement.scrollWidth').to.be.lte(root.clientWidth);
-    });
+    expectNoSidewaysScroll('public');
   });
 });
