@@ -86,7 +86,7 @@ Calling PHP in-process from this shell is the way out if Android ever stops the 
   - Both outlive a reload of the page; a sync pull reloads it.
   - `away` is `SystemClock.elapsedRealtime()`, counted from `onStop` to `onStart`. Setting the phone's clock back does not move it, and it keeps counting while the phone sleeps.
   - An unlock sets `away` back to 0. Before Android 11 the PIN is its own screen, and the time spent on it is not time away.
-  - `closed` is set by a prompt closed (codes 10, 13) with the app on the screen, and cleared by leaving it (`onStop`) or by an unlock. Since Android 10 a prompt that goes away with the app answers 10 as well; with the activity's state saved, that one is not the owner's.
+  - `closed` is set by a prompt closed (codes 10, 13) with the app on the screen, and cleared by leaving it (`onStop`), by a new prompt, or by an unlock. Since Android 10 a prompt that goes away with the app answers 10 as well; with the activity's state saved, that one is not the owner's.
 - **When to ask is the page's rule** (`client/src/app/core/mobile/app-lock.service.ts`):
   - it checks on opening and on every return, and never asks while the app is in the background;
   - five minutes away locks it;

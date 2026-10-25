@@ -131,6 +131,9 @@ public class AppLockPlugin extends Plugin {
                         // up and says so itself.
                     }
                 );
+                // A new prompt is up: whatever the owner closed before is behind it,
+                // and a page reloaded now must take this one's answer.
+                closedByOwner = false;
                 prompt.authenticate(
                     new BiometricPrompt.PromptInfo.Builder()
                         .setTitle(title)
