@@ -132,6 +132,9 @@ Format: `→` separates the symptom from the action.
 
 ## Tests — Cypress
 
+- → **`cypress-io/github-action@v6` fails every shard in ~20 ms with «Socket closed before the connection was established»** once the runner runs actions on Node 24 (runner 2.338.0) (#2147, #2148). No spec runs, so nothing in the log points at the code. → Use `cypress-io/github-action@v7`.
+- → **`ng serve` with hot reload in CI can fail a spec with «Failed to fetch dynamically imported module …/@ng/component»** (#2152, #2153): a hot update lands mid-spec and the lazy chunk it asks for is gone. → Serve with `--no-hmr` in CI; a local `make e2e` keeps HMR.
+- → **`make e2e` and CI never run the same browser.** Local runs `--browser electron` inside `cypress/included:15.21.1`; CI runs the runner's own Chrome (Chrome 154 on 7 Oct 2026, 155 on 25 Oct, per each run's `Browser:` line). A spec green here and red there may be the browser, not the code: on 25 Oct it was only a lead for #2154 and #2155, not a cause (`door.cy.ts` stayed green on Chrome 155 locally). → Read the failed frame first (the entry below), then compare the `Browser:` lines of the two runs.
 - → **`cy.clock(now, ['Date'])` stops RxJS's `debounceTime`** (#2122). The async scheduler measures the pause with `Date.now()`, so with the date frozen the pause never ends, and a debounced search never fires: the spec failed in CI, though it had passed locally. Follow a debounced action with `cy.tick(<pause + margin>)`, and wait for the page to be ready before typing.
 - **Local E2E logged out halfway, and CI never did.** With the `api` container up, a call a spec forgot to stub reaches the real server and gets a 401, and the auth interceptor sends the app to `/auth/login` mid-test. In CI there is no backend, so the same call just fails quietly. It cost hours blamed on "stale chunks" (#2020). → `make e2e` now stops the API for the run and starts it again after, as the screenshot harness always did. If you run Cypress another way, stop the API first.
 - **CI kept the frame; read it before re-running** (#2005). The artifact `cypress-screenshots-shard-N` on the failed run is the only record of what the page held. Three "flakes" this week were real causes, each visible in the frame:
@@ -372,6 +375,7 @@ Format: `→` separates the symptom from the action.
 ### commitlint
 
 - Commit subject with uppercase (`HTTP`, `POST`, `UI`, `ATHLETES_EMPTY`, `beforeEach`) → `subject-case: lower-case` fails. **Includes camelCase code identifiers** — use prose, not identifiers, in subjects.
+- → **commitlint rejects an upper-case word anywhere in the subject, not only an acronym or identifier**: «subject must be lower-case» fired on a plain «Italian» and on «Drive». Body lines over 100 characters fail too (`body-max-line-length`): `git log --format=%b origin/develop..HEAD | awk 'length > 100'` finds them. For a worktree, which skips the hook, see the entry below.
 - Multi-line subject → commitlint treats first line as subject. Keep it one line, detail in the body.
 - → **A commit made in a `git worktree` skips every hook.** The hooks come from the root `node_modules` (`core.hooksPath` = `.husky/_`), and a worktree has none, so husky prints `commitlint not installed` and lets the commit through: no lower-case check, no 100-character header limit. CI's «📝 Commits & PR body» is then the first to see it, and a fix means rewriting a pushed commit. A 101-character subject reached #2095 that way. → From a worktree, keep the subject under 100 characters by eye, or check before pushing: `git log origin/develop.. --format=%s | awk 'length > 100'`.
 - → **Stacked PRs and squash merges.** When PR B is built on PR A's branch and A is squash-merged, B's branch still carries A's original commits while `develop` carries one squash commit of the same content, so merging `develop` into B conflicts on every hunk both touched. B already contains A's final state, so resolve each conflict with B's side (`git checkout --ours`) and confirm `git diff origin/develop --stat` lists only B's own files. GitHub retargets B to `develop` by itself when A's branch is deleted on merge. Four PRs of #1799 went through this cleanly.
@@ -404,8 +408,8 @@ Format: `→` separates the symptom from the action.
 
 ## How to use this file
 
-1. **Before every `git push`**, skim the categories relevant to your diff. A 30-second read vs. a 5-minute Copilot round-trip + fix.
-2. **When Copilot flags a non-typo mistake in review**, add the `→` entry to the correct category in the SAME PR that fixes it. The file grows naturally.
+1. **Before every `git push`**, skim the categories relevant to your diff. A 30-second read vs. a 5-minute review round-trip + fix.
+2. **When a review finds a non-typo mistake** (`/review-pr`'s pr-reviewer agent is the required review since #2016/#2020; Copilot's threads, when it posts, count the same), add the `→` entry to the correct category in the SAME PR that fixes it. The file grows naturally.
 3. **Never delete entries.** Even if the framework fixes an issue upstream, the pattern-recognition is still useful. Just annotate with `~~strikethrough~~` + reason.
 4. **Keep it scannable.** One line per entry. If the explanation needs more, link to a doc or a PR discussion.
 
