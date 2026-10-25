@@ -4585,9 +4585,11 @@ paths:
           with the phone, no opt-out yet;
         - `missed-streak:<athlete>:<last session>`: an athlete who missed the
           last three scheduled sessions, today at 09:30. It cannot be told
-          ahead: only a check-in says whether they came. Keyed by the absence
-          (the last session before today), so it is told once for each, and a
-          check-in today does not tell it again.
+          ahead: only a check-in says whether they came. Keyed by the absence:
+          the athlete's last check-in on a scheduled day before today,
+          closures left out, or the day they joined when there is none. So it
+          is told once for each absence, and a check-in today, or on a day
+          with no session, does not tell it again.
 
         Each `key` names one occurrence: the phone keeps one notification per
         key, replaces it when its words change and cancels it when the key is
