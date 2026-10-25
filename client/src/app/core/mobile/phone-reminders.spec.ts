@@ -4,8 +4,9 @@ import { DueReminder, planReminders, reminderId, ToldLedger } from './phone-remi
 /**
  * The diff between the reminders handed to Android and the reminders due
  * (#2047): what to cancel, what to schedule, and which keys have been told.
- * What Android keeps is the plugin's: a record per notification until it is
- * swiped away, tapped or cancelled, and the tray, which a restart empties.
+ * What Android keeps is the plugin's: a record per notification scheduled for
+ * later until it is swiped away or tapped, and the tray, which a restart
+ * empties.
  */
 describe('planReminders', () => {
   const NOW = Date.parse('2026-05-04T10:00:00+02:00');

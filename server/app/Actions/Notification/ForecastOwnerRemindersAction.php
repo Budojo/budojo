@@ -17,6 +17,7 @@ use App\Support\NotificationPreferences;
 use App\Support\NotificationText;
 use App\Support\OperatorDay;
 use App\Support\ReminderSubjects;
+use App\Support\ScheduledDays;
 use App\Support\UpcomingReminder;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Collection;
@@ -154,7 +155,7 @@ final class ForecastOwnerRemindersAction
         foreach (ReminderSubjects::missedTheStreak($academy, $streakDates) as $athlete) {
             $reminders[] = $this->remind(
                 $owner,
-                \sprintf('missed-streak:%d:%s', $athlete->id, $this->lastSession($athlete, $today)),
+                \sprintf('missed-streak:%d:%s', $athlete->id, $this->lastSession($academy, $athlete, $today)),
                 self::at($today, '09:30'),
                 new OwnerAthleteMissedStreakNotification($athlete, ReminderSubjects::STREAK_LENGTH)->toDatabase($owner),
             );
@@ -164,19 +165,27 @@ final class ForecastOwnerRemindersAction
     }
 
     /**
-     * The day the absence began: the athlete's last session before today, or
-     * the day they joined. Before today, as the streak reads: a check-in this
-     * evening ends the absence tomorrow, and must not tell of it again tonight
-     * under a new key.
+     * The day the absence began: the athlete's last session, or the day they
+     * joined. Read as the streak reads it, on scheduled days before today, so
+     * the key stays the same while the streak holds: a check-in this evening,
+     * or at an open mat on a day off, does not tell of the absence again under
+     * a new key.
      */
-    private function lastSession(Athlete $athlete, CarbonImmutable $today): string
+    private function lastSession(Academy $academy, Athlete $athlete, CarbonImmutable $today): string
     {
-        $last = AttendanceRecord::query()
+        $sessions = AttendanceRecord::query()
             ->where('athlete_id', $athlete->id)
             ->where('attended_on', '<', $today->toDateString())
-            ->max('attended_on');
+            ->orderByDesc('attended_on')
+            ->get(['attended_on']);
+        foreach ($sessions as $session) {
+            $day = $session->attended_on->toImmutable();
+            if (ScheduledDays::isScheduledOn($academy, $day)) {
+                return $day->toDateString();
+            }
+        }
 
-        return \is_string($last) ? substr($last, 0, 10) : $athlete->joined_at->toDateString();
+        return $athlete->joined_at->toDateString();
     }
 
     /**

@@ -273,6 +273,18 @@ it('keeps the absence\'s key when the athlete checks in today', function (): voi
         ->and($before)->toBe(["missed-streak:{$mario->id}:2026-04-24"]);
 });
 
+it('keeps the absence\'s key across a check-in on a day with no session', function (): void {
+    Carbon::setTestNow('2026-05-03 08:00:00');
+    $owner = remindersOwner();
+    $mario = remindersPaidUp(remindersAthlete($owner, 'Mario', 'Neri'));
+    AttendanceRecord::factory()->create(['athlete_id' => $mario->id, 'attended_on' => '2026-04-24']);
+    // Saturday's open mat: the academy trains Mon/Wed/Fri, so the streak,
+    // read on scheduled days, still holds on Sunday.
+    AttendanceRecord::factory()->create(['athlete_id' => $mario->id, 'attended_on' => '2026-05-02']);
+
+    expect(upcomingKeys())->toBe(["missed-streak:{$mario->id}:2026-04-24"]);
+});
+
 it('leaves out what the owner turned off', function (): void {
     $owner = remindersOwner();
     $owner->update(['notification_preferences' => ['unpaid_athletes_digest' => false]]);

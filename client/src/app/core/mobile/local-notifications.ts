@@ -56,8 +56,10 @@ export interface LocalNotificationsPlugin {
   schedule(options: { notifications: LocalNotification[] }): Promise<unknown>;
   cancel(options: { notifications: { id: number }[] }): Promise<void>;
   /**
-   * Every notification the plugin keeps a record of: those still to come, and
-   * those past their hour until they are swiped away, tapped or cancelled.
+   * Every notification the plugin keeps a record of. One scheduled for later
+   * has a record until it is swiped away or tapped, or cancelled before it is
+   * shown; once cancelled past its hour, the record stays, marked cancelled,
+   * until a swipe or the next restart. One shown at once has none.
    * A record past its hour is not proof of a notification shown: Android
    * drops a one-off alarm whose hour passes with the phone off.
    */

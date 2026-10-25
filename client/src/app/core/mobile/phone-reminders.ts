@@ -14,7 +14,7 @@ export interface DueReminder {
 
 /** A key handed to Android and not taken back: whether it has been shown, and when it last mattered. */
 export interface Told {
-  /** Seen in the tray, or gone from Android's records without a cancel of ours: swiped away or tapped. */
+  /** Seen in the tray, or its record gone while the ledger held it: swiped away, tapped, or shown at once. */
   shown: boolean;
   /** The last refresh that found it due or kept, in milliseconds. */
   seen: number;
@@ -38,17 +38,18 @@ const FORGET_AFTER_MS = 14 * 86_400_000;
 
 /**
  * The diff between the reminders handed to Android and the reminders due
- * (#2047, PRD § 6.3). Android keeps a record of each notification (`kept`)
- * until it is swiped away, tapped or cancelled, and `delivered` is the tray,
- * which a restart empties. Each key is told once:
+ * (#2047, PRD § 6.3). `kept` is the plugin's records (see `getPending`):
+ * one is gone once its notification is swiped away or tapped, and one shown
+ * at once never had any. `delivered` is the tray, which a restart empties.
+ * Each key is told once:
  * - one still to come is left alone while its words and time stay the same,
  *   replaced when they change, and cancelled once it is no longer due: the
  *   fee got paid on the PC. A cancelled one was never shown, so it is
  *   forgotten, and may come back;
  * - one shown is never taken back nor shown again, even when the next day
  *   dates the same missed streak to its own morning. Shown means in the tray,
- *   seen there by an earlier refresh, or gone from Android's records without
- *   a cancel of ours;
+ *   seen there by an earlier refresh, or with no record left while the ledger
+ *   holds the key: swiped away, tapped, or shown at once;
  * - one past its hour that was never seen shown is shown at once: Android
  *   drops a one-off alarm whose hour passes with the phone off, and never
  *   brings it back. A tray emptied by a restart before any refresh saw it
