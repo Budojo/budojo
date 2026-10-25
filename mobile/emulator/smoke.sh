@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Opens the APK on the booted emulator, the way the owner would, and keeps a
-# photo of every screen it reaches (#2079). The first start unpacks the
-# server and runs the migrations, under ARM translation: minutes, not seconds.
+# photo of every screen it reaches (#2079): the lock (#2159), the door, the
+# sign-up. The first start unpacks the server and runs the migrations, under
+# ARM translation: minutes, not seconds.
 #
 #   smoke.sh <apk> <folder for the photos>
 #
@@ -55,21 +56,42 @@ fail() {
   exit 1
 }
 
+# The fingerprint lock (#2159) asks on opening. This phone gets a PIN, as the
+# owner's has one, and no fingerprint: the prompt is then the PIN alone. The
+# screen stays on, or the PIN would lock the phone itself during the long
+# first start.
+PIN=2159
+"$ADB" shell svc power stayon true
+"$ADB" shell locksettings set-pin "$PIN" > /dev/null || fail "the phone's PIN could not be set"
+
 "$ADB" install -r "$APK" || fail "the APK did not install"
 "$ADB" shell monkey -p "$PACKAGE" -c android.intent.category.LAUNCHER 1 > /dev/null
 sleep 10
 shot "00-starting"
 
-if ! wait_for "Sign in with Google" 600; then
+if ! wait_for "Unlock Budojo" 600; then
   if screen_xml | grep -q "did not start"; then
     fail "Budojo did not start: the screen says why (zz-failed.png)"
   fi
-  fail "the door never showed «Sign in with Google»"
+  fail "the lock never asked «Unlock Budojo» on opening"
 fi
-shot "01-door"
+# Android may keep a PIN screen out of screenshots: this photo can be black.
+shot "01-lock-prompt"
+
+# Closed without the PIN, the app stays covered, with a way to ask again.
+"$ADB" shell input keyevent KEYCODE_BACK
+wait_for "Budojo is locked" 30 || fail "a closed prompt did not leave the lock's cover"
+shot "02-locked"
+tap "Unlock" || fail "no «Unlock» on the lock's cover"
+wait_for "Unlock Budojo" 30 || fail "«Unlock» did not ask again"
+"$ADB" shell input text "$PIN"
+"$ADB" shell input keyevent KEYCODE_ENTER
+
+wait_for "Sign in with Google" 120 || fail "the PIN did not open the door"
+shot "03-door"
 
 tap "Continue without Google" || fail "no «Continue without Google» on the door"
 wait_for "Open your academy account" 120 || fail "«Continue without Google» did not reach the sign-up"
-shot "02-sign-up"
+shot "04-sign-up"
 
-echo "the door and the sign-up showed on the emulator; photos in $SHOTS"
+echo "the lock, the door and the sign-up showed on the emulator; photos in $SHOTS"

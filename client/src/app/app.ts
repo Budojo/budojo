@@ -12,6 +12,7 @@ import { CookieBannerComponent } from './features/cookie-banner/cookie-banner.co
 import { NotificationOnboardingDialogComponent } from './shared/components/notification-onboarding-dialog/notification-onboarding-dialog.component';
 import { PushToastComponent } from './shared/components/push-toast/push-toast.component';
 import { DesktopTitlebarComponent } from './shared/components/desktop-titlebar/desktop-titlebar.component';
+import { AppLockComponent } from './shared/components/app-lock/app-lock.component';
 
 @Component({
   selector: 'app-root',
@@ -22,6 +23,7 @@ import { DesktopTitlebarComponent } from './shared/components/desktop-titlebar/d
     NotificationOnboardingDialogComponent,
     PushToastComponent,
     DesktopTitlebarComponent,
+    AppLockComponent,
   ],
   templateUrl: './app.html',
   styleUrl: './app.scss',
