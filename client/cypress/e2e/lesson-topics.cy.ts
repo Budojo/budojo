@@ -103,6 +103,22 @@ function stub(opts: { lesson?: unknown; recent?: unknown[] } = {}): void {
     statusCode: 200,
     body: { data: [], meta: { occurrences: 0, occurrence_dates: [] } },
   });
+  // The timetable's «send the week» reads the season's calendar (#1995). The
+  // catch-all's `[]` is no calendar: reading its `today` threw on every change
+  // detection of the timetable (#2154).
+  cy.intercept('GET', '/api/v1/stats/syllabus/calendar*', {
+    statusCode: 200,
+    body: {
+      data: {
+        season: { start: '2026-09-01', end: '2027-08-31', label: '2026/27' },
+        kind: null,
+        today: TODAY_ISO,
+        weeks: [],
+        positions: [],
+        lessons: [],
+      },
+    },
+  });
   cy.intercept('GET', '/api/v1/lessons/recent-topics', {
     statusCode: 200,
     body: { data: opts.recent ?? [] },
@@ -125,7 +141,9 @@ describe('Lesson topics — check-in', () => {
       .and('contain.text', 'Nothing tagged yet');
 
     cy.get('[data-cy="attendance-topics"]').click();
-    cy.get('[data-cy="lesson-sheet"]').should('be.visible');
+    // The panel, not the `p-dialog` host: the host holds only fixed boxes, so it
+    // measures 0 x 0, which Cypress on Chrome 155 reads as not visible (#2154).
+    cy.get('[data-cy="lesson-sheet"] [role="dialog"]').should('be.visible');
 
     // Opens on the positions, not on every technique (Hick's law).
     cy.get('[data-cy="lesson-expand-1"]').should('be.visible');
@@ -369,7 +387,7 @@ describe('Lesson topics — planning from the timetable', () => {
     cy.visitAuthenticated('/dashboard/academy/timetable');
     cy.get('[data-cy="timetable-plan-3"]', { timeout: 15000 }).click();
 
-    cy.get('[data-cy="lesson-sheet"]').should('be.visible');
+    cy.get('[data-cy="lesson-sheet"] [role="dialog"]').should('be.visible');
     cy.wait('@lesson').its('request.url').should('contain', `held_on=${expectedIso}`);
     cy.get('[data-cy="lesson-sheet-state"]').should('not.exist');
   });
