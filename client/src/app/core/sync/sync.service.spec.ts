@@ -528,14 +528,12 @@ describe('SyncService', () => {
 
   it('asks again for another folder, which the door may bring without a sign-out (#2041)', async () => {
     await pcPublishes();
-    const stage = vi
-      .spyOn(phone, 'stage')
-      .mockRejectedValue(
-        new HttpErrorResponse({
-          status: 422,
-          error: { code: 'newer', message: 'Update Budojo first.' },
-        }),
-      );
+    const stage = vi.spyOn(phone, 'stage').mockRejectedValue(
+      new HttpErrorResponse({
+        status: 422,
+        error: { code: 'newer', message: 'Update Budojo first.' },
+      }),
+    );
     let current = identity();
     const sync = setUp({ identity: async () => current });
     await sync.syncNow();
