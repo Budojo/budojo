@@ -38,7 +38,7 @@ MOBILE_VIEWPORTS.forEach(({ name, width, height }) => {
       cy.get('input[id="password"]').should('be.visible');
       cy.get('button[type="submit"]').should('be.visible');
 
-      expectNoSidewaysScroll();
+      expectNoSidewaysScroll('public');
     });
   });
 
@@ -58,7 +58,7 @@ MOBILE_VIEWPORTS.forEach(({ name, width, height }) => {
       cy.get('input[id="email"]').should('be.visible');
       cy.get('button[type="submit"]').should('be.visible');
 
-      expectNoSidewaysScroll();
+      expectNoSidewaysScroll('public');
     });
   });
 

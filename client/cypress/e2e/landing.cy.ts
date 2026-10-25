@@ -134,6 +134,6 @@ describe('First screen (#1497)', () => {
     cy.viewport(390, 844);
     cy.get('.landing__headline').should('be.visible');
 
-    expectNoSidewaysScroll();
+    expectNoSidewaysScroll('public');
   });
 });

@@ -99,7 +99,7 @@ MOBILE_VIEWPORTS.forEach(({ name, width, height }) => {
     for (const path of ['/privacy', '/privacy/it']) {
       it(`${path} does not overflow horizontally`, () => {
         cy.visit(path);
-        expectNoSidewaysScroll();
+        expectNoSidewaysScroll('public');
       });
     }
   });

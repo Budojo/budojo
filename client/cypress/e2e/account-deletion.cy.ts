@@ -102,7 +102,7 @@ MOBILE_VIEWPORTS.forEach(({ name, width, height }) => {
     for (const path of ['/account-deletion', '/account-deletion/it']) {
       it(`${path} does not overflow horizontally`, () => {
         cy.visit(path);
-        expectNoSidewaysScroll();
+        expectNoSidewaysScroll('public');
       });
     }
   });

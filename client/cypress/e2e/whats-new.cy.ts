@@ -141,7 +141,7 @@ MOBILE_VIEWPORTS.forEach(({ name, width, height }) => {
       // uses — catches a release card or a long bullet that breaks
       // out of the viewport. Text-overflow doesn't change textContent
       // so this is the only honest check.
-      expectNoSidewaysScroll();
+      expectNoSidewaysScroll('public');
     });
   });
 });
