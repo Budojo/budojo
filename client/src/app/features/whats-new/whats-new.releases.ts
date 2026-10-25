@@ -60,6 +60,102 @@ export function localised(value: Localised, lang: string): string {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.79.0',
+    date: '2026-10-07',
+    headline: {
+      en: 'At the check-in on the phone you see who still has to pay and record the payment in two taps. The new Money tab lists who is behind, and someone new at the door is added in three fields.',
+      it: 'Al check-in sul telefono vedi chi deve ancora pagare e registri il pagamento in due tocchi. La nuova scheda «Soldi» elenca chi è indietro, e chi si presenta per la prima volta lo aggiungi in tre campi.',
+    },
+    sections: [
+      {
+        heading: { en: 'Money at the check-in', it: 'I soldi al check-in' },
+        bullets: [
+          {
+            en: 'On the phone, each check-in row says what pays for the month: the month owed ("September"), "Free", "Carnet · 3" or "Paid".',
+            it: 'Sul telefono ogni riga del check-in dice cosa paga il mese: il mese che deve («settembre»), «Gratis», «Carnet · 3» o «Pagato».',
+          },
+          {
+            en: 'When someone who owes a month is marked present, the row says "Ask": the right moment to ask for it.',
+            it: 'Quando segni presente chi deve un mese, la riga dice «Da chiedere»: è il momento giusto per chiederlo.',
+          },
+          {
+            en: 'A tap on the month opens the payment: the months owed, oldest first, the amount of their fee (a whole quarter for a quarterly payer), "Cash" already picked. One button: "Record €60.00 · cash".',
+            it: "Un tocco sul mese apre il pagamento: i mesi dovuti dal più vecchio, l'importo della sua quota (per un trimestrale, il trimestre intero), «Contanti» già scelto. Un tasto: «Registra 60,00 € · contanti».",
+          },
+          {
+            en: 'The message after it has "Undo", in case of a mistake. A payment the PC had already recorded is not undone from here.',
+            it: 'Il messaggio dopo ha «Annulla», se hai sbagliato. Un pagamento che il PC aveva già registrato non si annulla da qui.',
+          },
+        ],
+      },
+      {
+        heading: { en: 'Money', it: 'Soldi' },
+        bullets: [
+          {
+            en: "A new tab on the phone, Money: who still has to pay. Tonight's people first, then everyone else.",
+            it: 'Una nuova scheda sul telefono, «Soldi»: chi deve ancora pagare. In cima chi è sul tatami stasera, poi gli altri.',
+          },
+          {
+            en: 'Each row names the month and the ones behind: "October · also July and August". A tap opens the same payment as the check-in, and the row goes once nothing is owed.',
+            it: 'Ogni riga dice il mese e quelli indietro: «ottobre · anche luglio e agosto». Un tocco apre lo stesso pagamento del check-in, e la riga sparisce quando non deve più nulla.',
+          },
+        ],
+      },
+      {
+        heading: { en: 'Someone new', it: 'Una persona nuova' },
+        bullets: [
+          {
+            en: 'At the check-in, someone new is added in three fields: first name, last name and belt. A button sits beside the search, and when the search finds nobody: "Add «Luca B» and mark present".',
+            it: "Al check-in, chi viene per la prima volta lo aggiungi in tre campi: nome, cognome e cintura. C'è un pulsante accanto alla ricerca, e quando la ricerca non trova nessuno: «Aggiungi «Luca B» e segna presente».",
+          },
+          {
+            en: 'Their presence is already marked in the class on screen, and the message links to their record to complete it.',
+            it: 'La presenza è già segnata nella lezione che hai sullo schermo, e il messaggio porta alla sua scheda per completarla.',
+          },
+          {
+            en: '"Free trial" is already picked: a personal fee of zero, so the check-in asks for no month. When they join, clear that fee on their record.',
+            it: '«Prova gratuita» è già scelta: quota personale a zero, così il check-in non chiede nessun mese. Quando si iscrive, togli quella quota dalla scheda.',
+          },
+        ],
+      },
+      {
+        heading: { en: 'Promotions from the phone', it: 'Le promozioni dal telefono' },
+        bullets: [
+          {
+            en: 'From an athlete\'s "⋮" menu, "Promote": it proposes the next step, the same as "Who to promote?", and records it with one tap, dated today. Belt and stripes change if needed.',
+            it: 'Dal menu «⋮» di un atleta, «Promuovi»: ti propone il passo successivo, lo stesso di «Chi promuovere?», e lo registri con un tocco, con la data di oggi. Cintura e gradi si cambiano se serve.',
+          },
+        ],
+      },
+      {
+        heading: { en: 'Google Drive', it: 'Google Drive' },
+        bullets: [
+          {
+            en: 'The PC now tidies the Drive folder too: it keeps the last ten versions and one a day for two weeks. Backups are left alone.',
+            it: 'Anche il PC ora pulisce la cartella su Drive: tiene le ultime dieci versioni e una al giorno per due settimane. I backup non li tocca.',
+          },
+          {
+            en: 'Documents and photos you deleted go from Drive too, a few days later, once no kept version names them. Those already there at the first sync stay, because the first version is never deleted.',
+            it: "I documenti e le foto cancellati spariscono anche da Drive, qualche giorno dopo, quando nessuna versione tenuta li nomina più. Restano quelli che c'erano già alla prima sincronizzazione, perché la prima versione non si cancella.",
+          },
+          {
+            en: 'On Drive the PC lets Budojo rewrite only its own sync status file: never a backup or anything else.',
+            it: 'Su Drive il PC lascia riscrivere a Budojo solo il proprio file di stato della sincronizzazione: mai un backup o altro.',
+          },
+        ],
+      },
+      {
+        heading: { en: 'Dark theme', it: 'Tema scuro' },
+        bullets: [
+          {
+            en: "Secondary buttons on cards show again: they had the card's own colour and read as text.",
+            it: 'I pulsanti secondari sulle schede si vedono di nuovo: prima avevano lo stesso colore della scheda e sembravano testo.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.78.0',
     date: '2026-10-03',
     headline: {
