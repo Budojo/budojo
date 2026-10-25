@@ -43,7 +43,11 @@ describe('The update notice on the phone (#2041)', () => {
     cy.get('[data-cy="today-update"]').should('contain.text', 'Budojo 2.80.0 is out');
     cy.get('[data-cy="today-update-download"]')
       .should('have.attr', 'href', APK)
-      .and(($link) => expect($link[0].getBoundingClientRect().height).to.be.at.least(48));
+      .and(($link) => {
+        const box = $link[0].getBoundingClientRect();
+        expect(box.width, 'width').to.be.at.least(48);
+        expect(box.height, 'height').to.be.at.least(48);
+      });
   });
 
   it('says nothing when the phone already runs the latest', () => {

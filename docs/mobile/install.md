@@ -4,7 +4,7 @@ Budojo per Android non è sul Play Store: si installa da un file APK, scaricato 
 
 ## Cosa serve
 
-- **Android 7 o più recente.**
+- **Android 7 o più recente, su un telefono a 64 bit** (ARM64): quasi tutti quelli usciti dal 2017 in poi. L'APK contiene solo il motore a 64 bit: un telefono a 32 bit risponde *«App non installata»*.
 - **I servizi Google Play.** «Accedi con Google» e la sincronizzazione con Drive passano da lì: un telefono senza (alcuni Huawei recenti, i telefoni «de-googlati») non è supportato.
 - **Un blocco schermo** (PIN, sequenza o password), meglio con l'impronta: Budojo la chiede all'apertura e dopo 5 minuti fuori dall'app.
 

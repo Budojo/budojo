@@ -193,7 +193,7 @@ export class SyncService {
     this.stopping = null;
     // Signed out: the next owner, or another academy, may have an older
     // database than the one refused. Its first round asks the server again.
-    this.updateNeeded = false;
+    this.refusedNewer = null;
     this.stateSignal.set({ kind: 'off' });
   }
 
@@ -271,12 +271,6 @@ export class SyncService {
   }
 
   private async round(resolution?: { choice: AskChoice; seen: VersionRef }): Promise<void> {
-    // Every round would fetch the whole newer database again only to have it
-    // refused: none runs until the update starts the app again.
-    if (this.updateNeeded) {
-      this.stateSignal.set({ kind: 'update' });
-      return;
-    }
     const platform = this.platform;
     // What waits for the owner, and what the last pull brought, are on this
     // device: read before anything reaches Drive, the PC's identity included
@@ -298,6 +292,13 @@ export class SyncService {
     }
     if (platform === null || identity === null) {
       this.stateSignal.set({ kind: 'off' });
+      return;
+    }
+    // Every round would fetch the whole newer database again only to have it
+    // refused: none runs for that folder until the update starts the app
+    // again. Another folder, the door's choice, is asked as any other.
+    if (this.refusedNewer === identity.folder) {
+      this.stateSignal.set({ kind: 'update' });
       return;
     }
     const owner: LedgerOwner = {
@@ -426,8 +427,8 @@ export class SyncService {
 
   private countAsked = 0;
 
-  /** A newer database was refused: no round runs until the app is updated (#2041). */
-  private updateNeeded = false;
+  /** The folder whose newer database was refused: no round runs for it until the app is updated (#2041). */
+  private refusedNewer: string | null = null;
 
   /** Seen on Oggi: forgotten, on the server too. One a later pull added to stays there. */
   seenHomecoming(arrived: Homecoming): void {
@@ -461,7 +462,7 @@ export class SyncService {
       error.status === 422 &&
       error.error?.code === 'newer'
     ) {
-      this.updateNeeded = true;
+      this.refusedNewer = owner?.folder ?? null;
       this.stateSignal.set({ kind: 'update' });
       return;
     }

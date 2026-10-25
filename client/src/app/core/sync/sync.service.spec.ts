@@ -526,6 +526,28 @@ describe('SyncService', () => {
     expect(sync.state().kind).not.toBe('update');
   });
 
+  it('asks again for another folder, which the door may bring without a sign-out (#2041)', async () => {
+    await pcPublishes();
+    const stage = vi
+      .spyOn(phone, 'stage')
+      .mockRejectedValue(
+        new HttpErrorResponse({
+          status: 422,
+          error: { code: 'newer', message: 'Update Budojo first.' },
+        }),
+      );
+    let current = identity();
+    const sync = setUp({ identity: async () => current });
+    await sync.syncNow();
+    expect(sync.state()).toEqual({ kind: 'update' });
+
+    current = { ...identity(), folder: 'fedcba9876543210fedcba9876543210' };
+    await sync.syncNow();
+
+    expect(sync.state().kind).not.toBe('update');
+    expect(stage).toHaveBeenCalledOnce();
+  });
+
   it('says any other refusal of the stage as it is, and tries again later', async () => {
     await pcPublishes();
     const stage = vi.spyOn(phone, 'stage').mockRejectedValue(
