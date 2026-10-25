@@ -66,13 +66,19 @@ Calling PHP in-process from this shell is the way out if Android ever stops the 
 ## The keys at rest (#2134)
 
 **`secrets.json`, `secrets.previous.json` and `sync.json` live only sealed,** as `<name>.sealed`:
-- **`KeystoreSealer.java`** seals with AES-256-GCM under a key the Android Keystore makes and keeps (`budojo-keys`, in the TEE). The key never enters the app's memory or files. A sealed file is a version byte, the IV, then the ciphertext with its tag. The file's name is bound in, so one sealed file cannot stand in for another.
+- **`KeystoreSealer.java`** seals with AES-256-GCM under a key the Android Keystore makes and keeps (`budojo-keys`). The key never enters the app's memory or files. It lives in the phone's secure hardware (the TEE) on nearly every phone, and in the system's keystore process on one without it, the emulator among them. Either way, a copy of the app's files opens nothing. A sealed file is a version byte, the IV, then the ciphertext with its tag. The file's name is bound in, so one sealed file cannot stand in for another.
 - **No fingerprint on that key:** the server starts before the page and its lock (#2159), and Android would invalidate a fingerprint-bound key whenever a finger is enrolled.
+- **The key is made only while nothing is sealed yet.** A Keystore lookup that fails says nothing of whether the key is there, and generating `budojo-keys` again would replace it, with every file sealed under it. `getKey` throws on such a failure (Android 12+), where `getEntry` answers null.
 - **`SealedStore.java`** holds the file states, in plain `java.io` so a desktop JDK can put it through every one, as `StagedSwap` is:
   - an install from before #2134 is migrated at its first read: sealed, read back, and only then is the plain file deleted;
-  - a sealed file is written as `.part` and renamed into place;
+  - a sealed file is written as `.sealed.part` and renamed into place;
+  - a plain `.part` the writer before #2134 left is deleted, never taken as keys: the only keys a staged file can hold alone are the academy's, which are on the Google account;
   - **a sealed file that does not open is never replaced nor deleted.** The read fails, the server does not start, and the screen says so. New keys over it would leave the academy's documents unreadable for good, and a Keystore that is only slow to wake must not cost them. Taking the keys back from the Google account in that case is #2162.
-- **The emulator job checks it:** it installs the last release, updates over it, and compares the keys the server runs with, from its environment as root, before and after. It also fails on any key file left in plain text.
+- **The emulator job checks it** (`previous-apk.sh`, `smoke.sh`):
+  - it installs the newest release older than the build, and gives it a plain `secrets.previous.json` and `sync.json`, as the owner's phone has;
+  - it updates over that release, and compares the keys the server runs with before and after, read from its environment as root. It also checks all three files are sealed and that the device id came from the sealed `sync.json`;
+  - it installs the APK alone on an empty phone;
+  - every pass fails on a key file left in plain text, `.part` included.
 
 ## Google Drive on the phone (#2028)
 

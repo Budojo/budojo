@@ -12,8 +12,10 @@ import javax.crypto.spec.GCMParameterSpec;
 
 /**
  * Seals the phone's key files with an AES-256-GCM key the Android Keystore
- * makes and keeps (#2134): in the phone's secure hardware (the TEE), never in
- * the app's memory or files. A sealed file is a version byte, the 12-byte IV,
+ * makes and keeps (#2134), never in the app's memory or files: in the phone's
+ * secure hardware (the TEE) on nearly every phone, in the system's keystore
+ * process on one without it, the emulator among them. Either way a copy of
+ * the app's files opens nothing. A sealed file is a version byte, the 12-byte IV,
  * then the ciphertext with its tag; the file's name is bound in, so one sealed
  * file cannot stand in for another.
  *
@@ -22,8 +24,10 @@ import javax.crypto.spec.GCMParameterSpec;
  * fingerprint would be invalidated by Android whenever a new finger is
  * enrolled. The lock guards the screen; this guards the files.
  *
- * <p>Opening never makes a key: a key that is gone is a lost one, and a new
- * key would only open nothing.
+ * <p>Opening never makes a key, and sealing makes one only while
+ * {@link SealedStore} has sealed nothing yet. A lookup that fails says nothing
+ * of whether the key is there, and generating {@code budojo-keys} again would
+ * replace it, with every file sealed under it.
  */
 final class KeystoreSealer implements SealedStore.Sealer {
 
@@ -35,10 +39,15 @@ final class KeystoreSealer implements SealedStore.Sealer {
     private static final int TAG_BITS = 128;
 
     @Override
-    public byte[] seal(String name, byte[] plain) throws Exception {
+    public byte[] seal(String name, byte[] plain, boolean mayMakeKey) throws Exception {
+        SecretKey key = mayMakeKey ? keyOrNew() : existingKey();
+        if (key == null) {
+            throw new GeneralSecurityException("this phone's Keystore has no key " + ALIAS
+                    + ", and files are sealed under one: no new key over it");
+        }
         Cipher cipher = Cipher.getInstance(CIPHER);
         // The Keystore makes the IV: an app may not choose one for its key.
-        cipher.init(Cipher.ENCRYPT_MODE, keyOrNew());
+        cipher.init(Cipher.ENCRYPT_MODE, key);
         cipher.updateAAD(name.getBytes(StandardCharsets.UTF_8));
         byte[] body = cipher.doFinal(plain);
         byte[] iv = cipher.getIV();
@@ -67,11 +76,15 @@ final class KeystoreSealer implements SealedStore.Sealer {
         return cipher.doFinal(sealed, 1 + IV_BYTES, sealed.length - 1 - IV_BYTES);
     }
 
+    /**
+     * The key, or null when the Keystore has none under the alias. Since
+     * Android 12 {@code getKey} throws on any other failure, where
+     * {@code getEntry} answers null for every one.
+     */
     private static SecretKey existingKey() throws Exception {
         KeyStore keyStore = KeyStore.getInstance(KEYSTORE);
         keyStore.load(null);
-        KeyStore.Entry entry = keyStore.getEntry(ALIAS, null);
-        return entry instanceof KeyStore.SecretKeyEntry ? ((KeyStore.SecretKeyEntry) entry).getSecretKey() : null;
+        return (SecretKey) keyStore.getKey(ALIAS, null);
     }
 
     private static synchronized SecretKey keyOrNew() throws Exception {

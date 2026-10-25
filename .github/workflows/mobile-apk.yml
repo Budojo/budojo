@@ -262,11 +262,13 @@ jobs:
       # updates over it, and the update must keep the phone's keys (#2134).
       - name: The last release's APK, to update from
         id: previous
+        # A lookup that fails fails here, rather than skip the update in silence.
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          BUILDING: ${{ inputs.tag }}
-        run: echo "apk=$(mobile/emulator/previous-apk.sh "$RUNNER_TEMP/previous" "$BUILDING")" >> "$GITHUB_OUTPUT"
+        run: |
+          apk=$(mobile/emulator/previous-apk.sh "$RUNNER_TEMP/previous")
+          echo "apk=$apk" >> "$GITHUB_OUTPUT"
 
       - name: Open the app and photograph each screen
         env:

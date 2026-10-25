@@ -27,14 +27,24 @@ import java.nio.charset.StandardCharsets;
  *       read fails, and so does the server's start, with the reason on the
  *       screen. New keys over it would leave the academy's documents
  *       unreadable for good, and a Keystore that is only slow to wake must not
- *       cost them.</li>
+ *       cost them;</li>
+ *   <li>the sealer may make its key only while no file is sealed yet: a
+ *       Keystore that fails to find the key it has must never replace it, and
+ *       with it every file sealed so far;</li>
+ *   <li>the writer before #2134 staged a file as {@code <name>.part}, in plain
+ *       text, and renamed it into place. One left by a write that died is
+ *       deleted: the key file beside it, sealed or plain, is the one the phone
+ *       ran with, and the only keys a staged file can hold alone are the
+ *       academy's, which the door took from the Google account and takes
+ *       again.</li>
  * </ul>
  */
 final class SealedStore {
 
     /** Seals and opens one file's bytes; the file's name is bound in. */
     interface Sealer {
-        byte[] seal(String name, byte[] plain) throws Exception;
+        /** With {@code mayMakeKey} false, a sealer that finds no key fails rather than make one. */
+        byte[] seal(String name, byte[] plain, boolean mayMakeKey) throws Exception;
 
         byte[] open(String name, byte[] sealed) throws Exception;
     }
@@ -62,6 +72,7 @@ final class SealedStore {
     String read(String name) throws IOException {
         File sealed = new File(dir, name + ".sealed");
         File plain = new File(dir, name);
+        new File(dir, name + ".part").delete();
         if (sealed.exists()) {
             String text = open(name, sealed);
             // A migration that died after the sealed copy was in place.
@@ -81,7 +92,7 @@ final class SealedStore {
     void write(String name, String text) throws IOException {
         byte[] sealed;
         try {
-            sealed = sealer.seal(name, text.getBytes(StandardCharsets.UTF_8));
+            sealed = sealer.seal(name, text.getBytes(StandardCharsets.UTF_8), !anySealed());
         } catch (Exception e) {
             throw new IOException("could not seal " + name + ": " + e.getMessage(), e);
         }
@@ -103,6 +114,19 @@ final class SealedStore {
         if (!part.renameTo(new File(dir, name + ".sealed"))) {
             throw new IOException("could not write " + name + ".sealed");
         }
+    }
+
+    private boolean anySealed() {
+        String[] names = dir.list();
+        if (names == null) {
+            return false;
+        }
+        for (String each : names) {
+            if (each.endsWith(".sealed")) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private String open(String name, File sealed) throws IOException {

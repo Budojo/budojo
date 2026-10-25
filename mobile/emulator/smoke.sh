@@ -8,7 +8,8 @@
 #
 # Given the previous release, it installs that first and updates over it, as
 # the owner's phone does, and checks the server keeps the same keys across the
-# update, sealed by the Keystore (#2134).
+# update, sealed by the Keystore (#2134). Then it installs the APK alone, on
+# an empty phone, and checks the keys it makes are sealed from the start.
 #
 # Each step waits for words the screen must show (Android's accessibility
 # tree carries the WebView's text), photographs it, then taps on. A screen
@@ -58,17 +59,37 @@ tap() {
 
 # The keys the running server was started with, as a short hash: never the
 # keys themselves in a log. Read from its environment, as root.
-server_keys() {
-  local pid keys
+server_env() {
+  local pid
   pid=$("$ADB" shell ps -A -o PID,ARGS | grep libphp.so | grep -- '-S 127.0.0.1' | grep -v -- ' -t ' | awk '{print $1}' | head -1)
   [ -n "$pid" ] || return 1
-  keys=$("$ADB" shell cat "/proc/$pid/environ" | tr '\0' '\n' | grep -E '^(APP_KEY|DOCUMENT_ENCRYPTION_KEY)=.' | sort)
+  "$ADB" shell cat "/proc/$pid/environ" | tr '\0' '\n'
+}
+
+server_keys() {
+  local keys
+  keys=$(server_env | grep -E '^(APP_KEY|DOCUMENT_ENCRYPTION_KEY)=.' | sort)
   # Both, or no answer: the hash of nothing would match itself across the update.
   [ "$(printf '%s\n' "$keys" | grep -c .)" = 2 ] || return 1
   printf '%s' "$keys" | sha256sum | cut -c1-16
 }
 
 app_files() { "$ADB" shell ls "$FILES" | tr -d '\r'; }
+
+# A key file in plain text, as a release before #2134 kept it, owned as the
+# app owns its own: its user, mode and SELinux label, copied from secrets.json.
+plain_key_file() {
+  local ref="$FILES/secrets.json" file="$FILES/$1"
+  printf '%s' "$2" | "$ADB" shell "cat > $file"
+  "$ADB" shell "chown \$(stat -c %u:%g $ref) $file && chmod \$(stat -c %a $ref) $file && chcon \$(ls -Z $ref | cut -d' ' -f1) $file"
+}
+
+# No key file left in plain text, nor a plain one a write staged (.part).
+no_plain_keys() {
+  if grep -qxE '(secrets|secrets\.previous|sync)\.json(\.part)?' "$1"; then
+    fail "a key file is still in plain text: $(grep -xE '(secrets|secrets\.previous|sync)\.json(\.part)?' "$1" | tr '\n' ' ')"
+  fi
+}
 
 launch() { "$ADB" shell monkey -p "$PACKAGE" -c android.intent.category.LAUNCHER 1 > /dev/null; }
 
@@ -100,6 +121,12 @@ if [ -n "$PREVIOUS" ]; then
   wait_for "Sign in with Google\|Unlock Budojo" 600 || fail "the previous release never opened"
   shot "00-previous"
   BEFORE=$(server_keys) || fail "the previous release runs no server"
+  # The owner's phone also holds the pair it made before adopting the
+  # academy's, and its place in the sync: both in plain text until #2134.
+  PREVIOUS_KEYS=$("$ADB" shell cat "$FILES/secrets.json" | tr -d '\r')
+  plain_key_file secrets.previous.json "$PREVIOUS_KEYS" || fail "could not place secrets.previous.json"
+  plain_key_file sync.json '{"v":1,"device":"phoneci01","folder":"0123456789abcdef0123456789abcdef","syncKey":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="}' \
+    || fail "could not place sync.json"
   app_files > "$SHOTS/files-previous.txt"
 fi
 
@@ -144,17 +171,34 @@ shot "03-door"
 # an update keeps the ones the phone had.
 app_files > "$SHOTS/files.txt"
 grep -qx 'secrets.json.sealed' "$SHOTS/files.txt" || fail "no sealed keys in the app's files"
-if grep -qxE '(secrets|secrets\.previous|sync)\.json' "$SHOTS/files.txt"; then
-  fail "a key file is still in plain text"
-fi
+no_plain_keys "$SHOTS/files.txt"
 if [ -n "$PREVIOUS" ]; then
+  for sealed in secrets.previous.json.sealed sync.json.sealed; do
+    grep -qx "$sealed" "$SHOTS/files.txt" || fail "the update did not seal ${sealed%.sealed}"
+  done
   AFTER=$(server_keys) || fail "no server runs after the update"
   [ "$BEFORE" = "$AFTER" ] || fail "the update changed the phone's keys ($BEFORE, then $AFTER)"
-  echo "the update kept the phone's keys ($AFTER), sealed"
+  # The sealed sync.json opened: the server journals under its device id.
+  server_env | grep -qx 'BUDOJO_DEVICE_ID=phoneci01' || fail "the server did not get its device id from the sealed sync.json"
+  echo "the update kept the phone's keys ($AFTER) and its place in the sync, all three sealed"
 fi
 
 tap "Continue without Google" || fail "no «Continue without Google» on the door"
 wait_for "Open your academy account" 120 || fail "«Continue without Google» did not reach the sign-up"
 shot "04-sign-up"
 
-echo "the lock, the door and the sign-up showed on the emulator; photos in $SHOTS"
+# A fresh install, on an empty phone: nothing to migrate, and the keys it
+# makes are sealed from the start (#2134).
+"$ADB" uninstall "$PACKAGE" > /dev/null || fail "the app did not uninstall"
+"$ADB" install "$APK" || fail "the APK did not install on an empty phone"
+launch
+wait_for "Unlock Budojo" 600 || fail "a fresh install never asked «Unlock Budojo»"
+"$ADB" shell input text "$PIN"
+"$ADB" shell input keyevent KEYCODE_ENTER
+wait_for "Sign in with Google" 120 || fail "the PIN did not open a fresh install's door"
+shot "05-fresh-door"
+app_files > "$SHOTS/files-fresh.txt"
+grep -qx 'secrets.json.sealed' "$SHOTS/files-fresh.txt" || fail "a fresh install did not seal its keys"
+no_plain_keys "$SHOTS/files-fresh.txt"
+
+echo "the lock, the door and the sign-up showed on the emulator, updated and fresh; photos in $SHOTS"
