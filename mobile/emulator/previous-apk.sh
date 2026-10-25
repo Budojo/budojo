@@ -18,10 +18,14 @@ set -euo pipefail
 DIR="$1"
 mkdir -p "$DIR"
 building=$(( $(git log -1 --format=%ct) / 60 ))
-for tag in $(gh release list --exclude-pre-releases --limit 10 --json tagName --jq '.[].tagName'); do
+# Each answer in a variable first: set -e stops at a failed assignment, never
+# at a failure inside a for's list or a pipe.
+tags=$(gh release list --exclude-pre-releases --limit 10 --json tagName --jq '.[].tagName')
+for tag in $tags; do
   committed=$(gh api "repos/$GH_REPO/commits/$tag" --jq '.commit.committer.date')
   [ $(( $(date -d "$committed" +%s) / 60 )) -lt "$building" ] || continue
-  apk=$(gh release view "$tag" --json assets --jq '.assets[].name' | grep -m1 -E '^Budojo-Android-.*\.apk$' || true)
+  assets=$(gh release view "$tag" --json assets --jq '.assets[].name')
+  apk=$(printf '%s\n' "$assets" | grep -m1 -E '^Budojo-Android-.*\.apk$' || true)
   [ -n "$apk" ] || continue
   gh release download "$tag" --pattern "$apk" --dir "$DIR" --clobber
   echo "$DIR/$apk"
