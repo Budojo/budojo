@@ -7,9 +7,10 @@
 /**
  * GitHub's newest releases, betas included. `releases/latest` skips every
  * pre-release, and a phone on the beta train (each beta carries its APK)
- * would never hear of the next beta.
+ * would never hear of the next beta. Fifty, because the list is newest first
+ * and betas count: up to 26 have stood above a release (v2.66.0).
  */
-export const RELEASES_URL = 'https://api.github.com/repos/Budojo/budojo/releases?per_page=10';
+export const RELEASES_URL = 'https://api.github.com/repos/Budojo/budojo/releases?per_page=50';
 
 export interface ReleaseApk {
   version: string;

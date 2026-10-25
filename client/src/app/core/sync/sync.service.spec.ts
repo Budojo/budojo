@@ -509,14 +509,12 @@ describe('SyncService', () => {
 
   it('asks the server again after a sign-out: the next academy may not be newer (#2041)', async () => {
     await pcPublishes();
-    const stage = vi
-      .spyOn(phone, 'stage')
-      .mockRejectedValueOnce(
-        new HttpErrorResponse({
-          status: 422,
-          error: { code: 'newer', message: 'Update Budojo first.' },
-        }),
-      );
+    const stage = vi.spyOn(phone, 'stage').mockRejectedValueOnce(
+      new HttpErrorResponse({
+        status: 422,
+        error: { code: 'newer', message: 'Update Budojo first.' },
+      }),
+    );
     const sync = setUp();
     await sync.syncNow();
     expect(sync.state()).toEqual({ kind: 'update' });

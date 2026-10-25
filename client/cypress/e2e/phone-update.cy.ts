@@ -9,7 +9,7 @@ import { VIEWPORT_PHONE } from '../support/viewports';
  * release through `window.budojoVersion`, inside Cypress only.
  */
 
-const RELEASES = 'https://api.github.com/repos/Budojo/budojo/releases?per_page=10';
+const RELEASES = 'https://api.github.com/repos/Budojo/budojo/releases?per_page=50';
 const APK = 'https://github.com/Budojo/budojo/releases/download/v2.80.0/Budojo-Android-2.80.0.apk';
 
 function openTodayOnThePhone(running: string): void {

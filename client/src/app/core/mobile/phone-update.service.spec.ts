@@ -39,7 +39,7 @@ describe('PhoneUpdateService', () => {
   afterEach(() => TestBed.resetTestingModule());
 
   it('reads the newest releases from GitHub, by the API, betas included', () => {
-    expect(RELEASES_URL).toBe('https://api.github.com/repos/Budojo/budojo/releases?per_page=10');
+    expect(RELEASES_URL).toBe('https://api.github.com/repos/Budojo/budojo/releases?per_page=50');
   });
 
   it('offers the newer APK on the phone', async () => {
