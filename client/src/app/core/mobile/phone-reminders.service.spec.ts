@@ -113,7 +113,10 @@ describe('the phone reminders (#2047)', () => {
     };
   });
 
-  afterEach(() => TestBed.resetTestingModule());
+  afterEach(() => {
+    TestBed.resetTestingModule();
+    delete (document as unknown as { visibilityState?: string }).visibilityState;
+  });
 
   it('asks nothing off the phone', async () => {
     const { reminders, server } = remindersWith(null);
