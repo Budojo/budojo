@@ -5,11 +5,12 @@ import { APP_LOCK } from './shell-plugins';
 /** How long the app may sit in the background before it asks again (PRD § 6.1). */
 export const AWAY_LIMIT_MS = 5 * 60_000;
 
-/** BiometricPrompt's codes for a prompt the owner closed: ERROR_USER_CANCELED, ERROR_NEGATIVE_BUTTON. */
-const CLOSED_BY_OWNER = new Set([10, 13]);
-
-/** ERROR_CANCELED: the prompt went away with the app, or was asked in the background. */
-const NOT_IN_FRONT = 5;
+/**
+ * BiometricPrompt's codes for a prompt that was closed rather than refused:
+ * ERROR_CANCELED, ERROR_USER_CANCELED, ERROR_NEGATIVE_BUTTON. By the owner, or
+ * by the app going away; either way nothing to explain.
+ */
+const CLOSED = new Set([5, 10, 13]);
 
 /**
  * When the phone asks for the fingerprint (#2159, PRD § 6.1): on opening, and
@@ -32,11 +33,6 @@ export class AppLockService {
   /** Why the phone did not unlock, in Android's words; null after the prompt was just closed. */
   readonly problem = signal<string | null>(null);
 
-  /**
-   * The owner closed the last prompt: the cover stays, with its button, and
-   * nothing asks again by itself until they leave the app and come back.
-   */
-  private closedByOwner = false;
   private started = false;
 
   /**
@@ -48,7 +44,7 @@ export class AppLockService {
       return;
     }
     this.started = true;
-    const onVisibility = (): void => this.onVisibility();
+    const onVisibility = (): void => void this.check();
     this.document.addEventListener('visibilitychange', onVisibility);
     this.destroyRef.onDestroy(() =>
       this.document.removeEventListener('visibilitychange', onVisibility),
@@ -67,9 +63,7 @@ export class AppLockService {
       const answer = await this.plugin.unlock({ title: this.translate.instant('lock.prompt') });
       if (answer.unlocked) {
         this.locked.set(false);
-      } else if (answer.code !== undefined && CLOSED_BY_OWNER.has(answer.code)) {
-        this.closedByOwner = true;
-      } else if (answer.code !== NOT_IN_FRONT) {
+      } else if (answer.code === undefined || !CLOSED.has(answer.code)) {
         this.problem.set(answer.message ?? null);
       }
     } catch (error) {
@@ -79,31 +73,24 @@ export class AppLockService {
     }
   }
 
-  private onVisibility(): void {
-    if (this.document.visibilityState === 'hidden') {
-      // Leaving is what makes coming back an opening again.
-      this.closedByOwner = false;
-      return;
-    }
-    void this.check();
-  }
-
   /**
    * Asks the shell whether the app may stay open: unlocked since its screen
-   * opened, and never five minutes away since. Never in the background, where
-   * no prompt can show.
+   * opened, and never five minutes away since. If not, the prompt goes up,
+   * unless the owner just closed one: then the cover waits for «Sblocca». The
+   * shell keeps that too, so a reload of the page does not undo it. Never in
+   * the background, where no prompt can show.
    */
   private async check(): Promise<void> {
     if (this.plugin === null || this.document.visibilityState === 'hidden') {
       return;
     }
-    const { unlocked, away } = await this.plugin.state();
+    const { unlocked, away, closed } = await this.plugin.state();
     if (unlocked && away < AWAY_LIMIT_MS) {
       this.locked.set(false);
       return;
     }
     this.locked.set(true);
-    if (!this.closedByOwner) {
+    if (!closed) {
       void this.unlock();
     }
   }

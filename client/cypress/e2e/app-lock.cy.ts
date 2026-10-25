@@ -31,8 +31,8 @@ const page = {
 const YES = { unlocked: true, secure: true };
 const CLOSED = { unlocked: false, secure: true, code: 10, message: 'Cancelled' };
 
-/** What the shell keeps: unlocked since the screen opened, and the longest time away since. */
-let shell = { unlocked: false, away: 0 };
+/** What the shell keeps: unlocked since the screen opened, the longest time away since, a closed prompt. */
+let shell = { unlocked: false, away: 0, closed: false };
 
 /**
  * Opens the athletes on the phone, with the shell answering each prompt in
@@ -46,7 +46,7 @@ function openWith(...answers: object[]): void {
   cy.intercept('GET', '/api/v1/academy', { statusCode: 200, body: { data: MOCK_ACADEMY } });
   cy.intercept('GET', /\/api\/v1\/athletes(\?|$)/, { statusCode: 200, body: page }).as('athletes');
   cy.intercept('GET', '/api/v1/documents/expiring*', { statusCode: 200, body: { data: [] } });
-  shell = { unlocked: false, away: 0 };
+  shell = { unlocked: false, away: 0, closed: false };
   const state = cy
     .stub()
     .as('state')
@@ -103,13 +103,13 @@ describe('The fingerprint lock (#2159)', () => {
     cy.get('[data-cy="athletes-search-input"]').type('Mar');
 
     go('hidden');
-    cy.then(() => (shell = { unlocked: true, away: 4 * 60_000 }));
+    cy.then(() => (shell = { unlocked: true, away: 4 * 60_000, closed: false }));
     go('visible');
     cy.get('@state').should('have.been.calledTwice');
     cy.get('[data-cy="app-lock"]').should('not.exist');
 
     go('hidden');
-    cy.then(() => (shell = { unlocked: true, away: 5 * 60_000 }));
+    cy.then(() => (shell = { unlocked: true, away: 5 * 60_000, closed: false }));
     go('visible');
     cy.get('[data-cy="app-lock"]').should('be.visible');
     cy.get('@unlock').should('have.been.calledTwice');
@@ -125,7 +125,7 @@ describe('The fingerprint lock (#2159)', () => {
     cy.get('[data-cy="app-lock"]').should('not.exist');
 
     // A sync pull reloads the page; the shell, which outlives it, says it is open.
-    cy.then(() => (shell = { unlocked: true, away: 0 }));
+    cy.then(() => (shell = { unlocked: true, away: 0, closed: false }));
     cy.reload();
     cy.wait('@athletes');
 

@@ -42,15 +42,22 @@ public class AppLockPlugin extends Plugin {
     /** BiometricPrompt's ERROR_CANCELED: the page asks again once the app is back. */
     private static final int NOT_IN_FRONT = 5;
 
+    /** ERROR_USER_CANCELED and ERROR_NEGATIVE_BUTTON: closed by a tap or Back. */
+    private static final int USER_CANCELED = 10;
+    private static final int NEGATIVE_BUTTON = 13;
+
     // Written on the main thread by the lifecycle and the prompt, read on the
     // plugin's own thread by state().
     private volatile boolean unlocked = false;
     private volatile long leftAt = -1;
     private volatile long longestAway = 0;
+    private volatile boolean closedByOwner = false;
 
     @Override
     protected void handleOnStop() {
         leftAt = SystemClock.elapsedRealtime();
+        // Leaving is what makes coming back an opening again.
+        closedByOwner = false;
     }
 
     @Override
@@ -61,12 +68,16 @@ public class AppLockPlugin extends Plugin {
         }
     }
 
-    /** Unlocked since this screen opened, and the longest time away since then. */
+    /**
+     * Unlocked since this screen opened, the longest time away since then, and
+     * whether the owner closed the last prompt without leaving the app.
+     */
     @PluginMethod
     public void state(PluginCall call) {
         JSObject state = new JSObject();
         state.put("unlocked", unlocked);
         state.put("away", longestAway);
+        state.put("closed", closedByOwner);
         call.resolve(state);
     }
 
@@ -106,6 +117,14 @@ public class AppLockPlugin extends Plugin {
                                 call.resolve(answer(true, false));
                                 return;
                             }
+                            // Since Android 10 a prompt that goes away with the app answers
+                            // USER_CANCELED too: only one closed with the app on the screen
+                            // is the owner's choice. Before Android 11 the PIN is its own
+                            // screen, and the app is back on it before this answer comes.
+                            boolean onScreen = !activity.getSupportFragmentManager().isStateSaved();
+                            if (onScreen && (code == USER_CANCELED || code == NEGATIVE_BUTTON)) {
+                                closedByOwner = true;
+                            }
                             call.resolve(refused(code, message.toString()));
                         }
                         // onAuthenticationFailed, a finger not recognised: the prompt stays
@@ -135,6 +154,7 @@ public class AppLockPlugin extends Plugin {
     private void opened() {
         unlocked = true;
         longestAway = 0;
+        closedByOwner = false;
     }
 
     private boolean isDeviceSecure() {

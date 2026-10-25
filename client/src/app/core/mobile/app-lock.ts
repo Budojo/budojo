@@ -26,6 +26,11 @@ export interface AppLockState {
   unlocked: boolean;
   /** The longest time in the background since then, in milliseconds. */
   away: number;
+  /**
+   * The owner closed the last prompt, with the app on the screen, and has not
+   * left it since: nothing asks again by itself until they press «Sblocca».
+   */
+  closed: boolean;
 }
 
 export interface AppLockPlugin {

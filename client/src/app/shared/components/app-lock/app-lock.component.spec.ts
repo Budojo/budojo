@@ -11,7 +11,8 @@ import { AppLockComponent } from './app-lock.component';
 describe('AppLockComponent', () => {
   let unlock: ReturnType<typeof vi.fn<AppLockPlugin['unlock']>>;
   let answer: (value: AppLockAnswer) => void;
-  const state: AppLockPlugin['state'] = () => Promise.resolve({ unlocked: false, away: 0 });
+  const state: AppLockPlugin['state'] = () =>
+    Promise.resolve({ unlocked: false, away: 0, closed: false });
 
   async function render(plugin: AppLockPlugin | null): Promise<ComponentFixture<AppLockComponent>> {
     await TestBed.configureTestingModule({

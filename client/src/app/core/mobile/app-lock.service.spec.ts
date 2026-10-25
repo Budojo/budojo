@@ -11,7 +11,7 @@ import { APP_LOCK } from './shell-plugins';
  * when to ask is the page's rule, tested here.
  */
 describe('the fingerprint lock (#2159)', () => {
-  const NEVER: AppLockState = { unlocked: false, away: 0 };
+  const NEVER: AppLockState = { unlocked: false, away: 0, closed: false };
   const YES: AppLockAnswer = { unlocked: true, secure: true };
   let shell: AppLockState;
   let unlock: ReturnType<typeof vi.fn<AppLockPlugin['unlock']>>;
@@ -44,7 +44,7 @@ describe('the fingerprint lock (#2159)', () => {
     lock.start();
     await vi.waitFor(() => expect(unlock).toHaveBeenCalledOnce());
     answer(YES);
-    shell = { unlocked: true, away: 0 };
+    shell = { unlocked: true, away: 0, closed: false };
     await vi.waitFor(() => expect(lock.locked()).toBe(false));
     return lock;
   }
@@ -105,7 +105,7 @@ describe('the fingerprint lock (#2159)', () => {
 
   it('does not ask again after a reload, when the shell says it was unlocked', async () => {
     // A sync pull reloads the page: the shell outlives it.
-    shell = { unlocked: true, away: 60_000 };
+    shell = { unlocked: true, away: 60_000, closed: false };
     const lock = lockWith({ unlock, state });
     lock.start();
 
@@ -131,7 +131,7 @@ describe('the fingerprint lock (#2159)', () => {
     const lock = await opened();
 
     go('hidden');
-    shell = { unlocked: true, away: AWAY_LIMIT_MS - 1 };
+    shell = { unlocked: true, away: AWAY_LIMIT_MS - 1, closed: false };
     go('visible');
     await settle();
 
@@ -143,7 +143,7 @@ describe('the fingerprint lock (#2159)', () => {
     const lock = await opened();
 
     go('hidden');
-    shell = { unlocked: true, away: AWAY_LIMIT_MS };
+    shell = { unlocked: true, away: AWAY_LIMIT_MS, closed: false };
     go('visible');
 
     await vi.waitFor(() => expect(unlock).toHaveBeenCalledTimes(2));
@@ -151,7 +151,7 @@ describe('the fingerprint lock (#2159)', () => {
   });
 
   it('stays locked after a reload that follows five minutes away', async () => {
-    shell = { unlocked: true, away: AWAY_LIMIT_MS + 1 };
+    shell = { unlocked: true, away: AWAY_LIMIT_MS + 1, closed: false };
     const lock = lockWith({ unlock, state });
     lock.start();
 
@@ -163,11 +163,11 @@ describe('the fingerprint lock (#2159)', () => {
     const lock = lockWith({ unlock, state });
     lock.start();
     await vi.waitFor(() => expect(unlock).toHaveBeenCalledOnce());
-    // Before Android 11 the PIN is its own screen: the page goes, the owner
-    // closes it, and the page comes back.
-    go('hidden');
+    // Closed with the app on the screen: the shell records it as the owner's.
+    shell = { unlocked: false, away: 0, closed: true };
     answer({ unlocked: false, secure: true, code: 10, message: 'Cancelled' });
     await vi.waitFor(() => expect(lock.asking()).toBe(false));
+    // Before Android 11 the PIN is its own screen: the page comes back after.
     go('visible');
     await settle();
 
@@ -176,10 +176,12 @@ describe('the fingerprint lock (#2159)', () => {
     expect(lock.problem()).toBeNull();
     expect(unlock).toHaveBeenCalledOnce();
 
-    // Leaving and coming back is opening it again.
+    // Leaving clears it in the shell: coming back is opening again.
+    shell = { unlocked: false, away: 0, closed: false };
     go('hidden');
     go('visible');
     await vi.waitFor(() => expect(unlock).toHaveBeenCalledTimes(2));
+    shell = { unlocked: false, away: 0, closed: true };
     answer({ unlocked: false, secure: true, code: 13, message: 'Cancelled' });
     await vi.waitFor(() => expect(lock.asking()).toBe(false));
 
@@ -188,13 +190,26 @@ describe('the fingerprint lock (#2159)', () => {
     expect(unlock).toHaveBeenCalledTimes(3);
   });
 
+  it('keeps the cover, without a prompt, after a reload that follows a closed one', async () => {
+    // A sync pull reloads the page just after the owner closed the prompt.
+    shell = { unlocked: false, away: 0, closed: true };
+    const lock = lockWith({ unlock, state });
+    lock.start();
+    await vi.waitFor(() => expect(state).toHaveBeenCalledOnce());
+    await settle();
+
+    expect(lock.locked()).toBe(true);
+    expect(unlock).not.toHaveBeenCalled();
+  });
+
   it('asks again on the way back when the prompt went away with the app', async () => {
     const lock = lockWith({ unlock, state });
     lock.start();
     await vi.waitFor(() => expect(unlock).toHaveBeenCalledOnce());
     go('hidden');
-    // Android closes a prompt whose app leaves, and the shell refuses one
-    // asked in the background: ERROR_CANCELED, both.
+    // The shell refuses a prompt asked in the background with ERROR_CANCELED.
+    // A prompt that goes away with the app answers it before Android 10, and
+    // USER_CANCELED since, which the shell does not count as the owner's.
     answer({ unlocked: false, secure: true, code: 5, message: 'Not on the screen' });
     await vi.waitFor(() => expect(lock.asking()).toBe(false));
     // Nothing the owner did: nothing to explain.
