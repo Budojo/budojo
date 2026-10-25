@@ -1164,6 +1164,11 @@ describe('DailyAttendanceComponent', () => {
         ],
       });
       fixture.detectChanges();
+      // A carried presence spends a carnet entry, and its undo gives it back (#2150).
+      const refresh = vi.spyOn(
+        component as unknown as { refreshCarnet: (id: number) => void },
+        'refreshCarnet',
+      );
 
       carryButton(fixture)!.click();
 
@@ -1186,6 +1191,7 @@ describe('DailyAttendanceComponent', () => {
 
       // The room is no longer empty: the offer goes.
       expect(carryButton(fixture)).toBeNull();
+      expect(refresh.mock.calls).toEqual([[1], [2]]);
       const toast = add.mock.calls.at(-1)![0];
       expect(toast.summary).toContain('2');
       expect(toast.summary).toContain('17:00');
@@ -1196,6 +1202,7 @@ describe('DailyAttendanceComponent', () => {
       httpMock.expectOne('/api/v1/attendance/20').flush(null);
       httpMock.expectOne('/api/v1/attendance/21').flush(null);
       expect(component['anyInflight']()).toBe(false);
+      expect(refresh.mock.calls).toEqual([[1], [2], [1], [2]]);
     });
 
     it('puts the room back as it was when the request fails', () => {
@@ -2243,6 +2250,87 @@ describe('DailyAttendanceComponent — the money at the mat (#2036)', () => {
       .flush({ data: [{ id: 501, athlete_id: 1, lesson_id: 3, attended_on: '2026-09-14' }] });
 
     expect(chip(fixture, 1)).toBe('Ask August');
+  });
+
+  it("reads a carnet holder's balance again after a check-in and its undo (#2150)", () => {
+    const carnet = (left: number) => ({
+      id: 40,
+      code: 'C-40',
+      remaining_entries: left,
+      expires_at: '2026-12-31',
+    });
+    const DARIO = makeAthlete({
+      id: 4,
+      first_name: 'Dario',
+      ...fee,
+      payment_coverage: 'carnet',
+      active_carnet: carnet(3),
+    });
+    const harness = setup();
+    vi.spyOn(TestBed.inject(RuntimeService), 'profile').mockReturnValue('mobile');
+    harness.fixture.detectChanges();
+    flushInit(harness.httpMock, { athletes: [DARIO], classes: [FUNDAMENTALS] });
+    harness.httpMock
+      .expectOne((r) => r.url === '/api/v1/attendance/regulars')
+      .flush({ data: [], meta: { occurrences: 0, occurrence_dates: [] } });
+    const { fixture, component, httpMock } = harness;
+    httpMock.expectOne((r) => r.url === '/api/v1/stats/payments/arrears').flush({ data: [] });
+    expect(chip(fixture, 4)).toBe('Carnet · 3');
+
+    component['togglePresent'](DARIO);
+    httpMock
+      .expectOne((r) => r.url === '/api/v1/attendance' && r.method === 'POST')
+      .flush({ data: [{ id: 601, athlete_id: 4, lesson_id: 3, attended_on: '2026-09-14' }] });
+    httpMock
+      .expectOne((r) => r.url === '/api/v1/athletes/4' && r.method === 'GET')
+      .flush({ data: { ...DARIO, active_carnet: carnet(2) } });
+    expect(chip(fixture, 4)).toBe('Carnet · 2');
+
+    component['togglePresent'](DARIO);
+    httpMock
+      .expectOne((r) => r.url === '/api/v1/attendance/601' && r.method === 'DELETE')
+      .flush(null, { status: 204, statusText: 'No Content' });
+    httpMock
+      .expectOne((r) => r.url === '/api/v1/athletes/4' && r.method === 'GET')
+      .flush({ data: { ...DARIO, active_carnet: carnet(3) } });
+    expect(chip(fixture, 4)).toBe('Carnet · 3');
+  });
+
+  it('reads the athlete again on the undo of the last entry, though the row shows no carnet', () => {
+    const carnet = { id: 40, code: 'C-40', remaining_entries: 1, expires_at: '2026-12-31' };
+    const DARIO = makeAthlete({
+      id: 4,
+      first_name: 'Dario',
+      ...fee,
+      payment_coverage: 'carnet',
+      active_carnet: carnet,
+    });
+    const harness = setup();
+    vi.spyOn(TestBed.inject(RuntimeService), 'profile').mockReturnValue('mobile');
+    harness.fixture.detectChanges();
+    flushInit(harness.httpMock, { athletes: [DARIO], classes: [FUNDAMENTALS] });
+    harness.httpMock
+      .expectOne((r) => r.url === '/api/v1/attendance/regulars')
+      .flush({ data: [], meta: { occurrences: 0, occurrence_dates: [] } });
+    const { fixture, component, httpMock } = harness;
+    httpMock.expectOne((r) => r.url === '/api/v1/stats/payments/arrears').flush({ data: [] });
+
+    component['togglePresent'](DARIO);
+    httpMock
+      .expectOne((r) => r.url === '/api/v1/attendance' && r.method === 'POST')
+      .flush({ data: [{ id: 602, athlete_id: 4, lesson_id: 3, attended_on: '2026-09-14' }] });
+    // The last entry spent: no carnet counts any more, and the month is owed.
+    httpMock
+      .expectOne((r) => r.url === '/api/v1/athletes/4')
+      .flush({ data: { ...DARIO, active_carnet: null, payment_coverage: 'none' } });
+    expect(chip(fixture, 4)).toContain('September');
+
+    component['togglePresent'](DARIO);
+    httpMock
+      .expectOne((r) => r.url === '/api/v1/attendance/602' && r.method === 'DELETE')
+      .flush(null, { status: 204, statusText: 'No Content' });
+    httpMock.expectOne((r) => r.url === '/api/v1/athletes/4').flush({ data: DARIO });
+    expect(chip(fixture, 4)).toBe('Carnet · 1');
   });
 
   it('opens the payment sheet from the chip, and a tap on it marks nobody', () => {

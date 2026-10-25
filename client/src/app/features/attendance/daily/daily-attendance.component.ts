@@ -182,6 +182,8 @@ export class DailyAttendanceComponent implements OnInit {
   protected readonly paying = signal<{ athlete: Athlete; month: string } | null>(null);
   /** What was typed for someone new (#1939); `null` keeps their sheet shut. */
   protected readonly newPerson = signal<string | null>(null);
+  /** Rows that held a carnet on this screen, though a spent one shows none now. */
+  private readonly carnetHolders = new Set<number>();
   /** Who opened the sheet for someone new: the keyboard goes back there. */
   private newPersonOpener: HTMLElement | null = null;
   /** Set once someone was added: their row takes the keyboard when listed. */
@@ -812,6 +814,7 @@ export class DailyAttendanceComponent implements OnInit {
             }
           }
           this.markInflight(athlete.id, false);
+          this.refreshCarnet(athlete.id);
           options.settled?.(true);
         },
         error: () => {
@@ -850,6 +853,7 @@ export class DailyAttendanceComponent implements OnInit {
           );
         }
         this.markInflight(athlete.id, false);
+        this.refreshCarnet(athlete.id);
       },
       error: () => {
         this.optimisticAdd(athlete.id, recordId);
@@ -1193,6 +1197,7 @@ export class DailyAttendanceComponent implements OnInit {
           const created = records.filter((r) => ids.includes(r.athlete_id));
           for (const r of created) this.optimisticAdd(r.athlete_id, r.id);
           for (const id of ids) this.markInflight(id, false);
+          for (const r of created) this.refreshCarnet(r.athlete_id);
           this.toastUndo(this.carriedMessage(created, offer.time), () =>
             this.takeBack(created, roomKey),
           );
@@ -1265,6 +1270,7 @@ export class DailyAttendanceComponent implements OnInit {
     forkJoin(records.map((r) => this.attendanceService.delete(r.id))).subscribe({
       next: () => {
         if (sameRoom) for (const r of records) this.markInflight(r.athlete_id, false);
+        for (const r of records) this.refreshCarnet(r.athlete_id);
       },
       error: () => {
         if (sameRoom) for (const r of records) this.markInflight(r.athlete_id, false);
@@ -1445,6 +1451,42 @@ export class DailyAttendanceComponent implements OnInit {
       next.delete(athleteId);
     }
     this.inflight.set(next);
+  }
+
+  /**
+   * A presence spends a carnet entry on the server, and taking it back gives
+   * the entry back (`ReconcileCarnetEntriesAction`): the phone's chip reads
+   * the athlete again so «Carnet · 3» follows (#2150). Only where a chip shows
+   * and a carnet is in play: nobody else's row has a balance to move.
+   */
+  private refreshCarnet(athleteId: number): void {
+    if (!this.showsMoney()) return;
+    const athlete = this.athletes().find((a) => a.id === athleteId);
+    if (!athlete) return;
+    const holder =
+      athlete.active_carnet != null ||
+      athlete.payment_coverage === 'carnet' ||
+      // The last entry spent leaves no carnet on the row: its undo still
+      // gives one back, so the athlete is read again then too.
+      this.carnetHolders.has(athleteId);
+    if (!holder) return;
+    this.carnetHolders.add(athleteId);
+    // A failed read leaves the old balance: the next load corrects it.
+    this.athleteService.get(athleteId).subscribe({
+      next: (fresh) =>
+        this.athletes.update((rows) =>
+          rows.map((row) =>
+            row.id === athleteId
+              ? {
+                  ...row,
+                  active_carnet: fresh.active_carnet,
+                  payment_coverage: fresh.payment_coverage,
+                }
+              : row,
+          ),
+        ),
+      error: () => undefined,
+    });
   }
 
   /** The payment chip for one phone row, or `null` when it shows none. */

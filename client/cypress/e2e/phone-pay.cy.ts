@@ -90,6 +90,11 @@ function phoneAtClass(): void {
     statusCode: 200,
     body: { data: [], overdue_months: ['2026-09'] },
   });
+  // Every sheet reads the athlete's ledger, to know what a period would cross.
+  cy.intercept('GET', '/api/v1/athletes/2/payments?*', {
+    statusCode: 200,
+    body: { data: [], overdue_months: [] },
+  });
   cy.visitAuthenticated('/dashboard/attendance');
   cy.get('[data-cy="attendance-mobile-list"]').should('be.visible');
 }
@@ -209,6 +214,72 @@ describe('The money at the mat (#2036)', () => {
 
     cy.wait('@pay').its('request.body.period_months').should('eq', 3);
     chip(2).should(reads('Paid'));
+  });
+
+  it('offers single months where a quarter would cross one already paid (#2150)', () => {
+    // Bruno is behind August and September, and paid October to December.
+    cy.intercept('GET', '/api/v1/athletes/2/payments?*', {
+      statusCode: 200,
+      body: {
+        data: [
+          {
+            id: 70,
+            athlete_id: 2,
+            year: 2026,
+            month: 10,
+            period_months: 3,
+            amount_cents: 16500,
+            paid_at: '2026-09-30',
+            payment_method: 'transfer',
+          },
+        ],
+        overdue_months: ['2026-08', '2026-09'],
+      },
+    });
+    cy.intercept('POST', '/api/v1/athletes/2/payments', {
+      statusCode: 201,
+      body: {
+        data: {
+          id: 92,
+          athlete_id: 2,
+          year: 2026,
+          month: 8,
+          period_months: 1,
+          amount_cents: 5500,
+          paid_at: '2026-10-01',
+          payment_method: 'cash',
+        },
+      },
+    }).as('pay');
+
+    chip(2).find('button').click();
+    cy.get('[data-cy="pay-sheet-month-2026-08"]').should(reads('August'));
+    cy.get('[data-cy="pay-sheet-month-2026-09"]').should(reads('September'));
+    cy.get('[data-cy="pay-sheet-record"] button').should('contain.text', '€55.00').click();
+
+    cy.wait('@pay').its('request.body.period_months').should('eq', 1);
+  });
+
+  it("follows a carnet's balance after a check-in (#2150)", () => {
+    cy.intercept('POST', '/api/v1/attendance', {
+      statusCode: 201,
+      body: { data: [{ id: 504, athlete_id: 4, lesson_id: 3, attended_on: '2026-10-01' }] },
+    }).as('mark');
+    cy.intercept('GET', '/api/v1/athletes/4', {
+      statusCode: 200,
+      body: {
+        data: {
+          ...DARIO,
+          active_carnet: { id: 40, code: 'C-40', remaining_entries: 2, expires_at: '2026-12-31' },
+        },
+      },
+    }).as('dario');
+
+    chip(4).should(reads('Carnet · 3'));
+    cy.get('[data-cy="attendance-card-4"]').click();
+    cy.wait('@mark');
+    cy.wait('@dario');
+    chip(4).should(reads('Carnet · 2'));
   });
 
   it('lets a tap on a quiet chip through to the row', () => {

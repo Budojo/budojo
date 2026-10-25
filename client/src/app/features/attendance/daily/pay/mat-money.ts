@@ -1,5 +1,5 @@
 import { Injectable, inject, signal } from '@angular/core';
-import { Observable, forkJoin, map, of, tap } from 'rxjs';
+import { Observable, forkJoin, map, tap } from 'rxjs';
 import { Athlete } from '../../../../core/services/athlete.service';
 import {
   AthletePayment,
@@ -11,6 +11,7 @@ import { StatsService } from '../../../../core/services/stats.service';
 import { MoneyRows, moneyRows } from './money-rows';
 import {
   PayChip,
+  PayOption,
   monthOf,
   monthsCovered,
   owedMonths,
@@ -99,51 +100,65 @@ export class MatMoney {
     return athlete.billing_period_months ?? 1;
   }
 
-  /** What one payment costs this athlete: their fee times their period. */
-  amountOf(athlete: Athlete): number {
-    return (athlete.monthly_fee_cents ?? 0) * this.periodOf(athlete);
+  /**
+   * What one payment costs this athlete: their fee times the period, their own
+   * unless a single month is offered where a quarter would not fit (#2150).
+   */
+  amountOf(athlete: Athlete, period: number = this.periodOf(athlete)): number {
+    return (athlete.monthly_fee_cents ?? 0) * period;
   }
 
   /**
-   * The payments this athlete owes, oldest first, each as the month its
-   * period starts on. The months behind are asked of the server again, per
-   * year from the first one the arrears list names: a payment made on the PC
-   * since the list was read must not be offered. The answer replaces what the
-   * list said for them.
+   * The payments this athlete owes, oldest first, each with the month it
+   * starts on and the months it covers. Asked of the server again at each
+   * opening, per year from the first month the arrears list names (or this
+   * year) to the year the longest period could reach: a payment made on the
+   * PC since the list was read must not be offered, and the ledger's own
+   * payments say which months a whole period would cross (#2150). The months
+   * behind replace what the list said for them.
    */
-  owedFor(athlete: Athlete): Observable<string[]> {
-    const thisYear = yearMonthOf(this.thisMonth()).year;
+  owedFor(athlete: Athlete): Observable<PayOption[]> {
+    const thisMonth = this.thisMonth();
+    const thisYear = yearMonthOf(thisMonth).year;
     const first = this.behind().get(athlete.id)?.[0];
     const fromYear = first === undefined ? thisYear : Math.min(yearMonthOf(first).year, thisYear);
-    const years = Array.from({ length: thisYear - fromYear + 1 }, (_, i) => fromYear + i);
-    const asked: Observable<(readonly string[])[]> =
-      first === undefined ? of([]) : forkJoin(years.map((year) => this.overdueIn(athlete, year)));
-    return asked.pipe(
-      map((perYear) => perYear.flat()),
-      tap((months) => this.setBehind(athlete.id, months)),
-      map((months) =>
-        periodStarts(
-          owedMonths(
-            athlete,
-            months,
-            this.thisMonth(),
-            this.paidHere().get(athlete.id) ?? new Set(),
-          ),
-          this.periodOf(athlete),
+    const reach = monthsCovered(thisMonth, this.periodOf(athlete));
+    const toYear = yearMonthOf(reach[reach.length - 1]).year;
+    const years = Array.from({ length: toYear - fromYear + 1 }, (_, i) => fromYear + i);
+    return forkJoin(years.map((year) => this.payments.list(athlete.id, year))).pipe(
+      map((ledger) => ({
+        // A year after this one has nothing overdue yet; only its payments count.
+        behind: ledger.flatMap((year) => year.overdueMonths),
+        paid: new Set(
+          ledger
+            .flatMap((year) => year.payments)
+            .flatMap((p) =>
+              monthsCovered(monthOf(new Date(p.year, p.month - 1, 1)), p.period_months ?? 1),
+            ),
         ),
-      ),
+      })),
+      tap(({ behind }) => this.setBehind(athlete.id, behind)),
+      map(({ behind, paid }) => {
+        const here = this.paidHere().get(athlete.id) ?? new Set<string>();
+        const settled = new Set([...paid, ...here]);
+        // The ledger is fresher than the roster: a month it shows paid (the PC,
+        // since the list was read) is not owed, whatever the coverage said.
+        const owed = owedMonths(athlete, behind, thisMonth, here).filter((m) => !settled.has(m));
+        return periodStarts(owed, this.periodOf(athlete), settled);
+      }),
     );
   }
 
   /**
-   * Record one payment for `month`, today, by `method`. A row the server
-   * already held comes back with `created: false`: paid, but not this
-   * screen's to undo.
+   * Record one payment, from `option`'s month for its period, today, by
+   * `method`. A row the server already held comes back with `created:
+   * false`: paid, but not this screen's to undo.
    */
-  record(athlete: Athlete, month: string, method: PaymentMethod): Observable<RecordedPayment> {
+  record(athlete: Athlete, option: PayOption, method: PaymentMethod): Observable<RecordedPayment> {
+    const { month } = option;
     const { year, month: m } = yearMonthOf(month);
     return this.payments
-      .record(athlete.id, year, m, this.periodOf(athlete), { method })
+      .record(athlete.id, year, m, option.period, { method })
       .pipe(
         tap(({ payment }) =>
           this.markHere(athlete.id, monthsCovered(month, payment.period_months ?? 1), true),
@@ -161,10 +176,6 @@ export class MatMoney {
           this.markHere(athlete.id, monthsCovered(month, payment.period_months ?? 1), false),
         ),
       );
-  }
-
-  private overdueIn(athlete: Athlete, year: number): Observable<readonly string[]> {
-    return this.payments.list(athlete.id, year).pipe(map((answer) => answer.overdueMonths));
   }
 
   private setBehind(athleteId: number, months: readonly string[]): void {

@@ -230,14 +230,57 @@ describe('PaySheetComponent', () => {
     expect(sheet()).not.toBeNull();
   });
 
+  it('offers a quarterly payer single months where a quarter would cross one paid (#2150)', async () => {
+    const { fixture, http } = setup();
+    open(fixture, athlete({ billing_period_months: 3 }), '2026-08');
+    http
+      .expectOne((r) => r.url.endsWith('/athletes/7/payments'))
+      .flush({
+        data: [
+          {
+            id: 5,
+            athlete_id: 7,
+            year: 2026,
+            month: 10,
+            period_months: 3,
+            amount_cents: 18000,
+            paid_at: '2026-10-01',
+            payment_method: 'cash',
+          },
+        ],
+        overdue_months: ['2026-08', '2026-09'],
+      });
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const months = Array.from(document.body.querySelectorAll('[data-cy^="pay-sheet-month-"]')).map(
+      (el) => el.textContent?.trim(),
+    );
+    expect(months).toEqual(['August', 'September']);
+    expect(recordButton().textContent).toContain('Record €60.00');
+
+    recordButton().click();
+    const post = http.expectOne((r) => r.method === 'POST');
+    expect(post.request.body).toEqual({
+      year: 2026,
+      month: 8,
+      period_months: 1,
+      payment_method: 'cash',
+    });
+    post.flush({ message: 'x' }, { status: 500, statusText: 'x' });
+  });
+
   it('drops a late answer for an athlete the sheet has left', async () => {
     const { fixture, http } = setup();
     open(fixture, athlete(), '2026-08');
     const late = http.expectOne((r) => r.url.endsWith('/athletes/7/payments'));
 
-    // Bruno is behind on nothing: his months need no request.
+    // Bruno is behind on nothing: his ledger answers this month alone.
     open(fixture, athlete({ id: 8, first_name: 'Bruno' }), '2026-10');
     late.flush({ data: [], overdue_months: ['2026-08'] });
+    http
+      .expectOne((r) => r.url.endsWith('/athletes/8/payments'))
+      .flush({ data: [], overdue_months: [] });
     fixture.detectChanges();
     await fixture.whenStable();
 
