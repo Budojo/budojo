@@ -1,4 +1,5 @@
 import { MOBILE_VIEWPORTS } from '../support/viewports';
+import { expectNoSidewaysScroll } from '../support/no-sideways-scroll';
 
 // Mobile-viewport coverage for the login + register flows (#240).
 // Auth is the most-visited cold path for prospects landing from the
@@ -37,10 +38,7 @@ MOBILE_VIEWPORTS.forEach(({ name, width, height }) => {
       cy.get('input[id="password"]').should('be.visible');
       cy.get('button[type="submit"]').should('be.visible');
 
-      cy.document().then((doc) => {
-        const root = doc.documentElement;
-        expect(root.scrollWidth, 'documentElement.scrollWidth').to.be.lte(root.clientWidth);
-      });
+      expectNoSidewaysScroll();
     });
   });
 
@@ -60,10 +58,7 @@ MOBILE_VIEWPORTS.forEach(({ name, width, height }) => {
       cy.get('input[id="email"]').should('be.visible');
       cy.get('button[type="submit"]').should('be.visible');
 
-      cy.document().then((doc) => {
-        const root = doc.documentElement;
-        expect(root.scrollWidth, 'documentElement.scrollWidth').to.be.lte(root.clientWidth);
-      });
+      expectNoSidewaysScroll();
     });
   });
 

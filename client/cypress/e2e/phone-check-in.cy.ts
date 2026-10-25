@@ -1,6 +1,7 @@
 import { MOCK_ACADEMY } from '../support/fixtures';
 import { stubToday } from '../support/today';
 import { MOBILE_VIEWPORTS } from '../support/viewports';
+import { expectNoSidewaysScroll } from '../support/no-sideways-scroll';
 
 /**
  * Budojo on the phone at the mat (#2035, PRD § 6.1): the app opens on the
@@ -158,8 +159,6 @@ MOBILE_VIEWPORTS.forEach(({ name, width, height }) => {
     cy.viewport(width, height);
     phoneAt('2026-10-01T19:05:00');
     cy.get('[data-cy="attendance-register-regulars"]').should('be.visible');
-    cy.document().then((doc) => {
-      expect(doc.documentElement.scrollWidth).to.be.at.most(doc.documentElement.clientWidth);
-    });
+    expectNoSidewaysScroll();
   });
 });

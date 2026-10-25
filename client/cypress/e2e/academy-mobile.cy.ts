@@ -1,5 +1,6 @@
 import { MOCK_ACADEMY } from '../support/fixtures';
 import { MOBILE_VIEWPORTS } from '../support/viewports';
+import { expectNoSidewaysScroll } from '../support/no-sideways-scroll';
 
 // Mobile-viewport coverage for the Academy edit form (#240). Same
 // rationale as the athlete form spec — multi-field surface with
@@ -39,10 +40,7 @@ MOBILE_VIEWPORTS.forEach(({ name, width, height }) => {
       cy.get('[data-cy="academy-form"]').should('be.visible');
       cy.get('[data-cy="academy-form-name"]').should('be.visible');
 
-      cy.document().then((doc) => {
-        const root = doc.documentElement;
-        expect(root.scrollWidth, 'documentElement.scrollWidth').to.be.lte(root.clientWidth);
-      });
+      expectNoSidewaysScroll();
     });
   });
 });

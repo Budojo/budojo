@@ -150,13 +150,22 @@
 }
 
 // ---- icon-only ghost (row actions) ----
-// Force square 44×44, radius-full-inside-tile. Wrap parent gets 48px hit via padding.
+// Square, radius-full-inside-tile. 48 on a phone, where the thumb presses it
+// and two of them often sit side by side (a row's pencil and bin, #2144): the
+// touch floor is a floor. 44 from the tablet breakpoint up, where a pointer
+// does and the rows are dense.
 .p-button.p-button-icon-only {
-  width: 44px;
-  height: 44px;
-  min-height: 44px;
+  width: 48px;
+  height: 48px;
+  min-height: 48px;
   padding: 0;
   border-radius: var(--p-border-radius-full);
+
+  @media (min-width: 768px) {
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
+  }
 }
 
 // ---- Large CTA (optional — inside bottom sheets / full-width dialogs) ----

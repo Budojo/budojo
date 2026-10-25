@@ -6,6 +6,7 @@ import {
   VIEWPORT_PHONE,
 } from '../support/viewports';
 import { stubToday } from '../support/today';
+import { expectNoSidewaysScroll } from '../support/no-sideways-scroll';
 
 /**
  * «Da decidere» (#2038, PRD § 6.4): the writes a rebase set aside, each a
@@ -164,9 +165,7 @@ describe('«Da decidere» (#2038)', () => {
       cy.wait('@list');
 
       cy.get('[data-cy="sync-decide-item"]').should('have.length', 2);
-      cy.document().then((doc) => {
-        expect(doc.documentElement.scrollWidth).to.be.at.most(width);
-      });
+      expectNoSidewaysScroll();
     });
   });
 
@@ -224,12 +223,7 @@ describe('«Da decidere» (#2038)', () => {
         });
         // The shell scrolls `main`, not the document, from 768px up: a wide
         // card would scroll it sideways and leave the document's width alone.
-        cy.document().then((doc) => {
-          expect(doc.documentElement.scrollWidth).to.be.at.most(width);
-        });
-        cy.get('main.main').should(($main) => {
-          expect($main[0].scrollWidth).to.be.at.most($main[0].clientWidth);
-        });
+        expectNoSidewaysScroll();
       });
     });
   });

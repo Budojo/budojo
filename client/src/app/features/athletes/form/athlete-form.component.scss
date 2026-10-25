@@ -68,13 +68,17 @@
     font-variant-numeric: tabular-nums;
   }
 
+  // `minmax(0, 1fr)`, never a bare `1fr`, which cannot shrink below its
+  // widest field's own minimum: the phone pair (a 10rem prefix beside the
+  // number) made the contact column 441px on a 375px phone, and the page
+  // slid sideways under the thumb (#2144).
   &__row {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 1rem;
 
     &--three {
-      grid-template-columns: 1fr 1fr 1fr;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
     // One column below the tablet breakpoint — and the canon's 768, not the
@@ -82,7 +86,7 @@
     // half a window on a desktop lands here too, which is the case #1459 was
     // asked to hold up in.
     @media (max-width: 767px) {
-      grid-template-columns: 1fr;
+      grid-template-columns: minmax(0, 1fr);
     }
   }
 
@@ -247,7 +251,7 @@
 .address-group__row {
   display: grid;
   gap: 1rem;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
 
   // ZIP, city, province — sized to what goes in them, and capped so the row
   // does not stretch across a wide window with a five-character postcode
