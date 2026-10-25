@@ -10,6 +10,7 @@ public class MainActivity extends BridgeActivity {
         // Plugins that live in the app itself are registered before the bridge starts.
         registerPlugin(PhpServerPlugin.class);
         registerPlugin(DriveAuthPlugin.class);
+        registerPlugin(AppLockPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

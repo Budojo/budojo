@@ -3892,5 +3892,11 @@
       "topicsOne": "1 topic",
       "topicsOther": "{{count}} topics"
     }
+  },
+  "lock": {
+    "title": "Budojo is locked",
+    "body": "Use your fingerprint or the phone's PIN to open it.",
+    "unlock": "Unlock",
+    "prompt": "Unlock Budojo"
   }
 }

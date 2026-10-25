@@ -3892,5 +3892,11 @@
       "topicsOne": "1 argomento",
       "topicsOther": "{{count}} argomenti"
     }
+  },
+  "lock": {
+    "title": "Budojo è bloccato",
+    "body": "Usa l'impronta o il PIN del telefono per aprirlo.",
+    "unlock": "Sblocca",
+    "prompt": "Sblocca Budojo"
   }
 }

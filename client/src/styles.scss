@@ -43,6 +43,15 @@ body {
   background: var(--p-surface-50);
 }
 
+// The fingerprint lock (#2159): while it is up, everything but its cover is
+// hidden, to the eye, the keyboard and a screen reader alike. Hidden, not
+// removed: a form half filled is still there after the fingerprint. The body's
+// other children are the overlays PrimeNG appends there (a dialog's mask).
+html.budojo-locked body > :not(app-root),
+html.budojo-locked app-root > :not(app-lock) {
+  visibility: hidden;
+}
+
 // Respect the user's OS / browser reduced-motion preference (#1074
 // motion convention). Disables every CSS transition / animation site in
 // one rule, plus CSS scroll-behavior. JS-driven motion (e.g. the

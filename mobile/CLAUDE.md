@@ -75,6 +75,27 @@ Calling PHP in-process from this shell is the way out if Android ever stops the 
 - The WebView's `fetch` is one path for every call, with the browser's semantics. It depends on googleapis.com allowing the WebView's origin (CORS), which Google's APIs do.
 - The patched `fetch` takes two paths. A GET goes through Capacitor's local proxy, which hands the bytes back as they came. Any other method goes through native HTTP, whose answer reads as text unless it is JSON (`HttpRequestHandler.readData`), so a binary answer to a POST would arrive damaged.
 
+## The fingerprint lock (#2159)
+
+**`AppLockPlugin.java`** shows Android's own biometric prompt (AndroidX `biometric`, free and open source; the ready-made plugins are paid):
+- **`unlock({ title })` answers once the prompt is closed, whichever way,** and never rejects on a refusal: `{ unlocked, secure, code?, message? }`. `code` is BiometricPrompt's, and `message` is Android's own words, in the phone's language.
+- **Asked in the background, it refuses with `code: 5`** instead of asking: biometric 1.1.0 drops a prompt asked once the activity's state is saved, and the call would never answer.
+- **The phone's PIN, pattern or password is the fallback inside the same prompt** (`BIOMETRIC_WEAK | DEVICE_CREDENTIAL`). A phone with no fingerprint gets the screen lock alone.
+- **A phone with no screen lock has nothing to check against:** the answer is `unlocked` at once, with `secure: false`.
+- **`state()` keeps the facts the rule needs where the page cannot lose or bend them:** `unlocked` since this screen opened, `away`, the longest time in the background since then, and `closed`, a prompt the owner closed without leaving the app.
+  - Both outlive a reload of the page; a sync pull reloads it.
+  - `away` is `SystemClock.elapsedRealtime()`, counted from `onStop` to `onStart`. Setting the phone's clock back does not move it, and it keeps counting while the phone sleeps.
+  - An unlock sets `away` back to 0. Before Android 11 the PIN is its own screen, and the time spent on it is not time away.
+  - `closed` is set by a prompt closed (codes 10, 13) with the app on the screen, and cleared by leaving it (`onStop`), by a new prompt, or by an unlock. Since Android 10 a prompt that goes away with the app answers 10 as well; with the activity's state saved, that one is not the owner's.
+- **When to ask is the page's rule** (`client/src/app/core/mobile/app-lock.service.ts`):
+  - it checks on opening and on every return, and never asks while the app is in the background;
+  - five minutes away locks it;
+  - after a prompt the owner closed, the cover and its «Sblocca» wait until they press it or leave the app.
+
+  While locked, `app-lock` covers everything. The rest is hidden to a screen reader too, but kept: a form half filled survives it.
+- **It guards the screen, not the files.** The keys at rest are #2134. Android's recent-apps preview still shows the last screen: hiding it (`FLAG_SECURE`) would also stop every screenshot, the owner's and the emulator's.
+- **The emulator job checks it:** it sets a PIN, closes the prompt with Back (twice: the first only hides the keyboard) and photographs the cover, enters the PIN and reaches the door. Android keeps its PIN screen out of screenshots, so that photo comes out empty.
+
 ## Rules
 
 - **Only the release key signs.** `android/app/build.gradle` reads it from `BUDOJO_ANDROID_KEYSTORE` / `BUDOJO_ANDROID_KEYSTORE_PASSWORD` (alias `budojo`, PKCS12), and CI checks the certificate's SHA-256 before uploading. There is no debug-key fallback on purpose: an APK signed with another key never installs over the app, and uninstalling loses the changes a phone has not sent yet. The owner holds the other copy of the key.
