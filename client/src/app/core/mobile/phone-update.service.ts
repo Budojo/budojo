@@ -1,7 +1,7 @@
 import { Injectable, InjectionToken, inject, isDevMode, signal } from '@angular/core';
 import { VERSION } from '../../../environments/version';
 import { appVersionOf } from '../sync/version';
-import { isReleaseBuild, LATEST_RELEASE_URL, newerApk, ReleaseApk } from './app-update';
+import { isReleaseBuild, newerApk, ReleaseApk, RELEASES_URL } from './app-update';
 
 /** Where the update notice looks, injected so its rules can be tested without a phone or GitHub. */
 export interface PhoneUpdateSource {
@@ -9,7 +9,7 @@ export interface PhoneUpdateSource {
   onPhone: boolean;
   /** This build's version, as `appVersionOf` reads its tag. */
   running: string;
-  /** The latest release, as GitHub's API answers it. */
+  /** The newest releases, as GitHub's API lists them. */
   latest(): Promise<unknown>;
 }
 
@@ -21,7 +21,7 @@ export const PHONE_UPDATE_SOURCE = new InjectionToken<PhoneUpdateSource>('PHONE_
     // Plain fetch, not HttpClient: a release the phone cannot reach is no
     // reason to show the offline page, which the error interceptor would.
     latest: async () => {
-      const response = await fetch(LATEST_RELEASE_URL, {
+      const response = await fetch(RELEASES_URL, {
         headers: { Accept: 'application/vnd.github+json' },
       });
       return response.ok ? response.json() : null;

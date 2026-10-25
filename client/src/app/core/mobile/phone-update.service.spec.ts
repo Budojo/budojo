@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { LATEST_RELEASE_URL } from './app-update';
+import { RELEASES_URL } from './app-update';
 import { PHONE_UPDATE_SOURCE, PhoneUpdateService, PhoneUpdateSource } from './phone-update.service';
 
 /**
@@ -9,6 +9,7 @@ import { PHONE_UPDATE_SOURCE, PhoneUpdateService, PhoneUpdateSource } from './ph
 describe('PhoneUpdateService', () => {
   const RELEASE = {
     tag_name: 'v2.80.0',
+    prerelease: false,
     assets: [
       {
         name: 'Budojo-Android-2.80.0.apk',
@@ -32,13 +33,13 @@ describe('PhoneUpdateService', () => {
   }
 
   beforeEach(() => {
-    latest = vi.fn(async () => RELEASE);
+    latest = vi.fn(async () => [RELEASE]);
   });
 
   afterEach(() => TestBed.resetTestingModule());
 
-  it('reads the latest release from GitHub, by the API', () => {
-    expect(LATEST_RELEASE_URL).toBe('https://api.github.com/repos/Budojo/budojo/releases/latest');
+  it('reads the newest releases from GitHub, by the API, betas included', () => {
+    expect(RELEASES_URL).toBe('https://api.github.com/repos/Budojo/budojo/releases?per_page=10');
   });
 
   it('offers the newer APK on the phone', async () => {

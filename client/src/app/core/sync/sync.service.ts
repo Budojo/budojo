@@ -191,6 +191,9 @@ export class SyncService {
   stop(): void {
     this.stopping?.();
     this.stopping = null;
+    // Signed out: the next owner, or another academy, may have an older
+    // database than the one refused. Its first round asks the server again.
+    this.updateNeeded = false;
     this.stateSignal.set({ kind: 'off' });
   }
 

@@ -4,8 +4,12 @@
  * asks for the confirmation.
  */
 
-/** GitHub's newest release that is neither a draft nor a beta. */
-export const LATEST_RELEASE_URL = 'https://api.github.com/repos/Budojo/budojo/releases/latest';
+/**
+ * GitHub's newest releases, betas included. `releases/latest` skips every
+ * pre-release, and a phone on the beta train (each beta carries its APK)
+ * would never hear of the next beta.
+ */
+export const RELEASES_URL = 'https://api.github.com/repos/Budojo/budojo/releases?per_page=10';
 
 export interface ReleaseApk {
   version: string;
@@ -68,17 +72,49 @@ export function isReleaseBuild(version: string): boolean {
   return match !== null && Number(match[1]) >= 1;
 }
 
-/** The APK of a release newer than `running`, or null: an answer that is not a release is nothing. */
-export function newerApk(release: unknown, running: string): ReleaseApk | null {
+/**
+ * The newest APK above `running`, among GitHub's releases, or null. A phone
+ * on a release is offered releases only; a phone on a beta follows the beta
+ * train, so the newest of either. An answer that is not a list of releases is
+ * nothing.
+ */
+export function newerApk(releases: unknown, running: string): ReleaseApk | null {
+  if (!Array.isArray(releases)) {
+    return null;
+  }
+  const onBeta = SEMVER.exec(running)?.[4] !== undefined;
+  let newest: ReleaseApk | null = null;
+  for (const release of releases) {
+    const apk = apkOf(release, onBeta);
+    if (
+      apk !== null &&
+      compareVersions(apk.version, running) > 0 &&
+      (newest === null || compareVersions(apk.version, newest.version) > 0)
+    ) {
+      newest = apk;
+    }
+  }
+  return newest;
+}
+
+function apkOf(release: unknown, onBeta: boolean): ReleaseApk | null {
   if (typeof release !== 'object' || release === null) {
     return null;
   }
-  const { tag_name: tag, assets } = release as { tag_name?: unknown; assets?: unknown };
-  if (typeof tag !== 'string' || !Array.isArray(assets)) {
+  const {
+    tag_name: tag,
+    prerelease,
+    draft,
+    assets,
+  } = release as { tag_name?: unknown; prerelease?: unknown; draft?: unknown; assets?: unknown };
+  if (typeof tag !== 'string' || !Array.isArray(assets) || draft === true) {
+    return null;
+  }
+  if (prerelease === true && !onBeta) {
     return null;
   }
   const version = tag.replace(/^v/, '');
-  if (!SEMVER.test(version) || compareVersions(version, running) <= 0) {
+  if (!SEMVER.test(version)) {
     return null;
   }
   for (const asset of assets as { browser_download_url?: unknown }[]) {

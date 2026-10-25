@@ -507,16 +507,35 @@ describe('SyncService', () => {
     expect(sync.state()).toEqual({ kind: 'update' });
   });
 
-  it('says any other refusal of the stage as it is, and tries again later', async () => {
+  it('asks the server again after a sign-out: the next academy may not be newer (#2041)', async () => {
     await pcPublishes();
     const stage = vi
       .spyOn(phone, 'stage')
-      .mockRejectedValue(
+      .mockRejectedValueOnce(
         new HttpErrorResponse({
           status: 422,
-          error: { code: 'unreadable', message: 'not a database' },
+          error: { code: 'newer', message: 'Update Budojo first.' },
         }),
       );
+    const sync = setUp();
+    await sync.syncNow();
+    expect(sync.state()).toEqual({ kind: 'update' });
+
+    sync.stop();
+    await sync.syncNow();
+
+    expect(stage).toHaveBeenCalledTimes(2);
+    expect(sync.state().kind).not.toBe('update');
+  });
+
+  it('says any other refusal of the stage as it is, and tries again later', async () => {
+    await pcPublishes();
+    const stage = vi.spyOn(phone, 'stage').mockRejectedValue(
+      new HttpErrorResponse({
+        status: 422,
+        error: { code: 'unreadable', message: 'not a database' },
+      }),
+    );
     const sync = setUp();
 
     await sync.syncNow();

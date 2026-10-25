@@ -18,7 +18,7 @@ Budojo per Android non è sul Play Store: si installa da un file APK, scaricato 
    > **App bloccata per proteggere il tuo dispositivo**
    > Play Protect non ha mai rilevato app di questo sviluppatore prima d'ora. Potrebbe non essere sicura.
 
-   **Non toccare il pulsante grande (Ok): annulla l'installazione.** Tocca invece il testo piccolo **Installa comunque**, sotto. Se non lo vedi, tocca prima **Maggiori dettagli**.
+   **Non toccare il pulsante grande in basso (Ok): annulla l'installazione.** Tocca invece **Installa comunque**: è un link di testo, piccolo, **sopra** il pulsante Ok.
 5. **Apri Budojo.** Al primo avvio prepara il suo server sul telefono: può volerci un minuto. Poi chiede l'impronta (o il PIN), e mostra la porta:
    - **Accedi con Google**, se la palestra è già sul PC: torna da sola, con tutto quello che il PC ha messo su Drive;
    - **Continua senza Google**, per una palestra solo su questo telefono.

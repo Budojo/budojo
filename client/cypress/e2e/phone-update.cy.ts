@@ -9,7 +9,7 @@ import { VIEWPORT_PHONE } from '../support/viewports';
  * release through `window.budojoVersion`, inside Cypress only.
  */
 
-const RELEASES = 'https://api.github.com/repos/Budojo/budojo/releases/latest';
+const RELEASES = 'https://api.github.com/repos/Budojo/budojo/releases?per_page=10';
 const APK = 'https://github.com/Budojo/budojo/releases/download/v2.80.0/Budojo-Android-2.80.0.apk';
 
 function openTodayOnThePhone(running: string): void {
@@ -26,13 +26,16 @@ function openTodayOnThePhone(running: string): void {
 describe('The update notice on the phone (#2041)', () => {
   it('offers the newer APK as a quiet line on Oggi, a link the thumb can press', () => {
     cy.intercept('GET', RELEASES, {
-      body: {
-        tag_name: 'v2.80.0',
-        assets: [
-          { name: 'Budojo-Setup-2.80.0.exe', browser_download_url: 'https://github.com/x.exe' },
-          { name: 'Budojo-Android-2.80.0.apk', browser_download_url: APK },
-        ],
-      },
+      body: [
+        {
+          tag_name: 'v2.80.0',
+          prerelease: false,
+          assets: [
+            { name: 'Budojo-Setup-2.80.0.exe', browser_download_url: 'https://github.com/x.exe' },
+            { name: 'Budojo-Android-2.80.0.apk', browser_download_url: APK },
+          ],
+        },
+      ],
     }).as('latest');
     openTodayOnThePhone('2.79.0');
     cy.wait('@latest');
@@ -45,10 +48,13 @@ describe('The update notice on the phone (#2041)', () => {
 
   it('says nothing when the phone already runs the latest', () => {
     cy.intercept('GET', RELEASES, {
-      body: {
-        tag_name: 'v2.79.0',
-        assets: [{ name: 'Budojo-Android-2.79.0.apk', browser_download_url: APK }],
-      },
+      body: [
+        {
+          tag_name: 'v2.79.0',
+          prerelease: false,
+          assets: [{ name: 'Budojo-Android-2.79.0.apk', browser_download_url: APK }],
+        },
+      ],
     }).as('latest');
     openTodayOnThePhone('2.79.0');
     cy.wait('@latest');
