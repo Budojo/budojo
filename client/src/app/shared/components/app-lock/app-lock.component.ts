@@ -2,9 +2,12 @@ import {
   ChangeDetectionStrategy,
   Component,
   DOCUMENT,
+  ElementRef,
   afterNextRender,
+  afterRenderEffect,
   effect,
   inject,
+  viewChild,
 } from '@angular/core';
 import { TranslatePipe } from '@ngx-translate/core';
 import { ButtonModule } from 'primeng/button';
@@ -28,10 +31,19 @@ import { AppLockService } from '../../../core/mobile/app-lock.service';
 export class AppLockComponent {
   protected readonly lock = inject(AppLockService);
   private readonly document = inject(DOCUMENT);
+  private readonly unlockButton = viewChild('unlockButton', { read: ElementRef });
 
   constructor() {
     effect(() => {
       this.document.documentElement.classList.toggle('budojo-locked', this.lock.locked());
+    });
+    // «Sblocca» is disabled while a prompt is up; once it can be pressed, the
+    // keyboard and a screen reader start on it.
+    afterRenderEffect(() => {
+      if (this.lock.locked() && !this.lock.asking()) {
+        const element = this.unlockButton()?.nativeElement as HTMLElement | undefined;
+        element?.querySelector('button')?.focus();
+      }
     });
     // After the first render: the language is set by then, so the prompt's
     // title is in the owner's.

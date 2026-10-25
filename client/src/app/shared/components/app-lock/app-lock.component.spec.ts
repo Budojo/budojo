@@ -11,6 +11,7 @@ import { AppLockComponent } from './app-lock.component';
 describe('AppLockComponent', () => {
   let unlock: ReturnType<typeof vi.fn<AppLockPlugin['unlock']>>;
   let answer: (value: AppLockAnswer) => void;
+  const state: AppLockPlugin['state'] = () => Promise.resolve({ unlocked: false, away: 0 });
 
   async function render(plugin: AppLockPlugin | null): Promise<ComponentFixture<AppLockComponent>> {
     await TestBed.configureTestingModule({
@@ -48,7 +49,8 @@ describe('AppLockComponent', () => {
   });
 
   it('covers the app and asks for the fingerprint once it has rendered', async () => {
-    const fixture = await render({ unlock });
+    const fixture = await render({ unlock, state });
+    await vi.waitFor(() => expect(unlock).toHaveBeenCalledOnce());
 
     expect(cover(fixture)?.textContent).toContain('Budojo is locked');
     expect(cover(fixture)?.getAttribute('aria-modal')).toBe('true');
@@ -58,7 +60,8 @@ describe('AppLockComponent', () => {
   });
 
   it('opens the app once the phone says yes', async () => {
-    const fixture = await render({ unlock });
+    const fixture = await render({ unlock, state });
+    await vi.waitFor(() => expect(unlock).toHaveBeenCalledOnce());
     answer({ unlocked: true, secure: true });
     await settle(fixture);
 
@@ -67,7 +70,13 @@ describe('AppLockComponent', () => {
   });
 
   it('asks again from its button after the prompt was closed', async () => {
-    const fixture = await render({ unlock });
+    const fixture = await render({ unlock, state });
+    await vi.waitFor(() => expect(unlock).toHaveBeenCalledOnce());
+    // The prompt is up: the button renders disabled first, as on the phone.
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[data-cy="app-lock-unlock"] button').disabled).toBe(
+      true,
+    );
     answer({ unlocked: false, secure: true, code: 10, message: 'Cancelled' });
     await settle(fixture);
 
@@ -76,6 +85,8 @@ describe('AppLockComponent', () => {
     ) as HTMLButtonElement;
     expect(button.textContent).toContain('Unlock');
     expect(button.disabled).toBe(false);
+    // The prompt kept it disabled; the keyboard starts on it once it is closed.
+    expect(document.activeElement).toBe(button);
     expect(fixture.nativeElement.querySelector('[data-cy="app-lock-problem"]')).toBeNull();
 
     button.click();
@@ -83,7 +94,8 @@ describe('AppLockComponent', () => {
   });
 
   it("says why when the phone refused, in Android's words", async () => {
-    const fixture = await render({ unlock });
+    const fixture = await render({ unlock, state });
+    await vi.waitFor(() => expect(unlock).toHaveBeenCalledOnce());
     answer({ unlocked: false, secure: true, code: 7, message: 'Too many attempts' });
     await settle(fixture);
 

@@ -16,9 +16,25 @@ export interface AppLockAnswer {
   message?: string;
 }
 
+/**
+ * The facts the rule needs, kept by the shell where the page cannot lose or
+ * bend them: they outlive a reload (a sync pull reloads the page), and the
+ * time is Android's `elapsedRealtime`, which setting the clock back does not move.
+ */
+export interface AppLockState {
+  /** Unlocked since this screen of the app opened. */
+  unlocked: boolean;
+  /** The longest time in the background since then, in milliseconds. */
+  away: number;
+}
+
 export interface AppLockPlugin {
-  /** Shows the prompt; answers once it is closed, whichever way. Never rejects on a refusal. */
+  /**
+   * Shows the prompt; answers once it is closed, whichever way. Never rejects
+   * on a refusal. Asked in the background, it refuses with ERROR_CANCELED (5).
+   */
   unlock(options: { title: string }): Promise<AppLockAnswer>;
+  state(): Promise<AppLockState>;
 }
 
 /** The plugin when the page runs inside the Android app; null anywhere else. */

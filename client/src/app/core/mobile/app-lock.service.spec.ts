@@ -1,17 +1,21 @@
 import { TestBed } from '@angular/core/testing';
 import { provideI18nTesting } from '../../../test-utils/i18n-test';
-import { AppLockAnswer, AppLockPlugin, appLockPlugin } from './app-lock';
+import { AppLockAnswer, AppLockPlugin, appLockPlugin, AppLockState } from './app-lock';
 import { AppLockService, AWAY_LIMIT_MS } from './app-lock.service';
 import { APP_LOCK } from './shell-plugins';
 
 /**
  * The fingerprint lock (#2159, PRD § 6.1): on opening, and on coming back after
- * five minutes in the background. The prompt itself is Android's; when to ask is
- * the page's rule, tested here.
+ * five minutes in the background. The prompt is Android's, and the shell keeps
+ * the facts (unlocked since the screen opened, the longest time away since);
+ * when to ask is the page's rule, tested here.
  */
 describe('the fingerprint lock (#2159)', () => {
-  const OPENED = new Date('2026-10-25T18:00:00').getTime();
+  const NEVER: AppLockState = { unlocked: false, away: 0 };
+  const YES: AppLockAnswer = { unlocked: true, secure: true };
+  let shell: AppLockState;
   let unlock: ReturnType<typeof vi.fn<AppLockPlugin['unlock']>>;
+  let state: ReturnType<typeof vi.fn<AppLockPlugin['state']>>;
   let answer: (value: AppLockAnswer) => void;
   let fail: (error: unknown) => void;
 
@@ -22,24 +26,32 @@ describe('the fingerprint lock (#2159)', () => {
     return TestBed.inject(AppLockService);
   }
 
-  function go(state: 'hidden' | 'visible', at: number): void {
-    vi.setSystemTime(at);
-    Object.defineProperty(document, 'visibilityState', { value: state, configurable: true });
+  function go(visibility: 'hidden' | 'visible'): void {
+    Object.defineProperty(document, 'visibilityState', { value: visibility, configurable: true });
     document.dispatchEvent(new Event('visibilitychange'));
   }
 
-  /** Opened, the first prompt answered with the fingerprint. */
+  /** Lets the shell's answers reach the page. */
+  async function settle(): Promise<void> {
+    for (let i = 0; i < 5; i++) {
+      await Promise.resolve();
+    }
+  }
+
+  /** Opened, and the first prompt answered with the fingerprint. */
   async function opened(): Promise<AppLockService> {
-    const lock = lockWith({ unlock });
+    const lock = lockWith({ unlock, state });
     lock.start();
-    answer({ unlocked: true, secure: true });
+    await vi.waitFor(() => expect(unlock).toHaveBeenCalledOnce());
+    answer(YES);
+    shell = { unlocked: true, away: 0 };
     await vi.waitFor(() => expect(lock.locked()).toBe(false));
     return lock;
   }
 
   beforeEach(() => {
-    vi.useFakeTimers({ toFake: ['Date'] });
-    vi.setSystemTime(OPENED);
+    shell = NEVER;
+    state = vi.fn(() => Promise.resolve(shell));
     unlock = vi.fn(
       () =>
         new Promise<AppLockAnswer>((resolve, reject) => {
@@ -47,12 +59,12 @@ describe('the fingerprint lock (#2159)', () => {
           fail = reject;
         }),
     );
+    Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true });
   });
 
   afterEach(() => {
     TestBed.resetTestingModule();
     Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true });
-    vi.useRealTimers();
   });
 
   it('finds no plugin in a browser', () => {
@@ -67,74 +79,61 @@ describe('the fingerprint lock (#2159)', () => {
   });
 
   it('is locked from the first frame, and asks at once on opening', async () => {
-    const lock = lockWith({ unlock });
+    const lock = lockWith({ unlock, state });
     // Before anything is asked: the gym never shows ahead of the prompt.
     expect(lock.locked()).toBe(true);
 
     lock.start();
-    expect(unlock).toHaveBeenCalledExactlyOnceWith({ title: 'Unlock Budojo' });
+    await vi.waitFor(() =>
+      expect(unlock).toHaveBeenCalledExactlyOnceWith({ title: 'Unlock Budojo' }),
+    );
     expect(lock.asking()).toBe(true);
 
-    answer({ unlocked: true, secure: true });
+    answer(YES);
     await vi.waitFor(() => expect(lock.locked()).toBe(false));
     expect(lock.asking()).toBe(false);
   });
 
   it('opens a phone with no screen lock, which the shell answers at once', async () => {
-    const lock = lockWith({ unlock });
+    const lock = lockWith({ unlock, state });
     lock.start();
+    await vi.waitFor(() => expect(unlock).toHaveBeenCalledOnce());
     answer({ unlocked: true, secure: false });
 
     await vi.waitFor(() => expect(lock.locked()).toBe(false));
   });
 
-  it('stays locked when the prompt is closed, and asks again only when asked', async () => {
-    const lock = lockWith({ unlock });
+  it('does not ask again after a reload, when the shell says it was unlocked', async () => {
+    // A sync pull reloads the page: the shell outlives it.
+    shell = { unlocked: true, away: 60_000 };
+    const lock = lockWith({ unlock, state });
     lock.start();
-    answer({ unlocked: false, secure: true, code: 10, message: 'Cancelled' });
-    await vi.waitFor(() => expect(lock.asking()).toBe(false));
 
-    expect(lock.locked()).toBe(true);
-    // Closing it is the owner's own choice: nothing to explain.
-    expect(lock.problem()).toBeNull();
-    expect(unlock).toHaveBeenCalledOnce();
-
-    void lock.unlock();
-    expect(unlock).toHaveBeenCalledTimes(2);
+    await vi.waitFor(() => expect(lock.locked()).toBe(false));
+    expect(unlock).not.toHaveBeenCalled();
   });
 
-  it("says why, in Android's words, when the phone refused for another reason", async () => {
-    const lock = lockWith({ unlock });
+  it('never asks while the app is in the background, and asks once it is back', async () => {
+    // Reloaded in the background, by a pull or a first start the owner left.
+    Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true });
+    const lock = lockWith({ unlock, state });
     lock.start();
-    answer({ unlocked: false, secure: true, code: 7, message: 'Too many attempts' });
+    await settle();
+    expect(state).not.toHaveBeenCalled();
+    expect(unlock).not.toHaveBeenCalled();
 
-    await vi.waitFor(() => expect(lock.problem()).toBe('Too many attempts'));
+    go('visible');
+    await vi.waitFor(() => expect(unlock).toHaveBeenCalledOnce());
     expect(lock.locked()).toBe(true);
-  });
-
-  it('stays locked, and says why, when the shell itself fails', async () => {
-    const lock = lockWith({ unlock });
-    lock.start();
-    fail(new Error('AppLock is not implemented on android'));
-
-    await vi.waitFor(() => expect(lock.problem()).toBe('AppLock is not implemented on android'));
-    expect(lock.locked()).toBe(true);
-    expect(lock.asking()).toBe(false);
-  });
-
-  it('never puts two prompts up at once', () => {
-    const lock = lockWith({ unlock });
-    lock.start();
-    void lock.unlock();
-
-    expect(unlock).toHaveBeenCalledOnce();
   });
 
   it('stays open after less than five minutes away', async () => {
     const lock = await opened();
 
-    go('hidden', OPENED + 1000);
-    go('visible', OPENED + 1000 + AWAY_LIMIT_MS - 1);
+    go('hidden');
+    shell = { unlocked: true, away: AWAY_LIMIT_MS - 1 };
+    go('visible');
+    await settle();
 
     expect(lock.locked()).toBe(false);
     expect(unlock).toHaveBeenCalledOnce();
@@ -143,75 +142,100 @@ describe('the fingerprint lock (#2159)', () => {
   it('locks after five minutes away, and asks on the way back', async () => {
     const lock = await opened();
 
-    go('hidden', OPENED + 1000);
-    go('visible', OPENED + 1000 + AWAY_LIMIT_MS);
+    go('hidden');
+    shell = { unlocked: true, away: AWAY_LIMIT_MS };
+    go('visible');
 
+    await vi.waitFor(() => expect(unlock).toHaveBeenCalledTimes(2));
     expect(lock.locked()).toBe(true);
-    expect(unlock).toHaveBeenCalledTimes(2);
   });
 
-  it('counts each time away on its own, not the minutes added up', async () => {
-    const lock = await opened();
+  it('stays locked after a reload that follows five minutes away', async () => {
+    shell = { unlocked: true, away: AWAY_LIMIT_MS + 1 };
+    const lock = lockWith({ unlock, state });
+    lock.start();
 
-    go('hidden', OPENED + 1000);
-    go('visible', OPENED + 1000 + 3 * 60_000);
-    go('hidden', OPENED + 1000 + 4 * 60_000);
-    go('visible', OPENED + 1000 + 7 * 60_000);
+    await vi.waitFor(() => expect(unlock).toHaveBeenCalledOnce());
+    expect(lock.locked()).toBe(true);
+  });
 
-    expect(lock.locked()).toBe(false);
+  it('leaves the cover when the owner closes the prompt, until they ask or leave', async () => {
+    const lock = lockWith({ unlock, state });
+    lock.start();
+    await vi.waitFor(() => expect(unlock).toHaveBeenCalledOnce());
+    // Before Android 11 the PIN is its own screen: the page goes, the owner
+    // closes it, and the page comes back.
+    go('hidden');
+    answer({ unlocked: false, secure: true, code: 10, message: 'Cancelled' });
+    await vi.waitFor(() => expect(lock.asking()).toBe(false));
+    go('visible');
+    await settle();
+
+    expect(lock.locked()).toBe(true);
+    // Closing it is the owner's own choice: nothing to explain, and no new prompt.
+    expect(lock.problem()).toBeNull();
+    expect(unlock).toHaveBeenCalledOnce();
+
+    // Leaving and coming back is opening it again.
+    go('hidden');
+    go('visible');
+    await vi.waitFor(() => expect(unlock).toHaveBeenCalledTimes(2));
+    answer({ unlocked: false, secure: true, code: 13, message: 'Cancelled' });
+    await vi.waitFor(() => expect(lock.asking()).toBe(false));
+
+    // And its button asks, always.
+    void lock.unlock();
+    expect(unlock).toHaveBeenCalledTimes(3);
   });
 
   it('asks again on the way back when the prompt went away with the app', async () => {
-    const lock = lockWith({ unlock });
+    const lock = lockWith({ unlock, state });
     lock.start();
-    go('hidden', OPENED + 1000);
-    // Android closes a prompt whose app leaves: ERROR_CANCELED.
-    answer({ unlocked: false, secure: true, code: 5, message: 'Cancelled' });
+    await vi.waitFor(() => expect(unlock).toHaveBeenCalledOnce());
+    go('hidden');
+    // Android closes a prompt whose app leaves, and the shell refuses one
+    // asked in the background: ERROR_CANCELED, both.
+    answer({ unlocked: false, secure: true, code: 5, message: 'Not on the screen' });
     await vi.waitFor(() => expect(lock.asking()).toBe(false));
+    // Nothing the owner did: nothing to explain.
+    expect(lock.problem()).toBeNull();
 
-    go('visible', OPENED + 2000);
+    go('visible');
 
-    expect(lock.locked()).toBe(true);
-    expect(unlock).toHaveBeenCalledTimes(2);
+    await vi.waitFor(() => expect(unlock).toHaveBeenCalledTimes(2));
   });
 
-  it('does not count the PIN screen of its own prompt as time away', async () => {
-    const lock = lockWith({ unlock });
+  it("says why, in Android's words, when the phone refused for another reason", async () => {
+    const lock = lockWith({ unlock, state });
     lock.start();
-    // Before Android 11 the PIN is its own screen: the page goes away while
-    // the prompt is up, and may come back only after its answer.
-    go('hidden', OPENED + 1000);
-    answer({ unlocked: true, secure: true });
-    await vi.waitFor(() => expect(lock.locked()).toBe(false));
-    go('visible', OPENED + 1000 + AWAY_LIMIT_MS + 1);
+    await vi.waitFor(() => expect(unlock).toHaveBeenCalledOnce());
+    answer({ unlocked: false, secure: true, code: 7, message: 'Too many attempts' });
 
-    expect(lock.locked()).toBe(false);
-    expect(unlock).toHaveBeenCalledOnce();
-  });
-
-  it('stays open after the PIN that answered a return after five minutes', async () => {
-    const lock = await opened();
-    go('hidden', OPENED + 1000);
-    go('visible', OPENED + 1000 + AWAY_LIMIT_MS);
+    await vi.waitFor(() => expect(lock.problem()).toBe('Too many attempts'));
     expect(lock.locked()).toBe(true);
-
-    // The PIN's own screen, then the page back, after the answer.
-    go('hidden', OPENED + 2000 + AWAY_LIMIT_MS);
-    answer({ unlocked: true, secure: true });
-    await vi.waitFor(() => expect(lock.locked()).toBe(false));
-    go('visible', OPENED + 3000 + AWAY_LIMIT_MS);
-
-    expect(lock.locked()).toBe(false);
-    expect(unlock).toHaveBeenCalledTimes(2);
   });
 
-  it('asks once when the app comes back while its prompt is still up', () => {
-    const lock = lockWith({ unlock });
+  it('stays locked, and says why, when the shell itself fails', async () => {
+    const lock = lockWith({ unlock, state });
     lock.start();
-    go('hidden', OPENED + 1000);
-    go('visible', OPENED + 1000 + AWAY_LIMIT_MS + 1);
+    await vi.waitFor(() => expect(unlock).toHaveBeenCalledOnce());
+    fail(new Error('AppLock is not implemented on android'));
 
+    await vi.waitFor(() => expect(lock.problem()).toBe('AppLock is not implemented on android'));
     expect(lock.locked()).toBe(true);
+    expect(lock.asking()).toBe(false);
+  });
+
+  it('never puts two prompts up at once', async () => {
+    const lock = lockWith({ unlock, state });
+    lock.start();
+    await vi.waitFor(() => expect(unlock).toHaveBeenCalledOnce());
+
+    void lock.unlock();
+    go('hidden');
+    go('visible');
+    await settle();
+
     expect(unlock).toHaveBeenCalledOnce();
   });
 });

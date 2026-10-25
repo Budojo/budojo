@@ -79,11 +79,21 @@ Calling PHP in-process from this shell is the way out if Android ever stops the 
 
 **`AppLockPlugin.java`** shows Android's own biometric prompt (AndroidX `biometric`, free and open source; the ready-made plugins are paid):
 - **`unlock({ title })` answers once the prompt is closed, whichever way,** and never rejects on a refusal: `{ unlocked, secure, code?, message? }`. `code` is BiometricPrompt's, and `message` is Android's own words, in the phone's language.
+- **Asked in the background, it refuses with `code: 5`** instead of asking: biometric 1.1.0 drops a prompt asked once the activity's state is saved, and the call would never answer.
 - **The phone's PIN, pattern or password is the fallback inside the same prompt** (`BIOMETRIC_WEAK | DEVICE_CREDENTIAL`). A phone with no fingerprint gets the screen lock alone.
 - **A phone with no screen lock has nothing to check against:** the answer is `unlocked` at once, with `secure: false`.
-- **When to ask is the page's rule** (`client/src/app/core/mobile/app-lock.service.ts`): on opening, and on coming back after five minutes in the background. While locked, `app-lock` covers everything, and the rest is hidden to a screen reader too, but kept: a form half filled survives it.
+- **`state()` keeps the facts the rule needs where the page cannot lose or bend them:** `unlocked` since this screen opened, and `away`, the longest time in the background since then.
+  - Both outlive a reload of the page; a sync pull reloads it.
+  - `away` is `SystemClock.elapsedRealtime()`, counted from `onStop` to `onStart`. Setting the phone's clock back does not move it, and it keeps counting while the phone sleeps.
+  - An unlock sets `away` back to 0. Before Android 11 the PIN is its own screen, and the time spent on it is not time away.
+- **When to ask is the page's rule** (`client/src/app/core/mobile/app-lock.service.ts`):
+  - it checks on opening and on every return, and never asks while the app is in the background;
+  - five minutes away locks it;
+  - a prompt the owner closed (codes 10, 13) leaves the cover and its «Sblocca» until they press it or leave the app.
+
+  While locked, `app-lock` covers everything. The rest is hidden to a screen reader too, but kept: a form half filled survives it.
 - **It guards the screen, not the files.** The keys at rest are #2134. Android's recent-apps preview still shows the last screen: hiding it (`FLAG_SECURE`) would also stop every screenshot, the owner's and the emulator's.
-- **The emulator job checks it:** it sets a PIN, photographs the prompt and the cover, enters the PIN and reaches the door.
+- **The emulator job checks it:** it sets a PIN, closes the prompt with Back (twice: the first only hides the keyboard) and photographs the cover, enters the PIN and reaches the door. Android keeps its PIN screen out of screenshots, so that photo comes out empty.
 
 ## Rules
 
