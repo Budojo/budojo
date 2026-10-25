@@ -42,6 +42,23 @@ const promotion = (id: number, over: Record<string, unknown>) => ({
   ...over,
 });
 
+/**
+ * Inside the screen, at rest. A fixed panel wider than the phone widens
+ * neither the page nor its column, so the sideways check cannot see it.
+ */
+function expectInsideTheScreen(selector: string): void {
+  cy.get(selector).should(($panel) => {
+    // At rest: a panel still scaling in would measure smaller than it is.
+    expect(getComputedStyle($panel[0]).transform, `${selector} at rest`).to.be.oneOf([
+      'none',
+      'matrix(1, 0, 0, 1, 0, 0)',
+    ]);
+    const box = $panel[0].getBoundingClientRect();
+    expect(box.left, `${selector} left`).to.be.at.least(0);
+    expect(box.right, `${selector} right`).to.be.at.most(VIEWPORT_PHONE.width);
+  });
+}
+
 /** At least 48 x 48 CSS px, the touch floor. */
 function expectPressable(selector: string): void {
   cy.get(selector).should(($el) => {
@@ -147,6 +164,7 @@ describe('The athlete flows on the phone (#2144)', () => {
     cy.get('[data-cy="promotions-add"]').click();
     // The panel, not the `p-dialog` host, which holds only fixed boxes (#2154).
     cy.get('[data-cy="promotion-create-dialog"] [role="dialog"]').should('be.visible');
+    expectInsideTheScreen('[data-cy="promotion-create-dialog"] [role="dialog"]');
     expectNoSidewaysScroll();
     cy.get('[data-cy="promotion-create-cancel"]').click();
     cy.get('[data-cy="promotion-create-dialog"] [role="dialog"]').should('not.exist');
@@ -193,16 +211,7 @@ describe('The athlete flows on the phone (#2144)', () => {
 
     cy.get('[data-cy="payment-card-mark-10"]').scrollIntoView().click();
     cy.get('[data-cy="mark-paid-confirm"]').should('be.visible');
-    cy.get('.p-confirmpopup').should(($popup) => {
-      // At rest: a popup still scaling in would measure smaller than it is.
-      expect(getComputedStyle($popup[0]).transform, 'popup at rest').to.be.oneOf([
-        'none',
-        'matrix(1, 0, 0, 1, 0, 0)',
-      ]);
-      const box = $popup[0].getBoundingClientRect();
-      expect(box.left, 'popup left').to.be.at.least(0);
-      expect(box.right, 'popup right').to.be.at.most(VIEWPORT_PHONE.width);
-    });
+    expectInsideTheScreen('.p-confirmpopup');
     cy.get('.p-confirmpopup').contains('button', 'Mark paid').click();
     cy.wait('@pay').its('request.body').should('deep.include', { year: 2026, month: 10 });
   });
