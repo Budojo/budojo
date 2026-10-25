@@ -37,10 +37,11 @@ wait_for() {
 }
 
 # Taps the middle of the first node whose text or description is $1. A
-# button's text can lead with a space, where its icon is (« Unlock»).
+# button's text can lead with its icon's glyph and a space («\uE96A Unlock»),
+# so anything but a letter or a digit may come first.
 tap() {
   local bounds
-  bounds=$(screen_xml | tr '>' '\n' | grep -E "(text|content-desc)=\" *$1\"" | head -1 | grep -o 'bounds="[^"]*"' | head -1)
+  bounds=$(screen_xml | tr '>' '\n' | grep -E "(text|content-desc)=\"[^[:alnum:]\"]*$1\"" | head -1 | grep -o 'bounds="[^"]*"' | head -1)
   if [ -z "$bounds" ]; then
     echo "::error::nothing to tap called «$1»"
     return 1
