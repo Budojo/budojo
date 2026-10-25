@@ -8,8 +8,8 @@ The phone app of M12 ([PRD](../docs/specs/m12-mat-app.md), epic #2026). **The sc
 |---|---|
 | `capacitor.config.json` | App id **`it.budojo.mobile`** (permanent: it can never change once a phone has it), name, and `webDir` pointing at `../client/dist/client/browser`. **`allowMixedContent` is on** because the page (`https://localhost`) shows images, athletes' photos and avatars, straight from the server on `http://127.0.0.1`; cleartext is still allowed to that address only. |
 | `android/` | The Gradle project Capacitor generated. Committed, as Capacitor intends; `cap sync` copies the web build into it (the copy is gitignored). |
-| `android/app/src/main/res/` | The launcher icon and the launch screen draw the brand kit's glyph (`docs/design/brand-kit/`) as vectors: white on the accent for the adaptive and themed icon, the accent on the brand surface for the launch screen. The `mipmap-*/ic_launcher*.png` are only for Android 7, rendered from `icon-square-accent.svg`. |
-| `package.json` | Capacitor and its CLI, nothing else |
+| `android/app/src/main/res/` | The launcher icon and the launch screen draw the brand kit's glyph (`docs/design/brand-kit/`) as vectors: white on the accent for the adaptive and themed icon, the accent on the brand surface for the launch screen. The `mipmap-*/ic_launcher*.png` are only for Android 7, rendered from `icon-square-accent.svg`. `drawable/ic_stat_budojo.xml` is the glyph in white, the reminders' small icon: Android draws it from its alpha alone. |
+| `package.json` | Capacitor, its CLI, and `@capacitor/local-notifications` for the reminders (#2047) |
 
 ## Building
 
@@ -112,6 +112,20 @@ Calling PHP in-process from this shell is the way out if Android ever stops the 
   While locked, `app-lock` covers everything. The rest is hidden to a screen reader too, but kept: a form half filled survives it.
 - **It guards the screen, not the files.** The keys at rest are #2134. Android's recent-apps preview still shows the last screen: hiding it (`FLAG_SECURE`) would also stop every screenshot, the owner's and the emulator's.
 - **The emulator job checks it:** it sets a PIN, closes the prompt with Back (twice: the first only hides the keyboard) and photographs the cover, enters the PIN and reaches the door. Android keeps its PIN screen out of screenshots, so that photo comes out empty.
+
+## The reminders (#2047)
+
+**Android's own notifications, scheduled ahead**, through the official `@capacitor/local-notifications` (MIT). Nothing runs on a phone with the app closed, so the page hands Android the reminders of the next fourteen days, and Android shows each at its hour:
+- **The reminders are the PC's** (#1226): `GET /api/v1/reminders/upcoming` works them out with the PC's own selections, opt-outs and sentences (`ReminderSubjects`, `NotificationText`), plus birthdays, which are new. Each has a `key` naming one occurrence (`unpaid:2026-05`).
+- **The page keeps them true** (`client/src/app/core/mobile/phone-reminders.ts`): at every opening, every return to the screen and every sync, one still to come is replaced when its words change and cancelled when no longer due: the fee got paid on the PC. One already shown is never taken back nor shown twice.
+- **What "shown" means is read off Android**, because the plugin's own records do not say:
+  - a record stays until the notification is swiped away or tapped, so a key the ledger holds with no record left was shown. One shown at once never has a record; one we cancel past its hour stays, marked cancelled, until a swipe or the next restart;
+  - the tray (`getDeliveredNotifications`) holds the ones on show, and `localStorage` remembers each key seen there, because a restart empties the tray;
+  - **a record past its hour that was never seen shown is shown at once.** Android drops a one-off alarm whose hour passes with the phone off, and the plugin's boot receiver skips it (`isTriggered()` only compares the time). A tray emptied by a restart before any refresh saw it shows that reminder twice, which costs less than a certificate missed.
+- **Not exact alarms.** `SCHEDULE_EXACT_ALARM` is removed from the merged manifest: Android 14 denies it by default to anything that is not an alarm clock or a calendar, and a reminder due at nine may come a few minutes after it. The plugin's boot receiver schedules them again after a restart.
+- **The text on the lock screen:** the channel is public, as the owner chose (PRD § 6.3). The plugin marks each notification private, so a phone set to hide sensitive content on the lock screen hides it, as for any app; under Android's default the whole text shows.
+- **Asking:** Android 13+ asks. Oggi says why in one sentence and Android asks on the owner's tap («Attiva le notifiche»). After a no the plugin answers `prompt-with-rationale` (Android would ask once more), and Oggi offers nothing again: Android's settings turn them on, and the permission is read again at every refresh, so coming back from there schedules them.
+- **The emulator job checks the manifest** (the permission to post, the boot receiver, no exact alarms). That a reminder arrives with the app closed is checked on a real phone: the emulator has no academy to remind of.
 
 ## Rules
 

@@ -3502,7 +3502,9 @@
       "firstCopyPending": "The first copy off this computer comes with the next backup",
       "open": "Open backup",
       "update": "Budojo {{version}} is out",
-      "download": "Download"
+      "download": "Download",
+      "reminders": "Budojo can remind you of certificates, fees and birthdays with the app closed, through the phone's notifications.",
+      "allowReminders": "Turn on notifications"
     },
     "backup": {
       "folderFailing": "Copying backups to {{where}} is failing",
@@ -3902,5 +3904,11 @@
     "body": "Use your fingerprint or the phone's PIN to open it.",
     "unlock": "Unlock",
     "prompt": "Unlock Budojo"
+  },
+  "reminders": {
+    "channel": {
+      "name": "Reminders",
+      "description": "Expiring certificates and documents, unpaid fees, absences and birthdays"
+    }
   }
 }

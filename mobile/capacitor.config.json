@@ -10,6 +10,10 @@
   "plugins": {
     "CapacitorHttp": {
       "enabled": true
+    },
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_budojo",
+      "iconColor": "#5B6CFF"
     }
   }
 }
