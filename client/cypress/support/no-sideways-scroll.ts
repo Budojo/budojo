@@ -10,7 +10,9 @@
  * (the landing, the legal pages, sign-in) says so with `'public'`.
  */
 export function expectNoSidewaysScroll(where: 'dashboard' | 'public' = 'dashboard'): void {
-  cy.document().then((doc) => {
+  // `should`, retried: the shell renders after the visit, and a check made
+  // before it is there measures nothing.
+  cy.document().should((doc) => {
     expect(doc.documentElement.scrollWidth, 'page scrollWidth').to.be.at.most(
       doc.documentElement.clientWidth,
     );

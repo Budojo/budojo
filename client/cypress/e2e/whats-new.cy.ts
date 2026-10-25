@@ -141,7 +141,9 @@ MOBILE_VIEWPORTS.forEach(({ name, width, height }) => {
       // uses — catches a release card or a long bullet that breaks
       // out of the viewport. Text-overflow doesn't change textContent
       // so this is the only honest check.
-      expectNoSidewaysScroll('public');
+      // Inside the dashboard: its column is measured too, once the page is in it.
+      cy.get('.whats-new__title').should('be.visible');
+      expectNoSidewaysScroll();
     });
   });
 });
