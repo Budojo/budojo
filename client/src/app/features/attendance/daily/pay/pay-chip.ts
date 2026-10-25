@@ -70,21 +70,38 @@ export function owedMonths(
   return [...months].filter((month) => !paidHere.has(month)).sort();
 }
 
+/** One payment the sheet offers: the month it starts on, and how many it covers. */
+export interface PayOption {
+  readonly month: string;
+  readonly period: number;
+}
+
 /**
- * The payments that settle `owed`, one per period, as the months each starts
- * on (#2036). A monthly payer's are the months themselves. A quarterly payer
- * behind August and September owes one quarter, August to October, and not
- * three overlapping ones: a month a period already covers starts no other.
+ * The payments that settle `owed`, one per period, each with the month it
+ * starts on (#2036). A monthly payer's are the months themselves. A quarterly
+ * payer behind August and September owes one quarter, August to October, and
+ * not three overlapping ones: a month a period already covers starts no other.
+ *
+ * A whole period that would cross a month already `paid` is refused by the
+ * server, so that month is offered on its own instead (#2150): August and
+ * September owed with October to December paid are two single months.
  */
-export function periodStarts(owed: readonly string[], period: number): string[] {
-  const starts: string[] = [];
+export function periodStarts(
+  owed: readonly string[],
+  period: number,
+  paid: ReadonlySet<string>,
+): PayOption[] {
+  const options: PayOption[] = [];
   let covered = new Set<string>();
   for (const month of [...owed].sort()) {
     if (covered.has(month)) continue;
-    starts.push(month);
-    covered = new Set(monthsCovered(month, period));
+    const whole = monthsCovered(month, period);
+    const fits = whole.every((m) => m === month || !paid.has(m));
+    const option = { month, period: fits ? period : 1 };
+    options.push(option);
+    covered = new Set(monthsCovered(month, option.period));
   }
-  return starts;
+  return options;
 }
 
 /**

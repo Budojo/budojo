@@ -69,16 +69,36 @@ describe('pay-chip', () => {
   });
 
   describe('periodStarts', () => {
+    const PAID = new Set<string>();
+
     it('is the months themselves for a monthly payer', () => {
-      expect(periodStarts(['2026-08', '2026-09'], 1)).toEqual(['2026-08', '2026-09']);
+      expect(periodStarts(['2026-08', '2026-09'], 1, PAID)).toEqual([
+        { month: '2026-08', period: 1 },
+        { month: '2026-09', period: 1 },
+      ]);
     });
 
     it('owes a quarterly payer one quarter for two months behind, not three overlapping', () => {
-      expect(periodStarts(['2026-09', '2026-08', '2026-10'], 3)).toEqual(['2026-08']);
+      expect(periodStarts(['2026-09', '2026-08', '2026-10'], 3, PAID)).toEqual([
+        { month: '2026-08', period: 3 },
+      ]);
     });
 
     it('starts a second period on the first month the first leaves out', () => {
-      expect(periodStarts(['2026-02', '2026-03', '2026-06'], 3)).toEqual(['2026-02', '2026-06']);
+      expect(periodStarts(['2026-02', '2026-03', '2026-06'], 3, PAID)).toEqual([
+        { month: '2026-02', period: 3 },
+        { month: '2026-06', period: 3 },
+      ]);
+    });
+
+    it('offers the months alone where a whole period would cross one already paid', () => {
+      // August and September owed, October to December paid (#2150): the
+      // server refuses an August quarter, so each month goes on its own.
+      const paid = new Set(['2026-10', '2026-11', '2026-12']);
+      expect(periodStarts(['2026-08', '2026-09'], 3, paid)).toEqual([
+        { month: '2026-08', period: 1 },
+        { month: '2026-09', period: 1 },
+      ]);
     });
   });
 

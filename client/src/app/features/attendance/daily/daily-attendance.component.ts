@@ -812,6 +812,7 @@ export class DailyAttendanceComponent implements OnInit {
             }
           }
           this.markInflight(athlete.id, false);
+          this.refreshCarnet(athlete.id);
           options.settled?.(true);
         },
         error: () => {
@@ -850,6 +851,7 @@ export class DailyAttendanceComponent implements OnInit {
           );
         }
         this.markInflight(athlete.id, false);
+        this.refreshCarnet(athlete.id);
       },
       error: () => {
         this.optimisticAdd(athlete.id, recordId);
@@ -1445,6 +1447,36 @@ export class DailyAttendanceComponent implements OnInit {
       next.delete(athleteId);
     }
     this.inflight.set(next);
+  }
+
+  /**
+   * A presence spends a carnet entry on the server, and taking it back gives
+   * the entry back (`ReconcileCarnetEntriesAction`): the phone's chip reads
+   * the athlete again so «Carnet · 3» follows (#2150). Only where a chip shows
+   * and a carnet is in play: nobody else's row has a balance to move.
+   */
+  private refreshCarnet(athleteId: number): void {
+    if (!this.showsMoney()) return;
+    const athlete = this.athletes().find((a) => a.id === athleteId);
+    if (!athlete || (athlete.active_carnet == null && athlete.payment_coverage !== 'carnet')) {
+      return;
+    }
+    // A failed read leaves the old balance: the next load corrects it.
+    this.athleteService.get(athleteId).subscribe({
+      next: (fresh) =>
+        this.athletes.update((rows) =>
+          rows.map((row) =>
+            row.id === athleteId
+              ? {
+                  ...row,
+                  active_carnet: fresh.active_carnet,
+                  payment_coverage: fresh.payment_coverage,
+                }
+              : row,
+          ),
+        ),
+      error: () => undefined,
+    });
   }
 
   /** The payment chip for one phone row, or `null` when it shows none. */

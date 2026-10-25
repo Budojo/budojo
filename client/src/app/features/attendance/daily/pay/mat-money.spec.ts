@@ -4,6 +4,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { Athlete } from '../../../../core/services/athlete.service';
 import { AthletePayment } from '../../../../core/services/payment.service';
 import { MatMoney } from './mat-money';
+import { PayOption } from './pay-chip';
 
 const ARREARS = '/api/v1/stats/payments/arrears';
 
@@ -100,7 +101,7 @@ describe('MatMoney', () => {
     behind(http, [{ id: 7, months: ['2026-07', '2026-08'] }]);
 
     // Paid here for July: August is next, with no request for the months.
-    money.record(athlete(), '2026-07', 'cash').subscribe();
+    money.record(athlete(), { month: '2026-07', period: 1 }, 'cash').subscribe();
     http.expectOne((r) => r.method === 'POST').flush({ data: payment({ month: 7 }) });
     expect(money.chipFor(athlete())).toEqual({ kind: 'due', month: '2026-08' });
   });
@@ -127,7 +128,7 @@ describe('MatMoney', () => {
     money.load();
     behind(http, [{ id: 7, months: ['2025-12'] }]);
 
-    let owed: string[] = [];
+    let owed: PayOption[] = [];
     money.owedFor(athlete()).subscribe((months) => (owed = months));
     http
       .expectOne((r) => r.url.endsWith('/athletes/7/payments') && r.params.get('year') === '2025')
@@ -136,7 +137,8 @@ describe('MatMoney', () => {
       .expectOne((r) => r.url.endsWith('/athletes/7/payments') && r.params.get('year') === '2026')
       .flush({ data: [], overdue_months: ['2026-08', '2026-09'] });
 
-    expect(owed).toEqual(['2025-12', '2026-08', '2026-09', '2026-10']);
+    expect(owed.map((o) => o.month)).toEqual(['2025-12', '2026-08', '2026-09', '2026-10']);
+    expect(owed.every((o) => o.period === 1)).toBe(true);
   });
 
   it('offers a quarterly payer one quarter for the months behind', () => {
@@ -144,24 +146,48 @@ describe('MatMoney', () => {
     money.load();
     behind(http, [{ id: 7, months: ['2026-08'] }]);
 
-    let owed: string[] = [];
+    let owed: PayOption[] = [];
     money.owedFor(athlete({ billing_period_months: 3 })).subscribe((months) => (owed = months));
     http
       .expectOne((r) => r.url.endsWith('/athletes/7/payments'))
       .flush({ data: [], overdue_months: ['2026-08', '2026-09'] });
 
     // August to October settles all three: August, September and this month.
-    expect(owed).toEqual(['2026-08']);
+    expect(owed).toEqual([{ month: '2026-08', period: 3 }]);
   });
 
-  it('asks nothing for someone not behind', () => {
+  it('offers single months where a quarter would cross one already paid (#2150)', () => {
+    const { money, http } = setup();
+    money.load();
+    behind(http, [{ id: 7, months: ['2026-08'] }]);
+
+    let owed: PayOption[] = [];
+    money.owedFor(athlete({ billing_period_months: 3 })).subscribe((months) => (owed = months));
+    http
+      .expectOne((r) => r.url.endsWith('/athletes/7/payments'))
+      .flush({
+        data: [payment({ month: 10, period_months: 3, amount_cents: 16500 })],
+        overdue_months: ['2026-08', '2026-09'],
+      });
+
+    // October to December is paid: an August quarter would cross it.
+    expect(owed).toEqual([
+      { month: '2026-08', period: 1 },
+      { month: '2026-09', period: 1 },
+    ]);
+  });
+
+  it("reads this year's ledger for someone not behind, and offers this month", () => {
     const { money, http } = setup();
     money.load();
     behind(http, []);
 
-    let owed: string[] = [];
+    let owed: PayOption[] = [];
     money.owedFor(athlete()).subscribe((months) => (owed = months));
-    expect(owed).toEqual(['2026-10']);
+    http
+      .expectOne((r) => r.url.endsWith('/athletes/7/payments') && r.params.get('year') === '2026')
+      .flush({ data: [], overdue_months: [] });
+    expect(owed).toEqual([{ month: '2026-10', period: 1 }]);
   });
 
   it("records a quarterly payer's period, and the chip moves past it", () => {
@@ -175,7 +201,7 @@ describe('MatMoney', () => {
       .expectOne((r) => r.url.endsWith('/athletes/7/payments'))
       .flush({ data: [], overdue_months: ['2026-08', '2026-09'] });
 
-    money.record(quarterly, '2026-08', 'cash').subscribe();
+    money.record(quarterly, { month: '2026-08', period: 3 }, 'cash').subscribe();
     const post = http.expectOne((r) => r.method === 'POST');
     expect(post.request.body).toEqual({
       year: 2026,
@@ -193,7 +219,7 @@ describe('MatMoney', () => {
     money.load();
     behind(http, []);
 
-    money.record(athlete(), '2026-10', 'pos').subscribe();
+    money.record(athlete(), { month: '2026-10', period: 1 }, 'pos').subscribe();
     http.expectOne((r) => r.method === 'POST').flush({ data: payment({ month: 10 }) });
     expect(money.chipFor(athlete())).toEqual({ kind: 'covered' });
 

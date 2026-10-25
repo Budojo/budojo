@@ -24,20 +24,20 @@
           {{ 'attendance.daily.pay.sheet.months' | translate }}
         </legend>
         @if (months(); as months) {
-          @for (month of months; track month) {
+          @for (option of months; track option.month) {
             <label
               class="pay-sheet__month"
-              [class.pay-sheet__month--on]="month === picked()"
-              [attr.data-cy]="'pay-sheet-month-' + month"
+              [class.pay-sheet__month--on]="option.month === picked()"
+              [attr.data-cy]="'pay-sheet-month-' + option.month"
             >
               <input
                 type="radio"
                 name="pay-sheet-month"
-                [value]="month"
-                [checked]="month === picked()"
-                (change)="pick(month)"
+                [value]="option.month"
+                [checked]="option.month === picked()"
+                (change)="pick(option.month)"
               />
-              <span>{{ monthLabel(month) }}</span>
+              <span>{{ monthLabel(option) }}</span>
             </label>
           } @empty {
             <p class="pay-sheet__none" data-cy="pay-sheet-none">

@@ -25,7 +25,7 @@ import { formatCents } from '../../../../shared/utils/money';
 import { monthKey } from '../../../../shared/utils/months';
 import { paymentMethodOptions } from '../../../../shared/utils/payment-method-options';
 import { MatMoney } from './mat-money';
-import { monthsCovered, yearMonthOf } from './pay-chip';
+import { PayOption, monthsCovered, yearMonthOf } from './pay-chip';
 
 /** What the sheet hands back once a payment is recorded. */
 export interface PayRecorded {
@@ -75,9 +75,15 @@ export class PaySheetComponent {
   /** The sheet is gone from the screen: the host can take the keyboard back. */
   readonly hidden = output<void>();
 
-  /** The months owed; `null` while the server is asked. */
-  protected readonly months = signal<readonly string[] | null>(null);
+  /** The payments owed, each a month and its period; `null` while the server is asked. */
+  protected readonly months = signal<readonly PayOption[] | null>(null);
+  /** The month of the payment picked. */
   protected readonly picked = signal<string | null>(null);
+
+  /** The picked payment, with its period: a single month where a quarter would cross a paid one. */
+  private readonly pickedOption = computed<PayOption | null>(
+    () => this.months()?.find((option) => option.month === this.picked()) ?? null,
+  );
   protected readonly method = signal<PaymentMethod>('cash');
   protected readonly saving = signal<boolean>(false);
   protected readonly failed = signal<boolean>(false);
@@ -111,7 +117,7 @@ export class PaySheetComponent {
     const athlete = this.athlete();
     if (athlete === null) return '';
     const amount = formatCents(
-      this.money.amountOf(athlete),
+      this.money.amountOf(athlete, this.pickedOption()?.period),
       'EUR',
       this.languageService.currentLang(),
     );
@@ -124,9 +130,8 @@ export class PaySheetComponent {
    * payer, whose payment covers the months after it too. The year shows only
    * when it is not this one.
    */
-  protected monthLabel(month: string): string {
-    const athlete = this.athlete();
-    const covered = monthsCovered(month, athlete === null ? 1 : this.money.periodOf(athlete));
+  protected monthLabel(option: PayOption): string {
+    const covered = monthsCovered(option.month, option.period);
     const name = (m: string): string => {
       const { year, month: n } = yearMonthOf(m);
       const word = this.translate.instant(monthKey(n));
@@ -147,11 +152,11 @@ export class PaySheetComponent {
 
   protected submit(): void {
     const athlete = this.athlete();
-    const month = this.picked();
-    if (athlete === null || month === null || this.saving()) return;
+    const option = this.pickedOption();
+    if (athlete === null || option === null || this.saving()) return;
     this.saving.set(true);
     this.failed.set(false);
-    this.money.record(athlete, month, this.method()).subscribe({
+    this.money.record(athlete, option, this.method()).subscribe({
       next: ({ payment, created }) => {
         this.saving.set(false);
         this.recorded.emit({ athlete, payment, created });
@@ -173,16 +178,17 @@ export class PaySheetComponent {
       // The chip's own month is still worth offering: the server will say
       // if it is not owed any more.
       error: () => {
-        if (opening === this.opening) this.settle(chipMonth === null ? [] : [chipMonth], chipMonth);
+        if (opening !== this.opening) return;
+        const period = this.money.periodOf(athlete);
+        this.settle(chipMonth === null ? [] : [{ month: chipMonth, period }], chipMonth);
       },
     });
   }
 
-  private settle(months: readonly string[], chipMonth: string | null): void {
-    this.months.set(months);
-    this.picked.set(
-      chipMonth !== null && months.includes(chipMonth) ? chipMonth : (months[0] ?? null),
-    );
+  private settle(options: readonly PayOption[], chipMonth: string | null): void {
+    this.months.set(options);
+    const chip = options.find((option) => option.month === chipMonth);
+    this.picked.set(chip?.month ?? options[0]?.month ?? null);
   }
 
   private reset(): void {
