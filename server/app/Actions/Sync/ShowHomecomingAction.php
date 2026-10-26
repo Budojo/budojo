@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\DB;
  * payment corrected is told at its amount now.
  *
  * - presences by the lesson they were recorded into, the busiest first;
- * - payments, with their total;
+ * - payments, with their total; a month let off (#2167) is none;
  * - new athletes still in the roster;
  * - promotions given: a belt over another, or a stripe added. A timeline's
  *   opening row and the stripe reset beside a belt are none.
@@ -97,7 +97,7 @@ final class ShowHomecomingAction
      */
     private static function payments(array $ids): array
     {
-        $row = DB::table('athlete_payments')->whereIn('id', $ids)
+        $row = DB::table('athlete_payments')->whereIn('id', $ids)->where('waived', false)
             ->selectRaw('count(*) as count, coalesce(sum(amount_cents), 0) as amount_cents')
             ->first();
 

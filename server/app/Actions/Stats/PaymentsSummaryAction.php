@@ -30,6 +30,8 @@ use Illuminate\Support\Collection;
  *   rate; a trashed athlete is out through the model's soft delete. And only
  *   from their `BillingFloor` on (#1742): nobody owes a month before they
  *   joined, or before the academy kept its fees in Budojo.
+ * - A month the owner let an athlete off (#2167) takes them out of the
+ *   population for that month: it was never going to bring their fee in.
  * - **`expected_cents`** — Σ `MonthlyFee::forAthlete()` over the population:
  *   **one month's worth per athlete**, whatever their billing period. An
  *   annual payer adds a twelfth of what they handed over, because this is a
@@ -75,7 +77,7 @@ class PaymentsSummaryAction
         $bucket = AthletePayment::monthIndex($year, $month);
         $current = AthletePayment::monthIndex($today->year, $today->month);
 
-        $population = $this->population($academy, $bucket);
+        $population = $this->population($academy, $year, $month);
         $owingIds = $this->owingIds($academy, $year, $month, $bucket < $current);
         $owing = $population->filter(static fn (Athlete $athlete): bool => \in_array($athlete->id, $owingIds, true));
         $expected = $this->feesOf($population);
@@ -95,15 +97,20 @@ class PaymentsSummaryAction
     }
 
     /**
-     * The athletes a fee is owed from in the month: charged, and past their
-     * billing floor. The floor is a PHP rule over two dates (#1742), so it is
-     * applied to the loaded rows rather than restated in SQL.
+     * The athletes a fee is owed from in the month: charged, past their
+     * billing floor, and not let off it (#2167) — the owner chose not to ask,
+     * and the rate must not read that as money missing. The floor is a PHP
+     * rule over two dates (#1742), so it is applied to the loaded rows rather
+     * than restated in SQL.
      *
      * @return Collection<int, Athlete>
      */
-    private function population(Academy $academy, int $bucket): Collection
+    private function population(Academy $academy, int $year, int $month): Collection
     {
+        $bucket = AthletePayment::monthIndex($year, $month);
+
         return $this->query($academy)
+            ->whereDoesntHave('payments', static fn (Builder $q) => $q->covering($year, $month)->where('waived', true))
             ->with(['feeTier', 'academy'])
             ->get()
             ->filter(static function (Athlete $athlete) use ($academy, $bucket): bool {

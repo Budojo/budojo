@@ -52,6 +52,11 @@ export interface AthletePayment {
    * so fixtures written before it keep compiling; a missing value reads as null.
    */
   readonly payment_method?: PaymentMethod | null;
+  /**
+   * A month the owner let the athlete off (#2167): €0, no method, not owed.
+   * Optional so fixtures written before it keep compiling; missing is a payment.
+   */
+  readonly waived?: boolean;
 }
 
 /** How a fee or a carnet was paid (#1761), the server's `PaymentMethod` enum. */
@@ -187,6 +192,21 @@ export class PaymentService {
           created: res.status === 201,
         })),
       );
+  }
+
+  /**
+   * Let the athlete off one month (#2167): not paid, and not owed. The server
+   * records it at €0 with no method, dated today; undone like a payment,
+   * with `unmarkPaid`.
+   */
+  waive(athleteId: number, year: number, month: number): Observable<AthletePayment> {
+    return this.http
+      .post<AthletePaymentResponse>(`${this.base}/${athleteId}/payments`, {
+        year,
+        month,
+        waived: true,
+      })
+      .pipe(map((res) => res.data));
   }
 
   /**

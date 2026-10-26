@@ -5,7 +5,8 @@ import { Athlete } from '../../../../core/services/athlete.service';
  *
  * - `due`: the oldest month they owe. Once they are marked present it reads
  *   «Da chiedere»: the check-in knows who is standing in front of you.
- * - `free`: they train free (their own fee is zero).
+ * - `free`: they train free (their own fee is zero), or the owner let them
+ *   off this month (#2167).
  * - `carnet`: a carnet pays for this month, with its entries left.
  * - `covered`: a fee's period pays for this month and nothing is behind.
  */
@@ -39,11 +40,10 @@ export function monthsCovered(month: string, period: number): string[] {
  * older than `payment_coverage` falls back to `paid_current_month`, and one
  * with neither is not known: no chip says anything about it.
  */
-function coverageOf(athlete: Athlete): 'none' | 'carnet' | 'fee' | null {
+function coverageOf(athlete: Athlete): 'none' | 'carnet' | 'waived' | 'fee' | null {
   const coverage = athlete.payment_coverage;
-  if (coverage !== undefined) {
-    return coverage === 'none' ? 'none' : coverage === 'carnet' ? 'carnet' : 'fee';
-  }
+  if (coverage === 'none' || coverage === 'carnet' || coverage === 'waived') return coverage;
+  if (coverage !== undefined) return 'fee';
   if (athlete.paid_current_month === undefined) return null;
   return athlete.paid_current_month ? 'fee' : 'none';
 }
@@ -124,6 +124,7 @@ export function payChipOf(
   if (paidHere.has(thisMonth)) return { kind: 'covered' };
   const coverage = coverageOf(athlete);
   if (coverage === null || coverage === 'none') return null;
+  if (coverage === 'waived') return { kind: 'free' };
   if (coverage === 'carnet' && athlete.active_carnet) {
     return { kind: 'carnet', left: athlete.active_carnet.remaining_entries };
   }

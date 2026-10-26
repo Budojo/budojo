@@ -3,8 +3,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Router, provideRouter } from '@angular/router';
-import { Observable, Subject, of, throwError } from 'rxjs';
-import { ConfirmationService, MessageService } from 'primeng/api';
+import { EMPTY, Observable, Subject, of, throwError } from 'rxjs';
+import { ConfirmationService, MenuItem, MessageService } from 'primeng/api';
 import { By } from '@angular/platform-browser';
 import { Tooltip } from 'primeng/tooltip';
 import type { Mock } from 'vitest';
@@ -33,6 +33,9 @@ class FakeAthleteService {
   // Asked only when the roster comes back empty on a query nobody narrowed
   // (#1666). Zero by default: a fake academy with no rows is a new one.
   readonly countInactive = vi.fn(() => of(0));
+  // The row read again once its month changed (#2167). Silent by default:
+  // what the row knew at once stands, as when the read fails.
+  readonly get = vi.fn((): Observable<Athlete> => EMPTY);
   // Echoes the change back as the server would (#2011): the row is replaced
   // by what comes back, so the fake has to carry the new fee.
   readonly update = vi.fn(
@@ -64,6 +67,22 @@ class FakePaymentService {
     }),
   );
   readonly unmarkPaid = vi.fn(() => of(void 0));
+  readonly waive = vi.fn(() =>
+    of({
+      id: 2,
+      athlete_id: 42,
+      year: 2026,
+      month: 10,
+      amount_cents: 0,
+      paid_at: '2026-10-20T00:00:00Z',
+      waived: true,
+    }),
+  );
+}
+
+/** Every action in the chip's menu, its groups opened out (#2167). */
+function menuLabels(items: MenuItem[]): string[] {
+  return items.flatMap((item) => item.items ?? [item]).map((item) => item.label ?? '');
 }
 
 const ACADEMY_BASE = {
@@ -1707,7 +1726,7 @@ describe('AthletesListComponent — what is paying for the month (#1402)', () =>
     Object.defineProperty(event, 'currentTarget', { value: document.createElement('button') });
 
     cmp['openPaymentMenu'](event, makeAthlete({ id: 5, payment_coverage: 'none' }) as never);
-    const labels = cmp['paymentMenuItems']().map((i) => i.label);
+    const labels = menuLabels(cmp['paymentMenuItems']());
 
     // A menu that offers "undo the payment" to someone who has none teaches
     // the reader to ignore half of it.
@@ -1722,12 +1741,12 @@ describe('AthletesListComponent — what is paying for the month (#1402)', () =>
     Object.defineProperty(event, 'currentTarget', { value: document.createElement('button') });
 
     cmp['openPaymentMenu'](event, makeAthlete({ id: 6, payment_coverage: 'quarterly' }) as never);
-    expect(cmp['paymentMenuItems']().map((i) => i.label)).toContain('Undo the payment');
+    expect(menuLabels(cmp['paymentMenuItems']())).toContain('Undo the payment');
 
     // A carnet is undone by deleting the carnet — a different act, with its
     // own warning about the sessions it covers.
     cmp['openPaymentMenu'](event, makeAthlete({ id: 7, payment_coverage: 'carnet' }) as never);
-    expect(cmp['paymentMenuItems']().map((i) => i.label)).not.toContain('Undo the payment');
+    expect(menuLabels(cmp['paymentMenuItems']())).not.toContain('Undo the payment');
   });
 
   describe('someone who trains free (#2011)', () => {
@@ -1736,7 +1755,7 @@ describe('AthletesListComponent — what is paying for the month (#1402)', () =>
       const event = new MouseEvent('click');
       Object.defineProperty(event, 'currentTarget', { value: document.createElement('button') });
       cmp['openPaymentMenu'](event, athlete as never);
-      return cmp['paymentMenuItems']().map((i) => i.label ?? '');
+      return menuLabels(cmp['paymentMenuItems']());
     }
 
     function accepting(fixture: ComponentFixture<AthletesListComponent>): void {
@@ -1750,10 +1769,8 @@ describe('AthletesListComponent — what is paying for the month (#1402)', () =>
     it('offers «trains free» to anyone the chip asks to pay', () => {
       // "Lei è la mia compagna, non la faccio pagare": the state existed as a
       // personal fee of 0, three screens away from where the owner looks.
-      expect(menuFor(makeAthlete({ id: 20, payment_coverage: 'none' }))).toContain('Trains free');
-      expect(menuFor(makeAthlete({ id: 21, payment_coverage: 'monthly' }))).toContain(
-        'Trains free',
-      );
+      expect(menuFor(makeAthlete({ id: 20, payment_coverage: 'none' }))).toContain('Always');
+      expect(menuFor(makeAthlete({ id: 21, payment_coverage: 'monthly' }))).toContain('Always');
     });
 
     it('saves a personal fee of 0 on accept, and the row says Free', () => {
@@ -1828,6 +1845,116 @@ describe('AthletesListComponent — what is paying for the month (#1402)', () =>
     });
   });
 
+  describe('a month let off (#2167)', () => {
+    beforeEach(() => vi.setSystemTime(new Date(2026, 9, 20, 10)));
+    afterEach(() => vi.useRealTimers());
+
+    function open(athlete: Athlete): {
+      fixture: ComponentFixture<AthletesListComponent>;
+      groups: MenuItem[];
+    } {
+      const fixture = render([athlete]);
+      const event = new MouseEvent('click');
+      Object.defineProperty(event, 'currentTarget', { value: document.createElement('button') });
+      fixture.componentInstance['openPaymentMenu'](event, athlete);
+      return { fixture, groups: fixture.componentInstance['paymentMenuItems']() };
+    }
+
+    function choose(fixture: ComponentFixture<AthletesListComponent>, label: string): void {
+      const confirm = fixture.componentRef.injector.get(ConfirmationService);
+      confirm.confirm = vi.fn((cfg: { accept: () => void }) => {
+        cfg.accept();
+        return confirm;
+      }) as never;
+      const item = fixture.componentInstance['paymentMenuItems']()
+        .flatMap((group) => group.items ?? [])
+        .find((entry) => entry.label === label);
+      item?.command?.({} as never);
+      fixture.detectChanges();
+    }
+
+    it('says «trains free» once, over this month and always, under the name of whose menu it is', () => {
+      const { groups } = open(makeAthlete({ id: 30, payment_coverage: 'none' }));
+
+      expect(groups.map((group) => group.label)).toEqual(['Mario Rossi', 'Trains free']);
+      expect(groups[0].items?.map((item) => item.label)).toEqual([
+        'Mark paid',
+        'Sell a carnet',
+        'Open payments',
+      ]);
+      expect(groups[1].items?.map((item) => item.label)).toEqual(['Just October', 'Always']);
+    });
+
+    it('offers the month to a carnet holder, and only «always» once a fee pays it', () => {
+      const carnet = open(makeAthlete({ id: 31, payment_coverage: 'carnet' })).groups;
+      const paid = open(makeAthlete({ id: 32, payment_coverage: 'monthly' })).groups;
+
+      expect(carnet[1].items?.map((item) => item.label)).toEqual(['Just October', 'Always']);
+      // Paid already: letting it off would be refused, so it is not offered.
+      expect(paid[1].items?.map((item) => item.label)).toEqual(['Always']);
+    });
+
+    it('lets the athlete off this month on a yes: the chip says Free month at once', () => {
+      const { fixture } = open(makeAthlete({ id: 33, payment_coverage: 'none' }));
+      const toast = vi.spyOn(fixture.componentRef.injector.get(MessageService), 'add');
+
+      choose(fixture, 'Just October');
+
+      expect(TestBed.inject(PaymentService).waive).toHaveBeenCalledWith(33, 2026, 10);
+      expect(chip(fixture, 33)).toBe('Free month');
+      expect(toast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          severity: 'success',
+          summary: 'October is free for Mario Rossi',
+        }),
+      );
+    });
+
+    it('shows the month let off with a way back and nothing to pay', () => {
+      const { fixture, groups } = open(
+        makeAthlete({ id: 34, payment_coverage: 'waived', paid_current_month: true }),
+      );
+
+      expect(chip(fixture, 34)).toBe('Free month');
+      expect(menuLabels(groups)).not.toContain('Mark paid');
+      expect(menuLabels(groups)).not.toContain('Undo the payment');
+      expect(groups[1].items?.map((item) => item.label)).toEqual(['Undo October', 'Always']);
+    });
+
+    it('takes the month back, and the chip says what pays now, as the server does', () => {
+      const { fixture } = open(
+        makeAthlete({ id: 35, payment_coverage: 'waived', paid_current_month: true }),
+      );
+      // A carnet pays October once the month is owed again.
+      (TestBed.inject(AthleteService).get as unknown as Mock).mockReturnValue(
+        of(
+          makeAthlete({
+            id: 35,
+            payment_coverage: 'carnet',
+            paid_current_month: false,
+            active_carnet: { id: 4, code: 'C-4', remaining_entries: 3, expires_at: '2026-12-31' },
+          }),
+        ),
+      );
+
+      choose(fixture, 'Undo October');
+
+      expect(TestBed.inject(PaymentService).unmarkPaid).toHaveBeenCalledWith(35, 2026, 10);
+      expect(chip(fixture, 35)).toBe('Carnet · 3');
+    });
+
+    it('moves the chip when the month is marked paid, which only the next load did', () => {
+      const { fixture } = open(makeAthlete({ id: 36, payment_coverage: 'none' }));
+      (TestBed.inject(AthleteService).get as unknown as Mock).mockReturnValue(
+        of(makeAthlete({ id: 36, payment_coverage: 'monthly', paid_current_month: true })),
+      );
+
+      choose(fixture, 'Mark paid');
+
+      expect(chip(fixture, 36)).toBe('Monthly');
+    });
+  });
+
   it('does not offer a carnet in an academy that sells none', () => {
     TestBed.inject(AcademyService).academy.set({
       id: 1,
@@ -1844,7 +1971,7 @@ describe('AthletesListComponent — what is paying for the month (#1402)', () =>
     Object.defineProperty(event, 'currentTarget', { value: document.createElement('button') });
 
     cmp['openPaymentMenu'](event, makeAthlete({ id: 8, payment_coverage: 'none' }) as never);
-    expect(cmp['paymentMenuItems']().map((i) => i.label)).not.toContain('Sell a carnet');
+    expect(menuLabels(cmp['paymentMenuItems']())).not.toContain('Sell a carnet');
   });
 });
 

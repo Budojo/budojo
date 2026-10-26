@@ -74,6 +74,8 @@ final class ExportSeasonPaymentsAction
 
         return array_values(AthletePayment::query()
             ->whereIn('athlete_id', $this->athleteIds($academy))
+            // A month let off (#2167) brought nothing in.
+            ->where('waived', false)
             ->where('paid_at', '>=', $from)
             ->where('paid_at', '<', $until)
             ->with(['athlete' => static fn ($q) => $q->withTrashed()])

@@ -1339,9 +1339,9 @@ export class AthletesListComponent implements OnInit {
    * and the test a future chip has to pass to join it.
    */
   protected coverageIcon(athlete: Athlete): string {
-    if (this.trainsFree(athlete)) return 'pi pi-gift';
-
     const coverage = this.coverageOf(athlete);
+
+    if (this.trainsFree(athlete) || coverage === 'waived') return 'pi pi-gift';
 
     if (coverage === 'none') return 'pi pi-times-circle';
 
@@ -1359,7 +1359,7 @@ export class AthletesListComponent implements OnInit {
 
     if (coverage === 'none') return 'warn';
 
-    return coverage === 'carnet' ? 'secondary' : 'success';
+    return coverage === 'carnet' || coverage === 'waived' ? 'secondary' : 'success';
   }
 
   /**
@@ -1368,6 +1368,11 @@ export class AthletesListComponent implements OnInit {
    * Offering "undo the payment" to someone who has none, or "sell a carnet" in
    * an academy that does not sell them, is a menu teaching the reader to
    * ignore half of it.
+   *
+   * Two groups (#2167): the athlete's name over what is done about the money,
+   * then «Si allena gratis» once, over its two answers, this month or from
+   * now on. PrimeNG draws a menu with groups only as groups, and the name says
+   * whose menu it is where the popup covers the row.
    */
   protected openPaymentMenu(event: MouseEvent, athlete: Athlete): void {
     const openPayments: MenuItem = {
@@ -1400,10 +1405,10 @@ export class AthletesListComponent implements OnInit {
         icon: 'pi pi-check',
         command: () => this.confirmTogglePaid(event, athlete),
       });
-    } else if (coverage !== 'carnet') {
+    } else if (coverage !== 'carnet' && coverage !== 'waived') {
       // Only a fee payment can be undone from here. A carnet is undone by
       // deleting the carnet, which is a different act with its own warning
-      // about the sessions it covers.
+      // about the sessions it covers; a month let off, from its own group.
       items.push({
         label: this.translate.instant('athletes.list.payMenu.undoPaid'),
         icon: 'pi pi-undo',
@@ -1419,18 +1424,158 @@ export class AthletesListComponent implements OnInit {
       });
     }
 
-    // The owner's partner, a coach's child (#2011): the state existed as a
-    // personal fee of 0, three screens away in the athlete's record.
+    items.push(openPayments);
+
+    this.paymentMenuItems.set([
+      { label: `${athlete.first_name} ${athlete.last_name}`, items },
+      {
+        label: this.translate.instant('athletes.list.payMenu.trainFree'),
+        items: this.freeItems(event, athlete, coverage),
+      },
+    ]);
+    this.paymentMenu?.toggle(event);
+  }
+
+  /**
+   * «Si allena gratis»'s two answers (#2167). This month: someone who helped
+   * with the gym does not pay October, offered while nothing else pays it,
+   * and taken back from here. Always: the owner's partner, a coach's child
+   * (#2011), a personal fee of 0 that was three screens away.
+   */
+  private freeItems(event: MouseEvent, athlete: Athlete, coverage: PaymentCoverage): MenuItem[] {
+    const month = this.thisMonth().name;
+    const items: MenuItem[] = [];
+
+    if (coverage === 'waived') {
+      items.push({
+        label: this.translate.instant('athletes.list.payMenu.undoFreeMonth', { month }),
+        icon: 'pi pi-undo',
+        command: () => this.confirmFreeMonth(event, athlete, false),
+      });
+    } else if (coverage === 'none' || coverage === 'carnet') {
+      items.push({
+        label: this.translate.instant('athletes.list.payMenu.freeMonth', { month }),
+        icon: 'pi pi-calendar',
+        command: () => this.confirmFreeMonth(event, athlete, true),
+      });
+    }
+
     items.push({
-      label: this.translate.instant('athletes.list.payMenu.trainFree'),
+      label: this.translate.instant('athletes.list.payMenu.freeAlways'),
       icon: 'pi pi-gift',
       command: () => this.confirmTrainsFree(event, athlete, true),
     });
 
-    items.push(openPayments);
+    return items;
+  }
 
-    this.paymentMenuItems.set(items);
-    this.paymentMenu?.toggle(event);
+  /**
+   * The owner's month, the one the server reads `payment_coverage` in
+   * (#1968): UTC's would be the previous month for the first hours of every
+   * new one.
+   */
+  private thisMonth(): { year: number; month: number; name: string } {
+    const now = new Date();
+    return {
+      year: now.getFullYear(),
+      month: now.getMonth() + 1,
+      name: now.toLocaleString(this.locale(), { month: 'long' }),
+    };
+  }
+
+  /**
+   * Let the athlete off this month, or take it back (#2167). Confirmed like
+   * marking paid: it takes them off the unpaid list, and a mis-tap on a phone
+   * should not do that quietly.
+   */
+  protected confirmFreeMonth(event: MouseEvent, athlete: Athlete, free: boolean): void {
+    const { year, month, name: monthName } = this.thisMonth();
+    const params = { name: `${athlete.first_name} ${athlete.last_name}`, month: monthName };
+
+    this.confirmationService.confirm({
+      target: event.currentTarget as EventTarget,
+      message: this.translate.instant(
+        free
+          ? 'athletes.list.confirm.freeMonthMessage'
+          : 'athletes.list.confirm.undoFreeMonthMessage',
+        params,
+      ),
+      acceptLabel: this.translate.instant(
+        free
+          ? 'athletes.list.confirm.freeMonthAccept'
+          : 'athletes.list.confirm.undoFreeMonthAccept',
+        params,
+      ),
+      rejectLabel: this.translate.instant('common.cancel'),
+      rejectButtonProps: CONFIRM_REJECT_BUTTON,
+      accept: () => this.applyFreeMonth(athlete, year, month, free, params),
+    });
+  }
+
+  private applyFreeMonth(
+    athlete: Athlete,
+    year: number,
+    month: number,
+    free: boolean,
+    params: { name: string; month: string },
+  ): void {
+    const op$ = free
+      ? this.paymentService.waive(athlete.id, year, month).pipe(map(() => undefined))
+      : this.paymentService.unmarkPaid(athlete.id, year, month);
+
+    op$.subscribe({
+      next: () => {
+        this.settleRow(
+          athlete.id,
+          free
+            ? { paid_current_month: true, payment_coverage: 'waived' }
+            : { paid_current_month: false },
+        );
+        this.messageService.add({
+          severity: 'success',
+          summary: this.translate.instant(
+            free ? 'athletes.list.toast.freeMonth' : 'athletes.list.toast.undoFreeMonth',
+            params,
+          ),
+          life: 3000,
+        });
+      },
+      error: () =>
+        this.messageService.add({
+          severity: 'error',
+          summary: this.translate.instant('athletes.list.toast.errorSummary'),
+          detail: this.translate.instant('athletes.list.toast.paidErrorGeneric'),
+          life: 4000,
+        }),
+    });
+  }
+
+  /**
+   * A row whose month just changed: what is known at once, then what pays
+   * for it as the server says. The rule about which cover wins lives in
+   * `App\Support\MonthCoverage`: undoing a fee can leave a carnet paying, and
+   * the row must not guess. A failed read leaves the first answer; the next
+   * load corrects it.
+   */
+  private settleRow(
+    athleteId: number,
+    known: Pick<Athlete, 'paid_current_month'> & Partial<Pick<Athlete, 'payment_coverage'>>,
+  ): void {
+    const patch = (fields: Partial<Athlete>): void =>
+      this.athletes.update((rows) =>
+        rows.map((a) => (a.id === athleteId ? { ...a, ...fields } : a)),
+      );
+
+    patch(known);
+    this.athleteService.get(athleteId).subscribe({
+      next: (fresh) =>
+        patch({
+          paid_current_month: fresh.paid_current_month,
+          payment_coverage: fresh.payment_coverage,
+          active_carnet: fresh.active_carnet,
+        }),
+      error: () => undefined,
+    });
   }
 
   /** True when the academy has both halves of a carnet offering configured. */
@@ -1750,8 +1895,7 @@ export class AthletesListComponent implements OnInit {
     // previous month for the first hours of every new one, and the chip
     // would still say unpaid on the next load.
     const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth() + 1;
+    const { year, month } = this.thisMonth();
     const monthLabel = now.toLocaleString(this.locale(), { month: 'long', year: 'numeric' });
 
     const fullName = `${athlete.first_name} ${athlete.last_name}`;
@@ -1827,12 +1971,10 @@ export class AthletesListComponent implements OnInit {
 
     op$.subscribe({
       next: () => {
-        // Optimistic local-state update — we replace just this row's
-        // `paid_current_month` flag instead of reloading the whole
-        // page. The signal swap forces OnPush to re-render the badge.
-        this.athletes.update((rows) =>
-          rows.map((a) => (a.id === athlete.id ? { ...a, paid_current_month: markPaid } : a)),
-        );
+        // Just this row, not the whole page: the flag at once, then the
+        // chip's coverage from the server, which the flag alone left saying
+        // «Non pagato» after «Segna pagato» until the next load.
+        this.settleRow(athlete.id, { paid_current_month: markPaid });
         this.messageService.add({
           severity: 'success',
           summary: this.translate.instant(
