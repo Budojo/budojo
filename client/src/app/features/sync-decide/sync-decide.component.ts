@@ -233,14 +233,19 @@ export class SyncDecideComponent implements OnInit {
     if (key === 'payment') {
       const year = Number(body['year']);
       const month = Number(body['month']);
+      // A month let off (#2167) is not a payment: keeping the PC's over it
+      // must not read as dropping a duplicate.
+      const waived = body['waived'] === true;
       return Number.isInteger(year) && Number.isInteger(month) && month >= 1 && month <= 12
-        ? this.translate.instant('sync.decide.what.payment', {
+        ? this.translate.instant(waived ? 'sync.decide.what.waived' : 'sync.decide.what.payment', {
             month: new Intl.DateTimeFormat(this.locale(), {
               month: 'long',
               year: 'numeric',
             }).format(new Date(year, month - 1, 1)),
           })
-        : this.translate.instant('sync.decide.what.paymentAny');
+        : this.translate.instant(
+            waived ? 'sync.decide.what.waivedAny' : 'sync.decide.what.paymentAny',
+          );
     }
     if (key === 'attendance' || key === 'lessonTopics' || key === 'lessonNotes') {
       const day = body['date'] ?? body['held_on'];

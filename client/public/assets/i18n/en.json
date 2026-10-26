@@ -3879,6 +3879,8 @@
         "athlete": "Athlete details",
         "payment": "Payment for {{month}}",
         "paymentAny": "Payment",
+        "waived": "Free month: {{month}}",
+        "waivedAny": "Free month",
         "attendance": "Attendance on {{date}}",
         "attendanceAny": "Attendance",
         "lessonTopics": "Topics of the lesson on {{date}}",

@@ -3879,6 +3879,8 @@
         "athlete": "Scheda dell'atleta",
         "payment": "Pagamento di {{month}}",
         "paymentAny": "Pagamento",
+        "waived": "Mese gratis: {{month}}",
+        "waivedAny": "Mese gratis",
         "attendance": "Presenza del {{date}}",
         "attendanceAny": "Presenza",
         "lessonTopics": "Argomenti della lezione del {{date}}",

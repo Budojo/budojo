@@ -208,6 +208,25 @@ describe('SyncDecideComponent', () => {
     expect(el.textContent).toContain('2 topics');
   });
 
+  it('names a month let off as such, not as a payment (#2167)', async () => {
+    const { el } = await setup([
+      conflict({
+        route: 'athletes.payments.store',
+        reason: 'refused',
+        detail: { message: 'A payment already covers 2026-10.' },
+        entry: {
+          method: 'POST',
+          params: { athlete: 57 },
+          body: { year: 2026, month: 10, waived: true, amount_cents: 0, period_months: 1 },
+          before: null,
+        },
+      }),
+    ]);
+
+    expect(el.textContent).toContain('Free month: October 2026');
+    expect(el.textContent).not.toContain('Payment for October 2026');
+  });
+
   it('says there is nothing to decide when nothing waits', async () => {
     const { el } = await setup([]);
 
