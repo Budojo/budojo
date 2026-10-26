@@ -1,0 +1,24 @@
+@if (lock.locked()) {
+  <section
+    class="app-lock"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="app-lock-title"
+    data-cy="app-lock"
+  >
+    <span class="app-lock__icon pi pi-lock" aria-hidden="true"></span>
+    <h1 id="app-lock-title" class="app-lock__title">{{ 'lock.title' | translate }}</h1>
+    <p class="app-lock__body">{{ 'lock.body' | translate }}</p>
+    <p-button
+      #unlockButton
+      [label]="'lock.unlock' | translate"
+      icon="pi pi-lock-open"
+      [loading]="lock.asking()"
+      (onClick)="lock.unlock()"
+      data-cy="app-lock-unlock"
+    />
+    @if (lock.problem(); as problem) {
+      <p class="app-lock__problem" role="alert" data-cy="app-lock-problem">{{ problem }}</p>
+    }
+  </section>
+}

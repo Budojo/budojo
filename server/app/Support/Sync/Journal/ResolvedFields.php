@@ -20,7 +20,7 @@ final class ResolvedFields
 {
     /** Route => the fields of the row it answers with. */
     private const array ROUTES = [
-        'athletes.payments.store' => ['amount_cents', 'period_months', 'paid_at', 'payment_method'],
+        'athletes.payments.store' => ['amount_cents', 'period_months', 'paid_at', 'payment_method', 'waived'],
     ];
 
     /** @return list<string> */

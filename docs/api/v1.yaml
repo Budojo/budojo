@@ -4566,6 +4566,54 @@ paths:
         '403':
           $ref: '#/components/responses/OwnerGateForbidden'
 
+  /reminders/upcoming:
+    get:
+      tags: [auth]
+      summary: The owner's reminders of the next fourteen days, for the phone to schedule
+      description: |
+        The reminders the PC sends on the day (#1226), worked out ahead
+        (#2047, PRD § 6.3) so the phone can hand them to Android: nothing runs
+        on a phone with the app closed. Same selections, opt-outs and
+        sentences as the PC, in the owner's language:
+
+        - `medical-certificates:<day>` and `academy-documents:<day>`: the
+          papers expiring a month, a week or on the day after `<day>`, at
+          09:00;
+        - `unpaid:<YYYY-MM>`: the athletes who owe the month, on the 16th at
+          09:00, a carnet judged on that day as the PC will judge it;
+        - `birthdays:<day>`: the active athletes born that day, at 09:00. New
+          with the phone, no opt-out yet;
+        - `missed-streak:<athlete>:<last session>`: an athlete who missed the
+          last three scheduled sessions, today at 09:30. It cannot be told
+          ahead: only a check-in says whether they came. Keyed by the absence:
+          the athlete's last check-in on a scheduled day before today,
+          closures left out, or the day they joined when there is none. So it
+          is told once for each absence, and a check-in today, or on a day
+          with no session, does not tell it again.
+
+        Each `key` names one occurrence: the phone keeps one notification per
+        key, replaces it when its words change and cancels it when the key is
+        no longer listed. A reminder of today stays listed after its hour, for
+        a phone opened late. Read-only; scoped to the caller's academy.
+      operationId: upcomingReminders
+      responses:
+        '200':
+          description: The reminders, by time then key.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/UpcomingReminder'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/OwnerGateForbidden'
+
   /athletes:
     get:
       tags: [athletes]
@@ -5588,6 +5636,11 @@ paths:
         whose override is `0` records a payment of 0. The athlete resource's
         `monthly_fee_cents` is the resolved amount, so a client can tell
         upfront. Cross-academy returns 403.
+
+        With `waived: true` the row lets the athlete off one month instead
+        (#2167): €0, no method, no notice to the athlete. The same overlap
+        rules apply, and a month already paid cannot be let off, nor one let
+        off paid: undo it first.
       operationId: athletePaymentRecord
       parameters:
         - name: athlete
@@ -9376,6 +9429,31 @@ components:
             $ref: '#/components/schemas/ValidationErrorBody'
 
   schemas:
+    UpcomingReminder:
+      type: object
+      description: One reminder for the phone to schedule (#2047).
+      required: [key, at, title, body, link]
+      properties:
+        key:
+          type: string
+          description: The occurrence it names; stable across forecasts.
+          example: unpaid:2026-05
+        at:
+          type: string
+          format: date-time
+          description: When it is due, with the operator's offset.
+          example: '2026-05-16T09:00:00+02:00'
+        title:
+          type: string
+          example: Un atleta non ha ancora pagato la quota di maggio
+        body:
+          type: string
+          description: The names, or one line per document.
+          example: Marco Bianchi
+        link:
+          type: string
+          description: The page a tap opens, inside the app.
+          example: /dashboard/athletes?paid=no
     SyncHomecoming:
       type: object
       description: What the other device's work brought since this device last held it (#2039).
@@ -12013,11 +12091,12 @@ components:
               example: 2
         payment_coverage:
           type: string
-          enum: [monthly, quarterly, half_yearly, annual, carnet, none]
+          enum: [monthly, quarterly, half_yearly, annual, waived, carnet, none]
           description: |
             What is paying for this athlete's **current** month (#1402): the
-            fee's period when one covers it, otherwise a spendable carnet,
-            otherwise nothing.
+            fee's period when one covers it, `waived` when the owner let them
+            off it (#2167), otherwise a spendable carnet, otherwise nothing.
+            A month let off is `paid_current_month: true`: a row settles it.
 
             Resolved server-side by `App\Support\MonthCoverage`. **The monthly
             fee wins over a carnet**, which is not a decision this field takes
@@ -12237,7 +12316,7 @@ components:
 
     AthletePayment:
       type: object
-      required: [id, athlete_id, year, month, period_months, amount_cents, paid_at]
+      required: [id, athlete_id, year, month, period_months, amount_cents, paid_at, waived]
       properties:
         id:
           type: integer
@@ -12295,6 +12374,16 @@ components:
           allOf:
             - $ref: '#/components/schemas/PaymentMethod'
           description: How it was paid (#1761). Null is "not recorded".
+        waived:
+          type: boolean
+          description: |
+            A month the owner let the athlete off (#2167): `amount_cents` is
+            `0`, `period_months` is `1`, no method. It settles the month like a
+            payment for every "who owes" rule, the unpaid list, the arrears and
+            the reminders, and counts as no money anywhere: the money summary
+            leaves the athlete out of that month's expected, and the
+            accountant's export leaves the row out. `false` on every payment.
+          example: false
 
     PaymentMethod:
       type: string
@@ -12343,7 +12432,19 @@ components:
           nullable: true
           allOf:
             - $ref: '#/components/schemas/PaymentMethod'
-          description: How it was paid. Optional; an unknown value is a 422.
+          description: |
+            How it was paid. Optional; an unknown value is a 422. Refused
+            (422) on a month let off.
+        waived:
+          type: boolean
+          description: |
+            `true` lets the athlete off the month (#2167): the owner's choice
+            that it is not paid and not owed. The row is one month at
+            `amount_cents: 0` with no method, dated `paid_at` (the day it was
+            given, today when left out). `period_months` other than `1` and a
+            `payment_method` are refused (422). The athlete is not told a
+            payment arrived. Left out, or `false`, the row is a payment.
+          example: true
 
     Carnet:
       type: object

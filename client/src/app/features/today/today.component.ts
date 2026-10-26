@@ -61,6 +61,8 @@ import {
   weekStart,
 } from './today.helpers';
 import { BackupHealth, backupHealth } from './today-backup';
+import { PhoneRemindersService } from '../../core/mobile/phone-reminders.service';
+import { PhoneUpdateService } from '../../core/mobile/phone-update.service';
 
 /** A block's own request: in flight, answered, or failed on its own. */
 type Load<T> =
@@ -151,6 +153,16 @@ export class TodayComponent implements OnInit {
   private readonly languageService = inject(LanguageService);
   private readonly lessonService = inject(LessonService);
   private readonly onboarding = inject(OnboardingService);
+  protected readonly phoneUpdate = inject(PhoneUpdateService);
+  protected readonly reminders = inject(PhoneRemindersService);
+
+  /**
+   * Android has not been asked about notifications yet (#2047, Android 13+):
+   * Oggi says why first, and Android asks on the tap. After a no, Android
+   * reports `prompt-with-rationale` and would ask once more, but Oggi does
+   * not offer again: the owner said no, and Android's settings turn them on.
+   */
+  protected readonly offerReminders = computed(() => this.reminders.permission() === 'prompt');
   private readonly statsService = inject(StatsService);
   private readonly trainingModes = inject(TrainingModesService);
   private readonly translate = inject(TranslateService);
@@ -522,6 +534,8 @@ export class TodayComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    // A newer APK on GitHub (#2041): asked once per launch, on the phone only.
+    this.phoneUpdate.check();
     // The getting-started checklist is drawn here, the first screen (#1755),
     // and gates itself on this state. Once per session: a dismissal or a
     // finished tour does not change overnight.

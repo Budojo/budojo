@@ -4,15 +4,13 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
-use App\Enums\AthleteStatus;
 use App\Models\Academy;
 use App\Models\Athlete;
-use App\Models\AttendanceRecord;
 use App\Notifications\OwnerAthleteMissedStreakNotification;
 use App\Support\NotificationCategory;
 use App\Support\NotificationPreferences;
 use App\Support\OperatorDay;
-use App\Support\ScheduledDays;
+use App\Support\ReminderSubjects;
 use Carbon\CarbonInterface;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
@@ -43,16 +41,7 @@ use Illuminate\Support\Facades\Log;
  */
 class SendAthleteMissedStreakPushes extends Command
 {
-    private const int STREAK_LENGTH = 3;
     private const int RENOTIFY_AFTER_DAYS = 14;
-
-    /**
-     * How far back the streak may reach. Thirty days holds three sessions even
-     * for an academy that trains weekly; a streak older than that is about a
-     * schedule that stopped (a pause, a not-configured period), not about the
-     * athlete, and warning about it would repeat every fortnight of the pause.
-     */
-    private const int STREAK_REACH_DAYS = 30;
 
     /** @var string */
     protected $signature = 'budojo:send-athlete-missed-streak-pushes';
@@ -87,17 +76,9 @@ class SendAthleteMissedStreakPushes extends Command
 
     private function processAcademy(Academy $academy, CarbonInterface $today): void
     {
-        // Before today, never today: the command runs from 09:30 and the
-        // day's own session has not happened yet (Copilot review on #735).
-        // Each day is read against the schedule in force on it (#1764), so a
-        // timetable change last week does not rewrite which sessions those
-        // were.
-        $streakDates = ScheduledDays::lastBefore($academy, $today->toImmutable(), self::STREAK_LENGTH);
-        if (\count($streakDates) < self::STREAK_LENGTH) {
-            return; // Not configured, or too newly: not enough history.
-        }
-        if ($streakDates[self::STREAK_LENGTH - 1] < $today->copy()->subDays(self::STREAK_REACH_DAYS)->toDateString()) {
-            return; // Paused: the last sessions are too long ago to be news.
+        $streakDates = ReminderSubjects::streakDates($academy, $today);
+        if ($streakDates === null) {
+            return; // Not configured, too new, or paused.
         }
 
         $owner = $academy->owner;
@@ -108,36 +89,13 @@ class SendAthleteMissedStreakPushes extends Command
             return;
         }
 
-        // NOT filtered on `user_id`. This alert is delivered to the OWNER —
-        // `OwnerAthleteMissedStreakNotification::via()` is `['database',
-        // WebPushChannel]` with the owner as the notifiable — and the signal
-        // it reads is `attendance_records`, which the owner writes at
-        // check-in. An athlete's linked account has nothing to do with
-        // either end of it.
-        //
-        // The filter was here from #735 and made this command fire for
-        // NOBODY on the shipping desktop build, where `athlete_accounts` is
-        // off and therefore no athlete has a `user_id` at all. An owner who
-        // had the preference switched on believed they were being warned.
-        //
-        // The owner's own row is left out (#1913): the owner missing their
-        // own classes is not a churn signal, and the alert about it went to
-        // the owner.
-        $athletes = $academy->athletes()
-            ->where('status', AthleteStatus::Active)
-            ->where('is_self', false)
-            ->get();
-
-        foreach ($athletes as $athlete) {
+        foreach (ReminderSubjects::missedTheStreak($academy, $streakDates) as $athlete) {
             if ($this->alreadyTold($owner, $athlete, $today, $streakDates)) {
-                continue;
-            }
-            if (! $this->missedAllStreakDates($athlete, $streakDates)) {
                 continue;
             }
 
             try {
-                $owner->notify(new OwnerAthleteMissedStreakNotification($athlete, self::STREAK_LENGTH));
+                $owner->notify(new OwnerAthleteMissedStreakNotification($athlete, ReminderSubjects::STREAK_LENGTH));
             } catch (\Throwable $e) {
                 Log::warning('owner_athlete_missed_streak notification failed', [
                     'academy_id' => $academy->id,
@@ -147,32 +105,6 @@ class SendAthleteMissedStreakPushes extends Command
                 ]);
             }
         }
-    }
-
-    /**
-     * @param  list<string>  $streakDates
-     */
-    private function missedAllStreakDates(Athlete $athlete, array $streakDates): bool
-    {
-        // Guard: an athlete who joined AFTER the earliest streak date
-        // wasn't even rostered when those sessions happened — counting
-        // them as "missed" is a false positive. The earliest streak
-        // date is the LAST element (`ScheduledDays::lastBefore()` returns
-        // the most recent first, so $streakDates[0] is most recent and
-        // [count-1] is oldest). Copilot review on #738.
-        $oldestStreakDate = end($streakDates) ?: null;
-        if ($oldestStreakDate !== null
-            && $athlete->joined_at->toDateString() > $oldestStreakDate
-        ) {
-            return false;
-        }
-
-        $present = AttendanceRecord::query()
-            ->where('athlete_id', $athlete->id)
-            ->whereIn('attended_on', $streakDates)
-            ->count();
-
-        return $present === 0;
     }
 
     /**

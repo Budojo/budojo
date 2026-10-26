@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\Models\Academy;
-use App\Models\Document;
 use App\Models\NotificationLog;
 use App\Notifications\OwnerAcademyDocumentExpiringNotification;
 use App\Support\NotificationCategory;
 use App\Support\NotificationPreferences;
 use App\Support\OperatorDay;
+use App\Support\ReminderSubjects;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
@@ -34,9 +34,6 @@ class SendAcademyDocumentExpiryReminders extends Command
 {
     public const NOTIFICATION_TYPE = 'academy_document_expiry_digest';
 
-    /** T-0, T-7, T-30 — the cadence the medical digest and the dashboard already use. */
-    private const TRIGGER_OFFSETS = [0, 7, 30];
-
     protected $signature = 'budojo:send-academy-document-expiry-reminders'
         . ' {--force : Re-send digests for today even if notification_log already records them}';
 
@@ -45,10 +42,7 @@ class SendAcademyDocumentExpiryReminders extends Command
     public function handle(): int
     {
         $today = OperatorDay::today();
-        $triggerDates = array_map(
-            fn (int $offset): string => $today->copy()->addDays($offset)->toDateString(),
-            self::TRIGGER_OFFSETS,
-        );
+        $triggerDates = ReminderSubjects::expiryDates($today);
 
         $sent = 0;
         $skipped = 0;
@@ -60,7 +54,7 @@ class SendAcademyDocumentExpiryReminders extends Command
             ->chunkById(50, function ($chunk) use ($triggerDates, $today, $force, &$sent, &$skipped, &$failed): void {
                 foreach ($chunk as $academy) {
                     try {
-                        $documents = $this->expiringPapersFor($academy, $triggerDates);
+                        $documents = ReminderSubjects::academyDocuments($academy, $triggerDates);
                         if ($documents->isEmpty()) {
                             continue;
                         }
@@ -134,26 +128,5 @@ class SendAcademyDocumentExpiryReminders extends Command
         $this->info(\sprintf('Done. Sent: %d. Skipped: %d. Failed: %d.', $sent, $skipped, $failed));
 
         return $failed > 0 ? self::FAILURE : self::SUCCESS;
-    }
-
-    /**
-     * @param  list<string>  $triggerDates
-     * @return \Illuminate\Database\Eloquent\Collection<int, Document>
-     */
-    private function expiringPapersFor(Academy $academy, array $triggerDates): \Illuminate\Database\Eloquent\Collection
-    {
-        // `academy->documents()` is the academy's OWN papers — rows with a
-        // null `athlete_id`. An athlete's medical certificate reaches the
-        // owner through the other command, and a document must not produce
-        // two reminders for one expiry.
-        return $academy->documents()
-            ->whereNotNull('expires_at')
-            ->where(function ($q) use ($triggerDates): void {
-                foreach ($triggerDates as $date) {
-                    $q->orWhereDate('expires_at', $date);
-                }
-            })
-            ->orderBy('expires_at', 'asc')
-            ->get();
     }
 }

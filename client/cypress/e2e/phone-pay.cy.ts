@@ -1,5 +1,6 @@
 import { MOCK_ACADEMY } from '../support/fixtures';
 import { stubToday } from '../support/today';
+import { expectNoSidewaysScroll } from '../support/no-sideways-scroll';
 
 /**
  * The money at the mat (#2036, PRD § 6.1): each phone check-in row says what
@@ -116,9 +117,7 @@ describe('The money at the mat (#2036)', () => {
     chip(1).find('button').should('exist');
     chip(3).find('button').should('not.exist');
     // No page scrolls sideways under the chips.
-    cy.document().then((doc) => {
-      expect(doc.documentElement.scrollWidth).to.be.at.most(doc.documentElement.clientWidth);
-    });
+    expectNoSidewaysScroll();
   });
 
   it('asks for the month once the athlete who owes it is marked present', () => {

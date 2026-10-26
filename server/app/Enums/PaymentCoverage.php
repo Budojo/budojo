@@ -24,6 +24,8 @@ enum PaymentCoverage: string
     case Quarterly = 'quarterly';
     case HalfYearly = 'half_yearly';
     case Annual = 'annual';
+    /** The owner let the athlete off this month (#2167): nothing to pay, nothing paid. */
+    case Waived = 'waived';
     /** No fee covers the month, but the athlete holds a spendable carnet. */
     case Carnet = 'carnet';
     /** Nothing covers the month. The only state that asks for anything. */

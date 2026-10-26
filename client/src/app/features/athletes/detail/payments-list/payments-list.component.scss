@@ -247,6 +247,12 @@ $payments-mobile-breakpoint: 768px;
   color: var(--p-text-muted-color);
 }
 
+// The other answer to the month (#2167), under the fields: a quiet text
+// button at the start, so «Segna pagato» stays the popup's main action.
+.mark-paid__let-off {
+  align-self: flex-start;
+}
+
 // Title and its year stepper on one line (#1636).
 .payments-list__year {
   display: flex;

@@ -1,6 +1,7 @@
 import { MOCK_ACADEMY } from '../support/fixtures';
 import { stubToday } from '../support/today';
 import { VIEWPORT_PIXEL_8_PRO } from '../support/viewports';
+import { expectNoSidewaysScroll } from '../support/no-sideways-scroll';
 
 /**
  * «Soldi» on the phone (#2132, PRD § 6.1): who still has to pay this month,
@@ -108,9 +109,7 @@ describe('Soldi on the phone (#2132)', () => {
     row(3).should('not.exist');
 
     // The shell scrolls `main`, not the document: measure both.
-    cy.document().then((doc) => {
-      expect(doc.documentElement.scrollWidth).to.be.at.most(doc.documentElement.clientWidth);
-    });
+    expectNoSidewaysScroll();
     cy.get('main.main').should(($main) => {
       expect($main[0].scrollWidth).to.be.at.most($main[0].clientWidth);
     });

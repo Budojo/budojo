@@ -72,6 +72,19 @@ describe('MyPaymentsComponent (M7 PR-D slice 4)', () => {
     expect(el.querySelector('[data-cy="month-2"] .my-payments__unpaid')).not.toBeNull();
   });
 
+  it('says Free for a month the owner let them off, not €0 paid (#2167)', () => {
+    const { fixture, el, http, year } = setup();
+    http.expectOne(`${environment.apiBase}/api/v1/me/payments?year=${year}`).flush({
+      data: [payment({ month: 10, amount_cents: 0, waived: true })],
+    });
+    fixture.detectChanges();
+
+    const row = el.querySelector('[data-cy="month-10"]');
+    expect(row?.querySelector('[data-cy="month-free-10"]')?.textContent?.trim()).toBe('Free');
+    expect(row?.textContent).not.toContain('0.00');
+    expect(row?.querySelector('.my-payments__paid-on')).toBeNull();
+  });
+
   it('renders the no-profile state on 404', () => {
     const { fixture, el, http, year } = setup();
     http

@@ -318,6 +318,15 @@ Tapping it opens the detail:
 - **With the app closed, Android runs nothing.** So each time the app opens or syncs, it works out the reminders due in the next days and **schedules them with Android** as local notifications. They arrive on time with the app closed.
 - **A reminder about something that has changed since** (the fee got paid on the PC) is dropped at the next sync.
 - **The full text shows on the lock screen,** as the owner chose (*"Marco R. deve settembre, 60 €"*): the notification channel is public. It can become a setting later.
+- **How it is built (#2047):**
+  - the phone's server lists the reminders of the next **fourteen days** (`GET /reminders/upcoming`), each with the hour the PC's window opens: 09:00, and 09:30 for the missed streak;
+  - the page hands them to Android at every opening, every return to the screen and every sync. One still to come is replaced when its words change and cancelled when it is no longer due. One already shown is never taken back nor shown twice. One whose hour has passed and that was never shown is shown at once: a phone opened late, or one switched off at the hour, since Android drops that alarm. A restart that empties the tray before the app sees it can show one twice, which costs less than a certificate missed;
+  - the unpaid digest judges carnets on the 16th, as the PC will; a birthday reminder opens Oggi, which names them;
+  - **the missed streak cannot be told ahead:** only a check-in says whether the athlete came. It is today's reminder, told **once for each absence**, where the PC tells it again every fortnight;
+  - **birthdays have no opt-out yet;** the other four follow the owner's notification preferences;
+  - **not exact alarms:** a reminder due at nine may come a few minutes after it. Android 14 denies exact alarms by default to anything that is not an alarm clock or a calendar;
+  - **Android 13+ asks:** Oggi says why in one sentence, and Android asks on the owner's tap. After a no, Oggi does not offer again; Android's settings turn them on;
+  - the plugin marks each notification private. A phone set to hide sensitive content on the lock screen hides it, as for any app; under Android's default the whole text shows.
 
 ### 6.4 «Da decidere»: conflicts
 
@@ -338,7 +347,7 @@ A conflict is a question, asked on whichever device found it. **It is never reso
 ## 7. Security and privacy
 
 - **What the phone holds:** the whole database, as the PC does: athletes, payments, codice fiscale, document metadata. Documents are downloaded when they are opened.
-- **How it is protected:** the fingerprint (§ 6.1), and Android's app-private storage.
+- **How it is protected:** the fingerprint (§ 6.1), Android's app-private storage, and the phone's keys sealed by the Android Keystore (#2134). `APP_KEY`, the document key and the sync key sit in the app's files only as `*.sealed`, under an AES key that never leaves the phone's Keystore, which is its secure hardware on nearly every phone. A copy of the files holds the database and keys nobody can open.
 - **No Android backup** (`allowBackup="false"`, already set in #2027). The copy that survives a lost phone is the versions on Drive, encrypted.
 - **Google** holds the keys (`budojo-keys.json`, unsealed, § 5.4: the owner's decision), so the Google account is the lock on the academy's data. The versions and files beside it are ciphertext, under names that mean nothing (sequence numbers and content hashes), so the visible folder alone, as Drive for desktop copies it or a shared link would expose it, opens nothing while the keys sit in `appDataFolder`.
 - **The APK signing key** was created in #2027. It is held in the repo secrets and in the owner's password manager; if it is lost, no update installs over the app.
@@ -418,7 +427,7 @@ Sizes: **S** is a day or less, **M** a few days, **L** a week or more. The **fir
    - `Budojo`, in Testing, scope `drive.file`, with the owner as test user;
    - a Desktop client, whose id and secret are repo secrets;
    - an Android client for `it.budojo.mobile`, with the release key's SHA-1.
-2. **Android developer verification:** the free limited-distribution account (up to 20 devices, no ID). Register the package and the key before enforcement reaches Italy in 2027.
+2. **Android developer verification:** the free limited-distribution account (up to 20 devices, no ID). Register the package and the key before enforcement reaches Italy in 2027. The steps, in the owner's language: [`docs/mobile/developer-verification.md`](../mobile/developer-verification.md) (#2041).
 3. ✅ **The signing key** (created in #2027): into the password manager, with an offline copy.
 4. **For each friend's academy:** add their Gmail as a test user in the Google project.
 
@@ -439,3 +448,7 @@ Sizes: **S** is a day or less, **M** a few days, **L** a week or more. The **fir
 - **2 Oct 2026: the door first brings back the PC's newest backup (#2079).** The owner: *"la prossima volta che apro un apk voglio vedere la mia palestra con tutto da drive"*. The PC does not publish versions yet (#2032), but it has put a backup on Drive every six hours since #1301, which the phone already reads (§ 5.3). So **Accedi con Google** on the phone first restores the newest `budojo-backup-*.zip`: the database and the academy's files, staged and swapped in like a version, then the owner's session through the shell's secret. Until the PC publishes its keys, medical certificates do not open on the phone; until the sync runs, what changes on the phone does not go back to the PC, and the phone says so. Versions replace the backup as the door's source once the PC publishes them.
 - **2 Oct 2026: the phone keeps its sync key beside the app keys, not in Android's keystore (§ 5.6, #2046).** `sync.json` sits in the app's private files with `secrets.json`, which already holds `APP_KEY` and `DOCUMENT_ENCRYPTION_KEY`, the keys to everything the database encrypts. A keystore for one of three keys of the same weight would guard nothing the other two leave open. The manifest keeps all three off Android's backup and off a transfer to a new phone (#2034).
 - **3 Oct 2026: the PC reads its sync key from the account, and keeps it in no keychain (§ 5.6, #2032).** It wrote the keys file itself («Collega il telefono»), and every round already needs Drive, so the main process reads the key from there each time and hands it to the page for that round. A copy in `secrets.bin` would be a second place to keep in step when the key rotates (Scollega, § 5.4).
+- **25 Oct 2026: the phone's keys sealed by the Android Keystore (§ 7, #2134).** The 2 Oct entry above still holds: a keystore for one of three keys of the same weight guards nothing. So all three are sealed: `secrets.json`, `secrets.previous.json` and `sync.json` live only as `*.sealed`, under an AES-256-GCM key the Keystore makes.
+  - **No fingerprint on that key:** the server starts before the page, so before the lock's prompt (#2159), and Android invalidates a fingerprint-bound key whenever a finger is enrolled.
+  - **An install from before is migrated at its first start:** sealed, read back, and only then is the plain file deleted.
+  - **A sealed file that does not open is never replaced:** the server does not start, and the screen says so. New keys over it would leave the academy's documents unreadable for good. Taking the keys back from the Google account in that case is #2162.

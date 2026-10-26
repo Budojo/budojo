@@ -61,7 +61,7 @@ docs/
 │   └── preview/                       # static HTML previews of the variant matrix and audit mockups
 ├── legal/                             # 8 files — privacy, terms, DPA template, sub-processors
 ├── marketing/                         # positioning and launch copy
-├── mobile/                            # the phone-form-factor notes
+├── mobile/                            # the phone: install.md (installing and updating the APK, in Italian), developer-verification.md (Google's registration, the owner's checklist)
 └── operations/                        # runbooks that are neither infra nor development
 ```
 

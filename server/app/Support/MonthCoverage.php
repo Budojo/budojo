@@ -30,6 +30,10 @@ final class MonthCoverage
      */
     public static function resolve(?AthletePayment $payment, ?Carnet $carnet): PaymentCoverage
     {
+        if ($payment?->waived === true) {
+            return PaymentCoverage::Waived;
+        }
+
         if ($payment !== null) {
             return PaymentCoverage::forPeriod($payment->period_months);
         }

@@ -8,12 +8,14 @@ use App\Actions\Payment\DeleteAthletePaymentAction;
 use App\Actions\Payment\ListAthletePaymentsAction;
 use App\Actions\Payment\ListOverdueMonthsAction;
 use App\Actions\Payment\RecordAthletePaymentAction;
+use App\Actions\Payment\WaiveAthleteMonthAction;
 use App\Enums\BillingPeriod;
 use App\Enums\PaymentMethod;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Payment\StoreAthletePaymentRequest;
 use App\Http\Resources\AthletePaymentResource;
 use App\Models\Athlete;
+use App\Models\AthletePayment;
 use App\Models\User;
 use App\Support\MonthlyFee;
 use App\Support\OperatorDay;
@@ -26,6 +28,7 @@ class AthletePaymentController extends Controller
 {
     public function __construct(
         private readonly RecordAthletePaymentAction $recordAction,
+        private readonly WaiveAthleteMonthAction $waiveAction,
         private readonly ListAthletePaymentsAction $listAction,
         private readonly ListOverdueMonthsAction $overdueAction,
         private readonly DeleteAthletePaymentAction $deleteAction,
@@ -74,23 +77,16 @@ class AthletePaymentController extends Controller
             ], 422);
         }
 
-        // The period the caller asked for, or the athlete's own expectation
-        // when they didn't (#1382). The amount is the monthly fee times the
-        // months covered: Budojo has nowhere to record a discounted annual, so
-        // it does not pretend to — see docs/entities/athlete-payment.md.
-        $period = $request->has('period_months')
-            ? BillingPeriod::from($request->integer('period_months'))
-            : BillingPeriod::from($athlete->billing_period_months);
-
-        $payment = $this->recordAction->execute(
-            athlete: $athlete,
-            year: $request->integer('year'),
-            month: $request->integer('month'),
-            amountCents: $amountCents * $period->value,
-            period: $period,
-            paidAt: CarbonImmutable::make($request->date('paid_at', 'Y-m-d')),
-            method: $request->enum('payment_method', PaymentMethod::class),
-        );
+        // A month let off (#2167) needs a fee too: with none, nothing is owed
+        // and there is nothing to let off.
+        $payment = $request->boolean('waived')
+            ? $this->waiveAction->execute(
+                athlete: $athlete,
+                year: $request->integer('year'),
+                month: $request->integer('month'),
+                on: CarbonImmutable::make($request->date('paid_at', 'Y-m-d')),
+            )
+            : $this->record($request, $athlete, $amountCents);
 
         // 201 for a row this request made, 200 for the one already there
         // (#2036): an idempotent re-post created nothing, and a client that
@@ -120,6 +116,29 @@ class AthletePaymentController extends Controller
         }
 
         return response()->json(null, 204);
+    }
+
+    /**
+     * The period the caller asked for, or the athlete's own expectation when
+     * they didn't (#1382). The amount is the monthly fee times the months
+     * covered: Budojo has nowhere to record a discounted annual, so it does
+     * not pretend to — see docs/entities/athlete-payment.md.
+     */
+    private function record(StoreAthletePaymentRequest $request, Athlete $athlete, int $amountCents): AthletePayment
+    {
+        $period = $request->has('period_months')
+            ? BillingPeriod::from($request->integer('period_months'))
+            : BillingPeriod::from($athlete->billing_period_months);
+
+        return $this->recordAction->execute(
+            athlete: $athlete,
+            year: $request->integer('year'),
+            month: $request->integer('month'),
+            amountCents: $amountCents * $period->value,
+            period: $period,
+            paidAt: CarbonImmutable::make($request->date('paid_at', 'Y-m-d')),
+            method: $request->enum('payment_method', PaymentMethod::class),
+        );
     }
 
     private function userOwns(User $user, Athlete $athlete): bool

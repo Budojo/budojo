@@ -237,6 +237,9 @@ describe('the phone server (#2034)', () => {
       afterEach(() => {
         stop();
         release();
+        // Back to jsdom's own getter: a `hidden` left here kept the fingerprint
+        // lock from asking in whichever spec the worker ran next (#2047).
+        delete (document as unknown as { visibilityState?: string }).visibilityState;
       });
 
       it('holds every request, writes too, until the server answers again', async () => {

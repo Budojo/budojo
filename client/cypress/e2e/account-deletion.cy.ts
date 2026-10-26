@@ -1,4 +1,5 @@
 import { MOBILE_VIEWPORTS } from '../support/viewports';
+import { expectNoSidewaysScroll } from '../support/no-sideways-scroll';
 
 /**
  * Public account-deletion pages — `/account-deletion` is the canonical
@@ -101,10 +102,9 @@ MOBILE_VIEWPORTS.forEach(({ name, width, height }) => {
     for (const path of ['/account-deletion', '/account-deletion/it']) {
       it(`${path} does not overflow horizontally`, () => {
         cy.visit(path);
-        cy.document().then((doc) => {
-          const root = doc.documentElement;
-          expect(root.scrollWidth, 'documentElement.scrollWidth').to.be.lte(root.clientWidth);
-        });
+        // A lazy route: measured before it renders, the empty shell would fit.
+        cy.get('h1').should('be.visible');
+        expectNoSidewaysScroll('public');
       });
     }
   });

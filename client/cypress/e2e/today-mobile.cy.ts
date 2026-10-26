@@ -1,5 +1,6 @@
 import { MOCK_ACADEMY } from '../support/fixtures';
 import { MOBILE_VIEWPORTS } from '../support/viewports';
+import { expectNoSidewaysScroll } from '../support/no-sideways-scroll';
 
 // Today (#1643) on a phone: one column, nothing wider than the screen. The
 // business flow is covered by today.cy.ts; this is layout only.
@@ -76,9 +77,7 @@ MOBILE_VIEWPORTS.forEach(({ name, width, height }) => {
       cy.get('[data-cy="today-birthday-7"]').scrollIntoView().should('be.visible');
       cy.get('[data-cy="birthday-contact-7-whatsapp"]').should('be.visible');
 
-      cy.document().then((doc) => {
-        expect(doc.documentElement.scrollWidth).to.be.at.most(doc.documentElement.clientWidth);
-      });
+      expectNoSidewaysScroll();
     });
   });
 });

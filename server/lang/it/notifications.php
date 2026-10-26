@@ -20,6 +20,9 @@ return [
     'academy_documents_digest' => [
         'title' => "{1} Un documento dell'accademia sta per scadere|[2,*] :count documenti dell'accademia stanno per scadere",
     ],
+    'birthdays' => [
+        'title' => '{1} Un compleanno oggi|[2,*] :count compleanni oggi',
+    ],
     'names_and_more' => ':names e altri :more',
     'document_expires' => ':name, scade il :date',
 ];

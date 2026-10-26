@@ -384,7 +384,8 @@
       "title": "I tuoi pagamenti",
       "noProfileBody": "Non siamo riusciti a trovare il tuo profilo atleta. Contatta il titolare della tua accademia.",
       "errorBody": "Non siamo riusciti a caricare i tuoi pagamenti. Aggiorna la pagina e riprova.",
-      "unpaid": "Non pagato"
+      "unpaid": "Non pagato",
+      "free": "Gratis"
     },
     "documents": {
       "title": "I tuoi documenti",
@@ -1415,8 +1416,10 @@
       "documentUploaded": "Documento caricato",
       "documentDeleted": "Documento eliminato",
       "paymentCreated": "Pagamento registrato",
+      "paymentWaived": "Mese gratis registrato",
       "paymentUpdated": "Pagamento modificato",
-      "paymentDeleted": "Pagamento eliminato"
+      "paymentDeleted": "Pagamento eliminato",
+      "paymentUnwaived": "Mese gratis annullato"
     },
     "byActor": "da {{actor}}",
     "unknownActionTitle": "Azione registrata dal sistema come «{{action}}»"
@@ -2217,7 +2220,9 @@
         "carnetSoldError": "Non è stato possibile vendere il carnet.",
         "trainsFree": "{{name}} si allena gratis",
         "backToPaying": "{{name}} torna a pagare",
-        "feeChangeFailed": "Non sono riuscito a cambiare la quota di {{name}}. Riprova."
+        "feeChangeFailed": "Non sono riuscito a cambiare la quota di {{name}}. Riprova.",
+        "freeMonth": "Mese di {{month}} gratis per {{name}}",
+        "undoFreeMonth": "{{name}} paga {{month}}"
       },
       "confirm": {
         "deleteMessage": "Eliminare {{name}}? I suoi documenti saranno cancellati definitivamente e non potranno essere ripristinati — solo la riga atleta può essere annullata.",
@@ -2233,7 +2238,11 @@
         "trainFreeMessage": "{{name}} si allena gratis? Non deve niente e non compare tra chi non ha pagato.",
         "trainFreeAccept": "Si allena gratis",
         "backToPayingMessage": "{{name}} torna a pagare la quota normale. Una quota personale la metti dalla sua scheda.",
-        "backToPayingAccept": "Torna a pagare"
+        "backToPayingAccept": "Torna a pagare",
+        "freeMonthMessage": "{{name}} non paga {{month}}? Il mese è gratis e non compare tra chi deve pagare.",
+        "freeMonthAccept": "Mese gratis",
+        "undoFreeMonthMessage": "{{name}} paga {{month}}? Il mese torna tra quelli da pagare.",
+        "undoFreeMonthAccept": "Annulla mese gratis"
       },
       "restoreConfirm": {
         "message": "Ripristinare {{name}}?",
@@ -2255,7 +2264,8 @@
         "carnet": "Carnet · {{count}}",
         "none": "Non pagato",
         "aria": "Pagamento di {{name}}: {{coverage}}. Apri le azioni.",
-        "free": "Gratis"
+        "free": "Gratis",
+        "waived": "Mese gratis"
       },
       "payMenu": {
         "markPaid": "Segna pagato",
@@ -2263,7 +2273,13 @@
         "sellCarnet": "Vendi un carnet",
         "openPayments": "Apri i pagamenti",
         "trainFree": "Si allena gratis",
-        "backToPaying": "Torna a pagare"
+        "backToPaying": "Torna a pagare",
+        "freeMonth": "Solo {{month}}",
+        "undoFreeMonth": "Annulla {{month}}",
+        "freeAlways": "Sempre",
+        "freeMonthAria": "Si allena gratis: solo {{month}}",
+        "undoFreeMonthAria": "Si allena gratis: annulla {{month}}",
+        "freeAlwaysAria": "Si allena gratis: sempre"
       },
       "importButton": "Importa",
       "showTrashed": "Mostra atleti cancellati",
@@ -2356,7 +2372,9 @@
           "markPaidPeriodMessage": "Segnare {{name}} come pagato? Il pagamento copre: {{period}}",
           "markUnpaidPeriodMessage": "Segnare {{name}} come non pagato? Il pagamento copriva: {{period}}",
           "markPaidAccept": "Segna pagato",
-          "markUnpaidAccept": "Segna non pagato"
+          "markUnpaidAccept": "Segna non pagato",
+          "undoFreeMessage": "{{name}} paga {{month}} {{year}}? Il mese torna tra quelli da pagare.",
+          "undoFreeAccept": "Annulla mese gratis"
         },
         "toast": {
           "markedPaidSummary": "Pagato",
@@ -2369,7 +2387,9 @@
           "errorOverlap": "Quel mese è già coperto da un altro pagamento.",
           "errorYear": "Quell’anno è fuori dall’intervallo in cui si possono registrare pagamenti.",
           "errorPaidOn": "La data del pagamento non può essere dopo oggi.",
-          "errorInvalid": "Qualcosa di quanto inserito non è stato accettato. Controlla e riprova."
+          "errorInvalid": "Qualcosa di quanto inserito non è stato accettato. Controlla e riprova.",
+          "freeSummary": "Mese gratis",
+          "undoFreeSummary": "Mese gratis annullato"
         },
         "title": "Pagamenti — {{year}}",
         "noFeeHint": "Imposta una quota mensile sull'accademia per iniziare a registrare i pagamenti. Fino ad allora questa pagina rimane di sola lettura.",
@@ -2382,7 +2402,8 @@
         },
         "button": {
           "markPaid": "Segna pagato",
-          "unmarkPaid": "Annulla pagamento"
+          "unmarkPaid": "Annulla pagamento",
+          "undoFree": "Annulla gratis"
         },
         "overdue": "In ritardo",
         "feeTierHintOne": "Fascia {{label}} · {{amount}} al mese per {{count}} lezione a settimana.",
@@ -2400,7 +2421,9 @@
         "trainsFreeHint": "Si allena gratis · nessuna quota da pagare.",
         "feeOverrideHint": "Quota personale · {{amount}} al mese.",
         "paidOnLabel": "Pagato il",
-        "paidOnHint": "Vuoto vale oggi. Il pagamento resta dei mesi che copre."
+        "paidOnHint": "Vuoto vale oggi. Il pagamento resta dei mesi che copre.",
+        "free": "Gratis",
+        "letOff": "Non lo paga: mese gratis"
       },
       "documents": {
         "confirm": {
@@ -3500,7 +3523,11 @@
     "system": {
       "lastCopy": "Ultima copia fuori da questo computer: {{when}}",
       "firstCopyPending": "La prima copia fuori da questo computer arriva con il prossimo backup",
-      "open": "Apri il backup"
+      "open": "Apri il backup",
+      "update": "È uscito Budojo {{version}}",
+      "download": "Scarica",
+      "reminders": "Budojo può ricordarti certificati, quote e compleanni anche ad app chiusa, con le notifiche del telefono.",
+      "allowReminders": "Attiva le notifiche"
     },
     "backup": {
       "folderFailing": "La copia dei backup in {{where}} non riesce",
@@ -3793,7 +3820,8 @@
       "anotherFolder": "La cartella su Drive è di un'altra palestra",
       "unpaired": "Questo telefono è stato scollegato dalla palestra",
       "failed": "La sincronizzazione non è riuscita",
-      "full": "Budojo è già su due dispositivi"
+      "full": "Budojo è già su due dispositivi",
+      "update": "Aggiorna Budojo per sincronizzare"
     },
     "hint": {
       "pending": "Partono al prossimo tentativo, da sole.",
@@ -3803,7 +3831,8 @@
       "ask": "Questo dispositivo e Drive hanno due palestre diverse. Niente viene sovrascritto finché non scegli.",
       "anotherFolder": "Il telefono non ci scrive niente. Esci e accedi con l'account Google della palestra.",
       "unpaired": "Esci, poi accedi con Google per collegarlo di nuovo.",
-      "full": "Questo dispositivo non si unisce: la sincronizzazione regge due dispositivi, il PC e un telefono."
+      "full": "Questo dispositivo non si unisce: la sincronizzazione regge due dispositivi, il PC e un telefono.",
+      "update": "L'altro dispositivo usa un Budojo più nuovo. Quello che registri qui resta, e parte dopo l'aggiornamento."
     },
     "ask": {
       "useFolderPc": "Usa la palestra del PC",
@@ -3850,6 +3879,8 @@
         "athlete": "Scheda dell'atleta",
         "payment": "Pagamento di {{month}}",
         "paymentAny": "Pagamento",
+        "waived": "Mese gratis: {{month}}",
+        "waivedAny": "Mese gratis",
         "attendance": "Presenza del {{date}}",
         "attendanceAny": "Presenza",
         "lessonTopics": "Argomenti della lezione del {{date}}",
@@ -3891,6 +3922,18 @@
       },
       "topicsOne": "1 argomento",
       "topicsOther": "{{count}} argomenti"
+    }
+  },
+  "lock": {
+    "title": "Budojo è bloccato",
+    "body": "Usa l'impronta o il PIN del telefono per aprirlo.",
+    "unlock": "Sblocca",
+    "prompt": "Sblocca Budojo"
+  },
+  "reminders": {
+    "channel": {
+      "name": "Promemoria",
+      "description": "Certificati e documenti in scadenza, quote non pagate, assenze e compleanni"
     }
   }
 }

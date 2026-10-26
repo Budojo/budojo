@@ -113,6 +113,27 @@ describe('PaymentService (#182)', () => {
     expect(seen).toEqual([true, false]);
   });
 
+  it('waive lets the athlete off the month: only the month and the word go on the wire (#2167)', () => {
+    let actual: AthletePayment | null = null;
+    service.waive(42, 2026, 10).subscribe((p) => (actual = p));
+
+    const req = httpMock.expectOne(`${base}/42/payments`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ year: 2026, month: 10, waived: true });
+    const waived: AthletePayment = {
+      id: 7,
+      athlete_id: 42,
+      year: 2026,
+      month: 10,
+      amount_cents: 0,
+      paid_at: '2026-10-26T00:00:00Z',
+      waived: true,
+    };
+    req.flush({ data: waived });
+
+    expect(actual).toEqual(waived);
+  });
+
   it('unmarkPaid DELETEs /athletes/{id}/payments/{year}/{month} and emits void on 204', () => {
     let completed = false;
     let nextCalled = false;

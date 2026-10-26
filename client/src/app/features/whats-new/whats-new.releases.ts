@@ -60,6 +60,70 @@ export function localised(value: Localised, lang: string): string {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.80.0',
+    date: '2026-10-26',
+    headline: {
+      en: 'You can let an athlete off one month, without making them train free for good. On the phone Budojo locks with your fingerprint, reminds you of expiries and fees with the app closed, and tells you when a new version is out.',
+      it: "Puoi abbonare un mese a un atleta, senza farlo allenare gratis per sempre. Sul telefono Budojo si blocca con l'impronta, ti ricorda scadenze e quote anche ad app chiusa, e ti avvisa quando c'è una versione nuova.",
+    },
+    sections: [
+      {
+        heading: { en: 'A free month', it: 'Un mese gratis' },
+        bullets: [
+          {
+            en: 'From the payment chip, "Trains free" has two answers: "Just October", for the month at hand, and "Always", as before. The chip reads "Free month".',
+            it: 'Dalla chip del pagamento, «Si allena gratis» ha due risposte: «Solo ottobre», per il mese in corso, e «Sempre», come prima. La chip diventa «Mese gratis».',
+          },
+          {
+            en: 'A free month is not owed: the athlete leaves "Unpaid" and the reminder on the 16th, and that month no longer counts in the arrears.',
+            it: "Un mese gratis non è un debito: l'atleta esce da «Non pagato» e dal promemoria del 16, e quel mese non conta più negli arretrati.",
+          },
+          {
+            en: 'Nor is it money in: it stays out of the takings and the accountant\'s export, does not lower the month\'s collection rate, and the athlete gets no "payment received".',
+            it: "Non è nemmeno un incasso: non entra negli incassi né nell'export per il commercialista, non abbassa la percentuale di riscossione del mese, e l'atleta non riceve «pagamento ricevuto».",
+          },
+          {
+            en: 'On the athlete\'s payments the month reads "Free" and is undone with "Undo free month". The "Mark paid" box also has "Not paying: free month", to let off any month, an overdue one too.',
+            it: "Nella scheda pagamenti dell'atleta il mese si legge «Gratis», e si annulla con «Annulla gratis». Il riquadro di «Segna pagato» ha anche «Non lo paga: mese gratis», per abbonare un mese qualunque, anche uno arretrato.",
+          },
+          {
+            en: 'The check-in, the athlete\'s own page and the activity log call it "Free" or "Free month", never "Paid · €0".',
+            it: "Il check-in, la pagina dell'atleta e il registro attività lo chiamano «Gratis» o «Mese gratis», mai «Pagato · 0 €».",
+          },
+          {
+            en: 'After "Mark paid" from the chip, the chip changes at once. It used to say "Unpaid" until the page was reloaded.',
+            it: 'Dopo «Segna pagato» dalla chip, la chip cambia subito. Prima restava «Non pagato» fino al ricaricamento della pagina.',
+          },
+          {
+            en: 'A quarterly payer: when a month of the quarter is already free, "Mark paid" records the chosen month alone. The quarter used to be refused.',
+            it: 'Chi paga a trimestre: se un mese del trimestre è già gratis, «Segna pagato» registra solo il mese scelto. Prima il trimestre veniva rifiutato.',
+          },
+        ],
+      },
+      {
+        heading: { en: 'On the phone', it: 'Sul telefono' },
+        bullets: [
+          {
+            en: "The fingerprint: Budojo asks for it when it opens and when you come back after five minutes. If the fingerprint fails, the phone's PIN, pattern or password works.",
+            it: "L'impronta: Budojo la chiede quando si apre e quando ci torni dopo cinque minuti. Se l'impronta non va, valgono PIN, segno o password del telefono.",
+          },
+          {
+            en: "The gym's keys on the phone are encrypted with a key Android keeps for Budojo, no longer in a readable file.",
+            it: 'Le chiavi della palestra sul telefono sono cifrate con una chiave che Android custodisce per Budojo, non più in un file leggibile.',
+          },
+          {
+            en: 'Reminders arrive with the app closed, as notifications: certificates and documents expiring, fees unpaid on the 16th, a run of absences, birthdays. Today says why in one line, and Android asks only when you tap "Turn on notifications".',
+            it: 'I promemoria arrivano anche ad app chiusa, come notifiche: certificati e documenti in scadenza, quote non pagate il 16, assenze di fila, compleanni. Su Oggi una riga spiega perché, e Android chiede il permesso solo quando tocchi «Attiva le notifiche».',
+          },
+          {
+            en: "A new version: the phone tells you. If it is too old for the other device's database, it stops syncing until you update it, so nothing is lost.",
+            it: "Una versione nuova: il telefono te lo dice. Se è troppo vecchio per il database dell'altro dispositivo, smette di sincronizzare finché non lo aggiorni, così non perde nulla.",
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.79.0',
     date: '2026-10-07',
     headline: {

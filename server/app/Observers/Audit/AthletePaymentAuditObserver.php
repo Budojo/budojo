@@ -23,7 +23,9 @@ class AthletePaymentAuditObserver
     public function created(AthletePayment $payment): void
     {
         $this->writeAuditEntry->execute(
-            action: 'payment.created',
+            // A month let off (#2167) is not money recorded: named apart, so
+            // the activity log never reads «Pagamento registrato» at €0.
+            action: $payment->waived ? 'payment.waived' : 'payment.created',
             actor: $this->currentActor(),
             academy: $payment->athlete?->academy,
             subjectType: AthletePayment::class,
@@ -60,7 +62,7 @@ class AthletePaymentAuditObserver
     public function deleting(AthletePayment $payment): void
     {
         $this->writeAuditEntry->execute(
-            action: 'payment.deleted',
+            action: $payment->waived ? 'payment.unwaived' : 'payment.deleted',
             actor: $this->currentActor(),
             academy: $payment->athlete?->academy,
             subjectType: AthletePayment::class,

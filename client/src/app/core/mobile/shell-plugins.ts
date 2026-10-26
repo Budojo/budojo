@@ -1,5 +1,7 @@
 import { InjectionToken } from '@angular/core';
+import { appLockPlugin, AppLockPlugin } from './app-lock';
 import { driveAuthPlugin, DriveAuthPlugin } from './drive-auth';
+import { localNotificationsPlugin, LocalNotificationsPlugin } from './local-notifications';
 import { PcBackups } from './pc-backups';
 import { phpServerPlugin, PhpServerPlugin } from './phone-server';
 
@@ -16,6 +18,16 @@ export const DRIVE_AUTH = new InjectionToken<DriveAuthPlugin | null>('DRIVE_AUTH
   providedIn: 'root',
   factory: driveAuthPlugin,
 });
+
+export const APP_LOCK = new InjectionToken<AppLockPlugin | null>('APP_LOCK', {
+  providedIn: 'root',
+  factory: appLockPlugin,
+});
+
+export const LOCAL_NOTIFICATIONS = new InjectionToken<LocalNotificationsPlugin | null>(
+  'LOCAL_NOTIFICATIONS',
+  { providedIn: 'root', factory: localNotificationsPlugin },
+);
 
 /** Makes the reader of the PC's backups on Drive, with a way to get a token. */
 export const PC_BACKUPS = new InjectionToken<(token: () => Promise<string>) => PcBackups>(

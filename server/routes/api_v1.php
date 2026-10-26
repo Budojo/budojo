@@ -838,6 +838,11 @@ Route::middleware('auth:sanctum')->group(function (): void {
         // expansion (academy, payments) lands here without a SPA URL bump.
         Route::get('/search', \App\Http\Controllers\Search\SearchController::class);
 
+        // The reminders of the next fourteen days (#2047), for the phone to
+        // schedule with Android: nothing runs on a phone with the app closed.
+        Route::get('/reminders/upcoming', \App\Http\Controllers\Reminder\UpcomingRemindersController::class)
+            ->name('reminders.upcoming');
+
         // Stats — server-side aggregations for the /dashboard/stats charts.
         // Grouped under /stats so T3 (payments) and T4 (age bands) can extend
         // this block without touching other route sections.

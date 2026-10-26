@@ -32,6 +32,8 @@ class AthletePaymentResource extends JsonResource
             'paid_at' => $payment->paid_at->toIso8601String(),
             // How it was paid; null is "not recorded".
             'payment_method' => $payment->payment_method?->value,
+            // A month the owner let the athlete off (#2167): no money came in.
+            'waived' => $payment->waived,
         ];
     }
 }

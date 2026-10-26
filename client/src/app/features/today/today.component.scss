@@ -37,6 +37,16 @@
       font-weight: 500;
     }
   }
+
+  // The download is the line's one action: the touch floor on the phone, both
+  // ways (the Italian «Scarica» is narrower than 48px at this size).
+  &__system-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 3rem;
+    min-height: 3rem;
+  }
 }
 
 .today-card {

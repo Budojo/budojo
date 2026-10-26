@@ -40,10 +40,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int           $amount_cents
  * @property Carbon        $paid_at        When the money arrived (#1761): the start of the chosen day, or of the owner's today when none was chosen (#1963); rows before #1761 hold the moment it was recorded
  * @property PaymentMethod|null $payment_method Null is "not recorded" (#1761)
+ * @property bool          $waived  A month the owner let the athlete off (#2167): €0, no method
  * @property Carbon        $created_at
  * @property Carbon        $updated_at
  */
-#[Fillable(['athlete_id', 'year', 'month', 'period_months', 'amount_cents', 'paid_at', 'payment_method'])]
+#[Fillable(['athlete_id', 'year', 'month', 'period_months', 'amount_cents', 'paid_at', 'payment_method', 'waived'])]
 #[ObservedBy([AthletePaymentAuditObserver::class])]
 class AthletePayment extends Model
 {
@@ -126,6 +127,7 @@ class AthletePayment extends Model
             'period_months' => BillingPeriod::class,
             'amount_cents' => 'integer',
             'payment_method' => PaymentMethod::class,
+            'waived' => 'boolean',
         ];
     }
 }

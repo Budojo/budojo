@@ -15,26 +15,19 @@ use App\Support\OperatorDay;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Validation\ValidationException;
 
 class RecordAthletePaymentAction
 {
     public function __construct(
-        private readonly ReconcileCarnetEntriesAction $reconcileCarnets,
+        private readonly WritePaymentRowAction $writeRow,
     ) {
     }
 
     /**
      * Records a payment for the given (athlete, year, month). Idempotent:
-     * if a row already exists, returns it instead of creating a duplicate.
-     *
-     * `createOrFirst()` (NOT `firstOrCreate()`) is the atomic shape — it
-     * attempts the INSERT first and falls back to a query on a unique
-     * constraint violation. The naive read-then-write pattern would race
-     * under concurrency: two POSTs could both miss the initial query and
-     * then collide on insert, surfacing a 500 instead of returning the
-     * existing row. The DB unique index is the safety net that makes this
-     * work — see `create_athlete_payments_table` migration.
+     * if a row already exists, returns it instead of creating a duplicate
+     * (`WritePaymentRowAction`, which also refuses an overlapping period and
+     * rebuilds the carnets the payment frees).
      *
      * `amountCents` is supplied by the caller — the controller passes what
      * `App\Support\MonthlyFee::forAthlete()` resolves (the athlete's own
@@ -55,10 +48,7 @@ class RecordAthletePaymentAction
      * same way. Rows from before #1761 carry the moment they were recorded
      * instead. It is the transaction's date, **never** the
      * month the revenue belongs to — `(year, month)` and the period decide
-     * that, and the chart buckets by them. Like `$method`, it goes in the
-     * *values* of `createOrFirst`, not the keys: a re-post of the same month
-     * returns the first row with its first date, which is what keeps the
-     * double-click idempotent.
+     * that, and the chart buckets by them.
      */
     public function execute(
         Athlete $athlete,
@@ -69,85 +59,22 @@ class RecordAthletePaymentAction
         ?CarbonImmutable $paidAt = null,
         ?PaymentMethod $method = null,
     ): AthletePayment {
-        $values = [
+        $payment = $this->writeRow->execute(new AthletePayment([
+            'athlete_id' => $athlete->id,
+            'year' => $year,
+            'month' => $month,
             'period_months' => $period,
             'amount_cents' => $amountCents,
             'paid_at' => $paidAt?->startOfDay() ?? OperatorDay::today(),
             'payment_method' => $method,
-        ];
-
-        // The insert and the rebuild share a transaction: a payment recorded
-        // without the ledger catching up leaves exactly the stale balance the
-        // derived design exists to prevent.
-        $payment = DB::transaction(function () use ($athlete, $year, $month, $period, $values): AthletePayment {
-            $this->rejectOverlap($athlete, $year, $month, $period);
-
-            $payment = AthletePayment::query()->createOrFirst(
-                [
-                    'athlete_id' => $athlete->id,
-                    'year' => $year,
-                    'month' => $month,
-                ],
-                $values,
-            );
-
-            if ($payment->wasRecentlyCreated) {
-                // Paying a month releases whatever that month had taken off a
-                // carnet (#1380). Under the old event-driven consumption this
-                // discrepancy was accepted on purpose — the rule was evaluated
-                // at marking time and never revisited — but once the balance is
-                // a function of its inputs, leaving it frozen is the anomaly.
-                $this->reconcileCarnets->execute([$athlete->id]);
-            }
-
-            return $payment;
-        });
+            'waived' => false,
+        ]));
 
         if ($payment->wasRecentlyCreated) {
             $this->notifyAthlete($athlete, $payment);
         }
 
         return $payment;
-    }
-
-    /**
-     * Refuses a period that shares a month with one already recorded (#1382).
-     *
-     * `UNIQUE(athlete_id, year, month)` used to carry this invariant on its
-     * own, because a row was a month. It cannot any more: a March monthly and
-     * a February quarterly start in different months and both cover March, so
-     * the index waves them through. Losing a structural guarantee to an
-     * application check is a real cost — hence the transaction around it, so
-     * the read and the insert cannot be interleaved.
-     *
-     * Re-posting the *same* period is not an overlap: that is the double-click
-     * case, and `createOrFirst` below returns the existing row. Re-posting the
-     * same start month with a different length is refused, though — the caller
-     * is asking for something else, and silently handing back the quarterly
-     * would claim the athlete paid for a year.
-     */
-    private function rejectOverlap(Athlete $athlete, int $year, int $month, BillingPeriod $period): void
-    {
-        $clash = AthletePayment::query()
-            ->where('athlete_id', $athlete->id)
-            ->overlapping($year, $month, $period->value)
-            ->first();
-
-        if ($clash === null) {
-            return;
-        }
-
-        if ($clash->year === $year && $clash->month === $month && $clash->period_months === $period) {
-            return;
-        }
-
-        throw ValidationException::withMessages([
-            'period_months' => [\sprintf(
-                'A payment already covers %04d-%02d.',
-                $clash->year,
-                $clash->month,
-            )],
-        ]);
     }
 
     private function notifyAthlete(Athlete $athlete, AthletePayment $payment): void

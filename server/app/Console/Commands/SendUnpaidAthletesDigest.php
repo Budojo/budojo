@@ -11,6 +11,7 @@ use App\Models\Athlete;
 use App\Models\NotificationLog;
 use App\Notifications\OwnerUnpaidAthletesDigestNotification;
 use App\Support\OperatorDay;
+use App\Support\ReminderSubjects;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -122,22 +123,10 @@ class SendUnpaidAthletesDigest extends Command
 
         Academy::query()
             ->with('owner')
-            // Skip academies whose owner hasn't set a monthly fee yet
-            // (#404 follow-up). The "unpaid this month" concept only
-            // makes sense once a fee is configured — a fee-less
-            // academy treats payments as off-platform / cash, and a
-            // monthly chase email there is noise.
-            //
-            // "Has a fee" means a flat fee OR a price list since #1381,
-            // OR an athlete with a personal fee above zero since #1757:
-            // an academy that prices only by tier, or only by person,
-            // leaves `monthly_fee_cents` null and would otherwise
-            // silently stop getting its digest.
-            ->chargingAFee()
             ->chunkById(50, function ($chunk) use ($year, $month, $sentForDate, $force, &$sent, &$skipped, &$failed): void {
                 foreach ($chunk as $academy) {
                     try {
-                        $athletes = $this->unpaidActiveAthletesFor($academy, $year, $month);
+                        $athletes = ReminderSubjects::owing($academy, $year, $month, OperatorDay::today());
 
                         if ($athletes->isEmpty()) {
                             // No spam: an academy with zero unpaid
@@ -226,26 +215,5 @@ class SendUnpaidAthletesDigest extends Command
         ));
 
         return $failed > 0 ? self::FAILURE : self::SUCCESS;
-    }
-
-    /**
-     * The athletes who owe the month, by the roster's own rule
-     * (`Athlete::scopeOwing`, #1722): a carnet holder is not chased, and
-     * neither is the owner's own row or an athlete charged no fee.
-     *
-     * A carnet is judged spendable today, as the roster's chip judges it —
-     * a backfill for a past month still reads today's carnets.
-     *
-     * @return \Illuminate\Database\Eloquent\Collection<int, Athlete>
-     */
-    private function unpaidActiveAthletesFor(Academy $academy, int $year, int $month): \Illuminate\Database\Eloquent\Collection
-    {
-        return Athlete::query()
-            ->where('academy_id', $academy->id)
-            ->owing($year, $month, OperatorDay::today())
-            ->orderBy('last_name_sort', 'asc')
-            ->orderBy('first_name_sort', 'asc')
-            ->orderBy('id')
-            ->get();
     }
 }

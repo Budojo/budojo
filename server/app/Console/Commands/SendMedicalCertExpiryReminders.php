@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\Actions\Notification\DeliverOwnerDigestAction;
-use App\Enums\AthleteStatus;
-use App\Enums\DocumentType;
 use App\Mail\MedicalCertificateExpiringMail;
 use App\Models\Academy;
 use App\Models\Document;
@@ -16,6 +14,7 @@ use App\Notifications\OwnerMedicalCertExpiringDigestNotification;
 use App\Support\NotificationCategory;
 use App\Support\NotificationPreferences;
 use App\Support\OperatorDay;
+use App\Support\ReminderSubjects;
 use Carbon\CarbonInterface;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
@@ -56,14 +55,6 @@ class SendMedicalCertExpiryReminders extends Command
 {
     public const NOTIFICATION_TYPE = 'medical_cert_expiry_digest';
 
-    /**
-     * Threshold offsets (in days) at which we surface a cert as
-     * "expiring". Today (T-0) is the day the cert lapses; T+7 is
-     * one-week notice; T+30 is one-month notice — matches the
-     * existing M3 dashboard widget cadence.
-     */
-    private const TRIGGER_OFFSETS = [0, 7, 30];
-
     protected $signature = 'budojo:send-medical-cert-expiry-reminders'
         . ' {--force : Re-send digests for today even if notification_log already records them}';
 
@@ -76,10 +67,7 @@ class SendMedicalCertExpiryReminders extends Command
         $this->deliverOwnerDigest = $deliverOwnerDigest;
         $today = OperatorDay::today();
 
-        $triggerDates = array_map(
-            fn (int $offset): string => $today->copy()->addDays($offset)->toDateString(),
-            self::TRIGGER_OFFSETS,
-        );
+        $triggerDates = ReminderSubjects::expiryDates($today);
 
         $sent = 0;
         $skipped = 0;
@@ -91,7 +79,7 @@ class SendMedicalCertExpiryReminders extends Command
             ->chunkById(50, function ($chunk) use ($triggerDates, $today, $force, &$sent, &$skipped, &$failed): void {
                 foreach ($chunk as $academy) {
                     try {
-                        $documents = $this->expiringMedicalCertsFor($academy, $triggerDates);
+                        $documents = ReminderSubjects::medicalCertificates($academy, $triggerDates);
 
                         if ($documents->isEmpty()) {
                             continue;
@@ -263,45 +251,5 @@ class SendMedicalCertExpiryReminders extends Command
                 'message' => $e->getMessage(),
             ]);
         }
-    }
-
-    /**
-     * @param  list<string>  $triggerDates  ISO YYYY-MM-DD strings for the
-     *                                      three trigger thresholds.
-     * @return \Illuminate\Database\Eloquent\Collection<int, Document>
-     */
-    private function expiringMedicalCertsFor(Academy $academy, array $triggerDates): \Illuminate\Database\Eloquent\Collection
-    {
-        // The `expires_at` column is `date`; on SQLite (the test
-        // driver) a `WHERE expires_at IN (?, ?, ?)` against ISO date
-        // strings is unreliable when the model's cast normalises the
-        // stored representation. Use OR-orWhereDate so the database
-        // does the comparison against the date portion explicitly,
-        // matching regardless of any datetime-vs-date subtlety in
-        // the storage round-trip.
-        // A certificate the athlete has already renewed is not a reminder
-        // (#1739). Early renewal is the normal case — a month before the old
-        // one lapses — and without this the owner still got a T-30, a T-7 and
-        // a T-0 telling them to chase a certificate sitting in the athlete's
-        // own documents tab.
-        // Active athletes only, for the same reason the expiring list uses
-        // (#1740) — and because the digest links to that list. Chasing an
-        // athlete who stopped training was already noise; once the list
-        // stopped showing them, the reminder pointed the owner at a page
-        // reading "All documents up to date" about the very row it named.
-        return Document::query()
-            ->whereHas('athlete', fn ($q) => $q
-                ->where('academy_id', $academy->id)
-                ->where('status', AthleteStatus::Active->value))
-            ->where('type', DocumentType::MedicalCertificate)
-            ->notSuperseded()
-            ->where(function ($q) use ($triggerDates): void {
-                foreach ($triggerDates as $date) {
-                    $q->orWhereDate('expires_at', $date);
-                }
-            })
-            ->with('athlete')
-            ->orderBy('expires_at', 'asc')
-            ->get();
     }
 }

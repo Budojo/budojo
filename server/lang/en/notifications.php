@@ -21,6 +21,9 @@ return [
     'academy_documents_digest' => [
         'title' => "{1} One of the academy's documents is expiring|[2,*] :count of the academy's documents are expiring",
     ],
+    'birthdays' => [
+        'title' => '{1} A birthday today|[2,*] :count birthdays today',
+    ],
     'names_and_more' => ':names and :more more',
     'document_expires' => ':name, expires :date',
 ];

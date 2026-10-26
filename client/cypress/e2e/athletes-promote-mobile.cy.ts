@@ -1,5 +1,6 @@
 import { MOCK_ACADEMY } from '../support/fixtures';
 import { VIEWPORT_PHONE } from '../support/viewports';
+import { expectNoSidewaysScroll } from '../support/no-sideways-scroll';
 
 /**
  * A promotion from the athlete's row on the phone (#2045, PRD § 6.1): the
@@ -62,9 +63,7 @@ describe('A promotion from the row, on the phone (#2045)', () => {
     cy.get('[data-cy="promote-to"]').should('contain.text', 'Blue · 3');
     // The keyboard starts on Record, not on the ✕ where Enter would close.
     cy.focused().parents('[data-cy="promote-submit"]').should('exist');
-    cy.document().then((doc) => {
-      expect(doc.documentElement.scrollWidth).to.be.at.most(doc.documentElement.clientWidth);
-    });
+    expectNoSidewaysScroll();
     cy.get('[data-cy="promote-submit"] button').click();
 
     cy.wait('@promote').its('request.body').should('deep.equal', { belt: 'blue', stripes: 3 });

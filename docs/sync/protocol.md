@@ -216,7 +216,7 @@ There is no pairing code (#2033). **A device joins at its first «Accedi con Goo
 **A device that joined never publishes into a folder with no version.** It waits for the device that made the keys, which publishes the academy as version 1 (#2046). Otherwise a phone holding a backup it restored would publish it as version 1, and the PC, with the newer academy, would then meet it as another academy and ask.
 
 **Where a device keeps what it joined with** (#2046):
-- **The phone:** the device id, the folder id and the sync key in `sync.json`, beside the app keys in its private files, which neither Android's backup nor a transfer to a new phone copies. What it remembers between rounds (the `SyncLedger`) is in the page's storage, named by the device id.
+- **The phone:** the device id, the folder id and the sync key in `sync.json`, beside the app keys in its private files, which neither Android's backup nor a transfer to a new phone copies. All of them are sealed by the Android Keystore (`sync.json.sealed`, #2134). What it remembers between rounds (the `SyncLedger`) is in the page's storage, named by the device id.
 - **The PC:** the device id in `sync-device.json` under its data, apart from Drive's link, with the database's epoch, which a Restore moves on. The sync key and folder id are read from the account's keys file, which the PC wrote (`docs/desktop/architecture.md` § Sync with the phone).
 
 **A database replaced outside the sync** (the door's restore, the desktop's Restore) forgets the ledger: an academy with no base asks before it meets the folder's (§ Scope).

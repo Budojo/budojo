@@ -1,0 +1,46 @@
+// The cover is opaque and above everything: the rest of the app is hidden
+// under it as well (`html.budojo-locked` in styles.scss), so nothing behind
+// it shows through even if a layer of its own sets a higher stacking order.
+.app-lock {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: calc(2rem + env(safe-area-inset-top)) 1rem calc(2rem + env(safe-area-inset-bottom));
+  background: var(--p-surface-50);
+  text-align: center;
+
+  &__icon {
+    display: grid;
+    place-items: center;
+    width: 4rem;
+    height: 4rem;
+    border-radius: 50%;
+    background: var(--p-surface-100);
+    color: var(--p-text-color);
+    font-size: 1.5rem;
+  }
+
+  &__title {
+    margin: 0;
+    color: var(--p-text-color);
+    font-size: 1.5rem;
+    font-weight: 600;
+  }
+
+  &__body {
+    max-width: 20rem;
+    margin: 0 0 1rem;
+    color: var(--p-text-muted-color);
+  }
+
+  &__problem {
+    max-width: 20rem;
+    margin: 0;
+    color: var(--budojo-danger-ink);
+  }
+}

@@ -1,6 +1,7 @@
 import { MOCK_ACADEMY } from '../support/fixtures';
 import { stubToday } from '../support/today';
 import { VIEWPORT_LAPTOP, VIEWPORT_PHONE } from '../support/viewports';
+import { expectNoSidewaysScroll } from '../support/no-sideways-scroll';
 
 /**
  * Someone new at the door (#1939, #2045, PRD § 6.1): from the check-in, a
@@ -126,9 +127,7 @@ describe('Someone new at the door (#1939)', () => {
     cy.contains('First name is required').should('be.visible');
     cy.contains('Last name is required').should('be.visible');
 
-    cy.document().then((doc) => {
-      expect(doc.documentElement.scrollWidth).to.be.at.most(doc.documentElement.clientWidth);
-    });
+    expectNoSidewaysScroll();
     // Cancelling creates nobody.
     cy.get('body').type('{esc}');
     cy.get('.p-dialog').should('not.exist');

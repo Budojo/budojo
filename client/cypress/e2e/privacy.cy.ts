@@ -1,4 +1,5 @@
 import { MOBILE_VIEWPORTS } from '../support/viewports';
+import { expectNoSidewaysScroll } from '../support/no-sideways-scroll';
 
 /**
  * Public privacy-policy pages — `/privacy` is canonical English (#291),
@@ -98,10 +99,9 @@ MOBILE_VIEWPORTS.forEach(({ name, width, height }) => {
     for (const path of ['/privacy', '/privacy/it']) {
       it(`${path} does not overflow horizontally`, () => {
         cy.visit(path);
-        cy.document().then((doc) => {
-          const root = doc.documentElement;
-          expect(root.scrollWidth, 'documentElement.scrollWidth').to.be.lte(root.clientWidth);
-        });
+        // A lazy route: measured before it renders, the empty shell would fit.
+        cy.get('h1').should('be.visible');
+        expectNoSidewaysScroll('public');
       });
     }
   });
