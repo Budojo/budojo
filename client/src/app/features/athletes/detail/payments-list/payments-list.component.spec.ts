@@ -1397,4 +1397,32 @@ describe('PaymentsListComponent — a month let off (#2167)', () => {
     expect(list.mock.calls.length).toBeGreaterThan(loads);
     expect(toast).toHaveBeenCalledWith(expect.objectContaining({ summary: 'Free month' }));
   });
+
+  it("records a quarterly payer's month alone when the quarter would reach a month let off", () => {
+    const { fixture, component } = setup({ billingPeriodMonths: 3, payments: [letOff] });
+    const confirmation = fixture.componentRef.injector.get(ConfirmationService);
+    const spy = vi.spyOn(confirmation, 'confirm').mockImplementation(() => confirmation);
+    const rows = component['monthRows']();
+
+    // September to November would cross October: September alone, said plainly.
+    component.confirmToggleRow(
+      click(),
+      rows.find((r: { month: number }) => r.month === 9)!,
+    );
+    const september = spy.mock.calls[0][0];
+    expect(september.message).toBe('Mark Mario Rossi paid for September 2026?');
+    september.accept?.();
+    // November to January reaches nothing: the athlete's own quarter.
+    component.confirmToggleRow(
+      click(),
+      rows.find((r: { month: number }) => r.month === 11)!,
+    );
+    spy.mock.calls[1][0].accept?.();
+
+    const markPaid = TestBed.inject(PaymentService).markPaid as unknown as Mock;
+    expect(markPaid.mock.calls.map((call) => call.slice(0, 4))).toEqual([
+      [42, 2026, 9, 1],
+      [42, 2026, 11, undefined],
+    ]);
+  });
 });

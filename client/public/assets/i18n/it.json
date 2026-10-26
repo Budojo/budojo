@@ -1418,7 +1418,8 @@
       "paymentCreated": "Pagamento registrato",
       "paymentWaived": "Mese gratis registrato",
       "paymentUpdated": "Pagamento modificato",
-      "paymentDeleted": "Pagamento eliminato"
+      "paymentDeleted": "Pagamento eliminato",
+      "paymentUnwaived": "Mese gratis annullato"
     },
     "byActor": "da {{actor}}",
     "unknownActionTitle": "Azione registrata dal sistema come «{{action}}»"
@@ -2275,7 +2276,10 @@
         "backToPaying": "Torna a pagare",
         "freeMonth": "Solo {{month}}",
         "undoFreeMonth": "Annulla {{month}}",
-        "freeAlways": "Sempre"
+        "freeAlways": "Sempre",
+        "freeMonthAria": "Si allena gratis: solo {{month}}",
+        "undoFreeMonthAria": "Si allena gratis: annulla {{month}}",
+        "freeAlwaysAria": "Si allena gratis: sempre"
       },
       "importButton": "Importa",
       "showTrashed": "Mostra atleti cancellati",

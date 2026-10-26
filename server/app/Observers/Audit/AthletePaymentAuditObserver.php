@@ -62,7 +62,7 @@ class AthletePaymentAuditObserver
     public function deleting(AthletePayment $payment): void
     {
         $this->writeAuditEntry->execute(
-            action: 'payment.deleted',
+            action: $payment->waived ? 'payment.unwaived' : 'payment.deleted',
             actor: $this->currentActor(),
             academy: $payment->athlete?->academy,
             subjectType: AthletePayment::class,

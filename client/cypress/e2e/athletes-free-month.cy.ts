@@ -93,6 +93,17 @@ describe('A month let off, from the payment chip (#2167)', () => {
         'Always',
       ]);
     });
+    // A screen reader never hears the heading: each item carries it.
+    cy.contains('.p-menu [role="menuitem"]', 'Just October').should(
+      'have.attr',
+      'aria-label',
+      'Trains free: just October',
+    );
+    cy.contains('.p-menu [role="menuitem"]', 'Always').should(
+      'have.attr',
+      'aria-label',
+      'Trains free: always',
+    );
     expectNoSidewaysScroll();
 
     cy.contains('.p-menu [role="menuitem"]', 'Just October').click();

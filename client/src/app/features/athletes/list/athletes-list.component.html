@@ -97,7 +97,18 @@
 <!-- The payment cell's own popup (#1402). A second instance rather than a
      shared one: both are reachable on a phone, and sharing would make the
      second open steal the first's anchor. -->
-<p-menu #paymentMenu [popup]="true" [model]="paymentMenuItems()" appendTo="body" />
+<p-menu #paymentMenu [popup]="true" [model]="paymentMenuItems()" appendTo="body">
+  <!-- PrimeNG's own item markup, showing «Sempre» under «Si allena gratis»
+       while the item keeps its full name for a screen reader (#2167). -->
+  <ng-template #item let-item>
+    <span class="p-menu-item-link">
+      @if (item.icon) {
+        <span [class]="'p-menu-item-icon ' + item.icon" aria-hidden="true"></span>
+      }
+      <span class="p-menu-item-label">{{ item.shortLabel ?? item.label }}</span>
+    </span>
+  </ng-template>
+</p-menu>
 
 <div class="athletes-page">
   <app-page-header [title]="'athletes.list.title' | translate" [countLabel]="totalCountLabel()">

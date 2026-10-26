@@ -153,6 +153,17 @@ it('leaves the month out of the money: nothing collected, nothing expected, noth
     ]);
 });
 
+it('never stretches the revenue chart into a future month let off', function (): void {
+    Sanctum::actingAs($this->user);
+    $months = fn (): array => array_column($this->getJson('/api/v1/stats/payments/monthly')->assertOk()->json('data'), 'month');
+    $before = $months();
+
+    waivedLetOff($this, 3, ['year' => 2027])->assertCreated();
+
+    expect($months())->toBe($before)
+        ->and(end($before))->toBe('2026-10');
+});
+
 it('leaves a month let off out of the accountant\'s file', function (): void {
     waivedLetOff($this, 10)->assertCreated();
 

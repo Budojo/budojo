@@ -1418,7 +1418,8 @@
       "paymentCreated": "Payment recorded",
       "paymentWaived": "Free month recorded",
       "paymentUpdated": "Payment edited",
-      "paymentDeleted": "Payment deleted"
+      "paymentDeleted": "Payment deleted",
+      "paymentUnwaived": "Free month undone"
     },
     "byActor": "by {{actor}}",
     "unknownActionTitle": "Recorded by the system as “{{action}}”"
@@ -2275,7 +2276,10 @@
         "backToPaying": "Back to paying",
         "freeMonth": "Just {{month}}",
         "undoFreeMonth": "Undo {{month}}",
-        "freeAlways": "Always"
+        "freeAlways": "Always",
+        "freeMonthAria": "Trains free: just {{month}}",
+        "undoFreeMonthAria": "Trains free: undo {{month}}",
+        "freeAlwaysAria": "Trains free: always"
       },
       "importButton": "Import",
       "showTrashed": "Show deleted athletes",

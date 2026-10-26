@@ -1441,6 +1441,10 @@ export class AthletesListComponent implements OnInit {
    * with the gym does not pay October, offered while nothing else pays it,
    * and taken back from here. Always: the owner's partner, a coach's child
    * (#2011), a personal fee of 0 that was three screens away.
+   *
+   * Each is named in full (`label`), which is all a screen reader hears:
+   * PrimeNG names an item by its label and draws the heading outside the
+   * menu's roles. The menu shows `shortLabel` under the heading.
    */
   private freeItems(event: MouseEvent, athlete: Athlete, coverage: PaymentCoverage): MenuItem[] {
     const month = this.thisMonth().name;
@@ -1448,20 +1452,23 @@ export class AthletesListComponent implements OnInit {
 
     if (coverage === 'waived') {
       items.push({
-        label: this.translate.instant('athletes.list.payMenu.undoFreeMonth', { month }),
+        label: this.translate.instant('athletes.list.payMenu.undoFreeMonthAria', { month }),
+        shortLabel: this.translate.instant('athletes.list.payMenu.undoFreeMonth', { month }),
         icon: 'pi pi-undo',
         command: () => this.confirmFreeMonth(event, athlete, false),
       });
     } else if (coverage === 'none' || coverage === 'carnet') {
       items.push({
-        label: this.translate.instant('athletes.list.payMenu.freeMonth', { month }),
+        label: this.translate.instant('athletes.list.payMenu.freeMonthAria', { month }),
+        shortLabel: this.translate.instant('athletes.list.payMenu.freeMonth', { month }),
         icon: 'pi pi-calendar',
         command: () => this.confirmFreeMonth(event, athlete, true),
       });
     }
 
     items.push({
-      label: this.translate.instant('athletes.list.payMenu.freeAlways'),
+      label: this.translate.instant('athletes.list.payMenu.freeAlwaysAria'),
+      shortLabel: this.translate.instant('athletes.list.payMenu.freeAlways'),
       icon: 'pi pi-gift',
       command: () => this.confirmTrainsFree(event, athlete, true),
     });
@@ -1556,6 +1563,10 @@ export class AthletesListComponent implements OnInit {
    * `App\Support\MonthCoverage`: undoing a fee can leave a carnet paying, and
    * the row must not guess. A failed read leaves the first answer; the next
    * load corrects it.
+   *
+   * Only the latest read of a row lands: a month let off and taken back at
+   * once sends two, and the first one answering last would put back a free
+   * month that no longer exists.
    */
   private settleRow(
     athleteId: number,
@@ -1565,18 +1576,25 @@ export class AthletesListComponent implements OnInit {
       this.athletes.update((rows) =>
         rows.map((a) => (a.id === athleteId ? { ...a, ...fields } : a)),
       );
+    const read = (this.rowReads.get(athleteId) ?? 0) + 1;
+    this.rowReads.set(athleteId, read);
 
     patch(known);
     this.athleteService.get(athleteId).subscribe({
-      next: (fresh) =>
+      next: (fresh) => {
+        if (this.rowReads.get(athleteId) !== read) return;
         patch({
           paid_current_month: fresh.paid_current_month,
           payment_coverage: fresh.payment_coverage,
           active_carnet: fresh.active_carnet,
-        }),
+        });
+      },
       error: () => undefined,
     });
   }
+
+  /** The latest `settleRow` read per athlete; an older answer is dropped. */
+  private readonly rowReads = new Map<number, number>();
 
   /** True when the academy has both halves of a carnet offering configured. */
   protected readonly sellsCarnets = computed<boolean>(() => {

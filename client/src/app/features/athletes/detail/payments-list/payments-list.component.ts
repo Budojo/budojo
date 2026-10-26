@@ -603,8 +603,9 @@ export class PaymentsListComponent implements OnInit {
     // reader is about to create or undo the entire period, so "from February
     // to April" is exactly what they need and "part of the February payment"
     // would hide the two months the click also touches.
+    const recorded = this.periodFrom(row);
     const period = willMarkPaid
-      ? this.periodCaptionFor(row.year, row.month, this.athleteBillingPeriod())
+      ? this.periodCaptionFor(row.year, row.month, recorded)
       : row.payment !== null
         ? this.periodCaptionFor(row.payment.year, row.payment.month, row.periodMonths)
         : null;
@@ -648,8 +649,26 @@ export class PaymentsListComponent implements OnInit {
       rejectLabel: this.translate.instant('common.cancel'),
       rejectButtonProps: CONFIRM_REJECT_BUTTON,
       acceptButtonProps: willMarkPaid ? undefined : { severity: 'danger' },
-      accept: () => this.write(row.year, row.month, willMarkPaid ? 'mark-paid' : 'unmark'),
+      accept: () =>
+        this.write(row.year, row.month, willMarkPaid ? 'mark-paid' : 'unmark', recorded),
     });
+  }
+
+  /**
+   * The months «Segna pagato» records from this row: the athlete's period, or
+   * this month alone when the whole period would reach a month that already
+   * has a row, a payment or a month let off (#2167). The server refuses the
+   * overlap, and the owner could not have recorded the month at all; the
+   * check-in falls back the same way (`periodStarts`, #2150).
+   */
+  private periodFrom(row: MonthRow): number {
+    const period = this.athleteBillingPeriod();
+    const start = row.year * 12 + row.month - 1;
+    const reaches = this.payments().some((payment) => {
+      const from = payment.year * 12 + payment.month - 1;
+      return from < start + period && from + (payment.period_months ?? 1) > start;
+    });
+    return reaches ? 1 : period;
   }
 
   /**
@@ -695,14 +714,16 @@ export class PaymentsListComponent implements OnInit {
    * table's year would have written February 2027's payment onto February
    * 2026, silently, in the one place the app handles money.
    */
-  private write(year: number, month: number, change: LedgerChange): void {
+  private write(year: number, month: number, change: LedgerChange, period?: number): void {
     const id = this.athleteId();
     if (id === null) return;
+    // Left out when it is the athlete's own: the server reads that one.
+    const periodMonths = period === this.athleteBillingPeriod() ? undefined : period;
 
     const op$ =
       change === 'mark-paid'
         ? this.paymentService
-            .markPaid(id, year, month, undefined, this.receiptFromForm())
+            .markPaid(id, year, month, periodMonths, this.receiptFromForm())
             .pipe(map(() => undefined))
         : change === 'waive'
           ? this.paymentService.waive(id, year, month).pipe(map(() => undefined))

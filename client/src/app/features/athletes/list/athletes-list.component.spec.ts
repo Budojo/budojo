@@ -1769,8 +1769,12 @@ describe('AthletesListComponent — what is paying for the month (#1402)', () =>
     it('offers «trains free» to anyone the chip asks to pay', () => {
       // "Lei è la mia compagna, non la faccio pagare": the state existed as a
       // personal fee of 0, three screens away from where the owner looks.
-      expect(menuFor(makeAthlete({ id: 20, payment_coverage: 'none' }))).toContain('Always');
-      expect(menuFor(makeAthlete({ id: 21, payment_coverage: 'monthly' }))).toContain('Always');
+      expect(menuFor(makeAthlete({ id: 20, payment_coverage: 'none' }))).toContain(
+        'Trains free: always',
+      );
+      expect(menuFor(makeAthlete({ id: 21, payment_coverage: 'monthly' }))).toContain(
+        'Trains free: always',
+      );
     });
 
     it('saves a personal fee of 0 on accept, and the row says Free', () => {
@@ -1868,9 +1872,14 @@ describe('AthletesListComponent — what is paying for the month (#1402)', () =>
       }) as never;
       const item = fixture.componentInstance['paymentMenuItems']()
         .flatMap((group) => group.items ?? [])
-        .find((entry) => entry.label === label);
+        .find((entry) => (entry['shortLabel'] ?? entry.label) === label);
       item?.command?.({} as never);
       fixture.detectChanges();
+    }
+
+    /** What a group shows: the short answer under its heading. */
+    function shown(group: MenuItem): string[] {
+      return (group.items ?? []).map((item) => item['shortLabel'] ?? item.label ?? '');
     }
 
     it('says «trains free» once, over this month and always, under the name of whose menu it is', () => {
@@ -1882,16 +1891,21 @@ describe('AthletesListComponent — what is paying for the month (#1402)', () =>
         'Sell a carnet',
         'Open payments',
       ]);
-      expect(groups[1].items?.map((item) => item.label)).toEqual(['Just October', 'Always']);
+      expect(shown(groups[1])).toEqual(['Just October', 'Always']);
+      // Named in full for a screen reader, which never hears the heading.
+      expect(groups[1].items?.map((item) => item.label)).toEqual([
+        'Trains free: just October',
+        'Trains free: always',
+      ]);
     });
 
     it('offers the month to a carnet holder, and only «always» once a fee pays it', () => {
       const carnet = open(makeAthlete({ id: 31, payment_coverage: 'carnet' })).groups;
       const paid = open(makeAthlete({ id: 32, payment_coverage: 'monthly' })).groups;
 
-      expect(carnet[1].items?.map((item) => item.label)).toEqual(['Just October', 'Always']);
+      expect(shown(carnet[1])).toEqual(['Just October', 'Always']);
       // Paid already: letting it off would be refused, so it is not offered.
-      expect(paid[1].items?.map((item) => item.label)).toEqual(['Always']);
+      expect(shown(paid[1])).toEqual(['Always']);
     });
 
     it('lets the athlete off this month on a yes: the chip says Free month at once', () => {
@@ -1918,7 +1932,7 @@ describe('AthletesListComponent — what is paying for the month (#1402)', () =>
       expect(chip(fixture, 34)).toBe('Free month');
       expect(menuLabels(groups)).not.toContain('Mark paid');
       expect(menuLabels(groups)).not.toContain('Undo the payment');
-      expect(groups[1].items?.map((item) => item.label)).toEqual(['Undo October', 'Always']);
+      expect(shown(groups[1])).toEqual(['Undo October', 'Always']);
     });
 
     it('takes the month back, and the chip says what pays now, as the server does', () => {
@@ -1941,6 +1955,27 @@ describe('AthletesListComponent — what is paying for the month (#1402)', () =>
 
       expect(TestBed.inject(PaymentService).unmarkPaid).toHaveBeenCalledWith(35, 2026, 10);
       expect(chip(fixture, 35)).toBe('Carnet · 3');
+    });
+
+    it('lets only the latest read of a row land, whatever order they answer in', () => {
+      const { fixture } = open(makeAthlete({ id: 37, payment_coverage: 'none' }));
+      const first = new Subject<Athlete>();
+      const second = new Subject<Athlete>();
+      (TestBed.inject(AthleteService).get as unknown as Mock)
+        .mockReturnValueOnce(first)
+        .mockReturnValueOnce(second);
+
+      choose(fixture, 'Just October');
+      const event = new MouseEvent('click');
+      Object.defineProperty(event, 'currentTarget', { value: document.createElement('button') });
+      fixture.componentInstance['openPaymentMenu'](event, fixture.componentInstance.athletes()[0]);
+      choose(fixture, 'Undo October');
+      // The undo's read answers first, the let-off's read last.
+      second.next(makeAthlete({ id: 37, payment_coverage: 'none', paid_current_month: false }));
+      first.next(makeAthlete({ id: 37, payment_coverage: 'waived', paid_current_month: true }));
+      fixture.detectChanges();
+
+      expect(chip(fixture, 37)).toBe('Unpaid');
     });
 
     it('moves the chip when the month is marked paid, which only the next load did', () => {

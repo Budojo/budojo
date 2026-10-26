@@ -49,9 +49,12 @@ final class CollectedByMonth
     {
         // Every fee whose period REACHES the window. No upper bound: a period
         // running past `$atLeastUntil` is exactly what the extension shows.
+        // A month let off (#2167) took nothing, so it must not stretch the
+        // chart into a future it paid nothing for.
         $payments = DB::table('athlete_payments')
             ->join('athletes', 'athletes.id', '=', 'athlete_payments.athlete_id')
             ->where('athletes.academy_id', $academy->id)
+            ->where('athlete_payments.waived', false)
             ->whereRaw(
                 '(athlete_payments.year * 12 + athlete_payments.month - 1 + athlete_payments.period_months) > ?',
                 [$first],

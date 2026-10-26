@@ -55,6 +55,7 @@ Indexes:
 | `athlete.belt.promoted` | A specific belt-change event (qualifier for filterability) |
 | `payment.created` | New payment row |
 | `payment.waived` | A month the owner let the athlete off (#2167): a row at €0, not money recorded |
+| `payment.unwaived` | That month owed again: the row let off is undone (#2167) |
 | `payment.updated` | Edit on an existing payment |
 | `payment.deleted` | Soft-delete (or hard) |
 | `carnet.created` | An entry carnet was sold (#1364) |
