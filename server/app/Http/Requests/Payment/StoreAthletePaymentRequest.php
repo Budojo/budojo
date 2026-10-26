@@ -51,7 +51,14 @@ class StoreAthletePaymentRequest extends FormRequest
             // How many months this one payment covers (#1382). Optional: left
             // out, the athlete's own `billing_period_months` applies, which is
             // monthly for everybody until someone changes it.
-            'period_months' => ['sometimes', 'integer', Rule::enum(BillingPeriod::class)],
+            'period_months' => [
+                'sometimes',
+                'integer',
+                Rule::enum(BillingPeriod::class),
+                // A month let off is one month (#2167). A sync replays it
+                // with the period it got, so 1 is taken back.
+                Rule::when($this->boolean('waived'), [Rule::in([BillingPeriod::Monthly->value])]),
+            ],
             // The day the money arrived (#1761) — September's fee handed over
             // on 3 October. The same rule as a carnet's `purchased_at`, so the
             // two dialogs behave alike: `date_format` rather than `date`,
@@ -60,7 +67,10 @@ class StoreAthletePaymentRequest extends FormRequest
             // it is today.
             'paid_at' => ['sometimes', 'nullable', 'date_format:Y-m-d', OperatorDay::notAfterToday()],
             // How it was paid. Optional forever: null is "not recorded".
-            'payment_method' => ['sometimes', 'nullable', Rule::enum(PaymentMethod::class)],
+            'payment_method' => ['sometimes', 'nullable', Rule::enum(PaymentMethod::class), 'prohibited_if_accepted:waived'],
+            // A month the owner lets the athlete off (#2167): recorded at €0,
+            // with no method, dated the day it was given.
+            'waived' => ['sometimes', 'boolean'],
         ];
     }
 

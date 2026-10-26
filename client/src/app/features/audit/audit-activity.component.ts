@@ -46,8 +46,10 @@ const ACTION_LABEL_KEYS: Readonly<Record<string, string>> = {
   'document.uploaded': 'audit.actions.documentUploaded',
   'document.deleted': 'audit.actions.documentDeleted',
   'payment.created': 'audit.actions.paymentCreated',
+  'payment.waived': 'audit.actions.paymentWaived',
   'payment.updated': 'audit.actions.paymentUpdated',
   'payment.deleted': 'audit.actions.paymentDeleted',
+  'payment.unwaived': 'audit.actions.paymentUnwaived',
 };
 @Component({
   selector: 'app-audit-activity',

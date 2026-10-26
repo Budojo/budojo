@@ -38,6 +38,29 @@ it('writes payment.created with the "Mario Rossi — 2026-05" label', function (
     expect($entry->after['amount_cents'])->toBe(5000);
 });
 
+it('writes payment.waived for a month let off, not a payment recorded (#2167)', function (): void {
+    $user = userWithAcademy();
+    $mario = Athlete::factory()->for($user->academy)->create(['first_name' => 'Mario', 'last_name' => 'Rossi']);
+
+    AthletePayment::factory()->for($mario)->create(['year' => 2026, 'month' => 10, 'amount_cents' => 0, 'waived' => true]);
+
+    $entry = AuditEntry::query()->where('subject_type', AthletePayment::class)->sole();
+    expect($entry->action)->toBe('payment.waived')
+        ->and($entry->subject_label)->toBe('Mario Rossi — 2026-10');
+});
+
+it('writes payment.unwaived when a month let off is undone, not a payment deleted (#2167)', function (): void {
+    $user = userWithAcademy();
+    Sanctum::actingAs($user);
+    $mario = Athlete::factory()->for($user->academy)->create(['first_name' => 'Mario', 'last_name' => 'Rossi']);
+    AthletePayment::factory()->for($mario)->create(['year' => 2026, 'month' => 10, 'amount_cents' => 0, 'waived' => true]);
+
+    $this->deleteJson("/api/v1/athletes/{$mario->id}/payments/2026/10")->assertNoContent();
+
+    expect(AuditEntry::query()->where('action', 'payment.unwaived')->sole()->subject_label)->toBe('Mario Rossi — 2026-10')
+        ->and(AuditEntry::query()->where('action', 'payment.deleted')->exists())->toBeFalse();
+});
+
 it('writes payment.updated with the diff', function (): void {
     $user = userWithAcademy();
     Sanctum::actingAs($user);

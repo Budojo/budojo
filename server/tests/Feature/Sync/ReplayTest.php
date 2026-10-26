@@ -8,6 +8,7 @@ use App\Actions\Sync\ReplayJournalAction;
 use App\Enums\TrainingMode;
 use App\Models\AcademyClass;
 use App\Models\Athlete;
+use App\Models\AthletePayment;
 use App\Models\SyllabusTopic;
 use App\Support\Sync\RebasePending;
 use Carbon\CarbonImmutable;
@@ -207,6 +208,31 @@ describe('the phone’s writes on the PC’s database', function (): void {
         expect($conflict->reason)->toBe('differs')
             ->and(json_decode((string) $conflict->detail, true))->toMatchArray(['field' => 'payment_method', 'mine' => 'cash', 'here' => 'pos'])
             ->and(DB::table('athlete_payments')->where('athlete_id', $this->luca)->value('payment_method'))->toBe('pos');
+    });
+
+    it('lets off on the PC the month the phone let off, dated the day it was given (#2167)', function (): void {
+        $entries = onThePhone(fn () => $this->actingAs($this->owner)
+            ->postJson("/api/v1/athletes/{$this->luca}/payments", ['year' => 2026, 'month' => 10, 'waived' => true])
+            ->assertCreated());
+        $this->travel(2)->days();
+
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'applied']);
+        $row = AthletePayment::query()->where('athlete_id', $this->luca)->sole();
+        expect($row->waived)->toBeTrue()
+            ->and($row->amount_cents)->toBe(0)
+            ->and($row->paid_at->toDateString())->toBe($entries[0]['body']['paid_at']);
+    });
+
+    it('raises a conflict for a month let off on the phone and paid on the PC', function (): void {
+        $entries = onThePhone(fn () => $this->actingAs($this->owner)
+            ->postJson("/api/v1/athletes/{$this->luca}/payments", ['year' => 2026, 'month' => 10, 'waived' => true])
+            ->assertCreated());
+        $this->actingAs($this->owner)
+            ->postJson("/api/v1/athletes/{$this->luca}/payments", ['year' => 2026, 'month' => 10, 'payment_method' => 'cash'])
+            ->assertCreated();
+
+        expect(replayOnThePc($entries))->toBe([$entries[0]['id'] => 'conflict'])
+            ->and(DB::table('athlete_payments')->where('athlete_id', $this->luca)->value('waived'))->toBe(0);
     });
 
     it('applies nothing twice: a replay run again skips what it dealt with', function (): void {

@@ -108,6 +108,17 @@
             data-cy="mark-paid-method"
           />
         </form>
+        <!-- The other answer to the month (#2167): not paid, forgiven. -->
+        <p-button
+          type="button"
+          icon="pi pi-gift"
+          [label]="'athletes.detail.payments.letOff' | translate"
+          [text]="true"
+          severity="secondary"
+          class="mark-paid__let-off"
+          (onClick)="letOffMarkPaidRow()"
+          data-cy="mark-paid-let-off"
+        />
       </div>
     </ng-template>
   </p-confirmpopup>
@@ -149,7 +160,16 @@
             <!-- A month another month's period covers (#1654, PAY-2) gets no
                  second "Pagato" badge: its caption above says what it is. -->
             @if (!row.coveredByEarlierPeriod) {
-              @if (row.payment) {
+              @if (row.waived) {
+                <!-- A month the owner let them off (#2167): nothing paid, nothing owed. -->
+                <p-tag
+                  [value]="'athletes.detail.payments.free' | translate"
+                  severity="secondary"
+                  icon="pi pi-gift"
+                  [rounded]="true"
+                  [attr.data-cy]="'payment-card-free-' + row.month"
+                />
+              } @else if (row.payment) {
                 <p-tag
                   [value]="'shared.paidBadge.paid' | translate"
                   severity="success"
@@ -202,7 +222,7 @@
           @if (!row.coveredByEarlierPeriod || row.undoHere) {
             <div class="payment-card__meta">
               @if (!row.coveredByEarlierPeriod) {
-                @if (row.payment) {
+                @if (row.payment && !row.waived) {
                   <span class="payment-card__amount">{{
                     formatAmount(row.payment.amount_cents)
                   }}</span>
@@ -229,7 +249,12 @@
                 <div class="payment-card__actions">
                   <p-button
                     type="button"
-                    [label]="'athletes.detail.payments.button.unmarkPaid' | translate"
+                    [label]="
+                      (row.waived
+                        ? 'athletes.detail.payments.button.undoFree'
+                        : 'athletes.detail.payments.button.unmarkPaid'
+                      ) | translate
+                    "
                     severity="secondary"
                     [text]="true"
                     (onClick)="confirmToggleRow($event, row)"
@@ -315,6 +340,14 @@
                 <span class="payments-list__covered" [attr.data-cy]="'payment-period-' + row.month">
                   {{ periodCaption(row) }}
                 </span>
+              } @else if (row.waived) {
+                <p-tag
+                  [value]="'athletes.detail.payments.free' | translate"
+                  severity="secondary"
+                  icon="pi pi-gift"
+                  [rounded]="true"
+                  [attr.data-cy]="'payment-free-' + row.month"
+                />
               } @else if (row.payment) {
                 <p-tag
                   [value]="'shared.paidBadge.paid' | translate"
@@ -357,7 +390,7 @@
                 dashed: a dash reads as a value missing, and nothing is.
               -->
               @if (!row.coveredByEarlierPeriod) {
-                @if (row.payment) {
+                @if (row.payment && !row.waived) {
                   {{ formatAmount(row.payment.amount_cents) }}
                 } @else {
                   <span class="payments-list__dash">—</span>
@@ -368,7 +401,7 @@
               <!-- When the money actually changed hands: on the month the
                    period started, where the one payment is. -->
               @if (!row.coveredByEarlierPeriod) {
-                @if (row.payment) {
+                @if (row.payment && !row.waived) {
                   <time [attr.datetime]="row.payment.paid_at">{{
                     formatPaidAt(row.payment.paid_at)
                   }}</time>
@@ -395,7 +428,12 @@
               @if (row.undoHere) {
                 <p-button
                   type="button"
-                  [label]="'athletes.detail.payments.button.unmarkPaid' | translate"
+                  [label]="
+                    (row.waived
+                      ? 'athletes.detail.payments.button.undoFree'
+                      : 'athletes.detail.payments.button.unmarkPaid'
+                    ) | translate
+                  "
                   severity="secondary"
                   [text]="true"
                   (onClick)="confirmToggleRow($event, row)"

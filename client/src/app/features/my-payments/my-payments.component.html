@@ -90,7 +90,12 @@
                 </span>
               }
             </div>
-            @if (row.payment; as p) {
+            @if (row.payment?.waived) {
+              <!-- A month the owner let them off (#2167): free, not €0 paid. -->
+              <span class="my-payments__amount" [attr.data-cy]="'month-free-' + row.month">
+                {{ 'athletePortal.payments.free' | translate }}
+              </span>
+            } @else if (row.payment; as p) {
               <!-- The amount sits on the month the period started, once. -->
               @if (!row.coveredByEarlierPeriod) {
                 <span class="my-payments__amount">{{ formatAmount(p.amount_cents) }}</span>

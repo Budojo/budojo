@@ -43,6 +43,17 @@ class FakePaymentService {
     } as AthletePayment),
   );
   readonly unmarkPaid = vi.fn(() => of(void 0));
+  readonly waive = vi.fn(() =>
+    of({
+      id: 98,
+      athlete_id: 42,
+      year: 2026,
+      month: 10,
+      amount_cents: 0,
+      paid_at: '2026-10-20T00:00:00Z',
+      waived: true,
+    } as AthletePayment),
+  );
 }
 
 /**
@@ -851,10 +862,10 @@ describe('PaymentsListComponent — the 422 that is not about the fee (#1382)', 
     expect(october.year).toBe(2026);
     expect(february.year).toBe(2027);
 
-    component['applyToggle'](february.year, february.month, true);
+    component['write'](february.year, february.month, 'mark-paid');
     expect(svc.markPaid).toHaveBeenCalledWith(42, 2027, 2, undefined, {});
 
-    component['applyToggle'](october.year, october.month, true);
+    component['write'](october.year, october.month, 'mark-paid');
     expect(svc.markPaid).toHaveBeenLastCalledWith(42, 2026, 10, undefined, {});
   });
 
@@ -1309,5 +1320,109 @@ describe('PaymentsListComponent — a ledger that reads at a glance (#1654)', ()
       expect(message).toContain('copre: da marzo a maggio 2027');
       expect(message).not.toContain('Da ');
     });
+  });
+});
+
+describe('PaymentsListComponent — a month let off (#2167)', () => {
+  const letOff: AthletePayment = {
+    id: 5,
+    athlete_id: 42,
+    year: 2026,
+    month: 10,
+    amount_cents: 0,
+    paid_at: '2026-10-20T00:00:00+00:00',
+    payment_method: null,
+    waived: true,
+  };
+
+  function click(): MouseEvent {
+    const event = new MouseEvent('click');
+    Object.defineProperty(event, 'currentTarget', { value: document.createElement('button') });
+    return event;
+  }
+
+  function root(fixture: ReturnType<typeof setup>['fixture']): HTMLElement {
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  it('reads Free, with no amount and no date, and undoes as a free month', () => {
+    const { fixture } = setup({ payments: [letOff] });
+    const row = root(fixture).querySelector('[data-cy="payment-row-10"]');
+
+    expect(row?.querySelector('[data-cy="payment-free-10"]')?.textContent).toContain('Free');
+    expect(row?.textContent).not.toContain('€0');
+    expect(row?.querySelector('time')).toBeNull();
+    expect(row?.querySelector('[data-cy="payment-unmark-10"]')?.textContent).toContain(
+      'Undo free month',
+    );
+    expect(root(fixture).querySelector('[data-cy="payment-card-free-10"]')?.textContent).toContain(
+      'Free',
+    );
+  });
+
+  it('asks before the month is owed again, with nothing destructive about it', () => {
+    const { fixture, component } = setup({ payments: [letOff] });
+    const confirmation = fixture.componentRef.injector.get(ConfirmationService);
+    const spy = vi.spyOn(confirmation, 'confirm').mockImplementation(() => confirmation);
+
+    const october = component['monthRows']().find((r: { month: number }) => r.month === 10)!;
+    component.confirmToggleRow(click(), october);
+
+    const asked = spy.mock.calls[0][0];
+    expect(asked.message).toBe(
+      'Mario Rossi pays for October 2026 after all? The month is owed again.',
+    );
+    expect(asked.acceptLabel).toBe('Undo free month');
+    expect(asked.acceptButtonProps).toBeUndefined();
+    asked.accept?.();
+    expect(TestBed.inject(PaymentService).unmarkPaid).toHaveBeenCalledWith(42, 2026, 10);
+  });
+
+  it('lets the athlete off the month from the «Mark paid» popup, its other answer', () => {
+    const { fixture, component } = setup();
+    const confirmation = fixture.componentRef.injector.get(ConfirmationService);
+    vi.spyOn(confirmation, 'confirm').mockImplementation(() => confirmation);
+    const close = vi.spyOn(confirmation, 'close');
+    const toast = vi.spyOn(fixture.componentRef.injector.get(MessageService), 'add');
+    const list = TestBed.inject(PaymentService).list as unknown as Mock;
+    const loads = list.mock.calls.length;
+
+    const november = component['monthRows']().find((r: { month: number }) => r.month === 11)!;
+    component.confirmToggleRow(click(), november);
+    component['letOffMarkPaidRow']();
+
+    expect(close).toHaveBeenCalled();
+    expect(TestBed.inject(PaymentService).waive).toHaveBeenCalledWith(42, 2026, 11);
+    expect(TestBed.inject(PaymentService).markPaid).not.toHaveBeenCalled();
+    expect(list.mock.calls.length).toBeGreaterThan(loads);
+    expect(toast).toHaveBeenCalledWith(expect.objectContaining({ summary: 'Free month' }));
+  });
+
+  it("records a quarterly payer's month alone when the quarter would reach a month let off", () => {
+    const { fixture, component } = setup({ billingPeriodMonths: 3, payments: [letOff] });
+    const confirmation = fixture.componentRef.injector.get(ConfirmationService);
+    const spy = vi.spyOn(confirmation, 'confirm').mockImplementation(() => confirmation);
+    const rows = component['monthRows']();
+
+    // September to November would cross October: September alone, said plainly.
+    component.confirmToggleRow(
+      click(),
+      rows.find((r: { month: number }) => r.month === 9)!,
+    );
+    const september = spy.mock.calls[0][0];
+    expect(september.message).toBe('Mark Mario Rossi paid for September 2026?');
+    september.accept?.();
+    // November to January reaches nothing: the athlete's own quarter.
+    component.confirmToggleRow(
+      click(),
+      rows.find((r: { month: number }) => r.month === 11)!,
+    );
+    spy.mock.calls[1][0].accept?.();
+
+    const markPaid = TestBed.inject(PaymentService).markPaid as unknown as Mock;
+    expect(markPaid.mock.calls.map((call) => call.slice(0, 4))).toEqual([
+      [42, 2026, 9, 1],
+      [42, 2026, 11, undefined],
+    ]);
   });
 });

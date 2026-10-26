@@ -46,6 +46,16 @@ import { AcademyService } from '../../../../core/services/academy.service';
 /** The keyed popup that asks for the date and the method (#1761). */
 const MARK_PAID_CONFIRM_KEY = 'mark-paid';
 
+/** What a row's control does to its month: a fee, or a month let off (#2167). */
+type LedgerChange = 'mark-paid' | 'unmark' | 'waive' | 'undo-free';
+
+const LEDGER_TOAST: Record<LedgerChange, string> = {
+  'mark-paid': 'athletes.detail.payments.toast.markedPaidSummary',
+  unmark: 'athletes.detail.payments.toast.markedUnpaidSummary',
+  waive: 'athletes.detail.payments.toast.freeSummary',
+  'undo-free': 'athletes.detail.payments.toast.undoFreeSummary',
+};
+
 /** A month as the server's `overdue_months` writes it: `2026-03` (#1654). */
 function monthKey(year: number, month: number): string {
   return `${year}-${`${month}`.padStart(2, '0')}`;
@@ -165,6 +175,11 @@ interface MonthRow {
    * decide it — it cannot see a carnet, a free tier or an inactive status.
    */
   readonly overdue: boolean;
+  /**
+   * A month the owner let the athlete off (#2167): «Gratis», no amount, no
+   * date, and its undo says so. The row is a payment to the server, at €0.
+   */
+  readonly waived: boolean;
 }
 
 @Component({
@@ -539,6 +554,7 @@ export class PaymentsListComponent implements OnInit {
         undoHere: canEdit && payment !== null && (!coveredByEarlierPeriod || absolute === first),
         periodMonths: payment?.period_months ?? 1,
         overdue: payment === null && overdueMonths.has(monthKey(year, month)),
+        waived: payment?.waived === true,
       };
     });
   });
@@ -567,6 +583,10 @@ export class PaymentsListComponent implements OnInit {
    */
   confirmToggleRow(event: MouseEvent, row: MonthRow): void {
     if (!row.canEdit || this.athleteId() === null) return;
+    if (row.waived) {
+      this.confirmPaysAfterAll(event, row);
+      return;
+    }
 
     const willMarkPaid = row.payment === null;
     const fullName =
@@ -583,8 +603,9 @@ export class PaymentsListComponent implements OnInit {
     // reader is about to create or undo the entire period, so "from February
     // to April" is exactly what they need and "part of the February payment"
     // would hide the two months the click also touches.
+    const recorded = this.periodFrom(row);
     const period = willMarkPaid
-      ? this.periodCaptionFor(row.year, row.month, this.athleteBillingPeriod())
+      ? this.periodCaptionFor(row.year, row.month, recorded)
       : row.payment !== null
         ? this.periodCaptionFor(row.payment.year, row.payment.month, row.periodMonths)
         : null;
@@ -609,6 +630,7 @@ export class PaymentsListComponent implements OnInit {
     // the plain popup — there is nothing to say about money being undone.
     if (willMarkPaid) {
       this.markPaidForm.reset({ paid_at: null, payment_method: null });
+      this.markPaidRow = row;
     }
 
     this.confirmationService.confirm({
@@ -627,7 +649,62 @@ export class PaymentsListComponent implements OnInit {
       rejectLabel: this.translate.instant('common.cancel'),
       rejectButtonProps: CONFIRM_REJECT_BUTTON,
       acceptButtonProps: willMarkPaid ? undefined : { severity: 'danger' },
-      accept: () => this.applyToggle(row.year, row.month, willMarkPaid),
+      accept: () =>
+        this.write(row.year, row.month, willMarkPaid ? 'mark-paid' : 'unmark', recorded),
+    });
+  }
+
+  /**
+   * The months «Segna pagato» records from this row: the athlete's period, or
+   * this month alone when the whole period would reach a month that already
+   * has a row, a payment or a month let off (#2167). The server refuses the
+   * overlap, and the owner could not have recorded the month at all; the
+   * check-in falls back the same way (`periodStarts`, #2150).
+   */
+  private periodFrom(row: MonthRow): number {
+    const period = this.athleteBillingPeriod();
+    const start = row.year * 12 + row.month - 1;
+    const reaches = this.payments().some((payment) => {
+      const from = payment.year * 12 + payment.month - 1;
+      return from < start + period && from + (payment.period_months ?? 1) > start;
+    });
+    return reaches ? 1 : period;
+  }
+
+  /**
+   * The month on the open «Segna pagato» popup, which can also let the
+   * athlete off it (#2167).
+   */
+  private markPaidRow: MonthRow | null = null;
+
+  /**
+   * «Non lo paga: mese gratis» on the «Segna pagato» popup (#2167): the owner
+   * came to record the month, and says it is not paid but forgiven. The
+   * popup was the question, so the answer needs no second one.
+   */
+  protected letOffMarkPaidRow(): void {
+    const row = this.markPaidRow;
+    this.confirmationService.close();
+    if (row === null) return;
+    this.write(row.year, row.month, 'waive');
+  }
+
+  /** Undo a month let off (#2167): it is owed again. Not destructive: no money is undone. */
+  private confirmPaysAfterAll(event: MouseEvent, row: MonthRow): void {
+    const name =
+      this.athleteName() || this.translate.instant('athletes.detail.payments.fallbackName');
+
+    this.confirmationService.confirm({
+      target: event.currentTarget as EventTarget,
+      message: this.translate.instant('athletes.detail.payments.confirm.undoFreeMessage', {
+        name,
+        month: this.translate.instant(row.labelKey),
+        year: row.year,
+      }),
+      acceptLabel: this.translate.instant('athletes.detail.payments.confirm.undoFreeAccept'),
+      rejectLabel: this.translate.instant('common.cancel'),
+      rejectButtonProps: CONFIRM_REJECT_BUTTON,
+      accept: () => this.write(row.year, row.month, 'undo-free'),
     });
   }
 
@@ -637,15 +714,20 @@ export class PaymentsListComponent implements OnInit {
    * table's year would have written February 2027's payment onto February
    * 2026, silently, in the one place the app handles money.
    */
-  private applyToggle(year: number, month: number, markPaid: boolean): void {
+  private write(year: number, month: number, change: LedgerChange, period?: number): void {
     const id = this.athleteId();
     if (id === null) return;
+    // Left out when it is the athlete's own: the server reads that one.
+    const periodMonths = period === this.athleteBillingPeriod() ? undefined : period;
 
-    const op$ = markPaid
-      ? this.paymentService
-          .markPaid(id, year, month, undefined, this.receiptFromForm())
-          .pipe(map(() => undefined))
-      : this.paymentService.unmarkPaid(id, year, month);
+    const op$ =
+      change === 'mark-paid'
+        ? this.paymentService
+            .markPaid(id, year, month, periodMonths, this.receiptFromForm())
+            .pipe(map(() => undefined))
+        : change === 'waive'
+          ? this.paymentService.waive(id, year, month).pipe(map(() => undefined))
+          : this.paymentService.unmarkPaid(id, year, month);
 
     op$.subscribe({
       next: () => {
@@ -656,11 +738,7 @@ export class PaymentsListComponent implements OnInit {
         const monthLabel = this.translate.instant(MONTH_KEYS[month - 1]);
         this.messageService.add({
           severity: 'success',
-          summary: this.translate.instant(
-            markPaid
-              ? 'athletes.detail.payments.toast.markedPaidSummary'
-              : 'athletes.detail.payments.toast.markedUnpaidSummary',
-          ),
+          summary: this.translate.instant(LEDGER_TOAST[change]),
           detail: this.translate.instant('athletes.detail.payments.toast.markedDetail', {
             month: monthLabel,
             year,

@@ -293,7 +293,14 @@ export type ContactableAthlete = AthleteIdentity &
 
 /** The shapes `payment_coverage` takes. Mirrors `App\Enums\PaymentCoverage`. */
 export type PaymentCoverage =
-  'monthly' | 'quarterly' | 'half_yearly' | 'annual' | 'carnet' | 'none';
+  | 'monthly'
+  | 'quarterly'
+  | 'half_yearly'
+  | 'annual'
+  /** The owner let the athlete off this month (#2167). */
+  | 'waived'
+  | 'carnet'
+  | 'none';
 
 export interface AthleteMeta {
   current_page: number;

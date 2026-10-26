@@ -153,6 +153,16 @@ describe('pay-chip', () => {
       });
     });
 
+    it('says free for a month the owner let them off, and still asks for one behind (#2167)', () => {
+      const letOff = athlete({ payment_coverage: 'waived', paid_current_month: true });
+
+      expect(payChipOf(letOff, [], '2026-10', NONE)).toEqual({ kind: 'free' });
+      expect(payChipOf(letOff, ['2026-08'], '2026-10', NONE)).toEqual({
+        kind: 'due',
+        month: '2026-08',
+      });
+    });
+
     it('shows nothing for the owner, for no fee, or for a month not yet billed', () => {
       expect(payChipOf(athlete({ is_self: true }), [], '2026-10', NONE)).toBeNull();
       expect(payChipOf(athlete({ monthly_fee_cents: null }), [], '2026-10', NONE)).toBeNull();
