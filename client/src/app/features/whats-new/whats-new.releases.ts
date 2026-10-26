@@ -75,8 +75,8 @@ export const RELEASES: readonly Release[] = [
             it: 'Dalla chip del pagamento, «Si allena gratis» ha due risposte: «Solo ottobre», per il mese in corso, e «Sempre», come prima. La chip diventa «Mese gratis».',
           },
           {
-            en: 'A free month is not owed: the athlete leaves "Unpaid", the reminder on the 16th and the arrears.',
-            it: "Un mese gratis non è un debito: l'atleta esce da «Non pagato», dal promemoria del 16 e dagli arretrati.",
+            en: 'A free month is not owed: the athlete leaves "Unpaid" and the reminder on the 16th, and that month no longer counts in the arrears.',
+            it: "Un mese gratis non è un debito: l'atleta esce da «Non pagato» e dal promemoria del 16, e quel mese non conta più negli arretrati.",
           },
           {
             en: 'Nor is it money in: it stays out of the takings and the accountant\'s export, does not lower the month\'s collection rate, and the athlete gets no "payment received".',
@@ -108,8 +108,8 @@ export const RELEASES: readonly Release[] = [
             it: "L'impronta: Budojo la chiede quando si apre e quando ci torni dopo cinque minuti. Se l'impronta non va, valgono PIN, segno o password del telefono.",
           },
           {
-            en: "The gym's keys on the phone are kept by Android's security chip, no longer in a readable file.",
-            it: 'Le chiavi della palestra sul telefono sono custodite dal chip di sicurezza di Android, non più in un file leggibile.',
+            en: "The gym's keys on the phone are encrypted with a key Android keeps for Budojo, no longer in a readable file.",
+            it: 'Le chiavi della palestra sul telefono sono cifrate con una chiave che Android custodisce per Budojo, non più in un file leggibile.',
           },
           {
             en: 'Reminders arrive with the app closed, as notifications: certificates and documents expiring, fees unpaid on the 16th, a run of absences, birthdays. Today says why in one line, and Android asks only when you tap "Turn on notifications".',
