@@ -106,7 +106,10 @@ describe('A month let off, from the payment chip (#2167)', () => {
     );
     expectNoSidewaysScroll();
 
-    cy.contains('.p-menu [role="menuitem"]', 'Just October').click();
+    // By keyboard, as the owner at the PC may: down to «Just October», Enter.
+    cy.get('.p-menu [role="menu"]').focus().type('{downarrow}{downarrow}{downarrow}');
+    cy.get('.p-menu [data-p-focused="true"]').should('contain.text', 'Just October');
+    cy.get('.p-menu [role="menu"]').type('{enter}');
     cy.get('.p-confirmpopup').should(
       'contain.text',
       "Jacopo Neri doesn't pay for October? The month is free and stays off the unpaid list.",

@@ -99,9 +99,11 @@
      second open steal the first's anchor. -->
 <p-menu #paymentMenu [popup]="true" [model]="paymentMenuItems()" appendTo="body">
   <!-- PrimeNG's own item markup, showing «Sempre» under «Si allena gratis»
-       while the item keeps its full name for a screen reader (#2167). -->
+       while the item keeps its full name for a screen reader (#2167). The
+       `itemlink` section is what PrimeNG clicks on Enter and Space: without
+       it the keyboard opens nothing. -->
   <ng-template #item let-item>
-    <span class="p-menu-item-link">
+    <span class="p-menu-item-link" data-pc-section="itemlink">
       @if (item.icon) {
         <span [class]="'p-menu-item-icon ' + item.icon" aria-hidden="true"></span>
       }
