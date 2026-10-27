@@ -486,7 +486,7 @@ jobs:
 
       - name: Run Spectral
         if: needs.changes.outputs.api == 'true'
-        run: npx -y @stoplight/spectral-cli@6 lint docs/api/v1.yaml
+        run: npx -y @stoplight/spectral-cli@6 lint docs/api/v1.yaml docs/api/ai-v1.yaml
 
   desktop-test:
     # Vitest specs for the Electron shell's app:// routing (#1221). The rule
