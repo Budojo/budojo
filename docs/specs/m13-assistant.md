@@ -90,7 +90,7 @@ From #2175. Batch 1 is the owner's own words (q1–q7). Batch 2 was proposed and
 | 5 | «chi è quello con più presenze?» | `list_attendance_leaders?from=&until=` | **No period said:** this month, and the answer says so. |
 | 6 | «che tecniche mi consigli di fare questa sera? puoi prepararmi un programma con le spiegazioni anche se riesci?» | `list_classes?date=<today>` → `list_suggested_topics?class=` | The explanations are the owner's notes, shown by the chat (§ 7.5). Two classes tonight: the model asks which. |
 | 7 | «Isabella ha visto arm bar quando l'ultima volta?» | `find_athletes` → `find_syllabus_topics?name=arm bar` → `list_taught_techniques?athlete=&topic=` | "Visto" = was present at a lesson that taught it. The name is matched loosely: "arm bar", "armbar", "Armbar dalla guardia". |
-| 8 | «Quelli venuti in prova quest'anno, quanti sono rimasti?» | `list_new_athletes?from=&until=` | **Budojo keeps no record of a trial** (below). The answer counts who joined, and says so. |
+| 8 | «Quelli venuti in prova quest'anno, quanti sono rimasti?» | `list_new_athletes?from=&until=` | **Budojo keeps no record of a trial** (below). The answer splits who joined by what they are now, and says so. |
 | 9 | «Chi è pronto per la prossima stripe?» | `list_promotion_candidates` | Budojo does not decide who is ready (#1841). The answer lists the longest waiting, with the facts. |
 | 10 | «Da quanto tempo Marco è cintura viola?» | `find_athletes` → `get_athlete_summary` | |
 | 11 | «A chi manca il certificato medico?» | `list_expiring_documents?until=<today>` | The answer's `missing_medical_certificate`. |
@@ -102,7 +102,7 @@ From #2175. Batch 1 is the owner's own words (q1–q7). Batch 2 was proposed and
 
 **Coverage: 16 of 16,** with the catalogue in § 6.3. Six were answered by the epic's draft (q2, q3, q7, q10, q11, q12); ten needed new tools, each over an Action that already exists.
 
-**How a trial is recorded today (q8).** There is no trial entity and no trial flag. Someone who walks in for a trial is added at the check-in in three fields, with «Prova gratuita» picked, which is a personal fee of zero (`fee_override_cents = 0`). When they join, the owner clears that fee; when they do not, they become inactive. So "came on trial and stayed" is not recoverable afterwards. `list_new_athletes` counts **who joined in the period, and how many of them are still active**, and its answer carries that sentence. A real trial record is a product change of its own, in § 12.
+**How a trial is recorded today (q8).** There is no trial entity and no trial flag. Someone who walks in for a trial is added at the check-in in three fields, with «Prova gratuita» picked, which is a personal fee of zero (`fee_override_cents = 0`). When they join, the owner clears that fee. **When they do not come back, nothing changes by itself:** they stay active, at fee 0, until the owner sets them inactive. So "came on trial and stayed" is not recorded, and "still active" would count a trial who never returned. `list_new_athletes` therefore splits **who joined in the period** three ways: `stayed` (active, paying more than nothing), `still_free` (active at fee 0: a trial not yet settled, or someone who trains free) and `left` (inactive). The answer gives the three numbers and the sentence that says what they count. A real trial record is a product change of its own, in § 12.
 
 **The percentage in the export (q16): the one the app already shows.** On #2175 the decision read "sessions held that month in the classes the athlete could attend". Budojo does not tie an athlete to classes; the rate it shows everywhere is **presences ÷ the academy's scheduled training days**, closures left out, counted from the 1st of the month or from the day the athlete started if later (`GetMonthlyAttendanceSummaryAction`, #1767). The export uses that number, so the file and the attendance screen agree, and its header row says what it divides by. It is still per athlete, which was the decision.
 
@@ -187,7 +187,7 @@ owner confirms a card ─► the SPA's existing service ─► /api/v1  (the rea
 | `find_athletes` | `GET lookups/athletes?name=` | 3, 7, 10 | `SearchAcademyAction` | #2176 |
 | `get_athlete_summary` | `GET lookups/athletes/{athlete}/summary` | 3, 10 | `GetAthleteProgressionAction`, `ListOverdueMonthsAction`, documents | #2183 |
 | `list_absent_athletes` | `GET lookups/absent-athletes?since=` | hard case | attendance | #2183 |
-| `list_attendance_leaders` **new** | `GET lookups/attendance-leaders?from=&until=` | 5 | `GetMonthlyAttendanceSummaryAction`'s count | #2183 |
+| `list_attendance_leaders` **new** | `GET lookups/attendance-leaders?from=&until=` | 5 | a new query over any date range: distinct days present, counted as `GetMonthlyAttendanceSummaryAction` counts them (that Action is one calendar month only) | #2183 |
 | `list_unpaid_athletes` | `GET lookups/unpaid-athletes?month=` | 2 | `PaymentsSummaryAction::owingIds()`, extracted | #2177 |
 | `get_payments_summary` **new** | `GET lookups/payments-summary?month=` | 4 | `PaymentsSummaryAction` | #2177 |
 | `list_expiring_documents` | `GET lookups/expiring-documents?until=` or `?month=` | 11, 12 | `CertificateComplianceAction` | #2177 |
@@ -197,10 +197,10 @@ owner confirms a card ─► the SPA's existing service ─► /api/v1  (the rea
 | `list_birthdays` **new** | `GET lookups/birthdays?from=&until=` | 15 | `Athlete::scopeBirthdayOnAnyOf`, `BirthdayWindow` | roster issue |
 | `find_syllabus_topics` **new** | `GET lookups/syllabus-topics?name=` | 7, 14 | `NameFold` over `syllabus_topics` | #2182 |
 | `list_taught_techniques` | `GET lookups/taught-techniques?from=&until=&topic=&athlete=` | 7 | lessons and their topics | #2182 |
-| `list_syllabus_gaps` **new** | `GET lookups/syllabus-gaps?from=&until=&position=` | 13, 14 | `SyllabusCoverageAction` | #2182 |
+| `list_syllabus_gaps` **new** | `GET lookups/syllabus-gaps?from=&until=&position=` | 13, 14 | a new query over a date range: "held" as `SyllabusCoverageAction` defines it (that Action works in whole seasons, with no position filter), and each topic's last lesson as `SuggestLessonTopicsAction` computes it (private today: extracted, not copied) | #2182 |
 | `list_classes` **new** | `GET lookups/classes?date=` | 6 | the timetable | #2182 |
 | `list_suggested_topics` **new** | `GET lookups/suggested-topics?class=` | 6 | `SuggestLessonTopicsAction` | #2182 |
-| `export_attendance` **new** | `GET downloads/attendance?month=&belt=` | 16 | `GetMonthlyAttendanceSummaryAction`, `CsvWriter` | export issue |
+| `export_attendance` **new** | `GET downloads/attendance?month=&belt=` | 16 | the roster at that belt, joined to the month summary's counts (§ 7.6); `CsvWriter` | export issue |
 | `propose_payment` | `POST proposals/payment` | hard case | `WritePaymentRowAction`'s checks | #2181 |
 | `propose_free_month` | `POST proposals/free-month` | — | `WaiveAthleteMonthAction`'s checks | #2181 |
 
@@ -281,7 +281,7 @@ The model is told not to explain techniques. An explanation written by the model
 - The chat shows a card «Scarica presenze-ottobre-2026-bianche.csv».
 - The click downloads from the **app's** route, `GET /api/v1/stats/attendance/export?month=&belt=`. As with proposals, the AI side describes and the app side does.
 
-**So the export is an app feature first:** an «Esporta» on the monthly attendance screen, useful without the chat. It reuses `CsvWriter` (UTF-8 with BOM, so Excel opens it) and the month summary's numbers. Columns: name, belt, presences, training days, rate. A header line states the rate's rule (§ 4, note to q16). "Excel" means a CSV that Excel opens; a real `.xlsx` would add a dependency and waits until the CSV proves not enough.
+**So the export is an app feature first:** an «Esporta» on the monthly attendance screen, useful without the chat. It reuses `CsvWriter` (UTF-8 with BOM, so Excel opens it) and the month summary's numbers. **The rows start from the roster, not from the summary:** the summary has no belt and no row for an athlete with no presences, and a white belt who never came that month belongs in the file, at 0 %. So: every athlete on the roster that month at that belt, joined to the summary's count and expected days. Columns: name, belt, presences, training days, rate. A header line states the rate's rule (§ 4, note to q16). "Excel" means a CSV that Excel opens; a real `.xlsx` would add a dependency and waits until the CSV proves not enough.
 
 ### 7.7 Ambiguity
 
@@ -301,7 +301,9 @@ The model is told not to explain techniques. An explanation written by the model
 
 ## 9. Where the assistant appears
 
-- **The capability `assistant`:** in the desktop profile only. Not in `WEB_CAPABILITIES`, not on the phone.
+- **The capability `assistant`:** in the desktop profile only.
+  - **Server:** only under `desktop` in `config/budojo.php` › `capabilities`; not under `web` or `mobile`.
+  - **SPA:** `WEB_CAPABILITIES` is `ALL_CAPABILITIES` minus `sync`, so adding `assistant` to the list would put it in the web default. The filter excludes `assistant` too, and a test pins it.
 - **«Impostazioni › Assistente»** (#2184): always there on the desktop. It shows the state — Ollama not found, the model missing, «Pronto» — and the setup guide.
 - **Only when «Pronto»:**
   - a **«Chiedi a Budojo»** row in the Ctrl+K palette (`client/src/app/features/search/search-palette.component.ts`), carrying what was typed into the chat;

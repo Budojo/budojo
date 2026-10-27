@@ -286,8 +286,8 @@ paths:
       summary: The athletes with the most presences in a period
       description: |
         Presences are distinct training days, counted as the attendance
-        screens count them. Not the monthly leaderboard, which ranks
-        mat-hours. Most first, ties by name; at most 10 rows.
+        screens count them, over any range. Not the monthly leaderboard,
+        which ranks mat-hours. Most first, ties by last name; at most 10 rows.
       parameters:
         - $ref: "#/components/parameters/From"
         - $ref: "#/components/parameters/Until"
@@ -304,8 +304,8 @@ paths:
                   training_days: 12
                   athletes:
                     - { id: 18, name: Isabella Greco, presences: 11 }
-                    - { id: 12, name: Jacopo Rossi, presences: 9 }
                     - { id: 9, name: Marco Ferri, presences: 9 }
+                    - { id: 12, name: Jacopo Rossi, presences: 9 }
                 more: 14
         "401":
           $ref: "#/components/responses/Unauthenticated"
@@ -328,9 +328,12 @@ paths:
         - name: belt
           in: query
           required: true
-          description: A belt colour of the academy's ladder (`Belt` in `v1.yaml`).
+          description: |
+            The belt's code, as in `Belt` in `v1.yaml`: «blu» is `blue`,
+            «bianca» is `white`. Answers show belts in Italian; arguments take
+            the code.
           schema:
-            type: string
+            $ref: "#/components/schemas/Belt"
           example: blue
         - name: order
           in: query
@@ -372,8 +375,11 @@ paths:
       tags: [lookups]
       summary: Athletes who joined in a period, and how many are still active
       description: |
-        Budojo keeps no record of a trial. This counts who **joined** in the
-        period, and its `note` says so, for the model to repeat.
+        Budojo keeps no record of a trial: a trial is an athlete at a fee of
+        0, who stays active until the owner sets them inactive. So the athletes
+        who **joined** in the period are split three ways: `stayed` (active,
+        paying more than nothing), `still_free` (active at fee 0) and `left`
+        (inactive). The `note` says so, for the model to repeat.
       parameters:
         - $ref: "#/components/parameters/From"
         - $ref: "#/components/parameters/Until"
@@ -388,11 +394,13 @@ paths:
                 data:
                   period: dal 1 gennaio al 27 ottobre 2026
                   joined: 9
-                  still_active: 6
-                  note: "Budojo non registra le prove: conto chi è stato iscritto nel periodo."
+                  stayed: 5
+                  still_free: 1
+                  left: 3
+                  note: "Budojo non registra le prove: conto chi è stato iscritto nel periodo. «Rimasti» sono gli attivi che pagano; «ancora gratis» sono attivi con quota zero, magari una prova mai chiusa."
                   athletes:
-                    - { id: 22, name: Luca Verdi, joined: 3 febbraio 2026, status: attivo }
-                    - { id: 36, name: Davide Rizzo, joined: 14 aprile 2026, status: non attivo }
+                    - { id: 22, name: Luca Verdi, joined: 3 febbraio 2026, now: rimasto }
+                    - { id: 36, name: Davide Rizzo, joined: 14 aprile 2026, now: andato via }
                 more: 7
         "401":
           $ref: "#/components/responses/Unauthenticated"
@@ -823,7 +831,8 @@ paths:
         Describes the file and links it; it does not produce it. The file comes
         from the app's `GET /api/v1/stats/attendance/export`, which the chat's
         card calls. One row per athlete: name, belt, presences, training days,
-        rate. The rate is the month summary's: presences ÷ the academy's
+        rate. Rows start from the roster at that belt, so an athlete with no
+        presences is in the file at 0 %. The rate is the month summary's: presences ÷ the academy's
         training days from the 1st, or from the day the athlete started if
         later, closures left out. The file's header line says so.
       parameters:
@@ -831,9 +840,9 @@ paths:
         - name: belt
           in: query
           required: false
-          description: A belt colour, to keep only those athletes.
+          description: The belt's code, to keep only those athletes («bianca» is `white`).
           schema:
-            type: string
+            $ref: "#/components/schemas/Belt"
           example: white
       responses:
         "200":
@@ -1050,6 +1059,11 @@ components:
               month: [Il mese deve essere nel formato AAAA-MM.]
 
   schemas:
+    Belt:
+      type: string
+      description: The belt colour codes, the same vocabulary as `Belt` in `v1.yaml`.
+      enum: [grey, yellow, orange, green, white, blue, purple, brown, black, red-and-black, red-and-white, red, white-and-yellow, yellow-and-orange, orange-and-green, green-and-blue, blue-and-brown, yellow-and-green, blue-and-red, black-and-red]
+
     Message:
       type: object
       required: [message]
@@ -1276,13 +1290,17 @@ components:
       properties:
         data:
           type: object
-          required: [period, joined, still_active, note, athletes]
+          required: [period, joined, stayed, still_free, left, note, athletes]
           properties:
             period:
               type: string
             joined:
               type: integer
-            still_active:
+            stayed:
+              type: integer
+            still_free:
+              type: integer
+            left:
               type: integer
             note:
               type: string
@@ -1292,13 +1310,13 @@ components:
                 allOf:
                   - $ref: "#/components/schemas/AthleteRow"
                   - type: object
-                    required: [joined, status]
+                    required: [joined, now]
                     properties:
                       joined:
                         type: string
-                      status:
+                      now:
                         type: string
-                        enum: [attivo, non attivo]
+                        enum: [rimasto, ancora gratis, andato via]
         more:
           $ref: "#/components/schemas/More"
 
