@@ -1,0 +1,1700 @@
+openapi: 3.0.3
+info:
+  title: Budojo AI API
+  version: "1.0.0"
+  description: |
+    The model's toolbox (M13, epic #2174; PRD `docs/specs/m13-assistant.md`).
+    Apart from the app's API (`docs/api/v1.yaml`): its own prefix, route file,
+    middleware and contract. The two share the domain Actions underneath.
+
+    **Who calls it.** The chat panel in the desktop SPA. It reads the catalogue
+    once, hands the tools to the local model, and calls the route of each tool
+    the model asks for. The model never calls this API itself.
+
+    **Where it exists.** The desktop only, behind the `assistant` capability:
+    elsewhere every route answers `404`.
+
+    **Read-only by construction.** Every request runs with SQLite's
+    `query_only` on, inside a transaction that is always rolled back.
+    Proposals are `POST` and still write nothing: the change is made by the
+    app's own `/api/v1` call once the owner confirms.
+
+    ## Naming rules
+
+    - **Four families,** each with a fixed path prefix:
+      - `GET /tools`, the catalogue;
+      - `GET /lookups/<name>`, a question answered from the gym's data;
+      - `GET /downloads/<name>`, a file, described and linked, not produced here;
+      - `POST /proposals/<name>`, a change, checked and described, not made.
+    - **One route per tool,** no dispatcher.
+    - **Paths** are kebab-case nouns.
+    - **The tool's name is the `operationId`:** snake_case, verb plus noun.
+      Five verbs and no others:
+      - `find_`: search by name, may return several;
+      - `get_`: one thing, by its key (an id, a month);
+      - `list_`: a set, by a criterion;
+      - `export_`: a file;
+      - `propose_`: a change.
+    - **Route names** are `ai.v1.<family>.<path>`, e.g.
+      `ai.v1.lookups.unpaid-athletes`.
+    - **Arguments:** a month is `YYYY-MM`, a date is `YYYY-MM-DD`, never
+      "days from today". Athletes, classes and syllabus topics are passed by
+      id, found first with a `find_` or `list_` tool.
+
+    ## Answers
+
+    Every tool answers `{data, more?, display?}`:
+
+    - **`data`** goes to the model. Names, dates in Italian ("3 novembre
+      2026"), amounts in euro ("55 €"), states, ids, and the server's own fixed
+      sentences. **No text a person typed into Budojo, except names.**
+    - **`more`**, on lists: the rows left out. Lists stop at 50 unless the
+      operation says otherwise.
+    - **`display`** goes to the chat only and **never reaches the model.** It
+      may carry free text: the owner's notes on a technique, a download link,
+      a proposal card.
+
+    **Every response here has an `example`.** The go / no-go (#2178) runs its
+    stub tools from them, so they describe one consistent made-up academy.
+  contact:
+    name: Matteo Bonanno
+    url: https://github.com/Budojo/budojo
+
+servers:
+  - url: http://127.0.0.1:{port}/api/ai/v1
+    description: Desktop — the same loopback port as `/api/v1`, read by the SPA from `window.__BUDOJO__.apiBase`.
+    variables:
+      port:
+        default: "0"
+        description: Ephemeral loopback port chosen at launch.
+  - url: http://localhost:8000/api/ai/v1
+    description: Local dev (Docker), with the `assistant` capability on.
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: catalogue
+    description: The system prompt, today's calendar and every tool, in one read.
+  - name: lookups
+    description: Questions answered from the gym's data. `find_`, `get_`, `list_`.
+  - name: downloads
+    description: Files, described and linked. The download itself is an `/api/v1` route. `export_`.
+  - name: proposals
+    description: Changes, checked and described, never made. The owner confirms on a card. `propose_`.
+
+paths:
+  /tools:
+    get:
+      operationId: get_catalogue
+      tags: [catalogue]
+      summary: The system prompt, today's calendar and every tool's schema
+      description: |
+        Read once when the chat opens, and again when the day changes.
+
+        - `system.text` is `server/resources/ai/system-prompt.md`, verbatim;
+          `system.version` is the first 12 hex digits of its SHA-256.
+        - `calendar` is plain Italian text worked out from the owner's today
+          and the academy's season. The SPA appends it to the system prompt.
+          Its format is pinned in the PRD, § 7.3.
+        - `tools` follow the shape a chat-completions API expects. Each one
+          carries `x-route`, which the SPA uses to call it and **removes**
+          before the model sees the list.
+      responses:
+        "200":
+          description: The catalogue.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Catalogue"
+              example:
+                system:
+                  version: 3f9a1c07be52
+                  text: "Sei l'assistente di Budojo, il gestionale di una palestra di arti marziali. …"
+                calendar: |
+                  Calendario (oggi è martedì 27 ottobre 2026)
+                  - oggi: 2026-10-27
+                  - ieri: 2026-10-26
+                  - domani: 2026-10-28
+                  - questa settimana: dal 2026-10-26 al 2026-11-01
+                  - settimana scorsa: dal 2026-10-19 al 2026-10-25
+                  - settimana prossima: dal 2026-11-02 al 2026-11-08
+                  - i prossimi 7 giorni: mercoledì 2026-10-28, giovedì 2026-10-29, venerdì 2026-10-30, sabato 2026-10-31, domenica 2026-11-01, lunedì 2026-11-02, martedì 2026-11-03
+                  - questo mese: 2026-10, dal 2026-10-01 al 2026-10-31
+                  - mese scorso: 2026-09, dal 2026-09-01 al 2026-09-30
+                  - mese prossimo: 2026-11, dal 2026-11-01 al 2026-11-30
+                  - quest'anno: dal 2026-01-01 al 2026-12-31
+                  - questa stagione: 2026/27, dal 2026-09-01 al 2027-08-31
+                  - stagione scorsa: 2025/26, dal 2025-09-01 al 2026-08-31
+                  - settimane fa: 1 → 2026-10-20, 2 → 2026-10-13, 3 → 2026-10-06, 4 → 2026-09-29, 6 → 2026-09-15, 8 → 2026-09-01
+                  - mesi fa: 1 → 2026-09, 2 → 2026-08, 3 → 2026-07, 6 → 2026-04, 12 → 2025-10
+                tools:
+                  - type: function
+                    function:
+                      name: list_unpaid_athletes
+                      description: Gli atleti che non hanno pagato la quota di un mese, con gli altri mesi che devono.
+                      parameters:
+                        type: object
+                        properties:
+                          month:
+                            type: string
+                            description: Il mese, come AAAA-MM. Prendilo dal calendario.
+                        required: [month]
+                    x-route:
+                      method: GET
+                      path: /api/ai/v1/lookups/unpaid-athletes
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ── Lookups: athletes ──────────────────────────────────────────────
+
+  /lookups/athletes:
+    get:
+      operationId: find_athletes
+      tags: [lookups]
+      summary: Athletes whose name contains the given text
+      description: |
+        Every word must match part of the first or last name, accents folded
+        (`SearchAcademyAction`). Inactive athletes are included, and labelled.
+        At most 10 rows. Several rows: the model asks which one.
+      parameters:
+        - name: name
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 2
+          example: alessio
+      responses:
+        "200":
+          description: The matching athletes.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AthleteMatches"
+              examples:
+                two:
+                  summary: «alessio», two matches
+                  value:
+                    data:
+                      - { id: 7, name: Alessio Conti, belt: "bianca, 3 gradi", status: attivo }
+                      - { id: 31, name: Alessio Marino, belt: "viola", status: attivo }
+                    more: 0
+                one:
+                  summary: «jacopo», one match
+                  value:
+                    data:
+                      - { id: 12, name: Jacopo Rossi, belt: "blu, 2 gradi", status: attivo }
+                    more: 0
+                none:
+                  summary: «gianni», nobody
+                  value:
+                    data: []
+                    more: 0
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/Invalid"
+
+  /lookups/athletes/{athlete}/summary:
+    get:
+      operationId: get_athlete_summary
+      tags: [lookups]
+      summary: One athlete's whole situation
+      description: |
+        Belt and time at it, the last promotion, age, fee, months owed, the
+        last presence and this month's, and every document with its state. The
+        answer to «com'è messo Jacopo?», and to any single fact about one
+        athlete.
+      parameters:
+        - $ref: "#/components/parameters/AthletePath"
+      responses:
+        "200":
+          description: The athlete's situation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AthleteSummary"
+              example:
+                data:
+                  id: 12
+                  name: Jacopo Rossi
+                  status: attivo
+                  belt: "blu, 2 gradi"
+                  belt_since: 12 marzo 2025
+                  last_promotion: "2° grado, 4 giugno 2026"
+                  age: 34
+                  joined: 9 settembre 2021
+                  fee: "55 € al mese"
+                  months_owed: [settembre 2026, ottobre 2026]
+                  last_presence: 22 ottobre 2026
+                  presences_this_month: "9 su 12 giorni di allenamento"
+                  documents:
+                    - { type: certificato medico, expires: 3 novembre 2026, state: in scadenza }
+                    - { type: assicurazione, expires: 31 agosto 2027, state: valido }
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /lookups/absent-athletes:
+    get:
+      operationId: list_absent_athletes
+      tags: [lookups]
+      summary: Active athletes with no presence since a date
+      description: |
+        Longest away first. An athlete who never came shows «mai». Athletes who
+        joined after `since` are left out: they could not have come.
+      parameters:
+        - name: since
+          in: query
+          required: true
+          description: Take it from the calendar («3 settimane fa»).
+          schema:
+            type: string
+            format: date
+          example: "2026-10-06"
+      responses:
+        "200":
+          description: Who has not come since that day.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AbsentAthletes"
+              example:
+                data:
+                  since: 6 ottobre 2026
+                  athletes:
+                    - { id: 33, name: Paolo Neri, last_presence: 14 settembre 2026 }
+                    - { id: 22, name: Luca Verdi, last_presence: 2 ottobre 2026 }
+                more: 0
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/Invalid"
+
+  /lookups/attendance-leaders:
+    get:
+      operationId: list_attendance_leaders
+      tags: [lookups]
+      summary: The athletes with the most presences in a period
+      description: |
+        Presences are distinct training days, counted as the attendance
+        screens count them, over any range. Not the monthly leaderboard,
+        which ranks mat-hours. Most first, ties by last name; at most 10 rows.
+      parameters:
+        - $ref: "#/components/parameters/From"
+        - $ref: "#/components/parameters/Until"
+      responses:
+        "200":
+          description: The ranking.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttendanceLeaders"
+              example:
+                data:
+                  period: dal 1 al 31 ottobre 2026
+                  training_days: 12
+                  athletes:
+                    - { id: 18, name: Isabella Greco, presences: 11 }
+                    - { id: 9, name: Marco Ferri, presences: 9 }
+                    - { id: 12, name: Jacopo Rossi, presences: 9 }
+                more: 14
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/Invalid"
+
+  # ── Lookups: the roster ────────────────────────────────────────────
+
+  /lookups/athletes-by-belt:
+    get:
+      operationId: list_athletes_by_belt
+      tags: [lookups]
+      summary: Active athletes at one belt, with age and time at the belt
+      description: |
+        Each row carries both the age and the date the athlete reached this
+        belt, so «la cintura blu più anziana» can be answered both ways.
+      parameters:
+        - name: belt
+          in: query
+          required: true
+          description: |
+            The belt's code, as in `Belt` in `v1.yaml`: «blu» is `blue`,
+            «bianca» is `white`. Answers show belts in Italian; arguments take
+            the code.
+          schema:
+            $ref: "#/components/schemas/Belt"
+          example: blue
+        - name: order
+          in: query
+          required: false
+          description: |
+            `name` (default), `oldest` (by age, oldest first) or
+            `longest_at_belt` (earliest at this belt first). The ordering is the
+            server's, so the model never compares dates.
+          schema:
+            type: string
+            enum: [name, oldest, longest_at_belt]
+            default: name
+      responses:
+        "200":
+          description: The athletes at that belt.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AthletesByBelt"
+              example:
+                data:
+                  belt: blu
+                  order: dal più anziano
+                  athletes:
+                    - { id: 27, name: Sara Gallo, stripes: 0, age: 41, belt_since: 3 ottobre 2025 }
+                    - { id: 12, name: Jacopo Rossi, stripes: 2, age: 34, belt_since: 12 marzo 2025 }
+                    - { id: 18, name: Isabella Greco, stripes: 1, age: 27, belt_since: 20 gennaio 2026 }
+                more: 0
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/Invalid"
+
+  /lookups/new-athletes:
+    get:
+      operationId: list_new_athletes
+      tags: [lookups]
+      summary: Athletes who joined in a period, and how many are still active
+      description: |
+        Budojo keeps no record of a trial: a trial is an athlete at a fee of
+        0, who stays active until the owner sets them inactive. So the athletes
+        who **joined** in the period are split three ways: `stayed` (active,
+        paying more than nothing), `still_free` (active at fee 0) and `left`
+        (inactive). The `note` says so, for the model to repeat.
+      parameters:
+        - $ref: "#/components/parameters/From"
+        - $ref: "#/components/parameters/Until"
+      responses:
+        "200":
+          description: Who joined, and who stayed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NewAthletes"
+              example:
+                data:
+                  period: dal 1 gennaio al 27 ottobre 2026
+                  joined: 9
+                  stayed: 5
+                  still_free: 1
+                  left: 3
+                  note: "Budojo non registra le prove: conto chi è stato iscritto nel periodo. «Rimasti» sono gli attivi che pagano; «ancora gratis» sono attivi con quota zero, magari una prova mai chiusa."
+                  athletes:
+                    - { id: 22, name: Luca Verdi, joined: 3 febbraio 2026, now: rimasto }
+                    - { id: 36, name: Davide Rizzo, joined: 14 aprile 2026, now: andato via }
+                more: 7
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/Invalid"
+
+  /lookups/promotion-candidates:
+    get:
+      operationId: list_promotion_candidates
+      tags: [lookups]
+      summary: Active athletes, the longest since their last promotion first
+      description: |
+        `GetPromotionCandidatesAction`: no score and no threshold, the decision
+        is the owner's. Its `note` says so. At most 15 rows.
+      responses:
+        "200":
+          description: The candidates, with the facts.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PromotionCandidates"
+              example:
+                data:
+                  note: "Budojo non decide chi è pronto: questi sono gli atleti da più tempo senza promozione."
+                  athletes:
+                    - { id: 15, name: Marta Bianchi, belt: "bianca, 4 gradi", since_last_promotion: 14 mesi, training_days_since: 96, next_step: blu }
+                    - { id: 7, name: Alessio Conti, belt: "bianca, 3 gradi", since_last_promotion: 8 mesi, training_days_since: 51, next_step: "bianca, 4° grado" }
+                more: 21
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /lookups/birthdays:
+    get:
+      operationId: list_birthdays
+      tags: [lookups]
+      summary: Active athletes whose birthday falls in a period
+      description: |
+        `turns` is the age reached on that birthday. Athletes with no date of
+        birth are left out.
+      parameters:
+        - $ref: "#/components/parameters/From"
+        - $ref: "#/components/parameters/Until"
+      responses:
+        "200":
+          description: The birthdays, in date order.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Birthdays"
+              example:
+                data:
+                  period: dal 26 ottobre al 1 novembre 2026
+                  athletes:
+                    - { id: 9, name: Marco Ferri, birthday: giovedì 29 ottobre, turns: 38 }
+                more: 0
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/Invalid"
+
+  # ── Lookups: payments and documents ────────────────────────────────
+
+  /lookups/unpaid-athletes:
+    get:
+      operationId: list_unpaid_athletes
+      tags: [lookups]
+      summary: Athletes who have not paid a month, with the other months they owe
+      description: |
+        Only athletes expected to pay and charged more than nothing (a free
+        athlete is never owing). A past month reads who never paid it; the
+        current month, who has not paid yet; a future month is not owed by
+        anyone, and the `note` says so.
+      parameters:
+        - $ref: "#/components/parameters/Month"
+      responses:
+        "200":
+          description: Who has not paid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnpaidAthletes"
+              example:
+                data:
+                  month: ottobre 2026
+                  note: null
+                  athletes:
+                    - { id: 12, name: Jacopo Rossi, fee: 55 €, also_owes: [settembre 2026] }
+                    - { id: 15, name: Marta Bianchi, fee: 45 €, also_owes: [] }
+                    - { id: 22, name: Luca Verdi, fee: 55 €, also_owes: [] }
+                more: 0
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/Invalid"
+
+  /lookups/payments-summary:
+    get:
+      operationId: get_payments_summary
+      tags: [lookups]
+      summary: What a month brought in, out of what was expected
+      description: |
+        `PaymentsSummaryAction`, the numbers of the money tiles. "Collected"
+        follows `CollectedByMonth`: a fee spread over the months it pays for,
+        a carnet whole in the month it was sold. The `basis` sentence says so.
+      parameters:
+        - $ref: "#/components/parameters/Month"
+      responses:
+        "200":
+          description: The month's money.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentsSummary"
+              example:
+                data:
+                  month: settembre 2026
+                  collected: 1.210 €
+                  expected: 1.540 €
+                  outstanding: 330 €
+                  outstanding_athletes: 6
+                  estimated: false
+                  basis: "Incassato = le quote di settembre (un trimestrale conta un terzo per mese) più i carnet venduti a settembre."
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/Invalid"
+
+  /lookups/expiring-documents:
+    get:
+      operationId: list_expiring_documents
+      tags: [lookups]
+      summary: Documents expired or expiring by a date, and who has no medical certificate
+      description: |
+        Active athletes only. Exactly one of `until` and `month` (the month's
+        last day). `until` set to today answers «chi ha il certificato
+        scaduto?» and, through `missing_medical_certificate`, «a chi manca?».
+      parameters:
+        - name: until
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+          example: "2026-12-24"
+        - name: month
+          in: query
+          required: false
+          schema:
+            type: string
+            pattern: '^\d{4}-(0[1-9]|1[0-2])$'
+          example: "2026-11"
+      responses:
+        "200":
+          description: The documents, soonest first.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExpiringDocuments"
+              example:
+                data:
+                  until: 24 dicembre 2026
+                  expired:
+                    - { athlete_id: 33, name: Paolo Neri, type: certificato medico, expires: 30 settembre 2026 }
+                  expiring:
+                    - { athlete_id: 12, name: Jacopo Rossi, type: certificato medico, expires: 3 novembre 2026 }
+                    - { athlete_id: 27, name: Sara Gallo, type: certificato medico, expires: 20 novembre 2026 }
+                  missing_medical_certificate:
+                    - { id: 22, name: Luca Verdi }
+                more: 0
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/Invalid"
+
+  # ── Lookups: techniques and classes ────────────────────────────────
+
+  /lookups/syllabus-topics:
+    get:
+      operationId: find_syllabus_topics
+      tags: [lookups]
+      summary: Positions and techniques of the academy's programme whose name contains the text
+      description: |
+        Matched loosely: accents and spaces folded, so «arm bar» finds
+        «Armbar dalla guardia chiusa». A position's techniques are not listed;
+        pass the position's id where a tool takes `position`. At most 10 rows.
+      parameters:
+        - name: name
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 2
+          example: arm bar
+      responses:
+        "200":
+          description: The matching topics.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TopicMatches"
+              examples:
+                technique:
+                  summary: «arm bar»
+                  value:
+                    data:
+                      - { id: 41, name: Armbar dalla guardia chiusa, kind: tecnica, position: Guardia chiusa }
+                    more: 0
+                position:
+                  summary: «passaggio di guardia»
+                  value:
+                    data:
+                      - { id: 52, name: Passaggi di guardia, kind: posizione, position: null }
+                    more: 0
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/Invalid"
+
+  /lookups/taught-techniques:
+    get:
+      operationId: list_taught_techniques
+      tags: [lookups]
+      summary: Held lessons and what they taught, most recent first
+      description: |
+        Every filter is optional. `topic` keeps the lessons that named that
+        technique (or any technique of that position). `athlete` keeps the
+        lessons that athlete was present at: «Isabella ha visto l'armbar?» is
+        `athlete` + `topic`, and the first row is the last time.
+      parameters:
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: until
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: topic
+          in: query
+          required: false
+          description: A syllabus topic id, from `find_syllabus_topics`.
+          schema:
+            type: integer
+          example: 41
+        - name: athlete
+          in: query
+          required: false
+          description: An athlete id, from `find_athletes`.
+          schema:
+            type: integer
+          example: 18
+      responses:
+        "200":
+          description: The lessons.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaughtTechniques"
+              example:
+                data:
+                  athlete: Isabella Greco
+                  topic: Armbar dalla guardia chiusa
+                  lessons:
+                    - { date: giovedì 17 settembre 2026, class: Adulti gi, topics: [Armbar dalla guardia chiusa, Triangolo dalla guardia chiusa] }
+                    - { date: martedì 3 marzo 2026, class: Adulti gi, topics: [Armbar dalla guardia chiusa] }
+                more: 0
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/Invalid"
+
+  /lookups/syllabus-gaps:
+    get:
+      operationId: list_syllabus_gaps
+      tags: [lookups]
+      summary: Techniques not taught in a period, then the least recently taught
+      description: |
+        `from` and `until` default to this season. Never taught in the period
+        first, in programme order; then the rest, the longest ago first.
+        `position` keeps that position's techniques. At most 20 rows.
+      parameters:
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: until
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: position
+          in: query
+          required: false
+          description: A position's id, from `find_syllabus_topics`.
+          schema:
+            type: integer
+          example: 52
+      responses:
+        "200":
+          description: The gaps.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SyllabusGaps"
+              example:
+                data:
+                  period: stagione 2026/27, dal 1 settembre 2026
+                  position: Passaggi di guardia
+                  topics:
+                    - { id: 55, name: Over-under, last_taught: mai }
+                    - { id: 54, name: Knee slice, last_taught: 14 maggio 2026 }
+                more: 0
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/Invalid"
+
+  /lookups/classes:
+    get:
+      operationId: list_classes
+      tags: [lookups]
+      summary: The classes held on a date, from the timetable
+      description: A closure day answers no classes, and the `note` says why.
+      parameters:
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          example: "2026-10-27"
+      responses:
+        "200":
+          description: The day's classes, by time.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Classes"
+              example:
+                data:
+                  date: martedì 27 ottobre 2026
+                  note: null
+                  classes:
+                    - { id: 3, name: Adulti gi, time: "19:30–21:00" }
+                    - { id: 4, name: No-gi, time: "21:00–22:00" }
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/Invalid"
+
+  /lookups/suggested-topics:
+    get:
+      operationId: list_suggested_topics
+      tags: [lookups]
+      summary: What to teach in a class, with the rule that chose each technique
+      description: |
+        `SuggestLessonTopicsAction` (#1566), up to 3 techniques. `data` holds
+        names and reasons for the model. **`display` holds the owner's own
+        notes and video link for each technique, verbatim, for the chat only.**
+        A technique with no notes has `notes: null`, and the chat says so.
+      parameters:
+        - name: class
+          in: query
+          required: true
+          description: A class id, from `list_classes`.
+          schema:
+            type: integer
+          example: 3
+      responses:
+        "200":
+          description: The suggestions.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuggestedTopics"
+              example:
+                data:
+                  class: Adulti gi
+                  topics:
+                    - { id: 55, name: Over-under, position: Passaggi di guardia, reason: mai fatta in questa stagione }
+                    - { id: 41, name: Armbar dalla guardia chiusa, position: Guardia chiusa, reason: "fatta una volta sola, il 17 settembre 2026" }
+                display:
+                  topics:
+                    - { id: 55, name: Over-under, notes: null, video_url: null }
+                    - { id: 41, name: Armbar dalla guardia chiusa, notes: "Le note del titolare su questa tecnica, mostrate così come sono scritte.", video_url: "https://example.com/video/armbar" }
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/Invalid"
+
+  # ── Downloads ──────────────────────────────────────────────────────
+
+  /downloads/attendance:
+    get:
+      operationId: export_attendance
+      tags: [downloads]
+      summary: A month's attendance as a CSV, described and linked
+      description: |
+        Describes the file and links it; it does not produce it. The file comes
+        from the app's `GET /api/v1/stats/attendance/export`, which the chat's
+        card calls. One row per athlete: name, belt, presences, training days,
+        rate. Rows start from the roster at that belt, so an athlete with no
+        presences is in the file at 0 %. The rate is the month summary's: presences ÷ the academy's
+        training days from the 1st, or from the day the athlete started if
+        later, closures left out. The file's header line says so.
+      parameters:
+        - $ref: "#/components/parameters/Month"
+        - name: belt
+          in: query
+          required: false
+          description: The belt's code, to keep only those athletes («bianca» is `white`).
+          schema:
+            $ref: "#/components/schemas/Belt"
+          example: white
+      responses:
+        "200":
+          description: The file, described.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Download"
+              example:
+                data:
+                  filename: presenze-ottobre-2026-bianche.csv
+                  athletes: 9
+                  training_days: 12
+                  rate_rule: "presenze ÷ giorni di allenamento del mese, dal giorno di inizio se più tardi, chiusure escluse"
+                display:
+                  filename: presenze-ottobre-2026-bianche.csv
+                  href: /api/v1/stats/attendance/export?month=2026-10&belt=white
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/Invalid"
+
+  # ── Proposals ──────────────────────────────────────────────────────
+
+  /proposals/payment:
+    post:
+      operationId: propose_payment
+      tags: [proposals]
+      summary: Prepare one month's payment for the owner to confirm
+      description: |
+        Runs the same checks as recording the payment (overlap, fee, an
+        athlete who pays nothing) and writes nothing. `data.possible` false
+        comes with the server's `reason`. `display.card` is what the owner
+        confirms; «Conferma» sends `display.confirm` through the app's own
+        payment service (`POST /api/v1/athletes/{athlete}/payments`).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MonthProposalRequest"
+            example: { athlete: 12, month: "2026-10" }
+      responses:
+        "200":
+          description: The proposal, or why it cannot be made.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Proposal"
+              examples:
+                possible:
+                  summary: Jacopo, October
+                  value:
+                    data:
+                      possible: true
+                      summary: "Pagamento di Jacopo Rossi per ottobre 2026: 55 €, in contanti."
+                      also_owes: [settembre 2026]
+                    display:
+                      card:
+                        title: Segna pagato
+                        athlete: Jacopo Rossi
+                        month: ottobre 2026
+                        amount: 55 €
+                        method: Contanti
+                        also_owes: [settembre 2026]
+                      confirm:
+                        action: record_payment
+                        athlete_id: 12
+                        year: 2026
+                        month: 10
+                        amount_cents: 5500
+                        method: cash
+                refused:
+                  summary: Already paid
+                  value:
+                    data:
+                      possible: false
+                      reason: "Ottobre 2026 è già pagato per Jacopo Rossi."
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/Invalid"
+
+  /proposals/free-month:
+    post:
+      operationId: propose_free_month
+      tags: [proposals]
+      summary: Prepare letting an athlete off one month, for the owner to confirm
+      description: |
+        The free month of #2168, checked and written nowhere. «Conferma» sends
+        `display.confirm` through the app's own service.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MonthProposalRequest"
+            example: { athlete: 15, month: "2026-10" }
+      responses:
+        "200":
+          description: The proposal, or why it cannot be made.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Proposal"
+              example:
+                data:
+                  possible: true
+                  summary: "Ottobre 2026 gratuito per Marta Bianchi: non le verrà chiesto."
+                  also_owes: []
+                display:
+                  card:
+                    title: Mese gratuito
+                    athlete: Marta Bianchi
+                    month: ottobre 2026
+                    also_owes: []
+                  confirm:
+                    action: waive_month
+                    athlete_id: 15
+                    year: 2026
+                    month: 10
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/Invalid"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Sanctum
+      description: The same Sanctum token the SPA uses for `/api/v1`.
+
+  parameters:
+    AthletePath:
+      name: athlete
+      in: path
+      required: true
+      description: An athlete id, from `find_athletes`.
+      schema:
+        type: integer
+      example: 12
+    Month:
+      name: month
+      in: query
+      required: true
+      description: A month as `YYYY-MM`, taken from the calendar.
+      schema:
+        type: string
+        pattern: '^\d{4}-(0[1-9]|1[0-2])$'
+      example: "2026-10"
+    From:
+      name: from
+      in: query
+      required: true
+      description: The first day, from the calendar.
+      schema:
+        type: string
+        format: date
+      example: "2026-10-01"
+    Until:
+      name: until
+      in: query
+      required: true
+      description: The last day, included, from the calendar.
+      schema:
+        type: string
+        format: date
+      example: "2026-10-31"
+
+  responses:
+    Unauthenticated:
+      description: No valid token.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Message"
+          example: { message: Unauthenticated. }
+    NotFound:
+      description: |
+        The runtime has no assistant (the phone, the web profile), or the id
+        names nothing in this academy. The two are not told apart.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Message"
+          example: { message: Not Found }
+    Invalid:
+      description: An argument is missing or malformed. The chat hands `message` back to the model.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [message, errors]
+            properties:
+              message:
+                type: string
+              errors:
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    type: string
+          example:
+            message: Il mese deve essere nel formato AAAA-MM.
+            errors:
+              month: [Il mese deve essere nel formato AAAA-MM.]
+
+  schemas:
+    Belt:
+      type: string
+      description: The belt colour codes, the same vocabulary as `Belt` in `v1.yaml`.
+      enum: [grey, yellow, orange, green, white, blue, purple, brown, black, red-and-black, red-and-white, red, white-and-yellow, yellow-and-orange, orange-and-green, green-and-blue, blue-and-brown, yellow-and-green, blue-and-red, black-and-red]
+
+    Message:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+
+    More:
+      type: integer
+      minimum: 0
+      description: Rows left out of `data`. The model adds «e altri N».
+
+    Catalogue:
+      type: object
+      required: [system, calendar, tools]
+      properties:
+        system:
+          type: object
+          required: [version, text]
+          properties:
+            version:
+              type: string
+              description: First 12 hex digits of the prompt file's SHA-256.
+            text:
+              type: string
+        calendar:
+          type: string
+        tools:
+          type: array
+          items:
+            type: object
+            required: [type, function, x-route]
+            properties:
+              type:
+                type: string
+                enum: [function]
+              function:
+                type: object
+                required: [name, description, parameters]
+                properties:
+                  name:
+                    type: string
+                  description:
+                    type: string
+                  parameters:
+                    type: object
+              x-route:
+                type: object
+                required: [method, path]
+                properties:
+                  method:
+                    type: string
+                    enum: [GET, POST]
+                  path:
+                    type: string
+
+    AthleteRow:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+
+    AthleteMatches:
+      type: object
+      required: [data, more]
+      properties:
+        data:
+          type: array
+          items:
+            allOf:
+              - $ref: "#/components/schemas/AthleteRow"
+              - type: object
+                required: [belt, status]
+                properties:
+                  belt:
+                    type: string
+                  status:
+                    type: string
+                    enum: [attivo, non attivo]
+        more:
+          $ref: "#/components/schemas/More"
+
+    AthleteSummary:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [id, name, status, belt, documents]
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+            status:
+              type: string
+              enum: [attivo, non attivo]
+            belt:
+              type: string
+            belt_since:
+              type: string
+              nullable: true
+            last_promotion:
+              type: string
+              nullable: true
+            age:
+              type: integer
+              nullable: true
+            joined:
+              type: string
+            fee:
+              type: string
+              description: '"55 € al mese", or "allena gratis" for a fee of zero.'
+            months_owed:
+              type: array
+              items:
+                type: string
+            last_presence:
+              type: string
+              nullable: true
+            presences_this_month:
+              type: string
+            documents:
+              type: array
+              items:
+                type: object
+                required: [type, state]
+                properties:
+                  type:
+                    type: string
+                  expires:
+                    type: string
+                    nullable: true
+                  state:
+                    type: string
+                    enum: [valido, in scadenza, scaduto]
+
+    AbsentAthletes:
+      type: object
+      required: [data, more]
+      properties:
+        data:
+          type: object
+          required: [since, athletes]
+          properties:
+            since:
+              type: string
+            athletes:
+              type: array
+              items:
+                allOf:
+                  - $ref: "#/components/schemas/AthleteRow"
+                  - type: object
+                    required: [last_presence]
+                    properties:
+                      last_presence:
+                        type: string
+                        description: A date, or «mai».
+        more:
+          $ref: "#/components/schemas/More"
+
+    AttendanceLeaders:
+      type: object
+      required: [data, more]
+      properties:
+        data:
+          type: object
+          required: [period, training_days, athletes]
+          properties:
+            period:
+              type: string
+            training_days:
+              type: integer
+            athletes:
+              type: array
+              items:
+                allOf:
+                  - $ref: "#/components/schemas/AthleteRow"
+                  - type: object
+                    required: [presences]
+                    properties:
+                      presences:
+                        type: integer
+        more:
+          $ref: "#/components/schemas/More"
+
+    AthletesByBelt:
+      type: object
+      required: [data, more]
+      properties:
+        data:
+          type: object
+          required: [belt, order, athletes]
+          properties:
+            belt:
+              type: string
+            order:
+              type: string
+            athletes:
+              type: array
+              items:
+                allOf:
+                  - $ref: "#/components/schemas/AthleteRow"
+                  - type: object
+                    required: [stripes]
+                    properties:
+                      stripes:
+                        type: integer
+                      age:
+                        type: integer
+                        nullable: true
+                      belt_since:
+                        type: string
+                        nullable: true
+        more:
+          $ref: "#/components/schemas/More"
+
+    NewAthletes:
+      type: object
+      required: [data, more]
+      properties:
+        data:
+          type: object
+          required: [period, joined, stayed, still_free, left, note, athletes]
+          properties:
+            period:
+              type: string
+            joined:
+              type: integer
+            stayed:
+              type: integer
+            still_free:
+              type: integer
+            left:
+              type: integer
+            note:
+              type: string
+            athletes:
+              type: array
+              items:
+                allOf:
+                  - $ref: "#/components/schemas/AthleteRow"
+                  - type: object
+                    required: [joined, now]
+                    properties:
+                      joined:
+                        type: string
+                      now:
+                        type: string
+                        enum: [rimasto, ancora gratis, andato via]
+        more:
+          $ref: "#/components/schemas/More"
+
+    PromotionCandidates:
+      type: object
+      required: [data, more]
+      properties:
+        data:
+          type: object
+          required: [note, athletes]
+          properties:
+            note:
+              type: string
+            athletes:
+              type: array
+              items:
+                allOf:
+                  - $ref: "#/components/schemas/AthleteRow"
+                  - type: object
+                    required: [belt, next_step]
+                    properties:
+                      belt:
+                        type: string
+                      since_last_promotion:
+                        type: string
+                        nullable: true
+                      training_days_since:
+                        type: integer
+                        nullable: true
+                      next_step:
+                        type: string
+        more:
+          $ref: "#/components/schemas/More"
+
+    Birthdays:
+      type: object
+      required: [data, more]
+      properties:
+        data:
+          type: object
+          required: [period, athletes]
+          properties:
+            period:
+              type: string
+            athletes:
+              type: array
+              items:
+                allOf:
+                  - $ref: "#/components/schemas/AthleteRow"
+                  - type: object
+                    required: [birthday, turns]
+                    properties:
+                      birthday:
+                        type: string
+                      turns:
+                        type: integer
+        more:
+          $ref: "#/components/schemas/More"
+
+    UnpaidAthletes:
+      type: object
+      required: [data, more]
+      properties:
+        data:
+          type: object
+          required: [month, athletes]
+          properties:
+            month:
+              type: string
+            note:
+              type: string
+              nullable: true
+            athletes:
+              type: array
+              items:
+                allOf:
+                  - $ref: "#/components/schemas/AthleteRow"
+                  - type: object
+                    required: [fee, also_owes]
+                    properties:
+                      fee:
+                        type: string
+                      also_owes:
+                        type: array
+                        items:
+                          type: string
+        more:
+          $ref: "#/components/schemas/More"
+
+    PaymentsSummary:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [month, collected, expected, outstanding, outstanding_athletes, estimated, basis]
+          properties:
+            month:
+              type: string
+            collected:
+              type: string
+            expected:
+              type: string
+            outstanding:
+              type: string
+            outstanding_athletes:
+              type: integer
+            estimated:
+              type: boolean
+              description: True when the expected amount is an estimate (the tiles' rule).
+            basis:
+              type: string
+
+    ExpiringDocuments:
+      type: object
+      required: [data, more]
+      properties:
+        data:
+          type: object
+          required: [until, expired, expiring, missing_medical_certificate]
+          properties:
+            until:
+              type: string
+            expired:
+              type: array
+              items:
+                $ref: "#/components/schemas/DocumentRow"
+            expiring:
+              type: array
+              items:
+                $ref: "#/components/schemas/DocumentRow"
+            missing_medical_certificate:
+              type: array
+              items:
+                $ref: "#/components/schemas/AthleteRow"
+        more:
+          $ref: "#/components/schemas/More"
+
+    DocumentRow:
+      type: object
+      required: [athlete_id, name, type, expires]
+      properties:
+        athlete_id:
+          type: integer
+        name:
+          type: string
+        type:
+          type: string
+        expires:
+          type: string
+
+    TopicMatches:
+      type: object
+      required: [data, more]
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            required: [id, name, kind]
+            properties:
+              id:
+                type: integer
+              name:
+                type: string
+              kind:
+                type: string
+                enum: [posizione, tecnica]
+              position:
+                type: string
+                nullable: true
+        more:
+          $ref: "#/components/schemas/More"
+
+    TaughtTechniques:
+      type: object
+      required: [data, more]
+      properties:
+        data:
+          type: object
+          required: [lessons]
+          properties:
+            athlete:
+              type: string
+              nullable: true
+            topic:
+              type: string
+              nullable: true
+            lessons:
+              type: array
+              items:
+                type: object
+                required: [date, class, topics]
+                properties:
+                  date:
+                    type: string
+                  class:
+                    type: string
+                  topics:
+                    type: array
+                    items:
+                      type: string
+        more:
+          $ref: "#/components/schemas/More"
+
+    SyllabusGaps:
+      type: object
+      required: [data, more]
+      properties:
+        data:
+          type: object
+          required: [period, topics]
+          properties:
+            period:
+              type: string
+            position:
+              type: string
+              nullable: true
+            topics:
+              type: array
+              items:
+                type: object
+                required: [id, name, last_taught]
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+                  last_taught:
+                    type: string
+                    description: A date, or «mai».
+        more:
+          $ref: "#/components/schemas/More"
+
+    Classes:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [date, classes]
+          properties:
+            date:
+              type: string
+            note:
+              type: string
+              nullable: true
+            classes:
+              type: array
+              items:
+                type: object
+                required: [id, name, time]
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+                  time:
+                    type: string
+
+    SuggestedTopics:
+      type: object
+      required: [data, display]
+      properties:
+        data:
+          type: object
+          required: [class, topics]
+          properties:
+            class:
+              type: string
+            topics:
+              type: array
+              items:
+                type: object
+                required: [id, name, reason]
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+                  position:
+                    type: string
+                    nullable: true
+                  reason:
+                    type: string
+        display:
+          type: object
+          description: For the chat only. Never sent to the model.
+          required: [topics]
+          properties:
+            topics:
+              type: array
+              items:
+                type: object
+                required: [id, name, notes, video_url]
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+                  notes:
+                    type: string
+                    nullable: true
+                  video_url:
+                    type: string
+                    nullable: true
+
+    Download:
+      type: object
+      required: [data, display]
+      properties:
+        data:
+          type: object
+          required: [filename]
+          properties:
+            filename:
+              type: string
+            athletes:
+              type: integer
+            training_days:
+              type: integer
+            rate_rule:
+              type: string
+        display:
+          type: object
+          description: For the chat only. `href` is an `/api/v1` route.
+          required: [filename, href]
+          properties:
+            filename:
+              type: string
+            href:
+              type: string
+
+    MonthProposalRequest:
+      type: object
+      required: [athlete, month]
+      properties:
+        athlete:
+          type: integer
+          description: An athlete id, from `find_athletes`.
+        month:
+          type: string
+          pattern: '^\d{4}-(0[1-9]|1[0-2])$'
+
+    Proposal:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [possible]
+          properties:
+            possible:
+              type: boolean
+            summary:
+              type: string
+            reason:
+              type: string
+              description: The server's sentence, when `possible` is false.
+            also_owes:
+              type: array
+              items:
+                type: string
+        display:
+          type: object
+          description: For the chat only, present when `possible` is true.
+          properties:
+            card:
+              type: object
+              additionalProperties: true
+            confirm:
+              type: object
+              description: What «Conferma» sends through the app's own service.
+              required: [action, athlete_id]
+              properties:
+                action:
+                  type: string
+                  enum: [record_payment, waive_month]
+                athlete_id:
+                  type: integer
+              additionalProperties: true

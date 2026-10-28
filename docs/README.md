@@ -29,7 +29,8 @@ docs/
 │   └── support-ticket.md              # support form submission (#423)
 ├── api/
 │   ├── README.md                      # how to view the spec locally (Swagger UI, Redocly)
-│   └── v1.yaml                        # OpenAPI 3.0.3 — complete contract for /api/v1
+│   ├── v1.yaml                        # OpenAPI 3.0.3 — the app's API, /api/v1, for the SPA's screens
+│   └── ai-v1.yaml                     # OpenAPI 3.0.3 — the AI API, /api/ai/v1, for the local model's chat (M13)
 ├── desktop/                           # the desktop build (M11, #1218) — how Budojo ships today
 │   ├── architecture.md                # process model, app:// transport, PHP supervision, data layout
 │   ├── install.md                     # install, first run, SmartScreen, upgrades
@@ -38,7 +39,8 @@ docs/
 │   └── protocol.md                    # the sync protocol v2: folder, envelope, version, journal, keys and joining (#2029, #2033)
 ├── specs/                             # milestone PRDs
 │   ├── m3-documents.md                # M3 — Documents & Deadlines
-│   └── m4-attendance.md               # M4 — Attendance (with `Deltas from spec`)
+│   ├── m4-attendance.md               # M4 — Attendance (with `Deltas from spec`)
+│   └── m13-assistant.md               # M13 — the assistant on a local model: questions, tools, boundary rules (#2174)
 ├── infra/                             # operations / deployment
 │   ├── branch-rulesets.md             # GitHub branch protection rulesets
 │   └── archive/production-deployment.md  # the decommissioned hosted stack (#1230) — record only, nothing live
@@ -71,7 +73,7 @@ docs/
 |---|---|
 | New contributor onboarding | `entities/` then `api/v1.yaml`, then `desktop/architecture.md` for how it ships |
 | Desktop owner (install / recover data) | `desktop/install.md` and `desktop/backup-restore.md` |
-| Front-end / API consumer | `api/v1.yaml` (import into Postman, Insomnia, or Swagger UI) |
+| Front-end / API consumer | `api/v1.yaml` (import into Postman, Insomnia, or Swagger UI); `api/ai-v1.yaml` for the assistant's tools |
 | On-call / deployer | The hosted stack is decommissioned (#1230). `desktop/` is the current runtime; `infra/archive/production-deployment.md` is kept only as a record of how the old stack was wired |
 | Claude Code agent | Everything — the PR will fail review if docs are stale (see `CLAUDE.md` "Documentation discipline") |
 | Product planning | `specs/` |
