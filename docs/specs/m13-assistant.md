@@ -322,10 +322,10 @@ The epic's order, with the issues re-sliced from the catalogue (§ 6.3):
 
 **Phase 1, the server**
 3. **#2176** the surface: routes, middleware, catalogue and calendar, `find_athletes` · M · `--deep`
-4. **#2177** payments and documents: `list_unpaid_athletes`, `get_payments_summary` (new), `list_expiring_documents` · M
+4. **#2182** techniques: `find_syllabus_topics`, `list_taught_techniques` with `topic` and `athlete`, `list_syllabus_gaps`, `list_classes`, `list_suggested_topics` · grows from S to **M**. **First among the lookups** (product sign-off, 28 Oct 2026): technique tracking is what the owner wants pushed most (#1857), and q6 and q7 are where the chat beats every screen; payments and documents already live on «Oggi».
 5. **#2183** one athlete and attendance: `get_athlete_summary`, `list_absent_athletes`, `list_attendance_leaders` (new) · M
-6. **New issue, the roster:** `list_athletes_by_belt`, `list_new_athletes`, `list_promotion_candidates`, `list_birthdays` · M
-7. **#2182** techniques: `find_syllabus_topics`, `list_taught_techniques` with `topic` and `athlete`, `list_syllabus_gaps`, `list_classes`, `list_suggested_topics` · grows from S to **M**
+6. **#2177** payments and documents: `list_unpaid_athletes`, `get_payments_summary` (new), `list_expiring_documents` · M
+7. **New issue, the roster:** `list_athletes_by_belt`, `list_new_athletes`, `list_promotion_candidates`, `list_birthdays` · M
 8. **New issue, the attendance export:** the app's «Esporta» and `/api/v1/stats/attendance/export` first, then `export_attendance` · M
 
 **Phase 2, the chat:** #2179 bridge (`--deep`), #2184 settings, #2180 chat panel (L), which renders `display`.
@@ -334,7 +334,7 @@ The epic's order, with the issues re-sliced from the catalogue (§ 6.3):
 
 **The re-slice is done on GitHub when this PRD is approved:** the two new issues, and the new scope of #2177, #2183 and #2182.
 
-**Go / no-go (#2178), the bar:** right tool ≥ 90 %, right answer ≥ 90 %, **zero invented facts**, first word ≤ 3 s and full answer ≤ 10 s at the 90th percentile, model already loaded. A no-go stops the epic before Phase 1, and the report says which bar failed.
+**Go / no-go (#2178), the bar:** right tool ≥ 90 %, right answer ≥ 90 %, **zero invented facts**, first word ≤ 3 s and full answer ≤ 10 s at the 90th percentile, model already loaded. **The first question of a chat is measured apart** (it reads the whole catalogue), and over 10 s it is a no-go too: a first answer that slow stops the habit the success criterion needs (product sign-off, 28 Oct 2026). A no-go stops the epic before Phase 1, and the report says which bar failed.
 
 ## 11. Success
 
