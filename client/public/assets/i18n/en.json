@@ -2028,12 +2028,15 @@
           "months": "Month to pay",
           "none": "Nothing owed: the payment is already recorded.",
           "record": "Record {{amount}} · {{method}}",
-          "error": "The payment was not recorded. Try again."
+          "error": "The payment was not recorded. Try again.",
+          "letOff": "Let off: {{month}} free",
+          "letOffError": "The free month was not recorded. Try again."
         },
         "toast": {
           "recorded": "{{name}}'s payment recorded",
           "already": "{{name}}'s payment was already recorded",
-          "undoError": "Couldn't undo the payment."
+          "undoError": "Couldn't undo the payment.",
+          "letOff": "Free month for {{name}}"
         }
       },
       "newPerson": {

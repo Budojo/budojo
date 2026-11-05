@@ -17,7 +17,12 @@ import { SelectButtonModule } from 'primeng/selectbutton';
 import { SkeletonModule } from 'primeng/skeleton';
 import { Athlete } from '../../../../core/services/athlete.service';
 import { LanguageService } from '../../../../core/services/language.service';
-import { AthletePayment, PaymentMethod } from '../../../../core/services/payment.service';
+import { Observable } from 'rxjs';
+import {
+  AthletePayment,
+  PaymentMethod,
+  RecordedPayment,
+} from '../../../../core/services/payment.service';
 import { AthleteIdentityComponent } from '../../../../shared/components/athlete-identity/athlete-identity.component';
 import { PAYMENT_METHOD_KEYS } from '../../../../shared/utils/i18n-enum-keys';
 import { holdDialogWhile } from '../../../../shared/utils/dialog-hold';
@@ -35,6 +40,13 @@ export interface PayRecorded {
   readonly created: boolean;
 }
 
+/** The host's toast for what the sheet recorded: a payment, or a month let off (#2192). */
+export function recordedToastKey(payment: AthletePayment): string {
+  return payment.waived === true
+    ? 'attendance.daily.pay.toast.letOff'
+    : 'attendance.daily.pay.toast.recorded';
+}
+
 /**
  * The payment sheet (#2036, PRD § 6.1), opened from a check-in row's chip or
  * a row of «Soldi» (#2132).
@@ -44,7 +56,8 @@ export interface PayRecorded {
  * month where a whole period would cross one paid, #2150), and is not
  * editable here: the PC's ledger is where a payment gets adjusted. Cash
  * is picked, because cash is what changes hands at the mat. One button
- * records it, and the host offers the undo.
+ * records it, and the host offers the undo. Beneath it, the month's other
+ * answer (#2192), as on the athlete's page (#2167): not paid, let off.
  */
 @Component({
   selector: 'app-pay-sheet',
@@ -87,7 +100,8 @@ export class PaySheetComponent {
   );
   protected readonly method = signal<PaymentMethod>('cash');
   protected readonly saving = signal<boolean>(false);
-  protected readonly failed = signal<boolean>(false);
+  /** Which answer did not go through, for its own words; null while none failed. */
+  protected readonly failed = signal<'record' | 'letOff' | null>(null);
 
   protected readonly methodOptions = computed(() => {
     this.languageService.currentLang();
@@ -127,20 +141,37 @@ export class PaySheetComponent {
   });
 
   /**
+   * «Non lo paga: settembre gratis». One month, whatever the athlete's period:
+   * the picked payment's first, as the server lets off (#2167).
+   */
+  protected readonly letOffLabel = computed<string>(() => {
+    this.languageService.currentLang();
+    const option = this.pickedOption();
+    return option === null
+      ? ''
+      : this.translate.instant('attendance.daily.pay.sheet.letOff', {
+          month: this.monthName(option.month),
+        });
+  });
+
+  /**
    * One month's words: «settembre», or «settembre – novembre» for a quarterly
-   * payer, whose payment covers the months after it too. The year shows only
-   * when it is not this one.
+   * payer, whose payment covers the months after it too.
    */
   protected monthLabel(option: PayOption): string {
     const covered = monthsCovered(option.month, option.period);
-    const name = (m: string): string => {
-      const { year, month: n } = yearMonthOf(m);
-      const word = this.translate.instant(monthKey(n));
-      return year === this.thisYear ? word : `${word} ${year}`;
-    };
     const first = covered[0];
     const last = covered[covered.length - 1];
-    return first === last ? name(first) : `${name(first)} – ${name(last)}`;
+    return first === last
+      ? this.monthName(first)
+      : `${this.monthName(first)} – ${this.monthName(last)}`;
+  }
+
+  /** «settembre», with the year only when it is not this one. */
+  private monthName(month: string): string {
+    const { year, month: n } = yearMonthOf(month);
+    const word = this.translate.instant(monthKey(n));
+    return year === this.thisYear ? word : `${word} ${year}`;
   }
 
   protected pick(month: string): void {
@@ -152,19 +183,31 @@ export class PaySheetComponent {
   }
 
   protected submit(): void {
+    this.send('record', (athlete, option) => this.money.record(athlete, option, this.method()));
+  }
+
+  /** The picked month let off: no money, and the host's undo takes it back (#2192). */
+  protected letOff(): void {
+    this.send('letOff', (athlete, option) => this.money.letOff(athlete, option));
+  }
+
+  private send(
+    answer: 'record' | 'letOff',
+    write: (athlete: Athlete, option: PayOption) => Observable<RecordedPayment>,
+  ): void {
     const athlete = this.athlete();
     const option = this.pickedOption();
     if (athlete === null || option === null || this.saving()) return;
     this.saving.set(true);
-    this.failed.set(false);
-    this.money.record(athlete, option, this.method()).subscribe({
+    this.failed.set(null);
+    write(athlete, option).subscribe({
       next: ({ payment, created }) => {
         this.saving.set(false);
         this.recorded.emit({ athlete, payment, created });
       },
       error: () => {
         this.saving.set(false);
-        this.failed.set(true);
+        this.failed.set(answer);
       },
     });
   }
@@ -198,6 +241,6 @@ export class PaySheetComponent {
     this.picked.set(null);
     this.method.set('cash');
     this.saving.set(false);
-    this.failed.set(false);
+    this.failed.set(null);
   }
 }

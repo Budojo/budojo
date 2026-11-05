@@ -69,9 +69,14 @@
         />
       </div>
 
-      @if (failed()) {
+      @if (failed(); as answer) {
         <p class="pay-sheet__error" role="alert" data-cy="pay-sheet-error">
-          {{ 'attendance.daily.pay.sheet.error' | translate }}
+          {{
+            (answer === 'letOff'
+              ? 'attendance.daily.pay.sheet.letOffError'
+              : 'attendance.daily.pay.sheet.error'
+            ) | translate
+          }}
         </p>
       }
 
@@ -82,6 +87,18 @@
         [disabled]="picked() === null"
         (onClick)="submit()"
         data-cy="pay-sheet-record"
+      />
+
+      <!-- The month's other answer (#2192), as on the athlete's page (#2167): let off, no money. -->
+      <p-button
+        [fluid]="true"
+        [text]="true"
+        severity="secondary"
+        icon="pi pi-gift"
+        [label]="letOffLabel()"
+        [disabled]="picked() === null || saving()"
+        (onClick)="letOff()"
+        data-cy="pay-sheet-let-off"
       />
     </div>
   }

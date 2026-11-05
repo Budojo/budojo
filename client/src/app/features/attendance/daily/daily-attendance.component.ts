@@ -70,7 +70,7 @@ import { NewPersonSheetComponent } from '../../athletes/new-person/new-person-sh
 import { MatMoney } from './pay/mat-money';
 import { PayChip } from './pay/pay-chip';
 import { PayChipComponent } from './pay/pay-chip.component';
-import { PayRecorded, PaySheetComponent } from './pay/pay-sheet.component';
+import { PayRecorded, PaySheetComponent, recordedToastKey } from './pay/pay-sheet.component';
 
 interface SelectOption<T extends string> {
   label: string;
@@ -1619,7 +1619,7 @@ export class DailyAttendanceComponent implements OnInit {
       });
       return;
     }
-    this.toastUndo(this.translate.instant('attendance.daily.pay.toast.recorded', { name }), () =>
+    this.toastUndo(this.translate.instant(recordedToastKey(payment), { name }), () =>
       this.money.undo(athlete, payment).subscribe({
         next: () => this.messageService.clear(),
         error: () =>
