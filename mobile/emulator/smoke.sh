@@ -142,7 +142,11 @@ if [ -n "$PREVIOUS" ]; then
     # an upgrade test reading them in plain text broke the day it shipped
     # (#2188). A phone still on a release before it holds them in plain text:
     # that phone is made here from the keys the server runs with, so the
-    # update keeps proving the migration, sealed keys and all.
+    # update keeps proving the migration, sealed keys and all. One difference
+    # stays: the Keystore key `budojo-keys` is still there, which a phone from
+    # before v2.80.0 never had, and adb cannot remove it without wiping the
+    # app. So this pass seals under an existing key; the fresh install below
+    # is the one that makes the key.
     PREVIOUS_KEYS=$(server_secrets_json) || fail "could not read the previous release's keys"
     "$ADB" shell am force-stop "$PACKAGE"
     plain_key_file secrets.json "$PREVIOUS_KEYS" || fail "could not place secrets.json"

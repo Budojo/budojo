@@ -75,7 +75,7 @@ Calling PHP in-process from this shell is the way out if Android ever stops the 
   - a plain `.part` the writer before #2134 left is deleted, never taken as keys: the only keys a staged file can hold alone are the academy's, which are on the Google account;
   - **a sealed file that does not open is never replaced nor deleted.** The read fails, the server does not start, and the screen says so. New keys over it would leave the academy's documents unreadable for good, and a Keystore that is only slow to wake must not cost them. Taking the keys back from the Google account in that case is #2162.
 - **The emulator job checks it** (`previous-apk.sh`, `smoke.sh`):
-  - it installs the newest release older than the build, and gives it a plain `secrets.previous.json` and `sync.json`, as the owner's phone has;
+  - it installs the newest release older than the build, and gives it a plain `secrets.previous.json` and `sync.json`, as the owner's phone had. When that release already seals its keys (v2.80.0 on, #2188), the script first rebuilds a plain `secrets.json` from the server's environment and removes the `.sealed` files, so the update still migrates plain to sealed. The Keystore key stays, which adb cannot remove: that pass seals under an existing key, and the fresh install makes one;
   - it updates over that release, and compares the keys the server runs with before and after, read from its environment as root. It also checks all three files are sealed and that the device id came from the sealed `sync.json`;
   - it installs the APK alone on an empty phone;
   - every pass fails on a key file left in plain text, `.part` included.
