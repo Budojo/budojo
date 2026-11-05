@@ -236,6 +236,21 @@ describe('MatMoney', () => {
     expect(money.chipFor(quarterly)).toEqual({ kind: 'covered' });
   });
 
+  it('lets one month off, a quarterly payer too, and the chip moves past it (#2192)', () => {
+    const { money, http } = setup();
+    const quarterly = athlete({ billing_period_months: 3 });
+    money.load();
+    behind(http, [{ id: 7, months: ['2026-07', '2026-08'] }]);
+
+    money.letOff(quarterly, { month: '2026-07', period: 3 }).subscribe();
+    const post = http.expectOne((r) => r.method === 'POST');
+    expect(post.request.body).toEqual({ year: 2026, month: 7, waived: true });
+    post.flush({ data: payment({ month: 7, amount_cents: 0, waived: true }) });
+
+    // One month, not the quarter: August is still owed.
+    expect(money.chipFor(quarterly)).toEqual({ kind: 'due', month: '2026-08' });
+  });
+
   it('puts the month back on an undo', () => {
     const { money, http } = setup();
     money.load();
