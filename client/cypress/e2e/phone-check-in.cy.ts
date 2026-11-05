@@ -42,7 +42,7 @@ const regular = (index: number, attended: number) => ({
   last_attended_on: '2026-09-24',
 });
 
-function phoneAt(when: string, room = ROOM): void {
+function phoneAt(when: string, room = ROOM, present: readonly unknown[] = []): void {
   cy.clock(new Date(when).getTime(), ['Date']);
   stubToday();
   cy.intercept('GET', '/api/v1/runtime', {
@@ -67,7 +67,7 @@ function phoneAt(when: string, room = ROOM): void {
       },
     },
   });
-  cy.intercept('GET', '/api/v1/attendance?*', { statusCode: 200, body: { data: [] } });
+  cy.intercept('GET', '/api/v1/attendance?*', { statusCode: 200, body: { data: present } });
   cy.intercept('GET', '/api/v1/attendance/regulars*', {
     statusCode: 200,
     body: { data: [regular(0, 3), regular(2, 5)], meta: { occurrences: 6, occurrence_dates: [] } },
@@ -175,18 +175,24 @@ MOBILE_VIEWPORTS.forEach(({ name, width, height }) => {
 describe('The phone’s register, row by row (#2191)', () => {
   it('keeps the belt clear of the face, and every age on one line, in one column', () => {
     cy.viewport(390, 844);
-    phoneAt('2026-10-01T19:05:00', [
-      ROOM[0],
-      {
-        ...ROOM[1],
-        first_name: 'Pedro Henrique',
-        last_name: 'Engel Pires',
-        date_of_birth: '2007-01-15',
-      },
-      ROOM[2],
-      // A short name beside a long one: the photo had one age after its name, one mid-row.
-      { ...ROOM[3], date_of_birth: '2003-04-02' },
-    ]);
+    phoneAt(
+      '2026-10-01T19:05:00',
+      [
+        ROOM[0],
+        {
+          ...ROOM[1],
+          first_name: 'Pedro Henrique',
+          last_name: 'Engel Pires',
+          date_of_birth: '2007-01-15',
+        },
+        ROOM[2],
+        // A short name beside a long one: the photo had one age after its name, one mid-row.
+        { ...ROOM[3], date_of_birth: '2003-04-02' },
+      ],
+      // Dario marked himself: the «self-marked» badge must not push his age out of line.
+      [{ id: 900, athlete_id: 4, lesson_id: 3, attended_on: '2026-10-01', source: 'self' }],
+    );
+    cy.get('[data-cy="attendance-card-4"] .attendance-self-badge').should('be.visible');
     cy.get('[data-cy="attendance-mobile-list"]').should('be.visible');
     expectSpineClear();
     // The case the owner photographed: a name on two lines beside its age.
