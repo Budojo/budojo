@@ -36,6 +36,19 @@ function readApiBase(): string {
   return flag === undefined ? '' : flag.slice(API_BASE_FLAG.length);
 }
 
+/**
+ * The window's close asks the page to send what waits (#2194), and waits for
+ * the answer, within a limit. Answered always, a page with nothing to send or
+ * no sync included: an unanswered ask would hold every close to the limit.
+ */
+let flushOnClose: (() => Promise<void>) | null = null;
+ipcRenderer.on('budojo:sync:flush', (_event, id: unknown) => {
+  void Promise.resolve()
+    .then(() => flushOnClose?.())
+    .catch(() => undefined)
+    .finally(() => ipcRenderer.send('budojo:sync:flushed', id));
+});
+
 contextBridge.exposeInMainWorld('__BUDOJO__', {
   apiBase: readApiBase(),
   /**
@@ -111,6 +124,10 @@ contextBridge.exposeInMainWorld('__BUDOJO__', {
     identity: () => ipcRenderer.invoke('budojo:sync:identity'),
     driveFetch: (request: unknown) => ipcRenderer.invoke('budojo:sync:drive-fetch', request),
     swapIn: () => ipcRenderer.invoke('budojo:sync:swap-in'),
+    /** What the page runs when the window closes (#2194): the last push. */
+    onClose: (handler: () => Promise<void>) => {
+      flushOnClose = handler;
+    },
   },
   // Backup folder (#1320). The owner picks any folder — a synced one, a NAS, a
   // USB stick — and every backup is copied there. No account, no API.

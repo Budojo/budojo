@@ -87,6 +87,7 @@ export function stubBridge(overrides: BridgeOverrides = {}): Bridge {
       identity: async () => null,
       driveFetch: async () => ({ status: 503, headers: {}, body: new Uint8Array() }),
       swapIn: async () => undefined,
+      onClose: () => undefined,
     },
   };
 

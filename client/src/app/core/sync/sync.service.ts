@@ -47,6 +47,11 @@ export interface SyncPlatform {
    * already proved. Answers what came of it, for the pill to say.
    */
   update?(): Promise<UpdateOutcome>;
+  /**
+   * Hands the shell what to run when the app closes (#2194): the PC's window
+   * waits for it, within a limit. The phone has no close to wait on.
+   */
+  onClose?(flush: () => Promise<void>): void;
 }
 
 /**
@@ -161,6 +166,7 @@ export class SyncService {
 
   constructor() {
     inject(DestroyRef).onDestroy(() => this.stop());
+    this.platform?.onClose?.(() => this.flush());
     if (isDevMode() && 'Cypress' in window) {
       const hook: SyncTestHook = {
         state: (state) => this.stateSignal.set(state),
@@ -176,7 +182,10 @@ export class SyncService {
     if (this.stopping !== null || this.platform === null) {
       return;
     }
-    const written = this.gate.written$.subscribe(() => this.schedule(PUSH_DELAY_MS));
+    const written = this.gate.written$.subscribe(() => {
+      this.pushDue = true;
+      this.schedule(PUSH_DELAY_MS);
+    });
     const inFront = (): void => {
       if (document.visibilityState === 'visible') {
         this.schedule(0);
@@ -210,6 +219,35 @@ export class SyncService {
     this.refusedNewer = null;
     this.stateSignal.set({ kind: 'off' });
   }
+
+  /**
+   * The last push, as the app closes (#2194): what waits goes now, rather
+   * than at the next opening. Nothing waits when no round is due nor running;
+   * a signed-out page has nothing of its own to send.
+   */
+  async flush(): Promise<void> {
+    if (this.stopping === null) {
+      return;
+    }
+    // A save the owner just made: its push is due only once it has landed.
+    await this.gate.settled();
+    // A round running now is let finish; a new one runs only for a write that
+    // waits, never for a retry or a look (a pull, in a hidden window, is the
+    // next opening's).
+    for (let rounds = 0; rounds < 2; rounds++) {
+      if (this.running !== null) {
+        await this.running;
+        continue;
+      }
+      if (!this.pushDue) {
+        return;
+      }
+      await this.syncNow();
+    }
+  }
+
+  /** A write landed that no round has carried yet (#2194): what a close sends. */
+  private pushDue = false;
 
   /** «Sincronizza ora». */
   syncNow(): Promise<void> {
@@ -291,6 +329,8 @@ export class SyncService {
 
   private async round(resolution?: { choice: AskChoice; seen: VersionRef }): Promise<void> {
     const platform = this.platform;
+    // This round carries what was written; a failure says again if any waits.
+    this.pushDue = false;
     // What waits for the owner, and what the last pull brought, are on this
     // device: read before anything reaches Drive, the PC's identity included
     // (its keys are in the account), so an owner offline still finds them. A
@@ -489,6 +529,9 @@ export class SyncService {
       (error instanceof RemoteError && error.reason === 'offline') ||
       (error instanceof HttpErrorResponse && error.status === 0);
     const count = owner === null ? 0 : await this.pending(owner);
+    if (count > 0) {
+      this.pushDue = true;
+    }
     if (offline || count > 0) {
       this.stateSignal.set({ kind: 'pending', count, offline });
     } else {
