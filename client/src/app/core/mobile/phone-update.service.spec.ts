@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { RELEASES_URL } from './app-update';
+import { RELEASES_PAGE, RELEASES_URL } from './app-update';
 import { PHONE_UPDATE_SOURCE, PhoneUpdateService, PhoneUpdateSource } from './phone-update.service';
 
 /**
@@ -52,6 +52,18 @@ describe('PhoneUpdateService', () => {
         url: RELEASE.assets[0].browser_download_url,
       }),
     );
+  });
+
+  it('links the pill’s «Update Budojo» to the APK, the releases page until GitHub answers (#2193)', async () => {
+    const update = service({});
+    expect(update.link()).toBe(RELEASES_PAGE);
+
+    update.check();
+    await vi.waitFor(() => expect(update.link()).toBe(RELEASE.assets[0].browser_download_url));
+  });
+
+  it('links nothing off the phone: the PC updates itself', () => {
+    expect(service({ onPhone: false }).link()).toBeNull();
   });
 
   it('asks once per launch, however often Oggi opens', async () => {
