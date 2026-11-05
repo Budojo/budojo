@@ -2,6 +2,7 @@ import { MOCK_ACADEMY } from '../support/fixtures';
 import { stubToday } from '../support/today';
 import { MOBILE_VIEWPORTS } from '../support/viewports';
 import { expectNoSidewaysScroll } from '../support/no-sideways-scroll';
+import { expectSpineClear } from '../support/athlete-identity';
 
 /**
  * Budojo on the phone at the mat (#2035, PRD § 6.1): the app opens on the
@@ -41,7 +42,7 @@ const regular = (index: number, attended: number) => ({
   last_attended_on: '2026-09-24',
 });
 
-function phoneAt(when: string): void {
+function phoneAt(when: string, room = ROOM, present: readonly unknown[] = []): void {
   cy.clock(new Date(when).getTime(), ['Date']);
   stubToday();
   cy.intercept('GET', '/api/v1/runtime', {
@@ -53,12 +54,20 @@ function phoneAt(when: string): void {
   cy.intercept('GET', '/api/v1/athletes*', {
     statusCode: 200,
     body: {
-      data: ROOM,
+      data: room,
       links: { first: null, last: null, prev: null, next: null },
-      meta: { current_page: 1, from: 1, last_page: 1, path: '', per_page: 100, to: 4, total: 4 },
+      meta: {
+        current_page: 1,
+        from: 1,
+        last_page: 1,
+        path: '',
+        per_page: 100,
+        to: room.length,
+        total: room.length,
+      },
     },
   });
-  cy.intercept('GET', '/api/v1/attendance?*', { statusCode: 200, body: { data: [] } });
+  cy.intercept('GET', '/api/v1/attendance?*', { statusCode: 200, body: { data: present } });
   cy.intercept('GET', '/api/v1/attendance/regulars*', {
     statusCode: 200,
     body: { data: [regular(0, 3), regular(2, 5)], meta: { occurrences: 6, occurrence_dates: [] } },
@@ -160,5 +169,46 @@ MOBILE_VIEWPORTS.forEach(({ name, width, height }) => {
     phoneAt('2026-10-01T19:05:00');
     cy.get('[data-cy="attendance-register-regulars"]').should('be.visible');
     expectNoSidewaysScroll();
+  });
+});
+
+describe('The phone’s register, row by row (#2191)', () => {
+  it('keeps the belt clear of the face, and every age on one line, in one column', () => {
+    cy.viewport(390, 844);
+    phoneAt(
+      '2026-10-01T19:05:00',
+      [
+        ROOM[0],
+        {
+          ...ROOM[1],
+          first_name: 'Pedro Henrique',
+          last_name: 'Engel Pires',
+          date_of_birth: '2007-01-15',
+        },
+        ROOM[2],
+        // A short name beside a long one: the photo had one age after its name, one mid-row.
+        { ...ROOM[3], date_of_birth: '2003-04-02' },
+      ],
+      // Dario marked himself: the «self-marked» badge must not push his age out of line.
+      [{ id: 900, athlete_id: 4, lesson_id: 3, attended_on: '2026-10-01', source: 'self' }],
+    );
+    cy.get('[data-cy="attendance-card-4"] .attendance-self-badge').should('be.visible');
+    cy.get('[data-cy="attendance-mobile-list"]').should('be.visible');
+    expectSpineClear();
+    // The case the owner photographed: a name on two lines beside its age.
+    cy.get('[data-cy="attendance-card-2"] .athlete-identity__name').should(($name) => {
+      expect($name[0].getBoundingClientRect().height, 'a name on two lines').to.be.greaterThan(30);
+    });
+    cy.get('[data-cy="attendance-mobile-list"] app-age-badge .p-tag').should(($chips) => {
+      expect($chips.length, 'the ages on screen').to.be.at.least(2);
+      const rects = [...$chips].map((chip) => chip.getBoundingClientRect());
+      const lowest = Math.min(...rects.map((r) => r.height));
+      rects.forEach((r) => {
+        // On one line: as tall as the shortest chip, never «19 / anni».
+        expect(r.height, 'chip height').to.be.closeTo(lowest, 1);
+        // In one column: the same right edge on every row.
+        expect(r.right, 'chip right edge').to.be.closeTo(rects[0].right, 1);
+      });
+    });
   });
 });

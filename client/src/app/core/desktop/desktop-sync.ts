@@ -4,7 +4,7 @@ import { DeviceService } from '../mobile/device.service';
 import { AuthService } from '../services/auth.service';
 import { DriveRemote, Fetcher } from '../sync/drive-remote';
 import { followingFolder, RemoteError } from '../sync/remote';
-import { SYNC_PLATFORM, SyncPlatform } from '../sync/sync.service';
+import { SYNC_PLATFORM, SyncPlatform, UpdateOutcome } from '../sync/sync.service';
 
 /** The preload's sync bridge (`desktop/src/preload.cts`, #2032). */
 export type DesktopSyncBridge = BudojoBridge['sync'];
@@ -74,12 +74,17 @@ export function desktopSyncPlatform(
       },
     },
     publishesFirst: true,
+    // The window's close waits for the last push (#2194).
+    onClose: (flush) => bridge.sync.onClose(flush),
     reconnect: async () => {
       const linked = await bridge.drive.link();
       if (!linked.ok) {
         throw new Error(linked.error ?? 'Google did not reconnect');
       }
     },
+    // A download already done installs now; otherwise a check starts it, and
+    // the title bar shows it coming (#1401) and offers the restart.
+    update: () => updateThePc(bridge.update),
   };
 }
 
@@ -98,4 +103,41 @@ export function provideDesktopSync(): Provider {
           });
     },
   };
+}
+
+/** How long «Aggiorna Budojo» waits for a check to say whether there is anything. */
+export const UPDATE_CHECK_WAIT_MS = 30_000;
+
+/**
+ * The PC's update, with what came of it (#2193). A check that is started only
+ * says so: its answer arrives through `onStatus`, and «checking» then
+ * «up-to-date» showed nothing anywhere, so the tap looked like it did nothing.
+ */
+export async function updateThePc(
+  update: BudojoBridge['update'],
+  waitMs = UPDATE_CHECK_WAIT_MS,
+): Promise<UpdateOutcome> {
+  if ((await update.status()).phase === 'ready') {
+    await update.installNow();
+    return 'installing';
+  }
+  return new Promise<UpdateOutcome>((resolve) => {
+    let unsubscribe: (() => void) | null = null;
+    const settle = (outcome: UpdateOutcome): void => {
+      clearTimeout(timer);
+      unsubscribe?.();
+      resolve(outcome);
+    };
+    const timer = setTimeout(() => settle('failed'), waitMs);
+    unsubscribe = update.onStatus((status) => {
+      if (status.phase === 'downloading' || status.phase === 'ready') settle('downloading');
+      else if (status.phase === 'up-to-date') settle('none');
+    });
+    update.check().then(
+      (started) => {
+        if (!started.ok) settle(started.reason === 'unavailable' ? 'unavailable' : 'failed');
+      },
+      () => settle('failed'),
+    );
+  });
 }

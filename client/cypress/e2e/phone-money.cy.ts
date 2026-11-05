@@ -2,6 +2,7 @@ import { MOCK_ACADEMY } from '../support/fixtures';
 import { stubToday } from '../support/today';
 import { VIEWPORT_PIXEL_8_PRO } from '../support/viewports';
 import { expectNoSidewaysScroll } from '../support/no-sideways-scroll';
+import { expectSpineClear } from '../support/athlete-identity';
 
 /**
  * «Soldi» on the phone (#2132, PRD § 6.1): who still has to pay this month,
@@ -115,6 +116,11 @@ describe('Soldi on the phone (#2132)', () => {
     });
   });
 
+  it('keeps the belt clear of the face on every row (#2191)', () => {
+    row(1).should('be.visible');
+    expectSpineClear();
+  });
+
   it('takes the row off once paid, and the undo puts it back', () => {
     cy.intercept('POST', '/api/v1/athletes/2/payments', {
       statusCode: 201,
@@ -142,6 +148,41 @@ describe('Soldi on the phone (#2132)', () => {
     cy.get('[data-cy="money-undo"]').should(($undo) => {
       expect($undo[0].getBoundingClientRect().height).to.be.at.least(48);
     });
+    cy.get('[data-cy="money-undo"]').click();
+    cy.wait('@undo');
+    row(2).should('be.visible');
+  });
+
+  it('lets the month off from the sheet, and the undo puts the row back (#2192)', () => {
+    cy.intercept('POST', '/api/v1/athletes/2/payments', (req) => {
+      expect(req.body).to.deep.equal({ year: 2026, month: 10, waived: true });
+      req.reply({
+        statusCode: 201,
+        body: {
+          data: {
+            id: 91,
+            athlete_id: 2,
+            year: 2026,
+            month: 10,
+            period_months: 1,
+            amount_cents: 0,
+            paid_at: '2026-10-01',
+            payment_method: null,
+            waived: true,
+          },
+        },
+      });
+    }).as('letOff');
+    cy.intercept('DELETE', '/api/v1/athletes/2/payments/2026/10', { statusCode: 204 }).as('undo');
+
+    row(2).click();
+    cy.get('[data-cy="pay-sheet-let-off"] button')
+      .should('contain.text', 'Let off: October free')
+      .click();
+    cy.wait('@letOff');
+
+    row(2).should('not.exist');
+    cy.contains('Free month for Bruno Rossi').should('be.visible');
     cy.get('[data-cy="money-undo"]').click();
     cy.wait('@undo');
     row(2).should('be.visible');

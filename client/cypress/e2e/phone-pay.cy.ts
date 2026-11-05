@@ -190,6 +190,37 @@ describe('The money at the mat (#2036)', () => {
     chip(1).should(reads('September'));
   });
 
+  it('lets the month off from the check-in, says so, and the undo takes it back (#2192)', () => {
+    cy.intercept('POST', '/api/v1/athletes/1/payments', {
+      statusCode: 201,
+      body: {
+        data: {
+          id: 92,
+          athlete_id: 1,
+          year: 2026,
+          month: 9,
+          period_months: 1,
+          amount_cents: 0,
+          paid_at: '2026-10-01',
+          payment_method: null,
+          waived: true,
+        },
+      },
+    }).as('letOff');
+    cy.intercept('DELETE', '/api/v1/athletes/1/payments/2026/9', { statusCode: 204 }).as('undo');
+
+    chip(1).find('button').click();
+    cy.get('[data-cy="pay-sheet-let-off"] button').should('contain.text', 'September free').click();
+    cy.wait('@letOff')
+      .its('request.body')
+      .should('deep.equal', { year: 2026, month: 9, waived: true });
+
+    cy.contains('Free month for').should('be.visible');
+    cy.get('[data-cy="attendance-undo"]').click();
+    cy.wait('@undo');
+    chip(1).should(reads('September'));
+  });
+
   it("prices a quarterly payer's whole quarter", () => {
     cy.intercept('POST', '/api/v1/athletes/2/payments', {
       statusCode: 201,

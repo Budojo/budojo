@@ -1,5 +1,6 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, Notification, type OpenDialogOptions, protocol, safeStorage, shell } from 'electron';
-import { randomBytes } from 'node:crypto';
+import { app, BrowserWindow, dialog, ipcMain, type IpcMainEvent, Menu, nativeTheme, Notification, type OpenDialogOptions, protocol, safeStorage, shell, type WebContents } from 'electron';
+import { randomBytes, randomUUID } from 'node:crypto';
+import { flushWithin, holdsCloseForFlush } from './close-flush.js';
 import { createWriteStream, existsSync, readFileSync } from 'node:fs';
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -293,7 +294,11 @@ function registerThemeBridge(): void {
   });
 }
 
-function createWindow(apiBase: string): BrowserWindow {
+function createWindow(
+  apiBase: string,
+  isQuitting: () => boolean,
+  note: (line: string) => void,
+): BrowserWindow {
   // What was on screen last run, or what the OS asks for on a first launch
   // (#1793). Read here rather than after boot because both values below are
   // consumed before any renderer exists — asking the SPA would be a frame too
@@ -346,6 +351,45 @@ function createWindow(apiBase: string): BrowserWindow {
   // Avoid the white flash before Angular paints.
   window.once('ready-to-show', () => window.show());
 
+  // Closing sends what waits (#2194): the page pushes a write five seconds
+  // after it, and a close within them left the write here until the next
+  // opening. The window goes at once; the app waits for the push, within
+  // FLUSH_ON_CLOSE_MS, then closes for real. Unless the owner opened Budojo
+  // again meanwhile (its icon, a notification): the window was shown, and
+  // stays. A close made while a push is still on its way (closed, opened again,
+  // saved, closed) asks for one more: the decision to close waits for the
+  // last. The window may be gone by then, as the app quits by another way.
+  let alreadyFlushed = false;
+  let flushing = false;
+  let closeAsked = false;
+  const flushThenClose = async (): Promise<void> => {
+    flushing = true;
+    while (closeAsked) {
+      closeAsked = false;
+      note(`close: ${await flushWithin(() => askPageToFlush(window.webContents))}`);
+      if (window.isDestroyed()) {
+        return;
+      }
+    }
+    flushing = false;
+    if (window.isVisible() && !isQuitting()) {
+      return;
+    }
+    alreadyFlushed = true;
+    window.close();
+  };
+  window.on('close', (event) => {
+    if (!holdsCloseForFlush({ alreadyFlushed, quitting: isQuitting() })) {
+      return;
+    }
+    event.preventDefault();
+    window.hide();
+    closeAsked = true;
+    if (!flushing) {
+      void flushThenClose();
+    }
+  });
+
   // A link to an external site opens in the user's browser. Letting it open a
   // new Electron window would hand a remote page a renderer inside the app.
   window.webContents.setWindowOpenHandler(({ url }) => {
@@ -374,6 +418,25 @@ function createWindow(apiBase: string): BrowserWindow {
   void window.loadURL(DEV ? DEV_URL : `${APP_ORIGIN}/`);
 
   return window;
+}
+
+/**
+ * Asks the page to run the sync once and waits for its answer (#2194). The
+ * preload always answers, whether or not anything was sent.
+ */
+function askPageToFlush(contents: WebContents): Promise<void> {
+  return new Promise((resolve) => {
+    const id = randomUUID();
+    const answered = (event: IpcMainEvent, answer: unknown): void => {
+      if (event.sender !== contents || answer !== id) {
+        return;
+      }
+      ipcMain.removeListener('budojo:sync:flushed', answered);
+      resolve();
+    };
+    ipcMain.on('budojo:sync:flushed', answered);
+    contents.send('budojo:sync:flush', id);
+  });
 }
 
 /**
@@ -717,6 +780,7 @@ async function startRuntime(): Promise<{
   const syncLog = new RotatingLog(path.join(layout.logsDir, 'sync.log'));
   syncLog.open();
   const sync: DesktopSync = {
+    note: (line) => syncLog.write(`${new Date().toISOString()} ${line}`),
     running: () => syncState.running,
     epoch: () => syncState.file?.epoch ?? 0,
     join: async () => {
@@ -772,6 +836,8 @@ interface DesktopSync {
   swapIn(): Promise<void>;
   /** A restore put the database back in time (Data & backup). */
   restored(): Promise<void>;
+  /** A line in `logs/sync.log`: what the close's last push came to (#2194). */
+  note(line: string): void;
 }
 
 /** None only when there is no file: one that is there and does not read is not "none". */
@@ -1514,6 +1580,9 @@ if (!gotTheLock) {
       if (existing.isMinimized()) {
         existing.restore();
       }
+      // Shown too: a close sending its last push hides the window first, and
+      // a shown window is how it knows to stay (#2194).
+      existing.show();
       existing.focus();
     }
   });
@@ -1577,12 +1646,12 @@ if (!gotTheLock) {
       return;
     }
 
-    createWindow(apiBase);
+    createWindow(apiBase, () => quitting, (line) => sync?.note(line));
 
     // macOS keeps the app alive with no windows; recreate on dock click.
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) {
-        createWindow(apiBase);
+        createWindow(apiBase, () => quitting, (line) => sync?.note(line));
       }
     });
   });

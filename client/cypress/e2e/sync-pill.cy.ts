@@ -101,6 +101,8 @@ describe('The sync pill (#2046)', () => {
       says: 'Update Budojo to sync',
       hint: 'goes once this one is updated',
       attention: true,
+      // Not «Sync now», which did nothing here (#2193).
+      action: 'Update Budojo',
     },
     {
       name: 'failed',

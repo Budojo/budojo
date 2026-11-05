@@ -1,6 +1,13 @@
 # API Documentation
 
-The complete contract for Budojo's `/api/v1` surface lives in [`v1.yaml`](./v1.yaml), written against **OpenAPI 3.0.3**.
+Two contracts, both **OpenAPI 3.0.3**, one per API:
+
+| File | API | Who calls it |
+|---|---|---|
+| [`v1.yaml`](./v1.yaml) | `/api/v1`, the app's API | the SPA's screens, on the PC and on the phone |
+| [`ai-v1.yaml`](./ai-v1.yaml) | `/api/ai/v1`, the AI API (M13, #2174) | the chat panel, for the local model; desktop only, read-only. Its naming rules open the file |
+
+They share the domain underneath, never a route: a change the model proposes is made through `/api/v1` once the owner confirms. The PRD is [`docs/specs/m13-assistant.md`](../specs/m13-assistant.md).
 
 ## Viewing the spec
 
@@ -31,7 +38,7 @@ A Postman collection with pre-configured auth helpers also exists at `postman/bu
 Spectral runs in CI on every PR via the `🔬 OpenAPI Lint (Spectral)` job (see `.github/workflows/pr-checks.yml`). To run the same check locally:
 
 ```bash
-npx -y @stoplight/spectral-cli@6 lint docs/api/v1.yaml
+npx -y @stoplight/spectral-cli@6 lint docs/api/v1.yaml docs/api/ai-v1.yaml
 ```
 
 (Pinned to major `6` to match the CI invocation — avoids "works locally, fails in CI" on future Spectral releases.)
@@ -47,7 +54,7 @@ If the lint fails, fix the spec — don't disable the rule unless there's a spec
 
 ## Update discipline
 
-Any PR that changes a route, a request or response shape, a query parameter, a status code, or introduces a new endpoint must update `v1.yaml` in the same PR. Rule enforced by `CLAUDE.md` §"Documentation discipline" and by the CI Spectral job.
+Any PR that changes a route, a request or response shape, a query parameter, a status code, or introduces a new endpoint must update the contract of its API (`v1.yaml` or `ai-v1.yaml`) in the same PR. In `ai-v1.yaml` every response keeps an `example`: the go / no-go (#2178) runs its stub tools from them. Rule enforced by `CLAUDE.md` §"Documentation discipline" and by the CI Spectral job.
 
 ## OpenAPI version choice
 

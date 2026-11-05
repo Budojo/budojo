@@ -166,6 +166,18 @@ export class MatMoney {
       );
   }
 
+  /**
+   * Let the athlete off `option`'s month (#2192): one month, whatever period
+   * they pay by, as the athlete's page does (#2167). Taken back with `undo`,
+   * like a payment.
+   */
+  letOff(athlete: Athlete, option: PayOption): Observable<RecordedPayment> {
+    const { year, month: m } = yearMonthOf(option.month);
+    return this.payments
+      .waive(athlete.id, year, m)
+      .pipe(tap(() => this.markHere(athlete.id, [option.month], true)));
+  }
+
   /** Take back a payment this screen recorded. */
   undo(athlete: Athlete, payment: AthletePayment): Observable<void> {
     const month = `${payment.year}-${String(payment.month).padStart(2, '0')}`;

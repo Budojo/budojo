@@ -3,6 +3,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   ElementRef,
   inject,
   Injector,
@@ -13,10 +14,11 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ButtonModule } from 'primeng/button';
 import { Popover, PopoverModule } from 'primeng/popover';
 import { Router } from '@angular/router';
+import { PhoneUpdateService } from '../../../core/mobile/phone-update.service';
 import { LanguageService } from '../../../core/services/language.service';
 import { AskChoice } from '../../../core/sync/engine';
 import { VersionRef } from '../../../core/sync/layout';
-import { SyncService, SyncState } from '../../../core/sync/sync.service';
+import { SyncService, SyncState, UpdateOutcome } from '../../../core/sync/sync.service';
 import { localeFor } from '../../utils/locale';
 
 /** The states quiet enough for «N da decidere» to show over them. */
@@ -57,11 +59,48 @@ export class SyncPillComponent {
   private readonly router = inject(Router);
   private readonly translate = inject(TranslateService);
   private readonly language = inject(LanguageService);
+  private readonly phoneUpdate = inject(PhoneUpdateService);
 
   protected readonly state = this.sync.state;
   protected readonly busy = signal(false);
+  /** What the PC's «Aggiorna Budojo» came to, under the button; gone when the state moves. */
+  protected readonly updateNote = signal<string | null>(null);
   private readonly injector = inject(Injector);
   private readonly consequence = viewChild<ElementRef<HTMLElement>>('consequence');
+
+  constructor() {
+    // The phone's link to the APK comes from GitHub, asked once per launch:
+    // usually Oggi asked already; a launch straight into the check-in has not.
+    effect(() => {
+      if (this.state().kind === 'update') {
+        this.phoneUpdate.check();
+      } else {
+        this.updateNote.set(null);
+      }
+    });
+  }
+
+  /**
+   * The detail's one action, by state: «Sincronizza ora», «Ricollega Google»
+   * when Google let go, «Aggiorna Budojo» when the other device runs a newer
+   * one (#2193). A sync there would only be refused again: the button did
+   * nothing, and the owner tapped it.
+   */
+  protected readonly action = computed<{ key: string; icon: string }>(() => {
+    switch (this.state().kind) {
+      case 'reconnect':
+        return { key: 'sync.reconnect', icon: 'pi pi-link' };
+      case 'update':
+        return { key: 'sync.updateNow', icon: 'pi pi-download' };
+      default:
+        return { key: 'sync.now', icon: 'pi pi-sync' };
+    }
+  });
+
+  /** On the phone, the update is an APK to download: a link, as Oggi's notice (#2041). */
+  protected readonly updateLink = computed<string | null>(() =>
+    this.state().kind === 'update' ? this.phoneUpdate.link() : null,
+  );
 
   /**
    * The owner's pick when the sync asked, until they confirm it, with the
@@ -201,8 +240,12 @@ export class SyncPillComponent {
     }
     this.busy.set(true);
     try {
-      if (this.state().kind === 'reconnect') {
+      const kind = this.state().kind;
+      if (kind === 'reconnect') {
         await this.sync.reconnect();
+      } else if (kind === 'update') {
+        const outcome = await this.sync.update();
+        this.updateNote.set(outcome === 'installing' ? null : UPDATE_NOTES[outcome]);
       } else {
         await this.sync.syncNow();
       }
@@ -235,6 +278,14 @@ export class SyncPillComponent {
     }).format(new Date(at));
   }
 }
+
+/** What the PC's update came to, by key: listed, so the parity check sees every one (#2193). */
+const UPDATE_NOTES: Record<Exclude<UpdateOutcome, 'installing'>, string> = {
+  downloading: 'sync.updateOutcome.downloading',
+  none: 'sync.updateOutcome.none',
+  unavailable: 'sync.updateOutcome.unavailable',
+  failed: 'sync.updateOutcome.failed',
+};
 
 /** The translation key of each state with a fixed sentence: listed, so the parity check sees every one. */
 const KEYS: Record<SyncState['kind'], string> = {

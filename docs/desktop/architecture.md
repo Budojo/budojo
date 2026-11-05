@@ -50,6 +50,7 @@ Everything the renderer needs beyond HTTP is on `window.__BUDOJO__` (typed in `c
 | `platform` | read | `process.platform` of the host. |
 | `shellSecret` | read (sync, once) | The launch's shell secret ([#2032](https://github.com/Budojo/budojo/issues/2032)): `POST /device/session` opens the owner's session with it, with no password, after the sync swapped the phone's database in. Made per launch, handed to PHP as `BUDOJO_SHELL_SECRET`, written nowhere. |
 | `sync.{identity,driveFetch,swapIn}` | renderer → main (async) | The sync between the owner's devices ([#2032](https://github.com/Budojo/budojo/issues/2032)), § Sync below. |
+| `sync.onClose(handler)` | main → renderer → main | What the page runs as the window closes ([#2194](https://github.com/Budojo/budojo/issues/2194)): the last push. The main process sends `budojo:sync:flush`, and the preload always answers `budojo:sync:flushed`, whether or not anything was sent. |
 | `onNavigate(cb)` | main → renderer | A clicked native toast asks the SPA to route somewhere ([#1225](https://github.com/Budojo/budojo/issues/1225)). In-app paths only; the renderer still owns routing. |
 | `token.{get,set,clear}` | renderer ↔ main (sync) | The Sanctum bearer token, held encrypted in the OS keychain by the main process ([#1227](https://github.com/Budojo/budojo/issues/1227)). `get()` is synchronous so the HTTP interceptor can read it inline. |
 | `backup.{list,run,restore,restoreFromFile}` | renderer → main (async) | Local backup & restore ([#1228](https://github.com/Budojo/budojo/issues/1228)). `restoreFromFile` takes no argument: the main process opens the system file dialog and restores what it returns ([#1909](https://github.com/Budojo/budojo/issues/1909)). See [`backup-restore.md`](./backup-restore.md). |
@@ -154,6 +155,13 @@ The academy's two devices meet in the owner's Google Drive ([M12](../specs/m12-m
   - **A swap that fails with the database still staged ends the app,** as a failed start does: the page already counts the new version as in, and serving the old database would publish it over the other device's work. The next start finishes the swap.
   - **One stop of the server at a time:** the swap and a Restore share a lock, and a Restore is refused while a database the sync staged waits, looked at again once PHP is stopped.
 - **After a swap the page opens the owner's session again** through the shell's secret (`/device/session`). The database swapped in is the phone's, which holds none of this PC's sessions. While the sync swaps, the page's requests wait (`WriteGate`); one sent with the token from before is sent once more with the new one (`authInterceptor`).
+- **Closing sends what waits** ([#2194](https://github.com/Budojo/budojo/issues/2194)). The page pushes a write five seconds after it, and a close within them left the write here until the next opening.
+  - The window's first `close` is held, and the window hides at once.
+  - The page waits for a save still on its way. Then it lets a running round finish, and runs one only for a write no round has carried yet: a retry or a look is the next opening's.
+  - Opening Budojo again meanwhile (its icon, a notification) shows the window, and the close is called off.
+  - What the close came to (`sent`, `timeout`, `failed`) goes to `logs/sync.log`.
+  - The window then closes for real, within `FLUSH_ON_CLOSE_MS` (10 s, `close-flush.ts`). A slow or absent network never keeps Budojo open: what did not go, goes at the next opening.
+  - A quit already under way (the updater's install, the quit's second pass) closes at once: by then the server is stopping.
 - **A Restore (Data & backup) moves the database's epoch on,** and the page forgets what it remembered of the database before (`ledger-store.ts`): the protocol meets the restored database as an academy of its own, which asks (protocol § Scope). A Restore is refused while a database the sync staged waits to be swapped in.
 
 The PC made the academy's keys, so **it publishes its gym as version 1** into an empty folder; the phone, which joined with them, waits for it. The state is the pill at the foot of the side rail, as in the phone's topbar (PRD § 6.2). Its log is `logs/sync.log`.

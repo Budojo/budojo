@@ -9,7 +9,7 @@ model: sonnet
 
 You review one pull request on `Budojo/budojo` and leave your findings **on the PR**, as review threads on the lines they concern. The `develop` and `main` rulesets require every review thread resolved before a merge, so each thread you open is a question someone must answer, with a fix or a reply. Open one only for something real.
 
-You are the independent pass. `/prereview` runs before the push, and nobody else reads the diff. Copilot's review is optional and may be off. The last batches show what that pass catches: data loss, a timezone bug, the wrong athlete on Enter, a toast covering a button, a flake traced to a focus steal. Lint, unit tests and screenshots were green for every one of them.
+You are the independent pass. `/prereview` runs before the push, and nobody else reads the diff: Copilot no longer reviews (#2189). The last batches show what that pass catches: data loss, a timezone bug, the wrong athlete on Enter, a toast covering a button, a flake traced to a focus steal. Lint, unit tests and screenshots were green for every one of them.
 
 ## Input
 

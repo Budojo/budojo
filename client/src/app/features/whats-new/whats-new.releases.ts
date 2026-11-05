@@ -60,6 +60,55 @@ export function localised(value: Localised, lang: string): string {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.81.0',
+    date: '2026-11-05',
+    headline: {
+      en: 'A free month can be given from the payment sheet on the phone too. The PC no longer closes leaving behind what you just saved, and the sync leads you to the update when one is needed.',
+      it: "Il mese gratis si dà anche dal foglio di pagamento sul telefono. Il PC non si chiude più lasciando indietro le modifiche appena fatte, e la sincronizzazione ti porta all'aggiornamento quando serve.",
+    },
+    sections: [
+      {
+        heading: { en: 'Payments', it: 'Pagamenti' },
+        bullets: [
+          {
+            en: '"Let off: October free" is now on the "Payment" sheet too, the one that opens from Money and from the check-in, beneath "Record". It lets off one month only, for a quarterly payer too, and the message that appears takes it back, as for a payment.',
+            it: '«Non lo paga: ottobre gratis» è ora anche nel foglio «Pagamento», quello che si apre da Soldi e dal check-in, sotto «Registra». Abbona un solo mese, anche a chi paga a trimestre, e si annulla dal messaggio che compare, come un pagamento.',
+          },
+          {
+            en: 'The message says what happened: "Free month for Fabio Sdringola", or "already had this month free" when the PC had marked it.',
+            it: 'Il messaggio dice cosa è successo: «Mese gratis per Fabio Sdringola», oppure «aveva già questo mese gratis» se era già stato segnato sul PC.',
+          },
+        ],
+      },
+      {
+        heading: { en: 'Sync', it: 'Sincronizzazione' },
+        bullets: [
+          {
+            en: 'Closing Budojo on the PC first sends what you just saved. Before, a close within a few seconds of a save left the phone without it until the PC opened again. The window goes at once, and Budojo waits for the send for 10 seconds at most.',
+            it: "Chiudere Budojo sul PC invia prima quello che hai appena salvato. Prima, se chiudevi entro pochi secondi da un salvataggio, il telefono lo vedeva solo alla riapertura del PC. La finestra sparisce subito, e Budojo aspetta l'invio al massimo 10 secondi.",
+          },
+          {
+            en: 'When the other device runs a newer Budojo, the sync pill offers "Update Budojo". It used to offer "Sync now", which did nothing. On the phone it leads to the download; on the PC it starts the update and tells you how it went.',
+            it: "Quando l'altro dispositivo ha un Budojo più nuovo, la pillola della sincronizzazione offre «Aggiorna Budojo». Prima offriva «Sincronizza ora», che non faceva niente. Sul telefono porta al download dell'aggiornamento; sul PC avvia l'aggiornamento e ti dice com'è andata.",
+          },
+        ],
+      },
+      {
+        heading: { en: 'Screens', it: 'Schermate' },
+        bullets: [
+          {
+            en: 'In Money and in the arrears under Stats, the belt stripe no longer touches the avatar.',
+            it: "In Soldi e negli arretrati delle Statistiche, la striscia della cintura non tocca più l'avatar.",
+          },
+          {
+            en: 'On the phone\'s check-in, the age no longer breaks onto two lines ("19 / y") and stays in one column, beside a long name too.',
+            it: "Nel check-in sul telefono, l'età non va più a capo («19 / anni») e sta sempre in colonna, anche accanto a un nome lungo.",
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.80.0',
     date: '2026-10-26',
     headline: {
