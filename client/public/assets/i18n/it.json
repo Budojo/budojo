@@ -2028,12 +2028,16 @@
           "months": "Mese da pagare",
           "none": "Non deve niente: il pagamento è già registrato.",
           "record": "Registra {{amount}} · {{method}}",
-          "error": "Pagamento non registrato. Riprova."
+          "error": "Pagamento non registrato. Riprova.",
+          "letOff": "Non lo paga: {{month}} gratis",
+          "letOffError": "Mese gratis non registrato. Riprova."
         },
         "toast": {
           "recorded": "Pagamento di {{name}} registrato",
           "already": "Il pagamento di {{name}} era già registrato",
-          "undoError": "Non sono riuscito ad annullare il pagamento."
+          "undoError": "Non sono riuscito ad annullare il pagamento.",
+          "letOff": "Mese gratis per {{name}}",
+          "alreadyLetOff": "{{name}} aveva già questo mese gratis"
         }
       },
       "newPerson": {
@@ -3922,6 +3926,13 @@
       },
       "topicsOne": "1 argomento",
       "topicsOther": "{{count}} argomenti"
+    },
+    "updateNow": "Aggiorna Budojo",
+    "updateOutcome": {
+      "downloading": "Sto scaricando l'aggiornamento: lo vedi in alto, e al riavvio si installa.",
+      "none": "Per questo PC non c'è ancora un Budojo più nuovo. Riprova più tardi.",
+      "unavailable": "Questa versione di Budojo non si aggiorna da sola: scarica l'ultima dalla pagina delle release.",
+      "failed": "Il controllo degli aggiornamenti non è riuscito. Riprova."
     }
   },
   "lock": {

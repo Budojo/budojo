@@ -22,7 +22,11 @@ import { monthKey } from '../../shared/utils/months';
 import { MatMoney } from '../attendance/daily/pay/mat-money';
 import { MoneyRow } from '../attendance/daily/pay/money-rows';
 import { monthOf, yearMonthOf } from '../attendance/daily/pay/pay-chip';
-import { PayRecorded, PaySheetComponent } from '../attendance/daily/pay/pay-sheet.component';
+import {
+  PayRecorded,
+  PaySheetComponent,
+  recordedToastKey,
+} from '../attendance/daily/pay/pay-sheet.component';
 
 /** How many active athletes the list reads: the server's cap, as the check-in. */
 const ROSTER_SIZE = 200;
@@ -196,14 +200,14 @@ export class MoneyComponent implements OnInit {
     if (!created) {
       this.messageService.add({
         severity: 'info',
-        summary: this.translate.instant('attendance.daily.pay.toast.already', { name }),
+        summary: this.translate.instant(recordedToastKey({ payment, created }), { name }),
         life: 4000,
       });
       return;
     }
     this.messageService.add({
       severity: 'success',
-      summary: this.translate.instant('attendance.daily.pay.toast.recorded', { name }),
+      summary: this.translate.instant(recordedToastKey({ payment, created }), { name }),
       data: {
         undo: () =>
           this.money.undo(athlete, payment).subscribe({

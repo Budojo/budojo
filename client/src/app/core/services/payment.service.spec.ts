@@ -1,7 +1,12 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { PaymentService, AthletePayment, AthletePaymentYear } from './payment.service';
+import {
+  PaymentService,
+  AthletePayment,
+  AthletePaymentYear,
+  RecordedPayment,
+} from './payment.service';
 import { environment } from '../../../environments/environment';
 
 describe('PaymentService (#182)', () => {
@@ -114,8 +119,8 @@ describe('PaymentService (#182)', () => {
   });
 
   it('waive lets the athlete off the month: only the month and the word go on the wire (#2167)', () => {
-    let actual: AthletePayment | null = null;
-    service.waive(42, 2026, 10).subscribe((p) => (actual = p));
+    let actual: RecordedPayment | null = null;
+    service.waive(42, 2026, 10).subscribe((r) => (actual = r));
 
     const req = httpMock.expectOne(`${base}/42/payments`);
     expect(req.request.method).toBe('POST');
@@ -129,9 +134,9 @@ describe('PaymentService (#182)', () => {
       paid_at: '2026-10-26T00:00:00Z',
       waived: true,
     };
-    req.flush({ data: waived });
+    req.flush({ data: waived }, { status: 201, statusText: 'Created' });
 
-    expect(actual).toEqual(waived);
+    expect(actual).toEqual({ payment: waived, created: true });
   });
 
   it('unmarkPaid DELETEs /athletes/{id}/payments/{year}/{month} and emits void on 204', () => {

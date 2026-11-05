@@ -2028,12 +2028,16 @@
           "months": "Month to pay",
           "none": "Nothing owed: the payment is already recorded.",
           "record": "Record {{amount}} · {{method}}",
-          "error": "The payment was not recorded. Try again."
+          "error": "The payment was not recorded. Try again.",
+          "letOff": "Let off: {{month}} free",
+          "letOffError": "The free month was not recorded. Try again."
         },
         "toast": {
           "recorded": "{{name}}'s payment recorded",
           "already": "{{name}}'s payment was already recorded",
-          "undoError": "Couldn't undo the payment."
+          "undoError": "Couldn't undo the payment.",
+          "letOff": "Free month for {{name}}",
+          "alreadyLetOff": "{{name}} already had this month free"
         }
       },
       "newPerson": {
@@ -3922,6 +3926,13 @@
       },
       "topicsOne": "1 topic",
       "topicsOther": "{{count}} topics"
+    },
+    "updateNow": "Update Budojo",
+    "updateOutcome": {
+      "downloading": "Downloading the update: it shows at the top, and installs on restart.",
+      "none": "There is no newer Budojo for this PC yet. Try again later.",
+      "unavailable": "This Budojo does not update itself: download the latest from the releases page.",
+      "failed": "The update check did not go through. Try again."
     }
   },
   "lock": {

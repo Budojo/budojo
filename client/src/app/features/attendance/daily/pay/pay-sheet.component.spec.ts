@@ -6,7 +6,7 @@ import { provideRouter } from '@angular/router';
 import { provideI18nTesting } from '../../../../../test-utils/i18n-test';
 import { Athlete } from '../../../../core/services/athlete.service';
 import { MatMoney } from './mat-money';
-import { PayRecorded, PaySheetComponent } from './pay-sheet.component';
+import { PayRecorded, PaySheetComponent, recordedToastKey } from './pay-sheet.component';
 
 const athlete = (over: Partial<Athlete> = {}): Athlete =>
   ({
@@ -74,6 +74,8 @@ function open(fixture: ReturnType<typeof setup>['fixture'], who: Athlete, month:
 const sheet = (): HTMLElement | null => document.body.querySelector('.p-dialog');
 const recordButton = (): HTMLButtonElement =>
   document.body.querySelector('[data-cy="pay-sheet-record"] button') as HTMLButtonElement;
+const letOffButton = (): HTMLButtonElement =>
+  document.body.querySelector('[data-cy="pay-sheet-let-off"] button') as HTMLButtonElement;
 const radio = (month: string): HTMLInputElement =>
   document.body.querySelector(`[data-cy="pay-sheet-month-${month}"] input`) as HTMLInputElement;
 
@@ -145,6 +147,128 @@ describe('PaySheetComponent', () => {
     expect(recorded).toHaveLength(1);
     expect(recorded[0].payment).toEqual(paid);
     expect(recorded[0].created).toBe(true);
+  });
+
+  it("lets the picked month off, with no money, and hands it back for the host's undo (#2192)", async () => {
+    const { fixture, http, recorded } = setup();
+    open(fixture, athlete(), '2026-08');
+    http
+      .expectOne((r) => r.url.endsWith('/athletes/7/payments'))
+      .flush({ data: [], overdue_months: ['2026-08'] });
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(letOffButton().textContent).toContain('Let off: August free');
+    letOffButton().click();
+    const post = http.expectOne((r) => r.method === 'POST');
+    expect(post.request.body).toEqual({ year: 2026, month: 8, waived: true });
+    const waived = {
+      id: 4,
+      athlete_id: 7,
+      year: 2026,
+      month: 8,
+      period_months: 1,
+      amount_cents: 0,
+      paid_at: '2026-10-03',
+      payment_method: null,
+      waived: true,
+    };
+    post.flush({ data: waived }, { status: 201, statusText: 'Created' });
+
+    expect(recorded).toHaveLength(1);
+    expect(recorded[0].payment).toEqual(waived);
+    expect(recorded[0].created).toBe(true);
+    expect(recordedToastKey(recorded[0])).toBe('attendance.daily.pay.toast.letOff');
+  });
+
+  it('offers no let-off with no month to name: not while loading, not when nothing is owed', async () => {
+    const { fixture, http } = setup();
+    open(fixture, athlete(), '2026-10');
+    expect(document.body.querySelector('[data-cy="pay-sheet-let-off"]')).toBeNull();
+
+    // October paid on the PC, nothing behind: nothing owed.
+    http
+      .expectOne((r) => r.url.endsWith('/athletes/7/payments'))
+      .flush({
+        data: [
+          {
+            id: 5,
+            athlete_id: 7,
+            year: 2026,
+            month: 10,
+            period_months: 1,
+            amount_cents: 6000,
+            paid_at: '2026-10-02',
+            payment_method: 'cash',
+          },
+        ],
+        overdue_months: [],
+      });
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(document.body.querySelector('[data-cy="pay-sheet-none"]')).not.toBeNull();
+    expect(document.body.querySelector('[data-cy="pay-sheet-let-off"]')).toBeNull();
+  });
+
+  it('spins the let-off, not «Record», while the month goes', async () => {
+    const { fixture, http } = setup();
+    open(fixture, athlete(), '2026-08');
+    http
+      .expectOne((r) => r.url.endsWith('/athletes/7/payments'))
+      .flush({ data: [], overdue_months: ['2026-08'] });
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    letOffButton().click();
+    fixture.detectChanges();
+    const spinning = (cy: string) =>
+      document.body.querySelector(
+        `[data-cy="${cy}"] .p-button-loading-icon, [data-cy="${cy}"] .p-button-loading`,
+      ) !== null;
+    expect(spinning('pay-sheet-let-off')).toBe(true);
+    expect(spinning('pay-sheet-record')).toBe(false);
+    expect(recordButton().disabled).toBe(true);
+    http.expectOne((r) => r.method === 'POST');
+  });
+
+  it("lets a quarterly payer off the picked quarter's first month only", async () => {
+    const { fixture, http } = setup();
+    open(fixture, athlete({ billing_period_months: 3 }), '2026-08');
+    http
+      .expectOne((r) => r.url.endsWith('/athletes/7/payments'))
+      .flush({ data: [], overdue_months: ['2026-08'] });
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(letOffButton().textContent).toContain('Let off: August free');
+    letOffButton().click();
+    expect(http.expectOne((r) => r.method === 'POST').request.body).toEqual({
+      year: 2026,
+      month: 8,
+      waived: true,
+    });
+  });
+
+  it('says so in its own words when the month is not let off', async () => {
+    const { fixture, http, recorded } = setup();
+    open(fixture, athlete(), '2026-08');
+    http
+      .expectOne((r) => r.url.endsWith('/athletes/7/payments'))
+      .flush({ data: [], overdue_months: ['2026-08'] });
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    letOffButton().click();
+    http
+      .expectOne((r) => r.method === 'POST')
+      .flush({ message: 'x' }, { status: 422, statusText: 'Unprocessable' });
+    fixture.detectChanges();
+
+    expect(recorded).toHaveLength(0);
+    expect(document.body.querySelector('[data-cy="pay-sheet-error"]')?.textContent).toContain(
+      'The free month was not recorded',
+    );
+    expect(sheet()).not.toBeNull();
   });
 
   it('cannot be dismissed while the payment is on its way', async () => {
@@ -288,5 +412,31 @@ describe('PaySheetComponent', () => {
       (el) => el.getAttribute('data-cy'),
     );
     expect(months).toEqual(['pay-sheet-month-2026-10']);
+  });
+});
+
+describe('recordedToastKey (#2192)', () => {
+  it('names the toast by what the server holds: a payment or a month off, new or already there', () => {
+    const row = {
+      id: 1,
+      athlete_id: 7,
+      year: 2026,
+      month: 8,
+      amount_cents: 0,
+      paid_at: '2026-10-03',
+    };
+    expect(recordedToastKey({ payment: { ...row, waived: true }, created: true })).toBe(
+      'attendance.daily.pay.toast.letOff',
+    );
+    expect(recordedToastKey({ payment: { ...row, waived: true }, created: false })).toBe(
+      'attendance.daily.pay.toast.alreadyLetOff',
+    );
+    expect(recordedToastKey({ payment: row, created: true })).toBe(
+      'attendance.daily.pay.toast.recorded',
+    );
+    // A let-off the PC had already paid: the server's row is the payment.
+    expect(recordedToastKey({ payment: row, created: false })).toBe(
+      'attendance.daily.pay.toast.already',
+    );
   });
 });

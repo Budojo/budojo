@@ -69,20 +69,44 @@
         />
       </div>
 
-      @if (failed()) {
+      @if (failed(); as answer) {
         <p class="pay-sheet__error" role="alert" data-cy="pay-sheet-error">
-          {{ 'attendance.daily.pay.sheet.error' | translate }}
+          {{
+            (answer === 'letOff'
+              ? 'attendance.daily.pay.sheet.letOffError'
+              : 'attendance.daily.pay.sheet.error'
+            ) | translate
+          }}
         </p>
       }
 
       <p-button
         [fluid]="true"
         [label]="recordLabel()"
-        [loading]="saving()"
-        [disabled]="picked() === null"
+        [loading]="sending() === 'record'"
+        [disabled]="picked() === null || saving()"
         (onClick)="submit()"
         data-cy="pay-sheet-record"
       />
+
+      <!--
+        The month's other answer (#2192), as on the athlete's page (#2167): let
+        off, no money. Only with a month to name: while the months load, or
+        with nothing owed, it would be a bare gift with no words.
+      -->
+      @if (picked() !== null) {
+        <p-button
+          [fluid]="true"
+          [text]="true"
+          severity="secondary"
+          icon="pi pi-gift"
+          [label]="letOffLabel()"
+          [loading]="sending() === 'letOff'"
+          [disabled]="saving()"
+          (onClick)="letOff()"
+          data-cy="pay-sheet-let-off"
+        />
+      }
     </div>
   }
 </p-dialog>

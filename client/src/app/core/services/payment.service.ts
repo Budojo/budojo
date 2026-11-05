@@ -197,16 +197,22 @@ export class PaymentService {
   /**
    * Let the athlete off one month (#2167): not paid, and not owed. The server
    * records it at €0 with no method, dated today; undone like a payment,
-   * with `unmarkPaid`.
+   * with `unmarkPaid`. Like `record`, it says whether this call created the
+   * row: one the server already held is not the caller's to undo (#2192).
    */
-  waive(athleteId: number, year: number, month: number): Observable<AthletePayment> {
+  waive(athleteId: number, year: number, month: number): Observable<RecordedPayment> {
     return this.http
-      .post<AthletePaymentResponse>(`${this.base}/${athleteId}/payments`, {
-        year,
-        month,
-        waived: true,
-      })
-      .pipe(map((res) => res.data));
+      .post<AthletePaymentResponse>(
+        `${this.base}/${athleteId}/payments`,
+        { year, month, waived: true },
+        { observe: 'response' },
+      )
+      .pipe(
+        map((res) => ({
+          payment: (res.body as AthletePaymentResponse).data,
+          created: res.status === 201,
+        })),
+      );
   }
 
   /**
