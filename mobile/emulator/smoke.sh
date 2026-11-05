@@ -77,10 +77,23 @@ server_keys() {
 
 app_files() { "$ADB" shell ls "$FILES" | tr -d '\r'; }
 
+# The app keys the server runs with, as a release before #2134 kept them in
+# secrets.json.
+server_secrets_json() {
+  local env app doc
+  env=$(server_env) || return 1
+  app=$(printf '%s\n' "$env" | sed -n 's/^APP_KEY=//p')
+  doc=$(printf '%s\n' "$env" | sed -n 's/^DOCUMENT_ENCRYPTION_KEY=//p')
+  [ -n "$app" ] && [ -n "$doc" ] || return 1
+  printf '{"v":1,"APP_KEY":"%s","DOCUMENT_ENCRYPTION_KEY":"%s"}' "$app" "$doc"
+}
+
 # A key file in plain text, as a release before #2134 kept it, owned as the
-# app owns its own: its user, mode and SELinux label, copied from secrets.json.
+# app owns its own: its user, mode and SELinux label, copied from the app's
+# keys (secrets.json, or its sealed file on a release from #2134 on).
 plain_key_file() {
   local ref="$FILES/secrets.json" file="$FILES/$1"
+  "$ADB" shell test -f "$ref" || ref="$FILES/secrets.json.sealed"
   printf '%s' "$2" | "$ADB" shell "cat > $file"
   "$ADB" shell "chown \$(stat -c %u:%g $ref) $file && chmod \$(stat -c %a $ref) $file && chcon \$(ls -Z $ref | cut -d' ' -f1) $file"
 }
@@ -122,9 +135,25 @@ if [ -n "$PREVIOUS" ]; then
   wait_for "Sign in with Google\|Unlock Budojo" 600 || fail "the previous release never opened"
   shot "00-previous"
   BEFORE=$(server_keys) || fail "the previous release runs no server"
+  if "$ADB" shell test -f "$FILES/secrets.json"; then
+    PREVIOUS_KEYS=$("$ADB" shell cat "$FILES/secrets.json" | tr -d '\r')
+  else
+    # The previous release seals its keys already (#2134, from v2.80.0), and
+    # an upgrade test reading them in plain text broke the day it shipped
+    # (#2188). A phone still on a release before it holds them in plain text:
+    # that phone is made here from the keys the server runs with, so the
+    # update keeps proving the migration, sealed keys and all. One difference
+    # stays: the Keystore key `budojo-keys` is still there, which a phone from
+    # before v2.80.0 never had, and adb cannot remove it without wiping the
+    # app. So this pass seals under an existing key; the fresh install below
+    # is the one that makes the key.
+    PREVIOUS_KEYS=$(server_secrets_json) || fail "could not read the previous release's keys"
+    "$ADB" shell am force-stop "$PACKAGE"
+    plain_key_file secrets.json "$PREVIOUS_KEYS" || fail "could not place secrets.json"
+    "$ADB" shell rm -f "$FILES/secrets.json.sealed" "$FILES/secrets.previous.json.sealed" "$FILES/sync.json.sealed"
+  fi
   # The owner's phone also holds the pair it made before adopting the
   # academy's, and its place in the sync: both in plain text until #2134.
-  PREVIOUS_KEYS=$("$ADB" shell cat "$FILES/secrets.json" | tr -d '\r')
   plain_key_file secrets.previous.json "$PREVIOUS_KEYS" || fail "could not place secrets.previous.json"
   plain_key_file sync.json '{"v":1,"device":"phoneci01","folder":"0123456789abcdef0123456789abcdef","syncKey":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="}' \
     || fail "could not place sync.json"
