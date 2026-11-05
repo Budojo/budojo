@@ -127,7 +127,7 @@ The automated post-push reviewer was retired in #1234 — it cost a paid API key
   Sonnet by default; `--deep` (Opus) for an engine, money, security or migration diff.
 - **`/prereview`** is optional: a pre-push read of a large diff, reported in the session only.
 - Merge once CI is green **and every review thread is resolved**. The `develop` and `main` rulesets require it: a PR with every check green and one open thread reads `BLOCKED`. Read the threads — they have been real — fix or answer, then resolve.
-- Copilot's code review is optional. Its quota ran out once (Sep 2026) and the owner would rather not depend on it; when it posts, its threads are read like any other.
+- **Copilot does not review Budojo's PRs** (#2189, Nov 2026): don't request it and don't wait for it.
 - The PR body still matters: it is the record of why a change looks the way it does.
 
 ---
