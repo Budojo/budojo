@@ -3923,7 +3923,13 @@
       "topicsOne": "1 argomento",
       "topicsOther": "{{count}} argomenti"
     },
-    "updateNow": "Aggiorna Budojo"
+    "updateNow": "Aggiorna Budojo",
+    "updateOutcome": {
+      "downloading": "Sto scaricando l'aggiornamento: lo vedi in alto, e al riavvio si installa.",
+      "none": "Per questo PC non c'è ancora un Budojo più nuovo. Riprova più tardi.",
+      "unavailable": "Questa versione di Budojo non si aggiorna da sola: scarica l'ultima dalla pagina delle release.",
+      "failed": "Il controllo degli aggiornamenti non è riuscito. Riprova."
+    }
   },
   "lock": {
     "title": "Budojo è bloccato",

@@ -113,6 +113,11 @@
             (onClick)="act()"
             data-cy="sync-detail-action"
           />
+          @if (updateNote(); as note) {
+            <p class="sync-detail__hint" role="status" data-cy="sync-detail-update-note">
+              {{ note | translate }}
+            </p>
+          }
         }
       }
     </div>

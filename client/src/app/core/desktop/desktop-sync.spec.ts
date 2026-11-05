@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { stubBridge } from '../../../test-utils/bridge-test';
 import { buffer, fromUtf8, utf8 } from '../sync/bytes';
-import { bridgeFetcher, desktopSyncPlatform } from './desktop-sync';
+import { bridgeFetcher, desktopSyncPlatform, updateThePc } from './desktop-sync';
 
 /** The PC's side of the sync (#2032): Drive through the main process, the swap by its restart. */
 describe('the PC’s sync platform', () => {
@@ -100,25 +100,59 @@ describe('the PC’s sync platform', () => {
     expect(link).toHaveBeenCalledTimes(1);
   });
 
-  it('updates through the PC’s own updater: installs a download that is ready, else checks (#2193)', async () => {
-    const installNow = vi.fn(async () => ({ ok: true }));
-    const check = vi.fn(async () => ({ ok: true }));
-    const ready = desktopSyncPlatform(
-      stubBridge({
-        update: { status: async () => ({ phase: 'ready', version: '2.81.0' }), installNow, check },
-      }),
-      async () => undefined,
-    );
-    await ready.update?.();
-    expect(installNow).toHaveBeenCalledTimes(1);
-    expect(check).not.toHaveBeenCalled();
+  describe('the PC’s update from the pill (#2193)', () => {
+    type Status = Parameters<Parameters<BudojoBridge['update']['onStatus']>[0]>[0];
+    function updater(start: Status, check: BudojoBridge['update']['check']) {
+      let listener: ((status: Status) => void) | null = null;
+      return {
+        update: {
+          status: async () => start,
+          check,
+          installNow: vi.fn(async () => ({ ok: true })),
+          onStatus: (callback: (status: Status) => void) => {
+            listener = callback;
+            return () => (listener = null);
+          },
+        } as BudojoBridge['update'],
+        push: (status: Status) => listener?.(status),
+      };
+    }
 
-    const idle = desktopSyncPlatform(
-      stubBridge({ update: { status: async () => ({ phase: 'idle' }), installNow, check } }),
-      async () => undefined,
-    );
-    await idle.update?.();
-    expect(check).toHaveBeenCalledTimes(1);
-    expect(installNow).toHaveBeenCalledTimes(1);
+    /** The status is asked before the listener goes on: let that answer land. */
+    const settled = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+    it('installs a download that is ready', async () => {
+      const { update } = updater({ phase: 'ready', version: '2.81.0' }, vi.fn());
+      await expect(updateThePc(update)).resolves.toBe('installing');
+      expect(update.installNow).toHaveBeenCalledTimes(1);
+      expect(update.check).not.toHaveBeenCalled();
+    });
+
+    it('says a download started, or that there is nothing newer, from what the check finds', async () => {
+      const found = updater({ phase: 'idle' }, async () => ({ ok: true }));
+      const downloading = updateThePc(found.update);
+      await settled();
+      found.push({ phase: 'checking' });
+      found.push({ phase: 'downloading', version: '2.81.0', percent: 3 });
+      await expect(downloading).resolves.toBe('downloading');
+
+      const none = updater({ phase: 'idle' }, async () => ({ ok: true }));
+      const nothing = updateThePc(none.update);
+      await settled();
+      none.push({ phase: 'checking' });
+      none.push({ phase: 'up-to-date' });
+      await expect(nothing).resolves.toBe('none');
+    });
+
+    it('says when there is no updater, or the check fails, or never answers', async () => {
+      const dev = updater({ phase: 'idle' }, async () => ({ ok: false, reason: 'unavailable' }));
+      await expect(updateThePc(dev.update)).resolves.toBe('unavailable');
+
+      const broken = updater({ phase: 'idle' }, async () => ({ ok: false, reason: 'failed' }));
+      await expect(updateThePc(broken.update)).resolves.toBe('failed');
+
+      const silent = updater({ phase: 'idle' }, async () => ({ ok: true }));
+      await expect(updateThePc(silent.update, 10)).resolves.toBe('failed');
+    });
   });
 });

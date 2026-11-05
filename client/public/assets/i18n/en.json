@@ -3923,7 +3923,13 @@
       "topicsOne": "1 topic",
       "topicsOther": "{{count}} topics"
     },
-    "updateNow": "Update Budojo"
+    "updateNow": "Update Budojo",
+    "updateOutcome": {
+      "downloading": "Downloading the update: it shows at the top, and installs on restart.",
+      "none": "There is no newer Budojo for this PC yet. Try again later.",
+      "unavailable": "This Budojo does not update itself: download the latest from the releases page.",
+      "failed": "The update check did not go through. Try again."
+    }
   },
   "lock": {
     "title": "Budojo is locked",

@@ -44,10 +44,17 @@ export interface SyncPlatform {
    * «Aggiorna Budojo», when the other device published a newer database
    * (#2193): the PC's own updater. The phone has none to call: its pill links
    * the APK instead (`PhoneUpdateService.link`), the path its update notice
-   * already proved.
+   * already proved. Answers what came of it, for the pill to say.
    */
-  update?(): Promise<void>;
+  update?(): Promise<UpdateOutcome>;
 }
+
+/**
+ * What «Aggiorna Budojo» came to on the PC (#2193): installing (Budojo quits),
+ * downloading (the title bar shows it), nothing newer for this PC yet, no
+ * updater in this build, or a check that failed.
+ */
+export type UpdateOutcome = 'installing' | 'downloading' | 'none' | 'unavailable' | 'failed';
 
 /** The shell's sync, or null where there is none: the web, and a shell without it yet. */
 export const SYNC_PLATFORM = new InjectionToken<SyncPlatform | null>('SYNC_PLATFORM', {
@@ -229,8 +236,8 @@ export class SyncService {
   }
 
   /** «Aggiorna Budojo» (#2193): no round, which would only be refused again until the update. */
-  async update(): Promise<void> {
-    await this.platform?.update?.();
+  async update(): Promise<UpdateOutcome> {
+    return (await this.platform?.update?.()) ?? 'unavailable';
   }
 
   /** «Ricollega Google», then a round. */

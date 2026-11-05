@@ -4,7 +4,7 @@ import { provideRouter, Router } from '@angular/router';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { describe, expect, it, vi } from 'vitest';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
-import { SyncService, SyncState } from '../../../core/sync/sync.service';
+import { SyncService, SyncState, UpdateOutcome } from '../../../core/sync/sync.service';
 import { SyncPillComponent } from './sync-pill.component';
 import { PHONE_UPDATE_SOURCE, PhoneUpdateSource } from '../../../core/mobile/phone-update.service';
 import { RELEASES_PAGE } from '../../../core/mobile/app-update';
@@ -20,7 +20,7 @@ describe('SyncPillComponent', () => {
       syncNow: vi.fn(async () => undefined),
       reconnect: vi.fn(async () => undefined),
       resolve: vi.fn(async () => undefined),
-      update: vi.fn(async () => undefined),
+      update: vi.fn(async (): Promise<UpdateOutcome> => 'none'),
     };
     TestBed.configureTestingModule({
       imports: [SyncPillComponent],
@@ -105,6 +105,11 @@ describe('SyncPillComponent', () => {
     await fixture.componentInstance.act();
     expect(sync.update).toHaveBeenCalledTimes(1);
     expect(sync.syncNow).not.toHaveBeenCalled();
+    // Never a tap that does nothing: what came of it is said under the button.
+    fixture.detectChanges();
+    expect(document.querySelector('[data-cy="sync-detail-update-note"]')?.textContent).toContain(
+      'no newer Budojo for this PC',
+    );
   });
 
   it('links «Update Budojo» to the APK on the phone, asking GitHub once it is needed (#2193)', async () => {

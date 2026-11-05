@@ -18,7 +18,7 @@ import { PhoneUpdateService } from '../../../core/mobile/phone-update.service';
 import { LanguageService } from '../../../core/services/language.service';
 import { AskChoice } from '../../../core/sync/engine';
 import { VersionRef } from '../../../core/sync/layout';
-import { SyncService, SyncState } from '../../../core/sync/sync.service';
+import { SyncService, SyncState, UpdateOutcome } from '../../../core/sync/sync.service';
 import { localeFor } from '../../utils/locale';
 
 /** The states quiet enough for «N da decidere» to show over them. */
@@ -63,6 +63,8 @@ export class SyncPillComponent {
 
   protected readonly state = this.sync.state;
   protected readonly busy = signal(false);
+  /** What the PC's «Aggiorna Budojo» came to, under the button; gone when the state moves. */
+  protected readonly updateNote = signal<string | null>(null);
   private readonly injector = inject(Injector);
   private readonly consequence = viewChild<ElementRef<HTMLElement>>('consequence');
 
@@ -72,6 +74,8 @@ export class SyncPillComponent {
     effect(() => {
       if (this.state().kind === 'update') {
         this.phoneUpdate.check();
+      } else {
+        this.updateNote.set(null);
       }
     });
   }
@@ -240,7 +244,8 @@ export class SyncPillComponent {
       if (kind === 'reconnect') {
         await this.sync.reconnect();
       } else if (kind === 'update') {
-        await this.sync.update();
+        const outcome = await this.sync.update();
+        this.updateNote.set(outcome === 'installing' ? null : UPDATE_NOTES[outcome]);
       } else {
         await this.sync.syncNow();
       }
@@ -273,6 +278,14 @@ export class SyncPillComponent {
     }).format(new Date(at));
   }
 }
+
+/** What the PC's update came to, by key: listed, so the parity check sees every one (#2193). */
+const UPDATE_NOTES: Record<Exclude<UpdateOutcome, 'installing'>, string> = {
+  downloading: 'sync.updateOutcome.downloading',
+  none: 'sync.updateOutcome.none',
+  unavailable: 'sync.updateOutcome.unavailable',
+  failed: 'sync.updateOutcome.failed',
+};
 
 /** The translation key of each state with a fixed sentence: listed, so the parity check sees every one. */
 const KEYS: Record<SyncState['kind'], string> = {
