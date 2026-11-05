@@ -3922,7 +3922,8 @@
       },
       "topicsOne": "1 topic",
       "topicsOther": "{{count}} topics"
-    }
+    },
+    "updateNow": "Update Budojo"
   },
   "lock": {
     "title": "Budojo is locked",

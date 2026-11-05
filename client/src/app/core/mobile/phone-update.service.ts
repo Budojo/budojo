@@ -1,7 +1,7 @@
-import { Injectable, InjectionToken, inject, isDevMode, signal } from '@angular/core';
+import { Injectable, InjectionToken, computed, inject, isDevMode, signal } from '@angular/core';
 import { VERSION } from '../../../environments/version';
 import { appVersionOf } from '../sync/version';
-import { isReleaseBuild, newerApk, ReleaseApk, RELEASES_URL } from './app-update';
+import { isReleaseBuild, newerApk, ReleaseApk, RELEASES_PAGE, RELEASES_URL } from './app-update';
 
 /** Where the update notice looks, injected so its rules can be tested without a phone or GitHub. */
 export interface PhoneUpdateSource {
@@ -54,6 +54,20 @@ export class PhoneUpdateService {
 
   /** The newer APK, once GitHub answered with one. */
   readonly available = signal<ReleaseApk | null>(null);
+
+  /** Inside the Android app, where Budojo updates by an APK. */
+  get onPhone(): boolean {
+    return this.source.onPhone;
+  }
+
+  /**
+   * Where «Aggiorna Budojo» leads on the phone (#2193): the newer APK, or,
+   * before GitHub answered (no network yet, a test build), the releases page,
+   * which lists it. Null off the phone.
+   */
+  readonly link = computed<string | null>(() =>
+    this.source.onPhone ? (this.available()?.url ?? RELEASES_PAGE) : null,
+  );
 
   check(): void {
     if (this.checked || !this.source.onPhone || !isReleaseBuild(this.source.running)) {

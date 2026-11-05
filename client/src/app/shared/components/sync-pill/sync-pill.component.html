@@ -97,16 +97,23 @@
             data-cy="sync-detail-decide"
           />
         }
-        <p-button
-          [label]="(state().kind === 'reconnect' ? 'sync.reconnect' : 'sync.now') | translate"
-          [icon]="state().kind === 'reconnect' ? 'pi pi-link' : 'pi pi-sync'"
-          [loading]="busy()"
-          [autofocus]="toDecide() === 0"
-          [text]="toDecide() > 0"
-          [fluid]="true"
-          (onClick)="act()"
-          data-cy="sync-detail-action"
-        />
+        @if (updateLink(); as link) {
+          <a pButton [href]="link" [fluid]="true" data-cy="sync-detail-action">
+            <i class="pi pi-download" pButtonIcon aria-hidden="true"></i>
+            <span pButtonLabel>{{ 'sync.updateNow' | translate }}</span>
+          </a>
+        } @else {
+          <p-button
+            [label]="action().key | translate"
+            [icon]="action().icon"
+            [loading]="busy()"
+            [autofocus]="toDecide() === 0"
+            [text]="toDecide() > 0"
+            [fluid]="true"
+            (onClick)="act()"
+            data-cy="sync-detail-action"
+          />
+        }
       }
     </div>
   </p-popover>

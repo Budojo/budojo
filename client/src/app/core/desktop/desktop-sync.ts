@@ -80,6 +80,15 @@ export function desktopSyncPlatform(
         throw new Error(linked.error ?? 'Google did not reconnect');
       }
     },
+    // A download already done installs now; otherwise a check starts it, and
+    // the title bar shows it coming (#1401) and offers the restart.
+    update: async () => {
+      if ((await bridge.update.status()).phase === 'ready') {
+        await bridge.update.installNow();
+        return;
+      }
+      await bridge.update.check();
+    },
   };
 }
 

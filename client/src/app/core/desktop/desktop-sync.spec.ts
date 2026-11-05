@@ -99,4 +99,26 @@ describe('the PC’s sync platform', () => {
     await expect(platform.reconnect()).rejects.toThrow('access_denied');
     expect(link).toHaveBeenCalledTimes(1);
   });
+
+  it('updates through the PC’s own updater: installs a download that is ready, else checks (#2193)', async () => {
+    const installNow = vi.fn(async () => ({ ok: true }));
+    const check = vi.fn(async () => ({ ok: true }));
+    const ready = desktopSyncPlatform(
+      stubBridge({
+        update: { status: async () => ({ phase: 'ready', version: '2.81.0' }), installNow, check },
+      }),
+      async () => undefined,
+    );
+    await ready.update?.();
+    expect(installNow).toHaveBeenCalledTimes(1);
+    expect(check).not.toHaveBeenCalled();
+
+    const idle = desktopSyncPlatform(
+      stubBridge({ update: { status: async () => ({ phase: 'idle' }), installNow, check } }),
+      async () => undefined,
+    );
+    await idle.update?.();
+    expect(check).toHaveBeenCalledTimes(1);
+    expect(installNow).toHaveBeenCalledTimes(1);
+  });
 });

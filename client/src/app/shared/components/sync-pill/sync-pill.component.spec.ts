@@ -6,10 +6,12 @@ import { describe, expect, it, vi } from 'vitest';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 import { SyncService, SyncState } from '../../../core/sync/sync.service';
 import { SyncPillComponent } from './sync-pill.component';
+import { PHONE_UPDATE_SOURCE, PhoneUpdateSource } from '../../../core/mobile/phone-update.service';
+import { RELEASES_PAGE } from '../../../core/mobile/app-update';
 
 /** The sync state in the topbar (#2046, PRD § 6.2). */
 describe('SyncPillComponent', () => {
-  function setup(initial: SyncState, toDecideCount = 0) {
+  function setup(initial: SyncState, toDecideCount = 0, source?: Partial<PhoneUpdateSource>) {
     const state = signal<SyncState>(initial);
     const toDecide = signal(toDecideCount);
     const sync = {
@@ -18,6 +20,7 @@ describe('SyncPillComponent', () => {
       syncNow: vi.fn(async () => undefined),
       reconnect: vi.fn(async () => undefined),
       resolve: vi.fn(async () => undefined),
+      update: vi.fn(async () => undefined),
     };
     TestBed.configureTestingModule({
       imports: [SyncPillComponent],
@@ -26,6 +29,14 @@ describe('SyncPillComponent', () => {
         ...provideI18nTesting(),
         provideRouter([]),
         { provide: SyncService, useValue: sync },
+        ...(source === undefined
+          ? []
+          : [
+              {
+                provide: PHONE_UPDATE_SOURCE,
+                useValue: { onPhone: true, running: '2.79.0', latest: async () => [], ...source },
+              },
+            ]),
       ],
     });
     const fixture = TestBed.createComponent(SyncPillComponent);
@@ -80,6 +91,45 @@ describe('SyncPillComponent', () => {
     fixture.detectChanges();
     await pill.act();
     expect(sync.reconnect).toHaveBeenCalledTimes(1);
+  });
+
+  it('offers «Update Budojo» on the PC when the other device runs a newer one, and no sync (#2193)', async () => {
+    const { fixture, sync, pill } = setup({ kind: 'update' });
+    pill()?.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(document.querySelector('[data-cy="sync-detail-action"]')?.textContent).toContain(
+      'Update Budojo',
+    );
+
+    await fixture.componentInstance.act();
+    expect(sync.update).toHaveBeenCalledTimes(1);
+    expect(sync.syncNow).not.toHaveBeenCalled();
+  });
+
+  it('links «Update Budojo» to the APK on the phone, asking GitHub once it is needed (#2193)', async () => {
+    const APK =
+      'https://github.com/Budojo/budojo/releases/download/v2.80.0/Budojo-Android-2.80.0.apk';
+    const latest = vi.fn(async () => [
+      {
+        tag_name: 'v2.80.0',
+        prerelease: false,
+        assets: [{ name: 'Budojo-Android-2.80.0.apk', browser_download_url: APK }],
+      },
+    ]);
+    const { fixture, pill } = setup({ kind: 'update' }, 0, { latest });
+    pill()?.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const link = () => document.querySelector<HTMLAnchorElement>('a[data-cy="sync-detail-action"]');
+
+    expect(link()?.getAttribute('href')).toBe(RELEASES_PAGE);
+    expect(link()?.textContent).toContain('Update Budojo');
+    await vi.waitFor(() => {
+      fixture.detectChanges();
+      expect(link()?.getAttribute('href')).toBe(APK);
+    });
+    expect(latest).toHaveBeenCalledTimes(1);
   });
 
   it('counts what waits to be decided over a quiet state, and leads to the screen that answers it (#2038)', async () => {

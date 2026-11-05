@@ -12,6 +12,9 @@
  */
 export const RELEASES_URL = 'https://api.github.com/repos/Budojo/budojo/releases?per_page=50';
 
+/** The same releases as a page the owner can read, where each one carries its APK. */
+export const RELEASES_PAGE = 'https://github.com/Budojo/budojo/releases';
+
 export interface ReleaseApk {
   version: string;
   url: string;

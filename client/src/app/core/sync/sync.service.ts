@@ -40,6 +40,13 @@ export interface SyncPlatform {
   publishesFirst: boolean;
   /** Asks Google again, on the owner's tap: in Testing it lets go every week (#2028). */
   reconnect(): Promise<void>;
+  /**
+   * «Aggiorna Budojo», when the other device published a newer database
+   * (#2193): the PC's own updater. The phone has none to call: its pill links
+   * the APK instead (`PhoneUpdateService.link`), the path its update notice
+   * already proved.
+   */
+  update?(): Promise<void>;
 }
 
 /** The shell's sync, or null where there is none: the web, and a shell without it yet. */
@@ -219,6 +226,11 @@ export class SyncService {
     }
     this.cancelTimer();
     await this.run({ choice, seen });
+  }
+
+  /** «Aggiorna Budojo» (#2193): no round, which would only be refused again until the update. */
+  async update(): Promise<void> {
+    await this.platform?.update?.();
   }
 
   /** «Ricollega Google», then a round. */
