@@ -294,7 +294,11 @@ function registerThemeBridge(): void {
   });
 }
 
-function createWindow(apiBase: string, isQuitting: () => boolean): BrowserWindow {
+function createWindow(
+  apiBase: string,
+  isQuitting: () => boolean,
+  note: (line: string) => void,
+): BrowserWindow {
   // What was on screen last run, or what the OS asks for on a first launch
   // (#1793). Read here rather than after boot because both values below are
   // consumed before any renderer exists — asking the SPA would be a frame too
@@ -350,7 +354,9 @@ function createWindow(apiBase: string, isQuitting: () => boolean): BrowserWindow
   // Closing sends what waits (#2194): the page pushes a write five seconds
   // after it, and a close within them left the write here until the next
   // opening. The window goes at once; the app waits for the push, within
-  // FLUSH_ON_CLOSE_MS, then closes for real.
+  // FLUSH_ON_CLOSE_MS, then closes for real. Unless the owner opened Budojo
+  // again meanwhile (its icon, a notification): the window was shown, and
+  // stays.
   let alreadyFlushed = false;
   window.on('close', (event) => {
     if (!holdsCloseForFlush({ alreadyFlushed, quitting: isQuitting() })) {
@@ -360,7 +366,11 @@ function createWindow(apiBase: string, isQuitting: () => boolean): BrowserWindow
     alreadyFlushed = true;
     window.hide();
     void flushWithin(() => askPageToFlush(window.webContents)).then((outcome) => {
-      console.info(`[sync] close: ${outcome}`);
+      note(`close: ${outcome}`);
+      if (window.isVisible() && !isQuitting()) {
+        alreadyFlushed = false;
+        return;
+      }
       window.close();
     });
   });
@@ -755,6 +765,7 @@ async function startRuntime(): Promise<{
   const syncLog = new RotatingLog(path.join(layout.logsDir, 'sync.log'));
   syncLog.open();
   const sync: DesktopSync = {
+    note: (line) => syncLog.write(`${new Date().toISOString()} ${line}`),
     running: () => syncState.running,
     epoch: () => syncState.file?.epoch ?? 0,
     join: async () => {
@@ -810,6 +821,8 @@ interface DesktopSync {
   swapIn(): Promise<void>;
   /** A restore put the database back in time (Data & backup). */
   restored(): Promise<void>;
+  /** A line in `logs/sync.log`: what the close's last push came to (#2194). */
+  note(line: string): void;
 }
 
 /** None only when there is no file: one that is there and does not read is not "none". */
@@ -1552,6 +1565,9 @@ if (!gotTheLock) {
       if (existing.isMinimized()) {
         existing.restore();
       }
+      // Shown too: a close sending its last push hides the window first, and
+      // a shown window is how it knows to stay (#2194).
+      existing.show();
       existing.focus();
     }
   });
@@ -1615,12 +1631,12 @@ if (!gotTheLock) {
       return;
     }
 
-    createWindow(apiBase, () => quitting);
+    createWindow(apiBase, () => quitting, (line) => sync?.note(line));
 
     // macOS keeps the app alive with no windows; recreate on dock click.
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) {
-        createWindow(apiBase, () => quitting);
+        createWindow(apiBase, () => quitting, (line) => sync?.note(line));
       }
     });
   });

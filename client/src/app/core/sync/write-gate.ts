@@ -132,6 +132,11 @@ export class WriteGate {
     }
   }
 
+  /** Once no write is on its way: closing waits for a save the owner just made (#2194). */
+  settled(): Promise<void> {
+    return this.idle();
+  }
+
   private idle(): Promise<void> {
     return this.inFlight === 0
       ? Promise.resolve()

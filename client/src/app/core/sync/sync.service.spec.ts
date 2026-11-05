@@ -1,6 +1,6 @@
 import { HttpErrorResponse, HttpResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
-import { firstValueFrom, of } from 'rxjs';
+import { firstValueFrom, of, Subject } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SyncConflict } from './conflicts';
 import { EMPTY_LEDGER, syncOnce } from './engine';
@@ -729,6 +729,59 @@ describe('SyncService', () => {
     expect(rounds).toBe(2);
     // Sent now: no round is left due for later.
     await vi.advanceTimersByTimeAsync(PUSH_DELAY_MS);
+    expect(rounds).toBe(2);
+  });
+
+  it('runs no round on close for a retry or a look: only a write that waits goes (#2194)', async () => {
+    vi.useFakeTimers();
+    let rounds = 0;
+    let flush: (() => Promise<void>) | null = null;
+    const sync = setUp({
+      identity: async () => {
+        rounds++;
+        throw new Error('Drive said 500');
+      },
+      onClose: (handler) => (flush = handler),
+    });
+    sync.start();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(rounds).toBe(1);
+
+    // A retry is due in two minutes, and nothing was written.
+    await flush!();
+    expect(rounds).toBe(1);
+  });
+
+  it('waits on close for a save still on its way, then sends it (#2194)', async () => {
+    vi.useFakeTimers();
+    let rounds = 0;
+    let flush: (() => Promise<void>) | null = null;
+    const sync = setUp({
+      identity: async () => {
+        rounds++;
+        return null;
+      },
+      onClose: (handler) => (flush = handler),
+    });
+    sync.start();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(rounds).toBe(1);
+
+    // Save, then X at once: the server has not answered yet.
+    const answer = new Subject<HttpResponse<unknown>>();
+    TestBed.inject(WriteGate)
+      .pass(
+        () => answer,
+        (event) => event instanceof HttpResponse,
+      )
+      .subscribe();
+    const closing = flush!();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(rounds).toBe(1);
+
+    answer.next(new HttpResponse({ status: 201 }));
+    answer.complete();
+    await closing;
     expect(rounds).toBe(2);
   });
 

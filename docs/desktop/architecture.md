@@ -156,7 +156,10 @@ The academy's two devices meet in the owner's Google Drive ([M12](../specs/m12-m
   - **One stop of the server at a time:** the swap and a Restore share a lock, and a Restore is refused while a database the sync staged waits, looked at again once PHP is stopped.
 - **After a swap the page opens the owner's session again** through the shell's secret (`/device/session`). The database swapped in is the phone's, which holds none of this PC's sessions. While the sync swaps, the page's requests wait (`WriteGate`); one sent with the token from before is sent once more with the new one (`authInterceptor`).
 - **Closing sends what waits** ([#2194](https://github.com/Budojo/budojo/issues/2194)). The page pushes a write five seconds after it, and a close within them left the write here until the next opening.
-  - The window's first `close` is held: the window hides at once, and the page runs the sync once if a round is due or running.
+  - The window's first `close` is held, and the window hides at once.
+  - The page waits for a save still on its way. Then it lets a running round finish, and runs one only for a write no round has carried yet: a retry or a look is the next opening's.
+  - Opening Budojo again meanwhile (its icon, a notification) shows the window, and the close is called off.
+  - What the close came to (`sent`, `timeout`, `failed`) goes to `logs/sync.log`.
   - The window then closes for real, within `FLUSH_ON_CLOSE_MS` (10 s, `close-flush.ts`). A slow or absent network never keeps Budojo open: what did not go, goes at the next opening.
   - A quit already under way (the updater's install, the quit's second pass) closes at once: by then the server is stopping.
 - **A Restore (Data & backup) moves the database's epoch on,** and the page forgets what it remembered of the database before (`ledger-store.ts`): the protocol meets the restored database as an academy of its own, which asks (protocol § Scope). A Restore is refused while a database the sync staged waits to be swapped in.
