@@ -44,6 +44,16 @@
     min-width: 0;
     overflow-wrap: anywhere;
   }
+
+  // The age down one column at the row's end (#2191). Left to flow, it sat
+  // wherever a two-line name's box ended, and shrank with it to «19 / anni».
+  // Last, after what the page projects (the check-in's «self-marked»), which
+  // would otherwise take the row's end and push this row's age out of line.
+  app-age-badge {
+    flex-shrink: 0;
+    margin-inline-start: auto;
+    order: 1;
+  }
 }
 
 .athlete-identity__avatar {

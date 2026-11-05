@@ -50,6 +50,8 @@
     align-items: center;
     gap: 0.5rem 1rem;
     padding-block: 0.5rem;
+    // The spine sits in this padding: with none, it lay over the avatar (#2191).
+    padding-inline-start: 1rem;
     border-bottom: 1px solid var(--p-content-border-color);
 
     &:last-child {
