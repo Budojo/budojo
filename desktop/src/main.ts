@@ -356,23 +356,38 @@ function createWindow(
   // opening. The window goes at once; the app waits for the push, within
   // FLUSH_ON_CLOSE_MS, then closes for real. Unless the owner opened Budojo
   // again meanwhile (its icon, a notification): the window was shown, and
-  // stays.
+  // stays. A close made while a push is still on its way (closed, opened again,
+  // saved, closed) asks for one more: the decision to close waits for the
+  // last. The window may be gone by then, as the app quits by another way.
   let alreadyFlushed = false;
+  let flushing = false;
+  let closeAsked = false;
+  const flushThenClose = async (): Promise<void> => {
+    flushing = true;
+    while (closeAsked) {
+      closeAsked = false;
+      note(`close: ${await flushWithin(() => askPageToFlush(window.webContents))}`);
+      if (window.isDestroyed()) {
+        return;
+      }
+    }
+    flushing = false;
+    if (window.isVisible() && !isQuitting()) {
+      return;
+    }
+    alreadyFlushed = true;
+    window.close();
+  };
   window.on('close', (event) => {
     if (!holdsCloseForFlush({ alreadyFlushed, quitting: isQuitting() })) {
       return;
     }
     event.preventDefault();
-    alreadyFlushed = true;
     window.hide();
-    void flushWithin(() => askPageToFlush(window.webContents)).then((outcome) => {
-      note(`close: ${outcome}`);
-      if (window.isVisible() && !isQuitting()) {
-        alreadyFlushed = false;
-        return;
-      }
-      window.close();
-    });
+    closeAsked = true;
+    if (!flushing) {
+      void flushThenClose();
+    }
   });
 
   // A link to an external site opens in the user's browser. Letting it open a
