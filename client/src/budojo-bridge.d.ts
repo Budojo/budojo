@@ -194,6 +194,12 @@ interface BudojoBridge {
     }): Promise<{ status: number; headers: Record<string, string>; body: Uint8Array }>;
     /** Resolves once the server serves the swapped-in database. */
     swapIn(): Promise<void>;
+    /**
+     * What the page runs when the window closes (#2194): the sync once, so a
+     * write made just before is on Drive before Budojo goes. The window waits
+     * for it within a limit.
+     */
+    onClose(handler: () => Promise<void>): void;
   };
   /**
    * Native window chrome (#1793).

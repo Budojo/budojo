@@ -99,4 +99,18 @@ describe('the PC’s sync platform', () => {
     await expect(platform.reconnect()).rejects.toThrow('access_denied');
     expect(link).toHaveBeenCalledTimes(1);
   });
+
+  it('hands the window’s close the page’s last push (#2194)', async () => {
+    let registered: (() => Promise<void>) | null = null;
+    const platform = desktopSyncPlatform(
+      stubBridge({ sync: { onClose: (handler) => (registered = handler) } }),
+      async () => undefined,
+    );
+    const flush = vi.fn(async () => undefined);
+
+    platform.onClose?.(flush);
+    await registered!();
+
+    expect(flush).toHaveBeenCalledTimes(1);
+  });
 });

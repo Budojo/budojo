@@ -40,6 +40,11 @@ export interface SyncPlatform {
   publishesFirst: boolean;
   /** Asks Google again, on the owner's tap: in Testing it lets go every week (#2028). */
   reconnect(): Promise<void>;
+  /**
+   * Hands the shell what to run when the app closes (#2194): the PC's window
+   * waits for it, within a limit. The phone has no close to wait on.
+   */
+  onClose?(flush: () => Promise<void>): void;
 }
 
 /** The shell's sync, or null where there is none: the web, and a shell without it yet. */
@@ -147,6 +152,7 @@ export class SyncService {
 
   constructor() {
     inject(DestroyRef).onDestroy(() => this.stop());
+    this.platform?.onClose?.(() => this.flush());
     if (isDevMode() && 'Cypress' in window) {
       const hook: SyncTestHook = {
         state: (state) => this.stateSignal.set(state),
@@ -195,6 +201,25 @@ export class SyncService {
     // database than the one refused. Its first round asks the server again.
     this.refusedNewer = null;
     this.stateSignal.set({ kind: 'off' });
+  }
+
+  /**
+   * The last push, as the app closes (#2194): what waits goes now, rather
+   * than at the next opening. Nothing waits when no round is due nor running;
+   * a signed-out page has nothing of its own to send.
+   */
+  async flush(): Promise<void> {
+    if (this.stopping === null) {
+      return;
+    }
+    // A round running now, then one more if a write came during it.
+    for (let rounds = 0; rounds < 2 && (this.timer !== null || this.running !== null); rounds++) {
+      if (this.running !== null) {
+        await this.running;
+        continue;
+      }
+      await this.syncNow();
+    }
   }
 
   /** «Sincronizza ora». */

@@ -1,5 +1,6 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, Notification, type OpenDialogOptions, protocol, safeStorage, shell } from 'electron';
-import { randomBytes } from 'node:crypto';
+import { app, BrowserWindow, dialog, ipcMain, type IpcMainEvent, Menu, nativeTheme, Notification, type OpenDialogOptions, protocol, safeStorage, shell, type WebContents } from 'electron';
+import { randomBytes, randomUUID } from 'node:crypto';
+import { flushWithin, holdsCloseForFlush } from './close-flush.js';
 import { createWriteStream, existsSync, readFileSync } from 'node:fs';
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -293,7 +294,7 @@ function registerThemeBridge(): void {
   });
 }
 
-function createWindow(apiBase: string): BrowserWindow {
+function createWindow(apiBase: string, isQuitting: () => boolean): BrowserWindow {
   // What was on screen last run, or what the OS asks for on a first launch
   // (#1793). Read here rather than after boot because both values below are
   // consumed before any renderer exists — asking the SPA would be a frame too
@@ -346,6 +347,24 @@ function createWindow(apiBase: string): BrowserWindow {
   // Avoid the white flash before Angular paints.
   window.once('ready-to-show', () => window.show());
 
+  // Closing sends what waits (#2194): the page pushes a write five seconds
+  // after it, and a close within them left the write here until the next
+  // opening. The window goes at once; the app waits for the push, within
+  // FLUSH_ON_CLOSE_MS, then closes for real.
+  let alreadyFlushed = false;
+  window.on('close', (event) => {
+    if (!holdsCloseForFlush({ alreadyFlushed, quitting: isQuitting() })) {
+      return;
+    }
+    event.preventDefault();
+    alreadyFlushed = true;
+    window.hide();
+    void flushWithin(() => askPageToFlush(window.webContents)).then((outcome) => {
+      console.info(`[sync] close: ${outcome}`);
+      window.close();
+    });
+  });
+
   // A link to an external site opens in the user's browser. Letting it open a
   // new Electron window would hand a remote page a renderer inside the app.
   window.webContents.setWindowOpenHandler(({ url }) => {
@@ -374,6 +393,25 @@ function createWindow(apiBase: string): BrowserWindow {
   void window.loadURL(DEV ? DEV_URL : `${APP_ORIGIN}/`);
 
   return window;
+}
+
+/**
+ * Asks the page to run the sync once and waits for its answer (#2194). The
+ * preload always answers, whether or not anything was sent.
+ */
+function askPageToFlush(contents: WebContents): Promise<void> {
+  return new Promise((resolve) => {
+    const id = randomUUID();
+    const answered = (event: IpcMainEvent, answer: unknown): void => {
+      if (event.sender !== contents || answer !== id) {
+        return;
+      }
+      ipcMain.removeListener('budojo:sync:flushed', answered);
+      resolve();
+    };
+    ipcMain.on('budojo:sync:flushed', answered);
+    contents.send('budojo:sync:flush', id);
+  });
 }
 
 /**
@@ -1577,12 +1615,12 @@ if (!gotTheLock) {
       return;
     }
 
-    createWindow(apiBase);
+    createWindow(apiBase, () => quitting);
 
     // macOS keeps the app alive with no windows; recreate on dock click.
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) {
-        createWindow(apiBase);
+        createWindow(apiBase, () => quitting);
       }
     });
   });

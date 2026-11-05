@@ -697,6 +697,56 @@ describe('SyncService', () => {
     expect(rounds).toBe(2);
   });
 
+  it('sends a write that waits when the app closes, not at the next opening (#2194)', async () => {
+    vi.useFakeTimers();
+    let rounds = 0;
+    let flush: (() => Promise<void>) | null = null;
+    const sync = setUp({
+      identity: async () => {
+        rounds++;
+        return null;
+      },
+      onClose: (handler) => (flush = handler),
+    });
+    expect(flush).not.toBeNull();
+
+    sync.start();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(rounds).toBe(1);
+
+    // Nothing waits: the close sends nothing.
+    await flush!();
+    expect(rounds).toBe(1);
+
+    // A write, and the window closed before its five seconds.
+    TestBed.inject(WriteGate)
+      .pass(
+        () => of(new HttpResponse({ status: 201 })),
+        (event) => event instanceof HttpResponse,
+      )
+      .subscribe();
+    await flush!();
+    expect(rounds).toBe(2);
+    // Sent now: no round is left due for later.
+    await vi.advanceTimersByTimeAsync(PUSH_DELAY_MS);
+    expect(rounds).toBe(2);
+  });
+
+  it('sends nothing on close for a signed-out page', async () => {
+    let rounds = 0;
+    let flush: (() => Promise<void>) | null = null;
+    setUp({
+      identity: async () => {
+        rounds++;
+        return null;
+      },
+      onClose: (handler) => (flush = handler),
+    });
+
+    await flush!();
+    expect(rounds).toBe(0);
+  });
+
   it('syncs when the network comes back', async () => {
     vi.useFakeTimers();
     let rounds = 0;

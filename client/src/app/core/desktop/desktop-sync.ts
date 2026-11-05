@@ -74,6 +74,8 @@ export function desktopSyncPlatform(
       },
     },
     publishesFirst: true,
+    // The window's close waits for the last push (#2194).
+    onClose: (flush) => bridge.sync.onClose(flush),
     reconnect: async () => {
       const linked = await bridge.drive.link();
       if (!linked.ok) {
