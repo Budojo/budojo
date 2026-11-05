@@ -2036,7 +2036,8 @@
           "recorded": "{{name}}'s payment recorded",
           "already": "{{name}}'s payment was already recorded",
           "undoError": "Couldn't undo the payment.",
-          "letOff": "Free month for {{name}}"
+          "letOff": "Free month for {{name}}",
+          "alreadyLetOff": "{{name}} already had this month free"
         }
       },
       "newPerson": {

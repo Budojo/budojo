@@ -178,7 +178,57 @@ describe('PaySheetComponent', () => {
     expect(recorded).toHaveLength(1);
     expect(recorded[0].payment).toEqual(waived);
     expect(recorded[0].created).toBe(true);
-    expect(recordedToastKey(recorded[0].payment)).toBe('attendance.daily.pay.toast.letOff');
+    expect(recordedToastKey(recorded[0])).toBe('attendance.daily.pay.toast.letOff');
+  });
+
+  it('offers no let-off with no month to name: not while loading, not when nothing is owed', async () => {
+    const { fixture, http } = setup();
+    open(fixture, athlete(), '2026-10');
+    expect(document.body.querySelector('[data-cy="pay-sheet-let-off"]')).toBeNull();
+
+    // October paid on the PC, nothing behind: nothing owed.
+    http
+      .expectOne((r) => r.url.endsWith('/athletes/7/payments'))
+      .flush({
+        data: [
+          {
+            id: 5,
+            athlete_id: 7,
+            year: 2026,
+            month: 10,
+            period_months: 1,
+            amount_cents: 6000,
+            paid_at: '2026-10-02',
+            payment_method: 'cash',
+          },
+        ],
+        overdue_months: [],
+      });
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(document.body.querySelector('[data-cy="pay-sheet-none"]')).not.toBeNull();
+    expect(document.body.querySelector('[data-cy="pay-sheet-let-off"]')).toBeNull();
+  });
+
+  it('spins the let-off, not «Record», while the month goes', async () => {
+    const { fixture, http } = setup();
+    open(fixture, athlete(), '2026-08');
+    http
+      .expectOne((r) => r.url.endsWith('/athletes/7/payments'))
+      .flush({ data: [], overdue_months: ['2026-08'] });
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    letOffButton().click();
+    fixture.detectChanges();
+    const spinning = (cy: string) =>
+      document.body.querySelector(
+        `[data-cy="${cy}"] .p-button-loading-icon, [data-cy="${cy}"] .p-button-loading`,
+      ) !== null;
+    expect(spinning('pay-sheet-let-off')).toBe(true);
+    expect(spinning('pay-sheet-record')).toBe(false);
+    expect(recordButton().disabled).toBe(true);
+    http.expectOne((r) => r.method === 'POST');
   });
 
   it("lets a quarterly payer off the picked quarter's first month only", async () => {
@@ -362,5 +412,31 @@ describe('PaySheetComponent', () => {
       (el) => el.getAttribute('data-cy'),
     );
     expect(months).toEqual(['pay-sheet-month-2026-10']);
+  });
+});
+
+describe('recordedToastKey (#2192)', () => {
+  it('names the toast by what the server holds: a payment or a month off, new or already there', () => {
+    const row = {
+      id: 1,
+      athlete_id: 7,
+      year: 2026,
+      month: 8,
+      amount_cents: 0,
+      paid_at: '2026-10-03',
+    };
+    expect(recordedToastKey({ payment: { ...row, waived: true }, created: true })).toBe(
+      'attendance.daily.pay.toast.letOff',
+    );
+    expect(recordedToastKey({ payment: { ...row, waived: true }, created: false })).toBe(
+      'attendance.daily.pay.toast.alreadyLetOff',
+    );
+    expect(recordedToastKey({ payment: row, created: true })).toBe(
+      'attendance.daily.pay.toast.recorded',
+    );
+    // A let-off the PC had already paid: the server's row is the payment.
+    expect(recordedToastKey({ payment: row, created: false })).toBe(
+      'attendance.daily.pay.toast.already',
+    );
   });
 });

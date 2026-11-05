@@ -40,12 +40,20 @@ export interface PayRecorded {
   readonly created: boolean;
 }
 
-/** The host's toast for what the sheet recorded: a payment, or a month let off (#2192). */
-export function recordedToastKey(payment: AthletePayment): string {
-  return payment.waived === true
-    ? 'attendance.daily.pay.toast.letOff'
-    : 'attendance.daily.pay.toast.recorded';
+/**
+ * The host's toast for what the sheet recorded (#2192): a payment or a month
+ * let off, new or already on the ledger. The server answers with the row it
+ * holds, so a month let off on the PC reads as such, not as a payment.
+ */
+export function recordedToastKey({ payment, created }: Omit<PayRecorded, 'athlete'>): string {
+  const what = payment.waived === true ? 'letOff' : 'recorded';
+  return created ? `attendance.daily.pay.toast.${what}` : TOAST_ALREADY[what];
 }
+
+const TOAST_ALREADY = {
+  letOff: 'attendance.daily.pay.toast.alreadyLetOff',
+  recorded: 'attendance.daily.pay.toast.already',
+} as const;
 
 /**
  * The payment sheet (#2036, PRD § 6.1), opened from a check-in row's chip or
@@ -100,6 +108,8 @@ export class PaySheetComponent {
   );
   protected readonly method = signal<PaymentMethod>('cash');
   protected readonly saving = signal<boolean>(false);
+  /** Which answer is on its way: the spinner goes on the button tapped, not on «Registra». */
+  protected readonly sending = signal<'record' | 'letOff' | null>(null);
   /** Which answer did not go through, for its own words; null while none failed. */
   protected readonly failed = signal<'record' | 'letOff' | null>(null);
 
@@ -199,14 +209,17 @@ export class PaySheetComponent {
     const option = this.pickedOption();
     if (athlete === null || option === null || this.saving()) return;
     this.saving.set(true);
+    this.sending.set(answer);
     this.failed.set(null);
     write(athlete, option).subscribe({
       next: ({ payment, created }) => {
         this.saving.set(false);
+        this.sending.set(null);
         this.recorded.emit({ athlete, payment, created });
       },
       error: () => {
         this.saving.set(false);
+        this.sending.set(null);
         this.failed.set(answer);
       },
     });
@@ -241,6 +254,7 @@ export class PaySheetComponent {
     this.picked.set(null);
     this.method.set('cash');
     this.saving.set(false);
+    this.sending.set(null);
     this.failed.set(null);
   }
 }

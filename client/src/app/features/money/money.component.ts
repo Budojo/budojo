@@ -200,14 +200,14 @@ export class MoneyComponent implements OnInit {
     if (!created) {
       this.messageService.add({
         severity: 'info',
-        summary: this.translate.instant('attendance.daily.pay.toast.already', { name }),
+        summary: this.translate.instant(recordedToastKey({ payment, created }), { name }),
         life: 4000,
       });
       return;
     }
     this.messageService.add({
       severity: 'success',
-      summary: this.translate.instant(recordedToastKey(payment), { name }),
+      summary: this.translate.instant(recordedToastKey({ payment, created }), { name }),
       data: {
         undo: () =>
           this.money.undo(athlete, payment).subscribe({
